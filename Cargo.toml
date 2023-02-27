@@ -1,0 +1,7 @@
+[package]
+edition = '2021'
+name = 'uiua'
+version = '0.1.0'
+
+[dependencies]
+enum-iterator = '1.3'

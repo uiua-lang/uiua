@@ -9,7 +9,7 @@ use std::{
 
 use crate::{
     ast::{self, BinOp, Block, Expr, Item},
-    builtin::builtin_types,
+    builtin::{builtin_types, BuiltinFn},
     lex::{Sp, Span},
     parse::{parse, ParseError},
 };
@@ -150,12 +150,18 @@ pub struct Function {
     pub doc: Option<String>,
     pub params: Vec<Param>,
     pub ret_ty: Type,
-    pub body: Block,
+    pub body: FunctionBody,
+}
+
+#[derive(Debug, Clone)]
+pub enum FunctionBody {
+    UserDefined(Block),
+    Builtin(BuiltinFn),
 }
 
 #[derive(Debug, Clone)]
 pub struct Param {
-    pub name: String,
+    pub name: Sp<String>,
     pub ty: Type,
 }
 
@@ -170,6 +176,7 @@ pub enum InterpretError {
     WrongNumberOfArguments(Option<String>, usize, usize),
     CallNonFunction(Type),
     InvalidBinOp(BinOp, Type, Type),
+    WrongArgumentType(Option<String>, usize, Type, Type),
 }
 
 impl fmt::Display for InterpretError {
@@ -193,6 +200,14 @@ impl fmt::Display for InterpretError {
             InterpretError::InvalidBinOp(op, lhs, rhs) => {
                 write!(f, "cannot {op:?} {lhs} and {rhs}")
             }
+            InterpretError::WrongArgumentType(Some(name), index, expected, actual) => write!(
+                f,
+                "wrong type for argument {index} of `{name}`: expected {expected}, got {actual}"
+            ),
+            InterpretError::WrongArgumentType(None, index, expected, actual) => write!(
+                f,
+                "wrong type for argument {index}: expected {expected}, got {actual}"
+            ),
         }
     }
 }
@@ -262,7 +277,7 @@ impl Interpretter {
                         .iter()
                         .map(|param| -> InterpretResult<_> {
                             Ok(Param {
-                                name: param.name.value.clone(),
+                                name: param.name.clone(),
                                 ty: self.ty(&param.ty)?,
                             })
                         })
@@ -273,7 +288,7 @@ impl Interpretter {
                         .map(|ty| self.ty(ty))
                         .transpose()?
                         .unwrap_or(Type::Unit),
-                    body: def.body.clone(),
+                    body: FunctionBody::UserDefined(def.body.clone()),
                 };
                 self.scope_mut()
                     .values
@@ -376,10 +391,10 @@ impl Interpretter {
             Expr::Call(call) => {
                 let func = self.expr(&call.expr)?;
                 if let Value::Function(func) = func {
-                    let args: Vec<Value> = call
+                    let args: Vec<Sp<Value>> = call
                         .args
                         .iter()
-                        .map(|arg| self.expr(arg))
+                        .map(|arg| Ok(arg.span.clone().sp(self.expr(arg)?)))
                         .collect::<InterpretResult<_>>()?;
                     self.call_impl(&func, args, expr.span.clone())?
                 } else {
@@ -398,7 +413,7 @@ impl Interpretter {
     fn call_impl(
         &mut self,
         func: &Function,
-        args: Vec<Value>,
+        args: Vec<Sp<Value>>,
         span: Span,
     ) -> InterpretResult<Value> {
         self.in_new_scope(ScopeKind::Function, |this| {
@@ -409,10 +424,27 @@ impl Interpretter {
                     args.len(),
                 )));
             }
-            for (param, arg) in func.params.iter().zip(args) {
-                this.scope_mut().values.insert(param.name.clone(), arg);
+            for (i, (param, arg)) in func.params.iter().zip(&args).enumerate() {
+                if param.ty != arg.value.ty() {
+                    return Err(span.sp(InterpretError::WrongArgumentType(
+                        func.name.clone(),
+                        i + 1,
+                        param.ty.clone(),
+                        arg.value.ty(),
+                    )));
+                }
             }
-            this.block(&func.body)
+            match &func.body {
+                FunctionBody::UserDefined(block) => {
+                    for (param, arg) in func.params.iter().zip(args) {
+                        this.scope_mut()
+                            .values
+                            .insert(param.name.value.clone(), arg.value);
+                    }
+                    this.block(block)
+                }
+                FunctionBody::Builtin(f) => f(args.into_iter().map(|arg| arg.value).collect()),
+            }
         })
     }
     fn block(&mut self, block: &Block) -> InterpretResult<Value> {

@@ -24,10 +24,10 @@ fn main() {
     }
     println!("\nIR:");
     let mut ir = Ir::default();
+    println!("{ir:#?}");
     if let Err(e) = ir.compile(&input, path.as_ref()) {
         for e in e {
             println!("{e}");
         }
     }
-    println!("{ir:#?}");
 }

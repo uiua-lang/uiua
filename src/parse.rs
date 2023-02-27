@@ -103,6 +103,10 @@ struct Parser {
     errors: Vec<Sp<ParseError>>,
 }
 
+const PARENS: (Simple, Simple) = (OpenParen, CloseParen);
+const BRACKETS: (Simple, Simple) = (OpenBracket, CloseBracket);
+const CURLIES: (Simple, Simple) = (OpenCurly, CloseCurly);
+
 impl Parser {
     fn next_token_map<'a, T: 'a>(
         &'a mut self,
@@ -191,9 +195,7 @@ impl Parser {
         // Name
         let name = self.ident()?;
         // Parameters
-        let params = self
-            .surrounded_list(OpenParen, CloseParen, Self::try_param)?
-            .value;
+        let params = self.surrounded_list(PARENS, Self::try_param)?.value;
         // Return type
         let ret_ty = if self.try_exact(Arrow).is_some() {
             Some(self.ty()?)
@@ -223,9 +225,7 @@ impl Parser {
     fn try_pattern(&mut self) -> ParseResult<Option<Sp<Pattern>>> {
         Ok(Some(if let Some(ident) = self.try_ident() {
             ident.map(Pattern::Ident)
-        } else if let Some(items) =
-            self.try_surrounded_list(OpenParen, CloseParen, Self::try_pattern)?
-        {
+        } else if let Some(items) = self.try_surrounded_list(PARENS, Self::try_pattern)? {
             items.map(Pattern::Tuple)
         } else {
             return Ok(None);
@@ -297,8 +297,7 @@ impl Parser {
     }
     fn try_surrounded_list<T>(
         &mut self,
-        open: Simple,
-        close: Simple,
+        (open, close): (Simple, Simple),
         item: impl Fn(&mut Self) -> ParseResult<Option<T>>,
     ) -> ParseResult<Option<Sp<Vec<T>>>> {
         let Some(start) = self.try_exact(open) else {
@@ -314,6 +313,14 @@ impl Parser {
         let end = self.expect(close)?;
         let span = start.merge(end);
         Ok(Some(span.sp(items)))
+    }
+    fn surrounded_list<T>(
+        &mut self,
+        (open, close): (Simple, Simple),
+        item: impl Fn(&mut Self) -> ParseResult<Option<T>>,
+    ) -> ParseResult<Sp<Vec<T>>> {
+        self.try_surrounded_list((open, close), item)?
+            .ok_or_else(|| self.expected([Expectation::Simple(open)]))
     }
 }
 
@@ -452,7 +459,7 @@ impl Parser {
             return Ok(None);
         };
         loop {
-            if let Some(args) = self.try_surrounded_list(OpenParen, CloseParen, Self::try_expr)? {
+            if let Some(args) = self.try_surrounded_list(PARENS, Self::try_expr)? {
                 let start = expr.span.clone();
                 let end = args.span.clone();
                 let span = start.merge(end);
@@ -483,15 +490,6 @@ impl Parser {
         }
         Ok(Some(expr))
     }
-    fn surrounded_list<T>(
-        &mut self,
-        open: Simple,
-        close: Simple,
-        item: impl Fn(&mut Self) -> ParseResult<Option<T>>,
-    ) -> ParseResult<Sp<Vec<T>>> {
-        self.try_surrounded_list(open, close, item)?
-            .ok_or_else(|| self.expected([Expectation::Simple(open)]))
-    }
     fn try_term(&mut self) -> ParseResult<Option<Sp<Expr>>> {
         Ok(Some(if let Some(ident) = self.try_ident() {
             ident.map(Expr::Ident)
@@ -505,13 +503,9 @@ impl Parser {
             span.sp(Expr::Bool(false))
         } else if let Some(block) = self.try_block()? {
             block.map(Expr::Block)
-        } else if let Some(items) =
-            self.try_surrounded_list(OpenParen, CloseParen, Self::try_expr)?
-        {
+        } else if let Some(items) = self.try_surrounded_list(PARENS, Self::try_expr)? {
             items.map(Expr::Tuple)
-        } else if let Some(items) =
-            self.try_surrounded_list(OpenBracket, CloseBracket, Self::try_expr)?
-        {
+        } else if let Some(items) = self.try_surrounded_list(BRACKETS, Self::try_expr)? {
             items.map(Expr::Array)
         } else if let Some(whil) = self.try_while()? {
             whil.map(Box::new).map(Expr::While)
@@ -531,6 +525,26 @@ impl Parser {
             span.sp(Expr::Break)
         } else if let Some(span) = self.try_exact(Keyword::Continue) {
             span.sp(Expr::Continue)
+        } else if let Some(start) = self.try_exact(Keyword::Struct) {
+            let name = self.try_ident();
+            let start = name.as_ref().map(|n| n.span.clone()).unwrap_or(start);
+            let fields = self.surrounded_list(CURLIES, Self::try_param)?;
+            let end = fields.span;
+            let span = start.merge(end);
+            span.sp(Expr::Struct(Struct {
+                name,
+                fields: fields.value,
+            }))
+        } else if let Some(start) = self.try_exact(Keyword::Enum) {
+            let name = self.try_ident();
+            let start = name.as_ref().map(|n| n.span.clone()).unwrap_or(start);
+            let variants = self.surrounded_list(CURLIES, Self::try_variant)?;
+            let end = variants.span;
+            let span = start.merge(end);
+            span.sp(Expr::Enum(Enum {
+                name,
+                variants: variants.value,
+            }))
         } else {
             return Ok(None);
         }))
@@ -599,5 +613,20 @@ impl Parser {
             cond,
             then: then.value,
         })))
+    }
+    fn try_variant(&mut self) -> ParseResult<Option<Sp<Variant>>> {
+        let Some(name) = self.try_ident() else {
+            return Ok(None);
+        };
+        let fields = self.try_surrounded_list(PARENS, Self::try_ty)?;
+        Ok(Some(if let Some(fields) = fields {
+            let span = name.span.clone().merge(fields.span);
+            span.sp(Variant {
+                name,
+                fields: Some(fields.value),
+            })
+        } else {
+            name.span.clone().sp(Variant { name, fields: None })
+        }))
     }
 }

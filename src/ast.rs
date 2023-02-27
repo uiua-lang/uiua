@@ -44,6 +44,8 @@ pub struct Block {
 
 #[derive(Debug, Clone)]
 pub enum Expr {
+    Struct(Struct),
+    Enum(Enum),
     Ident(String),
     Tuple(Vec<Sp<Expr>>),
     Array(Vec<Sp<Expr>>),
@@ -163,6 +165,24 @@ impl fmt::Debug for IfElse {
 pub struct If {
     pub cond: Sp<Expr>,
     pub then: Block,
+}
+
+#[derive(Debug, Clone)]
+pub struct Struct {
+    pub name: Option<Sp<String>>,
+    pub fields: Vec<Param>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Enum {
+    pub name: Option<Sp<String>>,
+    pub variants: Vec<Sp<Variant>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Variant {
+    pub name: Sp<String>,
+    pub fields: Option<Vec<Sp<Type>>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

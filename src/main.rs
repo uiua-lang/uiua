@@ -18,7 +18,7 @@ fn main() {
     match parse(&input, path.as_ref()) {
         Ok(items) => {
             for item in items {
-                println!("{item:?}");
+                println!("{item:#?}");
             }
         }
         Err(errors) => {

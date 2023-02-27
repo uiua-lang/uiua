@@ -112,7 +112,8 @@ impl<T: Clone> Sp<&T> {
 
 impl<T: fmt::Debug> fmt::Debug for Sp<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {:?}", self.span, self.value)
+        write!(f, "{}: ", self.span)?;
+        self.value.fmt(f)
     }
 }
 
@@ -133,6 +134,27 @@ pub enum Token {
     Real(String),
     Keyword(Keyword),
     Simple(Simple),
+}
+
+impl Token {
+    pub fn as_ident(&self) -> Option<&str> {
+        match self {
+            Token::Ident(ident) => Some(ident),
+            _ => None,
+        }
+    }
+    pub fn as_integer(&self) -> Option<&str> {
+        match self {
+            Token::Integer(integer) => Some(integer),
+            _ => None,
+        }
+    }
+    pub fn as_real(&self) -> Option<&str> {
+        match self {
+            Token::Real(real) => Some(real),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -204,6 +226,7 @@ impl fmt::Display for Simple {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
 pub enum Keyword {
+    Let,
     Fn,
     If,
     Else,
@@ -214,6 +237,9 @@ pub enum Keyword {
     While,
     Break,
     Continue,
+    True,
+    False,
+    Not,
 }
 
 impl From<Keyword> for Token {

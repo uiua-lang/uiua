@@ -4,6 +4,13 @@ use crate::lex::Sp;
 pub enum Item {
     FunctionDef(FunctionDef),
     Expr(Sp<Expr>),
+    Binding(Binding),
+}
+
+#[derive(Debug, Clone)]
+pub struct Binding {
+    pub pattern: Sp<Pattern>,
+    pub expr: Sp<Expr>,
 }
 
 #[derive(Debug, Clone)]
@@ -29,37 +36,23 @@ pub enum Type {
 
 #[derive(Debug, Clone)]
 pub struct Block {
-    pub exprs: Vec<Sp<Expr>>,
+    pub items: Vec<Item>,
 }
 
 #[derive(Debug, Clone)]
 pub enum Expr {
     Ident(String),
     Tuple(Vec<Sp<Expr>>),
+    Array(Vec<Sp<Expr>>),
     Integer(String),
     Real(String),
+    Bool(bool),
     Bin(Box<BinExpr>),
     Un(Box<UnExpr>),
     Assign(Box<Assignment>),
     Block(Block),
     Call(Box<Call>),
-    Access(Sp<Box<Expr>>, Sp<Box<Accessor>>),
-}
-
-impl Expr {
-    pub fn as_pattern(&self) -> Option<Pattern> {
-        match self {
-            Expr::Ident(name) => Some(Pattern::Ident(name.clone())),
-            Expr::Tuple(exprs) => {
-                let mut patterns = Vec::new();
-                for expr in exprs {
-                    patterns.push(expr.span.clone().sp(expr.value.as_pattern()?));
-                }
-                Some(Pattern::Tuple(patterns))
-            }
-            _ => None,
-        }
-    }
+    Access(Box<Access>),
 }
 
 #[derive(Debug, Clone)]
@@ -77,7 +70,8 @@ pub struct UnExpr {
 
 #[derive(Debug, Clone)]
 pub struct Assignment {
-    pub lvalue: Sp<LValue>,
+    pub lvalue: Sp<Expr>,
+    pub op: Option<Sp<BinOp>>,
     pub expr: Sp<Expr>,
 }
 
@@ -85,6 +79,12 @@ pub struct Assignment {
 pub struct Call {
     pub expr: Sp<Expr>,
     pub args: Vec<Sp<Expr>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Access {
+    pub expr: Sp<Expr>,
+    pub accessor: Sp<Accessor>,
 }
 
 #[derive(Debug, Clone)]

@@ -1,4 +1,4 @@
-use uiua::{ir::Ir, lex::lex, parse::parse};
+use uiua::{lex::lex, parse::parse, transpile::Transpiler};
 
 fn main() {
     let path = "test.uiua";
@@ -23,11 +23,12 @@ fn main() {
         println!("{error}");
     }
     println!("\nIR:");
-    let mut ir = Ir::default();
-    println!("{ir:#?}");
-    if let Err(e) = ir.compile(&input, path.as_ref()) {
-        for e in e {
-            println!("{e}");
+    let mut transpile = Transpiler::default();
+    let res = transpile.transpile(&input, path.as_ref());
+    println!("{}", transpile.code);
+    if let Err(errors) = res {
+        for error in errors {
+            println!("{error}");
         }
     }
 }

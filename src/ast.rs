@@ -42,6 +42,12 @@ pub struct Block {
     pub items: Vec<Item>,
 }
 
+impl Block {
+    pub fn has_implicit_return(&self) -> bool {
+        matches!(self.items.last(), Some(Item::Expr(expr, false)) if !matches!(expr.value, Expr::Return(_)))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Expr {
     Struct(Struct),
@@ -64,6 +70,24 @@ pub enum Expr {
     Return(Option<Box<Sp<Expr>>>),
     Break,
     Continue,
+}
+
+impl Expr {
+    pub fn returns_value(&self) -> bool {
+        match self {
+            Expr::Struct(s) => s.name.is_none(),
+            Expr::Enum(e) => e.name.is_none(),
+            Expr::Return(_) | Expr::Break | Expr::Continue => false,
+            Expr::Block(block) => match block.items.last() {
+                Some(Item::Expr(expr, ended)) => expr.value.returns_value() && !*ended,
+                _ => false,
+            },
+            _ => true,
+        }
+    }
+    pub fn is_block(&self) -> bool {
+        matches!(self, Expr::Block(_))
+    }
 }
 
 #[derive(Clone)]

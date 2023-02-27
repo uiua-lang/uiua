@@ -5,7 +5,7 @@ use crate::lex::Sp;
 #[derive(Debug, Clone)]
 pub enum Item {
     FunctionDef(FunctionDef),
-    Expr(Sp<Expr>),
+    Expr(Sp<Expr>, bool),
     Binding(Binding),
 }
 

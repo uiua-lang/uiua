@@ -75,26 +75,29 @@ impl Error for ParseError {}
 
 pub type ParseResult<T = ()> = Result<T, Sp<ParseError>>;
 
-pub fn parse(input: &str, path: &Path) -> Result<Vec<Item>, Vec<Sp<ParseError>>> {
-    let tokens = lex(input, path).map_err(|e| vec![e.map(ParseError::Lex)])?;
+pub fn parse(input: &str, path: &Path) -> (Vec<Item>, Vec<Sp<ParseError>>) {
+    let tokens = match lex(input, path) {
+        Ok(tokens) => tokens,
+        Err(e) => return (Vec::new(), vec![e.map(ParseError::Lex)]),
+    };
     let mut items = Vec::new();
     let mut parser = Parser {
         tokens,
         index: 0,
         errors: Vec::new(),
     };
-    while let Some(item) = parser.try_item().map_err(|e| vec![e])? {
-        items.push(item);
+    loop {
+        match parser.try_item() {
+            Ok(Some(item)) => items.push(item),
+            Ok(None) => break,
+            Err(e) => parser.errors.push(e),
+        }
     }
     parser.next_token_map::<()>(|_| None);
     if parser.index != parser.tokens.len() {
         parser.errors.push(parser.expected([Expectation::Eof]));
     }
-    if parser.errors.is_empty() {
-        Ok(items)
-    } else {
-        Err(parser.errors)
-    }
+    (items, parser.errors)
 }
 
 struct Parser {
@@ -161,8 +164,8 @@ impl Parser {
         } else if let Some(binding) = self.try_binding()? {
             Item::Binding(binding)
         } else if let Some(expr) = self.try_expr()? {
-            self.try_exact(SemiColon);
-            Item::Expr(expr)
+            let ended = self.try_exact(SemiColon).is_some();
+            Item::Expr(expr, ended)
         } else {
             return Ok(None);
         }))

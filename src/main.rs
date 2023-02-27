@@ -1,4 +1,4 @@
-use uiua::{lex::lex, parse::parse};
+use uiua::{ir::Ir, lex::lex, parse::parse};
 
 fn main() {
     let path = "test.uiua";
@@ -15,16 +15,19 @@ fn main() {
         }
     };
     println!("\nAST:");
-    match parse(&input, path.as_ref()) {
-        Ok(items) => {
-            for item in items {
-                println!("{item:#?}");
-            }
-        }
-        Err(errors) => {
-            for error in errors {
-                println!("{error}");
-            }
+    let (items, errors) = parse(&input, path.as_ref());
+    for item in items {
+        println!("{item:#?}");
+    }
+    for error in errors {
+        println!("{error}");
+    }
+    println!("\nIR:");
+    let mut ir = Ir::default();
+    if let Err(e) = ir.compile(&input, path.as_ref()) {
+        for e in e {
+            println!("{e}");
         }
     }
+    println!("{ir:#?}");
 }

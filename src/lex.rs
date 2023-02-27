@@ -15,16 +15,16 @@ pub fn lex(input: &str, file: &Path) -> LexResult<Vec<Sp<Token>>> {
 
 #[derive(Debug)]
 pub enum LexError {
-    UnexpectedChar(char, Span),
-    Bang(Span),
+    UnexpectedChar(char),
+    Bang,
 }
 
 impl fmt::Display for LexError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LexError::UnexpectedChar(c, span) => write!(f, "{span}: unexpected char {c:?}"),
-            LexError::Bang(span) => {
-                write!(f, "{span}: unexpected char '!', maybe you meant 'not'?")
+            LexError::UnexpectedChar(c) => write!(f, "unexpected char {c:?}"),
+            LexError::Bang => {
+                write!(f, " unexpected char '!', maybe you meant 'not'?")
             }
         }
     }
@@ -32,9 +32,9 @@ impl fmt::Display for LexError {
 
 impl Error for LexError {}
 
-pub type LexResult<T = ()> = Result<T, LexError>;
+pub type LexResult<T = ()> = Result<T, Sp<LexError>>;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Loc {
     pub pos: usize,
     pub line: usize,
@@ -61,10 +61,53 @@ impl fmt::Display for Span {
     }
 }
 
+impl Span {
+    pub fn merge(self, end: Self) -> Self {
+        Self {
+            start: self.start.min(end.start),
+            end: self.end.max(end.end),
+            ..self
+        }
+    }
+    pub(crate) const fn sp<T>(self, value: T) -> Sp<T> {
+        Sp { value, span: self }
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct Sp<T> {
     pub value: T,
     pub span: Span,
+}
+
+impl<T> Sp<T> {
+    pub fn map<U, F: FnOnce(T) -> U>(self, f: F) -> Sp<U> {
+        Sp {
+            value: f(self.value),
+            span: self.span,
+        }
+    }
+    pub fn as_ref(&self) -> Sp<&T> {
+        Sp {
+            value: &self.value,
+            span: self.span.clone(),
+        }
+    }
+    pub fn filter_map<U>(self, f: impl FnOnce(T) -> Option<U>) -> Option<Sp<U>> {
+        f(self.value).map(|value| Sp {
+            value,
+            span: self.span,
+        })
+    }
+}
+
+impl<T: Clone> Sp<&T> {
+    pub fn cloned(self) -> Sp<T> {
+        Sp {
+            value: self.value.clone(),
+            span: self.span,
+        }
+    }
 }
 
 impl<T: fmt::Debug> fmt::Debug for Sp<T> {
@@ -79,7 +122,9 @@ impl<T: fmt::Display> fmt::Display for Sp<T> {
     }
 }
 
-#[derive(Debug, Clone)]
+impl<T: Error> Error for Sp<T> {}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
     Comment(String),
     DocComment(String),
@@ -87,6 +132,11 @@ pub enum Token {
     Integer(String),
     Real(String),
     Keyword(Keyword),
+    Simple(Simple),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Simple {
     OpenParen,
     CloseParen,
     OpenCurly,
@@ -115,6 +165,43 @@ pub enum Token {
     GreaterEqual,
 }
 
+impl fmt::Display for Simple {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Simple::OpenParen => "(",
+                Simple::CloseParen => ")",
+                Simple::OpenCurly => "{",
+                Simple::CloseCurly => "}",
+                Simple::OpenBracket => "[",
+                Simple::CloseBracket => "]",
+                Simple::Comma => ",",
+                Simple::Period => ".",
+                Simple::Colon => ":",
+                Simple::SemiColon => ";",
+                Simple::Arrow => "->",
+                Simple::Plus => "+",
+                Simple::PlusEquals => "+=",
+                Simple::Minus => "-",
+                Simple::MinusEquals => "-=",
+                Simple::Star => "*",
+                Simple::StarEquals => "*=",
+                Simple::Slash => "/",
+                Simple::SlashEquals => "/=",
+                Simple::Equals => "=",
+                Simple::Equal => "==",
+                Simple::NotEqual => "!=",
+                Simple::Less => "<",
+                Simple::LessEqual => "<=",
+                Simple::Greater => ">",
+                Simple::GreaterEqual => ">=",
+            }
+        )
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
 pub enum Keyword {
     Fn,
@@ -127,6 +214,18 @@ pub enum Keyword {
     While,
     Break,
     Continue,
+}
+
+impl From<Keyword> for Token {
+    fn from(k: Keyword) -> Self {
+        Self::Keyword(k)
+    }
+}
+
+impl From<Simple> for Token {
+    fn from(s: Simple) -> Self {
+        Self::Simple(s)
+    }
 }
 
 struct Lexer {
@@ -179,27 +278,31 @@ impl Lexer {
             input: self.input.clone(),
         }
     }
-    fn end(&self, token: Token, start: Loc) -> LexResult<Option<Sp<Token>>> {
+    fn end(&self, token: impl Into<Token>, start: Loc) -> LexResult<Option<Sp<Token>>> {
         Ok(Some(Sp {
-            value: token,
+            value: token.into(),
             span: self.end_span(start),
         }))
     }
-    fn switch_next<const N: usize>(
+    fn switch_next<T, U, const N: usize>(
         &mut self,
-        a: Token,
-        others: [(char, Token); N],
+        a: T,
+        others: [(char, U); N],
         start: Loc,
-    ) -> LexResult<Option<Sp<Token>>> {
+    ) -> LexResult<Option<Sp<Token>>>
+    where
+        T: Into<Token>,
+        U: Into<Token>,
+    {
         let token = others
             .into_iter()
             .find(|(c, _)| self.next_char_exact(*c))
-            .map(|(_, t)| t)
-            .unwrap_or(a);
+            .map(|(_, t)| t.into())
+            .unwrap_or(a.into());
         self.end(token, start)
     }
     fn next_token(&mut self) -> LexResult<Option<Sp<Token>>> {
-        use Token::*;
+        use {self::Simple::*, Token::*};
         loop {
             let start = self.loc;
             let Some(c) = self.next_char() else {
@@ -223,6 +326,7 @@ impl Lexer {
                     if self.next_char_exact('=') {
                         return self.end(SlashEquals, start);
                     } else if self.next_char_exact('/') {
+                        // Comments
                         let token = if self.next_char_exact('/') {
                             DocComment
                         } else {
@@ -232,8 +336,17 @@ impl Lexer {
                         while let Some(c) = self.next_char_if(|c| c != '\n') {
                             comment.push(c);
                         }
+                        let end = self.loc;
                         self.next_char();
-                        return self.end(token(comment.trim().into()), start);
+                        return Ok(Some(Sp {
+                            value: token(comment),
+                            span: Span {
+                                start,
+                                end,
+                                file: self.file.clone(),
+                                input: self.input.clone(),
+                            },
+                        }));
                     } else {
                         return self.end(Slash, start);
                     }
@@ -245,7 +358,7 @@ impl Lexer {
                     return if self.next_char_exact('=') {
                         self.end(NotEqual, start)
                     } else {
-                        Err(LexError::Bang(self.end_span(start)))
+                        Err(self.end_span(start).sp(LexError::Bang))
                     }
                 }
                 // Identifiers and keywords
@@ -296,7 +409,7 @@ impl Lexer {
                     return self.end(token, start);
                 }
                 c if c.is_whitespace() => {}
-                c => return Err(LexError::UnexpectedChar(c, self.end_span(start))),
+                c => return Err(self.end_span(start).sp(LexError::UnexpectedChar(c))),
             }
         }
     }

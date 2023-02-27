@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::lex::Sp;
 
 #[derive(Debug, Clone)]
@@ -18,6 +20,7 @@ pub struct FunctionDef {
     pub doc: Option<Sp<String>>,
     pub name: Sp<String>,
     pub params: Vec<Param>,
+    pub ret_ty: Option<Sp<Type>>,
     pub body: Block,
 }
 
@@ -53,13 +56,30 @@ pub enum Expr {
     Block(Block),
     Call(Box<Call>),
     Access(Box<Access>),
+    For(Box<For>),
+    While(Box<While>),
+    IfElse(Box<IfElse>),
+    Return(Option<Box<Sp<Expr>>>),
+    Break,
+    Continue,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct BinExpr {
     pub lhs: Sp<Expr>,
-    pub op: Sp<BinOp>,
-    pub rhs: Sp<Expr>,
+    pub rhs: Vec<(Sp<BinOp>, Sp<Expr>)>,
+}
+
+impl fmt::Debug for BinExpr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut tuple = f.debug_tuple("BinExpr");
+        tuple.field(&self.lhs);
+        for (op, rhs) in &self.rhs {
+            tuple.field(&op);
+            tuple.field(&rhs);
+        }
+        tuple.finish()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -105,6 +125,46 @@ pub enum Accessor {
     Index(Expr),
 }
 
+#[derive(Debug, Clone)]
+pub struct While {
+    pub cond: Sp<Expr>,
+    pub body: Block,
+}
+
+#[derive(Debug, Clone)]
+pub struct For {
+    pub pattern: Sp<Pattern>,
+    pub iter: Sp<Expr>,
+    pub body: Block,
+}
+
+#[derive(Clone)]
+pub struct IfElse {
+    pub first: If,
+    pub else_ifs: Vec<If>,
+    pub els: Option<Block>,
+}
+
+impl fmt::Debug for IfElse {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut list = f.debug_list();
+        list.entry(&self.first);
+        for else_if in &self.else_ifs {
+            list.entry(&else_if);
+        }
+        if let Some(els) = &self.els {
+            list.entry(&els);
+        }
+        list.finish()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct If {
+    pub cond: Sp<Expr>,
+    pub then: Block,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinOp {
     Add,
@@ -119,6 +179,7 @@ pub enum BinOp {
     Ge,
     And,
     Or,
+    RangeEx,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

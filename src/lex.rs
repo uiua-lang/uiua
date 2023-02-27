@@ -167,6 +167,7 @@ pub enum Simple {
     CloseBracket,
     Comma,
     Period,
+    Elipses,
     Colon,
     SemiColon,
     Arrow,
@@ -201,6 +202,7 @@ impl fmt::Display for Simple {
                 Simple::CloseBracket => "]",
                 Simple::Comma => ",",
                 Simple::Period => ".",
+                Simple::Elipses => "..",
                 Simple::Colon => ":",
                 Simple::SemiColon => ";",
                 Simple::Arrow => "->",
@@ -233,8 +235,9 @@ pub enum Keyword {
     Return,
     And,
     Or,
-    For,
     While,
+    For,
+    In,
     Break,
     Continue,
     True,
@@ -341,7 +344,7 @@ impl Lexer {
                 '}' => return self.end(CloseCurly, start),
                 '[' => return self.end(OpenBracket, start),
                 ']' => return self.end(CloseBracket, start),
-                '.' => return self.end(Period, start),
+                '.' => return self.switch_next(Period, [('.', Elipses)], start),
                 ':' => return self.end(Colon, start),
                 ';' => return self.end(SemiColon, start),
                 ',' => return self.end(Comma, start),
@@ -411,10 +414,15 @@ impl Lexer {
                         number.push(c);
                     }
                     // Fractional part
-                    if self.next_char_if(|c| c == '.').is_some() {
-                        number.push('.');
-                        while let Some(c) = self.next_char_if(|c| c.is_ascii_digit()) {
-                            number.push(c);
+                    let before_dot = self.loc;
+                    if self.next_char_exact('.') {
+                        if self.next_char_exact('.') {
+                            self.loc = before_dot;
+                        } else {
+                            number.push('.');
+                            while let Some(c) = self.next_char_if(|c| c.is_ascii_digit()) {
+                                number.push(c);
+                            }
                         }
                     }
                     // Exponent

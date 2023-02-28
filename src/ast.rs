@@ -39,17 +39,19 @@ pub enum Type {
 
 #[derive(Debug, Clone)]
 pub enum Expr {
-    Struct(Struct),
-    Enum(Enum),
-    Ident(String),
-    Tuple(Vec<Sp<Expr>>),
-    Array(Vec<Sp<Expr>>),
-    Integer(String),
-    Real(String),
-    Bool(bool),
     Bin(Box<BinExpr>),
     Un(Box<UnExpr>),
     If(Box<IfExpr>),
+    Call(Box<CallExpr>),
+    Struct(Struct),
+    Enum(Enum),
+    Bool(bool),
+    Integer(String),
+    Real(String),
+    Ident(String),
+    Tuple(Vec<Sp<Expr>>),
+    Array(Vec<Sp<Expr>>),
+    Parened(Box<Expr>),
 }
 
 #[derive(Clone)]
@@ -87,6 +89,12 @@ pub struct IfExpr {
     pub cond: Sp<Expr>,
     pub if_true: Sp<Expr>,
     pub if_false: Sp<Expr>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CallExpr {
+    pub func: Sp<Expr>,
+    pub args: Vec<Sp<Expr>>,
 }
 
 #[derive(Debug, Clone)]

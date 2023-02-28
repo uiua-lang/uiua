@@ -409,8 +409,24 @@ impl Parser {
             let span = start.merge(end);
             Ok(Some(span.sp(Expr::Un(Box::new(UnExpr { op, expr })))))
         } else {
-            self.try_term()
+            self.try_call()
         }
+    }
+    fn try_call(&mut self) -> ParseResult<Option<Sp<Expr>>> {
+        let Some(func) = self.try_term()? else {
+            return Ok(None);
+        };
+        let mut args = Vec::new();
+        while let Some(arg) = self.try_term()? {
+            args.push(arg);
+        }
+        if args.is_empty() {
+            return Ok(Some(func));
+        }
+        let start = func.span.clone();
+        let end = args.last().map(|a| a.span.clone()).unwrap_or(start.clone());
+        let span = start.merge(end);
+        Ok(Some(span.sp(Expr::Call(Box::new(CallExpr { func, args })))))
     }
     fn try_term(&mut self) -> ParseResult<Option<Sp<Expr>>> {
         Ok(Some(if let Some(ident) = self.try_ident() {
@@ -423,8 +439,23 @@ impl Parser {
             span.sp(Expr::Bool(true))
         } else if let Some(span) = self.try_exact(Keyword::False) {
             span.sp(Expr::Bool(false))
-        } else if let Some(items) = self.try_surrounded_list(PARENS, Self::try_expr)? {
-            items.map(Expr::Tuple)
+        } else if let Some(start) = self.try_exact(OpenParen) {
+            let mut items = Vec::new();
+            let mut comma_ended = true;
+            while let Some(item) = self.try_expr()? {
+                items.push(item);
+                if self.try_exact(Comma).is_none() {
+                    comma_ended = false;
+                    break;
+                }
+            }
+            let end = self.expect(CloseParen)?;
+            let span = start.merge(end);
+            span.sp(if !comma_ended && items.len() == 1 {
+                Expr::Parened(items.remove(0).value.into())
+            } else {
+                Expr::Tuple(items)
+            })
         } else if let Some(items) = self.try_surrounded_list(BRACKETS, Self::try_expr)? {
             items.map(Expr::Array)
         } else if let Some(if_else) = self.try_if()? {

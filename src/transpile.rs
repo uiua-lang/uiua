@@ -84,9 +84,11 @@ impl Transpiler {
             self.add(param.name.value);
         }
         self.line(")");
+        self.indentation += 1;
         self.add("return ");
         self.expr(def.body)?;
         self.ensure_line();
+        self.indentation -= 1;
         self.line("end");
         Ok(())
     }
@@ -132,7 +134,23 @@ impl Transpiler {
             Expr::Bin(bin) => self.bin_expr(*bin)?,
             Expr::Un(_) => todo!(),
             Expr::If(if_expr) => self.if_expr(*if_expr)?,
+            Expr::Call(call) => self.call(*call)?,
+            Expr::Parened(inner) => {
+                self.expr(expr.span.sp(*inner))?;
+            }
         }
+        Ok(())
+    }
+    fn call(&mut self, call: CallExpr) -> TranspileResult {
+        self.expr(call.func)?;
+        self.add("(");
+        for (i, arg) in call.args.into_iter().enumerate() {
+            if i > 0 {
+                self.add(", ");
+            }
+            self.expr(arg)?;
+        }
+        self.add(")");
         Ok(())
     }
     fn bin_expr(&mut self, bin: BinExpr) -> TranspileResult {

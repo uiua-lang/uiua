@@ -1,4 +1,4 @@
-use std::{error::Error, fmt, path::Path};
+use std::{error::Error, fmt, mem::take, path::Path};
 
 use crate::{
     ast::*,
@@ -108,7 +108,53 @@ impl Transpiler {
                 self.expr(binding.expr)?;
                 self.ensure_line();
             }
-            Pattern::Tuple(_) => todo!(),
+            Pattern::Tuple(items) => {
+                // Initial expression binding
+                self.add("local ");
+                let mut groups = Vec::new();
+                for (i, item) in items.into_iter().enumerate() {
+                    if i > 0 {
+                        self.add(", ");
+                    }
+                    match item.value {
+                        Pattern::Ident(ident) => self.add(ident),
+                        Pattern::Tuple(items) => {
+                            let name = format!("tuple_{}", i);
+                            self.add(name.clone());
+                            groups.push((name, items));
+                        }
+                    }
+                }
+                self.add(" = ");
+                self.add("unpack(");
+                self.expr(binding.expr)?;
+                self.add(")");
+                self.ensure_line();
+                // Subpattern bindings
+                while !groups.is_empty() {
+                    for (name, items) in take(&mut groups) {
+                        self.add("local ");
+                        for (i, item) in items.into_iter().enumerate() {
+                            if i > 0 {
+                                self.add(", ");
+                            }
+                            match item.value {
+                                Pattern::Ident(ident) => self.add(ident),
+                                Pattern::Tuple(items) => {
+                                    let name = format!("tuple_{}_{}", name, i);
+                                    self.add(name.clone());
+                                    groups.push((name, items));
+                                }
+                            }
+                        }
+                        self.add(" = ");
+                        self.add("unpack(");
+                        self.add(name);
+                        self.add(")");
+                        self.ensure_line();
+                    }
+                }
+            }
         }
         Ok(())
     }

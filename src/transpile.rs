@@ -71,7 +71,13 @@ impl Transpiler {
         self.code.push('\n');
     }
     fn ensure_line(&mut self) {
-        if !self.code.ends_with('\n') {
+        let ends_with_newline = self
+            .code
+            .chars()
+            .rev()
+            .find(|c| *c != ' ')
+            .map_or(true, |c| c == '\n');
+        if !ends_with_newline {
             self.code.push('\n');
         }
     }
@@ -85,8 +91,11 @@ impl Transpiler {
         }
         self.line(")");
         self.indentation += 1;
+        for binding in def.bindings {
+            self.binding(binding)?;
+        }
         self.add("return ");
-        self.expr(def.body)?;
+        self.expr(def.ret)?;
         self.ensure_line();
         self.indentation -= 1;
         self.line("end");
@@ -101,7 +110,6 @@ impl Transpiler {
             }
             Pattern::Tuple(_) => todo!(),
         }
-        self.line("");
         Ok(())
     }
     fn expr(&mut self, expr: Sp<Expr>) -> TranspileResult {
@@ -132,7 +140,7 @@ impl Transpiler {
             ),
             Expr::Bool(b) => self.add(b.to_string()),
             Expr::Bin(bin) => self.bin_expr(*bin)?,
-            Expr::Un(_) => todo!(),
+            Expr::Un(un) => self.un_expr(*un)?,
             Expr::If(if_expr) => self.if_expr(*if_expr)?,
             Expr::Call(call) => self.call(*call)?,
             Expr::Parened(inner) => {
@@ -176,6 +184,14 @@ impl Transpiler {
             ));
             self.expr(rhs)?;
         }
+        Ok(())
+    }
+    fn un_expr(&mut self, un: UnExpr) -> TranspileResult {
+        self.add(match un.op.value {
+            UnOp::Neg => "-",
+            UnOp::Not => "not ",
+        });
+        self.expr(un.expr)?;
         Ok(())
     }
     fn if_expr(&mut self, if_expr: IfExpr) -> TranspileResult {

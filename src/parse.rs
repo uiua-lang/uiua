@@ -206,14 +206,20 @@ impl Parser {
             None
         };
         self.expect(Colon)?;
-        // Body
-        let body = self.expr()?;
+        // Bindings
+        let mut bindings = Vec::new();
+        while let Some(binding) = self.try_binding()? {
+            bindings.push(binding);
+        }
+        // Return
+        let ret = self.expr()?;
         Ok(Some(FunctionDef {
             doc,
             name,
             params,
             ret_ty,
-            body,
+            bindings,
+            ret,
         }))
     }
     fn try_binding(&mut self) -> ParseResult<Option<Binding>> {
@@ -223,7 +229,7 @@ impl Parser {
         let pattern = self.pattern()?;
         self.expect(Equals)?;
         let expr = self.expr()?;
-        self.try_exact(SemiColon);
+        self.expect(SemiColon)?;
         Ok(Some(Binding { pattern, expr }))
     }
     fn try_pattern(&mut self) -> ParseResult<Option<Sp<Pattern>>> {

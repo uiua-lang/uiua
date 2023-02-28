@@ -376,29 +376,25 @@ impl Parser {
                 this.try_un_expr()
             }
         };
-        let Some(lhs) = leaf(self)? else{
+        let Some(mut expr) = leaf(self)? else{
             return Ok(None);
         };
-        let mut rhs = Vec::new();
         'rhs: loop {
             for (token, op) in def.ops {
                 if let Some(op_span) = self.try_exact(token.clone()) {
                     let op = op_span.sp(*op);
                     let right = self.expect_expr(leaf)?;
-                    rhs.push((op, right));
+                    let span = expr.span.clone().merge(right.span.clone());
+                    expr = span.sp(Expr::Call(Box::new(CallExpr {
+                        func: op.map(CallKind::Binary),
+                        args: vec![expr, right],
+                    })));
                     continue 'rhs;
                 }
             }
             break;
         }
-        if let Some(last) = rhs.last() {
-            let start = lhs.span.clone();
-            let end = last.1.span.clone();
-            let span = start.merge(end);
-            Ok(Some(span.sp(Expr::Bin(Box::new(BinExpr { lhs, rhs })))))
-        } else {
-            Ok(Some(lhs))
-        }
+        Ok(Some(expr))
     }
     fn try_un_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
         if let Some(op) = [
@@ -412,7 +408,10 @@ impl Parser {
             let start = op.span.clone();
             let end = expr.span.clone();
             let span = start.merge(end);
-            Ok(Some(span.sp(Expr::Un(Box::new(UnExpr { op, expr })))))
+            Ok(Some(span.sp(Expr::Call(Box::new(CallExpr {
+                func: op.map(CallKind::Unary),
+                args: vec![expr],
+            })))))
         } else {
             self.try_call()
         }
@@ -431,7 +430,10 @@ impl Parser {
         let start = func.span.clone();
         let end = args.last().map(|a| a.span.clone()).unwrap_or(start.clone());
         let span = start.merge(end);
-        Ok(Some(span.sp(Expr::Call(Box::new(CallExpr { func, args })))))
+        Ok(Some(span.sp(Expr::Call(Box::new(CallExpr {
+            func: func.map(CallKind::Normal),
+            args,
+        })))))
     }
     fn try_term(&mut self) -> ParseResult<Option<Sp<Expr>>> {
         Ok(Some(if let Some(ident) = self.try_ident() {

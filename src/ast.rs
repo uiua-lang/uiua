@@ -1,5 +1,3 @@
-use std::fmt;
-
 use crate::lex::Sp;
 
 #[derive(Debug, Clone)]
@@ -40,8 +38,6 @@ pub enum Type {
 
 #[derive(Debug, Clone)]
 pub enum Expr {
-    Bin(Box<BinExpr>),
-    Un(Box<UnExpr>),
     If(Box<IfExpr>),
     Call(Box<CallExpr>),
     Struct(Struct),
@@ -53,30 +49,6 @@ pub enum Expr {
     Tuple(Vec<Sp<Expr>>),
     List(Vec<Sp<Expr>>),
     Parened(Box<Expr>),
-}
-
-#[derive(Clone)]
-pub struct BinExpr {
-    pub lhs: Sp<Expr>,
-    pub rhs: Vec<(Sp<BinOp>, Sp<Expr>)>,
-}
-
-impl fmt::Debug for BinExpr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut tuple = f.debug_tuple("BinExpr");
-        tuple.field(&self.lhs);
-        for (op, rhs) in &self.rhs {
-            tuple.field(&op);
-            tuple.field(&rhs);
-        }
-        tuple.finish()
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct UnExpr {
-    pub op: Sp<UnOp>,
-    pub expr: Sp<Expr>,
 }
 
 #[derive(Debug, Clone)]
@@ -94,8 +66,15 @@ pub struct IfExpr {
 
 #[derive(Debug, Clone)]
 pub struct CallExpr {
-    pub func: Sp<Expr>,
+    pub func: Sp<CallKind>,
     pub args: Vec<Sp<Expr>>,
+}
+
+#[derive(Debug, Clone)]
+pub enum CallKind {
+    Normal(Expr),
+    Unary(UnOp),
+    Binary(BinOp),
 }
 
 #[derive(Debug, Clone)]

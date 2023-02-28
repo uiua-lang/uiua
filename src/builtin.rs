@@ -32,6 +32,7 @@ impl Runtime {
                     .function_replacements
                     .insert(uiua_name.into(), format!("uiua.{}", lua_name));
                 self.transpiler
+                    .checker
                     .scope_mut()
                     .bindings
                     .insert(uiua_name.into(), Type::Function(uiua_type.into()));

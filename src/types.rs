@@ -1,11 +1,5 @@
 use std::fmt;
 
-use crate::{
-    ast::Expr,
-    lex::Sp,
-    transpile::{TranspileError, TranspileResult, Transpiler},
-};
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type {
     Unit,
@@ -74,34 +68,5 @@ impl fmt::Display for FunctionType {
         } else {
             Ok(())
         }
-    }
-}
-
-impl Transpiler {
-    pub fn expr_type(&self, expr: &Sp<Expr>) -> TranspileResult<Type> {
-        Ok(match &expr.value {
-            Expr::Bin(_) => todo!(),
-            Expr::Un(_) => todo!(),
-            Expr::If(_) => todo!(),
-            Expr::Call(_) => todo!(),
-            Expr::Struct(_) => todo!(),
-            Expr::Enum(_) => todo!(),
-            Expr::Bool(_) => Type::Bool,
-            Expr::Integer(_) => Type::Int,
-            Expr::Real(_) => Type::Real,
-            Expr::Ident(name) => self.find_binding(name).ok_or_else(|| {
-                expr.span
-                    .clone()
-                    .sp(TranspileError::UnknownBinding(name.clone()))
-            })?,
-            Expr::Tuple(items) => Type::Tuple(
-                items
-                    .iter()
-                    .map(|item| self.expr_type(item))
-                    .collect::<TranspileResult<_>>()?,
-            ),
-            Expr::List(_) => todo!(),
-            Expr::Parened(inner) => self.expr_type(&expr.span.clone().sp((**inner).clone()))?,
-        })
     }
 }

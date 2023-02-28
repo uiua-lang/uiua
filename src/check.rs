@@ -1,10 +1,10 @@
-use std::{collections::HashMap, fmt, path::Path};
+use std::{cmp::Ordering, collections::HashMap, fmt, path::Path};
 
 use crate::{
     ast,
     lex::Sp,
     parse::{parse, ParseError},
-    types::Type,
+    types::{FunctionType, Type},
 };
 
 #[derive(Debug)]
@@ -15,6 +15,8 @@ pub enum CheckError {
     UnknownBinding(String),
     UnknownType(String),
     TypeMismatch(Type, Type),
+    CallNonFunction(Type),
+    TooManyArguments(usize, usize),
 }
 
 impl fmt::Display for CheckError {
@@ -27,6 +29,10 @@ impl fmt::Display for CheckError {
             CheckError::UnknownType(s) => write!(f, "unknown type: {s}"),
             CheckError::TypeMismatch(expected, actual) => {
                 write!(f, "type mismatch: expected {expected}, got {actual}")
+            }
+            CheckError::CallNonFunction(ty) => write!(f, "cannot call non-function: {ty}"),
+            CheckError::TooManyArguments(expected, actual) => {
+                write!(f, "too many arguments: expected {expected}, got {actual}")
             }
         }
     }
@@ -64,10 +70,14 @@ pub enum Pattern {
 
 pub enum Expr {
     Ident(String),
+    Bool(bool),
     Nat(u64),
     Int(i64),
     Real(f64),
     If(Box<IfExpr>),
+    Tuple(Vec<Expr>),
+    List(Vec<Expr>),
+    Call(Box<CallExpr>),
 }
 
 impl Expr {
@@ -82,6 +92,11 @@ pub struct IfExpr {
     pub if_false: Expr,
 }
 
+pub struct CallExpr {
+    pub func: Expr,
+    pub args: Vec<Expr>,
+}
+
 pub struct TypedExpr {
     pub expr: Expr,
     pub ty: Type,
@@ -93,8 +108,8 @@ pub struct Checker {
 }
 
 #[derive(Default)]
-struct Scope {
-    bindings: HashMap<String, Type>,
+pub(crate) struct Scope {
+    pub bindings: HashMap<String, Type>,
 }
 
 impl Default for Checker {
@@ -129,7 +144,7 @@ impl Checker {
             .find_map(|scope| scope.bindings.get(name))
             .cloned()
     }
-    fn scope_mut(&mut self) -> &mut Scope {
+    pub(crate) fn scope_mut(&mut self) -> &mut Scope {
         self.scopes.last_mut().unwrap()
     }
     fn item(&mut self, item: ast::Item) -> CheckResult<Item> {
@@ -204,13 +219,11 @@ impl Checker {
     }
     fn expr(&mut self, expr: Sp<ast::Expr>) -> CheckResult<TypedExpr> {
         Ok(match expr.value {
-            ast::Expr::Bin(_) => todo!(),
-            ast::Expr::Un(_) => todo!(),
             ast::Expr::If(if_expr) => self.if_expr(*if_expr)?,
-            ast::Expr::Call(_) => todo!(),
+            ast::Expr::Call(call) => self.call_expr(*call)?,
             ast::Expr::Struct(_) => todo!(),
             ast::Expr::Enum(_) => todo!(),
-            ast::Expr::Bool(_) => todo!(),
+            ast::Expr::Bool(b) => Expr::Bool(b).typed(Type::Bool),
             ast::Expr::Integer(i) => Expr::Int(
                 i.parse()
                     .map_err(|_| expr.span.sp(CheckError::InvalidInteger(i)))?,
@@ -228,9 +241,33 @@ impl Checker {
                     return Err(expr.span.sp(CheckError::UnknownBinding(name)));
                 }
             }
-            ast::Expr::Tuple(_) => todo!(),
-            ast::Expr::List(_) => todo!(),
-            ast::Expr::Parened(_) => todo!(),
+            ast::Expr::Tuple(items) => {
+                let items: Vec<TypedExpr> = items
+                    .into_iter()
+                    .map(|item| self.expr(item))
+                    .collect::<CheckResult<_>>()?;
+                let mut exprs = Vec::new();
+                let mut types = Vec::new();
+                for item in items {
+                    exprs.push(item.expr);
+                    types.push(item.ty);
+                }
+                Expr::Tuple(exprs).typed(Type::Tuple(types))
+            }
+            ast::Expr::List(items) => {
+                let mut ty: Option<Type> = None;
+                let mut exprs = Vec::new();
+                for item in items {
+                    let item = self.expr(item)?;
+                    let ty = ty.get_or_insert(item.ty.clone());
+                    if *ty != item.ty {
+                        return Err(expr.span.sp(CheckError::TypeMismatch(ty.clone(), item.ty)));
+                    }
+                    exprs.push(item.expr);
+                }
+                Expr::List(exprs).typed(Type::List(Box::new(ty.unwrap_or(Type::Unkown))))
+            }
+            ast::Expr::Parened(inner) => self.expr(expr.span.sp(*inner))?,
         })
     }
     fn ty(&mut self, ty: Sp<ast::Type>) -> CheckResult<Type> {
@@ -267,5 +304,45 @@ impl Checker {
             if_false: if_false.expr,
         }))
         .typed(if_true.ty))
+    }
+    fn call_expr(&mut self, call: ast::CallExpr) -> CheckResult<TypedExpr> {
+        let func_span = call.func.span.clone();
+        let func = match call.func.value {
+            ast::CallKind::Normal(func) => self.expr(call.func.span.sp(func))?,
+            ast::CallKind::Unary(_) => todo!(),
+            ast::CallKind::Binary(_) => todo!(),
+        };
+        let Type::Function(func_type) = func.ty else {
+            return Err(func_span.sp(CheckError::CallNonFunction(func.ty)));
+        };
+        let mut args = Vec::new();
+        let mut arg_types = Vec::new();
+        for (param_ty, ast_arg) in func_type.params.iter().zip(call.args) {
+            let arg_span = ast_arg.span.clone();
+            let arg = self.expr(ast_arg)?;
+            if param_ty != &arg.ty {
+                return Err(arg_span.sp(CheckError::TypeMismatch(param_ty.clone(), arg.ty)));
+            }
+            args.push(arg.expr);
+            arg_types.push(arg.ty);
+        }
+        let ty = match func_type.params.len().cmp(&args.len()) {
+            Ordering::Less => {
+                return Err(func_span.sp(CheckError::TooManyArguments(
+                    func_type.params.len(),
+                    args.len(),
+                )));
+            }
+            Ordering::Equal => func_type.ret.clone(),
+            Ordering::Greater => Type::Function(Box::new(FunctionType {
+                params: func_type.params[args.len()..].to_vec(),
+                ret: func_type.ret.clone(),
+            })),
+        };
+        Ok(Expr::Call(Box::new(CallExpr {
+            func: func.expr,
+            args,
+        }))
+        .typed(ty))
     }
 }

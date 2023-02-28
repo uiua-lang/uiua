@@ -1,46 +1,11 @@
-use std::{collections::HashMap, error::Error, fmt, io, mem::take, path::Path};
+use std::{collections::HashMap, mem::take, path::Path};
 
-use crate::{
-    ast::*,
-    lex::Sp,
-    parse::{parse, ParseError},
-    types::Type,
-};
+use crate::{check::*, lex::Sp};
 
-#[derive(Debug)]
-pub enum TranspileError {
-    Io(io::Error),
-    Parse(ParseError),
-    InvalidInteger(String),
-    InvalidReal(String),
-    UnknownBinding(String),
-    TypeMismatch(Type, Type),
-}
-
-impl fmt::Display for TranspileError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            TranspileError::Io(e) => write!(f, "{e}"),
-            TranspileError::Parse(e) => write!(f, "{e}"),
-            TranspileError::InvalidInteger(s) => write!(f, "invalid integer: {s}"),
-            TranspileError::InvalidReal(s) => write!(f, "invalid real: {s}"),
-            TranspileError::UnknownBinding(s) => write!(f, "unknown binding: {s}"),
-            TranspileError::TypeMismatch(expected, actual) => {
-                write!(f, "type mismatch: expected {expected}, got {actual}")
-            }
-        }
-    }
-}
-
-impl Error for TranspileError {}
-
-pub type TranspileResult<T = ()> = Result<T, Sp<TranspileError>>;
-
-#[derive(Debug)]
 pub struct Transpiler {
+    pub(crate) checker: Checker,
     pub(crate) code: String,
     indentation: usize,
-    scopes: Vec<Scope>,
     pub(crate) function_replacements: HashMap<String, String>,
 }
 
@@ -50,45 +15,19 @@ impl Default for Transpiler {
     }
 }
 
-#[derive(Debug, Default)]
-pub(crate) struct Scope {
-    pub bindings: HashMap<String, Type>,
-}
-
 impl Transpiler {
     pub(crate) fn new() -> Self {
         Self {
+            checker: Checker::default(),
             code: String::new(),
             indentation: 0,
-            scopes: vec![Scope::default()],
             function_replacements: HashMap::new(),
         }
     }
-    pub(crate) fn scope_mut(&mut self) -> &mut Scope {
-        self.scopes.last_mut().unwrap()
-    }
-    pub(crate) fn find_binding(&self, name: &str) -> Option<Type> {
-        self.scopes
-            .iter()
-            .rev()
-            .find_map(|scope| scope.bindings.get(name))
-            .cloned()
-    }
-    pub fn transpile(&mut self, input: &str, path: &Path) -> Result<(), Vec<Sp<TranspileError>>> {
-        let (items, errors) = parse(input, path);
-
-        for item in &items {
-            println!("{item:#?}");
-        }
-
-        let mut errors: Vec<_> = errors
-            .into_iter()
-            .map(|e| e.map(TranspileError::Parse))
-            .collect();
+    pub fn transpile(&mut self, input: &str, path: &Path) -> Result<(), Vec<Sp<CheckError>>> {
+        let (items, errors) = self.checker.load(input, path);
         for item in items {
-            if let Err(e) = self.item(item) {
-                errors.push(e);
-            }
+            self.item(item);
         }
         if errors.is_empty() {
             Ok(())
@@ -96,10 +35,10 @@ impl Transpiler {
             Err(errors)
         }
     }
-    fn item(&mut self, item: Item) -> TranspileResult {
+    fn item(&mut self, item: Item) {
         match item {
             Item::FunctionDef(def) => self.function_def(def),
-            Item::Expr(expr) => self.expr(expr),
+            Item::Expr(expr) => self.expr(expr.expr),
             Item::Binding(binding) => self.binding(binding),
         }
     }
@@ -126,42 +65,41 @@ impl Transpiler {
             self.code.push('\n');
         }
     }
-    fn function_def(&mut self, def: FunctionDef) -> TranspileResult {
-        self.add(format!("function {}(", def.name.value));
+    fn function_def(&mut self, def: FunctionDef) {
+        self.add(format!("function {}(", def.name));
         for (i, param) in def.params.into_iter().enumerate() {
             if i > 0 {
                 self.add(", ");
             }
-            self.add(param.name.value);
+            self.add(param.name);
         }
         self.line(")");
         self.indentation += 1;
         for binding in def.bindings {
-            self.binding(binding)?;
+            self.binding(binding);
         }
         self.add("return ");
-        self.expr(def.expr)?;
+        self.expr(def.expr.expr);
         self.ensure_line();
         self.indentation -= 1;
         self.line("end");
-        Ok(())
     }
-    fn binding(&mut self, binding: Binding) -> TranspileResult {
-        match binding.pattern.value {
+    fn binding(&mut self, binding: Binding) {
+        match binding.pattern {
             Pattern::Ident(ident) => {
                 self.add(format!("local {ident} = "));
-                self.expr(binding.expr)?;
+                self.expr(binding.expr.expr);
                 self.ensure_line();
             }
             Pattern::Tuple(items) => {
                 // Initial expression binding
                 self.add("local ");
                 let mut groups = Vec::new();
-                for (i, item) in items.into_iter().enumerate() {
+                for (i, pattern) in items.into_iter().enumerate() {
                     if i > 0 {
                         self.add(", ");
                     }
-                    match item.value {
+                    match pattern {
                         Pattern::Ident(ident) => self.add(ident),
                         Pattern::Tuple(items) => {
                             let name = format!("tuple_{}", i);
@@ -172,18 +110,18 @@ impl Transpiler {
                 }
                 self.add(" = ");
                 self.add("unpack(");
-                self.expr(binding.expr)?;
+                self.expr(binding.expr.expr);
                 self.add(")");
                 self.ensure_line();
                 // Subpattern bindings
                 while !groups.is_empty() {
-                    for (name, items) in take(&mut groups) {
+                    for (name, patterns) in take(&mut groups) {
                         self.add("local ");
-                        for (i, item) in items.into_iter().enumerate() {
+                        for (i, pattern) in patterns.into_iter().enumerate() {
                             if i > 0 {
                                 self.add(", ");
                             }
-                            match item.value {
+                            match pattern {
                                 Pattern::Ident(ident) => self.add(ident),
                                 Pattern::Tuple(items) => {
                                     let name = format!("tuple_{}_{}", name, i);
@@ -201,12 +139,9 @@ impl Transpiler {
                 }
             }
         }
-        Ok(())
     }
-    fn expr(&mut self, expr: Sp<Expr>) -> TranspileResult {
-        match expr.value {
-            Expr::Struct(_) => todo!(),
-            Expr::Enum(_) => todo!(),
+    fn expr(&mut self, expr: Expr) {
+        match expr {
             Expr::Ident(ident) => self.add(ident),
             Expr::Tuple(items) => {
                 self.add("{");
@@ -214,83 +149,35 @@ impl Transpiler {
                     if i > 0 {
                         self.add(", ");
                     }
-                    self.expr(item)?;
+                    self.expr(item);
                 }
                 self.add("}");
             }
             Expr::List(_) => todo!(),
-            Expr::Integer(i) => self.add(
-                i.parse::<u64>()
-                    .map_err(|_| expr.span.sp(TranspileError::InvalidInteger(i)))?
-                    .to_string(),
-            ),
-            Expr::Real(r) => self.add(
-                r.parse::<f64>()
-                    .map_err(|_| expr.span.sp(TranspileError::InvalidReal(r)))?
-                    .to_string(),
-            ),
+            Expr::Nat(n) => self.add(n.to_string()),
+            Expr::Int(i) => self.add(i.to_string()),
+            Expr::Real(r) => self.add(r.to_string()),
             Expr::Bool(b) => self.add(b.to_string()),
-            Expr::Bin(bin) => self.bin_expr(*bin)?,
-            Expr::Un(un) => self.un_expr(*un)?,
-            Expr::If(if_expr) => self.if_expr(*if_expr)?,
-            Expr::Call(call) => self.call(*call)?,
-            Expr::Parened(inner) => {
-                self.expr(expr.span.sp(*inner))?;
-            }
+            Expr::If(if_expr) => self.if_expr(*if_expr),
+            Expr::Call(call) => self.call(*call),
         }
-        Ok(())
     }
-    fn call(&mut self, call: CallExpr) -> TranspileResult {
-        self.expr(call.func)?;
+    fn call(&mut self, call: CallExpr) {
+        self.expr(call.func);
         self.add("(");
         for (i, arg) in call.args.into_iter().enumerate() {
             if i > 0 {
                 self.add(", ");
             }
-            self.expr(arg)?;
+            self.expr(arg);
         }
         self.add(")");
-        Ok(())
     }
-    fn bin_expr(&mut self, bin: BinExpr) -> TranspileResult {
-        self.expr(bin.lhs)?;
-        for (op, rhs) in bin.rhs {
-            self.add(format!(
-                " {} ",
-                match op.value {
-                    BinOp::Add => "+",
-                    BinOp::Sub => "-",
-                    BinOp::Mul => "*",
-                    BinOp::Div => "/",
-                    BinOp::Eq => "==",
-                    BinOp::Ne => "~=",
-                    BinOp::Lt => "<",
-                    BinOp::Le => "<=",
-                    BinOp::Gt => ">",
-                    BinOp::Ge => ">=",
-                    BinOp::And => "and",
-                    BinOp::Or => "or",
-                    BinOp::RangeEx => todo!(),
-                }
-            ));
-            self.expr(rhs)?;
-        }
-        Ok(())
-    }
-    fn un_expr(&mut self, un: UnExpr) -> TranspileResult {
-        self.add(match un.op.value {
-            UnOp::Neg => "-",
-            UnOp::Not => "not ",
-        });
-        self.expr(un.expr)?;
-        Ok(())
-    }
-    fn if_expr(&mut self, if_expr: IfExpr) -> TranspileResult {
-        self.expr(if_expr.cond)?;
+    fn if_expr(&mut self, if_expr: IfExpr) {
+        self.expr(if_expr.cond);
         self.add(" and ");
-        self.expr(if_expr.if_true)?;
+        self.expr(if_expr.if_true);
         self.add(" or ");
-        self.expr(if_expr.if_false)?;
-        Ok(())
+        self.expr(if_expr.if_false);
     }
 }

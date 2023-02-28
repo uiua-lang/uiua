@@ -13,15 +13,16 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use check::CheckError;
 use mlua::Lua;
 
 use lex::Sp;
-use transpile::{TranspileError, Transpiler};
+use transpile::Transpiler;
 
 #[derive(Debug)]
 pub enum RuntimeError {
     Load(PathBuf, io::Error),
-    Transpile(Vec<Sp<TranspileError>>),
+    Check(Vec<Sp<CheckError>>),
     NoMain,
 }
 
@@ -31,7 +32,7 @@ impl fmt::Display for RuntimeError {
             RuntimeError::Load(path, e) => {
                 write!(f, "failed to load {}: {e}", path.to_string_lossy())
             }
-            RuntimeError::Transpile(errors) => {
+            RuntimeError::Check(errors) => {
                 for error in errors {
                     writeln!(f, "{error}")?;
                 }
@@ -42,9 +43,9 @@ impl fmt::Display for RuntimeError {
     }
 }
 
-impl From<Vec<Sp<TranspileError>>> for RuntimeError {
-    fn from(errors: Vec<Sp<TranspileError>>) -> Self {
-        Self::Transpile(errors)
+impl From<Vec<Sp<CheckError>>> for RuntimeError {
+    fn from(errors: Vec<Sp<CheckError>>) -> Self {
+        Self::Check(errors)
     }
 }
 

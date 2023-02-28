@@ -69,6 +69,7 @@ pub enum Pattern {
 }
 
 pub enum Expr {
+    Unit,
     Ident(String),
     Bool(bool),
     Nat(u64),
@@ -200,7 +201,16 @@ impl Checker {
         })
     }
     fn binding(&mut self, binding: ast::Binding) -> CheckResult<Binding> {
-        let expr = self.expr(binding.expr)?;
+        let expr_span = binding.expr.span.clone();
+        let mut expr = self.expr(binding.expr)?;
+        let mut ty = if let Some(ty) = binding.ty {
+            self.ty(ty)?
+        } else {
+            Type::Unkown
+        };
+        if !expr.ty.matches(&mut ty) {
+            return Err(expr_span.sp(CheckError::TypeMismatch(ty, expr.ty)));
+        }
         let pattern = self.pattern(binding.pattern, expr.ty.clone())?;
         Ok(Binding { pattern, expr })
     }
@@ -244,6 +254,7 @@ impl Checker {
     }
     fn expr(&mut self, expr: Sp<ast::Expr>) -> CheckResult<TypedExpr> {
         Ok(match expr.value {
+            ast::Expr::Unit => Expr::Unit.typed(Type::Unit),
             ast::Expr::If(if_expr) => self.if_expr(*if_expr)?,
             ast::Expr::Call(call) => self.call_expr(*call)?,
             ast::Expr::Struct(_) => todo!(),

@@ -10,6 +10,7 @@ pub enum Item {
 #[derive(Debug, Clone)]
 pub struct Binding {
     pub pattern: Sp<Pattern>,
+    pub ty: Option<Sp<Type>>,
     pub expr: Sp<Expr>,
 }
 
@@ -38,6 +39,7 @@ pub enum Type {
 
 #[derive(Debug, Clone)]
 pub enum Expr {
+    Unit,
     If(Box<IfExpr>),
     Call(Box<CallExpr>),
     Struct(Struct),

@@ -222,14 +222,23 @@ impl Parser {
         }))
     }
     fn try_binding(&mut self) -> ParseResult<Option<Binding>> {
+        // Let
         if self.try_exact(Keyword::Let).is_none() {
             return Ok(None);
         };
+        // Pattern
         let pattern = self.pattern()?;
+        // Type annotation
+        let ty = if self.try_exact(Colon).is_some() {
+            Some(self.ty()?)
+        } else {
+            None
+        };
+        // Expression
         self.expect(Equals)?;
         let expr = self.expr()?;
         self.expect(SemiColon)?;
-        Ok(Some(Binding { pattern, expr }))
+        Ok(Some(Binding { pattern, ty, expr }))
     }
     fn try_pattern(&mut self) -> ParseResult<Option<Sp<Pattern>>> {
         Ok(Some(if let Some(ident) = self.try_ident() {
@@ -458,7 +467,9 @@ impl Parser {
             }
             let end = self.expect(CloseParen)?;
             let span = start.merge(end);
-            span.sp(if !comma_ended && items.len() == 1 {
+            span.sp(if items.is_empty() {
+                Expr::Unit
+            } else if !comma_ended && items.len() == 1 {
                 Expr::Parened(items.remove(0).value.into())
             } else {
                 Expr::Tuple(items)

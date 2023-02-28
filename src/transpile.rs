@@ -146,6 +146,7 @@ impl Transpiler {
     }
     fn expr(&mut self, expr: Expr) {
         match expr {
+            Expr::Unit => self.add("nil"),
             Expr::Ident(ident) => self.add(ident),
             Expr::Tuple(items) => {
                 self.add("{");

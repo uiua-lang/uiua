@@ -8,6 +8,17 @@ use crate::{
 
 impl Runtime {
     pub(crate) fn initialize_builtins(&mut self) {
+        // Add default types
+        for (name, ty) in [
+            ("bool", Type::Bool),
+            ("nat", Type::Nat),
+            ("int", Type::Int),
+            ("real", Type::Real),
+            ("unit", Type::Unit),
+        ] {
+            self.transpiler.checker.types.insert(name.into(), ty);
+        }
+        // Create Uiua functions
         let lua = &self.lua;
         let uiua = lua.create_table().unwrap();
         lua.globals().set("uiua", uiua.clone()).unwrap();

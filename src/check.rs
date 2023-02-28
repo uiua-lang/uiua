@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, collections::HashMap, fmt, path::Path};
 
 use crate::{
-    ast,
+    ast::{self, BinOp, UnOp},
     lex::Sp,
     parse::{parse, ParseError},
     types::{FunctionType, Type},
@@ -93,8 +93,14 @@ pub struct IfExpr {
 }
 
 pub struct CallExpr {
-    pub func: Expr,
+    pub func: CallKind,
     pub args: Vec<Expr>,
+}
+
+pub enum CallKind {
+    Normal(Expr),
+    Binary(BinOp),
+    Unary(UnOp),
 }
 
 pub struct TypedExpr {
@@ -102,9 +108,18 @@ pub struct TypedExpr {
     pub ty: Type,
 }
 
+impl TypedExpr {
+    pub fn map(self, f: impl FnOnce(Expr) -> Expr) -> Self {
+        TypedExpr {
+            expr: f(self.expr),
+            ty: self.ty,
+        }
+    }
+}
+
 pub struct Checker {
     scopes: Vec<Scope>,
-    types: HashMap<String, Type>,
+    pub(crate) types: HashMap<String, Type>,
 }
 
 #[derive(Default)]
@@ -163,7 +178,16 @@ impl Checker {
                     .into_iter()
                     .map(|b| self.binding(b))
                     .collect::<CheckResult<_>>()?;
+                let expr_span = def.expr.span.clone();
                 let expr = self.expr(def.expr)?;
+                let ret_ty = if let Some(ret_ty) = def.ret_ty {
+                    self.ty(ret_ty)?
+                } else {
+                    Type::Unit
+                };
+                if expr.ty != ret_ty {
+                    return Err(expr_span.sp(CheckError::TypeMismatch(ret_ty, expr.ty)));
+                }
                 self.scopes.pop().unwrap();
                 Item::FunctionDef(FunctionDef {
                     name: def.name.value,
@@ -307,13 +331,16 @@ impl Checker {
     }
     fn call_expr(&mut self, call: ast::CallExpr) -> CheckResult<TypedExpr> {
         let func_span = call.func.span.clone();
-        let func = match call.func.value {
-            ast::CallKind::Normal(func) => self.expr(call.func.span.sp(func))?,
+        let (call_kind, func_type) = match call.func.value {
+            ast::CallKind::Normal(func) => {
+                let expr = self.expr(call.func.span.sp(func))?;
+                (CallKind::Normal(expr.expr), expr.ty)
+            }
             ast::CallKind::Unary(_) => todo!(),
             ast::CallKind::Binary(_) => todo!(),
         };
-        let Type::Function(func_type) = func.ty else {
-            return Err(func_span.sp(CheckError::CallNonFunction(func.ty)));
+        let Type::Function(func_type) = func_type else {
+            return Err(func_span.sp(CheckError::CallNonFunction(func_type)));
         };
         let mut args = Vec::new();
         let mut arg_types = Vec::new();
@@ -340,7 +367,7 @@ impl Checker {
             })),
         };
         Ok(Expr::Call(Box::new(CallExpr {
-            func: func.expr,
+            func: call_kind,
             args,
         }))
         .typed(ty))

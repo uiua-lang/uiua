@@ -21,7 +21,7 @@ pub struct FunctionDef {
     pub name: Sp<String>,
     pub params: Vec<Param>,
     pub ret_ty: Option<Sp<Type>>,
-    pub body: Block,
+    pub body: Sp<Expr>,
 }
 
 #[derive(Debug, Clone)]
@@ -38,17 +38,6 @@ pub enum Type {
 }
 
 #[derive(Debug, Clone)]
-pub struct Block {
-    pub items: Vec<Item>,
-}
-
-impl Block {
-    pub fn has_implicit_return(&self) -> bool {
-        matches!(self.items.last(), Some(Item::Expr(expr, false)) if !matches!(expr.value, Expr::Return(_)))
-    }
-}
-
-#[derive(Debug, Clone)]
 pub enum Expr {
     Struct(Struct),
     Enum(Enum),
@@ -60,34 +49,7 @@ pub enum Expr {
     Bool(bool),
     Bin(Box<BinExpr>),
     Un(Box<UnExpr>),
-    Assign(Box<Assignment>),
-    Block(Block),
-    Call(Box<Call>),
-    Access(Box<Access>),
-    For(Box<For>),
-    While(Box<While>),
-    IfElse(Box<IfElse>),
-    Return(Option<Box<Sp<Expr>>>),
-    Break,
-    Continue,
-}
-
-impl Expr {
-    pub fn returns_value(&self) -> bool {
-        match self {
-            Expr::Struct(s) => s.name.is_none(),
-            Expr::Enum(e) => e.name.is_none(),
-            Expr::Return(_) | Expr::Break | Expr::Continue => false,
-            Expr::Block(block) => match block.items.last() {
-                Some(Item::Expr(expr, ended)) => expr.value.returns_value() && !*ended,
-                _ => false,
-            },
-            _ => true,
-        }
-    }
-    pub fn is_block(&self) -> bool {
-        matches!(self, Expr::Block(_))
-    }
+    If(Box<IfExpr>),
 }
 
 #[derive(Clone)]
@@ -115,80 +77,16 @@ pub struct UnExpr {
 }
 
 #[derive(Debug, Clone)]
-pub struct Assignment {
-    pub lvalue: Sp<Expr>,
-    pub op: Option<Sp<BinOp>>,
-    pub expr: Sp<Expr>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Call {
-    pub expr: Sp<Expr>,
-    pub args: Vec<Sp<Expr>>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Access {
-    pub expr: Sp<Expr>,
-    pub accessor: Sp<Accessor>,
-}
-
-#[derive(Debug, Clone)]
-pub enum LValue {
-    Pattern(Pattern),
-    Expr(Expr),
-}
-
-#[derive(Debug, Clone)]
 pub enum Pattern {
     Ident(String),
     Tuple(Vec<Sp<Pattern>>),
 }
 
 #[derive(Debug, Clone)]
-pub enum Accessor {
-    Field(String),
-    Index(Expr),
-}
-
-#[derive(Debug, Clone)]
-pub struct While {
+pub struct IfExpr {
     pub cond: Sp<Expr>,
-    pub body: Block,
-}
-
-#[derive(Debug, Clone)]
-pub struct For {
-    pub pattern: Sp<Pattern>,
-    pub iter: Sp<Expr>,
-    pub body: Block,
-}
-
-#[derive(Clone)]
-pub struct IfElse {
-    pub first: If,
-    pub else_ifs: Vec<If>,
-    pub els: Option<Block>,
-}
-
-impl fmt::Debug for IfElse {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut list = f.debug_list();
-        list.entry(&self.first);
-        for else_if in &self.else_ifs {
-            list.entry(&else_if);
-        }
-        if let Some(els) = &self.els {
-            list.entry(&els);
-        }
-        list.finish()
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct If {
-    pub cond: Sp<Expr>,
-    pub then: Block,
+    pub if_true: Sp<Expr>,
+    pub if_false: Sp<Expr>,
 }
 
 #[derive(Debug, Clone)]

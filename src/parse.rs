@@ -205,8 +205,9 @@ impl Parser {
         } else {
             None
         };
+        self.expect(Colon)?;
         // Body
-        let body = self.block()?.value;
+        let body = self.expr()?;
         Ok(Some(FunctionDef {
             doc,
             name,
@@ -237,22 +238,6 @@ impl Parser {
     fn pattern(&mut self) -> ParseResult<Sp<Pattern>> {
         self.try_pattern()?
             .ok_or_else(|| self.expected([Expectation::Pattern]))
-    }
-    fn try_block(&mut self) -> ParseResult<Option<Sp<Block>>> {
-        let Some(start) = self.try_exact(OpenCurly) else {
-            return Ok(None);
-        };
-        let mut items = Vec::new();
-        while let Some(expr) = self.try_item()? {
-            items.push(expr);
-        }
-        let end = self.expect(CloseCurly)?;
-        let span = start.merge(end);
-        Ok(Some(span.sp(Block { items })))
-    }
-    fn block(&mut self) -> ParseResult<Sp<Block>> {
-        self.try_block()?
-            .ok_or_else(|| self.expected([Expectation::Block]))
     }
     fn try_param(&mut self) -> ParseResult<Option<Param>> {
         let Some(name) = self.try_ident() else {
@@ -367,34 +352,7 @@ static BIN_EXPR_RANGE: BinExprDef = BinExprDef {
 
 impl Parser {
     fn try_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
-        let Some(expr) = self.try_expr_impl()? else {
-            return Ok(None);
-        };
-        Ok(Some(
-            if let Some(op) = [
-                (Equals, None),
-                (PlusEquals, Some(BinOp::Add)),
-                (MinusEquals, Some(BinOp::Sub)),
-                (StarEquals, Some(BinOp::Mul)),
-                (SlashEquals, Some(BinOp::Div)),
-            ]
-            .into_iter()
-            .find_map(|(simple, op)| self.try_exact(simple).map(|span| span.sp(op)))
-            {
-                let rhs = self.expr()?;
-                let lhs = expr;
-                let start = lhs.span.clone();
-                let end = rhs.span.clone();
-                let span = start.merge(end);
-                span.sp(Expr::Assign(Box::new(Assignment {
-                    lvalue: lhs,
-                    op: op.filter_map(|op| op),
-                    expr: rhs,
-                })))
-            } else {
-                expr
-            },
-        ))
+        self.try_bin_expr_def(&BIN_EXPR_RANGE)
     }
     fn expr(&mut self) -> ParseResult<Sp<Expr>> {
         self.expect_expr(Self::try_expr)
@@ -404,9 +362,6 @@ impl Parser {
         f: impl FnOnce(&mut Self) -> ParseResult<Option<Sp<Expr>>>,
     ) -> ParseResult<Sp<Expr>> {
         f(self)?.ok_or_else(|| self.expected([Expectation::Expr]))
-    }
-    fn try_expr_impl(&mut self) -> ParseResult<Option<Sp<Expr>>> {
-        self.try_bin_expr_def(&BIN_EXPR_RANGE)
     }
     fn try_bin_expr_def(&mut self, def: &BinExprDef) -> ParseResult<Option<Sp<Expr>>> {
         let leaf = |this: &mut Self| {
@@ -454,44 +409,8 @@ impl Parser {
             let span = start.merge(end);
             Ok(Some(span.sp(Expr::Un(Box::new(UnExpr { op, expr })))))
         } else {
-            self.try_call_access()
+            self.try_term()
         }
-    }
-    fn try_call_access(&mut self) -> ParseResult<Option<Sp<Expr>>> {
-        let Some(mut expr) = self.try_term()? else {
-            return Ok(None);
-        };
-        loop {
-            if let Some(args) = self.try_surrounded_list(PARENS, Self::try_expr)? {
-                let start = expr.span.clone();
-                let end = args.span.clone();
-                let span = start.merge(end);
-                expr = span.sp(Expr::Call(Box::new(Call {
-                    expr,
-                    args: args.value,
-                })));
-            } else if self.try_exact(Period).is_some() {
-                let ident = self.ident()?;
-                let start = expr.span.clone();
-                let end = ident.span.clone();
-                let span = start.merge(end);
-                expr = span.sp(Expr::Access(Box::new(Access {
-                    expr,
-                    accessor: ident.map(Accessor::Field),
-                })));
-            } else if let Some(start) = self.try_exact(OpenBracket) {
-                let index = self.expr()?;
-                let end = self.expect(CloseBracket)?;
-                let span = start.merge(end);
-                expr = span.sp(Expr::Access(Box::new(Access {
-                    expr,
-                    accessor: index.map(Accessor::Index),
-                })));
-            } else {
-                break;
-            }
-        }
-        Ok(Some(expr))
     }
     fn try_term(&mut self) -> ParseResult<Option<Sp<Expr>>> {
         Ok(Some(if let Some(ident) = self.try_ident() {
@@ -504,30 +423,12 @@ impl Parser {
             span.sp(Expr::Bool(true))
         } else if let Some(span) = self.try_exact(Keyword::False) {
             span.sp(Expr::Bool(false))
-        } else if let Some(block) = self.try_block()? {
-            block.map(Expr::Block)
         } else if let Some(items) = self.try_surrounded_list(PARENS, Self::try_expr)? {
             items.map(Expr::Tuple)
         } else if let Some(items) = self.try_surrounded_list(BRACKETS, Self::try_expr)? {
             items.map(Expr::Array)
-        } else if let Some(whil) = self.try_while()? {
-            whil.map(Box::new).map(Expr::While)
-        } else if let Some(fr) = self.try_for()? {
-            fr.map(Box::new).map(Expr::For)
-        } else if let Some(if_else) = self.try_if_else()? {
-            if_else.map(Box::new).map(Expr::IfElse)
-        } else if let Some(ret_span) = self.try_exact(Keyword::Return) {
-            let expr = self.try_expr()?;
-            if let Some(expr) = expr {
-                let span = ret_span.merge(expr.span.clone());
-                span.sp(Expr::Return(Some(Box::new(expr))))
-            } else {
-                ret_span.sp(Expr::Return(None))
-            }
-        } else if let Some(span) = self.try_exact(Keyword::Break) {
-            span.sp(Expr::Break)
-        } else if let Some(span) = self.try_exact(Keyword::Continue) {
-            span.sp(Expr::Continue)
+        } else if let Some(if_else) = self.try_if()? {
+            if_else.map(Box::new).map(Expr::If)
         } else if let Some(start) = self.try_exact(Keyword::Struct) {
             let name = self.try_ident();
             let start = name.as_ref().map(|n| n.span.clone()).unwrap_or(start);
@@ -552,69 +453,20 @@ impl Parser {
             return Ok(None);
         }))
     }
-    fn try_while(&mut self) -> ParseResult<Option<Sp<While>>> {
-        let Some(start) = self.try_exact(Keyword::While) else {
-            return Ok(None);
-        };
-        let cond = self.expr()?;
-        let body = self.block()?;
-        let end = body.span.clone();
-        let span = start.merge(end);
-        Ok(Some(span.sp(While {
-            cond,
-            body: body.value,
-        })))
-    }
-    fn try_for(&mut self) -> ParseResult<Option<Sp<For>>> {
-        let Some(start) = self.try_exact(Keyword::For) else {
-            return Ok(None);
-        };
-        let pattern = self.pattern()?;
-        self.expect(Keyword::In)?;
-        let iter = self.expr()?;
-        let body = self.block()?;
-        let end = body.span.clone();
-        let span = start.merge(end);
-        Ok(Some(span.sp(For {
-            pattern,
-            iter,
-            body: body.value,
-        })))
-    }
-    fn try_if_else(&mut self) -> ParseResult<Option<Sp<IfElse>>> {
-        let Some(first) = self.try_if()? else {
-            return Ok(None);
-        };
-        let start = first.span;
-        let mut end = start.clone();
-        let mut if_else = IfElse {
-            first: first.value,
-            else_ifs: Vec::new(),
-            els: None,
-        };
-        while self.try_exact(Keyword::Else).is_some() {
-            if let Some(case) = self.try_if()? {
-                if_else.else_ifs.push(case.value);
-                end = case.span;
-            } else if let Some(els) = self.try_block()? {
-                if_else.els = Some(els.value);
-                end = els.span;
-                break;
-            }
-        }
-        let span = start.merge(end);
-        Ok(Some(span.sp(if_else)))
-    }
-    fn try_if(&mut self) -> ParseResult<Option<Sp<If>>> {
+    fn try_if(&mut self) -> ParseResult<Option<Sp<IfExpr>>> {
         let Some(if_span) = self.try_exact(Keyword::If) else {
             return Ok(None);
         };
         let cond = self.expr()?;
-        let then = self.block()?;
-        let span = if_span.merge(then.span);
-        Ok(Some(span.sp(If {
+        self.expect(Keyword::Then)?;
+        let if_true = self.expr()?;
+        self.expect(Keyword::Else)?;
+        let if_false = self.expr()?;
+        let span = if_span.merge(if_false.span.clone());
+        Ok(Some(span.sp(IfExpr {
             cond,
-            then: then.value,
+            if_true,
+            if_false,
         })))
     }
     fn try_variant(&mut self) -> ParseResult<Option<Sp<Variant>>> {

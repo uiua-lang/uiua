@@ -172,13 +172,9 @@ pub enum Simple {
     SemiColon,
     Arrow,
     Plus,
-    PlusEquals,
     Minus,
-    MinusEquals,
     Star,
-    StarEquals,
     Slash,
-    SlashEquals,
     Equals,
     Equal,
     NotEqual,
@@ -207,13 +203,9 @@ impl fmt::Display for Simple {
                 Simple::SemiColon => ";",
                 Simple::Arrow => "->",
                 Simple::Plus => "+",
-                Simple::PlusEquals => "+=",
                 Simple::Minus => "-",
-                Simple::MinusEquals => "-=",
                 Simple::Star => "*",
-                Simple::StarEquals => "*=",
                 Simple::Slash => "/",
-                Simple::SlashEquals => "/=",
                 Simple::Equals => "=",
                 Simple::Equal => "==",
                 Simple::NotEqual => "!=",
@@ -233,15 +225,10 @@ pub enum Keyword {
     Let,
     Fn,
     If,
+    Then,
     Else,
-    Return,
     And,
     Or,
-    While,
-    For,
-    In,
-    Break,
-    Continue,
     True,
     False,
     Not,
@@ -350,13 +337,11 @@ impl Lexer {
                 ':' => return self.end(Colon, start),
                 ';' => return self.end(SemiColon, start),
                 ',' => return self.end(Comma, start),
-                '+' => return self.switch_next(Plus, [('=', PlusEquals)], start),
-                '-' => return self.switch_next(Minus, [('=', MinusEquals), ('>', Arrow)], start),
-                '*' => return self.switch_next(Star, [('=', StarEquals)], start),
+                '+' => return self.end(Plus, start),
+                '-' => return self.switch_next(Minus, [('>', Arrow)], start),
+                '*' => return self.end(Star, start),
                 '/' => {
-                    if self.next_char_exact('=') {
-                        return self.end(SlashEquals, start);
-                    } else if self.next_char_exact('/') {
+                    if self.next_char_exact('/') {
                         // Comments
                         let token = if self.next_char_exact('/') {
                             DocComment

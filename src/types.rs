@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub enum Type {
     Unit,
     Bool,
@@ -11,6 +11,28 @@ pub enum Type {
     List(Box<Type>),
     Tuple(Vec<Type>),
     Unkown,
+}
+
+impl Type {
+    pub fn matches(&mut self, other: &mut Self) -> bool {
+        if self != other {
+            return false;
+        }
+        match (self, other) {
+            (a @ Type::Unkown, b) => {
+                *a = b.clone();
+                true
+            }
+            (a, b @ Type::Unkown) => {
+                *b = a.clone();
+                true
+            }
+            (Type::List(a), Type::List(b)) => a.matches(b),
+            (Type::Tuple(a), Type::Tuple(b)) => a.iter_mut().zip(b).all(|(a, b)| a.matches(b)),
+            (Type::Function(a), Type::Function(b)) => a.matches(b),
+            _ => true,
+        }
+    }
 }
 
 impl fmt::Display for Type {
@@ -38,7 +60,24 @@ impl fmt::Display for Type {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+impl PartialEq for Type {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Type::Unkown, _) | (_, Type::Unkown) => true,
+            (Type::Unit, Type::Unit) => true,
+            (Type::Bool, Type::Bool) => true,
+            (Type::Nat, Type::Nat) => true,
+            (Type::Int, Type::Int) => true,
+            (Type::Real, Type::Real) => true,
+            (Type::Function(a), Type::Function(b)) => a == b,
+            (Type::List(a), Type::List(b)) => a == b,
+            (Type::Tuple(a), Type::Tuple(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct FunctionType {
     pub params: Vec<Type>,
     pub ret: Type,
@@ -50,6 +89,17 @@ impl FunctionType {
             params: params.into_iter().collect(),
             ret,
         }
+    }
+    pub fn matches(&mut self, other: &mut Self) -> bool {
+        if self != other {
+            return false;
+        }
+        for (a, b) in self.params.iter_mut().zip(&mut other.params) {
+            if !a.matches(b) {
+                return false;
+            }
+        }
+        self.ret.matches(&mut other.ret)
     }
 }
 

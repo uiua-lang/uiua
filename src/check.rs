@@ -120,6 +120,7 @@ impl TypedExpr {
 pub struct Checker {
     scopes: Vec<Scope>,
     pub(crate) types: HashMap<String, Type>,
+    errors: Vec<Sp<CheckError>>,
 }
 
 #[derive(Default)]
@@ -132,6 +133,7 @@ impl Default for Checker {
         Checker {
             scopes: vec![Scope::default()],
             types: HashMap::new(),
+            errors: Vec::new(),
         }
     }
 }
@@ -139,16 +141,15 @@ impl Default for Checker {
 impl Checker {
     pub fn load(&mut self, input: &str, path: &Path) -> (Vec<Item>, Vec<Sp<CheckError>>) {
         let (ast_items, errors) = parse(input, path);
-        let mut errors: Vec<Sp<CheckError>> = errors
-            .into_iter()
-            .map(|e| e.map(CheckError::Parse))
-            .collect();
+        let mut errors: Vec<Sp<CheckError>> =
+            (errors.into_iter().map(|e| e.map(CheckError::Parse))).collect();
         let mut items = Vec::new();
         for item in ast_items {
             match self.item(item) {
                 Ok(item) => items.push(item),
                 Err(e) => errors.push(e),
             }
+            errors.append(&mut self.errors);
         }
         (items, errors)
     }
@@ -179,13 +180,13 @@ impl Checker {
                     .map(|b| self.binding(b))
                     .collect::<CheckResult<_>>()?;
                 let expr_span = def.expr.span.clone();
-                let expr = self.expr(def.expr)?;
-                let ret_ty = if let Some(ret_ty) = def.ret_ty {
+                let mut expr = self.expr(def.expr)?;
+                let mut ret_ty = if let Some(ret_ty) = def.ret_ty {
                     self.ty(ret_ty)?
                 } else {
                     Type::Unit
                 };
-                if expr.ty != ret_ty {
+                if !expr.ty.matches(&mut ret_ty) {
                     return Err(expr_span.sp(CheckError::TypeMismatch(ret_ty, expr.ty)));
                 }
                 self.scopes.pop().unwrap();
@@ -282,9 +283,9 @@ impl Checker {
                 let mut ty: Option<Type> = None;
                 let mut exprs = Vec::new();
                 for item in items {
-                    let item = self.expr(item)?;
+                    let mut item = self.expr(item)?;
                     let ty = ty.get_or_insert(item.ty.clone());
-                    if *ty != item.ty {
+                    if !ty.matches(&mut item.ty) {
                         return Err(expr.span.sp(CheckError::TypeMismatch(ty.clone(), item.ty)));
                     }
                     exprs.push(item.expr);
@@ -312,14 +313,14 @@ impl Checker {
     }
     fn if_expr(&mut self, if_expr: ast::IfExpr) -> CheckResult<TypedExpr> {
         let cond_span = if_expr.cond.span.clone();
-        let cond = self.expr(if_expr.cond)?;
-        if cond.ty != Type::Bool {
+        let mut cond = self.expr(if_expr.cond)?;
+        if !cond.ty.matches(&mut Type::Bool) {
             return Err(cond_span.sp(CheckError::TypeMismatch(Type::Bool, cond.ty)));
         }
-        let if_true = self.expr(if_expr.if_true)?;
+        let mut if_true = self.expr(if_expr.if_true)?;
         let if_false_span = if_expr.if_false.span.clone();
-        let if_false = self.expr(if_expr.if_false)?;
-        if if_true.ty != if_false.ty {
+        let mut if_false = self.expr(if_expr.if_false)?;
+        if !if_true.ty.matches(&mut if_false.ty) {
             return Err(if_false_span.sp(CheckError::TypeMismatch(if_true.ty, if_false.ty)));
         }
         Ok(Expr::If(Box::new(IfExpr {
@@ -339,15 +340,15 @@ impl Checker {
             ast::CallKind::Unary(_) => todo!(),
             ast::CallKind::Binary(_) => todo!(),
         };
-        let Type::Function(func_type) = func_type else {
+        let Type::Function(mut func_type) = func_type else {
             return Err(func_span.sp(CheckError::CallNonFunction(func_type)));
         };
         let mut args = Vec::new();
         let mut arg_types = Vec::new();
-        for (param_ty, ast_arg) in func_type.params.iter().zip(call.args) {
+        for (param_ty, ast_arg) in func_type.params.iter_mut().zip(call.args) {
             let arg_span = ast_arg.span.clone();
-            let arg = self.expr(ast_arg)?;
-            if param_ty != &arg.ty {
+            let mut arg = self.expr(ast_arg)?;
+            if !param_ty.matches(&mut arg.ty) {
                 return Err(arg_span.sp(CheckError::TypeMismatch(param_ty.clone(), arg.ty)));
             }
             args.push(arg.expr);

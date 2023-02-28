@@ -258,10 +258,10 @@ impl Parser {
             // Named type
             Some(ident.map(Type::Ident))
         } else if self.try_exact(OpenBracket).is_some() {
-            // Array
+            // List
             let inner = self.ty()?;
             self.expect(CloseBracket)?;
-            Some(inner.map(Box::new).map(Type::Array))
+            Some(inner.map(Box::new).map(Type::List))
         } else if let Some(start) = self.try_exact(OpenParen) {
             // Tuple
             let mut tys = Vec::new();
@@ -463,7 +463,7 @@ impl Parser {
                 Expr::Tuple(items)
             })
         } else if let Some(items) = self.try_surrounded_list(BRACKETS, Self::try_expr)? {
-            items.map(Expr::Array)
+            items.map(Expr::List)
         } else if let Some(if_else) = self.try_if()? {
             if_else.map(Box::new).map(Expr::If)
         } else if let Some(start) = self.try_exact(Keyword::Struct) {

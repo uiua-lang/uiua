@@ -34,7 +34,7 @@ pub struct Param {
 #[derive(Debug, Clone)]
 pub enum Type {
     Ident(String),
-    Array(Box<Type>),
+    List(Box<Type>),
     Tuple(Vec<Sp<Type>>),
 }
 
@@ -51,7 +51,7 @@ pub enum Expr {
     Real(String),
     Ident(String),
     Tuple(Vec<Sp<Expr>>),
-    Array(Vec<Sp<Expr>>),
+    List(Vec<Sp<Expr>>),
     Parened(Box<Expr>),
 }
 

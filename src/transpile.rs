@@ -1,4 +1,4 @@
-use std::{error::Error, fmt, mem::take, path::Path};
+use std::{error::Error, fmt, io, mem::take, path::Path};
 
 use crate::{
     ast::*,
@@ -8,6 +8,7 @@ use crate::{
 
 #[derive(Debug)]
 pub enum TranspileError {
+    Io(io::Error),
     Parse(ParseError),
     InvalidInteger(String),
     InvalidReal(String),
@@ -16,6 +17,7 @@ pub enum TranspileError {
 impl fmt::Display for TranspileError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            TranspileError::Io(e) => write!(f, "{e}"),
             TranspileError::Parse(e) => write!(f, "{e}"),
             TranspileError::InvalidInteger(s) => write!(f, "invalid integer: {s}"),
             TranspileError::InvalidReal(s) => write!(f, "invalid real: {s}"),
@@ -36,6 +38,11 @@ pub struct Transpiler {
 impl Transpiler {
     pub fn transpile(&mut self, input: &str, path: &Path) -> Result<(), Vec<Sp<TranspileError>>> {
         let (items, errors) = parse(input, path);
+
+        for item in &items {
+            println!("{item:#?}");
+        }
+
         let mut errors: Vec<_> = errors
             .into_iter()
             .map(|e| e.map(TranspileError::Parse))
@@ -173,7 +180,7 @@ impl Transpiler {
                 }
                 self.add("}");
             }
-            Expr::Array(_) => todo!(),
+            Expr::List(_) => todo!(),
             Expr::Integer(i) => self.add(
                 i.parse::<u64>()
                     .map_err(|_| expr.span.sp(TranspileError::InvalidInteger(i)))?

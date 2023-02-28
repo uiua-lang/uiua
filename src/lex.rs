@@ -340,6 +340,17 @@ impl Lexer {
                 '+' => return self.end(Plus, start),
                 '-' => return self.switch_next(Minus, [('>', Arrow)], start),
                 '*' => return self.end(Star, start),
+                '=' => return self.switch_next(Equals, [('=', Equal)], start),
+                '<' => return self.switch_next(Less, [('=', LessEqual)], start),
+                '>' => return self.switch_next(Greater, [('=', GreaterEqual)], start),
+                '!' => {
+                    return if self.next_char_exact('=') {
+                        self.end(NotEqual, start)
+                    } else {
+                        Err(self.end_span(start).sp(LexError::Bang))
+                    }
+                }
+                // Division and comments
                 '/' => {
                     if self.next_char_exact('/') {
                         // Comments
@@ -364,17 +375,8 @@ impl Lexer {
                             },
                         }));
                     } else {
+                        // Division
                         return self.end(Slash, start);
-                    }
-                }
-                '=' => return self.switch_next(Equals, [('=', Equal)], start),
-                '<' => return self.switch_next(Less, [('=', LessEqual)], start),
-                '>' => return self.switch_next(Greater, [('=', GreaterEqual)], start),
-                '!' => {
-                    return if self.next_char_exact('=') {
-                        self.end(NotEqual, start)
-                    } else {
-                        Err(self.end_span(start).sp(LexError::Bang))
                     }
                 }
                 // Identifiers and keywords

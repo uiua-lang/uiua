@@ -4,6 +4,7 @@ pub mod lex;
 pub mod list;
 pub mod parse;
 pub mod transpile;
+pub mod types;
 
 use std::{
     error::Error,
@@ -11,10 +12,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use mlua::{Lua, Value};
+use mlua::Lua;
 
 use lex::Sp;
-use list::List;
 use transpile::{TranspileError, Transpiler};
 
 #[derive(Debug)]
@@ -52,8 +52,8 @@ impl Error for RuntimeError {}
 pub type RuntimeResult<T = ()> = Result<T, RuntimeError>;
 
 pub struct Runtime {
-    lua: Lua,
-    transpiler: Transpiler,
+    pub lua: Lua,
+    pub transpiler: Transpiler,
 }
 
 impl Default for Runtime {
@@ -64,18 +64,12 @@ impl Default for Runtime {
 
 impl Runtime {
     pub fn new() -> Self {
-        let lua = Lua::new();
-        let uiua = lua.create_table().unwrap();
-        lua.globals().set("uiua", uiua.clone()).unwrap();
-        uiua.set(
-            "new_list",
-            lua.create_function(|lua: &Lua, ()| lua.create_userdata(List::<Value>::new()))
-                .unwrap(),
-        )
-        .unwrap();
-        let transpiler = Transpiler::default();
-        drop(uiua);
-        Self { lua, transpiler }
+        let mut rt = Self {
+            lua: Lua::new(),
+            transpiler: Transpiler::new(),
+        };
+        rt.initialize_builtins();
+        rt
     }
     pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> RuntimeResult {
         let path = path.as_ref();

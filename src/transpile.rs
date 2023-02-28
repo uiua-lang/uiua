@@ -1,9 +1,10 @@
-use std::{error::Error, fmt, io, mem::take, path::Path};
+use std::{collections::HashMap, error::Error, fmt, io, mem::take, path::Path};
 
 use crate::{
     ast::*,
     lex::Sp,
     parse::{parse, ParseError},
+    types::Type,
 };
 
 #[derive(Debug)]
@@ -12,6 +13,8 @@ pub enum TranspileError {
     Parse(ParseError),
     InvalidInteger(String),
     InvalidReal(String),
+    UnknownBinding(String),
+    TypeMismatch(Type, Type),
 }
 
 impl fmt::Display for TranspileError {
@@ -21,21 +24,56 @@ impl fmt::Display for TranspileError {
             TranspileError::Parse(e) => write!(f, "{e}"),
             TranspileError::InvalidInteger(s) => write!(f, "invalid integer: {s}"),
             TranspileError::InvalidReal(s) => write!(f, "invalid real: {s}"),
+            TranspileError::UnknownBinding(s) => write!(f, "unknown binding: {s}"),
+            TranspileError::TypeMismatch(expected, actual) => {
+                write!(f, "type mismatch: expected {expected}, got {actual}")
+            }
         }
     }
 }
 
 impl Error for TranspileError {}
 
-pub type TranspileResult = Result<(), Sp<TranspileError>>;
+pub type TranspileResult<T = ()> = Result<T, Sp<TranspileError>>;
+
+#[derive(Debug)]
+pub struct Transpiler {
+    pub(crate) code: String,
+    indentation: usize,
+    scopes: Vec<Scope>,
+    pub(crate) function_replacements: HashMap<String, String>,
+}
+
+impl Default for Transpiler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 #[derive(Debug, Default)]
-pub struct Transpiler {
-    pub code: String,
-    indentation: usize,
+pub(crate) struct Scope {
+    pub bindings: HashMap<String, Type>,
 }
 
 impl Transpiler {
+    pub(crate) fn new() -> Self {
+        Self {
+            code: String::new(),
+            indentation: 0,
+            scopes: vec![Scope::default()],
+            function_replacements: HashMap::new(),
+        }
+    }
+    pub(crate) fn scope_mut(&mut self) -> &mut Scope {
+        self.scopes.last_mut().unwrap()
+    }
+    pub(crate) fn find_binding(&self, name: &str) -> Option<Type> {
+        self.scopes
+            .iter()
+            .rev()
+            .find_map(|scope| scope.bindings.get(name))
+            .cloned()
+    }
     pub fn transpile(&mut self, input: &str, path: &Path) -> Result<(), Vec<Sp<TranspileError>>> {
         let (items, errors) = parse(input, path);
 

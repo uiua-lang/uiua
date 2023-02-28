@@ -5,7 +5,7 @@ use crate::lex::Sp;
 #[derive(Debug, Clone)]
 pub enum Item {
     FunctionDef(FunctionDef),
-    Expr(Sp<Expr>, bool),
+    Expr(Sp<Expr>),
     Binding(Binding),
 }
 
@@ -22,7 +22,7 @@ pub struct FunctionDef {
     pub params: Vec<Param>,
     pub ret_ty: Option<Sp<Type>>,
     pub bindings: Vec<Binding>,
-    pub ret: Sp<Expr>,
+    pub expr: Sp<Expr>,
 }
 
 #[derive(Debug, Clone)]

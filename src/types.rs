@@ -39,7 +39,7 @@ impl fmt::Display for Type {
                 }
                 write!(f, ")")
             }
-            Type::Unkown => write!(f, "unknown"),
+            Type::Unkown => write!(f, "_"),
         }
     }
 }

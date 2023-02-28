@@ -164,8 +164,7 @@ impl Parser {
         } else if let Some(binding) = self.try_binding()? {
             Item::Binding(binding)
         } else if let Some(expr) = self.try_expr()? {
-            let ended = self.try_exact(SemiColon).is_some();
-            Item::Expr(expr, ended)
+            Item::Expr(expr)
         } else {
             return Ok(None);
         }))
@@ -219,7 +218,7 @@ impl Parser {
             params,
             ret_ty,
             bindings,
-            ret,
+            expr: ret,
         }))
     }
     fn try_binding(&mut self) -> ParseResult<Option<Binding>> {

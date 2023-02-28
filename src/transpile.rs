@@ -99,7 +99,7 @@ impl Transpiler {
     fn item(&mut self, item: Item) -> TranspileResult {
         match item {
             Item::FunctionDef(def) => self.function_def(def),
-            Item::Expr(expr, _) => self.expr(expr),
+            Item::Expr(expr) => self.expr(expr),
             Item::Binding(binding) => self.binding(binding),
         }
     }
@@ -140,7 +140,7 @@ impl Transpiler {
             self.binding(binding)?;
         }
         self.add("return ");
-        self.expr(def.ret)?;
+        self.expr(def.expr)?;
         self.ensure_line();
         self.indentation -= 1;
         self.line("end");

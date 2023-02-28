@@ -1,5 +1,6 @@
 pub mod ast;
 pub mod builtin;
+pub mod check;
 pub mod lex;
 pub mod list;
 pub mod parse;

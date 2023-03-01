@@ -1,7 +1,8 @@
 use std::fmt;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum Type {
+    #[default]
     Unit,
     Bool,
     Nat,
@@ -12,6 +13,7 @@ pub enum Type {
     Tuple(Vec<Type>),
     Unknown,
     UnknownInt,
+    UnknownFunction(Vec<FunctionType>),
 }
 
 impl Type {
@@ -39,6 +41,18 @@ impl Type {
             (Type::List(a), Type::List(b)) => a.matches(b),
             (Type::Tuple(a), Type::Tuple(b)) => a.iter_mut().zip(b).all(|(a, b)| a.matches(b)),
             (Type::Function(a), Type::Function(b)) => a.matches(b),
+            (Type::UnknownFunction(fs), Type::Function(f))
+            | (Type::Function(f), Type::UnknownFunction(fs)) => {
+                fs.retain_mut(|f2| {
+                    let mut f2_clone = f2.clone();
+                    let matches = f2_clone.matches(f);
+                    if matches {
+                        *f2 = f2_clone;
+                    }
+                    matches
+                });
+                !fs.is_empty()
+            }
             _ => true,
         }
     }
@@ -66,6 +80,7 @@ impl fmt::Display for Type {
             }
             Type::Unknown => write!(f, "_"),
             Type::UnknownInt => write!(f, "{{integer}}"),
+            Type::UnknownFunction(_) => write!(f, "{{function}}"),
         }
     }
 }
@@ -76,6 +91,8 @@ impl PartialEq for Type {
             (Type::Unknown, _) | (_, Type::Unknown) => true,
             (Type::UnknownInt, Type::Nat | Type::Int)
             | (Type::Nat | Type::Int, Type::UnknownInt) => true,
+            (Type::UnknownFunction(fs), Type::Function(f))
+            | (Type::Function(f), Type::UnknownFunction(fs)) => fs.iter().any(|f2| **f == *f2),
             (Type::Unit, Type::Unit) => true,
             (Type::Bool, Type::Bool) => true,
             (Type::Nat, Type::Nat) => true,
@@ -89,7 +106,7 @@ impl PartialEq for Type {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct FunctionType {
     pub params: Vec<Type>,
     pub ret: Type,

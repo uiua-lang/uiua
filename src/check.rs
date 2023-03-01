@@ -2,6 +2,7 @@ use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet},
     fmt,
+    mem::take,
     path::Path,
 };
 
@@ -151,6 +152,9 @@ impl Checker {
         let (ast_items, errors) = parse(input, path);
         let mut errors: Vec<Sp<CheckError>> =
             (errors.into_iter().map(|e| e.map(CheckError::Parse))).collect();
+        for item in &ast_items {
+            println!("{item:#?}");
+        }
         let mut items = Vec::new();
         for item in ast_items {
             match self.item(item) {
@@ -171,40 +175,59 @@ impl Checker {
     pub(crate) fn scope_mut(&mut self) -> &mut Scope {
         self.scopes.last_mut().unwrap()
     }
+    fn add_function(&mut self, name: &str, ty: FunctionType) {
+        let bindings = &mut self.scope_mut().bindings;
+        match bindings.get_mut(name) {
+            Some(Type::Function(ty1)) => {
+                let ty1: FunctionType = take(ty1);
+                bindings.insert(name.into(), Type::UnknownFunction(vec![ty1, ty]));
+            }
+            Some(Type::UnknownFunction(fs)) => fs.push(ty),
+            _ => {
+                bindings.insert(name.into(), Type::Function(ty.into()));
+            }
+        }
+    }
     fn item(&mut self, item: ast::Item) -> CheckResult<Item> {
         Ok(match item {
             ast::Item::Expr(expr) => Item::Expr(self.expr(expr)?),
             ast::Item::Binding(binding) => Item::Binding(self.binding(binding)?),
-            ast::Item::FunctionDef(def) => {
-                self.scopes.push(Scope::default());
-                let params = def
-                    .params
-                    .into_iter()
-                    .map(|p| self.param(p))
-                    .collect::<CheckResult<_>>()?;
-                let bindings = def
-                    .bindings
-                    .into_iter()
-                    .map(|b| self.binding(b))
-                    .collect::<CheckResult<_>>()?;
-                let expr_span = def.expr.span.clone();
-                let mut expr = self.expr(def.expr)?;
-                let mut ret_ty = if let Some(ret_ty) = def.ret_ty {
-                    self.ty(ret_ty)?
-                } else {
-                    Type::Unit
-                };
-                if !expr.ty.matches(&mut ret_ty) {
-                    return Err(expr_span.sp(CheckError::TypeMismatch(ret_ty, expr.ty)));
-                }
-                self.scopes.pop().unwrap();
-                Item::FunctionDef(FunctionDef {
-                    name: def.name.value,
-                    params,
-                    bindings,
-                    expr,
-                })
-            }
+            ast::Item::FunctionDef(def) => Item::FunctionDef(self.function_def(def)?),
+        })
+    }
+    fn function_def(&mut self, def: ast::FunctionDef) -> CheckResult<FunctionDef> {
+        self.scopes.push(Scope::default());
+        let params: Vec<Param> = def
+            .params
+            .into_iter()
+            .map(|p| self.param(p))
+            .collect::<CheckResult<_>>()?;
+        let bindings = def
+            .bindings
+            .into_iter()
+            .map(|b| self.binding(b))
+            .collect::<CheckResult<_>>()?;
+        let expr_span = def.expr.span.clone();
+        let mut expr = self.expr(def.expr)?;
+        let mut ret_ty = if let Some(ret_ty) = def.ret_ty {
+            self.ty(ret_ty)?
+        } else {
+            Type::Unit
+        };
+        if !expr.ty.matches(&mut ret_ty) {
+            return Err(expr_span.sp(CheckError::TypeMismatch(ret_ty, expr.ty)));
+        }
+        self.scopes.pop().unwrap();
+        let func_ty = FunctionType {
+            params: params.iter().map(|p| p.ty.clone()).collect(),
+            ret: ret_ty,
+        };
+        self.add_function(&def.name.value, func_ty);
+        Ok(FunctionDef {
+            name: def.name.value,
+            params,
+            bindings,
+            expr,
         })
     }
     fn binding(&mut self, binding: ast::Binding) -> CheckResult<Binding> {
@@ -387,6 +410,7 @@ impl Checker {
         // Check arguments
         let mut args = Vec::new();
         let mut arg_types = Vec::new();
+        let call_arg_count = call.args.len();
         for (param_ty, ast_arg) in func_type.params.iter_mut().zip(call.args) {
             let arg_span = ast_arg.span.clone();
             let mut arg = self.expr(ast_arg)?;
@@ -397,19 +421,19 @@ impl Checker {
             arg_types.push(arg.ty);
         }
         // Figure out the return type
-        let ty = match func_type.params.len().cmp(&args.len()) {
+        let ty = match func_type.params.len().cmp(&call_arg_count) {
             // Too many arguments
             Ordering::Less => {
                 return Err(func_span.sp(CheckError::TooManyArguments(
                     func_type.params.len(),
-                    args.len(),
+                    call_arg_count,
                 )));
             }
             // All arguments are provided
             Ordering::Equal => func_type.ret.clone(),
             // Partial application
             Ordering::Greater => Type::Function(Box::new(FunctionType {
-                params: func_type.params[args.len()..].to_vec(),
+                params: func_type.params[call_arg_count..].to_vec(),
                 ret: func_type.ret.clone(),
             })),
         };

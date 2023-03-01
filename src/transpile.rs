@@ -30,10 +30,10 @@ impl Transpiler {
     }
     pub fn transpile(&mut self, input: &str, path: &Path) -> Result<(), Vec<Sp<CheckError>>> {
         let (items, errors) = self.checker.load(input, path);
-        for item in items {
-            self.item(item);
-        }
         if errors.is_empty() {
+            for item in items {
+                self.item(item);
+            }
             Ok(())
         } else {
             Err(errors)

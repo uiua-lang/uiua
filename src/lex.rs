@@ -157,6 +157,20 @@ impl Token {
     }
 }
 
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Token::Comment(comment) => write!(f, "// {comment}"),
+            Token::DocComment(comment) => write!(f, "/// {comment}"),
+            Token::Ident(ident) => write!(f, "{ident}"),
+            Token::Integer(integer) => write!(f, "{integer}"),
+            Token::Real(real) => write!(f, "{real}"),
+            Token::Keyword(keyword) => write!(f, "{keyword}"),
+            Token::Simple(simple) => write!(f, "{simple}"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Simple {
     OpenParen,
@@ -232,6 +246,12 @@ pub enum Keyword {
     True,
     False,
     Not,
+}
+
+impl fmt::Display for Keyword {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", format!("{self:?}").to_lowercase())
+    }
 }
 
 impl From<Keyword> for Token {

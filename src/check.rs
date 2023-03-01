@@ -365,9 +365,11 @@ impl Checker {
             ast::CallKind::Unary(_) => todo!(),
             ast::CallKind::Binary(_) => todo!(),
         };
+        // Ensure it is a function that is being called
         let Type::Function(mut func_type) = func_type else {
             return Err(func_span.sp(CheckError::CallNonFunction(func_type)));
         };
+        // Check arguments
         let mut args = Vec::new();
         let mut arg_types = Vec::new();
         for (param_ty, ast_arg) in func_type.params.iter_mut().zip(call.args) {
@@ -379,14 +381,18 @@ impl Checker {
             args.push(arg.expr);
             arg_types.push(arg.ty);
         }
+        // Figure out the return type
         let ty = match func_type.params.len().cmp(&args.len()) {
+            // Too many arguments
             Ordering::Less => {
                 return Err(func_span.sp(CheckError::TooManyArguments(
                     func_type.params.len(),
                     args.len(),
                 )));
             }
+            // All arguments are provided
             Ordering::Equal => func_type.ret.clone(),
+            // Partial application
             Ordering::Greater => Type::Function(Box::new(FunctionType {
                 params: func_type.params[args.len()..].to_vec(),
                 ret: func_type.ret.clone(),

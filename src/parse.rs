@@ -45,7 +45,7 @@ impl fmt::Display for Expectation {
             Expectation::Pattern => write!(f, "pattern"),
             Expectation::Eof => write!(f, "end of file"),
             Expectation::Simple(s) => write!(f, "{s}"),
-            Expectation::Keyword(k) => write!(f, "{}", format!("{k:?}").to_lowercase()),
+            Expectation::Keyword(k) => write!(f, "{k}"),
         }
     }
 }
@@ -60,10 +60,10 @@ impl fmt::Display for ParseError {
                     if i > 0 {
                         write!(f, ", ")?;
                     }
-                    write!(f, "{exp}")?;
+                    write!(f, "`{exp}`")?;
                 }
                 if let Some(found) = found {
-                    write!(f, ", found {found:?}")?;
+                    write!(f, ", found `{}`", found.value)?;
                 }
                 Ok(())
             }

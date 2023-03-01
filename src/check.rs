@@ -23,6 +23,8 @@ pub enum CheckError {
     CallNonFunction(Type),
     TooManyArguments(usize, usize),
     CompatibleFunctionExists(String, FunctionType, FunctionType),
+    NoMatchingFunctionVariant(Vec<Type>),
+    AmbiguousFunctionVariant(Vec<Type>),
 }
 
 impl fmt::Display for CheckError {
@@ -43,6 +45,14 @@ impl fmt::Display for CheckError {
             CheckError::CompatibleFunctionExists(name, existing, new) => write!(
                 f,
                 "compatible function exists: existing `{name}: {existing}` is compatible with new `{name}: {new}`"
+            ),
+            CheckError::NoMatchingFunctionVariant( args) => write!(
+                f,
+                "no matching function variant that accepts arguments of types {args:?}"
+            ),
+            CheckError::AmbiguousFunctionVariant( args) => write!(
+                f,
+                "function variant accepting arguments of types {args:?} is ambiguous"
             ),
         }
     }
@@ -104,13 +114,8 @@ pub struct IfExpr {
 }
 
 pub struct CallExpr {
-    pub func: CallKind,
+    pub func: Expr,
     pub args: Vec<Expr>,
-}
-
-pub enum CallKind {
-    Normal(Expr),
-    Binary(BinOp),
 }
 
 pub struct TypedExpr {
@@ -189,7 +194,11 @@ impl Checker {
     pub(crate) fn scope_mut(&mut self) -> &mut Scope {
         self.scopes.last_mut().unwrap()
     }
-    fn add_function(&mut self, name: &str, ty: FunctionType) -> Result<(), FunctionType> {
+    pub(crate) fn add_function(
+        &mut self,
+        name: &str,
+        ty: FunctionType,
+    ) -> Result<(), FunctionType> {
         let functions = self.functions.entry(name.into()).or_default();
         if let Some(f) = functions
             .iter()
@@ -413,51 +422,93 @@ impl Checker {
     }
     fn call_expr(&mut self, call: ast::CallExpr) -> CheckResult<TypedExpr> {
         let func_span = call.func.span.clone();
-        let (call_kind, func_type) = match call.func.value {
-            ast::CallKind::Normal(func) => {
-                let expr = self.expr(call.func.span.sp(func))?;
-                (CallKind::Normal(expr.expr), expr.ty)
+        let expr = match call.func.value {
+            ast::CallKind::Normal(func) => self.expr(call.func.span.sp(func))?,
+            ast::CallKind::Binary(op) => {
+                let ast_expr = call.func.span.sp(ast::Expr::Ident(
+                    match op {
+                        BinOp::Add => "add",
+                        BinOp::Sub => "sub",
+                        BinOp::Mul => "mul",
+                        BinOp::Div => "div",
+                        BinOp::Eq => "eq",
+                        BinOp::Ne => "neq",
+                        BinOp::Lt => "lt",
+                        BinOp::Le => "le",
+                        BinOp::Gt => "gt",
+                        BinOp::Ge => "ge",
+                        BinOp::And => "and",
+                        BinOp::Or => "or",
+                        BinOp::RangeEx => todo!(),
+                    }
+                    .into(),
+                ));
+                self.expr(ast_expr)?
             }
-            ast::CallKind::Binary(_) => todo!(),
         };
+        let func = expr.expr;
+        let func_type = expr.ty;
         // Ensure it is a function that is being called
-        let Type::Function(mut func_type) = func_type else {
-            return Err(func_span.sp(CheckError::CallNonFunction(func_type)));
-        };
-        // Check arguments
-        let mut args = Vec::new();
-        let mut arg_types = Vec::new();
-        let call_arg_count = call.args.len();
-        for (param_ty, ast_arg) in func_type.params.iter_mut().zip(call.args) {
-            let arg_span = ast_arg.span.clone();
-            let mut arg = self.expr(ast_arg)?;
-            if !param_ty.matches(&mut arg.ty) {
-                return Err(arg_span.sp(CheckError::TypeMismatch(param_ty.clone(), arg.ty)));
+        match func_type {
+            Type::Function(mut func_type) => {
+                // Check arguments
+                let mut args = Vec::new();
+                let mut arg_types = Vec::new();
+                let call_arg_count = call.args.len();
+                for (param_ty, ast_arg) in func_type.params.iter_mut().zip(call.args) {
+                    let arg_span = ast_arg.span.clone();
+                    let mut arg = self.expr(ast_arg)?;
+                    if !param_ty.matches(&mut arg.ty) {
+                        return Err(arg_span.sp(CheckError::TypeMismatch(param_ty.clone(), arg.ty)));
+                    }
+                    args.push(arg.expr);
+                    arg_types.push(arg.ty);
+                }
+                // Figure out the return type
+                let ty = match func_type.params.len().cmp(&call_arg_count) {
+                    // Too many arguments
+                    Ordering::Less => {
+                        return Err(func_span.sp(CheckError::TooManyArguments(
+                            func_type.params.len(),
+                            call_arg_count,
+                        )));
+                    }
+                    // All arguments are provided
+                    Ordering::Equal => func_type.ret.clone(),
+                    // Partial application
+                    Ordering::Greater => Type::Function(Box::new(FunctionType {
+                        params: func_type.params[call_arg_count..].to_vec(),
+                        ret: func_type.ret.clone(),
+                    })),
+                };
+                Ok(Expr::Call(Box::new(CallExpr { func, args })).typed(ty))
             }
-            args.push(arg.expr);
-            arg_types.push(arg.ty);
+            Type::UnknownFunction(mut func_types) => {
+                let mut args = Vec::new();
+                for (i, ast_arg) in call.args.into_iter().enumerate() {
+                    let arg = self.expr(ast_arg)?;
+                    func_types.retain_mut(|func_type| {
+                        func_type.params.len() > i
+                            && func_type.params[i].matches(&mut arg.ty.clone())
+                    });
+                    args.push(arg);
+                }
+                let func_ty = match func_types.len() {
+                    0 => {
+                        return Err(func_span.sp(CheckError::NoMatchingFunctionVariant(
+                            args.into_iter().map(|arg| arg.ty).collect(),
+                        )))
+                    }
+                    1 => func_types.pop().unwrap(),
+                    _ => {
+                        return Err(func_span.sp(CheckError::AmbiguousFunctionVariant(
+                            args.into_iter().map(|arg| arg.ty).collect(),
+                        )))
+                    }
+                };
+                todo!()
+            }
+            _ => Err(func_span.sp(CheckError::CallNonFunction(func_type))),
         }
-        // Figure out the return type
-        let ty = match func_type.params.len().cmp(&call_arg_count) {
-            // Too many arguments
-            Ordering::Less => {
-                return Err(func_span.sp(CheckError::TooManyArguments(
-                    func_type.params.len(),
-                    call_arg_count,
-                )));
-            }
-            // All arguments are provided
-            Ordering::Equal => func_type.ret.clone(),
-            // Partial application
-            Ordering::Greater => Type::Function(Box::new(FunctionType {
-                params: func_type.params[call_arg_count..].to_vec(),
-                ret: func_type.ret.clone(),
-            })),
-        };
-        Ok(Expr::Call(Box::new(CallExpr {
-            func: call_kind,
-            args,
-        }))
-        .typed(ty))
     }
 }

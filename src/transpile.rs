@@ -1,12 +1,11 @@
-use std::{collections::HashMap, mem::take, path::Path};
+use std::{mem::take, path::Path};
 
-use crate::{ast::BinOp, check::*, lex::Sp};
+use crate::{check::*, lex::Sp};
 
 pub struct Transpiler {
     pub(crate) checker: Checker,
     pub(crate) code: String,
     indentation: usize,
-    pub(crate) function_replacements: HashMap<String, String>,
 }
 
 impl Default for Transpiler {
@@ -21,7 +20,6 @@ impl Transpiler {
             checker: Checker::default(),
             code: String::new(),
             indentation: 0,
-            function_replacements: HashMap::new(),
         }
     }
     pub fn transpile(&mut self, input: &str, path: &Path) -> Result<(), Vec<Sp<CheckError>>> {
@@ -164,27 +162,15 @@ impl Transpiler {
         }
     }
     fn call(&mut self, call: CallExpr) {
-        match call.func {
-            CallKind::Normal(func) => {
-                self.expr(func);
-                self.add("(");
-                for (i, arg) in call.args.into_iter().enumerate() {
-                    if i > 0 {
-                        self.add(", ");
-                    }
-                    self.expr(arg);
-                }
-                self.add(")");
+        self.expr(call.func);
+        self.add("(");
+        for (i, arg) in call.args.into_iter().enumerate() {
+            if i > 0 {
+                self.add(", ");
             }
-            CallKind::Binary(op) => {
-                if call.args.len() != 2 {
-                    todo!("implement partial binary operator application");
-                }
-                let [left, right]: [Expr; 2] =
-                    call.args.try_into().unwrap_or_else(|_| unreachable!());
-                self.bin_expr(left, op, right);
-            }
+            self.expr(arg);
         }
+        self.add(")");
     }
     fn if_expr(&mut self, if_expr: IfExpr) {
         self.expr(if_expr.cond);
@@ -192,27 +178,5 @@ impl Transpiler {
         self.expr(if_expr.if_true);
         self.add(" or ");
         self.expr(if_expr.if_false);
-    }
-    fn bin_expr(&mut self, left: Expr, op: BinOp, right: Expr) {
-        self.expr(left);
-        self.add(format!(
-            " {} ",
-            match op {
-                BinOp::Add => "+",
-                BinOp::Sub => "-",
-                BinOp::Mul => "*",
-                BinOp::Div => "/",
-                BinOp::Eq => "==",
-                BinOp::Ne => "~=",
-                BinOp::Lt => "<",
-                BinOp::Le => "<=",
-                BinOp::Gt => ">",
-                BinOp::Ge => ">=",
-                BinOp::And => "and",
-                BinOp::Or => "or",
-                BinOp::RangeEx => todo!(),
-            }
-        ));
-        self.expr(right);
     }
 }

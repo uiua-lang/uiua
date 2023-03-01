@@ -282,6 +282,13 @@ impl Parser {
             let end = self.expect(CloseParen)?;
             let span = start.merge(end);
             Some(span.sp(Type::Tuple(tys)))
+        } else if let Some(start) = self.try_exact(Keyword::Fn) {
+            // Function
+            let params = self.surrounded_list(PARENS, Self::try_ty)?.value;
+            self.expect(Arrow)?;
+            let ret = self.try_ty()?;
+            let span = start.merge(ret.span);
+            Some(span.sp(Type::Function(Box::new(FunctionType { params, ret }))))
         } else {
             None
         })

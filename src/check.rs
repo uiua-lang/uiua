@@ -320,6 +320,15 @@ impl Checker {
                     .map(|item| self.ty(item))
                     .collect::<CheckResult<_>>()?,
             ),
+            ast::Type::Function(func_ty) => Type::Function(Box::new(FunctionType {
+                params: func_ty
+                    .params
+                    .into_iter()
+                    .map(|param| self.ty(param))
+                    .collect::<CheckResult<_>>()?,
+                ret: self.ty(func_ty.ret)?,
+            })),
+            ast::Type::Parened(inner) => self.ty(ty.span.sp(*inner))?,
         })
     }
     fn if_expr(&mut self, if_expr: ast::IfExpr) -> CheckResult<TypedExpr> {

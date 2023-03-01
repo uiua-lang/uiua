@@ -35,6 +35,14 @@ pub enum Type {
     Ident(String),
     List(Box<Type>),
     Tuple(Vec<Sp<Type>>),
+    Function(Box<FunctionType>),
+    Parened(Box<Type>),
+}
+
+#[derive(Debug, Clone)]
+pub struct FunctionType {
+    pub params: Vec<Sp<Type>>,
+    pub ret: Option<Sp<Type>>,
 }
 
 #[derive(Debug, Clone)]

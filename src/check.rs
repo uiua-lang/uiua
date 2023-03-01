@@ -264,7 +264,7 @@ impl Checker {
                 i.parse()
                     .map_err(|_| expr.span.sp(CheckError::InvalidInteger(i)))?,
             )
-            .typed(Type::Int),
+            .typed(Type::UnknownInt),
             ast::Expr::Real(r) => Expr::Real(
                 r.parse()
                     .map_err(|_| expr.span.sp(CheckError::InvalidReal(r)))?,

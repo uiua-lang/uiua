@@ -11,6 +11,7 @@ pub enum Type {
     List(Box<Type>),
     Tuple(Vec<Type>),
     Unkown,
+    UnknownInt,
 }
 
 impl Type {
@@ -24,6 +25,14 @@ impl Type {
                 true
             }
             (a, b @ Type::Unkown) => {
+                *b = a.clone();
+                true
+            }
+            (a @ Type::UnknownInt, b @ (Type::Nat | Type::Int)) => {
+                *a = b.clone();
+                true
+            }
+            (a @ (Type::Nat | Type::Int), b @ Type::UnknownInt) => {
                 *b = a.clone();
                 true
             }
@@ -56,6 +65,7 @@ impl fmt::Display for Type {
                 write!(f, ")")
             }
             Type::Unkown => write!(f, "_"),
+            Type::UnknownInt => write!(f, "{{integer}}"),
         }
     }
 }
@@ -64,6 +74,8 @@ impl PartialEq for Type {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Type::Unkown, _) | (_, Type::Unkown) => true,
+            (Type::UnknownInt, Type::Nat | Type::Int)
+            | (Type::Nat | Type::Int, Type::UnknownInt) => true,
             (Type::Unit, Type::Unit) => true,
             (Type::Bool, Type::Bool) => true,
             (Type::Nat, Type::Nat) => true,

@@ -1,4 +1,9 @@
-use std::{cmp::Ordering, collections::HashMap, fmt, path::Path};
+use std::{
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+    fmt,
+    path::Path,
+};
 
 use crate::{
     ast::{self, BinOp, UnOp},
@@ -122,6 +127,7 @@ pub struct Checker {
     scopes: Vec<Scope>,
     pub(crate) types: HashMap<String, Type>,
     errors: Vec<Sp<CheckError>>,
+    unknown_types: HashSet<String>,
 }
 
 #[derive(Default)]
@@ -135,6 +141,7 @@ impl Default for Checker {
             scopes: vec![Scope::default()],
             types: HashMap::new(),
             errors: Vec::new(),
+            unknown_types: HashSet::new(),
         }
     }
 }
@@ -310,11 +317,18 @@ impl Checker {
         Ok(match ty.value {
             ast::Type::Unit => Type::Unit,
             ast::Type::Unknown => Type::Unknown,
-            ast::Type::Ident(name) => self
-                .types
-                .get(&name)
-                .cloned()
-                .ok_or_else(|| ty.span.sp(CheckError::UnknownType(name)))?,
+            ast::Type::Ident(name) => {
+                if let Some(ty) = self.types.get(&name) {
+                    ty.clone()
+                } else {
+                    if !self.unknown_types.contains(&name) {
+                        self.errors
+                            .push(ty.span.sp(CheckError::UnknownType(name.clone())));
+                        self.unknown_types.insert(name);
+                    }
+                    Type::Unknown
+                }
+            }
             ast::Type::List(item) => Type::List(Box::new(self.ty(ty.span.sp(*item))?)),
             ast::Type::Tuple(items) => Type::Tuple(
                 items

@@ -85,7 +85,6 @@ pub struct CallExpr {
 #[derive(Debug, Clone)]
 pub enum CallKind {
     Normal(Expr),
-    Unary(UnOp),
     Binary(BinOp),
 }
 
@@ -122,10 +121,4 @@ pub enum BinOp {
     And,
     Or,
     RangeEx,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum UnOp {
-    Neg,
-    Not,
 }

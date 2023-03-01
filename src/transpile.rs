@@ -1,10 +1,6 @@
 use std::{collections::HashMap, mem::take, path::Path};
 
-use crate::{
-    ast::{BinOp, UnOp},
-    check::*,
-    lex::Sp,
-};
+use crate::{ast::BinOp, check::*, lex::Sp};
 
 pub struct Transpiler {
     pub(crate) checker: Checker,
@@ -188,13 +184,6 @@ impl Transpiler {
                     call.args.try_into().unwrap_or_else(|_| unreachable!());
                 self.bin_expr(left, op, right);
             }
-            CallKind::Unary(op) => {
-                if call.args.len() != 1 {
-                    todo!("implement partial unary operator application");
-                }
-                let expr = call.args.into_iter().next().unwrap();
-                self.un_expr(op, expr);
-            }
         }
     }
     fn if_expr(&mut self, if_expr: IfExpr) {
@@ -225,12 +214,5 @@ impl Transpiler {
             }
         ));
         self.expr(right);
-    }
-    fn un_expr(&mut self, op: UnOp, expr: Expr) {
-        self.add(match op {
-            UnOp::Neg => "-",
-            UnOp::Not => "not ",
-        });
-        self.expr(expr);
     }
 }

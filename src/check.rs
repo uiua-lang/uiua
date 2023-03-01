@@ -2,12 +2,11 @@ use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet},
     fmt,
-    mem::take,
     path::Path,
 };
 
 use crate::{
-    ast::{self, BinOp, UnOp},
+    ast::{self, BinOp},
     lex::Sp,
     parse::{parse, ParseError},
     types::{FunctionType, Type},
@@ -23,6 +22,7 @@ pub enum CheckError {
     TypeMismatch(Type, Type),
     CallNonFunction(Type),
     TooManyArguments(usize, usize),
+    CompatibleFunctionExists(String, FunctionType, FunctionType),
 }
 
 impl fmt::Display for CheckError {
@@ -40,6 +40,10 @@ impl fmt::Display for CheckError {
             CheckError::TooManyArguments(expected, actual) => {
                 write!(f, "too many arguments: expected {expected}, got {actual}")
             }
+            CheckError::CompatibleFunctionExists(name, existing, new) => write!(
+                f,
+                "compatible function exists: existing `{name}: {existing}` is compatible with new `{name}: {new}`"
+            ),
         }
     }
 }
@@ -107,7 +111,6 @@ pub struct CallExpr {
 pub enum CallKind {
     Normal(Expr),
     Binary(BinOp),
-    Unary(UnOp),
 }
 
 pub struct TypedExpr {
@@ -126,6 +129,7 @@ impl TypedExpr {
 
 pub struct Checker {
     scopes: Vec<Scope>,
+    pub(crate) functions: HashMap<String, Vec<FunctionType>>,
     pub(crate) types: HashMap<String, Type>,
     errors: Vec<Sp<CheckError>>,
     unknown_types: HashSet<String>,
@@ -140,6 +144,7 @@ impl Default for Checker {
     fn default() -> Self {
         Checker {
             scopes: vec![Scope::default()],
+            functions: HashMap::new(),
             types: HashMap::new(),
             errors: Vec::new(),
             unknown_types: HashSet::new(),
@@ -165,28 +170,35 @@ impl Checker {
         }
         (items, errors)
     }
-    fn find_type(&self, name: &str) -> Option<Type> {
+    fn find_binding(&self, name: &str) -> Option<Type> {
         self.scopes
             .iter()
             .rev()
             .find_map(|scope| scope.bindings.get(name))
             .cloned()
+            .or_else(|| {
+                self.functions.get(name).cloned().map(|mut fs| {
+                    if fs.len() == 1 {
+                        Type::Function(fs.pop().unwrap().into())
+                    } else {
+                        Type::UnknownFunction(fs)
+                    }
+                })
+            })
     }
     pub(crate) fn scope_mut(&mut self) -> &mut Scope {
         self.scopes.last_mut().unwrap()
     }
-    fn add_function(&mut self, name: &str, ty: FunctionType) {
-        let bindings = &mut self.scope_mut().bindings;
-        match bindings.get_mut(name) {
-            Some(Type::Function(ty1)) => {
-                let ty1: FunctionType = take(ty1);
-                bindings.insert(name.into(), Type::UnknownFunction(vec![ty1, ty]));
-            }
-            Some(Type::UnknownFunction(fs)) => fs.push(ty),
-            _ => {
-                bindings.insert(name.into(), Type::Function(ty.into()));
-            }
+    fn add_function(&mut self, name: &str, ty: FunctionType) -> Result<(), FunctionType> {
+        let functions = self.functions.entry(name.into()).or_default();
+        if let Some(f) = functions
+            .iter()
+            .find(|f| (**f).clone().matches(&mut ty.clone()))
+        {
+            return Err(f.clone());
         }
+        functions.push(ty);
+        Ok(())
     }
     fn item(&mut self, item: ast::Item) -> CheckResult<Item> {
         Ok(match item {
@@ -222,7 +234,13 @@ impl Checker {
             params: params.iter().map(|p| p.ty.clone()).collect(),
             ret: ret_ty,
         };
-        self.add_function(&def.name.value, func_ty);
+        if let Err(existing) = self.add_function(&def.name.value, func_ty.clone()) {
+            return Err(def.name.span.sp(CheckError::CompatibleFunctionExists(
+                def.name.value,
+                existing,
+                func_ty,
+            )));
+        }
         Ok(FunctionDef {
             name: def.name.value,
             params,
@@ -301,7 +319,7 @@ impl Checker {
             )
             .typed(Type::Real),
             ast::Expr::Ident(name) => {
-                if let Some(ty) = self.find_type(&name) {
+                if let Some(ty) = self.find_binding(&name) {
                     Expr::Ident(name).typed(ty)
                 } else {
                     return Err(expr.span.sp(CheckError::UnknownBinding(name)));
@@ -400,7 +418,6 @@ impl Checker {
                 let expr = self.expr(call.func.span.sp(func))?;
                 (CallKind::Normal(expr.expr), expr.ty)
             }
-            ast::CallKind::Unary(_) => todo!(),
             ast::CallKind::Binary(_) => todo!(),
         };
         // Ensure it is a function that is being called

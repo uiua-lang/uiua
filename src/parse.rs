@@ -426,7 +426,7 @@ impl Parser {
             if let Some(child) = def.child {
                 this.try_bin_expr_def(child)
             } else {
-                this.try_un_expr()
+                this.try_call()
             }
         };
         let Some(mut expr) = leaf(self)? else{
@@ -448,26 +448,6 @@ impl Parser {
             break;
         }
         Ok(Some(expr))
-    }
-    fn try_un_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
-        if let Some(op) = [
-            (Token::Simple(Minus), UnOp::Neg),
-            (Token::Keyword(Keyword::Not), UnOp::Not),
-        ]
-        .into_iter()
-        .find_map(|(token, op)| self.try_exact(token).map(|span| span.sp(op)))
-        {
-            let expr = self.expect_expr(Self::try_un_expr)?;
-            let start = op.span.clone();
-            let end = expr.span.clone();
-            let span = start.merge(end);
-            Ok(Some(span.sp(Expr::Call(Box::new(CallExpr {
-                func: op.map(CallKind::Unary),
-                args: vec![expr],
-            })))))
-        } else {
-            self.try_call()
-        }
     }
     fn try_call(&mut self) -> ParseResult<Option<Sp<Expr>>> {
         let Some(func) = self.try_term()? else {

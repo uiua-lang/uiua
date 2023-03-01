@@ -38,6 +38,7 @@ pub enum Type {
     Tuple(Vec<Sp<Type>>),
     Function(Box<FunctionType>),
     Parened(Box<Type>),
+    Unknown,
 }
 
 #[derive(Debug, Clone)]

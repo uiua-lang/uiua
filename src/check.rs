@@ -206,7 +206,7 @@ impl Checker {
         let mut ty = if let Some(ty) = binding.ty {
             self.ty(ty)?
         } else {
-            Type::Unkown
+            Type::Unknown
         };
         if !expr.ty.matches(&mut ty) {
             return Err(expr_span.sp(CheckError::TypeMismatch(ty, expr.ty)));
@@ -234,7 +234,7 @@ impl Checker {
                 Pattern::Tuple(if let Type::Tuple(types) = expr_ty.clone() {
                     if types.len() != patterns.len() {
                         return Err(pattern.span.sp(CheckError::TypeMismatch(
-                            Type::Tuple(vec![Type::Unkown; patterns.len()]),
+                            Type::Tuple(vec![Type::Unknown; patterns.len()]),
                             expr_ty,
                         )));
                     }
@@ -245,7 +245,7 @@ impl Checker {
                         .collect::<CheckResult<_>>()?
                 } else {
                     return Err(pattern.span.sp(CheckError::TypeMismatch(
-                        Type::Tuple(vec![Type::Unkown; patterns.len()]),
+                        Type::Tuple(vec![Type::Unknown; patterns.len()]),
                         expr_ty,
                     )));
                 })
@@ -301,7 +301,7 @@ impl Checker {
                     }
                     exprs.push(item.expr);
                 }
-                Expr::List(exprs).typed(Type::List(Box::new(ty.unwrap_or(Type::Unkown))))
+                Expr::List(exprs).typed(Type::List(Box::new(ty.unwrap_or(Type::Unknown))))
             }
             ast::Expr::Parened(inner) => self.expr(expr.span.sp(*inner))?,
         })
@@ -309,6 +309,7 @@ impl Checker {
     fn ty(&mut self, ty: Sp<ast::Type>) -> CheckResult<Type> {
         Ok(match ty.value {
             ast::Type::Unit => Type::Unit,
+            ast::Type::Unknown => Type::Unknown,
             ast::Type::Ident(name) => self
                 .types
                 .get(&name)

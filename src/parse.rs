@@ -149,14 +149,26 @@ impl Parser {
     where
         T: Copy + Into<Token> + Into<Expectation>,
     {
-        self.try_exact(val)
-            .ok_or_else(|| self.expected([val.into()]))
+        self.try_exact(val).ok_or_else(|| self.expected([val]))
     }
-    fn expected(&self, expectations: impl IntoIterator<Item = Expectation>) -> Sp<ParseError> {
+    fn expected<I: Into<Expectation>>(
+        &self,
+        expectations: impl IntoIterator<Item = I>,
+    ) -> Sp<ParseError> {
         self.last_span().sp(ParseError::Expected(
-            expectations.into_iter().collect(),
+            expectations.into_iter().map(Into::into).collect(),
             self.tokens.get(self.index).cloned().map(Box::new),
         ))
+    }
+    fn expected_continue<I: Into<Expectation>>(
+        &mut self,
+        expectations: impl IntoIterator<Item = I>,
+    ) {
+        let err = self.last_span().sp(ParseError::Expected(
+            expectations.into_iter().map(Into::into).collect(),
+            None,
+        ));
+        self.errors.push(err);
     }
     fn try_item(&mut self) -> ParseResult<Option<Item>> {
         Ok(Some(if let Some(def) = self.try_function_def()? {
@@ -257,8 +269,16 @@ impl Parser {
         let Some(name) = self.try_ident() else {
             return Ok(None);
         };
-        self.expect(Colon)?;
-        let ty = self.ty()?;
+        let mut ty = None;
+        if self.try_exact(Colon).is_some() {
+            ty = self.try_ty()?;
+            if ty.is_none() {
+                self.expected_continue([Expectation::Type]);
+            }
+        } else {
+            self.expected_continue([Expectation::Type]);
+        }
+        let ty = ty.unwrap_or_else(|| name.span.clone().sp(Type::Unknown));
         Ok(Some(Param { name, ty }))
     }
     fn try_ty(&mut self) -> ParseResult<Option<Sp<Type>>> {

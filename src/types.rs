@@ -10,7 +10,7 @@ pub enum Type {
     Function(Box<FunctionType>),
     List(Box<Type>),
     Tuple(Vec<Type>),
-    Unkown,
+    Unknown,
     UnknownInt,
 }
 
@@ -20,11 +20,11 @@ impl Type {
             return false;
         }
         match (self, other) {
-            (a @ Type::Unkown, b) => {
+            (a @ Type::Unknown, b) => {
                 *a = b.clone();
                 true
             }
-            (a, b @ Type::Unkown) => {
+            (a, b @ Type::Unknown) => {
                 *b = a.clone();
                 true
             }
@@ -64,7 +64,7 @@ impl fmt::Display for Type {
                 }
                 write!(f, ")")
             }
-            Type::Unkown => write!(f, "_"),
+            Type::Unknown => write!(f, "_"),
             Type::UnknownInt => write!(f, "{{integer}}"),
         }
     }
@@ -73,7 +73,7 @@ impl fmt::Display for Type {
 impl PartialEq for Type {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Type::Unkown, _) | (_, Type::Unkown) => true,
+            (Type::Unknown, _) | (_, Type::Unknown) => true,
             (Type::UnknownInt, Type::Nat | Type::Int)
             | (Type::Nat | Type::Int, Type::UnknownInt) => true,
             (Type::Unit, Type::Unit) => true,

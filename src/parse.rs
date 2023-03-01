@@ -235,7 +235,7 @@ impl Parser {
             None
         };
         // Expression
-        self.expect(Equals)?;
+        self.expect(Equal)?;
         let expr = self.expr()?;
         self.expect(SemiColon)?;
         Ok(Some(Binding { pattern, ty, expr }))

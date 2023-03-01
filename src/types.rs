@@ -44,14 +44,14 @@ impl fmt::Display for Type {
             Type::Int => write!(f, "int"),
             Type::Real => write!(f, "real"),
             Type::Function(func) => write!(f, "{func}"),
-            Type::List(ty) => write!(f, "[{}]", ty),
+            Type::List(ty) => write!(f, "[{ty}]"),
             Type::Tuple(items) => {
                 write!(f, "(")?;
                 for (i, item) in items.iter().enumerate() {
                     if i > 0 {
                         write!(f, ", ")?;
                     }
-                    write!(f, "{}", item)?;
+                    write!(f, "{item}")?;
                 }
                 write!(f, ")")
             }
@@ -105,12 +105,12 @@ impl FunctionType {
 
 impl fmt::Display for FunctionType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "(")?;
+        write!(f, "fn(")?;
         for (i, param) in self.params.iter().enumerate() {
             if i > 0 {
                 write!(f, ", ")?;
             }
-            write!(f, "{}", param)?;
+            write!(f, "{param}")?;
         }
         write!(f, ")")?;
         if self.ret != Type::Unit {

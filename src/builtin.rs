@@ -41,7 +41,7 @@ impl Runtime {
             if let Some((uiua_name, uiua_type)) = uiua_name {
                 self.transpiler
                     .function_replacements
-                    .insert(uiua_name.into(), format!("uiua.{}", lua_name));
+                    .insert(uiua_name.into(), format!("uiua.{lua_name}"));
                 self.transpiler
                     .checker
                     .scope_mut()

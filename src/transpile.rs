@@ -106,7 +106,7 @@ impl Transpiler {
                     match pattern {
                         Pattern::Ident(ident) => self.add(ident),
                         Pattern::Tuple(items) => {
-                            let name = format!("tuple_{}", i);
+                            let name = format!("tuple_{i}");
                             self.add(name.clone());
                             groups.push((name, items));
                         }
@@ -128,7 +128,7 @@ impl Transpiler {
                             match pattern {
                                 Pattern::Ident(ident) => self.add(ident),
                                 Pattern::Tuple(items) => {
-                                    let name = format!("tuple_{}_{}", name, i);
+                                    let name = format!("tuple_{name}_{i}");
                                     self.add(name.clone());
                                     groups.push((name, items));
                                 }

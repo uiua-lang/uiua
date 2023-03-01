@@ -273,21 +273,38 @@ impl Parser {
         } else if let Some(start) = self.try_exact(OpenParen) {
             // Tuple
             let mut tys = Vec::new();
+            let mut comma_ended = true;
             while let Some(ty) = self.try_ty()? {
                 tys.push(ty);
                 if self.try_exact(Comma).is_none() {
+                    comma_ended = false;
                     break;
                 }
             }
             let end = self.expect(CloseParen)?;
             let span = start.merge(end);
-            Some(span.sp(Type::Tuple(tys)))
+            Some(span.sp(if tys.is_empty() {
+                Type::Unit
+            } else if tys.len() == 1 && !comma_ended {
+                Type::Parened(tys.remove(0).value.into())
+            } else {
+                Type::Tuple(tys)
+            }))
         } else if let Some(start) = self.try_exact(Keyword::Fn) {
             // Function
-            let params = self.surrounded_list(PARENS, Self::try_ty)?.value;
-            self.expect(Arrow)?;
-            let ret = self.try_ty()?;
-            let span = start.merge(ret.span);
+            let params = self.surrounded_list(PARENS, Self::try_ty)?;
+            let params_span = params.span;
+            let params = params.value;
+            let ret = if self.try_exact(Arrow).is_some() {
+                Some(self.ty()?)
+            } else {
+                None
+            };
+            let span = if let Some(ret) = &ret {
+                start.merge(ret.span.clone())
+            } else {
+                start.merge(params_span)
+            };
             Some(span.sp(Type::Function(Box::new(FunctionType { params, ret }))))
         } else {
             None

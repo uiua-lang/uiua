@@ -32,6 +32,7 @@ pub struct Param {
 
 #[derive(Debug, Clone)]
 pub enum Type {
+    Unit,
     Ident(String),
     List(Box<Type>),
     Tuple(Vec<Sp<Type>>),

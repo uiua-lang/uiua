@@ -308,6 +308,7 @@ impl Checker {
     }
     fn ty(&mut self, ty: Sp<ast::Type>) -> CheckResult<Type> {
         Ok(match ty.value {
+            ast::Type::Unit => Type::Unit,
             ast::Type::Ident(name) => self
                 .types
                 .get(&name)
@@ -326,7 +327,11 @@ impl Checker {
                     .into_iter()
                     .map(|param| self.ty(param))
                     .collect::<CheckResult<_>>()?,
-                ret: self.ty(func_ty.ret)?,
+                ret: func_ty
+                    .ret
+                    .map(|ty| self.ty(ty))
+                    .transpose()?
+                    .unwrap_or(Type::Unit),
             })),
             ast::Type::Parened(inner) => self.ty(ty.span.sp(*inner))?,
         })

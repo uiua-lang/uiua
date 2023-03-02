@@ -5,10 +5,5 @@ fn main() {
     let mut rt = Runtime::new();
     if let Err(e) = rt.load_file(path) {
         eprintln!("{e}");
-        return;
-    }
-    println!("{}", rt.lua_code());
-    if let Err(e) = rt.run() {
-        eprintln!("{e}");
     }
 }

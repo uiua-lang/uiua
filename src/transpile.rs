@@ -1,9 +1,8 @@
-use std::{mem::take, path::Path};
+use std::mem::take;
 
-use crate::{check::*, lex::Sp};
+use crate::{ast::LogicalOp, check::*};
 
 pub struct Transpiler {
-    pub(crate) checker: Checker,
     pub(crate) code: String,
     indentation: usize,
 }
@@ -17,7 +16,6 @@ impl Default for Transpiler {
 impl Transpiler {
     pub(crate) fn new() -> Self {
         Self {
-            checker: Checker::default(),
             code: String::new(),
             indentation: 0,
         }
@@ -25,18 +23,7 @@ impl Transpiler {
     pub fn take(&mut self) -> String {
         take(&mut self.code)
     }
-    pub fn transpile(&mut self, input: &str, path: &Path) -> Result<(), Vec<Sp<CheckError>>> {
-        let (items, errors) = self.checker.load(input, path);
-        if errors.is_empty() {
-            for item in items {
-                self.item(item);
-            }
-            Ok(())
-        } else {
-            Err(errors)
-        }
-    }
-    fn item(&mut self, item: Item) {
+    pub fn item(&mut self, item: Item) {
         match item {
             Item::FunctionDef(def) => self.function_def(def),
             Item::Expr(expr) => self.expr(expr.expr),
@@ -66,28 +53,32 @@ impl Transpiler {
             self.code.push('\n');
         }
     }
-    fn function_def(&mut self, def: FunctionDef) {
+    pub fn function_def(&mut self, def: FunctionDef) {
         self.add(format!("function {}(", def.name));
-        for (i, param) in def.params.into_iter().enumerate() {
+        for (i, param) in def.func.params.into_iter().enumerate() {
             if i > 0 {
                 self.add(", ");
             }
             self.add(param.name);
         }
         self.line(")");
-        self.indentation += 1;
-        self.function_body(def.body);
+        self.indented(|this| {
+            this.add("return ");
+            this.block(def.func.body);
+        });
         self.line("end");
     }
-    fn function_body(&mut self, body: FunctionBody) {
+    fn indented(&mut self, f: impl FnOnce(&mut Self)) {
         self.indentation += 1;
+        f(self);
+        self.indentation -= 1;
+    }
+    fn block(&mut self, body: Block) {
         for binding in body.bindings {
             self.binding(binding);
         }
-        self.add("return ");
         self.expr(body.expr.expr);
         self.ensure_line();
-        self.indentation -= 1;
     }
     fn binding(&mut self, binding: Binding) {
         match binding.pattern {
@@ -166,7 +157,10 @@ impl Transpiler {
             Expr::Bool(b) => self.add(b.to_string()),
             Expr::If(if_expr) => self.if_expr(*if_expr),
             Expr::Call(call) => self.call(*call),
+            Expr::Logic(log_expr) => self.logic_expr(*log_expr),
             Expr::Function(fn_expr) => self.fn_expr(*fn_expr),
+            Expr::BuiltinFn(f) => self.add(f.lua_name()),
+            Expr::Type(ty) => self.add(ty.to_string()),
         }
     }
     fn call(&mut self, call: CallExpr) {
@@ -183,20 +177,33 @@ impl Transpiler {
     fn if_expr(&mut self, if_expr: IfExpr) {
         self.expr(if_expr.cond);
         self.add(" and ");
-        self.expr(if_expr.if_true);
+        self.block(if_expr.if_true);
         self.add(" or ");
-        self.expr(if_expr.if_false);
+        self.block(if_expr.if_false);
     }
-    fn fn_expr(&mut self, fn_expr: FunctionExpr) {
+    fn logic_expr(&mut self, log_expr: LogicalExpr) {
+        self.expr(log_expr.left);
+        self.add(" ");
+        self.add(match log_expr.op {
+            LogicalOp::And => "and",
+            LogicalOp::Or => "or",
+        });
+        self.add(" ");
+        self.expr(log_expr.right);
+    }
+    fn fn_expr(&mut self, func: Function) {
         self.add("function(");
-        for (i, param) in fn_expr.params.into_iter().enumerate() {
+        for (i, param) in func.params.into_iter().enumerate() {
             if i > 0 {
                 self.add(", ");
             }
             self.add(param.name);
         }
         self.add(")");
-        self.function_body(fn_expr.body);
+        self.indented(|this| {
+            this.add("return ");
+            this.block(func.body);
+        });
         self.add("end");
     }
 }

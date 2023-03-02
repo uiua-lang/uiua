@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub enum Type {
     #[default]
     Unit,
@@ -14,13 +14,11 @@ pub enum Type {
     Unknown,
     UnknownInt,
     Type,
+    Polymorphic,
 }
 
 impl Type {
     pub fn matches(&mut self, other: &mut Self) -> bool {
-        if self != other {
-            return false;
-        }
         match (self, other) {
             (a @ Type::Unknown, b) => {
                 *a = b.clone();
@@ -41,7 +39,7 @@ impl Type {
             (Type::List(a), Type::List(b)) => a.matches(b),
             (Type::Tuple(a), Type::Tuple(b)) => a.iter_mut().zip(b).all(|(a, b)| a.matches(b)),
             (Type::Function(a), Type::Function(b)) => a.matches(b),
-            _ => true,
+            (a, b) => a == b,
         }
     }
 }
@@ -69,25 +67,7 @@ impl fmt::Display for Type {
             Type::Unknown => write!(f, "_"),
             Type::UnknownInt => write!(f, "{{integer}}"),
             Type::Type => write!(f, "type"),
-        }
-    }
-}
-
-impl PartialEq for Type {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Type::Unknown, _) | (_, Type::Unknown) => true,
-            (Type::UnknownInt, Type::Nat | Type::Int)
-            | (Type::Nat | Type::Int, Type::UnknownInt) => true,
-            (Type::Unit, Type::Unit) => true,
-            (Type::Bool, Type::Bool) => true,
-            (Type::Nat, Type::Nat) => true,
-            (Type::Int, Type::Int) => true,
-            (Type::Real, Type::Real) => true,
-            (Type::Function(a), Type::Function(b)) => a == b,
-            (Type::List(a), Type::List(b)) => a == b,
-            (Type::Tuple(a), Type::Tuple(b)) => a == b,
-            _ => false,
+            Type::Polymorphic => write!(f, "{{polymorphic}}"),
         }
     }
 }
@@ -98,17 +78,23 @@ impl From<FunctionType> for Type {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub struct FunctionType {
+    pub name: Option<String>,
     pub params: Vec<Type>,
     pub ret: Type,
 }
 
 impl FunctionType {
-    pub fn new(params: impl IntoIterator<Item = Type>, ret: Type) -> Self {
+    pub fn new<T: Into<Type>>(
+        name: Option<String>,
+        params: impl IntoIterator<Item = T>,
+        ret: T,
+    ) -> Self {
         Self {
-            params: params.into_iter().collect(),
-            ret,
+            name,
+            params: params.into_iter().map(Into::into).collect(),
+            ret: ret.into(),
         }
     }
     pub fn matches(&mut self, other: &mut Self) -> bool {
@@ -121,6 +107,9 @@ impl FunctionType {
             }
         }
         self.ret.matches(&mut other.ret)
+    }
+    pub fn is_comptime(&self) -> bool {
+        self.params.iter().any(|ty| *ty == Type::Type)
     }
 }
 

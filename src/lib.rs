@@ -13,11 +13,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use check::CheckError;
-use mlua::Lua;
+use check::{CheckError, Checker};
 
 use lex::Sp;
-use transpile::Transpiler;
 
 #[derive(Debug)]
 pub enum RuntimeError {
@@ -54,8 +52,7 @@ impl Error for RuntimeError {}
 pub type RuntimeResult<T = ()> = Result<T, RuntimeError>;
 
 pub struct Runtime {
-    pub lua: Lua,
-    pub transpiler: Transpiler,
+    pub checker: Checker,
 }
 
 impl Default for Runtime {
@@ -67,8 +64,7 @@ impl Default for Runtime {
 impl Runtime {
     pub fn new() -> Self {
         let mut rt = Self {
-            lua: Lua::new(),
-            transpiler: Transpiler::new(),
+            checker: Checker::default(),
         };
         rt.initialize_builtins();
         rt
@@ -77,26 +73,7 @@ impl Runtime {
         let path = path.as_ref();
         let input =
             fs::read_to_string(path).map_err(|e| RuntimeError::Load(path.to_path_buf(), e))?;
-        self.transpiler.transpile(&input, path)?;
+        self.checker.load(&input, path)?;
         Ok(())
-    }
-    pub fn lua_code(&self) -> &str {
-        &self.transpiler.code
-    }
-    pub fn run(&mut self) -> RuntimeResult {
-        self.lua
-            .load(&self.transpiler.code)
-            .exec()
-            .unwrap_or_else(|e| {
-                eprintln!("{e}");
-            });
-        if let Ok(main) = self.lua.globals().get::<_, mlua::Function>("main") {
-            main.call::<_, ()>(()).unwrap_or_else(|e| {
-                eprintln!("{e}");
-            });
-            Ok(())
-        } else {
-            Err(RuntimeError::NoMain)
-        }
     }
 }

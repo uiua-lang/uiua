@@ -1,3 +1,5 @@
+use enum_iterator::Sequence;
+
 use crate::lex::Sp;
 
 #[derive(Debug, Clone)]
@@ -20,11 +22,11 @@ pub struct FunctionDef {
     pub name: Sp<String>,
     pub params: Vec<Param>,
     pub ret_ty: Option<Sp<Type>>,
-    pub body: FunctionBody,
+    pub body: Block,
 }
 
 #[derive(Debug, Clone)]
-pub struct FunctionBody {
+pub struct Block {
     pub bindings: Vec<Binding>,
     pub expr: Sp<Expr>,
 }
@@ -57,6 +59,7 @@ pub enum Expr {
     Unit,
     If(Box<IfExpr>),
     Call(Box<CallExpr>),
+    Logic(Box<LogicalExpr>),
     Struct(Struct),
     Enum(Enum),
     Bool(bool),
@@ -75,10 +78,17 @@ pub enum Pattern {
 }
 
 #[derive(Debug, Clone)]
+pub struct LogicalExpr {
+    pub left: Sp<Expr>,
+    pub op: Sp<LogicalOp>,
+    pub right: Sp<Expr>,
+}
+
+#[derive(Debug, Clone)]
 pub struct IfExpr {
     pub cond: Sp<Expr>,
-    pub if_true: Sp<Expr>,
-    pub if_false: Sp<Expr>,
+    pub if_true: Block,
+    pub if_false: Block,
 }
 
 #[derive(Debug, Clone)]
@@ -111,7 +121,7 @@ pub struct Variant {
     pub fields: Option<Vec<Sp<Type>>>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Sequence)]
 pub enum BinOp {
     Add,
     Sub,
@@ -123,7 +133,44 @@ pub enum BinOp {
     Le,
     Gt,
     Ge,
+    RangeEx,
+}
+
+impl BinOp {
+    pub fn name(&self) -> &'static str {
+        match self {
+            BinOp::Add => "add",
+            BinOp::Sub => "sub",
+            BinOp::Mul => "mul",
+            BinOp::Div => "div",
+            BinOp::Eq => "eq",
+            BinOp::Ne => "ne",
+            BinOp::Lt => "lt",
+            BinOp::Gt => "gt",
+            BinOp::Le => "le",
+            BinOp::Ge => "ge",
+            BinOp::RangeEx => "range_ex",
+        }
+    }
+    pub fn lua_op(&self) -> &'static str {
+        match self {
+            BinOp::Add => "+",
+            BinOp::Sub => "-",
+            BinOp::Mul => "*",
+            BinOp::Div => "/",
+            BinOp::Eq => "==",
+            BinOp::Ne => "~=",
+            BinOp::Lt => "<",
+            BinOp::Gt => ">",
+            BinOp::Le => "<=",
+            BinOp::Ge => ">=",
+            BinOp::RangeEx => todo!(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LogicalOp {
     And,
     Or,
-    RangeEx,
 }

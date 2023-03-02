@@ -220,7 +220,7 @@ impl Parser {
         };
         self.expect(Colon)?;
         // Body
-        let body = self.function_body()?;
+        let body = self.block()?;
         Ok(Some(FunctionDef {
             doc,
             name,
@@ -229,13 +229,13 @@ impl Parser {
             body,
         }))
     }
-    fn function_body(&mut self) -> ParseResult<FunctionBody> {
+    fn block(&mut self) -> ParseResult<Block> {
         let mut bindings = Vec::new();
         while let Some(binding) = self.try_binding()? {
             bindings.push(binding);
         }
         let ret = self.expr()?;
-        Ok(FunctionBody {
+        Ok(Block {
             bindings,
             expr: ret,
         })
@@ -385,31 +385,25 @@ struct BinExprDef<'a> {
 static BIN_EXPR_RANGE: BinExprDef = BinExprDef {
     ops: &[(Token::Simple(Elipses), BinOp::RangeEx)],
     child: Some(&BinExprDef {
-        ops: &[(Token::Keyword(Keyword::Or), BinOp::Or)],
+        ops: &[
+            (Token::Simple(Equal), BinOp::Eq),
+            (Token::Simple(NotEqual), BinOp::Ne),
+            (Token::Simple(Less), BinOp::Lt),
+            (Token::Simple(LessEqual), BinOp::Le),
+            (Token::Simple(Greater), BinOp::Gt),
+            (Token::Simple(GreaterEqual), BinOp::Ge),
+        ],
         child: Some(&BinExprDef {
-            ops: &[(Token::Keyword(Keyword::And), BinOp::And)],
+            ops: &[
+                (Token::Simple(Plus), BinOp::Add),
+                (Token::Simple(Minus), BinOp::Sub),
+            ],
             child: Some(&BinExprDef {
                 ops: &[
-                    (Token::Simple(Equal), BinOp::Eq),
-                    (Token::Simple(NotEqual), BinOp::Ne),
-                    (Token::Simple(Less), BinOp::Lt),
-                    (Token::Simple(LessEqual), BinOp::Le),
-                    (Token::Simple(Greater), BinOp::Gt),
-                    (Token::Simple(GreaterEqual), BinOp::Ge),
+                    (Token::Simple(Star), BinOp::Mul),
+                    (Token::Simple(Slash), BinOp::Div),
                 ],
-                child: Some(&BinExprDef {
-                    ops: &[
-                        (Token::Simple(Plus), BinOp::Add),
-                        (Token::Simple(Minus), BinOp::Sub),
-                    ],
-                    child: Some(&BinExprDef {
-                        ops: &[
-                            (Token::Simple(Star), BinOp::Mul),
-                            (Token::Simple(Slash), BinOp::Div),
-                        ],
-                        child: None,
-                    }),
-                }),
+                child: None,
             }),
         }),
     }),
@@ -417,7 +411,7 @@ static BIN_EXPR_RANGE: BinExprDef = BinExprDef {
 
 impl Parser {
     fn try_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
-        self.try_bin_expr_def(&BIN_EXPR_RANGE)
+        self.try_or_expr()
     }
     fn expr(&mut self) -> ParseResult<Sp<Expr>> {
         self.expect_expr(Self::try_expr)
@@ -427,6 +421,41 @@ impl Parser {
         f: impl FnOnce(&mut Self) -> ParseResult<Option<Sp<Expr>>>,
     ) -> ParseResult<Sp<Expr>> {
         f(self)?.ok_or_else(|| self.expected([Expectation::Expr]))
+    }
+    fn try_or_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
+        let Some(left) = self.try_and_expr()? else {
+            return Ok(None);
+        };
+        let Some(op_span) = self.try_exact(Keyword::Or) else {
+            return Ok(Some(left));
+        };
+        let op = op_span.sp(LogicalOp::Or);
+        let right = self.expect_expr(Self::try_and_expr)?;
+        let span = left.span.clone().merge(right.span.clone());
+        Ok(Some(span.sp(Expr::Logic(Box::new(LogicalExpr {
+            op,
+            left,
+            right,
+        })))))
+    }
+    fn try_and_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
+        let Some(left) = self.try_bin_expr()? else {
+            return Ok(None);
+        };
+        let Some(op_span) = self.try_exact(Keyword::And) else {
+            return Ok(Some(left));
+        };
+        let op = op_span.sp(LogicalOp::And);
+        let right = self.expect_expr(Self::try_bin_expr)?;
+        let span = left.span.clone().merge(right.span.clone());
+        Ok(Some(span.sp(Expr::Logic(Box::new(LogicalExpr {
+            op,
+            left,
+            right,
+        })))))
+    }
+    fn try_bin_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
+        self.try_bin_expr_def(&BIN_EXPR_RANGE)
     }
     fn try_bin_expr_def(&mut self, def: &BinExprDef) -> ParseResult<Option<Sp<Expr>>> {
         let leaf = |this: &mut Self| {
@@ -539,10 +568,10 @@ impl Parser {
         };
         let cond = self.expr()?;
         self.expect(Keyword::Then)?;
-        let if_true = self.expr()?;
+        let if_true = self.block()?;
         self.expect(Keyword::Else)?;
-        let if_false = self.expr()?;
-        let span = if_span.merge(if_false.span.clone());
+        let if_false = self.block()?;
+        let span = if_span.merge(if_false.expr.span.clone());
         Ok(Some(span.sp(IfExpr {
             cond,
             if_true,

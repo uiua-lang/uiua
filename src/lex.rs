@@ -1,4 +1,9 @@
-use std::{error::Error, fmt, path::Path, sync::Arc};
+use std::{
+    error::Error,
+    fmt,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use enum_iterator::{all, Sequence};
 
@@ -47,12 +52,33 @@ impl fmt::Display for Loc {
     }
 }
 
+impl Default for Loc {
+    fn default() -> Self {
+        Self {
+            pos: 0,
+            line: 1,
+            col: 1,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Span {
     pub start: Loc,
     pub end: Loc,
     pub file: Arc<Path>,
     pub input: Arc<str>,
+}
+
+impl Default for Span {
+    fn default() -> Self {
+        Self {
+            start: Loc::default(),
+            end: Loc::default(),
+            file: PathBuf::from("builtin").into(),
+            input: "".into(),
+        }
+    }
 }
 
 impl fmt::Display for Span {

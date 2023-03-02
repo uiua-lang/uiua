@@ -5,10 +5,14 @@ use std::{
     path::Path,
 };
 
+use mlua::{Lua, Value};
+
 use crate::{
-    ast::{self, BinOp},
-    lex::Sp,
+    ast::{self, LogicalOp},
+    builtin::{BuiltinFn, CmpOp},
+    lex::{Sp, Span},
     parse::{parse, ParseError},
+    transpile::Transpiler,
     types::{FunctionType, Type},
 };
 
@@ -21,10 +25,8 @@ pub enum CheckError {
     UnknownType(String),
     TypeMismatch(Type, Type),
     CallNonFunction(Type),
-    TooManyArguments(usize, usize),
-    CompatibleFunctionExists(String, FunctionType, FunctionType),
-    NoMatchingFunctionVariant(Vec<Type>),
-    AmbiguousFunctionVariant(Vec<Type>),
+    WrongNumberOfArgs(usize, usize),
+    OverrideWrongParamCount(String, usize, usize),
 }
 
 impl fmt::Display for CheckError {
@@ -39,72 +41,111 @@ impl fmt::Display for CheckError {
                 write!(f, "type mismatch: expected {expected}, got {actual}")
             }
             CheckError::CallNonFunction(ty) => write!(f, "cannot call non-function: {ty}"),
-            CheckError::TooManyArguments(expected, actual) => {
-                write!(f, "too many arguments: expected {expected}, got {actual}")
+            CheckError::WrongNumberOfArgs(expected, actual) => {
+                write!(f, "wrong number of arguments: expected {expected}, got {actual}")
             }
-            CheckError::CompatibleFunctionExists(name, existing, new) => write!(
+            CheckError::OverrideWrongParamCount(name, expected, actual) => write!(
                 f,
-                "compatible function exists: existing `{name}: {existing}` \
-                is compatible with new `{name}: {new}`"
+                "override `{name}` has wrong number of parameters: expected {expected}, got {actual}"
             ),
-            CheckError::NoMatchingFunctionVariant(args) => write!(
-                f,
-                "no matching function variant that accepts arguments of types {args:?}"
-            ),
-            CheckError::AmbiguousFunctionVariant(args) => {
-                write!(f, "function variant accepting arguments of types ")?;
-                display_list(f, args)?;
-                write!(f, " is ambiguous")
-            }
         }
     }
-}
-
-fn display_list<T: fmt::Display>(f: &mut fmt::Formatter<'_>, list: &[T]) -> fmt::Result {
-    write!(f, "(")?;
-    for (i, item) in list.iter().enumerate() {
-        if i > 0 {
-            write!(f, ", ")?;
-        }
-        write!(f, "{item}")?;
-    }
-    write!(f, ")")
 }
 
 pub type CheckResult<T> = Result<T, Sp<CheckError>>;
 
+#[derive(Debug, Clone)]
 pub enum Item {
     Expr(TypedExpr),
     Binding(Binding),
     FunctionDef(FunctionDef),
 }
 
+#[derive(Debug, Clone)]
 pub struct FunctionDef {
     pub name: String,
-    pub params: Vec<Param>,
-    pub body: FunctionBody,
+    pub func: Function,
 }
 
-pub struct FunctionBody {
+#[derive(Debug, Clone)]
+pub struct Function {
+    pub params: Vec<Param>,
+    pub body: Block,
+}
+
+impl Function {
+    pub fn ty(&self, name: Option<String>) -> FunctionType {
+        FunctionType::new(
+            name,
+            self.params.iter().map(|p| p.ty.clone()),
+            self.body.expr.ty.clone(),
+        )
+    }
+    pub fn is_comptime(&self) -> bool {
+        self.params.iter().any(|p| p.ty == Type::Type)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Block {
     pub bindings: Vec<Binding>,
     pub expr: TypedExpr,
 }
 
+impl Block {
+    fn replace_ident(&mut self, old: &str, new: &str) {
+        for binding in &mut self.bindings {
+            binding.expr.expr.replace_ident(old, new);
+            if binding.pattern.contains_ident(old) {
+                return;
+            }
+        }
+    }
+}
+
+impl From<TypedExpr> for Block {
+    fn from(expr: TypedExpr) -> Self {
+        Block {
+            bindings: Vec::new(),
+            expr,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Param<T = Type> {
     pub name: String,
     pub ty: T,
 }
 
+impl<T> Param<T> {
+    pub fn new(name: String, ty: T) -> Self {
+        Param { name, ty }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Binding {
     pub pattern: Pattern,
     pub expr: TypedExpr,
 }
 
+#[derive(Debug, Clone)]
 pub enum Pattern {
     Ident(String),
     Tuple(Vec<Pattern>),
 }
 
+impl Pattern {
+    fn contains_ident(&self, ident: &str) -> bool {
+        match self {
+            Pattern::Ident(i) => i == ident,
+            Pattern::Tuple(patterns) => patterns.iter().any(|p| p.contains_ident(ident)),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum Expr {
     Unit,
     Ident(String),
@@ -112,35 +153,95 @@ pub enum Expr {
     Nat(u64),
     Int(i64),
     Real(f64),
+    Type(Type),
     If(Box<IfExpr>),
     Tuple(Vec<Expr>),
     List(Vec<Expr>),
     Call(Box<CallExpr>),
-    Function(Box<FunctionExpr>),
+    Logic(Box<LogicalExpr>),
+    Function(Box<Function>),
+    BuiltinFn(BuiltinFn),
 }
 
-impl Expr {
-    fn typed(self, ty: Type) -> TypedExpr {
-        TypedExpr { expr: self, ty }
+impl From<IfExpr> for Expr {
+    fn from(if_expr: IfExpr) -> Self {
+        Expr::If(Box::new(if_expr))
     }
 }
 
-pub struct IfExpr {
-    pub cond: Expr,
-    pub if_true: Expr,
-    pub if_false: Expr,
+impl From<CallExpr> for Expr {
+    fn from(call_expr: CallExpr) -> Self {
+        Expr::Call(Box::new(call_expr))
+    }
 }
 
+impl From<LogicalExpr> for Expr {
+    fn from(logical_expr: LogicalExpr) -> Self {
+        Expr::Logic(Box::new(logical_expr))
+    }
+}
+
+impl From<Function> for Expr {
+    fn from(func: Function) -> Self {
+        Expr::Function(Box::new(func))
+    }
+}
+
+impl Expr {
+    pub fn typed(self, ty: Type) -> TypedExpr {
+        TypedExpr { expr: self, ty }
+    }
+    fn replace_ident(&mut self, old: &str, new: &str) {
+        match self {
+            Expr::Ident(ident) if ident == old => *ident = new.to_string(),
+            Expr::If(if_expr) => {
+                if_expr.cond.replace_ident(old, new);
+                if_expr.if_true.replace_ident(old, new);
+                if_expr.if_false.replace_ident(old, new);
+            }
+            Expr::Tuple(exprs) => {
+                for expr in exprs {
+                    expr.replace_ident(old, new);
+                }
+            }
+            Expr::List(exprs) => {
+                for expr in exprs {
+                    expr.replace_ident(old, new);
+                }
+            }
+            Expr::Call(call_expr) => {
+                call_expr.func.replace_ident(old, new);
+                for arg in &mut call_expr.args {
+                    arg.replace_ident(old, new);
+                }
+            }
+            Expr::Function(func) => func.body.replace_ident(old, new),
+            _ => {}
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct IfExpr {
+    pub cond: Expr,
+    pub if_true: Block,
+    pub if_false: Block,
+}
+
+#[derive(Debug, Clone)]
 pub struct CallExpr {
     pub func: Expr,
     pub args: Vec<Expr>,
 }
 
-pub struct FunctionExpr {
-    pub params: Vec<Param<Option<Type>>>,
-    pub body: FunctionBody,
+#[derive(Debug, Clone)]
+pub struct LogicalExpr {
+    pub left: Expr,
+    pub op: LogicalOp,
+    pub right: Expr,
 }
 
+#[derive(Debug, Clone)]
 pub struct TypedExpr {
     pub expr: Expr,
     pub ty: Type,
@@ -156,11 +257,15 @@ impl TypedExpr {
 }
 
 pub struct Checker {
+    pub(crate) transpiler: Transpiler,
     scopes: Vec<Scope>,
-    pub(crate) functions: HashMap<String, FunctionType>,
+    pub(crate) functions: HashMap<String, Function>,
+    monomorphized_functions: HashMap<(String, Vec<Type>), Function>,
+    lua_functions: HashMap<Vec<u8>, Function>,
     pub(crate) types: HashMap<String, Type>,
     errors: Vec<Sp<CheckError>>,
     unknown_types: HashSet<String>,
+    lua: Lua,
 }
 
 #[derive(Default)]
@@ -171,8 +276,12 @@ pub(crate) struct Scope {
 impl Default for Checker {
     fn default() -> Self {
         Checker {
+            lua: Lua::new(),
+            transpiler: Transpiler::default(),
             scopes: vec![Scope::default()],
             functions: HashMap::new(),
+            monomorphized_functions: HashMap::new(),
+            lua_functions: HashMap::new(),
             types: HashMap::new(),
             errors: Vec::new(),
             unknown_types: HashSet::new(),
@@ -180,37 +289,64 @@ impl Default for Checker {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum FindPriority {
+    Binding,
+    Function,
+}
+
 impl Checker {
-    pub fn load(&mut self, input: &str, path: &Path) -> (Vec<Item>, Vec<Sp<CheckError>>) {
+    pub fn exec_lua(&mut self, lua_code: &str) {
+        println!("{lua_code}");
+        self.lua
+            .load(lua_code)
+            .exec()
+            .unwrap_or_else(|e| panic!("{e}"))
+    }
+    pub fn load(&mut self, input: &str, path: &Path) -> Result<(), Vec<Sp<CheckError>>> {
         let (ast_items, errors) = parse(input, path);
         let mut errors: Vec<Sp<CheckError>> =
             (errors.into_iter().map(|e| e.map(CheckError::Parse))).collect();
         for item in &ast_items {
             println!("{item:#?}");
         }
-        let mut items = Vec::new();
         for item in ast_items {
             match self.item(item) {
-                Ok(item) => items.push(item),
+                Ok(item) => {
+                    self.transpiler.item(item);
+                    let lua_code = self.transpiler.take();
+                    println!("{lua_code}");
+                    if let Err(e) = self.lua.load(&lua_code).exec() {
+                        eprintln!("{e}");
+                    }
+                }
                 Err(e) => errors.push(e),
             }
             errors.append(&mut self.errors);
         }
-        (items, errors)
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
     }
-    fn find_binding(&self, name: &str) -> Option<Type> {
-        self.scopes
-            .iter()
-            .rev()
-            .find_map(|scope| scope.bindings.get(name))
-            .cloned()
-            .or_else(|| {
-                self.functions
-                    .get(name)
-                    .cloned()
-                    .map(Box::new)
-                    .map(Type::Function)
-            })
+    fn find_binding(&self, name: &str, priority: FindPriority) -> Option<Type> {
+        let binding = || {
+            self.scopes
+                .iter()
+                .rev()
+                .find_map(|scope| scope.bindings.get(name))
+                .cloned()
+        };
+        let function = || {
+            self.functions
+                .get(name)
+                .map(|f| Type::Function(f.ty(Some(name.into())).into()))
+        };
+        match priority {
+            FindPriority::Binding => binding().or_else(function),
+            FindPriority::Function => function().or_else(binding),
+        }
     }
     pub(crate) fn scope_mut(&mut self) -> &mut Scope {
         self.scopes.last_mut().unwrap()
@@ -218,9 +354,58 @@ impl Checker {
     pub(crate) fn add_function(
         &mut self,
         name: &str,
-        ty: FunctionType,
-    ) -> Result<(), FunctionType> {
-        self.functions.insert(name.into(), ty);
+        mut func: Function,
+        span: Span,
+    ) -> CheckResult<()> {
+        let func = if let Some(inner) = self.functions.remove(name) {
+            if inner.params.len() != func.params.len() {
+                return Err(span.sp(CheckError::OverrideWrongParamCount(
+                    name.into(),
+                    inner.params.len(),
+                    func.params.len(),
+                )));
+            }
+            let type_params: Vec<Param> = inner
+                .params
+                .into_iter()
+                .map(|param| Param {
+                    name: param.name,
+                    ty: Type::Type,
+                })
+                .collect();
+            for (type_param, func_param) in type_params.iter().zip(&func.params) {
+                func.body.replace_ident(&func_param.name, &type_param.name);
+            }
+            let mut cond = Expr::Bool(true);
+            for param in func.params {
+                let check_type_expr = CallExpr {
+                    func: Expr::BuiltinFn(BuiltinFn::Cmp(CmpOp::Eq, Type::Type)),
+                    args: vec![Expr::Ident(param.name), Expr::Ident(param.ty.to_string())],
+                }
+                .into();
+                cond = LogicalExpr {
+                    left: cond,
+                    op: LogicalOp::And,
+                    right: check_type_expr,
+                }
+                .into();
+            }
+            Function {
+                params: type_params,
+                body: Block {
+                    bindings: Vec::new(),
+                    expr: Expr::from(IfExpr {
+                        cond,
+                        if_true: func.body,
+                        if_false: inner.body,
+                    })
+                    .typed(Type::Polymorphic),
+                },
+            }
+        } else {
+            func
+        };
+        self.functions.insert(name.into(), func);
         Ok(())
     }
     fn item(&mut self, item: ast::Item) -> CheckResult<Item> {
@@ -243,28 +428,18 @@ impl Checker {
             Type::Unit
         };
         let expr_span = def.body.expr.span.clone();
-        let mut body = self.function_body(def.body)?;
+        let mut body = self.block(def.body)?;
         if !body.expr.ty.matches(&mut ret_ty) {
             return Err(expr_span.sp(CheckError::TypeMismatch(ret_ty, body.expr.ty)));
         }
-        let func_ty = FunctionType {
-            params: params.iter().map(|p| p.ty.clone()).collect(),
-            ret: ret_ty,
-        };
-        if let Err(existing) = self.add_function(&def.name.value, func_ty.clone()) {
-            return Err(def.name.span.sp(CheckError::CompatibleFunctionExists(
-                def.name.value,
-                existing,
-                func_ty,
-            )));
-        }
+        let func = Function { params, body };
+        self.add_function(&def.name.value, func.clone(), def.name.span.clone())?;
         Ok(FunctionDef {
             name: def.name.value,
-            params,
-            body,
+            func,
         })
     }
-    fn function_body(&mut self, body: ast::FunctionBody) -> CheckResult<FunctionBody> {
+    fn block(&mut self, body: ast::Block) -> CheckResult<Block> {
         self.scopes.push(Scope::default());
         let bindings = body
             .bindings
@@ -273,7 +448,7 @@ impl Checker {
             .collect::<CheckResult<_>>()?;
         let expr = self.expr(body.expr)?;
         self.scopes.pop().unwrap();
-        Ok(FunctionBody { bindings, expr })
+        Ok(Block { bindings, expr })
     }
     fn binding(&mut self, binding: ast::Binding) -> CheckResult<Binding> {
         let expr_span = binding.expr.span.clone();
@@ -328,10 +503,18 @@ impl Checker {
         })
     }
     fn expr(&mut self, expr: Sp<ast::Expr>) -> CheckResult<TypedExpr> {
+        self.priority_expr(expr, FindPriority::Binding)
+    }
+    fn priority_expr(
+        &mut self,
+        expr: Sp<ast::Expr>,
+        priority: FindPriority,
+    ) -> CheckResult<TypedExpr> {
         Ok(match expr.value {
             ast::Expr::Unit => Expr::Unit.typed(Type::Unit),
             ast::Expr::If(if_expr) => self.if_expr(*if_expr)?,
             ast::Expr::Call(call) => self.call_expr(*call)?,
+            ast::Expr::Logic(log_expr) => self.logic_expr(*log_expr)?,
             ast::Expr::Struct(_) => todo!(),
             ast::Expr::Enum(_) => todo!(),
             ast::Expr::Bool(b) => Expr::Bool(b).typed(Type::Bool),
@@ -346,8 +529,10 @@ impl Checker {
             )
             .typed(Type::Real),
             ast::Expr::Ident(name) => {
-                if let Some(ty) = self.find_binding(&name) {
+                if let Some(ty) = self.find_binding(&name, priority) {
                     Expr::Ident(name).typed(ty)
+                } else if let Some(ty) = self.types.get(&name) {
+                    Expr::Type(ty.clone()).typed(Type::Type)
                 } else {
                     return Err(expr.span.sp(CheckError::UnknownBinding(name)));
                 }
@@ -404,18 +589,19 @@ impl Checker {
                     .map(|item| self.ty(item))
                     .collect::<CheckResult<_>>()?,
             ),
-            ast::Type::Function(func_ty) => Type::Function(Box::new(FunctionType {
-                params: func_ty
+            ast::Type::Function(func_ty) => Type::Function(Box::new(FunctionType::new(
+                None,
+                func_ty
                     .params
                     .into_iter()
                     .map(|param| self.ty(param))
-                    .collect::<CheckResult<_>>()?,
-                ret: func_ty
+                    .collect::<CheckResult<Vec<_>>>()?,
+                func_ty
                     .ret
                     .map(|ty| self.ty(ty))
                     .transpose()?
                     .unwrap_or(Type::Unit),
-            })),
+            ))),
             ast::Type::Parened(inner) => self.ty(ty.span.sp(*inner))?,
         })
     }
@@ -425,83 +611,117 @@ impl Checker {
         if !cond.ty.matches(&mut Type::Bool) {
             return Err(cond_span.sp(CheckError::TypeMismatch(Type::Bool, cond.ty)));
         }
-        let mut if_true = self.expr(if_expr.if_true)?;
-        let if_false_span = if_expr.if_false.span.clone();
-        let mut if_false = self.expr(if_expr.if_false)?;
-        if !if_true.ty.matches(&mut if_false.ty) {
-            return Err(if_false_span.sp(CheckError::TypeMismatch(if_true.ty, if_false.ty)));
+        let mut if_true = self.block(if_expr.if_true)?;
+        let if_false_span = if_expr.if_false.expr.span.clone();
+        let mut if_false = self.block(if_expr.if_false)?;
+        if !if_true.expr.ty.matches(&mut if_false.expr.ty) {
+            return Err(
+                if_false_span.sp(CheckError::TypeMismatch(if_true.expr.ty, if_false.expr.ty))
+            );
         }
-        Ok(Expr::If(Box::new(IfExpr {
+        let ty = if_true.expr.ty.clone();
+        Ok(Expr::from(IfExpr {
             cond: cond.expr,
-            if_true: if_true.expr,
-            if_false: if_false.expr,
-        }))
-        .typed(if_true.ty))
+            if_true,
+            if_false,
+        })
+        .typed(ty))
     }
     fn call_expr(&mut self, call: ast::CallExpr) -> CheckResult<TypedExpr> {
         let func_span = call.func.span.clone();
         let expr = match call.func.value {
-            ast::CallKind::Normal(func) => self.expr(call.func.span.sp(func))?,
+            ast::CallKind::Normal(func) => {
+                self.priority_expr(call.func.span.sp(func), FindPriority::Function)?
+            }
             ast::CallKind::Binary(op) => {
-                let ast_expr = call.func.span.sp(ast::Expr::Ident(
-                    match op {
-                        BinOp::Add => "add",
-                        BinOp::Sub => "sub",
-                        BinOp::Mul => "mul",
-                        BinOp::Div => "div",
-                        BinOp::Eq => "eq",
-                        BinOp::Ne => "neq",
-                        BinOp::Lt => "lt",
-                        BinOp::Le => "le",
-                        BinOp::Gt => "gt",
-                        BinOp::Ge => "ge",
-                        BinOp::And => "and",
-                        BinOp::Or => "or",
-                        BinOp::RangeEx => todo!(),
-                    }
-                    .into(),
-                ));
+                let ast_expr = call.func.span.sp(ast::Expr::Ident(op.name().into()));
                 self.expr(ast_expr)?
             }
         };
         let func = expr.expr;
         let func_type = expr.ty;
         // Ensure it is a function that is being called
-        match func_type {
-            Type::Function(mut func_type) => {
-                // Check arguments
-                let mut args = Vec::new();
-                let mut arg_types = Vec::new();
-                let call_arg_count = call.args.len();
-                for (param_ty, ast_arg) in func_type.params.iter_mut().zip(call.args) {
-                    let arg_span = ast_arg.span.clone();
-                    let mut arg = self.expr(ast_arg)?;
-                    if !param_ty.matches(&mut arg.ty) {
-                        return Err(arg_span.sp(CheckError::TypeMismatch(param_ty.clone(), arg.ty)));
-                    }
-                    args.push(arg.expr);
-                    arg_types.push(arg.ty);
-                }
-                // Figure out the return type
-                let ty = match func_type.params.len().cmp(&call_arg_count) {
-                    // Too many arguments
-                    Ordering::Less => {
-                        return Err(func_span.sp(CheckError::TooManyArguments(
-                            func_type.params.len(),
-                            call_arg_count,
-                        )));
-                    }
-                    // All arguments are provided
-                    Ordering::Equal => func_type.ret.clone(),
-                    // Partial application
-                    Ordering::Greater => Type::Function(Box::new(FunctionType {
-                        params: func_type.params[call_arg_count..].to_vec(),
-                        ret: func_type.ret.clone(),
-                    })),
-                };
-                Ok(Expr::Call(Box::new(CallExpr { func, args })).typed(ty))
-            }
-            _ => Err(func_span.sp(CheckError::CallNonFunction(func_type))),
+        let Type::Function(mut func_type) = func_type else {
+            return Err(func_span.sp(CheckError::CallNonFunction(func_type)));
+        };
+        let mut args = Vec::new();
+        let mut arg_types = Vec::new();
+        for ast_arg in call.args.iter().cloned() {
+            let arg = self.expr(ast_arg)?;
+            args.push(arg.expr);
+            arg_types.push(arg.ty);
         }
+        let checking_type_equality = matches!(func, Expr::BuiltinFn(BuiltinFn::Cmp(CmpOp::Eq, _)))
+            && matches!(arg_types.as_slice(), [Type::Type, Type::Type]);
+        if func_type.is_comptime() && !checking_type_equality {
+            let name = func_type
+                .name
+                .clone()
+                .unwrap_or_else(|| panic!("Comptime function has no name"));
+            self.monomorphized_functions
+                .entry((name.clone(), arg_types.clone()))
+                .or_insert_with(|| {
+                    let func: mlua::Function =
+                        self.lua.globals().get(name.as_str()).unwrap_or_else(|e| {
+                            panic!("unabled to find `{name}` function in lua: {e}")
+                        });
+                    let lua_ret: mlua::Function = func
+                        .call(
+                            arg_types
+                                .iter()
+                                .map(|ty| ty.to_string())
+                                .collect::<Vec<_>>(),
+                        )
+                        .unwrap();
+                    dbg!(lua_ret);
+                    todo!()
+                });
+        }
+        // Check arguments
+        let mut args = Vec::new();
+        let mut arg_types = Vec::new();
+        let call_arg_count = call.args.len();
+        for (param_ty, ast_arg) in func_type.params.iter_mut().zip(call.args) {
+            let arg_span = ast_arg.span.clone();
+            let mut arg = self.expr(ast_arg)?;
+            if !param_ty.matches(&mut arg.ty) {
+                return Err(arg_span.sp(CheckError::TypeMismatch(param_ty.clone(), arg.ty)));
+            }
+            args.push(arg.expr);
+            arg_types.push(arg.ty);
+        }
+        // Figure out the return type
+        let ty = match func_type.params.len().cmp(&call_arg_count) {
+            // Too many arguments
+            Ordering::Less => {
+                return Err(func_span.sp(CheckError::WrongNumberOfArgs(
+                    func_type.params.len(),
+                    call_arg_count,
+                )));
+            }
+            // All arguments are provided
+            Ordering::Equal => func_type.ret.clone(),
+            // Partial application
+            Ordering::Greater => todo!("partial application"),
+        };
+        Ok(Expr::from(CallExpr { func, args }).typed(ty))
+    }
+    fn logic_expr(&mut self, log_expr: ast::LogicalExpr) -> CheckResult<TypedExpr> {
+        let left_span = log_expr.left.span.clone();
+        let right_span = log_expr.right.span.clone();
+        let mut left = self.expr(log_expr.left)?;
+        let mut right = self.expr(log_expr.right)?;
+        if !left.ty.matches(&mut Type::Bool) {
+            return Err(left_span.sp(CheckError::TypeMismatch(Type::Bool, left.ty)));
+        }
+        if !right.ty.matches(&mut Type::Bool) {
+            return Err(right_span.sp(CheckError::TypeMismatch(Type::Bool, right.ty)));
+        }
+        Ok(Expr::from(LogicalExpr {
+            op: log_expr.op.value,
+            left: left.expr,
+            right: right.expr,
+        })
+        .typed(Type::Bool))
     }
 }

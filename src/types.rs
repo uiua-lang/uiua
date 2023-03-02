@@ -56,6 +56,17 @@ impl Type {
             _ => true,
         }
     }
+    pub fn pick_default(&mut self) -> bool {
+        match self {
+            Type::Unknown => false,
+            Type::UnknownInt => {
+                *self = Type::Int;
+                true
+            }
+            Type::UnknownFunction(_) => false,
+            _ => true,
+        }
+    }
 }
 
 impl fmt::Display for Type {
@@ -103,6 +114,12 @@ impl PartialEq for Type {
             (Type::Tuple(a), Type::Tuple(b)) => a == b,
             _ => false,
         }
+    }
+}
+
+impl From<FunctionType> for Type {
+    fn from(func: FunctionType) -> Self {
+        Self::Function(Box::new(func))
     }
 }
 

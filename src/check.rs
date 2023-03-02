@@ -44,18 +44,31 @@ impl fmt::Display for CheckError {
             }
             CheckError::CompatibleFunctionExists(name, existing, new) => write!(
                 f,
-                "compatible function exists: existing `{name}: {existing}` is compatible with new `{name}: {new}`"
+                "compatible function exists: existing `{name}: {existing}` \
+                is compatible with new `{name}: {new}`"
             ),
-            CheckError::NoMatchingFunctionVariant( args) => write!(
+            CheckError::NoMatchingFunctionVariant(args) => write!(
                 f,
                 "no matching function variant that accepts arguments of types {args:?}"
             ),
-            CheckError::AmbiguousFunctionVariant( args) => write!(
-                f,
-                "function variant accepting arguments of types {args:?} is ambiguous"
-            ),
+            CheckError::AmbiguousFunctionVariant(args) => {
+                write!(f, "function variant accepting arguments of types ")?;
+                display_list(f, args)?;
+                write!(f, " is ambiguous")
+            }
         }
     }
+}
+
+fn display_list<T: fmt::Display>(f: &mut fmt::Formatter<'_>, list: &[T]) -> fmt::Result {
+    write!(f, "(")?;
+    for (i, item) in list.iter().enumerate() {
+        if i > 0 {
+            write!(f, ", ")?;
+        }
+        write!(f, "{item}")?;
+    }
+    write!(f, ")")
 }
 
 pub type CheckResult<T> = Result<T, Sp<CheckError>>;
@@ -501,12 +514,35 @@ impl Checker {
                     }
                     1 => func_types.pop().unwrap(),
                     _ => {
-                        return Err(func_span.sp(CheckError::AmbiguousFunctionVariant(
-                            args.into_iter().map(|arg| arg.ty).collect(),
-                        )))
+                        for arg in &mut args {
+                            if !arg.ty.pick_default() {
+                                return Err(func_span.sp(CheckError::AmbiguousFunctionVariant(
+                                    args.into_iter().map(|arg| arg.ty).collect(),
+                                )));
+                            }
+                        }
+                        for (i, arg) in args.iter().enumerate() {
+                            func_types.retain_mut(|func_type| {
+                                func_type.params.len() > i
+                                    && func_type.params[i].matches(&mut arg.ty.clone())
+                            });
+                        }
+                        match func_types.len() {
+                            0 => unreachable!(),
+                            1 => func_types.pop().unwrap(),
+                            _ => {
+                                return Err(func_span.sp(CheckError::AmbiguousFunctionVariant(
+                                    args.into_iter().map(|arg| arg.ty).collect(),
+                                )))
+                            }
+                        }
                     }
                 };
-                todo!()
+                Ok(Expr::Call(Box::new(CallExpr {
+                    func,
+                    args: args.into_iter().map(|arg| arg.expr).collect(),
+                }))
+                .typed(func_ty.into()))
             }
             _ => Err(func_span.sp(CheckError::CallNonFunction(func_type))),
         }

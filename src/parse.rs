@@ -110,6 +110,7 @@ struct Parser {
 
 const PARENS: (Simple, Simple) = (OpenParen, CloseParen);
 const BRACKETS: (Simple, Simple) = (OpenBracket, CloseBracket);
+#[allow(unused)]
 const CURLIES: (Simple, Simple) = (OpenCurly, CloseCurly);
 
 impl Parser {
@@ -162,6 +163,7 @@ impl Parser {
             self.tokens.get(self.index).cloned().map(Box::new),
         ))
     }
+    #[allow(unused)]
     fn expected_continue<I: Into<Expectation>>(
         &mut self,
         expectations: impl IntoIterator<Item = I>,
@@ -211,13 +213,9 @@ impl Parser {
         // Name
         let name = self.ident()?;
         // Parameters
-        let params = self.surrounded_list(PARENS, Self::try_param)?.value;
-        // Return type
-        let ret_ty = if self.try_exact(Arrow).is_some() {
-            Some(self.ty()?)
-        } else {
-            None
-        };
+        let params = self
+            .surrounded_list(PARENS, |this| Ok(this.try_ident()))?
+            .value;
         self.expect(Colon)?;
         // Body
         let body = self.block()?;
@@ -225,7 +223,6 @@ impl Parser {
             doc,
             name,
             params,
-            ret_ty,
             body,
         }))
     }
@@ -247,17 +244,11 @@ impl Parser {
         };
         // Pattern
         let pattern = self.pattern()?;
-        // Type annotation
-        let ty = if self.try_exact(Colon).is_some() {
-            Some(self.ty()?)
-        } else {
-            None
-        };
         // Expression
         self.expect(Equal)?;
         let expr = self.expr()?;
         self.expect(SemiColon)?;
-        Ok(Some(Binding { pattern, ty, expr }))
+        Ok(Some(Binding { pattern, expr }))
     }
     fn try_pattern(&mut self) -> ParseResult<Option<Sp<Pattern>>> {
         Ok(Some(if let Some(ident) = self.try_ident() {
@@ -271,75 +262,6 @@ impl Parser {
     fn pattern(&mut self) -> ParseResult<Sp<Pattern>> {
         self.try_pattern()?
             .ok_or_else(|| self.expected([Expectation::Pattern]))
-    }
-    fn try_param(&mut self) -> ParseResult<Option<Param>> {
-        let Some(name) = self.try_ident() else {
-            return Ok(None);
-        };
-        let mut ty = None;
-        if self.try_exact(Colon).is_some() {
-            ty = self.try_ty()?;
-            if ty.is_none() {
-                self.expected_continue([Expectation::Type]);
-            }
-        } else {
-            self.expected_continue([Expectation::Type]);
-        }
-        let ty = ty.unwrap_or_else(|| name.span.clone().sp(Type::Unknown));
-        Ok(Some(Param { name, ty }))
-    }
-    fn try_ty(&mut self) -> ParseResult<Option<Sp<Type>>> {
-        Ok(if let Some(ident) = self.try_ident() {
-            // Named type
-            Some(ident.map(Type::Ident))
-        } else if self.try_exact(OpenBracket).is_some() {
-            // List
-            let inner = self.ty()?;
-            self.expect(CloseBracket)?;
-            Some(inner.map(Box::new).map(Type::List))
-        } else if let Some(start) = self.try_exact(OpenParen) {
-            // Tuple
-            let mut tys = Vec::new();
-            let mut comma_ended = true;
-            while let Some(ty) = self.try_ty()? {
-                tys.push(ty);
-                if self.try_exact(Comma).is_none() {
-                    comma_ended = false;
-                    break;
-                }
-            }
-            let end = self.expect(CloseParen)?;
-            let span = start.merge(end);
-            Some(span.sp(if tys.is_empty() {
-                Type::Unit
-            } else if tys.len() == 1 && !comma_ended {
-                Type::Parened(tys.remove(0).value.into())
-            } else {
-                Type::Tuple(tys)
-            }))
-        } else if let Some(start) = self.try_exact(Keyword::Fn) {
-            // Function
-            let params = self.surrounded_list(PARENS, Self::try_ty)?;
-            let params_span = params.span;
-            let params = params.value;
-            let ret = if self.try_exact(Arrow).is_some() {
-                Some(self.ty()?)
-            } else {
-                None
-            };
-            let span = if let Some(ret) = &ret {
-                start.merge(ret.span.clone())
-            } else {
-                start.merge(params_span)
-            };
-            Some(span.sp(Type::Function(Box::new(FunctionType { params, ret }))))
-        } else {
-            None
-        })
-    }
-    fn ty(&mut self) -> ParseResult<Sp<Type>> {
-        self.try_ty()?
-            .ok_or_else(|| self.expected([Expectation::Type]))
     }
     fn try_ident(&mut self) -> Option<Sp<String>> {
         self.next_token_map(|token| token.as_ident().map(Into::into))
@@ -538,26 +460,6 @@ impl Parser {
             items.map(Expr::List)
         } else if let Some(if_else) = self.try_if()? {
             if_else.map(Box::new).map(Expr::If)
-        } else if let Some(start) = self.try_exact(Keyword::Struct) {
-            let name = self.try_ident();
-            let start = name.as_ref().map(|n| n.span.clone()).unwrap_or(start);
-            let fields = self.surrounded_list(CURLIES, Self::try_param)?;
-            let end = fields.span;
-            let span = start.merge(end);
-            span.sp(Expr::Struct(Struct {
-                name,
-                fields: fields.value,
-            }))
-        } else if let Some(start) = self.try_exact(Keyword::Enum) {
-            let name = self.try_ident();
-            let start = name.as_ref().map(|n| n.span.clone()).unwrap_or(start);
-            let variants = self.surrounded_list(CURLIES, Self::try_variant)?;
-            let end = variants.span;
-            let span = start.merge(end);
-            span.sp(Expr::Enum(Enum {
-                name,
-                variants: variants.value,
-            }))
         } else {
             return Ok(None);
         }))
@@ -577,20 +479,5 @@ impl Parser {
             if_true,
             if_false,
         })))
-    }
-    fn try_variant(&mut self) -> ParseResult<Option<Sp<Variant>>> {
-        let Some(name) = self.try_ident() else {
-            return Ok(None);
-        };
-        let fields = self.try_surrounded_list(PARENS, Self::try_ty)?;
-        Ok(Some(if let Some(fields) = fields {
-            let span = name.span.clone().merge(fields.span);
-            span.sp(Variant {
-                name,
-                fields: Some(fields.value),
-            })
-        } else {
-            name.span.clone().sp(Variant { name, fields: None })
-        }))
     }
 }

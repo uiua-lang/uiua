@@ -258,8 +258,6 @@ impl fmt::Display for Simple {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
 pub enum Keyword {
-    Struct,
-    Enum,
     Let,
     Fn,
     If,

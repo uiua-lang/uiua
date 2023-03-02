@@ -12,7 +12,6 @@ pub enum Item {
 #[derive(Debug, Clone)]
 pub struct Binding {
     pub pattern: Sp<Pattern>,
-    pub ty: Option<Sp<Type>>,
     pub expr: Sp<Expr>,
 }
 
@@ -20,8 +19,7 @@ pub struct Binding {
 pub struct FunctionDef {
     pub doc: Option<Sp<String>>,
     pub name: Sp<String>,
-    pub params: Vec<Param>,
-    pub ret_ty: Option<Sp<Type>>,
+    pub params: Vec<Sp<String>>,
     pub body: Block,
 }
 
@@ -32,36 +30,11 @@ pub struct Block {
 }
 
 #[derive(Debug, Clone)]
-pub struct Param {
-    pub name: Sp<String>,
-    pub ty: Sp<Type>,
-}
-
-#[derive(Debug, Clone)]
-pub enum Type {
-    Unit,
-    Ident(String),
-    List(Box<Type>),
-    Tuple(Vec<Sp<Type>>),
-    Function(Box<FunctionType>),
-    Parened(Box<Type>),
-    Unknown,
-}
-
-#[derive(Debug, Clone)]
-pub struct FunctionType {
-    pub params: Vec<Sp<Type>>,
-    pub ret: Option<Sp<Type>>,
-}
-
-#[derive(Debug, Clone)]
 pub enum Expr {
     Unit,
     If(Box<IfExpr>),
     Call(Box<CallExpr>),
     Logic(Box<LogicalExpr>),
-    Struct(Struct),
-    Enum(Enum),
     Bool(bool),
     Integer(String),
     Real(String),
@@ -101,24 +74,6 @@ pub struct CallExpr {
 pub enum CallKind {
     Normal(Expr),
     Binary(BinOp),
-}
-
-#[derive(Debug, Clone)]
-pub struct Struct {
-    pub name: Option<Sp<String>>,
-    pub fields: Vec<Param>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Enum {
-    pub name: Option<Sp<String>>,
-    pub variants: Vec<Sp<Variant>>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Variant {
-    pub name: Sp<String>,
-    pub fields: Option<Vec<Sp<Type>>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Sequence)]

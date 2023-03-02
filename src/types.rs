@@ -13,8 +13,6 @@ pub enum Type {
     Tuple(Vec<Type>),
     Unknown,
     UnknownInt,
-    Type,
-    Polymorphic,
 }
 
 impl Type {
@@ -66,8 +64,6 @@ impl fmt::Display for Type {
             }
             Type::Unknown => write!(f, "_"),
             Type::UnknownInt => write!(f, "{{integer}}"),
-            Type::Type => write!(f, "type"),
-            Type::Polymorphic => write!(f, "{{polymorphic}}"),
         }
     }
 }
@@ -108,9 +104,6 @@ impl FunctionType {
         }
         self.ret.matches(&mut other.ret)
     }
-    pub fn is_comptime(&self) -> bool {
-        self.params.iter().any(|ty| *ty == Type::Type)
-    }
 }
 
 impl fmt::Display for FunctionType {
@@ -127,6 +120,43 @@ impl fmt::Display for FunctionType {
             write!(f, " -> {}", self.ret)
         } else {
             Ok(())
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum TypeSet {
+    Any,
+    Concrete(Type),
+    Or(Vec<Self>),
+    And(Vec<Self>),
+}
+
+impl From<Type> for TypeSet {
+    fn from(ty: Type) -> Self {
+        Self::Concrete(ty)
+    }
+}
+
+impl TypeSet {
+    pub fn or(self, other: impl Into<Self>) -> Self {
+        match self {
+            Self::Any => Self::Any,
+            Self::Or(mut or) => {
+                or.push(other.into());
+                Self::Or(or)
+            }
+            _ => Self::Or(vec![self, other.into()]),
+        }
+    }
+    pub fn and(self, other: impl Into<Self>) -> Self {
+        match self {
+            Self::Any => other.into(),
+            Self::And(mut and) => {
+                and.push(other.into());
+                Self::And(and)
+            }
+            _ => Self::And(vec![self, other.into()]),
         }
     }
 }

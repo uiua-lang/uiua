@@ -5,5 +5,3 @@ version = '0.1.0'
 
 [dependencies]
 enum-iterator = '1.3'
-mlua.features = ['luajit', 'vendored']
-mlua.version = '0.8.7'

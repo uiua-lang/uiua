@@ -175,7 +175,7 @@ impl Parser {
         self.errors.push(err);
     }
     fn try_item(&mut self) -> ParseResult<Option<Item>> {
-        Ok(Some(if let Some(def) = self.try_function_def()? {
+        let item = if let Some(def) = self.try_function_def()? {
             Item::FunctionDef(def)
         } else if let Some(binding) = self.try_binding()? {
             Item::Binding(binding)
@@ -183,7 +183,9 @@ impl Parser {
             Item::Expr(expr)
         } else {
             return Ok(None);
-        }))
+        };
+        self.try_exact(SemiColon);
+        Ok(Some(item))
     }
     fn doc_comment(&mut self) -> Option<Sp<String>> {
         let mut doc: Option<Sp<String>> = None;
@@ -396,9 +398,10 @@ impl Parser {
                     let op = op_span.sp(*op);
                     let right = self.expect_expr(leaf)?;
                     let span = expr.span.clone().merge(right.span.clone());
-                    expr = span.sp(Expr::Call(Box::new(CallExpr {
-                        func: op.map(CallKind::Binary),
-                        args: vec![expr, right],
+                    expr = span.sp(Expr::Bin(Box::new(BinExpr {
+                        left: expr,
+                        op,
+                        right,
                     })));
                     continue 'rhs;
                 }
@@ -421,10 +424,7 @@ impl Parser {
         let start = func.span.clone();
         let end = args.last().map(|a| a.span.clone()).unwrap_or(start.clone());
         let span = start.merge(end);
-        Ok(Some(span.sp(Expr::Call(Box::new(CallExpr {
-            func: func.map(CallKind::Normal),
-            args,
-        })))))
+        Ok(Some(span.sp(Expr::Call(Box::new(CallExpr { func, args })))))
     }
     fn try_term(&mut self) -> ParseResult<Option<Sp<Expr>>> {
         Ok(Some(if let Some(ident) = self.try_ident() {
@@ -438,24 +438,14 @@ impl Parser {
         } else if let Some(span) = self.try_exact(Keyword::False) {
             span.sp(Expr::Bool(false))
         } else if let Some(start) = self.try_exact(OpenParen) {
-            let mut items = Vec::new();
-            let mut comma_ended = true;
-            while let Some(item) = self.try_expr()? {
-                items.push(item);
-                if self.try_exact(Comma).is_none() {
-                    comma_ended = false;
-                    break;
-                }
-            }
+            let inner = self.try_expr()?;
             let end = self.expect(CloseParen)?;
             let span = start.merge(end);
-            span.sp(if items.is_empty() {
-                Expr::Unit
-            } else if !comma_ended && items.len() == 1 {
-                Expr::Parened(items.remove(0).value.into())
+            if let Some(expr) = inner {
+                expr.map(Box::new).map(Expr::Parened)
             } else {
-                Expr::Tuple(items)
-            })
+                span.sp(Expr::Unit)
+            }
         } else if let Some(items) = self.try_surrounded_list(BRACKETS, Self::try_expr)? {
             items.map(Expr::List)
         } else if let Some(if_else) = self.try_if()? {

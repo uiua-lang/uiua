@@ -39,7 +39,7 @@ impl Error for LexError {}
 
 pub type LexResult<T = ()> = Result<T, Sp<LexError>>;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Loc {
     pub pos: usize,
     pub line: usize,
@@ -62,7 +62,7 @@ impl Default for Loc {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Span {
     pub start: Loc,
     pub end: Loc,
@@ -100,7 +100,7 @@ impl Span {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Sp<T> {
     pub value: T,
     pub span: Span,

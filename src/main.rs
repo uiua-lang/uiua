@@ -1,9 +1,9 @@
-use uiua::Runtime;
+use uiua::interpret::Interpretter;
 
 fn main() {
     let path = "test.uiua";
-    let mut rt = Runtime::new();
-    if let Err(e) = rt.load_file(path) {
+    let mut rt = Interpretter::new();
+    if let Err(e) = rt.run_file(path) {
         eprintln!("{e}");
     }
 }

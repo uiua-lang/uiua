@@ -1,12 +1,13 @@
 use std::{
+    cmp::Ordering,
     collections::{HashMap, HashSet},
     fmt,
     path::Path,
 };
 
 use crate::{
-    ast::{self, LogicalOp},
-    lex::Sp,
+    ast::{self, BinOp, LogicalOp},
+    lex::{Sp, Span},
     parse::{parse, ParseError},
 };
 
@@ -16,7 +17,6 @@ pub enum CheckError {
     InvalidInteger(String),
     InvalidReal(String),
     UnknownBinding(String),
-    WrongNumberOfArgs(usize, usize),
 }
 
 impl fmt::Display for CheckError {
@@ -26,12 +26,6 @@ impl fmt::Display for CheckError {
             CheckError::InvalidInteger(s) => write!(f, "invalid integer: {s}"),
             CheckError::InvalidReal(s) => write!(f, "invalid real: {s}"),
             CheckError::UnknownBinding(s) => write!(f, "unknown binding: {s}"),
-            CheckError::WrongNumberOfArgs(expected, actual) => {
-                write!(
-                    f,
-                    "wrong number of arguments: expected {expected}, got {actual}"
-                )
-            }
         }
     }
 }
@@ -40,7 +34,7 @@ pub type CheckResult<T> = Result<T, Sp<CheckError>>;
 
 #[derive(Debug, Clone)]
 pub enum Item {
-    Expr(Expr),
+    Expr(Sp<Expr>),
     Binding(Binding),
     FunctionDef(FunctionDef),
 }
@@ -53,18 +47,45 @@ pub struct FunctionDef {
 
 #[derive(Debug, Clone)]
 pub struct Function {
-    pub params: Vec<String>,
+    pub id: FunctionId,
+    pub params: Vec<Sp<String>>,
     pub body: Block,
+}
+
+impl PartialEq for Function {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for Function {}
+
+impl PartialOrd for Function {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.id.partial_cmp(&other.id)
+    }
+}
+
+impl Ord for Function {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.id.cmp(&other.id)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum FunctionId {
+    Named(String),
+    Anonymous(Span),
 }
 
 #[derive(Debug, Clone)]
 pub struct Block {
     pub bindings: Vec<Binding>,
-    pub expr: Expr,
+    pub expr: Sp<Expr>,
 }
 
-impl From<Expr> for Block {
-    fn from(expr: Expr) -> Self {
+impl From<Sp<Expr>> for Block {
+    fn from(expr: Sp<Expr>) -> Self {
         Block {
             bindings: Vec::new(),
             expr,
@@ -74,14 +95,32 @@ impl From<Expr> for Block {
 
 #[derive(Debug, Clone)]
 pub struct Binding {
-    pub pattern: Pattern,
-    pub expr: Expr,
+    pub pattern: Sp<Pattern>,
+    pub expr: Sp<Expr>,
 }
 
 #[derive(Debug, Clone)]
 pub enum Pattern {
     Ident(String),
-    Tuple(Vec<Pattern>),
+    List(Vec<Sp<Pattern>>),
+}
+
+impl fmt::Display for Pattern {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Pattern::Ident(s) => write!(f, "{s}"),
+            Pattern::List(items) => {
+                write!(f, "(")?;
+                for (i, item) in items.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}", item.value)?;
+                }
+                write!(f, ")")
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -93,8 +132,8 @@ pub enum Expr {
     Int(i64),
     Real(f64),
     If(Box<IfExpr>),
-    Tuple(Vec<Expr>),
-    List(Vec<Expr>),
+    List(Vec<Sp<Expr>>),
+    Binary(Box<BinExpr>),
     Call(Box<CallExpr>),
     Logic(Box<LogicalExpr>),
     Function(Box<Function>),
@@ -118,6 +157,12 @@ impl From<LogicalExpr> for Expr {
     }
 }
 
+impl From<BinExpr> for Expr {
+    fn from(bin_expr: BinExpr) -> Self {
+        Expr::Binary(Box::new(bin_expr))
+    }
+}
+
 impl From<Function> for Expr {
     fn from(func: Function) -> Self {
         Expr::Function(Box::new(func))
@@ -126,31 +171,38 @@ impl From<Function> for Expr {
 
 #[derive(Debug, Clone)]
 pub struct IfExpr {
-    pub cond: Expr,
+    pub cond: Sp<Expr>,
     pub if_true: Block,
     pub if_false: Block,
 }
 
 #[derive(Debug, Clone)]
+pub struct BinExpr {
+    pub left: Sp<Expr>,
+    pub op: Sp<BinOp>,
+    pub right: Sp<Expr>,
+}
+
+#[derive(Debug, Clone)]
 pub struct CallExpr {
-    pub func: Expr,
-    pub args: Vec<Expr>,
+    pub func: Sp<Expr>,
+    pub args: Vec<Sp<Expr>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct LogicalExpr {
-    pub left: Expr,
+    pub left: Sp<Expr>,
     pub op: LogicalOp,
-    pub right: Expr,
+    pub right: Sp<Expr>,
 }
 
 pub struct Checker {
     scopes: Vec<Scope>,
-    pub(crate) functions: HashMap<String, Function>,
+    pub(crate) functions: HashMap<FunctionId, Function>,
     errors: Vec<Sp<CheckError>>,
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub(crate) struct Scope {
     pub bindings: HashSet<String>,
 }
@@ -170,9 +222,6 @@ impl Checker {
         let (ast_items, errors) = parse(input, path);
         let mut errors: Vec<Sp<CheckError>> =
             (errors.into_iter().map(|e| e.map(CheckError::Parse))).collect();
-        for item in &ast_items {
-            println!("{item:#?}");
-        }
         let mut items = Vec::new();
         for item in ast_items {
             match self.item(item) {
@@ -198,15 +247,17 @@ impl Checker {
         })
     }
     fn function_def(&mut self, def: ast::FunctionDef) -> CheckResult<FunctionDef> {
+        self.scope_mut().bindings.insert(def.name.value.clone());
         self.scopes.push(Scope::default());
-        let params: Vec<String> = def
-            .params
-            .into_iter()
-            .map(|p| self.param(p.value))
-            .collect();
+        let params: Vec<_> = def.params.into_iter().map(|p| self.param(p)).collect();
+        for param in &params {
+            self.scope_mut().bindings.insert(param.value.clone());
+        }
         let body = self.block(def.body)?;
-        let func = Function { params, body };
-        self.functions.insert(def.name.value.clone(), func.clone());
+        self.scopes.pop().unwrap();
+        let id = FunctionId::Named(def.name.value.clone());
+        let func = Function { id, params, body };
+        self.functions.insert(func.id.clone(), func.clone());
         Ok(FunctionDef {
             name: def.name.value,
             func,
@@ -228,29 +279,30 @@ impl Checker {
         let pattern = self.pattern(binding.pattern)?;
         Ok(Binding { pattern, expr })
     }
-    fn param(&mut self, param: String) -> String {
-        self.scope_mut().bindings.insert(param.clone());
+    fn param(&mut self, param: Sp<String>) -> Sp<String> {
+        self.scope_mut().bindings.insert(param.value.clone());
         param
     }
-    fn pattern(&mut self, pattern: Sp<ast::Pattern>) -> CheckResult<Pattern> {
-        Ok(match pattern.value {
+    fn pattern(&mut self, pattern: Sp<ast::Pattern>) -> CheckResult<Sp<Pattern>> {
+        Ok(pattern.span.sp(match pattern.value {
             ast::Pattern::Ident(name) => {
                 self.scope_mut().bindings.insert(name.clone());
                 Pattern::Ident(name)
             }
-            ast::Pattern::Tuple(patterns) => Pattern::Tuple(
+            ast::Pattern::Tuple(patterns) => Pattern::List(
                 patterns
                     .into_iter()
                     .map(|p| self.pattern(p))
                     .collect::<CheckResult<_>>()?,
             ),
-        })
+        }))
     }
-    fn expr(&mut self, expr: Sp<ast::Expr>) -> CheckResult<Expr> {
-        Ok(match expr.value {
+    fn expr(&mut self, expr: Sp<ast::Expr>) -> CheckResult<Sp<Expr>> {
+        Ok(expr.span.clone().sp(match expr.value {
             ast::Expr::Unit => Expr::Unit,
             ast::Expr::If(if_expr) => self.if_expr(*if_expr)?,
             ast::Expr::Call(call) => self.call_expr(*call)?,
+            ast::Expr::Bin(bin_expr) => self.bin_expr(*bin_expr)?,
             ast::Expr::Logic(log_expr) => self.logic_expr(*log_expr)?,
             ast::Expr::Bool(b) => Expr::Bool(b),
             ast::Expr::Integer(i) => Expr::Int(
@@ -262,25 +314,24 @@ impl Checker {
                     .map_err(|_| expr.span.sp(CheckError::InvalidReal(r)))?,
             ),
             ast::Expr::Ident(name) => {
-                if !self.scope_mut().bindings.contains(&name) {
+                if !self
+                    .scopes
+                    .iter()
+                    .rev()
+                    .any(|scope| scope.bindings.contains(&name))
+                {
                     return Err(expr.span.sp(CheckError::UnknownBinding(name)));
                 }
                 Expr::Ident(name)
             }
-            ast::Expr::Tuple(items) => Expr::Tuple(
-                items
-                    .into_iter()
-                    .map(|item| self.expr(item))
-                    .collect::<CheckResult<_>>()?,
-            ),
             ast::Expr::List(items) => Expr::List(
                 items
                     .into_iter()
                     .map(|item| self.expr(item))
                     .collect::<CheckResult<_>>()?,
             ),
-            ast::Expr::Parened(inner) => self.expr(expr.span.sp(*inner))?,
-        })
+            ast::Expr::Parened(inner) => return self.expr(expr.span.sp(*inner)),
+        }))
     }
     fn if_expr(&mut self, if_expr: ast::IfExpr) -> CheckResult<Expr> {
         let cond = self.expr(if_expr.cond)?;
@@ -293,17 +344,22 @@ impl Checker {
         }))
     }
     fn call_expr(&mut self, call: ast::CallExpr) -> CheckResult<Expr> {
-        let func = call.func.span.sp(match call.func.value {
-            ast::CallKind::Normal(func) => func,
-            ast::CallKind::Binary(op) => ast::Expr::Ident(op.name().into()),
-        });
-        let func = self.expr(func)?;
-        let args: Vec<Expr> = call
+        let func = self.expr(call.func)?;
+        let args: Vec<_> = call
             .args
             .into_iter()
             .map(|arg| self.expr(arg))
             .collect::<CheckResult<_>>()?;
         Ok(Expr::from(CallExpr { func, args }))
+    }
+    fn bin_expr(&mut self, bin_expr: ast::BinExpr) -> CheckResult<Expr> {
+        let left = self.expr(bin_expr.left)?;
+        let right = self.expr(bin_expr.right)?;
+        Ok(Expr::from(BinExpr {
+            op: bin_expr.op,
+            left,
+            right,
+        }))
     }
     fn logic_expr(&mut self, log_expr: ast::LogicalExpr) -> CheckResult<Expr> {
         let left = self.expr(log_expr.left)?;

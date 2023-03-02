@@ -34,12 +34,12 @@ pub enum Expr {
     Unit,
     If(Box<IfExpr>),
     Call(Box<CallExpr>),
+    Bin(Box<BinExpr>),
     Logic(Box<LogicalExpr>),
     Bool(bool),
     Integer(String),
     Real(String),
     Ident(String),
-    Tuple(Vec<Sp<Expr>>),
     List(Vec<Sp<Expr>>),
     Parened(Box<Expr>),
 }
@@ -66,14 +66,15 @@ pub struct IfExpr {
 
 #[derive(Debug, Clone)]
 pub struct CallExpr {
-    pub func: Sp<CallKind>,
+    pub func: Sp<Expr>,
     pub args: Vec<Sp<Expr>>,
 }
 
 #[derive(Debug, Clone)]
-pub enum CallKind {
-    Normal(Expr),
-    Binary(BinOp),
+pub struct BinExpr {
+    pub left: Sp<Expr>,
+    pub op: Sp<BinOp>,
+    pub right: Sp<Expr>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Sequence)]

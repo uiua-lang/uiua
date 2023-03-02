@@ -69,13 +69,17 @@ pub enum Item {
 pub struct FunctionDef {
     pub name: String,
     pub params: Vec<Param>,
+    pub body: FunctionBody,
+}
+
+pub struct FunctionBody {
     pub bindings: Vec<Binding>,
     pub expr: TypedExpr,
 }
 
-pub struct Param {
+pub struct Param<T = Type> {
     pub name: String,
-    pub ty: Type,
+    pub ty: T,
 }
 
 pub struct Binding {
@@ -99,6 +103,7 @@ pub enum Expr {
     Tuple(Vec<Expr>),
     List(Vec<Expr>),
     Call(Box<CallExpr>),
+    Function(Box<FunctionExpr>),
 }
 
 impl Expr {
@@ -118,6 +123,11 @@ pub struct CallExpr {
     pub args: Vec<Expr>,
 }
 
+pub struct FunctionExpr {
+    pub params: Vec<Param<Option<Type>>>,
+    pub body: FunctionBody,
+}
+
 pub struct TypedExpr {
     pub expr: Expr,
     pub ty: Type,
@@ -134,7 +144,7 @@ impl TypedExpr {
 
 pub struct Checker {
     scopes: Vec<Scope>,
-    pub(crate) functions: HashMap<String, Vec<FunctionType>>,
+    pub(crate) functions: HashMap<String, FunctionType>,
     pub(crate) types: HashMap<String, Type>,
     errors: Vec<Sp<CheckError>>,
     unknown_types: HashSet<String>,
@@ -182,13 +192,11 @@ impl Checker {
             .find_map(|scope| scope.bindings.get(name))
             .cloned()
             .or_else(|| {
-                self.functions.get(name).cloned().map(|mut fs| {
-                    if fs.len() == 1 {
-                        Type::Function(fs.pop().unwrap().into())
-                    } else {
-                        Type::UnknownFunction(fs)
-                    }
-                })
+                self.functions
+                    .get(name)
+                    .cloned()
+                    .map(Box::new)
+                    .map(Type::Function)
             })
     }
     pub(crate) fn scope_mut(&mut self) -> &mut Scope {
@@ -199,14 +207,7 @@ impl Checker {
         name: &str,
         ty: FunctionType,
     ) -> Result<(), FunctionType> {
-        let functions = self.functions.entry(name.into()).or_default();
-        if let Some(f) = functions
-            .iter()
-            .find(|f| (**f).clone().matches(&mut ty.clone()))
-        {
-            return Err(f.clone());
-        }
-        functions.push(ty);
+        self.functions.insert(name.into(), ty);
         Ok(())
     }
     fn item(&mut self, item: ast::Item) -> CheckResult<Item> {
@@ -223,22 +224,16 @@ impl Checker {
             .into_iter()
             .map(|p| self.param(p))
             .collect::<CheckResult<_>>()?;
-        let bindings = def
-            .bindings
-            .into_iter()
-            .map(|b| self.binding(b))
-            .collect::<CheckResult<_>>()?;
-        let expr_span = def.expr.span.clone();
-        let mut expr = self.expr(def.expr)?;
         let mut ret_ty = if let Some(ret_ty) = def.ret_ty {
             self.ty(ret_ty)?
         } else {
             Type::Unit
         };
-        if !expr.ty.matches(&mut ret_ty) {
-            return Err(expr_span.sp(CheckError::TypeMismatch(ret_ty, expr.ty)));
+        let expr_span = def.body.expr.span.clone();
+        let mut body = self.function_body(def.body)?;
+        if !body.expr.ty.matches(&mut ret_ty) {
+            return Err(expr_span.sp(CheckError::TypeMismatch(ret_ty, body.expr.ty)));
         }
-        self.scopes.pop().unwrap();
         let func_ty = FunctionType {
             params: params.iter().map(|p| p.ty.clone()).collect(),
             ret: ret_ty,
@@ -253,9 +248,19 @@ impl Checker {
         Ok(FunctionDef {
             name: def.name.value,
             params,
-            bindings,
-            expr,
+            body,
         })
+    }
+    fn function_body(&mut self, body: ast::FunctionBody) -> CheckResult<FunctionBody> {
+        self.scopes.push(Scope::default());
+        let bindings = body
+            .bindings
+            .into_iter()
+            .map(|b| self.binding(b))
+            .collect::<CheckResult<_>>()?;
+        let expr = self.expr(body.expr)?;
+        self.scopes.pop().unwrap();
+        Ok(FunctionBody { bindings, expr })
     }
     fn binding(&mut self, binding: ast::Binding) -> CheckResult<Binding> {
         let expr_span = binding.expr.span.clone();
@@ -482,31 +487,6 @@ impl Checker {
                     })),
                 };
                 Ok(Expr::Call(Box::new(CallExpr { func, args })).typed(ty))
-            }
-            Type::UnknownFunction(mut func_types) => {
-                let mut args = Vec::new();
-                for (i, ast_arg) in call.args.into_iter().enumerate() {
-                    let arg = self.expr(ast_arg)?;
-                    func_types.retain_mut(|func_type| {
-                        func_type.params.len() > i
-                            && func_type.params[i].matches(&mut arg.ty.clone())
-                    });
-                    args.push(arg);
-                }
-                let func_ty = match func_types.len() {
-                    0 => {
-                        return Err(func_span.sp(CheckError::NoMatchingFunctionVariant(
-                            args.into_iter().map(|arg| arg.ty).collect(),
-                        )))
-                    }
-                    1 => func_types.pop().unwrap(),
-                    _ => {
-                        return Err(func_span.sp(CheckError::AmbiguousFunctionVariant(
-                            args.into_iter().map(|arg| arg.ty).collect(),
-                        )))
-                    }
-                };
-                todo!()
             }
             _ => Err(func_span.sp(CheckError::CallNonFunction(func_type))),
         }

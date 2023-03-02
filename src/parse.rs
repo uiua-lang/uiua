@@ -19,6 +19,7 @@ pub enum Expectation {
     Expr,
     Pattern,
     Eof,
+    FunctionBody,
     Simple(Simple),
     Keyword(Keyword),
 }
@@ -44,6 +45,7 @@ impl fmt::Display for Expectation {
             Expectation::Expr => write!(f, "expression"),
             Expectation::Pattern => write!(f, "pattern"),
             Expectation::Eof => write!(f, "end of file"),
+            Expectation::FunctionBody => write!(f, "function body"),
             Expectation::Simple(s) => write!(f, "{s}"),
             Expectation::Keyword(k) => write!(f, "{k}"),
         }
@@ -217,21 +219,26 @@ impl Parser {
             None
         };
         self.expect(Colon)?;
-        // Bindings
-        let mut bindings = Vec::new();
-        while let Some(binding) = self.try_binding()? {
-            bindings.push(binding);
-        }
-        // Return
-        let ret = self.expr()?;
+        // Body
+        let body = self.function_body()?;
         Ok(Some(FunctionDef {
             doc,
             name,
             params,
             ret_ty,
+            body,
+        }))
+    }
+    fn function_body(&mut self) -> ParseResult<FunctionBody> {
+        let mut bindings = Vec::new();
+        while let Some(binding) = self.try_binding()? {
+            bindings.push(binding);
+        }
+        let ret = self.expr()?;
+        Ok(FunctionBody {
             bindings,
             expr: ret,
-        }))
+        })
     }
     fn try_binding(&mut self) -> ParseResult<Option<Binding>> {
         // Let

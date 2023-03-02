@@ -20,6 +20,11 @@ pub struct FunctionDef {
     pub name: Sp<String>,
     pub params: Vec<Param>,
     pub ret_ty: Option<Sp<Type>>,
+    pub body: FunctionBody,
+}
+
+#[derive(Debug, Clone)]
+pub struct FunctionBody {
     pub bindings: Vec<Binding>,
     pub expr: Sp<Expr>,
 }

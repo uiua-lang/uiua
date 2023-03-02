@@ -22,6 +22,9 @@ impl Transpiler {
             indentation: 0,
         }
     }
+    pub fn take(&mut self) -> String {
+        take(&mut self.code)
+    }
     pub fn transpile(&mut self, input: &str, path: &Path) -> Result<(), Vec<Sp<CheckError>>> {
         let (items, errors) = self.checker.load(input, path);
         if errors.is_empty() {
@@ -73,14 +76,18 @@ impl Transpiler {
         }
         self.line(")");
         self.indentation += 1;
-        for binding in def.bindings {
+        self.function_body(def.body);
+        self.line("end");
+    }
+    fn function_body(&mut self, body: FunctionBody) {
+        self.indentation += 1;
+        for binding in body.bindings {
             self.binding(binding);
         }
         self.add("return ");
-        self.expr(def.expr.expr);
+        self.expr(body.expr.expr);
         self.ensure_line();
         self.indentation -= 1;
-        self.line("end");
     }
     fn binding(&mut self, binding: Binding) {
         match binding.pattern {
@@ -159,6 +166,7 @@ impl Transpiler {
             Expr::Bool(b) => self.add(b.to_string()),
             Expr::If(if_expr) => self.if_expr(*if_expr),
             Expr::Call(call) => self.call(*call),
+            Expr::Function(fn_expr) => self.fn_expr(*fn_expr),
         }
     }
     fn call(&mut self, call: CallExpr) {
@@ -178,5 +186,17 @@ impl Transpiler {
         self.expr(if_expr.if_true);
         self.add(" or ");
         self.expr(if_expr.if_false);
+    }
+    fn fn_expr(&mut self, fn_expr: FunctionExpr) {
+        self.add("function(");
+        for (i, param) in fn_expr.params.into_iter().enumerate() {
+            if i > 0 {
+                self.add(", ");
+            }
+            self.add(param.name);
+        }
+        self.add(")");
+        self.function_body(fn_expr.body);
+        self.add("end");
     }
 }

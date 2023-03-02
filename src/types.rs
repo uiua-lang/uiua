@@ -92,6 +92,12 @@ impl PartialEq for Type {
     }
 }
 
+impl From<FunctionType> for Type {
+    fn from(func: FunctionType) -> Self {
+        Self::Function(Box::new(func))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct FunctionType {
     pub params: Vec<Type>,

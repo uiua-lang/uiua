@@ -216,8 +216,9 @@ impl Compiler {
         self.scopes.pop().unwrap();
         self.height = height;
     }
+    /// Bind the value on the top of the stack to the given identifier
     fn bind_local(&mut self, ident: Ident) {
-        let height = self.height;
+        let height = self.height - 1;
         self.scope_mut()
             .bindings
             .insert(ident, ScopeBind::Local(height));
@@ -277,8 +278,8 @@ impl Compiler {
             FunctionId::Anonymous(span) => format!("fn at {span}"),
         }));
         for param in func.params {
-            self.bind_local(param.value);
             self.height += 1;
+            self.bind_local(param.value);
             dprintln!("param: {}", param.value);
             dprintln!("{}", self.height);
         }
@@ -289,8 +290,8 @@ impl Compiler {
         Ok(())
     }
     fn binding(&mut self, binding: Binding) -> UiuaResult {
-        self.pattern(binding.pattern)?;
         self.expr(binding.expr)?;
+        self.pattern(binding.pattern)?;
         Ok(())
     }
     fn pattern(&mut self, pattern: Sp<Pattern>) -> UiuaResult {

@@ -74,14 +74,36 @@ impl Vm {
     }
     fn run(&mut self, mut pc: usize) -> UiuaResult {
         println!("Running...");
+        #[cfg(feature = "profile")]
+        let mut i = 0;
         while pc < self.instrs.len() {
+            #[cfg(feature = "profile")]
+            if i % 100_000 == 0 {
+                puffin::GlobalProfiler::lock().new_frame();
+            }
+            #[cfg(feature = "profile")]
+            {
+                i += 1;
+            }
+            #[cfg(feature = "profile")]
+            puffin::profile_scope!("instr loop");
             let instr = &self.instrs[pc];
             dprintln!("{pc:>3} {instr}");
             match instr {
                 Instr::Comment(_) => {}
-                Instr::Push(v) => self.stack.push(v.clone()),
-                Instr::Copy(n) => self.stack.push(self.stack[self.stack.len() - *n].clone()),
+                Instr::Push(v) => {
+                    #[cfg(feature = "profile")]
+                    puffin::profile_scope!("push");
+                    self.stack.push(v.clone())
+                }
+                Instr::Copy(n) => {
+                    #[cfg(feature = "profile")]
+                    puffin::profile_scope!("copy");
+                    self.stack.push(self.stack[self.stack.len() - *n].clone())
+                }
                 Instr::Call(arg_count, _) => {
+                    #[cfg(feature = "profile")]
+                    puffin::profile_scope!("call");
                     let (index, _) = match self.stack.pop().unwrap() {
                         Value::Function(func) => func,
                         val => {
@@ -97,6 +119,8 @@ impl Vm {
                     continue;
                 }
                 Instr::Return => {
+                    #[cfg(feature = "profile")]
+                    puffin::profile_scope!("return");
                     if let Some(frame) = self.call_stack.pop() {
                         let value = self.stack.pop().unwrap();
                         pc = frame.ret;
@@ -112,10 +136,14 @@ impl Vm {
                     self.stack.remove(self.stack.len() - 1 - *n);
                 }
                 Instr::Jump(delta) => {
+                    #[cfg(feature = "profile")]
+                    puffin::profile_scope!("jump");
                     pc = pc.wrapping_add_signed(*delta);
                     continue;
                 }
                 Instr::JumpIf(delta, cond) => {
+                    #[cfg(feature = "profile")]
+                    puffin::profile_scope!("jump_if");
                     let val = self.stack.pop().unwrap();
                     if val.is_truthy() == *cond {
                         pc = pc.wrapping_add_signed(*delta);
@@ -123,6 +151,8 @@ impl Vm {
                     }
                 }
                 Instr::JumpIfElsePop(delta, cond) => {
+                    #[cfg(feature = "profile")]
+                    puffin::profile_scope!("jump_if_else_pop");
                     let val = self.stack.last().unwrap();
                     if val.is_truthy() == *cond {
                         pc = pc.wrapping_add_signed(*delta);
@@ -132,8 +162,15 @@ impl Vm {
                     }
                 }
                 Instr::BinOp(op, span) => {
-                    let right = self.stack.pop().unwrap();
-                    let left = self.stack.last_mut().unwrap();
+                    #[cfg(feature = "profile")]
+                    puffin::profile_scope!("bin_op");
+                    let (left, right) = {
+                        #[cfg(feature = "profile")]
+                        puffin::profile_scope!("bin_args");
+                        let right = self.stack.pop().unwrap();
+                        let left = self.stack.last_mut().unwrap();
+                        (left, right)
+                    };
                     left.bin_op(right, *op, span)?;
                 }
                 Instr::DestructureList(n, span) => {

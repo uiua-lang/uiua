@@ -57,6 +57,8 @@ impl<F> Value<F> {
 
 impl<F: PartialEq + PartialOrd> Value<F> {
     pub fn bin_op(&mut self, other: Self, op: BinOp, span: &Span) -> UiuaResult {
+        #[cfg(feature = "profile")]
+        puffin::profile_function!();
         match op {
             BinOp::Add => self.add_assign(other, span)?,
             BinOp::Sub => self.sub_assign(other, span)?,
@@ -78,6 +80,8 @@ macro_rules! value_bin_op {
     ($method:ident, $verb:literal) => {
         impl<F> Value<F> {
             pub fn $method(&mut self, other: Self, span: &Span) -> UiuaResult {
+                #[cfg(feature = "profile")]
+                puffin::profile_function!();
                 match (self, other) {
                     (Value::Nat(a), Value::Nat(b)) => a.$method(b),
                     (Value::Int(a), Value::Int(b)) => a.$method(b),

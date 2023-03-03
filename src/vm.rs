@@ -1,11 +1,6 @@
-use std::fmt;
+use std::{cmp::Ordering, fmt};
 
-use crate::{
-    ast::BinOp,
-    lex::Span,
-    value::{Function, Value},
-    UiuaResult,
-};
+use crate::{ast::BinOp, compile::Assembly, lex::Span, value::Value, UiuaResult};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Instr {
@@ -45,15 +40,14 @@ macro_rules! dprintln {
     };
 }
 
-pub(crate) fn run_instrs(instrs: &[Instr], start: usize, args: Vec<Value>) -> UiuaResult {
-    let mut stack = args;
-    stack.reverse();
+pub(crate) fn run_assembly(assembly: &Assembly) -> UiuaResult {
+    let mut stack = Vec::new();
     let mut call_stack = Vec::new();
     dprintln!("Running...");
-    let mut pc = start;
+    let mut pc = assembly.start;
     #[cfg(feature = "profile")]
     let mut i = 0;
-    while pc < instrs.len() {
+    while pc < assembly.instrs.len() {
         #[cfg(feature = "profile")]
         if i % 100_000 == 0 {
             puffin::GlobalProfiler::lock().new_frame();
@@ -64,7 +58,7 @@ pub(crate) fn run_instrs(instrs: &[Instr], start: usize, args: Vec<Value>) -> Ui
         }
         #[cfg(feature = "profile")]
         puffin::profile_scope!("instr loop");
-        let instr = &instrs[pc];
+        let instr = &assembly.instrs[pc];
         dprintln!("{pc:>3} {instr}");
         match instr {
             Instr::Comment(_) => {}
@@ -78,22 +72,34 @@ pub(crate) fn run_instrs(instrs: &[Instr], start: usize, args: Vec<Value>) -> Ui
                 puffin::profile_scope!("copy");
                 stack.push(stack[stack.len() - *n].clone())
             }
-            Instr::Call(arg_count, _) => {
+            Instr::Call(arg_count, span) => {
                 #[cfg(feature = "profile")]
                 puffin::profile_scope!("call");
                 let func = stack.pop().unwrap();
-                let Function(index) = match func.as_function() {
+                let func = match func.as_function() {
                     Some(func) => func,
                     _ => {
                         let message = format!("cannot call {}", func.ty());
                         return Err(Span::default().sp(message).into());
                     }
                 };
+                let info = assembly.function_info(func);
+                match arg_count.cmp(&info.params) {
+                    Ordering::Less => todo!("partial application"),
+                    Ordering::Equal => {}
+                    Ordering::Greater => {
+                        let message = format!(
+                            "too many arguments: expected {}, got {}",
+                            info.params, arg_count
+                        );
+                        return Err(span.clone().sp(message).into());
+                    }
+                }
                 call_stack.push(StackFrame {
                     ret: pc + 1,
                     stack_size: stack.len() - arg_count,
                 });
-                pc = index;
+                pc = func.0;
                 continue;
             }
             Instr::Return => {

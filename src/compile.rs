@@ -1,11 +1,13 @@
 use std::{collections::HashMap, fmt, fs, path::Path};
 
+use nohash_hasher::BuildNoHashHasher;
+
 use crate::{
     ast::*,
     lex::{Ident, Sp},
     parse::{parse, ParseError},
     value::{Function, Value},
-    vm::{run_instrs, Instr},
+    vm::{run_assembly, Instr},
     UiuaError, UiuaResult,
 };
 
@@ -33,7 +35,7 @@ pub type CompileResult<T = ()> = Result<T, Sp<CompileError>>;
 pub struct Compiler {
     function_instrs: Vec<Instr>,
     global_instrs: Vec<Instr>,
-    function_info: HashMap<Function, FunctionInfo>,
+    function_info: HashMap<Function, FunctionInfo, BuildNoHashHasher<Function>>,
     scopes: Vec<Scope>,
     height: usize,
     in_function: bool,
@@ -56,7 +58,7 @@ impl Default for Compiler {
         Self {
             function_instrs: Vec::new(),
             global_instrs: vec![Instr::Comment("BEGIN".into())],
-            function_info: HashMap::new(),
+            function_info: HashMap::default(),
             scopes: vec![Scope::default()],
             height: 0,
             in_function: false,
@@ -68,7 +70,7 @@ impl Default for Compiler {
 pub struct Assembly {
     pub(crate) instrs: Vec<Instr>,
     pub(crate) start: usize,
-    function_info: HashMap<Function, FunctionInfo>,
+    function_info: HashMap<Function, FunctionInfo, BuildNoHashHasher<Function>>,
     global_functions: HashMap<Ident, Function>,
 }
 
@@ -85,26 +87,14 @@ impl Assembly {
         }
     }
     pub fn run(&self) -> UiuaResult {
-        run_instrs(&self.instrs, self.start, Vec::new())
-    }
-    pub fn run_function<A: IntoIterator<Item = Value>>(
-        &self,
-        function: Function,
-        args: A,
-    ) -> UiuaResult {
-        let info = self.function_info(function);
-        let args: Vec<Value> = args.into_iter().collect();
-        if args.len() != info.args {
-            return Err(UiuaError::NotEnoughArgsOnEntry(info.args, args.len()));
-        }
-        run_instrs(&self.instrs, function.0, args)
+        run_assembly(self)
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct FunctionInfo {
     pub id: FunctionId,
-    pub args: usize,
+    pub params: usize,
 }
 
 impl Compiler {
@@ -230,7 +220,7 @@ impl Compiler {
             function,
             FunctionInfo {
                 id: func.id.clone(),
-                args: func.params.len(),
+                params: func.params.len(),
             },
         );
         let height = self.push_scope();
@@ -269,18 +259,18 @@ impl Compiler {
     fn expr(&mut self, expr: Sp<Expr>) -> CompileResult {
         match expr.value {
             Expr::Unit => self.push_instr(Instr::Push(Value::unit())),
-            Expr::Bool(b) => self.push_instr(Instr::Push(Value::bool(b))),
+            Expr::Bool(b) => self.push_instr(Instr::Push(b.into())),
             Expr::Int(s) => {
                 let i: i64 = s
                     .parse()
                     .map_err(|_| expr.span.sp(CompileError::InvalidInteger(s)))?;
-                self.push_instr(Instr::Push(Value::int(i)));
+                self.push_instr(Instr::Push(i.into()));
             }
             Expr::Real(s) => {
                 let r: f64 = s
                     .parse()
                     .map_err(|_| expr.span.sp(CompileError::InvalidReal(s)))?;
-                self.push_instr(Instr::Push(Value::real(r)))
+                self.push_instr(Instr::Push(r.into()))
             }
             Expr::Ident(ident) => {
                 let bind = self
@@ -302,7 +292,7 @@ impl Compiler {
                             .rev()
                             .find_map(|scope| scope.functions.get(id))
                             .unwrap_or_else(|| panic!("unbound function `{id:?}`"));
-                        self.push_instr(Instr::Push(Value::function(function)));
+                        self.push_instr(Instr::Push(function.into()));
                     }
                 }
             }

@@ -58,6 +58,8 @@ impl fmt::Display for Type {
 #[repr(transparent)]
 pub struct Function(pub(crate) usize);
 
+impl nohash_hasher::IsEnabled for Function {}
+
 impl Value {
     pub fn unit() -> Self {
         Self {
@@ -65,41 +67,100 @@ impl Value {
             data: ValueData { unit: () },
         }
     }
-    pub fn bool(b: bool) -> Self {
-        Self {
-            ty: Type::Bool,
-            data: ValueData { bool: b },
-        }
-    }
-    pub fn int(int: i64) -> Self {
-        Self {
-            ty: Type::Int,
-            data: ValueData { int },
-        }
-    }
-    pub fn real(real: f64) -> Self {
-        Self {
-            ty: Type::Real,
-            data: ValueData { real },
-        }
-    }
-    pub fn function(function: Function) -> Self {
-        Self {
-            ty: Type::Function,
-            data: ValueData { function },
-        }
+    pub fn is_unit(&self) -> bool {
+        self.ty == Type::Unit
     }
     pub fn ty(&self) -> Type {
         self.ty
     }
     pub fn is_truthy(&self) -> bool {
-        !(self.ty == Type::Unit || (self.ty == Type::Bool && unsafe { !self.data.bool }))
+        !(self.is_unit() || (self.ty == Type::Bool && unsafe { !self.data.bool }))
     }
     pub fn as_function(&self) -> Option<Function> {
         if self.ty == Type::Function {
             Some(unsafe { self.data.function })
         } else {
             None
+        }
+    }
+}
+
+impl From<bool> for Value {
+    fn from(b: bool) -> Self {
+        Self {
+            ty: Type::Bool,
+            data: ValueData { bool: b },
+        }
+    }
+}
+
+impl From<i64> for Value {
+    fn from(i: i64) -> Self {
+        Self {
+            ty: Type::Int,
+            data: ValueData { int: i },
+        }
+    }
+}
+
+impl From<f64> for Value {
+    fn from(r: f64) -> Self {
+        Self {
+            ty: Type::Real,
+            data: ValueData { real: r },
+        }
+    }
+}
+
+impl From<Function> for Value {
+    fn from(f: Function) -> Self {
+        Self {
+            ty: Type::Function,
+            data: ValueData { function: f },
+        }
+    }
+}
+
+impl TryFrom<Value> for bool {
+    type Error = Type;
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        if value.ty == Type::Bool {
+            Ok(unsafe { value.data.bool })
+        } else {
+            Err(value.ty)
+        }
+    }
+}
+
+impl TryFrom<Value> for i64 {
+    type Error = Type;
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        if value.ty == Type::Int {
+            Ok(unsafe { value.data.int })
+        } else {
+            Err(value.ty)
+        }
+    }
+}
+
+impl TryFrom<Value> for f64 {
+    type Error = Type;
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        if value.ty == Type::Real {
+            Ok(unsafe { value.data.real })
+        } else {
+            Err(value.ty)
+        }
+    }
+}
+
+impl TryFrom<Value> for Function {
+    type Error = Type;
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        if value.ty == Type::Function {
+            Ok(unsafe { value.data.function })
+        } else {
+            Err(value.ty)
         }
     }
 }
@@ -138,12 +199,12 @@ impl Value {
             BinOp::Sub => self.sub_assign(other, span)?,
             BinOp::Mul => self.mul_assign(other, span)?,
             BinOp::Div => self.div_assign(other, span)?,
-            BinOp::Eq => *self = Value::bool(*self == other),
-            BinOp::Ne => *self = Value::bool(*self != other),
-            BinOp::Lt => *self = Value::bool(*self < other),
-            BinOp::Gt => *self = Value::bool(*self > other),
-            BinOp::Le => *self = Value::bool(*self <= other),
-            BinOp::Ge => *self = Value::bool(*self >= other),
+            BinOp::Eq => *self = (*self == other).into(),
+            BinOp::Ne => *self = (*self != other).into(),
+            BinOp::Lt => *self = (*self < other).into(),
+            BinOp::Gt => *self = (*self > other).into(),
+            BinOp::Le => *self = (*self <= other).into(),
+            BinOp::Ge => *self = (*self >= other).into(),
             BinOp::RangeEx => todo!(),
         }
         Ok(())

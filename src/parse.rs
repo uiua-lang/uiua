@@ -423,8 +423,8 @@ impl Parser {
     fn try_term(&mut self) -> ParseResult<Option<Sp<Expr>>> {
         Ok(Some(if let Some(ident) = self.try_ident() {
             ident.map(Expr::Ident)
-        } else if let Some(i) = self.next_token_map(Token::as_integer) {
-            i.map(Into::into).map(Expr::Integer)
+        } else if let Some(i) = self.next_token_map(Token::as_int) {
+            i.map(Into::into).map(Expr::Int)
         } else if let Some(r) = self.next_token_map(Token::as_real) {
             r.map(Into::into).map(Expr::Real)
         } else if let Some(span) = self.try_exact(Keyword::True) {

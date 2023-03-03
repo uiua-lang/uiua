@@ -49,7 +49,7 @@ pub enum Expr {
     Bin(Box<BinExpr>),
     Logic(Box<LogicExpr>),
     Bool(bool),
-    Integer(String),
+    Int(String),
     Real(String),
     Ident(Ident),
     List(Vec<Sp<Expr>>),

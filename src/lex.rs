@@ -164,7 +164,7 @@ pub enum Token {
     Comment(String),
     DocComment(String),
     Ident(Ident),
-    Integer(String),
+    Int(String),
     Real(String),
     Keyword(Keyword),
     Simple(Simple),
@@ -177,9 +177,9 @@ impl Token {
             _ => None,
         }
     }
-    pub fn as_integer(&self) -> Option<&str> {
+    pub fn as_int(&self) -> Option<&str> {
         match self {
-            Token::Integer(integer) => Some(integer),
+            Token::Int(int) => Some(int),
             _ => None,
         }
     }
@@ -197,7 +197,7 @@ impl fmt::Display for Token {
             Token::Comment(comment) => write!(f, "// {comment}"),
             Token::DocComment(comment) => write!(f, "/// {comment}"),
             Token::Ident(ident) => write!(f, "{ident}"),
-            Token::Integer(integer) => write!(f, "{integer}"),
+            Token::Int(int) => write!(f, "{int}"),
             Token::Real(real) => write!(f, "{real}"),
             Token::Keyword(keyword) => write!(f, "{keyword}"),
             Token::Simple(simple) => write!(f, "{simple}"),
@@ -477,7 +477,7 @@ impl Lexer {
                     let token = if number.contains(['.', 'e', 'E']) {
                         Real
                     } else {
-                        Integer
+                        Int
                     }(number);
                     return self.end(token, start);
                 }

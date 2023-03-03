@@ -267,7 +267,7 @@ impl Compiler {
         match expr.value {
             Expr::Unit => self.push_instr(Instr::Push(Value::unit())),
             Expr::Bool(b) => self.push_instr(Instr::Push(Value::bool(b))),
-            Expr::Integer(s) => {
+            Expr::Int(s) => {
                 let i: i64 = s
                     .parse()
                     .map_err(|_| expr.span.sp(CompileError::InvalidInteger(s)))?;

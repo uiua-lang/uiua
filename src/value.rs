@@ -16,7 +16,6 @@ impl fmt::Debug for Value {
         match self.ty {
             Type::Unit => write!(f, "unit"),
             Type::Bool => write!(f, "{}", unsafe { self.data.bool }),
-            Type::Nat => write!(f, "{}", unsafe { self.data.nat }),
             Type::Int => write!(f, "{}", unsafe { self.data.int }),
             Type::Real => write!(f, "{}", unsafe { self.data.real }),
             Type::Function => write!(f, "function"),
@@ -27,7 +26,6 @@ impl fmt::Debug for Value {
 union ValueData {
     unit: (),
     bool: bool,
-    nat: u64,
     int: i64,
     real: f64,
     function: Function,
@@ -37,18 +35,18 @@ union ValueData {
 pub enum Type {
     Unit,
     Bool,
-    Nat,
     Int,
     Real,
     Function,
 }
+
+const TYPE_ARITY: usize = 5;
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Type::Unit => write!(f, "unit"),
             Type::Bool => write!(f, "bool"),
-            Type::Nat => write!(f, "nat"),
             Type::Int => write!(f, "int"),
             Type::Real => write!(f, "real"),
             Type::Function => write!(f, "function"),
@@ -71,12 +69,6 @@ impl Value {
         Self {
             ty: Type::Bool,
             data: ValueData { bool: b },
-        }
-    }
-    pub fn nat(nat: u64) -> Self {
-        Self {
-            ty: Type::Nat,
-            data: ValueData { nat },
         }
     }
     pub fn int(int: i64) -> Self {
@@ -112,13 +104,10 @@ impl Value {
     }
 }
 
-static CLONE_TABLE: [fn(&ValueData) -> ValueData; 6] = [
+static CLONE_TABLE: [fn(&ValueData) -> ValueData; TYPE_ARITY] = [
     |_| ValueData { unit: () },
     |data| ValueData {
         bool: unsafe { data.bool },
-    },
-    |data| ValueData {
-        nat: unsafe { data.nat },
     },
     |data| ValueData {
         int: unsafe { data.int },
@@ -161,8 +150,6 @@ impl Value {
     }
 }
 
-const TYPES_COUNT: usize = 6;
-
 type MathFn = fn(*mut Value, Value, span: &Span) -> UiuaResult;
 
 macro_rules! type_line {
@@ -170,7 +157,6 @@ macro_rules! type_line {
         [
             $f($a, Type::Unit),
             $f($a, Type::Bool),
-            $f($a, Type::Nat),
             $f($a, Type::Int),
             $f($a, Type::Real),
             $f($a, Type::Function),
@@ -183,7 +169,6 @@ macro_rules! type_square {
         [
             type_line!(Type::Unit, $f),
             type_line!(Type::Bool, $f),
-            type_line!(Type::Nat, $f),
             type_line!(Type::Int, $f),
             type_line!(Type::Real, $f),
             type_line!(Type::Function, $f),
@@ -193,15 +178,11 @@ macro_rules! type_square {
 
 macro_rules! value_bin_op {
     ($table:ident, $fn_name:ident, $method:ident, $verb:literal) => {
-        static mut $table: [[MathFn; TYPES_COUNT]; TYPES_COUNT] = type_square!($fn_name);
+        static mut $table: [[MathFn; TYPE_ARITY]; TYPE_ARITY] = type_square!($fn_name);
         const fn $fn_name(a: Type, b: Type) -> MathFn {
             unsafe {
                 match (a, b) {
                     (Type::Unit, Type::Unit) => |_, _, _| Ok(()),
-                    (Type::Nat, Type::Nat) => |a, b, _| {
-                        (*a).data.nat.$method(b.data.nat);
-                        Ok(())
-                    },
                     (Type::Int, Type::Int) => |a, b, _| {
                         (*a).data.int.$method(b.data.int);
                         Ok(())
@@ -236,13 +217,12 @@ value_bin_op!(DIV_TABLE, div_fn, div_assign, "divide");
 
 type EqFn = unsafe fn(&Value, &Value) -> bool;
 
-static mut EQ_TABLE: [[EqFn; TYPES_COUNT]; TYPES_COUNT] = type_square!(eq_fn);
+static mut EQ_TABLE: [[EqFn; TYPE_ARITY]; TYPE_ARITY] = type_square!(eq_fn);
 const fn eq_fn(a: Type, b: Type) -> EqFn {
     unsafe {
         match (a, b) {
             (Type::Unit, Type::Unit) => |_, _| true,
             (Type::Bool, Type::Bool) => |a, b| a.data.bool == b.data.bool,
-            (Type::Nat, Type::Nat) => |a, b| a.data.nat == b.data.nat,
             (Type::Int, Type::Int) => |a, b| a.data.int == b.data.int,
             (Type::Real, Type::Real) => {
                 |a, b| a.data.real.is_nan() && b.data.real.is_nan() || a.data.real == b.data.real
@@ -264,14 +244,13 @@ impl Eq for Value {}
 
 type CmpFn = fn(&Value, &Value) -> Ordering;
 
-static mut CMP_TABLE: [[CmpFn; TYPES_COUNT]; TYPES_COUNT] = type_square!(cmp_fn);
+static mut CMP_TABLE: [[CmpFn; TYPE_ARITY]; TYPE_ARITY] = type_square!(cmp_fn);
 
 const fn cmp_fn(a: Type, b: Type) -> CmpFn {
     unsafe {
         match (a, b) {
             (Type::Unit, Type::Unit) => |_, _| Ordering::Equal,
             (Type::Bool, Type::Bool) => |a, b| a.data.bool.cmp(&b.data.bool),
-            (Type::Nat, Type::Nat) => |a, b| a.data.nat.cmp(&b.data.nat),
             (Type::Int, Type::Int) => |a, b| a.data.int.cmp(&b.data.int),
             (Type::Real, Type::Real) => |a, b| match (a.data.real.is_nan(), b.data.real.is_nan()) {
                 (true, true) => Ordering::Equal,

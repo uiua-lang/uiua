@@ -8,7 +8,7 @@ use std::{
 use crate::{
     ast::{BinOp, LogicalOp},
     check::*,
-    lex::{Sp, Span},
+    lex::{Ident, Sp, Span},
     value::Value,
 };
 
@@ -59,7 +59,7 @@ pub struct Interpretter {
 
 #[derive(Debug, Default)]
 struct Scope {
-    bindings: HashMap<String, Value>,
+    bindings: HashMap<Ident, Value>,
 }
 
 impl Default for Interpretter {

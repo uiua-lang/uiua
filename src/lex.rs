@@ -151,11 +151,13 @@ impl<T: fmt::Display> fmt::Display for Sp<T> {
 
 impl<T: Error> Error for Sp<T> {}
 
+pub type Ident = Arc<str>;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
     Comment(String),
     DocComment(String),
-    Ident(String),
+    Ident(Ident),
     Integer(String),
     Real(String),
     Keyword(Keyword),
@@ -433,7 +435,7 @@ impl Lexer {
                     {
                         Keyword(keyword)
                     } else {
-                        Ident(ident)
+                        Ident(ident.into())
                     };
                     return self.end(token, start);
                 }

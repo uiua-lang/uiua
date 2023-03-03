@@ -1,6 +1,6 @@
 use enum_iterator::Sequence;
 
-use crate::lex::Sp;
+use crate::lex::{Ident, Sp};
 
 #[derive(Debug, Clone)]
 pub enum Item {
@@ -18,8 +18,8 @@ pub struct Binding {
 #[derive(Debug, Clone)]
 pub struct FunctionDef {
     pub doc: Option<Sp<String>>,
-    pub name: Sp<String>,
-    pub params: Vec<Sp<String>>,
+    pub name: Sp<Ident>,
+    pub params: Vec<Sp<Ident>>,
     pub body: Block,
 }
 
@@ -39,14 +39,14 @@ pub enum Expr {
     Bool(bool),
     Integer(String),
     Real(String),
-    Ident(String),
+    Ident(Ident),
     List(Vec<Sp<Expr>>),
     Parened(Box<Expr>),
 }
 
 #[derive(Debug, Clone)]
 pub enum Pattern {
-    Ident(String),
+    Ident(Ident),
     Tuple(Vec<Sp<Pattern>>),
 }
 

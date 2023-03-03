@@ -215,9 +215,10 @@ impl Parser {
         // Name
         let name = self.ident()?;
         // Parameters
-        let params = self
-            .surrounded_list(PARENS, |this| Ok(this.try_ident()))?
-            .value;
+        let mut params = Vec::new();
+        while let Some(param) = self.try_ident() {
+            params.push(param);
+        }
         self.expect(Colon)?;
         // Body
         let body = self.block()?;
@@ -265,10 +266,10 @@ impl Parser {
         self.try_pattern()?
             .ok_or_else(|| self.expected([Expectation::Pattern]))
     }
-    fn try_ident(&mut self) -> Option<Sp<String>> {
+    fn try_ident(&mut self) -> Option<Sp<Ident>> {
         self.next_token_map(|token| token.as_ident().map(Into::into))
     }
-    fn ident(&mut self) -> ParseResult<Sp<String>> {
+    fn ident(&mut self) -> ParseResult<Sp<Ident>> {
         self.try_ident()
             .ok_or_else(|| self.expected([Expectation::Ident]))
     }
@@ -290,14 +291,6 @@ impl Parser {
         let end = self.expect(close)?;
         let span = start.merge(end);
         Ok(Some(span.sp(items)))
-    }
-    fn surrounded_list<T>(
-        &mut self,
-        (open, close): (Simple, Simple),
-        item: impl Fn(&mut Self) -> ParseResult<Option<T>>,
-    ) -> ParseResult<Sp<Vec<T>>> {
-        self.try_surrounded_list((open, close), item)?
-            .ok_or_else(|| self.expected([Expectation::Simple(open)]))
     }
 }
 

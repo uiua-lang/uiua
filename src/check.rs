@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     ast::{self, BinOp, LogicalOp},
-    lex::{Sp, Span},
+    lex::{Ident, Sp, Span},
     parse::{parse, ParseError},
 };
 
@@ -16,7 +16,7 @@ pub enum CheckError {
     Parse(ParseError),
     InvalidInteger(String),
     InvalidReal(String),
-    UnknownBinding(String),
+    UnknownBinding(Ident),
 }
 
 impl fmt::Display for CheckError {
@@ -41,14 +41,14 @@ pub enum Item {
 
 #[derive(Debug, Clone)]
 pub struct FunctionDef {
-    pub name: String,
+    pub name: Ident,
     pub func: Function,
 }
 
 #[derive(Debug, Clone)]
 pub struct Function {
     pub id: FunctionId,
-    pub params: Vec<Sp<String>>,
+    pub params: Vec<Sp<Ident>>,
     pub body: Block,
 }
 
@@ -74,7 +74,7 @@ impl Ord for Function {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum FunctionId {
-    Named(String),
+    Named(Ident),
     Anonymous(Span),
 }
 
@@ -101,7 +101,7 @@ pub struct Binding {
 
 #[derive(Debug, Clone)]
 pub enum Pattern {
-    Ident(String),
+    Ident(Ident),
     List(Vec<Sp<Pattern>>),
 }
 
@@ -126,7 +126,7 @@ impl fmt::Display for Pattern {
 #[derive(Debug, Clone)]
 pub enum Expr {
     Unit,
-    Ident(String),
+    Ident(Ident),
     Bool(bool),
     Nat(u64),
     Int(i64),
@@ -204,7 +204,7 @@ pub struct Checker {
 
 #[derive(Debug, Default)]
 pub(crate) struct Scope {
-    pub bindings: HashSet<String>,
+    pub bindings: HashSet<Ident>,
 }
 
 impl Default for Checker {
@@ -279,7 +279,7 @@ impl Checker {
         let pattern = self.pattern(binding.pattern)?;
         Ok(Binding { pattern, expr })
     }
-    fn param(&mut self, param: Sp<String>) -> Sp<String> {
+    fn param(&mut self, param: Sp<Ident>) -> Sp<Ident> {
         self.scope_mut().bindings.insert(param.value.clone());
         param
     }

@@ -7,7 +7,7 @@ use crate::{
     UiuaError, UiuaResult,
 };
 
-type Value = crate::value::Value<(usize, FunctionId)>;
+type Value = crate::value2::Value;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instr {
@@ -104,10 +104,11 @@ impl Vm {
                 Instr::Call(arg_count, _) => {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("call");
-                    let (index, _) = match self.stack.pop().unwrap() {
-                        Value::Function(func) => func,
-                        val => {
-                            let message = format!("cannot call {}", val.ty());
+                    let func = self.stack.pop().unwrap();
+                    let index = match func.as_function() {
+                        Some(func) => func,
+                        _ => {
+                            let message = format!("cannot call {}", func.ty());
                             return Err(Span::default().sp(message).into());
                         }
                     };
@@ -173,23 +174,23 @@ impl Vm {
                     };
                     left.bin_op(right, *op, span)?;
                 }
-                Instr::DestructureList(n, span) => {
-                    let list = match self.stack.pop().unwrap() {
-                        Value::List(list) if *n == list.len() => list,
-                        Value::List(list) => {
-                            let message =
-                                format!("cannot destructure list of {} as list of {n}", list.len());
-                            return Err(span.clone().sp(message).into());
-                        }
-                        val => {
-                            let message =
-                                format!("cannot destructure {} as list of {}", val.ty(), n);
-                            return Err(span.clone().sp(message).into());
-                        }
-                    };
-                    for val in list.into_iter().rev() {
-                        self.stack.push(val);
-                    }
+                Instr::DestructureList(_n, _span) => {
+                    // let list = match self.stack.pop().unwrap() {
+                    //     Value::List(list) if *n == list.len() => list,
+                    //     Value::List(list) => {
+                    //         let message =
+                    //             format!("cannot destructure list of {} as list of {n}", list.len());
+                    //         return Err(span.clone().sp(message).into());
+                    //     }
+                    //     val => {
+                    //         let message =
+                    //             format!("cannot destructure {} as list of {}", val.ty(), n);
+                    //         return Err(span.clone().sp(message).into());
+                    //     }
+                    // };
+                    // for val in list.into_iter().rev() {
+                    //     self.stack.push(val);
+                    // }
                 }
                 Instr::Dud => {
                     panic!("unresolved instruction")
@@ -363,11 +364,11 @@ impl Compiler {
     }
     fn expr(&mut self, expr: Sp<Expr>) -> UiuaResult {
         match expr.value {
-            Expr::Unit => self.push_instr(Instr::Push(Value::Unit)),
-            Expr::Bool(b) => self.push_instr(Instr::Push(Value::Bool(b))),
-            Expr::Nat(n) => self.push_instr(Instr::Push(Value::Nat(n))),
-            Expr::Int(i) => self.push_instr(Instr::Push(Value::Int(i))),
-            Expr::Real(r) => self.push_instr(Instr::Push(Value::Real(r))),
+            Expr::Unit => self.push_instr(Instr::Push(Value::unit())),
+            Expr::Bool(b) => self.push_instr(Instr::Push(Value::bool(b))),
+            Expr::Nat(n) => self.push_instr(Instr::Push(Value::nat(n))),
+            Expr::Int(i) => self.push_instr(Instr::Push(Value::int(i))),
+            Expr::Real(r) => self.push_instr(Instr::Push(Value::real(r))),
             Expr::Ident(ident) => {
                 let bind = self
                     .scopes
@@ -389,7 +390,7 @@ impl Compiler {
                             .rev()
                             .find_map(|scope| scope.functions.get(id))
                             .unwrap_or_else(|| panic!("unbound function `{id:?}`"));
-                        self.push_instr(Instr::Push(Value::Function((*index, id.clone()))));
+                        self.push_instr(Instr::Push(Value::function(*index)));
                     }
                 }
             }

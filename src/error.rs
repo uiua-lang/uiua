@@ -7,6 +7,7 @@ pub enum UiuaError {
     Load(PathBuf, io::Error),
     Compile(Vec<Sp<CompileError>>),
     Run(Sp<String>),
+    NotEnoughArgsOnEntry(usize, usize),
 }
 
 impl fmt::Display for UiuaError {
@@ -22,6 +23,13 @@ impl fmt::Display for UiuaError {
                 Ok(())
             }
             UiuaError::Run(e) => write!(f, "{e}"),
+            UiuaError::NotEnoughArgsOnEntry(expected, got) => {
+                write!(
+                    f,
+                    "note enough arguments passed to entry function: \
+                    expected {expected} args, got {got}"
+                )
+            }
         }
     }
 }

@@ -19,11 +19,11 @@ pub struct Binding {
 pub struct FunctionDef {
     pub doc: Option<Sp<String>>,
     pub name: Sp<Ident>,
-    pub func: Function,
+    pub func: Func,
 }
 
 #[derive(Debug, Clone)]
-pub struct Function {
+pub struct Func {
     pub id: FunctionId,
     pub params: Vec<Sp<Ident>>,
     pub body: Block,

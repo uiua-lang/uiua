@@ -1,11 +1,12 @@
-use std::{collections::HashMap, fmt, mem::take, path::Path};
+use std::{collections::HashMap, fmt, fs, path::Path};
 
 use crate::{
     ast::*,
     lex::{Ident, Sp},
     parse::{parse, ParseError},
-    value::Value,
-    vm::Instr,
+    value::{init_tables, Function, Value},
+    vm::{run_instrs, Instr},
+    UiuaError, UiuaResult,
 };
 
 #[derive(Debug)]
@@ -32,6 +33,7 @@ pub type CompileResult<T = ()> = Result<T, Sp<CompileError>>;
 pub struct Compiler {
     function_instrs: Vec<Instr>,
     global_instrs: Vec<Instr>,
+    function_info: HashMap<Function, FunctionInfo>,
     scopes: Vec<Scope>,
     height: usize,
     in_function: bool,
@@ -40,7 +42,7 @@ pub struct Compiler {
 
 #[derive(Default)]
 struct Scope {
-    functions: HashMap<FunctionId, usize>,
+    functions: HashMap<FunctionId, Function>,
     bindings: HashMap<Ident, ScopeBind>,
 }
 
@@ -54,6 +56,7 @@ impl Default for Compiler {
         Self {
             function_instrs: Vec::new(),
             global_instrs: vec![Instr::Comment("BEGIN".into())],
+            function_info: HashMap::new(),
             scopes: vec![Scope::default()],
             height: 0,
             in_function: false,
@@ -65,11 +68,55 @@ impl Default for Compiler {
 pub struct Assembly {
     pub(crate) instrs: Vec<Instr>,
     pub(crate) start: usize,
+    function_info: HashMap<Function, FunctionInfo>,
+    global_functions: HashMap<Ident, Function>,
+}
+
+impl Assembly {
+    pub fn lookup_function(&self, name: Ident) -> Option<Function> {
+        self.global_functions.get(&name).copied()
+    }
+    #[track_caller]
+    pub fn function_info(&self, function: Function) -> &FunctionInfo {
+        if let Some(info) = self.function_info.get(&function) {
+            info
+        } else {
+            panic!("function was compiled in a different assembly")
+        }
+    }
+    pub fn run(&self) -> UiuaResult {
+        run_instrs(&self.instrs, self.start, Vec::new())
+    }
+    pub fn run_function<A: IntoIterator<Item = Value>>(
+        &self,
+        function: Function,
+        args: A,
+    ) -> UiuaResult {
+        let info = self.function_info(function);
+        let args: Vec<Value> = args.into_iter().collect();
+        if args.len() != info.args {
+            return Err(UiuaError::NotEnoughArgsOnEntry(info.args, args.len()));
+        }
+        run_instrs(&self.instrs, function.0, args)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct FunctionInfo {
+    pub id: FunctionId,
+    pub args: usize,
 }
 
 impl Compiler {
     pub fn new() -> Self {
+        init_tables();
         Self::default()
+    }
+    pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult {
+        let path = path.as_ref();
+        let input = fs::read_to_string(path).map_err(|e| UiuaError::Load(path.into(), e))?;
+        self.load(&input, path)?;
+        Ok(())
     }
     pub fn load(&mut self, input: &str, path: &Path) -> Result<(), Vec<Sp<CompileError>>> {
         let (items, errors) = parse(input, path);
@@ -93,12 +140,20 @@ impl Compiler {
             Err(errors)
         }
     }
-    pub fn finish(&mut self) -> Assembly {
+    pub fn finish(mut self) -> Assembly {
         let start = self.function_instrs.len();
         self.function_instrs.append(&mut self.global_instrs);
+        let mut global_functions = HashMap::new();
+        for (id, index) in self.scopes.pop().unwrap().functions {
+            if let FunctionId::Named(name) = id {
+                global_functions.insert(name, index);
+            }
+        }
         Assembly {
-            instrs: take(&mut self.function_instrs),
+            instrs: self.function_instrs,
             start,
+            function_info: self.function_info,
+            global_functions,
         }
     }
     fn scope_mut(&mut self) -> &mut Scope {
@@ -162,13 +217,20 @@ impl Compiler {
     }
     fn function_def(&mut self, def: FunctionDef) -> CompileResult {
         self.bind_function(def.name.value, def.func.id.clone());
-        self.function(def.func)?;
+        self.func(def.func)?;
         Ok(())
     }
-    fn function(&mut self, func: Function) -> CompileResult {
+    fn func(&mut self, func: Func) -> CompileResult {
         self.in_function = true;
-        let index = self.function_instrs.len();
-        self.scope_mut().functions.insert(func.id.clone(), index);
+        let function = Function(self.function_instrs.len());
+        self.scope_mut().functions.insert(func.id.clone(), function);
+        self.function_info.insert(
+            function,
+            FunctionInfo {
+                id: func.id.clone(),
+                args: func.params.len(),
+            },
+        );
         let height = self.push_scope();
         self.push_instr(Instr::Comment(match func.id {
             FunctionId::Named(name) => format!("fn {name}"),
@@ -232,13 +294,13 @@ impl Compiler {
                         self.push_instr(Instr::Copy(diff));
                     }
                     ScopeBind::Function(id) => {
-                        let index = self
+                        let function = *self
                             .scopes
                             .iter()
                             .rev()
                             .find_map(|scope| scope.functions.get(id))
                             .unwrap_or_else(|| panic!("unbound function `{id:?}`"));
-                        self.push_instr(Instr::Push(Value::function(*index)));
+                        self.push_instr(Instr::Push(Value::function(function)));
                     }
                 }
             }
@@ -278,7 +340,7 @@ impl Compiler {
         self.height -= 1;
         self.block(if_expr.if_true)?;
         let jump_to_end_spot = self.push_spot();
-        self.instrs_mut()[jump_to_else_spot] = Instr::JumpIf(
+        self.instrs_mut()[jump_to_else_spot] = Instr::PopJumpIf(
             self.instrs().len() as isize - jump_to_else_spot as isize,
             false,
         );

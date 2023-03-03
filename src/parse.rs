@@ -227,7 +227,7 @@ impl Parser {
         Ok(Some(FunctionDef {
             doc,
             name,
-            func: Function { id, params, body },
+            func: Func { id, params, body },
         }))
     }
     fn block(&mut self) -> ParseResult<Block> {

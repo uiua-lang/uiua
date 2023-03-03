@@ -1,4 +1,4 @@
-use uiua::vm::Vm;
+use uiua::compile::Compiler;
 
 fn main() {
     #[cfg(feature = "profile")]
@@ -8,9 +8,12 @@ fn main() {
         Box::leak(Box::new(puffin_http::Server::new(&server_addr).unwrap()));
     }
 
-    let path = "test.uiua";
-    let mut vm = Vm::new();
-    if let Err(e) = vm.run_file(path) {
+    let mut compiler = Compiler::new();
+    if let Err(e) = compiler.load_file("test.uiua") {
+        eprintln!("{e}");
+    }
+    let assembly = compiler.finish();
+    if let Err(e) = assembly.run() {
         eprintln!("{e}");
     }
 }

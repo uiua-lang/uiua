@@ -3,8 +3,8 @@ use std::{cmp::Ordering, fmt, ops::*, sync::Once};
 use crate::{ast::BinOp, lex::Span, UiuaResult};
 
 pub struct Value {
-    pub ty: Type,
-    pub data: ValueData,
+    ty: Type,
+    data: ValueData,
 }
 
 fn _keep_value_small(_: std::convert::Infallible) {
@@ -24,13 +24,13 @@ impl fmt::Debug for Value {
     }
 }
 
-pub union ValueData {
-    pub unit: (),
-    pub bool: bool,
-    pub nat: u64,
-    pub int: i64,
-    pub real: f64,
-    pub function: usize,
+union ValueData {
+    unit: (),
+    bool: bool,
+    nat: u64,
+    int: i64,
+    real: f64,
+    function: Function,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -56,6 +56,10 @@ impl fmt::Display for Type {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(transparent)]
+pub struct Function(pub(crate) usize);
+
 impl Value {
     pub fn unit() -> Self {
         Self {
@@ -69,28 +73,28 @@ impl Value {
             data: ValueData { bool: b },
         }
     }
-    pub fn nat(n: u64) -> Self {
+    pub fn nat(nat: u64) -> Self {
         Self {
             ty: Type::Nat,
-            data: ValueData { nat: n },
+            data: ValueData { nat },
         }
     }
-    pub fn int(n: i64) -> Self {
+    pub fn int(int: i64) -> Self {
         Self {
             ty: Type::Int,
-            data: ValueData { int: n },
+            data: ValueData { int },
         }
     }
-    pub fn real(n: f64) -> Self {
+    pub fn real(real: f64) -> Self {
         Self {
             ty: Type::Real,
-            data: ValueData { real: n },
+            data: ValueData { real },
         }
     }
-    pub fn function(n: usize) -> Self {
+    pub fn function(function: Function) -> Self {
         Self {
             ty: Type::Function,
-            data: ValueData { function: n },
+            data: ValueData { function },
         }
     }
     pub fn ty(&self) -> Type {
@@ -99,7 +103,7 @@ impl Value {
     pub fn is_truthy(&self) -> bool {
         !(self.ty == Type::Unit || (self.ty == Type::Bool && unsafe { !self.data.bool }))
     }
-    pub fn as_function(&self) -> Option<usize> {
+    pub fn as_function(&self) -> Option<Function> {
         if self.ty == Type::Function {
             Some(unsafe { self.data.function })
         } else {

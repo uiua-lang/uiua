@@ -1,3 +1,8 @@
-- Add builtin functions
 - Add closures
+- Add builtin functions
+- Add partial functions
 - Add strings
+- Add structs
+- Add enums
+- Add inlining
+- Add type testing

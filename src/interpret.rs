@@ -13,44 +13,44 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub enum RuntimeError {
+pub enum UiuaError {
     Load(PathBuf, io::Error),
     Check(Vec<Sp<CheckError>>),
     Run(Sp<String>),
 }
 
-impl fmt::Display for RuntimeError {
+impl fmt::Display for UiuaError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            RuntimeError::Load(path, e) => {
+            UiuaError::Load(path, e) => {
                 write!(f, "failed to load {}: {e}", path.to_string_lossy())
             }
-            RuntimeError::Check(errors) => {
+            UiuaError::Check(errors) => {
                 for error in errors {
                     writeln!(f, "{error}")?;
                 }
                 Ok(())
             }
-            RuntimeError::Run(e) => write!(f, "{e}"),
+            UiuaError::Run(e) => write!(f, "{e}"),
         }
     }
 }
 
-impl From<Sp<String>> for RuntimeError {
+impl From<Sp<String>> for UiuaError {
     fn from(value: Sp<String>) -> Self {
         Self::Run(value)
     }
 }
 
-impl From<Vec<Sp<CheckError>>> for RuntimeError {
+impl From<Vec<Sp<CheckError>>> for UiuaError {
     fn from(errors: Vec<Sp<CheckError>>) -> Self {
         Self::Check(errors)
     }
 }
 
-impl Error for RuntimeError {}
+impl Error for UiuaError {}
 
-pub type RuntimeResult<T = ()> = Result<T, RuntimeError>;
+pub type UiuaResult<T = ()> = Result<T, UiuaError>;
 
 pub struct Interpretter {
     scopes: Vec<Scope>,
@@ -78,16 +78,16 @@ impl Interpretter {
     fn scope_mut(&mut self) -> &mut Scope {
         self.scopes.last_mut().unwrap()
     }
-    pub fn run_file<P: AsRef<Path>>(&mut self, path: P) -> RuntimeResult {
+    pub fn run_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult {
         let path = path.as_ref();
-        let input = fs::read_to_string(path).map_err(|e| RuntimeError::Load(path.into(), e))?;
+        let input = fs::read_to_string(path).map_err(|e| UiuaError::Load(path.into(), e))?;
         let items = self.checker.load(&input, path)?;
         for item in items {
             self.item(&item)?;
         }
         Ok(())
     }
-    pub fn item(&mut self, item: &Item) -> RuntimeResult {
+    pub fn item(&mut self, item: &Item) -> UiuaResult {
         match item {
             Item::Binding(binding) => self.binding(binding)?,
             Item::Expr(expr) => {
@@ -98,17 +98,17 @@ impl Interpretter {
         }
         Ok(())
     }
-    pub fn function_def(&mut self, def: &FunctionDef) -> RuntimeResult {
+    pub fn function_def(&mut self, def: &FunctionDef) -> UiuaResult {
         let value = Value::Function(def.func.clone());
         self.scope_mut().bindings.insert(def.name, value);
         Ok(())
     }
-    pub fn binding(&mut self, binding: &Binding) -> RuntimeResult {
+    pub fn binding(&mut self, binding: &Binding) -> UiuaResult {
         let value = self.expr(&binding.expr)?;
         self.pattern(&binding.pattern, value, false)?;
         Ok(())
     }
-    pub fn block(&mut self, block: &Block) -> RuntimeResult<Value> {
+    pub fn block(&mut self, block: &Block) -> UiuaResult<Value> {
         for binding in &block.bindings {
             self.binding(binding)?;
         }
@@ -119,7 +119,7 @@ impl Interpretter {
         pattern: &Sp<Pattern>,
         value: Value,
         fallible: bool,
-    ) -> RuntimeResult<bool> {
+    ) -> UiuaResult<bool> {
         Ok(match (&pattern.value, value) {
             (Pattern::Ident(name), value) => {
                 self.scope_mut().bindings.insert(name, value);
@@ -160,7 +160,7 @@ impl Interpretter {
             }
         })
     }
-    pub fn expr(&mut self, expr: &Sp<Expr>) -> RuntimeResult<Value> {
+    pub fn expr(&mut self, expr: &Sp<Expr>) -> UiuaResult<Value> {
         Ok(match &expr.value {
             Expr::Unit => Value::Unit,
             Expr::Ident(name) => self
@@ -180,13 +180,13 @@ impl Interpretter {
             Expr::List(list) => Value::List(
                 list.iter()
                     .map(|expr| self.expr(expr))
-                    .collect::<RuntimeResult<_>>()?,
+                    .collect::<UiuaResult<_>>()?,
             ),
             Expr::Binary(bin_expr) => self.bin_expr(bin_expr)?,
             Expr::Function(_) => todo!(),
         })
     }
-    pub fn call_expr(&mut self, call: &CallExpr, span: &Span) -> RuntimeResult<Value> {
+    pub fn call_expr(&mut self, call: &CallExpr, span: &Span) -> UiuaResult<Value> {
         let func = self.expr(&call.func)?;
         let func = match func {
             Value::Function(func) => func,
@@ -206,7 +206,7 @@ impl Interpretter {
         self.scopes.pop().unwrap();
         Ok(result)
     }
-    pub fn if_expr(&mut self, if_expr: &IfExpr) -> RuntimeResult<Value> {
+    pub fn if_expr(&mut self, if_expr: &IfExpr) -> UiuaResult<Value> {
         let cond = self.expr(&if_expr.cond)?;
         if cond.is_truthy() {
             self.block(&if_expr.if_true)
@@ -214,7 +214,7 @@ impl Interpretter {
             self.block(&if_expr.if_false)
         }
     }
-    pub fn logic_expr(&mut self, logic: &LogicalExpr) -> RuntimeResult<Value> {
+    pub fn logic_expr(&mut self, logic: &LogicalExpr) -> UiuaResult<Value> {
         let left = self.expr(&logic.left)?;
         let mut right = || self.expr(&logic.right);
         Ok(match logic.op {
@@ -234,7 +234,7 @@ impl Interpretter {
             }
         })
     }
-    pub fn bin_expr(&mut self, bin_expr: &BinExpr) -> RuntimeResult<Value> {
+    pub fn bin_expr(&mut self, bin_expr: &BinExpr) -> UiuaResult<Value> {
         let left = self.expr(&bin_expr.left)?;
         let right = self.expr(&bin_expr.right)?;
         let span = &bin_expr.op.span;

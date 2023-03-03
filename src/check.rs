@@ -218,6 +218,9 @@ impl Default for Checker {
 }
 
 impl Checker {
+    pub fn new() -> Self {
+        Self::default()
+    }
     pub fn load(&mut self, input: &str, path: &Path) -> Result<Vec<Item>, Vec<Sp<CheckError>>> {
         let (ast_items, errors) = parse(input, path);
         let mut errors: Vec<Sp<CheckError>> =

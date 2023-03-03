@@ -62,7 +62,7 @@ impl Default for Loc {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Span {
     pub start: Loc,
     pub end: Loc,
@@ -78,6 +78,12 @@ impl Default for Span {
             file: PathBuf::from("builtin").into(),
             input: "".into(),
         }
+    }
+}
+
+impl fmt::Debug for Span {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self}")
     }
 }
 

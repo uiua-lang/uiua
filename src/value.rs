@@ -1,16 +1,16 @@
-use std::{fmt, ops::*, slice, sync::Arc};
+use std::{cmp::Ordering, fmt, ops::*, slice, sync::Arc};
 
-use crate::{check::Function, interpret::RuntimeResult, lex::Span};
+use crate::{ast::BinOp, check::Function, interpret::UiuaResult, lex::Span};
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub enum Value {
+#[derive(Debug, Clone)]
+pub enum Value<F = Function> {
     Unit,
     Bool(bool),
     Nat(u64),
     Int(i64),
     Real(f64),
-    Function(Function),
-    List(List),
+    Function(F),
+    List(List<F>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -38,7 +38,7 @@ impl fmt::Display for Type {
     }
 }
 
-impl Value {
+impl<F> Value<F> {
     pub fn ty(&self) -> Type {
         match self {
             Value::Unit => Type::Unit,
@@ -55,10 +55,28 @@ impl Value {
     }
 }
 
+impl<F: PartialEq + PartialOrd> Value<F> {
+    pub fn bin_op(self, other: Self, op: BinOp, span: &Span) -> UiuaResult<Self> {
+        match op {
+            BinOp::Add => self.add(other, span),
+            BinOp::Sub => self.sub(other, span),
+            BinOp::Mul => self.mul(other, span),
+            BinOp::Div => self.div(other, span),
+            BinOp::Eq => Ok(Value::Bool(self == other)),
+            BinOp::Ne => Ok(Value::Bool(self != other)),
+            BinOp::Lt => Ok(Value::Bool(self < other)),
+            BinOp::Gt => Ok(Value::Bool(self > other)),
+            BinOp::Le => Ok(Value::Bool(self <= other)),
+            BinOp::Ge => Ok(Value::Bool(self >= other)),
+            BinOp::RangeEx => todo!(),
+        }
+    }
+}
+
 macro_rules! value_bin_op {
     ($method:ident, $verb:literal) => {
-        impl Value {
-            pub fn $method(self, other: Self, span: &Span) -> RuntimeResult<Self> {
+        impl<F> Value<F> {
+            pub fn $method(self, other: Self, span: &Span) -> UiuaResult<Self> {
                 match (self, other) {
                     (Value::Nat(a), Value::Nat(b)) => Ok(Value::Nat(a.$method(b))),
                     (Value::Int(a), Value::Int(b)) => Ok(Value::Int(a.$method(b))),
@@ -78,12 +96,55 @@ value_bin_op!(sub, "subtract");
 value_bin_op!(mul, "multiply");
 value_bin_op!(div, "divide");
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Default)]
-pub struct List(Arc<Vec<Value>>);
+impl<F: PartialEq> PartialEq for Value<F> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Value::Unit, Value::Unit) => true,
+            (Value::Bool(a), Value::Bool(b)) => a == b,
+            (Value::Nat(a), Value::Nat(b)) => a == b,
+            (Value::Int(a), Value::Int(b)) => a == b,
+            (Value::Real(a), Value::Real(b)) => a.is_nan() && b.is_nan() || a == b,
+            (Value::Function(a), Value::Function(b)) => a == b,
+            (Value::List(a), Value::List(b)) => a == b,
+            _ => false,
+        }
+    }
+}
 
-impl List {
+impl<F: Eq> Eq for Value<F> {}
+
+impl<F: PartialOrd> PartialOrd for Value<F> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(match (self, other) {
+            (Value::Unit, Value::Unit) => Ordering::Equal,
+            (Value::Bool(a), Value::Bool(b)) => a.cmp(b),
+            (Value::Nat(a), Value::Nat(b)) => a.cmp(b),
+            (Value::Int(a), Value::Int(b)) => a.cmp(b),
+            (Value::Real(a), Value::Real(b)) => match (a.is_nan(), b.is_nan()) {
+                (true, true) => Ordering::Equal,
+                (true, false) => Ordering::Greater,
+                (false, true) => Ordering::Less,
+                (false, false) => a.partial_cmp(b).unwrap(),
+            },
+            (Value::Function(a), Value::Function(b)) => a.partial_cmp(b).unwrap(),
+            (Value::List(a), Value::List(b)) => a.partial_cmp(b).unwrap(),
+            (a, b) => a.ty().cmp(&b.ty()),
+        })
+    }
+}
+
+impl<F: Ord> Ord for Value<F> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
+pub struct List<F>(Arc<Vec<Value<F>>>);
+
+impl<F: Clone> List<F> {
     pub fn new() -> Self {
-        Self::default()
+        Self(Arc::new(Vec::new()))
     }
     pub fn len(&self) -> usize {
         self.0.len()
@@ -91,24 +152,24 @@ impl List {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
-    pub fn push(mut self, value: Value) -> Self {
+    pub fn push(mut self, value: Value<F>) -> Self {
         Arc::make_mut(&mut self.0).push(value);
         self
     }
-    pub fn iter(&self) -> slice::Iter<Value> {
+    pub fn iter(&self) -> slice::Iter<Value<F>> {
         self.0.iter()
     }
 }
 
-impl FromIterator<Value> for List {
-    fn from_iter<I: IntoIterator<Item = Value>>(iter: I) -> Self {
+impl<F> FromIterator<Value<F>> for List<F> {
+    fn from_iter<I: IntoIterator<Item = Value<F>>>(iter: I) -> Self {
         Self(iter.into_iter().collect::<Vec<_>>().into())
     }
 }
 
-impl IntoIterator for List {
-    type Item = Value;
-    type IntoIter = Box<dyn Iterator<Item = Value>>;
+impl<F: Clone + 'static> IntoIterator for List<F> {
+    type Item = Value<F>;
+    type IntoIter = Box<dyn DoubleEndedIterator<Item = Value<F>>>;
     fn into_iter(self) -> Self::IntoIter {
         match Arc::try_unwrap(self.0) {
             Ok(vec) => Box::new(vec.into_iter()),

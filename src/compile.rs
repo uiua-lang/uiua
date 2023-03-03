@@ -4,7 +4,7 @@ use crate::{
     ast::*,
     lex::{Ident, Sp},
     parse::{parse, ParseError},
-    value::{init_tables, Function, Value},
+    value::{Function, Value},
     vm::{run_instrs, Instr},
     UiuaError, UiuaResult,
 };
@@ -109,7 +109,6 @@ pub struct FunctionInfo {
 
 impl Compiler {
     pub fn new() -> Self {
-        init_tables();
         Self::default()
     }
     pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult {

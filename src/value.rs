@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, fmt, ops::*, sync::Once};
+use std::{cmp::Ordering, fmt, ops::*};
 
 use crate::{ast::BinOp, lex::Span, UiuaResult};
 
@@ -162,51 +162,60 @@ impl Value {
 }
 
 const TYPES_COUNT: usize = 6;
-const ALL_TYPES: [Type; TYPES_COUNT] = [
-    Type::Unit,
-    Type::Bool,
-    Type::Nat,
-    Type::Int,
-    Type::Real,
-    Type::Function,
-];
 
-type MathFn = fn(&mut Value, Value, span: &Span) -> UiuaResult;
+type MathFn = fn(*mut Value, Value, span: &Span) -> UiuaResult;
+
+macro_rules! type_line {
+    ($a:expr, $f:expr) => {
+        [
+            $f($a, Type::Unit),
+            $f($a, Type::Bool),
+            $f($a, Type::Nat),
+            $f($a, Type::Int),
+            $f($a, Type::Real),
+            $f($a, Type::Function),
+        ]
+    };
+}
+
+macro_rules! type_square {
+    ($f:expr) => {
+        [
+            type_line!(Type::Unit, $f),
+            type_line!(Type::Bool, $f),
+            type_line!(Type::Nat, $f),
+            type_line!(Type::Int, $f),
+            type_line!(Type::Real, $f),
+            type_line!(Type::Function, $f),
+        ]
+    };
+}
 
 macro_rules! value_bin_op {
-    ($table:ident,$init:ident, $method:ident, $verb:literal) => {
-        static mut $table: [MathFn; TYPES_COUNT * TYPES_COUNT] = [|a, b, span| -> UiuaResult {
-            Err(span
-                .clone()
-                .sp(format!("cannot {} {} and {}", $verb, a.ty, b.ty))
-                .into())
-        }; TYPES_COUNT * TYPES_COUNT];
-        unsafe fn $init() {
-            for a in ALL_TYPES {
-                for b in ALL_TYPES {
-                    let f = &mut $table[a as usize * TYPES_COUNT + b as usize];
-                    match (a, b) {
-                        (Type::Unit, Type::Unit) => *f = |_, _, _| Ok(()),
-                        (Type::Nat, Type::Nat) => {
-                            *f = |a, b, _| {
-                                a.data.nat.$method(b.data.nat);
-                                Ok(())
-                            }
-                        }
-                        (Type::Int, Type::Int) => {
-                            *f = |a, b, _| {
-                                a.data.int.$method(b.data.int);
-                                Ok(())
-                            }
-                        }
-                        (Type::Real, Type::Real) => {
-                            *f = |a, b, _| {
-                                a.data.real.$method(b.data.real);
-                                Ok(())
-                            }
-                        }
-                        _ => {}
-                    }
+    ($table:ident, $fn_name:ident, $method:ident, $verb:literal) => {
+        static mut $table: [[MathFn; TYPES_COUNT]; TYPES_COUNT] = type_square!($fn_name);
+        const fn $fn_name(a: Type, b: Type) -> MathFn {
+            unsafe {
+                match (a, b) {
+                    (Type::Unit, Type::Unit) => |_, _, _| Ok(()),
+                    (Type::Nat, Type::Nat) => |a, b, _| {
+                        (*a).data.nat.$method(b.data.nat);
+                        Ok(())
+                    },
+                    (Type::Int, Type::Int) => |a, b, _| {
+                        (*a).data.int.$method(b.data.int);
+                        Ok(())
+                    },
+                    (Type::Real, Type::Real) => |a, b, _| {
+                        (*a).data.real.$method(b.data.real);
+                        Ok(())
+                    },
+                    _ => |a, b, span| {
+                        Err(span
+                            .clone()
+                            .sp(format!("cannot {} {} and {}", $verb, (*a).ty, b.ty))
+                            .into())
+                    },
                 }
             }
         }
@@ -214,52 +223,31 @@ macro_rules! value_bin_op {
             pub fn $method(&mut self, other: Self, span: &Span) -> UiuaResult {
                 #[cfg(feature = "profile")]
                 puffin::profile_function!();
-                unsafe {
-                    $table[self.ty as usize * TYPES_COUNT + other.ty as usize](self, other, span)
-                }
+                unsafe { $table[self.ty as usize][other.ty as usize](self, other, span) }
             }
         }
     };
 }
 
-pub(crate) fn init_tables() {
-    static ONCE: Once = Once::new();
+value_bin_op!(ADD_TABLE, add_fn, add_assign, "add");
+value_bin_op!(SUB_TABLE, sub_fn, sub_assign, "subtract");
+value_bin_op!(MUL_TABLE, mul_fn, mul_assign, "multiply");
+value_bin_op!(DIV_TABLE, div_fn, div_assign, "divide");
+
+type EqFn = unsafe fn(&Value, &Value) -> bool;
+
+static mut EQ_TABLE: [[EqFn; TYPES_COUNT]; TYPES_COUNT] = type_square!(eq_fn);
+const fn eq_fn(a: Type, b: Type) -> EqFn {
     unsafe {
-        ONCE.call_once(|| {
-            init_add_table();
-            init_sub_table();
-            init_mul_table();
-            init_div_table();
-            init_eq_table();
-            init_cmp_table();
-        });
-    }
-}
-
-value_bin_op!(ADD_TABLE, init_add_table, add_assign, "add");
-value_bin_op!(SUB_TABLE, init_sub_table, sub_assign, "subtract");
-value_bin_op!(MUL_TABLE, init_mul_table, mul_assign, "multiply");
-value_bin_op!(DIV_TABLE, init_div_table, div_assign, "divide");
-
-type EqFn = fn(&Value, &Value) -> bool;
-
-static mut EQ_TABLE: [EqFn; TYPES_COUNT * TYPES_COUNT] = [|_, _| false; TYPES_COUNT * TYPES_COUNT];
-unsafe fn init_eq_table() {
-    for a in ALL_TYPES {
-        for b in ALL_TYPES {
-            let f = &mut EQ_TABLE[a as usize * TYPES_COUNT + b as usize];
-            match (a, b) {
-                (Type::Unit, Type::Unit) => *f = |_, _| true,
-                (Type::Bool, Type::Bool) => *f = |a, b| a.data.bool == b.data.bool,
-                (Type::Nat, Type::Nat) => *f = |a, b| a.data.nat == b.data.nat,
-                (Type::Int, Type::Int) => *f = |a, b| a.data.int == b.data.int,
-                (Type::Real, Type::Real) => {
-                    *f = |a, b| {
-                        a.data.real.is_nan() && b.data.real.is_nan() || a.data.real == b.data.real
-                    }
-                }
-                _ => {}
+        match (a, b) {
+            (Type::Unit, Type::Unit) => |_, _| true,
+            (Type::Bool, Type::Bool) => |a, b| a.data.bool == b.data.bool,
+            (Type::Nat, Type::Nat) => |a, b| a.data.nat == b.data.nat,
+            (Type::Int, Type::Int) => |a, b| a.data.int == b.data.int,
+            (Type::Real, Type::Real) => {
+                |a, b| a.data.real.is_nan() && b.data.real.is_nan() || a.data.real == b.data.real
             }
+            _ => |_, _| false,
         }
     }
 }
@@ -268,7 +256,7 @@ impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         #[cfg(feature = "profile")]
         puffin::profile_function!();
-        unsafe { EQ_TABLE[self.ty as usize * TYPES_COUNT + other.ty as usize](self, other) }
+        unsafe { EQ_TABLE[self.ty as usize][other.ty as usize](self, other) }
     }
 }
 
@@ -276,28 +264,22 @@ impl Eq for Value {}
 
 type CmpFn = fn(&Value, &Value) -> Ordering;
 
-static mut CMP_TABLE: [CmpFn; TYPES_COUNT * TYPES_COUNT] =
-    [|_, _| Ordering::Equal; TYPES_COUNT * TYPES_COUNT];
+static mut CMP_TABLE: [[CmpFn; TYPES_COUNT]; TYPES_COUNT] = type_square!(cmp_fn);
 
-unsafe fn init_cmp_table() {
-    for a in ALL_TYPES {
-        for b in ALL_TYPES {
-            let f = &mut CMP_TABLE[a as usize * TYPES_COUNT + b as usize];
-            match (a, b) {
-                (Type::Unit, Type::Unit) => *f = |_, _| Ordering::Equal,
-                (Type::Bool, Type::Bool) => *f = |a, b| a.data.bool.cmp(&b.data.bool),
-                (Type::Nat, Type::Nat) => *f = |a, b| a.data.nat.cmp(&b.data.nat),
-                (Type::Int, Type::Int) => *f = |a, b| a.data.int.cmp(&b.data.int),
-                (Type::Real, Type::Real) => {
-                    *f = |a, b| match (a.data.real.is_nan(), b.data.real.is_nan()) {
-                        (true, true) => Ordering::Equal,
-                        (true, false) => Ordering::Greater,
-                        (false, true) => Ordering::Less,
-                        (false, false) => a.data.real.partial_cmp(&b.data.real).unwrap(),
-                    }
-                }
-                _ => {}
-            }
+const fn cmp_fn(a: Type, b: Type) -> CmpFn {
+    unsafe {
+        match (a, b) {
+            (Type::Unit, Type::Unit) => |_, _| Ordering::Equal,
+            (Type::Bool, Type::Bool) => |a, b| a.data.bool.cmp(&b.data.bool),
+            (Type::Nat, Type::Nat) => |a, b| a.data.nat.cmp(&b.data.nat),
+            (Type::Int, Type::Int) => |a, b| a.data.int.cmp(&b.data.int),
+            (Type::Real, Type::Real) => |a, b| match (a.data.real.is_nan(), b.data.real.is_nan()) {
+                (true, true) => Ordering::Equal,
+                (true, false) => Ordering::Less,
+                (false, true) => Ordering::Greater,
+                (false, false) => a.data.real.partial_cmp(&b.data.real).unwrap(),
+            },
+            _ => |_, _| Ordering::Equal,
         }
     }
 }
@@ -312,6 +294,6 @@ impl Ord for Value {
     fn cmp(&self, other: &Self) -> Ordering {
         #[cfg(feature = "profile")]
         puffin::profile_function!();
-        unsafe { CMP_TABLE[self.ty as usize * TYPES_COUNT + other.ty as usize](self, other) }
+        unsafe { CMP_TABLE[self.ty as usize][other.ty as usize](self, other) }
     }
 }

@@ -7,7 +7,7 @@ use crate::{
     UiuaError, UiuaResult,
 };
 
-type Value = crate::value::Value<(usize, FunctionId)>;
+type Value = crate::value::Value<usize>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instr {
@@ -104,7 +104,7 @@ impl Vm {
                 Instr::Call(arg_count, _) => {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("call");
-                    let (index, _) = match self.stack.pop().unwrap() {
+                    let index = match self.stack.pop().unwrap() {
                         Value::Function(func) => func,
                         val => {
                             let message = format!("cannot call {}", val.ty());
@@ -389,7 +389,7 @@ impl Compiler {
                             .rev()
                             .find_map(|scope| scope.functions.get(id))
                             .unwrap_or_else(|| panic!("unbound function `{id:?}`"));
-                        self.push_instr(Instr::Push(Value::Function((*index, id.clone()))));
+                        self.push_instr(Instr::Push(Value::Function(*index)));
                     }
                 }
             }

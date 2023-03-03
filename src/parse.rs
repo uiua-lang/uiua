@@ -233,6 +233,7 @@ impl Parser {
         let mut bindings = Vec::new();
         while let Some(binding) = self.try_binding()? {
             bindings.push(binding);
+            self.expect(SemiColon)?;
         }
         let ret = self.expr()?;
         Ok(Block {

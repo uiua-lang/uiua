@@ -7,7 +7,7 @@ use crate::{
     lex::{Ident, Sp, Span},
 };
 
-type Value = crate::value::Value<usize>;
+type Value = crate::value::Value<(usize, FunctionId)>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instr {
@@ -44,6 +44,15 @@ struct StackFrame {
     stack_size: usize,
 }
 
+const DBG: bool = false;
+macro_rules! dprintln {
+    ($($arg:tt)*) => {
+        if DBG {
+            println!($($arg)*);
+        }
+    };
+}
+
 impl Vm {
     pub fn new() -> Self {
         Self::default()
@@ -65,13 +74,13 @@ impl Vm {
         println!("Running...");
         while pc < self.instrs.len() {
             let instr = &self.instrs[pc];
-            // println!("{instr}");
+            dprintln!("{instr}");
             match instr {
                 Instr::Comment(_) => {}
                 Instr::Push(v) => self.stack.push(v.clone()),
                 Instr::Copy(n) => self.stack.push(self.stack[self.stack.len() - *n].clone()),
                 Instr::Call(arg_count, _) => {
-                    let index = match self.stack.pop().unwrap() {
+                    let (index, _) = match self.stack.pop().unwrap() {
                         Value::Function(func) => func,
                         val => {
                             let message = format!("cannot call {}", val.ty());
@@ -136,7 +145,7 @@ impl Vm {
                     panic!("unresolved instruction")
                 }
             }
-            // println!("{:?}", self.stack);
+            dprintln!("{:?}", self.stack);
             pc += 1;
         }
         println!("\nstack:");
@@ -153,6 +162,7 @@ pub struct Compiler {
     checker: Checker,
     scopes: Vec<Scope>,
     height: usize,
+    in_function: bool,
 }
 
 #[derive(Default)]
@@ -174,6 +184,7 @@ impl Default for Compiler {
             checker: Checker::new(),
             scopes: vec![Scope::default()],
             height: 0,
+            in_function: false,
         }
     }
 }
@@ -210,6 +221,7 @@ impl Compiler {
         self.scope_mut()
             .bindings
             .insert(ident, ScopeBind::Local(height));
+        dprintln!("bind {ident} to {height}");
     }
     fn bind_function(&mut self, ident: Ident, id: FunctionId) {
         self.scope_mut()
@@ -217,17 +229,17 @@ impl Compiler {
             .insert(ident, ScopeBind::Function(id));
     }
     fn instrs(&self) -> &[Instr] {
-        if self.scopes.len() <= 1 {
-            &self.global_instrs
-        } else {
+        if self.in_function {
             &self.function_instrs
+        } else {
+            &self.global_instrs
         }
     }
     fn instrs_mut(&mut self) -> &mut Vec<Instr> {
-        if self.scopes.len() <= 1 {
-            &mut self.global_instrs
-        } else {
+        if self.in_function {
             &mut self.function_instrs
+        } else {
+            &mut self.global_instrs
         }
     }
     fn push_instr(&mut self, instr: Instr) {
@@ -239,6 +251,8 @@ impl Compiler {
             Instr::JumpIf(..) => self.height -= 1,
             _ => {}
         }
+        dprintln!("{instr}");
+        dprintln!("{}", self.height);
         self.instrs_mut().push(instr);
     }
     fn item(&mut self, item: Item) -> UiuaResult {
@@ -249,13 +263,12 @@ impl Compiler {
         }
     }
     fn function_def(&mut self, def: FunctionDef) -> UiuaResult {
+        self.bind_function(def.name, def.func.id.clone());
         self.function(def.func)?;
         Ok(())
     }
     fn function(&mut self, func: Function) -> UiuaResult {
-        if let FunctionId::Named(name) = &func.id {
-            self.bind_function(name, func.id.clone());
-        }
+        self.in_function = true;
         let index = self.function_instrs.len();
         self.scope_mut().functions.insert(func.id.clone(), index);
         let height = self.push_scope();
@@ -266,15 +279,18 @@ impl Compiler {
         for param in func.params {
             self.bind_local(param.value);
             self.height += 1;
+            dprintln!("param: {}", param.value);
+            dprintln!("{}", self.height);
         }
         self.block(func.body)?;
         self.push_instr(Instr::Return);
         self.pop_scope(height);
+        self.in_function = false;
         Ok(())
     }
     fn binding(&mut self, binding: Binding) -> UiuaResult {
-        self.expr(binding.expr)?;
         self.pattern(binding.pattern)?;
+        self.expr(binding.expr)?;
         Ok(())
     }
     fn pattern(&mut self, pattern: Sp<Pattern>) -> UiuaResult {
@@ -308,6 +324,7 @@ impl Compiler {
                     ScopeBind::Local(index) => {
                         let curr = self.height;
                         let diff = curr - *index;
+                        dprintln!("copy {ident} from {index} to {curr}");
                         self.push_instr(Instr::Copy(diff));
                     }
                     ScopeBind::Function(id) => {
@@ -317,7 +334,7 @@ impl Compiler {
                             .rev()
                             .find_map(|scope| scope.functions.get(id))
                             .unwrap_or_else(|| panic!("unbound function `{id:?}`"));
-                        self.push_instr(Instr::Push(Value::Function(*index)));
+                        self.push_instr(Instr::Push(Value::Function((*index, id.clone()))));
                     }
                 }
             }

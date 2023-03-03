@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, fmt, ops::*, slice, sync::Arc};
 
-use crate::{ast::BinOp, check::Function, interpret::UiuaResult, lex::Span};
+use crate::{ast::BinOp, check::Function, lex::Span, UiuaResult};
 
 #[derive(Debug, Clone)]
 pub enum Value<F = Function> {
@@ -56,45 +56,49 @@ impl<F> Value<F> {
 }
 
 impl<F: PartialEq + PartialOrd> Value<F> {
-    pub fn bin_op(self, other: Self, op: BinOp, span: &Span) -> UiuaResult<Self> {
+    pub fn bin_op(&mut self, other: Self, op: BinOp, span: &Span) -> UiuaResult {
         match op {
-            BinOp::Add => self.add(other, span),
-            BinOp::Sub => self.sub(other, span),
-            BinOp::Mul => self.mul(other, span),
-            BinOp::Div => self.div(other, span),
-            BinOp::Eq => Ok(Value::Bool(self == other)),
-            BinOp::Ne => Ok(Value::Bool(self != other)),
-            BinOp::Lt => Ok(Value::Bool(self < other)),
-            BinOp::Gt => Ok(Value::Bool(self > other)),
-            BinOp::Le => Ok(Value::Bool(self <= other)),
-            BinOp::Ge => Ok(Value::Bool(self >= other)),
+            BinOp::Add => self.add_assign(other, span)?,
+            BinOp::Sub => self.sub_assign(other, span)?,
+            BinOp::Mul => self.mul_assign(other, span)?,
+            BinOp::Div => self.div_assign(other, span)?,
+            BinOp::Eq => *self = Value::Bool(*self == other),
+            BinOp::Ne => *self = Value::Bool(*self != other),
+            BinOp::Lt => *self = Value::Bool(*self < other),
+            BinOp::Gt => *self = Value::Bool(*self > other),
+            BinOp::Le => *self = Value::Bool(*self <= other),
+            BinOp::Ge => *self = Value::Bool(*self >= other),
             BinOp::RangeEx => todo!(),
         }
+        Ok(())
     }
 }
 
 macro_rules! value_bin_op {
     ($method:ident, $verb:literal) => {
         impl<F> Value<F> {
-            pub fn $method(self, other: Self, span: &Span) -> UiuaResult<Self> {
+            pub fn $method(&mut self, other: Self, span: &Span) -> UiuaResult {
                 match (self, other) {
-                    (Value::Nat(a), Value::Nat(b)) => Ok(Value::Nat(a.$method(b))),
-                    (Value::Int(a), Value::Int(b)) => Ok(Value::Int(a.$method(b))),
-                    (Value::Real(a), Value::Real(b)) => Ok(Value::Real(a.$method(b))),
-                    (a, b) => Err(span
-                        .clone()
-                        .sp(format!("cannot {} {} and {}", $verb, a.ty(), b.ty()))
-                        .into()),
+                    (Value::Nat(a), Value::Nat(b)) => a.$method(b),
+                    (Value::Int(a), Value::Int(b)) => a.$method(b),
+                    (Value::Real(a), Value::Real(b)) => a.$method(b),
+                    (a, b) => {
+                        return Err(span
+                            .clone()
+                            .sp(format!("cannot {} {} and {}", $verb, a.ty(), b.ty()))
+                            .into())
+                    }
                 }
+                Ok(())
             }
         }
     };
 }
 
-value_bin_op!(add, "add");
-value_bin_op!(sub, "subtract");
-value_bin_op!(mul, "multiply");
-value_bin_op!(div, "divide");
+value_bin_op!(add_assign, "add");
+value_bin_op!(sub_assign, "subtract");
+value_bin_op!(mul_assign, "multiply");
+value_bin_op!(div_assign, "divide");
 
 impl<F: PartialEq> PartialEq for Value<F> {
     fn eq(&self, other: &Self) -> bool {

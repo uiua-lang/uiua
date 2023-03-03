@@ -3,8 +3,8 @@ use std::{collections::HashMap, fmt, fs, path::Path};
 use crate::{
     ast::BinOp,
     check::*,
-    interpret::{UiuaError, UiuaResult},
     lex::{Ident, Sp, Span},
+    UiuaError, UiuaResult,
 };
 
 type Value = crate::value::Value<(usize, FunctionId)>;
@@ -119,9 +119,8 @@ impl Vm {
                 }
                 Instr::BinOp(op, span) => {
                     let right = self.stack.pop().unwrap();
-                    let left = self.stack.pop().unwrap();
-                    let result = left.bin_op(right, *op, span)?;
-                    self.stack.push(result);
+                    let left = self.stack.last_mut().unwrap();
+                    left.bin_op(right, *op, span)?;
                 }
                 Instr::DestructureList(n, span) => {
                     let list = match self.stack.pop().unwrap() {

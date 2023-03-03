@@ -347,7 +347,7 @@ impl Parser {
         let Some(op_span) = self.try_exact(Keyword::Or) else {
             return Ok(Some(left));
         };
-        let op = op_span.sp(LogicalOp::Or);
+        let op = op_span.sp(LogicOp::Or);
         let right = self.expect_expr(Self::try_and_expr)?;
         let span = left.span.clone().merge(right.span.clone());
         Ok(Some(span.sp(Expr::Logic(Box::new(LogicalExpr {
@@ -363,7 +363,7 @@ impl Parser {
         let Some(op_span) = self.try_exact(Keyword::And) else {
             return Ok(Some(left));
         };
-        let op = op_span.sp(LogicalOp::And);
+        let op = op_span.sp(LogicOp::And);
         let right = self.expect_expr(Self::try_bin_expr)?;
         let span = left.span.clone().merge(right.span.clone());
         Ok(Some(span.sp(Expr::Logic(Box::new(LogicalExpr {

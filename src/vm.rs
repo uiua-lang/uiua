@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt, fs, path::Path};
 
 use crate::{
-    ast::BinOp,
+    ast::{BinOp, LogicOp},
     check::*,
     interpret::{UiuaError, UiuaResult},
     lex::{Ident, Sp, Span},
@@ -16,8 +16,10 @@ pub enum Instr {
     Copy(usize),
     Call(usize, Span),
     Return,
-    Jump(usize),
-    JumpIf(usize, bool),
+    Pop(usize),
+    Jump(isize),
+    JumpIf(isize, bool),
+    JumpIfElsePop(isize, bool),
     BinOp(BinOp, Span),
     DestructureList(usize, Span),
     Dud,
@@ -74,7 +76,7 @@ impl Vm {
         println!("Running...");
         while pc < self.instrs.len() {
             let instr = &self.instrs[pc];
-            dprintln!("{instr}");
+            dprintln!("{pc:>3} {instr}");
             match instr {
                 Instr::Comment(_) => {}
                 Instr::Push(v) => self.stack.push(v.clone()),
@@ -84,7 +86,6 @@ impl Vm {
                         Value::Function(func) => func,
                         val => {
                             let message = format!("cannot call {}", val.ty());
-                            dbg!(val);
                             return Err(Span::default().sp(message).into());
                         }
                     };
@@ -101,20 +102,33 @@ impl Vm {
                         pc = frame.ret;
                         self.stack.truncate(frame.stack_size);
                         self.stack.push(value);
+                        dprintln!("{:?}", self.stack);
                         continue;
                     } else {
                         break;
                     }
                 }
-                Instr::Jump(to) => {
-                    pc = *to;
+                Instr::Pop(n) => {
+                    self.stack.remove(self.stack.len() - 1 - *n);
+                }
+                Instr::Jump(delta) => {
+                    pc = pc.wrapping_add_signed(*delta);
                     continue;
                 }
-                Instr::JumpIf(to, cond) => {
+                Instr::JumpIf(delta, cond) => {
                     let val = self.stack.pop().unwrap();
                     if val.is_truthy() == *cond {
-                        pc = *to;
+                        pc = pc.wrapping_add_signed(*delta);
                         continue;
+                    }
+                }
+                Instr::JumpIfElsePop(delta, cond) => {
+                    let val = self.stack.last().unwrap();
+                    if val.is_truthy() == *cond {
+                        pc = pc.wrapping_add_signed(*delta);
+                        continue;
+                    } else {
+                        self.stack.pop();
                     }
                 }
                 Instr::BinOp(op, span) => {
@@ -249,12 +263,16 @@ impl Compiler {
             Instr::Push(_) => self.height += 1,
             Instr::BinOp(..) => self.height -= 1,
             Instr::Call(..) => self.height -= 1,
-            Instr::JumpIf(..) => self.height -= 1,
             _ => {}
         }
         dprintln!("{instr}");
         dprintln!("{}", self.height);
         self.instrs_mut().push(instr);
+    }
+    fn push_spot(&mut self) -> usize {
+        let spot = self.instrs().len();
+        self.push_instr(Instr::Dud);
+        spot
     }
     fn item(&mut self, item: Item) -> UiuaResult {
         match item {
@@ -354,7 +372,9 @@ impl Compiler {
                 self.push_instr(Instr::Call(args_len, call_span));
             }
             Expr::If(if_expr) => self.if_expr(*if_expr)?,
-            _ => todo!(),
+            Expr::Logic(log_expr) => self.logic_expr(*log_expr)?,
+            Expr::List(_) => todo!(),
+            Expr::Function(_) => todo!(),
         }
         Ok(())
     }
@@ -369,15 +389,30 @@ impl Compiler {
     }
     fn if_expr(&mut self, if_expr: IfExpr) -> UiuaResult {
         self.expr(if_expr.cond)?;
-        let jump_to_else_spot = self.instrs().len();
-        self.push_instr(Instr::Dud);
+        let jump_to_else_spot = self.push_spot();
         self.height -= 1;
         self.block(if_expr.if_true)?;
-        let jump_to_end_spot = self.instrs().len();
-        self.push_instr(Instr::Dud);
-        self.instrs_mut()[jump_to_else_spot] = Instr::JumpIf(self.instrs().len(), false);
+        let jump_to_end_spot = self.push_spot();
+        self.instrs_mut()[jump_to_else_spot] = Instr::JumpIf(
+            self.instrs().len() as isize - jump_to_else_spot as isize,
+            false,
+        );
         self.block(if_expr.if_false)?;
-        self.instrs_mut()[jump_to_end_spot] = Instr::Jump(self.instrs().len());
+        self.instrs_mut()[jump_to_end_spot] =
+            Instr::Jump(self.instrs().len() as isize - jump_to_end_spot as isize);
+        Ok(())
+    }
+    fn logic_expr(&mut self, log_expr: LogicExpr) -> UiuaResult {
+        self.expr(log_expr.left)?;
+        let jump_spot = self.push_spot();
+        self.height -= 1;
+        self.expr(log_expr.right)?;
+        let jump_cond = match log_expr.op {
+            LogicOp::And => false,
+            LogicOp::Or => true,
+        };
+        self.instrs_mut()[jump_spot] =
+            Instr::JumpIfElsePop(self.instrs().len() as isize - jump_spot as isize, jump_cond);
         Ok(())
     }
 }

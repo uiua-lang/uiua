@@ -53,7 +53,7 @@ pub enum Pattern {
 #[derive(Debug, Clone)]
 pub struct LogicalExpr {
     pub left: Sp<Expr>,
-    pub op: Sp<LogicalOp>,
+    pub op: Sp<LogicOp>,
     pub right: Sp<Expr>,
 }
 
@@ -126,7 +126,7 @@ impl BinOp {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LogicalOp {
+pub enum LogicOp {
     And,
     Or,
 }

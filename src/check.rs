@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::{
-    ast::{self, BinOp, LogicalOp},
+    ast::{self, BinOp, LogicOp},
     lex::{Ident, Sp, Span},
     parse::{parse, ParseError},
 };
@@ -135,7 +135,7 @@ pub enum Expr {
     List(Vec<Sp<Expr>>),
     Binary(Box<BinExpr>),
     Call(Box<CallExpr>),
-    Logic(Box<LogicalExpr>),
+    Logic(Box<LogicExpr>),
     Function(Box<Function>),
 }
 
@@ -151,8 +151,8 @@ impl From<CallExpr> for Expr {
     }
 }
 
-impl From<LogicalExpr> for Expr {
-    fn from(logical_expr: LogicalExpr) -> Self {
+impl From<LogicExpr> for Expr {
+    fn from(logical_expr: LogicExpr) -> Self {
         Expr::Logic(Box::new(logical_expr))
     }
 }
@@ -190,9 +190,9 @@ pub struct CallExpr {
 }
 
 #[derive(Debug, Clone)]
-pub struct LogicalExpr {
+pub struct LogicExpr {
     pub left: Sp<Expr>,
-    pub op: LogicalOp,
+    pub op: LogicOp,
     pub right: Sp<Expr>,
 }
 
@@ -367,7 +367,7 @@ impl Checker {
     fn logic_expr(&mut self, log_expr: ast::LogicalExpr) -> CheckResult<Expr> {
         let left = self.expr(log_expr.left)?;
         let right = self.expr(log_expr.right)?;
-        Ok(Expr::from(LogicalExpr {
+        Ok(Expr::from(LogicExpr {
             op: log_expr.op.value,
             left,
             right,

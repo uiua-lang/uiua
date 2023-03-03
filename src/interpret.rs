@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::{
-    ast::{BinOp, LogicalOp},
+    ast::{BinOp, LogicOp},
     check::*,
     lex::{Ident, Sp, Span},
     value::Value,
@@ -214,18 +214,18 @@ impl Interpretter {
             self.block(&if_expr.if_false)
         }
     }
-    pub fn logic_expr(&mut self, logic: &LogicalExpr) -> UiuaResult<Value> {
+    pub fn logic_expr(&mut self, logic: &LogicExpr) -> UiuaResult<Value> {
         let left = self.expr(&logic.left)?;
         let mut right = || self.expr(&logic.right);
         Ok(match logic.op {
-            LogicalOp::Or => {
+            LogicOp::Or => {
                 if left.is_truthy() {
                     left
                 } else {
                     right()?
                 }
             }
-            LogicalOp::And => {
+            LogicOp::And => {
                 if left.is_truthy() {
                     right()?
                 } else {

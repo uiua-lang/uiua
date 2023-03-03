@@ -184,7 +184,7 @@ impl Parser {
         } else {
             return Ok(None);
         };
-        self.try_exact(SemiColon);
+        self.expect(SemiColon)?;
         Ok(Some(item))
     }
     fn doc_comment(&mut self) -> Option<Sp<String>> {
@@ -250,7 +250,6 @@ impl Parser {
         // Expression
         self.expect(Equal)?;
         let expr = self.expr()?;
-        self.expect(SemiColon)?;
         Ok(Some(Binding { pattern, expr }))
     }
     fn try_pattern(&mut self) -> ParseResult<Option<Sp<Pattern>>> {

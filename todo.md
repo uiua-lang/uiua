@@ -1,0 +1,3 @@
+- Add builtin functions
+- Add closures
+- Add strings

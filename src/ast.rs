@@ -1,6 +1,6 @@
 use enum_iterator::Sequence;
 
-use crate::lex::{Ident, Sp};
+use crate::lex::{Ident, Sp, Span};
 
 #[derive(Debug, Clone)]
 pub enum Item {
@@ -19,8 +19,20 @@ pub struct Binding {
 pub struct FunctionDef {
     pub doc: Option<Sp<String>>,
     pub name: Sp<Ident>,
+    pub func: Function,
+}
+
+#[derive(Debug, Clone)]
+pub struct Function {
+    pub id: FunctionId,
     pub params: Vec<Sp<Ident>>,
     pub body: Block,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum FunctionId {
+    Named(Ident),
+    Anonymous(Span),
 }
 
 #[derive(Debug, Clone)]
@@ -35,7 +47,7 @@ pub enum Expr {
     If(Box<IfExpr>),
     Call(Box<CallExpr>),
     Bin(Box<BinExpr>),
-    Logic(Box<LogicalExpr>),
+    Logic(Box<LogicExpr>),
     Bool(bool),
     Integer(String),
     Real(String),
@@ -47,11 +59,11 @@ pub enum Expr {
 #[derive(Debug, Clone)]
 pub enum Pattern {
     Ident(Ident),
-    Tuple(Vec<Sp<Pattern>>),
+    List(Vec<Sp<Pattern>>),
 }
 
 #[derive(Debug, Clone)]
-pub struct LogicalExpr {
+pub struct LogicExpr {
     pub left: Sp<Expr>,
     pub op: Sp<LogicOp>,
     pub right: Sp<Expr>,

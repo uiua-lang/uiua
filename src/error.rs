@@ -1,11 +1,11 @@
 use std::{error::Error, fmt, io, path::PathBuf};
 
-use crate::{check::CheckError, lex::Sp};
+use crate::{compile::CompileError, lex::Sp};
 
 #[derive(Debug)]
 pub enum UiuaError {
     Load(PathBuf, io::Error),
-    Check(Vec<Sp<CheckError>>),
+    Compile(Vec<Sp<CompileError>>),
     Run(Sp<String>),
 }
 
@@ -15,7 +15,7 @@ impl fmt::Display for UiuaError {
             UiuaError::Load(path, e) => {
                 write!(f, "failed to load {}: {e}", path.to_string_lossy())
             }
-            UiuaError::Check(errors) => {
+            UiuaError::Compile(errors) => {
                 for error in errors {
                     writeln!(f, "{error}")?;
                 }
@@ -32,9 +32,9 @@ impl From<Sp<String>> for UiuaError {
     }
 }
 
-impl From<Vec<Sp<CheckError>>> for UiuaError {
-    fn from(errors: Vec<Sp<CheckError>>) -> Self {
-        Self::Check(errors)
+impl From<Vec<Sp<CompileError>>> for UiuaError {
+    fn from(errors: Vec<Sp<CompileError>>) -> Self {
+        Self::Compile(errors)
     }
 }
 

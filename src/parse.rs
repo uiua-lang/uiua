@@ -223,11 +223,11 @@ impl Parser {
         self.expect(Colon)?;
         // Body
         let body = self.block()?;
+        let id = FunctionId::Named(name.value);
         Ok(Some(FunctionDef {
             doc,
             name,
-            params,
-            body,
+            func: Function { id, params, body },
         }))
     }
     fn block(&mut self) -> ParseResult<Block> {
@@ -258,7 +258,7 @@ impl Parser {
         Ok(Some(if let Some(ident) = self.try_ident() {
             ident.map(Pattern::Ident)
         } else if let Some(items) = self.try_surrounded_list(BRACKETS, Self::try_pattern)? {
-            items.map(Pattern::Tuple)
+            items.map(Pattern::List)
         } else {
             return Ok(None);
         }))
@@ -350,7 +350,7 @@ impl Parser {
         let op = op_span.sp(LogicOp::Or);
         let right = self.expect_expr(Self::try_and_expr)?;
         let span = left.span.clone().merge(right.span.clone());
-        Ok(Some(span.sp(Expr::Logic(Box::new(LogicalExpr {
+        Ok(Some(span.sp(Expr::Logic(Box::new(LogicExpr {
             op,
             left,
             right,
@@ -366,7 +366,7 @@ impl Parser {
         let op = op_span.sp(LogicOp::And);
         let right = self.expect_expr(Self::try_bin_expr)?;
         let span = left.span.clone().merge(right.span.clone());
-        Ok(Some(span.sp(Expr::Logic(Box::new(LogicalExpr {
+        Ok(Some(span.sp(Expr::Logic(Box::new(LogicExpr {
             op,
             left,
             right,

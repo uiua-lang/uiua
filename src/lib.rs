@@ -1,6 +1,6 @@
 pub mod ast;
 pub mod builtin;
-pub mod check;
+pub mod compile;
 mod error;
 pub mod lex;
 pub mod parse;

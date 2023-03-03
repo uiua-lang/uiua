@@ -4,10 +4,9 @@ use crate::{
     ast::{BinOp, LogicOp},
     check::*,
     lex::{Ident, Sp, Span},
+    value::Value,
     UiuaError, UiuaResult,
 };
-
-type Value = crate::value2::Value;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instr {

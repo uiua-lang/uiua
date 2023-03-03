@@ -158,7 +158,12 @@ pub struct Compiler {
 #[derive(Default)]
 struct Scope {
     functions: HashMap<FunctionId, usize>,
-    bindings: HashMap<Ident, usize>,
+    bindings: HashMap<Ident, ScopeBind>,
+}
+
+enum ScopeBind {
+    Function(FunctionId),
+    Local(usize),
 }
 
 impl Default for Compiler {
@@ -200,9 +205,16 @@ impl Compiler {
         self.scopes.pop().unwrap();
         self.height = height;
     }
-    fn bind(&mut self, ident: Ident) {
+    fn bind_local(&mut self, ident: Ident) {
         let height = self.height;
-        self.scope_mut().bindings.insert(ident, height);
+        self.scope_mut()
+            .bindings
+            .insert(ident, ScopeBind::Local(height));
+    }
+    fn bind_function(&mut self, ident: Ident, id: FunctionId) {
+        self.scope_mut()
+            .bindings
+            .insert(ident, ScopeBind::Function(id));
     }
     fn instrs(&self) -> &[Instr] {
         if self.scopes.len() <= 1 {
@@ -237,21 +249,22 @@ impl Compiler {
         }
     }
     fn function_def(&mut self, def: FunctionDef) -> UiuaResult {
-        let index = self.function_instrs.len();
-        self.scope_mut()
-            .functions
-            .insert(def.func.id.clone(), index);
         self.function(def.func)?;
         Ok(())
     }
     fn function(&mut self, func: Function) -> UiuaResult {
+        if let FunctionId::Named(name) = &func.id {
+            self.bind_function(name, func.id.clone());
+        }
+        let index = self.function_instrs.len();
+        self.scope_mut().functions.insert(func.id.clone(), index);
         let height = self.push_scope();
         self.push_instr(Instr::Comment(match func.id {
             FunctionId::Named(name) => format!("fn {name}"),
             FunctionId::Anonymous(span) => format!("fn at {span}"),
         }));
         for param in func.params {
-            self.bind(param.value);
+            self.bind_local(param.value);
             self.height += 1;
         }
         self.block(func.body)?;
@@ -266,7 +279,7 @@ impl Compiler {
     }
     fn pattern(&mut self, pattern: Sp<Pattern>) -> UiuaResult {
         match pattern.value {
-            Pattern::Ident(ident) => self.bind(ident),
+            Pattern::Ident(ident) => self.bind_local(ident),
             Pattern::List(patterns) => {
                 let len = patterns.len();
                 for pattern in patterns {
@@ -278,9 +291,6 @@ impl Compiler {
         Ok(())
     }
     fn expr(&mut self, expr: Sp<Expr>) -> UiuaResult {
-        self.expr_maybe_function(expr, false)
-    }
-    fn expr_maybe_function(&mut self, expr: Sp<Expr>, function: bool) -> UiuaResult {
         match expr.value {
             Expr::Unit => self.push_instr(Instr::Push(Value::Unit)),
             Expr::Bool(b) => self.push_instr(Instr::Push(Value::Bool(b))),
@@ -288,24 +298,27 @@ impl Compiler {
             Expr::Int(i) => self.push_instr(Instr::Push(Value::Int(i))),
             Expr::Real(r) => self.push_instr(Instr::Push(Value::Real(r))),
             Expr::Ident(ident) => {
-                if function {
-                    let index = *self
-                        .scopes
-                        .iter()
-                        .rev()
-                        .find_map(|scope| scope.functions.get(&FunctionId::Named(ident)))
-                        .unwrap();
-                    self.push_instr(Instr::Push(Value::Function(index)));
-                } else {
-                    let index = *self
-                        .scopes
-                        .iter()
-                        .rev()
-                        .find_map(|scope| scope.bindings.get(&ident))
-                        .unwrap();
-                    let curr = self.height;
-                    let diff = curr - index;
-                    self.push_instr(Instr::Copy(diff));
+                let bind = self
+                    .scopes
+                    .iter()
+                    .rev()
+                    .find_map(|scope| scope.bindings.get(&ident))
+                    .unwrap_or_else(|| panic!("unbound variable `{ident}`"));
+                match bind {
+                    ScopeBind::Local(index) => {
+                        let curr = self.height;
+                        let diff = curr - *index;
+                        self.push_instr(Instr::Copy(diff));
+                    }
+                    ScopeBind::Function(id) => {
+                        let index = self
+                            .scopes
+                            .iter()
+                            .rev()
+                            .find_map(|scope| scope.functions.get(id))
+                            .unwrap_or_else(|| panic!("unbound function `{id:?}`"));
+                        self.push_instr(Instr::Push(Value::Function(*index)));
+                    }
                 }
             }
             Expr::Binary(bin) => {
@@ -319,7 +332,7 @@ impl Compiler {
                     self.expr(arg)?;
                 }
                 let call_span = call.func.span.clone();
-                self.expr_maybe_function(call.func, true)?;
+                self.expr(call.func)?;
                 self.push_instr(Instr::Call(args_len, call_span));
             }
             Expr::If(if_expr) => self.if_expr(*if_expr)?,

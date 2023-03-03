@@ -1,6 +1,4 @@
-use std::{cmp::Ordering, fmt, ops::*};
-
-use once_cell::sync::Lazy;
+use std::{cmp::Ordering, fmt, ops::*, sync::Once};
 
 use crate::{ast::BinOp, lex::Span, UiuaResult};
 
@@ -159,7 +157,8 @@ impl Value {
     }
 }
 
-const ALL_TYPES: [Type; 6] = [
+const TYPES_COUNT: usize = 6;
+const ALL_TYPES: [Type; TYPES_COUNT] = [
     Type::Unit,
     Type::Bool,
     Type::Nat,
@@ -171,81 +170,101 @@ const ALL_TYPES: [Type; 6] = [
 type MathFn = fn(&mut Value, Value, span: &Span) -> UiuaResult;
 
 macro_rules! value_bin_op {
-    ($table:ident, $method:ident, $verb:literal) => {
-        static $table: Lazy<Vec<MathFn>> = Lazy::new(|| {
-            let mut fs: Vec<MathFn> = Vec::new();
+    ($table:ident,$init:ident, $method:ident, $verb:literal) => {
+        static mut $table: [MathFn; TYPES_COUNT * TYPES_COUNT] = [|a, b, span| -> UiuaResult {
+            Err(span
+                .clone()
+                .sp(format!("cannot {} {} and {}", $verb, a.ty, b.ty))
+                .into())
+        }; TYPES_COUNT * TYPES_COUNT];
+        unsafe fn $init() {
             for a in ALL_TYPES {
                 for b in ALL_TYPES {
-                    unsafe {
-                        fs.push(match (a, b) {
-                            (Type::Unit, Type::Unit) => |_, _, _| Ok(()),
-                            (Type::Nat, Type::Nat) => |a, b, _| {
+                    let f = &mut $table[a as usize * TYPES_COUNT + b as usize];
+                    match (a, b) {
+                        (Type::Unit, Type::Unit) => *f = |_, _, _| Ok(()),
+                        (Type::Nat, Type::Nat) => {
+                            *f = |a, b, _| {
                                 a.data.nat.$method(b.data.nat);
                                 Ok(())
-                            },
-                            (Type::Int, Type::Int) => |a, b, _| {
+                            }
+                        }
+                        (Type::Int, Type::Int) => {
+                            *f = |a, b, _| {
                                 a.data.int.$method(b.data.int);
                                 Ok(())
-                            },
-                            (Type::Real, Type::Real) => |a, b, _| {
+                            }
+                        }
+                        (Type::Real, Type::Real) => {
+                            *f = |a, b, _| {
                                 a.data.real.$method(b.data.real);
                                 Ok(())
-                            },
-                            _ => |a, b, span| -> UiuaResult {
-                                Err(span
-                                    .clone()
-                                    .sp(format!("cannot {} {} and {}", $verb, a.ty, b.ty))
-                                    .into())
-                            },
-                        });
+                            }
+                        }
+                        _ => {}
                     }
                 }
             }
-            fs
-        });
+        }
         impl Value {
             pub fn $method(&mut self, other: Self, span: &Span) -> UiuaResult {
                 #[cfg(feature = "profile")]
                 puffin::profile_function!();
-                $table[self.ty as usize * ALL_TYPES.len() + other.ty as usize](self, other, span)
+                unsafe {
+                    $table[self.ty as usize * TYPES_COUNT + other.ty as usize](self, other, span)
+                }
             }
         }
     };
 }
 
-value_bin_op!(ADD_TABLE, add_assign, "add");
-value_bin_op!(SUB_TABLE, sub_assign, "subtract");
-value_bin_op!(MUL_TABLE, mul_assign, "multiply");
-value_bin_op!(DIV_TABLE, div_assign, "divide");
+pub(crate) fn init_tables() {
+    static ONCE: Once = Once::new();
+    unsafe {
+        ONCE.call_once(|| {
+            init_add_table();
+            init_sub_table();
+            init_mul_table();
+            init_div_table();
+            init_eq_table();
+            init_cmp_table();
+        });
+    }
+}
+
+value_bin_op!(ADD_TABLE, init_add_table, add_assign, "add");
+value_bin_op!(SUB_TABLE, init_sub_table, sub_assign, "subtract");
+value_bin_op!(MUL_TABLE, init_mul_table, mul_assign, "multiply");
+value_bin_op!(DIV_TABLE, init_div_table, div_assign, "divide");
 
 type EqFn = fn(&Value, &Value) -> bool;
 
-static EQ_TABLE: Lazy<Vec<EqFn>> = Lazy::new(|| {
-    let mut fs: Vec<EqFn> = Vec::new();
+static mut EQ_TABLE: [EqFn; TYPES_COUNT * TYPES_COUNT] = [|_, _| false; TYPES_COUNT * TYPES_COUNT];
+unsafe fn init_eq_table() {
     for a in ALL_TYPES {
         for b in ALL_TYPES {
-            unsafe {
-                fs.push(match (a, b) {
-                    (Type::Unit, Type::Unit) => |_, _| true,
-                    (Type::Bool, Type::Bool) => |a, b| a.data.bool == b.data.bool,
-                    (Type::Nat, Type::Nat) => |a, b| a.data.nat == b.data.nat,
-                    (Type::Int, Type::Int) => |a, b| a.data.int == b.data.int,
-                    (Type::Real, Type::Real) => |a, b| {
+            let f = &mut EQ_TABLE[a as usize * TYPES_COUNT + b as usize];
+            match (a, b) {
+                (Type::Unit, Type::Unit) => *f = |_, _| true,
+                (Type::Bool, Type::Bool) => *f = |a, b| a.data.bool == b.data.bool,
+                (Type::Nat, Type::Nat) => *f = |a, b| a.data.nat == b.data.nat,
+                (Type::Int, Type::Int) => *f = |a, b| a.data.int == b.data.int,
+                (Type::Real, Type::Real) => {
+                    *f = |a, b| {
                         a.data.real.is_nan() && b.data.real.is_nan() || a.data.real == b.data.real
-                    },
-                    _ => |_, _| false,
-                });
+                    }
+                }
+                _ => {}
             }
         }
     }
-    fs
-});
+}
 
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         #[cfg(feature = "profile")]
         puffin::profile_function!();
-        EQ_TABLE[self.ty as usize * ALL_TYPES.len() + other.ty as usize](self, other)
+        unsafe { EQ_TABLE[self.ty as usize * TYPES_COUNT + other.ty as usize](self, other) }
     }
 }
 
@@ -253,31 +272,31 @@ impl Eq for Value {}
 
 type CmpFn = fn(&Value, &Value) -> Ordering;
 
-static CMP_TABLE: Lazy<Vec<CmpFn>> = Lazy::new(|| {
-    let mut fs: Vec<CmpFn> = Vec::new();
+static mut CMP_TABLE: [CmpFn; TYPES_COUNT * TYPES_COUNT] =
+    [|_, _| Ordering::Equal; TYPES_COUNT * TYPES_COUNT];
+
+unsafe fn init_cmp_table() {
     for a in ALL_TYPES {
         for b in ALL_TYPES {
-            unsafe {
-                fs.push(match (a, b) {
-                    (Type::Unit, Type::Unit) => |_, _| Ordering::Equal,
-                    (Type::Bool, Type::Bool) => |a, b| a.data.bool.cmp(&b.data.bool),
-                    (Type::Nat, Type::Nat) => |a, b| a.data.nat.cmp(&b.data.nat),
-                    (Type::Int, Type::Int) => |a, b| a.data.int.cmp(&b.data.int),
-                    (Type::Real, Type::Real) => {
-                        |a, b| match (a.data.real.is_nan(), b.data.real.is_nan()) {
-                            (true, true) => Ordering::Equal,
-                            (true, false) => Ordering::Greater,
-                            (false, true) => Ordering::Less,
-                            (false, false) => a.data.real.partial_cmp(&b.data.real).unwrap(),
-                        }
+            let f = &mut CMP_TABLE[a as usize * TYPES_COUNT + b as usize];
+            match (a, b) {
+                (Type::Unit, Type::Unit) => *f = |_, _| Ordering::Equal,
+                (Type::Bool, Type::Bool) => *f = |a, b| a.data.bool.cmp(&b.data.bool),
+                (Type::Nat, Type::Nat) => *f = |a, b| a.data.nat.cmp(&b.data.nat),
+                (Type::Int, Type::Int) => *f = |a, b| a.data.int.cmp(&b.data.int),
+                (Type::Real, Type::Real) => {
+                    *f = |a, b| match (a.data.real.is_nan(), b.data.real.is_nan()) {
+                        (true, true) => Ordering::Equal,
+                        (true, false) => Ordering::Greater,
+                        (false, true) => Ordering::Less,
+                        (false, false) => a.data.real.partial_cmp(&b.data.real).unwrap(),
                     }
-                    _ => |a, b| a.ty.cmp(&b.ty),
-                });
+                }
+                _ => {}
             }
         }
     }
-    fs
-});
+}
 
 impl PartialOrd for Value {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -289,6 +308,6 @@ impl Ord for Value {
     fn cmp(&self, other: &Self) -> Ordering {
         #[cfg(feature = "profile")]
         puffin::profile_function!();
-        CMP_TABLE[self.ty as usize * ALL_TYPES.len() + other.ty as usize](self, other)
+        unsafe { CMP_TABLE[self.ty as usize * TYPES_COUNT + other.ty as usize](self, other) }
     }
 }

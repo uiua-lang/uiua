@@ -4,7 +4,7 @@ use crate::{
     ast::{BinOp, LogicOp},
     check::*,
     lex::{Ident, Sp, Span},
-    value::Value,
+    value::{init_tables, Value},
     UiuaError, UiuaResult,
 };
 
@@ -59,6 +59,7 @@ impl Vm {
         Self::default()
     }
     pub fn run_file(&mut self, path: impl AsRef<Path>) -> UiuaResult {
+        init_tables();
         let path = path.as_ref();
         let input = fs::read_to_string(path).map_err(|e| UiuaError::Load(path.into(), e))?;
         let mut compiler = Compiler::new();

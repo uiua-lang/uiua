@@ -148,6 +148,9 @@ impl Compiler {
                 global_functions.insert(name, index);
             }
         }
+        for (i, instr) in self.function_instrs.iter().enumerate() {
+            println!("{i:>3} {instr}");
+        }
         Assembly {
             instrs: self.function_instrs,
             start,
@@ -235,7 +238,7 @@ impl Compiler {
             FunctionId::Named(name) => format!("fn {name}"),
             FunctionId::Anonymous(span) => format!("fn at {span}"),
         }));
-        for param in func.params {
+        for param in func.params.into_iter().rev() {
             self.height += 1;
             self.bind_local(param.value);
         }
@@ -308,20 +311,22 @@ impl Compiler {
                 self.expr(bin.right)?;
                 self.push_instr(Instr::BinOp(bin.op.value, bin.op.span.clone()));
             }
-            Expr::Call(call) => {
-                let args_len = call.args.len();
-                for arg in call.args {
-                    self.expr(arg)?;
-                }
-                let call_span = call.func.span.clone();
-                self.expr(call.func)?;
-                self.push_instr(Instr::Call(args_len, call_span));
-            }
+            Expr::Call(call) => self.call(*call)?,
             Expr::If(if_expr) => self.if_expr(*if_expr)?,
             Expr::Logic(log_expr) => self.logic_expr(*log_expr)?,
             Expr::List(_) => todo!(),
             Expr::Parened(inner) => self.expr(expr.span.sp(*inner))?,
         }
+        Ok(())
+    }
+    fn call(&mut self, call: CallExpr) -> CompileResult {
+        let args_len = call.args.len();
+        for arg in call.args.into_iter().rev() {
+            self.expr(arg)?;
+        }
+        let call_span = call.func.span.clone();
+        self.expr(call.func)?;
+        self.push_instr(Instr::Call(args_len, call_span));
         Ok(())
     }
     fn block(&mut self, block: Block) -> CompileResult {

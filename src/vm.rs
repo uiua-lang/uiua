@@ -47,6 +47,7 @@ macro_rules! dprintln {
 
 pub(crate) fn run_instrs(instrs: &[Instr], start: usize, args: Vec<Value>) -> UiuaResult {
     let mut stack = args;
+    stack.reverse();
     let mut call_stack = Vec::new();
     dprintln!("Running...");
     let mut pc = start;

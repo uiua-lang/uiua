@@ -4,4 +4,5 @@ name = 'uiua'
 version = '0.1.0'
 
 [dependencies]
+ascend = '0.3.0'
 enum-iterator = '1.3'

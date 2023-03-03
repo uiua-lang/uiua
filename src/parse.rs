@@ -267,7 +267,7 @@ impl Parser {
             .ok_or_else(|| self.expected([Expectation::Pattern]))
     }
     fn try_ident(&mut self) -> Option<Sp<Ident>> {
-        self.next_token_map(|token| token.as_ident().map(Into::into))
+        self.next_token_map(|token| token.as_ident().copied())
     }
     fn ident(&mut self) -> ParseResult<Sp<Ident>> {
         self.try_ident()

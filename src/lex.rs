@@ -151,7 +151,7 @@ impl<T: fmt::Display> fmt::Display for Sp<T> {
 
 impl<T: Error> Error for Sp<T> {}
 
-pub type Ident = Arc<str>;
+pub type Ident = &'static str;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
@@ -165,7 +165,7 @@ pub enum Token {
 }
 
 impl Token {
-    pub fn as_ident(&self) -> Option<&str> {
+    pub fn as_ident(&self) -> Option<&Ident> {
         match self {
             Token::Ident(ident) => Some(ident),
             _ => None,
@@ -435,7 +435,7 @@ impl Lexer {
                     {
                         Keyword(keyword)
                     } else {
-                        Ident(ident.into())
+                        Ident(ascend::static_str(&ident))
                     };
                     return self.end(token, start);
                 }

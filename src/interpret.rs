@@ -100,7 +100,7 @@ impl Interpretter {
     }
     pub fn function_def(&mut self, def: &FunctionDef) -> RuntimeResult {
         let value = Value::Function(def.func.clone());
-        self.scope_mut().bindings.insert(def.name.clone(), value);
+        self.scope_mut().bindings.insert(def.name, value);
         Ok(())
     }
     pub fn binding(&mut self, binding: &Binding) -> RuntimeResult {
@@ -122,7 +122,7 @@ impl Interpretter {
     ) -> RuntimeResult<bool> {
         Ok(match (&pattern.value, value) {
             (Pattern::Ident(name), value) => {
-                self.scope_mut().bindings.insert(name.clone(), value);
+                self.scope_mut().bindings.insert(name, value);
                 true
             }
             (Pattern::List(items), Value::List(list)) => {
@@ -200,7 +200,7 @@ impl Interpretter {
         self.scopes.push(Scope::default());
         for (param, arg) in func.params.iter().zip(&call.args) {
             let val = self.expr(arg)?;
-            self.scope_mut().bindings.insert(param.value.clone(), val);
+            self.scope_mut().bindings.insert(param.value, val);
         }
         let result = self.block(&func.body)?;
         self.scopes.pop().unwrap();

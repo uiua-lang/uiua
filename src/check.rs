@@ -247,15 +247,15 @@ impl Checker {
         })
     }
     fn function_def(&mut self, def: ast::FunctionDef) -> CheckResult<FunctionDef> {
-        self.scope_mut().bindings.insert(def.name.value.clone());
+        self.scope_mut().bindings.insert(def.name.value);
         self.scopes.push(Scope::default());
         let params: Vec<_> = def.params.into_iter().map(|p| self.param(p)).collect();
         for param in &params {
-            self.scope_mut().bindings.insert(param.value.clone());
+            self.scope_mut().bindings.insert(param.value);
         }
         let body = self.block(def.body)?;
         self.scopes.pop().unwrap();
-        let id = FunctionId::Named(def.name.value.clone());
+        let id = FunctionId::Named(def.name.value);
         let func = Function { id, params, body };
         self.functions.insert(func.id.clone(), func.clone());
         Ok(FunctionDef {
@@ -280,13 +280,13 @@ impl Checker {
         Ok(Binding { pattern, expr })
     }
     fn param(&mut self, param: Sp<Ident>) -> Sp<Ident> {
-        self.scope_mut().bindings.insert(param.value.clone());
+        self.scope_mut().bindings.insert(param.value);
         param
     }
     fn pattern(&mut self, pattern: Sp<ast::Pattern>) -> CheckResult<Sp<Pattern>> {
         Ok(pattern.span.sp(match pattern.value {
             ast::Pattern::Ident(name) => {
-                self.scope_mut().bindings.insert(name.clone());
+                self.scope_mut().bindings.insert(name);
                 Pattern::Ident(name)
             }
             ast::Pattern::Tuple(patterns) => Pattern::List(

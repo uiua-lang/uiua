@@ -1,6 +1,12 @@
 use std::{cmp::Ordering, fmt};
 
-use crate::{ast::BinOp, compile::Assembly, lex::Span, value::Value, UiuaResult};
+use crate::{
+    ast::BinOp,
+    compile::Assembly,
+    lex::Span,
+    value::{Function, Partial, Value},
+    UiuaResult,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Instr {
@@ -75,18 +81,34 @@ pub(crate) fn run_assembly(assembly: &Assembly) -> UiuaResult {
             Instr::Call(arg_count, span) => {
                 #[cfg(feature = "profile")]
                 puffin::profile_scope!("call");
-                let func = stack.pop().unwrap();
-                let func = match func.as_function() {
-                    Some(func) => func,
-                    _ => {
-                        let message = format!("cannot call {}", func.ty());
-                        return Err(Span::default().sp(message).into());
-                    }
+
+                let func = match Function::try_from(stack.pop().unwrap()) {
+                    Ok(func) => func,
+                    Err(val) => match Partial::try_from(val) {
+                        Ok(partial) => todo!("call partial"),
+                        Err(val) => {
+                            let message = format!("cannot call {}", val.ty());
+                            return Err(span.clone().sp(message).into());
+                        }
+                    },
                 };
                 let info = assembly.function_info(func);
                 match arg_count.cmp(&info.params) {
-                    Ordering::Less => todo!("partial application"),
-                    Ordering::Equal => {}
+                    Ordering::Less => {
+                        let partial = Partial {
+                            func,
+                            args: stack.drain(stack.len() - arg_count..).collect(),
+                        };
+                        stack.push(partial.into());
+                    }
+                    Ordering::Equal => {
+                        call_stack.push(StackFrame {
+                            ret: pc + 1,
+                            stack_size: stack.len() - arg_count,
+                        });
+                        pc = func.0;
+                        continue;
+                    }
                     Ordering::Greater => {
                         let message = format!(
                             "too many arguments: expected {}, got {}",
@@ -95,12 +117,6 @@ pub(crate) fn run_assembly(assembly: &Assembly) -> UiuaResult {
                         return Err(span.clone().sp(message).into());
                     }
                 }
-                call_stack.push(StackFrame {
-                    ret: pc + 1,
-                    stack_size: stack.len() - arg_count,
-                });
-                pc = func.0;
-                continue;
             }
             Instr::Return => {
                 #[cfg(feature = "profile")]

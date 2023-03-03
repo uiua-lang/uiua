@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, fmt, ops::*};
+use std::{cmp::Ordering, fmt, mem::ManuallyDrop, ops::*};
 
 use crate::{ast::BinOp, lex::Span, UiuaResult};
 
@@ -19,6 +19,7 @@ impl fmt::Debug for Value {
             Type::Int => write!(f, "{}", unsafe { self.data.int }),
             Type::Real => write!(f, "{}", unsafe { self.data.real }),
             Type::Function => write!(f, "function"),
+            Type::Partial => write!(f, "partial({})", unsafe { self.data.partial.args.len() }),
         }
     }
 }
@@ -29,6 +30,7 @@ union ValueData {
     int: i64,
     real: f64,
     function: Function,
+    partial: ManuallyDrop<Box<Partial>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -38,9 +40,10 @@ pub enum Type {
     Int,
     Real,
     Function,
+    Partial,
 }
 
-const TYPE_ARITY: usize = 5;
+const TYPE_ARITY: usize = 6;
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -50,6 +53,7 @@ impl fmt::Display for Type {
             Type::Int => write!(f, "int"),
             Type::Real => write!(f, "real"),
             Type::Function => write!(f, "function"),
+            Type::Partial => write!(f, "partial"),
         }
     }
 }
@@ -59,6 +63,12 @@ impl fmt::Display for Type {
 pub struct Function(pub(crate) usize);
 
 impl nohash_hasher::IsEnabled for Function {}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Partial {
+    pub(crate) func: Function,
+    pub(crate) args: Vec<Value>,
+}
 
 impl Value {
     pub fn unit() -> Self {
@@ -75,13 +85,6 @@ impl Value {
     }
     pub fn is_truthy(&self) -> bool {
         !(self.is_unit() || (self.ty == Type::Bool && unsafe { !self.data.bool }))
-    }
-    pub fn as_function(&self) -> Option<Function> {
-        if self.ty == Type::Function {
-            Some(unsafe { self.data.function })
-        } else {
-            None
-        }
     }
 }
 
@@ -121,47 +124,86 @@ impl From<Function> for Value {
     }
 }
 
+impl From<Partial> for Value {
+    fn from(p: Partial) -> Self {
+        Self {
+            ty: Type::Partial,
+            data: ValueData {
+                partial: ManuallyDrop::new(Box::new(p)),
+            },
+        }
+    }
+}
+
 impl TryFrom<Value> for bool {
-    type Error = Type;
+    type Error = Value;
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         if value.ty == Type::Bool {
             Ok(unsafe { value.data.bool })
         } else {
-            Err(value.ty)
+            Err(value)
         }
     }
 }
 
 impl TryFrom<Value> for i64 {
-    type Error = Type;
+    type Error = Value;
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         if value.ty == Type::Int {
             Ok(unsafe { value.data.int })
         } else {
-            Err(value.ty)
+            Err(value)
         }
     }
 }
 
 impl TryFrom<Value> for f64 {
-    type Error = Type;
+    type Error = Value;
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         if value.ty == Type::Real {
             Ok(unsafe { value.data.real })
         } else {
-            Err(value.ty)
+            Err(value)
         }
     }
 }
 
 impl TryFrom<Value> for Function {
-    type Error = Type;
+    type Error = Value;
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         if value.ty == Type::Function {
             Ok(unsafe { value.data.function })
         } else {
-            Err(value.ty)
+            Err(value)
         }
+    }
+}
+
+impl TryFrom<Value> for Partial {
+    type Error = Value;
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        if value.ty == Type::Partial {
+            Ok(unsafe { (**value.data.partial).clone() })
+        } else {
+            Err(value)
+        }
+    }
+}
+
+static DROP_TABLE: [fn(&mut ValueData); TYPE_ARITY] = [
+    |_| {},
+    |_| {},
+    |_| {},
+    |_| {},
+    |_| {},
+    |data| unsafe {
+        ManuallyDrop::drop(&mut data.partial);
+    },
+];
+
+impl Drop for Value {
+    fn drop(&mut self) {
+        DROP_TABLE[self.ty as usize](&mut self.data);
     }
 }
 
@@ -178,6 +220,9 @@ static CLONE_TABLE: [fn(&ValueData) -> ValueData; TYPE_ARITY] = [
     },
     |data| ValueData {
         function: unsafe { data.function },
+    },
+    |data| ValueData {
+        partial: ManuallyDrop::new(unsafe { (*data.partial).clone() }),
     },
 ];
 
@@ -221,6 +266,7 @@ macro_rules! type_line {
             $f($a, Type::Int),
             $f($a, Type::Real),
             $f($a, Type::Function),
+            $f($a, Type::Partial),
         ]
     };
 }
@@ -233,6 +279,7 @@ macro_rules! type_square {
             type_line!(Type::Int, $f),
             type_line!(Type::Real, $f),
             type_line!(Type::Function, $f),
+            type_line!(Type::Partial, $f),
         ]
     };
 }

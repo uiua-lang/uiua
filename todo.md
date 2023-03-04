@@ -2,7 +2,6 @@
 - Pipe operators
 - Includes
 - Arrays
-- Pop block stuff?
 - Closures
 - Strings
 - Structs

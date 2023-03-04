@@ -464,7 +464,6 @@ impl Compiler {
     fn if_expr(&mut self, if_expr: IfExpr) -> CompileResult {
         self.expr(if_expr.cond)?;
         let jump_to_else_spot = self.push_spot();
-        self.height -= 1;
         self.block(if_expr.if_true)?;
         let jump_to_end_spot = self.push_spot();
         self.instrs_mut()[jump_to_else_spot] = Instr::PopJumpIf(

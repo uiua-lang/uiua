@@ -7,7 +7,7 @@ use crate::{
     compile::Assembly,
     lex::Span,
     list::List,
-    value::{Function, Partial, Value},
+    value::{type_line, Function, Partial, Type, Value},
     RuntimeResult, TraceFrame, UiuaError, UiuaResult,
 };
 
@@ -139,16 +139,25 @@ fn run_assembly_inner(assembly: &Assembly, call_stack: &mut Vec<StackFrame>) -> 
             } => {
                 #[cfg(feature = "profile")]
                 puffin::profile_scope!("call");
-                let (function, args) = match Function::try_from(stack.pop().unwrap()) {
-                    Ok(func) => (func, Vec::new()),
-                    Err(val) => match Partial::try_from(val) {
-                        Ok(partial) => (partial.function, partial.args),
-                        Err(val) => {
-                            let message = format!("cannot call {}", val.ty());
-                            return Err(assembly.call_spans[*span].clone().sp(message));
+                type CallFn = fn(Value, usize, &Assembly) -> RuntimeResult<(Function, Vec<Value>)>;
+                const fn call_fn(ty: Type) -> CallFn {
+                    unsafe {
+                        match ty {
+                            Type::Function => |val, _, _| Ok((val.data.function, Vec::new())),
+                            Type::Partial => |val, _, _| {
+                                let partial = &val.data.partial;
+                                Ok((partial.function, partial.args.clone()))
+                            },
+                            _ => |val, span, assembly| {
+                                let message = format!("cannot call {}", val.ty());
+                                Err(assembly.call_spans[span].error(message))
+                            },
                         }
-                    },
-                };
+                    }
+                }
+                static CALL_TABLE: [CallFn; Type::ARITY] = type_line!(call_fn);
+                let value = stack.pop().unwrap();
+                let (function, args) = CALL_TABLE[value.ty() as usize](value, *span, assembly)?;
                 let partial_count = args.len();
                 let arg_count = call_arg_count + partial_count;
                 for arg in args {

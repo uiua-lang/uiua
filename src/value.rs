@@ -49,7 +49,7 @@ pub(crate) union ValueData {
 macro_rules! ty {
     ($($ty:ident),* $(,)*) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-        #[repr(u8)]
+        #[repr(usize)]
         pub enum Type {
             $($ty),*
         }

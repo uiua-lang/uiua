@@ -13,6 +13,7 @@ pub enum Item {
     FunctionDef(FunctionDef),
     Expr(Sp<Expr>),
     Let(Let),
+    Const(Const),
 }
 
 impl Item {
@@ -25,6 +26,7 @@ impl Item {
                 .merge(func.func.body.expr.span.clone()),
             Item::Expr(expr) => expr.span.clone(),
             Item::Let(r#let) => r#let.pattern.span.clone().merge(r#let.expr.span.clone()),
+            Item::Const(r#const) => r#const.name.span.clone().merge(r#const.expr.span.clone()),
         }
     }
 }
@@ -32,6 +34,12 @@ impl Item {
 #[derive(Debug, Clone)]
 pub struct Let {
     pub pattern: Sp<Pattern>,
+    pub expr: Sp<Expr>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Const {
+    pub name: Sp<Ident>,
     pub expr: Sp<Expr>,
 }
 

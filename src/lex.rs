@@ -330,6 +330,7 @@ pub enum Keyword {
     Or,
     True,
     False,
+    Const,
 }
 
 impl fmt::Display for Keyword {

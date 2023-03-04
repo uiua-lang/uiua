@@ -1,5 +1,7 @@
-- Constants
 - Pipe operators
+- Warnings
+  - naming conventions
+  - compare with bool literals
 - Includes
 - Closures
 - Strings

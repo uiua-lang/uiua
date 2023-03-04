@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt, fs, path::Path};
+use std::{collections::HashMap, fmt, fs, mem::take, path::Path};
 
 use enum_iterator::all;
 use nohash_hasher::BuildNoHashHasher;
@@ -9,7 +9,7 @@ use crate::{
     lex::{Sp, Span},
     parse::{parse, ParseError},
     value::{Function, Value},
-    vm::{run_assembly, Instr},
+    vm::{Instr, Vm},
     Ident, UiuaError, UiuaResult,
 };
 
@@ -30,8 +30,17 @@ impl Assembly {
             panic!("function was compiled in a different assembly")
         }
     }
-    pub fn run(&self) -> UiuaResult {
-        run_assembly(self)
+    pub fn run(&self) -> UiuaResult<Option<Value>> {
+        let mut vm = Vm::default();
+        let res = self.run_with_vm(&mut vm)?;
+        println!("\nstack:");
+        for val in &vm.stack {
+            println!("{:?}", val);
+        }
+        Ok(res)
+    }
+    fn run_with_vm(&self, vm: &mut Vm) -> UiuaResult<Option<Value>> {
+        vm.run_assembly(self)
     }
     fn add_function_instrs(&mut self, mut instrs: Vec<Instr>) {
         self.instrs.append(&mut instrs);
@@ -52,6 +61,7 @@ pub enum CompileError {
     InvalidInteger(String),
     InvalidReal(String),
     UnknownBinding(Ident),
+    ConstEval(UiuaError),
 }
 
 impl fmt::Display for CompileError {
@@ -61,7 +71,14 @@ impl fmt::Display for CompileError {
             CompileError::InvalidInteger(s) => write!(f, "invalid integer: {s}"),
             CompileError::InvalidReal(s) => write!(f, "invalid real: {s}"),
             CompileError::UnknownBinding(s) => write!(f, "unknown binding: {s}"),
+            CompileError::ConstEval(e) => write!(f, "{e}"),
         }
+    }
+}
+
+impl From<UiuaError> for CompileError {
+    fn from(e: UiuaError) -> Self {
+        CompileError::ConstEval(e)
     }
 }
 
@@ -80,6 +97,8 @@ pub struct Compiler {
     errors: Vec<Sp<CompileError>>,
     /// The partially compiled assembly
     assembly: Assembly,
+    /// Vm for constant evaluation
+    vm: Vm,
 }
 
 struct Scope {
@@ -174,6 +193,7 @@ impl Default for Compiler {
             height: 0,
             errors: Vec::new(),
             assembly,
+            vm: Vm::default(),
         }
     }
 }
@@ -281,6 +301,7 @@ impl Compiler {
         match item {
             Item::Expr(expr) => self.expr(resolve_placeholders(expr)),
             Item::Let(binding) => self.r#let(binding),
+            Item::Const(r#const) => self.r#const(r#const),
             Item::FunctionDef(def) => self.function_def(def),
         }
     }
@@ -347,6 +368,34 @@ impl Compiler {
         // will refer to the height of the stack after the expression
         self.expr(resolve_placeholders(binding.expr))?;
         self.pattern(binding.pattern)?;
+        Ok(())
+    }
+    fn r#const(&mut self, r#const: Const) -> CompileResult {
+        let index = self.assembly.constants.len();
+        // Set a restore point
+        let height = self.height;
+        let instr_len = self.assembly.instrs.len();
+        let global_instrs = self.global_instrs.clone();
+        // Compile the expression
+        let expr_span = r#const.expr.span.clone();
+        self.expr(resolve_placeholders(r#const.expr))?;
+        self.assembly
+            .add_non_function_instrs(take(&mut self.global_instrs));
+        // Evaluate the expression
+        let value = self
+            .assembly
+            .run_with_vm(&mut self.vm)
+            .map_err(|e| expr_span.sp(e.into()))?
+            .unwrap_or(Value::unit());
+        self.assembly.constants.push(value);
+        // Bind the constant
+        self.scope_mut()
+            .bindings
+            .insert(r#const.name.value, Binding::Constant(index));
+        // Restore
+        self.assembly.truncate(instr_len);
+        self.height = height;
+        self.global_instrs = global_instrs;
         Ok(())
     }
     fn pattern(&mut self, pattern: Sp<Pattern>) -> CompileResult {

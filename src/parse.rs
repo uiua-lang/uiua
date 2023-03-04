@@ -185,6 +185,8 @@ impl Parser {
             Item::FunctionDef(def)
         } else if let Some(binding) = self.try_let()? {
             Item::Let(binding)
+        } else if let Some(r#const) = self.try_const()? {
+            Item::Const(r#const)
         } else if self.try_exact(Keyword::Do).is_some() {
             Item::Expr(self.expr()?)
         } else {
@@ -254,6 +256,18 @@ impl Parser {
         self.expect(Equal)?;
         let expr = self.expr()?;
         Ok(Some(Let { pattern, expr }))
+    }
+    fn try_const(&mut self) -> ParseResult<Option<Const>> {
+        // Const
+        if self.try_exact(Keyword::Const).is_none() {
+            return Ok(None);
+        };
+        // Pattern
+        let name = self.ident()?;
+        // Expression
+        self.expect(Equal)?;
+        let expr = self.expr()?;
+        Ok(Some(Const { name, expr }))
     }
     fn try_pattern(&mut self) -> ParseResult<Option<Sp<Pattern>>> {
         Ok(Some(if let Some(ident) = self.try_ident() {

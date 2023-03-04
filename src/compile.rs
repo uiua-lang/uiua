@@ -324,7 +324,7 @@ impl Compiler {
                         .get(&ident)
                         .map(|binding| (binding, scope.function_depth))
                 });
-                let (binding, function_depth) = match bind {
+                let (binding, binding_depth) = match bind {
                     Some(bind) => bind,
                     None => {
                         self.errors
@@ -332,14 +332,18 @@ impl Compiler {
                         (&Binding::Error, self.scope().function_depth)
                     }
                 };
-                if function_depth > 0 && function_depth != self.scope().function_depth {
+                if binding_depth > 0 && binding_depth != self.scope().function_depth {
                     todo!("closure support ({})", expr.span)
                 }
                 match binding {
                     Binding::Local(index) => {
-                        let curr = self.height;
-                        let diff = curr - *index;
-                        self.push_instr(Instr::CopyRel(diff));
+                        if binding_depth == 0 {
+                            self.push_instr(Instr::CopyAbs(*index));
+                        } else {
+                            let curr = self.height;
+                            let diff = curr - *index;
+                            self.push_instr(Instr::CopyRel(diff));
+                        }
                     }
                     Binding::Function(id) => {
                         if let Some(function) = self

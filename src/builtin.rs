@@ -42,24 +42,35 @@ impl fmt::Display for Op1 {
 
 type ValueFn1 = fn(*mut Value, &Span) -> RuntimeResult;
 macro_rules! op1_table {
-    ($(($op:ident, $name:ident, $f:expr)),* $(,)*) => {
+    ($(($op:ident, $name:ident, $f:ident)),* $(,)*) => {
         $(static $name: [ValueFn1; Type::ARITY] = unsafe { type_line!($f) };)*
 
         impl Value {
             pub fn op1(&mut self, op: Op1, span: &Span) -> RuntimeResult {
                 match op {
-                    $(Op1::$op => $name[self.ty as usize](self, span),)*
+                    $(Op1::$op => self.$f(span),)*
                 }
             }
+            $(
+                fn $f(&mut self, span: &Span) -> RuntimeResult {
+                    $name[self.ty as usize](self, span)
+                }
+            )*
         }
     };
 }
 macro_rules! op1_fn {
     ($name:ident, $message:literal, $(($a_ty:pat, |$a:ident| $f:expr)),* $(,)?) => {
-        #[allow(unused_mut, clippy::no_effect)]
+        #[allow(unused_mut, clippy::no_effect, unreachable_patterns)]
         const unsafe fn $name(a: Type) -> ValueFn1 {
             match a {
                 $($a_ty => |$a, _| { $f; Ok(())},)*
+                Type::Array => |a, span| {
+                    for a in (*a).array_mut().iter_mut() {
+                        a.$name(span)?;
+                    }
+                    Ok(())
+                },
                 _ => |a, span| Err(span.error(format!($message, (*a).ty))),
             }
         }
@@ -171,15 +182,20 @@ impl fmt::Display for Op2 {
 
 pub(crate) type ValueFn2 = fn(*mut Value, Value, &Span) -> RuntimeResult;
 macro_rules! op2_table {
-    ($(($op:ident, $name:ident, $f:expr)),* $(,)*) => {
+    ($(($op:ident, $name:ident, $f:ident)),* $(,)*) => {
         $(static $name: [[ValueFn2; Type::ARITY]; Type::ARITY] = type_square!($f);)*
 
         impl Value {
             pub fn op2(&mut self, other: Value, op: Op2, span: &Span) -> RuntimeResult {
                 match op {
-                    $(Op2::$op => $name[self.ty as usize][other.ty as usize](self, other, span),)*
+                    $(Op2::$op => self.$f(other, span),)*
                 }
             }
+            $(
+                fn $f(&mut self, other: Value, span: &Span) -> RuntimeResult {
+                    $name[self.ty as usize][other.ty as usize](self, other, span)
+                }
+            )*
         }
     };
 }
@@ -190,6 +206,40 @@ macro_rules! op2_fn {
             unsafe {
                 match (a, b) {
                     $(($a_ty, $b_ty) => |$a, mut $b, _| { $f; Ok(())},)*
+                    (Type::Array, Type::Array) => |a, b, span| {
+                        if (*a).array_mut().len() != b.data.array.len() {
+                            return Err(span.error(format!(
+                                concat!($message, " because they have different lengths: {} and {}"),
+                                Type::Array,
+                                Type::Array,
+                                (*a).array_mut().len(),
+                                b.data.array.len()
+                            )));
+                        }
+                        for (a, b) in (*a)
+                            .array_mut()
+                            .iter_mut()
+                            .zip(b.data.array.iter().cloned())
+                        {
+                            a.$name(b, span)?;
+                        }
+                        Ok(())
+                    },
+                    (Type::Array, _) => |a, b, span| {
+                        for a in (*a).array_mut().iter_mut() {
+                            a.$name(b.clone(), span)?;
+                        }
+                        Ok(())
+                    },
+                    (_, Type::Array) => |a, mut b, span| {
+                        for b in b.array_mut().iter_mut() {
+                            let mut a_clone = (*a).clone();
+                            a_clone.$name(b.clone(), span)?;
+                            *b = a_clone;
+                        }
+                        *a = b;
+                        Ok(())
+                    },
                     _ => |a, b, span| Err(span.error(format!($message, (*a).ty, b.ty))),
                 }
             }

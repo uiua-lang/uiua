@@ -343,7 +343,7 @@ static BIN_EXPR_CMP: BinExprDef = BinExprDef {
 
 impl Parser {
     fn try_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
-        self.try_or_expr()
+        self.try_pipe_expr()
     }
     fn expr(&mut self) -> ParseResult<Sp<Expr>> {
         self.expect_expr(Self::try_expr)
@@ -354,37 +354,59 @@ impl Parser {
     ) -> ParseResult<Sp<Expr>> {
         f(self)?.ok_or_else(|| self.expected([Expectation::Expr]))
     }
-    fn try_or_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
-        let Some(left) = self.try_and_expr()? else {
+    fn try_pipe_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
+        let Some(mut expr) = self.try_or_expr()? else {
             return Ok(None);
         };
-        let Some(op_span) = self.try_exact(Keyword::Or) else {
-            return Ok(Some(left));
+        loop {
+            let op = if let Some(span) = self.try_exact(Pipe) {
+                span.sp(PipeOp::Forward)
+            } else if let Some(span) = self.try_exact(BackPipe) {
+                span.sp(PipeOp::Backward)
+            } else {
+                break;
+            };
+            let right = self.expect_expr(Self::try_or_expr)?;
+            let span = expr.span.clone().merge(right.span.clone());
+            expr = span.sp(Expr::Pipe(Box::new(PipeExpr {
+                op,
+                left: expr,
+                right,
+            })));
+        }
+        Ok(Some(expr))
+    }
+    fn try_or_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
+        let Some(mut expr) = self.try_and_expr()? else {
+            return Ok(None);
         };
-        let op = op_span.sp(LogicOp::Or);
-        let right = self.expect_expr(Self::try_and_expr)?;
-        let span = left.span.clone().merge(right.span.clone());
-        Ok(Some(span.sp(Expr::Logic(Box::new(LogicExpr {
-            op,
-            left,
-            right,
-        })))))
+        while let Some(op_span) = self.try_exact(Keyword::Or) {
+            let op = op_span.sp(LogicOp::Or);
+            let right = self.expect_expr(Self::try_and_expr)?;
+            let span = expr.span.clone().merge(right.span.clone());
+            expr = span.sp(Expr::Logic(Box::new(LogicExpr {
+                op,
+                left: expr,
+                right,
+            })));
+        }
+        Ok(Some(expr))
     }
     fn try_and_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
-        let Some(left) = self.try_bin_expr()? else {
+        let Some(mut expr) = self.try_bin_expr()? else {
             return Ok(None);
         };
-        let Some(op_span) = self.try_exact(Keyword::And) else {
-            return Ok(Some(left));
-        };
-        let op = op_span.sp(LogicOp::And);
-        let right = self.expect_expr(Self::try_bin_expr)?;
-        let span = left.span.clone().merge(right.span.clone());
-        Ok(Some(span.sp(Expr::Logic(Box::new(LogicExpr {
-            op,
-            left,
-            right,
-        })))))
+        while let Some(op_span) = self.try_exact(Keyword::And) {
+            let op = op_span.sp(LogicOp::And);
+            let right = self.expect_expr(Self::try_bin_expr)?;
+            let span = expr.span.clone().merge(right.span.clone());
+            expr = span.sp(Expr::Logic(Box::new(LogicExpr {
+                op,
+                left: expr,
+                right,
+            })));
+        }
+        Ok(Some(expr))
     }
     fn try_bin_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
         self.try_bin_expr_def(&BIN_EXPR_CMP)

@@ -98,6 +98,7 @@ pub enum Expr {
     Call(Box<CallExpr>),
     Bin(Box<BinExpr>),
     Logic(Box<LogicExpr>),
+    Pipe(Box<PipeExpr>),
     Bool(bool),
     Int(String),
     Real(String),
@@ -120,6 +121,13 @@ pub enum Pattern {
 pub struct LogicExpr {
     pub left: Sp<Expr>,
     pub op: Sp<LogicOp>,
+    pub right: Sp<Expr>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PipeExpr {
+    pub left: Sp<Expr>,
+    pub op: Sp<PipeOp>,
     pub right: Sp<Expr>,
 }
 
@@ -161,4 +169,10 @@ pub enum BinOp {
 pub enum LogicOp {
     And,
     Or,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum PipeOp {
+    Forward,
+    Backward,
 }

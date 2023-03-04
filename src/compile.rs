@@ -35,7 +35,10 @@ impl Assembly {
         let res = self.run_with_vm(&mut vm)?;
         println!("\nstack:");
         for val in &vm.stack {
-            println!("{:?}", val);
+            println!("{val:?}");
+        }
+        if let Some(val) = &res {
+            println!("{val:?}");
         }
         Ok(res)
     }
@@ -447,6 +450,7 @@ impl Compiler {
             Expr::Call(call) => self.call(*call)?,
             Expr::If(if_expr) => self.if_expr(*if_expr)?,
             Expr::Logic(log_expr) => self.logic_expr(*log_expr)?,
+            Expr::Pipe(pipe_expr) => self.pipe_expr(*pipe_expr)?,
             Expr::List(items) => self.list(Instr::List, items)?,
             Expr::Array(items) => self.list(Instr::Array, items)?,
             Expr::Parened(inner) => self.expr(resolve_placeholders(*inner))?,
@@ -511,13 +515,19 @@ impl Compiler {
         Ok(())
     }
     fn call(&mut self, call: CallExpr) -> CompileResult {
-        let args = call.args.len();
-        for arg in call.args.into_iter().rev() {
+        self.call_impl(call.func, call.args)
+    }
+    fn call_impl(&mut self, func: Sp<Expr>, args: Vec<Sp<Expr>>) -> CompileResult {
+        let args_len = args.len();
+        for arg in args.into_iter().rev() {
             self.expr(arg)?;
         }
-        let span = self.push_call_span(call.func.span.clone());
-        self.expr(call.func)?;
-        self.push_instr(Instr::Call { args, span });
+        let span = self.push_call_span(func.span.clone());
+        self.expr(func)?;
+        self.push_instr(Instr::Call {
+            args: args_len,
+            span,
+        });
         Ok(())
     }
     fn block(&mut self, block: Block) -> CompileResult {
@@ -556,6 +566,26 @@ impl Compiler {
         self.instrs_mut()[jump_spot] =
             Instr::JumpIfElsePop(self.instrs().len() as isize - jump_spot as isize, jump_cond);
         Ok(())
+    }
+    fn pipe_expr(&mut self, pipe_expr: PipeExpr) -> CompileResult {
+        match pipe_expr.op.value {
+            PipeOp::Forward => {
+                let (func, mut args) = match pipe_expr.right.value {
+                    Expr::Call(call_expr) => (call_expr.func, call_expr.args),
+                    expr => (pipe_expr.right.span.sp(expr), Vec::new()),
+                };
+                args.push(pipe_expr.left);
+                self.call_impl(func, args)
+            }
+            PipeOp::Backward => {
+                let (func, mut args) = match pipe_expr.left.value {
+                    Expr::Call(call_expr) => (call_expr.func, call_expr.args),
+                    expr => (pipe_expr.left.span.sp(expr), Vec::new()),
+                };
+                args.push(pipe_expr.right);
+                self.call_impl(func, args)
+            }
+        }
     }
 }
 
@@ -603,6 +633,10 @@ fn resolve_placeholders_rec(expr: &mut Sp<Expr>, params: &mut Vec<Sp<Ident>>) {
         Expr::Logic(log_expr) => {
             resolve_placeholders_rec(&mut log_expr.left, params);
             resolve_placeholders_rec(&mut log_expr.right, params);
+        }
+        Expr::Pipe(pipe_expr) => {
+            resolve_placeholders_rec(&mut pipe_expr.left, params);
+            resolve_placeholders_rec(&mut pipe_expr.right, params);
         }
         Expr::List(items) => {
             for item in items {

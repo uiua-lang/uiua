@@ -26,6 +26,7 @@ pub fn lex(input: &str, file: &Path) -> LexResult<Vec<Sp<Token>>> {
 pub enum LexError {
     UnexpectedChar(char),
     Bang,
+    Bar,
 }
 
 impl fmt::Display for LexError {
@@ -33,7 +34,10 @@ impl fmt::Display for LexError {
         match self {
             LexError::UnexpectedChar(c) => write!(f, "unexpected char {c:?}"),
             LexError::Bang => {
-                write!(f, " unexpected char '!', maybe you meant 'not'?")
+                write!(f, " unexpected char `!`, maybe you meant `not`?")
+            }
+            LexError::Bar => {
+                write!(f, " unexpected char `|`, maybe you meant `or` or `|>`?")
             }
         }
     }
@@ -274,6 +278,8 @@ pub enum Simple {
     Period,
     Colon,
     SemiColon,
+    Pipe,
+    BackPipe,
     Plus,
     Minus,
     Star,
@@ -303,6 +309,8 @@ impl fmt::Display for Simple {
                 Simple::Period => ".",
                 Simple::Colon => ":",
                 Simple::SemiColon => ";",
+                Simple::Pipe => "|>",
+                Simple::BackPipe => "<|",
                 Simple::Plus => "+",
                 Simple::Minus => "-",
                 Simple::Star => "*",
@@ -455,13 +463,20 @@ impl Lexer {
                 }
                 '*' => return self.end(Star, start),
                 '=' => return self.end(Equal, start),
-                '<' => return self.switch_next(Less, [('=', LessEqual)], start),
+                '<' => return self.switch_next(Less, [('=', LessEqual), ('|', BackPipe)], start),
                 '>' => return self.switch_next(Greater, [('=', GreaterEqual)], start),
                 '!' => {
                     return if self.next_char_exact('=') {
                         self.end(NotEqual, start)
                     } else {
                         Err(self.end_span(start).sp(LexError::Bang))
+                    }
+                }
+                '|' => {
+                    return if self.next_char_exact('>') {
+                        self.end(Pipe, start)
+                    } else {
+                        Err(self.end_span(start).sp(LexError::Bar))
                     }
                 }
                 // Division and comments

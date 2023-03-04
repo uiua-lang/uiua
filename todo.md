@@ -1,4 +1,3 @@
-- Pipe operators
 - Warnings
   - naming conventions
   - compare with bool literals

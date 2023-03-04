@@ -181,6 +181,7 @@ op1_fn!(
 /// 2-parameter built-in operations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
 pub enum Op2 {
+    Mod,
     Pow,
     Atan2,
     Push,
@@ -189,6 +190,7 @@ pub enum Op2 {
 impl fmt::Display for Op2 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Op2::Mod => write!(f, "mod"),
             Op2::Pow => write!(f, "pow"),
             Op2::Atan2 => write!(f, "atan2"),
             Op2::Push => write!(f, "push"),
@@ -265,9 +267,31 @@ macro_rules! op2_fn {
 pub(crate) use op2_fn;
 
 op2_table!(
+    (Mod, MOD_TABLE, mod_fn),
     (Pow, POW_TABLE, pow_fn),
     (Atan2, ATAN2_TABLE, atan2_fn),
     (Push, PUSH_TABLE, push_fn),
+);
+op2_fn!(
+    mod_fn,
+    "Cannot get remainder of {} % {}",
+    (Type::Int, Type::Int, |a, b| {
+        let b = b.data.int;
+        *a = (((*a).data.int % b + b) % b).into()
+    }),
+    (Type::Real, Type::Int, |a, b| {
+        let b = b.data.int as f64;
+        *a = (((*a).data.real % b + b) % b).into()
+    }),
+    (Type::Int, Type::Real, |a, b| {
+        let a_real = (*a).data.int as f64;
+        let b = b.data.real;
+        *a = (((a_real % b + b) % b) as i64).into()
+    }),
+    (Type::Real, Type::Real, |a, b| {
+        let b = b.data.real;
+        *a = (((*a).data.real % b + b) % b).into()
+    })
 );
 op2_fn!(
     pow_fn,

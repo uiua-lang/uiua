@@ -2,13 +2,7 @@ use std::{cmp::Ordering, fmt, mem::ManuallyDrop, ops::*};
 
 use im::Vector;
 
-use crate::{
-    array::Array,
-    ast::BinOp,
-    builtin::{op2_fn, ValueFn2},
-    lex::Span,
-    RuntimeResult,
-};
+use crate::{array::Array, ast::BinOp, builtin::ValueFn2, lex::Span, RuntimeResult};
 
 pub struct Value {
     pub(crate) ty: Type,
@@ -340,12 +334,12 @@ impl Value {
             BinOp::Sub => self.sub(other, span)?,
             BinOp::Mul => self.mul(other, span)?,
             BinOp::Div => self.div(other, span)?,
-            BinOp::Eq => *self = (*self == other).into(),
-            BinOp::Ne => *self = (*self != other).into(),
-            BinOp::Lt => *self = (*self < other).into(),
-            BinOp::Gt => *self = (*self > other).into(),
-            BinOp::Le => *self = (*self <= other).into(),
-            BinOp::Ge => *self = (*self >= other).into(),
+            BinOp::Eq => self.is_eq(other, span)?,
+            BinOp::Ne => self.is_ne(other, span)?,
+            BinOp::Lt => self.is_lt(other, span)?,
+            BinOp::Le => self.is_le(other, span)?,
+            BinOp::Gt => self.is_gt(other, span)?,
+            BinOp::Ge => self.is_ge(other, span)?,
         }
         Ok(())
     }
@@ -400,35 +394,6 @@ macro_rules! type_square {
 pub(crate) use type_square;
 
 type EqFn = unsafe fn(&Value, &Value) -> bool;
-
-static mut EQ_TABLE: [[ValueFn2; Type::ARITY]; Type::ARITY] = type_square!(eq_fn);
-op2_fn!(
-    eq_fn,
-    "{} == {}",
-    (Type::Unit, Type::Unit, |a, _b| *a = true.into()),
-    (Type::Bool, Type::Bool, |a, b| *a =
-        ((*a).data.bool == b.data.bool).into()),
-    (Type::Int, Type::Int, |a, b| *a =
-        ((*a).data.int == b.data.int).into()),
-    (Type::Real, Type::Real, |a, b| *a =
-        ((*a).data.real.is_nan() && b.data.real.is_nan()
-            || (*a).data.real == b.data.real)
-            .into()),
-    (Type::Function, Type::Function, |a, b| *a =
-        ((*a).data.function == b.data.function).into()),
-    (Type::Partial, Type::Partial, |a, b| *a =
-        ((*a).data.partial == b.data.partial).into()),
-    (Type::List, Type::List, |a, b| *a =
-        ((*a).data.list == b.data.list).into()),
-    (Type::Array, Type::Array, |a, b| *a =
-        ((*a).data.array == b.data.array).into()),
-    (Type::Int, Type::Real, |a, b| *a =
-        ((*a).data.int as f64 == b.data.real).into()),
-    (Type::Real, Type::Int, |a, b| *a =
-        ((*a).data.real == b.data.int as f64).into()),
-    (_, _, |a, _b| *a = false.into()),
-);
-
 static mut SIMPLE_EQ_TABLE: [[EqFn; Type::ARITY]; Type::ARITY] = type_square!(simple_eq_fn);
 const fn simple_eq_fn(a: Type, b: Type) -> EqFn {
     unsafe {
@@ -460,11 +425,9 @@ impl PartialEq for Value {
 
 impl Eq for Value {}
 
-type CmpFn = fn(&Value, &Value) -> Ordering;
-
-static mut CMP_TABLE: [[CmpFn; Type::ARITY]; Type::ARITY] = type_square!(cmp_fn);
-
-const fn cmp_fn(a: Type, b: Type) -> CmpFn {
+type SimpleCmpFn = fn(&Value, &Value) -> Ordering;
+static mut CMP_TABLE: [[SimpleCmpFn; Type::ARITY]; Type::ARITY] = type_square!(simple_cmp_fn);
+const fn simple_cmp_fn(a: Type, b: Type) -> SimpleCmpFn {
     unsafe {
         match (a, b) {
             (Type::Unit, Type::Unit) => |_, _| Ordering::Equal,
@@ -513,7 +476,7 @@ impl Ord for Value {
     }
 }
 
-macro_rules! value_bin_op {
+macro_rules! value_math_op {
     ($table:ident, $fn_name:ident, $trait:ident, $method:ident, $verb:literal) => {
         static mut $table: [[ValueFn2; Type::ARITY]; Type::ARITY] = type_square!($fn_name);
         const fn $fn_name(a: Type, b: Type) -> ValueFn2 {
@@ -537,10 +500,43 @@ macro_rules! value_bin_op {
                         *a = $trait::$method((*a).data.real, b.data.real).into();
                         Ok(())
                     },
+                    (Type::Array, Type::Array) => |a, b, span| {
+                        if (*a).array_mut().len() != b.data.array.len() {
+                            return Err(span.error(format!(
+                                "Cannot {} arrays of different lengths: {} and {}",
+                                $verb,
+                                (*a).array_mut().len(),
+                                b.data.array.len()
+                            )));
+                        }
+                        for (a, b) in (*a)
+                            .array_mut()
+                            .iter_mut()
+                            .zip(b.data.array.iter().cloned())
+                        {
+                            a.$method(b, span)?;
+                        }
+                        Ok(())
+                    },
+                    (Type::Array, _) => |a, b, span| {
+                        for a in (*a).array_mut().iter_mut() {
+                            a.$method(b.clone(), span)?;
+                        }
+                        Ok(())
+                    },
+                    (_, Type::Array) => |a, mut b, span| {
+                        for b in b.array_mut().iter_mut() {
+                            let mut a_clone = (*a).clone();
+                            a_clone.$method(b.clone(), span)?;
+                            *b = a_clone;
+                        }
+                        *a = b;
+                        Ok(())
+                    },
                     _ => |a, b, span| {
                         Err(span
                             .clone()
-                            .sp(format!("cannot {} {} and {}", $verb, (*a).ty, b.ty))
+                            .sp(format!("Cannot {} {} and {}", $verb, (*a).ty, b.ty))
                             .into())
                     },
                 }
@@ -556,7 +552,130 @@ macro_rules! value_bin_op {
     };
 }
 
-value_bin_op!(ADD_TABLE, add_fn, Add, add, "add");
-value_bin_op!(SUB_TABLE, sub_fn, Sub, sub, "subtract");
-value_bin_op!(MUL_TABLE, mul_fn, Mul, mul, "multiply");
-value_bin_op!(DIV_TABLE, div_fn, Div, div, "divide");
+value_math_op!(ADD_TABLE, add_fn, Add, add, "add");
+value_math_op!(SUB_TABLE, sub_fn, Sub, sub, "subtract");
+value_math_op!(MUL_TABLE, mul_fn, Mul, mul, "multiply");
+value_math_op!(DIV_TABLE, div_fn, Div, div, "divide");
+
+fn real_ordering(a: f64, b: f64) -> Ordering {
+    match (a.is_nan(), b.is_nan()) {
+        (true, true) => Ordering::Equal,
+        (false, true) => Ordering::Less,
+        (true, false) => Ordering::Greater,
+        (false, false) => a.partial_cmp(&b).unwrap(),
+    }
+}
+
+fn is_eq(ordering: Ordering) -> bool {
+    ordering == Ordering::Equal
+}
+fn is_ne(ordering: Ordering) -> bool {
+    ordering != Ordering::Equal
+}
+fn is_lt(ordering: Ordering) -> bool {
+    ordering == Ordering::Less
+}
+fn is_le(ordering: Ordering) -> bool {
+    ordering != Ordering::Greater
+}
+fn is_gt(ordering: Ordering) -> bool {
+    ordering == Ordering::Greater
+}
+fn is_ge(ordering: Ordering) -> bool {
+    ordering != Ordering::Less
+}
+
+macro_rules! value_cmp_op {
+    ($table:ident, $fn_name:ident, $method:ident) => {
+        static mut $table: [[ValueFn2; Type::ARITY]; Type::ARITY] = type_square!($fn_name);
+        const fn $fn_name(a: Type, b: Type) -> ValueFn2 {
+            unsafe {
+                match (a, b) {
+                    (Type::Unit, Type::Unit) => |a, _, _| {
+                        *a = $method(Ordering::Equal).into();
+                        Ok(())
+                    },
+                    (Type::Bool, Type::Bool) => |a, b, _| {
+                        *a = $method((*a).data.bool.cmp(&b.data.bool)).into();
+                        Ok(())
+                    },
+                    (Type::Int, Type::Int) => |a, b, _| {
+                        *a = $method((*a).data.int.cmp(&b.data.int)).into();
+                        Ok(())
+                    },
+                    (Type::Real, Type::Real) => |a, b, _| {
+                        *a = $method(real_ordering((*a).data.real, b.data.real)).into();
+                        Ok(())
+                    },
+                    (Type::Real, Type::Int) => |a, b, _| {
+                        *a = $method(real_ordering((*a).data.real, b.data.int as f64)).into();
+                        Ok(())
+                    },
+                    (Type::Int, Type::Real) => |a, b, _| {
+                        *a = ((*a).data.int as f64).into();
+                        *a = $method(real_ordering((*a).data.real, b.data.real)).into();
+                        Ok(())
+                    },
+                    (Type::Function, Type::Function) => |a, b, _| {
+                        *a = $method((*a).data.function.cmp(&b.data.function)).into();
+                        Ok(())
+                    },
+                    (Type::Partial, Type::Partial) => |a, b, _| {
+                        *a = $method((*a).data.partial.cmp(&b.data.partial)).into();
+                        Ok(())
+                    },
+                    (Type::Array, Type::Array) => |a, b, span| {
+                        if (*a).array_mut().len() != b.data.array.len() {
+                            return Err(span.error(format!(
+                                "Cannot compare arrays of different lengths: {} and {}",
+                                (*a).array_mut().len(),
+                                b.data.array.len()
+                            )));
+                        }
+                        for (a, b) in (*a)
+                            .array_mut()
+                            .iter_mut()
+                            .zip(b.data.array.iter().cloned())
+                        {
+                            a.$method(b, span)?;
+                        }
+                        Ok(())
+                    },
+                    (Type::Array, _) => |a, b, span| {
+                        for a in (*a).array_mut().iter_mut() {
+                            a.$method(b.clone(), span)?;
+                        }
+                        Ok(())
+                    },
+                    (_, Type::Array) => |a, mut b, span| {
+                        for b in b.array_mut().iter_mut() {
+                            let mut a_clone = (*a).clone();
+                            a_clone.$method(b.clone(), span)?;
+                            *b = a_clone;
+                        }
+                        *a = b;
+                        Ok(())
+                    },
+                    _ => |a, b, _| {
+                        *a = $method((*a).ty.cmp(&b.ty)).into();
+                        Ok(())
+                    },
+                }
+            }
+        }
+        impl Value {
+            pub fn $method(&mut self, other: Self, span: &Span) -> RuntimeResult {
+                #[cfg(feature = "profile")]
+                puffin::profile_function!();
+                unsafe { $table[self.ty as usize][other.ty as usize](self, other, span) }
+            }
+        }
+    };
+}
+
+value_cmp_op!(EQ_TABLE, eq_fn, is_eq);
+value_cmp_op!(NE_TABLE, ne_fn, is_ne);
+value_cmp_op!(LT_TABLE, lt_fn, is_lt);
+value_cmp_op!(LE_TABLE, le_fn, is_le);
+value_cmp_op!(GT_TABLE, gt_fn, is_gt);
+value_cmp_op!(GE_TABLE, ge_fn, is_ge);

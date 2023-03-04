@@ -256,8 +256,6 @@ impl Value {
     }
 }
 
-type MathFn = fn(*mut Value, Value, span: &Span) -> UiuaResult;
-
 macro_rules! type_line {
     ($a:expr, $f:expr) => {
         [
@@ -283,45 +281,6 @@ macro_rules! type_square {
         ]
     };
 }
-
-macro_rules! value_bin_op {
-    ($table:ident, $fn_name:ident, $method:ident, $verb:literal) => {
-        static mut $table: [[MathFn; TYPE_ARITY]; TYPE_ARITY] = type_square!($fn_name);
-        const fn $fn_name(a: Type, b: Type) -> MathFn {
-            unsafe {
-                match (a, b) {
-                    (Type::Unit, Type::Unit) => |_, _, _| Ok(()),
-                    (Type::Int, Type::Int) => |a, b, _| {
-                        (*a).data.int.$method(b.data.int);
-                        Ok(())
-                    },
-                    (Type::Real, Type::Real) => |a, b, _| {
-                        (*a).data.real.$method(b.data.real);
-                        Ok(())
-                    },
-                    _ => |a, b, span| {
-                        Err(span
-                            .clone()
-                            .sp(format!("cannot {} {} and {}", $verb, (*a).ty, b.ty))
-                            .into())
-                    },
-                }
-            }
-        }
-        impl Value {
-            pub fn $method(&mut self, other: Self, span: &Span) -> UiuaResult {
-                #[cfg(feature = "profile")]
-                puffin::profile_function!();
-                unsafe { $table[self.ty as usize][other.ty as usize](self, other, span) }
-            }
-        }
-    };
-}
-
-value_bin_op!(ADD_TABLE, add_fn, add_assign, "add");
-value_bin_op!(SUB_TABLE, sub_fn, sub_assign, "subtract");
-value_bin_op!(MUL_TABLE, mul_fn, mul_assign, "multiply");
-value_bin_op!(DIV_TABLE, div_fn, div_assign, "divide");
 
 type EqFn = unsafe fn(&Value, &Value) -> bool;
 
@@ -384,3 +343,44 @@ impl Ord for Value {
         unsafe { CMP_TABLE[self.ty as usize][other.ty as usize](self, other) }
     }
 }
+
+type MathFn = fn(*mut Value, Value, span: &Span) -> UiuaResult;
+
+macro_rules! value_bin_op {
+    ($table:ident, $fn_name:ident, $method:ident, $verb:literal) => {
+        static mut $table: [[MathFn; TYPE_ARITY]; TYPE_ARITY] = type_square!($fn_name);
+        const fn $fn_name(a: Type, b: Type) -> MathFn {
+            unsafe {
+                match (a, b) {
+                    (Type::Unit, Type::Unit) => |_, _, _| Ok(()),
+                    (Type::Int, Type::Int) => |a, b, _| {
+                        (*a).data.int.$method(b.data.int);
+                        Ok(())
+                    },
+                    (Type::Real, Type::Real) => |a, b, _| {
+                        (*a).data.real.$method(b.data.real);
+                        Ok(())
+                    },
+                    _ => |a, b, span| {
+                        Err(span
+                            .clone()
+                            .sp(format!("cannot {} {} and {}", $verb, (*a).ty, b.ty))
+                            .into())
+                    },
+                }
+            }
+        }
+        impl Value {
+            pub fn $method(&mut self, other: Self, span: &Span) -> UiuaResult {
+                #[cfg(feature = "profile")]
+                puffin::profile_function!();
+                unsafe { $table[self.ty as usize][other.ty as usize](self, other, span) }
+            }
+        }
+    };
+}
+
+value_bin_op!(ADD_TABLE, add_fn, add_assign, "add");
+value_bin_op!(SUB_TABLE, sub_fn, sub_assign, "subtract");
+value_bin_op!(MUL_TABLE, mul_fn, mul_assign, "multiply");
+value_bin_op!(DIV_TABLE, div_fn, div_assign, "divide");

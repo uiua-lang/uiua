@@ -54,6 +54,7 @@ pub enum Expr {
     Ident(Ident),
     List(Vec<Sp<Expr>>),
     Parened(Box<Expr>),
+    Func(Box<Func>),
 }
 
 #[derive(Debug, Clone)]

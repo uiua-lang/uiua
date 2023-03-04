@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, fmt};
 
 use crate::{
-    ast::BinOp,
+    ast::{BinOp, FunctionId},
     compile::Assembly,
     lex::Span,
     value::{Function, Partial, Value},
@@ -20,6 +20,7 @@ pub(crate) enum Instr {
     JumpIfElsePop(isize, bool),
     BinOp(BinOp, Span),
     DestructureList(usize, Span),
+    PushUnresolvedFunction(FunctionId),
     Dud,
 }
 
@@ -37,7 +38,7 @@ struct StackFrame {
     stack_size: usize,
 }
 
-const DBG: bool = false;
+const DBG: bool = true;
 macro_rules! dprintln {
     ($($arg:tt)*) => {
         if DBG {
@@ -195,6 +196,9 @@ pub(crate) fn run_assembly(assembly: &Assembly) -> UiuaResult {
                 // for val in list.into_iter().rev() {
                 //     stack.push(val);
                 // }
+            }
+            Instr::PushUnresolvedFunction(id) => {
+                panic!("unresolved function: {id:?}")
             }
             Instr::Dud => {
                 panic!("unresolved instruction")

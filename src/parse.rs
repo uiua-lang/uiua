@@ -444,6 +444,8 @@ impl Parser {
             items.map(Expr::List)
         } else if let Some(if_else) = self.try_if()? {
             if_else.map(Box::new).map(Expr::If)
+        } else if let Some(func) = self.try_func()? {
+            func.map(Box::new).map(Expr::Func)
         } else {
             return Ok(None);
         }))
@@ -463,5 +465,22 @@ impl Parser {
             if_true,
             if_false,
         })))
+    }
+    fn try_func(&mut self) -> ParseResult<Option<Sp<Func>>> {
+        // Keyword
+        let Some(start) = self.try_exact(Keyword::Fn) else {
+            return Ok(None);
+        };
+        // Parameters
+        let mut params = Vec::new();
+        while let Some(param) = self.try_ident() {
+            params.push(param);
+        }
+        self.expect(Colon)?;
+        // Body
+        let body = self.block()?;
+        let span = start.clone().merge(body.expr.span.clone());
+        let id = FunctionId::Anonymous(start);
+        Ok(Some(span.sp(Func { id, params, body })))
     }
 }

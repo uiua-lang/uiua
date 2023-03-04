@@ -35,10 +35,10 @@ pub type CompileResult<T = ()> = Result<T, Sp<CompileError>>;
 pub struct Compiler {
     function_instrs: Vec<Instr>,
     global_instrs: Vec<Instr>,
+    in_progress_functions: Vec<Vec<Instr>>,
     function_info: HashMap<Function, FunctionInfo, BuildNoHashHasher<Function>>,
     scopes: Vec<Scope>,
     height: usize,
-    in_function: bool,
     errors: Vec<Sp<CompileError>>,
 }
 
@@ -58,10 +58,10 @@ impl Default for Compiler {
         Self {
             function_instrs: Vec::new(),
             global_instrs: vec![Instr::Comment("BEGIN".into())],
+            in_progress_functions: Vec::new(),
             function_info: HashMap::default(),
             scopes: vec![Scope::default()],
             height: 0,
-            in_function: false,
             errors: Vec::new(),
         }
     }
@@ -71,13 +71,9 @@ pub struct Assembly {
     pub(crate) instrs: Vec<Instr>,
     pub(crate) start: usize,
     function_info: HashMap<Function, FunctionInfo, BuildNoHashHasher<Function>>,
-    global_functions: HashMap<Ident, Function>,
 }
 
 impl Assembly {
-    pub fn lookup_function(&self, name: Ident) -> Option<Function> {
-        self.global_functions.get(&name).copied()
-    }
     #[track_caller]
     pub fn function_info(&self, function: Function) -> &FunctionInfo {
         if let Some(info) = self.function_info.get(&function) {
@@ -132,12 +128,6 @@ impl Compiler {
     pub fn finish(mut self) -> Assembly {
         let start = self.function_instrs.len();
         self.function_instrs.append(&mut self.global_instrs);
-        let mut global_functions = HashMap::new();
-        for (id, index) in self.scopes.pop().unwrap().functions {
-            if let FunctionId::Named(name) = id {
-                global_functions.insert(name, index);
-            }
-        }
         for (i, instr) in self.function_instrs.iter().enumerate() {
             println!("{i:>3} {instr}");
         }
@@ -145,7 +135,6 @@ impl Compiler {
             instrs: self.function_instrs,
             start,
             function_info: self.function_info,
-            global_functions,
         }
     }
     fn scope_mut(&mut self) -> &mut Scope {
@@ -166,29 +155,21 @@ impl Compiler {
             .bindings
             .insert(ident, ScopeBind::Local(height));
     }
-    fn bind_function(&mut self, ident: Ident, id: FunctionId) {
-        self.scope_mut()
-            .bindings
-            .insert(ident, ScopeBind::Function(id));
-    }
     fn instrs(&self) -> &[Instr] {
-        if self.in_function {
-            &self.function_instrs
-        } else {
-            &self.global_instrs
-        }
+        self.in_progress_functions
+            .last()
+            .unwrap_or(&self.global_instrs)
     }
     fn instrs_mut(&mut self) -> &mut Vec<Instr> {
-        if self.in_function {
-            &mut self.function_instrs
-        } else {
-            &mut self.global_instrs
-        }
+        self.in_progress_functions
+            .last_mut()
+            .unwrap_or(&mut self.global_instrs)
     }
     fn push_instr(&mut self, instr: Instr) {
         match &instr {
             Instr::Copy(_) => self.height += 1,
             Instr::Push(_) => self.height += 1,
+            Instr::PushUnresolvedFunction(_) => self.height += 1,
             Instr::BinOp(..) => self.height -= 1,
             Instr::Call(args, _) => self.height -= *args,
             _ => {}
@@ -208,34 +189,59 @@ impl Compiler {
         }
     }
     fn function_def(&mut self, def: FunctionDef) -> CompileResult {
-        self.bind_function(def.name.value, def.func.id.clone());
-        self.func(def.func)?;
+        self.scope_mut()
+            .bindings
+            .insert(def.name.value, ScopeBind::Function(def.func.id.clone()));
+        self.func(def.func, false)?;
         Ok(())
     }
-    fn func(&mut self, func: Func) -> CompileResult {
-        self.in_function = true;
-        let function = Function(self.function_instrs.len());
-        self.scope_mut().functions.insert(func.id.clone(), function);
-        self.function_info.insert(
-            function,
-            FunctionInfo {
-                id: func.id.clone(),
-                params: func.params.len(),
-            },
-        );
+    fn func(&mut self, func: Func, push: bool) -> CompileResult {
+        // Initialize the function's instruction list
+        self.in_progress_functions.push(Vec::new());
+        // Push the function's scope
         let height = self.push_scope();
-        self.push_instr(Instr::Comment(match func.id {
+        // Push the function's name as a comment
+        self.push_instr(Instr::Comment(match &func.id {
             FunctionId::Named(name) => format!("fn {name}"),
             FunctionId::Anonymous(span) => format!("fn at {span}"),
         }));
+        // Push and bind the function's parameters
+        let params = func.params.len();
         for param in func.params.into_iter().rev() {
             self.height += 1;
             self.bind_local(param.value);
         }
+        // Compile the function's body
         self.block(func.body)?;
         self.push_instr(Instr::Return);
+        // Pop the function's scope
         self.pop_scope(height);
-        self.in_function = false;
+        //Determine the function's index
+        let function = Function(self.function_instrs.len());
+        // Resolve function references
+        for instrs in &mut self.in_progress_functions {
+            for instr in instrs {
+                if matches!(instr, Instr::PushUnresolvedFunction(id) if *id == func.id) {
+                    *instr = Instr::Push(function.into());
+                }
+            }
+        }
+        // Add the function's instructions to the global function list
+        let instrs = self.in_progress_functions.pop().unwrap();
+        self.function_instrs.extend(instrs);
+        self.scope_mut().functions.insert(func.id.clone(), function);
+        // Add to the function info map
+        self.function_info.insert(
+            function,
+            FunctionInfo {
+                id: func.id,
+                params,
+            },
+        );
+        // Push the function if necessary
+        if push {
+            self.push_instr(Instr::Push(function.into()));
+        }
         Ok(())
     }
     fn binding(&mut self, binding: Binding) -> CompileResult {
@@ -286,13 +292,17 @@ impl Compiler {
                         self.push_instr(Instr::Copy(diff));
                     }
                     ScopeBind::Function(id) => {
-                        let function = *self
+                        if let Some(function) = self
                             .scopes
                             .iter()
                             .rev()
                             .find_map(|scope| scope.functions.get(id))
-                            .unwrap_or_else(|| panic!("unbound function `{id:?}`"));
-                        self.push_instr(Instr::Push(function.into()));
+                            .cloned()
+                        {
+                            self.push_instr(Instr::Push(function.into()));
+                        } else {
+                            self.push_instr(Instr::PushUnresolvedFunction(id.clone()));
+                        }
                     }
                 }
             }
@@ -306,6 +316,7 @@ impl Compiler {
             Expr::Logic(log_expr) => self.logic_expr(*log_expr)?,
             Expr::List(_) => todo!(),
             Expr::Parened(inner) => self.expr(expr.span.sp(*inner))?,
+            Expr::Func(func) => self.func(*func, true)?,
         }
         Ok(())
     }

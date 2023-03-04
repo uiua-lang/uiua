@@ -6,11 +6,11 @@ use crate::lex::{Ident, Sp, Span};
 pub enum Item {
     FunctionDef(FunctionDef),
     Expr(Sp<Expr>),
-    Binding(Binding),
+    Let(Let),
 }
 
 #[derive(Debug, Clone)]
-pub struct Binding {
+pub struct Let {
     pub pattern: Sp<Pattern>,
     pub expr: Sp<Expr>,
 }
@@ -37,7 +37,7 @@ pub enum FunctionId {
 
 #[derive(Debug, Clone)]
 pub struct Block {
-    pub bindings: Vec<Binding>,
+    pub bindings: Vec<Let>,
     pub expr: Sp<Expr>,
 }
 

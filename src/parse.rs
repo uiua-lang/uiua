@@ -178,8 +178,8 @@ impl Parser {
     fn try_item(&mut self) -> ParseResult<Option<Item>> {
         let item = if let Some(def) = self.try_function_def()? {
             Item::FunctionDef(def)
-        } else if let Some(binding) = self.try_binding()? {
-            Item::Binding(binding)
+        } else if let Some(binding) = self.try_let()? {
+            Item::Let(binding)
         } else if let Some(expr) = self.try_expr()? {
             Item::Expr(expr)
         } else {
@@ -232,7 +232,7 @@ impl Parser {
     }
     fn block(&mut self) -> ParseResult<Block> {
         let mut bindings = Vec::new();
-        while let Some(binding) = self.try_binding()? {
+        while let Some(binding) = self.try_let()? {
             bindings.push(binding);
             self.expect(SemiColon)?;
         }
@@ -242,7 +242,7 @@ impl Parser {
             expr: ret,
         })
     }
-    fn try_binding(&mut self) -> ParseResult<Option<Binding>> {
+    fn try_let(&mut self) -> ParseResult<Option<Let>> {
         // Let
         if self.try_exact(Keyword::Let).is_none() {
             return Ok(None);
@@ -252,7 +252,7 @@ impl Parser {
         // Expression
         self.expect(Equal)?;
         let expr = self.expr()?;
-        Ok(Some(Binding { pattern, expr }))
+        Ok(Some(Let { pattern, expr }))
     }
     fn try_pattern(&mut self) -> ParseResult<Option<Sp<Pattern>>> {
         Ok(Some(if let Some(ident) = self.try_ident() {

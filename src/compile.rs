@@ -33,24 +33,48 @@ impl fmt::Display for CompileError {
 pub type CompileResult<T = ()> = Result<T, Sp<CompileError>>;
 
 pub struct Compiler {
+    /// Instructions for fully compiled functions
     function_instrs: Vec<Instr>,
+    /// Instructions for stuff in the global scope
     global_instrs: Vec<Instr>,
+    /// Instructions for functions that are currently being compiled
     in_progress_functions: Vec<Vec<Instr>>,
+    /// Information about functions. This is passed to the Assembly.
     function_info: HashMap<Function, FunctionInfo, BuildNoHashHasher<Function>>,
+    /// Stack of scopes
     scopes: Vec<Scope>,
+    /// The relative height of the runtime stack
     height: usize,
+    /// Errors that don't stop compilation
     errors: Vec<Sp<CompileError>>,
 }
 
-#[derive(Default)]
 struct Scope {
+    /// How many functions deep the scope is. 0 is the global scope.
+    function_depth: usize,
+    /// Values and functions that are in scope
+    bindings: HashMap<Ident, Binding>,
+    /// Map of function ids to the actual function values
     functions: HashMap<FunctionId, Function>,
-    bindings: HashMap<Ident, ScopeBind>,
 }
 
-enum ScopeBind {
+enum Binding {
+    /// A function that is available but not on the stack.
     Function(FunctionId),
+    /// A local variable is referenced by its height in the stack.
     Local(usize),
+    /// A dud binding used when a binding lookup fails
+    Error,
+}
+
+impl Scope {
+    fn new(function_depth: usize) -> Self {
+        Self {
+            function_depth,
+            bindings: HashMap::default(),
+            functions: HashMap::default(),
+        }
+    }
 }
 
 impl Default for Compiler {
@@ -60,7 +84,7 @@ impl Default for Compiler {
             global_instrs: vec![Instr::Comment("BEGIN".into())],
             in_progress_functions: Vec::new(),
             function_info: HashMap::default(),
-            scopes: vec![Scope::default()],
+            scopes: vec![Scope::new(0)],
             height: 0,
             errors: Vec::new(),
         }
@@ -137,11 +161,15 @@ impl Compiler {
             function_info: self.function_info,
         }
     }
+    fn scope(&self) -> &Scope {
+        self.scopes.last().unwrap()
+    }
     fn scope_mut(&mut self) -> &mut Scope {
         self.scopes.last_mut().unwrap()
     }
     fn push_scope(&mut self) -> usize {
-        self.scopes.push(Scope::default());
+        self.scopes
+            .push(Scope::new(self.in_progress_functions.len()));
         self.height
     }
     fn pop_scope(&mut self, height: usize) {
@@ -153,7 +181,7 @@ impl Compiler {
         let height = self.height - 1;
         self.scope_mut()
             .bindings
-            .insert(ident, ScopeBind::Local(height));
+            .insert(ident, Binding::Local(height));
     }
     fn instrs(&self) -> &[Instr] {
         self.in_progress_functions
@@ -167,7 +195,7 @@ impl Compiler {
     }
     fn push_instr(&mut self, instr: Instr) {
         match &instr {
-            Instr::Copy(_) => self.height += 1,
+            Instr::CopyRel(_) => self.height += 1,
             Instr::Push(_) => self.height += 1,
             Instr::PushUnresolvedFunction(_) => self.height += 1,
             Instr::BinOp(..) => self.height -= 1,
@@ -184,14 +212,14 @@ impl Compiler {
     fn item(&mut self, item: Item) -> CompileResult {
         match item {
             Item::Expr(expr) => self.expr(expr),
-            Item::Binding(binding) => self.binding(binding),
+            Item::Let(binding) => self.r#let(binding),
             Item::FunctionDef(def) => self.function_def(def),
         }
     }
     fn function_def(&mut self, def: FunctionDef) -> CompileResult {
         self.scope_mut()
             .bindings
-            .insert(def.name.value, ScopeBind::Function(def.func.id.clone()));
+            .insert(def.name.value, Binding::Function(def.func.id.clone()));
         self.func(def.func, false)?;
         Ok(())
     }
@@ -244,7 +272,9 @@ impl Compiler {
         }
         Ok(())
     }
-    fn binding(&mut self, binding: Binding) -> CompileResult {
+    fn r#let(&mut self, binding: Let) -> CompileResult {
+        // The expression is evaluated first because the pattern
+        // will refer to the height of the stack after the expression
         self.expr(binding.expr)?;
         self.pattern(binding.pattern)?;
         Ok(())
@@ -267,31 +297,51 @@ impl Compiler {
             Expr::Unit => self.push_instr(Instr::Push(Value::unit())),
             Expr::Bool(b) => self.push_instr(Instr::Push(b.into())),
             Expr::Int(s) => {
-                let i: i64 = s
-                    .parse()
-                    .map_err(|_| expr.span.sp(CompileError::InvalidInteger(s)))?;
+                let i: i64 = match s.parse() {
+                    Ok(i) => i,
+                    Err(_) => {
+                        self.errors
+                            .push(expr.span.sp(CompileError::InvalidInteger(s)));
+                        0
+                    }
+                };
                 self.push_instr(Instr::Push(i.into()));
             }
             Expr::Real(s) => {
-                let r: f64 = s
-                    .parse()
-                    .map_err(|_| expr.span.sp(CompileError::InvalidReal(s)))?;
-                self.push_instr(Instr::Push(r.into()))
+                let f: f64 = match s.parse() {
+                    Ok(f) => f,
+                    Err(_) => {
+                        self.errors.push(expr.span.sp(CompileError::InvalidReal(s)));
+                        0.0
+                    }
+                };
+                self.push_instr(Instr::Push(f.into()));
             }
             Expr::Ident(ident) => {
-                let bind = self
-                    .scopes
-                    .iter()
-                    .rev()
-                    .find_map(|scope| scope.bindings.get(&ident))
-                    .ok_or_else(|| expr.span.sp(CompileError::UnknownBinding(ident)))?;
-                match bind {
-                    ScopeBind::Local(index) => {
+                let bind = self.scopes.iter().rev().find_map(|scope| {
+                    scope
+                        .bindings
+                        .get(&ident)
+                        .map(|binding| (binding, scope.function_depth))
+                });
+                let (binding, function_depth) = match bind {
+                    Some(bind) => bind,
+                    None => {
+                        self.errors
+                            .push(expr.span.clone().sp(CompileError::UnknownBinding(ident)));
+                        (&Binding::Error, self.scope().function_depth)
+                    }
+                };
+                if function_depth > 0 && function_depth != self.scope().function_depth {
+                    todo!("closure support ({})", expr.span)
+                }
+                match binding {
+                    Binding::Local(index) => {
                         let curr = self.height;
                         let diff = curr - *index;
-                        self.push_instr(Instr::Copy(diff));
+                        self.push_instr(Instr::CopyRel(diff));
                     }
-                    ScopeBind::Function(id) => {
+                    Binding::Function(id) => {
                         if let Some(function) = self
                             .scopes
                             .iter()
@@ -304,6 +354,7 @@ impl Compiler {
                             self.push_instr(Instr::PushUnresolvedFunction(id.clone()));
                         }
                     }
+                    Binding::Error => self.push_instr(Instr::Push(Value::unit())),
                 }
             }
             Expr::Bin(bin) => {
@@ -333,7 +384,7 @@ impl Compiler {
     fn block(&mut self, block: Block) -> CompileResult {
         let height = self.push_scope();
         for binding in block.bindings {
-            self.binding(binding)?;
+            self.r#let(binding)?;
         }
         self.expr(block.expr)?;
         self.pop_scope(height);

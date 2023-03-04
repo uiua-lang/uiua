@@ -12,7 +12,8 @@ use crate::{
 pub(crate) enum Instr {
     Comment(String),
     Push(Value),
-    Copy(usize),
+    /// Copy the nth value from the top of the stack
+    CopyRel(usize),
     Call(usize, Span),
     Return,
     Jump(isize),
@@ -74,7 +75,7 @@ pub(crate) fn run_assembly(assembly: &Assembly) -> UiuaResult {
                 puffin::profile_scope!("push");
                 stack.push(v.clone())
             }
-            Instr::Copy(n) => {
+            Instr::CopyRel(n) => {
                 #[cfg(feature = "profile")]
                 puffin::profile_scope!("copy");
                 stack.push(stack[stack.len() - *n].clone())

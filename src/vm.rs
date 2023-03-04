@@ -6,7 +6,8 @@ use crate::{
     builtin::{Op1, Op2},
     compile::Assembly,
     lex::Span,
-    value::{Function, List, Partial, Value},
+    list::List,
+    value::{Function, Partial, Value},
     RuntimeResult, TraceFrame, UiuaError, UiuaResult,
 };
 
@@ -113,7 +114,7 @@ fn run_assembly_inner(assembly: &Assembly, call_stack: &mut Vec<StackFrame>) -> 
             Instr::List(n) => {
                 #[cfg(feature = "profile")]
                 puffin::profile_scope!("list");
-                let list = List(stack.drain(stack.len() - *n..).collect());
+                let list: List = stack.drain(stack.len() - *n..).collect();
                 stack.push(list.into());
             }
             Instr::Array(n) => {

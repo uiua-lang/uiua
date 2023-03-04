@@ -4,6 +4,7 @@ pub mod builtin;
 pub mod compile;
 mod error;
 pub mod lex;
+pub mod list;
 pub mod parse;
 pub mod value;
 mod vm;

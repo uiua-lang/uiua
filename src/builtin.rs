@@ -158,7 +158,7 @@ op1_fn!(
 op1_fn!(
     len_fn,
     "Cannot get length of {}",
-    (Type::List, |a| *a = ((*a).list_mut().0.len() as i64).into()),
+    (Type::List, |a| *a = ((*a).list_mut().len() as i64).into()),
     (Type::Array, |a| *a = ((*a).array_mut().len() as i64).into()),
 );
 
@@ -274,7 +274,7 @@ op2_fn!(
     "Cannot push {} onto {}",
     (_, Type::List, |a, b| {
         ptr::swap(a, &mut b);
-        (*a).list_mut().0.push_back(b);
+        (*a).list_mut().push(b);
     }),
     (_, Type::Array, |a, b| {
         ptr::swap(a, &mut b);

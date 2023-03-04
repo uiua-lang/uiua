@@ -1,8 +1,6 @@
 use std::{cmp::Ordering, fmt, mem::ManuallyDrop, ops::*};
 
-use im::Vector;
-
-use crate::{array::Array, ast::BinOp, builtin::ValueFn2, lex::Span, RuntimeResult};
+use crate::{array::Array, ast::BinOp, builtin::ValueFn2, lex::Span, list::List, RuntimeResult};
 
 pub struct Value {
     pub(crate) ty: Type,
@@ -30,7 +28,7 @@ impl fmt::Debug for Value {
             Type::Partial => write!(f, "partial({})", unsafe { self.data.partial.args.len() }),
             Type::List => f
                 .debug_set()
-                .entries(unsafe { &*self.data.list }.0.iter())
+                .entries(unsafe { &*self.data.list }.iter())
                 .finish(),
             Type::Array => unsafe { (*self.data.array).fmt(f) },
         }
@@ -91,10 +89,6 @@ pub struct Partial {
     pub(crate) function: Function,
     pub(crate) args: Vec<Value>,
 }
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
-#[repr(transparent)]
-pub struct List(pub Vector<Value>);
 
 impl Value {
     pub const fn unit() -> Self {

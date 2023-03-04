@@ -109,10 +109,9 @@ struct Parser {
     errors: Vec<Sp<ParseError>>,
 }
 
-#[allow(unused)]
 const PARENS: (Simple, Simple) = (OpenParen, CloseParen);
-const BRACKETS: (Simple, Simple) = (OpenBracket, CloseBracket);
 #[allow(unused)]
+const BRACKETS: (Simple, Simple) = (OpenBracket, CloseBracket);
 const CURLIES: (Simple, Simple) = (OpenCurly, CloseCurly);
 
 impl Parser {
@@ -258,7 +257,7 @@ impl Parser {
     fn try_pattern(&mut self) -> ParseResult<Option<Sp<Pattern>>> {
         Ok(Some(if let Some(ident) = self.try_ident() {
             ident.map(Pattern::Ident)
-        } else if let Some(items) = self.try_surrounded_list(BRACKETS, Self::try_pattern)? {
+        } else if let Some(items) = self.try_surrounded_list(PARENS, Self::try_pattern)? {
             items.map(Pattern::List)
         } else if let Some(span) = self.try_exact(Underscore) {
             span.sp(Pattern::Discard)
@@ -442,7 +441,7 @@ impl Parser {
             } else {
                 Expr::Unit
             })
-        } else if let Some(items) = self.try_surrounded_list(BRACKETS, Self::try_expr)? {
+        } else if let Some(items) = self.try_surrounded_list(CURLIES, Self::try_expr)? {
             items.map(Expr::List)
         } else if let Some(if_else) = self.try_if()? {
             if_else.map(Box::new).map(Expr::If)

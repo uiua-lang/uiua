@@ -29,8 +29,8 @@ impl fmt::Debug for Value {
             Type::Function => write!(f, "function({})", unsafe { self.data.function.0 }),
             Type::Partial => write!(f, "partial({})", unsafe { self.data.partial.args.len() }),
             Type::List => f
-                .debug_list()
-                .entries(unsafe { self.data.list.0.iter() })
+                .debug_set()
+                .entries(unsafe { &*self.data.list }.0.iter())
                 .finish(),
         }
     }

@@ -371,7 +371,7 @@ impl Compiler {
             Expr::Call(call) => self.call(*call)?,
             Expr::If(if_expr) => self.if_expr(*if_expr)?,
             Expr::Logic(log_expr) => self.logic_expr(*log_expr)?,
-            Expr::List(_) => todo!(),
+            Expr::List(_) => todo!("lists ({})", expr.span),
             Expr::Parened(inner) => self.expr(resolve_placeholders(*inner))?,
             Expr::Func(func) => self.func(*func, true)?,
         }

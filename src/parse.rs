@@ -218,7 +218,7 @@ impl Parser {
         let name = self.ident()?;
         // Parameters
         let mut params = Vec::new();
-        while let Some(param) = self.try_ident() {
+        while let Some(param) = self.try_param() {
             params.push(param);
         }
         self.expect(Colon)?;
@@ -475,7 +475,7 @@ impl Parser {
         };
         // Parameters
         let mut params = Vec::new();
-        while let Some(param) = self.try_ident() {
+        while let Some(param) = self.try_param() {
             params.push(param);
         }
         self.expect(Colon)?;
@@ -484,5 +484,9 @@ impl Parser {
         let span = start.clone().merge(body.expr.span.clone());
         let id = FunctionId::Anonymous(start);
         Ok(Some(span.sp(Func { id, params, body })))
+    }
+    fn try_param(&mut self) -> Option<Sp<Ident>> {
+        self.try_ident()
+            .or_else(|| self.try_exact(Underscore).map(|span| span.sp("_".into())))
     }
 }

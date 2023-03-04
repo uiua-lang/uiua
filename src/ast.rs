@@ -109,37 +109,6 @@ pub enum BinOp {
     Ge,
 }
 
-impl BinOp {
-    pub fn name(&self) -> &'static str {
-        match self {
-            BinOp::Add => "add",
-            BinOp::Sub => "sub",
-            BinOp::Mul => "mul",
-            BinOp::Div => "div",
-            BinOp::Eq => "eq",
-            BinOp::Ne => "ne",
-            BinOp::Lt => "lt",
-            BinOp::Gt => "gt",
-            BinOp::Le => "le",
-            BinOp::Ge => "ge",
-        }
-    }
-    pub fn lua_op(&self) -> &'static str {
-        match self {
-            BinOp::Add => "+",
-            BinOp::Sub => "-",
-            BinOp::Mul => "*",
-            BinOp::Div => "/",
-            BinOp::Eq => "==",
-            BinOp::Ne => "~=",
-            BinOp::Lt => "<",
-            BinOp::Gt => ">",
-            BinOp::Le => "<=",
-            BinOp::Ge => ">=",
-        }
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LogicOp {
     And,

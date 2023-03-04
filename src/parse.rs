@@ -10,6 +10,7 @@ use crate::{
 pub enum ParseError {
     Lex(LexError),
     Expected(Vec<Expectation>, Option<Box<Sp<Token>>>),
+    BlockMustEndWithExpr,
 }
 
 #[derive(Debug)]
@@ -69,6 +70,9 @@ impl fmt::Display for ParseError {
                     write!(f, ", found `{}`", found.value)?;
                 }
                 Ok(())
+            }
+            ParseError::BlockMustEndWithExpr => {
+                write!(f, "block must end with an expression")
             }
         }
     }
@@ -181,8 +185,8 @@ impl Parser {
             Item::FunctionDef(def)
         } else if let Some(binding) = self.try_let()? {
             Item::Let(binding)
-        } else if let Some(expr) = self.try_expr()? {
-            Item::Expr(expr)
+        } else if self.try_exact(Keyword::Do).is_some() {
+            Item::Expr(self.expr()?)
         } else {
             return Ok(None);
         };
@@ -232,16 +236,12 @@ impl Parser {
         }))
     }
     fn block(&mut self) -> ParseResult<Block> {
-        let mut bindings = Vec::new();
-        while let Some(binding) = self.try_let()? {
-            bindings.push(binding);
-            self.expect(SemiColon)?;
+        let mut items = Vec::new();
+        while let Some(item) = self.try_item()? {
+            items.push(item);
         }
-        let ret = self.expr()?;
-        Ok(Block {
-            bindings,
-            expr: ret,
-        })
+        let expr = self.expr()?;
+        Ok(Block { items, expr })
     }
     fn try_let(&mut self) -> ParseResult<Option<Let>> {
         // Let

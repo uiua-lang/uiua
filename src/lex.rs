@@ -322,6 +322,7 @@ impl fmt::Display for Simple {
 pub enum Keyword {
     Let,
     Fn,
+    Do,
     If,
     Then,
     Else,

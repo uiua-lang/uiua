@@ -15,6 +15,20 @@ pub enum Item {
     Let(Let),
 }
 
+impl Item {
+    pub fn span(&self) -> Span {
+        match self {
+            Item::FunctionDef(func) => func
+                .name
+                .span
+                .clone()
+                .merge(func.func.body.expr.span.clone()),
+            Item::Expr(expr) => expr.span.clone(),
+            Item::Let(r#let) => r#let.pattern.span.clone().merge(r#let.expr.span.clone()),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Let {
     pub pattern: Sp<Pattern>,
@@ -56,14 +70,14 @@ impl fmt::Display for FunctionId {
 
 #[derive(Debug, Clone)]
 pub struct Block {
-    pub bindings: Vec<Let>,
+    pub items: Vec<Item>,
     pub expr: Sp<Expr>,
 }
 
 impl From<Sp<Expr>> for Block {
     fn from(expr: Sp<Expr>) -> Self {
         Self {
-            bindings: Vec::new(),
+            items: Vec::new(),
             expr,
         }
     }

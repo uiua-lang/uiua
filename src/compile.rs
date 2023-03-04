@@ -457,8 +457,8 @@ impl Compiler {
     }
     fn block(&mut self, block: Block) -> CompileResult {
         let height = self.push_scope();
-        for binding in block.bindings {
-            self.r#let(binding)?;
+        for item in block.items {
+            self.item(item)?;
         }
         self.expr(resolve_placeholders(block.expr))?;
         self.pop_scope(height);
@@ -505,7 +505,7 @@ fn resolve_placeholders(mut expr: Sp<Expr>) -> Sp<Expr> {
         id: FunctionId::Anonymous(span),
         params,
         body: Block {
-            bindings: Vec::new(),
+            items: Vec::new(),
             expr,
         },
     })))
@@ -520,7 +520,7 @@ fn resolve_placeholders_rec(expr: &mut Sp<Expr>, params: &mut Vec<Sp<Ident>>) {
         }
         Expr::If(if_expr) => {
             resolve_placeholders_rec(&mut if_expr.cond, params);
-            if if_expr.if_true.bindings.is_empty() && if_expr.if_false.bindings.is_empty() {
+            if if_expr.if_true.items.is_empty() && if_expr.if_false.items.is_empty() {
                 resolve_placeholders_rec(&mut if_expr.if_true.expr, params);
                 resolve_placeholders_rec(&mut if_expr.if_false.expr, params);
             }

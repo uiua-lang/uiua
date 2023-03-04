@@ -16,7 +16,7 @@ use crate::{
 pub struct Assembly {
     pub(crate) instrs: Vec<Instr>,
     pub(crate) start: usize,
-    function_info: HashMap<Function, FunctionInfo, BuildNoHashHasher<Function>>,
+    pub(crate) function_info: HashMap<Function, FunctionInfo, BuildNoHashHasher<Function>>,
     pub(crate) call_spans: Vec<Span>,
 }
 
@@ -31,6 +31,17 @@ impl Assembly {
     }
     pub fn run(&self) -> UiuaResult {
         run_assembly(self)
+    }
+    fn add_function_instrs(&mut self, mut instrs: Vec<Instr>) {
+        self.instrs.append(&mut instrs);
+        self.start = self.instrs.len();
+    }
+    fn add_non_function_instrs(&mut self, mut instrs: Vec<Instr>) {
+        self.instrs.append(&mut instrs);
+    }
+    fn truncate(&mut self, len: usize) {
+        self.instrs.truncate(len);
+        self.start = len;
     }
 }
 
@@ -56,22 +67,18 @@ impl fmt::Display for CompileError {
 pub type CompileResult<T = ()> = Result<T, Sp<CompileError>>;
 
 pub struct Compiler {
-    /// Instructions for fully compiled functions
-    function_instrs: Vec<Instr>,
     /// Instructions for stuff in the global scope
     global_instrs: Vec<Instr>,
     /// Instructions for functions that are currently being compiled
     in_progress_functions: Vec<Vec<Instr>>,
-    /// Information about functions. This is passed to the Assembly.
-    function_info: HashMap<Function, FunctionInfo, BuildNoHashHasher<Function>>,
-    /// The span of each function call. This is passed to the Assembly.
-    call_spans: Vec<Span>,
     /// Stack of scopes
     scopes: Vec<Scope>,
     /// The relative height of the runtime stack
     height: usize,
     /// Errors that don't stop compilation
     errors: Vec<Sp<CompileError>>,
+    /// The partially compiled assembly
+    assembly: Assembly,
 }
 
 struct Scope {
@@ -140,15 +147,19 @@ impl Default for Compiler {
                 Instr::BuiltinOp2(op2),
             );
         }
-        Self {
-            function_instrs,
-            global_instrs: vec![Instr::Comment("BEGIN".into())],
-            in_progress_functions: Vec::new(),
+        let assembly = Assembly {
+            start: function_instrs.len(),
+            instrs: function_instrs,
             function_info,
             call_spans: Vec::new(),
+        };
+        Self {
+            global_instrs: vec![Instr::Comment("BEGIN".into())],
+            in_progress_functions: Vec::new(),
             scopes: vec![scope],
             height: 0,
             errors: Vec::new(),
+            assembly,
         }
     }
 }
@@ -175,7 +186,7 @@ impl Compiler {
             .into_iter()
             .map(|e| e.map(CompileError::Parse))
             .collect();
-        let function_start = self.function_instrs.len();
+        let function_start = self.assembly.instrs.len();
         let global_start = self.global_instrs.len();
         for item in items {
             if let Err(e) = self.item(item) {
@@ -186,23 +197,17 @@ impl Compiler {
         if errors.is_empty() {
             Ok(())
         } else {
-            self.function_instrs.truncate(function_start);
+            self.assembly.truncate(function_start);
             self.global_instrs.truncate(global_start);
             Err(errors)
         }
     }
     pub fn finish(mut self) -> Assembly {
-        let start = self.function_instrs.len();
-        self.function_instrs.append(&mut self.global_instrs);
-        for (i, instr) in self.function_instrs.iter().enumerate() {
+        self.assembly.add_non_function_instrs(self.global_instrs);
+        for (i, instr) in self.assembly.instrs.iter().enumerate() {
             println!("{i:>3} {instr}");
         }
-        Assembly {
-            instrs: self.function_instrs,
-            start,
-            function_info: self.function_info,
-            call_spans: self.call_spans,
-        }
+        self.assembly
     }
     fn scope(&self) -> &Scope {
         self.scopes.last().unwrap()
@@ -253,8 +258,8 @@ impl Compiler {
         spot
     }
     fn push_call_span(&mut self, span: Span) -> usize {
-        let spot = self.call_spans.len();
-        self.call_spans.push(span);
+        let spot = self.assembly.call_spans.len();
+        self.assembly.call_spans.push(span);
         spot
     }
     fn item(&mut self, item: Item) -> CompileResult {
@@ -295,7 +300,7 @@ impl Compiler {
         // Pop the function's scope
         self.pop_scope(height);
         //Determine the function's index
-        let function = Function(self.function_instrs.len());
+        let function = Function(self.assembly.instrs.len());
         // Resolve function references
         for instrs in &mut self.in_progress_functions {
             for instr in instrs {
@@ -306,10 +311,10 @@ impl Compiler {
         }
         // Add the function's instructions to the global function list
         let instrs = self.in_progress_functions.pop().unwrap();
-        self.function_instrs.extend(instrs);
+        self.assembly.add_function_instrs(instrs);
         self.scope_mut().functions.insert(func.id.clone(), function);
         // Add to the function info map
-        self.function_info.insert(
+        self.assembly.function_info.insert(
             function,
             FunctionInfo {
                 id: func.id,

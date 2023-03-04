@@ -108,9 +108,11 @@ impl Value {
     pub const fn is_truthy(&self) -> bool {
         !(self.is_unit() || (matches!(self.ty, Type::Bool) && unsafe { !self.data.bool }))
     }
+    #[inline(always)]
     pub(crate) unsafe fn list_mut(&mut self) -> &mut List {
         &mut self.data.list
     }
+    #[inline(always)]
     pub(crate) unsafe fn array_mut(&mut self) -> &mut Array {
         &mut self.data.array
     }

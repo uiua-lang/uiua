@@ -5,8 +5,8 @@ use im::Vector;
 use crate::{ast::BinOp, lex::Span, RuntimeResult};
 
 pub struct Value {
-    ty: Type,
-    data: ValueData,
+    pub(crate) ty: Type,
+    pub(crate) data: ValueData,
 }
 
 fn _keep_value_small(_: std::convert::Infallible) {
@@ -25,7 +25,7 @@ impl fmt::Debug for Value {
             Type::Unit => write!(f, "unit"),
             Type::Bool => write!(f, "{}", unsafe { self.data.bool }),
             Type::Int => write!(f, "{}", unsafe { self.data.int }),
-            Type::Real => write!(f, "{}", unsafe { self.data.real }),
+            Type::Real => write!(f, "{:?}", unsafe { self.data.real }),
             Type::Function => write!(f, "function({})", unsafe { self.data.function.0 }),
             Type::Partial => write!(f, "partial({})", unsafe { self.data.partial.args.len() }),
             Type::List => f
@@ -36,7 +36,7 @@ impl fmt::Debug for Value {
     }
 }
 
-union ValueData {
+pub(crate) union ValueData {
     pub unit: (),
     pub bool: bool,
     pub int: i64,
@@ -370,6 +370,8 @@ const fn eq_fn(a: Type, b: Type) -> EqFn {
             (Type::Function, Type::Function) => |a, b| a.data.function == b.data.function,
             (Type::Partial, Type::Partial) => |a, b| a.data.partial == b.data.partial,
             (Type::List, Type::List) => |a, b| a.data.list == b.data.list,
+            (Type::Int, Type::Real) => |a, b| a.data.int as f64 == b.data.real,
+            (Type::Real, Type::Int) => |a, b| a.data.real == b.data.int as f64,
             _ => |_, _| false,
         }
     }
@@ -404,6 +406,20 @@ const fn cmp_fn(a: Type, b: Type) -> CmpFn {
             (Type::Function, Type::Function) => |a, b| a.data.function.cmp(&b.data.function),
             (Type::Partial, Type::Partial) => |a, b| a.data.partial.cmp(&b.data.partial),
             (Type::List, Type::List) => |a, b| a.data.list.cmp(&b.data.list),
+            (Type::Int, Type::Real) => |a, b| {
+                if b.data.real.is_nan() {
+                    Ordering::Less
+                } else {
+                    (a.data.int as f64).partial_cmp(&b.data.real).unwrap()
+                }
+            },
+            (Type::Real, Type::Int) => |a, b| {
+                if a.data.real.is_nan() {
+                    Ordering::Greater
+                } else {
+                    a.data.real.partial_cmp(&(b.data.int as f64)).unwrap()
+                }
+            },
             _ => |a, b| a.ty.cmp(&b.ty),
         }
     }
@@ -437,6 +453,15 @@ macro_rules! value_bin_op {
                         Ok(())
                     },
                     (Type::Real, Type::Real) => |a, b, _| {
+                        (*a).data.real.$method(b.data.real);
+                        Ok(())
+                    },
+                    (Type::Real, Type::Int) => |a, b, _| {
+                        (*a).data.real.$method(b.data.int as f64);
+                        Ok(())
+                    },
+                    (Type::Int, Type::Real) => |a, b, _| {
+                        *a = ((*a).data.int as f64).into();
                         (*a).data.real.$method(b.data.real);
                         Ok(())
                     },

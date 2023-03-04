@@ -241,6 +241,11 @@ impl Compiler {
         self.push_instr(Instr::Dud);
         spot
     }
+    fn push_call_span(&mut self, span: Span) -> usize {
+        let spot = self.call_spans.len();
+        self.call_spans.push(span);
+        spot
+    }
     fn item(&mut self, item: Item) -> CompileResult {
         match item {
             Item::Expr(expr) => self.expr(resolve_placeholders(expr)),
@@ -417,8 +422,7 @@ impl Compiler {
         let height = self.height;
         let push = self.scopes[0].functions[&FunctionId::Builtin2(BuiltinOp2::Push)];
         for item in items {
-            let span = self.call_spans.len();
-            self.call_spans.push(item.span.clone());
+            let span = self.push_call_span(item.span.clone());
             self.expr(item)?;
             self.push_instr(Instr::Push(push.into()));
             self.push_instr(Instr::Call { args: 2, span });
@@ -431,8 +435,7 @@ impl Compiler {
         for arg in call.args.into_iter().rev() {
             self.expr(arg)?;
         }
-        let span = self.call_spans.len();
-        self.call_spans.push(call.func.span.clone());
+        let span = self.push_call_span(call.func.span.clone());
         self.expr(call.func)?;
         self.push_instr(Instr::Call { args, span });
         Ok(())

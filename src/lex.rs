@@ -1,4 +1,11 @@
-use std::{error::Error, fmt, path::Path, sync::Arc};
+use std::{
+    cmp::Ordering,
+    error::Error,
+    fmt,
+    hash::{Hash, Hasher},
+    path::Path,
+    sync::Arc,
+};
 
 use enum_iterator::{all, Sequence};
 
@@ -59,7 +66,7 @@ impl Default for Loc {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone)]
 pub struct Span {
     pub start: Loc,
     pub end: Loc,
@@ -105,6 +112,37 @@ impl Span {
     }
     pub fn error(&self, msg: impl Into<String>) -> RuntimeError {
         self.clone().sp(msg.into())
+    }
+}
+
+impl PartialEq for Span {
+    fn eq(&self, other: &Self) -> bool {
+        self.start == other.start && self.end == other.end && self.file == other.file
+    }
+}
+
+impl Eq for Span {}
+
+impl PartialOrd for Span {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Span {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.start
+            .cmp(&other.start)
+            .then(self.end.cmp(&other.end))
+            .then(self.file.cmp(&other.file))
+    }
+}
+
+impl Hash for Span {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.start.hash(state);
+        self.end.hash(state);
+        self.file.hash(state);
     }
 }
 

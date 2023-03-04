@@ -48,7 +48,7 @@ struct StackFrame {
     call_span: usize,
 }
 
-const DBG: bool = true;
+const DBG: bool = false;
 macro_rules! dprintln {
     ($($arg:tt)*) => {
         if DBG {
@@ -61,7 +61,7 @@ pub(crate) fn run_assembly(assembly: &Assembly) -> UiuaResult {
     let mut call_stack = Vec::new();
     if let Err(error) = run_assembly_inner(assembly, &mut call_stack) {
         let mut trace = Vec::new();
-        for frame in call_stack {
+        for frame in call_stack.into_iter().rev() {
             let info = assembly.function_info(frame.function);
             trace.push(TraceFrame {
                 id: info.id.clone(),

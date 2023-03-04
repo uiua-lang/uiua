@@ -351,6 +351,9 @@ impl Lexer {
             input: input.into(),
         }
     }
+    fn peek_char(&self) -> Option<char> {
+        self.input_chars.get(self.loc.pos).copied()
+    }
     fn next_char_if(&mut self, f: impl Fn(char) -> bool) -> Option<char> {
         let c = *self.input_chars.get(self.loc.pos)?;
         if !f(c) {
@@ -423,7 +426,13 @@ impl Lexer {
                 ';' => return self.end(SemiColon, start),
                 ',' => return self.end(Comma, start),
                 '+' => return self.end(Plus, start),
-                '-' => return self.end(Minus, start),
+                '-' => {
+                    if self.peek_char().filter(char::is_ascii_digit).is_some() {
+                        return self.number(start, "-".into());
+                    } else {
+                        return self.end(Minus, start);
+                    }
+                }
                 '*' => return self.end(Star, start),
                 '=' => return self.end(Equal, start),
                 '<' => return self.switch_next(Less, [('=', LessEqual)], start),
@@ -483,45 +492,46 @@ impl Lexer {
                     return self.end(token, start);
                 }
                 // Numbers
-                c if c.is_ascii_digit() => {
-                    // Whole part
-                    let mut number = String::from(c);
-                    while let Some(c) = self.next_char_if(|c| c.is_ascii_digit()) {
-                        number.push(c);
-                    }
-                    // Fractional part
-                    let before_dot = self.loc;
-                    if self.next_char_exact('.') {
-                        if self.next_char_exact('.') {
-                            self.loc = before_dot;
-                        } else {
-                            number.push('.');
-                            while let Some(c) = self.next_char_if(|c| c.is_ascii_digit()) {
-                                number.push(c);
-                            }
-                        }
-                    }
-                    // Exponent
-                    if let Some(e) = self.next_char_if(|c| c == 'e' || c == 'E') {
-                        number.push(e);
-                        if let Some(sign) = self.next_char_if(|c| c == '-' || c == '+') {
-                            number.push(sign);
-                        }
-                        while let Some(c) = self.next_char_if(|c| c.is_ascii_digit()) {
-                            number.push(c);
-                        }
-                    }
-                    let token = if number.contains(['.', 'e', 'E']) {
-                        Real
-                    } else {
-                        Int
-                    }(number);
-                    return self.end(token, start);
-                }
+                c if c.is_ascii_digit() => return self.number(start, c.to_string()),
                 c if c.is_whitespace() => {}
                 c => return Err(self.end_span(start).sp(LexError::UnexpectedChar(c))),
             }
         }
+    }
+    fn number(&mut self, start: Loc, init: String) -> LexResult<Option<Sp<Token>>> {
+        // Whole part
+        let mut number = init;
+        while let Some(c) = self.next_char_if(|c| c.is_ascii_digit()) {
+            number.push(c);
+        }
+        // Fractional part
+        let before_dot = self.loc;
+        if self.next_char_exact('.') {
+            if self.next_char_exact('.') {
+                self.loc = before_dot;
+            } else {
+                number.push('.');
+                while let Some(c) = self.next_char_if(|c| c.is_ascii_digit()) {
+                    number.push(c);
+                }
+            }
+        }
+        // Exponent
+        if let Some(e) = self.next_char_if(|c| c == 'e' || c == 'E') {
+            number.push(e);
+            if let Some(sign) = self.next_char_if(|c| c == '-' || c == '+') {
+                number.push(sign);
+            }
+            while let Some(c) = self.next_char_if(|c| c.is_ascii_digit()) {
+                number.push(c);
+            }
+        }
+        let token = if number.contains(['.', 'e', 'E']) {
+            Token::Real
+        } else {
+            Token::Int
+        }(number);
+        self.end(token, start)
     }
 }
 

@@ -1,7 +1,6 @@
 - Constants
 - Pipe operators
 - Includes
-- Arrays
 - Closures
 - Strings
 - Structs

@@ -4,6 +4,7 @@ use enum_iterator::all;
 use nohash_hasher::BuildNoHashHasher;
 
 use crate::{
+    array::Array,
     ast::*,
     builtin::{BuiltinOp1, BuiltinOp2},
     lex::{Sp, Span},
@@ -378,7 +379,8 @@ impl Compiler {
             Expr::Call(call) => self.call(*call)?,
             Expr::If(if_expr) => self.if_expr(*if_expr)?,
             Expr::Logic(log_expr) => self.logic_expr(*log_expr)?,
-            Expr::List(items) => self.list(items)?,
+            Expr::List(items) => self.list(List::default().into(), items)?,
+            Expr::Array(items) => self.list(Array::new().into(), items)?,
             Expr::Parened(inner) => self.expr(resolve_placeholders(*inner))?,
             Expr::Func(func) => self.func(*func, true)?,
         }
@@ -429,8 +431,8 @@ impl Compiler {
         }
         Ok(())
     }
-    fn list(&mut self, items: Vec<Sp<Expr>>) -> CompileResult {
-        self.push_instr(Instr::Push(List::default().into()));
+    fn list(&mut self, init: Value, items: Vec<Sp<Expr>>) -> CompileResult {
+        self.push_instr(Instr::Push(init));
         let height = self.height;
         let push = self.scopes[0].functions[&FunctionId::Builtin2(BuiltinOp2::Push)];
         for item in items {
@@ -536,6 +538,11 @@ fn resolve_placeholders_rec(expr: &mut Sp<Expr>, params: &mut Vec<Sp<Ident>>) {
             resolve_placeholders_rec(&mut log_expr.right, params);
         }
         Expr::List(items) => {
+            for item in items {
+                resolve_placeholders_rec(item, params);
+            }
+        }
+        Expr::Array(items) => {
             for item in items {
                 resolve_placeholders_rec(item, params);
             }

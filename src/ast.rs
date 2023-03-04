@@ -82,6 +82,7 @@ pub enum Expr {
     Ident(Ident),
     Placeholder,
     List(Vec<Sp<Expr>>),
+    Array(Vec<Sp<Expr>>),
     Parened(Box<Sp<Expr>>),
     Func(Box<Func>),
 }
@@ -120,7 +121,7 @@ pub struct BinExpr {
     pub right: Sp<Expr>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Sequence)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
 pub enum BinOp {
     Add,
     Sub,
@@ -134,7 +135,7 @@ pub enum BinOp {
     Ge,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum LogicOp {
     And,
     Or,

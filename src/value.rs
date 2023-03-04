@@ -2,7 +2,7 @@ use std::{cmp::Ordering, fmt, mem::ManuallyDrop, ops::*};
 
 use im::Vector;
 
-use crate::{ast::BinOp, lex::Span, RuntimeResult};
+use crate::{array::Array, ast::BinOp, lex::Span, RuntimeResult};
 
 pub struct Value {
     pub(crate) ty: Type,
@@ -32,6 +32,7 @@ impl fmt::Debug for Value {
                 .debug_set()
                 .entries(unsafe { &*self.data.list }.0.iter())
                 .finish(),
+            Type::Array => unsafe { (*self.data.array).fmt(f) },
         }
     }
 }
@@ -44,6 +45,7 @@ pub(crate) union ValueData {
     pub function: Function,
     pub partial: ManuallyDrop<Box<Partial>>,
     pub list: ManuallyDrop<Box<List>>,
+    pub array: ManuallyDrop<Box<Array>>,
 }
 
 macro_rules! ty {
@@ -61,7 +63,7 @@ macro_rules! ty {
     };
 }
 
-ty!(Unit, Bool, Int, Real, Function, Partial, List);
+ty!(Unit, Bool, Int, Real, Function, Partial, List, Array);
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -73,6 +75,7 @@ impl fmt::Display for Type {
             Type::Function => write!(f, "function"),
             Type::Partial => write!(f, "partial"),
             Type::List => write!(f, "list"),
+            Type::Array => write!(f, "array"),
         }
     }
 }
@@ -113,6 +116,9 @@ impl Value {
     }
     pub(crate) unsafe fn list_mut(&mut self) -> &mut List {
         &mut self.data.list
+    }
+    pub(crate) unsafe fn array_mut(&mut self) -> &mut Array {
+        &mut self.data.array
     }
 }
 
@@ -169,6 +175,17 @@ impl From<List> for Value {
             ty: Type::List,
             data: ValueData {
                 list: ManuallyDrop::new(Box::new(l)),
+            },
+        }
+    }
+}
+
+impl From<Array> for Value {
+    fn from(a: Array) -> Self {
+        Self {
+            ty: Type::Array,
+            data: ValueData {
+                array: ManuallyDrop::new(Box::new(a)),
             },
         }
     }
@@ -240,6 +257,17 @@ impl TryFrom<Value> for List {
     }
 }
 
+impl TryFrom<Value> for Array {
+    type Error = Value;
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        if value.ty == Type::Array {
+            Ok(unsafe { (**value.data.array).clone() })
+        } else {
+            Err(value)
+        }
+    }
+}
+
 static DROP_TABLE: [fn(&mut ValueData); Type::ARITY] = [
     |_| {},
     |_| {},
@@ -251,6 +279,9 @@ static DROP_TABLE: [fn(&mut ValueData); Type::ARITY] = [
     },
     |data| unsafe {
         ManuallyDrop::drop(&mut data.list);
+    },
+    |data| unsafe {
+        ManuallyDrop::drop(&mut data.array);
     },
 ];
 
@@ -279,6 +310,9 @@ static CLONE_TABLE: [fn(&ValueData) -> ValueData; Type::ARITY] = [
     },
     |data| ValueData {
         list: ManuallyDrop::new(unsafe { (*data.list).clone() }),
+    },
+    |data| ValueData {
+        array: ManuallyDrop::new(unsafe { (*data.array).clone() }),
     },
 ];
 
@@ -321,6 +355,7 @@ macro_rules! type_line {
             $f($crate::value::Type::Function),
             $f($crate::value::Type::Partial),
             $f($crate::value::Type::List),
+            $f($crate::value::Type::Array),
         ]
     };
 }
@@ -336,6 +371,7 @@ macro_rules! type_side {
             $f($a, $crate::value::Type::Function),
             $f($a, $crate::value::Type::Partial),
             $f($a, $crate::value::Type::List),
+            $f($a, $crate::value::Type::Array),
         ]
     };
 }
@@ -351,6 +387,7 @@ macro_rules! type_square {
             $crate::value::type_side!($crate::value::Type::Function, $f),
             $crate::value::type_side!($crate::value::Type::Partial, $f),
             $crate::value::type_side!($crate::value::Type::List, $f),
+            $crate::value::type_side!($crate::value::Type::Array, $f),
         ]
     };
 }
@@ -371,6 +408,7 @@ const fn eq_fn(a: Type, b: Type) -> EqFn {
             (Type::Function, Type::Function) => |a, b| a.data.function == b.data.function,
             (Type::Partial, Type::Partial) => |a, b| a.data.partial == b.data.partial,
             (Type::List, Type::List) => |a, b| a.data.list == b.data.list,
+            (Type::Array, Type::Array) => |a, b| a.data.array == b.data.array,
             (Type::Int, Type::Real) => |a, b| a.data.int as f64 == b.data.real,
             (Type::Real, Type::Int) => |a, b| a.data.real == b.data.int as f64,
             _ => |_, _| false,
@@ -407,6 +445,7 @@ const fn cmp_fn(a: Type, b: Type) -> CmpFn {
             (Type::Function, Type::Function) => |a, b| a.data.function.cmp(&b.data.function),
             (Type::Partial, Type::Partial) => |a, b| a.data.partial.cmp(&b.data.partial),
             (Type::List, Type::List) => |a, b| a.data.list.cmp(&b.data.list),
+            (Type::Array, Type::Array) => |a, b| a.data.array.cmp(&b.data.array),
             (Type::Int, Type::Real) => |a, b| {
                 if b.data.real.is_nan() {
                     Ordering::Less

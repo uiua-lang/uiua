@@ -146,7 +146,8 @@ op1_fn!(
 op1_fn!(
     len_fn,
     "Cannot get length of {}",
-    (Type::List, |a| *a = ((*a).list_mut().0.len() as i64).into())
+    (Type::List, |a| *a = ((*a).list_mut().0.len() as i64).into()),
+    (Type::Array, |a| *a = ((*a).array_mut().len() as i64).into()),
 );
 
 /// 2-parameter built-in operations
@@ -220,5 +221,9 @@ op2_fn!(
     (_, Type::List, |a, b| {
         ptr::swap(a, &mut b);
         (*a).list_mut().0.push_back(b);
-    })
+    }),
+    (_, Type::Array, |a, b| {
+        ptr::swap(a, &mut b);
+        (*a).array_mut().push(b);
+    }),
 );

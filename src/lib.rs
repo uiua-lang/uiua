@@ -1,3 +1,4 @@
+pub mod array;
 pub mod ast;
 pub mod builtin;
 pub mod compile;

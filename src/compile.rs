@@ -4,11 +4,11 @@ use nohash_hasher::BuildNoHashHasher;
 
 use crate::{
     ast::*,
-    lex::{Ident, Sp},
+    lex::Sp,
     parse::{parse, ParseError},
     value::{Function, Value},
     vm::{run_assembly, Instr},
-    UiuaError, UiuaResult,
+    Ident, UiuaError, UiuaResult,
 };
 
 #[derive(Debug)]
@@ -211,7 +211,7 @@ impl Compiler {
     }
     fn item(&mut self, item: Item) -> CompileResult {
         match item {
-            Item::Expr(expr) => self.expr(expr),
+            Item::Expr(expr) => self.expr(resolve_placeholders(expr)),
             Item::Let(binding) => self.r#let(binding),
             Item::FunctionDef(def) => self.function_def(def),
         }
@@ -275,7 +275,7 @@ impl Compiler {
     fn r#let(&mut self, binding: Let) -> CompileResult {
         // The expression is evaluated first because the pattern
         // will refer to the height of the stack after the expression
-        self.expr(binding.expr)?;
+        self.expr(resolve_placeholders(binding.expr))?;
         self.pattern(binding.pattern)?;
         Ok(())
     }
@@ -289,6 +289,7 @@ impl Compiler {
                 }
                 self.push_instr(Instr::DestructureList(len, pattern.span.clone()));
             }
+            Pattern::Discard => {}
         }
         Ok(())
     }
@@ -361,6 +362,7 @@ impl Compiler {
                     Binding::Error => self.push_instr(Instr::Push(Value::unit())),
                 }
             }
+            Expr::Placeholder => panic!("unresolved placeholder"),
             Expr::Bin(bin) => {
                 self.expr(bin.left)?;
                 self.expr(bin.right)?;
@@ -370,7 +372,7 @@ impl Compiler {
             Expr::If(if_expr) => self.if_expr(*if_expr)?,
             Expr::Logic(log_expr) => self.logic_expr(*log_expr)?,
             Expr::List(_) => todo!(),
-            Expr::Parened(inner) => self.expr(expr.span.sp(*inner))?,
+            Expr::Parened(inner) => self.expr(resolve_placeholders(*inner))?,
             Expr::Func(func) => self.func(*func, true)?,
         }
         Ok(())
@@ -390,7 +392,7 @@ impl Compiler {
         for binding in block.bindings {
             self.r#let(binding)?;
         }
-        self.expr(block.expr)?;
+        self.expr(resolve_placeholders(block.expr))?;
         self.pop_scope(height);
         Ok(())
     }
@@ -421,5 +423,65 @@ impl Compiler {
         self.instrs_mut()[jump_spot] =
             Instr::JumpIfElsePop(self.instrs().len() as isize - jump_spot as isize, jump_cond);
         Ok(())
+    }
+}
+
+fn resolve_placeholders(mut expr: Sp<Expr>) -> Sp<Expr> {
+    let mut params = Vec::new();
+    resolve_placeholders_rec(&mut expr, &mut params);
+    if params.is_empty() {
+        return expr;
+    }
+    let span = expr.span.clone();
+    span.clone().sp(Expr::Func(Box::new(Func {
+        id: FunctionId::Anonymous(span),
+        params,
+        body: Block {
+            bindings: Vec::new(),
+            expr,
+        },
+    })))
+}
+
+fn resolve_placeholders_rec(expr: &mut Sp<Expr>, params: &mut Vec<Sp<Ident>>) {
+    match &mut expr.value {
+        Expr::Placeholder => {
+            let ident = expr.span.clone().sp(Ident::Placeholder(params.len()));
+            params.push(ident.clone());
+            *expr = ident.map(Expr::Ident);
+        }
+        Expr::If(if_expr) => {
+            resolve_placeholders_rec(&mut if_expr.cond, params);
+            if if_expr.if_true.bindings.is_empty() && if_expr.if_false.bindings.is_empty() {
+                resolve_placeholders_rec(&mut if_expr.if_true.expr, params);
+                resolve_placeholders_rec(&mut if_expr.if_false.expr, params);
+            }
+        }
+        Expr::Call(call_expr) => {
+            resolve_placeholders_rec(&mut call_expr.func, params);
+            for arg in &mut call_expr.args {
+                resolve_placeholders_rec(arg, params);
+            }
+        }
+        Expr::Bin(bin_expr) => {
+            resolve_placeholders_rec(&mut bin_expr.left, params);
+            resolve_placeholders_rec(&mut bin_expr.right, params);
+        }
+        Expr::Logic(log_expr) => {
+            resolve_placeholders_rec(&mut log_expr.left, params);
+            resolve_placeholders_rec(&mut log_expr.right, params);
+        }
+        Expr::List(items) => {
+            for item in items {
+                resolve_placeholders_rec(item, params);
+            }
+        }
+        Expr::Parened(_) => {}
+        Expr::Unit
+        | Expr::Func(_)
+        | Expr::Bool(_)
+        | Expr::Int(_)
+        | Expr::Real(_)
+        | Expr::Ident(_) => {}
     }
 }

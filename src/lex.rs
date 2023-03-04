@@ -7,6 +7,8 @@ use std::{
 
 use enum_iterator::{all, Sequence};
 
+use crate::Ident;
+
 pub fn lex(input: &str, file: &Path) -> LexResult<Vec<Sp<Token>>> {
     let mut lexer = Lexer::new(input, file);
     let mut tokens = Vec::new();
@@ -157,8 +159,6 @@ impl<T: fmt::Display> fmt::Display for Sp<T> {
 
 impl<T: Error> Error for Sp<T> {}
 
-pub type Ident = &'static str;
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
     Comment(String),
@@ -213,6 +213,7 @@ pub enum Simple {
     CloseCurly,
     OpenBracket,
     CloseBracket,
+    Underscore,
     Comma,
     Period,
     Colon,
@@ -241,6 +242,7 @@ impl fmt::Display for Simple {
                 Simple::CloseCurly => "}",
                 Simple::OpenBracket => "[",
                 Simple::CloseBracket => "]",
+                Simple::Underscore => "_",
                 Simple::Comma => ",",
                 Simple::Period => ".",
                 Simple::Colon => ":",
@@ -425,7 +427,7 @@ impl Lexer {
                         return self.end(Slash, start);
                     }
                 }
-                // Identifiers and keywords
+                // Identifiers, keywords, and underscore
                 c if is_ident_start(c) => {
                     let mut ident = String::new();
                     ident.push(c);
@@ -436,8 +438,10 @@ impl Lexer {
                         all::<self::Keyword>().find(|k| format!("{k:?}").to_lowercase() == ident)
                     {
                         Keyword(keyword)
+                    } else if ident == "_" {
+                        Simple(Underscore)
                     } else {
-                        Ident(ascend::static_str(&ident))
+                        Ident(ascend::static_str(&ident).into())
                     };
                     return self.end(token, start);
                 }

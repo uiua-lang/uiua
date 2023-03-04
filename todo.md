@@ -1,7 +1,8 @@
-- Add closures
-- Add builtin functions
-- Add strings
-- Add structs
-- Add enums
-- Add inlining
-- Add type testing
+- Builtin functions
+- Pipe operators
+- Closures
+- Strings
+- Structs
+- Enums
+- Inlining
+- Type testing

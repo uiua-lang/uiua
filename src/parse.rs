@@ -3,6 +3,7 @@ use std::{error::Error, fmt, path::Path};
 use crate::{
     ast::*,
     lex::{Simple::*, *},
+    Ident,
 };
 
 #[derive(Debug)]
@@ -259,6 +260,8 @@ impl Parser {
             ident.map(Pattern::Ident)
         } else if let Some(items) = self.try_surrounded_list(BRACKETS, Self::try_pattern)? {
             items.map(Pattern::List)
+        } else if let Some(span) = self.try_exact(Underscore) {
+            span.sp(Pattern::Discard)
         } else {
             return Ok(None);
         }))
@@ -420,6 +423,8 @@ impl Parser {
     fn try_term(&mut self) -> ParseResult<Option<Sp<Expr>>> {
         Ok(Some(if let Some(ident) = self.try_ident() {
             ident.map(Expr::Ident)
+        } else if let Some(span) = self.try_exact(Underscore) {
+            span.sp(Expr::Placeholder)
         } else if let Some(i) = self.next_token_map(Token::as_int) {
             i.map(Into::into).map(Expr::Int)
         } else if let Some(r) = self.next_token_map(Token::as_real) {
@@ -432,11 +437,11 @@ impl Parser {
             let inner = self.try_expr()?;
             let end = self.expect(CloseParen)?;
             let span = start.merge(end);
-            if let Some(expr) = inner {
-                expr.map(Box::new).map(Expr::Parened)
+            span.sp(if let Some(expr) = inner {
+                Expr::Parened(expr.into())
             } else {
-                span.sp(Expr::Unit)
-            }
+                Expr::Unit
+            })
         } else if let Some(items) = self.try_surrounded_list(BRACKETS, Self::try_expr)? {
             items.map(Expr::List)
         } else if let Some(if_else) = self.try_if()? {

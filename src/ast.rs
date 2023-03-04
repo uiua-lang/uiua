@@ -1,6 +1,9 @@
 use enum_iterator::Sequence;
 
-use crate::lex::{Ident, Sp, Span};
+use crate::{
+    lex::{Sp, Span},
+    Ident,
+};
 
 #[derive(Debug, Clone)]
 pub enum Item {
@@ -52,8 +55,9 @@ pub enum Expr {
     Int(String),
     Real(String),
     Ident(Ident),
+    Placeholder,
     List(Vec<Sp<Expr>>),
-    Parened(Box<Expr>),
+    Parened(Box<Sp<Expr>>),
     Func(Box<Func>),
 }
 
@@ -61,6 +65,7 @@ pub enum Expr {
 pub enum Pattern {
     Ident(Ident),
     List(Vec<Sp<Pattern>>),
+    Discard,
 }
 
 #[derive(Debug, Clone)]

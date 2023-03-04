@@ -346,48 +346,32 @@ impl Value {
 }
 
 macro_rules! type_line {
-    ($f:expr) => {
+    ($f:expr $(,$a:expr)?) => {
         [
-            $f($crate::value::Type::Unit),
-            $f($crate::value::Type::Bool),
-            $f($crate::value::Type::Int),
-            $f($crate::value::Type::Real),
-            $f($crate::value::Type::Function),
-            $f($crate::value::Type::Partial),
-            $f($crate::value::Type::List),
-            $f($crate::value::Type::Array),
+            $f($($a,)? $crate::value::Type::Unit),
+            $f($($a,)? $crate::value::Type::Bool),
+            $f($($a,)? $crate::value::Type::Int),
+            $f($($a,)? $crate::value::Type::Real),
+            $f($($a,)? $crate::value::Type::Function),
+            $f($($a,)? $crate::value::Type::Partial),
+            $f($($a,)? $crate::value::Type::List),
+            $f($($a,)? $crate::value::Type::Array),
         ]
     };
 }
 pub(crate) use type_line;
 
-macro_rules! type_side {
-    ($a:expr, $f:expr) => {
-        [
-            $f($a, $crate::value::Type::Unit),
-            $f($a, $crate::value::Type::Bool),
-            $f($a, $crate::value::Type::Int),
-            $f($a, $crate::value::Type::Real),
-            $f($a, $crate::value::Type::Function),
-            $f($a, $crate::value::Type::Partial),
-            $f($a, $crate::value::Type::List),
-            $f($a, $crate::value::Type::Array),
-        ]
-    };
-}
-pub(crate) use type_side;
-
 macro_rules! type_square {
     ($f:expr) => {
         [
-            $crate::value::type_side!($crate::value::Type::Unit, $f),
-            $crate::value::type_side!($crate::value::Type::Bool, $f),
-            $crate::value::type_side!($crate::value::Type::Int, $f),
-            $crate::value::type_side!($crate::value::Type::Real, $f),
-            $crate::value::type_side!($crate::value::Type::Function, $f),
-            $crate::value::type_side!($crate::value::Type::Partial, $f),
-            $crate::value::type_side!($crate::value::Type::List, $f),
-            $crate::value::type_side!($crate::value::Type::Array, $f),
+            $crate::value::type_line!($f, $crate::value::Type::Unit),
+            $crate::value::type_line!($f, $crate::value::Type::Bool),
+            $crate::value::type_line!($f, $crate::value::Type::Int),
+            $crate::value::type_line!($f, $crate::value::Type::Real),
+            $crate::value::type_line!($f, $crate::value::Type::Function),
+            $crate::value::type_line!($f, $crate::value::Type::Partial),
+            $crate::value::type_line!($f, $crate::value::Type::List),
+            $crate::value::type_line!($f, $crate::value::Type::Array),
         ]
     };
 }

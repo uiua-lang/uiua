@@ -140,10 +140,12 @@ impl Parser {
             token.span.clone()
         } else {
             let mut span = self.tokens.last().unwrap().span.clone();
-            span.start = span.end;
-            if self.tokens.len() > span.end.pos {
-                span.end.pos += 1;
-                span.end.col += 1;
+            if let Span::Code(span) = &mut span {
+                span.start = span.end;
+                if self.tokens.len() > span.end.pos {
+                    span.end.pos += 1;
+                    span.end.col += 1;
+                }
             }
             span
         }
@@ -198,7 +200,7 @@ impl Parser {
         }) {
             if let Some(doc) = &mut doc {
                 doc.value.push_str(line.value);
-                doc.span.end = line.span.end;
+                doc.span = doc.span.clone().merge(line.span);
             } else {
                 doc = Some(line.cloned());
             }

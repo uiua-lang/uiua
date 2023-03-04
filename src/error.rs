@@ -38,10 +38,13 @@ impl fmt::Display for UiuaError {
                 Ok(())
             }
             UiuaError::Run { error, trace } => {
-                write!(f, "Error at {}: {}", error.span, error.value)?;
+                match &error.span {
+                    Span::Code(span) => write!(f, "Error at {}: {}", span, error.value)?,
+                    Span::Builtin => write!(f, "Error: {}", error.value)?,
+                }
                 let last = TraceFrame {
                     id: FunctionId::Named("".into()),
-                    span: Span::builtin(),
+                    span: Span::Builtin,
                 };
                 let mut last = &last;
                 let mut repetitions = 1;

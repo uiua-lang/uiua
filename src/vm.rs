@@ -1,11 +1,12 @@
 use std::{cmp::Ordering, fmt, mem::swap};
 
 use crate::{
+    array::Array,
     ast::{BinOp, FunctionId},
     builtin::{Op1, Op2},
     compile::Assembly,
     lex::Span,
-    value::{Function, Partial, Value},
+    value::{Function, List, Partial, Value},
     RuntimeResult, TraceFrame, UiuaError, UiuaResult,
 };
 
@@ -13,6 +14,8 @@ use crate::{
 pub(crate) enum Instr {
     Comment(String),
     Push(Value),
+    List(usize),
+    Array(usize),
     /// Copy the nth value from the top of the stack
     CopyRel(usize),
     /// Copy the nth value from the bottom of the stack
@@ -25,12 +28,16 @@ pub(crate) enum Instr {
     Jump(isize),
     PopJumpIf(isize, bool),
     JumpIfElsePop(isize, bool),
-    BinOp(BinOp, Span),
-    BuiltinOp1(Op1, Span),
-    BuiltinOp2(Op2, Span),
-    DestructureList(usize, Span),
-    PushUnresolvedFunction(FunctionId),
+    BinOp(BinOp, Box<Span>),
+    BuiltinOp1(Op1),
+    BuiltinOp2(Op2),
+    DestructureList(usize, Box<Span>),
+    PushUnresolvedFunction(Box<FunctionId>),
     Dud,
+}
+
+fn _keep_instr_small(_: std::convert::Infallible) {
+    let _: [u8; 32] = unsafe { std::mem::transmute(Instr::Dud) };
 }
 
 impl fmt::Display for Instr {
@@ -102,6 +109,18 @@ fn run_assembly_inner(assembly: &Assembly, call_stack: &mut Vec<StackFrame>) -> 
                 #[cfg(feature = "profile")]
                 puffin::profile_scope!("push");
                 stack.push(v.clone())
+            }
+            Instr::List(n) => {
+                #[cfg(feature = "profile")]
+                puffin::profile_scope!("list");
+                let list = List(stack.drain(stack.len() - *n..).collect());
+                stack.push(list.into());
+            }
+            Instr::Array(n) => {
+                #[cfg(feature = "profile")]
+                puffin::profile_scope!("list");
+                let array: Array = stack.drain(stack.len() - *n..).collect();
+                stack.push(array.into());
             }
             Instr::CopyRel(n) => {
                 #[cfg(feature = "profile")]
@@ -217,13 +236,13 @@ fn run_assembly_inner(assembly: &Assembly, call_stack: &mut Vec<StackFrame>) -> 
                 };
                 left.bin_op(right, *op, span)?;
             }
-            Instr::BuiltinOp1(op, span) => {
+            Instr::BuiltinOp1(op) => {
                 #[cfg(feature = "profile")]
                 puffin::profile_scope!("builtin_op1");
                 let val = stack.last_mut().unwrap();
-                val.op1(*op, span)?;
+                val.op1(*op, &Span::Builtin)?;
             }
-            Instr::BuiltinOp2(op, span) => {
+            Instr::BuiltinOp2(op) => {
                 #[cfg(feature = "profile")]
                 puffin::profile_scope!("builtin_op2");
                 let (left, mut right) = {
@@ -234,7 +253,7 @@ fn run_assembly_inner(assembly: &Assembly, call_stack: &mut Vec<StackFrame>) -> 
                     (left, right)
                 };
                 swap(left, &mut right);
-                left.op2(right, *op, span)?;
+                left.op2(right, *op, &Span::Builtin)?;
             }
             Instr::DestructureList(_n, _span) => {
                 // let list = match stack.pop().unwrap() {

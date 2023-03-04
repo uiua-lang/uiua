@@ -66,12 +66,30 @@ impl Default for Loc {
     }
 }
 
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Span {
+    Code(CodeSpan),
+    Builtin,
+}
+
 #[derive(Clone)]
-pub struct Span {
+pub struct CodeSpan {
     pub start: Loc,
     pub end: Loc,
-    pub file: Option<Arc<Path>>,
+    pub file: Arc<Path>,
     pub input: Arc<str>,
+}
+
+impl fmt::Debug for CodeSpan {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self}")
+    }
+}
+
+impl fmt::Display for CodeSpan {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:{}", self.file.to_string_lossy(), self.start)
+    }
 }
 
 impl fmt::Debug for Span {
@@ -82,54 +100,54 @@ impl fmt::Debug for Span {
 
 impl fmt::Display for Span {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let file = if let Some(file) = &self.file {
-            file.to_string_lossy()
-        } else {
-            "<builtin>".into()
-        };
-        write!(f, "{}:{}", file, self.start)
+        match self {
+            Span::Code(span) => write!(f, "{span}"),
+            Span::Builtin => write!(f, "<builtin>"),
+        }
     }
 }
 
 impl Span {
     pub fn merge(self, end: Self) -> Self {
-        Self {
-            start: self.start.min(end.start),
-            end: self.end.max(end.end),
-            ..self
+        match (self, end) {
+            (Span::Code(a), Span::Code(b)) => Span::Code(a.merge(b)),
+            (Span::Builtin, Span::Builtin) => Span::Builtin,
+            _ => panic!("cannot merge builtin and code span"),
         }
     }
     pub(crate) const fn sp<T>(self, value: T) -> Sp<T> {
         Sp { value, span: self }
-    }
-    pub fn builtin() -> Self {
-        Self {
-            start: Loc::default(),
-            end: Loc::default(),
-            file: None,
-            input: "".into(),
-        }
     }
     pub fn error(&self, msg: impl Into<String>) -> RuntimeError {
         self.clone().sp(msg.into())
     }
 }
 
-impl PartialEq for Span {
+impl CodeSpan {
+    pub fn merge(self, end: Self) -> Self {
+        CodeSpan {
+            start: self.start.min(end.start),
+            end: self.end.max(end.end),
+            ..self
+        }
+    }
+}
+
+impl PartialEq for CodeSpan {
     fn eq(&self, other: &Self) -> bool {
         self.start == other.start && self.end == other.end && self.file == other.file
     }
 }
 
-impl Eq for Span {}
+impl Eq for CodeSpan {}
 
-impl PartialOrd for Span {
+impl PartialOrd for CodeSpan {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for Span {
+impl Ord for CodeSpan {
     fn cmp(&self, other: &Self) -> Ordering {
         self.start
             .cmp(&other.start)
@@ -138,7 +156,7 @@ impl Ord for Span {
     }
 }
 
-impl Hash for Span {
+impl Hash for CodeSpan {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.start.hash(state);
         self.end.hash(state);
@@ -377,12 +395,12 @@ impl Lexer {
         self.next_char_if(|_| true)
     }
     fn end_span(&self, start: Loc) -> Span {
-        Span {
+        Span::Code(CodeSpan {
             start,
             end: self.loc,
-            file: Some(self.file.clone()),
+            file: self.file.clone(),
             input: self.input.clone(),
-        }
+        })
     }
     fn end(&self, token: impl Into<Token>, start: Loc) -> LexResult<Option<Sp<Token>>> {
         Ok(Some(Sp {
@@ -461,12 +479,12 @@ impl Lexer {
                         self.next_char();
                         return Ok(Some(Sp {
                             value: token(comment),
-                            span: Span {
+                            span: Span::Code(CodeSpan {
                                 start,
                                 end,
-                                file: Some(self.file.clone()),
+                                file: self.file.clone(),
                                 input: self.input.clone(),
-                            },
+                            }),
                         }));
                     } else {
                         // Division

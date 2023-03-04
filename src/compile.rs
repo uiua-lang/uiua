@@ -4,12 +4,11 @@ use enum_iterator::all;
 use nohash_hasher::BuildNoHashHasher;
 
 use crate::{
-    array::Array,
     ast::*,
     builtin::{Op1, Op2},
     lex::{Sp, Span},
     parse::{parse, ParseError},
-    value::{Function, List, Value},
+    value::{Function, Value},
     vm::{run_assembly, Instr},
     Ident, UiuaError, UiuaResult,
 };
@@ -129,7 +128,7 @@ impl Default for Compiler {
                 &op1.to_string(),
                 FunctionId::Op1(op1),
                 1,
-                Instr::BuiltinOp1(op1, Span::builtin()),
+                Instr::BuiltinOp1(op1),
             );
         }
         // 2-parameter builtins
@@ -138,7 +137,7 @@ impl Default for Compiler {
                 &op2.to_string(),
                 FunctionId::Op2(op2),
                 2,
-                Instr::BuiltinOp2(op2, Span::builtin()),
+                Instr::BuiltinOp2(op2),
             );
         }
         Self {
@@ -300,7 +299,7 @@ impl Compiler {
         // Resolve function references
         for instrs in &mut self.in_progress_functions {
             for instr in instrs {
-                if matches!(instr, Instr::PushUnresolvedFunction(id) if *id == func.id) {
+                if matches!(instr, Instr::PushUnresolvedFunction(id) if **id == func.id) {
                     *instr = Instr::Push(function.into());
                 }
             }
@@ -338,7 +337,7 @@ impl Compiler {
                 for pattern in patterns {
                     self.pattern(pattern)?;
                 }
-                self.push_instr(Instr::DestructureList(len, pattern.span.clone()));
+                self.push_instr(Instr::DestructureList(len, pattern.span.clone().into()));
             }
             Pattern::Discard => {}
         }
@@ -374,13 +373,13 @@ impl Compiler {
             Expr::Bin(bin) => {
                 self.expr(bin.left)?;
                 self.expr(bin.right)?;
-                self.push_instr(Instr::BinOp(bin.op.value, bin.op.span.clone()));
+                self.push_instr(Instr::BinOp(bin.op.value, bin.op.span.clone().into()));
             }
             Expr::Call(call) => self.call(*call)?,
             Expr::If(if_expr) => self.if_expr(*if_expr)?,
             Expr::Logic(log_expr) => self.logic_expr(*log_expr)?,
-            Expr::List(items) => self.list(List::default().into(), items)?,
-            Expr::Array(items) => self.list(Array::new().into(), items)?,
+            Expr::List(items) => self.list(Instr::List, items)?,
+            Expr::Array(items) => self.list(Instr::Array, items)?,
             Expr::Parened(inner) => self.expr(resolve_placeholders(*inner))?,
             Expr::Func(func) => self.func(*func, true)?,
         }
@@ -424,24 +423,21 @@ impl Compiler {
                 {
                     self.push_instr(Instr::Push(function.into()));
                 } else {
-                    self.push_instr(Instr::PushUnresolvedFunction(id.clone()));
+                    self.push_instr(Instr::PushUnresolvedFunction(id.clone().into()));
                 }
             }
             Binding::Error => self.push_instr(Instr::Push(Value::unit())),
         }
         Ok(())
     }
-    fn list(&mut self, init: Value, items: Vec<Sp<Expr>>) -> CompileResult {
-        self.push_instr(Instr::Push(init));
+    fn list(&mut self, make: fn(usize) -> Instr, items: Vec<Sp<Expr>>) -> CompileResult {
         let height = self.height;
-        let push = self.scopes[0].functions[&FunctionId::Op2(Op2::Push)];
+        let len = items.len();
         for item in items {
-            let span = self.push_call_span(item.span.clone());
             self.expr(item)?;
-            self.push_instr(Instr::Push(push.into()));
-            self.push_instr(Instr::Call { args: 2, span });
         }
-        self.height = height;
+        self.push_instr(make(len));
+        self.height = height + 1;
         Ok(())
     }
     fn call(&mut self, call: CallExpr) -> CompileResult {

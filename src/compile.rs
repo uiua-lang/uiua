@@ -6,7 +6,7 @@ use nohash_hasher::BuildNoHashHasher;
 use crate::{
     array::Array,
     ast::*,
-    builtin::{BuiltinOp1, BuiltinOp2},
+    builtin::{Op1, Op2},
     lex::{Sp, Span},
     parse::{parse, ParseError},
     value::{Function, List, Value},
@@ -124,19 +124,19 @@ impl Default for Compiler {
             function_info.insert(function, FunctionInfo { id, params });
         };
         // 1-parameter builtins
-        for op1 in all::<BuiltinOp1>() {
+        for op1 in all::<Op1>() {
             init(
                 &op1.to_string(),
-                FunctionId::Builtin1(op1),
+                FunctionId::Op1(op1),
                 1,
                 Instr::BuiltinOp1(op1, Span::builtin()),
             );
         }
         // 2-parameter builtins
-        for op2 in all::<BuiltinOp2>() {
+        for op2 in all::<Op2>() {
             init(
                 &op2.to_string(),
-                FunctionId::Builtin2(op2),
+                FunctionId::Op2(op2),
                 2,
                 Instr::BuiltinOp2(op2, Span::builtin()),
             );
@@ -281,8 +281,8 @@ impl Compiler {
         self.push_instr(Instr::Comment(match &func.id {
             FunctionId::Named(name) => format!("fn {name}"),
             FunctionId::Anonymous(span) => format!("fn at {span}"),
-            FunctionId::Builtin1(_) => unreachable!("Builtin1 functions should not be compiled"),
-            FunctionId::Builtin2(_) => unreachable!("Builtin2 functions should not be compiled"),
+            FunctionId::Op1(_) => unreachable!("Builtin1 functions should not be compiled"),
+            FunctionId::Op2(_) => unreachable!("Builtin2 functions should not be compiled"),
         }));
         // Push and bind the function's parameters
         let params = func.params.len();
@@ -434,7 +434,7 @@ impl Compiler {
     fn list(&mut self, init: Value, items: Vec<Sp<Expr>>) -> CompileResult {
         self.push_instr(Instr::Push(init));
         let height = self.height;
-        let push = self.scopes[0].functions[&FunctionId::Builtin2(BuiltinOp2::Push)];
+        let push = self.scopes[0].functions[&FunctionId::Op2(Op2::Push)];
         for item in items {
             let span = self.push_call_span(item.span.clone());
             self.expr(item)?;

@@ -3,7 +3,7 @@ use std::fmt;
 use enum_iterator::Sequence;
 
 use crate::{
-    builtin::{BuiltinOp1, BuiltinOp2},
+    builtin::{Op1, Op2},
     lex::{Sp, Span},
     Ident,
 };
@@ -39,8 +39,8 @@ pub struct Func {
 pub enum FunctionId {
     Named(Ident),
     Anonymous(Span),
-    Builtin1(BuiltinOp1),
-    Builtin2(BuiltinOp2),
+    Op1(Op1),
+    Op2(Op2),
 }
 
 impl fmt::Display for FunctionId {
@@ -48,8 +48,8 @@ impl fmt::Display for FunctionId {
         match self {
             FunctionId::Named(name) => write!(f, "`{name}`"),
             FunctionId::Anonymous(span) => write!(f, "fn from {span}"),
-            FunctionId::Builtin1(op) => write!(f, "`{op}`"),
-            FunctionId::Builtin2(op) => write!(f, "`{op}`"),
+            FunctionId::Op1(op) => write!(f, "`{op}`"),
+            FunctionId::Op2(op) => write!(f, "`{op}`"),
         }
     }
 }

@@ -1,4 +1,4 @@
-use std::{fmt, sync::Arc};
+use std::{fmt, slice, sync::Arc};
 
 use crate::value::Value;
 
@@ -23,6 +23,23 @@ impl Array {
     }
     pub fn pop(&mut self) -> Option<Value> {
         Arc::make_mut(&mut self.0).pop()
+    }
+    pub fn iter(&self) -> slice::Iter<Value> {
+        self.0.iter()
+    }
+    pub fn iter_mut(&mut self) -> slice::IterMut<Value> {
+        Arc::make_mut(&mut self.0).iter_mut()
+    }
+}
+
+impl IntoIterator for Array {
+    type Item = Value;
+    type IntoIter = Box<dyn Iterator<Item = Value>>;
+    fn into_iter(self) -> Self::IntoIter {
+        match Arc::try_unwrap(self.0) {
+            Ok(vec) => Box::new(vec.into_iter()),
+            Err(arc) => Box::new((*arc).clone().into_iter()),
+        }
     }
 }
 

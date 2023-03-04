@@ -2,7 +2,13 @@ use std::{cmp::Ordering, fmt, mem::ManuallyDrop, ops::*};
 
 use im::Vector;
 
-use crate::{array::Array, ast::BinOp, lex::Span, RuntimeResult};
+use crate::{
+    array::Array,
+    ast::BinOp,
+    builtin::{op2_fn, ValueFn2},
+    lex::Span,
+    RuntimeResult,
+};
 
 pub struct Value {
     pub(crate) ty: Type,
@@ -330,10 +336,10 @@ impl Value {
         #[cfg(feature = "profile")]
         puffin::profile_function!();
         match op {
-            BinOp::Add => self.add_assign(other, span)?,
-            BinOp::Sub => self.sub_assign(other, span)?,
-            BinOp::Mul => self.mul_assign(other, span)?,
-            BinOp::Div => self.div_assign(other, span)?,
+            BinOp::Add => self.add(other, span)?,
+            BinOp::Sub => self.sub(other, span)?,
+            BinOp::Mul => self.mul(other, span)?,
+            BinOp::Div => self.div(other, span)?,
             BinOp::Eq => *self = (*self == other).into(),
             BinOp::Ne => *self = (*self != other).into(),
             BinOp::Lt => *self = (*self < other).into(),
@@ -395,8 +401,36 @@ pub(crate) use type_square;
 
 type EqFn = unsafe fn(&Value, &Value) -> bool;
 
-static mut EQ_TABLE: [[EqFn; Type::ARITY]; Type::ARITY] = type_square!(eq_fn);
-const fn eq_fn(a: Type, b: Type) -> EqFn {
+static mut EQ_TABLE: [[ValueFn2; Type::ARITY]; Type::ARITY] = type_square!(eq_fn);
+op2_fn!(
+    eq_fn,
+    "{} == {}",
+    (Type::Unit, Type::Unit, |a, _b| *a = true.into()),
+    (Type::Bool, Type::Bool, |a, b| *a =
+        ((*a).data.bool == b.data.bool).into()),
+    (Type::Int, Type::Int, |a, b| *a =
+        ((*a).data.int == b.data.int).into()),
+    (Type::Real, Type::Real, |a, b| *a =
+        ((*a).data.real.is_nan() && b.data.real.is_nan()
+            || (*a).data.real == b.data.real)
+            .into()),
+    (Type::Function, Type::Function, |a, b| *a =
+        ((*a).data.function == b.data.function).into()),
+    (Type::Partial, Type::Partial, |a, b| *a =
+        ((*a).data.partial == b.data.partial).into()),
+    (Type::List, Type::List, |a, b| *a =
+        ((*a).data.list == b.data.list).into()),
+    (Type::Array, Type::Array, |a, b| *a =
+        ((*a).data.array == b.data.array).into()),
+    (Type::Int, Type::Real, |a, b| *a =
+        ((*a).data.int as f64 == b.data.real).into()),
+    (Type::Real, Type::Int, |a, b| *a =
+        ((*a).data.real == b.data.int as f64).into()),
+    (_, _, |a, _b| *a = false.into()),
+);
+
+static mut SIMPLE_EQ_TABLE: [[EqFn; Type::ARITY]; Type::ARITY] = type_square!(simple_eq_fn);
+const fn simple_eq_fn(a: Type, b: Type) -> EqFn {
     unsafe {
         match (a, b) {
             (Type::Unit, Type::Unit) => |_, _| true,
@@ -420,7 +454,7 @@ impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         #[cfg(feature = "profile")]
         puffin::profile_function!();
-        unsafe { EQ_TABLE[self.ty as usize][other.ty as usize](self, other) }
+        unsafe { SIMPLE_EQ_TABLE[self.ty as usize][other.ty as usize](self, other) }
     }
 }
 
@@ -479,30 +513,28 @@ impl Ord for Value {
     }
 }
 
-type MathFn = fn(*mut Value, Value, span: &Span) -> RuntimeResult;
-
 macro_rules! value_bin_op {
-    ($table:ident, $fn_name:ident, $method:ident, $verb:literal) => {
-        static mut $table: [[MathFn; Type::ARITY]; Type::ARITY] = type_square!($fn_name);
-        const fn $fn_name(a: Type, b: Type) -> MathFn {
+    ($table:ident, $fn_name:ident, $trait:ident, $method:ident, $verb:literal) => {
+        static mut $table: [[ValueFn2; Type::ARITY]; Type::ARITY] = type_square!($fn_name);
+        const fn $fn_name(a: Type, b: Type) -> ValueFn2 {
             unsafe {
                 match (a, b) {
                     (Type::Unit, Type::Unit) => |_, _, _| Ok(()),
                     (Type::Int, Type::Int) => |a, b, _| {
-                        (*a).data.int.$method(b.data.int);
+                        *a = $trait::$method((*a).data.int, b.data.int).into();
                         Ok(())
                     },
                     (Type::Real, Type::Real) => |a, b, _| {
-                        (*a).data.real.$method(b.data.real);
+                        *a = $trait::$method((*a).data.real, b.data.real).into();
                         Ok(())
                     },
                     (Type::Real, Type::Int) => |a, b, _| {
-                        (*a).data.real.$method(b.data.int as f64);
+                        *a = $trait::$method((*a).data.real, b.data.int as f64).into();
                         Ok(())
                     },
                     (Type::Int, Type::Real) => |a, b, _| {
                         *a = ((*a).data.int as f64).into();
-                        (*a).data.real.$method(b.data.real);
+                        *a = $trait::$method((*a).data.real, b.data.real).into();
                         Ok(())
                     },
                     _ => |a, b, span| {
@@ -524,7 +556,7 @@ macro_rules! value_bin_op {
     };
 }
 
-value_bin_op!(ADD_TABLE, add_fn, add_assign, "add");
-value_bin_op!(SUB_TABLE, sub_fn, sub_assign, "subtract");
-value_bin_op!(MUL_TABLE, mul_fn, mul_assign, "multiply");
-value_bin_op!(DIV_TABLE, div_fn, div_assign, "divide");
+value_bin_op!(ADD_TABLE, add_fn, Add, add, "add");
+value_bin_op!(SUB_TABLE, sub_fn, Sub, sub, "subtract");
+value_bin_op!(MUL_TABLE, mul_fn, Mul, mul, "multiply");
+value_bin_op!(DIV_TABLE, div_fn, Div, div, "divide");

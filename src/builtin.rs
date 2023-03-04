@@ -6,7 +6,7 @@ use crate::{lex::Span, value::*, RuntimeResult};
 
 /// 1-parameter built-in operations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
-pub enum BuiltinOp1 {
+pub enum Op1 {
     Int,
     Real,
     Not,
@@ -21,34 +21,34 @@ pub enum BuiltinOp1 {
     Len,
 }
 
-impl fmt::Display for BuiltinOp1 {
+impl fmt::Display for Op1 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            BuiltinOp1::Int => write!(f, "int"),
-            BuiltinOp1::Real => write!(f, "real"),
-            BuiltinOp1::Not => write!(f, "not"),
-            BuiltinOp1::Neg => write!(f, "neg"),
-            BuiltinOp1::Abs => write!(f, "abs"),
-            BuiltinOp1::Sqrt => write!(f, "sqrt"),
-            BuiltinOp1::Sin => write!(f, "sin"),
-            BuiltinOp1::Cos => write!(f, "cos"),
-            BuiltinOp1::Floor => write!(f, "floor"),
-            BuiltinOp1::Ceil => write!(f, "ceil"),
-            BuiltinOp1::Round => write!(f, "round"),
-            BuiltinOp1::Len => write!(f, "len"),
+            Op1::Int => write!(f, "int"),
+            Op1::Real => write!(f, "real"),
+            Op1::Not => write!(f, "not"),
+            Op1::Neg => write!(f, "neg"),
+            Op1::Abs => write!(f, "abs"),
+            Op1::Sqrt => write!(f, "sqrt"),
+            Op1::Sin => write!(f, "sin"),
+            Op1::Cos => write!(f, "cos"),
+            Op1::Floor => write!(f, "floor"),
+            Op1::Ceil => write!(f, "ceil"),
+            Op1::Round => write!(f, "round"),
+            Op1::Len => write!(f, "len"),
         }
     }
 }
 
-type BuiltinOp1Fn = fn(*mut Value, &Span) -> RuntimeResult;
+type ValueFn1 = fn(*mut Value, &Span) -> RuntimeResult;
 macro_rules! op1_table {
     ($(($op:ident, $name:ident, $f:expr)),* $(,)*) => {
-        $(static $name: [BuiltinOp1Fn; Type::ARITY] = unsafe { type_line!($f) };)*
+        $(static $name: [ValueFn1; Type::ARITY] = unsafe { type_line!($f) };)*
 
         impl Value {
-            pub fn op1(&mut self, op: BuiltinOp1, span: &Span) -> RuntimeResult {
+            pub fn op1(&mut self, op: Op1, span: &Span) -> RuntimeResult {
                 match op {
-                    $(BuiltinOp1::$op => $name[self.ty as usize](self, span),)*
+                    $(Op1::$op => $name[self.ty as usize](self, span),)*
                 }
             }
         }
@@ -57,7 +57,7 @@ macro_rules! op1_table {
 macro_rules! op1_fn {
     ($name:ident, $message:literal, $(($a_ty:pat, |$a:ident| $f:expr)),* $(,)?) => {
         #[allow(unused_mut, clippy::no_effect)]
-        const unsafe fn $name(a: Type) -> BuiltinOp1Fn {
+        const unsafe fn $name(a: Type) -> ValueFn1 {
             match a {
                 $($a_ty => |$a, _| { $f; Ok(())},)*
                 _ => |a, span| Err(span.error(format!($message, (*a).ty))),
@@ -65,6 +65,7 @@ macro_rules! op1_fn {
         }
     };
 }
+pub(crate) use op1_fn;
 
 op1_table!(
     (Int, INT_TABLE, int_fn),
@@ -80,7 +81,7 @@ op1_table!(
     (Round, ROUND_TABLE, round_fn),
     (Len, LEN_TABLE, len_fn),
 );
-const unsafe fn not_fn(_: Type) -> BuiltinOp1Fn {
+const unsafe fn not_fn(_: Type) -> ValueFn1 {
     |a, _| {
         *a = (!(*a).is_truthy()).into();
         Ok(())
@@ -152,31 +153,31 @@ op1_fn!(
 
 /// 2-parameter built-in operations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
-pub enum BuiltinOp2 {
+pub enum Op2 {
     Pow,
     Atan2,
     Push,
 }
 
-impl fmt::Display for BuiltinOp2 {
+impl fmt::Display for Op2 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            BuiltinOp2::Pow => write!(f, "pow"),
-            BuiltinOp2::Atan2 => write!(f, "atan2"),
-            BuiltinOp2::Push => write!(f, "push"),
+            Op2::Pow => write!(f, "pow"),
+            Op2::Atan2 => write!(f, "atan2"),
+            Op2::Push => write!(f, "push"),
         }
     }
 }
 
-type BuiltinOp2Fn = fn(*mut Value, Value, &Span) -> RuntimeResult;
+pub(crate) type ValueFn2 = fn(*mut Value, Value, &Span) -> RuntimeResult;
 macro_rules! op2_table {
     ($(($op:ident, $name:ident, $f:expr)),* $(,)*) => {
-        $(static $name: [[BuiltinOp2Fn; Type::ARITY]; Type::ARITY] = unsafe { type_square!($f) };)*
+        $(static $name: [[ValueFn2; Type::ARITY]; Type::ARITY] = type_square!($f);)*
 
         impl Value {
-            pub fn op2(&mut self, other: Value, op: BuiltinOp2, span: &Span) -> RuntimeResult {
+            pub fn op2(&mut self, other: Value, op: Op2, span: &Span) -> RuntimeResult {
                 match op {
-                    $(BuiltinOp2::$op => $name[self.ty as usize][other.ty as usize](self, other, span),)*
+                    $(Op2::$op => $name[self.ty as usize][other.ty as usize](self, other, span),)*
                 }
             }
         }
@@ -184,15 +185,18 @@ macro_rules! op2_table {
 }
 macro_rules! op2_fn {
     ($name:ident, $message:literal, $(($a_ty:pat, $b_ty:pat, |$a:ident, $b:ident| $f:expr)),* $(,)?) => {
-        #[allow(unused_mut)]
-        const unsafe fn $name(a: Type, b: Type) -> BuiltinOp2Fn {
-            match (a, b) {
-                $(($a_ty, $b_ty) => |$a, mut $b, _| { $f; Ok(())},)*
-                _ => |a, b, span| Err(span.error(format!($message, (*a).ty, b.ty))),
+        #[allow(unused_mut, unreachable_patterns)]
+        const fn $name(a: Type, b: Type) -> $crate::builtin::ValueFn2 {
+            unsafe {
+                match (a, b) {
+                    $(($a_ty, $b_ty) => |$a, mut $b, _| { $f; Ok(())},)*
+                    _ => |a, b, span| Err(span.error(format!($message, (*a).ty, b.ty))),
+                }
             }
         }
     };
 }
+pub(crate) use op2_fn;
 
 op2_table!(
     (Pow, POW_TABLE, pow_fn),

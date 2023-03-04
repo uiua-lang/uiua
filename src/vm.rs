@@ -2,7 +2,7 @@ use std::{cmp::Ordering, fmt, mem::swap};
 
 use crate::{
     ast::{BinOp, FunctionId},
-    builtin::{BuiltinOp1, BuiltinOp2},
+    builtin::{Op1, Op2},
     compile::Assembly,
     lex::Span,
     value::{Function, Partial, Value},
@@ -26,8 +26,8 @@ pub(crate) enum Instr {
     PopJumpIf(isize, bool),
     JumpIfElsePop(isize, bool),
     BinOp(BinOp, Span),
-    BuiltinOp1(BuiltinOp1, Span),
-    BuiltinOp2(BuiltinOp2, Span),
+    BuiltinOp1(Op1, Span),
+    BuiltinOp2(Op2, Span),
     DestructureList(usize, Span),
     PushUnresolvedFunction(FunctionId),
     Dud,

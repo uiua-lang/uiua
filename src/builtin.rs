@@ -1,8 +1,24 @@
-use std::{fmt, ptr};
+use std::{f64::consts::*, fmt, ptr};
 
 use enum_iterator::Sequence;
 
 use crate::{lex::Span, value::*, RuntimeResult};
+
+pub(crate) fn constants() -> Vec<(&'static str, Value)> {
+    vec![
+        ("PI", PI.into()),
+        ("TAU", TAU.into()),
+        ("E", E.into()),
+        ("INFINITY", f64::INFINITY.into()),
+        ("NEG_INFINITY", f64::NEG_INFINITY.into()),
+        ("NAN", f64::NAN.into()),
+        ("MAX_INT", i64::MAX.into()),
+        ("MIN_INT", i64::MIN.into()),
+        ("MAX_REAL", f64::MAX.into()),
+        ("MIN_REAL", f64::MIN.into()),
+        ("EPSILON", f64::EPSILON.into()),
+    ]
+}
 
 /// 1-parameter built-in operations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]

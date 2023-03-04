@@ -5,7 +5,7 @@ use nohash_hasher::BuildNoHashHasher;
 
 use crate::{
     ast::*,
-    builtin::{Op1, Op2},
+    builtin::{constants, Op1, Op2},
     lex::{Sp, Span},
     parse::{parse, ParseError},
     value::{Function, Value},
@@ -16,6 +16,7 @@ use crate::{
 pub struct Assembly {
     pub(crate) instrs: Vec<Instr>,
     pub(crate) start: usize,
+    pub(crate) constants: Vec<Value>,
     pub(crate) function_info: HashMap<Function, FunctionInfo, BuildNoHashHasher<Function>>,
     pub(crate) call_spans: Vec<Span>,
 }
@@ -95,6 +96,8 @@ enum Binding {
     Function(FunctionId),
     /// A local variable is referenced by its height in the stack.
     Local(usize),
+    /// A constant is referenced by its index in the constant array.
+    Constant(usize),
     /// A dud binding used when a binding lookup fails
     Error,
 }
@@ -114,7 +117,17 @@ impl Default for Compiler {
         let mut function_instrs = Vec::new();
         let mut scope = Scope::new(0);
         let mut function_info = HashMap::default();
+        let mut consts = Vec::new();
         // Initialize builtins
+        // Constants
+        for (name, value) in constants() {
+            let index = consts.len();
+            consts.push(value);
+            scope
+                .bindings
+                .insert(ascend::static_str(name).into(), Binding::Constant(index));
+        }
+        // Operations
         let mut init = |name: &str, id: FunctionId, params: usize, instr: Instr| {
             let function = Function(function_instrs.len());
             // Instructions
@@ -150,6 +163,7 @@ impl Default for Compiler {
         let assembly = Assembly {
             start: function_instrs.len(),
             instrs: function_instrs,
+            constants: consts,
             function_info,
             call_spans: Vec::new(),
         };
@@ -248,6 +262,7 @@ impl Compiler {
             Instr::PushUnresolvedFunction(_) => self.height += 1,
             Instr::BinOp(..) => self.height -= 1,
             Instr::Call { args, .. } => self.height -= *args,
+            Instr::Constant(_) => self.height += 1,
             _ => {}
         }
         self.instrs_mut().push(instr);
@@ -431,6 +446,7 @@ impl Compiler {
                     self.push_instr(Instr::PushUnresolvedFunction(id.clone().into()));
                 }
             }
+            Binding::Constant(index) => self.push_instr(Instr::Constant(*index)),
             Binding::Error => self.push_instr(Instr::Push(Value::unit())),
         }
         Ok(())

@@ -15,6 +15,7 @@ use crate::{
 pub(crate) enum Instr {
     Comment(String),
     Push(Value),
+    Constant(usize),
     List(usize),
     Array(usize),
     /// Copy the nth value from the top of the stack
@@ -110,6 +111,11 @@ fn run_assembly_inner(assembly: &Assembly, call_stack: &mut Vec<StackFrame>) -> 
                 #[cfg(feature = "profile")]
                 puffin::profile_scope!("push");
                 stack.push(v.clone())
+            }
+            Instr::Constant(n) => {
+                #[cfg(feature = "profile")]
+                puffin::profile_scope!("constant");
+                stack.push(assembly.constants[*n].clone())
             }
             Instr::List(n) => {
                 #[cfg(feature = "profile")]

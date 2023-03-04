@@ -18,7 +18,7 @@ impl fmt::Debug for Value {
             Type::Bool => write!(f, "{}", unsafe { self.data.bool }),
             Type::Int => write!(f, "{}", unsafe { self.data.int }),
             Type::Real => write!(f, "{}", unsafe { self.data.real }),
-            Type::Function => write!(f, "function"),
+            Type::Function => write!(f, "function({})", unsafe { self.data.function.0 }),
             Type::Partial => write!(f, "partial({})", unsafe { self.data.partial.args.len() }),
         }
     }

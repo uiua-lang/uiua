@@ -1,6 +1,5 @@
 - Add closures
 - Add builtin functions
-- Add partial functions
 - Add strings
 - Add structs
 - Add enums

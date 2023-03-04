@@ -190,7 +190,7 @@ impl Compiler {
             Instr::Copy(_) => self.height += 1,
             Instr::Push(_) => self.height += 1,
             Instr::BinOp(..) => self.height -= 1,
-            Instr::Call(..) => self.height -= 1,
+            Instr::Call(args, _) => self.height -= *args,
             _ => {}
         }
         self.instrs_mut().push(instr);

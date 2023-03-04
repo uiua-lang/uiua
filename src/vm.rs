@@ -78,20 +78,28 @@ pub(crate) fn run_assembly(assembly: &Assembly) -> UiuaResult {
                 puffin::profile_scope!("copy");
                 stack.push(stack[stack.len() - *n].clone())
             }
-            Instr::Call(arg_count, span) => {
+            Instr::Call(call_arg_count, span) => {
                 #[cfg(feature = "profile")]
                 puffin::profile_scope!("call");
 
-                let func = match Function::try_from(stack.pop().unwrap()) {
-                    Ok(func) => func,
+                let (func, args) = match Function::try_from(stack.pop().unwrap()) {
+                    Ok(func) => (func, Vec::new()),
                     Err(val) => match Partial::try_from(val) {
-                        Ok(partial) => todo!("call partial"),
+                        Ok(partial) => (partial.func, partial.args),
                         Err(val) => {
                             let message = format!("cannot call {}", val.ty());
                             return Err(span.clone().sp(message).into());
                         }
                     },
                 };
+                let partial_count = args.len();
+                let arg_count = call_arg_count + partial_count;
+                for arg in args {
+                    stack.push(arg);
+                }
+                if partial_count > 0 {
+                    dprintln!("{stack:?}");
+                }
                 let info = assembly.function_info(func);
                 match arg_count.cmp(&info.params) {
                     Ordering::Less => {

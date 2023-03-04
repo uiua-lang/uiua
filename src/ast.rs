@@ -102,7 +102,6 @@ pub enum BinOp {
     Le,
     Gt,
     Ge,
-    RangeEx,
 }
 
 impl BinOp {
@@ -118,7 +117,6 @@ impl BinOp {
             BinOp::Gt => "gt",
             BinOp::Le => "le",
             BinOp::Ge => "ge",
-            BinOp::RangeEx => "range_ex",
         }
     }
     pub fn lua_op(&self) -> &'static str {
@@ -133,7 +131,6 @@ impl BinOp {
             BinOp::Gt => ">",
             BinOp::Le => "<=",
             BinOp::Ge => ">=",
-            BinOp::RangeEx => todo!(),
         }
     }
 }

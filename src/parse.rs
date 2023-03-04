@@ -300,29 +300,26 @@ struct BinExprDef<'a> {
     child: Option<&'a Self>,
 }
 
-static BIN_EXPR_RANGE: BinExprDef = BinExprDef {
-    ops: &[(Token::Simple(Elipses), BinOp::RangeEx)],
+static BIN_EXPR_CMP: BinExprDef = BinExprDef {
+    ops: &[
+        (Token::Simple(Equal), BinOp::Eq),
+        (Token::Simple(NotEqual), BinOp::Ne),
+        (Token::Simple(Less), BinOp::Lt),
+        (Token::Simple(LessEqual), BinOp::Le),
+        (Token::Simple(Greater), BinOp::Gt),
+        (Token::Simple(GreaterEqual), BinOp::Ge),
+    ],
     child: Some(&BinExprDef {
         ops: &[
-            (Token::Simple(Equal), BinOp::Eq),
-            (Token::Simple(NotEqual), BinOp::Ne),
-            (Token::Simple(Less), BinOp::Lt),
-            (Token::Simple(LessEqual), BinOp::Le),
-            (Token::Simple(Greater), BinOp::Gt),
-            (Token::Simple(GreaterEqual), BinOp::Ge),
+            (Token::Simple(Plus), BinOp::Add),
+            (Token::Simple(Minus), BinOp::Sub),
         ],
         child: Some(&BinExprDef {
             ops: &[
-                (Token::Simple(Plus), BinOp::Add),
-                (Token::Simple(Minus), BinOp::Sub),
+                (Token::Simple(Star), BinOp::Mul),
+                (Token::Simple(Slash), BinOp::Div),
             ],
-            child: Some(&BinExprDef {
-                ops: &[
-                    (Token::Simple(Star), BinOp::Mul),
-                    (Token::Simple(Slash), BinOp::Div),
-                ],
-                child: None,
-            }),
+            child: None,
         }),
     }),
 };
@@ -373,7 +370,7 @@ impl Parser {
         })))))
     }
     fn try_bin_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
-        self.try_bin_expr_def(&BIN_EXPR_RANGE)
+        self.try_bin_expr_def(&BIN_EXPR_CMP)
     }
     fn try_bin_expr_def(&mut self, def: &BinExprDef) -> ParseResult<Option<Sp<Expr>>> {
         let leaf = |this: &mut Self| {

@@ -250,7 +250,6 @@ impl Value {
             BinOp::Gt => *self = (*self > other).into(),
             BinOp::Le => *self = (*self <= other).into(),
             BinOp::Ge => *self = (*self >= other).into(),
-            BinOp::RangeEx => todo!(),
         }
         Ok(())
     }

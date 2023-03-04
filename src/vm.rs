@@ -2,7 +2,7 @@ use std::{cmp::Ordering, fmt, mem::swap};
 
 use crate::{
     ast::{BinOp, FunctionId},
-    builtin::BuiltinOp2,
+    builtin::{BuiltinOp1, BuiltinOp2},
     compile::Assembly,
     lex::Span,
     value::{Function, Partial, Value},
@@ -26,6 +26,7 @@ pub(crate) enum Instr {
     PopJumpIf(isize, bool),
     JumpIfElsePop(isize, bool),
     BinOp(BinOp, Span),
+    BuiltinOp1(BuiltinOp1, Span),
     BuiltinOp2(BuiltinOp2, Span),
     DestructureList(usize, Span),
     PushUnresolvedFunction(FunctionId),
@@ -215,6 +216,12 @@ fn run_assembly_inner(assembly: &Assembly, call_stack: &mut Vec<StackFrame>) -> 
                     (left, right)
                 };
                 left.bin_op(right, *op, span)?;
+            }
+            Instr::BuiltinOp1(op, span) => {
+                #[cfg(feature = "profile")]
+                puffin::profile_scope!("builtin_op1");
+                let val = stack.last_mut().unwrap();
+                val.op1(*op, span)?;
             }
             Instr::BuiltinOp2(op, span) => {
                 #[cfg(feature = "profile")]

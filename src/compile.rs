@@ -5,7 +5,7 @@ use nohash_hasher::BuildNoHashHasher;
 
 use crate::{
     ast::*,
-    builtin::BuiltinOp2,
+    builtin::{BuiltinOp1, BuiltinOp2},
     lex::{Sp, Span},
     parse::{parse, ParseError},
     value::{Function, List, Value},
@@ -87,25 +87,36 @@ impl Default for Compiler {
         let mut scope = Scope::new(0);
         let mut function_info = HashMap::default();
         // Initialize builtins
-        // 2-parameter builtins
-        for op2 in all::<BuiltinOp2>() {
+        let mut init = |name: &str, id: FunctionId, params: usize, instr: Instr| {
             let function = Function(function_instrs.len());
             // Instructions
-            function_instrs.push(Instr::BuiltinOp2(op2, Span::builtin()));
+            function_instrs.push(instr);
             function_instrs.push(Instr::Return);
             // Scope
             scope.bindings.insert(
-                ascend::static_str(&op2.to_string()).into(),
-                Binding::Function(FunctionId::Builtin2(op2)),
+                ascend::static_str(name).into(),
+                Binding::Function(id.clone()),
             );
-            scope.functions.insert(FunctionId::Builtin2(op2), function);
+            scope.functions.insert(id.clone(), function);
             // Function info
-            function_info.insert(
-                function,
-                FunctionInfo {
-                    id: FunctionId::Builtin2(op2),
-                    params: 2,
-                },
+            function_info.insert(function, FunctionInfo { id, params });
+        };
+        // 1-parameter builtins
+        for op1 in all::<BuiltinOp1>() {
+            init(
+                &op1.to_string(),
+                FunctionId::Builtin1(op1),
+                1,
+                Instr::BuiltinOp1(op1, Span::builtin()),
+            );
+        }
+        // 2-parameter builtins
+        for op2 in all::<BuiltinOp2>() {
+            init(
+                &op2.to_string(),
+                FunctionId::Builtin2(op2),
+                2,
+                Instr::BuiltinOp2(op2, Span::builtin()),
             );
         }
         Self {
@@ -269,6 +280,7 @@ impl Compiler {
         self.push_instr(Instr::Comment(match &func.id {
             FunctionId::Named(name) => format!("fn {name}"),
             FunctionId::Anonymous(span) => format!("fn at {span}"),
+            FunctionId::Builtin1(_) => unreachable!("Builtin1 functions should not be compiled"),
             FunctionId::Builtin2(_) => unreachable!("Builtin2 functions should not be compiled"),
         }));
         // Push and bind the function's parameters

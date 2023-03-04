@@ -46,18 +46,21 @@ union ValueData {
     pub list: ManuallyDrop<Box<List>>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Type {
-    Unit,
-    Bool,
-    Int,
-    Real,
-    Function,
-    Partial,
-    List,
+macro_rules! ty {
+    ($($ty:ident),* $(,)*) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        pub enum Type {
+            $($ty),*
+        }
+
+        impl Type {
+            pub const ARITY: usize = 0 $(+ { let _ = stringify!($ty); 1 })*;
+            pub const ALL: [Self; Self::ARITY] = [$(Self::$ty),*];
+        }
+    };
 }
 
-pub(crate) const TYPE_ARITY: usize = 7;
+ty!(Unit, Bool, Int, Real, Function, Partial, List);
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -236,7 +239,7 @@ impl TryFrom<Value> for List {
     }
 }
 
-static DROP_TABLE: [fn(&mut ValueData); TYPE_ARITY] = [
+static DROP_TABLE: [fn(&mut ValueData); Type::ARITY] = [
     |_| {},
     |_| {},
     |_| {},
@@ -256,7 +259,7 @@ impl Drop for Value {
     }
 }
 
-static CLONE_TABLE: [fn(&ValueData) -> ValueData; TYPE_ARITY] = [
+static CLONE_TABLE: [fn(&ValueData) -> ValueData; Type::ARITY] = [
     |_| ValueData { unit: () },
     |data| ValueData {
         bool: unsafe { data.bool },
@@ -308,6 +311,21 @@ impl Value {
 }
 
 macro_rules! type_line {
+    ($f:expr) => {
+        [
+            $f($crate::value::Type::Unit),
+            $f($crate::value::Type::Bool),
+            $f($crate::value::Type::Int),
+            $f($crate::value::Type::Real),
+            $f($crate::value::Type::Function),
+            $f($crate::value::Type::Partial),
+            $f($crate::value::Type::List),
+        ]
+    };
+}
+pub(crate) use type_line;
+
+macro_rules! type_side {
     ($a:expr, $f:expr) => {
         [
             $f($a, $crate::value::Type::Unit),
@@ -320,18 +338,18 @@ macro_rules! type_line {
         ]
     };
 }
-pub(crate) use type_line;
+pub(crate) use type_side;
 
 macro_rules! type_square {
     ($f:expr) => {
         [
-            $crate::value::type_line!($crate::value::Type::Unit, $f),
-            $crate::value::type_line!($crate::value::Type::Bool, $f),
-            $crate::value::type_line!($crate::value::Type::Int, $f),
-            $crate::value::type_line!($crate::value::Type::Real, $f),
-            $crate::value::type_line!($crate::value::Type::Function, $f),
-            $crate::value::type_line!($crate::value::Type::Partial, $f),
-            $crate::value::type_line!($crate::value::Type::List, $f),
+            $crate::value::type_side!($crate::value::Type::Unit, $f),
+            $crate::value::type_side!($crate::value::Type::Bool, $f),
+            $crate::value::type_side!($crate::value::Type::Int, $f),
+            $crate::value::type_side!($crate::value::Type::Real, $f),
+            $crate::value::type_side!($crate::value::Type::Function, $f),
+            $crate::value::type_side!($crate::value::Type::Partial, $f),
+            $crate::value::type_side!($crate::value::Type::List, $f),
         ]
     };
 }
@@ -339,7 +357,7 @@ pub(crate) use type_square;
 
 type EqFn = unsafe fn(&Value, &Value) -> bool;
 
-static mut EQ_TABLE: [[EqFn; TYPE_ARITY]; TYPE_ARITY] = type_square!(eq_fn);
+static mut EQ_TABLE: [[EqFn; Type::ARITY]; Type::ARITY] = type_square!(eq_fn);
 const fn eq_fn(a: Type, b: Type) -> EqFn {
     unsafe {
         match (a, b) {
@@ -369,7 +387,7 @@ impl Eq for Value {}
 
 type CmpFn = fn(&Value, &Value) -> Ordering;
 
-static mut CMP_TABLE: [[CmpFn; TYPE_ARITY]; TYPE_ARITY] = type_square!(cmp_fn);
+static mut CMP_TABLE: [[CmpFn; Type::ARITY]; Type::ARITY] = type_square!(cmp_fn);
 
 const fn cmp_fn(a: Type, b: Type) -> CmpFn {
     unsafe {
@@ -409,7 +427,7 @@ type MathFn = fn(*mut Value, Value, span: &Span) -> RuntimeResult;
 
 macro_rules! value_bin_op {
     ($table:ident, $fn_name:ident, $method:ident, $verb:literal) => {
-        static mut $table: [[MathFn; TYPE_ARITY]; TYPE_ARITY] = type_square!($fn_name);
+        static mut $table: [[MathFn; Type::ARITY]; Type::ARITY] = type_square!($fn_name);
         const fn $fn_name(a: Type, b: Type) -> MathFn {
             unsafe {
                 match (a, b) {

@@ -11,6 +11,7 @@ fn main() {
     let mut compiler = Compiler::new();
     if let Err(e) = compiler.load_file("test.uiua") {
         eprintln!("{e}");
+        return;
     }
     let assembly = compiler.finish();
     if let Err(e) = assembly.run() {

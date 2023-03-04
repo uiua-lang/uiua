@@ -284,7 +284,7 @@ impl Compiler {
                     .iter()
                     .rev()
                     .find_map(|scope| scope.bindings.get(&ident))
-                    .unwrap_or_else(|| panic!("unbound variable `{ident}`"));
+                    .ok_or_else(|| expr.span.sp(CompileError::UnknownBinding(ident)))?;
                 match bind {
                     ScopeBind::Local(index) => {
                         let curr = self.height;

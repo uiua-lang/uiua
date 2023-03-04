@@ -4,7 +4,7 @@ use nohash_hasher::BuildNoHashHasher;
 
 use crate::{
     ast::*,
-    lex::Sp,
+    lex::{Sp, Span},
     parse::{parse, ParseError},
     value::{Function, Value},
     vm::{run_assembly, Instr},
@@ -318,50 +318,7 @@ impl Compiler {
                 };
                 self.push_instr(Instr::Push(f.into()));
             }
-            Expr::Ident(ident) => {
-                let bind = self.scopes.iter().rev().find_map(|scope| {
-                    scope
-                        .bindings
-                        .get(&ident)
-                        .map(|binding| (binding, scope.function_depth))
-                });
-                let (binding, binding_depth) = match bind {
-                    Some(bind) => bind,
-                    None => {
-                        self.errors
-                            .push(expr.span.clone().sp(CompileError::UnknownBinding(ident)));
-                        (&Binding::Error, self.scope().function_depth)
-                    }
-                };
-                if binding_depth > 0 && binding_depth != self.scope().function_depth {
-                    todo!("closure support ({})", expr.span)
-                }
-                match binding {
-                    Binding::Local(index) => {
-                        if binding_depth == 0 {
-                            self.push_instr(Instr::CopyAbs(*index));
-                        } else {
-                            let curr = self.height;
-                            let diff = curr - *index;
-                            self.push_instr(Instr::CopyRel(diff));
-                        }
-                    }
-                    Binding::Function(id) => {
-                        if let Some(function) = self
-                            .scopes
-                            .iter()
-                            .rev()
-                            .find_map(|scope| scope.functions.get(id))
-                            .cloned()
-                        {
-                            self.push_instr(Instr::Push(function.into()));
-                        } else {
-                            self.push_instr(Instr::PushUnresolvedFunction(id.clone()));
-                        }
-                    }
-                    Binding::Error => self.push_instr(Instr::Push(Value::unit())),
-                }
-            }
+            Expr::Ident(ident) => self.ident(ident, expr.span)?,
             Expr::Placeholder => panic!("unresolved placeholder"),
             Expr::Bin(bin) => {
                 self.expr(bin.left)?;
@@ -371,11 +328,59 @@ impl Compiler {
             Expr::Call(call) => self.call(*call)?,
             Expr::If(if_expr) => self.if_expr(*if_expr)?,
             Expr::Logic(log_expr) => self.logic_expr(*log_expr)?,
-            Expr::List(_) => todo!("lists ({})", expr.span),
+            Expr::List(items) => self.list(items)?,
             Expr::Parened(inner) => self.expr(resolve_placeholders(*inner))?,
             Expr::Func(func) => self.func(*func, true)?,
         }
         Ok(())
+    }
+    fn ident(&mut self, ident: Ident, span: Span) -> CompileResult {
+        let bind = self.scopes.iter().rev().find_map(|scope| {
+            scope
+                .bindings
+                .get(&ident)
+                .map(|binding| (binding, scope.function_depth))
+        });
+        let (binding, binding_depth) = match bind {
+            Some(bind) => bind,
+            None => {
+                self.errors
+                    .push(span.clone().sp(CompileError::UnknownBinding(ident)));
+                (&Binding::Error, self.scope().function_depth)
+            }
+        };
+        if binding_depth > 0 && binding_depth != self.scope().function_depth {
+            todo!("closure support ({})", span)
+        }
+        match binding {
+            Binding::Local(index) => {
+                if binding_depth == 0 {
+                    self.push_instr(Instr::CopyAbs(*index));
+                } else {
+                    let curr = self.height;
+                    let diff = curr - *index;
+                    self.push_instr(Instr::CopyRel(diff));
+                }
+            }
+            Binding::Function(id) => {
+                if let Some(function) = self
+                    .scopes
+                    .iter()
+                    .rev()
+                    .find_map(|scope| scope.functions.get(id))
+                    .cloned()
+                {
+                    self.push_instr(Instr::Push(function.into()));
+                } else {
+                    self.push_instr(Instr::PushUnresolvedFunction(id.clone()));
+                }
+            }
+            Binding::Error => self.push_instr(Instr::Push(Value::unit())),
+        }
+        Ok(())
+    }
+    fn list(&mut self, items: Vec<Sp<Expr>>) -> CompileResult {
+        todo!()
     }
     fn call(&mut self, call: CallExpr) -> CompileResult {
         let args_len = call.args.len();

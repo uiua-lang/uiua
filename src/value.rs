@@ -1,5 +1,7 @@
 use std::{cmp::Ordering, fmt, mem::ManuallyDrop, ops::*};
 
+use im::Vector;
+
 use crate::{ast::BinOp, lex::Span, UiuaResult};
 
 pub struct Value {
@@ -20,6 +22,10 @@ impl fmt::Debug for Value {
             Type::Real => write!(f, "{}", unsafe { self.data.real }),
             Type::Function => write!(f, "function({})", unsafe { self.data.function.0 }),
             Type::Partial => write!(f, "partial({})", unsafe { self.data.partial.args.len() }),
+            Type::List => f
+                .debug_list()
+                .entries(unsafe { self.data.list.0.iter() })
+                .finish(),
         }
     }
 }
@@ -31,6 +37,7 @@ union ValueData {
     real: f64,
     function: Function,
     partial: ManuallyDrop<Box<Partial>>,
+    list: ManuallyDrop<Box<List>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -41,9 +48,10 @@ pub enum Type {
     Real,
     Function,
     Partial,
+    List,
 }
 
-const TYPE_ARITY: usize = 6;
+const TYPE_ARITY: usize = 7;
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -54,6 +62,7 @@ impl fmt::Display for Type {
             Type::Real => write!(f, "real"),
             Type::Function => write!(f, "function"),
             Type::Partial => write!(f, "partial"),
+            Type::List => write!(f, "list"),
         }
     }
 }
@@ -69,6 +78,10 @@ pub struct Partial {
     pub(crate) func: Function,
     pub(crate) args: Vec<Value>,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(transparent)]
+pub struct List(pub Vector<Value>);
 
 impl Value {
     pub fn unit() -> Self {
@@ -135,6 +148,17 @@ impl From<Partial> for Value {
     }
 }
 
+impl From<List> for Value {
+    fn from(l: List) -> Self {
+        Self {
+            ty: Type::List,
+            data: ValueData {
+                list: ManuallyDrop::new(Box::new(l)),
+            },
+        }
+    }
+}
+
 impl TryFrom<Value> for bool {
     type Error = Value;
     fn try_from(value: Value) -> Result<Self, Self::Error> {
@@ -190,6 +214,17 @@ impl TryFrom<Value> for Partial {
     }
 }
 
+impl TryFrom<Value> for List {
+    type Error = Value;
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        if value.ty == Type::List {
+            Ok(unsafe { (**value.data.list).clone() })
+        } else {
+            Err(value)
+        }
+    }
+}
+
 static DROP_TABLE: [fn(&mut ValueData); TYPE_ARITY] = [
     |_| {},
     |_| {},
@@ -198,6 +233,9 @@ static DROP_TABLE: [fn(&mut ValueData); TYPE_ARITY] = [
     |_| {},
     |data| unsafe {
         ManuallyDrop::drop(&mut data.partial);
+    },
+    |data| unsafe {
+        ManuallyDrop::drop(&mut data.list);
     },
 ];
 
@@ -223,6 +261,9 @@ static CLONE_TABLE: [fn(&ValueData) -> ValueData; TYPE_ARITY] = [
     },
     |data| ValueData {
         partial: ManuallyDrop::new(unsafe { (*data.partial).clone() }),
+    },
+    |data| ValueData {
+        list: ManuallyDrop::new(unsafe { (*data.list).clone() }),
     },
 ];
 
@@ -264,6 +305,7 @@ macro_rules! type_line {
             $f($a, Type::Real),
             $f($a, Type::Function),
             $f($a, Type::Partial),
+            $f($a, Type::List),
         ]
     };
 }
@@ -277,6 +319,7 @@ macro_rules! type_square {
             type_line!(Type::Real, $f),
             type_line!(Type::Function, $f),
             type_line!(Type::Partial, $f),
+            type_line!(Type::List, $f),
         ]
     };
 }
@@ -293,6 +336,9 @@ const fn eq_fn(a: Type, b: Type) -> EqFn {
             (Type::Real, Type::Real) => {
                 |a, b| a.data.real.is_nan() && b.data.real.is_nan() || a.data.real == b.data.real
             }
+            (Type::Function, Type::Function) => |a, b| a.data.function == b.data.function,
+            (Type::Partial, Type::Partial) => |a, b| a.data.partial == b.data.partial,
+            (Type::List, Type::List) => |a, b| a.data.list == b.data.list,
             _ => |_, _| false,
         }
     }
@@ -324,7 +370,10 @@ const fn cmp_fn(a: Type, b: Type) -> CmpFn {
                 (false, true) => Ordering::Greater,
                 (false, false) => a.data.real.partial_cmp(&b.data.real).unwrap(),
             },
-            _ => |_, _| Ordering::Equal,
+            (Type::Function, Type::Function) => |a, b| a.data.function.cmp(&b.data.function),
+            (Type::Partial, Type::Partial) => |a, b| a.data.partial.cmp(&b.data.partial),
+            (Type::List, Type::List) => |a, b| a.data.list.cmp(&b.data.list),
+            _ => |a, b| a.ty.cmp(&b.ty),
         }
     }
 }

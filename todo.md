@@ -1,9 +1,15 @@
-- Builtin functions
-- Pop block stuff?
+- Constants
 - Pipe operators
+- Includes
+- Arrays
+- Pop block stuff?
 - Closures
 - Strings
 - Structs
 - Enums
 - Inlining
 - Type testing
+- LSP
+- FFI
+- Docs
+- Tooling

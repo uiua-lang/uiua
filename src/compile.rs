@@ -13,6 +13,27 @@ use crate::{
     Ident, UiuaError, UiuaResult,
 };
 
+pub struct Assembly {
+    pub(crate) instrs: Vec<Instr>,
+    pub(crate) start: usize,
+    function_info: HashMap<Function, FunctionInfo, BuildNoHashHasher<Function>>,
+    pub(crate) call_spans: Vec<Span>,
+}
+
+impl Assembly {
+    #[track_caller]
+    pub fn function_info(&self, function: Function) -> &FunctionInfo {
+        if let Some(info) = self.function_info.get(&function) {
+            info
+        } else {
+            panic!("function was compiled in a different assembly")
+        }
+    }
+    pub fn run(&self) -> UiuaResult {
+        run_assembly(self)
+    }
+}
+
 #[derive(Debug)]
 pub enum CompileError {
     Parse(ParseError),
@@ -129,27 +150,6 @@ impl Default for Compiler {
             height: 0,
             errors: Vec::new(),
         }
-    }
-}
-
-pub struct Assembly {
-    pub(crate) instrs: Vec<Instr>,
-    pub(crate) start: usize,
-    function_info: HashMap<Function, FunctionInfo, BuildNoHashHasher<Function>>,
-    pub(crate) call_spans: Vec<Span>,
-}
-
-impl Assembly {
-    #[track_caller]
-    pub fn function_info(&self, function: Function) -> &FunctionInfo {
-        if let Some(info) = self.function_info.get(&function) {
-            info
-        } else {
-            panic!("function was compiled in a different assembly")
-        }
-    }
-    pub fn run(&self) -> UiuaResult {
-        run_assembly(self)
     }
 }
 

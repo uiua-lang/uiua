@@ -1,6 +1,9 @@
+use std::fmt;
+
 use enum_iterator::Sequence;
 
 use crate::{
+    builtin::BuiltinOp2,
     lex::{Sp, Span},
     Ident,
 };
@@ -36,12 +39,32 @@ pub struct Func {
 pub enum FunctionId {
     Named(Ident),
     Anonymous(Span),
+    Builtin2(BuiltinOp2),
+}
+
+impl fmt::Display for FunctionId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FunctionId::Named(name) => write!(f, "`{name}`"),
+            FunctionId::Anonymous(span) => write!(f, "fn from {span}"),
+            FunctionId::Builtin2(op) => write!(f, "`{op}`"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct Block {
     pub bindings: Vec<Let>,
     pub expr: Sp<Expr>,
+}
+
+impl From<Sp<Expr>> for Block {
+    fn from(expr: Sp<Expr>) -> Self {
+        Self {
+            bindings: Vec::new(),
+            expr,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

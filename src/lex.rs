@@ -1,13 +1,8 @@
-use std::{
-    error::Error,
-    fmt,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{error::Error, fmt, path::Path, sync::Arc};
 
 use enum_iterator::{all, Sequence};
 
-use crate::Ident;
+use crate::{Ident, RuntimeError};
 
 pub fn lex(input: &str, file: &Path) -> LexResult<Vec<Sp<Token>>> {
     let mut lexer = Lexer::new(input, file);
@@ -68,19 +63,8 @@ impl Default for Loc {
 pub struct Span {
     pub start: Loc,
     pub end: Loc,
-    pub file: Arc<Path>,
+    pub file: Option<Arc<Path>>,
     pub input: Arc<str>,
-}
-
-impl Default for Span {
-    fn default() -> Self {
-        Self {
-            start: Loc::default(),
-            end: Loc::default(),
-            file: PathBuf::from("builtin").into(),
-            input: "".into(),
-        }
-    }
 }
 
 impl fmt::Debug for Span {
@@ -91,7 +75,12 @@ impl fmt::Debug for Span {
 
 impl fmt::Display for Span {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}", self.file.to_string_lossy(), self.start)
+        let file = if let Some(file) = &self.file {
+            file.to_string_lossy()
+        } else {
+            "<builtin>".into()
+        };
+        write!(f, "{}:{}", file, self.start)
     }
 }
 
@@ -105,6 +94,17 @@ impl Span {
     }
     pub(crate) const fn sp<T>(self, value: T) -> Sp<T> {
         Sp { value, span: self }
+    }
+    pub fn builtin() -> Self {
+        Self {
+            start: Loc::default(),
+            end: Loc::default(),
+            file: None,
+            input: "".into(),
+        }
+    }
+    pub fn error(&self, msg: impl Into<String>) -> RuntimeError {
+        self.clone().sp(msg.into())
     }
 }
 
@@ -340,7 +340,7 @@ impl Lexer {
         Span {
             start,
             end: self.loc,
-            file: self.file.clone(),
+            file: Some(self.file.clone()),
             input: self.input.clone(),
         }
     }
@@ -418,7 +418,7 @@ impl Lexer {
                             span: Span {
                                 start,
                                 end,
-                                file: self.file.clone(),
+                                file: Some(self.file.clone()),
                                 input: self.input.clone(),
                             },
                         }));

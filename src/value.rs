@@ -2,7 +2,7 @@ use std::{cmp::Ordering, fmt, mem::ManuallyDrop, ops::*};
 
 use im::Vector;
 
-use crate::{ast::BinOp, lex::Span, UiuaResult};
+use crate::{ast::BinOp, lex::Span, RuntimeResult};
 
 pub struct Value {
     ty: Type,
@@ -11,6 +11,12 @@ pub struct Value {
 
 fn _keep_value_small(_: std::convert::Infallible) {
     let _: [u8; 16] = unsafe { std::mem::transmute(Value::unit()) };
+}
+
+impl Default for Value {
+    fn default() -> Self {
+        Self::unit()
+    }
 }
 
 impl fmt::Debug for Value {
@@ -31,13 +37,13 @@ impl fmt::Debug for Value {
 }
 
 union ValueData {
-    unit: (),
-    bool: bool,
-    int: i64,
-    real: f64,
-    function: Function,
-    partial: ManuallyDrop<Box<Partial>>,
-    list: ManuallyDrop<Box<List>>,
+    pub unit: (),
+    pub bool: bool,
+    pub int: i64,
+    pub real: f64,
+    pub function: Function,
+    pub partial: ManuallyDrop<Box<Partial>>,
+    pub list: ManuallyDrop<Box<List>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -51,7 +57,7 @@ pub enum Type {
     List,
 }
 
-const TYPE_ARITY: usize = 7;
+pub(crate) const TYPE_ARITY: usize = 7;
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -75,29 +81,34 @@ impl nohash_hasher::IsEnabled for Function {}
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Partial {
-    pub(crate) func: Function,
+    pub(crate) function: Function,
     pub(crate) args: Vec<Value>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
 #[repr(transparent)]
 pub struct List(pub Vector<Value>);
 
 impl Value {
-    pub fn unit() -> Self {
+    pub const fn unit() -> Self {
         Self {
             ty: Type::Unit,
             data: ValueData { unit: () },
         }
     }
-    pub fn is_unit(&self) -> bool {
-        self.ty == Type::Unit
+    #[inline(always)]
+    pub const fn is_unit(&self) -> bool {
+        matches!(self.ty, Type::Unit)
     }
-    pub fn ty(&self) -> Type {
+    #[inline(always)]
+    pub const fn ty(&self) -> Type {
         self.ty
     }
-    pub fn is_truthy(&self) -> bool {
-        !(self.is_unit() || (self.ty == Type::Bool && unsafe { !self.data.bool }))
+    pub const fn is_truthy(&self) -> bool {
+        !(self.is_unit() || (matches!(self.ty, Type::Bool) && unsafe { !self.data.bool }))
+    }
+    pub(crate) unsafe fn list_mut(&mut self) -> &mut List {
+        &mut self.data.list
     }
 }
 
@@ -277,7 +288,7 @@ impl Clone for Value {
 }
 
 impl Value {
-    pub fn bin_op(&mut self, other: Self, op: BinOp, span: &Span) -> UiuaResult {
+    pub fn bin_op(&mut self, other: Self, op: BinOp, span: &Span) -> RuntimeResult {
         #[cfg(feature = "profile")]
         puffin::profile_function!();
         match op {
@@ -299,30 +310,32 @@ impl Value {
 macro_rules! type_line {
     ($a:expr, $f:expr) => {
         [
-            $f($a, Type::Unit),
-            $f($a, Type::Bool),
-            $f($a, Type::Int),
-            $f($a, Type::Real),
-            $f($a, Type::Function),
-            $f($a, Type::Partial),
-            $f($a, Type::List),
+            $f($a, $crate::value::Type::Unit),
+            $f($a, $crate::value::Type::Bool),
+            $f($a, $crate::value::Type::Int),
+            $f($a, $crate::value::Type::Real),
+            $f($a, $crate::value::Type::Function),
+            $f($a, $crate::value::Type::Partial),
+            $f($a, $crate::value::Type::List),
         ]
     };
 }
+pub(crate) use type_line;
 
 macro_rules! type_square {
     ($f:expr) => {
         [
-            type_line!(Type::Unit, $f),
-            type_line!(Type::Bool, $f),
-            type_line!(Type::Int, $f),
-            type_line!(Type::Real, $f),
-            type_line!(Type::Function, $f),
-            type_line!(Type::Partial, $f),
-            type_line!(Type::List, $f),
+            $crate::value::type_line!($crate::value::Type::Unit, $f),
+            $crate::value::type_line!($crate::value::Type::Bool, $f),
+            $crate::value::type_line!($crate::value::Type::Int, $f),
+            $crate::value::type_line!($crate::value::Type::Real, $f),
+            $crate::value::type_line!($crate::value::Type::Function, $f),
+            $crate::value::type_line!($crate::value::Type::Partial, $f),
+            $crate::value::type_line!($crate::value::Type::List, $f),
         ]
     };
 }
+pub(crate) use type_square;
 
 type EqFn = unsafe fn(&Value, &Value) -> bool;
 
@@ -392,7 +405,7 @@ impl Ord for Value {
     }
 }
 
-type MathFn = fn(*mut Value, Value, span: &Span) -> UiuaResult;
+type MathFn = fn(*mut Value, Value, span: &Span) -> RuntimeResult;
 
 macro_rules! value_bin_op {
     ($table:ident, $fn_name:ident, $method:ident, $verb:literal) => {
@@ -419,7 +432,7 @@ macro_rules! value_bin_op {
             }
         }
         impl Value {
-            pub fn $method(&mut self, other: Self, span: &Span) -> UiuaResult {
+            pub fn $method(&mut self, other: Self, span: &Span) -> RuntimeResult {
                 #[cfg(feature = "profile")]
                 puffin::profile_function!();
                 unsafe { $table[self.ty as usize][other.ty as usize](self, other, span) }

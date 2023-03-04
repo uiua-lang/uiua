@@ -1,11 +1,12 @@
-use std::{cmp::Ordering, fmt};
+use std::{cmp::Ordering, fmt, mem::swap};
 
 use crate::{
     ast::{BinOp, FunctionId},
+    builtin::BuiltinOp2,
     compile::Assembly,
     lex::Span,
     value::{Function, Partial, Value},
-    UiuaResult,
+    RuntimeResult, TraceFrame, UiuaError, UiuaResult,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -16,12 +17,16 @@ pub(crate) enum Instr {
     CopyRel(usize),
     /// Copy the nth value from the bottom of the stack
     CopyAbs(usize),
-    Call(usize, Span),
+    Call {
+        args: usize,
+        span: usize,
+    },
     Return,
     Jump(isize),
     PopJumpIf(isize, bool),
     JumpIfElsePop(isize, bool),
     BinOp(BinOp, Span),
+    BuiltinOp2(BuiltinOp2, Span),
     DestructureList(usize, Span),
     PushUnresolvedFunction(FunctionId),
     Dud,
@@ -37,11 +42,13 @@ impl fmt::Display for Instr {
 }
 
 struct StackFrame {
-    ret: usize,
     stack_size: usize,
+    function: Function,
+    ret: usize,
+    call_span: usize,
 }
 
-const DBG: bool = false;
+const DBG: bool = true;
 macro_rules! dprintln {
     ($($arg:tt)*) => {
         if DBG {
@@ -51,8 +58,26 @@ macro_rules! dprintln {
 }
 
 pub(crate) fn run_assembly(assembly: &Assembly) -> UiuaResult {
-    let mut stack = Vec::new();
     let mut call_stack = Vec::new();
+    if let Err(error) = run_assembly_inner(assembly, &mut call_stack) {
+        let mut trace = Vec::new();
+        for frame in call_stack {
+            let info = assembly.function_info(frame.function);
+            trace.push(TraceFrame {
+                id: info.id.clone(),
+                span: assembly.call_spans[frame.call_span].clone(),
+            });
+        }
+        Err(UiuaError::Run {
+            error: error.into(),
+            trace,
+        })
+    } else {
+        Ok(())
+    }
+}
+fn run_assembly_inner(assembly: &Assembly, call_stack: &mut Vec<StackFrame>) -> RuntimeResult {
+    let mut stack = Vec::new();
     dprintln!("Running...");
     let mut pc = assembly.start;
     #[cfg(feature = "profile")]
@@ -87,17 +112,19 @@ pub(crate) fn run_assembly(assembly: &Assembly) -> UiuaResult {
                 puffin::profile_scope!("copy");
                 stack.push(stack[*n].clone())
             }
-            Instr::Call(call_arg_count, span) => {
+            Instr::Call {
+                args: call_arg_count,
+                span,
+            } => {
                 #[cfg(feature = "profile")]
                 puffin::profile_scope!("call");
-
-                let (func, args) = match Function::try_from(stack.pop().unwrap()) {
+                let (function, args) = match Function::try_from(stack.pop().unwrap()) {
                     Ok(func) => (func, Vec::new()),
                     Err(val) => match Partial::try_from(val) {
-                        Ok(partial) => (partial.func, partial.args),
+                        Ok(partial) => (partial.function, partial.args),
                         Err(val) => {
                             let message = format!("cannot call {}", val.ty());
-                            return Err(span.clone().sp(message).into());
+                            return Err(assembly.call_spans[*span].clone().sp(message));
                         }
                     },
                 };
@@ -109,21 +136,23 @@ pub(crate) fn run_assembly(assembly: &Assembly) -> UiuaResult {
                 if partial_count > 0 {
                     dprintln!("{stack:?}");
                 }
-                let info = assembly.function_info(func);
+                let info = assembly.function_info(function);
                 match arg_count.cmp(&info.params) {
                     Ordering::Less => {
                         let partial = Partial {
-                            func,
+                            function,
                             args: stack.drain(stack.len() - arg_count..).collect(),
                         };
                         stack.push(partial.into());
                     }
                     Ordering::Equal => {
                         call_stack.push(StackFrame {
-                            ret: pc + 1,
                             stack_size: stack.len() - arg_count,
+                            function,
+                            ret: pc + 1,
+                            call_span: *span,
                         });
-                        pc = func.0;
+                        pc = function.0;
                         continue;
                     }
                     Ordering::Greater => {
@@ -131,7 +160,7 @@ pub(crate) fn run_assembly(assembly: &Assembly) -> UiuaResult {
                             "too many arguments: expected {}, got {}",
                             info.params, arg_count
                         );
-                        return Err(span.clone().sp(message).into());
+                        return Err(assembly.call_spans[*span].clone().sp(message));
                     }
                 }
             }
@@ -187,18 +216,31 @@ pub(crate) fn run_assembly(assembly: &Assembly) -> UiuaResult {
                 };
                 left.bin_op(right, *op, span)?;
             }
+            Instr::BuiltinOp2(op, span) => {
+                #[cfg(feature = "profile")]
+                puffin::profile_scope!("builtin_op2");
+                let (left, mut right) = {
+                    #[cfg(feature = "profile")]
+                    puffin::profile_scope!("builtin_op2_args");
+                    let right = stack.pop().unwrap();
+                    let left = stack.last_mut().unwrap();
+                    (left, right)
+                };
+                swap(left, &mut right);
+                left.op2(right, *op, span)?;
+            }
             Instr::DestructureList(_n, _span) => {
                 // let list = match stack.pop().unwrap() {
                 //     Value::List(list) if *n == list.len() => list,
                 //     Value::List(list) => {
                 //         let message =
                 //             format!("cannot destructure list of {} as list of {n}", list.len());
-                //         return Err(span.clone().sp(message).into());
+                //         return Err(span.sp(message).into());
                 //     }
                 //     val => {
                 //         let message =
                 //             format!("cannot destructure {} as list of {}", val.ty(), n);
-                //         return Err(span.clone().sp(message).into());
+                //         return Err(span.sp(message).into());
                 //     }
                 // };
                 // for val in list.into_iter().rev() {

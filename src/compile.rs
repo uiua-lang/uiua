@@ -1,12 +1,14 @@
 use std::{collections::HashMap, fmt, fs, path::Path};
 
+use enum_iterator::all;
 use nohash_hasher::BuildNoHashHasher;
 
 use crate::{
     ast::*,
+    builtin::BuiltinOp2,
     lex::{Sp, Span},
     parse::{parse, ParseError},
-    value::{Function, Value},
+    value::{Function, List, Value},
     vm::{run_assembly, Instr},
     Ident, UiuaError, UiuaResult,
 };
@@ -41,6 +43,8 @@ pub struct Compiler {
     in_progress_functions: Vec<Vec<Instr>>,
     /// Information about functions. This is passed to the Assembly.
     function_info: HashMap<Function, FunctionInfo, BuildNoHashHasher<Function>>,
+    /// The span of each function call. This is passed to the Assembly.
+    call_spans: Vec<Span>,
     /// Stack of scopes
     scopes: Vec<Scope>,
     /// The relative height of the runtime stack
@@ -79,12 +83,38 @@ impl Scope {
 
 impl Default for Compiler {
     fn default() -> Self {
+        let mut function_instrs = Vec::new();
+        let mut scope = Scope::new(0);
+        let mut function_info = HashMap::default();
+        // Initialize builtins
+        // 2-parameter builtins
+        for op2 in all::<BuiltinOp2>() {
+            let function = Function(function_instrs.len());
+            // Instructions
+            function_instrs.push(Instr::BuiltinOp2(op2, Span::builtin()));
+            function_instrs.push(Instr::Return);
+            // Scope
+            scope.bindings.insert(
+                ascend::static_str(&op2.to_string()).into(),
+                Binding::Function(FunctionId::Builtin2(op2)),
+            );
+            scope.functions.insert(FunctionId::Builtin2(op2), function);
+            // Function info
+            function_info.insert(
+                function,
+                FunctionInfo {
+                    id: FunctionId::Builtin2(op2),
+                    params: 2,
+                },
+            );
+        }
         Self {
-            function_instrs: Vec::new(),
+            function_instrs,
             global_instrs: vec![Instr::Comment("BEGIN".into())],
             in_progress_functions: Vec::new(),
-            function_info: HashMap::default(),
-            scopes: vec![Scope::new(0)],
+            function_info,
+            call_spans: Vec::new(),
+            scopes: vec![scope],
             height: 0,
             errors: Vec::new(),
         }
@@ -95,6 +125,7 @@ pub struct Assembly {
     pub(crate) instrs: Vec<Instr>,
     pub(crate) start: usize,
     function_info: HashMap<Function, FunctionInfo, BuildNoHashHasher<Function>>,
+    pub(crate) call_spans: Vec<Span>,
 }
 
 impl Assembly {
@@ -159,6 +190,7 @@ impl Compiler {
             instrs: self.function_instrs,
             start,
             function_info: self.function_info,
+            call_spans: self.call_spans,
         }
     }
     fn scope(&self) -> &Scope {
@@ -199,7 +231,7 @@ impl Compiler {
             Instr::Push(_) => self.height += 1,
             Instr::PushUnresolvedFunction(_) => self.height += 1,
             Instr::BinOp(..) => self.height -= 1,
-            Instr::Call(args, _) => self.height -= *args,
+            Instr::Call { args, .. } => self.height -= *args,
             _ => {}
         }
         self.instrs_mut().push(instr);
@@ -232,6 +264,7 @@ impl Compiler {
         self.push_instr(Instr::Comment(match &func.id {
             FunctionId::Named(name) => format!("fn {name}"),
             FunctionId::Anonymous(span) => format!("fn at {span}"),
+            FunctionId::Builtin2(_) => unreachable!("Builtin2 functions should not be compiled"),
         }));
         // Push and bind the function's parameters
         let params = func.params.len();
@@ -380,16 +413,28 @@ impl Compiler {
         Ok(())
     }
     fn list(&mut self, items: Vec<Sp<Expr>>) -> CompileResult {
-        todo!()
+        self.push_instr(Instr::Push(List::default().into()));
+        let height = self.height;
+        let push = self.scopes[0].functions[&FunctionId::Builtin2(BuiltinOp2::Push)];
+        for item in items {
+            let span = self.call_spans.len();
+            self.call_spans.push(item.span.clone());
+            self.expr(item)?;
+            self.push_instr(Instr::Push(push.into()));
+            self.push_instr(Instr::Call { args: 2, span });
+        }
+        self.height = height;
+        Ok(())
     }
     fn call(&mut self, call: CallExpr) -> CompileResult {
-        let args_len = call.args.len();
+        let args = call.args.len();
         for arg in call.args.into_iter().rev() {
             self.expr(arg)?;
         }
-        let call_span = call.func.span.clone();
+        let span = self.call_spans.len();
+        self.call_spans.push(call.func.span.clone());
         self.expr(call.func)?;
-        self.push_instr(Instr::Call(args_len, call_span));
+        self.push_instr(Instr::Call { args, span });
         Ok(())
     }
     fn block(&mut self, block: Block) -> CompileResult {

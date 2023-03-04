@@ -1,13 +1,29 @@
 use std::{error::Error, fmt, io, path::PathBuf};
 
-use crate::{compile::CompileError, lex::Sp};
+use crate::{
+    ast::FunctionId,
+    compile::CompileError,
+    lex::{Sp, Span},
+};
 
 #[derive(Debug)]
 pub enum UiuaError {
     Load(PathBuf, io::Error),
     Compile(Vec<Sp<CompileError>>),
-    Run(Sp<String>),
+    Run {
+        error: Box<RuntimeError>,
+        trace: Vec<TraceFrame>,
+    },
 }
+
+#[derive(Debug, Clone)]
+pub struct TraceFrame {
+    pub id: FunctionId,
+    pub span: Span,
+}
+
+pub type RuntimeError = Sp<String>;
+pub type RuntimeResult<T = ()> = Result<T, RuntimeError>;
 
 impl fmt::Display for UiuaError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -21,14 +37,14 @@ impl fmt::Display for UiuaError {
                 }
                 Ok(())
             }
-            UiuaError::Run(e) => write!(f, "{e}"),
+            UiuaError::Run { error, trace } => {
+                writeln!(f, "{error}")?;
+                for frame in trace {
+                    writeln!(f, "  in {} at {}", frame.id, frame.span)?;
+                }
+                Ok(())
+            }
         }
-    }
-}
-
-impl From<Sp<String>> for UiuaError {
-    fn from(value: Sp<String>) -> Self {
-        Self::Run(value)
     }
 }
 

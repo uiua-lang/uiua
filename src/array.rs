@@ -1,4 +1,4 @@
-use std::{fmt, slice, sync::Arc};
+use std::{fmt, mem::take, slice, sync::Arc};
 
 use crate::value::Value;
 
@@ -29,6 +29,9 @@ impl Array {
     }
     pub fn iter_mut(&mut self) -> slice::IterMut<Value> {
         Arc::make_mut(&mut self.0).iter_mut()
+    }
+    pub fn take_inner(&mut self) -> Vec<Value> {
+        take(Arc::make_mut(&mut self.0))
     }
 }
 

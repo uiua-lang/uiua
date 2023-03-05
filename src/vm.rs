@@ -133,7 +133,7 @@ impl Vm {
                 Instr::List(n) => {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("list");
-                    let list: List = stack.drain(stack.len() - *n..).collect();
+                    let list = List::from_items(stack.drain(stack.len() - *n..));
                     stack.push(list.into());
                 }
                 Instr::Array(n) => {

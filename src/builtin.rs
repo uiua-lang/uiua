@@ -48,6 +48,8 @@ pub enum Op1 {
     Int,
     Real,
     String,
+    List,
+    Array,
     Not,
     Neg,
     Abs,
@@ -71,6 +73,8 @@ impl fmt::Display for Op1 {
             Op1::Int => write!(f, "int"),
             Op1::Real => write!(f, "real"),
             Op1::String => write!(f, "string"),
+            Op1::List => write!(f, "list"),
+            Op1::Array => write!(f, "array"),
             Op1::Not => write!(f, "not"),
             Op1::Neg => write!(f, "neg"),
             Op1::Abs => write!(f, "abs"),
@@ -127,6 +131,8 @@ op1_table!(
     (Int, int),
     (Real, real),
     (String, string),
+    (List, list),
+    (Array, array),
     (Not, not),
     (Neg, neg),
     (Abs, abs),
@@ -198,6 +204,31 @@ op1_fn!(
     this,
     (Value::Array(a), *this = format!("{a}").into()),
     (a, *this = format!("{a}").into())
+);
+op1_fn!(
+    list,
+    "Cannot convert {} to list",
+    this,
+    (Value::List(_), ()),
+    (
+        Value::String(a),
+        *this = List::from_items(a.chars().map(Into::into)).into()
+    ),
+    (
+        Value::Array(a),
+        *this = List::from_items(a.take_inner()).into()
+    ),
+);
+op1_fn!(
+    array,
+    "Cannot convert {} to array",
+    this,
+    (Value::Array(_), ()),
+    (
+        Value::String(a),
+        *this = Array::from_iter(a.chars().map(|c| c.into())).into()
+    ),
+    (Value::List(a), *this = a.iter().collect::<Array>().into()),
 );
 op1_fn!(
     neg,
@@ -366,15 +397,15 @@ macro_rules! op2_fn {
 pub(crate) use op2_fn;
 
 op2_table!(
-    (Mod, mod_fn),
-    (Pow, pow_fn),
-    (Atan2, atan2_fn),
-    (Get, get_fn),
-    (Push, push_fn),
-    (Concat, concat_fn),
+    (Mod, modulus),
+    (Pow, pow),
+    (Atan2, atan2),
+    (Get, get),
+    (Push, push),
+    (Concat, concat),
 );
 op2_fn!(
-    mod_fn,
+    modulus,
     "Cannot get remainder of {} % {}",
     this,
     other,
@@ -400,7 +431,7 @@ op2_fn!(
     })
 );
 op2_fn!(
-    pow_fn,
+    pow,
     "Cannot raise {} to {} power",
     this,
     other,
@@ -417,14 +448,14 @@ op2_fn!(
     (Value::Real(a), Value::Real(b), *this = a.powf(*b).into()),
 );
 op2_fn!(
-    atan2_fn,
+    atan2,
     "Cannot get arctangent of {}/{}",
     this,
     other,
     (Value::Real(a), Value::Real(b), *this = a.atan2(*b).into()),
 );
 op2_fn!(
-    get_fn,
+    get,
     "Cannot get index {} from {}",
     this,
     other,
@@ -440,7 +471,7 @@ op2_fn!(
     (
         Value::Byte(a),
         Value::List(b),
-        *this = b.get(*a as usize).cloned().unwrap_or(Value::Unit)
+        *this = b.get(*a as usize).unwrap_or(Value::Unit)
     ),
     (
         Value::Byte(a),
@@ -459,7 +490,7 @@ op2_fn!(
     (
         Value::Int(a),
         Value::List(b),
-        *this = b.get(*a as usize).cloned().unwrap_or(Value::Unit)
+        *this = b.get(*a as usize).unwrap_or(Value::Unit)
     ),
     (
         Value::Int(a),
@@ -468,12 +499,12 @@ op2_fn!(
     ),
     (!env, Value::Array(a), b, {
         for index in a.iter_mut() {
-            index.get_fn(b, env)?;
+            index.get(b, env)?;
         }
     }),
 );
 op2_fn!(
-    push_fn,
+    push,
     "Cannot push {} onto {}",
     this,
     other,
@@ -491,7 +522,7 @@ op2_fn!(
     }),
 );
 op2_fn!(
-    concat_fn,
+    concat,
     "Cannot concatenate {} and {}",
     this,
     other,
@@ -501,7 +532,7 @@ op2_fn!(
     }),
     (Value::List(a), Value::List(b), {
         swap(a, b);
-        a.extend(take(b).into_iter());
+        a.extend(b.iter());
     }),
     (Value::Array(a), Value::Array(b), {
         swap(a, b);

@@ -343,7 +343,7 @@ static BIN_EXPR_CMP: BinExprDef = BinExprDef {
 
 impl Parser {
     fn try_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
-        self.try_pipe_expr()
+        self.try_backpipe_expr()
     }
     fn expr(&mut self) -> ParseResult<Sp<Expr>> {
         self.expect_expr(Self::try_expr)
@@ -354,19 +354,29 @@ impl Parser {
     ) -> ParseResult<Sp<Expr>> {
         f(self)?.ok_or_else(|| self.expected([Expectation::Expr]))
     }
+    fn try_backpipe_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
+        let Some(mut expr) = self.try_pipe_expr()? else {
+            return Ok(None);
+        };
+        while let Some(op_span) = self.try_exact(BackPipe) {
+            let op = op_span.sp(PipeOp::Backward);
+            let right = self.expect_expr(Self::try_backpipe_expr)?;
+            let span = expr.span.clone().merge(right.span.clone());
+            expr = span.sp(Expr::Pipe(Box::new(PipeExpr {
+                op,
+                left: expr,
+                right,
+            })));
+        }
+        Ok(Some(expr))
+    }
     fn try_pipe_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
         let Some(mut expr) = self.try_or_expr()? else {
             return Ok(None);
         };
-        loop {
-            let op = if let Some(span) = self.try_exact(Pipe) {
-                span.sp(PipeOp::Forward)
-            } else if let Some(span) = self.try_exact(BackPipe) {
-                span.sp(PipeOp::Backward)
-            } else {
-                break;
-            };
-            let right = self.expect_expr(Self::try_or_expr)?;
+        while let Some(op_span) = self.try_exact(Pipe) {
+            let op = op_span.sp(PipeOp::Forward);
+            let right = self.expect_expr(Self::try_pipe_expr)?;
             let span = expr.span.clone().merge(right.span.clone());
             expr = span.sp(Expr::Pipe(Box::new(PipeExpr {
                 op,

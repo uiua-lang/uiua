@@ -95,8 +95,9 @@ impl From<Sp<Expr>> for Block {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum Expr {
+    #[default]
     Unit,
     If(Box<IfExpr>),
     Call(Box<CallExpr>),

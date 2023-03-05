@@ -42,6 +42,7 @@ pub enum Op1 {
     Byte,
     Int,
     Real,
+    String,
     Not,
     Neg,
     Abs,
@@ -64,6 +65,7 @@ impl fmt::Display for Op1 {
             Op1::Byte => write!(f, "byte"),
             Op1::Int => write!(f, "int"),
             Op1::Real => write!(f, "real"),
+            Op1::String => write!(f, "string"),
             Op1::Not => write!(f, "not"),
             Op1::Neg => write!(f, "neg"),
             Op1::Abs => write!(f, "abs"),
@@ -125,6 +127,7 @@ op1_table!(
     (Byte, BYTE_TABLE, byte_fn),
     (Int, INT_TABLE, int_fn),
     (Real, REAL_TABLE, real_fn),
+    (String, STRING_TABLE, string_fn),
     (Not, NOT_TABLE, not_fn),
     (Neg, NEG_TABLE, neg_fn),
     (Abs, ABS_TABLE, abs_fn),
@@ -186,6 +189,12 @@ op1_fn!(
     (Type::Byte, |a| *a = ((*a).data.byte as f64).into()),
     (Type::Int, |a| *a = ((*a).data.int as f64).into()),
     (Type::Real, |_a| ()),
+);
+op1_fn!(
+    string_fn,
+    "Cannot format {}",
+    (Type::Array, |a| *a = Arc::new(format!("{}", &*a)).into()),
+    (_, |a| *a = Arc::new(format!("{}", &*a)).into())
 );
 op1_fn!(
     neg_fn,
@@ -250,9 +259,7 @@ op1_fn!(
     println_fn,
     "Cannot print {}",
     (Type::Array, |a| println!("{}", &*a)),
-    (_, |a| {
-        println!("{}", &*a);
-    })
+    (_, |a| println!("{}", &*a))
 );
 
 /// 2-parameter built-in operations
@@ -263,6 +270,7 @@ pub enum Op2 {
     Atan2,
     Get,
     Push,
+    Concat,
 }
 
 impl fmt::Display for Op2 {
@@ -273,6 +281,7 @@ impl fmt::Display for Op2 {
             Op2::Atan2 => write!(f, "atan2"),
             Op2::Get => write!(f, "get"),
             Op2::Push => write!(f, "push"),
+            Op2::Concat => write!(f, "concat"),
         }
     }
 }
@@ -355,6 +364,7 @@ op2_table!(
     (Atan2, ATAN2_TABLE, atan2_fn),
     (Get, GET_TABLE, get_fn),
     (Push, PUSH_TABLE, push_fn),
+    (Concat, CONCAT_TABLE, concat_fn),
 );
 op2_fn!(
     mod_fn,
@@ -457,6 +467,22 @@ op2_fn!(
     (_, Type::Array, |a, b| {
         ptr::swap(a, b);
         (*a).array_mut().push(take(&mut *b));
+    }),
+);
+op2_fn!(
+    concat_fn,
+    "Cannot concatenate {} and {}",
+    (Type::String, Type::String, |a, b| {
+        ptr::swap(a, b);
+        (*a).string_mut().push_str(&(*b).data.string);
+    }),
+    (Type::List, Type::List, |a, b| {
+        ptr::swap(a, b);
+        (*a).list_mut().extend(take((*b).list_mut()).into_iter())
+    }),
+    (Type::Array, Type::Array, |a, b| {
+        ptr::swap(a, b);
+        (*a).array_mut().extend(take((*b).array_mut()).into_iter())
     }),
 );
 

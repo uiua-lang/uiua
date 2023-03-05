@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt, fs, mem::take, path::Path};
+use std::{collections::HashMap, fmt, fs, mem::take, path::Path, sync::Arc};
 
 use enum_iterator::all;
 use nohash_hasher::BuildNoHashHasher;
@@ -9,7 +9,7 @@ use crate::{
     lex::{Sp, Span},
     parse::{parse, ParseError},
     value::{Function, Value},
-    vm::{Instr, Vm},
+    vm::{dprintln, Instr, Vm},
     Ident, UiuaError, UiuaResult,
 };
 
@@ -37,15 +37,7 @@ impl Assembly {
     }
     pub fn run(&self) -> UiuaResult<Option<Value>> {
         let mut vm = Vm::default();
-        let res = self.run_with_vm(&mut vm)?;
-        println!("\nstack:");
-        for val in &vm.stack {
-            println!("{val:?}");
-        }
-        if let Some(val) = &res {
-            println!("{val:?}");
-        }
-        Ok(res)
+        self.run_with_vm(&mut vm)
     }
     fn run_with_vm(&self, vm: &mut Vm) -> UiuaResult<Option<Value>> {
         vm.run_assembly(self)
@@ -268,7 +260,7 @@ impl Compiler {
     pub fn finish(mut self) -> Assembly {
         self.assembly.add_non_function_instrs(self.global_instrs);
         for (i, instr) in self.assembly.instrs.iter().enumerate() {
-            println!("{i:>3} {instr}");
+            dprintln!("{i:>3} {instr}");
         }
         self.assembly
     }
@@ -286,12 +278,10 @@ impl Compiler {
     fn pop_scope(&mut self, height: usize) {
         self.scopes.pop().unwrap();
         self.height = height;
-        println!("popping scope brought height to {height}");
     }
     /// Bind the value on the top of the stack to the given identifier
     fn bind_local(&mut self, ident: Ident) {
         let height = self.height - 1;
-        println!("bind {ident} to {height}");
         self.scope_mut()
             .bindings
             .insert(ident, Binding::Local(height));
@@ -319,7 +309,6 @@ impl Compiler {
             Instr::Array(len) => self.height -= len - 1,
             _ => {}
         }
-        println!("{instr:?} brought height to {}", self.height);
         self.instrs_mut().push(instr);
     }
     fn push_spot(&mut self) -> usize {
@@ -348,26 +337,38 @@ impl Compiler {
         Ok(())
     }
     fn func(&mut self, func: Func, push: bool) -> CompileResult {
+        self.func_outer(push, func.id.clone(), |this| {
+            // Push and bind the function's parameters
+            let params = func.params.len();
+            for param in func.params.into_iter().rev() {
+                this.height += 1;
+                this.bind_local(param.value);
+            }
+            // Compile the function's body
+            this.block(func.body)?;
+            Ok(params)
+        })
+    }
+    fn func_outer(
+        &mut self,
+        push: bool,
+        id: FunctionId,
+        f: impl FnOnce(&mut Self) -> CompileResult<usize>,
+    ) -> CompileResult {
         // Initialize the function's instruction list
         self.in_progress_functions.push(Vec::new());
         // Push the function's scope
         let height = self.push_scope();
         // Push the function's name as a comment
-        self.push_instr(Instr::Comment(match &func.id {
+        self.push_instr(Instr::Comment(match &id {
             FunctionId::Named(name) => format!("fn {name}"),
             FunctionId::Anonymous(span) => format!("fn at {span}"),
+            FunctionId::FormatString(span) => format!("format string at {span}"),
             FunctionId::Op1(_) => unreachable!("Builtin1 functions should not be compiled"),
             FunctionId::Op2(_) => unreachable!("Builtin2 functions should not be compiled"),
             FunctionId::Algorithm(_) => unreachable!("Builtin algorithms should not be compiled"),
         }));
-        // Push and bind the function's parameters
-        let params = func.params.len();
-        for param in func.params.into_iter().rev() {
-            self.height += 1;
-            self.bind_local(param.value);
-        }
-        // Compile the function's body
-        self.block(func.body)?;
+        let params = f(self)?;
         self.push_instr(Instr::Return);
         // Pop the function's scope
         self.pop_scope(height);
@@ -376,7 +377,7 @@ impl Compiler {
         // Resolve function references
         for instrs in &mut self.in_progress_functions {
             for instr in instrs {
-                if matches!(instr, Instr::PushUnresolvedFunction(id) if **id == func.id) {
+                if matches!(instr, Instr::PushUnresolvedFunction(uid) if **uid == id) {
                     *instr = Instr::Push(function.into());
                 }
             }
@@ -384,15 +385,11 @@ impl Compiler {
         // Add the function's instructions to the global function list
         let instrs = self.in_progress_functions.pop().unwrap();
         self.assembly.add_function_instrs(instrs);
-        self.scope_mut().functions.insert(func.id.clone(), function);
+        self.scope_mut().functions.insert(id.clone(), function);
         // Add to the function info map
-        self.assembly.function_info.insert(
-            function,
-            FunctionInfo {
-                id: func.id,
-                params,
-            },
-        );
+        self.assembly
+            .function_info
+            .insert(function, FunctionInfo { id, params });
         // Push the function if necessary
         if push {
             self.push_instr(Instr::Push(function.into()));
@@ -475,6 +472,7 @@ impl Compiler {
             }
             Expr::Char(c) => self.push_instr(Instr::Push(c.into())),
             Expr::String(s) => self.push_instr(Instr::Push(s.into())),
+            Expr::FormatString(parts) => self.format_string(parts, expr.span)?,
             Expr::Ident(ident) => self.ident(ident, expr.span)?,
             Expr::Placeholder => panic!("unresolved placeholder"),
             Expr::Bin(bin) => {
@@ -542,7 +540,6 @@ impl Compiler {
     }
     fn list(&mut self, make: fn(usize) -> Instr, items: Vec<Sp<Expr>>) -> CompileResult {
         let len = items.len();
-        println!("height before making list of {len} items: {}", self.height);
         for item in items {
             self.expr(item)?;
         }
@@ -622,6 +619,26 @@ impl Compiler {
             }
         }
     }
+    fn format_string(&mut self, parts: Vec<String>, span: Span) -> CompileResult {
+        if parts.len() <= 1 {
+            self.push_instr(Instr::Push(
+                Arc::new(parts.into_iter().next().unwrap_or_default()).into(),
+            ));
+            return Ok(());
+        }
+        self.func_outer(true, FunctionId::FormatString(span), |this| {
+            let params = parts.len() - 1;
+            let mut parts = parts.into_iter();
+            this.push_instr(Instr::Push(Arc::new(parts.next().unwrap()).into()));
+            for (i, part) in parts.enumerate() {
+                this.push_instr(Instr::CopyRel(i + 2));
+                this.push_instr(Instr::Op2(Op2::Concat));
+                this.push_instr(Instr::Push(Arc::new(part).into()));
+                this.push_instr(Instr::Op2(Op2::Concat));
+            }
+            Ok(params)
+        })
+    }
 }
 
 fn resolve_placeholders(mut expr: Sp<Expr>) -> Sp<Expr> {
@@ -691,6 +708,7 @@ fn resolve_placeholders_rec(expr: &mut Sp<Expr>, params: &mut Vec<Sp<Ident>>) {
         | Expr::Real(_)
         | Expr::Char(_)
         | Expr::String(_)
+        | Expr::FormatString(_)
         | Expr::Ident(_) => {}
     }
 }

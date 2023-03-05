@@ -54,3 +54,9 @@ impl fmt::Debug for Array {
         f.debug_list().entries(self.0.iter()).finish()
     }
 }
+
+impl Extend<Value> for Array {
+    fn extend<T: IntoIterator<Item = Value>>(&mut self, iter: T) {
+        Arc::make_mut(&mut self.0).extend(iter)
+    }
+}

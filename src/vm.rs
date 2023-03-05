@@ -61,14 +61,15 @@ struct StackFrame {
     call_span: usize,
 }
 
-const DBG: bool = false;
+pub const DBG: bool = false;
 macro_rules! dprintln {
     ($($arg:tt)*) => {
-        if DBG {
+        if $crate::vm::DBG {
             println!($($arg)*);
         }
     };
 }
+pub(crate) use dprintln;
 
 #[derive(Default)]
 pub struct Vm {
@@ -233,8 +234,8 @@ impl Vm {
                         }
                         Ordering::Greater => {
                             let message = format!(
-                                "too many arguments: expected {}, got {}",
-                                info.params, arg_count
+                                "Too many arguments to {}: expected {}, got {}",
+                                info.id, info.params, arg_count
                             );
                             return Err(assembly.spans[*span].clone().sp(message));
                         }

@@ -53,3 +53,9 @@ impl fmt::Debug for List {
         f.debug_list().entries(self.0.iter()).finish()
     }
 }
+
+impl Extend<Value> for List {
+    fn extend<T: IntoIterator<Item = Value>>(&mut self, iter: T) {
+        self.0.extend(iter)
+    }
+}

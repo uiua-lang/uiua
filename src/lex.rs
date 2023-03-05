@@ -229,6 +229,7 @@ pub enum Token {
     Real(String),
     Char(char),
     Str(Arc<String>),
+    FormatString(Vec<String>),
     Keyword(Keyword),
     Simple(Simple),
 }
@@ -264,6 +265,12 @@ impl Token {
             _ => None,
         }
     }
+    pub fn as_format_string(&self) -> Option<Vec<String>> {
+        match self {
+            Token::FormatString(parts) => Some(parts.clone()),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for Token {
@@ -276,6 +283,7 @@ impl fmt::Display for Token {
             Token::Real(real) => write!(f, "{real}"),
             Token::Char(char) => write!(f, "{char:?}"),
             Token::Str(s) => write!(f, "{s:?}"),
+            Token::FormatString(parts) => write!(f, "{parts:?}"),
             Token::Keyword(keyword) => write!(f, "{keyword}"),
             Token::Simple(simple) => write!(f, "{simple}"),
         }
@@ -564,6 +572,32 @@ impl Lexer {
                     }
                     return self.end(Token::Str(string.into()), start);
                 }
+                // Format strings
+                '$' => {
+                    if !self.next_char_exact('"') {
+                        return Err(self
+                            .end_span(start)
+                            .sp(LexError::ExpectedCharacter(Some('"'))));
+                    }
+                    let mut string = String::new();
+                    let mut slash_escaped = false;
+                    loop {
+                        match self.character(&mut slash_escaped, '"') {
+                            Ok(Some(c)) => string.push(c),
+                            Ok(None) => break,
+                            Err(e) => {
+                                return Err(self.end_span(start).sp(LexError::InvalidEscape(e)))
+                            }
+                        }
+                    }
+                    if !self.next_char_exact('"') {
+                        return Err(self
+                            .end_span(start)
+                            .sp(LexError::ExpectedCharacter(Some('"'))));
+                    }
+                    let parts = string.split("{}").map(Into::into).collect();
+                    return self.end(Token::FormatString(parts), start);
+                }
                 // Identifiers, keywords, and underscore
                 c if is_ident_start(c) => {
                     let mut ident = String::new();
@@ -638,6 +672,8 @@ impl Lexer {
                 '\\' => '\\',
                 '"' => '"',
                 '\'' => '\'',
+                '{' => '{',
+                '}' => '}',
                 c => return Err(c),
             }
         } else if c == '\\' {

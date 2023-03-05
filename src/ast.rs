@@ -61,6 +61,7 @@ pub struct Func {
 pub enum FunctionId {
     Named(Ident),
     Anonymous(Span),
+    FormatString(Span),
     Op1(Op1),
     Op2(Op2),
     Algorithm(Algorithm),
@@ -71,6 +72,7 @@ impl fmt::Display for FunctionId {
         match self {
             FunctionId::Named(name) => write!(f, "`{name}`"),
             FunctionId::Anonymous(span) => write!(f, "fn from {span}"),
+            FunctionId::FormatString(span) => write!(f, "format string from {span}"),
             FunctionId::Op1(op) => write!(f, "`{op}`"),
             FunctionId::Op2(op) => write!(f, "`{op}`"),
             FunctionId::Algorithm(alg) => write!(f, "`{alg}`"),
@@ -106,6 +108,7 @@ pub enum Expr {
     Real(String),
     Char(char),
     String(Arc<String>),
+    FormatString(Vec<String>),
     Ident(Ident),
     Placeholder,
     List(Vec<Sp<Expr>>),

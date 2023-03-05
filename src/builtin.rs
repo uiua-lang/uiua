@@ -386,12 +386,14 @@ op2_fn!(
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
 pub enum Algorithm {
+    Flip,
     Each,
 }
 
 impl fmt::Display for Algorithm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Algorithm::Flip => write!(f, "flip"),
             Algorithm::Each => write!(f, "each"),
         }
     }
@@ -400,6 +402,7 @@ impl fmt::Display for Algorithm {
 impl Algorithm {
     pub(crate) fn params(&self) -> usize {
         match self {
+            Algorithm::Flip => 3,
             Algorithm::Each => 2,
         }
     }
@@ -410,9 +413,15 @@ impl Algorithm {
             crate::builtin::{Op1, Op2},
             Instr::*,
         };
-        match self {
+        let mut instrs = match self {
+            Algorithm::Flip => vec![
+                // b, a, f
+                Rotate(3), // f, b, a
+                Rotate(2), // f, a, b
+                Move(3),   // a, b, f
+                Call { args: 2, span: 0 },
+            ],
             Algorithm::Each => vec![
-                Comment("each".into()),
                 // [1, 2, 3], f = (_ * 2)
                 CopyRel(2),        // [1, 2, 3], f, [1, 2, 3]
                 Op1(Op1::Default), // [1, 2, 3], f, []
@@ -439,6 +448,8 @@ impl Algorithm {
                 // Loop end
                 Pop(2), // [1, 2, 3], f, [2, 4, 6]
             ],
-        }
+        };
+        instrs.insert(0, Comment(self.to_string()));
+        instrs
     }
 }

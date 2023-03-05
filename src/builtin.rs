@@ -536,7 +536,7 @@ impl Algorithm {
                 CopyRel(2),          // [1, 2, 3], f, 0, 3, 0, 3
                 CopyRel(2),          // [1, 2, 3], f, 0, 3, 0, 3, 0
                 BinOp(Eq, 0),        // [1, 2, 3], f, 0, 3, 0, false
-                PopJumpIf(11, true), // [1, 2, 3], f, 0, 3, 0
+                PopJumpIf(12, true), // [1, 2, 3], f, 0, 3, 0
                 CopyRel(5),          // [1, 2, 3], f, 0, 3, 0, [1, 2, 3]
                 CopyRel(2),          // [1, 2, 3], f, 0, 3, 0, [1, 2, 3], 0
                 Op2(Op2::Get),       // [1, 2, 3], f, 0, 3, 0, 1
@@ -547,7 +547,7 @@ impl Algorithm {
                 Rotate(3),           // [1, 2, 3], f, 1, 3, 0
                 Push(1i64.into()),   // [1, 2, 3], f, 1, 3, 0, 1
                 BinOp(Add, 0),       // [1, 2, 3], f, 1, 3, 1
-                Jump(-13),
+                Jump(-14),
                 // Loop end
                 Pop(2), // [1, 2, 3], f, 6
             ],

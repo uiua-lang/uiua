@@ -39,6 +39,7 @@ pub(crate) fn constants() -> Vec<(&'static str, Value)> {
 pub enum Op1 {
     Id,
     Default,
+    Byte,
     Int,
     Real,
     Not,
@@ -58,6 +59,7 @@ impl fmt::Display for Op1 {
         match self {
             Op1::Id => write!(f, "id"),
             Op1::Default => write!(f, "default"),
+            Op1::Byte => write!(f, "byte"),
             Op1::Int => write!(f, "int"),
             Op1::Real => write!(f, "real"),
             Op1::Not => write!(f, "not"),
@@ -77,6 +79,7 @@ impl fmt::Display for Op1 {
 type ValueFn1 = fn(*mut Value, Env) -> RuntimeResult;
 macro_rules! op1_table {
     ($(($op:ident, $name:ident, $f:ident)),* $(,)*) => {
+        #[allow(unused_unsafe)]
         $(static $name: [ValueFn1; Type::ARITY] = unsafe { type_line!($f) };)*
 
         impl Value {
@@ -115,6 +118,7 @@ pub(crate) use op1_fn;
 op1_table!(
     (Id, ID_TABLE, id_fn),
     (Default, DEFAULT_TABLE, default_fn),
+    (Byte, BYTE_TABLE, byte_fn),
     (Int, INT_TABLE, int_fn),
     (Real, REAL_TABLE, real_fn),
     (Not, NOT_TABLE, not_fn),
@@ -134,28 +138,45 @@ const unsafe fn not_fn(_: Type) -> ValueFn1 {
         Ok(())
     }
 }
-op1_fn!(id_fn, "Cannot convert {} to itself", (_, |_a| ()));
+
+const fn id_fn(_: Type) -> ValueFn1 {
+    |_, _| Ok(())
+}
 op1_fn!(
     default_fn,
     "Cannot convert {} to default",
     (Type::Unit, |_a| ()),
     (Type::Bool, |a| *a = false.into()),
-    (Type::Int, |a| *a = 0.into()),
+    (Type::Byte, |a| *a = 0u8.into()),
+    (Type::Int, |a| *a = 0i64.into()),
     (Type::Real, |a| *a = 0.0.into()),
+    (Type::Char, |a| *a = '\0'.into()),
     (Type::Function, |a| *a = Function(0).into()),
     (Type::Partial, |a| *a = Function(0).into()),
     (Type::List, |a| *a = List::new().into()),
     (Type::Array, |a| *a = Array::new().into()),
 );
 op1_fn!(
+    byte_fn,
+    "Cannot convert {} to byte",
+    (Type::Bool, |a| *a = ((*a).data.bool as u8).into()),
+    (Type::Byte, |_a| ()),
+    (Type::Int, |a| *a = ((*a).data.int as u8).into()),
+    (Type::Real, |a| *a = ((*a).data.real as u8).into()),
+);
+op1_fn!(
     int_fn,
     "Cannot convert {} to int",
+    (Type::Bool, |a| *a = ((*a).data.bool as i64).into()),
+    (Type::Byte, |a| *a = ((*a).data.byte as i64).into()),
     (Type::Int, |_a| ()),
     (Type::Real, |a| *a = ((*a).data.real as i64).into()),
 );
 op1_fn!(
     real_fn,
     "Cannot convert {} to real",
+    (Type::Bool, |a| *a = ((*a).data.bool as u8 as f64).into()),
+    (Type::Byte, |a| *a = ((*a).data.byte as f64).into()),
     (Type::Int, |a| *a = ((*a).data.int as f64).into()),
     (Type::Real, |_a| ()),
 );
@@ -189,19 +210,19 @@ op1_fn!(
 op1_fn!(
     floor_fn,
     "Cannot get floor of {}",
-    (Type::Int, |_a| ()),
+    (Type::Byte | Type::Int, |_a| ()),
     (Type::Real, |a| *a = (*a).data.real.floor().into())
 );
 op1_fn!(
     ceil_fn,
     "Cannot get ceiling of {}",
-    (Type::Int, |_a| ()),
+    (Type::Byte | Type::Int, |_a| ()),
     (Type::Real, |a| *a = (*a).data.real.ceil().into())
 );
 op1_fn!(
     round_fn,
     "Cannot round {}",
-    (Type::Int, |_a| ()),
+    (Type::Byte | Type::Int, |_a| ()),
     (Type::Real, |a| *a = (*a).data.real.round().into())
 );
 op1_fn!(
@@ -355,6 +376,16 @@ op2_fn!(
 op2_fn!(
     get_fn,
     "Cannot get index {} from {}",
+    (Type::Byte, Type::List, |a, b| *a = b
+        .list_mut()
+        .get((*a).data.byte as usize)
+        .cloned()
+        .unwrap_or_else(Value::unit)),
+    (Type::Byte, Type::Array, |a, b| *a = b
+        .array_mut()
+        .get((*a).data.byte as usize)
+        .cloned()
+        .unwrap_or_else(Value::unit)),
     (Type::Int, Type::List, |a, b| *a = b
         .list_mut()
         .get((*a).data.int as usize)
@@ -426,9 +457,9 @@ impl Algorithm {
             ],
             Algorithm::Fold => vec![
                 // [1, 2, 3], f = (_+_), 0
-                CopyRel(3),     // [1, 2, 3], f, 0, [1, 2, 3]
-                Op1(Op1::Len),  // [1, 2, 3], f, 0, 3
-                Push(0.into()), // [1, 2, 3], f, 0, 3, 0
+                CopyRel(3),        // [1, 2, 3], f, 0, [1, 2, 3]
+                Op1(Op1::Len),     // [1, 2, 3], f, 0, 3
+                Push(0i64.into()), // [1, 2, 3], f, 0, 3, 0
                 // Loop start
                 CopyRel(2),                // [1, 2, 3], f, 0, 3, 0, 3
                 CopyRel(2),                // [1, 2, 3], f, 0, 3, 0, 3, 0
@@ -441,7 +472,7 @@ impl Algorithm {
                 CopyRel(5),                // [1, 2, 3], f, 3, 0, 1, 0, f
                 Call { args: 2, span: 0 }, // [1, 2, 3], f, 3, 0, 1
                 Rotate(3),                 // [1, 2, 3], f, 1, 3, 0
-                Push(1.into()),            // [1, 2, 3], f, 1, 3, 0, 1
+                Push(1i64.into()),         // [1, 2, 3], f, 1, 3, 0, 1
                 BinOp(Add, 0),             // [1, 2, 3], f, 1, 3, 1
                 Jump(-13),
                 // Loop end
@@ -453,7 +484,7 @@ impl Algorithm {
                 Op1(Op1::Default), // [1, 2, 3], f, []
                 CopyRel(3),        // [1, 2, 3], f, [], [1, 2, 3]
                 Op1(Op1::Len),     // [1, 2, 3], f, [], 3
-                Push(0.into()),    // [1, 2, 3], f, [], 3, 0
+                Push(0i64.into()), // [1, 2, 3], f, [], 3, 0
                 // Loop start
                 CopyRel(2),                // [1, 2, 3], f, [], 3, 0, 3
                 CopyRel(2),                // [1, 2, 3], f, [], 3, 0, 3, 0
@@ -468,7 +499,7 @@ impl Algorithm {
                 Move(2),                   // [1, 2, 3], f, 3, 0, [], 2
                 Op2(Op2::Push),            // [1, 2, 3], f, 3, 0, [2]
                 Rotate(3),                 // [1, 2, 3], f, [2], 3, 0
-                Push(1.into()),            // [1, 2, 3], f, [2], 3, 0, 1
+                Push(1i64.into()),         // [1, 2, 3], f, [2], 3, 0, 1
                 BinOp(Add, 0),             // [1, 2, 3], f, [2], 3, 1
                 Jump(-15),
                 // Loop end

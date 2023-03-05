@@ -3,7 +3,7 @@ use std::fmt;
 use enum_iterator::Sequence;
 
 use crate::{
-    builtin::{Op1, Op2},
+    builtin::{Algorithm, Op1, Op2},
     lex::{Sp, Span},
     Ident,
 };
@@ -63,6 +63,7 @@ pub enum FunctionId {
     Anonymous(Span),
     Op1(Op1),
     Op2(Op2),
+    Algorithm(Algorithm),
 }
 
 impl fmt::Display for FunctionId {
@@ -72,6 +73,7 @@ impl fmt::Display for FunctionId {
             FunctionId::Anonymous(span) => write!(f, "fn from {span}"),
             FunctionId::Op1(op) => write!(f, "`{op}`"),
             FunctionId::Op2(op) => write!(f, "`{op}`"),
+            FunctionId::Algorithm(alg) => write!(f, "`{alg}`"),
         }
     }
 }

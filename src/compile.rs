@@ -5,7 +5,7 @@ use nohash_hasher::BuildNoHashHasher;
 
 use crate::{
     ast::*,
-    builtin::{constants, Op1, Op2},
+    builtin::{constants, Algorithm, Op1, Op2},
     lex::{Sp, Span},
     parse::{parse, ParseError},
     value::{Function, Value},
@@ -156,28 +156,29 @@ impl Default for Compiler {
                 .insert(ascend::static_str(name).into(), Binding::Constant(index));
         }
         // Operations
-        let mut init = |name: &str, id: FunctionId, params: usize, instr: Instr| -> Function {
-            let function = Function(function_instrs.len());
-            // Instructions
-            function_instrs.push(instr);
-            function_instrs.push(Instr::Return);
-            // Scope
-            scope.bindings.insert(
-                ascend::static_str(name).into(),
-                Binding::Function(id.clone()),
-            );
-            scope.functions.insert(id.clone(), function);
-            // Function info
-            function_info.insert(function, FunctionInfo { id, params });
-            function
-        };
+        let mut init =
+            |name: &str, id: FunctionId, params: usize, mut instrs: Vec<Instr>| -> Function {
+                let function = Function(function_instrs.len());
+                // Instructions
+                function_instrs.append(&mut instrs);
+                function_instrs.push(Instr::Return);
+                // Scope
+                scope.bindings.insert(
+                    ascend::static_str(name).into(),
+                    Binding::Function(id.clone()),
+                );
+                scope.functions.insert(id.clone(), function);
+                // Function info
+                function_info.insert(function, FunctionInfo { id, params });
+                function
+            };
         // 1-parameter builtins
         for op1 in all::<Op1>() {
             init(
                 &op1.to_string(),
                 FunctionId::Op1(op1),
                 1,
-                Instr::BuiltinOp1(op1),
+                vec![Instr::Op1(op1)],
             );
         }
         // 2-parameter builtins
@@ -186,18 +187,31 @@ impl Default for Compiler {
                 &op2.to_string(),
                 FunctionId::Op2(op2),
                 2,
-                Instr::BuiltinOp2(op2),
+                vec![Instr::Op2(op2)],
             );
             if let Op2::Get = op2 {
                 cached_functions.get = function;
             }
         }
+        // Algorithms
+        for algo in all::<Algorithm>() {
+            init(
+                &algo.to_string(),
+                FunctionId::Algorithm(algo),
+                algo.params(),
+                algo.instrs(),
+            );
+        }
+
+        // The default function is the identity function
+        assert_eq!(function_instrs[0], Instr::Op1(Op1::Id));
+
         let assembly = Assembly {
             start: function_instrs.len(),
             instrs: function_instrs,
             constants: consts,
             function_info,
-            call_spans: Vec::new(),
+            call_spans: vec![Span::Builtin],
             cached_functions,
         };
         Self {
@@ -337,6 +351,7 @@ impl Compiler {
             FunctionId::Anonymous(span) => format!("fn at {span}"),
             FunctionId::Op1(_) => unreachable!("Builtin1 functions should not be compiled"),
             FunctionId::Op2(_) => unreachable!("Builtin2 functions should not be compiled"),
+            FunctionId::Algorithm(_) => unreachable!("Builtin algorithms should not be compiled"),
         }));
         // Push and bind the function's parameters
         let params = func.params.len();

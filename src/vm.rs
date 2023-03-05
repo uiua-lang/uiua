@@ -22,6 +22,9 @@ pub(crate) enum Instr {
     CopyRel(usize),
     /// Copy the nth value from the bottom of the stack
     CopyAbs(usize),
+    Move(usize),
+    Rotate(usize),
+    Pop(usize),
     Call {
         args: usize,
         span: usize,
@@ -31,8 +34,8 @@ pub(crate) enum Instr {
     PopJumpIf(isize, bool),
     JumpIfElsePop(isize, bool),
     BinOp(BinOp, Box<Span>),
-    BuiltinOp1(Op1),
-    BuiltinOp2(Op2),
+    Op1(Op1),
+    Op2(Op2),
     DestructureList(usize, Box<Span>),
     PushUnresolvedFunction(Box<FunctionId>),
     Dud,
@@ -58,7 +61,7 @@ struct StackFrame {
     call_span: usize,
 }
 
-const DBG: bool = false;
+const DBG: bool = true;
 macro_rules! dprintln {
     ($($arg:tt)*) => {
         if DBG {
@@ -153,6 +156,23 @@ impl Vm {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("copy");
                     stack.push(stack[*n].clone())
+                }
+                Instr::Move(n) => {
+                    #[cfg(feature = "profile")]
+                    puffin::profile_scope!("remove");
+                    let val = stack.remove(stack.len() - *n);
+                    stack.push(val);
+                }
+                Instr::Rotate(n) => {
+                    #[cfg(feature = "profile")]
+                    puffin::profile_scope!("rotate");
+                    let val = stack.pop().unwrap();
+                    stack.insert(stack.len() + 1 - *n, val);
+                }
+                Instr::Pop(n) => {
+                    #[cfg(feature = "profile")]
+                    puffin::profile_scope!("pop");
+                    stack.truncate(stack.len() - *n);
                 }
                 Instr::Call {
                     args: call_arg_count,
@@ -275,13 +295,13 @@ impl Vm {
                     };
                     left.bin_op(right, *op, span)?;
                 }
-                Instr::BuiltinOp1(op) => {
+                Instr::Op1(op) => {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("builtin_op1");
                     let val = stack.last_mut().unwrap();
                     val.op1(*op, &Span::Builtin)?;
                 }
-                Instr::BuiltinOp2(op) => {
+                Instr::Op2(op) => {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("builtin_op2");
                     let (left, mut right) = {

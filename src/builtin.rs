@@ -2,7 +2,7 @@ use std::{f64::consts::*, fmt, ptr};
 
 use enum_iterator::Sequence;
 
-use crate::{lex::Span, value::*, RuntimeResult};
+use crate::{array::Array, lex::Span, list::List, value::*, vm::Instr, RuntimeResult};
 
 pub(crate) fn constants() -> Vec<(&'static str, Value)> {
     vec![
@@ -23,6 +23,8 @@ pub(crate) fn constants() -> Vec<(&'static str, Value)> {
 /// 1-parameter built-in operations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
 pub enum Op1 {
+    Id,
+    Default,
     Int,
     Real,
     Not,
@@ -40,6 +42,8 @@ pub enum Op1 {
 impl fmt::Display for Op1 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Op1::Id => write!(f, "id"),
+            Op1::Default => write!(f, "default"),
             Op1::Int => write!(f, "int"),
             Op1::Real => write!(f, "real"),
             Op1::Not => write!(f, "not"),
@@ -95,6 +99,8 @@ macro_rules! op1_fn {
 pub(crate) use op1_fn;
 
 op1_table!(
+    (Id, ID_TABLE, id_fn),
+    (Default, DEFAULT_TABLE, default_fn),
     (Int, INT_TABLE, int_fn),
     (Real, REAL_TABLE, real_fn),
     (Not, NOT_TABLE, not_fn),
@@ -114,6 +120,19 @@ const unsafe fn not_fn(_: Type) -> ValueFn1 {
         Ok(())
     }
 }
+op1_fn!(id_fn, "Cannot convert {} to itself", (_, |_a| ()));
+op1_fn!(
+    default_fn,
+    "Cannot convert {} to default",
+    (Type::Unit, |_a| ()),
+    (Type::Bool, |a| *a = false.into()),
+    (Type::Int, |a| *a = 0.into()),
+    (Type::Real, |a| *a = 0.0.into()),
+    (Type::Function, |a| *a = Function(0).into()),
+    (Type::Partial, |a| *a = Function(0).into()),
+    (Type::List, |a| *a = List::new().into()),
+    (Type::Array, |a| *a = Array::new().into()),
+);
 op1_fn!(
     int_fn,
     "Cannot convert {} to int",
@@ -346,3 +365,63 @@ op2_fn!(
         (*a).array_mut().push(b);
     }),
 );
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
+pub enum Algorithm {
+    Each,
+}
+
+impl fmt::Display for Algorithm {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Algorithm::Each => write!(f, "each"),
+        }
+    }
+}
+
+impl Algorithm {
+    pub(crate) fn params(&self) -> usize {
+        match self {
+            Algorithm::Each => 2,
+        }
+    }
+    pub(crate) fn instrs(&self) -> Vec<Instr> {
+        #[allow(unused_imports)]
+        use {
+            crate::ast::BinOp::*,
+            crate::builtin::{Op1, Op2},
+            Instr::*,
+        };
+        const SPAN: Span = Span::Builtin;
+        match self {
+            Algorithm::Each => vec![
+                Comment("each".into()),
+                // [1, 2, 3], f = (_ * 2)
+                CopyRel(2),        // [1, 2, 3], f, [1, 2, 3]
+                Op1(Op1::Default), // [1, 2, 3], f, []
+                CopyRel(3),        // [1, 2, 3], f, [], [1, 2, 3]
+                Op1(Op1::Len),     // [1, 2, 3], f, [], 3
+                Push(0.into()),    // [1, 2, 3], f, [], 3, 0
+                // Loop start
+                CopyRel(2),                // [1, 2, 3], f, [], 3, 0, 3
+                CopyRel(2),                // [1, 2, 3], f, [], 3, 0, 3, 0
+                BinOp(Eq, SPAN.into()),    // [1, 2, 3], f, [], 3, 0, false
+                PopJumpIf(13, true),       // [1, 2, 3], f, [], 3, 0
+                CopyRel(5),                // [1, 2, 3], f, [], 3, 0, [1, 2, 3]
+                CopyRel(2),                // [1, 2, 3], f, [], 3, 0, [1, 2, 3], 0
+                Op2(Op2::Get),             // [1, 2, 3], f, [], 3, 0, 1
+                CopyRel(5),                // [1, 2, 3], f, [], 3, 0, 1, f
+                Call { args: 1, span: 0 }, // [1, 2, 3], f, [], 3, 0, 2
+                Move(4),                   // [1, 2, 3], f, 3, 0, 2, [],
+                Move(2),                   // [1, 2, 3], f, 3, 0, [], 2
+                Op2(Op2::Push),            // [1, 2, 3], f, 3, 0, [2]
+                Rotate(3),                 // [1, 2, 3], f, [2], 3, 0
+                Push(1.into()),            // [1, 2, 3], f, [2], 3, 0, 1
+                BinOp(Add, SPAN.into()),   // [1, 2, 3], f, [2], 3, 1
+                Jump(-15),
+                // Loop end
+                Pop(2), // [1, 2, 3], f, [2, 4, 6]
+            ],
+        }
+    }
+}

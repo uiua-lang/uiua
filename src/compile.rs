@@ -19,6 +19,11 @@ pub struct Assembly {
     pub(crate) constants: Vec<Value>,
     pub(crate) function_info: HashMap<Function, FunctionInfo, BuildNoHashHasher<Function>>,
     pub(crate) call_spans: Vec<Span>,
+    pub(crate) cached_functions: CachedFunctions,
+}
+
+pub(crate) struct CachedFunctions {
+    pub get: Function,
 }
 
 impl Assembly {
@@ -140,6 +145,7 @@ impl Default for Compiler {
         let mut scope = Scope::new(0);
         let mut function_info = HashMap::default();
         let mut consts = Vec::new();
+        let mut cached_functions = CachedFunctions { get: Function(0) };
         // Initialize builtins
         // Constants
         for (name, value) in constants() {
@@ -150,7 +156,7 @@ impl Default for Compiler {
                 .insert(ascend::static_str(name).into(), Binding::Constant(index));
         }
         // Operations
-        let mut init = |name: &str, id: FunctionId, params: usize, instr: Instr| {
+        let mut init = |name: &str, id: FunctionId, params: usize, instr: Instr| -> Function {
             let function = Function(function_instrs.len());
             // Instructions
             function_instrs.push(instr);
@@ -163,6 +169,7 @@ impl Default for Compiler {
             scope.functions.insert(id.clone(), function);
             // Function info
             function_info.insert(function, FunctionInfo { id, params });
+            function
         };
         // 1-parameter builtins
         for op1 in all::<Op1>() {
@@ -175,12 +182,15 @@ impl Default for Compiler {
         }
         // 2-parameter builtins
         for op2 in all::<Op2>() {
-            init(
+            let function = init(
                 &op2.to_string(),
                 FunctionId::Op2(op2),
                 2,
                 Instr::BuiltinOp2(op2),
             );
+            if let Op2::Get = op2 {
+                cached_functions.get = function;
+            }
         }
         let assembly = Assembly {
             start: function_instrs.len(),
@@ -188,6 +198,7 @@ impl Default for Compiler {
             constants: consts,
             function_info,
             call_spans: Vec::new(),
+            cached_functions,
         };
         Self {
             global_instrs: vec![Instr::Comment("BEGIN".into())],

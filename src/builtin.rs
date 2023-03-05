@@ -184,6 +184,7 @@ pub enum Op2 {
     Mod,
     Pow,
     Atan2,
+    Get,
     Push,
 }
 
@@ -193,6 +194,7 @@ impl fmt::Display for Op2 {
             Op2::Mod => write!(f, "mod"),
             Op2::Pow => write!(f, "pow"),
             Op2::Atan2 => write!(f, "atan2"),
+            Op2::Get => write!(f, "get"),
             Op2::Push => write!(f, "push"),
         }
     }
@@ -270,6 +272,7 @@ op2_table!(
     (Mod, MOD_TABLE, mod_fn),
     (Pow, POW_TABLE, pow_fn),
     (Atan2, ATAN2_TABLE, atan2_fn),
+    (Get, GET_TABLE, get_fn),
     (Push, PUSH_TABLE, push_fn),
 );
 op2_fn!(
@@ -311,6 +314,25 @@ op2_fn!(
     "Cannot get arctangent of {}/{}",
     (Type::Real, Type::Real, |a, b| *a =
         (*a).data.real.atan2(b.data.real).into()),
+);
+op2_fn!(
+    get_fn,
+    "Cannot get index {} from {}",
+    (Type::Int, Type::List, |a, b| *a = b
+        .list_mut()
+        .get((*a).data.int as usize)
+        .cloned()
+        .unwrap_or_else(Value::unit)),
+    (Type::Int, Type::Array, |a, b| *a = b
+        .array_mut()
+        .get((*a).data.int as usize)
+        .cloned()
+        .unwrap_or_else(Value::unit)),
+    (Type::Array, _, |a, b| {
+        for index in (*a).array_mut().iter_mut() {
+            index.get_fn(b.clone(), &Span::Builtin)?;
+        }
+    }),
 );
 op2_fn!(
     push_fn,

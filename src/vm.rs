@@ -171,6 +171,9 @@ impl Vm {
                                     let partial = &val.data.partial;
                                     Ok((partial.function, partial.args.clone()))
                                 },
+                                Type::Int | Type::List | Type::Array => |val, _, assembly| {
+                                    Ok((assembly.cached_functions.get, vec![val]))
+                                },
                                 _ => |val, span, assembly| {
                                     let message = format!("cannot call {}", val.ty());
                                     Err(assembly.call_spans[span].error(message))

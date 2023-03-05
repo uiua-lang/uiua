@@ -25,10 +25,7 @@ pub(crate) enum Instr {
     Move(usize),
     Rotate(usize),
     Pop(usize),
-    Call {
-        args: usize,
-        span: usize,
-    },
+    Call(usize),
     Return,
     Jump(isize),
     PopJumpIf(isize, bool),
@@ -172,10 +169,7 @@ impl Vm {
                     puffin::profile_scope!("pop");
                     stack.truncate(stack.len() - *n);
                 }
-                Instr::Call {
-                    args: call_arg_count,
-                    span,
-                } => {
+                Instr::Call(span) => {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("call");
                     // Table and function for getting call information from values
@@ -205,7 +199,7 @@ impl Vm {
                     let (function, args) = CALL_TABLE[value.ty() as usize](value, *span, assembly)?;
                     // Handle partial arguments
                     let partial_count = args.len();
-                    let arg_count = call_arg_count + partial_count;
+                    let arg_count = partial_count + 1;
                     for arg in args {
                         stack.push(arg);
                     }

@@ -376,7 +376,7 @@ impl Parser {
         };
         while let Some(op_span) = self.try_exact(Pipe) {
             let op = op_span.sp(PipeOp::Forward);
-            let right = self.expect_expr(Self::try_pipe_expr)?;
+            let right = self.expect_expr(Self::try_or_expr)?;
             let span = expr.span.clone().merge(right.span.clone());
             expr = span.sp(Expr::Pipe(Box::new(PipeExpr {
                 op,
@@ -451,20 +451,15 @@ impl Parser {
         Ok(Some(expr))
     }
     fn try_call(&mut self) -> ParseResult<Option<Sp<Expr>>> {
-        let Some(func) = self.try_term()? else {
+        let Some(mut expr) = self.try_term()? else {
             return Ok(None);
         };
-        let mut args = Vec::new();
         while let Some(arg) = self.try_term()? {
-            args.push(arg);
+            let span = expr.span.clone().merge(arg.span.clone());
+            let call = span.sp(Expr::Call(Box::new(CallExpr { func: expr, arg })));
+            expr = call;
         }
-        if args.is_empty() {
-            return Ok(Some(func));
-        }
-        let start = func.span.clone();
-        let end = args.last().map(|a| a.span.clone()).unwrap_or(start.clone());
-        let span = start.merge(end);
-        Ok(Some(span.sp(Expr::Call(Box::new(CallExpr { func, args })))))
+        Ok(Some(expr))
     }
     fn try_term(&mut self) -> ParseResult<Option<Sp<Expr>>> {
         Ok(Some(if let Some(ident) = self.try_ident() {

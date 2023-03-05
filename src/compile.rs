@@ -37,7 +37,15 @@ impl Assembly {
     }
     pub fn run(&self) -> UiuaResult<Option<Value>> {
         let mut vm = Vm::default();
-        self.run_with_vm(&mut vm)
+        let res = self.run_with_vm(&mut vm)?;
+        dprintln!("stack:");
+        for val in &vm.stack {
+            dprintln!("  {val:?}");
+        }
+        if let Some(val) = &res {
+            dprintln!("  {val:?}");
+        }
+        Ok(res)
     }
     fn run_with_vm(&self, vm: &mut Vm) -> UiuaResult<Option<Value>> {
         vm.run_assembly(self)
@@ -303,7 +311,7 @@ impl Compiler {
             Instr::Push(_) => self.height += 1,
             Instr::PushUnresolvedFunction(_) => self.height += 1,
             Instr::BinOp(..) => self.height -= 1,
-            Instr::Call { args, .. } => self.height -= *args,
+            Instr::Call(_) => self.height -= 1,
             Instr::Constant(_) => self.height += 1,
             Instr::List(len) => self.height -= len - 1,
             Instr::Array(len) => self.height -= len - 1,
@@ -547,19 +555,13 @@ impl Compiler {
         Ok(())
     }
     fn call(&mut self, call: CallExpr) -> CompileResult {
-        self.call_impl(call.func, call.args)
+        self.call_impl(call.func, call.arg)
     }
-    fn call_impl(&mut self, func: Sp<Expr>, args: Vec<Sp<Expr>>) -> CompileResult {
-        let args_len = args.len();
-        for arg in args.into_iter().rev() {
-            self.expr(arg)?;
-        }
+    fn call_impl(&mut self, func: Sp<Expr>, arg: Sp<Expr>) -> CompileResult {
+        self.expr(arg)?;
         let span = self.push_call_span(func.span.clone());
         self.expr(func)?;
-        self.push_instr(Instr::Call {
-            args: args_len,
-            span,
-        });
+        self.push_instr(Instr::Call(span));
         Ok(())
     }
     fn block(&mut self, block: Block) -> CompileResult {
@@ -601,22 +603,8 @@ impl Compiler {
     }
     fn pipe_expr(&mut self, pipe_expr: PipeExpr) -> CompileResult {
         match pipe_expr.op.value {
-            PipeOp::Forward => {
-                let (func, mut args) = match pipe_expr.right.value {
-                    Expr::Call(call_expr) => (call_expr.func, call_expr.args),
-                    expr => (pipe_expr.right.span.sp(expr), Vec::new()),
-                };
-                args.push(pipe_expr.left);
-                self.call_impl(func, args)
-            }
-            PipeOp::Backward => {
-                let (func, mut args) = match pipe_expr.left.value {
-                    Expr::Call(call_expr) => (call_expr.func, call_expr.args),
-                    expr => (pipe_expr.left.span.sp(expr), Vec::new()),
-                };
-                args.push(pipe_expr.right);
-                self.call_impl(func, args)
-            }
+            PipeOp::Forward => self.call_impl(pipe_expr.right, pipe_expr.left),
+            PipeOp::Backward => self.call_impl(pipe_expr.left, pipe_expr.right),
         }
     }
     fn format_string(&mut self, parts: Vec<String>, span: Span) -> CompileResult {
@@ -674,9 +662,7 @@ fn resolve_placeholders_rec(expr: &mut Sp<Expr>, params: &mut Vec<Sp<Ident>>) {
         }
         Expr::Call(call_expr) => {
             resolve_placeholders_rec(&mut call_expr.func, params);
-            for arg in &mut call_expr.args {
-                resolve_placeholders_rec(arg, params);
-            }
+            resolve_placeholders_rec(&mut call_expr.arg, params);
         }
         Expr::Bin(bin_expr) => {
             resolve_placeholders_rec(&mut bin_expr.left, params);

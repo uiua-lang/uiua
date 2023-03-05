@@ -149,7 +149,7 @@ pub struct IfExpr {
 #[derive(Debug, Clone)]
 pub struct CallExpr {
     pub func: Sp<Expr>,
-    pub args: Vec<Sp<Expr>>,
+    pub arg: Sp<Expr>,
 }
 
 #[derive(Debug, Clone)]

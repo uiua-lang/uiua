@@ -27,6 +27,7 @@ pub enum LexError {
     UnexpectedChar(char),
     Bang,
     Bar,
+    ExpectedCharacter(Option<char>),
 }
 
 impl fmt::Display for LexError {
@@ -38,6 +39,12 @@ impl fmt::Display for LexError {
             }
             LexError::Bar => {
                 write!(f, " unexpected char `|`, maybe you meant `or` or `|>`?")
+            }
+            LexError::ExpectedCharacter(Some(c)) => {
+                write!(f, "expected {c:?}")
+            }
+            LexError::ExpectedCharacter(None) => {
+                write!(f, "expected character")
             }
         }
     }
@@ -226,6 +233,7 @@ pub enum Token {
     Ident(Ident),
     Int(String),
     Real(String),
+    Char(char),
     Keyword(Keyword),
     Simple(Simple),
 }
@@ -249,6 +257,12 @@ impl Token {
             _ => None,
         }
     }
+    pub fn as_char(&self) -> Option<char> {
+        match self {
+            Token::Char(char) => Some(*char),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for Token {
@@ -259,6 +273,7 @@ impl fmt::Display for Token {
             Token::Ident(ident) => write!(f, "{ident}"),
             Token::Int(int) => write!(f, "{int}"),
             Token::Real(real) => write!(f, "{real}"),
+            Token::Char(char) => write!(f, "{char:?}"),
             Token::Keyword(keyword) => write!(f, "{keyword}"),
             Token::Simple(simple) => write!(f, "{simple}"),
         }
@@ -507,6 +522,18 @@ impl Lexer {
                         // Division
                         return self.end(Slash, start);
                     }
+                }
+                // Characters
+                '\'' => {
+                    let char = self.next_char().ok_or_else(|| {
+                        self.end_span(start).sp(LexError::ExpectedCharacter(None))
+                    })?;
+                    if !self.next_char_exact('\'') {
+                        return Err(self
+                            .end_span(start)
+                            .sp(LexError::ExpectedCharacter(Some('\''))));
+                    }
+                    return self.end(Token::Char(char), start);
                 }
                 // Identifiers, keywords, and underscore
                 c if is_ident_start(c) => {

@@ -104,6 +104,7 @@ pub enum Expr {
     Bool(bool),
     Int(String),
     Real(String),
+    Char(char),
     Ident(Ident),
     Placeholder,
     List(Vec<Sp<Expr>>),

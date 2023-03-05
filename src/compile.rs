@@ -466,6 +466,7 @@ impl Compiler {
                 };
                 self.push_instr(Instr::Push(f.into()));
             }
+            Expr::Char(c) => self.push_instr(Instr::Push(c.into())),
             Expr::Ident(ident) => self.ident(ident, expr.span)?,
             Expr::Placeholder => panic!("unresolved placeholder"),
             Expr::Bin(bin) => {
@@ -681,6 +682,7 @@ fn resolve_placeholders_rec(expr: &mut Sp<Expr>, params: &mut Vec<Sp<Ident>>) {
         | Expr::Bool(_)
         | Expr::Int(_)
         | Expr::Real(_)
+        | Expr::Char(_)
         | Expr::Ident(_) => {}
     }
 }

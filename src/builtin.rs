@@ -387,6 +387,7 @@ op2_fn!(
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
 pub enum Algorithm {
     Flip,
+    Fold,
     Each,
 }
 
@@ -394,6 +395,7 @@ impl fmt::Display for Algorithm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Algorithm::Flip => write!(f, "flip"),
+            Algorithm::Fold => write!(f, "fold"),
             Algorithm::Each => write!(f, "each"),
         }
     }
@@ -404,6 +406,7 @@ impl Algorithm {
         match self {
             Algorithm::Flip => 3,
             Algorithm::Each => 2,
+            Algorithm::Fold => 3,
         }
     }
     pub(crate) fn instrs(&self) -> Vec<Instr> {
@@ -420,6 +423,29 @@ impl Algorithm {
                 Rotate(2), // f, a, b
                 Move(3),   // a, b, f
                 Call { args: 2, span: 0 },
+            ],
+            Algorithm::Fold => vec![
+                // [1, 2, 3], f = (_+_), 0
+                CopyRel(3),     // [1, 2, 3], f, 0, [1, 2, 3]
+                Op1(Op1::Len),  // [1, 2, 3], f, 0, 3
+                Push(0.into()), // [1, 2, 3], f, 0, 3, 0
+                // Loop start
+                CopyRel(2),                // [1, 2, 3], f, 0, 3, 0, 3
+                CopyRel(2),                // [1, 2, 3], f, 0, 3, 0, 3, 0
+                BinOp(Eq, 0),              // [1, 2, 3], f, 0, 3, 0, false
+                PopJumpIf(11, true),       // [1, 2, 3], f, 0, 3, 0
+                CopyRel(5),                // [1, 2, 3], f, 0, 3, 0, [1, 2, 3]
+                CopyRel(2),                // [1, 2, 3], f, 0, 3, 0, [1, 2, 3], 0
+                Op2(Op2::Get),             // [1, 2, 3], f, 0, 3, 0, 1
+                Move(4),                   // [1, 2, 3], f, 3, 0, 1, 0
+                CopyRel(5),                // [1, 2, 3], f, 3, 0, 1, 0, f
+                Call { args: 2, span: 0 }, // [1, 2, 3], f, 3, 0, 1
+                Rotate(3),                 // [1, 2, 3], f, 1, 3, 0
+                Push(1.into()),            // [1, 2, 3], f, 1, 3, 0, 1
+                BinOp(Add, 0),             // [1, 2, 3], f, 1, 3, 1
+                Jump(-13),
+                // Loop end
+                Pop(2), // [1, 2, 3], f, 6
             ],
             Algorithm::Each => vec![
                 // [1, 2, 3], f = (_ * 2)

@@ -61,7 +61,7 @@ struct StackFrame {
     call_span: usize,
 }
 
-const DBG: bool = false;
+const DBG: bool = true;
 macro_rules! dprintln {
     ($($arg:tt)*) => {
         if DBG {

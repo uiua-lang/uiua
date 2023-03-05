@@ -1,6 +1,12 @@
 use std::{cmp::Ordering, fmt, mem::ManuallyDrop, ops::*};
 
-use crate::{array::Array, ast::BinOp, builtin::ValueFn2, lex::Span, list::List, RuntimeResult};
+use crate::{
+    array::Array,
+    ast::BinOp,
+    builtin::{Env, ValueFn2},
+    list::List,
+    RuntimeResult,
+};
 
 pub struct Value {
     pub(crate) ty: Type,
@@ -322,20 +328,20 @@ impl Clone for Value {
 }
 
 impl Value {
-    pub fn bin_op(&mut self, other: Self, op: BinOp, span: &Span) -> RuntimeResult {
+    pub(crate) fn bin_op(&mut self, other: Self, op: BinOp, env: Env) -> RuntimeResult {
         #[cfg(feature = "profile")]
         puffin::profile_function!();
         match op {
-            BinOp::Add => self.add(other, span)?,
-            BinOp::Sub => self.sub(other, span)?,
-            BinOp::Mul => self.mul(other, span)?,
-            BinOp::Div => self.div(other, span)?,
-            BinOp::Eq => self.is_eq(other, span)?,
-            BinOp::Ne => self.is_ne(other, span)?,
-            BinOp::Lt => self.is_lt(other, span)?,
-            BinOp::Le => self.is_le(other, span)?,
-            BinOp::Gt => self.is_gt(other, span)?,
-            BinOp::Ge => self.is_ge(other, span)?,
+            BinOp::Add => self.add(other, env)?,
+            BinOp::Sub => self.sub(other, env)?,
+            BinOp::Mul => self.mul(other, env)?,
+            BinOp::Div => self.div(other, env)?,
+            BinOp::Eq => self.is_eq(other, env)?,
+            BinOp::Ne => self.is_ne(other, env)?,
+            BinOp::Lt => self.is_lt(other, env)?,
+            BinOp::Le => self.is_le(other, env)?,
+            BinOp::Gt => self.is_gt(other, env)?,
+            BinOp::Ge => self.is_ge(other, env)?,
         }
         Ok(())
     }
@@ -480,9 +486,9 @@ macro_rules! value_math_op {
                         *a = $trait::$method((*a).data.real, b.data.real).into();
                         Ok(())
                     },
-                    (Type::Array, Type::Array) => |a, b, span| {
+                    (Type::Array, Type::Array) => |a, b, env| {
                         if (*a).array_mut().len() != b.data.array.len() {
-                            return Err(span.error(format!(
+                            return Err(env.error(format!(
                                 "Cannot {} arrays of different lengths: {} and {}",
                                 $verb,
                                 (*a).array_mut().len(),
@@ -494,39 +500,36 @@ macro_rules! value_math_op {
                             .iter_mut()
                             .zip(b.data.array.iter().cloned())
                         {
-                            a.$method(b, span)?;
+                            a.$method(b, env)?;
                         }
                         Ok(())
                     },
-                    (Type::Array, _) => |a, b, span| {
+                    (Type::Array, _) => |a, b, env| {
                         for a in (*a).array_mut().iter_mut() {
-                            a.$method(b.clone(), span)?;
+                            a.$method(b.clone(), env)?;
                         }
                         Ok(())
                     },
-                    (_, Type::Array) => |a, mut b, span| {
+                    (_, Type::Array) => |a, mut b, env| {
                         for b in b.array_mut().iter_mut() {
                             let mut a_clone = (*a).clone();
-                            a_clone.$method(b.clone(), span)?;
+                            a_clone.$method(b.clone(), env)?;
                             *b = a_clone;
                         }
                         *a = b;
                         Ok(())
                     },
-                    _ => |a, b, span| {
-                        Err(span
-                            .clone()
-                            .sp(format!("Cannot {} {} and {}", $verb, (*a).ty, b.ty))
-                            .into())
+                    _ => |a, b, env| {
+                        Err(env.error(format!("Cannot {} {} and {}", $verb, (*a).ty, b.ty)))
                     },
                 }
             }
         }
         impl Value {
-            pub fn $method(&mut self, other: Self, span: &Span) -> RuntimeResult {
+            pub(crate) fn $method(&mut self, other: Self, env: Env) -> RuntimeResult {
                 #[cfg(feature = "profile")]
                 puffin::profile_function!();
-                unsafe { $table[self.ty as usize][other.ty as usize](self, other, span) }
+                unsafe { $table[self.ty as usize][other.ty as usize](self, other, env) }
             }
         }
     };
@@ -604,9 +607,9 @@ macro_rules! value_cmp_op {
                         *a = $method((*a).data.partial.cmp(&b.data.partial)).into();
                         Ok(())
                     },
-                    (Type::Array, Type::Array) => |a, b, span| {
+                    (Type::Array, Type::Array) => |a, b, env| {
                         if (*a).array_mut().len() != b.data.array.len() {
-                            return Err(span.error(format!(
+                            return Err(env.error(format!(
                                 "Cannot compare arrays of different lengths: {} and {}",
                                 (*a).array_mut().len(),
                                 b.data.array.len()
@@ -617,20 +620,20 @@ macro_rules! value_cmp_op {
                             .iter_mut()
                             .zip(b.data.array.iter().cloned())
                         {
-                            a.$method(b, span)?;
+                            a.$method(b, env)?;
                         }
                         Ok(())
                     },
-                    (Type::Array, _) => |a, b, span| {
+                    (Type::Array, _) => |a, b, env| {
                         for a in (*a).array_mut().iter_mut() {
-                            a.$method(b.clone(), span)?;
+                            a.$method(b.clone(), env)?;
                         }
                         Ok(())
                     },
-                    (_, Type::Array) => |a, mut b, span| {
+                    (_, Type::Array) => |a, mut b, env| {
                         for b in b.array_mut().iter_mut() {
                             let mut a_clone = (*a).clone();
-                            a_clone.$method(b.clone(), span)?;
+                            a_clone.$method(b.clone(), env)?;
                             *b = a_clone;
                         }
                         *a = b;
@@ -644,10 +647,10 @@ macro_rules! value_cmp_op {
             }
         }
         impl Value {
-            pub fn $method(&mut self, other: Self, span: &Span) -> RuntimeResult {
+            pub(crate) fn $method(&mut self, other: Self, env: Env) -> RuntimeResult {
                 #[cfg(feature = "profile")]
                 puffin::profile_function!();
-                unsafe { $table[self.ty as usize][other.ty as usize](self, other, span) }
+                unsafe { $table[self.ty as usize][other.ty as usize](self, other, env) }
             }
         }
     };

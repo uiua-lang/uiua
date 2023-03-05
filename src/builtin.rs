@@ -2,7 +2,21 @@ use std::{f64::consts::*, fmt, ptr};
 
 use enum_iterator::Sequence;
 
-use crate::{array::Array, lex::Span, list::List, value::*, vm::Instr, RuntimeResult};
+use crate::{
+    array::Array, compile::Assembly, list::List, value::*, vm::Instr, RuntimeError, RuntimeResult,
+};
+
+#[derive(Clone, Copy)]
+pub(crate) struct Env<'a> {
+    pub span: usize,
+    pub assembly: &'a Assembly,
+}
+
+impl<'a> Env<'a> {
+    pub fn error(&self, message: impl Into<String>) -> RuntimeError {
+        self.assembly.spans[self.span].error(message)
+    }
+}
 
 pub(crate) fn constants() -> Vec<(&'static str, Value)> {
     vec![
@@ -60,20 +74,20 @@ impl fmt::Display for Op1 {
     }
 }
 
-type ValueFn1 = fn(*mut Value, &Span) -> RuntimeResult;
+type ValueFn1 = fn(*mut Value, Env) -> RuntimeResult;
 macro_rules! op1_table {
     ($(($op:ident, $name:ident, $f:ident)),* $(,)*) => {
         $(static $name: [ValueFn1; Type::ARITY] = unsafe { type_line!($f) };)*
 
         impl Value {
-            pub fn op1(&mut self, op: Op1, span: &Span) -> RuntimeResult {
+            pub(crate) fn op1(&mut self, op: Op1, env: Env) -> RuntimeResult {
                 match op {
-                    $(Op1::$op => self.$f(span),)*
+                    $(Op1::$op => self.$f(env),)*
                 }
             }
             $(
-                fn $f(&mut self, span: &Span) -> RuntimeResult {
-                    $name[self.ty as usize](self, span)
+                fn $f(&mut self, env: Env) -> RuntimeResult {
+                    $name[self.ty as usize](self, env)
                 }
             )*
         }
@@ -85,13 +99,13 @@ macro_rules! op1_fn {
         const unsafe fn $name(a: Type) -> ValueFn1 {
             match a {
                 $($a_ty => |$a, _| { $f; Ok(())},)*
-                Type::Array => |a, span| {
+                Type::Array => |a, env| {
                     for a in (*a).array_mut().iter_mut() {
-                        a.$name(span)?;
+                        a.$name(env)?;
                     }
                     Ok(())
                 },
-                _ => |a, span| Err(span.error(format!($message, (*a).ty))),
+                _ => |a, env| Err(env.error(format!($message, (*a).ty))),
             }
         }
     };
@@ -219,35 +233,39 @@ impl fmt::Display for Op2 {
     }
 }
 
-pub(crate) type ValueFn2 = fn(*mut Value, Value, &Span) -> RuntimeResult;
+pub(crate) type ValueFn2 = fn(*mut Value, Value, Env) -> RuntimeResult;
 macro_rules! op2_table {
     ($(($op:ident, $name:ident, $f:ident)),* $(,)*) => {
         $(static $name: [[ValueFn2; Type::ARITY]; Type::ARITY] = type_square!($f);)*
 
         impl Value {
-            pub fn op2(&mut self, other: Value, op: Op2, span: &Span) -> RuntimeResult {
+            pub(crate) fn op2(&mut self, other: Value, op: Op2, env: Env) -> RuntimeResult {
                 match op {
-                    $(Op2::$op => self.$f(other, span),)*
+                    $(Op2::$op => self.$f(other, env),)*
                 }
             }
             $(
-                fn $f(&mut self, other: Value, span: &Span) -> RuntimeResult {
-                    $name[self.ty as usize][other.ty as usize](self, other, span)
+                fn $f(&mut self, other: Value, env: Env) -> RuntimeResult {
+                    $name[self.ty as usize][other.ty as usize](self, other, env)
                 }
             )*
         }
     };
 }
 macro_rules! op2_fn {
-    ($name:ident, $message:literal, $(($a_ty:pat, $b_ty:pat, |$a:ident, $b:ident| $f:expr)),* $(,)?) => {
+    ($name:ident, $message:literal,
+        $(($a_ty:pat, $b_ty:pat, |$a:ident, $b:ident| $f:expr)),*
+        $(,(!env, $ea_ty:pat, $eb_ty:pat, |$ea:ident, $eb:ident, $env:ident| $ef:expr))*
+    $(,)?) => {
         #[allow(unused_mut, unreachable_patterns)]
         const fn $name(a: Type, b: Type) -> $crate::builtin::ValueFn2 {
             unsafe {
                 match (a, b) {
                     $(($a_ty, $b_ty) => |$a, mut $b, _| { $f; Ok(())},)*
-                    (Type::Array, Type::Array) => |a, b, span| {
+                    $(($ea_ty, $eb_ty) => |$ea, mut $eb, $env| { $ef; Ok(())},)*
+                    (Type::Array, Type::Array) => |a, b, env| {
                         if (*a).array_mut().len() != b.data.array.len() {
-                            return Err(span.error(format!(
+                            return Err(env.error(format!(
                                 concat!($message, " because they have different lengths: {} and {}"),
                                 Type::Array,
                                 Type::Array,
@@ -260,26 +278,26 @@ macro_rules! op2_fn {
                             .iter_mut()
                             .zip(b.data.array.iter().cloned())
                         {
-                            a.$name(b, span)?;
+                            a.$name(b, env)?;
                         }
                         Ok(())
                     },
-                    (Type::Array, _) => |a, b, span| {
+                    (Type::Array, _) => |a, b, env| {
                         for a in (*a).array_mut().iter_mut() {
-                            a.$name(b.clone(), span)?;
+                            a.$name(b.clone(), env)?;
                         }
                         Ok(())
                     },
-                    (_, Type::Array) => |a, mut b, span| {
+                    (_, Type::Array) => |a, mut b, env| {
                         for b in b.array_mut().iter_mut() {
                             let mut a_clone = (*a).clone();
-                            a_clone.$name(b.clone(), span)?;
+                            a_clone.$name(b.clone(), env)?;
                             *b = a_clone;
                         }
                         *a = b;
                         Ok(())
                     },
-                    _ => |a, b, span| Err(span.error(format!($message, (*a).ty, b.ty))),
+                    _ => |a, b, env| Err(env.error(format!($message, (*a).ty, b.ty))),
                 }
             }
         }
@@ -347,9 +365,9 @@ op2_fn!(
         .get((*a).data.int as usize)
         .cloned()
         .unwrap_or_else(Value::unit)),
-    (Type::Array, _, |a, b| {
+    (!env, Type::Array, _, |a, b, env| {
         for index in (*a).array_mut().iter_mut() {
-            index.get_fn(b.clone(), &Span::Builtin)?;
+            index.get_fn(b.clone(), env)?;
         }
     }),
 );
@@ -392,7 +410,6 @@ impl Algorithm {
             crate::builtin::{Op1, Op2},
             Instr::*,
         };
-        const SPAN: Span = Span::Builtin;
         match self {
             Algorithm::Each => vec![
                 Comment("each".into()),
@@ -405,7 +422,7 @@ impl Algorithm {
                 // Loop start
                 CopyRel(2),                // [1, 2, 3], f, [], 3, 0, 3
                 CopyRel(2),                // [1, 2, 3], f, [], 3, 0, 3, 0
-                BinOp(Eq, SPAN.into()),    // [1, 2, 3], f, [], 3, 0, false
+                BinOp(Eq, 0),              // [1, 2, 3], f, [], 3, 0, false
                 PopJumpIf(13, true),       // [1, 2, 3], f, [], 3, 0
                 CopyRel(5),                // [1, 2, 3], f, [], 3, 0, [1, 2, 3]
                 CopyRel(2),                // [1, 2, 3], f, [], 3, 0, [1, 2, 3], 0
@@ -417,7 +434,7 @@ impl Algorithm {
                 Op2(Op2::Push),            // [1, 2, 3], f, 3, 0, [2]
                 Rotate(3),                 // [1, 2, 3], f, [2], 3, 0
                 Push(1.into()),            // [1, 2, 3], f, [2], 3, 0, 1
-                BinOp(Add, SPAN.into()),   // [1, 2, 3], f, [2], 3, 1
+                BinOp(Add, 0),             // [1, 2, 3], f, [2], 3, 1
                 Jump(-15),
                 // Loop end
                 Pop(2), // [1, 2, 3], f, [2, 4, 6]

@@ -18,7 +18,7 @@ pub struct Assembly {
     pub(crate) start: usize,
     pub(crate) constants: Vec<Value>,
     pub(crate) function_info: HashMap<Function, FunctionInfo, BuildNoHashHasher<Function>>,
-    pub(crate) call_spans: Vec<Span>,
+    pub(crate) spans: Vec<Span>,
     pub(crate) cached_functions: CachedFunctions,
 }
 
@@ -211,7 +211,7 @@ impl Default for Compiler {
             instrs: function_instrs,
             constants: consts,
             function_info,
-            call_spans: vec![Span::Builtin],
+            spans: vec![Span::Builtin],
             cached_functions,
         };
         Self {
@@ -321,8 +321,8 @@ impl Compiler {
         spot
     }
     fn push_call_span(&mut self, span: Span) -> usize {
-        let spot = self.assembly.call_spans.len();
-        self.assembly.call_spans.push(span);
+        let spot = self.assembly.spans.len();
+        self.assembly.spans.push(span);
         spot
     }
     fn item(&mut self, item: Item) -> CompileResult {
@@ -471,7 +471,8 @@ impl Compiler {
             Expr::Bin(bin) => {
                 self.expr(bin.left)?;
                 self.expr(bin.right)?;
-                self.push_instr(Instr::BinOp(bin.op.value, bin.op.span.clone().into()));
+                let span = self.push_call_span(bin.op.span);
+                self.push_instr(Instr::BinOp(bin.op.value, span));
             }
             Expr::Call(call) => self.call(*call)?,
             Expr::If(if_expr) => self.if_expr(*if_expr)?,

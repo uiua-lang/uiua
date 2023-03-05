@@ -3,7 +3,7 @@ use std::{cmp::Ordering, fmt, mem::swap};
 use crate::{
     array::Array,
     ast::{BinOp, FunctionId},
-    builtin::{Op1, Op2},
+    builtin::{Env, Op1, Op2},
     compile::Assembly,
     lex::Span,
     list::List,
@@ -33,7 +33,7 @@ pub(crate) enum Instr {
     Jump(isize),
     PopJumpIf(isize, bool),
     JumpIfElsePop(isize, bool),
-    BinOp(BinOp, Box<Span>),
+    BinOp(BinOp, usize),
     Op1(Op1),
     Op2(Op2),
     DestructureList(usize, Box<Span>),
@@ -61,7 +61,7 @@ struct StackFrame {
     call_span: usize,
 }
 
-const DBG: bool = true;
+const DBG: bool = false;
 macro_rules! dprintln {
     ($($arg:tt)*) => {
         if DBG {
@@ -87,7 +87,7 @@ impl Vm {
                     let info = assembly.function_info(frame.function);
                     trace.push(TraceFrame {
                         id: info.id.clone(),
-                        span: assembly.call_spans[frame.call_span].clone(),
+                        span: assembly.spans[frame.call_span].clone(),
                     });
                 }
                 Err(UiuaError::Run {
@@ -196,7 +196,7 @@ impl Vm {
                                 },
                                 _ => |val, span, assembly| {
                                     let message = format!("cannot call {}", val.ty());
-                                    Err(assembly.call_spans[span].error(message))
+                                    Err(assembly.spans[span].error(message))
                                 },
                             }
                         }
@@ -239,7 +239,7 @@ impl Vm {
                                 "too many arguments: expected {}, got {}",
                                 info.params, arg_count
                             );
-                            return Err(assembly.call_spans[*span].clone().sp(message));
+                            return Err(assembly.spans[*span].clone().sp(message));
                         }
                     }
                 }
@@ -293,13 +293,18 @@ impl Vm {
                         let left = stack.last_mut().unwrap();
                         (left, right)
                     };
-                    left.bin_op(right, *op, span)?;
+                    let env = Env {
+                        assembly,
+                        span: *span,
+                    };
+                    left.bin_op(right, *op, env)?;
                 }
                 Instr::Op1(op) => {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("builtin_op1");
                     let val = stack.last_mut().unwrap();
-                    val.op1(*op, &Span::Builtin)?;
+                    let env = Env { assembly, span: 0 };
+                    val.op1(*op, env)?;
                 }
                 Instr::Op2(op) => {
                     #[cfg(feature = "profile")]
@@ -312,7 +317,8 @@ impl Vm {
                         (left, right)
                     };
                     swap(left, &mut right);
-                    left.op2(right, *op, &Span::Builtin)?;
+                    let env = Env { assembly, span: 0 };
+                    left.op2(right, *op, env)?;
                 }
                 Instr::DestructureList(_n, _span) => {
                     // let list = match stack.pop().unwrap() {

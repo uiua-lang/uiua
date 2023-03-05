@@ -74,7 +74,7 @@ macro_rules! dprintln {
 pub struct Vm {
     call_stack: Vec<StackFrame>,
     pub stack: Vec<Value>,
-    pc: Option<usize>,
+    pc: usize,
 }
 
 impl Vm {
@@ -101,15 +101,12 @@ impl Vm {
         let stack = &mut self.stack;
         let call_stack = &mut self.call_stack;
         dprintln!("Running...");
-        let pc = if let Some(pc) = &mut self.pc {
-            *pc -= 1;
-            pc
-        } else {
-            self.pc = Some(assembly.start);
-            self.pc.as_mut().unwrap()
-        };
+        if self.pc == 0 {
+            self.pc = assembly.start;
+        }
         #[cfg(feature = "profile")]
         let mut i = 0;
+        let pc = &mut self.pc;
         while *pc < assembly.instrs.len() {
             #[cfg(feature = "profile")]
             if i % 100_000 == 0 {
@@ -352,6 +349,7 @@ impl Vm {
             dprintln!("{:?}", stack);
             *pc += 1;
         }
+        *pc -= 1;
         Ok(stack.pop())
     }
 }

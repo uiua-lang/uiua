@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt, fs, mem::take, path::Path, sync::Arc};
+use std::{collections::HashMap, fmt, fs, mem::take, path::Path};
 
 use enum_iterator::all;
 use nohash_hasher::BuildNoHashHasher;
@@ -427,7 +427,7 @@ impl Compiler {
             .assembly
             .run_with_vm(&mut self.vm)
             .map_err(|e| expr_span.sp(e.into()))?
-            .unwrap_or(Value::unit());
+            .unwrap_or(Value::Unit);
         self.assembly.constants.push(value);
         // Bind the constant
         self.scope_mut()
@@ -455,7 +455,7 @@ impl Compiler {
     }
     fn expr(&mut self, expr: Sp<Expr>) -> CompileResult {
         match expr.value {
-            Expr::Unit => self.push_instr(Instr::Push(Value::unit())),
+            Expr::Unit => self.push_instr(Instr::Push(Value::Unit)),
             Expr::Bool(b) => self.push_instr(Instr::Push(b.into())),
             Expr::Int(s) => {
                 let i: i64 = match s.parse() {
@@ -542,7 +542,7 @@ impl Compiler {
                 }
             }
             Binding::Constant(index) => self.push_instr(Instr::Constant(*index)),
-            Binding::Error => self.push_instr(Instr::Push(Value::unit())),
+            Binding::Error => self.push_instr(Instr::Push(Value::Unit)),
         }
         Ok(())
     }
@@ -610,18 +610,18 @@ impl Compiler {
     fn format_string(&mut self, parts: Vec<String>, span: Span) -> CompileResult {
         if parts.len() <= 1 {
             self.push_instr(Instr::Push(
-                Arc::new(parts.into_iter().next().unwrap_or_default()).into(),
+                parts.into_iter().next().unwrap_or_default().into(),
             ));
             return Ok(());
         }
         self.func_outer(true, FunctionId::FormatString(span), |this| {
             let params = parts.len() - 1;
             let mut parts = parts.into_iter();
-            this.push_instr(Instr::Push(Arc::new(parts.next().unwrap()).into()));
+            this.push_instr(Instr::Push(parts.next().unwrap().into()));
             for (i, part) in parts.enumerate() {
                 this.push_instr(Instr::CopyRel(i + 2));
                 this.push_instr(Instr::Op2(Op2::Concat));
-                this.push_instr(Instr::Push(Arc::new(part).into()));
+                this.push_instr(Instr::Push(part.into()));
                 this.push_instr(Instr::Op2(Op2::Concat));
             }
             Ok(params)

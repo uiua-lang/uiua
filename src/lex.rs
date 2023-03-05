@@ -228,7 +228,7 @@ pub enum Token {
     Int(String),
     Real(String),
     Char(char),
-    Str(Arc<String>),
+    Str(String),
     FormatString(Vec<String>),
     Keyword(Keyword),
     Simple(Simple),
@@ -259,9 +259,9 @@ impl Token {
             _ => None,
         }
     }
-    pub fn as_string(&self) -> Option<Arc<String>> {
+    pub fn as_string(&self) -> Option<&str> {
         match self {
-            Token::Str(string) => Some(string.clone()),
+            Token::Str(string) => Some(string),
             _ => None,
         }
     }
@@ -570,7 +570,7 @@ impl Lexer {
                             .end_span(start)
                             .sp(LexError::ExpectedCharacter(Some('"'))));
                     }
-                    return self.end(Token::Str(string.into()), start);
+                    return self.end(Token::Str(string), start);
                 }
                 // Format strings
                 '$' => {

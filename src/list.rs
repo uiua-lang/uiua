@@ -4,7 +4,7 @@ use im::{vector, Vector};
 
 use crate::value::Value;
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
+#[derive(Clone, PartialEq, Eq, Default)]
 pub struct List(Vector<Value>);
 
 impl List {
@@ -50,7 +50,13 @@ impl FromIterator<Value> for List {
 
 impl fmt::Debug for List {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_list().entries(self.0.iter()).finish()
+        f.debug_set().entries(self.0.iter()).finish()
+    }
+}
+
+impl fmt::Display for List {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self:?}")
     }
 }
 

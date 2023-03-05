@@ -1,4 +1,4 @@
-use std::{fmt, sync::Arc};
+use std::fmt;
 
 use enum_iterator::Sequence;
 
@@ -108,7 +108,7 @@ pub enum Expr {
     Int(String),
     Real(String),
     Char(char),
-    String(Arc<String>),
+    String(String),
     FormatString(Vec<String>),
     Ident(Ident),
     Placeholder,

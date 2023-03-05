@@ -7,7 +7,7 @@ use crate::{
     compile::Assembly,
     lex::Span,
     list::List,
-    value::{type_line, Function, Partial, Type, Value},
+    value::{Function, Partial, Value},
     RuntimeResult, TraceFrame, UiuaError, UiuaResult,
 };
 
@@ -172,31 +172,18 @@ impl Vm {
                 Instr::Call(span) => {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("call");
-                    // Table and function for getting call information from values
-                    type CallFn =
-                        fn(Value, usize, &Assembly) -> RuntimeResult<(Function, Vec<Value>)>;
-                    const fn call_fn(ty: Type) -> CallFn {
-                        unsafe {
-                            match ty {
-                                Type::Function => |val, _, _| Ok((val.data.function, Vec::new())),
-                                Type::Partial => |val, _, _| {
-                                    let partial = &val.data.partial;
-                                    Ok((partial.function, partial.args.clone()))
-                                },
-                                Type::Int | Type::List | Type::Array => |val, _, assembly| {
-                                    Ok((assembly.cached_functions.get, vec![val]))
-                                },
-                                _ => |val, span, assembly| {
-                                    let message = format!("cannot call {}", val.ty());
-                                    Err(assembly.spans[span].error(message))
-                                },
-                            }
-                        }
-                    }
-                    static CALL_TABLE: [CallFn; Type::ARITY] = type_line!(call_fn);
-                    // Get the call information
                     let value = stack.pop().unwrap();
-                    let (function, args) = CALL_TABLE[value.ty() as usize](value, *span, assembly)?;
+                    let (function, args) = match value {
+                        Value::Function(f) => (f, Vec::new()),
+                        Value::Partial(p) => (p.function, p.args),
+                        Value::Int(_) | Value::List(_) | Value::Array(_) => {
+                            (assembly.cached_functions.get, vec![value])
+                        }
+                        _ => {
+                            let message = format!("cannot call {}", value.ty());
+                            return Err(assembly.spans[*span].error(message));
+                        }
+                    };
                     // Handle partial arguments
                     let partial_count = args.len();
                     let arg_count = partial_count + 1;

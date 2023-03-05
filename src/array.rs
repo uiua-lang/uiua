@@ -2,7 +2,7 @@ use std::{fmt, slice, sync::Arc};
 
 use crate::value::Value;
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
+#[derive(Clone, PartialEq, Eq, Default)]
 pub struct Array(Arc<Vec<Value>>);
 
 impl Array {
@@ -43,6 +43,22 @@ impl IntoIterator for Array {
     }
 }
 
+impl<'a> IntoIterator for &'a Array {
+    type Item = &'a Value;
+    type IntoIter = slice::Iter<'a, Value>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut Array {
+    type Item = &'a mut Value;
+    type IntoIter = slice::IterMut<'a, Value>;
+    fn into_iter(self) -> Self::IntoIter {
+        Arc::make_mut(&mut self.0).iter_mut()
+    }
+}
+
 impl FromIterator<Value> for Array {
     fn from_iter<T: IntoIterator<Item = Value>>(iter: T) -> Self {
         Self(Arc::new(iter.into_iter().collect()))
@@ -52,6 +68,12 @@ impl FromIterator<Value> for Array {
 impl fmt::Debug for Array {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.0.iter()).finish()
+    }
+}
+
+impl fmt::Display for Array {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self:?}")
     }
 }
 

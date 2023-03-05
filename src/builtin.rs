@@ -1,4 +1,9 @@
-use std::{f64::consts::*, fmt, mem::take, ptr, sync::Arc};
+use std::{
+    f64::consts::*,
+    fmt,
+    mem::{swap, take},
+    sync::Arc,
+};
 
 use enum_iterator::Sequence;
 
@@ -82,39 +87,33 @@ impl fmt::Display for Op1 {
     }
 }
 
-type ValueFn1 = fn(*mut Value, Env) -> RuntimeResult;
 macro_rules! op1_table {
-    ($(($op:ident, $name:ident, $f:ident)),* $(,)*) => {
-        #[allow(unused_unsafe)]
-        $(static $name: [ValueFn1; Type::ARITY] = unsafe { type_line!($f) };)*
-
+    ($(($op:ident, $f:ident)),* $(,)*) => {
         impl Value {
             pub(crate) fn op1(&mut self, op: Op1, env: Env) -> RuntimeResult {
                 match op {
                     $(Op1::$op => self.$f(env),)*
                 }
             }
-            $(
-                fn $f(&mut self, env: Env) -> RuntimeResult {
-                    $name[self.ty as usize](self, env)
-                }
-            )*
         }
     };
 }
 macro_rules! op1_fn {
-    ($name:ident, $message:literal, $(($a_ty:pat, |$a:ident| $f:expr)),* $(,)?) => {
+    ($name:ident, $message:literal, $this:ident, $(($a_val:pat, $f:expr)),* $(,)?) => {
         #[allow(unused_mut, clippy::no_effect, unreachable_patterns)]
-        const unsafe fn $name(a: Type) -> ValueFn1 {
-            match a {
-                $($a_ty => |$a, _| { $f; Ok(())},)*
-                Type::Array => |a, env| {
-                    for a in (*a).array_mut().iter_mut() {
-                        a.$name(env)?;
-                    }
-                    Ok(())
-                },
-                _ => |a, env| Err(env.error(format!($message, (*a).ty))),
+        impl Value {
+            pub(crate) fn $name(&mut self, env: Env) -> RuntimeResult {
+                let mut $this = self;
+                match &mut $this {
+                    $($a_val => $f,)*
+                    Value::Array(a) => {
+                        for a in a.iter_mut() {
+                            a.$name(env)?;
+                        }
+                    },
+                    a => return Err(env.error(format!($message, a.ty()))),
+                }
+                Ok(())
             }
         }
     };
@@ -122,144 +121,158 @@ macro_rules! op1_fn {
 pub(crate) use op1_fn;
 
 op1_table!(
-    (Id, ID_TABLE, id_fn),
-    (Default, DEFAULT_TABLE, default_fn),
-    (Byte, BYTE_TABLE, byte_fn),
-    (Int, INT_TABLE, int_fn),
-    (Real, REAL_TABLE, real_fn),
-    (String, STRING_TABLE, string_fn),
-    (Not, NOT_TABLE, not_fn),
-    (Neg, NEG_TABLE, neg_fn),
-    (Abs, ABS_TABLE, abs_fn),
-    (Sqrt, SQRT_TABLE, sqrt_fn),
-    (Sin, SIN_TABLE, sin_fn),
-    (Cos, COS_TABLE, cos_fn),
-    (Floor, FLOOR_TABLE, floor_fn),
-    (Ceil, CEIL_TABLE, ceil_fn),
-    (Round, ROUND_TABLE, round_fn),
-    (Len, LEN_TABLE, len_fn),
-    (Print, PRINT_TABLE, print_fn),
-    (Println, PRINTLN_TABLE, println_fn),
+    (Id, id),
+    (Default, default),
+    (Byte, byte),
+    (Int, int),
+    (Real, real),
+    (String, string),
+    (Not, not),
+    (Neg, neg),
+    (Abs, abs),
+    (Sqrt, sqrt),
+    (Sin, sin),
+    (Cos, cos),
+    (Floor, floor),
+    (Ceil, ceil),
+    (Round, round),
+    (Len, len),
+    (Print, print),
+    (Println, println),
 );
-const unsafe fn not_fn(_: Type) -> ValueFn1 {
-    |a, _| {
-        *a = (!(*a).is_truthy()).into();
+impl Value {
+    pub(crate) fn id(&mut self, _env: Env) -> RuntimeResult {
+        Ok(())
+    }
+    pub(crate) fn not(&mut self, _env: Env) -> RuntimeResult {
+        *self = (!self.is_truthy()).into();
         Ok(())
     }
 }
-
-const fn id_fn(_: Type) -> ValueFn1 {
-    |_, _| Ok(())
-}
 op1_fn!(
-    default_fn,
+    default,
     "Cannot convert {} to default",
-    (Type::Unit, |_a| ()),
-    (Type::Bool, |a| *a = false.into()),
-    (Type::Byte, |a| *a = 0u8.into()),
-    (Type::Int, |a| *a = 0i64.into()),
-    (Type::Real, |a| *a = 0.0.into()),
-    (Type::Char, |a| *a = '\0'.into()),
-    (Type::Function, |a| *a = Function(0).into()),
-    (Type::Partial, |a| *a = Function(0).into()),
-    (Type::String, |a| *a = Arc::new(String::new()).into()),
-    (Type::List, |a| *a = List::new().into()),
-    (Type::Array, |a| *a = Array::new().into()),
+    this,
+    (Value::Unit, ()),
+    (Value::Bool(_), *this = false.into()),
+    (Value::Byte(_), *this = 0u8.into()),
+    (Value::Int(_), *this = 0i64.into()),
+    (Value::Real(_), *this = 0.0.into()),
+    (Value::Char(_), *this = '\0'.into()),
+    (Value::Function(_), *this = Function(0).into()),
+    (Value::Partial(_), *this = Function(0).into()),
+    (Value::String(_), *this = String::new().into()),
+    (Value::List(_), *this = List::new().into()),
+    (Value::Array(_), *this = Array::new().into()),
 );
 op1_fn!(
-    byte_fn,
+    byte,
     "Cannot convert {} to byte",
-    (Type::Bool, |a| *a = ((*a).data.bool as u8).into()),
-    (Type::Byte, |_a| ()),
-    (Type::Int, |a| *a = ((*a).data.int as u8).into()),
-    (Type::Real, |a| *a = ((*a).data.real as u8).into()),
+    this,
+    (Value::Bool(a), *this = (*a as u8).into()),
+    (Value::Byte(_), ()),
+    (Value::Int(a), *this = (*a as u8).into()),
+    (Value::Real(a), *this = (*a as u8).into()),
 );
 op1_fn!(
-    int_fn,
+    int,
     "Cannot convert {} to int",
-    (Type::Bool, |a| *a = ((*a).data.bool as i64).into()),
-    (Type::Byte, |a| *a = ((*a).data.byte as i64).into()),
-    (Type::Int, |_a| ()),
-    (Type::Real, |a| *a = ((*a).data.real as i64).into()),
+    this,
+    (Value::Bool(a), *this = (*a as i64).into()),
+    (Value::Byte(a), *this = (*a as i64).into()),
+    (Value::Int(_), ()),
+    (Value::Real(a), *this = (*a as i64).into()),
 );
 op1_fn!(
-    real_fn,
+    real,
     "Cannot convert {} to real",
-    (Type::Bool, |a| *a = ((*a).data.bool as u8 as f64).into()),
-    (Type::Byte, |a| *a = ((*a).data.byte as f64).into()),
-    (Type::Int, |a| *a = ((*a).data.int as f64).into()),
-    (Type::Real, |_a| ()),
+    this,
+    (Value::Bool(a), *this = (*a as u8 as f64).into()),
+    (Value::Byte(a), *this = (*a as f64).into()),
+    (Value::Int(a), *this = (*a as f64).into()),
+    (Value::Real(_), ()),
 );
 op1_fn!(
-    string_fn,
+    string,
     "Cannot format {}",
-    (Type::Array, |a| *a = Arc::new(format!("{}", &*a)).into()),
-    (_, |a| *a = Arc::new(format!("{}", &*a)).into())
+    this,
+    (Value::Array(a), *this = format!("{a}").into()),
+    (a, *this = format!("{a}").into())
 );
 op1_fn!(
-    neg_fn,
+    neg,
     "Cannot negate {}",
-    (Type::Int, |a| *a = (-(*a).data.int).into()),
-    (Type::Real, |a| *a = (-(*a).data.real).into())
+    this,
+    (Value::Int(a), *this = (-*a).into()),
+    (Value::Real(a), *this = (-*a).into())
 );
 op1_fn!(
-    abs_fn,
+    abs,
     "Cannot get absolute value of {}",
-    (Type::Int, |a| *a = (*a).data.int.abs().into()),
-    (Type::Real, |a| *a = (*a).data.real.abs().into())
+    this,
+    (Value::Int(a), *this = a.abs().into()),
+    (Value::Real(a), *this = a.abs().into())
 );
 op1_fn!(
-    sqrt_fn,
+    sqrt,
     "Cannot get square root of {}",
-    (Type::Real, |a| *a = (*a).data.real.sqrt().into())
+    this,
+    (Value::Real(a), *this = a.sqrt().into())
 );
 op1_fn!(
-    sin_fn,
+    sin,
     "Cannot get sine of {}",
-    (Type::Real, |a| *a = (*a).data.real.sin().into())
+    this,
+    (Value::Real(a), *this = a.sin().into())
 );
 op1_fn!(
-    cos_fn,
+    cos,
     "Cannot get cosine of {}",
-    (Type::Real, |a| *a = (*a).data.real.cos().into())
+    this,
+    (Value::Real(a), *this = a.cos().into())
 );
 op1_fn!(
-    floor_fn,
+    floor,
     "Cannot get floor of {}",
-    (Type::Byte | Type::Int, |_a| ()),
-    (Type::Real, |a| *a = (*a).data.real.floor().into())
+    this,
+    (Value::Byte(_) | Value::Int(_), ()),
+    (Value::Real(a), *this = a.floor().into())
 );
 op1_fn!(
-    ceil_fn,
+    ceil,
     "Cannot get ceiling of {}",
-    (Type::Byte | Type::Int, |_a| ()),
-    (Type::Real, |a| *a = (*a).data.real.ceil().into())
+    this,
+    (Value::Byte(_) | Value::Int(_), ()),
+    (Value::Real(a), *this = a.ceil().into())
 );
 op1_fn!(
-    round_fn,
+    round,
     "Cannot round {}",
-    (Type::Byte | Type::Int, |_a| ()),
-    (Type::Real, |a| *a = (*a).data.real.round().into())
+    this,
+    (Value::Byte(_) | Value::Int(_), ()),
+    (Value::Real(a), *this = a.round().into())
 );
 op1_fn!(
-    len_fn,
+    len,
     "Cannot get length of {}",
-    (Type::String, |a| *a =
-        ((*a).data.string.len() as i64).into()),
-    (Type::List, |a| *a = ((*a).data.list.len() as i64).into()),
-    (Type::Array, |a| *a = ((*a).data.array.len() as i64).into()),
+    this,
+    (Value::String(a), *this = (a.len() as i64).into()),
+    (Value::List(a), *this = (a.len() as i64).into()),
+    (Value::Array(a), *this = (a.len() as i64).into()),
 );
 op1_fn!(
-    print_fn,
+    print,
     "Cannot print {}",
-    (Type::Array, |a| print!("{}", &*a)),
-    (_, |a| print!("{}", &*a))
+    this,
+    (Value::Array(a), print!("{}", a)),
+    (a, print!("{a}"))
 );
 op1_fn!(
-    println_fn,
+    println,
     "Cannot print {}",
-    (Type::Array, |a| println!("{}", &*a)),
-    (_, |a| println!("{}", &*a))
+    this,
+    (Value::Array(a), println!("{}", a)),
+    (a, println!("{a}"))
 );
 
 /// 2-parameter built-in operations
@@ -286,72 +299,66 @@ impl fmt::Display for Op2 {
     }
 }
 
-pub(crate) type ValueFn2 = fn(*mut Value, *mut Value, Env) -> RuntimeResult;
 macro_rules! op2_table {
-    ($(($op:ident, $name:ident, $f:ident)),* $(,)*) => {
-        $(static $name: [[ValueFn2; Type::ARITY]; Type::ARITY] = type_square!($f);)*
-
+    ($(($op:ident, $f:ident)),* $(,)*) => {
         impl Value {
             pub(crate) fn op2(&mut self, other: &mut Value, op: Op2, env: Env) -> RuntimeResult {
                 match op {
                     $(Op2::$op => self.$f(other, env),)*
                 }
             }
-            $(
-                fn $f(&mut self, other: &mut Value, env: Env) -> RuntimeResult {
-                    $name[self.ty as usize][other.ty as usize](self, other, env)
-                }
-            )*
         }
     };
 }
 macro_rules! op2_fn {
-    ($name:ident, $message:literal,
-        $(($a_ty:pat, $b_ty:pat, |$a:ident, $b:ident| $f:expr)),*
-        $(,(!env, $ea_ty:pat, $eb_ty:pat, |$ea:ident, $eb:ident, $env:ident| $ef:expr))*
+    ($name:ident, $message:literal, $this:ident, $other:ident,
+        $(($a_ty:pat, $b_ty:pat, $f:expr)),*
+        $(,(!$env:ident, $ea_ty:pat, $eb_ty:pat, $ef:expr))*
     $(,)?) => {
-        #[allow(unused_mut, unreachable_patterns)]
-        const fn $name(a: Type, b: Type) -> $crate::builtin::ValueFn2 {
-            unsafe {
-                match (a, b) {
-                    $(($a_ty, $b_ty) => |$a, mut $b, _| { $f; Ok(())},)*
-                    $(($ea_ty, $eb_ty) => |$ea, mut $eb, $env| { $ef; Ok(())},)*
-                    (Type::Array, Type::Array) => |a, b, env| {
-                        if (*a).array_mut().len() != (*b).data.array.len() {
+        impl Value {
+            #[allow(unused_mut, unreachable_patterns)]
+            pub(crate) fn $name(&mut self, other: &mut Self, env: Env) -> RuntimeResult {
+                let mut $this = self;
+                let mut $other = other;
+                match (&mut $this, &mut $other) {
+                    $(($a_ty, $b_ty) => $f,)*
+                    $(($ea_ty, $eb_ty) => {
+                        let $env = env;
+                        $ef
+                    },)*
+                    (Value::Array(a), Value::Array(b)) => {
+                        if a.len() != b.len() {
                             return Err(env.error(format!(
                                 concat!($message, " because they have different lengths: {} and {}"),
                                 Type::Array,
                                 Type::Array,
-                                (*a).array_mut().len(),
-                                (*b).data.array.len()
+                                a.len(),
+                                b.len()
                             )));
                         }
-                        for (a, b) in (*a)
-                            .array_mut()
+                        for (a, b) in a
                             .iter_mut()
-                            .zip((*b).array_mut().iter_mut())
+                            .zip(b.iter_mut())
                         {
                             a.$name(b, env)?;
                         }
-                        Ok(())
                     },
-                    (Type::Array, _) => |a, b, env| {
-                        for a in (*a).array_mut().iter_mut() {
+                    (Value::Array(a), b) => {
+                        for a in a.iter_mut() {
                             a.$name(&mut *b, env)?;
                         }
-                        Ok(())
                     },
-                    (_, Type::Array) => |a, b, env| {
-                        for b in (*b).array_mut().iter_mut() {
+                    (a, Value::Array(b)) => {
+                        for b in b.iter_mut() {
                             let mut a_clone = (*a).clone();
                             a_clone.$name(b, env)?;
                             *b = a_clone;
                         }
-                        ptr::swap(a, b);
-                        Ok(())
+                        swap(*a, $other);
                     },
-                    _ => |a, b, env| Err(env.error(format!($message, (*a).ty, (*b).ty))),
+                    (a, b) => return Err(env.error(format!($message, a.ty(), b.ty()))),
                 }
+                Ok(())
             }
         }
     };
@@ -359,130 +366,146 @@ macro_rules! op2_fn {
 pub(crate) use op2_fn;
 
 op2_table!(
-    (Mod, MOD_TABLE, mod_fn),
-    (Pow, POW_TABLE, pow_fn),
-    (Atan2, ATAN2_TABLE, atan2_fn),
-    (Get, GET_TABLE, get_fn),
-    (Push, PUSH_TABLE, push_fn),
-    (Concat, CONCAT_TABLE, concat_fn),
+    (Mod, mod_fn),
+    (Pow, pow_fn),
+    (Atan2, atan2_fn),
+    (Get, get_fn),
+    (Push, push_fn),
+    (Concat, concat_fn),
 );
 op2_fn!(
     mod_fn,
     "Cannot get remainder of {} % {}",
-    (Type::Int, Type::Int, |a, b| {
-        let x = (*b).data.int;
-        let m = (*a).data.int;
-        *a = ((x % m + m) % m).into();
+    this,
+    other,
+    (Value::Int(a), Value::Int(b), {
+        let x = *b;
+        let m = *a;
+        *this = ((x % m + m) % m).into();
     }),
-    (Type::Real, Type::Int, |a, b| {
-        let x = (*b).data.int as f64;
-        let m = (*a).data.real;
-        *a = (((x % m + m) % m) as i64).into()
+    (Value::Real(a), Value::Int(b), {
+        let x = *b as f64;
+        let m = *a;
+        *this = (((x % m + m) % m) as i64).into()
     }),
-    (Type::Int, Type::Real, |a, b| {
-        let x = (*b).data.real;
-        let m = (*a).data.int as f64;
-        *a = (((x % m + m) % m) as i64).into()
+    (Value::Int(a), Value::Real(b), {
+        let x = *b;
+        let m = *a as f64;
+        *this = (((x % m + m) % m) as i64).into()
     }),
-    (Type::Real, Type::Real, |a, b| {
-        let x = (*b).data.real;
-        let m = (*a).data.real;
-        *a = (((x % m + m) % m) as i64).into()
+    (Value::Real(a), Value::Real(b), {
+        let x = *b;
+        let m = *a;
+        *this = (((x % m + m) % m) as i64).into()
     })
 );
 op2_fn!(
     pow_fn,
     "Cannot raise {} to {} power",
-    (Type::Int, Type::Int, |a, b| *a =
-        (*a).data.int.pow((*b).data.int as u32).into()),
-    (Type::Real, Type::Int, |a, b| *a =
-        (*a).data.real.powi((*b).data.int as i32).into()),
-    (Type::Real, Type::Real, |a, b| *a =
-        (*a).data.real.powf((*b).data.real).into()),
+    this,
+    other,
+    (
+        Value::Int(a),
+        Value::Int(b),
+        *this = a.pow(*b as u32).into()
+    ),
+    (
+        Value::Real(a),
+        Value::Int(b),
+        *this = a.powi(*b as i32).into()
+    ),
+    (Value::Real(a), Value::Real(b), *this = a.powf(*b).into()),
 );
 op2_fn!(
     atan2_fn,
     "Cannot get arctangent of {}/{}",
-    (Type::Real, Type::Real, |a, b| *a =
-        (*a).data.real.atan2((*b).data.real).into()),
+    this,
+    other,
+    (Value::Real(a), Value::Real(b), *this = a.atan2(*b).into()),
 );
 op2_fn!(
     get_fn,
     "Cannot get index {} from {}",
-    (Type::Byte, Type::String, |a, b| *a = (*b)
-        .data
-        .string
-        .chars()
-        .nth((*a).data.byte as usize)
-        .map(Into::into)
-        .unwrap_or_else(Value::unit)),
-    (Type::Byte, Type::List, |a, b| *a = (*b)
-        .data
-        .list
-        .get((*a).data.byte as usize)
-        .cloned()
-        .unwrap_or_else(Value::unit)),
-    (Type::Byte, Type::Array, |a, b| *a = (*b)
-        .data
-        .array
-        .get((*a).data.byte as usize)
-        .cloned()
-        .unwrap_or_else(Value::unit)),
-    (Type::Int, Type::String, |a, b| *a = (*b)
-        .data
-        .string
-        .chars()
-        .nth((*a).data.int as usize)
-        .map(Into::into)
-        .unwrap_or_else(Value::unit)),
-    (Type::Int, Type::List, |a, b| *a = (*b)
-        .data
-        .list
-        .get((*a).data.int as usize)
-        .cloned()
-        .unwrap_or_else(Value::unit)),
-    (Type::Int, Type::Array, |a, b| *a = (*b)
-        .data
-        .array
-        .get((*a).data.int as usize)
-        .cloned()
-        .unwrap_or_else(Value::unit)),
-    (!env, Type::Array, _, |a, b, env| {
-        for index in (*a).array_mut().iter_mut() {
-            index.get_fn(&mut *b, env)?;
+    this,
+    other,
+    (
+        Value::Byte(a),
+        Value::String(b),
+        *this = b
+            .chars()
+            .nth(*a as usize)
+            .map(Into::into)
+            .unwrap_or(Value::Unit)
+    ),
+    (
+        Value::Byte(a),
+        Value::List(b),
+        *this = b.get(*a as usize).cloned().unwrap_or(Value::Unit)
+    ),
+    (
+        Value::Byte(a),
+        Value::Array(b),
+        *this = b.get(*a as usize).cloned().unwrap_or(Value::Unit)
+    ),
+    (
+        Value::Int(a),
+        Value::String(b),
+        *this = b
+            .chars()
+            .nth(*a as usize)
+            .map(Into::into)
+            .unwrap_or(Value::Unit)
+    ),
+    (
+        Value::Int(a),
+        Value::List(b),
+        *this = b.get(*a as usize).cloned().unwrap_or(Value::Unit)
+    ),
+    (
+        Value::Int(a),
+        Value::Array(b),
+        *this = b.get(*a as usize).cloned().unwrap_or(Value::Unit)
+    ),
+    (!env, Value::Array(a), b, {
+        for index in a.iter_mut() {
+            index.get_fn(b, env)?;
         }
     }),
 );
 op2_fn!(
     push_fn,
     "Cannot push {} onto {}",
-    (Type::Char, Type::String, |a, b| {
-        ptr::swap(a, b);
-        (*a).string_mut().push((*b).data.char);
+    this,
+    other,
+    (Value::Char(a), Value::String(b), {
+        Arc::make_mut(b).push(*a);
+        swap(this, other);
     }),
-    (_, Type::List, |a, b| {
-        ptr::swap(a, b);
-        (*a).list_mut().push(take(&mut *b));
+    (a, Value::List(b), {
+        b.push(take(a));
+        swap(this, other);
     }),
-    (_, Type::Array, |a, b| {
-        ptr::swap(a, b);
-        (*a).array_mut().push(take(&mut *b));
+    (a, Value::Array(b), {
+        b.push(take(a));
+        swap(this, other);
     }),
 );
 op2_fn!(
     concat_fn,
     "Cannot concatenate {} and {}",
-    (Type::String, Type::String, |a, b| {
-        ptr::swap(a, b);
-        (*a).string_mut().push_str(&(*b).data.string);
+    this,
+    other,
+    (Value::String(a), Value::String(b), {
+        swap(a, b);
+        Arc::make_mut(a).push_str(b);
     }),
-    (Type::List, Type::List, |a, b| {
-        ptr::swap(a, b);
-        (*a).list_mut().extend(take((*b).list_mut()).into_iter())
+    (Value::List(a), Value::List(b), {
+        swap(a, b);
+        a.extend(take(b).into_iter());
     }),
-    (Type::Array, Type::Array, |a, b| {
-        ptr::swap(a, b);
-        (*a).array_mut().extend(take((*b).array_mut()).into_iter())
+    (Value::Array(a), Value::Array(b), {
+        swap(a, b);
+        a.extend(take(b).into_iter())
     }),
 );
 

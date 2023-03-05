@@ -1,12 +1,28 @@
+- Convert Value back to enum
+- Closures
 - Warnings
   - naming conventions
   - compare with bool literals
 - Includes
-- Closures
+- More array functions
+  - First
+  - Last
+  - Tail
+  - Init
+  - Product
+  - Rotate
+  - Take
+  - Drop
+- Type testing
 - Structs
 - Enums
+- Operator overloading
+- System APIs
+  - Files
+  - Time
+  - Random
+  - Sockets
 - Inlining
-- Type testing
 - LSP
 - FFI
 - Docs

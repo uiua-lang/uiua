@@ -28,24 +28,18 @@ pub enum LexError {
     Bang,
     Bar,
     ExpectedCharacter(Option<char>),
+    InvalidEscape(char),
 }
 
 impl fmt::Display for LexError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             LexError::UnexpectedChar(c) => write!(f, "unexpected char {c:?}"),
-            LexError::Bang => {
-                write!(f, " unexpected char `!`, maybe you meant `not`?")
-            }
-            LexError::Bar => {
-                write!(f, " unexpected char `|`, maybe you meant `or` or `|>`?")
-            }
-            LexError::ExpectedCharacter(Some(c)) => {
-                write!(f, "expected {c:?}")
-            }
-            LexError::ExpectedCharacter(None) => {
-                write!(f, "expected character")
-            }
+            LexError::Bang => write!(f, " unexpected char `!`, maybe you meant `not`?"),
+            LexError::Bar => write!(f, " unexpected char `|`, maybe you meant `or` or `|>`?"),
+            LexError::ExpectedCharacter(Some(c)) => write!(f, "expected {c:?}"),
+            LexError::ExpectedCharacter(None) => write!(f, "expected character"),
+            LexError::InvalidEscape(c) => write!(f, "invalid escape character {c:?}"),
         }
     }
 }
@@ -234,6 +228,7 @@ pub enum Token {
     Int(String),
     Real(String),
     Char(char),
+    Str(Arc<str>),
     Keyword(Keyword),
     Simple(Simple),
 }
@@ -263,6 +258,12 @@ impl Token {
             _ => None,
         }
     }
+    pub fn as_string(&self) -> Option<&str> {
+        match self {
+            Token::Str(string) => Some(string),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for Token {
@@ -274,6 +275,7 @@ impl fmt::Display for Token {
             Token::Int(int) => write!(f, "{int}"),
             Token::Real(real) => write!(f, "{real}"),
             Token::Char(char) => write!(f, "{char:?}"),
+            Token::Str(s) => write!(f, "{s:?}"),
             Token::Keyword(keyword) => write!(f, "{keyword}"),
             Token::Simple(simple) => write!(f, "{simple}"),
         }
@@ -525,15 +527,42 @@ impl Lexer {
                 }
                 // Characters
                 '\'' => {
-                    let char = self.next_char().ok_or_else(|| {
-                        self.end_span(start).sp(LexError::ExpectedCharacter(None))
-                    })?;
+                    let mut escaped = false;
+                    let char = match self.character(&mut escaped, '"') {
+                        Ok(Some(c)) => c,
+                        Ok(None) => {
+                            return Err(self
+                                .end_span(start)
+                                .sp(LexError::ExpectedCharacter(Some('\''))))
+                        }
+                        Err(e) => return Err(self.end_span(start).sp(LexError::InvalidEscape(e))),
+                    };
                     if !self.next_char_exact('\'') {
                         return Err(self
                             .end_span(start)
                             .sp(LexError::ExpectedCharacter(Some('\''))));
                     }
                     return self.end(Token::Char(char), start);
+                }
+                // Strings
+                '"' => {
+                    let mut string = String::new();
+                    let mut escaped = false;
+                    loop {
+                        match self.character(&mut escaped, '"') {
+                            Ok(Some(c)) => string.push(c),
+                            Ok(None) => break,
+                            Err(e) => {
+                                return Err(self.end_span(start).sp(LexError::InvalidEscape(e)))
+                            }
+                        }
+                    }
+                    if !self.next_char_exact('"') {
+                        return Err(self
+                            .end_span(start)
+                            .sp(LexError::ExpectedCharacter(Some('"'))));
+                    }
+                    return self.end(Token::Str(string.into()), start);
                 }
                 // Identifiers, keywords, and underscore
                 c if is_ident_start(c) => {
@@ -594,6 +623,29 @@ impl Lexer {
             Token::Int
         }(number);
         self.end(token, start)
+    }
+    fn character(&mut self, escaped: &mut bool, escape_char: char) -> Result<Option<char>, char> {
+        let Some(c) = self.next_char_if(|c| c != escape_char || *escaped) else {
+            return Ok(None);
+        };
+        Ok(Some(if *escaped {
+            *escaped = false;
+            match c {
+                'n' => '\n',
+                'r' => '\r',
+                't' => '\t',
+                '0' => '\0',
+                '\\' => '\\',
+                '"' => '"',
+                '\'' => '\'',
+                c => return Err(c),
+            }
+        } else if c == '\\' {
+            *escaped = true;
+            return self.character(escaped, escape_char);
+        } else {
+            c
+        }))
     }
 }
 

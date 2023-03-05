@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, fmt, mem::ManuallyDrop, ops::*, sync::Arc};
+use std::{cmp::Ordering, fmt, mem::ManuallyDrop, ops::*, ptr, sync::Arc};
 
 use crate::{
     array::Array,
@@ -18,6 +18,7 @@ fn _keep_value_small(_: std::convert::Infallible) {
 }
 
 impl Default for Value {
+    #[inline(always)]
     fn default() -> Self {
         Self::unit()
     }
@@ -106,6 +107,7 @@ pub struct Partial {
 }
 
 impl Value {
+    #[inline(always)]
     pub const fn unit() -> Self {
         Self {
             ty: Type::Unit,
@@ -208,7 +210,7 @@ impl Clone for Value {
 }
 
 impl Value {
-    pub(crate) fn bin_op(&mut self, other: Self, op: BinOp, env: Env) -> RuntimeResult {
+    pub(crate) fn bin_op(&mut self, other: &mut Self, op: BinOp, env: Env) -> RuntimeResult {
         #[cfg(feature = "profile")]
         puffin::profile_function!();
         match op {
@@ -365,63 +367,59 @@ macro_rules! value_math_op {
                 match (a, b) {
                     (Type::Unit, Type::Unit) => |_, _, _| Ok(()),
                     (Type::Int, Type::Int) => |a, b, _| {
-                        *a = $trait::$method((*a).data.int, b.data.int).into();
+                        *a = $trait::$method((*a).data.int, (*b).data.int).into();
                         Ok(())
                     },
                     (Type::Real, Type::Real) => |a, b, _| {
-                        *a = $trait::$method((*a).data.real, b.data.real).into();
+                        *a = $trait::$method((*a).data.real, (*b).data.real).into();
                         Ok(())
                     },
                     (Type::Real, Type::Int) => |a, b, _| {
-                        *a = $trait::$method((*a).data.real, b.data.int as f64).into();
+                        *a = $trait::$method((*a).data.real, (*b).data.int as f64).into();
                         Ok(())
                     },
                     (Type::Int, Type::Real) => |a, b, _| {
                         *a = ((*a).data.int as f64).into();
-                        *a = $trait::$method((*a).data.real, b.data.real).into();
+                        *a = $trait::$method((*a).data.real, (*b).data.real).into();
                         Ok(())
                     },
                     (Type::Array, Type::Array) => |a, b, env| {
-                        if (*a).array_mut().len() != b.data.array.len() {
+                        if (*a).array_mut().len() != (*b).data.array.len() {
                             return Err(env.error(format!(
                                 "Cannot {} arrays of different lengths: {} and {}",
                                 $verb,
                                 (*a).array_mut().len(),
-                                b.data.array.len()
+                                (*b).data.array.len()
                             )));
                         }
-                        for (a, b) in (*a)
-                            .array_mut()
-                            .iter_mut()
-                            .zip(b.data.array.iter().cloned())
-                        {
-                            a.$method(b, env)?;
+                        for (a, b) in (*a).array_mut().iter_mut().zip((*b).array_mut().iter_mut()) {
+                            a.$method(&mut *b, env)?;
                         }
                         Ok(())
                     },
                     (Type::Array, _) => |a, b, env| {
                         for a in (*a).array_mut().iter_mut() {
-                            a.$method(b.clone(), env)?;
+                            a.$method(&mut *b, env)?;
                         }
                         Ok(())
                     },
-                    (_, Type::Array) => |a, mut b, env| {
-                        for b in b.array_mut().iter_mut() {
+                    (_, Type::Array) => |a, b, env| {
+                        for b in (*b).array_mut().iter_mut() {
                             let mut a_clone = (*a).clone();
-                            a_clone.$method(b.clone(), env)?;
+                            a_clone.$method(b, env)?;
                             *b = a_clone;
                         }
-                        *a = b;
+                        ptr::swap(a, b);
                         Ok(())
                     },
                     _ => |a, b, env| {
-                        Err(env.error(format!("Cannot {} {} and {}", $verb, (*a).ty, b.ty)))
+                        Err(env.error(format!("Cannot {} {} and {}", $verb, (*a).ty, (*b).ty)))
                     },
                 }
             }
         }
         impl Value {
-            pub(crate) fn $method(&mut self, other: Self, env: Env) -> RuntimeResult {
+            pub(crate) fn $method(&mut self, other: &mut Self, env: Env) -> RuntimeResult {
                 #[cfg(feature = "profile")]
                 puffin::profile_function!();
                 unsafe { $table[self.ty as usize][other.ty as usize](self, other, env) }
@@ -474,75 +472,71 @@ macro_rules! value_cmp_op {
                         Ok(())
                     },
                     (Type::Bool, Type::Bool) => |a, b, _| {
-                        *a = $method((*a).data.bool.cmp(&b.data.bool)).into();
+                        *a = $method((*a).data.bool.cmp(&(*b).data.bool)).into();
                         Ok(())
                     },
                     (Type::Int, Type::Int) => |a, b, _| {
-                        *a = $method((*a).data.int.cmp(&b.data.int)).into();
+                        *a = $method((*a).data.int.cmp(&(*b).data.int)).into();
                         Ok(())
                     },
                     (Type::Real, Type::Real) => |a, b, _| {
-                        *a = $method(real_ordering((*a).data.real, b.data.real)).into();
+                        *a = $method(real_ordering((*a).data.real, (*b).data.real)).into();
                         Ok(())
                     },
                     (Type::Real, Type::Int) => |a, b, _| {
-                        *a = $method(real_ordering((*a).data.real, b.data.int as f64)).into();
+                        *a = $method(real_ordering((*a).data.real, (*b).data.int as f64)).into();
                         Ok(())
                     },
                     (Type::Int, Type::Real) => |a, b, _| {
                         *a = ((*a).data.int as f64).into();
-                        *a = $method(real_ordering((*a).data.real, b.data.real)).into();
+                        *a = $method(real_ordering((*a).data.real, (*b).data.real)).into();
                         Ok(())
                     },
                     (Type::Function, Type::Function) => |a, b, _| {
-                        *a = $method((*a).data.function.cmp(&b.data.function)).into();
+                        *a = $method((*a).data.function.cmp(&(*b).data.function)).into();
                         Ok(())
                     },
                     (Type::Partial, Type::Partial) => |a, b, _| {
-                        *a = $method((*a).data.partial.cmp(&b.data.partial)).into();
+                        *a = $method((*a).data.partial.cmp(&(*b).data.partial)).into();
                         Ok(())
                     },
                     (Type::Array, Type::Array) => |a, b, env| {
-                        if (*a).array_mut().len() != b.data.array.len() {
+                        if (*a).array_mut().len() != (*b).data.array.len() {
                             return Err(env.error(format!(
                                 "Cannot compare arrays of different lengths: {} and {}",
                                 (*a).array_mut().len(),
-                                b.data.array.len()
+                                (*b).data.array.len()
                             )));
                         }
-                        for (a, b) in (*a)
-                            .array_mut()
-                            .iter_mut()
-                            .zip(b.data.array.iter().cloned())
-                        {
-                            a.$method(b, env)?;
+                        for (a, b) in (*a).array_mut().iter_mut().zip((*b).array_mut().iter_mut()) {
+                            a.$method(&mut *b, env)?;
                         }
                         Ok(())
                     },
                     (Type::Array, _) => |a, b, env| {
                         for a in (*a).array_mut().iter_mut() {
-                            a.$method(b.clone(), env)?;
+                            a.$method(&mut *b, env)?;
                         }
                         Ok(())
                     },
-                    (_, Type::Array) => |a, mut b, env| {
-                        for b in b.array_mut().iter_mut() {
+                    (_, Type::Array) => |a, b, env| {
+                        for b in (*b).array_mut().iter_mut() {
                             let mut a_clone = (*a).clone();
-                            a_clone.$method(b.clone(), env)?;
+                            a_clone.$method(b, env)?;
                             *b = a_clone;
                         }
-                        *a = b;
+                        ptr::swap(a, b);
                         Ok(())
                     },
                     _ => |a, b, _| {
-                        *a = $method((*a).ty.cmp(&b.ty)).into();
+                        *a = $method((*a).ty.cmp(&(*b).ty)).into();
                         Ok(())
                     },
                 }
             }
         }
         impl Value {
-            pub(crate) fn $method(&mut self, other: Self, env: Env) -> RuntimeResult {
+            pub(crate) fn $method(&mut self, other: &mut Self, env: Env) -> RuntimeResult {
                 #[cfg(feature = "profile")]
                 puffin::profile_function!();
                 unsafe { $table[self.ty as usize][other.ty as usize](self, other, env) }

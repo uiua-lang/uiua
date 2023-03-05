@@ -1,4 +1,4 @@
-use std::{f64::consts::*, fmt, ptr, sync::Arc};
+use std::{f64::consts::*, fmt, mem::take, ptr, sync::Arc};
 
 use enum_iterator::Sequence;
 
@@ -257,19 +257,19 @@ impl fmt::Display for Op2 {
     }
 }
 
-pub(crate) type ValueFn2 = fn(*mut Value, Value, Env) -> RuntimeResult;
+pub(crate) type ValueFn2 = fn(*mut Value, *mut Value, Env) -> RuntimeResult;
 macro_rules! op2_table {
     ($(($op:ident, $name:ident, $f:ident)),* $(,)*) => {
         $(static $name: [[ValueFn2; Type::ARITY]; Type::ARITY] = type_square!($f);)*
 
         impl Value {
-            pub(crate) fn op2(&mut self, other: Value, op: Op2, env: Env) -> RuntimeResult {
+            pub(crate) fn op2(&mut self, other: &mut Value, op: Op2, env: Env) -> RuntimeResult {
                 match op {
                     $(Op2::$op => self.$f(other, env),)*
                 }
             }
             $(
-                fn $f(&mut self, other: Value, env: Env) -> RuntimeResult {
+                fn $f(&mut self, other: &mut Value, env: Env) -> RuntimeResult {
                     $name[self.ty as usize][other.ty as usize](self, other, env)
                 }
             )*
@@ -288,19 +288,19 @@ macro_rules! op2_fn {
                     $(($a_ty, $b_ty) => |$a, mut $b, _| { $f; Ok(())},)*
                     $(($ea_ty, $eb_ty) => |$ea, mut $eb, $env| { $ef; Ok(())},)*
                     (Type::Array, Type::Array) => |a, b, env| {
-                        if (*a).array_mut().len() != b.data.array.len() {
+                        if (*a).array_mut().len() != (*b).data.array.len() {
                             return Err(env.error(format!(
                                 concat!($message, " because they have different lengths: {} and {}"),
                                 Type::Array,
                                 Type::Array,
                                 (*a).array_mut().len(),
-                                b.data.array.len()
+                                (*b).data.array.len()
                             )));
                         }
                         for (a, b) in (*a)
                             .array_mut()
                             .iter_mut()
-                            .zip(b.data.array.iter().cloned())
+                            .zip((*b).array_mut().iter_mut())
                         {
                             a.$name(b, env)?;
                         }
@@ -308,20 +308,20 @@ macro_rules! op2_fn {
                     },
                     (Type::Array, _) => |a, b, env| {
                         for a in (*a).array_mut().iter_mut() {
-                            a.$name(b.clone(), env)?;
+                            a.$name(&mut *b, env)?;
                         }
                         Ok(())
                     },
-                    (_, Type::Array) => |a, mut b, env| {
-                        for b in b.array_mut().iter_mut() {
+                    (_, Type::Array) => |a, b, env| {
+                        for b in (*b).array_mut().iter_mut() {
                             let mut a_clone = (*a).clone();
-                            a_clone.$name(b.clone(), env)?;
+                            a_clone.$name(b, env)?;
                             *b = a_clone;
                         }
-                        *a = b;
+                        ptr::swap(a, b);
                         Ok(())
                     },
-                    _ => |a, b, env| Err(env.error(format!($message, (*a).ty, b.ty))),
+                    _ => |a, b, env| Err(env.error(format!($message, (*a).ty, (*b).ty))),
                 }
             }
         }
@@ -340,22 +340,22 @@ op2_fn!(
     mod_fn,
     "Cannot get remainder of {} % {}",
     (Type::Int, Type::Int, |a, b| {
-        let x = b.data.int;
+        let x = (*b).data.int;
         let m = (*a).data.int;
         *a = ((x % m + m) % m).into();
     }),
     (Type::Real, Type::Int, |a, b| {
-        let x = b.data.int as f64;
+        let x = (*b).data.int as f64;
         let m = (*a).data.real;
         *a = (((x % m + m) % m) as i64).into()
     }),
     (Type::Int, Type::Real, |a, b| {
-        let x = b.data.real;
+        let x = (*b).data.real;
         let m = (*a).data.int as f64;
         *a = (((x % m + m) % m) as i64).into()
     }),
     (Type::Real, Type::Real, |a, b| {
-        let x = b.data.real;
+        let x = (*b).data.real;
         let m = (*a).data.real;
         *a = (((x % m + m) % m) as i64).into()
     })
@@ -364,54 +364,54 @@ op2_fn!(
     pow_fn,
     "Cannot raise {} to {} power",
     (Type::Int, Type::Int, |a, b| *a =
-        (*a).data.int.pow(b.data.int as u32).into()),
+        (*a).data.int.pow((*b).data.int as u32).into()),
     (Type::Real, Type::Int, |a, b| *a =
-        (*a).data.real.powi(b.data.int as i32).into()),
+        (*a).data.real.powi((*b).data.int as i32).into()),
     (Type::Real, Type::Real, |a, b| *a =
-        (*a).data.real.powf(b.data.real).into()),
+        (*a).data.real.powf((*b).data.real).into()),
 );
 op2_fn!(
     atan2_fn,
     "Cannot get arctangent of {}/{}",
     (Type::Real, Type::Real, |a, b| *a =
-        (*a).data.real.atan2(b.data.real).into()),
+        (*a).data.real.atan2((*b).data.real).into()),
 );
 op2_fn!(
     get_fn,
     "Cannot get index {} from {}",
-    (Type::Byte, Type::String, |a, b| *a = b
+    (Type::Byte, Type::String, |a, b| *a = (*b)
         .data
         .string
         .chars()
         .nth((*a).data.byte as usize)
         .map(Into::into)
         .unwrap_or_else(Value::unit)),
-    (Type::Byte, Type::List, |a, b| *a = b
+    (Type::Byte, Type::List, |a, b| *a = (*b)
         .data
         .list
         .get((*a).data.byte as usize)
         .cloned()
         .unwrap_or_else(Value::unit)),
-    (Type::Byte, Type::Array, |a, b| *a = b
+    (Type::Byte, Type::Array, |a, b| *a = (*b)
         .data
         .array
         .get((*a).data.byte as usize)
         .cloned()
         .unwrap_or_else(Value::unit)),
-    (Type::Int, Type::String, |a, b| *a = b
+    (Type::Int, Type::String, |a, b| *a = (*b)
         .data
         .string
         .chars()
         .nth((*a).data.int as usize)
         .map(Into::into)
         .unwrap_or_else(Value::unit)),
-    (Type::Int, Type::List, |a, b| *a = b
+    (Type::Int, Type::List, |a, b| *a = (*b)
         .data
         .list
         .get((*a).data.int as usize)
         .cloned()
         .unwrap_or_else(Value::unit)),
-    (Type::Int, Type::Array, |a, b| *a = b
+    (Type::Int, Type::Array, |a, b| *a = (*b)
         .data
         .array
         .get((*a).data.int as usize)
@@ -419,7 +419,7 @@ op2_fn!(
         .unwrap_or_else(Value::unit)),
     (!env, Type::Array, _, |a, b, env| {
         for index in (*a).array_mut().iter_mut() {
-            index.get_fn(b.clone(), env)?;
+            index.get_fn(&mut *b, env)?;
         }
     }),
 );
@@ -427,16 +427,16 @@ op2_fn!(
     push_fn,
     "Cannot push {} onto {}",
     (Type::Char, Type::String, |a, b| {
-        ptr::swap(a, &mut b);
-        (*a).string_mut().push(b.data.char);
+        ptr::swap(a, b);
+        (*a).string_mut().push((*b).data.char);
     }),
     (_, Type::List, |a, b| {
-        ptr::swap(a, &mut b);
-        (*a).list_mut().push(b);
+        ptr::swap(a, b);
+        (*a).list_mut().push(take(&mut *b));
     }),
     (_, Type::Array, |a, b| {
-        ptr::swap(a, &mut b);
-        (*a).array_mut().push(b);
+        ptr::swap(a, b);
+        (*a).array_mut().push(take(&mut *b));
     }),
 );
 

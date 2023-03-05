@@ -118,6 +118,7 @@ struct Scope {
     functions: HashMap<FunctionId, Function>,
 }
 
+#[derive(Debug)]
 enum Binding {
     /// A function that is available but not on the stack.
     Function(FunctionId),
@@ -285,10 +286,12 @@ impl Compiler {
     fn pop_scope(&mut self, height: usize) {
         self.scopes.pop().unwrap();
         self.height = height;
+        println!("popping scope brought height to {height}");
     }
     /// Bind the value on the top of the stack to the given identifier
     fn bind_local(&mut self, ident: Ident) {
         let height = self.height - 1;
+        println!("bind {ident} to {height}");
         self.scope_mut()
             .bindings
             .insert(ident, Binding::Local(height));
@@ -306,13 +309,17 @@ impl Compiler {
     fn push_instr(&mut self, instr: Instr) {
         match &instr {
             Instr::CopyRel(_) => self.height += 1,
+            Instr::CopyAbs(_) => self.height += 1,
             Instr::Push(_) => self.height += 1,
             Instr::PushUnresolvedFunction(_) => self.height += 1,
             Instr::BinOp(..) => self.height -= 1,
             Instr::Call { args, .. } => self.height -= *args,
             Instr::Constant(_) => self.height += 1,
+            Instr::List(len) => self.height -= len - 1,
+            Instr::Array(len) => self.height -= len - 1,
             _ => {}
         }
+        println!("{instr:?} brought height to {}", self.height);
         self.instrs_mut().push(instr);
     }
     fn push_spot(&mut self) -> usize {
@@ -534,13 +541,12 @@ impl Compiler {
         Ok(())
     }
     fn list(&mut self, make: fn(usize) -> Instr, items: Vec<Sp<Expr>>) -> CompileResult {
-        let height = self.height;
         let len = items.len();
+        println!("height before making list of {len} items: {}", self.height);
         for item in items {
             self.expr(item)?;
         }
         self.push_instr(make(len));
-        self.height = height + 1;
         Ok(())
     }
     fn call(&mut self, call: CallExpr) -> CompileResult {

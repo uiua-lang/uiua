@@ -289,8 +289,9 @@ impl Vm {
                     let (left, right) = {
                         #[cfg(feature = "profile")]
                         puffin::profile_scope!("bin_args");
-                        let right = stack.pop().unwrap();
-                        let left = stack.last_mut().unwrap();
+                        let mut iter = stack.iter_mut().rev();
+                        let right = iter.next().unwrap();
+                        let left = iter.next().unwrap();
                         (left, right)
                     };
                     let env = Env {
@@ -298,6 +299,7 @@ impl Vm {
                         span: *span,
                     };
                     left.bin_op(right, *op, env)?;
+                    stack.pop();
                 }
                 Instr::Op1(op) => {
                     #[cfg(feature = "profile")]
@@ -309,16 +311,18 @@ impl Vm {
                 Instr::Op2(op) => {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("builtin_op2");
-                    let (left, mut right) = {
+                    let (left, right) = {
                         #[cfg(feature = "profile")]
                         puffin::profile_scope!("builtin_op2_args");
-                        let right = stack.pop().unwrap();
-                        let left = stack.last_mut().unwrap();
+                        let mut iter = stack.iter_mut().rev();
+                        let right = iter.next().unwrap();
+                        let left = iter.next().unwrap();
                         (left, right)
                     };
-                    swap(left, &mut right);
+                    swap(left, right);
                     let env = Env { assembly, span: 0 };
                     left.op2(right, *op, env)?;
+                    stack.pop();
                 }
                 Instr::DestructureList(_n, _span) => {
                     // let list = match stack.pop().unwrap() {

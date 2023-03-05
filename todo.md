@@ -3,7 +3,6 @@
   - compare with bool literals
 - Includes
 - Closures
-- Strings
 - Structs
 - Enums
 - Inlining

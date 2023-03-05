@@ -276,21 +276,24 @@ op2_fn!(
     mod_fn,
     "Cannot get remainder of {} % {}",
     (Type::Int, Type::Int, |a, b| {
-        let b = b.data.int;
-        *a = (((*a).data.int % b + b) % b).into()
+        let x = b.data.int;
+        let m = (*a).data.int;
+        *a = ((x % m + m) % m).into();
     }),
     (Type::Real, Type::Int, |a, b| {
-        let b = b.data.int as f64;
-        *a = (((*a).data.real % b + b) % b).into()
+        let x = b.data.int as f64;
+        let m = (*a).data.real;
+        *a = (((x % m + m) % m) as i64).into()
     }),
     (Type::Int, Type::Real, |a, b| {
-        let a_real = (*a).data.int as f64;
-        let b = b.data.real;
-        *a = (((a_real % b + b) % b) as i64).into()
+        let x = b.data.real;
+        let m = (*a).data.int as f64;
+        *a = (((x % m + m) % m) as i64).into()
     }),
     (Type::Real, Type::Real, |a, b| {
-        let b = b.data.real;
-        *a = (((*a).data.real % b + b) % b).into()
+        let x = b.data.real;
+        let m = (*a).data.real;
+        *a = (((x % m + m) % m) as i64).into()
     })
 );
 op2_fn!(

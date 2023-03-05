@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, fmt, mem::ManuallyDrop, ops::*};
+use std::{cmp::Ordering, fmt, mem::ManuallyDrop, ops::*, sync::Arc};
 
 use crate::{
     array::Array,
@@ -34,6 +34,7 @@ impl fmt::Debug for Value {
             Type::Char => write!(f, "{:?}", unsafe { self.data.char }),
             Type::Function => write!(f, "function({})", unsafe { self.data.function.0 }),
             Type::Partial => write!(f, "partial({})", unsafe { self.data.partial.args.len() }),
+            Type::String => write!(f, "{:?}", unsafe { &*self.data.string }),
             Type::List => f
                 .debug_set()
                 .entries(unsafe { &*self.data.list }.iter())
@@ -52,6 +53,7 @@ pub(crate) union ValueData {
     pub char: char,
     pub function: Function,
     pub partial: ManuallyDrop<Box<Partial>>,
+    pub string: ManuallyDrop<Arc<String>>,
     pub list: ManuallyDrop<Box<List>>,
     pub array: ManuallyDrop<Box<Array>>,
 }
@@ -71,7 +73,7 @@ macro_rules! ty {
     };
 }
 
-ty!(Unit, Bool, Byte, Int, Real, Char, Function, Partial, List, Array);
+ty!(Unit, Bool, Byte, Int, Real, Char, Function, Partial, String, List, Array);
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -84,6 +86,7 @@ impl fmt::Display for Type {
             Type::Char => write!(f, "char"),
             Type::Function => write!(f, "function"),
             Type::Partial => write!(f, "partial"),
+            Type::String => write!(f, "string"),
             Type::List => write!(f, "list"),
             Type::Array => write!(f, "array"),
         }
@@ -120,6 +123,9 @@ impl Value {
     pub const fn is_truthy(&self) -> bool {
         !(self.is_unit() || (matches!(self.ty, Type::Bool) && unsafe { !self.data.bool }))
     }
+    pub(crate) unsafe fn string_mut(&mut self) -> &mut String {
+        Arc::make_mut(&mut *self.data.string)
+    }
     #[inline(always)]
     pub(crate) unsafe fn list_mut(&mut self) -> &mut List {
         &mut self.data.list
@@ -140,6 +146,9 @@ static DROP_TABLE: [fn(&mut ValueData); Type::ARITY] = [
     |_| {},
     |data| unsafe {
         ManuallyDrop::drop(&mut data.partial);
+    },
+    |data| unsafe {
+        ManuallyDrop::drop(&mut data.string);
     },
     |data| unsafe {
         ManuallyDrop::drop(&mut data.list);
@@ -177,6 +186,9 @@ static CLONE_TABLE: [fn(&ValueData) -> ValueData; Type::ARITY] = [
     },
     |data| ValueData {
         partial: ManuallyDrop::new(unsafe { (*data.partial).clone() }),
+    },
+    |data| ValueData {
+        string: ManuallyDrop::new(unsafe { (*data.string).clone() }),
     },
     |data| ValueData {
         list: ManuallyDrop::new(unsafe { (*data.list).clone() }),
@@ -226,6 +238,7 @@ macro_rules! type_line {
             $f($($a,)? $crate::value::Type::Char),
             $f($($a,)? $crate::value::Type::Function),
             $f($($a,)? $crate::value::Type::Partial),
+            $f($($a,)? $crate::value::Type::String),
             $f($($a,)? $crate::value::Type::List),
             $f($($a,)? $crate::value::Type::Array),
         ]
@@ -244,6 +257,7 @@ macro_rules! type_square {
             $crate::value::type_line!($f, $crate::value::Type::Char),
             $crate::value::type_line!($f, $crate::value::Type::Function),
             $crate::value::type_line!($f, $crate::value::Type::Partial),
+            $crate::value::type_line!($f, $crate::value::Type::String),
             $crate::value::type_line!($f, $crate::value::Type::List),
             $crate::value::type_line!($f, $crate::value::Type::Array),
         ]
@@ -266,6 +280,7 @@ const fn simple_eq_fn(a: Type, b: Type) -> EqFn {
             (Type::Char, Type::Char) => |a, b| a.data.char == b.data.char,
             (Type::Function, Type::Function) => |a, b| a.data.function == b.data.function,
             (Type::Partial, Type::Partial) => |a, b| a.data.partial == b.data.partial,
+            (Type::String, Type::String) => |a, b| a.data.string == b.data.string,
             (Type::List, Type::List) => |a, b| a.data.list == b.data.list,
             (Type::Array, Type::Array) => |a, b| a.data.array == b.data.array,
             (Type::Int, Type::Byte) => |a, b| a.data.int == b.data.byte as i64,
@@ -304,6 +319,7 @@ const fn simple_cmp_fn(a: Type, b: Type) -> SimpleCmpFn {
             (Type::Char, Type::Char) => |a, b| a.data.char.cmp(&b.data.char),
             (Type::Function, Type::Function) => |a, b| a.data.function.cmp(&b.data.function),
             (Type::Partial, Type::Partial) => |a, b| a.data.partial.cmp(&b.data.partial),
+            (Type::String, Type::String) => |a, b| a.data.string.cmp(&b.data.string),
             (Type::List, Type::List) => |a, b| a.data.list.cmp(&b.data.list),
             (Type::Array, Type::Array) => |a, b| a.data.array.cmp(&b.data.array),
             (Type::Int, Type::Byte) => |a, b| a.data.int.cmp(&(b.data.byte as i64)),
@@ -607,6 +623,17 @@ impl From<Partial> for Value {
     }
 }
 
+impl From<Arc<String>> for Value {
+    fn from(s: Arc<String>) -> Self {
+        Self {
+            ty: Type::String,
+            data: ValueData {
+                string: ManuallyDrop::new(s),
+            },
+        }
+    }
+}
+
 impl From<List> for Value {
     fn from(l: List) -> Self {
         Self {
@@ -678,6 +705,17 @@ impl TryFrom<Value> for Partial {
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         if value.ty == Type::Partial {
             Ok(unsafe { (**value.data.partial).clone() })
+        } else {
+            Err(value)
+        }
+    }
+}
+
+impl TryFrom<Value> for Arc<String> {
+    type Error = Value;
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        if value.ty == Type::String {
+            Ok(unsafe { (*value.data.string).clone() })
         } else {
             Err(value)
         }

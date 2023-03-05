@@ -1,4 +1,4 @@
-use std::{f64::consts::*, fmt, ptr};
+use std::{f64::consts::*, fmt, ptr, sync::Arc};
 
 use enum_iterator::Sequence;
 
@@ -153,6 +153,7 @@ op1_fn!(
     (Type::Char, |a| *a = '\0'.into()),
     (Type::Function, |a| *a = Function(0).into()),
     (Type::Partial, |a| *a = Function(0).into()),
+    (Type::String, |a| *a = Arc::new(String::new()).into()),
     (Type::List, |a| *a = List::new().into()),
     (Type::Array, |a| *a = Array::new().into()),
 );
@@ -228,8 +229,10 @@ op1_fn!(
 op1_fn!(
     len_fn,
     "Cannot get length of {}",
-    (Type::List, |a| *a = ((*a).list_mut().len() as i64).into()),
-    (Type::Array, |a| *a = ((*a).array_mut().len() as i64).into()),
+    (Type::String, |a| *a =
+        ((*a).data.string.len() as i64).into()),
+    (Type::List, |a| *a = ((*a).data.list.len() as i64).into()),
+    (Type::Array, |a| *a = ((*a).data.array.len() as i64).into()),
 );
 
 /// 2-parameter built-in operations
@@ -376,23 +379,41 @@ op2_fn!(
 op2_fn!(
     get_fn,
     "Cannot get index {} from {}",
+    (Type::Byte, Type::String, |a, b| *a = b
+        .data
+        .string
+        .chars()
+        .nth((*a).data.byte as usize)
+        .map(Into::into)
+        .unwrap_or_else(Value::unit)),
     (Type::Byte, Type::List, |a, b| *a = b
-        .list_mut()
+        .data
+        .list
         .get((*a).data.byte as usize)
         .cloned()
         .unwrap_or_else(Value::unit)),
     (Type::Byte, Type::Array, |a, b| *a = b
-        .array_mut()
+        .data
+        .array
         .get((*a).data.byte as usize)
         .cloned()
         .unwrap_or_else(Value::unit)),
+    (Type::Int, Type::String, |a, b| *a = b
+        .data
+        .string
+        .chars()
+        .nth((*a).data.int as usize)
+        .map(Into::into)
+        .unwrap_or_else(Value::unit)),
     (Type::Int, Type::List, |a, b| *a = b
-        .list_mut()
+        .data
+        .list
         .get((*a).data.int as usize)
         .cloned()
         .unwrap_or_else(Value::unit)),
     (Type::Int, Type::Array, |a, b| *a = b
-        .array_mut()
+        .data
+        .array
         .get((*a).data.int as usize)
         .cloned()
         .unwrap_or_else(Value::unit)),
@@ -405,6 +426,10 @@ op2_fn!(
 op2_fn!(
     push_fn,
     "Cannot push {} onto {}",
+    (Type::Char, Type::String, |a, b| {
+        ptr::swap(a, &mut b);
+        (*a).string_mut().push(b.data.char);
+    }),
     (_, Type::List, |a, b| {
         ptr::swap(a, &mut b);
         (*a).list_mut().push(b);

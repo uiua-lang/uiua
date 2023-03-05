@@ -465,8 +465,10 @@ impl Parser {
             i.map(Into::into).map(Expr::Int)
         } else if let Some(r) = self.next_token_map(Token::as_real) {
             r.map(Into::into).map(Expr::Real)
-        } else if let Some(r) = self.next_token_map(Token::as_char) {
-            r.map(Into::into).map(Expr::Char)
+        } else if let Some(c) = self.next_token_map(Token::as_char) {
+            c.map(Into::into).map(Expr::Char)
+        } else if let Some(s) = self.next_token_map(Token::as_string) {
+            s.map(Into::into).map(Expr::String)
         } else if let Some(span) = self.try_exact(Keyword::True) {
             span.sp(Expr::Bool(true))
         } else if let Some(span) = self.try_exact(Keyword::False) {

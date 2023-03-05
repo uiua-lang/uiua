@@ -228,7 +228,7 @@ pub enum Token {
     Int(String),
     Real(String),
     Char(char),
-    Str(Arc<str>),
+    Str(Arc<String>),
     Keyword(Keyword),
     Simple(Simple),
 }
@@ -258,9 +258,9 @@ impl Token {
             _ => None,
         }
     }
-    pub fn as_string(&self) -> Option<&str> {
+    pub fn as_string(&self) -> Option<Arc<String>> {
         match self {
-            Token::Str(string) => Some(string),
+            Token::Str(string) => Some(string.clone()),
             _ => None,
         }
     }

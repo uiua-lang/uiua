@@ -52,6 +52,8 @@ pub enum Op1 {
     Ceil,
     Round,
     Len,
+    Print,
+    Println,
 }
 
 impl fmt::Display for Op1 {
@@ -72,6 +74,8 @@ impl fmt::Display for Op1 {
             Op1::Ceil => write!(f, "ceil"),
             Op1::Round => write!(f, "round"),
             Op1::Len => write!(f, "len"),
+            Op1::Print => write!(f, "print"),
+            Op1::Println => write!(f, "println"),
         }
     }
 }
@@ -131,6 +135,8 @@ op1_table!(
     (Ceil, CEIL_TABLE, ceil_fn),
     (Round, ROUND_TABLE, round_fn),
     (Len, LEN_TABLE, len_fn),
+    (Print, PRINT_TABLE, print_fn),
+    (Println, PRINTLN_TABLE, println_fn),
 );
 const unsafe fn not_fn(_: Type) -> ValueFn1 {
     |a, _| {
@@ -233,6 +239,20 @@ op1_fn!(
         ((*a).data.string.len() as i64).into()),
     (Type::List, |a| *a = ((*a).data.list.len() as i64).into()),
     (Type::Array, |a| *a = ((*a).data.array.len() as i64).into()),
+);
+op1_fn!(
+    print_fn,
+    "Cannot print {}",
+    (Type::Array, |a| print!("{}", &*a)),
+    (_, |a| print!("{}", &*a))
+);
+op1_fn!(
+    println_fn,
+    "Cannot print {}",
+    (Type::Array, |a| println!("{}", &*a)),
+    (_, |a| {
+        println!("{}", &*a);
+    })
 );
 
 /// 2-parameter built-in operations

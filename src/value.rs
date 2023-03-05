@@ -45,6 +45,27 @@ impl fmt::Debug for Value {
     }
 }
 
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.ty {
+            Type::Unit => write!(f, "unit"),
+            Type::Bool => write!(f, "{}", unsafe { self.data.bool }),
+            Type::Byte => write!(f, "{}", unsafe { self.data.byte }),
+            Type::Int => write!(f, "{}", unsafe { self.data.int }),
+            Type::Real => write!(f, "{}", unsafe { self.data.real }),
+            Type::Char => write!(f, "{}", unsafe { self.data.char }),
+            Type::Function => write!(f, "function({})", unsafe { self.data.function.0 }),
+            Type::Partial => write!(f, "partial({})", unsafe { self.data.partial.args.len() }),
+            Type::String => write!(f, "{}", unsafe { &*self.data.string }),
+            Type::List => f
+                .debug_set()
+                .entries(unsafe { &*self.data.list }.iter())
+                .finish(),
+            Type::Array => write!(f, "{:?}", unsafe { &*self.data.array }),
+        }
+    }
+}
+
 pub(crate) union ValueData {
     pub unit: (),
     pub bool: bool,

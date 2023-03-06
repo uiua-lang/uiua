@@ -484,27 +484,26 @@ impl Compiler {
             Expr::Ident(ident) => self.ident(ident, expr.span)?,
             Expr::Placeholder => panic!("unresolved placeholder"),
             Expr::Bin(bin) => {
-                self.expr(bin.left)?;
-                self.expr(bin.right)?;
-                self.push_instr(Instr::Swap);
-                let span = self.push_call_span(bin.op.span);
-                let op2 = match bin.op.value {
-                    BinOp::Eq => Op2::Eq,
-                    BinOp::Ne => Op2::Ne,
-                    BinOp::Lt => Op2::Lt,
-                    BinOp::Le => Op2::Le,
-                    BinOp::Gt => Op2::Gt,
-                    BinOp::Ge => Op2::Ge,
-                    BinOp::Add => Op2::Add,
-                    BinOp::Sub => Op2::Sub,
-                    BinOp::Mul => Op2::Mul,
-                    BinOp::Div => Op2::Div,
-                };
-                self.push_instr(Instr::Op2(op2, span));
+                let left = bin.left;
+                let right = bin.right;
+                let span = bin.op.span;
+                match bin.op.value {
+                    BinOp::Or => self.logic_expr(true, left, right),
+                    BinOp::And => self.logic_expr(false, left, right),
+                    BinOp::Eq => self.bin_expr(Op2::Eq, left, right, span),
+                    BinOp::Ne => self.bin_expr(Op2::Ne, left, right, span),
+                    BinOp::Lt => self.bin_expr(Op2::Lt, left, right, span),
+                    BinOp::Le => self.bin_expr(Op2::Le, left, right, span),
+                    BinOp::Gt => self.bin_expr(Op2::Gt, left, right, span),
+                    BinOp::Ge => self.bin_expr(Op2::Ge, left, right, span),
+                    BinOp::Add => self.bin_expr(Op2::Add, left, right, span),
+                    BinOp::Sub => self.bin_expr(Op2::Sub, left, right, span),
+                    BinOp::Mul => self.bin_expr(Op2::Mul, left, right, span),
+                    BinOp::Div => self.bin_expr(Op2::Div, left, right, span),
+                }?;
             }
             Expr::Call(call) => self.call(*call)?,
             Expr::If(if_expr) => self.if_expr(*if_expr)?,
-            Expr::Logic(log_expr) => self.logic_expr(*log_expr)?,
             Expr::Pipe(pipe_expr) => self.pipe_expr(*pipe_expr)?,
             Expr::List(items) => self.list(Instr::List, items)?,
             Expr::Array(items) => self.list(Instr::Array, items)?,
@@ -601,15 +600,19 @@ impl Compiler {
             Instr::Jump(self.instrs().len() as isize - jump_to_end_spot as isize);
         Ok(())
     }
-    fn logic_expr(&mut self, log_expr: LogicExpr) -> CompileResult {
-        self.expr(log_expr.left)?;
+    fn bin_expr(&mut self, op2: Op2, left: Sp<Expr>, right: Sp<Expr>, span: Span) -> CompileResult {
+        self.expr(left)?;
+        self.expr(right)?;
+        self.push_instr(Instr::Swap);
+        let span = self.push_call_span(span);
+        self.push_instr(Instr::Op2(op2, span));
+        Ok(())
+    }
+    fn logic_expr(&mut self, jump_cond: bool, left: Sp<Expr>, right: Sp<Expr>) -> CompileResult {
+        self.expr(left)?;
         let jump_spot = self.push_spot();
         self.height -= 1;
-        self.expr(log_expr.right)?;
-        let jump_cond = match log_expr.op.value {
-            LogicOp::And => false,
-            LogicOp::Or => true,
-        };
+        self.expr(right)?;
         self.instrs_mut()[jump_spot] =
             Instr::JumpIfElsePop(self.instrs().len() as isize - jump_spot as isize, jump_cond);
         Ok(())
@@ -680,10 +683,6 @@ fn resolve_placeholders_rec(expr: &mut Sp<Expr>, params: &mut Vec<Sp<Ident>>) {
         Expr::Bin(bin_expr) => {
             resolve_placeholders_rec(&mut bin_expr.left, params);
             resolve_placeholders_rec(&mut bin_expr.right, params);
-        }
-        Expr::Logic(log_expr) => {
-            resolve_placeholders_rec(&mut log_expr.left, params);
-            resolve_placeholders_rec(&mut log_expr.right, params);
         }
         Expr::Pipe(pipe_expr) => {
             resolve_placeholders_rec(&mut pipe_expr.left, params);

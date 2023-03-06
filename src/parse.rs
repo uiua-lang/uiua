@@ -317,26 +317,32 @@ struct BinExprDef<'a> {
     child: Option<&'a Self>,
 }
 
-static BIN_EXPR_CMP: BinExprDef = BinExprDef {
-    ops: &[
-        (Token::Simple(Equal), BinOp::Eq),
-        (Token::Simple(NotEqual), BinOp::Ne),
-        (Token::Simple(Less), BinOp::Lt),
-        (Token::Simple(LessEqual), BinOp::Le),
-        (Token::Simple(Greater), BinOp::Gt),
-        (Token::Simple(GreaterEqual), BinOp::Ge),
-    ],
+static BIN_EXPR_OR: BinExprDef = BinExprDef {
+    ops: &[(Token::Keyword(Keyword::Or), BinOp::Or)],
     child: Some(&BinExprDef {
-        ops: &[
-            (Token::Simple(Plus), BinOp::Add),
-            (Token::Simple(Minus), BinOp::Sub),
-        ],
+        ops: &[(Token::Keyword(Keyword::And), BinOp::And)],
         child: Some(&BinExprDef {
             ops: &[
-                (Token::Simple(Star), BinOp::Mul),
-                (Token::Simple(Slash), BinOp::Div),
+                (Token::Simple(Equal), BinOp::Eq),
+                (Token::Simple(NotEqual), BinOp::Ne),
+                (Token::Simple(Less), BinOp::Lt),
+                (Token::Simple(LessEqual), BinOp::Le),
+                (Token::Simple(Greater), BinOp::Gt),
+                (Token::Simple(GreaterEqual), BinOp::Ge),
             ],
-            child: None,
+            child: Some(&BinExprDef {
+                ops: &[
+                    (Token::Simple(Plus), BinOp::Add),
+                    (Token::Simple(Minus), BinOp::Sub),
+                ],
+                child: Some(&BinExprDef {
+                    ops: &[
+                        (Token::Simple(Star), BinOp::Mul),
+                        (Token::Simple(Slash), BinOp::Div),
+                    ],
+                    child: None,
+                }),
+            }),
         }),
     }),
 };
@@ -371,12 +377,12 @@ impl Parser {
         Ok(Some(expr))
     }
     fn try_pipe_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
-        let Some(mut expr) = self.try_or_expr()? else {
+        let Some(mut expr) = self.try_bin_expr()? else {
             return Ok(None);
         };
         while let Some(op_span) = self.try_exact(Pipe) {
             let op = op_span.sp(PipeOp::Forward);
-            let right = self.expect_expr(Self::try_or_expr)?;
+            let right = self.expect_expr(Self::try_bin_expr)?;
             let span = expr.span.clone().merge(right.span.clone());
             expr = span.sp(Expr::Pipe(Box::new(PipeExpr {
                 op,
@@ -386,40 +392,8 @@ impl Parser {
         }
         Ok(Some(expr))
     }
-    fn try_or_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
-        let Some(mut expr) = self.try_and_expr()? else {
-            return Ok(None);
-        };
-        while let Some(op_span) = self.try_exact(Keyword::Or) {
-            let op = op_span.sp(LogicOp::Or);
-            let right = self.expect_expr(Self::try_and_expr)?;
-            let span = expr.span.clone().merge(right.span.clone());
-            expr = span.sp(Expr::Logic(Box::new(LogicExpr {
-                op,
-                left: expr,
-                right,
-            })));
-        }
-        Ok(Some(expr))
-    }
-    fn try_and_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
-        let Some(mut expr) = self.try_bin_expr()? else {
-            return Ok(None);
-        };
-        while let Some(op_span) = self.try_exact(Keyword::And) {
-            let op = op_span.sp(LogicOp::And);
-            let right = self.expect_expr(Self::try_bin_expr)?;
-            let span = expr.span.clone().merge(right.span.clone());
-            expr = span.sp(Expr::Logic(Box::new(LogicExpr {
-                op,
-                left: expr,
-                right,
-            })));
-        }
-        Ok(Some(expr))
-    }
     fn try_bin_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
-        self.try_bin_expr_def(&BIN_EXPR_CMP)
+        self.try_bin_expr_def(&BIN_EXPR_OR)
     }
     fn try_bin_expr_def(&mut self, def: &BinExprDef) -> ParseResult<Option<Sp<Expr>>> {
         let leaf = |this: &mut Self| {

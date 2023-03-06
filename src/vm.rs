@@ -193,7 +193,7 @@ impl Vm {
                             (assembly.cached_functions.get, 1)
                         }
                         _ => {
-                            let message = format!("cannot call {}", value.ty());
+                            let message = format!("Cannot call {}", value.ty());
                             return Err(assembly.spans[*span].error(message));
                         }
                     };

@@ -368,15 +368,17 @@ impl Compiler {
         // Push the function's scope
         let height = self.push_scope();
         // Push the function's name as a comment
-        self.push_instr(Instr::Comment(match &id {
+        let name = match &id {
             FunctionId::Named(name) => format!("fn {name}"),
             FunctionId::Anonymous(span) => format!("fn at {span}"),
             FunctionId::FormatString(span) => format!("format string at {span}"),
             FunctionId::Op1(_) => unreachable!("Builtin1 functions should not be compiled"),
             FunctionId::Op2(_) => unreachable!("Builtin2 functions should not be compiled"),
             FunctionId::Algorithm(_) => unreachable!("Builtin algorithms should not be compiled"),
-        }));
+        };
+        self.push_instr(Instr::Comment(name.clone()));
         let params = f(self)?;
+        self.push_instr(Instr::Comment(format!("end of {name}")));
         self.push_instr(Instr::Return);
         // Pop the function's scope
         self.pop_scope(height);
@@ -500,6 +502,8 @@ impl Compiler {
                     BinOp::Sub => self.bin_expr(Op2::Sub, left, right, span),
                     BinOp::Mul => self.bin_expr(Op2::Mul, left, right, span),
                     BinOp::Div => self.bin_expr(Op2::Div, left, right, span),
+                    BinOp::Compose => self.algo_bin_expr(Algorithm::Compose, left, right),
+                    BinOp::BlackBird => self.algo_bin_expr(Algorithm::BlackBird, left, right),
                 }?;
             }
             Expr::Call(call) => self.call(*call)?,
@@ -601,11 +605,39 @@ impl Compiler {
         Ok(())
     }
     fn bin_expr(&mut self, op2: Op2, left: Sp<Expr>, right: Sp<Expr>, span: Span) -> CompileResult {
+        let span = self.push_call_span(span);
+        self.bin_expr_impl([Instr::Op2(op2, span)], left, right)
+    }
+    fn algo_bin_expr(&mut self, algo: Algorithm, left: Sp<Expr>, right: Sp<Expr>) -> CompileResult {
+        let span = self.push_call_span(left.span.clone());
+        let (func, _) = self
+            .assembly
+            .function_info
+            .iter()
+            .find(|(_, info)| info.id == FunctionId::Algorithm(algo))
+            .unwrap();
+        self.bin_expr_impl(
+            [
+                Instr::Push((*func).into()),
+                Instr::Call(span),
+                Instr::Call(span),
+            ],
+            left,
+            right,
+        )
+    }
+    fn bin_expr_impl(
+        &mut self,
+        instrs: impl IntoIterator<Item = Instr>,
+        left: Sp<Expr>,
+        right: Sp<Expr>,
+    ) -> CompileResult {
         self.expr(left)?;
         self.expr(right)?;
         self.push_instr(Instr::Swap);
-        let span = self.push_call_span(span);
-        self.push_instr(Instr::Op2(op2, span));
+        for instr in instrs {
+            self.push_instr(instr);
+        }
         Ok(())
     }
     fn logic_expr(&mut self, jump_cond: bool, left: Sp<Expr>, right: Sp<Expr>) -> CompileResult {

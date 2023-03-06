@@ -697,6 +697,8 @@ math_fn!(DivAssign, div_assign, "divide", this, other);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
 pub enum Algorithm {
+    Compose,
+    BlackBird,
     Flip,
     Fold,
     Each,
@@ -705,6 +707,8 @@ pub enum Algorithm {
 impl fmt::Display for Algorithm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Algorithm::Compose => write!(f, "compose"),
+            Algorithm::BlackBird => write!(f, "blackbird"),
             Algorithm::Flip => write!(f, "flip"),
             Algorithm::Fold => write!(f, "fold"),
             Algorithm::Each => write!(f, "each"),
@@ -715,6 +719,8 @@ impl fmt::Display for Algorithm {
 impl Algorithm {
     pub(crate) fn params(&self) -> usize {
         match self {
+            Algorithm::Compose => 3,
+            Algorithm::BlackBird => 4,
             Algorithm::Flip => 3,
             Algorithm::Each => 2,
             Algorithm::Fold => 3,
@@ -728,6 +734,21 @@ impl Algorithm {
             Instr::*,
         };
         let mut instrs = match self {
+            Algorithm::Compose => vec![
+                // x g f
+                Rotate(3), // f x g
+                Call(0),   // f gx
+                Swap,      // gx f
+                Call(0),   // f(gx)
+            ],
+            Algorithm::BlackBird => vec![
+                // y x g f
+                Rotate(4), // f y x g
+                Call(0),   // f y gx
+                Call(0),   // f gxy
+                Swap,      // gxy f
+                Call(0),   // f(gxy)
+            ],
             Algorithm::Flip => vec![
                 // b, a, f
                 Rotate(3), // f, b, a

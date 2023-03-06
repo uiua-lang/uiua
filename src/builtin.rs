@@ -93,16 +93,31 @@ impl fmt::Display for Op1 {
     }
 }
 
-macro_rules! op1_table {
-    ($(($op:ident, $f:ident)),* $(,)*) => {
-        impl Value {
-            pub(crate) fn op1(&mut self, op: Op1, env: Env) -> RuntimeResult {
-                match op {
-                    $(Op1::$op => self.$f(env),)*
-                }
-            }
+impl Value {
+    pub(crate) fn op1(&mut self, op: Op1, env: Env) -> RuntimeResult {
+        match op {
+            Op1::Id => self.id(env),
+            Op1::Default => self.default(env),
+            Op1::Byte => self.byte(env),
+            Op1::Int => self.int(env),
+            Op1::Real => self.real(env),
+            Op1::String => self.string(env),
+            Op1::List => self.list(env),
+            Op1::Array => self.array(env),
+            Op1::Not => self.not(env),
+            Op1::Neg => self.neg(env),
+            Op1::Abs => self.abs(env),
+            Op1::Sqrt => self.sqrt(env),
+            Op1::Sin => self.sin(env),
+            Op1::Cos => self.cos(env),
+            Op1::Floor => self.floor(env),
+            Op1::Ceil => self.ceil(env),
+            Op1::Round => self.round(env),
+            Op1::Len => self.len(env),
+            Op1::Print => self.print(env),
+            Op1::Println => self.println(env),
         }
-    };
+    }
 }
 macro_rules! op1_fn {
     ($name:ident, $message:literal, $this:ident, $(($a_val:pat, $f:expr)),* $(,)?) => {
@@ -126,28 +141,6 @@ macro_rules! op1_fn {
 }
 pub(crate) use op1_fn;
 
-op1_table!(
-    (Id, id),
-    (Default, default),
-    (Byte, byte),
-    (Int, int),
-    (Real, real),
-    (String, string),
-    (List, list),
-    (Array, array),
-    (Not, not),
-    (Neg, neg),
-    (Abs, abs),
-    (Sqrt, sqrt),
-    (Sin, sin),
-    (Cos, cos),
-    (Floor, floor),
-    (Ceil, ceil),
-    (Round, round),
-    (Len, len),
-    (Print, print),
-    (Println, println),
-);
 impl Value {
     pub(crate) fn id(&mut self, _env: Env) -> RuntimeResult {
         Ok(())
@@ -352,16 +345,27 @@ impl fmt::Display for Op2 {
     }
 }
 
-macro_rules! op2_table {
-    ($(($op:ident, $f:ident)),* $(,)*) => {
-        impl Value {
-            pub(crate) fn op2(&mut self, other: &mut Value, op: Op2, env: Env) -> RuntimeResult {
-                match op {
-                    $(Op2::$op => self.$f(other, env),)*
-                }
-            }
+impl Value {
+    pub(crate) fn op2(&mut self, other: &mut Value, op: Op2, env: Env) -> RuntimeResult {
+        match op {
+            Op2::Eq => self.is_eq(other, env),
+            Op2::Ne => self.is_ne(other, env),
+            Op2::Lt => self.is_lt(other, env),
+            Op2::Le => self.is_le(other, env),
+            Op2::Gt => self.is_gt(other, env),
+            Op2::Ge => self.is_ge(other, env),
+            Op2::Add => self.add_assign(other, env),
+            Op2::Sub => self.sub_assign(other, env),
+            Op2::Mul => self.mul_assign(other, env),
+            Op2::Div => self.div_assign(other, env),
+            Op2::Mod => self.modulus(other, env),
+            Op2::Pow => self.pow(other, env),
+            Op2::Atan2 => self.atan2(other, env),
+            Op2::Get => self.get(other, env),
+            Op2::Push => self.push(other, env),
+            Op2::Concat => self.concat(other, env),
         }
-    };
+    }
 }
 macro_rules! op2_fn {
     ($name:ident, $message:expr, $this:ident, $other:ident,
@@ -418,24 +422,6 @@ macro_rules! op2_fn {
 }
 pub(crate) use op2_fn;
 
-op2_table!(
-    (Eq, is_eq),
-    (Ne, is_ne),
-    (Lt, is_lt),
-    (Le, is_le),
-    (Gt, is_gt),
-    (Ge, is_ge),
-    (Add, add_assign),
-    (Sub, sub_assign),
-    (Mul, mul_assign),
-    (Div, div_assign),
-    (Mod, modulus),
-    (Pow, pow),
-    (Atan2, atan2),
-    (Get, get),
-    (Push, push),
-    (Concat, concat),
-);
 op2_fn!(
     modulus,
     "Cannot get remainder of {} % {}",
@@ -467,16 +453,12 @@ op2_fn!(
     "Cannot raise {} to {} power",
     this,
     other,
-    (
-        Value::Int(a),
-        Value::Int(b),
+    (Value::Int(a), Value::Int(b), {
         *this = a.pow(*b as u32).into()
-    ),
-    (
-        Value::Real(a),
-        Value::Int(b),
+    }),
+    (Value::Real(a), Value::Int(b), {
         *this = a.powi(*b as i32).into()
-    ),
+    }),
     (Value::Real(a), Value::Real(b), *this = a.powf(*b).into()),
 );
 op2_fn!(
@@ -491,44 +473,32 @@ op2_fn!(
     "Cannot get index {} from {}",
     this,
     other,
-    (
-        Value::Byte(a),
-        Value::String(b),
+    (Value::Byte(a), Value::String(b), {
         *this = b
             .chars()
             .nth(*a as usize)
             .map(Into::into)
             .unwrap_or(Value::Unit)
-    ),
-    (
-        Value::Byte(a),
-        Value::List(b),
+    }),
+    (Value::Byte(a), Value::List(b), {
         *this = b.get(*a as usize).unwrap_or(Value::Unit)
-    ),
-    (
-        Value::Byte(a),
-        Value::Array(b),
+    }),
+    (Value::Byte(a), Value::Array(b), {
         *this = b.get(*a as usize).cloned().unwrap_or(Value::Unit)
-    ),
-    (
-        Value::Int(a),
-        Value::String(b),
+    }),
+    (Value::Int(a), Value::String(b), {
         *this = b
             .chars()
             .nth(*a as usize)
             .map(Into::into)
             .unwrap_or(Value::Unit)
-    ),
-    (
-        Value::Int(a),
-        Value::List(b),
+    }),
+    (Value::Int(a), Value::List(b), {
         *this = b.get(*a as usize).unwrap_or(Value::Unit)
-    ),
-    (
-        Value::Int(a),
-        Value::Array(b),
+    }),
+    (Value::Int(a), Value::Array(b), {
         *this = b.get(*a as usize).cloned().unwrap_or(Value::Unit)
-    ),
+    }),
     (!env, Value::Array(a), b, {
         for index in a.iter_mut() {
             index.get(b, env)?;
@@ -607,67 +577,45 @@ macro_rules! cmp_fn {
             "Cannot compare {} and {}",
             this,
             other,
-            (
-                Value::Unit,
-                Value::Unit,
+            (Value::Unit, Value::Unit, {
                 *this = $name(Ordering::Equal).into()
-            ),
-            (
-                Value::Bool(a),
-                Value::Bool(b),
+            }),
+            (Value::Bool(a), Value::Bool(b), {
                 *this = $name((*a).cmp(b)).into()
-            ),
-            (
-                Value::Byte(a),
-                Value::Byte(b),
+            }),
+            (Value::Byte(a), Value::Byte(b), {
                 *this = $name(a.cmp(&b)).into()
-            ),
-            (
-                Value::Int(a),
-                Value::Int(b),
+            }),
+            (Value::Int(a), Value::Int(b), {
                 *this = $name(a.cmp(&b)).into()
-            ),
-            (
-                Value::Real(a),
-                Value::Real(b),
+            }),
+            (Value::Real(a), Value::Real(b), {
                 *this = $name(real_ordering(*a, *b)).into()
-            ),
-            (
-                Value::Byte(a),
-                Value::Int(b),
+            }),
+            (Value::Byte(a), Value::Int(b), {
                 *this = $name((*a as i64).cmp(b)).into()
-            ),
-            (
-                Value::Int(a),
-                Value::Byte(b),
+            }),
+            (Value::Int(a), Value::Byte(b), {
                 *this = $name((*a).cmp(&(*b as i64))).into()
-            ),
+            }),
             (Value::Byte(a), Value::Real(b), {
                 *this = $name(real_ordering(*a as f64, *b)).into()
             }),
             (Value::Real(a), Value::Byte(b), {
                 *this = $name(real_ordering(*a, *b as f64)).into()
             }),
-            (
-                Value::Real(a),
-                Value::Int(b),
+            (Value::Real(a), Value::Int(b), {
                 *this = $name(real_ordering(*a, *b as f64)).into()
-            ),
-            (
-                Value::Int(a),
-                Value::Real(b),
+            }),
+            (Value::Int(a), Value::Real(b), {
                 *this = $name(real_ordering(*a as f64, *b)).into()
-            ),
-            (
-                Value::Char(a),
-                Value::Char(b),
+            }),
+            (Value::Char(a), Value::Char(b), {
                 *this = $name(a.cmp(&b)).into()
-            ),
-            (
-                Value::Function(a),
-                Value::Function(b),
+            }),
+            (Value::Function(a), Value::Function(b), {
                 *this = $name((*a).cmp(b)).into()
-            ),
+            }),
             (!env, Value::Partial(a), Value::Partial(b), {
                 if $name(a.function.cmp(&b.function)) {
                     *this = true.into();

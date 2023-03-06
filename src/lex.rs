@@ -301,6 +301,9 @@ pub enum Simple {
     Underscore,
     Comma,
     Period,
+    Period2,
+    Period3,
+    Period2Equal,
     Colon,
     SemiColon,
     Pipe,
@@ -332,6 +335,9 @@ impl fmt::Display for Simple {
                 Simple::Underscore => "_",
                 Simple::Comma => ",",
                 Simple::Period => ".",
+                Simple::Period2 => "..",
+                Simple::Period3 => "...",
+                Simple::Period2Equal => "..=",
                 Simple::Colon => ":",
                 Simple::SemiColon => ";",
                 Simple::Pipe => "|>",
@@ -474,7 +480,19 @@ impl Lexer {
                 '}' => return self.end(CloseCurly, start),
                 '[' => return self.end(OpenBracket, start),
                 ']' => return self.end(CloseBracket, start),
-                '.' => return self.end(Period, start),
+                '.' => {
+                    return if self.next_char_exact('.') {
+                        if self.next_char_exact('.') {
+                            self.end(Period3, start)
+                        } else if self.next_char_exact('=') {
+                            self.end(Period2Equal, start)
+                        } else {
+                            self.end(Period2, start)
+                        }
+                    } else {
+                        self.end(Period, start)
+                    }
+                }
                 ':' => return self.end(Colon, start),
                 ';' => return self.end(SemiColon, start),
                 ',' => return self.end(Comma, start),

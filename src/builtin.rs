@@ -672,7 +672,9 @@ macro_rules! cmp_fn {
                 if $name(a.function.cmp(&b.function)) {
                     *this = true.into();
                 } else {
-                    for (a, b) in a.args.iter_mut().zip(&mut b.args) {
+                    let mut a_args = a.args.to_vec();
+                    let mut b_args = b.args.to_vec();
+                    for (a, b) in a_args.iter_mut().zip(&mut b_args) {
                         a.$name(b, env)?;
                         if let Value::Bool(true) = a {
                             *this = true.into();

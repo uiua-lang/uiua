@@ -104,7 +104,7 @@ impl nohash_hasher::IsEnabled for Function {}
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Partial {
     pub(crate) function: Function,
-    pub(crate) args: Vec<Value>,
+    pub(crate) args: Arc<[Value]>,
 }
 
 impl Value {

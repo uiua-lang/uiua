@@ -1,3 +1,6 @@
+- Unify binary operator parsing
+- Allow binary operands to be omitted
+- Add composition operator
 - Closures
 - Warnings
   - naming conventions

@@ -179,11 +179,18 @@ impl Vm {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("call");
                     let value = stack.pop().unwrap();
-                    let (function, args) = match value {
-                        Value::Function(f) => (f, Vec::new()),
-                        Value::Partial(p) => (p.function, p.args),
-                        Value::Int(_) | Value::List(_) | Value::Array(_) => {
-                            (assembly.cached_functions.get, vec![value])
+                    let (function, partial_count) = match value {
+                        Value::Function(f) => (f, 0),
+                        Value::Partial(p) => {
+                            let arg_count = p.args.len();
+                            for arg in p.args.iter() {
+                                stack.push(arg.clone());
+                            }
+                            (p.function, arg_count)
+                        }
+                        Value::Byte(_) | Value::Int(_) | Value::List(_) | Value::Array(_) => {
+                            stack.push(value);
+                            (assembly.cached_functions.get, 1)
                         }
                         _ => {
                             let message = format!("cannot call {}", value.ty());
@@ -191,11 +198,7 @@ impl Vm {
                         }
                     };
                     // Handle partial arguments
-                    let partial_count = args.len();
                     let arg_count = partial_count + 1;
-                    for arg in args {
-                        stack.push(arg);
-                    }
                     if partial_count > 0 {
                         dprintln!("{stack:?}");
                     }

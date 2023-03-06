@@ -67,6 +67,30 @@ pub enum FunctionId {
     Algorithm(Algorithm),
 }
 
+impl From<Ident> for FunctionId {
+    fn from(name: Ident) -> Self {
+        Self::Named(name)
+    }
+}
+
+impl From<Op1> for FunctionId {
+    fn from(op: Op1) -> Self {
+        Self::Op1(op)
+    }
+}
+
+impl From<Op2> for FunctionId {
+    fn from(op: Op2) -> Self {
+        Self::Op2(op)
+    }
+}
+
+impl From<Algorithm> for FunctionId {
+    fn from(alg: Algorithm) -> Self {
+        Self::Algorithm(alg)
+    }
+}
+
 impl fmt::Display for FunctionId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

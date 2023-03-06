@@ -261,21 +261,24 @@ op1_fn!(
     floor,
     "Cannot get floor of {}",
     this,
-    (Value::Byte(_) | Value::Int(_), ()),
+    (Value::Byte(_), ()),
+    (Value::Int(_), ()),
     (Value::Real(a), *this = a.floor().into())
 );
 op1_fn!(
     ceil,
     "Cannot get ceiling of {}",
     this,
-    (Value::Byte(_) | Value::Int(_), ()),
+    (Value::Byte(_), ()),
+    (Value::Int(_), ()),
     (Value::Real(a), *this = a.ceil().into())
 );
 op1_fn!(
     round,
     "Cannot round {}",
     this,
-    (Value::Byte(_) | Value::Int(_), ()),
+    (Value::Byte(_), ()),
+    (Value::Int(_), ()),
     (Value::Real(a), *this = a.round().into())
 );
 op1_fn!(
@@ -702,6 +705,8 @@ pub enum Algorithm {
     Flip,
     Fold,
     Each,
+    Sum,
+    Product,
 }
 
 impl fmt::Display for Algorithm {
@@ -712,6 +717,8 @@ impl fmt::Display for Algorithm {
             Algorithm::Flip => write!(f, "flip"),
             Algorithm::Fold => write!(f, "fold"),
             Algorithm::Each => write!(f, "each"),
+            Algorithm::Sum => write!(f, "sum"),
+            Algorithm::Product => write!(f, "product"),
         }
     }
 }
@@ -724,9 +731,11 @@ impl Algorithm {
             Algorithm::Flip => 3,
             Algorithm::Each => 2,
             Algorithm::Fold => 3,
+            Algorithm::Sum => 1,
+            Algorithm::Product => 1,
         }
     }
-    pub(crate) fn instrs(&self) -> Vec<Instr> {
+    pub(crate) fn instrs(&self, assembly: &Assembly) -> Vec<Instr> {
         #[allow(unused_imports)]
         use {
             crate::ast::BinOp::*,
@@ -758,7 +767,8 @@ impl Algorithm {
                 Call(0),
             ],
             Algorithm::Fold => vec![
-                // [1, 2, 3], f = (_+_), 0
+                // [1, 2, 3], 0, f = (_+_)
+                Swap,              // [1, 2, 3], f, 0
                 CopyRel(3),        // [1, 2, 3], f, 0, [1, 2, 3]
                 Op1(Op1::Len),     // [1, 2, 3], f, 0, 3
                 Push(0i64.into()), // [1, 2, 3], f, 0, 3, 0
@@ -808,6 +818,32 @@ impl Algorithm {
                 // Loop end
                 Pop(2), // [1, 2, 3], f, [2, 4, 6]
             ],
+            Algorithm::Sum => {
+                let fold = assembly.find_function(Algorithm::Fold).unwrap();
+                let add = assembly.find_function(Op2::Add).unwrap();
+                vec![
+                    // [1, 2, 3]
+                    Push(0i64.into()), // [1, 2, 3], 0
+                    Push(add.into()),  // [1, 2, 3], 0, add
+                    Push(fold.into()), // [1, 2, 3], 0, add, fold
+                    Call(0),
+                    Call(0),
+                    Call(0),
+                ]
+            }
+            Algorithm::Product => {
+                let fold = assembly.find_function(Algorithm::Fold).unwrap();
+                let mul = assembly.find_function(Op2::Mul).unwrap();
+                vec![
+                    // [1, 2, 3]
+                    Push(1i64.into()), // [1, 2, 3], 0
+                    Push(mul.into()),  // [1, 2, 3], 0, mul
+                    Push(fold.into()), // [1, 2, 3], 0, mul, fold
+                    Call(0),
+                    Call(0),
+                    Call(0),
+                ]
+            }
         };
         instrs.insert(0, Comment(self.to_string()));
         instrs

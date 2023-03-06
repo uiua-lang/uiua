@@ -60,7 +60,7 @@ let x = fn x:
 let y = x 5; // prints 5, sets y to 6
 
 let numbers = {1, 2, 3, 4, 5}; // a list
-let sum = numbers |> fold 0 (_ + _); // Scala-style placeholder syntax
+let sum = numbers |> fold 0 (+);
 ```
 
 ## Strings
@@ -105,6 +105,7 @@ let matrix = [
     [7, 8, 9],
 ];
 do println <| matrix |> 1 |> 2; // 6
+do println <| (2 . 1) matrix; // also 6
 ```
 The `each` function applies a function to an array, but one rank down.
 

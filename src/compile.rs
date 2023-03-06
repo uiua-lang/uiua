@@ -35,6 +35,15 @@ impl Assembly {
             panic!("function was compiled in a different assembly")
         }
     }
+    pub fn find_function(&self, id: impl Into<FunctionId>) -> Option<Function> {
+        let id = id.into();
+        for (function, info) in &self.function_info {
+            if info.id == id {
+                return Some(*function);
+            }
+        }
+        None
+    }
     pub fn run(&self) -> UiuaResult<Option<Value>> {
         let mut vm = Vm::default();
         let res = self.run_with_vm(&mut vm)?;
@@ -142,40 +151,51 @@ impl Scope {
 
 impl Default for Compiler {
     fn default() -> Self {
-        let mut function_instrs = Vec::new();
+        let mut assembly = Assembly {
+            start: 0,
+            instrs: Vec::new(),
+            constants: Vec::new(),
+            function_info: HashMap::default(),
+            spans: vec![Span::Builtin],
+            cached_functions: CachedFunctions { get: Function(0) },
+        };
         let mut scope = Scope::new(0);
-        let mut function_info = HashMap::default();
-        let mut consts = Vec::new();
-        let mut cached_functions = CachedFunctions { get: Function(0) };
         // Initialize builtins
         // Constants
         for (name, value) in constants() {
-            let index = consts.len();
-            consts.push(value);
+            let index = assembly.constants.len();
+            assembly.constants.push(value);
             scope
                 .bindings
                 .insert(ascend::static_str(name).into(), Binding::Constant(index));
         }
         // Operations
-        let mut init =
-            |name: &str, id: FunctionId, params: usize, mut instrs: Vec<Instr>| -> Function {
-                let function = Function(function_instrs.len());
-                // Instructions
-                function_instrs.append(&mut instrs);
-                function_instrs.push(Instr::Return);
-                // Scope
-                scope.bindings.insert(
-                    ascend::static_str(name).into(),
-                    Binding::Function(id.clone()),
-                );
-                scope.functions.insert(id.clone(), function);
-                // Function info
-                function_info.insert(function, FunctionInfo { id, params });
-                function
-            };
+        let mut init = |assembly: &mut Assembly,
+                        name: &str,
+                        id: FunctionId,
+                        params: usize,
+                        mut instrs: Vec<Instr>|
+         -> Function {
+            let function = Function(assembly.instrs.len());
+            // Instructions
+            assembly.instrs.append(&mut instrs);
+            assembly.instrs.push(Instr::Return);
+            // Scope
+            scope.bindings.insert(
+                ascend::static_str(name).into(),
+                Binding::Function(id.clone()),
+            );
+            scope.functions.insert(id.clone(), function);
+            // Function info
+            assembly
+                .function_info
+                .insert(function, FunctionInfo { id, params });
+            function
+        };
         // 1-parameter builtins
         for op1 in all::<Op1>() {
             init(
+                &mut assembly,
                 &op1.to_string(),
                 FunctionId::Op1(op1),
                 1,
@@ -185,36 +205,33 @@ impl Default for Compiler {
         // 2-parameter builtins
         for op2 in all::<Op2>() {
             let function = init(
+                &mut assembly,
                 &op2.to_string(),
                 FunctionId::Op2(op2),
                 2,
                 vec![Instr::Op2(op2, 0)],
             );
             if let Op2::Get = op2 {
-                cached_functions.get = function;
+                assembly.cached_functions.get = function;
             }
         }
         // Algorithms
         for algo in all::<Algorithm>() {
+            let instrs = algo.instrs(&assembly);
             init(
+                &mut assembly,
                 &algo.to_string(),
                 FunctionId::Algorithm(algo),
                 algo.params(),
-                algo.instrs(),
+                instrs,
             );
         }
 
-        // The default function is the identity function
-        assert_eq!(function_instrs[0], Instr::Op1(Op1::Id));
+        assembly.start = assembly.instrs.len();
 
-        let assembly = Assembly {
-            start: function_instrs.len(),
-            instrs: function_instrs,
-            constants: consts,
-            function_info,
-            spans: vec![Span::Builtin],
-            cached_functions,
-        };
+        // The default function is the identity function
+        assert_eq!(assembly.instrs[0], Instr::Op1(Op1::Id));
+
         Self {
             global_instrs: vec![Instr::Comment("BEGIN".into())],
             in_progress_functions: Vec::new(),

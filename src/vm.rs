@@ -98,7 +98,7 @@ impl Vm {
     fn run_assembly_inner(&mut self, assembly: &Assembly) -> RuntimeResult<Option<Value>> {
         let stack = &mut self.stack;
         let call_stack = &mut self.call_stack;
-        dprintln!("Running...");
+        dprintln!("\nRunning...");
         if self.pc == 0 {
             self.pc = assembly.start;
         }

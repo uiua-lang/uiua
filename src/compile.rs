@@ -105,7 +105,7 @@ pub struct Compiler {
     /// Instructions for stuff in the global scope
     global_instrs: Vec<Instr>,
     /// Instructions for functions that are currently being compiled
-    in_progress_functions: Vec<Vec<Instr>>,
+    in_progress_functions: Vec<InProgressFunction>,
     /// Stack of scopes
     scopes: Vec<Scope>,
     /// The relative height of the runtime stack
@@ -118,6 +118,12 @@ pub struct Compiler {
     vm: Vm,
 }
 
+struct InProgressFunction {
+    instrs: Vec<Instr>,
+    captures: Vec<Ident>,
+    height: usize,
+}
+
 struct Scope {
     /// How many functions deep the scope is. 0 is the global scope.
     function_depth: usize,
@@ -127,7 +133,7 @@ struct Scope {
     functions: HashMap<FunctionId, Function>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Binding {
     /// A function that is available but not on the stack.
     Function(FunctionId),
@@ -314,11 +320,13 @@ impl Compiler {
     fn instrs(&self) -> &[Instr] {
         self.in_progress_functions
             .last()
+            .map(|f| &f.instrs)
             .unwrap_or(&self.global_instrs)
     }
     fn instrs_mut(&mut self) -> &mut Vec<Instr> {
         self.in_progress_functions
             .last_mut()
+            .map(|f| &mut f.instrs)
             .unwrap_or(&mut self.global_instrs)
     }
     fn push_instr(&mut self, instr: Instr) {
@@ -360,11 +368,11 @@ impl Compiler {
         self.scope_mut()
             .bindings
             .insert(def.name.value, Binding::Function(def.func.id.clone()));
-        self.func(def.func, false)?;
+        self.func(def.func, def.name.span, false)?;
         Ok(())
     }
-    fn func(&mut self, func: Func, push: bool) -> CompileResult {
-        self.func_outer(push, func.id.clone(), |this| {
+    fn func(&mut self, func: Func, span: Span, push: bool) -> CompileResult {
+        self.func_outer(push, func.id.clone(), span, |this| {
             // Push and bind the function's parameters
             let params = func.params.len();
             for param in func.params.into_iter().rev() {
@@ -380,10 +388,15 @@ impl Compiler {
         &mut self,
         push: bool,
         id: FunctionId,
+        span: Span,
         params_and_body: impl FnOnce(&mut Self) -> CompileResult<usize>,
     ) -> CompileResult {
         // Initialize the function's instruction list
-        self.in_progress_functions.push(Vec::new());
+        self.in_progress_functions.push(InProgressFunction {
+            instrs: Vec::new(),
+            captures: Vec::new(),
+            height: self.height,
+        });
         // Push the function's scope
         let height = self.push_scope();
         // Push the function's name as a comment
@@ -404,24 +417,52 @@ impl Compiler {
         //Determine the function's index
         let function = Function(self.assembly.instrs.len());
         // Resolve function references
-        for instrs in &mut self.in_progress_functions {
-            for instr in instrs {
+        for ipf in &mut self.in_progress_functions {
+            for instr in &mut ipf.instrs {
                 if matches!(instr, Instr::PushUnresolvedFunction(uid) if **uid == id) {
                     *instr = Instr::Push(function.into());
                 }
             }
         }
+        // Rotate captures
+        let ipf = self.in_progress_functions.last_mut().unwrap();
+        if !ipf.captures.is_empty() {
+            for _ in 0..ipf.captures.len() {
+                ipf.instrs.insert(1, Instr::Rotate(ipf.captures.len() + 1));
+            }
+        }
         // Add the function's instructions to the global function list
-        let instrs = self.in_progress_functions.pop().unwrap();
-        self.assembly.add_function_instrs(instrs);
+        let ipf = self.in_progress_functions.pop().unwrap();
+        self.assembly.add_function_instrs(ipf.instrs);
         self.scope_mut().functions.insert(id.clone(), function);
         // Add to the function info map
-        self.assembly
-            .function_info
-            .insert(function, FunctionInfo { id, params });
+        self.assembly.function_info.insert(
+            function,
+            FunctionInfo {
+                id: id.clone(),
+                params: params + ipf.captures.len(),
+            },
+        );
         // Push the function if necessary
-        if push {
+        if push || !ipf.captures.is_empty() {
+            // Reevalutate captures so they are copied to the stack just before the function
+            for &ident in ipf.captures.iter().rev() {
+                self.ident(ident, span.clone())?;
+            }
+            // Push the function
             self.push_instr(Instr::Push(function.into()));
+
+            if !ipf.captures.is_empty() {
+                // Call the function to collect the captures
+                let call_span = self.push_call_span(span);
+                for _ in 0..ipf.captures.len() {
+                    self.push_instr(Instr::Call(call_span));
+                }
+                // Rebind to the partial that has the captures
+                if let FunctionId::Named(name) = id {
+                    self.bind_local(name);
+                }
+            }
         }
         Ok(())
     }
@@ -531,7 +572,7 @@ impl Compiler {
             Expr::List(items) => self.list(Instr::List, items)?,
             Expr::Array(items) => self.list(Instr::Array, items)?,
             Expr::Parened(inner) => self.expr(resolve_placeholders(*inner))?,
-            Expr::Func(func) => self.func(*func, true)?,
+            Expr::Func(func) => self.func(*func, expr.span, true)?,
         }
         Ok(())
     }
@@ -546,20 +587,27 @@ impl Compiler {
             Some(bind) => bind,
             None => {
                 self.errors
-                    .push(span.clone().sp(CompileError::UnknownBinding(ident)));
+                    .push(span.sp(CompileError::UnknownBinding(ident)));
                 (&Binding::Error, self.scope().function_depth)
             }
         };
+        let mut binding = binding.clone();
         if binding_depth > 0 && binding_depth != self.scope().function_depth {
-            todo!("closure support ({})", span)
+            let ipf = self.in_progress_functions.last_mut().unwrap();
+            let pos = ipf.captures.iter().position(|id| id == &ident);
+            let pos = pos.unwrap_or_else(|| {
+                ipf.captures.push(ident);
+                ipf.captures.len() - 1
+            });
+            binding = Binding::Local(ipf.height - pos - 1);
         }
         match binding {
             Binding::Local(index) => {
                 if binding_depth == 0 {
-                    self.push_instr(Instr::CopyAbs(*index));
+                    self.push_instr(Instr::CopyAbs(index));
                 } else {
                     let curr = self.height;
-                    let diff = curr - *index;
+                    let diff = curr - index;
                     self.push_instr(Instr::CopyRel(diff));
                 }
             }
@@ -568,7 +616,7 @@ impl Compiler {
                     .scopes
                     .iter()
                     .rev()
-                    .find_map(|scope| scope.functions.get(id))
+                    .find_map(|scope| scope.functions.get(&id))
                     .cloned()
                 {
                     self.push_instr(Instr::Push(function.into()));
@@ -576,7 +624,7 @@ impl Compiler {
                     self.push_instr(Instr::PushUnresolvedFunction(id.clone().into()));
                 }
             }
-            Binding::Constant(index) => self.push_instr(Instr::Constant(*index)),
+            Binding::Constant(index) => self.push_instr(Instr::Constant(index)),
             Binding::Error => self.push_instr(Instr::Push(Value::Unit)),
         }
         Ok(())
@@ -681,7 +729,7 @@ impl Compiler {
             ));
             return Ok(());
         }
-        self.func_outer(true, FunctionId::FormatString(span), |this| {
+        self.func_outer(true, FunctionId::FormatString(span.clone()), span, |this| {
             let params = parts.len() - 1;
             let mut parts = parts.into_iter();
             this.push_instr(Instr::Push(parts.next().unwrap().into()));
@@ -694,6 +742,42 @@ impl Compiler {
             Ok(params)
         })
     }
+    // fn closure_params(&self, func: &Func) -> Vec<&'static str> {
+    //     let mut bindings = Vec::new();
+    //     let mut params = Vec::new();
+    //     for param in &func.params {
+    //         if let Ident::Name(name) = &param.value {
+    //             bindings.push(*name);
+    //         }
+    //     }
+    //     for item in &func.body.items {
+    //         self.item_closure_params(item, &mut bindings, &mut params);
+    //     }
+    //     params
+    // }
+    // fn item_closure_params(
+    //     &self,
+    //     item: &Item,
+    //     bindings: &mut Vec<&'static str>,
+    //     params: &mut Vec<&'static str>,
+    // ) {
+    //     match item {
+    //         Item::Expr(expr) => self.expr_closure_params(expr, bindings, params),
+    //         Item::Let(r#let) => {
+    //             self.expr_closure_params(&r#let.expr.value, bindings, params);
+    //             if let Ident::Name(name) = &r#let.p {
+    //                 bindings.push(*name);
+    //             }
+    //         }
+    //     }
+    // }
+    // fn expr_closure_params(
+    //     &self,
+    //     expr: &Expr,
+    //     bindings: &mut Vec<&'static str>,
+    //     params: &mut Vec<&'static str>,
+    // ) {
+    // }
 }
 
 fn resolve_placeholders(mut expr: Sp<Expr>) -> Sp<Expr> {

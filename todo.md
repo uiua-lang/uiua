@@ -1,4 +1,3 @@
-- Closures
 - Warnings
   - naming conventions
   - compare with bool literals

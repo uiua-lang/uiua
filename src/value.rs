@@ -31,17 +31,10 @@ impl Default for Value {
 impl fmt::Debug for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Unit => write!(f, "unit"),
-            Self::Bool(b) => write!(f, "{}", b),
-            Self::Byte(b) => write!(f, "{}", b),
-            Self::Int(i) => write!(f, "{}", i),
-            Self::Real(r) => write!(f, "{}", r),
-            Self::Char(c) => write!(f, "{:?}", c),
-            Self::Function(func) => write!(f, "function({})", func.0),
-            Self::Partial(p) => write!(f, "partial({})", p.args.len()),
             Self::String(s) => write!(f, "{:?}", s),
             Self::List(l) => write!(f, "{:?}", l),
             Self::Array(a) => write!(f, "{:?}", a),
+            _ => write!(f, "{self}"),
         }
     }
 }
@@ -56,7 +49,7 @@ impl fmt::Display for Value {
             Self::Real(r) => write!(f, "{}", r),
             Self::Char(c) => write!(f, "{}", c),
             Self::Function(func) => write!(f, "function({})", func.0),
-            Self::Partial(p) => write!(f, "partial({})", p.args.len()),
+            Self::Partial(p) => write!(f, "partial({} {})", p.function.0, p.args.len()),
             Self::String(s) => write!(f, "{}", s),
             Self::List(l) => write!(f, "{}", l),
             Self::Array(a) => write!(f, "{}", a),

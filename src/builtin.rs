@@ -1,7 +1,9 @@
 use std::{
+    cmp::Ordering,
     f64::consts::*,
     fmt,
     mem::{swap, take},
+    ops::*,
     sync::Arc,
 };
 
@@ -309,6 +311,12 @@ op1_fn!(
 /// 2-parameter built-in operations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
 pub enum Op2 {
+    Eq,
+    Ne,
+    Lt,
+    Le,
+    Gt,
+    Ge,
     Mod,
     Pow,
     Atan2,
@@ -320,6 +328,12 @@ pub enum Op2 {
 impl fmt::Display for Op2 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Op2::Eq => write!(f, "eq"),
+            Op2::Ne => write!(f, "ne"),
+            Op2::Lt => write!(f, "lt"),
+            Op2::Le => write!(f, "le"),
+            Op2::Gt => write!(f, "gt"),
+            Op2::Ge => write!(f, "ge"),
             Op2::Mod => write!(f, "mod"),
             Op2::Pow => write!(f, "pow"),
             Op2::Atan2 => write!(f, "atan2"),
@@ -342,9 +356,9 @@ macro_rules! op2_table {
     };
 }
 macro_rules! op2_fn {
-    ($name:ident, $message:literal, $this:ident, $other:ident,
-        $(($a_ty:pat, $b_ty:pat, $f:expr)),*
-        $(,(!$env:ident, $ea_ty:pat, $eb_ty:pat, $ef:expr))*
+    ($name:ident, $message:expr, $this:ident, $other:ident,
+        $(($a:pat, $b:pat, $f:expr)),*
+        $(,(!$env:ident, $ea:pat, $eb:pat, $ef:expr))*
     $(,)?) => {
         impl Value {
             #[allow(unused_mut, unreachable_patterns)]
@@ -352,8 +366,8 @@ macro_rules! op2_fn {
                 let mut $this = self;
                 let mut $other = other;
                 match (&mut $this, &mut $other) {
-                    $(($a_ty, $b_ty) => $f,)*
-                    $(($ea_ty, $eb_ty) => {
+                    $(($a, $b) => $f,)*
+                    $(($ea, $eb) => {
                         let $env = env;
                         $ef
                     },)*
@@ -397,6 +411,12 @@ macro_rules! op2_fn {
 pub(crate) use op2_fn;
 
 op2_table!(
+    (Eq, is_eq),
+    (Ne, is_ne),
+    (Lt, is_lt),
+    (Le, is_le),
+    (Gt, is_gt),
+    (Ge, is_ge),
     (Mod, modulus),
     (Pow, pow),
     (Atan2, atan2),
@@ -539,6 +559,179 @@ op2_fn!(
         a.extend(take(b).into_iter())
     }),
 );
+
+fn real_ordering(a: f64, b: f64) -> Ordering {
+    match (a.is_nan(), b.is_nan()) {
+        (true, true) => Ordering::Equal,
+        (false, true) => Ordering::Less,
+        (true, false) => Ordering::Greater,
+        (false, false) => a.partial_cmp(&b).unwrap(),
+    }
+}
+
+fn is_eq(ordering: Ordering) -> bool {
+    ordering == Ordering::Equal
+}
+fn is_ne(ordering: Ordering) -> bool {
+    ordering != Ordering::Equal
+}
+fn is_lt(ordering: Ordering) -> bool {
+    ordering == Ordering::Less
+}
+fn is_le(ordering: Ordering) -> bool {
+    ordering != Ordering::Greater
+}
+fn is_gt(ordering: Ordering) -> bool {
+    ordering == Ordering::Greater
+}
+fn is_ge(ordering: Ordering) -> bool {
+    ordering != Ordering::Less
+}
+
+macro_rules! cmp_fn {
+    ($name:ident) => {
+        op2_fn!(
+            $name,
+            "Cannot compare {} and {}",
+            this,
+            other,
+            (
+                Value::Unit,
+                Value::Unit,
+                *this = $name(Ordering::Equal).into()
+            ),
+            (
+                Value::Bool(a),
+                Value::Bool(b),
+                *this = $name((*a).cmp(b)).into()
+            ),
+            (
+                Value::Byte(a),
+                Value::Byte(b),
+                *this = $name(a.cmp(&b)).into()
+            ),
+            (
+                Value::Int(a),
+                Value::Int(b),
+                *this = $name(a.cmp(&b)).into()
+            ),
+            (
+                Value::Real(a),
+                Value::Real(b),
+                *this = $name(real_ordering(*a, *b)).into()
+            ),
+            (
+                Value::Byte(a),
+                Value::Int(b),
+                *this = $name((*a as i64).cmp(b)).into()
+            ),
+            (
+                Value::Int(a),
+                Value::Byte(b),
+                *this = $name((*a).cmp(&(*b as i64))).into()
+            ),
+            (Value::Byte(a), Value::Real(b), {
+                *this = $name(real_ordering(*a as f64, *b)).into()
+            }),
+            (Value::Real(a), Value::Byte(b), {
+                *this = $name(real_ordering(*a, *b as f64)).into()
+            }),
+            (
+                Value::Real(a),
+                Value::Int(b),
+                *this = $name(real_ordering(*a, *b as f64)).into()
+            ),
+            (
+                Value::Int(a),
+                Value::Real(b),
+                *this = $name(real_ordering(*a as f64, *b)).into()
+            ),
+            (
+                Value::Char(a),
+                Value::Char(b),
+                *this = $name(a.cmp(&b)).into()
+            ),
+            (
+                Value::Function(a),
+                Value::Function(b),
+                *this = $name((*a).cmp(b)).into()
+            ),
+            (!env, Value::Partial(a), Value::Partial(b), {
+                if $name(a.function.cmp(&b.function)) {
+                    *this = true.into();
+                } else {
+                    for (a, b) in a.args.iter_mut().zip(&mut b.args) {
+                        a.$name(b, env)?;
+                        if let Value::Bool(true) = a {
+                            *this = true.into();
+                            return Ok(());
+                        }
+                    }
+                    *this = false.into();
+                }
+            }),
+        );
+    };
+}
+
+cmp_fn!(is_eq);
+cmp_fn!(is_ne);
+cmp_fn!(is_lt);
+cmp_fn!(is_le);
+cmp_fn!(is_gt);
+cmp_fn!(is_ge);
+
+macro_rules! math_fn {
+    ($trait:ident, $method:ident, $verb:literal, $this:ident, $other:ident
+        $(,($a:pat, $b:pat, $f:expr))*
+    $(,)?) => {
+        op2_fn!(
+            $method,
+            concat!("Cannot ", $verb, " {} and {}"),
+            $this,
+            $other,
+            (Value::Unit, Value::Unit, {}),
+            (Value::Byte(a), Value::Byte(b), $trait::$method(a, *b)),
+            (Value::Int(a), Value::Int(b), $trait::$method(a, *b)),
+            (Value::Real(a), Value::Real(b), $trait::$method(a, *b)),
+            (Value::Real(a), Value::Int(b), $trait::$method(a, *b as f64)),
+            (Value::Int(a), Value::Real(b), $trait::$method(a, *b as i64)),
+            $(($a, $b, $f),)*
+        );
+    };
+}
+
+math_fn!(
+    AddAssign,
+    add_assign,
+    "add",
+    this,
+    other,
+    (
+        Value::Char(a),
+        Value::Byte(b),
+        *a = char::from_u32(*a as u32 + *b as u32).unwrap_or('\0')
+    ),
+    (
+        Value::Char(a),
+        Value::Int(b),
+        *a = char::from_u32(*a as u32 + *b as u32).unwrap_or('\0')
+    ),
+);
+math_fn!(
+    SubAssign,
+    sub_assign,
+    "subtract",
+    this,
+    other,
+    (
+        Value::Char(a),
+        Value::Char(b),
+        *this = (*a as i64 - *b as i64).into()
+    )
+);
+math_fn!(MulAssign, mul_assign, "multiply", this, other);
+math_fn!(DivAssign, div_assign, "divide", this, other);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
 pub enum Algorithm {

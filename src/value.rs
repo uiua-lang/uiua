@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, fmt, mem::swap, ops::*, sync::Arc};
+use std::{fmt, sync::Arc};
 
 use crate::{array::Array, ast::BinOp, builtin::Env, list::List, RuntimeResult};
 
@@ -137,12 +137,12 @@ impl Value {
             BinOp::Sub => self.sub_assign(other, env)?,
             BinOp::Mul => self.mul_assign(other, env)?,
             BinOp::Div => self.div_assign(other, env)?,
-            BinOp::Eq => self.compare(other, is_eq, env)?,
-            BinOp::Ne => self.compare(other, is_ne, env)?,
-            BinOp::Lt => self.compare(other, is_lt, env)?,
-            BinOp::Le => self.compare(other, is_le, env)?,
-            BinOp::Gt => self.compare(other, is_gt, env)?,
-            BinOp::Ge => self.compare(other, is_ge, env)?,
+            BinOp::Eq => self.is_eq(other, env)?,
+            BinOp::Ne => self.is_ne(other, env)?,
+            BinOp::Lt => self.is_lt(other, env)?,
+            BinOp::Le => self.is_le(other, env)?,
+            BinOp::Gt => self.is_gt(other, env)?,
+            BinOp::Ge => self.is_ge(other, env)?,
         }
         Ok(())
     }
@@ -176,161 +176,6 @@ impl PartialEq for Value {
 }
 
 impl Eq for Value {}
-
-fn real_ordering(a: f64, b: f64) -> Ordering {
-    match (a.is_nan(), b.is_nan()) {
-        (true, true) => Ordering::Equal,
-        (false, true) => Ordering::Less,
-        (true, false) => Ordering::Greater,
-        (false, false) => a.partial_cmp(&b).unwrap(),
-    }
-}
-
-fn is_eq(ordering: Ordering) -> bool {
-    ordering == Ordering::Equal
-}
-fn is_ne(ordering: Ordering) -> bool {
-    ordering != Ordering::Equal
-}
-fn is_lt(ordering: Ordering) -> bool {
-    ordering == Ordering::Less
-}
-fn is_le(ordering: Ordering) -> bool {
-    ordering != Ordering::Greater
-}
-fn is_gt(ordering: Ordering) -> bool {
-    ordering == Ordering::Greater
-}
-fn is_ge(ordering: Ordering) -> bool {
-    ordering != Ordering::Less
-}
-
-impl Value {
-    #[inline(always)]
-    fn compare(
-        &mut self,
-        mut other: &mut Self,
-        ord: fn(Ordering) -> bool,
-        env: Env,
-    ) -> RuntimeResult {
-        let mut this = self;
-        match (&mut this, &mut other) {
-            (Value::Unit, Value::Unit) => *this = ord(Ordering::Equal).into(),
-            (Value::Bool(a), Value::Bool(b)) => *this = ord((*a).cmp(b)).into(),
-            (Value::Byte(a), Value::Byte(b)) => *this = ord(a.cmp(&b)).into(),
-            (Value::Int(a), Value::Int(b)) => *this = ord(a.cmp(&b)).into(),
-            (Value::Real(a), Value::Real(b)) => *this = ord(real_ordering(*a, *b)).into(),
-            (Value::Byte(a), Value::Int(b)) => *this = ord((*a as i64).cmp(b)).into(),
-            (Value::Int(a), Value::Byte(b)) => *this = ord((*a).cmp(&(*b as i64))).into(),
-            (Value::Byte(a), Value::Real(b)) => *this = ord(real_ordering(*a as f64, *b)).into(),
-            (Value::Real(a), Value::Byte(b)) => *this = ord(real_ordering(*a, *b as f64)).into(),
-            (Value::Real(a), Value::Int(b)) => *this = ord(real_ordering(*a, *b as f64)).into(),
-            (Value::Int(a), Value::Real(b)) => *this = ord(real_ordering(*a as f64, *b)).into(),
-            (Value::Char(a), Value::Char(b)) => *this = ord(a.cmp(&b)).into(),
-            (Value::Function(a), Value::Function(b)) => *this = ord((*a).cmp(b)).into(),
-            (Value::Partial(a), Value::Partial(b)) => {
-                if ord(a.function.cmp(&b.function)) {
-                    *this = true.into();
-                } else {
-                    for (a, b) in a.args.iter_mut().zip(&mut b.args) {
-                        a.compare(b, ord, env)?;
-                        if let Value::Bool(true) = a {
-                            *this = true.into();
-                            return Ok(());
-                        }
-                    }
-                    *this = false.into();
-                }
-            }
-            (Value::Array(a), Value::Array(b)) => {
-                if a.len() != b.len() {
-                    return Err(env.error(format!(
-                        "Cannot compare arrays of different lengths: {} and {}",
-                        a.len(),
-                        b.len()
-                    )));
-                }
-                for (a, b) in a.iter_mut().zip(b.iter_mut()) {
-                    a.compare(b, ord, env)?;
-                }
-            }
-            (Value::Array(a), b) => {
-                for a in a.iter_mut() {
-                    a.compare(b, ord, env)?;
-                }
-            }
-            (a, Value::Array(b)) => {
-                for b in b.iter_mut() {
-                    let mut a_clone = (*a).clone();
-                    a_clone.compare(b, ord, env)?;
-                    *b = a_clone;
-                }
-                swap(this, other);
-            }
-            (a, b) => *this = ord(a.ty().cmp(&b.ty())).into(),
-        }
-        Ok(())
-    }
-}
-
-macro_rules! value_math_op {
-    ($trait:ident, $method:ident, $verb:literal) => {
-        impl Value {
-            #[inline(always)]
-            fn $method(&mut self, mut other: &mut Self, env: Env) -> RuntimeResult {
-                let mut this = self;
-                match (&mut this, &mut other) {
-                    (Value::Unit, Value::Unit) => {}
-                    (Value::Byte(a), Value::Byte(b)) => $trait::$method(a, *b),
-                    (Value::Int(a), Value::Int(b)) => $trait::$method(a, *b),
-                    (Value::Real(a), Value::Real(b)) => $trait::$method(a, *b),
-                    (Value::Real(a), Value::Int(b)) => $trait::$method(a, *b as f64),
-                    (Value::Int(a), Value::Real(b)) => $trait::$method(a, *b as i64),
-                    (Value::Array(a), Value::Array(b)) => {
-                        if a.len() != b.len() {
-                            return Err(env.error(format!(
-                                "Cannot {} arrays of different lengths: {} and {}",
-                                $verb,
-                                a.len(),
-                                b.len()
-                            )));
-                        }
-                        for (a, b) in a.iter_mut().zip(b.iter_mut()) {
-                            a.$method(b, env)?;
-                        }
-                    }
-                    (Value::Array(a), b) => {
-                        for a in a.iter_mut() {
-                            a.$method(b, env)?;
-                        }
-                    }
-                    (a, Value::Array(b)) => {
-                        for b in b.iter_mut() {
-                            let mut a_clone = (*a).clone();
-                            a_clone.$method(b, env)?;
-                            *b = a_clone;
-                        }
-                        swap(this, other);
-                    }
-                    (a, b) => {
-                        return Err(env.error(format!(
-                            "Cannot {} {} and {}",
-                            $verb,
-                            a.ty(),
-                            b.ty()
-                        )))
-                    }
-                }
-                Ok(())
-            }
-        }
-    };
-}
-
-value_math_op!(AddAssign, add_assign, "add");
-value_math_op!(SubAssign, sub_assign, "subtract");
-value_math_op!(MulAssign, mul_assign, "multiply");
-value_math_op!(DivAssign, div_assign, "divide");
 
 impl From<bool> for Value {
     fn from(b: bool) -> Self {

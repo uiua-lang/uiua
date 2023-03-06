@@ -2,7 +2,7 @@ use std::{cmp::Ordering, fmt, mem::swap};
 
 use crate::{
     array::Array,
-    ast::{BinOp, FunctionId},
+    ast::FunctionId,
     builtin::{Env, Op1, Op2},
     compile::Assembly,
     lex::Span,
@@ -22,6 +22,7 @@ pub(crate) enum Instr {
     CopyRel(usize),
     /// Copy the nth value from the bottom of the stack
     CopyAbs(usize),
+    Swap,
     Move(usize),
     Rotate(usize),
     Pop(usize),
@@ -30,9 +31,8 @@ pub(crate) enum Instr {
     Jump(isize),
     PopJumpIf(isize, bool),
     JumpIfElsePop(isize, bool),
-    BinOp(BinOp, usize),
     Op1(Op1),
-    Op2(Op2),
+    Op2(Op2, usize),
     DestructureList(usize, Box<Span>),
     PushUnresolvedFunction(Box<FunctionId>),
     Dud,
@@ -152,6 +152,12 @@ impl Vm {
                     puffin::profile_scope!("copy");
                     stack.push(stack[*n].clone())
                 }
+                Instr::Swap => {
+                    #[cfg(feature = "profile")]
+                    puffin::profile_scope!("swap");
+                    let len = stack.len();
+                    stack.swap(len - 1, len - 2);
+                }
                 Instr::Move(n) => {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("remove");
@@ -262,24 +268,6 @@ impl Vm {
                         stack.pop();
                     }
                 }
-                Instr::BinOp(op, span) => {
-                    #[cfg(feature = "profile")]
-                    puffin::profile_scope!("bin_op");
-                    let (left, right) = {
-                        #[cfg(feature = "profile")]
-                        puffin::profile_scope!("bin_args");
-                        let mut iter = stack.iter_mut().rev();
-                        let right = iter.next().unwrap();
-                        let left = iter.next().unwrap();
-                        (left, right)
-                    };
-                    let env = Env {
-                        assembly,
-                        span: *span,
-                    };
-                    left.bin_op(right, *op, env)?;
-                    stack.pop();
-                }
                 Instr::Op1(op) => {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("builtin_op1");
@@ -287,7 +275,7 @@ impl Vm {
                     let env = Env { assembly, span: 0 };
                     val.op1(*op, env)?;
                 }
-                Instr::Op2(op) => {
+                Instr::Op2(op, span) => {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("builtin_op2");
                     let (left, right) = {
@@ -299,7 +287,10 @@ impl Vm {
                         (left, right)
                     };
                     swap(left, right);
-                    let env = Env { assembly, span: 0 };
+                    let env = Env {
+                        assembly,
+                        span: *span,
+                    };
                     left.op2(right, *op, env)?;
                     stack.pop();
                 }

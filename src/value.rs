@@ -1,6 +1,6 @@
 use std::{fmt, sync::Arc};
 
-use crate::{array::Array, ast::BinOp, builtin::Env, list::List, RuntimeResult};
+use crate::{array::Array, list::List};
 
 #[derive(Clone)]
 pub enum Value {
@@ -125,26 +125,6 @@ impl Value {
     }
     pub const fn is_truthy(&self) -> bool {
         !matches!(self, Self::Unit | Self::Bool(false))
-    }
-}
-
-impl Value {
-    pub(crate) fn bin_op(&mut self, other: &mut Self, op: BinOp, env: Env) -> RuntimeResult {
-        #[cfg(feature = "profile")]
-        puffin::profile_function!();
-        match op {
-            BinOp::Add => self.add_assign(other, env)?,
-            BinOp::Sub => self.sub_assign(other, env)?,
-            BinOp::Mul => self.mul_assign(other, env)?,
-            BinOp::Div => self.div_assign(other, env)?,
-            BinOp::Eq => self.is_eq(other, env)?,
-            BinOp::Ne => self.is_ne(other, env)?,
-            BinOp::Lt => self.is_lt(other, env)?,
-            BinOp::Le => self.is_le(other, env)?,
-            BinOp::Gt => self.is_gt(other, env)?,
-            BinOp::Ge => self.is_ge(other, env)?,
-        }
-        Ok(())
     }
 }
 

@@ -317,6 +317,10 @@ pub enum Op2 {
     Le,
     Gt,
     Ge,
+    Add,
+    Sub,
+    Mul,
+    Div,
     Mod,
     Pow,
     Atan2,
@@ -334,6 +338,10 @@ impl fmt::Display for Op2 {
             Op2::Le => write!(f, "le"),
             Op2::Gt => write!(f, "gt"),
             Op2::Ge => write!(f, "ge"),
+            Op2::Add => write!(f, "add"),
+            Op2::Sub => write!(f, "sub"),
+            Op2::Mul => write!(f, "mul"),
+            Op2::Div => write!(f, "div"),
             Op2::Mod => write!(f, "mod"),
             Op2::Pow => write!(f, "pow"),
             Op2::Atan2 => write!(f, "atan2"),
@@ -417,6 +425,10 @@ op2_table!(
     (Le, is_le),
     (Gt, is_gt),
     (Ge, is_ge),
+    (Add, add_assign),
+    (Sub, sub_assign),
+    (Mul, mul_assign),
+    (Div, div_assign),
     (Mod, modulus),
     (Pow, pow),
     (Atan2, atan2),
@@ -769,7 +781,7 @@ impl Algorithm {
             Algorithm::Flip => vec![
                 // b, a, f
                 Rotate(3), // f, b, a
-                Rotate(2), // f, a, b
+                Swap,      // f, a, b
                 Move(3),   // a, b, f
                 Call(0),
                 Call(0),
@@ -782,18 +794,18 @@ impl Algorithm {
                 // Loop start
                 CopyRel(2),          // [1, 2, 3], f, 0, 3, 0, 3
                 CopyRel(2),          // [1, 2, 3], f, 0, 3, 0, 3, 0
-                BinOp(Eq, 0),        // [1, 2, 3], f, 0, 3, 0, false
+                Op2(Op2::Eq, 0),     // [1, 2, 3], f, 0, 3, 0, false
                 PopJumpIf(12, true), // [1, 2, 3], f, 0, 3, 0
                 CopyRel(5),          // [1, 2, 3], f, 0, 3, 0, [1, 2, 3]
                 CopyRel(2),          // [1, 2, 3], f, 0, 3, 0, [1, 2, 3], 0
-                Op2(Op2::Get),       // [1, 2, 3], f, 0, 3, 0, 1
+                Op2(Op2::Get, 0),    // [1, 2, 3], f, 0, 3, 0, 1
                 Move(4),             // [1, 2, 3], f, 3, 0, 1, 0
                 CopyRel(5),          // [1, 2, 3], f, 3, 0, 1, 0, f
                 Call(0),             // partial
                 Call(0),             // [1, 2, 3], f, 3, 0, 1
                 Rotate(3),           // [1, 2, 3], f, 1, 3, 0
                 Push(1i64.into()),   // [1, 2, 3], f, 1, 3, 0, 1
-                BinOp(Add, 0),       // [1, 2, 3], f, 1, 3, 1
+                Op2(Op2::Eq, 0),     // [1, 2, 3], f, 1, 3, 1
                 Jump(-14),
                 // Loop end
                 Pop(2), // [1, 2, 3], f, 6
@@ -808,19 +820,19 @@ impl Algorithm {
                 // Loop start
                 CopyRel(2),          // [1, 2, 3], f, [], 3, 0, 3
                 CopyRel(2),          // [1, 2, 3], f, [], 3, 0, 3, 0
-                BinOp(Eq, 0),        // [1, 2, 3], f, [], 3, 0, false
+                Op2(Op2::Eq, 0),     // [1, 2, 3], f, [], 3, 0, false
                 PopJumpIf(13, true), // [1, 2, 3], f, [], 3, 0
                 CopyRel(5),          // [1, 2, 3], f, [], 3, 0, [1, 2, 3]
                 CopyRel(2),          // [1, 2, 3], f, [], 3, 0, [1, 2, 3], 0
-                Op2(Op2::Get),       // [1, 2, 3], f, [], 3, 0, 1
+                Op2(Op2::Get, 0),    // [1, 2, 3], f, [], 3, 0, 1
                 CopyRel(5),          // [1, 2, 3], f, [], 3, 0, 1, f
                 Call(0),             // [1, 2, 3], f, [], 3, 0, 2
                 Move(4),             // [1, 2, 3], f, 3, 0, 2, [],
-                Move(2),             // [1, 2, 3], f, 3, 0, [], 2
-                Op2(Op2::Push),      // [1, 2, 3], f, 3, 0, [2]
+                Swap,                // [1, 2, 3], f, 3, 0, [], 2
+                Op2(Op2::Push, 0),   // [1, 2, 3], f, 3, 0, [2]
                 Rotate(3),           // [1, 2, 3], f, [2], 3, 0
                 Push(1i64.into()),   // [1, 2, 3], f, [2], 3, 0, 1
-                BinOp(Add, 0),       // [1, 2, 3], f, [2], 3, 1
+                Op2(Op2::Eq, 0),     // [1, 2, 3], f, [2], 3, 1
                 Jump(-15),
                 // Loop end
                 Pop(2), // [1, 2, 3], f, [2, 4, 6]

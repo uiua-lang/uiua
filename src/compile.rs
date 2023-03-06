@@ -188,7 +188,7 @@ impl Default for Compiler {
                 &op2.to_string(),
                 FunctionId::Op2(op2),
                 2,
-                vec![Instr::Op2(op2)],
+                vec![Instr::Op2(op2, 0)],
             );
             if let Op2::Get = op2 {
                 cached_functions.get = function;
@@ -310,7 +310,7 @@ impl Compiler {
             Instr::CopyAbs(_) => self.height += 1,
             Instr::Push(_) => self.height += 1,
             Instr::PushUnresolvedFunction(_) => self.height += 1,
-            Instr::BinOp(..) => self.height -= 1,
+            Instr::Op2(..) => self.height -= 1,
             Instr::Call(_) => self.height -= 1,
             Instr::Constant(_) => self.height += 1,
             Instr::List(len) => self.height -= len - 1,
@@ -486,8 +486,21 @@ impl Compiler {
             Expr::Bin(bin) => {
                 self.expr(bin.left)?;
                 self.expr(bin.right)?;
+                self.push_instr(Instr::Swap);
                 let span = self.push_call_span(bin.op.span);
-                self.push_instr(Instr::BinOp(bin.op.value, span));
+                let op2 = match bin.op.value {
+                    BinOp::Eq => Op2::Eq,
+                    BinOp::Ne => Op2::Ne,
+                    BinOp::Lt => Op2::Lt,
+                    BinOp::Le => Op2::Le,
+                    BinOp::Gt => Op2::Gt,
+                    BinOp::Ge => Op2::Ge,
+                    BinOp::Add => Op2::Add,
+                    BinOp::Sub => Op2::Sub,
+                    BinOp::Mul => Op2::Mul,
+                    BinOp::Div => Op2::Div,
+                };
+                self.push_instr(Instr::Op2(op2, span));
             }
             Expr::Call(call) => self.call(*call)?,
             Expr::If(if_expr) => self.if_expr(*if_expr)?,
@@ -620,9 +633,9 @@ impl Compiler {
             this.push_instr(Instr::Push(parts.next().unwrap().into()));
             for (i, part) in parts.enumerate() {
                 this.push_instr(Instr::CopyRel(i + 2));
-                this.push_instr(Instr::Op2(Op2::Concat));
+                this.push_instr(Instr::Op2(Op2::Concat, 0));
                 this.push_instr(Instr::Push(part.into()));
-                this.push_instr(Instr::Op2(Op2::Concat));
+                this.push_instr(Instr::Op2(Op2::Concat, 0));
             }
             Ok(params)
         })

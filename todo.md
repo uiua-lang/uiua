@@ -1,5 +1,3 @@
-- Allow binary operands to be omitted
-- Add composition operator
 - Closures
 - Warnings
   - naming conventions
@@ -14,16 +12,16 @@
   - Rotate
   - Take
   - Drop
-- Type testing
+- Type testing/tracing
 - Structs
 - Enums
 - Operator overloading
 - System APIs
-  - Files
+  - File system
   - Time
-  - Random
+  - Rng
   - Sockets
-- Inlining
+- Inlining?
 - LSP
 - FFI
 - Docs

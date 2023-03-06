@@ -380,7 +380,7 @@ impl Compiler {
         &mut self,
         push: bool,
         id: FunctionId,
-        f: impl FnOnce(&mut Self) -> CompileResult<usize>,
+        params_and_body: impl FnOnce(&mut Self) -> CompileResult<usize>,
     ) -> CompileResult {
         // Initialize the function's instruction list
         self.in_progress_functions.push(Vec::new());
@@ -396,7 +396,7 @@ impl Compiler {
             FunctionId::Algorithm(_) => unreachable!("Builtin algorithms should not be compiled"),
         };
         self.push_instr(Instr::Comment(name.clone()));
-        let params = f(self)?;
+        let params = params_and_body(self)?;
         self.push_instr(Instr::Comment(format!("end of {name}")));
         self.push_instr(Instr::Return);
         // Pop the function's scope

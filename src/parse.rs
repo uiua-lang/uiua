@@ -403,26 +403,48 @@ impl Parser {
                 this.try_call()
             }
         };
-        let Some(mut expr) = leaf(self)? else{
-            return Ok(None);
+        let mut expr_span = None;
+        let mut expr = if let Some(expr) = leaf(self)? {
+            expr_span = Some(expr.span);
+            expr.value
+        } else {
+            Expr::Placeholder
         };
+        // Repeatedly try to parse the next operator and right operand at this precedence level
         'rhs: loop {
+            // Try each operator
             for (token, op) in def.ops {
                 if let Some(op_span) = self.try_exact(token.clone()) {
-                    let op = op_span.sp(*op);
-                    let right = self.expect_expr(leaf)?;
-                    let span = expr.span.clone().merge(right.span.clone());
-                    expr = span.sp(Expr::Bin(Box::new(BinExpr {
-                        left: expr,
+                    // Span the op
+                    let op = op_span.clone().sp(*op);
+                    // Set the left span if it was a placeholder
+                    let left_span = expr_span.unwrap_or_else(|| op_span.clone());
+                    // Get the right side
+                    let mut must_break = false;
+                    let right = if let Some(right) = leaf(self)? {
+                        right
+                    } else {
+                        must_break = true;
+                        op_span.sp(Expr::Placeholder)
+                    };
+                    // Span the new whole expression
+                    expr_span = Some(left_span.clone().merge(right.span.clone()));
+                    // Set the new expression
+                    expr = Expr::Bin(Box::new(BinExpr {
+                        left: left_span.sp(expr),
                         op,
                         right,
-                    })));
-                    continue 'rhs;
+                    }));
+                    if must_break {
+                        break 'rhs;
+                    } else {
+                        continue 'rhs;
+                    }
                 }
             }
             break;
         }
-        Ok(Some(expr))
+        Ok(expr_span.map(|span| span.sp(expr)))
     }
     fn try_call(&mut self) -> ParseResult<Option<Sp<Expr>>> {
         let Some(mut expr) = self.try_term()? else {

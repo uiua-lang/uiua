@@ -58,7 +58,7 @@ struct StackFrame {
     call_span: usize,
 }
 
-pub const DBG: bool = false;
+pub const DBG: bool = cfg!(feature = "debug");
 macro_rules! dprintln {
     ($($arg:tt)*) => {
         if $crate::vm::DBG {

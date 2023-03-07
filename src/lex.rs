@@ -304,6 +304,8 @@ pub enum Simple {
     Period2,
     Period3,
     Period2Equal,
+    LessStar,
+    StarGreater,
     Colon,
     SemiColon,
     Pipe,
@@ -338,6 +340,8 @@ impl fmt::Display for Simple {
                 Simple::Period2 => "..",
                 Simple::Period3 => "...",
                 Simple::Period2Equal => "..=",
+                Simple::LessStar => "<*",
+                Simple::StarGreater => "*>",
                 Simple::Colon => ":",
                 Simple::SemiColon => ";",
                 Simple::Pipe => "|>",
@@ -504,9 +508,15 @@ impl Lexer {
                         return self.end(Minus, start);
                     }
                 }
-                '*' => return self.end(Star, start),
+                '*' => return self.switch_next(Star, [('>', StarGreater)], start),
                 '=' => return self.end(Equal, start),
-                '<' => return self.switch_next(Less, [('=', LessEqual), ('|', BackPipe)], start),
+                '<' => {
+                    return self.switch_next(
+                        Less,
+                        [('=', LessEqual), ('|', BackPipe), ('*', LessStar)],
+                        start,
+                    )
+                }
                 '>' => return self.switch_next(Greater, [('=', GreaterEqual)], start),
                 '!' => {
                     return if self.next_char_exact('=') {

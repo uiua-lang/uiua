@@ -17,4 +17,5 @@ puffin_http.optional = true
 puffin_http.version = "0.11.1"
 
 [features]
+debug = []
 profile = ["puffin", "puffin_http"]

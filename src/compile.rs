@@ -564,6 +564,8 @@ impl Compiler {
                     BinOp::Div => self.bin_expr(Op2::Div, left, right, span),
                     BinOp::Compose => self.algo_bin_expr(Algorithm::Compose, left, right),
                     BinOp::BlackBird => self.algo_bin_expr(Algorithm::BlackBird, left, right),
+                    BinOp::LeftThen => self.algo_bin_expr(Algorithm::LeftThen, left, right),
+                    BinOp::RightThen => self.algo_bin_expr(Algorithm::RightThen, left, right),
                 }?;
             }
             Expr::Call(call) => self.call(*call)?,

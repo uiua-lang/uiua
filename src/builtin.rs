@@ -752,6 +752,8 @@ pub enum Algorithm {
     Sum,
     Product,
     While,
+    LeftThen,
+    RightThen,
 }
 
 impl fmt::Display for Algorithm {
@@ -765,6 +767,8 @@ impl fmt::Display for Algorithm {
             Algorithm::Sum => write!(f, "sum"),
             Algorithm::Product => write!(f, "product"),
             Algorithm::While => write!(f, "while"),
+            Algorithm::LeftThen => write!(f, "left_then"),
+            Algorithm::RightThen => write!(f, "right_then"),
         }
     }
 }
@@ -780,6 +784,8 @@ impl Algorithm {
             Algorithm::Sum => 1,
             Algorithm::Product => 1,
             Algorithm::While => 3,
+            Algorithm::LeftThen => 3,
+            Algorithm::RightThen => 3,
         }
     }
     pub(crate) fn instrs(&self, assembly: &Assembly) -> Vec<Instr> {
@@ -902,6 +908,24 @@ impl Algorithm {
                 CopyRel(3),          // next, cond, 0, next
                 Call(0),             // next, cond, 1
                 Jump(-6),
+            ],
+            Algorithm::LeftThen => vec![
+                // x f g
+                CopyRel(3), // x, f, g, x
+                Swap,       // x, f, x, g
+                Call(0),    // x, f, gx
+                Swap,       // x, gx, f
+                Call(0),    // x, f(gx)
+                Call(0),    // f(gx)x
+            ],
+            Algorithm::RightThen => vec![
+                // x g f
+                CopyRel(3), // x, g, f, x
+                Move(3),    // x, f, x, g
+                Call(0),    // x, f, gx
+                Rotate(3),  // gx, x, f
+                Call(0),    // gx, fx
+                Call(0),    // fx(gx)
             ],
         };
         instrs.insert(0, Comment(self.to_string()));

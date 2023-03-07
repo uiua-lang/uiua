@@ -1,3 +1,4 @@
+- Show function names when printing
 - Warnings
   - naming conventions
   - compare with bool literals

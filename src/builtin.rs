@@ -1,5 +1,6 @@
 use std::{
     cmp::Ordering,
+    env,
     f64::consts::*,
     fmt,
     io::{stdin, stdout, Write},
@@ -66,6 +67,8 @@ pub enum Op1 {
     Print,
     Println,
     ScanLn,
+    Args,
+    Var,
 }
 
 impl fmt::Display for Op1 {
@@ -92,6 +95,8 @@ impl fmt::Display for Op1 {
             Op1::Print => write!(f, "print"),
             Op1::Println => write!(f, "println"),
             Op1::ScanLn => write!(f, "scanln"),
+            Op1::Args => write!(f, "args"),
+            Op1::Var => write!(f, "var"),
         }
     }
 }
@@ -120,6 +125,8 @@ impl Value {
             Op1::Print => self.print(env),
             Op1::Println => self.println(env),
             Op1::ScanLn => self.scanln(env),
+            Op1::Args => self.args(env),
+            Op1::Var => self.var(env),
         }
     }
 }
@@ -318,6 +325,24 @@ op1_fn!(
     "Cannot read from stdin {}",
     this,
     (_, *this = stdin().lines().next().unwrap().unwrap().into())
+);
+op1_fn!(
+    args,
+    "Cannot get program args {}",
+    this,
+    (
+        _,
+        *this = Array::from_iter(env::args().skip(1).map(Into::into)).into()
+    )
+);
+op1_fn!(
+    var,
+    "Cannot get environment variable by {}",
+    this,
+    (
+        Value::String(a),
+        *this = env::var(&**a).map(Into::into).unwrap_or(Value::Unit)
+    )
 );
 
 /// 2-parameter built-in operations

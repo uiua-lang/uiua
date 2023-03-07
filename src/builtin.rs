@@ -6,7 +6,6 @@ use std::{
     io::{stdin, stdout, Write},
     mem::{swap, take},
     ops::*,
-    sync::Arc,
 };
 
 use enum_iterator::Sequence;
@@ -49,8 +48,6 @@ pub enum Op1 {
     Nil,
     Id,
     Default,
-    Int,
-    Real,
     String,
     Array,
     Not,
@@ -76,8 +73,6 @@ impl fmt::Display for Op1 {
             Op1::Nil => write!(f, "nil"),
             Op1::Id => write!(f, "id"),
             Op1::Default => write!(f, "default"),
-            Op1::Int => write!(f, "int"),
-            Op1::Real => write!(f, "real"),
             Op1::String => write!(f, "string"),
             Op1::Array => write!(f, "array"),
             Op1::Not => write!(f, "not"),
@@ -108,8 +103,6 @@ impl Value {
             }
             Op1::Id => Ok(()),
             Op1::Default => self.default(env),
-            Op1::Int => self.int(env),
-            Op1::Real => self.real(env),
             Op1::String => self.string(env),
             Op1::Array => self.array(env),
             Op1::Not => self.not(env),
@@ -131,13 +124,18 @@ impl Value {
     }
 }
 macro_rules! op1_fn {
-    ($name:ident, $message:literal, $this:ident, $(($a_val:pat, $f:expr)),* $(,)?) => {
-        #[allow(unused_mut, clippy::no_effect, unreachable_patterns)]
+    ($name:ident, $message:literal, $this:ident
+        $(,($a_val:pat $(if $guard:expr)?, $f:expr))*
+        $(,({number($num:ident)}, $fnum:expr))*
+    $(,)?) => {
+        #[allow(clippy::unnecessary_cast, unreachable_patterns)]
         impl Value {
             pub(crate) fn $name(&mut self, env: Env) -> RuntimeResult {
                 let mut $this = self;
                 match &mut $this {
-                    $($a_val => $f,)*
+                    $($a_val $(if $guard)? => $f,)*
+                    $(Value::Int($num) => $fnum,)*
+                    $(Value::Real($num) => $fnum,)*
                     Value::Array(a) => {
                         for a in a.iter_mut() {
                             a.$name(env)?;
@@ -167,22 +165,7 @@ op1_fn!(
     (Value::Char(_), *this = '\0'.into()),
     (Value::Function(_), *this = Function::default().into()),
     (Value::Partial(_), *this = Function::default().into()),
-    (Value::String(_), *this = String::new().into()),
     (Value::Array(_), *this = Array::new().into()),
-);
-op1_fn!(
-    int,
-    "Cannot convert {} to int",
-    this,
-    (Value::Int(_), ()),
-    (Value::Real(a), *this = (*a as i64).into()),
-);
-op1_fn!(
-    real,
-    "Cannot convert {} to real",
-    this,
-    (Value::Int(a), *this = (*a as f64).into()),
-    (Value::Real(_), ()),
 );
 op1_fn!(
     string,
@@ -196,43 +179,36 @@ op1_fn!(
     "Cannot convert {} to array",
     this,
     (Value::Array(_), ()),
-    (
-        Value::String(a),
-        *this = Array::from_iter(a.chars().map(|c| c.into())).into()
-    ),
 );
 op1_fn!(
     neg,
     "Cannot negate {}",
     this,
-    (Value::Int(a), *this = (-*a).into()),
-    (Value::Real(a), *this = (-*a).into())
+    ({ number(a) }, *this = (-*a).into()),
 );
 op1_fn!(
     abs,
     "Cannot get absolute value of {}",
     this,
-    (Value::Int(a), *this = a.abs().into()),
-    (Value::Real(a), *this = a.abs().into())
+    ({ number(a) }, *this = a.abs().into()),
 );
 op1_fn!(
     sqrt,
     "Cannot get square root of {}",
     this,
-    (Value::Int(a), *this = (*a as f64).sqrt().into()),
-    (Value::Real(a), *this = a.sqrt().into())
+    ({ number(a) }, *this = (*a as f64).sqrt().into()),
 );
 op1_fn!(
     sin,
     "Cannot get sine of {}",
     this,
-    (Value::Real(a), *this = a.sin().into())
+    ({ number(a) }, *this = (*a as f64).sin().into()),
 );
 op1_fn!(
     cos,
     "Cannot get cosine of {}",
     this,
-    (Value::Real(a), *this = a.cos().into())
+    ({ number(a) }, *this = (*a as f64).cos().into()),
 );
 op1_fn!(
     floor,
@@ -246,20 +222,19 @@ op1_fn!(
     "Cannot get ceiling of {}",
     this,
     (Value::Int(_), ()),
-    (Value::Real(a), *this = a.ceil().into())
+    (Value::Real(a), *this = (a.ceil() as i64).into())
 );
 op1_fn!(
     round,
     "Cannot round {}",
     this,
     (Value::Int(_), ()),
-    (Value::Real(a), *this = a.round().into())
+    (Value::Real(a), *this = (a.round() as i64).into())
 );
 op1_fn!(
     len,
     "Cannot get length of {}",
     this,
-    (Value::String(a), *this = (a.len() as i64).into()),
     (Value::Array(a), *this = (a.len() as i64).into()),
 );
 op1_fn!(
@@ -302,8 +277,8 @@ op1_fn!(
     "Cannot get environment variable by {}",
     this,
     (
-        Value::String(a),
-        *this = env::var(&**a).map(Into::into).unwrap_or(Value::nil())
+        Value::Array(a) if a.is_string(),
+        *this = env::var(a.as_string().unwrap()).map(Into::into).unwrap_or(Value::nil())
     )
 );
 
@@ -499,13 +474,6 @@ op2_fn!(
     "Cannot get index {} from {}",
     this,
     other,
-    (Value::Int(a), Value::String(b), {
-        *this = b
-            .chars()
-            .nth(*a as usize)
-            .map(Into::into)
-            .unwrap_or(Value::nil())
-    }),
     (Value::Int(a), Value::Array(b), {
         *this = b.get(*a as usize).cloned().unwrap_or(Value::nil())
     }),
@@ -520,10 +488,6 @@ op2_fn!(
     "Cannot push {} onto {}",
     this,
     other,
-    (Value::Char(a), Value::String(b), {
-        Arc::make_mut(b).push(*a);
-        swap(this, other);
-    }),
     (a, Value::Array(b), {
         b.push(take(a));
         swap(this, other);
@@ -534,10 +498,6 @@ op2_fn!(
     "Cannot concatenate {} and {}",
     this,
     other,
-    (Value::String(a), Value::String(b), {
-        swap(a, b);
-        Arc::make_mut(a).push_str(b);
-    }),
     (Value::Array(a), Value::Array(b), {
         swap(a, b);
         a.extend(take(b).into_iter())
@@ -592,9 +552,6 @@ macro_rules! cmp_fn {
                 *this = $name(real_ordering(*a as f64, *b)).into()
             }),
             (Value::Char(a), Value::Char(b), {
-                *this = $name(a.cmp(&b)).into()
-            }),
-            (Value::String(a), Value::String(b), {
                 *this = $name(a.cmp(&b)).into()
             }),
             (Value::Function(a), Value::Function(b), {

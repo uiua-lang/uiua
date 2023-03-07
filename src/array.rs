@@ -33,6 +33,22 @@ impl Array {
     pub fn take_inner(&mut self) -> Vec<Value> {
         take(Arc::make_mut(&mut self.0))
     }
+    pub fn is_string(&self) -> bool {
+        self.0.iter().all(|v| matches!(v, Value::Char(_)))
+    }
+    pub fn as_string(&self) -> Option<String> {
+        if !self.is_string() {
+            return None;
+        }
+        Some(
+            self.iter()
+                .map(|val| match val {
+                    Value::Char(c) => *c,
+                    _ => unreachable!(),
+                })
+                .collect(),
+        )
+    }
 }
 
 impl IntoIterator for Array {
@@ -68,15 +84,36 @@ impl FromIterator<Value> for Array {
     }
 }
 
+impl From<Vec<Value>> for Array {
+    fn from(vec: Vec<Value>) -> Self {
+        Self(Arc::new(vec))
+    }
+}
+
 impl fmt::Debug for Array {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_list().entries(self.0.iter()).finish()
+        if let Some(s) = self.as_string() {
+            s.fmt(f)
+        } else {
+            f.debug_list().entries(self.0.iter()).finish()
+        }
     }
 }
 
 impl fmt::Display for Array {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{self:?}")
+        if self.is_string() {
+            for val in self.iter() {
+                if let Value::Char(c) = val {
+                    c.fmt(f)?;
+                } else {
+                    unreachable!();
+                }
+            }
+            Ok(())
+        } else {
+            f.debug_list().entries(self.0.iter()).finish()
+        }
     }
 }
 

@@ -9,7 +9,6 @@ pub enum Value {
     Char(char),
     Function(Function),
     Partial(Box<Partial>),
-    String(Arc<String>),
     Array(Array),
 }
 
@@ -26,8 +25,13 @@ impl Default for Value {
 impl fmt::Debug for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::String(s) => write!(f, "{:?}", s),
-            Self::Array(a) => write!(f, "{:?}", a),
+            Self::Array(a) => {
+                if let Some(s) = a.as_string() {
+                    write!(f, "{s:?}")
+                } else {
+                    write!(f, "{a:?}")
+                }
+            }
             _ => write!(f, "{self}"),
         }
     }
@@ -48,30 +52,31 @@ impl fmt::Display for Value {
                 p.function.params,
                 p.args.len()
             ),
-            Self::String(s) => write!(f, "{}", s),
-            Self::Array(a) => write!(f, "{}", a),
+            Self::Array(a) => {
+                if let Some(s) = a.as_string() {
+                    write!(f, "{s}")
+                } else {
+                    write!(f, "{a}")
+                }
+            }
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Type {
-    Int,
-    Real,
+    Num,
     Char,
     Function,
-    String,
     Array,
 }
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Type::Int => write!(f, "int"),
-            Type::Real => write!(f, "real"),
-            Type::Char => write!(f, "char"),
+            Type::Num => write!(f, "number"),
+            Type::Char => write!(f, "character"),
             Type::Function => write!(f, "function"),
-            Type::String => write!(f, "string"),
             Type::Array => write!(f, "array"),
         }
     }
@@ -115,12 +120,11 @@ impl Value {
     }
     pub const fn ty(&self) -> Type {
         match self {
-            Self::Int(_) => Type::Int,
-            Self::Real(_) => Type::Real,
+            Self::Int(_) => Type::Num,
+            Self::Real(_) => Type::Num,
             Self::Char(_) => Type::Char,
             Self::Function(_) => Type::Function,
             Self::Partial(_) => Type::Function,
-            Self::String(_) => Type::String,
             Self::Array(_) => Type::Array,
         }
     }
@@ -143,7 +147,6 @@ impl PartialEq for Value {
             (Value::Char(a), Value::Char(b)) => a == b,
             (Value::Function(a), Value::Function(b)) => a == b,
             (Value::Partial(a), Value::Partial(b)) => a == b,
-            (Value::String(a), Value::String(b)) => a == b,
             (Value::Array(a), Value::Array(b)) => a == b,
             // Different types
             (Value::Int(a), Value::Real(b)) => *a as f64 == *b,
@@ -193,7 +196,7 @@ impl From<Partial> for Value {
 
 impl From<String> for Value {
     fn from(s: String) -> Self {
-        Value::String(s.into())
+        Value::Array(Array::from_iter(s.chars().map(Value::from)))
     }
 }
 

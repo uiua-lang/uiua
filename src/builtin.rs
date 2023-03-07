@@ -348,6 +348,8 @@ op1_fn!(
 /// 2-parameter built-in operations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
 pub enum Op2 {
+    Left,
+    Right,
     Eq,
     Ne,
     Lt,
@@ -369,6 +371,8 @@ pub enum Op2 {
 impl fmt::Display for Op2 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Op2::Left => write!(f, "left"),
+            Op2::Right => write!(f, "right"),
             Op2::Eq => write!(f, "eq"),
             Op2::Ne => write!(f, "ne"),
             Op2::Lt => write!(f, "lt"),
@@ -392,6 +396,8 @@ impl fmt::Display for Op2 {
 impl Value {
     pub(crate) fn op2(&mut self, other: &mut Value, op: Op2, env: Env) -> RuntimeResult {
         match op {
+            Op2::Left => self.pick_left(other, env),
+            Op2::Right => self.pick_right(other, env),
             Op2::Eq => self.is_eq(other, env),
             Op2::Ne => self.is_ne(other, env),
             Op2::Lt => self.is_lt(other, env),
@@ -466,6 +472,20 @@ macro_rules! op2_fn {
 }
 pub(crate) use op2_fn;
 
+op2_fn!(
+    pick_left,
+    "Cannot pick left of {} and {}",
+    this,
+    other,
+    (_, _, ())
+);
+op2_fn!(
+    pick_right,
+    "Cannot pick right of {} and {}",
+    this,
+    other,
+    (a, b, **a = take(*b))
+);
 op2_fn!(
     modulus,
     "Cannot get remainder of {} % {}",

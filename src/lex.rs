@@ -306,6 +306,8 @@ pub enum Simple {
     Period2Equal,
     LessStar,
     StarGreater,
+    MinusBar,
+    BarMinus,
     Colon,
     SemiColon,
     Pipe,
@@ -342,6 +344,8 @@ impl fmt::Display for Simple {
                 Simple::Period2Equal => "..=",
                 Simple::LessStar => "<*",
                 Simple::StarGreater => "*>",
+                Simple::MinusBar => "-|",
+                Simple::BarMinus => "|-",
                 Simple::Colon => ":",
                 Simple::SemiColon => ";",
                 Simple::Pipe => "|>",
@@ -505,7 +509,7 @@ impl Lexer {
                     if self.peek_char().filter(char::is_ascii_digit).is_some() {
                         return self.number(start, "-".into());
                     } else {
-                        return self.end(Minus, start);
+                        return self.switch_next(Minus, [('|', MinusBar)], start);
                     }
                 }
                 '*' => return self.switch_next(Star, [('>', StarGreater)], start),
@@ -528,6 +532,8 @@ impl Lexer {
                 '|' => {
                     return if self.next_char_exact('>') {
                         self.end(Pipe, start)
+                    } else if self.next_char_exact('-') {
+                        self.end(BarMinus, start)
                     } else {
                         Err(self.end_span(start).sp(LexError::Bar))
                     }

@@ -345,6 +345,8 @@ static BIN_EXPR_OR: BinExprDef = BinExprDef {
                             (Token::Simple(Period3), BinOp::BlackBird),
                             (Token::Simple(StarGreater), BinOp::LeftThen),
                             (Token::Simple(LessStar), BinOp::RightThen),
+                            (Token::Simple(BarMinus), BinOp::Right),
+                            (Token::Simple(MinusBar), BinOp::Left),
                         ],
                         child: Some(&BinExprDef {
                             ops: &[(Token::Simple(Period), BinOp::Compose)],

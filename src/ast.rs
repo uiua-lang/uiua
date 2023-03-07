@@ -193,6 +193,8 @@ pub enum BinOp {
     BlackBird,
     LeftThen,
     RightThen,
+    Left,
+    Right,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

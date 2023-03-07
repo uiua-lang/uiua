@@ -2,8 +2,9 @@ use std::{fmt, sync::Arc};
 
 use crate::{array::Array, list::List};
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub enum Value {
+    #[default]
     Unit,
     Bool(bool),
     Byte(u8),
@@ -19,13 +20,6 @@ pub enum Value {
 
 fn _keep_value_small(_: std::convert::Infallible) {
     let _: [u8; 16] = unsafe { std::mem::transmute(Value::Unit) };
-}
-
-impl Default for Value {
-    #[inline(always)]
-    fn default() -> Self {
-        Self::Unit
-    }
 }
 
 impl fmt::Debug for Value {

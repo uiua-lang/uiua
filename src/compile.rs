@@ -237,8 +237,8 @@ impl Default for Compiler {
 
         assembly.start = assembly.instrs.len();
 
-        // The default function is the identity function
-        assert_eq!(assembly.instrs[0], Instr::Op1(Op1::Id));
+        // The first function is the nil function
+        assert_eq!(assembly.instrs[0], Instr::Op1(Op1::Nil));
 
         Self {
             global_instrs: vec![Instr::Comment("BEGIN".into())],
@@ -487,7 +487,7 @@ impl Compiler {
             .assembly
             .run_with_vm(&mut self.vm)
             .map_err(|e| expr_span.sp(e.into()))?
-            .unwrap_or(Value::Unit);
+            .unwrap_or(Value::nil());
         self.assembly.constants.push(value);
         // Bind the constant
         self.scope_mut()
@@ -515,7 +515,7 @@ impl Compiler {
     }
     fn expr(&mut self, expr: Sp<Expr>) -> CompileResult {
         match expr.value {
-            Expr::Unit => self.push_instr(Instr::Push(Value::Unit)),
+            Expr::Unit => self.push_instr(Instr::Push(Value::nil())),
             Expr::Int(s) => {
                 let i: i64 = match s.parse() {
                     Ok(i) => i,
@@ -625,7 +625,7 @@ impl Compiler {
                 }
             }
             Binding::Constant(index) => self.push_instr(Instr::Constant(index)),
-            Binding::Error => self.push_instr(Instr::Push(Value::Unit)),
+            Binding::Error => self.push_instr(Instr::Push(Value::nil())),
         }
         Ok(())
     }

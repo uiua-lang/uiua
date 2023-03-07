@@ -27,6 +27,8 @@ impl<'a> Env<'a> {
 
 pub(crate) fn constants() -> Vec<(&'static str, Value)> {
     vec![
+        ("true", true.into()),
+        ("false", false.into()),
         ("PI", PI.into()),
         ("TAU", TAU.into()),
         ("E", E.into()),
@@ -44,6 +46,7 @@ pub(crate) fn constants() -> Vec<(&'static str, Value)> {
 /// 1-parameter built-in operations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
 pub enum Op1 {
+    Nil,
     Id,
     Default,
     Int,
@@ -70,6 +73,7 @@ pub enum Op1 {
 impl fmt::Display for Op1 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Op1::Nil => write!(f, "nil"),
             Op1::Id => write!(f, "id"),
             Op1::Default => write!(f, "default"),
             Op1::Int => write!(f, "int"),
@@ -98,7 +102,11 @@ impl fmt::Display for Op1 {
 impl Value {
     pub(crate) fn op1(&mut self, op: Op1, env: Env) -> RuntimeResult {
         match op {
-            Op1::Id => self.id(env),
+            Op1::Nil => {
+                *self = Value::nil();
+                Ok(())
+            }
+            Op1::Id => Ok(()),
             Op1::Default => self.default(env),
             Op1::Int => self.int(env),
             Op1::Real => self.real(env),
@@ -145,9 +153,6 @@ macro_rules! op1_fn {
 pub(crate) use op1_fn;
 
 impl Value {
-    pub(crate) fn id(&mut self, _env: Env) -> RuntimeResult {
-        Ok(())
-    }
     pub(crate) fn not(&mut self, _env: Env) -> RuntimeResult {
         *self = (!self.is_truthy()).into();
         Ok(())
@@ -157,7 +162,6 @@ op1_fn!(
     default,
     "Cannot convert {} to default",
     this,
-    (Value::Unit, ()),
     (Value::Int(_), *this = 0i64.into()),
     (Value::Real(_), *this = 0.0.into()),
     (Value::Char(_), *this = '\0'.into()),
@@ -215,6 +219,7 @@ op1_fn!(
     sqrt,
     "Cannot get square root of {}",
     this,
+    (Value::Int(a), *this = (*a as f64).sqrt().into()),
     (Value::Real(a), *this = a.sqrt().into())
 );
 op1_fn!(
@@ -298,7 +303,7 @@ op1_fn!(
     this,
     (
         Value::String(a),
-        *this = env::var(&**a).map(Into::into).unwrap_or(Value::Unit)
+        *this = env::var(&**a).map(Into::into).unwrap_or(Value::nil())
     )
 );
 
@@ -499,10 +504,10 @@ op2_fn!(
             .chars()
             .nth(*a as usize)
             .map(Into::into)
-            .unwrap_or(Value::Unit)
+            .unwrap_or(Value::nil())
     }),
     (Value::Int(a), Value::Array(b), {
-        *this = b.get(*a as usize).cloned().unwrap_or(Value::Unit)
+        *this = b.get(*a as usize).cloned().unwrap_or(Value::nil())
     }),
     (!env, Value::Array(a), b, {
         for index in a.iter_mut() {
@@ -574,9 +579,6 @@ macro_rules! cmp_fn {
             "Cannot compare {} and {}",
             this,
             other,
-            (Value::Unit, Value::Unit, {
-                *this = $name(Ordering::Equal).into()
-            }),
             (Value::Int(a), Value::Int(b), {
                 *this = $name(a.cmp(&b)).into()
             }),
@@ -634,7 +636,6 @@ macro_rules! math_fn {
             concat!("Cannot ", $verb, " {} and {}"),
             $this,
             $other,
-            (Value::Unit, Value::Unit, {}),
             (Value::Int(a), Value::Int(b), $trait::$method(a, *b)),
             (Value::Real(a), Value::Real(b), $trait::$method(a, *b)),
             (Value::Real(a), Value::Int(b), $trait::$method(a, *b as f64)),

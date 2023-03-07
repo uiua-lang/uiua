@@ -2,10 +2,8 @@ use std::{fmt, sync::Arc};
 
 use crate::array::Array;
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub enum Value {
-    #[default]
-    Unit,
     Int(i64),
     Real(f64),
     Char(char),
@@ -16,7 +14,13 @@ pub enum Value {
 }
 
 fn _keep_value_small(_: std::convert::Infallible) {
-    let _: [u8; 16] = unsafe { std::mem::transmute(Value::Unit) };
+    let _: [u8; 16] = unsafe { std::mem::transmute(Value::nil()) };
+}
+
+impl Default for Value {
+    fn default() -> Self {
+        Self::nil()
+    }
 }
 
 impl fmt::Debug for Value {
@@ -32,10 +36,10 @@ impl fmt::Debug for Value {
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Unit => write!(f, "unit"),
             Self::Int(i) => write!(f, "{}", i),
             Self::Real(r) => write!(f, "{}", r),
             Self::Char(c) => write!(f, "{}", c),
+            Self::Function(func) if func.is_nil() => write!(f, "nil"),
             Self::Function(func) => write!(f, "function({} {})", func.start, func.params),
             Self::Partial(p) => write!(
                 f,
@@ -52,30 +56,22 @@ impl fmt::Display for Value {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Type {
-    Unit,
-    Bool,
-    Byte,
     Int,
     Real,
     Char,
     Function,
     String,
-    List,
     Array,
 }
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Type::Unit => write!(f, "unit"),
-            Type::Bool => write!(f, "bool"),
-            Type::Byte => write!(f, "byte"),
             Type::Int => write!(f, "int"),
             Type::Real => write!(f, "real"),
             Type::Char => write!(f, "char"),
             Type::Function => write!(f, "function"),
             Type::String => write!(f, "string"),
-            Type::List => write!(f, "list"),
             Type::Array => write!(f, "array"),
         }
     }
@@ -89,10 +85,21 @@ pub struct Function {
 
 impl Default for Function {
     fn default() -> Self {
+        Self::nil()
+    }
+}
+
+impl Function {
+    #[inline]
+    pub const fn nil() -> Self {
         Self {
             start: 0,
             params: 1,
         }
+    }
+    #[inline]
+    pub const fn is_nil(&self) -> bool {
+        self.start == 0
     }
 }
 
@@ -103,9 +110,11 @@ pub struct Partial {
 }
 
 impl Value {
+    pub const fn nil() -> Self {
+        Value::Function(Function::nil())
+    }
     pub const fn ty(&self) -> Type {
         match self {
-            Self::Unit => Type::Unit,
             Self::Int(_) => Type::Int,
             Self::Real(_) => Type::Real,
             Self::Char(_) => Type::Char,
@@ -117,8 +126,9 @@ impl Value {
     }
     pub fn is_truthy(&self) -> bool {
         match self {
-            Self::Unit | Self::Int(0) => false,
-            Self::Real(f) if *f == 0.0 => true,
+            Self::Int(0) => false,
+            Self::Real(f) => *f != 0.0,
+            Self::Function(func) => !func.is_nil(),
             _ => true,
         }
     }
@@ -128,7 +138,6 @@ impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             // Same types
-            (Value::Unit, Value::Unit) => true,
             (Value::Int(a), Value::Int(b)) => a == b,
             (Value::Real(a), Value::Real(b)) => a == b,
             (Value::Char(a), Value::Char(b)) => a == b,

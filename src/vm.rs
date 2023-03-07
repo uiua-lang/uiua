@@ -6,7 +6,6 @@ use crate::{
     builtin::{Env, Op1, Op2},
     compile::Assembly,
     lex::Span,
-    list::List,
     value::{Function, Partial, Value},
     RuntimeResult, TraceFrame, UiuaError, UiuaResult,
 };
@@ -16,7 +15,6 @@ pub(crate) enum Instr {
     Comment(String),
     Push(Value),
     Constant(usize),
-    List(usize),
     Array(usize),
     /// Copy the nth value from the top of the stack
     CopyRel(usize),
@@ -130,12 +128,6 @@ impl Vm {
                     puffin::profile_scope!("constant");
                     stack.push(assembly.constants[*n].clone())
                 }
-                Instr::List(n) => {
-                    #[cfg(feature = "profile")]
-                    puffin::profile_scope!("list");
-                    let list = List::from_items(stack.drain(stack.len() - *n..));
-                    stack.push(list.into());
-                }
                 Instr::Array(n) => {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("list");
@@ -188,7 +180,7 @@ impl Vm {
                             }
                             (p.function, arg_count)
                         }
-                        Value::Byte(_) | Value::Int(_) | Value::List(_) | Value::Array(_) => {
+                        Value::Int(_) | Value::Array(_) => {
                             stack.push(value);
                             (assembly.cached_functions.get, 1)
                         }

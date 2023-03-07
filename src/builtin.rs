@@ -11,9 +11,7 @@ use std::{
 
 use enum_iterator::Sequence;
 
-use crate::{
-    array::Array, compile::Assembly, list::List, value::*, vm::Instr, RuntimeError, RuntimeResult,
-};
+use crate::{array::Array, compile::Assembly, value::*, vm::Instr, RuntimeError, RuntimeResult};
 
 #[derive(Clone, Copy)]
 pub(crate) struct Env<'a> {
@@ -48,11 +46,9 @@ pub(crate) fn constants() -> Vec<(&'static str, Value)> {
 pub enum Op1 {
     Id,
     Default,
-    Byte,
     Int,
     Real,
     String,
-    List,
     Array,
     Not,
     Neg,
@@ -76,11 +72,9 @@ impl fmt::Display for Op1 {
         match self {
             Op1::Id => write!(f, "id"),
             Op1::Default => write!(f, "default"),
-            Op1::Byte => write!(f, "byte"),
             Op1::Int => write!(f, "int"),
             Op1::Real => write!(f, "real"),
             Op1::String => write!(f, "string"),
-            Op1::List => write!(f, "list"),
             Op1::Array => write!(f, "array"),
             Op1::Not => write!(f, "not"),
             Op1::Neg => write!(f, "neg"),
@@ -106,11 +100,9 @@ impl Value {
         match op {
             Op1::Id => self.id(env),
             Op1::Default => self.default(env),
-            Op1::Byte => self.byte(env),
             Op1::Int => self.int(env),
             Op1::Real => self.real(env),
             Op1::String => self.string(env),
-            Op1::List => self.list(env),
             Op1::Array => self.array(env),
             Op1::Not => self.not(env),
             Op1::Neg => self.neg(env),
@@ -166,32 +158,18 @@ op1_fn!(
     "Cannot convert {} to default",
     this,
     (Value::Unit, ()),
-    (Value::Bool(_), *this = false.into()),
-    (Value::Byte(_), *this = 0u8.into()),
     (Value::Int(_), *this = 0i64.into()),
     (Value::Real(_), *this = 0.0.into()),
     (Value::Char(_), *this = '\0'.into()),
     (Value::Function(_), *this = Function::default().into()),
     (Value::Partial(_), *this = Function::default().into()),
     (Value::String(_), *this = String::new().into()),
-    (Value::List(_), *this = List::new().into()),
     (Value::Array(_), *this = Array::new().into()),
-);
-op1_fn!(
-    byte,
-    "Cannot convert {} to byte",
-    this,
-    (Value::Bool(a), *this = (*a as u8).into()),
-    (Value::Byte(_), ()),
-    (Value::Int(a), *this = (*a as u8).into()),
-    (Value::Real(a), *this = (*a as u8).into()),
 );
 op1_fn!(
     int,
     "Cannot convert {} to int",
     this,
-    (Value::Bool(a), *this = (*a as i64).into()),
-    (Value::Byte(a), *this = (*a as i64).into()),
     (Value::Int(_), ()),
     (Value::Real(a), *this = (*a as i64).into()),
 );
@@ -199,8 +177,6 @@ op1_fn!(
     real,
     "Cannot convert {} to real",
     this,
-    (Value::Bool(a), *this = (*a as u8 as f64).into()),
-    (Value::Byte(a), *this = (*a as f64).into()),
     (Value::Int(a), *this = (*a as f64).into()),
     (Value::Real(_), ()),
 );
@@ -212,20 +188,6 @@ op1_fn!(
     (a, *this = format!("{a}").into())
 );
 op1_fn!(
-    list,
-    "Cannot convert {} to list",
-    this,
-    (Value::List(_), ()),
-    (
-        Value::String(a),
-        *this = List::from_items(a.chars().map(Into::into)).into()
-    ),
-    (
-        Value::Array(a),
-        *this = List::from_items(a.take_inner()).into()
-    ),
-);
-op1_fn!(
     array,
     "Cannot convert {} to array",
     this,
@@ -234,7 +196,6 @@ op1_fn!(
         Value::String(a),
         *this = Array::from_iter(a.chars().map(|c| c.into())).into()
     ),
-    (Value::List(a), *this = a.iter().collect::<Array>().into()),
 );
 op1_fn!(
     neg,
@@ -272,7 +233,6 @@ op1_fn!(
     floor,
     "Cannot get floor of {}",
     this,
-    (Value::Byte(_), ()),
     (Value::Int(_), ()),
     (Value::Real(a), *this = a.floor().into())
 );
@@ -280,7 +240,6 @@ op1_fn!(
     ceil,
     "Cannot get ceiling of {}",
     this,
-    (Value::Byte(_), ()),
     (Value::Int(_), ()),
     (Value::Real(a), *this = a.ceil().into())
 );
@@ -288,7 +247,6 @@ op1_fn!(
     round,
     "Cannot round {}",
     this,
-    (Value::Byte(_), ()),
     (Value::Int(_), ()),
     (Value::Real(a), *this = a.round().into())
 );
@@ -297,7 +255,6 @@ op1_fn!(
     "Cannot get length of {}",
     this,
     (Value::String(a), *this = (a.len() as i64).into()),
-    (Value::List(a), *this = (a.len() as i64).into()),
     (Value::Array(a), *this = (a.len() as i64).into()),
 );
 op1_fn!(
@@ -537,28 +494,12 @@ op2_fn!(
     "Cannot get index {} from {}",
     this,
     other,
-    (Value::Byte(a), Value::String(b), {
-        *this = b
-            .chars()
-            .nth(*a as usize)
-            .map(Into::into)
-            .unwrap_or(Value::Unit)
-    }),
-    (Value::Byte(a), Value::List(b), {
-        *this = b.get(*a as usize).unwrap_or(Value::Unit)
-    }),
-    (Value::Byte(a), Value::Array(b), {
-        *this = b.get(*a as usize).cloned().unwrap_or(Value::Unit)
-    }),
     (Value::Int(a), Value::String(b), {
         *this = b
             .chars()
             .nth(*a as usize)
             .map(Into::into)
             .unwrap_or(Value::Unit)
-    }),
-    (Value::Int(a), Value::List(b), {
-        *this = b.get(*a as usize).unwrap_or(Value::Unit)
     }),
     (Value::Int(a), Value::Array(b), {
         *this = b.get(*a as usize).cloned().unwrap_or(Value::Unit)
@@ -578,10 +519,6 @@ op2_fn!(
         Arc::make_mut(b).push(*a);
         swap(this, other);
     }),
-    (a, Value::List(b), {
-        b.push(take(a));
-        swap(this, other);
-    }),
     (a, Value::Array(b), {
         b.push(take(a));
         swap(this, other);
@@ -595,10 +532,6 @@ op2_fn!(
     (Value::String(a), Value::String(b), {
         swap(a, b);
         Arc::make_mut(a).push_str(b);
-    }),
-    (Value::List(a), Value::List(b), {
-        swap(a, b);
-        a.extend(b.iter());
     }),
     (Value::Array(a), Value::Array(b), {
         swap(a, b);
@@ -644,29 +577,11 @@ macro_rules! cmp_fn {
             (Value::Unit, Value::Unit, {
                 *this = $name(Ordering::Equal).into()
             }),
-            (Value::Bool(a), Value::Bool(b), {
-                *this = $name((*a).cmp(b)).into()
-            }),
-            (Value::Byte(a), Value::Byte(b), {
-                *this = $name(a.cmp(&b)).into()
-            }),
             (Value::Int(a), Value::Int(b), {
                 *this = $name(a.cmp(&b)).into()
             }),
             (Value::Real(a), Value::Real(b), {
                 *this = $name(real_ordering(*a, *b)).into()
-            }),
-            (Value::Byte(a), Value::Int(b), {
-                *this = $name((*a as i64).cmp(b)).into()
-            }),
-            (Value::Int(a), Value::Byte(b), {
-                *this = $name((*a).cmp(&(*b as i64))).into()
-            }),
-            (Value::Byte(a), Value::Real(b), {
-                *this = $name(real_ordering(*a as f64, *b)).into()
-            }),
-            (Value::Real(a), Value::Byte(b), {
-                *this = $name(real_ordering(*a, *b as f64)).into()
             }),
             (Value::Real(a), Value::Int(b), {
                 *this = $name(real_ordering(*a, *b as f64)).into()
@@ -691,7 +606,7 @@ macro_rules! cmp_fn {
                     let mut b_args = b.args.to_vec();
                     for (a, b) in a_args.iter_mut().zip(&mut b_args) {
                         a.$name(b, env)?;
-                        if let Value::Bool(true) = a {
+                        if a.is_truthy() {
                             *this = true.into();
                             return Ok(());
                         }
@@ -720,7 +635,6 @@ macro_rules! math_fn {
             $this,
             $other,
             (Value::Unit, Value::Unit, {}),
-            (Value::Byte(a), Value::Byte(b), $trait::$method(a, *b)),
             (Value::Int(a), Value::Int(b), $trait::$method(a, *b)),
             (Value::Real(a), Value::Real(b), $trait::$method(a, *b)),
             (Value::Real(a), Value::Int(b), $trait::$method(a, *b as f64)),
@@ -736,11 +650,6 @@ math_fn!(
     "add",
     this,
     other,
-    (
-        Value::Char(a),
-        Value::Byte(b),
-        *a = char::from_u32(*a as u32 + *b as u32).unwrap_or('\0')
-    ),
     (
         Value::Char(a),
         Value::Int(b),

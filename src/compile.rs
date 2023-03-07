@@ -340,9 +340,7 @@ impl Compiler {
             Instr::Op2(..) => self.height -= 1,
             Instr::Call(_) => self.height -= 1,
             Instr::Constant(_) => self.height += 1,
-            Instr::List(len) if *len == 0 => self.height += 1,
             Instr::Array(len) if *len == 0 => self.height += 1,
-            Instr::List(len) => self.height -= len - 1,
             Instr::Array(len) => self.height -= len - 1,
             _ => {}
         }
@@ -518,7 +516,6 @@ impl Compiler {
     fn expr(&mut self, expr: Sp<Expr>) -> CompileResult {
         match expr.value {
             Expr::Unit => self.push_instr(Instr::Push(Value::Unit)),
-            Expr::Bool(b) => self.push_instr(Instr::Push(b.into())),
             Expr::Int(s) => {
                 let i: i64 = match s.parse() {
                     Ok(i) => i,
@@ -573,7 +570,6 @@ impl Compiler {
             Expr::Call(call) => self.call(*call)?,
             Expr::If(if_expr) => self.if_expr(*if_expr)?,
             Expr::Pipe(pipe_expr) => self.pipe_expr(*pipe_expr)?,
-            Expr::List(items) => self.list(Instr::List, items)?,
             Expr::Array(items) => self.list(Instr::Array, items)?,
             Expr::Parened(inner) => self.expr(resolve_placeholders(*inner))?,
             Expr::Func(func) => self.func(*func, expr.span, true)?,
@@ -827,11 +823,6 @@ fn resolve_placeholders_rec(expr: &mut Sp<Expr>, params: &mut Vec<Sp<Ident>>) {
             resolve_placeholders_rec(&mut pipe_expr.left, params);
             resolve_placeholders_rec(&mut pipe_expr.right, params);
         }
-        Expr::List(items) => {
-            for item in items {
-                resolve_placeholders_rec(item, params);
-            }
-        }
         Expr::Array(items) => {
             for item in items {
                 resolve_placeholders_rec(item, params);
@@ -840,7 +831,6 @@ fn resolve_placeholders_rec(expr: &mut Sp<Expr>, params: &mut Vec<Sp<Ident>>) {
         Expr::Parened(_) => {}
         Expr::Unit
         | Expr::Func(_)
-        | Expr::Bool(_)
         | Expr::Int(_)
         | Expr::Real(_)
         | Expr::Char(_)

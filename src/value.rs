@@ -1,20 +1,17 @@
 use std::{fmt, sync::Arc};
 
-use crate::{array::Array, list::List};
+use crate::array::Array;
 
 #[derive(Clone, Default)]
 pub enum Value {
     #[default]
     Unit,
-    Bool(bool),
-    Byte(u8),
     Int(i64),
     Real(f64),
     Char(char),
     Function(Function),
     Partial(Box<Partial>),
     String(Arc<String>),
-    List(List),
     Array(Array),
 }
 
@@ -26,7 +23,6 @@ impl fmt::Debug for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::String(s) => write!(f, "{:?}", s),
-            Self::List(l) => write!(f, "{:?}", l),
             Self::Array(a) => write!(f, "{:?}", a),
             _ => write!(f, "{self}"),
         }
@@ -37,8 +33,6 @@ impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Unit => write!(f, "unit"),
-            Self::Bool(b) => write!(f, "{}", b),
-            Self::Byte(b) => write!(f, "{}", b),
             Self::Int(i) => write!(f, "{}", i),
             Self::Real(r) => write!(f, "{}", r),
             Self::Char(c) => write!(f, "{}", c),
@@ -51,7 +45,6 @@ impl fmt::Display for Value {
                 p.args.len()
             ),
             Self::String(s) => write!(f, "{}", s),
-            Self::List(l) => write!(f, "{}", l),
             Self::Array(a) => write!(f, "{}", a),
         }
     }
@@ -113,20 +106,21 @@ impl Value {
     pub const fn ty(&self) -> Type {
         match self {
             Self::Unit => Type::Unit,
-            Self::Bool(_) => Type::Bool,
-            Self::Byte(_) => Type::Byte,
             Self::Int(_) => Type::Int,
             Self::Real(_) => Type::Real,
             Self::Char(_) => Type::Char,
             Self::Function(_) => Type::Function,
             Self::Partial(_) => Type::Function,
             Self::String(_) => Type::String,
-            Self::List(_) => Type::List,
             Self::Array(_) => Type::Array,
         }
     }
-    pub const fn is_truthy(&self) -> bool {
-        !matches!(self, Self::Unit | Self::Bool(false))
+    pub fn is_truthy(&self) -> bool {
+        match self {
+            Self::Unit | Self::Int(0) => false,
+            Self::Real(f) if *f == 0.0 => true,
+            _ => true,
+        }
     }
 }
 
@@ -135,21 +129,14 @@ impl PartialEq for Value {
         match (self, other) {
             // Same types
             (Value::Unit, Value::Unit) => true,
-            (Value::Bool(a), Value::Bool(b)) => a == b,
-            (Value::Byte(a), Value::Byte(b)) => a == b,
             (Value::Int(a), Value::Int(b)) => a == b,
             (Value::Real(a), Value::Real(b)) => a == b,
             (Value::Char(a), Value::Char(b)) => a == b,
             (Value::Function(a), Value::Function(b)) => a == b,
             (Value::Partial(a), Value::Partial(b)) => a == b,
             (Value::String(a), Value::String(b)) => a == b,
-            (Value::List(a), Value::List(b)) => a == b,
             (Value::Array(a), Value::Array(b)) => a == b,
             // Different types
-            (Value::Byte(a), Value::Int(b)) => *a as i64 == *b,
-            (Value::Int(a), Value::Byte(b)) => *a == *b as i64,
-            (Value::Byte(a), Value::Real(b)) => *a as f64 == *b,
-            (Value::Real(a), Value::Byte(b)) => *a == *b as f64,
             (Value::Int(a), Value::Real(b)) => *a as f64 == *b,
             (Value::Real(a), Value::Int(b)) => *a == *b as f64,
             _ => false,
@@ -161,13 +148,7 @@ impl Eq for Value {}
 
 impl From<bool> for Value {
     fn from(b: bool) -> Self {
-        Value::Bool(b)
-    }
-}
-
-impl From<u8> for Value {
-    fn from(b: u8) -> Self {
-        Value::Byte(b)
+        Value::Int(b as i64)
     }
 }
 
@@ -204,12 +185,6 @@ impl From<Partial> for Value {
 impl From<String> for Value {
     fn from(s: String) -> Self {
         Value::String(s.into())
-    }
-}
-
-impl From<List> for Value {
-    fn from(l: List) -> Self {
-        Value::List(l)
     }
 }
 

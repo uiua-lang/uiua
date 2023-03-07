@@ -115,6 +115,7 @@ struct Parser {
 
 const PARENS: (Simple, Simple) = (OpenParen, CloseParen);
 const BRACKETS: (Simple, Simple) = (OpenBracket, CloseBracket);
+#[allow(unused)]
 const CURLIES: (Simple, Simple) = (OpenCurly, CloseCurly);
 
 impl Parser {
@@ -484,10 +485,6 @@ impl Parser {
             s.map(Into::into).map(Expr::String)
         } else if let Some(s) = self.next_token_map(Token::as_format_string) {
             s.map(Into::into).map(Expr::FormatString)
-        } else if let Some(span) = self.try_exact(Keyword::True) {
-            span.sp(Expr::Bool(true))
-        } else if let Some(span) = self.try_exact(Keyword::False) {
-            span.sp(Expr::Bool(false))
         } else if let Some(start) = self.try_exact(OpenParen) {
             let inner = self.try_expr()?;
             let end = self.expect(CloseParen)?;
@@ -497,8 +494,6 @@ impl Parser {
             } else {
                 Expr::Unit
             })
-        } else if let Some(items) = self.try_surrounded_list(CURLIES, Self::try_expr)? {
-            items.map(Expr::List)
         } else if let Some(items) = self.try_surrounded_list(BRACKETS, Self::try_expr)? {
             items.map(Expr::Array)
         } else if let Some(if_else) = self.try_if()? {

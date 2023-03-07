@@ -14,8 +14,8 @@ pub enum Value {
     Function(Function),
     Partial(Box<Partial>),
     String(Arc<String>),
-    List(Box<List>),
-    Array(Box<Array>),
+    List(List),
+    Array(Array),
 }
 
 fn _keep_value_small(_: std::convert::Infallible) {
@@ -194,12 +194,12 @@ impl From<String> for Value {
 
 impl From<List> for Value {
     fn from(l: List) -> Self {
-        Value::List(l.into())
+        Value::List(l)
     }
 }
 
 impl From<Array> for Value {
     fn from(a: Array) -> Self {
-        Value::Array(a.into())
+        Value::Array(a)
     }
 }

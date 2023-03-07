@@ -1,4 +1,5 @@
 - Show function names when printing
+- Optimize for non-reused values
 - Warnings
   - naming conventions
   - compare with bool literals

@@ -2,6 +2,7 @@ use std::{
     cmp::Ordering,
     f64::consts::*,
     fmt,
+    io::{stdin, stdout, Write},
     mem::{swap, take},
     ops::*,
     sync::Arc,
@@ -64,6 +65,7 @@ pub enum Op1 {
     Len,
     Print,
     Println,
+    ScanLn,
 }
 
 impl fmt::Display for Op1 {
@@ -89,6 +91,7 @@ impl fmt::Display for Op1 {
             Op1::Len => write!(f, "len"),
             Op1::Print => write!(f, "print"),
             Op1::Println => write!(f, "println"),
+            Op1::ScanLn => write!(f, "scanln"),
         }
     }
 }
@@ -116,6 +119,7 @@ impl Value {
             Op1::Len => self.len(env),
             Op1::Print => self.print(env),
             Op1::Println => self.println(env),
+            Op1::ScanLn => self.scanln(env),
         }
     }
 }
@@ -293,8 +297,14 @@ op1_fn!(
     print,
     "Cannot print {}",
     this,
-    (Value::Array(a), print!("{}", a)),
-    (a, print!("{a}"))
+    (Value::Array(a), {
+        print!("{a}");
+        stdout().flush().unwrap();
+    }),
+    (a, {
+        print!("{a}");
+        stdout().flush().unwrap();
+    })
 );
 op1_fn!(
     println,
@@ -302,6 +312,12 @@ op1_fn!(
     this,
     (Value::Array(a), println!("{}", a)),
     (a, println!("{a}"))
+);
+op1_fn!(
+    scanln,
+    "Cannot read from stdin {}",
+    this,
+    (_, *this = stdin().lines().next().unwrap().unwrap().into())
 );
 
 /// 2-parameter built-in operations
@@ -614,6 +630,9 @@ macro_rules! cmp_fn {
                 *this = $name(real_ordering(*a as f64, *b)).into()
             }),
             (Value::Char(a), Value::Char(b), {
+                *this = $name(a.cmp(&b)).into()
+            }),
+            (Value::String(a), Value::String(b), {
                 *this = $name(a.cmp(&b)).into()
             }),
             (Value::Function(a), Value::Function(b), {

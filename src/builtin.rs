@@ -171,8 +171,8 @@ op1_fn!(
     (Value::Int(_), *this = 0i64.into()),
     (Value::Real(_), *this = 0.0.into()),
     (Value::Char(_), *this = '\0'.into()),
-    (Value::Function(_), *this = Function(0).into()),
-    (Value::Partial(_), *this = Function(0).into()),
+    (Value::Function(_), *this = Function::default().into()),
+    (Value::Partial(_), *this = Function::default().into()),
     (Value::String(_), *this = String::new().into()),
     (Value::List(_), *this = List::new().into()),
     (Value::Array(_), *this = Array::new().into()),
@@ -794,7 +794,7 @@ impl fmt::Display for Algorithm {
 }
 
 impl Algorithm {
-    pub(crate) fn params(&self) -> usize {
+    pub(crate) fn params(&self) -> u8 {
         match self {
             Algorithm::Compose => 3,
             Algorithm::BlackBird => 4,

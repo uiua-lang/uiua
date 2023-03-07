@@ -82,9 +82,9 @@ impl Vm {
             Err(error) => {
                 let mut trace = Vec::new();
                 for frame in self.call_stack.iter().rev() {
-                    let info = assembly.function_info(frame.function);
+                    let id = assembly.function_id(frame.function);
                     trace.push(TraceFrame {
-                        id: info.id.clone(),
+                        id: id.clone(),
                         span: assembly.spans[frame.call_span].clone(),
                     });
                 }
@@ -203,8 +203,7 @@ impl Vm {
                         dprintln!("{stack:?}");
                     }
                     // Call
-                    let info = assembly.function_info(function);
-                    match arg_count.cmp(&info.params) {
+                    match arg_count.cmp(&(function.params as usize)) {
                         Ordering::Less => {
                             let partial = Partial {
                                 function,
@@ -219,13 +218,14 @@ impl Vm {
                                 ret: *pc + 1,
                                 call_span: *span,
                             });
-                            *pc = function.0;
+                            *pc = function.start as usize;
                             continue;
                         }
                         Ordering::Greater => {
+                            let id = assembly.function_id(function);
                             let message = format!(
                                 "Too many arguments to {}: expected {}, got {}",
-                                info.id, info.params, arg_count
+                                id, function.params, arg_count
                             );
                             return Err(assembly.spans[*span].clone().sp(message));
                         }

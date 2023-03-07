@@ -1,7 +1,6 @@
 use std::{collections::HashMap, fmt, fs, mem::take, path::Path};
 
 use enum_iterator::all;
-use nohash_hasher::BuildNoHashHasher;
 
 use crate::{
     ast::*,
@@ -17,7 +16,7 @@ pub struct Assembly {
     pub(crate) instrs: Vec<Instr>,
     pub(crate) start: usize,
     pub(crate) constants: Vec<Value>,
-    pub(crate) function_info: HashMap<Function, FunctionInfo, BuildNoHashHasher<Function>>,
+    pub(crate) function_ids: HashMap<Function, FunctionId>,
     pub(crate) spans: Vec<Span>,
     pub(crate) cached_functions: CachedFunctions,
 }
@@ -28,17 +27,17 @@ pub(crate) struct CachedFunctions {
 
 impl Assembly {
     #[track_caller]
-    pub fn function_info(&self, function: Function) -> &FunctionInfo {
-        if let Some(info) = self.function_info.get(&function) {
-            info
+    pub fn function_id(&self, function: Function) -> &FunctionId {
+        if let Some(id) = self.function_ids.get(&function) {
+            id
         } else {
             panic!("function was compiled in a different assembly")
         }
     }
     pub fn find_function(&self, id: impl Into<FunctionId>) -> Option<Function> {
         let id = id.into();
-        for (function, info) in &self.function_info {
-            if info.id == id {
+        for (function, fid) in &self.function_ids {
+            if fid == &id {
                 return Some(*function);
             }
         }
@@ -161,9 +160,11 @@ impl Default for Compiler {
             start: 0,
             instrs: Vec::new(),
             constants: Vec::new(),
-            function_info: HashMap::default(),
+            function_ids: HashMap::default(),
             spans: vec![Span::Builtin],
-            cached_functions: CachedFunctions { get: Function(0) },
+            cached_functions: CachedFunctions {
+                get: Function::default(),
+            },
         };
         let mut scope = Scope::new(0);
         // Initialize builtins
@@ -179,10 +180,13 @@ impl Default for Compiler {
         let mut init = |assembly: &mut Assembly,
                         name: &str,
                         id: FunctionId,
-                        params: usize,
+                        params: u8,
                         mut instrs: Vec<Instr>|
          -> Function {
-            let function = Function(assembly.instrs.len());
+            let function = Function {
+                start: assembly.instrs.len() as u32,
+                params,
+            };
             // Instructions
             assembly.instrs.append(&mut instrs);
             assembly.instrs.push(Instr::Return);
@@ -193,9 +197,7 @@ impl Default for Compiler {
             );
             scope.functions.insert(id.clone(), function);
             // Function info
-            assembly
-                .function_info
-                .insert(function, FunctionInfo { id, params });
+            assembly.function_ids.insert(function, id);
             function
         };
         // 1-parameter builtins
@@ -414,8 +416,19 @@ impl Compiler {
         self.push_instr(Instr::Return);
         // Pop the function's scope
         self.pop_scope(height);
+        // Rotate captures
+        let ipf = self.in_progress_functions.last_mut().unwrap();
+        if !ipf.captures.is_empty() {
+            for _ in 0..ipf.captures.len() {
+                ipf.instrs.insert(1, Instr::Rotate(ipf.captures.len() + 1));
+            }
+        }
         //Determine the function's index
-        let function = Function(self.assembly.instrs.len());
+        let params_count = params + ipf.captures.len();
+        let function = Function {
+            start: self.assembly.instrs.len() as u32,
+            params: params_count as u8,
+        };
         // Resolve function references
         for ipf in &mut self.in_progress_functions {
             for instr in &mut ipf.instrs {
@@ -424,25 +437,12 @@ impl Compiler {
                 }
             }
         }
-        // Rotate captures
-        let ipf = self.in_progress_functions.last_mut().unwrap();
-        if !ipf.captures.is_empty() {
-            for _ in 0..ipf.captures.len() {
-                ipf.instrs.insert(1, Instr::Rotate(ipf.captures.len() + 1));
-            }
-        }
         // Add the function's instructions to the global function list
         let ipf = self.in_progress_functions.pop().unwrap();
         self.assembly.add_function_instrs(ipf.instrs);
         self.scope_mut().functions.insert(id.clone(), function);
-        // Add to the function info map
-        self.assembly.function_info.insert(
-            function,
-            FunctionInfo {
-                id: id.clone(),
-                params: params + ipf.captures.len(),
-            },
-        );
+        // Add to the function id map
+        self.assembly.function_ids.insert(function, id.clone());
         // Push the function if necessary
         if push || !ipf.captures.is_empty() {
             // Reevalutate captures so they are copied to the stack just before the function
@@ -683,9 +683,9 @@ impl Compiler {
         let span = self.push_call_span(left.span.clone());
         let (func, _) = self
             .assembly
-            .function_info
+            .function_ids
             .iter()
-            .find(|(_, info)| info.id == FunctionId::Algorithm(algo))
+            .find(|(_, id)| **id == FunctionId::Algorithm(algo))
             .unwrap();
         self.bin_expr_impl(
             [

@@ -42,8 +42,14 @@ impl fmt::Display for Value {
             Self::Int(i) => write!(f, "{}", i),
             Self::Real(r) => write!(f, "{}", r),
             Self::Char(c) => write!(f, "{}", c),
-            Self::Function(func) => write!(f, "function({})", func.0),
-            Self::Partial(p) => write!(f, "partial({} {})", p.function.0, p.args.len()),
+            Self::Function(func) => write!(f, "function({} {})", func.start, func.params),
+            Self::Partial(p) => write!(
+                f,
+                "function({} {}/{})",
+                p.function.start,
+                p.function.params,
+                p.args.len()
+            ),
             Self::String(s) => write!(f, "{}", s),
             Self::List(l) => write!(f, "{}", l),
             Self::Array(a) => write!(f, "{}", a),
@@ -83,10 +89,19 @@ impl fmt::Display for Type {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(transparent)]
-pub struct Function(pub(crate) usize);
+pub struct Function {
+    pub(crate) start: u32,
+    pub(crate) params: u8,
+}
 
-impl nohash_hasher::IsEnabled for Function {}
+impl Default for Function {
+    fn default() -> Self {
+        Self {
+            start: 0,
+            params: 1,
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Partial {

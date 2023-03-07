@@ -1,11 +1,14 @@
 pub mod array;
+pub mod array2;
 pub mod ast;
 pub mod builtin;
 pub mod compile;
 mod error;
 pub mod lex;
 pub mod parse;
+pub mod primitive;
 pub mod value;
+pub mod value2;
 mod vm;
 
 use std::fmt;

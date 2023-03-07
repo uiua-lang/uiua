@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, fmt, mem::ManuallyDrop};
 
 use crate::{
-    primitive::{force_length, sort_array},
+    algorithm::{force_length, pervade_operator, sort_array},
     value2::Value,
 };
 
@@ -93,6 +93,20 @@ impl Array {
             Type::Number => force_length(self.numbers_mut(), new_len),
             Type::Char => force_length(self.chars_mut(), new_len),
             Type::Value => force_length(self.values_mut(), new_len),
+        }
+    }
+    pub fn add(&mut self, other: &Self) {
+        let a_shape = self.shape();
+        let b_shape = self.shape();
+        match (self.ty, other.ty) {
+            (Type::Number, Type::Number) => {
+                let a = self.numbers();
+                let b = other.numbers();
+                let (shape, c) = pervade_operator(a_shape, a, b_shape, b, |a, b| a + b);
+                *self = Self::from(c);
+                self.shape = shape;
+            }
+            _ => todo!(),
         }
     }
 }

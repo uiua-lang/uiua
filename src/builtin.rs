@@ -707,6 +707,7 @@ pub enum Algorithm {
     Each,
     Sum,
     Product,
+    While,
 }
 
 impl fmt::Display for Algorithm {
@@ -719,6 +720,7 @@ impl fmt::Display for Algorithm {
             Algorithm::Each => write!(f, "each"),
             Algorithm::Sum => write!(f, "sum"),
             Algorithm::Product => write!(f, "product"),
+            Algorithm::While => write!(f, "while"),
         }
     }
 }
@@ -733,6 +735,7 @@ impl Algorithm {
             Algorithm::Fold => 3,
             Algorithm::Sum => 1,
             Algorithm::Product => 1,
+            Algorithm::While => 3,
         }
     }
     pub(crate) fn instrs(&self, assembly: &Assembly) -> Vec<Instr> {
@@ -844,6 +847,18 @@ impl Algorithm {
                     Call(0),
                 ]
             }
+            Algorithm::While => vec![
+                // 0, next = (+1), cond = (<3)
+                Move(3), // next, cond, 0
+                // Loop start
+                CopyRel(1),          // next, cond, 0, 0
+                CopyRel(3),          // next, cond, 0, 0, cond
+                Call(0),             // next, cond, 0, true
+                PopJumpIf(4, false), // next, cond, 0
+                CopyRel(3),          // next, cond, 0, next
+                Call(0),             // next, cond, 1
+                Jump(-6),
+            ],
         };
         instrs.insert(0, Comment(self.to_string()));
         instrs

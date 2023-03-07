@@ -338,8 +338,8 @@ impl Compiler {
             Instr::Op2(..) => self.height -= 1,
             Instr::Call(_) => self.height -= 1,
             Instr::Constant(_) => self.height += 1,
-            Instr::List(len) if *len == 0 => self.height -= 1,
-            Instr::Array(len) if *len == 0 => self.height -= 1,
+            Instr::List(len) if *len == 0 => self.height += 1,
+            Instr::Array(len) if *len == 0 => self.height += 1,
             Instr::List(len) => self.height -= len - 1,
             Instr::Array(len) => self.height -= len - 1,
             _ => {}

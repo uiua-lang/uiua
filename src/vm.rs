@@ -39,6 +39,8 @@ pub(crate) enum Instr {
     Move(usize),
     Rotate(usize),
     Pop(usize),
+    ArrayPop,
+    ArrayPush,
     Call(usize),
     Return,
     Jump(isize),
@@ -153,7 +155,7 @@ impl Vm {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("array");
                     let array: Array = stack.drain(stack.len() - *n..).collect();
-                    stack.push(array.normalized(true).into());
+                    stack.push(array.normalized(usize::MAX).into());
                 }
                 Instr::CopyRel(n) => {
                     #[cfg(feature = "profile")]
@@ -173,7 +175,7 @@ impl Vm {
                 }
                 Instr::Move(n) => {
                     #[cfg(feature = "profile")]
-                    puffin::profile_scope!("remove");
+                    puffin::profile_scope!("move");
                     let val = stack.remove(stack.len() - *n);
                     stack.push(val);
                 }
@@ -187,6 +189,33 @@ impl Vm {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("pop");
                     stack.truncate(stack.len() - *n);
+                }
+                Instr::ArrayPop => {
+                    #[cfg(feature = "profile")]
+                    puffin::profile_scope!("array pop");
+                    let value = stack.last_mut().unwrap();
+                    if value.is_array() {
+                        let array = value.array_mut().pop_array().unwrap();
+                        stack.push(array.into());
+                    } else {
+                        let message = format!("Cannot pop from {}", value.ty());
+                        return Err(assembly.spans[0].error(message));
+                    }
+                }
+                Instr::ArrayPush => {
+                    let to_push = stack.pop().unwrap();
+                    let pushed_to = stack.last_mut().unwrap();
+                    if pushed_to.is_array() {
+                        let to_push = if to_push.is_array() {
+                            to_push.into_array()
+                        } else {
+                            Array::from(to_push)
+                        };
+                        pushed_to.array_mut().push_array(to_push);
+                    } else {
+                        let message = format!("Cannot push to {}", pushed_to.ty());
+                        return Err(assembly.spans[0].error(message));
+                    }
                 }
                 Instr::Call(span) => {
                     #[cfg(feature = "profile")]
@@ -263,7 +292,7 @@ impl Vm {
                 }
                 Instr::PopJumpIf(delta, cond) => {
                     #[cfg(feature = "profile")]
-                    puffin::profile_scope!("jump_if");
+                    puffin::profile_scope!("pop_jump_if");
                     let val = stack.pop().unwrap();
                     if val.is_truthy() == *cond {
                         *pc = pc.wrapping_add_signed(*delta);
@@ -283,17 +312,17 @@ impl Vm {
                 }
                 Instr::Op1(op) => {
                     #[cfg(feature = "profile")]
-                    puffin::profile_scope!("builtin_op1");
+                    puffin::profile_scope!("op1");
                     let val = stack.last_mut().unwrap();
                     let env = Env { assembly, span: 0 };
-                    val.op1(*op, env)?;
+                    val.op1(*op, &env)?;
                 }
                 Instr::Op2(op, span) => {
                     #[cfg(feature = "profile")]
-                    puffin::profile_scope!("builtin_op2");
+                    puffin::profile_scope!("op2");
                     let (left, right) = {
                         #[cfg(feature = "profile")]
-                        puffin::profile_scope!("builtin_op2_args");
+                        puffin::profile_scope!("op2_args");
                         let mut iter = stack.iter_mut().rev();
                         let right = iter.next().unwrap();
                         let left = iter.next().unwrap();

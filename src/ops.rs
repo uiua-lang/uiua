@@ -41,6 +41,7 @@ pub enum Op1 {
     Round,
     Len,
     Range,
+    Reverse,
     Show,
     Print,
     Println,
@@ -66,6 +67,7 @@ impl fmt::Display for Op1 {
             Op1::Round => write!(f, "round"),
             Op1::Len => write!(f, "len"),
             Op1::Range => write!(f, "range"),
+            Op1::Reverse => write!(f, "reverse"),
             Op1::Show => write!(f, "show"),
             Op1::Print => write!(f, "print"),
             Op1::Println => write!(f, "println"),
@@ -77,7 +79,7 @@ impl fmt::Display for Op1 {
 }
 
 impl Value {
-    pub(crate) fn op1(&mut self, op: Op1, env: Env) -> RuntimeResult {
+    pub(crate) fn op1(&mut self, op: Op1, env: &Env) -> RuntimeResult {
         match op {
             Op1::Nil => *self = Value::nil(),
             Op1::Id => {}
@@ -86,6 +88,8 @@ impl Value {
             Op1::Println => println!("{self}"),
             Op1::Len => *self = (self.len() as f64).into(),
             Op1::Range => *self = self.range(env)?.into(),
+            Op1::Reverse => self.reverse(),
+            Op1::Neg => *self = self.neg(env)?,
             op => todo!("{op}"),
         }
         Ok(())
@@ -272,6 +276,28 @@ impl Algorithm {
                 Rotate(3),  // gx, x, f
                 Call(0),    // gx, fx
                 Call(0),    // fx(gx)
+            ],
+            Algorithm::Each => vec![
+                // [1, 2, 3], f = neg
+                Swap,              // f, [1, 2, 3]
+                Op1(Op1::Reverse), // f, [3, 2, 1]
+                Array(0),          // f, [3, 2, 1], []
+                // Loop start
+                Swap,               // f, [], [3, 2, 1]
+                CopyRel(1),         // f, [], [3, 2, 1], [3, 2, 1]
+                Op1(Op1::Len),      // f, [], [3, 2, 1], 3
+                Push(0.0.into()),   // f, [], [3, 2, 1], 3, 0
+                Op2(Op2::Eq, 0),    // f, [], [3, 2, 1], false
+                PopJumpIf(8, true), // f, [], [3, 2, 1]
+                ArrayPop,           // f, [], [3, 2], 1
+                CopyRel(4),         // f, [], [3, 2], 1, f
+                Call(0),            // f, [], [3, 2], -1
+                Move(3),            // f, [3, 2], -1, []
+                Swap,               // f, [3, 2], [], -1
+                ArrayPush,          // f, [3, 2], [-1]
+                Jump(-12),
+                // Loop end
+                Swap,
             ],
             _ => vec![],
         };

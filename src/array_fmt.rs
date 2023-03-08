@@ -86,8 +86,12 @@ fn fmt_array<T: GridFmt + std::fmt::Display>(
         .chunks(chunk_size)
         .map(|chunk| fmt_array(&shape[1..], chunk, stringy))
         .collect();
-    let max_width = cell_grids.iter().map(|grid| grid[0].len()).max().unwrap();
-    let max_height = cell_grids.iter().map(|grid| grid.len()).max().unwrap();
+    let max_width = cell_grids
+        .iter()
+        .map(|grid| grid[0].len())
+        .max()
+        .unwrap_or(1);
+    let max_height = cell_grids.iter().map(|grid| grid.len()).max().unwrap_or(1);
     if shape.len() == 1 {
         for grid in &mut cell_grids {
             pad_grid_min(grid, grid[0].len(), max_height);

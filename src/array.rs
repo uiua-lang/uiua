@@ -37,11 +37,9 @@ impl Array {
     pub fn rank(&self) -> usize {
         self.shape.len()
     }
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
-        self.shape.first().copied().unwrap_or(0)
-    }
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
+        self.shape.first().copied().unwrap_or(1)
     }
     pub fn data_len(&self) -> usize {
         self.shape.iter().product()
@@ -81,19 +79,80 @@ impl Array {
         assert_eq!(self.ty, ArrayType::Value);
         unsafe { &self.data.values }
     }
-    pub fn clone_values(&self) -> Vec<Value> {
-        match self.ty {
-            ArrayType::Num => self.numbers().iter().copied().map(Into::into).collect(),
-            ArrayType::Char => self.chars().iter().copied().map(Into::into).collect(),
-            ArrayType::Value => self.values().to_vec(),
-        }
-    }
     pub fn values_mut(&mut self) -> &mut Vec<Value> {
         assert_eq!(self.ty, ArrayType::Value);
         unsafe { &mut self.data.values }
     }
-    pub fn range(n: usize) -> Self {
-        Self::from((0..n).map(|n| n as f64).collect::<Vec<_>>())
+    fn take_values(&mut self) -> Vec<Value> {
+        match self.ty {
+            ArrayType::Num => take(unsafe { &mut *self.data.numbers })
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+            ArrayType::Char => take(unsafe { &mut *self.data.chars })
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+            ArrayType::Value => take(unsafe { &mut *self.data.values }),
+        }
+    }
+    pub fn into_values(mut self) -> Vec<Value> {
+        self.take_values()
+    }
+    pub fn into_numbers(mut self) -> Vec<f64> {
+        assert_eq!(self.ty, ArrayType::Num);
+        take(unsafe { &mut *self.data.numbers })
+    }
+    pub fn into_chars(mut self) -> Vec<char> {
+        assert_eq!(self.ty, ArrayType::Char);
+        take(unsafe { &mut *self.data.chars })
+    }
+}
+
+impl Array {
+    pub fn normalize(&mut self, array_depth: usize) {
+        if let ArrayType::Value = self.ty {
+            if self.values().is_empty() {
+                return;
+            }
+            if self.values().iter().all(Value::is_char) {
+                let shape = take(&mut self.shape);
+                *self = Self::from(self.values().iter().map(Value::char).collect::<Vec<_>>());
+                self.shape = shape;
+            } else if self.values().iter().all(Value::is_num) {
+                let shape = take(&mut self.shape);
+                *self = Self::from(self.values().iter().map(Value::number).collect::<Vec<_>>());
+                self.shape = shape;
+            } else if array_depth > 0 && self.values().iter().all(Value::is_array) {
+                let mut shape = None;
+                for arr in self.values().iter().map(Value::array) {
+                    if arr.shape != *shape.get_or_insert_with(|| arr.shape()) {
+                        return;
+                    }
+                }
+                let mut shape = shape.unwrap_or(&[]).to_vec();
+                let values: Vec<Value> = self
+                    .take_values()
+                    .into_iter()
+                    .map(Value::into_array)
+                    .flat_map(Array::into_values)
+                    .collect();
+                self.shape.append(&mut shape);
+                let shape = take(&mut self.shape);
+                *self = Self {
+                    ty: ArrayType::Value,
+                    shape,
+                    data: Data {
+                        values: ManuallyDrop::new(values),
+                    },
+                }
+                .normalized(array_depth - 1);
+            }
+        }
+    }
+    pub fn normalized(mut self, array_depth: usize) -> Self {
+        self.normalize(array_depth);
+        self
     }
     pub fn sort(&mut self) {
         let shape = self.shape.clone();
@@ -105,50 +164,6 @@ impl Array {
             ArrayType::Char => sort_array(&shape, self.chars_mut(), Ord::cmp),
             ArrayType::Value => sort_array(&shape, self.values_mut(), Ord::cmp),
         }
-    }
-    pub fn shape_prefix_matches(&self, other: &Self) -> bool {
-        self.shape.iter().zip(&other.shape).all(|(a, b)| a == b)
-    }
-    pub fn normalize(&mut self, arrays: bool) {
-        if let ArrayType::Value = self.ty {
-            if self.values().iter().all(Value::is_char) {
-                let shape = take(&mut self.shape);
-                *self = Self::from(self.values().iter().map(Value::char).collect::<Vec<_>>());
-                self.shape = shape;
-            } else if self.values().iter().all(Value::is_num) {
-                let shape = take(&mut self.shape);
-                *self = Self::from(self.values().iter().map(Value::number).collect::<Vec<_>>());
-                self.shape = shape;
-            } else if arrays && self.values().iter().all(Value::is_array) {
-                let mut shape = None;
-                for arr in self.values().iter().map(Value::array) {
-                    if arr.shape != *shape.get_or_insert_with(|| arr.shape()) {
-                        return;
-                    }
-                }
-                let mut shape = shape.unwrap_or(&[]).to_vec();
-                let values: Vec<Value> = self
-                    .values()
-                    .iter()
-                    .map(Value::array)
-                    .flat_map(Array::clone_values)
-                    .collect();
-                self.shape.append(&mut shape);
-                let shape = take(&mut self.shape);
-                *self = Self {
-                    ty: ArrayType::Value,
-                    shape,
-                    data: Data {
-                        values: ManuallyDrop::new(values),
-                    },
-                }
-                .normalized(arrays);
-            }
-        }
-    }
-    pub fn normalized(mut self, arrays: bool) -> Self {
-        self.normalize(arrays);
-        self
     }
     pub fn deshape(&mut self) {
         let data_len: usize = self.shape.iter().product();
@@ -163,9 +178,71 @@ impl Array {
             ArrayType::Value => force_length(self.values_mut(), new_len),
         }
     }
+    pub fn reverse(&mut self) {
+        let shape = self.shape.clone();
+        match self.ty {
+            ArrayType::Num => reverse(&shape, self.numbers_mut()),
+            ArrayType::Char => reverse(&shape, self.chars_mut()),
+            ArrayType::Value => reverse(&shape, self.values_mut()),
+        }
+    }
+    pub(crate) fn pop_array(&mut self) -> Option<Array> {
+        if self.shape.is_empty() {
+            return None;
+        }
+        let shape = self.shape[1..].to_vec();
+        self.shape[0] -= 1;
+        let cell_size: usize = shape.iter().product();
+        let len: usize = self.shape[0] * cell_size;
+        Some(match self.ty() {
+            ArrayType::Num => (shape, self.numbers_mut().drain(len..).collect::<Vec<_>>()).into(),
+            ArrayType::Char => (shape, self.chars_mut().drain(len..).collect::<Vec<_>>()).into(),
+            ArrayType::Value => (shape, self.values_mut().drain(len..).collect::<Vec<_>>()).into(),
+        })
+    }
+    pub(crate) fn push_array(&mut self, array: Array) {
+        if self.shape == [0] {
+            self.shape.extend(array.shape.iter().copied());
+        }
+        assert_eq!(self.shape[1..], array.shape);
+        self.shape[0] += 1;
+        match (self.ty, array.ty) {
+            (ArrayType::Num, ArrayType::Num) => self.numbers_mut().extend(array.into_numbers()),
+            (ArrayType::Char, ArrayType::Char) => self.chars_mut().extend(array.into_chars()),
+            (ArrayType::Value, ArrayType::Value) => self.values_mut().extend(array.into_values()),
+            _ => {
+                let shape = take(&mut self.shape);
+                let mut values = self.take_values();
+                values.append(&mut array.into_values());
+                *self = Array::from((shape, values));
+            }
+        }
+    }
 }
 
-macro_rules! array_impl {
+macro_rules! array_un_impl {
+    ($name:ident,
+        $(($ty:ident, $get:ident, $f:ident)),*
+    $(,)?) => {
+        impl Array {
+            #[allow(unreachable_patterns)]
+            pub fn $name(&self, env: &Env) -> RuntimeResult<Self> {
+                let shape = self.shape.clone();
+                Ok(match self.ty {
+                    $(ArrayType::$ty => (shape, un_pervade(self.$get(), pervade::$name::$f)).into(),)*
+                    ArrayType::Value => {
+                        un_pervade_fallible(self.values(), env, Value::$name)?.into()
+                    }
+                    ty => return Err(pervade::$name::error(ty, env)),
+                })
+            }
+        }
+    };
+}
+
+array_un_impl!(neg, (Num, numbers, num));
+
+macro_rules! array_bin_impl {
     ($name:ident,
         $(($a_ty:ident, $af:ident, $b_ty:ident, $bf:ident, $ab:ident)),*
     $(,)?) => {
@@ -195,26 +272,26 @@ macro_rules! array_impl {
     };
 }
 
-array_impl!(
+array_bin_impl!(
     add,
     (Num, numbers, Num, numbers, num_num),
     (Num, numbers, Char, chars, num_char),
     (Char, chars, Num, numbers, char_num),
 );
 
-array_impl!(
+array_bin_impl!(
     sub,
     (Num, numbers, Num, numbers, num_num),
     (Char, chars, Num, numbers, char_num),
 );
 
-array_impl!(mul, (Num, numbers, Num, numbers, num_num));
-array_impl!(div, (Num, numbers, Num, numbers, num_num));
-array_impl!(modulus, (Num, numbers, Num, numbers, num_num));
-array_impl!(pow, (Num, numbers, Num, numbers, num_num));
-array_impl!(atan2, (Num, numbers, Num, numbers, num_num));
+array_bin_impl!(mul, (Num, numbers, Num, numbers, num_num));
+array_bin_impl!(div, (Num, numbers, Num, numbers, num_num));
+array_bin_impl!(modulus, (Num, numbers, Num, numbers, num_num));
+array_bin_impl!(pow, (Num, numbers, Num, numbers, num_num));
+array_bin_impl!(atan2, (Num, numbers, Num, numbers, num_num));
 
-array_impl!(
+array_bin_impl!(
     min,
     (Num, numbers, Num, numbers, num_num),
     (Char, chars, Char, chars, char_char),
@@ -222,7 +299,7 @@ array_impl!(
     (Num, numbers, Char, chars, num_char),
 );
 
-array_impl!(
+array_bin_impl!(
     max,
     (Num, numbers, Num, numbers, num_num),
     (Char, chars, Char, chars, char_char),
@@ -233,7 +310,7 @@ array_impl!(
 macro_rules! cmp_impls {
     ($($name:ident),*) => {
         $(
-            array_impl!(
+            array_bin_impl!(
                 $name,
                 (Num, numbers, Num, numbers, num_num),
                 (Char, chars, Char, chars, generic),
@@ -486,7 +563,7 @@ impl From<Vec<Value>> for Array {
                 values: ManuallyDrop::new(v),
             },
         }
-        .normalized(false)
+        .normalized(0)
     }
 }
 

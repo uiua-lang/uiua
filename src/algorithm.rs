@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, ptr};
 
 use crate::{
     array::Array,
@@ -18,7 +18,7 @@ impl Value {
             1
         }
     }
-    pub fn range(&self, env: Env) -> RuntimeResult<Array> {
+    pub fn range(&self, env: &Env) -> RuntimeResult<Array> {
         match self.raw_ty() {
             RawType::Array if self.array().is_numbers() => {
                 let arr = self.array();
@@ -54,7 +54,12 @@ impl Value {
             }
             _ => {}
         };
-        Err(env.error("Arrays can only be created from natural numbers"))
+        Err(env.error("Ranges can only be created from natural numbers"))
+    }
+    pub fn reverse(&mut self) {
+        if self.is_array() {
+            self.array_mut().reverse();
+        }
     }
 }
 
@@ -81,6 +86,23 @@ pub fn range(shape: &[usize]) -> Vec<Value> {
     data
 }
 
+pub fn reverse<T>(shape: &[usize], data: &mut [T]) {
+    if shape.is_empty() {
+        return;
+    }
+    let cells = shape[0];
+    let cell_size: usize = shape.iter().skip(1).product();
+    for i in 0..cells / 2 {
+        let left = i * cell_size;
+        let right = (cells - i - 1) * cell_size;
+        let left = &mut data[left] as *mut T;
+        let right = &mut data[right] as *mut T;
+        unsafe {
+            ptr::swap_nonoverlapping(left, right, cell_size);
+        }
+    }
+}
+
 pub fn force_length<T: Clone>(data: &mut Vec<T>, len: usize) {
     match data.len().cmp(&len) {
         Ordering::Less => {
@@ -99,7 +121,7 @@ pub fn sort_array<T: Clone>(shape: &[usize], data: &mut [T], cmp: CmpFn<T>) {
     if shape.is_empty() {
         return;
     }
-    let chunk_size: usize = shape.iter().skip(1).product();
+    let chunk_size = shape.iter().skip(1).product();
     merge_sort_chunks(chunk_size, data, cmp);
 }
 

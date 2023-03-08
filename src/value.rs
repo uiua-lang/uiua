@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, fmt};
+use std::{cmp::Ordering, fmt, mem::forget};
 
 use nanbox::NanBox;
 
@@ -142,9 +142,32 @@ impl Value {
         assert!(self.is_array());
         unsafe { &mut *self.0.unpack::<ArrayRef>() }
     }
+    pub fn into_array(self) -> Array {
+        assert!(self.is_array());
+        let array = unsafe { self.0.unpack::<ArrayRef>().read() };
+        forget(self);
+        array
+    }
 }
 
-macro_rules! value_impl {
+macro_rules! value_un_impl {
+    ($name:ident $(,($rt:ident, $get:ident, $f:ident))* $(,)?) => {
+        impl Value {
+            #[allow(unreachable_patterns)]
+            pub fn $name(&self, env: &Env) -> RuntimeResult<Self> {
+                Ok(match self.raw_ty() {
+                    $(RawType::$rt => pervade::$name::$f(&self.$get()).into(),)*
+                    RawType::Array => self.array().$name(env)?.into(),
+                    ty => return Err(pervade::$name::error(ty.ty(), env)),
+                })
+            }
+        }
+    };
+}
+
+value_un_impl!(neg, (Num, number, num));
+
+macro_rules! value_bin_impl {
     ($name:ident
         $(,($a_ty:ident, $af:ident, $b_ty:ident, $bf:ident, $ab:ident))*
         $(,|$a_fb:ident, $b_fb:ident| $fallback:expr)?
@@ -173,26 +196,26 @@ macro_rules! value_impl {
     };
 }
 
-value_impl!(
+value_bin_impl!(
     add,
     (Num, number, Num, number, num_num),
     (Num, number, Char, char, num_char),
     (Char, char, Num, number, char_num),
 );
 
-value_impl!(
+value_bin_impl!(
     sub,
     (Num, number, Num, number, num_num),
     (Char, char, Num, number, char_num),
 );
 
-value_impl!(mul, (Num, number, Num, number, num_num));
-value_impl!(div, (Num, number, Num, number, num_num));
-value_impl!(modulus, (Num, number, Num, number, num_num));
-value_impl!(pow, (Num, number, Num, number, num_num));
-value_impl!(atan2, (Num, number, Num, number, num_num));
+value_bin_impl!(mul, (Num, number, Num, number, num_num));
+value_bin_impl!(div, (Num, number, Num, number, num_num));
+value_bin_impl!(modulus, (Num, number, Num, number, num_num));
+value_bin_impl!(pow, (Num, number, Num, number, num_num));
+value_bin_impl!(atan2, (Num, number, Num, number, num_num));
 
-value_impl!(
+value_bin_impl!(
     min,
     (Num, number, Num, number, num_num),
     (Char, char, Char, char, char_char),
@@ -200,7 +223,7 @@ value_impl!(
     (Num, number, Char, char, num_char),
 );
 
-value_impl!(
+value_bin_impl!(
     max,
     (Num, number, Num, number, num_num),
     (Char, char, Char, char, char_char),
@@ -211,7 +234,7 @@ value_impl!(
 macro_rules! cmp_impls {
     ($($name:ident),*) => {
         $(
-            value_impl!(
+            value_bin_impl!(
                 $name,
                 (Num, number, Num, number, num_num),
                 (Char, char, Char, char, generic),

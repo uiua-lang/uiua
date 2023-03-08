@@ -2,6 +2,28 @@ use std::{cmp::Ordering, fmt::Debug};
 
 use crate::{vm::Env, RuntimeError, RuntimeResult};
 
+pub mod neg {
+    use super::*;
+    pub fn num(a: &f64) -> f64 {
+        -a
+    }
+    pub fn error<T: Debug>(a: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot negate {a:?}"))
+    }
+}
+
+pub fn un_pervade<A, B>(a: &[A], f: fn(&A) -> B) -> Vec<B> {
+    a.iter().map(f).collect()
+}
+
+pub fn un_pervade_fallible<A, B>(
+    a: &[A],
+    env: &Env,
+    f: fn(&A, &Env) -> RuntimeResult<B>,
+) -> RuntimeResult<Vec<B>> {
+    a.iter().map(|a| f(a, env)).collect()
+}
+
 macro_rules! cmp_impl {
     ($name:ident $eq:tt $ordering:expr) => {
         pub mod $name {

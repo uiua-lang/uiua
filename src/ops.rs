@@ -229,7 +229,7 @@ impl Algorithm {
             Algorithm::Table => 3,
         }
     }
-    pub(crate) fn instrs(&self, assembly: &Assembly) -> Vec<Instr> {
+    pub(crate) fn instrs(&self, _assembly: &Assembly) -> Vec<Instr> {
         #[allow(unused_imports)]
         use {
             crate::ast::BinOp::*,
@@ -311,6 +311,7 @@ impl Algorithm {
                 Jump(-12),
                 // Loop end
                 Swap,
+                Normalize(1),
             ],
             Algorithm::Fold => vec![
                 // [1, 2, 3], 0, f = (+)
@@ -331,19 +332,56 @@ impl Algorithm {
                 Call(0),            // f, [3, 2], 1
                 Jump(-11),
                 // Loop end
+                Normalize(1),
             ],
-            Algorithm::Table => {
-                let each = assembly.find_function(Algorithm::Each).unwrap();
-                vec![
-                    // b, a, f
-                    Move(3),           // a, f, b
-                    Swap,              // a, b, f
-                    Call(0),           // a, fb
-                    Push(each.into()), // a, fb, each
-                    Call(0),           // a, each(fb)
-                    Call(0),           // each(fb)a
-                ]
-            }
+            Algorithm::Table => vec![
+                // [4, 5], [2, 3], f = (*)
+                Rotate(3),         // f, [4, 5], [2, 3]
+                Op1(Op1::Reverse), // f, [4, 5], [3, 2]
+                Swap,              //f, [3, 2], [4, 5]
+                Op1(Op1::Reverse), // f, [3, 2], [5, 4]
+                Array(0),          // f, [3, 2], [5, 4], []
+                // Outer loop start
+                CopyRel(2),          // f, [3, 2], [5, 4], [], [5, 4]
+                Op1(Op1::Len),       // f, [3, 2], [5, 4], [], 2
+                Push(0.0.into()),    // f, [3, 2], [5, 4], [], 2, 0
+                Op2(Op2::Eq, 0),     // f, [3, 2], [5, 4], [], false
+                PopJumpIf(31, true), // f, [3, 2], [5, 4], []
+                Swap,                // f, [3, 2], [], [5, 4]
+                ArrayPop,            // f, [3, 2], [], [5], 4
+                Move(3),             // f, [3, 2], [5], 4, []
+                Swap,                // f, [3, 2], [5], [], 4
+                CopyRel(4),          // f, [3, 2], [5], [], 4, [3, 2]
+                Array(0),            // f, [3, 2], [5], [], 4, [3, 2], []
+                // Inner loop start,
+                CopyRel(2),          // f, [3, 2], [5], [], 4, [3, 2], [], [3, 2]
+                Op1(Op1::Len),       // f, [3, 2], [5], [], 4, [3, 2], [], 2
+                Push(0.0.into()),    // f, [3, 2], [5], [], 4, [3, 2], [], 2, 0
+                Op2(Op2::Eq, 0),     // f, [3, 2], [5], [], 4, [3, 2], [], false
+                PopJumpIf(16, true), // f, [3, 2], [5], [], 4, [3, 2], []
+                Swap,                // f, [3, 2], [5], [], 4, [], [3, 2]
+                ArrayPop,            // f, [3, 2], [5], [], 4, [], [3], 2
+                Move(4),             // f, [3, 2], [5], [], [], [3], 2, 4
+                CopyRel(1),          // f, [3, 2], [5], [], [], [3], 2, 4, 4
+                Move(3),             // f, [3, 2], [5], [], [], [3], 4, 4, 2
+                CopyRel(9),          // f, [3, 2], [5], [], [], [3], 4, 4, 2, f
+                Call(0),             // f, [3, 2], [5], [], [], [3], 4, 4, f(2)
+                Call(0),             // f, [3, 2], [5], [], [], [3], 4, 8
+                Move(4),             // f, [3, 2], [5], [], [3], 4, 8, []
+                Swap,                // f, [3, 2], [5], [], [3], 4, [], 8
+                ArrayPush,           // f, [3, 2], [5], [], [3], 4, [8]
+                Rotate(3),           // f, [3, 2], [5], [], [8], [3], 4
+                Swap,                // f, [3, 2], [5], [], [8], 4, [3]
+                Move(3),             // f, [3, 2], [5], [], 4, [3] [8]
+                Jump(-19),
+                // Inner loop end - f, [3, 2], [5], [], 4, [] [8, 12]
+                Rotate(3), // f, [3, 2], [5], [], [8, 12], 4, []
+                Pop(2),    // f, [3, 2], [5], [], [8, 12]
+                ArrayPush, // f, [3, 2], [5], [[8, 12]]
+                Jump(-34),
+                // Outer loop end - f, [3, 2], [], [[8, 12], [10, 15]]
+                Normalize(1),
+            ],
         };
         instrs.insert(0, Comment(self.to_string()));
         instrs

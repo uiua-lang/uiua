@@ -8,7 +8,7 @@ use crate::{
     algorithm::*,
     function::{Function, Partial},
     pervade::{self, *},
-    value::Value,
+    value::{RawType, Value},
     vm::Env,
     RuntimeResult,
 };
@@ -287,13 +287,19 @@ impl Array {
         };
         Some(arr.into())
     }
-    pub(crate) fn push_array(&mut self, array: Array) {
-        if self.shape == [0] {
-            self.shape.extend(array.shape.iter().copied());
-        }
-        assert_eq!(self.shape[1..], array.shape);
+    pub(crate) fn push_value(&mut self, value: Value) {
         self.shape[0] += 1;
-        self.take_values_from(array);
+        match (self.ty, value.raw_ty()) {
+            (ArrayType::Num, RawType::Num) => self.numbers_mut().push(value.number()),
+            (ArrayType::Char, RawType::Char) => self.chars_mut().push(value.char()),
+            (ArrayType::Value, _) => self.values_mut().push(value),
+            _ => {
+                let shape = take(&mut self.shape);
+                let mut values = self.take_values();
+                values.push(value);
+                *self = Array::from((shape, values));
+            }
+        }
     }
 }
 

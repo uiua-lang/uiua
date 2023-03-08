@@ -41,6 +41,7 @@ pub(crate) enum Instr {
     Pop(usize),
     ArrayPop,
     ArrayPush,
+    Normalize(usize),
     Call(usize),
     Return,
     Jump(isize),
@@ -206,15 +207,16 @@ impl Vm {
                     let to_push = stack.pop().unwrap();
                     let pushed_to = stack.last_mut().unwrap();
                     if pushed_to.is_array() {
-                        let to_push = if to_push.is_array() {
-                            to_push.into_array()
-                        } else {
-                            Array::from(to_push)
-                        };
-                        pushed_to.array_mut().push_array(to_push);
+                        pushed_to.array_mut().push_value(to_push);
                     } else {
                         let message = format!("Cannot push to {}", pushed_to.ty());
                         return Err(assembly.spans[0].error(message));
+                    }
+                }
+                Instr::Normalize(n) => {
+                    let value = stack.last_mut().unwrap();
+                    if value.is_array() {
+                        value.array_mut().normalize(*n);
                     }
                 }
                 Instr::Call(span) => {

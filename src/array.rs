@@ -262,7 +262,7 @@ macro_rules! array_bin_impl {
                 let bsh = other.shape();
                 Ok(match (self.ty, other.ty) {
                     $((ArrayType::$a_ty, ArrayType::$b_ty) =>
-                        bin_pervade(ash, self.$af(), bsh, other.$bf(), pervade::$name::$ab)?.into(),)*
+                        bin_pervade(ash, self.$af(), bsh, other.$bf(), env, pervade::$name::$ab)?.into(),)*
                     (ArrayType::Value, ArrayType::Value) => {
                         bin_pervade_fallible(ash, self.values(), bsh, other.values(), env, Value::$name)?.into()
                     }

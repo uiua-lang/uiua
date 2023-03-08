@@ -181,6 +181,7 @@ pub fn bin_pervade<A, B, C: Default>(
     a: &[A],
     b_shape: &[usize],
     b: &[B],
+    env: &Env,
     f: impl Fn(&A, &B) -> C + Copy,
 ) -> RuntimeResult<(Vec<usize>, Vec<C>)> {
     let c_shape = a_shape.max(b_shape).to_vec();
@@ -189,7 +190,7 @@ pub fn bin_pervade<A, B, C: Default>(
     for _ in 0..c_len {
         c.push(C::default());
     }
-    bin_pervade_recursive(a_shape, a, b_shape, b, &mut c, f)?;
+    bin_pervade_recursive(a_shape, a, b_shape, b, &mut c, env, f)?;
     Ok((c_shape, c))
 }
 
@@ -217,6 +218,7 @@ fn bin_pervade_recursive<A, B, C>(
     b_shape: &[usize],
     b: &[B],
     c: &mut [C],
+    env: &Env,
     f: impl Fn(&A, &B) -> C + Copy,
 ) -> RuntimeResult {
     if a_shape == b_shape {
@@ -241,7 +243,7 @@ fn bin_pervade_recursive<A, B, C>(
             let a_cells = a_shape[0];
             let b_cells = b_shape[0];
             if a_cells != b_cells {
-                panic!("Shapes do not match");
+                return Err(env.error(format!("Shapes {a_shape:?} and {b_shape:?} do not match")));
             }
             let a_chunk_size = a.len() / a_cells;
             let b_chunk_size = b.len() / b_cells;
@@ -250,7 +252,7 @@ fn bin_pervade_recursive<A, B, C>(
                 .zip(b.chunks_exact(b_chunk_size))
                 .zip(c.chunks_exact_mut(a_chunk_size.max(b_chunk_size)))
             {
-                bin_pervade_recursive(&a_shape[1..], a, &b_shape[1..], b, c, f)?;
+                bin_pervade_recursive(&a_shape[1..], a, &b_shape[1..], b, c, env, f)?;
             }
         }
     }

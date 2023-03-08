@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, fmt, mem::swap};
+use std::{fmt, mem::swap};
 
 use crate::{
     array::Array,
@@ -120,6 +120,7 @@ impl Vm {
         #[cfg(feature = "profile")]
         let mut i = 0;
         let pc = &mut self.pc;
+        let mut just_called = None;
         while *pc < assembly.instrs.len() {
             #[cfg(feature = "profile")]
             if i % 100_000 == 0 {
@@ -232,7 +233,15 @@ impl Vm {
                             (partial.function, arg_count)
                         }
                         _ => {
-                            let message = format!("Cannot call {}", value.ty());
+                            let message = if let Some(function) = just_called.take() {
+                                let id = assembly.function_id(function);
+                                format!(
+                                    "Too many arguments to {}: expected {}",
+                                    id, function.params
+                                )
+                            } else {
+                                format!("Cannot call {}", value.ty())
+                            };
                             return Err(assembly.spans[*span].error(message));
                         }
                     };
@@ -242,32 +251,23 @@ impl Vm {
                         dprintln!("{stack:?}");
                     }
                     // Call
-                    match arg_count.cmp(&(function.params as usize)) {
-                        Ordering::Less => {
-                            let partial = Partial {
-                                function,
-                                args: stack.drain(stack.len() - arg_count..).collect(),
-                            };
-                            stack.push(partial.into());
-                        }
-                        Ordering::Equal => {
-                            call_stack.push(StackFrame {
-                                stack_size: stack.len() - arg_count,
-                                function,
-                                ret: *pc + 1,
-                                call_span: *span,
-                            });
-                            *pc = function.start as usize;
-                            continue;
-                        }
-                        Ordering::Greater => {
-                            let id = assembly.function_id(function);
-                            let message = format!(
-                                "Too many arguments to {}: expected {}, got {}",
-                                id, function.params, arg_count
-                            );
-                            return Err(assembly.spans[*span].clone().sp(message));
-                        }
+                    if arg_count < function.params as usize {
+                        let partial = Partial {
+                            function,
+                            args: stack.drain(stack.len() - arg_count..).collect(),
+                        };
+                        stack.push(partial.into());
+                        just_called = None;
+                    } else {
+                        call_stack.push(StackFrame {
+                            stack_size: stack.len() - arg_count,
+                            function,
+                            ret: *pc + 1,
+                            call_span: *span,
+                        });
+                        *pc = function.start as usize;
+                        just_called = Some(function);
+                        continue;
                     }
                 }
                 Instr::Return => {

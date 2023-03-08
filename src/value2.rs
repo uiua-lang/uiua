@@ -1,13 +1,26 @@
-use std::{cmp::Ordering, fmt, sync::Arc};
+use std::{cmp::Ordering, fmt};
 
-use nanbox::{NanBox, NanBoxable};
+use nanbox::NanBox;
 
-use crate::array2::Array;
+use crate::{
+    array2::Array,
+    function::{Function, Partial},
+    ops::{self, Env},
+    RuntimeResult,
+};
 
 pub struct Value(NanBox);
 
 fn _value_is_small() {
     let _: u64 = unsafe { std::mem::transmute(Value::from(0.0)) };
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Type {
+    Num,
+    Char,
+    Function,
+    Array,
 }
 
 type PartialRef = *mut Partial;
@@ -20,7 +33,7 @@ const ARRAY_TAG: u8 = 4;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum RawType {
-    Number,
+    Num,
     Char,
     Function,
     Partial,
@@ -28,8 +41,8 @@ pub enum RawType {
 }
 
 static RAW_TYPES: [RawType; 5] = {
-    let mut types = [RawType::Number; 5];
-    types[NUM_TAG as usize] = RawType::Number;
+    let mut types = [RawType::Num; 5];
+    types[NUM_TAG as usize] = RawType::Num;
     types[CHAR_TAG as usize] = RawType::Char;
     types[FUNCTION_TAG as usize] = RawType::Function;
     types[PARTIAL_TAG as usize] = RawType::Partial;
@@ -37,7 +50,28 @@ static RAW_TYPES: [RawType; 5] = {
     types
 };
 
+impl RawType {
+    pub fn ty(&self) -> Type {
+        match self {
+            RawType::Num => Type::Num,
+            RawType::Char => Type::Char,
+            RawType::Function => Type::Function,
+            RawType::Partial => Type::Function,
+            RawType::Array => Type::Array,
+        }
+    }
+}
+
+impl Default for Value {
+    fn default() -> Self {
+        Self::nil()
+    }
+}
+
 impl Value {
+    pub fn nil() -> Self {
+        Self::from(Function::nil())
+    }
     pub fn raw_ty(&self) -> RawType {
         RAW_TYPES[self.0.tag() as usize]
     }
@@ -86,87 +120,6 @@ impl Value {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Function {
-    pub(crate) start: u32,
-    pub(crate) params: u16,
-}
-
-impl Default for Function {
-    fn default() -> Self {
-        Self::nil()
-    }
-}
-
-impl fmt::Debug for Function {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{self}")
-    }
-}
-
-impl fmt::Display for Function {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.is_nil() {
-            write!(f, "nil")
-        } else {
-            write!(f, "fn({} {})", self.start, self.params)
-        }
-    }
-}
-
-impl Function {
-    #[inline]
-    pub const fn nil() -> Self {
-        Self {
-            start: 0,
-            params: 1,
-        }
-    }
-    #[inline]
-    pub const fn is_nil(&self) -> bool {
-        self.start == 0
-    }
-}
-
-impl NanBoxable for Function {
-    unsafe fn from_nan_box(n: NanBox) -> Self {
-        let [a, b, c, d, e, f]: [u8; 6] = NanBoxable::from_nan_box(n);
-        Self {
-            start: u32::from_le_bytes([a, b, c, d]),
-            params: u16::from_le_bytes([e, f]),
-        }
-    }
-    fn into_nan_box(self) -> NanBox {
-        let [a, b, c, d] = self.start.to_le_bytes();
-        let [e, f] = self.params.to_le_bytes();
-        NanBoxable::into_nan_box([a, b, c, d, e, f])
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Partial {
-    pub(crate) function: Function,
-    pub(crate) args: Arc<[Value]>,
-}
-
-impl fmt::Debug for Partial {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{self}")
-    }
-}
-
-impl fmt::Display for Partial {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "fn({} {}/{})",
-            self.function.start,
-            self.args.len(),
-            self.function.params
-        )
-    }
-}
-
 impl Drop for Value {
     fn drop(&mut self) {
         match self.raw_ty() {
@@ -201,7 +154,7 @@ impl Clone for Value {
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         match (self.raw_ty(), other.raw_ty()) {
-            (RawType::Number, RawType::Number) => {
+            (RawType::Num, RawType::Num) => {
                 let a = self.number();
                 let b = other.number();
                 a == b || a.is_nan() && b.is_nan()
@@ -226,7 +179,7 @@ impl PartialOrd for Value {
 impl Ord for Value {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self.raw_ty(), other.raw_ty()) {
-            (RawType::Number, RawType::Number) => {
+            (RawType::Num, RawType::Num) => {
                 let a = self.number();
                 let b = other.number();
                 a.partial_cmp(&b)
@@ -244,7 +197,7 @@ impl Ord for Value {
 impl fmt::Debug for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.raw_ty() {
-            RawType::Number => write!(f, "{:?}", self.number()),
+            RawType::Num => write!(f, "{:?}", self.number()),
             RawType::Char => write!(f, "{:?}", self.char()),
             RawType::Function => write!(f, "{:?}", self.function()),
             RawType::Partial => write!(f, "{:?}", self.partial()),
@@ -282,3 +235,64 @@ impl From<Array> for Value {
         Self(unsafe { NanBox::new::<ArrayRef>(ARRAY_TAG, Box::into_raw(Box::new(a))) })
     }
 }
+
+macro_rules! value_impl {
+    ($name:ident
+        $(,($a_ty:ident, $af:ident, $b_ty:ident, $bf:ident, $ab:ident))*
+        $(,|$a_fb:ident, $b_fb:ident| $fallback:expr)?
+    $(,)?) => {
+        impl Value {
+            #[allow(unreachable_patterns)]
+            pub fn $name(&self, other: &Self, env: &Env) -> RuntimeResult<Self> {
+                Ok(match (self.raw_ty(), other.raw_ty()) {
+                    $((RawType::$a_ty, RawType::$b_ty) => {
+                        Value::from(ops::$name::$ab(&self.$af(), &other.$bf()))
+                    })*
+                    (RawType::Array, RawType::Array) => {
+                        Value::from(self.array().$name(other.array(), env)?)
+                    }
+                    $((RawType::Array, RawType::$b_ty) => {
+                        Value::from(self.array().$name(&Array::from(other.$bf().clone()), env)?)
+                    }),*
+                    $((RawType::$a_ty, RawType::Array) => {
+                        Value::from(Array::from(self.$af().clone()).$name(other.array(), env)?)
+                    }),*
+                    $(($a_fb, $b_fb) => $fallback,)?
+                    (a, b) => return Err(ops::$name::error(a.ty(), b.ty(), env))
+                })
+            }
+        }
+    };
+}
+
+value_impl!(
+    add,
+    (Num, number, Num, number, num_num),
+    (Num, number, Char, char, num_char),
+    (Char, char, Num, number, char_num),
+);
+
+value_impl!(
+    sub,
+    (Num, number, Num, number, num_num),
+    (Char, char, Num, number, char_num),
+);
+
+value_impl!(mul, (Num, number, Num, number, num_num));
+value_impl!(div, (Num, number, Num, number, num_num));
+
+macro_rules! cmp_impls {
+    ($($name:ident),*) => {
+        $(
+            value_impl!(
+                $name,
+                (Num, number, Num, number, num_num),
+                (Char, char, Char, char, generic),
+                (Function, function, Function, function, generic),
+                (Partial, partial, Partial, partial, generic),
+            );
+        )*
+    };
+}
+
+cmp_impls!(is_eq, is_ne, is_lt, is_le, is_gt, is_ge);

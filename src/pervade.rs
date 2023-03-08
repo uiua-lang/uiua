@@ -65,10 +65,10 @@ pub mod add {
         a + b
     }
     pub fn num_char(a: &f64, b: &char) -> char {
-        char::from_u32(*a as u32 + *b as u32).unwrap_or('\0')
+        char::from_u32((*a as i64 + *b as i64) as u32).unwrap_or('\0')
     }
     pub fn char_num(a: &char, b: &f64) -> char {
-        char::from_u32(*a as u32 + *b as u32).unwrap_or('\0')
+        char::from_u32((*a as i64 + *b as i64) as u32).unwrap_or('\0')
     }
     pub fn error<T: Debug>(a: T, b: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot add {a:?} and {b:?}"))
@@ -81,7 +81,10 @@ pub mod sub {
         a - b
     }
     pub fn char_num(a: &char, b: &f64) -> char {
-        char::from_u32((*a as u32).saturating_sub(*b as u32)).unwrap_or('\0')
+        char::from_u32(((*a as i64) - (*b as i64)) as u32).unwrap_or('\0')
+    }
+    pub fn char_char(a: &char, b: &char) -> f64 {
+        ((*a as i64) - (*b as i64)) as f64
     }
     pub fn error<T: Debug>(a: T, b: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot subtract {b:?} from {a:?}"))

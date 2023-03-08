@@ -155,7 +155,7 @@ impl Vm {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("array");
                     let array: Array = stack.drain(stack.len() - *n..).collect();
-                    stack.push(array.normalized(usize::MAX).into());
+                    stack.push(array.normalized(1).into());
                 }
                 Instr::CopyRel(n) => {
                     #[cfg(feature = "profile")]

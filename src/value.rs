@@ -207,6 +207,7 @@ value_bin_impl!(
     sub,
     (Num, number, Num, number, num_num),
     (Char, char, Num, number, char_num),
+    (Char, char, Char, char, char_char),
 );
 
 value_bin_impl!(mul, (Num, number, Num, number, num_num));

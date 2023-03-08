@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, ptr};
+use std::{cmp::Ordering, mem::take, ptr};
 
 use crate::{
     array::Array,
@@ -73,6 +73,24 @@ impl Value {
     pub fn reverse(&mut self) {
         if self.is_array() {
             self.array_mut().reverse();
+        }
+    }
+    pub fn join(&mut self, other: Value, env: &Env) -> RuntimeResult {
+        match (self.is_array(), other.is_array()) {
+            (true, true) => self.array_mut().join(other.into_array(), env),
+            (true, false) => self.array_mut().join(Array::from(other), env),
+            (false, true) => {
+                let mut arr = Array::from(take(self));
+                arr.join(other.into_array(), env)?;
+                *self = arr.into();
+                Ok(())
+            }
+            (false, false) => {
+                let mut arr = Array::from(take(self));
+                arr.join(Array::from(other), env)?;
+                *self = arr.into();
+                Ok(())
+            }
         }
     }
 }

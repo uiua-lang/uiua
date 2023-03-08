@@ -1,7 +1,7 @@
 use std::{
     cmp::Ordering,
     fmt,
-    mem::{take, ManuallyDrop},
+    mem::{swap, take, ManuallyDrop},
 };
 
 use crate::{
@@ -186,6 +186,84 @@ impl Array {
             ArrayType::Value => reverse(&shape, self.values_mut()),
         }
     }
+    pub fn join(&mut self, mut other: Self, env: &Env) -> RuntimeResult {
+        if self.shape.is_empty() && other.shape.is_empty() {
+            // Atom case
+            self.take_values_from(other);
+            self.shape = vec![2];
+        } else {
+            let rank_diff = self.rank() as isize - other.rank() as isize;
+            if rank_diff.abs() > 1 {
+                return Err(env.error(format!(
+                    "Joined values cannot have a rank difference greater than 1, \
+                    but ranks are {} and {}",
+                    self.rank(),
+                    other.rank()
+                )));
+            }
+            match self.rank().cmp(&other.rank()) {
+                Ordering::Equal => {
+                    if self.shape[1..] != other.shape[1..] {
+                        return Err(env.error(format!(
+                            "Joined arrays of the same rank must have the same \
+                            non-leading shape, but the shapes are {:?} and {:?}",
+                            self.shape, other.shape
+                        )));
+                    }
+                    self.shape[0] += other.shape[0];
+                    self.take_values_from(other);
+                }
+                Ordering::Greater => {
+                    if self.shape[1..] != other.shape {
+                        return Err(env.error(format!(
+                            "Appended arrays must have the same non-leading shape, \
+                            but the shapes are {:?} and {:?}",
+                            self.shape, other.shape
+                        )));
+                    }
+                    self.shape[0] += 1;
+                    self.take_values_from(other);
+                }
+                Ordering::Less => {
+                    if self.shape != other.shape[1..] {
+                        return Err(env.error(format!(
+                            "Prepended arrays must have the same non-leading shape, \
+                            but the shapes are {:?} and {:?}",
+                            self.shape, other.shape
+                        )));
+                    }
+                    self.reverse();
+                    other.reverse();
+                    swap(self, &mut other);
+                    self.take_values_from(other);
+                    self.shape[0] += 1;
+                    self.reverse();
+                }
+            }
+        }
+        Ok(())
+    }
+    /// Simply take the values from the other array and append them to this one.
+    /// Does not update the shape.
+    fn take_values_from(&mut self, other: Self) {
+        match (self.ty, other.ty) {
+            (ArrayType::Num, ArrayType::Num) => {
+                self.numbers_mut().extend(other.into_numbers());
+            }
+            (ArrayType::Char, ArrayType::Char) => {
+                self.chars_mut().extend(other.into_chars());
+            }
+            (ArrayType::Value, ArrayType::Value) => {
+                self.values_mut().extend(other.into_values());
+            }
+            _ => {
+                let shape = take(&mut self.shape);
+                let mut values = self.take_values();
+                values.append(&mut other.into_values());
+                *self = Array::from((shape, values));
+            }
+        }
+    }
     pub(crate) fn pop(&mut self) -> Option<Value> {
         if self.shape.len() == 1 {
             if self.shape[0] == 0 {
@@ -215,17 +293,7 @@ impl Array {
         }
         assert_eq!(self.shape[1..], array.shape);
         self.shape[0] += 1;
-        match (self.ty, array.ty) {
-            (ArrayType::Num, ArrayType::Num) => self.numbers_mut().extend(array.into_numbers()),
-            (ArrayType::Char, ArrayType::Char) => self.chars_mut().extend(array.into_chars()),
-            (ArrayType::Value, ArrayType::Value) => self.values_mut().extend(array.into_values()),
-            _ => {
-                let shape = take(&mut self.shape);
-                let mut values = self.take_values();
-                values.append(&mut array.into_values());
-                *self = Array::from((shape, values));
-            }
-        }
+        self.take_values_from(array);
     }
 }
 

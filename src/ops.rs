@@ -132,7 +132,7 @@ pub enum Op2 {
     Min,
     Max,
     Atan2,
-    Concat,
+    Join,
 }
 
 impl fmt::Display for Op2 {
@@ -155,7 +155,7 @@ impl fmt::Display for Op2 {
             Op2::Min => write!(f, "min"),
             Op2::Max => write!(f, "max"),
             Op2::Atan2 => write!(f, "atan2"),
-            Op2::Concat => write!(f, "concat"),
+            Op2::Join => write!(f, "join"),
         }
     }
 }
@@ -180,7 +180,7 @@ impl Value {
             Op2::Min => *self = Self::min(self, other, env)?,
             Op2::Max => *self = Self::max(self, other, env)?,
             Op2::Atan2 => *self = self.atan2(other, env)?,
-            Op2::Concat => todo!("concat"),
+            Op2::Join => self.join(other.clone(), env)?,
         }
         Ok(())
     }

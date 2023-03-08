@@ -715,9 +715,9 @@ impl Compiler {
             this.push_instr(Instr::Push(parts.next().unwrap().into()));
             for (i, part) in parts.enumerate() {
                 this.push_instr(Instr::CopyRel(i + 2));
-                this.push_instr(Instr::Op2(Op2::Concat, 0));
+                this.push_instr(Instr::Op2(Op2::Join, 0));
                 this.push_instr(Instr::Push(part.into()));
-                this.push_instr(Instr::Op2(Op2::Concat, 0));
+                this.push_instr(Instr::Op2(Op2::Join, 0));
             }
             Ok(params)
         })

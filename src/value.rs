@@ -166,6 +166,13 @@ macro_rules! value_un_impl {
 }
 
 value_un_impl!(neg, (Num, number, num));
+value_un_impl!(abs, (Num, number, num));
+value_un_impl!(sqrt, (Num, number, num));
+value_un_impl!(sin, (Num, number, num));
+value_un_impl!(cos, (Num, number, num));
+value_un_impl!(floor, (Num, number, num));
+value_un_impl!(ceil, (Num, number, num));
+value_un_impl!(round, (Num, number, num));
 
 macro_rules! value_bin_impl {
     ($name:ident

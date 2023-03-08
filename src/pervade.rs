@@ -11,6 +11,69 @@ pub mod neg {
         env.error(format!("Cannot negate {a:?}"))
     }
 }
+pub mod abs {
+    use super::*;
+    pub fn num(a: &f64) -> f64 {
+        a.abs()
+    }
+    pub fn error<T: Debug>(a: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot take the absolute value of {a:?}"))
+    }
+}
+pub mod sqrt {
+    use super::*;
+    pub fn num(a: &f64) -> f64 {
+        a.sqrt()
+    }
+    pub fn error<T: Debug>(a: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot take the square root of {a:?}"))
+    }
+}
+pub mod sin {
+    use super::*;
+    pub fn num(a: &f64) -> f64 {
+        a.sin()
+    }
+    pub fn error<T: Debug>(a: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot get the sine of {a:?}"))
+    }
+}
+pub mod cos {
+    use super::*;
+    pub fn num(a: &f64) -> f64 {
+        a.cos()
+    }
+    pub fn error<T: Debug>(a: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot get the cosine of {a:?}"))
+    }
+}
+pub mod floor {
+    use super::*;
+    pub fn num(a: &f64) -> f64 {
+        a.floor()
+    }
+    pub fn error<T: Debug>(a: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot get the floor of {a:?}"))
+    }
+}
+pub mod ceil {
+    use super::*;
+    pub fn num(a: &f64) -> f64 {
+        a.ceil()
+    }
+    pub fn error<T: Debug>(a: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot get the ceiling of {a:?}"))
+    }
+}
+pub mod round {
+    use super::*;
+    pub fn num(a: &f64) -> f64 {
+        a.round()
+    }
+    pub fn error<T: Debug>(a: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot get the rounded value of {a:?}"))
+    }
+}
 
 pub fn un_pervade<A, B>(a: &[A], f: fn(&A) -> B) -> Vec<B> {
     a.iter().map(f).collect()

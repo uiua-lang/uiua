@@ -1,16 +1,14 @@
 pub mod algorithm;
 pub mod array;
-pub mod array2;
 pub mod ast;
-pub mod builtin;
 pub mod compile;
 mod error;
 pub mod function;
 pub mod lex;
 pub mod ops;
 pub mod parse;
+pub mod pervade;
 pub mod value;
-pub mod value2;
 mod vm;
 
 use std::fmt;

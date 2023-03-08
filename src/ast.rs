@@ -3,8 +3,8 @@ use std::fmt;
 use enum_iterator::Sequence;
 
 use crate::{
-    builtin::{Algorithm, Op1, Op2},
     lex::{Sp, Span},
+    ops::{Algorithm, Op1, Op2},
     Ident,
 };
 
@@ -127,7 +127,6 @@ pub enum Expr {
     Call(Box<CallExpr>),
     Bin(Box<BinExpr>),
     Pipe(Box<PipeExpr>),
-    Int(String),
     Real(String),
     Char(char),
     String(String),

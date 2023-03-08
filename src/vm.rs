@@ -3,14 +3,17 @@ use std::{cmp::Ordering, fmt, mem::swap};
 use crate::{
     array::Array,
     ast::FunctionId,
-    builtin::{Env, Op1, Op2},
     compile::Assembly,
+    function::{Function, Partial},
     lex::Span,
-    value::{Function, Partial, Value},
+    ops::{Op1, Op2},
+    pervade::Env,
+    value::{RawType, Value},
     RuntimeResult, TraceFrame, UiuaError, UiuaResult,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(unused)]
 pub(crate) enum Instr {
     Comment(String),
     Push(Value),
@@ -171,18 +174,15 @@ impl Vm {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("call");
                     let value = stack.pop().unwrap();
-                    let (function, partial_count) = match value {
-                        Value::Function(f) => (f, 0),
-                        Value::Partial(p) => {
-                            let arg_count = p.args.len();
-                            for arg in p.args.iter() {
+                    let (function, partial_count) = match value.raw_ty() {
+                        RawType::Function => (value.function(), 0),
+                        RawType::Partial => {
+                            let partial = value.partial();
+                            let arg_count = partial.args.len();
+                            for arg in partial.args.iter() {
                                 stack.push(arg.clone());
                             }
-                            (p.function, arg_count)
-                        }
-                        Value::Int(_) | Value::Array(_) => {
-                            stack.push(value);
-                            (assembly.cached_functions.get, 1)
+                            (partial.function, arg_count)
                         }
                         _ => {
                             let message = format!("Cannot call {}", value.ty());
@@ -286,7 +286,7 @@ impl Vm {
                         assembly,
                         span: *span,
                     };
-                    left.op2(right, *op, env)?;
+                    left.op2(right, *op, &env)?;
                     stack.pop();
                 }
                 Instr::DestructureList(_n, _span) => {

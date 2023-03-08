@@ -475,9 +475,7 @@ impl Parser {
             ident.map(Expr::Ident)
         } else if let Some(span) = self.try_exact(Underscore) {
             span.sp(Expr::Placeholder)
-        } else if let Some(i) = self.next_token_map(Token::as_int) {
-            i.map(Into::into).map(Expr::Int)
-        } else if let Some(r) = self.next_token_map(Token::as_real) {
+        } else if let Some(r) = self.next_token_map(Token::as_number) {
             r.map(Into::into).map(Expr::Real)
         } else if let Some(c) = self.next_token_map(Token::as_char) {
             c.map(Into::into).map(Expr::Char)

@@ -225,8 +225,7 @@ pub enum Token {
     Comment(String),
     DocComment(String),
     Ident(Ident),
-    Int(String),
-    Real(String),
+    Number(String),
     Char(char),
     Str(String),
     FormatString(Vec<String>),
@@ -241,15 +240,9 @@ impl Token {
             _ => None,
         }
     }
-    pub fn as_int(&self) -> Option<&str> {
+    pub fn as_number(&self) -> Option<&str> {
         match self {
-            Token::Int(int) => Some(int),
-            _ => None,
-        }
-    }
-    pub fn as_real(&self) -> Option<&str> {
-        match self {
-            Token::Real(real) => Some(real),
+            Token::Number(real) => Some(real),
             _ => None,
         }
     }
@@ -279,8 +272,7 @@ impl fmt::Display for Token {
             Token::Comment(comment) => write!(f, "// {comment}"),
             Token::DocComment(comment) => write!(f, "/// {comment}"),
             Token::Ident(ident) => write!(f, "{ident}"),
-            Token::Int(int) => write!(f, "{int}"),
-            Token::Real(real) => write!(f, "{real}"),
+            Token::Number(real) => write!(f, "{real}"),
             Token::Char(char) => write!(f, "{char:?}"),
             Token::Str(s) => write!(f, "{s:?}"),
             Token::FormatString(parts) => write!(f, "{parts:?}"),
@@ -685,12 +677,7 @@ impl Lexer {
                 number.push(c);
             }
         }
-        let token = if number.contains(['.', 'e', 'E']) {
-            Token::Real
-        } else {
-            Token::Int
-        }(number);
-        self.end(token, start)
+        self.end(Token::Number(number), start)
     }
     fn character(&mut self, escaped: &mut bool, escape_char: char) -> Result<Option<char>, char> {
         let Some(c) = self.next_char_if(|c| c != escape_char || *escaped) else {

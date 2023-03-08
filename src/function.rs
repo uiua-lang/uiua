@@ -2,7 +2,7 @@ use std::{fmt, sync::Arc};
 
 use nanbox::{NanBox, NanBoxable};
 
-use crate::value2::Value;
+use crate::value::Value;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Function {

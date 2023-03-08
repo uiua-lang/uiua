@@ -4,10 +4,11 @@ use enum_iterator::all;
 
 use crate::{
     ast::*,
-    builtin::{constants, Algorithm, Op1, Op2},
+    function::Function,
     lex::{Sp, Span},
+    ops::{constants, Algorithm, Op1, Op2},
     parse::{parse, ParseError},
-    value::{Function, Value},
+    value::Value,
     vm::{dprintln, Instr, Vm},
     Ident, UiuaError, UiuaResult,
 };
@@ -18,11 +19,6 @@ pub struct Assembly {
     pub(crate) constants: Vec<Value>,
     pub(crate) function_ids: HashMap<Function, FunctionId>,
     pub(crate) spans: Vec<Span>,
-    pub(crate) cached_functions: CachedFunctions,
-}
-
-pub(crate) struct CachedFunctions {
-    pub get: Function,
 }
 
 impl Assembly {
@@ -162,9 +158,6 @@ impl Default for Compiler {
             constants: Vec::new(),
             function_ids: HashMap::default(),
             spans: vec![Span::Builtin],
-            cached_functions: CachedFunctions {
-                get: Function::default(),
-            },
         };
         let mut scope = Scope::new(0);
         // Initialize builtins
@@ -180,7 +173,7 @@ impl Default for Compiler {
         let mut init = |assembly: &mut Assembly,
                         name: &str,
                         id: FunctionId,
-                        params: u8,
+                        params: u16,
                         mut instrs: Vec<Instr>|
          -> Function {
             let function = Function {
@@ -212,16 +205,13 @@ impl Default for Compiler {
         }
         // 2-parameter builtins
         for op2 in all::<Op2>() {
-            let function = init(
+            init(
                 &mut assembly,
                 &op2.to_string(),
                 FunctionId::Op2(op2),
                 2,
                 vec![Instr::Op2(op2, 0)],
             );
-            if let Op2::Get = op2 {
-                assembly.cached_functions.get = function;
-            }
         }
         // Algorithms
         for algo in all::<Algorithm>() {
@@ -425,7 +415,7 @@ impl Compiler {
         let params_count = params + ipf.captures.len();
         let function = Function {
             start: self.assembly.instrs.len() as u32,
-            params: params_count as u8,
+            params: params_count as u16,
         };
         // Resolve function references
         for ipf in &mut self.in_progress_functions {
@@ -516,17 +506,6 @@ impl Compiler {
     fn expr(&mut self, expr: Sp<Expr>) -> CompileResult {
         match expr.value {
             Expr::Unit => self.push_instr(Instr::Push(Value::nil())),
-            Expr::Int(s) => {
-                let i: i64 = match s.parse() {
-                    Ok(i) => i,
-                    Err(_) => {
-                        self.errors
-                            .push(expr.span.sp(CompileError::InvalidInteger(s)));
-                        0
-                    }
-                };
-                self.push_instr(Instr::Push(i.into()));
-            }
             Expr::Real(s) => {
                 let f: f64 = match s.parse() {
                     Ok(f) => f,
@@ -831,7 +810,6 @@ fn resolve_placeholders_rec(expr: &mut Sp<Expr>, params: &mut Vec<Sp<Ident>>) {
         Expr::Parened(_) => {}
         Expr::Unit
         | Expr::Func(_)
-        | Expr::Int(_)
         | Expr::Real(_)
         | Expr::Char(_)
         | Expr::String(_)

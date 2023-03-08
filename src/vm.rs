@@ -195,8 +195,8 @@ impl Vm {
                     puffin::profile_scope!("array pop");
                     let value = stack.last_mut().unwrap();
                     if value.is_array() {
-                        let array = value.array_mut().pop_array().unwrap();
-                        stack.push(array.into());
+                        let array = value.array_mut().pop().unwrap();
+                        stack.push(array);
                     } else {
                         let message = format!("Cannot pop from {}", value.ty());
                         return Err(assembly.spans[0].error(message));

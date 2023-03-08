@@ -186,19 +186,28 @@ impl Array {
             ArrayType::Value => reverse(&shape, self.values_mut()),
         }
     }
-    pub(crate) fn pop_array(&mut self) -> Option<Array> {
-        if self.shape.is_empty() {
-            return None;
+    pub(crate) fn pop(&mut self) -> Option<Value> {
+        if self.shape.len() == 1 {
+            if self.shape[0] == 0 {
+                return None;
+            }
+            self.shape[0] -= 1;
+            return match self.ty {
+                ArrayType::Num => self.numbers_mut().pop().map(Into::into),
+                ArrayType::Char => self.chars_mut().pop().map(Into::into),
+                ArrayType::Value => self.values_mut().pop(),
+            };
         }
         let shape = self.shape[1..].to_vec();
         self.shape[0] -= 1;
         let cell_size: usize = shape.iter().product();
         let len: usize = self.shape[0] * cell_size;
-        Some(match self.ty() {
+        let arr: Array = match self.ty() {
             ArrayType::Num => (shape, self.numbers_mut().drain(len..).collect::<Vec<_>>()).into(),
             ArrayType::Char => (shape, self.chars_mut().drain(len..).collect::<Vec<_>>()).into(),
             ArrayType::Value => (shape, self.values_mut().drain(len..).collect::<Vec<_>>()).into(),
-        })
+        };
+        Some(arr.into())
     }
     pub(crate) fn push_array(&mut self, array: Array) {
         if self.shape == [0] {

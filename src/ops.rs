@@ -177,8 +177,6 @@ pub enum Algorithm {
     Flip,
     Fold,
     Each,
-    Sum,
-    Product,
     While,
     LeftThen,
     RightThen,
@@ -192,8 +190,6 @@ impl fmt::Display for Algorithm {
             Algorithm::Flip => write!(f, "flip"),
             Algorithm::Fold => write!(f, "fold"),
             Algorithm::Each => write!(f, "each"),
-            Algorithm::Sum => write!(f, "sum"),
-            Algorithm::Product => write!(f, "product"),
             Algorithm::While => write!(f, "while"),
             Algorithm::LeftThen => write!(f, "left_then"),
             Algorithm::RightThen => write!(f, "right_then"),
@@ -209,8 +205,6 @@ impl Algorithm {
             Algorithm::Flip => 3,
             Algorithm::Each => 2,
             Algorithm::Fold => 3,
-            Algorithm::Sum => 1,
-            Algorithm::Product => 1,
             Algorithm::While => 3,
             Algorithm::LeftThen => 3,
             Algorithm::RightThen => 3,
@@ -299,7 +293,26 @@ impl Algorithm {
                 // Loop end
                 Swap,
             ],
-            _ => vec![],
+            Algorithm::Fold => vec![
+                // [1, 2, 3], 0, f = (+)
+                Move(3),           // 0, f, [1, 2, 3]
+                Op1(Op1::Reverse), // 0, f, [3, 2, 1]
+                Move(3),           // f, [3, 2, 1], 0
+                // Loop start
+                CopyRel(2),         // f, [3, 2, 1], 0, [3, 2, 1]
+                Op1(Op1::Len),      // f, [3, 2, 1], 0, 3
+                Push(0.0.into()),   // f, [3, 2, 1], 0, 3, 0
+                Op2(Op2::Eq, 0),    // f, [3, 2, 1], 0, false
+                PopJumpIf(8, true), // f, [3, 2, 1], 0
+                Rotate(3),          // 0, f, [3, 2, 1]
+                ArrayPop,           // 0, f, [3, 2], 1
+                Move(4),            // f, [3, 2], 1, 0
+                CopyRel(4),         // f, [3, 2], 1, 0, f
+                Call(0),            // f, [3, 2], 1, f(0)
+                Call(0),            // f, [3, 2], 1
+                Jump(-11),
+                // Loop end
+            ],
         };
         instrs.insert(0, Comment(self.to_string()));
         instrs

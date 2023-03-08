@@ -1,5 +1,6 @@
 mod algorithm;
 pub mod array;
+mod array_fmt;
 pub mod ast;
 pub mod compile;
 mod error;

@@ -3,6 +3,7 @@ use std::{f64::consts::*, fmt};
 use enum_iterator::Sequence;
 
 use crate::{
+    array_fmt::GridFmt,
     compile::Assembly,
     value::*,
     vm::{Env, Instr},
@@ -80,7 +81,7 @@ impl Value {
         match op {
             Op1::Nil => *self = Value::nil(),
             Op1::Id => {}
-            Op1::Show => println!("{self:?}"),
+            Op1::Show => println!("{}", self.grid_string()),
             Op1::Print => print!("{self}"),
             Op1::Println => println!("{self}"),
             Op1::Len => *self = (self.len() as f64).into(),

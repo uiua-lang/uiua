@@ -1,6 +1,6 @@
 use std::{
     cmp::Ordering,
-    fmt::{self, Write},
+    fmt,
     mem::{take, ManuallyDrop},
 };
 
@@ -347,63 +347,12 @@ impl Ord for Array {
 impl fmt::Debug for Array {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.ty {
-            ArrayType::Num => {
-                let mut strings: Vec<String> = Vec::with_capacity(self.data_len());
-                let mut max_len = 0;
-                for n in self.numbers() {
-                    let mut s = String::new();
-                    write!(s, "{n}")?;
-                    max_len = max_len.max(s.len());
-                    strings.push(s);
-                }
-                for s in &mut strings {
-                    s.insert_str(0, &" ".repeat(max_len - s.len()));
-                }
-                let da = ShowArray {
-                    shape: &self.shape,
-                    data: &strings,
-                    top: true,
-                    indent: 0,
-                };
-                write!(f, "{da}",)
-            }
+            ArrayType::Num => write!(f, "{:?}", self.numbers()),
             ArrayType::Char if self.rank() == 1 => {
-                let s: String = self.chars().iter().collect();
-                write!(f, "{s:?}")
+                write!(f, "{:?}", self.chars().iter().collect::<String>())
             }
-            ArrayType::Char => {
-                let da = ShowArray {
-                    shape: &self.shape,
-                    data: self.chars(),
-                    top: true,
-                    indent: 0,
-                };
-                write!(f, "{da}",)
-            }
-            ArrayType::Value => {
-                let mut strings: Vec<String> = Vec::with_capacity(self.data_len());
-                let mut max_len = 0;
-                for n in self.values() {
-                    let mut s = String::new();
-                    if n.is_char() {
-                        write!(s, "{n:?}")?;
-                    } else {
-                        write!(s, "{n}")?;
-                    };
-                    max_len = max_len.max(s.len());
-                    strings.push(s);
-                }
-                for s in &mut strings {
-                    s.insert_str(0, &" ".repeat(max_len - s.len()));
-                }
-                let da = ShowArray {
-                    shape: &self.shape,
-                    data: &strings,
-                    top: true,
-                    indent: 0,
-                };
-                write!(f, "{da}",)
-            }
+            ArrayType::Char => write!(f, "{:?}", self.chars()),
+            ArrayType::Value => write!(f, "{:?}", self.values()),
         }
     }
 }
@@ -411,78 +360,13 @@ impl fmt::Debug for Array {
 impl fmt::Display for Array {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.ty {
-            ArrayType::Num => {
-                let da = ShowArray {
-                    shape: &self.shape,
-                    data: self.numbers(),
-                    top: true,
-                    indent: 0,
-                };
-                write!(f, "{da}",)
+            ArrayType::Num => write!(f, "{:?}", self.numbers()),
+            ArrayType::Char if self.rank() == 1 => {
+                write!(f, "{}", self.chars().iter().collect::<String>())
             }
-            ArrayType::Char => {
-                let s: String = self.chars().iter().collect();
-                write!(f, "{s}")
-            }
-            ArrayType::Value => {
-                let da = ShowArray {
-                    shape: &self.shape,
-                    data: self.values(),
-                    top: true,
-                    indent: 0,
-                };
-                write!(f, "{da}",)
-            }
+            ArrayType::Char => write!(f, "{:?}", self.chars()),
+            ArrayType::Value => write!(f, "{:?}", self.values()),
         }
-    }
-}
-
-struct ShowArray<'a, T> {
-    shape: &'a [usize],
-    data: &'a [T],
-    top: bool,
-    indent: usize,
-}
-
-impl<'a, T: fmt::Display> fmt::Display for ShowArray<'a, T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut indent = self.indent;
-        if self.top {
-            if self.shape.len() == 1 {
-                write!(f, "(")?;
-            } else {
-                writeln!(f, "┌─")?;
-                indent += 2;
-            }
-        }
-        if self.shape.is_empty() {
-            write!(f, "{}", self.data[0])?;
-        } else {
-            let cell_size = self.data.len() / self.shape[0];
-            let shape = &self.shape[1..];
-            if shape.is_empty() {
-                write!(f, "{:indent$}", "")?;
-            }
-            for (i, chunk) in self.data.chunks_exact(cell_size).enumerate() {
-                if i > 0 && self.shape.len() == 1 {
-                    write!(f, " ")?;
-                }
-                ShowArray {
-                    shape,
-                    data: chunk,
-                    top: false,
-                    indent,
-                }
-                .fmt(f)?;
-            }
-            if !self.top {
-                writeln!(f)?;
-            }
-        };
-        if self.top && self.shape.len() == 1 {
-            write!(f, ")")?
-        }
-        Ok(())
     }
 }
 

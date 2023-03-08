@@ -191,11 +191,12 @@ pub enum Algorithm {
     Compose,
     BlackBird,
     Flip,
-    Fold,
-    Each,
     While,
     LeftThen,
     RightThen,
+    Fold,
+    Each,
+    Table,
 }
 
 impl fmt::Display for Algorithm {
@@ -204,11 +205,12 @@ impl fmt::Display for Algorithm {
             Algorithm::Compose => write!(f, "compose"),
             Algorithm::BlackBird => write!(f, "blackbird"),
             Algorithm::Flip => write!(f, "flip"),
-            Algorithm::Fold => write!(f, "fold"),
-            Algorithm::Each => write!(f, "each"),
             Algorithm::While => write!(f, "while"),
             Algorithm::LeftThen => write!(f, "left_then"),
             Algorithm::RightThen => write!(f, "right_then"),
+            Algorithm::Fold => write!(f, "fold"),
+            Algorithm::Each => write!(f, "each"),
+            Algorithm::Table => write!(f, "table"),
         }
     }
 }
@@ -219,14 +221,15 @@ impl Algorithm {
             Algorithm::Compose => 3,
             Algorithm::BlackBird => 4,
             Algorithm::Flip => 3,
-            Algorithm::Each => 2,
-            Algorithm::Fold => 3,
             Algorithm::While => 3,
             Algorithm::LeftThen => 3,
             Algorithm::RightThen => 3,
+            Algorithm::Each => 2,
+            Algorithm::Fold => 3,
+            Algorithm::Table => 3,
         }
     }
-    pub(crate) fn instrs(&self, _assembly: &Assembly) -> Vec<Instr> {
+    pub(crate) fn instrs(&self, assembly: &Assembly) -> Vec<Instr> {
         #[allow(unused_imports)]
         use {
             crate::ast::BinOp::*,
@@ -329,6 +332,18 @@ impl Algorithm {
                 Jump(-11),
                 // Loop end
             ],
+            Algorithm::Table => {
+                let each = assembly.find_function(Algorithm::Each).unwrap();
+                vec![
+                    // b, a, f
+                    Move(3),           // a, f, b
+                    Swap,              // a, b, f
+                    Call(0),           // a, fb
+                    Push(each.into()), // a, fb, each
+                    Call(0),           // a, each(fb)
+                    Call(0),           // each(fb)a
+                ]
+            }
         };
         instrs.insert(0, Comment(self.to_string()));
         instrs

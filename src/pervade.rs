@@ -266,7 +266,7 @@ fn bin_pervade_recursive_fallible<A, B, C>(
             let a_cells = a_shape[0];
             let b_cells = b_shape[0];
             if a_cells != b_cells {
-                panic!("Shapes do not match");
+                return Err(env.error(format!("Shapes {a_shape:?} and {b_shape:?} do not match")));
             }
             let a_chunk_size = a.len() / a_cells;
             let b_chunk_size = b.len() / b_cells;

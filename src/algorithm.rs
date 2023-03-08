@@ -61,13 +61,19 @@ impl Value {
 pub fn range(shape: &[usize]) -> Vec<Value> {
     let len = shape.iter().product::<usize>();
     let mut data = Vec::with_capacity(len);
+    let products: Vec<usize> = (0..shape.len())
+        .map(|i| shape[i..].iter().product::<usize>())
+        .collect();
+    let moduli: Vec<usize> = (0..shape.len())
+        .map(|i| shape[i + 1..].iter().product::<usize>())
+        .collect();
     for i in 0..len {
         if shape.len() <= 1 {
             data.push((i as f64).into());
         } else {
             let mut cell: Vec<f64> = Vec::with_capacity(shape.len());
-            for &j in shape {
-                cell.push((i % j) as f64);
+            for j in 0..shape.len() {
+                cell.push((i % products[j] / moduli[j]) as f64);
             }
             data.push(Array::from(cell).into());
         }

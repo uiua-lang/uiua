@@ -536,7 +536,13 @@ impl From<Partial> for Array {
 
 impl From<Value> for Array {
     fn from(v: Value) -> Self {
-        Self::from(vec![v])
+        Self {
+            shape: vec![],
+            ty: ArrayType::Value,
+            data: Data {
+                values: ManuallyDrop::new(vec![v]),
+            },
+        }
     }
 }
 

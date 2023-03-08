@@ -163,7 +163,7 @@ macro_rules! value_impl {
                         Value::from(self.array().$name(&Array::from(other.$bf().clone()), env)?)
                     }),*
                     $((RawType::$a_ty, RawType::Array) => {
-                        Value::from(Array::min(&Array::from(self.$af().clone()), other.array(), env)?)
+                        Value::from(Array::$name(&Array::from(self.$af().clone()), other.array(), env)?)
                     }),*
                     $(($a_fb, $b_fb) => $fallback,)?
                     (a, b) => return Err(pervade::$name::error(a.ty(), b.ty(), env))

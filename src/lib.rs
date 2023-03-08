@@ -1,13 +1,13 @@
-pub mod algorithm;
+mod algorithm;
 pub mod array;
 pub mod ast;
 pub mod compile;
 mod error;
 pub mod function;
 pub mod lex;
-pub mod ops;
+mod ops;
 pub mod parse;
-pub mod pervade;
+mod pervade;
 pub mod value;
 mod vm;
 

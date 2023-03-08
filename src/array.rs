@@ -1,14 +1,15 @@
 use std::{
     cmp::Ordering,
-    fmt,
+    fmt::{self, Write},
     mem::{take, ManuallyDrop},
 };
 
 use crate::{
     algorithm::*,
     function::{Function, Partial},
-    pervade::{self, Env},
+    pervade::{self, *},
     value::Value,
+    vm::Env,
     RuntimeResult,
 };
 
@@ -42,11 +43,23 @@ impl Array {
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
+    pub fn data_len(&self) -> usize {
+        self.shape.iter().product()
+    }
     pub fn shape(&self) -> &[usize] {
         &self.shape
     }
     pub fn ty(&self) -> ArrayType {
         self.ty
+    }
+    pub fn is_numbers(&self) -> bool {
+        self.ty == ArrayType::Num
+    }
+    pub fn is_chars(&self) -> bool {
+        self.ty == ArrayType::Char
+    }
+    pub fn is_values(&self) -> bool {
+        self.ty == ArrayType::Value
     }
     pub fn numbers(&self) -> &[f64] {
         assert_eq!(self.ty, ArrayType::Num);
@@ -67,6 +80,13 @@ impl Array {
     pub fn values(&self) -> &[Value] {
         assert_eq!(self.ty, ArrayType::Value);
         unsafe { &self.data.values }
+    }
+    pub fn clone_values(&self) -> Vec<Value> {
+        match self.ty {
+            ArrayType::Num => self.numbers().iter().copied().map(Into::into).collect(),
+            ArrayType::Char => self.chars().iter().copied().map(Into::into).collect(),
+            ArrayType::Value => self.values().to_vec(),
+        }
     }
     pub fn values_mut(&mut self) -> &mut Vec<Value> {
         assert_eq!(self.ty, ArrayType::Value);
@@ -99,6 +119,30 @@ impl Array {
                 let shape = take(&mut self.shape);
                 *self = Self::from(self.values().iter().map(Value::number).collect::<Vec<_>>());
                 self.shape = shape;
+            } else if self.values().iter().all(Value::is_array) {
+                let mut shape = None;
+                for arr in self.values().iter().map(Value::array) {
+                    if arr.shape != *shape.get_or_insert_with(|| arr.shape()) {
+                        return;
+                    }
+                }
+                let mut shape = shape.unwrap_or(&[]).to_vec();
+                let values: Vec<Value> = self
+                    .values()
+                    .iter()
+                    .map(Value::array)
+                    .flat_map(Array::clone_values)
+                    .collect();
+                self.shape.append(&mut shape);
+                let shape = take(&mut self.shape);
+                *self = Self {
+                    ty: ArrayType::Value,
+                    shape,
+                    data: Data {
+                        values: ManuallyDrop::new(values),
+                    },
+                }
+                .normalized();
             }
         }
     }
@@ -124,7 +168,6 @@ impl Array {
 macro_rules! array_impl {
     ($name:ident,
         $(($a_ty:ident, $af:ident, $b_ty:ident, $bf:ident, $ab:ident)),*
-        $(,|$a_fb:ident, $b_fb:ident| $fallback:expr)?
     $(,)?) => {
         impl Array {
             #[allow(unreachable_patterns)]
@@ -132,16 +175,17 @@ macro_rules! array_impl {
                 let ash = self.shape();
                 let bsh = other.shape();
                 Ok(match (self.ty, other.ty) {
-                    $((ArrayType::$a_ty, ArrayType::$b_ty) => pervade(ash, self.$af(), bsh, other.$bf(), pervade::$name::$ab).into(),)*
+                    $((ArrayType::$a_ty, ArrayType::$b_ty) =>
+                        bin_pervade(ash, self.$af(), bsh, other.$bf(), pervade::$name::$ab)?.into(),)*
                     (ArrayType::Value, ArrayType::Value) => {
-                        pervade_fallible(ash, self.values(), bsh, other.values(), env, Value::$name)?.into()
+                        bin_pervade_fallible(ash, self.values(), bsh, other.values(), env, Value::$name)?.into()
                     }
                     $((ArrayType::Value, ArrayType::$b_ty) => {
-                        pervade_fallible(ash, self.values(), bsh, other.$bf(), env,
+                        bin_pervade_fallible(ash, self.values(), bsh, other.$bf(), env,
                             |a, b, env| Value::$name(a, &b.clone().into(), env))?.into()
                     },)*
                     $((ArrayType::$a_ty, ArrayType::Value) => {
-                        pervade_fallible(ash, self.$af(), bsh, other.values(), env,
+                        bin_pervade_fallible(ash, self.$af(), bsh, other.values(), env,
                             |a, b, env| Value::$name(&a.clone().into(), b, env))?.into()
                     },)*
                     (a, b) => return Err(pervade::$name::error(a, b, env)),
@@ -170,6 +214,22 @@ array_impl!(modulus, (Num, numbers, Num, numbers, num_num));
 array_impl!(pow, (Num, numbers, Num, numbers, num_num));
 array_impl!(atan2, (Num, numbers, Num, numbers, num_num));
 
+array_impl!(
+    min,
+    (Num, numbers, Num, numbers, num_num),
+    (Char, chars, Char, chars, char_char),
+    (Char, chars, Num, numbers, char_num),
+    (Num, numbers, Char, chars, num_char),
+);
+
+array_impl!(
+    max,
+    (Num, numbers, Num, numbers, num_num),
+    (Char, chars, Char, chars, char_char),
+    (Char, chars, Num, numbers, char_num),
+    (Num, numbers, Char, chars, num_char),
+);
+
 macro_rules! cmp_impls {
     ($($name:ident),*) => {
         $(
@@ -177,6 +237,8 @@ macro_rules! cmp_impls {
                 $name,
                 (Num, numbers, Num, numbers, num_num),
                 (Char, chars, Char, chars, generic),
+                (Num, numbers, Char, chars, always_less),
+                (Char, chars, Num, numbers, always_greater),
             );
         )*
     };
@@ -286,22 +348,61 @@ impl fmt::Debug for Array {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.ty {
             ArrayType::Num => {
-                let da = DebugArray {
+                let mut strings: Vec<String> = Vec::with_capacity(self.data_len());
+                let mut max_len = 0;
+                for n in self.numbers() {
+                    let mut s = String::new();
+                    write!(s, "{n}")?;
+                    max_len = max_len.max(s.len());
+                    strings.push(s);
+                }
+                for s in &mut strings {
+                    s.insert_str(0, &" ".repeat(max_len - s.len()));
+                }
+                let da = ShowArray {
                     shape: &self.shape,
-                    data: self.numbers(),
+                    data: &strings,
+                    top: true,
+                    indent: 0,
                 };
-                write!(f, "{da:?}",)
+                write!(f, "{da}",)
             }
-            ArrayType::Char => {
+            ArrayType::Char if self.rank() == 1 => {
                 let s: String = self.chars().iter().collect();
                 write!(f, "{s:?}")
             }
-            ArrayType::Value => {
-                let da = DebugArray {
+            ArrayType::Char => {
+                let da = ShowArray {
                     shape: &self.shape,
-                    data: self.values(),
+                    data: self.chars(),
+                    top: true,
+                    indent: 0,
                 };
-                write!(f, "{da:?}",)
+                write!(f, "{da}",)
+            }
+            ArrayType::Value => {
+                let mut strings: Vec<String> = Vec::with_capacity(self.data_len());
+                let mut max_len = 0;
+                for n in self.values() {
+                    let mut s = String::new();
+                    if n.is_char() {
+                        write!(s, "{n:?}")?;
+                    } else {
+                        write!(s, "{n}")?;
+                    };
+                    max_len = max_len.max(s.len());
+                    strings.push(s);
+                }
+                for s in &mut strings {
+                    s.insert_str(0, &" ".repeat(max_len - s.len()));
+                }
+                let da = ShowArray {
+                    shape: &self.shape,
+                    data: &strings,
+                    top: true,
+                    indent: 0,
+                };
+                write!(f, "{da}",)
             }
         }
     }
@@ -311,7 +412,7 @@ impl fmt::Display for Array {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.ty {
             ArrayType::Num => {
-                let da = DisplayArray {
+                let da = ShowArray {
                     shape: &self.shape,
                     data: self.numbers(),
                     top: true,
@@ -324,7 +425,7 @@ impl fmt::Display for Array {
                 write!(f, "{s}")
             }
             ArrayType::Value => {
-                let da = DisplayArray {
+                let da = ShowArray {
                     shape: &self.shape,
                     data: self.values(),
                     top: true,
@@ -336,36 +437,14 @@ impl fmt::Display for Array {
     }
 }
 
-struct DebugArray<'a, T> {
-    shape: &'a [usize],
-    data: &'a [T],
-}
-
-impl<'a, T: fmt::Debug> fmt::Debug for DebugArray<'a, T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.shape.is_empty() {
-            return write!(f, "{:?}", self.data[0]);
-        }
-        let cell_size = self.data.len() / self.shape[0];
-        let shape = &self.shape[1..];
-        f.debug_list()
-            .entries(
-                self.data
-                    .chunks_exact(cell_size)
-                    .map(|chunk| DebugArray { shape, data: chunk }),
-            )
-            .finish()
-    }
-}
-
-struct DisplayArray<'a, T> {
+struct ShowArray<'a, T> {
     shape: &'a [usize],
     data: &'a [T],
     top: bool,
     indent: usize,
 }
 
-impl<'a, T: fmt::Display> fmt::Display for DisplayArray<'a, T> {
+impl<'a, T: fmt::Display> fmt::Display for ShowArray<'a, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut indent = self.indent;
         if self.top {
@@ -381,11 +460,14 @@ impl<'a, T: fmt::Display> fmt::Display for DisplayArray<'a, T> {
         } else {
             let cell_size = self.data.len() / self.shape[0];
             let shape = &self.shape[1..];
+            if shape.is_empty() {
+                write!(f, "{:indent$}", "")?;
+            }
             for (i, chunk) in self.data.chunks_exact(cell_size).enumerate() {
                 if i > 0 && self.shape.len() == 1 {
                     write!(f, " ")?;
                 }
-                DisplayArray {
+                ShowArray {
                     shape,
                     data: chunk,
                     top: false,

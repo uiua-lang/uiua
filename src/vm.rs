@@ -7,10 +7,21 @@ use crate::{
     function::{Function, Partial},
     lex::Span,
     ops::{Op1, Op2},
-    pervade::Env,
     value::{RawType, Value},
-    RuntimeResult, TraceFrame, UiuaError, UiuaResult,
+    RuntimeError, RuntimeResult, TraceFrame, UiuaError, UiuaResult,
 };
+
+#[derive(Clone, Copy)]
+pub struct Env<'a> {
+    pub span: usize,
+    pub assembly: &'a Assembly,
+}
+
+impl<'a> Env<'a> {
+    pub fn error(&self, message: impl Into<String>) -> RuntimeError {
+        self.assembly.spans[self.span].error(message)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(unused)]

@@ -1,23 +1,20 @@
 use std::{cmp::Ordering, fmt::Debug};
 
-use crate::{compile::Assembly, RuntimeError};
-
-#[derive(Clone, Copy)]
-pub struct Env<'a> {
-    pub span: usize,
-    pub assembly: &'a Assembly,
-}
-
-impl<'a> Env<'a> {
-    pub fn error(&self, message: impl Into<String>) -> RuntimeError {
-        self.assembly.spans[self.span].error(message)
-    }
-}
+use crate::{vm::Env, RuntimeError, RuntimeResult};
 
 macro_rules! cmp_impl {
     ($name:ident $eq:tt $ordering:expr) => {
         pub mod $name {
             use super::*;
+            pub fn is(ordering: Ordering) -> f64 {
+                (ordering $eq $ordering) as u8 as f64
+            }
+            pub fn always_greater<A, B>(_: &A, _: &B) -> f64 {
+                ($ordering $eq Ordering::Greater) as u8 as f64
+            }
+            pub fn always_less<A, B>(_: &A, _: &B) -> f64 {
+                ($ordering $eq Ordering::Less) as u8 as f64
+            }
             pub fn num_num(a: &f64, b: &f64) -> f64 {
                 (a.partial_cmp(b)
                     .unwrap_or_else(|| a.is_nan().cmp(&b.is_nan()))
@@ -26,8 +23,8 @@ macro_rules! cmp_impl {
             pub fn generic<T: Ord>(a: &T, b: &T) -> f64 {
                 (a.cmp(b) $eq $ordering) as u8 as f64
             }
-            pub fn error<T: Debug>(_a: T, _b: T, _env: &Env) -> RuntimeError {
-                unreachable!("Comparisons cannot fail")
+            pub fn error<T: Debug>(a: T, b: T, _env: &Env) -> RuntimeError {
+                unreachable!("Comparisons cannot fail, failed to compare {a:?} and {b:?}")
             }
         }
     };
@@ -117,4 +114,170 @@ pub mod pow {
     pub fn error<T: Debug>(a: T, b: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot get the power of {a:?} to {b:?}"))
     }
+}
+
+pub mod max {
+    use super::*;
+    pub fn num_num(a: &f64, b: &f64) -> f64 {
+        a.max(*b)
+    }
+    pub fn char_char(a: &char, b: &char) -> char {
+        *a.max(b)
+    }
+    pub fn num_char(_a: &f64, b: &char) -> char {
+        *b
+    }
+    pub fn char_num(a: &char, _b: &f64) -> char {
+        *a
+    }
+    pub fn error<T: Debug>(a: T, b: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot get the max of {a:?} and {b:?}"))
+    }
+}
+
+pub mod min {
+    use super::*;
+    pub fn num_num(a: &f64, b: &f64) -> f64 {
+        a.min(*b)
+    }
+    pub fn char_char(a: &char, b: &char) -> char {
+        *a.min(b)
+    }
+    pub fn num_char(a: &f64, _b: &char) -> f64 {
+        *a
+    }
+    pub fn char_num(_a: &char, b: &f64) -> f64 {
+        *b
+    }
+    pub fn error<T: Debug>(a: T, b: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot get the min of {a:?} and {b:?}"))
+    }
+}
+
+pub fn bin_pervade<A, B, C: Default>(
+    a_shape: &[usize],
+    a: &[A],
+    b_shape: &[usize],
+    b: &[B],
+    f: impl Fn(&A, &B) -> C + Copy,
+) -> RuntimeResult<(Vec<usize>, Vec<C>)> {
+    let c_shape = a_shape.max(b_shape).to_vec();
+    let c_len: usize = c_shape.iter().product();
+    let mut c: Vec<C> = Vec::with_capacity(c_len);
+    for _ in 0..c_len {
+        c.push(C::default());
+    }
+    bin_pervade_recursive(a_shape, a, b_shape, b, &mut c, f)?;
+    Ok((c_shape, c))
+}
+
+pub fn bin_pervade_fallible<A, B, C: Default>(
+    a_shape: &[usize],
+    a: &[A],
+    b_shape: &[usize],
+    b: &[B],
+    env: &Env,
+    f: impl Fn(&A, &B, &Env) -> RuntimeResult<C> + Copy,
+) -> RuntimeResult<(Vec<usize>, Vec<C>)> {
+    let c_shape = a_shape.max(b_shape).to_vec();
+    let c_len: usize = c_shape.iter().product();
+    let mut c: Vec<C> = Vec::with_capacity(c_len);
+    for _ in 0..c_len {
+        c.push(C::default());
+    }
+    bin_pervade_recursive_fallible(a_shape, a, b_shape, b, &mut c, env, f)?;
+    Ok((c_shape, c))
+}
+
+fn bin_pervade_recursive<A, B, C>(
+    a_shape: &[usize],
+    a: &[A],
+    b_shape: &[usize],
+    b: &[B],
+    c: &mut [C],
+    f: impl Fn(&A, &B) -> C + Copy,
+) -> RuntimeResult {
+    if a_shape == b_shape {
+        for ((a, b), c) in a.iter().zip(b).zip(c) {
+            *c = f(a, b);
+        }
+        return Ok(());
+    }
+    match (a_shape.is_empty(), b_shape.is_empty()) {
+        (true, true) => c[0] = f(&a[0], &b[0]),
+        (false, true) => {
+            for (a, c) in a.iter().zip(c) {
+                *c = f(a, &b[0]);
+            }
+        }
+        (true, false) => {
+            for (b, c) in b.iter().zip(c) {
+                *c = f(&a[0], b);
+            }
+        }
+        (false, false) => {
+            let a_cells = a_shape[0];
+            let b_cells = b_shape[0];
+            if a_cells != b_cells {
+                panic!("Shapes do not match");
+            }
+            let a_chunk_size = a.len() / a_cells;
+            let b_chunk_size = b.len() / b_cells;
+            for ((a, b), c) in a
+                .chunks_exact(a_chunk_size)
+                .zip(b.chunks_exact(b_chunk_size))
+                .zip(c.chunks_exact_mut(a_chunk_size.max(b_chunk_size)))
+            {
+                bin_pervade_recursive(&a_shape[1..], a, &b_shape[1..], b, c, f)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn bin_pervade_recursive_fallible<A, B, C>(
+    a_shape: &[usize],
+    a: &[A],
+    b_shape: &[usize],
+    b: &[B],
+    c: &mut [C],
+    env: &Env,
+    f: impl Fn(&A, &B, &Env) -> RuntimeResult<C> + Copy,
+) -> RuntimeResult {
+    if a_shape == b_shape {
+        for ((a, b), c) in a.iter().zip(b).zip(c) {
+            *c = f(a, b, env)?;
+        }
+        return Ok(());
+    }
+    match (a_shape.is_empty(), b_shape.is_empty()) {
+        (true, true) => c[0] = f(&a[0], &b[0], env)?,
+        (false, true) => {
+            for (a, c) in a.iter().zip(c) {
+                *c = f(a, &b[0], env)?;
+            }
+        }
+        (true, false) => {
+            for (b, c) in b.iter().zip(c) {
+                *c = f(&a[0], b, env)?;
+            }
+        }
+        (false, false) => {
+            let a_cells = a_shape[0];
+            let b_cells = b_shape[0];
+            if a_cells != b_cells {
+                panic!("Shapes do not match");
+            }
+            let a_chunk_size = a.len() / a_cells;
+            let b_chunk_size = b.len() / b_cells;
+            for ((a, b), c) in a
+                .chunks_exact(a_chunk_size)
+                .zip(b.chunks_exact(b_chunk_size))
+                .zip(c.chunks_exact_mut(a_chunk_size.max(b_chunk_size)))
+            {
+                bin_pervade_recursive_fallible(&a_shape[1..], a, &b_shape[1..], b, c, env, f)?;
+            }
+        }
+    }
+    Ok(())
 }

@@ -5,7 +5,8 @@ use nanbox::NanBox;
 use crate::{
     array::Array,
     function::{Function, Partial},
-    pervade::{self, Env},
+    pervade,
+    vm::Env,
     RuntimeResult,
 };
 
@@ -162,7 +163,7 @@ macro_rules! value_impl {
                         Value::from(self.array().$name(&Array::from(other.$bf().clone()), env)?)
                     }),*
                     $((RawType::$a_ty, RawType::Array) => {
-                        Value::from(Array::from(self.$af().clone()).$name(other.array(), env)?)
+                        Value::from(Array::min(&Array::from(self.$af().clone()), other.array(), env)?)
                     }),*
                     $(($a_fb, $b_fb) => $fallback,)?
                     (a, b) => return Err(pervade::$name::error(a.ty(), b.ty(), env))
@@ -191,6 +192,22 @@ value_impl!(modulus, (Num, number, Num, number, num_num));
 value_impl!(pow, (Num, number, Num, number, num_num));
 value_impl!(atan2, (Num, number, Num, number, num_num));
 
+value_impl!(
+    min,
+    (Num, number, Num, number, num_num),
+    (Char, char, Char, char, char_char),
+    (Char, char, Num, number, char_num),
+    (Num, number, Char, char, num_char),
+);
+
+value_impl!(
+    max,
+    (Num, number, Num, number, num_num),
+    (Char, char, Char, char, char_char),
+    (Char, char, Num, number, char_num),
+    (Num, number, Char, char, num_char),
+);
+
 macro_rules! cmp_impls {
     ($($name:ident),*) => {
         $(
@@ -200,6 +217,7 @@ macro_rules! cmp_impls {
                 (Char, char, Char, char, generic),
                 (Function, function, Function, function, generic),
                 (Partial, partial, Partial, partial, generic),
+                |a, b| pervade::$name::is(a.ty().cmp(&b.ty())).into()
             );
         )*
     };

@@ -2,7 +2,12 @@ use std::{f64::consts::*, fmt};
 
 use enum_iterator::Sequence;
 
-use crate::{compile::Assembly, pervade::Env, value::*, vm::Instr, RuntimeResult};
+use crate::{
+    compile::Assembly,
+    value::*,
+    vm::{Env, Instr},
+    RuntimeResult,
+};
 
 pub(crate) fn constants() -> Vec<(&'static str, Value)> {
     vec![
@@ -34,6 +39,8 @@ pub enum Op1 {
     Ceil,
     Round,
     Len,
+    Range,
+    Show,
     Print,
     Println,
     ScanLn,
@@ -57,6 +64,8 @@ impl fmt::Display for Op1 {
             Op1::Ceil => write!(f, "ceil"),
             Op1::Round => write!(f, "round"),
             Op1::Len => write!(f, "len"),
+            Op1::Range => write!(f, "range"),
+            Op1::Show => write!(f, "show"),
             Op1::Print => write!(f, "print"),
             Op1::Println => write!(f, "println"),
             Op1::ScanLn => write!(f, "scanln"),
@@ -67,23 +76,18 @@ impl fmt::Display for Op1 {
 }
 
 impl Value {
-    pub(crate) fn op1(&mut self, op: Op1, _env: Env) -> RuntimeResult {
+    pub(crate) fn op1(&mut self, op: Op1, env: Env) -> RuntimeResult {
         match op {
-            Op1::Nil => {
-                *self = Value::nil();
-                Ok(())
-            }
-            Op1::Id => Ok(()),
-            Op1::Print => {
-                print!("{self}");
-                Ok(())
-            }
-            Op1::Println => {
-                println!("{self}");
-                Ok(())
-            }
+            Op1::Nil => *self = Value::nil(),
+            Op1::Id => {}
+            Op1::Show => println!("{self:?}"),
+            Op1::Print => print!("{self}"),
+            Op1::Println => println!("{self}"),
+            Op1::Len => *self = (self.len() as f64).into(),
+            Op1::Range => *self = self.range(env)?.into(),
             op => todo!("{op}"),
         }
+        Ok(())
     }
 }
 
@@ -104,6 +108,8 @@ pub enum Op2 {
     Div,
     Mod,
     Pow,
+    Min,
+    Max,
     Atan2,
     Concat,
 }
@@ -125,6 +131,8 @@ impl fmt::Display for Op2 {
             Op2::Div => write!(f, "div"),
             Op2::Mod => write!(f, "mod"),
             Op2::Pow => write!(f, "pow"),
+            Op2::Min => write!(f, "min"),
+            Op2::Max => write!(f, "max"),
             Op2::Atan2 => write!(f, "atan2"),
             Op2::Concat => write!(f, "concat"),
         }
@@ -148,6 +156,8 @@ impl Value {
             Op2::Div => *self = self.div(other, env)?,
             Op2::Mod => *self = self.modulus(other, env)?,
             Op2::Pow => *self = self.pow(other, env)?,
+            Op2::Min => *self = Self::min(self, other, env)?,
+            Op2::Max => *self = Self::max(self, other, env)?,
             Op2::Atan2 => *self = self.atan2(other, env)?,
             Op2::Concat => todo!("concat"),
         }

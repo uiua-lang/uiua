@@ -1,7 +1,74 @@
 use std::cmp::Ordering;
 
-use crate::{pervade::Env, RuntimeResult};
+use crate::{
+    array::Array,
+    value::{RawType, Value},
+    vm::Env,
+    RuntimeResult,
+};
+
 type CmpFn<T> = fn(&T, &T) -> Ordering;
+
+impl Value {
+    #[allow(clippy::len_without_is_empty)]
+    pub fn len(&self) -> usize {
+        if self.is_array() {
+            self.array().len()
+        } else {
+            1
+        }
+    }
+    pub fn range(&self, env: Env) -> RuntimeResult<Array> {
+        match self.raw_ty() {
+            RawType::Array => {
+                let arr = self.array();
+                let mut shape = Vec::with_capacity(arr.len());
+                for f in arr.numbers() {
+                    let rounded = f.round();
+                    if (f - rounded).abs() > f64::EPSILON || rounded <= 0.0 {
+                        return Err(env.error(
+                            "Tried to make a range of an array with decimal \
+                            or nonpositive numbers, but only natural numbers \
+                            are allowed",
+                        ));
+                    }
+                    let rounded = rounded as usize;
+
+                    shape.push(rounded);
+                }
+                let data = range(&shape);
+                shape.push(shape.len());
+                return Ok((shape, data).into());
+            }
+            RawType::Num => {
+                let f = self.number();
+                let rounded = f.round();
+                if (f - rounded).abs() > f64::EPSILON || rounded <= 0.0 {
+                    return Err(env.error(
+                        "Tried to make a range of decimal or nonpositive \
+                        number, but only natural numbers are allowed",
+                    ));
+                }
+                let shape = vec![rounded as usize];
+                let data = range(&shape);
+                return Ok((shape, data).into());
+            }
+            _ => {}
+        };
+        Err(env.error("Arrays can only be created from natural numbers"))
+    }
+}
+
+pub fn range(shape: &[usize]) -> Vec<f64> {
+    let len = shape.iter().product::<usize>() * shape.len();
+    let mut data = Vec::with_capacity(len);
+    for i in 0..len {
+        for &j in shape {
+            data.push((i % j) as f64);
+        }
+    }
+    data
+}
 
 pub fn force_length<T: Clone>(data: &mut Vec<T>, len: usize) {
     match data.len().cmp(&len) {
@@ -72,131 +139,4 @@ fn merge_sort_chunks<T: Clone>(chunk_size: usize, data: &mut [T], cmp: CmpFn<T>)
         }
     }
     data.clone_from_slice(&tmp);
-}
-
-pub fn pervade<A, B, C: Default>(
-    a_shape: &[usize],
-    a: &[A],
-    b_shape: &[usize],
-    b: &[B],
-    f: impl Fn(&A, &B) -> C + Copy,
-) -> (Vec<usize>, Vec<C>) {
-    let c_shape = a_shape.max(b_shape).to_vec();
-    let c_len: usize = c_shape.iter().product();
-    let mut c: Vec<C> = Vec::with_capacity(c_len);
-    for _ in 0..c_len {
-        c.push(C::default());
-    }
-    pervade_recursive(a_shape, a, b_shape, b, &mut c, f);
-    (c_shape, c)
-}
-
-pub fn pervade_fallible<A, B, C: Default>(
-    a_shape: &[usize],
-    a: &[A],
-    b_shape: &[usize],
-    b: &[B],
-    env: &Env,
-    f: impl Fn(&A, &B, &Env) -> RuntimeResult<C> + Copy,
-) -> RuntimeResult<(Vec<usize>, Vec<C>)> {
-    let c_shape = a_shape.max(b_shape).to_vec();
-    let c_len: usize = c_shape.iter().product();
-    let mut c: Vec<C> = Vec::with_capacity(c_len);
-    for _ in 0..c_len {
-        c.push(C::default());
-    }
-    pervade_recursive_fallible(a_shape, a, b_shape, b, &mut c, env, f)?;
-    Ok((c_shape, c))
-}
-
-fn pervade_recursive<A, B, C>(
-    a_shape: &[usize],
-    a: &[A],
-    b_shape: &[usize],
-    b: &[B],
-    c: &mut [C],
-    f: impl Fn(&A, &B) -> C + Copy,
-) {
-    if a_shape == b_shape {
-        for ((a, b), c) in a.iter().zip(b).zip(c) {
-            *c = f(a, b);
-        }
-        return;
-    }
-    match (a_shape.is_empty(), b_shape.is_empty()) {
-        (true, true) => c[0] = f(&a[0], &b[0]),
-        (false, true) => {
-            for (a, c) in a.iter().zip(c) {
-                *c = f(a, &b[0]);
-            }
-        }
-        (true, false) => {
-            for (b, c) in b.iter().zip(c) {
-                *c = f(&a[0], b);
-            }
-        }
-        (false, false) => {
-            let a_cells = a_shape[0];
-            let b_cells = b_shape[0];
-            if a_cells != b_cells {
-                panic!("Shapes do not match");
-            }
-            let a_chunk_size = a.len() / a_cells;
-            let b_chunk_size = b.len() / b_cells;
-            for ((a, b), c) in a
-                .chunks_exact(a_chunk_size)
-                .zip(b.chunks_exact(b_chunk_size))
-                .zip(c.chunks_exact_mut(a_chunk_size.max(b_chunk_size)))
-            {
-                pervade_recursive(&a_shape[1..], a, &b_shape[1..], b, c, f);
-            }
-        }
-    }
-}
-
-fn pervade_recursive_fallible<A, B, C>(
-    a_shape: &[usize],
-    a: &[A],
-    b_shape: &[usize],
-    b: &[B],
-    c: &mut [C],
-    env: &Env,
-    f: impl Fn(&A, &B, &Env) -> RuntimeResult<C> + Copy,
-) -> RuntimeResult {
-    if a_shape == b_shape {
-        for ((a, b), c) in a.iter().zip(b).zip(c) {
-            *c = f(a, b, env)?;
-        }
-        return Ok(());
-    }
-    match (a_shape.is_empty(), b_shape.is_empty()) {
-        (true, true) => c[0] = f(&a[0], &b[0], env)?,
-        (false, true) => {
-            for (a, c) in a.iter().zip(c) {
-                *c = f(a, &b[0], env)?;
-            }
-        }
-        (true, false) => {
-            for (b, c) in b.iter().zip(c) {
-                *c = f(&a[0], b, env)?;
-            }
-        }
-        (false, false) => {
-            let a_cells = a_shape[0];
-            let b_cells = b_shape[0];
-            if a_cells != b_cells {
-                panic!("Shapes do not match");
-            }
-            let a_chunk_size = a.len() / a_cells;
-            let b_chunk_size = b.len() / b_cells;
-            for ((a, b), c) in a
-                .chunks_exact(a_chunk_size)
-                .zip(b.chunks_exact(b_chunk_size))
-                .zip(c.chunks_exact_mut(a_chunk_size.max(b_chunk_size)))
-            {
-                pervade_recursive_fallible(&a_shape[1..], a, &b_shape[1..], b, c, env, f)?;
-            }
-        }
-    }
-    Ok(())
 }

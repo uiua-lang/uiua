@@ -576,8 +576,11 @@ impl From<Vec<Value>> for Array {
     }
 }
 
-impl FromIterator<Value> for Array {
-    fn from_iter<T: IntoIterator<Item = Value>>(iter: T) -> Self {
+impl<T> FromIterator<T> for Array
+where
+    Self: From<Vec<T>>,
+{
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         Self::from(iter.into_iter().collect::<Vec<_>>())
     }
 }

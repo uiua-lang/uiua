@@ -3,6 +3,7 @@ use std::{f64::consts::*, fmt};
 use enum_iterator::Sequence;
 
 use crate::{
+    array::Array,
     array_fmt::GridFmt,
     compile::Assembly,
     value::*,
@@ -40,6 +41,8 @@ pub enum Op1 {
     Ceil,
     Round,
     Len,
+    Rank,
+    Shape,
     Range,
     Reverse,
     Show,
@@ -66,6 +69,8 @@ impl fmt::Display for Op1 {
             Op1::Ceil => write!(f, "ceil"),
             Op1::Round => write!(f, "round"),
             Op1::Len => write!(f, "len"),
+            Op1::Rank => write!(f, "rank"),
+            Op1::Shape => write!(f, "shape"),
             Op1::Range => write!(f, "range"),
             Op1::Reverse => write!(f, "reverse"),
             Op1::Show => write!(f, "show"),
@@ -87,6 +92,10 @@ impl Value {
             Op1::Print => print!("{self}"),
             Op1::Println => println!("{self}"),
             Op1::Len => *self = (self.len() as f64).into(),
+            Op1::Rank => *self = (self.rank() as f64).into(),
+            Op1::Shape => {
+                *self = Array::from_iter(self.shape().into_iter().map(|i| i as f64)).into()
+            }
             Op1::Range => *self = self.range(env)?.into(),
             Op1::Reverse => self.reverse(),
             Op1::Neg => *self = self.neg(env)?,

@@ -18,6 +18,20 @@ impl Value {
             1
         }
     }
+    pub fn rank(&self) -> usize {
+        if self.is_array() {
+            self.array().rank()
+        } else {
+            0
+        }
+    }
+    pub fn shape(&self) -> Vec<usize> {
+        if self.is_array() {
+            self.array().shape().to_vec()
+        } else {
+            Vec::new()
+        }
+    }
     pub fn range(&self, env: &Env) -> RuntimeResult<Array> {
         match self.raw_ty() {
             RawType::Array if self.array().is_numbers() => {

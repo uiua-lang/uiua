@@ -29,6 +29,7 @@ pub(crate) enum Instr {
     Comment(String),
     Push(Value),
     Constant(usize),
+    List(usize),
     Array(usize),
     /// Copy the nth value from the top of the stack
     CopyRel(usize),
@@ -142,11 +143,17 @@ impl Vm {
                     puffin::profile_scope!("constant");
                     stack.push(assembly.constants[*n].clone())
                 }
-                Instr::Array(n) => {
+                Instr::List(n) => {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("list");
                     let array: Array = stack.drain(stack.len() - *n..).collect();
                     stack.push(array.into());
+                }
+                Instr::Array(n) => {
+                    #[cfg(feature = "profile")]
+                    puffin::profile_scope!("array");
+                    let array: Array = stack.drain(stack.len() - *n..).collect();
+                    stack.push(array.normalized(true).into());
                 }
                 Instr::CopyRel(n) => {
                     #[cfg(feature = "profile")]

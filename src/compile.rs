@@ -549,6 +549,7 @@ impl Compiler {
             Expr::Call(call) => self.call(*call)?,
             Expr::If(if_expr) => self.if_expr(*if_expr)?,
             Expr::Pipe(pipe_expr) => self.pipe_expr(*pipe_expr)?,
+            Expr::List(items) => self.list(Instr::List, items)?,
             Expr::Array(items) => self.list(Instr::Array, items)?,
             Expr::Parened(inner) => self.expr(resolve_placeholders(*inner))?,
             Expr::Func(func) => self.func(*func, expr.span, true)?,
@@ -802,7 +803,7 @@ fn resolve_placeholders_rec(expr: &mut Sp<Expr>, params: &mut Vec<Sp<Ident>>) {
             resolve_placeholders_rec(&mut pipe_expr.left, params);
             resolve_placeholders_rec(&mut pipe_expr.right, params);
         }
-        Expr::Array(items) => {
+        Expr::List(items) | Expr::Array(items) => {
             for item in items {
                 resolve_placeholders_rec(item, params);
             }

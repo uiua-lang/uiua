@@ -109,7 +109,7 @@ impl Array {
     pub fn shape_prefix_matches(&self, other: &Self) -> bool {
         self.shape.iter().zip(&other.shape).all(|(a, b)| a == b)
     }
-    pub fn normalize(&mut self) {
+    pub fn normalize(&mut self, arrays: bool) {
         if let ArrayType::Value = self.ty {
             if self.values().iter().all(Value::is_char) {
                 let shape = take(&mut self.shape);
@@ -119,7 +119,7 @@ impl Array {
                 let shape = take(&mut self.shape);
                 *self = Self::from(self.values().iter().map(Value::number).collect::<Vec<_>>());
                 self.shape = shape;
-            } else if self.values().iter().all(Value::is_array) {
+            } else if arrays && self.values().iter().all(Value::is_array) {
                 let mut shape = None;
                 for arr in self.values().iter().map(Value::array) {
                     if arr.shape != *shape.get_or_insert_with(|| arr.shape()) {
@@ -142,12 +142,12 @@ impl Array {
                         values: ManuallyDrop::new(values),
                     },
                 }
-                .normalized();
+                .normalized(arrays);
             }
         }
     }
-    pub fn normalized(mut self) -> Self {
-        self.normalize();
+    pub fn normalized(mut self, arrays: bool) -> Self {
+        self.normalize(arrays);
         self
     }
     pub fn deshape(&mut self) {
@@ -449,7 +449,7 @@ impl<'a, T: fmt::Display> fmt::Display for ShowArray<'a, T> {
         let mut indent = self.indent;
         if self.top {
             if self.shape.len() == 1 {
-                write!(f, "[")?;
+                write!(f, "(")?;
             } else {
                 writeln!(f, "┌─")?;
                 indent += 2;
@@ -480,7 +480,7 @@ impl<'a, T: fmt::Display> fmt::Display for ShowArray<'a, T> {
             }
         };
         if self.top && self.shape.len() == 1 {
-            write!(f, "]")?
+            write!(f, ")")?
         }
         Ok(())
     }
@@ -536,7 +536,7 @@ impl From<Partial> for Array {
 
 impl From<Value> for Array {
     fn from(v: Value) -> Self {
-        Self::from(vec![v]).normalized()
+        Self::from(vec![v])
     }
 }
 
@@ -596,7 +596,7 @@ impl From<Vec<Value>> for Array {
                 values: ManuallyDrop::new(v),
             },
         }
-        .normalized()
+        .normalized(false)
     }
 }
 

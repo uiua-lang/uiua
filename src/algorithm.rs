@@ -20,7 +20,7 @@ impl Value {
     }
     pub fn range(&self, env: Env) -> RuntimeResult<Array> {
         match self.raw_ty() {
-            RawType::Array => {
+            RawType::Array if self.array().is_numbers() => {
                 let arr = self.array();
                 let mut shape = Vec::with_capacity(arr.len());
                 for f in arr.numbers() {
@@ -37,7 +37,6 @@ impl Value {
                     shape.push(rounded);
                 }
                 let data = range(&shape);
-                shape.push(shape.len());
                 return Ok((shape, data).into());
             }
             RawType::Num => {
@@ -59,12 +58,18 @@ impl Value {
     }
 }
 
-pub fn range(shape: &[usize]) -> Vec<f64> {
-    let len = shape.iter().product::<usize>() * shape.len();
+pub fn range(shape: &[usize]) -> Vec<Value> {
+    let len = shape.iter().product::<usize>();
     let mut data = Vec::with_capacity(len);
     for i in 0..len {
-        for &j in shape {
-            data.push((i % j) as f64);
+        if shape.len() <= 1 {
+            data.push((i as f64).into());
+        } else {
+            let mut cell: Vec<f64> = Vec::with_capacity(shape.len());
+            for &j in shape {
+                cell.push((i % j) as f64);
+            }
+            data.push(Array::from(cell).into());
         }
     }
     data

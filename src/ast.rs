@@ -133,6 +133,7 @@ pub enum Expr {
     FormatString(Vec<String>),
     Ident(Ident),
     Placeholder,
+    List(Vec<Sp<Expr>>),
     Array(Vec<Sp<Expr>>),
     Parened(Box<Sp<Expr>>),
     Func(Box<Func>),

@@ -93,6 +93,9 @@ impl Value {
             RawType::Array => true,
         }
     }
+    pub fn is_falsy(&self) -> bool {
+        !self.is_truthy()
+    }
     pub fn raw_ty(&self) -> RawType {
         RAW_TYPES[self.0.tag() as usize]
     }

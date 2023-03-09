@@ -8,7 +8,7 @@ use crate::{
     algorithm::*,
     function::{Function, Partial},
     pervade::{self, *},
-    value::{RawType, Value},
+    value::Value,
     vm::Env,
     RuntimeResult,
 };
@@ -96,7 +96,7 @@ impl Array {
             ArrayType::Value => take(unsafe { &mut *self.data.values }),
         }
     }
-    pub fn into_values(mut self) -> Vec<Value> {
+    pub fn into_flat_values(mut self) -> Vec<Value> {
         self.take_values()
     }
     pub fn into_numbers(mut self) -> Vec<f64> {
@@ -135,7 +135,7 @@ impl Array {
                     .take_values()
                     .into_iter()
                     .map(Value::into_array)
-                    .flat_map(Array::into_values)
+                    .flat_map(Array::into_flat_values)
                     .collect();
                 self.shape.append(&mut shape);
                 let shape = take(&mut self.shape);
@@ -254,53 +254,80 @@ impl Array {
                 self.chars_mut().extend(other.into_chars());
             }
             (ArrayType::Value, ArrayType::Value) => {
-                self.values_mut().extend(other.into_values());
+                self.values_mut().extend(other.into_flat_values());
             }
             _ => {
                 let shape = take(&mut self.shape);
                 let mut values = self.take_values();
-                values.append(&mut other.into_values());
+                values.append(&mut other.into_flat_values());
                 *self = Array::from((shape, values));
             }
         }
     }
-    pub(crate) fn pop(&mut self) -> Option<Value> {
+    pub fn into_values(mut self) -> Vec<Value> {
+        if self.shape.is_empty() {
+            return self.into_flat_values();
+        }
         if self.shape.len() == 1 {
-            if self.shape[0] == 0 {
-                return None;
-            }
-            self.shape[0] -= 1;
-            return match self.ty {
-                ArrayType::Num => self.numbers_mut().pop().map(Into::into),
-                ArrayType::Char => self.chars_mut().pop().map(Into::into),
-                ArrayType::Value => self.values_mut().pop(),
-            };
+            return self.into_flat_values();
         }
-        let shape = self.shape[1..].to_vec();
-        self.shape[0] -= 1;
-        let cell_size: usize = shape.iter().product();
-        let len: usize = self.shape[0] * cell_size;
-        let arr: Array = match self.ty() {
-            ArrayType::Num => (shape, self.numbers_mut().drain(len..).collect::<Vec<_>>()).into(),
-            ArrayType::Char => (shape, self.chars_mut().drain(len..).collect::<Vec<_>>()).into(),
-            ArrayType::Value => (shape, self.values_mut().drain(len..).collect::<Vec<_>>()).into(),
-        };
-        Some(arr.into())
-    }
-    pub(crate) fn push_value(&mut self, value: Value) {
-        self.shape[0] += 1;
-        match (self.ty, value.raw_ty()) {
-            (ArrayType::Num, RawType::Num) => self.numbers_mut().push(value.number()),
-            (ArrayType::Char, RawType::Char) => self.chars_mut().push(value.char()),
-            (ArrayType::Value, _) => self.values_mut().push(value),
-            _ => {
-                let shape = take(&mut self.shape);
-                let mut values = self.take_values();
-                values.push(value);
-                *self = Array::from((shape, values));
+        let mut shape = self.shape.clone();
+        let cell_count = shape.remove(0);
+        match self.ty {
+            ArrayType::Num => into_cells(
+                cell_count,
+                take(unsafe { &mut self.data.numbers }),
+                |numbers| Value::from(Array::from((shape.clone(), numbers))),
+            ),
+            ArrayType::Char => {
+                into_cells(cell_count, take(unsafe { &mut self.data.chars }), |chars| {
+                    Value::from(Array::from((shape.clone(), chars)))
+                })
             }
+            ArrayType::Value => into_cells(
+                cell_count,
+                take(unsafe { &mut self.data.values }),
+                |values| Value::from(Array::from((shape.clone(), values))),
+            ),
         }
     }
+    pub fn into_cells(mut self) -> Vec<Self> {
+        if self.shape.is_empty() {
+            return vec![self];
+        }
+        let mut shape = self.shape.clone();
+        let cell_count = shape.remove(0);
+        match self.ty {
+            ArrayType::Num => into_cells(
+                cell_count,
+                take(unsafe { &mut self.data.numbers }),
+                |numbers| Array::from((shape.clone(), numbers)),
+            ),
+            ArrayType::Char => {
+                into_cells(cell_count, take(unsafe { &mut self.data.chars }), |chars| {
+                    Array::from((shape.clone(), chars))
+                })
+            }
+            ArrayType::Value => into_cells(
+                cell_count,
+                take(unsafe { &mut self.data.values }),
+                |values| Array::from((shape.clone(), values)),
+            ),
+        }
+    }
+}
+
+fn into_cells<T, F, R>(cell_count: usize, mut items: Vec<T>, f: F) -> Vec<R>
+where
+    F: Fn(Vec<T>) -> R,
+{
+    let cell_size = items.len() / cell_count;
+    let mut cells = Vec::with_capacity(cell_count);
+    for _ in 0..cell_count {
+        cells.push(f(items.drain(items.len() - cell_size..).collect()));
+    }
+    cells.reverse();
+    cells
 }
 
 macro_rules! array_un_impl {

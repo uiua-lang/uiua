@@ -5,9 +5,8 @@ use enum_iterator::Sequence;
 use crate::{
     array::Array,
     array_fmt::GridFmt,
-    compile::Assembly,
     value::*,
-    vm::{Env, Instr},
+    vm::{Env, Vm},
     RuntimeResult,
 };
 
@@ -229,161 +228,147 @@ impl Algorithm {
             Algorithm::Table => 3,
         }
     }
-    pub(crate) fn instrs(&self, _assembly: &Assembly) -> Vec<Instr> {
-        #[allow(unused_imports)]
-        use {
-            crate::ast::BinOp::*,
-            crate::ops::{Op1, Op2},
-            Instr::*,
-        };
-        let mut instrs = match self {
-            Algorithm::Compose => vec![
+    pub fn run(&self, vm: &mut Vm, env: &Env) -> RuntimeResult {
+        match self {
+            Algorithm::Compose => {
                 // x g f
-                Rotate(3), // f x g
-                Call(0),   // f gx
-                Swap,      // gx f
-                Call(0),   // f(gx)
-            ],
-            Algorithm::BlackBird => vec![
+                let f = vm.pop(); // x g
+                vm.call(1, env.assembly, 0)?; // gx
+                vm.push(f); // gx f
+                vm.call(1, env.assembly, 0)?; // f(gx)
+            }
+            Algorithm::BlackBird => {
                 // y x g f
-                Rotate(4), // f y x g
-                Call(0),   // f y gx
-                Call(0),   // f gxy
-                Swap,      // gxy f
-                Call(0),   // f(gxy)
-            ],
-            Algorithm::Flip => vec![
-                // b, a, f
-                Rotate(3), // f, b, a
-                Swap,      // f, a, b
-                Move(3),   // a, b, f
-                Call(0),
-                Call(0),
-            ],
-            Algorithm::While => vec![
-                // 0, next = (+1), cond = (<3)
-                Move(3), // next, cond, 0
-                // Loop start
-                CopyRel(1),          // next, cond, 0, 0
-                CopyRel(3),          // next, cond, 0, 0, cond
-                Call(0),             // next, cond, 0, true
-                PopJumpIf(4, false), // next, cond, 0
-                CopyRel(3),          // next, cond, 0, next
-                Call(0),             // next, cond, 1
-                Jump(-6),
-            ],
-            Algorithm::LeftThen => vec![
-                // x f g
-                CopyRel(3), // x, f, g, x
-                Swap,       // x, f, x, g
-                Call(0),    // x, f, gx
-                Swap,       // x, gx, f
-                Call(0),    // x, f(gx)
-                Call(0),    // f(gx)x
-            ],
-            Algorithm::RightThen => vec![
-                // x g f
-                CopyRel(3), // x, g, f, x
-                Move(3),    // x, f, x, g
-                Call(0),    // x, f, gx
-                Rotate(3),  // gx, x, f
-                Call(0),    // gx, fx
-                Call(0),    // fx(gx)
-            ],
-            Algorithm::Each => vec![
-                // [1, 2, 3], f = neg
-                Swap,              // f, [1, 2, 3]
-                Op1(Op1::Reverse), // f, [3, 2, 1]
-                Array(0),          // f, [3, 2, 1], []
-                // Loop start
-                Swap,               // f, [], [3, 2, 1]
-                CopyRel(1),         // f, [], [3, 2, 1], [3, 2, 1]
-                Op1(Op1::Len),      // f, [], [3, 2, 1], 3
-                Push(0.0.into()),   // f, [], [3, 2, 1], 3, 0
-                Op2(Op2::Eq, 0),    // f, [], [3, 2, 1], false
-                PopJumpIf(8, true), // f, [], [3, 2, 1]
-                ArrayPop,           // f, [], [3, 2], 1
-                CopyRel(4),         // f, [], [3, 2], 1, f
-                Call(0),            // f, [], [3, 2], -1
-                Move(3),            // f, [3, 2], -1, []
-                Swap,               // f, [3, 2], [], -1
-                ArrayPush,          // f, [3, 2], [-1]
-                Jump(-12),
-                // Loop end
-                Swap,
-                Normalize(1),
-            ],
-            Algorithm::Fold => vec![
-                // [1, 2, 3], 0, f = (+)
-                AssertType(Type::Function),
-                Move(3),           // 0, f, [1, 2, 3]
-                Op1(Op1::Reverse), // 0, f, [3, 2, 1]
-                Move(3),           // f, [3, 2, 1], 0
-                // Loop start
-                CopyRel(2),         // f, [3, 2, 1], 0, [3, 2, 1]
-                Op1(Op1::Len),      // f, [3, 2, 1], 0, 3
-                Push(0.0.into()),   // f, [3, 2, 1], 0, 3, 0
-                Op2(Op2::Eq, 0),    // f, [3, 2, 1], 0, false
-                PopJumpIf(8, true), // f, [3, 2, 1], 0
-                Rotate(3),          // 0, f, [3, 2, 1]
-                ArrayPop,           // 0, f, [3, 2], 1
-                Move(4),            // f, [3, 2], 1, 0
-                CopyRel(4),         // f, [3, 2], 1, 0, f
-                Call(0),            // f, [3, 2], 1, f(0)
-                Call(0),            // f, [3, 2], 1
-                Jump(-11),
-                // Loop end
-            ],
-            Algorithm::Table => vec![
-                // [4, 5], [2, 3], f = (*)
-                Rotate(3),         // f, [4, 5], [2, 3]
-                Op1(Op1::Reverse), // f, [4, 5], [3, 2]
-                Swap,              //f, [3, 2], [4, 5]
-                Op1(Op1::Reverse), // f, [3, 2], [5, 4]
-                Array(0),          // f, [3, 2], [5, 4], []
-                // Outer loop start
-                CopyRel(2),          // f, [3, 2], [5, 4], [], [5, 4]
-                Op1(Op1::Len),       // f, [3, 2], [5, 4], [], 2
-                Push(0.0.into()),    // f, [3, 2], [5, 4], [], 2, 0
-                Op2(Op2::Eq, 0),     // f, [3, 2], [5, 4], [], false
-                PopJumpIf(31, true), // f, [3, 2], [5, 4], []
-                Swap,                // f, [3, 2], [], [5, 4]
-                ArrayPop,            // f, [3, 2], [], [5], 4
-                Move(3),             // f, [3, 2], [5], 4, []
-                Swap,                // f, [3, 2], [5], [], 4
-                CopyRel(4),          // f, [3, 2], [5], [], 4, [3, 2]
-                Array(0),            // f, [3, 2], [5], [], 4, [3, 2], []
-                // Inner loop start,
-                CopyRel(2),          // f, [3, 2], [5], [], 4, [3, 2], [], [3, 2]
-                Op1(Op1::Len),       // f, [3, 2], [5], [], 4, [3, 2], [], 2
-                Push(0.0.into()),    // f, [3, 2], [5], [], 4, [3, 2], [], 2, 0
-                Op2(Op2::Eq, 0),     // f, [3, 2], [5], [], 4, [3, 2], [], false
-                PopJumpIf(16, true), // f, [3, 2], [5], [], 4, [3, 2], []
-                Swap,                // f, [3, 2], [5], [], 4, [], [3, 2]
-                ArrayPop,            // f, [3, 2], [5], [], 4, [], [3], 2
-                Move(4),             // f, [3, 2], [5], [], [], [3], 2, 4
-                CopyRel(1),          // f, [3, 2], [5], [], [], [3], 2, 4, 4
-                Move(3),             // f, [3, 2], [5], [], [], [3], 4, 4, 2
-                CopyRel(9),          // f, [3, 2], [5], [], [], [3], 4, 4, 2, f
-                Call(0),             // f, [3, 2], [5], [], [], [3], 4, 4, f(2)
-                Call(0),             // f, [3, 2], [5], [], [], [3], 4, 8
-                Move(4),             // f, [3, 2], [5], [], [3], 4, 8, []
-                Swap,                // f, [3, 2], [5], [], [3], 4, [], 8
-                ArrayPush,           // f, [3, 2], [5], [], [3], 4, [8]
-                Rotate(3),           // f, [3, 2], [5], [], [8], [3], 4
-                Swap,                // f, [3, 2], [5], [], [8], 4, [3]
-                Move(3),             // f, [3, 2], [5], [], 4, [3] [8]
-                Jump(-19),
-                // Inner loop end - f, [3, 2], [5], [], 4, [] [8, 12]
-                Rotate(3), // f, [3, 2], [5], [], [8, 12], 4, []
-                Pop(2),    // f, [3, 2], [5], [], [8, 12]
-                ArrayPush, // f, [3, 2], [5], [[8, 12]]
-                Jump(-34),
-                // Outer loop end - f, [3, 2], [], [[8, 12], [10, 15]]
-                Normalize(1),
-            ],
-        };
-        instrs.insert(0, Comment(self.to_string()));
-        instrs
+                let f = vm.pop(); // y x g
+                vm.call(1, env.assembly, 0)?; // gxy
+                vm.push(f); // gxy f
+                vm.call(2, env.assembly, 0)?; // f(gxy)
+            }
+            Algorithm::Flip => {
+                let f = vm.pop();
+                let a = vm.pop();
+                let b = vm.pop();
+                vm.push(a);
+                vm.push(b);
+                vm.push(f);
+                vm.call(2, env.assembly, 0)?;
+            }
+            Algorithm::While => {
+                let cond = vm.pop();
+                let body = vm.pop();
+                let mut init = vm.pop();
+                loop {
+                    vm.push(init.clone());
+                    vm.push(cond.clone());
+                    vm.call(1, env.assembly, 0)?;
+                    if vm.pop().is_falsy() {
+                        break;
+                    }
+                    vm.push(init.clone());
+                    vm.push(body.clone());
+                    vm.call(1, env.assembly, 0)?;
+                    init = vm.pop();
+                }
+                vm.push(init);
+            }
+            Algorithm::LeftThen => {
+                let g = vm.pop();
+                let f = vm.pop();
+                let x = vm.pop();
+                vm.push(x.clone());
+                vm.push(g);
+                vm.call(1, env.assembly, 0)?;
+                let gx = vm.pop();
+                vm.push(x);
+                vm.push(gx);
+                vm.push(f);
+                vm.call(2, env.assembly, 0)?;
+            }
+            Algorithm::RightThen => {
+                let f = vm.pop();
+                let g = vm.pop();
+                let x = vm.pop();
+                vm.push(x.clone());
+                vm.push(g);
+                vm.call(1, env.assembly, 0)?;
+                let gx = vm.pop();
+                vm.push(x);
+                vm.push(gx);
+                vm.push(f);
+                vm.call(2, env.assembly, 0)?;
+            }
+            Algorithm::Fold => {
+                let f = vm.pop();
+                let mut acc = vm.pop();
+                let xs = vm.pop();
+                if !xs.is_array() {
+                    vm.push(acc);
+                    vm.push(xs);
+                    vm.push(f);
+                    return vm.call(2, env.assembly, 0);
+                }
+                for cell in xs.into_array().into_values() {
+                    vm.push(acc.clone());
+                    vm.push(cell);
+                    vm.push(f.clone());
+                    vm.call(2, env.assembly, 0)?;
+                    acc = vm.pop();
+                }
+                vm.push(acc);
+            }
+            Algorithm::Each => {
+                let f = vm.pop();
+                let xs = vm.pop();
+                if !xs.is_array() {
+                    vm.push(xs);
+                    vm.push(f);
+                    return vm.call(1, env.assembly, 0);
+                }
+                let array = xs.into_array();
+                let mut cells = Vec::with_capacity(array.len());
+                for cell in array.into_values() {
+                    vm.push(cell);
+                    vm.push(f.clone());
+                    vm.call(1, env.assembly, 0)?;
+                    cells.push(vm.pop());
+                }
+                vm.push(Array::from(cells).normalized(1));
+            }
+            Algorithm::Table => {
+                let f = vm.pop();
+                let xs = vm.pop();
+                let ys = vm.pop();
+                if !xs.is_array() && !ys.is_array() {
+                    vm.push(ys);
+                    vm.push(xs);
+                    vm.push(f);
+                    return vm.call(2, env.assembly, 0);
+                }
+                let a = if xs.is_array() {
+                    xs.into_array()
+                } else {
+                    Array::from(xs)
+                };
+                let b = if ys.is_array() {
+                    ys.into_array()
+                } else {
+                    Array::from(ys)
+                };
+                let mut table = Vec::with_capacity(a.len());
+                for a in a.into_values() {
+                    let mut row = Vec::with_capacity(b.len());
+                    for b in b.clone().into_values() {
+                        vm.push(b);
+                        vm.push(a.clone());
+                        vm.push(f.clone());
+                        vm.call(2, env.assembly, 0)?;
+                        row.push(vm.pop());
+                    }
+                    table.push(Value::from(Array::from(row).normalized(1)));
+                }
+                vm.push(Array::from(table).normalized(1));
+            }
+        }
+        Ok(())
     }
 }

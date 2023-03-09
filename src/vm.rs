@@ -1,7 +1,4 @@
-use std::{
-    fmt,
-    mem::{swap, take},
-};
+use std::{fmt, mem::swap};
 
 use crate::{
     array::Array,
@@ -9,12 +6,11 @@ use crate::{
     compile::Assembly,
     function::{Function, Partial},
     lex::Span,
-    ops::{Op1, Op2},
+    ops::{Algorithm, Op1, Op2},
     value::{RawType, Type, Value},
     RuntimeError, RuntimeResult, TraceFrame, UiuaError, UiuaResult,
 };
 
-#[derive(Clone, Copy)]
 pub struct Env<'a> {
     pub span: usize,
     pub assembly: &'a Assembly,
@@ -43,9 +39,6 @@ pub(crate) enum Instr {
     Move(usize),
     Rotate(usize),
     Pop(usize),
-    ArrayPop,
-    ArrayPush,
-    Normalize(usize),
     Call(usize),
     Return,
     Jump(isize),
@@ -53,6 +46,7 @@ pub(crate) enum Instr {
     JumpIfElsePop(isize, bool),
     Op1(Op1),
     Op2(Op2, usize),
+    Algorithm(Algorithm),
     DestructureList(usize, Box<Span>),
     PushUnresolvedFunction(Box<FunctionId>),
     Dud,
@@ -96,26 +90,25 @@ pub struct Vm {
 }
 
 impl Vm {
-    pub fn run_assembly(&mut self, assembly: &Assembly) -> UiuaResult<Option<Value>> {
-        match self.run_assembly_inner(assembly) {
-            Ok(val) => Ok(val),
-            Err(error) => {
-                let mut trace = Vec::new();
-                for frame in self.call_stack.iter().rev() {
-                    let id = assembly.function_id(frame.function);
-                    trace.push(TraceFrame {
-                        id: id.clone(),
-                        span: assembly.spans[frame.call_span].clone(),
-                    });
-                }
-                Err(UiuaError::Run {
-                    error: error.into(),
-                    trace,
-                })
+    pub fn run_assembly(&mut self, assembly: &Assembly) -> UiuaResult {
+        if let Err(error) = self.run_assembly_inner(assembly, 0) {
+            let mut trace = Vec::new();
+            for frame in self.call_stack.iter().rev() {
+                let id = assembly.function_id(frame.function);
+                trace.push(TraceFrame {
+                    id: id.clone(),
+                    span: assembly.spans[frame.call_span].clone(),
+                });
             }
+            Err(UiuaError::Run {
+                error: error.into(),
+                trace,
+            })
+        } else {
+            Ok(())
         }
     }
-    fn run_assembly_inner(&mut self, assembly: &Assembly) -> RuntimeResult<Option<Value>> {
+    fn run_assembly_inner(&mut self, assembly: &Assembly, return_depth: usize) -> RuntimeResult {
         dprintln!("\nRunning...");
         if self.pc == 0 {
             self.pc = assembly.start;
@@ -203,34 +196,8 @@ impl Vm {
                     puffin::profile_scope!("pop");
                     stack.truncate(stack.len() - *n);
                 }
-                Instr::ArrayPop => {
-                    #[cfg(feature = "profile")]
-                    puffin::profile_scope!("array pop");
-                    let value = stack.last_mut().unwrap();
-                    if !value.is_array() {
-                        *value = Value::from(Array::from(vec![take(value)]));
-                    }
-                    let popped = value.array_mut().pop().unwrap();
-                    stack.push(popped);
-                }
-                Instr::ArrayPush => {
-                    let to_push = stack.pop().unwrap();
-                    let pushed_to = stack.last_mut().unwrap();
-                    if pushed_to.is_array() {
-                        pushed_to.array_mut().push_value(to_push);
-                    } else {
-                        let message = format!("Cannot push to {}", pushed_to.ty());
-                        return Err(assembly.spans[0].error(message));
-                    }
-                }
-                Instr::Normalize(n) => {
-                    let value = stack.last_mut().unwrap();
-                    if value.is_array() {
-                        value.array_mut().normalize(*n);
-                    }
-                }
                 &Instr::Call(span) => {
-                    self.call(span, assembly)?;
+                    self.call_impl(assembly, span)?;
                 }
                 Instr::Return => {
                     #[cfg(feature = "profile")]
@@ -241,9 +208,15 @@ impl Vm {
                         stack.truncate(frame.stack_size);
                         stack.push(value);
                         dprintln!("{:?}", stack);
-                        continue;
+                        if return_depth > 0 && self.call_stack.len() == return_depth {
+                            *pc = 0;
+                            return Ok(());
+                        } else {
+                            continue;
+                        }
                     } else {
-                        break;
+                        *pc = 0;
+                        return Ok(());
                     }
                 }
                 Instr::Jump(delta) => {
@@ -298,6 +271,12 @@ impl Vm {
                     left.op2(right, *op, &env)?;
                     stack.pop();
                 }
+                Instr::Algorithm(algo) => {
+                    #[cfg(feature = "profile")]
+                    puffin::profile_scope!("algorithm");
+                    let env = Env { assembly, span: 0 };
+                    algo.run(self, &env)?;
+                }
                 Instr::DestructureList(_n, _span) => {
                     // let list = match stack.pop().unwrap() {
                     //     Value::List(list) if *n == list.len() => list,
@@ -327,9 +306,24 @@ impl Vm {
             self.pc = self.pc.overflowing_add(1).0;
         }
         self.pc -= 1;
-        Ok(self.stack.pop())
+        Ok(())
     }
-    fn call(&mut self, span: usize, assembly: &Assembly) -> RuntimeResult {
+    pub fn push(&mut self, value: impl Into<Value>) {
+        self.stack.push(value.into());
+    }
+    #[track_caller]
+    pub fn pop(&mut self) -> Value {
+        self.stack.pop().expect("nothing to pop")
+    }
+    pub fn call(&mut self, args: usize, assembly: &Assembly, span: usize) -> RuntimeResult {
+        let return_depth = self.call_stack.len();
+        for _ in 0..args {
+            self.call_impl(assembly, span)?;
+        }
+        self.pc = self.pc.overflowing_add(1).0;
+        self.run_assembly_inner(assembly, return_depth)
+    }
+    fn call_impl(&mut self, assembly: &Assembly, span: usize) -> RuntimeResult<bool> {
         #[cfg(feature = "profile")]
         puffin::profile_scope!("call");
         let value = self.stack.pop().unwrap();
@@ -366,6 +360,7 @@ impl Vm {
                 span,
             };
             self.stack.push(partial.into());
+            Ok(false)
         } else {
             self.call_stack.push(StackFrame {
                 stack_size: self.stack.len() - arg_count,
@@ -375,7 +370,7 @@ impl Vm {
             });
             self.pc = (function.start as usize).overflowing_sub(1).0;
             self.just_called = Some(function);
+            Ok(true)
         }
-        Ok(())
     }
 }

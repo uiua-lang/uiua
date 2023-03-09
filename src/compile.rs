@@ -52,7 +52,8 @@ impl Assembly {
         Ok(res)
     }
     fn run_with_vm(&self, vm: &mut Vm) -> UiuaResult<Option<Value>> {
-        vm.run_assembly(self)
+        vm.run_assembly(self)?;
+        Ok(vm.stack.pop())
     }
     fn add_function_instrs(&mut self, mut instrs: Vec<Instr>) {
         self.instrs.append(&mut instrs);
@@ -174,14 +175,14 @@ impl Default for Compiler {
                         name: &str,
                         id: FunctionId,
                         params: u16,
-                        mut instrs: Vec<Instr>|
+                        instr: Instr|
          -> Function {
             let function = Function {
                 start: assembly.instrs.len() as u32,
                 params,
             };
             // Instructions
-            assembly.instrs.append(&mut instrs);
+            assembly.instrs.push(instr);
             assembly.instrs.push(Instr::Return);
             // Scope
             scope.bindings.insert(
@@ -200,7 +201,7 @@ impl Default for Compiler {
                 &op1.to_string(),
                 FunctionId::Op1(op1),
                 1,
-                vec![Instr::Op1(op1)],
+                Instr::Op1(op1),
             );
         }
         // 2-parameter builtins
@@ -210,18 +211,17 @@ impl Default for Compiler {
                 &op2.to_string(),
                 FunctionId::Op2(op2),
                 2,
-                vec![Instr::Op2(op2, 0)],
+                Instr::Op2(op2, 0),
             );
         }
         // Algorithms
         for algo in all::<Algorithm>() {
-            let instrs = algo.instrs(&assembly);
             init(
                 &mut assembly,
                 &algo.to_string(),
                 FunctionId::Algorithm(algo),
                 algo.params(),
-                instrs,
+                Instr::Algorithm(algo),
             );
         }
 
@@ -663,15 +663,10 @@ impl Compiler {
         span: Span,
     ) -> CompileResult {
         let span = self.push_call_span(span);
-        let (func, _) = self
-            .assembly
-            .function_ids
-            .iter()
-            .find(|(_, id)| **id == FunctionId::Algorithm(algo))
-            .unwrap();
+        let func = self.assembly.find_function(algo).unwrap();
         self.bin_expr_impl(
             [
-                Instr::Push((*func).into()),
+                Instr::Push(func.into()),
                 Instr::Call(span),
                 Instr::Call(span),
             ],

@@ -1,11 +1,10 @@
-use std::{cmp::Ordering, mem::take, ptr};
-
-use crate::{
-    array::Array,
-    value::{RawType, Value},
-    vm::Env,
-    RuntimeResult,
+use std::{
+    cmp::Ordering,
+    mem::{swap, take},
+    ptr,
 };
+
+use crate::{array::Array, value::Value, vm::Env, RuntimeResult};
 
 type CmpFn<T> = fn(&T, &T) -> Ordering;
 
@@ -32,43 +31,41 @@ impl Value {
             Vec::new()
         }
     }
-    pub fn range(&self, env: &Env) -> RuntimeResult<Array> {
-        match self.raw_ty() {
-            RawType::Array if self.array().is_numbers() => {
-                let arr = self.array();
-                let mut shape = Vec::with_capacity(arr.len());
-                for f in arr.numbers() {
-                    let rounded = f.round();
-                    if (f - rounded).abs() > f64::EPSILON || rounded <= 0.0 {
-                        return Err(env.error(
-                            "Tried to make a range of an array with decimal \
-                            or nonpositive numbers, but only natural numbers \
-                            are allowed",
-                        ));
-                    }
-                    let rounded = rounded as usize;
-
-                    shape.push(rounded);
-                }
-                let data = range(&shape);
-                return Ok((shape, data).into());
-            }
-            RawType::Num => {
-                let f = self.number();
+    pub fn as_shape(&self, env: &Env) -> RuntimeResult<Vec<usize>> {
+        if self.is_array() {
+            let arr = self.array();
+            let mut shape = Vec::with_capacity(arr.len());
+            for f in arr.numbers() {
                 let rounded = f.round();
                 if (f - rounded).abs() > f64::EPSILON || rounded <= 0.0 {
                     return Err(env.error(
-                        "Tried to make a range of decimal or nonpositive \
-                        number, but only natural numbers are allowed",
+                        "Tried to make a shape from an array with decimal or \
+                        nonpositive numbers, but only natural numbers are \
+                        allowed",
                     ));
                 }
-                let shape = vec![rounded as usize];
-                let data = range(&shape);
-                return Ok((shape, data).into());
+                let rounded = rounded as usize;
+                shape.push(rounded);
             }
-            _ => {}
-        };
-        Err(env.error("Ranges can only be created from natural numbers"))
+            Ok(shape)
+        } else if self.is_num() {
+            let f = self.number();
+            let rounded = f.round();
+            if (f - rounded).abs() > f64::EPSILON || rounded <= 0.0 {
+                return Err(env.error(
+                    "Tried to make a shape from decimal or nonpositive \
+                    number, but only natural numbers are allowed",
+                ));
+            }
+            Ok(vec![rounded as usize])
+        } else {
+            Err(env.error("Tried to make a shape from non-number"))
+        }
+    }
+    pub fn range(&self, env: &Env) -> RuntimeResult<Array> {
+        let shape = self.as_shape(env)?;
+        let data = range(&shape);
+        Ok((shape, data).into())
     }
     pub fn reverse(&mut self) {
         if self.is_array() {
@@ -92,6 +89,25 @@ impl Value {
                 Ok(())
             }
         }
+    }
+    pub fn deshape(&mut self) {
+        if self.is_array() {
+            self.array_mut().deshape();
+        } else {
+            *self = Array::from(take(self)).into();
+        }
+    }
+    pub fn reshape(&mut self, other: &mut Value, env: &Env) -> RuntimeResult {
+        swap(self, other);
+        let shape = other.as_shape(env)?;
+        self.coerce_array().reshape(shape);
+        Ok(())
+    }
+    pub fn coerce_array(&mut self) -> &mut Array {
+        if !self.is_array() {
+            *self = Array::from(take(self)).into();
+        }
+        self.array_mut()
     }
 }
 

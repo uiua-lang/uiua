@@ -44,6 +44,7 @@ pub enum Op1 {
     Shape,
     Range,
     Reverse,
+    Deshape,
     Show,
     Print,
     Println,
@@ -72,6 +73,7 @@ impl fmt::Display for Op1 {
             Op1::Shape => write!(f, "shape"),
             Op1::Range => write!(f, "range"),
             Op1::Reverse => write!(f, "reverse"),
+            Op1::Deshape => write!(f, "deshape"),
             Op1::Show => write!(f, "show"),
             Op1::Print => write!(f, "print"),
             Op1::Println => write!(f, "println"),
@@ -106,6 +108,7 @@ impl Value {
             Op1::Floor => *self = self.floor(env)?,
             Op1::Ceil => *self = self.ceil(env)?,
             Op1::Round => *self = self.round(env)?,
+            Op1::Deshape => self.deshape(),
             op => todo!("{op}"),
         }
         Ok(())
@@ -133,6 +136,7 @@ pub enum Op2 {
     Max,
     Atan2,
     Join,
+    Reshape,
 }
 
 impl fmt::Display for Op2 {
@@ -156,6 +160,7 @@ impl fmt::Display for Op2 {
             Op2::Max => write!(f, "max"),
             Op2::Atan2 => write!(f, "atan2"),
             Op2::Join => write!(f, "join"),
+            Op2::Reshape => write!(f, "reshape"),
         }
     }
 }
@@ -181,6 +186,7 @@ impl Value {
             Op2::Max => *self = Self::max(self, other, env)?,
             Op2::Atan2 => *self = self.atan2(other, env)?,
             Op2::Join => self.join(other.clone(), env)?,
+            Op2::Reshape => self.reshape(other, env)?,
         }
         Ok(())
     }

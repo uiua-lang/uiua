@@ -92,6 +92,7 @@ pub struct Vm {
     call_stack: Vec<StackFrame>,
     pub stack: Vec<Value>,
     pc: usize,
+    just_called: Option<Function>,
 }
 
 impl Vm {
@@ -115,17 +116,15 @@ impl Vm {
         }
     }
     fn run_assembly_inner(&mut self, assembly: &Assembly) -> RuntimeResult<Option<Value>> {
-        let stack = &mut self.stack;
-        let call_stack = &mut self.call_stack;
         dprintln!("\nRunning...");
         if self.pc == 0 {
             self.pc = assembly.start;
         }
         #[cfg(feature = "profile")]
         let mut i = 0;
-        let pc = &mut self.pc;
-        let mut just_called = None;
-        while *pc < assembly.instrs.len() {
+        while self.pc < assembly.instrs.len() {
+            let pc = &mut self.pc;
+            let stack = &mut self.stack;
             #[cfg(feature = "profile")]
             if i % 100_000 == 0 {
                 puffin::GlobalProfiler::lock().new_frame();
@@ -231,61 +230,12 @@ impl Vm {
                     }
                 }
                 &Instr::Call(span) => {
-                    #[cfg(feature = "profile")]
-                    puffin::profile_scope!("call");
-                    let value = stack.pop().unwrap();
-                    let (function, partial_count, span) = match value.raw_ty() {
-                        RawType::Function => (value.function(), 0, span),
-                        RawType::Partial => {
-                            let partial = value.partial();
-                            let arg_count = partial.args.len();
-                            for arg in partial.args.iter() {
-                                stack.push(arg.clone());
-                            }
-                            (partial.function, arg_count, partial.span)
-                        }
-                        _ => {
-                            let message = if let Some(function) = just_called.take() {
-                                let id = assembly.function_id(function);
-                                format!(
-                                    "Too many arguments to {}: expected {}",
-                                    id, function.params
-                                )
-                            } else {
-                                format!("Cannot call {}", value.ty())
-                            };
-                            return Err(assembly.spans[span].error(message));
-                        }
-                    };
-                    // Handle partial arguments
-                    let arg_count = partial_count + 1;
-                    if partial_count > 0 {
-                        dprintln!("{stack:?}");
-                    }
-                    // Call
-                    if arg_count < function.params as usize {
-                        let partial = Partial {
-                            function,
-                            args: stack.drain(stack.len() - arg_count..).collect(),
-                            span,
-                        };
-                        stack.push(partial.into());
-                    } else {
-                        call_stack.push(StackFrame {
-                            stack_size: stack.len() - arg_count,
-                            function,
-                            ret: *pc + 1,
-                            call_span: span,
-                        });
-                        *pc = function.start as usize;
-                        just_called = Some(function);
-                        continue;
-                    }
+                    self.call(span, assembly)?;
                 }
                 Instr::Return => {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("return");
-                    if let Some(frame) = call_stack.pop() {
+                    if let Some(frame) = self.call_stack.pop() {
                         let value = stack.pop().unwrap();
                         *pc = frame.ret;
                         stack.truncate(frame.stack_size);
@@ -373,10 +323,59 @@ impl Vm {
                     panic!("unresolved instruction")
                 }
             }
-            dprintln!("{:?}", stack);
-            *pc += 1;
+            dprintln!("{:?}", self.stack);
+            self.pc = self.pc.overflowing_add(1).0;
         }
-        *pc -= 1;
-        Ok(stack.pop())
+        self.pc -= 1;
+        Ok(self.stack.pop())
+    }
+    fn call(&mut self, span: usize, assembly: &Assembly) -> RuntimeResult {
+        #[cfg(feature = "profile")]
+        puffin::profile_scope!("call");
+        let value = self.stack.pop().unwrap();
+        let (function, partial_count, span) = match value.raw_ty() {
+            RawType::Function => (value.function(), 0, span),
+            RawType::Partial => {
+                let partial = value.partial();
+                let arg_count = partial.args.len();
+                for arg in partial.args.iter() {
+                    self.stack.push(arg.clone());
+                }
+                (partial.function, arg_count, partial.span)
+            }
+            _ => {
+                let message = if let Some(function) = self.just_called.take() {
+                    let id = assembly.function_id(function);
+                    format!("Too many arguments to {}: expected {}", id, function.params)
+                } else {
+                    format!("Cannot call {}", value.ty())
+                };
+                return Err(assembly.spans[span].error(message));
+            }
+        };
+        // Handle partial arguments
+        let arg_count = partial_count + 1;
+        if partial_count > 0 {
+            dprintln!("{:?}", self.stack);
+        }
+        // Call
+        if arg_count < function.params as usize {
+            let partial = Partial {
+                function,
+                args: self.stack.drain(self.stack.len() - arg_count..).collect(),
+                span,
+            };
+            self.stack.push(partial.into());
+        } else {
+            self.call_stack.push(StackFrame {
+                stack_size: self.stack.len() - arg_count,
+                function,
+                ret: self.pc + 1,
+                call_span: span,
+            });
+            self.pc = (function.start as usize).overflowing_sub(1).0;
+            self.just_called = Some(function);
+        }
+        Ok(())
     }
 }

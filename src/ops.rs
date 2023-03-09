@@ -97,6 +97,7 @@ impl Value {
             }
             Op1::Range => *self = self.range(env)?.into(),
             Op1::Reverse => self.reverse(),
+            Op1::Not => *self = self.not(env)?,
             Op1::Neg => *self = self.neg(env)?,
             Op1::Abs => *self = self.abs(env)?,
             Op1::Sqrt => *self = self.sqrt(env)?,

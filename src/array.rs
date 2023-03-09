@@ -350,6 +350,7 @@ macro_rules! array_un_impl {
     };
 }
 
+array_un_impl!(not, (Num, numbers, num));
 array_un_impl!(neg, (Num, numbers, num));
 array_un_impl!(abs, (Num, numbers, num));
 array_un_impl!(sqrt, (Num, numbers, num));

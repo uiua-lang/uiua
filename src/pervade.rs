@@ -2,6 +2,16 @@ use std::{cmp::Ordering, fmt::Debug};
 
 use crate::{vm::Env, RuntimeError, RuntimeResult};
 
+pub mod not {
+    use super::*;
+    pub fn num(a: &f64) -> f64 {
+        1.0 - a
+    }
+    pub fn error<T: Debug>(a: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot negate {a:?}"))
+    }
+}
+
 pub mod neg {
     use super::*;
     pub fn num(a: &f64) -> f64 {

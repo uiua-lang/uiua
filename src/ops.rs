@@ -332,7 +332,6 @@ impl Algorithm {
                 Call(0),            // f, [3, 2], 1
                 Jump(-11),
                 // Loop end
-                Normalize(1),
             ],
             Algorithm::Table => vec![
                 // [4, 5], [2, 3], f = (*)

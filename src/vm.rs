@@ -1,4 +1,7 @@
-use std::{fmt, mem::swap};
+use std::{
+    fmt,
+    mem::{swap, take},
+};
 
 use crate::{
     array::Array,
@@ -205,13 +208,11 @@ impl Vm {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("array pop");
                     let value = stack.last_mut().unwrap();
-                    if value.is_array() {
-                        let array = value.array_mut().pop().unwrap();
-                        stack.push(array);
-                    } else {
-                        let message = format!("Cannot pop from {}", value.ty());
-                        return Err(assembly.spans[0].error(message));
+                    if !value.is_array() {
+                        *value = Value::from(Array::from(vec![take(value)]));
                     }
+                    let popped = value.array_mut().pop().unwrap();
+                    stack.push(popped);
                 }
                 Instr::ArrayPush => {
                     let to_push = stack.pop().unwrap();
@@ -269,7 +270,6 @@ impl Vm {
                             span,
                         };
                         stack.push(partial.into());
-                        just_called = None;
                     } else {
                         call_stack.push(StackFrame {
                             stack_size: stack.len() - arg_count,

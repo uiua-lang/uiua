@@ -7,7 +7,7 @@ use crate::{
     function::{Function, Partial},
     lex::Span,
     ops::{Op1, Op2},
-    value::{RawType, Value},
+    value::{RawType, Type, Value},
     RuntimeError, RuntimeResult, TraceFrame, UiuaError, UiuaResult,
 };
 
@@ -27,6 +27,7 @@ impl<'a> Env<'a> {
 #[allow(unused)]
 pub(crate) enum Instr {
     Comment(String),
+    AssertType(Type),
     Push(Value),
     Constant(usize),
     List(usize),
@@ -136,6 +137,15 @@ impl Vm {
             dprintln!("{pc:>3} {instr}");
             match instr {
                 Instr::Comment(_) => {}
+                Instr::AssertType(ty) => {
+                    let value = stack.last().unwrap();
+                    let val_ty = value.ty();
+                    if val_ty != *ty {
+                        return Err(assembly.spans[0]
+                            .clone()
+                            .sp(format!("Value expected to be {ty} was {val_ty} instead")));
+                    }
+                }
                 Instr::Push(v) => {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("push");
@@ -219,19 +229,19 @@ impl Vm {
                         value.array_mut().normalize(*n);
                     }
                 }
-                Instr::Call(span) => {
+                &Instr::Call(span) => {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("call");
                     let value = stack.pop().unwrap();
-                    let (function, partial_count) = match value.raw_ty() {
-                        RawType::Function => (value.function(), 0),
+                    let (function, partial_count, span) = match value.raw_ty() {
+                        RawType::Function => (value.function(), 0, span),
                         RawType::Partial => {
                             let partial = value.partial();
                             let arg_count = partial.args.len();
                             for arg in partial.args.iter() {
                                 stack.push(arg.clone());
                             }
-                            (partial.function, arg_count)
+                            (partial.function, arg_count, partial.span)
                         }
                         _ => {
                             let message = if let Some(function) = just_called.take() {
@@ -243,7 +253,7 @@ impl Vm {
                             } else {
                                 format!("Cannot call {}", value.ty())
                             };
-                            return Err(assembly.spans[*span].error(message));
+                            return Err(assembly.spans[span].error(message));
                         }
                     };
                     // Handle partial arguments
@@ -256,6 +266,7 @@ impl Vm {
                         let partial = Partial {
                             function,
                             args: stack.drain(stack.len() - arg_count..).collect(),
+                            span,
                         };
                         stack.push(partial.into());
                         just_called = None;
@@ -264,7 +275,7 @@ impl Vm {
                             stack_size: stack.len() - arg_count,
                             function,
                             ret: *pc + 1,
-                            call_span: *span,
+                            call_span: span,
                         });
                         *pc = function.start as usize;
                         just_called = Some(function);

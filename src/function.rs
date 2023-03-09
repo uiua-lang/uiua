@@ -65,6 +65,7 @@ impl NanBoxable for Function {
 pub struct Partial {
     pub(crate) function: Function,
     pub(crate) args: Arc<[Value]>,
+    pub(crate) span: usize,
 }
 
 impl fmt::Debug for Partial {

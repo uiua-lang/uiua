@@ -315,7 +315,9 @@ impl Algorithm {
             ],
             Algorithm::Fold => vec![
                 // [1, 2, 3], 0, f = (+)
-                Move(3),           // 0, f, [1, 2, 3]
+                AssertType(Type::Function),
+                Move(3), // 0, f, [1, 2, 3]
+                AssertType(Type::Array),
                 Op1(Op1::Reverse), // 0, f, [3, 2, 1]
                 Move(3),           // f, [3, 2, 1], 0
                 // Loop start

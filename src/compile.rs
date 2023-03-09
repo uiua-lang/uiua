@@ -538,10 +538,10 @@ impl Compiler {
                     BinOp::Sub => self.bin_expr(Op2::Sub, left, right, span),
                     BinOp::Mul => self.bin_expr(Op2::Mul, left, right, span),
                     BinOp::Div => self.bin_expr(Op2::Div, left, right, span),
-                    BinOp::Compose => self.algo_bin_expr(Algorithm::Compose, left, right),
-                    BinOp::BlackBird => self.algo_bin_expr(Algorithm::BlackBird, left, right),
-                    BinOp::LeftThen => self.algo_bin_expr(Algorithm::LeftThen, left, right),
-                    BinOp::RightThen => self.algo_bin_expr(Algorithm::RightThen, left, right),
+                    BinOp::Compose => self.algo_bin_expr(Algorithm::Compose, left, right, span),
+                    BinOp::BlackBird => self.algo_bin_expr(Algorithm::BlackBird, left, right, span),
+                    BinOp::LeftThen => self.algo_bin_expr(Algorithm::LeftThen, left, right, span),
+                    BinOp::RightThen => self.algo_bin_expr(Algorithm::RightThen, left, right, span),
                     BinOp::Left => self.bin_expr(Op2::Left, left, right, span),
                     BinOp::Right => self.bin_expr(Op2::Right, left, right, span),
                 }?;
@@ -655,8 +655,14 @@ impl Compiler {
         let span = self.push_call_span(span);
         self.bin_expr_impl([Instr::Op2(op2, span)], left, right)
     }
-    fn algo_bin_expr(&mut self, algo: Algorithm, left: Sp<Expr>, right: Sp<Expr>) -> CompileResult {
-        let span = self.push_call_span(left.span.clone());
+    fn algo_bin_expr(
+        &mut self,
+        algo: Algorithm,
+        left: Sp<Expr>,
+        right: Sp<Expr>,
+        span: Span,
+    ) -> CompileResult {
+        let span = self.push_call_span(span);
         let (func, _) = self
             .assembly
             .function_ids

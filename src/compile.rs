@@ -6,7 +6,7 @@ use crate::{
     ast::*,
     function::Function,
     lex::{Sp, Span},
-    ops::{constants, Algorithm, Op1, Op2},
+    ops::{constants, HigherOp, Op1, Op2},
     parse::{parse, ParseError},
     value::Value,
     vm::{dprintln, Instr, Vm},
@@ -215,13 +215,13 @@ impl Default for Compiler {
             );
         }
         // Algorithms
-        for algo in all::<Algorithm>() {
+        for hop in all::<HigherOp>() {
             init(
                 &mut assembly,
-                &algo.to_string(),
-                FunctionId::Algorithm(algo),
-                algo.params(),
-                Instr::Algorithm(algo),
+                &hop.to_string(),
+                FunctionId::HigherOp(hop),
+                hop.params(),
+                Instr::HigherOp(hop),
             );
         }
 
@@ -396,7 +396,7 @@ impl Compiler {
             FunctionId::FormatString(span) => format!("format string at {span}"),
             FunctionId::Op1(_) => unreachable!("Builtin1 functions should not be compiled"),
             FunctionId::Op2(_) => unreachable!("Builtin2 functions should not be compiled"),
-            FunctionId::Algorithm(_) => unreachable!("Builtin algorithms should not be compiled"),
+            FunctionId::HigherOp(_) => unreachable!("Builtin algorithms should not be compiled"),
         };
         self.push_instr(Instr::Comment(name.clone()));
         let params = params_and_body(self)?;
@@ -538,10 +538,10 @@ impl Compiler {
                     BinOp::Sub => self.bin_expr(Op2::Sub, left, right, span),
                     BinOp::Mul => self.bin_expr(Op2::Mul, left, right, span),
                     BinOp::Div => self.bin_expr(Op2::Div, left, right, span),
-                    BinOp::Compose => self.algo_bin_expr(Algorithm::Compose, left, right, span),
-                    BinOp::BlackBird => self.algo_bin_expr(Algorithm::BlackBird, left, right, span),
-                    BinOp::LeftThen => self.algo_bin_expr(Algorithm::LeftThen, left, right, span),
-                    BinOp::RightThen => self.algo_bin_expr(Algorithm::RightThen, left, right, span),
+                    BinOp::Compose => self.algo_bin_expr(HigherOp::Compose, left, right, span),
+                    BinOp::BlackBird => self.algo_bin_expr(HigherOp::BlackBird, left, right, span),
+                    BinOp::LeftThen => self.algo_bin_expr(HigherOp::LeftThen, left, right, span),
+                    BinOp::RightThen => self.algo_bin_expr(HigherOp::RightThen, left, right, span),
                     BinOp::Left => self.bin_expr(Op2::Left, left, right, span),
                     BinOp::Right => self.bin_expr(Op2::Right, left, right, span),
                 }?;
@@ -657,13 +657,13 @@ impl Compiler {
     }
     fn algo_bin_expr(
         &mut self,
-        algo: Algorithm,
+        hop: HigherOp,
         left: Sp<Expr>,
         right: Sp<Expr>,
         span: Span,
     ) -> CompileResult {
         let span = self.push_call_span(span);
-        let func = self.assembly.find_function(algo).unwrap();
+        let func = self.assembly.find_function(hop).unwrap();
         self.bin_expr_impl(
             [
                 Instr::Push(func.into()),

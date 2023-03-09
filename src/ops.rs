@@ -186,7 +186,7 @@ impl Value {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
-pub enum Algorithm {
+pub enum HigherOp {
     Compose,
     BlackBird,
     Flip,
@@ -198,53 +198,53 @@ pub enum Algorithm {
     Table,
 }
 
-impl fmt::Display for Algorithm {
+impl fmt::Display for HigherOp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Algorithm::Compose => write!(f, "compose"),
-            Algorithm::BlackBird => write!(f, "blackbird"),
-            Algorithm::Flip => write!(f, "flip"),
-            Algorithm::While => write!(f, "while"),
-            Algorithm::LeftThen => write!(f, "left_then"),
-            Algorithm::RightThen => write!(f, "right_then"),
-            Algorithm::Fold => write!(f, "fold"),
-            Algorithm::Each => write!(f, "each"),
-            Algorithm::Table => write!(f, "table"),
+            HigherOp::Compose => write!(f, "compose"),
+            HigherOp::BlackBird => write!(f, "blackbird"),
+            HigherOp::Flip => write!(f, "flip"),
+            HigherOp::While => write!(f, "while"),
+            HigherOp::LeftThen => write!(f, "left_then"),
+            HigherOp::RightThen => write!(f, "right_then"),
+            HigherOp::Fold => write!(f, "fold"),
+            HigherOp::Each => write!(f, "each"),
+            HigherOp::Table => write!(f, "table"),
         }
     }
 }
 
-impl Algorithm {
+impl HigherOp {
     pub(crate) fn params(&self) -> u16 {
         match self {
-            Algorithm::Compose => 3,
-            Algorithm::BlackBird => 4,
-            Algorithm::Flip => 3,
-            Algorithm::While => 3,
-            Algorithm::LeftThen => 3,
-            Algorithm::RightThen => 3,
-            Algorithm::Each => 2,
-            Algorithm::Fold => 3,
-            Algorithm::Table => 3,
+            HigherOp::Compose => 3,
+            HigherOp::BlackBird => 4,
+            HigherOp::Flip => 3,
+            HigherOp::While => 3,
+            HigherOp::LeftThen => 3,
+            HigherOp::RightThen => 3,
+            HigherOp::Each => 2,
+            HigherOp::Fold => 3,
+            HigherOp::Table => 3,
         }
     }
     pub fn run(&self, vm: &mut Vm, env: &Env) -> RuntimeResult {
         match self {
-            Algorithm::Compose => {
+            HigherOp::Compose => {
                 // x g f
                 let f = vm.pop(); // x g
                 vm.call(1, env.assembly, 0)?; // gx
                 vm.push(f); // gx f
                 vm.call(1, env.assembly, 0)?; // f(gx)
             }
-            Algorithm::BlackBird => {
+            HigherOp::BlackBird => {
                 // y x g f
                 let f = vm.pop(); // y x g
                 vm.call(1, env.assembly, 0)?; // gxy
                 vm.push(f); // gxy f
                 vm.call(2, env.assembly, 0)?; // f(gxy)
             }
-            Algorithm::Flip => {
+            HigherOp::Flip => {
                 let f = vm.pop();
                 let a = vm.pop();
                 let b = vm.pop();
@@ -253,7 +253,7 @@ impl Algorithm {
                 vm.push(f);
                 vm.call(2, env.assembly, 0)?;
             }
-            Algorithm::While => {
+            HigherOp::While => {
                 let cond = vm.pop();
                 let body = vm.pop();
                 let mut init = vm.pop();
@@ -271,7 +271,7 @@ impl Algorithm {
                 }
                 vm.push(init);
             }
-            Algorithm::LeftThen => {
+            HigherOp::LeftThen => {
                 let g = vm.pop();
                 let f = vm.pop();
                 let x = vm.pop();
@@ -284,7 +284,7 @@ impl Algorithm {
                 vm.push(f);
                 vm.call(2, env.assembly, 0)?;
             }
-            Algorithm::RightThen => {
+            HigherOp::RightThen => {
                 let f = vm.pop();
                 let g = vm.pop();
                 let x = vm.pop();
@@ -297,7 +297,7 @@ impl Algorithm {
                 vm.push(f);
                 vm.call(2, env.assembly, 0)?;
             }
-            Algorithm::Fold => {
+            HigherOp::Fold => {
                 let f = vm.pop();
                 let mut acc = vm.pop();
                 let xs = vm.pop();
@@ -316,7 +316,7 @@ impl Algorithm {
                 }
                 vm.push(acc);
             }
-            Algorithm::Each => {
+            HigherOp::Each => {
                 let f = vm.pop();
                 let xs = vm.pop();
                 if !xs.is_array() {
@@ -334,7 +334,7 @@ impl Algorithm {
                 }
                 vm.push(Array::from(cells).normalized(1));
             }
-            Algorithm::Table => {
+            HigherOp::Table => {
                 let f = vm.pop();
                 let xs = vm.pop();
                 let ys = vm.pop();

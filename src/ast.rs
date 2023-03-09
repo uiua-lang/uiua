@@ -4,7 +4,7 @@ use enum_iterator::Sequence;
 
 use crate::{
     lex::{Sp, Span},
-    ops::{Algorithm, Op1, Op2},
+    ops::{HigherOp, Op1, Op2},
     Ident,
 };
 
@@ -64,7 +64,7 @@ pub enum FunctionId {
     FormatString(Span),
     Op1(Op1),
     Op2(Op2),
-    Algorithm(Algorithm),
+    HigherOp(HigherOp),
 }
 
 impl From<Ident> for FunctionId {
@@ -85,9 +85,9 @@ impl From<Op2> for FunctionId {
     }
 }
 
-impl From<Algorithm> for FunctionId {
-    fn from(alg: Algorithm) -> Self {
-        Self::Algorithm(alg)
+impl From<HigherOp> for FunctionId {
+    fn from(alg: HigherOp) -> Self {
+        Self::HigherOp(alg)
     }
 }
 
@@ -99,7 +99,7 @@ impl fmt::Display for FunctionId {
             FunctionId::FormatString(span) => write!(f, "format string from {span}"),
             FunctionId::Op1(op) => write!(f, "`{op}`"),
             FunctionId::Op2(op) => write!(f, "`{op}`"),
-            FunctionId::Algorithm(alg) => write!(f, "`{alg}`"),
+            FunctionId::HigherOp(alg) => write!(f, "`{alg}`"),
         }
     }
 }

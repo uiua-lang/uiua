@@ -6,7 +6,7 @@ use crate::{
     compile::Assembly,
     function::{Function, Partial},
     lex::Span,
-    ops::{Algorithm, Op1, Op2},
+    ops::{HigherOp, Op1, Op2},
     value::{RawType, Type, Value},
     RuntimeError, RuntimeResult, TraceFrame, UiuaError, UiuaResult,
 };
@@ -46,7 +46,7 @@ pub(crate) enum Instr {
     JumpIfElsePop(isize, bool),
     Op1(Op1),
     Op2(Op2, usize),
-    Algorithm(Algorithm),
+    HigherOp(HigherOp),
     DestructureList(usize, Box<Span>),
     PushUnresolvedFunction(Box<FunctionId>),
     Dud,
@@ -271,11 +271,11 @@ impl Vm {
                     left.op2(right, *op, &env)?;
                     stack.pop();
                 }
-                Instr::Algorithm(algo) => {
+                Instr::HigherOp(hop) => {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("algorithm");
                     let env = Env { assembly, span: 0 };
-                    algo.run(self, &env)?;
+                    hop.run(self, &env)?;
                 }
                 Instr::DestructureList(_n, _span) => {
                     // let list = match stack.pop().unwrap() {

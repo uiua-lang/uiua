@@ -36,19 +36,16 @@ pub(crate) enum Instr {
     Rotate(usize),
     Call(usize),
     Return,
-    Jump(isize),
-    PopJumpIf(isize, bool),
     Op1(Op1),
     Op2(Op2, usize),
     HigherOp(HigherOp),
     DestructureList(usize, Box<Span>),
     // These instructions don't exist after compilation
     PushUnresolvedFunction(Box<FunctionId>),
-    Dud,
 }
 
 fn _keep_instr_small(_: std::convert::Infallible) {
-    let _: [u8; 32] = unsafe { std::mem::transmute(Instr::Dud) };
+    let _: [u8; 32] = unsafe { std::mem::transmute(Instr::Return) };
 }
 
 impl fmt::Display for Instr {
@@ -193,21 +190,6 @@ impl Vm {
                         return Ok(());
                     }
                 }
-                Instr::Jump(delta) => {
-                    #[cfg(feature = "profile")]
-                    puffin::profile_scope!("jump");
-                    *pc = pc.wrapping_add_signed(*delta);
-                    continue;
-                }
-                Instr::PopJumpIf(delta, cond) => {
-                    #[cfg(feature = "profile")]
-                    puffin::profile_scope!("pop_jump_if");
-                    let val = stack.pop().unwrap();
-                    if val.is_truthy() == *cond {
-                        *pc = pc.wrapping_add_signed(*delta);
-                        continue;
-                    }
-                }
                 Instr::Op1(op) => {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("op1");
@@ -260,9 +242,6 @@ impl Vm {
                 }
                 Instr::PushUnresolvedFunction(id) => {
                     panic!("unresolved function: {id:?}")
-                }
-                Instr::Dud => {
-                    panic!("unresolved instruction")
                 }
             }
             dprintln!("{:?}", self.stack);

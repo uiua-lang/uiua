@@ -74,7 +74,6 @@ impl From<Sp<Expr>> for Block {
 pub enum Expr {
     #[default]
     Unit,
-    If(Box<IfExpr>),
     Call(Box<CallExpr>),
     Bin(Box<BinExpr>),
     Pipe(Box<PipeExpr>),
@@ -102,13 +101,6 @@ pub struct PipeExpr {
     pub left: Sp<Expr>,
     pub op: Sp<PipeOp>,
     pub right: Sp<Expr>,
-}
-
-#[derive(Debug, Clone)]
-pub struct IfExpr {
-    pub cond: Sp<Expr>,
-    pub if_true: Block,
-    pub if_false: Block,
 }
 
 #[derive(Debug, Clone)]

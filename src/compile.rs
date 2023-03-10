@@ -292,12 +292,6 @@ impl Compiler {
             .bindings
             .insert(ident, Binding::Local(height));
     }
-    fn instrs(&self) -> &[Instr] {
-        self.in_progress_functions
-            .last()
-            .map(|f| &f.instrs)
-            .unwrap_or(&self.global_instrs)
-    }
     fn instrs_mut(&mut self) -> &mut Vec<Instr> {
         self.in_progress_functions
             .last_mut()
@@ -318,11 +312,6 @@ impl Compiler {
             _ => {}
         }
         self.instrs_mut().push(instr);
-    }
-    fn push_spot(&mut self) -> usize {
-        let spot = self.instrs().len();
-        self.push_instr(Instr::Dud);
-        spot
     }
     fn push_call_span(&mut self, span: Span) -> usize {
         let spot = self.assembly.spans.len();
@@ -514,7 +503,6 @@ impl Compiler {
                 }?
             }
             Expr::Call(call) => self.call(*call)?,
-            Expr::If(if_expr) => self.if_expr(*if_expr)?,
             Expr::Pipe(pipe_expr) => self.pipe_expr(*pipe_expr)?,
             Expr::List(items) => self.list(Instr::List, items)?,
             Expr::Array(items) => self.list(Instr::Array, items)?,
@@ -613,21 +601,6 @@ impl Compiler {
         }
         self.expr(preprocess_expr(block.expr))?;
         self.pop_scope(height);
-        Ok(())
-    }
-    fn if_expr(&mut self, if_expr: IfExpr) -> CompileResult {
-        self.expr(if_expr.cond)?;
-        let jump_to_else_spot = self.push_spot();
-        self.height -= 1;
-        self.block(if_expr.if_true)?;
-        let jump_to_end_spot = self.push_spot();
-        self.instrs_mut()[jump_to_else_spot] = Instr::PopJumpIf(
-            self.instrs().len() as isize - jump_to_else_spot as isize,
-            false,
-        );
-        self.block(if_expr.if_false)?;
-        self.instrs_mut()[jump_to_end_spot] =
-            Instr::Jump(self.instrs().len() as isize - jump_to_end_spot as isize);
         Ok(())
     }
     fn bin_expr(&mut self, op2: Op2, left: Sp<Expr>, right: Sp<Expr>, span: Span) -> CompileResult {
@@ -754,13 +727,6 @@ fn preprocess_expr_rec(expr: &mut Sp<Expr>, params: &mut Vec<Sp<Ident>>) {
             let ident = expr.span.clone().sp(Ident::Placeholder(params.len()));
             params.push(ident.clone());
             *expr = ident.map(Expr::Ident);
-        }
-        Expr::If(if_expr) => {
-            preprocess_expr_rec(&mut if_expr.cond, params);
-            if if_expr.if_true.items.is_empty() && if_expr.if_false.items.is_empty() {
-                preprocess_expr_rec(&mut if_expr.if_true.expr, params);
-                preprocess_expr_rec(&mut if_expr.if_false.expr, params);
-            }
         }
         Expr::Call(call_expr) => {
             preprocess_expr_rec(&mut call_expr.func, params);

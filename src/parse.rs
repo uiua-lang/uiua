@@ -491,29 +491,11 @@ impl Parser {
             items.map(Expr::Array)
         } else if let Some(items) = self.try_surrounded_list(CURLIES, Self::try_expr)? {
             items.map(Expr::List)
-        } else if let Some(if_else) = self.try_if()? {
-            if_else.map(Box::new).map(Expr::If)
         } else if let Some(func) = self.try_func()? {
             func.map(Box::new).map(Expr::Func)
         } else {
             return Ok(None);
         }))
-    }
-    fn try_if(&mut self) -> ParseResult<Option<Sp<IfExpr>>> {
-        let Some(if_span) = self.try_exact(Keyword::If) else {
-            return Ok(None);
-        };
-        let cond = self.expr()?;
-        self.expect(Keyword::Then)?;
-        let if_true = self.block()?;
-        self.expect(Keyword::Else)?;
-        let if_false = self.block()?;
-        let span = if_span.merge(if_false.expr.span.clone());
-        Ok(Some(span.sp(IfExpr {
-            cond,
-            if_true,
-            if_false,
-        })))
     }
     fn try_func(&mut self) -> ParseResult<Option<Sp<Func>>> {
         let mut params = Vec::new();

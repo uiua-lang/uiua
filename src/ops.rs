@@ -206,6 +206,7 @@ pub enum HigherOp {
     Fold,
     Cells,
     Table,
+    Filter,
 }
 
 impl fmt::Display for HigherOp {
@@ -223,6 +224,7 @@ impl fmt::Display for HigherOp {
             HigherOp::Fold => write!(f, "fold"),
             HigherOp::Cells => write!(f, "cells"),
             HigherOp::Table => write!(f, "table"),
+            HigherOp::Filter => write!(f, "filter"),
         }
     }
 }
@@ -242,6 +244,7 @@ impl HigherOp {
             HigherOp::Cells => 2,
             HigherOp::Fold => 3,
             HigherOp::Table => 3,
+            HigherOp::Filter => 2,
         }
     }
     pub fn run(&self, vm: &mut Vm, env: &Env) -> RuntimeResult {
@@ -420,6 +423,10 @@ impl HigherOp {
                     table.push(Value::from(Array::from(row).normalized(1)));
                 }
                 vm.push(Array::from(table).normalized(1));
+            }
+            HigherOp::Filter => {
+                let filter = vm.pop();
+                vm.top_mut().replicate(&filter, env)?;
             }
         }
         Ok(())

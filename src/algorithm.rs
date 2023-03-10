@@ -1,5 +1,6 @@
 use std::{
     cmp::Ordering,
+    iter::repeat,
     mem::{swap, take},
     ptr,
 };
@@ -108,6 +109,48 @@ impl Value {
             *self = Array::from(take(self)).into();
         }
         self.array_mut()
+    }
+    pub fn replicate(&mut self, filter: &Self, env: &Env) -> RuntimeResult {
+        if !self.is_array() {
+            return Err(env.error("Tried to filter non-array"));
+        }
+        let filtered = self.array_mut();
+        let mut data = Vec::new();
+        if filter.is_num() {
+            if !filter.is_nat() {
+                return Err(env.error("Tried to replicate with non-integer"));
+            }
+            let n = filter.number() as usize;
+            for cell in take(filtered).into_values() {
+                data.extend(repeat(cell).take(n));
+            }
+        } else if filter.is_array() {
+            let filter = filter.array();
+            if filter.len() != filtered.len() {
+                return Err(env.error(format!(
+                    "Tried to replicate with array of different length: \
+                    the filter length is {}, but the array length is {}",
+                    filter.len(),
+                    filtered.len(),
+                )));
+            }
+            if !filter.is_numbers() {
+                return Err(env.error("Tried to replicate with non-number array"));
+            }
+            if filter.rank() != 1 {
+                return Err(env.error("Tried to replicate with non-1D array"));
+            }
+            for (&n, cell) in filter.numbers().iter().zip(take(filtered).into_values()) {
+                if n.trunc() != n || n < 0.0 {
+                    return Err(env.error("Tried to replicate with non-natural number"));
+                }
+                data.extend(repeat(cell).take(n as usize));
+            }
+        } else {
+            return Err(env.error("Tried to replicate with non-number"));
+        }
+        *self = Array::from(data).normalized(1).into();
+        Ok(())
     }
 }
 

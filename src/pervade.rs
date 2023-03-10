@@ -187,7 +187,7 @@ pub mod div {
 pub mod modulus {
     use super::*;
     pub fn num_num(a: &f64, b: &f64) -> f64 {
-        (a % b + b) % a
+        (b % a + a) % a
     }
     pub fn error<T: Debug>(a: T, b: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot take the modulus of {a:?} by {b:?}"))

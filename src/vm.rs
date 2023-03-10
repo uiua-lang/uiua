@@ -257,6 +257,10 @@ impl Vm {
     pub fn pop(&mut self) -> Value {
         self.stack.pop().expect("nothing to pop")
     }
+    #[track_caller]
+    pub fn top_mut(&mut self) -> &mut Value {
+        self.stack.last_mut().expect("stack is empty")
+    }
     pub fn call(&mut self, args: usize, assembly: &Assembly, span: usize) -> RuntimeResult {
         let return_depth = self.call_stack.len();
         let mut call_started = false;

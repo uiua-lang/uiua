@@ -19,6 +19,18 @@ pub struct Array {
     data: Data,
 }
 
+impl Default for Array {
+    fn default() -> Self {
+        Array {
+            ty: ArrayType::Num,
+            shape: Vec::new(),
+            data: Data {
+                numbers: ManuallyDrop::new(Vec::new()),
+            },
+        }
+    }
+}
+
 pub union Data {
     numbers: ManuallyDrop<Vec<f64>>,
     chars: ManuallyDrop<Vec<char>>,

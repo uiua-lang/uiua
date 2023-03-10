@@ -105,6 +105,12 @@ impl Value {
     pub fn is_num(&self) -> bool {
         self.0.tag() == NUM_TAG as u32
     }
+    pub fn is_nat(&self) -> bool {
+        self.is_num() && {
+            let n = self.number();
+            n >= 0.0 && n.trunc() == n
+        }
+    }
     pub fn is_char(&self) -> bool {
         self.0.tag() == CHAR_TAG as u32
     }

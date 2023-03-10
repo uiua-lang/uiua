@@ -203,13 +203,9 @@ impl Vm {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("return");
                     if let Some(frame) = self.call_stack.pop() {
-                        println!("returning from {}", assembly.function_id(frame.function));
-                        println!("before return truncation: {:?}", stack);
                         let value = stack.pop().unwrap();
                         stack.truncate(frame.stack_size);
                         stack.push(value);
-                        println!("after return truncation: {:?}", stack);
-                        dprintln!("{:?}", stack);
                         if return_depth > 0 && self.call_stack.len() == return_depth {
                             *pc = 0;
                             return Ok(());
@@ -319,7 +315,6 @@ impl Vm {
         self.stack.pop().expect("nothing to pop")
     }
     pub fn call(&mut self, args: usize, assembly: &Assembly, span: usize) -> RuntimeResult {
-        println!("call started with {:?}", self.stack);
         let return_depth = self.call_stack.len();
         let mut call_started = false;
         for _ in 0..args {
@@ -329,7 +324,6 @@ impl Vm {
             self.pc = self.pc.overflowing_add(1).0;
             self.run_assembly_inner(assembly, return_depth)?;
         }
-        println!("call ended with {:?}", self.stack);
         Ok(())
     }
     fn call_impl(&mut self, assembly: &Assembly, span: usize) -> RuntimeResult<bool> {
@@ -363,7 +357,6 @@ impl Vm {
         }
         // Call
         if arg_count < function.params as usize {
-            println!("partial {}", assembly.function_id(function));
             let partial = Partial {
                 function,
                 args: self.stack.drain(self.stack.len() - arg_count..).collect(),
@@ -372,8 +365,6 @@ impl Vm {
             self.stack.push(partial.into());
             Ok(false)
         } else {
-            println!("calling {}", assembly.function_id(function));
-            println!("return size: {}", self.stack.len() - arg_count);
             self.call_stack.push(StackFrame {
                 stack_size: self.stack.len() - arg_count,
                 function,

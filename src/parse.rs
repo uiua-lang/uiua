@@ -22,6 +22,7 @@ pub enum Expectation {
     Pattern,
     Eof,
     FunctionBody,
+    Parameter,
     Simple(Simple),
     Keyword(Keyword),
 }
@@ -48,6 +49,7 @@ impl fmt::Display for Expectation {
             Expectation::Pattern => write!(f, "pattern"),
             Expectation::Eof => write!(f, "end of file"),
             Expectation::FunctionBody => write!(f, "function body"),
+            Expectation::Parameter => write!(f, "parameter"),
             Expectation::Simple(s) => write!(f, "{s}"),
             Expectation::Keyword(k) => write!(f, "{k}"),
         }
@@ -97,7 +99,10 @@ pub fn parse(input: &str, path: &Path) -> (Vec<Item>, Vec<Sp<ParseError>>) {
         match parser.try_item() {
             Ok(Some(item)) => items.push(item),
             Ok(None) => break,
-            Err(e) => parser.errors.push(e),
+            Err(e) => {
+                parser.errors.push(e);
+                break;
+            }
         }
     }
     parser.next_token_map::<()>(|_| None);
@@ -182,10 +187,8 @@ impl Parser {
         self.errors.push(err);
     }
     fn try_item(&mut self) -> ParseResult<Option<Item>> {
-        let item = if let Some(def) = self.try_function_def()? {
-            Item::FunctionDef(def)
-        } else if let Some(binding) = self.try_let()? {
-            Item::Let(binding)
+        let item = if let Some(item) = self.try_let_or_fucntion_def()? {
+            item
         } else if let Some(r#const) = self.try_const()? {
             Item::Const(r#const)
         } else if self.try_exact(Keyword::Do).is_some() {
@@ -214,30 +217,6 @@ impl Parser {
         }
         doc
     }
-    fn try_function_def(&mut self) -> ParseResult<Option<FunctionDef>> {
-        // Documentation comments
-        let doc = self.doc_comment();
-        // Keyword
-        if self.try_exact(Keyword::Fn).is_none() {
-            return Ok(None);
-        };
-        // Name
-        let name = self.ident()?;
-        // Parameters
-        let mut params = Vec::new();
-        while let Some(param) = self.try_param() {
-            params.push(param);
-        }
-        self.expect(Colon)?;
-        // Body
-        let body = self.block()?;
-        let id = FunctionId::Named(name.value);
-        Ok(Some(FunctionDef {
-            doc,
-            name,
-            func: Func { id, params, body },
-        }))
-    }
     fn block(&mut self) -> ParseResult<Block> {
         let mut items = Vec::new();
         while let Some(item) = self.try_item()? {
@@ -246,17 +225,42 @@ impl Parser {
         let expr = self.expr()?;
         Ok(Block { items, expr })
     }
-    fn try_let(&mut self) -> ParseResult<Option<Let>> {
+    fn try_let_or_fucntion_def(&mut self) -> ParseResult<Option<Item>> {
+        let doc = self.doc_comment();
         // Let
         if self.try_exact(Keyword::Let).is_none() {
             return Ok(None);
         };
-        // Pattern
-        let pattern = self.pattern()?;
-        // Expression
+        // Pattern or function name and params
+        Ok(Some(if let Some(ident) = self.try_ident() {
+            let mut params = Vec::new();
+            while let Some(param) = self.try_param() {
+                params.push(param);
+            }
+            if params.is_empty() {
+                Item::Let(self.finish_binding(ident.map(Pattern::Ident))?)
+            } else {
+                self.expect(Equal)?;
+                let body = self.block()?;
+                let id = FunctionId::Named(ident.value);
+                Item::FunctionDef(FunctionDef {
+                    doc,
+                    name: ident,
+                    func: Func { id, params, body },
+                })
+            }
+        } else if let Some(items) = self.try_surrounded_list(PARENS, Self::try_pattern)? {
+            Item::Let(self.finish_binding(items.map(Pattern::List))?)
+        } else if let Some(span) = self.try_exact(Underscore) {
+            Item::Let(self.finish_binding(span.sp(Pattern::Discard))?)
+        } else {
+            return Ok(None);
+        }))
+    }
+    fn finish_binding(&mut self, pattern: Sp<Pattern>) -> ParseResult<Let> {
         self.expect(Equal)?;
         let expr = self.expr()?;
-        Ok(Some(Let { pattern, expr }))
+        Ok(Let { pattern, expr })
     }
     fn try_const(&mut self) -> ParseResult<Option<Const>> {
         // Const
@@ -280,10 +284,6 @@ impl Parser {
         } else {
             return Ok(None);
         }))
-    }
-    fn pattern(&mut self) -> ParseResult<Sp<Pattern>> {
-        self.try_pattern()?
-            .ok_or_else(|| self.expected([Expectation::Pattern]))
     }
     fn try_ident(&mut self) -> Option<Sp<Ident>> {
         self.next_token_map(|token| token.as_ident().copied())
@@ -521,16 +521,15 @@ impl Parser {
         })))
     }
     fn try_func(&mut self) -> ParseResult<Option<Sp<Func>>> {
-        // Keyword
-        let Some(start) = self.try_exact(Keyword::Fn) else {
+        let mut params = Vec::new();
+        let mut start = None;
+        while let Some(span) = self.try_exact(BackSlash) {
+            start.get_or_insert(span);
+            params.push(self.expect_param()?);
+        }
+        let Some(start) = start else {
             return Ok(None);
         };
-        // Parameters
-        let mut params = Vec::new();
-        while let Some(param) = self.try_param() {
-            params.push(param);
-        }
-        self.expect(Colon)?;
         // Body
         let body = self.block()?;
         let span = start.clone().merge(body.expr.span.clone());
@@ -540,5 +539,9 @@ impl Parser {
     fn try_param(&mut self) -> Option<Sp<Ident>> {
         self.try_ident()
             .or_else(|| self.try_exact(Underscore).map(|span| span.sp("_".into())))
+    }
+    fn expect_param(&mut self) -> ParseResult<Sp<Ident>> {
+        self.try_param()
+            .ok_or_else(|| self.expected([Expectation::Parameter]))
     }
 }

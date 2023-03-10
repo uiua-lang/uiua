@@ -292,6 +292,9 @@ pub enum Simple {
     CloseBracket,
     Underscore,
     Comma,
+    Colon,
+    SemiColon,
+    BackSlash,
     Period,
     Period2,
     Period3,
@@ -300,8 +303,6 @@ pub enum Simple {
     StarGreater,
     MinusBar,
     BarMinus,
-    Colon,
-    SemiColon,
     Pipe,
     BackPipe,
     Plus,
@@ -330,6 +331,9 @@ impl fmt::Display for Simple {
                 Simple::CloseBracket => "]",
                 Simple::Underscore => "_",
                 Simple::Comma => ",",
+                Simple::Colon => ":",
+                Simple::SemiColon => ";",
+                Simple::BackSlash => "\\",
                 Simple::Period => ".",
                 Simple::Period2 => "..",
                 Simple::Period3 => "...",
@@ -338,8 +342,6 @@ impl fmt::Display for Simple {
                 Simple::StarGreater => "*>",
                 Simple::MinusBar => "-|",
                 Simple::BarMinus => "|-",
-                Simple::Colon => ":",
-                Simple::SemiColon => ";",
                 Simple::Pipe => "|>",
                 Simple::BackPipe => "<|",
                 Simple::Plus => "+",
@@ -360,7 +362,6 @@ impl fmt::Display for Simple {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
 pub enum Keyword {
     Let,
-    Fn,
     Do,
     If,
     Then,
@@ -496,6 +497,7 @@ impl Lexer {
                 ':' => return self.end(Colon, start),
                 ';' => return self.end(SemiColon, start),
                 ',' => return self.end(Comma, start),
+                '\\' => return self.end(BackSlash, start),
                 '+' => return self.end(Plus, start),
                 '-' => {
                     if self.peek_char().filter(char::is_ascii_digit).is_some() {

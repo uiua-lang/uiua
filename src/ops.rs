@@ -89,7 +89,7 @@ impl Value {
         match op {
             Op1::Nil => *self = Value::nil(),
             Op1::Id => {}
-            Op1::Show => println!("{}", self.grid_string()),
+            Op1::Show => print!("{}", self.grid_string()),
             Op1::Print => print!("{self}"),
             Op1::Println => println!("{self}"),
             Op1::Len => *self = (self.len() as f64).into(),
@@ -274,10 +274,10 @@ impl HigherOp {
                 let c = vm.pop();
                 let x = vm.pop();
                 vm.push(x.clone());
-                vm.push(b);
+                vm.push(c);
                 vm.call(1, env.assembly, 0)?;
                 vm.push(x);
-                vm.push(c);
+                vm.push(b);
                 vm.call(1, env.assembly, 0)?;
                 vm.push(a);
                 vm.call(2, env.assembly, 0)?;

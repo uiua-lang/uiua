@@ -27,8 +27,8 @@ pub enum Type {
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Type::Num => write!(f, "num"),
-            Type::Char => write!(f, "char"),
+            Type::Num => write!(f, "number"),
+            Type::Char => write!(f, "character"),
             Type::Function => write!(f, "function"),
             Type::Array => write!(f, "array"),
         }

@@ -285,17 +285,7 @@ impl Vm {
                 (partial.function, arg_count, partial.span)
             }
             _ => {
-                let message = if let Some(function) = self.just_called.take() {
-                    let id = assembly.function_id(function);
-                    format!(
-                        "Too many arguments to {}: expected {}, got {}",
-                        id,
-                        function.params,
-                        function.params as usize + args
-                    )
-                } else {
-                    format!("Cannot call {}", value.ty())
-                };
+                let message = format!("Cannot call {}", value.ty());
                 return Err(assembly.spans[span].error(message));
             }
         };

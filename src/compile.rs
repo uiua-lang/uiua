@@ -4,7 +4,7 @@ use enum_iterator::all;
 
 use crate::{
     ast::*,
-    function::{Function, FunctionId},
+    function::{Function, FunctionId, PrimitiveId},
     lex::{Sp, Span},
     ops::{constants, HigherOp, Op1, Op2},
     parse::{parse, ParseError},
@@ -171,10 +171,11 @@ impl Default for Compiler {
                 .insert(ascend::static_str(name).into(), Binding::Constant(index));
         }
         // Operations
-        let mut init = |name: String, id: FunctionId, params: u16, instr: Instr| -> Function {
+        let mut init = |name: String, id: PrimitiveId, params: u8, instr: Instr| -> Function {
             let function = Function {
                 start: assembly.instrs.len() as u32,
                 params,
+                primitive: Some(id),
             };
             // Instructions
             assembly.instrs.push(instr);
@@ -182,11 +183,11 @@ impl Default for Compiler {
             // Scope
             scope.bindings.insert(
                 ascend::static_str(&name).into(),
-                Binding::Function(id.clone()),
+                Binding::Function(id.into()),
             );
-            scope.functions.insert(id.clone(), function);
+            scope.functions.insert(id.into(), function);
             // Function info
-            assembly.function_ids.insert(function, id);
+            assembly.function_ids.insert(function, id.into());
             function
         };
         // 1-parameter builtins
@@ -395,7 +396,8 @@ impl Compiler {
         let params_count = params + ipf.captures.len();
         let function = Function {
             start: self.assembly.instrs.len() as u32,
-            params: params_count as u16,
+            params: params_count as u8,
+            primitive: None,
         };
         // Resolve function references
         for ipf in &mut self.in_progress_functions {

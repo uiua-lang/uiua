@@ -228,7 +228,7 @@ impl fmt::Display for HigherOp {
 }
 
 impl HigherOp {
-    pub(crate) fn params(&self) -> u16 {
+    pub(crate) fn params(&self) -> u8 {
         match self {
             HigherOp::Compose => 3,
             HigherOp::Lark => 2,

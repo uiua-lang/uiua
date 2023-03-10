@@ -1,4 +1,4 @@
-use std::{fmt, sync::Arc};
+use std::{fmt, mem::transmute, sync::Arc};
 
 use nanbox::{NanBox, NanBoxable};
 
@@ -9,11 +9,15 @@ use crate::{
     Ident,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum PrimitiveId {
     Op1(Op1),
     Op2(Op2),
     HigherOp(HigherOp),
+}
+
+fn _keep_primitive_id_small(_: std::convert::Infallible) {
+    let _: [u8; 2] = unsafe { std::mem::transmute(Some(PrimitiveId::Op1(Op1::Nil))) };
 }
 
 impl fmt::Display for PrimitiveId {
@@ -76,6 +80,12 @@ impl From<HigherOp> for FunctionId {
     }
 }
 
+impl From<PrimitiveId> for FunctionId {
+    fn from(id: PrimitiveId) -> Self {
+        Self::Primitive(id)
+    }
+}
+
 impl fmt::Display for FunctionId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -90,7 +100,8 @@ impl fmt::Display for FunctionId {
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Function {
     pub(crate) start: u32,
-    pub(crate) params: u16,
+    pub(crate) params: u8,
+    pub(crate) primitive: Option<PrimitiveId>,
 }
 
 impl Default for Function {
@@ -121,6 +132,7 @@ impl Function {
         Self {
             start: 0,
             params: 1,
+            primitive: Some(PrimitiveId::Op1(Op1::Nil)),
         }
     }
     #[inline]
@@ -133,13 +145,16 @@ impl NanBoxable for Function {
     unsafe fn from_nan_box(n: NanBox) -> Self {
         let [a, b, c, d, e, f]: [u8; 6] = NanBoxable::from_nan_box(n);
         Self {
-            start: u32::from_le_bytes([a, b, c, d]),
-            params: u16::from_le_bytes([e, f]),
+            start: u32::from_le_bytes([a, b, c, 0]),
+            params: d,
+            primitive: transmute(u16::from_le_bytes([e, f])),
         }
     }
     fn into_nan_box(self) -> NanBox {
-        let [a, b, c, d] = self.start.to_le_bytes();
-        let [e, f] = self.params.to_le_bytes();
+        let [a, b, c, z] = self.start.to_le_bytes();
+        debug_assert_eq!(z, 0);
+        let d = self.params;
+        let [e, f]: [u8; 2] = unsafe { transmute(self.primitive) };
         NanBoxable::into_nan_box([a, b, c, d, e, f])
     }
 }

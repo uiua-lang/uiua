@@ -195,7 +195,7 @@ impl Value {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
 pub enum HigherOp {
     Compose,
-    Slf,
+    Lark,
     BlackBird,
     Phoenix,
     Psi,
@@ -215,7 +215,7 @@ impl fmt::Display for HigherOp {
             HigherOp::BlackBird => write!(f, "blackbird"),
             HigherOp::Phoenix => write!(f, "phoenix"),
             HigherOp::Psi => write!(f, "psi"),
-            HigherOp::Slf => write!(f, "self"),
+            HigherOp::Lark => write!(f, "lark"),
             HigherOp::Flip => write!(f, "flip"),
             HigherOp::While => write!(f, "while"),
             HigherOp::LeftThen => write!(f, "left_then"),
@@ -231,7 +231,7 @@ impl HigherOp {
     pub(crate) fn params(&self) -> u16 {
         match self {
             HigherOp::Compose => 3,
-            HigherOp::Slf => 2,
+            HigherOp::Lark => 2,
             HigherOp::BlackBird => 4,
             HigherOp::Phoenix => 4,
             HigherOp::Psi => 5,
@@ -253,7 +253,7 @@ impl HigherOp {
                 vm.push(f); // gx f
                 vm.call(1, env.assembly, 0)?; // f(gx)
             }
-            HigherOp::Slf => {
+            HigherOp::Lark => {
                 let f = vm.pop();
                 let x = vm.pop();
                 vm.push(x.clone());

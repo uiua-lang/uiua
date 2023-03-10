@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, fmt::Debug};
+use std::{cmp::Ordering, fmt::Display};
 
 use crate::{vm::Env, RuntimeError, RuntimeResult};
 
@@ -7,8 +7,8 @@ pub mod not {
     pub fn num(a: &f64) -> f64 {
         1.0 - a
     }
-    pub fn error<T: Debug>(a: T, env: &Env) -> RuntimeError {
-        env.error(format!("Cannot negate {a:?}"))
+    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot negate {a}"))
     }
 }
 
@@ -17,8 +17,8 @@ pub mod neg {
     pub fn num(a: &f64) -> f64 {
         -a
     }
-    pub fn error<T: Debug>(a: T, env: &Env) -> RuntimeError {
-        env.error(format!("Cannot negate {a:?}"))
+    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot negate {a}"))
     }
 }
 pub mod abs {
@@ -26,8 +26,8 @@ pub mod abs {
     pub fn num(a: &f64) -> f64 {
         a.abs()
     }
-    pub fn error<T: Debug>(a: T, env: &Env) -> RuntimeError {
-        env.error(format!("Cannot take the absolute value of {a:?}"))
+    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot take the absolute value of {a}"))
     }
 }
 pub mod sqrt {
@@ -35,8 +35,8 @@ pub mod sqrt {
     pub fn num(a: &f64) -> f64 {
         a.sqrt()
     }
-    pub fn error<T: Debug>(a: T, env: &Env) -> RuntimeError {
-        env.error(format!("Cannot take the square root of {a:?}"))
+    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot take the square root of {a}"))
     }
 }
 pub mod sin {
@@ -44,8 +44,8 @@ pub mod sin {
     pub fn num(a: &f64) -> f64 {
         a.sin()
     }
-    pub fn error<T: Debug>(a: T, env: &Env) -> RuntimeError {
-        env.error(format!("Cannot get the sine of {a:?}"))
+    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot get the sine of {a}"))
     }
 }
 pub mod cos {
@@ -53,8 +53,8 @@ pub mod cos {
     pub fn num(a: &f64) -> f64 {
         a.cos()
     }
-    pub fn error<T: Debug>(a: T, env: &Env) -> RuntimeError {
-        env.error(format!("Cannot get the cosine of {a:?}"))
+    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot get the cosine of {a}"))
     }
 }
 pub mod floor {
@@ -62,8 +62,8 @@ pub mod floor {
     pub fn num(a: &f64) -> f64 {
         a.floor()
     }
-    pub fn error<T: Debug>(a: T, env: &Env) -> RuntimeError {
-        env.error(format!("Cannot get the floor of {a:?}"))
+    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot get the floor of {a}"))
     }
 }
 pub mod ceil {
@@ -71,8 +71,8 @@ pub mod ceil {
     pub fn num(a: &f64) -> f64 {
         a.ceil()
     }
-    pub fn error<T: Debug>(a: T, env: &Env) -> RuntimeError {
-        env.error(format!("Cannot get the ceiling of {a:?}"))
+    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot get the ceiling of {a}"))
     }
 }
 pub mod round {
@@ -80,8 +80,8 @@ pub mod round {
     pub fn num(a: &f64) -> f64 {
         a.round()
     }
-    pub fn error<T: Debug>(a: T, env: &Env) -> RuntimeError {
-        env.error(format!("Cannot get the rounded value of {a:?}"))
+    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot get the rounded value of {a}"))
     }
 }
 
@@ -118,8 +118,8 @@ macro_rules! cmp_impl {
             pub fn generic<T: Ord>(a: &T, b: &T) -> f64 {
                 (a.cmp(b) $eq $ordering) as u8 as f64
             }
-            pub fn error<T: Debug>(a: T, b: T, _env: &Env) -> RuntimeError {
-                unreachable!("Comparisons cannot fail, failed to compare {a:?} and {b:?}")
+            pub fn error<T: Display>(a: T, b: T, _env: &Env) -> RuntimeError {
+                unreachable!("Comparisons cannot fail, failed to compare {a} and {b}")
             }
         }
     };
@@ -143,8 +143,8 @@ pub mod add {
     pub fn char_num(a: &char, b: &f64) -> char {
         char::from_u32((*a as i64 + *b as i64) as u32).unwrap_or('\0')
     }
-    pub fn error<T: Debug>(a: T, b: T, env: &Env) -> RuntimeError {
-        env.error(format!("Cannot add {a:?} and {b:?}"))
+    pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot add {a} and {b}"))
     }
 }
 
@@ -159,8 +159,8 @@ pub mod sub {
     pub fn char_char(a: &char, b: &char) -> f64 {
         ((*a as i64) - (*b as i64)) as f64
     }
-    pub fn error<T: Debug>(a: T, b: T, env: &Env) -> RuntimeError {
-        env.error(format!("Cannot subtract {b:?} from {a:?}"))
+    pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot subtract {b} from {a}"))
     }
 }
 
@@ -169,8 +169,8 @@ pub mod mul {
     pub fn num_num(a: &f64, b: &f64) -> f64 {
         a * b
     }
-    pub fn error<T: Debug>(a: T, b: T, env: &Env) -> RuntimeError {
-        env.error(format!("Cannot multiply {a:?} and {b:?}"))
+    pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot multiply {a} and {b}"))
     }
 }
 
@@ -179,8 +179,8 @@ pub mod div {
     pub fn num_num(a: &f64, b: &f64) -> f64 {
         a / b
     }
-    pub fn error<T: Debug>(a: T, b: T, env: &Env) -> RuntimeError {
-        env.error(format!("Cannot divide {a:?} by {b:?}"))
+    pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot divide {a} by {b}"))
     }
 }
 
@@ -189,8 +189,8 @@ pub mod modulus {
     pub fn num_num(a: &f64, b: &f64) -> f64 {
         (b % a + a) % a
     }
-    pub fn error<T: Debug>(a: T, b: T, env: &Env) -> RuntimeError {
-        env.error(format!("Cannot take the modulus of {a:?} by {b:?}"))
+    pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot take the modulus of {a} by {b}"))
     }
 }
 
@@ -199,8 +199,8 @@ pub mod atan2 {
     pub fn num_num(a: &f64, b: &f64) -> f64 {
         a.atan2(*b)
     }
-    pub fn error<T: Debug>(a: T, b: T, env: &Env) -> RuntimeError {
-        env.error(format!("Cannot get the atan2 of {a:?} and {b:?}"))
+    pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot get the atan2 of {a} and {b}"))
     }
 }
 
@@ -209,8 +209,8 @@ pub mod pow {
     pub fn num_num(a: &f64, b: &f64) -> f64 {
         a.powf(*b)
     }
-    pub fn error<T: Debug>(a: T, b: T, env: &Env) -> RuntimeError {
-        env.error(format!("Cannot get the power of {a:?} to {b:?}"))
+    pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot get the power of {a} to {b}"))
     }
 }
 
@@ -228,8 +228,8 @@ pub mod max {
     pub fn char_num(a: &char, _b: &f64) -> char {
         *a
     }
-    pub fn error<T: Debug>(a: T, b: T, env: &Env) -> RuntimeError {
-        env.error(format!("Cannot get the max of {a:?} and {b:?}"))
+    pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot get the max of {a} and {b}"))
     }
 }
 
@@ -247,8 +247,8 @@ pub mod min {
     pub fn char_num(_a: &char, b: &f64) -> f64 {
         *b
     }
-    pub fn error<T: Debug>(a: T, b: T, env: &Env) -> RuntimeError {
-        env.error(format!("Cannot get the min of {a:?} and {b:?}"))
+    pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot get the min of {a} and {b}"))
     }
 }
 

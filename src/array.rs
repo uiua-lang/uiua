@@ -45,6 +45,16 @@ pub enum ArrayType {
     Value,
 }
 
+impl fmt::Display for ArrayType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ArrayType::Num => write!(f, "numbers"),
+            ArrayType::Char => write!(f, "characters"),
+            ArrayType::Value => write!(f, "values"),
+        }
+    }
+}
+
 impl Array {
     pub fn rank(&self) -> usize {
         self.shape.len()

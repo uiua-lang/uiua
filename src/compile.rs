@@ -4,7 +4,7 @@ use enum_iterator::all;
 
 use crate::{
     ast::*,
-    function::Function,
+    function::{Function, FunctionId},
     lex::{Sp, Span},
     ops::{constants, HigherOp, Op1, Op2},
     parse::{parse, ParseError},
@@ -171,12 +171,7 @@ impl Default for Compiler {
                 .insert(ascend::static_str(name).into(), Binding::Constant(index));
         }
         // Operations
-        let mut init = |assembly: &mut Assembly,
-                        name: &str,
-                        id: FunctionId,
-                        params: u16,
-                        instr: Instr|
-         -> Function {
+        let mut init = |name: String, id: FunctionId, params: u16, instr: Instr| -> Function {
             let function = Function {
                 start: assembly.instrs.len() as u32,
                 params,
@@ -186,7 +181,7 @@ impl Default for Compiler {
             assembly.instrs.push(Instr::Return);
             // Scope
             scope.bindings.insert(
-                ascend::static_str(name).into(),
+                ascend::static_str(&name).into(),
                 Binding::Function(id.clone()),
             );
             scope.functions.insert(id.clone(), function);
@@ -196,30 +191,17 @@ impl Default for Compiler {
         };
         // 1-parameter builtins
         for op1 in all::<Op1>() {
-            init(
-                &mut assembly,
-                &op1.to_string(),
-                FunctionId::Op1(op1),
-                1,
-                Instr::Op1(op1),
-            );
+            init(op1.to_string(), op1.into(), 1, Instr::Op1(op1));
         }
         // 2-parameter builtins
         for op2 in all::<Op2>() {
-            init(
-                &mut assembly,
-                &op2.to_string(),
-                FunctionId::Op2(op2),
-                2,
-                Instr::Op2(op2, 0),
-            );
+            init(op2.to_string(), op2.into(), 2, Instr::Op2(op2, 0));
         }
-        // Algorithms
+        // Higher-order builtins
         for hop in all::<HigherOp>() {
             init(
-                &mut assembly,
-                &hop.to_string(),
-                FunctionId::HigherOp(hop),
+                hop.to_string(),
+                hop.into(),
                 hop.params(),
                 Instr::HigherOp(hop),
             );
@@ -394,9 +376,7 @@ impl Compiler {
             FunctionId::Named(name) => format!("fn {name}"),
             FunctionId::Anonymous(span) => format!("fn at {span}"),
             FunctionId::FormatString(span) => format!("format string at {span}"),
-            FunctionId::Op1(_) => unreachable!("Builtin1 functions should not be compiled"),
-            FunctionId::Op2(_) => unreachable!("Builtin2 functions should not be compiled"),
-            FunctionId::HigherOp(_) => unreachable!("Builtin algorithms should not be compiled"),
+            FunctionId::Primitive(_) => unreachable!("Primitive functions should not be compiled"),
         };
         self.push_instr(Instr::Comment(name.clone()));
         let params = params_and_body(self)?;

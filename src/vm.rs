@@ -2,9 +2,8 @@ use std::{fmt, mem::swap};
 
 use crate::{
     array::Array,
-    ast::FunctionId,
     compile::Assembly,
-    function::{Function, Partial},
+    function::{Function, FunctionId, Partial},
     lex::Span,
     ops::{HigherOp, Op1, Op2},
     value::{RawType, Type, Value},

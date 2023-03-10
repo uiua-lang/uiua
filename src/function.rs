@@ -2,7 +2,90 @@ use std::{fmt, sync::Arc};
 
 use nanbox::{NanBox, NanBoxable};
 
-use crate::value::Value;
+use crate::{
+    lex::Span,
+    ops::{HigherOp, Op1, Op2},
+    value::Value,
+    Ident,
+};
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum PrimitiveId {
+    Op1(Op1),
+    Op2(Op2),
+    HigherOp(HigherOp),
+}
+
+impl fmt::Display for PrimitiveId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PrimitiveId::Op1(op) => write!(f, "{op}"),
+            PrimitiveId::Op2(op) => write!(f, "{op}"),
+            PrimitiveId::HigherOp(op) => write!(f, "{op}"),
+        }
+    }
+}
+
+impl From<Op1> for PrimitiveId {
+    fn from(op: Op1) -> Self {
+        Self::Op1(op)
+    }
+}
+
+impl From<Op2> for PrimitiveId {
+    fn from(op: Op2) -> Self {
+        Self::Op2(op)
+    }
+}
+
+impl From<HigherOp> for PrimitiveId {
+    fn from(alg: HigherOp) -> Self {
+        Self::HigherOp(alg)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum FunctionId {
+    Named(Ident),
+    Anonymous(Span),
+    FormatString(Span),
+    Primitive(PrimitiveId),
+}
+
+impl From<Ident> for FunctionId {
+    fn from(name: Ident) -> Self {
+        Self::Named(name)
+    }
+}
+
+impl From<Op1> for FunctionId {
+    fn from(op: Op1) -> Self {
+        Self::Primitive(op.into())
+    }
+}
+
+impl From<Op2> for FunctionId {
+    fn from(op: Op2) -> Self {
+        Self::Primitive(op.into())
+    }
+}
+
+impl From<HigherOp> for FunctionId {
+    fn from(hop: HigherOp) -> Self {
+        Self::Primitive(hop.into())
+    }
+}
+
+impl fmt::Display for FunctionId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FunctionId::Named(name) => write!(f, "`{name}`"),
+            FunctionId::Anonymous(span) => write!(f, "fn from {span}"),
+            FunctionId::FormatString(span) => write!(f, "format string from {span}"),
+            FunctionId::Primitive(id) => write!(f, "{id}"),
+        }
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Function {

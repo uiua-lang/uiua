@@ -204,7 +204,7 @@ pub enum HigherOp {
     LeftThen,
     RightThen,
     Fold,
-    Each,
+    Cells,
     Table,
 }
 
@@ -221,7 +221,7 @@ impl fmt::Display for HigherOp {
             HigherOp::LeftThen => write!(f, "left_then"),
             HigherOp::RightThen => write!(f, "right_then"),
             HigherOp::Fold => write!(f, "fold"),
-            HigherOp::Each => write!(f, "each"),
+            HigherOp::Cells => write!(f, "cells"),
             HigherOp::Table => write!(f, "table"),
         }
     }
@@ -239,7 +239,7 @@ impl HigherOp {
             HigherOp::While => 3,
             HigherOp::LeftThen => 3,
             HigherOp::RightThen => 3,
-            HigherOp::Each => 2,
+            HigherOp::Cells => 2,
             HigherOp::Fold => 3,
             HigherOp::Table => 3,
         }
@@ -369,7 +369,7 @@ impl HigherOp {
                 }
                 vm.push(acc);
             }
-            HigherOp::Each => {
+            HigherOp::Cells => {
                 let f = vm.pop();
                 let xs = vm.pop();
                 if !xs.is_array() {

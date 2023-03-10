@@ -2,6 +2,7 @@ use std::{error::Error, fmt, path::Path};
 
 use crate::{
     ast::*,
+    function::FunctionId,
     lex::{Simple::*, *},
     Ident,
 };

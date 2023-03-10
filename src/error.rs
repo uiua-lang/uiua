@@ -1,8 +1,8 @@
 use std::{error::Error, fmt, io, path::PathBuf};
 
 use crate::{
-    ast::FunctionId,
     compile::CompileError,
+    function::FunctionId,
     lex::{Sp, Span},
 };
 

@@ -1,10 +1,8 @@
-use std::fmt;
-
 use enum_iterator::Sequence;
 
 use crate::{
+    function::FunctionId,
     lex::{Sp, Span},
-    ops::{HigherOp, Op1, Op2},
     Ident,
 };
 
@@ -55,53 +53,6 @@ pub struct Func {
     pub id: FunctionId,
     pub params: Vec<Sp<Ident>>,
     pub body: Block,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum FunctionId {
-    Named(Ident),
-    Anonymous(Span),
-    FormatString(Span),
-    Op1(Op1),
-    Op2(Op2),
-    HigherOp(HigherOp),
-}
-
-impl From<Ident> for FunctionId {
-    fn from(name: Ident) -> Self {
-        Self::Named(name)
-    }
-}
-
-impl From<Op1> for FunctionId {
-    fn from(op: Op1) -> Self {
-        Self::Op1(op)
-    }
-}
-
-impl From<Op2> for FunctionId {
-    fn from(op: Op2) -> Self {
-        Self::Op2(op)
-    }
-}
-
-impl From<HigherOp> for FunctionId {
-    fn from(alg: HigherOp) -> Self {
-        Self::HigherOp(alg)
-    }
-}
-
-impl fmt::Display for FunctionId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            FunctionId::Named(name) => write!(f, "`{name}`"),
-            FunctionId::Anonymous(span) => write!(f, "fn from {span}"),
-            FunctionId::FormatString(span) => write!(f, "format string from {span}"),
-            FunctionId::Op1(op) => write!(f, "`{op}`"),
-            FunctionId::Op2(op) => write!(f, "`{op}`"),
-            FunctionId::HigherOp(alg) => write!(f, "`{alg}`"),
-        }
-    }
 }
 
 #[derive(Debug, Clone)]

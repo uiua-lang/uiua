@@ -55,7 +55,10 @@ impl fmt::Display for UiuaError {
                     .unwrap_or(0);
                 let max_span_length = trace
                     .iter()
-                    .map(|frame| frame.span.to_string().len())
+                    .map(|frame| match &frame.span {
+                        Span::Code(span) => span.to_string().len(),
+                        Span::Builtin => 0,
+                    })
                     .max()
                     .unwrap_or(0);
                 for frame in trace {
@@ -68,12 +71,17 @@ impl fmt::Display for UiuaError {
                         } else {
                             writeln!(f)?;
                         }
-                        write!(
-                            f,
-                            "  in {:max_id_length$} at {:max_span_length$}",
-                            frame.id.to_string(),
-                            frame.span,
-                        )?;
+                        match &frame.span {
+                            Span::Code(span) => write!(
+                                f,
+                                "  in {:max_id_length$} at {:max_span_length$}",
+                                frame.id.to_string(),
+                                span
+                            )?,
+                            Span::Builtin => {
+                                write!(f, "  in {:max_id_length$}", frame.id.to_string())?
+                            }
+                        }
                         last = frame;
                     }
                 }

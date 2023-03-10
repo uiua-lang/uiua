@@ -1,22 +1,18 @@
-- Show function names when printing
 - Optimize for non-reused values
 - Warnings
   - naming conventions
-  - compare with bool literals
+  - directly calling number
 - Includes
 - More array functions
   - First
   - Last
-  - Tail
-  - Init
-  - Product
   - Rotate
   - Take
   - Drop
 - Type testing/tracing
 - Structs
 - Enums
-- Operator overloading
+- Operator overloading?
 - System APIs
   - File system
   - Time

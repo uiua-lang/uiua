@@ -267,9 +267,9 @@ impl HigherOp {
             HigherOp::BlackBird => {
                 // y x g f
                 let f = vm.pop(); // y x g
-                vm.call(1, env.assembly, 0)?; // gxy
+                vm.call(2, env.assembly, 0)?; // gxy
                 vm.push(f); // gxy f
-                vm.call(2, env.assembly, 0)?; // f(gxy)
+                vm.call(1, env.assembly, 0)?; // f(gxy)
             }
             HigherOp::Phoenix => {
                 let a = vm.pop();

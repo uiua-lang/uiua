@@ -1,4 +1,4 @@
-use std::{fmt, mem::swap};
+use std::{cmp::Ordering, fmt, mem::swap};
 
 use crate::{
     array::Array,
@@ -34,7 +34,7 @@ pub(crate) enum Instr {
     CopyAbs(usize),
     Swap,
     Rotate(usize),
-    Call(usize),
+    Call(usize, usize),
     Return,
     Op1(Op1),
     Op2(Op2, usize),
@@ -168,8 +168,8 @@ impl Vm {
                     let val = stack.pop().unwrap();
                     stack.insert(stack.len() + 1 - *n, val);
                 }
-                &Instr::Call(span) => {
-                    self.call_impl(assembly, span)?;
+                &Instr::Call(args, span) => {
+                    self.call_impl(assembly, args, span)?;
                 }
                 Instr::Return => {
                     #[cfg(feature = "profile")]
@@ -263,17 +263,14 @@ impl Vm {
     }
     pub fn call(&mut self, args: usize, assembly: &Assembly, span: usize) -> RuntimeResult {
         let return_depth = self.call_stack.len();
-        let mut call_started = false;
-        for _ in 0..args {
-            call_started = self.call_impl(assembly, span)?;
-        }
+        let call_started = self.call_impl(assembly, args, span)?;
         if call_started {
             self.pc = self.pc.overflowing_add(1).0;
             self.run_assembly_inner(assembly, return_depth)?;
         }
         Ok(())
     }
-    fn call_impl(&mut self, assembly: &Assembly, span: usize) -> RuntimeResult<bool> {
+    fn call_impl(&mut self, assembly: &Assembly, args: usize, span: usize) -> RuntimeResult<bool> {
         #[cfg(feature = "profile")]
         puffin::profile_scope!("call");
         let value = self.stack.pop().unwrap();
@@ -290,7 +287,12 @@ impl Vm {
             _ => {
                 let message = if let Some(function) = self.just_called.take() {
                     let id = assembly.function_id(function);
-                    format!("Too many arguments to {}: expected {}", id, function.params)
+                    format!(
+                        "Too many arguments to {}: expected {}, got {}",
+                        id,
+                        function.params,
+                        function.params as usize + args
+                    )
                 } else {
                     format!("Cannot call {}", value.ty())
                 };
@@ -298,29 +300,40 @@ impl Vm {
             }
         };
         // Handle partial arguments
-        let arg_count = partial_count + 1;
+        let arg_count = partial_count + args;
         if partial_count > 0 {
             dprintln!("{:?}", self.stack);
         }
         // Call
-        if arg_count < function.params as usize {
-            let partial = Partial {
-                function,
-                args: self.stack.drain(self.stack.len() - arg_count..).collect(),
-                span,
-            };
-            self.stack.push(partial.into());
-            Ok(false)
-        } else {
-            self.call_stack.push(StackFrame {
-                stack_size: self.stack.len() - arg_count,
-                function,
-                ret: self.pc + 1,
-                call_span: span,
-            });
-            self.pc = (function.start as usize).overflowing_sub(1).0;
-            self.just_called = Some(function);
-            Ok(true)
+        match arg_count.cmp(&(function.params as usize)) {
+            Ordering::Less => {
+                let partial = Partial {
+                    function,
+                    args: self.stack.drain(self.stack.len() - arg_count..).collect(),
+                    span,
+                };
+                self.stack.push(partial.into());
+                Ok(false)
+            }
+            Ordering::Equal => {
+                self.call_stack.push(StackFrame {
+                    stack_size: self.stack.len() - arg_count,
+                    function,
+                    ret: self.pc + 1,
+                    call_span: span,
+                });
+                self.pc = (function.start as usize).overflowing_sub(1).0;
+                self.just_called = Some(function);
+                Ok(true)
+            }
+            Ordering::Greater => {
+                let message = format!(
+                    "Too many arguments to {}: expected {}, got {arg_count}",
+                    assembly.function_id(function),
+                    function.params
+                );
+                Err(assembly.spans[span].error(message))
+            }
         }
     }
 }

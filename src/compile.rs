@@ -305,7 +305,7 @@ impl Compiler {
             Instr::Push(_) => self.height += 1,
             Instr::PushUnresolvedFunction(_) => self.height += 1,
             Instr::Op2(..) => self.height -= 1,
-            Instr::Call(_) => self.height -= 1,
+            Instr::Call(args, _) => self.height -= *args,
             Instr::Constant(_) => self.height += 1,
             Instr::Array(len) if *len == 0 => self.height += 1,
             Instr::Array(len) => self.height -= len - 1,
@@ -414,9 +414,8 @@ impl Compiler {
             if !ipf.captures.is_empty() {
                 // Call the function to collect the captures
                 let call_span = self.push_call_span(span);
-                for _ in 0..ipf.captures.len() {
-                    self.push_instr(Instr::Call(call_span));
-                }
+                self.push_instr(Instr::Call(ipf.captures.len(), call_span));
+
                 // Rebind to the partial that has the captures
                 if let FunctionId::Named(name) = id {
                     self.bind_local(name);
@@ -591,7 +590,7 @@ impl Compiler {
         self.expr(arg)?;
         let span = self.push_call_span(func.span.clone());
         self.expr(func)?;
-        self.push_instr(Instr::Call(span));
+        self.push_instr(Instr::Call(1, span));
         Ok(())
     }
     fn block(&mut self, block: Block) -> CompileResult {
@@ -617,11 +616,7 @@ impl Compiler {
         let span = self.push_call_span(span);
         let func = self.assembly.find_function(hop).unwrap();
         self.bin_expr_impl(
-            [
-                Instr::Push(func.into()),
-                Instr::Call(span),
-                Instr::Call(span),
-            ],
+            [Instr::Push(func.into()), Instr::Call(2, span)],
             left,
             right,
         )

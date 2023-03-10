@@ -6,7 +6,7 @@ use crate::{
     function::{Function, FunctionId, Partial},
     lex::Span,
     ops::{HigherOp, Op1, Op2},
-    value::{RawType, Type, Value},
+    value::{RawType, Value},
     RuntimeError, RuntimeResult, TraceFrame, UiuaError, UiuaResult,
 };
 
@@ -22,10 +22,8 @@ impl<'a> Env<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(unused)]
 pub(crate) enum Instr {
     Comment(String),
-    AssertType(Type),
     Push(Value),
     Constant(usize),
     List(usize),
@@ -35,18 +33,16 @@ pub(crate) enum Instr {
     /// Copy the nth value from the bottom of the stack
     CopyAbs(usize),
     Swap,
-    Move(usize),
     Rotate(usize),
-    Pop(usize),
     Call(usize),
     Return,
     Jump(isize),
     PopJumpIf(isize, bool),
-    JumpIfElsePop(isize, bool),
     Op1(Op1),
     Op2(Op2, usize),
     HigherOp(HigherOp),
     DestructureList(usize, Box<Span>),
+    // These instructions don't exist after compilation
     PushUnresolvedFunction(Box<FunctionId>),
     Dud,
 }
@@ -131,15 +127,6 @@ impl Vm {
             dprintln!("{pc:>3} {instr}");
             match instr {
                 Instr::Comment(_) => {}
-                Instr::AssertType(ty) => {
-                    let value = stack.last().unwrap();
-                    let val_ty = value.ty();
-                    if val_ty != *ty {
-                        return Err(assembly.spans[0]
-                            .clone()
-                            .sp(format!("Value expected to be {ty} was {val_ty} instead")));
-                    }
-                }
                 Instr::Push(v) => {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("push");
@@ -178,22 +165,11 @@ impl Vm {
                     let len = stack.len();
                     stack.swap(len - 1, len - 2);
                 }
-                Instr::Move(n) => {
-                    #[cfg(feature = "profile")]
-                    puffin::profile_scope!("move");
-                    let val = stack.remove(stack.len() - *n);
-                    stack.push(val);
-                }
                 Instr::Rotate(n) => {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("rotate");
                     let val = stack.pop().unwrap();
                     stack.insert(stack.len() + 1 - *n, val);
-                }
-                Instr::Pop(n) => {
-                    #[cfg(feature = "profile")]
-                    puffin::profile_scope!("pop");
-                    stack.truncate(stack.len() - *n);
                 }
                 &Instr::Call(span) => {
                     self.call_impl(assembly, span)?;
@@ -230,17 +206,6 @@ impl Vm {
                     if val.is_truthy() == *cond {
                         *pc = pc.wrapping_add_signed(*delta);
                         continue;
-                    }
-                }
-                Instr::JumpIfElsePop(delta, cond) => {
-                    #[cfg(feature = "profile")]
-                    puffin::profile_scope!("jump_if_else_pop");
-                    let val = stack.last().unwrap();
-                    if val.is_truthy() == *cond {
-                        *pc = pc.wrapping_add_signed(*delta);
-                        continue;
-                    } else {
-                        stack.pop();
                     }
                 }
                 Instr::Op1(op) => {

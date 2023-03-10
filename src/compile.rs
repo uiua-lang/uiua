@@ -331,7 +331,7 @@ impl Compiler {
     }
     fn item(&mut self, item: Item) -> CompileResult {
         match item {
-            Item::Expr(expr) => self.expr(resolve_placeholders(expr)),
+            Item::Expr(expr) => self.expr(preprocess_expr(expr)),
             Item::Let(binding) => self.r#let(binding),
             Item::Const(r#const) => self.r#const(r#const),
             Item::FunctionDef(def) => self.function_def(def),
@@ -439,7 +439,7 @@ impl Compiler {
     fn r#let(&mut self, binding: Let) -> CompileResult {
         // The expression is evaluated first because the pattern
         // will refer to the height of the stack after the expression
-        self.expr(resolve_placeholders(binding.expr))?;
+        self.expr(preprocess_expr(binding.expr))?;
         self.pattern(binding.pattern)?;
         Ok(())
     }
@@ -451,7 +451,7 @@ impl Compiler {
         let global_instrs = self.global_instrs.clone();
         // Compile the expression
         let expr_span = r#const.expr.span.clone();
-        self.expr(resolve_placeholders(r#const.expr))?;
+        self.expr(preprocess_expr(r#const.expr))?;
         self.assembly
             .add_non_function_instrs(take(&mut self.global_instrs));
         // Evaluate the expression
@@ -507,34 +507,30 @@ impl Compiler {
                 let left = bin.left;
                 let right = bin.right;
                 let span = bin.op.span;
-                match bin.op.value {
-                    BinOp::Or => self.logic_expr(true, left, right),
-                    BinOp::And => self.logic_expr(false, left, right),
-                    BinOp::Eq => self.bin_expr(Op2::Eq, left, right, span),
-                    BinOp::Ne => self.bin_expr(Op2::Ne, left, right, span),
-                    BinOp::Lt => self.bin_expr(Op2::Lt, left, right, span),
-                    BinOp::Le => self.bin_expr(Op2::Le, left, right, span),
-                    BinOp::Gt => self.bin_expr(Op2::Gt, left, right, span),
-                    BinOp::Ge => self.bin_expr(Op2::Ge, left, right, span),
-                    BinOp::Add => self.bin_expr(Op2::Add, left, right, span),
-                    BinOp::Sub => self.bin_expr(Op2::Sub, left, right, span),
-                    BinOp::Mul => self.bin_expr(Op2::Mul, left, right, span),
-                    BinOp::Div => self.bin_expr(Op2::Div, left, right, span),
-                    BinOp::Compose => self.algo_bin_expr(HigherOp::Compose, left, right, span),
-                    BinOp::BlackBird => self.algo_bin_expr(HigherOp::BlackBird, left, right, span),
-                    BinOp::LeftThen => self.algo_bin_expr(HigherOp::LeftThen, left, right, span),
-                    BinOp::RightThen => self.algo_bin_expr(HigherOp::RightThen, left, right, span),
-                    BinOp::Left => self.bin_expr(Op2::Left, left, right, span),
-                    BinOp::Right => self.bin_expr(Op2::Right, left, right, span),
-                }?;
+                match bin_op_primitive(bin.op.value) {
+                    PrimitiveId::Op1(_) => unreachable!("unary primitive id for binary operation"),
+                    PrimitiveId::Op2(op2) => self.bin_expr(op2, left, right, span),
+                    PrimitiveId::HigherOp(op) => self.higher_bin_expr(op, left, right, span),
+                }?
             }
             Expr::Call(call) => self.call(*call)?,
             Expr::If(if_expr) => self.if_expr(*if_expr)?,
             Expr::Pipe(pipe_expr) => self.pipe_expr(*pipe_expr)?,
             Expr::List(items) => self.list(Instr::List, items)?,
             Expr::Array(items) => self.list(Instr::Array, items)?,
-            Expr::Parened(inner) => self.expr(resolve_placeholders(*inner))?,
             Expr::Func(func) => self.func(*func, expr.span, true)?,
+            Expr::Parened(inner) => {
+                // Inline binary operators surrounded by parentheses
+                if let Expr::Bin(bin) = &inner.value {
+                    if let (Expr::Placeholder, Expr::Placeholder) =
+                        (&bin.left.value, &bin.right.value)
+                    {
+                        self.function_binding(bin_op_primitive(bin.op.value).into());
+                        return Ok(());
+                    }
+                }
+                self.expr(preprocess_expr(*inner))?
+            }
         }
         Ok(())
     }
@@ -573,23 +569,24 @@ impl Compiler {
                     self.push_instr(Instr::CopyRel(diff));
                 }
             }
-            Binding::Function(id) => {
-                if let Some(function) = self
-                    .scopes
-                    .iter()
-                    .rev()
-                    .find_map(|scope| scope.functions.get(&id))
-                    .cloned()
-                {
-                    self.push_instr(Instr::Push(function.into()));
-                } else {
-                    self.push_instr(Instr::PushUnresolvedFunction(id.clone().into()));
-                }
-            }
+            Binding::Function(id) => self.function_binding(id),
             Binding::Constant(index) => self.push_instr(Instr::Constant(index)),
             Binding::Error => self.push_instr(Instr::Push(Value::nil())),
         }
         Ok(())
+    }
+    fn function_binding(&mut self, id: FunctionId) {
+        if let Some(function) = self
+            .scopes
+            .iter()
+            .rev()
+            .find_map(|scope| scope.functions.get(&id))
+            .cloned()
+        {
+            self.push_instr(Instr::Push(function.into()));
+        } else {
+            self.push_instr(Instr::PushUnresolvedFunction(id.clone().into()));
+        }
     }
     fn list(&mut self, make: fn(usize) -> Instr, items: Vec<Sp<Expr>>) -> CompileResult {
         let len = items.len();
@@ -614,7 +611,7 @@ impl Compiler {
         for item in block.items {
             self.item(item)?;
         }
-        self.expr(resolve_placeholders(block.expr))?;
+        self.expr(preprocess_expr(block.expr))?;
         self.pop_scope(height);
         Ok(())
     }
@@ -637,7 +634,7 @@ impl Compiler {
         let span = self.push_call_span(span);
         self.bin_expr_impl([Instr::Op2(op2, span)], left, right)
     }
-    fn algo_bin_expr(
+    fn higher_bin_expr(
         &mut self,
         hop: HigherOp,
         left: Sp<Expr>,
@@ -668,15 +665,6 @@ impl Compiler {
         for instr in instrs {
             self.push_instr(instr);
         }
-        Ok(())
-    }
-    fn logic_expr(&mut self, jump_cond: bool, left: Sp<Expr>, right: Sp<Expr>) -> CompileResult {
-        self.expr(left)?;
-        let jump_spot = self.push_spot();
-        self.height -= 1;
-        self.expr(right)?;
-        self.instrs_mut()[jump_spot] =
-            Instr::JumpIfElsePop(self.instrs().len() as isize - jump_spot as isize, jump_cond);
         Ok(())
     }
     fn pipe_expr(&mut self, pipe_expr: PipeExpr) -> CompileResult {
@@ -743,9 +731,9 @@ impl Compiler {
     // }
 }
 
-fn resolve_placeholders(mut expr: Sp<Expr>) -> Sp<Expr> {
+fn preprocess_expr(mut expr: Sp<Expr>) -> Sp<Expr> {
     let mut params = Vec::new();
-    resolve_placeholders_rec(&mut expr, &mut params);
+    preprocess_expr_rec(&mut expr, &mut params);
     if params.is_empty() {
         return expr;
     }
@@ -760,7 +748,7 @@ fn resolve_placeholders(mut expr: Sp<Expr>) -> Sp<Expr> {
     })))
 }
 
-fn resolve_placeholders_rec(expr: &mut Sp<Expr>, params: &mut Vec<Sp<Ident>>) {
+fn preprocess_expr_rec(expr: &mut Sp<Expr>, params: &mut Vec<Sp<Ident>>) {
     match &mut expr.value {
         Expr::Placeholder => {
             let ident = expr.span.clone().sp(Ident::Placeholder(params.len()));
@@ -768,27 +756,27 @@ fn resolve_placeholders_rec(expr: &mut Sp<Expr>, params: &mut Vec<Sp<Ident>>) {
             *expr = ident.map(Expr::Ident);
         }
         Expr::If(if_expr) => {
-            resolve_placeholders_rec(&mut if_expr.cond, params);
+            preprocess_expr_rec(&mut if_expr.cond, params);
             if if_expr.if_true.items.is_empty() && if_expr.if_false.items.is_empty() {
-                resolve_placeholders_rec(&mut if_expr.if_true.expr, params);
-                resolve_placeholders_rec(&mut if_expr.if_false.expr, params);
+                preprocess_expr_rec(&mut if_expr.if_true.expr, params);
+                preprocess_expr_rec(&mut if_expr.if_false.expr, params);
             }
         }
         Expr::Call(call_expr) => {
-            resolve_placeholders_rec(&mut call_expr.func, params);
-            resolve_placeholders_rec(&mut call_expr.arg, params);
+            preprocess_expr_rec(&mut call_expr.func, params);
+            preprocess_expr_rec(&mut call_expr.arg, params);
         }
         Expr::Bin(bin_expr) => {
-            resolve_placeholders_rec(&mut bin_expr.left, params);
-            resolve_placeholders_rec(&mut bin_expr.right, params);
+            preprocess_expr_rec(&mut bin_expr.left, params);
+            preprocess_expr_rec(&mut bin_expr.right, params);
         }
         Expr::Pipe(pipe_expr) => {
-            resolve_placeholders_rec(&mut pipe_expr.left, params);
-            resolve_placeholders_rec(&mut pipe_expr.right, params);
+            preprocess_expr_rec(&mut pipe_expr.left, params);
+            preprocess_expr_rec(&mut pipe_expr.right, params);
         }
         Expr::List(items) | Expr::Array(items) => {
             for item in items {
-                resolve_placeholders_rec(item, params);
+                preprocess_expr_rec(item, params);
             }
         }
         Expr::Parened(_) => {}
@@ -799,5 +787,26 @@ fn resolve_placeholders_rec(expr: &mut Sp<Expr>, params: &mut Vec<Sp<Ident>>) {
         | Expr::String(_)
         | Expr::FormatString(_)
         | Expr::Ident(_) => {}
+    }
+}
+
+fn bin_op_primitive(op: BinOp) -> PrimitiveId {
+    match op {
+        BinOp::Add => PrimitiveId::Op2(Op2::Add),
+        BinOp::Sub => PrimitiveId::Op2(Op2::Sub),
+        BinOp::Mul => PrimitiveId::Op2(Op2::Mul),
+        BinOp::Div => PrimitiveId::Op2(Op2::Div),
+        BinOp::Eq => PrimitiveId::Op2(Op2::Eq),
+        BinOp::Ne => PrimitiveId::Op2(Op2::Ne),
+        BinOp::Lt => PrimitiveId::Op2(Op2::Lt),
+        BinOp::Le => PrimitiveId::Op2(Op2::Le),
+        BinOp::Gt => PrimitiveId::Op2(Op2::Gt),
+        BinOp::Ge => PrimitiveId::Op2(Op2::Ge),
+        BinOp::Left => PrimitiveId::Op2(Op2::Left),
+        BinOp::Right => PrimitiveId::Op2(Op2::Right),
+        BinOp::Compose => PrimitiveId::HigherOp(HigherOp::Compose),
+        BinOp::BlackBird => PrimitiveId::HigherOp(HigherOp::BlackBird),
+        BinOp::LeftThen => PrimitiveId::HigherOp(HigherOp::LeftThen),
+        BinOp::RightThen => PrimitiveId::HigherOp(HigherOp::RightThen),
     }
 }

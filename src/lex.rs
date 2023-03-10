@@ -366,8 +366,6 @@ pub enum Keyword {
     If,
     Then,
     Else,
-    And,
-    Or,
     True,
     False,
     Const,

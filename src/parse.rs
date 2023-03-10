@@ -319,42 +319,36 @@ struct BinExprDef<'a> {
     child: Option<&'a Self>,
 }
 
-static BIN_EXPR_OR: BinExprDef = BinExprDef {
-    ops: &[(Token::Keyword(Keyword::Or), BinOp::Or)],
+static BIN_EXPR_CMP: BinExprDef = BinExprDef {
+    ops: &[
+        (Token::Simple(Equal), BinOp::Eq),
+        (Token::Simple(NotEqual), BinOp::Ne),
+        (Token::Simple(Less), BinOp::Lt),
+        (Token::Simple(LessEqual), BinOp::Le),
+        (Token::Simple(Greater), BinOp::Gt),
+        (Token::Simple(GreaterEqual), BinOp::Ge),
+    ],
     child: Some(&BinExprDef {
-        ops: &[(Token::Keyword(Keyword::And), BinOp::And)],
+        ops: &[
+            (Token::Simple(Plus), BinOp::Add),
+            (Token::Simple(Minus), BinOp::Sub),
+        ],
         child: Some(&BinExprDef {
             ops: &[
-                (Token::Simple(Equal), BinOp::Eq),
-                (Token::Simple(NotEqual), BinOp::Ne),
-                (Token::Simple(Less), BinOp::Lt),
-                (Token::Simple(LessEqual), BinOp::Le),
-                (Token::Simple(Greater), BinOp::Gt),
-                (Token::Simple(GreaterEqual), BinOp::Ge),
+                (Token::Simple(Star), BinOp::Mul),
+                (Token::Simple(Slash), BinOp::Div),
             ],
             child: Some(&BinExprDef {
                 ops: &[
-                    (Token::Simple(Plus), BinOp::Add),
-                    (Token::Simple(Minus), BinOp::Sub),
+                    (Token::Simple(Period3), BinOp::BlackBird),
+                    (Token::Simple(StarGreater), BinOp::LeftThen),
+                    (Token::Simple(LessStar), BinOp::RightThen),
+                    (Token::Simple(BarMinus), BinOp::Right),
+                    (Token::Simple(MinusBar), BinOp::Left),
                 ],
                 child: Some(&BinExprDef {
-                    ops: &[
-                        (Token::Simple(Star), BinOp::Mul),
-                        (Token::Simple(Slash), BinOp::Div),
-                    ],
-                    child: Some(&BinExprDef {
-                        ops: &[
-                            (Token::Simple(Period3), BinOp::BlackBird),
-                            (Token::Simple(StarGreater), BinOp::LeftThen),
-                            (Token::Simple(LessStar), BinOp::RightThen),
-                            (Token::Simple(BarMinus), BinOp::Right),
-                            (Token::Simple(MinusBar), BinOp::Left),
-                        ],
-                        child: Some(&BinExprDef {
-                            ops: &[(Token::Simple(Period), BinOp::Compose)],
-                            child: None,
-                        }),
-                    }),
+                    ops: &[(Token::Simple(Period), BinOp::Compose)],
+                    child: None,
                 }),
             }),
         }),
@@ -407,7 +401,7 @@ impl Parser {
         Ok(Some(expr))
     }
     fn try_bin_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
-        self.try_bin_expr_def(&BIN_EXPR_OR)
+        self.try_bin_expr_def(&BIN_EXPR_CMP)
     }
     fn try_bin_expr_def(&mut self, def: &BinExprDef) -> ParseResult<Option<Sp<Expr>>> {
         let leaf = |this: &mut Self| {

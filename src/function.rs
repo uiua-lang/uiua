@@ -120,6 +120,8 @@ impl fmt::Display for Function {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_nil() {
             write!(f, "nil")
+        } else if let Some(primitive) = self.primitive {
+            write!(f, "{primitive}")
         } else {
             write!(f, "fn({} {})", self.start, self.params)
         }
@@ -174,12 +176,21 @@ impl fmt::Debug for Partial {
 
 impl fmt::Display for Partial {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "fn({} {}/{})",
-            self.function.start,
-            self.args.len(),
-            self.function.params
-        )
+        if let Some(primitive) = self.function.primitive {
+            write!(
+                f,
+                "{primitive}({}/{})",
+                self.args.len(),
+                self.function.params
+            )
+        } else {
+            write!(
+                f,
+                "fn({} {}/{})",
+                self.function.start,
+                self.args.len(),
+                self.function.params
+            )
+        }
     }
 }

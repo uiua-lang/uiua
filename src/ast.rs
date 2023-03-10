@@ -126,8 +126,6 @@ pub struct BinExpr {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
 pub enum BinOp {
-    Or,
-    And,
     Eq,
     Ne,
     Lt,

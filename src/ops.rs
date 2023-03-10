@@ -195,7 +195,10 @@ impl Value {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
 pub enum HigherOp {
     Compose,
+    Slf,
     BlackBird,
+    Phoenix,
+    Psi,
     Flip,
     While,
     LeftThen,
@@ -210,6 +213,9 @@ impl fmt::Display for HigherOp {
         match self {
             HigherOp::Compose => write!(f, "compose"),
             HigherOp::BlackBird => write!(f, "blackbird"),
+            HigherOp::Phoenix => write!(f, "phoenix"),
+            HigherOp::Psi => write!(f, "psi"),
+            HigherOp::Slf => write!(f, "self"),
             HigherOp::Flip => write!(f, "flip"),
             HigherOp::While => write!(f, "while"),
             HigherOp::LeftThen => write!(f, "left_then"),
@@ -225,7 +231,10 @@ impl HigherOp {
     pub(crate) fn params(&self) -> u16 {
         match self {
             HigherOp::Compose => 3,
+            HigherOp::Slf => 2,
             HigherOp::BlackBird => 4,
+            HigherOp::Phoenix => 4,
+            HigherOp::Psi => 5,
             HigherOp::Flip => 3,
             HigherOp::While => 3,
             HigherOp::LeftThen => 3,
@@ -244,12 +253,49 @@ impl HigherOp {
                 vm.push(f); // gx f
                 vm.call(1, env.assembly, 0)?; // f(gx)
             }
+            HigherOp::Slf => {
+                let f = vm.pop();
+                let x = vm.pop();
+                vm.push(x.clone());
+                vm.push(x);
+                vm.push(f);
+                vm.call(2, env.assembly, 0)?;
+            }
             HigherOp::BlackBird => {
                 // y x g f
                 let f = vm.pop(); // y x g
                 vm.call(1, env.assembly, 0)?; // gxy
                 vm.push(f); // gxy f
                 vm.call(2, env.assembly, 0)?; // f(gxy)
+            }
+            HigherOp::Phoenix => {
+                let a = vm.pop();
+                let b = vm.pop();
+                let c = vm.pop();
+                let x = vm.pop();
+                vm.push(x.clone());
+                vm.push(b);
+                vm.call(1, env.assembly, 0)?;
+                vm.push(x);
+                vm.push(c);
+                vm.call(1, env.assembly, 0)?;
+                vm.push(a);
+                vm.call(2, env.assembly, 0)?;
+            }
+            HigherOp::Psi => {
+                let a = vm.pop();
+                let b = vm.pop();
+                let c = vm.pop();
+                let x = vm.pop();
+                let y = vm.pop();
+                vm.push(x);
+                vm.push(b);
+                vm.call(1, env.assembly, 0)?;
+                vm.push(y);
+                vm.push(c);
+                vm.call(1, env.assembly, 0)?;
+                vm.push(a);
+                vm.call(2, env.assembly, 0)?;
             }
             HigherOp::Flip => {
                 let f = vm.pop();

@@ -307,8 +307,8 @@ impl Compiler {
             Instr::Op2(..) => self.height -= 1,
             Instr::Call(args, _) => self.height -= *args,
             Instr::Constant(_) => self.height += 1,
-            Instr::Array(len) if *len == 0 => self.height += 1,
-            Instr::Array(len) => self.height -= len - 1,
+            Instr::Array(len) | Instr::List(len) if *len == 0 => self.height += 1,
+            Instr::Array(len) | Instr::List(len) => self.height -= len - 1,
             _ => {}
         }
         self.instrs_mut().push(instr);

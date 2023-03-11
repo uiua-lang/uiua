@@ -315,6 +315,7 @@ pub enum Simple {
     LessEqual,
     Greater,
     GreaterEqual,
+    Newline,
 }
 
 impl fmt::Display for Simple {
@@ -354,6 +355,7 @@ impl fmt::Display for Simple {
                 Simple::LessEqual => "<=",
                 Simple::Greater => ">",
                 Simple::GreaterEqual => ">=",
+                Simple::Newline => "\\n",
             }
         )
     }
@@ -467,15 +469,15 @@ impl Lexer {
             let Some(c) = self.next_char() else {
                 break Ok(None);
             };
-            match c {
-                '(' => return self.end(OpenParen, start),
-                ')' => return self.end(CloseParen, start),
-                '{' => return self.end(OpenCurly, start),
-                '}' => return self.end(CloseCurly, start),
-                '[' => return self.end(OpenBracket, start),
-                ']' => return self.end(CloseBracket, start),
+            return match c {
+                '(' => self.end(OpenParen, start),
+                ')' => self.end(CloseParen, start),
+                '{' => self.end(OpenCurly, start),
+                '}' => self.end(CloseCurly, start),
+                '[' => self.end(OpenBracket, start),
+                ']' => self.end(CloseBracket, start),
                 '.' => {
-                    return if self.next_char_exact('.') {
+                    if self.next_char_exact('.') {
                         if self.next_char_exact('.') {
                             self.end(Period3, start)
                         } else if self.next_char_exact('=') {
@@ -487,37 +489,35 @@ impl Lexer {
                         self.end(Period, start)
                     }
                 }
-                ':' => return self.end(Colon, start),
-                ';' => return self.end(SemiColon, start),
-                ',' => return self.end(Comma, start),
-                '\\' => return self.end(BackSlash, start),
-                '+' => return self.end(Plus, start),
+                ':' => self.end(Colon, start),
+                ';' => self.end(SemiColon, start),
+                ',' => self.end(Comma, start),
+                '\\' => self.end(BackSlash, start),
+                '+' => self.end(Plus, start),
                 '-' => {
                     if self.peek_char().filter(char::is_ascii_digit).is_some() {
-                        return self.number(start, "-".into());
+                        self.number(start, "-".into())
                     } else {
-                        return self.switch_next(Minus, [('|', MinusBar)], start);
+                        self.switch_next(Minus, [('|', MinusBar)], start)
                     }
                 }
-                '*' => return self.switch_next(Star, [('>', StarGreater)], start),
-                '=' => return self.end(Equal, start),
-                '<' => {
-                    return self.switch_next(
-                        Less,
-                        [('=', LessEqual), ('|', BackPipe), ('*', LessStar)],
-                        start,
-                    )
-                }
-                '>' => return self.switch_next(Greater, [('=', GreaterEqual)], start),
+                '*' => self.switch_next(Star, [('>', StarGreater)], start),
+                '=' => self.end(Equal, start),
+                '<' => self.switch_next(
+                    Less,
+                    [('=', LessEqual), ('|', BackPipe), ('*', LessStar)],
+                    start,
+                ),
+                '>' => self.switch_next(Greater, [('=', GreaterEqual)], start),
                 '!' => {
-                    return if self.next_char_exact('=') {
+                    if self.next_char_exact('=') {
                         self.end(NotEqual, start)
                     } else {
                         Err(self.end_span(start).sp(LexError::Bang))
                     }
                 }
                 '|' => {
-                    return if self.next_char_exact('>') {
+                    if self.next_char_exact('>') {
                         self.end(Pipe, start)
                     } else if self.next_char_exact('-') {
                         self.end(BarMinus, start)
@@ -538,20 +538,10 @@ impl Lexer {
                         while let Some(c) = self.next_char_if(|c| c != '\n') {
                             comment.push(c);
                         }
-                        let end = self.loc;
-                        self.next_char();
-                        return Ok(Some(Sp {
-                            value: token(comment),
-                            span: Span::Code(CodeSpan {
-                                start,
-                                end,
-                                file: self.file.clone(),
-                                input: self.input.clone(),
-                            }),
-                        }));
+                        self.end(token(comment), start)
                     } else {
                         // Division
-                        return self.end(Slash, start);
+                        self.end(Slash, start)
                     }
                 }
                 // Characters
@@ -571,7 +561,7 @@ impl Lexer {
                             .end_span(start)
                             .sp(LexError::ExpectedCharacter(Some('\''))));
                     }
-                    return self.end(Token::Char(char), start);
+                    self.end(Token::Char(char), start)
                 }
                 // Strings
                 '"' => {
@@ -591,7 +581,7 @@ impl Lexer {
                             .end_span(start)
                             .sp(LexError::ExpectedCharacter(Some('"'))));
                     }
-                    return self.end(Token::Str(string), start);
+                    self.end(Token::Str(string), start)
                 }
                 // Format strings
                 '$' => {
@@ -617,7 +607,7 @@ impl Lexer {
                             .sp(LexError::ExpectedCharacter(Some('"'))));
                     }
                     let parts = string.split("{}").map(Into::into).collect();
-                    return self.end(Token::FormatString(parts), start);
+                    self.end(Token::FormatString(parts), start)
                 }
                 // Identifiers, keywords, and underscore
                 c if is_ident_start(c) => {
@@ -635,13 +625,15 @@ impl Lexer {
                     } else {
                         Ident(ascend::static_str(&ident).into())
                     };
-                    return self.end(token, start);
+                    self.end(token, start)
                 }
                 // Numbers
-                c if c.is_ascii_digit() => return self.number(start, c.to_string()),
-                c if c.is_whitespace() => {}
-                c => return Err(self.end_span(start).sp(LexError::UnexpectedChar(c))),
-            }
+                c if c.is_ascii_digit() => self.number(start, c.to_string()),
+                // Nelines
+                '\n' => self.end(Newline, start),
+                c if c.is_whitespace() => continue,
+                c => Err(self.end_span(start).sp(LexError::UnexpectedChar(c))),
+            };
         }
     }
     fn number(&mut self, start: Loc, init: String) -> LexResult<Option<Sp<Token>>> {

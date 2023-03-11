@@ -98,7 +98,12 @@ pub fn parse(input: &str, path: &Path) -> (Vec<Item>, Vec<Sp<ParseError>>) {
     };
     loop {
         match parser.try_item() {
-            Ok(Some(item)) => items.push(item),
+            Ok(Some(item)) => {
+                items.push(item);
+                if parser.try_exact(Newline).is_none() {
+                    break;
+                }
+            }
             Ok(None) => break,
             Err(e) => {
                 parser.errors.push(e);
@@ -197,7 +202,6 @@ impl Parser {
         } else {
             return Ok(None);
         };
-        self.expect(SemiColon)?;
         Ok(Some(item))
     }
     fn doc_comment(&mut self) -> Option<Sp<String>> {
@@ -222,6 +226,7 @@ impl Parser {
         let mut items = Vec::new();
         while let Some(item) = self.try_item()? {
             items.push(item);
+            self.expect(Newline)?;
         }
         let expr = self.expr()?;
         Ok(Block { items, expr })

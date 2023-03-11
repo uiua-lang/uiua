@@ -204,6 +204,7 @@ pub enum HigherOp {
     LeftThen,
     RightThen,
     Fold,
+    Each,
     Cells,
     Table,
     Filter,
@@ -222,6 +223,7 @@ impl fmt::Display for HigherOp {
             HigherOp::LeftThen => write!(f, "left_then"),
             HigherOp::RightThen => write!(f, "right_then"),
             HigherOp::Fold => write!(f, "fold"),
+            HigherOp::Each => write!(f, "each"),
             HigherOp::Cells => write!(f, "cells"),
             HigherOp::Table => write!(f, "table"),
             HigherOp::Filter => write!(f, "filter"),
@@ -241,6 +243,7 @@ impl HigherOp {
             HigherOp::While => 3,
             HigherOp::LeftThen => 3,
             HigherOp::RightThen => 3,
+            HigherOp::Each => 2,
             HigherOp::Cells => 2,
             HigherOp::Fold => 3,
             HigherOp::Table => 3,
@@ -371,6 +374,24 @@ impl HigherOp {
                     acc = vm.pop();
                 }
                 vm.push(acc);
+            }
+            HigherOp::Each => {
+                let f = vm.pop();
+                let xs = vm.pop();
+                if !xs.is_array() {
+                    vm.push(xs);
+                    vm.push(f);
+                    return vm.call(1, env.assembly, 0);
+                }
+                let (shape, values) = xs.into_array().into_parts();
+                let mut new_values = Vec::with_capacity(values.len());
+                for val in values {
+                    vm.push(val);
+                    vm.push(f.clone());
+                    vm.call(1, env.assembly, 0)?;
+                    new_values.push(vm.pop());
+                }
+                vm.push(Array::from((shape, new_values)).normalized(0));
             }
             HigherOp::Cells => {
                 let f = vm.pop();

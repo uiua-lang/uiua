@@ -27,7 +27,6 @@ pub(crate) fn constants() -> Vec<(&'static str, Value)> {
 /// 1-parameter built-in operations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
 pub enum Op1 {
-    Nil,
     Id,
     String,
     Not,
@@ -57,7 +56,6 @@ pub enum Op1 {
 impl fmt::Display for Op1 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Op1::Nil => write!(f, "nil"),
             Op1::Id => write!(f, "id"),
             Op1::String => write!(f, "string"),
             Op1::Not => write!(f, "not"),
@@ -89,7 +87,6 @@ impl fmt::Display for Op1 {
 impl Value {
     pub(crate) fn op1(&mut self, op: Op1, env: &Env) -> RuntimeResult {
         match op {
-            Op1::Nil => *self = Value::nil(),
             Op1::Id => {}
             Op1::Show => print!("{}", self.grid_string()),
             Op1::Print => print!("{self}"),
@@ -211,7 +208,6 @@ pub enum HigherOp {
     Phoenix,
     Psi,
     Flip,
-    While,
     LeftLeaf,
     LeftTree,
     RightLeaf,
@@ -233,7 +229,6 @@ impl fmt::Display for HigherOp {
             HigherOp::Psi => write!(f, "psi"),
             HigherOp::Slf => write!(f, "self"),
             HigherOp::Flip => write!(f, "flip"),
-            HigherOp::While => write!(f, "while"),
             HigherOp::LeftLeaf => write!(f, "left_leaf"),
             HigherOp::LeftTree => write!(f, "left_tree"),
             HigherOp::RightLeaf => write!(f, "right_leaf"),
@@ -257,7 +252,6 @@ impl HigherOp {
             HigherOp::Phoenix => 4,
             HigherOp::Psi => 5,
             HigherOp::Flip => 3,
-            HigherOp::While => 3,
             HigherOp::LeftLeaf => 4,
             HigherOp::LeftTree => 5,
             HigherOp::RightLeaf => 4,
@@ -343,24 +337,6 @@ impl HigherOp {
                 vm.push(b);
                 vm.push(f);
                 vm.call(2, env.assembly, 0)?;
-            }
-            HigherOp::While => {
-                let cond = vm.pop();
-                let body = vm.pop();
-                let mut init = vm.pop();
-                loop {
-                    vm.push(init.clone());
-                    vm.push(cond.clone());
-                    vm.call(1, env.assembly, 0)?;
-                    if vm.pop().is_falsy() {
-                        break;
-                    }
-                    vm.push(init.clone());
-                    vm.push(body.clone());
-                    vm.call(1, env.assembly, 0)?;
-                    init = vm.pop();
-                }
-                vm.push(init);
             }
             HigherOp::LeftLeaf => {
                 /*

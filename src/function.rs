@@ -17,7 +17,7 @@ pub enum PrimitiveId {
 }
 
 fn _keep_primitive_id_small(_: std::convert::Infallible) {
-    let _: [u8; 2] = unsafe { std::mem::transmute(Some(PrimitiveId::Op1(Op1::Nil))) };
+    let _: [u8; 2] = unsafe { std::mem::transmute(Some(PrimitiveId::Op1(Op1::Neg))) };
 }
 
 impl fmt::Display for PrimitiveId {
@@ -104,12 +104,6 @@ pub struct Function {
     pub(crate) primitive: Option<PrimitiveId>,
 }
 
-impl Default for Function {
-    fn default() -> Self {
-        Self::nil()
-    }
-}
-
 impl fmt::Debug for Function {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{self}")
@@ -118,28 +112,11 @@ impl fmt::Debug for Function {
 
 impl fmt::Display for Function {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.is_nil() {
-            write!(f, "nil")
-        } else if let Some(primitive) = self.primitive {
+        if let Some(primitive) = self.primitive {
             write!(f, "{primitive}")
         } else {
             write!(f, "fn({} {})", self.start, self.params)
         }
-    }
-}
-
-impl Function {
-    #[inline]
-    pub const fn nil() -> Self {
-        Self {
-            start: 0,
-            params: 1,
-            primitive: Some(PrimitiveId::Op1(Op1::Nil)),
-        }
-    }
-    #[inline]
-    pub const fn is_nil(&self) -> bool {
-        self.start == 0
     }
 }
 

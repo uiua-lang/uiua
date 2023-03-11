@@ -76,26 +76,11 @@ impl RawType {
 
 impl Default for Value {
     fn default() -> Self {
-        Self::nil()
+        0.0.into()
     }
 }
 
 impl Value {
-    pub fn nil() -> Self {
-        Self::from(Function::nil())
-    }
-    pub fn is_truthy(&self) -> bool {
-        match self.raw_ty() {
-            RawType::Num => self.number() != 0.0,
-            RawType::Char => self.char() != '\0',
-            RawType::Function => !self.function().is_nil(),
-            RawType::Partial => true,
-            RawType::Array => true,
-        }
-    }
-    pub fn is_falsy(&self) -> bool {
-        !self.is_truthy()
-    }
     pub fn raw_ty(&self) -> RawType {
         RAW_TYPES[self.0.tag() as usize]
     }

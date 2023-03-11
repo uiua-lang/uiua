@@ -509,7 +509,7 @@ impl Lexer {
                     [('=', LessEqual), ('|', BackPipe), ('>', LessGreater)],
                     start,
                 ),
-                '>' => self.switch_next(Greater, [('=', GreaterEqual)], start),
+                '>' => self.switch_next(Greater, [('=', GreaterEqual), ('<', GreaterLess)], start),
                 '!' => {
                     if self.next_char_exact('=') {
                         self.end(NotEqual, start)

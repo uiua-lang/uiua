@@ -317,7 +317,10 @@ static TOP_BIN_EXPR: BinExprDef = BinExprDef {
         ops: &[(Token::Simple(Pipe), BinOp::Pipe)],
         associativity: Associativity::Left,
         child: Some(&BinExprDef {
-            ops: &[(Token::Simple(LessGreater), BinOp::Slf)],
+            ops: &[
+                (Token::Simple(LessGreater), BinOp::Slf),
+                (Token::Simple(GreaterLess), BinOp::Flip),
+            ],
             associativity: Associativity::Left,
             child: Some(&BinExprDef {
                 associativity: Associativity::Left,

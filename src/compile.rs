@@ -724,5 +724,6 @@ fn bin_op_primitive(op: BinOp) -> PrimitiveId {
         BinOp::LeftTree => PrimitiveId::HigherOp(HigherOp::LeftTree),
         BinOp::RightTree => PrimitiveId::HigherOp(HigherOp::RightTree),
         BinOp::Slf => PrimitiveId::HigherOp(HigherOp::Slf),
+        BinOp::Flip => PrimitiveId::HigherOp(HigherOp::Flip),
     }
 }

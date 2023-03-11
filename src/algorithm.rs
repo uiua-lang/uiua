@@ -5,7 +5,12 @@ use std::{
     ptr,
 };
 
-use crate::{array::Array, value::Value, vm::Env, RuntimeResult};
+use crate::{
+    array::{Array, ArrayType},
+    value::Value,
+    vm::Env,
+    RuntimeResult,
+};
 
 type CmpFn<T> = fn(&T, &T) -> Ordering;
 
@@ -32,18 +37,14 @@ impl Value {
             Vec::new()
         }
     }
-    pub fn as_shape(&self, env: &Env) -> RuntimeResult<Vec<usize>> {
+    pub fn as_shape(&self, env: &Env, error: &'static str) -> RuntimeResult<Vec<usize>> {
         if self.is_array() {
             let arr = self.array();
             let mut shape = Vec::with_capacity(arr.len());
             for f in arr.numbers() {
                 let rounded = f.round();
                 if (f - rounded).abs() > f64::EPSILON || rounded <= 0.0 {
-                    return Err(env.error(
-                        "Tried to make a shape from an array with decimal or \
-                        nonpositive numbers, but only natural numbers are \
-                        allowed",
-                    ));
+                    return Err(env.error(error));
                 }
                 let rounded = rounded as usize;
                 shape.push(rounded);
@@ -53,18 +54,43 @@ impl Value {
             let f = self.number();
             let rounded = f.round();
             if (f - rounded).abs() > f64::EPSILON || rounded <= 0.0 {
-                return Err(env.error(
-                    "Tried to make a shape from decimal or nonpositive \
-                    number, but only natural numbers are allowed",
-                ));
+                return Err(env.error(error));
             }
             Ok(vec![rounded as usize])
         } else {
-            Err(env.error("Tried to make a shape from non-number"))
+            return Err(env.error(error));
+        }
+    }
+    pub fn as_index(&self, env: &Env, error: &'static str) -> RuntimeResult<Vec<isize>> {
+        if self.is_array() {
+            let arr = self.array();
+            let mut index = Vec::with_capacity(arr.len());
+            for f in arr.numbers() {
+                let rounded = f.round();
+                if (f - rounded).abs() > f64::EPSILON {
+                    return Err(env.error(error));
+                }
+                let rounded = rounded as isize;
+                index.push(rounded);
+            }
+            Ok(index)
+        } else if self.is_num() {
+            let f = self.number();
+            let rounded = f.round();
+            if (f - rounded).abs() > f64::EPSILON {
+                return Err(env.error(error));
+            }
+            Ok(vec![rounded as isize])
+        } else {
+            return Err(env.error(error));
         }
     }
     pub fn range(&self, env: &Env) -> RuntimeResult<Array> {
-        let shape = self.as_shape(env)?;
+        let shape = self.as_shape(
+            env,
+            "Range only accepts a single natural number \
+            or a list of natural numbers",
+        )?;
         let data = range(&shape);
         Ok((shape, data).into())
     }
@@ -100,7 +126,7 @@ impl Value {
     }
     pub fn reshape(&mut self, other: &mut Value, env: &Env) -> RuntimeResult {
         swap(self, other);
-        let shape = other.as_shape(env)?;
+        let shape = other.as_shape(env, "Shape must be a list of natural numbers")?;
         self.coerce_array().reshape(shape);
         Ok(())
     }
@@ -112,13 +138,13 @@ impl Value {
     }
     pub fn replicate(&mut self, filter: &Self, env: &Env) -> RuntimeResult {
         if !self.is_array() {
-            return Err(env.error("Tried to filter non-array"));
+            return Err(env.error("Cannot filter non-array"));
         }
         let filtered = self.array_mut();
         let mut data = Vec::new();
         if filter.is_num() {
             if !filter.is_nat() {
-                return Err(env.error("Tried to replicate with non-integer"));
+                return Err(env.error("Cannot replicate with non-integer"));
             }
             let n = filter.number() as usize;
             for cell in take(filtered).into_values() {
@@ -128,29 +154,86 @@ impl Value {
             let filter = filter.array();
             if filter.len() != filtered.len() {
                 return Err(env.error(format!(
-                    "Tried to replicate with array of different length: \
+                    "Cannot replicate with array of different length: \
                     the filter length is {}, but the array length is {}",
                     filter.len(),
                     filtered.len(),
                 )));
             }
             if !filter.is_numbers() {
-                return Err(env.error("Tried to replicate with non-number array"));
+                return Err(env.error("Cannot replicate with non-number array"));
             }
             if filter.rank() != 1 {
-                return Err(env.error("Tried to replicate with non-1D array"));
+                return Err(env.error("Cannot replicate with non-1D array"));
             }
             for (&n, cell) in filter.numbers().iter().zip(take(filtered).into_values()) {
                 if n.trunc() != n || n < 0.0 {
-                    return Err(env.error("Tried to replicate with non-natural number"));
+                    return Err(env.error("Cannot replicate with non-natural number"));
                 }
                 data.extend(repeat(cell).take(n as usize));
             }
         } else {
-            return Err(env.error("Tried to replicate with non-number"));
+            return Err(env.error("Cannot replicate with non-number"));
         }
         *self = Array::from(data).normalized(1).into();
         Ok(())
+    }
+    pub fn pick(&mut self, from: &mut Self, env: &Env) -> RuntimeResult {
+        if !from.is_array() || from.array().rank() == 0 {
+            return Err(env.error("Cannot pick from rank less than 1"));
+        }
+        let index = self.as_index(env, "Index must be a list of integers")?;
+        let array = from.array();
+        if index.len() > array.rank() {
+            return Err(env.error(format!(
+                "Cannot pick with index of greater rank: \
+                the index length is {}, but the array rank is {}",
+                index.len(),
+                array.rank(),
+            )));
+        }
+        for (&s, &i) in array.shape().iter().zip(&index) {
+            let s = s as isize;
+            if i >= s || s + i < 0 {
+                return Err(env.error(format!(
+                    "Index out of range: \
+                    the index is {:?}, but the shape is {:?}",
+                    index,
+                    array.shape()
+                )));
+            }
+        }
+        *self = match array.ty() {
+            ArrayType::Num => pick(array.shape(), index, array.numbers()),
+            ArrayType::Char => pick(array.shape(), index, array.chars()),
+            ArrayType::Value => pick(array.shape(), index, array.values()),
+        };
+        Ok(())
+    }
+}
+
+fn pick<T>(shape: &[usize], index: Vec<isize>, mut data: &[T]) -> Value
+where
+    T: Clone + Into<Value>,
+    Array: From<(Vec<usize>, Vec<T>)>,
+{
+    let mut shape_index = 0;
+    for i in index {
+        let s = shape[shape_index];
+        let cell_size = data.len() / s;
+        let start = if i >= 0 {
+            i as usize * cell_size
+        } else {
+            (data.len() as isize + i * cell_size as isize) as usize
+        };
+        data = &data[start..start + cell_size];
+        shape_index += 1;
+    }
+    if shape_index < shape.len() {
+        let shape = shape[shape_index..].to_vec();
+        Array::from((shape, data.to_vec())).into()
+    } else {
+        data[0].clone().into()
     }
 }
 

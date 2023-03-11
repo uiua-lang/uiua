@@ -661,42 +661,6 @@ impl Compiler {
             Ok(params)
         })
     }
-    // fn closure_params(&self, func: &Func) -> Vec<&'static str> {
-    //     let mut bindings = Vec::new();
-    //     let mut params = Vec::new();
-    //     for param in &func.params {
-    //         if let Ident::Name(name) = &param.value {
-    //             bindings.push(*name);
-    //         }
-    //     }
-    //     for item in &func.body.items {
-    //         self.item_closure_params(item, &mut bindings, &mut params);
-    //     }
-    //     params
-    // }
-    // fn item_closure_params(
-    //     &self,
-    //     item: &Item,
-    //     bindings: &mut Vec<&'static str>,
-    //     params: &mut Vec<&'static str>,
-    // ) {
-    //     match item {
-    //         Item::Expr(expr) => self.expr_closure_params(expr, bindings, params),
-    //         Item::Let(r#let) => {
-    //             self.expr_closure_params(&r#let.expr.value, bindings, params);
-    //             if let Ident::Name(name) = &r#let.p {
-    //                 bindings.push(*name);
-    //             }
-    //         }
-    //     }
-    // }
-    // fn expr_closure_params(
-    //     &self,
-    //     expr: &Expr,
-    //     bindings: &mut Vec<&'static str>,
-    //     params: &mut Vec<&'static str>,
-    // ) {
-    // }
 }
 
 fn preprocess_expr(mut expr: Sp<Expr>) -> Sp<Expr> {

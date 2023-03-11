@@ -137,6 +137,7 @@ pub enum Op2 {
     Atan2,
     Join,
     Reshape,
+    Pick,
 }
 
 impl fmt::Display for Op2 {
@@ -161,6 +162,7 @@ impl fmt::Display for Op2 {
             Op2::Atan2 => write!(f, "atan2"),
             Op2::Join => write!(f, "join"),
             Op2::Reshape => write!(f, "reshape"),
+            Op2::Pick => write!(f, "pick"),
         }
     }
 }
@@ -187,6 +189,7 @@ impl Value {
             Op2::Atan2 => *self = self.atan2(other, env)?,
             Op2::Join => self.join(other.clone(), env)?,
             Op2::Reshape => self.reshape(other, env)?,
+            Op2::Pick => self.pick(other, env)?,
         }
         Ok(())
     }

@@ -42,6 +42,7 @@ pub enum Op1 {
     Len,
     Rank,
     Shape,
+    First,
     Range,
     Reverse,
     Deshape,
@@ -71,6 +72,7 @@ impl fmt::Display for Op1 {
             Op1::Len => write!(f, "len"),
             Op1::Rank => write!(f, "rank"),
             Op1::Shape => write!(f, "shape"),
+            Op1::First => write!(f, "first"),
             Op1::Range => write!(f, "range"),
             Op1::Reverse => write!(f, "reverse"),
             Op1::Deshape => write!(f, "deshape"),
@@ -109,6 +111,7 @@ impl Value {
             Op1::Ceil => *self = self.ceil(env)?,
             Op1::Round => *self = self.round(env)?,
             Op1::Deshape => self.deshape(),
+            Op1::First => self.first(env)?,
             op => todo!("{op}"),
         }
         Ok(())

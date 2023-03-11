@@ -105,7 +105,7 @@ impl Array {
         assert_eq!(self.ty, ArrayType::Value);
         unsafe { &mut self.data.values }
     }
-    fn take_values(&mut self) -> Vec<Value> {
+    fn take_flat_values(&mut self) -> Vec<Value> {
         match self.ty {
             ArrayType::Num => take(unsafe { &mut *self.data.numbers })
                 .into_iter()
@@ -119,7 +119,7 @@ impl Array {
         }
     }
     pub fn into_flat_values(mut self) -> Vec<Value> {
-        self.take_values()
+        self.take_flat_values()
     }
     pub fn into_parts(mut self) -> (Vec<usize>, Vec<Value>) {
         (take(&mut self.shape), self.into_flat_values())
@@ -157,7 +157,7 @@ impl Array {
                 }
                 let mut shape = shape.unwrap_or(&[]).to_vec();
                 let values: Vec<Value> = self
-                    .take_values()
+                    .take_flat_values()
                     .into_iter()
                     .map(Value::into_array)
                     .flat_map(Array::into_flat_values)
@@ -283,7 +283,7 @@ impl Array {
             }
             _ => {
                 let shape = take(&mut self.shape);
-                let mut values = self.take_values();
+                let mut values = self.take_flat_values();
                 values.append(&mut other.into_flat_values());
                 *self = Array::from((shape, values));
             }
@@ -339,6 +339,38 @@ impl Array {
                 |values| Array::from((shape.clone(), values)),
             ),
         }
+    }
+    pub fn into_first(mut self) -> Option<Value> {
+        if self.shape.is_empty() {
+            return self.into_flat_values().pop();
+        }
+        if self.shape == [0] {
+            return None;
+        }
+        let mut shape = take(&mut self.shape);
+        let cell_count = shape.remove(0);
+        fn into_first<T>(
+            cell_count: usize,
+            shape: Vec<usize>,
+            items: &mut ManuallyDrop<Vec<T>>,
+        ) -> Value
+        where
+            T: Into<Value>,
+            Array: From<(Vec<usize>, Vec<T>)>,
+        {
+            let mut items = take(&mut **items);
+            if shape.is_empty() {
+                return items.into_iter().next().unwrap().into();
+            }
+            let cell_size = items.len() / cell_count;
+            items.truncate(cell_size);
+            Array::from((shape, items)).into()
+        }
+        Some(match self.ty {
+            ArrayType::Num => into_first(cell_count, shape, unsafe { &mut self.data.numbers }),
+            ArrayType::Char => into_first(cell_count, shape, unsafe { &mut self.data.chars }),
+            ArrayType::Value => into_first(cell_count, shape, unsafe { &mut self.data.values }),
+        })
     }
 }
 

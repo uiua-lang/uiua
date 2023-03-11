@@ -1,3 +1,5 @@
+- Call all arguments at once
+- Improve parsing expectation errors
 - Optimize for non-reused values
 - Warnings
   - naming conventions
@@ -11,7 +13,7 @@
   - Drop
 - Type testing/tracing
 - Structs
-- Enums
+- Enums?
 - Operator overloading?
 - System APIs
   - File system

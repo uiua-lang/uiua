@@ -210,6 +210,16 @@ impl Value {
         };
         Ok(())
     }
+    pub fn first(&mut self, env: &Env) -> RuntimeResult {
+        if !self.is_array() {
+            return Ok(());
+        }
+        let array = take(self.array_mut());
+        *self = array
+            .into_first()
+            .ok_or_else(|| env.error("Empty array has no first"))?;
+        Ok(())
+    }
 }
 
 fn pick<T>(shape: &[usize], index: Vec<isize>, mut data: &[T]) -> Value

@@ -154,20 +154,41 @@ impl fmt::Debug for Partial {
 impl fmt::Display for Partial {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(primitive) = self.function.primitive {
-            write!(
-                f,
-                "{primitive}({}/{})",
-                self.args.len(),
-                self.function.params
-            )
+            write!(f, "({primitive}")?
         } else {
-            write!(
-                f,
-                "fn({} {}/{})",
-                self.function.start,
-                self.args.len(),
-                self.function.params
-            )
+            write!(f, "fn({}", self.function.start)?
         }
+        for arg in self.args.iter().rev() {
+            if arg.is_array() {
+                let arr = arg.array();
+                match arr.rank() {
+                    0 => write!(f, " {arr}")?,
+                    1 => {
+                        write!(f, " [")?;
+                        for (i, value) in arr.clone().into_values().into_iter().take(3).enumerate()
+                        {
+                            if i > 0 {
+                                write!(f, ", ")?;
+                            }
+                            write!(f, "{value}")?;
+                        }
+                        if arr.len() > 3 {
+                            write!(f, ", ...")?;
+                        }
+                        write!(f, "]")?
+                    }
+                    _ => {
+                        write!(f, " [shape")?;
+                        for dim in arr.shape() {
+                            write!(f, " {dim}")?;
+                        }
+                        write!(f, "]")?
+                    }
+                }
+            } else {
+                write!(f, " {}", arg)?
+            }
+        }
+        write!(f, " /{})", self.function.params)
     }
 }

@@ -98,7 +98,7 @@ pub fn parse(input: &str, path: &Path) -> (Vec<Item>, Vec<Sp<ParseError>>) {
     };
     loop {
         match parser.try_item() {
-            Ok(Some(item)) => items.push(item),
+            Ok(Some(item)) => items.push(dbg!(item)),
             Ok(None) => {
                 if parser.try_exact(Newline).is_none() {
                     break;
@@ -110,7 +110,6 @@ pub fn parse(input: &str, path: &Path) -> (Vec<Item>, Vec<Sp<ParseError>>) {
             }
         }
     }
-    parser.next_token_map::<()>(|_| None);
     if parser.index != parser.tokens.len() {
         parser.errors.push(parser.expected([Expectation::Eof]));
     }

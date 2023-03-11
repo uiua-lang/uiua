@@ -26,7 +26,6 @@ pub fn lex(input: &str, file: &Path) -> LexResult<Vec<Sp<Token>>> {
 pub enum LexError {
     UnexpectedChar(char),
     Bang,
-    Bar,
     ExpectedCharacter(Option<char>),
     InvalidEscape(char),
 }
@@ -36,7 +35,6 @@ impl fmt::Display for LexError {
         match self {
             LexError::UnexpectedChar(c) => write!(f, "unexpected char {c:?}"),
             LexError::Bang => write!(f, " unexpected char `!`, maybe you meant `not`?"),
-            LexError::Bar => write!(f, " unexpected char `|`, maybe you meant `or` or `|>`?"),
             LexError::ExpectedCharacter(Some(c)) => write!(f, "expected {c:?}"),
             LexError::ExpectedCharacter(None) => write!(f, "expected character"),
             LexError::InvalidEscape(c) => write!(f, "invalid escape character {c:?}"),
@@ -223,7 +221,6 @@ impl<T: Error> Error for Sp<T> {}
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
     Comment(String),
-    DocComment(String),
     Ident(Ident),
     Number(String),
     Char(char),
@@ -270,7 +267,6 @@ impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Token::Comment(comment) => write!(f, "// {comment}"),
-            Token::DocComment(comment) => write!(f, "/// {comment}"),
             Token::Ident(ident) => write!(f, "{ident}"),
             Token::Number(real) => write!(f, "{real}"),
             Token::Char(char) => write!(f, "{char:?}"),
@@ -294,21 +290,24 @@ pub enum Simple {
     Comma,
     Colon,
     SemiColon,
-    BackSlash,
     Period,
     Period2,
     Period3,
-    Period2Equal,
-    LessStar,
-    StarGreater,
+    Bar,
     MinusBar,
     BarMinus,
     Pipe,
     BackPipe,
+    Slash,
+    BackSlash,
+    DoubleSlash,
+    DoubleBackSlash,
+    LessGreater,
+    GreaterLess,
     Plus,
     Minus,
     Star,
-    Slash,
+    Percent,
     Equal,
     NotEqual,
     Less,
@@ -334,21 +333,24 @@ impl fmt::Display for Simple {
                 Simple::Comma => ",",
                 Simple::Colon => ":",
                 Simple::SemiColon => ";",
-                Simple::BackSlash => "\\",
                 Simple::Period => ".",
                 Simple::Period2 => "..",
                 Simple::Period3 => "...",
-                Simple::Period2Equal => "..=",
-                Simple::LessStar => "<*",
-                Simple::StarGreater => "*>",
+                Simple::Bar => "|",
                 Simple::MinusBar => "-|",
                 Simple::BarMinus => "|-",
                 Simple::Pipe => "|>",
                 Simple::BackPipe => "<|",
+                Simple::Slash => "/",
+                Simple::DoubleSlash => "//",
+                Simple::BackSlash => "\\",
+                Simple::DoubleBackSlash => "\\\\",
+                Simple::LessGreater => "<>",
+                Simple::GreaterLess => "><",
                 Simple::Plus => "+",
                 Simple::Minus => "-",
                 Simple::Star => "*",
-                Simple::Slash => "/",
+                Simple::Percent => "%",
                 Simple::Equal => "=",
                 Simple::NotEqual => "!=",
                 Simple::Less => "<",
@@ -480,8 +482,6 @@ impl Lexer {
                     if self.next_char_exact('.') {
                         if self.next_char_exact('.') {
                             self.end(Period3, start)
-                        } else if self.next_char_exact('=') {
-                            self.end(Period2Equal, start)
                         } else {
                             self.end(Period2, start)
                         }
@@ -492,7 +492,8 @@ impl Lexer {
                 ':' => self.end(Colon, start),
                 ';' => self.end(SemiColon, start),
                 ',' => self.end(Comma, start),
-                '\\' => self.end(BackSlash, start),
+                '/' => self.switch_next(Slash, [('/', DoubleSlash)], start),
+                '\\' => self.switch_next(BackSlash, [('\\', DoubleBackSlash)], start),
                 '+' => self.end(Plus, start),
                 '-' => {
                     if self.peek_char().filter(char::is_ascii_digit).is_some() {
@@ -501,11 +502,11 @@ impl Lexer {
                         self.switch_next(Minus, [('|', MinusBar)], start)
                     }
                 }
-                '*' => self.switch_next(Star, [('>', StarGreater)], start),
+                '*' => self.end(Star, start),
                 '=' => self.end(Equal, start),
                 '<' => self.switch_next(
                     Less,
-                    [('=', LessEqual), ('|', BackPipe), ('*', LessStar)],
+                    [('=', LessEqual), ('|', BackPipe), ('>', LessGreater)],
                     start,
                 ),
                 '>' => self.switch_next(Greater, [('=', GreaterEqual)], start),
@@ -516,33 +517,14 @@ impl Lexer {
                         Err(self.end_span(start).sp(LexError::Bang))
                     }
                 }
-                '|' => {
-                    if self.next_char_exact('>') {
-                        self.end(Pipe, start)
-                    } else if self.next_char_exact('-') {
-                        self.end(BarMinus, start)
-                    } else {
-                        Err(self.end_span(start).sp(LexError::Bar))
+                '|' => self.switch_next(Bar, [('>', Pipe), ('-', BarMinus)], start),
+                // Comments
+                '#' => {
+                    let mut comment = String::new();
+                    while let Some(c) = self.next_char_if(|c| c != '\n') {
+                        comment.push(c);
                     }
-                }
-                // Division and comments
-                '/' => {
-                    if self.next_char_exact('/') {
-                        // Comments
-                        let token = if self.next_char_exact('/') {
-                            DocComment
-                        } else {
-                            Comment
-                        };
-                        let mut comment = String::new();
-                        while let Some(c) = self.next_char_if(|c| c != '\n') {
-                            comment.push(c);
-                        }
-                        self.end(token(comment), start)
-                    } else {
-                        // Division
-                        self.end(Slash, start)
-                    }
+                    self.end(Comment(comment), start)
                 }
                 // Characters
                 '\'' => {

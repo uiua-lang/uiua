@@ -11,33 +11,44 @@ cargo install uiua
 
 # Introduction
 
-Just to get a taste, here is a simple recursive fibonacci function:
-```rust
-fn fib n:
-    if n < 2 then n
-    else fib (n - 1) + fib (n - 2);
-
-do println (fib 10);
+Just to get a taste, here is a program that shows all the even numbers between 1 and 20:
+```cs
+let evens = (mod 2 _ = 0) / filter <> 1 + range _
+do show <| evens 20
 ```
 
-Uiua's syntax is whitespace-insensitive.
+Uiua's syntax is newline-sensitive, but all other whitespace is ignored.
 
 Code is compiled to bytecode and then executed by a virtual machine.
 
 ## Types and Values
 
-Uiua has 9 primitive types:
-- Unit - the null type
-- Byte - 8-bit unsigned integer
-- Int - 64-bit signed integer
-- Real - 64-bit floating point number
-- Char - 32-bit unicode character
-- String - UTF-8 string
-- Function - a function, closure, or partial function
-- List - a list with fast insertion at both ends and fast cloning
-- Array - a rank-polymorphic array
+Uiua has only 4 primitive types: numbers, characters, functions, and arrays
 
 Values in Uiua can have any type and are always immutable.
+
+### Numbers
+
+Numbers are double-precision floating-point.
+
+### Characters
+
+Characters are utf-32 encoded.
+
+Characters and numbers exist in an affine space:
+Numbers and characters can be added to get characters, and characters can be subtracted to get numbers.
+However, characters cannot be added together.
+
+### Functions
+
+All functions in Uiua are curried and can be partially applied.
+
+Calling a function with too few arguments returns a new function that takes the remaining arguments.
+
+### Arrays
+
+Arrays in Uiua are multidimensional and rank-polymorphic, meaning that many operations automatically apply to every item.
+Other operations allow the traversal of different axes.
 
 ## Functional Programming
 
@@ -46,21 +57,21 @@ Uiua supports functional programming features including partial function applica
 However, Uiua does not care about the purity of function. Any function may or may not have side effects.
 
 ### Simple function declaration:
-```rust
-fn add a b: a + b;
+```cs
+let add a b = a + b
 
-do print <| add 1 2; // prints 3
+do show <| add 1 2 # prints 3
 ```
 ### Anonymous functions:
-```rust
-let x = fn x:
-    do println x;
-    x + 1;
+```cs
+let x = |x
+    do show x
+    x + 1
 
-let y = x 5; // prints 5, sets y to 6
+let y = x 5 # prints 5, sets y to 6
 
-let numbers = {1, 2, 3, 4, 5}; // a list
-let sum = numbers |> fold 0 (+);
+let numbers = {1, 2, 3, 4, 5} # a list
+let sum = numbers |> fold (+) 0
 ```
 
 ## Strings
@@ -69,8 +80,8 @@ Strings are UTF-8 encoded and are immutable.
 
 They are delimited by double quotes (`"`).
 
-```rust
-do println "Hello, world!";
+```cs
+do show "Hello, world!"
 ```
 Combining strings is done by using format strings.
 
@@ -78,48 +89,47 @@ These are strings that start with a `$` before the first `"` and contain `{}` pl
 
 Format strings evaluate to a function that takes the values to be inserted into the placeholders.
 
-```rust
-let say_hello = $"Hello, {}!";
-do println <| say_hello "World";
+```cs
+let say_hello = $"Hello, {}!"
+do show <| say_hello "World"
 
-let everyone = {"Alice", "Bob", "Charlie"};
-do everyone |> each say_hello |> each println;
+let everyone = {"Alice", "Bob", "Charlie"}
+do everyone |> each say_hello |> each println
 ```
 
 ## Arrays
 
 Arrays in Uiua are rank-polymorphic, which means that many operations automatically apply to every item, even for multidimensional arrays.
 
-```rust
-do println <| [1, 2, 3] * 2; // [2, 4, 6]
+```cs
+do show <| [1, 2, 3] * 2 # [2, 4, 6]
 ```
-Arrays (and lists) can be indexed by using an index as a function.
-```rust
-let numbers = [1, 2, 3, 4, 5];
-do println <| 2 numbers; // 3
-do println <| numbers |> 2; // also 3
+Arrays (and lists) can be indexed with the `pick` function.
+```cs
+let numbers = [1, 2, 3, 4, 5]
+do show <| pick 2 numbers # 3
+do show <| numbers |> pick 2 # also 3
 
 let matrix = [
     [1, 2, 3], 
     [4, 5, 6], 
     [7, 8, 9],
-];
-do println <| matrix |> 1 |> 2; // 6
-do println <| (2 . 1) matrix; // also 6
+]
+do show <| matrix |> pick [1, 2] # 6
 ```
-The `each` function applies a function to an array, but one rank down.
+The `cells` function applies a function to an array, but one rank down.
 
 For example, if you want to get the middle row of a 2D array, you only have to index it:
-```rust
+```cs
 let matrix = [
     [1, 2, 3], 
     [4, 5, 6], 
     [7, 8, 9],
-];
+]
 
-do println <| 1 matrix; // [4, 5, 6]
+do show <| pick 1 matrix # [4, 5, 6]
 ```
-However, if you wanted to get the middle *column*, you would have to use `each`:
-```rust
-do println <| each 1 matrix; // [2, 5, 8]
+However, if you wanted to get the middle *column*, you would have to use `cells`:
+```cs
+do show <| cells (pick 1) matrix # [2, 5, 8]
 ```

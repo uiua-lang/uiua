@@ -731,7 +731,10 @@ fn bin_op_primitive(op: BinOp) -> PrimitiveId {
         BinOp::Right => PrimitiveId::Op2(Op2::Right),
         BinOp::Compose => PrimitiveId::HigherOp(HigherOp::Compose),
         BinOp::BlackBird => PrimitiveId::HigherOp(HigherOp::BlackBird),
-        BinOp::LeftThen => PrimitiveId::HigherOp(HigherOp::LeftThen),
-        BinOp::RightThen => PrimitiveId::HigherOp(HigherOp::RightThen),
+        BinOp::LeftLeaf => PrimitiveId::HigherOp(HigherOp::LeftLeaf),
+        BinOp::RightLeaf => PrimitiveId::HigherOp(HigherOp::RightLeaf),
+        BinOp::LeftTree => PrimitiveId::HigherOp(HigherOp::LeftTree),
+        BinOp::RightTree => PrimitiveId::HigherOp(HigherOp::RightTree),
+        BinOp::Slf => PrimitiveId::HigherOp(HigherOp::Slf),
     }
 }

@@ -138,6 +138,7 @@ pub enum Op2 {
     Join,
     Reshape,
     Pick,
+    Filter,
 }
 
 impl fmt::Display for Op2 {
@@ -163,6 +164,7 @@ impl fmt::Display for Op2 {
             Op2::Join => write!(f, "join"),
             Op2::Reshape => write!(f, "reshape"),
             Op2::Pick => write!(f, "pick"),
+            Op2::Filter => write!(f, "filter"),
         }
     }
 }
@@ -190,6 +192,7 @@ impl Value {
             Op2::Join => self.join(other.clone(), env)?,
             Op2::Reshape => self.reshape(other, env)?,
             Op2::Pick => self.pick(other, env)?,
+            Op2::Filter => self.replicate(other, env)?,
         }
         Ok(())
     }
@@ -198,19 +201,20 @@ impl Value {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
 pub enum HigherOp {
     Compose,
-    Lark,
+    Slf,
     BlackBird,
     Phoenix,
     Psi,
     Flip,
     While,
-    LeftThen,
-    RightThen,
+    LeftLeaf,
+    LeftTree,
+    RightLeaf,
+    RightTree,
     Fold,
     Each,
     Cells,
     Table,
-    Filter,
 }
 
 impl fmt::Display for HigherOp {
@@ -220,16 +224,17 @@ impl fmt::Display for HigherOp {
             HigherOp::BlackBird => write!(f, "blackbird"),
             HigherOp::Phoenix => write!(f, "phoenix"),
             HigherOp::Psi => write!(f, "psi"),
-            HigherOp::Lark => write!(f, "lark"),
+            HigherOp::Slf => write!(f, "self"),
             HigherOp::Flip => write!(f, "flip"),
             HigherOp::While => write!(f, "while"),
-            HigherOp::LeftThen => write!(f, "left_then"),
-            HigherOp::RightThen => write!(f, "right_then"),
+            HigherOp::LeftLeaf => write!(f, "left_leaf"),
+            HigherOp::LeftTree => write!(f, "left_tree"),
+            HigherOp::RightLeaf => write!(f, "right_leaf"),
+            HigherOp::RightTree => write!(f, "right_tree"),
             HigherOp::Fold => write!(f, "fold"),
             HigherOp::Each => write!(f, "each"),
             HigherOp::Cells => write!(f, "cells"),
             HigherOp::Table => write!(f, "table"),
-            HigherOp::Filter => write!(f, "filter"),
         }
     }
 }
@@ -238,19 +243,20 @@ impl HigherOp {
     pub(crate) fn params(&self) -> u8 {
         match self {
             HigherOp::Compose => 3,
-            HigherOp::Lark => 2,
+            HigherOp::Slf => 2,
             HigherOp::BlackBird => 4,
             HigherOp::Phoenix => 4,
             HigherOp::Psi => 5,
             HigherOp::Flip => 3,
             HigherOp::While => 3,
-            HigherOp::LeftThen => 3,
-            HigherOp::RightThen => 3,
+            HigherOp::LeftLeaf => 4,
+            HigherOp::LeftTree => 5,
+            HigherOp::RightLeaf => 4,
+            HigherOp::RightTree => 5,
             HigherOp::Each => 2,
             HigherOp::Cells => 2,
             HigherOp::Fold => 3,
             HigherOp::Table => 3,
-            HigherOp::Filter => 2,
         }
     }
     pub fn run(&self, vm: &mut Vm, env: &Env) -> RuntimeResult {
@@ -262,7 +268,7 @@ impl HigherOp {
                 vm.push(f); // gx f
                 vm.call(1, env.assembly, 0)?; // f(gx)
             }
-            HigherOp::Lark => {
+            HigherOp::Slf => {
                 let f = vm.pop();
                 let x = vm.pop();
                 vm.push(x.clone());
@@ -333,29 +339,85 @@ impl HigherOp {
                 }
                 vm.push(init);
             }
-            HigherOp::LeftThen => {
+            HigherOp::LeftLeaf => {
+                /*
+                      f
+                     / \
+                    g   b
+                    |
+                    a
+                */
                 let g = vm.pop();
                 let f = vm.pop();
-                let x = vm.pop();
-                vm.push(x.clone());
+                let a = vm.pop();
+                let b = vm.pop();
+                vm.push(a);
                 vm.push(g);
                 vm.call(1, env.assembly, 0)?;
-                let gx = vm.pop();
-                vm.push(x);
-                vm.push(gx);
+                vm.push(b);
                 vm.push(f);
                 vm.call(2, env.assembly, 0)?;
             }
-            HigherOp::RightThen => {
+            HigherOp::LeftTree => {
+                /*
+                      f
+                     / \
+                    g   c
+                   / \
+                  a   b
+                */
+                let g = vm.pop();
+                let f = vm.pop();
+                let a = vm.pop();
+                let b = vm.pop();
+                let c = vm.pop();
+                vm.push(b);
+                vm.push(a);
+                vm.push(g);
+                vm.call(2, env.assembly, 0)?;
+                let gab = vm.pop();
+                vm.push(c);
+                vm.push(gab);
+                vm.push(f);
+                vm.call(2, env.assembly, 0)?;
+            }
+            HigherOp::RightLeaf => {
+                /*
+                      f
+                     / \
+                    a   g
+                        |
+                        b
+                */
                 let f = vm.pop();
                 let g = vm.pop();
-                let x = vm.pop();
-                vm.push(x.clone());
+                let a = vm.pop();
+                let b = vm.pop();
+                vm.push(b);
                 vm.push(g);
                 vm.call(1, env.assembly, 0)?;
-                let gx = vm.pop();
-                vm.push(x);
-                vm.push(gx);
+                vm.push(a);
+                vm.push(f);
+                vm.call(2, env.assembly, 0)?;
+            }
+            HigherOp::RightTree => {
+                /*
+                      f
+                     / \
+                    a   g
+                       / \
+                      b   c
+                */
+                let f = vm.pop();
+                let g = vm.pop();
+                let a = vm.pop();
+                let b = vm.pop();
+                let c = vm.pop();
+                vm.push(c);
+                vm.push(b);
+                vm.push(g);
+                vm.call(2, env.assembly, 0)?;
+                vm.push(a);
                 vm.push(f);
                 vm.call(2, env.assembly, 0)?;
             }
@@ -447,10 +509,6 @@ impl HigherOp {
                     table.push(Value::from(Array::from(row).normalized(1)));
                 }
                 vm.push(Array::from(table).normalized(1));
-            }
-            HigherOp::Filter => {
-                let filter = vm.pop();
-                vm.top_mut().replicate(&filter, env)?;
             }
         }
         Ok(())

@@ -98,13 +98,12 @@ pub fn parse(input: &str, path: &Path) -> (Vec<Item>, Vec<Sp<ParseError>>) {
     };
     loop {
         match parser.try_item() {
-            Ok(Some(item)) => {
-                items.push(item);
+            Ok(Some(item)) => items.push(item),
+            Ok(None) => {
                 if parser.try_exact(Newline).is_none() {
                     break;
                 }
             }
-            Ok(None) => break,
             Err(e) => {
                 parser.errors.push(e);
                 break;
@@ -204,24 +203,6 @@ impl Parser {
         };
         Ok(Some(item))
     }
-    fn doc_comment(&mut self) -> Option<Sp<String>> {
-        let mut doc: Option<Sp<String>> = None;
-        while let Some(line) = self.next_token_map(|token| {
-            if let Token::DocComment(line) = token {
-                Some(line)
-            } else {
-                None
-            }
-        }) {
-            if let Some(doc) = &mut doc {
-                doc.value.push_str(line.value);
-                doc.span = doc.span.clone().merge(line.span);
-            } else {
-                doc = Some(line.cloned());
-            }
-        }
-        doc
-    }
     fn block(&mut self) -> ParseResult<Block> {
         let mut items = Vec::new();
         while let Some(item) = self.try_item()? {
@@ -232,7 +213,6 @@ impl Parser {
         Ok(Block { items, expr })
     }
     fn try_let_or_fucntion_def(&mut self) -> ParseResult<Option<Item>> {
-        let doc = self.doc_comment();
         // Let
         if self.try_exact(Keyword::Let).is_none() {
             return Ok(None);
@@ -250,7 +230,6 @@ impl Parser {
                 let body = self.block()?;
                 let id = FunctionId::Named(ident.value);
                 Item::FunctionDef(FunctionDef {
-                    doc,
                     name: ident,
                     func: Func { id, params, body },
                 })
@@ -306,12 +285,14 @@ impl Parser {
         let Some(start) = self.try_exact(open) else {
             return Ok(None);
         };
+        self.try_exact(Newline);
         let mut items = Vec::new();
         while let Some(item) = item(self)? {
             items.push(item);
             if self.try_exact(Comma).is_none() {
                 break;
             }
+            self.try_exact(Newline);
         }
         let end = self.expect(close)?;
         let span = start.merge(end);
@@ -324,36 +305,45 @@ struct BinExprDef<'a> {
     child: Option<&'a Self>,
 }
 
-static BIN_EXPR_CMP: BinExprDef = BinExprDef {
-    ops: &[
-        (Token::Simple(Equal), BinOp::Eq),
-        (Token::Simple(NotEqual), BinOp::Ne),
-        (Token::Simple(Less), BinOp::Lt),
-        (Token::Simple(LessEqual), BinOp::Le),
-        (Token::Simple(Greater), BinOp::Gt),
-        (Token::Simple(GreaterEqual), BinOp::Ge),
-    ],
+static TOP_BIN_EXPR: BinExprDef = BinExprDef {
+    ops: &[(Token::Simple(LessGreater), BinOp::Slf)],
     child: Some(&BinExprDef {
         ops: &[
-            (Token::Simple(Plus), BinOp::Add),
-            (Token::Simple(Minus), BinOp::Sub),
+            (Token::Simple(Slash), BinOp::LeftLeaf),
+            (Token::Simple(BackSlash), BinOp::RightLeaf),
+            (Token::Simple(DoubleSlash), BinOp::LeftTree),
+            (Token::Simple(DoubleBackSlash), BinOp::RightTree),
         ],
         child: Some(&BinExprDef {
             ops: &[
-                (Token::Simple(Star), BinOp::Mul),
-                (Token::Simple(Slash), BinOp::Div),
+                (Token::Simple(Equal), BinOp::Eq),
+                (Token::Simple(NotEqual), BinOp::Ne),
+                (Token::Simple(Less), BinOp::Lt),
+                (Token::Simple(LessEqual), BinOp::Le),
+                (Token::Simple(Greater), BinOp::Gt),
+                (Token::Simple(GreaterEqual), BinOp::Ge),
             ],
             child: Some(&BinExprDef {
                 ops: &[
-                    (Token::Simple(Period3), BinOp::BlackBird),
-                    (Token::Simple(StarGreater), BinOp::LeftThen),
-                    (Token::Simple(LessStar), BinOp::RightThen),
-                    (Token::Simple(BarMinus), BinOp::Right),
-                    (Token::Simple(MinusBar), BinOp::Left),
+                    (Token::Simple(Plus), BinOp::Add),
+                    (Token::Simple(Minus), BinOp::Sub),
                 ],
                 child: Some(&BinExprDef {
-                    ops: &[(Token::Simple(Period), BinOp::Compose)],
-                    child: None,
+                    ops: &[
+                        (Token::Simple(Star), BinOp::Mul),
+                        (Token::Simple(Percent), BinOp::Div),
+                    ],
+                    child: Some(&BinExprDef {
+                        ops: &[
+                            (Token::Simple(Period3), BinOp::BlackBird),
+                            (Token::Simple(BarMinus), BinOp::Right),
+                            (Token::Simple(MinusBar), BinOp::Left),
+                        ],
+                        child: Some(&BinExprDef {
+                            ops: &[(Token::Simple(Period), BinOp::Compose)],
+                            child: None,
+                        }),
+                    }),
                 }),
             }),
         }),
@@ -406,7 +396,7 @@ impl Parser {
         Ok(Some(expr))
     }
     fn try_bin_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
-        self.try_bin_expr_def(&BIN_EXPR_CMP)
+        self.try_bin_expr_def(&TOP_BIN_EXPR)
     }
     fn try_bin_expr_def(&mut self, def: &BinExprDef) -> ParseResult<Option<Sp<Expr>>> {
         let leaf = |this: &mut Self| {
@@ -505,13 +495,14 @@ impl Parser {
     fn try_func(&mut self) -> ParseResult<Option<Sp<Func>>> {
         let mut params = Vec::new();
         let mut start = None;
-        while let Some(span) = self.try_exact(BackSlash) {
+        while let Some(span) = self.try_exact(Bar) {
             start.get_or_insert(span);
             params.push(self.expect_param()?);
         }
         let Some(start) = start else {
             return Ok(None);
         };
+        self.try_exact(Newline);
         // Body
         let body = self.block()?;
         let span = start.clone().merge(body.expr.span.clone());

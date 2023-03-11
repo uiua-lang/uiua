@@ -502,7 +502,6 @@ impl Compiler {
                 }?
             }
             Expr::Call(call) => self.call(*call)?,
-            Expr::Pipe(pipe_expr) => self.pipe_expr(*pipe_expr)?,
             Expr::List(items) => self.list(Instr::List, items)?,
             Expr::Array(items) => self.list(Instr::Array, items)?,
             Expr::Func(func) => self.func(*func, expr.span, true)?,
@@ -635,12 +634,6 @@ impl Compiler {
         }
         Ok(())
     }
-    fn pipe_expr(&mut self, pipe_expr: PipeExpr) -> CompileResult {
-        match pipe_expr.op.value {
-            PipeOp::Forward => self.call_impl(pipe_expr.right, pipe_expr.left),
-            PipeOp::Backward => self.call_impl(pipe_expr.left, pipe_expr.right),
-        }
-    }
     fn format_string(&mut self, parts: Vec<String>, span: Span) -> CompileResult {
         if parts.len() <= 1 {
             self.push_instr(Instr::Push(
@@ -695,10 +688,6 @@ fn preprocess_expr_rec(expr: &mut Sp<Expr>, params: &mut Vec<Sp<Ident>>) {
             preprocess_expr_rec(&mut bin_expr.left, params);
             preprocess_expr_rec(&mut bin_expr.right, params);
         }
-        Expr::Pipe(pipe_expr) => {
-            preprocess_expr_rec(&mut pipe_expr.left, params);
-            preprocess_expr_rec(&mut pipe_expr.right, params);
-        }
         Expr::List(items) | Expr::Array(items) => {
             for item in items {
                 preprocess_expr_rec(item, params);
@@ -717,6 +706,8 @@ fn preprocess_expr_rec(expr: &mut Sp<Expr>, params: &mut Vec<Sp<Ident>>) {
 
 fn bin_op_primitive(op: BinOp) -> PrimitiveId {
     match op {
+        BinOp::Pipe => PrimitiveId::HigherOp(HigherOp::Pipe),
+        BinOp::BackPipe => PrimitiveId::HigherOp(HigherOp::BackPipe),
         BinOp::Add => PrimitiveId::Op2(Op2::Add),
         BinOp::Sub => PrimitiveId::Op2(Op2::Sub),
         BinOp::Mul => PrimitiveId::Op2(Op2::Mul),

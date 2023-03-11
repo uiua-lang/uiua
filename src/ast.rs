@@ -87,7 +87,6 @@ pub enum Expr {
     Unit,
     Call(Box<CallExpr>),
     Bin(Box<BinExpr>),
-    Pipe(Box<PipeExpr>),
     Real(String),
     Char(char),
     String(String),
@@ -106,7 +105,6 @@ impl fmt::Debug for Expr {
             Expr::Unit => write!(f, "unit"),
             Expr::Call(call) => call.fmt(f),
             Expr::Bin(bin) => bin.fmt(f),
-            Expr::Pipe(pipe) => pipe.fmt(f),
             Expr::Real(real) => write!(f, "{real:?}"),
             Expr::Char(char) => write!(f, "{char:?}"),
             Expr::String(string) => write!(f, "{string:?}"),
@@ -139,23 +137,6 @@ impl fmt::Debug for Pattern {
             Pattern::List(list) => write!(f, "list({:?})", list),
             Pattern::Discard => write!(f, "discard"),
         }
-    }
-}
-
-#[derive(Clone)]
-pub struct PipeExpr {
-    pub left: Sp<Expr>,
-    pub op: Sp<PipeOp>,
-    pub right: Sp<Expr>,
-}
-
-impl fmt::Debug for PipeExpr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("pipe")
-            .field(&self.op.value)
-            .field(&self.left.value)
-            .field(&self.right.value)
-            .finish()
     }
 }
 
@@ -212,10 +193,6 @@ pub enum BinOp {
     RightLeaf,
     RightTree,
     Slf,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum PipeOp {
-    Forward,
-    Backward,
+    Pipe,
+    BackPipe,
 }

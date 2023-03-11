@@ -302,46 +302,67 @@ impl Parser {
 
 struct BinExprDef<'a> {
     ops: &'a [(Token, BinOp)],
+    associativity: Associativity,
     child: Option<&'a Self>,
 }
 
+enum Associativity {
+    Left,
+    Right,
+}
+
 static TOP_BIN_EXPR: BinExprDef = BinExprDef {
-    ops: &[(Token::Simple(LessGreater), BinOp::Slf)],
+    ops: &[(Token::Simple(BackPipe), BinOp::BackPipe)],
+    associativity: Associativity::Right,
     child: Some(&BinExprDef {
-        ops: &[
-            (Token::Simple(Slash), BinOp::LeftLeaf),
-            (Token::Simple(BackSlash), BinOp::RightLeaf),
-            (Token::Simple(DoubleSlash), BinOp::LeftTree),
-            (Token::Simple(DoubleBackSlash), BinOp::RightTree),
-        ],
+        ops: &[(Token::Simple(Pipe), BinOp::Pipe)],
+        associativity: Associativity::Left,
         child: Some(&BinExprDef {
-            ops: &[
-                (Token::Simple(Equal), BinOp::Eq),
-                (Token::Simple(NotEqual), BinOp::Ne),
-                (Token::Simple(Less), BinOp::Lt),
-                (Token::Simple(LessEqual), BinOp::Le),
-                (Token::Simple(Greater), BinOp::Gt),
-                (Token::Simple(GreaterEqual), BinOp::Ge),
-            ],
+            ops: &[(Token::Simple(LessGreater), BinOp::Slf)],
+            associativity: Associativity::Left,
             child: Some(&BinExprDef {
+                associativity: Associativity::Left,
                 ops: &[
-                    (Token::Simple(Plus), BinOp::Add),
-                    (Token::Simple(Minus), BinOp::Sub),
+                    (Token::Simple(Slash), BinOp::LeftLeaf),
+                    (Token::Simple(BackSlash), BinOp::RightLeaf),
+                    (Token::Simple(DoubleSlash), BinOp::LeftTree),
+                    (Token::Simple(DoubleBackSlash), BinOp::RightTree),
                 ],
                 child: Some(&BinExprDef {
+                    associativity: Associativity::Left,
                     ops: &[
-                        (Token::Simple(Star), BinOp::Mul),
-                        (Token::Simple(Percent), BinOp::Div),
+                        (Token::Simple(Equal), BinOp::Eq),
+                        (Token::Simple(NotEqual), BinOp::Ne),
+                        (Token::Simple(Less), BinOp::Lt),
+                        (Token::Simple(LessEqual), BinOp::Le),
+                        (Token::Simple(Greater), BinOp::Gt),
+                        (Token::Simple(GreaterEqual), BinOp::Ge),
                     ],
                     child: Some(&BinExprDef {
+                        associativity: Associativity::Left,
                         ops: &[
-                            (Token::Simple(Period3), BinOp::BlackBird),
-                            (Token::Simple(BarMinus), BinOp::Right),
-                            (Token::Simple(MinusBar), BinOp::Left),
+                            (Token::Simple(Plus), BinOp::Add),
+                            (Token::Simple(Minus), BinOp::Sub),
                         ],
                         child: Some(&BinExprDef {
-                            ops: &[(Token::Simple(Period), BinOp::Compose)],
-                            child: None,
+                            associativity: Associativity::Left,
+                            ops: &[
+                                (Token::Simple(Star), BinOp::Mul),
+                                (Token::Simple(Percent), BinOp::Div),
+                            ],
+                            child: Some(&BinExprDef {
+                                associativity: Associativity::Left,
+                                ops: &[
+                                    (Token::Simple(Period3), BinOp::BlackBird),
+                                    (Token::Simple(BarMinus), BinOp::Right),
+                                    (Token::Simple(MinusBar), BinOp::Left),
+                                ],
+                                child: Some(&BinExprDef {
+                                    associativity: Associativity::Left,
+                                    ops: &[(Token::Simple(Period), BinOp::Compose)],
+                                    child: None,
+                                }),
+                            }),
                         }),
                     }),
                 }),
@@ -351,9 +372,6 @@ static TOP_BIN_EXPR: BinExprDef = BinExprDef {
 };
 
 impl Parser {
-    fn try_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
-        self.try_backpipe_expr()
-    }
     fn expr(&mut self) -> ParseResult<Sp<Expr>> {
         self.expect_expr(Self::try_expr)
     }
@@ -363,51 +381,27 @@ impl Parser {
     ) -> ParseResult<Sp<Expr>> {
         f(self)?.ok_or_else(|| self.expected([Expectation::Expr]))
     }
-    fn try_backpipe_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
-        let Some(mut expr) = self.try_pipe_expr()? else {
-            return Ok(None);
-        };
-        while let Some(op_span) = self.try_exact(BackPipe) {
-            let op = op_span.sp(PipeOp::Backward);
-            let right = self.expect_expr(Self::try_backpipe_expr)?;
-            let span = expr.span.clone().merge(right.span.clone());
-            expr = span.sp(Expr::Pipe(Box::new(PipeExpr {
-                op,
-                left: expr,
-                right,
-            })));
-        }
-        Ok(Some(expr))
-    }
-    fn try_pipe_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
-        let Some(mut expr) = self.try_bin_expr()? else {
-            return Ok(None);
-        };
-        while let Some(op_span) = self.try_exact(Pipe) {
-            let op = op_span.sp(PipeOp::Forward);
-            let right = self.expect_expr(Self::try_bin_expr)?;
-            let span = expr.span.clone().merge(right.span.clone());
-            expr = span.sp(Expr::Pipe(Box::new(PipeExpr {
-                op,
-                left: expr,
-                right,
-            })));
-        }
-        Ok(Some(expr))
-    }
-    fn try_bin_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
+    fn try_expr(&mut self) -> ParseResult<Option<Sp<Expr>>> {
         self.try_bin_expr_def(&TOP_BIN_EXPR)
     }
     fn try_bin_expr_def(&mut self, def: &BinExprDef) -> ParseResult<Option<Sp<Expr>>> {
-        let leaf = |this: &mut Self| {
+        let right_leaf = |this: &mut Self| {
             if let Some(child) = def.child {
-                this.try_bin_expr_def(child)
+                match def.associativity {
+                    Associativity::Left => this.try_bin_expr_def(child),
+                    Associativity::Right => this.try_bin_expr_def(def),
+                }
             } else {
                 this.try_call()
             }
         };
         let mut expr_span = None;
-        let mut expr = if let Some(expr) = leaf(self)? {
+        let left = if let Some(child) = def.child {
+            self.try_bin_expr_def(child)?
+        } else {
+            self.try_call()?
+        };
+        let mut expr = if let Some(expr) = left {
             expr_span = Some(expr.span);
             expr.value
         } else {
@@ -424,7 +418,7 @@ impl Parser {
                     let left_span = expr_span.unwrap_or_else(|| op_span.clone());
                     // Get the right side
                     let mut must_break = false;
-                    let right = if let Some(right) = leaf(self)? {
+                    let right = if let Some(right) = right_leaf(self)? {
                         right
                     } else {
                         must_break = true;
@@ -434,8 +428,8 @@ impl Parser {
                     expr_span = Some(left_span.clone().merge(right.span.clone()));
                     // Set the new expression
                     expr = Expr::Bin(Box::new(BinExpr {
-                        left: left_span.sp(expr),
                         op,
+                        left: left_span.sp(expr),
                         right,
                     }));
                     if must_break {

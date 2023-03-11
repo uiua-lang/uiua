@@ -650,7 +650,7 @@ impl Compiler {
         }
         self.func_outer(true, FunctionId::FormatString(span.clone()), span, |this| {
             let params = parts.len() - 1;
-            let mut parts = parts.into_iter();
+            let mut parts = parts.into_iter().rev();
             this.push_instr(Instr::Push(parts.next().unwrap().into()));
             for (i, part) in parts.enumerate() {
                 this.push_instr(Instr::CopyRel(i + 2));

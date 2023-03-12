@@ -12,6 +12,8 @@ mod pervade;
 pub mod value;
 mod vm;
 
+use std::rc::Rc;
+
 pub use error::*;
 
-pub type Ident = &'static str;
+pub type Ident = Rc<str>;

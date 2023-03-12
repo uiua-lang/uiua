@@ -227,7 +227,7 @@ impl Parser {
             } else {
                 self.expect(Equal)?;
                 let body = self.block()?;
-                let id = FunctionId::Named(ident.value);
+                let id = FunctionId::Named(ident.value.clone());
                 Item::FunctionDef(FunctionDef {
                     name: ident,
                     func: Func { id, params, body },
@@ -266,7 +266,7 @@ impl Parser {
         }))
     }
     fn try_ident(&mut self) -> Option<Sp<Ident>> {
-        self.next_token_map(|token| token.as_ident().copied())
+        self.next_token_map(|token| token.as_ident().cloned())
     }
     fn ident(&mut self) -> ParseResult<Sp<Ident>> {
         self.try_ident()
@@ -296,7 +296,7 @@ impl Parser {
 }
 
 struct BinExprDef<'a> {
-    ops: &'a [(Token, BinOp)],
+    ops: &'a [(Simple, BinOp)],
     associativity: Associativity,
     child: Option<&'a Self>,
 }
@@ -307,63 +307,45 @@ enum Associativity {
 }
 
 static TOP_BIN_EXPR: BinExprDef = BinExprDef {
-    ops: &[(Token::Simple(BackPipe), BinOp::BackPipe)],
+    ops: &[(BackPipe, BinOp::BackPipe)],
     associativity: Associativity::Right,
     child: Some(&BinExprDef {
-        ops: &[(Token::Simple(Pipe), BinOp::Pipe)],
+        ops: &[(Pipe, BinOp::Pipe)],
         associativity: Associativity::Left,
         child: Some(&BinExprDef {
-            ops: &[
-                (Token::Simple(LessGreater), BinOp::Slf),
-                (Token::Simple(GreaterLess), BinOp::Flip),
-            ],
+            ops: &[(LessGreater, BinOp::Slf), (GreaterLess, BinOp::Flip)],
             associativity: Associativity::Left,
             child: Some(&BinExprDef {
-                ops: &[
-                    (Token::Simple(Slash), BinOp::LeftLeaf),
-                    (Token::Simple(DoubleSlash), BinOp::LeftTree),
-                ],
+                ops: &[(Slash, BinOp::LeftLeaf), (DoubleSlash, BinOp::LeftTree)],
                 associativity: Associativity::Right,
                 child: Some(&BinExprDef {
                     ops: &[
-                        (Token::Simple(BackSlash), BinOp::RightLeaf),
-                        (Token::Simple(DoubleBackSlash), BinOp::RightTree),
+                        (BackSlash, BinOp::RightLeaf),
+                        (DoubleBackSlash, BinOp::RightTree),
                     ],
                     associativity: Associativity::Left,
                     child: Some(&BinExprDef {
-                        ops: &[
-                            (Token::Simple(Period), BinOp::Compose),
-                            (Token::Simple(Period3), BinOp::BlackBird),
-                        ],
+                        ops: &[(Period, BinOp::Compose), (Period3, BinOp::BlackBird)],
                         associativity: Associativity::Left,
                         child: Some(&BinExprDef {
                             associativity: Associativity::Left,
                             ops: &[
-                                (Token::Simple(Equal), BinOp::Eq),
-                                (Token::Simple(NotEqual), BinOp::Ne),
-                                (Token::Simple(Less), BinOp::Lt),
-                                (Token::Simple(LessEqual), BinOp::Le),
-                                (Token::Simple(Greater), BinOp::Gt),
-                                (Token::Simple(GreaterEqual), BinOp::Ge),
+                                (Equal, BinOp::Eq),
+                                (NotEqual, BinOp::Ne),
+                                (Less, BinOp::Lt),
+                                (LessEqual, BinOp::Le),
+                                (Greater, BinOp::Gt),
+                                (GreaterEqual, BinOp::Ge),
                             ],
                             child: Some(&BinExprDef {
                                 associativity: Associativity::Left,
-                                ops: &[
-                                    (Token::Simple(Plus), BinOp::Add),
-                                    (Token::Simple(Minus), BinOp::Sub),
-                                ],
+                                ops: &[(Plus, BinOp::Add), (Minus, BinOp::Sub)],
                                 child: Some(&BinExprDef {
                                     associativity: Associativity::Left,
-                                    ops: &[
-                                        (Token::Simple(Star), BinOp::Mul),
-                                        (Token::Simple(Percent), BinOp::Div),
-                                    ],
+                                    ops: &[(Star, BinOp::Mul), (Percent, BinOp::Div)],
                                     child: Some(&BinExprDef {
                                         associativity: Associativity::Left,
-                                        ops: &[
-                                            (Token::Simple(BarMinus), BinOp::Right),
-                                            (Token::Simple(MinusBar), BinOp::Left),
-                                        ],
+                                        ops: &[(BarMinus, BinOp::Right), (MinusBar, BinOp::Left)],
                                         child: None,
                                     }),
                                 }),
@@ -415,10 +397,10 @@ impl Parser {
         // Repeatedly try to parse the next operator and right operand at this precedence level
         'rhs: loop {
             // Try each operator
-            for (token, op) in def.ops {
-                if let Some(op_span) = self.try_exact(token.clone()) {
+            for &(token, op) in def.ops {
+                if let Some(op_span) = self.try_exact(token) {
                     // Span the op
-                    let op = op_span.clone().sp(*op);
+                    let op = op_span.clone().sp(op);
                     // Set the left span if it was a placeholder
                     let left_span = expr_span.unwrap_or_else(|| op_span.clone());
                     // Get the right side

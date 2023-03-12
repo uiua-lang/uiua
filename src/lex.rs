@@ -601,7 +601,7 @@ impl Lexer {
                     {
                         Keyword(keyword)
                     } else {
-                        Ident(ascend::static_str(&ident))
+                        Ident(ident.into())
                     };
                     self.end(token, start)
                 }

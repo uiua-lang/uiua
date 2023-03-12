@@ -166,9 +166,7 @@ impl Default for Compiler {
         for (name, value) in constants() {
             let index = assembly.constants.len();
             assembly.constants.push(value);
-            scope
-                .bindings
-                .insert(ascend::static_str(name), Binding::Constant(index));
+            scope.bindings.insert(name.into(), Binding::Constant(index));
         }
         // Operations
         let mut init = |name: String, id: PrimitiveId, params: u8, instr: Instr| -> Function {
@@ -183,7 +181,7 @@ impl Default for Compiler {
             // Scope
             scope
                 .bindings
-                .insert(ascend::static_str(&name), Binding::Function(id.into()));
+                .insert(name.into(), Binding::Function(id.into()));
             scope.functions.insert(id.into(), function);
             // Function info
             assembly.function_ids.insert(function, id.into());
@@ -401,8 +399,8 @@ impl Compiler {
         // Push the function if necessary
         if push || !ipf.captures.is_empty() {
             // Reevalutate captures so they are copied to the stack just before the function
-            for &ident in ipf.captures.iter().rev() {
-                self.ident(ident, span.clone())?;
+            for ident in ipf.captures.iter().rev() {
+                self.ident(ident.clone(), span.clone())?;
             }
             // Push the function
             self.push_instr(Instr::Push(function.into()));
@@ -516,7 +514,7 @@ impl Compiler {
             Some(bind) => bind,
             None => {
                 self.errors
-                    .push(span.sp(CompileError::UnknownBinding(ident)));
+                    .push(span.sp(CompileError::UnknownBinding(ident.clone())));
                 (&Binding::Error, self.scope().function_depth)
             }
         };
@@ -525,7 +523,7 @@ impl Compiler {
             let ipf = self.in_progress_functions.last_mut().unwrap();
             let pos = ipf.captures.iter().position(|id| id == &ident);
             let pos = pos.unwrap_or_else(|| {
-                ipf.captures.push(ident);
+                ipf.captures.push(ident.clone());
                 ipf.captures.len() - 1
             });
             binding = Binding::Local(ipf.height - pos - 1);

@@ -40,8 +40,15 @@ impl Value {
     pub fn as_shape(&self, env: &Env, error: &'static str) -> RuntimeResult<Vec<usize>> {
         if self.is_array() {
             let arr = self.array();
+            let numbers = if arr.is_numbers() {
+                arr.numbers()
+            } else if arr.shape() == [0] {
+                &[]
+            } else {
+                return Err(env.error(error));
+            };
             let mut shape = Vec::with_capacity(arr.len());
-            for f in arr.numbers() {
+            for f in numbers {
                 let rounded = f.round();
                 if (f - rounded).abs() > f64::EPSILON || rounded <= 0.0 {
                     return Err(env.error(error));
@@ -64,8 +71,15 @@ impl Value {
     pub fn as_index(&self, env: &Env, error: &'static str) -> RuntimeResult<Vec<isize>> {
         if self.is_array() {
             let arr = self.array();
+            let numbers = if arr.is_numbers() {
+                arr.numbers()
+            } else if arr.shape() == [0] {
+                &[]
+            } else {
+                return Err(env.error(error));
+            };
             let mut index = Vec::with_capacity(arr.len());
-            for f in arr.numbers() {
+            for f in numbers {
                 let rounded = f.round();
                 if (f - rounded).abs() > f64::EPSILON {
                     return Err(env.error(error));
@@ -101,21 +115,21 @@ impl Value {
     }
     pub fn join(&mut self, other: Value, env: &Env) -> RuntimeResult {
         match (self.is_array(), other.is_array()) {
-            (true, true) => self.array_mut().join(other.into_array(), env),
-            (true, false) => self.array_mut().join(Array::from(other), env),
+            (true, true) => self.array_mut().join(other.into_array(), env)?,
+            (true, false) => self.array_mut().join(Array::from(other), env)?,
             (false, true) => {
                 let mut arr = Array::from(take(self));
                 arr.join(other.into_array(), env)?;
                 *self = arr.into();
-                Ok(())
             }
             (false, false) => {
                 let mut arr = Array::from(take(self));
                 arr.join(Array::from(other), env)?;
                 *self = arr.into();
-                Ok(())
             }
         }
+        self.array_mut().normalize(0);
+        Ok(())
     }
     pub fn deshape(&mut self) {
         if self.is_array() {
@@ -132,7 +146,12 @@ impl Value {
     }
     pub fn coerce_array(&mut self) -> &mut Array {
         if !self.is_array() {
-            *self = Array::from(take(self)).into();
+            *self = match self.ty() {
+                Type::Num => Array::from(self.number()),
+                Type::Char => Array::from(self.char()),
+                _ => Array::from(take(self)),
+            }
+            .into();
         }
         self.array_mut()
     }

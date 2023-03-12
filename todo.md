@@ -1,5 +1,6 @@
-- Reference-count arrays
 - Implement function reversal
+- Fix array showing
+- Allow passing atoms as leaf/tree combinator binary functions?
 - Call all arguments at once
 - Improve parsing expectation errors
 - Optimize for non-reused values
@@ -8,12 +9,12 @@
   - directly calling number
 - Includes
 - More array functions
-  - First
   - Last
   - Rotate
   - Take
   - Drop
 - Type testing/tracing
+- Add combinator visualization
 - Structs
 - Enums?
 - Operator overloading?
@@ -22,8 +23,8 @@
   - Time
   - Rng
   - Sockets
-- Inlining?
 - LSP
 - FFI
 - Docs
 - Tooling
+- Inlining?

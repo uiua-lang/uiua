@@ -501,6 +501,7 @@ impl Lexer {
                     }
                 }
                 '*' => self.end(Star, start),
+                '%' => self.end(Percent, start),
                 '=' => self.end(Equal, start),
                 '<' => self.switch_next(
                     Less,

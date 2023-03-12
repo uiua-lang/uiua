@@ -98,7 +98,7 @@ pub fn parse(input: &str, path: &Path) -> (Vec<Item>, Vec<Sp<ParseError>>) {
     };
     loop {
         match parser.try_item() {
-            Ok(Some(item)) => items.push(dbg!(item)),
+            Ok(Some(item)) => items.push(item),
             Ok(None) => {
                 if parser.try_exact(Newline).is_none() {
                     break;
@@ -235,8 +235,6 @@ impl Parser {
             }
         } else if let Some(items) = self.try_surrounded_list(PARENS, Self::try_pattern)? {
             Item::Let(self.finish_binding(items.map(Pattern::List))?)
-        } else if let Some(span) = self.try_exact(Underscore) {
-            Item::Let(self.finish_binding(span.sp(Pattern::Discard))?)
         } else {
             return Ok(None);
         }))
@@ -263,8 +261,6 @@ impl Parser {
             ident.map(Pattern::Ident)
         } else if let Some(items) = self.try_surrounded_list(PARENS, Self::try_pattern)? {
             items.map(Pattern::List)
-        } else if let Some(span) = self.try_exact(Underscore) {
-            span.sp(Pattern::Discard)
         } else {
             return Ok(None);
         }))
@@ -461,8 +457,6 @@ impl Parser {
     fn try_term(&mut self) -> ParseResult<Option<Sp<Expr>>> {
         Ok(Some(if let Some(ident) = self.try_ident() {
             ident.map(Expr::Ident)
-        } else if let Some(span) = self.try_exact(Underscore) {
-            span.sp(Expr::Placeholder)
         } else if let Some(r) = self.next_token_map(Token::as_number) {
             r.map(Into::into).map(Expr::Real)
         } else if let Some(c) = self.next_token_map(Token::as_char) {
@@ -509,7 +503,6 @@ impl Parser {
     }
     fn try_param(&mut self) -> Option<Sp<Ident>> {
         self.try_ident()
-            .or_else(|| self.try_exact(Underscore).map(|span| span.sp("_".into())))
     }
     fn expect_param(&mut self) -> ParseResult<Sp<Ident>> {
         self.try_param()

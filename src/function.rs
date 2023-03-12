@@ -145,6 +145,16 @@ pub struct Partial {
     pub(crate) span: usize,
 }
 
+impl Partial {
+    pub fn new(function: Function, args: impl IntoIterator<Item = Value>, span: usize) -> Self {
+        Self {
+            function,
+            args: args.into_iter().collect(),
+            span,
+        }
+    }
+}
+
 impl fmt::Debug for Partial {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{self}")

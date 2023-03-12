@@ -286,7 +286,6 @@ pub enum Simple {
     CloseCurly,
     OpenBracket,
     CloseBracket,
-    Underscore,
     Comma,
     Colon,
     SemiColon,
@@ -329,7 +328,6 @@ impl fmt::Display for Simple {
                 Simple::CloseCurly => "}",
                 Simple::OpenBracket => "[",
                 Simple::CloseBracket => "]",
-                Simple::Underscore => "_",
                 Simple::Comma => ",",
                 Simple::Colon => ":",
                 Simple::SemiColon => ";",
@@ -602,10 +600,8 @@ impl Lexer {
                         all::<self::Keyword>().find(|k| format!("{k:?}").to_lowercase() == ident)
                     {
                         Keyword(keyword)
-                    } else if ident == "_" {
-                        Simple(Underscore)
                     } else {
-                        Ident(ascend::static_str(&ident).into())
+                        Ident(ascend::static_str(&ident))
                     };
                     self.end(token, start)
                 }

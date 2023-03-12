@@ -43,7 +43,7 @@ impl fmt::Display for UiuaError {
                     Span::Builtin => write!(f, "Error: {}", error.value)?,
                 }
                 let last = TraceFrame {
-                    id: FunctionId::Named("".into()),
+                    id: FunctionId::Named(""),
                     span: Span::Builtin,
                 };
                 let mut last = &last;

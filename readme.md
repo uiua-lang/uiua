@@ -1,6 +1,6 @@
 # Description
 
-Uiua (pronounced *"wee-wuh"*) is a simple programming language that borrows a bit from both the functional and array-based programming paradigms. It features rank-polymorphic arrays, partial function application, and dynamic typing.
+Uiua (pronounced *"wee-wuh"*) is a simple programming language that borrows a bit from both the functional and array programming paradigms. It features rank-polymorphic arrays, partial function application, and a dedicated syntax for creating binary combinator trees.
 
 # Installation
 
@@ -13,9 +13,21 @@ cargo install uiua
 
 Just to get a taste, here is a program that shows all the even numbers between 1 and 20:
 ```cs
-let evens = (mod 2 _ = 0) / filter <> 1 + range _
+let evens = (0= . mod 2 / filter <>) . +1 . range
 do show <| evens 20
 ```
+A quick breakdown:
+- `0=` on its own makes a function that compares a number to 0
+- `mod 2` is a partial application of the `mod` function, equivalent to `x % 2` in some other languages
+- `.` is the composition operator, so `0= . mod 2` is a function that checks if a number is even
+- `filter` takes 2 argments, a mask array on the left telling what to keep, and an array on the right to filter
+- `/` combines the even-checking function and `filter` into a new function that still takes 2 arguments.
+  This new function runs its left argument through the even function before passing it as the left argument to `filter`
+- `<>` is the self operator, which is partially applied here. It takes the 2-argument function on the left and
+  passes the argument on the right as both arguments to the function
+- `+1` just adds 1 to something
+- `range` creates an array with numbers from `0` to `n-1`
+- Because arrays in Uiua are rank-polymorphic, `+1` maps over the whole array automatically to get numbers from `1` to `n`
 
 Uiua's syntax is newline-sensitive, but all other whitespace is ignored.
 
@@ -64,11 +76,11 @@ do show <| add 1 2 # prints 3
 ```
 ### Anonymous functions:
 ```cs
-let x = |x
+let show_increment = |x
     do show x
     x + 1
 
-let y = x 5 # prints 5, sets y to 6
+let y = show_increment 5 # prints 5, sets y to 6
 
 let numbers = {1, 2, 3, 4, 5} # a list
 let sum = numbers |> fold (+) 0

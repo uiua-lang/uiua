@@ -168,7 +168,7 @@ impl Default for Compiler {
             assembly.constants.push(value);
             scope
                 .bindings
-                .insert(ascend::static_str(name).into(), Binding::Constant(index));
+                .insert(ascend::static_str(name), Binding::Constant(index));
         }
         // Operations
         let mut init = |name: String, id: PrimitiveId, params: u8, instr: Instr| -> Function {
@@ -181,10 +181,9 @@ impl Default for Compiler {
             assembly.instrs.push(instr);
             assembly.instrs.push(Instr::Return);
             // Scope
-            scope.bindings.insert(
-                ascend::static_str(&name).into(),
-                Binding::Function(id.into()),
-            );
+            scope
+                .bindings
+                .insert(ascend::static_str(&name), Binding::Function(id.into()));
             scope.functions.insert(id.into(), function);
             // Function info
             assembly.function_ids.insert(function, id.into());
@@ -317,7 +316,7 @@ impl Compiler {
     }
     fn item(&mut self, item: Item) -> CompileResult {
         match item {
-            Item::Expr(expr) => self.expr(preprocess_expr(expr)),
+            Item::Expr(expr) => self.expr(expr),
             Item::Let(binding) => self.r#let(binding),
             Item::Const(r#const) => self.r#const(r#const),
             Item::FunctionDef(def) => self.function_def(def),
@@ -424,7 +423,7 @@ impl Compiler {
     fn r#let(&mut self, binding: Let) -> CompileResult {
         // The expression is evaluated first because the pattern
         // will refer to the height of the stack after the expression
-        self.expr(preprocess_expr(binding.expr))?;
+        self.expr(binding.expr)?;
         self.pattern(binding.pattern)?;
         Ok(())
     }
@@ -436,7 +435,7 @@ impl Compiler {
         let global_instrs = self.global_instrs.clone();
         // Compile the expression
         let expr_span = r#const.expr.span.clone();
-        self.expr(preprocess_expr(r#const.expr))?;
+        self.expr(r#const.expr)?;
         self.assembly
             .add_non_function_instrs(take(&mut self.global_instrs));
         // Evaluate the expression
@@ -502,18 +501,7 @@ impl Compiler {
             Expr::List(items) => self.list(Instr::List, items)?,
             Expr::Array(items) => self.list(Instr::Array, items)?,
             Expr::Func(func) => self.func(*func, expr.span, true)?,
-            Expr::Parened(inner) => {
-                // Inline binary operators surrounded by parentheses
-                if let Expr::Bin(bin) = &inner.value {
-                    if let (Expr::Placeholder, Expr::Placeholder) =
-                        (&bin.left.value, &bin.right.value)
-                    {
-                        self.function_binding(bin_op_primitive(bin.op.value).into());
-                        return Ok(());
-                    }
-                }
-                self.expr(preprocess_expr(*inner))?
-            }
+            Expr::Parened(inner) => self.expr(*inner)?,
         }
         Ok(())
     }
@@ -594,13 +582,12 @@ impl Compiler {
         for item in block.items {
             self.item(item)?;
         }
-        self.expr(preprocess_expr(block.expr))?;
+        self.expr(block.expr)?;
         self.pop_scope(height);
         Ok(())
     }
     fn bin_expr(&mut self, op2: Op2, left: Sp<Expr>, right: Sp<Expr>, span: Span) -> CompileResult {
-        let span = self.push_call_span(span);
-        self.bin_expr_impl([Instr::Op2(op2, span)], left, right)
+        self.bin_expr_impl(op2, span, left, right)
     }
     fn higher_bin_expr(
         &mut self,
@@ -609,25 +596,38 @@ impl Compiler {
         right: Sp<Expr>,
         span: Span,
     ) -> CompileResult {
-        let span = self.push_call_span(span);
-        let func = self.assembly.find_function(hop).unwrap();
-        self.bin_expr_impl(
-            [Instr::Push(func.into()), Instr::Call(2, span)],
-            left,
-            right,
-        )
+        self.bin_expr_impl(hop, span, left, right)
     }
     fn bin_expr_impl(
         &mut self,
-        instrs: impl IntoIterator<Item = Instr>,
+        prim: impl Into<PrimitiveId>,
+        call_span: Span,
         left: Sp<Expr>,
         right: Sp<Expr>,
     ) -> CompileResult {
-        self.expr(left)?;
-        self.expr(right)?;
-        self.push_instr(Instr::Swap);
-        for instr in instrs {
-            self.push_instr(instr);
+        let function = self.assembly.find_function(prim.into()).unwrap();
+        let call_span = self.push_call_span(call_span);
+        match (&left.value, &right.value) {
+            (Expr::Placeholder, Expr::Placeholder) => self.push_instr(Instr::Push(function.into())),
+            (Expr::Placeholder, _) => {
+                self.expr(right)?;
+                self.push_instr(Instr::Push(function.into()));
+                let flip = self.assembly.find_function(HigherOp::Flip).unwrap();
+                self.push_instr(Instr::Push(flip.into()));
+                self.push_instr(Instr::Call(2, call_span));
+            }
+            (_, Expr::Placeholder) => {
+                self.expr(left)?;
+                self.push_instr(Instr::Push(function.into()));
+                self.push_instr(Instr::Call(1, call_span));
+            }
+            _ => {
+                self.expr(left)?;
+                self.expr(right)?;
+                self.push_instr(Instr::Swap);
+                self.push_instr(Instr::Push(function.into()));
+                self.push_instr(Instr::Call(2, call_span));
+            }
         }
         Ok(())
     }
@@ -650,54 +650,6 @@ impl Compiler {
             }
             Ok(params)
         })
-    }
-}
-
-fn preprocess_expr(mut expr: Sp<Expr>) -> Sp<Expr> {
-    let mut params = Vec::new();
-    preprocess_expr_rec(&mut expr, &mut params);
-    if params.is_empty() {
-        return expr;
-    }
-    let span = expr.span.clone();
-    span.clone().sp(Expr::Func(Box::new(Func {
-        id: FunctionId::Anonymous(span),
-        params,
-        body: Block {
-            items: Vec::new(),
-            expr,
-        },
-    })))
-}
-
-fn preprocess_expr_rec(expr: &mut Sp<Expr>, params: &mut Vec<Sp<Ident>>) {
-    match &mut expr.value {
-        Expr::Placeholder => {
-            let ident = expr.span.clone().sp(Ident::Placeholder(params.len()));
-            params.push(ident.clone());
-            *expr = ident.map(Expr::Ident);
-        }
-        Expr::Call(call_expr) => {
-            preprocess_expr_rec(&mut call_expr.func, params);
-            preprocess_expr_rec(&mut call_expr.arg, params);
-        }
-        Expr::Bin(bin_expr) => {
-            preprocess_expr_rec(&mut bin_expr.left, params);
-            preprocess_expr_rec(&mut bin_expr.right, params);
-        }
-        Expr::List(items) | Expr::Array(items) => {
-            for item in items {
-                preprocess_expr_rec(item, params);
-            }
-        }
-        Expr::Parened(_) => {}
-        Expr::Unit
-        | Expr::Func(_)
-        | Expr::Real(_)
-        | Expr::Char(_)
-        | Expr::String(_)
-        | Expr::FormatString(_)
-        | Expr::Ident(_) => {}
     }
 }
 

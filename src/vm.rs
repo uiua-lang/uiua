@@ -101,7 +101,9 @@ impl Vm {
         }
     }
     fn run_assembly_inner(&mut self, assembly: &Assembly, return_depth: usize) -> RuntimeResult {
-        dprintln!("\nRunning...");
+        if return_depth == 0 {
+            dprintln!("\nRunning...");
+        }
         if self.pc == 0 {
             self.pc = assembly.start;
         }
@@ -244,7 +246,7 @@ impl Vm {
                     panic!("unresolved function: {id:?}")
                 }
             }
-            dprintln!("{:?}", self.stack);
+            dprintln!("  {:?}", self.stack);
             self.pc = self.pc.overflowing_add(1).0;
         }
         self.pc -= 1;
@@ -285,14 +287,15 @@ impl Vm {
                 (partial.function, arg_count, partial.span)
             }
             _ => {
-                let message = format!("Cannot call {}", value.ty());
-                return Err(assembly.spans[span].error(message));
+                self.stack.truncate(self.stack.len() - args);
+                self.stack.push(value);
+                return Ok(false);
             }
         };
         // Handle partial arguments
         let arg_count = partial_count + args;
         if partial_count > 0 {
-            dprintln!("{:?}", self.stack);
+            dprintln!("  {:?}", self.stack);
         }
         // Call
         match arg_count.cmp(&(function.params as usize)) {

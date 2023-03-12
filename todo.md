@@ -1,3 +1,5 @@
+- Reference-count arrays
+- Implement function reversal
 - Call all arguments at once
 - Improve parsing expectation errors
 - Optimize for non-reused values

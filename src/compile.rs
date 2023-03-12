@@ -235,8 +235,12 @@ impl Compiler {
         self.load(&input, path)?;
         Ok(())
     }
-    pub fn load(&mut self, input: &str, path: &Path) -> Result<(), Vec<Sp<CompileError>>> {
-        let (items, errors) = parse(input, path);
+    pub fn load<P: AsRef<Path>>(
+        &mut self,
+        input: &str,
+        path: P,
+    ) -> Result<(), Vec<Sp<CompileError>>> {
+        let (items, errors) = parse(input, path.as_ref());
         let mut errors: Vec<Sp<CompileError>> = errors
             .into_iter()
             .map(|e| e.map(CompileError::Parse))

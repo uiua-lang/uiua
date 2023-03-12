@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, fmt, mem::forget};
+use std::{cmp::Ordering, fmt, mem::forget, rc::Rc};
 
 use nanbox::NanBox;
 
@@ -36,7 +36,7 @@ impl fmt::Display for Type {
 }
 
 type PartialRef = *mut Partial;
-type ArrayRef = *mut Array;
+type ArrayRef = *const Array;
 const NUM_TAG: u8 = 0;
 const CHAR_TAG: u8 = 1;
 const FUNCTION_TAG: u8 = 2;
@@ -143,11 +143,34 @@ impl Value {
     }
     pub fn array_mut(&mut self) -> &mut Array {
         assert!(self.is_array());
-        unsafe { &mut *self.0.unpack::<ArrayRef>() }
+        // Conjure the rc
+        let mut rc = unsafe { Rc::from_raw(self.0.unpack::<ArrayRef>()) };
+        // Ensure its reference is unique
+        Rc::make_mut(&mut rc);
+        // Get the pointer
+        let ptr = Rc::as_ptr(&rc) as *mut Array;
+        // Return the rc to the aether
+        self.0 = new_array_nanbox(rc);
+        // This should be safe because the mutable pointer is unique and the rc was forgotten
+        unsafe { &mut *ptr }
     }
     pub fn into_array(self) -> Array {
         assert!(self.is_array());
-        let array = unsafe { self.0.unpack::<ArrayRef>().read() };
+        // Conjure the rc
+        let rc = unsafe { Rc::from_raw(self.0.unpack::<ArrayRef>()) };
+        let array = match Rc::try_unwrap(rc) {
+            Ok(array) => {
+                // The rc is consumed and can rest
+                array
+            }
+            Err(rc) => {
+                // Clone the array and let the rc rest
+                let array = (*rc).clone();
+                drop(rc);
+                array
+            }
+        };
+        // The rc is already dropped, so the destructor shouldn't be run again
         forget(self);
         array
     }
@@ -267,7 +290,10 @@ impl Drop for Value {
                 drop(Box::from_raw(self.0.unpack::<PartialRef>()));
             },
             RawType::Array => unsafe {
-                drop(Box::from_raw(self.0.unpack::<ArrayRef>()));
+                // Conjure the rc
+                let rc = Rc::from_raw(self.0.unpack::<ArrayRef>());
+                // It may now rest in peace and decrease the refcount
+                drop(rc);
             },
             _ => {}
         }
@@ -284,7 +310,14 @@ impl Clone for Value {
                 )
             }),
             RawType::Array => Self(unsafe {
-                NanBox::new::<ArrayRef>(ARRAY_TAG, Box::into_raw(Box::new(self.array().clone())))
+                // Conjure the rc
+                let rc = Rc::from_raw(self.0.unpack::<ArrayRef>());
+                // Clone it to increase the refcount
+                let clone = rc.clone();
+                // Return the original rc to the aether
+                forget(rc);
+                // Use the clone to create a new NanBox
+                new_array_nanbox(clone)
             }),
             _ => Self(self.0),
         }
@@ -390,6 +423,32 @@ impl From<Partial> for Value {
 
 impl From<Array> for Value {
     fn from(a: Array) -> Self {
-        Self(unsafe { NanBox::new::<ArrayRef>(ARRAY_TAG, Box::into_raw(Box::new(a))) })
+        // Create a new rc
+        let rc = Rc::new(a);
+        // Cast it into the aether
+        Self(new_array_nanbox(rc))
+    }
+}
+
+fn new_array_nanbox(rc: Rc<Array>) -> NanBox {
+    unsafe { NanBox::new::<ArrayRef>(ARRAY_TAG, Rc::into_raw(rc)) }
+}
+
+#[test]
+fn value_memory_test() {
+    use crate::{compile::Compiler, UiuaError};
+    let mut compiler = Compiler::new();
+    let code = "
+let xs = range [3, 4]
+do show xs
+do show <| each (fold (+) 0) xs
+";
+    if let Err(e) = compiler.load(code, "test.uiua") {
+        eprintln!("{}", UiuaError::from(e));
+        return;
+    }
+    let assembly = compiler.finish();
+    if let Err(e) = assembly.run() {
+        eprintln!("{e}");
     }
 }

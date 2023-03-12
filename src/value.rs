@@ -108,6 +108,15 @@ impl Value {
     pub fn is_array(&self) -> bool {
         self.0.tag() == ARRAY_TAG as u32
     }
+    pub fn params(&self) -> u8 {
+        match self.raw_ty() {
+            RawType::Num => 1,
+            RawType::Char => 1,
+            RawType::Function => self.function().params,
+            RawType::Partial => self.partial().function.params - self.partial().args.len() as u8,
+            RawType::Array => 1,
+        }
+    }
     pub fn number(&self) -> f64 {
         assert!(self.is_num());
         unsafe { self.0.unpack::<f64>() }

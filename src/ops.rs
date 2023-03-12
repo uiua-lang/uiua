@@ -315,12 +315,41 @@ impl HigherOp {
                 let f = vm.pop();
                 let a = vm.pop();
                 let b = vm.pop();
+                if f.params() < 2 {
+                    return Err(env.error(format!(
+                        "{self} expects its right argument to be binary, but it is unary"
+                    )));
+                }
                 vm.push(a);
                 vm.push(g);
                 vm.call(1, env.assembly, 0)?;
                 let ga = vm.pop();
                 vm.push(b);
                 vm.push(ga);
+                vm.push(f);
+                vm.call(2, env.assembly, 0)?;
+            }
+            HigherOp::RightLeaf => {
+                /*
+                      f
+                     / \
+                    a   g
+                        |
+                        b
+                */
+                let f = vm.pop();
+                let g = vm.pop();
+                let a = vm.pop();
+                let b = vm.pop();
+                if f.params() < 2 {
+                    return Err(env.error(format!(
+                        "{self} expects its left argument to be binary, but it is unary",
+                    )));
+                }
+                vm.push(b);
+                vm.push(g);
+                vm.call(1, env.assembly, 0)?;
+                vm.push(a);
                 vm.push(f);
                 vm.call(2, env.assembly, 0)?;
             }
@@ -337,6 +366,16 @@ impl HigherOp {
                 let a = vm.pop();
                 let b = vm.pop();
                 let c = vm.pop();
+                if f.params() < 2 {
+                    return Err(env.error(format!(
+                        "{self} expects its right argument to be binary, but it is unary",
+                    )));
+                }
+                if g.params() < 2 {
+                    return Err(env.error(format!(
+                        "{self} expects its left argument to be binary, but it is unary",
+                    )));
+                }
                 vm.push(b);
                 vm.push(a);
                 vm.push(g);
@@ -344,25 +383,6 @@ impl HigherOp {
                 let gab = vm.pop();
                 vm.push(c);
                 vm.push(gab);
-                vm.push(f);
-                vm.call(2, env.assembly, 0)?;
-            }
-            HigherOp::RightLeaf => {
-                /*
-                      f
-                     / \
-                    a   g
-                        |
-                        b
-                */
-                let f = vm.pop();
-                let g = vm.pop();
-                let a = vm.pop();
-                let b = vm.pop();
-                vm.push(b);
-                vm.push(g);
-                vm.call(1, env.assembly, 0)?;
-                vm.push(a);
                 vm.push(f);
                 vm.call(2, env.assembly, 0)?;
             }
@@ -379,6 +399,16 @@ impl HigherOp {
                 let a = vm.pop();
                 let b = vm.pop();
                 let c = vm.pop();
+                if f.params() < 2 {
+                    return Err(env.error(format!(
+                        "{self} expects its left argument to be binary, but it is unary",
+                    )));
+                }
+                if g.params() < 2 {
+                    return Err(env.error(format!(
+                        "{self} expects its right argument to be binary, but it is unary",
+                    )));
+                }
                 vm.push(c);
                 vm.push(b);
                 vm.push(g);

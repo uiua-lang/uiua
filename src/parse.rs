@@ -319,48 +319,53 @@ static TOP_BIN_EXPR: BinExprDef = BinExprDef {
             ],
             associativity: Associativity::Left,
             child: Some(&BinExprDef {
-                associativity: Associativity::Left,
                 ops: &[
                     (Token::Simple(Slash), BinOp::LeftLeaf),
-                    (Token::Simple(BackSlash), BinOp::RightLeaf),
                     (Token::Simple(DoubleSlash), BinOp::LeftTree),
-                    (Token::Simple(DoubleBackSlash), BinOp::RightTree),
                 ],
+                associativity: Associativity::Left,
                 child: Some(&BinExprDef {
                     ops: &[
-                        (Token::Simple(Period), BinOp::Compose),
-                        (Token::Simple(Period3), BinOp::BlackBird),
+                        (Token::Simple(BackSlash), BinOp::RightLeaf),
+                        (Token::Simple(DoubleBackSlash), BinOp::RightTree),
                     ],
-                    associativity: Associativity::Left,
+                    associativity: Associativity::Right,
                     child: Some(&BinExprDef {
-                        associativity: Associativity::Left,
                         ops: &[
-                            (Token::Simple(Equal), BinOp::Eq),
-                            (Token::Simple(NotEqual), BinOp::Ne),
-                            (Token::Simple(Less), BinOp::Lt),
-                            (Token::Simple(LessEqual), BinOp::Le),
-                            (Token::Simple(Greater), BinOp::Gt),
-                            (Token::Simple(GreaterEqual), BinOp::Ge),
+                            (Token::Simple(Period), BinOp::Compose),
+                            (Token::Simple(Period3), BinOp::BlackBird),
                         ],
+                        associativity: Associativity::Left,
                         child: Some(&BinExprDef {
                             associativity: Associativity::Left,
                             ops: &[
-                                (Token::Simple(Plus), BinOp::Add),
-                                (Token::Simple(Minus), BinOp::Sub),
+                                (Token::Simple(Equal), BinOp::Eq),
+                                (Token::Simple(NotEqual), BinOp::Ne),
+                                (Token::Simple(Less), BinOp::Lt),
+                                (Token::Simple(LessEqual), BinOp::Le),
+                                (Token::Simple(Greater), BinOp::Gt),
+                                (Token::Simple(GreaterEqual), BinOp::Ge),
                             ],
                             child: Some(&BinExprDef {
                                 associativity: Associativity::Left,
                                 ops: &[
-                                    (Token::Simple(Star), BinOp::Mul),
-                                    (Token::Simple(Percent), BinOp::Div),
+                                    (Token::Simple(Plus), BinOp::Add),
+                                    (Token::Simple(Minus), BinOp::Sub),
                                 ],
                                 child: Some(&BinExprDef {
                                     associativity: Associativity::Left,
                                     ops: &[
-                                        (Token::Simple(BarMinus), BinOp::Right),
-                                        (Token::Simple(MinusBar), BinOp::Left),
+                                        (Token::Simple(Star), BinOp::Mul),
+                                        (Token::Simple(Percent), BinOp::Div),
                                     ],
-                                    child: None,
+                                    child: Some(&BinExprDef {
+                                        associativity: Associativity::Left,
+                                        ops: &[
+                                            (Token::Simple(BarMinus), BinOp::Right),
+                                            (Token::Simple(MinusBar), BinOp::Left),
+                                        ],
+                                        child: None,
+                                    }),
                                 }),
                             }),
                         }),

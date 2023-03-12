@@ -318,7 +318,9 @@ impl HigherOp {
                 vm.push(a);
                 vm.push(g);
                 vm.call(1, env.assembly, 0)?;
+                let ga = vm.pop();
                 vm.push(b);
+                vm.push(ga);
                 vm.push(f);
                 vm.call(2, env.assembly, 0)?;
             }

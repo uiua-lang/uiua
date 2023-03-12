@@ -1,10 +1,10 @@
 mod algorithm;
 pub mod array;
-mod array_fmt;
 pub mod ast;
 pub mod compile;
 mod error;
 pub mod function;
+mod grid_fmt;
 pub mod lex;
 mod ops;
 pub mod parse;

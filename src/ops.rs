@@ -4,7 +4,7 @@ use enum_iterator::Sequence;
 
 use crate::{
     array::Array,
-    array_fmt::GridFmt,
+    grid_fmt::GridFmt,
     value::*,
     vm::{Env, Vm},
     RuntimeResult,

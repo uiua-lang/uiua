@@ -1,4 +1,4 @@
-use std::{f64::consts::*, fmt};
+use std::{f64::consts::*, fmt, mem::swap};
 
 use enum_iterator::Sequence;
 
@@ -192,7 +192,10 @@ impl Value {
             Op2::Join => self.join(other.clone(), env)?,
             Op2::Reshape => self.reshape(other, env)?,
             Op2::Pick => self.pick(other, env)?,
-            Op2::Filter => self.replicate(other, env)?,
+            Op2::Filter => {
+                swap(self, other);
+                self.replicate(other, env)?
+            }
         }
         Ok(())
     }

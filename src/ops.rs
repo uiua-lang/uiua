@@ -140,6 +140,7 @@ pub enum Op2 {
     Pick,
     Filter,
     Take,
+    Drop,
 }
 
 impl fmt::Display for Op2 {
@@ -167,6 +168,7 @@ impl fmt::Display for Op2 {
             Op2::Pick => write!(f, "pick"),
             Op2::Filter => write!(f, "filter"),
             Op2::Take => write!(f, "take"),
+            Op2::Drop => write!(f, "drop"),
         }
     }
 }
@@ -199,6 +201,7 @@ impl Value {
                 self.replicate(other, env)?
             }
             Op2::Take => self.take(other, env)?,
+            Op2::Drop => self.drop(other, env)?,
         }
         Ok(())
     }

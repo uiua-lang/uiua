@@ -238,6 +238,31 @@ impl Value {
         *self = taken.into();
         Ok(())
     }
+    pub fn drop(&mut self, from: &mut Self, env: &Env) -> RuntimeResult {
+        if !from.is_array() || from.array().rank() == 0 {
+            return Err(env.error("Cannot drop from rank less than 1"));
+        }
+        let mut index = self.as_index(env, "Index must be a list of integers")?;
+        let array = take(from).into_array();
+        if index.len() > array.rank() {
+            return Err(env.error(format!(
+                "Cannot drop with index of greater rank: \
+                the index length is {}, but the array rank is {}",
+                index.len(),
+                array.rank(),
+            )));
+        }
+        for (i, s) in index.iter_mut().zip(array.shape()) {
+            *i = if *i >= 0 {
+                (*i - (*s as isize)).min(0)
+            } else {
+                ((*s as isize) + *i).max(0)
+            };
+        }
+        let taken = take_array(&index, array, env)?;
+        *self = taken.into();
+        Ok(())
+    }
     pub fn fill_value(&self, env: &Env) -> RuntimeResult<Value> {
         Ok(match self.ty() {
             Type::Num => 0.0.into(),

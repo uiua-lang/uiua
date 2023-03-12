@@ -11,8 +11,6 @@
 - More array functions
   - Last
   - Rotate
-  - Take
-  - Drop
 - Type testing/tracing
 - Add combinator visualization
 - Structs

@@ -323,13 +323,13 @@ static TOP_BIN_EXPR: BinExprDef = BinExprDef {
                     (Token::Simple(Slash), BinOp::LeftLeaf),
                     (Token::Simple(DoubleSlash), BinOp::LeftTree),
                 ],
-                associativity: Associativity::Left,
+                associativity: Associativity::Right,
                 child: Some(&BinExprDef {
                     ops: &[
                         (Token::Simple(BackSlash), BinOp::RightLeaf),
                         (Token::Simple(DoubleBackSlash), BinOp::RightTree),
                     ],
-                    associativity: Associativity::Right,
+                    associativity: Associativity::Left,
                     child: Some(&BinExprDef {
                         ops: &[
                             (Token::Simple(Period), BinOp::Compose),

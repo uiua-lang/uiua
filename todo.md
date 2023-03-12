@@ -11,6 +11,11 @@
 - More array functions
   - Last
   - Rotate
+  - Scan
+  - Windows
+  - Transpose?
+  - Grade
+  - Group
 - Type testing/tracing
 - Add combinator visualization
 - Structs

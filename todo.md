@@ -1,7 +1,7 @@
+- Add psi and 3->2 combinators
 - Implement function reversal
 - Fix array showing
 - Allow passing atoms as leaf/tree combinator binary functions?
-- Call all arguments at once
 - Improve parsing expectation errors
 - Optimize for non-reused values
 - Warnings

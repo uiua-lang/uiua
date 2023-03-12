@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     array::{Array, ArrayType},
-    value::Value,
+    value::{Type, Value},
     vm::Env,
     RuntimeResult,
 };
@@ -220,6 +220,80 @@ impl Value {
             .ok_or_else(|| env.error("Empty array has no first"))?;
         Ok(())
     }
+    pub fn take(&mut self, from: &mut Self, env: &Env) -> RuntimeResult {
+        if !from.is_array() || from.array().rank() == 0 {
+            return Err(env.error("Cannot take from rank less than 1"));
+        }
+        let index = self.as_index(env, "Index must be a list of integers")?;
+        let array = take(from).into_array();
+        if index.len() > array.rank() {
+            return Err(env.error(format!(
+                "Cannot take with index of greater rank: \
+                the index length is {}, but the array rank is {}",
+                index.len(),
+                array.rank(),
+            )));
+        }
+        let taken = take_array(&index, array, env)?;
+        *self = taken.into();
+        Ok(())
+    }
+    pub fn fill_value(&self, env: &Env) -> RuntimeResult<Value> {
+        Ok(match self.ty() {
+            Type::Num => 0.0.into(),
+            Type::Char => ' '.into(),
+            Type::Function => return Err(env.error("Functions do not have a fill value")),
+            Type::Array => {
+                let array = self.array();
+                let values: Vec<Value> = array
+                    .clone()
+                    .into_values()
+                    .into_iter()
+                    .map(|val| val.fill_value(env))
+                    .collect::<RuntimeResult<_>>()?;
+                Array::from((array.shape().to_vec(), values))
+                    .normalized(1)
+                    .into()
+            }
+        })
+    }
+}
+
+fn take_array(index: &[isize], array: Array, env: &Env) -> RuntimeResult<Array> {
+    let mut shape = array.shape().to_vec();
+    let mut cells = array.into_values();
+    let take_count = index[0];
+    let take_abs = take_count.unsigned_abs();
+    if take_count >= 0 {
+        cells.truncate(take_abs);
+        if cells.len() < take_abs {
+            let fill = cells[0].fill_value(env)?;
+            cells.extend(repeat(fill).take(take_abs - cells.len()));
+        }
+    } else {
+        if cells.len() > take_abs {
+            cells.drain(0..cells.len() - take_abs);
+        }
+        if cells.len() < take_abs {
+            let fill = cells[0].fill_value(env)?;
+            cells = repeat(fill)
+                .take(take_abs - cells.len())
+                .chain(cells)
+                .collect();
+        }
+    }
+    let index = &index[1..];
+    shape[0] = take_abs;
+    if index.is_empty() {
+        let norm = if shape.len() > 1 { 1 } else { 0 };
+        Ok(Array::from((shape, cells)).normalized(norm))
+    } else {
+        cells = cells
+            .into_iter()
+            .map(|cell| take_array(index, cell.into_array(), env).map(Value::from))
+            .collect::<RuntimeResult<_>>()?;
+        Ok(Array::from((shape, cells)).normalized(1))
+    }
 }
 
 fn pick<T>(shape: &[usize], index: Vec<isize>, mut data: &[T]) -> Value
@@ -229,8 +303,8 @@ where
 {
     let mut shape_index = 0;
     for i in index {
-        let s = shape[shape_index];
-        let cell_size = data.len() / s;
+        let cell_count = shape[shape_index];
+        let cell_size = data.len() / cell_count;
         let start = if i >= 0 {
             i as usize * cell_size
         } else {

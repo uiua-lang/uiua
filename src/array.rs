@@ -289,6 +289,7 @@ impl Array {
             }
         }
     }
+    /// If rank <= 1, return the atom values, otherwise return the array cell values.
     pub fn into_values(mut self) -> Vec<Value> {
         if self.shape.is_empty() {
             return self.into_flat_values();

@@ -7,7 +7,8 @@ These are all the Uiua operators, ordered by increasing precedence
 | <\|                 | Backpipe                        | Right         |
 | \|>                 | Pipe                            | Left          |
 | <>, ><              | Self, Flip                      | Left          |
-| /, //, \\, \\\\     | Left/Right Leaf/Tree            | Left          |
+| /, //,              | Left Leaf/Tree                  | Right         |
+| \\, \\\\            | Right Leaf/Tree                 | Left          |
 | ., ...              | Composition, Double Composition | Left          |
 | =, !=, <, <=, >, >= | Comparisons                     | Left          |
 | +, -                | Addition, Subtraction           | Left          |

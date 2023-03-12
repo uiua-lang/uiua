@@ -139,6 +139,7 @@ pub enum Op2 {
     Reshape,
     Pick,
     Filter,
+    Take,
 }
 
 impl fmt::Display for Op2 {
@@ -165,6 +166,7 @@ impl fmt::Display for Op2 {
             Op2::Reshape => write!(f, "reshape"),
             Op2::Pick => write!(f, "pick"),
             Op2::Filter => write!(f, "filter"),
+            Op2::Take => write!(f, "take"),
         }
     }
 }
@@ -196,6 +198,7 @@ impl Value {
                 swap(self, other);
                 self.replicate(other, env)?
             }
+            Op2::Take => self.take(other, env)?,
         }
         Ok(())
     }

@@ -624,13 +624,15 @@ impl Lexer {
         // Fractional part
         let before_dot = self.loc;
         if self.next_char_exact('.') {
-            if self.next_char_exact('.') {
+            number.push('.');
+            let mut has_decimal = false;
+            while let Some(c) = self.next_char_if(|c| c.is_ascii_digit()) {
+                number.push(c);
+                has_decimal = true;
+            }
+            if !has_decimal {
                 self.loc = before_dot;
-            } else {
-                number.push('.');
-                while let Some(c) = self.next_char_if(|c| c.is_ascii_digit()) {
-                    number.push(c);
-                }
+                number.pop();
             }
         }
         // Exponent

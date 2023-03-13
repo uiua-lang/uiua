@@ -3,9 +3,8 @@ use std::{cmp::Ordering, fmt, mem::swap};
 use crate::{
     array::Array,
     compile::Assembly,
-    function::{Function, FunctionId, Partial},
+    function::{Function, FunctionId, Partial, Primitive},
     lex::Span,
-    ops::{HigherOp, Op1, Op2},
     value::{RawType, Value},
     RuntimeError, RuntimeResult, TraceFrame, UiuaError, UiuaResult,
 };
@@ -36,9 +35,6 @@ pub(crate) enum Instr {
     Rotate(usize),
     Call(usize, usize),
     Return,
-    Op1(Op1),
-    Op2(Op2, usize),
-    HigherOp(HigherOp),
     DestructureList(usize, Box<Span>),
     // These instructions don't exist after compilation
     PushUnresolvedFunction(Box<FunctionId>),
@@ -192,38 +188,6 @@ impl Vm {
                         return Ok(());
                     }
                 }
-                Instr::Op1(op) => {
-                    #[cfg(feature = "profile")]
-                    puffin::profile_scope!("op1");
-                    let val = stack.last_mut().unwrap();
-                    let env = Env { assembly, span: 0 };
-                    val.op1(*op, &env)?;
-                }
-                Instr::Op2(op, span) => {
-                    #[cfg(feature = "profile")]
-                    puffin::profile_scope!("op2");
-                    let (left, right) = {
-                        #[cfg(feature = "profile")]
-                        puffin::profile_scope!("op2_args");
-                        let mut iter = stack.iter_mut().rev();
-                        let right = iter.next().unwrap();
-                        let left = iter.next().unwrap();
-                        (left, right)
-                    };
-                    swap(left, right);
-                    let env = Env {
-                        assembly,
-                        span: *span,
-                    };
-                    left.op2(right, *op, &env)?;
-                    stack.pop();
-                }
-                Instr::HigherOp(hop) => {
-                    #[cfg(feature = "profile")]
-                    puffin::profile_scope!("algorithm");
-                    let env = Env { assembly, span: 0 };
-                    hop.run(self, &env)?;
-                }
                 Instr::DestructureList(_n, _span) => {
                     // let list = match stack.pop().unwrap() {
                     //     Value::List(list) if *n == list.len() => list,
@@ -298,7 +262,7 @@ impl Vm {
             dprintln!("  {:?}", self.stack);
         }
         // Call
-        match arg_count.cmp(&(function.params as usize)) {
+        match arg_count.cmp(&(function.params() as usize)) {
             Ordering::Less => {
                 let partial = Partial {
                     function,
@@ -309,13 +273,38 @@ impl Vm {
                 Ok(false)
             }
             Ordering::Equal => {
-                self.call_stack.push(StackFrame {
-                    stack_size: self.stack.len() - arg_count,
-                    function,
-                    ret: self.pc + 1,
-                    call_span: span,
-                });
-                self.pc = (function.start as usize).overflowing_sub(1).0;
+                match function {
+                    Function::Code { start, .. } => {
+                        self.call_stack.push(StackFrame {
+                            stack_size: self.stack.len() - arg_count,
+                            function,
+                            ret: self.pc + 1,
+                            call_span: span,
+                        });
+                        self.pc = (start as usize).overflowing_sub(1).0;
+                    }
+                    Function::Primitive(Primitive::Op1(op1)) => {
+                        let val = self.stack.last_mut().unwrap();
+                        let env = Env { assembly, span: 0 };
+                        val.op1(op1, &env)?;
+                    }
+                    Function::Primitive(Primitive::Op2(op2)) => {
+                        let (left, right) = {
+                            let mut iter = self.stack.iter_mut().rev();
+                            let right = iter.next().unwrap();
+                            let left = iter.next().unwrap();
+                            (left, right)
+                        };
+                        swap(left, right);
+                        let env = Env { assembly, span };
+                        left.op2(right, op2, &env)?;
+                        self.stack.pop();
+                    }
+                    Function::Primitive(Primitive::HigherOp(hop)) => {
+                        let env = Env { assembly, span };
+                        hop.run(self, &env)?;
+                    }
+                }
                 self.just_called = Some(function);
                 Ok(true)
             }
@@ -323,7 +312,7 @@ impl Vm {
                 let message = format!(
                     "Too many arguments to {}: expected {}, got {arg_count}",
                     assembly.function_id(function),
-                    function.params
+                    function.params()
                 );
                 Err(assembly.spans[span].error(message))
             }

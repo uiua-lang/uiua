@@ -112,8 +112,8 @@ impl Value {
         match self.raw_ty() {
             RawType::Num => 1,
             RawType::Char => 1,
-            RawType::Function => self.function().params,
-            RawType::Partial => self.partial().function.params - self.partial().args.len() as u8,
+            RawType::Function => self.function().params(),
+            RawType::Partial => self.partial().function.params() - self.partial().args.len() as u8,
             RawType::Array => 1,
         }
     }

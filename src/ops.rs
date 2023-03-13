@@ -4,7 +4,7 @@ use enum_iterator::Sequence;
 
 use crate::{
     array::Array,
-    function::PrimitiveId,
+    function::{Function, Primitive},
     grid_fmt::GridFmt,
     value::*,
     vm::{Env, Vm},
@@ -578,8 +578,8 @@ impl HigherOp {
                 let mut x = vm.pop();
                 match f.raw_ty() {
                     RawType::Function => {
-                        match f.function().primitive {
-                            Some(PrimitiveId::Op1(op1)) => {
+                        match f.function() {
+                            Function::Primitive(Primitive::Op1(op1)) => {
                                 if let Some(inverse) = op1.inverse() {
                                     x.op1(inverse, env)?;
                                     vm.push(x);

@@ -4,7 +4,7 @@ use enum_iterator::all;
 
 use crate::{
     ast::*,
-    function::{Function, FunctionId, PrimitiveId},
+    function::{Function, FunctionId, Primitive},
     lex::{Sp, Span},
     ops::{constants, HigherOp, Op1, Op2},
     parse::{parse, ParseError},
@@ -169,40 +169,28 @@ impl Default for Compiler {
             scope.bindings.insert(name.into(), Binding::Constant(index));
         }
         // Operations
-        let mut init = |name: String, id: PrimitiveId, params: u8, instr: Instr| -> Function {
-            let function = Function {
-                start: assembly.instrs.len() as u32,
-                params,
-                primitive: Some(id),
-            };
-            // Instructions
-            assembly.instrs.push(instr);
-            assembly.instrs.push(Instr::Return);
+        let mut init = |name: String, prim: Primitive| -> Function {
+            let function = Function::Primitive(prim);
             // Scope
             scope
                 .bindings
-                .insert(name.into(), Binding::Function(id.into()));
-            scope.functions.insert(id.into(), function);
+                .insert(name.into(), Binding::Function(prim.into()));
+            scope.functions.insert(prim.into(), function);
             // Function info
-            assembly.function_ids.insert(function, id.into());
+            assembly.function_ids.insert(function, prim.into());
             function
         };
         // 1-parameter builtins
         for op1 in all::<Op1>() {
-            init(op1.to_string(), op1.into(), 1, Instr::Op1(op1));
+            init(op1.to_string(), op1.into());
         }
         // 2-parameter builtins
         for op2 in all::<Op2>() {
-            init(op2.to_string(), op2.into(), 2, Instr::Op2(op2, 0));
+            init(op2.to_string(), op2.into());
         }
         // Higher-order builtins
         for hop in all::<HigherOp>() {
-            init(
-                hop.to_string(),
-                hop.into(),
-                hop.params(),
-                Instr::HigherOp(hop),
-            );
+            init(hop.to_string(), hop.into());
         }
 
         assembly.start = assembly.instrs.len();
@@ -302,7 +290,6 @@ impl Compiler {
             Instr::CopyAbs(_) => self.height += 1,
             Instr::Push(_) => self.height += 1,
             Instr::PushUnresolvedFunction(_) => self.height += 1,
-            Instr::Op2(..) => self.height -= 1,
             Instr::Call(args, _) => self.height -= *args,
             Instr::Constant(_) => self.height += 1,
             Instr::Array(len) | Instr::List(len) if *len == 0 => self.height += 1,
@@ -381,10 +368,9 @@ impl Compiler {
         }
         //Determine the function's index
         let params_count = params + ipf.captures.len();
-        let function = Function {
+        let function = Function::Code {
             start: self.assembly.instrs.len() as u32,
             params: params_count as u8,
-            primitive: None,
         };
         // Resolve function references
         for ipf in &mut self.in_progress_functions {
@@ -494,9 +480,9 @@ impl Compiler {
                 let right = bin.right;
                 let span = bin.op.span;
                 match bin_op_primitive(bin.op.value) {
-                    PrimitiveId::Op1(_) => unreachable!("unary primitive id for binary operation"),
-                    PrimitiveId::Op2(op2) => self.bin_expr(op2, left, right, span),
-                    PrimitiveId::HigherOp(op) => self.higher_bin_expr(op, left, right, span),
+                    Primitive::Op1(_) => unreachable!("unary primitive id for binary operation"),
+                    Primitive::Op2(op2) => self.bin_expr(op2, left, right, span),
+                    Primitive::HigherOp(op) => self.higher_bin_expr(op, left, right, span),
                 }?
             }
             Expr::Call(call) => self.call(*call)?,
@@ -603,7 +589,7 @@ impl Compiler {
     }
     fn bin_expr_impl(
         &mut self,
-        prim: impl Into<PrimitiveId>,
+        prim: impl Into<Primitive>,
         call_span: Span,
         left: Sp<Expr>,
         right: Sp<Expr>,
@@ -647,38 +633,40 @@ impl Compiler {
             this.push_instr(Instr::Push(parts.next().unwrap().into()));
             for (i, part) in parts.enumerate() {
                 this.push_instr(Instr::CopyRel(i + 2));
-                this.push_instr(Instr::Op2(Op2::Join, 0));
+                this.push_instr(Instr::Push(Function::Primitive(Op2::Join.into()).into()));
+                this.push_instr(Instr::Call(2, 0));
                 this.push_instr(Instr::Push(part.into()));
-                this.push_instr(Instr::Op2(Op2::Join, 0));
+                this.push_instr(Instr::Push(Function::Primitive(Op2::Join.into()).into()));
+                this.push_instr(Instr::Call(2, 0));
             }
             Ok(params)
         })
     }
 }
 
-fn bin_op_primitive(op: BinOp) -> PrimitiveId {
+fn bin_op_primitive(op: BinOp) -> Primitive {
     match op {
-        BinOp::Pipe => PrimitiveId::HigherOp(HigherOp::Pipe),
-        BinOp::BackPipe => PrimitiveId::HigherOp(HigherOp::BackPipe),
-        BinOp::Add => PrimitiveId::Op2(Op2::Add),
-        BinOp::Sub => PrimitiveId::Op2(Op2::Sub),
-        BinOp::Mul => PrimitiveId::Op2(Op2::Mul),
-        BinOp::Div => PrimitiveId::Op2(Op2::Div),
-        BinOp::Eq => PrimitiveId::Op2(Op2::Eq),
-        BinOp::Ne => PrimitiveId::Op2(Op2::Ne),
-        BinOp::Lt => PrimitiveId::Op2(Op2::Lt),
-        BinOp::Le => PrimitiveId::Op2(Op2::Le),
-        BinOp::Gt => PrimitiveId::Op2(Op2::Gt),
-        BinOp::Ge => PrimitiveId::Op2(Op2::Ge),
-        BinOp::Left => PrimitiveId::Op2(Op2::Left),
-        BinOp::Right => PrimitiveId::Op2(Op2::Right),
-        BinOp::Compose => PrimitiveId::HigherOp(HigherOp::Compose),
-        BinOp::BlackBird => PrimitiveId::HigherOp(HigherOp::BlackBird),
-        BinOp::LeftLeaf => PrimitiveId::HigherOp(HigherOp::LeftLeaf),
-        BinOp::RightLeaf => PrimitiveId::HigherOp(HigherOp::RightLeaf),
-        BinOp::LeftTree => PrimitiveId::HigherOp(HigherOp::LeftTree),
-        BinOp::RightTree => PrimitiveId::HigherOp(HigherOp::RightTree),
-        BinOp::Slf => PrimitiveId::HigherOp(HigherOp::Slf),
-        BinOp::Flip => PrimitiveId::HigherOp(HigherOp::Flip),
+        BinOp::Pipe => Primitive::HigherOp(HigherOp::Pipe),
+        BinOp::BackPipe => Primitive::HigherOp(HigherOp::BackPipe),
+        BinOp::Add => Primitive::Op2(Op2::Add),
+        BinOp::Sub => Primitive::Op2(Op2::Sub),
+        BinOp::Mul => Primitive::Op2(Op2::Mul),
+        BinOp::Div => Primitive::Op2(Op2::Div),
+        BinOp::Eq => Primitive::Op2(Op2::Eq),
+        BinOp::Ne => Primitive::Op2(Op2::Ne),
+        BinOp::Lt => Primitive::Op2(Op2::Lt),
+        BinOp::Le => Primitive::Op2(Op2::Le),
+        BinOp::Gt => Primitive::Op2(Op2::Gt),
+        BinOp::Ge => Primitive::Op2(Op2::Ge),
+        BinOp::Left => Primitive::Op2(Op2::Left),
+        BinOp::Right => Primitive::Op2(Op2::Right),
+        BinOp::Compose => Primitive::HigherOp(HigherOp::Compose),
+        BinOp::BlackBird => Primitive::HigherOp(HigherOp::BlackBird),
+        BinOp::LeftLeaf => Primitive::HigherOp(HigherOp::LeftLeaf),
+        BinOp::RightLeaf => Primitive::HigherOp(HigherOp::RightLeaf),
+        BinOp::LeftTree => Primitive::HigherOp(HigherOp::LeftTree),
+        BinOp::RightTree => Primitive::HigherOp(HigherOp::RightTree),
+        BinOp::Slf => Primitive::HigherOp(HigherOp::Slf),
+        BinOp::Flip => Primitive::HigherOp(HigherOp::Flip),
     }
 }

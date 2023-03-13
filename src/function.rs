@@ -10,39 +10,49 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum PrimitiveId {
+pub enum Primitive {
     Op1(Op1),
     Op2(Op2),
     HigherOp(HigherOp),
 }
 
 fn _keep_primitive_id_small(_: std::convert::Infallible) {
-    let _: [u8; 2] = unsafe { std::mem::transmute(Some(PrimitiveId::Op1(Op1::Neg))) };
+    let _: [u8; 2] = unsafe { std::mem::transmute(Some(Primitive::Op1(Op1::Neg))) };
 }
 
-impl fmt::Display for PrimitiveId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Primitive {
+    pub fn params(&self) -> u8 {
         match self {
-            PrimitiveId::Op1(op) => write!(f, "{op}"),
-            PrimitiveId::Op2(op) => write!(f, "{op}"),
-            PrimitiveId::HigherOp(op) => write!(f, "{op}"),
+            Primitive::Op1(_) => 1,
+            Primitive::Op2(_) => 2,
+            Primitive::HigherOp(op) => op.params(),
         }
     }
 }
 
-impl From<Op1> for PrimitiveId {
+impl fmt::Display for Primitive {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Primitive::Op1(op) => write!(f, "{op}"),
+            Primitive::Op2(op) => write!(f, "{op}"),
+            Primitive::HigherOp(op) => write!(f, "{op}"),
+        }
+    }
+}
+
+impl From<Op1> for Primitive {
     fn from(op: Op1) -> Self {
         Self::Op1(op)
     }
 }
 
-impl From<Op2> for PrimitiveId {
+impl From<Op2> for Primitive {
     fn from(op: Op2) -> Self {
         Self::Op2(op)
     }
 }
 
-impl From<HigherOp> for PrimitiveId {
+impl From<HigherOp> for Primitive {
     fn from(alg: HigherOp) -> Self {
         Self::HigherOp(alg)
     }
@@ -53,7 +63,7 @@ pub enum FunctionId {
     Named(Ident),
     Anonymous(Span),
     FormatString(Span),
-    Primitive(PrimitiveId),
+    Primitive(Primitive),
 }
 
 impl From<Ident> for FunctionId {
@@ -80,8 +90,8 @@ impl From<HigherOp> for FunctionId {
     }
 }
 
-impl From<PrimitiveId> for FunctionId {
-    fn from(id: PrimitiveId) -> Self {
+impl From<Primitive> for FunctionId {
+    fn from(id: Primitive) -> Self {
         Self::Primitive(id)
     }
 }
@@ -98,10 +108,18 @@ impl fmt::Display for FunctionId {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Function {
-    pub(crate) start: u32,
-    pub(crate) params: u8,
-    pub(crate) primitive: Option<PrimitiveId>,
+pub enum Function {
+    Code { start: u32, params: u8 },
+    Primitive(Primitive),
+}
+
+impl Function {
+    pub fn params(&self) -> u8 {
+        match self {
+            Function::Code { params, .. } => *params,
+            Function::Primitive(prim) => prim.params(),
+        }
+    }
 }
 
 impl fmt::Debug for Function {
@@ -112,29 +130,37 @@ impl fmt::Debug for Function {
 
 impl fmt::Display for Function {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(primitive) = self.primitive {
-            write!(f, "{primitive}")
-        } else {
-            write!(f, "fn({} {})", self.start, self.params)
+        match self {
+            Function::Code { start, params } => write!(f, "fn({} {})", start, params),
+            Function::Primitive(prim) => write!(f, "{prim}"),
         }
     }
 }
 
 impl NanBoxable for Function {
     unsafe fn from_nan_box(n: NanBox) -> Self {
-        let [a, b, c, d, e, f]: [u8; 6] = NanBoxable::from_nan_box(n);
-        Self {
-            start: u32::from_le_bytes([a, b, c, 0]),
-            params: d,
-            primitive: transmute(u16::from_le_bytes([e, f])),
+        let [a, b, c, d, e]: [u8; 5] = NanBoxable::from_nan_box(n);
+        if a == 0 {
+            Function::Code {
+                start: u32::from_le_bytes([b, c, d, 0]),
+                params: e,
+            }
+        } else {
+            Function::Primitive(transmute(u16::from_le_bytes([b, c])))
         }
     }
     fn into_nan_box(self) -> NanBox {
-        let [a, b, c, z] = self.start.to_le_bytes();
-        debug_assert_eq!(z, 0);
-        let d = self.params;
-        let [e, f]: [u8; 2] = unsafe { transmute(self.primitive) };
-        NanBoxable::into_nan_box([a, b, c, d, e, f])
+        match self {
+            Function::Code { start, params } => {
+                let [b, c, d, z] = start.to_le_bytes();
+                debug_assert_eq!(z, 0);
+                NanBoxable::into_nan_box([0, b, c, d, params])
+            }
+            Function::Primitive(prim) => {
+                let [b, c]: [u8; 2] = unsafe { transmute(prim) };
+                NanBoxable::into_nan_box([1, b, c, 0, 0])
+            }
+        }
     }
 }
 
@@ -163,10 +189,9 @@ impl fmt::Debug for Partial {
 
 impl fmt::Display for Partial {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(primitive) = self.function.primitive {
-            write!(f, "({primitive}")?
-        } else {
-            write!(f, "fn({}", self.function.start)?
+        match self.function {
+            Function::Code { start, .. } => write!(f, "fn({}", start)?,
+            Function::Primitive(prim) => write!(f, "({prim}")?,
         }
         for arg in self.args.iter().rev() {
             if arg.is_array() {
@@ -199,6 +224,6 @@ impl fmt::Display for Partial {
                 write!(f, " {}", arg)?
             }
         }
-        write!(f, " /{})", self.function.params)
+        write!(f, " /{})", self.function.params())
     }
 }

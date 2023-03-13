@@ -2,7 +2,7 @@ use std::{iter::once, mem::take};
 
 use crate::{
     array::{Array, ArrayType},
-    function::{Function, Partial, PrimitiveId},
+    function::{Function, Partial, Primitive},
     ops::HigherOp,
     value::{RawType, Value},
 };
@@ -253,7 +253,7 @@ impl GridFmt for Partial {
         let args: Vec<_> = self.args.iter().collect();
         let mut arg_grids: Vec<Grid> = args.iter().map(|arg| arg.fmt_grid()).collect();
         let mut grid = self.function.fmt_grid();
-        let tree = if let Some(PrimitiveId::HigherOp(hop)) = self.function.primitive {
+        let tree = if let Function::Primitive(Primitive::HigherOp(hop)) = self.function {
             match hop {
                 HigherOp::Compose => {
                     if let Some(f) = arg_grids.pop() {

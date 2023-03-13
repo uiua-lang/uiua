@@ -1,3 +1,5 @@
+#![allow(clippy::single_match)]
+
 mod algorithm;
 pub mod array;
 pub mod ast;

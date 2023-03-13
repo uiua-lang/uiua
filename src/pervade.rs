@@ -57,6 +57,24 @@ pub mod cos {
         env.error(format!("Cannot get the cosine of {a}"))
     }
 }
+pub mod asin {
+    use super::*;
+    pub fn num(a: &f64) -> f64 {
+        a.asin()
+    }
+    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot get the arcsine of {a}"))
+    }
+}
+pub mod acos {
+    use super::*;
+    pub fn num(a: &f64) -> f64 {
+        a.acos()
+    }
+    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot get the arccosine of {a}"))
+    }
+}
 pub mod floor {
     use super::*;
     pub fn num(a: &f64) -> f64 {

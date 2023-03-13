@@ -4,6 +4,7 @@ use enum_iterator::Sequence;
 
 use crate::{
     array::Array,
+    function::PrimitiveId,
     grid_fmt::GridFmt,
     value::*,
     vm::{Env, Vm},
@@ -35,6 +36,8 @@ pub enum Op1 {
     Sqrt,
     Sin,
     Cos,
+    Asin,
+    Acos,
     Floor,
     Ceil,
     Round,
@@ -64,6 +67,8 @@ impl fmt::Display for Op1 {
             Op1::Sqrt => write!(f, "sqrt"),
             Op1::Sin => write!(f, "sin"),
             Op1::Cos => write!(f, "cos"),
+            Op1::Asin => write!(f, "asin"),
+            Op1::Acos => write!(f, "acos"),
             Op1::Floor => write!(f, "floor"),
             Op1::Ceil => write!(f, "ceil"),
             Op1::Round => write!(f, "round"),
@@ -104,6 +109,8 @@ impl Value {
             Op1::Sqrt => *self = self.sqrt(env)?,
             Op1::Sin => *self = self.sin(env)?,
             Op1::Cos => *self = self.cos(env)?,
+            Op1::Asin => *self = self.asin(env)?,
+            Op1::Acos => *self = self.acos(env)?,
             Op1::Floor => *self = self.floor(env)?,
             Op1::Ceil => *self = self.ceil(env)?,
             Op1::Round => *self = self.round(env)?,
@@ -132,7 +139,14 @@ impl Value {
 
 impl Op1 {
     pub fn inverse(&self) -> Option<Op1> {
-        None
+        Some(match self {
+            Op1::Id | Op1::Not | Op1::Neg | Op1::Reverse => *self,
+            Op1::Sin => Op1::Asin,
+            Op1::Cos => Op1::Acos,
+            Op1::Asin => Op1::Sin,
+            Op1::Acos => Op1::Cos,
+            _ => return None,
+        })
     }
 }
 
@@ -244,6 +258,7 @@ pub enum HigherOp {
     Each,
     Cells,
     Table,
+    Undo1,
 }
 
 impl fmt::Display for HigherOp {
@@ -263,6 +278,7 @@ impl fmt::Display for HigherOp {
             HigherOp::Each => write!(f, "each"),
             HigherOp::Cells => write!(f, "cells"),
             HigherOp::Table => write!(f, "table"),
+            HigherOp::Undo1 => write!(f, "undo1"),
         }
     }
 }
@@ -284,6 +300,7 @@ impl HigherOp {
             HigherOp::Cells => 2,
             HigherOp::Fold => 3,
             HigherOp::Table => 3,
+            HigherOp::Undo1 => 2,
         }
     }
     pub fn run(&self, vm: &mut Vm, env: &Env) -> RuntimeResult {
@@ -535,6 +552,26 @@ impl HigherOp {
                     table.push(Value::from(Array::from(row).normalized(1)));
                 }
                 vm.push(Array::from(table).normalized(1));
+            }
+            HigherOp::Undo1 => {
+                let f = vm.pop();
+                let mut x = vm.pop();
+                match f.raw_ty() {
+                    RawType::Function => {
+                        match f.function().primitive {
+                            Some(PrimitiveId::Op1(op1)) => {
+                                if let Some(inverse) = op1.inverse() {
+                                    x.op1(inverse, env)?;
+                                    vm.push(x);
+                                    return Ok(());
+                                }
+                            }
+                            _ => {}
+                        }
+                        return Err(env.error(format!("{} cannot be undone", f.function())));
+                    }
+                    _ => return Err(env.error("Only functions can be undone")),
+                }
             }
         }
         Ok(())

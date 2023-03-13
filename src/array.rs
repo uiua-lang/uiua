@@ -414,6 +414,8 @@ array_un_impl!(abs, (Num, numbers, num));
 array_un_impl!(sqrt, (Num, numbers, num));
 array_un_impl!(sin, (Num, numbers, num));
 array_un_impl!(cos, (Num, numbers, num));
+array_un_impl!(asin, (Num, numbers, num));
+array_un_impl!(acos, (Num, numbers, num));
 array_un_impl!(floor, (Num, numbers, num));
 array_un_impl!(ceil, (Num, numbers, num));
 array_un_impl!(round, (Num, numbers, num));

@@ -24,6 +24,7 @@ pub enum Expectation {
     Eof,
     FunctionBody,
     Parameter,
+    Term,
     Simple(Simple),
     Keyword(Keyword),
 }
@@ -51,6 +52,7 @@ impl fmt::Display for Expectation {
             Expectation::Eof => write!(f, "end of file"),
             Expectation::FunctionBody => write!(f, "function body"),
             Expectation::Parameter => write!(f, "parameter"),
+            Expectation::Term => write!(f, "term"),
             Expectation::Simple(s) => write!(f, "{s}"),
             Expectation::Keyword(k) => write!(f, "{k}"),
         }
@@ -431,13 +433,31 @@ impl Parser {
         Ok(expr_span.map(|span| span.sp(expr)))
     }
     fn try_call(&mut self) -> ParseResult<Option<Sp<Expr>>> {
-        let Some(mut expr) = self.try_term()? else {
+        let Some(mut expr) = self.try_strand()? else {
             return Ok(None);
         };
-        while let Some(arg) = self.try_term()? {
+        while let Some(arg) = self.try_strand()? {
             let span = expr.span.clone().merge(arg.span.clone());
             let call = span.sp(Expr::Call(Box::new(CallExpr { func: expr, arg })));
             expr = call;
+        }
+        Ok(Some(expr))
+    }
+    fn try_strand(&mut self) -> ParseResult<Option<Sp<Expr>>> {
+        let Some(mut expr) = self.try_term()? else {
+            return Ok(None);
+        };
+        let mut items = Vec::new();
+        while self.try_exact(BackTick).is_some() {
+            let item = self
+                .try_term()?
+                .ok_or_else(|| self.expected([Expectation::Term]))?;
+            items.push(item);
+        }
+        if let Some(last) = items.last() {
+            let span = expr.span.clone().merge(last.span.clone());
+            items.insert(0, expr);
+            expr = span.sp(Expr::Strand(items));
         }
         Ok(Some(expr))
     }

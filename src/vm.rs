@@ -140,7 +140,7 @@ impl Vm {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("list");
                     let array: Array = stack.drain(stack.len() - *n..).collect();
-                    stack.push(array.into());
+                    stack.push(array.normalized(0).into());
                 }
                 Instr::Array(n) => {
                     #[cfg(feature = "profile")]

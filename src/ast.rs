@@ -95,6 +95,7 @@ pub enum Expr {
     Placeholder,
     List(Vec<Sp<Expr>>),
     Array(Vec<Sp<Expr>>),
+    Strand(Vec<Sp<Expr>>),
     Parened(Box<Sp<Expr>>),
     Func(Box<Func>),
 }
@@ -113,6 +114,7 @@ impl fmt::Debug for Expr {
             Expr::Placeholder => write!(f, "_"),
             Expr::List(list) => write!(f, "list({list:?})"),
             Expr::Array(array) => write!(f, "array({array:?})"),
+            Expr::Strand(items) => write!(f, "strand({items:?})"),
             Expr::Parened(expr) => {
                 write!(f, "(")?;
                 expr.value.fmt(f)?;

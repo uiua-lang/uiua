@@ -502,6 +502,7 @@ impl Compiler {
             Expr::Call(call) => self.call(*call)?,
             Expr::List(items) => self.list(Instr::List, items)?,
             Expr::Array(items) => self.list(Instr::Array, items)?,
+            Expr::Strand(items) => self.list(Instr::Array, items)?,
             Expr::Func(func) => self.func(*func, expr.span, true)?,
             Expr::Parened(inner) => self.expr(*inner)?,
         }

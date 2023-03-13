@@ -109,9 +109,30 @@ impl Value {
             Op1::Round => *self = self.round(env)?,
             Op1::Deshape => self.deshape(),
             Op1::First => self.first(env)?,
-            op => todo!("{op}"),
+            Op1::String => *self = self.to_string().into(),
+            Op1::ScanLn => {
+                let mut line = String::new();
+                std::io::stdin().read_line(&mut line).unwrap_or_default();
+                *self = line.into();
+            }
+            Op1::Args => {
+                *self = Array::from_iter(std::env::args().map(Array::from).map(Value::from)).into()
+            }
+            Op1::Var => {
+                if !self.is_array() || !self.array().is_chars() {
+                    return Err(env.error("Argument to var must be a string"));
+                }
+                let key: String = self.array().chars().iter().collect();
+                *self = std::env::var(key).unwrap_or_default().into();
+            }
         }
         Ok(())
+    }
+}
+
+impl Op1 {
+    pub fn inverse(&self) -> Option<Op1> {
+        None
     }
 }
 

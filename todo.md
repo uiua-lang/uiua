@@ -1,7 +1,5 @@
 - Add psi and 3->2 combinators
 - Implement function reversal
-- Fix array showing
-- Allow passing atoms as leaf/tree combinator binary functions?
 - Improve parsing expectation errors
 - Optimize for non-reused values
 - Warnings
@@ -17,7 +15,6 @@
   - Grade
   - Group
 - Type testing/tracing
-- Add combinator visualization
 - Structs
 - Enums?
 - Operator overloading?

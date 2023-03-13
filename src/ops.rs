@@ -255,6 +255,7 @@ pub enum HigherOp {
     RightLeaf,
     RightTree,
     Fold,
+    Reduce,
     Each,
     Cells,
     Table,
@@ -275,6 +276,7 @@ impl fmt::Display for HigherOp {
             HigherOp::RightLeaf => write!(f, "right_leaf"),
             HigherOp::RightTree => write!(f, "right_tree"),
             HigherOp::Fold => write!(f, "fold"),
+            HigherOp::Reduce => write!(f, "reduce"),
             HigherOp::Each => write!(f, "each"),
             HigherOp::Cells => write!(f, "cells"),
             HigherOp::Table => write!(f, "table"),
@@ -299,6 +301,7 @@ impl HigherOp {
             HigherOp::Each => 2,
             HigherOp::Cells => 2,
             HigherOp::Fold => 3,
+            HigherOp::Reduce => 2,
             HigherOp::Table => 3,
             HigherOp::Undo1 => 2,
         }
@@ -475,7 +478,27 @@ impl HigherOp {
                     return vm.call(2, env.assembly, 0);
                 }
                 for cell in xs.into_array().into_values() {
-                    vm.push(acc.clone());
+                    vm.push(acc);
+                    vm.push(cell);
+                    vm.push(f.clone());
+                    vm.call(2, env.assembly, 0)?;
+                    acc = vm.pop();
+                }
+                vm.push(acc);
+            }
+            HigherOp::Reduce => {
+                let f = vm.pop();
+                let xs = vm.pop();
+                if !xs.is_array() {
+                    vm.push(xs);
+                    return Ok(());
+                }
+                let mut cells = xs.into_array().into_values().into_iter();
+                let Some(mut acc) = cells.next() else {
+                    return Err(env.error("Cannot reduce empty array"));
+                };
+                for cell in cells {
+                    vm.push(acc);
                     vm.push(cell);
                     vm.push(f.clone());
                     vm.call(2, env.assembly, 0)?;

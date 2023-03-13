@@ -155,22 +155,22 @@ impl Value {
         }
         self.array_mut()
     }
-    pub fn replicate(&mut self, filter: &Self, env: &Env) -> RuntimeResult {
-        if !self.is_array() {
+    pub fn replicate(&mut self, items: &mut Self, env: &Env) -> RuntimeResult {
+        if !items.is_array() {
             return Err(env.error("Cannot filter non-array"));
         }
-        let filtered = self.array_mut();
+        let filtered = items.array_mut();
         let mut data = Vec::new();
-        if filter.is_num() {
-            if !filter.is_nat() {
+        if self.is_num() {
+            if !self.is_nat() {
                 return Err(env.error("Cannot replicate with non-integer"));
             }
-            let n = filter.number() as usize;
+            let n = self.number() as usize;
             for cell in take(filtered).into_values() {
                 data.extend(repeat(cell).take(n));
             }
-        } else if filter.is_array() {
-            let filter = filter.array();
+        } else if self.is_array() {
+            let filter = self.array();
             if filter.len() != filtered.len() {
                 return Err(env.error(format!(
                     "Cannot replicate with array of different length: \

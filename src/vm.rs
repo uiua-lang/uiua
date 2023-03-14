@@ -229,7 +229,10 @@ impl Vm {
     }
     pub fn call(&mut self, args: usize, assembly: &Assembly, span: usize) -> RuntimeResult {
         let return_depth = self.call_stack.len();
-        let call_started = self.call_impl(assembly, args, span)?;
+        let mut call_started = false;
+        for _ in 0..args {
+            call_started |= self.call_impl(assembly, 1, span)?;
+        }
         if call_started {
             self.pc = self.pc.overflowing_add(1).0;
             self.run_assembly_inner(assembly, return_depth)?;

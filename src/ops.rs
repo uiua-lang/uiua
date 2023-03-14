@@ -339,7 +339,6 @@ impl HigherOp {
                 let f = vm.pop();
                 let a = vm.pop();
                 let b = vm.pop();
-                println!("{f} {a} {b}");
                 vm.push(b.clone());
                 vm.push(a.clone());
                 vm.push(b);

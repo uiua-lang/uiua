@@ -1,4 +1,8 @@
-use std::{f64::consts::*, fmt};
+use std::{
+    f64::consts::*,
+    fmt,
+    io::{stdout, Write},
+};
 
 use enum_iterator::Sequence;
 
@@ -94,7 +98,10 @@ impl Value {
         match op {
             Op1::Id => {}
             Op1::Show => print!("{}", self.grid_string()),
-            Op1::Print => print!("{self}"),
+            Op1::Print => {
+                print!("{self}");
+                let _ = stdout().flush();
+            }
             Op1::Println => println!("{self}"),
             Op1::Len => *self = (self.len() as f64).into(),
             Op1::Rank => *self = (self.rank() as f64).into(),
@@ -120,6 +127,8 @@ impl Value {
             Op1::ScanLn => {
                 let mut line = String::new();
                 std::io::stdin().read_line(&mut line).unwrap_or_default();
+                line.pop();
+                line.pop();
                 *self = line.into();
             }
             Op1::Args => {

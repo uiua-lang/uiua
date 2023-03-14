@@ -243,6 +243,7 @@ pub enum HigherOp {
     BackPipe,
     Compose,
     Slf,
+    DualSelf,
     BlackBird,
     Flip,
     LeftLeaf,
@@ -265,6 +266,7 @@ impl fmt::Display for HigherOp {
             HigherOp::Compose => write!(f, "compose"),
             HigherOp::BlackBird => write!(f, "blackbird"),
             HigherOp::Slf => write!(f, "self"),
+            HigherOp::DualSelf => write!(f, "dual_self"),
             HigherOp::Flip => write!(f, "flip"),
             HigherOp::LeftLeaf => write!(f, "left_leaf"),
             HigherOp::LeftTree => write!(f, "left_tree"),
@@ -287,6 +289,7 @@ impl HigherOp {
             HigherOp::BackPipe => 2,
             HigherOp::Compose => 3,
             HigherOp::Slf => 2,
+            HigherOp::DualSelf => 3,
             HigherOp::Flip => 3,
             HigherOp::BlackBird => 4,
             HigherOp::LeftLeaf => 4,
@@ -331,6 +334,18 @@ impl HigherOp {
                 vm.push(x);
                 vm.push(f);
                 vm.call(2, env.assembly, 0)?;
+            }
+            HigherOp::DualSelf => {
+                let f = vm.pop();
+                let a = vm.pop();
+                let b = vm.pop();
+                println!("{f} {a} {b}");
+                vm.push(b.clone());
+                vm.push(a.clone());
+                vm.push(b);
+                vm.push(a);
+                vm.push(f);
+                vm.call(4, env.assembly, 0)?;
             }
             HigherOp::BlackBird => {
                 // y x g f

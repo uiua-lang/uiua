@@ -315,7 +315,11 @@ static TOP_BIN_EXPR: BinExprDef = BinExprDef {
         ops: &[(Pipe, BinOp::Pipe)],
         associativity: Associativity::Left,
         child: Some(&BinExprDef {
-            ops: &[(LessGreater, BinOp::Slf), (GreaterLess, BinOp::Flip)],
+            ops: &[
+                (LessGreater, BinOp::Slf),
+                (GreaterLess, BinOp::Flip),
+                (DoubleLessGreater, BinOp::DualSelf),
+            ],
             associativity: Associativity::Left,
             child: Some(&BinExprDef {
                 ops: &[(Slash, BinOp::LeftLeaf), (DoubleSlash, BinOp::LeftTree)],

@@ -668,5 +668,6 @@ fn bin_op_primitive(op: BinOp) -> Primitive {
         BinOp::RightTree => Primitive::HigherOp(HigherOp::RightTree),
         BinOp::Slf => Primitive::HigherOp(HigherOp::Slf),
         BinOp::Flip => Primitive::HigherOp(HigherOp::Flip),
+        BinOp::DualSelf => Primitive::HigherOp(HigherOp::DualSelf),
     }
 }

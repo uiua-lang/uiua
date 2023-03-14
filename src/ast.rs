@@ -195,6 +195,7 @@ pub enum BinOp {
     RightLeaf,
     RightTree,
     Slf,
+    DualSelf,
     Flip,
     Pipe,
     BackPipe,

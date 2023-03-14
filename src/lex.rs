@@ -304,6 +304,7 @@ pub enum Simple {
     DoubleBackSlash,
     LessGreater,
     GreaterLess,
+    DoubleLessGreater,
     Plus,
     Minus,
     Star,
@@ -347,6 +348,7 @@ impl fmt::Display for Simple {
                 Simple::DoubleBackSlash => "\\\\",
                 Simple::LessGreater => "<>",
                 Simple::GreaterLess => "><",
+                Simple::DoubleLessGreater => "<<>>",
                 Simple::Plus => "+",
                 Simple::Minus => "-",
                 Simple::Star => "*",
@@ -411,11 +413,7 @@ impl Lexer {
     fn peek_char(&self) -> Option<char> {
         self.input_chars.get(self.loc.pos).copied()
     }
-    fn next_char_if(&mut self, f: impl Fn(char) -> bool) -> Option<char> {
-        let c = *self.input_chars.get(self.loc.pos)?;
-        if !f(c) {
-            return None;
-        }
+    fn update_loc(&mut self, c: char) {
         match c {
             '\n' => {
                 self.loc.line += 1;
@@ -425,10 +423,26 @@ impl Lexer {
             _ => self.loc.col += 1,
         }
         self.loc.pos += 1;
+    }
+    fn next_char_if(&mut self, f: impl Fn(char) -> bool) -> Option<char> {
+        let c = *self.input_chars.get(self.loc.pos)?;
+        if !f(c) {
+            return None;
+        }
+        self.update_loc(c);
         Some(c)
     }
     fn next_char_exact(&mut self, c: char) -> bool {
         self.next_char_if(|c2| c2 == c).is_some()
+    }
+    fn next_chars_exact<const N: usize>(&mut self, cs: [char; N]) -> bool {
+        let matches = self.input_chars[self.loc.pos..self.loc.pos + N] == cs;
+        if matches {
+            for c in cs {
+                self.update_loc(c);
+            }
+        }
+        matches
     }
     fn next_char(&mut self) -> Option<char> {
         self.next_char_if(|_| true)
@@ -506,11 +520,17 @@ impl Lexer {
                 '*' => self.end(Star, start),
                 '%' => self.end(Percent, start),
                 '=' => self.end(Equal, start),
-                '<' => self.switch_next(
-                    Less,
-                    [('=', LessEqual), ('|', BackPipe), ('>', LessGreater)],
-                    start,
-                ),
+                '<' => {
+                    if self.next_chars_exact(['<', '>', '>']) {
+                        self.end(DoubleLessGreater, start)
+                    } else {
+                        self.switch_next(
+                            Less,
+                            [('=', LessEqual), ('|', BackPipe), ('>', LessGreater)],
+                            start,
+                        )
+                    }
+                }
                 '>' => self.switch_next(Greater, [('=', GreaterEqual), ('<', GreaterLess)], start),
                 '!' => {
                     if self.next_char_exact('=') {

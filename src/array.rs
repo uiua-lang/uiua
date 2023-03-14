@@ -105,6 +105,18 @@ impl Array {
         assert_eq!(self.ty, ArrayType::Value);
         unsafe { &mut self.data.values }
     }
+    pub fn data<N, C, V, T>(&self, nums: N, chars: C, values: V) -> T
+    where
+        N: FnOnce(&[usize], &[f64]) -> T,
+        C: FnOnce(&[usize], &[char]) -> T,
+        V: FnOnce(&[usize], &[Value]) -> T,
+    {
+        match self.ty {
+            ArrayType::Num => nums(&self.shape, unsafe { &self.data.numbers }),
+            ArrayType::Char => chars(&self.shape, unsafe { &self.data.chars }),
+            ArrayType::Value => values(&self.shape, unsafe { &self.data.values }),
+        }
+    }
     pub fn data_mut<N, C, V, T>(&mut self, nums: N, chars: C, values: V) -> T
     where
         N: FnOnce(&[usize], &mut [f64]) -> T,

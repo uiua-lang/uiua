@@ -452,7 +452,7 @@ impl Parser {
             return Ok(None);
         };
         let mut items = Vec::new();
-        while self.try_exact(BackTick).is_some() {
+        while self.try_exact(Underscore).is_some() {
             let item = self
                 .try_term()?
                 .ok_or_else(|| self.expected([Expectation::Term]))?;
@@ -474,8 +474,6 @@ impl Parser {
             c.map(Into::into).map(Expr::Char)
         } else if let Some(s) = self.next_token_map(Token::as_string) {
             s.map(Into::into).map(Expr::String)
-        } else if let Some(s) = self.next_token_map(Token::as_format_string) {
-            s.map(Into::into).map(Expr::FormatString)
         } else if let Some(start) = self.try_exact(OpenParen) {
             let inner = self.try_expr()?;
             let end = self.expect(CloseParen)?;

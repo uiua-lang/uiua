@@ -225,7 +225,6 @@ pub enum Token {
     Number(String),
     Char(char),
     Str(String),
-    FormatString(Vec<String>),
     Keyword(Keyword),
     Simple(Simple),
 }
@@ -255,12 +254,6 @@ impl Token {
             _ => None,
         }
     }
-    pub fn as_format_string(&self) -> Option<Vec<String>> {
-        match self {
-            Token::FormatString(parts) => Some(parts.clone()),
-            _ => None,
-        }
-    }
 }
 
 impl fmt::Display for Token {
@@ -271,7 +264,6 @@ impl fmt::Display for Token {
             Token::Number(real) => write!(f, "{real}"),
             Token::Char(char) => write!(f, "{char:?}"),
             Token::Str(s) => write!(f, "{s:?}"),
-            Token::FormatString(parts) => write!(f, "{parts:?}"),
             Token::Keyword(keyword) => write!(f, "{keyword}"),
             Token::Simple(simple) => write!(f, "{simple}"),
         }
@@ -287,9 +279,12 @@ pub enum Simple {
     OpenBracket,
     CloseBracket,
     Comma,
+    Underscore,
     BackTick,
+    DoubleQuote,
+    SingleQuote,
+    Caret,
     Colon,
-    SemiColon,
     Period,
     Period2,
     Period3,
@@ -331,9 +326,12 @@ impl fmt::Display for Simple {
                 Simple::OpenBracket => "[",
                 Simple::CloseBracket => "]",
                 Simple::Comma => ",",
+                Simple::SingleQuote => "'",
+                Simple::DoubleQuote => "\"",
                 Simple::BackTick => "`",
+                Simple::Caret => "^",
+                Simple::Underscore => "_",
                 Simple::Colon => ":",
-                Simple::SemiColon => ";",
                 Simple::Period => ".",
                 Simple::Period2 => "..",
                 Simple::Period3 => "...",
@@ -488,8 +486,8 @@ impl Lexer {
             return match c {
                 '(' => self.end(OpenParen, start),
                 ')' => self.end(CloseParen, start),
-                '{' => self.end(OpenCurly, start),
-                '}' => self.end(CloseCurly, start),
+                // '{' => self.end(OpenCurly, start),
+                // '}' => self.end(CloseCurly, start),
                 '[' => self.end(OpenBracket, start),
                 ']' => self.end(CloseBracket, start),
                 '.' => {
@@ -504,9 +502,12 @@ impl Lexer {
                     }
                 }
                 ':' => self.end(Colon, start),
-                ';' => self.end(SemiColon, start),
                 ',' => self.end(Comma, start),
+                '_' => self.end(Underscore, start),
+                '\'' => self.end(SingleQuote, start),
+                '"' => self.end(DoubleQuote, start),
                 '`' => self.end(BackTick, start),
+                '^' => self.end(Caret, start),
                 '/' => self.switch_next(Slash, [('/', DoubleSlash)], start),
                 '\\' => self.switch_next(BackSlash, [('\\', DoubleBackSlash)], start),
                 '+' => self.end(Plus, start),
@@ -549,30 +550,23 @@ impl Lexer {
                     self.end(Comment(comment), start)
                 }
                 // Characters
-                '\'' => {
+                ';' => {
                     let mut escaped = false;
-                    let char = match self.character(&mut escaped, '"') {
+                    let char = match self.character(&mut escaped, ';') {
                         Ok(Some(c)) => c,
                         Ok(None) => {
-                            return Err(self
-                                .end_span(start)
-                                .sp(LexError::ExpectedCharacter(Some('\''))))
+                            return Err(self.end_span(start).sp(LexError::ExpectedCharacter(None)))
                         }
                         Err(e) => return Err(self.end_span(start).sp(LexError::InvalidEscape(e))),
                     };
-                    if !self.next_char_exact('\'') {
-                        return Err(self
-                            .end_span(start)
-                            .sp(LexError::ExpectedCharacter(Some('\''))));
-                    }
                     self.end(Token::Char(char), start)
                 }
                 // Strings
-                '"' => {
+                '{' => {
                     let mut string = String::new();
                     let mut escaped = false;
                     loop {
-                        match self.character(&mut escaped, '"') {
+                        match self.character(&mut escaped, '}') {
                             Ok(Some(c)) => string.push(c),
                             Ok(None) => break,
                             Err(e) => {
@@ -580,40 +574,14 @@ impl Lexer {
                             }
                         }
                     }
-                    if !self.next_char_exact('"') {
+                    if !self.next_char_exact('}') {
                         return Err(self
                             .end_span(start)
-                            .sp(LexError::ExpectedCharacter(Some('"'))));
+                            .sp(LexError::ExpectedCharacter(Some('}'))));
                     }
                     self.end(Token::Str(string), start)
                 }
-                // Format strings
-                '$' => {
-                    if !self.next_char_exact('"') {
-                        return Err(self
-                            .end_span(start)
-                            .sp(LexError::ExpectedCharacter(Some('"'))));
-                    }
-                    let mut string = String::new();
-                    let mut slash_escaped = false;
-                    loop {
-                        match self.character(&mut slash_escaped, '"') {
-                            Ok(Some(c)) => string.push(c),
-                            Ok(None) => break,
-                            Err(e) => {
-                                return Err(self.end_span(start).sp(LexError::InvalidEscape(e)))
-                            }
-                        }
-                    }
-                    if !self.next_char_exact('"') {
-                        return Err(self
-                            .end_span(start)
-                            .sp(LexError::ExpectedCharacter(Some('"'))));
-                    }
-                    let parts = string.split("{}").map(Into::into).collect();
-                    self.end(Token::FormatString(parts), start)
-                }
-                // Identifiers, keywords, and underscore
+                // Identifiers and keywords
                 c if is_ident_start(c) => {
                     let mut ident = String::new();
                     ident.push(c);
@@ -698,9 +666,9 @@ impl Lexer {
 }
 
 fn is_ident_start(c: char) -> bool {
-    c.is_ascii_alphabetic() || c == '_'
+    c.is_ascii_alphabetic()
 }
 
 fn is_ident(c: char) -> bool {
-    c.is_ascii_alphanumeric() || c == '_'
+    c.is_ascii_alphanumeric()
 }

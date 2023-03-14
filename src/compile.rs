@@ -472,7 +472,6 @@ impl Compiler {
             }
             Expr::Char(c) => self.push_instr(Instr::Push(c.into())),
             Expr::String(s) => self.push_instr(Instr::Push(s.into())),
-            Expr::FormatString(parts) => self.format_string(parts, expr.span)?,
             Expr::Ident(ident) => self.ident(ident, expr.span)?,
             Expr::Placeholder => panic!("unresolved placeholder"),
             Expr::Bin(bin) => {
@@ -618,28 +617,6 @@ impl Compiler {
             }
         }
         Ok(())
-    }
-    fn format_string(&mut self, parts: Vec<String>, span: Span) -> CompileResult {
-        if parts.len() <= 1 {
-            self.push_instr(Instr::Push(
-                parts.into_iter().next().unwrap_or_default().into(),
-            ));
-            return Ok(());
-        }
-        self.func_outer(true, FunctionId::FormatString(span.clone()), span, |this| {
-            let params = parts.len() - 1;
-            let mut parts = parts.into_iter().rev();
-            this.push_instr(Instr::Push(parts.next().unwrap().into()));
-            for (i, part) in parts.enumerate() {
-                this.push_instr(Instr::CopyRel(i + 2));
-                this.push_instr(Instr::Push(Function::Primitive(Op2::Join.into()).into()));
-                this.push_instr(Instr::Call(2, 0));
-                this.push_instr(Instr::Push(part.into()));
-                this.push_instr(Instr::Push(Function::Primitive(Op2::Join.into()).into()));
-                this.push_instr(Instr::Call(2, 0));
-            }
-            Ok(params)
-        })
     }
 }
 

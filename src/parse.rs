@@ -364,6 +364,13 @@ static TOP_BIN_EXPR: BinExprDef = BinExprDef {
     }),
 };
 
+static MOD_OPS: &[(Simple, ModOp)] = &[
+    (BackTick, ModOp::Scan),
+    (DoubleQuote, ModOp::Cells),
+    (SingleQuote, ModOp::Reduce),
+    (Caret, ModOp::Table),
+];
+
 impl Parser {
     fn expr(&mut self) -> ParseResult<Sp<Expr>> {
         self.expect_expr(Self::try_expr)
@@ -487,9 +494,45 @@ impl Parser {
             items.map(Expr::Array)
         } else if let Some(func) = self.try_func()? {
             func.map(Box::new).map(Expr::Func)
+        } else if let Some(m) = self.try_mod()? {
+            m.map(Box::new).map(Expr::Mod)
         } else {
             return Ok(None);
         }))
+    }
+    fn try_mod(&mut self) -> ParseResult<Option<Sp<ModExpr>>> {
+        let op = MOD_OPS
+            .iter()
+            .find_map(|(simple, op)| self.try_exact(*simple).map(|op_span| op_span.sp(*op)));
+        let Some(op) = op else {
+            return Ok(None);
+        };
+        // Look for binary operators
+        let mut curr = Some(&TOP_BIN_EXPR);
+        let mut expr = None;
+        while let Some(def) = curr {
+            for (token, bop) in def.ops {
+                if let Some(op_span) = self.try_exact(*token) {
+                    let bop = op_span.clone().sp(*bop);
+                    expr = Some(bop.span.clone().sp(Expr::Bin(Box::new(BinExpr {
+                        left: bop.span.clone().sp(Expr::Placeholder),
+                        right: bop.span.clone().sp(Expr::Placeholder),
+                        op: bop,
+                    }))));
+                    break;
+                }
+            }
+            curr = def.child;
+        }
+        // Look for terms
+        let expr = if let Some(expr) = expr {
+            expr
+        } else {
+            self.try_term()?
+                .ok_or_else(|| self.expected([Expectation::Term]))?
+        };
+        let span = op.span.clone().merge(expr.span.clone());
+        Ok(Some(span.sp(ModExpr { op, expr })))
     }
     fn try_func(&mut self) -> ParseResult<Option<Sp<Func>>> {
         let mut params = Vec::new();

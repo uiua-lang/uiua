@@ -484,6 +484,13 @@ impl Compiler {
                     Primitive::HigherOp(op) => self.higher_bin_expr(op, left, right, span),
                 }?
             }
+            Expr::Mod(m) => {
+                self.expr(m.expr)?;
+                let f = Function::Primitive(mod_op_primitive(m.op.value));
+                self.push_instr(Instr::Push(f.into()));
+                let call_span = self.push_call_span(m.op.span);
+                self.push_instr(Instr::Call(1, call_span));
+            }
             Expr::Call(call) => self.call(*call)?,
             Expr::Array(items) => self.list(Instr::Array, items)?,
             Expr::Strand(items) => self.list(Instr::List, items)?,
@@ -645,5 +652,14 @@ fn bin_op_primitive(op: BinOp) -> Primitive {
         BinOp::Slf => Primitive::HigherOp(HigherOp::Slf),
         BinOp::Flip => Primitive::HigherOp(HigherOp::Flip),
         BinOp::DualSelf => Primitive::HigherOp(HigherOp::DualSelf),
+    }
+}
+
+fn mod_op_primitive(op: ModOp) -> Primitive {
+    match op {
+        ModOp::Reduce => Primitive::HigherOp(HigherOp::Reduce),
+        ModOp::Cells => Primitive::HigherOp(HigherOp::Cells),
+        ModOp::Scan => Primitive::HigherOp(HigherOp::Scan),
+        ModOp::Table => Primitive::HigherOp(HigherOp::Table),
     }
 }

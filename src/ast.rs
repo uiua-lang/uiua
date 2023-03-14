@@ -1,7 +1,5 @@
 use std::fmt;
 
-use enum_iterator::Sequence;
-
 use crate::{
     function::FunctionId,
     lex::{Sp, Span},
@@ -87,6 +85,7 @@ pub enum Expr {
     Unit,
     Call(Box<CallExpr>),
     Bin(Box<BinExpr>),
+    Mod(Box<ModExpr>),
     Real(String),
     Char(char),
     String(String),
@@ -104,6 +103,7 @@ impl fmt::Debug for Expr {
             Expr::Unit => write!(f, "unit"),
             Expr::Call(call) => call.fmt(f),
             Expr::Bin(bin) => bin.fmt(f),
+            Expr::Mod(m) => m.fmt(f),
             Expr::Real(real) => write!(f, "{real:?}"),
             Expr::Char(char) => write!(f, "{char:?}"),
             Expr::String(string) => write!(f, "{{{string}}}"),
@@ -170,7 +170,22 @@ impl fmt::Debug for BinExpr {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
+#[derive(Clone)]
+pub struct ModExpr {
+    pub op: Sp<ModOp>,
+    pub expr: Sp<Expr>,
+}
+
+impl fmt::Debug for ModExpr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("mod")
+            .field(&self.op.value)
+            .field(&self.expr.value)
+            .finish()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum BinOp {
     Eq,
     Ne,
@@ -195,4 +210,12 @@ pub enum BinOp {
     Flip,
     Pipe,
     BackPipe,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ModOp {
+    Reduce,
+    Cells,
+    Scan,
+    Table,
 }

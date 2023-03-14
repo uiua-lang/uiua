@@ -273,7 +273,7 @@ impl Vm {
                 Ok(false)
             }
             Ordering::Equal => {
-                match function {
+                let call_stated = match function {
                     Function::Code { start, .. } => {
                         self.call_stack.push(StackFrame {
                             stack_size: self.stack.len() - arg_count,
@@ -282,31 +282,37 @@ impl Vm {
                             call_span: span,
                         });
                         self.pc = (start as usize).overflowing_sub(1).0;
+                        true
                     }
-                    Function::Primitive(Primitive::Op1(op1)) => {
-                        let val = self.stack.last_mut().unwrap();
-                        let env = Env { assembly, span: 0 };
-                        val.op1(op1, &env)?;
+                    Function::Primitive(prim) => {
+                        match prim {
+                            Primitive::Op1(op1) => {
+                                let val = self.stack.last_mut().unwrap();
+                                let env = Env { assembly, span: 0 };
+                                val.op1(op1, &env)?;
+                            }
+                            Primitive::Op2(op2) => {
+                                let (left, right) = {
+                                    let mut iter = self.stack.iter_mut().rev();
+                                    let right = iter.next().unwrap();
+                                    let left = iter.next().unwrap();
+                                    (left, right)
+                                };
+                                swap(left, right);
+                                let env = Env { assembly, span };
+                                left.op2(right, op2, &env)?;
+                                self.stack.pop();
+                            }
+                            Primitive::HigherOp(hop) => {
+                                let env = Env { assembly, span };
+                                hop.run(self, &env)?;
+                            }
+                        }
+                        false
                     }
-                    Function::Primitive(Primitive::Op2(op2)) => {
-                        let (left, right) = {
-                            let mut iter = self.stack.iter_mut().rev();
-                            let right = iter.next().unwrap();
-                            let left = iter.next().unwrap();
-                            (left, right)
-                        };
-                        swap(left, right);
-                        let env = Env { assembly, span };
-                        left.op2(right, op2, &env)?;
-                        self.stack.pop();
-                    }
-                    Function::Primitive(Primitive::HigherOp(hop)) => {
-                        let env = Env { assembly, span };
-                        hop.run(self, &env)?;
-                    }
-                }
+                };
                 self.just_called = Some(function);
-                Ok(true)
+                Ok(call_stated)
             }
             Ordering::Greater => {
                 let message = format!(

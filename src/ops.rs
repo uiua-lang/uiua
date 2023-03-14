@@ -171,6 +171,7 @@ pub enum Op2 {
     Filter,
     Take,
     Drop,
+    Rotate,
 }
 
 impl fmt::Display for Op2 {
@@ -199,6 +200,7 @@ impl fmt::Display for Op2 {
             Op2::Filter => write!(f, "filter"),
             Op2::Take => write!(f, "take"),
             Op2::Drop => write!(f, "drop"),
+            Op2::Rotate => write!(f, "rotate"),
         }
     }
 }
@@ -229,6 +231,7 @@ impl Value {
             Op2::Filter => self.replicate(other, env)?,
             Op2::Take => self.take(other, env)?,
             Op2::Drop => self.drop(other, env)?,
+            Op2::Rotate => self.rotate(other, env)?,
         }
         Ok(())
     }

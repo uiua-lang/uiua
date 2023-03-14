@@ -301,6 +301,44 @@ impl Value {
             }
         })
     }
+    pub fn rotate(&mut self, target: &mut Self, env: &Env) -> RuntimeResult {
+        swap(self, target);
+        let index = target.as_index(env, "Index must be a list of integers")?;
+        if index.is_empty() || index.iter().all(|i| *i == 0) {
+            return Ok(());
+        }
+        if !self.is_array() || self.array().shape() == [0] {
+            return Ok(());
+        }
+        self.array_mut().data_mut(
+            |shape, data| rotate(&index, shape, data),
+            |shape, data| rotate(&index, shape, data),
+            |shape, data| rotate(&index, shape, data),
+        );
+        Ok(())
+    }
+}
+
+fn rotate<T: Clone>(index: &[isize], shape: &[usize], data: &mut [T]) {
+    let cell_count = shape[0];
+    if cell_count == 0 {
+        return;
+    }
+    let cell_size = data.len() / cell_count;
+    let offset = index[0];
+    let mid = (cell_count as isize + offset).rem_euclid(cell_count as isize) as usize;
+    let (left, right) = data.split_at_mut(mid * cell_size);
+    left.reverse();
+    right.reverse();
+    data.reverse();
+    let index = &index[1..];
+    let shape = &shape[1..];
+    if index.is_empty() || shape.is_empty() {
+        return;
+    }
+    for cell in data.chunks_mut(cell_size) {
+        rotate(index, shape, cell);
+    }
 }
 
 fn take_array(index: &[isize], array: Array, env: &Env) -> RuntimeResult<Array> {

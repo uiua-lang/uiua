@@ -225,7 +225,7 @@ pub mod atan2 {
 pub mod pow {
     use super::*;
     pub fn num_num(a: &f64, b: &f64) -> f64 {
-        a.powf(*b)
+        b.powf(*a)
     }
     pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot get the power of {a} to {b}"))

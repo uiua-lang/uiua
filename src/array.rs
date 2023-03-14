@@ -626,6 +626,26 @@ impl fmt::Display for Array {
     }
 }
 
+impl From<ArrayType> for Array {
+    fn from(ty: ArrayType) -> Self {
+        Self {
+            shape: vec![],
+            ty,
+            data: match ty {
+                ArrayType::Num => Data {
+                    numbers: ManuallyDrop::new(vec![]),
+                },
+                ArrayType::Char => Data {
+                    chars: ManuallyDrop::new(vec![]),
+                },
+                ArrayType::Value => Data {
+                    values: ManuallyDrop::new(vec![]),
+                },
+            },
+        }
+    }
+}
+
 impl From<f64> for Array {
     fn from(n: f64) -> Self {
         Self {

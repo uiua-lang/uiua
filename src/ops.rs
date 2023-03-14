@@ -8,7 +8,6 @@ use enum_iterator::Sequence;
 
 use crate::{
     array::Array,
-    function::{Function, Primitive},
     grid_fmt::GridFmt,
     value::*,
     vm::{Env, Vm},
@@ -146,19 +145,6 @@ impl Value {
     }
 }
 
-impl Op1 {
-    pub fn inverse(&self) -> Option<Op1> {
-        Some(match self {
-            Op1::Id | Op1::Not | Op1::Neg | Op1::Reverse => *self,
-            Op1::Sin => Op1::Asin,
-            Op1::Cos => Op1::Acos,
-            Op1::Asin => Op1::Sin,
-            Op1::Acos => Op1::Cos,
-            _ => return None,
-        })
-    }
-}
-
 /// 2-parameter built-in operations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
 pub enum Op2 {
@@ -265,7 +251,7 @@ pub enum HigherOp {
     Each,
     Cells,
     Table,
-    Undo1,
+    Scan,
 }
 
 impl fmt::Display for HigherOp {
@@ -286,7 +272,7 @@ impl fmt::Display for HigherOp {
             HigherOp::Each => write!(f, "each"),
             HigherOp::Cells => write!(f, "cells"),
             HigherOp::Table => write!(f, "table"),
-            HigherOp::Undo1 => write!(f, "undo1"),
+            HigherOp::Scan => write!(f, "scan"),
         }
     }
 }
@@ -309,7 +295,7 @@ impl HigherOp {
             HigherOp::Fold => 3,
             HigherOp::Reduce => 2,
             HigherOp::Table => 3,
-            HigherOp::Undo1 => 2,
+            HigherOp::Scan => 2,
         }
     }
     pub fn run(&self, vm: &mut Vm, env: &Env) -> RuntimeResult {
@@ -582,25 +568,32 @@ impl HigherOp {
                 }
                 vm.push(Array::from(table).normalized(1));
             }
-            HigherOp::Undo1 => {
+            HigherOp::Scan => {
                 let f = vm.pop();
-                let mut x = vm.pop();
-                match f.raw_ty() {
-                    RawType::Function => {
-                        match f.function() {
-                            Function::Primitive(Primitive::Op1(op1)) => {
-                                if let Some(inverse) = op1.inverse() {
-                                    x.op1(inverse, env)?;
-                                    vm.push(x);
-                                    return Ok(());
-                                }
-                            }
-                            _ => {}
-                        }
-                        return Err(env.error(format!("{} cannot be undone", f.function())));
-                    }
-                    _ => return Err(env.error("Only functions can be undone")),
+                let xs = vm.pop();
+                if !xs.is_array() {
+                    vm.push(xs);
+                    return Ok(());
                 }
+                let arr = xs.into_array();
+                let ty = arr.ty();
+                let len = arr.len();
+                let mut cells = arr.into_values().into_iter();
+                let Some(mut acc) = cells.next() else {
+                    vm.push(Array::from(ty));
+                    return Ok(())
+                };
+                let mut scanned = Vec::with_capacity(len);
+                scanned.push(acc.clone());
+                for cell in cells {
+                    vm.push(cell);
+                    vm.push(acc.clone());
+                    vm.push(f.clone());
+                    vm.call(2, env.assembly, 0)?;
+                    acc = vm.pop();
+                    scanned.push(acc.clone());
+                }
+                vm.push(Array::from(scanned).normalized(1));
             }
         }
         Ok(())

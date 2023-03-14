@@ -487,8 +487,6 @@ impl Parser {
             })
         } else if let Some(items) = self.try_surrounded_list(BRACKETS, Self::try_expr)? {
             items.map(Expr::Array)
-        } else if let Some(items) = self.try_surrounded_list(CURLIES, Self::try_expr)? {
-            items.map(Expr::List)
         } else if let Some(func) = self.try_func()? {
             func.map(Box::new).map(Expr::Func)
         } else {

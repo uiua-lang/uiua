@@ -93,7 +93,6 @@ pub enum Expr {
     FormatString(Vec<String>),
     Ident(Ident),
     Placeholder,
-    List(Vec<Sp<Expr>>),
     Array(Vec<Sp<Expr>>),
     Strand(Vec<Sp<Expr>>),
     Parened(Box<Sp<Expr>>),
@@ -112,7 +111,6 @@ impl fmt::Debug for Expr {
             Expr::FormatString(parts) => write!(f, "${parts:?}"),
             Expr::Ident(ident) => write!(f, "ident({ident})"),
             Expr::Placeholder => write!(f, "_"),
-            Expr::List(list) => write!(f, "list({list:?})"),
             Expr::Array(array) => write!(f, "array({array:?})"),
             Expr::Strand(items) => write!(f, "strand({items:?})"),
             Expr::Parened(expr) => {

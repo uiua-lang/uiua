@@ -265,17 +265,17 @@ impl Parser {
     }
 }
 
-static BIN_OPS: &[(Simple, Op2)] = &[
-    (Equal, Op2::Eq),
-    (NotEqual, Op2::Ne),
-    (Less, Op2::Lt),
-    (LessEqual, Op2::Le),
-    (Greater, Op2::Gt),
-    (GreaterEqual, Op2::Ge),
-    (Plus, Op2::Add),
-    (Minus, Op2::Sub),
-    (Star, Op2::Mul),
-    (Percent, Op2::Div),
+static BIN_OPS: &[(Simple, Primitive)] = &[
+    (Equal, Primitive::Op2(Op2::Eq)),
+    (NotEqual, Primitive::Op2(Op2::Ne)),
+    (Less, Primitive::Op2(Op2::Lt)),
+    (LessEqual, Primitive::Op2(Op2::Le)),
+    (Greater, Primitive::Op2(Op2::Gt)),
+    (GreaterEqual, Primitive::Op2(Op2::Ge)),
+    (Plus, Primitive::Op2(Op2::Add)),
+    (Minus, Primitive::Op2(Op2::Sub)),
+    (Star, Primitive::Op2(Op2::Mul)),
+    (Percent, Primitive::Op2(Op2::Div)),
 ];
 
 impl Parser {
@@ -340,9 +340,9 @@ impl Parser {
         }))
     }
     fn try_op(&mut self) -> ParseResult<Option<Sp<Primitive>>> {
-        for (simple, op) in BIN_OPS {
+        for (simple, prim) in BIN_OPS {
             if let Some(span) = self.try_exact(*simple) {
-                return Ok(Some(span.sp(Primitive::Op2(*op))));
+                return Ok(Some(span.sp(*prim)));
             }
         }
         Ok(None)

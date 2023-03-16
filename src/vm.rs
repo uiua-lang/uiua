@@ -153,7 +153,7 @@ impl Vm {
                     stack.push(stack[*n].clone())
                 }
                 &Instr::Call(span) => {
-                    self.call_impl(assembly, span)?;
+                    self.call(assembly, span)?;
                 }
                 Instr::Return => {
                     #[cfg(feature = "profile")]
@@ -181,16 +181,17 @@ impl Vm {
         self.pc -= 1;
         Ok(())
     }
-    fn call_impl(&mut self, assembly: &Assembly, span: usize) -> RuntimeResult<bool> {
+    fn call(&mut self, assembly: &Assembly, span: usize) -> RuntimeResult<bool> {
         #[cfg(feature = "profile")]
         puffin::profile_scope!("call");
         let value = self.stack.pop().unwrap();
-        let function = if let RawType::Function = value.raw_ty() {
-            value.function()
-        } else {
-            self.stack.pop();
-            self.stack.push(value);
-            return Ok(false);
+        let function = match value.raw_ty() {
+            RawType::Function => value.function(),
+            _ => {
+                self.stack.pop();
+                self.stack.push(value);
+                return Ok(false);
+            }
         };
         // Call
         let call_started = match function {
@@ -257,7 +258,7 @@ impl<'a> CallEnv<'a> {
     }
     pub fn call(&mut self) -> RuntimeResult {
         let return_depth = self.vm.call_stack.len();
-        let call_started = self.vm.call_impl(self.assembly, self.span)?;
+        let call_started = self.vm.call(self.assembly, self.span)?;
         if call_started {
             self.vm.pc = self.vm.pc.overflowing_add(1).0;
             self.vm

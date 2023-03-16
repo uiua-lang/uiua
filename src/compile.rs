@@ -313,9 +313,7 @@ impl Compiler {
         }
     }
     fn r#let(&mut self, binding: Let) -> CompileResult {
-        for word in binding.words {
-            self.word(word)?;
-        }
+        self.words(binding.words)?;
         self.bind_local(binding.name.value);
         Ok(())
     }
@@ -327,9 +325,7 @@ impl Compiler {
         let global_instrs = self.global_instrs.clone();
         // Compile the words
         let words_span = r#const.words.last().unwrap().span.clone();
-        for word in r#const.words {
-            self.word(word)?;
-        }
+        self.words(r#const.words)?;
         self.assembly
             .add_non_function_instrs(take(&mut self.global_instrs));
         // Evaluate the words
@@ -351,11 +347,11 @@ impl Compiler {
     }
     fn words(&mut self, words: Vec<Sp<Word>>) -> CompileResult {
         for word in words.into_iter().rev() {
-            self.word(word)?;
+            self.word(word, true)?;
         }
         Ok(())
     }
-    fn word(&mut self, word: Sp<Word>) -> CompileResult {
+    fn word(&mut self, word: Sp<Word>, call: bool) -> CompileResult {
         match word.value {
             Word::Real(s) => {
                 let f: f64 = match s.parse() {
@@ -369,15 +365,15 @@ impl Compiler {
             }
             Word::Char(c) => self.push_instr(Instr::Push(c.into())),
             Word::String(s) => self.push_instr(Instr::Push(s.into())),
-            Word::Ident(ident) => self.ident(ident, word.span)?,
+            Word::Ident(ident) => self.ident(ident, word.span, call)?,
             Word::Array(items) => self.list(Instr::Array, items)?,
             Word::Strand(items) => self.list(Instr::List, items)?,
             Word::Func(func) => self.func(func)?,
-            Word::Primitive(prim) => self.primitive(prim, word.span),
+            Word::Primitive(prim) => self.primitive(prim, word.span, call),
         }
         Ok(())
     }
-    fn ident(&mut self, ident: Ident, span: Span) -> CompileResult {
+    fn ident(&mut self, ident: Ident, span: Span, call: bool) -> CompileResult {
         let bind = self.scopes.iter().rev().find_map(|scope| {
             scope
                 .bindings
@@ -416,8 +412,10 @@ impl Compiler {
             Binding::Constant(index) => self.push_instr(Instr::Constant(index)),
             Binding::Error => self.push_instr(Instr::Push(Value::default())),
         }
-        let span = self.push_call_span(span);
-        self.push_instr(Instr::Call(span));
+        if call {
+            let span = self.push_call_span(span);
+            self.push_instr(Instr::Call(span));
+        }
         Ok(())
     }
     fn function_binding(&mut self, id: FunctionId) {
@@ -436,7 +434,7 @@ impl Compiler {
     fn list(&mut self, make: fn(usize) -> Instr, items: Vec<Sp<Word>>) -> CompileResult {
         let len = items.len();
         for item in items {
-            self.word(item)?;
+            self.word(item, false)?;
         }
         self.push_instr(make(len));
         Ok(())
@@ -476,9 +474,11 @@ impl Compiler {
         self.push_instr(Instr::Push(function.into()));
         Ok(())
     }
-    fn primitive(&mut self, prim: Primitive, span: Span) {
-        let span = self.push_call_span(span);
+    fn primitive(&mut self, prim: Primitive, span: Span, call: bool) {
         self.push_instr(Instr::Push(Function::Primitive(prim).into()));
-        self.push_instr(Instr::Call(span));
+        if call {
+            let span = self.push_call_span(span);
+            self.push_instr(Instr::Call(span));
+        }
     }
 }

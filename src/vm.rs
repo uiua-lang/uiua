@@ -181,26 +181,6 @@ impl Vm {
         self.pc -= 1;
         Ok(())
     }
-    pub fn push(&mut self, value: impl Into<Value>) {
-        self.stack.push(value.into());
-    }
-    #[track_caller]
-    pub fn pop(&mut self) -> Value {
-        self.stack.pop().expect("nothing to pop")
-    }
-    #[track_caller]
-    pub fn top_mut(&mut self) -> &mut Value {
-        self.stack.last_mut().expect("stack is empty")
-    }
-    pub fn call(&mut self, assembly: &Assembly, span: usize) -> RuntimeResult {
-        let return_depth = self.call_stack.len();
-        let call_started = self.call_impl(assembly, span)?;
-        if call_started {
-            self.pc = self.pc.overflowing_add(1).0;
-            self.run_assembly_inner(assembly, Some(return_depth))?;
-        }
-        Ok(())
-    }
     fn call_impl(&mut self, assembly: &Assembly, span: usize) -> RuntimeResult<bool> {
         #[cfg(feature = "profile")]
         puffin::profile_scope!("call");
@@ -226,17 +206,26 @@ impl Vm {
             }
             Function::Primitive(prim) => {
                 let pc = self.pc;
+                let mut env = CallEnv {
+                    vm: self,
+                    assembly,
+                    span,
+                };
                 match prim {
                     Primitive::Op1(op1) => {
-                        let val = self.stack.last_mut().unwrap();
+                        let val = env.top_mut()?;
                         let env = Env { assembly, span: 0 };
                         val.op1(op1, &env)?;
                     }
                     Primitive::Op2(op2) => {
                         let (left, right) = {
                             let mut iter = self.stack.iter_mut().rev();
-                            let right = iter.next().unwrap();
-                            let left = iter.next().unwrap();
+                            let right = iter
+                                .next()
+                                .ok_or_else(|| assembly.error(span, "stack is empty"))?;
+                            let left = iter
+                                .next()
+                                .ok_or_else(|| assembly.error(span, "stack is empty"))?;
                             (left, right)
                         };
                         swap(left, right);
@@ -244,10 +233,7 @@ impl Vm {
                         left.op2(right, op2, &env)?;
                         self.stack.pop();
                     }
-                    Primitive::HigherOp(hop) => {
-                        let env = Env { assembly, span };
-                        hop.run(self, &env)?;
-                    }
+                    Primitive::HigherOp(hop) => hop.run(&mut env)?,
                 }
                 self.pc = pc;
                 false
@@ -255,5 +241,45 @@ impl Vm {
         };
         self.just_called = Some(function);
         Ok(call_started)
+    }
+}
+
+pub(crate) struct CallEnv<'a> {
+    pub vm: &'a mut Vm,
+    pub assembly: &'a Assembly,
+    pub span: usize,
+}
+
+impl<'a> CallEnv<'a> {
+    pub fn push(&mut self, value: impl Into<Value>) {
+        self.vm.stack.push(value.into());
+    }
+    #[track_caller]
+    pub fn pop(&mut self) -> RuntimeResult<Value> {
+        self.vm
+            .stack
+            .pop()
+            .ok_or_else(|| self.error("stack is empty"))
+    }
+    #[track_caller]
+    pub fn top_mut(&mut self) -> RuntimeResult<&mut Value> {
+        if let Some(value) = self.vm.stack.last_mut() {
+            Ok(value)
+        } else {
+            Err(self.assembly.spans[self.span].error("stack is empty"))
+        }
+    }
+    pub fn call(&mut self) -> RuntimeResult {
+        let return_depth = self.vm.call_stack.len();
+        let call_started = self.vm.call_impl(self.assembly, self.span)?;
+        if call_started {
+            self.vm.pc = self.vm.pc.overflowing_add(1).0;
+            self.vm
+                .run_assembly_inner(self.assembly, Some(return_depth))?;
+        }
+        Ok(())
+    }
+    pub fn error(&mut self, msg: impl Into<String>) -> RuntimeError {
+        self.assembly.error(self.span, msg.into())
     }
 }

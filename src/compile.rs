@@ -10,7 +10,7 @@ use crate::{
     parse::{parse, ParseError},
     value::Value,
     vm::{dprintln, Instr, Vm},
-    Ident, UiuaError, UiuaResult,
+    Ident, RuntimeError, UiuaError, UiuaResult,
 };
 
 pub struct Assembly {
@@ -65,6 +65,9 @@ impl Assembly {
     fn truncate(&mut self, len: usize) {
         self.instrs.truncate(len);
         self.start = len;
+    }
+    pub(crate) fn error(&self, span: usize, msg: impl Into<String>) -> RuntimeError {
+        self.spans[span].error(msg.into())
     }
 }
 

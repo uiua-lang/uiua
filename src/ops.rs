@@ -10,7 +10,7 @@ use crate::{
     array::Array,
     grid_fmt::GridFmt,
     value::*,
-    vm::{Env, Vm},
+    vm::{CallEnv, Env},
     RuntimeResult,
 };
 
@@ -239,18 +239,7 @@ impl Value {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
 pub enum HigherOp {
-    Call,
-    Pipe,
-    BackPipe,
-    Compose,
-    Slf,
-    DualSelf,
-    BlackBird,
-    Flip,
-    LeftLeaf,
-    LeftTree,
-    RightLeaf,
-    RightTree,
+    Fork,
     Fold,
     Reduce,
     Each,
@@ -262,18 +251,7 @@ pub enum HigherOp {
 impl fmt::Display for HigherOp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            HigherOp::Call => write!(f, "call"),
-            HigherOp::Pipe => write!(f, "pipe"),
-            HigherOp::BackPipe => write!(f, "backpipe"),
-            HigherOp::Compose => write!(f, "compose"),
-            HigherOp::BlackBird => write!(f, "blackbird"),
-            HigherOp::Slf => write!(f, "self"),
-            HigherOp::DualSelf => write!(f, "dual_self"),
-            HigherOp::Flip => write!(f, "flip"),
-            HigherOp::LeftLeaf => write!(f, "left_leaf"),
-            HigherOp::LeftTree => write!(f, "left_tree"),
-            HigherOp::RightLeaf => write!(f, "right_leaf"),
-            HigherOp::RightTree => write!(f, "right_tree"),
+            HigherOp::Fork => write!(f, "fork"),
             HigherOp::Fold => write!(f, "fold"),
             HigherOp::Reduce => write!(f, "reduce"),
             HigherOp::Each => write!(f, "each"),
@@ -285,175 +263,43 @@ impl fmt::Display for HigherOp {
 }
 
 impl HigherOp {
-    pub fn run(&self, vm: &mut Vm, env: &Env) -> RuntimeResult {
+    pub(crate) fn run(&self, env: &mut CallEnv) -> RuntimeResult {
         match self {
-            HigherOp::Call => {
-                vm.call(env.assembly, 0)?;
-            }
-            HigherOp::Pipe => {
-                let x = vm.pop();
-                let f = vm.pop();
-                vm.push(x);
-                vm.push(f);
-                vm.call(env.assembly, 0)?;
-            }
-            HigherOp::BackPipe => {
-                let f = vm.pop();
-                let x = vm.pop();
-                vm.push(x);
-                vm.push(f);
-                vm.call(env.assembly, 0)?;
-            }
-            HigherOp::Compose => {
-                // x g f
-                let f = vm.pop(); // x g
-                vm.call(env.assembly, 0)?; // gx
-                vm.push(f); // gx f
-                vm.call(env.assembly, 0)?; // f(gx)
-            }
-            HigherOp::Slf => {
-                let f = vm.pop();
-                let x = vm.pop();
-                vm.push(x.clone());
-                vm.push(x);
-                vm.push(f);
-                vm.call(env.assembly, 0)?;
-            }
-            HigherOp::DualSelf => {
-                let f = vm.pop();
-                let a = vm.pop();
-                let b = vm.pop();
-                vm.push(b.clone());
-                vm.push(a.clone());
-                vm.push(b);
-                vm.push(a);
-                vm.push(f);
-                vm.call(env.assembly, 0)?;
-            }
-            HigherOp::BlackBird => {
-                // y x g f
-                let f = vm.pop(); // y x g
-                vm.call(env.assembly, 0)?; // gxy
-                vm.push(f); // gxy f
-                vm.call(env.assembly, 0)?; // f(gxy)
-            }
-            HigherOp::Flip => {
-                let f = vm.pop();
-                let a = vm.pop();
-                let b = vm.pop();
-                vm.push(a);
-                vm.push(b);
-                vm.push(f);
-                vm.call(env.assembly, 0)?;
-            }
-            HigherOp::LeftLeaf => {
-                /*
-                      f
-                     / \
-                    g   b
-                    |
-                    a
-                */
-                let g = vm.pop();
-                let f = vm.pop();
-                let a = vm.pop();
-                let b = vm.pop();
-                vm.push(a);
-                vm.push(g);
-                vm.call(env.assembly, 0)?;
-                let ga = vm.pop();
-                vm.push(b);
-                vm.push(ga);
-                vm.push(f);
-                vm.call(env.assembly, 0)?;
-            }
-            HigherOp::RightLeaf => {
-                /*
-                      f
-                     / \
-                    a   g
-                        |
-                        b
-                */
-                let f = vm.pop();
-                let g = vm.pop();
-                let a = vm.pop();
-                let b = vm.pop();
-                vm.push(b);
-                vm.push(g);
-                vm.call(env.assembly, 0)?;
-                vm.push(a);
-                vm.push(f);
-                vm.call(env.assembly, 0)?;
-            }
-            HigherOp::LeftTree => {
-                /*
-                      f
-                     / \
-                    g   c
-                   / \
-                  a   b
-                */
-                let g = vm.pop();
-                let f = vm.pop();
-                let a = vm.pop();
-                let b = vm.pop();
-                let c = vm.pop();
-                vm.push(b);
-                vm.push(a);
-                vm.push(g);
-                vm.call(env.assembly, 0)?;
-                let gab = vm.pop();
-                vm.push(c);
-                vm.push(gab);
-                vm.push(f);
-                vm.call(env.assembly, 0)?;
-            }
-            HigherOp::RightTree => {
-                /*
-                      f
-                     / \
-                    a   g
-                       / \
-                      b   c
-                */
-                let f = vm.pop();
-                let g = vm.pop();
-                let a = vm.pop();
-                let b = vm.pop();
-                let c = vm.pop();
-                vm.push(c);
-                vm.push(b);
-                vm.push(g);
-                vm.call(env.assembly, 0)?;
-                vm.push(a);
-                vm.push(f);
-                vm.call(env.assembly, 0)?;
+            HigherOp::Fork => {
+                let f = env.pop()?;
+                let g = env.pop()?;
+                let x = env.pop()?;
+                env.push(x.clone());
+                env.push(g);
+                env.call()?;
+                env.push(x);
+                env.push(f);
+                env.call()?;
             }
             HigherOp::Fold => {
-                let f = vm.pop();
-                let mut acc = vm.pop();
-                let xs = vm.pop();
+                let f = env.pop()?;
+                let mut acc = env.pop()?;
+                let xs = env.pop()?;
                 if !xs.is_array() {
-                    vm.push(acc);
-                    vm.push(xs);
-                    vm.push(f);
-                    return vm.call(env.assembly, 0);
+                    env.push(acc);
+                    env.push(xs);
+                    env.push(f);
+                    return env.call();
                 }
                 for cell in xs.into_array().into_values() {
-                    vm.push(acc);
-                    vm.push(cell);
-                    vm.push(f.clone());
-                    vm.call(env.assembly, 0)?;
-                    acc = vm.pop();
+                    env.push(acc);
+                    env.push(cell);
+                    env.push(f.clone());
+                    env.call()?;
+                    acc = env.pop()?;
                 }
-                vm.push(acc);
+                env.push(acc);
             }
             HigherOp::Reduce => {
-                let f = vm.pop();
-                let xs = vm.pop();
+                let f = env.pop()?;
+                let xs = env.pop()?;
                 if !xs.is_array() {
-                    vm.push(xs);
+                    env.push(xs);
                     return Ok(());
                 }
                 let mut cells = xs.into_array().into_values().into_iter();
@@ -461,59 +307,59 @@ impl HigherOp {
                     return Err(env.error("Cannot reduce empty array"));
                 };
                 for cell in cells {
-                    vm.push(acc);
-                    vm.push(cell);
-                    vm.push(f.clone());
-                    vm.call(env.assembly, 0)?;
-                    acc = vm.pop();
+                    env.push(acc);
+                    env.push(cell);
+                    env.push(f.clone());
+                    env.call()?;
+                    acc = env.pop()?;
                 }
-                vm.push(acc);
+                env.push(acc);
             }
             HigherOp::Each => {
-                let f = vm.pop();
-                let xs = vm.pop();
+                let f = env.pop()?;
+                let xs = env.pop()?;
                 if !xs.is_array() {
-                    vm.push(xs);
-                    vm.push(f);
-                    return vm.call(env.assembly, 0);
+                    env.push(xs);
+                    env.push(f);
+                    return env.call();
                 }
                 let (shape, values) = xs.into_array().into_parts();
                 let mut new_values = Vec::with_capacity(values.len());
                 for val in values {
-                    vm.push(val);
-                    vm.push(f.clone());
-                    vm.call(env.assembly, 0)?;
-                    new_values.push(vm.pop());
+                    env.push(val);
+                    env.push(f.clone());
+                    env.call()?;
+                    new_values.push(env.pop()?);
                 }
-                vm.push(Array::from((shape, new_values)).normalized(0));
+                env.push(Array::from((shape, new_values)).normalized(0));
             }
             HigherOp::Cells => {
-                let f = vm.pop();
-                let xs = vm.pop();
+                let f = env.pop()?;
+                let xs = env.pop()?;
                 if !xs.is_array() {
-                    vm.push(xs);
-                    vm.push(f);
-                    return vm.call(env.assembly, 0);
+                    env.push(xs);
+                    env.push(f);
+                    return env.call();
                 }
                 let array = xs.into_array();
                 let mut cells = Vec::with_capacity(array.len());
                 for cell in array.into_values() {
-                    vm.push(cell);
-                    vm.push(f.clone());
-                    vm.call(env.assembly, 0)?;
-                    cells.push(vm.pop());
+                    env.push(cell);
+                    env.push(f.clone());
+                    env.call()?;
+                    cells.push(env.pop()?);
                 }
-                vm.push(Array::from(cells).normalized(1));
+                env.push(Array::from(cells).normalized(1));
             }
             HigherOp::Table => {
-                let f = vm.pop();
-                let xs = vm.pop();
-                let ys = vm.pop();
+                let f = env.pop()?;
+                let xs = env.pop()?;
+                let ys = env.pop()?;
                 if !xs.is_array() && !ys.is_array() {
-                    vm.push(ys);
-                    vm.push(xs);
-                    vm.push(f);
-                    return vm.call(env.assembly, 0);
+                    env.push(ys);
+                    env.push(xs);
+                    env.push(f);
+                    return env.call();
                 }
                 let a = if xs.is_array() {
                     xs.into_array()
@@ -529,21 +375,21 @@ impl HigherOp {
                 for a in a.into_values() {
                     let mut row = Vec::with_capacity(b.len());
                     for b in b.clone().into_values() {
-                        vm.push(b);
-                        vm.push(a.clone());
-                        vm.push(f.clone());
-                        vm.call(env.assembly, 0)?;
-                        row.push(vm.pop());
+                        env.push(b);
+                        env.push(a.clone());
+                        env.push(f.clone());
+                        env.call()?;
+                        row.push(env.pop()?);
                     }
                     table.push(Value::from(Array::from(row).normalized(1)));
                 }
-                vm.push(Array::from(table).normalized(1));
+                env.push(Array::from(table).normalized(1));
             }
             HigherOp::Scan => {
-                let f = vm.pop();
-                let xs = vm.pop();
+                let f = env.pop()?;
+                let xs = env.pop()?;
                 if !xs.is_array() {
-                    vm.push(xs);
+                    env.push(xs);
                     return Ok(());
                 }
                 let arr = xs.into_array();
@@ -551,20 +397,20 @@ impl HigherOp {
                 let len = arr.len();
                 let mut cells = arr.into_values().into_iter();
                 let Some(mut acc) = cells.next() else {
-                    vm.push(Array::from(ty));
+                    env.push(Array::from(ty));
                     return Ok(())
                 };
                 let mut scanned = Vec::with_capacity(len);
                 scanned.push(acc.clone());
                 for cell in cells {
-                    vm.push(cell);
-                    vm.push(acc.clone());
-                    vm.push(f.clone());
-                    vm.call(env.assembly, 0)?;
-                    acc = vm.pop();
+                    env.push(cell);
+                    env.push(acc.clone());
+                    env.push(f.clone());
+                    env.call()?;
+                    acc = env.pop()?;
                     scanned.push(acc.clone());
                 }
-                vm.push(Array::from(scanned).normalized(1));
+                env.push(Array::from(scanned).normalized(1));
             }
         }
         Ok(())

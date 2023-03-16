@@ -276,7 +276,7 @@ static BIN_OPS: &[(Simple, Primitive)] = &[
     (Minus, Primitive::Op2(Op2::Sub)),
     (Star, Primitive::Op2(Op2::Mul)),
     (Percent, Primitive::Op2(Op2::Div)),
-    (Slash, Primitive::ForkArray1),
+    (Colon, Primitive::ForkArray1),
     (DoubleSlash, Primitive::ForkArray2),
 ];
 

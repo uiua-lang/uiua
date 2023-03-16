@@ -283,6 +283,7 @@ pub enum Simple {
     BackTick,
     Caret,
     Colon,
+    DoubleColon,
     Period,
     Period2,
     Period3,
@@ -328,6 +329,7 @@ impl fmt::Display for Simple {
                 Simple::Caret => "^",
                 Simple::Underscore => "_",
                 Simple::Colon => ":",
+                Simple::DoubleColon => "::",
                 Simple::Period => ".",
                 Simple::Period2 => "..",
                 Simple::Period3 => "...",
@@ -497,7 +499,7 @@ impl Lexer {
                         self.end(Period, start)
                     }
                 }
-                ':' => self.end(Colon, start),
+                ':' => self.switch_next(Colon, [(':', DoubleColon)], start),
                 ',' => self.end(Comma, start),
                 '_' => self.end(Underscore, start),
                 '`' => self.end(BackTick, start),

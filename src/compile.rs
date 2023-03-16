@@ -347,7 +347,7 @@ impl Compiler {
         Ok(())
     }
     fn words(&mut self, words: Vec<Sp<Word>>) -> CompileResult {
-        for word in words {
+        for word in words.into_iter().rev() {
             self.word(word)?;
         }
         Ok(())
@@ -456,9 +456,7 @@ impl Compiler {
         };
         self.push_instr(Instr::Comment(name.clone()));
         // Compile the function's body
-        for item in func.body {
-            self.word(item)?;
-        }
+        self.words(func.body)?;
         self.push_instr(Instr::Comment(format!("end of {name}")));
         self.push_instr(Instr::Return);
         // Pop the function's scope
@@ -470,12 +468,9 @@ impl Compiler {
         self.assembly.add_function_instrs(ipf.instrs);
         self.scope_mut().functions.insert(func.id.clone(), function);
         // Add to the function id map
-        self.assembly.function_ids.insert(function, func.id.clone());
-        // Push the function if necessary
-        if let FunctionId::Anonymous(_) = func.id {
-            // Push the function
-            self.push_instr(Instr::Push(function.into()));
-        }
+        self.assembly.function_ids.insert(function, func.id);
+        // Push the function
+        self.push_instr(Instr::Push(function.into()));
         Ok(())
     }
     fn primitive(&mut self, prim: Primitive, span: Span) {

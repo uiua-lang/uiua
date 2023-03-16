@@ -243,6 +243,8 @@ pub enum Primitive {
     Op1(Op1),
     Op2(Op2),
     Fork,
+    ForkArray1,
+    ForkArray2,
     Fold,
     Reduce,
     Each,
@@ -272,6 +274,8 @@ impl fmt::Display for Primitive {
         match self {
             Primitive::Op1(op) => write!(f, "{op}"),
             Primitive::Op2(op) => write!(f, "{op}"),
+            Primitive::ForkArray1 => write!(f, "fork_array1"),
+            Primitive::ForkArray2 => write!(f, "fork_array2"),
             Primitive::Fork => write!(f, "fork"),
             Primitive::Fold => write!(f, "fold"),
             Primitive::Reduce => write!(f, "reduce"),
@@ -307,6 +311,37 @@ impl Primitive {
                 env.push(x);
                 env.push(f);
                 env.call()?;
+            }
+            Primitive::ForkArray1 => {
+                let fs = env.pop()?;
+                let x = env.pop()?;
+                if !fs.is_array() {
+                    env.push(x);
+                    env.push(fs);
+                    return env.call();
+                }
+                for f in fs.into_array().into_values().into_iter().rev() {
+                    env.push(x.clone());
+                    env.push(f);
+                    env.call()?;
+                }
+            }
+            Primitive::ForkArray2 => {
+                let fs = env.pop()?;
+                let x = env.pop()?;
+                let y = env.pop()?;
+                if !fs.is_array() {
+                    env.push(y);
+                    env.push(x);
+                    env.push(fs);
+                    return env.call();
+                }
+                for f in fs.into_array().into_values().into_iter().rev() {
+                    env.push(y.clone());
+                    env.push(x.clone());
+                    env.push(f);
+                    env.call()?;
+                }
             }
             Primitive::Fold => {
                 let f = env.pop()?;

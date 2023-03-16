@@ -1,11 +1,10 @@
-use std::{fmt, mem::transmute, sync::Arc};
+use std::{fmt, mem::transmute};
 
 use nanbox::{NanBox, NanBoxable};
 
 use crate::{
     lex::Span,
     ops::{HigherOp, Op1, Op2},
-    value::Value,
     Ident,
 };
 
@@ -109,17 +108,8 @@ impl fmt::Display for FunctionId {
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Function {
-    Code { start: u32, params: u8 },
+    Code(u32),
     Primitive(Primitive),
-}
-
-impl Function {
-    pub fn params(&self) -> u8 {
-        match self {
-            Function::Code { params, .. } => *params,
-            Function::Primitive(prim) => prim.params(),
-        }
-    }
 }
 
 impl fmt::Debug for Function {
@@ -131,7 +121,7 @@ impl fmt::Debug for Function {
 impl fmt::Display for Function {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Function::Code { start, params } => write!(f, "fn({} {})", start, params),
+            Function::Code(start) => write!(f, "({start})"),
             Function::Primitive(prim) => write!(f, "{prim}"),
         }
     }
@@ -140,90 +130,23 @@ impl fmt::Display for Function {
 impl NanBoxable for Function {
     unsafe fn from_nan_box(n: NanBox) -> Self {
         let [a, b, c, d, e]: [u8; 5] = NanBoxable::from_nan_box(n);
+        let start = u32::from_le_bytes([b, c, d, e]);
         if a == 0 {
-            Function::Code {
-                start: u32::from_le_bytes([b, c, d, 0]),
-                params: e,
-            }
+            Function::Code(start)
         } else {
             Function::Primitive(transmute(u16::from_le_bytes([b, c])))
         }
     }
     fn into_nan_box(self) -> NanBox {
         match self {
-            Function::Code { start, params } => {
-                let [b, c, d, z] = start.to_le_bytes();
-                debug_assert_eq!(z, 0);
-                NanBoxable::into_nan_box([0, b, c, d, params])
+            Function::Code(start) => {
+                let [b, c, d, e] = start.to_le_bytes();
+                NanBoxable::into_nan_box([0, b, c, d, e])
             }
             Function::Primitive(prim) => {
                 let [b, c]: [u8; 2] = unsafe { transmute(prim) };
                 NanBoxable::into_nan_box([1, b, c, 0, 0])
             }
         }
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Partial {
-    pub(crate) function: Function,
-    pub(crate) args: Arc<[Value]>,
-    pub(crate) span: usize,
-}
-
-impl Partial {
-    pub fn new(function: Function, args: impl IntoIterator<Item = Value>, span: usize) -> Self {
-        Self {
-            function,
-            args: args.into_iter().collect(),
-            span,
-        }
-    }
-}
-
-impl fmt::Debug for Partial {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{self}")
-    }
-}
-
-impl fmt::Display for Partial {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.function {
-            Function::Code { start, .. } => write!(f, "fn({}", start)?,
-            Function::Primitive(prim) => write!(f, "({prim}")?,
-        }
-        for arg in self.args.iter().rev() {
-            if arg.is_array() {
-                let arr = arg.array();
-                match arr.rank() {
-                    0 => write!(f, " {arr}")?,
-                    1 => {
-                        write!(f, " [")?;
-                        for (i, value) in arr.clone().into_values().into_iter().take(3).enumerate()
-                        {
-                            if i > 0 {
-                                write!(f, ", ")?;
-                            }
-                            write!(f, "{value}")?;
-                        }
-                        if arr.len() > 3 {
-                            write!(f, ", ...")?;
-                        }
-                        write!(f, "]")?
-                    }
-                    _ => {
-                        write!(f, " [shape")?;
-                        for dim in arr.shape() {
-                            write!(f, " {dim}")?;
-                        }
-                        write!(f, "]")?
-                    }
-                }
-            } else {
-                write!(f, " {}", arg)?
-            }
-        }
-        write!(f, " /{})", self.function.params())
     }
 }

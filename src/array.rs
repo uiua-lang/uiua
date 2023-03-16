@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     algorithm::*,
-    function::{Function, Partial},
+    function::Function,
     pervade::{self, *},
     value::Value,
     vm::Env,
@@ -701,18 +701,6 @@ impl From<Function> for Array {
             ty: ArrayType::Value,
             data: Data {
                 values: ManuallyDrop::new(vec![Value::from(f)]),
-            },
-        }
-    }
-}
-
-impl From<Partial> for Array {
-    fn from(p: Partial) -> Self {
-        Self {
-            shape: vec![],
-            ty: ArrayType::Value,
-            data: Data {
-                values: ManuallyDrop::new(vec![Value::from(p)]),
             },
         }
     }

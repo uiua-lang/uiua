@@ -2,8 +2,7 @@ use std::{iter::once, mem::take};
 
 use crate::{
     array::{Array, ArrayType},
-    function::{Function, Partial, Primitive},
-    ops::HigherOp,
+    function::Function,
     value::{RawType, Value},
 };
 
@@ -43,7 +42,6 @@ impl GridFmt for Value {
             RawType::Num => self.number().fmt_grid(),
             RawType::Char => self.char().fmt_grid(),
             RawType::Function => self.function().fmt_grid(),
-            RawType::Partial => self.partial().fmt_grid(),
             RawType::Array => self.array().fmt_grid(),
         }
     }
@@ -204,180 +202,12 @@ fn pad_grid_min(width: usize, height: usize, grid: &mut Grid) {
     }
 }
 
-fn pad_grid_max(width: usize, height: usize, grid: &mut Grid) {
-    for row in grid.iter_mut() {
-        row.resize(width, ' ');
-    }
-    grid.resize(height, vec![' '; width]);
-}
-
 impl GridFmt for Function {
     fn fmt_grid(&self) -> Grid {
         vec![self.to_string().chars().collect()]
     }
 }
 
-#[allow(clippy::needless_range_loop)]
-fn draw_grid_line(ax: usize, ay: usize, bx: usize, by: usize, grid: &mut Grid) {
-    let dx = bx as f64 - ax as f64;
-    let dy = by as f64 - ay as f64;
-    let slope = dy / dx;
-    let fill_char = if slope > 0.0 {
-        if slope < 0.5 {
-            '⟍'
-        } else if slope < 1.5 {
-            '╲'
-        } else {
-            '│'
-        }
-    } else if slope > -0.5 {
-        '⟋'
-    } else if slope > -1.5 {
-        '╱'
-    } else {
-        '│'
-    };
-    let min_x = ax.min(bx);
-    let max_x = ax.max(bx);
-    let min_y = ay.min(by);
-    let max_y = ay.max(by);
-    for y in min_y..=max_y {
-        let x = ((y as f64 - ay as f64) / slope + ax as f64).round() as usize;
-        if x >= min_x && x <= max_x {
-            grid[y][x] = fill_char;
-        }
-    }
-}
-
 fn empty_grid() -> Grid {
     vec![vec![' ']]
-}
-
-impl GridFmt for Partial {
-    fn fmt_grid(&self) -> Grid {
-        let args: Vec<_> = self.args.iter().collect();
-        let mut arg_grids: Vec<Grid> = args.iter().map(|arg| arg.fmt_grid()).collect();
-        let mut grid = self.function.fmt_grid();
-        let tree = if let Function::Primitive(Primitive::HigherOp(hop)) = self.function {
-            match hop {
-                HigherOp::Compose => {
-                    if let Some(f) = arg_grids.pop() {
-                        grid = f;
-                        if arg_grids.is_empty() {
-                            arg_grids.push(empty_grid());
-                        }
-                    }
-                }
-                HigherOp::BlackBird => {
-                    if let Some(f) = arg_grids.pop() {
-                        grid = f;
-                        if let Some(g) = arg_grids.pop() {
-                            if let Some(a) = arg_grids.pop() {
-                                arg_grids.push(layout_function_grid(
-                                    g,
-                                    vec![empty_grid(), a],
-                                    true,
-                                ));
-                            } else {
-                                arg_grids.push(empty_grid());
-                            };
-                        } else {
-                            arg_grids.push(empty_grid());
-                        }
-                    }
-                }
-                HigherOp::Flip => {
-                    if let Some(f) = arg_grids.pop() {
-                        grid = f;
-                        if let Some(a) = arg_grids.pop() {
-                            arg_grids.push(a);
-                            arg_grids.push(empty_grid());
-                        } else {
-                            arg_grids = vec![empty_grid(); 2];
-                        }
-                    }
-                }
-                HigherOp::LeftLeaf => {
-                    if arg_grids.len() >= 2 {
-                        let g = arg_grids.pop().unwrap();
-                        let f = arg_grids.pop().unwrap();
-                        grid = f;
-                        arg_grids.push(empty_grid());
-                        arg_grids.push(g);
-                    }
-                }
-                HigherOp::RightLeaf => {
-                    if arg_grids.len() >= 2 {
-                        let f = arg_grids.pop().unwrap();
-                        let g = arg_grids.pop().unwrap();
-                        grid = f;
-                        arg_grids.push(g);
-                        arg_grids.push(empty_grid());
-                    }
-                }
-                _ => {}
-            }
-            true
-        } else {
-            false
-        };
-        layout_function_grid(grid, arg_grids, tree)
-    }
-}
-
-fn inlay_grid(left: usize, top: usize, parent: &mut Grid, child: &Grid) {
-    for (r, row) in child.iter().enumerate() {
-        for (c, cell) in row.iter().enumerate() {
-            parent[top + r][left + c] = *cell;
-        }
-    }
-}
-
-fn layout_function_grid(mut grid: Grid, mut arg_grids: Vec<Grid>, tree: bool) -> Grid {
-    arg_grids.reverse();
-    let max_arg_height = arg_grids.iter().map(|grid| grid.len()).max().unwrap();
-    for grid in &mut arg_grids {
-        pad_grid_max(grid[0].len(), max_arg_height, grid);
-    }
-    let total_args_width =
-        arg_grids.iter().map(|grid| grid[0].len()).sum::<usize>() + 2 * (arg_grids.len() - 1);
-    let mut attach_xs = Vec::with_capacity(arg_grids.len());
-    let mut curr_x = 0;
-    for grid in &arg_grids {
-        attach_xs.push(curr_x + grid[0].len() / 2);
-        curr_x += grid[0].len() + 2;
-    }
-    let attach_range = attach_xs.last().unwrap() - attach_xs[0];
-    if tree {
-        let parent_width = grid[0].len();
-        pad_grid_center(
-            grid[0].len().max(total_args_width),
-            grid.len(),
-            false,
-            &mut grid,
-        );
-        let center_x = grid[0].len() as f32 / 2.0;
-        let parent_bottom = grid.len();
-        let args_y = parent_bottom + (attach_range / 4).max(1);
-        pad_grid_max(grid[0].len(), args_y + max_arg_height, &mut grid);
-        let mut curr_x = 0;
-        let arg_count = arg_grids.len();
-        for (i, (arg_grid, attach_x)) in arg_grids.into_iter().zip(attach_xs).enumerate() {
-            let ax = (center_x - parent_width as f32 / 2.0
-                + parent_width as f32 * (i as f32 + 0.4) / arg_count as f32)
-                .round() as usize;
-            draw_grid_line(ax, parent_bottom, attach_x, args_y, &mut grid);
-            inlay_grid(curr_x, args_y, &mut grid, &arg_grid);
-            curr_x += arg_grid[0].len() + 2;
-        }
-    } else {
-        pad_grid_center(grid[0].len(), max_arg_height, false, &mut grid);
-        for (r, row) in grid.iter_mut().enumerate() {
-            for arg_grid in &mut arg_grids {
-                row.push(' ');
-                row.extend(arg_grid[r].iter().copied());
-            }
-        }
-    }
-    grid
 }

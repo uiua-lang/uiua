@@ -1,10 +1,9 @@
-use std::{cmp::Ordering, fmt, mem::swap};
+use std::{fmt, mem::swap};
 
 use crate::{
     array::Array,
     compile::Assembly,
-    function::{Function, FunctionId, Partial, Primitive},
-    lex::Span,
+    function::{Function, Primitive},
     value::{RawType, Value},
     RuntimeError, RuntimeResult, TraceFrame, UiuaError, UiuaResult,
 };
@@ -31,13 +30,8 @@ pub(crate) enum Instr {
     CopyRel(usize),
     /// Copy the nth value from the bottom of the stack
     CopyAbs(usize),
-    Swap,
-    Rotate(usize),
-    Call(usize, usize),
+    Call(usize),
     Return,
-    DestructureList(usize, Box<Span>),
-    // These instructions don't exist after compilation
-    PushUnresolvedFunction(Box<FunctionId>),
 }
 
 fn _keep_instr_small(_: std::convert::Infallible) {
@@ -154,20 +148,8 @@ impl Vm {
                     puffin::profile_scope!("copy");
                     stack.push(stack[*n].clone())
                 }
-                Instr::Swap => {
-                    #[cfg(feature = "profile")]
-                    puffin::profile_scope!("swap");
-                    let len = stack.len();
-                    stack.swap(len - 1, len - 2);
-                }
-                Instr::Rotate(n) => {
-                    #[cfg(feature = "profile")]
-                    puffin::profile_scope!("rotate");
-                    let val = stack.pop().unwrap();
-                    stack.insert(stack.len() + 1 - *n, val);
-                }
-                &Instr::Call(args, span) => {
-                    self.call_impl(assembly, args, span)?;
+                &Instr::Call(span) => {
+                    self.call_impl(assembly, span)?;
                 }
                 Instr::Return => {
                     #[cfg(feature = "profile")]
@@ -188,27 +170,6 @@ impl Vm {
                         return Ok(());
                     }
                 }
-                Instr::DestructureList(_n, _span) => {
-                    // let list = match stack.pop().unwrap() {
-                    //     Value::List(list) if *n == list.len() => list,
-                    //     Value::List(list) => {
-                    //         let message =
-                    //             format!("cannot destructure list of {} as list of {n}", list.len());
-                    //         return Err(span.sp(message).into());
-                    //     }
-                    //     val => {
-                    //         let message =
-                    //             format!("cannot destructure {} as list of {}", val.ty(), n);
-                    //         return Err(span.sp(message).into());
-                    //     }
-                    // };
-                    // for val in list.into_iter().rev() {
-                    //     stack.push(val);
-                    // }
-                }
-                Instr::PushUnresolvedFunction(id) => {
-                    panic!("unresolved function: {id:?}")
-                }
             }
             dprintln!("  {:?}", self.stack);
             self.pc = self.pc.overflowing_add(1).0;
@@ -227,104 +188,66 @@ impl Vm {
     pub fn top_mut(&mut self) -> &mut Value {
         self.stack.last_mut().expect("stack is empty")
     }
-    pub fn call(&mut self, args: usize, assembly: &Assembly, span: usize) -> RuntimeResult {
+    pub fn call(&mut self, assembly: &Assembly, span: usize) -> RuntimeResult {
         let return_depth = self.call_stack.len();
-        let mut call_started = false;
-        for _ in 0..args {
-            call_started |= self.call_impl(assembly, 1, span)?;
-        }
+        let call_started = self.call_impl(assembly, span)?;
         if call_started {
             self.pc = self.pc.overflowing_add(1).0;
             self.run_assembly_inner(assembly, return_depth)?;
         }
         Ok(())
     }
-    fn call_impl(&mut self, assembly: &Assembly, args: usize, span: usize) -> RuntimeResult<bool> {
+    fn call_impl(&mut self, assembly: &Assembly, span: usize) -> RuntimeResult<bool> {
         #[cfg(feature = "profile")]
         puffin::profile_scope!("call");
         let value = self.stack.pop().unwrap();
-        let (function, partial_count, span) = match value.raw_ty() {
-            RawType::Function => (value.function(), 0, span),
-            RawType::Partial => {
-                let partial = value.partial();
-                let arg_count = partial.args.len();
-                for arg in partial.args.iter() {
-                    self.stack.push(arg.clone());
-                }
-                (partial.function, arg_count, partial.span)
+        let function = if let RawType::Function = value.raw_ty() {
+            value.function()
+        } else {
+            self.stack.pop();
+            self.stack.push(value);
+            return Ok(false);
+        };
+        // Call
+        let call_started = match function {
+            Function::Code(start) => {
+                self.call_stack.push(StackFrame {
+                    stack_size: self.stack.len(),
+                    function,
+                    ret: self.pc + 1,
+                    call_span: span,
+                });
+                self.pc = (start as usize).overflowing_sub(1).0;
+                true
             }
-            _ => {
-                self.stack.truncate(self.stack.len() - args);
-                self.stack.push(value);
-                return Ok(false);
+            Function::Primitive(prim) => {
+                match prim {
+                    Primitive::Op1(op1) => {
+                        let val = self.stack.last_mut().unwrap();
+                        let env = Env { assembly, span: 0 };
+                        val.op1(op1, &env)?;
+                    }
+                    Primitive::Op2(op2) => {
+                        let (left, right) = {
+                            let mut iter = self.stack.iter_mut().rev();
+                            let right = iter.next().unwrap();
+                            let left = iter.next().unwrap();
+                            (left, right)
+                        };
+                        swap(left, right);
+                        let env = Env { assembly, span };
+                        left.op2(right, op2, &env)?;
+                        self.stack.pop();
+                    }
+                    Primitive::HigherOp(hop) => {
+                        let env = Env { assembly, span };
+                        hop.run(self, &env)?;
+                    }
+                }
+                false
             }
         };
-        // Handle partial arguments
-        let arg_count = partial_count + args;
-        if partial_count > 0 {
-            dprintln!("  {:?}", self.stack);
-        }
-        // Call
-        match arg_count.cmp(&(function.params() as usize)) {
-            Ordering::Less => {
-                let partial = Partial {
-                    function,
-                    args: self.stack.drain(self.stack.len() - arg_count..).collect(),
-                    span,
-                };
-                self.stack.push(partial.into());
-                Ok(false)
-            }
-            Ordering::Equal => {
-                let call_stated = match function {
-                    Function::Code { start, .. } => {
-                        self.call_stack.push(StackFrame {
-                            stack_size: self.stack.len() - arg_count,
-                            function,
-                            ret: self.pc + 1,
-                            call_span: span,
-                        });
-                        self.pc = (start as usize).overflowing_sub(1).0;
-                        true
-                    }
-                    Function::Primitive(prim) => {
-                        match prim {
-                            Primitive::Op1(op1) => {
-                                let val = self.stack.last_mut().unwrap();
-                                let env = Env { assembly, span: 0 };
-                                val.op1(op1, &env)?;
-                            }
-                            Primitive::Op2(op2) => {
-                                let (left, right) = {
-                                    let mut iter = self.stack.iter_mut().rev();
-                                    let right = iter.next().unwrap();
-                                    let left = iter.next().unwrap();
-                                    (left, right)
-                                };
-                                swap(left, right);
-                                let env = Env { assembly, span };
-                                left.op2(right, op2, &env)?;
-                                self.stack.pop();
-                            }
-                            Primitive::HigherOp(hop) => {
-                                let env = Env { assembly, span };
-                                hop.run(self, &env)?;
-                            }
-                        }
-                        false
-                    }
-                };
-                self.just_called = Some(function);
-                Ok(call_stated)
-            }
-            Ordering::Greater => {
-                let message = format!(
-                    "Too many arguments to {}: expected {}, got {arg_count}",
-                    assembly.function_id(function),
-                    function.params()
-                );
-                Err(assembly.spans[span].error(message))
-            }
-        }
+        self.just_called = Some(function);
+        Ok(call_started)
     }
 }

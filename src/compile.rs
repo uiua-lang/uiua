@@ -289,8 +289,7 @@ impl Compiler {
             Instr::CopyRel(_) => self.height += 1,
             Instr::CopyAbs(_) => self.height += 1,
             Instr::Push(_) => self.height += 1,
-            Instr::PushUnresolvedFunction(_) => self.height += 1,
-            Instr::Call(args, _) => self.height -= *args,
+            Instr::Call(_) => self.height -= 1,
             Instr::Constant(_) => self.height += 1,
             Instr::Array(len) | Instr::List(len) if *len == 0 => self.height += 1,
             Instr::Array(len) | Instr::List(len) => self.height -= len - 1,
@@ -305,114 +304,16 @@ impl Compiler {
     }
     fn item(&mut self, item: Item) -> CompileResult {
         match item {
-            Item::Expr(expr) => self.expr(expr),
+            Item::Words(words) => self.words(words),
             Item::Let(binding) => self.r#let(binding),
             Item::Const(r#const) => self.r#const(r#const),
-            Item::FunctionDef(def) => self.function_def(def),
         }
-    }
-    fn function_def(&mut self, def: FunctionDef) -> CompileResult {
-        self.scope_mut()
-            .bindings
-            .insert(def.name.value, Binding::Function(def.func.id.clone()));
-        self.func(def.func, def.name.span, false)?;
-        Ok(())
-    }
-    fn func(&mut self, func: Func, span: Span, push: bool) -> CompileResult {
-        self.func_outer(push, func.id.clone(), span, |this| {
-            // Push and bind the function's parameters
-            let params = func.params.len();
-            for param in func.params.into_iter().rev() {
-                this.height += 1;
-                this.bind_local(param.value);
-            }
-            // Compile the function's body
-            this.block(func.body)?;
-            Ok(params)
-        })
-    }
-    fn func_outer(
-        &mut self,
-        push: bool,
-        id: FunctionId,
-        span: Span,
-        params_and_body: impl FnOnce(&mut Self) -> CompileResult<usize>,
-    ) -> CompileResult {
-        // Initialize the function's instruction list
-        self.in_progress_functions.push(InProgressFunction {
-            instrs: Vec::new(),
-            captures: Vec::new(),
-            height: self.height,
-        });
-        // Push the function's scope
-        let height = self.push_scope();
-        // Push the function's name as a comment
-        let name = match &id {
-            FunctionId::Named(name) => format!("fn {name}"),
-            FunctionId::Anonymous(span) => format!("fn at {span}"),
-            FunctionId::FormatString(span) => format!("format string at {span}"),
-            FunctionId::Primitive(_) => unreachable!("Primitive functions should not be compiled"),
-        };
-        self.push_instr(Instr::Comment(name.clone()));
-        let params = params_and_body(self)?;
-        self.push_instr(Instr::Comment(format!("end of {name}")));
-        self.push_instr(Instr::Return);
-        // Pop the function's scope
-        self.pop_scope(height);
-        // Rotate captures
-        let ipf = self.in_progress_functions.last_mut().unwrap();
-        if !ipf.captures.is_empty() {
-            for _ in 0..ipf.captures.len() {
-                ipf.instrs.insert(1, Instr::Rotate(ipf.captures.len() + 1));
-            }
-        }
-        //Determine the function's index
-        let params_count = params + ipf.captures.len();
-        let function = Function::Code {
-            start: self.assembly.instrs.len() as u32,
-            params: params_count as u8,
-        };
-        // Resolve function references
-        for ipf in &mut self.in_progress_functions {
-            for instr in &mut ipf.instrs {
-                if matches!(instr, Instr::PushUnresolvedFunction(uid) if **uid == id) {
-                    *instr = Instr::Push(function.into());
-                }
-            }
-        }
-        // Add the function's instructions to the global function list
-        let ipf = self.in_progress_functions.pop().unwrap();
-        self.assembly.add_function_instrs(ipf.instrs);
-        self.scope_mut().functions.insert(id.clone(), function);
-        // Add to the function id map
-        self.assembly.function_ids.insert(function, id.clone());
-        // Push the function if necessary
-        if push || !ipf.captures.is_empty() {
-            // Reevalutate captures so they are copied to the stack just before the function
-            for ident in ipf.captures.iter().rev() {
-                self.ident(ident.clone(), span.clone())?;
-            }
-            // Push the function
-            self.push_instr(Instr::Push(function.into()));
-
-            if !ipf.captures.is_empty() {
-                // Call the function to collect the captures
-                let call_span = self.push_call_span(span);
-                self.push_instr(Instr::Call(ipf.captures.len(), call_span));
-
-                // Rebind to the partial that has the captures
-                if let FunctionId::Named(name) = id {
-                    self.bind_local(name);
-                }
-            }
-        }
-        Ok(())
     }
     fn r#let(&mut self, binding: Let) -> CompileResult {
-        // The expression is evaluated first because the pattern
-        // will refer to the height of the stack after the expression
-        self.expr(binding.expr)?;
-        self.pattern(binding.pattern)?;
+        for word in binding.words {
+            self.word(word)?;
+        }
+        self.bind_local(binding.name.value);
         Ok(())
     }
     fn r#const(&mut self, r#const: Const) -> CompileResult {
@@ -421,16 +322,18 @@ impl Compiler {
         let height = self.height;
         let instr_len = self.assembly.instrs.len();
         let global_instrs = self.global_instrs.clone();
-        // Compile the expression
-        let expr_span = r#const.expr.span.clone();
-        self.expr(r#const.expr)?;
+        // Compile the words
+        let words_span = r#const.words.last().unwrap().span.clone();
+        for word in r#const.words {
+            self.word(word)?;
+        }
         self.assembly
             .add_non_function_instrs(take(&mut self.global_instrs));
-        // Evaluate the expression
+        // Evaluate the words
         let value = self
             .assembly
             .run_with_vm(&mut self.vm)
-            .map_err(|e| expr_span.sp(e.into()))?
+            .map_err(|e| words_span.sp(e.into()))?
             .unwrap_or(Value::default());
         self.assembly.constants.push(value);
         // Bind the constant
@@ -443,59 +346,31 @@ impl Compiler {
         self.global_instrs = global_instrs;
         Ok(())
     }
-    fn pattern(&mut self, pattern: Sp<Pattern>) -> CompileResult {
-        match pattern.value {
-            Pattern::Ident(ident) => self.bind_local(ident),
-            Pattern::List(patterns) => {
-                let len = patterns.len();
-                for pattern in patterns {
-                    self.pattern(pattern)?;
-                }
-                self.push_instr(Instr::DestructureList(len, pattern.span.clone().into()));
-            }
-            Pattern::Discard => {}
+    fn words(&mut self, words: Vec<Sp<Word>>) -> CompileResult {
+        for word in words {
+            self.word(word)?;
         }
         Ok(())
     }
-    fn expr(&mut self, expr: Sp<Expr>) -> CompileResult {
-        match expr.value {
-            Expr::Unit => self.push_instr(Instr::Push(Value::default())),
-            Expr::Real(s) => {
+    fn word(&mut self, word: Sp<Word>) -> CompileResult {
+        match word.value {
+            Word::Real(s) => {
                 let f: f64 = match s.parse() {
                     Ok(f) => f,
                     Err(_) => {
-                        self.errors.push(expr.span.sp(CompileError::InvalidReal(s)));
+                        self.errors.push(word.span.sp(CompileError::InvalidReal(s)));
                         0.0
                     }
                 };
                 self.push_instr(Instr::Push(f.into()));
             }
-            Expr::Char(c) => self.push_instr(Instr::Push(c.into())),
-            Expr::String(s) => self.push_instr(Instr::Push(s.into())),
-            Expr::Ident(ident) => self.ident(ident, expr.span)?,
-            Expr::Placeholder => panic!("unresolved placeholder"),
-            Expr::Bin(bin) => {
-                let left = bin.left;
-                let right = bin.right;
-                let span = bin.op.span;
-                match bin_op_primitive(bin.op.value) {
-                    Primitive::Op1(_) => unreachable!("unary primitive id for binary operation"),
-                    Primitive::Op2(op2) => self.bin_expr(op2, left, right, span),
-                    Primitive::HigherOp(op) => self.higher_bin_expr(op, left, right, span),
-                }?
-            }
-            Expr::Mod(m) => {
-                self.expr(m.expr)?;
-                let f = Function::Primitive(mod_op_primitive(m.op.value));
-                self.push_instr(Instr::Push(f.into()));
-                let call_span = self.push_call_span(m.op.span);
-                self.push_instr(Instr::Call(1, call_span));
-            }
-            Expr::Call(call) => self.call(*call)?,
-            Expr::Array(items) => self.list(Instr::Array, items)?,
-            Expr::Strand(items) => self.list(Instr::List, items)?,
-            Expr::Func(func) => self.func(*func, expr.span, true)?,
-            Expr::Parened(inner) => self.expr(*inner)?,
+            Word::Char(c) => self.push_instr(Instr::Push(c.into())),
+            Word::String(s) => self.push_instr(Instr::Push(s.into())),
+            Word::Ident(ident) => self.ident(ident, word.span)?,
+            Word::Array(items) => self.list(Instr::Array, items)?,
+            Word::Strand(items) => self.list(Instr::List, items)?,
+            Word::Func(func) => self.func(func)?,
+            Word::Primitive(prim) => self.primitive(prim, word.span),
         }
         Ok(())
     }
@@ -510,7 +385,7 @@ impl Compiler {
             Some(bind) => bind,
             None => {
                 self.errors
-                    .push(span.sp(CompileError::UnknownBinding(ident.clone())));
+                    .push(span.clone().sp(CompileError::UnknownBinding(ident.clone())));
                 (&Binding::Error, self.scope().function_depth)
             }
         };
@@ -538,6 +413,8 @@ impl Compiler {
             Binding::Constant(index) => self.push_instr(Instr::Constant(index)),
             Binding::Error => self.push_instr(Instr::Push(Value::default())),
         }
+        let span = self.push_call_span(span);
+        self.push_instr(Instr::Call(span));
         Ok(())
     }
     fn function_binding(&mut self, id: FunctionId) {
@@ -550,116 +427,60 @@ impl Compiler {
         {
             self.push_instr(Instr::Push(function.into()));
         } else {
-            self.push_instr(Instr::PushUnresolvedFunction(id.clone().into()));
+            todo!("is this even reachable?")
         }
     }
-    fn list(&mut self, make: fn(usize) -> Instr, items: Vec<Sp<Expr>>) -> CompileResult {
+    fn list(&mut self, make: fn(usize) -> Instr, items: Vec<Sp<Word>>) -> CompileResult {
         let len = items.len();
         for item in items {
-            self.expr(item)?;
+            self.word(item)?;
         }
         self.push_instr(make(len));
         Ok(())
     }
-    fn call(&mut self, call: CallExpr) -> CompileResult {
-        self.call_impl(call.func, call.arg)
-    }
-    fn call_impl(&mut self, func: Sp<Expr>, arg: Sp<Expr>) -> CompileResult {
-        self.expr(arg)?;
-        let span = self.push_call_span(func.span.clone());
-        self.expr(func)?;
-        self.push_instr(Instr::Call(1, span));
-        Ok(())
-    }
-    fn block(&mut self, block: Block) -> CompileResult {
+    fn func(&mut self, func: Func) -> CompileResult {
+        // Initialize the function's instruction list
+        self.in_progress_functions.push(InProgressFunction {
+            instrs: Vec::new(),
+            captures: Vec::new(),
+            height: self.height,
+        });
+        // Push the function's scope
         let height = self.push_scope();
-        for item in block.items {
-            self.item(item)?;
+        // Push the function's name as a comment
+        let name = match &func.id {
+            FunctionId::Named(name) => format!("fn {name}"),
+            FunctionId::Anonymous(span) => format!("fn at {span}"),
+            FunctionId::FormatString(span) => format!("format string at {span}"),
+            FunctionId::Primitive(_) => unreachable!("Primitive functions should not be compiled"),
+        };
+        self.push_instr(Instr::Comment(name.clone()));
+        // Compile the function's body
+        for item in func.body {
+            self.word(item)?;
         }
-        self.expr(block.expr)?;
+        self.push_instr(Instr::Comment(format!("end of {name}")));
+        self.push_instr(Instr::Return);
+        // Pop the function's scope
         self.pop_scope(height);
+        // Determine the function's index
+        let function = Function::Code(self.assembly.instrs.len() as u32);
+        // Add the function's instructions to the global function list
+        let ipf = self.in_progress_functions.pop().unwrap();
+        self.assembly.add_function_instrs(ipf.instrs);
+        self.scope_mut().functions.insert(func.id.clone(), function);
+        // Add to the function id map
+        self.assembly.function_ids.insert(function, func.id);
+        // Push the function if necessary
+        // if ? {
+        //     // Push the function
+        //     self.push_instr(Instr::Push(function.into()));
+        // }
         Ok(())
     }
-    fn bin_expr(&mut self, op2: Op2, left: Sp<Expr>, right: Sp<Expr>, span: Span) -> CompileResult {
-        self.bin_expr_impl(op2, span, left, right)
-    }
-    fn higher_bin_expr(
-        &mut self,
-        hop: HigherOp,
-        left: Sp<Expr>,
-        right: Sp<Expr>,
-        span: Span,
-    ) -> CompileResult {
-        self.bin_expr_impl(hop, span, left, right)
-    }
-    fn bin_expr_impl(
-        &mut self,
-        prim: impl Into<Primitive>,
-        call_span: Span,
-        left: Sp<Expr>,
-        right: Sp<Expr>,
-    ) -> CompileResult {
-        let function = self.assembly.find_function(prim.into()).unwrap();
-        let call_span = self.push_call_span(call_span);
-        match (&left.value, &right.value) {
-            (Expr::Placeholder, Expr::Placeholder) => self.push_instr(Instr::Push(function.into())),
-            (Expr::Placeholder, _) => {
-                self.expr(right)?;
-                self.push_instr(Instr::Push(function.into()));
-                let flip = self.assembly.find_function(HigherOp::Flip).unwrap();
-                self.push_instr(Instr::Push(flip.into()));
-                self.push_instr(Instr::Call(2, call_span));
-            }
-            (_, Expr::Placeholder) => {
-                self.expr(left)?;
-                self.push_instr(Instr::Push(function.into()));
-                self.push_instr(Instr::Call(1, call_span));
-            }
-            _ => {
-                self.expr(left)?;
-                self.expr(right)?;
-                self.push_instr(Instr::Swap);
-                self.push_instr(Instr::Push(function.into()));
-                self.push_instr(Instr::Call(2, call_span));
-            }
-        }
-        Ok(())
-    }
-}
-
-fn bin_op_primitive(op: BinOp) -> Primitive {
-    match op {
-        BinOp::Pipe => Primitive::HigherOp(HigherOp::Pipe),
-        BinOp::BackPipe => Primitive::HigherOp(HigherOp::BackPipe),
-        BinOp::Add => Primitive::Op2(Op2::Add),
-        BinOp::Sub => Primitive::Op2(Op2::Sub),
-        BinOp::Mul => Primitive::Op2(Op2::Mul),
-        BinOp::Div => Primitive::Op2(Op2::Div),
-        BinOp::Eq => Primitive::Op2(Op2::Eq),
-        BinOp::Ne => Primitive::Op2(Op2::Ne),
-        BinOp::Lt => Primitive::Op2(Op2::Lt),
-        BinOp::Le => Primitive::Op2(Op2::Le),
-        BinOp::Gt => Primitive::Op2(Op2::Gt),
-        BinOp::Ge => Primitive::Op2(Op2::Ge),
-        BinOp::Left => Primitive::Op2(Op2::Left),
-        BinOp::Right => Primitive::Op2(Op2::Right),
-        BinOp::Compose => Primitive::HigherOp(HigherOp::Compose),
-        BinOp::BlackBird => Primitive::HigherOp(HigherOp::BlackBird),
-        BinOp::LeftLeaf => Primitive::HigherOp(HigherOp::LeftLeaf),
-        BinOp::RightLeaf => Primitive::HigherOp(HigherOp::RightLeaf),
-        BinOp::LeftTree => Primitive::HigherOp(HigherOp::LeftTree),
-        BinOp::RightTree => Primitive::HigherOp(HigherOp::RightTree),
-        BinOp::Slf => Primitive::HigherOp(HigherOp::Slf),
-        BinOp::Flip => Primitive::HigherOp(HigherOp::Flip),
-        BinOp::DualSelf => Primitive::HigherOp(HigherOp::DualSelf),
-    }
-}
-
-fn mod_op_primitive(op: ModOp) -> Primitive {
-    match op {
-        ModOp::Reduce => Primitive::HigherOp(HigherOp::Reduce),
-        ModOp::Cells => Primitive::HigherOp(HigherOp::Cells),
-        ModOp::Scan => Primitive::HigherOp(HigherOp::Scan),
-        ModOp::Table => Primitive::HigherOp(HigherOp::Table),
+    fn primitive(&mut self, prim: Primitive, span: Span) {
+        let span = self.push_call_span(span);
+        self.push_instr(Instr::Push(Function::Primitive(prim).into()));
+        self.push_instr(Instr::Call(span));
     }
 }

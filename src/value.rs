@@ -2,13 +2,7 @@ use std::{cmp::Ordering, fmt, mem::forget, rc::Rc};
 
 use nanbox::NanBox;
 
-use crate::{
-    array::Array,
-    function::{Function, Partial},
-    pervade,
-    vm::Env,
-    RuntimeResult,
-};
+use crate::{array::Array, function::Function, pervade, vm::Env, RuntimeResult};
 
 pub struct Value(NanBox);
 
@@ -35,20 +29,17 @@ impl fmt::Display for Type {
     }
 }
 
-type PartialRef = *mut Partial;
 type ArrayRef = *const Array;
 const NUM_TAG: u8 = 0;
 const CHAR_TAG: u8 = 1;
 const FUNCTION_TAG: u8 = 2;
-const PARTIAL_TAG: u8 = 3;
-const ARRAY_TAG: u8 = 4;
+const ARRAY_TAG: u8 = 3;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum RawType {
     Num,
     Char,
     Function,
-    Partial,
     Array,
 }
 
@@ -57,7 +48,6 @@ static RAW_TYPES: [RawType; 5] = {
     types[NUM_TAG as usize] = RawType::Num;
     types[CHAR_TAG as usize] = RawType::Char;
     types[FUNCTION_TAG as usize] = RawType::Function;
-    types[PARTIAL_TAG as usize] = RawType::Partial;
     types[ARRAY_TAG as usize] = RawType::Array;
     types
 };
@@ -68,7 +58,6 @@ impl RawType {
             RawType::Num => Type::Num,
             RawType::Char => Type::Char,
             RawType::Function => Type::Function,
-            RawType::Partial => Type::Function,
             RawType::Array => Type::Array,
         }
     }
@@ -102,20 +91,8 @@ impl Value {
     pub fn is_function(&self) -> bool {
         self.0.tag() == FUNCTION_TAG as u32
     }
-    pub fn is_partial(&self) -> bool {
-        self.0.tag() == PARTIAL_TAG as u32
-    }
     pub fn is_array(&self) -> bool {
         self.0.tag() == ARRAY_TAG as u32
-    }
-    pub fn params(&self) -> u8 {
-        match self.raw_ty() {
-            RawType::Num => 1,
-            RawType::Char => 1,
-            RawType::Function => self.function().params(),
-            RawType::Partial => self.partial().function.params() - self.partial().args.len() as u8,
-            RawType::Array => 1,
-        }
     }
     pub fn number(&self) -> f64 {
         assert!(self.is_num());
@@ -128,14 +105,6 @@ impl Value {
     pub fn function(&self) -> Function {
         assert!(self.is_function());
         unsafe { self.0.unpack::<Function>() }
-    }
-    pub fn partial(&self) -> &Partial {
-        assert!(self.is_partial());
-        unsafe { &*self.0.unpack::<PartialRef>() }
-    }
-    pub fn partial_mut(&mut self) -> &mut Partial {
-        assert!(self.is_partial());
-        unsafe { &mut *self.0.unpack::<PartialRef>() }
     }
     pub fn array(&self) -> &Array {
         assert!(self.is_array());
@@ -276,7 +245,6 @@ macro_rules! cmp_impls {
                 (Num, number, Num, number, num_num),
                 (Char, char, Char, char, generic),
                 (Function, function, Function, function, generic),
-                (Partial, partial, Partial, partial, generic),
                 |a, b| pervade::$name::is(a.ty().cmp(&b.ty())).into()
             );
         )*
@@ -288,9 +256,6 @@ cmp_impls!(is_eq, is_ne, is_lt, is_le, is_gt, is_ge);
 impl Drop for Value {
     fn drop(&mut self) {
         match self.raw_ty() {
-            RawType::Partial => unsafe {
-                drop(Box::from_raw(self.0.unpack::<PartialRef>()));
-            },
             RawType::Array => unsafe {
                 // Conjure the rc
                 let rc = Rc::from_raw(self.0.unpack::<ArrayRef>());
@@ -305,12 +270,6 @@ impl Drop for Value {
 impl Clone for Value {
     fn clone(&self) -> Self {
         match self.raw_ty() {
-            RawType::Partial => Self(unsafe {
-                NanBox::new::<PartialRef>(
-                    PARTIAL_TAG,
-                    Box::into_raw(Box::new(self.partial().clone())),
-                )
-            }),
             RawType::Array => Self(unsafe {
                 // Conjure the rc
                 let rc = Rc::from_raw(self.0.unpack::<ArrayRef>());
@@ -336,7 +295,6 @@ impl PartialEq for Value {
             }
             (RawType::Char, RawType::Char) => self.char() == other.char(),
             (RawType::Function, RawType::Function) => self.function() == other.function(),
-            (RawType::Partial, RawType::Partial) => self.partial() == other.partial(),
             (RawType::Array, RawType::Array) => self.array() == other.array(),
             _ => false,
         }
@@ -362,7 +320,6 @@ impl Ord for Value {
             }
             (RawType::Char, RawType::Char) => self.char().cmp(&other.char()),
             (RawType::Function, RawType::Function) => self.function().cmp(&other.function()),
-            (RawType::Partial, RawType::Partial) => self.partial().cmp(other.partial()),
             (RawType::Array, RawType::Array) => self.array().cmp(other.array()),
             (a, b) => a.cmp(&b),
         }
@@ -375,7 +332,6 @@ impl fmt::Debug for Value {
             RawType::Num => write!(f, "{:?}", self.number()),
             RawType::Char => write!(f, "{:?}", self.char()),
             RawType::Function => write!(f, "{:?}", self.function()),
-            RawType::Partial => write!(f, "{:?}", self.partial()),
             RawType::Array => write!(f, "{:?}", self.array()),
         }
     }
@@ -387,7 +343,6 @@ impl fmt::Display for Value {
             RawType::Num => write!(f, "{}", self.number()),
             RawType::Char => write!(f, "{}", self.char()),
             RawType::Function => write!(f, "{}", self.function()),
-            RawType::Partial => write!(f, "{}", self.partial()),
             RawType::Array => write!(f, "{}", self.array()),
         }
     }
@@ -414,12 +369,6 @@ impl From<char> for Value {
 impl From<Function> for Value {
     fn from(f: Function) -> Self {
         Self(unsafe { NanBox::new(FUNCTION_TAG, f) })
-    }
-}
-
-impl From<Partial> for Value {
-    fn from(p: Partial) -> Self {
-        Self(unsafe { NanBox::new::<PartialRef>(PARTIAL_TAG, Box::into_raw(Box::new(p))) })
     }
 }
 

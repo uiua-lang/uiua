@@ -281,8 +281,6 @@ pub enum Simple {
     Comma,
     Underscore,
     BackTick,
-    DoubleQuote,
-    SingleQuote,
     Caret,
     Colon,
     Period,
@@ -326,8 +324,6 @@ impl fmt::Display for Simple {
                 Simple::OpenBracket => "[",
                 Simple::CloseBracket => "]",
                 Simple::Comma => ",",
-                Simple::SingleQuote => "'",
-                Simple::DoubleQuote => "\"",
                 Simple::BackTick => "`",
                 Simple::Caret => "^",
                 Simple::Underscore => "_",
@@ -504,8 +500,6 @@ impl Lexer {
                 ':' => self.end(Colon, start),
                 ',' => self.end(Comma, start),
                 '_' => self.end(Underscore, start),
-                '\'' => self.end(SingleQuote, start),
-                '"' => self.end(DoubleQuote, start),
                 '`' => self.end(BackTick, start),
                 '^' => self.end(Caret, start),
                 '/' => self.switch_next(Slash, [('/', DoubleSlash)], start),
@@ -550,23 +544,28 @@ impl Lexer {
                     self.end(Comment(comment), start)
                 }
                 // Characters
-                ';' => {
+                '\'' => {
                     let mut escaped = false;
-                    let char = match self.character(&mut escaped, ';') {
+                    let char = match self.character(&mut escaped, '\'') {
                         Ok(Some(c)) => c,
                         Ok(None) => {
                             return Err(self.end_span(start).sp(LexError::ExpectedCharacter(None)))
                         }
                         Err(e) => return Err(self.end_span(start).sp(LexError::InvalidEscape(e))),
                     };
+                    if !self.next_char_exact('\'') {
+                        return Err(self
+                            .end_span(start)
+                            .sp(LexError::ExpectedCharacter(Some('\''))));
+                    }
                     self.end(Token::Char(char), start)
                 }
                 // Strings
-                '{' => {
+                '"' => {
                     let mut string = String::new();
                     let mut escaped = false;
                     loop {
-                        match self.character(&mut escaped, '}') {
+                        match self.character(&mut escaped, '"') {
                             Ok(Some(c)) => string.push(c),
                             Ok(None) => break,
                             Err(e) => {
@@ -574,10 +573,10 @@ impl Lexer {
                             }
                         }
                     }
-                    if !self.next_char_exact('}') {
+                    if !self.next_char_exact('"') {
                         return Err(self
                             .end_span(start)
-                            .sp(LexError::ExpectedCharacter(Some('}'))));
+                            .sp(LexError::ExpectedCharacter(Some('"'))));
                     }
                     self.end(Token::Str(string), start)
                 }

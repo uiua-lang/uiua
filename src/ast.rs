@@ -1,15 +1,14 @@
 use std::fmt;
 
 use crate::{
-    function::FunctionId,
+    function::{FunctionId, Primitive},
     lex::{Sp, Span},
     Ident,
 };
 
 #[derive(Debug, Clone)]
 pub enum Item {
-    FunctionDef(FunctionDef),
-    Expr(Sp<Expr>),
+    Words(Vec<Sp<Word>>),
     Let(Let),
     Const(Const),
 }
@@ -17,205 +16,65 @@ pub enum Item {
 impl Item {
     pub fn span(&self) -> Span {
         match self {
-            Item::FunctionDef(func) => func
+            Item::Words(words) => words[0]
+                .span
+                .clone()
+                .merge(words.last().unwrap().span.clone()),
+            Item::Let(r#let) => r#let
                 .name
                 .span
                 .clone()
-                .merge(func.func.body.expr.span.clone()),
-            Item::Expr(expr) => expr.span.clone(),
-            Item::Let(r#let) => r#let.pattern.span.clone().merge(r#let.expr.span.clone()),
-            Item::Const(r#const) => r#const.name.span.clone().merge(r#const.expr.span.clone()),
+                .merge(r#let.words.last().unwrap().span.clone()),
+            Item::Const(r#const) => r#const
+                .name
+                .span
+                .clone()
+                .merge(r#const.words.last().unwrap().span.clone()),
         }
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Let {
-    pub pattern: Sp<Pattern>,
-    pub expr: Sp<Expr>,
+    pub name: Sp<Ident>,
+    pub words: Vec<Sp<Word>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct Const {
     pub name: Sp<Ident>,
-    pub expr: Sp<Expr>,
-}
-
-#[derive(Debug, Clone)]
-pub struct FunctionDef {
-    pub name: Sp<Ident>,
-    pub func: Func,
+    pub words: Vec<Sp<Word>>,
 }
 
 #[derive(Clone)]
-pub struct Func {
-    pub id: FunctionId,
-    pub params: Vec<Sp<Ident>>,
-    pub body: Block,
-}
-
-impl fmt::Debug for Func {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("func")
-            .field("id", &self.id)
-            .field("params", &self.params)
-            .field("body", &self.body)
-            .finish()
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Block {
-    pub items: Vec<Item>,
-    pub expr: Sp<Expr>,
-}
-
-impl From<Sp<Expr>> for Block {
-    fn from(expr: Sp<Expr>) -> Self {
-        Self {
-            items: Vec::new(),
-            expr,
-        }
-    }
-}
-
-#[derive(Clone, Default)]
-pub enum Expr {
-    #[default]
-    Unit,
-    Call(Box<CallExpr>),
-    Bin(Box<BinExpr>),
-    Mod(Box<ModExpr>),
+pub enum Word {
     Real(String),
     Char(char),
     String(String),
     Ident(Ident),
-    Placeholder,
-    Array(Vec<Sp<Expr>>),
-    Strand(Vec<Sp<Expr>>),
-    Parened(Box<Sp<Expr>>),
-    Func(Box<Func>),
+    Array(Vec<Sp<Word>>),
+    Strand(Vec<Sp<Word>>),
+    Func(Func),
+    Primitive(Primitive),
 }
 
-impl fmt::Debug for Expr {
+impl fmt::Debug for Word {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Expr::Unit => write!(f, "unit"),
-            Expr::Call(call) => call.fmt(f),
-            Expr::Bin(bin) => bin.fmt(f),
-            Expr::Mod(m) => m.fmt(f),
-            Expr::Real(real) => write!(f, "{real:?}"),
-            Expr::Char(char) => write!(f, "{char:?}"),
-            Expr::String(string) => write!(f, "{{{string}}}"),
-            Expr::Ident(ident) => write!(f, "ident({ident})"),
-            Expr::Placeholder => write!(f, "_"),
-            Expr::Array(array) => write!(f, "array({array:?})"),
-            Expr::Strand(items) => write!(f, "strand({items:?})"),
-            Expr::Parened(expr) => {
-                write!(f, "(")?;
-                expr.value.fmt(f)?;
-                write!(f, ")")
-            }
-            Expr::Func(func) => func.fmt(f),
+            Word::Real(real) => write!(f, "{real:?}"),
+            Word::Char(char) => write!(f, "{char:?}"),
+            Word::String(string) => write!(f, "{{{string}}}"),
+            Word::Ident(ident) => write!(f, "ident({ident})"),
+            Word::Array(array) => write!(f, "array({array:?})"),
+            Word::Strand(items) => write!(f, "strand({items:?})"),
+            Word::Func(func) => func.fmt(f),
+            Word::Primitive(prim) => prim.fmt(f),
         }
     }
 }
 
-#[derive(Clone)]
-pub enum Pattern {
-    Ident(Ident),
-    List(Vec<Sp<Pattern>>),
-    Discard,
-}
-
-impl fmt::Debug for Pattern {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Pattern::Ident(ident) => write!(f, "ident({:?})", ident),
-            Pattern::List(list) => write!(f, "list({:?})", list),
-            Pattern::Discard => write!(f, "discard"),
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct CallExpr {
-    pub func: Sp<Expr>,
-    pub arg: Sp<Expr>,
-}
-
-impl fmt::Debug for CallExpr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("call")
-            .field(&self.func.value)
-            .field(&self.arg.value)
-            .finish()
-    }
-}
-
-#[derive(Clone)]
-pub struct BinExpr {
-    pub left: Sp<Expr>,
-    pub op: Sp<BinOp>,
-    pub right: Sp<Expr>,
-}
-
-impl fmt::Debug for BinExpr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("bin")
-            .field(&self.op.value)
-            .field(&self.left.value)
-            .field(&self.right.value)
-            .finish()
-    }
-}
-
-#[derive(Clone)]
-pub struct ModExpr {
-    pub op: Sp<ModOp>,
-    pub expr: Sp<Expr>,
-}
-
-impl fmt::Debug for ModExpr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("mod")
-            .field(&self.op.value)
-            .field(&self.expr.value)
-            .finish()
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum BinOp {
-    Eq,
-    Ne,
-    Lt,
-    Le,
-    Gt,
-    Ge,
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Compose,
-    BlackBird,
-    Left,
-    Right,
-    LeftLeaf,
-    LeftTree,
-    RightLeaf,
-    RightTree,
-    Slf,
-    DualSelf,
-    Flip,
-    Pipe,
-    BackPipe,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum ModOp {
-    Reduce,
-    Cells,
-    Scan,
-    Table,
+#[derive(Clone, Debug)]
+pub struct Func {
+    pub id: FunctionId,
+    pub body: Vec<Sp<Word>>,
 }

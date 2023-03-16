@@ -2,9 +2,9 @@ use std::{error::Error, fmt, path::Path};
 
 use crate::{
     ast::*,
-    function::{FunctionId, Primitive},
+    function::FunctionId,
     lex::{Simple::*, *},
-    ops::Op2,
+    ops::{Op2, Primitive},
     Ident,
 };
 

@@ -4,9 +4,9 @@ use enum_iterator::all;
 
 use crate::{
     ast::*,
-    function::{Function, FunctionId, Primitive},
+    function::{Function, FunctionId},
     lex::{Sp, Span},
-    ops::{constants, HigherOp, Op1, Op2},
+    ops::{constants, Op1, Op2, Primitive},
     parse::{parse, ParseError},
     value::Value,
     vm::{dprintln, Instr, Vm},
@@ -192,8 +192,8 @@ impl Default for Compiler {
             init(op2.to_string(), op2.into());
         }
         // Higher-order builtins
-        for hop in all::<HigherOp>() {
-            init(hop.to_string(), hop.into());
+        for op in all::<Primitive>() {
+            init(op.to_string(), op);
         }
 
         assembly.start = assembly.instrs.len();

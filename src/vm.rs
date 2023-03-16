@@ -1,9 +1,9 @@
-use std::{fmt, mem::swap};
+use std::fmt;
 
 use crate::{
     array::Array,
     compile::Assembly,
-    function::{Function, Primitive},
+    function::Function,
     value::{RawType, Value},
     RuntimeError, RuntimeResult, TraceFrame, UiuaError, UiuaResult,
 };
@@ -211,30 +211,7 @@ impl Vm {
                     assembly,
                     span,
                 };
-                match prim {
-                    Primitive::Op1(op1) => {
-                        let val = env.top_mut()?;
-                        let env = Env { assembly, span: 0 };
-                        val.op1(op1, &env)?;
-                    }
-                    Primitive::Op2(op2) => {
-                        let (left, right) = {
-                            let mut iter = self.stack.iter_mut().rev();
-                            let right = iter
-                                .next()
-                                .ok_or_else(|| assembly.error(span, "stack is empty"))?;
-                            let left = iter
-                                .next()
-                                .ok_or_else(|| assembly.error(span, "stack is empty"))?;
-                            (left, right)
-                        };
-                        swap(left, right);
-                        let env = Env { assembly, span };
-                        left.op2(right, op2, &env)?;
-                        self.stack.pop();
-                    }
-                    Primitive::HigherOp(hop) => hop.run(&mut env)?,
-                }
+                prim.run(&mut env)?;
                 self.pc = pc;
                 false
             }
@@ -251,6 +228,15 @@ pub(crate) struct CallEnv<'a> {
 }
 
 impl<'a> CallEnv<'a> {
+    pub fn env<'b>(&self) -> Env<'b>
+    where
+        'a: 'b,
+    {
+        Env {
+            assembly: self.assembly,
+            span: self.span,
+        }
+    }
     pub fn push(&mut self, value: impl Into<Value>) {
         self.vm.stack.push(value.into());
     }

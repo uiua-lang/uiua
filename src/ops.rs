@@ -2,6 +2,7 @@ use std::{
     f64::consts::*,
     fmt,
     io::{stdout, Write},
+    mem::swap,
 };
 
 use enum_iterator::Sequence;
@@ -238,7 +239,9 @@ impl Value {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
-pub enum HigherOp {
+pub enum Primitive {
+    Op1(Op1),
+    Op2(Op2),
     Fork,
     Fold,
     Reduce,
@@ -248,24 +251,53 @@ pub enum HigherOp {
     Scan,
 }
 
-impl fmt::Display for HigherOp {
+fn _keep_primitive_id_small(_: std::convert::Infallible) {
+    let _: [u8; 2] = unsafe { std::mem::transmute(Some(Primitive::Op1(Op1::Neg))) };
+}
+
+impl From<Op1> for Primitive {
+    fn from(op: Op1) -> Self {
+        Self::Op1(op)
+    }
+}
+
+impl From<Op2> for Primitive {
+    fn from(op: Op2) -> Self {
+        Self::Op2(op)
+    }
+}
+
+impl fmt::Display for Primitive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            HigherOp::Fork => write!(f, "fork"),
-            HigherOp::Fold => write!(f, "fold"),
-            HigherOp::Reduce => write!(f, "reduce"),
-            HigherOp::Each => write!(f, "each"),
-            HigherOp::Cells => write!(f, "cells"),
-            HigherOp::Table => write!(f, "table"),
-            HigherOp::Scan => write!(f, "scan"),
+            Primitive::Op1(op) => write!(f, "{op}"),
+            Primitive::Op2(op) => write!(f, "{op}"),
+            Primitive::Fork => write!(f, "fork"),
+            Primitive::Fold => write!(f, "fold"),
+            Primitive::Reduce => write!(f, "reduce"),
+            Primitive::Each => write!(f, "each"),
+            Primitive::Cells => write!(f, "cells"),
+            Primitive::Table => write!(f, "table"),
+            Primitive::Scan => write!(f, "scan"),
         }
     }
 }
 
-impl HigherOp {
+impl Primitive {
     pub(crate) fn run(&self, env: &mut CallEnv) -> RuntimeResult {
         match self {
-            HigherOp::Fork => {
+            Primitive::Op1(op) => {
+                let subenv = env.env();
+                env.top_mut()?.op1(*op, &subenv)?;
+            }
+            Primitive::Op2(op) => {
+                let subenv = env.env();
+                let mut a = env.pop()?;
+                let b = env.top_mut()?;
+                swap(&mut a, b);
+                b.op2(&mut a, *op, &subenv)?;
+            }
+            Primitive::Fork => {
                 let f = env.pop()?;
                 let g = env.pop()?;
                 let x = env.pop()?;
@@ -276,7 +308,7 @@ impl HigherOp {
                 env.push(f);
                 env.call()?;
             }
-            HigherOp::Fold => {
+            Primitive::Fold => {
                 let f = env.pop()?;
                 let mut acc = env.pop()?;
                 let xs = env.pop()?;
@@ -295,7 +327,7 @@ impl HigherOp {
                 }
                 env.push(acc);
             }
-            HigherOp::Reduce => {
+            Primitive::Reduce => {
                 let f = env.pop()?;
                 let xs = env.pop()?;
                 if !xs.is_array() {
@@ -315,7 +347,7 @@ impl HigherOp {
                 }
                 env.push(acc);
             }
-            HigherOp::Each => {
+            Primitive::Each => {
                 let f = env.pop()?;
                 let xs = env.pop()?;
                 if !xs.is_array() {
@@ -333,7 +365,7 @@ impl HigherOp {
                 }
                 env.push(Array::from((shape, new_values)).normalized(0));
             }
-            HigherOp::Cells => {
+            Primitive::Cells => {
                 let f = env.pop()?;
                 let xs = env.pop()?;
                 if !xs.is_array() {
@@ -351,7 +383,7 @@ impl HigherOp {
                 }
                 env.push(Array::from(cells).normalized(1));
             }
-            HigherOp::Table => {
+            Primitive::Table => {
                 let f = env.pop()?;
                 let xs = env.pop()?;
                 let ys = env.pop()?;
@@ -385,7 +417,7 @@ impl HigherOp {
                 }
                 env.push(Array::from(table).normalized(1));
             }
-            HigherOp::Scan => {
+            Primitive::Scan => {
                 let f = env.pop()?;
                 let xs = env.pop()?;
                 if !xs.is_array() {

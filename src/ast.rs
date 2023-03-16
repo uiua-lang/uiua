@@ -1,8 +1,9 @@
 use std::fmt;
 
 use crate::{
-    function::{FunctionId, Primitive},
+    function::FunctionId,
     lex::{Sp, Span},
+    ops::Primitive,
     Ident,
 };
 

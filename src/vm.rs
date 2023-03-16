@@ -73,7 +73,7 @@ pub struct Vm {
 
 impl Vm {
     pub fn run_assembly(&mut self, assembly: &Assembly) -> UiuaResult {
-        if let Err(error) = self.run_assembly_inner(assembly, 0) {
+        if let Err(error) = self.run_assembly_inner(assembly, None) {
             let mut trace = Vec::new();
             for frame in self.call_stack.iter().rev() {
                 let id = assembly.function_id(frame.function);
@@ -90,12 +90,16 @@ impl Vm {
             Ok(())
         }
     }
-    fn run_assembly_inner(&mut self, assembly: &Assembly, return_depth: usize) -> RuntimeResult {
-        if return_depth == 0 {
+    fn run_assembly_inner(
+        &mut self,
+        assembly: &Assembly,
+        return_depth: Option<usize>,
+    ) -> RuntimeResult {
+        if return_depth.is_none() {
             dprintln!("\nRunning...");
-        }
-        if self.pc == 0 {
-            self.pc = assembly.start;
+            if self.pc == 0 {
+                self.pc = assembly.start;
+            }
         }
         #[cfg(feature = "profile")]
         let mut i = 0;
@@ -158,7 +162,7 @@ impl Vm {
                         let value = stack.pop().unwrap();
                         stack.truncate(frame.stack_size);
                         stack.push(value);
-                        if return_depth > 0 && self.call_stack.len() == return_depth {
+                        if return_depth.map_or(false, |d| d == self.call_stack.len()) {
                             *pc = 0;
                             return Ok(());
                         } else {
@@ -193,7 +197,7 @@ impl Vm {
         let call_started = self.call_impl(assembly, span)?;
         if call_started {
             self.pc = self.pc.overflowing_add(1).0;
-            self.run_assembly_inner(assembly, return_depth)?;
+            self.run_assembly_inner(assembly, Some(return_depth))?;
         }
         Ok(())
     }
@@ -217,10 +221,11 @@ impl Vm {
                     ret: self.pc + 1,
                     call_span: span,
                 });
-                self.pc = (start as usize).overflowing_sub(1).0;
+                self.pc = start as usize;
                 true
             }
             Function::Primitive(prim) => {
+                let pc = self.pc;
                 match prim {
                     Primitive::Op1(op1) => {
                         let val = self.stack.last_mut().unwrap();
@@ -244,6 +249,7 @@ impl Vm {
                         hop.run(self, &env)?;
                     }
                 }
+                self.pc = pc;
                 false
             }
         };

@@ -239,6 +239,7 @@ impl Value {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
 pub enum HigherOp {
+    Call,
     Pipe,
     BackPipe,
     Compose,
@@ -261,6 +262,7 @@ pub enum HigherOp {
 impl fmt::Display for HigherOp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            HigherOp::Call => write!(f, "call"),
             HigherOp::Pipe => write!(f, "pipe"),
             HigherOp::BackPipe => write!(f, "backpipe"),
             HigherOp::Compose => write!(f, "compose"),
@@ -283,29 +285,11 @@ impl fmt::Display for HigherOp {
 }
 
 impl HigherOp {
-    pub(crate) fn params(&self) -> u8 {
-        match self {
-            HigherOp::Pipe => 2,
-            HigherOp::BackPipe => 2,
-            HigherOp::Compose => 3,
-            HigherOp::Slf => 2,
-            HigherOp::DualSelf => 3,
-            HigherOp::Flip => 3,
-            HigherOp::BlackBird => 4,
-            HigherOp::LeftLeaf => 4,
-            HigherOp::LeftTree => 5,
-            HigherOp::RightLeaf => 4,
-            HigherOp::RightTree => 5,
-            HigherOp::Each => 2,
-            HigherOp::Cells => 2,
-            HigherOp::Fold => 3,
-            HigherOp::Reduce => 2,
-            HigherOp::Table => 3,
-            HigherOp::Scan => 2,
-        }
-    }
     pub fn run(&self, vm: &mut Vm, env: &Env) -> RuntimeResult {
         match self {
+            HigherOp::Call => {
+                vm.call(env.assembly, 0)?;
+            }
             HigherOp::Pipe => {
                 let x = vm.pop();
                 let f = vm.pop();

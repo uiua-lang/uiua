@@ -470,12 +470,12 @@ impl Compiler {
         self.assembly.add_function_instrs(ipf.instrs);
         self.scope_mut().functions.insert(func.id.clone(), function);
         // Add to the function id map
-        self.assembly.function_ids.insert(function, func.id);
+        self.assembly.function_ids.insert(function, func.id.clone());
         // Push the function if necessary
-        // if ? {
-        //     // Push the function
-        //     self.push_instr(Instr::Push(function.into()));
-        // }
+        if let FunctionId::Anonymous(_) = func.id {
+            // Push the function
+            self.push_instr(Instr::Push(function.into()));
+        }
         Ok(())
     }
     fn primitive(&mut self, prim: Primitive, span: Span) {

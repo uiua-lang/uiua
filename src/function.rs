@@ -19,16 +19,6 @@ fn _keep_primitive_id_small(_: std::convert::Infallible) {
     let _: [u8; 2] = unsafe { std::mem::transmute(Some(Primitive::Op1(Op1::Neg))) };
 }
 
-impl Primitive {
-    pub fn params(&self) -> u8 {
-        match self {
-            Primitive::Op1(_) => 1,
-            Primitive::Op2(_) => 2,
-            Primitive::HigherOp(op) => op.params(),
-        }
-    }
-}
-
 impl fmt::Display for Primitive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

@@ -463,10 +463,20 @@ impl Compiler {
         // Pop the function's scope
         self.pop_scope(height);
         // Determine the function's index
-        let function = Function::Code(self.assembly.instrs.len() as u32);
+        let mut function = Function::Code(self.assembly.instrs.len() as u32);
         // Add the function's instructions to the global function list
-        let ipf = self.in_progress_functions.pop().unwrap();
-        self.assembly.add_function_instrs(ipf.instrs);
+        let mut ipf = self.in_progress_functions.pop().unwrap();
+        let mut add_instrs = true;
+        if let [_, Instr::Push(val), Instr::Call(_), _, _] = ipf.instrs.as_slice() {
+            if val.is_function() {
+                function = val.function();
+                ipf.instrs = vec![Instr::Push(val.clone())];
+                add_instrs = false;
+            }
+        }
+        if add_instrs {
+            self.assembly.add_function_instrs(ipf.instrs);
+        }
         self.scope_mut().functions.insert(func.id.clone(), function);
         // Add to the function id map
         self.assembly.function_ids.insert(function, func.id);

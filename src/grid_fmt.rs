@@ -27,12 +27,7 @@ impl GridFmt for f64 {
 
 impl GridFmt for char {
     fn fmt_grid(&self) -> Grid {
-        let s = if *self == ';' {
-            format!(";\\{self}")
-        } else {
-            format!(";{self}")
-        };
-        vec![s.chars().collect()]
+        vec![format!("{self:?}").chars().collect()]
     }
 }
 
@@ -132,7 +127,7 @@ fn fmt_array<T: GridFmt + std::fmt::Display>(
         if stringy {
             let mut s = String::new();
             s.extend(data.iter().map(|c| c.to_string()));
-            row.push(vec![format!("{{{s}}}").chars().collect()]);
+            row.push(vec![format!("{s:?}").chars().collect()]);
         } else {
             for (i, val) in data.iter().enumerate() {
                 let mut grid = val.fmt_grid();

@@ -276,6 +276,7 @@ static BIN_OPS: &[(Simple, Primitive)] = &[
     (Minus, Primitive::Op2(Op2::Sub)),
     (Star, Primitive::Op2(Op2::Mul)),
     (Percent, Primitive::Op2(Op2::Div)),
+    (Slash, Primitive::Fork),
 ];
 
 impl Parser {

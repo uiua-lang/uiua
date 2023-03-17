@@ -1,4 +1,6 @@
-- Add psi and 3->2 combinators
+- Rethink sytax and semantics of array construction
+- Add selecting combinator literals
+- Don't require parens around bound functions
 - Implement function reversal
 - Improve parsing expectation errors
 - Optimize for non-reused values
@@ -7,13 +9,13 @@
   - directly calling number
 - Includes
 - More array functions
-  - Last
-  - Rotate
-  - Scan
+  - Last?
   - Windows
   - Transpose?
   - Grade
   - Group
+  - Classify
+  - Select
 - Type testing/tracing
 - Structs
 - Enums?

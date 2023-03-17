@@ -57,6 +57,7 @@ pub enum Word {
     Strand(Vec<Sp<Word>>),
     Func(Func),
     Primitive(Primitive),
+    Modified(Box<Modified>),
 }
 
 impl fmt::Debug for Word {
@@ -70,12 +71,35 @@ impl fmt::Debug for Word {
             Word::Strand(items) => write!(f, "strand({items:?})"),
             Word::Func(func) => func.fmt(f),
             Word::Primitive(prim) => prim.fmt(f),
+            Word::Modified(modified) => modified.fmt(f),
         }
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Func {
     pub id: FunctionId,
     pub body: Vec<Sp<Word>>,
+}
+
+impl fmt::Debug for Func {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut d = f.debug_tuple(&self.id.to_string());
+        for word in &self.body {
+            d.field(&word.value);
+        }
+        d.finish()
+    }
+}
+
+#[derive(Clone)]
+pub struct Modified {
+    pub modifier: Sp<Primitive>,
+    pub word: Sp<Word>,
+}
+
+impl fmt::Debug for Modified {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}({:?})", self.modifier.value, self.word.value)
+    }
 }

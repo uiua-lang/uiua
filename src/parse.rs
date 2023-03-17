@@ -280,6 +280,9 @@ static BIN_OPS: &[(Simple, Primitive)] = &[
     (DoubleSlash, Primitive::ForkArray2),
 ];
 
+static MOD_OPS: &[(Simple, Primitive)] =
+    &[(Slash, Primitive::Reduce), (BackSlash, Primitive::Scan)];
+
 impl Parser {
     fn try_words(&mut self) -> ParseResult<Option<Vec<Sp<Word>>>> {
         let mut words = Vec::new();
@@ -296,13 +299,13 @@ impl Parser {
         self.try_strand()
     }
     fn try_strand(&mut self) -> ParseResult<Option<Sp<Word>>> {
-        let Some(mut word) = self.try_term()? else {
+        let Some(mut word) = self.try_modified()? else {
             return Ok(None);
         };
         let mut items = Vec::new();
         while self.try_exact(Underscore).is_some() {
             let item = self
-                .try_term()?
+                .try_modified()?
                 .ok_or_else(|| self.expected([Expectation::Term]))?;
             items.push(item);
         }
@@ -312,6 +315,23 @@ impl Parser {
             word = span.sp(Word::Strand(items));
         }
         Ok(Some(word))
+    }
+    fn try_modified(&mut self) -> ParseResult<Option<Sp<Word>>> {
+        for (op, primitive) in MOD_OPS {
+            if let Some(mspan) = self.try_exact(*op) {
+                let inner = self.try_modified()?;
+                return Ok(Some(if let Some(word) = inner {
+                    let span = mspan.clone().merge(word.span.clone());
+                    span.sp(Word::Modified(Box::new(Modified {
+                        modifier: mspan.sp(*primitive),
+                        word,
+                    })))
+                } else {
+                    mspan.sp(Word::Primitive(*primitive))
+                }));
+            }
+        }
+        self.try_term()
     }
     fn try_term(&mut self) -> ParseResult<Option<Sp<Word>>> {
         Ok(Some(if let Some(ident) = self.try_ident() {

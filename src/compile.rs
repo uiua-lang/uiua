@@ -370,6 +370,7 @@ impl Compiler {
             Word::Strand(items) => self.list(Instr::List, items)?,
             Word::Func(func) => self.func(func)?,
             Word::Primitive(prim) => self.primitive(prim, word.span, call),
+            Word::Modified(m) => self.modified(*m, call)?,
         }
         Ok(())
     }
@@ -439,7 +440,11 @@ impl Compiler {
         self.push_instr(make(len));
         Ok(())
     }
-    fn func(&mut self, func: Func) -> CompileResult {
+    fn func_outer(
+        &mut self,
+        id: FunctionId,
+        inner: impl FnOnce(&mut Self) -> CompileResult,
+    ) -> CompileResult {
         // Initialize the function's instruction list
         self.in_progress_functions.push(InProgressFunction {
             instrs: Vec::new(),
@@ -449,7 +454,7 @@ impl Compiler {
         // Push the function's scope
         let height = self.push_scope();
         // Push the function's name as a comment
-        let name = match &func.id {
+        let name = match &id {
             FunctionId::Named(name) => format!("fn {name}"),
             FunctionId::Anonymous(span) => format!("fn at {span}"),
             FunctionId::FormatString(span) => format!("format string at {span}"),
@@ -457,7 +462,7 @@ impl Compiler {
         };
         self.push_instr(Instr::Comment(name.clone()));
         // Compile the function's body
-        self.words(func.body)?;
+        inner(self)?;
         self.push_instr(Instr::Comment(format!("end of {name}")));
         self.push_instr(Instr::Return);
         // Pop the function's scope
@@ -477,12 +482,15 @@ impl Compiler {
         if add_instrs {
             self.assembly.add_function_instrs(ipf.instrs);
         }
-        self.scope_mut().functions.insert(func.id.clone(), function);
+        self.scope_mut().functions.insert(id.clone(), function);
         // Add to the function id map
-        self.assembly.function_ids.insert(function, func.id);
+        self.assembly.function_ids.insert(function, id);
         // Push the function
         self.push_instr(Instr::Push(function.into()));
         Ok(())
+    }
+    fn func(&mut self, func: Func) -> CompileResult {
+        self.func_outer(func.id, |this| this.words(func.body))
     }
     fn primitive(&mut self, prim: Primitive, span: Span, call: bool) {
         self.push_instr(Instr::Push(Function::Primitive(prim).into()));
@@ -490,5 +498,25 @@ impl Compiler {
             let span = self.push_call_span(span);
             self.push_instr(Instr::Call(span));
         }
+    }
+    fn modified(&mut self, modified: Modified, call: bool) -> CompileResult {
+        let span = modified.modifier.span.clone();
+        let id = FunctionId::Anonymous(
+            modified
+                .modifier
+                .span
+                .clone()
+                .merge(modified.word.span.clone()),
+        );
+        self.func_outer(id, |this| {
+            this.word(modified.word, false)?;
+            this.primitive(modified.modifier.value, modified.modifier.span, true);
+            Ok(())
+        })?;
+        if call {
+            let span = self.push_call_span(span);
+            self.push_instr(Instr::Call(span));
+        }
+        Ok(())
     }
 }

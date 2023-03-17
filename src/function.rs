@@ -4,7 +4,7 @@ use nanbox::{NanBox, NanBoxable};
 
 use crate::{
     lex::Span,
-    ops::{Op1, Op2, Primitive},
+    ops::{Op2, Primitive},
     Ident,
 };
 
@@ -19,12 +19,6 @@ pub enum FunctionId {
 impl From<Ident> for FunctionId {
     fn from(name: Ident) -> Self {
         Self::Named(name)
-    }
-}
-
-impl From<Op1> for FunctionId {
-    fn from(op: Op1) -> Self {
-        Self::Primitive(op.into())
     }
 }
 
@@ -80,7 +74,7 @@ impl NanBoxable for Function {
         let start = u32::from_le_bytes([b, c, d, e]);
         match a {
             0 => Function::Code(start),
-            1 => Function::Primitive(transmute(u16::from_le_bytes([b, c]))),
+            1 => Function::Primitive(transmute(b)),
             2 => Function::Selector(Selector([b, c, d, e, f])),
             _ => unreachable!(),
         }
@@ -92,8 +86,8 @@ impl NanBoxable for Function {
                 NanBoxable::into_nan_box([0, b, c, d, e])
             }
             Function::Primitive(prim) => {
-                let [b, c]: [u8; 2] = unsafe { transmute(prim) };
-                NanBoxable::into_nan_box([1, b, c, 0, 0])
+                let b: u8 = unsafe { transmute(prim) };
+                NanBoxable::into_nan_box([1, b, 0, 0, 0])
             }
             Function::Selector(sel) => {
                 let [b, c, d, e, f] = sel.0;

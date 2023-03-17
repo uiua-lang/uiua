@@ -6,7 +6,7 @@ use crate::{
     ast::*,
     function::{Function, FunctionId, Selector},
     lex::{Sp, Span},
-    ops::{constants, Op1, Op2, Primitive},
+    ops::{constants, Op2, Primitive},
     parse::{parse, ParseError},
     value::Value,
     vm::{dprintln, Instr, Vm},
@@ -168,10 +168,6 @@ impl Default for Compiler {
             assembly.function_ids.insert(function, prim.into());
             function
         };
-        // 1-parameter builtins
-        for op1 in all::<Op1>() {
-            init(op1.to_string(), op1.into());
-        }
         // 2-parameter builtins
         for op2 in all::<Op2>() {
             init(op2.to_string(), op2.into());

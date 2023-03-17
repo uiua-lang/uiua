@@ -273,4 +273,26 @@ impl<'a> CallEnv<'a> {
     pub fn error(&mut self, msg: impl Into<String>) -> RuntimeError {
         self.assembly.error(self.span, msg.into())
     }
+    pub fn monadic<V: Into<Value>>(&mut self, f: fn(&Value) -> V) -> RuntimeResult {
+        let value = self.pop()?;
+        self.push(f(&value));
+        Ok(())
+    }
+    pub fn monadic_env<V: Into<Value>>(
+        &mut self,
+        f: fn(&Value, &Env) -> RuntimeResult<V>,
+    ) -> RuntimeResult {
+        let env = self.env();
+        let value = self.top_mut()?;
+        *value = f(value, &env)?.into();
+        Ok(())
+    }
+    pub fn monadic_mut(&mut self, f: fn(&mut Value)) -> RuntimeResult {
+        f(self.top_mut()?);
+        Ok(())
+    }
+    pub fn monadic_mut_env(&mut self, f: fn(&mut Value, &Env) -> RuntimeResult) -> RuntimeResult {
+        let env = self.env();
+        f(self.top_mut()?, &env)
+    }
 }

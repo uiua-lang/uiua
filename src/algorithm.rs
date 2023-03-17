@@ -99,14 +99,15 @@ impl Value {
             return Err(env.error(error));
         }
     }
-    pub fn range(&self, env: &Env) -> RuntimeResult<Array> {
+    pub fn range(&mut self, env: &Env) -> RuntimeResult {
         let shape = self.as_shape(
             env,
             "Range only accepts a single natural number \
             or a list of natural numbers",
         )?;
         let data = range(&shape);
-        Ok((shape, data).into())
+        *self = Array::from((shape, data)).into();
+        Ok(())
     }
     pub fn reverse(&mut self) {
         if self.is_array() {

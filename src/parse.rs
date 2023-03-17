@@ -250,8 +250,10 @@ static BIN_OPS: &[(Simple, Primitive)] = &[
     (Star, Primitive::Op2(Op2::Mul)),
     (Percent, Primitive::Op2(Op2::Div)),
     (Colon, Primitive::ForkArray1),
-    (DoubleSlash, Primitive::ForkArray2),
+    (DoubleColon, Primitive::ForkArray2),
     (Period, Primitive::Dup),
+    (Tilde, Primitive::Swap),
+    (SemiColon, Primitive::Pop),
 ];
 
 static MOD_OPS: &[(Simple, Primitive)] = &[

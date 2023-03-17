@@ -52,9 +52,6 @@ pub enum Op1 {
     Range,
     Reverse,
     Deshape,
-    Show,
-    Print,
-    Println,
     ScanLn,
     Args,
     Var,
@@ -83,9 +80,6 @@ impl fmt::Display for Op1 {
             Op1::Range => write!(f, "range"),
             Op1::Reverse => write!(f, "reverse"),
             Op1::Deshape => write!(f, "deshape"),
-            Op1::Show => write!(f, "show"),
-            Op1::Print => write!(f, "print"),
-            Op1::Println => write!(f, "println"),
             Op1::ScanLn => write!(f, "scanln"),
             Op1::Args => write!(f, "args"),
             Op1::Var => write!(f, "var"),
@@ -97,12 +91,6 @@ impl Value {
     pub(crate) fn op1(&mut self, op: Op1, env: &Env) -> RuntimeResult {
         match op {
             Op1::Id => {}
-            Op1::Show => print!("{}", self.grid_string()),
-            Op1::Print => {
-                print!("{self}");
-                let _ = stdout().flush();
-            }
-            Op1::Println => println!("{self}"),
             Op1::Len => *self = (self.len() as f64).into(),
             Op1::Rank => *self = (self.rank() as f64).into(),
             Op1::Shape => {
@@ -243,6 +231,8 @@ pub enum Primitive {
     Op1(Op1),
     Op2(Op2),
     Dup,
+    Swap,
+    Pop,
     Fork,
     ForkArray1,
     ForkArray2,
@@ -252,6 +242,9 @@ pub enum Primitive {
     Cells,
     Table,
     Scan,
+    Show,
+    Print,
+    Println,
 }
 
 fn _keep_primitive_id_small(_: std::convert::Infallible) {
@@ -276,6 +269,8 @@ impl fmt::Display for Primitive {
             Primitive::Op1(op) => write!(f, "{op}"),
             Primitive::Op2(op) => write!(f, "{op}"),
             Primitive::Dup => write!(f, "dup"),
+            Primitive::Swap => write!(f, "swap"),
+            Primitive::Pop => write!(f, "pop"),
             Primitive::ForkArray1 => write!(f, "fork_array1"),
             Primitive::ForkArray2 => write!(f, "fork_array2"),
             Primitive::Fork => write!(f, "fork"),
@@ -285,6 +280,9 @@ impl fmt::Display for Primitive {
             Primitive::Cells => write!(f, "cells"),
             Primitive::Table => write!(f, "table"),
             Primitive::Scan => write!(f, "scan"),
+            Primitive::Show => write!(f, "show"),
+            Primitive::Print => write!(f, "print"),
+            Primitive::Println => write!(f, "println"),
         }
     }
 }
@@ -306,6 +304,15 @@ impl Primitive {
             Primitive::Dup => {
                 let x = env.top_mut()?.clone();
                 env.push(x);
+            }
+            Primitive::Swap => {
+                let a = env.pop()?;
+                let b = env.pop()?;
+                env.push(a);
+                env.push(b);
+            }
+            Primitive::Pop => {
+                env.pop()?;
             }
             Primitive::Fork => {
                 let f = env.pop()?;
@@ -485,6 +492,14 @@ impl Primitive {
                 }
                 env.push(Array::from(scanned).normalized(1));
             }
+            Primitive::Show => {
+                println!("{}", env.pop()?.grid_string());
+            }
+            Primitive::Print => {
+                print!("{}", env.pop()?);
+                let _ = stdout().flush();
+            }
+            Primitive::Println => println!("{}", env.pop()?),
         }
         Ok(())
     }

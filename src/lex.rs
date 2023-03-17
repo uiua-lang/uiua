@@ -285,13 +285,9 @@ pub enum Simple {
     Colon,
     DoubleColon,
     Period,
-    Period2,
-    Period3,
+    Tilde,
+    SemiColon,
     Bar,
-    MinusBar,
-    BarMinus,
-    Pipe,
-    BackPipe,
     Slash,
     BackSlash,
     DoubleSlash,
@@ -328,16 +324,12 @@ impl fmt::Display for Simple {
                 Simple::BackTick => "`",
                 Simple::Caret => "^",
                 Simple::Underscore => "_",
+                Simple::SemiColon => ";",
                 Simple::Colon => ":",
                 Simple::DoubleColon => "::",
                 Simple::Period => ".",
-                Simple::Period2 => "..",
-                Simple::Period3 => "...",
+                Simple::Tilde => "~",
                 Simple::Bar => "|",
-                Simple::MinusBar => "-|",
-                Simple::BarMinus => "|-",
-                Simple::Pipe => "|>",
-                Simple::BackPipe => "<|",
                 Simple::Slash => "/",
                 Simple::DoubleSlash => "//",
                 Simple::BackSlash => "\\",
@@ -488,17 +480,8 @@ impl Lexer {
                 // '}' => self.end(CloseCurly, start),
                 '[' => self.end(OpenBracket, start),
                 ']' => self.end(CloseBracket, start),
-                '.' => {
-                    if self.next_char_exact('.') {
-                        if self.next_char_exact('.') {
-                            self.end(Period3, start)
-                        } else {
-                            self.end(Period2, start)
-                        }
-                    } else {
-                        self.end(Period, start)
-                    }
-                }
+                '.' => self.end(Period, start),
+                ';' => self.end(SemiColon, start),
                 ':' => self.switch_next(Colon, [(':', DoubleColon)], start),
                 ',' => self.end(Comma, start),
                 '_' => self.end(Underscore, start),
@@ -506,12 +489,13 @@ impl Lexer {
                 '^' => self.end(Caret, start),
                 '/' => self.switch_next(Slash, [('/', DoubleSlash)], start),
                 '\\' => self.switch_next(BackSlash, [('\\', DoubleBackSlash)], start),
+                '~' => self.end(Tilde, start),
                 '+' => self.end(Plus, start),
                 '-' => {
                     if self.peek_char().filter(char::is_ascii_digit).is_some() {
                         self.number(start, "-".into())
                     } else {
-                        self.switch_next(Minus, [('|', MinusBar)], start)
+                        self.end(Minus, start)
                     }
                 }
                 '*' => self.end(Star, start),
@@ -521,11 +505,7 @@ impl Lexer {
                     if self.next_chars_exact(['<', '>', '>']) {
                         self.end(DoubleLessGreater, start)
                     } else {
-                        self.switch_next(
-                            Less,
-                            [('=', LessEqual), ('|', BackPipe), ('>', LessGreater)],
-                            start,
-                        )
+                        self.switch_next(Less, [('=', LessEqual), ('>', LessGreater)], start)
                     }
                 }
                 '>' => self.switch_next(Greater, [('=', GreaterEqual), ('<', GreaterLess)], start),
@@ -536,7 +516,7 @@ impl Lexer {
                         Err(self.end_span(start).sp(LexError::Bang))
                     }
                 }
-                '|' => self.switch_next(Bar, [('>', Pipe), ('-', BarMinus)], start),
+                '|' => self.end(Bar, start),
                 // Comments
                 '#' => {
                     let mut comment = String::new();

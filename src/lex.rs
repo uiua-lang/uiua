@@ -7,7 +7,7 @@ use std::{
     sync::Arc,
 };
 
-use crate::{function::Selector, Ident, RuntimeError};
+use crate::{function::Selector, ops::Primitive, Ident, RuntimeError};
 
 pub fn lex(input: &str, file: &Path) -> LexResult<Vec<Sp<Token>>> {
     let mut lexer = Lexer::new(input, file);
@@ -226,6 +226,7 @@ pub enum Token {
     Selector(Selector),
     Keyword(Keyword),
     Simple(Simple),
+    Glyph(Primitive),
 }
 
 impl Token {
@@ -265,6 +266,12 @@ impl Token {
             _ => None,
         }
     }
+    pub fn as_glyph(&self) -> Option<Primitive> {
+        match self {
+            Token::Glyph(glyph) => Some(*glyph),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for Token {
@@ -278,6 +285,7 @@ impl fmt::Display for Token {
             Token::Selector(selector) => write!(f, "{selector}"),
             Token::Keyword(keyword) => write!(f, "{keyword}"),
             Token::Simple(simple) => write!(f, "{simple}"),
+            Token::Glyph(glyph) => write!(f, "{glyph}"),
         }
     }
 }
@@ -302,11 +310,6 @@ pub enum Simple {
     Bang,
     Slash,
     BackSlash,
-    DoubleSlash,
-    DoubleBackSlash,
-    LessGreater,
-    GreaterLess,
-    DoubleLessGreater,
     Plus,
     Minus,
     Star,
@@ -345,12 +348,7 @@ impl fmt::Display for Simple {
             Simple::Bar => write!(f, "|"),
             Simple::Bang => write!(f, "!"),
             Simple::Slash => write!(f, "/"),
-            Simple::DoubleSlash => write!(f, "//"),
             Simple::BackSlash => write!(f, "\\"),
-            Simple::DoubleBackSlash => write!(f, "\\\\"),
-            Simple::LessGreater => write!(f, "<>"),
-            Simple::GreaterLess => write!(f, "><"),
-            Simple::DoubleLessGreater => write!(f, "<<>>"),
             Simple::Plus => write!(f, "+"),
             Simple::Minus => write!(f, "-"),
             Simple::Star => write!(f, "*"),
@@ -392,6 +390,12 @@ impl From<Keyword> for Token {
 impl From<Simple> for Token {
     fn from(s: Simple) -> Self {
         Self::Simple(s)
+    }
+}
+
+impl From<Primitive> for Token {
+    fn from(p: Primitive) -> Self {
+        Self::Glyph(p)
     }
 }
 
@@ -439,15 +443,6 @@ impl Lexer {
     }
     fn next_char_exact(&mut self, c: char) -> bool {
         self.next_char_if(|c2| c2 == c).is_some()
-    }
-    fn next_chars_exact<const N: usize>(&mut self, cs: [char; N]) -> bool {
-        let matches = self.input_chars[self.loc.pos..self.loc.pos + N] == cs;
-        if matches {
-            for c in cs {
-                self.update_loc(c);
-            }
-        }
-        matches
     }
     fn next_char(&mut self) -> Option<char> {
         self.next_char_if(|_| true)
@@ -510,8 +505,8 @@ impl Lexer {
                 '_' => self.end(Underscore, start),
                 '`' => self.end(BackTick, start),
                 '^' => self.end(Caret, start),
-                '/' => self.switch_next(Slash, [('/', DoubleSlash)], start),
-                '\\' => self.switch_next(BackSlash, [('\\', DoubleBackSlash)], start),
+                '/' => self.end(Slash, start),
+                '\\' => self.end(BackSlash, start),
                 '~' => self.end(Tilde, start),
                 '+' => self.end(Plus, start),
                 '-' => {
@@ -524,14 +519,8 @@ impl Lexer {
                 '*' => self.end(Star, start),
                 '%' => self.end(Percent, start),
                 '=' => self.end(Equal, start),
-                '<' => {
-                    if self.next_chars_exact(['<', '>', '>']) {
-                        self.end(DoubleLessGreater, start)
-                    } else {
-                        self.switch_next(Less, [('=', LessEqual), ('>', LessGreater)], start)
-                    }
-                }
-                '>' => self.switch_next(Greater, [('=', GreaterEqual), ('<', GreaterLess)], start),
+                '<' => self.switch_next(Less, [('=', LessEqual)], start),
+                '>' => self.switch_next(Greater, [('=', GreaterEqual)], start),
                 '!' => self.switch_next(Bang, [('=', BangEqual)], start),
                 '|' => self.end(Bar, start),
                 // Comments
@@ -603,7 +592,13 @@ impl Lexer {
                 // Newlines
                 '\n' => self.end(Newline, start),
                 c if c.is_whitespace() => continue,
-                c => Err(self.end_span(start).sp(LexError::UnexpectedChar(c))),
+                c => {
+                    if let Some(prim) = Primitive::from_unicode(c) {
+                        self.end(Glyph(prim), start)
+                    } else {
+                        Err(self.end_span(start).sp(LexError::UnexpectedChar(c)))
+                    }
+                }
             };
         }
     }

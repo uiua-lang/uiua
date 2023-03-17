@@ -231,30 +231,6 @@ impl Parser {
     }
 }
 
-static BIN_OPS: &[(Simple, Primitive)] = &[
-    (Equal, Primitive::Eq),
-    (BangEqual, Primitive::Ne),
-    (Less, Primitive::Lt),
-    (LessEqual, Primitive::Le),
-    (Greater, Primitive::Gt),
-    (GreaterEqual, Primitive::Ge),
-    (Plus, Primitive::Add),
-    (Minus, Primitive::Sub),
-    (Star, Primitive::Mul),
-    (Percent, Primitive::Div),
-    (Period, Primitive::Dup),
-    (Tilde, Primitive::Flip),
-    (SemiColon, Primitive::Pop),
-    (Bang, Primitive::ExclusiveFork),
-];
-
-static MOD_OPS: &[(Simple, Primitive)] = &[
-    (Slash, Primitive::Reduce),
-    (BackSlash, Primitive::Scan),
-    (Caret, Primitive::Table),
-    (BackTick, Primitive::Cells),
-];
-
 impl Parser {
     fn try_words(&mut self) -> ParseResult<Option<Vec<Sp<Word>>>> {
         let mut words = Vec::new();
@@ -299,17 +275,20 @@ impl Parser {
         Ok(Some(word))
     }
     fn try_modified(&mut self) -> ParseResult<Option<Sp<Word>>> {
-        for (op, primitive) in MOD_OPS {
-            if let Some(mspan) = self.try_exact(*op) {
+        for prim in Primitive::ALL.into_iter().filter(Primitive::is_modifier) {
+            let op_span = self
+                .try_exact(prim)
+                .or_else(|| prim.name().ascii.and_then(|simple| self.try_exact(simple)));
+            if let Some(mspan) = op_span {
                 let inner = self.try_modified()?;
                 return Ok(Some(if let Some(word) = inner {
                     let span = mspan.clone().merge(word.span.clone());
                     span.sp(Word::Modified(Box::new(Modified {
-                        modifier: mspan.sp(*primitive),
+                        modifier: mspan.sp(prim),
                         word,
                     })))
                 } else {
-                    mspan.sp(Word::Primitive(*primitive))
+                    mspan.sp(Word::Primitive(prim))
                 }));
             }
         }
@@ -340,9 +319,12 @@ impl Parser {
         }))
     }
     fn try_op(&mut self) -> ParseResult<Option<Sp<Primitive>>> {
-        for (simple, prim) in BIN_OPS {
-            if let Some(span) = self.try_exact(*simple) {
-                return Ok(Some(span.sp(*prim)));
+        for prim in Primitive::ALL {
+            let op_span = self
+                .try_exact(prim)
+                .or_else(|| prim.name().ascii.and_then(|simple| self.try_exact(simple)));
+            if let Some(span) = op_span {
+                return Ok(Some(span.sp(prim)));
             }
         }
         if let Some(n) = self.next_token_map(Token::as_colons) {

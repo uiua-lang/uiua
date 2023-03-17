@@ -27,11 +27,11 @@ pub struct PrimitiveName {
 }
 
 macro_rules! primitive {
-    ($(($name:ident, $($ident:literal)? $($ascii:ident)? $(- $unicode:literal)?)),* $(,)?) => {
+    ($(($name:ident $({$modifier:ident})?,  $($ident:literal)? $($ascii:ident)? $(- $unicode:literal)?)),* $(,)?) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
         pub enum Primitive {
             $($name,)*
-                    AdicFork(u8)
+            AdicFork(u8)
         }
 
         impl Primitive {
@@ -62,6 +62,15 @@ macro_rules! primitive {
                 match c {
                     $($($unicode => Some(Self::$name),)?)*
                     _ => None
+                }
+            }
+            pub fn is_modifier(&self) -> bool {
+                match self {
+                    $($(Primitive::$name => {
+                        stringify!($modifier);
+                        true
+                    },)?)*
+                    _ => false
                 }
             }
         }
@@ -121,13 +130,6 @@ primitive!(
     (Drop, "drop" - '↦'),
     (Rotate, "rotate" - '↻'),
     (Reshape, "reshape" - '↯'),
-    // Higher order ops
-    (Fold, "Fold"),
-    (Reduce, Slash),
-    (Each, "Each"),
-    (Cells, BackTick),
-    (Table, Caret),
-    (Scan, BackSlash),
     (Repeat, "Repeat" - '⥀'),
     // IO ops
     (Show, "show"),
@@ -136,7 +138,14 @@ primitive!(
     (String, "string"),
     (ScanLn, "scanln"),
     (Args, "args"),
-    (Var, "var")
+    (Var, "var"),
+    // Modifiers
+    (Fold { modifier }, "Fold"),
+    (Reduce { modifier }, Slash),
+    (Each { modifier }, "Each"),
+    (Cells { modifier }, BackTick),
+    (Table { modifier }, Caret),
+    (Scan { modifier }, BackSlash),
 );
 
 fn _keep_primitive_small(_: std::convert::Infallible) {

@@ -83,7 +83,6 @@ primitive!(
     (Range, "range"),
     (Reverse, "reverse"),
     (Deshape, "deshape"),
-    (Reshape, "reshape"),
     // Dyadic array ops
     (Match, "match"),
     (Join, "join"),
@@ -92,14 +91,15 @@ primitive!(
     (Take, "take"),
     (Drop, "drop"),
     (Rotate, "rotate"),
+    (Reshape, "reshape"),
     // Higher order ops
-    (Fold, "fold"),
+    (Fold, "Fold"),
     (Reduce, Slash),
-    (Each, "each"),
+    (Each, "Each"),
     (Cells, BackTick),
     (Table, Caret),
     (Scan, BackSlash),
-    (Repeat, "repeat"),
+    (Repeat, "Repeat"),
     // IO ops
     (Show, "show"),
     (Print, "print"),

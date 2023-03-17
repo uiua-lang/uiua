@@ -22,81 +22,97 @@ pub(crate) fn constants() -> Vec<(&'static str, Value)> {
     ]
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
-pub enum Primitive {
-    // Pervasive monadic ops
-    Not,
-    Neg,
-    Abs,
-    Sqrt,
-    Sin,
-    Cos,
-    Asin,
-    Acos,
-    Floor,
-    Ceil,
-    Round,
-    // Pervasive dyadic ops
-    Eq,
-    Ne,
-    Lt,
-    Le,
-    Gt,
-    Ge,
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Mod,
-    Pow,
-    Min,
-    Max,
-    Atan2,
-    // Stack ops
-    Dup,
-    Flip,
-    Pop,
-    // Control flow ops
-    ExclusiveFork,
-    MonadicFork,
-    DyadicFork,
-    // Monadic array ops
-    Len,
-    Rank,
-    Shape,
-    First,
-    Range,
-    Reverse,
-    Deshape,
-    // Dyadic array ops
-    Match,
-    Join,
-    Reshape,
-    Pick,
-    Filter,
-    Take,
-    Drop,
-    Rotate,
-    // Higher order ops
-    Fold,
-    Reduce,
-    Each,
-    Cells,
-    Table,
-    Scan,
-    Repeat,
-    // IO ops
-    Show,
-    Print,
-    Println,
-    String,
-    ScanLn,
-    Args,
-    Var,
+macro_rules! primitive {
+    ($(($name:ident, $($string:literal)? $($simple:ident)?)),* $(,)?) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
+        pub enum Primitive {
+            $($name,)*
+                    AdicFork(u8)
+        }
+
+        impl Primitive {
+            pub fn public_name(&self) -> Result<&'static str, Simple> {
+                match self {
+                    $(Primitive::$name => $(Ok($string))? $(Err(Simple::$simple))?,)*
+                    Primitive::AdicFork(n) => Err(Simple::Colons(*n)),
+                }
+            }
+        }
+    };
 }
 
-fn _keep_primitive_id_small(_: std::convert::Infallible) {
-    let _: u8 = unsafe { std::mem::transmute(Some(Primitive::Not)) };
+primitive!(
+    // Pervasive monadic ops
+    (Not, "not"),
+    (Neg, "neg"),
+    (Abs, "abs"),
+    (Sqrt, "sqrt"),
+    (Sin, "sin"),
+    (Cos, "cos"),
+    (Asin, "asin"),
+    (Acos, "acos"),
+    (Floor, "floor"),
+    (Ceil, "ceil"),
+    (Round, "round"),
+    // Pervasive dyadic ops
+    (Eq, Equal),
+    (Ne, BangEqual),
+    (Lt, Less),
+    (Le, LessEqual),
+    (Gt, Greater),
+    (Ge, GreaterEqual),
+    (Add, Plus),
+    (Sub, Minus),
+    (Mul, Star),
+    (Div, Percent),
+    (Mod, "mod"),
+    (Pow, "pow"),
+    (Min, "min"),
+    (Max, "max"),
+    (Atan2, "atan2"),
+    // Stack ops
+    (Dup, Period),
+    (Flip, Tilde),
+    (Pop, SemiColon),
+    // Control flow ops
+    (ExclusiveFork, Bang),
+    // Monadic array ops
+    (Len, "len"),
+    (Rank, "rank"),
+    (Shape, "shape"),
+    (First, "first"),
+    (Range, "range"),
+    (Reverse, "reverse"),
+    (Deshape, "deshape"),
+    (Reshape, "reshape"),
+    // Dyadic array ops
+    (Match, "match"),
+    (Join, "join"),
+    (Pick, "pick"),
+    (Filter, "filter"),
+    (Take, "take"),
+    (Drop, "drop"),
+    (Rotate, "rotate"),
+    // Higher order ops
+    (Fold, "fold"),
+    (Reduce, Slash),
+    (Each, "each"),
+    (Cells, BackTick),
+    (Table, Caret),
+    (Scan, BackSlash),
+    (Repeat, "repeat"),
+    // IO ops
+    (Show, "show"),
+    (Print, "print"),
+    (Println, "println"),
+    (String, "string"),
+    (ScanLn, "scanLn"),
+    (Args, "args"),
+    (Var, "var")
+);
+
+fn _keep_primitive_small(_: std::convert::Infallible) {
+    let _: [u8; 2] = unsafe { std::mem::transmute(Some(Primitive::Not)) };
 }
 
 impl fmt::Display for Primitive {
@@ -109,72 +125,6 @@ impl fmt::Display for Primitive {
 }
 
 impl Primitive {
-    pub fn public_name(&self) -> Result<&'static str, Simple> {
-        use Simple::*;
-        match self {
-            Primitive::Not => Ok("not"),
-            Primitive::Neg => Ok("neg"),
-            Primitive::Abs => Ok("abs"),
-            Primitive::Sqrt => Ok("sqrt"),
-            Primitive::Sin => Ok("sin"),
-            Primitive::Cos => Ok("cos"),
-            Primitive::Asin => Ok("asin"),
-            Primitive::Acos => Ok("acos"),
-            Primitive::Floor => Ok("floor"),
-            Primitive::Ceil => Ok("ceil"),
-            Primitive::Round => Ok("round"),
-            Primitive::Eq => Err(Equal),
-            Primitive::Ne => Err(BangEqual),
-            Primitive::Lt => Err(Less),
-            Primitive::Le => Err(LessEqual),
-            Primitive::Gt => Err(Greater),
-            Primitive::Ge => Err(GreaterEqual),
-            Primitive::Add => Err(Plus),
-            Primitive::Sub => Err(Minus),
-            Primitive::Mul => Err(Star),
-            Primitive::Div => Err(Percent),
-            Primitive::Mod => Ok("mod"),
-            Primitive::Pow => Ok("pow"),
-            Primitive::Min => Ok("min"),
-            Primitive::Max => Ok("max"),
-            Primitive::Atan2 => Ok("atan2"),
-            Primitive::Match => Ok("match"),
-            Primitive::Join => Ok("join"),
-            Primitive::Reshape => Ok("reshape"),
-            Primitive::Pick => Ok("pick"),
-            Primitive::Filter => Ok("filter"),
-            Primitive::Take => Ok("take"),
-            Primitive::Drop => Ok("drop"),
-            Primitive::Rotate => Ok("rotate"),
-            Primitive::Dup => Err(Period),
-            Primitive::Flip => Err(Tilde),
-            Primitive::Pop => Err(SemiColon),
-            Primitive::ExclusiveFork => Err(Bang),
-            Primitive::MonadicFork => Err(Colon),
-            Primitive::DyadicFork => Err(DoubleColon),
-            Primitive::Fold => Ok("fold"),
-            Primitive::Reduce => Err(Slash),
-            Primitive::Each => Ok("each"),
-            Primitive::Cells => Err(BackTick),
-            Primitive::Table => Err(Caret),
-            Primitive::Scan => Err(BackSlash),
-            Primitive::Repeat => Ok("repeat"),
-            Primitive::Show => Ok("show"),
-            Primitive::Print => Ok("print"),
-            Primitive::Println => Ok("println"),
-            Primitive::String => Ok("string"),
-            Primitive::Len => Ok("len"),
-            Primitive::Rank => Ok("rank"),
-            Primitive::Shape => Ok("shape"),
-            Primitive::First => Ok("first"),
-            Primitive::Range => Ok("range"),
-            Primitive::Reverse => Ok("reverse"),
-            Primitive::Deshape => Ok("deshape"),
-            Primitive::ScanLn => Ok("scanln"),
-            Primitive::Args => Ok("args"),
-            Primitive::Var => Ok("var"),
-        }
-    }
     pub(crate) fn run(&self, env: &mut CallEnv) -> RuntimeResult {
         match self {
             Primitive::Not => env.monadic_env(Value::not)?,
@@ -238,30 +188,17 @@ impl Primitive {
                     env.call()?;
                 }
             }
-            Primitive::MonadicFork => {
+            Primitive::AdicFork(n) => {
                 let fs = env.pop()?;
                 if !fs.is_array() {
                     env.push(fs);
                     return env.call();
                 }
-                let x = env.pop()?;
+                let args = env.pop_n(*n as usize)?;
                 for f in fs.into_array().into_values().into_iter().rev() {
-                    env.push(x.clone());
-                    env.push(f);
-                    env.call()?;
-                }
-            }
-            Primitive::DyadicFork => {
-                let fs = env.pop()?;
-                if !fs.is_array() {
-                    env.push(fs);
-                    return env.call();
-                }
-                let x = env.pop()?;
-                let y = env.pop()?;
-                for f in fs.into_array().into_values().into_iter().rev() {
-                    env.push(y.clone());
-                    env.push(x.clone());
+                    for arg in args.iter() {
+                        env.push(arg.clone());
+                    }
                     env.push(f);
                     env.call()?;
                 }

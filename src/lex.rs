@@ -261,6 +261,12 @@ impl Token {
             _ => None,
         }
     }
+    pub fn as_colons(&self) -> Option<u8> {
+        match self {
+            Token::Simple(Simple::Colons(n)) => Some(*n),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for Token {
@@ -290,8 +296,7 @@ pub enum Simple {
     Underscore,
     BackTick,
     Caret,
-    Colon,
-    DoubleColon,
+    Colons(u8),
     Period,
     Tilde,
     SemiColon,
@@ -319,47 +324,47 @@ pub enum Simple {
 
 impl fmt::Display for Simple {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Simple::OpenParen => "(",
-                Simple::CloseParen => ")",
-                Simple::OpenCurly => "{",
-                Simple::CloseCurly => "}",
-                Simple::OpenBracket => "[",
-                Simple::CloseBracket => "]",
-                Simple::Comma => ",",
-                Simple::BackTick => "`",
-                Simple::Caret => "^",
-                Simple::Underscore => "_",
-                Simple::SemiColon => ";",
-                Simple::Colon => ":",
-                Simple::DoubleColon => "::",
-                Simple::Period => ".",
-                Simple::Tilde => "~",
-                Simple::Bar => "|",
-                Simple::Bang => "!",
-                Simple::Slash => "/",
-                Simple::DoubleSlash => "//",
-                Simple::BackSlash => "\\",
-                Simple::DoubleBackSlash => "\\\\",
-                Simple::LessGreater => "<>",
-                Simple::GreaterLess => "><",
-                Simple::DoubleLessGreater => "<<>>",
-                Simple::Plus => "+",
-                Simple::Minus => "-",
-                Simple::Star => "*",
-                Simple::Percent => "%",
-                Simple::Equal => "=",
-                Simple::BangEqual => "!=",
-                Simple::Less => "<",
-                Simple::LessEqual => "<=",
-                Simple::Greater => ">",
-                Simple::GreaterEqual => ">=",
-                Simple::Newline => "\\n",
+        match self {
+            Simple::OpenParen => write!(f, "("),
+            Simple::CloseParen => write!(f, ")"),
+            Simple::OpenCurly => write!(f, "{{"),
+            Simple::CloseCurly => write!(f, "}}"),
+            Simple::OpenBracket => write!(f, "["),
+            Simple::CloseBracket => write!(f, "]"),
+            Simple::Comma => write!(f, ","),
+            Simple::BackTick => write!(f, "`"),
+            Simple::Caret => write!(f, "^"),
+            Simple::Underscore => write!(f, "_"),
+            Simple::Colons(n) => {
+                for _ in 0..*n {
+                    write!(f, ":")?;
+                }
+                Ok(())
             }
-        )
+            Simple::SemiColon => write!(f, ";"),
+            Simple::Period => write!(f, "."),
+            Simple::Tilde => write!(f, "~"),
+            Simple::Bar => write!(f, "|"),
+            Simple::Bang => write!(f, "!"),
+            Simple::Slash => write!(f, "/"),
+            Simple::DoubleSlash => write!(f, "//"),
+            Simple::BackSlash => write!(f, "\\"),
+            Simple::DoubleBackSlash => write!(f, "\\\\"),
+            Simple::LessGreater => write!(f, "<>"),
+            Simple::GreaterLess => write!(f, "><"),
+            Simple::DoubleLessGreater => write!(f, "<<>>"),
+            Simple::Plus => write!(f, "+"),
+            Simple::Minus => write!(f, "-"),
+            Simple::Star => write!(f, "*"),
+            Simple::Percent => write!(f, "%"),
+            Simple::Equal => write!(f, "="),
+            Simple::BangEqual => write!(f, "!="),
+            Simple::Less => write!(f, "<"),
+            Simple::LessEqual => write!(f, "<="),
+            Simple::Greater => write!(f, ">"),
+            Simple::GreaterEqual => write!(f, ">="),
+            Simple::Newline => write!(f, "\\n"),
+        }
     }
 }
 
@@ -492,7 +497,13 @@ impl Lexer {
                 ']' => self.end(CloseBracket, start),
                 '.' => self.end(Period, start),
                 ';' => self.end(SemiColon, start),
-                ':' => self.switch_next(Colon, [(':', DoubleColon)], start),
+                ':' => {
+                    let mut n = 1;
+                    while self.next_char_exact(':') {
+                        n += 1;
+                    }
+                    self.end(Colons(n), start)
+                }
                 ',' => self.end(Comma, start),
                 '_' => self.end(Underscore, start),
                 '`' => self.end(BackTick, start),

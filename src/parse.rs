@@ -242,8 +242,6 @@ static BIN_OPS: &[(Simple, Primitive)] = &[
     (Minus, Primitive::Sub),
     (Star, Primitive::Mul),
     (Percent, Primitive::Div),
-    (Colon, Primitive::MonadicFork),
-    (DoubleColon, Primitive::DyadicFork),
     (Period, Primitive::Dup),
     (Tilde, Primitive::Flip),
     (SemiColon, Primitive::Pop),
@@ -346,6 +344,9 @@ impl Parser {
             if let Some(span) = self.try_exact(*simple) {
                 return Ok(Some(span.sp(*prim)));
             }
+        }
+        if let Some(n) = self.next_token_map(Token::as_colons) {
+            return Ok(Some(n.map(Primitive::AdicFork)));
         }
         Ok(None)
     }

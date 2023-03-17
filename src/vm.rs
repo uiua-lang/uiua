@@ -246,6 +246,12 @@ impl<'a> CallEnv<'a> {
             .pop()
             .ok_or_else(|| self.error("stack is empty"))
     }
+    pub fn pop_n(&mut self, n: usize) -> RuntimeResult<Vec<Value>> {
+        if self.vm.stack.len() < n {
+            return Err(self.error("stack is empty"));
+        }
+        Ok(self.vm.stack.drain(self.vm.stack.len() - n..).collect())
+    }
     #[track_caller]
     pub fn top_mut(&mut self) -> RuntimeResult<&mut Value> {
         if let Some(value) = self.vm.stack.last_mut() {

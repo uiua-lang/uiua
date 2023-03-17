@@ -233,7 +233,7 @@ impl Parser {
 
 static BIN_OPS: &[(Simple, Primitive)] = &[
     (Equal, Primitive::Op2(Op2::Eq)),
-    (NotEqual, Primitive::Op2(Op2::Ne)),
+    (BangEqual, Primitive::Op2(Op2::Ne)),
     (Less, Primitive::Op2(Op2::Lt)),
     (LessEqual, Primitive::Op2(Op2::Le)),
     (Greater, Primitive::Op2(Op2::Gt)),
@@ -242,11 +242,12 @@ static BIN_OPS: &[(Simple, Primitive)] = &[
     (Minus, Primitive::Op2(Op2::Sub)),
     (Star, Primitive::Op2(Op2::Mul)),
     (Percent, Primitive::Op2(Op2::Div)),
-    (Colon, Primitive::ForkArray1),
-    (DoubleColon, Primitive::ForkArray2),
+    (Colon, Primitive::MonadicFork),
+    (DoubleColon, Primitive::DyadicFork),
     (Period, Primitive::Dup),
     (Tilde, Primitive::Swap),
     (SemiColon, Primitive::Pop),
+    (Bang, Primitive::ExclusiveFork),
 ];
 
 static MOD_OPS: &[(Simple, Primitive)] = &[
@@ -279,7 +280,17 @@ impl Parser {
         while self.try_exact(Underscore).is_some() {
             let item = self
                 .try_modified()?
-                .ok_or_else(|| self.expected([Expectation::Term]))?;
+                .or_else(|| {
+                    self.try_exact(Underscore).map(|span| {
+                        span.clone().sp(Word::Func(Func {
+                            id: FunctionId::Anonymous(span),
+                            body: Vec::new(),
+                        }))
+                    })
+                })
+                .ok_or_else(|| {
+                    self.expected([Expectation::Term, Expectation::Simple(Underscore)])
+                })?;
             items.push(item);
         }
         if let Some(last) = items.last() {

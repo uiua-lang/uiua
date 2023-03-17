@@ -233,9 +233,9 @@ pub enum Primitive {
     Dup,
     Swap,
     Pop,
-    Fork,
-    ForkArray1,
-    ForkArray2,
+    ExclusiveFork,
+    MonadicFork,
+    DyadicFork,
     Fold,
     Reduce,
     Each,
@@ -271,9 +271,9 @@ impl fmt::Display for Primitive {
             Primitive::Dup => write!(f, "dup"),
             Primitive::Swap => write!(f, "swap"),
             Primitive::Pop => write!(f, "pop"),
-            Primitive::ForkArray1 => write!(f, "fork_array1"),
-            Primitive::ForkArray2 => write!(f, "fork_array2"),
-            Primitive::Fork => write!(f, "fork"),
+            Primitive::ExclusiveFork => write!(f, "exclusive_fork"),
+            Primitive::MonadicFork => write!(f, "monadic_fork"),
+            Primitive::DyadicFork => write!(f, "dyadic_fork"),
             Primitive::Fold => write!(f, "fold"),
             Primitive::Reduce => write!(f, "reduce"),
             Primitive::Each => write!(f, "each"),
@@ -314,41 +314,41 @@ impl Primitive {
             Primitive::Pop => {
                 env.pop()?;
             }
-            Primitive::Fork => {
-                let f = env.pop()?;
-                let g = env.pop()?;
-                let x = env.pop()?;
-                env.push(x.clone());
-                env.push(g);
-                env.call()?;
-                env.push(x);
-                env.push(f);
-                env.call()?;
-            }
-            Primitive::ForkArray1 => {
+            Primitive::ExclusiveFork => {
                 let fs = env.pop()?;
-                let x = env.pop()?;
                 if !fs.is_array() {
-                    env.push(x);
                     env.push(fs);
                     return env.call();
                 }
+                let arr = fs.into_array();
+                let values = env.pop_n(arr.len())?;
+                for (f, v) in arr.into_values().into_iter().rev().zip(values.into_iter()) {
+                    env.push(v);
+                    env.push(f);
+                    env.call()?;
+                }
+            }
+            Primitive::MonadicFork => {
+                let fs = env.pop()?;
+                if !fs.is_array() {
+                    env.push(fs);
+                    return env.call();
+                }
+                let x = env.pop()?;
                 for f in fs.into_array().into_values().into_iter().rev() {
                     env.push(x.clone());
                     env.push(f);
                     env.call()?;
                 }
             }
-            Primitive::ForkArray2 => {
+            Primitive::DyadicFork => {
                 let fs = env.pop()?;
-                let x = env.pop()?;
-                let y = env.pop()?;
                 if !fs.is_array() {
-                    env.push(y);
-                    env.push(x);
                     env.push(fs);
                     return env.call();
                 }
+                let x = env.pop()?;
+                let y = env.pop()?;
                 for f in fs.into_array().into_values().into_iter().rev() {
                     env.push(y.clone());
                     env.push(x.clone());

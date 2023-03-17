@@ -296,6 +296,7 @@ pub enum Simple {
     Tilde,
     SemiColon,
     Bar,
+    Bang,
     Slash,
     BackSlash,
     DoubleSlash,
@@ -308,7 +309,7 @@ pub enum Simple {
     Star,
     Percent,
     Equal,
-    NotEqual,
+    BangEqual,
     Less,
     LessEqual,
     Greater,
@@ -338,6 +339,7 @@ impl fmt::Display for Simple {
                 Simple::Period => ".",
                 Simple::Tilde => "~",
                 Simple::Bar => "|",
+                Simple::Bang => "!",
                 Simple::Slash => "/",
                 Simple::DoubleSlash => "//",
                 Simple::BackSlash => "\\",
@@ -350,7 +352,7 @@ impl fmt::Display for Simple {
                 Simple::Star => "*",
                 Simple::Percent => "%",
                 Simple::Equal => "=",
-                Simple::NotEqual => "!=",
+                Simple::BangEqual => "!=",
                 Simple::Less => "<",
                 Simple::LessEqual => "<=",
                 Simple::Greater => ">",
@@ -517,13 +519,7 @@ impl Lexer {
                     }
                 }
                 '>' => self.switch_next(Greater, [('=', GreaterEqual), ('<', GreaterLess)], start),
-                '!' => {
-                    if self.next_char_exact('=') {
-                        self.end(NotEqual, start)
-                    } else {
-                        Err(self.end_span(start).sp(LexError::Bang))
-                    }
-                }
+                '!' => self.switch_next(Bang, [('=', BangEqual)], start),
                 '|' => self.end(Bar, start),
                 // Comments
                 '#' => {

@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, mem::swap};
 
 use crate::{
     array::Array,
@@ -300,9 +300,20 @@ impl<'a> CallEnv<'a> {
         f: fn(&Value, &Value, &Env) -> RuntimeResult<V>,
     ) -> RuntimeResult {
         let env = self.env();
-        let b = self.pop()?;
+        let mut b = self.pop()?;
         let a = self.top_mut()?;
+        swap(a, &mut b);
         *a = f(a, &b, &env)?.into();
         Ok(())
+    }
+    pub fn dyadic_mut_env(
+        &mut self,
+        f: fn(&mut Value, &mut Value, &Env) -> RuntimeResult,
+    ) -> RuntimeResult {
+        let env = self.env();
+        let mut b = self.pop()?;
+        let a = self.top_mut()?;
+        swap(a, &mut b);
+        f(a, &mut b, &env)
     }
 }

@@ -6,7 +6,7 @@ use crate::{
     ast::*,
     function::{Function, FunctionId, Selector},
     lex::{Sp, Span},
-    ops::{constants, Op2, Primitive},
+    ops::{constants, Primitive},
     parse::{parse, ParseError},
     value::Value,
     vm::{dprintln, Instr, Vm},
@@ -156,25 +156,16 @@ impl Default for Compiler {
             assembly.constants.push(value);
             scope.bindings.insert(name.into(), Binding::Constant(index));
         }
-        // Operations
-        let mut init = |name: String, prim: Primitive| -> Function {
+        // Primitives
+        for prim in all::<Primitive>() {
             let function = Function::Primitive(prim);
             // Scope
             scope
                 .bindings
-                .insert(name.into(), Binding::Function(prim.into()));
+                .insert(prim.to_string().into(), Binding::Function(prim.into()));
             scope.functions.insert(prim.into(), function);
             // Function info
             assembly.function_ids.insert(function, prim.into());
-            function
-        };
-        // 2-parameter builtins
-        for op2 in all::<Op2>() {
-            init(op2.to_string(), op2.into());
-        }
-        // Higher-order builtins
-        for op in all::<Primitive>() {
-            init(op.to_string(), op);
         }
 
         assembly.start = assembly.instrs.len();

@@ -114,7 +114,8 @@ impl Value {
             self.array_mut().reverse();
         }
     }
-    pub fn join(&mut self, other: Value, env: &Env) -> RuntimeResult {
+    pub fn join(&mut self, other: &mut Value, env: &Env) -> RuntimeResult {
+        let other = take(other);
         match (self.is_array(), other.is_array()) {
             (true, true) => self.array_mut().join(other.into_array(), env)?,
             (true, false) => self.array_mut().join(Array::from(other), env)?,

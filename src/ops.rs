@@ -2,18 +2,11 @@ use std::{
     f64::consts::*,
     fmt,
     io::{stdout, Write},
-    mem::swap,
 };
 
 use enum_iterator::Sequence;
 
-use crate::{
-    array::Array,
-    grid_fmt::GridFmt,
-    value::*,
-    vm::{CallEnv, Env},
-    RuntimeResult,
-};
+use crate::{array::Array, grid_fmt::GridFmt, value::*, vm::CallEnv, RuntimeResult};
 
 pub(crate) fn constants() -> Vec<(&'static str, Value)> {
     vec![
@@ -29,49 +22,9 @@ pub(crate) fn constants() -> Vec<(&'static str, Value)> {
     ]
 }
 
-/// 2-parameter built-in operations
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
-pub enum Op2 {
-    Join,
-    Reshape,
-    Pick,
-    Filter,
-    Take,
-    Drop,
-    Rotate,
-}
-
-impl fmt::Display for Op2 {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Op2::Join => write!(f, "join"),
-            Op2::Reshape => write!(f, "reshape"),
-            Op2::Pick => write!(f, "pick"),
-            Op2::Filter => write!(f, "filter"),
-            Op2::Take => write!(f, "take"),
-            Op2::Drop => write!(f, "drop"),
-            Op2::Rotate => write!(f, "rotate"),
-        }
-    }
-}
-
-impl Value {
-    pub(crate) fn op2(&mut self, other: &mut Value, op: Op2, env: &Env) -> RuntimeResult {
-        match op {
-            Op2::Join => self.join(other.clone(), env)?,
-            Op2::Reshape => self.reshape(other, env)?,
-            Op2::Pick => self.pick(other, env)?,
-            Op2::Filter => self.replicate(other, env)?,
-            Op2::Take => self.take(other, env)?,
-            Op2::Drop => self.drop(other, env)?,
-            Op2::Rotate => self.rotate(other, env)?,
-        }
-        Ok(())
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
 pub enum Primitive {
+    // Pervasive monadic ops
     Not,
     Neg,
     Abs,
@@ -83,6 +36,7 @@ pub enum Primitive {
     Floor,
     Ceil,
     Round,
+    // Pervasive dyadic ops
     Eq,
     Ne,
     Lt,
@@ -98,23 +52,15 @@ pub enum Primitive {
     Min,
     Max,
     Atan2,
-    Op2(Op2),
+    // Stack ops
     Dup,
     Swap,
     Pop,
+    // Control flow ops
     ExclusiveFork,
     MonadicFork,
     DyadicFork,
-    Fold,
-    Reduce,
-    Each,
-    Cells,
-    Table,
-    Scan,
-    Show,
-    Print,
-    Println,
-    String,
+    // Monadic array ops
     Len,
     Rank,
     Shape,
@@ -122,6 +68,26 @@ pub enum Primitive {
     Range,
     Reverse,
     Deshape,
+    // Dyadic array ops
+    Join,
+    Reshape,
+    Pick,
+    Filter,
+    Take,
+    Drop,
+    Rotate,
+    // Higher order array ops
+    Fold,
+    Reduce,
+    Each,
+    Cells,
+    Table,
+    Scan,
+    // IO ops
+    Show,
+    Print,
+    Println,
+    String,
     ScanLn,
     Args,
     Var,
@@ -129,12 +95,6 @@ pub enum Primitive {
 
 fn _keep_primitive_id_small(_: std::convert::Infallible) {
     let _: u8 = unsafe { std::mem::transmute(Some(Primitive::Not)) };
-}
-
-impl From<Op2> for Primitive {
-    fn from(op: Op2) -> Self {
-        Self::Op2(op)
-    }
 }
 
 impl fmt::Display for Primitive {
@@ -166,7 +126,13 @@ impl fmt::Display for Primitive {
             Primitive::Min => write!(f, "min"),
             Primitive::Max => write!(f, "max"),
             Primitive::Atan2 => write!(f, "atan2"),
-            Primitive::Op2(op) => write!(f, "{op}"),
+            Primitive::Join => write!(f, "join"),
+            Primitive::Reshape => write!(f, "reshape"),
+            Primitive::Pick => write!(f, "pick"),
+            Primitive::Filter => write!(f, "filter"),
+            Primitive::Take => write!(f, "take"),
+            Primitive::Drop => write!(f, "drop"),
+            Primitive::Rotate => write!(f, "rotate"),
             Primitive::Dup => write!(f, "dup"),
             Primitive::Swap => write!(f, "swap"),
             Primitive::Pop => write!(f, "pop"),
@@ -226,13 +192,13 @@ impl Primitive {
             Primitive::Min => env.dyadic_env(Value::min)?,
             Primitive::Max => env.dyadic_env(Value::max)?,
             Primitive::Atan2 => env.dyadic_env(Value::atan2)?,
-            Primitive::Op2(op) => {
-                let subenv = env.env();
-                let mut a = env.pop()?;
-                let b = env.top_mut()?;
-                swap(&mut a, b);
-                b.op2(&mut a, *op, &subenv)?;
-            }
+            Primitive::Join => env.dyadic_mut_env(Value::join)?,
+            Primitive::Reshape => env.dyadic_mut_env(Value::reshape)?,
+            Primitive::Pick => env.dyadic_mut_env(Value::pick)?,
+            Primitive::Filter => env.dyadic_mut_env(Value::replicate)?,
+            Primitive::Take => env.dyadic_mut_env(Value::take)?,
+            Primitive::Drop => env.dyadic_mut_env(Value::drop)?,
+            Primitive::Rotate => env.dyadic_mut_env(Value::rotate)?,
             Primitive::Dup => {
                 let x = env.top_mut()?.clone();
                 env.push(x);

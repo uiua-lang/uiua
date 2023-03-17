@@ -2,11 +2,7 @@ use std::{fmt, mem::transmute, str::FromStr};
 
 use nanbox::{NanBox, NanBoxable};
 
-use crate::{
-    lex::Span,
-    ops::{Op2, Primitive},
-    Ident,
-};
+use crate::{lex::Span, ops::Primitive, Ident};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum FunctionId {
@@ -19,12 +15,6 @@ pub enum FunctionId {
 impl From<Ident> for FunctionId {
     fn from(name: Ident) -> Self {
         Self::Named(name)
-    }
-}
-
-impl From<Op2> for FunctionId {
-    fn from(op: Op2) -> Self {
-        Self::Primitive(op.into())
     }
 }
 

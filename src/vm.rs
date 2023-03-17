@@ -203,8 +203,8 @@ impl Vm {
                 false
             }
             Function::Selector(sel) => {
-                let mut items = Vec::with_capacity(sel.size() as usize);
-                for _ in 0..sel.size() {
+                let mut items = Vec::with_capacity(sel.outputs() as usize);
+                for _ in 0..sel.outputs() {
                     items.push(env.pop()?);
                 }
                 let bottom = env.vm.stack.len();

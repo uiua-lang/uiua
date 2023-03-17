@@ -91,17 +91,19 @@ impl NanBoxable for Function {
 pub struct Selector([u8; 5]);
 
 impl Selector {
-    pub fn size(&self) -> u8 {
+    pub fn inputs(&self) -> u8 {
         self.0[0]
+    }
+    pub fn outputs(&self) -> u8 {
+        self.0[1..].iter().position(|&i| i == 0).unwrap_or(4) as u8
     }
     pub fn get(&self, index: u8) -> u8 {
         self.0[index as usize + 1]
     }
     pub fn indices(&self) -> impl Iterator<Item = u8> + '_ {
-        self.0
+        self.0[1..]
             .iter()
             .copied()
-            .skip(1)
             .take_while(|&i| i != 0)
             .map(|i| i - 1)
     }
@@ -132,7 +134,11 @@ impl FromStr for Selector {
             if i >= 4 {
                 return Err(());
             }
-            inner[i + 1] = selector_char(c).ok_or(())?;
+            let c = selector_char(c).ok_or(())?;
+            if c > start {
+                return Err(());
+            }
+            inner[i + 1] = c;
         }
         Ok(Self(inner))
     }

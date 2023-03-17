@@ -7,8 +7,6 @@ use std::{
     sync::Arc,
 };
 
-use enum_iterator::{all, Sequence};
-
 use crate::{function::Selector, Ident, RuntimeError};
 
 pub fn lex(input: &str, file: &Path) -> LexResult<Vec<Sp<Token>>> {
@@ -368,11 +366,15 @@ impl fmt::Display for Simple {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Keyword {
     Let,
     Do,
     Const,
+}
+
+impl Keyword {
+    pub const ALL: [Keyword; 3] = [Keyword::Let, Keyword::Do, Keyword::Const];
 }
 
 impl fmt::Display for Keyword {
@@ -584,8 +586,9 @@ impl Lexer {
                     while let Some(c) = self.next_char_if(is_ident) {
                         ident.push(c);
                     }
-                    let token = if let Some(keyword) =
-                        all::<self::Keyword>().find(|k| format!("{k:?}").to_lowercase() == ident)
+                    let token = if let Some(keyword) = self::Keyword::ALL
+                        .into_iter()
+                        .find(|k| format!("{k:?}").to_lowercase() == ident)
                     {
                         Keyword(keyword)
                     } else if let Ok(selector) = ident.parse() {

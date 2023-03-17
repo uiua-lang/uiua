@@ -4,8 +4,6 @@ use std::{
     io::{stdout, Write},
 };
 
-use enum_iterator::Sequence;
-
 use crate::{array::Array, grid_fmt::GridFmt, lex::Simple, value::*, vm::CallEnv, RuntimeResult};
 
 pub(crate) fn constants() -> Vec<(&'static str, Value)> {
@@ -24,13 +22,14 @@ pub(crate) fn constants() -> Vec<(&'static str, Value)> {
 
 macro_rules! primitive {
     ($(($name:ident, $($string:literal)? $($simple:ident)?)),* $(,)?) => {
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
         pub enum Primitive {
             $($name,)*
                     AdicFork(u8)
         }
 
         impl Primitive {
+            pub const ALL: [Self; 0 $(+ {stringify!($name); 1})*] = [$(Self::$name,)*];
             pub fn public_name(&self) -> Result<&'static str, Simple> {
                 match self {
                     $(Primitive::$name => $(Ok($string))? $(Err(Simple::$simple))?,)*

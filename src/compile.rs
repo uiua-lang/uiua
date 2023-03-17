@@ -1,7 +1,5 @@
 use std::{collections::HashMap, fmt, fs, mem::take, path::Path};
 
-use enum_iterator::all;
-
 use crate::{
     ast::*,
     function::{Function, FunctionId, Selector},
@@ -157,7 +155,7 @@ impl Default for Compiler {
             scope.bindings.insert(name.into(), Binding::Constant(index));
         }
         // Primitives
-        for prim in all::<Primitive>() {
+        for prim in Primitive::ALL {
             let function = Function::Primitive(prim);
             // Scope
             if let Ok(name) = prim.public_name() {

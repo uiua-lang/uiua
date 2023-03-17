@@ -134,7 +134,7 @@ impl Vm {
                 Instr::EndArray => {
                     let bottom = self.array_stack.pop().expect("nothing in array stack");
                     let array: Array = stack.drain(bottom..).rev().collect();
-                    stack.push(array.into());
+                    stack.push(array.normalized(1).into());
                 }
                 Instr::BindGlobal => self.globals.push(stack.pop().unwrap()),
                 Instr::CopyGlobal(n) => stack.push(self.globals[*n].clone()),
@@ -180,6 +180,12 @@ impl Vm {
             }
         };
         // Call
+        let pc = self.pc;
+        let mut env = CallEnv {
+            vm: self,
+            assembly,
+            span,
+        };
         let call_started = match function {
             Function::Code(start) => {
                 self.call_stack.push(StackFrame {
@@ -192,14 +198,20 @@ impl Vm {
                 true
             }
             Function::Primitive(prim) => {
-                let pc = self.pc;
-                let mut env = CallEnv {
-                    vm: self,
-                    assembly,
-                    span,
-                };
                 prim.run(&mut env)?;
                 self.pc = pc;
+                false
+            }
+            Function::Selector(sel) => {
+                let mut items = Vec::with_capacity(sel.size() as usize);
+                for _ in 0..sel.size() {
+                    items.push(env.pop()?);
+                }
+                let bottom = env.vm.stack.len();
+                for i in sel.indices() {
+                    env.push(items[i as usize].clone());
+                }
+                self.stack[bottom..].reverse();
                 false
             }
         };

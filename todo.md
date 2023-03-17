@@ -1,5 +1,4 @@
-- Rethink sytax and semantics of array construction
-- Add selecting combinator literals
+- Add exclusive fork
 - Don't require parens around bound functions
 - Implement function reversal
 - Improve parsing expectation errors

@@ -1,4 +1,4 @@
-use std::{fmt, mem::transmute};
+use std::{fmt, mem::transmute, str::FromStr};
 
 use nanbox::{NanBox, NanBoxable};
 
@@ -55,6 +55,7 @@ impl fmt::Display for FunctionId {
 pub enum Function {
     Code(u32),
     Primitive(Primitive),
+    Selector(Selector),
 }
 
 impl fmt::Debug for Function {
@@ -68,18 +69,20 @@ impl fmt::Display for Function {
         match self {
             Function::Code(start) => write!(f, "({start})"),
             Function::Primitive(prim) => write!(f, "{prim}"),
+            Function::Selector(sel) => write!(f, "{sel}"),
         }
     }
 }
 
 impl NanBoxable for Function {
     unsafe fn from_nan_box(n: NanBox) -> Self {
-        let [a, b, c, d, e]: [u8; 5] = NanBoxable::from_nan_box(n);
+        let [a, b, c, d, e, f]: [u8; 6] = NanBoxable::from_nan_box(n);
         let start = u32::from_le_bytes([b, c, d, e]);
-        if a == 0 {
-            Function::Code(start)
-        } else {
-            Function::Primitive(transmute(u16::from_le_bytes([b, c])))
+        match a {
+            0 => Function::Code(start),
+            1 => Function::Primitive(transmute(u16::from_le_bytes([b, c]))),
+            2 => Function::Selector(Selector([b, c, d, e, f])),
+            _ => unreachable!(),
         }
     }
     fn into_nan_box(self) -> NanBox {
@@ -92,6 +95,69 @@ impl NanBoxable for Function {
                 let [b, c]: [u8; 2] = unsafe { transmute(prim) };
                 NanBoxable::into_nan_box([1, b, c, 0, 0])
             }
+            Function::Selector(sel) => {
+                let [b, c, d, e, f] = sel.0;
+                NanBoxable::into_nan_box([2, b, c, d, e, f])
+            }
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Selector([u8; 5]);
+
+impl Selector {
+    pub fn size(&self) -> u8 {
+        self.0[0]
+    }
+    pub fn get(&self, index: u8) -> u8 {
+        self.0[index as usize + 1]
+    }
+    pub fn indices(&self) -> impl Iterator<Item = u8> + '_ {
+        self.0
+            .iter()
+            .copied()
+            .skip(1)
+            .take_while(|&i| i != 0)
+            .map(|i| i - 1)
+    }
+}
+
+impl fmt::Display for Selector {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for i in self.0 {
+            if i == 0 {
+                break;
+            }
+            write!(f, "{}", (b'a' + i - 1) as char)?;
+        }
+        Ok(())
+    }
+}
+
+impl FromStr for Selector {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() < 2 {
+            return Err(());
+        }
+        let mut chars = s.chars();
+        let start = chars.next().and_then(selector_char).ok_or(())?;
+        let mut inner = [start, 0, 0, 0, 0];
+        for (i, c) in chars.enumerate() {
+            if i >= 4 {
+                return Err(());
+            }
+            inner[i + 1] = selector_char(c).ok_or(())?;
+        }
+        Ok(Self(inner))
+    }
+}
+
+fn selector_char(c: char) -> Option<u8> {
+    if ('a'..='d').contains(&c) {
+        Some(c as u8 - b'a' + 1)
+    } else {
+        None
     }
 }

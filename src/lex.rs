@@ -9,7 +9,7 @@ use std::{
 
 use enum_iterator::{all, Sequence};
 
-use crate::{Ident, RuntimeError};
+use crate::{function::Selector, Ident, RuntimeError};
 
 pub fn lex(input: &str, file: &Path) -> LexResult<Vec<Sp<Token>>> {
     let mut lexer = Lexer::new(input, file);
@@ -225,6 +225,7 @@ pub enum Token {
     Number(String),
     Char(char),
     Str(String),
+    Selector(Selector),
     Keyword(Keyword),
     Simple(Simple),
 }
@@ -254,6 +255,12 @@ impl Token {
             _ => None,
         }
     }
+    pub fn as_selector(&self) -> Option<&Selector> {
+        match self {
+            Token::Selector(selector) => Some(selector),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for Token {
@@ -264,6 +271,7 @@ impl fmt::Display for Token {
             Token::Number(real) => write!(f, "{real}"),
             Token::Char(char) => write!(f, "{char:?}"),
             Token::Str(s) => write!(f, "{s:?}"),
+            Token::Selector(selector) => write!(f, "{selector}"),
             Token::Keyword(keyword) => write!(f, "{keyword}"),
             Token::Simple(simple) => write!(f, "{simple}"),
         }
@@ -562,7 +570,7 @@ impl Lexer {
                     }
                     self.end(Token::Str(string), start)
                 }
-                // Identifiers and keywords
+                // Identifiers, keywords, and selectors
                 c if is_ident_start(c) => {
                     let mut ident = String::new();
                     ident.push(c);
@@ -573,6 +581,8 @@ impl Lexer {
                         all::<self::Keyword>().find(|k| format!("{k:?}").to_lowercase() == ident)
                     {
                         Keyword(keyword)
+                    } else if let Ok(selector) = ident.parse() {
+                        Selector(selector)
                     } else {
                         Ident(ident.into())
                     };
@@ -580,7 +590,7 @@ impl Lexer {
                 }
                 // Numbers
                 c if c.is_ascii_digit() => self.number(start, c.to_string()),
-                // Nelines
+                // Newlines
                 '\n' => self.end(Newline, start),
                 c if c.is_whitespace() => continue,
                 c => Err(self.end_span(start).sp(LexError::UnexpectedChar(c))),

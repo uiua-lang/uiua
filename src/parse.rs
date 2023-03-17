@@ -2,7 +2,7 @@ use std::{error::Error, fmt, path::Path};
 
 use crate::{
     ast::*,
-    function::FunctionId,
+    function::{FunctionId, Selector},
     lex::{Simple::*, *},
     ops::{Op2, Primitive},
     Ident,
@@ -222,6 +222,9 @@ impl Parser {
     fn try_ident(&mut self) -> Option<Sp<Ident>> {
         self.next_token_map(|token| token.as_ident().cloned())
     }
+    fn try_selector(&mut self) -> Option<Sp<Selector>> {
+        self.next_token_map(|token| token.as_selector().cloned())
+    }
     fn ident(&mut self) -> ParseResult<Sp<Ident>> {
         self.try_ident()
             .ok_or_else(|| self.expected([Expectation::Ident]))
@@ -321,6 +324,8 @@ impl Parser {
             span.sp(Word::Array(items))
         } else if let Some(prim) = self.try_op()? {
             prim.map(Word::Primitive)
+        } else if let Some(sel) = self.try_selector() {
+            sel.map(Word::Selector)
         } else {
             return Ok(None);
         }))

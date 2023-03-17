@@ -4,7 +4,7 @@ use enum_iterator::all;
 
 use crate::{
     ast::*,
-    function::{Function, FunctionId},
+    function::{Function, FunctionId, Selector},
     lex::{Sp, Span},
     ops::{constants, Op1, Op2, Primitive},
     parse::{parse, ParseError},
@@ -354,6 +354,7 @@ impl Compiler {
             }
             Word::Primitive(prim) => self.primitive(prim, word.span, call),
             Word::Modified(m) => self.modified(*m, call)?,
+            Word::Selector(sel) => self.selector(sel, word.span, call),
         }
         Ok(())
     }
@@ -447,6 +448,13 @@ impl Compiler {
     }
     fn primitive(&mut self, prim: Primitive, span: Span, call: bool) {
         self.push_instr(Instr::Push(Function::Primitive(prim).into()));
+        if call {
+            let span = self.push_call_span(span);
+            self.push_instr(Instr::Call(span));
+        }
+    }
+    fn selector(&mut self, selector: Selector, span: Span, call: bool) {
+        self.push_instr(Instr::Push(Function::Selector(selector).into()));
         if call {
             let span = self.push_call_span(span);
             self.push_instr(Instr::Call(span));

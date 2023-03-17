@@ -387,8 +387,8 @@ impl Primitive {
                     return Err(env.error("Cannot reduce empty array"));
                 };
                 for cell in cells {
-                    env.push(acc);
                     env.push(cell);
+                    env.push(acc);
                     env.push(f.clone());
                     env.call()?;
                     acc = env.pop()?;

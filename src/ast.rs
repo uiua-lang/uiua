@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::{
-    function::FunctionId,
+    function::{FunctionId, Selector},
     lex::{Sp, Span},
     ops::Primitive,
     Ident,
@@ -56,6 +56,7 @@ pub enum Word {
     Strand(Vec<Sp<Word>>),
     Array(Vec<Sp<Word>>),
     Func(Func),
+    Selector(Selector),
     FuncArray(Vec<Func>),
     Primitive(Primitive),
     Modified(Box<Modified>),
@@ -71,6 +72,7 @@ impl fmt::Debug for Word {
             Word::Array(array) => write!(f, "array({array:?})"),
             Word::Strand(items) => write!(f, "strand({items:?})"),
             Word::FuncArray(funcs) => funcs.fmt(f),
+            Word::Selector(selector) => selector.fmt(f),
             Word::Func(func) => func.fmt(f),
             Word::Primitive(prim) => prim.fmt(f),
             Word::Modified(modified) => modified.fmt(f),

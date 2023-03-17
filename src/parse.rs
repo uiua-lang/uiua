@@ -125,12 +125,6 @@ struct Parser {
     errors: Vec<Sp<ParseError>>,
 }
 
-#[allow(unused)]
-const PARENS: (Simple, Simple) = (OpenParen, CloseParen);
-const BRACKETS: (Simple, Simple) = (OpenBracket, CloseBracket);
-#[allow(unused)]
-const CURLIES: (Simple, Simple) = (OpenCurly, CloseCurly);
-
 impl Parser {
     fn next_token_map<'a, T: 'a>(
         &'a mut self,
@@ -242,27 +236,6 @@ impl Parser {
         self.try_ident()
             .ok_or_else(|| self.expected([Expectation::Ident]))
     }
-    fn try_surrounded_list<T>(
-        &mut self,
-        (open, close): (Simple, Simple),
-        item: impl Fn(&mut Self) -> ParseResult<Option<T>>,
-    ) -> ParseResult<Option<Sp<Vec<T>>>> {
-        let Some(start) = self.try_exact(open) else {
-            return Ok(None);
-        };
-        self.try_exact(Newline);
-        let mut items = Vec::new();
-        while let Some(item) = item(self)? {
-            items.push(item);
-            if self.try_exact(Comma).is_none() {
-                break;
-            }
-            self.try_exact(Newline);
-        }
-        let end = self.expect(close)?;
-        let span = start.merge(end);
-        Ok(Some(span.sp(items)))
-    }
 }
 
 static BIN_OPS: &[(Simple, Primitive)] = &[
@@ -278,6 +251,7 @@ static BIN_OPS: &[(Simple, Primitive)] = &[
     (Percent, Primitive::Op2(Op2::Div)),
     (Colon, Primitive::ForkArray1),
     (DoubleSlash, Primitive::ForkArray2),
+    (Period, Primitive::Dup),
 ];
 
 static MOD_OPS: &[(Simple, Primitive)] = &[
@@ -357,8 +331,31 @@ impl Parser {
                 id: FunctionId::Anonymous(span),
                 body,
             }))
-        } else if let Some(items) = self.try_surrounded_list(BRACKETS, Self::try_word)? {
-            items.map(Word::Array)
+        } else if let Some(start) = self.try_exact(OpenBracket) {
+            let mut items = Vec::new();
+            while let Some(words) = self.try_words()? {
+                let word = if words.len() == 1 {
+                    words.into_iter().next().unwrap()
+                } else {
+                    let span = words
+                        .first()
+                        .unwrap()
+                        .span
+                        .clone()
+                        .merge(words.last().unwrap().span.clone());
+                    span.clone().sp(Word::Func(Func {
+                        id: FunctionId::Anonymous(span),
+                        body: words,
+                    }))
+                };
+                items.push(word);
+                if self.try_exact(Comma).is_none() {
+                    break;
+                }
+            }
+            let end = self.expect(CloseBracket)?;
+            let span = start.merge(end);
+            span.sp(Word::Array(items))
         } else if let Some(prim) = self.try_op()? {
             prim.map(Word::Primitive)
         } else {

@@ -242,6 +242,7 @@ impl Value {
 pub enum Primitive {
     Op1(Op1),
     Op2(Op2),
+    Dup,
     Fork,
     ForkArray1,
     ForkArray2,
@@ -274,6 +275,7 @@ impl fmt::Display for Primitive {
         match self {
             Primitive::Op1(op) => write!(f, "{op}"),
             Primitive::Op2(op) => write!(f, "{op}"),
+            Primitive::Dup => write!(f, "dup"),
             Primitive::ForkArray1 => write!(f, "fork_array1"),
             Primitive::ForkArray2 => write!(f, "fork_array2"),
             Primitive::Fork => write!(f, "fork"),
@@ -300,6 +302,10 @@ impl Primitive {
                 let b = env.top_mut()?;
                 swap(&mut a, b);
                 b.op2(&mut a, *op, &subenv)?;
+            }
+            Primitive::Dup => {
+                let x = env.top_mut()?.clone();
+                env.push(x);
             }
             Primitive::Fork => {
                 let f = env.pop()?;

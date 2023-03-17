@@ -69,6 +69,7 @@ pub enum Primitive {
     Reverse,
     Deshape,
     // Dyadic array ops
+    Match,
     Join,
     Reshape,
     Pick,
@@ -137,6 +138,7 @@ impl Primitive {
             Primitive::Min => Ok("min"),
             Primitive::Max => Ok("max"),
             Primitive::Atan2 => Ok("atan2"),
+            Primitive::Match => Ok("match"),
             Primitive::Join => Ok("join"),
             Primitive::Reshape => Ok("reshape"),
             Primitive::Pick => Ok("pick"),
@@ -201,6 +203,7 @@ impl Primitive {
             Primitive::Min => env.dyadic_env(Value::min)?,
             Primitive::Max => env.dyadic_env(Value::max)?,
             Primitive::Atan2 => env.dyadic_env(Value::atan2)?,
+            Primitive::Match => env.dyadic(PartialEq::eq)?,
             Primitive::Join => env.dyadic_mut_env(Value::join)?,
             Primitive::Reshape => env.dyadic_mut_env(Value::reshape)?,
             Primitive::Pick => env.dyadic_mut_env(Value::pick)?,

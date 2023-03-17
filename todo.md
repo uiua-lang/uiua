@@ -1,6 +1,7 @@
 - Implement function reversal
 - Improve parsing expectation errors
 - Pretty error printing
+- Make calling arrays indexing
 - Optimize for non-reused values
 - Warnings
   - naming conventions

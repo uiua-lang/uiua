@@ -355,6 +355,12 @@ impl fmt::Display for Value {
     }
 }
 
+impl From<bool> for Value {
+    fn from(b: bool) -> Self {
+        Self::from(b as u8 as f64)
+    }
+}
+
 impl From<String> for Value {
     fn from(s: String) -> Self {
         Self::from(Array::from(s))

@@ -4,7 +4,7 @@ use crate::{
     ast::*,
     function::{FunctionId, Selector},
     lex::{Simple::*, *},
-    ops::{Op2, Primitive},
+    ops::Primitive,
     Ident,
 };
 
@@ -232,16 +232,16 @@ impl Parser {
 }
 
 static BIN_OPS: &[(Simple, Primitive)] = &[
-    (Equal, Primitive::Op2(Op2::Eq)),
-    (BangEqual, Primitive::Op2(Op2::Ne)),
-    (Less, Primitive::Op2(Op2::Lt)),
-    (LessEqual, Primitive::Op2(Op2::Le)),
-    (Greater, Primitive::Op2(Op2::Gt)),
-    (GreaterEqual, Primitive::Op2(Op2::Ge)),
-    (Plus, Primitive::Op2(Op2::Add)),
-    (Minus, Primitive::Op2(Op2::Sub)),
-    (Star, Primitive::Op2(Op2::Mul)),
-    (Percent, Primitive::Op2(Op2::Div)),
+    (Equal, Primitive::Eq),
+    (BangEqual, Primitive::Ne),
+    (Less, Primitive::Lt),
+    (LessEqual, Primitive::Le),
+    (Greater, Primitive::Gt),
+    (GreaterEqual, Primitive::Ge),
+    (Plus, Primitive::Add),
+    (Minus, Primitive::Sub),
+    (Star, Primitive::Mul),
+    (Percent, Primitive::Div),
     (Colon, Primitive::MonadicFork),
     (DoubleColon, Primitive::DyadicFork),
     (Period, Primitive::Dup),

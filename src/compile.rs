@@ -268,13 +268,13 @@ impl Compiler {
     }
     fn item(&mut self, item: Item) -> CompileResult {
         match item {
-            Item::Words(words) => self.words(words),
+            Item::Words(words) => self.words(words, true),
             Item::Let(binding) => self.r#let(binding),
             Item::Const(r#const) => self.r#const(r#const),
         }
     }
     fn r#let(&mut self, binding: Let) -> CompileResult {
-        self.words(binding.words)?;
+        self.words(binding.words, true)?;
         let scope = &mut self.scopes[0];
         let index = scope
             .bindings
@@ -294,7 +294,7 @@ impl Compiler {
         let global_instrs = self.global_instrs.clone();
         // Compile the words
         let words_span = r#const.words.last().unwrap().span.clone();
-        self.words(r#const.words)?;
+        self.words(r#const.words, true)?;
         self.assembly
             .add_non_function_instrs(take(&mut self.global_instrs));
         // Evaluate the words
@@ -313,9 +313,9 @@ impl Compiler {
         self.global_instrs = global_instrs;
         Ok(())
     }
-    fn words(&mut self, words: Vec<Sp<Word>>) -> CompileResult {
+    fn words(&mut self, words: Vec<Sp<Word>>, call: bool) -> CompileResult {
         for word in words.into_iter().rev() {
-            self.word(word, true)?;
+            self.word(word, call)?;
         }
         Ok(())
     }
@@ -334,9 +334,24 @@ impl Compiler {
             Word::Char(c) => self.push_instr(Instr::Push(c.into())),
             Word::String(s) => self.push_instr(Instr::Push(s.into())),
             Word::Ident(ident) => self.ident(ident, word.span, call)?,
-            Word::Array(items) => self.list(Instr::Array, items)?,
-            Word::Strand(items) => self.list(Instr::List, items)?,
+            Word::Array(items) => {
+                self.push_instr(Instr::BeginArray);
+                self.words(items, true)?;
+                self.push_instr(Instr::EndArray);
+            }
+            Word::Strand(items) => {
+                self.push_instr(Instr::BeginArray);
+                self.words(items, false)?;
+                self.push_instr(Instr::EndArray);
+            }
             Word::Func(func) => self.func(func)?,
+            Word::FuncArray(funcs) => {
+                self.push_instr(Instr::BeginArray);
+                for func in funcs.into_iter().rev() {
+                    self.func(func)?;
+                }
+                self.push_instr(Instr::EndArray);
+            }
             Word::Primitive(prim) => self.primitive(prim, word.span, call),
             Word::Modified(m) => self.modified(*m, call)?,
         }
@@ -380,14 +395,6 @@ impl Compiler {
         } else {
             todo!("is this even reachable?")
         }
-    }
-    fn list(&mut self, make: fn(usize) -> Instr, items: Vec<Sp<Word>>) -> CompileResult {
-        let len = items.len();
-        for item in items {
-            self.word(item, false)?;
-        }
-        self.push_instr(make(len));
-        Ok(())
     }
     fn func_outer(
         &mut self,
@@ -436,7 +443,7 @@ impl Compiler {
         Ok(())
     }
     fn func(&mut self, func: Func) -> CompileResult {
-        self.func_outer(func.id, |this| this.words(func.body))
+        self.func_outer(func.id, |this| this.words(func.body, true))
     }
     fn primitive(&mut self, prim: Primitive, span: Span, call: bool) {
         self.push_instr(Instr::Push(Function::Primitive(prim).into()));

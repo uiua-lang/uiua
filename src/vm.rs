@@ -24,8 +24,8 @@ pub(crate) enum Instr {
     Comment(String),
     Push(Value),
     Constant(usize),
-    List(usize),
-    Array(usize),
+    BeginArray,
+    EndArray,
     BindGlobal,
     CopyGlobal(usize),
     Call(usize),
@@ -64,6 +64,7 @@ pub(crate) use dprintln;
 #[derive(Default)]
 pub struct Vm {
     call_stack: Vec<StackFrame>,
+    array_stack: Vec<usize>,
     pub stack: Vec<Value>,
     pc: usize,
     just_called: Option<Function>,
@@ -129,17 +130,11 @@ impl Vm {
                     puffin::profile_scope!("constant");
                     stack.push(assembly.constants[*n].clone())
                 }
-                Instr::List(n) => {
-                    #[cfg(feature = "profile")]
-                    puffin::profile_scope!("list");
-                    let array: Array = stack.drain(stack.len() - *n..).collect();
-                    stack.push(array.normalized(0).into());
-                }
-                Instr::Array(n) => {
-                    #[cfg(feature = "profile")]
-                    puffin::profile_scope!("array");
-                    let array: Array = stack.drain(stack.len() - *n..).collect();
-                    stack.push(array.normalized(1).into());
+                Instr::BeginArray => self.array_stack.push(stack.len()),
+                Instr::EndArray => {
+                    let bottom = self.array_stack.pop().expect("nothing in array stack");
+                    let array: Array = stack.drain(bottom..).rev().collect();
+                    stack.push(array.into());
                 }
                 Instr::BindGlobal => self.globals.push(stack.pop().unwrap()),
                 Instr::CopyGlobal(n) => stack.push(self.globals[*n].clone()),

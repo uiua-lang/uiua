@@ -26,10 +26,8 @@ pub(crate) enum Instr {
     Constant(usize),
     List(usize),
     Array(usize),
-    /// Copy the nth value from the top of the stack
-    CopyRel(usize),
-    /// Copy the nth value from the bottom of the stack
-    CopyAbs(usize),
+    BindGlobal,
+    CopyGlobal(usize),
     Call(usize),
     Return,
 }
@@ -69,6 +67,7 @@ pub struct Vm {
     pub stack: Vec<Value>,
     pc: usize,
     just_called: Option<Function>,
+    globals: Vec<Value>,
 }
 
 impl Vm {
@@ -142,16 +141,8 @@ impl Vm {
                     let array: Array = stack.drain(stack.len() - *n..).collect();
                     stack.push(array.normalized(1).into());
                 }
-                Instr::CopyRel(n) => {
-                    #[cfg(feature = "profile")]
-                    puffin::profile_scope!("copy");
-                    stack.push(stack[stack.len() - *n].clone())
-                }
-                Instr::CopyAbs(n) => {
-                    #[cfg(feature = "profile")]
-                    puffin::profile_scope!("copy");
-                    stack.push(stack[*n].clone())
-                }
+                Instr::BindGlobal => self.globals.push(stack.pop().unwrap()),
+                Instr::CopyGlobal(n) => stack.push(self.globals[*n].clone()),
                 &Instr::Call(span) => {
                     self.call(assembly, span)?;
                 }

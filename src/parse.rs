@@ -280,8 +280,12 @@ static BIN_OPS: &[(Simple, Primitive)] = &[
     (DoubleSlash, Primitive::ForkArray2),
 ];
 
-static MOD_OPS: &[(Simple, Primitive)] =
-    &[(Slash, Primitive::Reduce), (BackSlash, Primitive::Scan)];
+static MOD_OPS: &[(Simple, Primitive)] = &[
+    (Slash, Primitive::Reduce),
+    (BackSlash, Primitive::Scan),
+    (Caret, Primitive::Table),
+    (BackTick, Primitive::Cells),
+];
 
 impl Parser {
     fn try_words(&mut self) -> ParseResult<Option<Vec<Sp<Word>>>> {

@@ -107,8 +107,6 @@ pub struct Compiler {
     in_progress_functions: Vec<InProgressFunction>,
     /// Stack of scopes
     scopes: Vec<Scope>,
-    /// The relative height of the runtime stack
-    height: usize,
     /// Errors that don't stop compilation
     errors: Vec<Sp<CompileError>>,
     /// The partially compiled assembly
@@ -119,13 +117,10 @@ pub struct Compiler {
 
 struct InProgressFunction {
     instrs: Vec<Instr>,
-    captures: Vec<Ident>,
-    height: usize,
 }
 
+#[derive(Default)]
 struct Scope {
-    /// How many functions deep the scope is. 0 is the global scope.
-    function_depth: usize,
     /// Values and functions that are in scope
     bindings: HashMap<Ident, Binding>,
     /// Map of function ids to the actual function values
@@ -136,22 +131,12 @@ struct Scope {
 enum Binding {
     /// A function that is available but not on the stack.
     Function(FunctionId),
-    /// A local variable is referenced by its height in the stack.
-    Local(usize),
+    /// A global variable is referenced by its index in the global array.
+    Global(usize),
     /// A constant is referenced by its index in the constant array.
     Constant(usize),
     /// A dud binding used when a binding lookup fails
     Error,
-}
-
-impl Scope {
-    fn new(function_depth: usize) -> Self {
-        Self {
-            function_depth,
-            bindings: HashMap::default(),
-            functions: HashMap::default(),
-        }
-    }
 }
 
 impl Default for Compiler {
@@ -163,7 +148,7 @@ impl Default for Compiler {
             function_ids: HashMap::default(),
             spans: vec![Span::Builtin],
         };
-        let mut scope = Scope::new(0);
+        let mut scope = Scope::default();
         // Initialize builtins
         // Constants
         for (name, value) in constants() {
@@ -202,7 +187,6 @@ impl Default for Compiler {
             global_instrs: vec![Instr::Comment("BEGIN".into())],
             in_progress_functions: Vec::new(),
             scopes: vec![scope],
-            height: 0,
             errors: Vec::new(),
             assembly,
             vm: Vm::default(),
@@ -259,27 +243,14 @@ impl Compiler {
         }
         self.assembly
     }
-    fn scope(&self) -> &Scope {
-        self.scopes.last().unwrap()
-    }
     fn scope_mut(&mut self) -> &mut Scope {
         self.scopes.last_mut().unwrap()
     }
-    fn push_scope(&mut self) -> usize {
-        self.scopes
-            .push(Scope::new(self.in_progress_functions.len()));
-        self.height
+    fn push_scope(&mut self) {
+        self.scopes.push(Scope::default());
     }
-    fn pop_scope(&mut self, height: usize) {
+    fn pop_scope(&mut self) {
         self.scopes.pop().unwrap();
-        self.height = height;
-    }
-    /// Bind the value on the top of the stack to the given identifier
-    fn bind_local(&mut self, ident: Ident) {
-        let height = self.height - 1;
-        self.scope_mut()
-            .bindings
-            .insert(ident, Binding::Local(height));
     }
     fn instrs_mut(&mut self) -> &mut Vec<Instr> {
         self.in_progress_functions
@@ -288,16 +259,6 @@ impl Compiler {
             .unwrap_or(&mut self.global_instrs)
     }
     fn push_instr(&mut self, instr: Instr) {
-        match &instr {
-            Instr::CopyRel(_) => self.height += 1,
-            Instr::CopyAbs(_) => self.height += 1,
-            Instr::Push(_) => self.height += 1,
-            Instr::Call(_) => self.height -= 1,
-            Instr::Constant(_) => self.height += 1,
-            Instr::Array(len) | Instr::List(len) if *len == 0 => self.height += 1,
-            Instr::Array(len) | Instr::List(len) => self.height -= len - 1,
-            _ => {}
-        }
         self.instrs_mut().push(instr);
     }
     fn push_call_span(&mut self, span: Span) -> usize {
@@ -314,13 +275,21 @@ impl Compiler {
     }
     fn r#let(&mut self, binding: Let) -> CompileResult {
         self.words(binding.words)?;
-        self.bind_local(binding.name.value);
+        let scope = &mut self.scopes[0];
+        let index = scope
+            .bindings
+            .values()
+            .filter(|b| matches!(b, Binding::Global(_)))
+            .count();
+        scope
+            .bindings
+            .insert(binding.name.value, Binding::Global(index));
+        self.push_instr(Instr::BindGlobal);
         Ok(())
     }
     fn r#const(&mut self, r#const: Const) -> CompileResult {
         let index = self.assembly.constants.len();
         // Set a restore point
-        let height = self.height;
         let instr_len = self.assembly.instrs.len();
         let global_instrs = self.global_instrs.clone();
         // Compile the words
@@ -341,7 +310,6 @@ impl Compiler {
             .insert(r#const.name.value, Binding::Constant(index));
         // Restore
         self.assembly.truncate(instr_len);
-        self.height = height;
         self.global_instrs = global_instrs;
         Ok(())
     }
@@ -375,40 +343,21 @@ impl Compiler {
         Ok(())
     }
     fn ident(&mut self, ident: Ident, span: Span, call: bool) -> CompileResult {
-        let bind = self.scopes.iter().rev().find_map(|scope| {
-            scope
-                .bindings
-                .get(&ident)
-                .map(|binding| (binding, scope.function_depth))
-        });
-        let (binding, binding_depth) = match bind {
+        let bind = self
+            .scopes
+            .iter()
+            .rev()
+            .find_map(|scope| scope.bindings.get(&ident));
+        let binding = match bind {
             Some(bind) => bind,
             None => {
                 self.errors
                     .push(span.clone().sp(CompileError::UnknownBinding(ident.clone())));
-                (&Binding::Error, self.scope().function_depth)
+                &Binding::Error
             }
         };
-        let mut binding = binding.clone();
-        if binding_depth > 0 && binding_depth != self.scope().function_depth {
-            let ipf = self.in_progress_functions.last_mut().unwrap();
-            let pos = ipf.captures.iter().position(|id| id == &ident);
-            let pos = pos.unwrap_or_else(|| {
-                ipf.captures.push(ident.clone());
-                ipf.captures.len() - 1
-            });
-            binding = Binding::Local(ipf.height - pos - 1);
-        }
-        match binding {
-            Binding::Local(index) => {
-                if binding_depth == 0 {
-                    self.push_instr(Instr::CopyAbs(index));
-                } else {
-                    let curr = self.height;
-                    let diff = curr - index;
-                    self.push_instr(Instr::CopyRel(diff));
-                }
-            }
+        match binding.clone() {
+            Binding::Global(index) => self.push_instr(Instr::CopyGlobal(index)),
             Binding::Function(id) => self.function_binding(id),
             Binding::Constant(index) => self.push_instr(Instr::Constant(index)),
             Binding::Error => self.push_instr(Instr::Push(Value::default())),
@@ -446,13 +395,10 @@ impl Compiler {
         inner: impl FnOnce(&mut Self) -> CompileResult,
     ) -> CompileResult {
         // Initialize the function's instruction list
-        self.in_progress_functions.push(InProgressFunction {
-            instrs: Vec::new(),
-            captures: Vec::new(),
-            height: self.height,
-        });
+        self.in_progress_functions
+            .push(InProgressFunction { instrs: Vec::new() });
         // Push the function's scope
-        let height = self.push_scope();
+        self.push_scope();
         // Push the function's name as a comment
         let name = match &id {
             FunctionId::Named(name) => format!("fn {name}"),
@@ -466,7 +412,7 @@ impl Compiler {
         self.push_instr(Instr::Comment(format!("end of {name}")));
         self.push_instr(Instr::Return);
         // Pop the function's scope
-        self.pop_scope(height);
+        self.pop_scope();
         // Determine the function's index
         let mut function = Function::Code(self.assembly.instrs.len() as u32);
         // Add the function's instructions to the global function list

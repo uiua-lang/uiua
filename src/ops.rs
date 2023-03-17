@@ -6,7 +6,7 @@ use std::{
 
 use enum_iterator::Sequence;
 
-use crate::{array::Array, grid_fmt::GridFmt, value::*, vm::CallEnv, RuntimeResult};
+use crate::{array::Array, grid_fmt::GridFmt, lex::Simple, value::*, vm::CallEnv, RuntimeResult};
 
 pub(crate) fn constants() -> Vec<(&'static str, Value)> {
     vec![
@@ -54,7 +54,7 @@ pub enum Primitive {
     Atan2,
     // Stack ops
     Dup,
-    Swap,
+    Flip,
     Pop,
     // Control flow ops
     ExclusiveFork,
@@ -76,7 +76,7 @@ pub enum Primitive {
     Take,
     Drop,
     Rotate,
-    // Higher order array ops
+    // Higher order ops
     Fold,
     Reduce,
     Each,
@@ -99,71 +99,78 @@ fn _keep_primitive_id_small(_: std::convert::Infallible) {
 
 impl fmt::Display for Primitive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Primitive::Not => write!(f, "not"),
-            Primitive::Neg => write!(f, "neg"),
-            Primitive::Abs => write!(f, "abs"),
-            Primitive::Sqrt => write!(f, "sqrt"),
-            Primitive::Sin => write!(f, "sin"),
-            Primitive::Cos => write!(f, "cos"),
-            Primitive::Asin => write!(f, "asin"),
-            Primitive::Acos => write!(f, "acos"),
-            Primitive::Floor => write!(f, "floor"),
-            Primitive::Ceil => write!(f, "ceil"),
-            Primitive::Round => write!(f, "round"),
-            Primitive::Eq => write!(f, "eq"),
-            Primitive::Ne => write!(f, "ne"),
-            Primitive::Lt => write!(f, "lt"),
-            Primitive::Le => write!(f, "le"),
-            Primitive::Gt => write!(f, "gt"),
-            Primitive::Ge => write!(f, "ge"),
-            Primitive::Add => write!(f, "add"),
-            Primitive::Sub => write!(f, "sub"),
-            Primitive::Mul => write!(f, "mul"),
-            Primitive::Div => write!(f, "div"),
-            Primitive::Mod => write!(f, "mod"),
-            Primitive::Pow => write!(f, "pow"),
-            Primitive::Min => write!(f, "min"),
-            Primitive::Max => write!(f, "max"),
-            Primitive::Atan2 => write!(f, "atan2"),
-            Primitive::Join => write!(f, "join"),
-            Primitive::Reshape => write!(f, "reshape"),
-            Primitive::Pick => write!(f, "pick"),
-            Primitive::Filter => write!(f, "filter"),
-            Primitive::Take => write!(f, "take"),
-            Primitive::Drop => write!(f, "drop"),
-            Primitive::Rotate => write!(f, "rotate"),
-            Primitive::Dup => write!(f, "dup"),
-            Primitive::Swap => write!(f, "swap"),
-            Primitive::Pop => write!(f, "pop"),
-            Primitive::ExclusiveFork => write!(f, "exclusive_fork"),
-            Primitive::MonadicFork => write!(f, "monadic_fork"),
-            Primitive::DyadicFork => write!(f, "dyadic_fork"),
-            Primitive::Fold => write!(f, "fold"),
-            Primitive::Reduce => write!(f, "reduce"),
-            Primitive::Each => write!(f, "each"),
-            Primitive::Cells => write!(f, "cells"),
-            Primitive::Table => write!(f, "table"),
-            Primitive::Scan => write!(f, "scan"),
-            Primitive::Show => write!(f, "show"),
-            Primitive::Print => write!(f, "print"),
-            Primitive::Println => write!(f, "println"),
-            Primitive::String => write!(f, "string"),
-            Primitive::Len => write!(f, "len"),
-            Primitive::Rank => write!(f, "rank"),
-            Primitive::Shape => write!(f, "shape"),
-            Primitive::First => write!(f, "first"),
-            Primitive::Range => write!(f, "range"),
-            Primitive::Reverse => write!(f, "reverse"),
-            Primitive::Deshape => write!(f, "deshape"),
-            Primitive::ScanLn => write!(f, "scanln"),
-            Primitive::Args => write!(f, "args"),
-            Primitive::Var => write!(f, "var"),
+        match self.public_name() {
+            Ok(name) => write!(f, "{name}"),
+            Err(simple) => write!(f, "{simple}"),
         }
     }
 }
 
 impl Primitive {
+    pub fn public_name(&self) -> Result<&'static str, Simple> {
+        use Simple::*;
+        match self {
+            Primitive::Not => Ok("not"),
+            Primitive::Neg => Ok("neg"),
+            Primitive::Abs => Ok("abs"),
+            Primitive::Sqrt => Ok("sqrt"),
+            Primitive::Sin => Ok("sin"),
+            Primitive::Cos => Ok("cos"),
+            Primitive::Asin => Ok("asin"),
+            Primitive::Acos => Ok("acos"),
+            Primitive::Floor => Ok("floor"),
+            Primitive::Ceil => Ok("ceil"),
+            Primitive::Round => Ok("round"),
+            Primitive::Eq => Err(Equal),
+            Primitive::Ne => Err(BangEqual),
+            Primitive::Lt => Err(Less),
+            Primitive::Le => Err(LessEqual),
+            Primitive::Gt => Err(Greater),
+            Primitive::Ge => Err(GreaterEqual),
+            Primitive::Add => Err(Plus),
+            Primitive::Sub => Err(Minus),
+            Primitive::Mul => Err(Star),
+            Primitive::Div => Err(Percent),
+            Primitive::Mod => Ok("mod"),
+            Primitive::Pow => Ok("pow"),
+            Primitive::Min => Ok("min"),
+            Primitive::Max => Ok("max"),
+            Primitive::Atan2 => Ok("atan2"),
+            Primitive::Join => Ok("join"),
+            Primitive::Reshape => Ok("reshape"),
+            Primitive::Pick => Ok("pick"),
+            Primitive::Filter => Ok("filter"),
+            Primitive::Take => Ok("take"),
+            Primitive::Drop => Ok("drop"),
+            Primitive::Rotate => Ok("rotate"),
+            Primitive::Dup => Err(Period),
+            Primitive::Flip => Err(Tilde),
+            Primitive::Pop => Err(SemiColon),
+            Primitive::ExclusiveFork => Err(Bang),
+            Primitive::MonadicFork => Err(Colon),
+            Primitive::DyadicFork => Err(DoubleColon),
+            Primitive::Fold => Ok("fold"),
+            Primitive::Reduce => Err(Slash),
+            Primitive::Each => Ok("each"),
+            Primitive::Cells => Err(BackTick),
+            Primitive::Table => Err(Caret),
+            Primitive::Scan => Err(BackSlash),
+            Primitive::Show => Ok("show"),
+            Primitive::Print => Ok("print"),
+            Primitive::Println => Ok("println"),
+            Primitive::String => Ok("string"),
+            Primitive::Len => Ok("len"),
+            Primitive::Rank => Ok("rank"),
+            Primitive::Shape => Ok("shape"),
+            Primitive::First => Ok("first"),
+            Primitive::Range => Ok("range"),
+            Primitive::Reverse => Ok("reverse"),
+            Primitive::Deshape => Ok("deshape"),
+            Primitive::ScanLn => Ok("scanln"),
+            Primitive::Args => Ok("args"),
+            Primitive::Var => Ok("var"),
+        }
+    }
     pub(crate) fn run(&self, env: &mut CallEnv) -> RuntimeResult {
         match self {
             Primitive::Not => env.monadic_env(Value::not)?,
@@ -203,7 +210,7 @@ impl Primitive {
                 let x = env.top_mut()?.clone();
                 env.push(x);
             }
-            Primitive::Swap => {
+            Primitive::Flip => {
                 let a = env.pop()?;
                 let b = env.pop()?;
                 env.push(a);

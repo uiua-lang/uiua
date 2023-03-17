@@ -160,9 +160,11 @@ impl Default for Compiler {
         for prim in all::<Primitive>() {
             let function = Function::Primitive(prim);
             // Scope
-            scope
-                .bindings
-                .insert(prim.to_string().into(), Binding::Function(prim.into()));
+            if let Ok(name) = prim.public_name() {
+                scope
+                    .bindings
+                    .insert(name.into(), Binding::Function(prim.into()));
+            }
             scope.functions.insert(prim.into(), function);
             // Function info
             assembly.function_ids.insert(function, prim.into());

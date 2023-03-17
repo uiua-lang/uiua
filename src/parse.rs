@@ -245,7 +245,7 @@ static BIN_OPS: &[(Simple, Primitive)] = &[
     (Colon, Primitive::MonadicFork),
     (DoubleColon, Primitive::DyadicFork),
     (Period, Primitive::Dup),
-    (Tilde, Primitive::Swap),
+    (Tilde, Primitive::Flip),
     (SemiColon, Primitive::Pop),
     (Bang, Primitive::ExclusiveFork),
 ];

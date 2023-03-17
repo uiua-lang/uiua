@@ -1,5 +1,6 @@
 - Implement function reversal
 - Improve parsing expectation errors
+- Pretty error printing
 - Optimize for non-reused values
 - Warnings
   - naming conventions

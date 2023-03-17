@@ -158,7 +158,7 @@ impl Default for Compiler {
         for prim in Primitive::ALL {
             let function = Function::Primitive(prim);
             // Scope
-            if let Ok(name) = prim.public_name() {
+            if let Some(name) = prim.name().ident {
                 scope
                     .bindings
                     .insert(name.into(), Binding::Function(prim.into()));

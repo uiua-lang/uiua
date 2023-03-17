@@ -20,8 +20,14 @@ pub(crate) fn constants() -> Vec<(&'static str, Value)> {
     ]
 }
 
+pub struct PrimitiveName {
+    pub ident: Option<&'static str>,
+    pub ascii: Option<Simple>,
+    pub unicode: Option<char>,
+}
+
 macro_rules! primitive {
-    ($(($name:ident, $($string:literal)? $($simple:ident)?)),* $(,)?) => {
+    ($(($name:ident, $($ident:literal)? $($ascii:ident)? $(- $unicode:literal)?)),* $(,)?) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
         pub enum Primitive {
             $($name,)*
@@ -30,10 +36,19 @@ macro_rules! primitive {
 
         impl Primitive {
             pub const ALL: [Self; 0 $(+ {stringify!($name); 1})*] = [$(Self::$name,)*];
-            pub fn public_name(&self) -> Result<&'static str, Simple> {
+            #[allow(path_statements)]
+            pub fn name(&self) -> PrimitiveName {
                 match self {
-                    $(Primitive::$name => $(Ok($string))? $(Err(Simple::$simple))?,)*
-                    Primitive::AdicFork(n) => Err(Simple::Colons(*n)),
+                    $(Primitive::$name => PrimitiveName {
+                        ident: {None::<&'static str> $(;Some($ident))?},
+                        ascii: {None::<Simple> $(;Some(Simple::$ascii))?},
+                        unicode: {None::<char> $(;Some($unicode))?},
+                    },)*
+                    Primitive::AdicFork(n) => PrimitiveName {
+                        ident: None,
+                        ascii: Some(Simple::Colons(*n)),
+                        unicode: None
+                    },
                 }
             }
         }
@@ -42,33 +57,33 @@ macro_rules! primitive {
 
 primitive!(
     // Pervasive monadic ops
-    (Not, "not"),
+    (Not, "not" - '¬'),
     (Neg, "neg"),
-    (Abs, "abs"),
-    (Sqrt, "sqrt"),
+    (Abs, "abs" - '¯'),
+    (Sqrt, "sqrt" - '√'),
     (Sin, "sin"),
     (Cos, "cos"),
     (Asin, "asin"),
     (Acos, "acos"),
-    (Floor, "floor"),
-    (Ceil, "ceil"),
+    (Floor, "floor" - '⌊'),
+    (Ceil, "ceil" - '⌈'),
     (Round, "round"),
     // Pervasive dyadic ops
     (Eq, Equal),
-    (Ne, BangEqual),
+    (Ne, BangEqual - '≠'),
     (Lt, Less),
-    (Le, LessEqual),
+    (Le, LessEqual - '≤'),
     (Gt, Greater),
-    (Ge, GreaterEqual),
+    (Ge, GreaterEqual - '≥'),
     (Add, Plus),
     (Sub, Minus),
-    (Mul, Star),
-    (Div, Percent),
-    (Mod, "mod"),
-    (Pow, "pow"),
-    (Min, "min"),
-    (Max, "max"),
-    (Atan2, "atan2"),
+    (Mul, Star - '×'),
+    (Div, Percent - '÷'),
+    (Mod, "mod" - '◿'),
+    (Pow, "pow" - '↗'),
+    (Min, "min" - '↧'),
+    (Max, "max" - '↥'),
+    (Atan, "atan"),
     // Stack ops
     (Dup, Period),
     (Flip, Tilde),
@@ -76,22 +91,23 @@ primitive!(
     // Control flow ops
     (ExclusiveFork, Bang),
     // Monadic array ops
-    (Len, "len"),
-    (Rank, "rank"),
-    (Shape, "shape"),
-    (First, "first"),
-    (Range, "range"),
-    (Reverse, "reverse"),
-    (Deshape, "deshape"),
+    (Len, "len" - '𝄩'),
+    (Rank, "rank" - '⧈'),
+    (Shape, "shape" - '⬠'),
+    (First, "first" - '⟥'),
+    (Range, "range" - '↕'),
+    (Reverse, "reverse" - '⇅'),
+    (Deshape, "deshape" - '♭'),
     // Dyadic array ops
-    (Match, "match"),
-    (Join, "join"),
+    (Match, "match" - '≡'),
+    (NoMatch, "nomatch" - '≢'),
+    (Join, "join" - '⨝'),
     (Pick, "pick"),
-    (Filter, "filter"),
-    (Take, "take"),
-    (Drop, "drop"),
-    (Rotate, "rotate"),
-    (Reshape, "reshape"),
+    (Filter, "filter" - 'ꖛ'),
+    (Take, "take" - '↤'),
+    (Drop, "drop" - '↦'),
+    (Rotate, "rotate" - '↻'),
+    (Reshape, "reshape" - '↯'),
     // Higher order ops
     (Fold, "Fold"),
     (Reduce, Slash),
@@ -99,7 +115,7 @@ primitive!(
     (Cells, BackTick),
     (Table, Caret),
     (Scan, BackSlash),
-    (Repeat, "Repeat"),
+    (Repeat, "Repeat" - '⥀'),
     // IO ops
     (Show, "show"),
     (Print, "print"),
@@ -116,9 +132,15 @@ fn _keep_primitive_small(_: std::convert::Infallible) {
 
 impl fmt::Display for Primitive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.public_name() {
-            Ok(name) => write!(f, "{name}"),
-            Err(simple) => write!(f, "{simple}"),
+        let name = self.name();
+        if let Some(c) = name.unicode {
+            write!(f, "{}", c)
+        } else if let Some(s) = name.ascii {
+            write!(f, "{}", s)
+        } else if let Some(s) = name.ident {
+            write!(f, "{}", s)
+        } else {
+            write!(f, "{:?}", self)
         }
     }
 }
@@ -151,8 +173,9 @@ impl Primitive {
             Primitive::Pow => env.dyadic_env(Value::pow)?,
             Primitive::Min => env.dyadic_env(Value::min)?,
             Primitive::Max => env.dyadic_env(Value::max)?,
-            Primitive::Atan2 => env.dyadic_env(Value::atan2)?,
-            Primitive::Match => env.dyadic(PartialEq::eq)?,
+            Primitive::Atan => env.dyadic_env(Value::atan2)?,
+            Primitive::Match => env.dyadic(|a, b| a == b)?,
+            Primitive::NoMatch => env.dyadic(|a, b| a != b)?,
             Primitive::Join => env.dyadic_mut_env(Value::join)?,
             Primitive::Reshape => env.dyadic_mut_env(Value::reshape)?,
             Primitive::Pick => env.dyadic_mut_env(Value::pick)?,

@@ -51,6 +51,19 @@ macro_rules! primitive {
                     },
                 }
             }
+            pub fn from_simple(s: Simple) -> Option<Self> {
+                match s {
+                    $($(Simple::$ascii => Some(Self::$name),)?)*
+                    Simple::Colons(n) => Some(Self::AdicFork(n)),
+                    _ => None
+                }
+            }
+            pub fn from_unicode(c: char) -> Option<Self> {
+                match c {
+                    $($($unicode => Some(Self::$name),)?)*
+                    _ => None
+                }
+            }
         }
     };
 }
@@ -58,8 +71,8 @@ macro_rules! primitive {
 primitive!(
     // Pervasive monadic ops
     (Not, "not" - '¬'),
-    (Neg, "neg"),
-    (Abs, "abs" - '¯'),
+    (Neg, "neg" - '¯'),
+    (Abs, "abs"),
     (Sqrt, "sqrt" - '√'),
     (Sin, "sin"),
     (Cos, "cos"),
@@ -121,7 +134,7 @@ primitive!(
     (Print, "print"),
     (Println, "println"),
     (String, "string"),
-    (ScanLn, "scanLn"),
+    (ScanLn, "scanln"),
     (Args, "args"),
     (Var, "var")
 );

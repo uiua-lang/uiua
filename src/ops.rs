@@ -83,6 +83,7 @@ pub enum Primitive {
     Cells,
     Table,
     Scan,
+    Repeat,
     // IO ops
     Show,
     Print,
@@ -155,6 +156,7 @@ impl Primitive {
             Primitive::Cells => Err(BackTick),
             Primitive::Table => Err(Caret),
             Primitive::Scan => Err(BackSlash),
+            Primitive::Repeat => Ok("repeat"),
             Primitive::Show => Ok("show"),
             Primitive::Print => Ok("print"),
             Primitive::Println => Ok("println"),
@@ -396,6 +398,21 @@ impl Primitive {
                     scanned.push(acc.clone());
                 }
                 env.push(Array::from(scanned).normalized(1));
+            }
+            Primitive::Repeat => {
+                let f = env.pop()?;
+                let n = env.pop()?;
+                let Some(n) = n.as_nat() else {
+                    return Err(env.error("Repetitions must be a natural number"));
+                };
+                let mut acc = env.pop()?;
+                for _ in 0..n {
+                    env.push(acc);
+                    env.push(f.clone());
+                    env.call()?;
+                    acc = env.pop()?;
+                }
+                env.push(acc);
             }
             Primitive::Show => {
                 println!("{}", env.pop()?.grid_string());

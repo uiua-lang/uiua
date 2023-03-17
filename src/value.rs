@@ -85,6 +85,13 @@ impl Value {
             n >= 0.0 && n.trunc() == n
         }
     }
+    pub fn as_nat(&self) -> Option<u64> {
+        if self.is_nat() {
+            Some(self.number() as u64)
+        } else {
+            None
+        }
+    }
     pub fn is_char(&self) -> bool {
         self.0.tag() == CHAR_TAG as u32
     }

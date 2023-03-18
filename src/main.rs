@@ -148,14 +148,13 @@ fn uiua_files() -> Vec<PathBuf> {
 
 const WATCHING: &str = "watching for changes...";
 fn print_watching() {
-    eprint!(
-        "\n{}\n{}",
-        "―".repeat(term_size::dimensions().map_or(10, |(w, _)| w)),
-        WATCHING
-    );
+    eprint!("{}", WATCHING);
     stderr().flush().unwrap();
 }
 fn clear_watching() {
-    eprint!("\r{}\n", " ".repeat(WATCHING.len()));
+    eprint!(
+        "\r{}",
+        "―".repeat(term_size::dimensions().map_or(10, |(w, _)| w))
+    );
     stderr().flush().unwrap();
 }

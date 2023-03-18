@@ -58,7 +58,11 @@ impl GridFmt for Array {
         let mut column_widths = vec![0; metagrid_width];
         let mut row_heights = vec![0; metagrid_height];
         for row in 0..metagrid_height {
-            let max_row_height = metagrid[row].iter().map(|cell| cell.len()).max().unwrap();
+            let max_row_height = metagrid[row]
+                .iter()
+                .map(|cell| cell.len())
+                .max()
+                .unwrap_or(1);
             row_heights[row] = max_row_height;
         }
         for col in 0..metagrid_width {

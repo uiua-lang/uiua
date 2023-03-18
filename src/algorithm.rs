@@ -326,7 +326,7 @@ impl Value {
 }
 
 fn transpose<T: Clone>(shape: &mut [usize], data: &mut [T]) {
-    if shape.len() < 2 {
+    if shape.len() < 2 || shape[0] == 0 {
         return;
     }
     let mut temp = Vec::with_capacity(data.len());

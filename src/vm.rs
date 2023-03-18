@@ -174,7 +174,6 @@ impl Vm {
         let function = match value.ty() {
             Type::Function => value.function(),
             _ => {
-                self.stack.pop();
                 self.stack.push(value);
                 return Ok(false);
             }
@@ -203,12 +202,12 @@ impl Vm {
                 false
             }
             Function::Selector(sel) => {
-                let mut items = Vec::with_capacity(sel.outputs() as usize);
-                for _ in 0..sel.outputs() {
+                let mut items = Vec::with_capacity(sel.inputs() as usize);
+                for _ in 0..sel.inputs() {
                     items.push(env.pop()?);
                 }
                 let bottom = env.vm.stack.len();
-                for i in sel.indices() {
+                for i in sel.output_indices() {
                     env.push(items[i as usize].clone());
                 }
                 self.stack[bottom..].reverse();

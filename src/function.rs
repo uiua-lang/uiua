@@ -100,7 +100,7 @@ impl Selector {
     pub fn get(&self, index: u8) -> u8 {
         self.0[index as usize + 1]
     }
-    pub fn indices(&self) -> impl Iterator<Item = u8> + '_ {
+    pub fn output_indices(&self) -> impl Iterator<Item = u8> + '_ {
         self.0[1..]
             .iter()
             .copied()
@@ -149,5 +149,22 @@ fn selector_char(c: char) -> Option<u8> {
         Some(c as u8 - b'a' + 1)
     } else {
         None
+    }
+}
+
+#[test]
+fn selector_correctness() {
+    let ba = Selector::from_str("ba").unwrap();
+    assert_eq!(ba.inputs(), 2);
+    assert_eq!(ba.outputs(), 1);
+    for i in ba.output_indices() {
+        assert!(i < ba.inputs());
+    }
+
+    let bb = Selector::from_str("bb").unwrap();
+    assert_eq!(bb.inputs(), 2);
+    assert_eq!(bb.outputs(), 1);
+    for i in bb.output_indices() {
+        assert!(i < bb.inputs());
     }
 }

@@ -1,6 +1,6 @@
 use std::{
     fs,
-    io::{stdout, Write},
+    io::{stderr, Write},
     path::{Path, PathBuf},
     process::exit,
     sync::{Arc, Mutex},
@@ -77,6 +77,7 @@ fn run() -> UiuaResult {
                     sleep(Duration::from_millis(10));
                     let mut guard = modify_paths.lock().unwrap();
                     guard.dedup();
+                    let mut did_something = false;
                     for path in guard.drain(..) {
                         match format_file(&path) {
                             Ok(formatted) => {
@@ -90,9 +91,15 @@ fn run() -> UiuaResult {
                                 last_formatted = formatted;
                             }
                             Err(e) => {
-                                eprintln!("{e}")
+                                clear_watching();
+                                eprintln!("{e}");
+                                print_watching();
                             }
                         }
+                        did_something = true;
+                    }
+                    if did_something {
+                        sleep(Duration::from_millis(100));
                     }
                 }
             }
@@ -163,14 +170,14 @@ fn uiua_files() -> Vec<PathBuf> {
 
 const WATCHING: &str = "watching for changes...";
 fn print_watching() {
-    print!(
+    eprint!(
         "\n{}\n{}",
         "―".repeat(term_size::dimensions().map_or(10, |(w, _)| w)),
         WATCHING
     );
-    stdout().flush().unwrap();
+    stderr().flush().unwrap();
 }
 fn clear_watching() {
-    print!("\r{}\n", " ".repeat(WATCHING.len()));
-    stdout().flush().unwrap();
+    eprint!("\r{}\n", " ".repeat(WATCHING.len()));
+    stderr().flush().unwrap();
 }

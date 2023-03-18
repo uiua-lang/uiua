@@ -146,8 +146,14 @@ impl Format for Word {
                 state.space_if_alphanumeric();
                 state.push(f);
             }
-            Word::Char(c) => state.push(&format!("{c:?}")),
-            Word::String(s) => state.push(&format!("{s:?}")),
+            Word::Char(c) => {
+                state.space_if_alphanumeric();
+                state.push(&format!("{c:?}"));
+            }
+            Word::String(s) => {
+                state.space_if_alphanumeric();
+                state.push(&format!("{s:?}"));
+            }
             Word::Ident(ident) => {
                 state.space_if_alphanumeric();
                 state.push(ident);

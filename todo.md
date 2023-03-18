@@ -12,6 +12,7 @@
   - Classify
   - Select
 - Basic parsing functions
+- Error handling
 - Type testing/tracing
 - Structs
 - Enums?

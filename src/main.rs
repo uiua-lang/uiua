@@ -10,7 +10,7 @@ use std::{
 
 use clap::Parser;
 use notify::{EventKind, RecursiveMode, Watcher};
-use uiua::{compile::Compiler, parse::format_file, UiuaResult};
+use uiua::{compile::Compiler, format::format_file, UiuaResult};
 
 fn main() {
     #[cfg(feature = "profile")]

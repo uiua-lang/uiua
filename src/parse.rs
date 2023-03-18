@@ -1,11 +1,11 @@
-use std::{error::Error, fmt, fs, path::Path};
+use std::{error::Error, fmt, path::Path};
 
 use crate::{
     ast::*,
     function::{FunctionId, Selector},
     lex::{Simple::*, *},
     ops::Primitive,
-    Ident, UiuaError, UiuaResult,
+    Ident,
 };
 
 #[derive(Debug)]
@@ -106,37 +106,6 @@ pub fn parse(input: &str, path: &Path) -> (Vec<Item>, Vec<Sp<ParseError>>) {
         parser.errors.push(parser.expected([Expectation::Eof]));
     }
     (items, parser.errors)
-}
-
-pub fn format_items(items: Vec<Item>) -> String {
-    let mut state = FormatState::default();
-    for item in items {
-        item.format(&mut state);
-    }
-    let mut s = state.string;
-    s = s.trim_end().into();
-    s.push('\n');
-    s
-}
-
-pub fn format(input: &str, path: &Path) -> Result<String, Vec<Sp<ParseError>>> {
-    let (items, errors) = parse(input, path);
-    if errors.is_empty() {
-        Ok(format_items(items))
-    } else {
-        Err(errors)
-    }
-}
-
-pub fn format_file<P: AsRef<Path>>(path: P) -> UiuaResult<String> {
-    let path = path.as_ref();
-    let input = fs::read_to_string(path).map_err(|e| UiuaError::Load(path.to_path_buf(), e))?;
-    let formatted = format(&input, path)?;
-    if formatted == input {
-        return Ok(formatted);
-    }
-    fs::write(path, &formatted).map_err(|e| UiuaError::Format(path.to_path_buf(), e))?;
-    Ok(formatted)
 }
 
 struct Parser {

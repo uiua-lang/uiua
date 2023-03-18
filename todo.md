@@ -5,7 +5,6 @@
 - More array functions
   - Last?
   - Windows
-  - Transpose?
   - Grade
   - Group
   - Classify

@@ -77,7 +77,7 @@ impl FormatState {
             return;
         }
         self.space_if_was_strand();
-        if self.string.ends_with(char::is_alphanumeric) {
+        if self.string.ends_with(|c: char| c.is_ascii_alphanumeric()) {
             self.push(' ');
         }
     }
@@ -87,7 +87,7 @@ impl FormatState {
             return;
         }
         self.space_if_was_strand();
-        if self.string.ends_with(char::is_alphabetic) {
+        if self.string.ends_with(|c: char| c.is_ascii_alphabetic()) {
             self.push(' ');
         }
     }
@@ -217,7 +217,7 @@ impl Format for Primitive {
     fn format(&self, state: &mut FormatState) {
         state.space_if_alphabetic();
         let s = self.to_string();
-        if s.starts_with(char::is_alphabetic) {
+        if s.starts_with(|c: char| c.is_ascii_alphabetic()) {
             state.space_if_alphanumeric();
         }
         state.push(s);

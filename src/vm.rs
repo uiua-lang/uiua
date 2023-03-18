@@ -145,9 +145,9 @@ impl Vm {
                     #[cfg(feature = "profile")]
                     puffin::profile_scope!("return");
                     if let Some(frame) = self.call_stack.pop() {
-                        let value = stack.pop().unwrap();
+                        let value = stack.pop();
                         stack.truncate(frame.stack_size);
-                        stack.push(value);
+                        stack.extend(value);
                         if return_depth.map_or(false, |d| d == self.call_stack.len()) {
                             *pc = 0;
                             return Ok(());

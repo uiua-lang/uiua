@@ -132,6 +132,8 @@ struct Scope {
 
 #[derive(Debug, Clone)]
 enum Bound {
+    /// A primitive
+    Primitive(Primitive),
     /// A function that is available but not on the stack.
     Function(FunctionId),
     /// A global variable is referenced by its index in the global array.
@@ -164,9 +166,7 @@ impl Default for Compiler {
             let function = Function::Primitive(prim);
             // Scope
             if let Some(name) = prim.name().ident {
-                scope
-                    .bindings
-                    .insert(name.into(), Bound::Function(prim.into()));
+                scope.bindings.insert(name.into(), Bound::Primitive(prim));
             }
             scope.functions.insert(prim.into(), function);
             // Function info
@@ -262,10 +262,12 @@ impl Compiler {
         spot
     }
     pub(crate) fn is_bound(&self, ident: &Ident) -> bool {
-        self.scopes
-            .iter()
-            .rev()
-            .any(|scope| scope.bindings.contains_key(ident))
+        self.scopes.iter().rev().any(|scope| {
+            scope
+                .bindings
+                .get(ident)
+                .map_or(false, |b| !matches!(b, Bound::Primitive(_)))
+        })
     }
     pub(crate) fn item(&mut self, item: Item) {
         match item {
@@ -311,7 +313,7 @@ impl Compiler {
                 .run_with_vm(&mut self.vm)
                 .map_err(|e| words_span.sp(e.into()));
             match value {
-                Ok(value) => value.unwrap(),
+                Ok(value) => value.unwrap_or_default(),
                 Err(e) => {
                     self.errors.push(e);
                     Value::default()
@@ -393,6 +395,9 @@ impl Compiler {
             Bound::Global(index) => self.push_instr(Instr::CopyGlobal(index)),
             Bound::Function(id) => self.function_binding(id),
             Bound::Constant(index) => self.push_instr(Instr::Constant(index)),
+            Bound::Primitive(prim) => {
+                self.push_instr(Instr::Push(Function::Primitive(prim).into()))
+            }
             Bound::Error => self.push_instr(Instr::Push(Value::default())),
         }
         if call {
@@ -447,6 +452,11 @@ impl Compiler {
         }
         if add_instrs {
             self.assembly.add_function_instrs(ipf.instrs);
+        }
+        if let FunctionId::Named(ident) = &id {
+            self.scope_mut()
+                .bindings
+                .insert(ident.clone(), Bound::Function(id.clone()));
         }
         self.scope_mut().functions.insert(id.clone(), function);
         // Add to the function id map

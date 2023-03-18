@@ -196,6 +196,7 @@ impl Format for Word {
 
 impl Format for Primitive {
     fn format(&self, state: &mut FormatState) {
+        state.space_if_alphabetic();
         let s = self.to_string();
         if s.starts_with(char::is_alphabetic) {
             state.space_if_alphanumeric();

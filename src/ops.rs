@@ -124,7 +124,7 @@ primitive!(
     // Dyadic array ops
     (Match, "match" + '≡'),
     (NoMatch, "nomatch" + '≢'),
-    (Join, "join" + '⨝'),
+    (Join, "join" + '∾'),
     (Pick, "pick"),
     (Filter, "filter" + 'ꖛ'),
     (Take, "take" + '↤'),

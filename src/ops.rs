@@ -27,7 +27,7 @@ pub struct PrimitiveName {
 }
 
 macro_rules! primitive {
-    ($(($name:ident $({$modifier:ident})?,  $($ident:literal)? $($ascii:ident)? $(- $unicode:literal)?)),* $(,)?) => {
+    ($(($name:ident $({$modifier:ident})?,  $($ident:literal)? $($ascii:ident)? $(+ $unicode:literal)?)),* $(,)?) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
         pub enum Primitive {
             $($name,)*
@@ -78,33 +78,34 @@ macro_rules! primitive {
 }
 
 primitive!(
+    (Nop, +'·'),
     // Pervasive monadic ops
-    (Not, "not" - '¬'),
-    (Neg, "neg" - '¯'),
+    (Not, "not" + '¬'),
+    (Neg, "neg" + '¯'),
     (Abs, "abs"),
-    (Sqrt, "sqrt" - '√'),
+    (Sqrt, "sqrt" + '√'),
     (Sin, "sin"),
     (Cos, "cos"),
     (Asin, "asin"),
     (Acos, "acos"),
-    (Floor, "floor" - '⌊'),
-    (Ceil, "ceil" - '⌈'),
+    (Floor, "floor" + '⌊'),
+    (Ceil, "ceil" + '⌈'),
     (Round, "round"),
     // Pervasive dyadic ops
     (Eq, Equal),
-    (Ne, BangEqual - '≠'),
+    (Ne, BangEqual + '≠'),
     (Lt, Less),
-    (Le, LessEqual - '≤'),
+    (Le, LessEqual + '≤'),
     (Gt, Greater),
-    (Ge, GreaterEqual - '≥'),
+    (Ge, GreaterEqual + '≥'),
     (Add, Plus),
     (Sub, Minus),
-    (Mul, Star - '×'),
-    (Div, Percent - '÷'),
-    (Mod, "mod" - '◿'),
-    (Pow, "pow" - '↗'),
-    (Min, "min" - '↧'),
-    (Max, "max" - '↥'),
+    (Mul, Star + '×'),
+    (Div, Percent + '÷'),
+    (Mod, "mod" + '◿'),
+    (Pow, "pow" + '↗'),
+    (Min, "min" + '↧'),
+    (Max, "max" + '↥'),
     (Atan, "atan"),
     // Stack ops
     (Dup, Period),
@@ -113,24 +114,24 @@ primitive!(
     // Control flow ops
     (ExclusiveFork, Bang),
     // Monadic array ops
-    (Len, "len" - '𝄩'),
-    (Rank, "rank" - '⧈'),
-    (Shape, "shape" - '⬠'),
-    (First, "first" - '⟥'),
-    (Range, "range" - '↕'),
-    (Reverse, "reverse" - '⇅'),
-    (Deshape, "deshape" - '♭'),
+    (Len, "len" + '𝄩'),
+    (Rank, "rank" + '⧈'),
+    (Shape, "shape" + '⬠'),
+    (First, "first" + '⟥'),
+    (Range, "range" + '↕'),
+    (Reverse, "reverse" + '⇌'),
+    (Deshape, "deshape" + '♭'),
     // Dyadic array ops
-    (Match, "match" - '≡'),
-    (NoMatch, "nomatch" - '≢'),
-    (Join, "join" - '⨝'),
+    (Match, "match" + '≡'),
+    (NoMatch, "nomatch" + '≢'),
+    (Join, "join" + '⨝'),
     (Pick, "pick"),
-    (Filter, "filter" - 'ꖛ'),
-    (Take, "take" - '↤'),
-    (Drop, "drop" - '↦'),
-    (Rotate, "rotate" - '↻'),
-    (Reshape, "reshape" - '↯'),
-    (Repeat, "Repeat" - '⥀'),
+    (Filter, "filter" + 'ꖛ'),
+    (Take, "take" + '↤'),
+    (Drop, "drop" + '↦'),
+    (Rotate, "rotate" + '↻'),
+    (Reshape, "reshape" + '↯'),
+    (Repeat, "Repeat" + '⥀'),
     // IO ops
     (Show, "show"),
     (Print, "print"),
@@ -170,6 +171,7 @@ impl fmt::Display for Primitive {
 impl Primitive {
     pub(crate) fn run(&self, env: &mut CallEnv) -> RuntimeResult {
         match self {
+            Primitive::Nop => {}
             Primitive::Not => env.monadic_env(Value::not)?,
             Primitive::Neg => env.monadic_env(Value::neg)?,
             Primitive::Abs => env.monadic_env(Value::abs)?,

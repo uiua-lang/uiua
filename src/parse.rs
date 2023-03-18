@@ -281,17 +281,7 @@ impl Parser {
         while self.try_exact(Underscore).is_some() {
             let item = self
                 .try_modified()?
-                .or_else(|| {
-                    self.try_exact(Underscore).map(|span| {
-                        span.clone().sp(Word::Func(Func {
-                            id: FunctionId::Anonymous(span),
-                            body: Vec::new(),
-                        }))
-                    })
-                })
-                .ok_or_else(|| {
-                    self.expected([Expectation::Term, Expectation::Simple(Underscore)])
-                })?;
+                .ok_or_else(|| self.expected([Expectation::Term]))?;
             items.push(item);
         }
         if let Some(last) = items.last() {
@@ -387,15 +377,17 @@ impl Parser {
         };
         let span = start.clone().merge(end);
         Ok(Some(span.clone().sp(if groups.is_empty() {
-            Word::Func(Func {
-                id: FunctionId::Anonymous(span),
-                body: Vec::new(),
-            })
-        } else if groups.len() == 1 {
-            Word::Func(Func {
-                id: FunctionId::Anonymous(span),
-                body: groups.into_iter().next().unwrap(),
-            })
+            unreachable!("At least one group is always pushed")
+        } else if groups.len() <= 1 {
+            let words = groups.into_iter().next().unwrap();
+            if words.is_empty() {
+                Word::Primitive(Primitive::Nop)
+            } else {
+                Word::Func(Func {
+                    id: FunctionId::Anonymous(span),
+                    body: words,
+                })
+            }
         } else {
             let mut last_span = start;
             let mut funcs = Vec::new();

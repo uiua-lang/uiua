@@ -92,19 +92,28 @@ impl fmt::Debug for Modified {
 #[derive(Default)]
 pub(crate) struct FormatState {
     pub string: String,
+    was_strand: bool,
 }
 
 impl FormatState {
     fn push<T: fmt::Display>(&mut self, t: T) {
+        self.was_strand = false;
         write!(&mut self.string, "{t}").unwrap();
     }
-    fn space_if_alphabetic(&mut self) {
+    fn space_if_alphanumeric(&mut self) {
+        self.space_if_was_strand();
         if self.string.ends_with(char::is_alphanumeric) {
             self.push(' ');
         }
     }
     fn space_if_numeric(&mut self) {
+        self.space_if_was_strand();
         if self.string.ends_with(char::is_numeric) {
+            self.push(' ');
+        }
+    }
+    fn space_if_was_strand(&mut self) {
+        if self.was_strand {
             self.push(' ');
         }
     }
@@ -162,13 +171,13 @@ impl Format for Word {
         state.space_if_numeric();
         match self {
             Word::Real(f) => {
-                state.space_if_alphabetic();
+                state.space_if_alphanumeric();
                 state.push(f);
             }
             Word::Char(c) => state.push(&format!("{c:?}")),
             Word::String(s) => state.push(&format!("{s:?}")),
             Word::Ident(ident) => {
-                state.space_if_alphabetic();
+                state.space_if_alphanumeric();
                 state.push(ident);
             }
             Word::Strand(items) => {
@@ -178,13 +187,11 @@ impl Format for Word {
                     }
                     item.value.format(state);
                 }
+                state.was_strand = true;
             }
             Word::Array(items) => {
                 state.push('[');
-                for (i, item) in items.iter().enumerate() {
-                    if i > 0 {
-                        state.push(' ');
-                    }
+                for item in items {
                     item.value.format(state);
                 }
                 state.push(']');
@@ -197,7 +204,7 @@ impl Format for Word {
                 state.push(')');
             }
             Word::Selector(s) => {
-                state.space_if_alphabetic();
+                state.space_if_alphanumeric();
                 state.push(&s.to_string());
             }
             Word::FuncArray(fs) => {
@@ -225,7 +232,7 @@ impl Format for Primitive {
     fn format(&self, state: &mut FormatState) {
         let s = self.to_string();
         if s.starts_with(char::is_alphabetic) {
-            state.space_if_alphabetic();
+            state.space_if_alphanumeric();
         }
         state.push(s);
     }

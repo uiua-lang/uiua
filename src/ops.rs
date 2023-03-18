@@ -401,7 +401,9 @@ impl Primitive {
                 env.push(acc);
             }
             Primitive::Show => {
-                println!("{}", env.pop()?.grid_string());
+                let mut s = env.pop()?.grid_string();
+                s.pop();
+                println!("{s}");
             }
             Primitive::Print => {
                 print!("{}", env.pop()?);

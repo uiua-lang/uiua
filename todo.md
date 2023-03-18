@@ -1,12 +1,7 @@
-- Make bindings case insensitive
 - Implement function reversal
 - Improve parsing expectation errors
 - Pretty error printing
 - Make calling arrays indexing
-- Optimize for non-reused values
-- Warnings
-  - naming conventions
-  - directly calling number
 - Includes
 - More array functions
   - Last?
@@ -16,6 +11,7 @@
   - Group
   - Classify
   - Select
+- Basic parsing functions
 - Type testing/tracing
 - Structs
 - Enums?

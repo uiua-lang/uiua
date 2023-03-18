@@ -113,7 +113,10 @@ pub fn format_items(items: Vec<Item>) -> String {
     for item in items {
         item.format(&mut state);
     }
-    state.string
+    let mut s = state.string;
+    s = s.trim_end().into();
+    s.push('\n');
+    s
 }
 
 pub fn format(input: &str, path: &Path) -> Result<String, Vec<Sp<ParseError>>> {
@@ -125,12 +128,15 @@ pub fn format(input: &str, path: &Path) -> Result<String, Vec<Sp<ParseError>>> {
     }
 }
 
-pub fn format_file<P: AsRef<Path>>(path: P) -> UiuaResult {
+pub fn format_file<P: AsRef<Path>>(path: P) -> UiuaResult<String> {
     let path = path.as_ref();
     let input = fs::read_to_string(path).map_err(|e| UiuaError::Load(path.to_path_buf(), e))?;
     let formatted = format(&input, path)?;
-    fs::write(path, formatted).map_err(|e| UiuaError::Format(path.to_path_buf(), e))?;
-    Ok(())
+    if formatted == input {
+        return Ok(formatted);
+    }
+    fs::write(path, &formatted).map_err(|e| UiuaError::Format(path.to_path_buf(), e))?;
+    Ok(formatted)
 }
 
 struct Parser {

@@ -8,7 +8,10 @@ version = "0.1.0"
 [dependencies]
 clap.features = ["derive"]
 clap.version = "4"
+ctrlc = "3"
 nanbox = "0.2.0"
+notify = "5"
+term_size = "0.3.2"
 
 puffin.optional = true
 puffin.version = "0.14.3"

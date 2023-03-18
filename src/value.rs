@@ -35,33 +35,14 @@ const CHAR_TAG: u8 = 1;
 const FUNCTION_TAG: u8 = 2;
 const ARRAY_TAG: u8 = 3;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum RawType {
-    Num,
-    Char,
-    Function,
-    Array,
-}
-
-static RAW_TYPES: [RawType; 5] = {
-    let mut types = [RawType::Num; 5];
-    types[NUM_TAG as usize] = RawType::Num;
-    types[CHAR_TAG as usize] = RawType::Char;
-    types[FUNCTION_TAG as usize] = RawType::Function;
-    types[ARRAY_TAG as usize] = RawType::Array;
+static TYPES: [Type; 4] = {
+    let mut types = [Type::Num; 4];
+    types[NUM_TAG as usize] = Type::Num;
+    types[CHAR_TAG as usize] = Type::Char;
+    types[FUNCTION_TAG as usize] = Type::Function;
+    types[ARRAY_TAG as usize] = Type::Array;
     types
 };
-
-impl RawType {
-    pub fn ty(&self) -> Type {
-        match self {
-            RawType::Num => Type::Num,
-            RawType::Char => Type::Char,
-            RawType::Function => Type::Function,
-            RawType::Array => Type::Array,
-        }
-    }
-}
 
 impl Default for Value {
     fn default() -> Self {
@@ -70,11 +51,8 @@ impl Default for Value {
 }
 
 impl Value {
-    pub fn raw_ty(&self) -> RawType {
-        RAW_TYPES[self.0.tag() as usize]
-    }
     pub fn ty(&self) -> Type {
-        self.raw_ty().ty()
+        TYPES[self.0.tag() as usize]
     }
     pub fn is_num(&self) -> bool {
         self.0.tag() == NUM_TAG as u32
@@ -157,10 +135,10 @@ macro_rules! value_un_impl {
         impl Value {
             #[allow(unreachable_patterns)]
             pub fn $name(&self, env: &Env) -> RuntimeResult<Self> {
-                Ok(match self.raw_ty() {
-                    $(RawType::$rt => pervade::$name::$f(&self.$get()).into(),)*
-                    RawType::Array => self.array().$name(env)?.into(),
-                    ty => return Err(pervade::$name::error(ty.ty(), env)),
+                Ok(match self.ty() {
+                    $(Type::$rt => pervade::$name::$f(&self.$get()).into(),)*
+                    Type::Array => self.array().$name(env)?.into(),
+                    ty => return Err(pervade::$name::error(ty, env)),
                 })
             }
         }
@@ -187,21 +165,21 @@ macro_rules! value_bin_impl {
         impl Value {
             #[allow(unreachable_patterns)]
             pub fn $name(&self, other: &Self, env: &Env) -> RuntimeResult<Self> {
-                Ok(match (self.raw_ty(), other.raw_ty()) {
-                    $((RawType::$a_ty, RawType::$b_ty) => {
+                Ok(match (self.ty(), other.ty()) {
+                    $((Type::$a_ty, Type::$b_ty) => {
                         Value::from(pervade::$name::$ab(&self.$af(), &other.$bf()))
                     })*
-                    (RawType::Array, RawType::Array) => {
+                    (Type::Array, Type::Array) => {
                         Value::from(self.array().$name(other.array(), env)?)
                     }
-                    $((RawType::Array, RawType::$b_ty) => {
+                    $((Type::Array, Type::$b_ty) => {
                         Value::from(self.array().$name(&Array::from(other.$bf().clone()), env)?)
                     }),*
-                    $((RawType::$a_ty, RawType::Array) => {
+                    $((Type::$a_ty, Type::Array) => {
                         Value::from(Array::$name(&Array::from(self.$af().clone()), other.array(), env)?)
                     }),*
                     $(($a_fb, $b_fb) => $fallback,)?
-                    (a, b) => return Err(pervade::$name::error(a.ty(), b.ty(), env))
+                    (a, b) => return Err(pervade::$name::error(a, b, env))
                 })
             }
         }
@@ -252,7 +230,7 @@ macro_rules! cmp_impls {
                 (Num, number, Num, number, num_num),
                 (Char, char, Char, char, generic),
                 (Function, function, Function, function, generic),
-                |a, b| pervade::$name::is(a.ty().cmp(&b.ty())).into()
+                |a, b| pervade::$name::is(a.cmp(&b)).into()
             );
         )*
     };
@@ -262,8 +240,8 @@ cmp_impls!(is_eq, is_ne, is_lt, is_le, is_gt, is_ge);
 
 impl Drop for Value {
     fn drop(&mut self) {
-        match self.raw_ty() {
-            RawType::Array => unsafe {
+        match self.ty() {
+            Type::Array => unsafe {
                 // Conjure the rc
                 let rc = Rc::from_raw(self.0.unpack::<ArrayRef>());
                 // It may now rest in peace and decrease the refcount
@@ -276,8 +254,8 @@ impl Drop for Value {
 
 impl Clone for Value {
     fn clone(&self) -> Self {
-        match self.raw_ty() {
-            RawType::Array => Self(unsafe {
+        match self.ty() {
+            Type::Array => Self(unsafe {
                 // Conjure the rc
                 let rc = Rc::from_raw(self.0.unpack::<ArrayRef>());
                 // Clone it to increase the refcount
@@ -294,15 +272,15 @@ impl Clone for Value {
 
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
-        match (self.raw_ty(), other.raw_ty()) {
-            (RawType::Num, RawType::Num) => {
+        match (self.ty(), other.ty()) {
+            (Type::Num, Type::Num) => {
                 let a = self.number();
                 let b = other.number();
                 a == b || a.is_nan() && b.is_nan()
             }
-            (RawType::Char, RawType::Char) => self.char() == other.char(),
-            (RawType::Function, RawType::Function) => self.function() == other.function(),
-            (RawType::Array, RawType::Array) => self.array() == other.array(),
+            (Type::Char, Type::Char) => self.char() == other.char(),
+            (Type::Function, Type::Function) => self.function() == other.function(),
+            (Type::Array, Type::Array) => self.array() == other.array(),
             _ => false,
         }
     }
@@ -318,16 +296,16 @@ impl PartialOrd for Value {
 
 impl Ord for Value {
     fn cmp(&self, other: &Self) -> Ordering {
-        match (self.raw_ty(), other.raw_ty()) {
-            (RawType::Num, RawType::Num) => {
+        match (self.ty(), other.ty()) {
+            (Type::Num, Type::Num) => {
                 let a = self.number();
                 let b = other.number();
                 a.partial_cmp(&b)
                     .unwrap_or_else(|| a.is_nan().cmp(&b.is_nan()))
             }
-            (RawType::Char, RawType::Char) => self.char().cmp(&other.char()),
-            (RawType::Function, RawType::Function) => self.function().cmp(&other.function()),
-            (RawType::Array, RawType::Array) => self.array().cmp(other.array()),
+            (Type::Char, Type::Char) => self.char().cmp(&other.char()),
+            (Type::Function, Type::Function) => self.function().cmp(&other.function()),
+            (Type::Array, Type::Array) => self.array().cmp(other.array()),
             (a, b) => a.cmp(&b),
         }
     }
@@ -335,22 +313,22 @@ impl Ord for Value {
 
 impl fmt::Debug for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.raw_ty() {
-            RawType::Num => write!(f, "{:?}", self.number()),
-            RawType::Char => write!(f, "{:?}", self.char()),
-            RawType::Function => write!(f, "{:?}", self.function()),
-            RawType::Array => write!(f, "{:?}", self.array()),
+        match self.ty() {
+            Type::Num => write!(f, "{:?}", self.number()),
+            Type::Char => write!(f, "{:?}", self.char()),
+            Type::Function => write!(f, "{:?}", self.function()),
+            Type::Array => write!(f, "{:?}", self.array()),
         }
     }
 }
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.raw_ty() {
-            RawType::Num => write!(f, "{}", self.number()),
-            RawType::Char => write!(f, "{}", self.char()),
-            RawType::Function => write!(f, "{}", self.function()),
-            RawType::Array => write!(f, "{}", self.array()),
+        match self.ty() {
+            Type::Num => write!(f, "{}", self.number()),
+            Type::Char => write!(f, "{}", self.char()),
+            Type::Function => write!(f, "{}", self.function()),
+            Type::Array => write!(f, "{}", self.array()),
         }
     }
 }

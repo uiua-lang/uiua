@@ -90,7 +90,7 @@ primitive!(
     (Acos, "acos"),
     (Floor, "floor" + '⌊'),
     (Ceil, "ceil" + '⌈'),
-    (Round, "round"),
+    (Round, "round" + '⁅'),
     // Pervasive dyadic ops
     (Eq, Equal),
     (Ne, BangEqual + '≠'),

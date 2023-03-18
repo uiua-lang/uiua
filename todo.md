@@ -10,6 +10,7 @@
   - Group
   - Classify
   - Select
+- Implement custom nanbox
 - Implement function reversal
 - Error handling
 - Contextual selectors

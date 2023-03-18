@@ -3,7 +3,7 @@ use std::{iter::once, mem::take};
 use crate::{
     array::{Array, ArrayType},
     function::Function,
-    value::{RawType, Value},
+    value::{Type, Value},
 };
 
 type Grid<T = char> = Vec<Vec<T>>;
@@ -33,11 +33,11 @@ impl GridFmt for char {
 
 impl GridFmt for Value {
     fn fmt_grid(&self) -> Grid {
-        match self.raw_ty() {
-            RawType::Num => self.number().fmt_grid(),
-            RawType::Char => self.char().fmt_grid(),
-            RawType::Function => self.function().fmt_grid(),
-            RawType::Array => self.array().fmt_grid(),
+        match self.ty() {
+            Type::Num => self.number().fmt_grid(),
+            Type::Char => self.char().fmt_grid(),
+            Type::Function => self.function().fmt_grid(),
+            Type::Array => self.array().fmt_grid(),
         }
     }
 }

@@ -4,7 +4,7 @@ use crate::{
     array::Array,
     compile::Assembly,
     function::Function,
-    value::{RawType, Value},
+    value::{Type, Value},
     RuntimeError, RuntimeResult, TraceFrame, UiuaError, UiuaResult,
 };
 
@@ -171,8 +171,8 @@ impl Vm {
         #[cfg(feature = "profile")]
         puffin::profile_scope!("call");
         let value = self.stack.pop().unwrap();
-        let function = match value.raw_ty() {
-            RawType::Function => value.function(),
+        let function = match value.ty() {
+            Type::Function => value.function(),
             _ => {
                 self.stack.pop();
                 self.stack.push(value);

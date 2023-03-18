@@ -7,11 +7,15 @@ version = "0.1.0"
 
 [dependencies]
 clap.features = ["derive"]
+clap.optional = true
 clap.version = "4"
-ctrlc = "3"
+ctrlc.optional = true
+ctrlc.version = "3"
 nanbox = "0.2.0"
-notify = "5"
-term_size = "0.3.2"
+notify.optional = true
+notify.version = "5"
+term_size.optional = true
+term_size.version = "0.3.2"
 
 puffin.optional = true
 puffin.version = "0.14.3"
@@ -19,5 +23,10 @@ puffin_http.optional = true
 puffin_http.version = "0.11.1"
 
 [features]
+binary = ["ctrlc", "notify", "term_size", "clap"]
 debug = []
+default = ["binary"]
 profile = ["puffin", "puffin_http"]
+
+[[bin]]
+name = "uiua"

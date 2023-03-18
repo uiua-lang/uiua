@@ -18,6 +18,7 @@ pub fn format_items(items: Vec<Item>) -> Result<String, Vec<Sp<CompileError>>> {
         string: String::new(),
         was_strand: false,
         compiler: Compiler::new().eval_consts(false),
+        override_space: false,
     };
     for item in items {
         item.format(&mut state);
@@ -62,6 +63,7 @@ struct FormatState {
     pub string: String,
     was_strand: bool,
     compiler: Compiler,
+    override_space: bool,
 }
 
 impl FormatState {
@@ -70,18 +72,30 @@ impl FormatState {
         write!(&mut self.string, "{t}").unwrap();
     }
     fn space_if_alphanumeric(&mut self) {
+        if self.override_space {
+            self.override_space = false;
+            return;
+        }
         self.space_if_was_strand();
         if self.string.ends_with(char::is_alphanumeric) {
             self.push(' ');
         }
     }
     fn space_if_alphabetic(&mut self) {
+        if self.override_space {
+            self.override_space = false;
+            return;
+        }
         self.space_if_was_strand();
         if self.string.ends_with(char::is_alphabetic) {
             self.push(' ');
         }
     }
     fn space_if_was_strand(&mut self) {
+        if self.override_space {
+            self.override_space = false;
+            return;
+        }
         if self.was_strand {
             self.push(' ');
         }
@@ -192,6 +206,7 @@ impl Format for Word {
             Word::Primitive(prim) => prim.format(state),
             Word::Modified(m) => {
                 m.modifier.value.format(state);
+                state.override_space = true;
                 m.word.value.format(state);
             }
         }

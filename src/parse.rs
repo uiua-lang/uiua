@@ -5,7 +5,7 @@ use crate::{
     function::{FunctionId, Selector},
     lex::{Simple::*, *},
     ops::Primitive,
-    Ident,
+    Ident, IdentCase,
 };
 
 #[derive(Debug)]
@@ -245,24 +245,33 @@ impl Parser {
         Ok(Some(span.sp(Word::Strand(items))))
     }
     fn try_modified(&mut self) -> ParseResult<Option<Sp<Word>>> {
-        for prim in Primitive::ALL.into_iter().filter(Primitive::is_modifier) {
-            let op_span = self
-                .try_exact(prim)
-                .or_else(|| prim.name().ascii.and_then(|simple| self.try_exact(simple)));
-            if let Some(mspan) = op_span {
-                let inner = self.try_modified()?;
-                return Ok(Some(if let Some(word) = inner {
-                    let span = mspan.clone().merge(word.span.clone());
-                    span.sp(Word::Modified(Box::new(Modified {
-                        modifier: mspan.sp(prim),
-                        word,
-                    })))
-                } else {
-                    mspan.sp(Word::Primitive(prim))
-                }));
-            }
-        }
-        self.try_term()
+        let modifier = Primitive::ALL
+            .into_iter()
+            .filter(Primitive::is_modifier)
+            .find_map(|prim| {
+                self.try_exact(prim)
+                    .or_else(|| prim.name().ascii.and_then(|simple| self.try_exact(simple)))
+                    .map(|span| span.sp(Word::Primitive(prim)))
+            })
+            .or_else(|| {
+                self.next_token_map(|token| {
+                    token
+                        .as_ident()
+                        .filter(|ident| ident.case() == IdentCase::Capital)
+                        .cloned()
+                })
+                .map(|ident| ident.map(Word::Ident))
+            });
+        let Some(modifier) = modifier else {
+            return self.try_term();
+        };
+        let inner = self.try_modified()?;
+        Ok(Some(if let Some(word) = inner {
+            let span = modifier.span.clone().merge(word.span.clone());
+            span.sp(Word::Modified(Box::new(Modified { modifier, word })))
+        } else {
+            modifier
+        }))
     }
     fn try_term(&mut self) -> ParseResult<Option<Sp<Word>>> {
         Ok(Some(if let Some(prim) = self.try_op()? {

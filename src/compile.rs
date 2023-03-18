@@ -492,7 +492,7 @@ impl Compiler {
         );
         self.func_outer(id, |this| {
             this.word(modified.word, false);
-            this.primitive(modified.modifier.value, modified.modifier.span, true);
+            this.word(modified.modifier, true);
         });
         if call {
             let span = self.push_call_span(span);

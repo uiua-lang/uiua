@@ -3,13 +3,13 @@ use std::{
     io::{stderr, Write},
     path::{Path, PathBuf},
     process::exit,
-    sync::{Arc, Mutex},
+    sync::mpsc::channel,
     thread::sleep,
     time::Duration,
 };
 
 use clap::Parser;
-use notify::{Event, EventKind, RecursiveMode, Watcher};
+use notify::{EventKind, RecursiveMode, Watcher};
 use uiua::{compile::Compiler, parse::format_file, UiuaResult};
 
 fn main() {
@@ -44,41 +44,23 @@ fn run() -> UiuaResult {
                 }
             }
             Command::Watch => {
-                let modify_paths = Arc::new(Mutex::new(Vec::new()));
-                let modify_paths2 = modify_paths.clone();
-                let mut watcher =
-                    notify::recommended_watcher(move |res: notify::Result<Event>| match res {
-                        Ok(event) => {
-                            if !matches!(event.kind, EventKind::Modify(_)) {
-                                return;
-                            }
-                            let Some(path) = event.paths.get(0) else {
-                                return;
-                            };
-                            if path.extension().map_or(false, |ext| ext != "ua") {
-                                return;
-                            }
-                            let Ok(mut guard) = modify_paths2.try_lock() else {
-                                return;
-                            };
-                            guard.push(path.clone());
-                        }
-                        Err(e) => eprintln!("watch error{e}"),
-                    })
-                    .unwrap();
-
+                let (send, recv) = channel();
+                let mut watcher = notify::recommended_watcher(send).unwrap();
                 watcher
                     .watch(Path::new("."), RecursiveMode::Recursive)
                     .unwrap();
-
                 print_watching();
                 let mut last_formatted = String::new();
                 loop {
                     sleep(Duration::from_millis(10));
-                    let mut guard = modify_paths.lock().unwrap();
-                    guard.dedup();
-                    let mut did_something = false;
-                    for path in guard.drain(..) {
+                    if let Some(path) = recv
+                        .try_iter()
+                        .filter_map(Result::ok)
+                        .filter(|event| matches!(event.kind, EventKind::Modify(_)))
+                        .flat_map(|event| event.paths)
+                        .filter(|path| path.extension().map_or(false, |ext| ext == "ua"))
+                        .last()
+                    {
                         match format_file(&path) {
                             Ok(formatted) => {
                                 if formatted != last_formatted {
@@ -96,10 +78,6 @@ fn run() -> UiuaResult {
                                 print_watching();
                             }
                         }
-                        did_something = true;
-                    }
-                    if did_something {
-                        sleep(Duration::from_millis(100));
                     }
                 }
             }

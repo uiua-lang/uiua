@@ -6,6 +6,8 @@ repository = "https://github.com/kaikalii/uiua"
 version = "0.1.0"
 
 [dependencies]
+clap.features = ["derive"]
+clap.version = "4"
 nanbox = "0.2.0"
 
 puffin.optional = true

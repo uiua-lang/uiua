@@ -135,7 +135,11 @@ impl Format for Word {
             }
             Word::String(s) => {
                 state.space_if_alphanumeric();
-                state.push(&format!("{s:?}"));
+                state.push('"');
+                for c in s.chars() {
+                    state.push(c);
+                }
+                state.push('"');
             }
             Word::Ident(ident) => {
                 if !state.compiler.is_bound(ident) {

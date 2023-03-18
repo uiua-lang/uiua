@@ -99,6 +99,12 @@ impl FormatState {
             self.push(' ');
         }
     }
+    fn space_if_alphabetic(&mut self) {
+        self.space_if_was_strand();
+        if self.string.ends_with(char::is_alphabetic) {
+            self.push(' ');
+        }
+    }
     fn space_if_was_strand(&mut self) {
         if self.was_strand {
             self.push(' ');
@@ -155,7 +161,7 @@ impl Format for Word {
                 state.push(&format!("{s:?}"));
             }
             Word::Ident(ident) => {
-                state.space_if_alphanumeric();
+                state.space_if_alphabetic();
                 state.push(ident);
             }
             Word::Strand(items) => {
@@ -182,7 +188,7 @@ impl Format for Word {
                 state.push(')');
             }
             Word::Selector(s) => {
-                state.space_if_alphanumeric();
+                state.space_if_alphabetic();
                 state.push(&s.to_string());
             }
             Word::FuncArray(fs) => {

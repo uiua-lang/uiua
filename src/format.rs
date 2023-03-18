@@ -6,27 +6,42 @@ use std::{
 
 use crate::{
     ast::*,
+    compile::{CompileError, Compiler},
     lex::Sp,
     ops::Primitive,
-    parse::{parse, ParseError},
+    parse::parse,
     UiuaError, UiuaResult,
 };
 
-pub fn format_items(items: Vec<Item>) -> String {
-    let mut state = FormatState::default();
+pub fn format_items(items: Vec<Item>) -> Result<String, Vec<Sp<CompileError>>> {
+    let mut state = FormatState {
+        string: String::new(),
+        was_strand: false,
+        compiler: Compiler::new().eval_consts(false),
+    };
     for item in items {
         item.format(&mut state);
+    }
+    if !state.compiler.errors.is_empty() {
+        return Err(state.compiler.errors);
     }
     let mut s = state.string;
     s = s.trim_end().into();
     s.push('\n');
-    s
+    Ok(s)
 }
 
-pub fn format(input: &str, path: &Path) -> Result<String, Vec<Sp<ParseError>>> {
+pub fn format(input: &str, path: &Path) -> Result<String, Vec<Sp<CompileError>>> {
     let (items, errors) = parse(input, path);
+    let mut errors: Vec<Sp<CompileError>> = errors.into_iter().map(Sp::map_into).collect();
     if errors.is_empty() {
-        Ok(format_items(items))
+        match format_items(items) {
+            Ok(s) => Ok(s),
+            Err(e) => {
+                errors.extend(e);
+                Err(errors)
+            }
+        }
     } else {
         Err(errors)
     }
@@ -43,10 +58,10 @@ pub fn format_file<P: AsRef<Path>>(path: P) -> UiuaResult<String> {
     Ok(formatted)
 }
 
-#[derive(Default)]
-pub(crate) struct FormatState {
+struct FormatState {
     pub string: String,
     was_strand: bool,
+    compiler: Compiler,
 }
 
 impl FormatState {
@@ -73,7 +88,7 @@ impl FormatState {
     }
 }
 
-pub(crate) trait Format {
+trait Format {
     fn format(&self, state: &mut FormatState);
 }
 
@@ -92,6 +107,7 @@ impl Format for Item {
             }
             Item::Newlines => {}
         }
+        state.compiler.item(self.clone());
         state.push('\n');
     }
 }
@@ -122,6 +138,11 @@ impl Format for Word {
                 state.push(&format!("{s:?}"));
             }
             Word::Ident(ident) => {
+                if !state.compiler.is_bound(ident) {
+                    if let Some(prim) = Primitive::from_name(ident.as_str()) {
+                        return prim.format(state);
+                    }
+                }
                 state.space_if_alphabetic();
                 state.push(ident);
             }

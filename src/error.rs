@@ -107,7 +107,7 @@ impl From<Vec<Sp<CompileError>>> for UiuaError {
 
 impl From<Vec<Sp<ParseError>>> for UiuaError {
     fn from(errors: Vec<Sp<ParseError>>) -> Self {
-        Self::Compile(errors.into_iter().map(|sp| sp.map(Into::into)).collect())
+        Self::Compile(errors.into_iter().map(Sp::map_into).collect())
     }
 }
 

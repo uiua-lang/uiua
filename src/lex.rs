@@ -178,6 +178,12 @@ impl<T> Sp<T> {
             span: self.span,
         }
     }
+    pub fn map_into<U>(self) -> Sp<U>
+    where
+        T: Into<U>,
+    {
+        self.map(Into::into)
+    }
     pub fn as_ref(&self) -> Sp<&T> {
         Sp {
             value: &self.value,

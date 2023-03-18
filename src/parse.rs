@@ -282,15 +282,7 @@ impl Parser {
         for prim in Primitive::ALL {
             let op_span = self
                 .try_exact(prim)
-                .or_else(|| prim.name().ascii.and_then(|simple| self.try_exact(simple)))
-                .or_else(|| {
-                    prim.name()
-                        .ident
-                        .and_then(|ident| {
-                            self.next_token_map(|token| token.as_ident().filter(|i| **i == ident))
-                        })
-                        .map(|s| s.span)
-                });
+                .or_else(|| prim.name().ascii.and_then(|simple| self.try_exact(simple)));
             if let Some(span) = op_span {
                 return Ok(Some(span.sp(prim)));
             }

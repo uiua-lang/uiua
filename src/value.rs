@@ -400,19 +400,14 @@ fn new_array_nanbox(rc: Rc<Array>) -> NanBox {
 
 #[test]
 fn value_memory_test() {
-    use crate::{compile::Compiler, UiuaError};
+    use crate::compile::Compiler;
     let mut compiler = Compiler::new();
     let code = "
-let xs = range [3, 4]
-do show xs
-do show <| each (fold (+) 0) xs
+xs = range 3_4
+show xs
+show `/+xs
 ";
-    if let Err(e) = compiler.load(code, "test.uiua") {
-        eprintln!("{}", UiuaError::from(e));
-        return;
-    }
+    compiler.load(code, "test.uiua").unwrap();
     let assembly = compiler.finish();
-    if let Err(e) = assembly.run() {
-        eprintln!("{e}");
-    }
+    assembly.run().unwrap();
 }

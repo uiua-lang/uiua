@@ -169,6 +169,19 @@ impl fmt::Display for Primitive {
 }
 
 impl Primitive {
+    pub fn from_name(name: &str) -> Option<Self> {
+        if name.len() < 2 {
+            return None;
+        }
+        let name = name.to_lowercase();
+        let mut matching = Primitive::ALL.into_iter().filter(|p| {
+            p.name()
+                .ident
+                .map_or(false, |i| i.to_lowercase().starts_with(&name))
+        });
+        let res = matching.next()?;
+        matching.next().is_none().then_some(res)
+    }
     pub(crate) fn run(&self, env: &mut CallEnv) -> RuntimeResult {
         match self {
             Primitive::Nop => {}
@@ -441,4 +454,11 @@ impl Primitive {
         }
         Ok(())
     }
+}
+
+#[test]
+fn primitive_from_name() {
+    assert_eq!(Primitive::from_name("rev"), Some(Primitive::Reverse));
+    assert_eq!(Primitive::from_name("re"), None);
+    assert_eq!(Primitive::from_name("resh"), Some(Primitive::Reshape));
 }

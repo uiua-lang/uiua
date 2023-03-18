@@ -102,9 +102,8 @@ impl From<UiuaError> for CompileError {
     }
 }
 
-pub type CompileResult<T = ()> = Result<T, Sp<CompileError>>;
-
 pub struct Compiler {
+    eval_consts: bool,
     /// Instructions for stuff in the global scope
     global_instrs: Vec<Instr>,
     /// Instructions for functions that are currently being compiled
@@ -112,7 +111,7 @@ pub struct Compiler {
     /// Stack of scopes
     scopes: Vec<Scope>,
     /// Errors that don't stop compilation
-    errors: Vec<Sp<CompileError>>,
+    pub(crate) errors: Vec<Sp<CompileError>>,
     /// The partially compiled assembly
     assembly: Assembly,
     /// Vm for constant evaluation
@@ -177,6 +176,7 @@ impl Default for Compiler {
         assembly.start = assembly.instrs.len();
 
         Self {
+            eval_consts: true,
             global_instrs: vec![Instr::Comment("BEGIN".into())],
             in_progress_functions: Vec::new(),
             scopes: vec![scope],
@@ -197,6 +197,10 @@ impl Compiler {
     pub fn new() -> Self {
         Self::default()
     }
+    pub fn eval_consts(mut self, eval: bool) -> Self {
+        self.eval_consts = eval;
+        self
+    }
     pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult {
         let path = path.as_ref();
         let input = fs::read_to_string(path).map_err(|e| UiuaError::Load(path.into(), e))?;
@@ -216,9 +220,7 @@ impl Compiler {
         let function_start = self.assembly.instrs.len();
         let global_start = self.global_instrs.len();
         for item in items {
-            if let Err(e) = self.item(item) {
-                errors.push(e);
-            }
+            self.item(item);
         }
         errors.append(&mut self.errors);
         if errors.is_empty() {
@@ -259,20 +261,26 @@ impl Compiler {
         self.assembly.spans.push(span);
         spot
     }
-    fn item(&mut self, item: Item) -> CompileResult {
+    pub(crate) fn is_bound(&self, ident: &Ident) -> bool {
+        self.scopes
+            .iter()
+            .rev()
+            .any(|scope| scope.bindings.contains_key(ident))
+    }
+    pub(crate) fn item(&mut self, item: Item) {
         match item {
             Item::Words(words) => self.words(words, true),
             Item::Binding(binding) => self.binding(binding),
-            Item::Comment(_) | Item::Newlines => Ok(()),
+            Item::Comment(_) | Item::Newlines => {}
         }
     }
-    fn binding(&mut self, binding: Binding) -> CompileResult {
+    fn binding(&mut self, binding: Binding) {
         match binding.name.value.case() {
-            IdentCase::Camel => self.words(binding.words, true)?,
+            IdentCase::Camel => self.words(binding.words, true),
             IdentCase::Capital => self.func(Func {
                 id: FunctionId::Named(binding.name.value.clone()),
                 body: binding.words,
-            })?,
+            }),
             IdentCase::AllCaps => return self.r#const(binding.name, binding.words),
         };
         let scope = &mut self.scopes[0];
@@ -285,24 +293,33 @@ impl Compiler {
             .bindings
             .insert(binding.name.value, Bound::Global(index));
         self.push_instr(Instr::BindGlobal);
-        Ok(())
     }
-    fn r#const(&mut self, name: Sp<Ident>, words: Vec<Sp<Word>>) -> CompileResult {
+    fn r#const(&mut self, name: Sp<Ident>, words: Vec<Sp<Word>>) {
         let index = self.assembly.constants.len();
         // Set a restore point
         let instr_len = self.assembly.instrs.len();
         let global_instrs = self.global_instrs.clone();
         // Compile the words
         let words_span = words.last().unwrap().span.clone();
-        self.words(words, true)?;
+        self.words(words, true);
         self.assembly
             .add_non_function_instrs(take(&mut self.global_instrs));
         // Evaluate the words
-        let value = self
-            .assembly
-            .run_with_vm(&mut self.vm)
-            .map_err(|e| words_span.sp(e.into()))?
-            .unwrap_or(Value::default());
+        let value = if self.eval_consts {
+            let value = self
+                .assembly
+                .run_with_vm(&mut self.vm)
+                .map_err(|e| words_span.sp(e.into()));
+            match value {
+                Ok(value) => value.unwrap(),
+                Err(e) => {
+                    self.errors.push(e);
+                    Value::default()
+                }
+            }
+        } else {
+            Value::default()
+        };
         self.assembly.constants.push(value);
         // Bind the constant
         self.scope_mut()
@@ -311,15 +328,13 @@ impl Compiler {
         // Restore
         self.assembly.truncate(instr_len);
         self.global_instrs = global_instrs;
-        Ok(())
     }
-    fn words(&mut self, words: Vec<Sp<Word>>, call: bool) -> CompileResult {
+    fn words(&mut self, words: Vec<Sp<Word>>, call: bool) {
         for word in words.into_iter().rev() {
-            self.word(word, call)?;
+            self.word(word, call);
         }
-        Ok(())
     }
-    fn word(&mut self, word: Sp<Word>, call: bool) -> CompileResult {
+    fn word(&mut self, word: Sp<Word>, call: bool) {
         match word.value {
             Word::Real(s) => {
                 let f: f64 = match s.parse() {
@@ -333,32 +348,31 @@ impl Compiler {
             }
             Word::Char(c) => self.push_instr(Instr::Push(c.into())),
             Word::String(s) => self.push_instr(Instr::Push(s.into())),
-            Word::Ident(ident) => self.ident(ident, word.span, call)?,
+            Word::Ident(ident) => self.ident(ident, word.span, call),
             Word::Array(items) => {
                 self.push_instr(Instr::BeginArray);
-                self.words(items, true)?;
+                self.words(items, true);
                 self.push_instr(Instr::EndArray);
             }
             Word::Strand(items) => {
                 self.push_instr(Instr::BeginArray);
-                self.words(items, false)?;
+                self.words(items, false);
                 self.push_instr(Instr::EndArray);
             }
-            Word::Func(func) => self.func(func)?,
+            Word::Func(func) => self.func(func),
             Word::FuncArray(funcs) => {
                 self.push_instr(Instr::BeginArray);
                 for func in funcs.into_iter().rev() {
-                    self.func(func)?;
+                    self.func(func);
                 }
                 self.push_instr(Instr::EndArray);
             }
             Word::Primitive(prim) => self.primitive(prim, word.span, call),
-            Word::Modified(m) => self.modified(*m, call)?,
+            Word::Modified(m) => self.modified(*m, call),
             Word::Selector(sel) => self.selector(sel, word.span, call),
         }
-        Ok(())
     }
-    fn ident(&mut self, ident: Ident, span: Span, call: bool) -> CompileResult {
+    fn ident(&mut self, ident: Ident, span: Span, call: bool) {
         let bind = self
             .scopes
             .iter()
@@ -367,6 +381,9 @@ impl Compiler {
         let binding = match bind {
             Some(bind) => bind,
             None => {
+                if let Some(prim) = Primitive::from_name(ident.as_str()) {
+                    return self.primitive(prim, span, call);
+                }
                 self.errors
                     .push(span.clone().sp(CompileError::UnknownBinding(ident.clone())));
                 &Bound::Error
@@ -382,7 +399,6 @@ impl Compiler {
             let span = self.push_call_span(span);
             self.push_instr(Instr::Call(span));
         }
-        Ok(())
     }
     fn function_binding(&mut self, id: FunctionId) {
         if let Some(function) = self
@@ -397,11 +413,7 @@ impl Compiler {
             todo!("is this even reachable?")
         }
     }
-    fn func_outer(
-        &mut self,
-        id: FunctionId,
-        inner: impl FnOnce(&mut Self) -> CompileResult,
-    ) -> CompileResult {
+    fn func_outer(&mut self, id: FunctionId, inner: impl FnOnce(&mut Self)) {
         // Initialize the function's instruction list
         self.in_progress_functions
             .push(InProgressFunction { instrs: Vec::new() });
@@ -416,7 +428,7 @@ impl Compiler {
         };
         self.push_instr(Instr::Comment(name.clone()));
         // Compile the function's body
-        inner(self)?;
+        inner(self);
         self.push_instr(Instr::Comment(format!("end of {name}")));
         self.push_instr(Instr::Return);
         // Pop the function's scope
@@ -441,9 +453,8 @@ impl Compiler {
         self.assembly.function_ids.insert(function, id);
         // Push the function
         self.push_instr(Instr::Push(function.into()));
-        Ok(())
     }
-    fn func(&mut self, func: Func) -> CompileResult {
+    fn func(&mut self, func: Func) {
         self.func_outer(func.id, |this| this.words(func.body, true))
     }
     fn primitive(&mut self, prim: Primitive, span: Span, call: bool) {
@@ -460,7 +471,7 @@ impl Compiler {
             self.push_instr(Instr::Call(span));
         }
     }
-    fn modified(&mut self, modified: Modified, call: bool) -> CompileResult {
+    fn modified(&mut self, modified: Modified, call: bool) {
         let span = modified.modifier.span.clone();
         let id = FunctionId::Anonymous(
             modified
@@ -470,14 +481,12 @@ impl Compiler {
                 .merge(modified.word.span.clone()),
         );
         self.func_outer(id, |this| {
-            this.word(modified.word, false)?;
+            this.word(modified.word, false);
             this.primitive(modified.modifier.value, modified.modifier.span, true);
-            Ok(())
-        })?;
+        });
         if call {
             let span = self.push_call_span(span);
             self.push_instr(Instr::Call(span));
         }
-        Ok(())
     }
 }

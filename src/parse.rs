@@ -1,11 +1,11 @@
-use std::{error::Error, fmt, path::Path};
+use std::{error::Error, fmt, fs, path::Path};
 
 use crate::{
     ast::*,
     function::{FunctionId, Selector},
     lex::{Simple::*, *},
     ops::Primitive,
-    Ident,
+    Ident, UiuaError, UiuaResult,
 };
 
 #[derive(Debug)]
@@ -96,6 +96,13 @@ pub fn parse(input: &str, path: &Path) -> (Vec<Item>, Vec<Sp<ParseError>>) {
                 if parser.try_exact(Newline).is_none() {
                     break;
                 }
+                let mut newline_item = false;
+                while parser.try_exact(Newline).is_some() {
+                    newline_item = true;
+                }
+                if newline_item {
+                    items.push(Item::Newlines);
+                }
             }
             Err(e) => {
                 parser.errors.push(e);
@@ -109,6 +116,31 @@ pub fn parse(input: &str, path: &Path) -> (Vec<Item>, Vec<Sp<ParseError>>) {
     (items, parser.errors)
 }
 
+pub fn format_items(items: Vec<Item>) -> String {
+    let mut state = FormatState::default();
+    for item in items {
+        item.format(&mut state);
+    }
+    state.string
+}
+
+pub fn format(input: &str, path: &Path) -> Result<String, Vec<Sp<ParseError>>> {
+    let (items, errors) = parse(input, path);
+    if errors.is_empty() {
+        Ok(format_items(items))
+    } else {
+        Err(errors)
+    }
+}
+
+pub fn format_file<P: AsRef<Path>>(path: P) -> UiuaResult {
+    let path = path.as_ref();
+    let input = fs::read_to_string(path).map_err(|e| UiuaError::Load(path.to_path_buf(), e))?;
+    let formatted = format(&input, path)?;
+    fs::write(path, formatted).map_err(|e| UiuaError::Format(path.to_path_buf(), e))?;
+    Ok(())
+}
+
 struct Parser {
     tokens: Vec<Sp<crate::lex::Token>>,
     index: usize,
@@ -120,17 +152,13 @@ impl Parser {
         &'a mut self,
         f: impl FnOnce(&'a Token) -> Option<T>,
     ) -> Option<Sp<T>> {
-        while let Some(token) = self.tokens.get(self.index) {
-            if matches!(token.value, Token::Comment(_)) {
-                self.index += 1;
-            } else if let Some(value) = f(&token.value) {
-                self.index += 1;
-                return Some(token.span.clone().sp(value));
-            } else {
-                return None;
-            }
+        let token = self.tokens.get(self.index)?;
+        if let Some(value) = f(&token.value) {
+            self.index += 1;
+            Some(token.span.clone().sp(value))
+        } else {
+            None
         }
-        None
     }
     fn try_exact(&mut self, token: impl Into<Token>) -> Option<Span> {
         let token = token.into();
@@ -185,6 +213,8 @@ impl Parser {
             Item::Const(r#const)
         } else if self.try_exact(Keyword::Do).is_some() {
             Item::Words(self.words()?)
+        } else if let Some(comment) = self.next_token_map(Token::as_comment) {
+            Item::Comment(comment.value.into())
         } else {
             return Ok(None);
         };
@@ -229,9 +259,6 @@ impl Parser {
         self.try_ident()
             .ok_or_else(|| self.expected([Expectation::Ident]))
     }
-}
-
-impl Parser {
     fn try_words(&mut self) -> ParseResult<Option<Vec<Sp<Word>>>> {
         let mut words = Vec::new();
         while let Some(word) = self.try_word()? {
@@ -295,7 +322,9 @@ impl Parser {
         self.try_term()
     }
     fn try_term(&mut self) -> ParseResult<Option<Sp<Word>>> {
-        Ok(Some(if let Some(ident) = self.try_ident() {
+        Ok(Some(if let Some(prim) = self.try_op()? {
+            prim.map(Word::Primitive)
+        } else if let Some(ident) = self.try_ident() {
             ident.map(Word::Ident)
         } else if let Some(r) = self.next_token_map(Token::as_number) {
             r.map(Into::into).map(Word::Real)
@@ -310,8 +339,6 @@ impl Parser {
             let end = self.expect(CloseBracket)?;
             let span = start.merge(end);
             span.sp(Word::Array(items))
-        } else if let Some(prim) = self.try_op()? {
-            prim.map(Word::Primitive)
         } else if let Some(sel) = self.try_selector() {
             sel.map(Word::Selector)
         } else {
@@ -322,7 +349,17 @@ impl Parser {
         for prim in Primitive::ALL {
             let op_span = self
                 .try_exact(prim)
-                .or_else(|| prim.name().ascii.and_then(|simple| self.try_exact(simple)));
+                .or_else(|| prim.name().ascii.and_then(|simple| self.try_exact(simple)))
+                .or_else(|| {
+                    prim.name()
+                        .ident
+                        .and_then(|ident| {
+                            self.next_token_map(|token| {
+                                token.as_ident().filter(|i| str::eq(i, ident))
+                            })
+                        })
+                        .map(|s| s.span)
+                });
             if let Some(span) = op_span {
                 return Ok(Some(span.sp(prim)));
             }

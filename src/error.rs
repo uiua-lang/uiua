@@ -4,11 +4,13 @@ use crate::{
     compile::CompileError,
     function::FunctionId,
     lex::{Sp, Span},
+    parse::ParseError,
 };
 
 #[derive(Debug)]
 pub enum UiuaError {
     Load(PathBuf, io::Error),
+    Format(PathBuf, io::Error),
     Compile(Vec<Sp<CompileError>>),
     Run {
         error: Box<RuntimeError>,
@@ -30,6 +32,9 @@ impl fmt::Display for UiuaError {
         match self {
             UiuaError::Load(path, e) => {
                 write!(f, "failed to load {}: {e}", path.to_string_lossy())
+            }
+            UiuaError::Format(path, e) => {
+                write!(f, "failed to format {}: {e}", path.to_string_lossy())
             }
             UiuaError::Compile(errors) => {
                 for error in errors {
@@ -97,6 +102,12 @@ impl fmt::Display for UiuaError {
 impl From<Vec<Sp<CompileError>>> for UiuaError {
     fn from(errors: Vec<Sp<CompileError>>) -> Self {
         Self::Compile(errors)
+    }
+}
+
+impl From<Vec<Sp<ParseError>>> for UiuaError {
+    fn from(errors: Vec<Sp<ParseError>>) -> Self {
+        Self::Compile(errors.into_iter().map(|sp| sp.map(Into::into)).collect())
     }
 }
 

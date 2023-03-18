@@ -272,6 +272,12 @@ impl Token {
             _ => None,
         }
     }
+    pub fn as_comment(&self) -> Option<&str> {
+        match self {
+            Token::Comment(comment) => Some(comment),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for Token {
@@ -529,6 +535,9 @@ impl Lexer {
                     while let Some(c) = self.next_char_if(|c| c != '\n') {
                         comment.push(c);
                     }
+                    if comment.starts_with(' ') {
+                        comment.remove(0);
+                    }
                     self.end(Comment(comment), start)
                 }
                 // Characters
@@ -569,10 +578,10 @@ impl Lexer {
                     self.end(Token::Str(string), start)
                 }
                 // Identifiers, keywords, and selectors
-                c if is_ident_start(c) => {
+                c if c.is_alphabetic() => {
                     let mut ident = String::new();
                     ident.push(c);
-                    while let Some(c) = self.next_char_if(is_ident) {
+                    while let Some(c) = self.next_char_if(char::is_alphabetic) {
                         ident.push(c);
                     }
                     let token = if let Some(keyword) = self::Keyword::ALL
@@ -659,12 +668,4 @@ impl Lexer {
             c
         }))
     }
-}
-
-fn is_ident_start(c: char) -> bool {
-    c.is_ascii_alphabetic()
-}
-
-fn is_ident(c: char) -> bool {
-    c.is_ascii_alphanumeric()
 }

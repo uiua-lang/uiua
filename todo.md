@@ -1,5 +1,3 @@
-- Parse unicode operators
-- Format AST back to file
 - Make bindings case insensitive
 - Implement function reversal
 - Improve parsing expectation errors

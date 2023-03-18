@@ -90,6 +90,12 @@ impl fmt::Display for CompileError {
     }
 }
 
+impl From<ParseError> for CompileError {
+    fn from(e: ParseError) -> Self {
+        CompileError::Parse(e)
+    }
+}
+
 impl From<UiuaError> for CompileError {
     fn from(e: UiuaError) -> Self {
         CompileError::ConstEval(e)
@@ -258,6 +264,7 @@ impl Compiler {
             Item::Words(words) => self.words(words, true),
             Item::Let(binding) => self.r#let(binding),
             Item::Const(r#const) => self.r#const(r#const),
+            Item::Comment(_) | Item::Newlines => Ok(()),
         }
     }
     fn r#let(&mut self, binding: Let) -> CompileResult {

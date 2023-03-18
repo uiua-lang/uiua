@@ -1,4 +1,4 @@
-use uiua::compile::Compiler;
+use uiua::{compile::Compiler, parse::format_file};
 
 fn main() {
     #[cfg(feature = "profile")]
@@ -8,6 +8,7 @@ fn main() {
         Box::leak(Box::new(puffin_http::Server::new(&server_addr).unwrap()));
     }
 
+    let _ = format_file("test.uiua");
     let mut compiler = Compiler::new();
     if let Err(e) = compiler.load_file("test.uiua") {
         eprintln!("{e}");

@@ -22,18 +22,11 @@ pub enum Expectation {
     Eof,
     Term,
     Simple(Simple),
-    Keyword(Keyword),
 }
 
 impl From<Simple> for Expectation {
     fn from(simple: Simple) -> Self {
         Expectation::Simple(simple)
-    }
-}
-
-impl From<Keyword> for Expectation {
-    fn from(keyword: Keyword) -> Self {
-        Expectation::Keyword(keyword)
     }
 }
 
@@ -45,7 +38,6 @@ impl fmt::Display for Expectation {
             Expectation::Eof => write!(f, "end of file"),
             Expectation::Term => write!(f, "term"),
             Expectation::Simple(s) => write!(f, "{s}"),
-            Expectation::Keyword(k) => write!(f, "{k}"),
         }
     }
 }
@@ -207,57 +199,33 @@ impl Parser {
         self.errors.push(err);
     }
     fn try_item(&mut self) -> ParseResult<Option<Item>> {
-        let item = if let Some(r#let) = self.try_let()? {
-            Item::Let(r#let)
-        } else if let Some(r#const) = self.try_const()? {
-            Item::Const(r#const)
-        } else if self.try_exact(Keyword::Do).is_some() {
-            Item::Words(self.words()?)
+        Ok(Some(if let Some(ident) = self.try_ident() {
+            if self.try_exact(Equal).is_some() {
+                let mut words = self.words()?;
+                if words.len() == 1 {
+                    if let Word::Func(func) = &mut words[0].value {
+                        func.id = FunctionId::Named(ident.value.clone());
+                    }
+                }
+                Item::Binding(Binding { name: ident, words })
+            } else {
+                let mut words = self.try_words()?.unwrap_or_default();
+                words.insert(0, ident.map(Word::Ident));
+                Item::Words(words)
+            }
+        } else if let Some(words) = self.try_words()? {
+            Item::Words(words)
         } else if let Some(comment) = self.next_token_map(Token::as_comment) {
             Item::Comment(comment.value.into())
         } else {
             return Ok(None);
-        };
-        Ok(Some(item))
-    }
-    fn try_let(&mut self) -> ParseResult<Option<Let>> {
-        // Let
-        if self.try_exact(Keyword::Let).is_none() {
-            return Ok(None);
-        };
-        // Name
-        let name = self.ident()?;
-        self.expect(Equal)?;
-        // Words
-        let mut words = self.words()?;
-        if words.len() == 1 {
-            if let Word::Func(func) = &mut words[0].value {
-                func.id = FunctionId::Named(name.value.clone());
-            }
-        }
-        Ok(Some(Let { name, words }))
-    }
-    fn try_const(&mut self) -> ParseResult<Option<Const>> {
-        // Const
-        if self.try_exact(Keyword::Const).is_none() {
-            return Ok(None);
-        };
-        // Pattern
-        let name = self.ident()?;
-        self.expect(Equal)?;
-        // Words
-        let words = self.words()?;
-        Ok(Some(Const { name, words }))
+        }))
     }
     fn try_ident(&mut self) -> Option<Sp<Ident>> {
         self.next_token_map(|token| token.as_ident().cloned())
     }
     fn try_selector(&mut self) -> Option<Sp<Selector>> {
         self.next_token_map(|token| token.as_selector().cloned())
-    }
-    fn ident(&mut self) -> ParseResult<Sp<Ident>> {
-        self.try_ident()
-            .ok_or_else(|| self.expected([Expectation::Ident]))
     }
     fn try_words(&mut self) -> ParseResult<Option<Vec<Sp<Word>>>> {
         let mut words = Vec::new();
@@ -344,9 +312,7 @@ impl Parser {
                     prim.name()
                         .ident
                         .and_then(|ident| {
-                            self.next_token_map(|token| {
-                                token.as_ident().filter(|i| str::eq(i, ident))
-                            })
+                            self.next_token_map(|token| token.as_ident().filter(|i| **i == ident))
                         })
                         .map(|s| s.span)
                 });

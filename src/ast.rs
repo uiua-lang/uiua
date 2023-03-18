@@ -10,20 +10,13 @@ use crate::{
 #[derive(Debug, Clone)]
 pub enum Item {
     Words(Vec<Sp<Word>>),
-    Let(Let),
-    Const(Const),
+    Binding(Binding),
     Newlines,
     Comment(String),
 }
 
 #[derive(Debug, Clone)]
-pub struct Let {
-    pub name: Sp<Ident>,
-    pub words: Vec<Sp<Word>>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Const {
+pub struct Binding {
     pub name: Sp<Ident>,
     pub words: Vec<Sp<Word>>,
 }
@@ -106,12 +99,6 @@ impl FormatState {
             self.push(' ');
         }
     }
-    fn space_if_numeric(&mut self) {
-        self.space_if_was_strand();
-        if self.string.ends_with(char::is_numeric) {
-            self.push(' ');
-        }
-    }
     fn space_if_was_strand(&mut self) {
         if self.was_strand {
             self.push(' ');
@@ -127,13 +114,11 @@ impl Format for Item {
     fn format(&self, state: &mut FormatState) {
         match self {
             Item::Words(words) => {
-                state.push("do");
                 for word in words {
                     word.value.format(state);
                 }
             }
-            Item::Let(l) => l.format(state),
-            Item::Const(c) => c.format(state),
+            Item::Binding(l) => l.format(state),
             Item::Comment(comment) => {
                 state.push("# ");
                 state.push(comment);
@@ -144,20 +129,8 @@ impl Format for Item {
     }
 }
 
-impl Format for Let {
+impl Format for Binding {
     fn format(&self, state: &mut FormatState) {
-        state.push("let ");
-        state.push(&self.name.value);
-        state.push(" = ");
-        for word in &self.words {
-            word.value.format(state);
-        }
-    }
-}
-
-impl Format for Const {
-    fn format(&self, state: &mut FormatState) {
-        state.push("const ");
         state.push(&self.name.value);
         state.push(" = ");
         for word in &self.words {
@@ -168,7 +141,6 @@ impl Format for Const {
 
 impl Format for Word {
     fn format(&self, state: &mut FormatState) {
-        state.space_if_numeric();
         match self {
             Word::Real(f) => {
                 state.space_if_alphanumeric();

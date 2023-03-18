@@ -224,7 +224,6 @@ pub enum Token {
     Char(char),
     Str(String),
     Selector(Selector),
-    Keyword(Keyword),
     Simple(Simple),
     Glyph(Primitive),
 }
@@ -289,7 +288,6 @@ impl fmt::Display for Token {
             Token::Char(char) => write!(f, "{char:?}"),
             Token::Str(s) => write!(f, "{s:?}"),
             Token::Selector(selector) => write!(f, "{selector}"),
-            Token::Keyword(keyword) => write!(f, "{keyword}"),
             Token::Simple(simple) => write!(f, "{simple}"),
             Token::Glyph(glyph) => write!(f, "{glyph}"),
         }
@@ -367,29 +365,6 @@ impl fmt::Display for Simple {
             Simple::GreaterEqual => write!(f, ">="),
             Simple::Newline => write!(f, "\\n"),
         }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Keyword {
-    Let,
-    Do,
-    Const,
-}
-
-impl Keyword {
-    pub const ALL: [Keyword; 3] = [Keyword::Let, Keyword::Do, Keyword::Const];
-}
-
-impl fmt::Display for Keyword {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", format!("{self:?}").to_lowercase())
-    }
-}
-
-impl From<Keyword> for Token {
-    fn from(k: Keyword) -> Self {
-        Self::Keyword(k)
     }
 }
 
@@ -577,19 +552,14 @@ impl Lexer {
                     }
                     self.end(Token::Str(string), start)
                 }
-                // Identifiers, keywords, and selectors
+                // Identifiers and selectors
                 c if c.is_alphabetic() => {
                     let mut ident = String::new();
                     ident.push(c);
                     while let Some(c) = self.next_char_if(char::is_alphabetic) {
                         ident.push(c);
                     }
-                    let token = if let Some(keyword) = self::Keyword::ALL
-                        .into_iter()
-                        .find(|k| format!("{k:?}").to_lowercase() == ident)
-                    {
-                        Keyword(keyword)
-                    } else if let Ok(selector) = ident.parse() {
+                    let token = if let Ok(selector) = ident.parse() {
                         Selector(selector)
                     } else {
                         Ident(ident.into())

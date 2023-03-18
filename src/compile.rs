@@ -8,7 +8,7 @@ use crate::{
     parse::{parse, ParseError},
     value::Value,
     vm::{dprintln, Instr, Vm},
-    Ident, RuntimeError, UiuaError, UiuaResult,
+    Ident, IdentCase, RuntimeError, UiuaError, UiuaResult,
 };
 
 pub struct Assembly {
@@ -126,13 +126,13 @@ struct InProgressFunction {
 #[derive(Default)]
 struct Scope {
     /// Values and functions that are in scope
-    bindings: HashMap<Ident, Binding>,
+    bindings: HashMap<Ident, Bound>,
     /// Map of function ids to the actual function values
     functions: HashMap<FunctionId, Function>,
 }
 
 #[derive(Debug, Clone)]
-enum Binding {
+enum Bound {
     /// A function that is available but not on the stack.
     Function(FunctionId),
     /// A global variable is referenced by its index in the global array.
@@ -158,7 +158,7 @@ impl Default for Compiler {
         for (name, value) in constants() {
             let index = assembly.constants.len();
             assembly.constants.push(value);
-            scope.bindings.insert(name.into(), Binding::Constant(index));
+            scope.bindings.insert(name.into(), Bound::Constant(index));
         }
         // Primitives
         for prim in Primitive::ALL {
@@ -167,7 +167,7 @@ impl Default for Compiler {
             if let Some(name) = prim.name().ident {
                 scope
                     .bindings
-                    .insert(name.into(), Binding::Function(prim.into()));
+                    .insert(name.into(), Bound::Function(prim.into()));
             }
             scope.functions.insert(prim.into(), function);
             // Function info
@@ -262,33 +262,39 @@ impl Compiler {
     fn item(&mut self, item: Item) -> CompileResult {
         match item {
             Item::Words(words) => self.words(words, true),
-            Item::Let(binding) => self.r#let(binding),
-            Item::Const(r#const) => self.r#const(r#const),
+            Item::Binding(binding) => self.binding(binding),
             Item::Comment(_) | Item::Newlines => Ok(()),
         }
     }
-    fn r#let(&mut self, binding: Let) -> CompileResult {
-        self.words(binding.words, true)?;
+    fn binding(&mut self, binding: Binding) -> CompileResult {
+        match binding.name.value.case() {
+            IdentCase::Camel => self.words(binding.words, true)?,
+            IdentCase::Capital => self.func(Func {
+                id: FunctionId::Named(binding.name.value.clone()),
+                body: binding.words,
+            })?,
+            IdentCase::AllCaps => return self.r#const(binding.name, binding.words),
+        };
         let scope = &mut self.scopes[0];
         let index = scope
             .bindings
             .values()
-            .filter(|b| matches!(b, Binding::Global(_)))
+            .filter(|b| matches!(b, Bound::Global(_)))
             .count();
         scope
             .bindings
-            .insert(binding.name.value, Binding::Global(index));
+            .insert(binding.name.value, Bound::Global(index));
         self.push_instr(Instr::BindGlobal);
         Ok(())
     }
-    fn r#const(&mut self, r#const: Const) -> CompileResult {
+    fn r#const(&mut self, name: Sp<Ident>, words: Vec<Sp<Word>>) -> CompileResult {
         let index = self.assembly.constants.len();
         // Set a restore point
         let instr_len = self.assembly.instrs.len();
         let global_instrs = self.global_instrs.clone();
         // Compile the words
-        let words_span = r#const.words.last().unwrap().span.clone();
-        self.words(r#const.words, true)?;
+        let words_span = words.last().unwrap().span.clone();
+        self.words(words, true)?;
         self.assembly
             .add_non_function_instrs(take(&mut self.global_instrs));
         // Evaluate the words
@@ -301,7 +307,7 @@ impl Compiler {
         // Bind the constant
         self.scope_mut()
             .bindings
-            .insert(r#const.name.value, Binding::Constant(index));
+            .insert(name.value, Bound::Constant(index));
         // Restore
         self.assembly.truncate(instr_len);
         self.global_instrs = global_instrs;
@@ -363,14 +369,14 @@ impl Compiler {
             None => {
                 self.errors
                     .push(span.clone().sp(CompileError::UnknownBinding(ident.clone())));
-                &Binding::Error
+                &Bound::Error
             }
         };
         match binding.clone() {
-            Binding::Global(index) => self.push_instr(Instr::CopyGlobal(index)),
-            Binding::Function(id) => self.function_binding(id),
-            Binding::Constant(index) => self.push_instr(Instr::Constant(index)),
-            Binding::Error => self.push_instr(Instr::Push(Value::default())),
+            Bound::Global(index) => self.push_instr(Instr::CopyGlobal(index)),
+            Bound::Function(id) => self.function_binding(id),
+            Bound::Constant(index) => self.push_instr(Instr::Constant(index)),
+            Bound::Error => self.push_instr(Instr::Push(Value::default())),
         }
         if call {
             let span = self.push_call_span(span);

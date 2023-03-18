@@ -353,6 +353,18 @@ impl Value {
         a.shape_mut().insert(0, 2);
         Ok(())
     }
+    pub fn grade(&mut self, env: &Env) -> RuntimeResult {
+        let arr = self.coerce_array();
+        if arr.rank() < 1 {
+            return Err(env.error("Cannot grade rank less than 1"));
+        }
+        let mut indices: Vec<usize> = (0..arr.shape()[0]).collect();
+        let cells = take(arr).into_values();
+        indices.sort_by(|&a, &b| cells[a].cmp(&cells[b]));
+        let nums: Vec<f64> = indices.iter().map(|&i| i as f64).collect();
+        *arr = Array::from((vec![indices.len()], nums));
+        Ok(())
+    }
 }
 
 fn transpose<T: Clone>(shape: &mut [usize], data: &mut [T]) {

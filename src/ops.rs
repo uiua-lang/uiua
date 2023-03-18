@@ -123,6 +123,7 @@ primitive!(
     (Deshape, "deshape" + "♭"),
     (Transpose, "transpose" + "🏳️‍⚧️"),
     (Enclose, "enclose" + "⺆"),
+    (Grade, "grade" + "⍋"),
     // Dyadic array ops
     (Match, "match" + "≅"),
     (NoMatch, "nomatch" + "≇"),
@@ -228,6 +229,7 @@ impl Primitive {
             Primitive::Enclose => env.monadic_mut(Value::enclose)?,
             Primitive::Pair => env.dyadic_mut(Value::pair)?,
             Primitive::Couple => env.dyadic_mut_env(Value::couple)?,
+            Primitive::Grade => env.monadic_mut_env(Value::grade)?,
             Primitive::Dup => {
                 let x = env.top_mut()?.clone();
                 env.push(x);

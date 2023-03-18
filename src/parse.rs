@@ -217,7 +217,7 @@ impl Parser {
         self.try_strand()
     }
     fn try_strand(&mut self) -> ParseResult<Option<Sp<Word>>> {
-        let Some(mut word) = self.try_modified()? else {
+        let Some(word) = self.try_modified()? else {
             return Ok(None);
         };
         let mut items = Vec::new();
@@ -227,12 +227,22 @@ impl Parser {
                 .ok_or_else(|| self.expected([Expectation::Term]))?;
             items.push(item);
         }
-        if let Some(last) = items.last() {
-            let span = word.span.clone().merge(last.span.clone());
-            items.insert(0, word);
-            word = span.sp(Word::Strand(items));
+        if items.is_empty() {
+            return Ok(Some(word));
         }
-        Ok(Some(word))
+        items.insert(0, word);
+        for item in &mut items {
+            if let Word::Func(func) = &item.value {
+                if func.body.is_empty() {
+                    item.value = Word::Primitive(Primitive::Nop);
+                }
+            }
+        }
+        let span = items[0]
+            .span
+            .clone()
+            .merge(items.last().unwrap().span.clone());
+        Ok(Some(span.sp(Word::Strand(items))))
     }
     fn try_modified(&mut self) -> ParseResult<Option<Sp<Word>>> {
         for prim in Primitive::ALL.into_iter().filter(Primitive::is_modifier) {
@@ -311,16 +321,11 @@ impl Parser {
         let span = start.clone().merge(end);
         Ok(Some(span.clone().sp(if groups.is_empty() {
             unreachable!("At least one group is always pushed")
-        } else if groups.len() <= 1 {
-            let words = groups.into_iter().next().unwrap();
-            if words.is_empty() {
-                Word::Primitive(Primitive::Nop)
-            } else {
-                Word::Func(Func {
-                    id: FunctionId::Anonymous(span),
-                    body: words,
-                })
-            }
+        } else if groups.len() == 1 {
+            Word::Func(Func {
+                id: FunctionId::Anonymous(span),
+                body: groups.into_iter().next().unwrap(),
+            })
         } else {
             let mut last_span = start;
             let mut funcs = Vec::new();

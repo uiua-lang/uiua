@@ -1,7 +1,6 @@
-- Implement function reversal
 - Improve parsing expectation errors
+- Basic parsing functions
 - Pretty error printing
-- Make calling arrays indexing
 - Includes
 - More array functions
   - Last?
@@ -11,7 +10,7 @@
   - Group
   - Classify
   - Select
-- Basic parsing functions
+- Implement function reversal
 - Error handling
 - Type testing/tracing
 - Structs

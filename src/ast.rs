@@ -62,7 +62,8 @@ pub struct Func {
 
 impl fmt::Debug for Func {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut d = f.debug_tuple(&self.id.to_string());
+        let mut d = f.debug_tuple("func");
+        d.field(&self.id);
         for word in &self.body {
             d.field(&word.value);
         }

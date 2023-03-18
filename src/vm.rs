@@ -301,6 +301,13 @@ impl<'a> CallEnv<'a> {
         *a = f(a, &b).into();
         Ok(())
     }
+    pub fn dyadic_mut(&mut self, f: fn(&mut Value, &mut Value)) -> RuntimeResult {
+        let mut b = self.pop()?;
+        let a = self.top_mut()?;
+        swap(a, &mut b);
+        f(a, &mut b);
+        Ok(())
+    }
     pub fn dyadic_env<V: Into<Value>>(
         &mut self,
         f: fn(&Value, &Value, &Env) -> RuntimeResult<V>,

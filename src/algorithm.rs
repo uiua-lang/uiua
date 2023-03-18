@@ -323,6 +323,36 @@ impl Value {
         let arr = self.coerce_array();
         arr.data_mut(transpose, transpose, transpose);
     }
+    pub fn enclose(&mut self) {
+        *self = Array::from((Vec::new(), vec![take(self)]))
+            .normalized(0)
+            .into();
+    }
+    pub fn pair(&mut self, other: &mut Self) {
+        *self = Array::from((vec![2], vec![take(self), take(other)]))
+            .normalized(0)
+            .into();
+    }
+    pub fn couple(&mut self, other: &mut Self, env: &Env) -> RuntimeResult {
+        let a = self.coerce_array();
+        let b = other.coerce_array();
+        if a.shape() != b.shape() {
+            return Err(env.error(format!(
+                "Cannot couple arrays of different shapes: \
+                the first shape is {:?}, but the second shape is {:?}",
+                a.shape(),
+                b.shape()
+            )));
+        }
+        match (a.ty(), b.ty()) {
+            (ArrayType::Num, ArrayType::Num) => a.numbers_mut().append(b.numbers_mut()),
+            (ArrayType::Char, ArrayType::Char) => a.chars_mut().append(b.chars_mut()),
+            (ArrayType::Value, ArrayType::Value) => a.values_mut().append(b.values_mut()),
+            _ => a.make_values().append(b.make_values()),
+        }
+        a.shape_mut().insert(0, 2);
+        Ok(())
+    }
 }
 
 fn transpose<T: Clone>(shape: &mut [usize], data: &mut [T]) {

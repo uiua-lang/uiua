@@ -69,6 +69,9 @@ impl Array {
     pub fn shape(&self) -> &[usize] {
         &self.shape
     }
+    pub fn shape_mut(&mut self) -> &mut Vec<usize> {
+        &mut self.shape
+    }
     pub fn ty(&self) -> ArrayType {
         self.ty
     }
@@ -155,6 +158,14 @@ impl Array {
     pub fn into_chars(mut self) -> Vec<char> {
         assert_eq!(self.ty, ArrayType::Char);
         take(unsafe { &mut *self.data.chars })
+    }
+    pub fn make_values(&mut self) -> &mut Vec<Value> {
+        if self.ty != ArrayType::Value {
+            self.data = Data {
+                values: ManuallyDrop::new(self.take_flat_values()),
+            };
+        }
+        self.values_mut()
     }
 }
 

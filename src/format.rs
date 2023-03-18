@@ -149,6 +149,9 @@ impl Format for Word {
             }
             Word::String(s) => {
                 state.space_if_alphanumeric();
+                if state.string.ends_with('"') {
+                    state.push(' ');
+                }
                 state.push('"');
                 for c in s.chars() {
                     state.push(c);
@@ -215,6 +218,13 @@ impl Format for Word {
 
 impl Format for Primitive {
     fn format(&self, state: &mut FormatState) {
+        match self {
+            Primitive::Dup | Primitive::Flip => {
+                state.push(self);
+                return;
+            }
+            _ => {}
+        }
         state.space_if_alphabetic();
         let s = self.to_string();
         if s.starts_with(|c: char| c.is_ascii_alphabetic()) {

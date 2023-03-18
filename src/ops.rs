@@ -122,12 +122,15 @@ primitive!(
     (Reverse, "reverse" + "⇌"),
     (Deshape, "deshape" + "♭"),
     (Transpose, "transpose" + "🏳️‍⚧️"),
+    (Enclose, "enclose" + "⺆"),
     // Dyadic array ops
     (Match, "match" + "≅"),
     (NoMatch, "nomatch" + "≇"),
     (Join, "join" + "∾"),
-    (Pick, "pick" + "⊞"),
-    (Filter, "filter" + "ꖛ"),
+    (Pair, "pair" + "⚇"),
+    (Couple, "couple" + "⊟"),
+    (Pick, "pick" + "⊡"),
+    (Filter, "filter" + "⌗"),
     (Take, "take" + "↤"),
     (Drop, "drop" + "↦"),
     (Rotate, "rotate" + "↻"),
@@ -222,6 +225,9 @@ impl Primitive {
             Primitive::Take => env.dyadic_mut_env(Value::take)?,
             Primitive::Drop => env.dyadic_mut_env(Value::drop)?,
             Primitive::Rotate => env.dyadic_mut_env(Value::rotate)?,
+            Primitive::Enclose => env.monadic_mut(Value::enclose)?,
+            Primitive::Pair => env.dyadic_mut(Value::pair)?,
+            Primitive::Couple => env.dyadic_mut_env(Value::couple)?,
             Primitive::Dup => {
                 let x = env.top_mut()?.clone();
                 env.push(x);

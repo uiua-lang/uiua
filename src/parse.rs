@@ -5,7 +5,7 @@ use crate::{
     function::{FunctionId, Selector},
     lex::{Simple::*, *},
     ops::Primitive,
-    Ident, IdentCase,
+    Ident,
 };
 
 #[derive(Debug)]
@@ -251,16 +251,7 @@ impl Parser {
             .find_map(|prim| {
                 self.try_exact(prim)
                     .or_else(|| prim.name().ascii.and_then(|simple| self.try_exact(simple)))
-                    .map(|span| span.sp(Word::Primitive(prim)))
-            })
-            .or_else(|| {
-                self.next_token_map(|token| {
-                    token
-                        .as_ident()
-                        .filter(|ident| ident.case() == IdentCase::Capital)
-                        .cloned()
-                })
-                .map(|ident| ident.map(Word::Ident))
+                    .map(|span| span.sp(prim))
             });
         let Some(modifier) = modifier else {
             return self.try_term();
@@ -270,7 +261,7 @@ impl Parser {
             let span = modifier.span.clone().merge(word.span.clone());
             span.sp(Word::Modified(Box::new(Modified { modifier, word })))
         } else {
-            modifier
+            modifier.map(Word::Primitive)
         }))
     }
     fn try_term(&mut self) -> ParseResult<Option<Sp<Word>>> {

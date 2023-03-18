@@ -123,8 +123,8 @@ primitive!(
     (Deshape, "deshape" + "♭"),
     (Transpose, "transpose" + "🏳️‍⚧️"),
     // Dyadic array ops
-    (Match, "match" + "≡"),
-    (NoMatch, "nomatch" + "≢"),
+    (Match, "match" + "≅"),
+    (NoMatch, "nomatch" + "≇"),
     (Join, "join" + "∾"),
     (Pick, "pick" + "⊞"),
     (Filter, "filter" + "ꖛ"),
@@ -141,13 +141,13 @@ primitive!(
     (Args, "args"),
     (Var, "var"),
     // Modifiers
-    (Fold { modifier }, "Fold"),
+    (Fold { modifier }, "fold"),
     (Reduce { modifier }, Slash),
-    (Each { modifier }, "Each" + "¨"),
-    (Cells { modifier }, BackTick),
+    (Each { modifier }, "each" + "⠿"),
+    (Cells { modifier }, "cells" + "≡"),
     (Table { modifier }, Caret),
     (Scan { modifier }, BackSlash),
-    (Repeat {modifier}, "Repeat" + "⥀"),
+    (Repeat {modifier}, "repeat" + "⥀"),
 );
 
 fn _keep_primitive_small(_: std::convert::Infallible) {

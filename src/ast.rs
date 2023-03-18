@@ -73,7 +73,7 @@ impl fmt::Debug for Func {
 
 #[derive(Clone)]
 pub struct Modified {
-    pub modifier: Sp<Word>,
+    pub modifier: Sp<Primitive>,
     pub word: Sp<Word>,
 }
 

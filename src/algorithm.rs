@@ -319,6 +319,25 @@ impl Value {
         );
         Ok(())
     }
+    pub fn transpose(&mut self) {
+        let arr = self.coerce_array();
+        arr.data_mut(transpose, transpose, transpose);
+    }
+}
+
+fn transpose<T: Clone>(shape: &mut [usize], data: &mut [T]) {
+    if shape.len() < 2 {
+        return;
+    }
+    let mut temp = Vec::with_capacity(data.len());
+    let run_length = data.len() / shape[0];
+    for j in 0..run_length {
+        for i in 0..shape[0] {
+            temp.push(data[i * run_length + j].clone());
+        }
+    }
+    data.clone_from_slice(&temp);
+    shape.rotate_left(1);
 }
 
 fn rotate<T: Clone>(index: &[isize], shape: &[usize], data: &mut [T]) {

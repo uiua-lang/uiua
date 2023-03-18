@@ -119,14 +119,14 @@ impl Array {
     }
     pub fn data_mut<N, C, V, T>(&mut self, nums: N, chars: C, values: V) -> T
     where
-        N: FnOnce(&[usize], &mut [f64]) -> T,
-        C: FnOnce(&[usize], &mut [char]) -> T,
-        V: FnOnce(&[usize], &mut [Value]) -> T,
+        N: FnOnce(&mut [usize], &mut [f64]) -> T,
+        C: FnOnce(&mut [usize], &mut [char]) -> T,
+        V: FnOnce(&mut [usize], &mut [Value]) -> T,
     {
         match self.ty {
-            ArrayType::Num => nums(&self.shape, unsafe { &mut self.data.numbers }),
-            ArrayType::Char => chars(&self.shape, unsafe { &mut self.data.chars }),
-            ArrayType::Value => values(&self.shape, unsafe { &mut self.data.values }),
+            ArrayType::Num => nums(&mut self.shape, unsafe { &mut self.data.numbers }),
+            ArrayType::Char => chars(&mut self.shape, unsafe { &mut self.data.chars }),
+            ArrayType::Value => values(&mut self.shape, unsafe { &mut self.data.values }),
         }
     }
     fn take_flat_values(&mut self) -> Vec<Value> {

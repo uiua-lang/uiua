@@ -23,7 +23,7 @@ pub(crate) fn constants() -> Vec<(&'static str, Value)> {
 pub struct PrimitiveName {
     pub ident: Option<&'static str>,
     pub ascii: Option<Simple>,
-    pub unicode: Option<char>,
+    pub unicode: Option<&'static str>,
 }
 
 macro_rules! primitive {
@@ -42,7 +42,7 @@ macro_rules! primitive {
                     $(Primitive::$name => PrimitiveName {
                         ident: {None::<&'static str> $(;Some($ident))?},
                         ascii: {None::<Simple> $(;Some(Simple::$ascii))?},
-                        unicode: {None::<char> $(;Some($unicode))?},
+                        unicode: {None::<&'static str> $(;Some($unicode))?},
                     },)*
                     Primitive::AdicFork(n) => PrimitiveName {
                         ident: None,
@@ -58,8 +58,8 @@ macro_rules! primitive {
                     _ => None
                 }
             }
-            pub fn from_unicode(c: char) -> Option<Self> {
-                match c {
+            pub fn from_unicode(s: &str) -> Option<Self> {
+                match s {
                     $($($unicode => Some(Self::$name),)?)*
                     _ => None
                 }
@@ -78,34 +78,34 @@ macro_rules! primitive {
 }
 
 primitive!(
-    (Nop, +'·'),
+    (Nop, +"·"),
     // Pervasive monadic ops
-    (Not, "not" + '¬'),
-    (Neg, "neg" + '¯'),
+    (Not, "not" + "¬"),
+    (Neg, "neg" + "¯"),
     (Abs, "abs"),
-    (Sqrt, "sqrt" + '√'),
+    (Sqrt, "sqrt" + "√"),
     (Sin, "sin"),
     (Cos, "cos"),
     (Asin, "asin"),
     (Acos, "acos"),
-    (Floor, "floor" + '⌊'),
-    (Ceil, "ceil" + '⌈'),
-    (Round, "round" + '⁅'),
+    (Floor, "floor" + "⌊"),
+    (Ceil, "ceil" + "⌈"),
+    (Round, "round" + "⁅"),
     // Pervasive dyadic ops
     (Eq, Equal),
-    (Ne, BangEqual + '≠'),
+    (Ne, BangEqual + "≠"),
     (Lt, Less),
-    (Le, LessEqual + '≤'),
+    (Le, LessEqual + "≤"),
     (Gt, Greater),
-    (Ge, GreaterEqual + '≥'),
+    (Ge, GreaterEqual + "≥"),
     (Add, Plus),
     (Sub, Minus),
-    (Mul, Star + '×'),
-    (Div, Percent + '÷'),
-    (Mod, "mod" + '◿'),
-    (Pow, "pow" + '↗'),
-    (Min, "min" + '↧'),
-    (Max, "max" + '↥'),
+    (Mul, Star + "×"),
+    (Div, Percent + "÷"),
+    (Mod, "mod" + "◿"),
+    (Pow, "pow" + "↗"),
+    (Min, "min" + "↧"),
+    (Max, "max" + "↥"),
     (Atan, "atan"),
     // Stack ops
     (Dup, Period),
@@ -114,23 +114,24 @@ primitive!(
     // Control flow ops
     (ExclusiveFork, Bang),
     // Monadic array ops
-    (Len, "len" + '𝄩'),
-    (Rank, "rank" + '⧈'),
-    (Shape, "shape" + '⬠'),
-    (First, "first" + '◱'),
-    (Range, "range" + '↕'),
-    (Reverse, "reverse" + '⇌'),
-    (Deshape, "deshape" + '♭'),
+    (Len, "len" + "𝄩"),
+    (Rank, "rank" + "⧈"),
+    (Shape, "shape" + "⬠"),
+    (First, "first" + "◱"),
+    (Range, "range" + "↕"),
+    (Reverse, "reverse" + "⇌"),
+    (Deshape, "deshape" + "♭"),
+    (Transpose, "transpose" + "🏳️‍⚧️"),
     // Dyadic array ops
-    (Match, "match" + '≡'),
-    (NoMatch, "nomatch" + '≢'),
-    (Join, "join" + '∾'),
-    (Pick, "pick" + '⊞'),
-    (Filter, "filter" + 'ꖛ'),
-    (Take, "take" + '↤'),
-    (Drop, "drop" + '↦'),
-    (Rotate, "rotate" + '↻'),
-    (Reshape, "reshape" + '↯'),
+    (Match, "match" + "≡"),
+    (NoMatch, "nomatch" + "≢"),
+    (Join, "join" + "∾"),
+    (Pick, "pick" + "⊞"),
+    (Filter, "filter" + "ꖛ"),
+    (Take, "take" + "↤"),
+    (Drop, "drop" + "↦"),
+    (Rotate, "rotate" + "↻"),
+    (Reshape, "reshape" + "↯"),
     // IO ops
     (Show, "show"),
     (Print, "print"),
@@ -146,7 +147,7 @@ primitive!(
     (Cells { modifier }, BackTick),
     (Table { modifier }, Caret),
     (Scan { modifier }, BackSlash),
-    (Repeat {modifier}, "Repeat" + '⥀'),
+    (Repeat {modifier}, "Repeat" + "⥀"),
 );
 
 fn _keep_primitive_small(_: std::convert::Infallible) {
@@ -215,6 +216,7 @@ impl Primitive {
             Primitive::NoMatch => env.dyadic(|a, b| a != b)?,
             Primitive::Join => env.dyadic_mut_env(Value::join)?,
             Primitive::Reshape => env.dyadic_mut_env(Value::reshape)?,
+            Primitive::Transpose => env.monadic_mut(Value::transpose)?,
             Primitive::Pick => env.dyadic_mut_env(Value::pick)?,
             Primitive::Filter => env.dyadic_mut_env(Value::replicate)?,
             Primitive::Take => env.dyadic_mut_env(Value::take)?,

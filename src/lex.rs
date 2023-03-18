@@ -574,10 +574,10 @@ impl Lexer {
                     self.end(Token::Str(string), start)
                 }
                 // Identifiers and selectors
-                c if c.is_ascii_alphabetic() => {
+                c if is_basically_alphabetic(c) => {
                     let mut ident = String::new();
                     ident.push(c);
-                    while let Some(c) = self.next_char_if(|c| c.is_ascii_alphabetic()) {
+                    while let Some(c) = self.next_char_if(is_basically_alphabetic) {
                         ident.push(c);
                     }
                     let token = if let Ok(selector) = ident.parse() {
@@ -663,4 +663,12 @@ impl Lexer {
             c
         }))
     }
+}
+
+pub fn is_basically_alphabetic(c: char) -> bool {
+    c.is_alphabetic() && c != 'ⁿ'
+}
+
+pub fn is_basically_alphanumeric(c: char) -> bool {
+    c.is_alphanumeric() && c != 'ⁿ'
 }

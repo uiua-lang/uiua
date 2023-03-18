@@ -7,7 +7,7 @@ use std::{
 use crate::{
     ast::*,
     compile::{CompileError, Compiler},
-    lex::Sp,
+    lex::{is_basically_alphabetic, is_basically_alphanumeric, Sp},
     ops::Primitive,
     parse::parse,
     UiuaError, UiuaResult,
@@ -77,7 +77,7 @@ impl FormatState {
             return;
         }
         self.space_if_was_strand();
-        if self.string.ends_with(|c: char| c.is_ascii_alphanumeric()) {
+        if self.string.ends_with(is_basically_alphanumeric) {
             self.push(' ');
         }
     }
@@ -87,7 +87,7 @@ impl FormatState {
             return;
         }
         self.space_if_was_strand();
-        if self.string.ends_with(|c: char| c.is_ascii_alphabetic()) {
+        if self.string.ends_with(is_basically_alphabetic) {
             self.push(' ');
         }
     }
@@ -227,7 +227,7 @@ impl Format for Primitive {
         }
         state.space_if_alphabetic();
         let s = self.to_string();
-        if s.starts_with(|c: char| c.is_ascii_alphabetic()) {
+        if s.starts_with(is_basically_alphabetic) {
             state.space_if_alphanumeric();
         }
         state.push(s);

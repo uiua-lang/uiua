@@ -117,7 +117,7 @@ primitive!(
     (Len, "len" + '𝄩'),
     (Rank, "rank" + '⧈'),
     (Shape, "shape" + '⬠'),
-    (First, "first" + '⟥'),
+    (First, "first" + '◱'),
     (Range, "range" + '↕'),
     (Reverse, "reverse" + '⇌'),
     (Deshape, "deshape" + '♭'),
@@ -125,13 +125,12 @@ primitive!(
     (Match, "match" + '≡'),
     (NoMatch, "nomatch" + '≢'),
     (Join, "join" + '∾'),
-    (Pick, "pick"),
+    (Pick, "pick" + '⊞'),
     (Filter, "filter" + 'ꖛ'),
     (Take, "take" + '↤'),
     (Drop, "drop" + '↦'),
     (Rotate, "rotate" + '↻'),
     (Reshape, "reshape" + '↯'),
-    (Repeat, "Repeat" + '⥀'),
     // IO ops
     (Show, "show"),
     (Print, "print"),
@@ -147,6 +146,7 @@ primitive!(
     (Cells { modifier }, BackTick),
     (Table { modifier }, Caret),
     (Scan { modifier }, BackSlash),
+    (Repeat {modifier}, "Repeat" + '⥀'),
 );
 
 fn _keep_primitive_small(_: std::convert::Infallible) {

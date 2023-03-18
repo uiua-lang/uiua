@@ -12,6 +12,7 @@
   - Select
 - Implement function reversal
 - Error handling
+- Contextual selectors
 - Type testing/tracing
 - Structs
 - Enums?
@@ -26,3 +27,4 @@
 - Docs
 - Tooling
 - Inlining?
+- Custom monospace font

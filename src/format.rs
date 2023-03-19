@@ -17,6 +17,7 @@ pub fn format_items(items: Vec<Item>) -> Result<String, Vec<Sp<CompileError>>> {
     let mut state = FormatState {
         string: String::new(),
         was_strand: false,
+        was_primitive: false,
         compiler: Compiler::new().eval_consts(false),
         override_space: false,
     };
@@ -62,6 +63,7 @@ pub fn format_file<P: AsRef<Path>>(path: P) -> UiuaResult<String> {
 struct FormatState {
     pub string: String,
     was_strand: bool,
+    was_primitive: bool,
     compiler: Compiler,
     override_space: bool,
 }
@@ -69,6 +71,7 @@ struct FormatState {
 impl FormatState {
     fn push<T: fmt::Display>(&mut self, t: T) {
         self.was_strand = false;
+        self.was_primitive = false;
         write!(&mut self.string, "{t}").unwrap();
     }
     fn space_if(&mut self, f: impl Fn(char) -> bool) {
@@ -85,6 +88,11 @@ impl FormatState {
     }
     fn space_if_alphabetic(&mut self) {
         self.space_if(is_basically_alphabetic);
+    }
+    fn prepare_for_constant(&mut self) -> bool {
+        let val = self.was_primitive;
+        self.was_primitive = false;
+        val
     }
 }
 
@@ -126,6 +134,7 @@ impl Format for Word {
     fn format(&self, state: &mut FormatState) {
         match self {
             Word::Real(f) => {
+                let space = state.prepare_for_constant();
                 state.space_if_alphanumeric();
                 state.space_if(|c| c == '¯');
                 if let Some(f) = f.strip_prefix('-') {
@@ -134,12 +143,20 @@ impl Format for Word {
                 } else {
                     state.push(f);
                 }
+                if space {
+                    state.push(' ');
+                }
             }
             Word::Char(c) => {
+                let space = state.prepare_for_constant();
                 state.space_if_alphanumeric();
                 state.push(&format!("{c:?}"));
+                if space {
+                    state.push(' ');
+                }
             }
             Word::String(s) => {
+                let space = state.prepare_for_constant();
                 state.space_if_alphanumeric();
                 if state.string.ends_with('"') {
                     state.push(' ');
@@ -149,6 +166,9 @@ impl Format for Word {
                     state.push(c);
                 }
                 state.push('"');
+                if space {
+                    state.push(' ');
+                }
             }
             Word::Ident(ident) => {
                 if !state.compiler.is_bound(ident) {
@@ -160,6 +180,7 @@ impl Format for Word {
                 state.push(ident);
             }
             Word::Strand(items) => {
+                state.was_primitive = false;
                 for (i, item) in items.iter().enumerate() {
                     if i > 0 {
                         state.push('_');
@@ -177,7 +198,10 @@ impl Format for Word {
             }
             Word::Func(f) => {
                 state.push('(');
-                for word in &f.body {
+                for (i, word) in f.body.iter().enumerate() {
+                    if i == f.body.len() - 1 {
+                        state.was_primitive = false;
+                    }
                     word.value.format(state);
                 }
                 state.push(')');
@@ -228,5 +252,6 @@ impl Format for Primitive {
             state.space_if_alphanumeric();
         }
         state.push(s);
+        state.was_primitive = true;
     }
 }

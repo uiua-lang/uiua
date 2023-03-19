@@ -1,5 +1,4 @@
 - Pretty error printing
-- Format spaces after function/constant pairs
 - Contextual selectors
 - Improve parsing expectation errors
 - Basic parsing functions

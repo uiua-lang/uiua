@@ -8,14 +8,14 @@ use web_sys::HtmlTextAreaElement;
 use yew::prelude::*;
 
 const EXAMPLES: &[&str] = &[
-    r#"‡=¯1≡/-◫2≤'A'≍' '."Um, I um...arrays""#,
+    r#"‡=¯1 ≡/-◫2 ≤'A' ≍' ' ."Um, I um...arrays""#,
     "# Click Run to format!\nfirst repeat (\\+ rev) 10 0_1",
     "↯~⇡/×.2_3_4",
     "Avg = ÷/+~⇀.\nAvg 0_2_1_5",
     r#"⊟⸪(≅⇌.).["uiua" "racecar" "wow" "cool!"]"#,
-    "‡⸪(=2/+=⌊.÷+1⇡.).+1⇡60",
+    "‡⸪(=2 /+=⌊.÷+1 ⇡.).+1 ⇡60",
     "⍉↯4_4[...1 .2 .3 ...4 .5 .6]",
-    "⸪(⊡~·_:_÷_≡_⍋ ⁅÷23)⊞×.-10⇡20",
+    "⸪(⊡~·_:_÷_≡_⍋ ⁅÷23)⊞×.-10 ⇡20",
 ];
 
 thread_local! {

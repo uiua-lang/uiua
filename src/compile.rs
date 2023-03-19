@@ -37,21 +37,19 @@ impl Assembly {
         }
         None
     }
-    pub fn run(&self) -> UiuaResult<Option<Value>> {
+    pub fn run(&self) -> UiuaResult<Vec<Value>> {
         let mut vm = Vm::default();
-        let res = self.run_with_vm(&mut vm)?;
+        self.run_with_vm(&mut vm)?;
+        let res = vm.stack;
         dprintln!("stack:");
-        for val in &vm.stack {
-            dprintln!("  {val:?}");
-        }
-        if let Some(val) = &res {
+        for val in &res {
             dprintln!("  {val:?}");
         }
         Ok(res)
     }
-    fn run_with_vm(&self, vm: &mut Vm) -> UiuaResult<Option<Value>> {
+    fn run_with_vm(&self, vm: &mut Vm) -> UiuaResult {
         vm.run_assembly(self)?;
-        Ok(vm.stack.pop())
+        Ok(())
     }
     fn add_function_instrs(&mut self, mut instrs: Vec<Instr>) {
         self.instrs.append(&mut instrs);
@@ -308,12 +306,12 @@ impl Compiler {
             .add_non_function_instrs(take(&mut self.global_instrs));
         // Evaluate the words
         let value = if self.eval_consts {
-            let value = self
+            let res = self
                 .assembly
                 .run_with_vm(&mut self.vm)
                 .map_err(|e| words_span.sp(e.into()));
-            match value {
-                Ok(value) => value.unwrap_or_default(),
+            match res {
+                Ok(()) => self.vm.stack.pop().unwrap_or_default(),
                 Err(e) => {
                     self.errors.push(e);
                     Value::default()

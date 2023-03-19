@@ -164,6 +164,7 @@ impl Array {
             self.data = Data {
                 values: ManuallyDrop::new(self.take_flat_values()),
             };
+            self.ty = ArrayType::Value;
         }
         self.values_mut()
     }

@@ -1,5 +1,6 @@
 use std::{
     cmp::Ordering,
+    collections::BTreeMap,
     iter::repeat,
     mem::{swap, take},
     ptr,
@@ -371,6 +372,21 @@ impl Value {
         }
         array_windows(&sizes, array, env)?;
         *self = take(array).into();
+        Ok(())
+    }
+    pub fn classify(&mut self, env: &Env) -> RuntimeResult {
+        if self.rank() < 1 {
+            return Err(env.error("Cannot classify rank less than 1"));
+        }
+        let array = take(self).into_array();
+        let mut classes = BTreeMap::new();
+        let mut classified = Vec::with_capacity(array.shape()[0]);
+        for val in array.into_values() {
+            let new_class = classes.len();
+            let class = *classes.entry(val).or_insert(new_class);
+            classified.push(class as f64);
+        }
+        *self = Array::from(classified).into();
         Ok(())
     }
 }

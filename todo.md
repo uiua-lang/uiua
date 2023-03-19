@@ -5,7 +5,6 @@
 - More array functions
   - Last?
   - Group
-  - Classify
 - Implement custom nanbox
 - Implement function reversal
 - Error handling

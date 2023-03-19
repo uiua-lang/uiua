@@ -124,6 +124,7 @@ primitive!(
     (Transpose, "transpose" + "🏳️‍⚧️"),
     (Enclose, "enclose" + "⺆"),
     (Grade, "grade" + "⍋"),
+    (Classify, "classify" + "⊛"),
     // Dyadic array ops
     (Match, "match" + "≅"),
     (NoMatch, "nomatch" + "≇"),
@@ -234,6 +235,7 @@ impl Primitive {
             Primitive::Grade => env.monadic_mut_env(Value::grade)?,
             Primitive::Select => env.dyadic_mut_env(Value::select)?,
             Primitive::Windows => env.dyadic_mut_env(Value::windows)?,
+            Primitive::Classify => env.monadic_mut_env(Value::classify)?,
             Primitive::Dup => {
                 let x = env.top_mut()?.clone();
                 env.push(x);

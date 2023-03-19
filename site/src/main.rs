@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+
 use gloo::{events::EventListener, utils::document};
 use rand::prelude::*;
 use uiua::{compile::Compiler, format::format, ops::Primitive, UiuaResult};
@@ -15,6 +17,10 @@ const EXAMPLES: &[&str] = &[
     "⍉↯4_4[...1 .2 .3 ...4 .5 .6]",
     "⸪(⊡~·_:_÷_≡_⍋ ⁅÷23)⊞×.-10⇡20",
 ];
+
+thread_local! {
+    static SUBTITLE: RefCell<Option<usize>> = RefCell::new(None);
+}
 
 #[function_component]
 fn App() -> Html {
@@ -163,7 +169,6 @@ fn App() -> Html {
         });
     }
 
-    let mut rng = SmallRng::seed_from_u64(instant::now().to_bits());
     let subtitles = [
         html! {<p>{"A stack-oriented array programming language"}</p>},
         html! {<p>{"An array-oriented stack programming language"}</p>},
@@ -177,8 +182,13 @@ fn App() -> Html {
         html! {<p>{"Do you like this page Marshall?"}</p>},
         html! {<p>{"Conor Dyadic Hookstra"}</p>},
     ];
-    let index = rng.gen_range(0.0..(subtitles.len() as f64).sqrt());
-    let index = index.powi(2) as usize;
+    let index = SUBTITLE.with(|s| {
+        *s.borrow_mut().get_or_insert_with(|| {
+            let mut rng = SmallRng::seed_from_u64(instant::now().to_bits());
+            let index = rng.gen_range(0.0..(subtitles.len() as f64).sqrt());
+            index.powi(2) as usize
+        })
+    });
     let subtitle = subtitles[index].clone();
 
     html! {

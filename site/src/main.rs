@@ -6,10 +6,18 @@ use yew::prelude::*;
 
 const DEFAULT_CODE: &str = r#"⌗=¯1≡/-🗗2≤'A'∾' '."Um, I um ...arrays""#;
 
+const EXAMPLES: &[&str] = &[
+    DEFAULT_CODE,
+    r#"↯~𝆱/+.2_3_4"#,
+    r#"◱⥀(\+⇌)10 0_1"#,
+    r#"⊟⠿(≅⇌.).["uiua" "racecar" "wow" "cool!"]"#,
+];
+
 #[function_component]
 fn App() -> Html {
     let (_, default_output) = run_code(DEFAULT_CODE).unwrap_throw();
 
+    let example = use_state(|| 0);
     let code = use_state(|| DEFAULT_CODE.to_string());
     let output = use_state(move || default_output);
     let error = use_state(String::new);
@@ -22,10 +30,11 @@ fn App() -> Html {
         move || {
             output.set(String::new());
             error.set(String::new());
-            match run_code(&code) {
+            let code_string = code_element().value();
+            match run_code(&code_string) {
                 Ok((formatted, stack)) => {
+                    code_element().set_value(&formatted);
                     code.set(formatted);
-                    code_element().set_value(&code);
                     output.set(stack);
                 }
                 Err(e) => error.set(e.to_string()),
@@ -34,9 +43,22 @@ fn App() -> Html {
     };
 
     // Run the code when the button is clicked
-    let onclick = {
+    let run_click = {
         let run = run.clone();
         move |_| run()
+    };
+
+    // Go to the next example
+    let next_example_click = {
+        let code = code.clone();
+        let run = run.clone();
+        move |_| {
+            let next = (*example + 1) % EXAMPLES.len();
+            example.set(next);
+            code.set(EXAMPLES[next].to_string());
+            code_element().set_value(EXAMPLES[next]);
+            run();
+        }
     };
 
     // Run the code when Ctrl+Enter or Shift+Enter is pressed
@@ -110,9 +132,16 @@ fn App() -> Html {
             <h4>{ "A stack-oriented array programming language" }</h4>
             <div id="editor">
                 <div id="glyph-buttons">{ glyph_buttons }</div>
-                <textarea class="code" id="code" spellcheck="false" {oninput} value={ (*code).clone() }></textarea>
+                <textarea class="code" id="code" spellcheck="false" {oninput} value={ (*code).clone() }/>
                 <div id="output" class="code">
-                    <button id="run-button" {onclick}>{ "Run" }</button>
+                    <div id="code-buttons">
+                        <button id="run-button" class="code-button" onclick={run_click}>{ "Run" }</button>
+                        <button id="next-example"
+                            class="code-button"
+                            onclick={next_example_click}
+                            title="Next example">{ "⏵" }
+                        </button>
+                    </div>
                     { (*output).clone() }
                 </div>
                 <p id="error" class="code">{ (*error).clone() }</p>

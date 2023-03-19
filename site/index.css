@@ -65,25 +65,32 @@ button:active {
     width: 100%;
     resize: vertical;
     box-sizing: border-box;
-    display: table;
     border-radius: 8px;
     padding: 10px;
+    font-size: 20px;
 }
 
 #output {
     padding: 10px;
-    // display: none;
     white-space: pre-wrap;
-    min-height: 35px;
+    min-height: 38px;
+    font-size: 20px;
 }
 
 #error {
     color: red;
+    padding: 10px;
+    white-space: pre-wrap;
 }
 
-#run-button {
+#code-buttons {
     float: right;
     margin: 0px;
+}
+
+.code-button {
+    font-size: 20px;
+    margin: 0 0 0 4px;
 }
 
 @font-face {
@@ -103,7 +110,7 @@ button:active {
 
 .glyph-button {
     font-family: "Noto";
-    font-size: 15px;
+    font-size: 20px;
     padding: 2px;
     margin: 2px;
 }

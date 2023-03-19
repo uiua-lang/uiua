@@ -789,6 +789,26 @@ impl From<Vec<Value>> for Array {
     }
 }
 
+impl From<Vec<Array>> for Array {
+    fn from(v: Vec<Array>) -> Self {
+        if v.len() == 1 {
+            return v.into_iter().next().unwrap();
+        }
+        let mut shape = v[0].shape.clone();
+        shape.insert(0, v.len());
+        assert!(v.windows(2).all(|w| w[0].shape == w[1].shape));
+        let values: Vec<Value> = v.into_iter().flat_map(Array::into_flat_values).collect();
+        Self {
+            shape,
+            ty: ArrayType::Value,
+            data: Data {
+                values: ManuallyDrop::new(values),
+            },
+        }
+        .normalized(0)
+    }
+}
+
 impl<T> FromIterator<T> for Array
 where
     Self: From<Vec<T>>,

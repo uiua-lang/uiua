@@ -137,6 +137,7 @@ primitive!(
     (Rotate, "rotate" + "↻"),
     (Reshape, "reshape" + "↯"),
     (Select, "select" + "⊏"),
+    (Windows, "windows" + "🗗"),
     // IO ops
     (Show, "show"),
     (Print, "print"),
@@ -232,6 +233,7 @@ impl Primitive {
             Primitive::Couple => env.dyadic_mut_env(Value::couple)?,
             Primitive::Grade => env.monadic_mut_env(Value::grade)?,
             Primitive::Select => env.dyadic_mut_env(Value::select)?,
+            Primitive::Windows => env.dyadic_mut_env(Value::windows)?,
             Primitive::Dup => {
                 let x = env.top_mut()?.clone();
                 env.push(x);

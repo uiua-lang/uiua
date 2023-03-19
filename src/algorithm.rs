@@ -68,7 +68,19 @@ impl Value {
             return Err(env.error(error));
         }
     }
-    pub fn as_index(&self, env: &Env, error: &'static str) -> RuntimeResult<Vec<isize>> {
+    pub fn as_indices(&self, env: &Env, error: &'static str) -> RuntimeResult<Vec<isize>> {
+        self.as_number_list(env, error, |f| f % 1.0 == 0.0, |f| f as isize)
+    }
+    pub fn as_positives(&self, env: &Env, error: &'static str) -> RuntimeResult<Vec<usize>> {
+        self.as_number_list(env, error, |f| f % 1.0 == 0.0 && f >= 0.0, |f| f as usize)
+    }
+    fn as_number_list<T>(
+        &self,
+        env: &Env,
+        error: &'static str,
+        test: fn(f64) -> bool,
+        convert: fn(f64) -> T,
+    ) -> RuntimeResult<Vec<T>> {
         if self.is_array() {
             let arr = self.array();
             let numbers = if arr.is_numbers() {
@@ -80,21 +92,18 @@ impl Value {
             };
             let mut index = Vec::with_capacity(arr.len());
             for f in numbers {
-                let rounded = f.round();
-                if (f - rounded).abs() > f64::EPSILON {
+                if !test(*f) {
                     return Err(env.error(error));
                 }
-                let rounded = rounded as isize;
-                index.push(rounded);
+                index.push(convert(*f));
             }
             Ok(index)
         } else if self.is_num() {
             let f = self.number();
-            let rounded = f.round();
-            if (f - rounded).abs() > f64::EPSILON {
+            if !test(f) {
                 return Err(env.error(error));
             }
-            Ok(vec![rounded as isize])
+            Ok(vec![convert(f)])
         } else {
             return Err(env.error(error));
         }
@@ -203,7 +212,7 @@ impl Value {
         if !from.is_array() || from.array().rank() == 0 {
             return Err(env.error("Cannot pick from rank less than 1"));
         }
-        let index = self.as_index(env, "Index must be a list of integers")?;
+        let index = self.as_indices(env, "Index must be a list of integers")?;
         let array = from.array();
         *self = pick(&index, array, env)?;
         Ok(())
@@ -222,7 +231,7 @@ impl Value {
         if !from.is_array() || from.array().rank() == 0 {
             return Err(env.error("Cannot take from rank less than 1"));
         }
-        let index = self.as_index(env, "Index must be a list of integers")?;
+        let index = self.as_indices(env, "Index must be a list of integers")?;
         let array = take(from).into_array();
         if index.len() > array.rank() {
             return Err(env.error(format!(
@@ -240,7 +249,7 @@ impl Value {
         if !from.is_array() || from.array().rank() == 0 {
             return Err(env.error("Cannot drop from rank less than 1"));
         }
-        let mut index = self.as_index(env, "Index must be a list of integers")?;
+        let mut index = self.as_indices(env, "Index must be a list of integers")?;
         let array = take(from).into_array();
         if index.len() > array.rank() {
             return Err(env.error(format!(
@@ -282,7 +291,7 @@ impl Value {
     }
     pub fn rotate(&mut self, target: &mut Self, env: &Env) -> RuntimeResult {
         swap(self, target);
-        let index = target.as_index(env, "Index must be a list of integers")?;
+        let index = target.as_indices(env, "Index must be a list of integers")?;
         if index.is_empty() || index.iter().all(|i| *i == 0) {
             return Ok(());
         }
@@ -343,7 +352,7 @@ impl Value {
         Ok(())
     }
     pub fn select(&mut self, from: &mut Self, env: &Env) -> RuntimeResult {
-        let indices = self.as_index(env, "Indices must be a list of integers")?;
+        let indices = self.as_indices(env, "Indices must be a list of integers")?;
         let array = from.coerce_array();
         let mut selected = Vec::with_capacity(indices.len());
         for index in indices {
@@ -354,6 +363,46 @@ impl Value {
             .into();
         Ok(())
     }
+    pub fn windows(&mut self, from: &mut Self, env: &Env) -> RuntimeResult {
+        let array = from.coerce_array();
+        let sizes = self.as_positives(env, "Window size must be a list of positive integers")?;
+        if sizes.is_empty() {
+            return Ok(());
+        }
+        array_windows(&sizes, array, env)?;
+        *self = take(array).into();
+        Ok(())
+    }
+}
+
+fn array_windows(mut sizes: &[usize], array: &mut Array, env: &Env) -> RuntimeResult {
+    if sizes.is_empty() {
+        return Ok(());
+    }
+    let window_size = sizes[0];
+    sizes = &sizes[1..];
+    let window_count = if window_size <= array.shape()[0] {
+        array.shape()[0] - window_size + 1
+    } else {
+        return Err(env.error(format!(
+            "Window size of {} is too large for shape {:?}",
+            window_size,
+            array.shape(),
+        )));
+    };
+    let mut windows = Vec::with_capacity(window_count);
+    let mut window_shape = array.shape().to_vec();
+    let cells = take(array).into_cells();
+    window_shape[0] = window_count;
+    for window in cells.windows(window_size) {
+        let mut window = window.to_vec();
+        for array in &mut window {
+            array_windows(sizes, array, env)?;
+        }
+        windows.push(Array::from(window));
+    }
+    *array = Array::from(windows);
+    Ok(())
 }
 
 fn transpose<T: Clone>(shape: &mut [usize], data: &mut [T]) {

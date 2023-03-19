@@ -178,3 +178,11 @@ button:active {
 .modifier-button {
     color: #cc3;
 }
+
+#editor-help {
+    margin-top: -25px;
+    font-size: 14px;
+    opacity: 0.5;
+    display: flex;
+    justify-content: space-between;
+}

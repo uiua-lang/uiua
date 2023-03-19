@@ -12,7 +12,7 @@ const EXAMPLES: &[&str] = &[
     r#"⊟⸪(≅⇌.).["uiua" "racecar" "wow" "cool!"]"#,
     "‡⸪(=2/+=⌊.÷+1⇡.).+1⇡60",
     "⍉↯4_4[...1 .2 .3 ...4 .5 .6]",
-    "⸪(⊡~(·|:|÷|≡|⍋)⁅÷23)⊞×.-10⇡20",
+    "⸪(⊡~·_:_÷_≡_⍋ ⁅÷23)⊞×.-10⇡20",
 ];
 
 #[function_component]
@@ -185,6 +185,11 @@ fn App() -> Html {
                 </div>
                 <p id="error" class="code">{ (*error).clone() }</p>
             </div>
+            <div id="editor-help">
+                <p class="editor-help-item">{ "Type some or all of a glyph's name, then run to format the names into glyphs." }</p>
+                <p class="editor-help-item">{ "You can run with ctrl/shift + enter." }</p>
+            </div>
+            <br/>
             <br/>
             { main_text() }
         </div>

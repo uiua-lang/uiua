@@ -1,10 +1,9 @@
-use std::{
-    f64::consts::*,
-    fmt,
-    io::{stdout, Write},
-};
+use std::{f64::consts::*, fmt};
 
-use crate::{array::Array, grid_fmt::GridFmt, lex::Simple, value::*, vm::CallEnv, RuntimeResult};
+use crate::{
+    array::Array, grid_fmt::GridFmt, io::IoBackend, lex::Simple, value::*, vm::CallEnv,
+    RuntimeResult,
+};
 
 pub(crate) fn constants() -> Vec<(&'static str, Value)> {
     vec![
@@ -211,7 +210,7 @@ impl Primitive {
         let res = matching.next()?;
         matching.next().is_none().then_some(res)
     }
-    pub(crate) fn run(&self, env: &mut CallEnv) -> RuntimeResult {
+    pub(crate) fn run<B: IoBackend>(&self, env: &mut CallEnv<B>) -> RuntimeResult {
         match self {
             Primitive::Nop => {}
             Primitive::Not => env.monadic_env(Value::not)?,
@@ -468,13 +467,16 @@ impl Primitive {
             Primitive::Show => {
                 let mut s = env.pop()?.grid_string();
                 s.pop();
-                println!("{s}");
+                env.vm.io.print_str_ln(&s.to_string());
             }
             Primitive::Print => {
-                print!("{}", env.pop()?);
-                let _ = stdout().flush();
+                let val = env.pop()?;
+                env.vm.io.print_str(&val.to_string());
             }
-            Primitive::Println => println!("{}", env.pop()?),
+            Primitive::Println => {
+                let val = env.pop()?;
+                env.vm.io.print_str_ln(&val.to_string());
+            }
             Primitive::Len => env.monadic(|v| v.len() as f64)?,
             Primitive::Rank => env.monadic(|v| v.rank() as f64)?,
             Primitive::Shape => {
@@ -486,22 +488,25 @@ impl Primitive {
             Primitive::First => env.monadic_mut_env(Value::first)?,
             Primitive::String => env.monadic(|v| v.to_string())?,
             Primitive::ScanLn => {
-                let mut line = String::new();
-                std::io::stdin().read_line(&mut line).unwrap_or_default();
+                let mut line = env.vm.io.scan_line();
                 line.pop();
                 line.pop();
                 env.push(line);
             }
-            Primitive::Args => env.push(Array::from_iter(
-                std::env::args().map(Array::from).map(Value::from),
-            )),
+            Primitive::Args => {
+                let args = env.vm.io.args();
+                env.push(Array::from_iter(
+                    args.into_iter().map(Array::from).map(Value::from),
+                ))
+            }
             Primitive::Var => {
-                let name = env.top_mut()?;
+                let name = env.pop()?;
                 if !name.is_array() || !name.array().is_chars() {
                     return Err(env.error("Argument to var must be a string"));
                 }
                 let key: String = name.array().chars().iter().collect();
-                *name = std::env::var(key).unwrap_or_default().into();
+                let var = env.vm.io.var(&key).unwrap_or_default();
+                env.push(var);
             }
         }
         Ok(())

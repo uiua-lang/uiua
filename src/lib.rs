@@ -8,6 +8,7 @@ mod error;
 pub mod format;
 pub mod function;
 mod grid_fmt;
+mod io;
 pub mod lex;
 pub mod ops;
 pub mod parse;

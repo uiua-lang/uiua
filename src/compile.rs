@@ -3,6 +3,7 @@ use std::{collections::HashMap, fmt, fs, mem::take, path::Path};
 use crate::{
     ast::*,
     function::{Function, FunctionId, Selector},
+    io::{IoBackend, PipedIo, StdIo},
     lex::{Sp, Span},
     ops::{constants, Primitive},
     parse::{parse, ParseError},
@@ -38,7 +39,7 @@ impl Assembly {
         None
     }
     pub fn run(&self) -> UiuaResult<Vec<Value>> {
-        let mut vm = Vm::default();
+        let mut vm = Vm::<StdIo>::default();
         self.run_with_vm(&mut vm)?;
         let res = vm.stack;
         dprintln!("stack:");
@@ -47,7 +48,12 @@ impl Assembly {
         }
         Ok(res)
     }
-    fn run_with_vm(&self, vm: &mut Vm) -> UiuaResult {
+    pub fn run_piped(&self) -> UiuaResult<(Vec<Value>, String)> {
+        let mut vm = Vm::<PipedIo>::default();
+        self.run_with_vm(&mut vm)?;
+        Ok((vm.stack, vm.io.buffer))
+    }
+    fn run_with_vm<B: IoBackend>(&self, vm: &mut Vm<B>) -> UiuaResult {
         vm.run_assembly(self)?;
         Ok(())
     }

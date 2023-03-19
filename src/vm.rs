@@ -4,6 +4,7 @@ use crate::{
     array::Array,
     compile::Assembly,
     function::Function,
+    io::{IoBackend, StdIo},
     value::{Type, Value},
     RuntimeError, RuntimeResult, TraceFrame, UiuaError, UiuaResult,
 };
@@ -58,16 +59,17 @@ macro_rules! dprintln {
 pub(crate) use dprintln;
 
 #[derive(Default)]
-pub struct Vm {
+pub struct Vm<B = StdIo> {
     call_stack: Vec<StackFrame>,
     array_stack: Vec<usize>,
     pub stack: Vec<Value>,
     pc: usize,
     just_called: Option<Function>,
     globals: Vec<Value>,
+    pub io: B,
 }
 
-impl Vm {
+impl<B: IoBackend> Vm<B> {
     pub fn run_assembly(&mut self, assembly: &Assembly) -> UiuaResult {
         if let Err(error) = self.run_assembly_inner(assembly, None) {
             let mut trace = Vec::new();
@@ -215,13 +217,13 @@ impl Vm {
     }
 }
 
-pub(crate) struct CallEnv<'a> {
-    pub vm: &'a mut Vm,
+pub(crate) struct CallEnv<'a, B> {
+    pub vm: &'a mut Vm<B>,
     pub assembly: &'a Assembly,
     pub span: usize,
 }
 
-impl<'a> CallEnv<'a> {
+impl<'a, B: IoBackend> CallEnv<'a, B> {
     pub fn env<'b>(&self) -> Env<'b>
     where
         'a: 'b,

@@ -241,6 +241,7 @@ fn code_element() -> HtmlTextAreaElement {
     element("code")
 }
 
+/// Returns the output and the formatted code
 fn run_code(code: &str, format_first: bool) -> UiuaResult<(String, String)> {
     let formatted = if format_first {
         format(code, "")?
@@ -250,8 +251,17 @@ fn run_code(code: &str, format_first: bool) -> UiuaResult<(String, String)> {
     let mut compiler = Compiler::new();
     compiler.load(code, "")?;
     let assembly = compiler.finish();
-    let values = assembly.run()?;
+    let (values, output) = assembly.run_piped()?;
     let mut s = String::new();
+    if !output.is_empty() {
+        if !values.is_empty() {
+            s.push_str("Output:\n");
+        }
+        s.push_str(&output);
+        if !values.is_empty() {
+            s.push_str("\n\nStack:\n");
+        }
+    }
     for val in values.into_iter().rev() {
         s.push_str(&val.show());
     }

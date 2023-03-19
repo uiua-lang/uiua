@@ -1,4 +1,3 @@
-- Generic backends
 - Pretty error printing
 - Format spaces after function/constant pairs
 - Contextual selectors

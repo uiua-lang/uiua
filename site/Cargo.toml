@@ -1,0 +1,12 @@
+[package]
+edition = "2021"
+name = "site"
+version = "0.1.0"
+
+[dependencies]
+uiua.default-features = false
+uiua.path = ".."
+wasm-bindgen = "0.2.84"
+web-sys = "0.3.61"
+yew.features = ["csr"]
+yew.version = "0.20.0"

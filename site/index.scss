@@ -1,0 +1,42 @@
+html *
+{
+   font-family: Arial;
+}
+
+@media (prefers-color-scheme: dark) {
+    body {
+        color: #eee;
+        background-color: #222;
+    }
+    textarea {
+        color: #eee;
+        background-color: #444;
+    }
+}
+
+@media (prefers-color-scheme: light) {
+    body {
+        color: #222;
+        background-color: #eee;
+    }
+    textarea {
+        color: #222;
+        background-color: #fff;
+    }
+}
+
+.centered-div {
+    margin: 100px auto;
+    width: 50%;
+}
+
+@font-face {
+    font-family: "Noto";
+    src: url(NotoSansMono.ttf) format("truetype");
+}
+
+
+textarea {
+    width: 100%;
+    font-family: "Noto";
+}

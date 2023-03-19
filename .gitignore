@@ -3,3 +3,4 @@
 *.uiua
 *.ua
 .vscode
+site/dist

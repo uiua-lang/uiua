@@ -32,19 +32,19 @@ pub fn format_items(items: Vec<Item>) -> Result<String, Vec<Sp<CompileError>>> {
     Ok(s)
 }
 
-pub fn format(input: &str, path: &Path) -> Result<String, Vec<Sp<CompileError>>> {
-    let (items, errors) = parse(input, path);
+pub fn format<P: AsRef<Path>>(input: &str, path: P) -> UiuaResult<String> {
+    let (items, errors) = parse(input, path.as_ref());
     let mut errors: Vec<Sp<CompileError>> = errors.into_iter().map(Sp::map_into).collect();
     if errors.is_empty() {
         match format_items(items) {
             Ok(s) => Ok(s),
             Err(e) => {
                 errors.extend(e);
-                Err(errors)
+                Err(errors.into())
             }
         }
     } else {
-        Err(errors)
+        Err(errors.into())
     }
 }
 

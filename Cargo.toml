@@ -30,3 +30,6 @@ profile = ["puffin", "puffin_http"]
 
 [[bin]]
 name = "uiua"
+
+[workspace]
+members = ["site"]

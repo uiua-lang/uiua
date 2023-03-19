@@ -2,7 +2,7 @@ use std::{cmp::Ordering, fmt, mem::forget, rc::Rc};
 
 use nanbox::NanBox;
 
-use crate::{array::Array, function::Function, pervade, vm::Env, RuntimeResult};
+use crate::{array::Array, function::Function, grid_fmt::GridFmt, pervade, vm::Env, RuntimeResult};
 
 pub struct Value(NanBox);
 
@@ -51,6 +51,9 @@ impl Default for Value {
 }
 
 impl Value {
+    pub fn show(&self) -> String {
+        self.grid_string()
+    }
     pub fn ty(&self) -> Type {
         TYPES[self.0.tag() as usize]
     }

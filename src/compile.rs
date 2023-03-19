@@ -205,11 +205,7 @@ impl Compiler {
         self.load(&input, path)?;
         Ok(())
     }
-    pub fn load<P: AsRef<Path>>(
-        &mut self,
-        input: &str,
-        path: P,
-    ) -> Result<(), Vec<Sp<CompileError>>> {
+    pub fn load<P: AsRef<Path>>(&mut self, input: &str, path: P) -> UiuaResult {
         let (items, errors) = parse(input, path.as_ref());
         let mut errors: Vec<Sp<CompileError>> = errors
             .into_iter()
@@ -226,7 +222,7 @@ impl Compiler {
         } else {
             self.assembly.truncate(function_start);
             self.global_instrs.truncate(global_start);
-            Err(errors)
+            Err(errors.into())
         }
     }
     pub fn finish(mut self) -> Assembly {

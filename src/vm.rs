@@ -32,10 +32,6 @@ pub(crate) enum Instr {
     Return,
 }
 
-fn _keep_instr_small(_: std::convert::Infallible) {
-    let _: [u8; 32] = unsafe { std::mem::transmute(Instr::Return) };
-}
-
 impl fmt::Display for Instr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

@@ -8,9 +8,12 @@ const DEFAULT_CODE: &str = r#"⌗=¯1≡/-🗗2≤'A'∾' '."Um, I um...arrays""
 
 const EXAMPLES: &[&str] = &[
     DEFAULT_CODE,
-    r#"↯~𝆱/+.2_3_4"#,
+    r#"↯~𝆱/×.2_3_4"#,
     r#"◱⥀(\+⇌)10 0_1"#,
     r#"⊟⠿(≅⇌.).["uiua" "racecar" "wow" "cool!"]"#,
+    r#"⌗⠿(=2/+=⌊.÷~+1𝆱.).+1𝆱60"#,
+    r#"🏳️‍⚧️↯4_4[...1 .2 .3 ...4 .5 .6] # Yes, the transpose operator is the trans flag"#,
+    r#"⠿(⊡~(·|:|÷|≡|⍋)⁅÷~23)^×.-~10𝆱20"#,
 ];
 
 #[function_component]

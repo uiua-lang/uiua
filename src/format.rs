@@ -211,7 +211,12 @@ impl Format for Word {
 impl Format for Primitive {
     fn format(&self, state: &mut FormatState) {
         match self {
-            Primitive::Dup | Primitive::Flip => {
+            Primitive::Dup => {
+                state.space_if(|c: char| c.is_ascii_digit());
+                state.push(self);
+                return;
+            }
+            Primitive::Flip => {
                 state.push(self);
                 return;
             }

@@ -38,6 +38,14 @@ button:active {
         color: #eef;
         background-color: #445;
     }
+
+    a:link {
+        color: #3cf;
+    }
+
+    a:visited {
+        color: #88f;
+    }
 }
 
 @media (prefers-color-scheme: light) {

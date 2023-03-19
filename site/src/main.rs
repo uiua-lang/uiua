@@ -183,6 +183,7 @@ fn App() -> Html {
         html! {<p>{"A programming language for variable dislikers"}</p>},
         html! {<p>{"What if APL was a FORTH?"}</p>},
         html! {<p>{"What if FORTH was an APL?"}</p>},
+        html! {<p>{"Isn't a stack a sort of array?"}</p>},
         html! {<p>{"It's got um...I um...arrays"}</p>},
         html! {<p><a href="https://youtu.be/seVSlKazsNk">{"Point-Free or Die"}</a></p>},
         html! {<p>{"Notation as a tool of thot"}</p>},
@@ -200,7 +201,7 @@ fn App() -> Html {
     let subtitle = subtitles[index].clone();
 
     html! {
-        <div id="top" class="centered-div">
+        <div id="top">
             <h1>{ "Uiua" }</h1>
             <div id="subtitle">
                 { subtitle }

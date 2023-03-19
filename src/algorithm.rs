@@ -404,6 +404,28 @@ impl Value {
         )
         .into();
     }
+    pub fn group(&mut self, target: Self, env: &Env) -> RuntimeResult {
+        let indices = self.as_indices(env, "Indices must be a list of integers")?;
+        let values = target.coerce_into_array().into_values();
+        let group_count = values
+            .len()
+            .min(indices.iter().max().copied().unwrap_or(0).max(0) as usize + 1);
+        let mut groups = vec![Vec::new(); group_count];
+        for (index, value) in indices.into_iter().zip(values) {
+            if index >= 0 && (index as usize) < group_count {
+                groups[index as usize].push(value);
+            }
+        }
+        *self = Array::from(
+            groups
+                .into_iter()
+                .map(Array::from)
+                .map(Value::from)
+                .collect::<Vec<_>>(),
+        )
+        .into();
+        Ok(())
+    }
 }
 
 fn array_windows(mut sizes: &[usize], array: &mut Array, env: &Env) -> RuntimeResult {

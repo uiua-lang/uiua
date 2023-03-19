@@ -140,6 +140,7 @@ primitive!(
     (Select, "select" + "⊏"),
     (Windows, "windows" + "🗗"),
     (Member, "member" + "∈"),
+    (Group, "group" + "⊔"),
     // IO ops
     (Show, "show"),
     (Print, "print"),
@@ -238,6 +239,7 @@ impl Primitive {
             Primitive::Windows => env.dyadic_mut_env(Value::windows)?,
             Primitive::Classify => env.monadic_mut_env(Value::classify)?,
             Primitive::Member => env.dyadic_mut(Value::member)?,
+            Primitive::Group => env.dyadic_mut_env(Value::group)?,
             Primitive::Dup => {
                 let x = env.top_mut()?.clone();
                 env.push(x);

@@ -4,7 +4,6 @@
 - Includes
 - More array functions
   - Last?
-  - Group
 - Implement custom nanbox
 - Implement function reversal
 - Error handling

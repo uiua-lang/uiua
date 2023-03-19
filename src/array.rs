@@ -788,13 +788,17 @@ impl From<Vec<Value>> for Array {
 }
 
 impl From<Vec<Array>> for Array {
+    #[track_caller]
     fn from(v: Vec<Array>) -> Self {
         if v.len() == 1 {
             return v.into_iter().next().unwrap();
         }
         let mut shape = v[0].shape.clone();
         shape.insert(0, v.len());
-        assert!(v.windows(2).all(|w| w[0].shape == w[1].shape));
+        assert!(
+            v.windows(2).all(|w| w[0].shape == w[1].shape),
+            "all arrays must have the same shape"
+        );
         let values: Vec<Value> = v.into_iter().flat_map(Array::into_flat_values).collect();
         Self {
             shape,

@@ -1,5 +1,5 @@
 use gloo::{events::EventListener, utils::document};
-use uiua::{compile::Compiler, format::format, value::Value, UiuaResult};
+use uiua::{compile::Compiler, format::format, ops::Primitive, UiuaResult};
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use web_sys::HtmlTextAreaElement;
 use yew::prelude::*;
@@ -25,9 +25,7 @@ fn App() -> Html {
             match run_code(&code) {
                 Ok((formatted, stack)) => {
                     code.set(formatted);
-                    if let Some(elem) = element::<HtmlTextAreaElement>("code") {
-                        elem.set_value(&code);
-                    }
+                    code_element().set_value(&code);
                     output.set(stack);
                 }
                 Err(e) => error.set(e.to_string()),
@@ -63,11 +61,55 @@ fn App() -> Html {
         }
     };
 
+    let glyph_buttons: Vec<_> = Primitive::ALL
+        .iter()
+        .filter_map(|p| {
+            let name = p.name();
+            let text = name
+                .unicode
+                .map(Into::into)
+                .or_else(|| name.ascii.map(|s| s.to_string()))?;
+            let extra = name
+                .unicode
+                .is_some()
+                .then(|| name.ascii.map(|s| s.to_string()))
+                .flatten()
+                .unwrap_or_default();
+            let title = format!(
+                "{}{}",
+                name.ident.unwrap_or_default(),
+                format_args!("\n{extra}")
+            );
+            let onclick = {
+                let code = code.clone();
+                move |_| {
+                    let elem = code_element();
+                    if let (Ok(Some(start)), Ok(Some(end))) =
+                        (elem.selection_start(), elem.selection_end())
+                    {
+                        let (start, end) = (start.min(end) as usize, start.max(end) as usize);
+                        let text = code
+                            .chars()
+                            .take(start)
+                            .chain(p.to_string().chars())
+                            .chain(code.chars().skip(end))
+                            .collect();
+                        code.set(text);
+                    }
+                }
+            };
+            Some(html! {
+                <button class="glyph-button" {title} {onclick}>{ text }</button>
+            })
+        })
+        .collect();
+
     html! {
         <div id="top" class="centered-div">
             <h1>{ "Uiua" }</h1>
             <h4>{ "A stack-oriented array programming language" }</h4>
             <div id="editor">
+                <div id="glyph-buttons">{ glyph_buttons }</div>
                 <textarea class="code" id="code" spellcheck="false" {oninput} value={ (*code).clone() }></textarea>
                 <div id="output" class="code">
                     <button id="run-button" {onclick}>{ "Run" }</button>
@@ -83,13 +125,16 @@ fn main() {
     yew::Renderer::<App>::new().render();
 }
 
-fn element<T: JsCast>(id: &str) -> Option<T> {
-    Some(
-        document()
-            .get_element_by_id(id)?
-            .dyn_into::<T>()
-            .unwrap_throw(),
-    )
+fn element<T: JsCast>(id: &str) -> T {
+    document()
+        .get_element_by_id(id)
+        .unwrap_throw()
+        .dyn_into::<T>()
+        .unwrap_throw()
+}
+
+fn code_element() -> HtmlTextAreaElement {
+    element("code")
 }
 
 fn run_code(code: &str) -> UiuaResult<(String, String)> {

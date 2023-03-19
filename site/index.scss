@@ -2,10 +2,15 @@ html * {
     font-family: Arial;
 }
 
+html {
+    font-size: 150%;
+}
+
 button {
     border-width: 0;
     border-radius: 8px;
-    font-size: 18px;
+    font-size: 20px;
+    padding: 5px;
 }
 
 button:active {
@@ -62,13 +67,14 @@ button:active {
     box-sizing: border-box;
     display: table;
     border-radius: 8px;
+    padding: 10px;
 }
 
 #output {
     padding: 10px;
     // display: none;
     white-space: pre-wrap;
-    min-height: 30px;
+    min-height: 35px;
 }
 
 #error {
@@ -78,7 +84,6 @@ button:active {
 #run-button {
     float: right;
     margin: 0px;
-    padding: 5px;
 }
 
 @font-face {
@@ -88,4 +93,17 @@ button:active {
 
 .code {
     font-family: "Noto";
+}
+
+#glyph-buttons {
+    padding: 2px;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.glyph-button {
+    font-family: "Noto";
+    font-size: 15px;
+    padding: 2px;
+    margin: 2px;
 }

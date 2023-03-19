@@ -27,7 +27,7 @@ pub struct PrimitiveName {
 }
 
 macro_rules! primitive {
-    ($(($name:ident $({$modifier:ident})?,  $($ident:literal)? $($ascii:ident)? $(+ $unicode:literal)?)),* $(,)?) => {
+    ($(($name:ident $({$modifier:ident})?  $(,$ident:literal)? $(,$ascii:ident)? $(+ $unicode:literal)?)),* $(,)?) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
         pub enum Primitive {
             $($name,)*
@@ -35,7 +35,12 @@ macro_rules! primitive {
         }
 
         impl Primitive {
-            pub const ALL: [Self; 0 $(+ {stringify!($name); 1})*] = [$(Self::$name,)*];
+            pub const ALL: [Self; 3 $(+ {stringify!($name); 1})*] = [
+                $(Self::$name,)*
+                Self::AdicFork(1),
+                Self::AdicFork(2),
+                Self::AdicFork(3),
+            ];
             #[allow(path_statements)]
             pub fn name(&self) -> PrimitiveName {
                 match self {
@@ -45,7 +50,12 @@ macro_rules! primitive {
                         unicode: {None::<&'static str> $(;Some($unicode))?},
                     },)*
                     Primitive::AdicFork(n) => PrimitiveName {
-                        ident: None,
+                        ident: match n {
+                            1 => Some("monadic fork"),
+                            2 => Some("dyadic fork"),
+                            3 => Some("triadic fork"),
+                            _ => None
+                        },
                         ascii: Some(Simple::Colons(*n)),
                         unicode: None
                     },
@@ -78,43 +88,43 @@ macro_rules! primitive {
 }
 
 primitive!(
-    (Nop, +"·"),
+    (Nop, "noop" + "·"),
     // Pervasive monadic ops
     (Not, "not" + "¬"),
-    (Neg, "neg" + "¯"),
+    (Neg, "negate" + "¯"),
     (Abs, "abs"),
     (Sqrt, "sqrt" + "√"),
-    (Sin, "sin"),
-    (Cos, "cos"),
-    (Asin, "asin"),
-    (Acos, "acos"),
+    (Sin, "sine"),
+    (Cos, "cosine"),
+    (Asin, "asine"),
+    (Acos, "acosine"),
     (Floor, "floor" + "⌊"),
-    (Ceil, "ceil" + "⌈"),
+    (Ceil, "ceiling" + "⌈"),
     (Round, "round" + "⁅"),
     // Pervasive dyadic ops
-    (Eq, Equal),
-    (Ne, BangEqual + "≠"),
-    (Lt, Less),
-    (Le, LessEqual + "≤"),
-    (Gt, Greater),
-    (Ge, GreaterEqual + "≥"),
-    (Add, Plus),
-    (Sub, Minus),
-    (Mul, Star + "×"),
-    (Div, Percent + "÷"),
-    (Mod, "mod" + "◿"),
-    (Pow, "pow" + "ⁿ"),
-    (Min, "min" + "↧"),
-    (Max, "max" + "↥"),
-    (Atan, "atan"),
+    (Eq, "equals", Equal),
+    (Ne, "not equals", BangEqual + "≠"),
+    (Lt, "less than", Less),
+    (Le, "less or equal", LessEqual + "≤"),
+    (Gt, "greater than", Greater),
+    (Ge, "greater or equal", GreaterEqual + "≥"),
+    (Add, "add", Plus),
+    (Sub, "subtract", Minus),
+    (Mul, "multiple", Star + "×"),
+    (Div, "divide", Percent + "÷"),
+    (Mod, "modulus" + "◿"),
+    (Pow, "power" + "ⁿ"),
+    (Min, "minimum" + "↧"),
+    (Max, "maximum" + "↥"),
+    (Atan, "atangent"),
     // Stack ops
-    (Dup, Period),
-    (Flip, Tilde),
-    (Pop, SemiColon),
+    (Dup, "duplicate", Period),
+    (Flip, "flip", Tilde),
+    (Pop, "pop", SemiColon),
     // Control flow ops
-    (ExclusiveFork, Bang),
+    (ExclusiveFork, "exclusive fork", Bang),
     // Monadic array ops
-    (Len, "len" + "𝄩"),
+    (Len, "length" + "𝄩"),
     (Rank, "rank" + "⧈"),
     (Shape, "shape" + "⬠"),
     (First, "first" + "◱"),
@@ -151,12 +161,12 @@ primitive!(
     (Var, "var"),
     // Modifiers
     (Fold { modifier }, "fold"),
-    (Reduce { modifier }, Slash),
+    (Reduce { modifier }, "reduce", Slash),
     (Each { modifier }, "each" + "⠿"),
     (Cells { modifier }, "cells" + "≡"),
-    (Table { modifier }, Caret),
-    (Scan { modifier }, BackSlash),
-    (Repeat {modifier}, "repeat" + "⥀"),
+    (Table { modifier }, "table", Caret),
+    (Scan { modifier }, "scan", BackSlash),
+    (Repeat { modifier }, "repeat" + "⥀"),
 );
 
 fn _keep_primitive_small(_: std::convert::Infallible) {

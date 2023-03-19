@@ -9,7 +9,7 @@ pub mod format;
 pub mod function;
 mod grid_fmt;
 pub mod lex;
-mod ops;
+pub mod ops;
 pub mod parse;
 mod pervade;
 pub mod value;

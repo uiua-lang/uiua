@@ -3,7 +3,21 @@ html * {
 }
 
 html {
-    font-size: 150%;
+    font-size: 100%;
+}
+
+button[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    font-family: "Noto";
+    font-size: 14px;
+    bottom: 100%;
+    left: -30px;
+    color: #eee;
+    background-color: #000a;
+    padding: 2px;
+    border-radius: 4px;
+    width: 90px;
 }
 
 button {
@@ -11,6 +25,8 @@ button {
     border-radius: 8px;
     font-size: 20px;
     padding: 5px;
+    display: inline-block;
+    position: relative;
 }
 
 button:active {
@@ -21,6 +37,10 @@ button:active {
     body {
         color: #eef;
         background-color: #223;
+    }
+
+    #editor {
+        background-color: #334;
     }
 
     textarea {
@@ -40,6 +60,10 @@ button:active {
         background-color: #fff8e0;
     }
 
+    #editor {
+        background-color: #fffee8;
+    }
+
     textarea {
         color: #443;
         background-color: #fff;
@@ -53,7 +77,14 @@ button:active {
 
 #top {
     margin: 20px auto;
-    width: max(200px, min(90%, max(50%, 800px)));
+    width: max(200px, min(90%, 800px));
+}
+
+#subtitle {
+    margin-top: -25px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 20px;
 }
 
 #editor {
@@ -65,7 +96,8 @@ button:active {
     width: 100%;
     resize: vertical;
     box-sizing: border-box;
-    border-radius: 8px;
+    outline: none;
+    border: none;
     padding: 10px;
     font-size: 20px;
 }
@@ -113,4 +145,33 @@ button:active {
     font-size: 20px;
     padding: 2px;
     margin: 2px;
+    background-color: transparent;
+}
+
+.glyph-button:hover {
+    background-color: #0002;
+}
+
+.noadic-function-button {
+    color: #3cc;
+}
+
+.monadic-function-button {
+    color: #3c3;
+}
+
+.dyadic-function-button {
+    color: #55f;
+}
+
+.triadic-function-button {
+    color: #c33;
+}
+
+.tetradic-function-button {
+    color: #c3c;
+}
+
+.modifier-button {
+    color: #cc3;
 }

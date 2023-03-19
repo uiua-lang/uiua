@@ -234,6 +234,12 @@ impl<'a> CallEnv<'a> {
     pub fn push(&mut self, value: impl Into<Value>) {
         self.vm.stack.push(value.into());
     }
+    pub fn stack_size(&self) -> usize {
+        self.vm.stack.len()
+    }
+    pub fn truncate(&mut self, size: usize) {
+        self.vm.stack.truncate(size);
+    }
     #[track_caller]
     pub fn pop(&mut self) -> RuntimeResult<Value> {
         self.vm

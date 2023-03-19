@@ -1,18 +1,17 @@
 - Generic backends
+- Pretty error printing
+- Contextual selectors
 - Improve parsing expectation errors
 - Basic parsing functions
-- Pretty error printing
 - Includes
 - More array functions
   - Index of
   - Progressive index of
   - Nudge
-  - Catch
   - Throw
 - Implement custom nanbox
 - Implement function reversal
 - Error handling
-- Contextual selectors
 - Type testing/tracing
 - Structs
 - Enums?

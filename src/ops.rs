@@ -175,6 +175,7 @@ primitive!(
     (Table { modifier }, "table", Caret),
     (Fold { modifier }, "fold"),
     (Repeat { modifier }, "repeat" + "⥀"),
+    (Try { modifier }, "try", Question)
 );
 
 fn _keep_primitive_small(_: std::convert::Infallible) {
@@ -451,6 +452,18 @@ impl Primitive {
                     acc = env.pop()?;
                 }
                 env.push(acc);
+            }
+            Primitive::Try => {
+                let f = env.pop()?;
+                let handle = env.pop()?;
+                let size = env.stack_size();
+                env.push(f);
+                if let Err(e) = env.call() {
+                    env.truncate(size);
+                    env.push(e.value);
+                    env.push(handle);
+                    env.call()?;
+                }
             }
             Primitive::Show => {
                 let mut s = env.pop()?.grid_string();

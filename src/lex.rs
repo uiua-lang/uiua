@@ -318,6 +318,7 @@ pub enum Simple {
     SemiColon,
     Bar,
     Bang,
+    Question,
     Slash,
     BackSlash,
     Plus,
@@ -357,6 +358,7 @@ impl fmt::Display for Simple {
             Simple::Tilde => write!(f, "~"),
             Simple::Bar => write!(f, "|"),
             Simple::Bang => write!(f, "!"),
+            Simple::Question => write!(f, "?"),
             Simple::Slash => write!(f, "/"),
             Simple::BackSlash => write!(f, "\\"),
             Simple::Plus => write!(f, "+"),
@@ -521,6 +523,7 @@ impl Lexer {
                 '<' => self.switch_next(Less, [('=', LessEqual)], start),
                 '>' => self.switch_next(Greater, [('=', GreaterEqual)], start),
                 '!' => self.switch_next(Bang, [('=', BangEqual)], start),
+                '?' => self.end(Question, start),
                 '|' => self.end(Bar, start),
                 // Comments
                 '#' => {

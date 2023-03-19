@@ -1,15 +1,17 @@
 use gloo::{events::EventListener, utils::document};
-use uiua::{compile::Compiler, format::format};
+use uiua::{compile::Compiler, format::format, value::Value, UiuaResult};
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
-use web_sys::{HtmlElement, HtmlTextAreaElement};
+use web_sys::HtmlTextAreaElement;
 use yew::prelude::*;
 
 const DEFAULT_CODE: &str = r#"⌗=¯1≡/-🗗2≤'A'∾' '."Um, I um ...arrays""#;
 
 #[function_component]
 fn App() -> Html {
+    let (_, default_output) = run_code(DEFAULT_CODE).unwrap_throw();
+
     let code = use_state(|| DEFAULT_CODE.to_string());
-    let output = use_state(String::new);
+    let output = use_state(move || default_output);
     let error = use_state(String::new);
 
     // Run the code
@@ -20,38 +22,16 @@ fn App() -> Html {
         move || {
             output.set(String::new());
             error.set(String::new());
-            let mut display = "none";
-            match format(&code, "") {
-                Ok(formatted) => {
+            match run_code(&code) {
+                Ok((formatted, stack)) => {
                     code.set(formatted);
-                    element::<HtmlTextAreaElement>("code").set_value(&code);
-                }
-                Err(e) => {
-                    error.set(e.to_string());
-                    return;
-                }
-            }
-            let mut compiler = Compiler::new();
-            if let Err(e) = compiler.load(&code, "") {
-                error.set(e.to_string());
-                return;
-            }
-            let assembly = compiler.finish();
-            match assembly.run() {
-                Ok(values) => {
-                    let mut s = String::new();
-                    for val in values.into_iter().rev() {
-                        s.push_str(&val.show());
+                    if let Some(elem) = element::<HtmlTextAreaElement>("code") {
+                        elem.set_value(&code);
                     }
-                    output.set(s);
-                    display = "block";
+                    output.set(stack);
                 }
                 Err(e) => error.set(e.to_string()),
             }
-            element::<HtmlElement>("output")
-                .style()
-                .set_property("display", display)
-                .unwrap_throw();
         }
     };
 
@@ -88,9 +68,11 @@ fn App() -> Html {
             <h1>{ "Uiua" }</h1>
             <h4>{ "A stack-oriented array programming language" }</h4>
             <div id="editor">
-                <textarea class="code" id="code" {oninput} value={ (*code).clone() }></textarea>
-                <button id="run-button" {onclick}>{ "Run" }</button>
-                <div id="output" class="code">{ (*output).clone() }</div>
+                <textarea class="code" id="code" spellcheck="false" {oninput} value={ (*code).clone() }></textarea>
+                <div id="output" class="code">
+                    <button id="run-button" {onclick}>{ "Run" }</button>
+                    { (*output).clone() }
+                </div>
                 <p id="error" class="code">{ (*error).clone() }</p>
             </div>
         </div>
@@ -101,10 +83,24 @@ fn main() {
     yew::Renderer::<App>::new().render();
 }
 
-fn element<T: JsCast>(id: &str) -> T {
-    document()
-        .get_element_by_id(id)
-        .unwrap_throw()
-        .dyn_into::<T>()
-        .unwrap_throw()
+fn element<T: JsCast>(id: &str) -> Option<T> {
+    Some(
+        document()
+            .get_element_by_id(id)?
+            .dyn_into::<T>()
+            .unwrap_throw(),
+    )
+}
+
+fn run_code(code: &str) -> UiuaResult<(String, String)> {
+    let formatted = format(code, "")?;
+    let mut compiler = Compiler::new();
+    compiler.load(code, "")?;
+    let assembly = compiler.finish();
+    let values = assembly.run()?;
+    let mut s = String::new();
+    for val in values.into_iter().rev() {
+        s.push_str(&val.show());
+    }
+    Ok((formatted, s))
 }

@@ -4,62 +4,71 @@ html * {
 
 button {
     border-width: 0;
+    border-radius: 8px;
+    font-size: 18px;
+}
+
+button:active {
+    transform: translateY(2px);
 }
 
 @media (prefers-color-scheme: dark) {
     body {
-        color: #eee;
-        background-color: #222;
+        color: #eef;
+        background-color: #223;
     }
 
     textarea {
-        color: #eee;
-        background-color: #444;
+        color: #eef;
+        background-color: #445;
     }
 
     button {
-        color: #eee;
-        background-color: #444;
+        color: #eef;
+        background-color: #445;
     }
 }
 
 @media (prefers-color-scheme: light) {
     body {
-        color: #222;
-        background-color: #eee;
+        color: #443;
+        background-color: #fff8e0;
     }
 
     textarea {
-        color: #222;
+        color: #443;
         background-color: #fff;
     }
 
     button {
-        color: #222;
+        color: #443;
         background-color: #fff;
     }
 }
 
 #top {
-    margin: 100px auto;
-    width: 50%;
+    margin: 20px auto;
+    width: max(200px, min(90%, max(50%, 800px)));
 }
 
 #editor {
-    outline: 1px solid #ccc;
+    outline: 1px solid #ccd;
+    border-radius: 8px;
 }
 
 #code {
     width: 100%;
     resize: vertical;
     box-sizing: border-box;
+    display: table;
+    border-radius: 8px;
 }
 
 #output {
-    border: 1px solid #ccc;
     padding: 10px;
-    display: none;
+    // display: none;
     white-space: pre-wrap;
+    min-height: 30px;
 }
 
 #error {
@@ -68,7 +77,7 @@ button {
 
 #run-button {
     float: right;
-    margin: 5px;
+    margin: 0px;
     padding: 5px;
 }
 

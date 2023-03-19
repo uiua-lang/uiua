@@ -94,7 +94,10 @@ macro_rules! primitive {
 }
 
 primitive!(
-    (0, Nop, "noop" + '·'),
+    // Stack ops
+    (1, Dup, "duplicate", Period),
+    (2, Flip, "flip", Tilde),
+    (1, Pop, "pop", SemiColon),
     // Pervasive monadic ops
     (1, Not, "not" + '¬'),
     (1, Neg, "negate" + '¯'),
@@ -124,12 +127,6 @@ primitive!(
     (2, Min, "minimum" + '↧'),
     (2, Max, "maximum" + '↥'),
     (2, Atan, "atangent"),
-    // Stack ops
-    (1, Dup, "duplicate", Period),
-    (2, Flip, "flip", Tilde),
-    (1, Pop, "pop", SemiColon),
-    // Control flow ops
-    (ExclusiveFork, "exclusive fork", Bang),
     // Monadic array ops
     (1, Len, "length" + '⇀'),
     (1, Rank, "rank" + '⸫'),
@@ -174,7 +171,10 @@ primitive!(
     (Table { modifier }, "table", Caret + '⊞'),
     (Fold { modifier }, "fold"),
     (Repeat { modifier }, "repeat" + '⍥'),
-    (Try { modifier }, "try", Question)
+    (Try { modifier }, "try", Question),
+    // Misc
+    (0, Nop, "noop" + '·'),
+    (ExclusiveFork, "exclusive fork", Bang),
 );
 
 fn _keep_primitive_small(_: std::convert::Infallible) {

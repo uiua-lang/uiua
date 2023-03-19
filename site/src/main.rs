@@ -1,4 +1,5 @@
 use gloo::{events::EventListener, utils::document};
+use rand::prelude::*;
 use uiua::{compile::Compiler, format::format, ops::Primitive, UiuaResult};
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use web_sys::HtmlTextAreaElement;
@@ -162,11 +163,29 @@ fn App() -> Html {
         });
     }
 
+    let mut rng = SmallRng::seed_from_u64(instant::now().to_bits());
+    let subtitles = [
+        html! {<p>{"A stack-oriented array programming language"}</p>},
+        html! {<p>{"An array-oriented stack programming language"}</p>},
+        html! {<p>{"A programming language for point-free enjoyers"}</p>},
+        html! {<p>{"A programming language for variable dislikers"}</p>},
+        html! {<p>{"What if APL was a FORTH?"}</p>},
+        html! {<p>{"What if FORTH was an APL?"}</p>},
+        html! {<p>{"It's got um...I um...arrays"}</p>},
+        html! {<p><a href="https://youtu.be/seVSlKazsNk">{"Poin-Free or Die"}</a></p>},
+        html! {<p>{"Notation as a tool of thot"}</p>},
+        html! {<p>{"Do you like this page Marshall?"}</p>},
+        html! {<p>{"Conor Dyadic Hookstra"}</p>},
+    ];
+    let index = rng.gen_range(0.0..(subtitles.len() as f64).sqrt());
+    let index = index.powi(2) as usize;
+    let subtitle = subtitles[index].clone();
+
     html! {
         <div id="top" class="centered-div">
             <h1>{ "Uiua" }</h1>
             <div id="subtitle">
-                <p>{ "A stack-oriented array programming language" }</p>
+                { subtitle }
                 <p><a href="https://github.com/kaikalii/uiua">{"GitHub"}</a></p>
             </div>
             <div id="editor">

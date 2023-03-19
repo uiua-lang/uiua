@@ -5,6 +5,11 @@ version = "0.1.0"
 
 [dependencies]
 gloo = "0.8.0"
+instant.features = ['wasm-bindgen']
+instant.version = "0.1.12"
+rand.default-features = false
+rand.features = ["small_rng"]
+rand.version = "0.8.5"
 uiua.default-features = false
 uiua.path = ".."
 wasm-bindgen = "0.2.84"

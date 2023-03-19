@@ -1,4 +1,3 @@
-- Pretty error printing
 - Contextual selectors
 - Improve parsing expectation errors
 - Basic parsing functions

@@ -199,7 +199,7 @@ value_bin_impl!(
 value_bin_impl!(
     sub,
     (Num, number, Num, number, num_num),
-    (Char, char, Num, number, char_num),
+    (Num, number, Char, char, num_char),
     (Char, char, Char, char, char_char),
 );
 

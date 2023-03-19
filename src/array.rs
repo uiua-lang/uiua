@@ -493,7 +493,7 @@ array_bin_impl!(
 array_bin_impl!(
     sub,
     (Num, numbers, Num, numbers, num_num),
-    (Char, chars, Num, numbers, char_num),
+    (Num, numbers, Char, chars, num_char),
     (Char, chars, Char, chars, char_char),
 );
 

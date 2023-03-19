@@ -188,8 +188,8 @@ fn App() -> Html {
     let index = SUBTITLE.with(|s| {
         *s.borrow_mut().get_or_insert_with(|| {
             let mut rng = SmallRng::seed_from_u64(instant::now().to_bits());
-            let index = rng.gen_range(0.0..(subtitles.len() as f64).sqrt());
-            index.powi(2) as usize
+            let index = rng.gen_range(0.0..(subtitles.len() as f64).cbrt());
+            index.powi(3) as usize
         })
     });
     let subtitle = subtitles[index].clone();

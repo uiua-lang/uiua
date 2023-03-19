@@ -97,7 +97,7 @@ button:active {
 }
 
 #error {
-    color: red;
+    color: #f33;
     padding: 10px;
     white-space: pre-wrap;
 }

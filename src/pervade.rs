@@ -171,14 +171,14 @@ pub mod sub {
     pub fn num_num(a: &f64, b: &f64) -> f64 {
         b - a
     }
-    pub fn char_num(a: &char, b: &f64) -> char {
+    pub fn num_char(a: &f64, b: &char) -> char {
         char::from_u32(((*b as i64) - (*a as i64)) as u32).unwrap_or('\0')
     }
     pub fn char_char(a: &char, b: &char) -> f64 {
         ((*b as i64) - (*a as i64)) as f64
     }
     pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
-        env.error(format!("Cannot subtract {b} from {a}"))
+        env.error(format!("Cannot subtract {a} from {b}"))
     }
 }
 

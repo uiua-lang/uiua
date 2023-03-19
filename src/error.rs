@@ -126,11 +126,15 @@ impl Error for UiuaError {}
 pub type UiuaResult<T = ()> = Result<T, UiuaError>;
 
 impl UiuaError {
-    pub fn show(&self, color: bool) -> String {
+    pub fn show(&self, complex_output: bool) -> String {
         let config = Config::default()
-            .with_color(color)
-            .with_multiline_arrows(false)
-            .with_char_set(ariadne::CharSet::Ascii);
+            .with_color(complex_output)
+            .with_multiline_arrows(false);
+        let color = if complex_output {
+            Color::Red
+        } else {
+            Color::Unset
+        };
         match self {
             UiuaError::Compile(errors) => {
                 if errors.is_empty() {
@@ -150,7 +154,7 @@ impl UiuaError {
                             span.start.pos,
                         )
                         .with_message(&error.value)
-                        .with_label(Label::new(span.clone()).with_color(Color::Red))
+                        .with_label(Label::new(span.clone()).with_color(color))
                         .with_config(config)
                         .finish();
                         let _ = report.write(cache, &mut buffer);
@@ -162,7 +166,7 @@ impl UiuaError {
                 let mut buffer = Vec::new();
                 if let Span::Code(span) = &error.span {
                     let mut cache = Cache {
-                        input: Source::from(span.file.as_ref().unwrap().to_string_lossy()),
+                        input: Source::from(&span.input),
                         files: HashMap::new(),
                     };
                     let report = Report::<CodeSpan>::build(
@@ -171,7 +175,7 @@ impl UiuaError {
                         span.start.pos,
                     )
                     .with_message(&error.value)
-                    .with_label(Label::new(span.clone()).with_color(Color::Red))
+                    .with_label(Label::new(span.clone()).with_color(color))
                     .with_config(config)
                     .finish();
                     let _ = report.write(&mut cache, &mut buffer);
@@ -221,9 +225,9 @@ impl ariadne::Cache<SourceId> for Cache {
         }
     }
     fn display<'a>(&self, id: &'a SourceId) -> Option<Box<dyn fmt::Display + 'a>> {
-        match id {
-            Some(path) => Some(Box::new(path.to_string_lossy())),
-            None => None,
-        }
+        Some(match id {
+            Some(path) => Box::new(path.to_string_lossy()),
+            None => Box::<String>::default(),
+        })
     }
 }

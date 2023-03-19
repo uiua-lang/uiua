@@ -168,9 +168,6 @@ impl Array {
         }
         self.values_mut()
     }
-}
-
-impl Array {
     pub fn normalize(&mut self, array_depth: usize) {
         if let ArrayType::Value = self.ty {
             if self.values().is_empty() {

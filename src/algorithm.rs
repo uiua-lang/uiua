@@ -1,6 +1,6 @@
 use std::{
     cmp::Ordering,
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     iter::repeat,
     mem::{swap, take},
     ptr,
@@ -388,6 +388,18 @@ impl Value {
         }
         *self = Array::from(classified).into();
         Ok(())
+    }
+    pub fn member(&mut self, of: &mut Self) {
+        let members = self.coerce_array();
+        let set: BTreeSet<Value> = take(of.coerce_array()).into_values().into_iter().collect();
+        *self = Array::from(
+            take(members)
+                .into_values()
+                .into_iter()
+                .map(|val| set.contains(&val) as u8 as f64)
+                .collect::<Vec<_>>(),
+        )
+        .into();
     }
 }
 

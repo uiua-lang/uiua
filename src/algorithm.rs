@@ -205,30 +205,7 @@ impl Value {
         }
         let index = self.as_index(env, "Index must be a list of integers")?;
         let array = from.array();
-        if index.len() > array.rank() {
-            return Err(env.error(format!(
-                "Cannot pick with index of greater rank: \
-                the index length is {}, but the array rank is {}",
-                index.len(),
-                array.rank(),
-            )));
-        }
-        for (&s, &i) in array.shape().iter().zip(&index) {
-            let s = s as isize;
-            if i >= s || s + i < 0 {
-                return Err(env.error(format!(
-                    "Index out of range: \
-                    the index is {:?}, but the shape is {:?}",
-                    index,
-                    array.shape()
-                )));
-            }
-        }
-        *self = match array.ty() {
-            ArrayType::Num => pick(array.shape(), index, array.numbers()),
-            ArrayType::Char => pick(array.shape(), index, array.chars()),
-            ArrayType::Value => pick(array.shape(), index, array.values()),
-        };
+        *self = pick(&index, array, env)?;
         Ok(())
     }
     pub fn first(&mut self, env: &Env) -> RuntimeResult {
@@ -365,6 +342,18 @@ impl Value {
         *arr = Array::from((vec![indices.len()], nums));
         Ok(())
     }
+    pub fn select(&mut self, from: &mut Self, env: &Env) -> RuntimeResult {
+        let indices = self.as_index(env, "Indices must be a list of integers")?;
+        let array = from.coerce_array();
+        let mut selected = Vec::with_capacity(indices.len());
+        for index in indices {
+            selected.push(pick(&[index], array, env)?);
+        }
+        *self = Array::from((vec![selected.len()], selected))
+            .normalized(1)
+            .into();
+        Ok(())
+    }
 }
 
 fn transpose<T: Clone>(shape: &mut [usize], data: &mut [T]) {
@@ -441,13 +430,40 @@ fn take_array(index: &[isize], array: Array, env: &Env) -> RuntimeResult<Array> 
     }
 }
 
-fn pick<T>(shape: &[usize], index: Vec<isize>, mut data: &[T]) -> Value
+fn pick(index: &[isize], array: &Array, env: &Env) -> RuntimeResult<Value> {
+    if index.len() > array.rank() {
+        return Err(env.error(format!(
+            "Cannot pick with index of greater rank: \
+                the index length is {}, but the array rank is {}",
+            index.len(),
+            array.rank(),
+        )));
+    }
+    for (&s, &i) in array.shape().iter().zip(index) {
+        let s = s as isize;
+        if i >= s || s + i < 0 {
+            return Err(env.error(format!(
+                "Index out of range: \
+                    the index is {:?}, but the shape is {:?}",
+                index,
+                array.shape()
+            )));
+        }
+    }
+    Ok(match array.ty() {
+        ArrayType::Num => pick_impl(array.shape(), index, array.numbers()),
+        ArrayType::Char => pick_impl(array.shape(), index, array.chars()),
+        ArrayType::Value => pick_impl(array.shape(), index, array.values()),
+    })
+}
+
+fn pick_impl<T>(shape: &[usize], index: &[isize], mut data: &[T]) -> Value
 where
     T: Clone + Into<Value>,
     Array: From<(Vec<usize>, Vec<T>)>,
 {
     let mut shape_index = 0;
-    for i in index {
+    for &i in index {
         let cell_count = shape[shape_index];
         let cell_size = data.len() / cell_count;
         let start = if i >= 0 {

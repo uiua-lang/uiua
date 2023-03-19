@@ -25,7 +25,7 @@ pub(crate) enum Instr {
     Push(Value),
     Constant(usize),
     BeginArray,
-    EndArray,
+    EndArray(bool),
     BindGlobal,
     CopyGlobal(usize),
     Call(usize),
@@ -131,10 +131,10 @@ impl Vm {
                     stack.push(assembly.constants[*n].clone())
                 }
                 Instr::BeginArray => self.array_stack.push(stack.len()),
-                Instr::EndArray => {
+                Instr::EndArray(normalize) => {
                     let bottom = self.array_stack.pop().expect("nothing in array stack");
                     let array: Array = stack.drain(bottom..).rev().collect();
-                    stack.push(array.normalized(1).into());
+                    stack.push(array.normalized(*normalize as usize).into());
                 }
                 Instr::BindGlobal => self.globals.push(stack.pop().unwrap()),
                 Instr::CopyGlobal(n) => stack.push(self.globals[*n].clone()),

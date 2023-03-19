@@ -354,12 +354,12 @@ impl Compiler {
             Word::Array(items) => {
                 self.push_instr(Instr::BeginArray);
                 self.words(items, true);
-                self.push_instr(Instr::EndArray);
+                self.push_instr(Instr::EndArray(true));
             }
             Word::Strand(items) => {
                 self.push_instr(Instr::BeginArray);
                 self.words(items, false);
-                self.push_instr(Instr::EndArray);
+                self.push_instr(Instr::EndArray(false));
             }
             Word::Func(func) => self.func(func),
             Word::FuncArray(funcs) => {
@@ -367,7 +367,7 @@ impl Compiler {
                 for func in funcs.into_iter().rev() {
                     self.func(func);
                 }
-                self.push_instr(Instr::EndArray);
+                self.push_instr(Instr::EndArray(false));
             }
             Word::Primitive(prim) => self.primitive(prim, word.span, call),
             Word::Modified(m) => self.modified(*m, call),

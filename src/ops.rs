@@ -136,6 +136,7 @@ primitive!(
     (Drop, "drop" + "↦"),
     (Rotate, "rotate" + "↻"),
     (Reshape, "reshape" + "↯"),
+    (Select, "select" + "⊏"),
     // IO ops
     (Show, "show"),
     (Print, "print"),
@@ -230,6 +231,7 @@ impl Primitive {
             Primitive::Pair => env.dyadic_mut(Value::pair)?,
             Primitive::Couple => env.dyadic_mut_env(Value::couple)?,
             Primitive::Grade => env.monadic_mut_env(Value::grade)?,
+            Primitive::Select => env.dyadic_mut_env(Value::select)?,
             Primitive::Dup => {
                 let x = env.top_mut()?.clone();
                 env.push(x);

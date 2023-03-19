@@ -1,20 +1,19 @@
 - Contextual selectors
-- Improve parsing expectation errors
-- Basic parsing functions
-- Includes
 - More array functions
   - Index of
   - Progressive index of
   - Nudge
   - Throw
   - Zip
-- Implement custom nanbox
 - Implement function reversal
 - Error handling
+- Basic parsing functions
+- Improve parsing expectation errors
+- Includes
 - Type testing/tracing
 - Structs
 - Enums?
-- Operator overloading?
+- Implement custom nanbox
 - System APIs
   - File system
   - Time

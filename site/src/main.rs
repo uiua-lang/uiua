@@ -172,6 +172,7 @@ fn App() -> Html {
         });
     }
 
+    // Choose a random subtitle
     let subtitles = [
         html! {<p>{"A stack-oriented array programming language"}</p>},
         html! {<p>{"An array-oriented stack programming language"}</p>},
@@ -180,7 +181,7 @@ fn App() -> Html {
         html! {<p>{"What if APL was a FORTH?"}</p>},
         html! {<p>{"What if FORTH was an APL?"}</p>},
         html! {<p>{"It's got um...I um...arrays"}</p>},
-        html! {<p><a href="https://youtu.be/seVSlKazsNk">{"Poin-Free or Die"}</a></p>},
+        html! {<p><a href="https://youtu.be/seVSlKazsNk">{"Point-Free or Die"}</a></p>},
         html! {<p>{"Notation as a tool of thot"}</p>},
         html! {<p>{"Do you like this page Marshall?"}</p>},
         html! {<p>{"Conor Dyadic Hookstra"}</p>},
@@ -188,6 +189,7 @@ fn App() -> Html {
     let index = SUBTITLE.with(|s| {
         *s.borrow_mut().get_or_insert_with(|| {
             let mut rng = SmallRng::seed_from_u64(instant::now().to_bits());
+            // Prefers lower indices
             let index = rng.gen_range(0.0..(subtitles.len() as f64).cbrt());
             index.powi(3) as usize
         })
@@ -273,7 +275,7 @@ fn run_code(code: &str, format_first: bool) -> UiuaResult<(String, String)> {
 
 fn main_text() -> Html {
     html! {<div>
-        <p>{"Uiua ("}<i>{"wee-wuh"}</i>{") is a stack-oriented array programming language with a focus on tacit code. Its semantics and primitives (and this site) are largely inspired by "}<a href="https://mlochbaum.github.io/BQN/">{"BQN"}</a>{", but it combines the array paradigm with the stack-oriented paradigm to make writing point-free code more workable."}</p>
+        <p>{"Uiua ("}<i><a href="weewah.mp3">{"wee-wuh"}</a></i>{") is a stack-oriented array programming language with a focus on tacit code. Its semantics and primitives (and this site) are largely inspired by "}<a href="https://mlochbaum.github.io/BQN/">{"BQN"}</a>{", but it combines the array paradigm with the stack-oriented paradigm to make writing point-free code more workable."}</p>
         <hr/>
         <h3>{"How is Uiua like other array languages?"}</h3>
         <p>{"Like APL, J, BQN, and many other array languages, Uiua's primary data type is the array. Arrays are multidimensional and rank-polymorphic, meaning that many operation automatically apply to every element."}</p>

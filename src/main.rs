@@ -25,7 +25,7 @@ fn main() {
     });
 
     if let Err(e) = run() {
-        eprintln!("{e}");
+        eprintln!("{}", e.show(true));
         exit(1);
     }
 }
@@ -74,7 +74,7 @@ fn run() -> UiuaResult {
                             }
                             Err(e) => {
                                 clear_watching();
-                                eprintln!("{e}");
+                                eprintln!("{}", e.show(true));
                                 print_watching();
                             }
                         }

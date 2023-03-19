@@ -46,7 +46,10 @@ fn App() -> Html {
                     code.set(formatted);
                     output.set(stack);
                 }
-                Err(e) => error.set(e.to_string()),
+                Err(e) => {
+                    gloo::console::log!(e.show(false));
+                    error.set(e.show(false))
+                }
             }
         }
     };

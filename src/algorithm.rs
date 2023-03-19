@@ -429,7 +429,7 @@ impl Value {
 }
 
 fn array_windows(mut sizes: &[usize], array: &mut Array, env: &Env) -> RuntimeResult {
-    if sizes.is_empty() {
+    if sizes.is_empty() || array.shape().is_empty() {
         return Ok(());
     }
     let window_size = sizes[0];

@@ -99,7 +99,7 @@ primitive!(
     // Pervasive monadic ops
     (1, Not, "not" + "¬"),
     (1, Neg, "negate" + "¯"),
-    (1, Abs, "abs" + "⌵"),
+    (1, Abs, "absolute value" + "⌵"),
     (1, Sqrt, "sqrt" + "√"),
     (1, Sin, "sine"),
     (1, Cos, "cosine"),

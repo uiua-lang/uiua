@@ -1,9 +1,14 @@
+- Generic backends
 - Improve parsing expectation errors
 - Basic parsing functions
 - Pretty error printing
 - Includes
 - More array functions
-  - Last?
+  - Index of
+  - Progressive index of
+  - Nudge
+  - Catch
+  - Throw
 - Implement custom nanbox
 - Implement function reversal
 - Error handling

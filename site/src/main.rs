@@ -8,18 +8,18 @@ const DEFAULT_CODE: &str = r#"⌗=¯1≡/-🗗2≤'A'∾' '."Um, I um...arrays""
 
 const EXAMPLES: &[&str] = &[
     DEFAULT_CODE,
+    "# Click Run to format!\nfirst repeat (\\+ rev) 10 0_1",
     "↯~𝆱/×.2_3_4",
     "Avg = ÷/+~𝄩.\nAvg 0_2_1_5",
     r#"⊟⠿(≅⇌.).["uiua" "racecar" "wow" "cool!"]"#,
-    "◱⥀(\\+⇌)10 0_1",
     "⌗⠿(=2/+=⌊.÷+1𝆱.).+1𝆱60",
-    "🏳️‍⚧️↯4_4[...1 .2 .3 ...4 .5 .6] # Yes, the transpose operator is the trans flag",
+    "🏳️‍⚧️↯4_4[...1 .2 .3 ...4 .5 .6]\n# Yes, the transpose operator is the trans flag",
     "⠿(⊡~(·|:|÷|≡|⍋)⁅÷23)^×.-10𝆱20",
 ];
 
 #[function_component]
 fn App() -> Html {
-    let (_, default_output) = run_code(DEFAULT_CODE).unwrap_throw();
+    let (_, default_output) = run_code(DEFAULT_CODE, false).unwrap_throw();
 
     let example = use_state(|| 0);
     let code = use_state(|| DEFAULT_CODE.to_string());
@@ -31,11 +31,11 @@ fn App() -> Html {
         let code = code.clone();
         let output = output.clone();
         let error = error.clone();
-        move || {
+        move |format: bool| {
             output.set(String::new());
             error.set(String::new());
             let code_string = code_element().value();
-            match run_code(&code_string) {
+            match run_code(&code_string, format) {
                 Ok((formatted, stack)) => {
                     code_element().set_value(&formatted);
                     code.set(formatted);
@@ -49,7 +49,7 @@ fn App() -> Html {
     // Run the code when the button is clicked
     let run_click = {
         let run = run.clone();
-        move |_| run()
+        move |_| run(true)
     };
 
     // Go to the next example
@@ -61,7 +61,7 @@ fn App() -> Html {
             example.set(next);
             code.set(EXAMPLES[next].to_string());
             code_element().set_value(EXAMPLES[next]);
-            run();
+            run(false);
         }
     };
 
@@ -70,7 +70,7 @@ fn App() -> Html {
         let listener = EventListener::new(&document(), "keydown", move |event| {
             let event = event.dyn_ref::<web_sys::KeyboardEvent>().unwrap_throw();
             if event.key() == "Enter" && (event.ctrl_key() || event.shift_key()) {
-                run();
+                run(true);
             }
         });
         || drop(listener)
@@ -84,6 +84,24 @@ fn App() -> Html {
             let text_area: HtmlTextAreaElement =
                 event.target().unwrap_throw().dyn_into().unwrap_throw();
             code.set(text_area.value());
+        }
+    };
+
+    let replace_code = {
+        let code = code.clone();
+        move |inserted: &str| {
+            let elem = code_element();
+            if let (Ok(Some(start)), Ok(Some(end))) = (elem.selection_start(), elem.selection_end())
+            {
+                let (start, end) = (start.min(end) as usize, start.max(end) as usize);
+                let text = code
+                    .chars()
+                    .take(start)
+                    .chain(inserted.chars())
+                    .chain(code.chars().skip(end))
+                    .collect();
+                code.set(text);
+            }
         }
     };
 
@@ -107,22 +125,8 @@ fn App() -> Html {
                 format_args!("\n{extra}")
             );
             let onclick = {
-                let code = code.clone();
-                move |_| {
-                    let elem = code_element();
-                    if let (Ok(Some(start)), Ok(Some(end))) =
-                        (elem.selection_start(), elem.selection_end())
-                    {
-                        let (start, end) = (start.min(end) as usize, start.max(end) as usize);
-                        let text = code
-                            .chars()
-                            .take(start)
-                            .chain(p.to_string().chars())
-                            .chain(code.chars().skip(end))
-                            .collect();
-                        code.set(text);
-                    }
-                }
+                let replace_code = replace_code.clone();
+                move |_| replace_code(&p.to_string())
             };
             let class = format!(
                 "glyph-button {}",
@@ -145,8 +149,12 @@ fn App() -> Html {
         .collect();
 
     for (glyph, title) in [("#", "comment"), ("=", "binding")] {
+        let onclick = {
+            let replace_code = replace_code.clone();
+            move |_| replace_code(glyph)
+        };
         glyph_buttons.push(html! {
-            <button class="glyph-button" {title}>{glyph}</button>
+            <button class="glyph-button" {title} {onclick}>{glyph}</button>
         });
     }
 
@@ -195,8 +203,12 @@ fn code_element() -> HtmlTextAreaElement {
     element("code")
 }
 
-fn run_code(code: &str) -> UiuaResult<(String, String)> {
-    let formatted = format(code, "")?;
+fn run_code(code: &str, format_first: bool) -> UiuaResult<(String, String)> {
+    let formatted = if format_first {
+        format(code, "")?
+    } else {
+        code.to_string()
+    };
     let mut compiler = Compiler::new();
     compiler.load(code, "")?;
     let assembly = compiler.finish();

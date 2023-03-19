@@ -511,13 +511,7 @@ impl Lexer {
                 '\\' => self.end(BackSlash, start),
                 '~' => self.end(Tilde, start),
                 '+' => self.end(Plus, start),
-                '-' => {
-                    if self.peek_char().filter(char::is_ascii_digit).is_some() {
-                        self.number(start, "-".into())
-                    } else {
-                        self.end(Minus, start)
-                    }
-                }
+                '-' => self.end(Minus, start),
                 '¯' if self.peek_char().filter(char::is_ascii_digit).is_some() => {
                     self.number(start, "-".into())
                 }

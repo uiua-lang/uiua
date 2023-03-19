@@ -139,12 +139,13 @@ button:active {
     padding: 2px;
     display: flex;
     flex-wrap: wrap;
+    justify-content: space-evenly;
 }
 
 .glyph-button {
     font-family: "Noto";
-    font-size: 20px;
-    padding: 2px;
+    font-size: 18px;
+    padding: 1px;
     margin: 2px;
     background-color: transparent;
     min-width: 18px;

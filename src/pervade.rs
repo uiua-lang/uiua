@@ -129,12 +129,12 @@ macro_rules! cmp_impl {
                 ($ordering $eq Ordering::Less) as u8 as f64
             }
             pub fn num_num(a: &f64, b: &f64) -> f64 {
-                (a.partial_cmp(b)
-                    .unwrap_or_else(|| a.is_nan().cmp(&b.is_nan()))
+                (b.partial_cmp(a)
+                    .unwrap_or_else(|| b.is_nan().cmp(&a.is_nan()))
                     $eq $ordering) as u8 as f64
             }
             pub fn generic<T: Ord>(a: &T, b: &T) -> f64 {
-                (a.cmp(b) $eq $ordering) as u8 as f64
+                (b.cmp(a) $eq $ordering) as u8 as f64
             }
             pub fn error<T: Display>(a: T, b: T, _env: &Env) -> RuntimeError {
                 unreachable!("Comparisons cannot fail, failed to compare {a} and {b}")
@@ -153,13 +153,13 @@ cmp_impl!(is_ge != Ordering::Less);
 pub mod add {
     use super::*;
     pub fn num_num(a: &f64, b: &f64) -> f64 {
-        a + b
+        b + a
     }
     pub fn num_char(a: &f64, b: &char) -> char {
-        char::from_u32((*a as i64 + *b as i64) as u32).unwrap_or('\0')
+        char::from_u32((*b as i64 + *a as i64) as u32).unwrap_or('\0')
     }
     pub fn char_num(a: &char, b: &f64) -> char {
-        char::from_u32((*a as i64 + *b as i64) as u32).unwrap_or('\0')
+        char::from_u32((*b as i64 + *a as i64) as u32).unwrap_or('\0')
     }
     pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot add {a} and {b}"))
@@ -169,13 +169,13 @@ pub mod add {
 pub mod sub {
     use super::*;
     pub fn num_num(a: &f64, b: &f64) -> f64 {
-        a - b
+        b - a
     }
     pub fn char_num(a: &char, b: &f64) -> char {
-        char::from_u32(((*a as i64) - (*b as i64)) as u32).unwrap_or('\0')
+        char::from_u32(((*b as i64) - (*a as i64)) as u32).unwrap_or('\0')
     }
     pub fn char_char(a: &char, b: &char) -> f64 {
-        ((*a as i64) - (*b as i64)) as f64
+        ((*b as i64) - (*a as i64)) as f64
     }
     pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot subtract {b} from {a}"))
@@ -185,7 +185,7 @@ pub mod sub {
 pub mod mul {
     use super::*;
     pub fn num_num(a: &f64, b: &f64) -> f64 {
-        a * b
+        b * a
     }
     pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot multiply {a} and {b}"))
@@ -195,7 +195,7 @@ pub mod mul {
 pub mod div {
     use super::*;
     pub fn num_num(a: &f64, b: &f64) -> f64 {
-        a / b
+        b / a
     }
     pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot divide {a} by {b}"))

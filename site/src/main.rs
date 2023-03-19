@@ -8,12 +8,13 @@ const DEFAULT_CODE: &str = r#"⌗=¯1≡/-🗗2≤'A'∾' '."Um, I um...arrays""
 
 const EXAMPLES: &[&str] = &[
     DEFAULT_CODE,
-    r#"↯~𝆱/×.2_3_4"#,
-    r#"◱⥀(\+⇌)10 0_1"#,
+    "↯~𝆱/×.2_3_4",
+    "Avg = ÷/+~𝄩.\nAvg 0_2_1_5",
     r#"⊟⠿(≅⇌.).["uiua" "racecar" "wow" "cool!"]"#,
-    r#"⌗⠿(=2/+=⌊.÷~+1𝆱.).+1𝆱60"#,
-    r#"🏳️‍⚧️↯4_4[...1 .2 .3 ...4 .5 .6] # Yes, the transpose operator is the trans flag"#,
-    r#"⠿(⊡~(·|:|÷|≡|⍋)⁅÷~23)^×.-~10𝆱20"#,
+    "◱⥀(\\+⇌)10 0_1",
+    "⌗⠿(=2/+=⌊.÷+1𝆱.).+1𝆱60",
+    "🏳️‍⚧️↯4_4[...1 .2 .3 ...4 .5 .6] # Yes, the transpose operator is the trans flag",
+    "⠿(⊡~(·|:|÷|≡|⍋)⁅÷23)^×.-10𝆱20",
 ];
 
 #[function_component]
@@ -219,6 +220,7 @@ fn main_text() -> Html {
             <li>{"Arrays following the "}<a href="https://mlochbaum.github.io/BQN/doc/based.html">{"Based Array Model"}</a>{"."}</li>
             <li>{"Basic IO facilities"}</li>
             <li>{"Compile-time code evaluation"}</li>
+            <li>{"A deterministic formatter"}</li>
         </ul>
         <hr/>
         <h3>{"How is Uiua different from other array languages?"}</h3>

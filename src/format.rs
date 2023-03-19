@@ -71,34 +71,20 @@ impl FormatState {
         self.was_strand = false;
         write!(&mut self.string, "{t}").unwrap();
     }
-    fn space_if_alphanumeric(&mut self) {
+    fn space_if(&mut self, f: impl Fn(char) -> bool) {
         if self.override_space {
             self.override_space = false;
             return;
         }
-        self.space_if_was_strand();
-        if self.string.ends_with(is_basically_alphanumeric) {
+        if self.was_strand || self.string.ends_with(f) {
             self.push(' ');
         }
+    }
+    fn space_if_alphanumeric(&mut self) {
+        self.space_if(is_basically_alphanumeric);
     }
     fn space_if_alphabetic(&mut self) {
-        if self.override_space {
-            self.override_space = false;
-            return;
-        }
-        self.space_if_was_strand();
-        if self.string.ends_with(is_basically_alphabetic) {
-            self.push(' ');
-        }
-    }
-    fn space_if_was_strand(&mut self) {
-        if self.override_space {
-            self.override_space = false;
-            return;
-        }
-        if self.was_strand {
-            self.push(' ');
-        }
+        self.space_if(is_basically_alphabetic);
     }
 }
 
@@ -141,7 +127,13 @@ impl Format for Word {
         match self {
             Word::Real(f) => {
                 state.space_if_alphanumeric();
-                state.push(f);
+                state.space_if(|c| c == '¯');
+                if let Some(f) = f.strip_prefix('-') {
+                    state.push('¯');
+                    state.push(f);
+                } else {
+                    state.push(f);
+                }
             }
             Word::Char(c) => {
                 state.space_if_alphanumeric();

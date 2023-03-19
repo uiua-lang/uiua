@@ -518,6 +518,9 @@ impl Lexer {
                         self.end(Minus, start)
                     }
                 }
+                '¯' if self.peek_char().filter(char::is_ascii_digit).is_some() => {
+                    self.number(start, "-".into())
+                }
                 '*' => self.end(Star, start),
                 '%' => self.end(Percent, start),
                 '=' => self.end(Equal, start),

@@ -4,25 +4,23 @@ use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use web_sys::HtmlTextAreaElement;
 use yew::prelude::*;
 
-const DEFAULT_CODE: &str = r#"⌗=¯1≡/-🗗2≤'A'∾' '."Um, I um...arrays""#;
-
 const EXAMPLES: &[&str] = &[
-    DEFAULT_CODE,
+    r#"‡=¯1≡/-◫2≤'A'≍' '."Um, I um...arrays""#,
     "# Click Run to format!\nfirst repeat (\\+ rev) 10 0_1",
-    "↯~𝆱/×.2_3_4",
-    "Avg = ÷/+~𝄩.\nAvg 0_2_1_5",
-    r#"⊟⠿(≅⇌.).["uiua" "racecar" "wow" "cool!"]"#,
-    "⌗⠿(=2/+=⌊.÷+1𝆱.).+1𝆱60",
-    "🏳️‍⚧️↯4_4[...1 .2 .3 ...4 .5 .6]\n# Yes, the transpose operator is the trans flag",
-    "⠿(⊡~(·|:|÷|≡|⍋)⁅÷23)^×.-10𝆱20",
+    "↯~⇡/×.2_3_4",
+    "Avg = ÷/+~⇀.\nAvg 0_2_1_5",
+    r#"⊟⸪(≅⇌.).["uiua" "racecar" "wow" "cool!"]"#,
+    "‡⸪(=2/+=⌊.÷+1⇡.).+1⇡60",
+    "⍉↯4_4[...1 .2 .3 ...4 .5 .6]",
+    "⸪(⊡~(·|:|÷|≡|⍋)⁅÷23)⊞×.-10⇡20",
 ];
 
 #[function_component]
 fn App() -> Html {
-    let (_, default_output) = run_code(DEFAULT_CODE, false).unwrap_throw();
+    let (_, default_output) = run_code(EXAMPLES[0], false).unwrap_throw();
 
     let example = use_state(|| 0);
-    let code = use_state(|| DEFAULT_CODE.to_string());
+    let code = use_state(|| EXAMPLES[0].to_string());
     let output = use_state(move || default_output);
     let error = use_state(String::new);
 
@@ -151,6 +149,7 @@ fn App() -> Html {
     for (glyph, title) in [
         ("'", "character"),
         ("\"", "string"),
+        ("|", "function separator"),
         ("#", "comment"),
         ("=", "binding"),
     ] {
@@ -234,7 +233,7 @@ fn main_text() -> Html {
         <p>{"Uiua features:"}</p>
         <ul>
             <li>{"A rich set of primitives"}</li>
-            <li>{"Arrays following the "}<a href="https://mlochbaum.github.io/BQN/doc/based.html">{"Based Array Model"}</a>{"."}</li>
+            <li>{"Arrays following the "}<a href="https://mlochbaum.github.io/BQN/doc/based.html">{"Based Array Model"}</a></li>
             <li>{"Basic IO facilities"}</li>
             <li>{"Compile-time code evaluation"}</li>
             <li>{"A deterministic formatter"}</li>

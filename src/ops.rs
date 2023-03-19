@@ -23,7 +23,7 @@ pub(crate) fn constants() -> Vec<(&'static str, Value)> {
 pub struct PrimitiveName {
     pub ident: Option<&'static str>,
     pub ascii: Option<Simple>,
-    pub unicode: Option<&'static str>,
+    pub unicode: Option<char>,
 }
 
 macro_rules! primitive {
@@ -47,7 +47,7 @@ macro_rules! primitive {
                     $(Primitive::$name => PrimitiveName {
                         ident: {None::<&'static str> $(;Some($ident))?},
                         ascii: {None::<Simple> $(;Some(Simple::$ascii))?},
-                        unicode: {None::<&'static str> $(;Some($unicode))?},
+                        unicode: {None::<char> $(;Some($unicode))?},
                     },)*
                     Primitive::AdicFork(n) => PrimitiveName {
                         ident: match n {
@@ -68,8 +68,8 @@ macro_rules! primitive {
                     _ => None
                 }
             }
-            pub fn from_unicode(s: &str) -> Option<Self> {
-                match s {
+            pub fn from_unicode(c: char) -> Option<Self> {
+                match c {
                     $($($unicode => Some(Self::$name),)?)*
                     _ => None
                 }
@@ -95,35 +95,35 @@ macro_rules! primitive {
 }
 
 primitive!(
-    (0, Nop, "noop" + "·"),
+    (0, Nop, "noop" + '·'),
     // Pervasive monadic ops
-    (1, Not, "not" + "¬"),
-    (1, Neg, "negate" + "¯"),
-    (1, Abs, "absolute value" + "⌵"),
-    (1, Sqrt, "sqrt" + "√"),
+    (1, Not, "not" + '¬'),
+    (1, Neg, "negate" + '¯'),
+    (1, Abs, "absolute value" + '⌵'),
+    (1, Sqrt, "sqrt" + '√'),
     (1, Sin, "sine"),
     (1, Cos, "cosine"),
     (1, Asin, "asine"),
     (1, Acos, "acosine"),
-    (1, Floor, "floor" + "⌊"),
-    (1, Ceil, "ceiling" + "⌈"),
-    (1, Round, "round" + "⁅"),
+    (1, Floor, "floor" + '⌊'),
+    (1, Ceil, "ceiling" + '⌈'),
+    (1, Round, "round" + '⁅'),
     // Pervasive dyadic ops
     (2, Eq, "equals", Equal),
-    (2, Ne, "not equals", BangEqual + "≠"),
+    (2, Ne, "not equals", BangEqual + '≠'),
     (2, Lt, "less than", Less),
-    (2, Le, "less or equal", LessEqual + "≤"),
+    (2, Le, "less or equal", LessEqual + '≤'),
     (2, Gt, "greater than", Greater),
-    (2, Ge, "greater or equal", GreaterEqual + "≥"),
+    (2, Ge, "greater or equal", GreaterEqual + '≥'),
     (2, Add, "add", Plus),
     (2, Sub, "subtract", Minus),
-    (2, Mul, "multiply", Star + "×"),
-    (2, Div, "divide", Percent + "÷"),
-    (2, Mod, "modulus" + "◿"),
-    (2, Pow, "power" + "ⁿ"),
-    (2, Root, "root" + "◱"),
-    (2, Min, "minimum" + "↧"),
-    (2, Max, "maximum" + "↥"),
+    (2, Mul, "multiply", Star + '×'),
+    (2, Div, "divide", Percent + '÷'),
+    (2, Mod, "modulus" + '◿'),
+    (2, Pow, "power" + 'ⁿ'),
+    (2, Root, "root" + '◱'),
+    (2, Min, "minimum" + '↧'),
+    (2, Max, "maximum" + '↥'),
     (2, Atan, "atangent"),
     // Stack ops
     (1, Dup, "duplicate", Period),
@@ -132,33 +132,33 @@ primitive!(
     // Control flow ops
     (ExclusiveFork, "exclusive fork", Bang),
     // Monadic array ops
-    (1, Len, "length" + "𝄩"),
-    (1, Rank, "rank" + "⧈"),
-    (1, Shape, "shape" + "⬠"),
-    (1, Range, "range" + "𝆱"),
-    (1, First, "first" + "⊢"),
-    (1, Reverse, "reverse" + "⇌"),
-    (1, Enclose, "enclose" + "⺆"),
-    (1, Deshape, "deshape" + "♭"),
-    (1, Transpose, "transpose" + "🏳️‍⚧️"),
-    (1, Grade, "grade" + "⍋"),
-    (1, Classify, "classify" + "⊛"),
+    (1, Len, "length" + '⇀'),
+    (1, Rank, "rank" + '⸫'),
+    (1, Shape, "shape" + '△'),
+    (1, Range, "range" + '⇡'),
+    (1, First, "first" + '⊢'),
+    (1, Reverse, "reverse" + '⇌'),
+    (1, Enclose, "enclose" + '⊓'),
+    (1, Deshape, "deshape" + '♭'),
+    (1, Transpose, "transpose" + '⍉'),
+    (1, Grade, "grade" + '⍋'),
+    (1, Classify, "classify" + '⊛'),
     // Dyadic array ops
-    (2, Match, "match" + "≅"),
-    (2, NotMatch, "notmatch" + "≇"),
-    (2, Join, "join" + "∾"),
-    (2, Pair, "pair" + "⚇"),
-    (2, Couple, "couple" + "⊟"),
-    (2, Pick, "pick" + "⊡"),
-    (2, Select, "select" + "⊏"),
-    (2, Take, "take" + "↙"),
-    (2, Drop, "drop" + "↘"),
-    (2, Reshape, "reshape" + "↯"),
-    (2, Rotate, "rotate" + "↻"),
-    (2, Windows, "windows" + "🗗"),
-    (2, Filter, "filter" + "⌗"),
-    (2, Member, "member" + "∈"),
-    (2, Group, "group" + "⊔"),
+    (2, Match, "match" + '≅'),
+    (2, NotMatch, "notmatch" + '≇'),
+    (2, Join, "join" + '≍'),
+    (2, Pair, "pair" + '⚇'),
+    (2, Couple, "couple" + '⊟'),
+    (2, Pick, "pick" + '⊡'),
+    (2, Select, "select" + '⊏'),
+    (2, Take, "take" + '↙'),
+    (2, Drop, "drop" + '↘'),
+    (2, Reshape, "reshape" + '↯'),
+    (2, Rotate, "rotate" + '↻'),
+    (2, Windows, "windows" + '◫'),
+    (2, Replicate, "replicate" + '‡'),
+    (2, Member, "member" + '∈'),
+    (2, Group, "group" + '⊕'),
     // IO ops
     (1, Show, "show"),
     (1, Print, "print"),
@@ -170,11 +170,11 @@ primitive!(
     // Modifiers
     (Reduce { modifier }, "reduce", Slash),
     (Scan { modifier }, "scan", BackSlash),
-    (Each { modifier }, "each" + "⠿"),
-    (Cells { modifier }, "cells" + "≡"),
-    (Table { modifier }, "table", Caret),
+    (Each { modifier }, "each" + '⸪'),
+    (Cells { modifier }, "cells" + '≡'),
+    (Table { modifier }, "table", Caret + '⊞'),
     (Fold { modifier }, "fold"),
-    (Repeat { modifier }, "repeat" + "⥀"),
+    (Repeat { modifier }, "repeat" + '⍥'),
     (Try { modifier }, "try", Question)
 );
 
@@ -247,7 +247,7 @@ impl Primitive {
             Primitive::Reshape => env.dyadic_mut_env(Value::reshape)?,
             Primitive::Transpose => env.monadic_mut(Value::transpose)?,
             Primitive::Pick => env.dyadic_mut_env(Value::pick)?,
-            Primitive::Filter => env.dyadic_mut_env(Value::replicate)?,
+            Primitive::Replicate => env.dyadic_mut_env(Value::replicate)?,
             Primitive::Take => env.dyadic_mut_env(Value::take)?,
             Primitive::Drop => env.dyadic_mut_env(Value::drop)?,
             Primitive::Rotate => env.dyadic_mut_env(Value::rotate)?,

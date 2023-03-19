@@ -9,6 +9,7 @@
   - Progressive index of
   - Nudge
   - Throw
+  - Zip
 - Implement custom nanbox
 - Implement function reversal
 - Error handling

@@ -6,20 +6,6 @@ html {
     font-size: 100%;
 }
 
-button[title]:hover::after {
-    content: attr(title);
-    position: absolute;
-    font-family: "Noto";
-    font-size: 14px;
-    bottom: 100%;
-    left: -30px;
-    color: #eee;
-    background-color: #000a;
-    padding: 2px;
-    border-radius: 4px;
-    width: 90px;
-}
-
 button {
     border-width: 0;
     border-radius: 8px;
@@ -127,12 +113,12 @@ button:active {
 }
 
 @font-face {
-    font-family: "Noto";
-    src: url(NotoSansMono.ttf) format("truetype");
+    font-family: "Code Font";
+    src: url(DejaVuSansMono.ttf) format("truetype");
 }
 
 .code {
-    font-family: "Noto";
+    font-family: "Code Font";
 }
 
 #glyph-buttons {
@@ -143,12 +129,26 @@ button:active {
 }
 
 .glyph-button {
-    font-family: "Noto";
+    font-family: "Code Font";
     font-size: 18px;
     padding: 1px;
     margin: 2px;
     background-color: transparent;
     min-width: 18px;
+}
+
+.glyph-button[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    font-family: "Code Font";
+    font-size: 14px;
+    bottom: 100%;
+    left: -90px;
+    color: #eee;
+    background-color: #000a;
+    padding: 2px;
+    border-radius: 4px;
+    width: 90px;
 }
 
 .glyph-button:hover {

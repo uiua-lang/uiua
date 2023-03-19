@@ -385,7 +385,7 @@ fn value_memory_test() {
     use crate::compile::Compiler;
     let mut compiler = Compiler::new();
     let code = "
-xs = range 3_4
+xs = ⇡ 3_4
 show xs
 show ≡/+xs
 ";

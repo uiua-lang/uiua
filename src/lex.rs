@@ -433,21 +433,6 @@ impl Lexer {
     fn next_char_exact(&mut self, c: char) -> bool {
         self.next_char_if(|c2| c2 == c).is_some()
     }
-    fn next_chars_exact(&mut self, chars: impl IntoIterator<Item = char>) -> bool {
-        let chars: Vec<char> = chars.into_iter().collect();
-        if chars.iter().enumerate().all(|(i, c)| {
-            self.input_chars
-                .get(self.loc.pos + i)
-                .map_or(false, |c2| c == c2)
-        }) {
-            for c in chars {
-                self.update_loc(c);
-            }
-            true
-        } else {
-            false
-        }
-    }
     fn next_char(&mut self) -> Option<char> {
         self.next_char_if(|_| true)
     }
@@ -593,12 +578,8 @@ impl Lexer {
                 '\n' => self.end(Newline, start),
                 c if c.is_whitespace() => continue,
                 c => {
-                    if let Some(prim) = Primitive::from_unicode(&c.to_string()) {
+                    if let Some(prim) = Primitive::from_unicode(c) {
                         self.end(Glyph(prim), start)
-                    } else if c == "🏳️‍⚧️".chars().next().unwrap()
-                        && self.next_chars_exact("🏳️‍⚧️".chars().skip(1))
-                    {
-                        self.end(Glyph(Primitive::Transpose), start)
                     } else {
                         Err(self.end_span(start).sp(LexError::UnexpectedChar(c)))
                     }

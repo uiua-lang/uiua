@@ -212,7 +212,13 @@ impl Compiler {
         Ok(())
     }
     pub fn load<P: AsRef<Path>>(&mut self, input: &str, path: P) -> UiuaResult {
-        let (items, errors) = parse(input, path.as_ref());
+        self.load_impl(input, Some(path.as_ref()))
+    }
+    pub fn load_str(&mut self, input: &str) -> UiuaResult {
+        self.load_impl(input, None)
+    }
+    fn load_impl(&mut self, input: &str, path: Option<&Path>) -> UiuaResult {
+        let (items, errors) = parse(input, path);
         let mut errors: Vec<Sp<CompileError>> = errors
             .into_iter()
             .map(|e| e.map(CompileError::Parse))

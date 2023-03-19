@@ -70,7 +70,7 @@ impl Error for ParseError {}
 
 pub type ParseResult<T = ()> = Result<T, Sp<ParseError>>;
 
-pub fn parse(input: &str, path: &Path) -> (Vec<Item>, Vec<Sp<ParseError>>) {
+pub fn parse(input: &str, path: Option<&Path>) -> (Vec<Item>, Vec<Sp<ParseError>>) {
     let tokens = match lex(input, path) {
         Ok(tokens) => tokens,
         Err(e) => return (Vec::new(), vec![e.map(ParseError::Lex)]),

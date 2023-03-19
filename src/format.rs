@@ -34,7 +34,13 @@ pub fn format_items(items: Vec<Item>) -> Result<String, Vec<Sp<CompileError>>> {
 }
 
 pub fn format<P: AsRef<Path>>(input: &str, path: P) -> UiuaResult<String> {
-    let (items, errors) = parse(input, path.as_ref());
+    format_impl(input, Some(path.as_ref()))
+}
+pub fn format_str(input: &str) -> UiuaResult<String> {
+    format_impl(input, None)
+}
+fn format_impl(input: &str, path: Option<&Path>) -> UiuaResult<String> {
+    let (items, errors) = parse(input, path);
     let mut errors: Vec<Sp<CompileError>> = errors.into_iter().map(Sp::map_into).collect();
     if errors.is_empty() {
         match format_items(items) {

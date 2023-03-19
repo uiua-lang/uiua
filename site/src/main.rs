@@ -2,7 +2,7 @@ use std::cell::RefCell;
 
 use gloo::{events::EventListener, utils::document};
 use rand::prelude::*;
-use uiua::{compile::Compiler, format::format, ops::Primitive, UiuaResult};
+use uiua::{compile::Compiler, format::format_str, ops::Primitive, UiuaResult};
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use web_sys::HtmlTextAreaElement;
 use yew::prelude::*;
@@ -244,12 +244,12 @@ fn code_element() -> HtmlTextAreaElement {
 /// Returns the output and the formatted code
 fn run_code(code: &str, format_first: bool) -> UiuaResult<(String, String)> {
     let formatted = if format_first {
-        format(code, "")?
+        format_str(code)?
     } else {
         code.to_string()
     };
     let mut compiler = Compiler::new();
-    compiler.load(code, "")?;
+    compiler.load_str(code)?;
     let assembly = compiler.finish();
     let (values, output) = assembly.run_piped()?;
     let mut s = String::new();

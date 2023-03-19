@@ -9,7 +9,7 @@ use std::{
 
 use crate::{function::Selector, ops::Primitive, Ident, RuntimeError};
 
-pub fn lex(input: &str, file: &Path) -> LexResult<Vec<Sp<Token>>> {
+pub fn lex(input: &str, file: Option<&Path>) -> LexResult<Vec<Sp<Token>>> {
     let mut lexer = Lexer::new(input, file);
     let mut tokens = Vec::new();
 
@@ -77,7 +77,7 @@ pub enum Span {
 pub struct CodeSpan {
     pub start: Loc,
     pub end: Loc,
-    pub file: Arc<Path>,
+    pub file: Option<Arc<Path>>,
     pub input: Arc<str>,
 }
 
@@ -89,7 +89,11 @@ impl fmt::Debug for CodeSpan {
 
 impl fmt::Display for CodeSpan {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}", self.file.to_string_lossy(), self.start)
+        if let Some(file) = &self.file {
+            write!(f, "{}:{}", file.to_string_lossy(), self.start)
+        } else {
+            write!(f, "{}", self.start)
+        }
     }
 }
 
@@ -391,12 +395,12 @@ impl From<Primitive> for Token {
 struct Lexer {
     input_chars: Vec<char>,
     loc: Loc,
-    file: Arc<Path>,
+    file: Option<Arc<Path>>,
     input: Arc<str>,
 }
 
 impl Lexer {
-    fn new(input: &str, file: &Path) -> Self {
+    fn new(input: &str, file: Option<&Path>) -> Self {
         Self {
             input_chars: input.chars().collect(),
             loc: Loc {
@@ -404,7 +408,7 @@ impl Lexer {
                 line: 1,
                 col: 1,
             },
-            file: file.into(),
+            file: file.map(Into::into),
             input: input.into(),
         }
     }

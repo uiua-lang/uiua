@@ -124,8 +124,7 @@ impl Value {
             self.array_mut().reverse();
         }
     }
-    pub fn join(&mut self, other: &mut Value, env: &Env) -> RuntimeResult {
-        let other = take(other);
+    pub fn join(&mut self, other: Value, env: &Env) -> RuntimeResult {
         match (self.is_array(), other.is_array()) {
             (true, true) => self.array_mut().join(other.into_array(), env)?,
             (true, false) => self.array_mut().join(Array::from(other), env)?,
@@ -150,8 +149,8 @@ impl Value {
             *self = Array::from(take(self)).into();
         }
     }
-    pub fn reshape(&mut self, other: &mut Value, env: &Env) -> RuntimeResult {
-        swap(self, other);
+    pub fn reshape(&mut self, mut other: Value, env: &Env) -> RuntimeResult {
+        swap(self, &mut other);
         let shape = other.as_shape(env, "Shape must be a list of natural numbers")?;
         self.coerce_array().reshape(shape);
         Ok(())
@@ -167,18 +166,22 @@ impl Value {
         }
         self.array_mut()
     }
-    pub fn replicate(&mut self, items: &mut Self, env: &Env) -> RuntimeResult {
+    pub fn coerce_into_array(mut self) -> Array {
+        self.coerce_array();
+        self.into_array()
+    }
+    pub fn replicate(&mut self, items: Self, env: &Env) -> RuntimeResult {
         if !items.is_array() {
             return Err(env.error("Cannot filter non-array"));
         }
-        let filtered = items.array_mut();
+        let filtered = items.into_array();
         let mut data = Vec::new();
         if self.is_num() {
             if !self.is_nat() {
                 return Err(env.error("Cannot replicate with non-integer"));
             }
             let n = self.number() as usize;
-            for cell in take(filtered).into_values() {
+            for cell in filtered.into_values() {
                 data.extend(repeat(cell).take(n));
             }
         } else if self.is_array() {
@@ -197,7 +200,7 @@ impl Value {
             if filter.rank() != 1 {
                 return Err(env.error("Cannot replicate with non-1D array"));
             }
-            for (&n, cell) in filter.numbers().iter().zip(take(filtered).into_values()) {
+            for (&n, cell) in filter.numbers().iter().zip(filtered.into_values()) {
                 if n.trunc() != n || n < 0.0 {
                     return Err(env.error("Cannot replicate with non-natural number"));
                 }
@@ -209,7 +212,7 @@ impl Value {
         *self = Array::from(data).normalized(1).into();
         Ok(())
     }
-    pub fn pick(&mut self, from: &mut Self, env: &Env) -> RuntimeResult {
+    pub fn pick(&mut self, from: Self, env: &Env) -> RuntimeResult {
         if !from.is_array() || from.array().rank() == 0 {
             return Err(env.error("Cannot pick from rank less than 1"));
         }
@@ -228,12 +231,12 @@ impl Value {
             .ok_or_else(|| env.error("Empty array has no first"))?;
         Ok(())
     }
-    pub fn take(&mut self, from: &mut Self, env: &Env) -> RuntimeResult {
+    pub fn take(&mut self, from: Self, env: &Env) -> RuntimeResult {
         if !from.is_array() || from.array().rank() == 0 {
             return Err(env.error("Cannot take from rank less than 1"));
         }
         let index = self.as_indices(env, "Index must be a list of integers")?;
-        let array = take(from).into_array();
+        let array = from.into_array();
         if index.len() > array.rank() {
             return Err(env.error(format!(
                 "Cannot take with index of greater rank: \
@@ -246,12 +249,12 @@ impl Value {
         *self = taken.into();
         Ok(())
     }
-    pub fn drop(&mut self, from: &mut Self, env: &Env) -> RuntimeResult {
+    pub fn drop(&mut self, from: Self, env: &Env) -> RuntimeResult {
         if !from.is_array() || from.array().rank() == 0 {
             return Err(env.error("Cannot drop from rank less than 1"));
         }
         let mut index = self.as_indices(env, "Index must be a list of integers")?;
-        let array = take(from).into_array();
+        let array = from.into_array();
         if index.len() > array.rank() {
             return Err(env.error(format!(
                 "Cannot drop with index of greater rank: \
@@ -290,8 +293,8 @@ impl Value {
             }
         })
     }
-    pub fn rotate(&mut self, target: &mut Self, env: &Env) -> RuntimeResult {
-        swap(self, target);
+    pub fn rotate(&mut self, mut target: Self, env: &Env) -> RuntimeResult {
+        swap(self, &mut target);
         let index = target.as_indices(env, "Index must be a list of integers")?;
         if index.is_empty() || index.iter().all(|i| *i == 0) {
             return Ok(());
@@ -315,12 +318,12 @@ impl Value {
             .normalized(0)
             .into();
     }
-    pub fn pair(&mut self, other: &mut Self) {
-        *self = Array::from((vec![2], vec![take(self), take(other)]))
+    pub fn pair(&mut self, other: Self) {
+        *self = Array::from((vec![2], vec![take(self), other]))
             .normalized(0)
             .into();
     }
-    pub fn couple(&mut self, other: &mut Self, env: &Env) -> RuntimeResult {
+    pub fn couple(&mut self, mut other: Self, env: &Env) -> RuntimeResult {
         let a = self.coerce_array();
         let b = other.coerce_array();
         if a.shape() != b.shape() {
@@ -352,7 +355,7 @@ impl Value {
         *arr = Array::from((vec![indices.len()], nums));
         Ok(())
     }
-    pub fn select(&mut self, from: &mut Self, env: &Env) -> RuntimeResult {
+    pub fn select(&mut self, mut from: Self, env: &Env) -> RuntimeResult {
         let indices = self.as_indices(env, "Indices must be a list of integers")?;
         let array = from.coerce_array();
         let mut selected = Vec::with_capacity(indices.len());
@@ -364,14 +367,14 @@ impl Value {
             .into();
         Ok(())
     }
-    pub fn windows(&mut self, from: &mut Self, env: &Env) -> RuntimeResult {
-        let array = from.coerce_array();
+    pub fn windows(&mut self, from: Self, env: &Env) -> RuntimeResult {
+        let mut array = from.coerce_into_array();
         let sizes = self.as_positives(env, "Window size must be a list of positive integers")?;
         if sizes.is_empty() {
             return Ok(());
         }
-        array_windows(&sizes, array, env)?;
-        *self = take(array).into();
+        array_windows(&sizes, &mut array, env)?;
+        *self = array.into();
         Ok(())
     }
     pub fn classify(&mut self, env: &Env) -> RuntimeResult {
@@ -389,9 +392,9 @@ impl Value {
         *self = Array::from(classified).into();
         Ok(())
     }
-    pub fn member(&mut self, of: &mut Self) {
+    pub fn member(&mut self, of: Self) {
         let members = self.coerce_array();
-        let set: BTreeSet<Value> = take(of.coerce_array()).into_values().into_iter().collect();
+        let set: BTreeSet<Value> = of.coerce_into_array().into_values().into_iter().collect();
         *self = Array::from(
             take(members)
                 .into_values()

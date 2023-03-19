@@ -1,6 +1,7 @@
+use gloo::{events::EventListener, utils::document};
 use uiua::{compile::Compiler, format::format};
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
-use web_sys::{window, HtmlTextAreaElement};
+use web_sys::{HtmlElement, HtmlTextAreaElement};
 use yew::prelude::*;
 
 const DEFAULT_CODE: &str = r#"⌗=¯1≡/-🗗2≤'A'∾' '."Um, I um ...arrays""#;
@@ -10,25 +11,20 @@ fn App() -> Html {
     let code = use_state(|| DEFAULT_CODE.to_string());
     let output = use_state(String::new);
     let error = use_state(String::new);
-    let onclick = {
+
+    // Run the code
+    let run = {
         let code = code.clone();
         let output = output.clone();
         let error = error.clone();
-        move |_| {
+        move || {
             output.set(String::new());
             error.set(String::new());
+            let mut display = "none";
             match format(&code, "") {
                 Ok(formatted) => {
                     code.set(formatted);
-                    window()
-                        .unwrap_throw()
-                        .document()
-                        .unwrap_throw()
-                        .get_element_by_id("code")
-                        .unwrap_throw()
-                        .dyn_into::<HtmlTextAreaElement>()
-                        .unwrap_throw()
-                        .set_value(&code);
+                    element::<HtmlTextAreaElement>("code").set_value(&code);
                 }
                 Err(e) => {
                     error.set(e.to_string());
@@ -44,17 +40,39 @@ fn App() -> Html {
             match assembly.run() {
                 Ok(values) => {
                     let mut s = String::new();
-                    for val in values {
+                    for val in values.into_iter().rev() {
                         s.push_str(&val.show());
-                        s.push('\n');
                     }
                     output.set(s);
+                    display = "block";
                 }
                 Err(e) => error.set(e.to_string()),
             }
+            element::<HtmlElement>("output")
+                .style()
+                .set_property("display", display)
+                .unwrap_throw();
         }
     };
 
+    // Run the code when the button is clicked
+    let onclick = {
+        let run = run.clone();
+        move |_| run()
+    };
+
+    // Run the code when Ctrl+Enter or Shift+Enter is pressed
+    use_effect(move || {
+        let listener = EventListener::new(&document(), "keydown", move |event| {
+            let event = event.dyn_ref::<web_sys::KeyboardEvent>().unwrap_throw();
+            if event.key() == "Enter" && (event.ctrl_key() || event.shift_key()) {
+                run();
+            }
+        });
+        || drop(listener)
+    });
+
+    // Update the code when the textarea is changed
     let oninput = {
         let code = code.clone();
         move |e: InputEvent| {
@@ -66,17 +84,27 @@ fn App() -> Html {
     };
 
     html! {
-        <div class="centered-div">
+        <div id="top" class="centered-div">
             <h1>{ "Uiua" }</h1>
             <h4>{ "A stack-oriented array programming language" }</h4>
-            <textarea id="code" {oninput} value={ (*code).clone() }></textarea>
-            <button {onclick}>{ "Run" }</button>
-            <p>{ (*output).clone() }</p>
-            <p>{ (*error).clone() }</p>
+            <div id="editor">
+                <textarea class="code" id="code" {oninput} value={ (*code).clone() }></textarea>
+                <button id="run-button" {onclick}>{ "Run" }</button>
+                <div id="output" class="code">{ (*output).clone() }</div>
+                <p id="error" class="code">{ (*error).clone() }</p>
+            </div>
         </div>
     }
 }
 
 fn main() {
     yew::Renderer::<App>::new().render();
+}
+
+fn element<T: JsCast>(id: &str) -> T {
+    document()
+        .get_element_by_id(id)
+        .unwrap_throw()
+        .dyn_into::<T>()
+        .unwrap_throw()
 }

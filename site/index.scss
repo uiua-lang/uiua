@@ -1,6 +1,9 @@
-html *
-{
-   font-family: Arial;
+html * {
+    font-family: Arial;
+}
+
+button {
+    border-width: 0;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -8,7 +11,13 @@ html *
         color: #eee;
         background-color: #222;
     }
+
     textarea {
+        color: #eee;
+        background-color: #444;
+    }
+
+    button {
         color: #eee;
         background-color: #444;
     }
@@ -19,15 +28,48 @@ html *
         color: #222;
         background-color: #eee;
     }
+
     textarea {
+        color: #222;
+        background-color: #fff;
+    }
+
+    button {
         color: #222;
         background-color: #fff;
     }
 }
 
-.centered-div {
+#top {
     margin: 100px auto;
     width: 50%;
+}
+
+#editor {
+    outline: 1px solid #ccc;
+}
+
+#code {
+    width: 100%;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+#output {
+    border: 1px solid #ccc;
+    padding: 10px;
+    display: none;
+    white-space: pre-wrap;
+}
+
+#error {
+    color: red;
+}
+
+#run-button {
+    float: right;
+    margin: 5px;
+    padding: 5px;
 }
 
 @font-face {
@@ -35,8 +77,6 @@ html *
     src: url(NotoSansMono.ttf) format("truetype");
 }
 
-
-textarea {
-    width: 100%;
+.code {
     font-family: "Noto";
 }

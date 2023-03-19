@@ -157,11 +157,14 @@ fn App() -> Html {
         .collect();
 
     for (glyph, title) in [
+        ("_", "strand"),
+        ("[]", "array"),
+        ("()", "function"),
+        ("|", "function separator"),
         ("'", "character"),
         ("\"", "string"),
-        ("|", "function separator"),
-        ("#", "comment"),
         ("=", "binding"),
+        ("#", "comment"),
     ] {
         let onclick = {
             let replace_code = replace_code.clone();

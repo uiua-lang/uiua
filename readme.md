@@ -1,6 +1,6 @@
 # Description
 
-Uiua (pronounced *"wee-wuh"*) is a simple programming language that borrows a bit from both the functional and array programming paradigms. It features rank-polymorphic arrays, partial function application, and a dedicated syntax for creating binary combinator trees.
+Uiua (pronounced *"wee-wuh"*) is a stack-oriented array programming language.
 
 # Installation
 
@@ -11,27 +11,60 @@ cargo install uiua
 
 # Introduction
 
-Just to get a taste, here is a program that shows all the even numbers between 1 and 20:
-```cs
-let evens = (0= . mod 2 / filter <>) . +1 . range
-do show <| evens 20
+In Uiua, a function or expression is made of *words*. 
+A word can push or pop any number of values to and from the program stack.
+
+Just to get a taste, here is a program that shows all the even numbers between 1 and 10:
+```
+Evens = ⌗=0◿2.
+show evens +1𝆱10
 ```
 A quick breakdown:
-- `0=` on its own makes a function that compares a number to 0
-- `mod 2` is a partial application of the `mod` function, equivalent to `x % 2` in some other languages
-- `.` is the composition operator, so `0= . mod 2` is a function that checks if a number is even
-- `filter` takes 2 argments, a mask array on the left telling what to keep, and an array on the right to filter
-- `/` combines the even-checking function and `filter` into a new function that still takes 2 arguments.
-  This new function runs its left argument through the even function before passing it as the left argument to `filter`
-- `<>` is the self operator, which is partially applied here. It takes the 2-argument function on the left and
-  passes the argument on the right as both arguments to the function
-- `+1` just adds 1 to something
-- `range` creates an array with numbers from `0` to `n-1`
-- Because arrays in Uiua are rank-polymorphic, `+1` maps over the whole array automatically to get numbers from `1` to `n`
+- `Evens = ` defines a function because is capitalized.
+- Operations are performed right-to-left.
+- `.` is the duplicate operator. It duplicates the top item on the stack.
+- `2` pushes the number `2` to the stack.
+- `◿` is the modulus operator. Here, `◿2` is applied to every item in the array.
+- `0` pushes the number `0` to the stack.
+- `=` compares two values for equality. `=0` is also applied to every item in the array.
+- `⌗` filters its second argument with a mask from its first argument. It is equivalent to APL's replicate`⌿`.
+- `10` pushes the number `10` to the stack.
+- `𝆱` gets all the natural numbers before its argument.
+- `1` pushes the number `1` to the stack.
+- `+` adds two values, in this case `1` and `𝆱10`.
+- `evens` calls the function. Identifiers are case-insensitive.
+- `show` pretty-prints its argument.
 
 Uiua's syntax is newline-sensitive, but all other whitespace is ignored.
 
 Code is compiled to bytecode and then executed by a virtual machine.
+
+## Special Characters
+
+Like most array languages, Uiua uses many special characters.
+However, Uiua *can* be written without *any* special characters.
+This is actually the main way to write Uiua code.
+Once ascii-only code is written, the Uiua formatter can convert certain names and ascii characters to their unicode conterparts.
+
+To format all Uiua code in the current directory, run:
+```
+uiua fmt
+```
+Code can also be formatted by simply running it.
+
+This will convert code like
+```
+show reshape~range/*.2_3_4
+```
+to
+```
+show ↯~𝆱/×.2_3_4
+```
+Primitive names only need to be long enough to disambiguate them, so the ascii code above could also be written as
+```
+show resh~rang/*.2_3_4
+```
+and it would still be converted.
 
 ## Types and Values
 
@@ -53,95 +86,48 @@ However, characters cannot be added together.
 
 ### Functions
 
-All functions in Uiua are curried and can be partially applied.
-
-Calling a function with too few arguments returns a new function that takes the remaining arguments.
+Function can be defined in a few ways:
+- A capitalized identifier followed by `=` and a body:
+```
+DoubleThenAdd = +2×
+```
+- Anywhere else when wrapped in `()`:
+```
+double = (×2)
+```
+- In *function arrays*, a special syntax for building lists of functions:
+```
+(+1|÷2◿10)
+```
 
 ### Arrays
 
 Arrays in Uiua are multidimensional and rank-polymorphic, meaning that many operations automatically apply to every item.
 Other operations allow the traversal of different axes.
 
-## Functional Programming
+Other than through functions (and the *function arrays* syntax above), there are two ways to create arrays.
 
-Uiua supports functional programming features including partial function application, currying, and higher-order functions.
-
-However, Uiua does not care about the purity of function. Any function may or may not have side effects.
-
-### Simple function declaration:
-```cs
-let add a b = a + b
-
-do show <| add 1 2 # prints 3
+Strand notation connetcs items with `_`:
 ```
-### Anonymous functions:
-```cs
-let show_increment = |x
-    do show x
-    x + 1
-
-let y = show_increment 5 # prints 5, sets y to 6
-
-let numbers = {1, 2, 3, 4, 5} # a list
-let sum = numbers |> fold (+) 0
+1_2_3
 ```
-
-## Strings
-
-Strings are UTF-8 encoded and are immutable.
-
-They are delimited by double quotes (`"`).
-
-```cs
-do show "Hello, world!"
+Inside `[]` brackets, arguments are evaluated from righ to left as normal, but at the end, all new values placed on the stack are popped into an array.
 ```
-Combining strings is done by using format strings.
-
-These are strings that start with a `$` before the first `"` and contain `{}` placeholders.
-
-Format strings evaluate to a function that takes the values to be inserted into the placeholders.
-
-```cs
-let say_hello = $"Hello, {}!"
-do show <| say_hello "World"
-
-let everyone = {"Alice", "Bob", "Charlie"}
-do everyone |> each say_hello |> each println
+[1 2 3]
 ```
-
-## Arrays
-
-Arrays in Uiua are rank-polymorphic, which means that many operations automatically apply to every item, even for multidimensional arrays.
-
-```cs
-do show <| [1, 2, 3] * 2 # [2, 4, 6]
+With this notation, subarrays attempt to *normalize*, meaning that if all subarrays have the same length, they are turned into a higher-dimensional array.
 ```
-Arrays (and lists) can be indexed with the `pick` function.
-```cs
-let numbers = [1, 2, 3, 4, 5]
-do show <| pick 2 numbers # 3
-do show <| numbers |> pick 2 # also 3
-
-let matrix = [
-    [1, 2, 3], 
-    [4, 5, 6], 
-    [7, 8, 9],
-]
-do show <| matrix |> pick [1, 2] # 6
+[[1 2 3] [4 5 6]] # a 2x3 array
 ```
-The `cells` function applies a function to an array, but one rank down.
-
-For example, if you want to get the middle row of a 2D array, you only have to index it:
-```cs
-let matrix = [
-    [1, 2, 3], 
-    [4, 5, 6], 
-    [7, 8, 9],
-]
-
-do show <| pick 1 matrix # [4, 5, 6]
+Any normal Uiua code can be put inside `[]` brackets. If you wanted a 3x3 array with rows descending to `[1 2 3]`, you could do
 ```
-However, if you wanted to get the middle *column*, you would have to use `cells`:
-```cs
-do show <| cells (pick 1) matrix # [2, 5, 8]
+[+3.+3.[1 2 3]]
+```
+This yields
+```
+┌─
+· 7 8 9
+· 4 5 6
+  1 2 3
+        ┘
 ```

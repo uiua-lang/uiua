@@ -207,6 +207,7 @@ value_bin_impl!(mul, (Num, number, Num, number, num_num));
 value_bin_impl!(div, (Num, number, Num, number, num_num));
 value_bin_impl!(modulus, (Num, number, Num, number, num_num));
 value_bin_impl!(pow, (Num, number, Num, number, num_num));
+value_bin_impl!(root, (Num, number, Num, number, num_num));
 value_bin_impl!(atan2, (Num, number, Num, number, num_num));
 
 value_bin_impl!(
@@ -386,7 +387,7 @@ fn value_memory_test() {
     let code = "
 xs = range 3_4
 show xs
-show `/+xs
+show ≡/+xs
 ";
     compiler.load(code, "test.uiua").unwrap();
     let assembly = compiler.finish();

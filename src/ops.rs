@@ -121,6 +121,7 @@ primitive!(
     (2, Div, "divide", Percent + "÷"),
     (2, Mod, "modulus" + "◿"),
     (2, Pow, "power" + "ⁿ"),
+    (2, Root, "root" + "◱"),
     (2, Min, "minimum" + "↧"),
     (2, Max, "maximum" + "↥"),
     (2, Atan, "atangent"),
@@ -135,7 +136,7 @@ primitive!(
     (1, Rank, "rank" + "⧈"),
     (1, Shape, "shape" + "⬠"),
     (1, Range, "range" + "𝆱"),
-    (1, First, "first" + "◱"),
+    (1, First, "first" + "⊢"),
     (1, Reverse, "reverse" + "⇌"),
     (1, Enclose, "enclose" + "⺆"),
     (1, Deshape, "deshape" + "♭"),
@@ -150,8 +151,8 @@ primitive!(
     (2, Couple, "couple" + "⊟"),
     (2, Pick, "pick" + "⊡"),
     (2, Select, "select" + "⊏"),
-    (2, Take, "take" + "↤"),
-    (2, Drop, "drop" + "↦"),
+    (2, Take, "take" + "↙"),
+    (2, Drop, "drop" + "↘"),
     (2, Reshape, "reshape" + "↯"),
     (2, Rotate, "rotate" + "↻"),
     (2, Windows, "windows" + "🗗"),
@@ -235,6 +236,7 @@ impl Primitive {
             Primitive::Div => env.dyadic_env(Value::div)?,
             Primitive::Mod => env.dyadic_env(Value::modulus)?,
             Primitive::Pow => env.dyadic_env(Value::pow)?,
+            Primitive::Root => env.dyadic_env(Value::root)?,
             Primitive::Min => env.dyadic_env(Value::min)?,
             Primitive::Max => env.dyadic_env(Value::max)?,
             Primitive::Atan => env.dyadic_env(Value::atan2)?,
@@ -498,4 +500,17 @@ fn primitive_from_name() {
     assert_eq!(Primitive::from_name("rev"), Some(Primitive::Reverse));
     assert_eq!(Primitive::from_name("re"), None);
     assert_eq!(Primitive::from_name("resh"), Some(Primitive::Reshape));
+}
+
+#[test]
+fn glyph_size() {
+    use std::{fs::File, io::Write};
+    let mut file = File::create("glyph_test.txt").unwrap();
+    writeln!(file, "A |").unwrap();
+    writeln!(file, "a |").unwrap();
+    for p in Primitive::ALL {
+        if let Some(glyph) = p.name().unicode {
+            writeln!(file, "{} |", glyph).unwrap();
+        }
+    }
 }

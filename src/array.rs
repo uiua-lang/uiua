@@ -501,6 +501,7 @@ array_bin_impl!(mul, (Num, numbers, Num, numbers, num_num));
 array_bin_impl!(div, (Num, numbers, Num, numbers, num_num));
 array_bin_impl!(modulus, (Num, numbers, Num, numbers, num_num));
 array_bin_impl!(pow, (Num, numbers, Num, numbers, num_num));
+array_bin_impl!(root, (Num, numbers, Num, numbers, num_num));
 array_bin_impl!(atan2, (Num, numbers, Num, numbers, num_num));
 
 array_bin_impl!(

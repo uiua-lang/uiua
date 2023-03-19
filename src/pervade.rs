@@ -232,6 +232,16 @@ pub mod pow {
     }
 }
 
+pub mod root {
+    use super::*;
+    pub fn num_num(a: &f64, b: &f64) -> f64 {
+        b.powf(1.0 / a)
+    }
+    pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot get the root of {a} to {b}"))
+    }
+}
+
 pub mod max {
     use super::*;
     pub fn num_num(a: &f64, b: &f64) -> f64 {

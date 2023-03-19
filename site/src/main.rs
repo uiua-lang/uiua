@@ -148,7 +148,12 @@ fn App() -> Html {
         })
         .collect();
 
-    for (glyph, title) in [("#", "comment"), ("=", "binding")] {
+    for (glyph, title) in [
+        ("'", "character"),
+        ("\"", "string"),
+        ("#", "comment"),
+        ("=", "binding"),
+    ] {
         let onclick = {
             let replace_code = replace_code.clone();
             move |_| replace_code(glyph)

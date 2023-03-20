@@ -39,6 +39,10 @@ button:active {
         background-color: #445;
     }
 
+    button:hover {
+        background-color: #556;
+    }
+
     a:link {
         color: #3cf;
     }
@@ -66,6 +70,10 @@ button:active {
     button {
         color: #443;
         background-color: #fff;
+    }
+
+    button:hover {
+        background-color: #eee;
     }
 }
 

@@ -35,8 +35,8 @@ const CHAR_TAG: u8 = 1;
 const FUNCTION_TAG: u8 = 2;
 const ARRAY_TAG: u8 = 3;
 
-static TYPES: [Type; 4] = {
-    let mut types = [Type::Num; 4];
+static TYPES: [Type; 9] = {
+    let mut types = [Type::Num; 9];
     types[NUM_TAG as usize] = Type::Num;
     types[CHAR_TAG as usize] = Type::Char;
     types[FUNCTION_TAG as usize] = Type::Function;
@@ -58,7 +58,7 @@ impl Value {
         TYPES[self.0.tag() as usize]
     }
     pub fn is_num(&self) -> bool {
-        self.0.tag() == NUM_TAG as u32
+        self.0.tag() == NUM_TAG as u32 || self.0.tag() > ARRAY_TAG as u32
     }
     pub fn is_nat(&self) -> bool {
         self.is_num() && {

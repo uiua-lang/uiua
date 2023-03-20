@@ -192,7 +192,7 @@ pub fn App(cx: Scope) -> impl IntoView {
                         <button id="next-example"
                             class="code-button"
                             on:click=next_example
-                            title="Next example">{ "⏵" }
+                            title="Next example">{ ">" }
                         </button>
                     </div>
                     { move || output.get() }

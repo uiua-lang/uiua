@@ -21,10 +21,10 @@ pub trait GridFmt {
 
 impl GridFmt for f64 {
     fn fmt_grid(&self) -> Grid {
-        let s = if *self >= -0.0 {
-            self.abs().to_string()
-        } else {
+        let s = if *self < -0.0 {
             format!("¯{}", self.abs())
+        } else {
+            self.abs().to_string()
         };
         vec![s.chars().collect()]
     }

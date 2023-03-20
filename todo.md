@@ -1,10 +1,13 @@
+- Show stack in terminal
+- REPL
 - Contextual selectors
 - More array functions
   - Index of
   - Progressive index of
   - Nudge
   - Throw
-  - Zip
+  - Couple Min
+  - Couple Max
 - Implement function reversal
 - Error handling
 - Basic parsing functions

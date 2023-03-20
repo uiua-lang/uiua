@@ -439,11 +439,11 @@ impl Primitive {
             }
             Primitive::Repeat => {
                 let f = env.pop(1)?;
-                let n = env.pop(2)?;
+                let mut acc = env.pop(2)?;
+                let n = env.pop(3)?;
                 let Some(n) = n.as_nat() else {
                     return Err(env.error("Repetitions must be a natural number"));
                 };
-                let mut acc = env.pop(1)?;
                 for _ in 0..n {
                     env.push(acc);
                     env.push(f.clone());

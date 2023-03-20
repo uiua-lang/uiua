@@ -8,7 +8,7 @@ use web_sys::HtmlTextAreaElement;
 
 const EXAMPLES: &[&str] = &[
     r#"‡=¯1 ≡/-◫2 ≤'A' ≍' ' ."Um, I um...arrays""#,
-    "# Click Run to format!\nfirst repeat (\\+ rev) 10 0_1",
+    "# Click Run to format!\nfirst repeat (\\+ rev)0_1 10",
     "↯~⇡/×.2_3_4",
     "Avg = ÷/+~⇀.\nAvg 0_2_1_5",
     r#"⊟⸪(≅⇌.).["uiua" "racecar" "wow" "cool!"]"#,

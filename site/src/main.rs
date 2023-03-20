@@ -218,7 +218,7 @@ fn run_code(code: &str, format_first: bool) -> UiuaResult<(String, String)> {
         code.to_string()
     };
     let mut compiler = Compiler::new();
-    compiler.load_str(code)?;
+    compiler.load_str(&formatted)?;
     let assembly = compiler.finish();
     let (values, output) = assembly.run_piped()?;
     let mut s = String::new();

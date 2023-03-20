@@ -205,8 +205,8 @@ impl<B: IoBackend> Vm<B> {
             }
             Function::Selector(sel) => {
                 let mut items = Vec::with_capacity(sel.inputs() as usize);
-                for _ in 0..sel.inputs() {
-                    items.push(env.pop()?);
+                for n in 0..sel.inputs() {
+                    items.push(env.pop(n as usize)?);
                 }
                 let bottom = env.vm.stack.len();
                 for i in sel.output_indices() {
@@ -246,12 +246,13 @@ impl<'a, B: IoBackend> CallEnv<'a, B> {
     pub fn truncate(&mut self, size: usize) {
         self.vm.stack.truncate(size);
     }
-    #[track_caller]
-    pub fn pop(&mut self) -> RuntimeResult<Value> {
-        self.vm
-            .stack
-            .pop()
-            .ok_or_else(|| self.error("stack is empty"))
+    pub fn pop(&mut self, arg: impl StackArg) -> RuntimeResult<Value> {
+        self.vm.stack.pop().ok_or_else(|| {
+            self.error(format!(
+                "stack was empty when evaluating {}",
+                arg.arg_name()
+            ))
+        })
     }
     pub fn pop_n(&mut self, n: usize) -> RuntimeResult<Vec<Value>> {
         if self.vm.stack.len() < n {
@@ -259,12 +260,14 @@ impl<'a, B: IoBackend> CallEnv<'a, B> {
         }
         Ok(self.vm.stack.drain(self.vm.stack.len() - n..).collect())
     }
-    #[track_caller]
-    pub fn top_mut(&mut self) -> RuntimeResult<&mut Value> {
+    pub fn top_mut(&mut self, arg: impl StackArg) -> RuntimeResult<&mut Value> {
         if let Some(value) = self.vm.stack.last_mut() {
             Ok(value)
         } else {
-            Err(self.assembly.spans[self.span].error("stack is empty"))
+            Err(self.assembly.spans[self.span].error(format!(
+                "stack was empty when evaluating argument {}",
+                arg.arg_name()
+            )))
         }
     }
     pub fn call(&mut self) -> RuntimeResult {
@@ -281,7 +284,7 @@ impl<'a, B: IoBackend> CallEnv<'a, B> {
         self.assembly.error(self.span, msg.into())
     }
     pub fn monadic<V: Into<Value>>(&mut self, f: fn(&Value) -> V) -> RuntimeResult {
-        let value = self.pop()?;
+        let value = self.pop(1)?;
         self.push(f(&value));
         Ok(())
     }
@@ -290,28 +293,28 @@ impl<'a, B: IoBackend> CallEnv<'a, B> {
         f: fn(&Value, &Env) -> RuntimeResult<V>,
     ) -> RuntimeResult {
         let env = self.env();
-        let value = self.top_mut()?;
+        let value = self.top_mut(1)?;
         *value = f(value, &env)?.into();
         Ok(())
     }
     pub fn monadic_mut(&mut self, f: fn(&mut Value)) -> RuntimeResult {
-        f(self.top_mut()?);
+        f(self.top_mut(1)?);
         Ok(())
     }
     pub fn monadic_mut_env(&mut self, f: fn(&mut Value, &Env) -> RuntimeResult) -> RuntimeResult {
         let env = self.env();
-        f(self.top_mut()?, &env)
+        f(self.top_mut(1)?, &env)
     }
     pub fn dyadic<V: Into<Value>>(&mut self, f: fn(&Value, &Value) -> V) -> RuntimeResult {
-        let mut b = self.pop()?;
-        let a = self.top_mut()?;
+        let mut b = self.pop(1)?;
+        let a = self.top_mut(2)?;
         swap(a, &mut b);
         *a = f(a, &b).into();
         Ok(())
     }
     pub fn dyadic_mut(&mut self, f: fn(&mut Value, Value)) -> RuntimeResult {
-        let mut b = self.pop()?;
-        let a = self.top_mut()?;
+        let mut b = self.pop(1)?;
+        let a = self.top_mut(2)?;
         swap(a, &mut b);
         f(a, b);
         Ok(())
@@ -321,8 +324,8 @@ impl<'a, B: IoBackend> CallEnv<'a, B> {
         f: fn(&Value, &Value, &Env) -> RuntimeResult<V>,
     ) -> RuntimeResult {
         let env = self.env();
-        let mut b = self.pop()?;
-        let a = self.top_mut()?;
+        let mut b = self.pop(1)?;
+        let a = self.top_mut(2)?;
         swap(a, &mut b);
         *a = f(a, &b, &env)?.into();
         Ok(())
@@ -332,9 +335,37 @@ impl<'a, B: IoBackend> CallEnv<'a, B> {
         f: fn(&mut Value, Value, &Env) -> RuntimeResult,
     ) -> RuntimeResult {
         let env = self.env();
-        let mut b = self.pop()?;
-        let a = self.top_mut()?;
+        let mut b = self.pop(1)?;
+        let a = self.top_mut(2)?;
         swap(a, &mut b);
         f(a, b, &env)
+    }
+}
+
+pub trait StackArg {
+    fn arg_name(&self) -> String;
+}
+
+impl StackArg for usize {
+    fn arg_name(&self) -> String {
+        format!("argument {self}")
+    }
+}
+
+impl StackArg for u8 {
+    fn arg_name(&self) -> String {
+        format!("argument {self}")
+    }
+}
+
+impl StackArg for i32 {
+    fn arg_name(&self) -> String {
+        format!("argument {self}")
+    }
+}
+
+impl<'a> StackArg for &'a str {
+    fn arg_name(&self) -> String {
+        self.to_string()
     }
 }

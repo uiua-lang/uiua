@@ -260,20 +260,20 @@ impl Primitive {
             Primitive::Member => env.dyadic_mut(Value::member)?,
             Primitive::Group => env.dyadic_mut_env(Value::group)?,
             Primitive::Dup => {
-                let x = env.top_mut()?.clone();
+                let x = env.top_mut(1)?.clone();
                 env.push(x);
             }
             Primitive::Flip => {
-                let a = env.pop()?;
-                let b = env.pop()?;
+                let a = env.pop(1)?;
+                let b = env.pop(2)?;
                 env.push(a);
                 env.push(b);
             }
             Primitive::Pop => {
-                env.pop()?;
+                env.pop(1)?;
             }
             Primitive::ExclusiveFork => {
-                let fs = env.pop()?;
+                let fs = env.pop(1)?;
                 if !fs.is_array() {
                     env.push(fs);
                     return env.call();
@@ -287,7 +287,7 @@ impl Primitive {
                 }
             }
             Primitive::AdicFork(n) => {
-                let fs = env.pop()?;
+                let fs = env.pop(1)?;
                 if !fs.is_array() {
                     env.push(fs);
                     return env.call();
@@ -302,9 +302,9 @@ impl Primitive {
                 }
             }
             Primitive::Fold => {
-                let f = env.pop()?;
-                let mut acc = env.pop()?;
-                let xs = env.pop()?;
+                let f = env.pop(1)?;
+                let mut acc = env.pop(2)?;
+                let xs = env.pop(3)?;
                 if !xs.is_array() {
                     env.push(acc);
                     env.push(xs);
@@ -316,13 +316,13 @@ impl Primitive {
                     env.push(cell);
                     env.push(f.clone());
                     env.call()?;
-                    acc = env.pop()?;
+                    acc = env.pop("folded function result")?;
                 }
                 env.push(acc);
             }
             Primitive::Reduce => {
-                let f = env.pop()?;
-                let xs = env.pop()?;
+                let f = env.pop(1)?;
+                let xs = env.pop(2)?;
                 if !xs.is_array() {
                     env.push(xs);
                     return Ok(());
@@ -336,13 +336,13 @@ impl Primitive {
                     env.push(acc);
                     env.push(f.clone());
                     env.call()?;
-                    acc = env.pop()?;
+                    acc = env.pop("reduced function result")?;
                 }
                 env.push(acc);
             }
             Primitive::Each => {
-                let f = env.pop()?;
-                let xs = env.pop()?;
+                let f = env.pop(1)?;
+                let xs = env.pop(2)?;
                 if !xs.is_array() {
                     env.push(xs);
                     env.push(f);
@@ -354,13 +354,13 @@ impl Primitive {
                     env.push(val);
                     env.push(f.clone());
                     env.call()?;
-                    new_values.push(env.pop()?);
+                    new_values.push(env.pop("each's function result")?);
                 }
                 env.push(Array::from((shape, new_values)).normalized(0));
             }
             Primitive::Cells => {
-                let f = env.pop()?;
-                let xs = env.pop()?;
+                let f = env.pop(1)?;
+                let xs = env.pop(2)?;
                 if !xs.is_array() {
                     env.push(xs);
                     env.push(f);
@@ -372,14 +372,14 @@ impl Primitive {
                     env.push(cell);
                     env.push(f.clone());
                     env.call()?;
-                    cells.push(env.pop()?);
+                    cells.push(env.pop("cells' function result")?);
                 }
                 env.push(Array::from(cells).normalized(1));
             }
             Primitive::Table => {
-                let f = env.pop()?;
-                let xs = env.pop()?;
-                let ys = env.pop()?;
+                let f = env.pop(1)?;
+                let xs = env.pop(2)?;
+                let ys = env.pop(3)?;
                 if !xs.is_array() && !ys.is_array() {
                     env.push(ys);
                     env.push(xs);
@@ -404,15 +404,15 @@ impl Primitive {
                         env.push(a.clone());
                         env.push(f.clone());
                         env.call()?;
-                        row.push(env.pop()?);
+                        row.push(env.pop("tabled function result")?);
                     }
                     table.push(Value::from(Array::from(row).normalized(1)));
                 }
                 env.push(Array::from(table).normalized(1));
             }
             Primitive::Scan => {
-                let f = env.pop()?;
-                let xs = env.pop()?;
+                let f = env.pop(1)?;
+                let xs = env.pop(2)?;
                 if !xs.is_array() {
                     env.push(xs);
                     return Ok(());
@@ -432,29 +432,29 @@ impl Primitive {
                     env.push(acc.clone());
                     env.push(f.clone());
                     env.call()?;
-                    acc = env.pop()?;
+                    acc = env.pop("scanned function result")?;
                     scanned.push(acc.clone());
                 }
                 env.push(Array::from(scanned).normalized(1));
             }
             Primitive::Repeat => {
-                let f = env.pop()?;
-                let n = env.pop()?;
+                let f = env.pop(1)?;
+                let n = env.pop(2)?;
                 let Some(n) = n.as_nat() else {
                     return Err(env.error("Repetitions must be a natural number"));
                 };
-                let mut acc = env.pop()?;
+                let mut acc = env.pop(1)?;
                 for _ in 0..n {
                     env.push(acc);
                     env.push(f.clone());
                     env.call()?;
-                    acc = env.pop()?;
+                    acc = env.pop("repeated function result")?;
                 }
                 env.push(acc);
             }
             Primitive::Try => {
-                let f = env.pop()?;
-                let handle = env.pop()?;
+                let f = env.pop(1)?;
+                let handle = env.pop(2)?;
                 let size = env.stack_size();
                 env.push(f);
                 if let Err(e) = env.call() {
@@ -465,16 +465,16 @@ impl Primitive {
                 }
             }
             Primitive::Show => {
-                let mut s = env.pop()?.grid_string();
+                let mut s = env.pop(1)?.grid_string();
                 s.pop();
                 env.vm.io.print_str_ln(&s.to_string());
             }
             Primitive::Print => {
-                let val = env.pop()?;
+                let val = env.pop(1)?;
                 env.vm.io.print_str(&val.to_string());
             }
             Primitive::Println => {
-                let val = env.pop()?;
+                let val = env.pop(1)?;
                 env.vm.io.print_str_ln(&val.to_string());
             }
             Primitive::Len => env.monadic(|v| v.len() as f64)?,
@@ -500,7 +500,7 @@ impl Primitive {
                 ))
             }
             Primitive::Var => {
-                let name = env.pop()?;
+                let name = env.pop(1)?;
                 if !name.is_array() || !name.array().is_chars() {
                     return Err(env.error("Argument to var must be a string"));
                 }

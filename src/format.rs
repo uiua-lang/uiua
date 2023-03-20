@@ -139,7 +139,7 @@ impl Format for Binding {
 impl Format for Word {
     fn format(&self, state: &mut FormatState) {
         match self {
-            Word::Real(f) => {
+            Word::Number(f) => {
                 let space = state.prepare_for_constant();
                 state.space_if_alphanumeric();
                 state.space_if(|c| c == '¯');

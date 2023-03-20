@@ -270,7 +270,7 @@ impl Parser {
         } else if let Some(ident) = self.try_ident() {
             ident.map(Word::Ident)
         } else if let Some(r) = self.next_token_map(Token::as_number) {
-            r.map(Into::into).map(Word::Real)
+            r.map(Into::into).map(Word::Number)
         } else if let Some(c) = self.next_token_map(Token::as_char) {
             c.map(Into::into).map(Word::Char)
         } else if let Some(s) = self.next_token_map(Token::as_string) {

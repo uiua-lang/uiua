@@ -24,7 +24,7 @@ thread_local! {
 
 #[function_component]
 fn App() -> Html {
-    let (_, default_output) = run_code(EXAMPLES[0], false).unwrap_throw();
+    let (_, default_output) = run_code(EXAMPLES[0], false).expect_throw("First example failed");
 
     let example = use_state(|| 0);
     let code = use_state(|| EXAMPLES[0].to_string());
@@ -161,6 +161,7 @@ fn App() -> Html {
         ("[]", "array"),
         ("()", "function"),
         ("|", "function separator"),
+        ("¯", "negative\n`"),
         ("'", "character"),
         ("\"", "string"),
         ("=", "binding"),

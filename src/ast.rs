@@ -23,7 +23,7 @@ pub struct Binding {
 
 #[derive(Clone)]
 pub enum Word {
-    Real(String),
+    Number(String),
     Char(char),
     String(String),
     Ident(Ident),
@@ -39,7 +39,7 @@ pub enum Word {
 impl fmt::Debug for Word {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Word::Real(real) => write!(f, "{real:?}"),
+            Word::Number(real) => write!(f, "{real:?}"),
             Word::Char(char) => write!(f, "{char:?}"),
             Word::String(string) => write!(f, "{{{string}}}"),
             Word::Ident(ident) => write!(f, "ident({ident})"),

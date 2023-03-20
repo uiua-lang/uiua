@@ -77,7 +77,7 @@ impl Assembly {
 pub enum CompileError {
     Parse(ParseError),
     InvalidInteger(String),
-    InvalidReal(String),
+    InvalidNumber(String),
     UnknownBinding(Ident),
     ConstEval(UiuaError),
 }
@@ -87,7 +87,7 @@ impl fmt::Display for CompileError {
         match self {
             CompileError::Parse(e) => write!(f, "{e}"),
             CompileError::InvalidInteger(s) => write!(f, "invalid integer: {s}"),
-            CompileError::InvalidReal(s) => write!(f, "invalid real: {s}"),
+            CompileError::InvalidNumber(s) => write!(f, "invalid real: {s}"),
             CompileError::UnknownBinding(s) => write!(f, "unknown binding: {s}"),
             CompileError::ConstEval(e) => write!(f, "{e}"),
         }
@@ -344,11 +344,12 @@ impl Compiler {
     }
     fn word(&mut self, word: Sp<Word>, call: bool) {
         match word.value {
-            Word::Real(s) => {
+            Word::Number(s) => {
                 let f: f64 = match s.parse() {
                     Ok(f) => f,
                     Err(_) => {
-                        self.errors.push(word.span.sp(CompileError::InvalidReal(s)));
+                        self.errors
+                            .push(word.span.sp(CompileError::InvalidNumber(s)));
                         0.0
                     }
                 };

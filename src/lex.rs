@@ -23,19 +23,19 @@ pub fn lex(input: &str, file: Option<&Path>) -> LexResult<Vec<Sp<Token>>> {
 #[derive(Debug)]
 pub enum LexError {
     UnexpectedChar(char),
-    Bang,
     ExpectedCharacter(Option<char>),
     InvalidEscape(char),
+    ExpectedNumber,
 }
 
 impl fmt::Display for LexError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             LexError::UnexpectedChar(c) => write!(f, "unexpected char {c:?}"),
-            LexError::Bang => write!(f, " unexpected char `!`, maybe you meant `not`?"),
             LexError::ExpectedCharacter(Some(c)) => write!(f, "expected {c:?}"),
             LexError::ExpectedCharacter(None) => write!(f, "expected character"),
             LexError::InvalidEscape(c) => write!(f, "invalid escape character {c:?}"),
+            LexError::ExpectedNumber => write!(f, "expected number"),
         }
     }
 }
@@ -314,7 +314,6 @@ pub enum Simple {
     CloseBracket,
     Comma,
     Underscore,
-    BackTick,
     Caret,
     Colons(u8),
     Period,
@@ -348,7 +347,6 @@ impl fmt::Display for Simple {
             Simple::OpenBracket => write!(f, "["),
             Simple::CloseBracket => write!(f, "]"),
             Simple::Comma => write!(f, ","),
-            Simple::BackTick => write!(f, "`"),
             Simple::Caret => write!(f, "^"),
             Simple::Underscore => write!(f, "_"),
             Simple::Colons(n) => {
@@ -496,7 +494,14 @@ impl Lexer {
                 }
                 ',' => self.end(Comma, start),
                 '_' => self.end(Underscore, start),
-                '`' => self.end(BackTick, start),
+                '`' => {
+                    let number = self.number('-');
+                    if number.len() == 1 {
+                        Err(self.end_span(start).sp(LexError::ExpectedNumber))
+                    } else {
+                        self.end(Token::Number(number), start)
+                    }
+                }
                 '^' => self.end(Caret, start),
                 '/' => self.end(Slash, start),
                 '\\' => self.end(BackSlash, start),
@@ -504,7 +509,8 @@ impl Lexer {
                 '+' => self.end(Plus, start),
                 '-' => self.end(Minus, start),
                 '¯' if self.peek_char().filter(char::is_ascii_digit).is_some() => {
-                    self.number(start, "-".into())
+                    let number = self.number('-');
+                    self.end(Token::Number(number), start)
                 }
                 '*' => self.end(Star, start),
                 '%' => self.end(Percent, start),
@@ -577,7 +583,10 @@ impl Lexer {
                     self.end(token, start)
                 }
                 // Numbers
-                c if c.is_ascii_digit() => self.number(start, c.to_string()),
+                c if c.is_ascii_digit() => {
+                    let number = self.number(c);
+                    self.end(Token::Number(number), start)
+                }
                 // Newlines
                 '\n' => self.end(Newline, start),
                 c if c.is_whitespace() => continue,
@@ -591,9 +600,9 @@ impl Lexer {
             };
         }
     }
-    fn number(&mut self, start: Loc, init: String) -> LexResult<Option<Sp<Token>>> {
+    fn number(&mut self, init: char) -> String {
         // Whole part
-        let mut number = init;
+        let mut number = String::from(init);
         while let Some(c) = self.next_char_if(|c| c.is_ascii_digit()) {
             number.push(c);
         }
@@ -621,7 +630,7 @@ impl Lexer {
                 number.push(c);
             }
         }
-        self.end(Token::Number(number), start)
+        number
     }
     fn character(&mut self, escaped: &mut bool, escape_char: char) -> Result<Option<char>, char> {
         let Some(c) = self.next_char_if(|c| c != escape_char || *escaped) else {

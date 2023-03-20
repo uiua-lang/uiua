@@ -240,28 +240,28 @@ fn run_code(code: &str, format_first: bool) -> UiuaResult<(String, String)> {
 #[component]
 fn MainText(cx: Scope) -> impl IntoView {
     view! { cx, <div>
-        <p>{"Uiua ("}<i><a href="weewah.mp3">{"wee-wuh"}</a></i>{") is a stack-oriented array programming language with a focus on tacit code. Its semantics and primitives (and this site) are largely inspired by "}<a href="https://mlochbaum.github.io/BQN/">{"BQN"}</a>{", but it combines the array paradigm with the stack-oriented paradigm to make writing point-free code more workable."}</p>
+        <p>"Uiua ("<i><a href="weewah.mp3">"wee-wuh"</a></i>") is a stack-oriented array programming language with a focus on tacit code. Its semantics and primitives (and this site) are largely inspired by "<a href="https://mlochbaum.github.io/BQN/">"BQN"</a>", but it combines the array paradigm with the stack-oriented paradigm to make writing point-free code more workable."</p>
         <hr/>
-        <h3>{"How is Uiua like other array languages?"}</h3>
-        <p>{"Like APL, J, BQN, and many other array languages, Uiua's primary data type is the array. Arrays are multidimensional and rank-polymorphic, meaning that many operation automatically apply to every element."}</p>
-        <p>{"Uiua features:"}</p>
+        <h3>"How is Uiua like other array languages?"</h3>
+        <p>"Like APL, J, BQN, and many other array languages, Uiua's primary data type is the array. Arrays are multidimensional and rank-polymorphic, meaning that many operation automatically apply to every element."</p>
+        <p>"Uiua features:"</p>
         <ul>
-            <li>{"A rich set of primitives"}</li>
-            <li>{"Arrays following the "}<a href="https://mlochbaum.github.io/BQN/doc/based.html">{"Based Array Model"}</a></li>
-            <li>{"Basic IO facilities"}</li>
-            <li>{"Compile-time code evaluation"}</li>
-            <li>{"A deterministic formatter"}</li>
+            <li>"A rich set of primitives"</li>
+            <li>"Arrays following the "<a href="https://mlochbaum.github.io/BQN/doc/based.html">"Based Array Model"</a></li>
+            <li>"Basic IO facilities"</li>
+            <li>"Compile-time code evaluation"</li>
+            <li>"A deterministic formatter"</li>
         </ul>
         <hr/>
-        <h3>{"How is Uiua different from other array languages?"}</h3>
-        <p>{"Uiua does away with the infix notation of most array languages for a more general prefix notation. While functions still take arguments, they pull those arguments from the stack and push their results back on. This enables a lot of cool stuff, particularly in the realm of tacit code."}</p>
-        <p>{"Uiua also features:"}</p>
+        <h3>"How is Uiua different from other array languages?"</h3>
+        <p>"Uiua does away with the infix notation of most array languages for a more general prefix notation. While functions still take arguments, they pull those arguments from the stack and push their results back on. This enables a lot of cool stuff, particularly in the realm of tacit code."</p>
+        <p>"Uiua also features:"</p>
         <ul>
-            <li>{"Hook and fork constructs without parenthesis"}</li>
-            <li>{"Selector literals, or combinators that only rearrange arguments"}</li>
-            <li>{"Stack-to-array syntax for building arrays with stack operations"}</li>
-            <li>{"Special syntax for constructing lists of functions"}</li>
-            <li>{"Functions that work with lists of functions to form complex combinators"}</li>
+            <li>"Hook and fork constructs without parenthesis"</li>
+            <li>"Selector literals, or combinators that only rearrange arguments"</li>
+            <li>"Stack-to-array syntax for building arrays with stack operations"</li>
+            <li>"Special syntax for constructing lists of functions"</li>
+            <li>"Functions that work with lists of functions to form complex combinators"</li>
         </ul>
     </div>}
 }

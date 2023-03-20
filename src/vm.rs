@@ -26,7 +26,7 @@ pub(crate) enum Instr {
     Push(Value),
     Constant(usize),
     BeginArray,
-    EndArray(bool),
+    EndArray(bool, usize),
     BindGlobal,
     CopyGlobal(usize),
     Call(usize),
@@ -62,10 +62,10 @@ pub(crate) use dprintln;
 pub struct Vm<B = StdIo> {
     call_stack: Vec<StackFrame>,
     array_stack: Vec<usize>,
+    globals: Vec<Value>,
     pub stack: Vec<Value>,
     pc: usize,
     just_called: Option<Function>,
-    globals: Vec<Value>,
     pub io: B,
 }
 
@@ -129,8 +129,12 @@ impl<B: IoBackend> Vm<B> {
                     stack.push(assembly.constants[*n].clone())
                 }
                 Instr::BeginArray => self.array_stack.push(stack.len()),
-                Instr::EndArray(normalize) => {
+                Instr::EndArray(normalize, span) => {
                     let bottom = self.array_stack.pop().expect("nothing in array stack");
+                    if bottom > stack.len() {
+                        return Err(assembly.spans[*span]
+                            .error("array construction ended with a smaller stack"));
+                    }
                     let array: Array = stack.drain(bottom..).rev().collect();
                     stack.push(array.normalized(*normalize as usize).into());
                 }

@@ -11,7 +11,7 @@ pub trait IoBackend {
     }
     fn print_str_ln(&mut self, s: &str) {
         self.print_str(s);
-        self.print_str("\r");
+        self.print_str("\n");
     }
     fn var(&mut self, name: &str) -> Option<String> {
         None

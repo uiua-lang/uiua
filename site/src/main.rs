@@ -82,13 +82,14 @@ pub fn App(cx: Scope) -> impl IntoView {
         let elem = code_element();
         if let (Ok(Some(start)), Ok(Some(end))) = (elem.selection_start(), elem.selection_end()) {
             let (start, end) = (start.min(end) as usize, start.max(end) as usize);
-            let text = code
+            let text: String = code
                 .get()
                 .chars()
                 .take(start)
                 .chain(inserted.chars())
                 .chain(code.get().chars().skip(end))
                 .collect();
+            code_element().set_value(&text);
             set_code.set(text);
         };
     };

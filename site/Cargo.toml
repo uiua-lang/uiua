@@ -4,16 +4,25 @@ name = "site"
 version = "0.1.0"
 
 [dependencies]
-gloo = "0.8.0"
-instant.features = ['wasm-bindgen']
-instant.version = "0.1.12"
-rand.default-features = false
-rand.features = ["small_rng"]
-rand.version = "0.8.5"
-uiua.default-features = false
-uiua.path = ".."
 wasm-bindgen = "0.2.84"
-web-sys.features = ["CssStyleDeclaration"]
-web-sys.version = "0.3.61"
-yew.features = ["csr"]
-yew.version = "0.20.0"
+
+[dependencies.web-sys]
+features = ["CssStyleDeclaration"]
+version = "0.3.61"
+
+[dependencies.instant]
+features = ['wasm-bindgen']
+version = "0.1.12"
+
+[dependencies.leptos]
+features = ["stable"]
+version = "0.2.3"
+
+[dependencies.rand]
+default-features = false
+features = ["small_rng"]
+version = "0.8.5"
+
+[dependencies.uiua]
+default-features = false
+path = ".."

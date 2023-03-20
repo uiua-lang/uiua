@@ -1,11 +1,10 @@
 use std::cell::RefCell;
 
-use gloo::{events::EventListener, utils::document};
+use leptos::{ev::Event, *};
 use rand::prelude::*;
 use uiua::{compile::Compiler, format::format_str, ops::Primitive, UiuaResult};
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use web_sys::HtmlTextAreaElement;
-use yew::prelude::*;
 
 const EXAMPLES: &[&str] = &[
     r#"‡=¯1 ≡/-◫2 ≤'A' ≍' ' ."Um, I um...arrays""#,
@@ -19,100 +18,105 @@ const EXAMPLES: &[&str] = &[
 ];
 
 thread_local! {
-    static SUBTITLE: RefCell<Option<usize>> = RefCell::new(None);
+    static SUBTITLE: RefCell<Option<usize>>  = RefCell::new(None);
 }
 
-#[function_component]
-fn App() -> Html {
+pub fn main() {
+    mount_to_body(|cx| view! { cx, <App/> })
+}
+
+#[component]
+pub fn App(cx: Scope) -> impl IntoView {
+    // Choose a random subtitle
+    let subtitles = [
+        view! {cx, <p>"A stack-oriented array programming language"</p>},
+        view! {cx, <p>"An array-oriented stack programming language"</p>},
+        view! {cx, <p>"A programming language for point-free enjoyers"</p>},
+        view! {cx, <p>"A programming language for variable dislikers"</p>},
+        view! {cx, <p>"What if APL was a FORTH?"</p>},
+        view! {cx, <p>"What if FORTH was an APL?"</p>},
+        view! {cx, <p>"Isn't a stack a sort of array?"</p>},
+        view! {cx, <p>"It's got um...I um...arrays"</p>},
+        view! {cx, <p><a href="https://youtu.be/seVSlKazsNk">"Point-Free or Die"</a></p>},
+        view! {cx, <p>"Notation as a tool of thot"</p>},
+        view! {cx, <p>"Do you like this page Marshall?"</p>},
+        view! {cx, <p>"Conor Dyadic Hookstra"</p>},
+    ];
+    let index = SUBTITLE.with(|s| {
+        *s.borrow_mut().get_or_insert_with(|| {
+            let mut rng = SmallRng::seed_from_u64(instant::now().to_bits());
+            // Prefers lower indices
+            let index = rng.gen_range(0.0..(subtitles.len() as f64).cbrt());
+            index.powi(3) as usize
+        })
+    });
+    let subtitle = subtitles[index].clone();
+
     let (_, default_output) = run_code(EXAMPLES[0], false).expect_throw("First example failed");
 
-    let example = use_state(|| 0);
-    let code = use_state(|| EXAMPLES[0].to_string());
-    let output = use_state(move || default_output);
-    let error = use_state(String::new);
+    let (_, set_example) = create_signal(cx, 0);
+    let (code, set_code) = create_signal(cx, EXAMPLES[0].to_string());
+    let (output, set_output) = create_signal(cx, default_output);
+    let (error, set_error) = create_signal(cx, String::new());
 
     // Run the code
-    let run = {
-        let code = code.clone();
-        let output = output.clone();
-        let error = error.clone();
-        move |format: bool| {
-            output.set(String::new());
-            error.set(String::new());
-            let code_string = code_element().value();
-            match run_code(&code_string, format) {
-                Ok((formatted, stack)) => {
-                    code_element().set_value(&formatted);
-                    code.set(formatted);
-                    output.set(stack);
-                }
-                Err(e) => {
-                    gloo::console::log!(e.show(false));
-                    error.set(e.show(false))
-                }
+    let run = move |format: bool| {
+        set_output.set(String::new());
+        set_error.set(String::new());
+        let code_string = code_element().value();
+        match run_code(&code_string, format) {
+            Ok((formatted, stack)) => {
+                code_element().set_value(&formatted);
+                set_code.set(formatted);
+                set_output.set(stack);
+            }
+            Err(e) => {
+                log!("{}", e.show(false));
+                set_error.set(e.show(false))
             }
         }
     };
 
-    // Run the code when the button is clicked
-    let run_click = {
-        let run = run.clone();
-        move |_| run(true)
+    // Replace the selected text in the editor with the given string
+    let replace_code = move |inserted: &str| {
+        let elem = code_element();
+        if let (Ok(Some(start)), Ok(Some(end))) = (elem.selection_start(), elem.selection_end()) {
+            let (start, end) = (start.min(end) as usize, start.max(end) as usize);
+            let text = code
+                .get()
+                .chars()
+                .take(start)
+                .chain(inserted.chars())
+                .chain(code.get().chars().skip(end))
+                .collect();
+            set_code.set(text);
+        };
     };
 
     // Go to the next example
-    let next_example_click = {
-        let code = code.clone();
-        let run = run.clone();
-        move |_| {
-            let next = (*example + 1) % EXAMPLES.len();
-            example.set(next);
-            code.set(EXAMPLES[next].to_string());
-            code_element().set_value(EXAMPLES[next]);
+    let next_example = move |_| {
+        set_example.update(|e| {
+            *e = (*e + 1) % EXAMPLES.len();
+            set_code.set(EXAMPLES[*e].to_string());
+            code_element().set_value(EXAMPLES[*e]);
             run(false);
-        }
+        })
     };
 
     // Run the code when Ctrl+Enter or Shift+Enter is pressed
-    use_effect(move || {
-        let listener = EventListener::new(&document(), "keydown", move |event| {
-            let event = event.dyn_ref::<web_sys::KeyboardEvent>().unwrap_throw();
-            if event.key() == "Enter" && (event.ctrl_key() || event.shift_key()) {
-                run(true);
-            }
-        });
-        || drop(listener)
+    window_event_listener("keydown", move |event| {
+        let event = event.dyn_ref::<web_sys::KeyboardEvent>().unwrap_throw();
+        if event.key() == "Enter" && (event.ctrl_key() || event.shift_key()) {
+            run(true);
+        }
     });
 
     // Update the code when the textarea is changed
-    let oninput = {
-        let code = code.clone();
-        move |e: InputEvent| {
-            let event: Event = e.dyn_into().unwrap_throw();
-            let text_area: HtmlTextAreaElement =
-                event.target().unwrap_throw().dyn_into().unwrap_throw();
-            code.set(text_area.value());
-        }
+    let code_input = move |event: Event| {
+        let text_area: HtmlTextAreaElement =
+            event.target().unwrap_throw().dyn_into().unwrap_throw();
+        set_code.set(text_area.value());
     };
-
-    let replace_code = {
-        let code = code.clone();
-        move |inserted: &str| {
-            let elem = code_element();
-            if let (Ok(Some(start)), Ok(Some(end))) = (elem.selection_start(), elem.selection_end())
-            {
-                let (start, end) = (start.min(end) as usize, start.max(end) as usize);
-                let text = code
-                    .chars()
-                    .take(start)
-                    .chain(inserted.chars())
-                    .chain(code.chars().skip(end))
-                    .collect();
-                code.set(text);
-            }
-        }
-    };
-
     let mut glyph_buttons: Vec<_> = Primitive::ALL
         .iter()
         .filter_map(|p| {
@@ -132,10 +136,7 @@ fn App() -> Html {
                 name.ident.unwrap_or_default(),
                 format_args!("\n{extra}")
             );
-            let onclick = {
-                let replace_code = replace_code.clone();
-                move |_| replace_code(&p.to_string())
-            };
+            let onclick = move |_| replace_code(&p.to_string());
             let class = format!(
                 "glyph-button {}",
                 if p.is_modifier() {
@@ -150,8 +151,8 @@ fn App() -> Html {
                     }
                 }
             );
-            Some(html! {
-                <button {class} {title} {onclick}>{ text }</button>
+            Some(view! { cx,
+                <button class=class title=title on:click=onclick>{ text }</button>
             })
         })
         .collect();
@@ -167,41 +168,14 @@ fn App() -> Html {
         ("=", "binding"),
         ("#", "comment"),
     ] {
-        let onclick = {
-            let replace_code = replace_code.clone();
-            move |_| replace_code(glyph)
-        };
-        glyph_buttons.push(html! {
-            <button class="glyph-button" {title} {onclick}>{glyph}</button>
+        let onclick = move |_| replace_code(glyph);
+        glyph_buttons.push(view! { cx,
+            <button class="glyph-button" title=title on:click=onclick>{glyph}</button>
         });
     }
 
-    // Choose a random subtitle
-    let subtitles = [
-        html! {<p>{"A stack-oriented array programming language"}</p>},
-        html! {<p>{"An array-oriented stack programming language"}</p>},
-        html! {<p>{"A programming language for point-free enjoyers"}</p>},
-        html! {<p>{"A programming language for variable dislikers"}</p>},
-        html! {<p>{"What if APL was a FORTH?"}</p>},
-        html! {<p>{"What if FORTH was an APL?"}</p>},
-        html! {<p>{"Isn't a stack a sort of array?"}</p>},
-        html! {<p>{"It's got um...I um...arrays"}</p>},
-        html! {<p><a href="https://youtu.be/seVSlKazsNk">{"Point-Free or Die"}</a></p>},
-        html! {<p>{"Notation as a tool of thot"}</p>},
-        html! {<p>{"Do you like this page Marshall?"}</p>},
-        html! {<p>{"Conor Dyadic Hookstra"}</p>},
-    ];
-    let index = SUBTITLE.with(|s| {
-        *s.borrow_mut().get_or_insert_with(|| {
-            let mut rng = SmallRng::seed_from_u64(instant::now().to_bits());
-            // Prefers lower indices
-            let index = rng.gen_range(0.0..(subtitles.len() as f64).cbrt());
-            index.powi(3) as usize
-        })
-    });
-    let subtitle = subtitles[index].clone();
-
-    html! {
+    view! {
+        cx,
         <div id="top">
             <h1>{ "Uiua" }</h1>
             <div id="subtitle">
@@ -210,19 +184,19 @@ fn App() -> Html {
             </div>
             <div id="editor">
                 <div id="glyph-buttons">{ glyph_buttons }</div>
-                <textarea class="code" id="code" spellcheck="false" {oninput} value={ (*code).clone() }/>
+                <textarea class="code" id="code" spellcheck="false" on:input=code_input>{ move || code.get() }</textarea>
                 <div id="output" class="code">
                     <div id="code-buttons">
-                        <button id="run-button" class="code-button" onclick={run_click}>{ "Run" }</button>
+                        <button id="run-button" class="code-button" on:click=move |_| run(true)>{ "Run" }</button>
                         <button id="next-example"
                             class="code-button"
-                            onclick={next_example_click}
+                            on:click=next_example
                             title="Next example">{ "⏵" }
                         </button>
                     </div>
-                    { (*output).clone() }
+                    { move || output.get() }
                 </div>
-                <p id="error" class="code">{ (*error).clone() }</p>
+                <p id="error" class="code">{ move || error.get() }</p>
             </div>
             <div id="editor-help">
                 <p class="editor-help-item">{ "Type some or all of a glyph's name, then run to format the names into glyphs." }</p>
@@ -230,25 +204,9 @@ fn App() -> Html {
             </div>
             <br/>
             <br/>
-            { main_text() }
+            <MainText/>
         </div>
     }
-}
-
-fn main() {
-    yew::Renderer::<App>::new().render();
-}
-
-fn element<T: JsCast>(id: &str) -> T {
-    document()
-        .get_element_by_id(id)
-        .unwrap_throw()
-        .dyn_into::<T>()
-        .unwrap_throw()
-}
-
-fn code_element() -> HtmlTextAreaElement {
-    element("code")
 }
 
 /// Returns the output and the formatted code
@@ -278,8 +236,9 @@ fn run_code(code: &str, format_first: bool) -> UiuaResult<(String, String)> {
     Ok((formatted, s))
 }
 
-fn main_text() -> Html {
-    html! {<div>
+#[component]
+fn MainText(cx: Scope) -> impl IntoView {
+    view! { cx, <div>
         <p>{"Uiua ("}<i><a href="weewah.mp3">{"wee-wuh"}</a></i>{") is a stack-oriented array programming language with a focus on tacit code. Its semantics and primitives (and this site) are largely inspired by "}<a href="https://mlochbaum.github.io/BQN/">{"BQN"}</a>{", but it combines the array paradigm with the stack-oriented paradigm to make writing point-free code more workable."}</p>
         <hr/>
         <h3>{"How is Uiua like other array languages?"}</h3>
@@ -304,4 +263,16 @@ fn main_text() -> Html {
             <li>{"Functions that work with lists of functions to form complex combinators"}</li>
         </ul>
     </div>}
+}
+
+fn element<T: JsCast>(id: &str) -> T {
+    document()
+        .get_element_by_id(id)
+        .unwrap_throw()
+        .dyn_into::<T>()
+        .unwrap_throw()
+}
+
+fn code_element() -> HtmlTextAreaElement {
+    element("code")
 }

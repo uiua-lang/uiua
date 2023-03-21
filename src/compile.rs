@@ -52,6 +52,7 @@ pub enum CompileError {
     InvalidNumber(String),
     UnknownBinding(Ident),
     ConstEval(UiuaError),
+    RefOutsideContext(usize),
 }
 
 impl fmt::Display for CompileError {
@@ -62,6 +63,11 @@ impl fmt::Display for CompileError {
             CompileError::InvalidNumber(s) => write!(f, "invalid real: {s}"),
             CompileError::UnknownBinding(s) => write!(f, "unknown binding: {s}"),
             CompileError::ConstEval(e) => write!(f, "{e}"),
+            CompileError::RefOutsideContext(n) => write!(
+                f,
+                "`{}` is referenced outside a context",
+                (*n as u8 + b'a') as char
+            ),
         }
     }
 }
@@ -80,7 +86,7 @@ impl From<UiuaError> for CompileError {
 
 pub struct Compiler {
     /// Instructions for functions that are currently being compiled
-    in_progress_functions: Vec<Vec<Instr>>,
+    in_progress_functions: Vec<InProgressFunction>,
     /// Values and functions that are bound
     bindings: HashMap<Ident, Bound>,
     /// Errors that don't stop compilation
@@ -135,6 +141,11 @@ pub struct FunctionInfo {
     pub params: usize,
 }
 
+struct InProgressFunction {
+    instrs: Vec<Instr>,
+    refs: Vec<(usize, Span)>,
+}
+
 impl Compiler {
     pub fn new() -> Self {
         Self::default()
@@ -174,7 +185,7 @@ impl Compiler {
     }
     fn push_instr(&mut self, instr: Instr) {
         if let Some(ipf) = self.in_progress_functions.last_mut() {
-            ipf.push(instr);
+            ipf.instrs.push(instr);
         } else {
             self.assembly.instrs.push(instr);
         }
@@ -222,7 +233,7 @@ impl Compiler {
                 Item::Words(words) => stack = self.eval_words(words)?,
                 Item::Binding(binding) => {
                     if binding.name.value.is_capitalized() {
-                        self.func_outer(FunctionId::Named(binding.name.value), |this| {
+                        self.func_outer(FunctionId::Named(binding.name.value), None, |this| {
                             this.words(binding.words, true)
                         });
                     } else {
@@ -278,13 +289,7 @@ impl Compiler {
                 self.push_instr(Instr::EndArray(false, 0));
             }
             Word::Func(func) => self.func(func),
-            Word::FuncArray(funcs) => {
-                self.push_instr(Instr::BeginArray);
-                for func in funcs.into_iter().rev() {
-                    self.func(func);
-                }
-                self.push_instr(Instr::EndArray(false, 0));
-            }
+            Word::RefFunc(func) => self.ref_func(func, word.span),
             Word::Primitive(prim) => self.primitive(prim, word.span, call),
             Word::Modified(m) => self.modified(*m, call),
         }
@@ -296,6 +301,18 @@ impl Compiler {
                 let name = ident.as_str();
                 if let Some(prim) = Primitive::from_name(name) {
                     return self.primitive(prim, span, call);
+                }
+                if let Some(ipf) = self.in_progress_functions.last_mut() {
+                    if name.len() == 1 {
+                        let c = name.chars().next().unwrap();
+                        if c.is_ascii_alphabetic() {
+                            let n = (c as u8 - b'a') as usize;
+                            ipf.refs.push((n, span.clone()));
+                            let span = self.push_call_span(span);
+                            self.push_instr(Instr::CopyRef(n, span));
+                            return;
+                        }
+                    }
                 }
                 self.errors
                     .push(span.clone().sp(CompileError::UnknownBinding(ident.clone())));
@@ -312,9 +329,17 @@ impl Compiler {
             self.push_instr(Instr::Call(span));
         }
     }
-    fn func_outer(&mut self, id: FunctionId, inner: impl FnOnce(&mut Self)) {
+    fn func_outer(
+        &mut self,
+        id: FunctionId,
+        refs_span: Option<Span>,
+        inner: impl FnOnce(&mut Self),
+    ) {
         // Initialize the function's instruction list
-        self.in_progress_functions.push(Vec::new());
+        self.in_progress_functions.push(InProgressFunction {
+            instrs: Vec::new(),
+            refs: Vec::new(),
+        });
         // Push the function's name as a comment
         let _name = match &id {
             FunctionId::Named(name) => format!("fn {name}"),
@@ -324,12 +349,32 @@ impl Compiler {
         // Compile the function's body
         inner(self);
         // Add the function's instructions to the global function list
-        let instrs = self.in_progress_functions.pop().unwrap();
+        let ipf = self.in_progress_functions.pop().unwrap();
         // Push the function
-        self.push_instr(Instr::Push(Function { id, instrs }.into()));
+        self.push_instr(Instr::Push(
+            Function {
+                id,
+                instrs: ipf.instrs,
+            }
+            .into(),
+        ));
+        // Call as reference if necessary
+        if let Some(span) = refs_span {
+            let max_ref = ipf.refs.iter().map(|(n, _)| *n).max().unwrap_or(0) + 1;
+            let span = self.push_call_span(span);
+            self.push_instr(Instr::CallRef(max_ref, span));
+        } else if !ipf.refs.is_empty() {
+            for (n, span) in ipf.refs {
+                self.errors
+                    .push(span.sp(CompileError::RefOutsideContext(n)));
+            }
+        }
     }
     fn func(&mut self, func: Func) {
-        self.func_outer(func.id, |this| this.words(func.body, true))
+        self.func_outer(func.id, None, |this| this.words(func.body, true));
+    }
+    fn ref_func(&mut self, func: Func, span: Span) {
+        self.func_outer(func.id, Some(span), |this| this.words(func.body, true));
     }
     fn primitive(&mut self, prim: Primitive, span: Span, call: bool) {
         let span = self.push_call_span(span);
@@ -355,7 +400,7 @@ impl Compiler {
                 .clone()
                 .merge(modified.word.span.clone()),
         );
-        self.func_outer(id, |this| {
+        self.func_outer(id, None, |this| {
             this.word(modified.word, false);
             this.primitive(modified.modifier.value, modified.modifier.span, true);
         });

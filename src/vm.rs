@@ -39,6 +39,7 @@ pub(crate) use dprintln;
 pub struct Vm<B = StdIo> {
     instrs: vec::IntoIter<Instr>,
     call_stack: Vec<StackFrame>,
+    ref_stack: Vec<Vec<Value>>,
     array_stack: Vec<usize>,
     pub globals: Vec<Value>,
     pub stack: Vec<Value>,
@@ -50,6 +51,7 @@ impl<B: Default> Default for Vm<B> {
         Self {
             instrs: Vec::new().into_iter(),
             call_stack: Vec::new(),
+            ref_stack: Vec::new(),
             array_stack: Vec::new(),
             globals: constants().into_iter().map(|(_, v)| v).collect(),
             stack: Vec::new(),
@@ -147,6 +149,36 @@ impl<B: IoBackend> Vm<B> {
                 };
                 prim.run(&mut env)?;
             }
+            Instr::CallRef(n, span) => {
+                let f = self.stack.pop().expect("stack empty when calling ref");
+                if self.stack.len() < n {
+                    return Err(assembly.spans[span].error(format!(
+                        "reference requires {n} values, but only {} are on the stack",
+                        self.stack.len()
+                    )));
+                }
+                let mut values = self.stack.split_off(self.stack.len() - n);
+                values.reverse();
+                self.ref_stack.push(values);
+                self.stack.push(f);
+                let res = self.call_complete(assembly, span);
+                self.ref_stack.pop().expect("ref stack empty");
+                res?
+            }
+            Instr::CopyRef(n, span) => {
+                let name = || (n as u8 + b'a') as char;
+                let Some(values) = self.ref_stack.last() else {
+                    return Err(assembly.spans[span].error(format!("`{}` has no reference context", name())));
+                };
+                if n >= values.len() {
+                    return Err(assembly.spans[span].error(format!(
+                        "reference `{}` requires {n} values, but the current context only has {}",
+                        name(),
+                        values.len()
+                    )));
+                }
+                self.stack.push(values[n].clone());
+            }
         }
         Ok(())
     }
@@ -168,6 +200,14 @@ impl<B: IoBackend> Vm<B> {
             pc: 0,
         });
         Ok(true)
+    }
+    pub fn call_complete(&mut self, assembly: &Assembly, span: usize) -> RuntimeResult {
+        let return_depth = self.call_stack.len();
+        let call_started = self.call(span)?;
+        if call_started {
+            self.run_assembly_inner(assembly, Some(return_depth))?;
+        }
+        Ok(())
     }
 }
 
@@ -204,12 +244,6 @@ impl<'a, B: IoBackend> CallEnv<'a, B> {
             ))
         })
     }
-    pub fn pop_n(&mut self, n: usize) -> RuntimeResult<Vec<Value>> {
-        if self.vm.stack.len() < n {
-            return Err(self.error("stack is empty"));
-        }
-        Ok(self.vm.stack.drain(self.vm.stack.len() - n..).collect())
-    }
     pub fn top_mut(&mut self, arg: impl StackArg) -> RuntimeResult<&mut Value> {
         if let Some(value) = self.vm.stack.last_mut() {
             Ok(value)
@@ -221,13 +255,7 @@ impl<'a, B: IoBackend> CallEnv<'a, B> {
         }
     }
     pub fn call(&mut self) -> RuntimeResult {
-        let return_depth = self.vm.call_stack.len();
-        let call_started = self.vm.call(self.span)?;
-        if call_started {
-            self.vm
-                .run_assembly_inner(self.assembly, Some(return_depth))?;
-        }
-        Ok(())
+        self.vm.call_complete(self.assembly, self.span)
     }
     pub fn error(&mut self, msg: impl Into<String>) -> RuntimeError {
         self.assembly.error(self.span, msg.into())
@@ -288,13 +316,6 @@ impl<'a, B: IoBackend> CallEnv<'a, B> {
         let a = self.top_mut(2)?;
         swap(a, &mut b);
         f(a, b, &env)
-    }
-    pub fn with_reference(
-        &mut self,
-        _size: usize,
-        _f: impl FnOnce(&mut Self) -> RuntimeResult,
-    ) -> RuntimeResult {
-        todo!("references")
     }
 }
 

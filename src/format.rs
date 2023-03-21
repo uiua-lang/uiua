@@ -201,17 +201,15 @@ impl Format for Word {
                 }
                 state.push(')');
             }
-            Word::FuncArray(fs) => {
-                state.push('(');
-                for (i, f) in fs.iter().enumerate() {
-                    if i > 0 {
-                        state.push('|');
+            Word::RefFunc(f) => {
+                state.push('{');
+                for (i, word) in f.body.iter().enumerate() {
+                    if i == f.body.len() - 1 {
+                        state.was_primitive = false;
                     }
-                    for word in &f.body {
-                        word.value.format(state);
-                    }
+                    word.value.format(state);
                 }
-                state.push(')');
+                state.push('}');
             }
             Word::Primitive(prim) => prim.format(state),
             Word::Modified(m) => {

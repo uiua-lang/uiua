@@ -272,7 +272,9 @@ impl Parser {
             c.map(Into::into).map(Word::Char)
         } else if let Some(s) = self.next_token_map(Token::as_string) {
             s.map(Into::into).map(Word::String)
-        } else if let Some(expr) = self.try_parened()? {
+        } else if let Some(expr) = self.try_func()? {
+            expr
+        } else if let Some(expr) = self.try_ref_func()? {
             expr
         } else if let Some(start) = self.try_exact(OpenBracket) {
             let items = self.try_words()?.unwrap_or_default();
@@ -292,51 +294,30 @@ impl Parser {
                 return Ok(Some(span.sp(prim)));
             }
         }
-        if let Some(n) = self.next_token_map(Token::as_colons) {
-            return Ok(Some(n.map(Primitive::AdicFork)));
-        }
         Ok(None)
     }
-    fn try_parened(&mut self) -> ParseResult<Option<Sp<Word>>> {
+    fn try_func(&mut self) -> ParseResult<Option<Sp<Word>>> {
         let Some(start) = self.try_exact(OpenParen) else {
             return Ok(None);
         };
-        let mut groups = Vec::new();
-        let end = loop {
-            let words = self.try_words()?.unwrap_or_default();
-            groups.push(words);
-            if let Some(span) = self.try_exact(CloseParen) {
-                break span;
-            } else if self.try_exact(Bar).is_none() {
-                return Err(
-                    self.expected([Expectation::Simple(CloseParen), Expectation::Simple(Bar)])
-                );
-            }
+        let body = self.try_words()?.unwrap_or_default();
+        let end = self.expect(CloseParen)?;
+        let span = start.merge(end);
+        Ok(Some(span.clone().sp(Word::Func(Func {
+            id: FunctionId::Anonymous(span),
+            body,
+        }))))
+    }
+    fn try_ref_func(&mut self) -> ParseResult<Option<Sp<Word>>> {
+        let Some(start) = self.try_exact(OpenCurly) else {
+            return Ok(None);
         };
-        let span = start.clone().merge(end);
-        Ok(Some(span.clone().sp(if groups.is_empty() {
-            unreachable!("At least one group is always pushed")
-        } else if groups.len() == 1 {
-            Word::Func(Func {
-                id: FunctionId::Anonymous(span),
-                body: groups.into_iter().next().unwrap(),
-            })
-        } else {
-            let mut last_span = start;
-            let mut funcs = Vec::new();
-            for words in groups {
-                let span = if let Some((first, last)) = words.first().zip(words.last()) {
-                    last_span = last.span.clone();
-                    first.span.clone().merge(last.span.clone())
-                } else {
-                    last_span.clone()
-                };
-                funcs.push(Func {
-                    id: FunctionId::Anonymous(span),
-                    body: words,
-                });
-            }
-            Word::FuncArray(funcs)
-        })))
+        let body = self.try_words()?.unwrap_or_default();
+        let end = self.expect(CloseCurly)?;
+        let span = start.merge(end);
+        Ok(Some(span.clone().sp(Word::RefFunc(Func {
+            id: FunctionId::Anonymous(span),
+            body,
+        }))))
     }
 }

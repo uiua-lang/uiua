@@ -476,8 +476,8 @@ impl Lexer {
             return match c {
                 '(' => self.end(OpenParen, start),
                 ')' => self.end(CloseParen, start),
-                // '{' => self.end(OpenCurly, start),
-                // '}' => self.end(CloseCurly, start),
+                '{' => self.end(OpenCurly, start),
+                '}' => self.end(CloseCurly, start),
                 '[' => self.end(OpenBracket, start),
                 ']' => self.end(CloseBracket, start),
                 '.' => self.end(Period, start),

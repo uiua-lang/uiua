@@ -30,15 +30,11 @@ macro_rules! primitive {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
         pub enum Primitive {
             $($name,)*
-            AdicFork(u8)
         }
 
         impl Primitive {
-            pub const ALL: [Self; 3 $(+ {stringify!($name); 1})*] = [
+            pub const ALL: [Self; 0 $(+ {stringify!($name); 1})*] = [
                 $(Self::$name,)*
-                Self::AdicFork(1),
-                Self::AdicFork(2),
-                Self::AdicFork(3),
             ];
             #[allow(path_statements)]
             pub fn name(&self) -> PrimitiveName {
@@ -48,22 +44,11 @@ macro_rules! primitive {
                         ascii: {None::<Simple> $(;Some(Simple::$ascii))?},
                         unicode: {None::<char> $(;Some($unicode))?},
                     },)*
-                    Primitive::AdicFork(n) => PrimitiveName {
-                        ident: match n {
-                            1 => Some("monadic fork"),
-                            2 => Some("dyadic fork"),
-                            3 => Some("triadic fork"),
-                            _ => None
-                        },
-                        ascii: Some(Simple::Colons(*n)),
-                        unicode: None
-                    },
                 }
             }
             pub fn from_simple(s: Simple) -> Option<Self> {
                 match s {
                     $($(Simple::$ascii => Some(Self::$name),)?)*
-                    Simple::Colons(n) => Some(Self::AdicFork(n)),
                     _ => None
                 }
             }
@@ -85,7 +70,6 @@ macro_rules! primitive {
             pub fn args(&self) -> Option<u8> {
                 match self {
                     $($(Primitive::$name => Some($args),)?)*
-                    Primitive::AdicFork(n) => Some(*n + 1),
                     _ => None
                 }
             }
@@ -183,7 +167,7 @@ primitive!(
 );
 
 fn _keep_primitive_small(_: std::convert::Infallible) {
-    let _: [u8; 2] = unsafe { std::mem::transmute(Some(Primitive::Not)) };
+    let _: [u8; 1] = unsafe { std::mem::transmute(Some(Primitive::Not)) };
 }
 
 impl fmt::Display for Primitive {
@@ -276,24 +260,6 @@ impl Primitive {
             }
             Primitive::Pop => {
                 env.pop(1)?;
-            }
-            Primitive::AdicFork(n) => {
-                let fs = env.pop(1)?;
-                env.with_reference(*n as usize, |env| {
-                    if !fs.is_array() {
-                        env.push(fs);
-                        return env.call();
-                    }
-                    let args = env.pop_n(*n as usize)?;
-                    for f in fs.into_array().into_values().into_iter().rev() {
-                        for arg in args.iter() {
-                            env.push(arg.clone());
-                        }
-                        env.push(f);
-                        env.call()?;
-                    }
-                    Ok(())
-                })?;
             }
             Primitive::Fold => {
                 let f = env.pop(1)?;

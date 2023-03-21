@@ -67,6 +67,8 @@ pub enum Instr {
     BindGlobal,
     Primitive(Primitive, usize),
     Call(usize),
+    CallRef(usize, usize),
+    CopyRef(usize, usize),
 }
 
 impl fmt::Display for Instr {
@@ -79,6 +81,8 @@ impl fmt::Display for Instr {
             Instr::CopyGlobal(idx) => write!(f, "g{idx}"),
             Instr::Primitive(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => Ok(()),
+            Instr::CallRef(n, _) => write!(f, "ref{n}"),
+            Instr::CopyRef(n, _) => write!(f, "{}", (*n as u8 + b'a') as char),
         }
     }
 }

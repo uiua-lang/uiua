@@ -1,5 +1,7 @@
 use std::{f64::consts::*, fmt};
 
+use rand::{rngs::SmallRng, Rng, SeedableRng};
+
 use crate::{
     array::Array, grid_fmt::GridFmt, io::IoBackend, lex::Simple, value::*, vm::CallEnv,
     RuntimeResult,
@@ -163,6 +165,7 @@ primitive!(
     (0, ScanLn, "scanln"),
     (0, Args, "args"),
     (1, Var, "var"),
+    (0, Rand, "rand"),
     // Modifiers
     (Reduce { modifier(1) }, "reduce", Slash),
     (Scan { modifier(1) }, "scan", BackSlash),
@@ -539,6 +542,9 @@ impl Primitive {
                 let key: String = name.array().chars().iter().collect();
                 let var = env.vm.io.var(&key).unwrap_or_default();
                 env.push(var);
+            }
+            Primitive::Rand => {
+                env.push(SmallRng::seed_from_u64(instant::now().to_bits()).gen::<f64>())
             }
         }
         Ok(())

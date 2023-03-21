@@ -3,7 +3,6 @@
   - Nudge
   - Couple Min
   - Couple Max
-- Implement function reversal
 - Basic parsing functions
 - Improve parsing expectation errors
 - Includes

@@ -12,9 +12,13 @@ clap.optional = true
 clap.version = "4"
 ctrlc.optional = true
 ctrlc.version = "3"
+instant = "0.1.12"
 nanbox = "0.2.0"
 notify.optional = true
 notify.version = "5"
+rand.default-features = false
+rand.features = ["small_rng"]
+rand.version = "0.8.5"
 term_size.optional = true
 term_size.version = "0.3.2"
 

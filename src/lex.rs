@@ -26,7 +26,6 @@ pub enum LexError {
     ExpectedCharacter(Option<char>),
     InvalidEscape(char),
     ExpectedNumber,
-    TooManyColons,
 }
 
 impl fmt::Display for LexError {
@@ -37,10 +36,6 @@ impl fmt::Display for LexError {
             LexError::ExpectedCharacter(None) => write!(f, "expected character"),
             LexError::InvalidEscape(c) => write!(f, "invalid escape character {c:?}"),
             LexError::ExpectedNumber => write!(f, "expected number"),
-            LexError::TooManyColons => write!(
-                f,
-                "too many colons. Do you really need more than 26 values?"
-            ),
         }
     }
 }
@@ -267,12 +262,6 @@ impl Token {
             _ => None,
         }
     }
-    pub fn as_colons(&self) -> Option<u8> {
-        match self {
-            Token::Simple(Simple::Colons(n)) => Some(*n),
-            _ => None,
-        }
-    }
     pub fn as_glyph(&self) -> Option<Primitive> {
         match self {
             Token::Glyph(glyph) => Some(*glyph),
@@ -312,7 +301,7 @@ pub enum Simple {
     Comma,
     Underscore,
     Caret,
-    Colons(u8),
+    Colon,
     Period,
     Tilde,
     SemiColon,
@@ -346,12 +335,7 @@ impl fmt::Display for Simple {
             Simple::Comma => write!(f, ","),
             Simple::Caret => write!(f, "^"),
             Simple::Underscore => write!(f, "_"),
-            Simple::Colons(n) => {
-                for _ in 0..*n {
-                    write!(f, ":")?;
-                }
-                Ok(())
-            }
+            Simple::Colon => write!(f, ":"),
             Simple::SemiColon => write!(f, ";"),
             Simple::Period => write!(f, "."),
             Simple::Tilde => write!(f, "~"),
@@ -482,16 +466,7 @@ impl Lexer {
                 ']' => self.end(CloseBracket, start),
                 '.' => self.end(Period, start),
                 ';' => self.end(SemiColon, start),
-                ':' => {
-                    let mut n = 1;
-                    while self.next_char_exact(':') {
-                        n += 1;
-                        if n > 26 {
-                            return Err(self.end_span(start).sp(LexError::TooManyColons));
-                        }
-                    }
-                    self.end(Colons(n), start)
-                }
+                ':' => self.end(Colon, start),
                 ',' => self.end(Comma, start),
                 '_' => self.end(Underscore, start),
                 '`' => {

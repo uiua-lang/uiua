@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt, fs, path::Path};
+use std::{collections::HashMap, fmt, fs, mem::take, path::Path};
 
 use crate::{
     ast::*,
@@ -229,32 +229,22 @@ impl Compiler {
         let formatted = format_items(items);
         let (items, _) = parse(&formatted, None);
         for item in items {
-            match item {
-                Item::Words(words) => stack = self.eval_words(words)?,
-                Item::Binding(binding) => {
-                    if binding.name.value.is_capitalized() {
-                        self.func_outer(FunctionId::Named(binding.name.value), None, |this| {
-                            this.words(binding.words, true)
-                        });
-                    } else {
-                        let val = self.eval_words(binding.words)?.pop();
-                        self.vm.globals.extend(val);
-                        let index = self
-                            .bindings
-                            .values()
-                            .filter(|b| matches!(b, Bound::Global(_)))
-                            .count();
-                        self.bindings
-                            .insert(binding.name.value, Bound::Global(index));
-                    }
-                }
-                Item::Comment(_) | Item::Newlines => {}
-            }
+            stack = self.eval_item(item)?;
         }
         Ok(stack)
     }
-    fn eval_words(&mut self, _words: Vec<Sp<Word>>) -> UiuaResult<Vec<Value>> {
-        todo!()
+    fn eval_item(&mut self, item: Item) -> UiuaResult<Vec<Value>> {
+        let point = self.vm.restore_point();
+        self.item(item);
+        if !self.errors.is_empty() {
+            self.assembly.instrs.clear();
+            self.vm.restore(point);
+            return Err(take(&mut self.errors).into());
+        }
+        let res = self.vm.run_assembly(&self.assembly);
+        self.assembly.instrs.clear();
+        let stack = self.vm.restore(point);
+        res.map(|_| stack)
     }
     fn words(&mut self, words: Vec<Sp<Word>>, call: bool) {
         for word in words.into_iter().rev() {
@@ -340,12 +330,6 @@ impl Compiler {
             instrs: Vec::new(),
             refs: Vec::new(),
         });
-        // Push the function's name as a comment
-        let _name = match &id {
-            FunctionId::Named(name) => format!("fn {name}"),
-            FunctionId::Anonymous(span) => format!("fn at {span}"),
-            FunctionId::Primitive(_) => unreachable!("Primitive functions should not be compiled"),
-        };
         // Compile the function's body
         inner(self);
         // Add the function's instructions to the global function list

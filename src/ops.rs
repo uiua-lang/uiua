@@ -164,6 +164,7 @@ primitive!(
     // Misc
     (2, Assert, "assert", Bang),
     (0, Nop, "noop" + '·'),
+    (Call, "call", Colon),
 );
 
 fn _keep_primitive_small(_: std::convert::Infallible) {
@@ -248,6 +249,7 @@ impl Primitive {
             Primitive::Classify => env.monadic_mut_env(Value::classify)?,
             Primitive::Member => env.dyadic_mut(Value::member)?,
             Primitive::Group => env.dyadic_mut_env(Value::group)?,
+            Primitive::Call => env.call()?,
             Primitive::Dup => {
                 let x = env.top_mut(1)?.clone();
                 env.push(x);

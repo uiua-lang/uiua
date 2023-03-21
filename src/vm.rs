@@ -1,4 +1,8 @@
-use std::{mem::swap, rc::Rc, vec};
+use std::{
+    mem::{replace, swap},
+    rc::Rc,
+    vec,
+};
 
 use crate::{
     array::Array,
@@ -21,6 +25,7 @@ impl<'a> Env<'a> {
     }
 }
 
+#[derive(Clone)]
 struct StackFrame {
     function: Rc<Function>,
     call_span: usize,
@@ -60,7 +65,31 @@ impl<B: Default> Default for Vm<B> {
     }
 }
 
+pub struct RestorePoint {
+    instrs: vec::IntoIter<Instr>,
+    call_stack: Vec<StackFrame>,
+    ref_stack: Vec<Vec<Value>>,
+    array_stack: Vec<usize>,
+    stack: Vec<Value>,
+}
+
 impl<B: IoBackend> Vm<B> {
+    pub fn restore_point(&self) -> RestorePoint {
+        RestorePoint {
+            instrs: self.instrs.clone(),
+            call_stack: self.call_stack.clone(),
+            ref_stack: self.ref_stack.clone(),
+            array_stack: self.array_stack.clone(),
+            stack: self.stack.clone(),
+        }
+    }
+    pub fn restore(&mut self, point: RestorePoint) -> Vec<Value> {
+        self.instrs = point.instrs;
+        self.call_stack = point.call_stack;
+        self.ref_stack = point.ref_stack;
+        self.array_stack = point.array_stack;
+        replace(&mut self.stack, point.stack)
+    }
     pub fn run_assembly(&mut self, assembly: &Assembly) -> UiuaResult {
         self.instrs = assembly.instrs.clone().into_iter();
         if let Err(error) = self.run_assembly_inner(assembly, None) {

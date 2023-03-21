@@ -444,6 +444,28 @@ impl Value {
         *self = Array::from(deduped).normalized(1).into();
         Ok(())
     }
+    pub fn index_of(&mut self, searched_in: Self, env: &Env) -> RuntimeResult {
+        if !searched_in.is_array() {
+            return Err(env.error("Cannot search in non-array"));
+        }
+        if searched_in.rank() == 0 {
+            return Err(env.error("Cannot search in rank 0 array"));
+        }
+        let searched_in = searched_in.into_array().into_values();
+        let searched_for = take(self).coerce_into_array();
+        let result_shape = searched_for.shape()[..1].to_vec();
+        let searched_for = searched_for.into_values();
+        let mut indices = Vec::with_capacity(searched_for.len());
+        for val in searched_for {
+            if let Some(index) = searched_in.iter().position(|v| v == &val) {
+                indices.push(index as f64);
+            } else {
+                indices.push(searched_in.len() as f64);
+            }
+        }
+        *self = Array::from((result_shape, indices)).into();
+        Ok(())
+    }
 }
 
 fn array_windows(mut sizes: &[usize], array: &mut Array, env: &Env) -> RuntimeResult {

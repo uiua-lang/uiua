@@ -145,6 +145,7 @@ primitive!(
     (2, Replicate, "replicate" + '‡'),
     (2, Member, "member" + '∈'),
     (2, Group, "group" + '⊕'),
+    (2, IndexOf, "indexof" + '⦶'),
     // IO ops
     (1, Show, "show"),
     (1, Print, "print"),
@@ -251,6 +252,7 @@ impl Primitive {
             Primitive::Deduplicate => env.monadic_mut_env(Value::deduplicate)?,
             Primitive::Member => env.dyadic_mut(Value::member)?,
             Primitive::Group => env.dyadic_mut_env(Value::group)?,
+            Primitive::IndexOf => env.dyadic_mut_env(Value::index_of)?,
             Primitive::Call => env.call()?,
             Primitive::Dup => {
                 let x = env.top_mut(1)?.clone();

@@ -1,5 +1,4 @@
 - More array functions
-  - Index of
   - Progressive index of
   - Nudge
   - Couple Min

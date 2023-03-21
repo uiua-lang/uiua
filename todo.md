@@ -1,4 +1,3 @@
-- Contextual selectors
 - More array functions
   - Index of
   - Progressive index of

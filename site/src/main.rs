@@ -252,7 +252,7 @@ fn run_code(code: &str, format_first: bool) -> UiuaResult<(String, String)> {
 #[component]
 fn MainText(cx: Scope) -> impl IntoView {
     view! { cx, <div>
-        <p>"Uiua ("<i><a href="weewah.mp3">"wee-wuh"</a></i>") is a stack-oriented array programming language with a focus on tacit code. Its semantics and primitives (and this site) are largely inspired by "<a href="https://mlochbaum.github.io/BQN/">"BQN"</a>", but it combines the array paradigm with the stack-oriented paradigm to make writing point-free code more workable."</p>
+        <p>"Uiua ("<i><a href="weewah.mp3">"wee-wuh"</a></i>") is a stack-oriented array programming language with a focus on tacit code (code without named values). Its semantics and primitives (and this site) are largely inspired by "<a href="https://mlochbaum.github.io/BQN/">"BQN"</a>", but it combines the array paradigm with the stack-oriented paradigm to make writing point-free code more workable."</p>
         <hr/>
         <h3>"How is Uiua like other array languages?"</h3>
         <p>"Like APL, J, BQN, and many other array languages, Uiua's primary data type is the array. Arrays are multidimensional and rank-polymorphic, meaning that many operation automatically apply to every element."</p>
@@ -261,7 +261,6 @@ fn MainText(cx: Scope) -> impl IntoView {
             <li>"A rich set of primitives"</li>
             <li>"Arrays following the "<a href="https://mlochbaum.github.io/BQN/doc/based.html">"Based Array Model"</a></li>
             <li>"Basic IO facilities"</li>
-            <li>"Compile-time code evaluation"</li>
             <li>"A deterministic formatter"</li>
         </ul>
         <hr/>
@@ -270,11 +269,15 @@ fn MainText(cx: Scope) -> impl IntoView {
         <p>"Uiua also features:"</p>
         <ul>
             <li>"Hook and fork constructs without parenthesis"</li>
-            <li>"Selector literals, or combinators that only rearrange arguments"</li>
             <li>"Stack-to-array syntax for building arrays with stack operations"</li>
             <li>"Special syntax for constructing lists of functions"</li>
             <li>"Functions that work with lists of functions to form complex combinators"</li>
         </ul>
+        <hr/>
+        <h3>"How does writing the glyphs work?"</h3>
+        <p>"Unlike most array languages, Uiua does not overload primitives depending on whether they are passed one or two arguments. Functions in Uiua can take any number of arguments, but an individual function always takes the "<i>"same"</i>" number of arguments."</p>
+        <p>"This ends up meaning that Uiua requires way more glyphs to have one for every primitive. There simply are not enough keys on them keyboard to type them without using a bunch of hard-to-remeber shortcuts. Also, I think it's annoying to need special editor support to be able to write code properly."</p>
+        <p>"To solve these issues, Uiua has a formatter that automatically converts ASCII names and characters into glyphs. You can type the name of a glyph (or a digraph, like >= for ≥), and the formatter will turn it into the corresponding glyph. Alternatively, the editor on the homepage has a button for each glyph."</p>
     </div>}
 }
 

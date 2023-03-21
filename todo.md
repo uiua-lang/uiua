@@ -6,7 +6,6 @@
   - Couple Min
   - Couple Max
 - Implement function reversal
-- Error handling
 - Basic parsing functions
 - Improve parsing expectation errors
 - Includes

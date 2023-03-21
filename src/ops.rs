@@ -173,8 +173,8 @@ primitive!(
     (Repeat { modifier }, "repeat" + '⍥'),
     (Try { modifier }, "try", Question),
     // Misc
+    (2, Assert, "assert", Bang),
     (0, Nop, "noop" + '·'),
-    (ExclusiveFork, "exclusive fork", Bang),
 );
 
 fn _keep_primitive_small(_: std::convert::Infallible) {
@@ -271,20 +271,6 @@ impl Primitive {
             }
             Primitive::Pop => {
                 env.pop(1)?;
-            }
-            Primitive::ExclusiveFork => {
-                let fs = env.pop(1)?;
-                if !fs.is_array() {
-                    env.push(fs);
-                    return env.call();
-                }
-                let arr = fs.into_array();
-                let values = env.pop_n(arr.len())?;
-                for (f, v) in arr.into_values().into_iter().rev().zip(values.into_iter()) {
-                    env.push(v);
-                    env.push(f);
-                    env.call()?;
-                }
             }
             Primitive::AdicFork(n) => {
                 let fs = env.pop(1)?;
@@ -457,14 +443,21 @@ impl Primitive {
             }
             Primitive::Try => {
                 let f = env.pop(1)?;
-                let handle = env.pop(2)?;
+                let handler = env.pop(2)?;
                 let size = env.stack_size();
                 env.push(f);
                 if let Err(e) = env.call() {
                     env.truncate(size);
                     env.push(e.value);
-                    env.push(handle);
+                    env.push(handler);
                     env.call()?;
+                }
+            }
+            Primitive::Assert => {
+                let msg = env.pop(1)?;
+                let cond = env.pop(2)?;
+                if !(cond.is_num() && (cond.number() - 1.0).abs() < 1e-10) {
+                    return Err(env.error(&msg.to_string()));
                 }
             }
             Primitive::Show => {

@@ -382,10 +382,12 @@ impl Compiler {
                 .modifier
                 .span
                 .clone()
-                .merge(modified.word.span.clone()),
+                .merge(modified.words.last().unwrap().span.clone()),
         );
         self.func_outer(id, None, |this| {
-            this.word(modified.word, false);
+            for word in modified.words.into_iter().rev() {
+                this.word(word, false);
+            }
             this.primitive(modified.modifier.value, modified.modifier.span, true);
         });
         if call {

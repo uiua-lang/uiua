@@ -26,7 +26,7 @@ pub struct PrimitiveName {
 }
 
 macro_rules! primitive {
-    ($(($($args:literal,)? $name:ident $({$modifier:ident})? $(,$ident:literal)? $(,$ascii:ident)? $(+ $unicode:literal)?)),* $(,)?) => {
+    ($(($($args:literal,)? $name:ident $({$modifier:ident ($margs:literal)})? $(,$ident:literal)? $(,$ascii:ident)? $(+ $unicode:literal)?)),* $(,)?) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
         pub enum Primitive {
             $($name,)*
@@ -67,14 +67,15 @@ macro_rules! primitive {
                     _ => false
                 }
             }
-            pub fn args(&self) -> Option<u8> {
+            pub fn modifier_args(&self) -> Option<u8> {
                 match self {
-                    $($(Primitive::$name => Some($args),)?)*
+                    $($(Primitive::$name => Some($margs),)?)*
                     _ => None
                 }
             }
-            pub fn inverse(&self) -> Option<Self> {
+            pub fn args(&self) -> Option<u8> {
                 match self {
+                    $($(Primitive::$name => Some($args),)?)*
                     _ => None
                 }
             }
@@ -94,8 +95,8 @@ primitive!(
     (1, Sqrt, "sqrt" + '√'),
     (1, Sin, "sine"),
     (1, Cos, "cosine"),
-    (1, Asin, "asine"),
-    (1, Acos, "acosine"),
+    (1, Asin),
+    (1, Acos),
     (1, Floor, "floor" + '⌊'),
     (1, Ceil, "ceiling" + '⌈'),
     (1, Round, "round" + '⁅'),
@@ -155,14 +156,16 @@ primitive!(
     (0, Args, "args"),
     (1, Var, "var"),
     // Modifiers
-    (Reduce { modifier }, "reduce", Slash),
-    (Scan { modifier }, "scan", BackSlash),
-    (Each { modifier }, "each" + '⸪'),
-    (Cells { modifier }, "cells" + '≡'),
-    (Table { modifier }, "table", Caret + '⊞'),
-    (Fold { modifier }, "fold"),
-    (Repeat { modifier }, "repeat" + '⍥'),
-    (Try { modifier }, "try", Question),
+    (Invert { modifier(1) }, "invert" + '↩'),
+    (Under { modifier(2) }, "under" + '⍜'),
+    (Reduce { modifier(1) }, "reduce", Slash),
+    (Scan { modifier(1) }, "scan", BackSlash),
+    (Each { modifier(1) }, "each" + '⸪'),
+    (Cells { modifier(1) }, "cells" + '≡'),
+    (Table { modifier(1) }, "table", Caret + '⊞'),
+    (Fold { modifier(1) }, "fold"),
+    (Repeat { modifier(1) }, "repeat" + '⍥'),
+    (Try { modifier(2) }, "try", Question),
     // Misc
     (2, Assert, "assert", Bang),
     (0, Nop, "noop" + '·'),
@@ -189,6 +192,21 @@ impl fmt::Display for Primitive {
 }
 
 impl Primitive {
+    pub fn inverse(&self) -> Option<Self> {
+        use Primitive::*;
+        Some(match self {
+            Neg => Neg,
+            Not => Not,
+            Sin => Asin,
+            Cos => Acos,
+            Reverse => Reverse,
+            Add => Sub,
+            Sub => Add,
+            Mul => Div,
+            Div => Mul,
+            _ => return None,
+        })
+    }
     pub fn from_name(name: &str) -> Option<Self> {
         if name.len() < 3 {
             return None;
@@ -266,6 +284,29 @@ impl Primitive {
             }
             Primitive::Pop => {
                 env.pop(1)?;
+            }
+            Primitive::Invert => {
+                let f = env.pop(1)?;
+                if !f.is_function() {
+                    return Err(env.error("Only functions can be inverted"));
+                }
+                let f_inv = f.function().inverse(&env.env(), false)?;
+                env.push(f_inv);
+                env.call()?;
+            }
+            Primitive::Under => {
+                let f = env.pop(1)?;
+                let g = env.pop(2)?;
+                if !f.is_function() || !g.is_function() {
+                    return Err(env.error("Only functions can be inverted"));
+                }
+                let f_inv = f.function().inverse(&env.env(), true)?;
+                env.push(f);
+                env.call()?;
+                env.push(g);
+                env.call()?;
+                env.push(f_inv);
+                env.call()?;
             }
             Primitive::Fold => {
                 let f = env.pop(1)?;

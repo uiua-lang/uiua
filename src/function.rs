@@ -1,32 +1,32 @@
 use std::fmt;
 
-use crate::{lex::Span, ops::Primitive, value::Value, Ident};
+use crate::{lex::Span, ops::Primitive, value::Value, vm::Env, Ident, RuntimeResult};
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum FunctionId {
-    Named(Ident),
-    Anonymous(Span),
-    Primitive(Primitive),
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Instr {
+    Push(Value),
+    BeginArray,
+    EndArray(bool, usize),
+    CopyGlobal(usize),
+    BindGlobal,
+    Primitive(Primitive, usize),
+    Call(usize),
+    CallRef(usize, usize),
+    CopyRef(usize, usize),
 }
 
-impl From<Ident> for FunctionId {
-    fn from(name: Ident) -> Self {
-        Self::Named(name)
-    }
-}
-
-impl From<Primitive> for FunctionId {
-    fn from(op: Primitive) -> Self {
-        Self::Primitive(op)
-    }
-}
-
-impl fmt::Display for FunctionId {
+impl fmt::Display for Instr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            FunctionId::Named(name) => write!(f, "`{name}`"),
-            FunctionId::Anonymous(span) => write!(f, "fn from {span}"),
-            FunctionId::Primitive(id) => write!(f, "{id}"),
+            Instr::Push(val) => write!(f, "{val}"),
+            Instr::BeginArray => write!(f, "]"),
+            Instr::EndArray(..) => write!(f, "["),
+            Instr::BindGlobal => write!(f, "g!"),
+            Instr::CopyGlobal(idx) => write!(f, "g{idx}"),
+            Instr::Primitive(prim, _) => write!(f, "{prim}"),
+            Instr::Call(_) => Ok(()),
+            Instr::CallRef(n, _) => write!(f, "ref{n}"),
+            Instr::CopyRef(n, _) => write!(f, "{}", (*n as u8 + b'a') as char),
         }
     }
 }
@@ -58,31 +58,87 @@ impl fmt::Display for Function {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Instr {
-    Push(Value),
-    BeginArray,
-    EndArray(bool, usize),
-    CopyGlobal(usize),
-    BindGlobal,
-    Primitive(Primitive, usize),
-    Call(usize),
-    CallRef(usize, usize),
-    CopyRef(usize, usize),
+impl Function {
+    pub fn inverse(&self, env: &Env, require_unary: bool) -> RuntimeResult<Self> {
+        let mut args = 0;
+        let mut groups: Vec<Vec<Instr>> = Vec::new();
+        let no_inverse = || env.error("No inverse found");
+        macro_rules! last_group {
+            () => {
+                groups.last_mut().ok_or_else(no_inverse)?
+            };
+        }
+        for instr in self.instrs.iter().rev() {
+            match instr {
+                Instr::Push(val) => {
+                    if args > 0 {
+                        last_group!().push(Instr::Push(val.clone()));
+                        args -= 1;
+                    } else {
+                        return Err(no_inverse());
+                    }
+                }
+                Instr::Primitive(prim, span) => {
+                    if let Some(inv) = prim.inverse() {
+                        if let Some(a) = inv.args() {
+                            args = a;
+                            groups.push(vec![Instr::Primitive(inv, *span)]);
+                        } else {
+                            return Err(no_inverse());
+                        }
+                    } else {
+                        return Err(env.error(format!("No inverse found for {prim}")));
+                    }
+                }
+                &Instr::Call(n) => groups.push(vec![Instr::Call(n)]),
+                Instr::BeginArray => {
+                    last_group!().push(Instr::EndArray(false, 0));
+                }
+                &Instr::EndArray(n, span) => last_group!().push(Instr::EndArray(n, span)),
+                &Instr::CopyGlobal(n) => last_group!().push(Instr::CopyGlobal(n)),
+                &Instr::BindGlobal => return Err(no_inverse()),
+                &Instr::CallRef(_, _) => return Err(no_inverse()),
+                &Instr::CopyRef(_, _) => return Err(no_inverse()),
+            }
+        }
+        if require_unary && args != 1 {
+            return Err(env.error("Only unary functions can be inverted"));
+        }
+        Ok(Function {
+            id: FunctionId::Anonymous(env.span().clone()),
+            instrs: groups
+                .into_iter()
+                .flat_map(|g| g.into_iter().rev())
+                .collect(),
+        })
+    }
 }
 
-impl fmt::Display for Instr {
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum FunctionId {
+    Named(Ident),
+    Anonymous(Span),
+    Primitive(Primitive),
+}
+
+impl From<Ident> for FunctionId {
+    fn from(name: Ident) -> Self {
+        Self::Named(name)
+    }
+}
+
+impl From<Primitive> for FunctionId {
+    fn from(op: Primitive) -> Self {
+        Self::Primitive(op)
+    }
+}
+
+impl fmt::Display for FunctionId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Instr::Push(val) => write!(f, "{val}"),
-            Instr::BeginArray => write!(f, "]"),
-            Instr::EndArray(..) => write!(f, "["),
-            Instr::BindGlobal => write!(f, "g!"),
-            Instr::CopyGlobal(idx) => write!(f, "g{idx}"),
-            Instr::Primitive(prim, _) => write!(f, "{prim}"),
-            Instr::Call(_) => Ok(()),
-            Instr::CallRef(n, _) => write!(f, "ref{n}"),
-            Instr::CopyRef(n, _) => write!(f, "{}", (*n as u8 + b'a') as char),
+            FunctionId::Named(name) => write!(f, "`{name}`"),
+            FunctionId::Anonymous(span) => write!(f, "fn from {span}"),
+            FunctionId::Primitive(id) => write!(f, "{id}"),
         }
     }
 }

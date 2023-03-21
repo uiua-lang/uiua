@@ -215,7 +215,9 @@ impl Format for Word {
             Word::Modified(m) => {
                 m.modifier.value.format(state);
                 state.override_space = true;
-                m.word.value.format(state);
+                for word in &m.words {
+                    word.value.format(state);
+                }
             }
         }
     }

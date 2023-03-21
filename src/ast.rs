@@ -71,11 +71,15 @@ impl fmt::Debug for Func {
 #[derive(Clone)]
 pub struct Modified {
     pub modifier: Sp<Primitive>,
-    pub word: Sp<Word>,
+    pub words: Vec<Sp<Word>>,
 }
 
 impl fmt::Debug for Modified {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}({:?})", self.modifier.value, self.word.value)
+        write!(f, "{:?}", self.modifier.value)?;
+        for word in &self.words {
+            write!(f, "({:?})", word.value)?;
+        }
+        Ok(())
     }
 }

@@ -9,6 +9,7 @@ use crate::{
     compile::Assembly,
     function::{Function, Instr},
     io::{IoBackend, StdIo},
+    lex::Span,
     ops::constants,
     value::{Type, Value},
     RuntimeError, RuntimeResult, TraceFrame, UiuaError, UiuaResult,
@@ -21,7 +22,10 @@ pub struct Env<'a> {
 
 impl<'a> Env<'a> {
     pub fn error(&self, message: impl Into<String>) -> RuntimeError {
-        self.assembly.spans[self.span].error(message)
+        self.span().error(message)
+    }
+    pub fn span(&self) -> &Span {
+        &self.assembly.spans[self.span]
     }
 }
 

@@ -242,23 +242,36 @@ impl Parser {
         Ok(Some(span.sp(Word::Strand(items))))
     }
     fn try_modified(&mut self) -> ParseResult<Option<Sp<Word>>> {
-        let modifier = Primitive::ALL
+        let mod_margs = Primitive::ALL
             .into_iter()
-            .filter(Primitive::is_modifier)
-            .find_map(|prim| {
+            .filter_map(|prim| prim.modifier_args().map(|margs| (prim, margs)))
+            .find_map(|(prim, margs)| {
                 self.try_exact(prim)
                     .or_else(|| prim.name().ascii.and_then(|simple| self.try_exact(simple)))
-                    .map(|span| span.sp(prim))
+                    .map(|span| (span.sp(prim), margs))
             });
-        let Some(modifier) = modifier else {
+        let Some((modifier, margs)) = mod_margs else {
             return self.try_term();
         };
-        let inner = self.try_modified()?;
-        Ok(Some(if let Some(word) = inner {
-            let span = modifier.span.clone().merge(word.span.clone());
-            span.sp(Word::Modified(Box::new(Modified { modifier, word })))
-        } else {
+        let mut args = Vec::new();
+        for _ in 0..margs {
+            if let Some(arg) = self.try_modified()? {
+                args.push(arg);
+            } else {
+                break;
+            }
+        }
+        Ok(Some(if args.is_empty() {
             modifier.map(Word::Primitive)
+        } else {
+            let span = modifier
+                .span
+                .clone()
+                .merge(args.last().unwrap().span.clone());
+            span.sp(Word::Modified(Box::new(Modified {
+                modifier,
+                words: args,
+            })))
         }))
     }
     fn try_term(&mut self) -> ParseResult<Option<Sp<Word>>> {

@@ -168,11 +168,11 @@ primitive!(
     (0, Rand, "rand"),
     // Modifiers
     (Reduce { modifier(1) }, "reduce", Slash),
+    (Fold { modifier(1) }, "fold"+ '⌿'),
     (Scan { modifier(1) }, "scan", BackSlash),
     (Each { modifier(1) }, "each" + '⸪'),
     (Cells { modifier(1) }, "cells" + '≡'),
     (Table { modifier(1) }, "table", Caret + '⊞'),
-    (Fold { modifier(1) }, "fold"),
     (Repeat { modifier(1) }, "repeat" + '⍥'),
     (Invert { modifier(1) }, "invert" + '↩'),
     (Under { modifier(2) }, "under" + '⍜'),

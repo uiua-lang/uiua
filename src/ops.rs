@@ -154,7 +154,7 @@ primitive!(
     (2, Replicate, "replicate" + '‡'),
     (2, Member, "member" + '∈'),
     (2, Group, "group" + '⊕'),
-    (2, IndexOf, "indexof" + '⦶'),
+    (2, IndexOf, "indexof" + '⊙'),
     // Triadic array op
     (3, Put),
     // IO ops

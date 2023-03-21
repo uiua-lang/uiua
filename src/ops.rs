@@ -26,7 +26,7 @@ pub struct PrimitiveName {
 }
 
 macro_rules! primitive {
-    ($(($($args:literal,)? $name:ident $({$modifier:ident ($margs:literal)})? $(,$ident:literal)? $(,$ascii:ident)? $(+ $unicode:literal)?)),* $(,)?) => {
+    ($(($($args:literal, $($outputs:literal,)?)? $name:ident $({$modifier:ident ($margs:literal)})? $(,$ident:literal)? $(,$ascii:ident)? $(+ $unicode:literal)?)),* $(,)?) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
         pub enum Primitive {
             $($name,)*
@@ -79,15 +79,21 @@ macro_rules! primitive {
                     _ => None
                 }
             }
+            pub fn outputs(&self) -> u8 {
+                match self {
+                    $($($(Primitive::$name => $outputs,)?)?)*
+                    _ => 1
+                }
+            }
         }
     };
 }
 
 primitive!(
     // Stack ops
-    (1, Dup, "duplicate", Period),
-    (2, Flip, "flip", Tilde),
-    (1, Pop, "pop", SemiColon),
+    (1, 2, Dup, "duplicate", Period),
+    (2, 2, Flip, "flip", Tilde),
+    (1, 0, Pop, "pop", SemiColon),
     // Pervasive monadic ops
     (1, Not, "not" + '¬'),
     (1, Neg, "negate" + '¯'),
@@ -148,9 +154,9 @@ primitive!(
     (2, Group, "group" + '⊕'),
     (2, IndexOf, "indexof" + '⦶'),
     // IO ops
-    (1, Show, "show"),
-    (1, Print, "print"),
-    (1, Println, "println"),
+    (1, 0, Show, "show"),
+    (1, 0, Print, "print"),
+    (1, 0, Println, "println"),
     (1, String, "string"),
     (0, ScanLn, "scanln"),
     (0, Args, "args"),
@@ -195,6 +201,7 @@ impl Primitive {
     pub fn inverse(&self) -> Option<Self> {
         use Primitive::*;
         Some(match self {
+            Flip => Flip,
             Neg => Neg,
             Not => Not,
             Sin => Asin,

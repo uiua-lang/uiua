@@ -81,7 +81,7 @@ impl Function {
                 Instr::Primitive(prim, span) => {
                     if let Some(inv) = prim.inverse() {
                         if let Some(a) = inv.args() {
-                            args = a;
+                            args = a - inv.outputs();
                             groups.push(vec![Instr::Primitive(inv, *span)]);
                         } else {
                             return Err(no_inverse());
@@ -101,7 +101,7 @@ impl Function {
                 &Instr::CopyRef(_, _) => return Err(no_inverse()),
             }
         }
-        if require_unary && args != 1 {
+        if require_unary && args != 0 {
             return Err(env.error("Only unary functions can be inverted"));
         }
         Ok(Function {

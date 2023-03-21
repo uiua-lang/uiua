@@ -426,6 +426,24 @@ impl Value {
         .into();
         Ok(())
     }
+    pub fn deduplicate(&mut self, env: &Env) -> RuntimeResult {
+        if !self.is_array() {
+            return Err(env.error("Cannot deduplicate non-array"));
+        }
+        let array = take(self).into_array();
+        if array.rank() == 0 {
+            return Err(env.error("Cannot deduplicate rank 0 array"));
+        }
+        let mut deduped = Vec::with_capacity(array.shape()[0]);
+        let mut seen = BTreeSet::new();
+        for val in array.into_values() {
+            if seen.insert(val.clone()) {
+                deduped.push(val);
+            }
+        }
+        *self = Array::from(deduped).normalized(1).into();
+        Ok(())
+    }
 }
 
 fn array_windows(mut sizes: &[usize], array: &mut Array, env: &Env) -> RuntimeResult {

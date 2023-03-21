@@ -2,7 +2,6 @@
   - Index of
   - Progressive index of
   - Nudge
-  - Throw
   - Couple Min
   - Couple Max
 - Implement function reversal

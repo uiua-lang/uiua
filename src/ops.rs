@@ -128,6 +128,7 @@ primitive!(
     (1, Transpose, "transpose" + '⍉'),
     (1, Grade, "grade" + '⍋'),
     (1, Classify, "classify" + '⊛'),
+    (1, Deduplicate, "deduplicate" + '⊝'),
     // Dyadic array ops
     (2, Match, "match" + '≅'),
     (2, NotMatch, "notmatch" + '≇'),
@@ -247,6 +248,7 @@ impl Primitive {
             Primitive::Select => env.dyadic_mut_env(Value::select)?,
             Primitive::Windows => env.dyadic_mut_env(Value::windows)?,
             Primitive::Classify => env.monadic_mut_env(Value::classify)?,
+            Primitive::Deduplicate => env.monadic_mut_env(Value::deduplicate)?,
             Primitive::Member => env.dyadic_mut(Value::member)?,
             Primitive::Group => env.dyadic_mut_env(Value::group)?,
             Primitive::Call => env.call()?,
@@ -310,7 +312,7 @@ impl Primitive {
                     env.push(f);
                     return env.call();
                 }
-                let (shape, values) = xs.into_array().into_parts();
+                let (shape, values) = xs.into_array().into_shape_flat_values();
                 let mut new_values = Vec::with_capacity(values.len());
                 for val in values {
                     env.push(val);

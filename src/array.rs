@@ -148,8 +148,11 @@ impl Array {
     pub fn into_flat_values(mut self) -> Vec<Value> {
         self.take_flat_values()
     }
-    pub fn into_parts(mut self) -> (Vec<usize>, Vec<Value>) {
+    pub fn into_shape_flat_values(mut self) -> (Vec<usize>, Vec<Value>) {
         (take(&mut self.shape), self.into_flat_values())
+    }
+    pub fn into_shape_values(mut self) -> (Vec<usize>, Vec<Value>) {
+        (take(&mut self.shape), self.into_values())
     }
     pub fn into_numbers(mut self) -> Vec<f64> {
         assert_eq!(self.ty, ArrayType::Num);

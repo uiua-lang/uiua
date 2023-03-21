@@ -12,10 +12,13 @@ type Metagrid = Grid<Grid>;
 pub trait GridFmt {
     fn fmt_grid(&self) -> Grid;
     fn grid_string(&self) -> String {
-        self.fmt_grid()
+        let mut s: String = self
+            .fmt_grid()
             .into_iter()
             .flat_map(|v| v.into_iter().chain(once('\n')))
-            .collect()
+            .collect();
+        s.pop();
+        s
     }
 }
 

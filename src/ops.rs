@@ -465,9 +465,8 @@ impl Primitive {
                 }
             }
             Primitive::Show => {
-                let mut s = env.pop(1)?.grid_string();
-                s.pop();
-                env.vm.io.print_str_ln(&s.to_string());
+                let s = env.pop(1)?.grid_string();
+                env.vm.io.print_str_ln(&s);
             }
             Primitive::Print => {
                 let val = env.pop(1)?;

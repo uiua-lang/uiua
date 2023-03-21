@@ -14,23 +14,29 @@ use crate::{
 };
 
 pub fn format_items(items: Vec<Item>) -> Result<String, Vec<Sp<CompileError>>> {
+    let (formatted, errors) = format_items_ignore_errors(items);
+    if errors.is_empty() {
+        Ok(formatted)
+    } else {
+        Err(errors)
+    }
+}
+
+pub(crate) fn format_items_ignore_errors(items: Vec<Item>) -> (String, Vec<Sp<CompileError>>) {
     let mut state = FormatState {
         string: String::new(),
         was_strand: false,
         was_primitive: false,
-        compiler: Compiler::new().eval_consts(false),
+        compiler: Compiler::new(),
         override_space: false,
     };
     for item in items {
         item.format(&mut state);
     }
-    if !state.compiler.errors.is_empty() {
-        return Err(state.compiler.errors);
-    }
     let mut s = state.string;
     s = s.trim_end().into();
     s.push('\n');
-    Ok(s)
+    (s, state.compiler.errors)
 }
 
 pub fn format<P: AsRef<Path>>(input: &str, path: P) -> UiuaResult<String> {

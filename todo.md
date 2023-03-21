@@ -1,5 +1,3 @@
-- Show stack in terminal
-- REPL
 - Contextual selectors
 - More array functions
   - Index of

@@ -1,6 +1,6 @@
 use std::{
     fs,
-    io::{stderr, Write},
+    io::{stderr, stdin, stdout, BufRead, Write},
     path::{Path, PathBuf},
     process::exit,
     sync::mpsc::channel,
@@ -20,7 +20,13 @@ fn main() {
         Box::leak(Box::new(puffin_http::Server::new(&server_addr).unwrap()));
     }
     let _ = ctrlc::set_handler(|| {
-        clear_watching();
+        if let Ok(App {
+            command: Some(Command::Watch),
+            ..
+        }) = App::try_parse()
+        {
+            clear_watching();
+        }
         exit(0)
     });
 
@@ -81,26 +87,33 @@ fn run() -> UiuaResult {
                     }
                 }
             }
+            Command::Run => {
+                let path = PathBuf::from("main.ua");
+                format_file(&path)?;
+                run_file(&path)?;
+            }
         }
     } else {
-        let path = if let Some(path) = app.path {
-            path
-        } else {
-            let mut uiua_files = uiua_files();
-            match uiua_files.len() {
-                0 => {
-                    eprintln!("No .ua files found in current directory");
-                    exit(1);
-                }
-                1 => uiua_files.remove(0),
-                _ => {
-                    eprintln!("Multiple .ua files found in current directory");
-                    exit(1);
-                }
+        let mut compiler = Compiler::new();
+        fn print_prompt() {
+            print!("  ");
+            stdout().flush().unwrap();
+        }
+        print_prompt();
+        while let Some(Ok(line)) = stdin().lock().lines().next() {
+            if line.trim() == "exit" {
+                break;
             }
-        };
-        format_file(&path)?;
-        run_file(&path)?;
+            match compiler.eval(&line) {
+                Ok(stack) => {
+                    for value in stack {
+                        println!("{}", value.show());
+                    }
+                }
+                Err(e) => eprintln!("{}", e.show(true)),
+            }
+            print_prompt();
+        }
     }
     Ok(())
 }
@@ -132,9 +145,12 @@ enum Command {
         long_about = "Format a uiua file or all files in the current directory, \
                       replacing named primitives with their unicode equivalents"
     )]
-    Fmt { path: Option<PathBuf> },
+    Fmt {
+        path: Option<PathBuf>,
+    },
     #[clap(about = "Format and run a uiua file when it changes")]
     Watch,
+    Run,
 }
 
 fn uiua_files() -> Vec<PathBuf> {

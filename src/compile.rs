@@ -2,6 +2,7 @@ use std::{collections::HashMap, fmt, fs, mem::take, path::Path};
 
 use crate::{
     ast::*,
+    format::format_items_ignore_errors,
     function::{Function, FunctionId, Selector},
     io::{IoBackend, PipedIo, StdIo},
     lex::{Sp, Span},
@@ -9,7 +10,7 @@ use crate::{
     parse::{parse, ParseError},
     value::Value,
     vm::{dprintln, Instr, Vm},
-    Ident, IdentCase, RuntimeError, UiuaError, UiuaResult,
+    Ident, RuntimeError, UiuaError, UiuaResult,
 };
 
 pub struct Assembly {
@@ -41,12 +42,7 @@ impl Assembly {
     pub fn run(&self) -> UiuaResult<Vec<Value>> {
         let mut vm = Vm::<StdIo>::default();
         self.run_with_vm(&mut vm)?;
-        let res = vm.stack;
-        dprintln!("stack:");
-        for val in &res {
-            dprintln!("  {val:?}");
-        }
-        Ok(res)
+        Ok(vm.stack)
     }
     pub fn run_piped(&self) -> UiuaResult<(Vec<Value>, String)> {
         let mut vm = Vm::<PipedIo>::default();
@@ -54,7 +50,14 @@ impl Assembly {
         Ok((vm.stack, vm.io.buffer))
     }
     fn run_with_vm<B: IoBackend>(&self, vm: &mut Vm<B>) -> UiuaResult {
+        for (i, instr) in self.instrs.iter().enumerate() {
+            dprintln!("{i:>3}: {instr:?}");
+        }
         vm.run_assembly(self)?;
+        dprintln!("stack:");
+        for val in &vm.stack {
+            dprintln!("  {val:?}");
+        }
         Ok(())
     }
     fn add_function_instrs(&mut self, mut instrs: Vec<Instr>) {
@@ -107,13 +110,12 @@ impl From<UiuaError> for CompileError {
 }
 
 pub struct Compiler {
-    eval_consts: bool,
     /// Instructions for stuff in the global scope
     global_instrs: Vec<Instr>,
     /// Instructions for functions that are currently being compiled
     in_progress_functions: Vec<InProgressFunction>,
-    /// Stack of scopes
-    scopes: Vec<Scope>,
+    /// Values and functions that are bound
+    bindings: HashMap<Ident, Bound>,
     /// Errors that don't stop compilation
     pub(crate) errors: Vec<Sp<CompileError>>,
     /// The partially compiled assembly
@@ -126,20 +128,12 @@ struct InProgressFunction {
     instrs: Vec<Instr>,
 }
 
-#[derive(Default)]
-struct Scope {
-    /// Values and functions that are in scope
-    bindings: HashMap<Ident, Bound>,
-    /// Map of function ids to the actual function values
-    functions: HashMap<FunctionId, Function>,
-}
-
 #[derive(Debug, Clone)]
 enum Bound {
     /// A primitive
     Primitive(Primitive),
-    /// A function that is available but not on the stack.
-    Function(FunctionId),
+    /// A function
+    Function(Function),
     /// A global variable is referenced by its index in the global array.
     Global(usize),
     /// A constant is referenced by its index in the constant array.
@@ -157,22 +151,21 @@ impl Default for Compiler {
             function_ids: HashMap::default(),
             spans: vec![Span::Builtin],
         };
-        let mut scope = Scope::default();
+        let mut bindings = HashMap::new();
         // Initialize builtins
         // Constants
         for (name, value) in constants() {
             let index = assembly.constants.len();
             assembly.constants.push(value);
-            scope.bindings.insert(name.into(), Bound::Constant(index));
+            bindings.insert(name.into(), Bound::Constant(index));
         }
         // Primitives
         for prim in Primitive::ALL {
             let function = Function::Primitive(prim);
             // Scope
             if let Some(name) = prim.name().ident {
-                scope.bindings.insert(name.into(), Bound::Primitive(prim));
+                bindings.insert(name.into(), Bound::Primitive(prim));
             }
-            scope.functions.insert(prim.into(), function);
             // Function info
             assembly.function_ids.insert(function, prim.into());
         }
@@ -180,10 +173,9 @@ impl Default for Compiler {
         assembly.start = assembly.instrs.len();
 
         Self {
-            eval_consts: true,
             global_instrs: vec![Instr::Comment("BEGIN".into())],
             in_progress_functions: Vec::new(),
-            scopes: vec![scope],
+            bindings,
             errors: Vec::new(),
             assembly,
             vm: Vm::default(),
@@ -200,10 +192,6 @@ pub struct FunctionInfo {
 impl Compiler {
     pub fn new() -> Self {
         Self::default()
-    }
-    pub fn eval_consts(mut self, eval: bool) -> Self {
-        self.eval_consts = eval;
-        self
     }
     pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult {
         let path = path.as_ref();
@@ -244,15 +232,6 @@ impl Compiler {
         }
         self.assembly
     }
-    fn scope_mut(&mut self) -> &mut Scope {
-        self.scopes.last_mut().unwrap()
-    }
-    fn push_scope(&mut self) {
-        self.scopes.push(Scope::default());
-    }
-    fn pop_scope(&mut self) {
-        self.scopes.pop().unwrap();
-    }
     fn instrs_mut(&mut self) -> &mut Vec<Instr> {
         self.in_progress_functions
             .last_mut()
@@ -268,12 +247,9 @@ impl Compiler {
         spot
     }
     pub(crate) fn is_bound(&self, ident: &Ident) -> bool {
-        self.scopes.iter().rev().any(|scope| {
-            scope
-                .bindings
-                .get(ident)
-                .map_or(false, |b| !matches!(b, Bound::Primitive(_)))
-        })
+        self.bindings
+            .get(ident)
+            .map_or(false, |b| !matches!(b, Bound::Primitive(_)))
     }
     pub(crate) fn item(&mut self, item: Item) {
         match item {
@@ -283,59 +259,75 @@ impl Compiler {
         }
     }
     fn binding(&mut self, binding: Binding) {
-        match binding.name.value.case() {
-            IdentCase::Camel => self.words(binding.words, true),
-            IdentCase::Capital => self.func(Func {
+        if binding.name.value.is_capitalized() {
+            self.func(Func {
                 id: FunctionId::Named(binding.name.value.clone()),
                 body: binding.words,
-            }),
-            IdentCase::AllCaps => return self.r#const(binding.name, binding.words),
-        };
-        let scope = &mut self.scopes[0];
-        let index = scope
+            })
+        } else {
+            self.words(binding.words, true)
+        }
+        let index = self
             .bindings
             .values()
             .filter(|b| matches!(b, Bound::Global(_)))
             .count();
-        scope
-            .bindings
+        self.bindings
             .insert(binding.name.value, Bound::Global(index));
         self.push_instr(Instr::BindGlobal);
     }
-    fn r#const(&mut self, name: Sp<Ident>, words: Vec<Sp<Word>>) {
-        let index = self.assembly.constants.len();
-        // Set a restore point
-        let instr_len = self.assembly.instrs.len();
-        let global_instrs = self.global_instrs.clone();
-        // Compile the words
-        let words_span = words.last().unwrap().span.clone();
-        self.words(words, true);
-        self.assembly
-            .add_non_function_instrs(take(&mut self.global_instrs));
-        // Evaluate the words
-        let value = if self.eval_consts {
-            let res = self
-                .assembly
-                .run_with_vm(&mut self.vm)
-                .map_err(|e| words_span.sp(e.into()));
-            match res {
-                Ok(()) => self.vm.stack.pop().unwrap_or_default(),
-                Err(e) => {
-                    self.errors.push(e);
-                    Value::default()
+    pub fn eval(&mut self, input: &str) -> UiuaResult<Vec<Value>> {
+        let (items, errors) = parse(input, None);
+        if !errors.is_empty() {
+            return Err(errors.into());
+        }
+        let mut stack = Vec::new();
+        let (formatted, _) = format_items_ignore_errors(items);
+        let (items, _) = parse(&formatted, None);
+        for item in items {
+            match item {
+                Item::Words(words) => stack = self.eval_words(words)?,
+                Item::Binding(binding) => {
+                    if binding.name.value.is_capitalized() {
+                        self.func_outer(FunctionId::Named(binding.name.value), |this| {
+                            this.words(binding.words, true)
+                        });
+                    } else {
+                        let val = self.eval_words(binding.words)?.pop();
+                        self.vm.globals.extend(val);
+                        let index = self
+                            .bindings
+                            .values()
+                            .filter(|b| matches!(b, Bound::Global(_)))
+                            .count();
+                        self.bindings
+                            .insert(binding.name.value, Bound::Global(index));
+                    }
                 }
+                Item::Comment(_) | Item::Newlines => {}
             }
-        } else {
-            Value::default()
-        };
-        self.assembly.constants.push(value);
-        // Bind the constant
-        self.scope_mut()
-            .bindings
-            .insert(name.value, Bound::Constant(index));
+        }
+        Ok(stack)
+    }
+    fn eval_words(&mut self, words: Vec<Sp<Word>>) -> UiuaResult<Vec<Value>> {
+        // Set a restore point
+        let vm_state = self.vm.restore_point();
+        let function_start = self.assembly.instrs.len();
+        // Compile the words
+        self.words(words, true);
+        let global_instrs = take(&mut self.global_instrs);
+        if !self.errors.is_empty() {
+            self.vm.restore(vm_state);
+            self.assembly.truncate(function_start);
+            return Err(take(&mut self.errors).into());
+        }
+        self.assembly.add_non_function_instrs(global_instrs);
+        // Evaluate the words
+        let res = self.assembly.run_with_vm(&mut self.vm);
         // Restore
-        self.assembly.truncate(instr_len);
-        self.global_instrs = global_instrs;
+        let stack = self.vm.restore(vm_state);
+        self.assembly.truncate(self.assembly.start);
+        res.map(|_| stack)
     }
     fn words(&mut self, words: Vec<Sp<Word>>, call: bool) {
         for word in words.into_iter().rev() {
@@ -383,12 +375,7 @@ impl Compiler {
         }
     }
     fn ident(&mut self, ident: Ident, span: Span, call: bool) {
-        let bind = self
-            .scopes
-            .iter()
-            .rev()
-            .find_map(|scope| scope.bindings.get(&ident));
-        let binding = match bind {
+        let bound = match self.bindings.get(&ident) {
             Some(bind) => bind,
             None => {
                 if let Some(prim) = Primitive::from_name(ident.as_str()) {
@@ -399,9 +386,9 @@ impl Compiler {
                 &Bound::Error
             }
         };
-        match binding.clone() {
+        match bound.clone() {
             Bound::Global(index) => self.push_instr(Instr::CopyGlobal(index)),
-            Bound::Function(id) => self.function_binding(id),
+            Bound::Function(function) => self.push_instr(Instr::Push(function.into())),
             Bound::Constant(index) => self.push_instr(Instr::Constant(index)),
             Bound::Primitive(prim) => {
                 self.push_instr(Instr::Push(Function::Primitive(prim).into()))
@@ -413,25 +400,10 @@ impl Compiler {
             self.push_instr(Instr::Call(span));
         }
     }
-    fn function_binding(&mut self, id: FunctionId) {
-        if let Some(function) = self
-            .scopes
-            .iter()
-            .rev()
-            .find_map(|scope| scope.functions.get(&id))
-            .cloned()
-        {
-            self.push_instr(Instr::Push(function.into()));
-        } else {
-            todo!("is this even reachable?")
-        }
-    }
     fn func_outer(&mut self, id: FunctionId, inner: impl FnOnce(&mut Self)) {
         // Initialize the function's instruction list
         self.in_progress_functions
             .push(InProgressFunction { instrs: Vec::new() });
-        // Push the function's scope
-        self.push_scope();
         // Push the function's name as a comment
         let name = match &id {
             FunctionId::Named(name) => format!("fn {name}"),
@@ -444,8 +416,6 @@ impl Compiler {
         inner(self);
         self.push_instr(Instr::Comment(format!("end of {name}")));
         self.push_instr(Instr::Return);
-        // Pop the function's scope
-        self.pop_scope();
         // Determine the function's index
         let mut function = Function::Code(self.assembly.instrs.len() as u32);
         // Add the function's instructions to the global function list
@@ -462,11 +432,9 @@ impl Compiler {
             self.assembly.add_function_instrs(ipf.instrs);
         }
         if let FunctionId::Named(ident) = &id {
-            self.scope_mut()
-                .bindings
-                .insert(ident.clone(), Bound::Function(id.clone()));
+            self.bindings
+                .insert(ident.clone(), Bound::Function(function));
         }
-        self.scope_mut().functions.insert(id.clone(), function);
         // Add to the function id map
         self.assembly.function_ids.insert(function, id);
         // Push the function

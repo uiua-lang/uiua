@@ -1,4 +1,7 @@
-use std::{fmt, mem::swap};
+use std::{
+    fmt,
+    mem::{replace, swap},
+};
 
 use crate::{
     array::Array,
@@ -62,11 +65,16 @@ pub(crate) use dprintln;
 pub struct Vm<B = StdIo> {
     call_stack: Vec<StackFrame>,
     array_stack: Vec<usize>,
-    globals: Vec<Value>,
+    pub globals: Vec<Value>,
     pub stack: Vec<Value>,
     pc: usize,
     just_called: Option<Function>,
     pub io: B,
+}
+
+pub struct RestorePoint {
+    stack: Vec<Value>,
+    pc: usize,
 }
 
 impl<B: IoBackend> Vm<B> {
@@ -87,6 +95,19 @@ impl<B: IoBackend> Vm<B> {
         } else {
             Ok(())
         }
+    }
+    pub(crate) fn restore_point(&self) -> RestorePoint {
+        RestorePoint {
+            stack: self.stack.clone(),
+            pc: self.pc,
+        }
+    }
+    pub(crate) fn restore(&mut self, point: RestorePoint) -> Vec<Value> {
+        assert!(self.call_stack.is_empty());
+        assert!(self.array_stack.is_empty());
+        self.pc = point.pc;
+        self.just_called = None;
+        replace(&mut self.stack, point.stack)
     }
     fn run_assembly_inner(
         &mut self,

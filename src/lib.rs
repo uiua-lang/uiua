@@ -28,22 +28,9 @@ pub use error::*;
 #[derive(Debug, Clone)]
 pub struct Ident(Rc<str>);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum IdentCase {
-    Camel,
-    Capital,
-    AllCaps,
-}
-
 impl Ident {
-    pub fn case(&self) -> IdentCase {
-        if self.0.starts_with(char::is_lowercase) {
-            IdentCase::Camel
-        } else if self.0.chars().all(char::is_uppercase) {
-            IdentCase::AllCaps
-        } else {
-            IdentCase::Capital
-        }
+    pub fn is_capitalized(&self) -> bool {
+        self.0.starts_with(char::is_uppercase)
     }
     pub fn as_str(&self) -> &str {
         &self.0

@@ -111,7 +111,6 @@ impl Function {
                 .flat_map(|g| g.into_iter().rev())
                 .collect(),
         };
-        println!("inverse: {function}");
         Ok(function)
     }
 }

@@ -119,7 +119,7 @@ primitive!(
     (2, Div, "divide", Percent + '÷'),
     (2, Mod, "modulus" + '◿'),
     (2, Pow, "power" + 'ⁿ'),
-    (2, Root, "root" + '◱'),
+    (2, Root),
     (2, Min, "minimum" + '↧'),
     (2, Max, "maximum" + '↥'),
     (2, Atan, "atangent"),
@@ -213,6 +213,8 @@ impl Primitive {
             Sub => Add,
             Mul => Div,
             Div => Mul,
+            Pow => Root,
+            Root => Pow,
             Pick => Put,
             _ => return None,
         })

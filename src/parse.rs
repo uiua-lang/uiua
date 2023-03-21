@@ -2,7 +2,7 @@ use std::{error::Error, fmt, path::Path};
 
 use crate::{
     ast::*,
-    function::{FunctionId, Selector},
+    function::FunctionId,
     lex::{Simple::*, *},
     ops::Primitive,
     Ident,
@@ -199,9 +199,6 @@ impl Parser {
     fn try_ident(&mut self) -> Option<Sp<Ident>> {
         self.next_token_map(|token| token.as_ident().cloned())
     }
-    fn try_selector(&mut self) -> Option<Sp<Selector>> {
-        self.next_token_map(|token| token.as_selector().cloned())
-    }
     fn try_words(&mut self) -> ParseResult<Option<Vec<Sp<Word>>>> {
         let mut words = Vec::new();
         while let Some(word) = self.try_word()? {
@@ -282,8 +279,6 @@ impl Parser {
             let end = self.expect(CloseBracket)?;
             let span = start.merge(end);
             span.sp(Word::Array(items))
-        } else if let Some(sel) = self.try_selector() {
-            sel.map(Word::Selector)
         } else {
             return Ok(None);
         }))

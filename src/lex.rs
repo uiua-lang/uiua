@@ -7,7 +7,7 @@ use std::{
     sync::Arc,
 };
 
-use crate::{function::Selector, ops::Primitive, Ident, RuntimeError};
+use crate::{ops::Primitive, Ident, RuntimeError};
 
 pub fn lex(input: &str, file: Option<&Path>) -> LexResult<Vec<Sp<Token>>> {
     let mut lexer = Lexer::new(input, file);
@@ -233,7 +233,6 @@ pub enum Token {
     Number(String),
     Char(char),
     Str(String),
-    Selector(Selector),
     Simple(Simple),
     Glyph(Primitive),
 }
@@ -260,12 +259,6 @@ impl Token {
     pub fn as_string(&self) -> Option<&str> {
         match self {
             Token::Str(string) => Some(string),
-            _ => None,
-        }
-    }
-    pub fn as_selector(&self) -> Option<&Selector> {
-        match self {
-            Token::Selector(selector) => Some(selector),
             _ => None,
         }
     }
@@ -297,7 +290,6 @@ impl fmt::Display for Token {
             Token::Number(real) => write!(f, "{real}"),
             Token::Char(char) => write!(f, "{char:?}"),
             Token::Str(s) => write!(f, "{s:?}"),
-            Token::Selector(selector) => write!(f, "{selector}"),
             Token::Simple(simple) => write!(f, "{simple}"),
             Token::Glyph(glyph) => write!(f, "{glyph}"),
         }
@@ -575,12 +567,7 @@ impl Lexer {
                     while let Some(c) = self.next_char_if(is_basically_alphabetic) {
                         ident.push(c);
                     }
-                    let token = if let Ok(selector) = ident.parse() {
-                        Selector(selector)
-                    } else {
-                        Ident(ident.into())
-                    };
-                    self.end(token, start)
+                    self.end(Ident(ident.into()), start)
                 }
                 // Numbers
                 c if c.is_ascii_digit() => {

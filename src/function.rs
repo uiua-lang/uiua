@@ -91,17 +91,17 @@ impl NanBoxable for Function {
 pub struct Selector([u8; 5]);
 
 impl Selector {
-    pub fn inputs(&self) -> u8 {
-        self.0[0]
+    pub fn min_inputs(&self) -> u8 {
+        self.0.iter().max().copied().unwrap()
     }
     pub fn outputs(&self) -> u8 {
-        self.0[1..].iter().position(|&i| i == 0).unwrap_or(4) as u8
+        self.0.iter().position(|&i| i == 0).unwrap_or(5) as u8
     }
     pub fn get(&self, index: u8) -> u8 {
-        self.0[index as usize + 1]
+        self.0[index as usize]
     }
     pub fn output_indices(&self) -> impl Iterator<Item = u8> + '_ {
-        self.0[1..]
+        self.0
             .iter()
             .copied()
             .take_while(|&i| i != 0)
@@ -124,47 +124,13 @@ impl fmt::Display for Selector {
 impl FromStr for Selector {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.len() < 2 {
+        if s.is_empty() || s.len() > 5 || s.chars().any(|c| !('a'..='e').contains(&c)) {
             return Err(());
         }
-        let mut chars = s.chars();
-        let start = chars.next().and_then(selector_char).ok_or(())?;
-        let mut inner = [start, 0, 0, 0, 0];
-        for (i, c) in chars.enumerate() {
-            if i >= 4 {
-                return Err(());
-            }
-            let c = selector_char(c).ok_or(())?;
-            if c > start {
-                return Err(());
-            }
-            inner[i + 1] = c;
+        let mut inner = [0; 5];
+        for (i, c) in s.chars().enumerate() {
+            inner[i] = c as u8 - b'a' + 1;
         }
         Ok(Self(inner))
-    }
-}
-
-fn selector_char(c: char) -> Option<u8> {
-    if ('a'..='d').contains(&c) {
-        Some(c as u8 - b'a' + 1)
-    } else {
-        None
-    }
-}
-
-#[test]
-fn selector_correctness() {
-    let ba = Selector::from_str("ba").unwrap();
-    assert_eq!(ba.inputs(), 2);
-    assert_eq!(ba.outputs(), 1);
-    for i in ba.output_indices() {
-        assert!(i < ba.inputs());
-    }
-
-    let bb = Selector::from_str("bb").unwrap();
-    assert_eq!(bb.inputs(), 2);
-    assert_eq!(bb.outputs(), 1);
-    for i in bb.output_indices() {
-        assert!(i < bb.inputs());
     }
 }

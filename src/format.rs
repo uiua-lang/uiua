@@ -218,10 +218,6 @@ impl Format for Word {
                 }
                 state.push(')');
             }
-            Word::Selector(s) => {
-                state.space_if_alphabetic();
-                state.push(&s.to_string());
-            }
             Word::FuncArray(fs) => {
                 state.push('(');
                 for (i, f) in fs.iter().enumerate() {

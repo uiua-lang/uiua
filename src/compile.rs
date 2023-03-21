@@ -371,7 +371,6 @@ impl Compiler {
             }
             Word::Primitive(prim) => self.primitive(prim, word.span, call),
             Word::Modified(m) => self.modified(*m, call),
-            Word::Selector(sel) => self.selector(sel, word.span, call),
         }
     }
     fn ident(&mut self, ident: Ident, span: Span, call: bool) {
@@ -380,6 +379,9 @@ impl Compiler {
             None => {
                 if let Some(prim) = Primitive::from_name(ident.as_str()) {
                     return self.primitive(prim, span, call);
+                }
+                if let Ok(selector) = ident.as_str().parse::<Selector>() {
+                    return self.selector(selector, span, call);
                 }
                 self.errors
                     .push(span.clone().sp(CompileError::UnknownBinding(ident.clone())));

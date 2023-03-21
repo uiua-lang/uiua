@@ -65,6 +65,7 @@ pub(crate) use dprintln;
 pub struct Vm<B = StdIo> {
     call_stack: Vec<StackFrame>,
     array_stack: Vec<usize>,
+    pub context_stack: Vec<usize>,
     pub globals: Vec<Value>,
     pub stack: Vec<Value>,
     pc: usize,
@@ -75,6 +76,8 @@ pub struct Vm<B = StdIo> {
 pub struct RestorePoint {
     stack: Vec<Value>,
     pc: usize,
+    array_stack_size: usize,
+    context_stack_size: usize,
 }
 
 impl<B: IoBackend> Vm<B> {
@@ -100,6 +103,8 @@ impl<B: IoBackend> Vm<B> {
         RestorePoint {
             stack: self.stack.clone(),
             pc: self.pc,
+            array_stack_size: self.array_stack.len(),
+            context_stack_size: self.context_stack.len(),
         }
     }
     pub(crate) fn restore(&mut self, point: RestorePoint) -> Vec<Value> {
@@ -107,6 +112,8 @@ impl<B: IoBackend> Vm<B> {
         assert!(self.array_stack.is_empty());
         self.pc = point.pc;
         self.just_called = None;
+        self.array_stack.truncate(point.array_stack_size);
+        self.context_stack.truncate(point.context_stack_size);
         replace(&mut self.stack, point.stack)
     }
     fn run_assembly_inner(
@@ -225,9 +232,20 @@ impl<B: IoBackend> Vm<B> {
                 false
             }
             Function::Selector(sel) => {
-                let mut items = Vec::with_capacity(sel.inputs() as usize);
-                for n in 0..sel.inputs() {
-                    items.push(env.pop(n as usize)?);
+                let inputs = env.vm.context_stack.last().copied().ok_or_else(|| {
+                    assembly.spans[span].error("selector called outside of context")
+                })?;
+                if inputs < sel.min_inputs() as usize {
+                    return Err(assembly.spans[span].error(format!(
+                        "selector `{}` requires a context of at least {} inputs, but this context only has {}",
+                        sel,
+                        sel.min_inputs(),
+                        inputs,
+                    )));
+                }
+                let mut items = Vec::with_capacity(inputs);
+                for n in 0..inputs {
+                    items.push(env.pop(n)?);
                 }
                 let bottom = env.vm.stack.len();
                 for i in sel.output_indices() {

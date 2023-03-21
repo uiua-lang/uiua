@@ -288,6 +288,7 @@ impl Primitive {
             }
             Primitive::AdicFork(n) => {
                 let fs = env.pop(1)?;
+                env.vm.context_stack.push(*n as usize);
                 if !fs.is_array() {
                     env.push(fs);
                     return env.call();
@@ -300,6 +301,7 @@ impl Primitive {
                     env.push(f);
                     env.call()?;
                 }
+                env.vm.context_stack.pop();
             }
             Primitive::Fold => {
                 let f = env.pop(1)?;

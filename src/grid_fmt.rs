@@ -157,7 +157,9 @@ fn fmt_array<T: GridFmt + std::fmt::Display>(
     let cell_size = data.len() / cell_count;
     for (i, cell) in data.chunks(cell_size).enumerate() {
         if i > 0 && rank > 2 {
-            metagrid.push(vec![vec![vec![' ']]; metagrid.last().unwrap().len()]);
+            for _ in 0..rank - 2 {
+                metagrid.push(vec![vec![vec![' ']]; metagrid.last().unwrap().len()]);
+            }
         }
         fmt_array(shape, cell, stringy, metagrid);
     }

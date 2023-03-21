@@ -466,6 +466,78 @@ impl Value {
         *self = Array::from((result_shape, indices)).into();
         Ok(())
     }
+    pub fn put(&mut self, value: Self, array: Self, env: &Env) -> RuntimeResult {
+        if !array.is_array() {
+            return Err(env.error("Cannot put into non-array"));
+        }
+        let indices = self.as_indices(env, "Indices must be a list of integers")?;
+        let mut array = array.into_array();
+        if indices.len() + value.rank() != array.rank() {
+            return Err(env.error(format!(
+                "Cannot put value of rank {} into array of rank {} at indices {:?}",
+                value.rank(),
+                array.rank(),
+                indices
+            )));
+        }
+        put(&indices, value, &mut array, env)?;
+        *self = array.into();
+        Ok(())
+    }
+}
+
+fn signed_index(index: isize, len: usize) -> Option<usize> {
+    if index < 0 {
+        if (-index) as usize > len {
+            None
+        } else {
+            Some((len as isize + index) as usize)
+        }
+    } else {
+        Some(index as usize)
+    }
+}
+
+fn put(indices: &[isize], value: Value, array: &mut Array, env: &Env) -> RuntimeResult {
+    if indices.len() == 1 {
+        let index = signed_index(indices[0], array.shape()[0]);
+        if let Some(index) = index {
+            let value = value.coerce_into_array();
+            if value.shape() != &array.shape()[1..] {
+                return Err(env.error(format!(
+                    "Cannot put value of shape {:?} into array of shape {:?} at index {}",
+                    value.shape(),
+                    array.shape(),
+                    index
+                )));
+            }
+            let mut cells = take(array).into_cells();
+            cells[index] = value;
+            *array = Array::from(cells);
+            Ok(())
+        } else {
+            Err(env.error(format!(
+                "Index {} out of bounds for array of length {}",
+                indices[0],
+                array.shape()[0]
+            )))
+        }
+    } else {
+        let index = signed_index(indices[0], array.shape()[0]);
+        if let Some(index) = index {
+            let mut cells = take(array).into_cells();
+            let cell = cells.get_mut(index).unwrap();
+            put(&indices[1..], value, cell, env)?;
+            *array = Array::from(cells);
+            Ok(())
+        } else {
+            Err(env.error(format!(
+                "Index {} out of bounds for array of length {}",
+                indices[0],
+                array.shape()[0]
+            )))
+        }
+    }
 }
 
 fn array_windows(mut sizes: &[usize], array: &mut Array, env: &Env) -> RuntimeResult {

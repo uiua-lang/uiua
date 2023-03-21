@@ -153,6 +153,8 @@ primitive!(
     (2, Member, "member" + '∈'),
     (2, Group, "group" + '⊕'),
     (2, IndexOf, "indexof" + '⦶'),
+    // Triadic array op
+    (3, Put),
     // IO ops
     (1, 0, Show, "show"),
     (1, 0, Print, "print"),
@@ -211,6 +213,7 @@ impl Primitive {
             Sub => Add,
             Mul => Div,
             Div => Mul,
+            Pick => Put,
             _ => return None,
         })
     }
@@ -279,6 +282,13 @@ impl Primitive {
             Primitive::Group => env.dyadic_mut_env(Value::group)?,
             Primitive::IndexOf => env.dyadic_mut_env(Value::index_of)?,
             Primitive::Call => env.call()?,
+            Primitive::Put => {
+                let mut index = env.pop(1)?;
+                let value = env.pop(2)?;
+                let array = env.pop(3)?;
+                index.put(value, array, &env.env())?;
+                env.push(index);
+            }
             Primitive::Dup => {
                 let x = env.top_mut(1)?.clone();
                 env.push(x);

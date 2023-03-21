@@ -1,3 +1,5 @@
+- Fix interaction of forks an references
+  - Maybe just use `{}` for references?
 - More array functions
   - Index of
   - Progressive index of

@@ -16,15 +16,21 @@ const EXAMPLES: &[&str] = &[
     "‡⸪(=2 /+=⌊.÷+1 ⇡.).+1 ⇡60",
     "⍉↯4_4[...1 .2 .3 ...4 .5 .6]",
     "⸪(⊡~·_:_÷_≡_⍋ ⁅÷23)⊞×.-10 ⇡20",
+    "# Change this ↓ to a 0\n!\"Oh no bad!\" 1\nprintln \"All is well\"",
 ];
 
 #[cfg(test)]
 #[test]
 fn test_examples() {
     for example in EXAMPLES {
-        Compiler::new()
-            .eval(example)
-            .unwrap_or_else(|e| panic!("Example failed:\n{example}\n{e}"));
+        let res = Compiler::new().eval(example);
+        if example.lines().any(|l| l.starts_with('!')) {
+            if res.is_ok() {
+                panic!("Example succeded?\n{example}");
+            }
+        } else {
+            res.unwrap_or_else(|e| panic!("Example failed:\n{example}\n{e}"));
+        }
     }
 }
 
@@ -109,6 +115,15 @@ pub fn App(cx: Scope) -> impl IntoView {
     let next_example = move |_| {
         set_example.update(|e| {
             *e = (*e + 1) % EXAMPLES.len();
+            set_code.set(EXAMPLES[*e].to_string());
+            code_element().set_value(EXAMPLES[*e]);
+            run(false);
+        })
+    };
+    // Go to the previous example
+    let prev_example = move |_| {
+        set_example.update(|e| {
+            *e = (*e + EXAMPLES.len() - 1) % EXAMPLES.len();
             set_code.set(EXAMPLES[*e].to_string());
             code_element().set_value(EXAMPLES[*e]);
             run(false);
@@ -200,11 +215,8 @@ pub fn App(cx: Scope) -> impl IntoView {
                 <div id="output" class="code">
                     <div id="code-buttons">
                         <button id="run-button" class="code-button" on:click=move |_| run(true)>{ "Run" }</button>
-                        <button id="next-example"
-                            class="code-button"
-                            on:click=next_example
-                            title="Next example">{ ">" }
-                        </button>
+                        <button id="prev-example" class="code-button" on:click=prev_example title="Previous example">{ "<" } </button>
+                        <button id="next-example" class="code-button" on:click=next_example title="Next example">{ ">" } </button>
                     </div>
                     { move || output.get() }
                 </div>

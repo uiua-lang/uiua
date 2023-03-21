@@ -1,44 +1,24 @@
-use std::{collections::HashMap, fmt, fs, mem::take, path::Path};
+use std::{collections::HashMap, fmt, fs, path::Path};
 
 use crate::{
     ast::*,
     format::format_items,
-    function::{Function, FunctionId},
+    function::{Function, FunctionId, Instr},
     io::{IoBackend, PipedIo, StdIo},
     lex::{Sp, Span},
     ops::{constants, Primitive},
     parse::{parse, ParseError},
     value::Value,
-    vm::{dprintln, Instr, Vm},
+    vm::{dprintln, Vm, VmInstr},
     Ident, RuntimeError, UiuaError, UiuaResult,
 };
 
 pub struct Assembly {
-    pub(crate) instrs: Vec<Instr>,
-    pub(crate) start: usize,
-    pub(crate) constants: Vec<Value>,
-    pub(crate) function_ids: HashMap<Function, FunctionId>,
+    pub(crate) instrs: Vec<VmInstr>,
     pub(crate) spans: Vec<Span>,
 }
 
 impl Assembly {
-    #[track_caller]
-    pub fn function_id(&self, function: Function) -> &FunctionId {
-        if let Some(id) = self.function_ids.get(&function) {
-            id
-        } else {
-            panic!("function was compiled in a different assembly")
-        }
-    }
-    pub fn find_function(&self, id: impl Into<FunctionId>) -> Option<Function> {
-        let id = id.into();
-        for (function, fid) in &self.function_ids {
-            if fid == &id {
-                return Some(*function);
-            }
-        }
-        None
-    }
     pub fn run(&self) -> UiuaResult<Vec<Value>> {
         let mut vm = Vm::<StdIo>::default();
         self.run_with_vm(&mut vm)?;
@@ -51,7 +31,7 @@ impl Assembly {
     }
     fn run_with_vm<B: IoBackend>(&self, vm: &mut Vm<B>) -> UiuaResult {
         for (i, instr) in self.instrs.iter().enumerate() {
-            dprintln!("{i:>3}: {instr:?}");
+            dprintln!("{i:>3}: {instr}");
         }
         vm.run_assembly(self)?;
         dprintln!("stack:");
@@ -59,17 +39,6 @@ impl Assembly {
             dprintln!("  {val:?}");
         }
         Ok(())
-    }
-    fn add_function_instrs(&mut self, mut instrs: Vec<Instr>) {
-        self.instrs.append(&mut instrs);
-        self.start = self.instrs.len();
-    }
-    fn add_non_function_instrs(&mut self, mut instrs: Vec<Instr>) {
-        self.instrs.append(&mut instrs);
-    }
-    fn truncate(&mut self, len: usize) {
-        self.instrs.truncate(len);
-        self.start = len;
     }
     pub(crate) fn error(&self, span: usize, msg: impl Into<String>) -> RuntimeError {
         self.spans[span].error(msg.into())
@@ -110,10 +79,8 @@ impl From<UiuaError> for CompileError {
 }
 
 pub struct Compiler {
-    /// Instructions for stuff in the global scope
-    global_instrs: Vec<Instr>,
     /// Instructions for functions that are currently being compiled
-    in_progress_functions: Vec<InProgressFunction>,
+    in_progress_functions: Vec<Vec<Instr>>,
     /// Values and functions that are bound
     bindings: HashMap<Ident, Bound>,
     /// Errors that don't stop compilation
@@ -124,61 +91,43 @@ pub struct Compiler {
     vm: Vm,
 }
 
-struct InProgressFunction {
-    instrs: Vec<Instr>,
-}
-
 #[derive(Debug, Clone)]
 enum Bound {
     /// A primitive
     Primitive(Primitive),
-    /// A function
-    Function(Function),
     /// A global variable is referenced by its index in the global array.
     Global(usize),
-    /// A constant is referenced by its index in the constant array.
-    Constant(usize),
     /// A dud binding used when a binding lookup fails
     Error,
 }
 
 impl Default for Compiler {
     fn default() -> Self {
-        let mut assembly = Assembly {
-            start: 0,
-            instrs: Vec::new(),
-            constants: Vec::new(),
-            function_ids: HashMap::default(),
-            spans: vec![Span::Builtin],
-        };
         let mut bindings = HashMap::new();
+        let mut vm = Vm::default();
         // Initialize builtins
         // Constants
         for (name, value) in constants() {
-            let index = assembly.constants.len();
-            assembly.constants.push(value);
-            bindings.insert(name.into(), Bound::Constant(index));
+            let index = vm.globals.len();
+            vm.globals.push(value);
+            bindings.insert(name.into(), Bound::Global(index));
         }
         // Primitives
         for prim in Primitive::ALL {
-            let function = Function::Primitive(prim);
-            // Scope
             if let Some(name) = prim.name().ident {
                 bindings.insert(name.into(), Bound::Primitive(prim));
             }
-            // Function info
-            assembly.function_ids.insert(function, prim.into());
         }
 
-        assembly.start = assembly.instrs.len();
-
         Self {
-            global_instrs: vec![Instr::Comment("BEGIN".into())],
             in_progress_functions: Vec::new(),
             bindings,
             errors: Vec::new(),
-            assembly,
-            vm: Vm::default(),
+            assembly: Assembly {
+                instrs: Vec::new(),
+                spans: vec![Span::Builtin],
+            },
+            vm,
         }
     }
 }
@@ -211,8 +160,7 @@ impl Compiler {
             .into_iter()
             .map(|e| e.map(CompileError::Parse))
             .collect();
-        let function_start = self.assembly.instrs.len();
-        let global_start = self.global_instrs.len();
+        let global_start = self.assembly.instrs.len();
         for item in items {
             self.item(item);
         }
@@ -220,26 +168,24 @@ impl Compiler {
         if errors.is_empty() {
             Ok(())
         } else {
-            self.assembly.truncate(function_start);
-            self.global_instrs.truncate(global_start);
+            self.assembly.instrs.truncate(global_start);
             Err(errors.into())
         }
     }
-    pub fn finish(mut self) -> Assembly {
-        self.assembly.add_non_function_instrs(self.global_instrs);
-        for (i, instr) in self.assembly.instrs.iter().enumerate() {
-            dprintln!("{i:>3} {instr}");
-        }
+    pub fn finish(self) -> Assembly {
         self.assembly
     }
-    fn instrs_mut(&mut self) -> &mut Vec<Instr> {
-        self.in_progress_functions
-            .last_mut()
-            .map(|f| &mut f.instrs)
-            .unwrap_or(&mut self.global_instrs)
-    }
-    fn push_instr(&mut self, instr: Instr) {
-        self.instrs_mut().push(instr);
+    fn push_instr(&mut self, instr: impl Into<VmInstr>) {
+        let instr = instr.into();
+        if let Some(ipf) = self.in_progress_functions.last_mut() {
+            if let VmInstr::Function(instr) = instr {
+                ipf.push(instr);
+            } else {
+                panic!("non-function instr in function")
+            }
+        } else {
+            self.assembly.instrs.push(instr);
+        }
     }
     fn push_call_span(&mut self, span: Span) -> usize {
         let spot = self.assembly.spans.len();
@@ -269,7 +215,7 @@ impl Compiler {
             .count();
         self.bindings
             .insert(binding.name.value, Bound::Global(index));
-        self.push_instr(Instr::BindGlobal);
+        self.push_instr(VmInstr::BindGlobal);
     }
     pub fn eval(&mut self, input: &str) -> UiuaResult<Vec<Value>> {
         let (items, errors) = parse(input, None);
@@ -304,25 +250,8 @@ impl Compiler {
         }
         Ok(stack)
     }
-    fn eval_words(&mut self, words: Vec<Sp<Word>>) -> UiuaResult<Vec<Value>> {
-        // Set a restore point
-        let vm_state = self.vm.restore_point();
-        let function_start = self.assembly.instrs.len();
-        // Compile the words
-        self.words(words, true);
-        let global_instrs = take(&mut self.global_instrs);
-        if !self.errors.is_empty() {
-            self.vm.restore(vm_state);
-            self.assembly.truncate(function_start);
-            return Err(take(&mut self.errors).into());
-        }
-        self.assembly.add_non_function_instrs(global_instrs);
-        // Evaluate the words
-        let res = self.assembly.run_with_vm(&mut self.vm);
-        // Restore
-        let stack = self.vm.restore(vm_state);
-        self.assembly.truncate(self.assembly.start);
-        res.map(|_| stack)
+    fn eval_words(&mut self, _words: Vec<Sp<Word>>) -> UiuaResult<Vec<Value>> {
+        todo!()
     }
     fn words(&mut self, words: Vec<Sp<Word>>, call: bool) {
         for word in words.into_iter().rev() {
@@ -376,15 +305,6 @@ impl Compiler {
                 if let Some(prim) = Primitive::from_name(name) {
                     return self.primitive(prim, span, call);
                 }
-                if name.len() == 1 {
-                    let c = name.chars().next().unwrap();
-                    if c.is_ascii_alphabetic() {
-                        let n = c.to_ascii_lowercase() as u8 - b'a';
-                        let span = self.push_call_span(span);
-                        self.push_instr(Instr::CopyRef(n as usize, span));
-                        return;
-                    }
-                }
                 self.errors
                     .push(span.clone().sp(CompileError::UnknownBinding(ident.clone())));
                 &Bound::Error
@@ -392,11 +312,7 @@ impl Compiler {
         };
         match bound.clone() {
             Bound::Global(index) => self.push_instr(Instr::CopyGlobal(index)),
-            Bound::Function(function) => self.push_instr(Instr::Push(function.into())),
-            Bound::Constant(index) => self.push_instr(Instr::Constant(index)),
-            Bound::Primitive(prim) => {
-                self.push_instr(Instr::Push(Function::Primitive(prim).into()))
-            }
+            Bound::Primitive(prim) => return self.primitive(prim, span, call),
             Bound::Error => self.push_instr(Instr::Push(Value::default())),
         }
         if call {
@@ -406,52 +322,36 @@ impl Compiler {
     }
     fn func_outer(&mut self, id: FunctionId, inner: impl FnOnce(&mut Self)) {
         // Initialize the function's instruction list
-        self.in_progress_functions
-            .push(InProgressFunction { instrs: Vec::new() });
+        self.in_progress_functions.push(Vec::new());
         // Push the function's name as a comment
-        let name = match &id {
+        let _name = match &id {
             FunctionId::Named(name) => format!("fn {name}"),
             FunctionId::Anonymous(span) => format!("fn at {span}"),
-            FunctionId::FormatString(span) => format!("format string at {span}"),
             FunctionId::Primitive(_) => unreachable!("Primitive functions should not be compiled"),
         };
-        self.push_instr(Instr::Comment(name.clone()));
         // Compile the function's body
         inner(self);
-        self.push_instr(Instr::Comment(format!("end of {name}")));
-        self.push_instr(Instr::Return);
-        // Determine the function's index
-        let mut function = Function::Code(self.assembly.instrs.len() as u32);
         // Add the function's instructions to the global function list
-        let mut ipf = self.in_progress_functions.pop().unwrap();
-        let mut add_instrs = true;
-        if let [_, Instr::Push(val), Instr::Call(_), _, _] = ipf.instrs.as_slice() {
-            if val.is_function() {
-                function = val.function();
-                ipf.instrs = vec![Instr::Push(val.clone())];
-                add_instrs = false;
-            }
-        }
-        if add_instrs {
-            self.assembly.add_function_instrs(ipf.instrs);
-        }
-        if let FunctionId::Named(ident) = &id {
-            self.bindings
-                .insert(ident.clone(), Bound::Function(function));
-        }
-        // Add to the function id map
-        self.assembly.function_ids.insert(function, id);
+        let instrs = self.in_progress_functions.pop().unwrap();
         // Push the function
-        self.push_instr(Instr::Push(function.into()));
+        self.push_instr(Instr::Push(Function { id, instrs }.into()));
     }
     fn func(&mut self, func: Func) {
         self.func_outer(func.id, |this| this.words(func.body, true))
     }
     fn primitive(&mut self, prim: Primitive, span: Span, call: bool) {
-        self.push_instr(Instr::Push(Function::Primitive(prim).into()));
+        let span = self.push_call_span(span);
+        let instr = Instr::Primitive(prim, span);
         if call {
-            let span = self.push_call_span(span);
-            self.push_instr(Instr::Call(span));
+            self.push_instr(instr);
+        } else {
+            self.push_instr(Instr::Push(
+                Function {
+                    id: FunctionId::Primitive(prim),
+                    instrs: vec![instr],
+                }
+                .into(),
+            ));
         }
     }
     fn modified(&mut self, modified: Modified, call: bool) {

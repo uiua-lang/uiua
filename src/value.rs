@@ -30,6 +30,7 @@ impl fmt::Display for Type {
 }
 
 type ArrayRef = *const Array;
+type FunctionRef = *const Function;
 const NUM_TAG: u8 = 0;
 const CHAR_TAG: u8 = 1;
 const FUNCTION_TAG: u8 = 2;
@@ -90,9 +91,9 @@ impl Value {
         assert!(self.is_char());
         unsafe { self.0.unpack::<char>() }
     }
-    pub fn function(&self) -> Function {
+    pub fn function(&self) -> &Function {
         assert!(self.is_function());
-        unsafe { self.0.unpack::<Function>() }
+        unsafe { &*self.0.unpack::<FunctionRef>() }
     }
     pub fn array(&self) -> &Array {
         assert!(self.is_array());
@@ -130,6 +131,26 @@ impl Value {
         // The rc is already dropped, so the destructor shouldn't be run again
         forget(self);
         array
+    }
+    pub fn into_function(self) -> Function {
+        assert!(self.is_function());
+        // Conjure the rc
+        let rc = unsafe { Rc::from_raw(self.0.unpack::<FunctionRef>()) };
+        let function = match Rc::try_unwrap(rc) {
+            Ok(function) => {
+                // The rc is consumed and can rest
+                function
+            }
+            Err(rc) => {
+                // Clone the function and let the rc rest
+                let function = (*rc).clone();
+                drop(rc);
+                function
+            }
+        };
+        // The rc is already dropped, so the destructor shouldn't be run again
+        forget(self);
+        function
     }
 }
 
@@ -245,6 +266,12 @@ cmp_impls!(is_eq, is_ne, is_lt, is_le, is_gt, is_ge);
 impl Drop for Value {
     fn drop(&mut self) {
         match self.ty() {
+            Type::Function => unsafe {
+                // Conjure the rc
+                let rc = Rc::from_raw(self.0.unpack::<FunctionRef>());
+                // It may now rest in peace and decrease the refcount
+                drop(rc);
+            },
             Type::Array => unsafe {
                 // Conjure the rc
                 let rc = Rc::from_raw(self.0.unpack::<ArrayRef>());
@@ -259,6 +286,16 @@ impl Drop for Value {
 impl Clone for Value {
     fn clone(&self) -> Self {
         match self.ty() {
+            Type::Function => Self(unsafe {
+                // Conjure the rc
+                let rc = Rc::from_raw(self.0.unpack::<FunctionRef>());
+                // Clone it to increase the refcount
+                let clone = rc.clone();
+                // Return the original rc to the aether
+                forget(rc);
+                // Use the clone to create a new NanBox
+                new_function_nanbox(clone)
+            }),
             Type::Array => Self(unsafe {
                 // Conjure the rc
                 let rc = Rc::from_raw(self.0.unpack::<ArrayRef>());
@@ -308,7 +345,7 @@ impl Ord for Value {
                     .unwrap_or_else(|| a.is_nan().cmp(&b.is_nan()))
             }
             (Type::Char, Type::Char) => self.char().cmp(&other.char()),
-            (Type::Function, Type::Function) => self.function().cmp(&other.function()),
+            (Type::Function, Type::Function) => self.function().cmp(other.function()),
             (Type::Array, Type::Array) => self.array().cmp(other.array()),
             (a, b) => a.cmp(&b),
         }
@@ -363,7 +400,10 @@ impl From<char> for Value {
 
 impl From<Function> for Value {
     fn from(f: Function) -> Self {
-        Self(unsafe { NanBox::new(FUNCTION_TAG, f) })
+        // Create a new rc
+        let rc = Rc::new(f);
+        // Cast it into the aether
+        Self(new_function_nanbox(rc))
     }
 }
 
@@ -378,6 +418,10 @@ impl From<Array> for Value {
 
 fn new_array_nanbox(rc: Rc<Array>) -> NanBox {
     unsafe { NanBox::new::<ArrayRef>(ARRAY_TAG, Rc::into_raw(rc)) }
+}
+
+fn new_function_nanbox(rc: Rc<Function>) -> NanBox {
+    unsafe { NanBox::new::<FunctionRef>(FUNCTION_TAG, Rc::into_raw(rc)) }
 }
 
 #[test]

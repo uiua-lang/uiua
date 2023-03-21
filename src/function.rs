@@ -1,14 +1,11 @@
-use std::{fmt, mem::transmute};
+use std::fmt;
 
-use nanbox::{NanBox, NanBoxable};
-
-use crate::{lex::Span, ops::Primitive, Ident};
+use crate::{lex::Span, ops::Primitive, value::Value, Ident};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum FunctionId {
     Named(Ident),
     Anonymous(Span),
-    FormatString(Span),
     Primitive(Primitive),
 }
 
@@ -29,16 +26,15 @@ impl fmt::Display for FunctionId {
         match self {
             FunctionId::Named(name) => write!(f, "`{name}`"),
             FunctionId::Anonymous(span) => write!(f, "fn from {span}"),
-            FunctionId::FormatString(span) => write!(f, "format string from {span}"),
             FunctionId::Primitive(id) => write!(f, "{id}"),
         }
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Function {
-    Code(u32),
-    Primitive(Primitive),
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Function {
+    pub id: FunctionId,
+    pub instrs: Vec<Instr>,
 }
 
 impl fmt::Debug for Function {
@@ -49,33 +45,33 @@ impl fmt::Debug for Function {
 
 impl fmt::Display for Function {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Function::Code(start) => write!(f, "({start})"),
-            Function::Primitive(prim) => write!(f, "{prim}"),
+        write!(f, "(")?;
+        for instr in &self.instrs {
+            instr.fmt(f)?;
         }
+        write!(f, ")")
     }
 }
 
-impl NanBoxable for Function {
-    unsafe fn from_nan_box(n: NanBox) -> Self {
-        let [a, b, c, d, e]: [u8; 5] = NanBoxable::from_nan_box(n);
-        let start = u32::from_le_bytes([b, c, d, e]);
-        match a {
-            0 => Function::Code(start),
-            1 => Function::Primitive(transmute([b, c])),
-            _ => unreachable!(),
-        }
-    }
-    fn into_nan_box(self) -> NanBox {
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Instr {
+    Push(Value),
+    BeginArray,
+    EndArray(bool, usize),
+    CopyGlobal(usize),
+    Primitive(Primitive, usize),
+    Call(usize),
+}
+
+impl fmt::Display for Instr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Function::Code(start) => {
-                let [b, c, d, e] = start.to_le_bytes();
-                NanBoxable::into_nan_box([0, b, c, d, e])
-            }
-            Function::Primitive(prim) => {
-                let [b, c]: [u8; 2] = unsafe { transmute(prim) };
-                NanBoxable::into_nan_box([1, b, c, 0, 0])
-            }
+            Instr::Push(val) => write!(f, "{val}"),
+            Instr::BeginArray => write!(f, "]"),
+            Instr::EndArray(..) => write!(f, "["),
+            Instr::CopyGlobal(idx) => write!(f, "g{idx}"),
+            Instr::Primitive(prim, _) => write!(f, "{prim}"),
+            Instr::Call(_) => write!(f, "call"),
         }
     }
 }

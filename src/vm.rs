@@ -1,12 +1,9 @@
-use std::{
-    fmt,
-    mem::{replace, swap},
-};
+use std::{collections::VecDeque, fmt, mem::swap};
 
 use crate::{
     array::Array,
     compile::Assembly,
-    function::Function,
+    function::{FunctionId, Instr},
     io::{IoBackend, StdIo},
     value::{Type, Value},
     RuntimeError, RuntimeResult, TraceFrame, UiuaError, UiuaResult,
@@ -24,33 +21,30 @@ impl<'a> Env<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum Instr {
-    Comment(String),
-    Push(Value),
-    Constant(usize),
-    BeginArray,
-    EndArray(bool, usize),
+pub(crate) enum VmInstr {
     BindGlobal,
-    CopyGlobal(usize),
-    CopyRef(usize, usize),
-    Call(usize),
-    Return,
+    Function(Instr),
 }
 
-impl fmt::Display for Instr {
+impl fmt::Display for VmInstr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Instr::Comment(s) => write!(f, "\n// {}", s),
-            instr => write!(f, "{instr:?}"),
+            VmInstr::BindGlobal => write!(f, "BindGlobal"),
+            VmInstr::Function(instr) => write!(f, "{instr}"),
         }
     }
 }
 
+impl From<Instr> for VmInstr {
+    fn from(instr: Instr) -> Self {
+        Self::Function(instr)
+    }
+}
+
 struct StackFrame {
-    stack_size: usize,
-    function: Function,
-    ret: usize,
     call_span: usize,
+    id: FunctionId,
+    instrs: VecDeque<Instr>,
 }
 
 macro_rules! dprintln {
@@ -64,37 +58,22 @@ pub(crate) use dprintln;
 
 #[derive(Default)]
 pub struct Vm<B = StdIo> {
+    instrs: VecDeque<VmInstr>,
     call_stack: Vec<StackFrame>,
     array_stack: Vec<usize>,
-    reference_stack: Vec<ReferenceFrame>,
     pub globals: Vec<Value>,
     pub stack: Vec<Value>,
-    pc: usize,
-    just_called: Option<Function>,
     pub io: B,
-}
-
-struct ReferenceFrame {
-    bottom: usize,
-    size: usize,
-    values: Option<Vec<Value>>,
-}
-
-pub struct RestorePoint {
-    stack: Vec<Value>,
-    pc: usize,
-    array_stack_size: usize,
-    context_stack_size: usize,
 }
 
 impl<B: IoBackend> Vm<B> {
     pub fn run_assembly(&mut self, assembly: &Assembly) -> UiuaResult {
+        self.instrs = assembly.instrs.iter().cloned().map(Into::into).collect();
         if let Err(error) = self.run_assembly_inner(assembly, None) {
             let mut trace = Vec::new();
             for frame in self.call_stack.iter().rev() {
-                let id = assembly.function_id(frame.function);
                 trace.push(TraceFrame {
-                    id: id.clone(),
+                    id: frame.id.clone(),
                     span: assembly.spans[frame.call_span].clone(),
                 });
             }
@@ -106,39 +85,17 @@ impl<B: IoBackend> Vm<B> {
             Ok(())
         }
     }
-    pub(crate) fn restore_point(&self) -> RestorePoint {
-        RestorePoint {
-            stack: self.stack.clone(),
-            pc: self.pc,
-            array_stack_size: self.array_stack.len(),
-            context_stack_size: self.reference_stack.len(),
-        }
-    }
-    pub(crate) fn restore(&mut self, point: RestorePoint) -> Vec<Value> {
-        assert!(self.call_stack.is_empty());
-        assert!(self.array_stack.is_empty());
-        self.pc = point.pc;
-        self.just_called = None;
-        self.array_stack.truncate(point.array_stack_size);
-        self.reference_stack.truncate(point.context_stack_size);
-        replace(&mut self.stack, point.stack)
-    }
     fn run_assembly_inner(
         &mut self,
         assembly: &Assembly,
         return_depth: Option<usize>,
     ) -> RuntimeResult {
         if return_depth.is_none() {
-            dprintln!("\nRunning...");
-            if self.pc == 0 {
-                self.pc = assembly.start;
-            }
+            dprintln!("Running...");
         }
         #[cfg(feature = "profile")]
         let mut i = 0;
-        while self.pc < assembly.instrs.len() {
-            let pc = &mut self.pc;
-            let stack = &mut self.stack;
+        loop {
             #[cfg(feature = "profile")]
             if i % 100_000 == 0 {
                 puffin::GlobalProfiler::lock().new_frame();
@@ -149,127 +106,81 @@ impl<B: IoBackend> Vm<B> {
             }
             #[cfg(feature = "profile")]
             puffin::profile_scope!("instr loop");
-            let instr = &assembly.instrs[*pc];
-            dprintln!("{pc:>3} {instr}");
-            match instr {
-                Instr::Comment(_) => {}
-                Instr::Push(v) => {
-                    #[cfg(feature = "profile")]
-                    puffin::profile_scope!("push");
-                    stack.push(v.clone())
-                }
-                Instr::Constant(n) => {
-                    #[cfg(feature = "profile")]
-                    puffin::profile_scope!("constant");
-                    stack.push(assembly.constants[*n].clone())
-                }
-                Instr::BeginArray => self.array_stack.push(stack.len()),
-                Instr::EndArray(normalize, span) => {
-                    let bottom = self.array_stack.pop().expect("nothing in array stack");
-                    if bottom > stack.len() {
-                        return Err(assembly.spans[*span]
-                            .error("array construction ended with a smaller stack"));
-                    }
-                    let array: Array = stack.drain(bottom..).rev().collect();
-                    stack.push(array.normalized(*normalize as usize).into());
-                }
-                Instr::BindGlobal => self.globals.push(stack.pop().unwrap()),
-                Instr::CopyGlobal(n) => stack.push(self.globals[*n].clone()),
-                &Instr::CopyRef(n, span) => {
-                    let name = || (n as u8 + b'a') as char;
-                    let reference = self.reference_stack.last_mut().ok_or_else(|| {
-                        assembly.spans[span].error(format!("no reference set for `{}`", name()))
-                    })?;
-                    if n >= reference.size {
-                        return Err(assembly.spans[span].error(format!(
-                            "reference `{}` is out of bounds of {} reference",
-                            name(),
-                            reference.size
-                        )));
-                    }
-                    if reference.values.is_none() {
-                        if reference.size > stack.len()
-                            || reference.bottom - reference.size > stack.len()
-                        {
-                            return Err(assembly.spans[span]
-                                .error(format!("reference `{}` was invalidated", name())));
-                        }
-                        reference.values = Some(
-                            stack
-                                .drain(reference.bottom - reference.size..reference.bottom)
-                                .rev()
-                                .collect(),
-                        );
-                    }
-                    let value = reference.values.as_ref().unwrap()[n].clone();
-                    stack.push(value);
-                }
-                &Instr::Call(span) => {
-                    self.call(assembly, span)?;
-                }
-                Instr::Return => {
-                    #[cfg(feature = "profile")]
-                    puffin::profile_scope!("return");
-                    if let Some(frame) = self.call_stack.pop() {
-                        let value = stack.pop();
-                        stack.truncate(frame.stack_size);
-                        stack.extend(value);
-                        if return_depth.map_or(false, |d| d == self.call_stack.len()) {
-                            *pc = 0;
-                            return Ok(());
-                        } else {
-                            *pc = frame.ret;
-                            continue;
-                        }
-                    } else {
-                        *pc = 0;
-                        return Ok(());
+            if let Some(frame) = self.call_stack.last_mut() {
+                if let Some(instr) = frame.instrs.pop_front() {
+                    dprintln!("  {instr}");
+                    self.instr(assembly, &instr)?;
+                } else {
+                    self.call_stack.pop();
+                    if return_depth == Some(self.call_stack.len()) {
+                        break;
                     }
                 }
+            } else if let Some(instr) = self.instrs.pop_front() {
+                dprintln!("  {instr}");
+                match instr {
+                    VmInstr::BindGlobal => self.globals.push(self.stack.pop().unwrap()),
+                    VmInstr::Function(instr) => self.instr(assembly, &instr)?,
+                }
+            } else {
+                break;
             }
-            dprintln!("  {:?}", self.stack);
-            self.pc = self.pc.overflowing_add(1).0;
+
+            dprintln!("{:?}", self.stack);
         }
-        self.pc -= 1;
         Ok(())
     }
-    fn call(&mut self, assembly: &Assembly, span: usize) -> RuntimeResult<bool> {
+    fn instr(&mut self, assembly: &Assembly, instr: &Instr) -> RuntimeResult {
+        match instr {
+            Instr::Push(v) => {
+                #[cfg(feature = "profile")]
+                puffin::profile_scope!("push");
+                self.stack.push(v.clone())
+            }
+            Instr::BeginArray => self.array_stack.push(self.stack.len()),
+            Instr::EndArray(normalize, span) => {
+                let bottom = self.array_stack.pop().expect("nothing in array stack");
+                if bottom > self.stack.len() {
+                    return Err(assembly.spans[*span]
+                        .error("array construction ended with a smaller stack"));
+                }
+                let array: Array = self.stack.drain(bottom..).rev().collect();
+                self.stack
+                    .push(array.normalized(*normalize as usize).into());
+            }
+            Instr::CopyGlobal(n) => self.stack.push(self.globals[*n].clone()),
+            &Instr::Call(span) => {
+                self.call(span)?;
+            }
+            &Instr::Primitive(prim, span) => {
+                let mut env = CallEnv {
+                    vm: self,
+                    assembly,
+                    span,
+                };
+                prim.run(&mut env)?;
+            }
+        }
+        Ok(())
+    }
+    fn call(&mut self, span: usize) -> RuntimeResult<bool> {
         #[cfg(feature = "profile")]
         puffin::profile_scope!("call");
         let value = self.stack.pop().unwrap();
         let function = match value.ty() {
-            Type::Function => value.function(),
+            Type::Function => value.into_function(),
             _ => {
                 self.stack.push(value);
                 return Ok(false);
             }
         };
         // Call
-        let pc = self.pc;
-        let mut env = CallEnv {
-            vm: self,
-            assembly,
-            span,
-        };
-        let call_started = match function {
-            Function::Code(start) => {
-                self.call_stack.push(StackFrame {
-                    stack_size: self.stack.len(),
-                    function,
-                    ret: self.pc + 1,
-                    call_span: span,
-                });
-                self.pc = start as usize;
-                true
-            }
-            Function::Primitive(prim) => {
-                prim.run(&mut env)?;
-                self.pc = pc;
-                false
-            }
-        };
-        self.just_called = Some(function);
-        Ok(call_started)
+        self.call_stack.push(StackFrame {
+            call_span: span,
+            id: function.id,
+            instrs: function.instrs.into(),
+        });
+        Ok(true)
     }
 }
 
@@ -324,9 +235,8 @@ impl<'a, B: IoBackend> CallEnv<'a, B> {
     }
     pub fn call(&mut self) -> RuntimeResult {
         let return_depth = self.vm.call_stack.len();
-        let call_started = self.vm.call(self.assembly, self.span)?;
+        let call_started = self.vm.call(self.span)?;
         if call_started {
-            self.vm.pc = self.vm.pc.overflowing_add(1).0;
             self.vm
                 .run_assembly_inner(self.assembly, Some(return_depth))?;
         }
@@ -394,24 +304,10 @@ impl<'a, B: IoBackend> CallEnv<'a, B> {
     }
     pub fn with_reference(
         &mut self,
-        size: usize,
-        f: impl FnOnce(&mut Self) -> RuntimeResult,
+        _size: usize,
+        _f: impl FnOnce(&mut Self) -> RuntimeResult,
     ) -> RuntimeResult {
-        let bottom = self.vm.stack.len();
-        if bottom < size {
-            return Err(self.error(format!("This reference needs at least {size} values, but there are only {bottom} on the stack")));
-        }
-        self.vm.reference_stack.push(ReferenceFrame {
-            bottom,
-            size,
-            values: None,
-        });
-        let res = f(self);
-        self.vm
-            .reference_stack
-            .pop()
-            .expect("popped empty reference stack");
-        res
+        todo!("references")
     }
 }
 

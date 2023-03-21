@@ -89,6 +89,11 @@ macro_rules! primitive {
                     _ => None
                 }
             }
+            pub fn inverse(&self) -> Option<Self> {
+                match self {
+                    _ => None
+                }
+            }
         }
     };
 }

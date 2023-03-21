@@ -545,6 +545,9 @@ fn array_windows(mut sizes: &[usize], array: &mut Array, env: &Env) -> RuntimeRe
         return Ok(());
     }
     let window_size = sizes[0];
+    if window_size == 0 {
+        return Err(env.error("Window size cannot be 0"));
+    }
     sizes = &sizes[1..];
     let window_count = if window_size <= array.shape()[0] {
         array.shape()[0] - window_size + 1

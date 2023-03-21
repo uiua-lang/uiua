@@ -198,7 +198,7 @@ impl fmt::Display for Primitive {
 
 impl Primitive {
     pub fn from_name(name: &str) -> Option<Self> {
-        if name.len() < 2 {
+        if name.len() < 3 {
             return None;
         }
         let name = name.to_lowercase();

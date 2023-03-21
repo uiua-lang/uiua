@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt, fs, mem::take, path::Path};
 
 use crate::{
     ast::*,
-    format::format_items_ignore_errors,
+    format::format_items,
     function::{Function, FunctionId},
     io::{IoBackend, PipedIo, StdIo},
     lex::{Sp, Span},
@@ -246,11 +246,6 @@ impl Compiler {
         self.assembly.spans.push(span);
         spot
     }
-    pub(crate) fn is_bound(&self, ident: &Ident) -> bool {
-        self.bindings
-            .get(ident)
-            .map_or(false, |b| !matches!(b, Bound::Primitive(_)))
-    }
     pub(crate) fn item(&mut self, item: Item) {
         match item {
             Item::Words(words) => self.words(words, true),
@@ -282,7 +277,7 @@ impl Compiler {
             return Err(errors.into());
         }
         let mut stack = Vec::new();
-        let (formatted, _) = format_items_ignore_errors(items);
+        let formatted = format_items(items);
         let (items, _) = parse(&formatted, None);
         for item in items {
             match item {

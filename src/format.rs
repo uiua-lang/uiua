@@ -6,28 +6,17 @@ use std::{
 
 use crate::{
     ast::*,
-    compile::{CompileError, Compiler},
-    lex::{is_basically_alphabetic, is_basically_alphanumeric, Sp},
+    lex::{is_basically_alphabetic, is_basically_alphanumeric},
     ops::Primitive,
     parse::parse,
     UiuaError, UiuaResult,
 };
 
-pub fn format_items(items: Vec<Item>) -> Result<String, Vec<Sp<CompileError>>> {
-    let (formatted, errors) = format_items_ignore_errors(items);
-    if errors.is_empty() {
-        Ok(formatted)
-    } else {
-        Err(errors)
-    }
-}
-
-pub(crate) fn format_items_ignore_errors(items: Vec<Item>) -> (String, Vec<Sp<CompileError>>) {
+pub fn format_items(items: Vec<Item>) -> String {
     let mut state = FormatState {
         string: String::new(),
         was_strand: false,
         was_primitive: false,
-        compiler: Compiler::new(),
         override_space: false,
     };
     for item in items {
@@ -36,7 +25,7 @@ pub(crate) fn format_items_ignore_errors(items: Vec<Item>) -> (String, Vec<Sp<Co
     let mut s = state.string;
     s = s.trim_end().into();
     s.push('\n');
-    (s, state.compiler.errors)
+    s
 }
 
 pub fn format<P: AsRef<Path>>(input: &str, path: P) -> UiuaResult<String> {
@@ -47,15 +36,8 @@ pub fn format_str(input: &str) -> UiuaResult<String> {
 }
 fn format_impl(input: &str, path: Option<&Path>) -> UiuaResult<String> {
     let (items, errors) = parse(input, path);
-    let mut errors: Vec<Sp<CompileError>> = errors.into_iter().map(Sp::map_into).collect();
     if errors.is_empty() {
-        match format_items(items) {
-            Ok(s) => Ok(s),
-            Err(e) => {
-                errors.extend(e);
-                Err(errors.into())
-            }
-        }
+        Ok(format_items(items))
     } else {
         Err(errors.into())
     }
@@ -76,7 +58,6 @@ struct FormatState {
     pub string: String,
     was_strand: bool,
     was_primitive: bool,
-    compiler: Compiler,
     override_space: bool,
 }
 
@@ -127,7 +108,6 @@ impl Format for Item {
             }
             Item::Newlines => {}
         }
-        state.compiler.item(self.clone());
         state.push('\n');
     }
 }
@@ -183,7 +163,7 @@ impl Format for Word {
                 }
             }
             Word::Ident(ident) => {
-                if !state.compiler.is_bound(ident) {
+                if !ident.is_capitalized() {
                     if let Some(prim) = Primitive::from_name(ident.as_str()) {
                         let name = prim.name();
                         if name.ascii.is_some() || name.unicode.is_some() {

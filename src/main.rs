@@ -72,7 +72,7 @@ fn run() -> UiuaResult {
                                 if formatted != last_formatted {
                                     clear_watching();
                                     if let Err(e) = run_file(&path) {
-                                        eprintln!("{e}")
+                                        eprintln!("{}", e.show(true))
                                     }
                                     print_watching();
                                 }

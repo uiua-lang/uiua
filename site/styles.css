@@ -188,11 +188,15 @@ button:active {
 }
 
 .tetradic-function-button {
-    color: #c3c;
+    color: #c73;
 }
 
-.modifier-button {
+.modifier1-button {
     color: #cc3;
+}
+
+.modifier2-button {
+    color: #c3c;
 }
 
 #editor-help {

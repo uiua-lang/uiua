@@ -162,8 +162,6 @@ primitive!(
     (0, Args, "args"),
     (1, Var, "var"),
     // Modifiers
-    (Invert { modifier(1) }, "invert" + '↩'),
-    (Under { modifier(2) }, "under" + '⍜'),
     (Reduce { modifier(1) }, "reduce", Slash),
     (Scan { modifier(1) }, "scan", BackSlash),
     (Each { modifier(1) }, "each" + '⸪'),
@@ -171,6 +169,8 @@ primitive!(
     (Table { modifier(1) }, "table", Caret + '⊞'),
     (Fold { modifier(1) }, "fold"),
     (Repeat { modifier(1) }, "repeat" + '⍥'),
+    (Invert { modifier(1) }, "invert" + '↩'),
+    (Under { modifier(2) }, "under" + '⍜'),
     (Try { modifier(2) }, "try", Question),
     // Misc
     (2, Assert, "assert", Bang),

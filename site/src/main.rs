@@ -161,8 +161,12 @@ pub fn App(cx: Scope) -> impl IntoView {
             let onclick = move |_| replace_code(&p.to_string());
             let class = format!(
                 "glyph-button {}",
-                if p.is_modifier() {
-                    "modifier-button"
+                if let Some(m) = p.modifier_args() {
+                    if m == 1 {
+                        "modifier1-button"
+                    } else {
+                        "modifier2-button"
+                    }
                 } else {
                     match p.args() {
                         Some(1) => "monadic-function-button",

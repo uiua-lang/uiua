@@ -45,11 +45,16 @@ impl fmt::Debug for Function {
 
 impl fmt::Display for Function {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "(")?;
-        for instr in &self.instrs {
+        if self.instrs.len() != 1 {
+            write!(f, "(")?;
+        }
+        for instr in self.instrs.iter().rev() {
             instr.fmt(f)?;
         }
-        write!(f, ")")
+        if self.instrs.len() != 1 {
+            write!(f, ")")?;
+        }
+        Ok(())
     }
 }
 
@@ -59,6 +64,7 @@ pub enum Instr {
     BeginArray,
     EndArray(bool, usize),
     CopyGlobal(usize),
+    BindGlobal,
     Primitive(Primitive, usize),
     Call(usize),
 }
@@ -69,9 +75,10 @@ impl fmt::Display for Instr {
             Instr::Push(val) => write!(f, "{val}"),
             Instr::BeginArray => write!(f, "]"),
             Instr::EndArray(..) => write!(f, "["),
+            Instr::BindGlobal => write!(f, "g!"),
             Instr::CopyGlobal(idx) => write!(f, "g{idx}"),
             Instr::Primitive(prim, _) => write!(f, "{prim}"),
-            Instr::Call(_) => write!(f, "call"),
+            Instr::Call(_) => Ok(()),
         }
     }
 }

@@ -132,25 +132,13 @@ impl Value {
         forget(self);
         array
     }
-    pub fn into_function(self) -> Function {
+    pub fn into_function(self) -> Rc<Function> {
         assert!(self.is_function());
         // Conjure the rc
         let rc = unsafe { Rc::from_raw(self.0.unpack::<FunctionRef>()) };
-        let function = match Rc::try_unwrap(rc) {
-            Ok(function) => {
-                // The rc is consumed and can rest
-                function
-            }
-            Err(rc) => {
-                // Clone the function and let the rc rest
-                let function = (*rc).clone();
-                drop(rc);
-                function
-            }
-        };
-        // The rc is already dropped, so the destructor shouldn't be run again
+        // The rc is moved out, so the destructor shouldn't be run
         forget(self);
-        function
+        rc
     }
 }
 

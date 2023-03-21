@@ -9,12 +9,12 @@ use crate::{
     ops::{constants, Primitive},
     parse::{parse, ParseError},
     value::Value,
-    vm::{dprintln, Vm, VmInstr},
+    vm::{dprintln, Vm},
     Ident, RuntimeError, UiuaError, UiuaResult,
 };
 
 pub struct Assembly {
-    pub(crate) instrs: Vec<VmInstr>,
+    pub(crate) instrs: Vec<Instr>,
     pub(crate) spans: Vec<Span>,
 }
 
@@ -104,13 +104,10 @@ enum Bound {
 impl Default for Compiler {
     fn default() -> Self {
         let mut bindings = HashMap::new();
-        let mut vm = Vm::default();
         // Initialize builtins
         // Constants
-        for (name, value) in constants() {
-            let index = vm.globals.len();
-            vm.globals.push(value);
-            bindings.insert(name.into(), Bound::Global(index));
+        for (i, (name, _)) in constants().into_iter().enumerate() {
+            bindings.insert(name.into(), Bound::Global(i));
         }
         // Primitives
         for prim in Primitive::ALL {
@@ -127,7 +124,7 @@ impl Default for Compiler {
                 instrs: Vec::new(),
                 spans: vec![Span::Builtin],
             },
-            vm,
+            vm: Vm::default(),
         }
     }
 }
@@ -175,14 +172,9 @@ impl Compiler {
     pub fn finish(self) -> Assembly {
         self.assembly
     }
-    fn push_instr(&mut self, instr: impl Into<VmInstr>) {
-        let instr = instr.into();
+    fn push_instr(&mut self, instr: Instr) {
         if let Some(ipf) = self.in_progress_functions.last_mut() {
-            if let VmInstr::Function(instr) = instr {
-                ipf.push(instr);
-            } else {
-                panic!("non-function instr in function")
-            }
+            ipf.push(instr);
         } else {
             self.assembly.instrs.push(instr);
         }
@@ -215,7 +207,7 @@ impl Compiler {
             .count();
         self.bindings
             .insert(binding.name.value, Bound::Global(index));
-        self.push_instr(VmInstr::BindGlobal);
+        self.push_instr(Instr::BindGlobal);
     }
     pub fn eval(&mut self, input: &str) -> UiuaResult<Vec<Value>> {
         let (items, errors) = parse(input, None);

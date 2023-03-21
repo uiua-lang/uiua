@@ -1,10 +1,11 @@
-use std::{collections::VecDeque, fmt, mem::swap};
+use std::{mem::swap, rc::Rc, vec};
 
 use crate::{
     array::Array,
     compile::Assembly,
-    function::{FunctionId, Instr},
+    function::{Function, Instr},
     io::{IoBackend, StdIo},
+    ops::constants,
     value::{Type, Value},
     RuntimeError, RuntimeResult, TraceFrame, UiuaError, UiuaResult,
 };
@@ -20,31 +21,10 @@ impl<'a> Env<'a> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum VmInstr {
-    BindGlobal,
-    Function(Instr),
-}
-
-impl fmt::Display for VmInstr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            VmInstr::BindGlobal => write!(f, "BindGlobal"),
-            VmInstr::Function(instr) => write!(f, "{instr}"),
-        }
-    }
-}
-
-impl From<Instr> for VmInstr {
-    fn from(instr: Instr) -> Self {
-        Self::Function(instr)
-    }
-}
-
 struct StackFrame {
+    function: Rc<Function>,
     call_span: usize,
-    id: FunctionId,
-    instrs: VecDeque<Instr>,
+    pc: usize,
 }
 
 macro_rules! dprintln {
@@ -56,9 +36,8 @@ macro_rules! dprintln {
 }
 pub(crate) use dprintln;
 
-#[derive(Default)]
 pub struct Vm<B = StdIo> {
-    instrs: VecDeque<VmInstr>,
+    instrs: vec::IntoIter<Instr>,
     call_stack: Vec<StackFrame>,
     array_stack: Vec<usize>,
     pub globals: Vec<Value>,
@@ -66,14 +45,27 @@ pub struct Vm<B = StdIo> {
     pub io: B,
 }
 
+impl<B: Default> Default for Vm<B> {
+    fn default() -> Self {
+        Self {
+            instrs: Vec::new().into_iter(),
+            call_stack: Vec::new(),
+            array_stack: Vec::new(),
+            globals: constants().into_iter().map(|(_, v)| v).collect(),
+            stack: Vec::new(),
+            io: B::default(),
+        }
+    }
+}
+
 impl<B: IoBackend> Vm<B> {
     pub fn run_assembly(&mut self, assembly: &Assembly) -> UiuaResult {
-        self.instrs = assembly.instrs.iter().cloned().map(Into::into).collect();
+        self.instrs = assembly.instrs.clone().into_iter();
         if let Err(error) = self.run_assembly_inner(assembly, None) {
             let mut trace = Vec::new();
             for frame in self.call_stack.iter().rev() {
                 trace.push(TraceFrame {
-                    id: frame.id.clone(),
+                    id: frame.function.id.clone(),
                     span: assembly.spans[frame.call_span].clone(),
                 });
             }
@@ -107,21 +99,19 @@ impl<B: IoBackend> Vm<B> {
             #[cfg(feature = "profile")]
             puffin::profile_scope!("instr loop");
             if let Some(frame) = self.call_stack.last_mut() {
-                if let Some(instr) = frame.instrs.pop_front() {
+                if let Some(instr) = frame.function.instrs.get(frame.pc).cloned() {
                     dprintln!("  {instr}");
-                    self.instr(assembly, &instr)?;
+                    frame.pc += 1;
+                    self.instr(assembly, instr)?;
                 } else {
                     self.call_stack.pop();
                     if return_depth == Some(self.call_stack.len()) {
                         break;
                     }
                 }
-            } else if let Some(instr) = self.instrs.pop_front() {
+            } else if let Some(instr) = self.instrs.next() {
                 dprintln!("  {instr}");
-                match instr {
-                    VmInstr::BindGlobal => self.globals.push(self.stack.pop().unwrap()),
-                    VmInstr::Function(instr) => self.instr(assembly, &instr)?,
-                }
+                self.instr(assembly, instr)?;
             } else {
                 break;
             }
@@ -130,29 +120,26 @@ impl<B: IoBackend> Vm<B> {
         }
         Ok(())
     }
-    fn instr(&mut self, assembly: &Assembly, instr: &Instr) -> RuntimeResult {
+    fn instr(&mut self, assembly: &Assembly, instr: Instr) -> RuntimeResult {
         match instr {
-            Instr::Push(v) => {
-                #[cfg(feature = "profile")]
-                puffin::profile_scope!("push");
-                self.stack.push(v.clone())
-            }
+            Instr::Push(v) => self.stack.push(v),
             Instr::BeginArray => self.array_stack.push(self.stack.len()),
             Instr::EndArray(normalize, span) => {
                 let bottom = self.array_stack.pop().expect("nothing in array stack");
                 if bottom > self.stack.len() {
-                    return Err(assembly.spans[*span]
-                        .error("array construction ended with a smaller stack"));
+                    return Err(
+                        assembly.spans[span].error("array construction ended with a smaller stack")
+                    );
                 }
                 let array: Array = self.stack.drain(bottom..).rev().collect();
-                self.stack
-                    .push(array.normalized(*normalize as usize).into());
+                self.stack.push(array.normalized(normalize as usize).into());
             }
-            Instr::CopyGlobal(n) => self.stack.push(self.globals[*n].clone()),
-            &Instr::Call(span) => {
+            Instr::BindGlobal => self.globals.push(self.stack.pop().unwrap()),
+            Instr::CopyGlobal(n) => self.stack.push(self.globals[n].clone()),
+            Instr::Call(span) => {
                 self.call(span)?;
             }
-            &Instr::Primitive(prim, span) => {
+            Instr::Primitive(prim, span) => {
                 let mut env = CallEnv {
                     vm: self,
                     assembly,
@@ -176,9 +163,9 @@ impl<B: IoBackend> Vm<B> {
         };
         // Call
         self.call_stack.push(StackFrame {
+            function,
             call_span: span,
-            id: function.id,
-            instrs: function.instrs.into(),
+            pc: 0,
         });
         Ok(true)
     }

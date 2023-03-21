@@ -185,7 +185,10 @@ impl Format for Word {
             Word::Ident(ident) => {
                 if !state.compiler.is_bound(ident) {
                     if let Some(prim) = Primitive::from_name(ident.as_str()) {
-                        return prim.format(state);
+                        let name = prim.name();
+                        if name.ascii.is_some() || name.unicode.is_some() {
+                            return prim.format(state);
+                        }
                     }
                 }
                 state.space_if_alphabetic();

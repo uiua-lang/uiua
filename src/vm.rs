@@ -32,6 +32,7 @@ pub(crate) enum Instr {
     EndArray(bool, usize),
     BindGlobal,
     CopyGlobal(usize),
+    CopyRef(usize, usize),
     Call(usize),
     Return,
 }
@@ -65,12 +66,18 @@ pub(crate) use dprintln;
 pub struct Vm<B = StdIo> {
     call_stack: Vec<StackFrame>,
     array_stack: Vec<usize>,
-    pub context_stack: Vec<usize>,
+    reference_stack: Vec<ReferenceFrame>,
     pub globals: Vec<Value>,
     pub stack: Vec<Value>,
     pc: usize,
     just_called: Option<Function>,
     pub io: B,
+}
+
+struct ReferenceFrame {
+    bottom: usize,
+    size: usize,
+    values: Option<Vec<Value>>,
 }
 
 pub struct RestorePoint {
@@ -104,7 +111,7 @@ impl<B: IoBackend> Vm<B> {
             stack: self.stack.clone(),
             pc: self.pc,
             array_stack_size: self.array_stack.len(),
-            context_stack_size: self.context_stack.len(),
+            context_stack_size: self.reference_stack.len(),
         }
     }
     pub(crate) fn restore(&mut self, point: RestorePoint) -> Vec<Value> {
@@ -113,7 +120,7 @@ impl<B: IoBackend> Vm<B> {
         self.pc = point.pc;
         self.just_called = None;
         self.array_stack.truncate(point.array_stack_size);
-        self.context_stack.truncate(point.context_stack_size);
+        self.reference_stack.truncate(point.context_stack_size);
         replace(&mut self.stack, point.stack)
     }
     fn run_assembly_inner(
@@ -168,6 +175,35 @@ impl<B: IoBackend> Vm<B> {
                 }
                 Instr::BindGlobal => self.globals.push(stack.pop().unwrap()),
                 Instr::CopyGlobal(n) => stack.push(self.globals[*n].clone()),
+                &Instr::CopyRef(n, span) => {
+                    let name = || (n as u8 + b'a') as char;
+                    let reference = self.reference_stack.last_mut().ok_or_else(|| {
+                        assembly.spans[span].error(format!("no reference set for `{}`", name()))
+                    })?;
+                    if n >= reference.size {
+                        return Err(assembly.spans[span].error(format!(
+                            "reference `{}` is out of bounds of {} reference",
+                            name(),
+                            reference.size
+                        )));
+                    }
+                    if reference.values.is_none() {
+                        if reference.size > stack.len()
+                            || reference.bottom - reference.size > stack.len()
+                        {
+                            return Err(assembly.spans[span]
+                                .error(format!("reference `{}` was invalidated", name())));
+                        }
+                        reference.values = Some(
+                            stack
+                                .drain(reference.bottom - reference.size..reference.bottom)
+                                .rev()
+                                .collect(),
+                        );
+                    }
+                    let value = reference.values.as_ref().unwrap()[n].clone();
+                    stack.push(value);
+                }
                 &Instr::Call(span) => {
                     self.call(assembly, span)?;
                 }
@@ -231,29 +267,6 @@ impl<B: IoBackend> Vm<B> {
                 self.pc = pc;
                 false
             }
-            Function::Selector(sel) => {
-                let inputs = env.vm.context_stack.last().copied().ok_or_else(|| {
-                    assembly.spans[span].error("selector called outside of context")
-                })?;
-                if inputs < sel.min_inputs() as usize {
-                    return Err(assembly.spans[span].error(format!(
-                        "selector `{}` requires a context of at least {} inputs, but this context only has {}",
-                        sel,
-                        sel.min_inputs(),
-                        inputs,
-                    )));
-                }
-                let mut items = Vec::with_capacity(inputs);
-                for n in 0..inputs {
-                    items.push(env.pop(n)?);
-                }
-                let bottom = env.vm.stack.len();
-                for i in sel.output_indices() {
-                    env.push(items[i as usize].clone());
-                }
-                self.stack[bottom..].reverse();
-                false
-            }
         };
         self.just_called = Some(function);
         Ok(call_started)
@@ -288,7 +301,7 @@ impl<'a, B: IoBackend> CallEnv<'a, B> {
     pub fn pop(&mut self, arg: impl StackArg) -> RuntimeResult<Value> {
         self.vm.stack.pop().ok_or_else(|| {
             self.error(format!(
-                "stack was empty when evaluating {}",
+                "Stack was empty when evaluating {}",
                 arg.arg_name()
             ))
         })
@@ -304,7 +317,7 @@ impl<'a, B: IoBackend> CallEnv<'a, B> {
             Ok(value)
         } else {
             Err(self.assembly.spans[self.span].error(format!(
-                "stack was empty when evaluating argument {}",
+                "Stack was empty when evaluating argument {}",
                 arg.arg_name()
             )))
         }
@@ -378,6 +391,27 @@ impl<'a, B: IoBackend> CallEnv<'a, B> {
         let a = self.top_mut(2)?;
         swap(a, &mut b);
         f(a, b, &env)
+    }
+    pub fn with_reference(
+        &mut self,
+        size: usize,
+        f: impl FnOnce(&mut Self) -> RuntimeResult,
+    ) -> RuntimeResult {
+        let bottom = self.vm.stack.len();
+        if bottom < size {
+            return Err(self.error(format!("This reference needs at least {size} values, but there are only {bottom} on the stack")));
+        }
+        self.vm.reference_stack.push(ReferenceFrame {
+            bottom,
+            size,
+            values: None,
+        });
+        let res = f(self);
+        self.vm
+            .reference_stack
+            .pop()
+            .expect("popped empty reference stack");
+        res
     }
 }
 

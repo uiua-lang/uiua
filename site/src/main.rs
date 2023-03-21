@@ -11,11 +11,22 @@ const EXAMPLES: &[&str] = &[
     "# Click Run to format!\nfirst repeat (\\+ rev)0_1 10",
     "↯~⇡/×.2_3_4",
     "Avg = ÷/+~⇀.\nAvg 0_2_1_5",
+    ":::(÷×2 a -b ⚇:·_¯ √-××4 a c ⁿ2 b)1 2 0",
     r#"⊟⸪(≅⇌.).["uiua" "racecar" "wow" "cool!"]"#,
     "‡⸪(=2 /+=⌊.÷+1 ⇡.).+1 ⇡60",
     "⍉↯4_4[...1 .2 .3 ...4 .5 .6]",
     "⸪(⊡~·_:_÷_≡_⍋ ⁅÷23)⊞×.-10 ⇡20",
 ];
+
+#[cfg(test)]
+#[test]
+fn test_examples() {
+    for example in EXAMPLES {
+        Compiler::new()
+            .eval(example)
+            .unwrap_or_else(|e| panic!("Example failed:\n{example}\n{e}"));
+    }
+}
 
 thread_local! {
     static SUBTITLE: RefCell<Option<usize>>  = RefCell::new(None);
@@ -233,6 +244,7 @@ fn run_code(code: &str, format_first: bool) -> UiuaResult<(String, String)> {
     }
     for val in values.into_iter().rev() {
         s.push_str(&val.show());
+        s.push('\n');
     }
     Ok((formatted, s))
 }

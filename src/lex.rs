@@ -26,6 +26,7 @@ pub enum LexError {
     ExpectedCharacter(Option<char>),
     InvalidEscape(char),
     ExpectedNumber,
+    TooManyColons,
 }
 
 impl fmt::Display for LexError {
@@ -36,6 +37,10 @@ impl fmt::Display for LexError {
             LexError::ExpectedCharacter(None) => write!(f, "expected character"),
             LexError::InvalidEscape(c) => write!(f, "invalid escape character {c:?}"),
             LexError::ExpectedNumber => write!(f, "expected number"),
+            LexError::TooManyColons => write!(
+                f,
+                "too many colons. Do you really need more than 26 values?"
+            ),
         }
     }
 }
@@ -481,6 +486,9 @@ impl Lexer {
                     let mut n = 1;
                     while self.next_char_exact(':') {
                         n += 1;
+                        if n > 26 {
+                            return Err(self.end_span(start).sp(LexError::TooManyColons));
+                        }
                     }
                     self.end(Colons(n), start)
                 }

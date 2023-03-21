@@ -288,20 +288,21 @@ impl Primitive {
             }
             Primitive::AdicFork(n) => {
                 let fs = env.pop(1)?;
-                env.vm.context_stack.push(*n as usize);
-                if !fs.is_array() {
-                    env.push(fs);
-                    return env.call();
-                }
-                let args = env.pop_n(*n as usize)?;
-                for f in fs.into_array().into_values().into_iter().rev() {
-                    for arg in args.iter() {
-                        env.push(arg.clone());
+                env.with_reference(*n as usize, |env| {
+                    if !fs.is_array() {
+                        env.push(fs);
+                        return env.call();
                     }
-                    env.push(f);
-                    env.call()?;
-                }
-                env.vm.context_stack.pop();
+                    let args = env.pop_n(*n as usize)?;
+                    for f in fs.into_array().into_values().into_iter().rev() {
+                        for arg in args.iter() {
+                            env.push(arg.clone());
+                        }
+                        env.push(f);
+                        env.call()?;
+                    }
+                    Ok(())
+                })?;
             }
             Primitive::Fold => {
                 let f = env.pop(1)?;

@@ -3,7 +3,7 @@ use std::{collections::HashMap, fmt, fs, mem::take, path::Path};
 use crate::{
     ast::*,
     format::format_items_ignore_errors,
-    function::{Function, FunctionId, Selector},
+    function::{Function, FunctionId},
     io::{IoBackend, PipedIo, StdIo},
     lex::{Sp, Span},
     ops::{constants, Primitive},
@@ -377,11 +377,18 @@ impl Compiler {
         let bound = match self.bindings.get(&ident) {
             Some(bind) => bind,
             None => {
-                if let Some(prim) = Primitive::from_name(ident.as_str()) {
+                let name = ident.as_str();
+                if let Some(prim) = Primitive::from_name(name) {
                     return self.primitive(prim, span, call);
                 }
-                if let Ok(selector) = ident.as_str().parse::<Selector>() {
-                    return self.selector(selector, span, call);
+                if name.len() == 1 {
+                    let c = name.chars().next().unwrap();
+                    if c.is_ascii_alphabetic() {
+                        let n = c.to_ascii_lowercase() as u8 - b'a';
+                        let span = self.push_call_span(span);
+                        self.push_instr(Instr::CopyRef(n as usize, span));
+                        return;
+                    }
                 }
                 self.errors
                     .push(span.clone().sp(CompileError::UnknownBinding(ident.clone())));
@@ -447,13 +454,6 @@ impl Compiler {
     }
     fn primitive(&mut self, prim: Primitive, span: Span, call: bool) {
         self.push_instr(Instr::Push(Function::Primitive(prim).into()));
-        if call {
-            let span = self.push_call_span(span);
-            self.push_instr(Instr::Call(span));
-        }
-    }
-    fn selector(&mut self, selector: Selector, span: Span, call: bool) {
-        self.push_instr(Instr::Push(Function::Selector(selector).into()));
         if call {
             let span = self.push_call_span(span);
             self.push_instr(Instr::Call(span));

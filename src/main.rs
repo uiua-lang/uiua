@@ -10,7 +10,7 @@ use std::{
 
 use clap::Parser;
 use notify::{EventKind, RecursiveMode, Watcher};
-use uiua::{compile::Compiler, format::format_file, UiuaResult};
+use uiua::{compile::Compiler, format::format_file, value::Value, UiuaResult};
 
 fn main() {
     #[cfg(feature = "profile")]
@@ -71,8 +71,13 @@ fn run() -> UiuaResult {
                             Ok(formatted) => {
                                 if formatted != last_formatted {
                                     clear_watching();
-                                    if let Err(e) = run_file(&path) {
-                                        eprintln!("{}", e.show(true))
+                                    match run_file(&path) {
+                                        Ok(values) => {
+                                            for value in values.into_iter().rev() {
+                                                println!("{}", value.show());
+                                            }
+                                        }
+                                        Err(e) => eprintln!("{}", e.show(true)),
                                     }
                                     print_watching();
                                 }
@@ -123,12 +128,11 @@ fn run() -> UiuaResult {
     Ok(())
 }
 
-fn run_file(path: &Path) -> UiuaResult {
+fn run_file(path: &Path) -> UiuaResult<Vec<Value>> {
     let mut compiler = Compiler::new();
     compiler.load_file(path)?;
     let assembly = compiler.finish();
-    assembly.run()?;
-    Ok(())
+    assembly.run()
 }
 
 #[derive(Parser)]

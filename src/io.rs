@@ -22,12 +22,15 @@ pub trait IoBackend {
 }
 
 #[derive(Default)]
-pub struct StdIo;
+pub struct StdIo {
+    pub printed: bool,
+}
 
 impl IoBackend for StdIo {
     fn print_str(&mut self, s: &str) {
         print!("{}", s);
         let _ = stdout().lock().flush();
+        self.printed = true;
     }
     fn scan_line(&mut self) -> String {
         stdin()

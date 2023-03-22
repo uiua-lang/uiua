@@ -175,6 +175,11 @@ primitive!(
     (0, Args, "args"),
     (1, Var, "var"),
     (0, Rand, "rand"),
+    (1, FReadStr, "freadstr"),
+    (1, FWriteStr, "fwritestr"),
+    (1, FReadBytes, "freadbytes"),
+    (1, FWriteBytes, "fwritebytes"),
+    (1, FLines, "flines"),
     // Modifiers
     (Reduce { modifier: 1 }, "reduce" + '/'),
     (Fold { modifier: 1 }, "fold" + '⌿'),
@@ -560,6 +565,68 @@ impl Primitive {
             }
             Primitive::Rand => {
                 env.push(SmallRng::seed_from_u64(instant::now().to_bits()).gen::<f64>())
+            }
+            Primitive::FReadStr => {
+                let path = env.pop(1)?;
+                if !path.is_array() || !path.array().is_chars() {
+                    return Err(env.error("Path must be a string"));
+                }
+                let path: String = path.array().chars().iter().collect();
+                let contents = env.vm.io.read_file_string(&path, &env.env())?;
+                env.push(contents);
+            }
+            Primitive::FWriteStr => {
+                let path = env.pop(1)?;
+                let contents = env.pop(2)?;
+                if !path.is_array() || !path.array().is_chars() {
+                    return Err(env.error("Path must be a string"));
+                }
+                if !contents.is_array() || !contents.array().is_chars() {
+                    return Err(env.error("Contents must be a string"));
+                }
+                let path: String = path.array().chars().iter().collect();
+                env.vm
+                    .io
+                    .write_file_string(&path, contents.to_string(), &env.env())?;
+            }
+            Primitive::FReadBytes => {
+                let path = env.pop(1)?;
+                if !path.is_array() || !path.array().is_chars() {
+                    return Err(env.error("Path must be a string"));
+                }
+                let path: String = path.array().chars().iter().collect();
+                let contents = env.vm.io.read_file(&path, &env.env())?;
+                let arr = Array::from_iter(contents.into_iter().map(|b| b as f64));
+                env.push(arr);
+            }
+            Primitive::FWriteBytes => {
+                let path = env.pop(1)?;
+                let contents = env.pop(2)?;
+                if !path.is_array() || !path.array().is_chars() {
+                    return Err(env.error("Path must be a string"));
+                }
+                if !contents.is_array() || !contents.array().is_numbers() {
+                    return Err(env.error("Contents must be a byte array"));
+                }
+                let path: String = path.array().chars().iter().collect();
+                let contents: Vec<u8> = contents
+                    .array()
+                    .numbers()
+                    .iter()
+                    .map(|n| *n as u8)
+                    .collect();
+                env.vm.io.write_file(&path, contents, &env.env())?;
+            }
+            Primitive::FLines => {
+                let path = env.pop(1)?;
+                if !path.is_array() || !path.array().is_chars() {
+                    return Err(env.error("Path must be a string"));
+                }
+                let path: String = path.array().chars().iter().collect();
+                let contents = env.vm.io.read_file_string(&path, &env.env())?;
+                let lines_array =
+                    Array::from_iter(contents.lines().map(Array::from).map(Value::from));
+                env.push(lines_array);
             }
         }
         Ok(())

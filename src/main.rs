@@ -154,11 +154,10 @@ enum Command {
         long_about = "Format a uiua file or all files in the current directory, \
                       replacing named primitives with their unicode equivalents"
     )]
-    Fmt {
-        path: Option<PathBuf>,
-    },
+    Fmt { path: Option<PathBuf> },
     #[clap(about = "Format and run a uiua file when it changes")]
     Watch,
+    #[clap(about = "Format and run main.ua")]
     Run,
 }
 

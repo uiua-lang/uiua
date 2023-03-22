@@ -180,6 +180,9 @@ primitive!(
     (1, FReadBytes, "freadbytes"),
     (1, FWriteBytes, "fwritebytes"),
     (1, FLines, "flines"),
+    (1, FExists, "fexists"),
+    (1, FListDir, "flistdir"),
+    (1, FIsFile, "fisfile"),
     // Modifiers
     (Reduce { modifier: 1 }, "reduce" + '/'),
     (Fold { modifier: 1 }, "fold" + '⌿'),
@@ -627,6 +630,35 @@ impl Primitive {
                 let lines_array =
                     Array::from_iter(contents.lines().map(Array::from).map(Value::from));
                 env.push(lines_array);
+            }
+            Primitive::FExists => {
+                let path = env.pop(1)?;
+                if !path.is_array() || !path.array().is_chars() {
+                    return Err(env.error("Path must be a string"));
+                }
+                let path: String = path.array().chars().iter().collect();
+                let exists = env.vm.io.file_exists(&path);
+                env.push(exists);
+            }
+            Primitive::FListDir => {
+                let path = env.pop(1)?;
+                if !path.is_array() || !path.array().is_chars() {
+                    return Err(env.error("Path must be a string"));
+                }
+                let path: String = path.array().chars().iter().collect();
+                let paths = env.vm.io.list_dir(&path, &env.env())?;
+                let paths_array =
+                    Array::from_iter(paths.into_iter().map(Array::from).map(Value::from));
+                env.push(paths_array);
+            }
+            Primitive::FIsFile => {
+                let path = env.pop(1)?;
+                if !path.is_array() || !path.array().is_chars() {
+                    return Err(env.error("Path must be a string"));
+                }
+                let path: String = path.array().chars().iter().collect();
+                let is_file = env.vm.io.is_file(&path, &env.env())?;
+                env.push(is_file);
             }
         }
         Ok(())

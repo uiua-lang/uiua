@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     env, fs,
     io::{stdin, stdout, BufRead, Write},
 };
@@ -21,6 +20,15 @@ pub trait IoBackend {
     }
     fn args(&mut self) -> Vec<String> {
         Vec::new()
+    }
+    fn file_exists(&self, path: &str) -> bool {
+        false
+    }
+    fn list_dir(&self, path: &str, env: &Env) -> RuntimeResult<Vec<String>> {
+        Err(env.error("File IO not supported in this environment"))
+    }
+    fn is_file(&self, path: &str, env: &Env) -> RuntimeResult<bool> {
+        Err(env.error("File IO not supported in this environment"))
     }
     fn read_file(&mut self, path: &str, env: &Env) -> RuntimeResult<Vec<u8>> {
         Err(env.error("File IO not supported in this environment"))
@@ -58,6 +66,22 @@ impl IoBackend for StdIo {
     fn args(&mut self) -> Vec<String> {
         env::args().collect()
     }
+    fn file_exists(&self, path: &str) -> bool {
+        fs::metadata(path).is_ok()
+    }
+    fn is_file(&self, path: &str, env: &Env) -> RuntimeResult<bool> {
+        fs::metadata(path)
+            .map(|m| m.is_file())
+            .map_err(|e| env.error(e.to_string()))
+    }
+    fn list_dir(&self, path: &str, env: &Env) -> RuntimeResult<Vec<String>> {
+        let mut paths = Vec::new();
+        for entry in fs::read_dir(path).map_err(|e| env.error(e.to_string()))? {
+            let entry = entry.map_err(|e| env.error(e.to_string()))?;
+            paths.push(entry.path().to_string_lossy().into());
+        }
+        Ok(paths)
+    }
     fn read_file(&mut self, path: &str, env: &Env) -> RuntimeResult<Vec<u8>> {
         fs::read(path).map_err(|e| env.error(e.to_string()))
     }
@@ -69,21 +93,10 @@ impl IoBackend for StdIo {
 #[derive(Default)]
 pub struct PipedIo {
     pub buffer: String,
-    pub files: HashMap<String, Vec<u8>>,
 }
 
 impl IoBackend for PipedIo {
     fn print_str(&mut self, s: &str) {
         self.buffer.push_str(s);
-    }
-    fn read_file(&mut self, path: &str, env: &Env) -> RuntimeResult<Vec<u8>> {
-        self.files
-            .get(path)
-            .cloned()
-            .ok_or_else(|| env.error(format!("File not found: {}", path)))
-    }
-    fn write_file(&mut self, path: &str, contents: Vec<u8>, _env: &Env) -> RuntimeResult {
-        self.files.insert(path.to_string(), contents.to_vec());
-        Ok(())
     }
 }

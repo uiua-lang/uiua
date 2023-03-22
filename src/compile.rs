@@ -102,7 +102,7 @@ enum Bound {
     /// A primitive
     Primitive(Primitive),
     /// A global variable is referenced by its index in the global array.
-    Global(usize),
+    Global(usize, bool),
     /// A dud binding used when a binding lookup fails
     Error,
 }
@@ -113,7 +113,7 @@ impl Default for Compiler {
         // Initialize builtins
         // Constants
         for (i, (name, _)) in constants().into_iter().enumerate() {
-            bindings.insert(name.into(), Bound::Global(i));
+            bindings.insert(name.into(), Bound::Global(i, false));
         }
         // Primitives
         for prim in Primitive::ALL {
@@ -203,21 +203,23 @@ impl Compiler {
         }
     }
     fn binding(&mut self, binding: Binding) {
-        if binding.name.value.is_capitalized() {
+        let function = if binding.name.value.is_capitalized() {
             self.func(Func {
                 id: FunctionId::Named(binding.name.value.clone()),
                 body: binding.words,
-            })
+            });
+            true
         } else {
-            self.words(binding.words, true)
-        }
+            self.words(binding.words, true);
+            false
+        };
         let index = self
             .bindings
             .values()
-            .filter(|b| matches!(b, Bound::Global(_)))
+            .filter(|b| matches!(b, Bound::Global(..)))
             .count();
         self.bindings
-            .insert(binding.name.value, Bound::Global(index));
+            .insert(binding.name.value, Bound::Global(index, function));
         self.push_instr(Instr::BindGlobal);
     }
     pub fn eval(&mut self, input: &str) -> UiuaResult<Vec<Value>> {
@@ -310,7 +312,7 @@ impl Compiler {
             }
         };
         match bound.clone() {
-            Bound::Global(index) => self.push_instr(Instr::CopyGlobal(index)),
+            Bound::Global(index, _) => self.push_instr(Instr::CopyGlobal(index)),
             Bound::Primitive(prim) => return self.primitive(prim, span, call),
             Bound::Error => self.push_instr(Instr::Push(Value::default())),
         }
@@ -355,6 +357,14 @@ impl Compiler {
         }
     }
     fn func(&mut self, func: Func) {
+        if func.body.len() == 1 {
+            if let Word::Ident(ident) = &func.body[0].value {
+                if let Some(Bound::Global(i, true)) = self.bindings.get(ident) {
+                    self.push_instr(Instr::CopyGlobal(*i));
+                    return;
+                }
+            }
+        }
         self.func_outer(func.id, None, |this| this.words(func.body, true));
     }
     fn ref_func(&mut self, func: Func, span: Span) {

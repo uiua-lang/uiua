@@ -8,15 +8,15 @@ html {
 
 button {
     border-width: 0;
-    border-radius: 8px;
-    font-size: 20px;
-    padding: 5px;
+    border-radius: 0.3em;
+    font-size: 3em;
+    padding: 0.3em;
     display: inline-block;
     position: relative;
 }
 
 button:active {
-    transform: translateY(2px);
+    transform: translateY(0.1em);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -78,20 +78,20 @@ button:active {
 }
 
 #top {
-    margin: 20px auto;
-    width: max(200px, min(90%, 800px));
+    margin: 2em auto;
+    width: max(10em, min(90%, 56em));
 }
 
 #subtitle {
-    margin-top: -25px;
+    margin-top: -1em;
     display: flex;
     justify-content: space-between;
-    font-size: 20px;
+    font-size: 1.5em;
 }
 
 #editor {
-    outline: 1px solid #ccd;
-    border-radius: 8px;
+    outline: 0.1em solid #ccd;
+    border-radius: 0.5em;
 }
 
 #code {
@@ -100,32 +100,33 @@ button:active {
     box-sizing: border-box;
     outline: none;
     border: none;
-    padding: 10px;
-    font-size: 20px;
-    height: 115px;
+    padding: 0.5em;
+    font-size: 1.4em;
+    height: 6em;
 }
 
 #output {
-    padding: 10px;
+    padding: 0.5em;
     white-space: pre-wrap;
-    min-height: 38px;
-    font-size: 20px;
+    min-height: 1em;
+    font-size: 1.4em;
 }
 
 #error {
     color: #f33;
-    padding: 10px;
+    padding: 0.5em;
     white-space: pre-wrap;
+    font-size: 1.4em;
 }
 
 #code-buttons {
     float: right;
-    margin: 0px;
+    margin: 0;
 }
 
 .code-button {
-    font-size: 20px;
-    margin: 0 0 0 4px;
+    font-size: 1em;
+    margin: 0 0 0 0.2em;
 }
 
 @font-face {
@@ -138,7 +139,7 @@ button:active {
 }
 
 #glyph-buttons {
-    padding: 2px;
+    padding: 0.1em;
     display: flex;
     flex-wrap: wrap;
     justify-content: space-evenly;
@@ -146,25 +147,24 @@ button:active {
 
 .glyph-button {
     font-family: "Code Font";
-    font-size: 18px;
-    padding: 1px;
-    margin: 1.5px;
+    font-size: 1.3em;
+    padding: 0.1em;
+    margin: 0.1em;
     background-color: transparent;
-    min-width: 18px;
 }
 
 .glyph-button[title]:hover::after {
     content: attr(title);
     position: absolute;
     font-family: "Code Font";
-    font-size: 14px;
+    font-size: 0.7em;
     bottom: 100%;
-    left: -90px;
     color: #eee;
     background-color: #000a;
-    padding: 2px;
-    border-radius: 4px;
-    width: 90px;
+    padding: 0.1em;
+    border-radius: 0.2em;
+    left: -7em;
+    width: 7em;
 }
 
 .glyph-button:hover {
@@ -200,8 +200,8 @@ button:active {
 }
 
 #editor-help {
-    margin-top: -25px;
-    font-size: 14px;
+    margin-top: -2em;
+    font-size: 1em;
     opacity: 0.5;
     display: flex;
     justify-content: space-between;

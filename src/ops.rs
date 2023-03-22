@@ -22,7 +22,7 @@ pub(crate) fn constants() -> Vec<(&'static str, Value)> {
 }
 
 macro_rules! primitive {
-    ($(($($args:literal, $($outputs:literal,)?)? $name:ident $({$modifier:ident: $margs:literal})? $(,$ident:literal)? $(,$ascii:ident)? $(+ $unicode:literal)?)),* $(,)?) => {
+    ($(($($args:literal, $($outputs:literal,)?)? $name:ident $({$modifier:ident: $margs:literal})? $(,$ident:literal)? $(,$ascii:ident)? $(+ $character:literal)?)),* $(,)?) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
         pub enum Primitive {
             $($name,)*
@@ -46,7 +46,7 @@ macro_rules! primitive {
             }
             pub fn unicode(&self) -> Option<char> {
                 match self {
-                    $($(Primitive::$name => Some($unicode),)?)*
+                    $($(Primitive::$name => Some($character),)?)*
                     _ => None
                 }
             }
@@ -58,7 +58,7 @@ macro_rules! primitive {
             }
             pub fn from_unicode(c: char) -> Option<Self> {
                 match c {
-                    $($($unicode => Some(Self::$name),)?)*
+                    $($($character => Some(Self::$name),)?)*
                     _ => None
                 }
             }

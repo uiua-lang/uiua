@@ -100,19 +100,24 @@ fn run() -> UiuaResult {
             stdout().flush().unwrap();
         }
         print_prompt();
-        while let Some(Ok(line)) = stdin().lock().lines().next() {
-            if line.trim() == "exit" {
+        loop {
+            let line = stdin().lock().lines().next();
+            if let Some(Ok(line)) = line {
+                if line.trim() == "exit" {
+                    break;
+                }
+                match compiler.eval(&line) {
+                    Ok(stack) => {
+                        for value in stack {
+                            println!("{}", value.show());
+                        }
+                    }
+                    Err(e) => eprintln!("{}", e.show(true)),
+                }
+                print_prompt();
+            } else {
                 break;
             }
-            match compiler.eval(&line) {
-                Ok(stack) => {
-                    for value in stack {
-                        println!("{}", value.show());
-                    }
-                }
-                Err(e) => eprintln!("{}", e.show(true)),
-            }
-            print_prompt();
         }
     }
     Ok(())

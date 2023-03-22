@@ -540,9 +540,7 @@ impl Primitive {
             Primitive::First => env.monadic_mut_env(Value::first)?,
             Primitive::String => env.monadic(|v| v.to_string())?,
             Primitive::ScanLn => {
-                let mut line = env.vm.io.scan_line();
-                line.pop();
-                line.pop();
+                let line = env.vm.io.scan_line();
                 env.push(line);
             }
             Primitive::Args => {

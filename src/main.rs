@@ -67,7 +67,7 @@ fn run() -> UiuaResult {
                         .filter(|path| path.extension().map_or(false, |ext| ext == "ua"))
                         .last()
                     {
-                        match format_file(&path) {
+                        match format_file(&path).or_else(|_| format_file(&path)) {
                             Ok(formatted) => {
                                 if formatted != last_formatted {
                                     clear_watching();

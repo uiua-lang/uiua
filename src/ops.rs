@@ -141,7 +141,7 @@ primitive!(
     (1, Deduplicate, "deduplicate" + '⊝'),
     // Dyadic array ops
     (2, Match, "match" + '≅'),
-    (2, NotMatch, "notmatch" + '≇'),
+    (2, NoMatch, "notmatch" + '≇'),
     (2, Join, "join" + '≍'),
     (2, Pair, "pair" + '⚇'),
     (2, Couple, "couple" + '⊟'),
@@ -227,14 +227,15 @@ impl Primitive {
         if name.len() < 3 {
             return None;
         }
-        let name = name.to_lowercase();
+        let lower = name.to_lowercase();
         let mut matching = Primitive::ALL.into_iter().filter(|p| {
             p.name()
                 .ident
-                .map_or(false, |i| i.to_lowercase().starts_with(&name))
+                .map_or(false, |i| i.to_lowercase().starts_with(&lower))
         });
         let res = matching.next()?;
-        matching.next().is_none().then_some(res)
+        let exact_match = res.name().ident.map_or(false, |i| i == lower);
+        (exact_match || matching.next().is_none()).then_some(res)
     }
     pub(crate) fn run<B: IoBackend>(&self, env: &mut CallEnv<B>) -> RuntimeResult {
         match self {
@@ -267,7 +268,7 @@ impl Primitive {
             Primitive::Max => env.dyadic_env(Value::max)?,
             Primitive::Atan => env.dyadic_env(Value::atan2)?,
             Primitive::Match => env.dyadic(|a, b| a == b)?,
-            Primitive::NotMatch => env.dyadic(|a, b| a != b)?,
+            Primitive::NoMatch => env.dyadic(|a, b| a != b)?,
             Primitive::Join => env.dyadic_mut_env(Value::join)?,
             Primitive::Reshape => env.dyadic_mut_env(Value::reshape)?,
             Primitive::Transpose => env.monadic_mut(Value::transpose)?,

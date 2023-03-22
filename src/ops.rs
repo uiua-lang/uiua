@@ -96,6 +96,7 @@ primitive!(
     (1, 2, Dup, "duplicate", Period),
     (2, 2, Flip, "flip", Tilde),
     (1, 0, Pop, "pop", SemiColon),
+    (2, 3, Over, "over", Comma),
     // Pervasive monadic ops
     (1, Not, "not" + '¬'),
     (1, Neg, "negate" + '¯'),
@@ -301,6 +302,13 @@ impl Primitive {
             Primitive::Flip => {
                 let a = env.pop(1)?;
                 let b = env.pop(2)?;
+                env.push(a);
+                env.push(b);
+            }
+            Primitive::Over => {
+                let a = env.pop(1)?;
+                let b = env.pop(2)?;
+                env.push(b.clone());
                 env.push(a);
                 env.push(b);
             }

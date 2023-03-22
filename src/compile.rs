@@ -117,7 +117,7 @@ impl Default for Compiler {
         }
         // Primitives
         for prim in Primitive::ALL {
-            if let Some(name) = prim.name().ident {
+            if let Some(name) = prim.ident() {
                 bindings.insert(name.into(), Bound::Primitive(prim));
             }
         }

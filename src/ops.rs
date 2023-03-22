@@ -21,14 +21,8 @@ pub(crate) fn constants() -> Vec<(&'static str, Value)> {
     ]
 }
 
-pub struct PrimitiveName {
-    pub ident: Option<&'static str>,
-    pub ascii: Option<Simple>,
-    pub unicode: Option<char>,
-}
-
 macro_rules! primitive {
-    ($(($($args:literal, $($outputs:literal,)?)? $name:ident $({$modifier:ident ($margs:literal)})? $(,$ident:literal)? $(,$ascii:ident)? $(+ $unicode:literal)?)),* $(,)?) => {
+    ($(($($args:literal, $($outputs:literal,)?)? $name:ident $({$modifier:ident: $margs:literal})? $(,$ident:literal)? $(,$ascii:ident)? $(+ $unicode:literal)?)),* $(,)?) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
         pub enum Primitive {
             $($name,)*
@@ -38,14 +32,22 @@ macro_rules! primitive {
             pub const ALL: [Self; 0 $(+ {stringify!($name); 1})*] = [
                 $(Self::$name,)*
             ];
-            #[allow(path_statements)]
-            pub fn name(&self) -> PrimitiveName {
+            pub fn ident(&self) -> Option<&'static str > {
                 match self {
-                    $(Primitive::$name => PrimitiveName {
-                        ident: {None::<&'static str> $(;Some($ident))?},
-                        ascii: {None::<Simple> $(;Some(Simple::$ascii))?},
-                        unicode: {None::<char> $(;Some($unicode))?},
-                    },)*
+                    $($(Primitive::$name => Some($ident),)?)*
+                    _ => None
+                }
+            }
+            pub fn ascii(&self) -> Option<Simple> {
+                match self {
+                    $($(Primitive::$name => Some(Simple::$ascii),)?)*
+                    _ => None
+                }
+            }
+            pub fn unicode(&self) -> Option<char> {
+                match self {
+                    $($(Primitive::$name => Some($unicode),)?)*
+                    _ => None
                 }
             }
             pub fn from_simple(s: Simple) -> Option<Self> {
@@ -93,11 +95,12 @@ macro_rules! primitive {
 
 primitive!(
     // Stack ops
-    (1, 2, Dup, "duplicate", Period),
-    (2, 2, Flip, "flip", Tilde),
-    (1, 0, Pop, "pop", SemiColon),
-    (2, 3, Over, "over", Comma),
+    (1, 2, Dup, "duplicate" + '.'),
+    (2, 2, Flip, "flip" + '~'),
+    (1, 0, Pop, "pop" + ';'),
+    (2, 3, Over, "over" + ','),
     // Pervasive monadic ops
+    (1, Sign, "sign" + '$'),
     (1, Not, "not" + '¬'),
     (1, Neg, "negate" + '¯'),
     (1, Abs, "absolute value" + '⌵'),
@@ -112,12 +115,12 @@ primitive!(
     // Pervasive dyadic ops
     (2, Eq, "equals", Equal),
     (2, Ne, "not equals", BangEqual + '≠'),
-    (2, Lt, "less than", Less),
+    (2, Lt, "less than" + '<'),
     (2, Le, "less or equal", LessEqual + '≤'),
-    (2, Gt, "greater than", Greater),
+    (2, Gt, "greater than" + '>'),
     (2, Ge, "greater or equal", GreaterEqual + '≥'),
-    (2, Add, "add", Plus),
-    (2, Sub, "subtract", Minus),
+    (2, Add, "add" + '+'),
+    (2, Sub, "subtract" + '-'),
     (2, Mul, "multiply", Star + '×'),
     (2, Div, "divide", Percent + '÷'),
     (2, Mod, "modulus" + '◿'),
@@ -168,20 +171,20 @@ primitive!(
     (1, Var, "var"),
     (0, Rand, "rand"),
     // Modifiers
-    (Reduce { modifier(1) }, "reduce", Slash),
-    (Fold { modifier(1) }, "fold"+ '⌿'),
-    (Scan { modifier(1) }, "scan", BackSlash),
-    (Each { modifier(1) }, "each" + '⸪'),
-    (Cells { modifier(1) }, "cells" + '≡'),
-    (Table { modifier(1) }, "table", Caret + '⊞'),
-    (Repeat { modifier(1) }, "repeat" + '⍥'),
-    (Invert { modifier(1) }, "invert" + '↩'),
-    (Under { modifier(2) }, "under" + '⍜'),
-    (Try { modifier(2) }, "try", Question),
+    (Reduce { modifier: 1 }, "reduce" + '/'),
+    (Fold { modifier: 1 }, "fold" + '⌿'),
+    (Scan { modifier: 1 }, "scan" + '\\'),
+    (Each { modifier: 1 }, "each" + '⸪'),
+    (Cells { modifier: 1 }, "cells" + '≡'),
+    (Table { modifier: 1 }, "table" + '⊞'),
+    (Repeat { modifier: 1 }, "repeat" + '⍥'),
+    (Invert { modifier: 1 }, "invert" + '↩'),
+    (Under { modifier: 2 }, "under" + '⍜'),
+    (Try { modifier: 2 }, "try" + '?'),
     // Misc
-    (2, Assert, "assert", Bang),
+    (2, Assert, "assert" + '!'),
     (0, Nop, "noop" + '·'),
-    (Call, "call", Colon),
+    (Call, "call" + ':'),
 );
 
 fn _keep_primitive_small(_: std::convert::Infallible) {
@@ -190,12 +193,11 @@ fn _keep_primitive_small(_: std::convert::Infallible) {
 
 impl fmt::Display for Primitive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name = self.name();
-        if let Some(c) = name.unicode {
+        if let Some(c) = self.unicode() {
             write!(f, "{}", c)
-        } else if let Some(s) = name.ascii {
+        } else if let Some(s) = self.ascii() {
             write!(f, "{}", s)
-        } else if let Some(s) = name.ident {
+        } else if let Some(s) = self.ident() {
             write!(f, "{}", s)
         } else {
             write!(f, "{:?}", self)
@@ -229,12 +231,11 @@ impl Primitive {
         }
         let lower = name.to_lowercase();
         let mut matching = Primitive::ALL.into_iter().filter(|p| {
-            p.name()
-                .ident
+            p.ident()
                 .map_or(false, |i| i.to_lowercase().starts_with(&lower))
         });
         let res = matching.next()?;
-        let exact_match = res.name().ident.map_or(false, |i| i == lower);
+        let exact_match = res.ident().map_or(false, |i| i == lower);
         (exact_match || matching.next().is_none()).then_some(res)
     }
     pub(crate) fn run<B: IoBackend>(&self, env: &mut CallEnv<B>) -> RuntimeResult {
@@ -243,6 +244,7 @@ impl Primitive {
             Primitive::Not => env.monadic_env(Value::not)?,
             Primitive::Neg => env.monadic_env(Value::neg)?,
             Primitive::Abs => env.monadic_env(Value::abs)?,
+            Primitive::Sign => env.monadic_env(Value::sign)?,
             Primitive::Sqrt => env.monadic_env(Value::sqrt)?,
             Primitive::Sin => env.monadic_env(Value::sin)?,
             Primitive::Cos => env.monadic_env(Value::cos)?,
@@ -574,7 +576,7 @@ fn glyph_size() {
     writeln!(file, "A |").unwrap();
     writeln!(file, "a |").unwrap();
     for p in Primitive::ALL {
-        if let Some(glyph) = p.name().unicode {
+        if let Some(glyph) = p.unicode() {
             writeln!(file, "{} |", glyph).unwrap();
         }
     }

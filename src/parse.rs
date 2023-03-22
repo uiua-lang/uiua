@@ -247,7 +247,7 @@ impl Parser {
             .filter_map(|prim| prim.modifier_args().map(|margs| (prim, margs)))
             .find_map(|(prim, margs)| {
                 self.try_exact(prim)
-                    .or_else(|| prim.name().ascii.and_then(|simple| self.try_exact(simple)))
+                    .or_else(|| prim.ascii().and_then(|simple| self.try_exact(simple)))
                     .map(|span| (span.sp(prim), margs))
             });
         let Some((modifier, margs)) = mod_margs else {
@@ -302,7 +302,7 @@ impl Parser {
         for prim in Primitive::ALL {
             let op_span = self
                 .try_exact(prim)
-                .or_else(|| prim.name().ascii.and_then(|simple| self.try_exact(simple)));
+                .or_else(|| prim.ascii().and_then(|simple| self.try_exact(simple)));
             if let Some(span) = op_span {
                 return Ok(Some(span.sp(prim)));
             }

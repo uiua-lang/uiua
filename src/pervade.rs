@@ -30,6 +30,15 @@ pub mod abs {
         env.error(format!("Cannot take the absolute value of {a}"))
     }
 }
+pub mod sign {
+    use super::*;
+    pub fn num(a: &f64) -> f64 {
+        a.signum()
+    }
+    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+        env.error(format!("Cannot get the sign of {a}"))
+    }
+}
 pub mod sqrt {
     use super::*;
     pub fn num(a: &f64) -> f64 {

@@ -165,8 +165,7 @@ impl Format for Word {
             Word::Ident(ident) => {
                 if !ident.is_capitalized() {
                     if let Some(prim) = Primitive::from_name(ident.as_str()) {
-                        let name = prim.name();
-                        if name.ascii.is_some() || name.unicode.is_some() {
+                        if prim.ascii().is_some() || prim.unicode().is_some() {
                             return prim.format(state);
                         }
                     }

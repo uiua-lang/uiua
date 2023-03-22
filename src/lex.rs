@@ -298,27 +298,13 @@ pub enum Simple {
     CloseCurly,
     OpenBracket,
     CloseBracket,
-    Comma,
     Underscore,
-    Caret,
-    Colon,
-    Period,
-    Tilde,
-    SemiColon,
     Bar,
-    Bang,
-    Question,
-    Slash,
-    BackSlash,
-    Plus,
-    Minus,
     Star,
     Percent,
     Equal,
     BangEqual,
-    Less,
     LessEqual,
-    Greater,
     GreaterEqual,
     Newline,
 }
@@ -332,27 +318,13 @@ impl fmt::Display for Simple {
             Simple::CloseCurly => write!(f, "}}"),
             Simple::OpenBracket => write!(f, "["),
             Simple::CloseBracket => write!(f, "]"),
-            Simple::Comma => write!(f, ","),
-            Simple::Caret => write!(f, "^"),
             Simple::Underscore => write!(f, "_"),
-            Simple::Colon => write!(f, ":"),
-            Simple::SemiColon => write!(f, ";"),
-            Simple::Period => write!(f, "."),
-            Simple::Tilde => write!(f, "~"),
             Simple::Bar => write!(f, "|"),
-            Simple::Bang => write!(f, "!"),
-            Simple::Question => write!(f, "?"),
-            Simple::Slash => write!(f, "/"),
-            Simple::BackSlash => write!(f, "\\"),
-            Simple::Plus => write!(f, "+"),
-            Simple::Minus => write!(f, "-"),
             Simple::Star => write!(f, "*"),
             Simple::Percent => write!(f, "%"),
             Simple::Equal => write!(f, "="),
             Simple::BangEqual => write!(f, "!="),
-            Simple::Less => write!(f, "<"),
             Simple::LessEqual => write!(f, "<="),
-            Simple::Greater => write!(f, ">"),
             Simple::GreaterEqual => write!(f, ">="),
             Simple::Newline => write!(f, "\\n"),
         }
@@ -433,23 +405,6 @@ impl Lexer {
             span: self.end_span(start),
         }))
     }
-    fn switch_next<T, U, const N: usize>(
-        &mut self,
-        a: T,
-        others: [(char, U); N],
-        start: Loc,
-    ) -> LexResult<Option<Sp<Token>>>
-    where
-        T: Into<Token>,
-        U: Into<Token>,
-    {
-        let token = others
-            .into_iter()
-            .find(|(c, _)| self.next_char_exact(*c))
-            .map(|(_, t)| t.into())
-            .unwrap_or(a.into());
-        self.end(token, start)
-    }
     fn next_token(&mut self) -> LexResult<Option<Sp<Token>>> {
         use {self::Simple::*, Token::*};
         loop {
@@ -464,10 +419,6 @@ impl Lexer {
                 '}' => self.end(CloseCurly, start),
                 '[' => self.end(OpenBracket, start),
                 ']' => self.end(CloseBracket, start),
-                '.' => self.end(Period, start),
-                ';' => self.end(SemiColon, start),
-                ':' => self.end(Colon, start),
-                ',' => self.end(Comma, start),
                 '_' => self.end(Underscore, start),
                 '`' => {
                     let number = self.number('-');
@@ -477,12 +428,6 @@ impl Lexer {
                         self.end(Token::Number(number), start)
                     }
                 }
-                '^' => self.end(Caret, start),
-                '/' => self.end(Slash, start),
-                '\\' => self.end(BackSlash, start),
-                '~' => self.end(Tilde, start),
-                '+' => self.end(Plus, start),
-                '-' => self.end(Minus, start),
                 '¯' if self.peek_char().filter(char::is_ascii_digit).is_some() => {
                     let number = self.number('-');
                     self.end(Token::Number(number), start)
@@ -490,10 +435,9 @@ impl Lexer {
                 '*' => self.end(Star, start),
                 '%' => self.end(Percent, start),
                 '=' => self.end(Equal, start),
-                '<' => self.switch_next(Less, [('=', LessEqual)], start),
-                '>' => self.switch_next(Greater, [('=', GreaterEqual)], start),
-                '!' => self.switch_next(Bang, [('=', BangEqual)], start),
-                '?' => self.end(Question, start),
+                '<' if self.peek_char() == Some('=') => self.end(LessEqual, start),
+                '>' if self.peek_char() == Some('=') => self.end(GreaterEqual, start),
+                '!' if self.peek_char() == Some('=') => self.end(BangEqual, start),
                 '|' => self.end(Bar, start),
                 // Comments
                 '#' => {

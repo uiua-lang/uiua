@@ -14,7 +14,7 @@ const EXAMPLES: &[&str] = &[
     "{÷×2 a -b ⚇¯.√-××4 a c ⁿ2 b}1 2 0",
     r#"⊟⸪(≅⇌.).["uiua" "racecar" "wow" "cool!"]"#,
     "\
-Thirty = ≡(↥≅[0 1 1]~=1 /+.)◫3 ≍~0≍0 
+Thirty = ≡(↥≅0_1_1~=1 /+.)◫3 ≍~0≍0 
 size = 26
 start = =÷2 size ⇡+1 size
 ⸪(⊡~·_⊞)⇌[⍥(Thirty.)start ÷2 size]",
@@ -147,20 +147,19 @@ pub fn App(cx: Scope) -> impl IntoView {
     let mut glyph_buttons: Vec<_> = Primitive::ALL
         .iter()
         .filter_map(|p| {
-            let name = p.name();
-            let text = name
-                .unicode
+            let text = p
+                .unicode()
                 .map(Into::into)
-                .or_else(|| name.ascii.map(|s| s.to_string()))?;
-            let extra = name
-                .unicode
+                .or_else(|| p.ascii().map(|s| s.to_string()))?;
+            let extra = p
+                .unicode()
                 .is_some()
-                .then(|| name.ascii.map(|s| s.to_string()))
+                .then(|| p.ascii().map(|s| s.to_string()))
                 .flatten()
                 .unwrap_or_default();
             let title = format!(
                 "{}{}",
-                name.ident.unwrap_or_default(),
+                p.ident().unwrap_or_default(),
                 format_args!("\n{extra}")
             );
             let onclick = move |_| replace_code(&p.to_string());

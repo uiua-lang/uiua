@@ -160,6 +160,7 @@ macro_rules! value_un_impl {
 value_un_impl!(not, (Num, number, num));
 value_un_impl!(neg, (Num, number, num));
 value_un_impl!(abs, (Num, number, num));
+value_un_impl!(sign, (Num, number, num));
 value_un_impl!(sqrt, (Num, number, num));
 value_un_impl!(sin, (Num, number, num));
 value_un_impl!(cos, (Num, number, num));

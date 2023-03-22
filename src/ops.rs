@@ -183,6 +183,7 @@ primitive!(
     (1, FExists, "fexists"),
     (1, FListDir, "flistdir"),
     (1, FIsFile, "fisfile"),
+    (1, Import, "import"),
     // Modifiers
     (Reduce { modifier: 1 }, "reduce" + '/'),
     (Fold { modifier: 1 }, "fold" + '⌿'),
@@ -513,7 +514,7 @@ impl Primitive {
                 env.push(f);
                 if let Err(e) = env.call() {
                     env.truncate(size);
-                    env.push(e.value);
+                    env.push(e.to_string());
                     env.push(handler);
                     env.call()?;
                 }
@@ -659,6 +660,15 @@ impl Primitive {
                 let path: String = path.array().chars().iter().collect();
                 let is_file = env.vm.io.is_file(&path, &env.env())?;
                 env.push(is_file);
+            }
+            Primitive::Import => {
+                let name = env.pop(1)?;
+                if !name.is_array() || !name.array().is_chars() {
+                    return Err(env.error("Path to import must be a string"));
+                }
+                let name: String = name.array().chars().iter().collect();
+                let value = env.vm.io.import(&name, &env.env())?;
+                env.push(value);
             }
         }
         Ok(())

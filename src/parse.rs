@@ -174,24 +174,24 @@ impl Parser {
         self.errors.push(err);
     }
     fn try_item(&mut self) -> ParseResult<Option<Item>> {
-        Ok(Some(if let Some(ident) = self.try_ident() {
-            if self.try_exact(Equal).is_some() {
-                let mut words = self.words()?;
-                if words.len() == 1 {
-                    if let Word::Func(func) = &mut words[0].value {
-                        func.id = FunctionId::Named(ident.value.clone());
-                    }
-                }
-                Item::Binding(Binding { name: ident, words })
-            } else {
-                let mut words = self.try_words()?.unwrap_or_default();
-                words.insert(0, ident.map(Word::Ident));
-                Item::Words(words)
-            }
+        Ok(Some(if let Some(binding) = self.try_binding()? {
+            Item::Binding(binding)
         } else if let Some(words) = self.try_words()? {
             Item::Words(words)
         } else if let Some(comment) = self.next_token_map(Token::as_comment) {
             Item::Comment(comment.value.into())
+        } else {
+            return Ok(None);
+        }))
+    }
+    fn try_binding(&mut self) -> ParseResult<Option<Binding>> {
+        Ok(Some(if let Some(ident) = self.try_ident() {
+            if self.try_exact(Equal).is_none() {
+                self.index -= 1;
+                return Ok(None);
+            }
+            let words = self.words()?;
+            Binding { name: ident, words }
         } else {
             return Ok(None);
         }))

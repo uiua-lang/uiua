@@ -1,9 +1,10 @@
 use std::{
+    collections::HashMap,
     env, fs,
     io::{stdin, stdout, BufRead, Write},
 };
 
-use crate::{vm::Env, RuntimeResult};
+use crate::{compile::Compiler, value::Value, vm::Env, RuntimeResult};
 
 #[allow(unused_variables)]
 pub trait IoBackend {
@@ -14,6 +15,9 @@ pub trait IoBackend {
     fn print_str_ln(&mut self, s: &str) {
         self.print_str(s);
         self.print_str("\n");
+    }
+    fn import(&mut self, name: &str, env: &Env) -> RuntimeResult<Value> {
+        Err(env.error("Import not supported in this environment"))
     }
     fn var(&mut self, name: &str) -> Option<String> {
         None
@@ -45,7 +49,9 @@ pub trait IoBackend {
 }
 
 #[derive(Default)]
-pub struct StdIo;
+pub struct StdIo {
+    imports: HashMap<String, Value>,
+}
 
 impl IoBackend for StdIo {
     fn print_str(&mut self, s: &str) {
@@ -59,6 +65,19 @@ impl IoBackend for StdIo {
             .next()
             .and_then(Result::ok)
             .unwrap_or_default()
+    }
+    fn import(&mut self, path: &str, env: &Env) -> RuntimeResult<Value> {
+        if !self.imports.contains_key(path) {
+            let mut compiler = Compiler::new();
+            compiler
+                .load_file(path)
+                .map_err(|e| env.error(e.to_string()))?;
+            let assembly = compiler.finish();
+            let mut stack = assembly.run().map_err(|e| env.error(e.to_string()))?;
+            let value = stack.pop().unwrap_or_default();
+            self.imports.insert(path.into(), value);
+        }
+        Ok(self.imports[path].clone())
     }
     fn var(&mut self, name: &str) -> Option<String> {
         env::var(name).ok()

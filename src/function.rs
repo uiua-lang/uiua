@@ -45,6 +45,9 @@ impl fmt::Debug for Function {
 
 impl fmt::Display for Function {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let FunctionId::Named(name) = &self.id {
+            return write!(f, "{name}");
+        }
         if self.instrs.len() != 1 {
             write!(f, "(")?;
         }

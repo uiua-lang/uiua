@@ -484,6 +484,25 @@ impl Value {
         *self = array.into();
         Ok(())
     }
+    pub fn sort(&mut self, env: &Env) -> RuntimeResult {
+        if !self.is_array() {
+            return Err(env.error("Cannot sort non-array"));
+        }
+        if self.rank() == 0 {
+            return Err(env.error("Cannot sort rank 0 array"));
+        }
+        self.array_mut().data_mut(
+            |shape, numbers| {
+                sort_array(shape, numbers, |a, b| {
+                    a.partial_cmp(b)
+                        .unwrap_or_else(|| a.is_nan().cmp(&b.is_nan()))
+                })
+            },
+            |shape, chars| sort_array(shape, chars, Ord::cmp),
+            |shape, values| sort_array(shape, values, Ord::cmp),
+        );
+        Ok(())
+    }
 }
 
 fn signed_index(index: isize, len: usize) -> Option<usize> {

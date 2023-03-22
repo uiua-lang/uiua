@@ -215,17 +215,6 @@ impl Array {
         self.normalize(array_depth);
         self
     }
-    pub fn sort(&mut self) {
-        let shape = self.shape.clone();
-        match self.ty {
-            ArrayType::Num => sort_array(&shape, self.numbers_mut(), |a, b| {
-                a.partial_cmp(b)
-                    .unwrap_or_else(|| a.is_nan().cmp(&b.is_nan()))
-            }),
-            ArrayType::Char => sort_array(&shape, self.chars_mut(), Ord::cmp),
-            ArrayType::Value => sort_array(&shape, self.values_mut(), Ord::cmp),
-        }
-    }
     pub fn deshape(&mut self) {
         let data_len: usize = self.shape.iter().product();
         self.shape = vec![data_len];

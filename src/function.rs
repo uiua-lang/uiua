@@ -8,7 +8,7 @@ pub enum Instr {
     BeginArray,
     EndArray(bool, usize),
     CopyGlobal(usize),
-    BindGlobal,
+    BindGlobal(usize),
     Primitive(Primitive, usize),
     Call(usize),
     CallRef(usize, usize),
@@ -21,7 +21,7 @@ impl fmt::Display for Instr {
             Instr::Push(val) => write!(f, "{val}"),
             Instr::BeginArray => write!(f, "]"),
             Instr::EndArray(..) => write!(f, "["),
-            Instr::BindGlobal => write!(f, "g!"),
+            Instr::BindGlobal(_) => write!(f, "g!"),
             Instr::CopyGlobal(idx) => write!(f, "g{idx}"),
             Instr::Primitive(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => Ok(()),
@@ -99,7 +99,7 @@ impl Function {
                 }
                 &Instr::EndArray(n, span) => last_group!().push(Instr::EndArray(n, span)),
                 &Instr::CopyGlobal(n) => last_group!().push(Instr::CopyGlobal(n)),
-                &Instr::BindGlobal => return Err(no_inverse()),
+                &Instr::BindGlobal(_) => return Err(no_inverse()),
                 &Instr::CallRef(_, _) => return Err(no_inverse()),
                 &Instr::CopyRef(_, _) => return Err(no_inverse()),
             }

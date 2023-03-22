@@ -100,9 +100,9 @@ macro_rules! primitive {
 primitive!(
     // Stack ops
     (1, 2, Dup, "duplicate" + '.'),
+    (2, 3, Over, "over" + ','),
     (2, 2, Flip, "flip" + '~'),
     (1, 0, Pop, "pop" + ';'),
-    (2, 3, Over, "over" + ','),
     // Pervasive monadic ops
     (1, Sign, "sign" + '$'),
     (1, Not, "not" + '¬'),

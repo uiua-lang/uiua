@@ -220,7 +220,8 @@ impl Compiler {
             .count();
         self.bindings
             .insert(binding.name.value, Bound::Global(index, function));
-        self.push_instr(Instr::BindGlobal);
+        let span = self.push_call_span(binding.name.span);
+        self.push_instr(Instr::BindGlobal(span));
     }
     pub fn eval(&mut self, input: &str) -> UiuaResult<Vec<Value>> {
         let (items, errors) = parse(input, None);

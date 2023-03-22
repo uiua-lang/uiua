@@ -12,13 +12,10 @@ use crate::{
 pub enum ParseError {
     Lex(LexError),
     Expected(Vec<Expectation>, Option<Box<Sp<Token>>>),
-    BlockMustEndWithWord,
 }
 
 #[derive(Debug)]
 pub enum Expectation {
-    Ident,
-    Words,
     Eof,
     Term,
     Simple(Simple),
@@ -33,8 +30,6 @@ impl From<Simple> for Expectation {
 impl fmt::Display for Expectation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Expectation::Ident => write!(f, "identifier"),
-            Expectation::Words => write!(f, "words"),
             Expectation::Eof => write!(f, "end of file"),
             Expectation::Term => write!(f, "term"),
             Expectation::Simple(s) => write!(f, "{s}"),
@@ -58,9 +53,6 @@ impl fmt::Display for ParseError {
                     write!(f, ", found `{}`", found.value)?;
                 }
                 Ok(())
-            }
-            ParseError::BlockMustEndWithWord => {
-                write!(f, "block must end with an words")
             }
         }
     }
@@ -190,7 +182,7 @@ impl Parser {
                 self.index -= 1;
                 return Ok(None);
             }
-            let words = self.words()?;
+            let words = self.try_words()?.unwrap_or_default();
             Binding { name: ident, words }
         } else {
             return Ok(None);
@@ -205,10 +197,6 @@ impl Parser {
             words.push(word);
         }
         Ok(if words.is_empty() { None } else { Some(words) })
-    }
-    fn words(&mut self) -> ParseResult<Vec<Sp<Word>>> {
-        self.try_words()?
-            .ok_or_else(|| self.expected([Expectation::Words]))
     }
     fn try_word(&mut self) -> ParseResult<Option<Sp<Word>>> {
         self.try_strand()

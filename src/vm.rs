@@ -169,7 +169,11 @@ impl<B: IoBackend> Vm<B> {
                 let array: Array = self.stack.drain(bottom..).rev().collect();
                 self.stack.push(array.normalized(normalize as usize).into());
             }
-            Instr::BindGlobal => self.globals.push(self.stack.pop().unwrap()),
+            Instr::BindGlobal(span) => self.globals.push(
+                self.stack
+                    .pop()
+                    .ok_or_else(|| assembly.spans[span].error("stack empty when binding global"))?,
+            ),
             Instr::CopyGlobal(n) => self.stack.push(self.globals[n].clone()),
             Instr::Call(span) => {
                 self.call(span)?;

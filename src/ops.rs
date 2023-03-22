@@ -184,6 +184,7 @@ primitive!(
     (1, FListDir, "flistdir"),
     (1, FIsFile, "fisfile"),
     (1, Import, "import"),
+    (0, Now, "now"),
     // Modifiers
     (Reduce { modifier: 1 }, "reduce" + '/'),
     (Fold { modifier: 1 }, "fold" + '⌿'),
@@ -670,6 +671,7 @@ impl Primitive {
                 let value = env.vm.io.import(&name, &env.env())?;
                 env.push(value);
             }
+            Primitive::Now => env.push(instant::now()),
         }
         Ok(())
     }

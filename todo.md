@@ -7,14 +7,9 @@
 - Improve parsing expectation errors
 - Includes
 - Type testing/tracing
-- Structs
-- Enums?
-- Implement custom nanbox
 - System APIs
-  - File system
-  - Time
-  - Rng
   - Sockets
+- Implement custom nanbox?
 - LSP
 - FFI
 - Docs

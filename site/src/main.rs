@@ -10,6 +10,7 @@ const EXAMPLES: &[&str] = &[
     r#"‡=¯1 ≡/-◫2 ≤'A' ≍' ' ."Um, I um...arrays""#,
     "# Click Run to format!\nfirst repeat (\\+ rev)0_1 10",
     "↯~⇡/×.2_3_4",
+    "⌈≍≍×30.44 -⌊..×12 -⌊.~+1969 ~.÷365.24 /(÷~)[now 1000 60 60 24]",
     "Avg = ÷⇀~/+.\nAvg 0_2_1_5",
     "{÷×2 a -b ⚇¯.√-××4 a c ⁿ2 b}1 2 0",
     r#"⊟⸪(≅⇌.).["uiua" "racecar" "wow" "cool!"]"#,

@@ -8,7 +8,7 @@ html {
 
 button {
     border-width: 0;
-    border-radius: 0.3em;
+    border-radius: 0.5em;
     padding: 0.2em;
     display: inline-block;
     position: relative;
@@ -16,6 +16,23 @@ button {
 
 button:active {
     transform: translateY(0.1em);
+}
+
+code {
+    font-family: "Code Font";
+    border-radius: 0.2em;
+    padding: 0.2em;
+}
+
+th,
+td {
+    padding: 0.5em;
+    border-radius: 0.5em;
+}
+
+table {
+    border: 0.2em solid #0005;
+    border-radius: 0.5em;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -49,6 +66,10 @@ button:active {
     a:visited {
         color: #88f;
     }
+
+    code {
+        background-color: #0005;
+    }
 }
 
 @media (prefers-color-scheme: light) {
@@ -73,6 +94,10 @@ button:active {
 
     button:hover {
         background-color: #eee;
+    }
+
+    code {
+        background-color: #fff8;
     }
 }
 
@@ -106,6 +131,13 @@ button:active {
 #editor {
     outline: 0.1em solid #ccd;
     border-radius: 0.5em;
+}
+
+.small-editor {
+    font-size: 1.2em;
+}
+
+.medium-editor {
     font-size: 1.4em;
 }
 
@@ -113,42 +145,35 @@ button:active {
     position: relative;
 }
 
-#code {
-    border-top-right-radius: 0.5em;
-    border-top-left-radius: 0.5em;
+.code {
+    border-radius: 0.5em;
     width: 100%;
     resize: vertical;
     box-sizing: border-box;
     outline: none;
     border: none;
-    padding: 0.5em;
-    min-height: 2.2em;
+    padding: 0.3em;
+    min-height: 1em;
     font-size: 1em;
     font-family: "Code Font";
 }
 
-.small-code {
-    height: 2.2em;
-}
-
-.medium-code {
-    height: 6em;
-}
-
-#output {
+.output {
     white-space: pre-wrap;
     display: flex;
     justify-content: space-between;
 }
 
 #output-text {
-    padding: 0.5em;
+    padding: 0.3em;
     font-family: "Code Font";
 }
 
 #code-buttons {
-    float: right;
     margin: 0.2em;
+    display: flex;
+    flex-wrap: nowrap;
+    height: 1.5em;
 }
 
 .code-button {
@@ -163,7 +188,7 @@ button:active {
 
 #glyphs-toggle-button {
     position: absolute;
-    top: 0.2em;
+    top: 0.1em;
     right: 0.7em;
     opacity: 0.5;
     font-size: 1em;

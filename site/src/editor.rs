@@ -3,7 +3,7 @@ use uiua::{compile::Compiler, format::format_str, ops::Primitive, UiuaResult};
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use web_sys::{Event, HtmlDivElement, HtmlTextAreaElement};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Copy, Default)]
 pub enum EditorSize {
     #[default]
     Small,
@@ -17,6 +17,14 @@ pub fn Editor(
     #[prop(optional)] size: EditorSize,
 ) -> impl IntoView {
     let examples = if examples.is_empty() { &[""] } else { examples };
+    let code_em = examples.iter().map(|e| e.lines().count()).max().unwrap() as f32 * 1.3 + 0.5;
+
+    let (code_id, _) = create_signal(cx, format!("code{:p}", examples));
+    let (output_id, _) = create_signal(cx, format!("output{:p}", examples));
+
+    let code_element = move || -> HtmlTextAreaElement { element(&code_id.get()) };
+    let output_element = move || -> HtmlDivElement { element(&output_id.get()) };
+
     let (_, default_output) = run_code(examples[0], false).expect_throw("First example failed");
 
     let (_, set_example) = create_signal(cx, 0);
@@ -26,11 +34,13 @@ pub fn Editor(
     // Run the code
     let run = move |format: bool| {
         set_output.set(String::new());
-        let code_string = code_element().value();
+        let code_elem = code_element();
+        let code_string = code_elem.value();
         match run_code(&code_string, format) {
             Ok((formatted, stack)) => {
-                code_element().set_value(&formatted);
-                set_code.set(formatted);
+                let formatted = formatted.trim();
+                code_elem.set_value(formatted);
+                set_code.set(formatted.to_string());
                 set_output.set(stack);
                 _ = output_element().style().remove_property("color");
             }
@@ -154,9 +164,9 @@ pub fn Editor(
         });
     }
 
-    let code_class = match size {
-        EditorSize::Small => "small-code",
-        EditorSize::Medium => "medium-code",
+    let (editor_class, code_class) = match size {
+        EditorSize::Small => ("small-editor", "small-code"),
+        EditorSize::Medium => ("medium-editor", "medium-code"),
     };
 
     let example_arrow_style = if examples.len() <= 1 {
@@ -192,16 +202,21 @@ pub fn Editor(
     };
 
     view! { cx,
-        <div id="editor">
+        <div id="editor" class=editor_class>
             <div id="glyph-buttons" style=glyph_buttons_style>{ glyph_buttons }</div>
             <div id="code-area">
                 <button
                     id="glyphs-toggle-button"
                     title=show_glyphs_title
                     on:click=toggle_show_glyphs>{show_glyphs_text}</button>
-                <textarea class={code_class} id="code" spellcheck="false" on:input=code_input>{ move || code.get() }</textarea>
+                <textarea
+                    id={code_id.get()}
+                    spellcheck="false"
+                    class={format!("code {code_class}")}
+                    style={format!("height: {code_em}em")}
+                    on:input=code_input>{ move || code.get() }</textarea>
             </div>
-            <div id="output">
+            <div id={output_id.get()} class="output">
                 <div id="output-text">
                     { move || output.get() }
                 </div>
@@ -257,12 +272,4 @@ fn element<T: JsCast>(id: &str) -> T {
         .unwrap_throw()
         .dyn_into::<T>()
         .unwrap_throw()
-}
-
-fn code_element() -> HtmlTextAreaElement {
-    element("code")
-}
-
-fn output_element() -> HtmlDivElement {
-    element("output")
 }

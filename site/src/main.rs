@@ -66,6 +66,9 @@ pub fn Site(cx: Scope) -> impl IntoView {
                         <Route path="docs/basic" view=move |cx| view! { cx, <DocsBasic/> }/>
                     </Routes>
                 </div>
+                <br/>
+                <br/>
+                <br/>
             </main>
         </Router>
     }

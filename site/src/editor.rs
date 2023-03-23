@@ -46,15 +46,17 @@ pub fn Editor(
     let replace_code = move |inserted: &str| {
         let elem = code_element();
         if let (Ok(Some(start)), Ok(Some(end))) = (elem.selection_start(), elem.selection_end()) {
-            let (start, end) = (start.min(end) as usize, start.max(end) as usize);
+            let (start, end) = (start.min(end), start.max(end) as usize);
             let text: String = code
                 .get()
                 .chars()
-                .take(start)
+                .take(start as usize)
                 .chain(inserted.chars())
                 .chain(code.get().chars().skip(end))
                 .collect();
-            code_element().set_value(&text);
+            elem.set_value(&text);
+            _ = elem.focus();
+            _ = elem.set_selection_range(start + 1, start + 1);
             set_code.set(text);
         };
     };

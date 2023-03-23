@@ -159,17 +159,65 @@ pub fn Editor(
         EditorSize::Medium => "medium-code",
     };
 
+    let example_arrow_style = if examples.len() <= 1 {
+        "display:none"
+    } else {
+        ""
+    };
+
+    let (show_glyphs, set_show_glyphs) = create_signal(
+        cx,
+        match size {
+            EditorSize::Small => false,
+            EditorSize::Medium => true,
+        },
+    );
+
+    let show_glyphs_text = move || if show_glyphs.get() { "↥" } else { "↧" };
+    let show_glyphs_title = move || {
+        if show_glyphs.get() {
+            "Hide glyphs"
+        } else {
+            "Show glyphs"
+        }
+    };
+    let toggle_show_glyphs = move |_| set_show_glyphs.update(|s| *s = !*s);
+
+    let glyph_buttons_style = move || {
+        if show_glyphs.get() {
+            ""
+        } else {
+            "display:none"
+        }
+    };
+
     view! { cx,
         <div id="editor">
-            <div id="glyph-buttons">{ glyph_buttons }</div>
-            <textarea class={code_class} id="code" spellcheck="false" on:input=code_input>{ move || code.get() }</textarea>
+            <div id="glyph-buttons" style=glyph_buttons_style>{ glyph_buttons }</div>
+            <div id="code-area">
+                <button
+                    id="glyphs-toggle-button"
+                    title=show_glyphs_title
+                    on:click=toggle_show_glyphs>{show_glyphs_text}</button>
+                <textarea class={code_class} id="code" spellcheck="false" on:input=code_input>{ move || code.get() }</textarea>
+            </div>
             <div id="output">
+                <div id="output-text">
+                    { move || output.get() }
+                </div>
                 <div id="code-buttons">
                     <button id="run-button" class="code-button" on:click=move |_| run(true)>{ "Run" }</button>
-                    <button id="prev-example" class="code-button" on:click=prev_example title="Previous example">{ "<" } </button>
-                    <button id="next-example" class="code-button" on:click=next_example title="Next example">{ ">" } </button>
+                    <button
+                        id="prev-example"
+                        class="code-button"
+                        style=example_arrow_style
+                        on:click=prev_example title="Previous example">{ "<" } </button>
+                    <button
+                        id="next-example"
+                        class="code-button"
+                        style=example_arrow_style
+                        on:click=next_example title="Next example">{ ">" } </button>
                 </div>
-                { move || output.get() }
             </div>
         </div>
     }

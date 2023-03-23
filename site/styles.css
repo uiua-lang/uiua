@@ -9,8 +9,7 @@ html {
 button {
     border-width: 0;
     border-radius: 0.3em;
-    font-size: 3em;
-    padding: 0.3em;
+    padding: 0.2em;
     display: inline-block;
     position: relative;
 }
@@ -107,16 +106,24 @@ button:active {
 #editor {
     outline: 0.1em solid #ccd;
     border-radius: 0.5em;
+    font-size: 1.4em;
+}
+
+#code-area {
+    position: relative;
 }
 
 #code {
+    border-top-right-radius: 0.5em;
+    border-top-left-radius: 0.5em;
     width: 100%;
     resize: vertical;
     box-sizing: border-box;
     outline: none;
     border: none;
     padding: 0.5em;
-    font-size: 1.4em;
+    min-height: 2.2em;
+    font-size: 1em;
     font-family: "Code Font";
 }
 
@@ -129,16 +136,19 @@ button:active {
 }
 
 #output {
-    padding: 0.5em;
-    min-height: 1.9em;
     white-space: pre-wrap;
-    font-size: 1.4em;
+    display: flex;
+    justify-content: space-between;
+}
+
+#output-text {
+    padding: 0.5em;
     font-family: "Code Font";
 }
 
 #code-buttons {
     float: right;
-    margin: 0;
+    margin: 0.2em;
 }
 
 .code-button {
@@ -151,6 +161,28 @@ button:active {
     src: url(DejaVuSansMono.ttf) format("truetype");
 }
 
+#glyphs-toggle-button {
+    position: absolute;
+    top: 0.2em;
+    right: 0.7em;
+    opacity: 0.5;
+    font-size: 1em;
+}
+
+#glyphs-toggle-button[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    font-family: "Code Font";
+    font-size: 0.6em;
+    left: calc(-8em - 50%);
+    top: calc(50% - 0.6em);
+    color: #eee;
+    background-color: #000a;
+    padding: 0.2em;
+    border-radius: 0.2em;
+    width: 8em;
+}
+
 #glyph-buttons {
     padding: 0.1em;
     display: flex;
@@ -160,7 +192,7 @@ button:active {
 
 .glyph-button {
     font-family: "Code Font";
-    font-size: 1.3em;
+    font-size: 1em;
     padding: 0.1em;
     margin: 0.1em;
     background-color: transparent;

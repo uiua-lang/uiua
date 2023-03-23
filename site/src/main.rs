@@ -2,6 +2,7 @@ mod docs;
 use docs::*;
 mod editor;
 use editor::*;
+use uiua::ops::Primitive;
 
 use std::cell::RefCell;
 
@@ -64,6 +65,7 @@ pub fn Site(cx: Scope) -> impl IntoView {
                         <Route path="" view=move |cx| view! { cx, <MainPage/> }/>
                         <Route path="docs" view=move |cx| view! { cx, <DocsHome/> }/>
                         <Route path="docs/basic" view=move |cx| view! { cx, <DocsBasic/> }/>
+                        <Route path="docs/math" view=move |cx| view! { cx, <DocsMath/> }/>
                     </Routes>
                 </div>
                 <br/>
@@ -152,4 +154,27 @@ fn MainText(cx: Scope) -> impl IntoView {
         <p>"This ends up meaning that Uiua requires way more glyphs to have one for every primitive. There simply are not enough keys on them keyboard to type them without using a bunch of hard-to-remeber shortcuts. Also, I think it's annoying to need special editor support to be able to write code properly."</p>
         <p>"To solve these issues, Uiua has a formatter that automatically converts ASCII names and characters into glyphs. You can type the name of a glyph (or a digraph, like >= for ≥), and the formatter will turn it into the corresponding glyph. Alternatively, the editor on the homepage has a button for each glyph."</p>
     </div>}
+}
+
+mod code {
+    use super::*;
+    #[component]
+    pub fn PrimCode(cx: Scope, prim: Primitive) -> impl IntoView {
+        let class = if let Some(m) = prim.modifier_args() {
+            if m == 1 {
+                "modifier1-button"
+            } else {
+                "modifier2-button"
+            }
+        } else {
+            match prim.args() {
+                Some(1) => "monadic-function-button",
+                Some(2) => "dyadic-function-button",
+                Some(3) => "triadic-function-button",
+                Some(4) => "tetradic-function-button",
+                _ => "noadic-function-button",
+            }
+        };
+        view!(cx, <code class=class>{ prim.to_string() }</code>)
+    }
 }

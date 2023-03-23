@@ -82,11 +82,26 @@ button:active {
     width: max(10em, min(90%, 56em));
 }
 
+#header {
+    display: flex;
+    justify-content: space-between;
+}
+
+#nav {
+    display: flex;
+    gap: 1em;
+}
+
 #subtitle {
     margin-top: -1em;
     display: flex;
     justify-content: space-between;
     font-size: 1.5em;
+}
+
+#links {
+    margin-top: -1em;
+    font-size: 1.2em;
 }
 
 #editor {
@@ -102,21 +117,23 @@ button:active {
     border: none;
     padding: 0.5em;
     font-size: 1.4em;
+    font-family: "Code Font";
+}
+
+.small-code {
+    height: 2.2em;
+}
+
+.medium-code {
     height: 6em;
 }
 
 #output {
     padding: 0.5em;
-    white-space: pre-wrap;
-    min-height: 1em;
-    font-size: 1.4em;
-}
-
-#error {
-    color: #f33;
-    padding: 0.5em;
+    min-height: 1.9em;
     white-space: pre-wrap;
     font-size: 1.4em;
+    font-family: "Code Font";
 }
 
 #code-buttons {
@@ -132,10 +149,6 @@ button:active {
 @font-face {
     font-family: "Code Font";
     src: url(DejaVuSansMono.ttf) format("truetype");
-}
-
-.code {
-    font-family: "Code Font";
 }
 
 #glyph-buttons {
@@ -200,7 +213,7 @@ button:active {
 }
 
 #editor-help {
-    margin-top: -2em;
+    margin-top: -0.5em;
     font-size: 1em;
     opacity: 0.5;
     display: flex;

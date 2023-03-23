@@ -112,11 +112,13 @@ pub fn MainPage(cx: Scope) -> impl IntoView {
             <div id="links">
                 <p><A href="docs">{"Documentation"}</A></p>
             </div>
-            <Editor examples={EXAMPLES} size={EditorSize::Medium}/>
-            <div id="editor-help">
-                <p class="editor-help-item">{ "Type some or all of a glyph's name, then run to format the names into glyphs." }</p>
-                <p class="editor-help-item">{ "You can run with ctrl/shift + enter." }</p>
-            </div>
+            <Editor
+                examples={EXAMPLES}
+                size={EditorSize::Medium}
+                help={&[
+                    "Type some or all of a glyph's name, then run to format the names into glyphs.",
+                    "You can run with ctrl/shift + enter.",
+                ]}/>
             <br/>
             <br/>
             <MainText/>

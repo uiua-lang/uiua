@@ -15,6 +15,7 @@ pub fn Editor(
     cx: Scope,
     #[prop(optional)] examples: &'static [&'static str],
     #[prop(optional)] size: EditorSize,
+    #[prop(optional)] help: &'static [&'static str],
 ) -> impl IntoView {
     let examples = if examples.is_empty() { &[""] } else { examples };
     let code_em = examples.iter().map(|e| e.lines().count()).max().unwrap() as f32 * 1.3 + 0.5;
@@ -202,37 +203,42 @@ pub fn Editor(
     };
 
     view! { cx,
-        <div id="editor" class=editor_class>
-            <div id="glyph-buttons" style=glyph_buttons_style>{ glyph_buttons }</div>
-            <div id="code-area">
-                <button
-                    id="glyphs-toggle-button"
-                    title=show_glyphs_title
-                    on:click=toggle_show_glyphs>{show_glyphs_text}</button>
-                <textarea
-                    id={code_id.get()}
-                    spellcheck="false"
-                    class={format!("code {code_class}")}
-                    style={format!("height: {code_em}em")}
-                    on:input=code_input>{ move || code.get() }</textarea>
+        <div>
+            <div id="editor" class=editor_class>
+                <div id="glyph-buttons" style=glyph_buttons_style>{ glyph_buttons }</div>
+                <div id="code-area">
+                    <button
+                        id="glyphs-toggle-button"
+                        title=show_glyphs_title
+                        on:click=toggle_show_glyphs>{show_glyphs_text}</button>
+                    <textarea
+                        id={code_id.get()}
+                        spellcheck="false"
+                        class={format!("code {code_class}")}
+                        style={format!("height: {code_em}em")}
+                        on:input=code_input>{ move || code.get() }</textarea>
+                </div>
+                <div id={output_id.get()} class="output">
+                    <div id="output-text">
+                        { move || output.get() }
+                    </div>
+                    <div id="code-buttons">
+                        <button id="run-button" class="code-button" on:click=move |_| run(true)>{ "Run" }</button>
+                        <button
+                            id="prev-example"
+                            class="code-button"
+                            style=example_arrow_style
+                            on:click=prev_example title="Previous example">{ "<" } </button>
+                        <button
+                            id="next-example"
+                            class="code-button"
+                            style=example_arrow_style
+                            on:click=next_example title="Next example">{ ">" } </button>
+                    </div>
+                </div>
             </div>
-            <div id={output_id.get()} class="output">
-                <div id="output-text">
-                    { move || output.get() }
-                </div>
-                <div id="code-buttons">
-                    <button id="run-button" class="code-button" on:click=move |_| run(true)>{ "Run" }</button>
-                    <button
-                        id="prev-example"
-                        class="code-button"
-                        style=example_arrow_style
-                        on:click=prev_example title="Previous example">{ "<" } </button>
-                    <button
-                        id="next-example"
-                        class="code-button"
-                        style=example_arrow_style
-                        on:click=next_example title="Next example">{ ">" } </button>
-                </div>
+            <div id="editor-help">
+                { help.iter().map(|s| view! { cx, <p>{*s}</p> }).collect::<Vec<_>>() }
             </div>
         </div>
     }

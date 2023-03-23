@@ -44,9 +44,9 @@ pub fn DocsBasic(cx: Scope) -> impl IntoView {
             <h3>"The Stack"</h3>
             <hr/>
             <p>"In Uiua, all operations operate on a global stack. Each line is evaluated from right to left. A number simply pushes its value onto the stack:"</p>
-            <Editor examples={&["5", "1 2 3"]}/>
+            <Editor examples={&["5", "1 2 3"]} help={&["", "Click the arrows to see more examples"]}/>
             <p>"Operators pop values off the stack and push their results."</p>
-            <Editor examples={&["+1 2", "+1 ×2 3"]}/>
+            <Editor examples={&["3", "2 3", "×2 3", "1 ×2 3", "+1 ×2 3"]}/>
             <br/>
             <h3>"Formatting"</h3>
             <hr/>

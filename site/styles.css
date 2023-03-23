@@ -270,9 +270,13 @@ table {
 }
 
 #editor-help {
-    margin-top: -0.5em;
+    margin-top: -0.6em;
     font-size: 1em;
     opacity: 0.5;
     display: flex;
     justify-content: space-between;
+}
+
+#editor-help:empty {
+    margin-top: 0;
 }

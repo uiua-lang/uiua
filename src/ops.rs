@@ -1,4 +1,7 @@
-use std::{f64::consts::*, fmt};
+use std::{
+    f64::{consts::PI, INFINITY},
+    fmt,
+};
 
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 
@@ -6,20 +9,6 @@ use crate::{
     array::Array, grid_fmt::GridFmt, io::IoBackend, lex::Simple, value::*, vm::CallEnv,
     RuntimeResult,
 };
-
-pub(crate) fn constants() -> Vec<(&'static str, Value)> {
-    vec![
-        ("PI", PI.into()),
-        ("TAU", TAU.into()),
-        ("E", E.into()),
-        ("INFINITY", f64::INFINITY.into()),
-        ("NEG_INFINITY", f64::NEG_INFINITY.into()),
-        ("NAN", f64::NAN.into()),
-        ("MAX_REAL", f64::MAX.into()),
-        ("MIN_REAL", f64::MIN.into()),
-        ("EPSILON", f64::EPSILON.into()),
-    ]
-}
 
 macro_rules! primitive {
     ($((
@@ -106,7 +95,7 @@ primitive!(
     // Pervasive monadic ops
     (1, Sign, "sign" + '$'),
     (1, Not, "not" + '¬'),
-    (1, Neg, "negate" + '¯'),
+    (1, Neg, "negate", Backtick + '¯'),
     (1, Abs, "absolute value" + '⌵'),
     (1, Sqrt, "sqrt" + '√'),
     (1, Sin, "sine"),
@@ -200,6 +189,9 @@ primitive!(
     (2, Assert, "assert" + '!'),
     (0, Nop, "noop" + '·'),
     (Call, "call" + ':'),
+    // Constants
+    (0, 1, Pi, "pi" + 'π'),
+    (0, 1, Infinity, "infinity" + '∞')
 );
 
 fn _keep_primitive_small(_: std::convert::Infallible) {
@@ -241,10 +233,13 @@ impl Primitive {
         })
     }
     pub fn from_name(name: &str) -> Option<Self> {
+        let lower = name.to_lowercase();
+        if lower == "pi" || lower == "π" {
+            return Some(Primitive::Pi);
+        }
         if name.len() < 3 {
             return None;
         }
-        let lower = name.to_lowercase();
         let mut matching = Primitive::ALL.into_iter().filter(|p| {
             p.ident()
                 .map_or(false, |i| i.to_lowercase().starts_with(&lower))
@@ -255,6 +250,8 @@ impl Primitive {
     }
     pub(crate) fn run<B: IoBackend>(&self, env: &mut CallEnv<B>) -> RuntimeResult {
         match self {
+            Primitive::Pi => env.push(PI),
+            Primitive::Infinity => env.push(INFINITY),
             Primitive::Nop => {}
             Primitive::Not => env.monadic_env(Value::not)?,
             Primitive::Neg => env.monadic_env(Value::neg)?,

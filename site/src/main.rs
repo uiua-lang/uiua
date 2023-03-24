@@ -162,21 +162,26 @@ mod code {
     use super::*;
     #[component]
     pub fn PrimCode(cx: Scope, prim: Primitive) -> impl IntoView {
-        let class = if let Some(m) = prim.modifier_args() {
-            if m == 1 {
-                "modifier1-button"
-            } else {
-                "modifier2-button"
-            }
-        } else {
-            match prim.args() {
-                Some(1) => "monadic-function-button",
-                Some(2) => "dyadic-function-button",
-                Some(3) => "triadic-function-button",
-                Some(4) => "tetradic-function-button",
-                _ => "noadic-function-button",
-            }
-        };
+        let class = prim_class(prim);
         view!(cx, <code class=class>{ prim.to_string() }</code>)
+    }
+}
+
+fn prim_class(prim: Primitive) -> &'static str {
+    if let Some(m) = prim.modifier_args() {
+        if m == 1 {
+            "modifier1-button"
+        } else {
+            "modifier2-button"
+        }
+    } else {
+        match prim.args() {
+            Some(0) => "noadic-function-button",
+            Some(1) => "monadic-function-button",
+            Some(2) => "dyadic-function-button",
+            Some(3) => "triadic-function-button",
+            Some(4) => "tetradic-function-button",
+            _ => "variadic-function-button",
+        }
     }
 }

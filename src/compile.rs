@@ -6,7 +6,7 @@ use crate::{
     function::{Function, FunctionId, Instr},
     io::{IoBackend, PipedIo, StdIo},
     lex::{Sp, Span},
-    ops::{constants, Primitive},
+    ops::Primitive,
     parse::{parse, ParseError},
     value::Value,
     vm::{dprintln, Vm},
@@ -110,12 +110,7 @@ enum Bound {
 impl Default for Compiler {
     fn default() -> Self {
         let mut bindings = HashMap::new();
-        // Initialize builtins
-        // Constants
-        for (i, (name, _)) in constants().into_iter().enumerate() {
-            bindings.insert(name.into(), Bound::Global(i, false));
-        }
-        // Primitives
+        // Initialize primitives
         for prim in Primitive::ALL {
             if let Some(name) = prim.ident() {
                 bindings.insert(name.into(), Bound::Primitive(prim));

@@ -307,6 +307,7 @@ pub enum Simple {
     LessEqual,
     GreaterEqual,
     Newline,
+    Backtick,
 }
 
 impl fmt::Display for Simple {
@@ -327,6 +328,7 @@ impl fmt::Display for Simple {
             Simple::LessEqual => write!(f, "<="),
             Simple::GreaterEqual => write!(f, ">="),
             Simple::Newline => write!(f, "\\n"),
+            Simple::Backtick => write!(f, "`"),
         }
     }
 }
@@ -423,14 +425,14 @@ impl Lexer {
                 '`' => {
                     let number = self.number('-');
                     if number.len() == 1 {
-                        Err(self.end_span(start).sp(LexError::ExpectedNumber))
+                        self.end(Simple(Backtick), start)
                     } else {
-                        self.end(Token::Number(number), start)
+                        self.end(Number(number), start)
                     }
                 }
                 '¯' if self.peek_char().filter(char::is_ascii_digit).is_some() => {
                     let number = self.number('-');
-                    self.end(Token::Number(number), start)
+                    self.end(Number(number), start)
                 }
                 '*' => self.end(Star, start),
                 '%' => self.end(Percent, start),
@@ -465,7 +467,7 @@ impl Lexer {
                             .end_span(start)
                             .sp(LexError::ExpectedCharacter(Some('\''))));
                     }
-                    self.end(Token::Char(char), start)
+                    self.end(Char(char), start)
                 }
                 // Strings
                 '"' => {
@@ -485,7 +487,7 @@ impl Lexer {
                             .end_span(start)
                             .sp(LexError::ExpectedCharacter(Some('"'))));
                     }
-                    self.end(Token::Str(string), start)
+                    self.end(Str(string), start)
                 }
                 // Identifiers and selectors
                 c if is_basically_alphabetic(c) => {
@@ -499,7 +501,7 @@ impl Lexer {
                 // Numbers
                 c if c.is_ascii_digit() => {
                     let number = self.number(c);
-                    self.end(Token::Number(number), start)
+                    self.end(Number(number), start)
                 }
                 // Newlines
                 '\n' => self.end(Newline, start),

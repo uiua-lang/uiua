@@ -3,6 +3,8 @@ use uiua::{compile::Compiler, format::format_str, ops::Primitive, UiuaResult};
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use web_sys::{Event, HtmlDivElement, HtmlTextAreaElement};
 
+use crate::prim_class;
+
 #[derive(Debug, Clone, Copy, Default)]
 pub enum EditorSize {
     #[default]
@@ -124,24 +126,7 @@ pub fn Editor(
                 format_args!("\n{extra}")
             );
             let onclick = move |_| replace_code(&p.to_string());
-            let class = format!(
-                "glyph-button {}",
-                if let Some(m) = p.modifier_args() {
-                    if m == 1 {
-                        "modifier1-button"
-                    } else {
-                        "modifier2-button"
-                    }
-                } else {
-                    match p.args() {
-                        Some(1) => "monadic-function-button",
-                        Some(2) => "dyadic-function-button",
-                        Some(3) => "triadic-function-button",
-                        Some(4) => "tetradic-function-button",
-                        _ => "noadic-function-button",
-                    }
-                }
-            );
+            let class = format!("glyph-button {}", prim_class(*p));
             Some(view! { cx,
                 <button class=class title=title on:click=onclick>{ text }</button>
             })
@@ -152,7 +137,7 @@ pub fn Editor(
         ("_", "strand"),
         ("[]", "array"),
         ("()", "function"),
-        ("|", "function separator"),
+        ("{}", "ref function"),
         ("¯", "negative\n`"),
         ("'", "character"),
         ("\"", "string"),

@@ -217,7 +217,7 @@ table {
 
 .glyph-button {
     font-family: "Code Font";
-    font-size: 1em;
+    font-size: 0.95em;
     padding: 0.1em;
     margin: 0.1em;
     background-color: transparent;
@@ -241,8 +241,12 @@ table {
     background-color: #0002;
 }
 
-.noadic-function-button {
+.variadic-function-button {
     color: #3cc;
+}
+
+.noadic-function-button {
+    color: #c33;
 }
 
 .monadic-function-button {
@@ -251,10 +255,6 @@ table {
 
 .dyadic-function-button {
     color: #77f;
-}
-
-.triadic-function-button {
-    color: #c33;
 }
 
 .tetradic-function-button {

@@ -1,4 +1,8 @@
-use std::{iter::once, mem::take};
+use std::{
+    f64::{consts::PI, INFINITY},
+    iter::once,
+    mem::take,
+};
 
 use crate::{
     array::{Array, ArrayType},
@@ -24,10 +28,14 @@ pub trait GridFmt {
 
 impl GridFmt for f64 {
     fn fmt_grid(&self) -> Grid {
-        let s = if *self < -0.0 {
-            format!("¯{}", self.abs())
+        let positive = self.abs();
+        let minus = if *self < -0.0 { "¯" } else { "" };
+        let s = if positive == PI {
+            format!("{minus}π")
+        } else if positive == INFINITY {
+            format!("{minus}∞")
         } else {
-            self.abs().to_string()
+            format!("{minus}{positive}")
         };
         vec![s.chars().collect()]
     }

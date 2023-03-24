@@ -10,7 +10,6 @@ use crate::{
     function::{Function, Instr},
     io::{IoBackend, StdIo},
     lex::Span,
-    ops::constants,
     value::{Type, Value},
     RuntimeError, RuntimeResult, TraceFrame, UiuaError, UiuaResult,
 };
@@ -62,7 +61,7 @@ impl<B: Default> Default for Vm<B> {
             call_stack: Vec::new(),
             ref_stack: Vec::new(),
             array_stack: Vec::new(),
-            globals: constants().into_iter().map(|(_, v)| v).collect(),
+            globals: Vec::new(),
             stack: Vec::new(),
             io: B::default(),
         }

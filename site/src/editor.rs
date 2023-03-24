@@ -250,7 +250,7 @@ fn run_code(code: &str, format_first: bool) -> UiuaResult<(String, String)> {
             s.push_str("\n\nStack:\n");
         }
     }
-    for val in values.into_iter().rev() {
+    for val in values {
         s.push_str(&val.show());
         s.push('\n');
     }

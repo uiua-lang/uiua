@@ -64,8 +64,9 @@ pub fn Site(cx: Scope) -> impl IntoView {
                     <Routes>
                         <Route path="" view=move |cx| view! { cx, <MainPage/> }/>
                         <Route path="docs" view=move |cx| view! { cx, <DocsHome/> }/>
-                        <Route path="docs/basic" view=move |cx| view! { cx, <DocsBasic/> }/>
-                        <Route path="docs/math" view=move |cx| view! { cx, <DocsMath/> }/>
+                        <Route path="docs/basic" view=move |cx| view! { cx, <TutorialBasic/> }/>
+                        <Route path="docs/math" view=move |cx| view! { cx, <TutorialMath/> }/>
+                        <Route path="docs/arrays" view=move |cx| view! { cx, <TutorialArrays/> }/>
                     </Routes>
                 </div>
                 <br/>
@@ -161,9 +162,10 @@ fn MainText(cx: Scope) -> impl IntoView {
 mod code {
     use super::*;
     #[component]
-    pub fn PrimCode(cx: Scope, prim: Primitive) -> impl IntoView {
+    pub fn PrimCode(cx: Scope, prim: Primitive, #[prop(optional)] name: bool) -> impl IntoView {
         let class = prim_class(prim);
-        view!(cx, <code class=class>{ prim.to_string() }</code>)
+        let name = prim.ident().filter(|_| name).unwrap_or("");
+        view!(cx, <code>{name}{" "}<span class=class>{ prim.to_string() }</span></code>)
     }
 }
 

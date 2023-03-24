@@ -10,7 +10,7 @@ use crate::{
 
 macro_rules! primitive {
     ($((
-        $($args:literal, $($outputs:literal,)?)?
+        $($args:literal$(($outputs:expr))?,)?
         $name:ident $({$modifier:ident: $margs:literal})?
         $(,$ident:literal)? $(,$ascii:ident)? $(+ $character:literal)?
     )),* $(,)?) => {
@@ -74,10 +74,10 @@ macro_rules! primitive {
                     _ => None
                 }
             }
-            pub fn outputs(&self) -> u8 {
+            pub fn outputs(&self) -> Option<u8> {
                 match self {
-                    $($($(Primitive::$name => $outputs,)?)?)*
-                    _ => 1
+                    $($($(Primitive::$name => $outputs.into(),)?)?)*
+                    _ => Some(1)
                 }
             }
         }
@@ -86,10 +86,11 @@ macro_rules! primitive {
 
 primitive!(
     // Stack ops
-    (1, 2, Dup, "duplicate" + '.'),
-    (2, 3, Over, "over" + ','),
-    (2, 2, Flip, "flip" + '~'),
-    (1, 0, Pop, "pop" + ';'),
+    (1(2), Dup, "duplicate" + '.'),
+    (2(3), Over, "over" + ','),
+    (2(2), Flip, "flip" + '~'),
+    (1(0), Pop, "pop" + ';'),
+    (1(None), Unpack, "unpack" + '⊔'),
     // Pervasive monadic ops
     (1, Sign, "sign" + '$'),
     (1, Not, "not" + '¬'),
@@ -154,9 +155,9 @@ primitive!(
     // Triadic array op
     (3, Put),
     // IO ops
-    (1, 0, Show, "show"),
-    (1, 0, Print, "print"),
-    (1, 0, Println, "println"),
+    (1(0), Show, "show"),
+    (1(0), Print, "print"),
+    (1(0), Println, "println"),
     (1, String, "string"),
     (0, ScanLn, "scanln"),
     (0, Args, "args"),
@@ -186,11 +187,11 @@ primitive!(
     // Misc
     (2, Assert, "assert" + '!'),
     (0, Nop, "noop" + '·'),
-    (Call, "call" + ':'),
+    (1(None), Call, "call" + ':'),
     (1, Parse, "parsenumber"),
     // Constants
-    (0, 1, Pi, "pi" + 'π'),
-    (0, 1, Infinity, "infinity" + '∞')
+    (0(1), Pi, "pi" + 'π'),
+    (0(1), Infinity, "infinity" + '∞')
 );
 
 fn _keep_primitive_small(_: std::convert::Infallible) {
@@ -304,6 +305,16 @@ impl Primitive {
             Primitive::IndexOf => env.dyadic_mut_env(Value::index_of)?,
             Primitive::Call => env.call()?,
             Primitive::Parse => env.monadic_mut_env(Value::parse_num)?,
+            Primitive::Unpack => {
+                let value = env.pop(1)?;
+                if value.is_array() {
+                    for v in value.into_array().into_values().into_iter().rev() {
+                        env.push(v);
+                    }
+                } else {
+                    env.push(value);
+                }
+            }
             Primitive::Put => {
                 let mut index = env.pop(1)?;
                 let value = env.pop(2)?;

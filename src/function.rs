@@ -83,8 +83,8 @@ impl Function {
                 }
                 Instr::Primitive(prim, span) => {
                     if let Some(inv) = prim.inverse() {
-                        if let Some(a) = prim.args() {
-                            args = a - prim.outputs();
+                        if let Some((a, o)) = prim.args().zip(prim.outputs()) {
+                            args = a - o;
                             groups.push(vec![Instr::Primitive(inv, *span)]);
                         } else {
                             return Err(no_inverse());

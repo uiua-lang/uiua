@@ -16,7 +16,6 @@ pub enum ParseError {
 
 #[derive(Debug)]
 pub enum Expectation {
-    Eof,
     Term,
     Simple(Simple),
 }
@@ -30,9 +29,8 @@ impl From<Simple> for Expectation {
 impl fmt::Display for Expectation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Expectation::Eof => write!(f, "end of file"),
             Expectation::Term => write!(f, "term"),
-            Expectation::Simple(s) => write!(f, "{s}"),
+            Expectation::Simple(s) => write!(f, "`{s}`"),
         }
     }
 }
@@ -47,7 +45,7 @@ impl fmt::Display for ParseError {
                     if i > 0 {
                         write!(f, ", ")?;
                     }
-                    write!(f, "`{exp}`")?;
+                    write!(f, "{exp}")?;
                 }
                 if let Some(found) = found {
                     write!(f, ", found `{}`", found.value)?;
@@ -75,8 +73,8 @@ pub fn parse(input: &str, path: Option<&Path>) -> (Vec<Item>, Vec<Sp<ParseError>
     };
     loop {
         match parser.try_item() {
-            Ok(Some(item)) => items.push(item),
-            Ok(None) => {
+            Some(item) => items.push(item),
+            None => {
                 if parser.try_exact(Newline).is_none() {
                     break;
                 }
@@ -88,14 +86,7 @@ pub fn parse(input: &str, path: Option<&Path>) -> (Vec<Item>, Vec<Sp<ParseError>
                     items.push(Item::Newlines);
                 }
             }
-            Err(e) => {
-                parser.errors.push(e);
-                break;
-            }
         }
-    }
-    if parser.index != parser.tokens.len() {
-        parser.errors.push(parser.expected([Expectation::Eof]));
     }
     (items, parser.errors)
 }
@@ -139,12 +130,6 @@ impl Parser {
             span
         }
     }
-    fn expect<T>(&mut self, val: T) -> ParseResult<Span>
-    where
-        T: Copy + Into<Token> + Into<Expectation>,
-    {
-        self.try_exact(val).ok_or_else(|| self.expected([val]))
-    }
     fn expected<I: Into<Expectation>>(
         &self,
         expectations: impl IntoIterator<Item = I>,
@@ -165,55 +150,63 @@ impl Parser {
         ));
         self.errors.push(err);
     }
-    fn try_item(&mut self) -> ParseResult<Option<Item>> {
-        Ok(Some(if let Some(binding) = self.try_binding()? {
+    fn try_item(&mut self) -> Option<Item> {
+        Some(if let Some(binding) = self.try_binding() {
             Item::Binding(binding)
-        } else if let Some(words) = self.try_words()? {
+        } else if let Some(words) = self.try_words() {
             Item::Words(words)
         } else if let Some(comment) = self.next_token_map(Token::as_comment) {
             Item::Comment(comment.value.into())
         } else {
-            return Ok(None);
-        }))
+            return None;
+        })
     }
-    fn try_binding(&mut self) -> ParseResult<Option<Binding>> {
-        Ok(Some(if let Some(ident) = self.try_ident() {
+    fn try_binding(&mut self) -> Option<Binding> {
+        Some(if let Some(ident) = self.try_ident() {
             if self.try_exact(Equal).is_none() {
                 self.index -= 1;
-                return Ok(None);
+                return None;
             }
-            let words = self.try_words()?.unwrap_or_default();
+            let words = self.try_words().unwrap_or_default();
             Binding { name: ident, words }
         } else {
-            return Ok(None);
-        }))
+            return None;
+        })
     }
     fn try_ident(&mut self) -> Option<Sp<Ident>> {
         self.next_token_map(|token| token.as_ident().cloned())
     }
-    fn try_words(&mut self) -> ParseResult<Option<Vec<Sp<Word>>>> {
+    fn try_words(&mut self) -> Option<Vec<Sp<Word>>> {
         let mut words = Vec::new();
-        while let Some(word) = self.try_word()? {
+        while let Some(word) = self.try_word() {
             words.push(word);
         }
-        Ok(if words.is_empty() { None } else { Some(words) })
+        if words.is_empty() {
+            None
+        } else {
+            Some(words)
+        }
     }
-    fn try_word(&mut self) -> ParseResult<Option<Sp<Word>>> {
+    fn try_word(&mut self) -> Option<Sp<Word>> {
         self.try_strand()
     }
-    fn try_strand(&mut self) -> ParseResult<Option<Sp<Word>>> {
-        let Some(word) = self.try_modified()? else {
-            return Ok(None);
+    fn try_strand(&mut self) -> Option<Sp<Word>> {
+        let Some(word) = self.try_modified() else {
+            return None;
         };
         let mut items = Vec::new();
-        while self.try_exact(Underscore).is_some() {
-            let item = self
-                .try_modified()?
-                .ok_or_else(|| self.expected([Expectation::Term]))?;
+        while let Some(uspan) = self.try_exact(Underscore) {
+            let item = match self.try_modified() {
+                Some(item) => item,
+                None => {
+                    self.errors.push(self.expected([Expectation::Term]));
+                    uspan.sp(Word::Primitive(Primitive::Nop))
+                }
+            };
             items.push(item);
         }
         if items.is_empty() {
-            return Ok(Some(word));
+            return Some(word);
         }
         items.insert(0, word);
         for item in &mut items {
@@ -227,9 +220,9 @@ impl Parser {
             .span
             .clone()
             .merge(items.last().unwrap().span.clone());
-        Ok(Some(span.sp(Word::Strand(items))))
+        Some(span.sp(Word::Strand(items)))
     }
-    fn try_modified(&mut self) -> ParseResult<Option<Sp<Word>>> {
+    fn try_modified(&mut self) -> Option<Sp<Word>> {
         let mod_margs = Primitive::ALL
             .into_iter()
             .filter_map(|prim| prim.modifier_args().map(|margs| (prim, margs)))
@@ -243,13 +236,13 @@ impl Parser {
         };
         let mut args = Vec::new();
         for _ in 0..margs {
-            if let Some(arg) = self.try_modified()? {
+            if let Some(arg) = self.try_modified() {
                 args.push(arg);
             } else {
                 break;
             }
         }
-        Ok(Some(if args.is_empty() {
+        Some(if args.is_empty() {
             modifier.map(Word::Primitive)
         } else {
             let span = modifier
@@ -260,10 +253,10 @@ impl Parser {
                 modifier,
                 words: args,
             })))
-        }))
+        })
     }
-    fn try_term(&mut self) -> ParseResult<Option<Sp<Word>>> {
-        Ok(Some(if let Some(prim) = self.try_op()? {
+    fn try_term(&mut self) -> Option<Sp<Word>> {
+        Some(if let Some(prim) = self.try_op() {
             prim.map(Word::Primitive)
         } else if let Some(ident) = self.try_ident() {
             ident.map(Word::Ident)
@@ -273,52 +266,61 @@ impl Parser {
             c.map(Into::into).map(Word::Char)
         } else if let Some(s) = self.next_token_map(Token::as_string) {
             s.map(Into::into).map(Word::String)
-        } else if let Some(expr) = self.try_func()? {
+        } else if let Some(expr) = self.try_func() {
             expr
-        } else if let Some(expr) = self.try_ref_func()? {
+        } else if let Some(expr) = self.try_ref_func() {
             expr
         } else if let Some(start) = self.try_exact(OpenBracket) {
-            let items = self.try_words()?.unwrap_or_default();
-            let end = self.expect(CloseBracket)?;
+            let items = self.try_words().unwrap_or_default();
+            let end = self.expect_close(CloseParen);
             let span = start.merge(end);
             span.sp(Word::Array(items))
         } else {
-            return Ok(None);
-        }))
+            return None;
+        })
     }
-    fn try_op(&mut self) -> ParseResult<Option<Sp<Primitive>>> {
+    fn try_op(&mut self) -> Option<Sp<Primitive>> {
         for prim in Primitive::ALL {
             let op_span = self
                 .try_exact(prim)
                 .or_else(|| prim.ascii().and_then(|simple| self.try_exact(simple)));
             if let Some(span) = op_span {
-                return Ok(Some(span.sp(prim)));
+                return Some(span.sp(prim));
             }
         }
-        Ok(None)
+        None
     }
-    fn try_func(&mut self) -> ParseResult<Option<Sp<Word>>> {
+    fn try_func(&mut self) -> Option<Sp<Word>> {
         let Some(start) = self.try_exact(OpenParen) else {
-            return Ok(None);
+            return None;
         };
-        let body = self.try_words()?.unwrap_or_default();
-        let end = self.expect(CloseParen)?;
+        let body = self.try_words().unwrap_or_default();
+        let end = self.expect_close(CloseParen);
         let span = start.merge(end);
-        Ok(Some(span.clone().sp(Word::Func(Func {
+        Some(span.clone().sp(Word::Func(Func {
             id: FunctionId::Anonymous(span),
             body,
-        }))))
+        })))
     }
-    fn try_ref_func(&mut self) -> ParseResult<Option<Sp<Word>>> {
+    fn try_ref_func(&mut self) -> Option<Sp<Word>> {
         let Some(start) = self.try_exact(OpenCurly) else {
-            return Ok(None);
+            return None;
         };
-        let body = self.try_words()?.unwrap_or_default();
-        let end = self.expect(CloseCurly)?;
+        let body = self.try_words().unwrap_or_default();
+        let end = self.expect_close(CloseCurly);
         let span = start.merge(end);
-        Ok(Some(span.clone().sp(Word::RefFunc(Func {
+        Some(span.clone().sp(Word::RefFunc(Func {
             id: FunctionId::Anonymous(span),
             body,
-        }))))
+        })))
+    }
+    fn expect_close(&mut self, simple: Simple) -> Span {
+        if let Some(span) = self.try_exact(simple) {
+            span
+        } else {
+            self.errors
+                .push(self.expected([Expectation::Term, Expectation::Simple(simple)]));
+            self.last_span()
+        }
     }
 }

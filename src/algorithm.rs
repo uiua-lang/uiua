@@ -31,11 +31,11 @@ impl Value {
             0
         }
     }
-    pub fn shape(&self) -> Vec<usize> {
+    pub fn shape(&self) -> &[usize] {
         if self.is_array() {
-            self.array().shape().to_vec()
+            self.array().shape()
         } else {
-            Vec::new()
+            &[]
         }
     }
     pub fn as_shape(&self, env: &Env, error: &'static str) -> RuntimeResult<Vec<usize>> {
@@ -139,7 +139,7 @@ impl Value {
                 *self = arr.into();
             }
         }
-        self.array_mut().normalize(0);
+        self.array_mut().normalize_type();
         Ok(())
     }
     pub fn deshape(&mut self) {
@@ -209,7 +209,7 @@ impl Value {
         } else {
             return Err(env.error("Cannot replicate with non-number"));
         }
-        *self = Array::from(data).normalized(1).into();
+        *self = Array::from(data).normalized_type().into();
         Ok(())
     }
     pub fn pick(&mut self, from: Self, env: &Env) -> RuntimeResult {
@@ -288,7 +288,7 @@ impl Value {
                     .map(|val| val.fill_value(env))
                     .collect::<RuntimeResult<_>>()?;
                 Array::from((array.shape().to_vec(), values))
-                    .normalized(1)
+                    .normalized()
                     .into()
             }
         })
@@ -315,12 +315,12 @@ impl Value {
     }
     pub fn enclose(&mut self) {
         *self = Array::from((Vec::new(), vec![take(self)]))
-            .normalized(0)
+            .normalized_type()
             .into();
     }
     pub fn pair(&mut self, other: Self) {
         *self = Array::from((vec![2], vec![take(self), other]))
-            .normalized(0)
+            .normalized_type()
             .into();
     }
     pub fn couple(&mut self, mut other: Self, env: &Env) -> RuntimeResult {
@@ -363,7 +363,7 @@ impl Value {
             selected.push(pick(&[index], array, env)?);
         }
         *self = Array::from((vec![selected.len()], selected))
-            .normalized(1)
+            .normalized()
             .into();
         Ok(())
     }
@@ -441,7 +441,7 @@ impl Value {
                 deduped.push(val);
             }
         }
-        *self = Array::from(deduped).normalized(1).into();
+        *self = Array::from(deduped).normalized().into();
         Ok(())
     }
     pub fn index_of(&mut self, searched_in: Self, env: &Env) -> RuntimeResult {
@@ -528,6 +528,16 @@ impl Value {
                     .parse::<f64>()
                     .map(Value::from)
                     .map_err(|e| env.error(e.to_string()))?
+            }
+        }
+        Ok(())
+    }
+    pub fn normalize(&mut self, env: &Env) -> RuntimeResult {
+        if self.is_array() {
+            if let Some((a, b)) = self.array_mut().normalize() {
+                return Err(env.error(format!(
+                    "Cannot normalize array with values of difference shapes {a:?} and {b:?}"
+                )));
             }
         }
         Ok(())
@@ -684,14 +694,18 @@ fn take_array(index: &[isize], array: Array, env: &Env) -> RuntimeResult<Array> 
     let index = &index[1..];
     shape[0] = take_abs;
     if index.is_empty() {
-        let norm = if shape.len() > 1 { 1 } else { 0 };
-        Ok(Array::from((shape, cells)).normalized(norm))
+        let normalize = shape.len() > 1;
+        let mut arr = Array::from((shape, cells)).normalized_type();
+        if normalize {
+            arr.normalize();
+        }
+        Ok(arr)
     } else {
         cells = cells
             .into_iter()
             .map(|cell| take_array(index, cell.into_array(), env).map(Value::from))
             .collect::<RuntimeResult<_>>()?;
-        Ok(Array::from((shape, cells)).normalized(1))
+        Ok(Array::from((shape, cells)).normalized())
     }
 }
 

@@ -248,8 +248,9 @@ pub fn TutorialArrays(cx: Scope) -> impl IntoView {
             <p><PrimCode prim=Len name=true/>" is the number of "<i>"major cells"</i>" of the array. This is the number of elements for a 1D array and the number of rows for a 2D array."</p>
             <p><PrimCode prim=Rank name=true/>" is the number of dimensions of the array. It is defined as the length of the shape."</p>
             <Editor examples={&["△[1 2 3]\n⇀[1 2 3]\n⸫[1 2 3]", "# ⸫ is equivalent to ⇀△\n=⸫[1 2 3]⇀△[1 2 3]"]}/>
-            <p>"When creating multidimensional arrays, stack notation applies a step called "<i>"normalization"</i>". If all the items pushed to the stack have the same shape, they will combine into an array with a higher rank. If they have different shapes, then they combine into a rank 1 nested array."</p>
+            <p>"When creating multidimensional arrays, stack notation applies a step called "<i>"normalization"</i>". If all the items pushed to the stack have the same shape, they will combine into an array with a higher rank. Different shapes result in an error."</p>
             <Editor examples={&["[[1 2] [3 4]]", "[[1 2] [3 4 5]]"]}/>
+            <p>"This is equivalent to the "<PrimCode prim=Normalize name=true/>" primitive."</p>
             <br/>
             <h2>"Pervasion"</h2>
             <hr/>

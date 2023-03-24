@@ -295,7 +295,7 @@ fn run_code(code: &str) -> UiuaResult<(String, Option<Vec<u8>>)> {
             let value = &values[i];
             if let Ok(bytes) = value_to_image_bytes(value, ImageOutputFormat::Png, &assembly.env())
             {
-                if value.shape().into_iter().product::<usize>() > 100 {
+                if value.shape().iter().product::<usize>() > 100 {
                     values.remove(i);
                     return Some(bytes);
                 }

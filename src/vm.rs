@@ -6,6 +6,7 @@ use crate::{
     function::{Function, Instr},
     io::{IoBackend, StdIo},
     lex::Span,
+    ops::Primitive,
     value::{Type, Value},
     RuntimeError, RuntimeResult, TraceFrame, UiuaError, UiuaResult,
 };
@@ -129,7 +130,15 @@ impl<B: IoBackend> Vm<B> {
                     );
                 }
                 let array: Array = self.stack.drain(bottom..).rev().collect();
-                self.stack.push(array.normalized(normalize as usize).into());
+                self.stack.push(array.into());
+                if normalize {
+                    let mut env = CallEnv {
+                        vm: self,
+                        assembly,
+                        span,
+                    };
+                    Primitive::Normalize.run(&mut env)?;
+                }
             }
             Instr::BindGlobal(span) => self.globals.push(
                 self.stack

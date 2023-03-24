@@ -130,6 +130,7 @@ primitive!(
     (1, First, "first" + '⊢'),
     (1, Reverse, "reverse" + '⇌'),
     (1, Enclose, "enclose" + '⊓'),
+    (1, Normalize, "normalize" + '□'),
     (1, Deshape, "deshape" + '♭'),
     (1, Transpose, "transpose" + '⍉'),
     (1, Sort, "sort" + '∧'),
@@ -278,6 +279,7 @@ impl Primitive {
             Primitive::Drop => env.dyadic_mut_env(Value::drop)?,
             Primitive::Rotate => env.dyadic_mut_env(Value::rotate)?,
             Primitive::Enclose => env.monadic_mut(Value::enclose)?,
+            Primitive::Normalize => env.monadic_mut_env(Value::normalize)?,
             Primitive::Pair => env.dyadic_mut(Value::pair)?,
             Primitive::Couple => env.dyadic_mut_env(Value::couple)?,
             Primitive::Sort => env.monadic_mut_env(Value::sort)?,
@@ -406,7 +408,7 @@ impl Primitive {
                     env.call()?;
                     new_values.push(env.pop("each's function result")?);
                 }
-                env.push(Array::from((shape, new_values)).normalized(0));
+                env.push(Array::from((shape, new_values)).normalized_type());
             }
             Primitive::Cells => {
                 let f = env.pop(1)?;
@@ -424,7 +426,7 @@ impl Primitive {
                     env.call()?;
                     cells.push(env.pop("cells' function result")?);
                 }
-                env.push(Array::from(cells).normalized(1));
+                env.push(Array::from(cells).normalized());
             }
             Primitive::Table => {
                 let f = env.pop(1)?;
@@ -456,9 +458,9 @@ impl Primitive {
                         env.call()?;
                         row.push(env.pop("tabled function result")?);
                     }
-                    table.push(Value::from(Array::from(row).normalized(1)));
+                    table.push(Value::from(Array::from(row).normalized()));
                 }
-                env.push(Array::from(table).normalized(1));
+                env.push(Array::from(table).normalized());
             }
             Primitive::Scan => {
                 let f = env.pop(1)?;
@@ -485,7 +487,7 @@ impl Primitive {
                     acc = env.pop("scanned function result")?;
                     scanned.push(acc.clone());
                 }
-                env.push(Array::from(scanned).normalized(1));
+                env.push(Array::from(scanned).normalized());
             }
             Primitive::Repeat => {
                 let f = env.pop(1)?;
@@ -524,7 +526,7 @@ impl Primitive {
             Primitive::Len => env.monadic(|v| v.len() as f64)?,
             Primitive::Rank => env.monadic(|v| v.rank() as f64)?,
             Primitive::Shape => {
-                env.monadic(|v| Array::from_iter(v.shape().into_iter().map(|i| i as f64)))?
+                env.monadic(|v| Array::from_iter(v.shape().iter().map(|i| *i as f64)))?
             }
             Primitive::Range => env.monadic_mut_env(Value::range)?,
             Primitive::Reverse => env.monadic_mut(Value::reverse)?,

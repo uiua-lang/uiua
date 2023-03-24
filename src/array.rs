@@ -171,7 +171,7 @@ impl Array {
         }
         self.values_mut()
     }
-    pub fn normalize(&mut self, array_depth: usize) {
+    pub fn normalize_type(&mut self) {
         if let ArrayType::Value = self.ty {
             if self.values().is_empty() {
                 return;
@@ -184,35 +184,45 @@ impl Array {
                 let shape = take(&mut self.shape);
                 *self = Self::from(self.values().iter().map(Value::number).collect::<Vec<_>>());
                 self.shape = shape;
-            } else if array_depth > 0 && self.values().iter().all(Value::is_array) {
-                let mut shape = None;
-                for arr in self.values().iter().map(Value::array) {
-                    if arr.shape != *shape.get_or_insert_with(|| arr.shape()) {
-                        return;
-                    }
-                }
-                let mut shape = shape.unwrap_or(&[]).to_vec();
-                let values: Vec<Value> = self
-                    .take_flat_values()
-                    .into_iter()
-                    .map(Value::into_array)
-                    .flat_map(Array::into_flat_values)
-                    .collect();
-                self.shape.append(&mut shape);
-                let shape = take(&mut self.shape);
-                *self = Self {
-                    ty: ArrayType::Value,
-                    shape,
-                    data: Data {
-                        values: ManuallyDrop::new(values),
-                    },
-                }
-                .normalized(array_depth - 1);
             }
         }
     }
-    pub fn normalized(mut self, array_depth: usize) -> Self {
-        self.normalize(array_depth);
+    pub fn normalize(&mut self) -> Option<(Vec<usize>, Vec<usize>)> {
+        if !self.is_values() {
+            return None;
+        }
+        let mut shape = None;
+        for val in self.values() {
+            let acc = shape.get_or_insert_with(|| val.shape());
+            if val.shape() != *acc {
+                return Some((acc.to_vec(), val.shape().to_vec()));
+            }
+        }
+        let mut shape = shape.unwrap_or(&[]).to_vec();
+        let values: Vec<Value> = self
+            .take_flat_values()
+            .into_iter()
+            .map(Value::into_array)
+            .flat_map(Array::into_flat_values)
+            .collect();
+        self.shape.append(&mut shape);
+        let shape = take(&mut self.shape);
+        *self = Self {
+            ty: ArrayType::Value,
+            shape,
+            data: Data {
+                values: ManuallyDrop::new(values),
+            },
+        }
+        .normalized_type();
+        None
+    }
+    pub fn normalized(mut self) -> Self {
+        self.normalize();
+        self
+    }
+    pub fn normalized_type(mut self) -> Self {
+        self.normalize_type();
         self
     }
     pub fn deshape(&mut self) {
@@ -744,7 +754,7 @@ impl From<Vec<Value>> for Array {
                 values: ManuallyDrop::new(v),
             },
         }
-        .normalized(0)
+        .normalized_type()
     }
 }
 
@@ -768,7 +778,7 @@ impl From<Vec<Array>> for Array {
                 values: ManuallyDrop::new(values),
             },
         }
-        .normalized(0)
+        .normalized_type()
     }
 }
 

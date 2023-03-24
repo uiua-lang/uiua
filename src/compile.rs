@@ -247,7 +247,8 @@ impl Compiler {
             Word::Strand(items) => {
                 self.push_instr(Instr::BeginArray);
                 self.words(items, false);
-                self.push_instr(Instr::EndArray(false, 0));
+                let span = self.push_call_span(word.span);
+                self.push_instr(Instr::EndArray(false, span));
             }
             Word::Func(func) => self.func(func),
             Word::RefFunc(func) => self.ref_func(func, word.span),

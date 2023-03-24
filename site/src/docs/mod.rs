@@ -215,7 +215,7 @@ pub fn TutorialMath(cx: Scope) -> impl IntoView {
             <Editor examples={&["++1 2 3", "×××2 3 4 5"]}/>
             <p>"This is not special syntax. All the numbers are pushed to the stack, then the operators work on them."</p>
             <p>"Remember that you can type the names of operators and then run to format them:"</p>
-            <Editor examples={&["# Click Run to format!\nmax sqrt 2 mod 10 abs `31"]}/>
+            <Editor examples={&["# Click Run to format!\nmax sqrt 2 mod 10 abs `31"]} help={&["", "⇡Click⇡"]}/>
         </div>
     }
 }

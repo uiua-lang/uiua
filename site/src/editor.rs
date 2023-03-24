@@ -29,7 +29,7 @@ pub fn Editor(
     let code_element = move || -> HtmlTextAreaElement { element(&code_id.get()) };
     let output_element = move || -> HtmlDivElement { element(&output_id.get()) };
 
-    let (_, set_example) = create_signal(cx, 0);
+    let (example, set_example) = create_signal(cx, 0);
     let (code, set_code) = create_signal(cx, examples[0].to_string());
     let (output, set_output) = create_signal(cx, String::new());
 
@@ -199,6 +199,9 @@ pub fn Editor(
 
     let glyph_button_bottom = glyph_buttons.split_off(glyph_buttons.len() / 2);
 
+    let example_text =
+        move || (examples.len() > 1).then(|| format!("{}/{}", example.get() + 1, examples.len()));
+
     view! { cx,
         <div>
             <div id="editor" class=editor_class>
@@ -207,10 +210,13 @@ pub fn Editor(
                     <div class="glyph-buttons">{glyph_button_bottom}</div>
                 </div>
                 <div id="code-area">
-                    <button
-                        id="glyphs-toggle-button"
-                        title=show_glyphs_title
-                        on:click=toggle_show_glyphs>{show_glyphs_text}</button>
+                    <div id="code-right-side">
+                        <button
+                            id="glyphs-toggle-button"
+                            title=show_glyphs_title
+                            on:click=toggle_show_glyphs>{show_glyphs_text}</button>
+                        <div id="example-tracker">{example_text}</div>
+                    </div>
                     <textarea
                         id={code_id.get()}
                         spellcheck="false"
@@ -229,7 +235,7 @@ pub fn Editor(
                             class="code-button"
                             style=example_arrow_style
                             on:click=prev_example title="Previous example">{ "<" } </button>
-                        <button
+                            <button
                             id="next-example"
                             class="code-button"
                             style=example_arrow_style

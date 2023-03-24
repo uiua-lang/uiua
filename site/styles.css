@@ -51,6 +51,7 @@ table {
 
     #editor {
         background-color: #334;
+        outline: 0.1em solid #fff4;
     }
 
     textarea {
@@ -82,26 +83,27 @@ table {
 
 @media (prefers-color-scheme: light) {
     body {
-        color: #443;
-        background-color: #fff8e0;
+        color: #344;
+        background-color: #d0e8ee;
     }
 
     #editor {
-        background-color: #fffee8;
+        background-color: #e0f8ff;
+        outline: 0.1em solid #0004;
     }
 
     textarea {
-        color: #443;
-        background-color: #fff;
+        color: #344;
+        background-color: #eff;
     }
 
     button {
-        color: #443;
-        background-color: #fff;
+        color: #344;
+        background-color: #cee;
     }
 
     button:hover {
-        background-color: #eee;
+        background-color: #dff;
     }
 
     code {
@@ -137,7 +139,6 @@ table {
 }
 
 #editor {
-    outline: 0.1em solid #ccd;
     border-radius: 0.5em;
 }
 
@@ -194,11 +195,19 @@ table {
     src: url(DejaVuSansMono.ttf) format("truetype");
 }
 
-#glyphs-toggle-button {
+#code-right-side {
+    display: flex;
     position: absolute;
     top: 0.1em;
     right: 0.7em;
     opacity: 0.5;
+    font-size: 1em;
+    align-items: center;
+}
+
+#glyphs-toggle-button {
+    margin-right: 0.3em;
+    font-weight: bolder;
     font-size: 1em;
 }
 
@@ -210,10 +219,14 @@ table {
     left: calc(-8em - 50%);
     top: calc(50% - 0.6em);
     color: #eee;
-    background-color: #000a;
+    background-color: #000b;
     padding: 0.2em;
     border-radius: 0.2em;
     width: 8em;
+}
+
+#example-tracker {
+    font-size: 0.8em;
 }
 
 .glyph-buttons {
@@ -221,6 +234,7 @@ table {
     display: flex;
     flex-wrap: wrap;
     justify-content: space-evenly;
+    align-items: baseline;
 }
 
 .glyph-button {
@@ -258,7 +272,7 @@ table {
 }
 
 .monadic-function-button {
-    color: #3c3;
+    color: #30ba30;
 }
 
 .dyadic-function-button {

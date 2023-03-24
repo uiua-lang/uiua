@@ -1,14 +1,15 @@
+mod backend;
 mod docs;
-use docs::*;
 mod editor;
-use editor::*;
-use uiua::ops::Primitive;
 
 use std::cell::RefCell;
 
 use leptos::*;
 use leptos_router::*;
 use rand::prelude::*;
+use uiua::ops::Primitive;
+
+use crate::{docs::*, editor::*};
 
 const EXAMPLES: &[&str] = &[
     r#"‡=¯1 ≡/-◫2 ≤'A' ≍' ' ."Um, I um...arrays""#,
@@ -31,9 +32,11 @@ start = =÷2 size ⇡+1 size
 #[cfg(test)]
 #[test]
 fn test_examples() {
+    use uiua::Assembly;
     for example in EXAMPLES {
-        uiua::compile::Compiler::new()
-            .eval(example)
+        Assembly::load_str(example)
+            .unwrap_or_else(|e| panic!("Example failed:\n{example}\n{e}"))
+            .run()
             .unwrap_or_else(|e| panic!("Example failed:\n{example}\n{e}"));
     }
 }

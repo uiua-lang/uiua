@@ -1,10 +1,9 @@
-use std::{collections::HashMap, fmt, fs, mem::take, path::Path};
+use std::{collections::HashMap, fmt, fs, path::Path};
 
 use crate::{
     ast::*,
-    format::format_items,
     function::{Function, FunctionId, Instr},
-    io::{IoBackend, PipedIo, StdIo},
+    io::{IoBackend, StdIo},
     lex::{Sp, Span},
     ops::Primitive,
     parse::{parse, ParseError},
@@ -19,15 +18,30 @@ pub struct Assembly {
 }
 
 impl Assembly {
+    pub fn load_file<P: AsRef<Path>>(path: P) -> UiuaResult<Self> {
+        let path = path.as_ref();
+        let input = fs::read_to_string(path).map_err(|e| UiuaError::Load(path.into(), e))?;
+        Self::load(&input, path)
+    }
+    pub fn load<P: AsRef<Path>>(input: &str, path: P) -> UiuaResult<Self> {
+        let mut compiler = Compiler::default();
+        compiler.load_impl(input, Some(path.as_ref()))?;
+        Ok(compiler.assembly)
+    }
+    pub fn load_str(input: &str) -> UiuaResult<Self> {
+        let mut compiler = Compiler::default();
+        compiler.load_impl(input, None)?;
+        Ok(compiler.assembly)
+    }
+    pub fn run_with_backend<B: IoBackend>(&self, backend: B) -> UiuaResult<(Vec<Value>, B)> {
+        let mut vm = Vm::new(backend);
+        self.run_with_vm(&mut vm)?;
+        Ok((vm.stack, vm.io))
+    }
     pub fn run(&self) -> UiuaResult<Vec<Value>> {
         let mut vm = Vm::<StdIo>::default();
         self.run_with_vm(&mut vm)?;
         Ok(vm.stack)
-    }
-    pub fn run_piped(&self) -> UiuaResult<(Vec<Value>, String)> {
-        let mut vm = Vm::<PipedIo>::default();
-        self.run_with_vm(&mut vm)?;
-        Ok((vm.stack, vm.io.buffer))
     }
     fn run_with_vm<B: IoBackend>(&self, vm: &mut Vm<B>) -> UiuaResult {
         for (i, instr) in self.instrs.iter().enumerate() {
@@ -84,7 +98,7 @@ impl From<UiuaError> for CompileError {
     }
 }
 
-pub struct Compiler {
+pub(crate) struct Compiler {
     /// Instructions for functions that are currently being compiled
     in_progress_functions: Vec<InProgressFunction>,
     /// Values and functions that are bound
@@ -93,8 +107,6 @@ pub struct Compiler {
     pub(crate) errors: Vec<Sp<CompileError>>,
     /// The partially compiled assembly
     assembly: Assembly,
-    /// Vm for constant evaluation
-    vm: Vm,
 }
 
 #[derive(Debug, Clone)]
@@ -125,7 +137,6 @@ impl Default for Compiler {
                 instrs: Vec::new(),
                 spans: vec![Span::Builtin],
             },
-            vm: Vm::default(),
         }
     }
 }
@@ -142,21 +153,6 @@ struct InProgressFunction {
 }
 
 impl Compiler {
-    pub fn new() -> Self {
-        Self::default()
-    }
-    pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult {
-        let path = path.as_ref();
-        let input = fs::read_to_string(path).map_err(|e| UiuaError::Load(path.into(), e))?;
-        self.load(&input, path)?;
-        Ok(())
-    }
-    pub fn load<P: AsRef<Path>>(&mut self, input: &str, path: P) -> UiuaResult {
-        self.load_impl(input, Some(path.as_ref()))
-    }
-    pub fn load_str(&mut self, input: &str) -> UiuaResult {
-        self.load_impl(input, None)
-    }
     fn load_impl(&mut self, input: &str, path: Option<&Path>) -> UiuaResult {
         let (items, errors) = parse(input, path);
         let mut errors: Vec<Sp<CompileError>> = errors
@@ -174,9 +170,6 @@ impl Compiler {
             self.assembly.instrs.truncate(global_start);
             Err(errors.into())
         }
-    }
-    pub fn finish(self) -> Assembly {
-        self.assembly
     }
     fn push_instr(&mut self, instr: Instr) {
         if let Some(ipf) = self.in_progress_functions.last_mut() {
@@ -217,32 +210,6 @@ impl Compiler {
             .insert(binding.name.value, Bound::Global(index, function));
         let span = self.push_call_span(binding.name.span);
         self.push_instr(Instr::BindGlobal(span));
-    }
-    pub fn eval(&mut self, input: &str) -> UiuaResult<Vec<Value>> {
-        let (items, errors) = parse(input, None);
-        if !errors.is_empty() {
-            return Err(errors.into());
-        }
-        let mut stack = Vec::new();
-        let formatted = format_items(items);
-        let (items, _) = parse(&formatted, None);
-        for item in items {
-            stack = self.eval_item(item)?;
-        }
-        Ok(stack)
-    }
-    fn eval_item(&mut self, item: Item) -> UiuaResult<Vec<Value>> {
-        let point = self.vm.restore_point();
-        self.item(item);
-        if !self.errors.is_empty() {
-            self.assembly.instrs.clear();
-            self.vm.restore(point);
-            return Err(take(&mut self.errors).into());
-        }
-        let res = self.vm.run_assembly(&self.assembly);
-        self.assembly.instrs.clear();
-        let stack = self.vm.restore(point);
-        res.map(|_| stack)
     }
     fn words(&mut self, words: Vec<Sp<Word>>, call: bool) {
         for word in words.into_iter().rev() {

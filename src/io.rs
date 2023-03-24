@@ -4,7 +4,7 @@ use std::{
     io::{stdin, stdout, BufRead, Write},
 };
 
-use crate::{compile::Compiler, value::Value, vm::Env, RuntimeError, RuntimeResult};
+use crate::{compile::Assembly, value::Value, vm::Env, RuntimeError, RuntimeResult};
 
 #[allow(unused_variables)]
 pub trait IoBackend {
@@ -48,6 +48,51 @@ pub trait IoBackend {
     }
 }
 
+impl<'a, T> IoBackend for &'a mut T
+where
+    T: IoBackend,
+{
+    fn print_str(&mut self, s: &str) {
+        (**self).print_str(s)
+    }
+    fn scan_line(&mut self) -> String {
+        (**self).scan_line()
+    }
+    fn print_str_ln(&mut self, s: &str) {
+        (**self).print_str_ln(s)
+    }
+    fn import(&mut self, name: &str, env: &Env) -> RuntimeResult<Vec<Value>> {
+        (**self).import(name, env)
+    }
+    fn var(&mut self, name: &str) -> Option<String> {
+        (**self).var(name)
+    }
+    fn args(&mut self) -> Vec<String> {
+        (**self).args()
+    }
+    fn file_exists(&self, path: &str) -> bool {
+        (**self).file_exists(path)
+    }
+    fn list_dir(&self, path: &str, env: &Env) -> RuntimeResult<Vec<String>> {
+        (**self).list_dir(path, env)
+    }
+    fn is_file(&self, path: &str, env: &Env) -> RuntimeResult<bool> {
+        (**self).is_file(path, env)
+    }
+    fn read_file(&mut self, path: &str, env: &Env) -> RuntimeResult<Vec<u8>> {
+        (**self).read_file(path, env)
+    }
+    fn write_file(&mut self, path: &str, contents: Vec<u8>, env: &Env) -> RuntimeResult {
+        (**self).write_file(path, contents, env)
+    }
+    fn read_file_string(&mut self, path: &str, env: &Env) -> RuntimeResult<String> {
+        (**self).read_file_string(path, env)
+    }
+    fn write_file_string(&mut self, path: &str, contents: String, env: &Env) -> RuntimeResult {
+        (**self).write_file_string(path, contents, env)
+    }
+}
+
 #[derive(Default)]
 pub struct StdIo {
     imports: HashMap<String, Vec<Value>>,
@@ -68,10 +113,10 @@ impl IoBackend for StdIo {
     }
     fn import(&mut self, path: &str, _env: &Env) -> RuntimeResult<Vec<Value>> {
         if !self.imports.contains_key(path) {
-            let mut compiler = Compiler::new();
-            compiler.load_file(path).map_err(RuntimeError::Import)?;
-            let assembly = compiler.finish();
-            let stack = assembly.run().map_err(RuntimeError::Import)?;
+            let stack = Assembly::load_file(path)
+                .map_err(RuntimeError::Import)?
+                .run()
+                .map_err(RuntimeError::Import)?;
             self.imports.insert(path.into(), stack);
         }
         Ok(self.imports[path].clone())

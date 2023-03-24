@@ -16,22 +16,17 @@ instant = "0.1.12"
 nanbox = "0.2.0"
 notify.optional = true
 notify.version = "5"
+open = "4"
 rand.default-features = false
 rand.features = ["small_rng"]
 rand.version = "0.8.5"
 term_size.optional = true
 term_size.version = "0.3.2"
 
-puffin.optional = true
-puffin.version = "0.14.3"
-puffin_http.optional = true
-puffin_http.version = "0.11.1"
-
 [features]
 binary = ["ctrlc", "notify", "term_size", "clap"]
 debug = []
 default = ["binary"]
-profile = ["puffin", "puffin_http"]
 
 [[bin]]
 name = "uiua"

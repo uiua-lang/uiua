@@ -439,14 +439,11 @@ fn new_function_nanbox(rc: Rc<Function>) -> NanBox {
 
 #[test]
 fn value_memory_test() {
-    use crate::compile::Compiler;
-    let mut compiler = Compiler::new();
+    use crate::compile::Assembly;
     let code = "
 xs = ⇡ 3_4
 show xs
 show ≡/+xs
 ";
-    compiler.load(code, "test.uiua").unwrap();
-    let assembly = compiler.finish();
-    assembly.run().unwrap();
+    Assembly::load(code, "test.uiua").unwrap().run().unwrap();
 }

@@ -1,10 +1,10 @@
 use instant::Duration;
 use leptos::*;
-use uiua::{compile::Compiler, format::format_str, ops::Primitive, UiuaResult};
+use uiua::{format::format_str, ops::Primitive, Assembly, UiuaResult};
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use web_sys::{Event, HtmlDivElement, HtmlTextAreaElement};
 
-use crate::prim_class;
+use crate::{backend::WebBackend, prim_class};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum EditorSize {
@@ -252,10 +252,8 @@ pub fn Editor(
 
 /// Returns the output and the formatted code
 fn run_code(code: &str) -> UiuaResult<String> {
-    let mut compiler = Compiler::new();
-    compiler.load_str(code)?;
-    let assembly = compiler.finish();
-    let (values, output) = assembly.run_piped()?;
+    let (values, io) = Assembly::load_str(code)?.run_with_backend(WebBackend::default())?;
+    let output = io.stdout;
     let mut s = String::new();
     if !output.is_empty() {
         if !values.is_empty() {

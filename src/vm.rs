@@ -1,8 +1,4 @@
-use std::{
-    mem::{replace, swap},
-    rc::Rc,
-    vec,
-};
+use std::{mem::swap, rc::Rc, vec};
 
 use crate::{
     array::Array,
@@ -54,8 +50,14 @@ pub struct Vm<B = StdIo> {
     pub io: B,
 }
 
-impl<B: Default> Default for Vm<B> {
+impl<B: Default + IoBackend> Default for Vm<B> {
     fn default() -> Self {
+        Self::new(B::default())
+    }
+}
+
+impl<B: IoBackend> Vm<B> {
+    pub fn new(io: B) -> Self {
         Self {
             instrs: Vec::new().into_iter(),
             call_stack: Vec::new(),
@@ -63,35 +65,8 @@ impl<B: Default> Default for Vm<B> {
             array_stack: Vec::new(),
             globals: Vec::new(),
             stack: Vec::new(),
-            io: B::default(),
+            io,
         }
-    }
-}
-
-pub struct RestorePoint {
-    instrs: vec::IntoIter<Instr>,
-    call_stack: Vec<StackFrame>,
-    ref_stack: Vec<Vec<Value>>,
-    array_stack: Vec<usize>,
-    stack: Vec<Value>,
-}
-
-impl<B: IoBackend> Vm<B> {
-    pub fn restore_point(&self) -> RestorePoint {
-        RestorePoint {
-            instrs: self.instrs.clone(),
-            call_stack: self.call_stack.clone(),
-            ref_stack: self.ref_stack.clone(),
-            array_stack: self.array_stack.clone(),
-            stack: self.stack.clone(),
-        }
-    }
-    pub fn restore(&mut self, point: RestorePoint) -> Vec<Value> {
-        self.instrs = point.instrs;
-        self.call_stack = point.call_stack;
-        self.ref_stack = point.ref_stack;
-        self.array_stack = point.array_stack;
-        replace(&mut self.stack, point.stack)
     }
     pub fn run_assembly(&mut self, assembly: &Assembly) -> UiuaResult {
         self.instrs = assembly.instrs.clone().into_iter();
@@ -119,19 +94,7 @@ impl<B: IoBackend> Vm<B> {
         if return_depth.is_none() {
             dprintln!("Running...");
         }
-        #[cfg(feature = "profile")]
-        let mut i = 0;
         loop {
-            #[cfg(feature = "profile")]
-            if i % 100_000 == 0 {
-                puffin::GlobalProfiler::lock().new_frame();
-            }
-            #[cfg(feature = "profile")]
-            {
-                i += 1;
-            }
-            #[cfg(feature = "profile")]
-            puffin::profile_scope!("instr loop");
             if let Some(frame) = self.call_stack.last_mut() {
                 if let Some(instr) = frame.function.instrs.get(frame.pc).cloned() {
                     dprintln!("  {instr}");
@@ -219,8 +182,6 @@ impl<B: IoBackend> Vm<B> {
         Ok(())
     }
     fn call(&mut self, span: usize) -> RuntimeResult<bool> {
-        #[cfg(feature = "profile")]
-        puffin::profile_scope!("call");
         let value = self.stack.pop().unwrap();
         let function = match value.ty() {
             Type::Function => value.into_function(),

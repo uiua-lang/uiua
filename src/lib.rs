@@ -3,7 +3,7 @@
 mod algorithm;
 pub mod array;
 pub mod ast;
-pub mod compile;
+mod compile;
 mod error;
 pub mod format;
 pub mod function;
@@ -23,7 +23,7 @@ use std::{
     rc::Rc,
 };
 
-pub use error::*;
+pub use {compile::Assembly, error::*, io::IoBackend};
 
 #[derive(Debug, Clone)]
 pub struct Ident(Rc<str>);

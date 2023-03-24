@@ -1,9 +1,10 @@
 use std::{
     collections::HashMap,
     env, fs,
-    io::{stdin, stdout, BufRead, Write},
+    io::{stdin, stdout, BufRead, Cursor, Write},
 };
 
+use image::ImageOutputFormat;
 use rand::prelude::*;
 
 use crate::{
@@ -70,6 +71,8 @@ io_op! {
     (1, FIsFile, "fisfile"),
     (1, Import, "import"),
     (0, Now, "now"),
+    (1, ImRead, "imread"),
+    (1, ImWrite, "imwrite"),
 }
 
 #[allow(unused_variables)]
@@ -358,6 +361,101 @@ impl IoOp {
                 }
             }
             IoOp::Now => env.push(instant::now()),
+            IoOp::ImRead => {
+                let path = env.pop(1)?;
+                if !path.is_array() || !path.array().is_chars() {
+                    return Err(env.error("Path must be a string"));
+                }
+                let path: String = path.array().chars().iter().collect();
+                let bytes = env.vm.io.read_file(&path, &env.env())?;
+                let image = image::load_from_memory(&bytes)
+                    .map_err(|e| env.error(&format!("Failed to read image: {}", e)))?
+                    .into_rgba32f();
+                let shape = vec![image.height() as usize, image.width() as usize, 4];
+                let data: Vec<f64> = image.into_raw().into_iter().map(|f| f as f64).collect();
+                let array = Array::from((shape, data));
+                env.push(array);
+            }
+            IoOp::ImWrite => {
+                let path = env.pop(1)?;
+                let arr = env.pop(2)?;
+                if !path.is_array() || !path.array().is_chars() {
+                    return Err(env.error("Path must be a string"));
+                }
+                if !arr.is_array() || !arr.array().is_numbers() || arr.array().rank() != 3 {
+                    return Err(env.error("Image must be a rank 3 number array"));
+                }
+                let arr = arr.array();
+                let path: String = path.array().chars().iter().collect();
+                let ext = path.split('.').last().unwrap_or("");
+                let [width, height, px_size] = match arr.shape() {
+                    &[a, b, c] => [a, b, c],
+                    _ => unreachable!("Shape checked above"),
+                };
+                let output_format = match ext {
+                    "jpg" | "jpeg" => ImageOutputFormat::Jpeg(100),
+                    "png" => ImageOutputFormat::Png,
+                    "bmp" => ImageOutputFormat::Bmp,
+                    "gif" => ImageOutputFormat::Gif,
+                    "ico" => ImageOutputFormat::Ico,
+                    "tga" => ImageOutputFormat::Tga,
+                    "tiff" => ImageOutputFormat::Tiff,
+                    _ => ImageOutputFormat::Png,
+                };
+                let mut bytes = Cursor::new(Vec::new());
+                match px_size {
+                    1 => {
+                        let image = image::GrayImage::from_raw(
+                            width as u32,
+                            height as u32,
+                            arr.numbers()
+                                .iter()
+                                .map(|f| (*f * 255.0).floor() as u8)
+                                .collect::<Vec<_>>(),
+                        )
+                        .ok_or_else(|| env.error("Failed to create image"))?;
+                        image
+                            .write_to(&mut bytes, output_format)
+                            .map_err(|e| env.error(&format!("Failed to write image: {}", e)))?;
+                    }
+                    3 => {
+                        let image = image::RgbImage::from_raw(
+                            width as u32,
+                            height as u32,
+                            arr.numbers()
+                                .iter()
+                                .map(|f| (*f * 255.0).floor() as u8)
+                                .collect::<Vec<_>>(),
+                        )
+                        .ok_or_else(|| env.error("Failed to create image"))?;
+                        image
+                            .write_to(&mut bytes, output_format)
+                            .map_err(|e| env.error(&format!("Failed to write image: {}", e)))?;
+                    }
+                    4 => {
+                        let image = image::RgbaImage::from_raw(
+                            width as u32,
+                            height as u32,
+                            arr.numbers()
+                                .iter()
+                                .map(|f| (*f * 255.0).floor() as u8)
+                                .collect::<Vec<_>>(),
+                        )
+                        .ok_or_else(|| env.error("Failed to create image"))?;
+                        image
+                            .write_to(&mut bytes, output_format)
+                            .map_err(|e| env.error(&format!("Failed to write image: {}", e)))?;
+                    }
+                    n => {
+                        return Err(env.error(&format!(
+                            "The last dimension of an image array must be 1, 3, or 4, but it is {n}"
+                        )))
+                    }
+                };
+                env.vm
+                    .io
+                    .write_file(&path, bytes.into_inner(), &env.env())?;
+            }
         }
         Ok(())
     }

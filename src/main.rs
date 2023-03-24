@@ -74,7 +74,10 @@ fn watch() -> io::Result<()> {
         .unwrap();
     print_watching();
     let mut last_formatted = String::new();
-    let mut run = |path: &Path| match format_file(path).or_else(|_| format_file(path)) {
+    let mut run = |path: &Path| match format_file(path).or_else(|_| {
+        sleep(Duration::from_millis(10));
+        format_file(path)
+    }) {
         Ok(formatted) => {
             if formatted != last_formatted {
                 clear_watching();

@@ -9,7 +9,7 @@ use crate::{
     parse::{parse, ParseError},
     value::Value,
     vm::{dprintln, Vm},
-    Ident, RuntimeError, UiuaError, UiuaResult,
+    Env, Ident, RuntimeError, UiuaError, UiuaResult,
 };
 
 pub struct Assembly {
@@ -56,6 +56,12 @@ impl Assembly {
     }
     pub(crate) fn error(&self, span: usize, msg: impl Into<String>) -> RuntimeError {
         self.spans[span].error(msg.into())
+    }
+    pub fn env(&self) -> Env {
+        Env {
+            assembly: self,
+            span: 0,
+        }
     }
 }
 

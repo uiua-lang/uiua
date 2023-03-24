@@ -80,7 +80,7 @@ io_op! {
 pub trait IoBackend {
     fn print_str(&mut self, s: &str);
     fn rand(&mut self) -> f64;
-    fn show_image(&mut self, image: &DynamicImage, env: &Env) -> RuntimeResult {
+    fn show_image(&mut self, image: DynamicImage, env: &Env) -> RuntimeResult {
         Err(env.error("Showing images not supported in this environment"))
     }
     fn scan_line(&mut self) -> String {
@@ -122,7 +122,7 @@ where
     fn rand(&mut self) -> f64 {
         (**self).rand()
     }
-    fn show_image(&mut self, image: &DynamicImage, env: &Env) -> RuntimeResult {
+    fn show_image(&mut self, image: DynamicImage, env: &Env) -> RuntimeResult {
         (**self).show_image(image, env)
     }
     fn scan_line(&mut self) -> String {
@@ -401,25 +401,32 @@ impl IoOp {
                     "tiff" => ImageOutputFormat::Tiff,
                     _ => ImageOutputFormat::Png,
                 };
-                let mut bytes = Cursor::new(Vec::new());
-                value_to_image(&value, &env.env())?
-                    .write_to(&mut bytes, output_format)
-                    .map_err(|e| env.error(&format!("Failed to write image: {}", e)))?;
-                env.vm
-                    .io
-                    .write_file(&path, bytes.into_inner(), &env.env())?;
+                let bytes = value_to_image_bytes(&value, output_format, &env.env())?;
+                env.vm.io.write_file(&path, bytes, &env.env())?;
             }
             IoOp::ImShow => {
                 let value = env.pop(1)?;
                 let image = value_to_image(&value, &env.env())?;
-                env.vm.io.show_image(&image, &env.env())?;
+                env.vm.io.show_image(image, &env.env())?;
             }
         }
         Ok(())
     }
 }
 
-fn value_to_image(value: &Value, env: &Env) -> RuntimeResult<DynamicImage> {
+pub fn value_to_image_bytes(
+    value: &Value,
+    format: ImageOutputFormat,
+    env: &Env,
+) -> RuntimeResult<Vec<u8>> {
+    let mut bytes = Cursor::new(Vec::new());
+    value_to_image(value, env)?
+        .write_to(&mut bytes, format)
+        .map_err(|e| env.error(format!("Failed to write image: {}", e)))?;
+    Ok(bytes.into_inner())
+}
+
+pub fn value_to_image(value: &Value, env: &Env) -> RuntimeResult<DynamicImage> {
     if !value.is_array() || !value.array().is_numbers() || value.array().rank() != 3 {
         return Err(env.error("Image must be a rank 3 number array"));
     }

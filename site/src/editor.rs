@@ -1,8 +1,10 @@
+use base64::{engine::general_purpose::STANDARD, Engine};
+use image::ImageOutputFormat;
 use instant::Duration;
 use leptos::*;
-use uiua::{format::format_str, ops::Primitive, Assembly, UiuaResult};
+use uiua::{format::format_str, ops::Primitive, value_to_image_bytes, Assembly, UiuaResult};
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
-use web_sys::{Event, HtmlDivElement, HtmlTextAreaElement};
+use web_sys::{Event, HtmlDivElement, HtmlImageElement, HtmlTextAreaElement};
 
 use crate::{backend::WebBackend, prim_class};
 
@@ -40,9 +42,11 @@ pub fn Editor(
 
     let (code_id, _) = create_signal(cx, format!("code{id}"));
     let (output_id, _) = create_signal(cx, format!("output{id}"));
+    let (image_id, _) = create_signal(cx, format!("image{id}"));
 
     let code_element = move || -> HtmlTextAreaElement { element(&code_id.get()) };
     let output_element = move || -> HtmlDivElement { element(&output_id.get()) };
+    let image_element = move || -> HtmlImageElement { element(&image_id.get()) };
 
     let (example, set_example) = create_signal(cx, 0);
     let (code, set_code) = create_signal(cx, examples[0].to_string());
@@ -66,9 +70,17 @@ pub fn Editor(
             code_string
         };
         match run_code(&input) {
-            Ok(stack) => {
+            Ok((stack, image_bytes)) => {
                 set_output.set(stack);
                 _ = output_element().style().remove_property("color");
+                if let Some(image_bytes) = image_bytes {
+                    let encoded = STANDARD.encode(image_bytes);
+                    _ = image_element().style().remove_property("display");
+                    image_element().set_src(&format!("data:image/png;base64,{encoded}"));
+                } else {
+                    _ = image_element().style().set_property("display", "none");
+                    image_element().set_src("");
+                }
             }
             Err(e) => {
                 log!("{}", e.show(false));
@@ -263,6 +275,9 @@ pub fn Editor(
                             on:click=next_example title="Next example">{ ">" } </button>
                     </div>
                 </div>
+                <div>
+                    <img id=move || image_id.get() class="output-image" src=""/>
+                </div>
             </div>
             <div id="editor-help">
                 { help.iter().map(|s| view! { cx, <p>{*s}</p> }).collect::<Vec<_>>() }
@@ -272,8 +287,22 @@ pub fn Editor(
 }
 
 /// Returns the output and the formatted code
-fn run_code(code: &str) -> UiuaResult<String> {
-    let (values, io) = Assembly::load_str(code)?.run_with_backend(WebBackend::default())?;
+fn run_code(code: &str) -> UiuaResult<(String, Option<Vec<u8>>)> {
+    let assembly = Assembly::load_str(code)?;
+    let (mut values, io) = assembly.run_with_backend(WebBackend::default())?;
+    let image_bytes = io.image_bytes.or_else(|| {
+        for i in 0..values.len() {
+            let value = &values[i];
+            if let Ok(bytes) = value_to_image_bytes(value, ImageOutputFormat::Png, &assembly.env())
+            {
+                if value.shape().into_iter().product::<usize>() > 100 {
+                    values.remove(i);
+                    return Some(bytes);
+                }
+            }
+        }
+        None
+    });
     let output = io.stdout;
     let mut s = String::new();
     if !output.is_empty() {
@@ -289,7 +318,7 @@ fn run_code(code: &str) -> UiuaResult<String> {
         s.push_str(&val.show());
         s.push('\n');
     }
-    Ok(s)
+    Ok((s, image_bytes))
 }
 
 fn element<T: JsCast>(id: &str) -> T {

@@ -11,7 +11,7 @@ use crate::{
 };
 
 pub struct Env<'a> {
-    pub span: usize,
+    pub(crate) span: usize,
     pub assembly: &'a Assembly,
 }
 

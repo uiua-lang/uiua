@@ -503,6 +503,35 @@ impl Value {
         );
         Ok(())
     }
+    pub fn parse_num(&mut self, env: &Env) -> RuntimeResult {
+        match self.ty() {
+            Type::Num => {}
+            Type::Char => {
+                *self = self
+                    .char()
+                    .to_string()
+                    .parse::<f64>()
+                    .map(Value::from)
+                    .map_err(|e| env.error(e.to_string()))?
+            }
+            Type::Function => return Err(env.error("Cannot parse function as number")),
+            Type::Array => {
+                let arr = self.array();
+                if !arr.is_chars() {
+                    return Err(env.error("Cannot parse non-character as number"));
+                }
+                if arr.rank() > 1 {
+                    return Err(env.error("Cannot parse array of rank > 1 as number"));
+                }
+                let string = arr.chars().iter().collect::<String>();
+                *self = string
+                    .parse::<f64>()
+                    .map(Value::from)
+                    .map_err(|e| env.error(e.to_string()))?
+            }
+        }
+        Ok(())
+    }
 }
 
 fn signed_index(index: isize, len: usize) -> Option<usize> {

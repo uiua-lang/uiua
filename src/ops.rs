@@ -187,6 +187,7 @@ primitive!(
     (2, Assert, "assert" + '!'),
     (0, Nop, "noop" + '·'),
     (Call, "call" + ':'),
+    (1, Parse, "parsenumber"),
     // Constants
     (0, 1, Pi, "pi" + 'π'),
     (0, 1, Infinity, "infinity" + '∞')
@@ -302,6 +303,7 @@ impl Primitive {
             Primitive::Group => env.dyadic_mut_env(Value::group)?,
             Primitive::IndexOf => env.dyadic_mut_env(Value::index_of)?,
             Primitive::Call => env.call()?,
+            Primitive::Parse => env.monadic_mut_env(Value::parse_num)?,
             Primitive::Put => {
                 let mut index = env.pop(1)?;
                 let value = env.pop(2)?;

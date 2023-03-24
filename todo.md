@@ -1,4 +1,3 @@
-- Basic parsing function
 - Improve parsing expectation errors
 - More array functions
   - Pack

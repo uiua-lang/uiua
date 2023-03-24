@@ -199,6 +199,9 @@ impl Array {
             }
         }
         let mut shape = shape.unwrap_or(&[]).to_vec();
+        if shape.is_empty() {
+            return None;
+        }
         let values: Vec<Value> = self
             .take_flat_values()
             .into_iter()

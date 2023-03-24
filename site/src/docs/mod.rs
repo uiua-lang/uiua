@@ -101,16 +101,16 @@ pub fn TutorialBasic(cx: Scope) -> impl IntoView {
     view! { cx,
         <div>
             <h2>"Basic Stack Operations and Formatting"</h2>
-            <h3>"The Stack"</h3>
+            <h2>"The Stack"</h2>
             <hr/>
             <p>"In Uiua, all operations operate on a global stack. Each line is evaluated from right to left. A number simply pushes its value onto the stack:"</p>
             <Editor examples={&["5", "1 2 3"]} help={&["", "Click the arrows to see more examples"]}/>
             <p>"Operators pop values off the stack and push their results."</p>
-            <Editor examples={&["3", "2 3", "×2 3", "1 ×2 3", "+1 ×2 3"]}/>
+            <Editor examples={&["3", "2 3", "×2 3", "1 ×2 3", "+1 ×2 3"]} help={&["", "Really, try the arrows"]}/>
             <p>"In the editor, items that end up on the "<i>"top"</i>" of the stack are shown at the "<i>"bottom"</i>" of the output. This is so consecutive lines of code show their outputs in the correct order:"</p>
             <Editor examples={&["5\n+1 2\n\"Hello, World!\"\n+1 'a'"]}/>
             <br/>
-            <h3>"Formatting"</h3>
+            <h2>"Formatting"</h2>
             <hr/>
             <p>"Most Uiua primitives use special unicode characters. To type multiplication and division signs, you can use "<code>"*"</code>" and "<code>"%"</code>" respectively. Then, run the code to format."</p>
             <Editor examples={&["# Click Run to format!\n%6 *3 8"]} help={&["", "⇡Click⇡"]}/>
@@ -227,7 +227,7 @@ pub fn TutorialArrays(cx: Scope) -> impl IntoView {
         <div>
             <h2>"Arrays"</h2>
             <p>"Uiua is, first and foremost, an array language. The only composite data type is the multimensional array. Arrays have a lot of nice properties, and the primitive oeprations of the language are designed to make it easy to work with them. If you've only ever programmed in non-array languages, then this will be a completely foreign paradigm. In most array languages, most data structure and indeed control flow are replaced with operations on arrays."</p>
-            <h3>"How do you make an array?"</h3>
+            <h2>"Creating Arrays"</h2>
             <p>"Other than through functions, Uiua has two ways to create arrays. They are called "<i>"strand notation"</i>" and "<i>"stack notation"</i>"."</p>
             <p><b>"Strand notation"</b>" uses underscores to connect elements:"</p>
             <Editor examples={&["1_2_3","\"Hello\"_\"World\"",  "0_π_⍉_5_(+1)"]}/>
@@ -238,15 +238,25 @@ pub fn TutorialArrays(cx: Scope) -> impl IntoView {
             <Editor examples={&["[...5]", "[×2.×2.×2.×2 .2]", "[+1 2 +3 4]"]}/>
             <p>"Of course, you can also use stack notation to make multideimensional arrays:"</p>
             <Editor examples={&["[[1 2 3] [4 5 6]]", "[...[1 2 3]]"]}/>
+            <br/>
+            <h2><PrimCode prim=Shape name=true/>", "<PrimCode prim=Len name=true/>", and "<PrimCode prim=Rank name=true/></h2>
+            <hr/>
             <p>"Other than their data, arrays also have a property called their "<b>"shape"</b>". Shape is a list of non-negative integers that describes the array's size along each of its axis."</p>
             <p>"We can get the array's shape with the "<PrimCode prim=Shape name=true/>" primitive. It's a triangle because a triangle is a shape."</p>
             <Editor examples={&["△[1 2 3]", "△5", "△[[1 2 3] [4 5 6]]", "△[...[1 2 3]]"]}/>
             <p>"From shape we can derive two closely-related properties called "<b>"length"</b>" and "<b>"rank"</b>"."</p>
             <p><PrimCode prim=Len name=true/>" is the number of "<i>"major cells"</i>" of the array. This is the number of elements for a 1D array and the number of rows for a 2D array."</p>
             <p><PrimCode prim=Rank name=true/>" is the number of dimensions of the array. It is defined as the length of the shape."</p>
-            <Editor examples={&["△[1 2 3]\n⇀[1 2 3]\n⸫[1 2 3]"]}/>
+            <Editor examples={&["△[1 2 3]\n⇀[1 2 3]\n⸫[1 2 3]", "# ⸫ is equivalent to ⇀△\n=⸫[1 2 3]⇀△[1 2 3]"]}/>
             <p>"When creating multidimensional arrays, stack notation applies a step called "<i>"normalization"</i>". If all the items pushed to the stack have the same shape, they will combine into an array with a higher rank. If they have different shapes, then they combine into a rank 1 nested array."</p>
             <Editor examples={&["[[1 2] [3 4]]", "[[1 2] [3 4 5]]"]}/>
+            <br/>
+            <h2>"Pervasion"</h2>
+            <hr/>
+            <p>"Most operations that apply to scalars are what is called "<i>"pervasive"</i>" when it comes to arrays. This means that the operations automatically applies to every item in the array."</p>
+            <Editor examples={&["+1 1_2_3\n√[4 9 16]\n+1_2_3 4_5_6"]}/>
+            <p>"When doing a pervasive operation on two arrays, their shape "<i>"prefixes"</i>" must match."</p>
+            <Editor examples={&["+[1 2] [3 4 5]", "△10_20\n△[3_4_5 6_7_8]\n+10_20 [3_4_5 6_7_8]"]}/>
         </div>
     }
 }

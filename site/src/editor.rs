@@ -1,3 +1,4 @@
+use instant::Duration;
 use leptos::*;
 use uiua::{compile::Compiler, format::format_str, ops::Primitive, UiuaResult};
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
@@ -28,22 +29,29 @@ pub fn Editor(
     let code_element = move || -> HtmlTextAreaElement { element(&code_id.get()) };
     let output_element = move || -> HtmlDivElement { element(&output_id.get()) };
 
-    let (_, default_output) = run_code(examples[0], false).expect_throw("First example failed");
-
     let (_, set_example) = create_signal(cx, 0);
     let (code, set_code) = create_signal(cx, examples[0].to_string());
-    let (output, set_output) = create_signal(cx, default_output);
+    let (output, set_output) = create_signal(cx, String::new());
 
     // Run the code
     let run = move |format: bool| {
         set_output.set(String::new());
         let code_elem = code_element();
         let code_string = code_elem.value();
-        match run_code(&code_string, format) {
-            Ok((formatted, stack)) => {
+        let input = if format {
+            if let Ok(formatted) = format_str(&code_string) {
                 let formatted = formatted.trim();
                 code_elem.set_value(formatted);
                 set_code.set(formatted.to_string());
+                formatted.into()
+            } else {
+                code_string
+            }
+        } else {
+            code_string
+        };
+        match run_code(&input) {
+            Ok(stack) => {
                 set_output.set(stack);
                 _ = output_element().style().remove_property("color");
             }
@@ -100,6 +108,8 @@ pub fn Editor(
             run(true);
         }
     });
+
+    set_timeout(move || run(false), Duration::from_millis(0));
 
     // Update the code when the textarea is changed
     let code_input = move |event: Event| {
@@ -187,10 +197,15 @@ pub fn Editor(
         }
     };
 
+    let glyph_button_bottom = glyph_buttons.split_off(glyph_buttons.len() / 2);
+
     view! { cx,
         <div>
             <div id="editor" class=editor_class>
-                <div id="glyph-buttons" style=glyph_buttons_style>{ glyph_buttons }</div>
+                <div style=glyph_buttons_style>
+                    <div class="glyph-buttons">{glyph_buttons}</div>
+                    <div class="glyph-buttons">{glyph_button_bottom}</div>
+                </div>
                 <div id="code-area">
                     <button
                         id="glyphs-toggle-button"
@@ -230,14 +245,9 @@ pub fn Editor(
 }
 
 /// Returns the output and the formatted code
-fn run_code(code: &str, format_first: bool) -> UiuaResult<(String, String)> {
-    let formatted = if format_first {
-        format_str(code)?
-    } else {
-        code.to_string()
-    };
+fn run_code(code: &str) -> UiuaResult<String> {
     let mut compiler = Compiler::new();
-    compiler.load_str(&formatted)?;
+    compiler.load_str(code)?;
     let assembly = compiler.finish();
     let (values, output) = assembly.run_piped()?;
     let mut s = String::new();
@@ -254,7 +264,7 @@ fn run_code(code: &str, format_first: bool) -> UiuaResult<(String, String)> {
         s.push_str(&val.show());
         s.push('\n');
     }
-    Ok((formatted, s))
+    Ok(s)
 }
 
 fn element<T: JsCast>(id: &str) -> T {

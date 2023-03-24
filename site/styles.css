@@ -216,7 +216,7 @@ table {
     width: 8em;
 }
 
-#glyph-buttons {
+.glyph-buttons {
     padding: 0.1em;
     display: flex;
     flex-wrap: wrap;

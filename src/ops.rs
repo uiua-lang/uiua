@@ -3,10 +3,7 @@ use std::{
     fmt,
 };
 
-use crate::{
-    array::Array, grid_fmt::GridFmt, io::IoBackend, lex::Simple, value::*, vm::CallEnv,
-    RuntimeResult,
-};
+use crate::{array::Array, io::*, lex::Simple, value::*, vm::CallEnv, RuntimeResult};
 
 macro_rules! primitive {
     ($((
@@ -17,6 +14,7 @@ macro_rules! primitive {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
         pub enum Primitive {
             $($name,)*
+            Io(IoOp)
         }
 
         impl Primitive {
@@ -24,9 +22,10 @@ macro_rules! primitive {
                 $(Self::$name,)*
             ];
             #[allow(path_statements)]
-            pub fn ident(&self) -> Option<&'static str > {
+            pub fn name(&self) -> Option<&'static str > {
                 match self {
                     $(Primitive::$name => { None::<&'static str> $(;Some($ident))? },)*
+                    Primitive::Io(op) => Some(op.name())
                 }
             }
             pub fn ascii(&self) -> Option<Simple> {
@@ -71,12 +70,14 @@ macro_rules! primitive {
             pub fn args(&self) -> Option<u8> {
                 match self {
                     $($(Primitive::$name => Some($args),)?)*
+                    Primitive::Io(op) => Some(op.args()),
                     _ => None
                 }
             }
             pub fn outputs(&self) -> Option<u8> {
                 match self {
                     $($($(Primitive::$name => $outputs.into(),)?)?)*
+                    Primitive::Io(op) => op.outputs(),
                     _ => Some(1)
                 }
             }
@@ -154,25 +155,6 @@ primitive!(
     (2, IndexOf, "indexof" + '⊙'),
     // Triadic array op
     (3, Put),
-    // IO ops
-    (1(0), Show, "show"),
-    (1(0), Print, "print"),
-    (1(0), Println, "println"),
-    (1, String, "string"),
-    (0, ScanLn, "scanln"),
-    (0, Args, "args"),
-    (1, Var, "var"),
-    (0, Rand, "rand"),
-    (1, FReadStr, "freadstr"),
-    (1, FWriteStr, "fwritestr"),
-    (1, FReadBytes, "freadbytes"),
-    (1, FWriteBytes, "fwritebytes"),
-    (1, FLines, "flines"),
-    (1, FExists, "fexists"),
-    (1, FListDir, "flistdir"),
-    (1, FIsFile, "fisfile"),
-    (1, Import, "import"),
-    (0, Now, "now"),
     // Modifiers
     (Reduce { modifier: 1 }, "reduce" + '/'),
     (Fold { modifier: 1 }, "fold" + '⌿'),
@@ -188,6 +170,7 @@ primitive!(
     (2, Assert, "assert" + '!'),
     (0, Nop, "noop" + '·'),
     (1(None), Call, "call" + ':'),
+    (1, String, "string"),
     (1, Parse, "parsenumber"),
     // Constants
     (0(1), Pi, "pi" + 'π'),
@@ -204,7 +187,7 @@ impl fmt::Display for Primitive {
             write!(f, "{}", c)
         } else if let Some(s) = self.ascii() {
             write!(f, "{}", s)
-        } else if let Some(s) = self.ident() {
+        } else if let Some(s) = self.name() {
             write!(f, "{}", s)
         } else {
             write!(f, "{:?}", self)
@@ -234,6 +217,9 @@ impl Primitive {
     }
     pub fn from_name(name: &str) -> Option<Self> {
         let lower = name.to_lowercase();
+        if let Some(io) = IoOp::from_name(&lower) {
+            return Some(Primitive::Io(io));
+        }
         if lower == "pi" || lower == "π" {
             return Some(Primitive::Pi);
         }
@@ -241,11 +227,11 @@ impl Primitive {
             return None;
         }
         let mut matching = Primitive::ALL.into_iter().filter(|p| {
-            p.ident()
+            p.name()
                 .map_or(false, |i| i.to_lowercase().starts_with(&lower))
         });
         let res = matching.next()?;
-        let exact_match = res.ident().map_or(false, |i| i == lower);
+        let exact_match = res.name().map_or(false, |i| i == lower);
         (exact_match || matching.next().is_none()).then_some(res)
     }
     pub(crate) fn run<B: IoBackend>(&self, env: &mut CallEnv<B>) -> RuntimeResult {
@@ -535,20 +521,6 @@ impl Primitive {
                     return Err(env.error(&msg.to_string()));
                 }
             }
-            Primitive::Show => {
-                let s = env.pop(1)?.grid_string();
-                env.vm.io.print_str(&s);
-                env.vm.io.print_str("\n");
-            }
-            Primitive::Print => {
-                let val = env.pop(1)?;
-                env.vm.io.print_str(&val.to_string());
-            }
-            Primitive::Println => {
-                let val = env.pop(1)?;
-                env.vm.io.print_str(&val.to_string());
-                env.vm.io.print_str("\n");
-            }
             Primitive::Len => env.monadic(|v| v.len() as f64)?,
             Primitive::Rank => env.monadic(|v| v.rank() as f64)?,
             Primitive::Shape => {
@@ -559,133 +531,7 @@ impl Primitive {
             Primitive::Deshape => env.monadic_mut(Value::deshape)?,
             Primitive::First => env.monadic_mut_env(Value::first)?,
             Primitive::String => env.monadic(|v| v.to_string())?,
-            Primitive::ScanLn => {
-                let line = env.vm.io.scan_line();
-                env.push(line);
-            }
-            Primitive::Args => {
-                let args = env.vm.io.args();
-                env.push(Array::from_iter(
-                    args.into_iter().map(Array::from).map(Value::from),
-                ))
-            }
-            Primitive::Var => {
-                let name = env.pop(1)?;
-                if !name.is_array() || !name.array().is_chars() {
-                    return Err(env.error("Argument to var must be a string"));
-                }
-                let key: String = name.array().chars().iter().collect();
-                let var = env.vm.io.var(&key).unwrap_or_default();
-                env.push(var);
-            }
-            Primitive::Rand => {
-                let num = env.vm.io.rand();
-                env.push(num);
-            }
-            Primitive::FReadStr => {
-                let path = env.pop(1)?;
-                if !path.is_array() || !path.array().is_chars() {
-                    return Err(env.error("Path must be a string"));
-                }
-                let path: String = path.array().chars().iter().collect();
-                let contents = String::from_utf8(env.vm.io.read_file(&path, &env.env())?)
-                    .map_err(|e| env.error(&format!("Failed to read file: {}", e)))?;
-                env.push(contents);
-            }
-            Primitive::FWriteStr => {
-                let path = env.pop(1)?;
-                let contents = env.pop(2)?;
-                if !path.is_array() || !path.array().is_chars() {
-                    return Err(env.error("Path must be a string"));
-                }
-                if !contents.is_array() || !contents.array().is_chars() {
-                    return Err(env.error("Contents must be a string"));
-                }
-                let path: String = path.array().chars().iter().collect();
-                env.vm
-                    .io
-                    .write_file(&path, contents.to_string().into_bytes(), &env.env())?;
-            }
-            Primitive::FReadBytes => {
-                let path = env.pop(1)?;
-                if !path.is_array() || !path.array().is_chars() {
-                    return Err(env.error("Path must be a string"));
-                }
-                let path: String = path.array().chars().iter().collect();
-                let contents = env.vm.io.read_file(&path, &env.env())?;
-                let arr = Array::from_iter(contents.into_iter().map(|b| b as f64));
-                env.push(arr);
-            }
-            Primitive::FWriteBytes => {
-                let path = env.pop(1)?;
-                let contents = env.pop(2)?;
-                if !path.is_array() || !path.array().is_chars() {
-                    return Err(env.error("Path must be a string"));
-                }
-                if !contents.is_array() || !contents.array().is_numbers() {
-                    return Err(env.error("Contents must be a byte array"));
-                }
-                let path: String = path.array().chars().iter().collect();
-                let contents: Vec<u8> = contents
-                    .array()
-                    .numbers()
-                    .iter()
-                    .map(|n| *n as u8)
-                    .collect();
-                env.vm.io.write_file(&path, contents, &env.env())?;
-            }
-            Primitive::FLines => {
-                let path = env.pop(1)?;
-                if !path.is_array() || !path.array().is_chars() {
-                    return Err(env.error("Path must be a string"));
-                }
-                let path: String = path.array().chars().iter().collect();
-                let contents = String::from_utf8(env.vm.io.read_file(&path, &env.env())?)
-                    .map_err(|e| env.error(&format!("Failed to read file: {}", e)))?;
-                let lines_array =
-                    Array::from_iter(contents.lines().map(Array::from).map(Value::from));
-                env.push(lines_array);
-            }
-            Primitive::FExists => {
-                let path = env.pop(1)?;
-                if !path.is_array() || !path.array().is_chars() {
-                    return Err(env.error("Path must be a string"));
-                }
-                let path: String = path.array().chars().iter().collect();
-                let exists = env.vm.io.file_exists(&path);
-                env.push(exists);
-            }
-            Primitive::FListDir => {
-                let path = env.pop(1)?;
-                if !path.is_array() || !path.array().is_chars() {
-                    return Err(env.error("Path must be a string"));
-                }
-                let path: String = path.array().chars().iter().collect();
-                let paths = env.vm.io.list_dir(&path, &env.env())?;
-                let paths_array =
-                    Array::from_iter(paths.into_iter().map(Array::from).map(Value::from));
-                env.push(paths_array);
-            }
-            Primitive::FIsFile => {
-                let path = env.pop(1)?;
-                if !path.is_array() || !path.array().is_chars() {
-                    return Err(env.error("Path must be a string"));
-                }
-                let path: String = path.array().chars().iter().collect();
-                let is_file = env.vm.io.is_file(&path, &env.env())?;
-                env.push(is_file);
-            }
-            Primitive::Import => {
-                let name = env.pop(1)?;
-                if !name.is_array() || !name.array().is_chars() {
-                    return Err(env.error("Path to import must be a string"));
-                }
-                let name: String = name.array().chars().iter().collect();
-                for value in env.vm.io.import(&name, &env.env())? {
-                    env.push(value);
-                }
-            }
-            Primitive::Now => env.push(instant::now()),
+            Primitive::Io(io) => io.run(env)?,
         }
         Ok(())
     }

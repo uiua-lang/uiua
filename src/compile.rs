@@ -124,7 +124,7 @@ impl Default for Compiler {
         let mut bindings = HashMap::new();
         // Initialize primitives
         for prim in Primitive::ALL {
-            if let Some(name) = prim.ident() {
+            if let Some(name) = prim.name() {
                 bindings.insert(name.into(), Bound::Primitive(prim));
             }
         }

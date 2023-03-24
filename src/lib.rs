@@ -23,7 +23,7 @@ use std::{
     rc::Rc,
 };
 
-pub use {compile::Assembly, error::*, io::IoBackend};
+pub use {compile::Assembly, error::*, io::*};
 
 #[derive(Debug, Clone)]
 pub struct Ident(Rc<str>);

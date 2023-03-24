@@ -166,7 +166,7 @@ mod code {
     #[component]
     pub fn PrimCode(cx: Scope, prim: Primitive, #[prop(optional)] name: bool) -> impl IntoView {
         let class = prim_class(prim);
-        let name = prim.ident().filter(|_| name).unwrap_or("");
+        let name = prim.name().filter(|_| name).unwrap_or("");
         view!(cx, <code>{name}{" "}<span class=class>{ prim.to_string() }</span></code>)
     }
 }

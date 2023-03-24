@@ -153,7 +153,7 @@ pub fn Editor(
                 .unwrap_or_default();
             let title = format!(
                 "{}{}",
-                p.ident().unwrap_or_default(),
+                p.name().unwrap_or_default(),
                 format_args!("\n{extra}")
             );
             let onclick = move |_| replace_code(&p.to_string());

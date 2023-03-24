@@ -84,7 +84,7 @@ pub fn TutorialBasic(cx: Scope) -> impl IntoView {
     let primitive_table: Vec<_> = Primitive::ALL
         .into_iter()
         .filter_map(|p| {
-            if let (Some(name), Some(ascii), Some(_)) = (p.ident(), p.ascii(), p.unicode()) {
+            if let (Some(name), Some(ascii), Some(_)) = (p.name(), p.ascii(), p.unicode()) {
                 Some(view! { cx,
                     <tr>
                         <td><code>{ name }</code></td>
@@ -151,7 +151,7 @@ fn primitive_rows(cx: Scope, prims: impl IntoIterator<Item = Primitive>) -> Vec<
     prims
         .into_iter()
         .map(|p| {
-            let name = p.ident();
+            let name = p.name();
             let glyph = p.unicode();
             let ascii = p
                 .ascii()

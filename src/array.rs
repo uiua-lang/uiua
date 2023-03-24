@@ -413,39 +413,6 @@ where
     cells
 }
 
-macro_rules! array_un_impl {
-    ($name:ident,
-        $(($ty:ident, $get:ident, $f:ident)),*
-    $(,)?) => {
-        impl Array {
-            #[allow(unreachable_patterns)]
-            pub fn $name(&self, env: &Env) -> RuntimeResult<Self> {
-                let shape = self.shape.clone();
-                Ok(match self.ty {
-                    $(ArrayType::$ty => (shape, un_pervade(self.$get(), pervade::$name::$f)).into(),)*
-                    ArrayType::Value => {
-                        (shape, un_pervade_fallible(self.values(), env, Value::$name)?).into()
-                    }
-                    ty => return Err(pervade::$name::error(ty, env)),
-                })
-            }
-        }
-    };
-}
-
-array_un_impl!(not, (Num, numbers, num));
-array_un_impl!(neg, (Num, numbers, num));
-array_un_impl!(abs, (Num, numbers, num));
-array_un_impl!(sign, (Num, numbers, num));
-array_un_impl!(sqrt, (Num, numbers, num));
-array_un_impl!(sin, (Num, numbers, num));
-array_un_impl!(cos, (Num, numbers, num));
-array_un_impl!(asin, (Num, numbers, num));
-array_un_impl!(acos, (Num, numbers, num));
-array_un_impl!(floor, (Num, numbers, num));
-array_un_impl!(ceil, (Num, numbers, num));
-array_un_impl!(round, (Num, numbers, num));
-
 macro_rules! array_bin_impl {
     ($name:ident,
         $(($a_ty:ident, $af:ident, $b_ty:ident, $bf:ident, $ab:ident)),*

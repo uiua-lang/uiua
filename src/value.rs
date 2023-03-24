@@ -2,7 +2,14 @@ use std::{cmp::Ordering, fmt, mem::forget, rc::Rc};
 
 use nanbox::NanBox;
 
-use crate::{array::Array, function::Function, grid_fmt::GridFmt, pervade, vm::Env, RuntimeResult};
+use crate::{
+    array::{Array, ArrayType},
+    function::Function,
+    grid_fmt::GridFmt,
+    pervade::{self, *},
+    vm::Env,
+    RuntimeResult,
+};
 
 pub struct Value(NanBox);
 
@@ -142,6 +149,13 @@ impl Value {
     }
 }
 
+mod array {
+    use super::*;
+    pub fn number(array: &Array) -> &[f64] {
+        array.numbers()
+    }
+}
+
 macro_rules! value_un_impl {
     ($name:ident $(,($rt:ident, $get:ident, $f:ident))* $(,)?) => {
         impl Value {
@@ -149,7 +163,17 @@ macro_rules! value_un_impl {
             pub fn $name(&self, env: &Env) -> RuntimeResult<Self> {
                 Ok(match self.ty() {
                     $(Type::$rt => pervade::$name::$f(&self.$get()).into(),)*
-                    Type::Array => self.array().$name(env)?.into(),
+                    Type::Array => {
+                        let arr = self.array();
+                        let shape = arr.shape().to_vec();
+                        match arr.ty() {
+                            $(ArrayType::$rt => Array::from((shape, un_pervade(array::$get(&arr), pervade::$name::$f))),)*
+                            ArrayType::Value => {
+                                Array::from((shape, un_pervade_fallible(arr.values(), env, Value::$name)?))
+                            }
+                            ty => return Err(pervade::$name::error(ty, env)),
+                        }.into()
+                    },
                     ty => return Err(pervade::$name::error(ty, env)),
                 })
             }

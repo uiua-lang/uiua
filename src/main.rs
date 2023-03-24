@@ -65,7 +65,7 @@ fn watch() -> io::Result<()> {
         fs::write(&path, "Hello, World!")?;
         path
     };
-    open::that(open_path)?;
+    open::that(&open_path)?;
 
     let (send, recv) = channel();
     let mut watcher = notify::recommended_watcher(send).unwrap();
@@ -74,6 +74,29 @@ fn watch() -> io::Result<()> {
         .unwrap();
     print_watching();
     let mut last_formatted = String::new();
+    let mut run = |path: &Path| match format_file(path).or_else(|_| format_file(path)) {
+        Ok(formatted) => {
+            if formatted != last_formatted {
+                clear_watching();
+                match run_file(path) {
+                    Ok(values) => {
+                        for value in values.into_iter().rev() {
+                            println!("{}", value.show());
+                        }
+                    }
+                    Err(e) => eprintln!("{}", e.show(true)),
+                }
+                print_watching();
+            }
+            last_formatted = formatted;
+        }
+        Err(e) => {
+            clear_watching();
+            eprintln!("{}", e.show(true));
+            print_watching();
+        }
+    };
+    run(&open_path);
     loop {
         sleep(Duration::from_millis(10));
         if let Some(path) = recv
@@ -84,28 +107,7 @@ fn watch() -> io::Result<()> {
             .filter(|path| path.extension().map_or(false, |ext| ext == "ua"))
             .last()
         {
-            match format_file(&path).or_else(|_| format_file(&path)) {
-                Ok(formatted) => {
-                    if formatted != last_formatted {
-                        clear_watching();
-                        match run_file(&path) {
-                            Ok(values) => {
-                                for value in values.into_iter().rev() {
-                                    println!("{}", value.show());
-                                }
-                            }
-                            Err(e) => eprintln!("{}", e.show(true)),
-                        }
-                        print_watching();
-                    }
-                    last_formatted = formatted;
-                }
-                Err(e) => {
-                    clear_watching();
-                    eprintln!("{}", e.show(true));
-                    print_watching();
-                }
-            }
+            run(&path);
         }
     }
 }

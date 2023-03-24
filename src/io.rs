@@ -16,7 +16,7 @@ pub trait IoBackend {
         self.print_str(s);
         self.print_str("\n");
     }
-    fn import(&mut self, name: &str, env: &Env) -> RuntimeResult<Value> {
+    fn import(&mut self, name: &str, env: &Env) -> RuntimeResult<Vec<Value>> {
         Err(env.error("Import not supported in this environment"))
     }
     fn var(&mut self, name: &str) -> Option<String> {
@@ -50,7 +50,7 @@ pub trait IoBackend {
 
 #[derive(Default)]
 pub struct StdIo {
-    imports: HashMap<String, Value>,
+    imports: HashMap<String, Vec<Value>>,
 }
 
 impl IoBackend for StdIo {
@@ -66,14 +66,13 @@ impl IoBackend for StdIo {
             .and_then(Result::ok)
             .unwrap_or_default()
     }
-    fn import(&mut self, path: &str, _env: &Env) -> RuntimeResult<Value> {
+    fn import(&mut self, path: &str, _env: &Env) -> RuntimeResult<Vec<Value>> {
         if !self.imports.contains_key(path) {
             let mut compiler = Compiler::new();
             compiler.load_file(path).map_err(RuntimeError::Import)?;
             let assembly = compiler.finish();
-            let mut stack = assembly.run().map_err(RuntimeError::Import)?;
-            let value = stack.pop().unwrap_or_default();
-            self.imports.insert(path.into(), value);
+            let stack = assembly.run().map_err(RuntimeError::Import)?;
+            self.imports.insert(path.into(), stack);
         }
         Ok(self.imports[path].clone())
     }

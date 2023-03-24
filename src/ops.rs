@@ -665,8 +665,9 @@ impl Primitive {
                     return Err(env.error("Path to import must be a string"));
                 }
                 let name: String = name.array().chars().iter().collect();
-                let value = env.vm.io.import(&name, &env.env())?;
-                env.push(value);
+                for value in env.vm.io.import(&name, &env.env())? {
+                    env.push(value);
+                }
             }
             Primitive::Now => env.push(instant::now()),
         }

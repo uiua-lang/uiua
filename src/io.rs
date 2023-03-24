@@ -15,10 +15,6 @@ pub trait IoBackend {
     fn scan_line(&mut self) -> String {
         String::new()
     }
-    fn print_str_ln(&mut self, s: &str) {
-        self.print_str(s);
-        self.print_str("\n");
-    }
     fn import(&mut self, name: &str, env: &Env) -> RuntimeResult<Vec<Value>> {
         Err(env.error("Import not supported in this environment"))
     }
@@ -43,12 +39,6 @@ pub trait IoBackend {
     fn write_file(&mut self, path: &str, contents: Vec<u8>, env: &Env) -> RuntimeResult {
         Err(env.error("File IO not supported in this environment"))
     }
-    fn read_file_string(&mut self, path: &str, env: &Env) -> RuntimeResult<String> {
-        String::from_utf8(self.read_file(path, env)?).map_err(|e| env.error(e.to_string()))
-    }
-    fn write_file_string(&mut self, path: &str, contents: String, env: &Env) -> RuntimeResult {
-        self.write_file(path, contents.into_bytes(), env)
-    }
 }
 
 impl<'a, T> IoBackend for &'a mut T
@@ -63,9 +53,6 @@ where
     }
     fn scan_line(&mut self) -> String {
         (**self).scan_line()
-    }
-    fn print_str_ln(&mut self, s: &str) {
-        (**self).print_str_ln(s)
     }
     fn import(&mut self, name: &str, env: &Env) -> RuntimeResult<Vec<Value>> {
         (**self).import(name, env)
@@ -90,12 +77,6 @@ where
     }
     fn write_file(&mut self, path: &str, contents: Vec<u8>, env: &Env) -> RuntimeResult {
         (**self).write_file(path, contents, env)
-    }
-    fn read_file_string(&mut self, path: &str, env: &Env) -> RuntimeResult<String> {
-        (**self).read_file_string(path, env)
-    }
-    fn write_file_string(&mut self, path: &str, contents: String, env: &Env) -> RuntimeResult {
-        (**self).write_file_string(path, contents, env)
     }
 }
 

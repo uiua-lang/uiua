@@ -537,7 +537,8 @@ impl Primitive {
             }
             Primitive::Show => {
                 let s = env.pop(1)?.grid_string();
-                env.vm.io.print_str_ln(&s);
+                env.vm.io.print_str(&s);
+                env.vm.io.print_str("\n");
             }
             Primitive::Print => {
                 let val = env.pop(1)?;
@@ -545,7 +546,8 @@ impl Primitive {
             }
             Primitive::Println => {
                 let val = env.pop(1)?;
-                env.vm.io.print_str_ln(&val.to_string());
+                env.vm.io.print_str(&val.to_string());
+                env.vm.io.print_str("\n");
             }
             Primitive::Len => env.monadic(|v| v.len() as f64)?,
             Primitive::Rank => env.monadic(|v| v.rank() as f64)?,
@@ -586,7 +588,8 @@ impl Primitive {
                     return Err(env.error("Path must be a string"));
                 }
                 let path: String = path.array().chars().iter().collect();
-                let contents = env.vm.io.read_file_string(&path, &env.env())?;
+                let contents = String::from_utf8(env.vm.io.read_file(&path, &env.env())?)
+                    .map_err(|e| env.error(&format!("Failed to read file: {}", e)))?;
                 env.push(contents);
             }
             Primitive::FWriteStr => {
@@ -601,7 +604,7 @@ impl Primitive {
                 let path: String = path.array().chars().iter().collect();
                 env.vm
                     .io
-                    .write_file_string(&path, contents.to_string(), &env.env())?;
+                    .write_file(&path, contents.to_string().into_bytes(), &env.env())?;
             }
             Primitive::FReadBytes => {
                 let path = env.pop(1)?;
@@ -637,7 +640,8 @@ impl Primitive {
                     return Err(env.error("Path must be a string"));
                 }
                 let path: String = path.array().chars().iter().collect();
-                let contents = env.vm.io.read_file_string(&path, &env.env())?;
+                let contents = String::from_utf8(env.vm.io.read_file(&path, &env.env())?)
+                    .map_err(|e| env.error(&format!("Failed to read file: {}", e)))?;
                 let lines_array =
                     Array::from_iter(contents.lines().map(Array::from).map(Value::from));
                 env.push(lines_array);

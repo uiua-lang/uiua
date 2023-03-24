@@ -4,7 +4,7 @@ use std::{
     io::{stdin, stdout, BufRead, Cursor, Write},
 };
 
-use image::ImageOutputFormat;
+use image::{DynamicImage, ImageOutputFormat};
 use rand::prelude::*;
 
 use crate::{
@@ -73,12 +73,16 @@ io_op! {
     (0, Now, "now"),
     (1, ImRead, "imread"),
     (1, ImWrite, "imwrite"),
+    (1(0), ImShow, "imshow"),
 }
 
 #[allow(unused_variables)]
 pub trait IoBackend {
     fn print_str(&mut self, s: &str);
     fn rand(&mut self) -> f64;
+    fn show_image(&mut self, image: &DynamicImage, env: &Env) -> RuntimeResult {
+        Err(env.error("Showing images not supported in this environment"))
+    }
     fn scan_line(&mut self) -> String {
         String::new()
     }
@@ -117,6 +121,9 @@ where
     }
     fn rand(&mut self) -> f64 {
         (**self).rand()
+    }
+    fn show_image(&mut self, image: &DynamicImage, env: &Env) -> RuntimeResult {
+        (**self).show_image(image, env)
     }
     fn scan_line(&mut self) -> String {
         (**self).scan_line()
@@ -378,20 +385,12 @@ impl IoOp {
             }
             IoOp::ImWrite => {
                 let path = env.pop(1)?;
-                let arr = env.pop(2)?;
+                let value = env.pop(2)?;
                 if !path.is_array() || !path.array().is_chars() {
                     return Err(env.error("Path must be a string"));
                 }
-                if !arr.is_array() || !arr.array().is_numbers() || arr.array().rank() != 3 {
-                    return Err(env.error("Image must be a rank 3 number array"));
-                }
-                let arr = arr.array();
                 let path: String = path.array().chars().iter().collect();
                 let ext = path.split('.').last().unwrap_or("");
-                let [width, height, px_size] = match arr.shape() {
-                    &[a, b, c] => [a, b, c],
-                    _ => unreachable!("Shape checked above"),
-                };
                 let output_format = match ext {
                     "jpg" | "jpeg" => ImageOutputFormat::Jpeg(100),
                     "png" => ImageOutputFormat::Png,
@@ -403,60 +402,67 @@ impl IoOp {
                     _ => ImageOutputFormat::Png,
                 };
                 let mut bytes = Cursor::new(Vec::new());
-                match px_size {
-                    1 => {
-                        let image = image::GrayImage::from_raw(
-                            width as u32,
-                            height as u32,
-                            arr.numbers()
-                                .iter()
-                                .map(|f| (*f * 255.0).floor() as u8)
-                                .collect::<Vec<_>>(),
-                        )
-                        .ok_or_else(|| env.error("Failed to create image"))?;
-                        image
-                            .write_to(&mut bytes, output_format)
-                            .map_err(|e| env.error(&format!("Failed to write image: {}", e)))?;
-                    }
-                    3 => {
-                        let image = image::RgbImage::from_raw(
-                            width as u32,
-                            height as u32,
-                            arr.numbers()
-                                .iter()
-                                .map(|f| (*f * 255.0).floor() as u8)
-                                .collect::<Vec<_>>(),
-                        )
-                        .ok_or_else(|| env.error("Failed to create image"))?;
-                        image
-                            .write_to(&mut bytes, output_format)
-                            .map_err(|e| env.error(&format!("Failed to write image: {}", e)))?;
-                    }
-                    4 => {
-                        let image = image::RgbaImage::from_raw(
-                            width as u32,
-                            height as u32,
-                            arr.numbers()
-                                .iter()
-                                .map(|f| (*f * 255.0).floor() as u8)
-                                .collect::<Vec<_>>(),
-                        )
-                        .ok_or_else(|| env.error("Failed to create image"))?;
-                        image
-                            .write_to(&mut bytes, output_format)
-                            .map_err(|e| env.error(&format!("Failed to write image: {}", e)))?;
-                    }
-                    n => {
-                        return Err(env.error(&format!(
-                            "The last dimension of an image array must be 1, 3, or 4, but it is {n}"
-                        )))
-                    }
-                };
+                value_to_image(&value, &env.env())?
+                    .write_to(&mut bytes, output_format)
+                    .map_err(|e| env.error(&format!("Failed to write image: {}", e)))?;
                 env.vm
                     .io
                     .write_file(&path, bytes.into_inner(), &env.env())?;
             }
+            IoOp::ImShow => {
+                let value = env.pop(1)?;
+                let image = value_to_image(&value, &env.env())?;
+                env.vm.io.show_image(&image, &env.env())?;
+            }
         }
         Ok(())
     }
+}
+
+fn value_to_image(value: &Value, env: &Env) -> RuntimeResult<DynamicImage> {
+    if !value.is_array() || !value.array().is_numbers() || value.array().rank() != 3 {
+        return Err(env.error("Image must be a rank 3 number array"));
+    }
+    let arr = value.array();
+    let [width, height, px_size] = match arr.shape() {
+        &[a, b, c] => [a, b, c],
+        _ => unreachable!("Shape checked above"),
+    };
+    Ok(match px_size {
+        1 => image::GrayImage::from_raw(
+            width as u32,
+            height as u32,
+            arr.numbers()
+                .iter()
+                .map(|f| (*f * 255.0).floor() as u8)
+                .collect::<Vec<_>>(),
+        )
+        .ok_or_else(|| env.error("Failed to create image"))?
+        .into(),
+        3 => image::RgbImage::from_raw(
+            width as u32,
+            height as u32,
+            arr.numbers()
+                .iter()
+                .map(|f| (*f * 255.0).floor() as u8)
+                .collect::<Vec<_>>(),
+        )
+        .ok_or_else(|| env.error("Failed to create image"))?
+        .into(),
+        4 => image::RgbaImage::from_raw(
+            width as u32,
+            height as u32,
+            arr.numbers()
+                .iter()
+                .map(|f| (*f * 255.0).floor() as u8)
+                .collect::<Vec<_>>(),
+        )
+        .ok_or_else(|| env.error("Failed to create image"))?
+        .into(),
+        n => {
+            return Err(env.error(format!(
+                "The last dimension of an image array must be 1, 3, or 4, but it is {n}"
+            )))
+        }
+    })
 }

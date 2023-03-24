@@ -1,18 +1,21 @@
+- Fix rand
+- Add back function lists
+- Progressive examples
+- Basic parsing function
+- Improve import error location
+- Improve parsing expectation errors
 - More array functions
+  - Pack
+  - Unpack
   - Progressive index of
   - Nudge
   - Couple Min
   - Couple Max
-- Basic parsing functions
-- Improve parsing expectation errors
-- Includes
 - Type testing/tracing
 - System APIs
   - Sockets
-- Implement custom nanbox?
 - LSP
 - FFI
 - Docs
 - Tooling
-- Inlining?
 - Custom monospace font

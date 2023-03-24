@@ -30,6 +30,14 @@ td {
     border-radius: 0.5em;
 }
 
+th {
+    text-align: left;
+}
+
+tr:nth-child(even) {
+    background-color: #0001;
+}
+
 table {
     border: 0.2em solid #0005;
     border-radius: 0.5em;
@@ -68,7 +76,7 @@ table {
     }
 
     code {
-        background-color: #0005;
+        background-color: #0004;
     }
 }
 
@@ -279,4 +287,10 @@ table {
 
 #editor-help:empty {
     margin-top: 0;
+}
+
+#bottom-page-nav {
+    margin-top: 2em;
+    display: flex;
+    justify-content: space-between;
 }

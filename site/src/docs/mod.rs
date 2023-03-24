@@ -1,4 +1,4 @@
-use std::{fmt::Display, mem::transmute};
+use std::fmt::Display;
 
 use leptos::*;
 use leptos_router::*;
@@ -13,19 +13,8 @@ pub fn DocsHome(cx: Scope) -> impl IntoView {
         <h2>"Tutorial"</h2>
         <ul>
             <p>"These are meant to be read in order:"</p>
-            <li><A href="basic">"Basic Stack Operations and Formatting"</A></li>
-            <li><A href="math">"Math and Comparison"</A></li>
-            <li><A href="arrays">"Arrays"</A></li>
+            {TutorialPage::ALL.iter().map(|p| view!(cx, <li><A href={p.path()}>{p.title()}</A></li>)).collect::<Vec<_>>()}
         </ul>
-    }
-}
-
-#[component]
-pub fn Tutorial(cx: Scope, page: TutorialPage) -> impl IntoView {
-    view! { cx,
-        <div>
-            {page.view(cx)}
-        </div>
     }
 }
 
@@ -38,23 +27,56 @@ pub enum TutorialPage {
 }
 
 impl TutorialPage {
-    pub const ALL: [Self; 3] = [Self::Basic, Self::Math, Self::Arrays];
-    pub fn prev(&self) -> Option<Self> {
+    const ALL: [Self; 3] = [Self::Basic, Self::Math, Self::Arrays];
+    fn path(&self) -> String {
+        format!("{self:?}").to_lowercase()
+    }
+    fn title(&self) -> &'static str {
         match self {
-            Self::Basic => None,
-            _ => Some(unsafe { transmute(*self as u8 - 1) }),
+            Self::Basic => "Basic Stack Operations and Formatting",
+            Self::Math => "Math and Comparison",
+            Self::Arrays => "Arrays",
         }
     }
-    pub fn next(&self) -> Option<Self> {
-        Self::ALL.get(*self as usize + 1).copied()
+}
+
+impl IntoParam for TutorialPage {
+    fn into_param(value: Option<&str>, name: &str) -> Result<Self, ParamsError> {
+        TutorialPage::ALL
+            .iter()
+            .find(|p| p.path() == value.unwrap_or(""))
+            .copied()
+            .ok_or_else(|| ParamsError::MissingParam(name.to_string()))
     }
-    pub fn view(&self, cx: Scope) -> View {
-        match self {
-            Self::Basic => view!(cx, <TutorialBasic/>).into_view(cx),
-            Self::Math => view!(cx, <TutorialMath/>).into_view(cx),
-            Self::Arrays => view!(cx, <TutorialArrays/>).into_view(cx),
-        }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Params)]
+pub struct DocsParams {
+    page: TutorialPage,
+}
+
+#[component]
+pub fn DocsPage(cx: Scope) -> impl IntoView {
+    let page = match use_params::<DocsParams>(cx).get() {
+        Ok(page) => page.page,
+        Err(_) => return view! { cx, <DocsHome/> }.into_view(cx),
+    };
+    let page_view = move || match page {
+        TutorialPage::Basic => view! { cx, <TutorialBasic/> }.into_view(cx),
+        TutorialPage::Math => view! { cx, <TutorialMath/> }.into_view(cx),
+        TutorialPage::Arrays => view! { cx, <TutorialArrays/> }.into_view(cx),
+    };
+
+    view! { cx,
+        <div>
+            <A href="/docs">"Back to Docs Home"</A>
+            { page_view }
+            <div id="bottom-page-nav">
+                <A href="/docs">"Back to Docs Home"</A>
+            </div>
+        </div>
     }
+    .into_view(cx)
 }
 
 #[component]
@@ -162,26 +184,27 @@ pub fn TutorialMath(cx: Scope) -> impl IntoView {
     view! { cx,
         <div>
             <h2>"Math and Comparison"</h2>
-            <p>"Uiua supports all the basic math operations:"</p>
-            <table>
-                <tr>
-                    <th>"Name"</th>
-                    <th>"ASCII"</th>
-                    <th>"Glyph"</th>
-                    <th>"Arguments"</th>
-                </tr>
-                {math_table}
-            </table>
-            <p>"Uiua also supports comparison, min/max, and rounding operations:"</p>
-            <table>
-                <tr>
-                    <th>"Name"</th>
-                    <th>"ASCII"</th>
-                    <th>"Glyph"</th>
-                    <th>"Arguments"</th>
-                </tr>
-                {comp_table}
-            </table>
+            <p>"Uiua supports all the basic math operations as well as comparison, min/max, and rounding:"</p>
+            <div style="display: flex; justify-content: space-evenly;">
+                <table>
+                    <tr>
+                        <th>"Name"</th>
+                        <th>"ASCII"</th>
+                        <th>"Glyph"</th>
+                        <th>"Args"</th>
+                    </tr>
+                    {math_table}
+                </table>
+                <table>
+                    <tr>
+                        <th>"Name"</th>
+                        <th>"ASCII"</th>
+                        <th>"Glyph"</th>
+                        <th>"Args"</th>
+                    </tr>
+                    {comp_table}
+                </table>
+            </div>
             <p>"Most of these are used mostly how you might think:"</p>
             <Editor examples={&["+2 5", "↥2 5", "ⁿ2 5", "⌈2.5", "√4"]}/>
             <p>"One thing to note is that non-commutative operators work backwards:"</p>

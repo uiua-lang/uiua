@@ -4,11 +4,14 @@ use std::{
     io::{stdin, stdout, BufRead, Write},
 };
 
+use rand::prelude::*;
+
 use crate::{compile::Assembly, value::Value, vm::Env, RuntimeError, RuntimeResult};
 
 #[allow(unused_variables)]
 pub trait IoBackend {
     fn print_str(&mut self, s: &str);
+    fn rand(&mut self) -> f64;
     fn scan_line(&mut self) -> String {
         String::new()
     }
@@ -55,6 +58,9 @@ where
     fn print_str(&mut self, s: &str) {
         (**self).print_str(s)
     }
+    fn rand(&mut self) -> f64 {
+        (**self).rand()
+    }
     fn scan_line(&mut self) -> String {
         (**self).scan_line()
     }
@@ -93,15 +99,27 @@ where
     }
 }
 
-#[derive(Default)]
 pub struct StdIo {
     imports: HashMap<String, Vec<Value>>,
+    rng: SmallRng,
+}
+
+impl Default for StdIo {
+    fn default() -> Self {
+        Self {
+            imports: HashMap::new(),
+            rng: SmallRng::seed_from_u64(instant::now().to_bits()),
+        }
+    }
 }
 
 impl IoBackend for StdIo {
     fn print_str(&mut self, s: &str) {
         print!("{}", s);
         let _ = stdout().lock().flush();
+    }
+    fn rand(&mut self) -> f64 {
+        self.rng.gen()
     }
     fn scan_line(&mut self) -> String {
         stdin()
@@ -113,9 +131,9 @@ impl IoBackend for StdIo {
     }
     fn import(&mut self, path: &str, _env: &Env) -> RuntimeResult<Vec<Value>> {
         if !self.imports.contains_key(path) {
-            let stack = Assembly::load_file(path)
+            let (stack, _) = Assembly::load_file(path)
                 .map_err(RuntimeError::Import)?
-                .run()
+                .run_with_backend(&mut *self)
                 .map_err(RuntimeError::Import)?;
             self.imports.insert(path.into(), stack);
         }
@@ -148,16 +166,5 @@ impl IoBackend for StdIo {
     }
     fn write_file(&mut self, path: &str, contents: Vec<u8>, env: &Env) -> RuntimeResult {
         fs::write(path, contents).map_err(|e| env.error(e.to_string()))
-    }
-}
-
-#[derive(Default)]
-pub struct PipedIo {
-    pub buffer: String,
-}
-
-impl IoBackend for PipedIo {
-    fn print_str(&mut self, s: &str) {
-        self.buffer.push_str(s);
     }
 }

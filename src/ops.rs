@@ -3,8 +3,6 @@ use std::{
     fmt,
 };
 
-use rand::{rngs::SmallRng, Rng, SeedableRng};
-
 use crate::{
     array::Array, grid_fmt::GridFmt, io::IoBackend, lex::Simple, value::*, vm::CallEnv,
     RuntimeResult,
@@ -566,7 +564,8 @@ impl Primitive {
                 env.push(var);
             }
             Primitive::Rand => {
-                env.push(SmallRng::seed_from_u64(instant::now().to_bits()).gen::<f64>())
+                let num = env.vm.io.rand();
+                env.push(num);
             }
             Primitive::FReadStr => {
                 let path = env.pop(1)?;

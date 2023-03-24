@@ -106,7 +106,7 @@ pub fn TutorialBasic(cx: Scope) -> impl IntoView {
             <p>"In Uiua, all operations operate on a global stack. Each line is evaluated from right to left. A number simply pushes its value onto the stack:"</p>
             <Editor examples={&["5", "1 2 3"]} help={&["", "Click the arrows to see more examples"]}/>
             <p>"Operators pop values off the stack and push their results."</p>
-            <Editor examples={&["3", "2 3", "×2 3", "1 ×2 3", "+1 ×2 3"]} help={&["", "Really, try the arrows"]}/>
+            <Editor examples={&["3", "2", "×", "1", "+"]} progressive=true help={&["", "Really, try the arrows"]}/>
             <p>"In the editor, items that end up on the "<i>"top"</i>" of the stack are shown at the "<i>"bottom"</i>" of the output. This is so consecutive lines of code show their outputs in the correct order:"</p>
             <Editor examples={&["5\n+1 2\n\"Hello, World!\"\n+1 'a'"]}/>
             <br/>
@@ -212,7 +212,7 @@ pub fn TutorialMath(cx: Scope) -> impl IntoView {
             <p>"Uiua has no boolean types. Comparison operators return "<code>0</code>" for false and "<code>1</code>" for true:"</p>
             <Editor examples={&["=2 5", "=2 2"]}/>
             <p>"Because of how stack operations work, you can delay operations until after all the arguments are on the stack:"</p>
-            <Editor examples={&["++1 2 3", "×××2 3 4 5"]}/>
+            <Editor examples={&["4", "3", "2", "1", "+", "+",  "×"]} progressive=true/>
             <p>"This is not special syntax. All the numbers are pushed to the stack, then the operators work on them."</p>
             <p>"Remember that you can type the names of operators and then run to format them:"</p>
             <Editor examples={&["# Click Run to format!\nmax sqrt 2 mod 10 abs `31"]} help={&["", "⇡Click⇡"]}/>

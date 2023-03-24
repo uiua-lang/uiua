@@ -19,12 +19,27 @@ pub fn Editor(
     #[prop(optional)] examples: &'static [&'static str],
     #[prop(optional)] size: EditorSize,
     #[prop(optional)] help: &'static [&'static str],
+    #[prop(optional)] progressive: bool,
 ) -> impl IntoView {
-    let examples = if examples.is_empty() { &[""] } else { examples };
+    let id = format!("{:p}", examples);
+    let examples: Vec<String> = if examples.is_empty() {
+        vec![String::new()]
+    } else if progressive {
+        examples
+            .iter()
+            .map(|s| s.to_string())
+            .scan(String::new(), |acc, s| {
+                *acc = format!("{s} {acc}");
+                Some(format_str(acc).unwrap_or_else(|_| acc.clone()))
+            })
+            .collect()
+    } else {
+        examples.iter().map(|s| s.to_string()).collect()
+    };
     let code_em = examples.iter().map(|e| e.lines().count()).max().unwrap() as f32 * 1.3 + 0.5;
 
-    let (code_id, _) = create_signal(cx, format!("code{:p}", examples));
-    let (output_id, _) = create_signal(cx, format!("output{:p}", examples));
+    let (code_id, _) = create_signal(cx, format!("code{id}"));
+    let (output_id, _) = create_signal(cx, format!("output{id}"));
 
     let code_element = move || -> HtmlTextAreaElement { element(&code_id.get()) };
     let output_element = move || -> HtmlDivElement { element(&output_id.get()) };
@@ -83,22 +98,28 @@ pub fn Editor(
     };
 
     // Go to the next example
-    let next_example = move |_| {
-        set_example.update(|e| {
-            *e = (*e + 1) % examples.len();
-            set_code.set(examples[*e].to_string());
-            code_element().set_value(examples[*e]);
-            run(false);
-        })
+    let next_example = {
+        let examples = examples.clone();
+        move |_| {
+            set_example.update(|e| {
+                *e = (*e + 1) % examples.len();
+                set_code.set(examples[*e].to_string());
+                code_element().set_value(&examples[*e]);
+                run(false);
+            })
+        }
     };
     // Go to the previous example
-    let prev_example = move |_| {
-        set_example.update(|e| {
-            *e = (*e + examples.len() - 1) % examples.len();
-            set_code.set(examples[*e].to_string());
-            code_element().set_value(examples[*e]);
-            run(false);
-        })
+    let prev_example = {
+        let examples = examples.clone();
+        move |_| {
+            set_example.update(|e| {
+                *e = (*e + examples.len() - 1) % examples.len();
+                set_code.set(examples[*e].to_string());
+                code_element().set_value(&examples[*e]);
+                run(false);
+            })
+        }
     };
 
     // Run the code when Ctrl+Enter or Shift+Enter is pressed

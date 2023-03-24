@@ -1,6 +1,3 @@
-- Fix rand
-- Add back function lists
-- Progressive examples
 - Basic parsing function
 - Improve parsing expectation errors
 - More array functions

@@ -80,7 +80,7 @@ fn watch() -> io::Result<()> {
                 clear_watching();
                 match run_file(path) {
                     Ok(values) => {
-                        for value in values.into_iter().rev() {
+                        for value in values {
                             println!("{}", value.show());
                         }
                     }

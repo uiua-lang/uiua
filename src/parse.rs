@@ -272,7 +272,7 @@ impl Parser {
             expr
         } else if let Some(start) = self.try_exact(OpenBracket) {
             let items = self.try_words().unwrap_or_default();
-            let end = self.expect_close(CloseParen);
+            let end = self.expect_close(CloseBracket);
             let span = start.merge(end);
             span.sp(Word::Array(items))
         } else {

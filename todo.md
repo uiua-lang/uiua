@@ -1,7 +1,5 @@
-- Improve parsing expectation errors
 - More array functions
   - Pack
-  - Unpack
   - Progressive index of
   - Nudge
   - Couple Min

@@ -88,18 +88,18 @@ pub fn Site(cx: Scope) -> impl IntoView {
 pub fn MainPage(cx: Scope) -> impl IntoView {
     // Choose a random subtitle
     let subtitles = [
-        view! {cx, <p>"A stack-oriented array programming language"</p>},
-        view! {cx, <p>"An array-oriented stack programming language"</p>},
-        view! {cx, <p>"A programming language for point-free enjoyers"</p>},
-        view! {cx, <p>"A programming language for variable dislikers"</p>},
-        view! {cx, <p>"What if APL was a FORTH?"</p>},
-        view! {cx, <p>"What if FORTH was an APL?"</p>},
-        view! {cx, <p>"Isn't a stack a sort of array?"</p>},
-        view! {cx, <p>"It's got um...I um...arrays"</p>},
-        view! {cx, <p><a href="https://youtu.be/seVSlKazsNk">"Point-Free or Die"</a></p>},
-        view! {cx, <p>"Notation as a tool of thot"</p>},
-        view! {cx, <p>"Do you like this page Marshall?"</p>},
-        view! {cx, <p>"Conor Dyadic Hookstra"</p>},
+        view!(cx, <p>"A stack-oriented array programming language"</p>),
+        view!(cx, <p>"An array-oriented stack programming language"</p>),
+        view!(cx, <p>"A programming language for point-free enjoyers"</p>),
+        view!(cx, <p>"A programming language for variable dislikers"</p>),
+        view!(cx, <p>"What if APL was a FORTH?"</p>),
+        view!(cx, <p>"What if FORTH was an APL?"</p>),
+        view!(cx, <p>"Isn't a stack a sort of array?"</p>),
+        view!(cx, <p>"It's got um...I um...arrays"</p>),
+        view!(cx, <p><a href="https://youtu.be/seVSlKazsNk">"Point-Free or Die"</a></p>),
+        view!(cx, <p>"Notation as a tool of thot"</p>),
+        view!(cx, <p>"Do you like this page Marshall?"</p>),
+        view!(cx, <p>"Conor Dyadic Hookstra"</p>),
     ];
     let index = SUBTITLE.with(|s| {
         *s.borrow_mut().get_or_insert_with(|| {

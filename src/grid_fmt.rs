@@ -63,6 +63,25 @@ impl GridFmt for Array {
         // Fill the metagrid
         let mut metagrid = Metagrid::new();
         let shape = self.shape();
+
+        // Handle really big arrays
+        if shape.iter().product::<usize>() > 1000 {
+            let mut s = String::from('[');
+            for (i, d) in shape.iter().enumerate() {
+                if i > 0 {
+                    s.push_str(" × ");
+                }
+                s.push_str(&d.to_string());
+            }
+            match self.ty() {
+                ArrayType::Num => s.push_str(" numbers"),
+                ArrayType::Char => s.push_str(" chars"),
+                ArrayType::Value => s.push_str(" array"),
+            }
+            s.push(']');
+            return vec![s.chars().collect()];
+        }
+
         match self.ty() {
             ArrayType::Num => fmt_array(shape, self.numbers(), false, &mut metagrid),
             ArrayType::Char => fmt_array(shape, self.chars(), true, &mut metagrid),

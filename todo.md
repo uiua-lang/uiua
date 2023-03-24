@@ -2,7 +2,6 @@
 - Add back function lists
 - Progressive examples
 - Basic parsing function
-- Improve import error location
 - Improve parsing expectation errors
 - More array functions
   - Pack

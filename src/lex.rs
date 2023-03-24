@@ -124,7 +124,7 @@ impl Span {
         Sp { value, span: self }
     }
     pub fn error(&self, msg: impl Into<String>) -> RuntimeError {
-        self.clone().sp(msg.into())
+        self.clone().sp(msg.into()).into()
     }
 }
 

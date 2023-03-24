@@ -4,7 +4,7 @@ use std::{
     io::{stdin, stdout, BufRead, Write},
 };
 
-use crate::{compile::Compiler, value::Value, vm::Env, RuntimeResult};
+use crate::{compile::Compiler, value::Value, vm::Env, RuntimeError, RuntimeResult};
 
 #[allow(unused_variables)]
 pub trait IoBackend {
@@ -66,14 +66,12 @@ impl IoBackend for StdIo {
             .and_then(Result::ok)
             .unwrap_or_default()
     }
-    fn import(&mut self, path: &str, env: &Env) -> RuntimeResult<Value> {
+    fn import(&mut self, path: &str, _env: &Env) -> RuntimeResult<Value> {
         if !self.imports.contains_key(path) {
             let mut compiler = Compiler::new();
-            compiler
-                .load_file(path)
-                .map_err(|e| env.error(e.to_string()))?;
+            compiler.load_file(path).map_err(RuntimeError::Import)?;
             let assembly = compiler.finish();
-            let mut stack = assembly.run().map_err(|e| env.error(e.to_string()))?;
+            let mut stack = assembly.run().map_err(RuntimeError::Import)?;
             let value = stack.pop().unwrap_or_default();
             self.imports.insert(path.into(), value);
         }

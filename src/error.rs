@@ -32,7 +32,18 @@ pub struct TraceFrame {
     pub span: Span,
 }
 
-pub type RuntimeError = Sp<String>;
+#[derive(Debug)]
+pub enum RuntimeError {
+    Run(Sp<String>),
+    Import(UiuaError),
+}
+
+impl From<Sp<String>> for RuntimeError {
+    fn from(value: Sp<String>) -> Self {
+        Self::Run(value)
+    }
+}
+
 pub type RuntimeResult<T = ()> = Result<T, RuntimeError>;
 
 impl fmt::Display for UiuaError {
@@ -50,13 +61,34 @@ impl fmt::Display for UiuaError {
                 }
                 Ok(())
             }
-            UiuaError::Run { error, trace } => {
-                match &error.span {
-                    Span::Code(span) => write!(f, "Error at {}: {}", span, error.value)?,
-                    Span::Builtin => write!(f, "Error: {}", error.value)?,
+            UiuaError::Run { error, trace } => match &**error {
+                RuntimeError::Run(error) => {
+                    match &error.span {
+                        Span::Code(span) => write!(f, "Error at {}: {}", span, error.value)?,
+                        Span::Builtin => write!(f, "Error: {}", error.value)?,
+                    }
+                    format_trace(f, trace)
                 }
-                format_trace(f, trace)
-            }
+                RuntimeError::Import(error) => write!(f, "Import {error}"),
+            },
+        }
+    }
+}
+
+impl UiuaError {
+    pub fn message(&self) -> String {
+        match self {
+            UiuaError::Run { error, .. } => error.message(),
+            error => error.to_string(),
+        }
+    }
+}
+
+impl RuntimeError {
+    pub fn message(&self) -> String {
+        match self {
+            RuntimeError::Run(error) => error.value.clone(),
+            RuntimeError::Import(error) => error.message(),
         }
     }
 }
@@ -162,28 +194,31 @@ impl UiuaError {
                 }
                 String::from_utf8_lossy(&buffer).into_owned()
             }
-            UiuaError::Run { error, trace } => {
-                let mut buffer = Vec::new();
-                if let Span::Code(span) = &error.span {
-                    let mut cache = Cache {
-                        input: Source::from(&span.input),
-                        files: HashMap::new(),
-                    };
-                    let report = Report::<CodeSpan>::build(
-                        ReportKind::Error,
-                        span.file.clone(),
-                        span.start.pos,
-                    )
-                    .with_message(&error.value)
-                    .with_label(Label::new(span.clone()).with_color(color))
-                    .with_config(config)
-                    .finish();
-                    let _ = report.write(&mut cache, &mut buffer);
+            UiuaError::Run { error, trace } => match &**error {
+                RuntimeError::Run(error) => {
+                    let mut buffer = Vec::new();
+                    if let Span::Code(span) = &error.span {
+                        let mut cache = Cache {
+                            input: Source::from(&span.input),
+                            files: HashMap::new(),
+                        };
+                        let report = Report::<CodeSpan>::build(
+                            ReportKind::Error,
+                            span.file.clone(),
+                            span.start.pos,
+                        )
+                        .with_message(&error.value)
+                        .with_label(Label::new(span.clone()).with_color(color))
+                        .with_config(config)
+                        .finish();
+                        let _ = report.write(&mut cache, &mut buffer);
+                    }
+                    let mut s = String::from_utf8_lossy(&buffer).into_owned();
+                    format_trace(&mut s, trace).unwrap();
+                    s
                 }
-                let mut s = String::from_utf8_lossy(&buffer).into_owned();
-                format_trace(&mut s, trace).unwrap();
-                s
-            }
+                RuntimeError::Import(error) => error.show(complex_output),
+            },
             _ => self.to_string(),
         }
     }

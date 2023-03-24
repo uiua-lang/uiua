@@ -512,7 +512,7 @@ impl Primitive {
                 env.push(f);
                 if let Err(e) = env.call() {
                     env.truncate(size);
-                    env.push(e.to_string());
+                    env.push(e.message());
                     env.push(handler);
                     env.call()?;
                 }

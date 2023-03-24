@@ -12,20 +12,19 @@ use crate::{
     UiuaError, UiuaResult,
 };
 
-pub fn format_items(items: Vec<Item>) -> String {
-    let mut state = FormatState {
-        string: String::new(),
-        was_strand: false,
-        was_primitive: false,
-        override_space: false,
-    };
+pub fn format_items(items: &[Item]) -> String {
+    let mut output = String::new();
     for item in items {
-        item.format(&mut state);
+        let mut line = String::new();
+        match item {
+            Item::Words(w) => {
+                for node in words(w.iter().map(|w| &w.value)) {
+                    reduce(&mut line, &node);
+                }
+            }
+        }
     }
-    let mut s = state.string;
-    s = s.trim_end().into();
-    s.push('\n');
-    s
+    output
 }
 
 pub fn format<P: AsRef<Path>>(input: &str, path: P) -> UiuaResult<String> {
@@ -37,7 +36,7 @@ pub fn format_str(input: &str) -> UiuaResult<String> {
 fn format_impl(input: &str, path: Option<&Path>) -> UiuaResult<String> {
     let (items, errors) = parse(input, path);
     if errors.is_empty() {
-        Ok(format_items(items))
+        Ok(format_items(&items))
     } else {
         Err(errors.into())
     }
@@ -52,6 +51,115 @@ pub fn format_file<P: AsRef<Path>>(path: P) -> UiuaResult<String> {
     }
     fs::write(path, &formatted).map_err(|e| UiuaError::Format(path.to_path_buf(), e))?;
     Ok(formatted)
+}
+
+#[derive(Debug)]
+enum FormatNode {
+    Unit(String),
+    Call(String, Vec<FormatNode>),
+    Strand(Vec<FormatNode>),
+    Delim(char, char, Vec<FormatNode>),
+}
+
+fn space_between(a: char, b: char) -> bool {
+    a.is_alphabetic() && b.is_alphabetic() || a.is_ascii_digit() && b.is_ascii_digit()
+}
+
+fn formatted(output: &mut String, s: &str) {
+    if let Some(c) = output.chars().last() {
+        if space_between(c, s.chars().next().unwrap()) {
+            output.push(' ');
+        }
+    }
+    output.push_str(s);
+}
+
+fn reduce(output: &mut String, node: &FormatNode) {
+    match node {
+        FormatNode::Unit(s) => formatted(output, s),
+        FormatNode::Call(f, args) => {
+            formatted(output, f);
+            for (i, arg) in args.iter().enumerate() {
+                if i > 0 {
+                    formatted(output, " ");
+                }
+                reduce(output, arg);
+            }
+        }
+        FormatNode::Strand(items) => {
+            for (i, item) in items.iter().enumerate() {
+                if i > 0 {
+                    formatted(output, "_");
+                }
+                reduce(output, item);
+            }
+        }
+        FormatNode::Delim(start, end, items) => {
+            formatted(output, &start.to_string());
+            for item in items {
+                reduce(output, item);
+            }
+            formatted(output, &end.to_string());
+        }
+    }
+}
+
+fn words<'a, I: Iterator<Item = &'a Word>>(mut iter: I) -> Vec<FormatNode> {
+    let mut nodes = Vec::new();
+    while let Some(word) = iter.next() {
+        match word {
+            Word::Number(n) => nodes.push(FormatNode::Unit(n.to_string())),
+            Word::Char(c) => nodes.push(FormatNode::Unit(format!("'{c}'"))),
+            Word::String(s) => nodes.push(FormatNode::Unit(format!("{s:?}"))),
+            Word::Ident(ident) => {
+                if !ident.is_capitalized() {
+                    if let Some(prim) = Primitive::from_name(ident.as_str()) {
+                        if prim.ascii().is_some() || prim.unicode().is_some() {
+                            if let Some(args) = prim.args() {
+                                let args = words(iter.by_ref().take(args as usize));
+                                nodes.push(FormatNode::Call(prim.to_string(), args));
+                                continue;
+                            }
+                        }
+                    }
+                }
+                nodes.push(FormatNode::Unit(ident.to_string()));
+            }
+            Word::Strand(items) => {
+                nodes.push(FormatNode::Strand(words(items.iter().map(|i| &i.value))))
+            }
+            Word::Array(items) => nodes.push(FormatNode::Delim(
+                '[',
+                ']',
+                words(items.iter().map(|i| &i.value)),
+            )),
+            Word::Func(func) => nodes.push(FormatNode::Delim(
+                '(',
+                ')',
+                words(func.body.iter().map(|i| &i.value)),
+            )),
+            Word::RefFunc(rfunc) => nodes.push(FormatNode::Delim(
+                '{',
+                '}',
+                words(rfunc.body.iter().map(|i| &i.value)),
+            )),
+            Word::Primitive(prim) => {
+                if prim.ascii().is_some() || prim.unicode().is_some() {
+                    if let Some(args) = prim.args() {
+                        let args = words(iter.by_ref().take(args as usize));
+                        nodes.push(FormatNode::Call(prim.to_string(), args));
+                        continue;
+                    }
+                }
+                nodes.push(FormatNode::Unit(prim.to_string()));
+            }
+            Word::Modified(m) => nodes.push(FormatNode::Call(
+                m.modifier.to_string(),
+                words(m.words.iter().map(|i| &i.value)),
+            )),
+        }
+    }
+    nodes
 }
 
 struct FormatState {

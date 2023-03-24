@@ -1,3 +1,4 @@
+- Use a tree structure for formatter
 - More array functions
   - Pack
   - Progressive index of

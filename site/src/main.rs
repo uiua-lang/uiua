@@ -12,7 +12,7 @@ use uiua::ops::Primitive;
 use crate::{docs::*, editor::*};
 
 const EXAMPLES: &[&str] = &[
-    r#"‡=¯1 ≡/-◫2 ≤'A' ≍' ' ."Um, I um...arrays""#,
+    r#"‡=¯1 ≡/-◫2 ≤'A' ≍' '."Um, I um...arrays""#,
     "# Click Run to format!\nfirst repeat (\\+ rev)0_1 10",
     "↯~⇡/×.2_3_4",
     "\

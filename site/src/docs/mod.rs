@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use leptos::*;
 use leptos_router::*;
-use uiua::ops::Primitive;
+use uiua::primitive::Primitive;
 
 use crate::{code::*, editor::*};
 

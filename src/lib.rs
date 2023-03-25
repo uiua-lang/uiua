@@ -10,9 +10,9 @@ pub mod function;
 mod grid_fmt;
 mod io;
 pub mod lex;
-pub mod ops;
 pub mod parse;
 mod pervade;
+pub mod primitive;
 pub mod value;
 mod vm;
 

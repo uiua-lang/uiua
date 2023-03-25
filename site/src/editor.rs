@@ -2,7 +2,7 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use image::ImageOutputFormat;
 use instant::Duration;
 use leptos::*;
-use uiua::{format::format_str, ops::Primitive, value_to_image_bytes, Assembly, UiuaResult};
+use uiua::{format::format_str, primitive::Primitive, value_to_image_bytes, Assembly, UiuaResult};
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use web_sys::{Event, HtmlDivElement, HtmlImageElement, HtmlTextAreaElement};
 

@@ -6,7 +6,7 @@ use crate::{
     function::{Function, Instr},
     io::{IoBackend, StdIo},
     lex::Span,
-    ops::Primitive,
+    primitive::Primitive,
     value::{Type, Value},
     RuntimeError, RuntimeResult, TraceFrame, UiuaError, UiuaResult,
 };

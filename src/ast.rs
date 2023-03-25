@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{function::FunctionId, lex::Sp, ops::Primitive, Ident};
+use crate::{function::FunctionId, lex::Sp, primitive::Primitive, Ident};
 
 #[derive(Debug, Clone)]
 pub enum Item {

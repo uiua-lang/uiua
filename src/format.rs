@@ -1,6 +1,6 @@
 use std::{fs, iter::once, path::Path};
 
-use crate::{ast::*, ops::Primitive, parse::parse, UiuaError, UiuaResult};
+use crate::{ast::*, parse::parse, primitive::Primitive, UiuaError, UiuaResult};
 
 pub fn format_items(items: &[Item]) -> String {
     let mut output = String::new();

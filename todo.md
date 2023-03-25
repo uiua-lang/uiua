@@ -1,14 +1,13 @@
-- Use a tree structure for formatter
 - More array functions
   - Pack
   - Progressive index of
-  - Nudge
+  - Nudged
   - Couple Min
   - Couple Max
 - Type testing/tracing
 - System APIs
   - Sockets
-- LSP
+- LS
 - FFI
 - Docs
 - Tooling

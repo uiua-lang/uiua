@@ -7,7 +7,7 @@ use std::cell::RefCell;
 use leptos::*;
 use leptos_router::*;
 use rand::prelude::*;
-use uiua::ops::Primitive;
+use uiua::primitive::Primitive;
 
 use crate::{docs::*, editor::*};
 

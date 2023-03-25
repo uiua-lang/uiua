@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{lex::Span, ops::Primitive, value::Value, vm::Env, Ident, RuntimeResult};
+use crate::{lex::Span, primitive::Primitive, value::Value, vm::Env, Ident, RuntimeResult};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Instr {

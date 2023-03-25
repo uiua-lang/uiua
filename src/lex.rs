@@ -7,7 +7,7 @@ use std::{
     sync::Arc,
 };
 
-use crate::{ops::Primitive, Ident, RuntimeError};
+use crate::{primitive::Primitive, Ident, RuntimeError};
 
 pub fn lex(input: &str, file: Option<&Path>) -> LexResult<Vec<Sp<Token>>> {
     let mut lexer = Lexer::new(input, file);

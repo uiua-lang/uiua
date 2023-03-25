@@ -4,7 +4,7 @@ use crate::{
     ast::*,
     function::FunctionId,
     lex::{Simple::*, *},
-    ops::Primitive,
+    primitive::Primitive,
     Ident,
 };
 

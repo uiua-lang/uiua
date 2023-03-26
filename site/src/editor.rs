@@ -230,8 +230,6 @@ pub fn Editor(
         }
     };
 
-    let glyph_button_bottom = glyph_buttons.split_off(glyph_buttons.len() / 2);
-
     let example_text =
         move || (examples.len() > 1).then(|| format!("{}/{}", example.get() + 1, examples.len()));
 
@@ -240,7 +238,6 @@ pub fn Editor(
             <div id="editor" class=editor_class>
                 <div style=glyph_buttons_style>
                     <div class="glyph-buttons">{glyph_buttons}</div>
-                    <div class="glyph-buttons">{glyph_button_bottom}</div>
                 </div>
                 <div id="code-area">
                     <div id="code-right-side">

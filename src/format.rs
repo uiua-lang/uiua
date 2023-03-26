@@ -63,7 +63,7 @@ enum FormatNode {
     Unit(String),
     Call(String, Vec<FormatNode>),
     Strand(Vec<FormatNode>),
-    Delim(char, char, Vec<FormatNode>),
+    Delim(&'static str, &'static str, Vec<FormatNode>),
 }
 
 fn is_literal_char(c: char) -> bool {
@@ -73,6 +73,9 @@ fn is_literal_char(c: char) -> bool {
 fn space_between(a: char, b: char) -> bool {
     if a == ' ' || ".,])}".contains(b) {
         return false;
+    }
+    if a == '.' && b.is_ascii_digit() {
+        return true;
     }
     is_literal_char(a) || (a.is_ascii_digit() && (b.is_alphabetic() || b.is_ascii_digit()))
 }
@@ -113,11 +116,11 @@ fn reduce(output: &mut String, node: &FormatNode) {
             output.push(' ');
         }
         FormatNode::Delim(start, end, items) => {
-            space(output, &start.to_string());
+            space(output, start);
             for item in items {
                 reduce(output, item);
             }
-            space(output, &end.to_string());
+            space(output, end);
         }
     }
 }
@@ -158,14 +161,14 @@ fn word_node(iter: &mut dyn Iterator<Item = &Word>) -> Option<FormatNode> {
             FormatNode::Strand(nodes)
         }
         Word::Array(items) => {
-            FormatNode::Delim('[', ']', words(items.iter().map(|i| &i.value).by_ref()))
+            FormatNode::Delim("[", "]", words(items.iter().map(|i| &i.value).by_ref()))
         }
         Word::Func(func) => {
-            FormatNode::Delim('(', ')', words(func.body.iter().map(|i| &i.value).by_ref()))
+            FormatNode::Delim("(", ")", words(func.body.iter().map(|i| &i.value).by_ref()))
         }
         Word::RefFunc(rfunc) => FormatNode::Delim(
-            '{',
-            '}',
+            "{",
+            "}",
             words(rfunc.body.iter().map(|i| &i.value).by_ref()),
         ),
         Word::Primitive(prim) => {

@@ -308,6 +308,7 @@ pub enum Simple {
     GreaterEqual,
     Newline,
     Backtick,
+    LeftArrow,
 }
 
 impl fmt::Display for Simple {
@@ -329,6 +330,7 @@ impl fmt::Display for Simple {
             Simple::GreaterEqual => write!(f, ">="),
             Simple::Newline => write!(f, "\\n"),
             Simple::Backtick => write!(f, "`"),
+            Simple::LeftArrow => write!(f, "←"),
         }
     }
 }
@@ -441,6 +443,7 @@ impl Lexer {
                 '>' if self.peek_char() == Some('=') => self.end(GreaterEqual, start),
                 '!' if self.peek_char() == Some('=') => self.end(BangEqual, start),
                 '|' => self.end(Bar, start),
+                '←' => self.end(Simple(LeftArrow), start),
                 // Comments
                 '#' => {
                     let mut comment = String::new();

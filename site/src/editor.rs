@@ -184,7 +184,7 @@ pub fn Editor(
         ("¯", "negative\n`"),
         ("'", "character"),
         ("\"", "string"),
-        ("=", "binding"),
+        ("←", "binding"),
         ("#", "comment"),
     ] {
         let onclick = move |_| replace_code(glyph);

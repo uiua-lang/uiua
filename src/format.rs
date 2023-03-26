@@ -14,7 +14,7 @@ pub fn format_items(items: &[Item]) -> String {
             }
             Item::Binding(binding) => {
                 line.push_str(&binding.name.value.0);
-                line.push_str(" = ");
+                line.push_str(" ← ");
                 for node in words(binding.words.iter().map(|w| &w.value).by_ref()) {
                     reduce(&mut line, &node);
                 }

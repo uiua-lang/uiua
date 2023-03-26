@@ -163,7 +163,7 @@ impl Parser {
     }
     fn try_binding(&mut self) -> Option<Binding> {
         Some(if let Some(ident) = self.try_ident() {
-            if self.try_exact(Equal).is_none() {
+            if self.try_exact(Equal).is_none() && self.try_exact(LeftArrow).is_none() {
                 self.index -= 1;
                 return None;
             }

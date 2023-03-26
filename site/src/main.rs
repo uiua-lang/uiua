@@ -16,17 +16,17 @@ const EXAMPLES: &[&str] = &[
     "# Click Run to format!\nfirst repeat (\\+ rev)0_1 10",
     "↯~⇡/×.2_3_4",
     "\
-r = ⌵sin ÷10 ⊞+.⇡300 
-g = ⌵sin ÷21 ⊞+.⇡300 
-b = ⌵sin ÷32 ⊞-.⇡300 
+r ← ⌵sin ÷10 ⊞+.⇡300 
+g ← ⌵sin ÷21 ⊞+.⇡300 
+b ← ⌵sin ÷32 ⊞-.⇡300 
 ⍉[r g b]",
-    "Avg = ÷⇀~/+.\nAvg 0_2_1_5",
+    "Avg ← ÷⇀~/+.\nAvg 0_2_1_5",
     "{÷×2 a -b ⚇¯.√-××4 a c ⁿ2 b}1 2 0",
     r#"⊟⸪(≅⇌.)."uiua"_"racecar"_"wow"_"cool!""#,
     "\
-Thirty = ≡(↥≅0_1_1~=1 /+.)◫3 ≍~0≍0 
-size = 26
-start = =÷2 size ⇡+1 size
+Thirty ← ≡(↥≅0_1_1~=1 /+.)◫3 ≍~0≍0 
+size ← 26
+start ← =÷2 size ⇡+1 size
 ⸪(⊡~·_⊞)⇌[⍥(Thirty.)start ÷2 size]",
     "‡¬∈~♭⊞×...↘2 ⇡60",
     "⍉↯4_4[...1 .2 .3 ...4 .5 .6]",

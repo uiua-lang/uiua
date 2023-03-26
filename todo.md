@@ -1,9 +1,10 @@
+- Scoped regions
+- Named imports
 - More array functions
+  - Clear stack
   - Pack
   - Progressive index of
-  - Nudged
-  - Couple Min
-  - Couple Max
+  - Nudge
 - Type testing/tracing
 - System APIs
   - Sockets

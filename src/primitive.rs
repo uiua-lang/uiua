@@ -3,7 +3,9 @@ use std::{
     fmt,
 };
 
-use crate::{array::Array, io::*, lex::Simple, value::*, vm::CallEnv, RuntimeResult};
+use crate::{
+    array::Array, function::FunctionId, io::*, lex::Simple, value::*, vm::CallEnv, RuntimeResult,
+};
 
 macro_rules! primitive {
     ($((
@@ -173,6 +175,7 @@ primitive!(
     (1(None), Call, "call" + ':'),
     (1, String, "string"),
     (1, Parse, "parsenumber"),
+    (1, Use, "use"),
     // Constants
     (0(1), Pi, "pi" + 'π'),
     (0(1), Infinity, "infinity" + '∞')
@@ -533,6 +536,28 @@ impl Primitive {
             Primitive::Deshape => env.monadic_mut(Value::deshape)?,
             Primitive::First => env.monadic_mut_env(Value::first)?,
             Primitive::String => env.monadic(|v| v.to_string())?,
+            Primitive::Use => {
+                let mut lib = env.pop(1)?;
+                let name = env.pop(2)?;
+                if !name.is_array() || !name.array().is_chars() {
+                    return Err(env.error("Use name must be a string"));
+                }
+                let arr = lib.coerce_array();
+                let name = name.array().chars().iter().collect::<String>();
+                let lowername = name.to_lowercase();
+                let f = arr.data(
+                    |_, _| None,
+                    |_, _| None,
+                    |_, values| {
+                        values.iter().filter(|v| v.is_function()).find_map(|v| {
+                            let f = v.function();
+                            matches!(&f.id, FunctionId::Named(n) if n.as_str().to_lowercase() == lowername)
+                                .then(|| f.clone())
+                        })
+                    },
+                ).ok_or_else(|| env.error(format!("No function found for {name:?}")))?;
+                env.push(f);
+            }
             Primitive::Io(io) => io.run(env)?,
         }
         Ok(())

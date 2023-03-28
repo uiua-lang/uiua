@@ -223,7 +223,7 @@ impl Parser {
         Some(span.sp(Word::Strand(items)))
     }
     fn try_modified(&mut self) -> Option<Sp<Word>> {
-        let mod_margs = Primitive::ALL
+        let mut mod_margs = Primitive::ALL
             .into_iter()
             .filter_map(|prim| prim.modifier_args().map(|margs| (prim, margs)))
             .find_map(|(prim, margs)| {
@@ -231,6 +231,16 @@ impl Parser {
                     .or_else(|| prim.ascii().and_then(|simple| self.try_exact(simple)))
                     .map(|span| (span.sp(prim), margs))
             });
+        if mod_margs.is_none() {
+            mod_margs = self
+                .next_token_map(|token| {
+                    token
+                        .as_ident()
+                        .and_then(|ident| Primitive::from_name(ident.as_str()))
+                        .and_then(|prim| prim.modifier_args().map(|margs| (prim, margs)))
+                })
+                .map(|sp| (sp.span.sp(sp.value.0), sp.value.1));
+        }
         let Some((modifier, margs)) = mod_margs else {
             return self.try_term();
         };

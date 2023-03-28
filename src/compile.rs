@@ -267,7 +267,7 @@ impl Compiler {
                 if let Some(ipf) = self.in_progress_functions.last_mut() {
                     if name.len() == 1 {
                         let c = name.chars().next().unwrap();
-                        if c.is_ascii_alphabetic() {
+                        if c.is_ascii_lowercase() {
                             let n = (c as u8 - b'a') as usize;
                             ipf.refs.push((n, span.clone()));
                             let span = self.push_call_span(span);

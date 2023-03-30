@@ -61,7 +61,7 @@ pub fn format_file<P: AsRef<Path>>(path: P) -> UiuaResult<String> {
 #[derive(Debug)]
 enum FormatNode {
     Unit(String),
-    Call(String, Vec<FormatNode>),
+    Call(String, Vec<FormatNode>, bool),
     Strand(Vec<FormatNode>),
     Delim(&'static str, &'static str, Vec<FormatNode>),
 }
@@ -100,10 +100,13 @@ fn space(output: &mut String, s: &str) {
 fn reduce(output: &mut String, node: &FormatNode) {
     match node {
         FormatNode::Unit(s) => space(output, s),
-        FormatNode::Call(f, args) => {
+        FormatNode::Call(f, args, space_after) => {
             space(output, f);
             for arg in args {
                 reduce(output, arg);
+            }
+            if *space_after {
+                space(output, " ");
             }
         }
         FormatNode::Strand(items) => {
@@ -146,7 +149,7 @@ fn word_node(iter: &mut dyn Iterator<Item = &Word>) -> Option<FormatNode> {
                             for _ in 0..args {
                                 arg_nodes.extend(word_node(iter));
                             }
-                            return Some(FormatNode::Call(prim.to_string(), arg_nodes));
+                            return Some(FormatNode::Call(prim.to_string(), arg_nodes, false));
                         }
                     }
                 }
@@ -178,7 +181,7 @@ fn word_node(iter: &mut dyn Iterator<Item = &Word>) -> Option<FormatNode> {
                     for _ in 0..args {
                         arg_nodes.extend(word_node(iter));
                     }
-                    return Some(FormatNode::Call(prim.to_string(), arg_nodes));
+                    return Some(FormatNode::Call(prim.to_string(), arg_nodes, false));
                 }
             }
             FormatNode::Unit(prim.to_string())
@@ -186,6 +189,7 @@ fn word_node(iter: &mut dyn Iterator<Item = &Word>) -> Option<FormatNode> {
         Word::Modified(m) => FormatNode::Call(
             m.modifier.value.to_string(),
             words(m.words.iter().map(|i| &i.value).by_ref()),
+            true,
         ),
     })
 }

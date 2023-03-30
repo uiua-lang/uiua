@@ -106,7 +106,9 @@ impl From<UiuaError> for CompileError {
 
 pub(crate) struct Compiler {
     /// Instructions for functions that are currently being compiled
-    in_progress_functions: Vec<InProgressFunction>,
+    in_progress_functions: Vec<Vec<Instr>>,
+    /// References for ref functions that are currently being compiled
+    in_progress_refs: Vec<Vec<(usize, Span)>>,
     /// Values and functions that are bound
     bindings: HashMap<Ident, Bound>,
     /// Errors that don't stop compilation
@@ -137,6 +139,7 @@ impl Default for Compiler {
 
         Self {
             in_progress_functions: Vec::new(),
+            in_progress_refs: Vec::new(),
             bindings,
             errors: Vec::new(),
             assembly: Assembly {
@@ -151,11 +154,6 @@ impl Default for Compiler {
 pub struct FunctionInfo {
     pub id: FunctionId,
     pub params: usize,
-}
-
-struct InProgressFunction {
-    instrs: Vec<Instr>,
-    refs: Vec<(usize, Span)>,
 }
 
 impl Compiler {
@@ -178,8 +176,8 @@ impl Compiler {
         }
     }
     fn push_instr(&mut self, instr: Instr) {
-        if let Some(ipf) = self.in_progress_functions.last_mut() {
-            ipf.instrs.push(instr);
+        if let Some(instrs) = self.in_progress_functions.last_mut() {
+            instrs.push(instr);
         } else {
             self.assembly.instrs.push(instr);
         }
@@ -264,12 +262,12 @@ impl Compiler {
                 if let Some(prim) = Primitive::from_name(name) {
                     return self.primitive(prim, span, call);
                 }
-                if let Some(ipf) = self.in_progress_functions.last_mut() {
+                if let Some(refs) = self.in_progress_refs.last_mut() {
                     if name.len() == 1 {
                         let c = name.chars().next().unwrap();
                         if c.is_ascii_lowercase() {
                             let n = (c as u8 - b'a') as usize;
-                            ipf.refs.push((n, span.clone()));
+                            refs.push((n, span.clone()));
                             let span = self.push_call_span(span);
                             self.push_instr(Instr::CopyRef(n, span));
                             return;
@@ -298,32 +296,22 @@ impl Compiler {
         inner: impl FnOnce(&mut Self),
     ) {
         // Initialize the function's instruction list
-        self.in_progress_functions.push(InProgressFunction {
-            instrs: Vec::new(),
-            refs: Vec::new(),
-        });
+        self.in_progress_functions.push(Vec::new());
+        if refs_span.is_some() {
+            self.in_progress_refs.push(Vec::new());
+        }
         // Compile the function's body
         inner(self);
         // Add the function's instructions to the global function list
-        let ipf = self.in_progress_functions.pop().unwrap();
+        let instrs = self.in_progress_functions.pop().unwrap();
         // Push the function
-        self.push_instr(Instr::Push(
-            Function {
-                id,
-                instrs: ipf.instrs,
-            }
-            .into(),
-        ));
+        self.push_instr(Instr::Push(Function { id, instrs }.into()));
         // Call as reference if necessary
         if let Some(span) = refs_span {
-            let max_ref = ipf.refs.iter().map(|(n, _)| *n).max().unwrap_or(0) + 1;
+            let refs = self.in_progress_refs.pop().unwrap();
+            let max_ref = refs.iter().map(|(n, _)| *n).max().unwrap_or(0) + 1;
             let span = self.push_call_span(span);
             self.push_instr(Instr::CallRef(max_ref, span));
-        } else if !ipf.refs.is_empty() {
-            for (n, span) in ipf.refs {
-                self.errors
-                    .push(span.sp(CompileError::RefOutsideContext(n)));
-            }
         }
     }
     fn func(&mut self, func: Func) {

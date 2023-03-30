@@ -89,7 +89,7 @@ fn space(output: &mut String, s: &str) {
             output.push(' ');
         }
     }
-    if s.starts_with([']', ')', '}']) {
+    if s.starts_with([']', ')', '}', '.', ',', ';']) {
         while output.ends_with(' ') {
             output.pop();
         }

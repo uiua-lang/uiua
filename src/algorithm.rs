@@ -72,7 +72,7 @@ impl Value {
     pub fn as_indices(&self, env: &Env, error: &'static str) -> RuntimeResult<Vec<isize>> {
         self.as_number_list(env, error, |f| f % 1.0 == 0.0, |f| f as isize)
     }
-    pub fn as_positives(&self, env: &Env, error: &'static str) -> RuntimeResult<Vec<usize>> {
+    pub fn as_naturals(&self, env: &Env, error: &'static str) -> RuntimeResult<Vec<usize>> {
         self.as_number_list(env, error, |f| f % 1.0 == 0.0 && f >= 0.0, |f| f as usize)
     }
     fn as_number_list<T>(
@@ -369,7 +369,7 @@ impl Value {
     }
     pub fn windows(&mut self, from: Self, env: &Env) -> RuntimeResult {
         let mut array = from.coerce_into_array();
-        let sizes = self.as_positives(env, "Window size must be a list of positive integers")?;
+        let sizes = self.as_naturals(env, "Window size must be a list of positive integers")?;
         if sizes.is_empty() {
             return Ok(());
         }
@@ -540,6 +540,21 @@ impl Value {
                 )));
             }
         }
+        Ok(())
+    }
+    pub fn indices(&mut self, env: &Env) -> RuntimeResult {
+        if !self.is_array() {
+            return Err(env.error("Cannot get indices of non-array"));
+        }
+        let array = self.array();
+        let mask = self.as_naturals(env, "Can only get indices of rank 1 number array")?;
+        let mut indices = Vec::with_capacity(array.shape()[0]);
+        for (i, n) in mask.into_iter().enumerate() {
+            for _ in 0..n {
+                indices.push(i as f64);
+            }
+        }
+        *self = Array::from(indices).into();
         Ok(())
     }
 }

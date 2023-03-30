@@ -137,6 +137,7 @@ primitive!(
     (1, Transpose, "transpose" + '⍉'),
     (1, Sort, "sort" + '∧'),
     (1, Grade, "grade" + '⍋'),
+    (1, Indices, "indices" + '⊘'),
     (1, Classify, "classify" + '⊛'),
     (1, Deduplicate, "deduplicate" + '⊝'),
     // Dyadic array ops
@@ -287,6 +288,7 @@ impl Primitive {
             Primitive::Couple => env.dyadic_mut_env(Value::couple)?,
             Primitive::Sort => env.monadic_mut_env(Value::sort)?,
             Primitive::Grade => env.monadic_mut_env(Value::grade)?,
+            Primitive::Indices => env.monadic_mut_env(Value::indices)?,
             Primitive::Select => env.dyadic_mut_env(Value::select)?,
             Primitive::Windows => env.dyadic_mut_env(Value::windows)?,
             Primitive::Classify => env.monadic_mut_env(Value::classify)?,

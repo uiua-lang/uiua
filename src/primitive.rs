@@ -463,7 +463,7 @@ impl Primitive {
                         env.call()?;
                         row.push(env.pop("tabled function result")?);
                     }
-                    table.push(Value::from(Array::from(row).normalized()));
+                    table.push(Value::from(Array::from(row).normalized_type()));
                 }
                 env.push(Array::from(table).normalized());
             }

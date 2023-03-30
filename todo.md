@@ -1,5 +1,7 @@
+- Pass stack around
+  - Parallelism
+- Allow wider array showing when terminal size is known
 - Scoped regions
-- Named imports
 - More array functions
   - Clear stack
   - Pack
@@ -8,7 +10,7 @@
 - Type testing/tracing
 - System APIs
   - Sockets
-- LS
+- LSP
 - FFI
 - Docs
 - Tooling

@@ -1,13 +1,22 @@
+- Rethink imports
 - Pass stack around
   - Parallelism
 - Allow wider array showing when terminal size is known
 - Scoped regions
+- Optimized functions
+  - Reduces:
+    - Sum
+    - Product
+    - Join all
+  - Scans:
+    - Plus
 - More array functions
   - Clear stack
   - Pack
   - Progressive index of
   - Nudge
 - Type testing/tracing
+- "Structs"
 - System APIs
   - Sockets
 - LSP

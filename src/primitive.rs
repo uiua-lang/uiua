@@ -541,14 +541,15 @@ impl Primitive {
             Primitive::Last => env.monadic_mut_env(Value::last)?,
             Primitive::String => env.monadic(|v| v.to_string())?,
             Primitive::Use => {
-                let mut lib = env.pop(1)?;
-                let name = env.pop(2)?;
+                let name = env.pop(1)?;
+                let mut lib = env.pop(2)?;
                 if !name.is_array() || !name.array().is_chars() {
+                    dbg!(name);
                     return Err(env.error("Use name must be a string"));
                 }
-                let arr = lib.coerce_array();
                 let name = name.array().chars().iter().collect::<String>();
                 let lowername = name.to_lowercase();
+                let arr = lib.coerce_array();
                 let f = arr.data(
                     |_, _| None,
                     |_, _| None,

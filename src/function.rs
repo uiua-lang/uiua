@@ -62,6 +62,12 @@ impl fmt::Display for Function {
 }
 
 impl Function {
+    pub fn as_primitive(&self) -> Option<Primitive> {
+        match &self.id {
+            FunctionId::Primitive(prim) => Some(*prim),
+            _ => None,
+        }
+    }
     pub fn inverse(&self, env: &Env, require_unary: bool) -> RuntimeResult<Self> {
         let mut args = 0;
         let mut groups: Vec<Vec<Instr>> = Vec::new();

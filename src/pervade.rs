@@ -7,6 +7,9 @@ pub mod not {
     pub fn num(a: &f64) -> f64 {
         1.0 - a
     }
+    pub fn byte(a: &u8) -> u8 {
+        1u8.saturating_sub(*a)
+    }
     pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot negate {a}"))
     }
@@ -16,6 +19,9 @@ pub mod neg {
     use super::*;
     pub fn num(a: &f64) -> f64 {
         -a
+    }
+    pub fn byte(a: &u8) -> f64 {
+        -(*a as f64)
     }
     pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot negate {a}"))
@@ -66,6 +72,9 @@ pub mod sin {
     pub fn num(a: &f64) -> f64 {
         a.sin()
     }
+    pub fn byte(a: &u8) -> f64 {
+        (*a as f64).sin()
+    }
     pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot get the sine of {a}"))
     }
@@ -74,6 +83,9 @@ pub mod cos {
     use super::*;
     pub fn num(a: &f64) -> f64 {
         a.cos()
+    }
+    pub fn byte(a: &u8) -> f64 {
+        (*a as f64).cos()
     }
     pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot get the cosine of {a}"))
@@ -84,6 +96,9 @@ pub mod asin {
     pub fn num(a: &f64) -> f64 {
         a.asin()
     }
+    pub fn byte(a: &u8) -> f64 {
+        (*a as f64).asin()
+    }
     pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot get the arcsine of {a}"))
     }
@@ -92,6 +107,9 @@ pub mod acos {
     use super::*;
     pub fn num(a: &f64) -> f64 {
         a.acos()
+    }
+    pub fn byte(a: &u8) -> f64 {
+        (*a as f64).acos()
     }
     pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot get the arccosine of {a}"))

@@ -197,15 +197,15 @@ macro_rules! value_un_impl {
     };
 }
 
-value_un_impl!(not, (Num, number, num));
-value_un_impl!(neg, (Num, number, num));
+value_un_impl!(not, (Num, number, num), (Byte, byte, byte));
+value_un_impl!(neg, (Num, number, num), (Byte, byte, byte));
 value_un_impl!(abs, (Num, number, num), (Byte, byte, byte));
 value_un_impl!(sign, (Num, number, num), (Byte, byte, byte));
 value_un_impl!(sqrt, (Num, number, num), (Byte, byte, byte));
-value_un_impl!(sin, (Num, number, num));
-value_un_impl!(cos, (Num, number, num));
-value_un_impl!(asin, (Num, number, num));
-value_un_impl!(acos, (Num, number, num));
+value_un_impl!(sin, (Num, number, num), (Byte, byte, byte));
+value_un_impl!(cos, (Num, number, num), (Byte, byte, byte));
+value_un_impl!(asin, (Num, number, num), (Byte, byte, byte));
+value_un_impl!(acos, (Num, number, num), (Byte, byte, byte));
 value_un_impl!(floor, (Num, number, num), (Byte, byte, byte));
 value_un_impl!(ceil, (Num, number, num), (Byte, byte, byte));
 value_un_impl!(round, (Num, number, num), (Byte, byte, byte));

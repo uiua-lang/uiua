@@ -69,45 +69,53 @@ impl Value {
             return Err(env.error(error));
         }
     }
-    pub fn as_indices(&self, env: &Env, error: &'static str) -> RuntimeResult<Vec<isize>> {
-        self.as_number_list(env, error, |f| f % 1.0 == 0.0, |f| f as isize)
+    pub fn as_indices(&self, env: &Env, requirement: &'static str) -> RuntimeResult<Vec<isize>> {
+        self.as_number_list(env, requirement, |f| f % 1.0 == 0.0, |f| f as isize)
     }
-    pub fn as_naturals(&self, env: &Env, error: &'static str) -> RuntimeResult<Vec<usize>> {
-        self.as_number_list(env, error, |f| f % 1.0 == 0.0 && f >= 0.0, |f| f as usize)
+    pub fn as_naturals(&self, env: &Env, requirement: &'static str) -> RuntimeResult<Vec<usize>> {
+        self.as_number_list(
+            env,
+            requirement,
+            |f| f % 1.0 == 0.0 && f >= 0.0,
+            |f| f as usize,
+        )
     }
     fn as_number_list<T>(
         &self,
         env: &Env,
-        error: &'static str,
+        requirement: &'static str,
         test: fn(f64) -> bool,
         convert: fn(f64) -> T,
     ) -> RuntimeResult<Vec<T>> {
-        if self.is_array() {
-            let arr = self.array();
-            let numbers = if arr.is_numbers() {
-                arr.numbers()
-            } else if arr.shape() == [0] {
-                &[]
-            } else {
-                return Err(env.error(error));
-            };
-            let mut index = Vec::with_capacity(arr.len());
-            for f in numbers {
-                if !test(*f) {
-                    return Err(env.error(error));
+        Ok(match self.ty() {
+            Type::Num => {
+                let f = self.number();
+                if !test(f) {
+                    return Err(env.error(requirement));
                 }
-                index.push(convert(*f));
+                vec![convert(f)]
             }
-            Ok(index)
-        } else if self.is_num() {
-            let f = self.number();
-            if !test(f) {
-                return Err(env.error(error));
+            Type::Byte => {
+                let f = self.byte() as f64;
+                if !test(f) {
+                    return Err(env.error(requirement));
+                }
+                vec![convert(f)]
             }
-            Ok(vec![convert(f)])
-        } else {
-            return Err(env.error(error));
-        }
+            Type::Array => {
+                let arr = self.array();
+                let mut index = Vec::with_capacity(arr.len());
+                arr.try_iter_numbers(env, requirement, |f, env| {
+                    if !test(f) {
+                        return Err(env.error(requirement));
+                    }
+                    index.push(convert(f));
+                    Ok(())
+                })?;
+                index
+            }
+            _ => return Err(env.error(requirement)),
+        })
     }
     pub fn range(&mut self, env: &Env) -> RuntimeResult {
         let shape = self.as_shape(

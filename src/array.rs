@@ -98,6 +98,27 @@ impl Array {
         assert_eq!(self.ty, ArrayType::Num);
         unsafe { &mut self.data.numbers }
     }
+    pub fn try_iter_numbers(
+        &self,
+        env: &Env,
+        requirement: &'static str,
+        mut f: impl FnMut(f64, &Env) -> RuntimeResult,
+    ) -> RuntimeResult {
+        match self.ty {
+            ArrayType::Num => {
+                for &num in self.numbers() {
+                    f(num, env)?;
+                }
+            }
+            ArrayType::Byte => {
+                for &byte in self.bytes() {
+                    f(byte as f64, env)?;
+                }
+            }
+            ty => return Err(env.error(format!("{requirement}, it is {ty}"))),
+        }
+        Ok(())
+    }
     pub fn bytes(&self) -> &[u8] {
         assert_eq!(self.ty, ArrayType::Byte);
         unsafe { &self.data.bytes }

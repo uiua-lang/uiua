@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    array::Array, function::FunctionId, io::*, lex::Simple, value::*, vm::CallEnv, RuntimeResult,
+    array::Array, function::FunctionId, io::*, lex::Simple, value::*, vm::Env, RuntimeResult,
 };
 
 macro_rules! primitive {
@@ -256,7 +256,7 @@ impl Primitive {
         let exact_match = res.name().map_or(false, |i| i == lower);
         (exact_match || matching.next().is_none()).then_some(res)
     }
-    pub(crate) fn run<B: IoBackend>(&self, env: &mut CallEnv<B>) -> RuntimeResult {
+    pub(crate) fn run(&self, env: &mut Env) -> RuntimeResult {
         match self {
             Primitive::Pi => env.push(PI),
             Primitive::Infinity => env.push(INFINITY),
@@ -329,7 +329,7 @@ impl Primitive {
                 let mut index = env.pop(1)?;
                 let value = env.pop(2)?;
                 let array = env.pop(3)?;
-                index.put(value, array, &env.env())?;
+                index.put(value, array, env)?;
                 env.push(index);
             }
             Primitive::Dup => {
@@ -365,7 +365,7 @@ impl Primitive {
                 if !f.is_function() {
                     return Err(env.error("Only functions can be inverted"));
                 }
-                let f_inv = f.function().inverse(&env.env(), false)?;
+                let f_inv = f.function().inverse(env, false)?;
                 env.push(f_inv);
                 env.call()?;
             }
@@ -375,7 +375,7 @@ impl Primitive {
                 if !f.is_function() || !g.is_function() {
                     return Err(env.error("Only functions can be inverted"));
                 }
-                let f_inv = f.function().inverse(&env.env(), true)?;
+                let f_inv = f.function().inverse(env, true)?;
                 env.push(f);
                 env.call()?;
                 env.push(g);
@@ -550,7 +550,7 @@ impl Primitive {
                 let msg = env.pop(1)?;
                 let cond = env.pop(2)?;
                 if !(cond.is_num() && (cond.number() - 1.0).abs() < 1e-10) {
-                    return Err(env.error(&msg.to_string()));
+                    return Err(env.error(msg.to_string()));
                 }
             }
             Primitive::Len => env.monadic(|v| v.len() as f64)?,

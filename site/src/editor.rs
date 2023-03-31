@@ -285,13 +285,12 @@ pub fn Editor(
 
 /// Returns the output and the formatted code
 fn run_code(code: &str) -> UiuaResult<(String, Option<Vec<u8>>)> {
-    let assembly = Assembly::load_str(code)?;
+    let mut assembly = Assembly::load_str(code)?;
     let (mut values, io) = assembly.run_with_backend(WebBackend::default())?;
     let image_bytes = io.image_bytes.or_else(|| {
         for i in 0..values.len() {
             let value = &values[i];
-            if let Ok(bytes) = value_to_image_bytes(value, ImageOutputFormat::Png, &assembly.env())
-            {
+            if let Ok(bytes) = value_to_image_bytes(value, ImageOutputFormat::Png) {
                 if value.shape().iter().product::<usize>() > 100 {
                     values.remove(i);
                     return Some(bytes);

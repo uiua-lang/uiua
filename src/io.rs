@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     env, fs,
     io::{stdin, stdout, BufRead, Cursor, Write},
 };
@@ -7,14 +6,7 @@ use std::{
 use image::{DynamicImage, ImageOutputFormat};
 use rand::prelude::*;
 
-use crate::{
-    array::Array,
-    compile::Assembly,
-    grid_fmt::GridFmt,
-    value::Value,
-    vm::{CallEnv, Env},
-    RuntimeError, RuntimeResult,
-};
+use crate::{array::Array, grid_fmt::GridFmt, value::Value, vm::Env, RuntimeResult};
 
 macro_rules! io_op {
     ($((
@@ -80,14 +72,11 @@ io_op! {
 pub trait IoBackend {
     fn print_str(&mut self, s: &str);
     fn rand(&mut self) -> f64;
-    fn show_image(&mut self, image: DynamicImage, env: &Env) -> RuntimeResult {
-        Err(env.error("Showing images not supported in this environment"))
+    fn show_image(&mut self, image: DynamicImage) -> Result<(), String> {
+        Err("Showing images not supported in this environment".into())
     }
     fn scan_line(&mut self) -> String {
         String::new()
-    }
-    fn import(&mut self, name: &str, env: &Env) -> RuntimeResult<Vec<Value>> {
-        Err(env.error("Import not supported in this environment"))
     }
     fn var(&mut self, name: &str) -> Option<String> {
         None
@@ -98,17 +87,17 @@ pub trait IoBackend {
     fn file_exists(&self, path: &str) -> bool {
         false
     }
-    fn list_dir(&self, path: &str, env: &Env) -> RuntimeResult<Vec<String>> {
-        Err(env.error("File IO not supported in this environment"))
+    fn list_dir(&self, path: &str) -> Result<Vec<String>, String> {
+        Err("File IO not supported in this environment".into())
     }
-    fn is_file(&self, path: &str, env: &Env) -> RuntimeResult<bool> {
-        Err(env.error("File IO not supported in this environment"))
+    fn is_file(&self, path: &str) -> Result<bool, String> {
+        Err("File IO not supported in this environment".into())
     }
-    fn read_file(&mut self, path: &str, env: &Env) -> RuntimeResult<Vec<u8>> {
-        Err(env.error("File IO not supported in this environment"))
+    fn read_file(&mut self, path: &str) -> Result<Vec<u8>, String> {
+        Err("File IO not supported in this environment".into())
     }
-    fn write_file(&mut self, path: &str, contents: Vec<u8>, env: &Env) -> RuntimeResult {
-        Err(env.error("File IO not supported in this environment"))
+    fn write_file(&mut self, path: &str, contents: Vec<u8>) -> Result<(), String> {
+        Err("File IO not supported in this environment".into())
     }
 }
 
@@ -122,14 +111,11 @@ where
     fn rand(&mut self) -> f64 {
         (**self).rand()
     }
-    fn show_image(&mut self, image: DynamicImage, env: &Env) -> RuntimeResult {
-        (**self).show_image(image, env)
+    fn show_image(&mut self, image: DynamicImage) -> Result<(), String> {
+        (**self).show_image(image)
     }
     fn scan_line(&mut self) -> String {
         (**self).scan_line()
-    }
-    fn import(&mut self, name: &str, env: &Env) -> RuntimeResult<Vec<Value>> {
-        (**self).import(name, env)
     }
     fn var(&mut self, name: &str) -> Option<String> {
         (**self).var(name)
@@ -140,29 +126,27 @@ where
     fn file_exists(&self, path: &str) -> bool {
         (**self).file_exists(path)
     }
-    fn list_dir(&self, path: &str, env: &Env) -> RuntimeResult<Vec<String>> {
-        (**self).list_dir(path, env)
+    fn list_dir(&self, path: &str) -> Result<Vec<String>, String> {
+        (**self).list_dir(path)
     }
-    fn is_file(&self, path: &str, env: &Env) -> RuntimeResult<bool> {
-        (**self).is_file(path, env)
+    fn is_file(&self, path: &str) -> Result<bool, String> {
+        (**self).is_file(path)
     }
-    fn read_file(&mut self, path: &str, env: &Env) -> RuntimeResult<Vec<u8>> {
-        (**self).read_file(path, env)
+    fn read_file(&mut self, path: &str) -> Result<Vec<u8>, String> {
+        (**self).read_file(path)
     }
-    fn write_file(&mut self, path: &str, contents: Vec<u8>, env: &Env) -> RuntimeResult {
-        (**self).write_file(path, contents, env)
+    fn write_file(&mut self, path: &str, contents: Vec<u8>) -> Result<(), String> {
+        (**self).write_file(path, contents)
     }
 }
 
 pub struct StdIo {
-    imports: HashMap<String, Vec<Value>>,
     rng: SmallRng,
 }
 
 impl Default for StdIo {
     fn default() -> Self {
         Self {
-            imports: HashMap::new(),
             rng: SmallRng::seed_from_u64(instant::now().to_bits()),
         }
     }
@@ -184,16 +168,6 @@ impl IoBackend for StdIo {
             .and_then(Result::ok)
             .unwrap_or_default()
     }
-    fn import(&mut self, path: &str, _env: &Env) -> RuntimeResult<Vec<Value>> {
-        if !self.imports.contains_key(path) {
-            let (stack, _) = Assembly::load_file(path)
-                .map_err(RuntimeError::Import)?
-                .run_with_backend(&mut *self)
-                .map_err(RuntimeError::Import)?;
-            self.imports.insert(path.into(), stack);
-        }
-        Ok(self.imports[path].clone())
-    }
     fn var(&mut self, name: &str) -> Option<String> {
         env::var(name).ok()
     }
@@ -203,29 +177,29 @@ impl IoBackend for StdIo {
     fn file_exists(&self, path: &str) -> bool {
         fs::metadata(path).is_ok()
     }
-    fn is_file(&self, path: &str, env: &Env) -> RuntimeResult<bool> {
+    fn is_file(&self, path: &str) -> Result<bool, String> {
         fs::metadata(path)
             .map(|m| m.is_file())
-            .map_err(|e| env.error(e.to_string()))
+            .map_err(|e| e.to_string())
     }
-    fn list_dir(&self, path: &str, env: &Env) -> RuntimeResult<Vec<String>> {
+    fn list_dir(&self, path: &str) -> Result<Vec<String>, String> {
         let mut paths = Vec::new();
-        for entry in fs::read_dir(path).map_err(|e| env.error(e.to_string()))? {
-            let entry = entry.map_err(|e| env.error(e.to_string()))?;
+        for entry in fs::read_dir(path).map_err(|e| e.to_string())? {
+            let entry = entry.map_err(|e| e.to_string())?;
             paths.push(entry.path().to_string_lossy().into());
         }
         Ok(paths)
     }
-    fn read_file(&mut self, path: &str, env: &Env) -> RuntimeResult<Vec<u8>> {
-        fs::read(path).map_err(|e| env.error(e.to_string()))
+    fn read_file(&mut self, path: &str) -> Result<Vec<u8>, String> {
+        fs::read(path).map_err(|e| e.to_string())
     }
-    fn write_file(&mut self, path: &str, contents: Vec<u8>, env: &Env) -> RuntimeResult {
-        fs::write(path, contents).map_err(|e| env.error(e.to_string()))
+    fn write_file(&mut self, path: &str, contents: Vec<u8>) -> Result<(), String> {
+        fs::write(path, contents).map_err(|e| e.to_string())
     }
 }
 
 impl IoOp {
-    pub(crate) fn run<B: IoBackend>(&self, env: &mut CallEnv<B>) -> RuntimeResult {
+    pub(crate) fn run(&self, env: &mut Env) -> RuntimeResult {
         match self {
             IoOp::Show => {
                 let s = env.pop(1)?.grid_string();
@@ -270,8 +244,9 @@ impl IoOp {
                     return Err(env.error("Path must be a string"));
                 }
                 let path: String = path.array().chars().iter().collect();
-                let contents = String::from_utf8(env.vm.io.read_file(&path, &env.env())?)
-                    .map_err(|e| env.error(&format!("Failed to read file: {}", e)))?;
+                let contents =
+                    String::from_utf8(env.vm.io.read_file(&path).map_err(|e| env.error(e))?)
+                        .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
                 env.push(contents);
             }
             IoOp::FWriteStr => {
@@ -286,7 +261,8 @@ impl IoOp {
                 let path: String = path.array().chars().iter().collect();
                 env.vm
                     .io
-                    .write_file(&path, contents.to_string().into_bytes(), &env.env())?;
+                    .write_file(&path, contents.to_string().into_bytes())
+                    .map_err(|e| env.error(e))?;
             }
             IoOp::FReadBytes => {
                 let path = env.pop(1)?;
@@ -294,7 +270,7 @@ impl IoOp {
                     return Err(env.error("Path must be a string"));
                 }
                 let path: String = path.array().chars().iter().collect();
-                let contents = env.vm.io.read_file(&path, &env.env())?;
+                let contents = env.vm.io.read_file(&path).map_err(|e| env.error(e))?;
                 let arr = Array::from(contents);
                 env.push(arr);
             }
@@ -320,7 +296,10 @@ impl IoOp {
                 } else {
                     return Err(env.error("Contents must be a numeric array"));
                 };
-                env.vm.io.write_file(&path, contents, &env.env())?;
+                env.vm
+                    .io
+                    .write_file(&path, contents)
+                    .map_err(|e| env.error(e))?;
             }
             IoOp::FLines => {
                 let path = env.pop(1)?;
@@ -328,8 +307,9 @@ impl IoOp {
                     return Err(env.error("Path must be a string"));
                 }
                 let path: String = path.array().chars().iter().collect();
-                let contents = String::from_utf8(env.vm.io.read_file(&path, &env.env())?)
-                    .map_err(|e| env.error(&format!("Failed to read file: {}", e)))?;
+                let contents =
+                    String::from_utf8(env.vm.io.read_file(&path).map_err(|e| env.error(e))?)
+                        .map_err(|e| env.error(format!("Failed to read file: {}", e)))?;
                 let lines_array =
                     Array::from_iter(contents.lines().map(Array::from).map(Value::from));
                 env.push(lines_array);
@@ -349,7 +329,7 @@ impl IoOp {
                     return Err(env.error("Path must be a string"));
                 }
                 let path: String = path.array().chars().iter().collect();
-                let paths = env.vm.io.list_dir(&path, &env.env())?;
+                let paths = env.vm.io.list_dir(&path).map_err(|e| env.error(e))?;
                 let paths_array =
                     Array::from_iter(paths.into_iter().map(Array::from).map(Value::from));
                 env.push(paths_array);
@@ -360,7 +340,7 @@ impl IoOp {
                     return Err(env.error("Path must be a string"));
                 }
                 let path: String = path.array().chars().iter().collect();
-                let is_file = env.vm.io.is_file(&path, &env.env())?;
+                let is_file = env.vm.io.is_file(&path).map_err(|e| env.error(e))?;
                 env.push(is_file);
             }
             IoOp::Import => {
@@ -369,9 +349,7 @@ impl IoOp {
                     return Err(env.error("Path to import must be a string"));
                 }
                 let name: String = name.array().chars().iter().collect();
-                for value in env.vm.io.import(&name, &env.env())? {
-                    env.push(value);
-                }
+                todo!()
             }
             IoOp::Now => env.push(instant::now()),
             IoOp::ImRead => {
@@ -380,9 +358,9 @@ impl IoOp {
                     return Err(env.error("Path must be a string"));
                 }
                 let path: String = path.array().chars().iter().collect();
-                let bytes = env.vm.io.read_file(&path, &env.env())?;
+                let bytes = env.vm.io.read_file(&path).map_err(|e| env.error(e))?;
                 let image = image::load_from_memory(&bytes)
-                    .map_err(|e| env.error(&format!("Failed to read image: {}", e)))?
+                    .map_err(|e| env.error(format!("Failed to read image: {}", e)))?
                     .into_rgba8();
                 let shape = vec![image.height() as usize, image.width() as usize, 4];
                 let array = Array::from((shape, image.into_raw()));
@@ -406,34 +384,34 @@ impl IoOp {
                     "tiff" => ImageOutputFormat::Tiff,
                     _ => ImageOutputFormat::Png,
                 };
-                let bytes = value_to_image_bytes(&value, output_format, &env.env())?;
-                env.vm.io.write_file(&path, bytes, &env.env())?;
+                let bytes =
+                    value_to_image_bytes(&value, output_format).map_err(|e| env.error(e))?;
+                env.vm
+                    .io
+                    .write_file(&path, bytes)
+                    .map_err(|e| env.error(e))?;
             }
             IoOp::ImShow => {
                 let value = env.pop(1)?;
-                let image = value_to_image(&value, &env.env())?;
-                env.vm.io.show_image(image, &env.env())?;
+                let image = value_to_image(&value).map_err(|e| env.error(e))?;
+                env.vm.io.show_image(image).map_err(|e| env.error(e))?;
             }
         }
         Ok(())
     }
 }
 
-pub fn value_to_image_bytes(
-    value: &Value,
-    format: ImageOutputFormat,
-    env: &Env,
-) -> RuntimeResult<Vec<u8>> {
+pub fn value_to_image_bytes(value: &Value, format: ImageOutputFormat) -> Result<Vec<u8>, String> {
     let mut bytes = Cursor::new(Vec::new());
-    value_to_image(value, env)?
+    value_to_image(value)?
         .write_to(&mut bytes, format)
-        .map_err(|e| env.error(format!("Failed to write image: {}", e)))?;
+        .map_err(|e| format!("Failed to write image: {e}"))?;
     Ok(bytes.into_inner())
 }
 
-pub fn value_to_image(value: &Value, env: &Env) -> RuntimeResult<DynamicImage> {
+pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
     if !value.is_array() || value.array().rank() != 3 {
-        return Err(env.error("Image must be a rank 3 numeric array"));
+        return Err("Image must be a rank 3 numeric array".into());
     }
     let arr = value.array();
     let bytes = if arr.is_numbers() {
@@ -444,7 +422,7 @@ pub fn value_to_image(value: &Value, env: &Env) -> RuntimeResult<DynamicImage> {
     } else if arr.is_bytes() {
         arr.bytes().to_vec()
     } else {
-        return Err(env.error("Image must be a rank 3 numeric array"));
+        return Err("Image must be a rank 3 numeric array".into());
     };
     let [width, height, px_size] = match arr.shape() {
         &[a, b, c] => [a, b, c],
@@ -452,18 +430,18 @@ pub fn value_to_image(value: &Value, env: &Env) -> RuntimeResult<DynamicImage> {
     };
     Ok(match px_size {
         1 => image::GrayImage::from_raw(width as u32, height as u32, bytes)
-            .ok_or_else(|| env.error("Failed to create image"))?
+            .ok_or("Failed to create image")?
             .into(),
         3 => image::RgbImage::from_raw(width as u32, height as u32, bytes)
-            .ok_or_else(|| env.error("Failed to create image"))?
+            .ok_or("Failed to create image")?
             .into(),
         4 => image::RgbaImage::from_raw(width as u32, height as u32, bytes)
-            .ok_or_else(|| env.error("Failed to create image"))?
+            .ok_or("Failed to create image")?
             .into(),
         n => {
-            return Err(env.error(format!(
+            return Err(format!(
                 "The last dimension of an image array must be 1, 3, or 4, but it is {n}"
-            )))
+            ))
         }
     })
 }

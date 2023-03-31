@@ -1,4 +1,3 @@
-- Move array pervasion macro into value
 - Rethink imports
 - Pass stack around
   - Parallelism

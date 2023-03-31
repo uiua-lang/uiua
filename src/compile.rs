@@ -9,7 +9,7 @@ use crate::{
     primitive::Primitive,
     value::Value,
     vm::{dprintln, Vm},
-    Env, Ident, RuntimeError, UiuaError, UiuaResult,
+    Ident, RuntimeError, UiuaError, UiuaResult,
 };
 
 pub struct Assembly {
@@ -33,17 +33,15 @@ impl Assembly {
         compiler.load_impl(input, None)?;
         Ok(compiler.assembly)
     }
-    pub fn run_with_backend<B: IoBackend>(&self, backend: B) -> UiuaResult<(Vec<Value>, B)> {
-        let mut vm = Vm::new(backend);
+    pub fn run_with_backend<B: IoBackend>(&mut self, mut io: B) -> UiuaResult<(Vec<Value>, B)> {
+        let mut vm = Vm::new(&mut io);
         self.run_with_vm(&mut vm)?;
-        Ok((vm.stack, vm.io))
+        Ok((vm.stack, io))
     }
-    pub fn run(&self) -> UiuaResult<Vec<Value>> {
-        let mut vm = Vm::<StdIo>::default();
-        self.run_with_vm(&mut vm)?;
-        Ok(vm.stack)
+    pub fn run(&mut self) -> UiuaResult<Vec<Value>> {
+        Ok(self.run_with_backend(StdIo::default())?.0)
     }
-    fn run_with_vm<B: IoBackend>(&self, vm: &mut Vm<B>) -> UiuaResult {
+    fn run_with_vm(&mut self, vm: &mut Vm) -> UiuaResult {
         for (i, instr) in self.instrs.iter().enumerate() {
             dprintln!("{i:>3}: {instr}");
         }
@@ -56,12 +54,6 @@ impl Assembly {
     }
     pub(crate) fn error(&self, span: usize, msg: impl Into<String>) -> RuntimeError {
         self.spans[span].error(msg.into())
-    }
-    pub fn env(&self) -> Env {
-        Env {
-            assembly: self,
-            span: 0,
-        }
     }
 }
 
@@ -129,6 +121,21 @@ enum Bound {
 
 impl Default for Compiler {
     fn default() -> Self {
+        Self::new(Assembly {
+            instrs: Vec::new(),
+            spans: vec![Span::Builtin],
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct FunctionInfo {
+    pub id: FunctionId,
+    pub params: usize,
+}
+
+impl Compiler {
+    pub fn new(assembly: Assembly) -> Self {
         let mut bindings = HashMap::new();
         // Initialize primitives
         for prim in Primitive::ALL {
@@ -142,21 +149,9 @@ impl Default for Compiler {
             in_progress_refs: Vec::new(),
             bindings,
             errors: Vec::new(),
-            assembly: Assembly {
-                instrs: Vec::new(),
-                spans: vec![Span::Builtin],
-            },
+            assembly,
         }
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct FunctionInfo {
-    pub id: FunctionId,
-    pub params: usize,
-}
-
-impl Compiler {
     fn load_impl(&mut self, input: &str, path: Option<&Path>) -> UiuaResult {
         let (items, errors) = parse(input, path);
         let mut errors: Vec<Sp<CompileError>> = errors
@@ -223,9 +218,10 @@ impl Compiler {
             false
         };
         let index = self
-            .bindings
-            .values()
-            .filter(|b| matches!(b, Bound::Global(..)))
+            .assembly
+            .instrs
+            .iter()
+            .filter(|instr| matches!(instr, Instr::BindGlobal(_)))
             .count();
         self.bindings
             .insert(binding.name.value, Bound::Global(index, function));

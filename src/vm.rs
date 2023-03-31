@@ -4,26 +4,12 @@ use crate::{
     array::Array,
     compile::Assembly,
     function::{Function, Instr},
-    io::{IoBackend, StdIo},
+    io::IoBackend,
     lex::Span,
     primitive::Primitive,
     value::{Type, Value},
     RuntimeError, RuntimeResult, TraceFrame, UiuaError, UiuaResult,
 };
-
-pub struct Env<'a> {
-    pub(crate) span: usize,
-    pub assembly: &'a Assembly,
-}
-
-impl<'a> Env<'a> {
-    pub fn error(&self, message: impl Into<String>) -> RuntimeError {
-        self.span().error(message)
-    }
-    pub fn span(&self) -> &Span {
-        &self.assembly.spans[self.span]
-    }
-}
 
 #[derive(Clone)]
 struct StackFrame {
@@ -41,7 +27,7 @@ macro_rules! dprintln {
 }
 pub(crate) use dprintln;
 
-pub struct Vm<B = StdIo> {
+pub struct Vm<'io> {
     instrs: vec::IntoIter<Instr>,
     call_stack: Vec<StackFrame>,
     ref_stack: Vec<Vec<Value>>,
@@ -49,17 +35,11 @@ pub struct Vm<B = StdIo> {
     pub globals: Vec<Value>,
     pub stack: Vec<Value>,
     pub antistack: Vec<Value>,
-    pub io: B,
+    pub io: &'io mut dyn IoBackend,
 }
 
-impl<B: Default + IoBackend> Default for Vm<B> {
-    fn default() -> Self {
-        Self::new(B::default())
-    }
-}
-
-impl<B: IoBackend> Vm<B> {
-    pub fn new(io: B) -> Self {
+impl<'io> Vm<'io> {
+    pub fn new(io: &'io mut dyn IoBackend) -> Self {
         Self {
             instrs: Vec::new().into_iter(),
             call_stack: Vec::new(),
@@ -71,7 +51,7 @@ impl<B: IoBackend> Vm<B> {
             io,
         }
     }
-    pub fn run_assembly(&mut self, assembly: &Assembly) -> UiuaResult {
+    pub fn run_assembly(&mut self, assembly: &mut Assembly) -> UiuaResult {
         self.instrs = assembly.instrs.clone().into_iter();
         if let Err(error) = self.run_assembly_inner(assembly, None) {
             let mut trace = Vec::new();
@@ -91,7 +71,7 @@ impl<B: IoBackend> Vm<B> {
     }
     fn run_assembly_inner(
         &mut self,
-        assembly: &Assembly,
+        assembly: &mut Assembly,
         return_depth: Option<usize>,
     ) -> RuntimeResult {
         if return_depth.is_none() {
@@ -120,7 +100,7 @@ impl<B: IoBackend> Vm<B> {
         }
         Ok(())
     }
-    fn instr(&mut self, assembly: &Assembly, instr: Instr) -> RuntimeResult {
+    fn instr(&mut self, assembly: &mut Assembly, instr: Instr) -> RuntimeResult {
         match instr {
             Instr::Push(v) => self.stack.push(v),
             Instr::BeginArray => self.array_stack.push(self.stack.len()),
@@ -134,7 +114,7 @@ impl<B: IoBackend> Vm<B> {
                 let array: Array = self.stack.drain(bottom..).rev().collect();
                 self.stack.push(array.into());
                 if normalize {
-                    let mut env = CallEnv {
+                    let mut env = Env {
                         vm: self,
                         assembly,
                         span,
@@ -152,7 +132,7 @@ impl<B: IoBackend> Vm<B> {
                 self.call(span)?;
             }
             Instr::Primitive(prim, span) => {
-                let mut env = CallEnv {
+                let mut env = Env {
                     vm: self,
                     assembly,
                     span,
@@ -209,7 +189,7 @@ impl<B: IoBackend> Vm<B> {
         });
         Ok(true)
     }
-    pub fn call_complete(&mut self, assembly: &Assembly, span: usize) -> RuntimeResult {
+    pub fn call_complete(&mut self, assembly: &mut Assembly, span: usize) -> RuntimeResult {
         let return_depth = self.call_stack.len();
         let call_started = self.call(span)?;
         if call_started {
@@ -219,22 +199,13 @@ impl<B: IoBackend> Vm<B> {
     }
 }
 
-pub(crate) struct CallEnv<'a, B> {
-    pub vm: &'a mut Vm<B>,
-    pub assembly: &'a Assembly,
+pub struct Env<'vm, 'io, 'a> {
+    pub(crate) vm: &'vm mut Vm<'io>,
+    pub assembly: &'a mut Assembly,
     pub span: usize,
 }
 
-impl<'a, B: IoBackend> CallEnv<'a, B> {
-    pub fn env<'b>(&self) -> Env<'b>
-    where
-        'a: 'b,
-    {
-        Env {
-            assembly: self.assembly,
-            span: self.span,
-        }
-    }
+impl<'vm, 'io, 'a> Env<'vm, 'io, 'a> {
     pub fn push(&mut self, value: impl Into<Value>) {
         self.vm.stack.push(value.into());
     }
@@ -276,7 +247,7 @@ impl<'a, B: IoBackend> CallEnv<'a, B> {
     pub fn call(&mut self) -> RuntimeResult {
         self.vm.call_complete(self.assembly, self.span)
     }
-    pub fn error(&mut self, msg: impl Into<String>) -> RuntimeError {
+    pub fn error(&self, msg: impl Into<String>) -> RuntimeError {
         self.assembly.error(self.span, msg.into())
     }
     pub fn monadic<V: Into<Value>>(&mut self, f: fn(&Value) -> V) -> RuntimeResult {
@@ -286,20 +257,21 @@ impl<'a, B: IoBackend> CallEnv<'a, B> {
     }
     pub fn monadic_env<V: Into<Value>>(
         &mut self,
-        f: fn(&Value, &Env) -> RuntimeResult<V>,
+        f: fn(&Value, &Self) -> RuntimeResult<V>,
     ) -> RuntimeResult {
-        let env = self.env();
-        let value = self.top_mut(1)?;
-        *value = f(value, &env)?.into();
+        let value = self.pop(1)?;
+        self.push(f(&value, self)?);
         Ok(())
     }
     pub fn monadic_mut(&mut self, f: fn(&mut Value)) -> RuntimeResult {
         f(self.top_mut(1)?);
         Ok(())
     }
-    pub fn monadic_mut_env(&mut self, f: fn(&mut Value, &Env) -> RuntimeResult) -> RuntimeResult {
-        let env = self.env();
-        f(self.top_mut(1)?, &env)
+    pub fn monadic_mut_env(&mut self, f: fn(&mut Value, &Self) -> RuntimeResult) -> RuntimeResult {
+        let mut a = self.pop(1)?;
+        f(&mut a, self)?;
+        self.push(a);
+        Ok(())
     }
     pub fn dyadic<V: Into<Value>>(&mut self, f: fn(&Value, &Value) -> V) -> RuntimeResult {
         let mut b = self.pop(1)?;
@@ -317,24 +289,26 @@ impl<'a, B: IoBackend> CallEnv<'a, B> {
     }
     pub fn dyadic_env<V: Into<Value>>(
         &mut self,
-        f: fn(&Value, &Value, &Env) -> RuntimeResult<V>,
+        f: fn(&Value, &Value, &Self) -> RuntimeResult<V>,
     ) -> RuntimeResult {
-        let env = self.env();
-        let mut b = self.pop(1)?;
-        let a = self.top_mut(2)?;
-        swap(a, &mut b);
-        *a = f(a, &b, &env)?.into();
+        let a = self.pop(1)?;
+        let b = self.pop(2)?;
+        let value = f(&a, &b, self)?.into();
+        self.push(value);
         Ok(())
     }
     pub fn dyadic_mut_env(
         &mut self,
-        f: fn(&mut Value, Value, &Env) -> RuntimeResult,
+        f: fn(&mut Value, Value, &Self) -> RuntimeResult,
     ) -> RuntimeResult {
-        let env = self.env();
-        let mut b = self.pop(1)?;
-        let a = self.top_mut(2)?;
-        swap(a, &mut b);
-        f(a, b, &env)
+        let mut a = self.pop(1)?;
+        let b = self.pop(2)?;
+        f(&mut a, b, self)?;
+        self.push(a);
+        Ok(())
+    }
+    pub fn span(&self) -> &Span {
+        &self.assembly.spans[self.span]
     }
 }
 

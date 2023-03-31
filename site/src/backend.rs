@@ -1,7 +1,7 @@
 use std::io::Cursor;
 
 use rand::prelude::*;
-use uiua::{Env, IoBackend};
+use uiua::IoBackend;
 
 pub struct WebBackend {
     pub stdout: String,
@@ -26,11 +26,11 @@ impl IoBackend for WebBackend {
     fn rand(&mut self) -> f64 {
         self.rng.gen()
     }
-    fn show_image(&mut self, image: image::DynamicImage, env: &Env) -> uiua::RuntimeResult {
+    fn show_image(&mut self, image: image::DynamicImage) -> Result<(), String> {
         let mut bytes = Cursor::new(Vec::new());
         image
             .write_to(&mut bytes, image::ImageOutputFormat::Png)
-            .map_err(|e| env.error(format!("Failed to show image: {}", e)))?;
+            .map_err(|e| format!("Failed to show image: {e}"))?;
         self.image_bytes = Some(bytes.into_inner());
         Ok(())
     }

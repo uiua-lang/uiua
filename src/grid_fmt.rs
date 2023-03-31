@@ -53,6 +53,12 @@ impl GridFmt for char {
     }
 }
 
+impl GridFmt for Function {
+    fn fmt_grid(&self) -> Grid {
+        vec![self.to_string().chars().collect()]
+    }
+}
+
 impl GridFmt for Value {
     fn fmt_grid(&self) -> Grid {
         match self.ty() {
@@ -244,11 +250,5 @@ fn pad_grid_min(width: usize, height: usize, grid: &mut Grid) {
         while row.len() < width {
             row.insert(0, ' ');
         }
-    }
-}
-
-impl GridFmt for Function {
-    fn fmt_grid(&self) -> Grid {
-        vec![self.to_string().chars().collect()]
     }
 }

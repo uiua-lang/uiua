@@ -233,10 +233,20 @@ impl Value {
         if !self.is_array() {
             return Ok(());
         }
-        let array = take(self.array_mut());
-        *self = array
-            .into_first()
+        *self = self
+            .array()
+            .first()
             .ok_or_else(|| env.error("Empty array has no first"))?;
+        Ok(())
+    }
+    pub fn last(&mut self, env: &Env) -> RuntimeResult {
+        if !self.is_array() {
+            return Ok(());
+        }
+        *self = self
+            .array()
+            .last()
+            .ok_or_else(|| env.error("Empty array has no last"))?;
         Ok(())
     }
     pub fn take(&mut self, from: Self, env: &Env) -> RuntimeResult {

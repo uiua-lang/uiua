@@ -438,37 +438,72 @@ impl Array {
             ),
         }
     }
-    pub fn into_first(mut self) -> Option<Value> {
+    pub fn first(&self) -> Option<Value> {
         if self.shape.is_empty() {
-            return self.into_flat_values().pop();
+            fn first<T>(_: &[usize], items: &[T]) -> Option<Value>
+            where
+                T: Clone + Into<Value>,
+            {
+                items.first().cloned().map(Into::into)
+            }
+            return self.data(first, first, first, first);
         }
         if self.shape == [0] {
             return None;
         }
-        let mut shape = take(&mut self.shape);
-        let cell_count = shape.remove(0);
-        fn into_first<T>(
-            cell_count: usize,
-            shape: Vec<usize>,
-            items: &mut ManuallyDrop<Vec<T>>,
-        ) -> Value
+        let cell_count = self.shape[0];
+        let shape = &self.shape[1..];
+        fn first<T>(cell_count: usize, shape: &[usize], items: &[T]) -> Value
         where
-            T: Into<Value>,
+            T: Clone + Into<Value>,
             Array: From<(Vec<usize>, Vec<T>)>,
         {
-            let mut items = take(&mut **items);
             if shape.is_empty() {
-                return items.into_iter().next().unwrap().into();
+                return items.first().unwrap().clone().into();
             }
             let cell_size = items.len() / cell_count;
-            items.truncate(cell_size);
-            Array::from((shape, items)).into()
+            let items = items[..cell_size].to_vec();
+            Array::from((shape.to_vec(), items)).into()
         }
         Some(match self.ty {
-            ArrayType::Num => into_first(cell_count, shape, unsafe { &mut self.data.numbers }),
-            ArrayType::Byte => into_first(cell_count, shape, unsafe { &mut self.data.bytes }),
-            ArrayType::Char => into_first(cell_count, shape, unsafe { &mut self.data.chars }),
-            ArrayType::Value => into_first(cell_count, shape, unsafe { &mut self.data.values }),
+            ArrayType::Num => first(cell_count, shape, self.numbers()),
+            ArrayType::Byte => first(cell_count, shape, self.bytes()),
+            ArrayType::Char => first(cell_count, shape, self.chars()),
+            ArrayType::Value => first(cell_count, shape, self.values()),
+        })
+    }
+    pub fn last(&self) -> Option<Value> {
+        if self.shape.is_empty() {
+            fn last<T>(_: &[usize], items: &[T]) -> Option<Value>
+            where
+                T: Clone + Into<Value>,
+            {
+                items.last().cloned().map(Into::into)
+            }
+            return self.data(last, last, last, last);
+        }
+        if self.shape == [0] {
+            return None;
+        }
+        let cell_count = self.shape[0];
+        let shape = &self.shape[1..];
+        fn last<T>(cell_count: usize, shape: &[usize], items: &[T]) -> Value
+        where
+            T: Clone + Into<Value>,
+            Array: From<(Vec<usize>, Vec<T>)>,
+        {
+            if shape.is_empty() {
+                return items.last().unwrap().clone().into();
+            }
+            let cell_size = items.len() / cell_count;
+            let items = items[items.len() - cell_size..].to_vec();
+            Array::from((shape.to_vec(), items)).into()
+        }
+        Some(match self.ty {
+            ArrayType::Num => last(cell_count, shape, self.numbers()),
+            ArrayType::Byte => last(cell_count, shape, self.bytes()),
+            ArrayType::Char => last(cell_count, shape, self.chars()),
+            ArrayType::Value => last(cell_count, shape, self.values()),
         })
     }
 }

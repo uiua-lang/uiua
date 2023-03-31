@@ -200,7 +200,7 @@ impl Parser {
                 Some(item) => item,
                 None => {
                     self.errors.push(self.expected([Expectation::Term]));
-                    uspan.sp(Word::Primitive(Primitive::Nop))
+                    uspan.sp(Word::Primitive(Primitive::Noop))
                 }
             };
             items.push(item);
@@ -212,7 +212,7 @@ impl Parser {
         for item in &mut items {
             if let Word::Func(func) = &item.value {
                 if func.body.is_empty() {
-                    item.value = Word::Primitive(Primitive::Nop);
+                    item.value = Word::Primitive(Primitive::Noop);
                 }
             }
         }

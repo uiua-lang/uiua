@@ -130,6 +130,7 @@ primitive!(
     (1, Shape, "shape" + '△'),
     (1, Range, "range" + '⇡'),
     (1, First, "first" + '⊢'),
+    (1, Last),
     (1, Reverse, "reverse" + '⇌'),
     (1, Enclose, "enclose" + '⊓'),
     (1, Normalize, "normalize" + '□'),
@@ -172,7 +173,7 @@ primitive!(
     (Try { modifier: 2 }, "try" + '?'),
     // Misc
     (2, Assert, "assert" + '!'),
-    (0, Nop, "noop" + '·'),
+    (0, Noop, "noop" + '·'),
     (1(None), Call, "call" + ':'),
     (1, String, "string"),
     (1, Parse, "parsenumber"),
@@ -243,7 +244,7 @@ impl Primitive {
         match self {
             Primitive::Pi => env.push(PI),
             Primitive::Infinity => env.push(INFINITY),
-            Primitive::Nop => {}
+            Primitive::Noop => {}
             Primitive::Not => env.monadic_env(Value::not)?,
             Primitive::Neg => env.monadic_env(Value::neg)?,
             Primitive::Abs => env.monadic_env(Value::abs)?,
@@ -537,6 +538,7 @@ impl Primitive {
             Primitive::Reverse => env.monadic_mut(Value::reverse)?,
             Primitive::Deshape => env.monadic_mut(Value::deshape)?,
             Primitive::First => env.monadic_mut_env(Value::first)?,
+            Primitive::Last => env.monadic_mut_env(Value::last)?,
             Primitive::String => env.monadic(|v| v.to_string())?,
             Primitive::Use => {
                 let mut lib = env.pop(1)?;

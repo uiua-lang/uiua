@@ -176,10 +176,27 @@ impl Compiler {
         }
     }
     fn push_instr(&mut self, instr: Instr) {
-        if let Some(instrs) = self.in_progress_functions.last_mut() {
-            instrs.push(instr);
-        } else {
-            self.assembly.instrs.push(instr);
+        let instrs = self
+            .in_progress_functions
+            .last_mut()
+            .unwrap_or(&mut self.assembly.instrs);
+        match (instrs.last_mut(), instr) {
+            (Some(Instr::Primitive(last, _)), Instr::Primitive(new, new_span)) => {
+                match (&last, new) {
+                    (Primitive::Reverse, Primitive::First) => *last = Primitive::Last,
+                    (Primitive::Reverse, Primitive::Last) => *last = Primitive::First,
+                    (a, b)
+                        if a.args() == a.outputs()
+                            && b.args() == b.outputs()
+                            && a.inverse() == Some(b) =>
+                    {
+                        instrs.pop();
+                    }
+                    _ => instrs.push(Instr::Primitive(new, new_span)),
+                }
+            }
+            (_, Instr::Primitive(Primitive::Noop, _)) => {}
+            (_, instr) => instrs.push(instr),
         }
     }
     fn push_call_span(&mut self, span: Span) -> usize {
@@ -315,6 +332,7 @@ impl Compiler {
         }
     }
     fn func(&mut self, func: Func) {
+        // If the function is a single identifier, push the global function
         if func.body.len() == 1 {
             if let Word::Ident(ident) = &func.body[0].value {
                 if let Some(Bound::Global(i, true)) = self.bindings.get(ident) {
@@ -323,6 +341,7 @@ impl Compiler {
                 }
             }
         }
+        // Otherwise, compile the function
         self.func_outer(func.id, None, |this| this.words(func.body, true));
     }
     fn ref_func(&mut self, func: Func, span: Span) {

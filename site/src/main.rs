@@ -182,7 +182,9 @@ mod code {
 }
 
 fn prim_class(prim: Primitive) -> &'static str {
-    if let Some(m) = prim.modifier_args() {
+    if prim.antiargs().is_some() || prim.antioutputs().is_some() {
+        "anti-function-button"
+    } else if let Some(m) = prim.modifier_args() {
         if m == 1 {
             "modifier1-button"
         } else {

@@ -157,13 +157,12 @@ fn primitive_rows(cx: Scope, prims: impl IntoIterator<Item = Primitive>) -> Vec<
                 .ascii()
                 .map(|s| s.to_string())
                 .or_else(|| glyph.filter(|c| c.is_ascii()).map(|c| c.to_string()));
-            let args = p.args();
             view! { cx,
                 <tr>
                     <td>{maybe_code(cx, name)}</td>
                     <td>{maybe_code(cx, ascii)}</td>
                     <td><PrimCode prim=p/></td>
-                    <td>{maybe_code(cx, args)}</td>
+                    <td>{view!(cx, <code>{p.args()}</code>)}</td>
                 </tr>
             }
         })

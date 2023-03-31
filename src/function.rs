@@ -69,6 +69,19 @@ impl Function {
         }
     }
     pub fn inverse(&self, env: &Env, require_unary: bool) -> RuntimeResult<Self> {
+        match self.instrs.as_slice() {
+            [Instr::Primitive(prim, span)] => {
+                return if let Some(inv) = prim.inverse() {
+                    Ok(Function {
+                        id: FunctionId::Primitive(inv),
+                        instrs: vec![Instr::Primitive(inv, *span)],
+                    })
+                } else {
+                    Err(env.error(format!("No inverse found for {prim}")))
+                }
+            }
+            _ => {}
+        }
         let mut args = 0;
         let mut groups: Vec<Vec<Instr>> = Vec::new();
         let no_inverse = || env.error("No inverse found");
@@ -90,7 +103,7 @@ impl Function {
                 Instr::Primitive(prim, span) => {
                     if let Some(inv) = prim.inverse() {
                         if let Some((a, o)) = prim.args().zip(prim.outputs()) {
-                            args = a - o;
+                            args = a.saturating_sub(o);
                             groups.push(vec![Instr::Primitive(inv, *span)]);
                         } else {
                             return Err(no_inverse());

@@ -1,3 +1,4 @@
+- Move array pervasion macro into value
 - Rethink imports
 - Pass stack around
   - Parallelism
@@ -10,6 +11,7 @@
     - Join all
   - Scans:
     - Plus
+- Refactor inverse
 - More array functions
   - Clear stack
   - Pack

@@ -48,6 +48,7 @@ pub struct Vm<B = StdIo> {
     array_stack: Vec<usize>,
     pub globals: Vec<Value>,
     pub stack: Vec<Value>,
+    pub antistack: Vec<Value>,
     pub io: B,
 }
 
@@ -66,6 +67,7 @@ impl<B: IoBackend> Vm<B> {
             array_stack: Vec::new(),
             globals: Vec::new(),
             stack: Vec::new(),
+            antistack: Vec::new(),
             io,
         }
     }
@@ -236,6 +238,9 @@ impl<'a, B: IoBackend> CallEnv<'a, B> {
     pub fn push(&mut self, value: impl Into<Value>) {
         self.vm.stack.push(value.into());
     }
+    pub fn antipush(&mut self, value: impl Into<Value>) {
+        self.vm.antistack.push(value.into());
+    }
     pub fn stack_size(&self) -> usize {
         self.vm.stack.len()
     }
@@ -246,6 +251,14 @@ impl<'a, B: IoBackend> CallEnv<'a, B> {
         self.vm.stack.pop().ok_or_else(|| {
             self.error(format!(
                 "Stack was empty when evaluating {}",
+                arg.arg_name()
+            ))
+        })
+    }
+    pub fn antipop(&mut self, arg: impl StackArg) -> RuntimeResult<Value> {
+        self.vm.antistack.pop().ok_or_else(|| {
+            self.error(format!(
+                "Antistack was empty when evaluating {}",
                 arg.arg_name()
             ))
         })

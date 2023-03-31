@@ -9,7 +9,7 @@ use crate::{
 
 macro_rules! primitive {
     ($((
-        $($args:literal$(($outputs:expr))?,)?
+        $($($args:literal)? $([$antiargs:literal])? $(($outputs:expr))? $({$antioutputs:literal})?,)?
         $name:ident $({$modifier:ident: $margs:literal})?
         $(,$ident:literal)? $(,$ascii:ident)? $(+ $character:literal)?
     )),* $(,)?) => {
@@ -71,7 +71,7 @@ macro_rules! primitive {
             }
             pub fn args(&self) -> Option<u8> {
                 match self {
-                    $($(Primitive::$name => Some($args),)?)*
+                    $($($(Primitive::$name => Some($args),)?)?)*
                     Primitive::Io(op) => Some(op.args()),
                     _ => None
                 }
@@ -81,6 +81,18 @@ macro_rules! primitive {
                     $($($(Primitive::$name => $outputs.into(),)?)?)*
                     Primitive::Io(op) => op.outputs(),
                     _ => Some(1)
+                }
+            }
+            pub fn antiargs(&self) -> Option<u8> {
+                match self {
+                    $($($(Primitive::$name => Some($antiargs),)?)?)*
+                    _ => None
+                }
+            }
+            pub fn antioutputs(&self) -> Option<u8> {
+                match self {
+                    $($($(Primitive::$name => Some($antioutputs),)?)?)*
+                    _ => None
                 }
             }
         }
@@ -93,6 +105,8 @@ primitive!(
     (2(3), Over, "over" + ','),
     (2(2), Flip, "flip" + '~'),
     (1(0), Pop, "pop" + ';'),
+    (1(0){1}, Save, "save", Dollar + '⇟'),
+    (0[1](1), Load, "load", At + '⇞'),
     (1(None), Unpack, "unpack" + '⊔'),
     // Pervasive monadic ops
     (1, Sign, "sign" + '$'),
@@ -174,7 +188,7 @@ primitive!(
     // Misc
     (2, Assert, "assert" + '!'),
     (0, Noop, "noop" + '·'),
-    (1(None), Call, "call" + ':'),
+    ((None), Call, "call" + ':'),
     (1, String, "string"),
     (1, Parse, "parsenumber"),
     (1, Use, "use"),
@@ -218,6 +232,8 @@ impl Primitive {
             Pow => Log,
             Log => Pow,
             Pick => Put,
+            Save => Load,
+            Load => Save,
             _ => return None,
         })
     }
@@ -335,6 +351,14 @@ impl Primitive {
             }
             Primitive::Pop => {
                 env.pop(1)?;
+            }
+            Primitive::Save => {
+                let x = env.pop(1)?;
+                env.antipush(x);
+            }
+            Primitive::Load => {
+                let x = env.antipop(1)?;
+                env.push(x);
             }
             Primitive::Invert => {
                 let f = env.pop(1)?;

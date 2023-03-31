@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt, fs, path::Path};
+use std::{collections::HashMap, fmt, fs, mem::replace, path::Path};
 
 use crate::{
     ast::*,
@@ -25,12 +25,12 @@ impl Assembly {
     }
     pub fn load<P: AsRef<Path>>(input: &str, path: P) -> UiuaResult<Self> {
         let mut compiler = Compiler::default();
-        compiler.load_impl(input, Some(path.as_ref()))?;
+        compiler.load(input, Some(path.as_ref()))?;
         Ok(compiler.assembly)
     }
     pub fn load_str(input: &str) -> UiuaResult<Self> {
         let mut compiler = Compiler::default();
-        compiler.load_impl(input, None)?;
+        compiler.load(input, None)?;
         Ok(compiler.assembly)
     }
     pub fn run_with_backend<B: IoBackend>(&mut self, mut io: B) -> UiuaResult<(Vec<Value>, B)> {
@@ -45,7 +45,16 @@ impl Assembly {
         for (i, instr) in self.instrs.iter().enumerate() {
             dprintln!("{i:>3}: {instr}");
         }
-        vm.run_assembly(self)?;
+        let this = replace(
+            self,
+            Assembly {
+                instrs: Vec::new(),
+                spans: Vec::new(),
+            },
+        );
+        let mut compiler = Compiler::new(this);
+        vm.run_compiler(&mut compiler)?;
+        *self = compiler.assembly;
         dprintln!("stack:");
         for val in &vm.stack {
             dprintln!("  {val:?}");
@@ -106,7 +115,7 @@ pub(crate) struct Compiler {
     /// Errors that don't stop compilation
     pub(crate) errors: Vec<Sp<CompileError>>,
     /// The partially compiled assembly
-    assembly: Assembly,
+    pub(crate) assembly: Assembly,
 }
 
 #[derive(Debug, Clone)]
@@ -152,7 +161,7 @@ impl Compiler {
             assembly,
         }
     }
-    fn load_impl(&mut self, input: &str, path: Option<&Path>) -> UiuaResult {
+    pub fn load(&mut self, input: &str, path: Option<&Path>) -> UiuaResult {
         let (items, errors) = parse(input, path);
         let mut errors: Vec<Sp<CompileError>> = errors
             .into_iter()

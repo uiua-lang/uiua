@@ -2,7 +2,7 @@ use std::{mem::swap, rc::Rc, vec};
 
 use crate::{
     array::Array,
-    compile::Assembly,
+    compile::Compiler,
     function::{Function, Instr},
     io::IoBackend,
     lex::Span,
@@ -51,14 +51,14 @@ impl<'io> Vm<'io> {
             io,
         }
     }
-    pub fn run_assembly(&mut self, assembly: &mut Assembly) -> UiuaResult {
-        self.instrs = assembly.instrs.clone().into_iter();
-        if let Err(error) = self.run_assembly_inner(assembly, None) {
+    pub(crate) fn run_compiler(&mut self, compiler: &mut Compiler) -> UiuaResult {
+        self.instrs = compiler.assembly.instrs.clone().into_iter();
+        if let Err(error) = self.run_assembly_inner(compiler, None) {
             let mut trace = Vec::new();
             for frame in self.call_stack.iter().rev() {
                 trace.push(TraceFrame {
                     id: frame.function.id.clone(),
-                    span: assembly.spans[frame.call_span].clone(),
+                    span: compiler.assembly.spans[frame.call_span].clone(),
                 });
             }
             Err(UiuaError::Run {
@@ -71,7 +71,7 @@ impl<'io> Vm<'io> {
     }
     fn run_assembly_inner(
         &mut self,
-        assembly: &mut Assembly,
+        compiler: &mut Compiler,
         return_depth: Option<usize>,
     ) -> RuntimeResult {
         if return_depth.is_none() {
@@ -82,7 +82,7 @@ impl<'io> Vm<'io> {
                 if let Some(instr) = frame.function.instrs.get(frame.pc).cloned() {
                     dprintln!("  {instr}");
                     frame.pc += 1;
-                    self.instr(assembly, instr)?;
+                    self.instr(compiler, instr)?;
                 } else {
                     self.call_stack.pop();
                     if return_depth == Some(self.call_stack.len()) {
@@ -91,7 +91,7 @@ impl<'io> Vm<'io> {
                 }
             } else if let Some(instr) = self.instrs.next() {
                 dprintln!("  {instr}");
-                self.instr(assembly, instr)?;
+                self.instr(compiler, instr)?;
             } else {
                 break;
             }
@@ -100,33 +100,30 @@ impl<'io> Vm<'io> {
         }
         Ok(())
     }
-    fn instr(&mut self, assembly: &mut Assembly, instr: Instr) -> RuntimeResult {
+    fn instr(&mut self, compiler: &mut Compiler, instr: Instr) -> RuntimeResult {
         match instr {
             Instr::Push(v) => self.stack.push(v),
             Instr::BeginArray => self.array_stack.push(self.stack.len()),
             Instr::EndArray(normalize, span) => {
                 let bottom = self.array_stack.pop().expect("nothing in array stack");
                 if bottom > self.stack.len() {
-                    return Err(
-                        assembly.spans[span].error("array construction ended with a smaller stack")
-                    );
+                    return Err(compiler.assembly.spans[span]
+                        .error("array construction ended with a smaller stack"));
                 }
                 let array: Array = self.stack.drain(bottom..).rev().collect();
                 self.stack.push(array.into());
                 if normalize {
                     let mut env = Env {
                         vm: self,
-                        assembly,
+                        compiler,
                         span,
                     };
                     Primitive::Normalize.run(&mut env)?;
                 }
             }
-            Instr::BindGlobal(span) => self.globals.push(
-                self.stack
-                    .pop()
-                    .ok_or_else(|| assembly.spans[span].error("stack empty when binding global"))?,
-            ),
+            Instr::BindGlobal(span) => self.globals.push(self.stack.pop().ok_or_else(|| {
+                compiler.assembly.spans[span].error("stack empty when binding global")
+            })?),
             Instr::CopyGlobal(n) => self.stack.push(self.globals[n].clone()),
             Instr::Call(span) => {
                 self.call(span)?;
@@ -134,7 +131,7 @@ impl<'io> Vm<'io> {
             Instr::Primitive(prim, span) => {
                 let mut env = Env {
                     vm: self,
-                    assembly,
+                    compiler,
                     span,
                 };
                 prim.run(&mut env)?;
@@ -142,7 +139,7 @@ impl<'io> Vm<'io> {
             Instr::CallRef(n, span) => {
                 let f = self.stack.pop().expect("stack empty when calling ref");
                 if self.stack.len() < n {
-                    return Err(assembly.spans[span].error(format!(
+                    return Err(compiler.assembly.spans[span].error(format!(
                         "reference requires {n} values, but only {} are on the stack",
                         self.stack.len()
                     )));
@@ -151,17 +148,17 @@ impl<'io> Vm<'io> {
                 values.reverse();
                 self.ref_stack.push(values);
                 self.stack.push(f);
-                let res = self.call_complete(assembly, span);
+                let res = self.call_complete(compiler, span);
                 self.ref_stack.pop().expect("ref stack empty");
                 res?
             }
             Instr::CopyRef(n, span) => {
                 let name = || (n as u8 + b'a') as char;
                 let Some(values) = self.ref_stack.last() else {
-                    return Err(assembly.spans[span].error(format!("`{}` has no reference context", name())));
+                    return Err(compiler.assembly.spans[span].error(format!("`{}` has no reference context", name())));
                 };
                 if n >= values.len() {
-                    return Err(assembly.spans[span].error(format!(
+                    return Err(compiler.assembly.spans[span].error(format!(
                         "reference `{}` requires {n} values, but the current context only has {}",
                         name(),
                         values.len()
@@ -189,11 +186,11 @@ impl<'io> Vm<'io> {
         });
         Ok(true)
     }
-    pub fn call_complete(&mut self, assembly: &mut Assembly, span: usize) -> RuntimeResult {
+    fn call_complete(&mut self, compiler: &mut Compiler, span: usize) -> RuntimeResult {
         let return_depth = self.call_stack.len();
         let call_started = self.call(span)?;
         if call_started {
-            self.run_assembly_inner(assembly, Some(return_depth))?;
+            self.run_assembly_inner(compiler, Some(return_depth))?;
         }
         Ok(())
     }
@@ -201,7 +198,7 @@ impl<'io> Vm<'io> {
 
 pub struct Env<'vm, 'io, 'a> {
     pub(crate) vm: &'vm mut Vm<'io>,
-    pub assembly: &'a mut Assembly,
+    pub(crate) compiler: &'a mut Compiler,
     pub span: usize,
 }
 
@@ -238,17 +235,17 @@ impl<'vm, 'io, 'a> Env<'vm, 'io, 'a> {
         if let Some(value) = self.vm.stack.last_mut() {
             Ok(value)
         } else {
-            Err(self.assembly.spans[self.span].error(format!(
+            Err(self.compiler.assembly.spans[self.span].error(format!(
                 "Stack was empty when evaluating argument {}",
                 arg.arg_name()
             )))
         }
     }
     pub fn call(&mut self) -> RuntimeResult {
-        self.vm.call_complete(self.assembly, self.span)
+        self.vm.call_complete(self.compiler, self.span)
     }
     pub fn error(&self, msg: impl Into<String>) -> RuntimeError {
-        self.assembly.error(self.span, msg.into())
+        self.compiler.assembly.error(self.span, msg.into())
     }
     pub fn monadic<V: Into<Value>>(&mut self, f: fn(&Value) -> V) -> RuntimeResult {
         let value = self.pop(1)?;
@@ -308,7 +305,7 @@ impl<'vm, 'io, 'a> Env<'vm, 'io, 'a> {
         Ok(())
     }
     pub fn span(&self) -> &Span {
-        &self.assembly.spans[self.span]
+        &self.compiler.assembly.spans[self.span]
     }
 }
 

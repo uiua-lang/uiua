@@ -344,12 +344,14 @@ impl IoOp {
                 env.push(is_file);
             }
             IoOp::Import => {
-                let name = env.pop(1)?;
-                if !name.is_array() || !name.array().is_chars() {
+                let path = env.pop(1)?;
+                if !path.is_array() || !path.array().is_chars() {
                     return Err(env.error("Path to import must be a string"));
                 }
-                let name: String = name.array().chars().iter().collect();
-                todo!()
+                let path: String = path.array().chars().iter().collect();
+                let input =
+                    String::from_utf8(env.vm.io.read_file(&path).map_err(|e| env.error(e))?)
+                        .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
             }
             IoOp::Now => env.push(instant::now()),
             IoOp::ImRead => {

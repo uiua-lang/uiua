@@ -569,7 +569,7 @@ array_bin_impl!(
     (Num, numbers, Byte, bytes, num_byte),
 );
 array_bin_impl!(
-    root,
+    log,
     (Num, numbers, Num, numbers, num_num),
     (Byte, bytes, Byte, bytes, byte_byte),
     (Byte, bytes, Num, numbers, byte_num),

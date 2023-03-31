@@ -292,7 +292,7 @@ value_bin_impl!(
     (Num, number, Byte, byte, num_byte),
 );
 value_bin_impl!(
-    root,
+    log,
     (Num, number, Num, number, num_num),
     (Byte, byte, Byte, byte, byte_byte),
     (Byte, byte, Num, number, byte_num),

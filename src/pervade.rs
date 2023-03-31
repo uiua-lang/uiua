@@ -357,19 +357,19 @@ pub mod pow {
     }
 }
 
-pub mod root {
+pub mod log {
     use super::*;
     pub fn num_num(a: &f64, b: &f64) -> f64 {
-        b.powf(1.0 / a)
+        b.log(*a)
     }
     pub fn byte_byte(a: &u8, b: &u8) -> f64 {
-        (*b as i16).pow(1 / *a as u32) as f64
+        (*b as f64).log(*a as f64)
     }
     pub fn byte_num(a: &u8, b: &f64) -> f64 {
-        (*b as i16).pow(1 / *a as u32) as f64
+        b.log(*a as f64)
     }
     pub fn num_byte(a: &f64, b: &u8) -> f64 {
-        (*b as i16).pow(1 / *a as u32) as f64
+        (*b as f64).log(*a)
     }
     pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot get the root of {a} to {b}"))

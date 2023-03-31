@@ -431,14 +431,40 @@ impl Value {
             .len()
             .min(indices.iter().max().copied().unwrap_or(0).max(0) as usize + 1);
         let mut groups = vec![Vec::new(); group_count];
+        let mut last_index = None;
         for (index, value) in indices.into_iter().zip(values) {
-            if index >= 0 && (index as usize) < group_count {
-                groups[index as usize].push(value);
+            if index < 0 {
+                last_index = None;
+                continue;
+            }
+            let index = index as usize;
+            if index < group_count {
+                let group = &mut groups[index];
+                let subgroup = if let Some(last_index) = last_index {
+                    if index != last_index {
+                        group.push(Vec::new())
+                    }
+                    group.last_mut().unwrap()
+                } else {
+                    group.push(Vec::new());
+                    group.last_mut().unwrap()
+                };
+                subgroup.push(value);
+                last_index = Some(index);
+            } else {
+                last_index = None;
             }
         }
         *self = Array::from(
             groups
                 .into_iter()
+                .map(|group| {
+                    group
+                        .into_iter()
+                        .map(Array::from)
+                        .map(Value::from)
+                        .collect::<Vec<_>>()
+                })
                 .map(Array::from)
                 .map(Value::from)
                 .collect::<Vec<_>>(),

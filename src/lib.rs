@@ -13,6 +13,7 @@ pub mod lex;
 pub mod parse;
 mod pervade;
 pub mod primitive;
+pub mod run;
 pub mod value;
 mod vm;
 
@@ -23,7 +24,7 @@ use std::{
     rc::Rc,
 };
 
-pub use {compile::Assembly, error::*, io::*};
+pub use {compile::Assembly, error::*, io::*, run::Uiua};
 
 #[derive(Debug, Clone)]
 pub struct Ident(Rc<str>);

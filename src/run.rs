@@ -196,15 +196,17 @@ impl Uiua {
             id: FunctionId::Anonymous(Span::Builtin),
             instrs,
         };
-        self.call_stack.push(StackFrame {
+        self.exec(StackFrame {
             function: Rc::new(func),
             call_span: 0,
             pc: 0,
-        });
-        self.exec()
+        })
     }
-    fn exec(&mut self) -> UiuaResult {
-        'outer: while let Some(frame) = self.call_stack.last_mut() {
+    fn exec(&mut self, frame: StackFrame) -> UiuaResult {
+        let ret_height = self.call_stack.len();
+        self.call_stack.push(frame);
+        'outer: while self.call_stack.len() > ret_height {
+            let frame = self.call_stack.last_mut().unwrap();
             while let Some(instr) = frame.function.instrs.get(frame.pc) {
                 match instr {
                     Instr::Push(val) => self.stack.push(val.clone()),
@@ -238,9 +240,30 @@ impl Uiua {
         }
         Ok(())
     }
+    pub fn call(&mut self) -> UiuaResult {
+        let call_span = self.span_index();
+        let value = self.stack.pop().unwrap_or_else(|| todo!());
+        if value.is_function() {
+            let function = value.into_function();
+            let new_frame = StackFrame {
+                function,
+                call_span,
+                pc: 0,
+            };
+            self.exec(new_frame)
+        } else {
+            self.stack.push(value);
+            Ok(())
+        }
+    }
+    fn span_index(&self) -> usize {
+        self.call_stack.last().map_or(0, |frame| frame.call_span)
+    }
+    pub fn span(&self) -> &Span {
+        &self.spans[self.span_index()]
+    }
     pub fn error(&self, message: impl ToString) -> UiuaError {
-        let span = self.spans[self.call_stack.last().unwrap().call_span].clone();
-        UiuaError::Run(span.sp(message.to_string()))
+        UiuaError::Run(self.span().clone().sp(message.to_string()))
     }
     pub fn pop(&mut self, arg: impl StackArg) -> UiuaResult<Value> {
         self.stack.pop().ok_or_else(|| {

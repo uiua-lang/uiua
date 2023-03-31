@@ -168,9 +168,6 @@ macro_rules! cmp_impl {
     ($name:ident $eq:tt $ordering:expr) => {
         pub mod $name {
             use super::*;
-            pub fn is(ordering: Ordering) -> f64 {
-                (ordering $eq $ordering) as u8 as f64
-            }
             pub fn always_greater<A, B>(_: &A, _: &B) -> f64 {
                 ($ordering $eq Ordering::Less) as u8 as f64
             }
@@ -181,9 +178,6 @@ macro_rules! cmp_impl {
                 (b.partial_cmp(a)
                     .unwrap_or_else(|| b.is_nan().cmp(&a.is_nan()))
                     $eq $ordering) as u8 as f64
-            }
-            pub fn byte_byte(a: &u8, b: &u8) -> f64 {
-                (b.cmp(a) $eq $ordering) as u8 as f64
             }
             pub fn byte_num(a: &u8, b: &f64) -> f64 {
                 (b.partial_cmp(&(*a as f64))

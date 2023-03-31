@@ -170,6 +170,9 @@ mod array {
     pub fn byte(array: &Array) -> &[u8] {
         array.bytes()
     }
+    pub fn char(array: &Array) -> &[char] {
+        array.chars()
+    }
 }
 
 macro_rules! value_un_impl {
@@ -212,26 +215,24 @@ value_un_impl!(round, (Num, number, num), (Byte, byte, byte));
 
 macro_rules! value_bin_impl {
     ($name:ident
-        $(,($a_ty:ident, $af:ident, $b_ty:ident, $bf:ident, $ab:ident))*
-        $(,|$a_fb:ident, $b_fb:ident| $fallback:expr)?
+        $(,($a_ty:ident, $get_a:ident, $b_ty:ident, $get_b:ident, $ab:ident))*
     $(,)?) => {
         impl Value {
             #[allow(unreachable_patterns)]
             pub fn $name(&self, other: &Self, env: &Env) -> RuntimeResult<Self> {
                 Ok(match (self.ty(), other.ty()) {
                     $((Type::$a_ty, Type::$b_ty) => {
-                        Value::from(pervade::$name::$ab(&self.$af(), &other.$bf()))
+                        Value::from(pervade::$name::$ab(&self.$get_a(), &other.$get_b()))
                     })*
                     (Type::Array, Type::Array) => {
                         Value::from(self.array().$name(other.array(), env)?)
                     }
                     $((Type::Array, Type::$b_ty) => {
-                        Value::from(self.array().$name(&Array::from(other.$bf().clone()), env)?)
+                        Value::from(self.array().$name(&Array::from(other.$get_b().clone()), env)?)
                     }),*
                     $((Type::$a_ty, Type::Array) => {
-                        Value::from(Array::$name(&Array::from(self.$af().clone()), other.array(), env)?)
+                        Value::from(Array::$name(&Array::from(self.$get_a().clone()), other.array(), env)?)
                     }),*
-                    $(($a_fb, $b_fb) => $fallback,)?
                     (a, b) => return Err(pervade::$name::error(a, b, env))
                 })
             }
@@ -239,7 +240,46 @@ macro_rules! value_bin_impl {
     };
 }
 
-value_bin_impl!(
+macro_rules! array_bin_impl {
+    ($name:ident
+        $(,($a_ty:ident, $get_a:ident, $b_ty:ident, $get_b:ident, $ab:ident))*
+    $(,)?) => {
+        impl Array {
+            #[allow(unreachable_patterns)]
+            pub fn $name(&self, other: &Self, env: &Env) -> RuntimeResult<Self> {
+                let ash = self.shape();
+                let bsh = other.shape();
+                Ok(match (self.ty(), other.ty()) {
+                    $((ArrayType::$a_ty, ArrayType::$b_ty) =>
+                        bin_pervade(ash, array::$get_a(self), bsh, array::$get_b(other), env, pervade::$name::$ab)?.into(),)*
+                    (ArrayType::Value, ArrayType::Value) => {
+                        bin_pervade_fallible(ash, self.values(), bsh, other.values(), env, Value::$name)?.into()
+                    }
+                    $((ArrayType::Value, ArrayType::$b_ty) => {
+                        bin_pervade_fallible(ash, self.values(), bsh, array::$get_b(other), env,
+                            |a, b, env| Value::$name(a, &b.clone().into(), env))?.into()
+                    },)*
+                    $((ArrayType::$a_ty, ArrayType::Value) => {
+                        bin_pervade_fallible(ash, array::$get_a(self), bsh, other.values(), env,
+                            |a, b, env| Value::$name(&a.clone().into(), b, env))?.into()
+                    },)*
+                    (a, b) => return Err(pervade::$name::error(a, b, env)),
+                })
+            }
+        }
+    }
+}
+
+macro_rules! full_bin_impl {
+    ($name:ident
+        $(,($a_ty:ident, $get_a:ident, $b_ty:ident, $get_b:ident, $ab:ident))*
+    $(,)?) => {
+        value_bin_impl!($name $(,($a_ty, $get_a, $b_ty, $get_b, $ab))*);
+        array_bin_impl!($name $(,($a_ty, $get_a, $b_ty, $get_b, $ab))*);
+    };
+}
+
+full_bin_impl!(
     add,
     (Num, number, Num, number, num_num),
     (Num, number, Char, char, num_char),
@@ -251,7 +291,7 @@ value_bin_impl!(
     (Num, number, Byte, byte, num_byte),
 );
 
-value_bin_impl!(
+full_bin_impl!(
     sub,
     (Num, number, Num, number, num_num),
     (Num, number, Char, char, num_char),
@@ -263,44 +303,44 @@ value_bin_impl!(
     (Num, number, Byte, byte, num_byte),
 );
 
-value_bin_impl!(
+full_bin_impl!(
     mul,
     (Num, number, Num, number, num_num),
     (Byte, byte, Byte, byte, byte_byte),
     (Byte, byte, Num, number, byte_num),
     (Num, number, Byte, byte, num_byte),
 );
-value_bin_impl!(
+full_bin_impl!(
     div,
     (Num, number, Num, number, num_num),
     (Byte, byte, Byte, byte, byte_byte),
     (Byte, byte, Num, number, byte_num),
     (Num, number, Byte, byte, num_byte),
 );
-value_bin_impl!(
+full_bin_impl!(
     modulus,
     (Num, number, Num, number, num_num),
     (Byte, byte, Byte, byte, byte_byte),
     (Byte, byte, Num, number, byte_num),
     (Num, number, Byte, byte, num_byte),
 );
-value_bin_impl!(
+full_bin_impl!(
     pow,
     (Num, number, Num, number, num_num),
     (Byte, byte, Byte, byte, byte_byte),
     (Byte, byte, Num, number, byte_num),
     (Num, number, Byte, byte, num_byte),
 );
-value_bin_impl!(
+full_bin_impl!(
     log,
     (Num, number, Num, number, num_num),
     (Byte, byte, Byte, byte, byte_byte),
     (Byte, byte, Num, number, byte_num),
     (Num, number, Byte, byte, num_byte),
 );
-value_bin_impl!(atan2, (Num, number, Num, number, num_num));
+full_bin_impl!(atan2, (Num, number, Num, number, num_num));
 
-value_bin_impl!(
+full_bin_impl!(
     min,
     (Num, number, Num, number, num_num),
     (Char, char, Char, char, char_char),
@@ -314,7 +354,7 @@ value_bin_impl!(
     (Num, number, Byte, byte, num_byte),
 );
 
-value_bin_impl!(
+full_bin_impl!(
     max,
     (Num, number, Num, number, num_num),
     (Char, char, Char, char, char_char),
@@ -333,13 +373,35 @@ macro_rules! cmp_impls {
         $(
             value_bin_impl!(
                 $name,
+                // Value comparable
                 (Num, number, Num, number, num_num),
-                (Byte, byte, Byte, byte, byte_byte),
+                (Byte, byte, Byte, byte, generic),
                 (Char, char, Char, char, generic),
                 (Num, number, Byte, byte, num_byte),
                 (Byte, byte, Num, number, byte_num),
-                (Function, function, Function, function, generic),
-                |a, b| pervade::$name::is(b.cmp(&a)).into()
+                // Type comparable
+                (Num, number, Char, char, always_less),
+                (Num, number, Function, function, always_less),
+                (Byte, byte, Char, char, always_less),
+                (Byte, byte, Function, function, always_less),
+                (Char, char, Num, number, always_greater),
+                (Char, char, Byte, byte, always_greater),
+                (Char, char, Function, function, always_less),
+            );
+
+            array_bin_impl!(
+                $name,
+                // Value comparable
+                (Num, number, Num, number, num_num),
+                (Byte, byte, Byte, byte, generic),
+                (Char, char, Char, char, generic),
+                (Num, number, Byte, byte, num_byte),
+                (Byte, byte, Num, number, byte_num),
+                // Type comparable
+                (Num, number, Char, char, always_less),
+                (Char, char, Num, number, always_greater),
+                (Byte, byte, Char, char, always_less),
+                (Char, char, Byte, byte, always_greater),
             );
         )*
     };

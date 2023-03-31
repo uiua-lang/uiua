@@ -277,6 +277,7 @@ impl Value {
     pub fn fill_value(&self, env: &Env) -> RuntimeResult<Value> {
         Ok(match self.ty() {
             Type::Num => 0.0.into(),
+            Type::Byte => 0.into(),
             Type::Char => ' '.into(),
             Type::Function => return Err(env.error("Functions do not have a fill value")),
             Type::Array => {
@@ -306,12 +307,13 @@ impl Value {
             |shape, data| rotate(&index, shape, data),
             |shape, data| rotate(&index, shape, data),
             |shape, data| rotate(&index, shape, data),
+            |shape, data| rotate(&index, shape, data),
         );
         Ok(())
     }
     pub fn transpose(&mut self) {
         let arr = self.coerce_array();
-        arr.data_mut(transpose, transpose, transpose);
+        arr.data_mut(transpose, transpose, transpose, transpose);
     }
     pub fn enclose(&mut self) {
         *self = Array::from((Vec::new(), vec![take(self)]))
@@ -498,6 +500,7 @@ impl Value {
                         .unwrap_or_else(|| a.is_nan().cmp(&b.is_nan()))
                 })
             },
+            |shape, bytes| sort_array(shape, bytes, Ord::cmp),
             |shape, chars| sort_array(shape, chars, Ord::cmp),
             |shape, values| sort_array(shape, values, Ord::cmp),
         );
@@ -506,6 +509,7 @@ impl Value {
     pub fn parse_num(&mut self, env: &Env) -> RuntimeResult {
         match self.ty() {
             Type::Num => {}
+            Type::Byte => {}
             Type::Char => {
                 *self = self
                     .char()
@@ -746,6 +750,7 @@ fn pick(index: &[isize], array: &Array, env: &Env) -> RuntimeResult<Value> {
     }
     Ok(match array.ty() {
         ArrayType::Num => pick_impl(array.shape(), index, array.numbers()),
+        ArrayType::Byte => pick_impl(array.shape(), index, array.bytes()),
         ArrayType::Char => pick_impl(array.shape(), index, array.chars()),
         ArrayType::Value => pick_impl(array.shape(), index, array.values()),
     })

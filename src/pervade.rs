@@ -26,6 +26,9 @@ pub mod abs {
     pub fn num(a: &f64) -> f64 {
         a.abs()
     }
+    pub fn byte(a: &u8) -> u8 {
+        *a
+    }
     pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot take the absolute value of {a}"))
     }
@@ -35,6 +38,13 @@ pub mod sign {
     pub fn num(a: &f64) -> f64 {
         a.signum()
     }
+    pub fn byte(a: &u8) -> u8 {
+        if *a == 0 {
+            0
+        } else {
+            1
+        }
+    }
     pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot get the sign of {a}"))
     }
@@ -43,6 +53,9 @@ pub mod sqrt {
     use super::*;
     pub fn num(a: &f64) -> f64 {
         a.sqrt()
+    }
+    pub fn byte(a: &u8) -> u8 {
+        (*a as f64).sqrt() as u8
     }
     pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot take the square root of {a}"))
@@ -89,6 +102,9 @@ pub mod floor {
     pub fn num(a: &f64) -> f64 {
         a.floor()
     }
+    pub fn byte(a: &u8) -> u8 {
+        *a
+    }
     pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot get the floor of {a}"))
     }
@@ -98,6 +114,9 @@ pub mod ceil {
     pub fn num(a: &f64) -> f64 {
         a.ceil()
     }
+    pub fn byte(a: &u8) -> u8 {
+        *a
+    }
     pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot get the ceiling of {a}"))
     }
@@ -106,6 +125,9 @@ pub mod round {
     use super::*;
     pub fn num(a: &f64) -> f64 {
         a.round()
+    }
+    pub fn byte(a: &u8) -> u8 {
+        *a
     }
     pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot get the rounded value of {a}"))
@@ -132,14 +154,27 @@ macro_rules! cmp_impl {
                 (ordering $eq $ordering) as u8 as f64
             }
             pub fn always_greater<A, B>(_: &A, _: &B) -> f64 {
-                ($ordering $eq Ordering::Greater) as u8 as f64
+                ($ordering $eq Ordering::Less) as u8 as f64
             }
             pub fn always_less<A, B>(_: &A, _: &B) -> f64 {
-                ($ordering $eq Ordering::Less) as u8 as f64
+                ($ordering $eq Ordering::Greater) as u8 as f64
             }
             pub fn num_num(a: &f64, b: &f64) -> f64 {
                 (b.partial_cmp(a)
                     .unwrap_or_else(|| b.is_nan().cmp(&a.is_nan()))
+                    $eq $ordering) as u8 as f64
+            }
+            pub fn byte_byte(a: &u8, b: &u8) -> f64 {
+                (b.cmp(a) $eq $ordering) as u8 as f64
+            }
+            pub fn byte_num(a: &u8, b: &f64) -> f64 {
+                (b.partial_cmp(&(*a as f64))
+                    .unwrap_or_else(|| b.is_nan().cmp(&false))
+                    $eq $ordering) as u8 as f64
+            }
+            pub fn num_byte(a: &f64, b: &u8) -> f64 {
+                ((*b as f64).partial_cmp(a)
+                    .unwrap_or_else(|| false.cmp(&a.is_nan()))
                     $eq $ordering) as u8 as f64
             }
             pub fn generic<T: Ord>(a: &T, b: &T) -> f64 {
@@ -164,10 +199,25 @@ pub mod add {
     pub fn num_num(a: &f64, b: &f64) -> f64 {
         b + a
     }
+    pub fn byte_byte(a: &u8, b: &u8) -> f64 {
+        (*b as i16 + *a as i16) as u8 as f64
+    }
+    pub fn byte_num(a: &u8, b: &f64) -> f64 {
+        (*b as i16 + *a as i16) as u8 as f64
+    }
+    pub fn num_byte(a: &f64, b: &u8) -> f64 {
+        (*b as i16 + *a as i16) as u8 as f64
+    }
     pub fn num_char(a: &f64, b: &char) -> char {
         char::from_u32((*b as i64 + *a as i64) as u32).unwrap_or('\0')
     }
     pub fn char_num(a: &char, b: &f64) -> char {
+        char::from_u32((*b as i64 + *a as i64) as u32).unwrap_or('\0')
+    }
+    pub fn byte_char(a: &u8, b: &char) -> char {
+        char::from_u32((*b as i64 + *a as i64) as u32).unwrap_or('\0')
+    }
+    pub fn char_byte(a: &char, b: &u8) -> char {
         char::from_u32((*b as i64 + *a as i64) as u32).unwrap_or('\0')
     }
     pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
@@ -180,11 +230,23 @@ pub mod sub {
     pub fn num_num(a: &f64, b: &f64) -> f64 {
         b - a
     }
+    pub fn byte_byte(a: &u8, b: &u8) -> f64 {
+        (*b as i16 - *a as i16) as f64
+    }
+    pub fn byte_num(a: &u8, b: &f64) -> f64 {
+        *b - *a as f64
+    }
+    pub fn num_byte(a: &f64, b: &u8) -> f64 {
+        *b as f64 - *a
+    }
     pub fn num_char(a: &f64, b: &char) -> char {
         char::from_u32(((*b as i64) - (*a as i64)) as u32).unwrap_or('\0')
     }
     pub fn char_char(a: &char, b: &char) -> f64 {
         ((*b as i64) - (*a as i64)) as f64
+    }
+    pub fn byte_char(a: &u8, b: &char) -> char {
+        char::from_u32(((*b as i64) - (*a as i64)) as u32).unwrap_or('\0')
     }
     pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot subtract {a} from {b}"))
@@ -196,6 +258,15 @@ pub mod mul {
     pub fn num_num(a: &f64, b: &f64) -> f64 {
         b * a
     }
+    pub fn byte_byte(a: &u8, b: &u8) -> f64 {
+        (*b as i16 * *a as i16) as f64
+    }
+    pub fn byte_num(a: &u8, b: &f64) -> f64 {
+        *b * *a as f64
+    }
+    pub fn num_byte(a: &f64, b: &u8) -> f64 {
+        *b as f64 * *a
+    }
     pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot multiply {a} and {b}"))
     }
@@ -206,6 +277,15 @@ pub mod div {
     pub fn num_num(a: &f64, b: &f64) -> f64 {
         b / a
     }
+    pub fn byte_byte(a: &u8, b: &u8) -> f64 {
+        (*b as i16 / *a as i16) as f64
+    }
+    pub fn byte_num(a: &u8, b: &f64) -> f64 {
+        *b / *a as f64
+    }
+    pub fn num_byte(a: &f64, b: &u8) -> f64 {
+        *b as f64 / *a
+    }
     pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot divide {a} by {b}"))
     }
@@ -215,6 +295,15 @@ pub mod modulus {
     use super::*;
     pub fn num_num(a: &f64, b: &f64) -> f64 {
         (b % a + a) % a
+    }
+    pub fn byte_byte(a: &u8, b: &u8) -> f64 {
+        (*b as i16 % *a as i16) as f64
+    }
+    pub fn byte_num(a: &u8, b: &f64) -> f64 {
+        *b % *a as f64
+    }
+    pub fn num_byte(a: &f64, b: &u8) -> f64 {
+        *b as f64 % *a
     }
     pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot take the modulus of {a} by {b}"))
@@ -236,6 +325,15 @@ pub mod pow {
     pub fn num_num(a: &f64, b: &f64) -> f64 {
         b.powf(*a)
     }
+    pub fn byte_byte(a: &u8, b: &u8) -> f64 {
+        (*b as i16).pow(*a as u32) as f64
+    }
+    pub fn byte_num(a: &u8, b: &f64) -> f64 {
+        (*b as i16).pow(*a as u32) as f64
+    }
+    pub fn num_byte(a: &f64, b: &u8) -> f64 {
+        (*b as i16).pow(*a as u32) as f64
+    }
     pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot get the power of {a} to {b}"))
     }
@@ -245,6 +343,15 @@ pub mod root {
     use super::*;
     pub fn num_num(a: &f64, b: &f64) -> f64 {
         b.powf(1.0 / a)
+    }
+    pub fn byte_byte(a: &u8, b: &u8) -> f64 {
+        (*b as i16).pow(1 / *a as u32) as f64
+    }
+    pub fn byte_num(a: &u8, b: &f64) -> f64 {
+        (*b as i16).pow(1 / *a as u32) as f64
+    }
+    pub fn num_byte(a: &f64, b: &u8) -> f64 {
+        (*b as i16).pow(1 / *a as u32) as f64
     }
     pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
         env.error(format!("Cannot get the root of {a} to {b}"))
@@ -256,6 +363,9 @@ pub mod max {
     pub fn num_num(a: &f64, b: &f64) -> f64 {
         a.max(*b)
     }
+    pub fn byte_byte(a: &u8, b: &u8) -> u8 {
+        *a.max(b)
+    }
     pub fn char_char(a: &char, b: &char) -> char {
         *a.max(b)
     }
@@ -263,6 +373,18 @@ pub mod max {
         *b
     }
     pub fn char_num(a: &char, _b: &f64) -> char {
+        *a
+    }
+    pub fn num_byte(a: &f64, b: &u8) -> f64 {
+        (*a).max(*b as f64)
+    }
+    pub fn byte_num(a: &u8, b: &f64) -> f64 {
+        (*a as f64).max(*b)
+    }
+    pub fn byte_char(_a: &u8, b: &char) -> char {
+        *b
+    }
+    pub fn char_byte(a: &char, _b: &u8) -> char {
         *a
     }
     pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
@@ -275,6 +397,9 @@ pub mod min {
     pub fn num_num(a: &f64, b: &f64) -> f64 {
         a.min(*b)
     }
+    pub fn byte_byte(a: &u8, b: &u8) -> u8 {
+        *a.min(b)
+    }
     pub fn char_char(a: &char, b: &char) -> char {
         *a.min(b)
     }
@@ -282,6 +407,18 @@ pub mod min {
         *a
     }
     pub fn char_num(_a: &char, b: &f64) -> f64 {
+        *b
+    }
+    pub fn num_byte(a: &f64, b: &u8) -> f64 {
+        (*a).min(*b as f64)
+    }
+    pub fn byte_num(a: &u8, b: &f64) -> f64 {
+        (*a as f64).min(*b)
+    }
+    pub fn byte_char(a: &u8, _b: &char) -> u8 {
+        *a
+    }
+    pub fn char_byte(_a: &char, b: &u8) -> u8 {
         *b
     }
     pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {

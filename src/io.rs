@@ -295,7 +295,7 @@ impl IoOp {
                 }
                 let path: String = path.array().chars().iter().collect();
                 let contents = env.vm.io.read_file(&path, &env.env())?;
-                let arr = Array::from_iter(contents.into_iter().map(|b| b as f64));
+                let arr = Array::from(contents);
                 env.push(arr);
             }
             IoOp::FWriteBytes => {
@@ -304,16 +304,22 @@ impl IoOp {
                 if !path.is_array() || !path.array().is_chars() {
                     return Err(env.error("Path must be a string"));
                 }
-                if !contents.is_array() || !contents.array().is_numbers() {
-                    return Err(env.error("Contents must be a byte array"));
+                if !contents.is_array() {
+                    return Err(env.error("Contents must be an array"));
                 }
                 let path: String = path.array().chars().iter().collect();
-                let contents: Vec<u8> = contents
-                    .array()
-                    .numbers()
-                    .iter()
-                    .map(|n| *n as u8)
-                    .collect();
+                let contents = contents.into_array();
+                let contents = if contents.is_numbers() {
+                    contents
+                        .into_numbers()
+                        .into_iter()
+                        .map(|n| n as u8)
+                        .collect()
+                } else if contents.is_bytes() {
+                    contents.into_bytes()
+                } else {
+                    return Err(env.error("Contents must be a numeric array"));
+                };
                 env.vm.io.write_file(&path, contents, &env.env())?;
             }
             IoOp::FLines => {
@@ -377,10 +383,9 @@ impl IoOp {
                 let bytes = env.vm.io.read_file(&path, &env.env())?;
                 let image = image::load_from_memory(&bytes)
                     .map_err(|e| env.error(&format!("Failed to read image: {}", e)))?
-                    .into_rgba32f();
+                    .into_rgba8();
                 let shape = vec![image.height() as usize, image.width() as usize, 4];
-                let data: Vec<f64> = image.into_raw().into_iter().map(|f| f as f64).collect();
-                let array = Array::from((shape, data));
+                let array = Array::from((shape, image.into_raw()));
                 env.push(array);
             }
             IoOp::ImWrite => {
@@ -427,45 +432,34 @@ pub fn value_to_image_bytes(
 }
 
 pub fn value_to_image(value: &Value, env: &Env) -> RuntimeResult<DynamicImage> {
-    if !value.is_array() || !value.array().is_numbers() || value.array().rank() != 3 {
-        return Err(env.error("Image must be a rank 3 number array"));
+    if !value.is_array() || value.array().rank() != 3 {
+        return Err(env.error("Image must be a rank 3 numeric array"));
     }
     let arr = value.array();
+    let bytes = if arr.is_numbers() {
+        arr.numbers()
+            .iter()
+            .map(|f| (*f * 255.0).floor() as u8)
+            .collect()
+    } else if arr.is_bytes() {
+        arr.bytes().to_vec()
+    } else {
+        return Err(env.error("Image must be a rank 3 numeric array"));
+    };
     let [width, height, px_size] = match arr.shape() {
         &[a, b, c] => [a, b, c],
         _ => unreachable!("Shape checked above"),
     };
     Ok(match px_size {
-        1 => image::GrayImage::from_raw(
-            width as u32,
-            height as u32,
-            arr.numbers()
-                .iter()
-                .map(|f| (*f * 255.0).floor() as u8)
-                .collect::<Vec<_>>(),
-        )
-        .ok_or_else(|| env.error("Failed to create image"))?
-        .into(),
-        3 => image::RgbImage::from_raw(
-            width as u32,
-            height as u32,
-            arr.numbers()
-                .iter()
-                .map(|f| (*f * 255.0).floor() as u8)
-                .collect::<Vec<_>>(),
-        )
-        .ok_or_else(|| env.error("Failed to create image"))?
-        .into(),
-        4 => image::RgbaImage::from_raw(
-            width as u32,
-            height as u32,
-            arr.numbers()
-                .iter()
-                .map(|f| (*f * 255.0).floor() as u8)
-                .collect::<Vec<_>>(),
-        )
-        .ok_or_else(|| env.error("Failed to create image"))?
-        .into(),
+        1 => image::GrayImage::from_raw(width as u32, height as u32, bytes)
+            .ok_or_else(|| env.error("Failed to create image"))?
+            .into(),
+        3 => image::RgbImage::from_raw(width as u32, height as u32, bytes)
+            .ok_or_else(|| env.error("Failed to create image"))?
+            .into(),
+        4 => image::RgbaImage::from_raw(width as u32, height as u32, bytes)
+            .ok_or_else(|| env.error("Failed to create image"))?
+            .into(),
         n => {
             return Err(env.error(format!(
                 "The last dimension of an image array must be 1, 3, or 4, but it is {n}"

@@ -26,6 +26,12 @@ pub trait GridFmt {
     }
 }
 
+impl GridFmt for u8 {
+    fn fmt_grid(&self) -> Grid {
+        vec![format!("{self:02X}").chars().collect()]
+    }
+}
+
 impl GridFmt for f64 {
     fn fmt_grid(&self) -> Grid {
         let positive = self.abs();
@@ -51,6 +57,7 @@ impl GridFmt for Value {
     fn fmt_grid(&self) -> Grid {
         match self.ty() {
             Type::Num => self.number().fmt_grid(),
+            Type::Byte => self.byte().fmt_grid(),
             Type::Char => self.char().fmt_grid(),
             Type::Function => self.function().fmt_grid(),
             Type::Array => self.array().fmt_grid(),
@@ -75,6 +82,7 @@ impl GridFmt for Array {
             }
             match self.ty() {
                 ArrayType::Num => s.push_str(" numbers"),
+                ArrayType::Byte => s.push_str(" bytes"),
                 ArrayType::Char => s.push_str(" chars"),
                 ArrayType::Value => s.push_str(" array"),
             }
@@ -84,6 +92,7 @@ impl GridFmt for Array {
 
         match self.ty() {
             ArrayType::Num => fmt_array(shape, self.numbers(), false, &mut metagrid),
+            ArrayType::Byte => fmt_array(shape, self.bytes(), false, &mut metagrid),
             ArrayType::Char => fmt_array(shape, self.chars(), true, &mut metagrid),
             ArrayType::Value => fmt_array(shape, self.values(), false, &mut metagrid),
         }

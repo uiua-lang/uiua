@@ -33,6 +33,7 @@ impl Default for Array {
 
 pub union Data {
     numbers: ManuallyDrop<Vec<f64>>,
+    bytes: ManuallyDrop<Vec<u8>>,
     chars: ManuallyDrop<Vec<char>>,
     values: ManuallyDrop<Vec<Value>>,
 }
@@ -41,6 +42,7 @@ pub union Data {
 pub enum ArrayType {
     #[default]
     Num,
+    Byte,
     Char,
     Value,
 }
@@ -49,6 +51,7 @@ impl fmt::Display for ArrayType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ArrayType::Num => write!(f, "numbers"),
+            ArrayType::Byte => write!(f, "bytes"),
             ArrayType::Char => write!(f, "characters"),
             ArrayType::Value => write!(f, "values"),
         }
@@ -78,6 +81,9 @@ impl Array {
     pub fn is_numbers(&self) -> bool {
         self.ty == ArrayType::Num
     }
+    pub fn is_bytes(&self) -> bool {
+        self.ty == ArrayType::Byte
+    }
     pub fn is_chars(&self) -> bool {
         self.ty == ArrayType::Char
     }
@@ -91,6 +97,14 @@ impl Array {
     pub fn numbers_mut(&mut self) -> &mut Vec<f64> {
         assert_eq!(self.ty, ArrayType::Num);
         unsafe { &mut self.data.numbers }
+    }
+    pub fn bytes(&self) -> &[u8] {
+        assert_eq!(self.ty, ArrayType::Byte);
+        unsafe { &self.data.bytes }
+    }
+    pub fn bytes_mut(&mut self) -> &mut Vec<u8> {
+        assert_eq!(self.ty, ArrayType::Byte);
+        unsafe { &mut self.data.bytes }
     }
     pub fn chars(&self) -> &[char] {
         assert_eq!(self.ty, ArrayType::Char);
@@ -108,26 +122,30 @@ impl Array {
         assert_eq!(self.ty, ArrayType::Value);
         unsafe { &mut self.data.values }
     }
-    pub fn data<N, C, V, T>(&self, nums: N, chars: C, values: V) -> T
+    pub fn data<N, B, C, V, T>(&self, nums: N, bytes: B, chars: C, values: V) -> T
     where
         N: FnOnce(&[usize], &[f64]) -> T,
+        B: FnOnce(&[usize], &[u8]) -> T,
         C: FnOnce(&[usize], &[char]) -> T,
         V: FnOnce(&[usize], &[Value]) -> T,
     {
         match self.ty {
             ArrayType::Num => nums(&self.shape, unsafe { &self.data.numbers }),
+            ArrayType::Byte => bytes(&self.shape, unsafe { &self.data.bytes }),
             ArrayType::Char => chars(&self.shape, unsafe { &self.data.chars }),
             ArrayType::Value => values(&self.shape, unsafe { &self.data.values }),
         }
     }
-    pub fn data_mut<N, C, V, T>(&mut self, nums: N, chars: C, values: V) -> T
+    pub fn data_mut<N, B, C, V, T>(&mut self, nums: N, bytes: B, chars: C, values: V) -> T
     where
         N: FnOnce(&mut [usize], &mut [f64]) -> T,
+        B: FnOnce(&mut [usize], &mut [u8]) -> T,
         C: FnOnce(&mut [usize], &mut [char]) -> T,
         V: FnOnce(&mut [usize], &mut [Value]) -> T,
     {
         match self.ty {
             ArrayType::Num => nums(&mut self.shape, unsafe { &mut self.data.numbers }),
+            ArrayType::Byte => bytes(&mut self.shape, unsafe { &mut self.data.bytes }),
             ArrayType::Char => chars(&mut self.shape, unsafe { &mut self.data.chars }),
             ArrayType::Value => values(&mut self.shape, unsafe { &mut self.data.values }),
         }
@@ -135,6 +153,10 @@ impl Array {
     fn take_flat_values(&mut self) -> Vec<Value> {
         match self.ty {
             ArrayType::Num => take(unsafe { &mut *self.data.numbers })
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+            ArrayType::Byte => take(unsafe { &mut *self.data.bytes })
                 .into_iter()
                 .map(Into::into)
                 .collect(),
@@ -157,6 +179,10 @@ impl Array {
     pub fn into_numbers(mut self) -> Vec<f64> {
         assert_eq!(self.ty, ArrayType::Num);
         take(unsafe { &mut *self.data.numbers })
+    }
+    pub fn into_bytes(mut self) -> Vec<u8> {
+        assert_eq!(self.ty, ArrayType::Byte);
+        take(unsafe { &mut *self.data.bytes })
     }
     pub fn into_chars(mut self) -> Vec<char> {
         assert_eq!(self.ty, ArrayType::Char);
@@ -237,6 +263,7 @@ impl Array {
         let new_len: usize = self.shape.iter().product();
         match self.ty {
             ArrayType::Num => force_length(self.numbers_mut(), new_len),
+            ArrayType::Byte => force_length(self.bytes_mut(), new_len),
             ArrayType::Char => force_length(self.chars_mut(), new_len),
             ArrayType::Value => force_length(self.values_mut(), new_len),
         }
@@ -245,6 +272,7 @@ impl Array {
         let shape = self.shape.clone();
         match self.ty {
             ArrayType::Num => reverse(&shape, self.numbers_mut()),
+            ArrayType::Byte => reverse(&shape, self.bytes_mut()),
             ArrayType::Char => reverse(&shape, self.chars_mut()),
             ArrayType::Value => reverse(&shape, self.values_mut()),
         }
@@ -343,6 +371,11 @@ impl Array {
                 take(unsafe { &mut self.data.numbers }),
                 |numbers| Value::from(Array::from((shape.clone(), numbers))),
             ),
+            ArrayType::Byte => {
+                into_cells(cell_count, take(unsafe { &mut self.data.bytes }), |bytes| {
+                    Value::from(Array::from((shape.clone(), bytes)))
+                })
+            }
             ArrayType::Char => {
                 into_cells(cell_count, take(unsafe { &mut self.data.chars }), |chars| {
                     Value::from(Array::from((shape.clone(), chars)))
@@ -367,6 +400,11 @@ impl Array {
                 take(unsafe { &mut self.data.numbers }),
                 |numbers| Array::from((shape.clone(), numbers)),
             ),
+            ArrayType::Byte => {
+                into_cells(cell_count, take(unsafe { &mut self.data.bytes }), |bytes| {
+                    Array::from((shape.clone(), bytes))
+                })
+            }
             ArrayType::Char => {
                 into_cells(cell_count, take(unsafe { &mut self.data.chars }), |chars| {
                     Array::from((shape.clone(), chars))
@@ -407,6 +445,7 @@ impl Array {
         }
         Some(match self.ty {
             ArrayType::Num => into_first(cell_count, shape, unsafe { &mut self.data.numbers }),
+            ArrayType::Byte => into_first(cell_count, shape, unsafe { &mut self.data.bytes }),
             ArrayType::Char => into_first(cell_count, shape, unsafe { &mut self.data.chars }),
             ArrayType::Value => into_first(cell_count, shape, unsafe { &mut self.data.values }),
         })
@@ -461,6 +500,11 @@ array_bin_impl!(
     (Num, numbers, Num, numbers, num_num),
     (Num, numbers, Char, chars, num_char),
     (Char, chars, Num, numbers, char_num),
+    (Byte, bytes, Byte, bytes, byte_byte),
+    (Byte, bytes, Char, chars, byte_char),
+    (Char, chars, Byte, bytes, char_byte),
+    (Byte, bytes, Num, numbers, byte_num),
+    (Num, numbers, Byte, bytes, num_byte),
 );
 
 array_bin_impl!(
@@ -468,13 +512,48 @@ array_bin_impl!(
     (Num, numbers, Num, numbers, num_num),
     (Num, numbers, Char, chars, num_char),
     (Char, chars, Char, chars, char_char),
+    (Byte, bytes, Byte, bytes, byte_byte),
+    (Byte, bytes, Char, chars, byte_char),
+    (Char, chars, Char, chars, char_char),
+    (Byte, bytes, Num, numbers, byte_num),
+    (Num, numbers, Byte, bytes, num_byte),
 );
 
-array_bin_impl!(mul, (Num, numbers, Num, numbers, num_num));
-array_bin_impl!(div, (Num, numbers, Num, numbers, num_num));
-array_bin_impl!(modulus, (Num, numbers, Num, numbers, num_num));
-array_bin_impl!(pow, (Num, numbers, Num, numbers, num_num));
-array_bin_impl!(root, (Num, numbers, Num, numbers, num_num));
+array_bin_impl!(
+    mul,
+    (Num, numbers, Num, numbers, num_num),
+    (Byte, bytes, Byte, bytes, byte_byte),
+    (Byte, bytes, Num, numbers, byte_num),
+    (Num, numbers, Byte, bytes, num_byte),
+);
+array_bin_impl!(
+    div,
+    (Num, numbers, Num, numbers, num_num),
+    (Byte, bytes, Byte, bytes, byte_byte),
+    (Byte, bytes, Num, numbers, byte_num),
+    (Num, numbers, Byte, bytes, num_byte),
+);
+array_bin_impl!(
+    modulus,
+    (Num, numbers, Num, numbers, num_num),
+    (Byte, bytes, Byte, bytes, byte_byte),
+    (Byte, bytes, Num, numbers, byte_num),
+    (Num, numbers, Byte, bytes, num_byte),
+);
+array_bin_impl!(
+    pow,
+    (Num, numbers, Num, numbers, num_num),
+    (Byte, bytes, Byte, bytes, byte_byte),
+    (Byte, bytes, Num, numbers, byte_num),
+    (Num, numbers, Byte, bytes, num_byte),
+);
+array_bin_impl!(
+    root,
+    (Num, numbers, Num, numbers, num_num),
+    (Byte, bytes, Byte, bytes, byte_byte),
+    (Byte, bytes, Num, numbers, byte_num),
+    (Num, numbers, Byte, bytes, num_byte),
+);
 array_bin_impl!(atan2, (Num, numbers, Num, numbers, num_num));
 
 array_bin_impl!(
@@ -483,6 +562,12 @@ array_bin_impl!(
     (Char, chars, Char, chars, char_char),
     (Char, chars, Num, numbers, char_num),
     (Num, numbers, Char, chars, num_char),
+    (Byte, bytes, Byte, bytes, byte_byte),
+    (Char, chars, Char, chars, char_char),
+    (Char, chars, Byte, bytes, char_byte),
+    (Byte, bytes, Char, chars, byte_char),
+    (Byte, bytes, Num, numbers, byte_num),
+    (Num, numbers, Byte, bytes, num_byte),
 );
 
 array_bin_impl!(
@@ -491,6 +576,12 @@ array_bin_impl!(
     (Char, chars, Char, chars, char_char),
     (Char, chars, Num, numbers, char_num),
     (Num, numbers, Char, chars, num_char),
+    (Byte, bytes, Byte, bytes, byte_byte),
+    (Char, chars, Char, chars, char_char),
+    (Char, chars, Byte, bytes, char_byte),
+    (Byte, bytes, Char, chars, byte_char),
+    (Byte, bytes, Num, numbers, byte_num),
+    (Num, numbers, Byte, bytes, num_byte),
 );
 
 macro_rules! cmp_impls {
@@ -499,9 +590,14 @@ macro_rules! cmp_impls {
             array_bin_impl!(
                 $name,
                 (Num, numbers, Num, numbers, num_num),
+                (Byte, bytes, Byte, bytes, byte_byte),
                 (Char, chars, Char, chars, generic),
+                (Num, numbers, Byte, bytes, num_byte),
+                (Byte, bytes, Num, numbers, byte_num),
                 (Num, numbers, Char, chars, always_less),
                 (Char, chars, Num, numbers, always_greater),
+                (Byte, bytes, Char, chars, always_less),
+                (Char, chars, Byte, bytes, always_greater),
             );
         )*
     };
@@ -512,15 +608,10 @@ cmp_impls!(is_eq, is_ne, is_lt, is_le, is_gt, is_ge);
 impl Drop for Array {
     fn drop(&mut self) {
         match self.ty {
-            ArrayType::Num => unsafe {
-                ManuallyDrop::drop(&mut self.data.numbers);
-            },
-            ArrayType::Char => unsafe {
-                ManuallyDrop::drop(&mut self.data.chars);
-            },
-            ArrayType::Value => unsafe {
-                ManuallyDrop::drop(&mut self.data.values);
-            },
+            ArrayType::Num => unsafe { ManuallyDrop::drop(&mut self.data.numbers) },
+            ArrayType::Byte => unsafe { ManuallyDrop::drop(&mut self.data.bytes) },
+            ArrayType::Char => unsafe { ManuallyDrop::drop(&mut self.data.chars) },
+            ArrayType::Value => unsafe { ManuallyDrop::drop(&mut self.data.values) },
         }
     }
 }
@@ -533,6 +624,13 @@ impl Clone for Array {
                 shape: self.shape.clone(),
                 data: Data {
                     numbers: ManuallyDrop::new(self.numbers().to_vec()),
+                },
+            },
+            ArrayType::Byte => Self {
+                ty: self.ty,
+                shape: self.shape.clone(),
+                data: Data {
+                    bytes: ManuallyDrop::new(self.bytes().to_vec()),
                 },
             },
             ArrayType::Char => Self {
@@ -563,6 +661,7 @@ impl PartialEq for Array {
         }
         match self.ty {
             ArrayType::Num => self.numbers() == other.numbers(),
+            ArrayType::Byte => self.bytes() == other.bytes(),
             ArrayType::Char => self.chars() == other.chars(),
             ArrayType::Value => self.values() == other.values(),
         }
@@ -601,6 +700,7 @@ impl Ord for Array {
                         Ordering::Equal
                     })
                 }
+                ArrayType::Byte => self.bytes().cmp(other.bytes()),
                 ArrayType::Char => self.chars().cmp(other.chars()),
                 ArrayType::Value => self.values().cmp(other.values()),
             })
@@ -611,6 +711,7 @@ impl fmt::Debug for Array {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.ty {
             ArrayType::Num => write!(f, "{:?}", self.numbers()),
+            ArrayType::Byte => write!(f, "{:?}", self.bytes()),
             ArrayType::Char if self.rank() == 1 => {
                 write!(f, "{:?}", self.chars().iter().collect::<String>())
             }
@@ -624,6 +725,7 @@ impl fmt::Display for Array {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.ty {
             ArrayType::Num => write!(f, "{:?}", self.numbers()),
+            ArrayType::Byte => write!(f, "{:?}", self.bytes()),
             ArrayType::Char if self.rank() == 1 => {
                 write!(f, "{}", self.chars().iter().collect::<String>())
             }
@@ -642,12 +744,27 @@ impl From<ArrayType> for Array {
                 ArrayType::Num => Data {
                     numbers: ManuallyDrop::new(vec![]),
                 },
+                ArrayType::Byte => Data {
+                    bytes: ManuallyDrop::new(vec![]),
+                },
                 ArrayType::Char => Data {
                     chars: ManuallyDrop::new(vec![]),
                 },
                 ArrayType::Value => Data {
                     values: ManuallyDrop::new(vec![]),
                 },
+            },
+        }
+    }
+}
+
+impl From<u8> for Array {
+    fn from(n: u8) -> Self {
+        Self {
+            shape: vec![],
+            ty: ArrayType::Byte,
+            data: Data {
+                bytes: ManuallyDrop::new(vec![n]),
             },
         }
     }
@@ -709,6 +826,18 @@ where
         let mut arr = Array::from(data);
         arr.shape = shape;
         arr
+    }
+}
+
+impl From<Vec<u8>> for Array {
+    fn from(v: Vec<u8>) -> Self {
+        Self {
+            shape: vec![v.len()],
+            ty: ArrayType::Byte,
+            data: Data {
+                bytes: ManuallyDrop::new(v),
+            },
+        }
     }
 }
 

@@ -550,6 +550,7 @@ impl Primitive {
                 let f = arr.data(
                     |_, _| None,
                     |_, _| None,
+                    |_, _| None,
                     |_, values| {
                         values.iter().filter(|v| v.is_function()).find_map(|v| {
                             let f = v.function();

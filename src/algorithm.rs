@@ -634,7 +634,7 @@ fn put(indices: &[isize], value: Value, array: &mut Array, env: &Env) -> Runtime
             }
             let mut cells = take(array).into_cells();
             cells[index] = value;
-            *array = Array::from(cells);
+            *array = Array::from_cells(cells);
             Ok(())
         } else {
             Err(env.error(format!(
@@ -649,7 +649,7 @@ fn put(indices: &[isize], value: Value, array: &mut Array, env: &Env) -> Runtime
             let mut cells = take(array).into_cells();
             let cell = cells.get_mut(index).unwrap();
             put(&indices[1..], value, cell, env)?;
-            *array = Array::from(cells);
+            *array = Array::from_cells(cells);
             Ok(())
         } else {
             Err(env.error(format!(
@@ -688,9 +688,9 @@ fn array_windows(mut sizes: &[usize], array: &mut Array, env: &Env) -> RuntimeRe
         for array in &mut window {
             array_windows(sizes, array, env)?;
         }
-        windows.push(Array::from(window));
+        windows.push(Array::from_cells(window));
     }
-    *array = Array::from(windows);
+    *array = Array::from_cells(windows);
     Ok(())
 }
 

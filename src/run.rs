@@ -1,6 +1,7 @@
 use std::{collections::HashMap, fs, mem::take, path::Path, rc::Rc};
 
 use crate::{
+    array::Array,
     ast::*,
     function::{Function, FunctionId, Instr},
     lex::{Sp, Span},
@@ -149,7 +150,7 @@ impl<'io> Uiua<'io> {
             }
             Word::Char(c) => self.push_instr(Instr::Push(c.into())),
             Word::String(s) => self.push_instr(Instr::Push(s.into())),
-            Word::Ident(_) => todo!(),
+            Word::Ident(ident) => self.ident(ident, word.span)?,
             Word::Strand(items) => {
                 self.push_instr(Instr::BeginArray);
                 self.words(items)?;
@@ -162,15 +163,35 @@ impl<'io> Uiua<'io> {
                 let span = self.push_span(word.span);
                 self.push_instr(Instr::EndArray(true, span));
             }
-            Word::Func(_) => todo!(),
-            Word::RefFunc(_) => todo!(),
+            Word::Func(func) => self.func(func, word.span)?,
+            Word::RefFunc(func) => self.ref_func(func, word.span)?,
             Word::Primitive(p) => {
                 let span = self.push_span(word.span);
                 self.push_instr(Instr::Primitive(p, span));
             }
-            Word::Modified(_) => todo!(),
+            Word::Modified(m) => self.modified(*m, word.span)?,
         }
         Ok(())
+    }
+    fn ident(&mut self, ident: Ident, span: Span) -> UiuaResult {
+        if let Some(idx) = self.global_names.get(&ident) {
+            self.push_instr(Instr::CopyGlobal(*idx));
+        } else if let Some(prim) = Primitive::from_name(ident.as_str()) {
+            let span = self.push_span(span);
+            self.push_instr(Instr::Primitive(prim, span));
+        } else {
+            return Err(span.sp(format!("unknown identifier {}", ident)).into());
+        }
+        Ok(())
+    }
+    fn func(&mut self, func: Func, span: Span) -> UiuaResult {
+        todo!("func")
+    }
+    fn ref_func(&mut self, func: Func, span: Span) -> UiuaResult {
+        todo!("ref func")
+    }
+    fn modified(&mut self, modified: Modified, span: Span) -> UiuaResult {
+        todo!("modified")
     }
     fn exec_global_instrs(&mut self, instrs: Vec<Instr>) -> UiuaResult {
         let func = Function {
@@ -193,9 +214,30 @@ impl<'io> Uiua<'io> {
                 match instr {
                     Instr::Push(val) => self.stack.push(val.clone()),
                     Instr::BeginArray => self.array_stack.push(self.stack.len()),
-                    Instr::EndArray(_, _) => todo!(),
+                    Instr::EndArray(normalize, span) => {
+                        let start = self.array_stack.pop().unwrap();
+                        if start > self.stack.len() {
+                            return Err(self.spans[*span]
+                                .clone()
+                                .sp("array removed elements".into())
+                                .into());
+                        }
+                        let mut array = Array::from_iter(self.stack.drain(start..));
+                        if *normalize {
+                            if let Some((a, b)) = array.normalize() {
+                                return Err(self.spans[*span]
+                                    .clone()
+                                    .sp(format!(
+                                        "array items have different shapes: {a:?} and {b:?}"
+                                    ))
+                                    .into());
+                            }
+                        } else {
+                            array.normalize_type();
+                        }
+                        self.stack.push(array.into());
+                    }
                     Instr::CopyGlobal(idx) => self.stack.push(self.globals[*idx].clone()),
-                    Instr::BindGlobal(_) => todo!(),
                     &Instr::Primitive(prim, span) => {
                         frame.spans.push(span);
                         prim.run(self)?;

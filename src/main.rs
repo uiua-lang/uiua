@@ -10,7 +10,7 @@ use std::{
 
 use clap::Parser;
 use notify::{EventKind, RecursiveMode, Watcher};
-use uiua::{format::format_file, value::Value, Assembly, UiuaResult};
+use uiua::{format::format_file, value::Value, Uiua, UiuaResult};
 
 fn main() {
     let _ = ctrlc::set_handler(|| {
@@ -116,7 +116,7 @@ fn watch() -> io::Result<()> {
 }
 
 fn run_file(path: &Path) -> UiuaResult<Vec<Value>> {
-    Assembly::load_file(path)?.run()
+    Ok(Uiua::default().load_file(path)?.take_stack())
 }
 
 #[derive(Parser)]

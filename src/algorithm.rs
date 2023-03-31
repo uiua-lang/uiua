@@ -9,8 +9,7 @@ use std::{
 use crate::{
     array::{Array, ArrayType},
     value::{Type, Value},
-    vm::Env,
-    RuntimeResult,
+    Uiua, UiuaResult,
 };
 
 type CmpFn<T> = fn(&T, &T) -> Ordering;
@@ -38,7 +37,7 @@ impl Value {
             &[]
         }
     }
-    pub fn as_shape(&self, env: &Env, error: &'static str) -> RuntimeResult<Vec<usize>> {
+    pub fn as_shape(&self, env: &Uiua, error: &'static str) -> UiuaResult<Vec<usize>> {
         if self.is_array() {
             let arr = self.array();
             let numbers = if arr.is_numbers() {
@@ -69,10 +68,10 @@ impl Value {
             return Err(env.error(error));
         }
     }
-    pub fn as_indices(&self, env: &Env, requirement: &'static str) -> RuntimeResult<Vec<isize>> {
+    pub fn as_indices(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<isize>> {
         self.as_number_list(env, requirement, |f| f % 1.0 == 0.0, |f| f as isize)
     }
-    pub fn as_naturals(&self, env: &Env, requirement: &'static str) -> RuntimeResult<Vec<usize>> {
+    pub fn as_naturals(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<usize>> {
         self.as_number_list(
             env,
             requirement,
@@ -82,11 +81,11 @@ impl Value {
     }
     fn as_number_list<T>(
         &self,
-        env: &Env,
+        env: &Uiua,
         requirement: &'static str,
         test: fn(f64) -> bool,
         convert: fn(f64) -> T,
-    ) -> RuntimeResult<Vec<T>> {
+    ) -> UiuaResult<Vec<T>> {
         Ok(match self.ty() {
             Type::Num => {
                 let f = self.number();
@@ -117,7 +116,7 @@ impl Value {
             _ => return Err(env.error(requirement)),
         })
     }
-    pub fn range(&mut self, env: &Env) -> RuntimeResult {
+    pub fn range(&mut self, env: &Uiua) -> UiuaResult {
         let shape = self.as_shape(
             env,
             "Range only accepts a single natural number \
@@ -132,7 +131,7 @@ impl Value {
             self.array_mut().reverse();
         }
     }
-    pub fn join(&mut self, other: Value, env: &Env) -> RuntimeResult {
+    pub fn join(&mut self, other: Value, env: &Uiua) -> UiuaResult {
         match (self.is_array(), other.is_array()) {
             (true, true) => self.array_mut().join(other.into_array(), env)?,
             (true, false) => self.array_mut().join(Array::from(other), env)?,
@@ -157,7 +156,7 @@ impl Value {
             *self = Array::from(take(self)).into();
         }
     }
-    pub fn reshape(&mut self, mut other: Value, env: &Env) -> RuntimeResult {
+    pub fn reshape(&mut self, mut other: Value, env: &Uiua) -> UiuaResult {
         swap(self, &mut other);
         let shape = other.as_shape(env, "Shape must be a list of natural numbers")?;
         self.coerce_array().reshape(shape);
@@ -178,7 +177,7 @@ impl Value {
         self.coerce_array();
         self.into_array()
     }
-    pub fn replicate(&mut self, items: Self, env: &Env) -> RuntimeResult {
+    pub fn replicate(&mut self, items: Self, env: &Uiua) -> UiuaResult {
         if !items.is_array() {
             return Err(env.error("Cannot filter non-array"));
         }
@@ -220,7 +219,7 @@ impl Value {
         *self = Array::from(data).normalized_type().into();
         Ok(())
     }
-    pub fn pick(&mut self, from: Self, env: &Env) -> RuntimeResult {
+    pub fn pick(&mut self, from: Self, env: &Uiua) -> UiuaResult {
         if !from.is_array() || from.array().rank() == 0 {
             return Err(env.error("Cannot pick from rank less than 1"));
         }
@@ -229,7 +228,7 @@ impl Value {
         *self = pick(&index, array, env)?;
         Ok(())
     }
-    pub fn first(&mut self, env: &Env) -> RuntimeResult {
+    pub fn first(&mut self, env: &Uiua) -> UiuaResult {
         if !self.is_array() {
             return Ok(());
         }
@@ -239,7 +238,7 @@ impl Value {
             .ok_or_else(|| env.error("Empty array has no first"))?;
         Ok(())
     }
-    pub fn last(&mut self, env: &Env) -> RuntimeResult {
+    pub fn last(&mut self, env: &Uiua) -> UiuaResult {
         if !self.is_array() {
             return Ok(());
         }
@@ -249,7 +248,7 @@ impl Value {
             .ok_or_else(|| env.error("Empty array has no last"))?;
         Ok(())
     }
-    pub fn take(&mut self, from: Self, env: &Env) -> RuntimeResult {
+    pub fn take(&mut self, from: Self, env: &Uiua) -> UiuaResult {
         if !from.is_array() || from.array().rank() == 0 {
             return Err(env.error("Cannot take from rank less than 1"));
         }
@@ -267,7 +266,7 @@ impl Value {
         *self = taken.into();
         Ok(())
     }
-    pub fn drop(&mut self, from: Self, env: &Env) -> RuntimeResult {
+    pub fn drop(&mut self, from: Self, env: &Uiua) -> UiuaResult {
         if !from.is_array() || from.array().rank() == 0 {
             return Err(env.error("Cannot drop from rank less than 1"));
         }
@@ -292,7 +291,7 @@ impl Value {
         *self = taken.into();
         Ok(())
     }
-    pub fn fill_value(&self, env: &Env) -> RuntimeResult<Value> {
+    pub fn fill_value(&self, env: &Uiua) -> UiuaResult<Value> {
         Ok(match self.ty() {
             Type::Num => 0.0.into(),
             Type::Byte => 0.into(),
@@ -305,14 +304,14 @@ impl Value {
                     .into_values()
                     .into_iter()
                     .map(|val| val.fill_value(env))
-                    .collect::<RuntimeResult<_>>()?;
+                    .collect::<UiuaResult<_>>()?;
                 Array::from((array.shape().to_vec(), values))
                     .normalized()
                     .into()
             }
         })
     }
-    pub fn rotate(&mut self, mut target: Self, env: &Env) -> RuntimeResult {
+    pub fn rotate(&mut self, mut target: Self, env: &Uiua) -> UiuaResult {
         swap(self, &mut target);
         let index = target.as_indices(env, "Index must be a list of integers")?;
         if index.is_empty() || index.iter().all(|i| *i == 0) {
@@ -343,7 +342,7 @@ impl Value {
             .normalized_type()
             .into();
     }
-    pub fn couple(&mut self, mut other: Self, env: &Env) -> RuntimeResult {
+    pub fn couple(&mut self, mut other: Self, env: &Uiua) -> UiuaResult {
         let a = self.coerce_array();
         let b = other.coerce_array();
         if a.shape() != b.shape() {
@@ -363,7 +362,7 @@ impl Value {
         a.shape_mut().insert(0, 2);
         Ok(())
     }
-    pub fn grade(&mut self, env: &Env) -> RuntimeResult {
+    pub fn grade(&mut self, env: &Uiua) -> UiuaResult {
         let arr = self.coerce_array();
         if arr.rank() < 1 {
             return Err(env.error("Cannot grade rank less than 1"));
@@ -375,7 +374,7 @@ impl Value {
         *arr = Array::from((vec![indices.len()], nums));
         Ok(())
     }
-    pub fn select(&mut self, mut from: Self, env: &Env) -> RuntimeResult {
+    pub fn select(&mut self, mut from: Self, env: &Uiua) -> UiuaResult {
         let indices = self.as_indices(env, "Indices must be a list of integers")?;
         let array = from.coerce_array();
         let mut selected = Vec::with_capacity(indices.len());
@@ -387,7 +386,7 @@ impl Value {
             .into();
         Ok(())
     }
-    pub fn windows(&mut self, from: Self, env: &Env) -> RuntimeResult {
+    pub fn windows(&mut self, from: Self, env: &Uiua) -> UiuaResult {
         let mut array = from.coerce_into_array();
         let sizes = self.as_naturals(env, "Window size must be a list of positive integers")?;
         if sizes.is_empty() {
@@ -397,7 +396,7 @@ impl Value {
         *self = array.into();
         Ok(())
     }
-    pub fn classify(&mut self, env: &Env) -> RuntimeResult {
+    pub fn classify(&mut self, env: &Uiua) -> UiuaResult {
         if self.rank() < 1 {
             return Err(env.error("Cannot classify rank less than 1"));
         }
@@ -424,7 +423,7 @@ impl Value {
         )
         .into();
     }
-    pub fn group(&mut self, target: Self, env: &Env) -> RuntimeResult {
+    pub fn group(&mut self, target: Self, env: &Uiua) -> UiuaResult {
         let indices = self.as_indices(env, "Indices must be a list of integers")?;
         let values = target.coerce_into_array().into_values();
         let group_count = values
@@ -472,7 +471,7 @@ impl Value {
         .into();
         Ok(())
     }
-    pub fn deduplicate(&mut self, env: &Env) -> RuntimeResult {
+    pub fn deduplicate(&mut self, env: &Uiua) -> UiuaResult {
         if !self.is_array() {
             return Err(env.error("Cannot deduplicate non-array"));
         }
@@ -490,7 +489,7 @@ impl Value {
         *self = Array::from(deduped).normalized().into();
         Ok(())
     }
-    pub fn index_of(&mut self, searched_in: Self, env: &Env) -> RuntimeResult {
+    pub fn index_of(&mut self, searched_in: Self, env: &Uiua) -> UiuaResult {
         if !searched_in.is_array() {
             return Err(env.error("Cannot search in non-array"));
         }
@@ -512,7 +511,7 @@ impl Value {
         *self = Array::from((result_shape, indices)).into();
         Ok(())
     }
-    pub fn put(&mut self, value: Self, array: Self, env: &Env) -> RuntimeResult {
+    pub fn put(&mut self, value: Self, array: Self, env: &Uiua) -> UiuaResult {
         if !array.is_array() {
             return Err(env.error("Cannot put into non-array"));
         }
@@ -530,7 +529,7 @@ impl Value {
         *self = array.into();
         Ok(())
     }
-    pub fn sort(&mut self, env: &Env) -> RuntimeResult {
+    pub fn sort(&mut self, env: &Uiua) -> UiuaResult {
         if !self.is_array() {
             return Err(env.error("Cannot sort non-array"));
         }
@@ -550,7 +549,7 @@ impl Value {
         );
         Ok(())
     }
-    pub fn parse_num(&mut self, env: &Env) -> RuntimeResult {
+    pub fn parse_num(&mut self, env: &Uiua) -> UiuaResult {
         match self.ty() {
             Type::Num => {}
             Type::Byte => {}
@@ -580,7 +579,7 @@ impl Value {
         }
         Ok(())
     }
-    pub fn normalize(&mut self, env: &Env) -> RuntimeResult {
+    pub fn normalize(&mut self, env: &Uiua) -> UiuaResult {
         if self.is_array() {
             if let Some((a, b)) = self.array_mut().normalize() {
                 return Err(env.error(format!(
@@ -590,7 +589,7 @@ impl Value {
         }
         Ok(())
     }
-    pub fn indices(&mut self, env: &Env) -> RuntimeResult {
+    pub fn indices(&mut self, env: &Uiua) -> UiuaResult {
         if !self.is_array() {
             return Err(env.error("Cannot get indices of non-array"));
         }
@@ -619,7 +618,7 @@ fn signed_index(index: isize, len: usize) -> Option<usize> {
     }
 }
 
-fn put(indices: &[isize], value: Value, array: &mut Array, env: &Env) -> RuntimeResult {
+fn put(indices: &[isize], value: Value, array: &mut Array, env: &Uiua) -> UiuaResult {
     if indices.len() == 1 {
         let index = signed_index(indices[0], array.shape()[0]);
         if let Some(index) = index {
@@ -661,7 +660,7 @@ fn put(indices: &[isize], value: Value, array: &mut Array, env: &Env) -> Runtime
     }
 }
 
-fn array_windows(mut sizes: &[usize], array: &mut Array, env: &Env) -> RuntimeResult {
+fn array_windows(mut sizes: &[usize], array: &mut Array, env: &Uiua) -> UiuaResult {
     if sizes.is_empty() || array.shape().is_empty() {
         return Ok(());
     }
@@ -731,7 +730,7 @@ fn rotate<T: Clone>(index: &[isize], shape: &[usize], data: &mut [T]) {
     }
 }
 
-fn take_array(index: &[isize], array: Array, env: &Env) -> RuntimeResult<Array> {
+fn take_array(index: &[isize], array: Array, env: &Uiua) -> UiuaResult<Array> {
     let mut shape = array.shape().to_vec();
     let mut cells = array.into_values();
     let take_count = index[0];
@@ -767,12 +766,12 @@ fn take_array(index: &[isize], array: Array, env: &Env) -> RuntimeResult<Array> 
         cells = cells
             .into_iter()
             .map(|cell| take_array(index, cell.into_array(), env).map(Value::from))
-            .collect::<RuntimeResult<_>>()?;
+            .collect::<UiuaResult<_>>()?;
         Ok(Array::from((shape, cells)).normalized())
     }
 }
 
-fn pick(index: &[isize], array: &Array, env: &Env) -> RuntimeResult<Value> {
+fn pick(index: &[isize], array: &Array, env: &Uiua) -> UiuaResult<Value> {
     if index.len() > array.rank() {
         return Err(env.error(format!(
             "Cannot pick with index of greater rank: \

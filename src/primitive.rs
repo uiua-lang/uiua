@@ -3,9 +3,7 @@ use std::{
     fmt,
 };
 
-use crate::{
-    array::Array, function::FunctionId, io::*, lex::Simple, value::*, vm::Env, RuntimeResult,
-};
+use crate::{array::Array, function::FunctionId, io::*, lex::Simple, value::*, Uiua, UiuaResult};
 
 macro_rules! primitive {
     ($((
@@ -256,7 +254,7 @@ impl Primitive {
         let exact_match = res.name().map_or(false, |i| i == lower);
         (exact_match || matching.next().is_none()).then_some(res)
     }
-    pub(crate) fn run(&self, env: &mut Env) -> RuntimeResult {
+    pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
             Primitive::Pi => env.push(PI),
             Primitive::Infinity => env.push(INFINITY),
@@ -333,7 +331,8 @@ impl Primitive {
                 env.push(index);
             }
             Primitive::Dup => {
-                let x = env.top_mut(1)?.clone();
+                let x = env.pop(1)?;
+                env.push(x.clone());
                 env.push(x);
             }
             Primitive::Flip => {
@@ -538,9 +537,11 @@ impl Primitive {
                 let f = env.pop(1)?;
                 let handler = env.pop(2)?;
                 let size = env.stack_size();
+                let antisize = env.antistack_size();
                 env.push(f);
                 if let Err(e) = env.call() {
-                    env.truncate(size);
+                    env.truncate_stack(size);
+                    env.truncate_antistack(antisize);
                     env.push(e.message());
                     env.push(handler);
                     env.call()?;

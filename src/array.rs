@@ -4,7 +4,7 @@ use std::{
     mem::{swap, take, ManuallyDrop},
 };
 
-use crate::{algorithm::*, function::Function, value::Value, vm::Env, RuntimeResult};
+use crate::{algorithm::*, function::Function, value::Value, Uiua, UiuaResult};
 
 pub struct Array {
     ty: ArrayType,
@@ -117,10 +117,10 @@ impl Array {
     }
     pub fn try_iter_numbers(
         &self,
-        env: &Env,
+        env: &Uiua,
         requirement: &'static str,
-        mut f: impl FnMut(f64, &Env) -> RuntimeResult,
-    ) -> RuntimeResult {
+        mut f: impl FnMut(f64, &Uiua) -> UiuaResult,
+    ) -> UiuaResult {
         match self.ty {
             ArrayType::Num => {
                 for &num in self.numbers() {
@@ -315,7 +315,7 @@ impl Array {
             ArrayType::Value => reverse(&shape, self.values_mut()),
         }
     }
-    pub fn join(&mut self, mut other: Self, env: &Env) -> RuntimeResult {
+    pub fn join(&mut self, mut other: Self, env: &Uiua) -> UiuaResult {
         if self.shape.is_empty() && other.shape.is_empty() {
             // Atom case
             self.take_values_from(other);

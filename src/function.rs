@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{lex::Span, primitive::Primitive, value::Value, vm::Env, Ident, RuntimeResult};
+use crate::{lex::Span, primitive::Primitive, value::Value, Ident, Uiua, UiuaResult};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Instr {
@@ -68,7 +68,7 @@ impl Function {
             _ => None,
         }
     }
-    pub fn inverse(&self, env: &Env, require_unary: bool) -> RuntimeResult<Self> {
+    pub fn inverse(&self, env: &Uiua, require_unary: bool) -> UiuaResult<Self> {
         match self.instrs.as_slice() {
             [Instr::Primitive(prim, span)] => {
                 return if let Some(inv) = prim.inverse() {

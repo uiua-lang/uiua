@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, fmt::Display};
 
-use crate::{vm::Env, RuntimeError, RuntimeResult};
+use crate::{Uiua, UiuaError, UiuaResult};
 
 pub mod not {
     use super::*;
@@ -10,7 +10,7 @@ pub mod not {
     pub fn byte(a: &u8) -> u8 {
         1u8.saturating_sub(*a)
     }
-    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot negate {a}"))
     }
 }
@@ -23,7 +23,7 @@ pub mod neg {
     pub fn byte(a: &u8) -> f64 {
         -(*a as f64)
     }
-    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot negate {a}"))
     }
 }
@@ -35,7 +35,7 @@ pub mod abs {
     pub fn byte(a: &u8) -> u8 {
         *a
     }
-    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot take the absolute value of {a}"))
     }
 }
@@ -51,7 +51,7 @@ pub mod sign {
             1
         }
     }
-    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the sign of {a}"))
     }
 }
@@ -63,7 +63,7 @@ pub mod sqrt {
     pub fn byte(a: &u8) -> u8 {
         (*a as f64).sqrt() as u8
     }
-    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot take the square root of {a}"))
     }
 }
@@ -75,7 +75,7 @@ pub mod sin {
     pub fn byte(a: &u8) -> f64 {
         (*a as f64).sin()
     }
-    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the sine of {a}"))
     }
 }
@@ -87,7 +87,7 @@ pub mod cos {
     pub fn byte(a: &u8) -> f64 {
         (*a as f64).cos()
     }
-    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the cosine of {a}"))
     }
 }
@@ -99,7 +99,7 @@ pub mod asin {
     pub fn byte(a: &u8) -> f64 {
         (*a as f64).asin()
     }
-    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the arcsine of {a}"))
     }
 }
@@ -111,7 +111,7 @@ pub mod acos {
     pub fn byte(a: &u8) -> f64 {
         (*a as f64).acos()
     }
-    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the arccosine of {a}"))
     }
 }
@@ -123,7 +123,7 @@ pub mod floor {
     pub fn byte(a: &u8) -> u8 {
         *a
     }
-    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the floor of {a}"))
     }
 }
@@ -135,7 +135,7 @@ pub mod ceil {
     pub fn byte(a: &u8) -> u8 {
         *a
     }
-    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the ceiling of {a}"))
     }
 }
@@ -147,7 +147,7 @@ pub mod round {
     pub fn byte(a: &u8) -> u8 {
         *a
     }
-    pub fn error<T: Display>(a: T, env: &Env) -> RuntimeError {
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the rounded value of {a}"))
     }
 }
@@ -158,9 +158,9 @@ pub fn un_pervade<A, B>(a: &[A], f: fn(&A) -> B) -> Vec<B> {
 
 pub fn un_pervade_fallible<A, B>(
     a: &[A],
-    env: &Env,
-    f: fn(&A, &Env) -> RuntimeResult<B>,
-) -> RuntimeResult<Vec<B>> {
+    env: &Uiua,
+    f: fn(&A, &Uiua) -> UiuaResult<B>,
+) -> UiuaResult<Vec<B>> {
     a.iter().map(|a| f(a, env)).collect()
 }
 
@@ -192,7 +192,7 @@ macro_rules! cmp_impl {
             pub fn generic<T: Ord>(a: &T, b: &T) -> f64 {
                 (b.cmp(a) $eq $ordering) as u8 as f64
             }
-            pub fn error<T: Display>(a: T, b: T, _env: &Env) -> RuntimeError {
+            pub fn error<T: Display>(a: T, b: T, _env: &Uiua) -> UiuaError {
                 unreachable!("Comparisons cannot fail, failed to compare {a} and {b}")
             }
         }
@@ -232,7 +232,7 @@ pub mod add {
     pub fn char_byte(a: &char, b: &u8) -> char {
         char::from_u32((*b as i64 + *a as i64) as u32).unwrap_or('\0')
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
+    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot add {a} and {b}"))
     }
 }
@@ -260,7 +260,7 @@ pub mod sub {
     pub fn byte_char(a: &u8, b: &char) -> char {
         char::from_u32(((*b as i64) - (*a as i64)) as u32).unwrap_or('\0')
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
+    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot subtract {a} from {b}"))
     }
 }
@@ -279,7 +279,7 @@ pub mod mul {
     pub fn num_byte(a: &f64, b: &u8) -> f64 {
         *b as f64 * *a
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
+    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot multiply {a} and {b}"))
     }
 }
@@ -298,7 +298,7 @@ pub mod div {
     pub fn num_byte(a: &f64, b: &u8) -> f64 {
         *b as f64 / *a
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
+    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot divide {a} by {b}"))
     }
 }
@@ -317,7 +317,7 @@ pub mod modulus {
     pub fn num_byte(a: &f64, b: &u8) -> f64 {
         *b as f64 % *a
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
+    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot take the modulus of {a} by {b}"))
     }
 }
@@ -327,7 +327,7 @@ pub mod atan2 {
     pub fn num_num(a: &f64, b: &f64) -> f64 {
         a.atan2(*b)
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
+    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the atan2 of {a} and {b}"))
     }
 }
@@ -346,7 +346,7 @@ pub mod pow {
     pub fn num_byte(a: &f64, b: &u8) -> f64 {
         (*b as i16).pow(*a as u32) as f64
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
+    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the power of {a} to {b}"))
     }
 }
@@ -365,7 +365,7 @@ pub mod log {
     pub fn num_byte(a: &f64, b: &u8) -> f64 {
         (*b as f64).log(*a)
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
+    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the root of {a} to {b}"))
     }
 }
@@ -399,7 +399,7 @@ pub mod max {
     pub fn char_byte(a: &char, _b: &u8) -> char {
         *a
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
+    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the max of {a} and {b}"))
     }
 }
@@ -433,7 +433,7 @@ pub mod min {
     pub fn char_byte(_a: &char, b: &u8) -> u8 {
         *b
     }
-    pub fn error<T: Display>(a: T, b: T, env: &Env) -> RuntimeError {
+    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the min of {a} and {b}"))
     }
 }
@@ -443,9 +443,9 @@ pub fn bin_pervade<A, B, C: Default>(
     a: &[A],
     b_shape: &[usize],
     b: &[B],
-    env: &Env,
+    env: &Uiua,
     f: impl Fn(&A, &B) -> C + Copy,
-) -> RuntimeResult<(Vec<usize>, Vec<C>)> {
+) -> UiuaResult<(Vec<usize>, Vec<C>)> {
     let c_shape = a_shape.max(b_shape).to_vec();
     let c_len: usize = c_shape.iter().product();
     let mut c: Vec<C> = Vec::with_capacity(c_len);
@@ -461,9 +461,9 @@ pub fn bin_pervade_fallible<A, B, C: Default>(
     a: &[A],
     b_shape: &[usize],
     b: &[B],
-    env: &Env,
-    f: impl Fn(&A, &B, &Env) -> RuntimeResult<C> + Copy,
-) -> RuntimeResult<(Vec<usize>, Vec<C>)> {
+    env: &Uiua,
+    f: impl Fn(&A, &B, &Uiua) -> UiuaResult<C> + Copy,
+) -> UiuaResult<(Vec<usize>, Vec<C>)> {
     let c_shape = a_shape.max(b_shape).to_vec();
     let c_len: usize = c_shape.iter().product();
     let mut c: Vec<C> = Vec::with_capacity(c_len);
@@ -480,9 +480,9 @@ fn bin_pervade_recursive<A, B, C>(
     b_shape: &[usize],
     b: &[B],
     c: &mut [C],
-    env: &Env,
+    env: &Uiua,
     f: impl Fn(&A, &B) -> C + Copy,
-) -> RuntimeResult {
+) -> UiuaResult {
     if a_shape == b_shape {
         for ((a, b), c) in a.iter().zip(b).zip(c) {
             *c = f(a, b);
@@ -527,9 +527,9 @@ fn bin_pervade_recursive_fallible<A, B, C>(
     b_shape: &[usize],
     b: &[B],
     c: &mut [C],
-    env: &Env,
-    f: impl Fn(&A, &B, &Env) -> RuntimeResult<C> + Copy,
-) -> RuntimeResult {
+    env: &Uiua,
+    f: impl Fn(&A, &B, &Uiua) -> UiuaResult<C> + Copy,
+) -> UiuaResult {
     if a_shape == b_shape {
         for ((a, b), c) in a.iter().zip(b).zip(c) {
             *c = f(a, b, env)?;

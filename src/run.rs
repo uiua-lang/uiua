@@ -1,47 +1,16 @@
-use std::{
-    collections::HashMap,
-    fs, io,
-    path::{Path, PathBuf},
-    rc::Rc,
-};
+use std::{collections::HashMap, fs, mem::take, path::Path, rc::Rc};
 
 use crate::{
     ast::*,
     function::{Function, FunctionId, Instr},
     lex::{Sp, Span},
-    parse::{parse, ParseError},
+    parse::parse,
     primitive::Primitive,
     value::Value,
-    Ident,
+    Ident, IoBackend, StdIo, UiuaError, UiuaResult,
 };
 
-#[derive(Debug)]
-pub enum UiuaError {
-    Load(PathBuf, io::Error),
-    Format(PathBuf, io::Error),
-    Parse(Vec<Sp<ParseError>>),
-    Run(Sp<String>),
-    Traced {
-        error: Box<Self>,
-        trace: Vec<TraceFrame>,
-    },
-}
-
-pub type UiuaResult<T = ()> = Result<T, UiuaError>;
-
-impl From<Sp<String>> for UiuaError {
-    fn from(value: Sp<String>) -> Self {
-        Self::Run(value)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TraceFrame {
-    pub id: FunctionId,
-    pub span: Span,
-}
-
-pub struct Uiua {
+pub struct Uiua<'io> {
     spans: Vec<Span>,
     stack: Vec<Value>,
     antistack: Vec<Value>,
@@ -50,15 +19,17 @@ pub struct Uiua {
     global_names: HashMap<Ident, usize>,
     new_functions: Vec<Vec<Instr>>,
     call_stack: Vec<StackFrame>,
+    pub(crate) io: &'io dyn IoBackend,
 }
 
 struct StackFrame {
     function: Rc<Function>,
     call_span: usize,
     pc: usize,
+    spans: Vec<usize>,
 }
 
-impl Default for Uiua {
+impl<'io> Default for Uiua<'io> {
     fn default() -> Self {
         Uiua {
             spans: vec![Span::Builtin],
@@ -69,28 +40,38 @@ impl Default for Uiua {
             global_names: HashMap::new(),
             new_functions: Vec::new(),
             call_stack: Vec::new(),
+            io: &StdIo,
         }
     }
 }
 
-impl Uiua {
-    pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult {
+impl<'io> Uiua<'io> {
+    pub fn with_stdio() -> Self {
+        Default::default()
+    }
+    pub fn with_backend(io: &'io dyn IoBackend) -> Self {
+        Uiua {
+            io,
+            ..Default::default()
+        }
+    }
+    pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<&mut Self> {
         let path = path.as_ref();
         let input = fs::read_to_string(path).map_err(|e| UiuaError::Load(path.into(), e))?;
         self.load_impl(&input, Some(path))
     }
-    pub fn load_str(&mut self, input: &str) -> UiuaResult {
+    pub fn load_str(&mut self, input: &str) -> UiuaResult<&mut Self> {
         self.load_impl(input, None)
     }
-    fn load_impl(&mut self, input: &str, path: Option<&Path>) -> UiuaResult {
+    fn load_impl(&mut self, input: &str, path: Option<&Path>) -> UiuaResult<&mut Self> {
         let (items, errors) = parse(input, path);
         if !errors.is_empty() {
-            return Err(UiuaError::Parse(errors));
+            return Err(errors.into());
         }
         for item in items {
             self.item(item)?;
         }
-        Ok(())
+        Ok(self)
     }
     fn item(&mut self, item: Item) -> UiuaResult {
         match item {
@@ -132,7 +113,7 @@ impl Uiua {
         Ok(self.new_functions.pop().unwrap())
     }
     fn words(&mut self, words: Vec<Sp<Word>>) -> UiuaResult {
-        for word in words {
+        for word in words.into_iter().rev() {
             self.word(word)?;
         }
         Ok(())
@@ -199,6 +180,7 @@ impl Uiua {
         self.exec(StackFrame {
             function: Rc::new(func),
             call_span: 0,
+            spans: Vec::new(),
             pc: 0,
         })
     }
@@ -214,7 +196,13 @@ impl Uiua {
                     Instr::EndArray(_, _) => todo!(),
                     Instr::CopyGlobal(idx) => self.stack.push(self.globals[*idx].clone()),
                     Instr::BindGlobal(_) => todo!(),
-                    Instr::Primitive(_, _) => todo!(),
+                    &Instr::Primitive(prim, span) => {
+                        frame.spans.push(span);
+                        prim.run(self)?;
+                        self.call_stack.last_mut().unwrap().spans.pop();
+                        self.call_stack.last_mut().unwrap().pc += 1;
+                        continue 'outer;
+                    }
                     Instr::Call(span) => {
                         let value = self.stack.pop().unwrap();
                         if value.is_function() {
@@ -222,6 +210,7 @@ impl Uiua {
                             let new_frame = StackFrame {
                                 function,
                                 call_span: *span,
+                                spans: Vec::new(),
                                 pc: 0,
                             };
                             frame.pc += 1;
@@ -248,6 +237,7 @@ impl Uiua {
             let new_frame = StackFrame {
                 function,
                 call_span,
+                spans: Vec::new(),
                 pc: 0,
             };
             self.exec(new_frame)
@@ -284,11 +274,84 @@ impl Uiua {
     pub fn pop_result(&mut self) -> UiuaResult<Value> {
         self.pop("result")
     }
-    pub fn push(&mut self, val: Value) {
-        self.stack.push(val);
+    pub fn push(&mut self, val: impl Into<Value>) {
+        self.stack.push(val.into());
     }
-    pub fn antipush(&mut self, val: Value) {
-        self.antistack.push(val);
+    pub fn antipush(&mut self, val: impl Into<Value>) {
+        self.antistack.push(val.into());
+    }
+    pub fn take_stack(&mut self) -> Vec<Value> {
+        take(&mut self.stack)
+    }
+    pub(crate) fn monadic<V: Into<Value>>(&mut self, f: fn(&Value) -> V) -> UiuaResult {
+        let value = self.pop(1)?;
+        self.push(f(&value));
+        Ok(())
+    }
+    pub(crate) fn monadic_env<V: Into<Value>>(
+        &mut self,
+        f: fn(&Value, &Self) -> UiuaResult<V>,
+    ) -> UiuaResult {
+        let value = self.pop(1)?;
+        self.push(f(&value, self)?);
+        Ok(())
+    }
+    pub(crate) fn monadic_mut(&mut self, f: fn(&mut Value)) -> UiuaResult {
+        let mut a = self.pop(1)?;
+        f(&mut a);
+        self.push(a);
+        Ok(())
+    }
+    pub(crate) fn monadic_mut_env(&mut self, f: fn(&mut Value, &Self) -> UiuaResult) -> UiuaResult {
+        let mut a = self.pop(1)?;
+        f(&mut a, self)?;
+        self.push(a);
+        Ok(())
+    }
+    pub(crate) fn dyadic<V: Into<Value>>(&mut self, f: fn(&Value, &Value) -> V) -> UiuaResult {
+        let a = self.pop(1)?;
+        let b = self.pop(2)?;
+        self.push(f(&a, &b));
+        Ok(())
+    }
+    pub(crate) fn dyadic_mut(&mut self, f: fn(&mut Value, Value)) -> UiuaResult {
+        let mut a = self.pop(1)?;
+        let b = self.pop(2)?;
+        f(&mut a, b);
+        self.push(a);
+        Ok(())
+    }
+    pub(crate) fn dyadic_env<V: Into<Value>>(
+        &mut self,
+        f: fn(&Value, &Value, &Self) -> UiuaResult<V>,
+    ) -> UiuaResult {
+        let a = self.pop(1)?;
+        let b = self.pop(2)?;
+        let value = f(&a, &b, self)?.into();
+        self.push(value);
+        Ok(())
+    }
+    pub(crate) fn dyadic_mut_env(
+        &mut self,
+        f: fn(&mut Value, Value, &Self) -> UiuaResult,
+    ) -> UiuaResult {
+        let mut a = self.pop(1)?;
+        let b = self.pop(2)?;
+        f(&mut a, b, self)?;
+        self.push(a);
+        Ok(())
+    }
+    pub(crate) fn stack_size(&self) -> usize {
+        self.stack.len()
+    }
+    pub(crate) fn antistack_size(&self) -> usize {
+        self.antistack.len()
+    }
+    pub(crate) fn truncate_stack(&mut self, size: usize) {
+        self.stack.truncate(size);
+    }
+    pub(crate) fn truncate_antistack(&mut self, size: usize) {
+        self.antistack.truncate(size);
     }
 }
 

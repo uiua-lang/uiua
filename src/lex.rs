@@ -7,7 +7,7 @@ use std::{
     sync::Arc,
 };
 
-use crate::{primitive::Primitive, Ident, RuntimeError};
+use crate::{primitive::Primitive, Ident, UiuaError};
 
 pub fn lex(input: &str, file: Option<&Path>) -> LexResult<Vec<Sp<Token>>> {
     let mut lexer = Lexer::new(input, file);
@@ -123,7 +123,7 @@ impl Span {
     pub(crate) const fn sp<T>(self, value: T) -> Sp<T> {
         Sp { value, span: self }
     }
-    pub fn error(&self, msg: impl Into<String>) -> RuntimeError {
+    pub fn error(&self, msg: impl Into<String>) -> UiuaError {
         self.clone().sp(msg.into()).into()
     }
 }

@@ -42,11 +42,10 @@ Z ← +⚇/- ⁿ2 ~×2 /×.⇌
 #[cfg(test)]
 #[test]
 fn test_examples() {
-    use uiua::Assembly;
+    use uiua::Uiua;
     for example in EXAMPLES {
-        Assembly::load_str(example)
-            .unwrap_or_else(|e| panic!("Example failed:\n{example}\n{e}"))
-            .run()
+        Uiua::with_stdio()
+            .load_str(example)
             .unwrap_or_else(|e| panic!("Example failed:\n{example}\n{e}"));
     }
 }

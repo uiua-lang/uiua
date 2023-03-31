@@ -1,4 +1,5 @@
 use std::{
+    cell::RefCell,
     env, fs,
     io::{stdin, stdout, BufRead, Cursor, Write},
 };
@@ -6,7 +7,7 @@ use std::{
 use image::{DynamicImage, ImageOutputFormat};
 use rand::prelude::*;
 
-use crate::{array::Array, grid_fmt::GridFmt, value::Value, vm::Env, RuntimeResult};
+use crate::{array::Array, grid_fmt::GridFmt, value::Value, Uiua, UiuaResult};
 
 macro_rules! io_op {
     ($((
@@ -70,18 +71,18 @@ io_op! {
 
 #[allow(unused_variables)]
 pub trait IoBackend {
-    fn print_str(&mut self, s: &str);
-    fn rand(&mut self) -> f64;
-    fn show_image(&mut self, image: DynamicImage) -> Result<(), String> {
+    fn print_str(&self, s: &str);
+    fn rand(&self) -> f64;
+    fn show_image(&self, image: DynamicImage) -> Result<(), String> {
         Err("Showing images not supported in this environment".into())
     }
-    fn scan_line(&mut self) -> String {
+    fn scan_line(&self) -> String {
         String::new()
     }
-    fn var(&mut self, name: &str) -> Option<String> {
+    fn var(&self, name: &str) -> Option<String> {
         None
     }
-    fn args(&mut self) -> Vec<String> {
+    fn args(&self) -> Vec<String> {
         Vec::new()
     }
     fn file_exists(&self, path: &str) -> bool {
@@ -93,74 +94,30 @@ pub trait IoBackend {
     fn is_file(&self, path: &str) -> Result<bool, String> {
         Err("File IO not supported in this environment".into())
     }
-    fn read_file(&mut self, path: &str) -> Result<Vec<u8>, String> {
+    fn read_file(&self, path: &str) -> Result<Vec<u8>, String> {
         Err("File IO not supported in this environment".into())
     }
-    fn write_file(&mut self, path: &str, contents: Vec<u8>) -> Result<(), String> {
+    fn write_file(&self, path: &str, contents: Vec<u8>) -> Result<(), String> {
         Err("File IO not supported in this environment".into())
     }
 }
 
-impl<'a, T> IoBackend for &'a mut T
-where
-    T: IoBackend,
-{
-    fn print_str(&mut self, s: &str) {
-        (**self).print_str(s)
-    }
-    fn rand(&mut self) -> f64 {
-        (**self).rand()
-    }
-    fn show_image(&mut self, image: DynamicImage) -> Result<(), String> {
-        (**self).show_image(image)
-    }
-    fn scan_line(&mut self) -> String {
-        (**self).scan_line()
-    }
-    fn var(&mut self, name: &str) -> Option<String> {
-        (**self).var(name)
-    }
-    fn args(&mut self) -> Vec<String> {
-        (**self).args()
-    }
-    fn file_exists(&self, path: &str) -> bool {
-        (**self).file_exists(path)
-    }
-    fn list_dir(&self, path: &str) -> Result<Vec<String>, String> {
-        (**self).list_dir(path)
-    }
-    fn is_file(&self, path: &str) -> Result<bool, String> {
-        (**self).is_file(path)
-    }
-    fn read_file(&mut self, path: &str) -> Result<Vec<u8>, String> {
-        (**self).read_file(path)
-    }
-    fn write_file(&mut self, path: &str, contents: Vec<u8>) -> Result<(), String> {
-        (**self).write_file(path, contents)
-    }
-}
+#[derive(Default)]
+pub struct StdIo;
 
-pub struct StdIo {
-    rng: SmallRng,
-}
-
-impl Default for StdIo {
-    fn default() -> Self {
-        Self {
-            rng: SmallRng::seed_from_u64(instant::now().to_bits()),
-        }
-    }
+thread_local! {
+    static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::seed_from_u64(instant::now().to_bits()));
 }
 
 impl IoBackend for StdIo {
-    fn print_str(&mut self, s: &str) {
+    fn print_str(&self, s: &str) {
         print!("{}", s);
         let _ = stdout().lock().flush();
     }
-    fn rand(&mut self) -> f64 {
-        self.rng.gen()
+    fn rand(&self) -> f64 {
+        RNG.with(|rng| rng.borrow_mut().gen())
     }
-    fn scan_line(&mut self) -> String {
+    fn scan_line(&self) -> String {
         stdin()
             .lock()
             .lines()
@@ -168,10 +125,10 @@ impl IoBackend for StdIo {
             .and_then(Result::ok)
             .unwrap_or_default()
     }
-    fn var(&mut self, name: &str) -> Option<String> {
+    fn var(&self, name: &str) -> Option<String> {
         env::var(name).ok()
     }
-    fn args(&mut self) -> Vec<String> {
+    fn args(&self) -> Vec<String> {
         env::args().collect()
     }
     fn file_exists(&self, path: &str) -> bool {
@@ -190,37 +147,37 @@ impl IoBackend for StdIo {
         }
         Ok(paths)
     }
-    fn read_file(&mut self, path: &str) -> Result<Vec<u8>, String> {
+    fn read_file(&self, path: &str) -> Result<Vec<u8>, String> {
         fs::read(path).map_err(|e| e.to_string())
     }
-    fn write_file(&mut self, path: &str, contents: Vec<u8>) -> Result<(), String> {
+    fn write_file(&self, path: &str, contents: Vec<u8>) -> Result<(), String> {
         fs::write(path, contents).map_err(|e| e.to_string())
     }
 }
 
 impl IoOp {
-    pub(crate) fn run(&self, env: &mut Env) -> RuntimeResult {
+    pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
             IoOp::Show => {
                 let s = env.pop(1)?.grid_string();
-                env.vm.io.print_str(&s);
-                env.vm.io.print_str("\n");
+                env.io.print_str(&s);
+                env.io.print_str("\n");
             }
             IoOp::Print => {
                 let val = env.pop(1)?;
-                env.vm.io.print_str(&val.to_string());
+                env.io.print_str(&val.to_string());
             }
             IoOp::Println => {
                 let val = env.pop(1)?;
-                env.vm.io.print_str(&val.to_string());
-                env.vm.io.print_str("\n");
+                env.io.print_str(&val.to_string());
+                env.io.print_str("\n");
             }
             IoOp::ScanLn => {
-                let line = env.vm.io.scan_line();
+                let line = env.io.scan_line();
                 env.push(line);
             }
             IoOp::Args => {
-                let args = env.vm.io.args();
+                let args = env.io.args();
                 env.push(Array::from_iter(
                     args.into_iter().map(Array::from).map(Value::from),
                 ))
@@ -231,11 +188,11 @@ impl IoOp {
                     return Err(env.error("Argument to var must be a string"));
                 }
                 let key: String = name.array().chars().iter().collect();
-                let var = env.vm.io.var(&key).unwrap_or_default();
+                let var = env.io.var(&key).unwrap_or_default();
                 env.push(var);
             }
             IoOp::Rand => {
-                let num = env.vm.io.rand();
+                let num = env.io.rand();
                 env.push(num);
             }
             IoOp::FReadStr => {
@@ -245,7 +202,7 @@ impl IoOp {
                 }
                 let path: String = path.array().chars().iter().collect();
                 let contents =
-                    String::from_utf8(env.vm.io.read_file(&path).map_err(|e| env.error(e))?)
+                    String::from_utf8(env.io.read_file(&path).map_err(|e| env.error(e))?)
                         .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
                 env.push(contents);
             }
@@ -259,8 +216,7 @@ impl IoOp {
                     return Err(env.error("Contents must be a string"));
                 }
                 let path: String = path.array().chars().iter().collect();
-                env.vm
-                    .io
+                env.io
                     .write_file(&path, contents.to_string().into_bytes())
                     .map_err(|e| env.error(e))?;
             }
@@ -270,7 +226,7 @@ impl IoOp {
                     return Err(env.error("Path must be a string"));
                 }
                 let path: String = path.array().chars().iter().collect();
-                let contents = env.vm.io.read_file(&path).map_err(|e| env.error(e))?;
+                let contents = env.io.read_file(&path).map_err(|e| env.error(e))?;
                 let arr = Array::from(contents);
                 env.push(arr);
             }
@@ -296,8 +252,7 @@ impl IoOp {
                 } else {
                     return Err(env.error("Contents must be a numeric array"));
                 };
-                env.vm
-                    .io
+                env.io
                     .write_file(&path, contents)
                     .map_err(|e| env.error(e))?;
             }
@@ -308,7 +263,7 @@ impl IoOp {
                 }
                 let path: String = path.array().chars().iter().collect();
                 let contents =
-                    String::from_utf8(env.vm.io.read_file(&path).map_err(|e| env.error(e))?)
+                    String::from_utf8(env.io.read_file(&path).map_err(|e| env.error(e))?)
                         .map_err(|e| env.error(format!("Failed to read file: {}", e)))?;
                 let lines_array =
                     Array::from_iter(contents.lines().map(Array::from).map(Value::from));
@@ -320,7 +275,7 @@ impl IoOp {
                     return Err(env.error("Path must be a string"));
                 }
                 let path: String = path.array().chars().iter().collect();
-                let exists = env.vm.io.file_exists(&path);
+                let exists = env.io.file_exists(&path);
                 env.push(exists);
             }
             IoOp::FListDir => {
@@ -329,7 +284,7 @@ impl IoOp {
                     return Err(env.error("Path must be a string"));
                 }
                 let path: String = path.array().chars().iter().collect();
-                let paths = env.vm.io.list_dir(&path).map_err(|e| env.error(e))?;
+                let paths = env.io.list_dir(&path).map_err(|e| env.error(e))?;
                 let paths_array =
                     Array::from_iter(paths.into_iter().map(Array::from).map(Value::from));
                 env.push(paths_array);
@@ -340,7 +295,7 @@ impl IoOp {
                     return Err(env.error("Path must be a string"));
                 }
                 let path: String = path.array().chars().iter().collect();
-                let is_file = env.vm.io.is_file(&path).map_err(|e| env.error(e))?;
+                let is_file = env.io.is_file(&path).map_err(|e| env.error(e))?;
                 env.push(is_file);
             }
             IoOp::Import => {
@@ -349,9 +304,8 @@ impl IoOp {
                     return Err(env.error("Path to import must be a string"));
                 }
                 let path: String = path.array().chars().iter().collect();
-                let input =
-                    String::from_utf8(env.vm.io.read_file(&path).map_err(|e| env.error(e))?)
-                        .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
+                let _input = String::from_utf8(env.io.read_file(&path).map_err(|e| env.error(e))?)
+                    .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
             }
             IoOp::Now => env.push(instant::now()),
             IoOp::ImRead => {
@@ -360,7 +314,7 @@ impl IoOp {
                     return Err(env.error("Path must be a string"));
                 }
                 let path: String = path.array().chars().iter().collect();
-                let bytes = env.vm.io.read_file(&path).map_err(|e| env.error(e))?;
+                let bytes = env.io.read_file(&path).map_err(|e| env.error(e))?;
                 let image = image::load_from_memory(&bytes)
                     .map_err(|e| env.error(format!("Failed to read image: {}", e)))?
                     .into_rgba8();
@@ -388,15 +342,12 @@ impl IoOp {
                 };
                 let bytes =
                     value_to_image_bytes(&value, output_format).map_err(|e| env.error(e))?;
-                env.vm
-                    .io
-                    .write_file(&path, bytes)
-                    .map_err(|e| env.error(e))?;
+                env.io.write_file(&path, bytes).map_err(|e| env.error(e))?;
             }
             IoOp::ImShow => {
                 let value = env.pop(1)?;
                 let image = value_to_image(&value).map_err(|e| env.error(e))?;
-                env.vm.io.show_image(image).map_err(|e| env.error(e))?;
+                env.io.show_image(image).map_err(|e| env.error(e))?;
             }
         }
         Ok(())

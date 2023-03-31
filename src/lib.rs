@@ -3,7 +3,6 @@
 mod algorithm;
 pub mod array;
 pub mod ast;
-mod compile;
 mod error;
 pub mod format;
 pub mod function;
@@ -15,7 +14,6 @@ mod pervade;
 pub mod primitive;
 pub mod run;
 pub mod value;
-mod vm;
 
 use std::{
     cmp::Ordering,
@@ -24,7 +22,7 @@ use std::{
     rc::Rc,
 };
 
-pub use {compile::Assembly, error::*, io::*, run::Uiua};
+pub use {error::*, io::*, run::Uiua};
 
 #[derive(Debug, Clone)]
 pub struct Ident(Rc<str>);

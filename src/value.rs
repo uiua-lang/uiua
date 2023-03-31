@@ -7,8 +7,7 @@ use crate::{
     function::Function,
     grid_fmt::GridFmt,
     pervade::{self, *},
-    vm::Env,
-    RuntimeResult,
+    Uiua, UiuaResult,
 };
 
 pub struct Value(NanBox);
@@ -179,7 +178,7 @@ macro_rules! value_un_impl {
     ($name:ident $(,($rt:ident, $get:ident, $f:ident))* $(,)?) => {
         impl Value {
             #[allow(unreachable_patterns)]
-            pub fn $name(&self, env: &Env) -> RuntimeResult<Self> {
+            pub fn $name(&self, env: &Uiua) -> UiuaResult<Self> {
                 Ok(match self.ty() {
                     $(Type::$rt => pervade::$name::$f(&self.$get()).into(),)*
                     Type::Array => {
@@ -219,7 +218,7 @@ macro_rules! value_bin_impl {
     $(,)?) => {
         impl Value {
             #[allow(unreachable_patterns)]
-            pub fn $name(&self, other: &Self, env: &Env) -> RuntimeResult<Self> {
+            pub fn $name(&self, other: &Self, env: &Uiua) -> UiuaResult<Self> {
                 Ok(match (self.ty(), other.ty()) {
                     $((Type::$a_ty, Type::$b_ty) => {
                         Value::from(pervade::$name::$ab(&self.$get_a(), &other.$get_b()))
@@ -246,7 +245,7 @@ macro_rules! array_bin_impl {
     $(,)?) => {
         impl Array {
             #[allow(unreachable_patterns)]
-            pub fn $name(&self, other: &Self, env: &Env) -> RuntimeResult<Self> {
+            pub fn $name(&self, other: &Self, env: &Uiua) -> UiuaResult<Self> {
                 let ash = self.shape();
                 let bsh = other.shape();
                 Ok(match (self.ty(), other.ty()) {
@@ -576,15 +575,4 @@ fn new_array_nanbox(rc: Rc<Array>) -> NanBox {
 
 fn new_function_nanbox(rc: Rc<Function>) -> NanBox {
     unsafe { NanBox::new::<FunctionRef>(FUNCTION_TAG, Rc::into_raw(rc)) }
-}
-
-#[test]
-fn value_memory_test() {
-    use crate::compile::Assembly;
-    let code = "
-xs = ⇡ 3_4
-show xs
-show ≡/+xs
-";
-    Assembly::load(code, "test.uiua").unwrap().run().unwrap();
 }

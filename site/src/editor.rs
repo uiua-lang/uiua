@@ -2,7 +2,7 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use image::ImageOutputFormat;
 use instant::Duration;
 use leptos::*;
-use uiua::{format::format_str, primitive::Primitive, value_to_image_bytes, Assembly, UiuaResult};
+use uiua::{format::format_str, primitive::Primitive, value_to_image_bytes, Uiua, UiuaResult};
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
 use web_sys::{Event, HtmlDivElement, HtmlImageElement, HtmlTextAreaElement};
 
@@ -285,9 +285,9 @@ pub fn Editor(
 
 /// Returns the output and the formatted code
 fn run_code(code: &str) -> UiuaResult<(String, Option<Vec<u8>>)> {
-    let mut assembly = Assembly::load_str(code)?;
-    let (mut values, io) = assembly.run_with_backend(WebBackend::default())?;
-    let image_bytes = io.image_bytes.or_else(|| {
+    let io = WebBackend::default();
+    let mut values = Uiua::with_backend(&io).load_str(code)?.take_stack();
+    let image_bytes = io.image_bytes.into_inner().or_else(|| {
         for i in 0..values.len() {
             let value = &values[i];
             if let Ok(bytes) = value_to_image_bytes(value, ImageOutputFormat::Png) {
@@ -299,7 +299,7 @@ fn run_code(code: &str) -> UiuaResult<(String, Option<Vec<u8>>)> {
         }
         None
     });
-    let output = io.stdout;
+    let output = io.stdout.into_inner();
     let mut s = String::new();
     if !output.is_empty() {
         if !values.is_empty() {

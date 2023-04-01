@@ -13,6 +13,7 @@ pub enum EditorSize {
     #[default]
     Small,
     Medium,
+    Pad,
 }
 
 #[component]
@@ -38,7 +39,12 @@ pub fn Editor(
     } else {
         examples.iter().map(|s| s.to_string()).collect()
     };
-    let code_em = examples.iter().map(|e| e.lines().count()).max().unwrap() as f32 * 1.3 + 0.5;
+    let code_max_lines = if let EditorSize::Pad = size {
+        10
+    } else {
+        examples.iter().map(|e| e.lines().count()).max().unwrap()
+    };
+    let code_height_em = code_max_lines as f32 * 1.3 + 0.5;
 
     let (code_id, _) = create_signal(cx, format!("code{id}"));
     let (output_id, _) = create_signal(cx, format!("output{id}"));
@@ -48,8 +54,20 @@ pub fn Editor(
     let output_element = move || -> HtmlDivElement { element(&output_id.get()) };
     let image_element = move || -> HtmlImageElement { element(&image_id.get()) };
 
+    let get_saved_code = || {
+        window()
+            .local_storage()
+            .ok()
+            .flatten()
+            .and_then(|storage| storage.get_item("code").ok().flatten())
+    };
+    let code = (matches!(size, EditorSize::Pad))
+        .then(get_saved_code)
+        .flatten()
+        .unwrap_or_else(|| examples[0].to_string());
+
     let (example, set_example) = create_signal(cx, 0);
-    let (code, set_code) = create_signal(cx, examples[0].to_string());
+    let (code, set_code) = create_signal(cx, code);
     let (output, set_output) = create_signal(cx, String::new());
 
     // Run the code
@@ -80,6 +98,11 @@ pub fn Editor(
                 } else {
                     _ = image_element().style().set_property("display", "none");
                     image_element().set_src("");
+                }
+                if let EditorSize::Pad = size {
+                    if let Ok(Some(storage)) = window().local_storage() {
+                        _ = storage.set_item("code", &input);
+                    }
                 }
             }
             Err(e) => {
@@ -195,7 +218,7 @@ pub fn Editor(
 
     let (editor_class, code_class) = match size {
         EditorSize::Small => ("small-editor", "small-code"),
-        EditorSize::Medium => ("medium-editor", "medium-code"),
+        EditorSize::Medium | EditorSize::Pad => ("medium-editor", "medium-code"),
     };
 
     let example_arrow_style = if examples.len() <= 1 {
@@ -208,7 +231,7 @@ pub fn Editor(
         cx,
         match size {
             EditorSize::Small => false,
-            EditorSize::Medium => true,
+            EditorSize::Medium | EditorSize::Pad => true,
         },
     );
 
@@ -251,7 +274,7 @@ pub fn Editor(
                         id={code_id.get()}
                         spellcheck="false"
                         class={format!("code {code_class}")}
-                        style={format!("height: {code_em}em")}
+                        style={format!("height: {code_height_em}em")}
                         on:input=code_input>{ move || code.get() }</textarea>
                 </div>
                 <div id={output_id.get()} class="output">

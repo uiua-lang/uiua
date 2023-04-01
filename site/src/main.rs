@@ -1,6 +1,7 @@
 mod backend;
 mod docs;
 mod editor;
+mod pad;
 
 use std::cell::RefCell;
 
@@ -9,7 +10,7 @@ use leptos_router::*;
 use rand::prelude::*;
 use uiua::primitive::Primitive;
 
-use crate::{docs::*, editor::*};
+use crate::{docs::*, editor::*, pad::*};
 
 const EXAMPLES: &[&str] = &[
     r#"‡=¯1 ≡/-◫2 ≤'A' ≍' '."Um, I um...arrays""#,
@@ -78,6 +79,7 @@ pub fn Site(cx: Scope) -> impl IntoView {
                             <Route path=":page" view=|cx| view!(cx, <DocsPage/>)/>
                             <Route path="" view=|cx| view!(cx, <DocsHome/>)/>
                         </Route>
+                        <Route path="/pad" view=|cx| view!(cx, <Pad/>)/>
                     </Routes>
                 </div>
                 <br/>
@@ -123,6 +125,7 @@ pub fn MainPage(cx: Scope) -> impl IntoView {
             </div>
             <div id="links">
                 <p><A href="docs">{"Documentation"}</A></p>
+                <p><A href="pad">{"Pad"}</A></p>
             </div>
             <Editor
                 examples={EXAMPLES}

@@ -167,6 +167,8 @@ fn word_node(iter: &mut dyn Iterator<Item = &Word>) -> Option<FormatNode> {
                                 arg_nodes.extend(word_node(iter));
                             }
                             return Some(FormatNode::Call(prim.to_string(), arg_nodes, false));
+                        } else {
+                            return Some(FormatNode::Unit(prim.to_string()));
                         }
                     }
                 }
@@ -199,6 +201,8 @@ fn word_node(iter: &mut dyn Iterator<Item = &Word>) -> Option<FormatNode> {
                         arg_nodes.extend(word_node(iter));
                     }
                     return Some(FormatNode::Call(prim.to_string(), arg_nodes, false));
+                } else {
+                    return Some(FormatNode::Unit(prim.to_string()));
                 }
             }
             FormatNode::Unit(prim.to_string())

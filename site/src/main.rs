@@ -72,7 +72,7 @@ pub fn Site(cx: Scope) -> impl IntoView {
             <main>
                 <div id="top">
                     <div id="header">
-                        <h1><img src="uiua-logo.png" style="height: 1em"></img>" Uiua"</h1>
+                        <h1><img src="/uiua-logo.png" style="height: 1em"></img>" Uiua"</h1>
                         <div id="nav">
                             <p><a href="https://github.com/kaikalii/uiua">"GitHub"</a></p>
                             <p><a href="/">"Home"</a></p>
@@ -149,7 +149,7 @@ pub fn MainPage(cx: Scope) -> impl IntoView {
 #[component]
 fn MainText(cx: Scope) -> impl IntoView {
     view! { cx, <div>
-        <p>"Uiua ("<i>"wee-wuh "<audio controls src="weewah.mp3" style="width: 3em; height: 1.2em;"/></i>") is a stack-oriented array programming language with a focus on tacit code (code without named values). Its semantics and primitives (and this site) are largely inspired by "<a href="https://mlochbaum.github.io/BQN/">"BQN"</a>", but it combines the array paradigm with the stack-oriented paradigm to make writing point-free code more workable."</p>
+        <p>"Uiua ("<i>"wee-wuh "<audio controls src="/weewah.mp3" style="width: 3em; height: 1.2em;"/></i>") is a stack-oriented array programming language with a focus on tacit code (code without named values). Its semantics and primitives (and this site) are largely inspired by "<a href="https://mlochbaum.github.io/BQN/">"BQN"</a>", but it combines the array paradigm with the stack-oriented paradigm to make writing point-free code more workable."</p>
         <hr/>
         <h3>"How is Uiua like other array languages?"</h3>
         <p>"Like APL, J, BQN, and many other array languages, Uiua's primary data type is the array. Arrays are multidimensional and rank-polymorphic, meaning that many operation automatically apply to every element."</p>

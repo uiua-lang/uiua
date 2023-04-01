@@ -496,14 +496,17 @@ impl Primitive {
                     env.push(f);
                     return env.call();
                 }
+                let mut deshape = false;
                 let a = if xs.is_array() {
                     xs.into_array()
                 } else {
+                    deshape = true;
                     Array::from(xs)
                 };
                 let b = if ys.is_array() {
                     ys.into_array()
                 } else {
+                    deshape = true;
                     Array::from(ys)
                 };
                 let mut table = Vec::with_capacity(a.len());
@@ -518,7 +521,11 @@ impl Primitive {
                     }
                     table.push(Value::from(Array::from(row).normalized_type()));
                 }
-                env.push(Array::from(table).normalized());
+                let mut table = Array::from(table).normalized();
+                if deshape {
+                    table.deshape();
+                }
+                env.push(table);
             }
             Primitive::Scan => {
                 let f = env.pop(1)?;

@@ -105,6 +105,7 @@ primitive!(
     (1(0), Pop, "pop" + ';'),
     (1(0){1}, Save, "save", Dollar + '⇟'),
     (0[1](1), Load, "load", At + '⇞'),
+    ((None), Pack, "pack" + '⊓'),
     (1(None), Unpack, "unpack" + '⊔'),
     // Pervasive monadic ops
     (1, Sign, "sign" + '$'),
@@ -144,7 +145,7 @@ primitive!(
     (1, First, "first" + '⊢'),
     (1, Last),
     (1, Reverse, "reverse" + '⇌'),
-    (1, Enclose, "enclose" + '⊓'),
+    (1, Enclose, "enclose" + '⌒'),
     (1, Normalize, "normalize" + '□'),
     (1, Deshape, "deshape" + '♭'),
     (1, Transpose, "transpose" + '⍉'),
@@ -322,6 +323,24 @@ impl Primitive {
             Primitive::IndexOf => env.dyadic_mut_env(Value::index_of)?,
             Primitive::Call => env.call()?,
             Primitive::Parse => env.monadic_mut_env(Value::parse_num)?,
+            Primitive::Pack => {
+                let n = env
+                    .pop(1)?
+                    .as_nat()
+                    .ok_or_else(|| env.error("pack expects a natural number"))?
+                    as usize;
+                if env.stack_size() < n {
+                    return Err(env.error(format!(
+                        "pack needs {n} values from the stack, but there are only {}",
+                        env.stack_size()
+                    )));
+                }
+                let mut values = Vec::with_capacity(n);
+                for n in 0..n {
+                    values.push(env.pop(n).unwrap());
+                }
+                env.push(Array::from(values));
+            }
             Primitive::Unpack => {
                 let value = env.pop(1)?;
                 if value.is_array() {

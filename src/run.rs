@@ -269,7 +269,7 @@ impl<'io> Uiua<'io> {
     }
     fn exec_global_instrs(&mut self, instrs: Vec<Instr>) -> UiuaResult {
         let func = Function {
-            id: FunctionId::Anonymous(Span::Builtin),
+            id: FunctionId::Main,
             instrs,
         };
         self.exec(StackFrame {
@@ -288,8 +288,8 @@ impl<'io> Uiua<'io> {
                 self.call_stack.pop();
                 continue;
             };
-            println!("{:?}", self.stack);
-            println!("  {:?}", instr);
+            // println!("{:?}", self.stack);
+            // println!("  {:?}", instr);
             match instr {
                 Instr::Push(val) => self.stack.push(val.clone()),
                 Instr::BeginArray => self.array_stack.push(self.stack.len()),

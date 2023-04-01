@@ -139,6 +139,7 @@ pub enum FunctionId {
     Named(Ident),
     Anonymous(Span),
     Primitive(Primitive),
+    Main,
 }
 
 impl From<Ident> for FunctionId {
@@ -159,6 +160,7 @@ impl fmt::Display for FunctionId {
             FunctionId::Named(name) => write!(f, "`{name}`"),
             FunctionId::Anonymous(span) => write!(f, "fn from {span}"),
             FunctionId::Primitive(id) => write!(f, "{id}"),
+            FunctionId::Main => write!(f, "main"),
         }
     }
 }

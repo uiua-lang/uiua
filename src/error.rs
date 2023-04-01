@@ -94,6 +94,9 @@ fn format_trace<F: fmt::Write>(f: &mut F, trace: &[TraceFrame]) -> fmt::Result {
         .max()
         .unwrap_or(0);
     for frame in trace {
+        if frame.id == FunctionId::Main {
+            continue;
+        }
         if frame == last {
             repetitions += 1;
         } else {

@@ -623,8 +623,10 @@ fn signed_index(index: isize, len: usize) -> Option<usize> {
         } else {
             Some((len as isize + index) as usize)
         }
-    } else {
+    } else if (index as usize) < len {
         Some(index as usize)
+    } else {
+        None
     }
 }
 

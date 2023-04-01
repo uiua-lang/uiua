@@ -260,9 +260,12 @@ impl<'io> Uiua<'io> {
             .find_map(|scope| scope.get(&ident))
         {
             let value = self.globals[*idx].clone();
+            let is_function = value.is_function();
             self.push_instr(Instr::Push(value));
-            let span = self.push_span(span);
-            self.push_instr(Instr::Call(span));
+            if is_function {
+                let span = self.push_span(span);
+                self.push_instr(Instr::Call(span));
+            }
         } else if let Some(prim) = Primitive::from_name(ident.as_str()) {
             let span = self.push_span(span);
             self.push_instr(Instr::Primitive(prim, span));
@@ -431,6 +434,7 @@ impl<'io> Uiua<'io> {
             };
             self.exec(new_frame)
         } else {
+            self.stack.pop();
             self.stack.push(value);
             Ok(())
         }

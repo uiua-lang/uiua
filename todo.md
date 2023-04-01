@@ -24,3 +24,5 @@
 - Docs
 - Tooling
 - Custom monospace font
+- Bugs/Crahes:
+  - ⍜(⊡)(9) 1. 1_2_3 

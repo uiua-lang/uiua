@@ -1,5 +1,14 @@
-- Pass stack around
-  - Parallelism
+- Native image output
+- Threads
+- Refactor inverse
+- Call refs somethings else
+- Sound IO
+- Better solution to string formatting
+- More array functions
+  - Clear stack
+  - Pack
+  - Progressive index of
+  - Nudge
 - Optimized functions
   - Reduces:
     - Sum
@@ -7,20 +16,12 @@
     - Join all
   - Scans:
     - Plus
-- Refactor inverse
-- Sound IO
-- Native image output
-- More array functions
-  - Clear stack
-  - Pack
-  - Progressive index of
-  - Nudge
 - Type testing/tracing
 - "Structs"
 - System APIs
   - Sockets
+  - FFI
 - LSP
-- FFI
 - Docs
 - Tooling
 - Custom monospace font

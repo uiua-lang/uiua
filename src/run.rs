@@ -232,7 +232,7 @@ impl<'io> Uiua<'io> {
             }
             Word::Char(c) => self.push_instr(Instr::Push(c.into())),
             Word::String(s) => self.push_instr(Instr::Push(s.into())),
-            Word::Ident(ident) => self.ident(ident, word.span)?,
+            Word::Ident(ident) => self.ident(ident, word.span, call)?,
             Word::Strand(items) => {
                 self.push_instr(Instr::BeginArray);
                 self.words(items, false)?;
@@ -252,7 +252,7 @@ impl<'io> Uiua<'io> {
         }
         Ok(())
     }
-    fn ident(&mut self, ident: Ident, span: Span) -> UiuaResult {
+    fn ident(&mut self, ident: Ident, span: Span, call: bool) -> UiuaResult {
         if let Some(idx) = self
             .global_names
             .iter()
@@ -262,13 +262,12 @@ impl<'io> Uiua<'io> {
             let value = self.globals[*idx].clone();
             let is_function = value.is_function();
             self.push_instr(Instr::Push(value));
-            if is_function {
+            if is_function && call {
                 let span = self.push_span(span);
                 self.push_instr(Instr::Call(span));
             }
         } else if let Some(prim) = Primitive::from_name(ident.as_str()) {
-            let span = self.push_span(span);
-            self.push_instr(Instr::Primitive(prim, span));
+            self.primitive(prim, span, call)
         } else {
             if let Some(refs) = self.new_refs.last_mut() {
                 if ident.as_str().len() == 1 {

@@ -44,7 +44,7 @@ pub fn Editor(
     } else {
         examples.iter().map(|e| e.lines().count()).max().unwrap()
     };
-    let code_height_em = code_max_lines as f32 * 1.3 + 0.5;
+    let code_height_em = code_max_lines as f32 * 1.2 + 0.6;
 
     let (code_id, _) = create_signal(cx, format!("code{id}"));
     let (output_id, _) = create_signal(cx, format!("output{id}"));

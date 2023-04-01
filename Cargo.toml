@@ -22,11 +22,10 @@ open.version = "4"
 rand.default-features = false
 rand.features = ["small_rng"]
 rand.version = "0.8.5"
-term_size.optional = true
-term_size.version = "0.3.2"
+term_size = "0.3.2"
 
 [features]
-binary = ["ctrlc", "notify", "term_size", "clap", "open"]
+binary = ["ctrlc", "notify", "clap", "open"]
 debug = []
 default = ["binary"]
 

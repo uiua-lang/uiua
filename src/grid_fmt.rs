@@ -78,7 +78,99 @@ impl GridFmt for Array {
         let shape = self.shape();
 
         // Handle really big arrays
-        if shape.iter().product::<usize>() > 1000 {
+        let mut just_dims = false;
+        if shape.len() > 1 {
+            let columns = *shape.last().unwrap();
+            if let Some((w, _)) = term_size::dimensions() {
+                if columns > w / 2 - 1 {
+                    just_dims = true;
+                }
+            } else if columns > 40 {
+                just_dims = true;
+            } else {
+                let rows = shape.iter().rev().skip(1).product::<usize>();
+                if rows > 100 {
+                    just_dims = true;
+                }
+            }
+        }
+
+        let mut grid: Grid = Grid::new();
+
+        if !just_dims {
+            match self.ty() {
+                ArrayType::Num => fmt_array(shape, self.numbers(), false, &mut metagrid),
+                ArrayType::Byte => fmt_array(shape, self.bytes(), false, &mut metagrid),
+                ArrayType::Char => fmt_array(shape, self.chars(), true, &mut metagrid),
+                ArrayType::Value => fmt_array(shape, self.values(), false, &mut metagrid),
+            }
+            // Determine max row heights and column widths
+            let metagrid_width = metagrid.iter().map(|row| row.len()).max().unwrap();
+            let metagrid_height = metagrid.len();
+            let mut column_widths = vec![0; metagrid_width];
+            let mut row_heights = vec![0; metagrid_height];
+            for row in 0..metagrid_height {
+                let max_row_height = metagrid[row]
+                    .iter()
+                    .map(|cell| cell.len())
+                    .max()
+                    .unwrap_or(1);
+                row_heights[row] = max_row_height;
+            }
+            for col in 0..metagrid_width {
+                let max_col_width = metagrid
+                    .iter()
+                    .map(|row| row[col].iter().map(|cell| cell.len()).max().unwrap())
+                    .max()
+                    .unwrap();
+                column_widths[col] = max_col_width;
+            }
+            // Pad each metagrid cell to its row's max height and column's max width
+            for row in 0..metagrid_height {
+                let row_height = row_heights[row];
+                let mut subrows = vec![vec![]; row_height];
+                for (col_width, cell) in column_widths.iter().zip(&mut metagrid[row]) {
+                    pad_grid_center(*col_width, row_height, true, cell);
+                    for (subrow, cell_row) in subrows.iter_mut().zip(take(cell)) {
+                        subrow.extend(cell_row);
+                    }
+                }
+                grid.extend(subrows);
+            }
+            // Outline the grid
+            let row_count = grid.len();
+            if row_count == 1 && self.rank() == 1 {
+                // Add brackets to vectors
+                if !self.is_chars() {
+                    grid[0].insert(0, '[');
+                    grid[0].push(']');
+                }
+            } else {
+                // Add corners to non-vectors
+                let width = grid[0].len();
+                let height = grid.len();
+                pad_grid_center(
+                    width + 4,
+                    (height + 2).max(self.rank() + 2),
+                    false,
+                    &mut grid,
+                );
+                grid[0][0] = '┌';
+                grid[0][1] = '─';
+                for i in 0..self.rank() {
+                    grid[i + 1][0] = '·';
+                }
+                *grid.last_mut().unwrap().last_mut().unwrap() = '┘';
+            }
+            // Handle really big grid
+            if let Some((w, _)) = term_size::dimensions() {
+                if grid[0].len() > w {
+                    just_dims = true;
+                }
+            }
+        }
+
+        if just_dims {
             let mut s = String::from('[');
             for (i, d) in shape.iter().enumerate() {
                 if i > 0 {
@@ -90,76 +182,10 @@ impl GridFmt for Array {
                 ArrayType::Num => s.push_str(" numbers"),
                 ArrayType::Byte => s.push_str(" bytes"),
                 ArrayType::Char => s.push_str(" chars"),
-                ArrayType::Value => s.push_str(" array"),
+                ArrayType::Value => s.push_str(" arrays"),
             }
             s.push(']');
             return vec![s.chars().collect()];
-        }
-
-        match self.ty() {
-            ArrayType::Num => fmt_array(shape, self.numbers(), false, &mut metagrid),
-            ArrayType::Byte => fmt_array(shape, self.bytes(), false, &mut metagrid),
-            ArrayType::Char => fmt_array(shape, self.chars(), true, &mut metagrid),
-            ArrayType::Value => fmt_array(shape, self.values(), false, &mut metagrid),
-        }
-        // Determine max row heights and column widths
-        let metagrid_width = metagrid.iter().map(|row| row.len()).max().unwrap();
-        let metagrid_height = metagrid.len();
-        let mut column_widths = vec![0; metagrid_width];
-        let mut row_heights = vec![0; metagrid_height];
-        for row in 0..metagrid_height {
-            let max_row_height = metagrid[row]
-                .iter()
-                .map(|cell| cell.len())
-                .max()
-                .unwrap_or(1);
-            row_heights[row] = max_row_height;
-        }
-        for col in 0..metagrid_width {
-            let max_col_width = metagrid
-                .iter()
-                .map(|row| row[col].iter().map(|cell| cell.len()).max().unwrap())
-                .max()
-                .unwrap();
-            column_widths[col] = max_col_width;
-        }
-        // Pad each metagrid cell to its row's max height and column's max width
-        let mut grid: Grid = Grid::new();
-        for row in 0..metagrid_height {
-            let row_height = row_heights[row];
-            let mut subrows = vec![vec![]; row_height];
-            for (col_width, cell) in column_widths.iter().zip(&mut metagrid[row]) {
-                pad_grid_center(*col_width, row_height, true, cell);
-                for (subrow, cell_row) in subrows.iter_mut().zip(take(cell)) {
-                    subrow.extend(cell_row);
-                }
-            }
-            grid.extend(subrows);
-        }
-        // Outline the grid
-        let row_count = grid.len();
-        if row_count == 1 && self.rank() == 1 {
-            // Add brackets to vectors
-            if !self.is_chars() {
-                grid[0].insert(0, '[');
-                grid[0].push(']');
-            }
-        } else {
-            // Add corners to non-vectors
-            let width = grid[0].len();
-            let height = grid.len();
-            pad_grid_center(
-                width + 4,
-                (height + 2).max(self.rank() + 2),
-                false,
-                &mut grid,
-            );
-            grid[0][0] = '┌';
-            grid[0][1] = '─';
-            for i in 0..self.rank() {
-                grid[i + 1][0] = '·';
-            }
-            *grid.last_mut().unwrap().last_mut().unwrap() = '┘';
         }
         grid
     }

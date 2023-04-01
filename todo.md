@@ -1,7 +1,6 @@
 - Rethink imports
 - Pass stack around
   - Parallelism
-- Allow wider array showing when terminal size is known
 - Scoped regions
 - Optimized functions
   - Reduces:

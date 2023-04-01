@@ -50,8 +50,10 @@ fn format_item(output: &mut String, item: &Item) {
             for node in words(w.iter().map(|w| &w.value).by_ref()) {
                 reduce(output, &node);
             }
-            space(output, "  # ");
-            space(output, comment);
+            if let Some(comment) = comment {
+                space(output, "  # ");
+                space(output, comment);
+            }
         }
         Item::Binding(binding, comment) => {
             output.push_str(&binding.name.value.0);
@@ -59,8 +61,10 @@ fn format_item(output: &mut String, item: &Item) {
             for node in words(binding.words.iter().map(|w| &w.value).by_ref()) {
                 reduce(output, &node);
             }
-            space(output, "  # ");
-            space(output, comment);
+            if let Some(comment) = comment {
+                space(output, "  # ");
+                space(output, comment);
+            }
         }
         Item::Comment(comment) => {
             output.push_str("# ");

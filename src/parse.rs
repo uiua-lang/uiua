@@ -161,11 +161,9 @@ impl Parser {
     }
     fn try_item(&mut self, parse_scopes: bool) -> Option<Item> {
         Some(if let Some(binding) = self.try_binding() {
-            let comment = self.comment().unwrap_or_default();
-            Item::Binding(binding, comment)
+            Item::Binding(binding, self.comment())
         } else if let Some(words) = self.try_words() {
-            let comment = self.comment().unwrap_or_default();
-            Item::Words(words, comment)
+            Item::Words(words, self.comment())
         } else if let Some(comment) = self.comment() {
             Item::Comment(comment)
         } else if parse_scopes && self.try_exact(ScopeDelim).is_some() {

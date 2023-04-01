@@ -17,11 +17,11 @@ const EXAMPLES: &[&str] = &[
     "# Click Run to format!\nfirst repeat (\\+ rev)0_1 10",
     "↯~⇡/×.2_3_4",
     "\
-c ← ⊞⚇.÷÷2 ~-÷2,⇡. 256
-rgb ← □⸪(:(⸪)~c) (×.⊢⇌)_(ⁿ1.5 ¬√/+ ⁿ2)_(×.⊢) 
-a ← ↧√/↥ ⊏0_2 rgb ⸪(<1 √/+ ⁿ2) c
-u ← ⸪(↥<0.2 ~>0.7.+×2 ×.~⊔) c
-⍉≍~a +0.1 ≡(↧u) rgb",
+x ← ⊞⚇.÷÷2 ~-÷2,⇡. 256
+rgb ← □⸪(:(⸪)~x) (×.⊢⇌)_(×.⊢)_0.5 
+u ← ⸪(↥<0.2 ~>0.7.+×2 ×.~⊔) x
+c ← √⸪(/+ ⁿ2) x
+⍉≍~-¬u <1 c +0.1 ≡(↧<0.95 c) rgb",
     "Avg ← ÷⇀~/+.\nAvg 0_2_1_5",
     "{÷×2 a -b ⚇¯.√-××4 a c ⁿ2 b}1 2 0",
     "\
@@ -72,10 +72,10 @@ pub fn Site(cx: Scope) -> impl IntoView {
             <main>
                 <div id="top">
                     <div id="header">
-                        <h1>{ "Uiua" }</h1>
+                        <h1><img src="uiua-logo.png" style="height: 1em"></img>" Uiua"</h1>
                         <div id="nav">
-                            <p><a href="https://github.com/kaikalii/uiua">{"GitHub"}</a></p>
-                            <p><a href="/">{"Home"}</a></p>
+                            <p><a href="https://github.com/kaikalii/uiua">"GitHub"</a></p>
+                            <p><a href="/">"Home"</a></p>
                         </div>
                     </div>
                     <Routes>
@@ -129,8 +129,8 @@ pub fn MainPage(cx: Scope) -> impl IntoView {
                 { subtitle }
             </div>
             <div id="links">
-                <p><A href="docs">{"Documentation"}</A></p>
-                <p><A href="pad">{"Pad"}</A></p>
+                <p><A href="docs">"Documentation"</A></p>
+                <p><A href="pad">"Pad"</A></p>
             </div>
             <Editor
                 examples={EXAMPLES}
@@ -184,7 +184,7 @@ mod code {
     pub fn PrimCode(cx: Scope, prim: Primitive, #[prop(optional)] name: bool) -> impl IntoView {
         let class = prim_class(prim);
         let name = prim.name().filter(|_| name).unwrap_or("");
-        view!(cx, <code>{name}{" "}<span class=class>{ prim.to_string() }</span></code>)
+        view!(cx, <code>{name}" "<span class=class>{ prim.to_string() }</span></code>)
     }
 }
 

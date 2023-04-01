@@ -38,34 +38,36 @@ pub fn format_file<P: AsRef<Path>>(path: P) -> UiuaResult<String> {
 }
 
 fn format_item(output: &mut String, item: &Item) {
-    let mut line = String::new();
     match item {
         Item::Scoped(items) => {
-            line.push_str("---\n");
+            output.push_str("---\n");
             for item in items {
-                format_item(&mut line, item);
+                format_item(output, item);
             }
-            line.push_str("---");
+            output.push_str("---");
         }
-        Item::Words(w) => {
+        Item::Words(w, comment) => {
             for node in words(w.iter().map(|w| &w.value).by_ref()) {
-                reduce(&mut line, &node);
+                reduce(output, &node);
             }
+            space(output, "  # ");
+            space(output, comment);
         }
-        Item::Binding(binding) => {
-            line.push_str(&binding.name.value.0);
-            line.push_str(" ← ");
+        Item::Binding(binding, comment) => {
+            output.push_str(&binding.name.value.0);
+            output.push_str(" ← ");
             for node in words(binding.words.iter().map(|w| &w.value).by_ref()) {
-                reduce(&mut line, &node);
+                reduce(output, &node);
             }
+            space(output, "  # ");
+            space(output, comment);
         }
         Item::Comment(comment) => {
-            line.push_str("# ");
-            line.push_str(comment);
+            output.push_str("# ");
+            output.push_str(comment);
         }
         Item::Newlines => {}
     }
-    output.push_str(&line);
     output.push('\n');
 }
 
@@ -100,7 +102,7 @@ fn space(output: &mut String, s: &str) {
             output.push(' ');
         }
     }
-    if s.starts_with([']', ')', '}', '.', ',', ';']) {
+    if s.starts_with([']', ')', '}', '.', ',', ';', ' ']) {
         while output.ends_with(' ') {
             output.pop();
         }

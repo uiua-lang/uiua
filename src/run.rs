@@ -153,11 +153,11 @@ impl<'io> Uiua<'io> {
     fn item(&mut self, item: Item) -> UiuaResult {
         match item {
             Item::Scoped(items) => self.in_scope(|env| env.items(items))?,
-            Item::Words(words) => {
+            Item::Words(words, _) => {
                 let instrs = self.compile_words(words)?;
                 self.exec_global_instrs(instrs)?;
             }
-            Item::Binding(binding) => self.binding(binding)?,
+            Item::Binding(binding, _) => self.binding(binding)?,
             Item::Newlines => {}
             Item::Comment(_) => {}
         }

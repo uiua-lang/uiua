@@ -161,11 +161,13 @@ impl Parser {
     }
     fn try_item(&mut self, parse_scopes: bool) -> Option<Item> {
         Some(if let Some(binding) = self.try_binding() {
-            Item::Binding(binding)
+            let comment = self.comment().unwrap_or_default();
+            Item::Binding(binding, comment)
         } else if let Some(words) = self.try_words() {
-            Item::Words(words)
-        } else if let Some(comment) = self.next_token_map(Token::as_comment) {
-            Item::Comment(comment.value.into())
+            let comment = self.comment().unwrap_or_default();
+            Item::Words(words, comment)
+        } else if let Some(comment) = self.comment() {
+            Item::Comment(comment)
         } else if parse_scopes && self.try_exact(ScopeDelim).is_some() {
             let items = self.items(false);
             if self.try_exact(ScopeDelim).is_none() {
@@ -175,6 +177,10 @@ impl Parser {
         } else {
             return None;
         })
+    }
+    fn comment(&mut self) -> Option<String> {
+        self.next_token_map(Token::as_comment)
+            .map(|s| s.value.into())
     }
     fn try_binding(&mut self) -> Option<Binding> {
         Some(if let Some(ident) = self.try_ident() {

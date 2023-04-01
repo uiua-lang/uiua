@@ -11,7 +11,7 @@ pub enum Instr {
     Primitive(Primitive, usize),
     Call(usize),
     CallRef(usize, usize),
-    CopyRef(usize, usize),
+    CopyRef(usize),
 }
 
 impl fmt::Display for Instr {
@@ -24,7 +24,7 @@ impl fmt::Display for Instr {
             Instr::Primitive(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => Ok(()),
             Instr::CallRef(n, _) => write!(f, "ref{n}"),
-            Instr::CopyRef(n, _) => write!(f, "{}", (*n as u8 + b'a') as char),
+            Instr::CopyRef(n) => write!(f, "{}", (*n as u8 + b'a') as char),
         }
     }
 }
@@ -117,7 +117,7 @@ impl Function {
                 &Instr::EndArray(n, span) => last_group!().push(Instr::EndArray(n, span)),
                 &Instr::CopyGlobal(n) => last_group!().push(Instr::CopyGlobal(n)),
                 &Instr::CallRef(_, _) => return Err(no_inverse()),
-                &Instr::CopyRef(_, _) => return Err(no_inverse()),
+                &Instr::CopyRef(_) => return Err(no_inverse()),
             }
         }
         if require_unary && args != 0 {

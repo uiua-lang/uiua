@@ -16,9 +16,11 @@ pub struct Uiua<'io> {
     stack: Vec<Value>,
     antistack: Vec<Value>,
     array_stack: Vec<usize>,
+    ref_stack: Vec<Vec<Value>>,
     globals: Vec<Value>,
     global_names: HashMap<Ident, usize>,
     new_functions: Vec<Vec<Instr>>,
+    new_refs: Vec<Vec<u8>>,
     call_stack: Vec<StackFrame>,
     pub(crate) io: &'io dyn IoBackend,
 }
@@ -37,9 +39,11 @@ impl<'io> Default for Uiua<'io> {
             stack: Vec::new(),
             antistack: Vec::new(),
             array_stack: Vec::new(),
+            ref_stack: Vec::new(),
             globals: Vec::new(),
             global_names: HashMap::new(),
             new_functions: Vec::new(),
+            new_refs: Vec::new(),
             call_stack: Vec::new(),
             io: &StdIo,
         }
@@ -180,17 +184,45 @@ impl<'io> Uiua<'io> {
             let span = self.push_span(span);
             self.push_instr(Instr::Primitive(prim, span));
         } else {
+            if let Some(refs) = self.new_refs.last_mut() {
+                if ident.as_str().len() == 1 {
+                    let c = ident.as_str().chars().next().unwrap();
+                    if c.is_ascii_lowercase() {
+                        let idx = c as u8 - b'a';
+                        refs.push(idx);
+                        self.push_instr(Instr::CopyRef(idx as usize));
+                        return Ok(());
+                    }
+                }
+            }
             return Err(span.sp(format!("unknown identifier {}", ident)).into());
         }
         Ok(())
     }
-    fn func(&mut self, func: Func, span: Span) -> UiuaResult {
-        todo!("func")
+    fn func(&mut self, func: Func, _span: Span) -> UiuaResult {
+        let instrs = self.compile_words(func.body)?;
+        let func = Function {
+            id: func.id,
+            instrs,
+        };
+        self.push_instr(Instr::Push(func.into()));
+        Ok(())
     }
     fn ref_func(&mut self, func: Func, span: Span) -> UiuaResult {
-        todo!("ref func")
+        self.new_refs.push(Vec::new());
+        let instrs = self.compile_words(func.body)?;
+        let refs = self.new_refs.pop().unwrap();
+        let func = Function {
+            id: func.id,
+            instrs,
+        };
+        self.push_instr(Instr::Push(func.into()));
+        let span = self.push_span(span);
+        let ref_size = refs.into_iter().max().unwrap_or(0) + 1;
+        self.push_instr(Instr::CallRef(ref_size as usize, span));
+        Ok(())
     }
-    fn modified(&mut self, modified: Modified, span: Span) -> UiuaResult {
+    fn modified(&mut self, _modified: Modified, _span: Span) -> UiuaResult {
         todo!("modified")
     }
     fn exec_global_instrs(&mut self, instrs: Vec<Instr>) -> UiuaResult {
@@ -210,7 +242,10 @@ impl<'io> Uiua<'io> {
         self.call_stack.push(frame);
         'outer: while self.call_stack.len() > ret_height {
             let frame = self.call_stack.last_mut().unwrap();
+            // println!("frame: {:?}", frame.function.instrs);
             while let Some(instr) = frame.function.instrs.get(frame.pc) {
+                // println!("{:?}", self.stack);
+                // println!("  {:?}", instr);
                 match instr {
                     Instr::Push(val) => self.stack.push(val.clone()),
                     Instr::BeginArray => self.array_stack.push(self.stack.len()),
@@ -262,8 +297,25 @@ impl<'io> Uiua<'io> {
                             self.stack.push(value);
                         }
                     }
-                    Instr::CallRef(_, _) => todo!(),
-                    Instr::CopyRef(_, _) => todo!(),
+                    &Instr::CallRef(n, span) => {
+                        let f = self.pop("ref function")?;
+                        if self.stack.len() < n {
+                            return Err(self.spans[span]
+                                .clone()
+                                .sp(format!("not enough arguments for reference of {n} values"))
+                                .into());
+                        }
+                        let refs = self.stack.drain(self.stack.len() - n..).collect();
+                        self.ref_stack.push(refs);
+                        self.stack.push(f);
+                        self.call()?;
+                        self.call_stack.last_mut().unwrap().pc += 1;
+                        continue 'outer;
+                    }
+                    Instr::CopyRef(n) => {
+                        let value = self.ref_stack.last().unwrap()[*n].clone();
+                        self.stack.push(value);
+                    }
                 }
                 frame.pc += 1;
             }
@@ -273,7 +325,8 @@ impl<'io> Uiua<'io> {
     }
     pub fn call(&mut self) -> UiuaResult {
         let call_span = self.span_index();
-        let value = self.stack.pop().unwrap_or_else(|| todo!());
+        let value = self.pop("called function")?;
+        println!("call: {value:?}");
         if value.is_function() {
             let function = value.into_function();
             let new_frame = StackFrame {

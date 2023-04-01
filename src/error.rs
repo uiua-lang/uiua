@@ -183,8 +183,10 @@ impl UiuaError {
                     .with_config(config)
                     .finish();
                     let _ = report.write(&mut cache, &mut buffer);
+                    String::from_utf8_lossy(&buffer).into_owned()
+                } else {
+                    error.to_string()
                 }
-                String::from_utf8_lossy(&buffer).into_owned()
             }
             UiuaError::Traced { error, trace } => {
                 let mut s = error.show(complex_output);

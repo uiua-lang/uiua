@@ -371,7 +371,7 @@ impl Primitive {
             Primitive::Under => {
                 let f = env.pop(1)?;
                 let g = env.pop(2)?;
-                if !f.is_function() || !g.is_function() {
+                if !f.is_function() {
                     return Err(env.error("Only functions can be inverted"));
                 }
                 let f_inv = f.function().inverse(env, true)?;

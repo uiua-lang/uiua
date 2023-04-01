@@ -13,12 +13,12 @@ use uiua::primitive::Primitive;
 use crate::{docs::*, editor::*, pad::*};
 
 const EXAMPLES: &[&str] = &[
-    r#"‡=¯1 ≡/-◫2 ≤'A' ≍' '."Um, I um...arrays""#,
+    r#"‡=¯1 ≡/-◫2 <'A' ≍' '."Um, I um...arrays""#,
     "# Click Run to format!\nfirst repeat (\\+ rev)0_1 10",
     "↯~⇡/×.2_3_4",
     "\
 x ← ⊞⚇.÷÷2 ~-÷2,⇡. 256
-rgb ← □⸪(:(⸪)~x) (×.⊢⇌)_(×.⊢)_0.5 
+rgb ← □⊞: (×.⊢⇌)_(×.⊢)_⸪0.5 x
 u ← ⸪(↥<0.2 ~>0.7.+×2 ×.~⊔) x
 c ← √⸪(/+ ⁿ2) x
 ⍉≍~-¬u <1 c +0.1 ≡(↧<0.95 c) rgb",
@@ -167,8 +167,7 @@ fn MainText(cx: Scope) -> impl IntoView {
         <ul>
             <li>"Hook and fork constructs without parenthesis"</li>
             <li>"Stack-to-array syntax for building arrays with stack operations"</li>
-            <li>"Special syntax for constructing lists of functions"</li>
-            <li>"Functions that work with lists of functions to form complex combinators"</li>
+            <li>"Primitives specifically for stack operations"</li>
         </ul>
         <hr/>
         <h3>"How does writing the glyphs work?"</h3>

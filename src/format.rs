@@ -133,7 +133,7 @@ fn reduce(output: &mut String, node: &FormatNode) {
                 }
                 reduce(output, item);
             }
-            output.push(' ');
+            space(output, " ");
         }
         FormatNode::Delim(start, end, items) => {
             space(output, start);

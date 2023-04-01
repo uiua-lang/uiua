@@ -174,7 +174,6 @@ primitive!(
     // Triadic array op
     (3, Put),
     // Modifiers
-    (Call { modifier: 1 }, "call" + ':'),
     (Reduce { modifier: 1 }, "reduce" + '/'),
     (Fold { modifier: 1 }, "fold" + '⌿'),
     (Scan { modifier: 1 }, "scan" + '\\'),
@@ -187,6 +186,7 @@ primitive!(
     (Try { modifier: 2 }, "try" + '?'),
     // Misc
     (2, Assert, "assert" + '!'),
+    (1(None), Call, "call" + ':'),
     (0, Noop, "noop" + '·'),
     (1, String, "string"),
     (1, Parse, "parsenumber"),

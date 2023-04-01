@@ -235,6 +235,15 @@ impl Primitive {
             _ => return None,
         })
     }
+    pub fn reduce_identity(&self) -> Option<Value> {
+        Some(match self {
+            Primitive::Add => Value::from(0),
+            Primitive::Mul => Value::from(1),
+            Primitive::Min => Value::from(std::f64::INFINITY),
+            Primitive::Max => Value::from(std::f64::NEG_INFINITY),
+            _ => return None,
+        })
+    }
     pub fn from_name(name: &str) -> Option<Self> {
         let lower = name.to_lowercase();
         if let Some(io) = IoOp::from_name(&lower) {
@@ -409,7 +418,14 @@ impl Primitive {
                     return Ok(());
                 }
                 let mut cells = xs.into_array().into_values().into_iter();
-                let Some(mut acc) = cells.next() else {
+                let acc = if f.is_function() {
+                    f.function()
+                        .as_primitive()
+                        .and_then(|p| p.reduce_identity())
+                } else {
+                    None
+                };
+                let Some(mut acc) = acc.or_else (|| cells.next()) else {
                     return Err(env.error("Cannot reduce empty array"));
                 };
                 for cell in cells {

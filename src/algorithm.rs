@@ -37,37 +37,6 @@ impl Value {
             &[]
         }
     }
-    pub fn as_shape(&self, env: &Uiua, error: &'static str) -> UiuaResult<Vec<usize>> {
-        if self.is_array() {
-            let arr = self.array();
-            let numbers = if arr.is_numbers() {
-                arr.numbers()
-            } else if arr.shape() == [0] {
-                &[]
-            } else {
-                return Err(env.error(error));
-            };
-            let mut shape = Vec::with_capacity(arr.len());
-            for f in numbers {
-                let rounded = f.round();
-                if (f - rounded).abs() > f64::EPSILON || rounded <= 0.0 {
-                    return Err(env.error(error));
-                }
-                let rounded = rounded as usize;
-                shape.push(rounded);
-            }
-            Ok(shape)
-        } else if self.is_num() {
-            let f = self.number();
-            let rounded = f.round();
-            if (f - rounded).abs() > f64::EPSILON || rounded <= 0.0 {
-                return Err(env.error(error));
-            }
-            Ok(vec![rounded as usize])
-        } else {
-            return Err(env.error(error));
-        }
-    }
     pub fn as_indices(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<isize>> {
         self.as_number_list(env, requirement, |f| f % 1.0 == 0.0, |f| f as isize)
     }
@@ -127,7 +96,7 @@ impl Value {
         Ok(arr.chars().iter().collect())
     }
     pub fn range(&mut self, env: &Uiua) -> UiuaResult {
-        let shape = self.as_shape(
+        let shape = self.as_naturals(
             env,
             "Range only accepts a single natural number \
             or a list of natural numbers",
@@ -168,7 +137,7 @@ impl Value {
     }
     pub fn reshape(&mut self, mut other: Value, env: &Uiua) -> UiuaResult {
         swap(self, &mut other);
-        let shape = other.as_shape(env, "Shape must be a list of natural numbers")?;
+        let shape = other.as_naturals(env, "Shape must be a list of natural numbers")?;
         self.coerce_array().reshape(shape);
         Ok(())
     }
@@ -202,7 +171,7 @@ impl Value {
                 data.extend(repeat(cell).take(n));
             }
         } else if self.is_array() {
-            let filter = self.array();
+            let filter = self.as_naturals(env, "Can only filter with natural numbers")?;
             if filter.len() != filtered.len() {
                 return Err(env.error(format!(
                     "Cannot replicate with array of different length: \
@@ -211,17 +180,8 @@ impl Value {
                     filtered.len(),
                 )));
             }
-            if !filter.is_numbers() {
-                return Err(env.error("Cannot replicate with non-number array"));
-            }
-            if filter.rank() != 1 {
-                return Err(env.error("Cannot replicate with non-1D array"));
-            }
-            for (&n, cell) in filter.numbers().iter().zip(filtered.into_values()) {
-                if n.trunc() != n || n < 0.0 {
-                    return Err(env.error("Cannot replicate with non-natural number"));
-                }
-                data.extend(repeat(cell).take(n as usize));
+            for (&n, cell) in filter.iter().zip(filtered.into_values()) {
+                data.extend(repeat(cell).take(n));
             }
         } else {
             return Err(env.error("Cannot replicate with non-number"));

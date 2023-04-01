@@ -168,29 +168,29 @@ macro_rules! cmp_impl {
     ($name:ident $eq:tt $ordering:expr) => {
         pub mod $name {
             use super::*;
-            pub fn always_greater<A, B>(_: &A, _: &B) -> f64 {
-                ($ordering $eq Ordering::Less) as u8 as f64
+            pub fn always_greater<A, B>(_: &A, _: &B) -> u8 {
+                ($ordering $eq Ordering::Less) as u8
             }
-            pub fn always_less<A, B>(_: &A, _: &B) -> f64 {
-                ($ordering $eq Ordering::Greater) as u8 as f64
+            pub fn always_less<A, B>(_: &A, _: &B) -> u8 {
+                ($ordering $eq Ordering::Greater) as u8
             }
-            pub fn num_num(a: &f64, b: &f64) -> f64 {
+            pub fn num_num(a: &f64, b: &f64) -> u8 {
                 (b.partial_cmp(a)
                     .unwrap_or_else(|| b.is_nan().cmp(&a.is_nan()))
-                    $eq $ordering) as u8 as f64
+                    $eq $ordering) as u8
             }
-            pub fn byte_num(a: &u8, b: &f64) -> f64 {
+            pub fn byte_num(a: &u8, b: &f64) -> u8 {
                 (b.partial_cmp(&(*a as f64))
                     .unwrap_or_else(|| b.is_nan().cmp(&false))
-                    $eq $ordering) as u8 as f64
+                    $eq $ordering) as u8
             }
-            pub fn num_byte(a: &f64, b: &u8) -> f64 {
+            pub fn num_byte(a: &f64, b: &u8) -> u8 {
                 ((*b as f64).partial_cmp(a)
                     .unwrap_or_else(|| false.cmp(&a.is_nan()))
-                    $eq $ordering) as u8 as f64
+                    $eq $ordering) as u8
             }
-            pub fn generic<T: Ord>(a: &T, b: &T) -> f64 {
-                (b.cmp(a) $eq $ordering) as u8 as f64
+            pub fn generic<T: Ord>(a: &T, b: &T) -> u8 {
+                (b.cmp(a) $eq $ordering) as u8
             }
             pub fn error<T: Display>(a: T, b: T, _env: &Uiua) -> UiuaError {
                 unreachable!("Comparisons cannot fail, failed to compare {a} and {b}")

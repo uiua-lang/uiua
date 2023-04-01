@@ -236,23 +236,40 @@ impl Array {
         self.values_mut()
     }
     pub fn normalize_type(&mut self) {
-        if let ArrayType::Value = self.ty {
-            if self.values().is_empty() {
-                return;
+        match self.ty {
+            ArrayType::Value => {
+                if self.values().is_empty() {
+                    return;
+                }
+                let values = self.values().iter();
+                if self.values().iter().all(Value::is_char) {
+                    self.data = values.map(Value::char).collect::<Vec<_>>().into();
+                    self.ty = ArrayType::Char;
+                } else if self.values().iter().all(Value::is_num) {
+                    self.data = values.map(Value::number).collect::<Vec<_>>().into();
+                    self.ty = ArrayType::Num;
+                } else if self.values().iter().all(Value::is_byte) {
+                    self.data = values.map(Value::byte).collect::<Vec<_>>().into();
+                    self.ty = ArrayType::Byte;
+                }
             }
-            if self.values().iter().all(Value::is_char) {
-                let shape = take(&mut self.shape);
-                *self = Self::from(self.values().iter().map(Value::char).collect::<Vec<_>>());
-                self.shape = shape;
-            } else if self.values().iter().all(Value::is_num) {
-                let shape = take(&mut self.shape);
-                *self = Self::from(self.values().iter().map(Value::number).collect::<Vec<_>>());
-                self.shape = shape;
+            ArrayType::Num => {
+                if self
+                    .numbers()
+                    .iter()
+                    .all(|n| (0.0..=255.0).contains(n) && n.fract() == 0.0)
+                {
+                    let numbers = self.numbers().iter().map(|&n| n as u8).collect::<Vec<_>>();
+                    self.data = numbers.into();
+                    self.ty = ArrayType::Byte;
+                }
             }
+            _ => (),
         }
     }
     pub fn normalize(&mut self) -> Option<(Vec<usize>, Vec<usize>)> {
         if !self.is_values() {
+            self.normalize_type();
             return None;
         }
         let mut shape = None;
@@ -674,18 +691,10 @@ impl From<ArrayType> for Array {
             shape: vec![],
             ty,
             data: match ty {
-                ArrayType::Num => Data {
-                    numbers: ManuallyDrop::new(vec![]),
-                },
-                ArrayType::Byte => Data {
-                    bytes: ManuallyDrop::new(vec![]),
-                },
-                ArrayType::Char => Data {
-                    chars: ManuallyDrop::new(vec![]),
-                },
-                ArrayType::Value => Data {
-                    values: ManuallyDrop::new(vec![]),
-                },
+                ArrayType::Num => Vec::<f64>::new().into(),
+                ArrayType::Byte => Vec::<u8>::new().into(),
+                ArrayType::Char => Vec::<char>::new().into(),
+                ArrayType::Value => Vec::<Value>::new().into(),
             },
         }
     }
@@ -696,9 +705,7 @@ impl From<u8> for Array {
         Self {
             shape: vec![],
             ty: ArrayType::Byte,
-            data: Data {
-                bytes: ManuallyDrop::new(vec![n]),
-            },
+            data: vec![n].into(),
         }
     }
 }
@@ -708,9 +715,7 @@ impl From<f64> for Array {
         Self {
             shape: vec![],
             ty: ArrayType::Num,
-            data: Data {
-                numbers: ManuallyDrop::new(vec![n]),
-            },
+            data: vec![n].into(),
         }
     }
 }
@@ -720,9 +725,7 @@ impl From<char> for Array {
         Self {
             shape: vec![],
             ty: ArrayType::Char,
-            data: Data {
-                chars: ManuallyDrop::new(vec![c]),
-            },
+            data: vec![c].into(),
         }
     }
 }
@@ -732,9 +735,7 @@ impl From<Function> for Array {
         Self {
             shape: vec![],
             ty: ArrayType::Value,
-            data: Data {
-                values: ManuallyDrop::new(vec![Value::from(f)]),
-            },
+            data: vec![Value::from(f)].into(),
         }
     }
 }
@@ -744,9 +745,7 @@ impl From<Value> for Array {
         Self {
             shape: vec![],
             ty: ArrayType::Value,
-            data: Data {
-                values: ManuallyDrop::new(vec![v]),
-            },
+            data: vec![v].into(),
         }
     }
 }
@@ -767,9 +766,7 @@ impl From<Vec<u8>> for Array {
         Self {
             shape: vec![v.len()],
             ty: ArrayType::Byte,
-            data: Data {
-                bytes: ManuallyDrop::new(v),
-            },
+            data: v.into(),
         }
     }
 }
@@ -779,9 +776,7 @@ impl From<Vec<f64>> for Array {
         Self {
             shape: vec![v.len()],
             ty: ArrayType::Num,
-            data: Data {
-                numbers: ManuallyDrop::new(v),
-            },
+            data: v.into(),
         }
     }
 }
@@ -791,9 +786,7 @@ impl From<Vec<char>> for Array {
         Self {
             shape: vec![v.len()],
             ty: ArrayType::Char,
-            data: Data {
-                chars: ManuallyDrop::new(v),
-            },
+            data: v.into(),
         }
     }
 }
@@ -815,9 +808,7 @@ impl From<Vec<Value>> for Array {
         Self {
             shape: vec![v.len()],
             ty: ArrayType::Value,
-            data: Data {
-                values: ManuallyDrop::new(v),
-            },
+            data: v.into(),
         }
         .normalized_type()
     }
@@ -829,5 +820,37 @@ where
 {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         Self::from(iter.into_iter().collect::<Vec<_>>())
+    }
+}
+
+impl From<Vec<f64>> for Data {
+    fn from(v: Vec<f64>) -> Self {
+        Data {
+            numbers: ManuallyDrop::new(v),
+        }
+    }
+}
+
+impl From<Vec<u8>> for Data {
+    fn from(v: Vec<u8>) -> Self {
+        Data {
+            bytes: ManuallyDrop::new(v),
+        }
+    }
+}
+
+impl From<Vec<char>> for Data {
+    fn from(v: Vec<char>) -> Self {
+        Data {
+            chars: ManuallyDrop::new(v),
+        }
+    }
+}
+
+impl From<Vec<Value>> for Data {
+    fn from(v: Vec<Value>) -> Self {
+        Data {
+            values: ManuallyDrop::new(v),
+        }
     }
 }

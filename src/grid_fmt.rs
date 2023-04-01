@@ -28,7 +28,7 @@ pub trait GridFmt {
 
 impl GridFmt for u8 {
     fn fmt_grid(&self) -> Grid {
-        vec![format!("{self:02X}").chars().collect()]
+        vec![self.to_string().chars().collect()]
     }
 }
 

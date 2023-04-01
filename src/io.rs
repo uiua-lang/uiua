@@ -268,7 +268,7 @@ impl IoOp {
                 let path = env.pop(1)?.as_string(env, "Import path must be a string")?;
                 let input = String::from_utf8(env.io.read_file(&path).map_err(|e| env.error(e))?)
                     .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
-                env.load_str_path(&input, &path)?;
+                env.import(&input, path.as_ref())?;
             }
             IoOp::Now => env.push(instant::now()),
             IoOp::ImRead => {

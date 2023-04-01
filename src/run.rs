@@ -1,4 +1,10 @@
-use std::{collections::HashMap, fs, mem::take, path::Path, rc::Rc};
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+    mem::take,
+    path::{Path, PathBuf},
+    rc::Rc,
+};
 
 use crate::{
     array::Array,
@@ -11,20 +17,27 @@ use crate::{
     Ident, IoBackend, StdIo, TraceFrame, UiuaError, UiuaResult,
 };
 
+/// The Uiua runtime
+#[derive(Clone)]
 pub struct Uiua<'io> {
-    spans: Vec<Span>,
-    stack: Vec<Value>,
-    antistack: Vec<Value>,
-    array_stack: Vec<usize>,
-    ref_stack: Vec<Vec<Value>>,
-    globals: Vec<Value>,
-    global_names: HashMap<Ident, usize>,
+    // Compilation
     new_functions: Vec<Vec<Instr>>,
     new_refs: Vec<Vec<u8>>,
+    global_names: Vec<HashMap<Ident, usize>>,
+    // Statics
+    globals: Vec<Value>,
+    spans: Vec<Span>,
+    // Runtime
+    array_stack: Vec<usize>,
+    ref_stack: Vec<Vec<Value>>,
+    stack: Vec<Value>,
+    antistack: Vec<Value>,
     call_stack: Vec<StackFrame>,
+    current_imports: HashSet<PathBuf>,
     pub(crate) io: &'io dyn IoBackend,
 }
 
+#[derive(Clone)]
 struct StackFrame {
     function: Rc<Function>,
     call_span: usize,
@@ -34,6 +47,13 @@ struct StackFrame {
 
 impl<'io> Default for Uiua<'io> {
     fn default() -> Self {
+        Self::with_stdio()
+    }
+}
+
+impl<'io> Uiua<'io> {
+    /// Create a new Uiua runtime with the standard IO backend
+    pub fn with_stdio() -> Self {
         Uiua {
             spans: vec![Span::Builtin],
             stack: Vec::new(),
@@ -41,40 +61,54 @@ impl<'io> Default for Uiua<'io> {
             array_stack: Vec::new(),
             ref_stack: Vec::new(),
             globals: Vec::new(),
-            global_names: HashMap::new(),
+            global_names: vec![HashMap::new()],
             new_functions: Vec::new(),
             new_refs: Vec::new(),
             call_stack: Vec::new(),
+            current_imports: HashSet::new(),
             io: &StdIo,
         }
     }
-}
-
-impl<'io> Uiua<'io> {
-    pub fn with_stdio() -> Self {
-        Default::default()
-    }
+    /// Create a new Uiua runtime with a custom IO backend
     pub fn with_backend(io: &'io dyn IoBackend) -> Self {
         Uiua {
             io,
             ..Default::default()
         }
     }
+    /// Load a Uiua file from a path
     pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<&mut Self> {
         let path = path.as_ref();
         let input = fs::read_to_string(path).map_err(|e| UiuaError::Load(path.into(), e))?;
         self.load_impl(&input, Some(path))
     }
+    /// Load a Uiua file from a string
     pub fn load_str(&mut self, input: &str) -> UiuaResult<&mut Self> {
         self.load_impl(input, None)
     }
+    /// Load a Uiua file from a string with a path for error reporting
     pub fn load_str_path<P: AsRef<Path>>(&mut self, input: &str, path: P) -> UiuaResult<&mut Self> {
         self.load_impl(input, Some(path.as_ref()))
+    }
+    /// Run in a scoped context. Names defined in this context will be removed when the scope ends.
+    ///
+    /// While names defined in this context will be removed when the scope ends, values *bound* to
+    /// those names will not.
+    ///
+    /// All other runtime state, including the stack, will be preserved.
+    pub fn in_scope<T>(&mut self, f: impl FnOnce(&mut Self) -> T) -> T {
+        self.global_names.push(HashMap::new());
+        let res = f(self);
+        self.global_names.pop();
+        res
     }
     fn load_impl(&mut self, input: &str, path: Option<&Path>) -> UiuaResult<&mut Self> {
         let (items, errors) = parse(input, path);
         if !errors.is_empty() {
             return Err(errors.into());
+        }
+        if let Some(path) = path {
+            self.current_imports.insert(path.into());
         }
         for item in items {
             if let Err(error) = self.item(item) {
@@ -89,10 +123,26 @@ impl<'io> Uiua<'io> {
                     error: error.into(),
                     trace,
                 };
+                if let Some(path) = path {
+                    self.current_imports.remove(path);
+                }
                 return Err(traced);
             }
         }
+        if let Some(path) = path {
+            self.current_imports.remove(path);
+        }
         Ok(self)
+    }
+    pub(crate) fn import(&mut self, input: &str, path: &Path) -> UiuaResult {
+        if self.current_imports.contains(path) {
+            return Err(self.error(format!(
+                "cycle detected importing {}",
+                path.to_string_lossy()
+            )));
+        }
+        self.in_scope(|env| env.load_str_path(input, path).map(drop))?;
+        Ok(())
     }
     fn item(&mut self, item: Item) -> UiuaResult {
         match item {
@@ -126,7 +176,10 @@ impl<'io> Uiua<'io> {
         };
         let idx = self.globals.len();
         self.globals.push(val);
-        self.global_names.insert(binding.name.value, idx);
+        self.global_names
+            .last_mut()
+            .unwrap()
+            .insert(binding.name.value, idx);
         Ok(())
     }
     fn compile_words(&mut self, words: Vec<Sp<Word>>) -> UiuaResult<Vec<Instr>> {
@@ -193,8 +246,14 @@ impl<'io> Uiua<'io> {
         Ok(())
     }
     fn ident(&mut self, ident: Ident, span: Span) -> UiuaResult {
-        if let Some(idx) = self.global_names.get(&ident) {
-            self.push_instr(Instr::CopyGlobal(*idx));
+        if let Some(idx) = self
+            .global_names
+            .iter()
+            .rev()
+            .find_map(|scope| scope.get(&ident))
+        {
+            let value = self.globals[*idx].clone();
+            self.push_instr(Instr::Push(value));
             let span = self.push_span(span);
             self.push_instr(Instr::Call(span));
         } else if let Some(prim) = Primitive::from_name(ident.as_str()) {
@@ -218,6 +277,12 @@ impl<'io> Uiua<'io> {
     }
     fn func(&mut self, func: Func, _span: Span) -> UiuaResult {
         let instrs = self.compile_words(func.body)?;
+        if let [Instr::Push(f), Instr::Call(..)] = instrs.as_slice() {
+            if f.is_function() {
+                self.push_instr(Instr::Push(f.clone()));
+                return Ok(());
+            }
+        }
         let func = Function {
             id: func.id,
             instrs,
@@ -319,7 +384,6 @@ impl<'io> Uiua<'io> {
                     }
                     self.stack.push(array.into());
                 }
-                Instr::CopyGlobal(idx) => self.stack.push(self.globals[*idx].clone()),
                 &Instr::Primitive(prim, span) => {
                     self.call_stack.last_mut().unwrap().spans.push(span);
                     prim.run(self)?;
@@ -364,6 +428,7 @@ impl<'io> Uiua<'io> {
             Ok(())
         }
     }
+    /// Call the top of the stack as a function
     pub fn call(&mut self) -> UiuaResult {
         let call_span = self.span_index();
         self.call_with_span(call_span)
@@ -373,12 +438,15 @@ impl<'io> Uiua<'io> {
             frame.spans.last().copied().unwrap_or(frame.call_span)
         })
     }
+    /// Get the span of the current function call
     pub fn span(&self) -> &Span {
         &self.spans[self.span_index()]
     }
+    /// Construct an error with the current span
     pub fn error(&self, message: impl ToString) -> UiuaError {
         UiuaError::Run(self.span().clone().sp(message.to_string()))
     }
+    /// Pop a value from the stack
     pub fn pop(&mut self, arg: impl StackArg) -> UiuaResult<Value> {
         self.stack.pop().ok_or_else(|| {
             self.error(format!(
@@ -387,6 +455,7 @@ impl<'io> Uiua<'io> {
             ))
         })
     }
+    /// Pop a value from the antistack
     pub fn antipop(&mut self, arg: impl StackArg) -> UiuaResult<Value> {
         self.antistack.pop().ok_or_else(|| {
             self.error(format!(
@@ -395,17 +464,27 @@ impl<'io> Uiua<'io> {
             ))
         })
     }
+    /// Pop a result value from the stack
+    ///
+    /// Equivalent to `Self::pop("result")`
     pub fn pop_result(&mut self) -> UiuaResult<Value> {
         self.pop("result")
     }
+    /// Push a value onto the stack
     pub fn push(&mut self, val: impl Into<Value>) {
         self.stack.push(val.into());
     }
+    /// Push a value onto the antistack
     pub fn antipush(&mut self, val: impl Into<Value>) {
         self.antistack.push(val.into());
     }
+    /// Take the entire stack
     pub fn take_stack(&mut self) -> Vec<Value> {
         take(&mut self.stack)
+    }
+    /// Clone the entire stack
+    pub fn clone_stack(&self) -> Vec<Value> {
+        self.stack.clone()
     }
     pub(crate) fn monadic<V: Into<Value>>(&mut self, f: fn(&Value) -> V) -> UiuaResult {
         let value = self.pop(1)?;
@@ -479,6 +558,9 @@ impl<'io> Uiua<'io> {
     }
 }
 
+/// A trait for types that can be used as argument specifiers for [`Uiua::pop`] and [`Uiua::antipop`]
+///
+/// If the stack is empty, the error message will be "Stack was empty when evaluating {arg_name}"
 pub trait StackArg {
     fn arg_name(&self) -> String;
 }
@@ -488,19 +570,16 @@ impl StackArg for usize {
         format!("argument {self}")
     }
 }
-
 impl StackArg for u8 {
     fn arg_name(&self) -> String {
         format!("argument {self}")
     }
 }
-
 impl StackArg for i32 {
     fn arg_name(&self) -> String {
         format!("argument {self}")
     }
 }
-
 impl<'a> StackArg for &'a str {
     fn arg_name(&self) -> String {
         self.to_string()

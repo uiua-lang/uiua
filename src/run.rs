@@ -8,7 +8,7 @@ use crate::{
     parse::parse,
     primitive::Primitive,
     value::Value,
-    Ident, IoBackend, StdIo, UiuaError, UiuaResult,
+    Ident, IoBackend, StdIo, TraceFrame, UiuaError, UiuaResult,
 };
 
 pub struct Uiua<'io> {
@@ -74,7 +74,20 @@ impl<'io> Uiua<'io> {
             return Err(errors.into());
         }
         for item in items {
-            self.item(item)?;
+            if let Err(error) = self.item(item) {
+                let mut trace = Vec::new();
+                for frame in self.call_stack.iter().rev() {
+                    trace.push(TraceFrame {
+                        id: frame.function.id.clone(),
+                        span: self.spans[frame.call_span].clone(),
+                    });
+                }
+                let traced = UiuaError::Traced {
+                    error: error.into(),
+                    trace,
+                };
+                return Err(traced);
+            }
         }
         Ok(self)
     }
@@ -96,14 +109,15 @@ impl<'io> Uiua<'io> {
         idx
     }
     fn binding(&mut self, binding: Binding) -> UiuaResult {
-        let instrs = self.compile_words(binding.words)?;
         let val = if binding.name.value.is_capitalized() {
+            let instrs = self.compile_words(binding.words)?;
             let func = Function {
                 id: FunctionId::Named(binding.name.value.clone()),
                 instrs,
             };
             Value::from(func)
         } else {
+            let instrs = self.compile_words(binding.words)?;
             self.exec_global_instrs(instrs)?;
             self.stack.pop().unwrap_or_default()
         };
@@ -114,12 +128,13 @@ impl<'io> Uiua<'io> {
     }
     fn compile_words(&mut self, words: Vec<Sp<Word>>) -> UiuaResult<Vec<Instr>> {
         self.new_functions.push(Vec::new());
-        self.words(words)?;
-        Ok(self.new_functions.pop().unwrap())
+        self.words(words, true)?;
+        let instrs = self.new_functions.pop().unwrap();
+        Ok(instrs)
     }
-    fn words(&mut self, words: Vec<Sp<Word>>) -> UiuaResult {
+    fn words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult {
         for word in words.into_iter().rev() {
-            self.word(word)?;
+            self.word(word, call)?;
         }
         Ok(())
     }
@@ -144,7 +159,7 @@ impl<'io> Uiua<'io> {
             (_, instr) => instrs.push(instr),
         }
     }
-    fn word(&mut self, word: Sp<Word>) -> UiuaResult {
+    fn word(&mut self, word: Sp<Word>, call: bool) -> UiuaResult {
         match word.value {
             Word::Number(n) => {
                 let n: f64 = n
@@ -157,29 +172,28 @@ impl<'io> Uiua<'io> {
             Word::Ident(ident) => self.ident(ident, word.span)?,
             Word::Strand(items) => {
                 self.push_instr(Instr::BeginArray);
-                self.words(items)?;
+                self.words(items, false)?;
                 let span = self.push_span(word.span);
                 self.push_instr(Instr::EndArray(false, span));
             }
             Word::Array(items) => {
                 self.push_instr(Instr::BeginArray);
-                self.words(items)?;
+                self.words(items, true)?;
                 let span = self.push_span(word.span);
                 self.push_instr(Instr::EndArray(true, span));
             }
             Word::Func(func) => self.func(func, word.span)?,
             Word::RefFunc(func) => self.ref_func(func, word.span)?,
-            Word::Primitive(p) => {
-                let span = self.push_span(word.span);
-                self.push_instr(Instr::Primitive(p, span));
-            }
-            Word::Modified(m) => self.modified(*m, word.span)?,
+            Word::Primitive(p) => self.primitive(p, word.span, call),
+            Word::Modified(m) => self.modified(*m, call)?,
         }
         Ok(())
     }
     fn ident(&mut self, ident: Ident, span: Span) -> UiuaResult {
         if let Some(idx) = self.global_names.get(&ident) {
             self.push_instr(Instr::CopyGlobal(*idx));
+            let span = self.push_span(span);
+            self.push_instr(Instr::Call(span));
         } else if let Some(prim) = Primitive::from_name(ident.as_str()) {
             let span = self.push_span(span);
             self.push_instr(Instr::Primitive(prim, span));
@@ -222,8 +236,36 @@ impl<'io> Uiua<'io> {
         self.push_instr(Instr::CallRef(ref_size as usize, span));
         Ok(())
     }
-    fn modified(&mut self, _modified: Modified, _span: Span) -> UiuaResult {
-        todo!("modified")
+    fn modified(&mut self, modified: Modified, call: bool) -> UiuaResult {
+        self.new_functions.push(Vec::new());
+        self.words(modified.words, false)?;
+        self.primitive(
+            modified.modifier.value,
+            modified.modifier.span.clone(),
+            true,
+        );
+        let instrs = self.new_functions.pop().unwrap();
+        let func = Function {
+            id: FunctionId::Anonymous(modified.modifier.span.clone()),
+            instrs,
+        };
+        self.push_instr(Instr::Push(func.into()));
+        if call {
+            let span = self.push_span(modified.modifier.span);
+            self.push_instr(Instr::Call(span));
+        }
+        Ok(())
+    }
+    fn primitive(&mut self, prim: Primitive, span: Span, call: bool) {
+        let span = self.push_span(span);
+        if call {
+            self.push_instr(Instr::Primitive(prim, span));
+        } else {
+            self.push_instr(Instr::Push(Value::from(Function {
+                id: FunctionId::Primitive(prim),
+                instrs: vec![Instr::Primitive(prim, span)],
+            })))
+        }
     }
     fn exec_global_instrs(&mut self, instrs: Vec<Instr>) -> UiuaResult {
         let func = Function {
@@ -240,93 +282,71 @@ impl<'io> Uiua<'io> {
     fn exec(&mut self, frame: StackFrame) -> UiuaResult {
         let ret_height = self.call_stack.len();
         self.call_stack.push(frame);
-        'outer: while self.call_stack.len() > ret_height {
-            let frame = self.call_stack.last_mut().unwrap();
-            // println!("frame: {:?}", frame.function.instrs);
-            while let Some(instr) = frame.function.instrs.get(frame.pc) {
-                // println!("{:?}", self.stack);
-                // println!("  {:?}", instr);
-                match instr {
-                    Instr::Push(val) => self.stack.push(val.clone()),
-                    Instr::BeginArray => self.array_stack.push(self.stack.len()),
-                    Instr::EndArray(normalize, span) => {
-                        let start = self.array_stack.pop().unwrap();
-                        if start > self.stack.len() {
+        while self.call_stack.len() > ret_height {
+            let frame = self.call_stack.last().unwrap();
+            let Some(instr) = frame.function.instrs.get(frame.pc) else {
+                self.call_stack.pop();
+                continue;
+            };
+            println!("{:?}", self.stack);
+            println!("  {:?}", instr);
+            match instr {
+                Instr::Push(val) => self.stack.push(val.clone()),
+                Instr::BeginArray => self.array_stack.push(self.stack.len()),
+                Instr::EndArray(normalize, span) => {
+                    let start = self.array_stack.pop().unwrap();
+                    if start > self.stack.len() {
+                        return Err(self.spans[*span]
+                            .clone()
+                            .sp("array removed elements".into())
+                            .into());
+                    }
+                    let mut array = Array::from_iter(self.stack.drain(start..).rev());
+                    if *normalize {
+                        if let Some((a, b)) = array.normalize() {
                             return Err(self.spans[*span]
                                 .clone()
-                                .sp("array removed elements".into())
+                                .sp(format!(
+                                    "array items have different shapes: {a:?} and {b:?}"
+                                ))
                                 .into());
                         }
-                        let mut array = Array::from_iter(self.stack.drain(start..));
-                        if *normalize {
-                            if let Some((a, b)) = array.normalize() {
-                                return Err(self.spans[*span]
-                                    .clone()
-                                    .sp(format!(
-                                        "array items have different shapes: {a:?} and {b:?}"
-                                    ))
-                                    .into());
-                            }
-                        } else {
-                            array.normalize_type();
-                        }
-                        self.stack.push(array.into());
+                    } else {
+                        array.normalize_type();
                     }
-                    Instr::CopyGlobal(idx) => self.stack.push(self.globals[*idx].clone()),
-                    &Instr::Primitive(prim, span) => {
-                        frame.spans.push(span);
-                        prim.run(self)?;
-                        self.call_stack.last_mut().unwrap().spans.pop();
-                        self.call_stack.last_mut().unwrap().pc += 1;
-                        continue 'outer;
-                    }
-                    Instr::Call(span) => {
-                        let value = self.stack.pop().unwrap();
-                        if value.is_function() {
-                            let function = value.into_function();
-                            let new_frame = StackFrame {
-                                function,
-                                call_span: *span,
-                                spans: Vec::new(),
-                                pc: 0,
-                            };
-                            frame.pc += 1;
-                            self.call_stack.push(new_frame);
-                            continue 'outer;
-                        } else {
-                            self.stack.push(value);
-                        }
-                    }
-                    &Instr::CallRef(n, span) => {
-                        let f = self.pop("ref function")?;
-                        if self.stack.len() < n {
-                            return Err(self.spans[span]
-                                .clone()
-                                .sp(format!("not enough arguments for reference of {n} values"))
-                                .into());
-                        }
-                        let refs = self.stack.drain(self.stack.len() - n..).collect();
-                        self.ref_stack.push(refs);
-                        self.stack.push(f);
-                        self.call()?;
-                        self.call_stack.last_mut().unwrap().pc += 1;
-                        continue 'outer;
-                    }
-                    Instr::CopyRef(n) => {
-                        let value = self.ref_stack.last().unwrap()[*n].clone();
-                        self.stack.push(value);
-                    }
+                    self.stack.push(array.into());
                 }
-                frame.pc += 1;
+                Instr::CopyGlobal(idx) => self.stack.push(self.globals[*idx].clone()),
+                &Instr::Primitive(prim, span) => {
+                    self.call_stack.last_mut().unwrap().spans.push(span);
+                    prim.run(self)?;
+                    self.call_stack.last_mut().unwrap().spans.pop();
+                }
+                &Instr::Call(span) => self.call_with_span(span)?,
+                &Instr::CallRef(n, span) => {
+                    let f = self.pop("ref function")?;
+                    if self.stack.len() < n {
+                        return Err(self.spans[span]
+                            .clone()
+                            .sp(format!("not enough arguments for reference of {n} values"))
+                            .into());
+                    }
+                    let refs = self.stack.drain(self.stack.len() - n..).rev().collect();
+                    self.ref_stack.push(refs);
+                    self.stack.push(f);
+                    self.call_with_span(span)?;
+                }
+                Instr::CopyRef(n) => {
+                    let value = self.ref_stack.last().unwrap()[*n].clone();
+                    self.stack.push(value);
+                }
             }
-            self.call_stack.pop();
+            self.call_stack.last_mut().unwrap().pc += 1;
         }
         Ok(())
     }
-    pub fn call(&mut self) -> UiuaResult {
-        let call_span = self.span_index();
+    fn call_with_span(&mut self, call_span: usize) -> UiuaResult {
         let value = self.pop("called function")?;
-        println!("call: {value:?}");
         if value.is_function() {
             let function = value.into_function();
             let new_frame = StackFrame {
@@ -341,8 +361,14 @@ impl<'io> Uiua<'io> {
             Ok(())
         }
     }
+    pub fn call(&mut self) -> UiuaResult {
+        let call_span = self.span_index();
+        self.call_with_span(call_span)
+    }
     fn span_index(&self) -> usize {
-        self.call_stack.last().map_or(0, |frame| frame.call_span)
+        self.call_stack.last().map_or(0, |frame| {
+            frame.spans.last().copied().unwrap_or(frame.call_span)
+        })
     }
     pub fn span(&self) -> &Span {
         &self.spans[self.span_index()]

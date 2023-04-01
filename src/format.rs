@@ -5,28 +5,7 @@ use crate::{ast::*, parse::parse, primitive::Primitive, UiuaError, UiuaResult};
 pub fn format_items(items: &[Item]) -> String {
     let mut output = String::new();
     for item in items {
-        let mut line = String::new();
-        match item {
-            Item::Words(w) => {
-                for node in words(w.iter().map(|w| &w.value).by_ref()) {
-                    reduce(&mut line, &node);
-                }
-            }
-            Item::Binding(binding) => {
-                line.push_str(&binding.name.value.0);
-                line.push_str(" ← ");
-                for node in words(binding.words.iter().map(|w| &w.value).by_ref()) {
-                    reduce(&mut line, &node);
-                }
-            }
-            Item::Comment(comment) => {
-                line.push_str("# ");
-                line.push_str(comment);
-            }
-            Item::Newlines => line.push('\n'),
-        }
-        output.push_str(&line);
-        output.push('\n');
+        format_item(&mut output, item);
     }
     output
 }
@@ -37,11 +16,11 @@ pub fn format<P: AsRef<Path>>(input: &str, path: P) -> UiuaResult<String> {
 pub fn format_str(input: &str) -> UiuaResult<String> {
     format_impl(input, None)
 }
+
 fn format_impl(input: &str, path: Option<&Path>) -> UiuaResult<String> {
     let (items, errors) = parse(input, path);
     if errors.is_empty() {
         Ok(format_items(&items))
-        // Ok(input.into())
     } else {
         Err(errors.into())
     }
@@ -56,6 +35,38 @@ pub fn format_file<P: AsRef<Path>>(path: P) -> UiuaResult<String> {
     }
     fs::write(path, &formatted).map_err(|e| UiuaError::Format(path.to_path_buf(), e))?;
     Ok(formatted)
+}
+
+fn format_item(output: &mut String, item: &Item) {
+    let mut line = String::new();
+    match item {
+        Item::Scoped(items) => {
+            line.push_str("---\n");
+            for item in items {
+                format_item(&mut line, item);
+            }
+            line.push_str("---");
+        }
+        Item::Words(w) => {
+            for node in words(w.iter().map(|w| &w.value).by_ref()) {
+                reduce(&mut line, &node);
+            }
+        }
+        Item::Binding(binding) => {
+            line.push_str(&binding.name.value.0);
+            line.push_str(" ← ");
+            for node in words(binding.words.iter().map(|w| &w.value).by_ref()) {
+                reduce(&mut line, &node);
+            }
+        }
+        Item::Comment(comment) => {
+            line.push_str("# ");
+            line.push_str(comment);
+        }
+        Item::Newlines => {}
+    }
+    output.push_str(&line);
+    output.push('\n');
 }
 
 #[derive(Debug)]

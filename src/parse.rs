@@ -17,6 +17,7 @@ pub enum ParseError {
 #[derive(Debug)]
 pub enum Expectation {
     Term,
+    Eof,
     Simple(Simple),
 }
 
@@ -30,6 +31,7 @@ impl fmt::Display for Expectation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Expectation::Term => write!(f, "term"),
+            Expectation::Eof => write!(f, "end of file"),
             Expectation::Simple(s) => write!(f, "`{s}`"),
         }
     }
@@ -65,28 +67,14 @@ pub fn parse(input: &str, path: Option<&Path>) -> (Vec<Item>, Vec<Sp<ParseError>
         Ok(tokens) => tokens,
         Err(e) => return (Vec::new(), vec![e.map(ParseError::Lex)]),
     };
-    let mut items = Vec::new();
     let mut parser = Parser {
         tokens,
         index: 0,
         errors: Vec::new(),
     };
-    loop {
-        match parser.try_item() {
-            Some(item) => items.push(item),
-            None => {
-                if parser.try_exact(Newline).is_none() {
-                    break;
-                }
-                let mut newline_item = false;
-                while parser.try_exact(Newline).is_some() {
-                    newline_item = true;
-                }
-                if newline_item {
-                    items.push(Item::Newlines);
-                }
-            }
-        }
+    let items = parser.items(true);
+    if parser.errors.is_empty() && parser.index < parser.tokens.len() {
+        parser.errors.push(parser.expected([Expectation::Eof]));
     }
     (items, parser.errors)
 }
@@ -150,13 +138,40 @@ impl Parser {
         ));
         self.errors.push(err);
     }
-    fn try_item(&mut self) -> Option<Item> {
+    fn items(&mut self, parse_scopes: bool) -> Vec<Item> {
+        let mut items = Vec::new();
+        loop {
+            match self.try_item(parse_scopes) {
+                Some(item) => items.push(item),
+                None => {
+                    if self.try_exact(Newline).is_none() {
+                        break;
+                    }
+                    let mut newline_item = false;
+                    while self.try_exact(Newline).is_some() {
+                        newline_item = true;
+                    }
+                    if newline_item {
+                        items.push(Item::Newlines);
+                    }
+                }
+            }
+        }
+        items
+    }
+    fn try_item(&mut self, parse_scopes: bool) -> Option<Item> {
         Some(if let Some(binding) = self.try_binding() {
             Item::Binding(binding)
         } else if let Some(words) = self.try_words() {
             Item::Words(words)
         } else if let Some(comment) = self.next_token_map(Token::as_comment) {
             Item::Comment(comment.value.into())
+        } else if parse_scopes && self.try_exact(ScopeDelim).is_some() {
+            let items = self.items(false);
+            if self.try_exact(ScopeDelim).is_none() {
+                self.errors.push(self.expected([ScopeDelim]));
+            }
+            Item::Scoped(items)
         } else {
             return None;
         })

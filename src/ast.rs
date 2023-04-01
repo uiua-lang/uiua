@@ -4,6 +4,7 @@ use crate::{function::FunctionId, lex::Sp, primitive::Primitive, Ident};
 
 #[derive(Debug, Clone)]
 pub enum Item {
+    Scoped(Vec<Item>),
     Words(Vec<Sp<Word>>),
     Binding(Binding),
     Newlines,

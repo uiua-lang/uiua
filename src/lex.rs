@@ -312,6 +312,7 @@ pub enum Simple {
     Newline,
     Backtick,
     LeftArrow,
+    ScopeDelim,
 }
 
 impl fmt::Display for Simple {
@@ -337,6 +338,7 @@ impl fmt::Display for Simple {
             Simple::Newline => write!(f, "\\n"),
             Simple::Backtick => write!(f, "`"),
             Simple::LeftArrow => write!(f, "←"),
+            Simple::ScopeDelim => write!(f, "---"),
         }
     }
 }
@@ -401,6 +403,16 @@ impl Lexer {
     fn next_char(&mut self) -> Option<char> {
         self.next_char_if(|_| true)
     }
+    fn next_chars_exact(&mut self, s: &str) -> bool {
+        let start = self.loc;
+        for c in s.chars() {
+            if !self.next_char_exact(c) {
+                self.loc = start;
+                return false;
+            }
+        }
+        true
+    }
     fn end_span(&self, start: Loc) -> Span {
         Span::Code(CodeSpan {
             start,
@@ -452,6 +464,8 @@ impl Lexer {
                 '!' if self.next_char_exact('=') => self.end(BangEqual, start),
                 '|' => self.end(Bar, start),
                 '←' => self.end(Simple(LeftArrow), start),
+                // Scope delimiter
+                '-' if self.next_chars_exact("--") => self.end(Simple(ScopeDelim), start),
                 // Comments
                 '#' => {
                     let mut comment = String::new();

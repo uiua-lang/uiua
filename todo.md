@@ -1,6 +1,5 @@
 - Pass stack around
   - Parallelism
-- Scoped regions
 - Optimized functions
   - Reduces:
     - Sum

@@ -110,29 +110,29 @@ impl<'io> Uiua<'io> {
         if let Some(path) = path {
             self.current_imports.insert(path.into());
         }
-        for item in items {
-            if let Err(error) = self.item(item) {
-                let mut trace = Vec::new();
-                for frame in self.call_stack.iter().rev() {
-                    trace.push(TraceFrame {
-                        id: frame.function.id.clone(),
-                        span: self.spans[frame.call_span].clone(),
-                    });
-                }
-                let traced = UiuaError::Traced {
-                    error: error.into(),
-                    trace,
-                };
-                if let Some(path) = path {
-                    self.current_imports.remove(path);
-                }
-                return Err(traced);
-            }
-        }
+        let res = self.items(items);
         if let Some(path) = path {
             self.current_imports.remove(path);
         }
-        Ok(self)
+        if let Err(error) = res {
+            let mut trace = Vec::new();
+            for frame in self.call_stack.iter().rev() {
+                trace.push(TraceFrame {
+                    id: frame.function.id.clone(),
+                    span: self.spans[frame.call_span].clone(),
+                });
+            }
+            let traced = UiuaError::Traced {
+                error: error.into(),
+                trace,
+            };
+            if let Some(path) = path {
+                self.current_imports.remove(path);
+            }
+            Err(traced)
+        } else {
+            Ok(self)
+        }
     }
     pub(crate) fn import(&mut self, input: &str, path: &Path) -> UiuaResult {
         if self.current_imports.contains(path) {
@@ -144,8 +144,15 @@ impl<'io> Uiua<'io> {
         self.in_scope(|env| env.load_str_path(input, path).map(drop))?;
         Ok(())
     }
+    fn items(&mut self, items: Vec<Item>) -> UiuaResult {
+        for item in items {
+            self.item(item)?;
+        }
+        Ok(())
+    }
     fn item(&mut self, item: Item) -> UiuaResult {
         match item {
+            Item::Scoped(items) => self.in_scope(|env| env.items(items))?,
             Item::Words(words) => {
                 let instrs = self.compile_words(words)?;
                 self.exec_global_instrs(instrs)?;

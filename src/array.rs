@@ -603,17 +603,36 @@ impl Clone for Array {
 
 impl PartialEq for Array {
     fn eq(&self, other: &Self) -> bool {
-        if self.ty != other.ty {
+        if self.data_len() != other.data_len() {
             return false;
         }
-        if self.shape != other.shape {
-            return false;
-        }
-        match self.ty {
-            ArrayType::Num => self.numbers() == other.numbers(),
-            ArrayType::Byte => self.bytes() == other.bytes(),
-            ArrayType::Char => self.chars() == other.chars(),
-            ArrayType::Value => self.values() == other.values(),
+        match (self.ty, other.ty) {
+            (ArrayType::Num, ArrayType::Byte) => {
+                self.numbers().iter().zip(other.bytes()).all(|(n, b)| {
+                    let b = *b as f64;
+                    *n == b || n.is_nan() && b.is_nan()
+                })
+            }
+            (ArrayType::Byte, ArrayType::Num) => {
+                self.bytes().iter().zip(other.numbers()).all(|(b, n)| {
+                    let b = *b as f64;
+                    *n == b || n.is_nan() && b.is_nan()
+                })
+            }
+            _ => {
+                if self.ty != other.ty {
+                    return false;
+                }
+                if self.shape != other.shape {
+                    return false;
+                }
+                match self.ty {
+                    ArrayType::Num => self.numbers() == other.numbers(),
+                    ArrayType::Byte => self.bytes() == other.bytes(),
+                    ArrayType::Char => self.chars() == other.chars(),
+                    ArrayType::Value => self.values() == other.values(),
+                }
+            }
         }
     }
 }

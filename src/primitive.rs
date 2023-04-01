@@ -103,8 +103,8 @@ primitive!(
     (2(3), Over, "over" + ','),
     (2(2), Flip, "flip" + '~'),
     (1(0), Pop, "pop" + ';'),
-    (1(0){1}, Save, "save", Dollar + '⇟'),
-    (0[1](1), Load, "load", At + '⇞'),
+    (1(0){1}, Save, "save" + '⇟'),
+    (0[1](1), Load, "load" + '⇞'),
     ((None), Pack, "pack" + '⊓'),
     (1(None), Unpack, "unpack" + '⊔'),
     // Pervasive monadic ops
@@ -437,16 +437,10 @@ impl Primitive {
                     return Ok(());
                 }
                 let mut cells = xs.into_array().into_values().into_iter();
-                let acc = if f.is_function() {
-                    f.function()
-                        .as_primitive()
-                        .and_then(|p| p.reduce_identity())
-                } else {
-                    None
-                };
-                let Some(mut acc) = acc.or_else (|| cells.next()) else {
-                    return Err(env.error("Cannot reduce empty array"));
-                };
+                let mut acc = cells
+                    .next()
+                    .or_else(|| f.as_primitive().and_then(|p| p.reduce_identity()))
+                    .ok_or_else(|| env.error("Cannot reduce empty array"))?;
                 for cell in cells {
                     env.push(cell);
                     env.push(acc);

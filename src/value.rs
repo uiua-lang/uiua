@@ -7,6 +7,7 @@ use crate::{
     function::Function,
     grid_fmt::GridFmt,
     pervade::{self, *},
+    primitive::Primitive,
     Uiua, UiuaResult,
 };
 
@@ -113,6 +114,13 @@ impl Value {
     pub fn function(&self) -> &Function {
         assert!(self.is_function());
         unsafe { &*self.0.unpack::<FunctionRef>() }
+    }
+    pub fn as_primitive(&self) -> Option<Primitive> {
+        if self.is_function() {
+            self.function().as_primitive()
+        } else {
+            None
+        }
     }
     pub fn array(&self) -> &Array {
         assert!(self.is_array());

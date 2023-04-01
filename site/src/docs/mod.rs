@@ -225,31 +225,30 @@ pub fn TutorialArrays(cx: Scope) -> impl IntoView {
     view! { cx,
         <div>
             <h2>"Arrays"</h2>
-            <p>"Uiua is, first and foremost, an array language. The only composite data type is the multimensional array. Arrays have a lot of nice properties, and the primitive oeprations of the language are designed to make it easy to work with them. If you've only ever programmed in non-array languages, then this will be a completely foreign paradigm. In most array languages, most data structure and indeed control flow are replaced with operations on arrays."</p>
+            <p>"Uiua is, first and foremost, an array language. The only composite data type is the multimensional array. Arrays have a lot of nice properties, and the primitive oeprations of the language are designed to make it easy to work with them. If you've only ever programmed in non-array languages, then this will be a completely foreign paradigm. In most array languages, most data structures and control flow are replaced with operations on arrays."</p>
             <h2>"Creating Arrays"</h2>
-            <p>"Other than through functions, Uiua has two ways to create arrays. They are called "<i>"strand notation"</i>" and "<i>"stack notation"</i>"."</p>
+            <p>"Other than with functions, Uiua has two ways to create arrays. They are called "<i>"strand notation"</i>" and "<i>"stack notation"</i>"."</p>
             <p><b>"Strand notation"</b>" uses underscores to connect elements:"</p>
             <Editor examples={&["1_2_3","\"Hello\"_\"World\"",  "0_π_⍉_5_(+1)"]}/>
             <p>"Strand notation is good when you want to create short and/or simple arrays. For longer or more complex arrays, you can use stack notation."</p>
             <p><b>"Stack notation"</b>" uses brackets to group elements:"</p>
-            <Editor examples={&["[1 2 3]", "[¯5 'a' 0 \"wow\"]"]}/>
+            <Editor examples={&["[1 2 3]", "[¯5 'a' 0 (+)]"]}/>
             <p>"What's cool about stack notation is that it is "<i>"not"</i>" just a way to list elements. The code between the brackets runs from right to left as it normally would. When it is done, any items on the stack higher than when it started are put into the array. This gives you some cool ways to create arrays:"</p>
             <Editor examples={&["[...5]", "[×2.×2.×2.×2 .2]", "[+1 2 +3 4]"]}/>
-            <p>"Of course, you can also use stack notation to make multideimensional arrays:"</p>
+            <p>"Of course, you can also use stack notation to make multidimensional arrays:"</p>
             <Editor examples={&["[[1 2 3] [4 5 6]]", "[...[1 2 3]]"]}/>
             <br/>
             <h2><PrimCode prim=Shape name=true/>", "<PrimCode prim=Len name=true/>", and "<PrimCode prim=Rank name=true/></h2>
             <hr/>
-            <p>"Other than their data, arrays also have a property called their "<b>"shape"</b>". Shape is a list of non-negative integers that describes the array's size along each of its axis."</p>
+            <p>"Other than their data, arrays also have a property called their "<b>"shape"</b>". Shape is a list of non-negative integers that describes the array's size along each of its axes."</p>
             <p>"We can get the array's shape with the "<PrimCode prim=Shape name=true/>" primitive. It's a triangle because a triangle is a shape."</p>
             <Editor examples={&["△[1 2 3]", "△5", "△[[1 2 3] [4 5 6]]", "△[...[1 2 3]]"]}/>
             <p>"From shape we can derive two closely-related properties called "<b>"length"</b>" and "<b>"rank"</b>"."</p>
-            <p><PrimCode prim=Len name=true/>" is the number of "<i>"major cells"</i>" of the array. This is the number of elements for a 1D array and the number of rows for a 2D array."</p>
+            <p><PrimCode prim=Len name=true/>" is the number of "<i>"major cells"</i>" of the array. This is the number of elements for a 1D array and the number of rows for a 2D array. Length is always equal to the first number in the shape (or 1 if the shape is empty)."</p>
             <p><PrimCode prim=Rank name=true/>" is the number of dimensions of the array. It is defined as the length of the shape."</p>
             <Editor examples={&["△[1 2 3]\n⇀[1 2 3]\n⸫[1 2 3]", "# ⸫ is equivalent to ⇀△\n=⸫[1 2 3]⇀△[1 2 3]"]}/>
             <p>"When creating multidimensional arrays, stack notation applies a step called "<i>"normalization"</i>". If all the items pushed to the stack have the same shape, they will combine into an array with a higher rank. Different shapes result in an error."</p>
             <Editor examples={&["[[1 2] [3 4]]", "[[1 2] [3 4 5]]"]}/>
-            <p>"This is equivalent to the "<PrimCode prim=Normalize name=true/>" primitive."</p>
             <br/>
             <h2>"Pervasion"</h2>
             <hr/>

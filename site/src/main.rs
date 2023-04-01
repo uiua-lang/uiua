@@ -195,7 +195,6 @@ fn prim_class(prim: Primitive) -> &'static str {
             Some(1) => "monadic-function-button",
             Some(2) => "dyadic-function-button",
             Some(3) => "triadic-function-button",
-            Some(4) => "tetradic-function-button",
             _ => "variadic-function-button",
         }
     }

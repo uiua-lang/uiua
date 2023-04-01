@@ -1,4 +1,3 @@
-- Rethink imports
 - Pass stack around
   - Parallelism
 - Scoped regions
@@ -10,6 +9,8 @@
   - Scans:
     - Plus
 - Refactor inverse
+- Sound IO
+- Native image output
 - More array functions
   - Clear stack
   - Pack

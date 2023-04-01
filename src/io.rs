@@ -304,8 +304,9 @@ impl IoOp {
                     return Err(env.error("Path to import must be a string"));
                 }
                 let path: String = path.array().chars().iter().collect();
-                let _input = String::from_utf8(env.io.read_file(&path).map_err(|e| env.error(e))?)
+                let input = String::from_utf8(env.io.read_file(&path).map_err(|e| env.error(e))?)
                     .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
+                env.load_str_path(&input, &path)?;
             }
             IoOp::Now => env.push(instant::now()),
             IoOp::ImRead => {

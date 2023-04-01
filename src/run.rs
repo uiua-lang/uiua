@@ -68,6 +68,9 @@ impl<'io> Uiua<'io> {
     pub fn load_str(&mut self, input: &str) -> UiuaResult<&mut Self> {
         self.load_impl(input, None)
     }
+    pub fn load_str_path<P: AsRef<Path>>(&mut self, input: &str, path: P) -> UiuaResult<&mut Self> {
+        self.load_impl(input, Some(path.as_ref()))
+    }
     fn load_impl(&mut self, input: &str, path: Option<&Path>) -> UiuaResult<&mut Self> {
         let (items, errors) = parse(input, path);
         if !errors.is_empty() {

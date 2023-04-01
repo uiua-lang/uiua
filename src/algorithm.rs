@@ -116,6 +116,16 @@ impl Value {
             _ => return Err(env.error(requirement)),
         })
     }
+    pub fn as_string(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<String> {
+        if !self.is_array() {
+            return Err(env.error(format!("{}, it is {}", requirement, self.ty())));
+        }
+        let arr = self.array();
+        if !arr.is_chars() {
+            return Err(env.error(format!("{}, it is {}", requirement, arr.ty())));
+        }
+        Ok(arr.chars().iter().collect())
+    }
     pub fn range(&mut self, env: &Uiua) -> UiuaResult {
         let shape = self.as_shape(
             env,

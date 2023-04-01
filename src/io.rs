@@ -183,11 +183,9 @@ impl IoOp {
                 ))
             }
             IoOp::Var => {
-                let name = env.pop(1)?;
-                if !name.is_array() || !name.array().is_chars() {
-                    return Err(env.error("Argument to var must be a string"));
-                }
-                let key: String = name.array().chars().iter().collect();
+                let key = env
+                    .pop(1)?
+                    .as_string(env, "Augument to var must be a string")?;
                 let var = env.io.var(&key).unwrap_or_default();
                 env.push(var);
             }
@@ -196,50 +194,34 @@ impl IoOp {
                 env.push(num);
             }
             IoOp::FReadStr => {
-                let path = env.pop(1)?;
-                if !path.is_array() || !path.array().is_chars() {
-                    return Err(env.error("Path must be a string"));
-                }
-                let path: String = path.array().chars().iter().collect();
+                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let contents =
                     String::from_utf8(env.io.read_file(&path).map_err(|e| env.error(e))?)
                         .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
                 env.push(contents);
             }
             IoOp::FWriteStr => {
-                let path = env.pop(1)?;
+                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let contents = env.pop(2)?;
-                if !path.is_array() || !path.array().is_chars() {
-                    return Err(env.error("Path must be a string"));
-                }
                 if !contents.is_array() || !contents.array().is_chars() {
                     return Err(env.error("Contents must be a string"));
                 }
-                let path: String = path.array().chars().iter().collect();
                 env.io
                     .write_file(&path, contents.to_string().into_bytes())
                     .map_err(|e| env.error(e))?;
             }
             IoOp::FReadBytes => {
-                let path = env.pop(1)?;
-                if !path.is_array() || !path.array().is_chars() {
-                    return Err(env.error("Path must be a string"));
-                }
-                let path: String = path.array().chars().iter().collect();
+                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let contents = env.io.read_file(&path).map_err(|e| env.error(e))?;
                 let arr = Array::from(contents);
                 env.push(arr);
             }
             IoOp::FWriteBytes => {
-                let path = env.pop(1)?;
+                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let contents = env.pop(2)?;
-                if !path.is_array() || !path.array().is_chars() {
-                    return Err(env.error("Path must be a string"));
-                }
                 if !contents.is_array() {
                     return Err(env.error("Contents must be an array"));
                 }
-                let path: String = path.array().chars().iter().collect();
                 let contents = contents.into_array();
                 let contents = if contents.is_numbers() {
                     contents
@@ -257,11 +239,7 @@ impl IoOp {
                     .map_err(|e| env.error(e))?;
             }
             IoOp::FLines => {
-                let path = env.pop(1)?;
-                if !path.is_array() || !path.array().is_chars() {
-                    return Err(env.error("Path must be a string"));
-                }
-                let path: String = path.array().chars().iter().collect();
+                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let contents =
                     String::from_utf8(env.io.read_file(&path).map_err(|e| env.error(e))?)
                         .map_err(|e| env.error(format!("Failed to read file: {}", e)))?;
@@ -270,51 +248,31 @@ impl IoOp {
                 env.push(lines_array);
             }
             IoOp::FExists => {
-                let path = env.pop(1)?;
-                if !path.is_array() || !path.array().is_chars() {
-                    return Err(env.error("Path must be a string"));
-                }
-                let path: String = path.array().chars().iter().collect();
+                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let exists = env.io.file_exists(&path);
                 env.push(exists);
             }
             IoOp::FListDir => {
-                let path = env.pop(1)?;
-                if !path.is_array() || !path.array().is_chars() {
-                    return Err(env.error("Path must be a string"));
-                }
-                let path: String = path.array().chars().iter().collect();
+                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let paths = env.io.list_dir(&path).map_err(|e| env.error(e))?;
                 let paths_array =
                     Array::from_iter(paths.into_iter().map(Array::from).map(Value::from));
                 env.push(paths_array);
             }
             IoOp::FIsFile => {
-                let path = env.pop(1)?;
-                if !path.is_array() || !path.array().is_chars() {
-                    return Err(env.error("Path must be a string"));
-                }
-                let path: String = path.array().chars().iter().collect();
+                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let is_file = env.io.is_file(&path).map_err(|e| env.error(e))?;
                 env.push(is_file);
             }
             IoOp::Import => {
-                let path = env.pop(1)?;
-                if !path.is_array() || !path.array().is_chars() {
-                    return Err(env.error("Path to import must be a string"));
-                }
-                let path: String = path.array().chars().iter().collect();
+                let path = env.pop(1)?.as_string(env, "Import path must be a string")?;
                 let input = String::from_utf8(env.io.read_file(&path).map_err(|e| env.error(e))?)
                     .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
                 env.load_str_path(&input, &path)?;
             }
             IoOp::Now => env.push(instant::now()),
             IoOp::ImRead => {
-                let path = env.pop(1)?;
-                if !path.is_array() || !path.array().is_chars() {
-                    return Err(env.error("Path must be a string"));
-                }
-                let path: String = path.array().chars().iter().collect();
+                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let bytes = env.io.read_file(&path).map_err(|e| env.error(e))?;
                 let image = image::load_from_memory(&bytes)
                     .map_err(|e| env.error(format!("Failed to read image: {}", e)))?
@@ -324,12 +282,8 @@ impl IoOp {
                 env.push(array);
             }
             IoOp::ImWrite => {
-                let path = env.pop(1)?;
+                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let value = env.pop(2)?;
-                if !path.is_array() || !path.array().is_chars() {
-                    return Err(env.error("Path must be a string"));
-                }
-                let path: String = path.array().chars().iter().collect();
                 let ext = path.split('.').last().unwrap_or("");
                 let output_format = match ext {
                     "jpg" | "jpeg" => ImageOutputFormat::Jpeg(100),

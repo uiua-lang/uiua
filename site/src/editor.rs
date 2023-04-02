@@ -290,7 +290,7 @@ pub fn Editor(
                             on:click=prev_example title="Previous example">{ "<" } </button>
                             <button
                             id="next-example"
-                            class="code-button"
+                            class="code-button important-button"
                             style=example_arrow_style
                             on:click=next_example title="Next example">{ ">" } </button>
                     </div>

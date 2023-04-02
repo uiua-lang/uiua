@@ -177,7 +177,7 @@ primitive!(
     (Fold { modifier: 1 }, "fold" + '⌿'),
     (Scan { modifier: 1 }, "scan" + '\\'),
     (Each { modifier: 1 }, "each" + '⸪'),
-    (Cells { modifier: 1 }, "cells" + '≡'),
+    (Rows { modifier: 1 }, "rows" + '≡'),
     (Table { modifier: 1 }, "table" + '⊞'),
     (Repeat { modifier: 1 }, "repeat" + '⍥'),
     (Invert { modifier: 1 }, "invert" + '↩'),
@@ -457,7 +457,7 @@ impl Primitive {
                 }
                 env.push(Array::from((shape, new_values)).normalized_type());
             }
-            Primitive::Cells => {
+            Primitive::Rows => {
                 let f = env.pop(1)?;
                 let xs = env.pop(2)?;
                 if !xs.is_array() {
@@ -471,12 +471,12 @@ impl Primitive {
                     env.push(cell);
                     env.push(f.clone());
                     env.call()?;
-                    cells.push(env.pop("cells' function result")?);
+                    cells.push(env.pop("rows' function result")?);
                 }
                 let mut array = Array::from(cells);
                 if let Some((a, b)) = array.normalize() {
                     return Err(env.error(format!(
-                        "Cells in resulting array have different shapes {a:?} and {b:?}"
+                        "Rows in resulting array have different shapes {a:?} and {b:?}"
                     )));
                 }
                 env.push(array);

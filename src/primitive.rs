@@ -477,14 +477,20 @@ impl Primitive {
                     return env.call();
                 }
                 let array = xs.into_array();
-                let mut cells = Vec::with_capacity(array.len());
+                let mut cells: Vec<Value> = Vec::with_capacity(array.len());
                 for cell in array.into_values() {
                     env.push(cell);
                     env.push(f.clone());
                     env.call()?;
                     cells.push(env.pop("cells' function result")?);
                 }
-                env.push(Array::from(cells).normalized());
+                let mut array = Array::from(cells);
+                if let Some((a, b)) = array.normalize() {
+                    return Err(env.error(format!(
+                        "Cells in resulting array have different shapes {a:?} and {b:?}"
+                    )));
+                }
+                env.push(array);
             }
             Primitive::Table => {
                 let f = env.pop(1)?;

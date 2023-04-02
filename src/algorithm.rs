@@ -726,21 +726,19 @@ fn take_array(index: &[isize], array: Array, env: &Uiua) -> UiuaResult<Array> {
         }
     }
     let index = &index[1..];
-    shape[0] = take_abs;
-    if index.is_empty() {
-        let normalize = shape.len() > 1;
-        let mut arr = Array::from((shape, cells)).normalized_type();
-        if normalize {
-            arr.normalize();
-        }
-        Ok(arr)
-    } else {
+    if !index.is_empty() {
         cells = cells
             .into_iter()
             .map(|cell| take_array(index, cell.into_array(), env).map(Value::from))
             .collect::<UiuaResult<_>>()?;
-        Ok(Array::from((shape, cells)).normalized())
     }
+    let arr = if shape.len() > 1 {
+        Array::from_cells(cells.into_iter().map(Value::into_array).collect()).normalized_type()
+    } else {
+        shape[0] = take_abs;
+        Array::from((shape, cells))
+    };
+    Ok(arr)
 }
 
 fn pick(index: &[isize], array: &Array, env: &Uiua) -> UiuaResult<Value> {

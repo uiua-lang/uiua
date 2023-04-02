@@ -45,11 +45,7 @@ pub mod sign {
         a.signum()
     }
     pub fn byte(a: &u8) -> u8 {
-        if *a == 0 {
-            0
-        } else {
-            1
-        }
+        (*a != 0) as u8
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the sign of {a}"))
@@ -212,13 +208,13 @@ pub mod add {
         b + a
     }
     pub fn byte_byte(a: &u8, b: &u8) -> f64 {
-        (*b as i16 + *a as i16) as u8 as f64
+        (*b as u16 + *a as u16) as f64
     }
     pub fn byte_num(a: &u8, b: &f64) -> f64 {
-        (*b as i16 + *a as i16) as u8 as f64
+        *b + *a as f64
     }
     pub fn num_byte(a: &f64, b: &u8) -> f64 {
-        (*b as i16 + *a as i16) as u8 as f64
+        *a + *b as f64
     }
     pub fn num_char(a: &f64, b: &char) -> char {
         char::from_u32((*b as i64 + *a as i64) as u32).unwrap_or('\0')
@@ -271,7 +267,7 @@ pub mod mul {
         b * a
     }
     pub fn byte_byte(a: &u8, b: &u8) -> f64 {
-        (*b as i16 * *a as i16) as f64
+        *b as f64 * *a as f64
     }
     pub fn byte_num(a: &u8, b: &f64) -> f64 {
         *b * *a as f64
@@ -290,7 +286,7 @@ pub mod div {
         b / a
     }
     pub fn byte_byte(a: &u8, b: &u8) -> f64 {
-        (*b as i16 / *a as i16) as f64
+        *b as f64 / *a as f64
     }
     pub fn byte_num(a: &u8, b: &f64) -> f64 {
         *b / *a as f64
@@ -309,13 +305,14 @@ pub mod modulus {
         (b % a + a) % a
     }
     pub fn byte_byte(a: &u8, b: &u8) -> f64 {
-        (*b as i16 % *a as i16) as f64
+        (*b % *a) as f64
     }
     pub fn byte_num(a: &u8, b: &f64) -> f64 {
-        *b % *a as f64
+        let a = *a as f64;
+        (b % a + a) % a
     }
     pub fn num_byte(a: &f64, b: &u8) -> f64 {
-        *b as f64 % *a
+        (*b as f64 % a + a) % a
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot take the modulus of {a} by {b}"))
@@ -338,13 +335,13 @@ pub mod pow {
         b.powf(*a)
     }
     pub fn byte_byte(a: &u8, b: &u8) -> f64 {
-        (*b as i16).pow(*a as u32) as f64
+        (*b as f64).powf(*a as f64)
     }
     pub fn byte_num(a: &u8, b: &f64) -> f64 {
-        (*b as i16).pow(*a as u32) as f64
+        b.powf(*a as f64)
     }
     pub fn num_byte(a: &f64, b: &u8) -> f64 {
-        (*b as i16).pow(*a as u32) as f64
+        (*b as f64).powf(*a)
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the power of {a} to {b}"))

@@ -328,7 +328,7 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
             .map(|f| (*f * 255.0).floor() as u8)
             .collect()
     } else if arr.is_bytes() {
-        arr.bytes().to_vec()
+        arr.bytes().iter().map(|&b| b.min(1) * 255).collect()
     } else {
         return Err("Image must be a rank 3 numeric array".into());
     };

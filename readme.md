@@ -1,7 +1,7 @@
 
 <img src="site/uiua-logo.png" width="140"/> 
 
-# Description
+# Uiua
 
 Uiua (pronounced *"wee-wuh"*) is a stack-oriented array programming language.
 

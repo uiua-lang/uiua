@@ -78,7 +78,11 @@ pub fn Editor(
         let input = if format {
             if let Ok(formatted) = format_str(&code_string) {
                 let formatted = formatted.trim();
+                let range = (code_elem.selection_start(), code_elem.selection_end());
                 code_elem.set_value(formatted);
+                if let (Ok(Some(start)), Ok(Some(end))) = range {
+                    _ = code_elem.set_selection_range(start, end);
+                }
                 set_code.set(formatted.to_string());
                 formatted.into()
             } else {

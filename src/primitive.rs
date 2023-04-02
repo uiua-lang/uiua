@@ -159,7 +159,7 @@ primitive!(
     // Dyadic array ops
     (2, Match, "match" + '≅'),
     (2, NoMatch, "notmatch" + '≇'),
-    (2, Join, "join" + '≍'),
+    (2, Join, "join" + '⊂'),
     (2, Pair, "pair" + '⚇'),
     (2, Couple, "couple" + '⊟'),
     (2, Pick, "pick" + '⊡'),
@@ -170,7 +170,7 @@ primitive!(
     (2, Rotate, "rotate" + '↻'),
     (2, Windows, "windows" + '◫'),
     (2, Replicate, "replicate" + '‡'),
-    (2, Member, "member" + '∈'),
+    (2, Member, "member" + '∊'),
     (2, Group, "group" + '⊕'),
     (2, IndexOf, "indexof" + '⊙'),
     // Triadic array op

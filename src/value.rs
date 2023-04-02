@@ -171,14 +171,14 @@ impl Value {
 
 mod array {
     use super::*;
-    pub fn number(array: &Array) -> &[f64] {
-        array.numbers()
+    pub fn number(array: Array) -> Vec<f64> {
+        array.into_numbers()
     }
-    pub fn byte(array: &Array) -> &[u8] {
-        array.bytes()
+    pub fn byte(array: Array) -> Vec<u8> {
+        array.into_bytes()
     }
-    pub fn char(array: &Array) -> &[char] {
-        array.chars()
+    pub fn char(array: Array) -> Vec<char> {
+        array.into_chars()
     }
 }
 
@@ -186,16 +186,16 @@ macro_rules! value_un_impl {
     ($name:ident $(,($rt:ident, $get:ident, $f:ident))* $(,)?) => {
         impl Value {
             #[allow(unreachable_patterns)]
-            pub fn $name(&self, env: &Uiua) -> UiuaResult<Self> {
+            pub fn $name(self, env: &Uiua) -> UiuaResult<Self> {
                 Ok(match self.ty() {
-                    $(Type::$rt => pervade::$name::$f(&self.$get()).into(),)*
+                    $(Type::$rt => pervade::$name::$f(self.$get()).into(),)*
                     Type::Array => {
-                        let arr = self.array();
+                        let arr = self.into_array();
                         let shape = arr.shape().to_vec();
                         match arr.ty() {
-                            $(ArrayType::$rt => Array::from((shape, un_pervade(array::$get(&arr), pervade::$name::$f))),)*
+                            $(ArrayType::$rt => Array::from((shape, un_pervade(array::$get(arr), pervade::$name::$f))),)*
                             ArrayType::Value => {
-                                Array::from((shape, un_pervade_fallible(arr.values(), env, Value::$name)?))
+                                Array::from((shape, un_pervade_fallible(arr.into_values(), env, Value::$name)?))
                             }
                             ty => return Err(pervade::$name::error(ty, env)),
                         }.into()
@@ -226,19 +226,19 @@ macro_rules! value_bin_impl {
     $(,)?) => {
         impl Value {
             #[allow(unreachable_patterns)]
-            pub fn $name(&self, other: &Self, env: &Uiua) -> UiuaResult<Self> {
+            pub fn $name(self, other: Self, env: &mut Uiua) -> UiuaResult<Self> {
                 Ok(match (self.ty(), other.ty()) {
                     $((Type::$a_ty, Type::$b_ty) => {
-                        Value::from(pervade::$name::$ab(&self.$get_a(), &other.$get_b()))
+                        Value::from(pervade::$name::$ab(self.$get_a(), other.$get_b()))
                     })*
                     (Type::Array, Type::Array) => {
-                        Value::from(self.array().$name(other.array(), env)?)
+                        Value::from(self.into_array().$name(other.into_array(), env)?)
                     }
                     $((Type::Array, Type::$b_ty) => {
-                        Value::from(self.array().$name(&Array::from(other.$get_b().clone()), env)?)
+                        Value::from(self.into_array().$name(Array::from(other.$get_b()), env)?)
                     }),*
                     $((Type::$a_ty, Type::Array) => {
-                        Value::from(Array::$name(&Array::from(self.$get_a().clone()), other.array(), env)?)
+                        Value::from(Array::$name(Array::from(self.$get_a()), other.into_array(), env)?)
                     }),*
                     (a, b) => return Err(pervade::$name::error(a, b, env))
                 })
@@ -253,22 +253,22 @@ macro_rules! array_bin_impl {
     $(,)?) => {
         impl Array {
             #[allow(unreachable_patterns)]
-            pub fn $name(&self, other: &Self, env: &Uiua) -> UiuaResult<Self> {
-                let ash = self.shape();
-                let bsh = other.shape();
+            pub fn $name(mut self, mut other: Self, env: &mut Uiua) -> UiuaResult<Self> {
+                let ash = self.take_shape();
+                let bsh = other.take_shape();
                 Ok(match (self.ty(), other.ty()) {
                     $((ArrayType::$a_ty, ArrayType::$b_ty) =>
-                        bin_pervade(ash, array::$get_a(self), bsh, array::$get_b(other), env, pervade::$name::$ab)?.into(),)*
+                        bin_pervade(&ash, array::$get_a(self), &bsh, array::$get_b(other), env, pervade::$name::$ab)?.into(),)*
                     (ArrayType::Value, ArrayType::Value) => {
-                        bin_pervade_fallible(ash, self.values(), bsh, other.values(), env, Value::$name)?.into()
+                        bin_pervade_fallible(&ash, self.into_values(), &bsh, other.into_values(), env, Value::$name)?.into()
                     }
                     $((ArrayType::Value, ArrayType::$b_ty) => {
-                        bin_pervade_fallible(ash, self.values(), bsh, array::$get_b(other), env,
-                            |a, b, env| Value::$name(a, &b.clone().into(), env))?.into()
+                        bin_pervade_fallible(&ash, self.into_values(), &bsh, array::$get_b(other), env,
+                            |a, b, env| Value::$name(a, b.into(), env))?.into()
                     },)*
                     $((ArrayType::$a_ty, ArrayType::Value) => {
-                        bin_pervade_fallible(ash, array::$get_a(self), bsh, other.values(), env,
-                            |a, b, env| Value::$name(&a.clone().into(), b, env))?.into()
+                        bin_pervade_fallible(&ash, array::$get_a(self), &bsh, other.into_values(), env,
+                            |a, b, env| Value::$name(a.into(), b, env))?.into()
                     },)*
                     (a, b) => return Err(pervade::$name::error(a, b, env)),
                 })
@@ -388,12 +388,12 @@ macro_rules! cmp_impls {
                 (Byte, byte, Num, number, byte_num),
                 // Type comparable
                 (Num, number, Char, char, always_less),
-                (Num, number, Function, function, always_less),
+                (Num, number, Function, into_function, always_less),
                 (Byte, byte, Char, char, always_less),
-                (Byte, byte, Function, function, always_less),
+                (Byte, byte, Function, into_function, always_less),
                 (Char, char, Num, number, always_greater),
                 (Char, char, Byte, byte, always_greater),
-                (Char, char, Function, function, always_less),
+                (Char, char, Function, into_function, always_less),
             );
 
             array_bin_impl!(
@@ -561,8 +561,12 @@ impl From<char> for Value {
 
 impl From<Function> for Value {
     fn from(f: Function) -> Self {
-        // Create a new rc
-        let rc = Rc::new(f);
+        Rc::new(f).into()
+    }
+}
+
+impl From<Rc<Function>> for Value {
+    fn from(rc: Rc<Function>) -> Self {
         // Cast it into the aether
         Self(new_function_nanbox(rc))
     }

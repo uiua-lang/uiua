@@ -2,6 +2,7 @@ use std::{
     cmp::Ordering,
     fmt,
     mem::{swap, take, ManuallyDrop},
+    rc::Rc,
 };
 
 use crate::{algorithm::*, function::Function, value::Value, Uiua, UiuaResult};
@@ -91,6 +92,9 @@ impl Array {
     }
     pub fn shape_mut(&mut self) -> &mut Vec<usize> {
         &mut self.shape
+    }
+    pub(crate) fn take_shape(&mut self) -> Vec<usize> {
+        take(&mut self.shape)
     }
     pub fn ty(&self) -> ArrayType {
         self.ty
@@ -751,6 +755,16 @@ impl From<char> for Array {
 
 impl From<Function> for Array {
     fn from(f: Function) -> Self {
+        Self {
+            shape: vec![],
+            ty: ArrayType::Value,
+            data: vec![Value::from(f)].into(),
+        }
+    }
+}
+
+impl From<Rc<Function>> for Array {
+    fn from(f: Rc<Function>) -> Self {
         Self {
             shape: vec![],
             ty: ArrayType::Value,

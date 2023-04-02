@@ -3,7 +3,10 @@ use std::{
     fmt,
 };
 
-use crate::{array::Array, function::FunctionId, io::*, lex::Simple, value::*, Uiua, UiuaResult};
+use crate::{
+    array::Array, function::FunctionId, io::*, lex::Simple, pervade::bin_pervade_fallible,
+    value::*, Uiua, UiuaResult,
+};
 
 macro_rules! primitive {
     ($((
@@ -138,7 +141,7 @@ primitive!(
     (2, Atan, "atangent"),
     // Monadic array ops
     (1, Len, "length" + '⇀'),
-    (1, Rank, "rank" + '⸫'),
+    (1, Rank, "rank" + '∴'),
     (1, Shape, "shape" + '△'),
     (1, Range, "range" + '⇡'),
     (1, First, "first" + '⊢'),
@@ -176,8 +179,10 @@ primitive!(
     (Reduce { modifier: 1 }, "reduce" + '/'),
     (Fold { modifier: 1 }, "fold" + '⌿'),
     (Scan { modifier: 1 }, "scan" + '\\'),
-    (Each { modifier: 1 }, "each" + '⸪'),
+    (Each { modifier: 1 }, "each" + '∵'),
+    (Zip { modifier: 2 }, "zip" + '∺'),
     (Rows { modifier: 1 }, "rows" + '≡'),
+    (Bridge { modifier: 2 }, "bridge" + '≑'),
     (Table { modifier: 1 }, "table" + '⊞'),
     (Repeat { modifier: 1 }, "repeat" + '⍥'),
     (Invert { modifier: 1 }, "invert" + '↩'),
@@ -457,6 +462,62 @@ impl Primitive {
                 }
                 env.push(Array::from((shape, new_values)).normalized_type());
             }
+            Primitive::Zip => {
+                let f = env.pop(1)?;
+                let xs = env.pop(2)?;
+                let ys = env.pop(3)?;
+                match (xs.is_array(), ys.is_array()) {
+                    (false, false) => {
+                        env.push(ys);
+                        env.push(xs);
+                        env.push(f);
+                        env.call()?;
+                    }
+                    (true, true) => {
+                        let (x_shape, x_values) = xs.into_array().into_shape_flat_values();
+                        let (y_shape, y_values) = ys.into_array().into_shape_flat_values();
+                        let (shape, values) = bin_pervade_fallible(
+                            &x_shape,
+                            x_values,
+                            &y_shape,
+                            y_values,
+                            env,
+                            |x, y, env| {
+                                env.push(y);
+                                env.push(x);
+                                env.push(f.clone());
+                                env.call()?;
+                                env.pop("zip's function result")
+                            },
+                        )?;
+                        env.push(Array::from((shape, values)).normalized_type());
+                    }
+                    (true, false) => {
+                        let (x_shape, x_values) = xs.into_array().into_shape_flat_values();
+                        let mut new_values = Vec::with_capacity(x_values.len());
+                        for x in x_values {
+                            env.push(ys.clone());
+                            env.push(x);
+                            env.push(f.clone());
+                            env.call()?;
+                            new_values.push(env.pop("zip's function result")?);
+                        }
+                        env.push(Array::from((x_shape, new_values)).normalized_type());
+                    }
+                    (false, true) => {
+                        let (y_shape, y_values) = ys.into_array().into_shape_flat_values();
+                        let mut new_values = Vec::with_capacity(y_values.len());
+                        for y in y_values {
+                            env.push(y);
+                            env.push(xs.clone());
+                            env.push(f.clone());
+                            env.call()?;
+                            new_values.push(env.pop("zip's function result")?);
+                        }
+                        env.push(Array::from((y_shape, new_values)).normalized_type());
+                    }
+                }
+            }
             Primitive::Rows => {
                 let f = env.pop(1)?;
                 let xs = env.pop(2)?;
@@ -466,20 +527,95 @@ impl Primitive {
                     return env.call();
                 }
                 let array = xs.into_array();
-                let mut cells: Vec<Value> = Vec::with_capacity(array.len());
-                for cell in array.into_values() {
-                    env.push(cell);
+                let mut new_rows: Vec<Value> = Vec::with_capacity(array.len());
+                for row in array.into_values() {
+                    env.push(row);
                     env.push(f.clone());
                     env.call()?;
-                    cells.push(env.pop("rows' function result")?);
+                    new_rows.push(env.pop("rows' function result")?);
                 }
-                let mut array = Array::from(cells);
+                let mut array = Array::from(new_rows);
                 if let Some((a, b)) = array.normalize() {
                     return Err(env.error(format!(
                         "Rows in resulting array have different shapes {a:?} and {b:?}"
                     )));
                 }
                 env.push(array);
+            }
+            Primitive::Bridge => {
+                let f = env.pop(1)?;
+                let xs = env.pop(2)?;
+                let ys = env.pop(3)?;
+                match (xs.is_array(), ys.is_array()) {
+                    (false, false) => {
+                        env.push(ys);
+                        env.push(xs);
+                        env.push(f);
+                        env.call()?;
+                    }
+                    (true, true) => {
+                        let x_rows = xs.into_array().into_values();
+                        let y_rows = ys.into_array().into_values();
+                        if x_rows.len() != y_rows.len() {
+                            return Err(env.error(format!(
+                                "Cannot bridge arrays with different number of rows {:?} and {:?}",
+                                x_rows.len(),
+                                y_rows.len()
+                            )));
+                        }
+                        let mut new_rows = Vec::with_capacity(x_rows.len());
+                        for (x, y) in x_rows.into_iter().zip(y_rows) {
+                            env.push(y);
+                            env.push(x);
+                            env.push(f.clone());
+                            env.call()?;
+                            new_rows.push(env.pop("bridge's function result")?);
+                        }
+                        let mut array = Array::from(new_rows);
+                        if let Some((a, b)) = array.normalize() {
+                            return Err(env.error(format!(
+                                "Rows in resulting array have different shapes {a:?} and {b:?}"
+                            )));
+                        }
+                        env.push(array);
+                    }
+                    (true, false) => {
+                        let x_rows = xs.into_array().into_values();
+                        let mut new_rows = Vec::with_capacity(x_rows.len());
+                        for x in x_rows {
+                            env.push(ys.clone());
+                            env.push(x);
+                            env.push(f.clone());
+                            env.call()?;
+                            new_rows.push(env.pop("bridge's function result")?);
+                        }
+                        let mut array = Array::from(new_rows);
+                        if let Some((a, b)) = array.normalize() {
+                            return Err(env.error(format!(
+                                "Rows in resulting array have different shapes {a:?} and {b:?}"
+                            )));
+                        }
+                        env.push(array);
+                    }
+                    (false, true) => {
+                        let y_rows = ys.into_array().into_values();
+                        let mut new_rows = Vec::with_capacity(y_rows.len());
+                        for y in y_rows {
+                            env.push(y);
+                            env.push(xs.clone());
+                            env.push(f.clone());
+                            env.call()?;
+                            new_rows.push(env.pop("bridge's function result")?);
+                        }
+                        let mut array = Array::from(new_rows);
+                        if let Some((a, b)) = array.normalize() {
+                            return Err(env.error(format!(
+                                "Rows in resulting array have different shapes {a:?} and {b:?}"
+                            )));
+                        }
+                        env.push(array);
+                    }
+                }
             }
             Primitive::Table => {
                 let f = env.pop(1)?;

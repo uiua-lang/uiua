@@ -503,10 +503,10 @@ impl<'io> Uiua<'io> {
     }
     pub(crate) fn monadic_env<V: Into<Value>>(
         &mut self,
-        f: fn(&Value, &Self) -> UiuaResult<V>,
+        f: fn(Value, &Self) -> UiuaResult<V>,
     ) -> UiuaResult {
         let value = self.pop(1)?;
-        self.push(f(&value, self)?);
+        self.push(f(value, self)?);
         Ok(())
     }
     pub(crate) fn monadic_mut(&mut self, f: fn(&mut Value)) -> UiuaResult {
@@ -536,11 +536,11 @@ impl<'io> Uiua<'io> {
     }
     pub(crate) fn dyadic_env<V: Into<Value>>(
         &mut self,
-        f: fn(&Value, &Value, &Self) -> UiuaResult<V>,
+        f: fn(Value, Value, &mut Self) -> UiuaResult<V>,
     ) -> UiuaResult {
         let a = self.pop(1)?;
         let b = self.pop(2)?;
-        let value = f(&a, &b, self)?.into();
+        let value = f(a, b, self)?.into();
         self.push(value);
         Ok(())
     }

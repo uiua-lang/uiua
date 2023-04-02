@@ -163,7 +163,7 @@ table {
     box-sizing: border-box;
     outline: none;
     border: none;
-    padding: 0.3em;
+    padding: 0.3em 3.5em 0.3em 0.3em;
     min-height: 1em;
     font-size: 1em;
     font-family: "Code Font";
@@ -200,8 +200,8 @@ table {
 #code-right-side {
     display: flex;
     position: absolute;
-    top: 0.1em;
-    right: 0.7em;
+    top: 0.2em;
+    right: 0.2em;
     opacity: 0.5;
     font-size: 1em;
     align-items: center;
@@ -313,4 +313,8 @@ table {
     margin-top: 2em;
     display: flex;
     justify-content: space-between;
+}
+
+.sound-button {
+    background-color: transparent;
 }

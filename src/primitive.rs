@@ -190,6 +190,7 @@ primitive!(
     (Try { modifier: 2 }, "try" + '?'),
     // Misc
     (2, Assert, "assert" + '!'),
+    (1, Trace, "trace" + '|'),
     (1(None), Call, "call" + ':'),
     (0, Noop, "noop" + '·'),
     (1, String, "string"),
@@ -327,6 +328,11 @@ impl Primitive {
             Primitive::IndexOf => env.dyadic_mut_env(Value::index_of)?,
             Primitive::Call => env.call()?,
             Primitive::Parse => env.monadic_mut_env(Value::parse_num)?,
+            Primitive::Trace => {
+                let value = env.pop(1)?;
+                env.io.print_str(&value.show());
+                env.push(value);
+            }
             Primitive::Pack => {
                 let n = env
                     .pop(1)?

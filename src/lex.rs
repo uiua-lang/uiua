@@ -299,7 +299,6 @@ pub enum Simple {
     OpenBracket,
     CloseBracket,
     Underscore,
-    Bar,
     At,
     Bang,
     Star,
@@ -325,7 +324,6 @@ impl fmt::Display for Simple {
             Simple::CloseBracket => write!(f, "]"),
             Simple::Underscore => write!(f, "_"),
             Simple::At => write!(f, "@"),
-            Simple::Bar => write!(f, "|"),
             Simple::Bang => write!(f, "!"),
             Simple::Star => write!(f, "*"),
             Simple::Percent => write!(f, "%"),
@@ -459,7 +457,6 @@ impl Lexer {
                 '<' if self.next_char_exact('=') => self.end(LessEqual, start),
                 '>' if self.next_char_exact('=') => self.end(GreaterEqual, start),
                 '!' if self.next_char_exact('=') => self.end(BangEqual, start),
-                '|' => self.end(Bar, start),
                 '←' => self.end(Simple(LeftArrow), start),
                 // Scope delimiter
                 '-' if self.next_chars_exact("--") => self.end(Simple(ScopeDelim), start),

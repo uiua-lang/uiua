@@ -106,7 +106,6 @@ primitive!(
     (1(0){1}, Save, "save" + '⇟'),
     (0[1](1), Load, "load" + '⇞'),
     ((None), Pack, "pack" + '⊓'),
-    (1(None), Unpack, "unpack" + '⊔'),
     // Pervasive monadic ops
     (1, Sign, "sign" + '$'),
     (1, Not, "not" + '¬'),
@@ -341,16 +340,6 @@ impl Primitive {
                 }
                 env.push(Array::from(values));
             }
-            Primitive::Unpack => {
-                let value = env.pop(1)?;
-                if value.is_array() {
-                    for v in value.into_array().into_values().into_iter().rev() {
-                        env.push(v);
-                    }
-                } else {
-                    env.push(value);
-                }
-            }
             Primitive::Put => {
                 let mut index = env.pop(1)?;
                 let value = env.pop(2)?;
@@ -420,7 +409,7 @@ impl Primitive {
                     env.push(f);
                     return env.call();
                 }
-                for cell in xs.into_array().into_values() {
+                for cell in xs.into_array().into_values().into_iter().rev() {
                     env.push(acc);
                     env.push(cell);
                     env.push(f.clone());
@@ -436,14 +425,14 @@ impl Primitive {
                     env.push(xs);
                     return Ok(());
                 }
-                let mut cells = xs.into_array().into_values().into_iter();
+                let mut cells = xs.into_array().into_values().into_iter().rev();
                 let mut acc = cells
                     .next()
                     .or_else(|| f.as_primitive().and_then(|p| p.reduce_identity()))
                     .ok_or_else(|| env.error("Cannot reduce empty array"))?;
                 for cell in cells {
-                    env.push(cell);
                     env.push(acc);
+                    env.push(cell);
                     env.push(f.clone());
                     env.call()?;
                     acc = env.pop("reduced function result")?;

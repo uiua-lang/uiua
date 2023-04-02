@@ -1,6 +1,7 @@
 mod backend;
 mod docs;
 mod editor;
+mod examples;
 mod pad;
 
 use std::cell::RefCell;
@@ -12,50 +13,6 @@ use uiua::primitive::Primitive;
 use web_sys::HtmlAudioElement;
 
 use crate::{docs::*, editor::*, pad::*};
-
-const EXAMPLES: &[&str] = &[
-    r#"‡=¯1 ≡/-◫2 <'A' ≍' '."Um, I um...arrays""#,
-    "# Click Run to format!\nfirst repeat (\\+ rev)0_1 10",
-    "↯~⇡/×.2_3_4",
-    "\
-x ← ⊞⚇.÷÷2 ~-÷2,⇡. 256
-rgb ← ⊞: (×.⊢⇌)_(×.⊢)_0.5 x
-u ← ⸪(↥<0.2 ~>0.7.+×2 ×.~⊔) x
-c ← √⸪(/+ ⁿ2) x
-⍉≍~-¬u <1 c +0.1 ≡(↧<0.95 c) rgb",
-    "Avg ← ÷⇀~/+.\nAvg 0_2_1_5",
-    "{÷×2 a -b ⚇¯.√-××4 a c ⁿ2 b}1 2 0",
-    "\
-r ← ⌵sin ÷10 ⊞+.⇡300 
-g ← ⌵sin ÷21 ⊞↥.⇡300 
-b ← ⌵sin ÷32 ⊞-.⇡300 
-⍉[r g b]",
-    r#"⊟⸪(≅⇌.).⊢⊕=' '."uiua racecar wow cool!""#,
-    "\
-Thirty ← ≡(↥≅0_1_1 ~=1 /+.) ◫3 ≍~0 ≍0
-size ← 600
-start ← =÷2 size ⇡+1 size
-↯≍~1 ⇌△.⇌[⍥(Thirty.) start ÷2 size]",
-    "‡⸪(=2 /+ =⌊.÷⇡.).+1 ⇡60",
-    "⍉↯4_4[...1 .2 .3 ...4 .5 .6]",
-    "\
-Z ← +⚇/- ⁿ2 ~×2 /×.⇌
-⍉⊞⚇.÷25 -÷2 ~⇡. 100
-↯≍~1 △.⸪(<1 √/+ ⁿ2;~⍥(Z ~,) 0_0 10)",
-    "⸪(⊡~·_:_÷_≡_⍋ ⁅÷23)⊞×.-10 ⇡20",
-    "# Change this ↓ to a 0\n!\"Oh no bad!\" 1\nprintln \"All is well\"",
-];
-
-#[cfg(test)]
-#[test]
-fn test_examples() {
-    use uiua::Uiua;
-    for example in EXAMPLES {
-        Uiua::with_stdio()
-            .load_str(example)
-            .unwrap_or_else(|e| panic!("Example failed:\n{example}\n{e}"));
-    }
-}
 
 thread_local! {
     static SUBTITLE: RefCell<Option<usize>>  = RefCell::new(None);
@@ -126,16 +83,14 @@ pub fn MainPage(cx: Scope) -> impl IntoView {
     view! {
         cx,
         <div>
-            <div id="subtitle">
-                { subtitle }
-            </div>
+            <div id="subtitle">{ subtitle }</div>
             <div id="links">
                 <p><A href="docs">"Documentation"</A></p>
                 <p><A href="pad">"Pad"</A></p>
             </div>
             <Editor
-                examples={EXAMPLES}
-                size={EditorSize::Medium}
+                examples=examples::EXAMPLES
+                size=EditorSize::Medium
                 help={&[
                     "Type some or all of a glyph's name, then run to format the names into glyphs.",
                     "You can run with ctrl/shift + enter.",

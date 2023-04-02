@@ -9,6 +9,7 @@ use leptos::*;
 use leptos_router::*;
 use rand::prelude::*;
 use uiua::primitive::Primitive;
+use web_sys::HtmlAudioElement;
 
 use crate::{docs::*, editor::*, pad::*};
 
@@ -148,8 +149,14 @@ pub fn MainPage(cx: Scope) -> impl IntoView {
 
 #[component]
 fn MainText(cx: Scope) -> impl IntoView {
+    let borat = |_| {
+        if let Ok(audio) = HtmlAudioElement::new_with_src("/weewah.mp3") {
+            _ = audio.play();
+        }
+    };
+
     view! { cx, <div>
-        <p>"Uiua ("<i>"wee-wuh "<audio controls src="/weewah.mp3" style="width: 3em; height: 1.2em;"/></i>") is a stack-oriented array programming language with a focus on tacit code (code without named values). Its semantics and primitives (and this site) are largely inspired by "<a href="https://mlochbaum.github.io/BQN/">"BQN"</a>", but it combines the array paradigm with the stack-oriented paradigm to make writing point-free code more workable."</p>
+        <p>"Uiua ("<i>"wee-wuh "</i><button on:click=borat>"🔉"</button>") is a stack-oriented array programming language with a focus on tacit code (code without named values). Its semantics and primitives (and this site) are largely inspired by "<a href="https://mlochbaum.github.io/BQN/">"BQN"</a>", but it combines the array paradigm with the stack-oriented paradigm to make writing point-free code more workable."</p>
         <hr/>
         <h3>"How is Uiua like other array languages?"</h3>
         <p>"Like APL, J, BQN, and many other array languages, Uiua's primary data type is the array. Arrays are multidimensional and rank-polymorphic, meaning that many operation automatically apply to every element."</p>

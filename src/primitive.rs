@@ -331,6 +331,7 @@ impl Primitive {
             Primitive::Trace => {
                 let value = env.pop(1)?;
                 env.io.print_str(&value.show());
+                env.io.print_str("\n");
                 env.push(value);
             }
             Primitive::Pack => {

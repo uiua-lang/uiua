@@ -1,12 +1,12 @@
-- Native image output
-- Threads
-- Refactor inverse
 - Call refs somethings else
-- Sound IO
+- Fix windows
+- Refactor inverse
+- Memoize imports
 - Better solution to string formatting
+- Threads
 - More array functions
+  - Find
   - Clear stack
-  - Pack
   - Progressive index of
   - Nudge
 - Optimized functions
@@ -17,7 +17,9 @@
   - Scans:
     - Plus
   - Happy-path for Put
-- Type testing/tracing
+- Multimedia Output
+  - Native image output
+  - Sound IO
 - "Structs"
 - System APIs
   - Sockets

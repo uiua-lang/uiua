@@ -502,36 +502,29 @@ impl Primitive {
                     env.push(f);
                     return env.call();
                 }
-                let mut deshape = false;
                 let a = if xs.is_array() {
                     xs.into_array()
                 } else {
-                    deshape = true;
                     Array::from(xs)
                 };
                 let b = if ys.is_array() {
                     ys.into_array()
                 } else {
-                    deshape = true;
                     Array::from(ys)
                 };
-                let mut table = Vec::with_capacity(a.len());
-                for a in a.into_values() {
-                    let mut row = Vec::with_capacity(b.len());
-                    for b in b.clone().into_values() {
+                let mut new_shape = a.shape().to_vec();
+                new_shape.extend_from_slice(b.shape());
+                let mut items = Vec::with_capacity(a.len() * b.len());
+                for a in a.into_flat_values() {
+                    for b in b.clone().into_flat_values() {
                         env.push(b);
                         env.push(a.clone());
                         env.push(f.clone());
                         env.call()?;
-                        row.push(env.pop("tabled function result")?);
+                        items.push(env.pop("tabled function result")?);
                     }
-                    table.push(Value::from(Array::from(row).normalized_type()));
                 }
-                let mut table = Array::from(table).normalized();
-                if deshape {
-                    table.deshape();
-                }
-                env.push(table);
+                env.push(Array::from((new_shape, items)).normalized_type());
             }
             Primitive::Scan => {
                 let f = env.pop(1)?;

@@ -117,8 +117,8 @@ primitive!(
     (1, Sqrt, "sqrt" + '√'),
     (1, Sin, "sine"),
     (1, Cos, "cosine"),
-    (1, Asin),
-    (1, Acos),
+    (1, Asin, "asine"),
+    (1, Acos, "acosine"),
     (1, Floor, "floor" + '⌊'),
     (1, Ceil, "ceiling" + '⌈'),
     (1, Round, "round" + '⁅'),
@@ -135,7 +135,7 @@ primitive!(
     (2, Div, "divide", Percent + '÷'),
     (2, Mod, "modulus" + '◿'),
     (2, Pow, "power" + 'ⁿ'),
-    (2, Log),
+    (2, Log, "log"),
     (2, Min, "minimum" + '↧'),
     (2, Max, "maximum" + '↥'),
     (2, Atan, "atangent"),
@@ -185,8 +185,6 @@ primitive!(
     (Bridge { modifier: 1 }, "bridge" + '≑'),
     (Table { modifier: 1 }, "table" + '⊞'),
     (Repeat { modifier: 1 }, "repeat" + '⍥'),
-    (Invert { modifier: 1 }, "invert" + '↩'),
-    (Under { modifier: 2 }, "under" + '⍜'),
     (Try { modifier: 2 }, "try" + '?'),
     // Misc
     (2, Assert, "assert" + '!'),
@@ -398,29 +396,6 @@ impl Primitive {
             Primitive::Load => {
                 let x = env.antipop(1)?;
                 env.push(x);
-            }
-            Primitive::Invert => {
-                let f = env.pop(1)?;
-                if !f.is_function() {
-                    return Err(env.error("Only functions can be inverted"));
-                }
-                let f_inv = f.function().inverse(env, false)?;
-                env.push(f_inv);
-                env.call()?;
-            }
-            Primitive::Under => {
-                let f = env.pop(1)?;
-                let g = env.pop(2)?;
-                if !f.is_function() {
-                    return Err(env.error("Only functions can be inverted"));
-                }
-                let f_inv = f.function().inverse(env, true)?;
-                env.push(f);
-                env.call()?;
-                env.push(g);
-                env.call()?;
-                env.push(f_inv);
-                env.call()?;
             }
             Primitive::Fold => {
                 let f = env.pop(1)?;

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{lex::Span, primitive::Primitive, value::Value, Ident, Uiua, UiuaResult};
+use crate::{lex::Span, primitive::Primitive, value::Value, Ident};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Instr {
@@ -63,71 +63,6 @@ impl Function {
             FunctionId::Primitive(prim) => Some(*prim),
             _ => None,
         }
-    }
-    pub fn inverse(&self, env: &Uiua, require_unary: bool) -> UiuaResult<Self> {
-        match self.instrs.as_slice() {
-            [Instr::Primitive(prim, span)] => {
-                return if let Some(inv) = prim.inverse() {
-                    Ok(Function {
-                        id: FunctionId::Primitive(inv),
-                        instrs: vec![Instr::Primitive(inv, *span)],
-                    })
-                } else {
-                    Err(env.error(format!("No inverse found for {prim}")))
-                }
-            }
-            _ => {}
-        }
-        let mut args = 0;
-        let mut groups: Vec<Vec<Instr>> = Vec::new();
-        let no_inverse = || env.error("No inverse found");
-        macro_rules! last_group {
-            () => {
-                groups.last_mut().ok_or_else(no_inverse)?
-            };
-        }
-        for instr in self.instrs.iter().rev() {
-            match instr {
-                Instr::Push(val) => {
-                    if args > 0 {
-                        last_group!().push(Instr::Push(val.clone()));
-                        args -= 1;
-                    } else {
-                        return Err(no_inverse());
-                    }
-                }
-                Instr::Primitive(prim, span) => {
-                    if let Some(inv) = prim.inverse() {
-                        if let Some((a, o)) = prim.args().zip(prim.outputs()) {
-                            args = a.saturating_sub(o);
-                            groups.push(vec![Instr::Primitive(inv, *span)]);
-                        } else {
-                            return Err(no_inverse());
-                        }
-                    } else {
-                        return Err(env.error(format!("No inverse found for {prim}")));
-                    }
-                }
-                &Instr::Call(n) => groups.push(vec![Instr::Call(n)]),
-                Instr::BeginArray => {
-                    last_group!().push(Instr::EndArray(false, 0));
-                }
-                &Instr::EndArray(n, span) => last_group!().push(Instr::EndArray(n, span)),
-                &Instr::CallDfn(_, _) => return Err(no_inverse()),
-                &Instr::DfnVal(_) => return Err(no_inverse()),
-            }
-        }
-        if require_unary && args != 0 {
-            return Err(env.error("Only unary functions can be inverted"));
-        }
-        let function = Function {
-            id: FunctionId::Anonymous(env.span().clone()),
-            instrs: groups
-                .into_iter()
-                .flat_map(|g| g.into_iter().rev())
-                .collect(),
-        };
-        Ok(function)
     }
 }
 

@@ -1,5 +1,4 @@
 - Refactor inverse
-- Pick a new glyph for enclose that looks good next to join
 - Memoize imports
 - Better solution to string formatting
 - Recursion?

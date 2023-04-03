@@ -1,11 +1,11 @@
 use std::{
     cmp::Ordering,
     fmt,
-    mem::{swap, take, ManuallyDrop},
+    mem::{take, ManuallyDrop},
     rc::Rc,
 };
 
-use crate::{algorithm::*, function::Function, value::Value, Uiua, UiuaResult};
+use crate::{function::Function, value::Value, Uiua, UiuaResult};
 
 pub struct Array {
     ty: ArrayType,
@@ -95,6 +95,9 @@ impl Array {
     }
     pub(crate) fn take_shape(&mut self) -> Vec<usize> {
         take(&mut self.shape)
+    }
+    pub(crate) fn set_shape(&mut self, shape: impl Into<Vec<usize>>) {
+        self.shape = shape.into();
     }
     pub fn ty(&self) -> ArrayType {
         self.ty
@@ -206,7 +209,7 @@ impl Array {
             ArrayType::Value => values(&mut self.shape, unsafe { &mut self.data.values }),
         }
     }
-    fn take_flat_values(&mut self) -> Vec<Value> {
+    pub fn take_flat_values(&mut self) -> Vec<Value> {
         match self.ty {
             ArrayType::Num => take(unsafe { &mut *self.data.numbers })
                 .into_iter()
@@ -330,103 +333,6 @@ impl Array {
     pub fn deshape(&mut self) {
         let data_len: usize = self.shape.iter().product();
         self.shape = vec![data_len];
-    }
-    pub fn reshape(&mut self, shape: impl IntoIterator<Item = usize>) {
-        self.shape = shape.into_iter().collect();
-        let new_len: usize = self.shape.iter().product();
-        match self.ty {
-            ArrayType::Num => force_length(self.numbers_mut(), new_len),
-            ArrayType::Byte => force_length(self.bytes_mut(), new_len),
-            ArrayType::Char => force_length(self.chars_mut(), new_len),
-            ArrayType::Value => force_length(self.values_mut(), new_len),
-        }
-    }
-    pub fn reverse(&mut self) {
-        let shape = self.shape.clone();
-        match self.ty {
-            ArrayType::Num => reverse(&shape, self.numbers_mut()),
-            ArrayType::Byte => reverse(&shape, self.bytes_mut()),
-            ArrayType::Char => reverse(&shape, self.chars_mut()),
-            ArrayType::Value => reverse(&shape, self.values_mut()),
-        }
-    }
-    pub fn join(&mut self, mut other: Self, env: &Uiua) -> UiuaResult {
-        if self.shape.is_empty() && other.shape.is_empty() {
-            // Atom case
-            self.take_values_from(other);
-            self.shape = vec![2];
-        } else {
-            let rank_diff = self.rank() as isize - other.rank() as isize;
-            if rank_diff.abs() > 1 {
-                return Err(env.error(format!(
-                    "Joined values cannot have a rank difference greater than 1, \
-                    but ranks are {} and {}",
-                    self.rank(),
-                    other.rank()
-                )));
-            }
-            match self.rank().cmp(&other.rank()) {
-                Ordering::Equal => {
-                    if self.shape[1..] != other.shape[1..] {
-                        return Err(env.error(format!(
-                            "Joined arrays of the same rank must have the same \
-                            non-leading shape, but the shapes are {:?} and {:?}",
-                            self.shape, other.shape
-                        )));
-                    }
-                    self.shape[0] += other.shape[0];
-                    self.take_values_from(other);
-                }
-                Ordering::Greater => {
-                    if self.shape[1..] != other.shape {
-                        return Err(env.error(format!(
-                            "Appended arrays must have the same non-leading shape, \
-                            but the shapes are {:?} and {:?}",
-                            self.shape, other.shape
-                        )));
-                    }
-                    self.shape[0] += 1;
-                    self.take_values_from(other);
-                }
-                Ordering::Less => {
-                    if self.shape != other.shape[1..] {
-                        return Err(env.error(format!(
-                            "Prepended arrays must have the same non-leading shape, \
-                            but the shapes are {:?} and {:?}",
-                            self.shape, other.shape
-                        )));
-                    }
-                    self.reverse();
-                    other.reverse();
-                    swap(self, &mut other);
-                    self.take_values_from(other);
-                    self.shape[0] += 1;
-                    self.reverse();
-                }
-            }
-        }
-        Ok(())
-    }
-    /// Simply take the values from the other array and append them to this one.
-    /// Does not update the shape.
-    fn take_values_from(&mut self, other: Self) {
-        match (self.ty, other.ty) {
-            (ArrayType::Num, ArrayType::Num) => {
-                self.numbers_mut().extend(other.into_numbers());
-            }
-            (ArrayType::Char, ArrayType::Char) => {
-                self.chars_mut().extend(other.into_chars());
-            }
-            (ArrayType::Value, ArrayType::Value) => {
-                self.values_mut().extend(other.into_flat_values());
-            }
-            _ => {
-                let shape = take(&mut self.shape);
-                let mut values = self.take_flat_values();
-                values.append(&mut other.into_flat_values());
-                *self = Array::from((shape, values));
-            }
-        }
     }
     /// If rank <= 1, return the atom values, otherwise return the array cell values.
     pub fn into_values(mut self) -> Vec<Value> {

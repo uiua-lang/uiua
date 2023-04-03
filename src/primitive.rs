@@ -4,8 +4,8 @@ use std::{
 };
 
 use crate::{
-    array::Array, function::FunctionId, io::*, lex::Simple, pervade::bin_pervade_fallible,
-    value::*, Uiua, UiuaResult,
+    algorithm::pervade::bin_pervade_fallible, array::Array, function::FunctionId, io::*,
+    lex::Simple, value::*, Uiua, UiuaResult,
 };
 
 macro_rules! primitive {

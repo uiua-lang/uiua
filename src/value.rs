@@ -3,10 +3,10 @@ use std::{cmp::Ordering, fmt, mem::forget, rc::Rc};
 use nanbox::NanBox;
 
 use crate::{
+    algorithm::pervade::{self, *},
     array::{Array, ArrayType},
     function::Function,
     grid_fmt::GridFmt,
-    pervade::{self, *},
     primitive::Primitive,
     Uiua, UiuaResult,
 };

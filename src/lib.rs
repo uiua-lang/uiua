@@ -10,7 +10,6 @@ mod grid_fmt;
 mod io;
 pub mod lex;
 pub mod parse;
-mod pervade;
 pub mod primitive;
 pub mod run;
 pub mod value;

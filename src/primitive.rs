@@ -109,6 +109,7 @@ primitive!(
     (1(0){1}, Save, "save" + '⇟'),
     (0[1](1), Load, "load" + '⇞'),
     ((None), Pack, "pack" + '⊓'),
+    (0(None), Clear, DoubleBacktick),
     // Pervasive monadic ops
     (1, Sign, "sign" + '$'),
     (1, Not, "not" + '¬'),
@@ -396,6 +397,9 @@ impl Primitive {
             Primitive::Load => {
                 let x = env.antipop(1)?;
                 env.push(x);
+            }
+            Primitive::Clear => {
+                env.take_stack();
             }
             Primitive::Fold => {
                 let f = env.pop(1)?;

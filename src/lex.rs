@@ -311,6 +311,7 @@ pub enum Simple {
     Backtick,
     LeftArrow,
     ScopeDelim,
+    DoubleBacktick,
 }
 
 impl fmt::Display for Simple {
@@ -335,6 +336,7 @@ impl fmt::Display for Simple {
             Simple::Backtick => write!(f, "`"),
             Simple::LeftArrow => write!(f, "←"),
             Simple::ScopeDelim => write!(f, "---"),
+            Simple::DoubleBacktick => write!(f, "``"),
         }
     }
 }
@@ -441,10 +443,12 @@ impl Lexer {
                 '@' => self.end(At, start),
                 '`' => {
                     let number = self.number('-');
-                    if number.len() == 1 {
-                        self.end(Simple(Backtick), start)
-                    } else {
+                    if number.len() > 1 {
                         self.end(Number(number), start)
+                    } else if self.next_char_exact('`') {
+                        self.end(DoubleBacktick, start)
+                    } else {
+                        self.end(Backtick, start)
                     }
                 }
                 '¯' if self.peek_char().filter(char::is_ascii_digit).is_some() => {
@@ -457,9 +461,9 @@ impl Lexer {
                 '<' if self.next_char_exact('=') => self.end(LessEqual, start),
                 '>' if self.next_char_exact('=') => self.end(GreaterEqual, start),
                 '!' if self.next_char_exact('=') => self.end(BangEqual, start),
-                '←' => self.end(Simple(LeftArrow), start),
+                '←' => self.end(LeftArrow, start),
                 // Scope delimiter
-                '-' if self.next_chars_exact("--") => self.end(Simple(ScopeDelim), start),
+                '-' if self.next_chars_exact("--") => self.end(ScopeDelim, start),
                 // Comments
                 '#' => {
                     let mut comment = String::new();

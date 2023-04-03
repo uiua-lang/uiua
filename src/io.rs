@@ -266,6 +266,12 @@ impl IoOp {
             }
             IoOp::Import => {
                 let path = env.pop(1)?.as_string(env, "Import path must be a string")?;
+                if env.stack_size() > 0 {
+                    return Err(env.error(format!(
+                        "Stack must be empty before import, but there are {} items on it",
+                        env.stack_size()
+                    )));
+                }
                 let input = String::from_utf8(env.io.read_file(&path).map_err(|e| env.error(e))?)
                     .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
                 env.import(&input, path.as_ref())?;

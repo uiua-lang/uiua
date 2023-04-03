@@ -33,7 +33,9 @@ pub struct Uiua<'io> {
     stack: Vec<Value>,
     antistack: Vec<Value>,
     call_stack: Vec<StackFrame>,
+    // IO
     current_imports: HashSet<PathBuf>,
+    imports: HashMap<PathBuf, Vec<Value>>,
     pub(crate) io: &'io dyn IoBackend,
 }
 
@@ -66,6 +68,7 @@ impl<'io> Uiua<'io> {
             new_dfns: Vec::new(),
             call_stack: Vec::new(),
             current_imports: HashSet::new(),
+            imports: HashMap::new(),
             io: &StdIo,
         }
     }
@@ -141,7 +144,12 @@ impl<'io> Uiua<'io> {
                 path.to_string_lossy()
             )));
         }
-        self.in_scope(|env| env.load_str_path(input, path).map(drop))?;
+        if !self.imports.contains_key(path) {
+            self.in_scope(|env| env.load_str_path(input, path).map(drop))?;
+            let module_stack = self.take_stack();
+            self.imports.insert(path.into(), module_stack);
+        }
+        self.stack.extend(self.imports[path].iter().cloned());
         Ok(())
     }
     fn items(&mut self, items: Vec<Item>) -> UiuaResult {

@@ -19,13 +19,13 @@ const RULE_30: &str = "\
 Thirty ← ≡(↥≅0_1_1 ~=1 /+.) ◫3 ⊂~0 ⊂0
 size ← 600
 start ← =÷2 size ⇡+1 size
-↯⊂~1 ⇌△.⇌[⍥(Thirty.) start ÷2 size]";
+⇌[⍥(Thirty.) start ÷2 size]";
 const PRIMES: &str = "‡∵(=2 /+ =⌊.÷⇡.).+1 ⇡60";
 const TRANS_STACK: &str = "⍉↯4_4[...1 .2 .3 ...4 .5 .6]";
 const MANDELBROT: &str = "\
 Z ← +⚇/- ⁿ2 ~×2 /×.⇌
 ⍉⊞⚇.÷25 -÷2 ~⇡. 100
-↯⊂~1 △.∵(<1 √/+ ⁿ2;~⍥(Z ~,) 0_0 10)";
+∵(<1 √/+ ⁿ2;~⍥(Z ~,) 0_0 10)";
 const CHART: &str = "∵(⊙~·_:_÷_≡_⍋ ⁅÷23)⊞×.-10 ⇡20";
 const ERRORS: &str = "# Change this ↓ to a 0\n!\"Oh no bad!\" 1\nprintln \"All is well\"";
 

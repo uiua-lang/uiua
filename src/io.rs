@@ -318,8 +318,8 @@ pub fn value_to_image_bytes(value: &Value, format: ImageOutputFormat) -> Result<
 }
 
 pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
-    if !value.is_array() || value.array().rank() != 3 {
-        return Err("Image must be a rank 3 numeric array".into());
+    if !value.is_array() || ![2, 3].contains(&value.array().rank()) {
+        return Err("Image must be a rank 2 or 3 numeric array".into());
     }
     let arr = value.array();
     let bytes = if arr.is_numbers() {
@@ -330,14 +330,19 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
     } else if arr.is_bytes() {
         arr.bytes().iter().map(|&b| b.min(1) * 255).collect()
     } else {
-        return Err("Image must be a rank 3 numeric array".into());
+        return Err("Image must be a rank 2 or 3 numeric array".into());
     };
-    let [width, height, px_size] = match arr.shape() {
+    #[allow(clippy::match_ref_pats)]
+    let [height, width, px_size] = match arr.shape() {
+        &[a, b] => [a, b, 1],
         &[a, b, c] => [a, b, c],
         _ => unreachable!("Shape checked above"),
     };
     Ok(match px_size {
         1 => image::GrayImage::from_raw(width as u32, height as u32, bytes)
+            .ok_or("Failed to create image")?
+            .into(),
+        2 => image::GrayAlphaImage::from_raw(width as u32, height as u32, bytes)
             .ok_or("Failed to create image")?
             .into(),
         3 => image::RgbImage::from_raw(width as u32, height as u32, bytes)
@@ -348,7 +353,7 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
             .into(),
         n => {
             return Err(format!(
-                "The last dimension of an image array must be 1, 3, or 4, but it is {n}"
+                "For a color image, the last dimension of the image array must be between 1 and 4 but it is {n}"
             ))
         }
     })

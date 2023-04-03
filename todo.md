@@ -1,7 +1,5 @@
 - Call refs somethings else
 - Refactor inverse
-- Allow more shapes for images
-- Add break
 - Pick a new glyph for enclose that looks good next to join
 - Memoize imports
 - Better solution to string formatting

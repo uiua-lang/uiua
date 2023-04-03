@@ -178,6 +178,20 @@ impl Array {
             ArrayType::Value => values(&self.shape, unsafe { &self.data.values }),
         }
     }
+    pub fn data_with<D, N, B, C, V, T>(&self, with: D, nums: N, bytes: B, chars: C, values: V) -> T
+    where
+        N: FnOnce(D, &[usize], &[f64]) -> T,
+        B: FnOnce(D, &[usize], &[u8]) -> T,
+        C: FnOnce(D, &[usize], &[char]) -> T,
+        V: FnOnce(D, &[usize], &[Value]) -> T,
+    {
+        match self.ty {
+            ArrayType::Num => nums(with, &self.shape, unsafe { &self.data.numbers }),
+            ArrayType::Byte => bytes(with, &self.shape, unsafe { &self.data.bytes }),
+            ArrayType::Char => chars(with, &self.shape, unsafe { &self.data.chars }),
+            ArrayType::Value => values(with, &self.shape, unsafe { &self.data.values }),
+        }
+    }
     pub fn data_mut<N, B, C, V, T>(&mut self, nums: N, bytes: B, chars: C, values: V) -> T
     where
         N: FnOnce(&mut [usize], &mut [f64]) -> T,

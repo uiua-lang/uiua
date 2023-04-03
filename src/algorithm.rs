@@ -357,13 +357,16 @@ impl Value {
         Ok(())
     }
     pub fn windows(&mut self, from: Self, env: &Uiua) -> UiuaResult {
-        let mut array = from.coerce_into_array();
-        let sizes = self.as_naturals(env, "Window size must be a list of positive integers")?;
-        if sizes.is_empty() {
+        if !from.is_array() {
+            return Err(env.error("Cannot take windows from a non-array"));
+        }
+        let array = from.array();
+        let size_spec = self.as_naturals(env, "Window size must be a list of positive integers")?;
+        if size_spec.is_empty() {
             return Ok(());
         }
-        array_windows(&sizes, &mut array, env)?;
-        *self = array.into();
+        let new_array = windows(&size_spec, array, env)?;
+        *self = new_array.into();
         Ok(())
     }
     pub fn classify(&mut self, env: &Uiua) -> UiuaResult {
@@ -632,37 +635,87 @@ fn put(indices: &[isize], value: Value, array: &mut Array, env: &Uiua) -> UiuaRe
     }
 }
 
-fn array_windows(mut sizes: &[usize], array: &mut Array, env: &Uiua) -> UiuaResult {
-    if sizes.is_empty() || array.shape().is_empty() {
-        return Ok(());
-    }
-    let window_size = sizes[0];
-    if window_size == 0 {
-        return Err(env.error("Window size cannot be 0"));
-    }
-    sizes = &sizes[1..];
-    let window_count = if window_size <= array.shape()[0] {
-        array.shape()[0] - window_size + 1
-    } else {
+fn windows(size_spec: &[usize], array: &Array, env: &Uiua) -> UiuaResult<Array> {
+    if size_spec.len() > array.shape().len() {
         return Err(env.error(format!(
-            "Window size of {} is too large for shape {:?}",
-            window_size,
-            array.shape(),
+            "Window size {size_spec:?} has too many axes for array of shape {:?}",
+            array.shape()
         )));
-    };
-    let mut windows = Vec::with_capacity(window_count);
-    let mut window_shape = array.shape().to_vec();
-    let cells = take(array).into_cells();
-    window_shape[0] = window_count;
-    for window in cells.windows(window_size) {
-        let mut window = window.to_vec();
-        for array in &mut window {
-            array_windows(sizes, array, env)?;
-        }
-        windows.push(Array::from_cells(window));
     }
-    *array = Array::from_cells(windows);
-    Ok(())
+    for (i, (size, shape)) in size_spec.iter().zip(array.shape()).enumerate() {
+        if *size > *shape {
+            return Err(env.error(format!(
+                "Cannot take window of size {size} along axis {i} of array of shape {:?}",
+                array.shape()
+            )));
+        }
+    }
+    let mut new_shape = Vec::with_capacity(array.shape().len() + size_spec.len());
+    new_shape.extend(array.shape().iter().zip(size_spec).map(|(a, b)| a - b + 1));
+    new_shape.extend(size_spec);
+    new_shape.extend(&array.shape()[size_spec.len()..]);
+    let mut true_size = Vec::with_capacity(array.shape().len());
+    true_size.extend(size_spec);
+    if true_size.len() < array.shape().len() {
+        true_size.extend(&array.shape()[true_size.len()..]);
+    }
+    let mut new_array: Array = array.data_with(
+        true_size,
+        |size, shape, nums| copy_windows(size, shape, nums).into(),
+        |size, shape, bytes| copy_windows(size, shape, bytes).into(),
+        |size, shape, chars| copy_windows(size, shape, chars).into(),
+        |size, shape, values| copy_windows(size, shape, values).into(),
+    );
+    new_array.reshape(new_shape);
+    Ok(new_array)
+}
+
+fn copy_windows<T: Clone>(mut size: Vec<usize>, shape: &[usize], src: &[T]) -> Vec<T> {
+    let mut dst = Vec::new();
+    let mut corner = vec![0; shape.len()];
+    let mut curr = vec![0; shape.len()];
+    for (i, dim) in shape.iter().enumerate() {
+        if size.len() <= i {
+            size.push(*dim);
+        }
+    }
+    'windows: loop {
+        // Reset curr
+        for i in curr.iter_mut() {
+            *i = 0;
+        }
+        // Copy the window at the current corner
+        'items: loop {
+            // Copy the current item
+            let mut src_index = 0;
+            let mut stride = 1;
+            for ((c, i), s) in corner.iter().zip(&*curr).zip(shape).rev() {
+                src_index += (*c + *i) * stride;
+                stride *= s;
+            }
+            dst.push(src[src_index].clone());
+            // Go to the next item
+            for i in (0..curr.len()).rev() {
+                if curr[i] == size[i] - 1 {
+                    curr[i] = 0;
+                } else {
+                    curr[i] += 1;
+                    continue 'items;
+                }
+            }
+            break;
+        }
+        // Go to the next corner
+        for i in (0..corner.len()).rev() {
+            if corner[i] == shape[i] - size[i] {
+                corner[i] = 0;
+            } else {
+                corner[i] += 1;
+                continue 'windows;
+            }
+        }
+        return dst;
+    }
 }
 
 fn transpose<T: Clone>(shape: &mut [usize], data: &mut [T]) {

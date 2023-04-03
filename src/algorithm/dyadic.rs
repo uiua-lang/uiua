@@ -398,9 +398,9 @@ fn put(indices: &[isize], value: Value, array: &mut Array, env: &Uiua) -> UiuaRe
                     index
                 )));
             }
-            let mut cells = take(array).into_cells();
+            let (shape, mut cells) = take(array).into_shape_rows();
             cells[index] = value;
-            *array = Array::from_cells(cells);
+            *array = Array::from_cells(shape, cells);
             Ok(())
         } else {
             Err(env.error(format!(
@@ -412,10 +412,10 @@ fn put(indices: &[isize], value: Value, array: &mut Array, env: &Uiua) -> UiuaRe
     } else {
         let index = signed_index(indices[0], array.shape()[0]);
         if let Some(index) = index {
-            let mut cells = take(array).into_cells();
+            let (shape, mut cells) = take(array).into_shape_rows();
             let cell = cells.get_mut(index).unwrap();
             put(&indices[1..], value, cell, env)?;
-            *array = Array::from_cells(cells);
+            *array = Array::from_cells(shape, cells);
             Ok(())
         } else {
             Err(env.error(format!(
@@ -560,10 +560,11 @@ fn take_array(index: &[isize], array: Array, env: &Uiua) -> UiuaResult<Array> {
             .map(|cell| take_array(index, cell.into_array(), env).map(Value::from))
             .collect::<UiuaResult<_>>()?;
     }
+    shape[0] = take_abs;
     let arr = if shape.len() > 1 {
-        Array::from_cells(cells.into_iter().map(Value::into_array).collect()).normalized_type()
+        Array::from_cells(shape, cells.into_iter().map(Value::into_array).collect())
+            .normalized_type()
     } else {
-        shape[0] = take_abs;
         Array::from((shape, cells))
     };
     Ok(arr)

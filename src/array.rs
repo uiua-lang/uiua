@@ -54,12 +54,10 @@ impl fmt::Display for ArrayType {
 
 impl Array {
     #[track_caller]
-    pub fn from_cells(cells: Vec<Array>) -> Self {
+    pub fn from_cells(shape: Vec<usize>, cells: Vec<Array>) -> Self {
         if cells.len() == 1 {
             return cells.into_iter().next().unwrap();
         }
-        let mut shape = cells[0].shape.clone();
-        shape.insert(0, cells.len());
         assert!(
             cells.windows(2).all(|w| w[0].shape == w[1].shape),
             "all arrays must have the same shape"
@@ -235,6 +233,9 @@ impl Array {
     pub fn into_shape_values(mut self) -> (Vec<usize>, Vec<Value>) {
         (take(&mut self.shape), self.into_values())
     }
+    pub fn into_shape_rows(mut self) -> (Vec<usize>, Vec<Array>) {
+        (take(&mut self.shape), self.into_rows())
+    }
     pub fn into_numbers(mut self) -> Vec<f64> {
         assert_eq!(self.ty, ArrayType::Num);
         take(unsafe { &mut *self.data.numbers })
@@ -367,7 +368,7 @@ impl Array {
             ),
         }
     }
-    pub fn into_cells(mut self) -> Vec<Self> {
+    pub fn into_rows(mut self) -> Vec<Self> {
         if self.shape.is_empty() {
             return vec![self];
         }

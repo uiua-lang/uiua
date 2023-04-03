@@ -164,8 +164,16 @@ impl GridFmt for Array {
             }
             // Handle really big grid
             if let Some((w, _)) = term_size::dimensions() {
-                if grid[0].len() > w {
-                    just_dims = true;
+                for row in grid.iter_mut() {
+                    if row.len() > w {
+                        let diff = row.len() - w;
+                        row.truncate(w);
+                        if !(row[w - 1].is_whitespace() && diff == 1)
+                            && (2..4).any(|i| !row[w - i].is_whitespace())
+                        {
+                            row[w - 1] = '…';
+                        }
+                    }
                 }
             }
         }

@@ -430,13 +430,16 @@ impl Primitive {
                     env.push(acc);
                     env.push(xs);
                     env.push(f);
-                    return env.call();
+                    env.call_catch_break()?;
+                    return Ok(());
                 }
                 for cell in xs.into_array().into_values().into_iter().rev() {
                     env.push(acc);
                     env.push(cell);
                     env.push(f.clone());
-                    env.call()?;
+                    if env.call_catch_break()? {
+                        return Ok(());
+                    }
                     acc = env.pop("folded function result")?;
                 }
                 env.push(acc);
@@ -457,7 +460,9 @@ impl Primitive {
                     env.push(acc);
                     env.push(cell);
                     env.push(f.clone());
-                    env.call()?;
+                    if env.call_catch_break()? {
+                        return Ok(());
+                    }
                     acc = env.pop("reduced function result")?;
                 }
                 env.push(acc);
@@ -465,17 +470,18 @@ impl Primitive {
             Primitive::Each => {
                 let f = env.pop(1)?;
                 let xs = env.pop(2)?;
+                const BREAK_ERROR: &str = "break is not allowed in each";
                 if !xs.is_array() {
                     env.push(xs);
                     env.push(f);
-                    return env.call();
+                    return env.call_error_on_break(BREAK_ERROR);
                 }
                 let (shape, values) = xs.into_array().into_shape_flat_values();
                 let mut new_values = Vec::with_capacity(values.len());
                 for val in values {
                     env.push(val);
                     env.push(f.clone());
-                    env.call()?;
+                    env.call_error_on_break(BREAK_ERROR)?;
                     new_values.push(env.pop("each's function result")?);
                 }
                 env.push(Array::from((shape, new_values)).normalized_type());
@@ -484,12 +490,13 @@ impl Primitive {
                 let f = env.pop(1)?;
                 let xs = env.pop(2)?;
                 let ys = env.pop(3)?;
+                const BREAK_ERROR: &str = "break is not allowed in zip";
                 match (xs.is_array(), ys.is_array()) {
                     (false, false) => {
                         env.push(ys);
                         env.push(xs);
                         env.push(f);
-                        env.call()?;
+                        env.call_error_on_break(BREAK_ERROR)?;
                     }
                     (true, true) => {
                         let (x_shape, x_values) = xs.into_array().into_shape_flat_values();
@@ -504,7 +511,7 @@ impl Primitive {
                                 env.push(y);
                                 env.push(x);
                                 env.push(f.clone());
-                                env.call()?;
+                                env.call_error_on_break(BREAK_ERROR)?;
                                 env.pop("zip's function result")
                             },
                         )?;
@@ -517,7 +524,7 @@ impl Primitive {
                             env.push(ys.clone());
                             env.push(x);
                             env.push(f.clone());
-                            env.call()?;
+                            env.call_error_on_break(BREAK_ERROR)?;
                             new_values.push(env.pop("zip's function result")?);
                         }
                         env.push(Array::from((x_shape, new_values)).normalized_type());
@@ -529,7 +536,7 @@ impl Primitive {
                             env.push(y);
                             env.push(xs.clone());
                             env.push(f.clone());
-                            env.call()?;
+                            env.call_error_on_break(BREAK_ERROR)?;
                             new_values.push(env.pop("zip's function result")?);
                         }
                         env.push(Array::from((y_shape, new_values)).normalized_type());
@@ -539,17 +546,18 @@ impl Primitive {
             Primitive::Rows => {
                 let f = env.pop(1)?;
                 let xs = env.pop(2)?;
+                const BREAK_ERROR: &str = "break is not allowed in rows";
                 if !xs.is_array() {
                     env.push(xs);
                     env.push(f);
-                    return env.call();
+                    return env.call_error_on_break(BREAK_ERROR);
                 }
                 let array = xs.into_array();
                 let mut new_rows: Vec<Value> = Vec::with_capacity(array.len());
                 for row in array.into_values() {
                     env.push(row);
                     env.push(f.clone());
-                    env.call()?;
+                    env.call_error_on_break(BREAK_ERROR)?;
                     new_rows.push(env.pop("rows' function result")?);
                 }
                 let mut array = Array::from(new_rows);
@@ -564,12 +572,13 @@ impl Primitive {
                 let f = env.pop(1)?;
                 let xs = env.pop(2)?;
                 let ys = env.pop(3)?;
+                const BREAK_ERROR: &str = "break is not allowed in bridge";
                 match (xs.is_array(), ys.is_array()) {
                     (false, false) => {
                         env.push(ys);
                         env.push(xs);
                         env.push(f);
-                        env.call()?;
+                        env.call_error_on_break(BREAK_ERROR)?;
                     }
                     (true, true) => {
                         let x_rows = xs.into_array().into_values();
@@ -586,7 +595,7 @@ impl Primitive {
                             env.push(y);
                             env.push(x);
                             env.push(f.clone());
-                            env.call()?;
+                            env.call_error_on_break(BREAK_ERROR)?;
                             new_rows.push(env.pop("bridge's function result")?);
                         }
                         let mut array = Array::from(new_rows);
@@ -604,7 +613,7 @@ impl Primitive {
                             env.push(ys.clone());
                             env.push(x);
                             env.push(f.clone());
-                            env.call()?;
+                            env.call_error_on_break(BREAK_ERROR)?;
                             new_rows.push(env.pop("bridge's function result")?);
                         }
                         let mut array = Array::from(new_rows);
@@ -622,7 +631,7 @@ impl Primitive {
                             env.push(y);
                             env.push(xs.clone());
                             env.push(f.clone());
-                            env.call()?;
+                            env.call_error_on_break(BREAK_ERROR)?;
                             new_rows.push(env.pop("bridge's function result")?);
                         }
                         let mut array = Array::from(new_rows);
@@ -639,11 +648,12 @@ impl Primitive {
                 let f = env.pop(1)?;
                 let xs = env.pop(2)?;
                 let ys = env.pop(3)?;
+                const BREAK_ERROR: &str = "break is not allowed in table";
                 if !xs.is_array() && !ys.is_array() {
                     env.push(ys);
                     env.push(xs);
                     env.push(f);
-                    return env.call();
+                    return env.call_error_on_break(BREAK_ERROR);
                 }
                 let a = if xs.is_array() {
                     xs.into_array()
@@ -663,7 +673,7 @@ impl Primitive {
                         env.push(b);
                         env.push(a.clone());
                         env.push(f.clone());
-                        env.call()?;
+                        env.call_error_on_break(BREAK_ERROR)?;
                         items.push(env.pop("tabled function result")?);
                     }
                 }
@@ -685,13 +695,18 @@ impl Primitive {
                     return Ok(())
                 };
                 let mut scanned = Vec::with_capacity(len);
-                scanned.push(acc.clone());
                 for cell in cells {
+                    let start_height = env.stack_size();
                     env.push(cell);
                     env.push(acc.clone());
                     env.push(f.clone());
-                    env.call()?;
-                    acc = env.pop("scanned function result")?;
+                    let should_break = env.call_catch_break()?;
+                    let new_acc = env.pop("scanned function result")?;
+                    if should_break {
+                        env.truncate_stack(start_height);
+                        break;
+                    }
+                    acc = new_acc;
                     scanned.push(acc.clone());
                 }
                 env.push(Array::from(scanned).normalized());

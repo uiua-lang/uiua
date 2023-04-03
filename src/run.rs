@@ -465,6 +465,14 @@ impl<'io> Uiua<'io> {
             Err(e) => Err(e),
         }
     }
+    pub fn call_error_on_break(&mut self, message: &str) -> UiuaResult {
+        match self.call() {
+            Ok(_) => Ok(()),
+            Err(UiuaError::Break(0, span)) => Err(span.sp(message.into()).into()),
+            Err(UiuaError::Break(n, span)) => Err(UiuaError::Break(n - 1, span)),
+            Err(e) => Err(e),
+        }
+    }
     fn span_index(&self) -> usize {
         self.call_stack.last().map_or(0, |frame| {
             frame.spans.last().copied().unwrap_or(frame.call_span)

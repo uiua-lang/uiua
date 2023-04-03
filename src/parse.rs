@@ -297,7 +297,7 @@ impl Parser {
             s.map(Into::into).map(Word::String)
         } else if let Some(expr) = self.try_func() {
             expr
-        } else if let Some(expr) = self.try_ref_func() {
+        } else if let Some(expr) = self.try_dfn() {
             expr
         } else if let Some(start) = self.try_exact(OpenBracket) {
             let items = self.try_words().unwrap_or_default();
@@ -331,14 +331,14 @@ impl Parser {
             body,
         })))
     }
-    fn try_ref_func(&mut self) -> Option<Sp<Word>> {
+    fn try_dfn(&mut self) -> Option<Sp<Word>> {
         let Some(start) = self.try_exact(OpenCurly) else {
             return None;
         };
         let body = self.try_words().unwrap_or_default();
         let end = self.expect_close(CloseCurly);
         let span = start.merge(end);
-        Some(span.clone().sp(Word::RefFunc(Func {
+        Some(span.clone().sp(Word::Dfn(Func {
             id: FunctionId::Anonymous(span),
             body,
         })))

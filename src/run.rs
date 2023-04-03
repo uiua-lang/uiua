@@ -22,14 +22,14 @@ use crate::{
 pub struct Uiua<'io> {
     // Compilation
     new_functions: Vec<Vec<Instr>>,
-    new_refs: Vec<Vec<u8>>,
+    new_dfns: Vec<Vec<u8>>,
     global_names: Vec<HashMap<Ident, usize>>,
     // Statics
     globals: Vec<Value>,
     spans: Vec<Span>,
     // Runtime
     array_stack: Vec<usize>,
-    ref_stack: Vec<Vec<Value>>,
+    dfn_stack: Vec<Vec<Value>>,
     stack: Vec<Value>,
     antistack: Vec<Value>,
     call_stack: Vec<StackFrame>,
@@ -59,11 +59,11 @@ impl<'io> Uiua<'io> {
             stack: Vec::new(),
             antistack: Vec::new(),
             array_stack: Vec::new(),
-            ref_stack: Vec::new(),
+            dfn_stack: Vec::new(),
             globals: Vec::new(),
             global_names: vec![HashMap::new()],
             new_functions: Vec::new(),
-            new_refs: Vec::new(),
+            new_dfns: Vec::new(),
             call_stack: Vec::new(),
             current_imports: HashSet::new(),
             io: &StdIo,
@@ -246,7 +246,7 @@ impl<'io> Uiua<'io> {
                 self.push_instr(Instr::EndArray(true, span));
             }
             Word::Func(func) => self.func(func, word.span)?,
-            Word::RefFunc(func) => self.ref_func(func, word.span)?,
+            Word::Dfn(func) => self.dfn(func, word.span)?,
             Word::Primitive(p) => self.primitive(p, word.span, call),
             Word::Modified(m) => self.modified(*m, call)?,
         }
@@ -269,13 +269,13 @@ impl<'io> Uiua<'io> {
         } else if let Some(prim) = Primitive::from_name(ident.as_str()) {
             self.primitive(prim, span, call)
         } else {
-            if let Some(refs) = self.new_refs.last_mut() {
+            if let Some(dfn) = self.new_dfns.last_mut() {
                 if ident.as_str().len() == 1 {
                     let c = ident.as_str().chars().next().unwrap();
                     if c.is_ascii_lowercase() {
                         let idx = c as u8 - b'a';
-                        refs.push(idx);
-                        self.push_instr(Instr::CopyRef(idx as usize));
+                        dfn.push(idx);
+                        self.push_instr(Instr::DfnVal(idx as usize));
                         return Ok(());
                     }
                 }
@@ -299,18 +299,18 @@ impl<'io> Uiua<'io> {
         self.push_instr(Instr::Push(func.into()));
         Ok(())
     }
-    fn ref_func(&mut self, func: Func, span: Span) -> UiuaResult {
-        self.new_refs.push(Vec::new());
+    fn dfn(&mut self, func: Func, span: Span) -> UiuaResult {
+        self.new_dfns.push(Vec::new());
         let instrs = self.compile_words(func.body)?;
-        let refs = self.new_refs.pop().unwrap();
+        let refs = self.new_dfns.pop().unwrap();
         let func = Function {
             id: func.id,
             instrs,
         };
         self.push_instr(Instr::Push(func.into()));
         let span = self.push_span(span);
-        let ref_size = refs.into_iter().max().unwrap_or(0) + 1;
-        self.push_instr(Instr::CallRef(ref_size as usize, span));
+        let dfn_size = refs.into_iter().max().unwrap_or(0) + 1;
+        self.push_instr(Instr::CallDfn(dfn_size as usize, span));
         Ok(())
     }
     fn modified(&mut self, modified: Modified, call: bool) -> UiuaResult {
@@ -407,7 +407,7 @@ impl<'io> Uiua<'io> {
                     Ok(())
                 })(),
                 &Instr::Call(span) => self.call_with_span(span),
-                &Instr::CallRef(n, span) => (|| {
+                &Instr::CallDfn(n, span) => (|| {
                     let f = self.pop("ref function")?;
                     if self.stack.len() < n {
                         return Err(self.spans[span]
@@ -416,12 +416,12 @@ impl<'io> Uiua<'io> {
                             .into());
                     }
                     let refs = self.stack.drain(self.stack.len() - n..).rev().collect();
-                    self.ref_stack.push(refs);
+                    self.dfn_stack.push(refs);
                     self.stack.push(f);
                     self.call_with_span(span)
                 })(),
-                Instr::CopyRef(n) => {
-                    let value = self.ref_stack.last().unwrap()[*n].clone();
+                Instr::DfnVal(n) => {
+                    let value = self.dfn_stack.last().unwrap()[*n].clone();
                     self.stack.push(value);
                     Ok(())
                 }

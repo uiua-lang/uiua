@@ -188,7 +188,7 @@ fn word_node(iter: &mut dyn Iterator<Item = &Word>) -> Option<FormatNode> {
         Word::Func(func) => {
             FormatNode::Delim("(", ")", words(func.body.iter().map(|i| &i.value).by_ref()))
         }
-        Word::RefFunc(rfunc) => FormatNode::Delim(
+        Word::Dfn(rfunc) => FormatNode::Delim(
             "{",
             "}",
             words(rfunc.body.iter().map(|i| &i.value).by_ref()),

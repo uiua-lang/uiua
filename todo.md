@@ -1,4 +1,3 @@
-- Call refs somethings else
 - Refactor inverse
 - Pick a new glyph for enclose that looks good next to join
 - Memoize imports

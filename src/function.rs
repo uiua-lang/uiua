@@ -9,8 +9,8 @@ pub enum Instr {
     EndArray(bool, usize),
     Primitive(Primitive, usize),
     Call(usize),
-    CallRef(usize, usize),
-    CopyRef(usize),
+    CallDfn(usize, usize),
+    DfnVal(usize),
 }
 
 impl fmt::Display for Instr {
@@ -21,8 +21,8 @@ impl fmt::Display for Instr {
             Instr::EndArray(..) => write!(f, "["),
             Instr::Primitive(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => write!(f, ":"),
-            Instr::CallRef(n, _) => write!(f, "ref{n}"),
-            Instr::CopyRef(n) => write!(f, "{}", (*n as u8 + b'a') as char),
+            Instr::CallDfn(n, _) => write!(f, "dfn{n}"),
+            Instr::DfnVal(n) => write!(f, "{}", (*n as u8 + b'a') as char),
         }
     }
 }
@@ -113,8 +113,8 @@ impl Function {
                     last_group!().push(Instr::EndArray(false, 0));
                 }
                 &Instr::EndArray(n, span) => last_group!().push(Instr::EndArray(n, span)),
-                &Instr::CallRef(_, _) => return Err(no_inverse()),
-                &Instr::CopyRef(_) => return Err(no_inverse()),
+                &Instr::CallDfn(_, _) => return Err(no_inverse()),
+                &Instr::DfnVal(_) => return Err(no_inverse()),
             }
         }
         if require_unary && args != 0 {

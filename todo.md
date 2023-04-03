@@ -3,9 +3,11 @@
 - Refactor inverse
 - Memoize imports
 - Better solution to string formatting
+- Recursion?
 - Threads
 - More array functions
   - Find
+  - Separate group into group and partition
   - Clear stack
   - Progressive index of
   - Nudge

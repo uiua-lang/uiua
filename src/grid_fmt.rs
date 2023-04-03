@@ -221,6 +221,10 @@ fn fmt_array<T: GridFmt + std::fmt::Display>(
         return;
     }
     let cell_count = shape[0];
+    if cell_count == 0 {
+        metagrid.push(vec![vec![vec![' ']]]);
+        return;
+    }
     let shape = &shape[1..];
     let cell_size = data.len() / cell_count;
     for (i, cell) in data.chunks(cell_size).enumerate() {

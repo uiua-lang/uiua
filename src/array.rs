@@ -236,6 +236,12 @@ impl Array {
     pub fn into_shape_rows(mut self) -> (Vec<usize>, Vec<Array>) {
         (take(&mut self.shape), self.into_rows())
     }
+    pub fn into_shape_numbers(mut self) -> (Vec<usize>, Vec<f64>) {
+        (take(&mut self.shape), self.into_numbers())
+    }
+    pub fn into_shape_bytes(mut self) -> (Vec<usize>, Vec<u8>) {
+        (take(&mut self.shape), self.into_bytes())
+    }
     pub fn into_numbers(mut self) -> Vec<f64> {
         assert_eq!(self.ty, ArrayType::Num);
         take(unsafe { &mut *self.data.numbers })
@@ -732,6 +738,7 @@ impl From<Vec<f64>> for Array {
             ty: ArrayType::Num,
             data: v.into(),
         }
+        .normalized_type()
     }
 }
 

@@ -4,8 +4,13 @@ use std::{
 };
 
 use crate::{
-    algorithm::pervade::bin_pervade_fallible, array::Array, function::FunctionId, io::*,
-    lex::Simple, value::*, Uiua, UiuaError, UiuaResult,
+    algorithm::{loops, pervade::bin_pervade_fallible},
+    array::Array,
+    function::FunctionId,
+    io::*,
+    lex::Simple,
+    value::*,
+    Uiua, UiuaError, UiuaResult,
 };
 
 macro_rules! primitive {
@@ -245,8 +250,8 @@ impl Primitive {
         Some(match self {
             Primitive::Add => Value::from(0),
             Primitive::Mul => Value::from(1),
-            Primitive::Min => Value::from(std::f64::INFINITY),
-            Primitive::Max => Value::from(std::f64::NEG_INFINITY),
+            Primitive::Min => Value::from(f64::INFINITY),
+            Primitive::Max => Value::from(f64::NEG_INFINITY),
             _ => return None,
         })
     }
@@ -401,51 +406,8 @@ impl Primitive {
             Primitive::Clear => {
                 env.take_stack();
             }
-            Primitive::Fold => {
-                let f = env.pop(1)?;
-                let mut acc = env.pop(2)?;
-                let xs = env.pop(3)?;
-                if !xs.is_array() {
-                    env.push(acc);
-                    env.push(xs);
-                    env.push(f);
-                    env.call_catch_break()?;
-                    return Ok(());
-                }
-                for cell in xs.into_array().into_values().into_iter().rev() {
-                    env.push(acc);
-                    env.push(cell);
-                    env.push(f.clone());
-                    if env.call_catch_break()? {
-                        return Ok(());
-                    }
-                    acc = env.pop("folded function result")?;
-                }
-                env.push(acc);
-            }
-            Primitive::Reduce => {
-                let f = env.pop(1)?;
-                let xs = env.pop(2)?;
-                if !xs.is_array() {
-                    env.push(xs);
-                    return Ok(());
-                }
-                let mut cells = xs.into_array().into_values().into_iter().rev();
-                let mut acc = cells
-                    .next()
-                    .or_else(|| f.as_primitive().and_then(|p| p.reduce_identity()))
-                    .ok_or_else(|| env.error("Cannot reduce empty array"))?;
-                for cell in cells {
-                    env.push(acc);
-                    env.push(cell);
-                    env.push(f.clone());
-                    if env.call_catch_break()? {
-                        return Ok(());
-                    }
-                    acc = env.pop("reduced function result")?;
-                }
-                env.push(acc);
-            }
+            Primitive::Fold => loops::fold(env)?,
+            Primitive::Reduce => loops::reduce(env)?,
             Primitive::Each => {
                 let f = env.pop(1)?;
                 let xs = env.pop(2)?;

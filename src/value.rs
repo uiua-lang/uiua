@@ -49,6 +49,7 @@ const ARRAY_TAG: u8 = 4;
 static TYPES: [Type; 9] = {
     let mut types = [Type::Num; 9];
     types[NUM_TAG as usize] = Type::Num;
+    types[BYTE_TAG as usize] = Type::Byte;
     types[CHAR_TAG as usize] = Type::Char;
     types[FUNCTION_TAG as usize] = Type::Function;
     types[ARRAY_TAG as usize] = Type::Array;
@@ -546,8 +547,8 @@ impl From<String> for Value {
 }
 
 impl From<u8> for Value {
-    fn from(n: u8) -> Self {
-        Self(unsafe { NanBox::new(NUM_TAG, n as f64) })
+    fn from(b: u8) -> Self {
+        Self(unsafe { NanBox::new(BYTE_TAG, b) })
     }
 }
 

@@ -620,39 +620,7 @@ impl Primitive {
                 }
                 env.push(Array::from((new_shape, items)).normalized_type());
             }
-            Primitive::Scan => {
-                let f = env.pop(1)?;
-                let xs = env.pop(2)?;
-                if !xs.is_array() {
-                    env.push(xs);
-                    return Ok(());
-                }
-                let arr = xs.into_array();
-                let ty = arr.ty();
-                let len = arr.len();
-                let mut cells = arr.into_values().into_iter();
-                let Some(mut acc) = cells.next() else {
-                    env.push(Array::from(ty));
-                    return Ok(())
-                };
-                let mut scanned = Vec::with_capacity(len);
-                scanned.push(acc.clone());
-                for cell in cells {
-                    let start_height = env.stack_size();
-                    env.push(cell);
-                    env.push(acc.clone());
-                    env.push(f.clone());
-                    let should_break = env.call_catch_break()?;
-                    let new_acc = env.pop("scanned function result")?;
-                    if should_break {
-                        env.truncate_stack(start_height);
-                        break;
-                    }
-                    acc = new_acc;
-                    scanned.push(acc.clone());
-                }
-                env.push(Array::from(scanned).normalized());
-            }
+            Primitive::Scan => loops::scan(env)?,
             Primitive::Repeat => {
                 let f = env.pop(1)?;
                 let mut acc = env.pop(2)?;

@@ -477,6 +477,9 @@ fn into_cells<T, F, R>(cell_count: usize, mut items: Vec<T>, f: F) -> Vec<R>
 where
     F: Fn(Vec<T>) -> R,
 {
+    if cell_count == 0 {
+        return Vec::new();
+    }
     let cell_size = items.len() / cell_count;
     let mut cells = Vec::with_capacity(cell_count);
     for _ in 0..cell_count {

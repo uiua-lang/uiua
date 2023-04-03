@@ -279,6 +279,18 @@ impl Array {
                 } else if self.values().iter().all(Value::is_byte) {
                     self.data = values.map(Value::byte).collect::<Vec<_>>().into();
                     self.ty = ArrayType::Byte;
+                } else if self.values().iter().all(|v| v.is_number() || v.is_byte()) {
+                    self.data = values
+                        .map(|v| {
+                            if v.is_number() {
+                                v.number()
+                            } else {
+                                v.byte() as f64
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                        .into();
+                    self.ty = ArrayType::Num;
                 }
             }
             ArrayType::Num => {

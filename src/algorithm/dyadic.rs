@@ -110,7 +110,7 @@ fn take_values_from(a: &mut Array, b: Array) {
             let shape = a.take_shape();
             let mut values = a.take_flat_values();
             values.append(&mut b.into_flat_values());
-            *a = Array::from((shape, values));
+            *a = Array::from((shape, values)).normalized_type();
         }
     }
 }

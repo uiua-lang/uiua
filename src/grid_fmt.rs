@@ -197,6 +197,10 @@ fn fmt_array<T: GridFmt + std::fmt::Display>(
     stringy: bool,
     metagrid: &mut Metagrid,
 ) {
+    if data.is_empty() {
+        metagrid.push(vec![vec![vec![' ']]]);
+        return;
+    }
     let rank = shape.len();
     if rank == 0 {
         metagrid.push(vec![data[0].fmt_grid()]);

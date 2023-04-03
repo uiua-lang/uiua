@@ -26,7 +26,7 @@ const MANDELBROT: &str = "\
 Z ← +⚇/- ⁿ2 ~×2 /×.⇌
 ⍉⊞⚇.÷25 -÷2 ~⇡. 100
 ↯⊂~1 △.∵(<1 √/+ ⁿ2;~⍥(Z ~,) 0_0 10)";
-const CHART: &str = "∵(⊡~·_:_÷_≡_⍋ ⁅÷23)⊞×.-10 ⇡20";
+const CHART: &str = "∵(⊙~·_:_÷_≡_⍋ ⁅÷23)⊞×.-10 ⇡20";
 const ERRORS: &str = "# Change this ↓ to a 0\n!\"Oh no bad!\" 1\nprintln \"All is well\"";
 
 pub const EXAMPLES: &[&str] = &[

@@ -147,7 +147,7 @@ primitive!(
     (1, First, "first" + '⊢'),
     (1, Last),
     (1, Reverse, "reverse" + '⇌'),
-    (1, Enclose, "enclose" + '⌒'),
+    (1, Enclose, "enclose" + '⊡'),
     (1, Normalize, "normalize" + '□'),
     (1, Deshape, "deshape" + '♭'),
     (1, Transpose, "transpose" + '⍉'),
@@ -162,7 +162,7 @@ primitive!(
     (2, Join, "join" + '⊂'),
     (2, Pair, "pair" + '⚇'),
     (2, Couple, "couple" + '⊟'),
-    (2, Pick, "pick" + '⊡'),
+    (2, Pick, "pick" + '⊙'),
     (2, Select, "select" + '⊏'),
     (2, Take, "take" + '↙'),
     (2, Drop, "drop" + '↘'),
@@ -172,7 +172,7 @@ primitive!(
     (2, Replicate, "replicate" + '‡'),
     (2, Member, "member" + '∊'),
     (2, Group, "group" + '⊕'),
-    (2, IndexOf, "indexof" + '⊙'),
+    (2, IndexOf, "indexof" + '⊗'),
     // Triadic array op
     (3, Put),
     // Modifiers
@@ -695,6 +695,7 @@ impl Primitive {
                     return Ok(())
                 };
                 let mut scanned = Vec::with_capacity(len);
+                scanned.push(acc.clone());
                 for cell in cells {
                     let start_height = env.stack_size();
                     env.push(cell);

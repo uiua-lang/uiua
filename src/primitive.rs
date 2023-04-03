@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     algorithm::pervade::bin_pervade_fallible, array::Array, function::FunctionId, io::*,
-    lex::Simple, value::*, Uiua, UiuaResult,
+    lex::Simple, value::*, Uiua, UiuaError, UiuaResult,
 };
 
 macro_rules! primitive {
@@ -190,6 +190,7 @@ primitive!(
     (Try { modifier: 2 }, "try" + '?'),
     // Misc
     (2, Assert, "assert" + '!'),
+    (1(0), Break, "break" + '⎋'),
     (1, Trace, "trace" + '|'),
     (1(None), Call, "call" + ':'),
     (0, Noop, "noop" + '·'),
@@ -328,6 +329,16 @@ impl Primitive {
             Primitive::IndexOf => env.dyadic_mut_env(Value::index_of)?,
             Primitive::Call => env.call()?,
             Primitive::Parse => env.monadic_mut_env(Value::parse_num)?,
+            Primitive::Break => {
+                let n = env
+                    .pop(1)?
+                    .as_nat()
+                    .ok_or_else(|| env.error("break expects a natural number"))?
+                    as usize;
+                if n > 0 {
+                    return Err(UiuaError::Break(n - 1, env.span().clone()));
+                }
+            }
             Primitive::Trace => {
                 let value = env.pop(1)?;
                 env.io.print_str(&value.show());
@@ -689,16 +700,29 @@ impl Primitive {
                 let f = env.pop(1)?;
                 let mut acc = env.pop(2)?;
                 let n = env.pop(3)?;
-                let Some(n) = n.as_nat() else {
-                    return Err(env.error("Repetitions must be a natural number"));
-                };
-                for _ in 0..n {
+                if n.is_number() && n.number() == INFINITY {
+                    loop {
+                        env.push(acc);
+                        env.push(f.clone());
+                        if env.call_catch_break()? {
+                            break;
+                        }
+                        acc = env.pop("repeated function result")?;
+                    }
+                } else {
+                    let Some(n) = n.as_nat() else {
+                        return Err(env.error("Repetitions must be a natural number or infinity"));
+                    };
+                    for _ in 0..n {
+                        env.push(acc);
+                        env.push(f.clone());
+                        if env.call_catch_break()? {
+                            return Ok(());
+                        }
+                        acc = env.pop("repeated function result")?;
+                    }
                     env.push(acc);
-                    env.push(f.clone());
-                    env.call()?;
-                    acc = env.pop("repeated function result")?;
                 }
-                env.push(acc);
             }
             Primitive::Try => {
                 let f = env.pop(1)?;
@@ -717,7 +741,7 @@ impl Primitive {
             Primitive::Assert => {
                 let msg = env.pop(1)?;
                 let cond = env.pop(2)?;
-                if !(cond.is_num() && (cond.number() - 1.0).abs() < 1e-10) {
+                if !(cond.is_number() && (cond.number() - 1.0).abs() < 1e-10) {
                     return Err(env.error(msg.to_string()));
                 }
             }

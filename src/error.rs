@@ -24,6 +24,7 @@ pub enum UiuaError {
         error: Box<Self>,
         trace: Vec<TraceFrame>,
     },
+    Break(usize, Span),
 }
 
 pub type UiuaResult<T = ()> = Result<T, UiuaError>;
@@ -60,6 +61,7 @@ impl fmt::Display for UiuaError {
                 write!(f, "{error}")?;
                 format_trace(f, trace)
             }
+            UiuaError::Break(_, span) => write!(f, "{span}: break outside of loop"),
         }
     }
 }
@@ -195,6 +197,28 @@ impl UiuaError {
                 let mut s = error.show(complex_output);
                 format_trace(&mut s, trace).unwrap();
                 s
+            }
+            UiuaError::Break(_, span) => {
+                let mut buffer = Vec::new();
+                if let Span::Code(span) = span {
+                    let mut cache = Cache {
+                        input: Source::from(&span.input),
+                        files: HashMap::new(),
+                    };
+                    let report = Report::<CodeSpan>::build(
+                        ReportKind::Error,
+                        span.file.clone(),
+                        span.start.pos,
+                    )
+                    .with_message("break outside of loop")
+                    .with_label(Label::new(span.clone()).with_color(color))
+                    .with_config(config)
+                    .finish();
+                    let _ = report.write(&mut cache, &mut buffer);
+                    String::from_utf8_lossy(&buffer).into_owned()
+                } else {
+                    self.to_string()
+                }
             }
             _ => self.to_string(),
         }

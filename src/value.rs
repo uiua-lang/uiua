@@ -68,7 +68,7 @@ impl Value {
     pub fn ty(&self) -> Type {
         TYPES[self.0.tag() as usize]
     }
-    pub fn is_num(&self) -> bool {
+    pub fn is_number(&self) -> bool {
         self.0.tag() == NUM_TAG as u32 || self.0.tag() > ARRAY_TAG as u32
     }
     pub fn is_byte(&self) -> bool {
@@ -76,7 +76,7 @@ impl Value {
     }
     pub fn is_nat(&self) -> bool {
         self.is_byte()
-            || self.is_num() && {
+            || self.is_number() && {
                 let n = self.number();
                 n >= 0.0 && n.trunc() == n
             }
@@ -84,8 +84,12 @@ impl Value {
     pub fn as_nat(&self) -> Option<u64> {
         if self.is_byte() {
             Some(self.byte() as u64)
-        } else if self.is_num() {
-            Some(self.number() as u64)
+        } else if self.is_number() {
+            if self.number().fract() == 0.0 {
+                Some(self.number() as u64)
+            } else {
+                None
+            }
         } else {
             None
         }
@@ -100,7 +104,7 @@ impl Value {
         self.0.tag() == ARRAY_TAG as u32
     }
     pub fn number(&self) -> f64 {
-        assert!(self.is_num());
+        assert!(self.is_number());
         unsafe { self.0.unpack::<f64>() }
     }
     pub fn byte(&self) -> u8 {

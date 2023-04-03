@@ -367,10 +367,16 @@ impl<'io> Uiua<'io> {
             };
             // println!("{:?}", self.stack);
             // println!("  {:?}", instr);
-            match instr {
-                Instr::Push(val) => self.stack.push(val.clone()),
-                Instr::BeginArray => self.array_stack.push(self.stack.len()),
-                Instr::EndArray(normalize, span) => {
+            let res = match instr {
+                Instr::Push(val) => {
+                    self.stack.push(val.clone());
+                    Ok(())
+                }
+                Instr::BeginArray => {
+                    self.array_stack.push(self.stack.len());
+                    Ok(())
+                }
+                Instr::EndArray(normalize, span) => (|| {
                     let start = self.array_stack.pop().unwrap();
                     if start > self.stack.len() {
                         return Err(self.spans[*span]
@@ -392,14 +398,16 @@ impl<'io> Uiua<'io> {
                         array.normalize_type();
                     }
                     self.stack.push(array.into());
-                }
-                &Instr::Primitive(prim, span) => {
+                    Ok(())
+                })(),
+                &Instr::Primitive(prim, span) => (|| {
                     self.call_stack.last_mut().unwrap().spans.push(span);
                     prim.run(self)?;
                     self.call_stack.last_mut().unwrap().spans.pop();
-                }
-                &Instr::Call(span) => self.call_with_span(span)?,
-                &Instr::CallRef(n, span) => {
+                    Ok(())
+                })(),
+                &Instr::Call(span) => self.call_with_span(span),
+                &Instr::CallRef(n, span) => (|| {
                     let f = self.pop("ref function")?;
                     if self.stack.len() < n {
                         return Err(self.spans[span]
@@ -410,14 +418,20 @@ impl<'io> Uiua<'io> {
                     let refs = self.stack.drain(self.stack.len() - n..).rev().collect();
                     self.ref_stack.push(refs);
                     self.stack.push(f);
-                    self.call_with_span(span)?;
-                }
+                    self.call_with_span(span)
+                })(),
                 Instr::CopyRef(n) => {
                     let value = self.ref_stack.last().unwrap()[*n].clone();
                     self.stack.push(value);
+                    Ok(())
                 }
+            };
+            if res.is_err() {
+                self.call_stack.truncate(ret_height);
+            } else {
+                self.call_stack.last_mut().unwrap().pc += 1;
             }
-            self.call_stack.last_mut().unwrap().pc += 1;
+            res?;
         }
         Ok(())
     }
@@ -442,6 +456,14 @@ impl<'io> Uiua<'io> {
     pub fn call(&mut self) -> UiuaResult {
         let call_span = self.span_index();
         self.call_with_span(call_span)
+    }
+    pub fn call_catch_break(&mut self) -> UiuaResult<bool> {
+        match self.call() {
+            Ok(_) => Ok(false),
+            Err(UiuaError::Break(0, _)) => Ok(true),
+            Err(UiuaError::Break(n, span)) => Err(UiuaError::Break(n - 1, span)),
+            Err(e) => Err(e),
+        }
     }
     fn span_index(&self) -> usize {
         self.call_stack.last().map_or(0, |frame| {

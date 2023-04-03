@@ -122,7 +122,7 @@ impl Value {
         }
         let filtered = items.into_array();
         let mut data = Vec::new();
-        if self.is_num() {
+        if self.is_number() {
             if !self.is_nat() {
                 return Err(env.error("Cannot replicate with non-integer"));
             }

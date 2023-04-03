@@ -266,7 +266,7 @@ impl Array {
                 if self.values().iter().all(Value::is_char) {
                     self.data = values.map(Value::char).collect::<Vec<_>>().into();
                     self.ty = ArrayType::Char;
-                } else if self.values().iter().all(Value::is_num) {
+                } else if self.values().iter().all(Value::is_number) {
                     self.data = values.map(Value::number).collect::<Vec<_>>().into();
                     self.ty = ArrayType::Num;
                 } else if self.values().iter().all(Value::is_byte) {

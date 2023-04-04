@@ -57,6 +57,15 @@ impl<T> Array<T> {
         let row_len = self.row_len();
         &self.data[row * row_len..(row + 1) * row_len]
     }
+    pub fn convert<U>(self) -> Array<U>
+    where
+        T: Into<U>,
+    {
+        Array {
+            shape: self.shape,
+            data: self.data.into_iter().map(Into::into).collect(),
+        }
+    }
 }
 
 impl<T: ArrayValue> PartialEq for Array<T> {
@@ -183,6 +192,16 @@ impl<'a, T: ArrayValue> Ord for Row<'a, T> {
     }
 }
 
+impl<'a, T: ArrayValue> Arrayish for Row<'a, T> {
+    type Value = T;
+    fn shape(&self) -> &[usize] {
+        &self.array.shape[1..]
+    }
+    fn data(&self) -> &[T] {
+        self
+    }
+}
+
 pub trait ArrayValue: Clone {
     fn cmp(&self, other: &Self) -> Ordering;
     fn eq(&self, other: &Self) -> bool {
@@ -221,6 +240,9 @@ pub trait Arrayish {
     fn data(&self) -> &[Self::Value];
     fn len(&self) -> usize {
         self.shape().first().copied().unwrap_or(1)
+    }
+    fn rank(&self) -> usize {
+        self.shape().len()
     }
     fn flat_len(&self) -> usize {
         self.data().len()

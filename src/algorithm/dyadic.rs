@@ -118,20 +118,17 @@ fn take_values_from(a: &mut Array, b: Array) {
 impl Value {
     pub fn replicate(&mut self, items: Self, env: &Uiua) -> UiuaResult {
         if !items.is_array() {
-            return Err(env.error("Cannot filter non-array"));
+            return Err(env.error("Cannot replicate non-array"));
         }
-        let filtered = items.into_array();
+        const MASK_ERROR: &str =
+            "Can only replicate with natural number or list of natural numbers";
+        let filtered = items.array();
         let mut data = Vec::new();
-        if self.is_number() {
-            if !self.is_nat() {
-                return Err(env.error("Cannot replicate with non-integer"));
-            }
-            let n = self.number() as usize;
-            for cell in filtered.into_values() {
-                data.extend(repeat(cell).take(n));
-            }
+        if let Some(n) = self.as_nat() {
+            let n = n as usize;
+            filtered.iter_values(|val| data.extend(repeat(val).take(n).cloned()));
         } else if self.is_array() {
-            let filter = self.as_naturals(env, "Can only filter with natural numbers")?;
+            let filter = self.as_naturals(env, MASK_ERROR)?;
             if filter.len() != filtered.len() {
                 return Err(env.error(format!(
                     "Cannot replicate with array of different length: \
@@ -140,15 +137,18 @@ impl Value {
                     filtered.len(),
                 )));
             }
-            for (&n, cell) in filter.iter().zip(filtered.into_values()) {
-                data.extend(repeat(cell).take(n));
-            }
+            let mut filter = filter.into_iter();
+            filtered
+                .iter_values(|val| data.extend(repeat(val).take(filter.next().unwrap()).cloned()));
         } else {
-            return Err(env.error("Cannot replicate with non-number"));
+            return Err(env.error(MASK_ERROR));
         }
         *self = Array::from(data).normalized_type().into();
         Ok(())
     }
+}
+
+impl Value {
     pub fn pick(&mut self, from: Self, env: &Uiua) -> UiuaResult {
         if !from.is_array() || from.array().rank() == 0 {
             return Err(env.error("Cannot pick from rank less than 1"));

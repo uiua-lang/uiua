@@ -120,7 +120,7 @@ impl Array {
         assert_eq!(self.ty, ArrayType::Num);
         unsafe { &mut self.data.numbers }
     }
-    pub fn try_iter_numbers(
+    pub(crate) fn try_iter_numbers(
         &self,
         env: &Uiua,
         requirement: &'static str,
@@ -355,10 +355,7 @@ impl Array {
     }
     /// If rank <= 1, return the atom values, otherwise return the array cell values.
     pub fn into_values(mut self) -> Vec<Value> {
-        if self.shape.is_empty() {
-            return self.into_flat_values();
-        }
-        if self.shape.len() == 1 {
+        if self.shape.len() <= 1 {
             return self.into_flat_values();
         }
         let mut shape = self.shape.clone();
@@ -366,25 +363,65 @@ impl Array {
         match self.ty {
             ArrayType::Num => into_cells(
                 cell_count,
-                take(unsafe { &mut self.data.numbers }),
+                take(unsafe { &mut *self.data.numbers }).into_iter(),
                 |numbers| Value::from(Array::from((shape.clone(), numbers))),
             ),
-            ArrayType::Byte => {
-                into_cells(cell_count, take(unsafe { &mut self.data.bytes }), |bytes| {
-                    Value::from(Array::from((shape.clone(), bytes)))
-                })
-            }
-            ArrayType::Char => {
-                into_cells(cell_count, take(unsafe { &mut self.data.chars }), |chars| {
-                    Value::from(Array::from((shape.clone(), chars)))
-                })
-            }
+            ArrayType::Byte => into_cells(
+                cell_count,
+                take(unsafe { &mut *self.data.bytes }).into_iter(),
+                |bytes| Value::from(Array::from((shape.clone(), bytes))),
+            ),
+            ArrayType::Char => into_cells(
+                cell_count,
+                take(unsafe { &mut *self.data.chars }).into_iter(),
+                |chars| Value::from(Array::from((shape.clone(), chars))),
+            ),
             ArrayType::Value => into_cells(
                 cell_count,
-                take(unsafe { &mut self.data.values }),
+                take(unsafe { &mut *self.data.values }).into_iter(),
                 |values| Value::from(Array::from((shape.clone(), values))),
             ),
         }
+    }
+    pub fn iter_flat_values(&self, f: impl FnMut(&Value)) {
+        self.data_with(
+            f,
+            |mut f, _, nums| nums.iter().for_each(|&n| f(&Value::from(n))),
+            |mut f, _, bytes| bytes.iter().for_each(|&b| f(&Value::from(b))),
+            |mut f, _, chars| chars.iter().for_each(|&c| f(&Value::from(c))),
+            |f, _, values| values.iter().for_each(f),
+        )
+    }
+    pub fn iter_values(&self, f: impl FnMut(&Value)) {
+        if self.shape.is_empty() {
+            return;
+        }
+        if self.shape.len() == 1 {
+            return self.iter_flat_values(f);
+        }
+        self.data_with(
+            f,
+            |mut f, shape, nums| {
+                into_cells(shape[0], nums.iter().copied(), |numbers| {
+                    f(&Value::from(Array::from((shape.to_vec(), numbers))))
+                })
+            },
+            |mut f, shape, bytes| {
+                into_cells(shape[0], bytes.iter().copied(), |bytes| {
+                    f(&Value::from(Array::from((shape.to_vec(), bytes))))
+                })
+            },
+            |mut f, shape, chars| {
+                into_cells(shape[0], chars.iter().copied(), |chars| {
+                    f(&Value::from(Array::from((shape.to_vec(), chars))))
+                })
+            },
+            |mut f, shape, values| {
+                into_cells(shape[0], values.iter().cloned(), |values| {
+                    f(&Value::from(Array::from((shape.to_vec(), values))))
+                })
+            },
+        );
     }
     pub fn into_rows(mut self) -> Vec<Self> {
         if self.shape.is_empty() {
@@ -392,28 +429,28 @@ impl Array {
         }
         let mut shape = self.shape.clone();
         let cell_count = shape.remove(0);
-        match self.ty {
-            ArrayType::Num => into_cells(
-                cell_count,
-                take(unsafe { &mut self.data.numbers }),
-                |numbers| Array::from((shape.clone(), numbers)),
-            ),
-            ArrayType::Byte => {
-                into_cells(cell_count, take(unsafe { &mut self.data.bytes }), |bytes| {
-                    Array::from((shape.clone(), bytes))
+        self.data_mut(
+            |shape, nums| {
+                into_cells(cell_count, nums.iter().copied(), |nums| {
+                    Array::from((shape.to_vec(), nums))
                 })
-            }
-            ArrayType::Char => {
-                into_cells(cell_count, take(unsafe { &mut self.data.chars }), |chars| {
-                    Array::from((shape.clone(), chars))
+            },
+            |shape, bytes| {
+                into_cells(cell_count, bytes.iter().copied(), |bytes| {
+                    Array::from((shape.to_vec(), bytes))
                 })
-            }
-            ArrayType::Value => into_cells(
-                cell_count,
-                take(unsafe { &mut self.data.values }),
-                |values| Array::from((shape.clone(), values)),
-            ),
-        }
+            },
+            |shape, chars| {
+                into_cells(cell_count, chars.iter().copied(), |chars| {
+                    Array::from((shape.to_vec(), chars))
+                })
+            },
+            |shape, values| {
+                into_cells(cell_count, values.iter().cloned(), |values| {
+                    Array::from((shape.to_vec(), values))
+                })
+            },
+        )
     }
     pub fn first(&self) -> Option<Value> {
         if self.shape.is_empty() {
@@ -485,9 +522,10 @@ impl Array {
     }
 }
 
-fn into_cells<T, F, R>(cell_count: usize, mut items: Vec<T>, f: F) -> Vec<R>
+fn into_cells<I, T, F, R>(cell_count: usize, mut items: I, mut f: F) -> Vec<R>
 where
-    F: Fn(Vec<T>) -> R,
+    I: ExactSizeIterator<Item = T>,
+    F: FnMut(Vec<T>) -> R,
 {
     if cell_count == 0 {
         return Vec::new();
@@ -495,9 +533,8 @@ where
     let cell_size = items.len() / cell_count;
     let mut cells = Vec::with_capacity(cell_count);
     for _ in 0..cell_count {
-        cells.push(f(items.drain(items.len() - cell_size..).collect()));
+        cells.push(f(items.by_ref().take(cell_size).collect()));
     }
-    cells.reverse();
     cells
 }
 

@@ -4,13 +4,7 @@ use std::{
 };
 
 use crate::{
-    algorithm::{loops, pervade::bin_pervade_fallible},
-    array::Array,
-    function::FunctionId,
-    io::*,
-    lex::Simple,
-    value::*,
-    Uiua, UiuaError, UiuaResult,
+    array::Array, function::FunctionId, io::*, lex::Simple, value::*, Uiua, UiuaError, UiuaResult,
 };
 
 macro_rules! primitive {
@@ -406,8 +400,8 @@ impl Primitive {
             Primitive::Clear => {
                 env.take_stack();
             }
-            Primitive::Fold => loops::fold(env)?,
-            Primitive::Reduce => loops::reduce(env)?,
+            Primitive::Fold => todo!(),
+            Primitive::Reduce => todo!(),
             Primitive::Each => {
                 let f = env.pop(1)?;
                 let xs = env.pop(2)?;
@@ -442,21 +436,21 @@ impl Primitive {
                     (true, true) => {
                         let (x_shape, x_values) = xs.into_array().into_shape_flat_values();
                         let (y_shape, y_values) = ys.into_array().into_shape_flat_values();
-                        let (shape, values) = bin_pervade_fallible(
-                            &x_shape,
-                            x_values,
-                            &y_shape,
-                            y_values,
-                            env,
-                            |x, y, env| {
-                                env.push(y);
-                                env.push(x);
-                                env.push(f.clone());
-                                env.call_error_on_break(BREAK_ERROR)?;
-                                env.pop("zip's function result")
-                            },
-                        )?;
-                        env.push(Array::from((shape, values)).normalized_type());
+                        // let (shape, values) = bin_pervade_fallible(
+                        //     &x_shape,
+                        //     x_values,
+                        //     &y_shape,
+                        //     y_values,
+                        //     env,
+                        //     |x, y, env| {
+                        //         env.push(y);
+                        //         env.push(x);
+                        //         env.push(f.clone());
+                        //         env.call_error_on_break(BREAK_ERROR)?;
+                        //         env.pop("zip's function result")
+                        //     },
+                        // )?;
+                        // env.push(Array::from((shape, values)).normalized_type());
                     }
                     (true, false) => {
                         let (x_shape, x_values) = xs.into_array().into_shape_flat_values();
@@ -620,7 +614,7 @@ impl Primitive {
                 }
                 env.push(Array::from((new_shape, items)).normalized_type());
             }
-            Primitive::Scan => loops::scan(env)?,
+            Primitive::Scan => todo!(),
             Primitive::Repeat => {
                 let f = env.pop(1)?;
                 let mut acc = env.pop(2)?;

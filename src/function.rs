@@ -1,10 +1,10 @@
-use std::fmt;
+use std::{fmt, rc::Rc};
 
 use crate::{lex::Span, primitive::Primitive, value::Value, Ident};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Instr {
-    Push(Value),
+    Push(Rc<Value>),
     BeginArray,
     EndArray(bool, usize),
     Primitive(Primitive, usize),

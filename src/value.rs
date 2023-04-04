@@ -1,485 +1,319 @@
-use std::{cmp::Ordering, fmt, mem::forget, rc::Rc};
+use std::{cmp::Ordering, fmt, mem::take};
 
-use nanbox::NanBox;
+use crate::{algorithm::pervade::*, array::*, function::Function, Uiua, UiuaResult};
 
-use crate::{
-    algorithm::pervade::{self, *},
-    array::{Array, ArrayType},
-    function::Function,
-    grid_fmt::GridFmt,
-    primitive::Primitive,
-    Uiua, UiuaResult,
-};
-
-pub struct Value(NanBox);
-
-fn _value_is_small() {
-    let _: u64 = unsafe { std::mem::transmute(Value::from(0.0)) };
+#[derive(Clone)]
+pub enum Value {
+    Num(Array<f64>),
+    Byte(Array<u8>),
+    Char(Array<char>),
+    Func(Array<Function>),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Type {
-    Num,
-    Byte,
-    Char,
-    Function,
-    Array,
-}
-
-impl fmt::Display for Type {
+impl fmt::Debug for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Type::Num => write!(f, "number"),
-            Type::Byte => write!(f, "byte"),
-            Type::Char => write!(f, "character"),
-            Type::Function => write!(f, "function"),
-            Type::Array => write!(f, "array"),
+            Self::Num(array) => array.fmt(f),
+            Self::Byte(array) => array.fmt(f),
+            Self::Char(array) => array.fmt(f),
+            Self::Func(array) => array.fmt(f),
         }
-    }
-}
-
-type ArrayRef = *const Array;
-type FunctionRef = *const Function;
-const NUM_TAG: u8 = 0;
-const BYTE_TAG: u8 = 1;
-const CHAR_TAG: u8 = 2;
-const FUNCTION_TAG: u8 = 3;
-const ARRAY_TAG: u8 = 4;
-
-static TYPES: [Type; 9] = {
-    let mut types = [Type::Num; 9];
-    types[NUM_TAG as usize] = Type::Num;
-    types[BYTE_TAG as usize] = Type::Byte;
-    types[CHAR_TAG as usize] = Type::Char;
-    types[FUNCTION_TAG as usize] = Type::Function;
-    types[ARRAY_TAG as usize] = Type::Array;
-    types
-};
-
-impl Default for Value {
-    fn default() -> Self {
-        0.0.into()
     }
 }
 
 impl Value {
-    pub fn show(&self) -> String {
-        self.grid_string()
-    }
-    pub fn ty(&self) -> Type {
-        TYPES[self.0.tag() as usize]
-    }
-    pub fn is_number(&self) -> bool {
-        self.0.tag() == NUM_TAG as u32 || self.0.tag() > ARRAY_TAG as u32
-    }
-    pub fn is_byte(&self) -> bool {
-        self.0.tag() == BYTE_TAG as u32
-    }
-    pub fn is_nat(&self) -> bool {
-        self.is_byte()
-            || self.is_number() && {
-                let n = self.number();
-                n >= 0.0 && n.trunc() == n
-            }
-    }
-    pub fn as_nat(&self) -> Option<u64> {
-        if self.is_byte() {
-            Some(self.byte() as u64)
-        } else if self.is_number() {
-            if self.number().fract() == 0.0 {
-                Some(self.number() as u64)
-            } else {
-                None
-            }
-        } else {
-            None
+    pub fn type_name(&self) -> &'static str {
+        match self {
+            Self::Num(_) => "number",
+            Self::Byte(_) => "byte",
+            Self::Char(_) => "char",
+            Self::Func(_) => "function",
         }
     }
-    pub fn is_char(&self) -> bool {
-        self.0.tag() == CHAR_TAG as u32
-    }
-    pub fn is_function(&self) -> bool {
-        self.0.tag() == FUNCTION_TAG as u32
-    }
-    pub fn is_array(&self) -> bool {
-        self.0.tag() == ARRAY_TAG as u32
-    }
-    pub fn number(&self) -> f64 {
-        assert!(self.is_number());
-        unsafe { self.0.unpack::<f64>() }
-    }
-    pub fn byte(&self) -> u8 {
-        assert!(self.is_byte());
-        unsafe { self.0.unpack::<u8>() }
-    }
-    pub fn char(&self) -> char {
-        assert!(self.is_char());
-        unsafe { self.0.unpack::<char>() }
-    }
-    pub fn function(&self) -> &Function {
-        assert!(self.is_function());
-        unsafe { &*self.0.unpack::<FunctionRef>() }
-    }
-    pub fn as_primitive(&self) -> Option<Primitive> {
-        if self.is_function() {
-            self.function().as_primitive()
-        } else {
-            None
+    pub fn shape(&self) -> &[usize] {
+        match self {
+            Self::Num(array) => array.shape(),
+            Self::Byte(array) => array.shape(),
+            Self::Char(array) => array.shape(),
+            Self::Func(array) => array.shape(),
         }
     }
-    pub fn array(&self) -> &Array {
-        assert!(self.is_array());
-        unsafe { &*self.0.unpack::<ArrayRef>() }
+    pub fn generic_mut<T>(
+        &mut self,
+        n: impl FnOnce(&mut Array<f64>) -> T,
+        b: impl FnOnce(&mut Array<u8>) -> T,
+        c: impl FnOnce(&mut Array<char>) -> T,
+        f: impl FnOnce(&mut Array<Function>) -> T,
+    ) -> T {
+        match self {
+            Self::Num(array) => n(array),
+            Self::Byte(array) => b(array),
+            Self::Char(array) => c(array),
+            Self::Func(array) => f(array),
+        }
     }
-    pub fn array_mut(&mut self) -> &mut Array {
-        assert!(self.is_array());
-        // Conjure the rc
-        let mut rc = unsafe { Rc::from_raw(self.0.unpack::<ArrayRef>()) };
-        // Ensure its reference is unique
-        Rc::make_mut(&mut rc);
-        // Get the pointer
-        let ptr = Rc::as_ptr(&rc) as *mut Array;
-        // Return the rc to the aether
-        self.0 = new_array_nanbox(rc);
-        // This should be safe because the mutable pointer is unique and the rc was forgotten
-        unsafe { &mut *ptr }
+    pub fn into_generic<T>(
+        self,
+        n: impl FnOnce(Array<f64>) -> T,
+        b: impl FnOnce(Array<u8>) -> T,
+        c: impl FnOnce(Array<char>) -> T,
+        f: impl FnOnce(Array<Function>) -> T,
+    ) -> T {
+        match self {
+            Self::Num(array) => n(array),
+            Self::Byte(array) => b(array),
+            Self::Char(array) => c(array),
+            Self::Func(array) => f(array),
+        }
     }
-    pub fn into_array(self) -> Array {
-        assert!(self.is_array());
-        // Conjure the rc
-        let rc = unsafe { Rc::from_raw(self.0.unpack::<ArrayRef>()) };
-        let array = match Rc::try_unwrap(rc) {
-            Ok(array) => {
-                // The rc is consumed and can rest
-                array
+    pub fn as_indices(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<isize>> {
+        self.as_number_list(env, requirement, |f| f % 1.0 == 0.0, |f| f as isize)
+    }
+    pub fn as_naturals(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<usize>> {
+        self.as_number_list(
+            env,
+            requirement,
+            |f| f % 1.0 == 0.0 && f >= 0.0,
+            |f| f as usize,
+        )
+    }
+    fn as_number_list<T>(
+        &self,
+        env: &Uiua,
+        requirement: &'static str,
+        test: fn(f64) -> bool,
+        convert: fn(f64) -> T,
+    ) -> UiuaResult<Vec<T>> {
+        Ok(match self {
+            Value::Num(nums) => {
+                if nums.rank() > 1 {
+                    return Err(
+                        env.error(format!("{requirement}, but its rank is {}", nums.rank()))
+                    );
+                }
+                let mut result = Vec::with_capacity(nums.len());
+                for &num in nums.data() {
+                    if !test(num) {
+                        return Err(env.error(requirement));
+                    }
+                    result.push(convert(num));
+                }
+                result
             }
-            Err(rc) => {
-                // Clone the array and let the rc rest
-                let array = (*rc).clone();
-                drop(rc);
-                array
+            Value::Byte(bytes) => {
+                if bytes.rank() > 1 {
+                    return Err(
+                        env.error(format!("{requirement}, but its rank is {}", bytes.rank()))
+                    );
+                }
+                let mut result = Vec::with_capacity(bytes.len());
+                for &byte in bytes.data() {
+                    let num = byte as f64;
+                    if !test(num) {
+                        return Err(env.error(requirement));
+                    }
+                    result.push(convert(num));
+                }
+                result
             }
-        };
-        // The rc is already dropped, so the destructor shouldn't be run again
-        forget(self);
-        array
+            value => {
+                return Err(env.error(format!(
+                    "{requirement}, but its type is {}",
+                    value.type_name()
+                )))
+            }
+        })
     }
-    pub fn into_function(self) -> Rc<Function> {
-        assert!(self.is_function());
-        // Conjure the rc
-        let rc = unsafe { Rc::from_raw(self.0.unpack::<FunctionRef>()) };
-        // The rc is moved out, so the destructor shouldn't be run
-        forget(self);
-        rc
+    pub fn as_string(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<String> {
+        if let Value::Char(chars) = self {
+            if chars.rank() > 1 {
+                return Err(env.error(format!("{requirement}, but its rank is {}", chars.rank())));
+            }
+            Ok(chars.data().iter().collect())
+        } else {
+            Err(env.error(format!(
+                "{requirement}, but its type is {}",
+                self.type_name()
+            )))
+        }
     }
 }
 
-mod array {
-    use super::*;
-    pub fn number(array: Array) -> Vec<f64> {
-        array.into_numbers()
-    }
-    pub fn byte(array: Array) -> Vec<u8> {
-        array.into_bytes()
-    }
-    pub fn char(array: Array) -> Vec<char> {
-        array.into_chars()
+macro_rules! value_from {
+    ($ty:ty, $variant:ident) => {
+        impl From<$ty> for Value {
+            fn from(item: $ty) -> Self {
+                Self::$variant(Array::from(item))
+            }
+        }
+        impl From<Array<$ty>> for Value {
+            fn from(array: Array<$ty>) -> Self {
+                Self::$variant(array)
+            }
+        }
+        impl From<Vec<$ty>> for Value {
+            fn from(vec: Vec<$ty>) -> Self {
+                Self::$variant(Array::from(vec))
+            }
+        }
+        impl From<(Vec<usize>, Vec<$ty>)> for Value {
+            fn from((shape, data): (Vec<usize>, Vec<$ty>)) -> Self {
+                Self::$variant(Array::new(shape, data))
+            }
+        }
+        impl FromIterator<$ty> for Value {
+            fn from_iter<I: IntoIterator<Item = $ty>>(iter: I) -> Self {
+                Self::$variant(Array::from_iter(iter))
+            }
+        }
+    };
+}
+
+value_from!(f64, Num);
+value_from!(u8, Byte);
+value_from!(char, Char);
+value_from!(Function, Func);
+
+impl FromIterator<usize> for Value {
+    fn from_iter<I: IntoIterator<Item = usize>>(iter: I) -> Self {
+        iter.into_iter().map(|i| i as f64).collect()
     }
 }
 
 macro_rules! value_un_impl {
-    ($name:ident $(,($rt:ident, $get:ident, $f:ident))* $(,)?) => {
+    ($name:ident, $(($variant:ident, $f:ident)),* $(,)?) => {
         impl Value {
-            #[allow(unreachable_patterns)]
-            pub fn $name(self, env: &Uiua) -> UiuaResult<Self> {
-                Ok(match self.ty() {
-                    $(Type::$rt => pervade::$name::$f(self.$get()).into(),)*
-                    Type::Array => {
-                        let arr = self.into_array();
-                        let shape = arr.shape().to_vec();
-                        match arr.ty() {
-                            $(ArrayType::$rt => Array::from((shape, un_pervade(array::$get(arr), pervade::$name::$f))),)*
-                            ArrayType::Value => {
-                                Array::from((shape, un_pervade_fallible(arr.into_values(), env, Value::$name)?))
-                            }
-                            ty => return Err(pervade::$name::error(ty, env)),
-                        }.into()
-                    },
-                    ty => return Err(pervade::$name::error(ty, env)),
+            pub fn $name(&mut self, env: &Uiua) -> UiuaResult {
+                Ok(match self {
+                    $(Self::$variant(array) => {
+                        let (shape, data) = take(array).into_pair();
+                        *self = (shape, data.into_iter().map($name::$f).collect::<Vec<_>>()).into();
+                    },)*
+                    val => return Err($name::error(val.type_name(), env))
                 })
             }
         }
-    };
+    }
 }
 
-value_un_impl!(not, (Num, number, num), (Byte, byte, byte));
-value_un_impl!(neg, (Num, number, num), (Byte, byte, byte));
-value_un_impl!(abs, (Num, number, num), (Byte, byte, byte));
-value_un_impl!(sign, (Num, number, num), (Byte, byte, byte));
-value_un_impl!(sqrt, (Num, number, num), (Byte, byte, byte));
-value_un_impl!(sin, (Num, number, num), (Byte, byte, byte));
-value_un_impl!(cos, (Num, number, num), (Byte, byte, byte));
-value_un_impl!(asin, (Num, number, num), (Byte, byte, byte));
-value_un_impl!(acos, (Num, number, num), (Byte, byte, byte));
-value_un_impl!(floor, (Num, number, num), (Byte, byte, byte));
-value_un_impl!(ceil, (Num, number, num), (Byte, byte, byte));
-value_un_impl!(round, (Num, number, num), (Byte, byte, byte));
+macro_rules! value_un_impl_all {
+    ($($name:ident),* $(,)?) => {
+        $(value_un_impl!($name, (Num, num), (Byte, byte));)*
+    }
+}
+
+value_un_impl_all!(neg, not, abs, sign, sqrt, sin, cos, asin, acos, floor, ceil, round);
 
 macro_rules! value_bin_impl {
-    ($name:ident
-        $(,($a_ty:ident, $get_a:ident, $b_ty:ident, $get_b:ident, $ab:ident))*
-    $(,)?) => {
+    ($name:ident, $(($va:ident, $vb:ident, $f:ident)),* $(,)?) => {
         impl Value {
-            #[allow(unreachable_patterns)]
-            pub fn $name(self, other: Self, env: &mut Uiua) -> UiuaResult<Self> {
-                Ok(match (self.ty(), other.ty()) {
-                    $((Type::$a_ty, Type::$b_ty) => {
-                        Value::from(pervade::$name::$ab(self.$get_a(), other.$get_b()))
-                    })*
-                    (Type::Array, Type::Array) => {
-                        Value::from(self.into_array().$name(other.into_array(), env)?)
-                    }
-                    $((Type::Array, Type::$b_ty) => {
-                        Value::from(self.into_array().$name(Array::from(other.$get_b()), env)?)
-                    }),*
-                    $((Type::$a_ty, Type::Array) => {
-                        Value::from(Array::$name(Array::from(self.$get_a()), other.into_array(), env)?)
-                    }),*
-                    (a, b) => return Err(pervade::$name::error(a, b, env))
+            pub fn $name(&mut self, other: &Self, env: &Uiua) -> UiuaResult {
+                Ok(match (&mut *self, other) {
+                    $((Value::$va(a), Value::$vb(b)) => {
+                        *self = bin_pervade(a, &b, env, $name::$f)?.into()
+                    },)*
+                    (a, b) => return Err($name::error(a.type_name(), b.type_name(), env)),
                 })
             }
         }
     };
 }
 
-macro_rules! array_bin_impl {
-    ($name:ident
-        $(,($a_ty:ident, $get_a:ident, $b_ty:ident, $get_b:ident, $ab:ident))*
-    $(,)?) => {
-        impl Array {
-            #[allow(unreachable_patterns)]
-            pub fn $name(mut self, mut other: Self, env: &mut Uiua) -> UiuaResult<Self> {
-                let ash = self.take_shape();
-                let bsh = other.take_shape();
-                Ok(match (self.ty(), other.ty()) {
-                    $((ArrayType::$a_ty, ArrayType::$b_ty) =>
-                        bin_pervade(&ash, array::$get_a(self), &bsh, array::$get_b(other), env, pervade::$name::$ab)?.into(),)*
-                    (ArrayType::Value, ArrayType::Value) => {
-                        bin_pervade_fallible(&ash, self.into_values(), &bsh, other.into_values(), env, Value::$name)?.into()
-                    }
-                    $((ArrayType::Value, ArrayType::$b_ty) => {
-                        bin_pervade_fallible(&ash, self.into_values(), &bsh, array::$get_b(other), env,
-                            |a, b, env| Value::$name(a, b.into(), env))?.into()
-                    },)*
-                    $((ArrayType::$a_ty, ArrayType::Value) => {
-                        bin_pervade_fallible(&ash, array::$get_a(self), &bsh, other.into_values(), env,
-                            |a, b, env| Value::$name(a.into(), b, env))?.into()
-                    },)*
-                    (a, b) => return Err(pervade::$name::error(a, b, env)),
-                })
-            }
-        }
-    }
-}
-
-macro_rules! full_bin_impl {
-    ($name:ident
-        $(,($a_ty:ident, $get_a:ident, $b_ty:ident, $get_b:ident, $ab:ident))*
-    $(,)?) => {
-        value_bin_impl!($name $(,($a_ty, $get_a, $b_ty, $get_b, $ab))*);
-        array_bin_impl!($name $(,($a_ty, $get_a, $b_ty, $get_b, $ab))*);
-    };
-}
-
-full_bin_impl!(
+value_bin_impl!(
     add,
-    (Num, number, Num, number, num_num),
-    (Num, number, Char, char, num_char),
-    (Char, char, Num, number, char_num),
-    (Byte, byte, Byte, byte, byte_byte),
-    (Byte, byte, Char, char, byte_char),
-    (Char, char, Byte, byte, char_byte),
-    (Byte, byte, Num, number, byte_num),
-    (Num, number, Byte, byte, num_byte),
+    (Num, Num, num_num),
+    (Num, Char, num_char),
+    (Char, Num, char_num),
+    (Byte, Byte, byte_byte),
+    (Byte, Char, byte_char),
+    (Char, Byte, char_byte),
+    (Byte, Num, byte_num),
+    (Num, Byte, num_byte),
 );
 
-full_bin_impl!(
+value_bin_impl!(
     sub,
-    (Num, number, Num, number, num_num),
-    (Num, number, Char, char, num_char),
-    (Char, char, Char, char, char_char),
-    (Byte, byte, Byte, byte, byte_byte),
-    (Byte, byte, Char, char, byte_char),
-    (Char, char, Char, char, char_char),
-    (Byte, byte, Num, number, byte_num),
-    (Num, number, Byte, byte, num_byte),
+    (Num, Num, num_num),
+    (Num, Char, num_char),
+    (Char, Char, char_char),
+    (Byte, Byte, byte_byte),
+    (Byte, Char, byte_char),
+    (Byte, Num, byte_num),
+    (Num, Byte, num_byte),
 );
 
-full_bin_impl!(
+value_bin_impl!(
     mul,
-    (Num, number, Num, number, num_num),
-    (Byte, byte, Byte, byte, byte_byte),
-    (Byte, byte, Num, number, byte_num),
-    (Num, number, Byte, byte, num_byte),
+    (Num, Num, num_num),
+    (Byte, Byte, byte_byte),
+    (Byte, Num, byte_num),
+    (Num, Byte, num_byte),
 );
-full_bin_impl!(
+value_bin_impl!(
     div,
-    (Num, number, Num, number, num_num),
-    (Byte, byte, Byte, byte, byte_byte),
-    (Byte, byte, Num, number, byte_num),
-    (Num, number, Byte, byte, num_byte),
+    (Num, Num, num_num),
+    (Byte, Byte, byte_byte),
+    (Byte, Num, byte_num),
+    (Num, Byte, num_byte),
 );
-full_bin_impl!(
+value_bin_impl!(
     modulus,
-    (Num, number, Num, number, num_num),
-    (Byte, byte, Byte, byte, byte_byte),
-    (Byte, byte, Num, number, byte_num),
-    (Num, number, Byte, byte, num_byte),
+    (Num, Num, num_num),
+    (Byte, Byte, byte_byte),
+    (Byte, Num, byte_num),
+    (Num, Byte, num_byte),
 );
-full_bin_impl!(
+value_bin_impl!(
     pow,
-    (Num, number, Num, number, num_num),
-    (Byte, byte, Byte, byte, byte_byte),
-    (Byte, byte, Num, number, byte_num),
-    (Num, number, Byte, byte, num_byte),
+    (Num, Num, num_num),
+    (Byte, Byte, byte_byte),
+    (Byte, Num, byte_num),
+    (Num, Byte, num_byte),
 );
-full_bin_impl!(
+value_bin_impl!(
     log,
-    (Num, number, Num, number, num_num),
-    (Byte, byte, Byte, byte, byte_byte),
-    (Byte, byte, Num, number, byte_num),
-    (Num, number, Byte, byte, num_byte),
+    (Num, Num, num_num),
+    (Byte, Byte, byte_byte),
+    (Byte, Num, byte_num),
+    (Num, Byte, num_byte),
 );
-full_bin_impl!(atan2, (Num, number, Num, number, num_num));
+value_bin_impl!(atan2, (Num, Num, num_num));
 
-full_bin_impl!(
+value_bin_impl!(
     min,
-    (Num, number, Num, number, num_num),
-    (Char, char, Char, char, char_char),
-    (Char, char, Num, number, char_num),
-    (Num, number, Char, char, num_char),
-    (Byte, byte, Byte, byte, byte_byte),
-    (Char, char, Char, char, char_char),
-    (Char, char, Byte, byte, char_byte),
-    (Byte, byte, Char, char, byte_char),
-    (Byte, byte, Num, number, byte_num),
-    (Num, number, Byte, byte, num_byte),
+    (Num, Num, num_num),
+    (Char, Char, char_char),
+    (Char, Num, char_num),
+    (Num, Char, num_char),
+    (Byte, Byte, byte_byte),
+    (Char, Byte, char_byte),
+    (Byte, Char, byte_char),
+    (Byte, Num, byte_num),
+    (Num, Byte, num_byte),
 );
 
-full_bin_impl!(
+value_bin_impl!(
     max,
-    (Num, number, Num, number, num_num),
-    (Char, char, Char, char, char_char),
-    (Char, char, Num, number, char_num),
-    (Num, number, Char, char, num_char),
-    (Byte, byte, Byte, byte, byte_byte),
-    (Char, char, Char, char, char_char),
-    (Char, char, Byte, byte, char_byte),
-    (Byte, byte, Char, char, byte_char),
-    (Byte, byte, Num, number, byte_num),
-    (Num, number, Byte, byte, num_byte),
+    (Num, Num, num_num),
+    (Char, Char, char_char),
+    (Char, Num, char_num),
+    (Num, Char, num_char),
+    (Byte, Byte, byte_byte),
+    (Char, Byte, char_byte),
+    (Byte, Char, byte_char),
+    (Byte, Num, byte_num),
+    (Num, Byte, num_byte),
 );
-
-macro_rules! cmp_impls {
-    ($($name:ident),*) => {
-        $(
-            value_bin_impl!(
-                $name,
-                // Value comparable
-                (Num, number, Num, number, num_num),
-                (Byte, byte, Byte, byte, generic),
-                (Char, char, Char, char, generic),
-                (Num, number, Byte, byte, num_byte),
-                (Byte, byte, Num, number, byte_num),
-                // Type comparable
-                (Num, number, Char, char, always_less),
-                (Num, number, Function, into_function, always_less),
-                (Byte, byte, Char, char, always_less),
-                (Byte, byte, Function, into_function, always_less),
-                (Char, char, Num, number, always_greater),
-                (Char, char, Byte, byte, always_greater),
-                (Char, char, Function, into_function, always_less),
-            );
-
-            array_bin_impl!(
-                $name,
-                // Value comparable
-                (Num, number, Num, number, num_num),
-                (Byte, byte, Byte, byte, generic),
-                (Char, char, Char, char, generic),
-                (Num, number, Byte, byte, num_byte),
-                (Byte, byte, Num, number, byte_num),
-                // Type comparable
-                (Num, number, Char, char, always_less),
-                (Char, char, Num, number, always_greater),
-                (Byte, byte, Char, char, always_less),
-                (Char, char, Byte, byte, always_greater),
-            );
-        )*
-    };
-}
-
-cmp_impls!(is_eq, is_ne, is_lt, is_le, is_gt, is_ge);
-
-impl Drop for Value {
-    fn drop(&mut self) {
-        match self.ty() {
-            Type::Function => unsafe {
-                // Conjure the rc
-                let rc = Rc::from_raw(self.0.unpack::<FunctionRef>());
-                // It may now rest in peace and decrease the refcount
-                drop(rc);
-            },
-            Type::Array => unsafe {
-                // Conjure the rc
-                let rc = Rc::from_raw(self.0.unpack::<ArrayRef>());
-                // It may now rest in peace and decrease the refcount
-                drop(rc);
-            },
-            _ => {}
-        }
-    }
-}
-
-impl Clone for Value {
-    fn clone(&self) -> Self {
-        match self.ty() {
-            Type::Function => Self(unsafe {
-                // Conjure the rc
-                let rc = Rc::from_raw(self.0.unpack::<FunctionRef>());
-                // Clone it to increase the refcount
-                let clone = rc.clone();
-                // Return the original rc to the aether
-                forget(rc);
-                // Use the clone to create a new NanBox
-                new_function_nanbox(clone)
-            }),
-            Type::Array => Self(unsafe {
-                // Conjure the rc
-                let rc = Rc::from_raw(self.0.unpack::<ArrayRef>());
-                // Clone it to increase the refcount
-                let clone = rc.clone();
-                // Return the original rc to the aether
-                forget(rc);
-                // Use the clone to create a new NanBox
-                new_array_nanbox(clone)
-            }),
-            _ => Self(self.0),
-        }
-    }
-}
 
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
-        match (self.ty(), other.ty()) {
-            (Type::Num, Type::Num) => {
-                let a = self.number();
-                let b = other.number();
-                a == b || a.is_nan() && b.is_nan()
-            }
-            (Type::Char, Type::Char) => self.char() == other.char(),
-            (Type::Function, Type::Function) => self.function() == other.function(),
-            (Type::Array, Type::Array) => self.array() == other.array(),
+        match (self, other) {
+            (Value::Num(a), Value::Num(b)) => a == b,
+            (Value::Byte(a), Value::Byte(b)) => a == b,
+            (Value::Char(a), Value::Char(b)) => a == b,
+            (Value::Func(a), Value::Func(b)) => a == b,
+            (Value::Num(a), Value::Byte(b)) => a.eq(b),
+            (Value::Byte(a), Value::Num(b)) => b.eq(a),
             _ => false,
         }
     }
@@ -495,101 +329,30 @@ impl PartialOrd for Value {
 
 impl Ord for Value {
     fn cmp(&self, other: &Self) -> Ordering {
-        match (self.ty(), other.ty()) {
-            (Type::Num, Type::Num) => {
-                let a = self.number();
-                let b = other.number();
-                a.partial_cmp(&b)
-                    .unwrap_or_else(|| a.is_nan().cmp(&b.is_nan()))
-            }
-            (Type::Char, Type::Char) => self.char().cmp(&other.char()),
-            (Type::Function, Type::Function) => self.function().cmp(other.function()),
-            (Type::Array, Type::Array) => self.array().cmp(other.array()),
-            (a, b) => a.cmp(&b),
-        }
-    }
-}
-
-impl fmt::Debug for Value {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.ty() {
-            Type::Num => write!(f, "{:?}", self.number()),
-            Type::Byte => write!(f, "{:?}", self.byte()),
-            Type::Char => write!(f, "{:?}", self.char()),
-            Type::Function => write!(f, "{:?}", self.function()),
-            Type::Array => write!(f, "{:?}", self.array()),
+        match (self, other) {
+            (Value::Num(a), Value::Num(b)) => a.cmp(b),
+            (Value::Byte(a), Value::Byte(b)) => a.cmp(b),
+            (Value::Char(a), Value::Char(b)) => a.cmp(b),
+            (Value::Func(a), Value::Func(b)) => a.cmp(b),
+            (Value::Num(a), Value::Byte(b)) => a.cmp(b),
+            (Value::Byte(a), Value::Num(b)) => b.cmp(a).reverse(),
+            (Value::Num(_), _) => Ordering::Less,
+            (_, Value::Num(_)) => Ordering::Greater,
+            (Value::Byte(_), _) => Ordering::Less,
+            (_, Value::Byte(_)) => Ordering::Greater,
+            (Value::Char(_), _) => Ordering::Less,
+            (_, Value::Char(_)) => Ordering::Greater,
         }
     }
 }
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.ty() {
-            Type::Num => write!(f, "{}", self.number()),
-            Type::Byte => write!(f, "{}", self.byte()),
-            Type::Char => write!(f, "{}", self.char()),
-            Type::Function => write!(f, "{}", self.function()),
-            Type::Array => write!(f, "{}", self.array()),
+        match self {
+            Value::Num(n) => n.fmt(f),
+            Value::Byte(b) => b.fmt(f),
+            Value::Char(c) => c.fmt(f),
+            Value::Func(func) => func.fmt(f),
         }
     }
-}
-
-impl From<bool> for Value {
-    fn from(b: bool) -> Self {
-        Self::from(b as u8 as f64)
-    }
-}
-
-impl From<String> for Value {
-    fn from(s: String) -> Self {
-        Self::from(Array::from(s))
-    }
-}
-
-impl From<u8> for Value {
-    fn from(b: u8) -> Self {
-        Self(unsafe { NanBox::new(BYTE_TAG, b) })
-    }
-}
-
-impl From<f64> for Value {
-    fn from(n: f64) -> Self {
-        Self(unsafe { NanBox::new(NUM_TAG, n) })
-    }
-}
-
-impl From<char> for Value {
-    fn from(c: char) -> Self {
-        Self(unsafe { NanBox::new(CHAR_TAG, c) })
-    }
-}
-
-impl From<Function> for Value {
-    fn from(f: Function) -> Self {
-        Rc::new(f).into()
-    }
-}
-
-impl From<Rc<Function>> for Value {
-    fn from(rc: Rc<Function>) -> Self {
-        // Cast it into the aether
-        Self(new_function_nanbox(rc))
-    }
-}
-
-impl From<Array> for Value {
-    fn from(a: Array) -> Self {
-        // Create a new rc
-        let rc = Rc::new(a);
-        // Cast it into the aether
-        Self(new_array_nanbox(rc))
-    }
-}
-
-fn new_array_nanbox(rc: Rc<Array>) -> NanBox {
-    unsafe { NanBox::new::<ArrayRef>(ARRAY_TAG, Rc::into_raw(rc)) }
-}
-
-fn new_function_nanbox(rc: Rc<Function>) -> NanBox {
-    unsafe { NanBox::new::<FunctionRef>(FUNCTION_TAG, Rc::into_raw(rc)) }
 }

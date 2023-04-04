@@ -1,69 +1,44 @@
 use std::{
     cmp::Ordering,
     collections::{BTreeMap, BTreeSet},
-    mem::{swap, take},
+    iter::repeat,
     ptr,
 };
 
-use crate::{
-    array::{Array, ArrayType},
-    value::{Type, Value},
-    Uiua, UiuaResult,
-};
+use crate::{array::*, value::Value, Uiua, UiuaResult};
 
 impl Value {
     pub fn deshape(&mut self) {
-        if self.is_array() {
-            self.array_mut().deshape();
-        } else {
-            *self = Array::from(take(self)).into();
-        }
-    }
-    pub fn reshape(&mut self, mut other: Value, env: &Uiua) -> UiuaResult {
-        swap(self, &mut other);
-        let shape = other.as_naturals(env, "Shape must be a list of natural numbers")?;
-        let arr = self.coerce_array();
-        arr.set_shape(shape);
-        let new_len: usize = arr.shape().iter().product();
-        match arr.ty() {
-            ArrayType::Num => force_length(arr.numbers_mut(), new_len),
-            ArrayType::Byte => force_length(arr.bytes_mut(), new_len),
-            ArrayType::Char => force_length(arr.chars_mut(), new_len),
-            ArrayType::Value => force_length(arr.values_mut(), new_len),
-        }
-        Ok(())
+        self.generic_mut(
+            Array::deshape,
+            Array::deshape,
+            Array::deshape,
+            Array::deshape,
+        )
     }
 }
 
-fn force_length<T: Clone>(data: &mut Vec<T>, len: usize) {
-    match data.len().cmp(&len) {
-        Ordering::Less => {
-            let mut i = 0;
-            while data.len() < len {
-                data.push(data[i].clone());
-                i += 1;
-            }
-        }
-        Ordering::Greater => data.truncate(len),
-        Ordering::Equal => {}
+impl<T> Array<T> {
+    pub fn deshape(&mut self) {
+        self.shape = vec![self.flat_len()];
     }
 }
 
 impl Value {
-    pub fn range(&mut self, env: &Uiua) -> UiuaResult {
-        let shape = self.as_naturals(
+    pub fn range(&self, env: &Uiua) -> UiuaResult<Self> {
+        let mut shape = self.as_naturals(
             env,
-            "Range only accepts a single natural number \
+            "Range max should be a single natural number \
             or a list of natural numbers",
         )?;
         let data = range(&shape);
-        *self = Array::from((shape, data)).into();
-        Ok(())
+        shape.push(shape.len());
+        Ok(Array::new(shape, data).into())
     }
 }
 
-fn range(shape: &[usize]) -> Vec<Value> {
-    let len = shape.iter().product::<usize>();
+fn range(shape: &[usize]) -> Vec<f64> {
+    let len = shape.len() * shape.iter().product::<usize>();
     let mut data = Vec::with_capacity(len);
     let products: Vec<usize> = (0..shape.len())
         .map(|i| shape[i..].iter().product::<usize>())
@@ -73,242 +48,227 @@ fn range(shape: &[usize]) -> Vec<Value> {
         .collect();
     for i in 0..len {
         if shape.len() <= 1 {
-            data.push((i as f64).into());
+            data.push(i as f64);
         } else {
-            let mut cell: Vec<f64> = Vec::with_capacity(shape.len());
             for j in 0..shape.len() {
-                cell.push((i % products[j] / moduli[j]) as f64);
+                data.push((i % products[j] / moduli[j]) as f64);
             }
-            data.push(Array::from(cell).into());
         }
     }
     data
 }
 
 impl Value {
-    pub fn first(&mut self, env: &Uiua) -> UiuaResult {
-        if !self.is_array() {
-            return Ok(());
-        }
-        *self = self
-            .array()
-            .first()
-            .ok_or_else(|| env.error("Empty array has no first"))?;
-        Ok(())
+    pub fn first(self, env: &Uiua) -> UiuaResult<Self> {
+        Ok(match self {
+            Self::Num(array) => array.first(env)?.into(),
+            Self::Byte(array) => array.first(env)?.into(),
+            Self::Char(array) => array.first(env)?.into(),
+            Self::Func(array) => array.first(env)?.into(),
+        })
     }
-    pub fn last(&mut self, env: &Uiua) -> UiuaResult {
-        if !self.is_array() {
-            return Ok(());
-        }
-        *self = self
-            .array()
-            .last()
-            .ok_or_else(|| env.error("Empty array has no last"))?;
-        Ok(())
-    }
-    pub fn reverse(&mut self) {
-        if self.is_array() {
-            self.array_mut().reverse();
-        }
+    pub fn last(self, env: &Uiua) -> UiuaResult<Self> {
+        Ok(match self {
+            Self::Num(array) => array.last(env)?.into(),
+            Self::Byte(array) => array.last(env)?.into(),
+            Self::Char(array) => array.last(env)?.into(),
+            Self::Func(array) => array.last(env)?.into(),
+        })
     }
 }
 
-impl Array {
-    pub fn reverse(&mut self) {
-        self.data_mut(reverse, reverse, reverse, reverse);
-    }
-}
-
-fn reverse<T>(shape: &mut [usize], data: &mut [T]) {
-    if shape.is_empty() {
-        return;
-    }
-    let cells = shape[0];
-    let cell_size: usize = shape.iter().skip(1).product();
-    for i in 0..cells / 2 {
-        let left = i * cell_size;
-        let right = (cells - i - 1) * cell_size;
-        let left = &mut data[left] as *mut T;
-        let right = &mut data[right] as *mut T;
-        unsafe {
-            ptr::swap_nonoverlapping(left, right, cell_size);
-        }
-    }
-}
-
-impl Value {
-    pub fn enclose(&mut self) {
-        *self = Array::from((Vec::new(), vec![take(self)]))
-            .normalized_type()
-            .into();
-    }
-    pub fn transpose(&mut self) {
-        let arr = self.coerce_array();
-        arr.data_mut(transpose, transpose, transpose, transpose);
-    }
-}
-
-fn transpose<T: Clone>(shape: &mut [usize], data: &mut [T]) {
-    if shape.len() < 2 || shape[0] == 0 {
-        return;
-    }
-    let mut temp = Vec::with_capacity(data.len());
-    let run_length = data.len() / shape[0];
-    for j in 0..run_length {
-        for i in 0..shape[0] {
-            temp.push(data[i * run_length + j].clone());
-        }
-    }
-    data.clone_from_slice(&temp);
-    shape.rotate_left(1);
-}
-
-impl Value {
-    pub fn grade(&mut self, env: &Uiua) -> UiuaResult {
-        let arr = self.coerce_array();
-        if arr.rank() < 1 {
-            return Err(env.error("Cannot grade rank less than 1"));
-        }
-        let mut indices: Vec<usize> = (0..arr.shape()[0]).collect();
-        let cells = take(arr).into_values();
-        indices.sort_by(|&a, &b| cells[a].cmp(&cells[b]));
-        let nums: Vec<f64> = indices.iter().map(|&i| i as f64).collect();
-        *arr = Array::from((vec![indices.len()], nums));
-        Ok(())
-    }
-    pub fn classify(&mut self, env: &Uiua) -> UiuaResult {
-        if self.rank() < 1 {
-            return Err(env.error("Cannot classify rank less than 1"));
-        }
-        let array = take(self).into_array();
-        let mut classes = BTreeMap::new();
-        let mut classified = Vec::with_capacity(array.shape()[0]);
-        for val in array.into_values() {
-            let new_class = classes.len();
-            let class = *classes.entry(val).or_insert(new_class);
-            classified.push(class as f64);
-        }
-        *self = Array::from(classified).into();
-        Ok(())
-    }
-    pub fn deduplicate(&mut self, env: &Uiua) -> UiuaResult {
-        if !self.is_array() {
-            return Err(env.error("Cannot deduplicate non-array"));
-        }
-        let array = take(self).into_array();
-        if array.rank() == 0 {
-            return Err(env.error("Cannot deduplicate rank 0 array"));
-        }
-        let mut deduped = Vec::with_capacity(array.shape()[0]);
-        let mut seen = BTreeSet::new();
-        for val in array.into_values() {
-            if seen.insert(val.clone()) {
-                deduped.push(val);
-            }
-        }
-        *self = Array::from(deduped).normalized().into();
-        Ok(())
-    }
-    pub fn parse_num(&mut self, env: &Uiua) -> UiuaResult {
-        match self.ty() {
-            Type::Num => {}
-            Type::Byte => {}
-            Type::Char => {
-                *self = self
-                    .char()
-                    .to_string()
-                    .parse::<f64>()
-                    .map(Value::from)
-                    .map_err(|e| env.error(e.to_string()))?
-            }
-            Type::Function => return Err(env.error("Cannot parse function as number")),
-            Type::Array => {
-                let arr = self.array();
-                if !arr.is_chars() {
-                    return Err(env.error("Cannot parse non-character as number"));
-                }
-                if arr.rank() > 1 {
-                    return Err(env.error("Cannot parse array of rank > 1 as number"));
-                }
-                let string = arr.chars().iter().collect::<String>();
-                *self = string
-                    .parse::<f64>()
-                    .map(Value::from)
-                    .map_err(|e| env.error(e.to_string()))?
-            }
-        }
-        Ok(())
-    }
-    pub fn normalize(&mut self, env: &Uiua) -> UiuaResult {
-        if self.is_array() {
-            if let Some((a, b)) = self.array_mut().normalize() {
-                return Err(env.error(format!(
-                    "Cannot normalize array with values of difference shapes {a:?} and {b:?}"
-                )));
-            }
-        }
-        Ok(())
-    }
-    pub fn indices(&mut self, env: &Uiua) -> UiuaResult {
-        if !self.is_array() {
-            return Err(env.error("Cannot get indices of non-array"));
-        }
-        let array = self.array();
-        let mask = self.as_naturals(env, "Can only get indices of rank 1 number array")?;
-        let mut indices = Vec::with_capacity(array.shape()[0]);
-        for (i, n) in mask.into_iter().enumerate() {
-            for _ in 0..n {
-                indices.push(i as f64);
-            }
-        }
-        *self = Array::from(indices).into();
-        Ok(())
-    }
-    pub fn sort(&mut self, env: &Uiua) -> UiuaResult {
-        if !self.is_array() {
-            return Err(env.error("Cannot sort non-array"));
-        }
+impl<T> Array<T> {
+    pub fn first(mut self, env: &Uiua) -> UiuaResult<Self> {
         if self.rank() == 0 {
-            return Err(env.error("Cannot sort rank 0 array"));
+            return Err(env.error("Cannot take first of a scalar"));
         }
-        self.array_mut().data_mut(
-            |shape, numbers| {
-                sort_array(shape, numbers, |a, b| {
-                    a.partial_cmp(b)
-                        .unwrap_or_else(|| a.is_nan().cmp(&b.is_nan()))
-                })
-            },
-            |shape, bytes| sort_array(shape, bytes, Ord::cmp),
-            |shape, chars| sort_array(shape, chars, Ord::cmp),
-            |shape, values| sort_array(shape, values, Ord::cmp),
-        );
-        Ok(())
+        let row_len = self.shape[0];
+        self.shape.remove(0);
+        self.data.truncate(row_len);
+        Ok(self)
+    }
+    pub fn last(mut self, env: &Uiua) -> UiuaResult<Self> {
+        if self.rank() == 0 {
+            return Err(env.error("Cannot take last of a scalar"));
+        }
+        let row_len = self.shape[0];
+        self.shape.remove(0);
+        let prefix_len = self.data.len() - row_len;
+        self.data.drain(0..prefix_len);
+        Ok(self)
     }
 }
 
-type CmpFn<T> = fn(&T, &T) -> Ordering;
-
-pub fn sort_array<T: Clone>(shape: &[usize], data: &mut [T], cmp: CmpFn<T>) {
-    if shape.is_empty() {
-        return;
+impl Value {
+    pub fn reverve(&mut self) {
+        self.generic_mut(
+            Array::reverse,
+            Array::reverse,
+            Array::reverse,
+            Array::reverse,
+        )
     }
-    let chunk_size = shape.iter().skip(1).product();
-    merge_sort_chunks(chunk_size, data, cmp);
 }
 
-fn merge_sort_chunks<T: Clone>(chunk_size: usize, data: &mut [T], cmp: CmpFn<T>) {
-    let cells = data.len() / chunk_size;
+impl<T> Array<T> {
+    pub fn reverse(&mut self) {
+        if self.shape.is_empty() {
+            return;
+        }
+        let cells = self.shape[0];
+        let cell_size: usize = self.shape.iter().skip(1).product();
+        for i in 0..cells / 2 {
+            let left = i * cell_size;
+            let right = (cells - i - 1) * cell_size;
+            let left = &mut self.data[left] as *mut T;
+            let right = &mut self.data[right] as *mut T;
+            unsafe {
+                ptr::swap_nonoverlapping(left, right, cell_size);
+            }
+        }
+    }
+}
+
+impl Value {
+    pub fn transpose(&mut self) {
+        self.generic_mut(
+            Array::transpose,
+            Array::transpose,
+            Array::transpose,
+            Array::transpose,
+        )
+    }
+}
+
+impl<T: Clone> Array<T> {
+    pub fn transpose(&mut self) {
+        if self.shape.len() < 2 || self.shape[0] == 0 {
+            return;
+        }
+        let mut temp = Vec::with_capacity(self.data.len());
+        let run_length = self.data.len() / self.shape[0];
+        for j in 0..run_length {
+            for i in 0..self.shape[0] {
+                temp.push(self.data[i * run_length + j].clone());
+            }
+        }
+        self.data.clone_from_slice(&temp);
+        self.shape.rotate_left(1);
+    }
+}
+
+impl Value {
+    pub fn grade(&self, env: &Uiua) -> UiuaResult<Self> {
+        Ok(Self::from_iter(match self {
+            Self::Num(array) => array.grade(env)?,
+            Self::Byte(array) => array.grade(env)?,
+            Self::Char(array) => array.grade(env)?,
+            Self::Func(array) => array.grade(env)?,
+        }))
+    }
+    pub fn classify(&self, env: &Uiua) -> UiuaResult<Self> {
+        Ok(Self::from_iter(match self {
+            Self::Num(array) => array.classify(env)?,
+            Self::Byte(array) => array.classify(env)?,
+            Self::Char(array) => array.classify(env)?,
+            Self::Func(array) => array.classify(env)?,
+        }))
+    }
+    pub fn deduplicate(&mut self) {
+        self.generic_mut(
+            Array::deduplicate,
+            Array::deduplicate,
+            Array::deduplicate,
+            Array::deduplicate,
+        )
+    }
+}
+
+impl<T: ArrayValue> Array<T> {
+    pub fn grade(&self, env: &Uiua) -> UiuaResult<Vec<usize>> {
+        if self.rank() == 0 {
+            return Err(env.error("Cannot grade a rank-0 array"));
+        }
+        let mut indices = (0..self.flat_len()).collect::<Vec<_>>();
+        indices.sort_by(|&a, &b| {
+            self.row(a)
+                .iter()
+                .zip(self.row(b))
+                .map(|(a, b)| a.cmp(b))
+                .find(|x| x != &Ordering::Equal)
+                .unwrap_or(Ordering::Equal)
+        });
+        Ok(indices)
+    }
+    pub fn classify(&self, env: &Uiua) -> UiuaResult<Vec<usize>> {
+        if self.rank() == 0 {
+            return Err(env.error("Cannot classify a rank-0 array"));
+        }
+        let mut classes = BTreeMap::new();
+        let mut classified = Vec::with_capacity(self.len());
+        for row in self.rows() {
+            let new_class = classes.len();
+            let class = *classes.entry(row).or_insert(new_class);
+            classified.push(class);
+        }
+        Ok(classified)
+    }
+    pub fn deduplicate(&mut self) {
+        if self.rank() == 0 {
+            return;
+        }
+        let mut deduped = Vec::new();
+        let mut seen = BTreeSet::new();
+        let mut new_len = 0;
+        for row in self.rows() {
+            if seen.insert(row) {
+                deduped.extend_from_slice(&row);
+                new_len += 1;
+            }
+        }
+        self.data = deduped;
+        self.shape[0] = new_len;
+    }
+}
+
+impl Value {
+    pub fn indices(&self, env: &Uiua) -> UiuaResult<Self> {
+        let nats =
+            self.as_naturals(env, "Argument to indices must be a list of natural numbers")?;
+        let mut indices = Vec::new();
+        for (i, n) in nats.into_iter().enumerate() {
+            indices.extend(repeat(i as f64).take(n));
+        }
+        Ok(Self::from_iter(indices))
+    }
+    pub fn sort(&mut self) {
+        self.generic_mut(Array::sort, Array::sort, Array::sort, Array::sort)
+    }
+}
+
+impl<T: ArrayValue> Array<T> {
+    pub fn sort(&mut self) {
+        if self.rank() == 0 {
+            return;
+        }
+        let row_len = self.row_len();
+        merge_sort_rows(row_len, &mut self.data);
+    }
+}
+
+fn merge_sort_rows<T: ArrayValue>(row_len: usize, data: &mut [T]) {
+    let cells = data.len() / row_len;
     assert_ne!(cells, 0);
     if cells == 1 {
         return;
     }
     let mid = cells / 2;
     let mut tmp = Vec::with_capacity(data.len());
-    let (left, right) = data.split_at_mut(mid * chunk_size);
-    merge_sort_chunks(chunk_size, left, cmp);
-    merge_sort_chunks(chunk_size, right, cmp);
-    let mut left = left.chunks_exact(chunk_size);
-    let mut right = right.chunks_exact(chunk_size);
+    let (left, right) = data.split_at_mut(mid * row_len);
+    merge_sort_rows(row_len, left);
+    merge_sort_rows(row_len, right);
+    let mut left = left.chunks_exact(row_len);
+    let mut right = right.chunks_exact(row_len);
     let mut left_next = left.next();
     let mut right_next = right.next();
     loop {
@@ -316,7 +276,7 @@ fn merge_sort_chunks<T: Clone>(chunk_size: usize, data: &mut [T], cmp: CmpFn<T>)
             (Some(l), Some(r)) => {
                 let mut ordering = Ordering::Equal;
                 for (l, r) in l.iter().zip(r) {
-                    ordering = cmp(l, r);
+                    ordering = l.cmp(r);
                     if ordering != Ordering::Equal {
                         break;
                     }

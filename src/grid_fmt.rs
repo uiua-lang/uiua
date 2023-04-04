@@ -1,13 +1,14 @@
 use std::{
+    any::type_name,
     f64::{consts::PI, INFINITY},
     iter::once,
     mem::take,
 };
 
 use crate::{
-    array::{Array, ArrayType},
+    array::{Array, ArrayValue},
     function::Function,
-    value::{Type, Value},
+    value::Value,
 };
 
 type Grid<T = char> = Vec<Vec<T>>;
@@ -61,26 +62,24 @@ impl GridFmt for Function {
 
 impl GridFmt for Value {
     fn fmt_grid(&self) -> Grid {
-        match self.ty() {
-            Type::Num => self.number().fmt_grid(),
-            Type::Byte => self.byte().fmt_grid(),
-            Type::Char => self.char().fmt_grid(),
-            Type::Function => self.function().fmt_grid(),
-            Type::Array => self.array().fmt_grid(),
+        match self {
+            Value::Num(array) => array.fmt_grid(),
+            Value::Byte(array) => array.fmt_grid(),
+            Value::Char(array) => array.fmt_grid(),
+            Value::Func(array) => array.fmt_grid(),
         }
     }
 }
 
-impl GridFmt for Array {
+impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
     fn fmt_grid(&self) -> Grid {
         // Fill the metagrid
         let mut metagrid = Metagrid::new();
-        let shape = self.shape();
 
         // Handle really big arrays
         let mut just_dims = false;
-        if shape.len() > 1 {
-            let columns = *shape.last().unwrap();
+        if self.shape.len() > 1 {
+            let columns = *self.shape.last().unwrap();
             if let Some((w, _)) = term_size::dimensions() {
                 if columns > w / 2 - 1 {
                     just_dims = true;
@@ -88,7 +87,7 @@ impl GridFmt for Array {
             } else if columns > 40 {
                 just_dims = true;
             } else {
-                let rows = shape.iter().rev().skip(1).product::<usize>();
+                let rows = self.shape.iter().rev().skip(1).product::<usize>();
                 if rows > 100 {
                     just_dims = true;
                 }
@@ -98,12 +97,8 @@ impl GridFmt for Array {
         let mut grid: Grid = Grid::new();
 
         if !just_dims {
-            match self.ty() {
-                ArrayType::Num => fmt_array(shape, self.numbers(), false, &mut metagrid),
-                ArrayType::Byte => fmt_array(shape, self.bytes(), false, &mut metagrid),
-                ArrayType::Char => fmt_array(shape, self.chars(), true, &mut metagrid),
-                ArrayType::Value => fmt_array(shape, self.values(), false, &mut metagrid),
-            }
+            let stringy = type_name::<T>() == type_name::<char>();
+            fmt_array(&self.shape, &self.data, stringy, &mut metagrid);
             // Determine max row heights and column widths
             let metagrid_width = metagrid.iter().map(|row| row.len()).max().unwrap();
             let metagrid_height = metagrid.len();
@@ -141,7 +136,7 @@ impl GridFmt for Array {
             let row_count = grid.len();
             if row_count == 1 && self.rank() == 1 {
                 // Add brackets to vectors
-                if !self.is_chars() {
+                if !stringy {
                     grid[0].insert(0, '[');
                     grid[0].push(']');
                 }
@@ -180,18 +175,13 @@ impl GridFmt for Array {
 
         if just_dims {
             let mut s = String::from('[');
-            for (i, d) in shape.iter().enumerate() {
+            for (i, d) in self.shape.iter().enumerate() {
                 if i > 0 {
                     s.push_str(" × ");
                 }
                 s.push_str(&d.to_string());
             }
-            match self.ty() {
-                ArrayType::Num => s.push_str(" numbers"),
-                ArrayType::Byte => s.push_str(" bytes"),
-                ArrayType::Char => s.push_str(" chars"),
-                ArrayType::Value => s.push_str(" arrays"),
-            }
+            s.push_str(T::NAME);
             s.push(']');
             return vec![s.chars().collect()];
         }

@@ -25,17 +25,17 @@ pub struct Uiua<'io> {
     new_dfns: Vec<Vec<u8>>,
     global_names: Vec<HashMap<Ident, usize>>,
     // Statics
-    globals: Vec<Value>,
+    globals: Vec<Rc<Value>>,
     spans: Vec<Span>,
     // Runtime
     array_stack: Vec<usize>,
-    dfn_stack: Vec<Vec<Value>>,
-    stack: Vec<Value>,
-    antistack: Vec<Value>,
+    dfn_stack: Vec<Vec<Rc<Value>>>,
+    stack: Vec<Rc<Value>>,
+    antistack: Vec<Rc<Value>>,
     call_stack: Vec<StackFrame>,
     // IO
     current_imports: HashSet<PathBuf>,
-    imports: HashMap<PathBuf, Vec<Value>>,
+    imports: HashMap<PathBuf, Vec<Rc<Value>>>,
     pub(crate) io: &'io dyn IoBackend,
 }
 
@@ -527,11 +527,11 @@ impl<'io> Uiua<'io> {
         self.antistack.push(val.into());
     }
     /// Take the entire stack
-    pub fn take_stack(&mut self) -> Vec<Value> {
+    pub fn take_stack(&mut self) -> Vec<Rc<Value>> {
         take(&mut self.stack)
     }
     /// Clone the entire stack
-    pub fn clone_stack(&self) -> Vec<Value> {
+    pub fn clone_stack(&self) -> Vec<Rc<Value>> {
         self.stack.clone()
     }
     pub(crate) fn monadic<V: Into<Value>>(&mut self, f: fn(&Value) -> V) -> UiuaResult {

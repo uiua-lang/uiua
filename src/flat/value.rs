@@ -28,6 +28,105 @@ impl Value {
             Self::Func(array) => array.shape(),
         }
     }
+    pub fn generic_mut<T>(
+        &mut self,
+        n: impl FnOnce(&mut Array<f64>) -> T,
+        b: impl FnOnce(&mut Array<u8>) -> T,
+        c: impl FnOnce(&mut Array<char>) -> T,
+        f: impl FnOnce(&mut Array<Function>) -> T,
+    ) -> T {
+        match self {
+            Self::Num(array) => n(array),
+            Self::Byte(array) => b(array),
+            Self::Char(array) => c(array),
+            Self::Func(array) => f(array),
+        }
+    }
+    pub fn into_generic<T>(
+        self,
+        n: impl FnOnce(Array<f64>) -> T,
+        b: impl FnOnce(Array<u8>) -> T,
+        c: impl FnOnce(Array<char>) -> T,
+        f: impl FnOnce(Array<Function>) -> T,
+    ) -> T {
+        match self {
+            Self::Num(array) => n(array),
+            Self::Byte(array) => b(array),
+            Self::Char(array) => c(array),
+            Self::Func(array) => f(array),
+        }
+    }
+    pub fn as_indices(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<isize>> {
+        self.as_number_list(env, requirement, |f| f % 1.0 == 0.0, |f| f as isize)
+    }
+    pub fn as_naturals(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<usize>> {
+        self.as_number_list(
+            env,
+            requirement,
+            |f| f % 1.0 == 0.0 && f >= 0.0,
+            |f| f as usize,
+        )
+    }
+    fn as_number_list<T>(
+        &self,
+        env: &Uiua,
+        requirement: &'static str,
+        test: fn(f64) -> bool,
+        convert: fn(f64) -> T,
+    ) -> UiuaResult<Vec<T>> {
+        Ok(match self {
+            Value::Num(nums) => {
+                if nums.rank() > 1 {
+                    return Err(
+                        env.error(format!("{requirement}, but its rank is {}", nums.rank()))
+                    );
+                }
+                let mut result = Vec::with_capacity(nums.len());
+                for &num in nums.data() {
+                    if !test(num) {
+                        return Err(env.error(requirement));
+                    }
+                    result.push(convert(num));
+                }
+                result
+            }
+            Value::Byte(bytes) => {
+                if bytes.rank() > 1 {
+                    return Err(
+                        env.error(format!("{requirement}, but its rank is {}", bytes.rank()))
+                    );
+                }
+                let mut result = Vec::with_capacity(bytes.len());
+                for &byte in bytes.data() {
+                    let num = byte as f64;
+                    if !test(num) {
+                        return Err(env.error(requirement));
+                    }
+                    result.push(convert(num));
+                }
+                result
+            }
+            value => {
+                return Err(env.error(format!(
+                    "{requirement}, but its type is {}",
+                    value.type_name()
+                )))
+            }
+        })
+    }
+    pub fn as_string(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<String> {
+        if let Value::Char(chars) = self {
+            if chars.rank() > 1 {
+                return Err(env.error(format!("{requirement}, but its rank is {}", chars.rank())));
+            }
+            Ok(chars.data().iter().collect())
+        } else {
+            Err(env.error(format!(
+                "{requirement}, but its type is {}",
+                self.type_name()
+            )))
+        }
+    }
 }
 
 macro_rules! value_from {
@@ -64,6 +163,12 @@ value_from!(f64, Num);
 value_from!(u8, Byte);
 value_from!(char, Char);
 value_from!(Function, Func);
+
+impl FromIterator<usize> for Value {
+    fn from_iter<I: IntoIterator<Item = usize>>(iter: I) -> Self {
+        iter.into_iter().map(|i| i as f64).collect()
+    }
+}
 
 macro_rules! value_un_impl {
     ($name:ident, $(($variant:ident, $f:ident)),* $(,)?) => {

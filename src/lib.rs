@@ -4,6 +4,7 @@ mod algorithm;
 pub mod array;
 pub mod ast;
 mod error;
+mod flat;
 pub mod format;
 pub mod function;
 mod grid_fmt;

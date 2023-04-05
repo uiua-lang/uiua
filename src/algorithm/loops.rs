@@ -1,5 +1,4 @@
 use std::{
-    iter,
     ops::{Add, Mul},
     rc::Rc,
 };
@@ -169,39 +168,31 @@ pub fn bridge(env: &mut Uiua) -> UiuaResult {
 }
 
 pub fn table(env: &mut Uiua) -> UiuaResult {
-    // let f = env.pop(1)?;
-    // let xs = env.pop(2)?;
-    // let ys = env.pop(3)?;
-    // const BREAK_ERROR: &str = "break is not allowed in table";
-    // if !xs.is_array() && !ys.is_array() {
-    //     env.push(ys);
-    //     env.push(xs);
-    //     env.push(f);
-    //     return env.call_error_on_break(BREAK_ERROR);
-    // }
-    // let a = if xs.is_array() {
-    //     xs.into_array()
-    // } else {
-    //     Array::from(xs)
-    // };
-    // let b = if ys.is_array() {
-    //     ys.into_array()
-    // } else {
-    //     Array::from(ys)
-    // };
-    // let mut new_shape = a.shape().to_vec();
-    // new_shape.extend_from_slice(b.shape());
-    // let mut items = Vec::with_capacity(a.len() * b.len());
-    // for a in a.into_flat_values() {
-    //     for b in b.clone().into_flat_values() {
-    //         env.push(b);
-    //         env.push(a.clone());
-    //         env.push(f.clone());
-    //         env.call_error_on_break(BREAK_ERROR)?;
-    //         items.push(env.pop("tabled function result")?);
-    //     }
-    // }
-    // env.push(Array::from((new_shape, items)).normalized_type());
+    let f = env.pop(1)?;
+    let xs = rc_take(env.pop(2)?);
+    let ys = rc_take(env.pop(3)?);
+    const BREAK_ERROR: &str = "break is not allowed in table";
+    let mut new_shape = xs.shape().to_vec();
+    new_shape.extend_from_slice(ys.shape());
+    let x_dim = xs.row_count();
+    let y_dim = ys.row_count();
+    let mut items = Vec::with_capacity(x_dim * y_dim);
+    let y_rows = ys.into_rows().collect::<Vec<_>>();
+    for x in xs.into_rows() {
+        for y in y_rows.iter().cloned() {
+            env.push(y);
+            env.push(x.clone());
+            env.push_ref(f.clone());
+            env.call_error_on_break(BREAK_ERROR)?;
+            items.push(rc_take(env.pop("tabled function result")?));
+        }
+    }
+    let mut rows = Vec::with_capacity(y_dim);
+    let mut items = items.into_iter();
+    for _ in 0..y_dim {
+        rows.push(Value::from_row_values(items.by_ref().take(x_dim), env)?);
+    }
+    env.push(Value::from_row_values(rows, env)?);
     Ok(())
 }
 

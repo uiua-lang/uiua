@@ -258,32 +258,35 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
 }
 
 pub fn repeat(env: &mut Uiua) -> UiuaResult {
-    // let f = env.pop(1)?;
-    // let mut acc = env.pop(2)?;
-    // let n = env.pop(3)?;
-    // if n.is_number() && n.number() == INFINITY {
-    //     loop {
-    //         env.push(acc);
-    //         env.push(f.clone());
-    //         if env.call_catch_break()? {
-    //             break;
-    //         }
-    //         acc = env.pop("repeated function result")?;
-    //     }
-    // } else {
-    //     let Some(n) = n.as_nat() else {
-    //                     return Err(env.error("Repetitions must be a natural number or infinity"));
-    //                 };
-    //     for _ in 0..n {
-    //         env.push(acc);
-    //         env.push(f.clone());
-    //         if env.call_catch_break()? {
-    //             return Ok(());
-    //         }
-    //         acc = env.pop("repeated function result")?;
-    //     }
-    //     env.push(acc);
-    // }
+    let f = env.pop(1)?;
+    let mut acc = env.pop(2)?;
+    let n = env.pop(3)?.as_num(
+        env,
+        "Repetitions must be a single natural number or infinity",
+    )?;
+    if n == f64::INFINITY {
+        loop {
+            env.push_ref(acc);
+            env.push_ref(f.clone());
+            if env.call_catch_break()? {
+                break;
+            }
+            acc = env.pop("repeated function result")?;
+        }
+    } else {
+        if n.fract().abs() > f64::EPSILON {
+            return Err(env.error("Repetitions must be a single natural number or infinity"));
+        };
+        for _ in 0..n as u64 {
+            env.push_ref(acc);
+            env.push_ref(f.clone());
+            if env.call_catch_break()? {
+                return Ok(());
+            }
+            acc = env.pop("repeated function result")?;
+        }
+        env.push_ref(acc);
+    }
     Ok(())
 }
 

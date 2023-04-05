@@ -39,30 +39,36 @@ impl Value {
             or a list of natural numbers",
         )?;
         let data = range(&shape);
-        shape.push(shape.len());
-        Ok(Array::new(shape, data).into())
+        if shape.len() > 1 {
+            shape.push(shape.len());
+        }
+        let array = Array::new(shape, data);
+        Ok(array.into())
     }
 }
 
 fn range(shape: &[usize]) -> Vec<f64> {
     let len = shape.len() * shape.iter().product::<usize>();
-    let mut data = Vec::with_capacity(len);
-    let products: Vec<usize> = (0..shape.len())
-        .map(|i| shape[i..].iter().product::<usize>())
-        .collect();
-    let moduli: Vec<usize> = (0..shape.len())
-        .map(|i| shape[i + 1..].iter().product::<usize>())
-        .collect();
-    for i in 0..len {
-        if shape.len() <= 1 {
-            data.push(i as f64);
-        } else {
-            for j in 0..shape.len() {
-                data.push((i % products[j] / moduli[j]) as f64);
+    let mut data: Vec<f64> = Vec::with_capacity(len);
+    let mut curr = vec![0; shape.len()];
+    loop {
+        for d in &curr {
+            data.push(*d as f64);
+        }
+        let mut i = shape.len() - 1;
+        loop {
+            curr[i] += 1;
+            if curr[i] == shape[i] {
+                curr[i] = 0;
+                if i == 0 {
+                    return data;
+                }
+                i -= 1;
+            } else {
+                break;
             }
         }
     }
-    data
 }
 
 impl Value {

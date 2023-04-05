@@ -7,7 +7,7 @@ use std::{
 use image::{DynamicImage, ImageOutputFormat};
 use rand::prelude::*;
 
-use crate::{array::Array, grid_fmt::GridFmt, rc_cloned, value::Value, Uiua, UiuaResult};
+use crate::{array::Array, grid_fmt::GridFmt, rc_take, value::Value, Uiua, UiuaResult};
 
 macro_rules! io_op {
     ($((
@@ -216,7 +216,7 @@ impl IoOp {
             IoOp::FWriteBytes => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let contents =
-                    rc_cloned(env.pop(2)?).into_bytes(env, "Contents must be a byte array")?;
+                    rc_take(env.pop(2)?).into_bytes(env, "Contents must be a byte array")?;
                 env.io
                     .write_file(&path, contents)
                     .map_err(|e| env.error(e))?;

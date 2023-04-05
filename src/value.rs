@@ -1,7 +1,8 @@
-use std::{cmp::Ordering, fmt};
+use std::{cmp::Ordering, fmt, rc::Rc};
 
 use crate::{
-    algorithm::pervade::*, array::*, function::Function, grid_fmt::GridFmt, Uiua, UiuaResult,
+    algorithm::pervade::*, array::*, function::Function, grid_fmt::GridFmt, primitive::Primitive,
+    Uiua, UiuaResult,
 };
 
 #[derive(Clone)]
@@ -9,7 +10,7 @@ pub enum Value {
     Num(Array<f64>),
     Byte(Array<u8>),
     Char(Array<char>),
-    Func(Array<Function>),
+    Func(Array<Rc<Function>>),
 }
 
 impl Default for Value {
@@ -43,6 +44,22 @@ impl Value {
         }
         Ok(value)
     }
+    pub fn into_rows(self) -> Box<dyn Iterator<Item = Self>> {
+        match self {
+            Self::Num(array) => Box::new(array.into_rows().map(Value::from)),
+            Self::Byte(array) => Box::new(array.into_rows().map(Value::from)),
+            Self::Char(array) => Box::new(array.into_rows().map(Value::from)),
+            Self::Func(array) => Box::new(array.into_rows().map(Value::from)),
+        }
+    }
+    pub fn into_rows_rev(self) -> Box<dyn Iterator<Item = Self>> {
+        match self {
+            Self::Num(array) => Box::new(array.into_rows_rev().map(Value::from)),
+            Self::Byte(array) => Box::new(array.into_rows_rev().map(Value::from)),
+            Self::Char(array) => Box::new(array.into_rows_rev().map(Value::from)),
+            Self::Func(array) => Box::new(array.into_rows_rev().map(Value::from)),
+        }
+    }
     pub fn type_name(&self) -> &'static str {
         match self {
             Self::Num(_) => "number",
@@ -59,7 +76,7 @@ impl Value {
             Self::Func(array) => array.shape(),
         }
     }
-    pub fn len(&self) -> usize {
+    pub fn row_count(&self) -> usize {
         match self {
             Self::Num(array) => array.row_count(),
             Self::Byte(array) => array.row_count(),
@@ -75,21 +92,7 @@ impl Value {
         n: impl FnOnce(&mut Array<f64>) -> T,
         b: impl FnOnce(&mut Array<u8>) -> T,
         c: impl FnOnce(&mut Array<char>) -> T,
-        f: impl FnOnce(&mut Array<Function>) -> T,
-    ) -> T {
-        match self {
-            Self::Num(array) => n(array),
-            Self::Byte(array) => b(array),
-            Self::Char(array) => c(array),
-            Self::Func(array) => f(array),
-        }
-    }
-    pub fn into_generic<T>(
-        self,
-        n: impl FnOnce(Array<f64>) -> T,
-        b: impl FnOnce(Array<u8>) -> T,
-        c: impl FnOnce(Array<char>) -> T,
-        f: impl FnOnce(Array<Function>) -> T,
+        f: impl FnOnce(&mut Array<Rc<Function>>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
@@ -105,6 +108,14 @@ impl Value {
             Self::Char(array) => array.grid_string(),
             Self::Func(array) => array.grid_string(),
         }
+    }
+    pub fn as_primitive(&self) -> Option<Primitive> {
+        if let Value::Func(fs) = self {
+            if fs.rank() == 0 {
+                return fs.data[0].as_primitive();
+            }
+        }
+        None
     }
     pub fn as_indices(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<isize>> {
         self.as_number_list(env, requirement, |f| f % 1.0 == 0.0, |f| f as isize)
@@ -293,7 +304,7 @@ macro_rules! value_from {
 value_from!(f64, Num);
 value_from!(u8, Byte);
 value_from!(char, Char);
-value_from!(Function, Func);
+value_from!(Rc<Function>, Func);
 
 impl FromIterator<usize> for Value {
     fn from_iter<I: IntoIterator<Item = usize>>(iter: I) -> Self {
@@ -319,10 +330,16 @@ impl From<String> for Value {
     }
 }
 
+impl From<Function> for Value {
+    fn from(f: Function) -> Self {
+        Rc::new(f).into()
+    }
+}
+
 macro_rules! value_un_impl {
     ($name:ident, $(($variant:ident, $f:ident)),* $(,)?) => {
         impl Value {
-            pub fn $name(mut self, env: &Uiua) -> UiuaResult<Self> {
+            pub fn $name(self, env: &Uiua) -> UiuaResult<Self> {
                 Ok(match self {
                     $(Self::$variant(array) => {
                         let (shape, data) = array.into_pair();

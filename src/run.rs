@@ -12,7 +12,7 @@ use crate::{
     lex::{Sp, Span},
     parse::parse,
     primitive::Primitive,
-    rc_cloned,
+    rc_take,
     value::Value,
     Ident, IoBackend, StdIo, TraceFrame, UiuaError, UiuaResult,
 };
@@ -392,7 +392,7 @@ impl<'io> Uiua<'io> {
                             .sp("array removed elements".into())
                             .into());
                     }
-                    let values: Vec<_> = self.stack.drain(start..).map(rc_cloned).rev().collect();
+                    let values: Vec<_> = self.stack.drain(start..).map(rc_take).rev().collect();
                     let val = Value::from_row_values(values, self)?;
                     self.stack.push(val.into());
                     Ok(())
@@ -433,22 +433,23 @@ impl<'io> Uiua<'io> {
         Ok(())
     }
     fn call_with_span(&mut self, call_span: usize) -> UiuaResult {
-        // let value = self.pop("called function")?;
-        // if value.is_function() {
-        //     let function = value.into_function();
-        //     let new_frame = StackFrame {
-        //         function,
-        //         call_span,
-        //         spans: Vec::new(),
-        //         pc: 0,
-        //     };
-        //     self.exec(new_frame)
-        // } else {
-        //     self.stack.pop();
-        //     self.stack.push(value);
-        //     Ok(())
-        // }
-        todo!()
+        let value = self.pop("called function")?;
+        if let Value::Func(fs) = &*value {
+            for f in &fs.data {
+                let new_frame = StackFrame {
+                    function: f.clone(),
+                    call_span,
+                    spans: Vec::new(),
+                    pc: 0,
+                };
+                self.exec(new_frame)?;
+            }
+            Ok(())
+        } else {
+            self.stack.pop();
+            self.stack.push(value);
+            Ok(())
+        }
     }
     /// Call the top of the stack as a function
     pub fn call(&mut self) -> UiuaResult {
@@ -530,11 +531,6 @@ impl<'io> Uiua<'io> {
     pub fn clone_stack(&self) -> Vec<Rc<Value>> {
         self.stack.clone()
     }
-    pub(crate) fn monadic<V: Into<Value>>(&mut self, f: fn(&Value) -> V) -> UiuaResult {
-        let value = self.pop(1)?;
-        self.push(f(&value));
-        Ok(())
-    }
     pub(crate) fn monadic_ref<V: Into<Value>>(&mut self, f: fn(&Value) -> V) -> UiuaResult {
         let value = self.pop(1)?;
         self.push(f(&value));
@@ -544,7 +540,7 @@ impl<'io> Uiua<'io> {
         &mut self,
         f: fn(Value, &Self) -> UiuaResult<V>,
     ) -> UiuaResult {
-        let value = rc_cloned(self.pop(1)?);
+        let value = rc_take(self.pop(1)?);
         self.push(f(value, self)?);
         Ok(())
     }
@@ -562,18 +558,6 @@ impl<'io> Uiua<'io> {
         self.push_ref(a);
         Ok(())
     }
-    pub(crate) fn monadic_mut_env(&mut self, f: fn(&mut Value, &Self) -> UiuaResult) -> UiuaResult {
-        let mut a = self.pop(1)?;
-        f(Rc::make_mut(&mut a), self)?;
-        self.push_ref(a);
-        Ok(())
-    }
-    pub(crate) fn dyadic<V: Into<Value>>(&mut self, f: fn(Value, Value) -> V) -> UiuaResult {
-        let a = self.pop(1)?;
-        let b = self.pop(2)?;
-        self.push(f(rc_cloned(a), rc_cloned(b)));
-        Ok(())
-    }
     pub(crate) fn dyadic_ref<V: Into<Value>>(&mut self, f: fn(&Value, &Value) -> V) -> UiuaResult {
         let a = self.pop(1)?;
         let b = self.pop(2)?;
@@ -586,7 +570,7 @@ impl<'io> Uiua<'io> {
     ) -> UiuaResult {
         let a = self.pop(1)?;
         let b = self.pop(2)?;
-        let value = f(rc_cloned(a), rc_cloned(b), self)?.into();
+        let value = f(rc_take(a), rc_take(b), self)?.into();
         self.push(value);
         Ok(())
     }
@@ -605,7 +589,7 @@ impl<'io> Uiua<'io> {
     ) -> UiuaResult {
         let a = self.pop(1)?;
         let b = self.pop(2)?;
-        f(&a, rc_cloned(b), self)?;
+        f(&a, rc_take(b), self)?;
         self.push_ref(a);
         Ok(())
     }

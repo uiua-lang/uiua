@@ -2,6 +2,7 @@ use std::{
     cmp::Ordering,
     fmt::{self, Display},
     ops::Deref,
+    rc::Rc,
     slice::{Chunks, ChunksMut},
 };
 
@@ -98,6 +99,31 @@ impl<T> Array<T> {
             shape: self.shape,
             data: self.data.into_iter().map(Into::into).collect(),
         }
+    }
+    pub fn into_rows(self) -> impl Iterator<Item = Self> {
+        let row_len = self.row_len();
+        let mut row_shape = self.shape.clone();
+        let row_count = if row_shape.is_empty() {
+            1
+        } else {
+            row_shape.remove(0)
+        };
+        let mut data = self.data.into_iter();
+        (0..row_count)
+            .map(move |_| Array::new(row_shape.clone(), data.by_ref().take(row_len).collect()))
+    }
+    pub fn into_rows_rev(mut self) -> impl Iterator<Item = Self> {
+        let row_len = self.row_len();
+        let mut row_shape = self.shape.clone();
+        let row_count = if row_shape.is_empty() {
+            1
+        } else {
+            row_shape.remove(0)
+        };
+        (0..row_count).map(move |_| {
+            let end = self.data.len() - row_len;
+            Array::new(row_shape.clone(), self.data.drain(end..).collect())
+        })
     }
 }
 
@@ -286,7 +312,7 @@ impl ArrayValue for char {
     }
 }
 
-impl ArrayValue for Function {
+impl ArrayValue for Rc<Function> {
     const NAME: &'static str = "function";
     fn cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(self, other)

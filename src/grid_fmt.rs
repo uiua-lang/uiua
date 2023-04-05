@@ -3,6 +3,7 @@ use std::{
     f64::{consts::PI, INFINITY},
     iter::once,
     mem::take,
+    rc::Rc,
 };
 
 use crate::{
@@ -54,7 +55,7 @@ impl GridFmt for char {
     }
 }
 
-impl GridFmt for Function {
+impl GridFmt for Rc<Function> {
     fn fmt_grid(&self) -> Grid {
         vec![self.to_string().chars().collect()]
     }

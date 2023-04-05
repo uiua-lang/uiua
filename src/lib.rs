@@ -23,7 +23,7 @@ use std::{
 
 pub use {error::*, io::*, run::Uiua};
 
-fn rc_cloned<T: Clone>(rc: Rc<T>) -> T {
+fn rc_take<T: Clone>(rc: Rc<T>) -> T {
     match Rc::try_unwrap(rc) {
         Ok(x) => x,
         Err(rc) => (*rc).clone(),

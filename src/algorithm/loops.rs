@@ -1,9 +1,51 @@
+use std::{
+    ops::{Add, Mul},
+    rc::Rc,
+};
+
 use crate::{
     array::{Array, ArrayValue},
+    primitive::Primitive,
+    rc_take,
+    value::Value,
     Uiua, UiuaResult,
 };
 
 pub fn reduce(env: &mut Uiua) -> UiuaResult {
+    let f = env.pop(1)?;
+    let xs = rc_take(env.pop(2)?);
+    match (f.as_primitive(), xs) {
+        (Some(prim), Value::Num(nums)) => {
+            let arr = match prim {
+                Primitive::Add => nums.reduce(0.0, Add::add),
+                Primitive::Mul => nums.reduce(1.0, Mul::mul),
+                Primitive::Max => nums.reduce(f64::NEG_INFINITY, f64::max),
+                Primitive::Min => nums.reduce(f64::INFINITY, f64::min),
+                _ => return generic_reduce(f, Value::Num(nums), env),
+            };
+            env.push(arr);
+            Ok(())
+        }
+        (_, xs) => generic_reduce(f, xs, env),
+    }
+}
+
+fn generic_reduce(f: Rc<Value>, xs: Value, env: &mut Uiua) -> UiuaResult {
+    let mut rows = xs.into_rows_rev();
+    let mut acc = Rc::new(
+        rows.next()
+            .ok_or_else(|| env.error("Cannot reduce empty array"))?,
+    );
+    for row in rows {
+        env.push_ref(acc);
+        env.push(row);
+        env.push_ref(f.clone());
+        if env.call_catch_break()? {
+            return Ok(());
+        }
+        acc = env.pop("reduced function result")?;
+    }
+    env.push_ref(acc);
     Ok(())
 }
 
@@ -36,29 +78,18 @@ pub fn zip(env: &mut Uiua) -> UiuaResult {
 }
 
 pub fn rows(env: &mut Uiua) -> UiuaResult {
-    // let f = env.pop(1)?;
-    // let xs = env.pop(2)?;
-    // const BREAK_ERROR: &str = "break is not allowed in rows";
-    // if !xs.is_array() {
-    //     env.push(xs);
-    //     env.push(f);
-    //     return env.call_error_on_break(BREAK_ERROR);
-    // }
-    // let array = xs.into_array();
-    // let mut new_rows: Vec<Value> = Vec::with_capacity(array.len());
-    // for row in array.into_values() {
-    //     env.push(row);
-    //     env.push(f.clone());
-    //     env.call_error_on_break(BREAK_ERROR)?;
-    //     new_rows.push(env.pop("rows' function result")?);
-    // }
-    // let mut array = Array::from(new_rows);
-    // if let Some((a, b)) = array.normalize() {
-    //     return Err(env.error(format!(
-    //         "Rows in resulting array have different shapes {a:?} and {b:?}"
-    //     )));
-    // }
-    // env.push(array);
+    let f = env.pop(1)?;
+    let xs = rc_take(env.pop(2)?);
+    const BREAK_ERROR: &str = "break is not allowed in rows";
+    let mut new_rows = Vec::with_capacity(xs.row_count());
+    for row in xs.into_rows() {
+        env.push(row);
+        env.push_ref(f.clone());
+        env.call_error_on_break(BREAK_ERROR)?;
+        new_rows.push(rc_take(env.pop("rows' function result")?));
+    }
+    let res = Value::from_row_values(new_rows, env)?;
+    env.push(res);
     Ok(())
 }
 

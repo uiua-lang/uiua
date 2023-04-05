@@ -1,6 +1,7 @@
 use std::{
     f64::{consts::PI, INFINITY},
     fmt,
+    rc::Rc,
 };
 
 use crate::{
@@ -257,18 +258,18 @@ impl Primitive {
             Primitive::Pi => env.push(PI),
             Primitive::Infinity => env.push(INFINITY),
             Primitive::Noop => {}
-            Primitive::Not => env.monadic_env(|v, env| v.not(env))?,
-            Primitive::Neg => env.monadic_env(|v, env| v.neg(env))?,
-            Primitive::Abs => env.monadic_env(|v, env| v.abs(env))?,
-            Primitive::Sign => env.monadic_env(|v, env| v.sign(env))?,
-            Primitive::Sqrt => env.monadic_env(|v, env| v.sqrt(env))?,
-            Primitive::Sin => env.monadic_env(|v, env| v.sin(env))?,
-            Primitive::Cos => env.monadic_env(|v, env| v.cos(env))?,
-            Primitive::Asin => env.monadic_env(|v, env| v.asin(env))?,
-            Primitive::Acos => env.monadic_env(|v, env| v.acos(env))?,
-            Primitive::Floor => env.monadic_env(|v, env| v.floor(env))?,
-            Primitive::Ceil => env.monadic_env(|v, env| v.ceil(env))?,
-            Primitive::Round => env.monadic_env(|v, env| v.round(env))?,
+            Primitive::Not => env.monadic_env(Value::not)?,
+            Primitive::Neg => env.monadic_env(Value::neg)?,
+            Primitive::Abs => env.monadic_env(Value::abs)?,
+            Primitive::Sign => env.monadic_env(Value::sign)?,
+            Primitive::Sqrt => env.monadic_env(Value::sqrt)?,
+            Primitive::Sin => env.monadic_env(Value::sin)?,
+            Primitive::Cos => env.monadic_env(Value::cos)?,
+            Primitive::Asin => env.monadic_env(Value::asin)?,
+            Primitive::Acos => env.monadic_env(Value::acos)?,
+            Primitive::Floor => env.monadic_env(Value::floor)?,
+            Primitive::Ceil => env.monadic_env(Value::ceil)?,
+            Primitive::Round => env.monadic_env(Value::round)?,
             Primitive::Eq => env.dyadic_ref_env(Value::is_eq)?,
             Primitive::Ne => env.dyadic_ref_env(Value::is_ne)?,
             Primitive::Lt => env.dyadic_ref_env(Value::is_lt)?,
@@ -288,7 +289,6 @@ impl Primitive {
             Primitive::Match => env.dyadic_ref(|a, b| a == b)?,
             Primitive::NoMatch => env.dyadic_ref(|a, b| a != b)?,
             Primitive::Join => env.dyadic_env(Value::join)?,
-            Primitive::Reshape => env.dyadic_ref_mut_env(|a, b, env| b.reshape(a, env))?,
             Primitive::Transpose => env.monadic_mut(Value::transpose)?,
             Primitive::Pick => env.dyadic_env(Value::pick)?,
             Primitive::Replicate => env.dyadic_ref_own_env(Value::replicate)?,
@@ -307,6 +307,12 @@ impl Primitive {
             Primitive::IndexOf => env.dyadic_ref_env(Value::index_of)?,
             Primitive::Call => env.call()?,
             Primitive::Parse => env.monadic_env(|v, env| v.parse_num(env))?,
+            Primitive::Reshape => {
+                let shape = env.pop(1)?;
+                let mut array = env.pop(2)?;
+                Rc::make_mut(&mut array).reshape(&shape, env)?;
+                env.push_ref(array);
+            }
             Primitive::Break => {
                 let n = env.pop(1)?.as_nat(env, "break expects a natural number")?;
                 if n > 0 {
@@ -381,7 +387,7 @@ impl Primitive {
                     return Err(UiuaError::Assert(msg));
                 }
             }
-            Primitive::Len => env.monadic_ref(Value::len)?,
+            Primitive::Len => env.monadic_ref(Value::row_count)?,
             Primitive::Rank => env.monadic_ref(Value::rank)?,
             Primitive::Shape => {
                 env.monadic_ref(|v| v.shape().iter().copied().collect::<Value>())?

@@ -236,12 +236,12 @@ impl From<String> for Array<char> {
 impl FromIterator<String> for Array<char> {
     fn from_iter<I: IntoIterator<Item = String>>(iter: I) -> Self {
         let mut lines: Vec<String> = iter.into_iter().collect();
-        let max_len = lines.iter().map(|s| s.len()).max().unwrap_or(0);
+        let max_len = lines.iter().map(|s| s.chars().count()).max().unwrap_or(0);
         let mut data = Vec::with_capacity(max_len * lines.len());
         let shape = vec![lines.len(), max_len];
         for line in lines.drain(..) {
             data.extend(line.chars());
-            data.extend(repeat('\x00').take(max_len - line.len()));
+            data.extend(repeat('\x00').take(max_len - line.chars().count()));
         }
         Array::new(shape, data)
     }

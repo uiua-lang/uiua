@@ -570,8 +570,7 @@ impl<'io> Uiua<'io> {
     ) -> UiuaResult {
         let a = self.pop(1)?;
         let b = self.pop(2)?;
-        let value = f(rc_take(a), rc_take(b), self)?.into();
-        self.push(value);
+        self.push(f(rc_take(a), rc_take(b), self)?);
         Ok(())
     }
     pub(crate) fn dyadic_ref_env<V: Into<Value>>(
@@ -589,18 +588,7 @@ impl<'io> Uiua<'io> {
     ) -> UiuaResult {
         let a = self.pop(1)?;
         let b = self.pop(2)?;
-        f(&a, rc_take(b), self)?;
-        self.push_ref(a);
-        Ok(())
-    }
-    pub(crate) fn dyadic_ref_mut_env(
-        &mut self,
-        f: fn(&Value, &mut Value, &Self) -> UiuaResult,
-    ) -> UiuaResult {
-        let a = self.pop(1)?;
-        let mut b = self.pop(2)?;
-        f(&a, Rc::make_mut(&mut b), self)?;
-        self.push_ref(a);
+        self.push(f(&a, rc_take(b), self)?);
         Ok(())
     }
     pub(crate) fn stack_size(&self) -> usize {

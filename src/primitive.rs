@@ -295,7 +295,7 @@ impl Primitive {
             Primitive::Take => env.dyadic_env(Value::take)?,
             Primitive::Drop => env.dyadic_env(Value::drop)?,
             Primitive::Rotate => env.dyadic_ref_own_env(Value::rotate)?,
-            Primitive::Couple => env.dyadic_env(|a, b, env| a.couple(b, env))?,
+            Primitive::Couple => env.dyadic_env(Value::couple)?,
             Primitive::Sort => env.monadic_mut(Value::sort)?,
             Primitive::Grade => env.monadic_ref_env(|v, env| v.grade(env))?,
             Primitive::Indices => env.monadic_ref_env(|v, env| v.indices(env))?,

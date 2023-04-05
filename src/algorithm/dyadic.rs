@@ -1,6 +1,7 @@
 use std::{
     cmp::{self, Ordering},
     collections::BTreeMap,
+    iter::repeat,
 };
 
 use crate::{array::*, value::Value, Uiua, UiuaResult};
@@ -103,9 +104,72 @@ impl<T: ArrayValue> Array<T> {
                     self.data.extend(other.data);
                     self.shape.insert(0, bsh[0] + 1);
                     self
+                } else if let Some(fill) = T::fill_value() {
+                    match ash.len() as i8 - bsh.len() as i8 {
+                        0 => {
+                            let mut new_row_shape = vec![0; ash.len().max(bsh.len()) - 1];
+                            for i in 0..new_row_shape.len() {
+                                new_row_shape[i] =
+                                    ash.get(i + 1).max(bsh.get(i + 1)).copied().unwrap();
+                            }
+                            let new_row_len: usize = new_row_shape.iter().product();
+                            let mut new_shape = new_row_shape;
+                            new_shape.insert(0, self.row_count() + other.row_count());
+                            let mut new_data = Vec::with_capacity(new_shape.iter().product());
+                            for row in self.rows().chain(other.rows()) {
+                                new_data.extend(row.iter().cloned());
+                                new_data.extend(repeat(fill.clone()).take(new_row_len - row.len()));
+                            }
+                            Array::new(new_shape, new_data)
+                        }
+                        1 => {
+                            let mut new_row_shape = ash[1..].to_vec();
+                            for (n, r) in new_row_shape.iter_mut().zip(bsh.iter()) {
+                                *n = (*n).max(*r);
+                            }
+                            let new_row_len: usize = new_row_shape.iter().product();
+                            let mut new_shape = new_row_shape;
+                            new_shape.insert(0, ash[0] + 1);
+                            let mut new_data = Vec::with_capacity(new_shape.iter().product());
+                            for row in self.rows() {
+                                new_data.extend(row.iter().cloned());
+                                new_data.extend(repeat(fill.clone()).take(new_row_len - row.len()));
+                            }
+                            let other_data_len = other.data.len();
+                            new_data.extend(other.data);
+                            new_data.extend(repeat(fill).take(new_row_len - other_data_len));
+                            Array::new(new_shape, new_data)
+                        }
+                        -1 => {
+                            let mut new_row_shape = bsh[1..].to_vec();
+                            for (n, r) in new_row_shape.iter_mut().zip(ash.iter()) {
+                                *n = (*n).max(*r);
+                            }
+                            let new_row_len: usize = new_row_shape.iter().product();
+                            let mut new_shape = new_row_shape;
+                            new_shape.insert(0, bsh[0] + 1);
+                            let mut new_data = Vec::with_capacity(new_shape.iter().product());
+                            let self_data_len = self.data.len();
+                            new_data.extend(self.data);
+                            new_data.extend(repeat(fill.clone()).take(new_row_len - self_data_len));
+                            for row in other.rows() {
+                                new_data.extend(row.iter().cloned());
+                                new_data.extend(repeat(fill.clone()).take(new_row_len - row.len()));
+                            }
+                            Array::new(new_shape, new_data)
+                        }
+                        diff => {
+                            return Err(env.error(format!(
+                                "Can only join arrays with a maximum rank difference of 1, \
+                                but {ash:?} and {bsh:?} have a difference of {}",
+                                diff.abs()
+                            )))
+                        }
+                    }
                 } else {
                     return Err(env.error(format!(
-                        "Cannot join arrays with shapes {ash:?} and {bsh:?}",
+                        "Cannot join arrays {} with shapes {ash:?} and {bsh:?}",
+                        T::NAME
                     )));
                 }
             }

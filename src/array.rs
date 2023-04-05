@@ -82,7 +82,7 @@ impl<T> Array<T> {
         self.shape.len()
     }
     pub fn rows(&self) -> impl Iterator<Item = Row<T>> {
-        (0..self.row_len()).map(|row| Row { array: self, row })
+        (0..self.row_count()).map(|row| Row { array: self, row })
     }
     pub fn rows_mut(&mut self) -> ChunksMut<T> {
         let row_len = self.row_len();

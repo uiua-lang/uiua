@@ -39,21 +39,14 @@ impl Value {
         let Some(mut value) = row_values.next() else {
             return Ok(Value::default());
         };
-        let mut shape = Vec::new();
-        let mut count = 0;
+        let mut count = 1;
         for row in row_values {
             count += 1;
-            if shape.is_empty() {
-                shape = row.shape().to_vec();
-            }
-            value = value.join(row, env)?;
-        }
-        shape.insert(0, count + 1);
-        match &mut value {
-            Self::Num(array) => array.shape = shape,
-            Self::Byte(array) => array.shape = shape,
-            Self::Char(array) => array.shape = shape,
-            Self::Func(array) => array.shape = shape,
+            value = if count == 2 {
+                value.couple(row, env)?
+            } else {
+                value.join(row, env)?
+            };
         }
         Ok(value)
     }

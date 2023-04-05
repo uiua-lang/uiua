@@ -1,6 +1,7 @@
 use std::{
     cmp::Ordering,
     fmt::{self, Debug, Display},
+    iter::repeat,
     ops::Deref,
     rc::Rc,
     slice::{Chunks, ChunksMut},
@@ -220,6 +221,29 @@ impl<T> From<Vec<T>> for Array<T> {
 impl<T> FromIterator<T> for Array<T> {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         Self::from(iter.into_iter().collect::<Vec<T>>())
+    }
+}
+
+impl From<String> for Array<char> {
+    fn from(s: String) -> Self {
+        Self {
+            shape: vec![s.len()],
+            data: s.chars().collect(),
+        }
+    }
+}
+
+impl FromIterator<String> for Array<char> {
+    fn from_iter<I: IntoIterator<Item = String>>(iter: I) -> Self {
+        let mut lines: Vec<String> = iter.into_iter().collect();
+        let max_len = lines.iter().map(|s| s.len()).max().unwrap_or(0);
+        let mut data = Vec::with_capacity(max_len * lines.len());
+        let shape = vec![lines.len(), max_len];
+        for line in lines.drain(..) {
+            data.extend(line.chars());
+            data.extend(repeat('\x00').take(max_len - line.len()));
+        }
+        Array::new(shape, data)
     }
 }
 

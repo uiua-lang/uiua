@@ -177,10 +177,8 @@ impl IoOp {
                 env.push(line);
             }
             IoOp::Args => {
-                // let args = env.io.args();
-                // env.push(Array::from_iter(
-                //     args.into_iter().map(Array::from).map(Value::from),
-                // ))
+                let args = env.io.args();
+                env.push(Array::<char>::from_iter(args));
             }
             IoOp::Var => {
                 let key = env
@@ -222,13 +220,14 @@ impl IoOp {
                     .map_err(|e| env.error(e))?;
             }
             IoOp::FLines => {
-                // let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                // let contents =
-                //     String::from_utf8(env.io.read_file(&path).map_err(|e| env.error(e))?)
-                //         .map_err(|e| env.error(format!("Failed to read file: {}", e)))?;
-                // let lines_array =
-                //     Array::from_iter(contents.lines().map(Array::from).map(Value::from));
-                // env.push(lines_array);
+                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                let lines: Array<char> =
+                    String::from_utf8(env.io.read_file(&path).map_err(|e| env.error(e))?)
+                        .map_err(|e| env.error(format!("Failed to read file: {}", e)))?
+                        .lines()
+                        .map(String::from)
+                        .collect();
+                env.push(lines);
             }
             IoOp::FExists => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
@@ -236,11 +235,9 @@ impl IoOp {
                 env.push(exists);
             }
             IoOp::FListDir => {
-                // let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                // let paths = env.io.list_dir(&path).map_err(|e| env.error(e))?;
-                // let paths_array =
-                //     Array::from_iter(paths.into_iter().map(Array::from).map(Value::from));
-                // env.push(paths_array);
+                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                let paths = env.io.list_dir(&path).map_err(|e| env.error(e))?;
+                env.push(Array::<char>::from_iter(paths));
             }
             IoOp::FIsFile => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;

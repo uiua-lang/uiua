@@ -44,7 +44,7 @@ impl Value {
         for row in row_values {
             count += 1;
             if shape.is_empty() {
-                shape = value.shape().to_vec();
+                shape = row.shape().to_vec();
             }
             value = value.join(row, env)?;
         }

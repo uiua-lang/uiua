@@ -143,80 +143,28 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
 }
 
 pub fn bridge(env: &mut Uiua) -> UiuaResult {
-    // let f = env.pop(1)?;
-    // let xs = env.pop(2)?;
-    // let ys = env.pop(3)?;
-    // const BREAK_ERROR: &str = "break is not allowed in bridge";
-    // match (xs.is_array(), ys.is_array()) {
-    //     (false, false) => {
-    //         env.push(ys);
-    //         env.push(xs);
-    //         env.push(f);
-    //         env.call_error_on_break(BREAK_ERROR)?;
-    //     }
-    //     (true, true) => {
-    //         let x_rows = xs.into_array().into_values();
-    //         let y_rows = ys.into_array().into_values();
-    //         if x_rows.len() != y_rows.len() {
-    //             return Err(env.error(format!(
-    //                 "Cannot bridge arrays with different number of rows {:?} and {:?}",
-    //                 x_rows.len(),
-    //                 y_rows.len()
-    //             )));
-    //         }
-    //         let mut new_rows = Vec::with_capacity(x_rows.len());
-    //         for (x, y) in x_rows.into_iter().zip(y_rows) {
-    //             env.push(y);
-    //             env.push(x);
-    //             env.push(f.clone());
-    //             env.call_error_on_break(BREAK_ERROR)?;
-    //             new_rows.push(env.pop("bridge's function result")?);
-    //         }
-    //         let mut array = Array::from(new_rows);
-    //         if let Some((a, b)) = array.normalize() {
-    //             return Err(env.error(format!(
-    //                 "Rows in resulting array have different shapes {a:?} and {b:?}"
-    //             )));
-    //         }
-    //         env.push(array);
-    //     }
-    //     (true, false) => {
-    //         let x_rows = xs.into_array().into_values();
-    //         let mut new_rows = Vec::with_capacity(x_rows.len());
-    //         for x in x_rows {
-    //             env.push(ys.clone());
-    //             env.push(x);
-    //             env.push(f.clone());
-    //             env.call_error_on_break(BREAK_ERROR)?;
-    //             new_rows.push(env.pop("bridge's function result")?);
-    //         }
-    //         let mut array = Array::from(new_rows);
-    //         if let Some((a, b)) = array.normalize() {
-    //             return Err(env.error(format!(
-    //                 "Rows in resulting array have different shapes {a:?} and {b:?}"
-    //             )));
-    //         }
-    //         env.push(array);
-    //     }
-    //     (false, true) => {
-    //         let y_rows = ys.into_array().into_values();
-    //         let mut new_rows = Vec::with_capacity(y_rows.len());
-    //         for y in y_rows {
-    //             env.push(y);
-    //             env.push(xs.clone());
-    //             env.push(f.clone());
-    //             env.call_error_on_break(BREAK_ERROR)?;
-    //             new_rows.push(env.pop("bridge's function result")?);
-    //         }
-    //         let mut array = Array::from(new_rows);
-    //         if let Some((a, b)) = array.normalize() {
-    //             return Err(env.error(format!(
-    //                 "Rows in resulting array have different shapes {a:?} and {b:?}"
-    //             )));
-    //         }
-    //         env.push(array);
-    //     }
-    // }
+    let f = env.pop(1)?;
+    let xs = rc_take(env.pop(2)?);
+    let ys = rc_take(env.pop(3)?);
+    const BREAK_ERROR: &str = "break is not allowed in bridge";
+    if xs.row_count() != ys.row_count() {
+        return Err(env.error(format!(
+            "Cannot bridge arrays with different number of rows {} and {}",
+            xs.row_count(),
+            ys.row_count()
+        )));
+    }
+    let mut new_rows = Vec::with_capacity(xs.row_count());
+    let x_rows = xs.into_rows();
+    let y_rows = ys.into_rows();
+    for (x, y) in x_rows.into_iter().zip(y_rows) {
+        env.push(y);
+        env.push(x);
+        env.push_ref(f.clone());
+        env.call_error_on_break(BREAK_ERROR)?;
+        new_rows.push(rc_take(env.pop("bridge's function result")?));
+    }
+    env.push(Value::from_row_values(new_rows, env)?);
     Ok(())
 }
 

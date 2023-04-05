@@ -39,8 +39,21 @@ impl Value {
         let Some(mut value) = row_values.next() else {
             return Ok(Value::default());
         };
+        let mut shape = Vec::new();
+        let mut count = 0;
         for row in row_values {
+            count += 1;
+            if shape.is_empty() {
+                shape = value.shape().to_vec();
+            }
             value = value.join(row, env)?;
+        }
+        shape.insert(0, count + 1);
+        match &mut value {
+            Self::Num(array) => array.shape = shape,
+            Self::Byte(array) => array.shape = shape,
+            Self::Char(array) => array.shape = shape,
+            Self::Func(array) => array.shape = shape,
         }
         Ok(value)
     }
@@ -82,6 +95,14 @@ impl Value {
             Self::Byte(array) => array.row_count(),
             Self::Char(array) => array.row_count(),
             Self::Func(array) => array.row_count(),
+        }
+    }
+    pub fn empty_row(&self) -> Self {
+        match self {
+            Self::Num(array) => array.empty_row().into(),
+            Self::Byte(array) => array.empty_row().into(),
+            Self::Char(array) => array.empty_row().into(),
+            Self::Func(array) => array.empty_row().into(),
         }
     }
     pub fn rank(&self) -> usize {

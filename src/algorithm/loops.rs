@@ -1,4 +1,5 @@
 use std::{
+    iter,
     ops::{Add, Mul},
     rc::Rc,
 };
@@ -56,6 +57,52 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
 }
 
 pub fn scan(env: &mut Uiua) -> UiuaResult {
+    let f = env.pop(1)?;
+    let xs = rc_take(env.pop(2)?);
+    if xs.rank() == 0 {
+        return Err(env.error("Cannot scan rank 0 array"));
+    }
+    match (f.as_primitive(), xs) {
+        (Some(prim), Value::Num(nums)) => {
+            let arr = match prim {
+                Primitive::Add => nums.scan(0.0, Add::add),
+                Primitive::Mul => nums.scan(1.0, Mul::mul),
+                Primitive::Max => nums.scan(f64::NEG_INFINITY, f64::max),
+                Primitive::Min => nums.scan(f64::INFINITY, f64::min),
+                _ => return generic_scan(f, Value::Num(nums), env),
+            };
+            env.push(arr);
+            Ok(())
+        }
+        (_, xs) => generic_scan(f, xs, env),
+    }
+}
+
+fn generic_scan(f: Rc<Value>, xs: Value, env: &mut Uiua) -> UiuaResult {
+    if xs.row_count() == 0 {
+        env.push(xs.empty_row());
+        return Ok(());
+    }
+    let row_count = xs.row_count();
+    let mut rows = xs.into_rows();
+    let mut acc = rows.next().unwrap();
+    let mut scanned = Vec::with_capacity(row_count);
+    scanned.push(acc.clone());
+    for row in rows {
+        let start_height = env.stack_size();
+        env.push(row);
+        env.push(acc.clone());
+        env.push_ref(f.clone());
+        let should_break = env.call_catch_break()?;
+        let new_acc = rc_take(env.pop("scanned function result")?);
+        if should_break {
+            env.truncate_stack(start_height);
+            break;
+        }
+        acc = new_acc;
+        scanned.push(acc.clone());
+    }
+    env.push(Value::from_row_values(scanned, env)?);
     Ok(())
 }
 
@@ -267,6 +314,39 @@ impl<T: ArrayValue> Array<T> {
                 self.data.truncate(row_len);
                 self.shape.remove(0);
                 self
+            }
+        }
+    }
+    fn scan(self, identity: T, f: impl Fn(T, T) -> T) -> Self {
+        match self.shape.len() {
+            0 => unreachable!("scan_nums called on unit array, should have been guarded against"),
+            1 => self
+                .data
+                .iter()
+                .scan(identity, |acc, n| {
+                    *acc = f(acc.clone(), n.clone());
+                    Some(acc.clone())
+                })
+                .collect(),
+            _ => {
+                let row_len: usize = self.row_len();
+                if self.row_count() == 0 {
+                    return self;
+                }
+                let shape = self.shape.clone();
+                let mut new_data = Vec::with_capacity(self.data.len());
+                let mut rows = self.into_rows();
+                new_data.extend(rows.next().unwrap().data);
+                for row in rows {
+                    let start = new_data.len() - row_len;
+                    for (i, r) in row.data.into_iter().enumerate() {
+                        new_data.push(f(new_data[start + i].clone(), r));
+                    }
+                }
+                Array {
+                    shape,
+                    data: new_data,
+                }
             }
         }
     }

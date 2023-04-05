@@ -1,6 +1,6 @@
 use std::{
     cmp::Ordering,
-    fmt::{self, Display},
+    fmt::{self, Debug, Display},
     ops::Deref,
     rc::Rc,
     slice::{Chunks, ChunksMut},
@@ -145,6 +145,12 @@ impl<T: ArrayValue> Array<T> {
             .find(|o| o != &Ordering::Equal)
             .unwrap_or_else(|| self.data.len().cmp(&other.data.len()))
     }
+    pub fn empty_row(&self) -> Self {
+        if self.rank() == 0 {
+            return self.clone();
+        }
+        Array::new(self.shape[1..].to_vec(), Vec::new())
+    }
 }
 
 impl<T: ArrayValue> PartialEq for Array<T> {
@@ -196,7 +202,7 @@ impl<T> From<(Vec<usize>, Vec<T>)> for Array<T> {
 impl<T> From<Vec<T>> for Array<T> {
     fn from(data: Vec<T>) -> Self {
         Self {
-            shape: Vec::new(),
+            shape: vec![data.len()],
             data,
         }
     }
@@ -204,10 +210,7 @@ impl<T> From<Vec<T>> for Array<T> {
 
 impl<T> FromIterator<T> for Array<T> {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        Self {
-            shape: Vec::new(),
-            data: iter.into_iter().collect(),
-        }
+        Self::from(iter.into_iter().collect::<Vec<T>>())
     }
 }
 
@@ -282,7 +285,7 @@ impl<'a, T: ArrayValue> Arrayish for Row<'a, T> {
     }
 }
 
-pub trait ArrayValue: Clone + Display {
+pub trait ArrayValue: Clone + Debug + Display {
     const NAME: &'static str;
     fn cmp(&self, other: &Self) -> Ordering;
     fn eq(&self, other: &Self) -> bool {

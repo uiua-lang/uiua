@@ -1,3 +1,6 @@
+- Fix table
+- Implement each and zip
+- Figure out how to deal with variable lengths
 - Better solution to string formatting
 - Recursion?
 - Threads

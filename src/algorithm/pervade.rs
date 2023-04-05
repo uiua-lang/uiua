@@ -1,10 +1,6 @@
-use std::{cmp::Ordering, fmt::Display, slice};
+use std::{cmp::Ordering, fmt::Display};
 
 use crate::{array::*, Uiua, UiuaError, UiuaResult};
-
-fn unit_arrayish<T: ArrayValue>(value: &T) -> (&[usize], &[T]) {
-    (&[], slice::from_ref(value))
-}
 
 pub fn bin_pervade<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
     a: &Array<A>,

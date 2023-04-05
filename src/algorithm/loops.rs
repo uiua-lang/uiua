@@ -21,21 +21,20 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
                 Primitive::Mul => nums.reduce(1.0, Mul::mul),
                 Primitive::Max => nums.reduce(f64::NEG_INFINITY, f64::max),
                 Primitive::Min => nums.reduce(f64::INFINITY, f64::min),
-                _ => return generic_reduce(f, Value::Num(nums), env),
+                _ => return generic_fold(f, Value::Num(nums), None, env),
             };
             env.push(arr);
             Ok(())
         }
-        (_, xs) => generic_reduce(f, xs, env),
+        (_, xs) => generic_fold(f, xs, None, env),
     }
 }
 
-fn generic_reduce(f: Rc<Value>, xs: Value, env: &mut Uiua) -> UiuaResult {
+fn generic_fold(f: Rc<Value>, xs: Value, init: Option<Rc<Value>>, env: &mut Uiua) -> UiuaResult {
     let mut rows = xs.into_rows_rev();
-    let mut acc = Rc::new(
-        rows.next()
-            .ok_or_else(|| env.error("Cannot reduce empty array"))?,
-    );
+    let mut acc = init
+        .or_else(|| rows.next().map(Rc::new))
+        .ok_or_else(|| env.error("Cannot reduce empty array"))?;
     for row in rows {
         env.push_ref(acc);
         env.push(row);
@@ -50,7 +49,10 @@ fn generic_reduce(f: Rc<Value>, xs: Value, env: &mut Uiua) -> UiuaResult {
 }
 
 pub fn fold(env: &mut Uiua) -> UiuaResult {
-    Ok(())
+    let f = env.pop(1)?;
+    let acc = env.pop(2)?;
+    let xs = rc_take(env.pop(3)?);
+    generic_fold(f, xs, Some(acc), env)
 }
 
 pub fn scan(env: &mut Uiua) -> UiuaResult {

@@ -73,6 +73,14 @@ impl Value {
             Self::Func(array) => Box::new(array.into_rows_rev().map(Value::from)),
         }
     }
+    pub fn into_flat_values(self) -> Box<dyn Iterator<Item = Self>> {
+        match self {
+            Self::Num(array) => Box::new(array.data.into_iter().map(Value::from)),
+            Self::Byte(array) => Box::new(array.data.into_iter().map(Value::from)),
+            Self::Char(array) => Box::new(array.data.into_iter().map(Value::from)),
+            Self::Func(array) => Box::new(array.data.into_iter().map(Value::from)),
+        }
+    }
     pub fn type_name(&self) -> &'static str {
         match self {
             Self::Num(_) => "number",
@@ -82,20 +90,23 @@ impl Value {
         }
     }
     pub fn shape(&self) -> &[usize] {
-        match self {
-            Self::Num(array) => array.shape(),
-            Self::Byte(array) => array.shape(),
-            Self::Char(array) => array.shape(),
-            Self::Func(array) => array.shape(),
-        }
+        self.generic_ref(Array::shape, Array::shape, Array::shape, Array::shape)
     }
     pub fn row_count(&self) -> usize {
-        match self {
-            Self::Num(array) => array.row_count(),
-            Self::Byte(array) => array.row_count(),
-            Self::Char(array) => array.row_count(),
-            Self::Func(array) => array.row_count(),
-        }
+        self.generic_ref(
+            Array::row_count,
+            Array::row_count,
+            Array::row_count,
+            Array::row_count,
+        )
+    }
+    pub fn flat_len(&self) -> usize {
+        self.generic_ref(
+            Array::flat_len,
+            Array::flat_len,
+            Array::flat_len,
+            Array::flat_len,
+        )
     }
     pub fn empty_row(&self) -> Self {
         match self {
@@ -108,12 +119,34 @@ impl Value {
     pub fn rank(&self) -> usize {
         self.shape().len()
     }
-    pub fn generic_mut<T>(
-        &mut self,
-        n: impl FnOnce(&mut Array<f64>) -> T,
-        b: impl FnOnce(&mut Array<u8>) -> T,
-        c: impl FnOnce(&mut Array<char>) -> T,
-        f: impl FnOnce(&mut Array<Rc<Function>>) -> T,
+    pub fn shape_mut(&mut self) -> &mut Vec<usize> {
+        self.generic_mut(
+            |arr| &mut arr.shape,
+            |arr| &mut arr.shape,
+            |arr| &mut arr.shape,
+            |arr| &mut arr.shape,
+        )
+    }
+    pub fn generic_ref<'a, T: 'a>(
+        &'a self,
+        n: impl FnOnce(&'a Array<f64>) -> T,
+        b: impl FnOnce(&'a Array<u8>) -> T,
+        c: impl FnOnce(&'a Array<char>) -> T,
+        f: impl FnOnce(&'a Array<Rc<Function>>) -> T,
+    ) -> T {
+        match self {
+            Self::Num(array) => n(array),
+            Self::Byte(array) => b(array),
+            Self::Char(array) => c(array),
+            Self::Func(array) => f(array),
+        }
+    }
+    pub fn generic_mut<'a, T: 'a>(
+        &'a mut self,
+        n: impl FnOnce(&'a mut Array<f64>) -> T,
+        b: impl FnOnce(&'a mut Array<u8>) -> T,
+        c: impl FnOnce(&'a mut Array<char>) -> T,
+        f: impl FnOnce(&'a mut Array<Rc<Function>>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),

@@ -174,12 +174,10 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
     const BREAK_ERROR: &str = "break is not allowed in table";
     let mut new_shape = xs.shape().to_vec();
     new_shape.extend_from_slice(ys.shape());
-    let x_dim = xs.row_count();
-    let y_dim = ys.row_count();
-    let mut items = Vec::with_capacity(x_dim * y_dim);
-    let y_rows = ys.into_rows().collect::<Vec<_>>();
-    for x in xs.into_rows() {
-        for y in y_rows.iter().cloned() {
+    let mut items = Vec::with_capacity(xs.flat_len() * ys.flat_len());
+    let y_values = ys.into_flat_values().collect::<Vec<_>>();
+    for x in xs.into_flat_values() {
+        for y in y_values.iter().cloned() {
             env.push(y);
             env.push(x.clone());
             env.push_ref(f.clone());
@@ -187,12 +185,11 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
             items.push(rc_take(env.pop("tabled function result")?));
         }
     }
-    let mut rows = Vec::with_capacity(y_dim);
-    let mut items = items.into_iter();
-    for _ in 0..y_dim {
-        rows.push(Value::from_row_values(items.by_ref().take(x_dim), env)?);
-    }
-    env.push(Value::from_row_values(rows, env)?);
+    let mut tabled = Value::from_row_values(items, env)?;
+    let extra_shape = tabled.shape()[1..].to_vec();
+    new_shape.extend(extra_shape);
+    *tabled.shape_mut() = new_shape;
+    env.push(tabled);
     Ok(())
 }
 

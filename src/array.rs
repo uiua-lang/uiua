@@ -82,7 +82,9 @@ impl<T> Array<T> {
     pub fn rank(&self) -> usize {
         self.shape.len()
     }
-    pub fn rows(&self) -> impl Iterator<Item = Row<T>> {
+    pub fn rows(
+        &self,
+    ) -> impl ExactSizeIterator<Item = Row<T>> + DoubleEndedIterator<Item = Row<T>> {
         (0..self.row_count()).map(|row| Row { array: self, row })
     }
     pub fn rows_mut(&mut self) -> ChunksMut<T> {
@@ -160,6 +162,22 @@ impl<T: ArrayValue> Array<T> {
         } else {
             self.row_count()
         }
+    }
+    /// Remove fill elements from the end of the array
+    pub fn truncate(&mut self) {
+        if T::fill_value().is_none() || self.rank() == 0 {
+            return;
+        }
+        let mut new_len = self.row_count();
+        for (i, row) in self.rows().enumerate().rev() {
+            if row.iter().all(|x| x.is_fill_value()) {
+                new_len = i;
+            } else {
+                break;
+            }
+        }
+        self.data.truncate(new_len * self.row_len());
+        self.shape[0] = new_len;
     }
 }
 

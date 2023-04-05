@@ -69,6 +69,7 @@ impl<T: ArrayValue> Array<T> {
             }
             ([], bsh) => {
                 if bsh.len() == 1 {
+                    other.truncate();
                     other.data.insert(0, self.data.remove(0));
                     other.shape = vec![other.flat_len()];
                     other
@@ -81,6 +82,7 @@ impl<T: ArrayValue> Array<T> {
             }
             (ash, []) => {
                 if ash.len() == 1 {
+                    self.truncate();
                     self.data.push(other.data.remove(0));
                     self.shape = vec![self.flat_len()];
                     self
@@ -93,18 +95,26 @@ impl<T: ArrayValue> Array<T> {
             }
             (ash, bsh) => {
                 if ash[1..] == bsh[1..] {
+                    self.truncate();
+                    other.truncate();
                     self.data.extend(other.data);
                     self.shape[0] += other.shape[0];
                     self
                 } else if ash[1..] == bsh[..] {
+                    self.truncate();
                     self.data.extend(other.data);
                     self.shape[0] += 1;
                     self
                 } else if ash[..] == bsh[1..] {
+                    other.truncate();
                     self.data.extend(other.data);
-                    self.shape.insert(0, bsh[0] + 1);
+                    self.shape.insert(0, other.shape[0] + 1);
                     self
                 } else if let Some(fill) = T::fill_value() {
+                    self.truncate();
+                    other.truncate();
+                    let ash = &self.shape;
+                    let bsh = &other.shape;
                     match ash.len() as i8 - bsh.len() as i8 {
                         0 => {
                             let mut new_row_shape = vec![0; ash.len().max(bsh.len()) - 1];

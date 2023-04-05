@@ -4,6 +4,7 @@ use std::{
 };
 
 use crate::{
+    algorithm::pervade::bin_pervade_generic,
     array::{Array, ArrayValue},
     primitive::Primitive,
     rc_take,
@@ -106,22 +107,52 @@ fn generic_scan(f: Rc<Value>, xs: Value, env: &mut Uiua) -> UiuaResult {
 }
 
 pub fn each(env: &mut Uiua) -> UiuaResult {
-    // let f = env.pop(1)?;
-    // let xs = env.pop(2)?;
-    // const BREAK_ERROR: &str = "break is not allowed in each";
-    // let (shape, values) = xs.into_shape_flat_values();
-    // let mut new_values = Vec::with_capacity(values.len());
-    // for val in values {
-    //     env.push(val);
-    //     env.push(f.clone());
-    //     env.call_error_on_break(BREAK_ERROR)?;
-    //     new_values.push(env.pop("each's function result")?);
-    // }
-    // env.push(Array::from((shape, new_values)).normalized_type());
+    let f = env.pop(1)?;
+    let xs = rc_take(env.pop(2)?);
+    const BREAK_ERROR: &str = "break is not allowed in each";
+    let mut new_values = Vec::with_capacity(xs.flat_len());
+    let mut new_shape = xs.shape().to_vec();
+    let values = xs.into_flat_values();
+    for val in values {
+        env.push(val);
+        env.push_ref(f.clone());
+        env.call_error_on_break(BREAK_ERROR)?;
+        new_values.push(rc_take(env.pop("each's function result")?));
+    }
+    let mut eached = Value::from_row_values(new_values, env)?;
+    new_shape.extend_from_slice(&eached.shape()[1..]);
+    *eached.shape_mut() = new_shape;
+    env.push(eached);
     Ok(())
 }
 
 pub fn zip(env: &mut Uiua) -> UiuaResult {
+    let f = env.pop(1)?;
+    let xs = rc_take(env.pop(2)?);
+    let ys = rc_take(env.pop(3)?);
+    let xs_shape = xs.shape().to_vec();
+    let ys_shape = ys.shape().to_vec();
+    let xs_values: Vec<_> = xs.into_flat_values().collect();
+    let ys_values: Vec<_> = ys.into_flat_values().collect();
+    const BREAK_ERROR: &str = "break is not allowed in zip";
+    let (mut shape, values) = bin_pervade_generic(
+        &xs_shape,
+        xs_values,
+        &ys_shape,
+        ys_values,
+        env,
+        |x, y, env| {
+            env.push(y);
+            env.push(x);
+            env.push_ref(f.clone());
+            env.call_error_on_break(BREAK_ERROR)?;
+            env.pop("zip's function result").map(rc_take)
+        },
+    )?;
+    let mut zipped = Value::from_row_values(values, env)?;
+    shape.extend_from_slice(&zipped.shape()[1..]);
+    *zipped.shape_mut() = shape;
+    env.push(zipped);
     Ok(())
 }
 
@@ -186,8 +217,7 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
         }
     }
     let mut tabled = Value::from_row_values(items, env)?;
-    let extra_shape = tabled.shape()[1..].to_vec();
-    new_shape.extend(extra_shape);
+    new_shape.extend_from_slice(&tabled.shape()[1..]);
     *tabled.shape_mut() = new_shape;
     env.push(tabled);
     Ok(())

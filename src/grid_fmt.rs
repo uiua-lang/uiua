@@ -73,6 +73,9 @@ impl GridFmt for Value {
 
 impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
     fn fmt_grid(&self) -> Grid {
+        if self.shape.is_empty() {
+            return self.data[0].fmt_grid();
+        }
         // Fill the metagrid
         let mut metagrid = Metagrid::new();
 

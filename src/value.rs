@@ -61,10 +61,10 @@ impl Value {
     }
     pub fn len(&self) -> usize {
         match self {
-            Self::Num(array) => array.len(),
-            Self::Byte(array) => array.len(),
-            Self::Char(array) => array.len(),
-            Self::Func(array) => array.len(),
+            Self::Num(array) => array.row_count(),
+            Self::Byte(array) => array.row_count(),
+            Self::Char(array) => array.row_count(),
+            Self::Func(array) => array.row_count(),
         }
     }
     pub fn rank(&self) -> usize {
@@ -184,7 +184,7 @@ impl Value {
                         env.error(format!("{requirement}, but its rank is {}", nums.rank()))
                     );
                 }
-                let mut result = Vec::with_capacity(nums.len());
+                let mut result = Vec::with_capacity(nums.row_count());
                 for &num in nums.data() {
                     if !test(num) {
                         return Err(env.error(requirement));
@@ -199,7 +199,7 @@ impl Value {
                         env.error(format!("{requirement}, but its rank is {}", bytes.rank()))
                     );
                 }
-                let mut result = Vec::with_capacity(bytes.len());
+                let mut result = Vec::with_capacity(bytes.row_count());
                 for &byte in bytes.data() {
                     let num = byte as f64;
                     if !test(num) {
@@ -477,8 +477,8 @@ impl PartialEq for Value {
             (Value::Byte(a), Value::Byte(b)) => a == b,
             (Value::Char(a), Value::Char(b)) => a == b,
             (Value::Func(a), Value::Func(b)) => a == b,
-            (Value::Num(a), Value::Byte(b)) => a.eq(b),
-            (Value::Byte(a), Value::Num(b)) => b.eq(a),
+            (Value::Num(a), Value::Byte(b)) => a.val_eq(b),
+            (Value::Byte(a), Value::Num(b)) => b.val_eq(a),
             _ => false,
         }
     }
@@ -495,12 +495,12 @@ impl PartialOrd for Value {
 impl Ord for Value {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
-            (Value::Num(a), Value::Num(b)) => a.cmp(b),
-            (Value::Byte(a), Value::Byte(b)) => a.cmp(b),
-            (Value::Char(a), Value::Char(b)) => a.cmp(b),
-            (Value::Func(a), Value::Func(b)) => a.cmp(b),
-            (Value::Num(a), Value::Byte(b)) => a.cmp(b),
-            (Value::Byte(a), Value::Num(b)) => b.cmp(a).reverse(),
+            (Value::Num(a), Value::Num(b)) => a.val_cmp(b),
+            (Value::Byte(a), Value::Byte(b)) => a.val_cmp(b),
+            (Value::Char(a), Value::Char(b)) => a.val_cmp(b),
+            (Value::Func(a), Value::Func(b)) => a.val_cmp(b),
+            (Value::Num(a), Value::Byte(b)) => a.val_cmp(b),
+            (Value::Byte(a), Value::Num(b)) => b.val_cmp(a).reverse(),
             (Value::Num(_), _) => Ordering::Less,
             (_, Value::Num(_)) => Ordering::Greater,
             (Value::Byte(_), _) => Ordering::Less,

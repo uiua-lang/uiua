@@ -67,7 +67,7 @@ impl<T> Array<T> {
     pub fn into_pair(self) -> (Vec<usize>, Vec<T>) {
         (self.shape, self.data)
     }
-    pub fn len(&self) -> usize {
+    pub fn row_count(&self) -> usize {
         self.shape.first().copied().unwrap_or(1)
     }
     pub fn flat_len(&self) -> usize {
@@ -102,7 +102,7 @@ impl<T> Array<T> {
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn eq<U: Into<T> + Clone>(&self, other: &Array<U>) -> bool {
+    pub fn val_eq<U: Into<T> + Clone>(&self, other: &Array<U>) -> bool {
         self.shape == other.shape
             && self.data.len() == other.data.len()
             && self
@@ -111,7 +111,7 @@ impl<T: ArrayValue> Array<T> {
                 .zip(&other.data)
                 .all(|(a, b)| T::eq(a, &b.clone().into()))
     }
-    pub fn cmp<U: Into<T> + Clone>(&self, other: &Array<U>) -> Ordering {
+    pub fn val_cmp<U: Into<T> + Clone>(&self, other: &Array<U>) -> Ordering {
         self.data
             .iter()
             .zip(&other.data)
@@ -137,7 +137,7 @@ impl<T: ArrayValue> Eq for Array<T> {}
 
 impl<T: ArrayValue> PartialOrd for Array<T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
+        Some(self.val_cmp(other))
     }
 }
 
@@ -293,6 +293,7 @@ impl ArrayValue for Function {
     }
 }
 
+#[allow(clippy::len_without_is_empty)]
 pub trait Arrayish {
     type Value: ArrayValue;
     fn shape(&self) -> &[usize];

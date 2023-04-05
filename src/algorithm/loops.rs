@@ -19,12 +19,7 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
     // let f = env.pop(1)?;
     // let xs = env.pop(2)?;
     // const BREAK_ERROR: &str = "break is not allowed in each";
-    // if !xs.is_array() {
-    //     env.push(xs);
-    //     env.push(f);
-    //     return env.call_error_on_break(BREAK_ERROR);
-    // }
-    // let (shape, values) = xs.into_array().into_shape_flat_values();
+    // let (shape, values) = xs.into_shape_flat_values();
     // let mut new_values = Vec::with_capacity(values.len());
     // for val in values {
     //     env.push(val);
@@ -225,12 +220,12 @@ impl<T: ArrayValue> Array<T> {
                 .into(),
             _ => {
                 let row_len: usize = self.row_len();
-                if self.len() == 0 {
+                if self.row_count() == 0 {
                     self.shape.remove(0);
                     self.data = vec![identity; row_len];
                     return self;
                 }
-                for i in 1..self.len() {
+                for i in 1..self.row_count() {
                     let start = i * row_len;
                     for j in 0..row_len {
                         self.data[j] = f(self.data[j].clone(), self.data[start + j].clone());

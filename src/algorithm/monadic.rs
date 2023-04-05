@@ -212,7 +212,7 @@ impl<T: ArrayValue> Array<T> {
             return Err(env.error("Cannot classify a rank-0 array"));
         }
         let mut classes = BTreeMap::new();
-        let mut classified = Vec::with_capacity(self.len());
+        let mut classified = Vec::with_capacity(self.row_count());
         for row in self.rows() {
             let new_class = classes.len();
             let class = *classes.entry(row).or_insert(new_class);

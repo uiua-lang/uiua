@@ -120,7 +120,7 @@ impl Value {
 
 impl<T: Clone> Array<T> {
     pub fn replicate(mut self, amount: &[usize], env: &Uiua) -> UiuaResult<Self> {
-        if self.len() != amount.len() {
+        if self.row_count() != amount.len() {
             return Err(env.error(format!(
                 "Cannot replicate array with shape {:?} with array of length {}",
                 self.shape,
@@ -586,7 +586,7 @@ impl<T: ArrayValue> Array<T> {
                 self.shape, of.shape
             )));
         }
-        let mut result = Vec::with_capacity(self.len());
+        let mut result = Vec::with_capacity(self.row_count());
         let mut indices = BTreeMap::new();
         for (i, row) in of.rows().enumerate() {
             indices.insert(row, i);
@@ -596,7 +596,7 @@ impl<T: ArrayValue> Array<T> {
                 indices
                     .get(&row)
                     .map(|i| *i as f64)
-                    .unwrap_or_else(|| (self.len() - 1) as f64),
+                    .unwrap_or_else(|| (self.row_count() - 1) as f64),
             );
         }
         Ok(Array::new(self.shape.clone(), result))

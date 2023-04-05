@@ -10,7 +10,7 @@ pub fn bin_pervade<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
     a: &Array<A>,
     b: &Array<B>,
     env: &Uiua,
-    f: impl Fn(A, B) -> C,
+    f: impl Fn(A, B) -> C + Copy,
 ) -> UiuaResult<Array<C>> {
     if !a.shape_prefixes_match(&b) {
         return Err(env.error(format!(
@@ -45,10 +45,10 @@ pub fn bin_pervade_fallible<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
 }
 
 fn bin_pervade_recursive<A: Arrayish, B: Arrayish, C: ArrayValue>(
-    a: A,
-    b: B,
+    a: &A,
+    b: &B,
     c: &mut Vec<C>,
-    f: impl Fn(A::Value, B::Value) -> C,
+    f: impl Fn(A::Value, B::Value) -> C + Copy,
 ) {
     match (a.shape(), b.shape()) {
         ([], []) => c.push(f(a.data()[0].clone(), b.data()[0].clone())),
@@ -58,26 +58,26 @@ fn bin_pervade_recursive<A: Arrayish, B: Arrayish, C: ArrayValue>(
             }
         }
         ([], bsh) => {
-            for (a, b) in a.data().iter().zip(b.rows()) {
-                bin_pervade_recursive(unit_arrayish(a), (&bsh[1..], b), c, &f);
+            for b in b.rows() {
+                bin_pervade_recursive(a, &(&bsh[1..], b), c, f);
             }
         }
         (ash, []) => {
-            for (a, b) in a.rows().zip(b.data().iter()) {
-                bin_pervade_recursive((&ash[1..], a), unit_arrayish(b), c, &f);
+            for a in a.rows() {
+                bin_pervade_recursive(&(&ash[1..], a), b, c, f);
             }
         }
         (ash, bsh) => {
             for (a, b) in a.rows().zip(b.rows()) {
-                bin_pervade_recursive((&ash[1..], a), (&bsh[1..], b), c, &f);
+                bin_pervade_recursive(&(&ash[1..], a), &(&bsh[1..], b), c, f);
             }
         }
     }
 }
 
 fn bin_pervade_recursive_fallible<A: Arrayish, B: Arrayish, C: ArrayValue>(
-    a: A,
-    b: B,
+    a: &A,
+    b: &B,
     c: &mut Vec<C>,
     env: &mut Uiua,
     f: impl Fn(A::Value, B::Value, &mut Uiua) -> UiuaResult<C> + Copy,
@@ -85,18 +85,18 @@ fn bin_pervade_recursive_fallible<A: Arrayish, B: Arrayish, C: ArrayValue>(
     match (a.shape(), b.shape()) {
         ([], []) => c.push(f(a.data()[0].clone(), b.data()[0].clone(), env)?),
         ([], bsh) => {
-            for (a, b) in a.data().iter().zip(b.rows()) {
-                bin_pervade_recursive_fallible(unit_arrayish(a), (&bsh[1..], b), c, env, f)?;
+            for b in b.rows() {
+                bin_pervade_recursive_fallible(&a, &(&bsh[1..], b), c, env, f)?;
             }
         }
         (ash, []) => {
-            for (a, b) in a.rows().zip(b.data().iter()) {
-                bin_pervade_recursive_fallible((&ash[1..], a), unit_arrayish(b), c, env, f)?;
+            for a in a.rows() {
+                bin_pervade_recursive_fallible(&(&ash[1..], a), &b, c, env, f)?;
             }
         }
         (ash, bsh) => {
             for (a, b) in a.rows().zip(b.rows()) {
-                bin_pervade_recursive_fallible((&ash[1..], a), (&bsh[1..], b), c, env, f)?;
+                bin_pervade_recursive_fallible(&(&ash[1..], a), &(&bsh[1..], b), c, env, f)?;
             }
         }
     }

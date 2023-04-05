@@ -58,7 +58,7 @@ impl Value {
     }
 }
 
-impl<T> Array<T> {
+impl<T: ArrayValue> Array<T> {
     pub fn join(mut self, mut other: Self, env: &Uiua) -> UiuaResult<Self> {
         Ok(match (self.shape.as_slice(), other.shape.as_slice()) {
             ([], []) => {
@@ -73,7 +73,7 @@ impl<T> Array<T> {
                     other
                 } else {
                     return Err(env.error(format!(
-                        "Cannot join a scalar to a rank-{} array",
+                        "Cannot join a scalar to a rank {} array",
                         bsh.len()
                     )));
                 }
@@ -85,7 +85,7 @@ impl<T> Array<T> {
                     self
                 } else {
                     return Err(env.error(format!(
-                        "Cannot join a rank-{} array to a scalar",
+                        "Cannot join a rank {} array to a scalar",
                         ash.len()
                     )));
                 }
@@ -94,6 +94,14 @@ impl<T> Array<T> {
                 if ash[1..] == bsh[1..] {
                     self.data.extend(other.data);
                     self.shape[0] += other.shape[0];
+                    self
+                } else if ash[1..] == bsh[..] {
+                    self.data.extend(other.data);
+                    self.shape[0] += 1;
+                    self
+                } else if ash[..] == bsh[1..] {
+                    self.data.extend(other.data);
+                    self.shape.insert(0, bsh[0] + 1);
                     self
                 } else {
                     return Err(env.error(format!(
@@ -166,7 +174,7 @@ impl<T> Array<T> {
     pub fn pick(mut self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
         if index.len() > self.rank() {
             return Err(env.error(format!(
-                "Cannot pick from rank-{} array with index of length {}",
+                "Cannot pick from rank {} array with index of length {}",
                 self.rank(),
                 index.len()
             )));
@@ -222,7 +230,7 @@ impl<T> Array<T> {
     pub fn take(mut self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
         if index.len() > self.rank() {
             return Err(env.error(format!(
-                "Cannot take from rank-{} array with index of length {}",
+                "Cannot take from rank {} array with index of length {}",
                 self.rank(),
                 index.len()
             )));
@@ -254,7 +262,7 @@ impl<T> Array<T> {
     pub fn drop(mut self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
         if index.len() > self.rank() {
             return Err(env.error(format!(
-                "Cannot drop from rank-{} array with index of length {}",
+                "Cannot drop from rank {} array with index of length {}",
                 self.rank(),
                 index.len()
             )));
@@ -302,7 +310,7 @@ impl<T> Array<T> {
     pub fn rotate(&mut self, by: &[isize], env: &Uiua) -> UiuaResult {
         if by.len() > self.rank() {
             return Err(env.error(format!(
-                "Cannot rotate rank-{} array with index of length {}",
+                "Cannot rotate rank {} array with index of length {}",
                 self.rank(),
                 by.len()
             )));
@@ -354,13 +362,28 @@ impl Value {
     }
 }
 
-impl<T> Array<T> {
+impl<T: ArrayValue> Array<T> {
     pub fn couple(mut self, mut other: Self, env: &Uiua) -> UiuaResult<Self> {
         if self.shape != other.shape {
-            return Err(env.error(format!(
-                "Cannot couple arrays of different shapes: {:?} and {:?}",
-                self.shape, other.shape
-            )));
+            if let Some(fill) = T::fill_value() {
+                let mut new_shape = vec![0; self.shape.len().max(other.shape.len())];
+                for i in 0..new_shape.len() {
+                    new_shape[i] = self.shape.get(i).max(other.shape.get(i)).copied().unwrap();
+                }
+                let target_size = new_shape.iter().product();
+                self.data.resize(target_size, fill.clone());
+                self.shape = new_shape.clone();
+                other.data.resize(target_size, fill);
+                other.shape = new_shape;
+            } else {
+                return Err(env.error(format!(
+                    "Cannot couple arrays of different shapes {:?} and {:?} \
+                    because {} has no fill value",
+                    self.shape,
+                    other.shape,
+                    T::NAME
+                )));
+            }
         }
         self.data.append(&mut other.data);
         self.shape.insert(0, 2);

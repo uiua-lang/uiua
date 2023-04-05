@@ -152,6 +152,14 @@ impl<T: ArrayValue> Array<T> {
         }
         Array::new(self.shape[1..].to_vec(), Vec::new())
     }
+    #[allow(clippy::len_without_is_empty)]
+    pub fn len(&self) -> usize {
+        if self.rank() == 1 && T::fill_value().is_some() {
+            self.data.iter().take_while(|x| !x.is_fill_value()).count()
+        } else {
+            self.row_count()
+        }
+    }
 }
 
 impl<T: ArrayValue> PartialEq for Array<T> {
@@ -298,6 +306,12 @@ pub trait ArrayValue: Clone + Debug + Display {
     fn format_sep() -> &'static str {
         " "
     }
+    fn fill_value() -> Option<Self> {
+        None
+    }
+    fn is_fill_value(&self) -> bool {
+        false
+    }
 }
 
 impl ArrayValue for f64 {
@@ -326,6 +340,12 @@ impl ArrayValue for char {
     fn format_sep() -> &'static str {
         ""
     }
+    fn fill_value() -> Option<Self> {
+        Some('\x00')
+    }
+    fn is_fill_value(&self) -> bool {
+        *self == '\x00'
+    }
 }
 
 impl ArrayValue for Rc<Function> {
@@ -340,9 +360,6 @@ pub trait Arrayish {
     type Value: ArrayValue;
     fn shape(&self) -> &[usize];
     fn data(&self) -> &[Self::Value];
-    fn len(&self) -> usize {
-        self.shape().first().copied().unwrap_or(1)
-    }
     fn rank(&self) -> usize {
         self.shape().len()
     }

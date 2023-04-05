@@ -1,4 +1,4 @@
-#![allow(clippy::single_match)]
+#![allow(clippy::single_match, clippy::needless_range_loop)]
 
 mod algorithm;
 pub mod array;

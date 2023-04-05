@@ -119,6 +119,10 @@ impl Value {
     pub fn rank(&self) -> usize {
         self.shape().len()
     }
+    #[allow(clippy::len_without_is_empty)]
+    pub fn len(&self) -> usize {
+        self.generic_ref(Array::len, Array::len, Array::len, Array::len)
+    }
     pub fn shape_mut(&mut self) -> &mut Vec<usize> {
         self.generic_mut(
             |arr| &mut arr.shape,

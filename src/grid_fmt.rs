@@ -51,7 +51,11 @@ impl GridFmt for f64 {
 
 impl GridFmt for char {
     fn fmt_grid(&self) -> Grid {
-        vec![format!("{self:?}").chars().collect()]
+        if self.is_fill_value() {
+            vec![vec![' ']]
+        } else {
+            vec![format!("{self:?}").chars().collect()]
+        }
     }
 }
 
@@ -185,6 +189,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 }
                 s.push_str(&d.to_string());
             }
+            s.push(' ');
             s.push_str(T::NAME);
             s.push(']');
             return vec![s.chars().collect()];
@@ -193,7 +198,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
     }
 }
 
-fn fmt_array<T: GridFmt + std::fmt::Display>(
+fn fmt_array<T: GridFmt + ArrayValue>(
     shape: &[usize],
     data: &[T],
     stringy: bool,
@@ -212,7 +217,13 @@ fn fmt_array<T: GridFmt + std::fmt::Display>(
         let mut row = Vec::with_capacity(shape[0]);
         if stringy {
             let mut s = String::new();
-            s.extend(data.iter().map(|c| c.to_string()));
+            s.extend(data.iter().map(|c| {
+                if c.is_fill_value() {
+                    " ".into()
+                } else {
+                    c.to_string()
+                }
+            }));
             row.push(vec![format!("{s:?}").chars().collect()]);
         } else {
             for (i, val) in data.iter().enumerate() {

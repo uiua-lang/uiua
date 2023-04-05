@@ -387,7 +387,7 @@ impl Primitive {
                     return Err(UiuaError::Assert(msg));
                 }
             }
-            Primitive::Len => env.monadic_ref(Value::row_count)?,
+            Primitive::Len => env.monadic_ref(Value::len)?,
             Primitive::Rank => env.monadic_ref(Value::rank)?,
             Primitive::Shape => {
                 env.monadic_ref(|v| v.shape().iter().copied().collect::<Value>())?

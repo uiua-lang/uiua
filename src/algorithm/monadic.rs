@@ -25,7 +25,7 @@ impl Value {
     }
 }
 
-impl<T> Array<T> {
+impl<T: ArrayValue> Array<T> {
     pub fn deshape(&mut self) {
         self.shape = vec![self.flat_len()];
     }
@@ -90,7 +90,7 @@ impl Value {
     }
 }
 
-impl<T> Array<T> {
+impl<T: ArrayValue> Array<T> {
     pub fn first(mut self, env: &Uiua) -> UiuaResult<Self> {
         if self.rank() == 0 {
             return Err(env.error("Cannot take first of a scalar"));
@@ -123,7 +123,7 @@ impl Value {
     }
 }
 
-impl<T> Array<T> {
+impl<T: ArrayValue> Array<T> {
     pub fn reverse(&mut self) {
         if self.shape.is_empty() {
             return;

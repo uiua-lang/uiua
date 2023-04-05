@@ -7,7 +7,7 @@ use std::{
 use image::{DynamicImage, ImageOutputFormat};
 use rand::prelude::*;
 
-use crate::{array::Array, grid_fmt::GridFmt, rc_take, value::Value, Uiua, UiuaResult};
+use crate::{array::Array, grid_fmt::GridFmt, rc_take, value::Value, Byte, Uiua, UiuaResult};
 
 macro_rules! io_op {
     ($((
@@ -207,9 +207,14 @@ impl IoOp {
             }
             IoOp::FReadBytes => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let contents = env.io.read_file(&path).map_err(|e| env.error(e))?;
-                let arr = Array::<u8>::from(contents);
-                env.push(arr);
+                let contents: Array<Byte> = env
+                    .io
+                    .read_file(&path)
+                    .map_err(|e| env.error(e))?
+                    .into_iter()
+                    .map(Into::into)
+                    .collect();
+                env.push(contents);
             }
             IoOp::FWriteBytes => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
@@ -262,9 +267,9 @@ impl IoOp {
                 let bytes = env.io.read_file(&path).map_err(|e| env.error(e))?;
                 let image = image::load_from_memory(&bytes)
                     .map_err(|e| env.error(format!("Failed to read image: {}", e)))?
-                    .into_rgba8();
+                    .into_rgba16();
                 let shape = vec![image.height() as usize, image.width() as usize, 4];
-                let array = Array::<u8>::from((shape, image.into_raw()));
+                let array = Array::<Byte>::from((shape, image.into_raw()));
                 env.push(array);
             }
             IoOp::ImWrite => {
@@ -313,7 +318,7 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
             .iter()
             .map(|f| (*f * 255.0).floor() as u8)
             .collect(),
-        Value::Byte(bytes) => bytes.data.iter().map(|&b| b.min(1) * 255).collect(),
+        Value::Byte(bytes) => bytes.data.iter().map(|&b| b.min(1) as u8 * 255).collect(),
         _ => return Err("Image must be a numeric array".into()),
     };
     #[allow(clippy::match_ref_pats)]

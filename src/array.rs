@@ -2,17 +2,19 @@ use std::{
     cmp::Ordering,
     fmt::{self, Debug, Display},
     iter::repeat,
+    mem::transmute,
     ops::Deref,
     rc::Rc,
     slice::{Chunks, ChunksMut},
 };
 
-use crate::function::Function;
+use crate::{function::Function, primitive::Primitive};
 
 #[derive(Debug, Clone)]
 pub struct Array<T> {
     pub(crate) shape: Vec<usize>,
     pub(crate) data: Vec<T>,
+    pub(crate) fill: bool,
 }
 
 impl<T: ArrayValue> Default for Array<T> {
@@ -20,6 +22,7 @@ impl<T: ArrayValue> Default for Array<T> {
         Self {
             shape: Vec::new(),
             data: Vec::new(),
+            fill: T::DEFAULT_FILL,
         }
     }
 }
@@ -57,15 +60,16 @@ impl<T: ArrayValue> fmt::Display for Array<T> {
     }
 }
 
-impl<T> Array<T> {
+impl<T: ArrayValue> Array<T> {
     pub fn new(shape: Vec<usize>, data: Vec<T>) -> Self {
-        Self { shape, data }
+        Self {
+            shape,
+            data,
+            fill: T::DEFAULT_FILL,
+        }
     }
     pub fn unit(data: T) -> Self {
-        Self {
-            shape: Vec::new(),
-            data: vec![data],
-        }
+        Self::new(Vec::new(), vec![data])
     }
     pub fn into_pair(self) -> (Vec<usize>, Vec<T>) {
         (self.shape, self.data)
@@ -102,6 +106,7 @@ impl<T> Array<T> {
         Array {
             shape: self.shape,
             data: self.data.into_iter().map(Into::into).collect(),
+            fill: self.fill,
         }
     }
     pub fn into_rows(self) -> impl Iterator<Item = Self> {
@@ -157,7 +162,7 @@ impl<T: ArrayValue> Array<T> {
     }
     #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
-        if self.rank() == 1 && T::fill_value().is_some() {
+        if self.rank() == 1 && self.fill {
             self.data.iter().take_while(|x| !x.is_fill_value()).count()
         } else {
             self.row_count()
@@ -165,7 +170,7 @@ impl<T: ArrayValue> Array<T> {
     }
     /// Remove fill elements from the end of the array
     pub fn truncate(&mut self) {
-        if T::fill_value().is_none() || self.rank() == 0 {
+        if !self.fill || self.rank() == 0 {
             return;
         }
         let mut new_len = self.row_count();
@@ -212,31 +217,25 @@ impl<T: ArrayValue> Ord for Array<T> {
     }
 }
 
-impl<T> From<T> for Array<T> {
+impl<T: ArrayValue> From<T> for Array<T> {
     fn from(data: T) -> Self {
-        Self {
-            shape: Vec::new(),
-            data: vec![data],
-        }
+        Self::unit(data)
     }
 }
 
-impl<T> From<(Vec<usize>, Vec<T>)> for Array<T> {
+impl<T: ArrayValue> From<(Vec<usize>, Vec<T>)> for Array<T> {
     fn from((shape, data): (Vec<usize>, Vec<T>)) -> Self {
-        Self { shape, data }
+        Self::new(shape, data)
     }
 }
 
-impl<T> From<Vec<T>> for Array<T> {
+impl<T: ArrayValue> From<Vec<T>> for Array<T> {
     fn from(data: Vec<T>) -> Self {
-        Self {
-            shape: vec![data.len()],
-            data,
-        }
+        Self::new(vec![data.len()], data)
     }
 }
 
-impl<T> FromIterator<T> for Array<T> {
+impl<T: ArrayValue> FromIterator<T> for Array<T> {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         Self::from(iter.into_iter().collect::<Vec<T>>())
     }
@@ -244,10 +243,7 @@ impl<T> FromIterator<T> for Array<T> {
 
 impl From<String> for Array<char> {
     fn from(s: String) -> Self {
-        Self {
-            shape: vec![s.len()],
-            data: s.chars().collect(),
-        }
+        Self::new(vec![s.len()], s.chars().collect())
     }
 }
 
@@ -281,13 +277,13 @@ impl<'a, T> Clone for Row<'a, T> {
 
 impl<'a, T> Copy for Row<'a, T> {}
 
-impl<'a, T> AsRef<[T]> for Row<'a, T> {
+impl<'a, T: ArrayValue> AsRef<[T]> for Row<'a, T> {
     fn as_ref(&self) -> &[T] {
         self.array.row(self.row)
     }
 }
 
-impl<'a, T> Deref for Row<'a, T> {
+impl<'a, T: ArrayValue> Deref for Row<'a, T> {
     type Target = [T];
     fn deref(&self) -> &Self::Target {
         self.array.row(self.row)
@@ -338,7 +334,9 @@ impl<'a, T: ArrayValue> Arrayish for Row<'a, T> {
 
 pub trait ArrayValue: Clone + Debug + Display {
     const NAME: &'static str;
+    const DEFAULT_FILL: bool = false;
     fn cmp(&self, other: &Self) -> Ordering;
+    fn fill_value() -> Self;
     fn eq(&self, other: &Self) -> bool {
         self.cmp(other) == Ordering::Equal
     }
@@ -347,9 +345,6 @@ pub trait ArrayValue: Clone + Debug + Display {
     }
     fn format_sep() -> &'static str {
         " "
-    }
-    fn fill_value() -> Option<Self> {
-        None
     }
     fn is_fill_value(&self) -> bool {
         false
@@ -362,17 +357,33 @@ impl ArrayValue for f64 {
         self.partial_cmp(other)
             .unwrap_or_else(|| self.is_nan().cmp(&other.is_nan()))
     }
+    fn fill_value() -> Self {
+        SIGNALING_NAN
+    }
+    fn is_fill_value(&self) -> bool {
+        self.to_bits() == SIGNLING_NAN_BITS
+    }
 }
 
-impl ArrayValue for u8 {
+const SIGNLING_NAN_BITS: u64 = 0x7ff0000000000001;
+const SIGNALING_NAN: f64 = unsafe { transmute(SIGNLING_NAN_BITS) };
+
+impl ArrayValue for u16 {
     const NAME: &'static str = "byte";
     fn cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(self, other)
+    }
+    fn fill_value() -> Self {
+        u16::MAX
+    }
+    fn is_fill_value(&self) -> bool {
+        *self == u16::MAX
     }
 }
 
 impl ArrayValue for char {
     const NAME: &'static str = "character";
+    const DEFAULT_FILL: bool = true;
     fn cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(self, other)
     }
@@ -382,8 +393,8 @@ impl ArrayValue for char {
     fn format_sep() -> &'static str {
         ""
     }
-    fn fill_value() -> Option<Self> {
-        Some('\x00')
+    fn fill_value() -> Self {
+        '\x00'
     }
     fn is_fill_value(&self) -> bool {
         *self == '\x00'
@@ -394,6 +405,12 @@ impl ArrayValue for Rc<Function> {
     const NAME: &'static str = "function";
     fn cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(self, other)
+    }
+    fn fill_value() -> Self {
+        Rc::new(Primitive::Noop.into())
+    }
+    fn is_fill_value(&self) -> bool {
+        self.as_primitive() == Some(Primitive::Noop)
     }
 }
 

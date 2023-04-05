@@ -10,6 +10,7 @@ use crate::{
     array::{Array, ArrayValue},
     function::Function,
     value::Value,
+    Byte,
 };
 
 type Grid<T = char> = Vec<Vec<T>>;
@@ -28,7 +29,7 @@ pub trait GridFmt {
     }
 }
 
-impl GridFmt for u8 {
+impl GridFmt for Byte {
     fn fmt_grid(&self) -> Grid {
         vec![self.to_string().chars().collect()]
     }

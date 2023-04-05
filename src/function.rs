@@ -33,6 +33,15 @@ pub struct Function {
     pub instrs: Vec<Instr>,
 }
 
+impl From<Primitive> for Function {
+    fn from(op: Primitive) -> Self {
+        Self {
+            id: FunctionId::Primitive(op),
+            instrs: vec![Instr::Primitive(op, 0)],
+        }
+    }
+}
+
 impl fmt::Debug for Function {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{self}")

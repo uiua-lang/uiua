@@ -23,6 +23,8 @@ use std::{
 
 pub use {error::*, io::*, run::Uiua};
 
+type Byte = u16;
+
 fn rc_take<T: Clone>(rc: Rc<T>) -> T {
     match Rc::try_unwrap(rc) {
         Ok(x) => x,

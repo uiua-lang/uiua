@@ -312,10 +312,7 @@ impl<T: ArrayValue> Array<T> {
                         new_data.push(f(new_data[start + i].clone(), r));
                     }
                 }
-                Array {
-                    shape,
-                    data: new_data,
-                }
+                Array::new(shape, new_data)
             }
         }
     }

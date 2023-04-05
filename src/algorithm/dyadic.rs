@@ -4,7 +4,7 @@ use std::{
     iter::repeat,
 };
 
-use crate::{array::*, value::Value, Uiua, UiuaResult};
+use crate::{array::*, value::Value, Byte, Uiua, UiuaResult};
 
 impl Value {
     pub fn reshape(&mut self, shape: &Self, env: &Uiua) -> UiuaResult {
@@ -23,7 +23,7 @@ impl Value {
     }
 }
 
-impl<T: Clone> Array<T> {
+impl<T: ArrayValue> Array<T> {
     pub fn reshape(&mut self, shape: Vec<usize>) {
         self.shape = shape;
         let target_len: usize = self.shape.iter().product();
@@ -110,11 +110,12 @@ impl<T: ArrayValue> Array<T> {
                     self.data.extend(other.data);
                     self.shape.insert(0, other.shape[0] + 1);
                     self
-                } else if let Some(fill) = T::fill_value() {
+                } else if self.fill || other.fill {
                     self.truncate();
                     other.truncate();
                     let ash = &self.shape;
                     let bsh = &other.shape;
+                    let fill = T::fill_value();
                     match ash.len() as i8 - bsh.len() as i8 {
                         0 => {
                             let mut new_row_shape = vec![0; ash.len().max(bsh.len()) - 1];
@@ -200,7 +201,7 @@ impl Value {
     }
 }
 
-impl<T: Clone> Array<T> {
+impl<T: ArrayValue> Array<T> {
     pub fn replicate(mut self, amount: &[usize], env: &Uiua) -> UiuaResult<Self> {
         if self.row_count() != amount.len() {
             return Err(env.error(format!(
@@ -244,7 +245,7 @@ impl Value {
     }
 }
 
-impl<T> Array<T> {
+impl<T: ArrayValue> Array<T> {
     pub fn pick(mut self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
         if index.len() > self.rank() {
             return Err(env.error(format!(
@@ -300,7 +301,7 @@ impl Value {
     }
 }
 
-impl<T> Array<T> {
+impl<T: ArrayValue> Array<T> {
     pub fn take(mut self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
         if index.len() > self.rank() {
             return Err(env.error(format!(
@@ -380,7 +381,7 @@ impl Value {
     }
 }
 
-impl<T> Array<T> {
+impl<T: ArrayValue> Array<T> {
     pub fn rotate(&mut self, by: &[isize], env: &Uiua) -> UiuaResult {
         if by.len() > self.rank() {
             return Err(env.error(format!(
@@ -439,7 +440,8 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     pub fn couple(mut self, mut other: Self, env: &Uiua) -> UiuaResult<Self> {
         if self.shape != other.shape {
-            if let Some(fill) = T::fill_value() {
+            if self.fill || other.fill {
+                let fill = T::fill_value();
                 let mut new_shape = vec![0; self.shape.len().max(other.shape.len())];
                 for i in 0..new_shape.len() {
                     new_shape[i] = self.shape.get(i).max(other.shape.get(i)).copied().unwrap();
@@ -451,11 +453,8 @@ impl<T: ArrayValue> Array<T> {
                 other.shape = new_shape;
             } else {
                 return Err(env.error(format!(
-                    "Cannot couple arrays of different shapes {:?} and {:?} \
-                    because {} has no fill value",
-                    self.shape,
-                    other.shape,
-                    T::NAME
+                    "Cannot couple arrays of different shapes {:?} and {:?}",
+                    self.shape, other.shape,
                 )));
             }
         }
@@ -477,7 +476,7 @@ impl Value {
     }
 }
 
-impl<T: Clone> Array<T> {
+impl<T: ArrayValue> Array<T> {
     pub fn select(&self, indices: &[isize], env: &Uiua) -> UiuaResult<Self> {
         let mut selected = Vec::with_capacity(self.row_len() * indices.len());
         let row_len = self.row_len();
@@ -515,7 +514,7 @@ impl Value {
     }
 }
 
-impl<T: Clone> Array<T> {
+impl<T: ArrayValue> Array<T> {
     pub fn windows(&self, size_spec: &[usize], env: &Uiua) -> UiuaResult<Self> {
         if size_spec.len() > self.shape.len() {
             return Err(env.error(format!(
@@ -547,7 +546,7 @@ impl<T: Clone> Array<T> {
     }
 }
 
-fn copy_windows<T: Clone>(mut size: Vec<usize>, shape: &[usize], src: &[T]) -> Vec<T> {
+fn copy_windows<T: ArrayValue>(mut size: Vec<usize>, shape: &[usize], src: &[T]) -> Vec<T> {
     let mut dst = Vec::new();
     let mut corner = vec![0; shape.len()];
     let mut curr = vec![0; shape.len()];
@@ -616,7 +615,7 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn member(&self, of: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
+    pub fn member(&self, of: &Self, env: &Uiua) -> UiuaResult<Array<Byte>> {
         let shape = cmp::max_by_key(self.shape(), of.shape(), |s| s.len());
         let mut result = Vec::with_capacity(shape.iter().product());
         member(self, of, &mut result, env)?;
@@ -627,7 +626,7 @@ impl<T: ArrayValue> Array<T> {
 fn member<A: Arrayish>(
     elems: &A,
     of: &impl Arrayish<Value = A::Value>,
-    result: &mut Vec<u8>,
+    result: &mut Vec<Byte>,
     env: &Uiua,
 ) -> UiuaResult {
     match elems.rank().cmp(&of.rank()) {
@@ -641,7 +640,7 @@ fn member<A: Arrayish>(
             }
             for (elem, of) in elems.rows().zip(of.rows()) {
                 let is_member = elem.iter().zip(of.iter()).all(|(a, b)| a.eq(b));
-                result.push(is_member as u8);
+                result.push(is_member as Byte);
             }
         }
         Ordering::Greater => {

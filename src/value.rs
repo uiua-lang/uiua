@@ -2,20 +2,20 @@ use std::{cmp::Ordering, fmt, rc::Rc};
 
 use crate::{
     algorithm::pervade::*, array::*, function::Function, grid_fmt::GridFmt, primitive::Primitive,
-    Uiua, UiuaResult,
+    Byte, Uiua, UiuaResult,
 };
 
 #[derive(Clone)]
 pub enum Value {
     Num(Array<f64>),
-    Byte(Array<u8>),
+    Byte(Array<Byte>),
     Char(Array<char>),
     Func(Array<Rc<Function>>),
 }
 
 impl Default for Value {
     fn default() -> Self {
-        Array::<u8>::default().into()
+        Array::<Byte>::default().into()
     }
 }
 
@@ -127,7 +127,7 @@ impl Value {
     pub fn generic_ref<'a, T: 'a>(
         &'a self,
         n: impl FnOnce(&'a Array<f64>) -> T,
-        b: impl FnOnce(&'a Array<u8>) -> T,
+        b: impl FnOnce(&'a Array<Byte>) -> T,
         c: impl FnOnce(&'a Array<char>) -> T,
         f: impl FnOnce(&'a Array<Rc<Function>>) -> T,
     ) -> T {
@@ -141,7 +141,7 @@ impl Value {
     pub fn generic_mut<'a, T: 'a>(
         &'a mut self,
         n: impl FnOnce(&'a mut Array<f64>) -> T,
-        b: impl FnOnce(&'a mut Array<u8>) -> T,
+        b: impl FnOnce(&'a mut Array<Byte>) -> T,
         c: impl FnOnce(&'a mut Array<char>) -> T,
         f: impl FnOnce(&'a mut Array<Rc<Function>>) -> T,
     ) -> T {
@@ -298,13 +298,13 @@ impl Value {
                 if a.rank() != 1 {
                     return Err(env.error(format!("{requirement}, but its rank is {}", a.rank())));
                 }
-                a.data
+                a.data.into_iter().map(|b| b as u8).collect()
             }
             Value::Num(a) => {
                 if a.rank() != 1 {
                     return Err(env.error(format!("{requirement}, but its rank is {}", a.rank())));
                 }
-                a.data.iter().map(|&f| f as u8).collect()
+                a.data.into_iter().map(|f| f as u8).collect()
             }
             Value::Char(a) => {
                 if a.rank() != 1 {
@@ -353,7 +353,7 @@ macro_rules! value_from {
 }
 
 value_from!(f64, Num);
-value_from!(u8, Byte);
+value_from!(Byte, Byte);
 value_from!(char, Char);
 value_from!(Rc<Function>, Func);
 
@@ -365,7 +365,7 @@ impl FromIterator<usize> for Value {
 
 impl From<bool> for Value {
     fn from(b: bool) -> Self {
-        Value::from(b as u8)
+        Value::from(b as Byte)
     }
 }
 

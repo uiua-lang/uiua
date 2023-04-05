@@ -326,10 +326,14 @@ impl Parser {
         let body = self.try_words().unwrap_or_default();
         let end = self.expect_close(CloseParen);
         let span = start.merge(end);
-        Some(span.clone().sp(Word::Func(Func {
-            id: FunctionId::Anonymous(span),
-            body,
-        })))
+        Some(span.clone().sp(if body.is_empty() {
+            Word::Primitive(Primitive::Noop)
+        } else {
+            Word::Func(Func {
+                id: FunctionId::Anonymous(span),
+                body,
+            })
+        }))
     }
     fn try_dfn(&mut self) -> Option<Sp<Word>> {
         let Some(start) = self.try_exact(OpenCurly) else {

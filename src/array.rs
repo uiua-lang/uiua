@@ -28,14 +28,15 @@ impl<T: ArrayValue> fmt::Display for Array<T> {
         match self.rank() {
             0 => write!(f, "{}", self.data[0]),
             1 => {
-                write!(f, "[")?;
+                let (start, end) = T::format_delims();
+                write!(f, "{}", start)?;
                 for (i, x) in self.data.iter().enumerate() {
                     if i > 0 {
-                        write!(f, " ")?;
+                        write!(f, "{}", T::format_sep())?;
                     }
                     write!(f, "{}", x)?;
                 }
-                write!(f, "]")
+                write!(f, "{}", end)
             }
             _ => {
                 write!(f, "[")?;
@@ -291,6 +292,12 @@ pub trait ArrayValue: Clone + Debug + Display {
     fn eq(&self, other: &Self) -> bool {
         self.cmp(other) == Ordering::Equal
     }
+    fn format_delims() -> (&'static str, &'static str) {
+        ("[", "]")
+    }
+    fn format_sep() -> &'static str {
+        " "
+    }
 }
 
 impl ArrayValue for f64 {
@@ -312,6 +319,12 @@ impl ArrayValue for char {
     const NAME: &'static str = "character";
     fn cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(self, other)
+    }
+    fn format_delims() -> (&'static str, &'static str) {
+        ("", "")
+    }
+    fn format_sep() -> &'static str {
+        ""
     }
 }
 

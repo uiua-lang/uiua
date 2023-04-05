@@ -16,6 +16,13 @@ impl Value {
             Array::deshape,
         )
     }
+    pub fn parse_num(&self, env: &Uiua) -> UiuaResult<Self> {
+        Ok(self
+            .as_string(env, "Parsed array must be a string")?
+            .parse::<f64>()
+            .map_err(|e| env.error(format!("Cannot parse into number: {}", e)))?
+            .into())
+    }
 }
 
 impl<T> Array<T> {
@@ -100,7 +107,7 @@ impl<T> Array<T> {
 }
 
 impl Value {
-    pub fn reverve(&mut self) {
+    pub fn reverse(&mut self) {
         self.generic_mut(
             Array::reverse,
             Array::reverse,

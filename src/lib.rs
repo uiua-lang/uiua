@@ -23,6 +23,13 @@ use std::{
 
 pub use {error::*, io::*, run::Uiua};
 
+fn rc_cloned<T: Clone>(rc: Rc<T>) -> T {
+    match Rc::try_unwrap(rc) {
+        Ok(x) => x,
+        Err(rc) => (*rc).clone(),
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Ident(Rc<str>);
 

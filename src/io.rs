@@ -7,7 +7,7 @@ use std::{
 use image::{DynamicImage, ImageOutputFormat};
 use rand::prelude::*;
 
-use crate::{array::Array, grid_fmt::GridFmt, value::Value, Uiua, UiuaResult};
+use crate::{array::Array, grid_fmt::GridFmt, rc_cloned, value::Value, Uiua, UiuaResult};
 
 macro_rules! io_op {
     ($((
@@ -177,10 +177,10 @@ impl IoOp {
                 env.push(line);
             }
             IoOp::Args => {
-                let args = env.io.args();
-                env.push(Array::from_iter(
-                    args.into_iter().map(Array::from).map(Value::from),
-                ))
+                // let args = env.io.args();
+                // env.push(Array::from_iter(
+                //     args.into_iter().map(Array::from).map(Value::from),
+                // ))
             }
             IoOp::Var => {
                 let key = env
@@ -202,50 +202,33 @@ impl IoOp {
             }
             IoOp::FWriteStr => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let contents = env.pop(2)?;
-                if !contents.is_array() || !contents.array().is_chars() {
-                    return Err(env.error("Contents must be a string"));
-                }
+                let contents = env.pop(2)?.as_string(env, "Contents must be a string")?;
                 env.io
-                    .write_file(&path, contents.to_string().into_bytes())
+                    .write_file(&path, contents.into_bytes())
                     .map_err(|e| env.error(e))?;
             }
             IoOp::FReadBytes => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let contents = env.io.read_file(&path).map_err(|e| env.error(e))?;
-                let arr = Array::from(contents);
+                let arr = Array::<u8>::from(contents);
                 env.push(arr);
             }
             IoOp::FWriteBytes => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let contents = env.pop(2)?;
-                if !contents.is_array() {
-                    return Err(env.error("Contents must be an array"));
-                }
-                let contents = contents.into_array();
-                let contents = if contents.is_numbers() {
-                    contents
-                        .into_numbers()
-                        .into_iter()
-                        .map(|n| n as u8)
-                        .collect()
-                } else if contents.is_bytes() {
-                    contents.into_bytes()
-                } else {
-                    return Err(env.error("Contents must be a numeric array"));
-                };
+                let contents =
+                    rc_cloned(env.pop(2)?).into_bytes(env, "Contents must be a byte array")?;
                 env.io
                     .write_file(&path, contents)
                     .map_err(|e| env.error(e))?;
             }
             IoOp::FLines => {
-                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let contents =
-                    String::from_utf8(env.io.read_file(&path).map_err(|e| env.error(e))?)
-                        .map_err(|e| env.error(format!("Failed to read file: {}", e)))?;
-                let lines_array =
-                    Array::from_iter(contents.lines().map(Array::from).map(Value::from));
-                env.push(lines_array);
+                // let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                // let contents =
+                //     String::from_utf8(env.io.read_file(&path).map_err(|e| env.error(e))?)
+                //         .map_err(|e| env.error(format!("Failed to read file: {}", e)))?;
+                // let lines_array =
+                //     Array::from_iter(contents.lines().map(Array::from).map(Value::from));
+                // env.push(lines_array);
             }
             IoOp::FExists => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
@@ -253,11 +236,11 @@ impl IoOp {
                 env.push(exists);
             }
             IoOp::FListDir => {
-                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let paths = env.io.list_dir(&path).map_err(|e| env.error(e))?;
-                let paths_array =
-                    Array::from_iter(paths.into_iter().map(Array::from).map(Value::from));
-                env.push(paths_array);
+                // let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                // let paths = env.io.list_dir(&path).map_err(|e| env.error(e))?;
+                // let paths_array =
+                //     Array::from_iter(paths.into_iter().map(Array::from).map(Value::from));
+                // env.push(paths_array);
             }
             IoOp::FIsFile => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
@@ -284,7 +267,7 @@ impl IoOp {
                     .map_err(|e| env.error(format!("Failed to read image: {}", e)))?
                     .into_rgba8();
                 let shape = vec![image.height() as usize, image.width() as usize, 4];
-                let array = Array::from((shape, image.into_raw()));
+                let array = Array::<u8>::from((shape, image.into_raw()));
                 env.push(array);
             }
             IoOp::ImWrite => {
@@ -324,22 +307,20 @@ pub fn value_to_image_bytes(value: &Value, format: ImageOutputFormat) -> Result<
 }
 
 pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
-    if !value.is_array() || ![2, 3].contains(&value.array().rank()) {
+    if ![2, 3].contains(&value.rank()) {
         return Err("Image must be a rank 2 or 3 numeric array".into());
     }
-    let arr = value.array();
-    let bytes = if arr.is_numbers() {
-        arr.numbers()
+    let bytes = match value {
+        Value::Num(nums) => nums
+            .data
             .iter()
             .map(|f| (*f * 255.0).floor() as u8)
-            .collect()
-    } else if arr.is_bytes() {
-        arr.bytes().iter().map(|&b| b.min(1) * 255).collect()
-    } else {
-        return Err("Image must be a rank 2 or 3 numeric array".into());
+            .collect(),
+        Value::Byte(bytes) => bytes.data.iter().map(|&b| b.min(1) * 255).collect(),
+        _ => return Err("Image must be a numeric array".into()),
     };
     #[allow(clippy::match_ref_pats)]
-    let [height, width, px_size] = match arr.shape() {
+    let [height, width, px_size] = match value.shape() {
         &[a, b] => [a, b, 1],
         &[a, b, c] => [a, b, c],
         _ => unreachable!("Shape checked above"),

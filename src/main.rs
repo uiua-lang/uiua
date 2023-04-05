@@ -3,6 +3,7 @@ use std::{
     io::{self, stderr, Write},
     path::{Path, PathBuf},
     process::exit,
+    rc::Rc,
     sync::mpsc::channel,
     thread::sleep,
     time::Duration,
@@ -115,7 +116,7 @@ fn watch() -> io::Result<()> {
     }
 }
 
-fn run_file(path: &Path) -> UiuaResult<Vec<Value>> {
+fn run_file(path: &Path) -> UiuaResult<Vec<Rc<Value>>> {
     Ok(Uiua::default().load_file(path)?.take_stack())
 }
 

@@ -28,8 +28,8 @@ pub fn bin_pervade<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
 pub fn bin_pervade_fallible<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
     a: &Array<A>,
     b: &Array<B>,
-    env: &Uiua,
-    f: impl Fn(A, B, &Uiua) -> UiuaResult<C> + Copy,
+    env: &mut Uiua,
+    f: impl Fn(A, B, &mut Uiua) -> UiuaResult<C> + Copy,
 ) -> UiuaResult<Array<C>> {
     if !a.shape_prefixes_match(&b) {
         return Err(env.error(format!(
@@ -79,8 +79,8 @@ fn bin_pervade_recursive_fallible<A: Arrayish, B: Arrayish, C: ArrayValue>(
     a: A,
     b: B,
     c: &mut Vec<C>,
-    env: &Uiua,
-    f: impl Fn(A::Value, B::Value, &Uiua) -> UiuaResult<C> + Copy,
+    env: &mut Uiua,
+    f: impl Fn(A::Value, B::Value, &mut Uiua) -> UiuaResult<C> + Copy,
 ) -> UiuaResult {
     match (a.shape(), b.shape()) {
         ([], []) => c.push(f(a.data()[0].clone(), b.data()[0].clone(), env)?),

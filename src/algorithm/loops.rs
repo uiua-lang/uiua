@@ -1,4 +1,216 @@
-use crate::array::{Array, ArrayValue};
+use crate::{
+    array::{Array, ArrayValue},
+    Uiua, UiuaResult,
+};
+
+pub fn reduce(env: &mut Uiua) -> UiuaResult {
+    Ok(())
+}
+
+pub fn fold(env: &mut Uiua) -> UiuaResult {
+    Ok(())
+}
+
+pub fn scan(env: &mut Uiua) -> UiuaResult {
+    Ok(())
+}
+
+pub fn each(env: &mut Uiua) -> UiuaResult {
+    // let f = env.pop(1)?;
+    // let xs = env.pop(2)?;
+    // const BREAK_ERROR: &str = "break is not allowed in each";
+    // if !xs.is_array() {
+    //     env.push(xs);
+    //     env.push(f);
+    //     return env.call_error_on_break(BREAK_ERROR);
+    // }
+    // let (shape, values) = xs.into_array().into_shape_flat_values();
+    // let mut new_values = Vec::with_capacity(values.len());
+    // for val in values {
+    //     env.push(val);
+    //     env.push(f.clone());
+    //     env.call_error_on_break(BREAK_ERROR)?;
+    //     new_values.push(env.pop("each's function result")?);
+    // }
+    // env.push(Array::from((shape, new_values)).normalized_type());
+    Ok(())
+}
+
+pub fn zip(env: &mut Uiua) -> UiuaResult {
+    Ok(())
+}
+
+pub fn rows(env: &mut Uiua) -> UiuaResult {
+    // let f = env.pop(1)?;
+    // let xs = env.pop(2)?;
+    // const BREAK_ERROR: &str = "break is not allowed in rows";
+    // if !xs.is_array() {
+    //     env.push(xs);
+    //     env.push(f);
+    //     return env.call_error_on_break(BREAK_ERROR);
+    // }
+    // let array = xs.into_array();
+    // let mut new_rows: Vec<Value> = Vec::with_capacity(array.len());
+    // for row in array.into_values() {
+    //     env.push(row);
+    //     env.push(f.clone());
+    //     env.call_error_on_break(BREAK_ERROR)?;
+    //     new_rows.push(env.pop("rows' function result")?);
+    // }
+    // let mut array = Array::from(new_rows);
+    // if let Some((a, b)) = array.normalize() {
+    //     return Err(env.error(format!(
+    //         "Rows in resulting array have different shapes {a:?} and {b:?}"
+    //     )));
+    // }
+    // env.push(array);
+    Ok(())
+}
+
+pub fn bridge(env: &mut Uiua) -> UiuaResult {
+    // let f = env.pop(1)?;
+    // let xs = env.pop(2)?;
+    // let ys = env.pop(3)?;
+    // const BREAK_ERROR: &str = "break is not allowed in bridge";
+    // match (xs.is_array(), ys.is_array()) {
+    //     (false, false) => {
+    //         env.push(ys);
+    //         env.push(xs);
+    //         env.push(f);
+    //         env.call_error_on_break(BREAK_ERROR)?;
+    //     }
+    //     (true, true) => {
+    //         let x_rows = xs.into_array().into_values();
+    //         let y_rows = ys.into_array().into_values();
+    //         if x_rows.len() != y_rows.len() {
+    //             return Err(env.error(format!(
+    //                 "Cannot bridge arrays with different number of rows {:?} and {:?}",
+    //                 x_rows.len(),
+    //                 y_rows.len()
+    //             )));
+    //         }
+    //         let mut new_rows = Vec::with_capacity(x_rows.len());
+    //         for (x, y) in x_rows.into_iter().zip(y_rows) {
+    //             env.push(y);
+    //             env.push(x);
+    //             env.push(f.clone());
+    //             env.call_error_on_break(BREAK_ERROR)?;
+    //             new_rows.push(env.pop("bridge's function result")?);
+    //         }
+    //         let mut array = Array::from(new_rows);
+    //         if let Some((a, b)) = array.normalize() {
+    //             return Err(env.error(format!(
+    //                 "Rows in resulting array have different shapes {a:?} and {b:?}"
+    //             )));
+    //         }
+    //         env.push(array);
+    //     }
+    //     (true, false) => {
+    //         let x_rows = xs.into_array().into_values();
+    //         let mut new_rows = Vec::with_capacity(x_rows.len());
+    //         for x in x_rows {
+    //             env.push(ys.clone());
+    //             env.push(x);
+    //             env.push(f.clone());
+    //             env.call_error_on_break(BREAK_ERROR)?;
+    //             new_rows.push(env.pop("bridge's function result")?);
+    //         }
+    //         let mut array = Array::from(new_rows);
+    //         if let Some((a, b)) = array.normalize() {
+    //             return Err(env.error(format!(
+    //                 "Rows in resulting array have different shapes {a:?} and {b:?}"
+    //             )));
+    //         }
+    //         env.push(array);
+    //     }
+    //     (false, true) => {
+    //         let y_rows = ys.into_array().into_values();
+    //         let mut new_rows = Vec::with_capacity(y_rows.len());
+    //         for y in y_rows {
+    //             env.push(y);
+    //             env.push(xs.clone());
+    //             env.push(f.clone());
+    //             env.call_error_on_break(BREAK_ERROR)?;
+    //             new_rows.push(env.pop("bridge's function result")?);
+    //         }
+    //         let mut array = Array::from(new_rows);
+    //         if let Some((a, b)) = array.normalize() {
+    //             return Err(env.error(format!(
+    //                 "Rows in resulting array have different shapes {a:?} and {b:?}"
+    //             )));
+    //         }
+    //         env.push(array);
+    //     }
+    // }
+    Ok(())
+}
+
+pub fn table(env: &mut Uiua) -> UiuaResult {
+    // let f = env.pop(1)?;
+    // let xs = env.pop(2)?;
+    // let ys = env.pop(3)?;
+    // const BREAK_ERROR: &str = "break is not allowed in table";
+    // if !xs.is_array() && !ys.is_array() {
+    //     env.push(ys);
+    //     env.push(xs);
+    //     env.push(f);
+    //     return env.call_error_on_break(BREAK_ERROR);
+    // }
+    // let a = if xs.is_array() {
+    //     xs.into_array()
+    // } else {
+    //     Array::from(xs)
+    // };
+    // let b = if ys.is_array() {
+    //     ys.into_array()
+    // } else {
+    //     Array::from(ys)
+    // };
+    // let mut new_shape = a.shape().to_vec();
+    // new_shape.extend_from_slice(b.shape());
+    // let mut items = Vec::with_capacity(a.len() * b.len());
+    // for a in a.into_flat_values() {
+    //     for b in b.clone().into_flat_values() {
+    //         env.push(b);
+    //         env.push(a.clone());
+    //         env.push(f.clone());
+    //         env.call_error_on_break(BREAK_ERROR)?;
+    //         items.push(env.pop("tabled function result")?);
+    //     }
+    // }
+    // env.push(Array::from((new_shape, items)).normalized_type());
+    Ok(())
+}
+
+pub fn repeat(env: &mut Uiua) -> UiuaResult {
+    // let f = env.pop(1)?;
+    // let mut acc = env.pop(2)?;
+    // let n = env.pop(3)?;
+    // if n.is_number() && n.number() == INFINITY {
+    //     loop {
+    //         env.push(acc);
+    //         env.push(f.clone());
+    //         if env.call_catch_break()? {
+    //             break;
+    //         }
+    //         acc = env.pop("repeated function result")?;
+    //     }
+    // } else {
+    //     let Some(n) = n.as_nat() else {
+    //                     return Err(env.error("Repetitions must be a natural number or infinity"));
+    //                 };
+    //     for _ in 0..n {
+    //         env.push(acc);
+    //         env.push(f.clone());
+    //         if env.call_catch_break()? {
+    //             return Ok(());
+    //         }
+    //         acc = env.pop("repeated function result")?;
+    //     }
+    //     env.push(acc);
+    // }
+    Ok(())
+}
 
 impl<T: ArrayValue> Array<T> {
     pub fn reduce(mut self, identity: T, f: impl Fn(T, T) -> T) -> Self {

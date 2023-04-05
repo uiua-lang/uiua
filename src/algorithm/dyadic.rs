@@ -6,6 +6,39 @@ use std::{
 use crate::{array::*, value::Value, Uiua, UiuaResult};
 
 impl Value {
+    pub fn reshape(&mut self, shape: &Self, env: &Uiua) -> UiuaResult {
+        let target_shape = shape.as_naturals(
+            env,
+            "Shape should be a single natural number \
+            or a list of natural numbers",
+        )?;
+        match self {
+            Value::Num(a) => a.reshape(target_shape),
+            Value::Byte(a) => a.reshape(target_shape),
+            Value::Char(a) => a.reshape(target_shape),
+            Value::Func(a) => a.reshape(target_shape),
+        }
+        Ok(())
+    }
+}
+
+impl<T: Clone> Array<T> {
+    pub fn reshape(&mut self, shape: Vec<usize>) {
+        self.shape = shape;
+        let target_len: usize = self.shape.iter().product();
+        if self.data.len() < target_len {
+            self.data.reserve(target_len - self.data.len());
+            let start = self.data.len();
+            for i in 0..target_len - start {
+                self.data.push(self.data[i % start].clone());
+            }
+        } else {
+            self.data.truncate(target_len);
+        }
+    }
+}
+
+impl Value {
     pub fn join(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
         Ok(match (self, other) {
             (Value::Num(a), Value::Num(b)) => Value::Num(a.join(b, env)?),
@@ -253,7 +286,7 @@ impl<T> Array<T> {
 }
 
 impl Value {
-    pub fn rotate(self, mut rotated: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn rotate(&self, mut rotated: Self, env: &Uiua) -> UiuaResult<Self> {
         let by = self.as_indices(env, "Rotation amount must be a list of integers")?;
         match &mut rotated {
             Value::Num(a) => a.rotate(&by, env)?,
@@ -528,6 +561,21 @@ fn member<A: Arrayish>(
         }
     }
     Ok(())
+}
+
+impl Value {
+    pub fn index_of(&self, of: &Self, env: &Uiua) -> UiuaResult<Self> {
+        Ok(match (self, of) {
+            (Value::Num(a), Value::Num(b)) => a.index_of(b, env)?.into(),
+            (a, b) => {
+                return Err(env.error(format!(
+                    "Cannot look for indices of {} in {}",
+                    a.type_name(),
+                    b.type_name(),
+                )))
+            }
+        })
+    }
 }
 
 impl<T: ArrayValue> Array<T> {

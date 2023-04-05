@@ -6,7 +6,7 @@ use crate::{lex::Span, primitive::Primitive, value::Value, Ident};
 pub enum Instr {
     Push(Rc<Value>),
     BeginArray,
-    EndArray(bool, usize),
+    EndArray(usize),
     Primitive(Primitive, usize),
     Call(usize),
     CallDfn(usize, usize),
@@ -18,7 +18,7 @@ impl fmt::Display for Instr {
         match self {
             Instr::Push(val) => write!(f, "{val}"),
             Instr::BeginArray => write!(f, "]"),
-            Instr::EndArray(..) => write!(f, "["),
+            Instr::EndArray(_) => write!(f, "["),
             Instr::Primitive(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => write!(f, ":"),
             Instr::CallDfn(n, _) => write!(f, "dfn{n}"),

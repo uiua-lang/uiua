@@ -108,7 +108,7 @@ impl<T: ArrayValue> Array<T> {
             && self
                 .data
                 .iter()
-                .zip(other.data)
+                .zip(&other.data)
                 .all(|(a, b)| T::eq(a, &b.clone().into()))
     }
     pub fn cmp<U: Into<T> + Clone>(&self, other: &Array<U>) -> Ordering {

@@ -64,8 +64,7 @@ impl<T: ArrayValue> Array<T> {
         Self {
             shape,
             data,
-            // fill: T::DEFAULT_FILL,
-            fill: true,
+            fill: T::DEFAULT_FILL,
         }
     }
     pub fn unit(data: T) -> Self {

@@ -171,7 +171,7 @@ impl<'io> Uiua<'io> {
         }
         Ok(())
     }
-    fn push_span(&mut self, span: Span) -> usize {
+    fn add_span(&mut self, span: Span) -> usize {
         let idx = self.spans.len();
         self.spans.push(span);
         idx
@@ -244,13 +244,13 @@ impl<'io> Uiua<'io> {
             Word::Strand(items) => {
                 self.push_instr(Instr::BeginArray);
                 self.words(items, false)?;
-                let span = self.push_span(word.span);
+                let span = self.add_span(word.span);
                 self.push_instr(Instr::EndArray(span));
             }
             Word::Array(items) => {
                 self.push_instr(Instr::BeginArray);
                 self.words(items, true)?;
-                let span = self.push_span(word.span);
+                let span = self.add_span(word.span);
                 self.push_instr(Instr::EndArray(span));
             }
             Word::Func(func) => self.func(func, word.span)?,
@@ -271,7 +271,7 @@ impl<'io> Uiua<'io> {
             let is_function = matches!(&*value, Value::Func(_));
             self.push_instr(Instr::Push(value));
             if is_function && call {
-                let span = self.push_span(span);
+                let span = self.add_span(span);
                 self.push_instr(Instr::Call(span));
             }
         } else if let Some(prim) = Primitive::from_name(ident.as_str()) {
@@ -316,7 +316,7 @@ impl<'io> Uiua<'io> {
             instrs,
         };
         self.push_instr(Instr::Push(Rc::new(func.into())));
-        let span = self.push_span(span);
+        let span = self.add_span(span);
         let dfn_size = refs.into_iter().max().unwrap_or(0) + 1;
         self.push_instr(Instr::CallDfn(dfn_size as usize, span));
         Ok(())
@@ -336,13 +336,13 @@ impl<'io> Uiua<'io> {
         };
         self.push_instr(Instr::Push(Rc::new(func.into())));
         if call {
-            let span = self.push_span(modified.modifier.span);
+            let span = self.add_span(modified.modifier.span);
             self.push_instr(Instr::Call(span));
         }
         Ok(())
     }
     fn primitive(&mut self, prim: Primitive, span: Span, call: bool) {
-        let span = self.push_span(span);
+        let span = self.add_span(span);
         if call {
             self.push_instr(Instr::Primitive(prim, span));
         } else {
@@ -393,14 +393,16 @@ impl<'io> Uiua<'io> {
                             .into());
                     }
                     let values: Vec<_> = self.stack.drain(start..).map(rc_take).rev().collect();
+                    self.push_span(span);
                     let val = Value::from_row_values(values, self)?;
+                    self.pop_span();
                     self.stack.push(val.into());
                     Ok(())
                 })(),
                 &Instr::Primitive(prim, span) => (|| {
-                    self.call_stack.last_mut().unwrap().spans.push(span);
+                    self.push_span(span);
                     prim.run(self)?;
-                    self.call_stack.last_mut().unwrap().spans.pop();
+                    self.pop_span();
                     Ok(())
                 })(),
                 &Instr::Call(span) => self.call_with_span(span),
@@ -431,6 +433,12 @@ impl<'io> Uiua<'io> {
             res?;
         }
         Ok(())
+    }
+    fn push_span(&mut self, span: usize) {
+        self.call_stack.last_mut().unwrap().spans.push(span);
+    }
+    fn pop_span(&mut self) {
+        self.call_stack.last_mut().unwrap().spans.pop();
     }
     fn call_with_span(&mut self, call_span: usize) -> UiuaResult {
         let value = self.pop("called function")?;

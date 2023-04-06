@@ -44,7 +44,7 @@ impl GridFmt for f64 {
         if self.is_fill_value() {
             vec![vec!['_']]
         } else {
-            let positive = self.abs();
+            let positive = (self.abs() * 1e12).round() / 1e12;
             let minus = if *self < -0.0 { "¯" } else { "" };
             let s = if positive == PI {
                 format!("{minus}π")

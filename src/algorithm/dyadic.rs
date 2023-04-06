@@ -207,7 +207,7 @@ impl<T: ArrayValue> Array<T> {
                     }
                 } else {
                     return Err(env.error(format!(
-                        "Cannot join arrays {} with shapes {ash:?} and {bsh:?}",
+                        "Cannot join {} arrays with shapes {ash:?} and {bsh:?}",
                         T::NAME
                     )));
                 }

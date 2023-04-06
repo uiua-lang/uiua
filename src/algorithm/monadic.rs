@@ -95,7 +95,7 @@ impl<T: ArrayValue> Array<T> {
         if self.rank() == 0 {
             return Err(env.error("Cannot take first of a scalar"));
         }
-        let row_len = self.shape[0];
+        let row_len = self.row_len();
         self.shape.remove(0);
         self.data.truncate(row_len);
         Ok(self)
@@ -104,7 +104,7 @@ impl<T: ArrayValue> Array<T> {
         if self.rank() == 0 {
             return Err(env.error("Cannot take last of a scalar"));
         }
-        let row_len = self.shape[0];
+        let row_len = self.row_len();
         self.shape.remove(0);
         let prefix_len = self.data.len() - row_len;
         self.data.drain(0..prefix_len);

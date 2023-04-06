@@ -1,4 +1,3 @@
-- Context-free identifiers
 - Better solution to string formatting
 - Recursion?
 - Threads

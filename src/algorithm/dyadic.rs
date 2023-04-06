@@ -568,60 +568,64 @@ impl<T: ArrayValue> Array<T> {
         if true_size.len() < self.shape.len() {
             true_size.extend(&self.shape[true_size.len()..]);
         }
-        Ok(Array::new(
-            new_shape,
-            copy_windows(true_size, &self.shape, &self.data),
-        ))
+        let mut dst = Vec::new();
+        let mut corner = vec![0; self.shape.len()];
+        let mut curr = vec![0; self.shape.len()];
+        for (i, dim) in self.shape.iter().enumerate() {
+            if true_size.len() <= i {
+                true_size.push(*dim);
+            }
+        }
+        'windows: loop {
+            // Reset curr
+            for i in curr.iter_mut() {
+                *i = 0;
+            }
+            // Copy the window at the current corner
+            'items: loop {
+                // Copy the current item
+                let mut src_index = 0;
+                let mut stride = 1;
+                for ((c, i), s) in corner.iter().zip(&*curr).zip(&self.shape).rev() {
+                    src_index += (*c + *i) * stride;
+                    stride *= s;
+                }
+                dst.push(self.data[src_index].clone());
+                // Go to the next item
+                for i in (0..curr.len()).rev() {
+                    if curr[i] == true_size[i] - 1 {
+                        curr[i] = 0;
+                    } else {
+                        curr[i] += 1;
+                        continue 'items;
+                    }
+                }
+                break;
+            }
+            // Go to the next corner
+            for i in (0..corner.len()).rev() {
+                if corner[i] == self.shape[i] - true_size[i] {
+                    corner[i] = 0;
+                } else {
+                    corner[i] += 1;
+                    continue 'windows;
+                }
+            }
+            break Ok(Array::new(new_shape, dst));
+        }
     }
 }
 
-fn copy_windows<T: ArrayValue>(mut size: Vec<usize>, shape: &[usize], src: &[T]) -> Vec<T> {
-    let mut dst = Vec::new();
-    let mut corner = vec![0; shape.len()];
-    let mut curr = vec![0; shape.len()];
-    for (i, dim) in shape.iter().enumerate() {
-        if size.len() <= i {
-            size.push(*dim);
-        }
-    }
-    'windows: loop {
-        // Reset curr
-        for i in curr.iter_mut() {
-            *i = 0;
-        }
-        // Copy the window at the current corner
-        'items: loop {
-            // Copy the current item
-            let mut src_index = 0;
-            let mut stride = 1;
-            for ((c, i), s) in corner.iter().zip(&*curr).zip(shape).rev() {
-                src_index += (*c + *i) * stride;
-                stride *= s;
-            }
-            dst.push(src[src_index].clone());
-            // Go to the next item
-            for i in (0..curr.len()).rev() {
-                if curr[i] == size[i] - 1 {
-                    curr[i] = 0;
-                } else {
-                    curr[i] += 1;
-                    continue 'items;
-                }
-            }
-            break;
-        }
-        // Go to the next corner
-        for i in (0..corner.len()).rev() {
-            if corner[i] == shape[i] - size[i] {
-                corner[i] = 0;
-            } else {
-                corner[i] += 1;
-                continue 'windows;
-            }
-        }
-        return dst;
-    }
-}
+// impl<T: ArrayValue> Array<T> {
+//     pub fn find_in(&self, searched: &Self) -> Vec<Byte> {
+//         let mut searched_for_shape = self.shape.clone();
+//         for (i, dim) in searched.shape.iter().enumerate() {
+//             if searched_for_shape.len() < i {
+//                 searched_for_shape.push(*dim);
+//             }
+//         }
+//     }
+// }
 
 impl Value {
     pub fn member(&self, of: &Self, env: &Uiua) -> UiuaResult<Self> {

@@ -559,23 +559,21 @@ impl<T: ArrayValue> Array<T> {
                 )));
             }
         }
+        // Determine the shape of the windows array
         let mut new_shape = Vec::with_capacity(self.shape.len() + size_spec.len());
         new_shape.extend(self.shape.iter().zip(size_spec).map(|(a, b)| a - b + 1));
         new_shape.extend(size_spec);
         new_shape.extend(&self.shape[size_spec.len()..]);
-        let mut true_size = Vec::with_capacity(self.shape.len());
+        // Make a new window shape with the same rank as the windowed array
+        let mut true_size: Vec<usize> = Vec::with_capacity(self.shape.len());
         true_size.extend(size_spec);
         if true_size.len() < self.shape.len() {
             true_size.extend(&self.shape[true_size.len()..]);
         }
+
         let mut dst = Vec::new();
         let mut corner = vec![0; self.shape.len()];
         let mut curr = vec![0; self.shape.len()];
-        for (i, dim) in self.shape.iter().enumerate() {
-            if true_size.len() <= i {
-                true_size.push(*dim);
-            }
-        }
         'windows: loop {
             // Reset curr
             for i in curr.iter_mut() {
@@ -586,7 +584,7 @@ impl<T: ArrayValue> Array<T> {
                 // Copy the current item
                 let mut src_index = 0;
                 let mut stride = 1;
-                for ((c, i), s) in corner.iter().zip(&*curr).zip(&self.shape).rev() {
+                for ((c, i), s) in corner.iter().zip(&curr).zip(&self.shape).rev() {
                     src_index += (*c + *i) * stride;
                     stride *= s;
                 }
@@ -616,16 +614,109 @@ impl<T: ArrayValue> Array<T> {
     }
 }
 
-// impl<T: ArrayValue> Array<T> {
-//     pub fn find_in(&self, searched: &Self) -> Vec<Byte> {
-//         let mut searched_for_shape = self.shape.clone();
-//         for (i, dim) in searched.shape.iter().enumerate() {
-//             if searched_for_shape.len() < i {
-//                 searched_for_shape.push(*dim);
-//             }
-//         }
-//     }
-// }
+impl Value {
+    pub fn find(&self, searched: &Self, env: &Uiua) -> UiuaResult<Self> {
+        Ok(match (self, searched) {
+            (Value::Num(a), Value::Num(b)) => a.find(b, env)?.into(),
+            (Value::Byte(a), Value::Byte(b)) => a.find(b, env)?.into(),
+            (Value::Char(a), Value::Char(b)) => a.find(b, env)?.into(),
+            (Value::Func(a), Value::Func(b)) => a.find(b, env)?.into(),
+            (Value::Num(a), Value::Byte(b)) => a.find(&b.clone().convert(), env)?.into(),
+            (Value::Byte(a), Value::Num(b)) => a.clone().convert().find(b, env)?.into(),
+            (a, b) => {
+                return Err(env.error(format!(
+                    "Cannot find {} in {} array",
+                    a.type_name(),
+                    b.type_name(),
+                )))
+            }
+        })
+    }
+}
+
+impl<T: ArrayValue> Array<T> {
+    pub fn find(&self, searched: &Self, env: &Uiua) -> UiuaResult<Array<Byte>> {
+        if self.rank() > searched.rank() {
+            return Err(env.error(format!(
+                "Cannot search for array of shape {:?} in array of shape {:?}",
+                self.shape, searched.shape
+            )));
+        }
+
+        // Pad the shape of the searched-for array
+        let mut searched_for_shape = self.shape.clone();
+        while searched_for_shape.len() < searched.shape.len() {
+            searched_for_shape.insert(0, 1);
+        }
+
+        // Determine the ouput shape
+        let output_shape: Vec<usize> = searched
+            .shape
+            .iter()
+            .zip(&searched_for_shape)
+            .map(|(a, b)| a + 1 - b)
+            .collect();
+
+        let mut dst = Vec::new();
+        let mut corner = vec![0; searched.shape.len()];
+        let mut curr = vec![0; searched.shape.len()];
+
+        'windows: loop {
+            // Reset curr
+            for i in curr.iter_mut() {
+                *i = 0;
+            }
+            // Search the window at the current corner
+            'items: loop {
+                // Get index for the current item in the searched array
+                let mut searched_index = 0;
+                let mut stride = 1;
+                for ((c, i), s) in corner.iter().zip(&curr).zip(&searched.shape).rev() {
+                    searched_index += (*c + *i) * stride;
+                    stride *= s;
+                }
+                // Get index for the current item in the searched-for array
+                let mut search_for_index = 0;
+                let mut stride = 1;
+                for (i, s) in curr.iter().zip(&searched_for_shape).rev() {
+                    search_for_index += *i * stride;
+                    stride *= s;
+                }
+                // Compare the current items in the two arrays
+                let same = if let Some(searched_for) = self.data.get(search_for_index) {
+                    searched.data[searched_index].eq(searched_for)
+                } else {
+                    false
+                };
+                if !same {
+                    dst.push(Byte::from(false));
+                    break;
+                }
+                // Go to the next item
+                for i in (0..curr.len()).rev() {
+                    if curr[i] == searched_for_shape[i] - 1 {
+                        curr[i] = 0;
+                    } else {
+                        curr[i] += 1;
+                        continue 'items;
+                    }
+                }
+                dst.push(Byte::from(true));
+                break;
+            }
+            // Go to the next corner
+            for i in (0..corner.len()).rev() {
+                if corner[i] == searched.shape[i] - searched_for_shape[i] {
+                    corner[i] = 0;
+                } else {
+                    corner[i] += 1;
+                    continue 'windows;
+                }
+            }
+            break Ok(Array::new(output_shape, dst));
+        }
+    }
+}
 
 impl Value {
     pub fn member(&self, of: &Self, env: &Uiua) -> UiuaResult<Self> {

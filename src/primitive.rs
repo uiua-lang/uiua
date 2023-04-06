@@ -170,6 +170,7 @@ primitive!(
     (2, Windows, "windows" + '◫'),
     (2, Replicate, "replicate" + '‡'),
     (2, Member, "member" + '∊'),
+    (2, Find, "find" + '⌕'),
     (2, IndexOf, "indexof" + '⊗'),
     (2, Group, "group" + '⊕'),
     // Modifiers
@@ -306,6 +307,7 @@ impl Primitive {
             Primitive::Classify => env.monadic_ref_env(Value::classify)?,
             Primitive::Deduplicate => env.monadic_mut(Value::deduplicate)?,
             Primitive::Member => env.dyadic_ref_env(Value::member)?,
+            Primitive::Find => env.dyadic_ref_env(Value::find)?,
             Primitive::IndexOf => env.dyadic_ref_env(Value::index_of)?,
             Primitive::Group => env.dyadic_ref_env(Value::group)?,
             Primitive::Call => env.call()?,

@@ -2,8 +2,6 @@
 - Recursion?
 - Threads
 - More array functions
-  - Find
-  - Partition
   - Progressive index of
   - Nudge
 - Optimized functions

@@ -153,7 +153,7 @@ primitive!(
     (1, Transpose, "transpose" + '⍉'),
     (1, Sort, "sort" + '∧'),
     (1, Grade, "grade" + '⍋'),
-    (1, Indices, "indices" + '⊘'),
+    (1, Indices, "indices" + '⊙'),
     (1, Classify, "classify" + '⊛'),
     (1, Deduplicate, "deduplicate" + '⊝'),
     // Dyadic array ops
@@ -161,7 +161,7 @@ primitive!(
     (2, NoMatch, "notmatch" + '≇'),
     (2, Join, "join" + '⊂'),
     (2, Couple, "couple" + '⊟'),
-    (2, Pick, "pick" + '⊙'),
+    (2, Pick, "pick" + '⊡'),
     (2, Select, "select" + '⊏'),
     (2, Take, "take" + '↙'),
     (2, Drop, "drop" + '↘'),
@@ -173,6 +173,7 @@ primitive!(
     (2, Find, "find" + '⌕'),
     (2, IndexOf, "indexof" + '⊗'),
     (2, Group, "group" + '⊕'),
+    (2, Partition, "partition" + '⊘'),
     // Modifiers
     (Reduce { modifier: 1 }, "reduce" + '/'),
     (Fold { modifier: 1 }, "fold" + '⌿'),
@@ -310,6 +311,7 @@ impl Primitive {
             Primitive::Find => env.dyadic_ref_env(Value::find)?,
             Primitive::IndexOf => env.dyadic_ref_env(Value::index_of)?,
             Primitive::Group => env.dyadic_ref_env(Value::group)?,
+            Primitive::Partition => env.dyadic_ref_env(Value::partition)?,
             Primitive::Call => env.call()?,
             Primitive::Parse => env.monadic_env(|v, env| v.parse_num(env))?,
             Primitive::Reshape => {

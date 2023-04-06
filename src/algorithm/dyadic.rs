@@ -858,3 +858,47 @@ impl<T: ArrayValue> Array<T> {
         Self::from_row_arrays(rows, true, env)
     }
 }
+
+impl Value {
+    pub fn partition(&self, partitioned: &Self, env: &Uiua) -> UiuaResult<Self> {
+        let markers =
+            self.as_naturals(env, "Partition markers must be a list of natural numbers")?;
+        Ok(match partitioned {
+            Value::Num(a) => a.partition(&markers, env)?.into(),
+            Value::Byte(a) => a.partition(&markers, env)?.into(),
+            Value::Char(a) => a.partition(&markers, env)?.into(),
+            Value::Func(a) => a.partition(&markers, env)?.into(),
+        })
+    }
+}
+
+impl<T: ArrayValue> Array<T> {
+    pub fn partition(&self, markers: &[usize], env: &Uiua) -> UiuaResult<Self> {
+        let mut groups = Vec::new();
+        let mut last_marker = usize::MAX;
+        for (row, &marker) in self.rows().zip(markers) {
+            if marker == 0 {
+                groups.push(Vec::new());
+                continue;
+            }
+            if marker != last_marker {
+                groups.push(Vec::new());
+            }
+            groups
+                .last_mut()
+                .unwrap()
+                .push(Self::new(self.shape[1..].to_vec(), row.to_vec()));
+            last_marker = marker;
+        }
+        let mut rows = groups
+            .into_iter()
+            .map(|row_arrays| Self::from_row_arrays(row_arrays, true, env))
+            .collect::<UiuaResult<Vec<_>>>()?;
+        for row in &mut rows {
+            while row.rank() < self.rank() {
+                row.shape.insert(0, 1);
+            }
+        }
+        Self::from_row_arrays(rows, true, env)
+    }
+}

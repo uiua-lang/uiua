@@ -1,7 +1,8 @@
+- Parse spaces as words
 - Better solution to string formatting
 - Recursion?
 - Threads
-- Add back inverse and under
+- Suspend/resume
 - More array functions
   - Progressive index of
   - Nudge

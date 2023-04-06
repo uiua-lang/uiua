@@ -291,13 +291,7 @@ impl<'a, T: ArrayValue> Deref for Row<'a, T> {
 
 impl<'a, T: ArrayValue> PartialEq for Row<'a, T> {
     fn eq(&self, other: &Self) -> bool {
-        self.array.data.len() == other.array.data.len()
-            && self
-                .array
-                .data
-                .iter()
-                .zip(&other.array.data)
-                .all(|(a, b)| a.eq(b))
+        self.iter().zip(&**other).all(|(a, b)| a.eq(b))
     }
 }
 
@@ -311,10 +305,8 @@ impl<'a, T: ArrayValue> PartialOrd for Row<'a, T> {
 
 impl<'a, T: ArrayValue> Ord for Row<'a, T> {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.array
-            .data
-            .iter()
-            .zip(&other.array.data)
+        self.iter()
+            .zip(&**other)
             .map(|(a, b)| a.cmp(b))
             .find(|o| o != &Ordering::Equal)
             .unwrap_or_else(|| self.array.data.len().cmp(&other.array.data.len()))

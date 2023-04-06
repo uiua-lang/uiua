@@ -736,7 +736,10 @@ impl<T: ArrayValue> Array<T> {
 //             return Ok(Self::new(shape, Vec::new()));
 //         };
 //         let mut groups: Vec<Vec<T>> = vec![Vec::new(); max_index + 1];
-//         let mut rows = self.into_rows();
-//         todo!()
+//         for (i, row) in indices.iter().zip(self.rows()) {
+//             groups[*i].extend_from_slice(&row);
+//             shape[0] += 1;
+//         }
+
 //     }
 // }

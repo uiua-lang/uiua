@@ -41,13 +41,18 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     pub fn join(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
+        self.join_impl(other, true, env)
+    }
+    pub(crate) fn join_impl(self, other: Self, truncate: bool, env: &Uiua) -> UiuaResult<Self> {
         Ok(match (self, other) {
-            (Value::Num(a), Value::Num(b)) => Value::Num(a.join(b, env)?),
-            (Value::Byte(a), Value::Byte(b)) => Value::Byte(a.join(b, env)?),
-            (Value::Char(a), Value::Char(b)) => Value::Char(a.join(b, env)?),
-            (Value::Func(a), Value::Func(b)) => Value::Func(a.join(b, env)?),
-            (Value::Byte(a), Value::Num(b)) => Value::Num(a.convert().join(b, env)?),
-            (Value::Num(a), Value::Byte(b)) => Value::Num(a.join(b.convert(), env)?),
+            (Value::Num(a), Value::Num(b)) => Value::Num(a.join_impl(b, truncate, env)?),
+            (Value::Byte(a), Value::Byte(b)) => Value::Byte(a.join_impl(b, truncate, env)?),
+            (Value::Char(a), Value::Char(b)) => Value::Char(a.join_impl(b, truncate, env)?),
+            (Value::Func(a), Value::Func(b)) => Value::Func(a.join_impl(b, truncate, env)?),
+            (Value::Byte(a), Value::Num(b)) => Value::Num(a.convert().join_impl(b, truncate, env)?),
+            (Value::Num(a), Value::Byte(b)) => {
+                Value::Num(a.join_impl(b.convert(), truncate, env)?)
+            }
             (a, b) => {
                 return Err(env.error(format!(
                     "Cannot join {} array and {} array",
@@ -60,7 +65,15 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn join(mut self, mut other: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn join(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
+        self.join_impl(other, true, env)
+    }
+    pub(crate) fn join_impl(
+        mut self,
+        mut other: Self,
+        truncate: bool,
+        env: &Uiua,
+    ) -> UiuaResult<Self> {
         Ok(match (self.shape.as_slice(), other.shape.as_slice()) {
             ([], []) => {
                 self.data.extend(other.data);
@@ -69,7 +82,9 @@ impl<T: ArrayValue> Array<T> {
             }
             ([], bsh) => {
                 if bsh.len() == 1 {
-                    other.truncate();
+                    if truncate {
+                        other.truncate();
+                    }
                     other.data.insert(0, self.data.remove(0));
                     other.shape = vec![other.flat_len()];
                     other
@@ -82,7 +97,9 @@ impl<T: ArrayValue> Array<T> {
             }
             (ash, []) => {
                 if ash.len() == 1 {
-                    self.truncate();
+                    if truncate {
+                        self.truncate();
+                    }
                     self.data.push(other.data.remove(0));
                     self.shape = vec![self.flat_len()];
                     self
@@ -95,24 +112,32 @@ impl<T: ArrayValue> Array<T> {
             }
             (ash, bsh) => {
                 if ash[1..] == bsh[1..] {
-                    self.truncate();
-                    other.truncate();
+                    if truncate {
+                        self.truncate();
+                        other.truncate();
+                    }
                     self.data.extend(other.data);
                     self.shape[0] += other.shape[0];
                     self
                 } else if ash[1..] == bsh[..] {
-                    self.truncate();
+                    if truncate {
+                        self.truncate();
+                    }
                     self.data.extend(other.data);
                     self.shape[0] += 1;
                     self
                 } else if ash[..] == bsh[1..] {
-                    other.truncate();
+                    if truncate {
+                        other.truncate();
+                    }
                     self.data.extend(other.data);
                     self.shape.insert(0, other.shape[0] + 1);
                     self
                 } else if self.fill || other.fill {
-                    self.truncate();
-                    other.truncate();
+                    if truncate {
+                        self.truncate();
+                        other.truncate();
+                    }
                     let ash = &self.shape;
                     let bsh = &other.shape;
                     let fill = T::fill_value();

@@ -207,6 +207,7 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
     new_shape.extend_from_slice(ys.shape());
     let mut items = Vec::with_capacity(xs.flat_len() * ys.flat_len());
     let y_values = ys.into_flat_values().collect::<Vec<_>>();
+    println!("y_values: {y_values:?}");
     for x in xs.into_flat_values() {
         for y in y_values.iter().cloned() {
             env.push(y);

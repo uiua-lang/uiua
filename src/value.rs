@@ -45,7 +45,7 @@ impl Value {
             value = if count == 2 {
                 value.couple(row, env)?
             } else {
-                value.join(row, env)?
+                value.join_impl(row, false, env)?
             };
         }
         Ok(value)

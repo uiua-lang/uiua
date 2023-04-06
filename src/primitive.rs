@@ -184,6 +184,7 @@ primitive!(
     (Bridge { modifier: 1 }, "bridge" + '≑'),
     (Table { modifier: 1 }, "table" + '⊞'),
     (Repeat { modifier: 1 }, "repeat" + '⍥'),
+    (Invert { modifier: 1 }, "invert" + '↶'),
     (Try { modifier: 2 }, "try" + '?'),
     // Misc
     (2, Assert, "assert" + '!'),
@@ -227,12 +228,6 @@ impl Primitive {
             Sin => Asin,
             Cos => Acos,
             Reverse => Reverse,
-            Add => Sub,
-            Sub => Add,
-            Mul => Div,
-            Div => Mul,
-            Pow => Log,
-            Log => Pow,
             Save => Load,
             Load => Save,
             _ => return None,
@@ -383,6 +378,12 @@ impl Primitive {
                     env.push_ref(handler);
                     env.call()?;
                 }
+            }
+            Primitive::Invert => {
+                let f = env.pop(1)?;
+                let inv_f = f.invert(env)?;
+                env.push(inv_f);
+                env.call()?;
             }
             Primitive::Fill => env.monadic_mut(|v| *v.fill_mut() = true)?,
             Primitive::Truncate => env.monadic_mut(Value::truncate)?,

@@ -317,3 +317,22 @@ fn merge_sort_rows<T: ArrayValue>(row_len: usize, data: &mut [T]) {
     }
     data.clone_from_slice(&tmp);
 }
+
+impl Value {
+    pub fn invert(&self, env: &Uiua) -> UiuaResult<Self> {
+        Ok(match self {
+            Self::Func(fs) => {
+                let mut invs = Vec::with_capacity(fs.len());
+                for f in &fs.data {
+                    invs.push(
+                        f.inverse()
+                            .ok_or_else(|| env.error("No inverse found"))?
+                            .into(),
+                    );
+                }
+                Self::Func(Array::new(fs.shape.clone(), invs))
+            }
+            v => return Err(env.error(format!("Cannot invert {}", v.type_name()))),
+        })
+    }
+}

@@ -34,10 +34,10 @@ pub struct Function {
 }
 
 impl From<Primitive> for Function {
-    fn from(op: Primitive) -> Self {
+    fn from(prim: Primitive) -> Self {
         Self {
-            id: FunctionId::Primitive(op),
-            instrs: vec![Instr::Primitive(op, 0)],
+            id: FunctionId::Primitive(prim),
+            instrs: vec![Instr::Primitive(prim, 0)],
         }
     }
 }
@@ -105,5 +105,84 @@ impl fmt::Display for FunctionId {
             FunctionId::Constant => write!(f, "constant"),
             FunctionId::Main => write!(f, "main"),
         }
+    }
+}
+
+fn invert_primitive(prim: Primitive, span: usize) -> Option<Vec<Instr>> {
+    Some(match prim {
+        Primitive::Sqrt => vec![
+            Instr::Push(Rc::new(0.5.into())),
+            Instr::Primitive(Primitive::Pow, span),
+        ],
+        prim => vec![Instr::Primitive(prim.inverse()?, span)],
+    })
+}
+
+fn invert_instr_fragment(instrs: &[Instr]) -> Option<Vec<Instr>> {
+    Some(match instrs {
+        [Instr::Primitive(prim, span)] => invert_primitive(*prim, *span)?,
+        [Instr::Push(val), Instr::Primitive(Primitive::Rotate, span)] => vec![
+            Instr::Push(val.clone()),
+            Instr::Primitive(Primitive::Neg, *span),
+            Instr::Primitive(Primitive::Rotate, *span),
+        ],
+        [Instr::Push(val), Instr::Primitive(Primitive::Neg, _), Instr::Primitive(Primitive::Rotate, span)] =>
+        {
+            vec![
+                Instr::Push(val.clone()),
+                Instr::Primitive(Primitive::Rotate, *span),
+            ]
+        }
+        [Instr::Push(val), Instr::Primitive(Primitive::Add, span)] => vec![
+            Instr::Push(val.clone()),
+            Instr::Primitive(Primitive::Sub, *span),
+        ],
+        [Instr::Push(val), Instr::Primitive(Primitive::Sub, span)] => vec![
+            Instr::Push(val.clone()),
+            Instr::Primitive(Primitive::Add, *span),
+        ],
+        [Instr::Push(val), Instr::Primitive(Primitive::Mul, span)] => vec![
+            Instr::Push(val.clone()),
+            Instr::Primitive(Primitive::Div, *span),
+        ],
+        [Instr::Push(val), Instr::Primitive(Primitive::Div, span)] => vec![
+            Instr::Push(val.clone()),
+            Instr::Primitive(Primitive::Mul, *span),
+        ],
+        [Instr::Push(val), Instr::Primitive(Primitive::Pow, span)] => vec![
+            Instr::Push(Rc::new(1.into())),
+            Instr::Push(val.clone()),
+            Instr::Primitive(Primitive::Div, *span),
+            Instr::Primitive(Primitive::Pow, *span),
+        ],
+        _ => return None,
+    })
+}
+
+fn invert_instrs(instrs: &[Instr]) -> Option<Vec<Instr>> {
+    let mut inverted = Vec::new();
+    let mut start = 0;
+    let mut len = 1;
+    while start + len <= instrs.len() {
+        if let Some(mut inverted_fragment) = invert_instr_fragment(&instrs[start..start + len]) {
+            inverted_fragment.append(&mut inverted);
+            inverted = inverted_fragment;
+            start += len;
+            len = 1;
+        } else if len >= 3 {
+            return None;
+        } else {
+            len += 1;
+        }
+    }
+    Some(inverted)
+}
+
+impl Function {
+    pub fn inverse(&self) -> Option<Self> {
+        Some(Function {
+            id: self.id.clone(),
+            instrs: invert_instrs(&self.instrs)?,
+        })
     }
 }

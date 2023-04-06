@@ -185,6 +185,7 @@ primitive!(
     (Table { modifier: 1 }, "table" + '⊞'),
     (Repeat { modifier: 1 }, "repeat" + '⍥'),
     (Invert { modifier: 1 }, "invert" + '↶'),
+    (Under { modifier: 2 }, "under" + '⍜'),
     (Try { modifier: 2 }, "try" + '?'),
     // Misc
     (2, Assert, "assert" + '!'),
@@ -382,6 +383,17 @@ impl Primitive {
             Primitive::Invert => {
                 let f = env.pop(1)?;
                 let inv_f = f.invert(env)?;
+                env.push(inv_f);
+                env.call()?;
+            }
+            Primitive::Under => {
+                let f = env.pop(1)?;
+                let g = env.pop(2)?;
+                let inv_f = f.invert(env)?;
+                env.push_ref(f);
+                env.call()?;
+                env.push_ref(g);
+                env.call()?;
                 env.push(inv_f);
                 env.call()?;
             }

@@ -48,6 +48,9 @@ impl Value {
                 value.join_impl(row, false, env)?
             };
         }
+        if count == 1 {
+            value.shape_mut().insert(0, 1);
+        }
         Ok(value)
     }
     pub fn into_rows(self) -> Box<dyn Iterator<Item = Self>> {

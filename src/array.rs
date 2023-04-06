@@ -211,13 +211,20 @@ impl<T: ArrayValue> Array<T> {
 
 impl<T: ArrayValue> PartialEq for Array<T> {
     fn eq(&self, other: &Self) -> bool {
-        self.shape == other.shape
-            && self.data.len() == other.data.len()
-            && self
-                .data
-                .iter()
-                .zip(&other.data)
-                .all(|(a, b)| a.cmp(b) == Ordering::Equal)
+        if !(self.shape == other.shape && self.data.len() == other.data.len()) {
+            return false;
+        }
+        let a = self
+            .data
+            .iter()
+            .skip_while(|x| x.is_fill_value())
+            .take_while(|x| !x.is_fill_value());
+        let b = other
+            .data
+            .iter()
+            .skip_while(|x| x.is_fill_value())
+            .take_while(|x| !x.is_fill_value());
+        a.zip(b).all(|(a, b)| a.cmp(b) == Ordering::Equal)
     }
 }
 

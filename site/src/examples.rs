@@ -14,7 +14,7 @@ r ← ⌵sin ÷10 ⊞+.⇡300
 g ← ⌵sin ÷21 ⊞↥.⇡300
 b ← ⌵sin ÷32 ⊞-.⇡300
 ⍉[r g b]";
-const PALINDROME: &str = r#"⊟∵(≅⇌.).⊢⊕=' '."uiua racecar wow cool!""#;
+const PALINDROME: &str = r#"≡(≅⇌.).⊘≠' '."uiua racecar wow cool!""#;
 const RULE_30: &str = "\
 Thirty ← ≡(↥≅0_1_1 ~=1 /+.) ◫3 ⊂~0 ⊂0
 size ← 600

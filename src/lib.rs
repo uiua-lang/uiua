@@ -23,7 +23,98 @@ use std::{
 
 pub use {error::*, io::*, run::Uiua};
 
-type Byte = u16;
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Byte {
+    Value(u8),
+    Fill,
+}
+
+impl Byte {
+    pub fn map(self, f: impl FnOnce(u8) -> u8) -> Self {
+        match self {
+            Byte::Value(x) => Byte::Value(f(x)),
+            Byte::Fill => Byte::Fill,
+        }
+    }
+    pub fn op(self, other: Self, f: impl FnOnce(u8, u8) -> u8) -> Self {
+        match (self, other) {
+            (Byte::Value(x), Byte::Value(y)) => Byte::Value(f(x, y)),
+            _ => Byte::Fill,
+        }
+    }
+    pub fn op_or_value(self, other: Self, f: impl FnOnce(u8, u8) -> u8) -> Self {
+        match (self, other) {
+            (Byte::Value(x), Byte::Value(y)) => Byte::Value(f(x, y)),
+            (Byte::Value(x), Byte::Fill) => Byte::Value(x),
+            (Byte::Fill, Byte::Value(y)) => Byte::Value(y),
+            _ => Byte::Fill,
+        }
+    }
+    pub fn or(self, default: u8) -> u8 {
+        match self {
+            Byte::Value(x) => x,
+            Byte::Fill => default,
+        }
+    }
+    pub fn map_or<T>(self, default: T, f: impl FnOnce(u8) -> T) -> T {
+        match self {
+            Byte::Value(x) => f(x),
+            Byte::Fill => default,
+        }
+    }
+    pub fn value(self) -> Option<u8> {
+        match self {
+            Byte::Value(x) => Some(x),
+            Byte::Fill => None,
+        }
+    }
+}
+
+impl fmt::Debug for Byte {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self}")
+    }
+}
+
+impl fmt::Display for Byte {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Byte::Value(x) => write!(f, "{x}"),
+            Byte::Fill => write!(f, " "),
+        }
+    }
+}
+
+impl From<Byte> for f64 {
+    fn from(b: Byte) -> Self {
+        match b {
+            Byte::Value(x) => x as f64,
+            Byte::Fill => f64::NAN,
+        }
+    }
+}
+
+impl From<bool> for Byte {
+    fn from(x: bool) -> Self {
+        Byte::Value(x as u8)
+    }
+}
+
+impl From<u8> for Byte {
+    fn from(x: u8) -> Self {
+        Byte::Value(x)
+    }
+}
+
+impl From<f64> for Byte {
+    fn from(x: f64) -> Self {
+        if x.is_nan() {
+            Byte::Fill
+        } else {
+            Byte::Value(x as u8)
+        }
+    }
+}
 
 fn rc_take<T: Clone>(rc: Rc<T>) -> T {
     match Rc::try_unwrap(rc) {

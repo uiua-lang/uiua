@@ -31,22 +31,30 @@ pub trait GridFmt {
 
 impl GridFmt for Byte {
     fn fmt_grid(&self) -> Grid {
-        vec![self.to_string().chars().collect()]
+        if self.is_fill_value() {
+            vec![vec![' ']]
+        } else {
+            vec![self.to_string().chars().collect()]
+        }
     }
 }
 
 impl GridFmt for f64 {
     fn fmt_grid(&self) -> Grid {
-        let positive = self.abs();
-        let minus = if *self < -0.0 { "¯" } else { "" };
-        let s = if positive == PI {
-            format!("{minus}π")
-        } else if positive == INFINITY {
-            format!("{minus}∞")
+        if self.is_fill_value() {
+            vec![vec![' ']]
         } else {
-            format!("{minus}{positive}")
-        };
-        vec![s.chars().collect()]
+            let positive = self.abs();
+            let minus = if *self < -0.0 { "¯" } else { "" };
+            let s = if positive == PI {
+                format!("{minus}π")
+            } else if positive == INFINITY {
+                format!("{minus}∞")
+            } else {
+                format!("{minus}{positive}")
+            };
+            vec![s.chars().collect()]
+        }
     }
 }
 

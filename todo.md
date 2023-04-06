@@ -1,3 +1,4 @@
+- Fix some top-level error messages
 - Better solution to string formatting
 - Recursion?
 - Threads

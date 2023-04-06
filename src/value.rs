@@ -194,7 +194,12 @@ impl Value {
                         env.error(format!("{requirement}, but its rank is {}", bytes.rank()))
                     );
                 }
-                bytes.data[0] as usize
+                match bytes.data[0] {
+                    Byte::Value(b) => b as usize,
+                    Byte::Fill => {
+                        return Err(env.error(format!("{requirement}, but it is a fill byte")))
+                    }
+                }
             }
             value => {
                 return Err(env.error(format!("{requirement}, but it is {}", value.type_name())))
@@ -217,7 +222,12 @@ impl Value {
                         env.error(format!("{requirement}, but its rank is {}", bytes.rank()))
                     );
                 }
-                bytes.data[0] as f64
+                match bytes.data[0] {
+                    Byte::Value(b) => b as f64,
+                    Byte::Fill => {
+                        return Err(env.error(format!("{requirement}, but it is a fill byte")))
+                    }
+                }
             }
             value => {
                 return Err(env.error(format!("{requirement}, but it is {}", value.type_name())))
@@ -263,7 +273,7 @@ impl Value {
                 }
                 let mut result = Vec::with_capacity(bytes.row_count());
                 for &byte in bytes.data() {
-                    let num = byte as f64;
+                    let num = byte.map_or(f64::fill_value(), |b| b as f64);
                     if !test(num) {
                         return Err(env.error(requirement));
                     }
@@ -298,7 +308,7 @@ impl Value {
                 if a.rank() != 1 {
                     return Err(env.error(format!("{requirement}, but its rank is {}", a.rank())));
                 }
-                a.data.into_iter().map(|b| b as u8).collect()
+                a.data.into_iter().filter_map(Byte::value).collect()
             }
             Value::Num(a) => {
                 if a.rank() != 1 {
@@ -365,7 +375,7 @@ impl FromIterator<usize> for Value {
 
 impl From<bool> for Value {
     fn from(b: bool) -> Self {
-        Value::from(b as Byte)
+        Value::from(Byte::Value(b as u8))
     }
 }
 
@@ -490,11 +500,7 @@ value_bin_impl!(
     min,
     (Num, Num, num_num),
     (Char, Char, char_char),
-    (Char, Num, char_num),
-    (Num, Char, num_char),
     (Byte, Byte, byte_byte),
-    (Char, Byte, char_byte),
-    (Byte, Char, byte_char),
     (Byte, Num, byte_num),
     (Num, Byte, num_byte),
 );
@@ -503,11 +509,7 @@ value_bin_impl!(
     max,
     (Num, Num, num_num),
     (Char, Char, char_char),
-    (Char, Num, char_num),
-    (Num, Char, num_char),
     (Byte, Byte, byte_byte),
-    (Char, Byte, char_byte),
-    (Byte, Char, byte_char),
     (Byte, Num, byte_num),
     (Num, Byte, num_byte),
 );

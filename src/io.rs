@@ -267,9 +267,10 @@ impl IoOp {
                 let bytes = env.io.read_file(&path).map_err(|e| env.error(e))?;
                 let image = image::load_from_memory(&bytes)
                     .map_err(|e| env.error(format!("Failed to read image: {}", e)))?
-                    .into_rgba16();
+                    .into_rgba8();
                 let shape = vec![image.height() as usize, image.width() as usize, 4];
-                let array = Array::<Byte>::from((shape, image.into_raw()));
+                let bytes: Vec<Byte> = image.into_raw().into_iter().map(Into::into).collect();
+                let array = Array::<Byte>::from((shape, bytes));
                 env.push(array);
             }
             IoOp::ImWrite => {
@@ -318,7 +319,7 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
             .iter()
             .map(|f| (*f * 255.0).floor() as u8)
             .collect(),
-        Value::Byte(bytes) => bytes.data.iter().map(|&b| b.min(1) as u8 * 255).collect(),
+        Value::Byte(bytes) => bytes.data.iter().map(|&b| b.or(0).min(1) * 255).collect(),
         _ => return Err("Image must be a numeric array".into()),
     };
     #[allow(clippy::match_ref_pats)]

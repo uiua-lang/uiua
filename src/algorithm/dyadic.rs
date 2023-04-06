@@ -640,7 +640,7 @@ fn member<A: Arrayish>(
             }
             for (elem, of) in elems.rows().zip(of.rows()) {
                 let is_member = elem.iter().zip(of.iter()).all(|(a, b)| a.eq(b));
-                result.push(is_member as Byte);
+                result.push(Byte::Value(is_member as u8));
             }
         }
         Ordering::Greater => {
@@ -698,3 +698,16 @@ impl<T: ArrayValue> Array<T> {
         Ok(Array::new(self.shape.clone(), result))
     }
 }
+
+// impl<T: ArrayValue> Array<T> {
+//     pub fn group(self, indices: &[usize], env: &Uiua) -> UiuaResult<Self> {
+//         let mut shape = self.shape.clone();
+//         shape.insert(0, 0);
+//         let Some(max_index) = indices.iter().max() else {
+//             return Ok(Self::new(shape, Vec::new()));
+//         };
+//         let mut groups: Vec<Vec<T>> = vec![Vec::new(); max_index + 1];
+//         let mut rows = self.into_rows();
+//         todo!()
+//     }
+// }

@@ -2,13 +2,12 @@ use std::{
     cmp::Ordering,
     fmt::{self, Debug, Display},
     iter::repeat,
-    mem::transmute,
     ops::Deref,
     rc::Rc,
     slice::{Chunks, ChunksMut},
 };
 
-use crate::{function::Function, primitive::Primitive};
+use crate::{function::Function, primitive::Primitive, Byte};
 
 #[derive(Debug, Clone)]
 pub struct Array<T> {
@@ -65,7 +64,8 @@ impl<T: ArrayValue> Array<T> {
         Self {
             shape,
             data,
-            fill: T::DEFAULT_FILL,
+            // fill: T::DEFAULT_FILL,
+            fill: true,
         }
     }
     pub fn unit(data: T) -> Self {
@@ -76,6 +76,14 @@ impl<T: ArrayValue> Array<T> {
     }
     pub fn row_count(&self) -> usize {
         self.shape.first().copied().unwrap_or(1)
+    }
+    #[allow(clippy::len_without_is_empty)]
+    pub fn len(&self) -> usize {
+        if self.rank() == 1 && self.fill {
+            self.data.iter().take_while(|x| !x.is_fill_value()).count()
+        } else {
+            self.row_count()
+        }
     }
     pub fn flat_len(&self) -> usize {
         self.data.len()
@@ -134,9 +142,6 @@ impl<T: ArrayValue> Array<T> {
             Array::new(row_shape.clone(), self.data.drain(end..).collect())
         })
     }
-}
-
-impl<T: ArrayValue> Array<T> {
     pub fn val_eq<U: Into<T> + Clone>(&self, other: &Array<U>) -> bool {
         self.shape == other.shape
             && self.data.len() == other.data.len()
@@ -159,14 +164,6 @@ impl<T: ArrayValue> Array<T> {
             return self.clone();
         }
         Array::new(self.shape[1..].to_vec(), Vec::new())
-    }
-    #[allow(clippy::len_without_is_empty)]
-    pub fn len(&self) -> usize {
-        if self.rank() == 1 && self.fill {
-            self.data.iter().take_while(|x| !x.is_fill_value()).count()
-        } else {
-            self.row_count()
-        }
     }
     /// Remove fill elements from the end of the array
     pub fn truncate(&mut self) {
@@ -358,26 +355,23 @@ impl ArrayValue for f64 {
             .unwrap_or_else(|| self.is_nan().cmp(&other.is_nan()))
     }
     fn fill_value() -> Self {
-        SIGNALING_NAN
+        f64::NAN
     }
     fn is_fill_value(&self) -> bool {
-        self.to_bits() == SIGNLING_NAN_BITS
+        self.is_nan()
     }
 }
 
-const SIGNLING_NAN_BITS: u64 = 0x7ff0000000000001;
-const SIGNALING_NAN: f64 = unsafe { transmute(SIGNLING_NAN_BITS) };
-
-impl ArrayValue for u16 {
+impl ArrayValue for Byte {
     const NAME: &'static str = "byte";
     fn cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(self, other)
     }
     fn fill_value() -> Self {
-        u16::MAX
+        Byte::Fill
     }
     fn is_fill_value(&self) -> bool {
-        *self == u16::MAX
+        *self == Byte::Fill
     }
 }
 

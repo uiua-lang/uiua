@@ -3,7 +3,6 @@
 - Threads
 - Add back inverse and under
 - More array functions
-  - Rank modifier
   - Progressive index of
   - Nudge
 - Optimized functions

@@ -186,6 +186,7 @@ primitive!(
     (Repeat { modifier: 1 }, "repeat" + '⍥'),
     (Invert { modifier: 1 }, "invert" + '↶'),
     (Under { modifier: 2 }, "under" + '⍜'),
+    (Level { modifier: 2 }, "level" + '⍚'),
     (Try { modifier: 2 }, "try" + '?'),
     // Misc
     (2, Assert, "assert" + '!'),
@@ -366,6 +367,7 @@ impl Primitive {
             Primitive::Table => loops::table(env)?,
             Primitive::Scan => loops::scan(env)?,
             Primitive::Repeat => loops::repeat(env)?,
+            Primitive::Level => loops::rank(env)?,
             Primitive::Try => {
                 let f = env.pop(1)?;
                 let handler = env.pop(2)?;

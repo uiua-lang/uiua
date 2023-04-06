@@ -225,6 +225,38 @@ impl Value {
             }
         })
     }
+    pub fn as_int(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<isize> {
+        Ok(match self {
+            Value::Num(nums) => {
+                if nums.rank() > 0 {
+                    return Err(
+                        env.error(format!("{requirement}, but its rank is {}", nums.rank()))
+                    );
+                }
+                let num = nums.data[0];
+                if num.fract().abs() > f64::EPSILON {
+                    return Err(env.error(format!("{requirement}, but it has a fractional part")));
+                }
+                num as isize
+            }
+            Value::Byte(bytes) => {
+                if bytes.rank() > 0 {
+                    return Err(
+                        env.error(format!("{requirement}, but its rank is {}", bytes.rank()))
+                    );
+                }
+                match bytes.data[0] {
+                    Byte::Value(b) => b as isize,
+                    Byte::Fill => {
+                        return Err(env.error(format!("{requirement}, but it is a fill byte")))
+                    }
+                }
+            }
+            value => {
+                return Err(env.error(format!("{requirement}, but it is {}", value.type_name())))
+            }
+        })
+    }
     pub fn as_num(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<f64> {
         Ok(match self {
             Value::Num(nums) => {

@@ -118,6 +118,7 @@ impl<T: ArrayValue> Array<T> {
                     }
                     self.data.extend(other.data);
                     self.shape[0] += other.shape[0];
+                    self.reset_fill();
                     self
                 } else if ash[1..] == bsh[..] {
                     if truncate {
@@ -125,6 +126,7 @@ impl<T: ArrayValue> Array<T> {
                     }
                     self.data.extend(other.data);
                     self.shape[0] += 1;
+                    self.reset_fill();
                     self
                 } else if ash[..] == bsh[1..] {
                     if truncate {
@@ -132,6 +134,7 @@ impl<T: ArrayValue> Array<T> {
                     }
                     self.data.extend(other.data);
                     self.shape.insert(0, other.shape[0] + 1);
+                    self.reset_fill();
                     self
                 } else if self.fill || other.fill {
                     if truncate {
@@ -485,6 +488,7 @@ impl<T: ArrayValue> Array<T> {
         }
         self.data.append(&mut other.data);
         self.shape.insert(0, 2);
+        self.reset_fill();
         Ok(self)
     }
 }

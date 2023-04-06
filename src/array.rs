@@ -106,6 +106,9 @@ impl<T: ArrayValue> Array<T> {
         let row_len = self.row_len();
         &self.data[row * row_len..(row + 1) * row_len]
     }
+    pub fn reset_fill(&mut self) {
+        self.fill = T::DEFAULT_FILL;
+    }
     pub fn convert<U>(self) -> Array<U>
     where
         T: Into<U>,

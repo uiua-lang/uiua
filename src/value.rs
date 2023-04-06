@@ -124,6 +124,14 @@ impl Value {
             |arr| &mut arr.shape,
         )
     }
+    pub fn fill_mut(&mut self) -> &mut bool {
+        self.generic_mut(
+            |arr| &mut arr.fill,
+            |arr| &mut arr.fill,
+            |arr| &mut arr.fill,
+            |arr| &mut arr.fill,
+        )
+    }
     pub fn generic_ref<'a, T: 'a>(
         &'a self,
         n: impl FnOnce(&'a Array<f64>) -> T,

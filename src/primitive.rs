@@ -147,6 +147,7 @@ primitive!(
     (1, Range, "range" + '⇡'),
     (1, First, "first" + '⊢'),
     (1, Last),
+    (1, Fill, "fill" + '∘'),
     (1, Reverse, "reverse" + '⇌'),
     (1, Deshape, "deshape" + '♭'),
     (1, Transpose, "transpose" + '⍉'),
@@ -379,6 +380,11 @@ impl Primitive {
                     env.push_ref(handler);
                     env.call()?;
                 }
+            }
+            Primitive::Fill => {
+                let mut value = env.pop(1)?;
+                *Rc::make_mut(&mut value).fill_mut() = true;
+                env.push_ref(value);
             }
             Primitive::Assert => {
                 let msg = env.pop(1)?;

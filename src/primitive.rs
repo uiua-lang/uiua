@@ -148,6 +148,7 @@ primitive!(
     (1, First, "first" + '⊢'),
     (1, Last),
     (1, Fill, "fill" + '∘'),
+    (1, Truncate, "truncate" + '⍛'),
     (1, Reverse, "reverse" + '⇌'),
     (1, Deshape, "deshape" + '♭'),
     (1, Transpose, "transpose" + '⍉'),
@@ -387,11 +388,8 @@ impl Primitive {
                     env.call()?;
                 }
             }
-            Primitive::Fill => {
-                let mut value = env.pop(1)?;
-                *Rc::make_mut(&mut value).fill_mut() = true;
-                env.push_ref(value);
-            }
+            Primitive::Fill => env.monadic_mut(|v| *v.fill_mut() = true)?,
+            Primitive::Truncate => env.monadic_mut(Value::truncate)?,
             Primitive::Assert => {
                 let msg = env.pop(1)?;
                 let cond = env.pop(2)?;

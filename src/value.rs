@@ -135,6 +135,14 @@ impl Value {
             |arr| &mut arr.fill,
         )
     }
+    pub fn truncate(&mut self) {
+        self.generic_mut(
+            Array::truncate,
+            Array::truncate,
+            Array::truncate,
+            Array::truncate,
+        )
+    }
     pub fn generic_ref<'a, T: 'a>(
         &'a self,
         n: impl FnOnce(&'a Array<f64>) -> T,

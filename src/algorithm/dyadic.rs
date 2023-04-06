@@ -728,18 +728,31 @@ impl<T: ArrayValue> Array<T> {
     }
 }
 
-// impl<T: ArrayValue> Array<T> {
-//     pub fn group(self, indices: &[usize], env: &Uiua) -> UiuaResult<Self> {
-//         let mut shape = self.shape.clone();
-//         shape.insert(0, 0);
-//         let Some(max_index) = indices.iter().max() else {
-//             return Ok(Self::new(shape, Vec::new()));
-//         };
-//         let mut groups: Vec<Vec<T>> = vec![Vec::new(); max_index + 1];
-//         for (i, row) in indices.iter().zip(self.rows()) {
-//             groups[*i].extend_from_slice(&row);
-//             shape[0] += 1;
-//         }
+impl Value {
+    pub fn group(&self, grouped: Self, env: &Uiua) -> UiuaResult<Self> {
+        let indices = self.as_naturals(env, "Group indices must be a list of natural numbers")?;
+        Ok(match grouped {
+            Value::Num(a) => a.group(&indices, env)?.into(),
+            Value::Byte(a) => a.group(&indices, env)?.into(),
+            Value::Char(a) => a.group(&indices, env)?.into(),
+            Value::Func(a) => a.group(&indices, env)?.into(),
+        })
+    }
+}
 
-//     }
-// }
+impl<T: ArrayValue> Array<T> {
+    pub fn group(self, indices: &[usize], env: &Uiua) -> UiuaResult<Self> {
+        let Some(max_index) = indices.iter().max() else {
+            return Ok(Self::new(self.shape, Vec::new()));
+        };
+        let mut groups: Vec<Vec<Array<T>>> = vec![Vec::new(); max_index + 1];
+        for (i, row) in indices.iter().zip(self.into_rows()) {
+            groups[*i].push(row);
+        }
+        let rows = groups
+            .into_iter()
+            .map(|row_arrays| Self::from_row_arrays(row_arrays, true, env))
+            .collect::<UiuaResult<Vec<_>>>()?;
+        Self::from_row_arrays(rows, true, env)
+    }
+}

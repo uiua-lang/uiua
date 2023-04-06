@@ -32,7 +32,7 @@ pub trait GridFmt {
 impl GridFmt for Byte {
     fn fmt_grid(&self) -> Grid {
         if self.is_fill_value() {
-            vec![vec![' ']]
+            vec![vec!['_']]
         } else {
             vec![self.to_string().chars().collect()]
         }
@@ -42,7 +42,7 @@ impl GridFmt for Byte {
 impl GridFmt for f64 {
     fn fmt_grid(&self) -> Grid {
         if self.is_fill_value() {
-            vec![vec![' ']]
+            vec![vec!['_']]
         } else {
             let positive = self.abs();
             let minus = if *self < -0.0 { "¯" } else { "" };

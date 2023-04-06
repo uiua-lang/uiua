@@ -307,7 +307,7 @@ impl Primitive {
             Primitive::Deduplicate => env.monadic_mut(Value::deduplicate)?,
             Primitive::Member => env.dyadic_ref_env(Value::member)?,
             Primitive::IndexOf => env.dyadic_ref_env(Value::index_of)?,
-            Primitive::Group => env.dyadic_ref_own_env(Value::group)?,
+            Primitive::Group => env.dyadic_ref_env(Value::group)?,
             Primitive::Call => env.call()?,
             Primitive::Parse => env.monadic_env(|v, env| v.parse_num(env))?,
             Primitive::Reshape => {

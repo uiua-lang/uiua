@@ -1,9 +1,10 @@
+- Context-free identifiers
 - Better solution to string formatting
 - Recursion?
 - Threads
 - More array functions
   - Find
-  - Separate group into group and partition
+  - Partition
   - Progressive index of
   - Nudge
 - Optimized functions

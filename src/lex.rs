@@ -311,7 +311,6 @@ pub enum Simple {
     Backtick,
     LeftArrow,
     ScopeDelim,
-    DoubleBacktick,
 }
 
 impl fmt::Display for Simple {
@@ -336,7 +335,6 @@ impl fmt::Display for Simple {
             Simple::Backtick => write!(f, "`"),
             Simple::LeftArrow => write!(f, "←"),
             Simple::ScopeDelim => write!(f, "---"),
-            Simple::DoubleBacktick => write!(f, "``"),
         }
     }
 }
@@ -445,8 +443,6 @@ impl Lexer {
                     let number = self.number('-');
                     if number.len() > 1 {
                         self.end(Number(number), start)
-                    } else if self.next_char_exact('`') {
-                        self.end(DoubleBacktick, start)
                     } else {
                         self.end(Backtick, start)
                     }

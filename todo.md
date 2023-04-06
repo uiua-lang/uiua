@@ -1,12 +1,14 @@
 - Better solution to string formatting
 - Recursion?
 - Threads
+- Add back inverse and under
 - More array functions
   - Progressive index of
   - Nudge
 - Optimized functions
   - Reduces:
     - Join all
+  - Make group and partition allocate less
 - Multimedia Output
   - Native image output
   - Sound IO

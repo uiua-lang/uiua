@@ -23,10 +23,10 @@ start ← =÷2 size ⇡+1 size
 const PRIMES: &str = "‡∵(=2 /+ =⌊.÷⇡.).+1 ⇡60";
 const TRANS_STACK: &str = "⍉↯4_4[...1 .2 .3 ...4 .5 .6]";
 const MANDELBROT: &str = "\
-Z ← +⊟/- ⁿ2 ~×2 /×.⇌
-⍉⊞⊟.÷25 -÷2 ~⇡. 100
-∵(<1 √/+ ⁿ2;~⍥(Z ~,) 0_0 10)";
-const CHART: &str = "∵(⊙~·_:_÷_≡_⍋ ⁅÷23)⊞×.-10 ⇡20";
+Z ← ⊟/- ⁿ2 ~×2 /×.⇌
+⇌⍉⍉⊞⊟.×4 ÷~-÷2,⇡. 300
+<2 √/+ ⁿ2;~⍥(+Z ~,) ~20 ∵0.";
+const CHART: &str = "∵(⊡~·_:_÷_≡_⍋ ⁅÷23)⊞×.-10 ⇡20";
 const ERRORS: &str = "# Change this ↓ to a 0\n!\"Oh no bad!\" 1\nprintln \"All is well\"";
 
 pub const EXAMPLES: &[&str] = &[

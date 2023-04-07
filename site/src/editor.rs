@@ -257,8 +257,17 @@ pub fn Editor(
         }
     };
 
+    let examples_len = examples.len();
     let example_text =
-        move || (examples.len() > 1).then(|| format!("{}/{}", example.get() + 1, examples.len()));
+        move || (examples_len > 1).then(|| format!("{}/{}", example.get() + 1, examples_len));
+
+    let next_button_class = move || {
+        if example.get() == examples_len - 1 {
+            "code-button"
+        } else {
+            "code-button important-button"
+        }
+    };
 
     view! { cx,
         <div>
@@ -294,7 +303,7 @@ pub fn Editor(
                             on:click=prev_example title="Previous example">{ "<" } </button>
                             <button
                             id="next-example"
-                            class="code-button important-button"
+                            class=next_button_class
                             style=example_arrow_style
                             on:click=next_example title="Next example">{ ">" } </button>
                     </div>

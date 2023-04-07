@@ -13,7 +13,7 @@ pub fn DocsHome(cx: Scope) -> impl IntoView {
         <h2>"Tutorial"</h2>
         <ul>
             <p>"These are meant to be read in order:"</p>
-            {TutorialPage::ALL.iter().map(|p| view!(cx, <li><A href={p.path()}>{p.title()}</A></li>)).collect::<Vec<_>>()}
+            {TutorialPage::ALL.iter().map(|p| view!(cx, <li><A href={p.path()}>{p.title()}" "{p.additional_title(cx)}</A></li>)).collect::<Vec<_>>()}
         </ul>
     }
 }
@@ -36,6 +36,17 @@ impl TutorialPage {
             Self::Basic => "Basic Stack Operations and Formatting",
             Self::Math => "Math and Comparison",
             Self::Arrays => "Arrays",
+        }
+    }
+    fn additional_title(&self, cx: Scope) -> impl IntoView {
+        use Primitive::*;
+        match self {
+            Self::Basic => view!(cx, {}).into_view(cx),
+            Self::Math => view!(cx, {}).into_view(cx),
+            Self::Arrays => {
+                view!(cx, <PrimCode prim=Len/><PrimCode prim=Rank/><PrimCode prim=Shape/>)
+                    .into_view(cx)
+            }
         }
     }
 }

@@ -10,14 +10,18 @@ use std::{
 use crate::{primitive::Primitive, Ident, UiuaError};
 
 pub fn lex(input: &str, file: Option<&Path>) -> LexResult<Vec<Sp<Token>>> {
-    let mut lexer = Lexer::new(input, file);
-    let mut tokens = Vec::new();
-
-    while let Some(token) = lexer.next_token()? {
-        tokens.push(token);
+    Lexer {
+        input_chars: input.chars().collect(),
+        loc: Loc {
+            pos: 0,
+            line: 1,
+            col: 1,
+        },
+        file: file.map(Into::into),
+        input: input.into(),
+        tokens: Vec::new(),
     }
-
-    Ok(tokens)
+    .run()
 }
 
 #[derive(Debug)]
@@ -358,21 +362,10 @@ struct Lexer {
     loc: Loc,
     file: Option<Arc<Path>>,
     input: Arc<str>,
+    tokens: Vec<Sp<Token>>,
 }
 
 impl Lexer {
-    fn new(input: &str, file: Option<&Path>) -> Self {
-        Self {
-            input_chars: input.chars().collect(),
-            loc: Loc {
-                pos: 0,
-                line: 1,
-                col: 1,
-            },
-            file: file.map(Into::into),
-            input: input.into(),
-        }
-    }
     fn peek_char(&self) -> Option<char> {
         self.input_chars.get(self.loc.pos).copied()
     }
@@ -419,20 +412,20 @@ impl Lexer {
             input: self.input.clone(),
         })
     }
-    fn end(&self, token: impl Into<Token>, start: Loc) -> LexResult<Option<Sp<Token>>> {
-        Ok(Some(Sp {
+    fn end(&mut self, token: impl Into<Token>, start: Loc) {
+        self.tokens.push(Sp {
             value: token.into(),
             span: self.end_span(start),
-        }))
+        })
     }
-    fn next_token(&mut self) -> LexResult<Option<Sp<Token>>> {
+    fn run(mut self) -> LexResult<Vec<Sp<Token>>> {
         use {self::Simple::*, Token::*};
         loop {
             let start = self.loc;
             let Some(c) = self.next_char() else {
-                break Ok(None);
+                break;
             };
-            return match c {
+            match c {
                 '(' => self.end(OpenParen, start),
                 ')' => self.end(CloseParen, start),
                 '{' => self.end(OpenCurly, start),
@@ -535,11 +528,12 @@ impl Lexer {
                     if let Some(prim) = Primitive::from_unicode(c) {
                         self.end(Glyph(prim), start)
                     } else {
-                        Err(self.end_span(start).sp(LexError::UnexpectedChar(c)))
+                        return Err(self.end_span(start).sp(LexError::UnexpectedChar(c)));
                     }
                 }
             };
         }
+        Ok(self.tokens)
     }
     fn number(&mut self, init: char) -> String {
         // Whole part

@@ -256,6 +256,29 @@ impl Primitive {
         let exact_match = res.name().map_or(false, |i| i == name);
         (exact_match || matching.next().is_none()).then_some(res)
     }
+    pub fn from_multiname(name: &str) -> Option<Vec<Self>> {
+        if name.chars().count() < 3 {
+            return None;
+        }
+        let mut start = 0;
+        let indices: Vec<usize> = name.char_indices().map(|(i, _)| i).collect();
+        let mut prims = Vec::new();
+        'outer: loop {
+            if start == name.len() {
+                break Some(prims);
+            }
+            for len in (3..=name.len() - start).rev() {
+                let start_index = indices[start];
+                let end_index = indices[start + len - 1];
+                if let Some(p) = Primitive::from_name(&name[start_index..=end_index]) {
+                    prims.push(p);
+                    start += len;
+                    continue 'outer;
+                }
+            }
+            break None;
+        }
+    }
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
             Primitive::Pi => env.push(PI),
@@ -448,6 +471,7 @@ fn primitive_from_name() {
     assert_eq!(Primitive::from_name("resh"), Some(Primitive::Reshape));
 }
 
+#[cfg(test)]
 #[test]
 fn glyph_size() {
     use std::{fs::File, io::Write};
@@ -459,4 +483,22 @@ fn glyph_size() {
             writeln!(file, "{} |", glyph).unwrap();
         }
     }
+}
+
+#[cfg(test)]
+#[test]
+fn from_multiname() {
+    assert_eq!(
+        Primitive::from_multiname("rev").expect("rev"),
+        [Primitive::Reverse]
+    );
+    assert_eq!(
+        Primitive::from_multiname("revrev").expect("revrev"),
+        [Primitive::Reverse, Primitive::Reverse]
+    );
+    assert_eq!(
+        Primitive::from_multiname("tabrepl").unwrap(),
+        [Primitive::Table, Primitive::Replicate]
+    );
+    assert_eq!(Primitive::from_multiname("foo"), None);
 }

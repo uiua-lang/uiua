@@ -83,8 +83,10 @@ fn format_word(output: &mut String, word: &Word) {
         Word::Char(c) => output.push_str(&format!("{:?}", c)),
         Word::String(s) => output.push_str(&format!("{:?}", s)),
         Word::Ident(ident) => {
-            if let Some(prim) = Primitive::from_name(&ident.0) {
-                output.push_str(&prim.to_string());
+            if let Some(prims) = Primitive::from_multiname(&ident.0) {
+                for prim in prims {
+                    output.push_str(&prim.to_string());
+                }
             } else {
                 output.push_str(&ident.0)
             }

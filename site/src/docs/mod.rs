@@ -246,7 +246,7 @@ pub fn TutorialArrays(cx: Scope) -> impl IntoView {
             <p>"From shape we can derive two closely-related properties called "<b>"length"</b>" and "<b>"rank"</b>"."</p>
             <p><PrimCode prim=Len name=true/>" is the number of "<i>"major cells"</i>" of the array. This is the number of elements for a 1D array and the number of rows for a 2D array. Length is always equal to the first number in the shape (or 1 if the shape is empty)."</p>
             <p><PrimCode prim=Rank name=true/>" is the number of dimensions of the array. It is defined as the length of the shape."</p>
-            <Editor examples={&["△[1 2 3]\n⇀[1 2 3]\n⸫[1 2 3]", "# ⸫ is equivalent to ⇀△\n=⸫[1 2 3]⇀△[1 2 3]"]}/>
+            <Editor examples={&["△[1 2 3]\n≢[1 2 3]\n⸫[1 2 3]", "# ⸫ is equivalent to ≢△\n=⸫[1 2 3]≢△[1 2 3]"]}/>
             <p>"When creating multidimensional arrays, stack notation applies a step called "<i>"normalization"</i>". If all the items pushed to the stack have the same shape, they will combine into an array with a higher rank. Different shapes result in an error."</p>
             <Editor examples={&["[[1 2] [3 4]]", "[[1 2] [3 4 5]]"]}/>
             <br/>

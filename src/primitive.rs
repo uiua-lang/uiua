@@ -140,7 +140,7 @@ primitive!(
     (2, Max, "maximum" + '↥'),
     (2, Atan, "atangent"),
     // Monadic array ops
-    (1, Len, "length" + '⇀'),
+    (1, Len, "length" + '≢'),
     (1, Rank, "rank" + '∴'),
     (1, Shape, "shape" + '△'),
     (1, Range, "range" + '⇡'),

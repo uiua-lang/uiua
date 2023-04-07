@@ -7,7 +7,7 @@ rgb ← [×.⊢⇌x ×.⊢x ∵(0.5;) ⊢x]
 u ← ↥<0.2 ~>0.7.+×2 ×.~/· x
 c ← √/+ ⁿ2 x
 ⍉⊂~-¬u <1 c +0.1 ≡(↧<0.95 c) rgb";
-const AVG: &str = "Avg ← ÷⇀~/+.\nAvg 0_2_1_5";
+const AVG: &str = "Avg ← ÷≢~/+.\nAvg 0_2_1_5";
 const QUADRATIC: &str = "{÷×2 a -b ⊟¯.√-××4 a c ⁿ2 b}1 2 0";
 const STRIPES: &str = "\
 r ← ⌵sin ÷10 ⊞+.⇡300

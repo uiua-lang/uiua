@@ -79,7 +79,14 @@ fn format_words(output: &mut String, words: &[Sp<Word>]) {
 
 fn format_word(output: &mut String, word: &Word) {
     match word {
-        Word::Number(n) => output.push_str(n),
+        Word::Number(n) => {
+            if let Some(n) = n.strip_prefix('-') {
+                output.push('¯');
+                output.push_str(n);
+            } else {
+                output.push_str(n);
+            }
+        }
         Word::Char(c) => output.push_str(&format!("{:?}", c)),
         Word::String(s) => output.push_str(&format!("{:?}", s)),
         Word::Ident(ident) => {

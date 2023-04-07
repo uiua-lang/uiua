@@ -155,6 +155,9 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 // Add brackets to vectors
                 if !stringy {
                     grid[0].insert(0, '[');
+                    if self.fill {
+                        grid[0].insert(1, '∘');
+                    }
                     grid[0].push(']');
                 }
             } else {
@@ -169,21 +172,24 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 );
                 grid[0][0] = '┌';
                 grid[0][1] = '─';
+                if self.fill {
+                    grid[0][2] = '∘';
+                }
                 for i in 0..self.rank() {
                     grid[i + 1][0] = '·';
                 }
                 *grid.last_mut().unwrap().last_mut().unwrap() = '┘';
-            }
-            // Handle really big grid
-            if let Some((w, _)) = term_size::dimensions() {
-                for row in grid.iter_mut() {
-                    if row.len() > w {
-                        let diff = row.len() - w;
-                        row.truncate(w);
-                        if !(row[w - 1].is_whitespace() && diff == 1)
-                            && (2..4).any(|i| !row[w - i].is_whitespace())
-                        {
-                            row[w - 1] = '…';
+                // Handle really big grid
+                if let Some((w, _)) = term_size::dimensions() {
+                    for row in grid.iter_mut() {
+                        if row.len() > w {
+                            let diff = row.len() - w;
+                            row.truncate(w);
+                            if !(row[w - 1].is_whitespace() && diff == 1)
+                                && (2..4).any(|i| !row[w - i].is_whitespace())
+                            {
+                                row[w - 1] = '…';
+                            }
                         }
                     }
                 }
@@ -192,6 +198,9 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
 
         if just_dims {
             let mut s = String::from('[');
+            if self.fill {
+                s.push('∘');
+            }
             for (i, d) in self.shape.iter().enumerate() {
                 if i > 0 {
                     s.push_str(" × ");

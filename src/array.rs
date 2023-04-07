@@ -93,7 +93,7 @@ impl<T: ArrayValue> Array<T> {
     }
     #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
-        if self.rank() == 1 && self.fill {
+        if self.rank() == 1 {
             self.data.iter().take_while(|x| !x.is_fill_value()).count()
         } else {
             self.row_count()

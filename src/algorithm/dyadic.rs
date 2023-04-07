@@ -355,7 +355,7 @@ impl<T: ArrayValue> Array<T> {
         }
         for (d, (&s, &i)) in self.shape.iter().zip(index).enumerate() {
             let s = s as isize;
-            if i >= s || i < -s {
+            if i > s || i < -s {
                 return Err(env.error(format!(
                     "Index {i} is out of bounds of length {s} (dimension {d}) in shape {:?}",
                     self.shape
@@ -387,7 +387,7 @@ impl<T: ArrayValue> Array<T> {
         }
         for (d, (&s, &i)) in self.shape.iter().zip(index).enumerate() {
             let s = s as isize;
-            if i >= s || i < -s {
+            if i > s || i < -s {
                 return Err(env.error(format!(
                     "Index {i} is out of bounds of length {s} (dimension {d}) in shape {:?}",
                     self.shape

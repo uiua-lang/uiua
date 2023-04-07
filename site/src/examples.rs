@@ -1,5 +1,5 @@
 const UIUA: &str = r#"‡=¯1 ≡/-◫2 <'A' ⊂' '."Um, I um...arrays""#;
-const FORMAT: &str = "# Click Run to format!\nfirst repeat (\\+ rev)0_1 10";
+const FORMAT: &str = "# Click Run to format!\nfirstrepeat(\\+ rev)0_1 10";
 const D3: &str = "↯~⇡/×.2_3_4";
 const LOGO: &str = "\
 x ← ⍉⍉⊞⊟.÷÷2 ~-÷2,⇡. 200

@@ -110,10 +110,10 @@ primitive!(
     (1(0){1}, Save, "save" + '⇟'),
     (0[1](1), Load, "load" + '⇞'),
     // Pervasive monadic ops
-    (1, Sign, "sign" + '$'),
     (1, Not, "not" + '¬'),
+    (1, Sign, "sign" + '$'),
     (1, Neg, "negate", Backtick + '¯'),
-    (1, Abs, "absolute" + '⌵'),
+    (1, Abs, "absolute value" + '⌵'),
     (1, Sqrt, "sqrt" + '√'),
     (1, Sin, "sine"),
     (1, Cos, "cosine"),

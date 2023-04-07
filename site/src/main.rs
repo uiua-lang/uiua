@@ -118,7 +118,7 @@ fn MainText(cx: Scope) -> impl IntoView {
         <p>"Uiua features:"</p>
         <ul>
             <li>"A rich set of primitives"</li>
-            <li>"Arrays following the "<a href="https://mlochbaum.github.io/BQN/doc/based.html">"Based Array Model"</a></li>
+            <li>"Arrays following the wonderfully simple "<a href="https://aplwiki.com/wiki/Array_model#Flat_array_theory">"Flat Array Model"</a>", with no boxing"</li>
             <li>"Basic IO facilities"</li>
             <li>"A deterministic formatter"</li>
         </ul>
@@ -130,12 +130,13 @@ fn MainText(cx: Scope) -> impl IntoView {
             <li>"Hook and fork constructs without parenthesis"</li>
             <li>"Stack-to-array syntax for building arrays with stack operations"</li>
             <li>"Primitives specifically for stack operations"</li>
+            <li>"No function overloading. Every glyph has one name and does one thing."</li>
         </ul>
         <hr/>
         <h3>"How does writing the glyphs work?"</h3>
         <p>"Unlike most array languages, Uiua does not overload primitives depending on whether they are passed one or two arguments. Functions in Uiua can take any number of arguments, but an individual function always takes the "<i>"same"</i>" number of arguments."</p>
         <p>"This ends up meaning that Uiua requires way more glyphs to have one for every primitive. There simply are not enough keys on them keyboard to type them without using a bunch of hard-to-remeber shortcuts. Also, I think it's annoying to need special editor support to be able to write code properly."</p>
-        <p>"To solve these issues, Uiua has a formatter that automatically converts ASCII names and characters into glyphs. You can type the name of a glyph (or a digraph, like >= for ≥), and the formatter will turn it into the corresponding glyph. Alternatively, the editor on the homepage has a button for each glyph."</p>
+        <p>"To solve these issues, Uiua has a formatter that automatically converts ASCII names and characters into glyphs. You can type the name of a glyph (or a digraph, like "<code>">="</code>" for "<PrimCode prim=Primitive::Ge/>"), and the formatter will turn it into the corresponding glyph. Alternatively, the editors embedded in this site have a button for each glyph."</p>
     </div>}
 }
 
@@ -148,6 +149,7 @@ mod code {
         view!(cx, <code>{name}" "<span class=class>{ prim.to_string() }</span></code>)
     }
 }
+use code::*;
 
 fn prim_class(prim: Primitive) -> &'static str {
     if prim.antiargs().is_some() || prim.antioutputs().is_some() {

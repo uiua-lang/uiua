@@ -1,4 +1,3 @@
-- Allow unicode symbols as identifiers
 - Better solution to string formatting
 - Recursion?
 - Threads

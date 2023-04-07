@@ -198,6 +198,23 @@ pub fn bridge(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
+pub fn distribute(env: &mut Uiua) -> UiuaResult {
+    let f = env.pop(1)?;
+    let xs = rc_take(env.pop(2)?);
+    let y = rc_take(env.pop(3)?);
+    const BREAK_ERROR: &str = "break is not allowed in distribute";
+    let mut new_rows = Vec::with_capacity(xs.row_count());
+    for x in xs.into_rows() {
+        env.push(y.clone());
+        env.push(x);
+        env.push_ref(f.clone());
+        env.call_error_on_break(BREAK_ERROR)?;
+        new_rows.push(rc_take(env.pop("distribute's function result")?));
+    }
+    env.push(Value::from_row_values(new_rows, env)?);
+    Ok(())
+}
+
 pub fn table(env: &mut Uiua) -> UiuaResult {
     let f = env.pop(1)?;
     let xs = rc_take(env.pop(2)?);

@@ -74,7 +74,7 @@ impl<T: ArrayValue> Array<T> {
         truncate: bool,
         env: &Uiua,
     ) -> UiuaResult<Self> {
-        Ok(match (self.shape.as_slice(), other.shape.as_slice()) {
+        let res = match (self.shape.as_slice(), other.shape.as_slice()) {
             ([], []) => {
                 self.data.extend(other.data);
                 self.shape = vec![self.flat_len()];
@@ -212,7 +212,9 @@ impl<T: ArrayValue> Array<T> {
                     )));
                 }
             }
-        })
+        };
+        res.validate_shape();
+        Ok(res)
     }
 }
 
@@ -238,13 +240,25 @@ impl<T: ArrayValue> Array<T> {
                 amount.len()
             )));
         }
-        if amount.iter().all(|&n| n <= 1) {
+        if self.rank() == 0 {
+            if amount.len() != 1 {
+                return Err(env.error("Scalar array can only be replicated with a single number"));
+            }
+            let mut new_data = Vec::with_capacity(amount[0]);
+            for _ in 0..amount[0] {
+                new_data.push(self.data[0].clone());
+            }
+            self = new_data.into();
+        } else if amount.iter().all(|&n| n <= 1) {
             let row_len = self.row_len();
+            let mut new_row_count = self.row_count();
             for (r, &n) in amount.iter().enumerate().rev() {
                 if n == 0 {
                     self.data.drain(r * row_len..(r + 1) * row_len);
+                    new_row_count -= 1;
                 }
             }
+            self.shape[0] = new_row_count;
         } else {
             let mut new_data = Vec::new();
             let mut new_len = 0;
@@ -257,6 +271,7 @@ impl<T: ArrayValue> Array<T> {
             self.shape[0] = new_len;
             self.data = new_data;
         }
+        self.validate_shape();
         Ok(self)
     }
 }
@@ -489,6 +504,7 @@ impl<T: ArrayValue> Array<T> {
         self.data.append(&mut other.data);
         self.shape.insert(0, 2);
         self.reset_fill();
+        self.validate_shape();
         Ok(self)
     }
 }

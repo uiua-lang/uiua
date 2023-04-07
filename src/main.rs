@@ -14,6 +14,8 @@ use notify::{EventKind, RecursiveMode, Watcher};
 use uiua::{format::format_file, value::Value, Uiua, UiuaResult};
 
 fn main() {
+    color_backtrace::install();
+
     let _ = ctrlc::set_handler(|| {
         if let Ok(App { command: None, .. }) = App::try_parse() {
             clear_watching();

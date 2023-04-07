@@ -127,6 +127,14 @@ impl Value {
             |arr| &mut arr.shape,
         )
     }
+    pub(crate) fn validate_shape(&self) {
+        self.generic_ref(
+            Array::validate_shape,
+            Array::validate_shape,
+            Array::validate_shape,
+            Array::validate_shape,
+        )
+    }
     pub fn fill_mut(&mut self) -> &mut bool {
         self.generic_mut(
             |arr| &mut arr.fill,
@@ -454,8 +462,7 @@ macro_rules! value_un_impl {
             pub fn $name(self, env: &Uiua) -> UiuaResult<Self> {
                 Ok(match self {
                     $(Self::$variant(array) => {
-                        let (shape, data) = array.into_pair();
-                        (shape, data.into_iter().map($name::$f).collect::<Vec<_>>()).into()
+                        (array.shape, array.data.into_iter().map($name::$f).collect::<Vec<_>>()).into()
                     },)*
                     val => return Err($name::error(val.type_name(), env))
                 })

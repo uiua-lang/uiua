@@ -213,12 +213,15 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
             env.push(x.clone());
             env.push_ref(f.clone());
             env.call_error_on_break(BREAK_ERROR)?;
-            items.push(rc_take(env.pop("tabled function result")?));
+            let item = rc_take(env.pop("tabled function result")?);
+            item.validate_shape();
+            items.push(item);
         }
     }
     let mut tabled = Value::from_row_values(items, env)?;
     new_shape.extend_from_slice(&tabled.shape()[1..]);
     *tabled.shape_mut() = new_shape;
+    tabled.validate_shape();
     env.push(tabled);
     Ok(())
 }

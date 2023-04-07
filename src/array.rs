@@ -59,19 +59,34 @@ impl<T: ArrayValue> fmt::Display for Array<T> {
     }
 }
 
+#[track_caller]
+#[inline(always)]
+fn validate_shape<T>(shape: &[usize], data: &[T]) {
+    debug_assert_eq!(
+        shape.iter().product::<usize>(),
+        data.len(),
+        "shape {shape:?} does not match data length {}",
+        data.len()
+    );
+}
+
 impl<T: ArrayValue> Array<T> {
+    #[track_caller]
     pub fn new(shape: Vec<usize>, data: Vec<T>) -> Self {
+        validate_shape(&shape, &data);
         Self {
             shape,
             data,
             fill: T::DEFAULT_FILL,
         }
     }
+    #[track_caller]
+    #[inline(always)]
+    pub(crate) fn validate_shape(&self) {
+        validate_shape(&self.shape, &self.data);
+    }
     pub fn unit(data: T) -> Self {
         Self::new(Vec::new(), vec![data])
-    }
-    pub fn into_pair(self) -> (Vec<usize>, Vec<T>) {
-        (self.shape, self.data)
     }
     pub fn row_count(&self) -> usize {
         self.shape.first().copied().unwrap_or(1)
@@ -183,6 +198,7 @@ impl<T: ArrayValue> Array<T> {
         self.data.truncate(new_len * self.row_len());
         self.shape[0] = new_len;
     }
+    #[track_caller]
     pub fn from_row_arrays(
         values: impl IntoIterator<Item = Self>,
         fill: bool,

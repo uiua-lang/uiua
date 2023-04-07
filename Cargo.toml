@@ -10,6 +10,7 @@ ariadne = "0.2.0"
 clap.features = ["derive"]
 clap.optional = true
 clap.version = "4"
+color-backtrace = "0.5.1"
 ctrlc.optional = true
 ctrlc.version = "3"
 image = "0.24.5"

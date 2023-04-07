@@ -237,22 +237,23 @@ impl Primitive {
         })
     }
     pub fn from_name(name: &str) -> Option<Self> {
-        let lower = name.to_lowercase();
-        if let Some(io) = IoOp::from_name(&lower) {
+        if name.chars().any(char::is_uppercase) {
+            return None;
+        }
+        if let Some(io) = IoOp::from_name(name) {
             return Some(Primitive::Io(io));
         }
-        if lower == "pi" || lower == "π" {
+        if name == "pi" || name == "π" {
             return Some(Primitive::Pi);
         }
         if name.len() < 3 {
             return None;
         }
-        let mut matching = Primitive::ALL.into_iter().filter(|p| {
-            p.name()
-                .map_or(false, |i| i.to_lowercase().starts_with(&lower))
-        });
+        let mut matching = Primitive::ALL
+            .into_iter()
+            .filter(|p| p.name().map_or(false, |i| i.starts_with(name)));
         let res = matching.next()?;
-        let exact_match = res.name().map_or(false, |i| i == lower);
+        let exact_match = res.name().map_or(false, |i| i == name);
         (exact_match || matching.next().is_none()).then_some(res)
     }
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {

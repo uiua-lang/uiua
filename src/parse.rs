@@ -182,10 +182,11 @@ impl Parser {
             .map(|s| s.value.into())
     }
     fn try_binding(&mut self) -> Option<Binding> {
+        let start = self.index;
         Some(if let Some(ident) = self.try_ident() {
             self.try_exact(Spaces);
             if self.try_exact(Equal).is_none() && self.try_exact(LeftArrow).is_none() {
-                self.index -= 1;
+                self.index = start;
                 return None;
             }
             self.try_exact(Spaces);

@@ -257,6 +257,7 @@ impl<'io> Uiua<'io> {
             Word::Dfn(func) => self.dfn(func, word.span)?,
             Word::Primitive(p) => self.primitive(p, word.span, call),
             Word::Modified(m) => self.modified(*m, call)?,
+            Word::Spaces => {}
         }
         Ok(())
     }

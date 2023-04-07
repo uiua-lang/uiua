@@ -160,6 +160,7 @@ impl Parser {
         items
     }
     fn try_item(&mut self, parse_scopes: bool) -> Option<Item> {
+        self.try_exact(Spaces);
         Some(if let Some(binding) = self.try_binding() {
             Item::Binding(binding, self.comment())
         } else if let Some(words) = self.try_words() {
@@ -182,10 +183,12 @@ impl Parser {
     }
     fn try_binding(&mut self) -> Option<Binding> {
         Some(if let Some(ident) = self.try_ident() {
+            self.try_exact(Spaces);
             if self.try_exact(Equal).is_none() && self.try_exact(LeftArrow).is_none() {
                 self.index -= 1;
                 return None;
             }
+            self.try_exact(Spaces);
             let words = self.try_words().unwrap_or_default();
             Binding { name: ident, words }
         } else {
@@ -216,7 +219,12 @@ impl Parser {
         let mut items = Vec::new();
         while let Some(uspan) = self.try_exact(Underscore) {
             let item = match self.try_modified() {
-                Some(item) => item,
+                Some(item) => {
+                    if let Word::Spaces = item.value {
+                        self.errors.push(self.expected([Expectation::Term]));
+                    }
+                    item
+                }
                 None => {
                     self.errors.push(self.expected([Expectation::Term]));
                     uspan.sp(Word::Primitive(Primitive::Noop))
@@ -265,6 +273,7 @@ impl Parser {
         };
         let mut args = Vec::new();
         for _ in 0..margs {
+            self.try_exact(Spaces);
             if let Some(arg) = self.try_modified() {
                 args.push(arg);
             } else {
@@ -304,6 +313,8 @@ impl Parser {
             let end = self.expect_close(CloseBracket);
             let span = start.merge(end);
             span.sp(Word::Array(items))
+        } else if let Some(span) = self.try_exact(Spaces) {
+            span.sp(Word::Spaces)
         } else {
             return None;
         })

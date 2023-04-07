@@ -1,6 +1,6 @@
-use std::{fs, iter::once, path::Path};
+use std::{fs, path::Path};
 
-use crate::{ast::*, parse::parse, primitive::Primitive, UiuaError, UiuaResult};
+use crate::{ast::*, lex::Sp, parse::parse, primitive::Primitive, UiuaError, UiuaResult};
 
 pub fn format_items(items: &[Item]) -> String {
     let mut output = String::new();
@@ -47,23 +47,19 @@ fn format_item(output: &mut String, item: &Item) {
             output.push_str("---");
         }
         Item::Words(w, comment) => {
-            for node in words(w.iter().map(|w| &w.value).by_ref()) {
-                reduce(output, &node);
-            }
+            format_words(output, w);
             if let Some(comment) = comment {
-                space(output, "  # ");
-                space(output, comment);
+                output.push_str("  # ");
+                output.push_str(comment);
             }
         }
         Item::Binding(binding, comment) => {
             output.push_str(&binding.name.value.0);
             output.push_str(" ← ");
-            for node in words(binding.words.iter().map(|w| &w.value).by_ref()) {
-                reduce(output, &node);
-            }
+            format_words(output, &binding.words);
             if let Some(comment) = comment {
-                space(output, "  # ");
-                space(output, comment);
+                output.push_str("  # ");
+                output.push_str(comment);
             }
         }
         Item::Comment(comment) => {
@@ -75,150 +71,52 @@ fn format_item(output: &mut String, item: &Item) {
     output.push('\n');
 }
 
-#[derive(Debug)]
-enum FormatNode {
-    Unit(String),
-    Call(String, Vec<FormatNode>, bool),
-    Strand(Vec<FormatNode>),
-    Delim(&'static str, &'static str, Vec<FormatNode>),
+fn format_words(output: &mut String, words: &[Sp<Word>]) {
+    for word in words {
+        format_word(output, &word.value);
+    }
 }
 
-fn is_literal_char(c: char) -> bool {
-    c.is_alphabetic() && c != 'ⁿ' || c.is_ascii_digit() || "\"'".contains(c)
-}
-
-fn space_between(a: char, b: char) -> bool {
-    if a == ' ' || ".,])}".contains(b) {
-        return false;
-    }
-    if a == '.' && b.is_ascii_digit() {
-        return true;
-    }
-    is_literal_char(a) || (a.is_ascii_digit() && (b.is_alphabetic() || b.is_ascii_digit()))
-}
-
-fn space(output: &mut String, s: &str) {
-    if let Some(c) = output.chars().last() {
-        if c == ' ' && s == " " {
-            return;
-        }
-        if space_between(c, s.chars().next().unwrap()) {
-            output.push(' ');
-        }
-    }
-    if s.starts_with([']', ')', '}', '.', ',', ';', ' ']) {
-        while output.ends_with(' ') {
-            output.pop();
-        }
-    }
-    output.push_str(s);
-}
-
-fn reduce(output: &mut String, node: &FormatNode) {
-    match node {
-        FormatNode::Unit(s) => space(output, s),
-        FormatNode::Call(f, args, space_after) => {
-            space(output, f);
-            for arg in args {
-                reduce(output, arg);
-            }
-            if *space_after {
-                space(output, " ");
+fn format_word(output: &mut String, word: &Word) {
+    match word {
+        Word::Number(n) => output.push_str(n),
+        Word::Char(c) => output.push_str(&format!("{:?}", c)),
+        Word::String(s) => output.push_str(&format!("{:?}", s)),
+        Word::Ident(ident) => {
+            if let Some(prim) = Primitive::from_name(&ident.0) {
+                output.push_str(&prim.to_string());
+            } else {
+                output.push_str(&ident.0)
             }
         }
-        FormatNode::Strand(items) => {
+        Word::Strand(items) => {
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
                     output.push('_');
                 }
-                reduce(output, item);
+                format_word(output, &item.value);
             }
-            space(output, " ");
-        }
-        FormatNode::Delim(start, end, items) => {
-            space(output, start);
-            for item in items {
-                reduce(output, item);
-            }
-            space(output, end);
-        }
-    }
-}
-
-fn word_node(iter: &mut dyn Iterator<Item = &Word>) -> Option<FormatNode> {
-    let word = iter.next()?;
-    Some(match word {
-        Word::Number(n) => FormatNode::Unit({
-            if let Some(n) = n.strip_prefix('-') {
-                format!("¯{}", n)
-            } else {
-                n.to_string()
-            }
-        }),
-        Word::Char(c) => FormatNode::Unit(format!("'{c}'")),
-        Word::String(s) => FormatNode::Unit(format!("{s:?}")),
-        Word::Ident(ident) => {
-            if !ident.is_capitalized() {
-                if let Some(prim) = Primitive::from_name(ident.as_str()) {
-                    if prim.ascii().is_some() || prim.unicode().is_some() {
-                        if let Some(args) = prim.args() {
-                            let mut arg_nodes = Vec::new();
-                            for _ in 0..args {
-                                arg_nodes.extend(word_node(iter));
-                            }
-                            return Some(FormatNode::Call(prim.to_string(), arg_nodes, false));
-                        } else {
-                            return Some(FormatNode::Unit(prim.to_string()));
-                        }
-                    }
-                }
-            }
-            FormatNode::Unit(ident.to_string())
-        }
-        Word::Strand(items) => {
-            let mut nodes = Vec::new();
-            for item in items {
-                nodes.extend(word_node(&mut once(&item.value)));
-            }
-            FormatNode::Strand(nodes)
         }
         Word::Array(items) => {
-            FormatNode::Delim("[", "]", words(items.iter().map(|i| &i.value).by_ref()))
+            output.push('[');
+            format_words(output, items);
+            output.push(']');
         }
         Word::Func(func) => {
-            FormatNode::Delim("(", ")", words(func.body.iter().map(|i| &i.value).by_ref()))
+            output.push('(');
+            format_words(output, &func.body);
+            output.push(')');
         }
-        Word::Dfn(rfunc) => FormatNode::Delim(
-            "{",
-            "}",
-            words(rfunc.body.iter().map(|i| &i.value).by_ref()),
-        ),
-        Word::Primitive(prim) => {
-            if prim.ascii().is_some() || prim.unicode().is_some() {
-                if let Some(args) = prim.args() {
-                    let mut arg_nodes = Vec::new();
-                    for _ in 0..args {
-                        arg_nodes.extend(word_node(iter));
-                    }
-                    return Some(FormatNode::Call(prim.to_string(), arg_nodes, false));
-                } else {
-                    return Some(FormatNode::Unit(prim.to_string()));
-                }
-            }
-            FormatNode::Unit(prim.to_string())
+        Word::Dfn(dfn) => {
+            output.push('{');
+            format_words(output, &dfn.body);
+            output.push('}');
         }
-        Word::Modified(m) => FormatNode::Call(
-            m.modifier.value.to_string(),
-            words(m.words.iter().map(|i| &i.value).by_ref()),
-            true,
-        ),
-    })
-}
-
-fn words(iter: &mut dyn Iterator<Item = &Word>) -> Vec<FormatNode> {
-    let mut nodes = Vec::new();
-    while let Some(word) = word_node(iter) {
-        nodes.push(word);
+        Word::Primitive(prim) => output.push_str(&prim.to_string()),
+        Word::Modified(m) => {
+            output.push_str(&m.modifier.value.to_string());
+            format_words(output, &m.words);
+        }
+        Word::Spaces => output.push(' '),
     }
-    nodes
 }

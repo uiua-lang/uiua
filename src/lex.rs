@@ -307,10 +307,11 @@ pub enum Simple {
     BangEqual,
     LessEqual,
     GreaterEqual,
-    Newline,
     Backtick,
     LeftArrow,
     ScopeDelim,
+    Newline,
+    Spaces,
 }
 
 impl fmt::Display for Simple {
@@ -331,10 +332,11 @@ impl fmt::Display for Simple {
             Simple::BangEqual => write!(f, "!="),
             Simple::LessEqual => write!(f, "<="),
             Simple::GreaterEqual => write!(f, ">="),
-            Simple::Newline => write!(f, "\\n"),
             Simple::Backtick => write!(f, "`"),
             Simple::LeftArrow => write!(f, "←"),
             Simple::ScopeDelim => write!(f, "---"),
+            Simple::Newline => write!(f, "\\n"),
+            Simple::Spaces => write!(f, " "),
         }
     }
 }
@@ -524,6 +526,10 @@ impl Lexer {
                 }
                 // Newlines
                 '\n' => self.end(Newline, start),
+                ' ' | '\t' => {
+                    while self.next_char_exact(' ') || self.next_char_exact('\t') {}
+                    self.end(Spaces, start)
+                }
                 c if c.is_whitespace() => continue,
                 c => {
                     if let Some(prim) = Primitive::from_unicode(c) {

@@ -29,6 +29,7 @@ pub enum Word {
     Dfn(Func),
     Primitive(Primitive),
     Modified(Box<Modified>),
+    Spaces,
 }
 
 impl fmt::Debug for Word {
@@ -48,6 +49,7 @@ impl fmt::Debug for Word {
             }
             Word::Primitive(prim) => prim.fmt(f),
             Word::Modified(modified) => modified.fmt(f),
+            Word::Spaces => write!(f, " "),
         }
     }
 }

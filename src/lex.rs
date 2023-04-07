@@ -504,6 +504,7 @@ impl Lexer {
                     self.end(Str(string), start)
                 }
                 // Identifiers and selectors
+                c if is_custom_glyph(c) => self.end(Ident(c.to_string().into()), start),
                 c if is_basically_alphabetic(c) => {
                     let mut ident = String::new();
                     ident.push(c);
@@ -598,6 +599,6 @@ pub fn is_basically_alphabetic(c: char) -> bool {
     c.is_alphabetic() && c != 'ⁿ'
 }
 
-pub fn is_basically_alphanumeric(c: char) -> bool {
-    c.is_alphanumeric() && c != 'ⁿ'
+pub fn is_custom_glyph(c: char) -> bool {
+    c as u32 > 127 && !is_basically_alphabetic(c) && Primitive::from_unicode(c).is_none()
 }

@@ -177,7 +177,7 @@ impl<'io> Uiua<'io> {
         idx
     }
     fn binding(&mut self, binding: Binding) -> UiuaResult {
-        let val = if binding.name.value.is_capitalized() {
+        let val = if binding.name.value.is_functiony() {
             let instrs = self.compile_words(binding.words)?;
             let func = Function {
                 id: FunctionId::Named(binding.name.value.clone()),

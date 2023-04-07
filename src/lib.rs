@@ -127,8 +127,8 @@ fn rc_take<T: Clone>(rc: Rc<T>) -> T {
 pub struct Ident(Rc<str>);
 
 impl Ident {
-    pub fn is_capitalized(&self) -> bool {
-        self.0.starts_with(char::is_uppercase)
+    pub fn is_functiony(&self) -> bool {
+        self.0.starts_with(|c: char| !c.is_lowercase())
     }
     pub fn as_str(&self) -> &str {
         &self.0

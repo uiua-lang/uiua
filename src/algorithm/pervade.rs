@@ -1,4 +1,8 @@
-use std::{cmp::Ordering, fmt::Display, slice};
+use std::{
+    cmp::{self, Ordering},
+    fmt::Display,
+    slice,
+};
 
 use crate::{array::*, Byte, Uiua, UiuaError, UiuaResult};
 
@@ -35,18 +39,18 @@ fn bin_pervade_recursive<A: Arrayish, B: Arrayish, C: ArrayValue>(
             }
         }
         ([], bsh) => {
-            for b in b.rows() {
-                bin_pervade_recursive(a, &(&bsh[1..], b), c, f);
+            for brow in b.rows() {
+                bin_pervade_recursive(a, &(&bsh[1..], brow), c, f);
             }
         }
         (ash, []) => {
-            for a in a.rows() {
-                bin_pervade_recursive(&(&ash[1..], a), b, c, f);
+            for arow in a.rows() {
+                bin_pervade_recursive(&(&ash[1..], arow), b, c, f);
             }
         }
         (ash, bsh) => {
-            for (a, b) in a.rows().zip(b.rows()) {
-                bin_pervade_recursive(&(&ash[1..], a), &(&bsh[1..], b), c, f);
+            for (arow, brow) in a.rows().zip(b.rows()) {
+                bin_pervade_recursive(&(&ash[1..], arow), &(&bsh[1..], brow), c, f);
             }
         }
     }
@@ -522,7 +526,7 @@ pub fn bin_pervade_generic<A: PervasiveInput, B: PervasiveInput, C: Default>(
     env: &mut Uiua,
     f: impl FnMut(A::OwnedItem, B::OwnedItem, &mut Uiua) -> UiuaResult<C> + Copy,
 ) -> UiuaResult<(Vec<usize>, Vec<C>)> {
-    let c_shape = a_shape.max(b_shape).to_vec();
+    let c_shape = cmp::max(a_shape, b_shape).to_vec();
     let c_len: usize = c_shape.iter().product();
     let mut c: Vec<C> = Vec::with_capacity(c_len);
     for _ in 0..c_len {
@@ -613,7 +617,7 @@ fn bin_pervade_recursive_generic<A: PervasiveInput, B: PervasiveInput, C>(
                         .as_slice()
                         .chunks_exact(a_chunk_size)
                         .zip(b.as_slice().chunks_exact(b_chunk_size))
-                        .zip(c.chunks_exact_mut(a_chunk_size.max(b_chunk_size)))
+                        .zip(c.chunks_exact_mut(cmp::max(a_chunk_size, b_chunk_size)))
                     {
                         bin_pervade_recursive_generic(
                             &a_shape[1..],

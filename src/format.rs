@@ -1,6 +1,6 @@
 use std::{fs, path::Path};
 
-use crate::{ast::*, lex::Sp, parse::parse, primitive::Primitive, UiuaError, UiuaResult};
+use crate::{ast::*, lex::Sp, parse::parse, UiuaError, UiuaResult};
 
 pub fn format_items(items: &[Item]) -> String {
     let mut output = String::new();
@@ -21,6 +21,7 @@ fn format_impl(input: &str, path: Option<&Path>) -> UiuaResult<String> {
     let (items, errors) = parse(input, path);
     if errors.is_empty() {
         Ok(format_items(&items))
+        // Ok(input.into())
     } else {
         Err(errors.into())
     }
@@ -89,15 +90,7 @@ fn format_word(output: &mut String, word: &Word) {
         }
         Word::Char(c) => output.push_str(&format!("{:?}", c)),
         Word::String(s) => output.push_str(&format!("{:?}", s)),
-        Word::Ident(ident) => {
-            if let Some(prims) = Primitive::from_multiname(&ident.0) {
-                for prim in prims {
-                    output.push_str(&prim.to_string());
-                }
-            } else {
-                output.push_str(&ident.0)
-            }
-        }
+        Word::Ident(ident) => output.push_str(&ident.0),
         Word::Strand(items) => {
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {

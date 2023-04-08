@@ -256,7 +256,7 @@ impl Primitive {
         let exact_match = res.name().map_or(false, |i| i == name);
         (exact_match || matching.next().is_none()).then_some(res)
     }
-    pub fn from_multiname(name: &str) -> Option<Vec<Self>> {
+    pub fn from_multiname(name: &str) -> Option<Vec<(Self, &str)>> {
         if name.chars().count() < 3 {
             return None;
         }
@@ -271,7 +271,7 @@ impl Primitive {
                 let start_index = indices[start];
                 let end_index = indices[start + len - 1];
                 if let Some(p) = Primitive::from_name(&name[start_index..=end_index]) {
-                    prims.push(p);
+                    prims.push((p, &name[start_index..=end_index]));
                     start += len;
                     continue 'outer;
                 }
@@ -488,18 +488,18 @@ fn glyph_size() {
 #[cfg(test)]
 #[test]
 fn from_multiname() {
-    assert_eq!(
-        Primitive::from_multiname("rev").expect("rev"),
-        [Primitive::Reverse]
-    );
-    assert_eq!(
-        Primitive::from_multiname("revrev").expect("revrev"),
-        [Primitive::Reverse, Primitive::Reverse]
-    );
-    assert_eq!(
-        Primitive::from_multiname("tabrepl").unwrap(),
-        [Primitive::Table, Primitive::Replicate]
-    );
+    assert!(matches!(
+        &*Primitive::from_multiname("rev").expect("rev"),
+        [(Primitive::Reverse, _)]
+    ));
+    assert!(matches!(
+        &*Primitive::from_multiname("revrev").expect("revrev"),
+        [(Primitive::Reverse, _), (Primitive::Reverse, _)]
+    ));
+    assert!(matches!(
+        &*Primitive::from_multiname("tabrepl").unwrap(),
+        [(Primitive::Table, _), (Primitive::Replicate, _)]
+    ));
     assert_eq!(Primitive::from_multiname("foo"), None);
 }
 

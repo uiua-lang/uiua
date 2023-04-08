@@ -275,8 +275,10 @@ impl<'io> Uiua<'io> {
                 let span = self.add_span(span);
                 self.push_instr(Instr::Call(span));
             }
-        } else if let Some(prim) = Primitive::from_name(ident.as_str()) {
-            self.primitive(prim, span, call)
+        } else if let Some(prims) = Primitive::from_multiname(ident.as_str()) {
+            for (prim, _) in prims.into_iter().rev() {
+                self.primitive(prim, span.clone(), call);
+            }
         } else {
             if let Some(dfn) = self.new_dfns.last_mut() {
                 if ident.as_str().len() == 1 {

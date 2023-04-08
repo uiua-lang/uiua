@@ -153,6 +153,7 @@ impl IoBackend for StdIo {
     fn write_file(&self, path: &str, contents: Vec<u8>) -> Result<(), String> {
         fs::write(path, contents).map_err(|e| e.to_string())
     }
+    #[cfg(feature = "viuer")]
     fn show_image(&self, image: DynamicImage) -> Result<(), String> {
         let (width, height) = if image.width() > image.height() {
             (term_size::dimensions().map(|(w, _)| w as u32), None)

@@ -404,13 +404,16 @@ impl Lexer {
         }
         true
     }
-    fn end_span(&self, start: Loc) -> Span {
+    fn make_span(&self, start: Loc, end: Loc) -> Span {
         Span::Code(CodeSpan {
             start,
-            end: self.loc,
+            end,
             file: self.file.clone(),
             input: self.input.clone(),
         })
+    }
+    fn end_span(&self, start: Loc) -> Span {
+        self.make_span(start, self.loc)
     }
     fn end(&mut self, token: impl Into<Token>, start: Loc) {
         self.tokens.push(Sp {
@@ -511,7 +514,27 @@ impl Lexer {
                     while let Some(c) = self.next_char_if(is_basically_alphabetic) {
                         ident.push(c);
                     }
-                    self.end(Ident(ident.into()), start)
+                    if let Some(prims) = Primitive::from_multiname(&ident) {
+                        let mut start = start;
+                        for (prim, frag) in prims {
+                            let end = Loc {
+                                col: start.col + frag.chars().count(),
+                                ..start
+                            };
+                            let token = if prim.unicode().is_some() || prim.ascii().is_some() {
+                                Glyph(prim)
+                            } else {
+                                Ident(frag.into())
+                            };
+                            self.tokens.push(Sp {
+                                value: token,
+                                span: self.make_span(start, end),
+                            });
+                            start = end;
+                        }
+                    } else {
+                        self.end(Ident(ident.into()), start)
+                    }
                 }
                 // Numbers
                 c if c.is_ascii_digit() => {

@@ -9,7 +9,6 @@ version = "0.1.0"
 ariadne = "0.2.0"
 instant = "0.1.12"
 term_size = "0.3.2"
-viuer = "0.6.2"
 
 [dependencies.color-backtrace]
 optional = true
@@ -48,10 +47,14 @@ default-features = false
 features = ["small_rng"]
 version = "0.8.5"
 
+[dependencies.viuer]
+optional = true
+version = "0.6.2"
+
 [features]
 binary = ["ctrlc", "notify", "clap", "open", "color-backtrace"]
 debug = []
-default = ["binary"]
+default = ["binary", "viuer"]
 
 [[bin]]
 name = "uiua"

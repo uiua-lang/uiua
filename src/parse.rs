@@ -251,25 +251,14 @@ impl Parser {
         Some(span.sp(Word::Strand(items)))
     }
     fn try_modified(&mut self) -> Option<Sp<Word>> {
-        let mut mod_margs = Primitive::ALL
+        let Some((modifier, margs)) = Primitive::ALL
             .into_iter()
             .filter_map(|prim| prim.modifier_args().map(|margs| (prim, margs)))
             .find_map(|(prim, margs)| {
                 self.try_exact(prim)
                     .or_else(|| prim.ascii().and_then(|simple| self.try_exact(simple)))
                     .map(|span| (span.sp(prim), margs))
-            });
-        if mod_margs.is_none() {
-            mod_margs = self
-                .next_token_map(|token| {
-                    token
-                        .as_ident()
-                        .and_then(|ident| Primitive::from_name(ident.as_str()))
-                        .and_then(|prim| prim.modifier_args().map(|margs| (prim, margs)))
-                })
-                .map(|sp| (sp.span.sp(sp.value.0), sp.value.1));
-        }
-        let Some((modifier, margs)) = mod_margs else {
+            }) else {
             return self.try_term();
         };
         let mut args = Vec::new();
@@ -295,7 +284,7 @@ impl Parser {
         })
     }
     fn try_term(&mut self) -> Option<Sp<Word>> {
-        Some(if let Some(prim) = self.try_op() {
+        Some(if let Some(prim) = self.try_prim() {
             prim.map(Word::Primitive)
         } else if let Some(ident) = self.try_ident() {
             ident.map(Word::Ident)
@@ -320,7 +309,7 @@ impl Parser {
             return None;
         })
     }
-    fn try_op(&mut self) -> Option<Sp<Primitive>> {
+    fn try_prim(&mut self) -> Option<Sp<Primitive>> {
         for prim in Primitive::ALL {
             let op_span = self
                 .try_exact(prim)

@@ -1,9 +1,7 @@
-- Always rerun on watch
 - Better solution to string formatting
 - Make grid formatting less vertical
-- Recursion?
 - Threads
-- Clean up lexer
+- Unroll some runtime recursion
 - More array functions
   - Progressive index of
   - Nudge

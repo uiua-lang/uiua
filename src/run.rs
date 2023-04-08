@@ -29,7 +29,7 @@ pub struct Uiua<'io> {
     spans: Vec<Span>,
     // Runtime
     array_stack: Vec<usize>,
-    dfn_stack: Vec<Vec<Rc<Value>>>,
+    dfn_stack: Vec<DfnFrame>,
     stack: Vec<Rc<Value>>,
     antistack: Vec<Rc<Value>>,
     call_stack: Vec<StackFrame>,
@@ -46,6 +46,12 @@ struct StackFrame {
     call_span: usize,
     pc: usize,
     spans: Vec<(usize, Option<Primitive>)>,
+}
+
+#[derive(Clone)]
+struct DfnFrame {
+    function: Rc<Value>,
+    args: Vec<Rc<Value>>,
 }
 
 impl<'io> Default for Uiua<'io> {
@@ -457,21 +463,9 @@ impl<'io> Uiua<'io> {
                     Ok(())
                 })(),
                 &Instr::Call(span) => self.call_with_span(span),
-                &Instr::CallDfn(n, span) => (|| {
-                    let f = self.pop("ref function")?;
-                    if self.stack.len() < n {
-                        return Err(self.spans[span]
-                            .clone()
-                            .sp(format!("not enough arguments for reference of {n} values"))
-                            .into());
-                    }
-                    let refs = self.stack.drain(self.stack.len() - n..).rev().collect();
-                    self.dfn_stack.push(refs);
-                    self.stack.push(f);
-                    self.call_with_span(span)
-                })(),
+                &Instr::CallDfn(n, span) => self.call_dfn_with_span(n, span),
                 Instr::DfnVal(n) => {
-                    let value = self.dfn_stack.last().unwrap()[*n].clone();
+                    let value = self.dfn_stack.last().unwrap().args[*n].clone();
                     self.stack.push(value);
                     Ok(())
                 }
@@ -515,10 +509,35 @@ impl<'io> Uiua<'io> {
             Ok(())
         }
     }
+    fn call_dfn_with_span(&mut self, n: usize, span: usize) -> UiuaResult {
+        let f = self.pop("dfn function")?;
+        if self.stack.len() < n {
+            return Err(self.spans[span]
+                .clone()
+                .sp(format!("not enough arguments for dfn of {n} values"))
+                .into());
+        }
+        let args = self.stack.drain(self.stack.len() - n..).rev().collect();
+        self.dfn_stack.push(DfnFrame {
+            function: f.clone(),
+            args,
+        });
+        self.stack.push(f);
+        self.call_with_span(span)
+    }
     /// Call the top of the stack as a function
     pub fn call(&mut self) -> UiuaResult {
         let call_span = self.span_index();
         self.call_with_span(call_span)
+    }
+    pub fn recur(&mut self) -> UiuaResult {
+        let dfn = self
+            .dfn_stack
+            .last()
+            .ok_or_else(|| self.error("Cannot recur outside of dfn"))?;
+        let call_span = self.span_index();
+        self.stack.push(dfn.function.clone());
+        self.call_dfn_with_span(dfn.args.len(), call_span)
     }
     pub fn call_catch_break(&mut self) -> UiuaResult<bool> {
         match self.call() {

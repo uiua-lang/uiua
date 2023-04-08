@@ -303,7 +303,6 @@ pub enum Simple {
     OpenBracket,
     CloseBracket,
     Underscore,
-    At,
     Bang,
     Star,
     Percent,
@@ -329,7 +328,6 @@ impl fmt::Display for Simple {
             Simple::OpenBracket => write!(f, "["),
             Simple::CloseBracket => write!(f, "]"),
             Simple::Underscore => write!(f, "_"),
-            Simple::At => write!(f, "@"),
             Simple::Bang => write!(f, "!"),
             Simple::Star => write!(f, "*"),
             Simple::Percent => write!(f, "%"),
@@ -438,7 +436,6 @@ impl Lexer {
                 '[' => self.end(OpenBracket, start),
                 ']' => self.end(CloseBracket, start),
                 '_' => self.end(Underscore, start),
-                '@' => self.end(At, start),
                 '`' => {
                     let number = self.number('-');
                     if number.len() > 1 {

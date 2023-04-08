@@ -9,7 +9,7 @@ use std::{
 
 use crate::{function::Function, primitive::Primitive, Byte, Uiua, UiuaResult};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Array<T> {
     pub(crate) shape: Vec<usize>,
     pub(crate) data: Vec<T>,
@@ -23,6 +23,11 @@ impl<T: ArrayValue> Default for Array<T> {
             data: Vec::new(),
             fill: T::DEFAULT_FILL,
         }
+    }
+}
+impl<T: ArrayValue> fmt::Debug for Array<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self}")
     }
 }
 

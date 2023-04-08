@@ -193,6 +193,7 @@ primitive!(
     // Misc
     (2, Throw, "throw" + '!'),
     (1(0), Break, "break" + '⎋'),
+    (1(0), Recur, "recur" + '↬'),
     (1, Debug, "debug" + '|'),
     (1(None), Call, "call" + ':'),
     (0, Noop, "noop" + '·'),
@@ -371,6 +372,12 @@ impl Primitive {
                 let n = env.pop(1)?.as_nat(env, "break expects a natural number")?;
                 if n > 0 {
                     return Err(UiuaError::Break(n - 1, env.span().clone()));
+                }
+            }
+            Primitive::Recur => {
+                let n = env.pop(1)?.as_nat(env, "recur expects a natural number")?;
+                if n > 0 {
+                    env.recur()?
                 }
             }
             Primitive::Debug => {

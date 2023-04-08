@@ -253,11 +253,9 @@ impl Primitive {
         if name.len() < 3 {
             return None;
         }
-        let mut matching = Primitive::ALL.into_iter().filter(|p| {
-            p.name().map_or(false, |pn| {
-                pn.starts_with(name) && !(pn.len() == 4 && name.len() == 3)
-            })
-        });
+        let mut matching = Primitive::ALL
+            .into_iter()
+            .filter(|p| p.name().map_or(false, |pn| pn.starts_with(name)));
         let res = matching.next()?;
         let exact_match = res.name().map_or(false, |i| i == name);
         (exact_match || matching.next().is_none()).then_some(res)

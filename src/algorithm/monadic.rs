@@ -151,22 +151,46 @@ impl Value {
             Array::transpose,
         )
     }
+    pub fn inv_transpose(&mut self) {
+        self.generic_mut(
+            Array::inv_transpose,
+            Array::inv_transpose,
+            Array::inv_transpose,
+            Array::inv_transpose,
+        )
+    }
 }
 
-impl<T: Clone> Array<T> {
+impl<T: ArrayValue> Array<T> {
     pub fn transpose(&mut self) {
         if self.shape.len() < 2 || self.shape[0] == 0 {
             return;
         }
         let mut temp = Vec::with_capacity(self.data.len());
-        let run_length = self.data.len() / self.shape[0];
-        for j in 0..run_length {
-            for i in 0..self.shape[0] {
-                temp.push(self.data[i * run_length + j].clone());
+        let row_len = self.row_len();
+        let row_count = self.row_count();
+        for j in 0..row_len {
+            for i in 0..row_count {
+                temp.push(self.data[i * row_len + j].clone());
             }
         }
-        self.data.clone_from_slice(&temp);
+        self.data = temp;
         self.shape.rotate_left(1);
+    }
+    pub fn inv_transpose(&mut self) {
+        if self.shape.len() < 2 || self.shape[0] == 0 {
+            return;
+        }
+        let mut temp = Vec::with_capacity(self.data.len());
+        let col_len = *self.shape.last().unwrap();
+        let col_count: usize = self.shape.iter().rev().skip(1).product();
+        for j in 0..col_len {
+            for i in 0..col_count {
+                temp.push(self.data[i * col_len + j].clone());
+            }
+        }
+        self.data = temp;
+        self.shape.rotate_right(1);
     }
 }
 

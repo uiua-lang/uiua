@@ -151,6 +151,7 @@ primitive!(
     (1, Reverse, "reverse" + '⇌'),
     (1, Deshape, "deshape" + '♭'),
     (1, Transpose, "transpose" + '⍉'),
+    (1, InvTranspose),
     (1, Sort, "sort" + '∧'),
     (1, Grade, "grade" + '⍋'),
     (1, Indices, "indices" + '⊙'),
@@ -233,6 +234,8 @@ impl Primitive {
             Reverse => Reverse,
             Save => Load,
             Load => Save,
+            Transpose => InvTranspose,
+            InvTranspose => Transpose,
             _ => return None,
         })
     }
@@ -316,6 +319,7 @@ impl Primitive {
             Primitive::NoMatch => env.dyadic_ref(|a, b| a != b)?,
             Primitive::Join => env.dyadic_env(Value::join)?,
             Primitive::Transpose => env.monadic_mut(Value::transpose)?,
+            Primitive::InvTranspose => env.monadic_mut(Value::inv_transpose)?,
             Primitive::Pick => env.dyadic_env(Value::pick)?,
             Primitive::Replicate => env.dyadic_ref_own_env(Value::replicate)?,
             Primitive::Take => env.dyadic_env(Value::take)?,

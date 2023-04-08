@@ -1,6 +1,5 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
 use image::ImageOutputFormat;
-use instant::Duration;
 use leptos::*;
 use uiua::{format::format_str, primitive::Primitive, value_to_image_bytes, Uiua, UiuaResult};
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
@@ -168,8 +167,6 @@ pub fn Editor(
             run(true);
         }
     });
-
-    set_timeout(move || run(false), Duration::from_millis(0));
 
     // Update the code when the textarea is changed
     let code_input = move |event: Event| {

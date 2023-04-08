@@ -2,6 +2,7 @@ use std::{
     cell::RefCell,
     env, fs,
     io::{stdin, stdout, BufRead, Cursor, Write},
+    process::Child,
 };
 
 use image::{DynamicImage, ImageOutputFormat};
@@ -107,6 +108,7 @@ pub struct StdIo;
 
 thread_local! {
     static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::seed_from_u64(instant::now().to_bits()));
+    static IMAGE_COMMAND: RefCell<Option<Child>> = RefCell::new(None);
 }
 
 impl IoBackend for StdIo {
@@ -152,6 +154,33 @@ impl IoBackend for StdIo {
     }
     fn write_file(&self, path: &str, contents: Vec<u8>) -> Result<(), String> {
         fs::write(path, contents).map_err(|e| e.to_string())
+    }
+    fn show_image(&self, image: DynamicImage) -> Result<(), String> {
+        IMAGE_COMMAND.with(|child| {
+            // Kill existing child
+            let mut child = child.borrow_mut();
+            if let Some(child) = child.as_mut() {
+                _ = child.kill();
+            }
+            // Save image
+            _ = fs::create_dir_all("uiua-temp");
+            let path = format!("uiua-temp/{}.png", instant::now());
+            image
+                .save(&path)
+                .map_err(|e| format!("Error saving image: {e}"))?;
+            // Spawn child process to show image
+            let commands = open::commands(&path);
+            if commands.is_empty() {
+                return Err("No commands found to open image".into());
+            }
+            for mut command in commands {
+                if let Ok(ch) = command.spawn() {
+                    *child = Some(ch);
+                    return Ok(());
+                }
+            }
+            Err("Failed to spawn process to show image".into())
+        })
     }
 }
 

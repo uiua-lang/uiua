@@ -68,14 +68,14 @@ fn watch() -> io::Result<()> {
         fs::write(&path, "Hello, World!")?;
         path
     };
-    open::that(&open_path)?;
+    _ = open::that(&open_path);
 
     let (send, recv) = channel();
     let mut watcher = notify::recommended_watcher(send).unwrap();
     watcher
         .watch(Path::new("."), RecursiveMode::Recursive)
         .unwrap();
-    print_watching();
+    println!("Running {}...", open_path.display());
     let mut last_formatted = String::new();
     let mut run = |path: &Path| match format_file(path).or_else(|_| {
         sleep(Duration::from_millis(10));

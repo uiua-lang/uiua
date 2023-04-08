@@ -20,6 +20,9 @@ macro_rules! io_op {
         }
 
         impl IoOp {
+            pub const ALL: [Self; 0 $(+ {stringify!($variant); 1})*] = [
+                $(Self::$variant,)*
+            ];
             pub fn from_name(s: &str) -> Option<Self> {
                 match s {
                     $($name => Some(Self::$variant)),*,
@@ -48,9 +51,9 @@ macro_rules! io_op {
 
 io_op! {
     (1(0), Show, "show"),
+    (1(0), Prin, "prin"),
     (1(0), Print, "print"),
-    (1(0), Println, "println"),
-    (0, ScanLn, "scanln"),
+    (0, Scan, "scan"),
     (0, Args, "args"),
     (1, Var, "var"),
     (0, Rand, "rand"),
@@ -186,16 +189,16 @@ impl IoOp {
                 env.io.print_str(&s);
                 env.io.print_str("\n");
             }
-            IoOp::Print => {
+            IoOp::Prin => {
                 let val = env.pop(1)?;
                 env.io.print_str(&val.to_string());
             }
-            IoOp::Println => {
+            IoOp::Print => {
                 let val = env.pop(1)?;
                 env.io.print_str(&val.to_string());
                 env.io.print_str("\n");
             }
-            IoOp::ScanLn => {
+            IoOp::Scan => {
                 let line = env.io.scan_line();
                 env.push(line);
             }

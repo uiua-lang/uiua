@@ -190,7 +190,7 @@ primitive!(
     (Level { modifier: 2 }, "level" + '⍚'),
     (Try { modifier: 2 }, "try" + '?'),
     // Misc
-    (2, Assert, "assert" + '!'),
+    (2, Throw, "throw" + '!'),
     (1(0), Break, "break" + '⎋'),
     (1, Trace, "trace" + '|'),
     (1(None), Call, "call" + ':'),
@@ -427,11 +427,11 @@ impl Primitive {
             }
             Primitive::Fill => env.monadic_mut(|v| *v.fill_mut() = true)?,
             Primitive::Truncate => env.monadic_mut(Value::truncate)?,
-            Primitive::Assert => {
+            Primitive::Throw => {
                 let msg = env.pop(1)?;
                 let cond = env.pop(2)?;
                 if cond.as_nat(env, "").map_or(true, |n| n == 0) {
-                    return Err(UiuaError::Assert(msg));
+                    return Err(UiuaError::Throw(msg));
                 }
             }
             Primitive::Len => env.monadic_ref(Value::len)?,

@@ -26,7 +26,7 @@ pub enum UiuaError {
         error: Box<Self>,
         trace: Vec<TraceFrame>,
     },
-    Assert(Rc<Value>),
+    Throw(Rc<Value>),
     Break(usize, Span),
 }
 
@@ -64,7 +64,7 @@ impl fmt::Display for UiuaError {
                 write!(f, "{error}")?;
                 format_trace(f, trace)
             }
-            UiuaError::Assert(value) => write!(f, "{value}"),
+            UiuaError::Throw(value) => write!(f, "{value}"),
             UiuaError::Break(_, span) => write!(f, "{span}: break outside of loop"),
         }
     }

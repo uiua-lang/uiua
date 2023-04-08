@@ -193,7 +193,7 @@ primitive!(
     // Misc
     (2, Throw, "throw" + '!'),
     (1(0), Break, "break" + '⎋'),
-    (1, Trace, "trace" + '|'),
+    (1, Debug, "debug" + '|'),
     (1(None), Call, "call" + ':'),
     (0, Noop, "noop" + '·'),
     (1, String, "string"),
@@ -236,7 +236,7 @@ impl Primitive {
             Load => Save,
             Transpose => InvTranspose,
             InvTranspose => Transpose,
-            Trace => Trace,
+            Debug => Debug,
             _ => return None,
         })
     }
@@ -253,9 +253,11 @@ impl Primitive {
         if name.len() < 3 {
             return None;
         }
-        let mut matching = Primitive::ALL
-            .into_iter()
-            .filter(|p| p.name().map_or(false, |i| i.starts_with(name)));
+        let mut matching = Primitive::ALL.into_iter().filter(|p| {
+            p.name().map_or(false, |pn| {
+                pn.starts_with(name) && !(pn.len() == 4 && name.len() == 3)
+            })
+        });
         let res = matching.next()?;
         let exact_match = res.name().map_or(false, |i| i == name);
         (exact_match || matching.next().is_none()).then_some(res)
@@ -353,7 +355,7 @@ impl Primitive {
                     return Err(UiuaError::Break(n - 1, env.span().clone()));
                 }
             }
-            Primitive::Trace => {
+            Primitive::Debug => {
                 let value = env.pop(1)?;
                 env.io.print_str(&value.show());
                 env.io.print_str("\n");
@@ -511,9 +513,12 @@ fn from_multiname() {
 #[cfg(test)]
 #[test]
 fn word_collisions() {
+    let mut collisions = 0;
     for word in std::fs::read_to_string("src/words.txt").unwrap().lines() {
         if let Some(prims) = Primitive::from_multiname(word) {
             println!("{word:>10}: {prims:?}");
+            collisions += 1;
         }
     }
+    println!("{collisions} collisions")
 }

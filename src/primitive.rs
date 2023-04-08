@@ -236,6 +236,7 @@ impl Primitive {
             Load => Save,
             Transpose => InvTranspose,
             InvTranspose => Transpose,
+            Trace => Trace,
             _ => return None,
         })
     }

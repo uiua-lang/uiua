@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use base64::{engine::general_purpose::STANDARD, Engine};
 use image::ImageOutputFormat;
 use leptos::*;
@@ -265,6 +267,8 @@ pub fn Editor(
             "code-button important-button"
         }
     };
+
+    set_timeout(move || run(false), Duration::from_millis(0));
 
     view! { cx,
         <div>

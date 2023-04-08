@@ -502,3 +502,13 @@ fn from_multiname() {
     );
     assert_eq!(Primitive::from_multiname("foo"), None);
 }
+
+#[cfg(test)]
+#[test]
+fn word_collisions() {
+    for word in std::fs::read_to_string("src/words.txt").unwrap().lines() {
+        if let Some(prims) = Primitive::from_multiname(word) {
+            println!("{word:>10}: {prims:?}");
+        }
+    }
+}

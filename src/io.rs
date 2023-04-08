@@ -312,8 +312,6 @@ impl IoOp {
                     "bmp" => ImageOutputFormat::Bmp,
                     "gif" => ImageOutputFormat::Gif,
                     "ico" => ImageOutputFormat::Ico,
-                    "tga" => ImageOutputFormat::Tga,
-                    "tiff" => ImageOutputFormat::Tiff,
                     _ => ImageOutputFormat::Png,
                 };
                 let bytes =

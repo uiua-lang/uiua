@@ -7,23 +7,44 @@ version = "0.1.0"
 
 [dependencies]
 ariadne = "0.2.0"
-clap.features = ["derive"]
-clap.optional = true
-clap.version = "4"
 color-backtrace = "0.5.1"
-ctrlc.optional = true
-ctrlc.version = "3"
-image = "0.24.5"
 instant = "0.1.12"
 nanbox = "0.2.0"
-notify.optional = true
-notify.version = "5"
-open.optional = true
-open.version = "4"
-rand.default-features = false
-rand.features = ["small_rng"]
-rand.version = "0.8.5"
 term_size = "0.3.2"
+viuer = "0.6.2"
+
+[dependencies.clap]
+features = ["derive"]
+optional = true
+version = "4"
+
+[dependencies.ctrlc]
+optional = true
+version = "3"
+
+[dependencies.image]
+default-features = false
+features = [
+  "bmp",
+  "gif",
+  "ico",
+  "jpeg",
+  "png",
+]
+version = "0.24.5"
+
+[dependencies.notify]
+optional = true
+version = "5"
+
+[dependencies.open]
+optional = true
+version = "4"
+
+[dependencies.rand]
+default-features = false
+features = ["small_rng"]
+version = "0.8.5"
 
 [features]
 binary = ["ctrlc", "notify", "clap", "open"]

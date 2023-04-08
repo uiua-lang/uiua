@@ -268,6 +268,7 @@ pub fn Editor(
         }
     };
 
+    // This ensures the output of the first example is shown
     set_timeout(move || run(false), Duration::from_millis(0));
 
     view! { cx,

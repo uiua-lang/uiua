@@ -1,8 +1,8 @@
 const UIUA: &str = r#"‡=¯1 ≡/-◫2 <'A' ⊂' '."Um, I um...arrays""#;
-const FORMAT: &str = "# Click Run to format!\nfirstrepeat(\\+ rev)0_1 10";
+const FORMAT: &str = "# Click Run to format!\nfold(join~/+drop`2.;)0_1range10";
 const D3: &str = "↯~⇡/×.2_3_4";
 const LOGO: &str = "\
-x ← ⍉⍉⊞⊟. ÷÷2~ -÷2,⇡.200
+x ← ↶⍉⊞⊟. ÷÷2~ -÷2,⇡.200
 rgb ← [×.⊢⇌x ×.⊢x ∵0.5⊢x]
 u ← ↥<0.2~>0.7.+×2 ×.~/·x
 c ← √/+ⁿ2 x
@@ -24,10 +24,10 @@ const PRIMES: &str = "‡∵(=2 /+ =⌊.÷⇡.).+1 ⇡60";
 const TRANS_STACK: &str = "⍉↯4_4[...1 .2 .3 ...4 .5 .6]";
 const MANDELBROT: &str = "\
 Z ← ⊟/- ⁿ2 ~×2 /×.⇌
-⇌⍉⍉⊞⊟.×4 ÷~-÷2,⇡. 300
+⇌↶⍉⊞⊟.×4 ÷~-÷2,⇡. 300
 <2 √/+ ⁿ2;~⍥(+Z ~,) ~20 ∵0.";
-const CHART: &str = "∵(⊡~·_:_÷_≡_⍋ ⁅÷23)⊞×.-10 ⇡20";
-const ERRORS: &str = "# Change this ↓ to a 0\n!\"Oh no bad!\" 1\nprintln \"All is well\"";
+const CHART: &str = "⊞(⊡~·_._∴_↥_⍋ ⌊×5rand;;).⇡15";
+const ERRORS: &str = "# Change this ↓ to a 0\n!\"Oh no bad!\" 1\nprint \"All is well\"";
 
 pub const EXAMPLES: &[&str] = &[
     UIUA,

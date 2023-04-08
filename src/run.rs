@@ -44,7 +44,7 @@ struct StackFrame {
     function: Rc<Function>,
     call_span: usize,
     pc: usize,
-    spans: Vec<usize>,
+    spans: Vec<(usize, Option<Primitive>)>,
 }
 
 impl<'io> Default for Uiua<'io> {
@@ -117,24 +117,30 @@ impl<'io> Uiua<'io> {
         if let Some(path) = path {
             self.current_imports.remove(path);
         }
-        if let Err(error) = res {
-            let mut trace = Vec::new();
-            for frame in self.call_stack.iter().rev() {
-                trace.push(TraceFrame {
-                    id: frame.function.id.clone(),
-                    span: self.spans[frame.call_span].clone(),
+        res.map(|_| self)
+    }
+    fn trace_error(&self, mut error: UiuaError, frame: StackFrame) -> UiuaError {
+        let mut frames = Vec::new();
+        for (span, prim) in &frame.spans {
+            if let Some(prim) = prim {
+                frames.push(TraceFrame {
+                    id: FunctionId::Primitive(*prim),
+                    span: self.spans[*span].clone(),
                 });
             }
-            let traced = UiuaError::Traced {
-                error: error.into(),
-                trace,
-            };
-            if let Some(path) = path {
-                self.current_imports.remove(path);
-            }
-            Err(traced)
+        }
+        frames.push(TraceFrame {
+            id: frame.function.id.clone(),
+            span: self.spans[frame.call_span].clone(),
+        });
+        if let UiuaError::Traced { trace, .. } = &mut error {
+            trace.extend(frames);
+            error
         } else {
-            Ok(self)
+            UiuaError::Traced {
+                error: error.into(),
+                trace: frames,
+            }
         }
     }
     pub(crate) fn import(&mut self, input: &str, path: &Path) -> UiuaResult {
@@ -396,14 +402,14 @@ impl<'io> Uiua<'io> {
                             .into());
                     }
                     let values: Vec<_> = self.stack.drain(start..).map(rc_take).rev().collect();
-                    self.push_span(span);
+                    self.push_span(span, None);
                     let val = Value::from_row_values(values, self)?;
                     self.pop_span();
                     self.stack.push(val.into());
                     Ok(())
                 })(),
                 &Instr::Primitive(prim, span) => (|| {
-                    self.push_span(span);
+                    self.push_span(span, Some(prim));
                     prim.run(self)?;
                     self.pop_span();
                     Ok(())
@@ -428,17 +434,22 @@ impl<'io> Uiua<'io> {
                     Ok(())
                 }
             };
-            if res.is_err() {
-                self.call_stack.truncate(ret_height);
+            if let Err(mut err) = res {
+                // Trace errors
+                let frames = self.call_stack.split_off(ret_height);
+                for frame in frames {
+                    err = self.trace_error(err, frame);
+                }
+                return Err(err);
             } else {
+                // Go to next instruction
                 self.call_stack.last_mut().unwrap().pc += 1;
             }
-            res?;
         }
         Ok(())
     }
-    fn push_span(&mut self, span: usize) {
-        self.call_stack.last_mut().unwrap().spans.push(span);
+    fn push_span(&mut self, span: usize, prim: Option<Primitive>) {
+        self.call_stack.last_mut().unwrap().spans.push((span, prim));
     }
     fn pop_span(&mut self) {
         self.call_stack.last_mut().unwrap().spans.pop();
@@ -485,7 +496,11 @@ impl<'io> Uiua<'io> {
     }
     fn span_index(&self) -> usize {
         self.call_stack.last().map_or(0, |frame| {
-            frame.spans.last().copied().unwrap_or(frame.call_span)
+            frame
+                .spans
+                .last()
+                .map(|(i, _)| *i)
+                .unwrap_or(frame.call_span)
         })
     }
     /// Get the span of the current function call

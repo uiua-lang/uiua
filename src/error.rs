@@ -26,7 +26,7 @@ pub enum UiuaError {
         error: Box<Self>,
         trace: Vec<TraceFrame>,
     },
-    Throw(Rc<Value>),
+    Throw(Rc<Value>, Span),
     Break(usize, Span),
 }
 
@@ -64,7 +64,7 @@ impl fmt::Display for UiuaError {
                 write!(f, "{error}")?;
                 format_trace(f, trace)
             }
-            UiuaError::Throw(value) => write!(f, "{value}"),
+            UiuaError::Throw(value, span) => write!(f, "{span}: {value}"),
             UiuaError::Break(_, span) => write!(f, "{span}: break outside of loop"),
         }
     }
@@ -88,6 +88,7 @@ fn format_trace<F: fmt::Write>(f: &mut F, trace: &[TraceFrame]) -> fmt::Result {
     let mut repetitions = 1;
     let max_id_length = trace
         .iter()
+        .filter(|frame| frame.span != Span::Builtin)
         .map(|frame| frame.id.to_string().len())
         .max()
         .unwrap_or(0);
@@ -140,93 +141,62 @@ impl Error for UiuaError {}
 
 impl UiuaError {
     pub fn show(&self, complex_output: bool) -> String {
-        let config = Config::default()
-            .with_color(complex_output)
-            .with_multiline_arrows(false);
-        let color = if complex_output {
-            Color::Red
-        } else {
-            Color::Unset
-        };
         match self {
-            UiuaError::Parse(errors) => {
-                if errors.is_empty() {
-                    return String::new();
-                }
-                let mut buffer = Vec::new();
-                let mut chache = None;
-                for error in errors {
-                    if let Span::Code(span) = &error.span {
-                        let cache = chache.get_or_insert_with(|| Cache {
-                            input: Source::from(&span.input),
-                            files: HashMap::new(),
-                        });
-                        let report = Report::<CodeSpan>::build(
-                            ReportKind::Error,
-                            span.file.clone(),
-                            span.start.pos,
-                        )
-                        .with_message(&error.value)
-                        .with_label(Label::new(span.clone()).with_color(color))
-                        .with_config(config)
-                        .finish();
-                        let _ = report.write(cache, &mut buffer);
-                    }
-                }
-                String::from_utf8_lossy(&buffer).into_owned()
-            }
-            UiuaError::Run(error) => {
-                let mut buffer = Vec::new();
-                if let Span::Code(span) = &error.span {
-                    let mut cache = Cache {
-                        input: Source::from(&span.input),
-                        files: HashMap::new(),
-                    };
-                    let report = Report::<CodeSpan>::build(
-                        ReportKind::Error,
-                        span.file.clone(),
-                        span.start.pos,
-                    )
-                    .with_message(&error.value)
-                    .with_label(Label::new(span.clone()).with_color(color))
-                    .with_config(config)
-                    .finish();
-                    let _ = report.write(&mut cache, &mut buffer);
-                    String::from_utf8_lossy(&buffer).into_owned()
-                } else {
-                    error.to_string()
-                }
-            }
+            UiuaError::Parse(errors) => report(
+                errors
+                    .iter()
+                    .map(|error| (error.value.to_string(), &error.span)),
+                complex_output,
+            ),
+            UiuaError::Run(error) => report([(&error.value, &error.span)], complex_output),
             UiuaError::Traced { error, trace } => {
                 let mut s = error.show(complex_output);
                 format_trace(&mut s, trace).unwrap();
                 s
             }
-            UiuaError::Break(_, span) => {
-                let mut buffer = Vec::new();
-                if let Span::Code(span) = span {
-                    let mut cache = Cache {
-                        input: Source::from(&span.input),
-                        files: HashMap::new(),
-                    };
-                    let report = Report::<CodeSpan>::build(
-                        ReportKind::Error,
-                        span.file.clone(),
-                        span.start.pos,
-                    )
-                    .with_message("break outside of loop")
-                    .with_label(Label::new(span.clone()).with_color(color))
-                    .with_config(config)
-                    .finish();
-                    let _ = report.write(&mut cache, &mut buffer);
-                    String::from_utf8_lossy(&buffer).into_owned()
-                } else {
-                    self.to_string()
-                }
-            }
+            UiuaError::Throw(message, span) => report([(&message, span)], complex_output),
+            UiuaError::Break(_, span) => report([("break outside of loop", span)], complex_output),
             _ => self.to_string(),
         }
     }
+}
+
+fn report<'a, I, T>(errors: I, complex_output: bool) -> String
+where
+    I: IntoIterator<Item = (T, &'a Span)>,
+    T: ToString,
+{
+    let config = Config::default()
+        .with_color(complex_output)
+        .with_multiline_arrows(false);
+    let color = if complex_output {
+        Color::Red
+    } else {
+        Color::Unset
+    };
+    let mut buffer = Vec::new();
+    let mut chache = None;
+    for (message, span) in errors {
+        if let Span::Code(span) = span {
+            let cache = chache.get_or_insert_with(|| Cache {
+                input: Source::from(&span.input),
+                files: HashMap::new(),
+            });
+            let report =
+                Report::<CodeSpan>::build(ReportKind::Error, span.file.clone(), span.start.pos)
+                    .with_message(message)
+                    .with_label(Label::new(span.clone()).with_color(color))
+                    .with_config(config)
+                    .finish();
+            let _ = report.write(cache, &mut buffer);
+        } else {
+            if !buffer.ends_with(b"\n") {
+                buffer.push(b'\n');
+            }
+            buffer.extend(message.to_string().into_bytes());
+        }
+    }
+    String::from_utf8_lossy(&buffer).trim().into()
 }
 
 type SourceId = Option<Arc<Path>>;
@@ -266,7 +236,7 @@ impl ariadne::Cache<SourceId> for Cache {
     }
     fn display<'a>(&self, id: &'a SourceId) -> Option<Box<dyn fmt::Display + 'a>> {
         Some(match id {
-            Some(path) => Box::new(path.to_string_lossy()),
+            Some(path) => Box::new(path.display()),
             None => Box::<String>::default(),
         })
     }

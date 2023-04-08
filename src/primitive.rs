@@ -431,7 +431,7 @@ impl Primitive {
                 let msg = env.pop(1)?;
                 let cond = env.pop(2)?;
                 if cond.as_nat(env, "").map_or(true, |n| n == 0) {
-                    return Err(UiuaError::Throw(msg));
+                    return Err(UiuaError::Throw(msg, env.span().clone()));
                 }
             }
             Primitive::Len => env.monadic_ref(Value::len)?,

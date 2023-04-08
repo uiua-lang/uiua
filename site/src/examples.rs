@@ -2,11 +2,11 @@ const UIUA: &str = r#"‡=¯1 ≡/-◫2 <'A' ⊂' '."Um, I um...arrays""#;
 const FORMAT: &str = "# Click Run to format!\nfirstrepeat(\\+ rev)0_1 10";
 const D3: &str = "↯~⇡/×.2_3_4";
 const LOGO: &str = "\
-x ← ⍉⍉⊞⊟.÷÷2 ~-÷2,⇡. 200
-rgb ← [×.⊢⇌x ×.⊢x ∵(0.5;) ⊢x]
-u ← ↥<0.2 ~>0.7.+×2 ×.~/· x
-c ← √/+ ⁿ2 x
-⍉⊂~-¬u <1 c +0.1 ≡(↧<0.95 c) rgb";
+x ← ⍉⍉⊞⊟. ÷÷2~ -÷2,⇡.200
+rgb ← [×.⊢⇌x ×.⊢x ∵0.5⊢x]
+u ← ↥<0.2~>0.7.+×2 ×.~/·x
+c ← √/+ⁿ2 x
+⍉⊂~-¬u <1 c +0.1 ≡(↧<0.95 c)rgb";
 const AVG: &str = "Avg ← ÷≢~/+.\nAvg 0_2_1_5";
 const QUADRATIC: &str = "{÷×2 a -b ⊟¯.√-××4 a c ⁿ2 b}1 2 0";
 const STRIPES: &str = "\

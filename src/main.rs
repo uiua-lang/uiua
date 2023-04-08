@@ -58,7 +58,7 @@ fn watch() -> io::Result<()> {
     let main = PathBuf::from("main.ua");
     let open_path = if main.exists() {
         main
-    } else if let Some(entry) = fs::read_dir(".")?
+    } else if let Some(entry) = fs::read_dir("")?
         .filter_map(Result::ok)
         .find(|entry| entry.path().extension().map_or(false, |ext| ext == "ua"))
     {

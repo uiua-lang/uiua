@@ -583,13 +583,24 @@ impl Lexer {
             }
         }
         // Exponent
+        let loc_before_e = self.loc;
+        let number_before_e = number.len();
         if let Some(e) = self.next_char_if(|c| c == 'e' || c == 'E') {
             number.push(e);
-            if let Some(sign) = self.next_char_if(|c| c == '-' || c == '+') {
-                number.push(sign);
+            if self
+                .next_char_if(|c| c == '-' || c == '`' || c == '¯')
+                .is_some()
+            {
+                number.push('-');
             }
+            let mut got_digit = false;
             while let Some(c) = self.next_char_if(|c| c.is_ascii_digit()) {
                 number.push(c);
+                got_digit = true;
+            }
+            if !got_digit {
+                self.loc = loc_before_e;
+                number.truncate(number_before_e);
             }
         }
         number

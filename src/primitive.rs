@@ -241,7 +241,7 @@ impl Primitive {
             _ => return None,
         })
     }
-    pub fn from_name(name: &str) -> Option<Self> {
+    fn from_name(name: &str) -> Option<Self> {
         if name.chars().any(char::is_uppercase) {
             return None;
         }
@@ -262,7 +262,10 @@ impl Primitive {
         (exact_match || matching.next().is_none()).then_some(res)
     }
     pub fn from_multiname(name: &str) -> Option<Vec<(Self, &str)>> {
-        if name.chars().count() < 3 {
+        if name == "pi" || name == "π" {
+            return Some(vec![(Primitive::Pi, name)]);
+        }
+        if name.len() < 3 {
             return None;
         }
         let mut start = 0;

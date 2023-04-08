@@ -10,10 +10,10 @@ c ← √/+ⁿ2 x
 const AVG: &str = "Avg ← ÷≢~/+.\nAvg 0_2_1_5";
 const QUADRATIC: &str = "{÷×2 a -b ⊟¯.√-××4 a c ⁿ2 b}1 2 0";
 const STRIPES: &str = "\
-r ← ⌵sin ÷10 ⊞+.⇡300
-g ← ⌵sin ÷21 ⊞↥.⇡300
-b ← ⌵sin ÷32 ⊞-.⇡300
-⍉[r g b]";
+r ← ⊞+.⇡300
+g ← ⊞↥.⇡300
+b ← ⊞-.⇡300
+⍉ ÷2 +1.2 sin ÷10[r g b]";
 const PALINDROME: &str = r#"≡(≅⇌.).⊘≠' '."uiua racecar wow cool!""#;
 const RULE_30: &str = "\
 Thirty ← ≡(↥≅0_1_1 ~=1 /+.) ◫3 ⊂~0 ⊂0

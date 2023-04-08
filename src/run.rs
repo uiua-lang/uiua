@@ -454,7 +454,7 @@ impl<'io> Uiua<'io> {
                     if start > self.stack.len() {
                         return Err(self.spans[span]
                             .clone()
-                            .sp("array removed elements".into())
+                            .sp("Array removed elements".into())
                             .into());
                     }
                     let values: Vec<_> = self.stack.drain(start..).map(rc_take).rev().collect();

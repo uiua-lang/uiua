@@ -8,3 +8,4 @@ glyph_test.txt
 *.png
 !*/uiua-logo.png
 uiua-temp
+*.wav

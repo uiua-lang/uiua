@@ -7,6 +7,7 @@ version = "0.1.0"
 
 [dependencies]
 ariadne = "0.2.0"
+hound = "3"
 instant = "0.1.12"
 term_size = "0.3.2"
 
@@ -47,6 +48,10 @@ default-features = false
 features = ["small_rng"]
 version = "0.8.5"
 
+[dependencies.rodio]
+optional = true
+version = "0.17.1"
+
 [dependencies.viuer]
 optional = true
 version = "0.6.2"
@@ -54,7 +59,7 @@ version = "0.6.2"
 [features]
 binary = ["ctrlc", "notify", "clap", "open", "color-backtrace"]
 debug = []
-default = ["binary", "viuer"]
+default = ["binary", "rodio", "viuer"]
 
 [[bin]]
 name = "uiua"

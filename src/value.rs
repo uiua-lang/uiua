@@ -96,6 +96,14 @@ impl Value {
             Array::row_count,
         )
     }
+    pub fn row_len(&self) -> usize {
+        self.generic_ref(
+            Array::row_len,
+            Array::row_len,
+            Array::row_len,
+            Array::row_len,
+        )
+    }
     pub fn flat_len(&self) -> usize {
         self.generic_ref(
             Array::flat_len,

@@ -4,6 +4,7 @@ use std::{
     io::{stdin, stdout, BufRead, Cursor, Write},
 };
 
+use hound::{SampleFormat, WavSpec, WavWriter};
 use image::{DynamicImage, ImageOutputFormat};
 use rand::prelude::*;
 
@@ -70,6 +71,7 @@ io_op! {
     (1, ImRead, "imread"),
     (1, ImWrite, "imwrite"),
     (1(0), ImShow, "imshow"),
+    (1(0), AudioPlay, "audioplay"),
 }
 
 #[allow(unused_variables)]
@@ -78,6 +80,9 @@ pub trait IoBackend {
     fn rand(&self) -> f64;
     fn show_image(&self, image: DynamicImage) -> Result<(), String> {
         Err("Showing images not supported in this environment".into())
+    }
+    fn play_audio(&self, wav_bytes: Vec<u8>) -> Result<(), String> {
+        Err("Playing audio not supported in this environment".into())
     }
     fn scan_line(&self) -> String {
         String::new()
@@ -110,6 +115,8 @@ pub struct StdIo;
 
 thread_local! {
     static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::seed_from_u64(instant::now().to_bits()));
+    #[cfg(feature = "rodio")]
+    static AUDIO_STREAM: RefCell<Option<rodio::OutputStream>> = RefCell::new(None);
 }
 
 impl IoBackend for StdIo {
@@ -178,6 +185,19 @@ impl IoBackend for StdIo {
         )
         .map(drop)
         .map_err(|e| format!("Failed to show image: {e}"))
+    }
+    #[cfg(feature = "rodio")]
+    fn play_audio(&self, wav_bytes: Vec<u8>) -> Result<(), String> {
+        use rodio::Source;
+        let decoder = rodio::Decoder::new_wav(Cursor::new(wav_bytes))
+            .map_err(|e| format!("Failed to decode audio: {e}"))?;
+        let (stream, handle) = rodio::OutputStream::try_default()
+            .map_err(|e| format!("Failed to create audio output stream: {e}"))?;
+        AUDIO_STREAM.with(|s| *s.borrow_mut() = Some(stream));
+        handle
+            .play_raw(decoder.convert_samples())
+            .map_err(|e| format!("Failed to play audio: {e}"))?;
+        Ok(())
     }
 }
 
@@ -320,6 +340,11 @@ impl IoOp {
                 let image = value_to_image(&value).map_err(|e| env.error(e))?;
                 env.io.show_image(image).map_err(|e| env.error(e))?;
             }
+            IoOp::AudioPlay => {
+                let value = env.pop(1)?;
+                let bytes = value_to_wav_bytes(&value).map_err(|e| env.error(e))?;
+                env.io.play_audio(bytes).map_err(|e| env.error(e))?;
+            }
         }
         Ok(())
     }
@@ -371,4 +396,46 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
             ))
         }
     })
+}
+
+pub fn value_to_wav_bytes(audio: &Value) -> Result<Vec<u8>, String> {
+    let values: Vec<f32> = match audio {
+        Value::Num(nums) => nums.data.iter().map(|&f| f as f32).collect(),
+        Value::Byte(byte) => byte.data.iter().map(|&b| b.or(0) as f32).collect(),
+        _ => return Err("Audio must be a numeric array".into()),
+    };
+    let (length, channels) = match audio.rank() {
+        1 => (values.len(), vec![values]),
+        2 => (
+            audio.row_len(),
+            values
+                .chunks_exact(audio.row_len())
+                .map(|c| c.to_vec())
+                .collect(),
+        ),
+        n => {
+            return Err(format!(
+                "Audio must be a rank 1 or 2 numeric array, but it is rank {n}"
+            ))
+        }
+    };
+    let spec = WavSpec {
+        channels: channels.len() as u16,
+        sample_rate: 44100,
+        bits_per_sample: 32,
+        sample_format: SampleFormat::Float,
+    };
+    let mut bytes = Cursor::new(Vec::new());
+    let mut writer = WavWriter::new(&mut bytes, spec).map_err(|e| e.to_string())?;
+    for i in 0..length {
+        for channel in &channels {
+            writer
+                .write_sample(channel[i])
+                .map_err(|e| format!("Failed to write audio: {e}"))?;
+        }
+    }
+    writer
+        .finalize()
+        .map_err(|e| format!("Failed to finalize audio: {e}"))?;
+    Ok(bytes.into_inner())
 }

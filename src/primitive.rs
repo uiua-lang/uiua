@@ -343,6 +343,26 @@ impl Primitive {
             Primitive::Partition => env.dyadic_ref_env(Value::partition)?,
             Primitive::Call => env.call()?,
             Primitive::Parse => env.monadic_env(|v, env| v.parse_num(env))?,
+            Primitive::Range => env.monadic_ref_env(Value::range)?,
+            Primitive::Reverse => env.monadic_mut(Value::reverse)?,
+            Primitive::Deshape => env.monadic_mut(Value::deshape)?,
+            Primitive::First => env.monadic_env(Value::first)?,
+            Primitive::Last => env.monadic_env(Value::last)?,
+            Primitive::Len => env.monadic_ref(Value::len)?,
+            Primitive::Rank => env.monadic_ref(Value::rank)?,
+            Primitive::Fill => env.monadic_mut(|v| *v.fill_mut() = true)?,
+            Primitive::Truncate => env.monadic_mut(Value::truncate)?,
+            Primitive::Fold => loops::fold(env)?,
+            Primitive::Reduce => loops::reduce(env)?,
+            Primitive::Each => loops::each(env)?,
+            Primitive::Zip => loops::zip(env)?,
+            Primitive::Rows => loops::rows(env)?,
+            Primitive::Bridge => loops::bridge(env)?,
+            Primitive::Distribute => loops::distribute(env)?,
+            Primitive::Table => loops::table(env)?,
+            Primitive::Scan => loops::scan(env)?,
+            Primitive::Repeat => loops::repeat(env)?,
+            Primitive::Level => loops::rank(env)?,
             Primitive::Reshape => {
                 let shape = env.pop(1)?;
                 let mut array = env.pop(2)?;
@@ -390,17 +410,6 @@ impl Primitive {
                 let x = env.antipop(1)?;
                 env.push_ref(x);
             }
-            Primitive::Fold => loops::fold(env)?,
-            Primitive::Reduce => loops::reduce(env)?,
-            Primitive::Each => loops::each(env)?,
-            Primitive::Zip => loops::zip(env)?,
-            Primitive::Rows => loops::rows(env)?,
-            Primitive::Bridge => loops::bridge(env)?,
-            Primitive::Distribute => loops::distribute(env)?,
-            Primitive::Table => loops::table(env)?,
-            Primitive::Scan => loops::scan(env)?,
-            Primitive::Repeat => loops::repeat(env)?,
-            Primitive::Level => loops::rank(env)?,
             Primitive::Try => {
                 let f = env.pop(1)?;
                 let handler = env.pop(2)?;
@@ -432,8 +441,6 @@ impl Primitive {
                 env.push(inv_f);
                 env.call()?;
             }
-            Primitive::Fill => env.monadic_mut(|v| *v.fill_mut() = true)?,
-            Primitive::Truncate => env.monadic_mut(Value::truncate)?,
             Primitive::Throw => {
                 let msg = env.pop(1)?;
                 let cond = env.pop(2)?;
@@ -441,16 +448,9 @@ impl Primitive {
                     return Err(UiuaError::Throw(msg, env.span().clone()));
                 }
             }
-            Primitive::Len => env.monadic_ref(Value::len)?,
-            Primitive::Rank => env.monadic_ref(Value::rank)?,
             Primitive::Shape => {
                 env.monadic_ref(|v| v.shape().iter().copied().collect::<Value>())?
             }
-            Primitive::Range => env.monadic_ref_env(Value::range)?,
-            Primitive::Reverse => env.monadic_mut(Value::reverse)?,
-            Primitive::Deshape => env.monadic_mut(Value::deshape)?,
-            Primitive::First => env.monadic_env(Value::first)?,
-            Primitive::Last => env.monadic_env(Value::last)?,
             Primitive::String => env.monadic_ref(|v| v.to_string())?,
             Primitive::Use => {
                 let name = env.pop(1)?.as_string(env, "Use name must be a string")?;

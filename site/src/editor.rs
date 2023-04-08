@@ -24,7 +24,7 @@ pub fn Editor(
     #[prop(optional)] help: &'static [&'static str],
     #[prop(optional)] progressive: bool,
 ) -> impl IntoView {
-    let id = format!("{:p}", examples);
+    let id = format!("{:?}", cx.id);
     let examples: Vec<String> = if examples.is_empty() {
         vec![String::new()]
     } else if progressive {

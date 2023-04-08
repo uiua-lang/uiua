@@ -240,10 +240,10 @@ pub fn TutorialArrays(cx: Scope) -> impl IntoView {
             <h2>"Creating Arrays"</h2>
             <p>"Other than with functions, Uiua has two ways to create arrays. They are called "<i>"strand notation"</i>" and "<i>"stack notation"</i>"."</p>
             <p><b>"Strand notation"</b>" uses underscores to connect elements:"</p>
-            <Editor examples={&["1_2_3","\"Hello\"_\"World\"",  "0_π_⍉_5_(+1)"]}/>
+            <Editor examples={&["1_2_3","\"Hello\"_\"World\"",  "0_π_2.3_5_∞"]}/>
             <p>"Strand notation is good when you want to create short and/or simple arrays. For longer or more complex arrays, you can use stack notation."</p>
             <p><b>"Stack notation"</b>" uses brackets to group elements:"</p>
-            <Editor examples={&["[1 2 3]", "[¯5 'a' 0 (+)]"]}/>
+            <Editor examples={&["[1 2 3]", "[¯5 37 42 π]"]}/>
             <p>"What's cool about stack notation is that it is "<i>"not"</i>" just a way to list elements. The code between the brackets runs from right to left as it normally would. When it is done, any items on the stack higher than when it started are put into the array. This gives you some cool ways to create arrays:"</p>
             <Editor examples={&["[...5]", "[×2.×2.×2.×2 .2]", "[+1 2 +3 4]"]}/>
             <p>"Of course, you can also use stack notation to make multidimensional arrays:"</p>

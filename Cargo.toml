@@ -7,11 +7,13 @@ version = "0.1.0"
 
 [dependencies]
 ariadne = "0.2.0"
-color-backtrace = "0.5.1"
 instant = "0.1.12"
-nanbox = "0.2.0"
 term_size = "0.3.2"
 viuer = "0.6.2"
+
+[dependencies.color-backtrace]
+optional = true
+version = "0.5.1"
 
 [dependencies.clap]
 features = ["derive"]
@@ -47,7 +49,7 @@ features = ["small_rng"]
 version = "0.8.5"
 
 [features]
-binary = ["ctrlc", "notify", "clap", "open"]
+binary = ["ctrlc", "notify", "clap", "open", "color-backtrace"]
 debug = []
 default = ["binary"]
 

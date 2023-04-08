@@ -1,22 +1,30 @@
+- Always rerun on watch
 - Better solution to string formatting
+- Make grid formatting less vertical
 - Recursion?
 - Threads
-- Suspend/resume
+- Clean up lexer
 - More array functions
   - Progressive index of
   - Nudge
+  - Amend
 - Optimized functions
   - Reduces:
     - Join all
   - Make group and partition allocate less
-- Multimedia Output
-  - Native image output
+- Multimedia
   - Sound IO
+  - Webcam input?
 - "Structs"
 - System APIs
   - Sockets
   - FFI
-- LSP
+  - check OS
+  - character kinds
+- LSP?
 - Docs
+  - Primitives
+  - Design
 - Tooling
+  - Basic package manager
 - Custom monospace font

@@ -75,7 +75,7 @@ fn format_item(output: &mut String, item: &Item) {
 }
 
 fn format_words(output: &mut String, words: &[Sp<Word>]) {
-    for word in words {
+    for word in trim_spaces(words) {
         format_word(output, &word.value);
     }
 }
@@ -123,4 +123,24 @@ fn format_word(output: &mut String, word: &Word) {
         }
         Word::Spaces => output.push(' '),
     }
+}
+
+fn trim_spaces(words: &[Sp<Word>]) -> &[Sp<Word>] {
+    let mut start = 0;
+    for word in words {
+        if let Word::Spaces = word.value {
+            start += 1;
+        } else {
+            break;
+        }
+    }
+    let mut end = words.len();
+    for word in words.iter().rev() {
+        if let Word::Spaces = word.value {
+            end -= 1;
+        } else {
+            break;
+        }
+    }
+    &words[start..end]
 }

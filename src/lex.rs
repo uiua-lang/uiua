@@ -313,9 +313,10 @@ pub enum Simple {
     GreaterEqual,
     Backtick,
     LeftArrow,
-    ScopeDelim,
     Newline,
     Spaces,
+    TripleMinus,
+    TripleTilde,
 }
 
 impl fmt::Display for Simple {
@@ -338,9 +339,10 @@ impl fmt::Display for Simple {
             Simple::GreaterEqual => write!(f, ">="),
             Simple::Backtick => write!(f, "`"),
             Simple::LeftArrow => write!(f, "←"),
-            Simple::ScopeDelim => write!(f, "---"),
             Simple::Newline => write!(f, "\\n"),
             Simple::Spaces => write!(f, " "),
+            Simple::TripleMinus => write!(f, "---"),
+            Simple::TripleTilde => write!(f, "~~~"),
         }
     }
 }
@@ -456,8 +458,9 @@ impl Lexer {
                 '>' if self.next_char_exact('=') => self.end(GreaterEqual, start),
                 '!' if self.next_char_exact('=') => self.end(BangEqual, start),
                 '←' => self.end(LeftArrow, start),
-                // Scope delimiter
-                '-' if self.next_chars_exact("--") => self.end(ScopeDelim, start),
+                // Scope delimiters
+                '-' if self.next_chars_exact("--") => self.end(TripleMinus, start),
+                '~' if self.next_chars_exact("~~") => self.end(TripleTilde, start),
                 // Comments
                 '#' => {
                     let mut comment = String::new();

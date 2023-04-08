@@ -167,12 +167,18 @@ impl Parser {
             Item::Words(words, self.comment())
         } else if let Some(comment) = self.comment() {
             Item::Comment(comment)
-        } else if parse_scopes && self.try_exact(ScopeDelim).is_some() {
+        } else if parse_scopes && self.try_exact(TripleMinus).is_some() {
             let items = self.items(false);
-            if self.try_exact(ScopeDelim).is_none() {
-                self.errors.push(self.expected([ScopeDelim]));
+            if self.try_exact(TripleMinus).is_none() {
+                self.errors.push(self.expected([TripleMinus]));
             }
-            Item::Scoped(items)
+            Item::Scoped { items, test: false }
+        } else if parse_scopes && self.try_exact(TripleTilde).is_some() {
+            let items = self.items(false);
+            if self.try_exact(TripleTilde).is_none() {
+                self.errors.push(self.expected([TripleTilde]));
+            }
+            Item::Scoped { items, test: true }
         } else {
             return None;
         })

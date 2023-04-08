@@ -40,12 +40,14 @@ pub fn format_file<P: AsRef<Path>>(path: P) -> UiuaResult<String> {
 
 fn format_item(output: &mut String, item: &Item) {
     match item {
-        Item::Scoped(items) => {
-            output.push_str("---\n");
+        Item::Scoped { items, test } => {
+            let delim = if *test { "~~~" } else { "---" };
+            output.push_str(delim);
+            output.push('\n');
             for item in items {
                 format_item(output, item);
             }
-            output.push_str("---");
+            output.push_str(delim);
         }
         Item::Words(w, comment) => {
             format_words(output, w);

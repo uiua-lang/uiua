@@ -14,7 +14,7 @@ use crate::{
     primitive::Primitive,
     rc_take,
     value::Value,
-    Ident, IoBackend, StdIo, TraceFrame, UiuaError, UiuaResult,
+    Ident, IoBackend, IoOp, StdIo, TraceFrame, UiuaError, UiuaResult,
 };
 
 /// The Uiua runtime
@@ -33,6 +33,7 @@ pub struct Uiua<'io> {
     stack: Vec<Rc<Value>>,
     antistack: Vec<Rc<Value>>,
     call_stack: Vec<StackFrame>,
+    mode: RunMode,
     // IO
     current_imports: HashSet<PathBuf>,
     imports: HashMap<PathBuf, Vec<Rc<Value>>>,
@@ -53,6 +54,19 @@ impl<'io> Default for Uiua<'io> {
     }
 }
 
+/// A mode that affects how non-binding lines are run
+///
+/// Regardless of the mode, lines with a call to `import` will always be run
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum RunMode {
+    /// Only run lines outside of test blocks
+    Normal,
+    /// Only run non-binding lines inside of test blocks
+    Test,
+    /// Run everything
+    Watch,
+}
+
 impl<'io> Uiua<'io> {
     /// Create a new Uiua runtime with the standard IO backend
     pub fn with_stdio() -> Self {
@@ -69,6 +83,7 @@ impl<'io> Uiua<'io> {
             call_stack: Vec::new(),
             current_imports: HashSet::new(),
             imports: HashMap::new(),
+            mode: RunMode::Normal,
             io: &StdIo,
         }
     }
@@ -78,6 +93,13 @@ impl<'io> Uiua<'io> {
             io,
             ..Default::default()
         }
+    }
+    /// Set the [`RunMode`]
+    ///
+    /// Default is [`RunMode::Normal`]
+    pub fn mode(mut self, mode: RunMode) -> Self {
+        self.mode = mode;
+        self
     }
     /// Load a Uiua file from a path
     pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<&mut Self> {
@@ -113,7 +135,7 @@ impl<'io> Uiua<'io> {
         if let Some(path) = path {
             self.current_imports.insert(path.into());
         }
-        let res = self.items(items);
+        let res = self.items(items, false);
         if let Some(path) = path {
             self.current_imports.remove(path);
         }
@@ -158,20 +180,40 @@ impl<'io> Uiua<'io> {
         self.stack.extend(self.imports[path].iter().cloned());
         Ok(())
     }
-    fn items(&mut self, items: Vec<Item>) -> UiuaResult {
+    fn items(&mut self, items: Vec<Item>, in_test: bool) -> UiuaResult {
         for item in items {
-            self.item(item)?;
+            self.item(item, in_test)?;
         }
         Ok(())
     }
-    fn item(&mut self, item: Item) -> UiuaResult {
+    fn item(&mut self, item: Item, in_test: bool) -> UiuaResult {
+        fn words_have_import(words: &[Sp<Word>]) -> bool {
+            words
+                .iter()
+                .any(|w| matches!(w.value, Word::Primitive(Primitive::Io(IoOp::Import))))
+        }
         match item {
-            Item::Scoped(items) => self.in_scope(|env| env.items(items))?,
+            Item::Scoped { items, test } => self.in_scope(|env| env.items(items, test))?,
             Item::Words(words, _) => {
-                let instrs = self.compile_words(words)?;
-                self.exec_global_instrs(instrs)?;
+                let can_run = match self.mode {
+                    RunMode::Normal => !in_test,
+                    RunMode::Test => in_test,
+                    RunMode::Watch => true,
+                };
+                if can_run || words_have_import(&words) {
+                    let instrs = self.compile_words(words)?;
+                    self.exec_global_instrs(instrs)?;
+                }
             }
-            Item::Binding(binding, _) => self.binding(binding)?,
+            Item::Binding(binding, _) => {
+                let can_run = match self.mode {
+                    RunMode::Normal | RunMode::Watch => true,
+                    RunMode::Test => in_test,
+                };
+                if can_run || words_have_import(&binding.words) {
+                    self.binding(binding)?;
+                }
+            }
             Item::Newlines => {}
             Item::Comment(_) => {}
         }

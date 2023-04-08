@@ -11,7 +11,7 @@ use std::{
 
 use clap::Parser;
 use notify::{EventKind, RecursiveMode, Watcher};
-use uiua::{format::format_file, value::Value, Uiua, UiuaResult};
+use uiua::{format::format_file, run::RunMode, value::Value, Uiua, UiuaResult};
 
 fn main() {
     color_backtrace::install();
@@ -45,7 +45,12 @@ fn run() -> UiuaResult {
             Command::Run => {
                 let path = PathBuf::from("main.ua");
                 format_file(&path)?;
-                run_file(&path)?;
+                run_file(&path, RunMode::Normal)?;
+            }
+            Command::Test => {
+                let path = PathBuf::from("main.ua");
+                format_file(&path)?;
+                run_file(&path, RunMode::Test)?;
             }
         }
     } else if let Err(e) = watch() {
@@ -84,7 +89,7 @@ fn watch() -> io::Result<()> {
         Ok(formatted) => {
             if formatted != last_formatted {
                 clear_watching();
-                match run_file(path) {
+                match run_file(path, RunMode::Watch) {
                     Ok(values) => {
                         for value in values {
                             println!("{}", value.show());
@@ -118,8 +123,8 @@ fn watch() -> io::Result<()> {
     }
 }
 
-fn run_file(path: &Path) -> UiuaResult<Vec<Rc<Value>>> {
-    Ok(Uiua::default().load_file(path)?.take_stack())
+fn run_file(path: &Path, mode: RunMode) -> UiuaResult<Vec<Rc<Value>>> {
+    Ok(Uiua::default().mode(mode).load_file(path)?.take_stack())
 }
 
 #[derive(Parser)]
@@ -144,6 +149,8 @@ enum Command {
     Fmt { path: Option<PathBuf> },
     #[clap(about = "Format and run main.ua")]
     Run,
+    #[clap(about = "Format and test main.ua")]
+    Test,
 }
 
 fn uiua_files() -> Vec<PathBuf> {

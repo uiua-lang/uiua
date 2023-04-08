@@ -204,7 +204,7 @@ pub fn Editor(
         ("_", "strand"),
         ("[]", "array"),
         ("()", "function"),
-        ("{}", "ref function"),
+        ("{}", "dfn"),
         ("¯", "negative\n`"),
         ("'", "character"),
         ("\"", "string"),

@@ -9,7 +9,6 @@ pub enum Instr {
     EndArray(usize),
     Primitive(Primitive, usize),
     Call(usize),
-    CallDfn(usize, usize),
     DfnVal(usize),
 }
 
@@ -21,7 +20,6 @@ impl fmt::Display for Instr {
             Instr::EndArray(_) => write!(f, "["),
             Instr::Primitive(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => write!(f, ":"),
-            Instr::CallDfn(n, _) => write!(f, "dfn{n}"),
             Instr::DfnVal(n) => write!(f, "{}", (*n as u8 + b'a') as char),
         }
     }
@@ -31,6 +29,7 @@ impl fmt::Display for Instr {
 pub struct Function {
     pub id: FunctionId,
     pub instrs: Vec<Instr>,
+    pub dfn_args: Option<u8>,
 }
 
 impl From<Primitive> for Function {
@@ -38,6 +37,7 @@ impl From<Primitive> for Function {
         Self {
             id: FunctionId::Primitive(prim),
             instrs: vec![Instr::Primitive(prim, 0)],
+            dfn_args: None,
         }
     }
 }
@@ -53,13 +53,20 @@ impl fmt::Display for Function {
         if let FunctionId::Named(name) = &self.id {
             return write!(f, "{name}");
         }
-        if self.instrs.len() != 1 {
+        if let Some(prim) = self.as_primitive() {
+            return write!(f, "{prim}");
+        }
+        if self.dfn_args.is_some() {
+            write!(f, "{{")?;
+        } else {
             write!(f, "(")?;
         }
         for instr in self.instrs.iter().rev() {
             instr.fmt(f)?;
         }
-        if self.instrs.len() != 1 {
+        if self.dfn_args.is_some() {
+            write!(f, "}}")?;
+        } else {
             write!(f, ")")?;
         }
         Ok(())
@@ -183,6 +190,7 @@ impl Function {
         Some(Function {
             id: self.id.clone(),
             instrs: invert_instrs(&self.instrs)?,
+            dfn_args: self.dfn_args,
         })
     }
 }

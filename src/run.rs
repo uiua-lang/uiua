@@ -50,7 +50,7 @@ struct StackFrame {
 
 #[derive(Clone)]
 struct DfnFrame {
-    function: Rc<Value>,
+    function: Rc<Function>,
     args: Vec<Rc<Value>>,
 }
 
@@ -236,6 +236,7 @@ impl<'io> Uiua<'io> {
             let func = Function {
                 id: FunctionId::Named(binding.name.value.clone()),
                 instrs,
+                dfn_args: None,
             };
             Value::from(func).into()
         } else {
@@ -308,7 +309,7 @@ impl<'io> Uiua<'io> {
                 self.push_instr(Instr::EndArray(span));
             }
             Word::Func(func) => self.func(func, word.span)?,
-            Word::Dfn(func) => self.dfn(func, word.span)?,
+            Word::Dfn(func) => self.dfn(func, word.span, call)?,
             Word::Primitive(p) => self.primitive(p, word.span, call),
             Word::Modified(m) => self.modified(*m, call)?,
             Word::Spaces => {}
@@ -360,22 +361,26 @@ impl<'io> Uiua<'io> {
         let func = Function {
             id: func.id,
             instrs,
+            dfn_args: None,
         };
         self.push_instr(Instr::Push(Rc::new(func.into())));
         Ok(())
     }
-    fn dfn(&mut self, func: Func, span: Span) -> UiuaResult {
+    fn dfn(&mut self, func: Func, span: Span, call: bool) -> UiuaResult {
         self.new_dfns.push(Vec::new());
         let instrs = self.compile_words(func.body)?;
         let refs = self.new_dfns.pop().unwrap();
+        let span = self.add_span(span);
+        let dfn_size = refs.into_iter().max().map(|n| n + 1).unwrap_or(0);
         let func = Function {
             id: func.id,
             instrs,
+            dfn_args: Some(dfn_size),
         };
         self.push_instr(Instr::Push(Rc::new(func.into())));
-        let span = self.add_span(span);
-        let dfn_size = refs.into_iter().max().unwrap_or(0) + 1;
-        self.push_instr(Instr::CallDfn(dfn_size as usize, span));
+        if call {
+            self.push_instr(Instr::Call(span));
+        }
         Ok(())
     }
     fn modified(&mut self, modified: Modified, call: bool) -> UiuaResult {
@@ -390,6 +395,7 @@ impl<'io> Uiua<'io> {
         let func = Function {
             id: FunctionId::Anonymous(modified.modifier.span.clone()),
             instrs,
+            dfn_args: None,
         };
         self.push_instr(Instr::Push(Rc::new(func.into())));
         if call {
@@ -406,6 +412,7 @@ impl<'io> Uiua<'io> {
             self.push_instr(Instr::Push(Rc::new(Value::from(Function {
                 id: FunctionId::Primitive(prim),
                 instrs: vec![Instr::Primitive(prim, span)],
+                dfn_args: None,
             }))))
         }
     }
@@ -413,6 +420,7 @@ impl<'io> Uiua<'io> {
         let func = Function {
             id: FunctionId::Main,
             instrs,
+            dfn_args: None,
         };
         self.exec(StackFrame {
             function: Rc::new(func),
@@ -463,7 +471,6 @@ impl<'io> Uiua<'io> {
                     Ok(())
                 })(),
                 &Instr::Call(span) => self.call_with_span(span),
-                &Instr::CallDfn(n, span) => self.call_dfn_with_span(n, span),
                 Instr::DfnVal(n) => {
                     let value = self.dfn_stack.last().unwrap().args[*n].clone();
                     self.stack.push(value);
@@ -494,6 +501,20 @@ impl<'io> Uiua<'io> {
         let value = self.pop("called function")?;
         if let Value::Func(fs) = &*value {
             for f in &fs.data {
+                if let Some(n) = f.dfn_args {
+                    let n = n as usize;
+                    if self.stack.len() < n {
+                        return Err(self.spans[call_span]
+                            .clone()
+                            .sp(format!("not enough arguments for dfn of {n} values"))
+                            .into());
+                    }
+                    let args = self.stack.drain(self.stack.len() - n..).rev().collect();
+                    self.dfn_stack.push(DfnFrame {
+                        function: f.clone(),
+                        args,
+                    });
+                }
                 let new_frame = StackFrame {
                     function: f.clone(),
                     call_span,
@@ -509,22 +530,6 @@ impl<'io> Uiua<'io> {
             Ok(())
         }
     }
-    fn call_dfn_with_span(&mut self, n: usize, span: usize) -> UiuaResult {
-        let f = self.pop("dfn function")?;
-        if self.stack.len() < n {
-            return Err(self.spans[span]
-                .clone()
-                .sp(format!("not enough arguments for dfn of {n} values"))
-                .into());
-        }
-        let args = self.stack.drain(self.stack.len() - n..).rev().collect();
-        self.dfn_stack.push(DfnFrame {
-            function: f.clone(),
-            args,
-        });
-        self.stack.push(f);
-        self.call_with_span(span)
-    }
     /// Call the top of the stack as a function
     pub fn call(&mut self) -> UiuaResult {
         let call_span = self.span_index();
@@ -535,9 +540,8 @@ impl<'io> Uiua<'io> {
             .dfn_stack
             .last()
             .ok_or_else(|| self.error("Cannot recur outside of dfn"))?;
-        let call_span = self.span_index();
-        self.stack.push(dfn.function.clone());
-        self.call_dfn_with_span(dfn.args.len(), call_span)
+        self.push(dfn.function.clone());
+        self.call()
     }
     pub fn call_catch_break(&mut self) -> UiuaResult<bool> {
         match self.call() {

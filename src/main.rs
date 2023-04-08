@@ -3,15 +3,15 @@ use std::{
     io::{self, stderr, Write},
     path::{Path, PathBuf},
     process::exit,
-    rc::Rc,
     sync::mpsc::channel,
     thread::sleep,
     time::Duration,
 };
 
 use clap::Parser;
+use instant::Instant;
 use notify::{EventKind, RecursiveMode, Watcher};
-use uiua::{format::format_file, run::RunMode, value::Value, Uiua, UiuaResult};
+use uiua::{format::format_file, run::RunMode, Uiua, UiuaResult};
 
 fn main() {
     color_backtrace::install();
@@ -45,12 +45,12 @@ fn run() -> UiuaResult {
             Command::Run => {
                 let path = PathBuf::from("main.ua");
                 format_file(&path)?;
-                run_file(&path, RunMode::Normal)?;
+                Uiua::default().mode(RunMode::Normal).load_file(path)?;
             }
             Command::Test => {
                 let path = PathBuf::from("main.ua");
                 format_file(&path)?;
-                run_file(&path, RunMode::Test)?;
+                Uiua::default().mode(RunMode::Test).load_file(path)?;
             }
         }
     } else if let Err(e) = watch() {
@@ -80,26 +80,29 @@ fn watch() -> io::Result<()> {
     watcher
         .watch(Path::new("."), RecursiveMode::Recursive)
         .unwrap();
-    println!("Running {}...", open_path.display());
-    let mut last_formatted = String::new();
-    let mut run = |path: &Path| match format_file(path).or_else(|_| {
-        sleep(Duration::from_millis(10));
+    let run = |path: &Path| match format_file(path).or_else(|_| {
+        sleep(Duration::from_millis(100));
         format_file(path)
     }) {
         Ok(formatted) => {
-            if formatted != last_formatted {
+            if formatted.is_empty() {
                 clear_watching();
-                match run_file(path, RunMode::Watch) {
-                    Ok(values) => {
-                        for value in values {
-                            println!("{}", value.show());
-                        }
-                    }
-                    Err(e) => eprintln!("{}", e.show(true)),
-                }
                 print_watching();
+                return;
             }
-            last_formatted = formatted;
+            clear_watching();
+            match Uiua::default()
+                .mode(RunMode::Watch)
+                .load_str_path(&formatted, path)
+            {
+                Ok(env) => {
+                    for value in env.take_stack() {
+                        println!("{}", value.show());
+                    }
+                }
+                Err(e) => eprintln!("{}", e.show(true)),
+            }
+            print_watching();
         }
         Err(e) => {
             clear_watching();
@@ -108,6 +111,7 @@ fn watch() -> io::Result<()> {
         }
     };
     run(&open_path);
+    let mut last_time = Instant::now();
     loop {
         sleep(Duration::from_millis(10));
         if let Some(path) = recv
@@ -118,13 +122,12 @@ fn watch() -> io::Result<()> {
             .filter(|path| path.extension().map_or(false, |ext| ext == "ua"))
             .last()
         {
-            run(&path);
+            if last_time.elapsed() > Duration::from_millis(100) {
+                run(&path);
+                last_time = Instant::now();
+            }
         }
     }
-}
-
-fn run_file(path: &Path, mode: RunMode) -> UiuaResult<Vec<Rc<Value>>> {
-    Ok(Uiua::default().mode(mode).load_file(path)?.take_stack())
 }
 
 #[derive(Parser)]

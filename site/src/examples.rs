@@ -8,6 +8,7 @@ u ← ↥<0.2~>0.7.+×2 ×.~/·x
 c ← √/+ⁿ2 x
 ⍉⊂~-¬u <1 c +0.1 ≡(↧<0.95 c)rgb";
 const AVG: &str = "Avg ← ÷≢~/+.\nAvg 0_2_1_5";
+const AUDIO: &str = "sin ×2×π ×110 √ ÷~ ⇡.44100";
 const QUADRATIC: &str = "{÷×2 a -b ⊟¯.√-××4 a c ⁿ2 b}1 2 0";
 const STRIPES: &str = "\
 r ← ⊞+.⇡300
@@ -35,6 +36,7 @@ pub const EXAMPLES: &[&str] = &[
     D3,
     LOGO,
     AVG,
+    AUDIO,
     QUADRATIC,
     STRIPES,
     PALINDROME,

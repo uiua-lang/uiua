@@ -7,6 +7,7 @@ pub struct WebBackend {
     pub stdout: RefCell<String>,
     rng: RefCell<SmallRng>,
     pub image_bytes: RefCell<Option<Vec<u8>>>,
+    pub audio_bytes: RefCell<Option<Vec<u8>>>,
 }
 
 impl Default for WebBackend {
@@ -15,6 +16,7 @@ impl Default for WebBackend {
             stdout: String::new().into(),
             rng: SmallRng::seed_from_u64(instant::now().to_bits()).into(),
             image_bytes: None.into(),
+            audio_bytes: None.into(),
         }
     }
 }
@@ -32,6 +34,10 @@ impl IoBackend for WebBackend {
             .write_to(&mut bytes, image::ImageOutputFormat::Png)
             .map_err(|e| format!("Failed to show image: {e}"))?;
         *self.image_bytes.borrow_mut() = Some(bytes.into_inner());
+        Ok(())
+    }
+    fn play_audio(&self, wav_bytes: Vec<u8>) -> Result<(), String> {
+        *self.audio_bytes.borrow_mut() = Some(wav_bytes);
         Ok(())
     }
 }

@@ -1,11 +1,14 @@
-use std::time::Duration;
+use std::{rc::Rc, time::Duration};
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use image::ImageOutputFormat;
 use leptos::*;
-use uiua::{format::format_str, primitive::Primitive, value_to_image_bytes, Uiua, UiuaResult};
+use uiua::{
+    format::format_str, primitive::Primitive, value::Value, value_to_image_bytes,
+    value_to_wav_bytes, Uiua, UiuaResult,
+};
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
-use web_sys::{Event, HtmlDivElement, HtmlImageElement, HtmlTextAreaElement};
+use web_sys::{Event, HtmlAudioElement, HtmlDivElement, HtmlImageElement, HtmlTextAreaElement};
 
 use crate::{backend::WebBackend, prim_class};
 
@@ -50,10 +53,12 @@ pub fn Editor(
     let (code_id, _) = create_signal(cx, format!("code{id}"));
     let (output_id, _) = create_signal(cx, format!("output{id}"));
     let (image_id, _) = create_signal(cx, format!("image{id}"));
+    let (audio_id, _) = create_signal(cx, format!("audio{id}"));
 
     let code_element = move || -> HtmlTextAreaElement { element(&code_id.get()) };
     let output_element = move || -> HtmlDivElement { element(&output_id.get()) };
     let image_element = move || -> HtmlImageElement { element(&image_id.get()) };
+    let audio_element = move || -> HtmlAudioElement { element(&audio_id.get()) };
 
     let get_saved_code = || {
         window()
@@ -93,17 +98,30 @@ pub fn Editor(
             code_string
         };
         match run_code(&input) {
-            Ok((stack, image_bytes)) => {
-                set_output.set(stack);
+            Ok(output) => {
+                // Show text output
+                set_output.set(output.text());
                 _ = output_element().style().remove_property("color");
-                if let Some(image_bytes) = image_bytes {
-                    let encoded = STANDARD.encode(image_bytes);
+                // Show image output
+                if let Some(image_bytes) = output.image_bytes {
                     _ = image_element().style().remove_property("display");
+                    let encoded = STANDARD.encode(image_bytes);
                     image_element().set_src(&format!("data:image/png;base64,{encoded}"));
                 } else {
                     _ = image_element().style().set_property("display", "none");
                     image_element().set_src("");
                 }
+                // Show audio output
+                if let Some(audio_bytes) = output.audio_bytes {
+                    _ = audio_element().style().remove_property("display");
+                    let encoded = STANDARD.encode(audio_bytes);
+
+                    audio_element().set_src(&format!("data:audio/wav;base64,{encoded}"));
+                } else {
+                    _ = audio_element().style().set_property("display", "none");
+                    audio_element().set_src("");
+                }
+                // Save the code for Pad editor
                 if let EditorSize::Pad = size {
                     if let Ok(Some(storage)) = window().local_storage() {
                         _ = storage.set_item("code", &input);
@@ -293,9 +311,7 @@ pub fn Editor(
                         on:input=code_input>{ move || code.get() }</textarea>
                 </div>
                 <div id={output_id.get()} class="output">
-                    <div id="output-text">
-                        { move || output.get() }
-                    </div>
+                    <div id="output-text">{ move || output.get() }</div>
                     <div id="code-buttons">
                         <button id="run-button" class="code-button" on:click=move |_| run(true)>{ "Run" }</button>
                         <button
@@ -303,7 +319,7 @@ pub fn Editor(
                             class="code-button"
                             style=example_arrow_style
                             on:click=prev_example title="Previous example">{ "<" } </button>
-                            <button
+                        <button
                             id="next-example"
                             class=next_button_class
                             style=example_arrow_style
@@ -311,7 +327,8 @@ pub fn Editor(
                     </div>
                 </div>
                 <div>
-                    <img id=move || image_id.get() class="output-image" src=""/>
+                    <img id=move || image_id.get() src=""/>
+                    <audio id=move || audio_id.get() src="" controls autoplay/>
                 </div>
             </div>
             <div id="editor-help">
@@ -321,8 +338,35 @@ pub fn Editor(
     }
 }
 
+struct RunOutput {
+    stdout: String,
+    stack: Vec<Rc<Value>>,
+    image_bytes: Option<Vec<u8>>,
+    audio_bytes: Option<Vec<u8>>,
+}
+
+impl RunOutput {
+    fn text(&self) -> String {
+        let mut s = String::new();
+        if !self.stdout.is_empty() {
+            if !self.stack.is_empty() {
+                s.push_str("Output:\n");
+            }
+            s.push_str(&self.stdout);
+            if !self.stack.is_empty() {
+                s.push_str("\n\nStack:\n");
+            }
+        }
+        for val in &self.stack {
+            s.push_str(&val.show());
+            s.push('\n');
+        }
+        s
+    }
+}
+
 /// Returns the output and the formatted code
-fn run_code(code: &str) -> UiuaResult<(String, Option<Vec<u8>>)> {
+fn run_code(code: &str) -> UiuaResult<RunOutput> {
     let io = WebBackend::default();
     let mut values = Uiua::with_backend(&io).load_str(code)?.take_stack();
     let image_bytes = io.image_bytes.into_inner().or_else(|| {
@@ -337,22 +381,24 @@ fn run_code(code: &str) -> UiuaResult<(String, Option<Vec<u8>>)> {
         }
         None
     });
-    let output = io.stdout.into_inner();
-    let mut s = String::new();
-    if !output.is_empty() {
-        if !values.is_empty() {
-            s.push_str("Output:\n");
+    let audio_bytes = io.audio_bytes.into_inner().or_else(|| {
+        for i in 0..values.len() {
+            let value = &values[i];
+            if let Ok(bytes) = value_to_wav_bytes(value) {
+                if value.len() > 1000 {
+                    values.remove(i);
+                    return Some(bytes);
+                }
+            }
         }
-        s.push_str(&output);
-        if !values.is_empty() {
-            s.push_str("\n\nStack:\n");
-        }
-    }
-    for val in values {
-        s.push_str(&val.show());
-        s.push('\n');
-    }
-    Ok((s, image_bytes))
+        None
+    });
+    Ok(RunOutput {
+        stdout: io.stdout.into_inner(),
+        stack: values,
+        image_bytes,
+        audio_bytes,
+    })
 }
 
 fn element<T: JsCast>(id: &str) -> T {

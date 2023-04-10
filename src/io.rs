@@ -399,9 +399,17 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
 }
 
 pub fn value_to_wav_bytes(audio: &Value) -> Result<Vec<u8>, String> {
-    let values: Vec<f32> = match audio {
-        Value::Num(nums) => nums.data.iter().map(|&f| f as f32).collect(),
-        Value::Byte(byte) => byte.data.iter().map(|&b| b.or(0) as f32).collect(),
+    let values: Vec<i16> = match audio {
+        Value::Num(nums) => nums
+            .data
+            .iter()
+            .map(|&f| (f.clamp(-1.0, 1.0) * i16::MAX as f64) as i16)
+            .collect(),
+        Value::Byte(byte) => byte
+            .data
+            .iter()
+            .map(|&b| b.value().map_or(i16::MIN, |_| i16::MAX))
+            .collect(),
         _ => return Err("Audio must be a numeric array".into()),
     };
     let (length, channels) = match audio.rank() {
@@ -422,8 +430,8 @@ pub fn value_to_wav_bytes(audio: &Value) -> Result<Vec<u8>, String> {
     let spec = WavSpec {
         channels: channels.len() as u16,
         sample_rate: 44100,
-        bits_per_sample: 32,
-        sample_format: SampleFormat::Float,
+        bits_per_sample: 16,
+        sample_format: SampleFormat::Int,
     };
     let mut bytes = Cursor::new(Vec::new());
     let mut writer = WavWriter::new(&mut bytes, spec).map_err(|e| e.to_string())?;

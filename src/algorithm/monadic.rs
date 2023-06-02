@@ -48,6 +48,9 @@ impl Value {
 }
 
 fn range(shape: &[usize]) -> Vec<f64> {
+    if shape.contains(&0) {
+        return Vec::new();
+    }
     let len = shape.len() * shape.iter().product::<usize>();
     let mut data: Vec<f64> = Vec::with_capacity(len);
     let mut curr = vec![0; shape.len()];

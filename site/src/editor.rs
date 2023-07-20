@@ -343,7 +343,7 @@ pub fn Editor(
                 </div>
                 <div>
                     <img id=move || image_id.get() src=""/>
-                    <audio id=move || audio_id.get() src="" controls autoplay/>
+                    <audio id=move || audio_id.get() src="" style="display:none" controls autoplay/>
                 </div>
             </div>
             <div id="editor-help">

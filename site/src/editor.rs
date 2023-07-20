@@ -194,6 +194,8 @@ pub fn Editor(
             event.target().unwrap_throw().dyn_into().unwrap_throw();
         set_code.set(text_area.value());
     };
+    let (glyph_doc, set_glyph_doc) = create_signal(cx, "");
+    let (glyph_doc_display, set_glyph_doc_display) = create_signal(cx, "none");
     let mut glyph_buttons: Vec<_> = Primitive::ALL
         .iter()
         .filter_map(|p| {
@@ -207,15 +209,24 @@ pub fn Editor(
                 .then(|| p.ascii().map(|s| s.to_string()))
                 .flatten()
                 .unwrap_or_default();
-            let title = format!(
-                "{}{}",
-                p.name().unwrap_or_default(),
-                format_args!("\n{extra}")
-            );
+            let title = format!("{}\n{}", p.name().unwrap_or_default(), extra);
             let onclick = move |_| replace_code(&p.to_string());
+            let onmouseover = move |_| {
+                if let Some(doc) = p.doc() {
+                    set_glyph_doc.set(doc);
+                    set_glyph_doc_display.set("");
+                } else {
+                    set_glyph_doc.set("");
+                    set_glyph_doc_display.set("none");
+                }
+            };
             let class = format!("glyph-button {}", prim_class(*p));
             Some(view! { cx,
-                <button class=class title=title on:click=onclick>{ text }</button>
+                <button
+                    class=class
+                    title=title
+                    on:click=onclick
+                    on:mouseover=onmouseover>{ text }</button>
             })
         })
         .collect();
@@ -303,6 +314,7 @@ pub fn Editor(
                             on:click=toggle_show_glyphs>{show_glyphs_text}</button>
                         <div id="example-tracker">{example_text}</div>
                     </div>
+                    <div id="glyph-doc" display={move || glyph_doc_display.get()}>{glyph_doc.get()}</div>
                     <textarea
                         id={code_id.get()}
                         spellcheck="false"

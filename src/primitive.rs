@@ -10,11 +10,14 @@ use crate::{
 };
 
 macro_rules! primitive {
-    ($((
-        $($($args:literal)? $([$antiargs:literal])? $(($outputs:expr))? $({$antioutputs:literal})?,)?
-        $name:ident $({$modifier:ident: $margs:literal})?
-        $(,$ident:literal)? $(,$ascii:ident)? $(+ $character:literal)?
-    )),* $(,)?) => {
+    ($(
+        $(#[doc = $doc:literal])?
+        (
+            $($($args:literal)? $([$antiargs:literal])? $(($outputs:expr))? $({$antioutputs:literal})?,)?
+            $name:ident $({$modifier:ident: $margs:literal})?
+            $(,$ident:literal)? $(,$ascii:ident)? $(+ $character:literal)?
+        )
+    ),* $(,)?) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
         pub enum Primitive {
             $($name,)*
@@ -97,20 +100,34 @@ macro_rules! primitive {
                     _ => None
                 }
             }
+            pub fn doc(&self) -> Option<&'static str> {
+                match self {
+                    $($(Primitive::$name => Some($doc),)?)*
+                    _ => None
+                }
+            }
         }
     };
 }
 
 primitive!(
     // Stack ops
+    /// Duplicate the top value on the stack
     (1(2), Dup, "duplicate" + '.'),
+    /// Duplicate the second-to-top value to the top of the stack
     (2(3), Over, "over" + ','),
+    /// Swap the top two values on the stack
     (2(2), Flip, "flip" + '~'),
+    /// Pop the top value off the stack
     (1(0), Pop, "pop" + ';'),
+    /// Pop the top value off the stack and save it to the antistack
     (1(0){1}, Save, "save" + '⇟'),
+    /// Pop the top value off the antistack and push it to the stack
     (0[1](1), Load, "load" + '⇞'),
     // Pervasive monadic ops
+    /// Logical not (equivalen to 1 - x)
     (1, Not, "not" + '¬'),
+    /// Numerical sign (1, -1, or 0)
     (1, Sign, "sign" + '$'),
     (1, Neg, "negate", Backtick + '¯'),
     (1, Abs, "absolute value" + '⌵'),
@@ -140,65 +157,121 @@ primitive!(
     (2, Max, "maximum" + '↥'),
     (2, Atan, "atangent"),
     // Monadic array ops
+    /// The number of rows in an array
     (1, Len, "length" + '≢'),
+    /// The number of dimensions in an array
     (1, Rank, "rank" + '∴'),
+    /// The dimensions of an array
     (1, Shape, "shape" + '△'),
+    /// Make an array of [0, x)
     (1, Range, "range" + '⇡'),
+    /// The first element of an array
     (1, First, "first" + '⊢'),
+    /// The last element of an array
     (1, Last),
+    /// Allow an array to be combined with arrays of incompatible shapes
     (1, Fill, "fill" + '∘'),
+    /// Remove fill elements from the end of an array
     (1, Truncate, "truncate" + '⍛'),
+    /// Reverse the elements of an array
     (1, Reverse, "reverse" + '⇌'),
+    /// Make an array 1-dimensional
     (1, Deshape, "deshape" + '♭'),
+    /// Rotate the shape of an array
     (1, Transpose, "transpose" + '⍉'),
     (1, InvTranspose),
+    /// Sort the rows of an array
     (1, Sort, "sort" + '∧'),
+    /// Grade the rows of an array
     (1, Grade, "grade" + '⍋'),
+    /// Repeat the index of each array element the element's value times
     (1, Indices, "indices" + '⊙'),
+    /// Assign a unique index to each unique element in an array
     (1, Classify, "classify" + '⊛'),
+    /// Remove duplicate elements from an array
     (1, Deduplicate, "deduplicate" + '⊝'),
     // Dyadic array ops
+    /// Check if two arrays' elements match exactly
     (2, Match, "match" + '≅'),
+    /// Check if two arrays' elements do not match exactly
     (2, NoMatch, "notmatch" + '≇'),
+    /// Append two arrays or an array and a scalar
     (2, Join, "join" + '⊂'),
+    /// Combine two arrays as rows
     (2, Couple, "couple" + '⊟'),
+    /// Index a single row or element from an array
     (2, Pick, "pick" + '⊡'),
+    /// Select multiple elements from an array
     (2, Select, "select" + '⊏'),
+    /// Take the first n elements of an array
     (2, Take, "take" + '↙'),
+    /// Drop the first n elements of an array
     (2, Drop, "drop" + '↘'),
+    /// Change the shape of an array
     (2, Reshape, "reshape" + '↯'),
+    /// Rotate the elements of an array
     (2, Rotate, "rotate" + '↻'),
+    /// The n-wise windows of an array
     (2, Windows, "windows" + '◫'),
+    /// Use an array to replicate the elements of another array
     (2, Replicate, "replicate" + '‡'),
+    /// Check if each element of an array is a member of another array
     (2, Member, "member" + '∊'),
+    /// Find the first index of an element in an array
     (2, Find, "find" + '⌕'),
+    /// Find the index of an element in an array
     (2, IndexOf, "indexof" + '⊗'),
+    /// Group elements of an array into buckets by index
     (2, Group, "group" + '⊕'),
+    /// Group elements of an array into buckets by sequential keys
     (2, Partition, "partition" + '⊘'),
     // Modifiers
+    /// Apply a reducing function to an array
     (Reduce { modifier: 1 }, "reduce" + '/'),
+    /// Apply a reducing function to an array with an initial value
     (Fold { modifier: 1 }, "fold" + '⌿'),
+    /// Reduce, but keep intermediate values
     (Scan { modifier: 1 }, "scan" + '\\'),
+    /// Apply a function to each element of an array
     (Each { modifier: 1 }, "each" + '∵'),
+    /// Pervade a function through two arrays
     (Zip { modifier: 1 }, "zip" + '∺'),
+    /// Apply a function to each row of an array
     (Rows { modifier: 1 }, "rows" + '≡'),
+    /// Apply a function to each pair of rows in two arrays
     (Bridge { modifier: 1 }, "bridge" + '≑'),
+    /// Apply a function to a fixed value and each row of an array
     (Distribute { modifier: 1 }, "distribute" + '∹'),
+    /// Apply a function to each combination of elements of two arrays
     (Table { modifier: 1 }, "table" + '⊞'),
+    /// Repeat a function n times
     (Repeat { modifier: 1 }, "repeat" + '⍥'),
+    /// Invert the behavior of a function
     (Invert { modifier: 1 }, "invert" + '↶'),
+    /// Apply a function under another
     (Under { modifier: 2 }, "under" + '⍜'),
+    /// Apply a function at a different array depth
     (Level { modifier: 2 }, "level" + '⍚'),
+    /// Call a function and catch errors
     (Try { modifier: 2 }, "try" + '?'),
     // Misc
+    /// Throw an error
     (2, Throw, "throw" + '!'),
+    /// Break out of a loop
     (1(0), Break, "break" + '⎋'),
+    /// Call the current function recursively
     (1(0), Recur, "recur" + '↬'),
+    /// Debug print a value without popping it
     (1, Debug, "debug" + '|'),
+    /// Call a function
     (1(None), Call, "call" + ':'),
+    /// Do nothing
     (0, Noop, "noop" + '·'),
+    /// Convert a value to a string
     (1, String, "string"),
+    /// Parse a string as a number
     (1, Parse, "parsenumber"),
+    /// Import a function from another file
     (1, Use, "use"),
     // Constants
     (0(1), Pi, "pi" + 'π'),

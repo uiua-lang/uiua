@@ -1,7 +1,6 @@
 - Better solution to string formatting
 - Make grid formatting less vertical
 - Threads
-- Unroll some runtime recursion
 - More array functions
   - Progressive index of
   - Nudge
@@ -13,7 +12,6 @@
 - Multimedia
   - Sound IO
   - Webcam input?
-- "Structs"
 - System APIs
   - Sockets
   - FFI

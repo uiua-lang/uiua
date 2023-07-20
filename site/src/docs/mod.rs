@@ -56,7 +56,12 @@ impl TutorialPage {
             Self::Basic => view!(cx, {}).into_view(cx),
             Self::Math => view!(cx, {}).into_view(cx),
             Self::Arrays => {
-                view!(cx, <PrimCode prim=Len/><PrimCode prim=Rank/><PrimCode prim=Shape/>)
+                view!(cx, 
+                    <PrimCode prim=Len/>
+                    <PrimCode prim=Rank/>
+                    <PrimCode prim=Shape/>
+                    <PrimCode prim=Fill/>
+                    <PrimCode prim=Truncate/>)
                     .into_view(cx)
             }
         }
@@ -272,6 +277,10 @@ pub fn TutorialArrays(cx: Scope) -> impl IntoView {
             <Editor examples={&["△[1 2 3]\n≢[1 2 3]\n∴[1 2 3]", "# ∴ is equivalent to ≢△\n=∴[1 2 3]≢△[1 2 3]"]}/>
             <p>"When creating multidimensional arrays, stack notation applies a step called "<i>"normalization"</i>". If all the items pushed to the stack have the same shape, they will combine into an array with a higher rank. Different shapes result in an error."</p>
             <Editor examples={&["[[1 2] [3 4]]", "[[1 2] [3 4 5]]"]}/>
+            <br/>
+            <h2><PrimCode prim=Fill name=true/>" and" <PrimCode prim=Truncate name=true/></h2>
+            <hr/>
+            <p>"Many operations that work on multiple arrays will return an error if the arrays have mismatchs lengths or shapes"</p>
             <br/>
             <h2>"Pervasion"</h2>
             <hr/>

@@ -1,6 +1,7 @@
 use std::{
     f64::{consts::PI, INFINITY},
     fmt,
+    mem::take,
     rc::Rc,
     sync::OnceLock,
 };
@@ -101,30 +102,15 @@ macro_rules! primitive {
                     _ => None
                 }
             }
-            pub fn doc(&self) -> Option<PrimDoc> {
+            pub fn doc(&self) -> Option<&'static PrimDoc> {
                 match self {
                     $(Primitive::$name => {
-                        let doc = concat!($($doc, "\n"),*);
-                        static DOC: OnceLock<[PrimDocLine; 0 $(+ {_ = $doc; 1})*]> = OnceLock::new();
-                        if doc.is_empty() {
+                        let doc_str = concat!($($doc, "\n"),*);
+                        static DOC: OnceLock<PrimDoc> = OnceLock::new();
+                        if doc_str.is_empty() {
                             return None;
                         }
-                        Some(PrimDoc(DOC.get_or_init(|| [$({
-                            let doc = $doc;
-                            if let Some(ex) = doc.trim().strip_prefix("ex:") {
-                                let input = ex.trim();
-                                let output = Uiua::with_backend(&StdIo::default()).load_str(input)
-                                    .map(|env| env.take_stack().into_iter().map(|val| val.show()).collect())
-                                    .map_err(|e| e.to_string().lines().next().unwrap_or_default()
-                                        .split_once(' ').unwrap_or_default().1.into());
-                                PrimDocLine::Example(PrimExample {
-                                    input,
-                                    output
-                                })
-                            } else {
-                                PrimDocLine::Text(doc.trim())
-                            }
-                        }),*])))
+                        Some(DOC.get_or_init(|| PrimDoc::from_str(doc_str)))
                     },)*
                     _ => None,
                 }
@@ -134,49 +120,104 @@ macro_rules! primitive {
 }
 
 #[derive(Debug)]
-pub struct PrimDoc(pub &'static [PrimDocLine]);
+pub struct PrimDoc {
+    pub intro: String,
+    pub examples: Vec<PrimExample>,
+    pub outro: String,
+}
+
+impl PrimDoc {
+    fn from_str(s: &str) -> Self {
+        let mut intro = String::new();
+        let mut examples = Vec::new();
+        let mut got_break = false;
+        let mut primer = String::new();
+        for line in s.lines() {
+            let line = line.trim();
+            if line.is_empty() {
+                got_break = true;
+            } else if let Some(ex) = line.strip_prefix("ex:") {
+                let input = ex.trim().to_owned();
+                examples.push(PrimExample {
+                    primer: take(&mut primer),
+                    input,
+                    output: OnceLock::new(),
+                });
+            } else if got_break {
+                primer.push_str(line);
+                primer.push('\n');
+            } else {
+                intro.push_str(line);
+                intro.push('\n');
+            }
+        }
+        let outro = take(&mut primer);
+        Self {
+            intro,
+            examples,
+            outro,
+        }
+    }
+}
 
 impl fmt::Display for PrimDoc {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for line in self.0 {
-            match line {
-                PrimDocLine::Text(text) => writeln!(f, "{}", text)?,
-                PrimDocLine::Example(ex) => {
-                    writeln!(f, "ex: {}", ex.input)?;
-                    match &ex.output {
-                        Ok(output) => {
-                            for formatted in output {
-                                for (i, line) in formatted.lines().enumerate() {
-                                    if i == 0 {
-                                        write!(f, " => ")?
-                                    } else {
-                                        write!(f, "    ")?;
-                                    }
-                                    writeln!(f, "{line}")?;
-                                }
+        writeln!(f, "{}", self.intro.trim())?;
+        for ex in &self.examples {
+            if !ex.primer.is_empty() {
+                writeln!(f, "primer: {}", ex.primer)?;
+            }
+            writeln!(f, "ex: {}", ex.input)?;
+            match ex.output() {
+                Ok(output) => {
+                    for formatted in output {
+                        for (i, line) in formatted.lines().enumerate() {
+                            if i == 0 {
+                                write!(f, " => ")?
+                            } else {
+                                write!(f, "    ")?;
                             }
-                        }
-                        Err(e) => {
-                            writeln!(f, " => error: {e}")?;
+                            writeln!(f, "{line}")?;
                         }
                     }
                 }
+                Err(e) => {
+                    writeln!(f, " => error: {e}")?;
+                }
             }
+        }
+        if !self.outro.is_empty() {
+            writeln!(f)?;
         }
         Ok(())
     }
 }
 
 #[derive(Debug)]
-pub enum PrimDocLine {
-    Text(&'static str),
-    Example(PrimExample),
+pub struct PrimExample {
+    pub primer: String,
+    pub input: String,
+    output: OnceLock<Result<Vec<String>, String>>,
 }
 
-#[derive(Debug)]
-pub struct PrimExample {
-    pub input: &'static str,
-    pub output: Result<Vec<String>, String>,
+impl PrimExample {
+    pub fn output(&self) -> &Result<Vec<String>, String> {
+        self.output.get_or_init(|| {
+            Uiua::with_backend(&StdIo)
+                .load_str(&self.input)
+                .map(|env| env.take_stack().into_iter().map(|val| val.show()).collect())
+                .map_err(|e| {
+                    e.to_string()
+                        .lines()
+                        .next()
+                        .unwrap_or_default()
+                        .split_once(' ')
+                        .unwrap_or_default()
+                        .1
+                        .into()
+                })
+        })
+    }
 }
 
 primitive!(
@@ -227,15 +268,19 @@ primitive!(
     (2, Atan, "atangent"),
     // Monadic array ops
     /// The number of rows in an array
+    ///
     /// ex: ≢2_7_0
     (1, Len, "length" + '≢'),
     /// The number of dimensions in an array
+    ///
     /// ex: ∴[1_2 3_4 5_6]
     (1, Rank, "rank" + '∴'),
     /// The dimensions of an array
+    ///
     /// ex: △[1_2 3_4 5_6]
     (1, Shape, "shape" + '△'),
     /// Make an array of [0, x)
+    ///
     /// ex: ⇡5
     (1, Range, "range" + '⇡'),
     /// The first element of an array
@@ -247,62 +292,85 @@ primitive!(
     /// Remove fill elements from the end of an array
     (1, Truncate, "truncate" + '⍛'),
     /// Reverse the elements of an array
+    ///
     /// ex: ⇌1_2_3_9
     (1, Reverse, "reverse" + '⇌'),
     /// Make an array 1-dimensional
+    ///
     /// ex: ♭[1_2 3_4 5_6]
     (1, Deshape, "deshape" + '♭'),
     /// Rotate the shape of an array
+    ///
     /// ex: ⍉[1_2 3_4 5_6]
     (1, Transpose, "transpose" + '⍉'),
     (1, InvTranspose),
     /// Sort the rows of an array
+    ///
     /// ex: ∧6_2_7_0_¯1_5
     (1, Sort, "sort" + '∧'),
     /// Grade the rows of an array
+    ///
     /// ex: ⍋6_2_7_0_¯1_5
     (1, Grade, "grade" + '⍋'),
     /// Repeat the index of each array element the element's value times
+    ///
     /// ex: ⊙2_0_4_1
     (1, Indices, "indices" + '⊙'),
     /// Assign a unique index to each unique element in an array
+    ///
     /// ex: ⊛7_7_8_0_1_2_0
     (1, Classify, "classify" + '⊛'),
     /// Remove duplicate elements from an array
+    ///
     /// ex: ⊝7_7_8_0_1_2_0
     (1, Deduplicate, "deduplicate" + '⊝'),
     // Dyadic array ops
     /// Check if two arrays' elements match exactly
+    ///
     /// ex: ≅ 1_2_3 [1 2 3]
+    ///
     /// ex: ≅ 1_2_3 [1 2]
     (2, Match, "match" + '≅'),
     /// Check if two arrays' elements do not match exactly
+    ///
     /// ex: ≇ 1_2_3 [1 2 3]
+    ///
     /// ex: ≇ 1_2_3 [1 2]
     (2, NoMatch, "notmatch" + '≇'),
     /// Append two arrays or an array and a scalar
+    ///
     /// ex: ⊂ 1 2
+    ///
     /// ex: ⊂ 1 [2 3]
+    ///
     /// ex: ⊂ [1 2] 3
+    ///
     /// ex: ⊂ [1 2] [3 4]
     (2, Join, "join" + '⊂'),
     /// Combine two arrays as rows
+    ///
     /// ex: ⊟ [1 2 3] [4 5 6]
+    ///
     /// ex: ⊟ [1 2 3] [4 5]
     (2, Couple, "couple" + '⊟'),
     /// Index a single row or element from an array
+    ///
     /// ex: ⊡ 2 [8 3 9 2 0]
     (2, Pick, "pick" + '⊡'),
     /// Select multiple elements from an array
+    ///
     /// ex: ⊏ 4_2 [8 3 9 2 0]
     (2, Select, "select" + '⊏'),
     /// Take the first n elements of an array
+    ///
     /// ex: ↙ 3 [8 3 9 2 0]
     (2, Take, "take" + '↙'),
     /// Drop the first n elements of an array
+    ///
     /// ex: ↘ 3 [8 3 9 2 0]
     (2, Drop, "drop" + '↘'),
     /// Change the shape of an array
+    ///
     /// ex: ↯ 2_3 [1 2 3 4 5 6]
     (2, Reshape, "reshape" + '↯'),
     /// Rotate the elements of an array

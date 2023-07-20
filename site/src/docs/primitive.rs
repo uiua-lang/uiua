@@ -1,6 +1,6 @@
 use leptos::*;
 use leptos_router::*;
-use uiua::primitive::{PrimDocLine, Primitive};
+use uiua::primitive::Primitive;
 
 use crate::{code::PrimCode, docs::DocsHome, editor::Editor};
 
@@ -28,22 +28,27 @@ pub fn PrimDocsPage(cx: Scope) -> impl IntoView {
         _ => return view! { cx, <DocsHome/> }.into_view(cx),
     };
 
-    let doc_lines: Vec<_> = doc
-        .0
+    let ex_lines: Vec<_> = doc
+        .examples
         .iter()
-        .map(|line| match line {
-            PrimDocLine::Text(text) => view! (cx, <p>{*text}</p>).into_view(cx),
-            PrimDocLine::Example(example) => {
-                view!(cx, <Editor examples=&[example.input]/>).into_view(cx)
-            }
+        .map(|ex| {
+            view!(cx,
+                <div>
+                    <p>{&ex.primer}</p>
+                    <Editor examples=&[&ex.input]/>
+                </div>
+            )
+            .into_view(cx)
         })
         .collect();
 
     view! { cx,
         <div>
             <A href="/docs">"Back to Docs Home"</A>
-            <h1><PrimCode prim=prim name=true hide_docs=true/></h1>
-            { doc_lines }
+            <h1><PrimCode prim=prim name=true/></h1>
+            <p>{&doc.intro}</p>
+            { ex_lines }
+            <p>{&doc.outro}</p>
             <div id="bottom-page-nav">
                 <A href="/docs">"Back to Docs Home"</A>
             </div>

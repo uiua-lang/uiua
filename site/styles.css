@@ -3,7 +3,7 @@ html * {
 }
 
 html {
-    font-size: 100%;
+    font-size: 110%;
 }
 
 button {
@@ -42,6 +42,10 @@ tr:nth-child(even) {
 table {
     border: 0.2em solid #0005;
     border-radius: 0.5em;
+}
+
+li {
+    margin: 0.2em 0;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -130,7 +134,7 @@ table {
 
 #top {
     margin: 2em auto;
-    width: max(10em, min(90%, 56em));
+    width: max(10em, min(90%, 50em));
 }
 
 #header {
@@ -258,7 +262,7 @@ table {
 
 .glyph-button {
     font-family: "Code Font";
-    font-size: 1.05em;
+    font-size: 0.94em;
     padding: 0.1em;
     margin: 0em;
     background-color: transparent;

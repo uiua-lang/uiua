@@ -12,6 +12,12 @@ pub use primitive::*;
 
 #[component]
 pub fn DocsHome(cx: Scope) -> impl IntoView {
+    let primitives: Vec<_> = Primitive::ALL
+        .into_iter()
+        .filter(|p| p.doc().is_some_and(|doc| !doc.examples.is_empty()))
+        .map(|p| view!(cx, <li><PrimCode prim=p name=true/></li>))
+        .collect();
+
     view! { cx,
         <h2>"Documentation"</h2>
         <h2>"Tutorial"</h2>
@@ -19,6 +25,8 @@ pub fn DocsHome(cx: Scope) -> impl IntoView {
             <p>"These are meant to be read in order:"</p>
             {TutorialPage::ALL.iter().map(|p| view!(cx, <li><A href={p.path()}>{p.title()}" "{p.additional_title(cx)}</A></li>)).collect::<Vec<_>>()}
         </ul>
+        <h2>"Primitives"</h2>
+        <ul>{ primitives }</ul>
     }
 }
 

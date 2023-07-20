@@ -223,10 +223,16 @@ impl PrimExample {
 primitive!(
     // Stack ops
     /// Duplicate the top value on the stack
+    ///
+    /// ex: . 1 2 3
     (1(2), Dup, "duplicate" + '.'),
     /// Duplicate the second-to-top value to the top of the stack
+    ///
+    /// ex: , 1 2 3
     (2(3), Over, "over" + ','),
     /// Swap the top two values on the stack
+    ///
+    /// ex: ~ 1 2 3
     (2(2), Flip, "flip" + '~'),
     /// Pop the top value off the stack
     (1(0), Pop, "pop" + ';'),
@@ -242,9 +248,20 @@ primitive!(
     (0[1](1), Load, "load" + '⇞'),
     // Pervasive monadic ops
     /// Logical not (equivalen to 1 - x)
+    ///
+    /// ex: ¬1
+    /// ex: ¬[0 1 1 0]
     (1, Not, "not" + '¬'),
     /// Numerical sign (1, -1, or 0)
+    ///
+    /// ex: $ 1
+    /// ex: $ -5
+    /// ex: $ [-2 -1 0 1 2]
     (1, Sign, "sign" + '$'),
+    /// Negate a number
+    ///
+    /// ex: ¯ 1
+    /// ex: ¯ ¯3
     (1, Neg, "negate", Backtick + '¯'),
     (1, Abs, "absolute value" + '⌵'),
     (1, Sqrt, "sqrt" + '√'),
@@ -379,21 +396,44 @@ primitive!(
     ///
     /// ex: ↯ 2_3 [1 2 3 4 5 6]
     (2, Reshape, "reshape" + '↯'),
-    /// Rotate the elements of an array
+    /// Rotate the elements of an array by n
+    ///
+    /// ex: ↻1 ⇡5
+    /// ex: ↻2 ⇡5
+    /// ex: ↻¯1 ⇡5
     (2, Rotate, "rotate" + '↻'),
     /// The n-wise windows of an array
+    ///
+    /// ex: ◫2 ⇡4
+    /// ex: ◫4 ⇡6
     (2, Windows, "windows" + '◫'),
     /// Use an array to replicate the elements of another array
+    ///
+    /// ex: ‡ [1 0 2 1 4] [8 3 9 2 0]
+    ///
+    /// This can be used as a filter.
+    /// ex: ‡ ≥'a' ."lOWERCASe onLY"
     (2, Replicate, "replicate" + '‡'),
     /// Check if each element of an array is a member of another array
+    ///
+    /// ex: ∊ [1 2 3] [0 3 4 5 1]
     (2, Member, "member" + '∊'),
-    /// Find the first index of an element in an array
+    /// Find the indices of an element in an array
+    ///
+    /// ex: ⌕ 5 [1 8 5 2 3 5 4 5 6 7]
     (2, Find, "find" + '⌕'),
-    /// Find the index of an element in an array
+    /// Find the first index of an element in an array
+    ///
+    /// ex: ⊗ 5 [1 8 5 2 3 5 4 5 6 7]
     (2, IndexOf, "indexof" + '⊗'),
     /// Group elements of an array into buckets by index
+    ///
+    /// ex: ⊕ [0 1 0 2 1 1] [1 2 3 4 5 6]
+    /// ex: ⊕ =0◿2. [1 2 3 4 5 6]
     (2, Group, "group" + '⊕'),
     /// Group elements of an array into buckets by sequential keys
+    ///
+    /// ex: ⊘ [1 1 2 2 2 3] [1 2 3 4 5 6]
     (2, Partition, "partition" + '⊘'),
     // Modifiers
     /// Apply a reducing function to an array

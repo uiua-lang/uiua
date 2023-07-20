@@ -781,9 +781,14 @@ fn member<A: Arrayish>(
                     of.shape()
                 )));
             }
-            for (elem, of) in elems.rows().zip(of.rows()) {
-                let is_member = elem.iter().zip(of.iter()).all(|(a, b)| a.eq(b));
-                result.push(Byte::Value(is_member as u8));
+            'elem: for elem in elems.rows() {
+                for of in of.rows() {
+                    if elem.len() == of.len() && elem.iter().zip(of).all(|(a, b)| a.eq(b)) {
+                        result.push(Byte::Value(1));
+                        continue 'elem;
+                    }
+                }
+                result.push(Byte::Value(0));
             }
         }
         Ordering::Greater => {

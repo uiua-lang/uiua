@@ -523,6 +523,9 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     pub fn select(&self, indices: &[isize], env: &Uiua) -> UiuaResult<Self> {
+        if self.rank() == 0 {
+            return Err(env.error("Cannot select from a rank 0 array"));
+        }
         let mut selected = Vec::with_capacity(self.row_len() * indices.len());
         let row_len = self.row_len();
         for &i in indices {

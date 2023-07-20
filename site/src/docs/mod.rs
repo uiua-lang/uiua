@@ -1,3 +1,5 @@
+mod primitive;
+
 use std::fmt::Display;
 
 use leptos::*;
@@ -5,6 +7,8 @@ use leptos_router::*;
 use uiua::primitive::Primitive;
 
 use crate::{code::*, editor::*};
+
+pub use primitive::*;
 
 #[component]
 pub fn DocsHome(cx: Scope) -> impl IntoView {

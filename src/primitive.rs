@@ -175,8 +175,8 @@ pub enum PrimDocLine {
 
 #[derive(Debug)]
 pub struct PrimExample {
-    input: &'static str,
-    output: Result<Vec<String>, String>,
+    pub input: &'static str,
+    pub output: Result<Vec<String>, String>,
 }
 
 primitive!(

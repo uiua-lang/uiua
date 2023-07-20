@@ -21,9 +21,10 @@ pub enum EditorSize {
 }
 
 #[component]
-pub fn Editor(
+#[allow(clippy::needless_lifetimes)]
+pub fn Editor<'a>(
     cx: Scope,
-    #[prop(optional)] examples: &'static [&'static str],
+    #[prop(optional)] examples: &'a [&'static str],
     #[prop(optional)] size: EditorSize,
     #[prop(optional)] help: &'static [&'static str],
     #[prop(optional)] progressive: bool,

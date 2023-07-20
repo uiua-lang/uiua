@@ -219,6 +219,7 @@ primitive!(
     (2, Join, "join" + '⊂'),
     /// Combine two arrays as rows
     /// ex: ⊟ [1 2 3] [4 5 6]
+    /// ex: ⊟ [1 2 3] [4 5]
     (2, Couple, "couple" + '⊟'),
     /// Index a single row or element from an array
     /// ex: ⊡ 2 [8 3 9 2 0]

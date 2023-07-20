@@ -45,7 +45,7 @@ table {
 }
 
 li {
-    margin: 0.2em 0;
+    margin: 0.3em 0;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -268,7 +268,7 @@ li {
     background-color: transparent;
 }
 
-.glyph-title[title]:hover::after {
+.glyph-button[title]:hover::after {
     content: attr(title);
     position: absolute;
     font-family: "Code Font";
@@ -280,6 +280,20 @@ li {
     border-radius: 0.2em;
     left: -7em;
     width: 7em;
+}
+
+.prim-code[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    font-family: "Code Font";
+    font-size: 0.8em;
+    bottom: 100%;
+    color: #eee;
+    background-color: #000b;
+    padding: 0.2em;
+    border-radius: 0.2em;
+    left: -10.2em;
+    width: 10em;
 }
 
 .glyph-button:hover {

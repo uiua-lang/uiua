@@ -9,6 +9,26 @@ pub struct PrimsDocsParams {
     prim_name: Option<String>,
 }
 
+#[allow(unused_braces)]
+fn parse_doc(cx: Scope, line: &str) -> impl IntoView {
+    line.split('[')
+        .flat_map(|s| {
+            let (p, s) = s.split_once(']').unwrap_or(("", s));
+            if let Some(prim) = Primitive::from_name(p) {
+                [
+                    view!(cx, <PrimCode prim=prim name=true/>).into_view(cx),
+                    view!(cx, { s.to_string() }).into_view(cx),
+                ]
+            } else {
+                [
+                    view!(cx, { p.to_string() }).into_view(cx),
+                    view!(cx, { s.to_string() }).into_view(cx),
+                ]
+            }
+        })
+        .collect::<Vec<_>>()
+}
+
 #[component]
 pub fn PrimDocsPage(cx: Scope) -> impl IntoView {
     let (prim, doc) = match use_params::<PrimsDocsParams>(cx).get() {
@@ -34,7 +54,7 @@ pub fn PrimDocsPage(cx: Scope) -> impl IntoView {
         .map(|ex| {
             view!(cx,
                 <div>
-                    <p>{&ex.primer}</p>
+                    <p>{parse_doc(cx, &ex.primer)}</p>
                     <Editor examples=&[&ex.input]/>
                 </div>
             )
@@ -45,10 +65,10 @@ pub fn PrimDocsPage(cx: Scope) -> impl IntoView {
     view! { cx,
         <div>
             <A href="/docs">"Back to Docs Home"</A>
-            <h1><PrimCode prim=prim name=true/></h1>
-            <p>{&doc.intro}</p>
+            <h1><PrimCode prim=prim name=true hide_docs=true/></h1>
+            <p>{parse_doc(cx, &doc.intro)}</p>
             { ex_lines }
-            <p>{&doc.outro}</p>
+            <p>{parse_doc(cx, &doc.outro)}</p>
             <div id="bottom-page-nav">
                 <A href="/docs">"Back to Docs Home"</A>
             </div>

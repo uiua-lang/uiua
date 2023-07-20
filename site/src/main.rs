@@ -146,7 +146,12 @@ fn MainText(cx: Scope) -> impl IntoView {
 mod code {
     use super::*;
     #[component]
-    pub fn PrimCode(cx: Scope, prim: Primitive, #[prop(optional)] name: bool) -> impl IntoView {
+    pub fn PrimCode(
+        cx: Scope,
+        prim: Primitive,
+        #[prop(optional)] name: bool,
+        #[prop(optional)] hide_docs: bool,
+    ) -> impl IntoView {
         let show_name = name;
         let class = prim_class(prim);
         let name = if let Some(name) = prim.name().filter(|_| show_name) {
@@ -154,13 +159,21 @@ mod code {
         } else {
             "".to_string()
         };
-        let title = match (prim.doc(), show_name) {
-            (Some(doc), true) => doc.intro.clone(),
-            (Some(doc), false) => format!("{}: {}", prim.name().unwrap_or_default(), doc.intro),
-            (None, true) => String::new(),
-            (None, false) => prim.name().unwrap_or_default().into(),
-        };
-        view!(cx, <a href={format!("/primitive/{prim:?}")}><code class="glyph-title" title=title>{name}<span class=class>{ prim.to_string() }</span></code></a>)
+        if hide_docs {
+            view!(cx, <a href={format!("/primitive/{prim:?}")} style="text-decoration: none;">
+                <code class="prim-code">{name}<span class=class>{ prim.to_string() }</span></code>
+            </a>)
+        } else {
+            let title = match (prim.doc(), show_name) {
+                (Some(doc), true) => doc.intro.clone(),
+                (Some(doc), false) => format!("{}: {}", prim.name().unwrap_or_default(), doc.intro),
+                (None, true) => String::new(),
+                (None, false) => prim.name().unwrap_or_default().into(),
+            };
+            view!(cx, <a href={format!("/primitive/{prim:?}")} style="text-decoration: none;">
+                <code class="prim-code" title=title>{name}<span class=class>{ prim.to_string() }</span></code>
+            </a>)
+        }
     }
 }
 use code::*;

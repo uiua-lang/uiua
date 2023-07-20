@@ -231,8 +231,14 @@ primitive!(
     /// Pop the top value off the stack
     (1(0), Pop, "pop" + ';'),
     /// Pop the top value off the stack and push it to the antistack
+    ///
+    /// This is the inverse of [load].
+    /// ex: ⇞ 1 2 ⇟ 3
     (1(0){1}, Save, "save" + '⇟'),
     /// Pop the top value off the antistack and push it to the stack
+    ///
+    /// This is the inverse of [save].
+    /// ex: ⇞ 1 2 ⇟ 3
     (0[1](1), Load, "load" + '⇞'),
     // Pervasive monadic ops
     /// Logical not (equivalen to 1 - x)
@@ -478,7 +484,7 @@ impl Primitive {
             _ => return None,
         })
     }
-    fn from_name(name: &str) -> Option<Self> {
+    pub fn from_name(name: &str) -> Option<Self> {
         if name.chars().any(char::is_uppercase) {
             return None;
         }

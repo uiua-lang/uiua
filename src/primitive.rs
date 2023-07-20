@@ -11,7 +11,7 @@ use crate::{
 
 macro_rules! primitive {
     ($(
-        $(#[doc = $doc:literal])?
+        $(#[doc = $doc:literal])*
         (
             $($($args:literal)? $([$antiargs:literal])? $(($outputs:expr))? $({$antioutputs:literal})?,)?
             $name:ident $({$modifier:ident: $margs:literal})?
@@ -102,8 +102,8 @@ macro_rules! primitive {
             }
             pub fn doc(&self) -> Option<&'static str> {
                 match self {
-                    $($(Primitive::$name => Some($doc),)?)*
-                    _ => None
+                    $(Primitive::$name => Some(concat!($($doc, "\n"),*)).filter(|s| !s.is_empty()),)*
+                    _ => None,
                 }
             }
         }
@@ -158,12 +158,16 @@ primitive!(
     (2, Atan, "atangent"),
     // Monadic array ops
     /// The number of rows in an array
+    /// ex: ≢2_7_0
     (1, Len, "length" + '≢'),
     /// The number of dimensions in an array
+    /// ex: ∴[1_2 3_4 5_6]
     (1, Rank, "rank" + '∴'),
     /// The dimensions of an array
+    /// ex: △[1_2 3_4 5_6]
     (1, Shape, "shape" + '△'),
     /// Make an array of [0, x)
+    /// ex: ⇡5
     (1, Range, "range" + '⇡'),
     /// The first element of an array
     (1, First, "first" + '⊢'),
@@ -174,40 +178,62 @@ primitive!(
     /// Remove fill elements from the end of an array
     (1, Truncate, "truncate" + '⍛'),
     /// Reverse the elements of an array
+    /// ex: ⇌1_2_3_9
     (1, Reverse, "reverse" + '⇌'),
     /// Make an array 1-dimensional
+    /// ex: ♭[1_2 3_4 5_6]
     (1, Deshape, "deshape" + '♭'),
     /// Rotate the shape of an array
+    /// ex: ⍉[1_2 3_4 5_6]
     (1, Transpose, "transpose" + '⍉'),
     (1, InvTranspose),
     /// Sort the rows of an array
+    /// ex: ∧6_2_7_0_¯1_5
     (1, Sort, "sort" + '∧'),
     /// Grade the rows of an array
+    /// ex: ⍋6_2_7_0_¯1_5
     (1, Grade, "grade" + '⍋'),
     /// Repeat the index of each array element the element's value times
+    /// ex: ⊙2_0_4_1
     (1, Indices, "indices" + '⊙'),
     /// Assign a unique index to each unique element in an array
+    /// ex: ⊛7_7_8_0_1_2_0
     (1, Classify, "classify" + '⊛'),
     /// Remove duplicate elements from an array
+    /// ex: ⊝7_7_8_0_1_2_0
     (1, Deduplicate, "deduplicate" + '⊝'),
     // Dyadic array ops
     /// Check if two arrays' elements match exactly
+    /// ex: ≅ 1_2_3 [1 2 3]
+    /// ex: ≅ 1_2_3 [1 2]
     (2, Match, "match" + '≅'),
     /// Check if two arrays' elements do not match exactly
+    /// ex: ≇ 1_2_3 [1 2 3]
+    /// ex: ≇ 1_2_3 [1 2]
     (2, NoMatch, "notmatch" + '≇'),
     /// Append two arrays or an array and a scalar
+    /// ex: ⊂ 1 2
+    /// ex: ⊂ 1 [2 3]
+    /// ex: ⊂ [1 2] 3
+    /// ex: ⊂ [1 2] [3 4]
     (2, Join, "join" + '⊂'),
     /// Combine two arrays as rows
+    /// ex: ⊟ [1 2 3] [4 5 6]
     (2, Couple, "couple" + '⊟'),
     /// Index a single row or element from an array
+    /// ex: ⊡ 2 [8 3 9 2 0]
     (2, Pick, "pick" + '⊡'),
     /// Select multiple elements from an array
+    /// ex: ⊏ 4_2 [8 3 9 2 0]
     (2, Select, "select" + '⊏'),
     /// Take the first n elements of an array
+    /// ex: ↙ 3 [8 3 9 2 0]
     (2, Take, "take" + '↙'),
     /// Drop the first n elements of an array
+    /// ex: ↘ 3 [8 3 9 2 0]
     (2, Drop, "drop" + '↘'),
     /// Change the shape of an array
+    /// ex: ↯ 2_3 [1 2 3 4 5 6]
     (2, Reshape, "reshape" + '↯'),
     /// Rotate the elements of an array
     (2, Rotate, "rotate" + '↻'),

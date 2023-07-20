@@ -117,7 +117,6 @@ pub fn Editor(
                 if let Some(audio_bytes) = output.audio_bytes {
                     _ = audio_element().style().remove_property("display");
                     let encoded = STANDARD.encode(audio_bytes);
-
                     audio_element().set_src(&format!("data:audio/wav;base64,{encoded}"));
                 } else {
                     _ = audio_element().style().set_property("display", "none");
@@ -196,7 +195,7 @@ pub fn Editor(
             event.target().unwrap_throw().dyn_into().unwrap_throw();
         set_code.set(text_area.value());
     };
-    let (glyph_doc, set_glyph_doc) = create_signal(cx, "");
+    let (glyph_doc, set_glyph_doc) = create_signal(cx, Vec::new());
     let onmouseleave = move |_| {
         _ = glyph_doc_element().style().set_property("display", "none");
     };
@@ -217,7 +216,22 @@ pub fn Editor(
             let onclick = move |_| replace_code(&p.to_string());
             let onmouseover = move |_| {
                 if let Some(doc) = p.doc() {
-                    set_glyph_doc.set(doc);
+                    let mut doc_lines: Vec<String> =
+                        doc.lines().map(str::trim).map(Into::into).collect();
+                    for i in (0..doc_lines.len()).rev() {
+                        if let Some(ex_line) = doc_lines[i].strip_prefix("ex:") {
+                            let stack = Uiua::with_backend(&WebBackend::default())
+                                .load_str(ex_line.trim_matches('`'))
+                                .unwrap_throw()
+                                .take_stack();
+                            for item in stack {
+                                for line in item.show().lines().rev() {
+                                    doc_lines.insert(i + 1, line.into());
+                                }
+                            }
+                        }
+                    }
+                    set_glyph_doc.set(doc_lines);
                     _ = glyph_doc_element().style().remove_property("display");
                 }
             };
@@ -316,7 +330,13 @@ pub fn Editor(
                             on:click=toggle_show_glyphs>{show_glyphs_text}</button>
                         <div id="example-tracker">{example_text}</div>
                     </div>
-                    <div id={glyph_doc_id.get()} class="glyph-doc" style="display: none">{move || glyph_doc.get()}</div>
+                    <div
+                        id={glyph_doc_id.get()}
+                        class="glyph-doc"
+                        style="display: none"
+                    > {
+                        move || glyph_doc.get().join("\n")
+                    }</div>
                     <textarea
                         id={code_id.get()}
                         spellcheck="false"

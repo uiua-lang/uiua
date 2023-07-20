@@ -120,7 +120,7 @@ primitive!(
     (2(2), Flip, "flip" + '~'),
     /// Pop the top value off the stack
     (1(0), Pop, "pop" + ';'),
-    /// Pop the top value off the stack and save it to the antistack
+    /// Pop the top value off the stack and push it to the antistack
     (1(0){1}, Save, "save" + '⇟'),
     /// Pop the top value off the antistack and push it to the stack
     (0[1](1), Load, "load" + '⇞'),

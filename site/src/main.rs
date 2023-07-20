@@ -144,13 +144,20 @@ mod code {
     use super::*;
     #[component]
     pub fn PrimCode(cx: Scope, prim: Primitive, #[prop(optional)] name: bool) -> impl IntoView {
+        let show_name = name;
         let class = prim_class(prim);
-        let name = if let Some(name) = prim.name().filter(|_| name) {
+        let name = if let Some(name) = prim.name().filter(|_| show_name) {
             format!("{} ", name)
         } else {
             "".to_string()
         };
-        view!(cx, <code>{name}<span class=class>{ prim.to_string() }</span></code>)
+        let title = match (prim.doc(), show_name) {
+            (Some(doc), true) => doc.into(),
+            (Some(doc), false) => format!("{}: {}", prim.name().unwrap_or_default(), doc),
+            (None, true) => String::new(),
+            (None, false) => prim.name().unwrap_or_default().into(),
+        };
+        view!(cx, <code class="glyph-title" title=title>{name}<span class=class>{ prim.to_string() }</span></code>)
     }
 }
 use code::*;

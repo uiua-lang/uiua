@@ -22,6 +22,7 @@ code {
     font-family: "Code Font";
     border-radius: 0.2em;
     padding: 0.2em;
+    position: relative;
 }
 
 th,
@@ -263,7 +264,7 @@ table {
     background-color: transparent;
 }
 
-.glyph-button[title]:hover::after {
+.glyph-title[title]:hover::after {
     content: attr(title);
     position: absolute;
     font-family: "Code Font";

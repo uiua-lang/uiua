@@ -221,7 +221,7 @@ pub fn Editor(
                     _ = glyph_doc_element().style().remove_property("display");
                 }
             };
-            let class = format!("glyph-button {}", prim_class(*p));
+            let class = format!("glyph-button glyph-title {}", prim_class(*p));
             Some(view! { cx,
                 <button
                     class=class

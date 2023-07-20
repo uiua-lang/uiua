@@ -865,9 +865,9 @@ impl<T: ArrayValue> Array<T> {
             return Ok(Self::new(self.shape.clone(), Vec::new()));
         };
         let mut groups: Vec<Vec<Array<T>>> = vec![Vec::new(); max_index + 1];
-        for &i in indices {
-            if i < self.row_count() {
-                groups[i].push(Self::new(self.shape[1..].to_vec(), self.row(i).to_vec()));
+        for (r, &g) in indices.iter().enumerate() {
+            if g < self.row_count() {
+                groups[g].push(Self::new(self.shape[1..].to_vec(), self.row(r).to_vec()));
             }
         }
         let mut rows = groups
@@ -901,17 +901,15 @@ impl<T: ArrayValue> Array<T> {
         let mut groups = Vec::new();
         let mut last_marker = usize::MAX;
         for (row, &marker) in self.rows().zip(markers) {
-            if marker == 0 {
-                groups.push(Vec::new());
-                continue;
+            if marker != 0 {
+                if marker != last_marker {
+                    groups.push(Vec::new());
+                }
+                groups
+                    .last_mut()
+                    .unwrap()
+                    .push(Self::new(self.shape[1..].to_vec(), row.to_vec()));
             }
-            if marker != last_marker {
-                groups.push(Vec::new());
-            }
-            groups
-                .last_mut()
-                .unwrap()
-                .push(Self::new(self.shape[1..].to_vec(), row.to_vec()));
             last_marker = marker;
         }
         let mut rows = groups

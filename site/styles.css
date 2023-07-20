@@ -223,15 +223,6 @@ table {
     align-items: center;
 }
 
-#glyph-doc {
-    position: absolute;
-    top: 2em;
-    left: 2em;
-    padding: 0.5em;
-    background-color: #0008;
-    font-size: 1em;
-}
-
 #glyphs-toggle-button {
     margin-right: 0.3em;
     font-weight: bolder;
@@ -288,6 +279,18 @@ table {
 
 .glyph-button:hover {
     background-color: #0002;
+}
+
+.glyph-doc {
+    position: absolute;
+    top: 1em;
+    left: 10%;
+    padding: 0.5em;
+    font-size: 1em;
+    border-radius: 0.5em;
+    max-width: 80%;
+    color: #eee;
+    background-color: #000a;
 }
 
 .variadic-function-button {

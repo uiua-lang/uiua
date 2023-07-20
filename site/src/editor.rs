@@ -2,7 +2,7 @@ use std::{rc::Rc, time::Duration};
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use image::ImageOutputFormat;
-use leptos::*;
+use leptos::{ev::keydown, *};
 use uiua::{
     format::format_str, primitive::Primitive, value::Value, value_to_image_bytes,
     value_to_wav_bytes, Uiua, UiuaResult,
@@ -54,11 +54,13 @@ pub fn Editor(
     let (output_id, _) = create_signal(cx, format!("output{id}"));
     let (image_id, _) = create_signal(cx, format!("image{id}"));
     let (audio_id, _) = create_signal(cx, format!("audio{id}"));
+    let (glyph_doc_id, _) = create_signal(cx, format!("glyphdoc{id}"));
 
     let code_element = move || -> HtmlTextAreaElement { element(&code_id.get()) };
     let output_element = move || -> HtmlDivElement { element(&output_id.get()) };
     let image_element = move || -> HtmlImageElement { element(&image_id.get()) };
     let audio_element = move || -> HtmlAudioElement { element(&audio_id.get()) };
+    let glyph_doc_element = move || -> HtmlDivElement { element(&glyph_doc_id.get()) };
 
     let get_saved_code = || {
         window()
@@ -181,7 +183,7 @@ pub fn Editor(
     };
 
     // Run the code when Ctrl+Enter or Shift+Enter is pressed
-    window_event_listener("keydown", move |event| {
+    window_event_listener(keydown, move |event| {
         let event = event.dyn_ref::<web_sys::KeyboardEvent>().unwrap_throw();
         if event.key() == "Enter" && (event.ctrl_key() || event.shift_key()) {
             run(true);
@@ -195,7 +197,9 @@ pub fn Editor(
         set_code.set(text_area.value());
     };
     let (glyph_doc, set_glyph_doc) = create_signal(cx, "");
-    let (glyph_doc_display, set_glyph_doc_display) = create_signal(cx, "none");
+    let onmouseleave = move |_| {
+        _ = glyph_doc_element().style().set_property("display", "none");
+    };
     let mut glyph_buttons: Vec<_> = Primitive::ALL
         .iter()
         .filter_map(|p| {
@@ -214,10 +218,7 @@ pub fn Editor(
             let onmouseover = move |_| {
                 if let Some(doc) = p.doc() {
                     set_glyph_doc.set(doc);
-                    set_glyph_doc_display.set("");
-                } else {
-                    set_glyph_doc.set("");
-                    set_glyph_doc_display.set("none");
+                    _ = glyph_doc_element().style().remove_property("display");
                 }
             };
             let class = format!("glyph-button {}", prim_class(*p));
@@ -226,7 +227,8 @@ pub fn Editor(
                     class=class
                     title=title
                     on:click=onclick
-                    on:mouseover=onmouseover>{ text }</button>
+                    on:mouseover=onmouseover
+                    on:mouseleave=onmouseleave>{ text }</button>
             })
         })
         .collect();
@@ -314,7 +316,7 @@ pub fn Editor(
                             on:click=toggle_show_glyphs>{show_glyphs_text}</button>
                         <div id="example-tracker">{example_text}</div>
                     </div>
-                    <div id="glyph-doc" display={move || glyph_doc_display.get()}>{glyph_doc.get()}</div>
+                    <div id={glyph_doc_id.get()} class="glyph-doc" style="display: none">{move || glyph_doc.get()}</div>
                     <textarea
                         id={code_id.get()}
                         spellcheck="false"

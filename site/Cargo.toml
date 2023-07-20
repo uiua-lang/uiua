@@ -18,12 +18,11 @@ features = ['wasm-bindgen']
 version = "0.1.12"
 
 [dependencies.leptos]
-features = ["stable"]
-version = "0.2.4"
+version = "0.4.5"
 
 [dependencies.leptos_router]
-features = ["stable", "csr"]
-version = "0.2.4"
+features = ["csr"]
+version = "0.4.5"
 
 [dependencies.rand]
 default-features = false

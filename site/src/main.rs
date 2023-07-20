@@ -152,7 +152,7 @@ mod code {
             "".to_string()
         };
         let title = match (prim.doc(), show_name) {
-            (Some(doc), true) => doc.into(),
+            (Some(doc), true) => doc.to_string(),
             (Some(doc), false) => format!("{}: {}", prim.name().unwrap_or_default(), doc),
             (None, true) => String::new(),
             (None, false) => prim.name().unwrap_or_default().into(),

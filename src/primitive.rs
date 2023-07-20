@@ -2,6 +2,7 @@ use std::{
     f64::{consts::PI, INFINITY},
     fmt,
     rc::Rc,
+    sync::OnceLock,
 };
 
 use crate::{
@@ -100,14 +101,82 @@ macro_rules! primitive {
                     _ => None
                 }
             }
-            pub fn doc(&self) -> Option<&'static str> {
+            pub fn doc(&self) -> Option<PrimDoc> {
                 match self {
-                    $(Primitive::$name => Some(concat!($($doc, "\n"),*)).filter(|s| !s.is_empty()),)*
+                    $(Primitive::$name => {
+                        let doc = concat!($($doc, "\n"),*);
+                        static DOC: OnceLock<[PrimDocLine; 0 $(+ {_ = $doc; 1})*]> = OnceLock::new();
+                        if doc.is_empty() {
+                            return None;
+                        }
+                        Some(PrimDoc(DOC.get_or_init(|| [$({
+                            let doc = $doc;
+                            if let Some(ex) = doc.trim().strip_prefix("ex:") {
+                                let input = ex.trim();
+                                let output = Uiua::with_backend(&StdIo::default()).load_str(input)
+                                    .map(|env| env.take_stack().into_iter().map(|val| val.show()).collect())
+                                    .map_err(|e| e.to_string().lines().next().unwrap_or_default()
+                                        .split_once(' ').unwrap_or_default().1.into());
+                                PrimDocLine::Example(PrimExample {
+                                    input,
+                                    output
+                                })
+                            } else {
+                                PrimDocLine::Text(doc.trim())
+                            }
+                        }),*])))
+                    },)*
                     _ => None,
                 }
             }
         }
     };
+}
+
+#[derive(Debug)]
+pub struct PrimDoc(pub &'static [PrimDocLine]);
+
+impl fmt::Display for PrimDoc {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for line in self.0 {
+            match line {
+                PrimDocLine::Text(text) => writeln!(f, "{}", text)?,
+                PrimDocLine::Example(ex) => {
+                    writeln!(f, "ex: {}", ex.input)?;
+                    match &ex.output {
+                        Ok(output) => {
+                            for formatted in output {
+                                for (i, line) in formatted.lines().enumerate() {
+                                    if i == 0 {
+                                        write!(f, " => ")?
+                                    } else {
+                                        write!(f, "    ")?;
+                                    }
+                                    writeln!(f, "{line}")?;
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            writeln!(f, " => error: {e}")?;
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub enum PrimDocLine {
+    Text(&'static str),
+    Example(PrimExample),
+}
+
+#[derive(Debug)]
+pub struct PrimExample {
+    input: &'static str,
+    output: Result<Vec<String>, String>,
 }
 
 primitive!(

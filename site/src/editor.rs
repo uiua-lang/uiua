@@ -216,36 +216,7 @@ pub fn Editor(
             let onclick = move |_| replace_code(&p.to_string());
             let onmouseover = move |_| {
                 if let Some(doc) = p.doc() {
-                    let mut doc_lines: Vec<String> =
-                        doc.lines().map(str::trim).map(Into::into).collect();
-                    for i in (0..doc_lines.len()).rev() {
-                        if let Some(ex_line) = doc_lines[i].strip_prefix("ex:") {
-                            match Uiua::with_backend(&WebBackend::default()).load_str(ex_line) {
-                                Ok(env) => {
-                                    let stack = env.take_stack();
-                                    for item in stack {
-                                        for line in item.show().lines().rev() {
-                                            doc_lines.insert(i + 1, line.into());
-                                        }
-                                    }
-                                }
-                                Err(e) => doc_lines.insert(
-                                    i + 1,
-                                    format!(
-                                        "error: {}",
-                                        e.to_string()
-                                            .lines()
-                                            .next()
-                                            .unwrap_or_default()
-                                            .split_once(' ')
-                                            .unwrap_or_default()
-                                            .1
-                                    ),
-                                ),
-                            }
-                        }
-                    }
-                    set_glyph_doc.set(doc_lines.join("\n"));
+                    set_glyph_doc.set(doc.to_string());
                     _ = glyph_doc_element().style().remove_property("display");
                 }
             };

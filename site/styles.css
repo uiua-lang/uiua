@@ -294,6 +294,7 @@ table {
     background-color: #000a;
     white-space: pre-wrap;
     font-family: "Code Font";
+    z-index: 1;
 }
 
 .variadic-function-button {

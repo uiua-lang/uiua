@@ -1,7 +1,10 @@
 use std::{
     cell::RefCell,
-    env, fs,
-    io::{stdin, stdout, BufRead, Cursor, Write},
+    collections::HashMap,
+    env,
+    fs::{self, File},
+    io::{stdin, stdout, BufRead, Cursor, Read, Write},
+    sync::{Mutex, OnceLock},
 };
 
 use hound::{SampleFormat, WavSpec, WavWriter};
@@ -58,14 +61,18 @@ io_op! {
     (0, Args, "args"),
     (1, Var, "var"),
     (0, Rand, "rand"),
-    (1, FReadStr, "freadstr"),
-    (1, FWriteStr, "fwritestr"),
-    (1, FReadBytes, "freadbytes"),
-    (1, FWriteBytes, "fwritebytes"),
-    (1, FLines, "flines"),
+    (1, FOpen, "fopen"),
+    (1, FCreate, "fcreate"),
+    (1, FClose, "fclose"),
     (1, FExists, "fexists"),
     (1, FListDir, "flistdir"),
     (1, FIsFile, "fisfile"),
+    (1, ReadAllStr, "freadallstr"),
+    (1, ReadAllBytes, "freadallbytes"),
+    (1, ReadStr, "readstr"),
+    (1, WriteStr, "writestr"),
+    (1, ReadBytes, "readbytes"),
+    (1, WriteBytes, "writebytes"),
     (1, Import, "import"),
     (0, Now, "now"),
     (1, ImRead, "imread"),
@@ -73,6 +80,8 @@ io_op! {
     (1(0), ImShow, "imshow"),
     (1(0), AudioPlay, "audioplay"),
 }
+
+pub type Handle = u64;
 
 #[allow(unused_variables)]
 pub trait IoBackend {
@@ -102,16 +111,49 @@ pub trait IoBackend {
     fn is_file(&self, path: &str) -> Result<bool, String> {
         Err("File IO not supported in this environment".into())
     }
-    fn read_file(&self, path: &str) -> Result<Vec<u8>, String> {
+    fn read(&self, handle: Handle, count: usize) -> Result<Vec<u8>, String> {
         Err("File IO not supported in this environment".into())
     }
-    fn write_file(&self, path: &str, contents: Vec<u8>) -> Result<(), String> {
+    fn write(&self, handle: Handle, contents: &[u8]) -> Result<(), String> {
         Err("File IO not supported in this environment".into())
+    }
+    fn create_file(&self, path: &str) -> Result<Handle, String> {
+        Err("File IO not supported in this environment".into())
+    }
+    fn open_file(&self, path: &str) -> Result<Handle, String> {
+        Err("File IO not supported in this environment".into())
+    }
+    fn close_file(&self, handle: Handle) -> Result<(), String> {
+        Err("File IO not supported in this environment".into())
+    }
+    fn file_read_all(&self, path: &str) -> Result<Vec<u8>, String> {
+        let handle = self.open_file(path)?;
+        let bytes = self.read(handle, usize::MAX)?;
+        self.close_file(handle)?;
+        Ok(bytes)
+    }
+    fn file_write_all(&self, path: &str, contents: &[u8]) -> Result<(), String> {
+        let handle = self.create_file(path)?;
+        self.write(handle, contents)?;
+        self.close_file(handle)?;
+        Ok(())
     }
 }
 
 #[derive(Default)]
 pub struct StdIo;
+
+#[derive(Default)]
+struct GlobalStdIo {
+    next_handle: Handle,
+    files: HashMap<Handle, File>,
+}
+
+static STDIO: OnceLock<Mutex<GlobalStdIo>> = OnceLock::new();
+
+fn stdio<T>(mut f: impl FnMut(&mut GlobalStdIo) -> T) -> T {
+    f(&mut STDIO.get_or_init(Default::default).lock().unwrap())
+}
 
 thread_local! {
     static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::seed_from_u64(instant::now().to_bits()));
@@ -157,11 +199,54 @@ impl IoBackend for StdIo {
         }
         Ok(paths)
     }
-    fn read_file(&self, path: &str) -> Result<Vec<u8>, String> {
-        fs::read(path).map_err(|e| e.to_string())
+    fn open_file(&self, path: &str) -> Result<Handle, String> {
+        stdio(|io| {
+            let handle = io.next_handle;
+            io.next_handle += 1;
+            let file = File::open(path).map_err(|e| e.to_string())?;
+            io.files.insert(handle, file);
+            Ok(handle)
+        })
     }
-    fn write_file(&self, path: &str, contents: Vec<u8>) -> Result<(), String> {
-        fs::write(path, contents).map_err(|e| e.to_string())
+    fn create_file(&self, path: &str) -> Result<Handle, String> {
+        stdio(|io| {
+            let handle = io.next_handle;
+            io.next_handle += 1;
+            let file = File::create(path).map_err(|e| e.to_string())?;
+            io.files.insert(handle, file);
+            Ok(handle)
+        })
+    }
+    fn close_file(&self, handle: Handle) -> Result<(), String> {
+        stdio(|io| {
+            io.files
+                .remove(&handle)
+                .ok_or_else(|| "Invalid file handle".to_string())?;
+            Ok(())
+        })
+    }
+    fn read(&self, handle: Handle, len: usize) -> Result<Vec<u8>, String> {
+        stdio(|io| {
+            if let Some(file) = io.files.get_mut(&handle) {
+                let mut buf = Vec::new();
+                file.take(len as u64)
+                    .read_to_end(&mut buf)
+                    .map_err(|e| e.to_string())?;
+                Ok(buf)
+            } else {
+                Err("Invalid file handle".to_string())
+            }
+        })
+    }
+    fn write(&self, handle: Handle, contents: &[u8]) -> Result<(), String> {
+        stdio(|io| {
+            if let Some(file) = io.files.get_mut(&handle) {
+                file.write_all(contents).map_err(|e| e.to_string())?;
+                Ok(())
+            } else {
+                Err("Invalid file handle".to_string())
+            }
+        })
     }
     #[cfg(feature = "viuer")]
     fn show_image(&self, image: DynamicImage) -> Result<(), String> {
@@ -237,48 +322,63 @@ impl IoOp {
                 let num = env.io.rand();
                 env.push(num);
             }
-            IoOp::FReadStr => {
+            IoOp::FOpen => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let contents =
-                    String::from_utf8(env.io.read_file(&path).map_err(|e| env.error(e))?)
-                        .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
-                env.push(contents);
+                let handle = env.io.open_file(&path).map_err(|e| env.error(e))?;
+                env.push(handle as f64);
             }
-            IoOp::FWriteStr => {
+            IoOp::FCreate => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let contents = env.pop(2)?.as_string(env, "Contents must be a string")?;
+                let handle = env.io.create_file(&path).map_err(|e| env.error(e))?;
+                env.push(handle as f64);
+            }
+            IoOp::FClose => {
+                let handle = env.pop(1)?.as_nat(env, "Handle must be an integer")?;
                 env.io
-                    .write_file(&path, contents.into_bytes())
+                    .close_file(handle as Handle)
                     .map_err(|e| env.error(e))?;
             }
-            IoOp::FReadBytes => {
-                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let contents: Array<Byte> = env
+            IoOp::ReadStr => {
+                let count = env.pop(1)?.as_nat(env, "Count must be an integer")?;
+                let handle = env.pop(2)?.as_nat(env, "Handle must be an integer")?;
+                let bytes = env
                     .io
-                    .read_file(&path)
-                    .map_err(|e| env.error(e))?
-                    .into_iter()
-                    .map(Into::into)
-                    .collect();
-                env.push(contents);
-            }
-            IoOp::FWriteBytes => {
-                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let contents =
-                    rc_take(env.pop(2)?).into_bytes(env, "Contents must be a byte array")?;
-                env.io
-                    .write_file(&path, contents)
+                    .read(handle as Handle, count)
                     .map_err(|e| env.error(e))?;
+                let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
+                env.push(s);
             }
-            IoOp::FLines => {
+            IoOp::ReadAllStr => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let lines: Array<char> =
-                    String::from_utf8(env.io.read_file(&path).map_err(|e| env.error(e))?)
-                        .map_err(|e| env.error(format!("Failed to read file: {}", e)))?
-                        .lines()
-                        .map(String::from)
-                        .collect();
-                env.push(lines);
+                let bytes = env.io.file_read_all(&path).map_err(|e| env.error(e))?;
+                let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
+                env.push(s);
+            }
+            IoOp::WriteStr => {
+                let handle = env.pop(1)?.as_nat(env, "Handle must be an integer")? as Handle;
+                let s = env.pop(2)?.as_string(env, "Contents must be a string")?;
+                env.io.write(handle, s.as_ref()).map_err(|e| env.error(e))?;
+            }
+            IoOp::ReadBytes => {
+                let count = env.pop(1)?.as_nat(env, "Count must be an integer")?;
+                let handle = env.pop(2)?.as_nat(env, "Handle must be an integer")? as Handle;
+                let bytes = env.io.read(handle, count).map_err(|e| env.error(e))?;
+                let bytes = bytes.into_iter().map(Into::into);
+                env.push(Array::<Byte>::from_iter(bytes));
+            }
+            IoOp::ReadAllBytes => {
+                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                let bytes = env.io.file_read_all(&path).map_err(|e| env.error(e))?;
+                let bytes = bytes.into_iter().map(Into::into);
+                env.push(Array::<Byte>::from_iter(bytes));
+            }
+            IoOp::WriteBytes => {
+                let handle = env.pop(1)?.as_nat(env, "Handle must be an integer")?;
+                let bytes =
+                    rc_take(env.pop(2)?).into_bytes(env, "Contents must be a 1D array of bytes")?;
+                env.io
+                    .write(handle as Handle, &bytes)
+                    .map_err(|e| env.error(e))?;
             }
             IoOp::FExists => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
@@ -303,14 +403,15 @@ impl IoOp {
                         env.stack_size()
                     )));
                 }
-                let input = String::from_utf8(env.io.read_file(&path).map_err(|e| env.error(e))?)
-                    .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
+                let input =
+                    String::from_utf8(env.io.file_read_all(&path).map_err(|e| env.error(e))?)
+                        .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
                 env.import(&input, path.as_ref())?;
             }
             IoOp::Now => env.push(instant::now()),
             IoOp::ImRead => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let bytes = env.io.read_file(&path).map_err(|e| env.error(e))?;
+                let bytes = env.io.file_read_all(&path).map_err(|e| env.error(e))?;
                 let image = image::load_from_memory(&bytes)
                     .map_err(|e| env.error(format!("Failed to read image: {}", e)))?
                     .into_rgba8();
@@ -333,7 +434,9 @@ impl IoOp {
                 };
                 let bytes =
                     value_to_image_bytes(&value, output_format).map_err(|e| env.error(e))?;
-                env.io.write_file(&path, bytes).map_err(|e| env.error(e))?;
+                env.io
+                    .file_write_all(&path, &bytes)
+                    .map_err(|e| env.error(e))?;
             }
             IoOp::ImShow => {
                 let value = env.pop(1)?;

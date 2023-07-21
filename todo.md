@@ -1,4 +1,4 @@
-- Stream-based IO
+- std(in|out|err) IO handles
 - Docs
   - Idents and bindings
   - Functions and Dfns
@@ -16,13 +16,13 @@
     - Join all
   - Make group and partition allocate less
 - Multimedia
-  - Sound IO
+  - Sound input
   - Webcam input?
 - System APIs
   - Sockets
   - FFI
   - check OS
-  - character kinds
+  - unicode utils
 - LSP?
 - Tooling
   - Basic package manager

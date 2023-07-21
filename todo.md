@@ -1,6 +1,12 @@
+- Stream-based IO
+- Docs
+  - Idents and bindings
+  - Functions and Dfns
+  - IO primitives
+  - Design
 - Better solution to string formatting
-- Make grid formatting less vertical
 - Threads
+- Make grid formatting less vertical
 - More array functions
   - Progressive index of
   - Nudge
@@ -18,9 +24,6 @@
   - check OS
   - character kinds
 - LSP?
-- Docs
-  - Primitives
-  - Design
 - Tooling
   - Basic package manager
 - Custom monospace font

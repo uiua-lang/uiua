@@ -406,6 +406,7 @@ primitive!(
     ///
     /// ex: ◫2 ⇡4
     /// ex: ◫4 ⇡6
+    /// ex: ◫ 2_2 [1_2_3 4_5_6 7_8_9]
     (2, Windows, "windows" + '◫'),
     /// Use an array to replicate the elements of another array
     ///

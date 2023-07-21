@@ -16,7 +16,7 @@ fn parse_doc(cx: Scope, line: &str) -> impl IntoView {
             let (p, s) = s.split_once(']').unwrap_or(("", s));
             if let Some(prim) = Primitive::from_name(p) {
                 [
-                    view!(cx, <PrimCode prim=prim name=true/>).into_view(cx),
+                    view!(cx, <PrimCode prim=prim/>).into_view(cx),
                     view!(cx, { s.to_string() }).into_view(cx),
                 ]
             } else {
@@ -65,7 +65,7 @@ pub fn PrimDocsPage(cx: Scope) -> impl IntoView {
     view! { cx,
         <div>
             <A href="/docs">"Back to Docs Home"</A>
-            <h1><PrimCode prim=prim name=true hide_docs=true/></h1>
+            <h1><PrimCode prim=prim hide_docs=true/></h1>
             <p>{parse_doc(cx, &doc.intro)}</p>
             { ex_lines }
             <p>{parse_doc(cx, &doc.outro)}</p>

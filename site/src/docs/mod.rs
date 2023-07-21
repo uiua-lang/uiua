@@ -15,7 +15,7 @@ pub fn DocsHome(cx: Scope) -> impl IntoView {
     let primitives: Vec<_> = Primitive::ALL
         .into_iter()
         .filter(|p| p.doc().is_some_and(|doc| !doc.examples.is_empty()))
-        .map(|p| view!(cx, <li><PrimCode prim=p name=true/></li>))
+        .map(|p| view!(cx, <li><PrimCode prim=p/></li>))
         .collect();
 
     view! { cx,
@@ -55,15 +55,12 @@ impl TutorialPage {
         match self {
             Self::Basic => view!(cx, {}).into_view(cx),
             Self::Math => view!(cx, {}).into_view(cx),
-            Self::Arrays => {
-                view!(cx, 
-                    <PrimCode prim=Len/>
-                    <PrimCode prim=Rank/>
-                    <PrimCode prim=Shape/>
-                    <PrimCode prim=Fill/>
-                    <PrimCode prim=Truncate/>)
-                    .into_view(cx)
-            }
+            Self::Arrays => view!(cx,
+                <PrimCode prim=Len/>
+                <PrimCode prim=Rank/>
+                <PrimCode prim=Shape/>
+                <PrimCode prim=Fill/>)
+            .into_view(cx),
         }
     }
 }
@@ -117,7 +114,7 @@ pub fn TutorialBasic(cx: Scope) -> impl IntoView {
                     <tr>
                         <td><code>{ name }</code></td>
                         <td><code>{ ascii.to_string() }</code></td>
-                        <td><PrimCode prim=p/></td>
+                        <td><PrimCode prim=p glyph_only=true/></td>
                     </tr>
                 })
             } else {
@@ -189,7 +186,7 @@ fn primitive_rows(cx: Scope, prims: impl IntoIterator<Item = Primitive>) -> Vec<
                 <tr>
                     <td>{maybe_code(cx, name)}</td>
                     <td>{maybe_code(cx, ascii)}</td>
-                    <td><PrimCode prim=p/></td>
+                    <td><PrimCode prim=p glyph_only=true/></td>
                     <td>{view!(cx, <code>{p.args()}</code>)}</td>
                 </tr>
             }
@@ -266,21 +263,17 @@ pub fn TutorialArrays(cx: Scope) -> impl IntoView {
             <p>"Of course, you can also use stack notation to make multidimensional arrays:"</p>
             <Editor examples={&["[[1 2 3] [4 5 6]]", "[...[1 2 3]]"]}/>
             <br/>
-            <h2><PrimCode prim=Shape name=true/>", "<PrimCode prim=Len name=true/>", and "<PrimCode prim=Rank name=true/></h2>
+            <h2><PrimCode prim=Shape/>", "<PrimCode prim=Len/>", and "<PrimCode prim=Rank/></h2>
             <hr/>
             <p>"Other than their data, arrays also have a property called their "<b>"shape"</b>". Shape is a list of non-negative integers that describes the array's size along each of its axes."</p>
-            <p>"We can get the array's shape with the "<PrimCode prim=Shape name=true/>" primitive. It's a triangle because a triangle is a shape."</p>
+            <p>"We can get the array's shape with the "<PrimCode prim=Shape/>" primitive. It's a triangle because a triangle is a shape."</p>
             <Editor examples={&["△[1 2 3]", "△5", "△[[1 2 3] [4 5 6]]", "△[...[1 2 3]]"]}/>
             <p>"From shape we can derive two closely-related properties called "<b>"length"</b>" and "<b>"rank"</b>"."</p>
-            <p><PrimCode prim=Len name=true/>" is the number of "<i>"major cells"</i>" of the array. This is the number of elements for a 1D array and the number of rows for a 2D array. Length is always equal to the first number in the shape (or 1 if the shape is empty)."</p>
-            <p><PrimCode prim=Rank name=true/>" is the number of dimensions of the array. It is defined as the length of the shape."</p>
+            <p><PrimCode prim=Len/>" is the number of "<i>"major cells"</i>" of the array. This is the number of elements for a 1D array and the number of rows for a 2D array. Length is always equal to the first number in the shape (or 1 if the shape is empty)."</p>
+            <p><PrimCode prim=Rank/>" is the number of dimensions of the array. It is defined as the length of the shape."</p>
             <Editor examples={&["△[1 2 3]\n≢[1 2 3]\n∴[1 2 3]", "# ∴ is equivalent to ≢△\n=∴[1 2 3]≢△[1 2 3]"]}/>
             <p>"When creating multidimensional arrays, stack notation applies a step called "<i>"normalization"</i>". If all the items pushed to the stack have the same shape, they will combine into an array with a higher rank. Different shapes result in an error."</p>
             <Editor examples={&["[[1 2] [3 4]]", "[[1 2] [3 4 5]]"]}/>
-            <br/>
-            <h2><PrimCode prim=Fill name=true/>" and" <PrimCode prim=Truncate name=true/></h2>
-            <hr/>
-            <p>"Many operations that work on multiple arrays will return an error if the arrays have mismatchs lengths or shapes"</p>
             <br/>
             <h2>"Pervasion"</h2>
             <hr/>
@@ -288,6 +281,19 @@ pub fn TutorialArrays(cx: Scope) -> impl IntoView {
             <Editor examples={&["+1 1_2_3\n√[4 9 16]\n+1_2_3 4_5_6"]}/>
             <p>"When doing a pervasive operation on two arrays, their shape "<i>"prefixes"</i>" must match."</p>
             <Editor examples={&["+[1 2] [3 4 5]", "△10_20\n△[3_4_5 6_7_8]\n+10_20 [3_4_5 6_7_8]"]}/>
+            <br/>
+            <h2><PrimCode prim=Fill/>" and the Flat Array Model"</h2>
+            <hr/>
+            <p>"Most modern array languages allow arrays to contain arrays. The simplest model for this is the "<a href="https://aplwiki.com/wiki/Box">"Boxed Array Model"</a>" used in J, where an array may be an array of \"boxes\", which can contain any value but which must be boxed and unboxed. APL uses the "<a href="https://aplwiki.com/wiki/Array_model#Nested_array_theory">"Nested Array Model"</a>", making nested arrays a little easier to access. BQN uses the "<a href="https://mlochbaum.github.io/BQN/doc/based.html">"Based Array Model"</a>"."</p>
+            <p>"Uiua does not use any of these. It sticks to the Flat Array Model of the original APL. In Uiua, "<b>"you cannot nest arrays inside other arrays"</b>"."</p>
+            <p>"This may seem like a regression, but this model was picked for two reasons. For one, it is easier to make array algorithms fast when you only have to check their type once. More importantly than the implementation, however, is that the Flat Array Model makes array primitives easier to reason about. In Uiua, you never have to wonder whether a function like "<PrimCode prim=Windows/>" or "<PrimCode prim=Partition/>" returns an array or an array of arrays. The answer is always the same."</p>
+            <p>"If you have worked with other array languages, you may be thinking, \"Sure, the Flat Array Model is simple, but it is very limited. How do you represent arrays with subarrays of different lengths?\" The answer is "<b>"fill values"</b>"."</p>
+            <p>"Many operations that work on multiple arrays will return an error if the arrays have mismatched lengths or shapes. The most basic is stack notation, like in the error in the example above."</p>
+            <p>"The "<PrimCode prim=Fill/>" function sets an array to use "<i>"fill values"</i>" to make array shapes match so that operations like this succeed:"</p>
+            <Editor examples={&["[∘[1 2] [3 4 5]]", "[[1 2 3] ∘[4] ∘[5 6]]"]}/>
+            <p>"Only one of the arrays needs to be fill-marked for this to work. The fill flag does not carry to result arrays."</p>
+            <p>"Every array type is not fill by default, except for character arrays:"</p>
+            <Editor examples={&["[\"Hello\" \"my\" \"friend\"]"]} help={&["Notice the lack of the fill function"]}/>
         </div>
     }
 }

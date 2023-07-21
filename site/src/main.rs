@@ -139,7 +139,7 @@ fn MainText(cx: Scope) -> impl IntoView {
         <h3>"How does writing the glyphs work?"</h3>
         <p>"Unlike most array languages, Uiua does not overload primitives depending on whether they are passed one or two arguments. Functions in Uiua can take any number of arguments, but an individual function always takes the "<i>"same"</i>" number of arguments."</p>
         <p>"This ends up meaning that Uiua requires way more glyphs to have one for every primitive. There simply are not enough keys on them keyboard to type them without using a bunch of hard-to-remeber shortcuts. Also, I think it's annoying to need special editor support to be able to write code properly."</p>
-        <p>"To solve these issues, Uiua has a formatter that automatically converts ASCII names and characters into glyphs. You can type the name of a glyph (or a digraph, like "<code>">="</code>" for "<PrimCode prim=Primitive::Ge/>"), and the formatter will turn it into the corresponding glyph. Alternatively, the editors embedded in this site have a button for each glyph."</p>
+        <p>"To solve these issues, Uiua has a formatter that automatically converts ASCII names and characters into glyphs. You can type the name of a glyph (or a digraph, like "<code>">="</code>" for "<PrimCode prim=Primitive::Ge glyph_only=true/>"), and the formatter will turn it into the corresponding glyph. Alternatively, the editors embedded in this site have a button for each glyph."</p>
     </div>}
 }
 
@@ -149,18 +149,23 @@ mod code {
     pub fn PrimCode(
         cx: Scope,
         prim: Primitive,
-        #[prop(optional)] name: bool,
+        #[prop(optional)] glyph_only: bool,
         #[prop(optional)] hide_docs: bool,
     ) -> impl IntoView {
-        let show_name = name;
+        let show_name = !glyph_only;
         let class = prim_class(prim);
         let name = if let Some(name) = prim.name().filter(|_| show_name) {
             format!("{} ", name)
         } else {
             "".to_string()
         };
+        let href = if prim.doc().is_some() {
+            Some(format!("/primitive/{prim:?}"))
+        } else {
+            None
+        };
         if hide_docs {
-            view!(cx, <a href={format!("/primitive/{prim:?}")} style="text-decoration: none;">
+            view!(cx, <a href=href style="text-decoration: none;">
                 <code class="prim-code">{name}<span class=class>{ prim.to_string() }</span></code>
             </a>)
         } else {
@@ -170,7 +175,7 @@ mod code {
                 (None, true) => String::new(),
                 (None, false) => prim.name().unwrap_or_default().into(),
             };
-            view!(cx, <a href={format!("/primitive/{prim:?}")} style="text-decoration: none;">
+            view!(cx, <a href=href style="text-decoration: none;">
                 <code class="prim-code" title=title>{name}<span class=class>{ prim.to_string() }</span></code>
             </a>)
         }

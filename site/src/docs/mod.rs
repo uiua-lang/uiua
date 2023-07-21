@@ -1,6 +1,6 @@
 mod primitive;
 
-use std::fmt::Display;
+use std::{fmt::Display, ops::RangeBounds};
 
 use leptos::*;
 use leptos_router::*;
@@ -12,11 +12,18 @@ pub use primitive::*;
 
 #[component]
 pub fn DocsHome(cx: Scope) -> impl IntoView {
-    let primitives: Vec<_> = Primitive::ALL
-        .into_iter()
-        .filter(|p| p.doc().is_some_and(|doc| !doc.examples.is_empty()))
-        .map(|p| view!(cx, <li><PrimCode prim=p/></li>))
-        .collect();
+    let range_a = ..Primitive::Not;
+    let range_b = Primitive::Not..Primitive::Match;
+    let range_c = Primitive::Match..Primitive::Reduce;
+    let range_d = Primitive::Reduce..Primitive::Throw;
+    let range_e = Primitive::Throw..;
+    fn primitives<R: RangeBounds<Primitive>>(cx: Scope, range: R) -> impl IntoView {
+        Primitive::ALL
+            .into_iter()
+            .filter(|p| range.contains(p) && p.doc().is_some_and(|doc| !doc.examples.is_empty()))
+            .map(|p| view! { cx, <li><PrimCode prim=p/></li> })
+            .collect::<Vec<_>>()
+    }
 
     view! { cx,
         <h2>"Documentation"</h2>
@@ -26,7 +33,12 @@ pub fn DocsHome(cx: Scope) -> impl IntoView {
             {TutorialPage::ALL.iter().map(|p| view!(cx, <li><A href={p.path()}>{p.title()}" "{p.additional_title(cx)}</A></li>)).collect::<Vec<_>>()}
         </ul>
         <h2>"Primitives"</h2>
-        <ul>{ primitives }</ul>
+        <div style="display: flex;">
+            <div><ul>{ primitives(cx, range_a) }{ primitives(cx, range_e) }</ul></div>
+            <div><ul>{ primitives(cx, range_b) }</ul></div>
+            <div><ul>{ primitives(cx, range_c) }</ul></div>
+            <div><ul>{ primitives(cx, range_d) }</ul></div>
+        </div>
     }
 }
 
@@ -55,11 +67,13 @@ impl TutorialPage {
         match self {
             Self::Basic => view!(cx, {}).into_view(cx),
             Self::Math => view!(cx, {}).into_view(cx),
-            Self::Arrays => view!(cx,
+            Self::Arrays => view!(cx, 
+                "("
                 <PrimCode prim=Len/>
                 <PrimCode prim=Rank/>
                 <PrimCode prim=Shape/>
-                <PrimCode prim=Fill/>)
+                <PrimCode prim=Fill/>
+                ")")
             .into_view(cx),
         }
     }

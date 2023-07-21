@@ -247,7 +247,7 @@ primitive!(
     /// ex: ⇞ 1 2 ⇟ 3
     (0[1](1), Load, "load" + '⇞'),
     // Pervasive monadic ops
-    /// Logical not (equivalen to 1 - x)
+    /// Logical not (equivalent to 1 - x)
     ///
     /// ex: ¬1
     /// ex: ¬[0 1 1 0]
@@ -292,21 +292,33 @@ primitive!(
     // Monadic array ops
     /// The number of rows in an array
     ///
-    /// ex: ≢2_7_0
+    /// ex: ≢5
+    /// ex: ≢[]
+    /// ex: ≢1_2_3
+    /// ex: ≢[1_2 3_4 5_6]
     (1, Len, "length" + '≢'),
     /// The number of dimensions in an array
     ///
+    /// ex: ∴5
+    /// ex: ∴[]
+    /// ex: ∴1_2_3
     /// ex: ∴[1_2 3_4 5_6]
     (1, Rank, "rank" + '∴'),
     /// The dimensions of an array
     ///
+    /// ex: △5
+    /// ex: △[]
+    /// ex: △1_2_3
     /// ex: △[1_2 3_4 5_6]
     (1, Shape, "shape" + '△'),
     /// Make an array of [0, x)
     ///
     /// ex: ⇡5
+    /// ex: ⇡2_3
     (1, Range, "range" + '⇡'),
     /// The first element of an array
+    ///
+    /// ex: ⊢1_2_3
     (1, First, "first" + '⊢'),
     /// The last element of an array
     (1, Last),
@@ -314,9 +326,10 @@ primitive!(
     (1, Fill, "fill" + '∘'),
     /// Remove fill elements from the end of an array
     (1, Truncate, "truncate" + '⍛'),
-    /// Reverse the elements of an array
+    /// Reverse the rows of an array
     ///
     /// ex: ⇌1_2_3_9
+    /// ex: ⇌[1_2 3_4 5_6]
     (1, Reverse, "reverse" + '⇌'),
     /// Make an array 1-dimensional
     ///
@@ -324,7 +337,8 @@ primitive!(
     (1, Deshape, "deshape" + '♭'),
     /// Rotate the shape of an array
     ///
-    /// ex: ⍉[1_2 3_4 5_6]
+    /// ex: ⍉.[1_2 3_4 5_6]
+    /// ex: ⍉.[[1_2 3_4] [5_6 7_8]]
     (1, Transpose, "transpose" + '⍉'),
     (1, InvTranspose),
     /// Sort the rows of an array
@@ -375,6 +389,9 @@ primitive!(
     /// ex: ⊟ [1 2 3] [4 5 6]
     ///
     /// ex: ⊟ [1 2 3] [4 5]
+    ///
+    /// Couple can utilize [fill].
+    /// ex: ⊟ [1 2 3] ∘[4 5]
     (2, Couple, "couple" + '⊟'),
     /// Index a single row or element from an array
     ///
@@ -404,9 +421,9 @@ primitive!(
     (2, Rotate, "rotate" + '↻'),
     /// The n-wise windows of an array
     ///
-    /// ex: ◫2 ⇡4
-    /// ex: ◫4 ⇡6
-    /// ex: ◫ 2_2 [1_2_3 4_5_6 7_8_9]
+    /// ex: ◫2 .⇡4
+    /// ex: ◫4 .⇡6
+    /// ex: ◫ 2_2 .[1_2_3 4_5_6 7_8_9]
     (2, Windows, "windows" + '◫'),
     /// Use an array to replicate the elements of another array
     ///
@@ -435,52 +452,137 @@ primitive!(
     /// Group elements of an array into buckets by sequential keys
     ///
     /// ex: ⊘ [1 1 2 2 2 3] [1 2 3 4 5 6]
+    /// ex: ⊘ ≠' '. "Hey there friendo"
     (2, Partition, "partition" + '⊘'),
     // Modifiers
     /// Apply a reducing function to an array
+    /// For reducing with an initial value, see [fold].
+    ///
+    /// ex: /+ 1_2_3_4_5
+    /// ex: /- 1_2_3_4_5
+    /// ex: /(-~) 1_2_3_4_5
+    /// ex: /(×+1) 1_2_3_4_5
     (Reduce { modifier: 1 }, "reduce" + '/'),
     /// Apply a reducing function to an array with an initial value
+    /// For reducing without an initial value, see [reduce].
+    ///
+    /// ex: ⌿+ 10 1_2_3_4
     (Fold { modifier: 1 }, "fold" + '⌿'),
     /// Reduce, but keep intermediate values
+    ///
+    /// ex: \+ 1_2_3_4
+    /// ex: \- 1_2_3_4
+    /// ex: \(-~) 1_2_3_4
+    /// ex: \(⊂∘) 1_2_3_4
     (Scan { modifier: 1 }, "scan" + '\\'),
     /// Apply a function to each element of an array
+    ///
+    /// ex: ∵(⊟.) 1_2_3_4
+    /// ex: ∵(∘⇡) 1_2_3_4
     (Each { modifier: 1 }, "each" + '∵'),
     /// Pervade a function through two arrays
+    /// For operations that are already pervasive, like [add], this is redundant.
+    ///
+    /// ex: ∺⊂ 1_2_3 4_5_6
+    /// ex: ∺⊂ 1_2 [4_5 6_7]
     (Zip { modifier: 1 }, "zip" + '∺'),
     /// Apply a function to each row of an array
+    ///
+    /// ex: /+ [1_2_3 4_5_6 7_8_9]  # Sum columns
+    /// ex: ≡/+ [1_2_3 4_5_6 7_8_9]  # Sum rows
     (Rows { modifier: 1 }, "rows" + '≡'),
     /// Apply a function to each pair of rows in two arrays
+    ///
+    /// ex: ≑⊂ 1_2 [4_5 6_7]
+    /// ex: ≑⌿+ 1_2 [4_5 6_7]
     (Bridge { modifier: 1 }, "bridge" + '≑'),
     /// Apply a function to a fixed value and each row of an array
+    ///
+    /// ex: ∹⊂ 2_3_4 1
+    /// ex: ∹⊂ 1_2_3 4_5_6
     (Distribute { modifier: 1 }, "distribute" + '∹'),
     /// Apply a function to each combination of elements of two arrays
+    ///
+    /// ex: ⊞+ 1_2_3 4_5_6
+    /// ex: ⊞⊂ 1_2 3_4
     (Table { modifier: 1 }, "table" + '⊞'),
     /// Repeat a function n times
+    ///
+    /// ex: ⍥(+2) 0 5
+    /// ex: ⍥(⊂2) [] 5
     (Repeat { modifier: 1 }, "repeat" + '⍥'),
     /// Invert the behavior of a function
+    /// Most functions are not invertible.
+    ///
+    /// ex: √2
+    /// ex: ↶√2
     (Invert { modifier: 1 }, "invert" + '↶'),
     /// Apply a function under another
+    /// This is a more powerful version of [invert].
+    ///
+    /// [under] takes 2 functions f and g and another argument x.
+    /// It applies f to x, then applies g to the result.
+    /// It then applies the inverse of f to the result of g.
+    ///
+    /// Here, we negate 5, subtract 2, then negate again.
+    /// ex: ⍜¯(-2) 5
+    ///
+    /// Uiua has no built-in function to get the last element of an array.
+    /// Instead, we can use [first] under [reverse]:
+    /// ex: ⍜⇌⊢ 1_2_3
     (Under { modifier: 2 }, "under" + '⍜'),
     /// Apply a function at a different array depth
+    ///
+    /// ex: ↯2_2_3 ⇡12
+    /// ex: /+ ↯2_2_3 ⇡12
+    /// ex: ⍚0/+ ↯2_2_3 ⇡12
+    /// ex: ⍚¯1/+ ↯2_2_3 ⇡12
+    /// ex: ⍚¯2/+ ↯2_2_3 ⇡12
     (Level { modifier: 2 }, "level" + '⍚'),
     /// Call a function and catch errors
+    ///
+    /// ex: ?(+1 2)"failure"
+    /// ex: ?(+'a' 'b')"failure"
     (Try { modifier: 2 }, "try" + '?'),
     // Misc
     /// Throw an error
+    ///
+    /// ex: !"Oh no!" "any array"
+    /// ex: !"Oh no!" 1
+    /// ex: !"Oh no!" 0
     (2, Throw, "throw" + '!'),
     /// Break out of a loop
+    /// Expects a non-negative integer. This integer is how many loops will be broken out of.
+    /// Not all looping functions can be broken out of.
+    ///
+    /// ex: /(⎋>10.+) ⇌⇡40  # Break when the sum exceeds 10
+    /// ex: ⍥(⎋>100.×2) 1 40  # Break when the product exceeds 100
     (1(0), Break, "break" + '⎋'),
     /// Call the current function recursively
+    /// Expects a non-negative integer. Recursion happens when the integer is not 0.
+    /// Only dfns can be recurred in.
+    ///
+    /// ex: {↬<10.×2} 1 # Recur if the product is less than 10
     (1(0), Recur, "recur" + '↬'),
     /// Debug print a value without popping it
+    ///
+    /// ex: /+ | 1_2_3
     (1, Debug, "debug" + '|'),
     /// Call a function
+    ///
+    /// ex: :(+) 1 2
     (1(None), Call, "call" + ':'),
     /// Do nothing
     (0, Noop, "noop" + '·'),
     /// Convert a value to a string
+    ///
+    /// ex: string 5
     (1, String, "string"),
     /// Parse a string as a number
+    ///
+    /// ex: parsenum "17"
+    /// ex: parsenum "3.1415926535897932"
+    /// ex: parsenum "dog"
     (1, Parse, "parsenumber"),
     /// Import a function from another file
     (1, Use, "use"),

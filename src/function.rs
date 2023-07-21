@@ -118,7 +118,7 @@ impl fmt::Display for FunctionId {
 fn invert_primitive(prim: Primitive, span: usize) -> Option<Vec<Instr>> {
     Some(match prim {
         Primitive::Sqrt => vec![
-            Instr::Push(Rc::new(0.5.into())),
+            Instr::Push(Rc::new(2.0.into())),
             Instr::Primitive(Primitive::Pow, span),
         ],
         prim => vec![Instr::Primitive(prim.inverse()?, span)],

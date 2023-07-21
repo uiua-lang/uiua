@@ -38,7 +38,7 @@ pub fn PrimDocsPage(cx: Scope) -> impl IntoView {
             if let Some(pair) = Primitive::ALL.into_iter().find_map(|prim| {
                 prim.doc()
                     .map(|doc| (prim, doc))
-                    .filter(|_| format!("{prim:?}") == prim_name)
+                    .filter(|_| format!("{prim:?}").eq_ignore_ascii_case(&prim_name))
             }) {
                 pair
             } else {
@@ -66,9 +66,9 @@ pub fn PrimDocsPage(cx: Scope) -> impl IntoView {
         <div>
             <A href="/docs">"Back to Docs Home"</A>
             <h1><PrimCode prim=prim hide_docs=true/></h1>
-            <p>{parse_doc(cx, &doc.intro)}</p>
+            <p style="white-space: pre-wrap">{parse_doc(cx, &doc.intro)}</p>
             { ex_lines }
-            <p>{parse_doc(cx, &doc.outro)}</p>
+            <p style="white-space: pre-wrap">{parse_doc(cx, &doc.outro)}</p>
             <div id="bottom-page-nav">
                 <A href="/docs">"Back to Docs Home"</A>
             </div>

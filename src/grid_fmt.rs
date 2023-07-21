@@ -46,7 +46,7 @@ impl GridFmt for f64 {
         } else {
             let positive = (self.abs() * 1e12).round() / 1e12;
             let minus = if *self < -0.0 { "¯" } else { "" };
-            let s = if positive == PI {
+            let s = if (positive - PI).abs() < 1e-12 {
                 format!("{minus}π")
             } else if positive == INFINITY {
                 format!("{minus}∞")

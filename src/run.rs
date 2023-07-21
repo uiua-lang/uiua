@@ -546,17 +546,21 @@ impl<'io> Uiua<'io> {
     pub fn call_catch_break(&mut self) -> UiuaResult<bool> {
         match self.call() {
             Ok(_) => Ok(false),
-            Err(UiuaError::Break(0, _)) => Ok(true),
-            Err(UiuaError::Break(n, span)) => Err(UiuaError::Break(n - 1, span)),
-            Err(e) => Err(e),
+            Err(e) => match e.break_data() {
+                Ok((0, _)) => Ok(true),
+                Ok((n, span)) => Err(UiuaError::Break(n - 1, span)),
+                Err(e) => Err(e),
+            },
         }
     }
     pub fn call_error_on_break(&mut self, message: &str) -> UiuaResult {
         match self.call() {
             Ok(_) => Ok(()),
-            Err(UiuaError::Break(0, span)) => Err(span.sp(message.into()).into()),
-            Err(UiuaError::Break(n, span)) => Err(UiuaError::Break(n - 1, span)),
-            Err(e) => Err(e),
+            Err(e) => match e.break_data() {
+                Ok((0, span)) => Err(span.sp(message.into()).into()),
+                Ok((n, span)) => Err(UiuaError::Break(n - 1, span)),
+                Err(e) => Err(e),
+            },
         }
     }
     fn span_index(&self) -> usize {

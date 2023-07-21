@@ -77,6 +77,18 @@ impl UiuaError {
             error => error.to_string(),
         }
     }
+    pub fn break_data(self) -> Result<(usize, Span), Self> {
+        match self {
+            UiuaError::Traced { error, trace } => {
+                error.break_data().map_err(|error| UiuaError::Traced {
+                    error: Box::new(error),
+                    trace,
+                })
+            }
+            UiuaError::Break(n, span) => Ok((n, span)),
+            error => Err(error),
+        }
+    }
 }
 
 fn format_trace<F: fmt::Write>(f: &mut F, trace: &[TraceFrame]) -> fmt::Result {

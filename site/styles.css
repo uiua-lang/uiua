@@ -315,6 +315,10 @@ li {
     z-index: 1;
 }
 
+.code-font {
+    font-family: "Code Font";
+}
+
 .variadic-function-button {
     color: #aaa;
 }

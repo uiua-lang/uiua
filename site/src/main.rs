@@ -37,15 +37,15 @@ pub fn Site(cx: Scope) -> impl IntoView {
                         </div>
                     </div>
                     <Routes>
-                        <Route path="/" view=|cx| view!(cx, <MainPage/>)/>
-                        <Route path="/docs" view=|cx| view!(cx, <Outlet/>)>
+                        <Route path="" view=|cx| view!(cx, <MainPage/>)/>
+                        <Route path="docs" view=|cx| view!(cx, <Outlet/>)>
                             <Route path=":page" view=|cx| view!(cx, <DocsPage/>)/>
                             <Route path="" view=|cx| view!(cx, <DocsHome/>)/>
                         </Route>
-                        <Route path="/primitive" view=|cx| view!(cx, <Outlet/>)>
+                        <Route path="primitive" view=|cx| view!(cx, <Outlet/>)>
                             <Route path=":prim_name" view=|cx| view!(cx, <PrimDocsPage/>)/>
                         </Route>
-                        <Route path="/pad" view=|cx| view!(cx, <Pad/>)/>
+                        <Route path="pad" view=|cx| view!(cx, <Pad/>)/>
                     </Routes>
                 </div>
                 <br/>
@@ -154,29 +154,34 @@ mod code {
     ) -> impl IntoView {
         let show_name = !glyph_only;
         let class = prim_class(prim);
-        let name = if let Some(name) = prim.name().filter(|_| show_name) {
-            format!("{} ", name)
+        let symbol = prim.to_string();
+        let name = if let Some(name) = prim.name().filter(|name| show_name && symbol != *name) {
+            format!(" {}", name)
         } else {
             "".to_string()
         };
         let href = if prim.doc().is_some() {
-            Some(format!("/primitive/{prim:?}"))
+            Some(format!("/primitive/{prim:?}").to_lowercase())
         } else {
             None
         };
         if hide_docs {
             view!(cx, <a href=href style="text-decoration: none;">
-                <code class="prim-code">{name}<span class=class>{ prim.to_string() }</span></code>
+                <code class="prim-code"><span class=class>{ symbol }</span>{name}</code>
             </a>)
         } else {
             let title = match (prim.doc(), show_name) {
-                (Some(doc), true) => doc.intro.clone(),
-                (Some(doc), false) => format!("{}: {}", prim.name().unwrap_or_default(), doc.intro),
+                (Some(doc), true) => doc.intro.lines().next().unwrap_or_default().into(),
+                (Some(doc), false) => format!(
+                    "{}: {}",
+                    prim.name().unwrap_or_default(),
+                    doc.intro.lines().next().unwrap_or_default()
+                ),
                 (None, true) => String::new(),
                 (None, false) => prim.name().unwrap_or_default().into(),
             };
             view!(cx, <a href=href style="text-decoration: none;">
-                <code class="prim-code" title=title>{name}<span class=class>{ prim.to_string() }</span></code>
+                <code class="prim-code" title=title><span class=class>{ symbol }</span>{name}</code>
             </a>)
         }
     }
@@ -184,21 +189,27 @@ mod code {
 use code::*;
 
 fn prim_class(prim: Primitive) -> &'static str {
+    macro_rules! code_font {
+        ($class:literal) => {
+            concat!("code-font ", $class)
+        };
+    }
+
     if prim.antiargs().is_some() || prim.antioutputs().is_some() {
-        "anti-function-button"
+        code_font!("anti-function-button")
     } else if let Some(m) = prim.modifier_args() {
         if m == 1 {
-            "modifier1-button"
+            code_font!("modifier1-button")
         } else {
-            "modifier2-button"
+            code_font!("modifier2-button")
         }
     } else {
         match prim.args() {
-            Some(0) => "noadic-function-button",
-            Some(1) => "monadic-function-button",
-            Some(2) => "dyadic-function-button",
-            Some(3) => "triadic-function-button",
-            _ => "variadic-function-button",
+            Some(0) => code_font!("noadic-function-button"),
+            Some(1) => code_font!("monadic-function-button"),
+            Some(2) => code_font!("dyadic-function-button"),
+            Some(3) => code_font!("triadic-function-button"),
+            _ => code_font!("variadic-function-button"),
         }
     }
 }

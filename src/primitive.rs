@@ -771,8 +771,8 @@ impl Primitive {
             }
             Primitive::Debug => {
                 let value = env.pop(1)?;
-                env.io.print_str(&value.show());
-                env.io.print_str("\n");
+                env.io.print_str(&value.show()).map_err(|e| env.error(e))?;
+                env.io.print_str("\n").map_err(|e| env.error(e))?;
                 env.push_ref(value);
             }
             Primitive::Dup => {

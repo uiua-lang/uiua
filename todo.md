@@ -1,4 +1,3 @@
-- std(in|out|err) IO handles
 - Docs
   - Idents and bindings
   - Functions and Dfns

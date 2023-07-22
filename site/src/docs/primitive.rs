@@ -2,12 +2,7 @@ use leptos::*;
 use leptos_router::*;
 use uiua::primitive::Primitive;
 
-use crate::{code::PrimCode, docs::DocsHome, editor::Editor};
-
-#[derive(Debug, Clone, PartialEq, Eq, Params)]
-pub struct PrimsDocsParams {
-    prim_name: Option<String>,
-}
+use crate::{code::PrimCode, editor::Editor};
 
 #[allow(unused_braces)]
 fn parse_doc(cx: Scope, line: &str) -> impl IntoView {
@@ -31,44 +26,52 @@ fn parse_doc(cx: Scope, line: &str) -> impl IntoView {
 
 #[component]
 pub fn PrimDocsPage(cx: Scope) -> impl IntoView {
-    let (prim, doc) = match use_params::<PrimsDocsParams>(cx).get() {
-        Ok(PrimsDocsParams {
-            prim_name: Some(prim_name),
-        }) => {
-            if let Some(pair) = Primitive::ALL.into_iter().find_map(|prim| {
-                prim.doc()
-                    .map(|doc| (prim, doc))
-                    .filter(|_| format!("{prim:?}").eq_ignore_ascii_case(&prim_name))
-            }) {
-                pair
-            } else {
-                return view! { cx, <DocsHome/> }.into_view(cx);
-            }
-        }
-        _ => return view! { cx, <DocsHome/> }.into_view(cx),
+    let prim_name = move || use_params_map(cx).with(|p| p.get("prim_name").cloned());
+    let prim = move || prim_name().and_then(|name| Primitive::from_name(&name));
+
+    let ex_lines = move || {
+        prim()
+            .and_then(|prim| prim.doc())
+            .map(|doc| {
+                doc.examples
+                    .iter()
+                    .map(|ex| {
+                        view!(cx,
+                            <div>
+                                <p>{parse_doc(cx, &ex.primer)}</p>
+                                <Editor examples=&[&ex.input]/>
+                            </div>
+                        )
+                        .into_view(cx)
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default()
     };
 
-    let ex_lines: Vec<_> = doc
-        .examples
-        .iter()
-        .map(|ex| {
-            view!(cx,
-                <div>
-                    <p>{parse_doc(cx, &ex.primer)}</p>
-                    <Editor examples=&[&ex.input]/>
-                </div>
-            )
-            .into_view(cx)
+    let header = move || {
+        if let Some(prim) = prim() {
+            view!(cx, <h1><PrimCode prim=prim hide_docs=true/></h1>)
+        } else {
+            view!(cx, <h1>"Unknown primitive: "{ prim_name }</h1>)
+        }
+    };
+
+    let body = move || {
+        prim().and_then(|prim| prim.doc()).map(|doc| {
+            view! { cx,
+                <p style="white-space: pre-wrap">{parse_doc(cx, &doc.intro)}</p>
+                { ex_lines }
+                <p style="white-space: pre-wrap">{parse_doc(cx, &doc.outro)}</p>
+            }
         })
-        .collect();
+    };
 
     view! { cx,
         <div>
             <A href="/docs">"Back to Docs Home"</A>
-            <h1><PrimCode prim=prim hide_docs=true/></h1>
-            <p style="white-space: pre-wrap">{parse_doc(cx, &doc.intro)}</p>
-            { ex_lines }
-            <p style="white-space: pre-wrap">{parse_doc(cx, &doc.outro)}</p>
+            { header }
+            { body }
             <div id="bottom-page-nav">
                 <A href="/docs">"Back to Docs Home"</A>
             </div>

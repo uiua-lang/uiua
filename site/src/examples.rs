@@ -19,8 +19,7 @@ r ← ⊞+.⇡300
 g ← ⊞↥.⇡300
 b ← ⊞-.⇡300
 ⍉ ÷2 +1.2 sin ÷10[r g b]";
-const PALINDROME: &str = r#"\
-words ← "uiua racecar wow cool!"
+const PALINDROME: &str = r#"words ← "uiua racecar wow cool!"
 ≑⊂~ ⊏~[" ❌" " ✅"] ≡(≅⇌.). ⊘≠' '. words"#;
 const RULE_30: &str = "\
 Thirty ← ≡(↥≅0_1_1 ~=1 /+.) ◫3 ⊂~0 ⊂0

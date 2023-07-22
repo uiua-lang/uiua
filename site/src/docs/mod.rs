@@ -2,6 +2,7 @@ mod primitive;
 
 use std::{fmt::Display, ops::RangeBounds};
 
+use enum_iterator::{all, Sequence};
 use leptos::*;
 use leptos_router::*;
 use uiua::primitive::Primitive;
@@ -30,7 +31,10 @@ pub fn DocsHome(cx: Scope) -> impl IntoView {
         <h2>"Tutorial"</h2>
         <ul>
             <p>"These are meant to be read in order:"</p>
-            {TutorialPage::ALL.iter().map(|p| view!(cx, <li><A href={p.path()}>{p.title()}" "{p.additional_title(cx)}</A></li>)).collect::<Vec<_>>()}
+            { all::<TutorialPage>()
+                .map(|p| view!(cx, <li><A href={p.path()}>{p.title()}" "{p.additional_title(cx)}</A></li>))
+                .collect::<Vec<_>>()
+            }
         </ul>
         <h2>"Primitives"</h2>
         <div style="display: flex;">
@@ -42,7 +46,7 @@ pub fn DocsHome(cx: Scope) -> impl IntoView {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
 #[repr(u8)]
 pub enum TutorialPage {
     Basic,
@@ -53,7 +57,6 @@ pub enum TutorialPage {
 }
 
 impl TutorialPage {
-    const ALL: [Self; 5] = [Self::Basic, Self::Math, Self::Arrays, Self::Bindings, Self::Functions];
     fn path(&self) -> String {
         format!("{self:?}").to_lowercase()
     }
@@ -69,7 +72,7 @@ impl TutorialPage {
     fn additional_title(&self, cx: Scope) -> impl IntoView {
         use Primitive::*;
         match self {
-            Self::Arrays => view!(cx, 
+            Self::Arrays => view!(cx,
                 "("
                 <PrimCode prim=Len/>
                 <PrimCode prim=Rank/>
@@ -84,10 +87,8 @@ impl TutorialPage {
 
 impl IntoParam for TutorialPage {
     fn into_param(value: Option<&str>, name: &str) -> Result<Self, ParamsError> {
-        TutorialPage::ALL
-            .iter()
+        all::<TutorialPage>()
             .find(|p| p.path() == value.unwrap_or(""))
-            .copied()
             .ok_or_else(|| ParamsError::MissingParam(name.to_string()))
     }
 }
@@ -99,32 +100,64 @@ pub struct DocsParams {
 
 #[component]
 pub fn DocsPage(cx: Scope) -> impl IntoView {
-    let page = match use_params::<DocsParams>(cx).get() {
-        Ok(page) => page.page,
-        Err(_) => return view! { cx, <DocsHome/> }.into_view(cx),
-    };
-    let page_view = move || match page {
-        TutorialPage::Basic => view! { cx, <TutorialBasic/> }.into_view(cx),
-        TutorialPage::Math => view! { cx, <TutorialMath/> }.into_view(cx),
-        TutorialPage::Arrays => view! { cx, <TutorialArrays/> }.into_view(cx),
-        TutorialPage::Bindings => view! { cx, <TutorialBindings/> }.into_view(cx),
-        TutorialPage::Functions => view! { cx, <TutorialFunctions/> }.into_view(cx),
-    };
+    move || {
+        let Ok(params) = use_params::<DocsParams>(cx).get() else {
+            return view! { cx, <Redirect path="/docs"/> }.into_view(cx);
+        };
+        let page = params.page;
+        let page_view = match page {
+            TutorialPage::Basic => view! { cx, <TutorialBasic/> }.into_view(cx),
+            TutorialPage::Math => view! { cx, <TutorialMath/> }.into_view(cx),
+            TutorialPage::Arrays => view! { cx, <TutorialArrays/> }.into_view(cx),
+            TutorialPage::Bindings => view! { cx, <TutorialBindings/> }.into_view(cx),
+            TutorialPage::Functions => view! { cx, <TutorialFunctions/> }.into_view(cx),
+        };
 
-    view! { cx,
-        <div>
-            <A href="/docs">"Back to Docs Home"</A>
-            { page_view }
-            <div id="bottom-page-nav">
+        view! { cx,
+            <div>
                 <A href="/docs">"Back to Docs Home"</A>
+                <br/>
+                <br/>
+                <TutorialNav page=page/>
+                { page_view }
+                <br/>
+                <br/>
+                <TutorialNav page=page/>
             </div>
-        </div>
+        }
+        .into_view(cx)
     }
-    .into_view(cx)
 }
 
 #[component]
- fn TutorialBasic(cx: Scope) -> impl IntoView {
+fn TutorialNav(cx: Scope, page: TutorialPage) -> impl IntoView {
+    let next = move || {
+        page.next()
+            .map(|p| {
+                view!(cx, <div><A href=format!("/docs/{}", p.path())>{p.title()}</A>" 〉"</div>)
+                    .into_view(cx)
+            })
+            .unwrap_or_else(|| view!(cx, "").into_view(cx))
+    };
+    let previous = move || {
+        page.previous()
+            .map(|p| {
+                view!(cx, <div>"〈 "<A href=format!("/docs/{}", p.path())>{p.title()}</A></div>)
+                    .into_view(cx)
+            })
+            .unwrap_or_else(|| view!(cx, "").into_view(cx))
+    };
+
+    view! { cx,
+        <div class="tutorial-nav">
+            { previous }
+            { next }
+        </div>
+    }
+}
+
+#[component]
+fn TutorialBasic(cx: Scope) -> impl IntoView {
     let primitive_table: Vec<_> = Primitive::ALL
         .into_iter()
         .filter_map(|p| {
@@ -214,7 +247,7 @@ fn primitive_rows(cx: Scope, prims: impl IntoIterator<Item = Primitive>) -> Vec<
 }
 
 #[component]
- fn TutorialMath(cx: Scope) -> impl IntoView {
+fn TutorialMath(cx: Scope) -> impl IntoView {
     use Primitive::*;
     let math_table = primitive_rows(
         cx,
@@ -264,7 +297,7 @@ fn primitive_rows(cx: Scope, prims: impl IntoIterator<Item = Primitive>) -> Vec<
 }
 
 #[component]
- fn TutorialArrays(cx: Scope) -> impl IntoView {
+fn TutorialArrays(cx: Scope) -> impl IntoView {
     use Primitive::*;
     view! { cx,
         <div>
@@ -319,7 +352,7 @@ fn primitive_rows(cx: Scope, prims: impl IntoIterator<Item = Primitive>) -> Vec<
 
 #[component]
 fn TutorialBindings(cx: Scope) -> impl IntoView {
-    view! { cx, 
+    view! { cx,
         <div>
             <h2>"Bindings"</h2>
             <p>"Bindings are global names that can be given to Uiua values. They are denoted with "<code>"←"</code>", which the formatter will convert from "<code>"="</code>" when appropriate."</p>
@@ -331,15 +364,15 @@ fn TutorialBindings(cx: Scope) -> impl IntoView {
             <Editor examples={&["part = 5", "Part ← 5\n×2 Part"]} help={&["", "Run to format and reveal why this does not work"]}/>
             <p>"If you start a binding with a captial letter or an unused glyph, it will bind the right side as a function."</p>
             <Editor examples={&["TimesThree ← ×3\nTimesThree 7", "👋 ← ⊂\"Hello, \"\n👋 \"World!\""]}/>
-        </div> 
+        </div>
     }
 }
 
 #[component]
 fn TutorialFunctions(cx: Scope) -> impl IntoView {
-    view! { cx, 
+    view! { cx,
         <div>
               <p>"TODO!"</p>
-        </div> 
+        </div>
     }
 }

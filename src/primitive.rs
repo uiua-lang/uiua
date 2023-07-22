@@ -119,7 +119,7 @@ macro_rules! primitive {
     };
 }
 
-#[derive(Debug)]
+#[derive(Default, Debug)]
 pub struct PrimDoc {
     pub intro: String,
     pub examples: Vec<PrimExample>,

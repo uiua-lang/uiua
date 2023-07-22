@@ -217,7 +217,7 @@ pub fn Editor<'a>(
             let onclick = move |_| replace_code(&p.to_string());
             let onmouseover = move |_| {
                 if let Some(doc) = p.doc() {
-                    set_glyph_doc.set(doc.intro.lines().next().unwrap_or_default().into());
+                    set_glyph_doc.set(doc.short.clone());
                     _ = glyph_doc_element().style().remove_property("display");
                 }
             };

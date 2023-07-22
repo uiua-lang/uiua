@@ -121,39 +121,38 @@ macro_rules! primitive {
 
 #[derive(Default, Debug)]
 pub struct PrimDoc {
-    pub intro: String,
+    pub short: String,
     pub examples: Vec<PrimExample>,
     pub outro: String,
 }
 
 impl PrimDoc {
     fn from_str(s: &str) -> Self {
-        let mut intro = String::new();
+        let mut short = String::new();
         let mut examples = Vec::new();
-        let mut got_break = false;
         let mut primer = String::new();
         for line in s.lines() {
             let line = line.trim();
             if line.is_empty() {
-                got_break = true;
-            } else if let Some(ex) = line.strip_prefix("ex:") {
+                continue;
+            }
+            if let Some(ex) = line.strip_prefix("ex:") {
                 let input = ex.trim().to_owned();
                 examples.push(PrimExample {
                     primer: take(&mut primer),
                     input,
                     output: OnceLock::new(),
                 });
-            } else if got_break {
+            } else if short.is_empty() {
+                short = line.into();
+            } else {
                 primer.push_str(line);
                 primer.push('\n');
-            } else {
-                intro.push_str(line);
-                intro.push('\n');
             }
         }
         let outro = take(&mut primer);
         Self {
-            intro,
+            short,
             examples,
             outro,
         }
@@ -162,7 +161,7 @@ impl PrimDoc {
 
 impl fmt::Display for PrimDoc {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "{}", self.intro.trim())?;
+        writeln!(f, "{}", self.short.trim())?;
         for ex in &self.examples {
             if !ex.primer.is_empty() {
                 writeln!(f, "primer: {}", ex.primer)?;
@@ -225,6 +224,10 @@ primitive!(
     /// Duplicate the top value on the stack
     ///
     /// ex: . 1 2 3
+    ///
+    /// This can be used to make a monadic left-hook, such as a palindrome checker:
+    /// ex: ≅⇌. "friend"
+    /// ex: ≅⇌. "racecar"
     (1(2), Dup, "duplicate" + '.'),
     /// Duplicate the second-to-top value to the top of the stack
     ///
@@ -232,7 +235,10 @@ primitive!(
     (2(3), Over, "over" + ','),
     /// Swap the top two values on the stack
     ///
-    /// ex: ~ 1 2 3
+    /// ex: ~ 1 2 3 4
+    ///
+    /// When combined with [duplicate], this can be used to make a monadic right-hook or monadic fork, such as an average calculator:
+    /// ex: ÷≢~/+. 1_8_2_5
     (2(2), Flip, "flip" + '~'),
     /// Pop the top value off the stack
     (1(0), Pop, "pop" + ';'),
@@ -285,10 +291,18 @@ primitive!(
     (2, Div, "divide", Percent + '÷'),
     (2, Mod, "modulus" + '◿'),
     (2, Pow, "power" + 'ⁿ'),
-    (2, Log, "log"),
+    (2, Log),
+    /// Take the minimum of two arrays
+    ///
+    /// ex: ↧ 3 5
+    /// ex: ↧ [1 4 2] [3 7 1]
     (2, Min, "minimum" + '↧'),
+    /// Take the maximum of two arrays
+    ///
+    /// ex: ↥ 3 5
+    /// ex: ↥ [1 4 2] [3 7 1]
     (2, Max, "maximum" + '↥'),
-    (2, Atan, "atangent"),
+    (2, Atan),
     // Monadic array ops
     /// The number of rows in an array
     ///
@@ -298,6 +312,8 @@ primitive!(
     /// ex: ≢[1_2 3_4 5_6]
     (1, Len, "length" + '≢'),
     /// The number of dimensions in an array
+    ///
+    /// [rank] is equivalent to [length] of [shape].
     ///
     /// ex: ∴5
     /// ex: ∴[]
@@ -411,7 +427,12 @@ primitive!(
     (2, Drop, "drop" + '↘'),
     /// Change the shape of an array
     ///
+    /// Shapes that have fewer elements than the original array will truncate it.
+    /// Shapes that have more elements than the original array will repeat elements.
+    ///
     /// ex: ↯ 2_3 [1 2 3 4 5 6]
+    /// ex: ↯ 5 2
+    /// ex: ↯ 3_7 1_2_3_4
     (2, Reshape, "reshape" + '↯'),
     /// Rotate the elements of an array by n
     ///
@@ -420,6 +441,8 @@ primitive!(
     /// ex: ↻¯1 ⇡5
     (2, Rotate, "rotate" + '↻'),
     /// The n-wise windows of an array
+    ///
+    /// Multi-dimensional window sizes are supported.
     ///
     /// ex: ◫2 .⇡4
     /// ex: ◫4 .⇡6
@@ -506,10 +529,17 @@ primitive!(
     /// ex: ⊞+ 1_2_3 4_5_6
     /// ex: ⊞⊂ 1_2 3_4
     (Table { modifier: 1 }, "table" + '⊞'),
-    /// Repeat a function n times
+    /// Repeat a function a number of times
     ///
-    /// ex: ⍥(+2) 0 5
-    /// ex: ⍥(⊂2) [] 5
+    /// ex: ⍥(+2) 5 0
+    /// ex: ⍥(⊂2) 5 []
+    ///
+    /// One interesting use of [repeat] is to collect some number of stack values into an array.
+    /// ex: ⍥⊂3 [] 1 2 3
+    ///
+    /// Repeating for [infinity] times will create an infinite loop.
+    /// You can use [break] to break out of the loop.
+    /// ex: ⍥(⎋>1000. ×2)∞ 1
     (Repeat { modifier: 1 }, "repeat" + '⍥'),
     /// Invert the behavior of a function
     /// Most functions are not invertible.
@@ -553,12 +583,12 @@ primitive!(
     (2, Throw, "throw" + '!'),
     /// Break out of a loop
     /// Expects a non-negative integer. This integer is how many loops will be broken out of.
-    /// Not all looping functions can be broken out of.
+    /// Loops that can be broken out of are [reduce], [fold], [scan], [each], [rows], and [repeat].
     ///
     /// ex: /(⎋>10.+) ⇌⇡40  # Break when the sum exceeds 10
-    /// ex: ⍥(⎋>100.×2) 1 40  # Break when the product exceeds 100
+    /// ex: ⍥(⎋>100.×2)∞ 1  # Break when the product exceeds 100
     (1(0), Break, "break" + '⎋'),
-    /// Call the current function recursively
+    /// Call the current dfn recursively
     /// Expects a non-negative integer. Recursion happens when the integer is not 0.
     /// Only dfns can be recurred in.
     ///
@@ -573,6 +603,9 @@ primitive!(
     /// ex: :(+) 1 2
     (1(None), Call, "call" + ':'),
     /// Do nothing
+    ///
+    /// While this may seem useless, one way to use it is to put all of an array's values on the stack.
+    /// ex: /· [1 2 3]
     (0, Noop, "noop" + '·'),
     /// Convert a value to a string
     ///

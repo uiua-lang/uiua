@@ -25,12 +25,12 @@ const RULE_30: &str = "\
 Thirty ← ≡(↥≅0_1_1 ~=1 /+.) ◫3 ⊂~0 ⊂0
 size ← 600
 start ← =÷2 size ⇡+1 size
-⇌[⍥(Thirty.) start ÷2 size]";
+⇌[⍥(Thirty.)÷2 size start]";
 const PRIMES: &str = "‡∵(=2 /+ =⌊.÷⇡.).+1 ⇡60";
 const MANDELBROT: &str = "\
 Z ← ⊟/- ⁿ2 ~×2 /×.⇌
 ⇌↶⍉⊞⊟.×4 ÷~-÷2,⇡. 300
-<2 √/+ ⁿ2;~⍥(+Z ~,) ~20 ∵0.";
+<2 √/+ ⁿ2;~⍥(+Z ~,)20 ∵0.";
 const CHART: &str = "⊞(⊡ ⌊×5rand ·_._∴_↥_⍋ ;;).⇡15";
 const ERRORS: &str = "# Change this ↓ to a 0\n!\"Oh no bad!\" 1\nprint \"All is well\"";
 

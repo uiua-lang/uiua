@@ -151,19 +151,6 @@ impl<T: ArrayValue> Array<T> {
         (0..row_count)
             .map(move |_| Array::new(row_shape.clone(), data.by_ref().take(row_len).collect()))
     }
-    pub fn into_rows_rev(mut self) -> impl Iterator<Item = Self> {
-        let row_len = self.row_len();
-        let mut row_shape = self.shape.clone();
-        let row_count = if row_shape.is_empty() {
-            1
-        } else {
-            row_shape.remove(0)
-        };
-        (0..row_count).map(move |_| {
-            let end = self.data.len() - row_len;
-            Array::new(row_shape.clone(), self.data.drain(end..).collect())
-        })
-    }
     pub fn val_eq<U: Into<T> + Clone>(&self, other: &Array<U>) -> bool {
         self.shape == other.shape
             && self.data.len() == other.data.len()

@@ -60,7 +60,7 @@ pub fn PrimDocsPage(cx: Scope) -> impl IntoView {
     let body = move || {
         prim().and_then(|prim| prim.doc()).map(|doc| {
             view! { cx,
-                <p style="white-space: pre-wrap">{parse_doc(cx, &doc.intro)}</p>
+                <p style="white-space: pre-wrap">{parse_doc(cx, &doc.short)}</p>
                 { ex_lines }
                 <p style="white-space: pre-wrap">{parse_doc(cx, &doc.outro)}</p>
             }

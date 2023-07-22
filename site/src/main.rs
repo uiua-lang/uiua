@@ -165,25 +165,19 @@ mod code {
         } else {
             None
         };
-        if hide_docs {
-            view!(cx, <a href=href style="text-decoration: none;">
-                <code class="prim-code"><span class=class>{ symbol }</span>{name}</code>
-            </a>)
-        } else {
-            let title = match (prim.doc(), show_name) {
-                (Some(doc), true) => doc.intro.lines().next().unwrap_or_default().into(),
-                (Some(doc), false) => format!(
-                    "{}: {}",
-                    prim.name().unwrap_or_default(),
-                    doc.intro.lines().next().unwrap_or_default()
-                ),
-                (None, true) => String::new(),
-                (None, false) => prim.name().unwrap_or_default().into(),
-            };
-            view!(cx, <a href=href style="text-decoration: none;">
-                <code class="prim-code" title=title><span class=class>{ symbol }</span>{name}</code>
-            </a>)
-        }
+        let title = match (prim.doc().filter(|_| !hide_docs), show_name) {
+            (Some(doc), true) => Some(doc.short.clone()),
+            (Some(doc), false) => Some(format!(
+                "{}: {}",
+                prim.name().unwrap_or_default(),
+                doc.short
+            )),
+            (None, true) => None,
+            (None, false) => prim.name().map(Into::into),
+        };
+        view!(cx, <a href=href style="text-decoration: none;">
+            <code class="prim-code" title=title><span class=class>{ symbol }</span>{name}</code>
+        </a>)
     }
 }
 use code::*;

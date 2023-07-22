@@ -32,7 +32,7 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
 }
 
 fn generic_fold(f: Rc<Value>, xs: Value, init: Option<Rc<Value>>, env: &mut Uiua) -> UiuaResult {
-    let mut rows = xs.into_rows_rev();
+    let mut rows = xs.into_rows();
     let mut acc = init
         .or_else(|| rows.next().map(Rc::new))
         .ok_or_else(|| env.error("Cannot reduce empty array"))?;
@@ -109,15 +109,20 @@ fn generic_scan(f: Rc<Value>, xs: Value, env: &mut Uiua) -> UiuaResult {
 pub fn each(env: &mut Uiua) -> UiuaResult {
     let f = env.pop(1)?;
     let xs = rc_take(env.pop(2)?);
-    const BREAK_ERROR: &str = "break is not allowed in each";
     let mut new_values = Vec::with_capacity(xs.flat_len());
     let mut new_shape = xs.shape().to_vec();
-    let values = xs.into_flat_values();
-    for val in values {
+    let mut values = xs.into_flat_values();
+    while let Some(val) = values.next() {
         env.push(val);
         env.push_ref(f.clone());
-        env.call_error_on_break(BREAK_ERROR)?;
+        let broke = env.call_catch_break()?;
         new_values.push(rc_take(env.pop("each's function result")?));
+        if broke {
+            for val in values {
+                new_values.push(val);
+            }
+            break;
+        }
     }
     let mut eached = Value::from_row_values(new_values, env)?;
     new_shape.extend_from_slice(&eached.shape()[1..]);
@@ -159,13 +164,19 @@ pub fn zip(env: &mut Uiua) -> UiuaResult {
 pub fn rows(env: &mut Uiua) -> UiuaResult {
     let f = env.pop(1)?;
     let xs = rc_take(env.pop(2)?);
-    const BREAK_ERROR: &str = "break is not allowed in rows";
     let mut new_rows = Vec::with_capacity(xs.row_count());
-    for row in xs.into_rows() {
+    let mut old_rows = xs.into_rows();
+    while let Some(row) = old_rows.next() {
         env.push(row);
         env.push_ref(f.clone());
-        env.call_error_on_break(BREAK_ERROR)?;
+        let broke = env.call_catch_break()?;
         new_rows.push(rc_take(env.pop("rows' function result")?));
+        if broke {
+            for row in old_rows {
+                new_rows.push(row);
+            }
+            break;
+        }
     }
     let res = Value::from_row_values(new_rows, env)?;
     env.push(res);
@@ -245,33 +256,27 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
 
 pub fn repeat(env: &mut Uiua) -> UiuaResult {
     let f = env.pop(1)?;
-    let mut acc = env.pop(2)?;
-    let n = env.pop(3)?.as_num(
+    let n = env.pop(2)?.as_num(
         env,
         "Repetitions must be a single natural number or infinity",
     )?;
     if n == f64::INFINITY {
         loop {
-            env.push_ref(acc);
             env.push_ref(f.clone());
             if env.call_catch_break()? {
                 break;
             }
-            acc = env.pop("repeated function result")?;
         }
     } else {
         if n.fract().abs() > f64::EPSILON {
             return Err(env.error("Repetitions must be a single natural number or infinity"));
         };
         for _ in 0..n as u64 {
-            env.push_ref(acc);
             env.push_ref(f.clone());
             if env.call_catch_break()? {
                 return Ok(());
             }
-            acc = env.pop("repeated function result")?;
         }
-        env.push_ref(acc);
     }
     Ok(())
 }
@@ -306,17 +311,17 @@ impl<T: ArrayValue> Array<T> {
             }
         }
     }
-    fn scan(self, identity: T, f: impl Fn(T, T) -> T) -> Self {
+    fn scan(mut self, identity: T, f: impl Fn(T, T) -> T) -> Self {
         match self.shape.len() {
             0 => unreachable!("scan_nums called on unit array, should have been guarded against"),
-            1 => self
-                .data
-                .iter()
-                .scan(identity, |acc, n| {
-                    *acc = f(acc.clone(), n.clone());
-                    Some(acc.clone())
-                })
-                .collect(),
+            1 => {
+                let mut acc = identity;
+                for val in self.data.iter_mut() {
+                    acc = f(val.clone(), acc);
+                    *val = acc.clone();
+                }
+                self
+            }
             _ => {
                 let row_len: usize = self.row_len();
                 if self.row_count() == 0 {

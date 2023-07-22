@@ -48,10 +48,12 @@ pub enum TutorialPage {
     Basic,
     Math,
     Arrays,
+    Bindings,
+    Functions,
 }
 
 impl TutorialPage {
-    const ALL: [Self; 3] = [Self::Basic, Self::Math, Self::Arrays];
+    const ALL: [Self; 5] = [Self::Basic, Self::Math, Self::Arrays, Self::Bindings, Self::Functions];
     fn path(&self) -> String {
         format!("{self:?}").to_lowercase()
     }
@@ -60,13 +62,13 @@ impl TutorialPage {
             Self::Basic => "Basic Stack Operations and Formatting",
             Self::Math => "Math and Comparison",
             Self::Arrays => "Arrays",
+            Self::Bindings => "Bindings",
+            Self::Functions => "Functions",
         }
     }
     fn additional_title(&self, cx: Scope) -> impl IntoView {
         use Primitive::*;
         match self {
-            Self::Basic => view!(cx, {}).into_view(cx),
-            Self::Math => view!(cx, {}).into_view(cx),
             Self::Arrays => view!(cx, 
                 "("
                 <PrimCode prim=Len/>
@@ -75,6 +77,7 @@ impl TutorialPage {
                 <PrimCode prim=Fill/>
                 ")")
             .into_view(cx),
+            _ => view!(cx, {}).into_view(cx),
         }
     }
 }
@@ -104,6 +107,8 @@ pub fn DocsPage(cx: Scope) -> impl IntoView {
         TutorialPage::Basic => view! { cx, <TutorialBasic/> }.into_view(cx),
         TutorialPage::Math => view! { cx, <TutorialMath/> }.into_view(cx),
         TutorialPage::Arrays => view! { cx, <TutorialArrays/> }.into_view(cx),
+        TutorialPage::Bindings => view! { cx, <TutorialBindings/> }.into_view(cx),
+        TutorialPage::Functions => view! { cx, <TutorialFunctions/> }.into_view(cx),
     };
 
     view! { cx,
@@ -119,7 +124,7 @@ pub fn DocsPage(cx: Scope) -> impl IntoView {
 }
 
 #[component]
-pub fn TutorialBasic(cx: Scope) -> impl IntoView {
+ fn TutorialBasic(cx: Scope) -> impl IntoView {
     let primitive_table: Vec<_> = Primitive::ALL
         .into_iter()
         .filter_map(|p| {
@@ -209,7 +214,7 @@ fn primitive_rows(cx: Scope, prims: impl IntoIterator<Item = Primitive>) -> Vec<
 }
 
 #[component]
-pub fn TutorialMath(cx: Scope) -> impl IntoView {
+ fn TutorialMath(cx: Scope) -> impl IntoView {
     use Primitive::*;
     let math_table = primitive_rows(
         cx,
@@ -259,7 +264,7 @@ pub fn TutorialMath(cx: Scope) -> impl IntoView {
 }
 
 #[component]
-pub fn TutorialArrays(cx: Scope) -> impl IntoView {
+ fn TutorialArrays(cx: Scope) -> impl IntoView {
     use Primitive::*;
     view! { cx,
         <div>
@@ -309,5 +314,32 @@ pub fn TutorialArrays(cx: Scope) -> impl IntoView {
             <p>"Every array type is not fill by default, except for character arrays:"</p>
             <Editor examples={&["[\"Hello\" \"my\" \"friend\"]"]} help={&["Notice the lack of the fill function"]}/>
         </div>
+    }
+}
+
+#[component]
+fn TutorialBindings(cx: Scope) -> impl IntoView {
+    view! { cx, 
+        <div>
+            <h2>"Bindings"</h2>
+            <p>"Bindings are global names that can be given to Uiua values. They are denoted with "<code>"←"</code>", which the formatter will convert from "<code>"="</code>" when appropriate."</p>
+            <Editor examples={&["a = 3\nb = 5\n+ a b"]} help={&["", "Try running to format the ="]}/>
+            <p>"Valid binding names can be made up of any sequence of uppercase or lowercase alphabetic characters OR a single non-alphanumeric character that is not already used for a Uiua function."</p>
+            <p>"Unlike most programming languages, binding names in Uiua "<i>"cannot"</i>" contain numbers or underscores."</p>
+            <Editor examples={&["numone ← 1\nNuMtWo ← 2\n😀 ← \"happy\"", "variable_1 ← 5"]}/>
+            <p>"If the formatter would coerce a binding name to a Uiua function glyph, simply change its capitalization."</p>
+            <Editor examples={&["part = 5", "Part ← 5\n×2 Part"]} help={&["", "Run to format and reveal why this does not work"]}/>
+            <p>"If you start a binding with a captial letter or an unused glyph, it will bind the right side as a function."</p>
+            <Editor examples={&["TimesThree ← ×3\nTimesThree 7", "👋 ← ⊂\"Hello, \"\n👋 \"World!\""]}/>
+        </div> 
+    }
+}
+
+#[component]
+fn TutorialFunctions(cx: Scope) -> impl IntoView {
+    view! { cx, 
+        <div>
+              <p>"TODO!"</p>
+        </div> 
     }
 }

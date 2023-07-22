@@ -1,7 +1,8 @@
+- Rework imports
 - Docs
-  - Idents and bindings
   - Functions and Dfns
   - IO primitives
+  - Imports
   - Design
 - Better solution to string formatting
 - Threads

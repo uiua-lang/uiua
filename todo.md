@@ -1,10 +1,10 @@
+- Put name-only builtins in scope instead of parsing
 - Fix and refine fill behavior
 - Fix typos
-- Rework imports
 - Make a better rand API
 - Simplify dyadic module
-- Web stderr
 - Function array coercion
+- Simplify editor examples
 - Docs
   - IO primitives
     - Let web backend open "example" file for testing

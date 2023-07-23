@@ -367,6 +367,7 @@ pub fn Editor<'a>(
 
 struct RunOutput {
     stdout: String,
+    stderr: String,
     stack: Vec<Rc<Value>>,
     image_bytes: Option<Vec<u8>>,
     audio_bytes: Option<Vec<u8>>,
@@ -375,18 +376,41 @@ struct RunOutput {
 impl RunOutput {
     fn text(&self) -> String {
         let mut s = String::new();
+        let groups = (!self.stack.is_empty()) as u8
+            + (!self.stdout.is_empty()) as u8
+            + (!self.stderr.is_empty()) as u8;
         if !self.stdout.is_empty() {
-            if !self.stack.is_empty() {
-                s.push_str("Output:\n");
+            if groups >= 2 {
+                s.push_str("stdout:\n");
             }
             s.push_str(&self.stdout);
-            if !self.stack.is_empty() {
-                s.push_str("\n\nStack:\n");
+            if !self.stdout.ends_with('\n') {
+                s.push('\n');
             }
         }
-        for val in &self.stack {
-            s.push_str(&val.show());
-            s.push('\n');
+        if !self.stderr.is_empty() {
+            if groups >= 2 {
+                if !s.is_empty() {
+                    s.push('\n');
+                }
+                s.push_str("stderr:\n");
+            }
+            s.push_str(&self.stderr);
+            if !self.stderr.ends_with('\n') {
+                s.push('\n');
+            }
+        }
+        if !self.stack.is_empty() {
+            if groups >= 2 {
+                if !s.is_empty() {
+                    s.push('\n');
+                }
+                s.push_str("stack:\n");
+            }
+            for val in &self.stack {
+                s.push_str(&val.show());
+                s.push('\n');
+            }
         }
         s
     }
@@ -422,6 +446,7 @@ fn run_code(code: &str) -> UiuaResult<RunOutput> {
     });
     Ok(RunOutput {
         stdout: io.stdout.into_inner(),
+        stderr: io.stderr.into_inner(),
         stack: values,
         image_bytes,
         audio_bytes,

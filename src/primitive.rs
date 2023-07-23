@@ -273,6 +273,11 @@ primitive!(
     /// The last element of an array
     (1, Last, MonadicArray),
     /// Allow an array to be combined with arrays of incompatible shapes
+    /// This sets the array's fill flag.
+    ///
+    /// Character arrays have the fill flag set by default.
+    ///
+    /// Operations like [couple] that would normally fail with mismatched shapes will instead fill the array with the fill value.
     (1, Fill, MonadicArray, "fill" + '∘'),
     /// Remove fill elements from the end of an array
     (1, Truncate, MonadicArray, "truncate" + '⍛'),
@@ -289,11 +294,15 @@ primitive!(
     ///
     /// ex: ⍉.[1_2 3_4 5_6]
     /// ex: ⍉.[[1_2 3_4] [5_6 7_8]]
+    ///
+    /// See also: [reshape]
     (1, Transpose, MonadicArray, "transpose" + '⍉'),
     (1, InvTranspose, MonadicArray),
     /// Sort the rows of an array
     ///
     /// ex: ∧6_2_7_0_¯1_5
+    ///
+    /// See also: [grade]
     (1, Sort, MonadicArray, "sort" + '∧'),
     /// Grade the rows of an array
     ///
@@ -301,6 +310,8 @@ primitive!(
     ///
     /// Using the grading as a selector in [select] yields the sorted array.
     /// ex: ⊏⍋.6_2_7_0_¯1_5
+    ///
+    /// See also: [sort]
     (1, Grade, MonadicArray, "grade" + '⍋'),
     /// Repeat the index of each array element the element's value times
     ///
@@ -320,47 +331,59 @@ primitive!(
     /// ex: ≅ 1_2_3 [1 2 3]
     ///
     /// ex: ≅ 1_2_3 [1 2]
+    ///
+    /// See also: [notmatch]
     (2, Match, DyadicArray, "match" + '≅'),
     /// Check if two arrays' elements do not match exactly
     ///
     /// ex: ≇ 1_2_3 [1 2 3]
     ///
     /// ex: ≇ 1_2_3 [1 2]
+    ///
+    /// See also: [match]
     (2, NotMatch, DyadicArray, "notmatch" + '≇'),
     /// Append two arrays or an array and a scalar
     ///
+    /// The arrays cannot have a [rank] difference greater than 1.
+    ///
     /// ex: ⊂ 1 2
-    ///
     /// ex: ⊂ 1 [2 3]
-    ///
     /// ex: ⊂ [1 2] 3
-    ///
     /// ex: ⊂ [1 2] [3 4]
+    /// ex: ⊂ 1 [2_3 4_5]
     (2, Join, DyadicArray, "join" + '⊂'),
     /// Combine two arrays as rows
     ///
+    /// Un[fill]ed arrays must have the same [shape].
+    ///
     /// ex: ⊟ [1 2 3] [4 5 6]
-    ///
     /// ex: ⊟ [1 2 3] [4 5]
-    ///
-    /// Couple can utilize [fill].
     /// ex: ⊟ [1 2 3] ∘[4 5]
     (2, Couple, DyadicArray, "couple" + '⊟'),
     /// Index a single row or element from an array
     ///
     /// ex: ⊡ 2 [8 3 9 2 0]
+    /// ex: ⊡ 1_1 .[1_2_3 4_5_6]
+    ///
+    /// [pick] combined with [call] is the easiest way to emulate an if-else expression.
+    /// This idiom is optimized in the compiler to use fewer cycles.
+    /// ex: :⊡~("not 5")_("5") =5 3
     (2, Pick, DyadicArray, "pick" + '⊡'),
     /// Select multiple elements from an array
     ///
     /// ex: ⊏ 4_2 [8 3 9 2 0]
     (2, Select, DyadicArray, "select" + '⊏'),
     /// Take the first n elements of an array
+    /// This is the opposite of [drop].
     ///
     /// ex: ↙ 3 [8 3 9 2 0]
+    /// ex: ↙ ¯3 [8 3 9 2 0]
     (2, Take, DyadicArray, "take" + '↙'),
     /// Drop the first n elements of an array
+    /// This is the opposite of [take].
     ///
     /// ex: ↘ 3 [8 3 9 2 0]
+    /// ex: ↘ ¯3 [8 3 9 2 0]
     (2, Drop, DyadicArray, "drop" + '↘'),
     /// Change the shape of an array
     ///
@@ -370,6 +393,8 @@ primitive!(
     /// ex: ↯ 2_3 [1 2 3 4 5 6]
     /// ex: ↯ 5 2
     /// ex: ↯ 3_7 1_2_3_4
+    ///
+    /// See also: [reshape]
     (2, Reshape, DyadicArray, "reshape" + '↯'),
     /// Rotate the elements of an array by n
     ///
@@ -536,10 +561,10 @@ primitive!(
     /// ex: ⍥(⎋>100.×2)∞ 1  # Break when the product exceeds 100
     (1(0), Break, Control, "break" + '⎋'),
     /// Call the current dfn recursively
-    /// Expects a non-negative integer. Recursion happens when the integer is not 0.
     /// Only dfns can be recurred in.
     ///
-    /// ex: {↬<10.×2} 1 # Recur if the product is less than 10
+    /// To check for a base case, you can use [pick].
+    /// ex: {:⊡~·_↬ <10.×2} 1
     (1(0), Recur, Control, "recur" + '↬'),
     /// Debug print a value without popping it
     ///
@@ -745,12 +770,7 @@ impl Primitive {
                     return Err(UiuaError::Break(n - 1, env.span().clone()));
                 }
             }
-            Primitive::Recur => {
-                let n = env.pop(1)?.as_nat(env, "recur expects a natural number")?;
-                if n > 0 {
-                    env.recur()?
-                }
-            }
+            Primitive::Recur => env.recur()?,
             Primitive::Debug => {
                 let value = env.pop(1)?;
                 env.io.print_str(&value.show()).map_err(|e| env.error(e))?;

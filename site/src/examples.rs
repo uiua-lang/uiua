@@ -12,7 +12,7 @@ const AUDIO: &str = "\
 Wave ← sin ×2×π ×~ ÷~ ⇡.44100
 ÷≢~ /+∵Wave .[220 277.18 329.63]";
 const QUADRATIC: &str = "\
-Quadratic ← {÷×2 a -b ⊟¯.√-××4 a c ⁿ2 b}
+Quadratic ← {÷ ×2a -b ⊟¯. √- ××4a c ⁿ2 b}
 Quadratic 1 2 0";
 const STRIPES: &str = "\
 r ← ⊞+.⇡300

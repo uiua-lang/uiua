@@ -111,6 +111,11 @@ impl<T: ArrayValue> Array<T> {
                 }
             }
             (ash, bsh) => {
+                if ash.len().abs_diff(bsh.len()) > 1 {
+                    return Err(env.error(format!(
+                        "Cannot join arrays with a rank difference > 1 (shapes are {ash:?} and {bsh:?})",
+                    )));
+                }
                 if ash[1..] == bsh[1..] {
                     if truncate {
                         self.truncate();

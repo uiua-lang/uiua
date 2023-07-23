@@ -98,7 +98,7 @@ impl TutorialPage {
             Self::Math => "Math and Comparison",
             Self::Arrays => "Arrays",
             Self::Bindings => "Bindings",
-            Self::Functions => "Functions",
+            Self::Functions => "Modifiers and Functions",
         }
     }
     fn additional_title(&self, cx: Scope) -> impl IntoView {
@@ -401,9 +401,42 @@ fn TutorialBindings(cx: Scope) -> impl IntoView {
 
 #[component]
 fn TutorialFunctions(cx: Scope) -> impl IntoView {
+    use Primitive::*;
     view! { cx,
         <div>
-              <p>"TODO!"</p>
+            <h2>"Modifiers and Functions"</h2>
+            <h2>"Modifiers"</h2>
+            <hr/>
+            <p>"Modifiers are functions that take other functions. If you immediately follow a modifier with its function arguments, the functions will be called inside the modifier rather than outside."</p>
+            <p>"For example, "<PrimCode prim=Reduce/>" applies a function \"between\" all rows of an array."</p>
+            <Editor examples={&["/+ 1_2_3_4"]}/>
+            <p><PrimCode prim=Scan/>" is similar, but it returns all the intermediate results."</p>
+            <Editor examples={&["\\+ 1_2_3_4"]}/>
+            <p><A href="/docs">"The main docs page"</A>" lists all of the built-in modifiers."</p>
+            <br/>
+            <h2>"Functions"</h2>
+            <hr/>
+            <p>"In addition to creating a new function with a capitalized binding name, as discussed in the "<A href="/docs/bindings">"previous sections"</A>", functions in Uiua can also be created with "<code>"(...)"</code>"."</p>
+            <p>"This is usually only necessary when you need to call multiple primitives withing a modifier."</p>
+            <p>"For example, if you wanted to make an array that is pairs each element of an array with its inverse, you could use "<PrimCode prim=Each/>"."</p>
+            <Editor examples={&["∵(⊂÷~1.) 1_2_4_5"]}/>
+            <p>"Or, if you wanted to get the last element of each row of an array, you could use "<PrimCode prim=Rows/>"."</p>
+            <Editor examples={&["A ← [2_5_3 0_2_1 0_0_2]\nA\n≡(⊢⇌)A"]}/>
+            <br/>
+            <h2>"Dfns"</h2>
+            <hr/>
+            <p>"A dfn (pronounced \"dee-fun\") is a block of code that can bind names to single-character names."</p>
+            <p>"Dfns are created with "<code>"{...}"</code>"."</p>
+            <p>"Unlike functions created with "<code>"(...)"</code>", dfns are called imediately, much like a built-in function."</p>
+            <p>"The number of arguments that a dfn takes is determined by which single-character lowercase ASCII names it refers to. This means you can use any of 26 names: "<code>"a"</code>", "<code>"b"</code>", "<code>"c"</code>", ... "<code>"z"</code>". A dfn that only refers to "<code>"a"</code>" takes 1 argument. A dfn that refers to "<code>"z"</code>" takes 26."</p>
+            <p>"As an example, you could use a dfn to manually implement "<PrimCode prim=Flip/>" (don't do this):"</p>
+            <Editor examples={&["[1 2]\n[~ 1 2]\n[{b a} 1 2]"]}/>
+            <p>"Dfns are particularly useful when you have to juggle three or more arguments."</p>
+            <p>"If you tried to implement the "<a href="https://en.wikipedia.org/wiki/Quadratic_formula">quadratic formula</a>" with only stack operations, you would have a very hard time. Thankfully, dfns make it pretty simple:"</p>
+            <Editor examples={&["Quadratic ← {÷ ×2a -b ⊟¯. √- ××4a c ⁿ2 b}\nQuadratic 1 2 0"]}/>
+            <p>"Dfns are also required if you want to use "<PrimCode prim=Recur/>". The dfn that contains the "<PrimCode prim=Recur/>" will be the thing that recurs."</p>
+            <p>"Here is a recursive fibonacci function:"</p>
+            <Editor examples={&["{:⊡~(+ ↬-2a ↬-1a)_(a)≤2a} 10"]}/>
         </div>
     }
 }

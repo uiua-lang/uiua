@@ -1,3 +1,4 @@
+- Ctrl-click glyph buttons
 - Rework imports
 - Make a better rand API
 - Docs

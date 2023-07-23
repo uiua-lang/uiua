@@ -46,6 +46,7 @@ struct StackFrame {
     call_span: usize,
     pc: usize,
     spans: Vec<(usize, Option<Primitive>)>,
+    dfn: bool,
 }
 
 #[derive(Clone)]
@@ -266,10 +267,30 @@ impl<'io> Uiua<'io> {
     }
     fn push_instr(&mut self, instr: Instr) {
         let instrs = self.new_functions.last_mut().unwrap();
-        match (instrs.last_mut(), instr) {
-            (Some(Instr::Prim(last, _)), Instr::Prim(new, new_span)) => match (&last, new) {
-                (Primitive::Reverse, Primitive::First) => *last = Primitive::Last,
-                (Primitive::Reverse, Primitive::Last) => *last = Primitive::First,
+        // Optimizations
+        match (instrs.as_mut_slice(), instr) {
+            // Call pick = if
+            (
+                [.., Instr::BeginArray, Instr::Push(if_true), Instr::Push(if_false), Instr::EndArray(_), Instr::Prim(Primitive::Flip, _), Instr::Prim(Primitive::Pick, _)],
+                Instr::Prim(Primitive::Call, span),
+            ) => {
+                if let (Value::Func(if_true), Value::Func(if_false)) = (&**if_true, &**if_false) {
+                    if if_true.shape.is_empty() && if_false.shape.is_empty() {
+                        let if_true = if_true.data[0].clone();
+                        let if_false = if_false.data[0].clone();
+                        for _ in 0..6 {
+                            instrs.pop().unwrap();
+                        }
+                        instrs.push(Instr::If(if_true, if_false));
+                        return;
+                    }
+                }
+                instrs.push(Instr::Prim(Primitive::Call, span))
+            }
+            // First reverse = last
+            ([.., Instr::Prim(top, _)], Instr::Prim(new, new_span)) => match (&top, new) {
+                (Primitive::Reverse, Primitive::First) => *top = Primitive::Last,
+                (Primitive::Reverse, Primitive::Last) => *top = Primitive::First,
                 (a, b)
                     if a.args() == a.outputs()
                         && b.args() == b.outputs()
@@ -279,6 +300,7 @@ impl<'io> Uiua<'io> {
                 }
                 _ => instrs.push(Instr::Prim(new, new_span)),
             },
+            // Ignore noops
             (_, Instr::Prim(Primitive::Noop, _)) => {}
             (_, instr) => instrs.push(instr),
         }
@@ -425,6 +447,7 @@ impl<'io> Uiua<'io> {
             call_span: 0,
             spans: Vec::new(),
             pc: 0,
+            dfn: false,
         })
     }
     fn exec(&mut self, frame: StackFrame) -> UiuaResult {
@@ -433,7 +456,11 @@ impl<'io> Uiua<'io> {
         while self.call_stack.len() > ret_height {
             let frame = self.call_stack.last().unwrap();
             let Some(instr) = frame.function.instrs.get(frame.pc) else {
-                self.call_stack.pop();
+                if let Some(frame) = self.call_stack.pop() {
+                    if frame.dfn {
+                        self.dfn_stack.pop();
+                    }
+                }
                 continue;
             };
             // println!("{:?}", self.stack);
@@ -450,16 +477,13 @@ impl<'io> Uiua<'io> {
                 &Instr::EndArray(span) => (|| {
                     let start = self.array_stack.pop().unwrap();
                     if start > self.stack.len() {
-                        return Err(self.spans[span]
-                            .clone()
-                            .sp("Array removed elements".into())
-                            .into());
+                        return Err(self.error("Array removed elements"));
                     }
                     let values: Vec<_> = self.stack.drain(start..).map(rc_take).rev().collect();
                     self.push_span(span, None);
                     let val = Value::from_row_values(values, self)?;
                     self.pop_span();
-                    self.stack.push(val.into());
+                    self.push(val);
                     Ok(())
                 })(),
                 &Instr::Prim(prim, span) => (|| {
@@ -473,6 +497,30 @@ impl<'io> Uiua<'io> {
                     let value = self.dfn_stack.last().unwrap().args[*n].clone();
                     self.stack.push(value);
                     Ok(())
+                }
+                Instr::If(if_true, if_false) => {
+                    let if_true = if_true.clone();
+                    let if_false = if_false.clone();
+                    (|| {
+                        let value = self.pop(2)?;
+                        let condition = value.as_nat(self, "Index must be a list of integers")?;
+                        match condition {
+                            0 => {
+                                self.push(if_false);
+                                self.call()?;
+                            }
+                            1 => {
+                                self.push(if_true);
+                                self.call()?;
+                            }
+                            n => {
+                                return Err(self.error(format!(
+                                "Index {n} is out of bounds of length 2 (dimension 1) in shape [2]"
+                            )))
+                            }
+                        }
+                        Ok(())
+                    })()
                 }
             };
             if let Err(mut err) = res {
@@ -499,6 +547,7 @@ impl<'io> Uiua<'io> {
         let value = self.pop("called function")?;
         if let Value::Func(fs) = &*value {
             for f in &fs.data {
+                let mut dfn = false;
                 if let Some(n) = f.dfn_args {
                     let n = n as usize;
                     if self.stack.len() < n {
@@ -512,12 +561,14 @@ impl<'io> Uiua<'io> {
                         function: f.clone(),
                         args,
                     });
+                    dfn = true;
                 }
                 let new_frame = StackFrame {
                     function: f.clone(),
                     call_span,
                     spans: Vec::new(),
                     pc: 0,
+                    dfn,
                 };
                 self.exec(new_frame)?;
             }

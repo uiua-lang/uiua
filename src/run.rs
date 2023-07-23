@@ -32,7 +32,7 @@ pub struct Uiua<'io> {
     mode: RunMode,
     // IO
     current_imports: HashSet<PathBuf>,
-    imports: HashMap<PathBuf, Vec<Rc<Value>>>,
+    imports: HashMap<PathBuf, Scope>,
     pub(crate) io: &'io dyn IoBackend,
 }
 
@@ -183,9 +183,9 @@ impl<'io> Uiua<'io> {
         }
         if !self.imports.contains_key(path) {
             let scope = self.in_scope(|env| env.load_str_path(input, path).map(drop))?;
-            self.push_scope_imports(scope);
+            self.imports.insert(path.into(), scope);
         }
-        self.stack.value.extend(self.imports[path].iter().cloned());
+        self.push_scope_imports(self.imports[path].clone());
         Ok(())
     }
     fn push_scope_imports(&mut self, scope: Scope) {

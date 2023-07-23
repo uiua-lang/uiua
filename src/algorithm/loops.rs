@@ -254,6 +254,33 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
+pub fn cross(env: &mut Uiua) -> UiuaResult {
+    let f = env.pop(1)?;
+    let xs = rc_take(env.pop(2)?);
+    let ys = rc_take(env.pop(3)?);
+    const BREAK_ERROR: &str = "break is not allowed in cross";
+    let mut new_shape = vec![xs.len(), ys.len()];
+    let mut items = Vec::with_capacity(xs.len() * ys.len());
+    let y_rows = ys.into_rows().collect::<Vec<_>>();
+    for x_row in xs.into_rows() {
+        for y_row in y_rows.iter().cloned() {
+            env.push(y_row);
+            env.push(x_row.clone());
+            env.push_ref(f.clone());
+            env.call_error_on_break(BREAK_ERROR)?;
+            let item = rc_take(env.pop("crossed function result")?);
+            item.validate_shape();
+            items.push(item);
+        }
+    }
+    let mut crossed = Value::from_row_values(items, env)?;
+    new_shape.extend_from_slice(&crossed.shape()[1..]);
+    *crossed.shape_mut() = new_shape;
+    crossed.validate_shape();
+    env.push(crossed);
+    Ok(())
+}
+
 pub fn repeat(env: &mut Uiua) -> UiuaResult {
     let f = env.pop(1)?;
     let n = env.pop(2)?.as_num(

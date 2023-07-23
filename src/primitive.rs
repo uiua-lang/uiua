@@ -298,6 +298,9 @@ primitive!(
     /// Grade the rows of an array
     ///
     /// ex: ⍋6_2_7_0_¯1_5
+    ///
+    /// Using the grading as a selector in [select] yields the sorted array.
+    /// ex: ⊏⍋.6_2_7_0_¯1_5
     (1, Grade, MonadicArray, "grade" + '⍋'),
     /// Repeat the index of each array element the element's value times
     ///
@@ -323,7 +326,7 @@ primitive!(
     /// ex: ≇ 1_2_3 [1 2 3]
     ///
     /// ex: ≇ 1_2_3 [1 2]
-    (2, NoMatch, DyadicArray, "notmatch" + '≇'),
+    (2, NotMatch, DyadicArray, "notmatch" + '≇'),
     /// Append two arrays or an array and a scalar
     ///
     /// ex: ⊂ 1 2
@@ -433,22 +436,26 @@ primitive!(
     /// ex: \(⊂∘) 1_2_3_4
     (Scan, MonadicModifier { modifier: 1 }, "scan" + '\\'),
     /// Apply a function to each element of an array
+    /// This is the element-wise version of [rows].
     ///
     /// ex: ∵(⊟.) 1_2_3_4
     /// ex: ∵(∘⇡) 1_2_3_4
     (Each, MonadicModifier { modifier: 1 }, "each" + '∵'),
     /// Pervade a function through two arrays
     /// For operations that are already pervasive, like [add], this is redundant.
+    /// This is the element-wise version of [bridge].
     ///
     /// ex: ∺⊂ 1_2_3 4_5_6
     /// ex: ∺⊂ 1_2 [4_5 6_7]
     (Zip, DyadicModifier { modifier: 1 }, "zip" + '∺'),
     /// Apply a function to each row of an array
+    /// This is the row-wise version of [each].
     ///
     /// ex: /+ [1_2_3 4_5_6 7_8_9]  # Sum columns
     /// ex: ≡/+ [1_2_3 4_5_6 7_8_9]  # Sum rows
     (Rows, MonadicModifier { modifier: 1 }, "rows" + '≡'),
     /// Apply a function to each pair of rows in two arrays
+    /// This is the row-wise version of [zip].
     ///
     /// ex: ≑⊂ 1_2 [4_5 6_7]
     /// ex: ≑⌿+ 1_2 [4_5 6_7]
@@ -459,10 +466,16 @@ primitive!(
     /// ex: ∹⊂ 1_2_3 4_5_6
     (Distribute, DyadicModifier { modifier: 1 }, "distribute" + '∹'),
     /// Apply a function to each combination of elements of two arrays
+    /// This is the element-wise version of [cross].
     ///
     /// ex: ⊞+ 1_2_3 4_5_6
     /// ex: ⊞⊂ 1_2 3_4
     (Table, DyadicModifier { modifier: 1 }, "table" + '⊞'),
+    /// Apply a function to each combination of rows of two arrays
+    /// This is the row-wise version of [table].
+    ///
+    /// ex: ⊠⊂ [1_2 3_4] [5_6 7_8]
+    (Cross, DyadicModifier { modifier: 1 }, "cross" + '⊠'),
     /// Repeat a function a number of times
     ///
     /// ex: ⍥(+2) 5 0
@@ -675,7 +688,7 @@ impl Primitive {
             Primitive::Max => env.dyadic_ref_env(Value::max)?,
             Primitive::Atan => env.dyadic_ref_env(Value::atan2)?,
             Primitive::Match => env.dyadic_ref(|a, b| a == b)?,
-            Primitive::NoMatch => env.dyadic_ref(|a, b| a != b)?,
+            Primitive::NotMatch => env.dyadic_ref(|a, b| a != b)?,
             Primitive::Join => env.dyadic_env(Value::join)?,
             Primitive::Transpose => env.monadic_mut(Value::transpose)?,
             Primitive::InvTranspose => env.monadic_mut(Value::inv_transpose)?,
@@ -716,6 +729,7 @@ impl Primitive {
             Primitive::Bridge => loops::bridge(env)?,
             Primitive::Distribute => loops::distribute(env)?,
             Primitive::Table => loops::table(env)?,
+            Primitive::Cross => loops::cross(env)?,
             Primitive::Scan => loops::scan(env)?,
             Primitive::Repeat => loops::repeat(env)?,
             Primitive::Level => loops::rank(env)?,

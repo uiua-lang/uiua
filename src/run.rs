@@ -23,21 +23,27 @@ pub struct Uiua<'io> {
     // Compilation
     new_functions: Vec<Vec<Instr>>,
     new_dfns: Vec<Vec<u8>>,
-    global_names: Vec<HashMap<Ident, usize>>,
     // Statics
     globals: Vec<Rc<Value>>,
     spans: Vec<Span>,
     // Runtime
-    array_stack: Vec<usize>,
-    dfn_stack: Vec<DfnFrame>,
-    stack: Vec<Rc<Value>>,
-    antistack: Vec<Rc<Value>>,
-    call_stack: Vec<StackFrame>,
+    stack: Stacks,
+    lower_stacks: Vec<Stacks>,
     mode: RunMode,
     // IO
     current_imports: HashSet<PathBuf>,
     imports: HashMap<PathBuf, Vec<Rc<Value>>>,
     pub(crate) io: &'io dyn IoBackend,
+}
+
+#[derive(Default, Clone)]
+struct Stacks {
+    value: Vec<Rc<Value>>,
+    anti: Vec<Rc<Value>>,
+    array: Vec<usize>,
+    dfn: Vec<DfnFrame>,
+    call: Vec<StackFrame>,
+    names: HashMap<Ident, usize>,
 }
 
 #[derive(Clone)]
@@ -79,15 +85,11 @@ impl<'io> Uiua<'io> {
     pub fn with_stdio() -> Self {
         Uiua {
             spans: vec![Span::Builtin],
-            stack: Vec::new(),
-            antistack: Vec::new(),
-            array_stack: Vec::new(),
-            dfn_stack: Vec::new(),
+            stack: Stacks::default(),
+            lower_stacks: Vec::new(),
             globals: Vec::new(),
-            global_names: vec![HashMap::new()],
             new_functions: Vec::new(),
             new_dfns: Vec::new(),
-            call_stack: Vec::new(),
             current_imports: HashSet::new(),
             imports: HashMap::new(),
             mode: RunMode::Normal,
@@ -127,11 +129,11 @@ impl<'io> Uiua<'io> {
     /// While names defined in this context will be removed when the scope ends, values *bound* to
     /// those names will not.
     ///
-    /// All other runtime state, including the stack, will be preserved.
+    /// All other runtime state, including the stack, will also be restored.
     pub fn in_scope<T>(&mut self, f: impl FnOnce(&mut Self) -> T) -> T {
-        self.global_names.push(HashMap::new());
+        self.lower_stacks.push(take(&mut self.stack));
         let res = f(self);
-        self.global_names.pop();
+        self.stack = self.lower_stacks.pop().unwrap();
         res
     }
     fn load_impl(&mut self, input: &str, path: Option<&Path>) -> UiuaResult<&mut Self> {
@@ -184,7 +186,7 @@ impl<'io> Uiua<'io> {
             let module_stack = self.take_stack();
             self.imports.insert(path.into(), module_stack);
         }
-        self.stack.extend(self.imports[path].iter().cloned());
+        self.stack.value.extend(self.imports[path].iter().cloned());
         Ok(())
     }
     fn items(&mut self, items: Vec<Item>, in_test: bool) -> UiuaResult {
@@ -243,14 +245,11 @@ impl<'io> Uiua<'io> {
         } else {
             let instrs = self.compile_words(binding.words)?;
             self.exec_global_instrs(instrs)?;
-            self.stack.pop().unwrap_or_default()
+            self.stack.value.pop().unwrap_or_default()
         };
         let idx = self.globals.len();
         self.globals.push(val);
-        self.global_names
-            .last_mut()
-            .unwrap()
-            .insert(binding.name.value, idx);
+        self.stack.names.insert(binding.name.value, idx);
         Ok(())
     }
     fn compile_words(&mut self, words: Vec<Sp<Word>>) -> UiuaResult<Vec<Instr>> {
@@ -337,12 +336,7 @@ impl<'io> Uiua<'io> {
         Ok(())
     }
     fn ident(&mut self, ident: Ident, span: Span, call: bool) -> UiuaResult {
-        if let Some(idx) = self
-            .global_names
-            .iter()
-            .rev()
-            .find_map(|scope| scope.get(&ident))
-        {
+        if let Some(idx) = self.stack.names.get(&ident) {
             let value = self.globals[*idx].clone();
             let is_function = matches!(&*value, Value::Func(_));
             self.push_instr(Instr::Push(value));
@@ -451,14 +445,14 @@ impl<'io> Uiua<'io> {
         })
     }
     fn exec(&mut self, frame: StackFrame) -> UiuaResult {
-        let ret_height = self.call_stack.len();
-        self.call_stack.push(frame);
-        while self.call_stack.len() > ret_height {
-            let frame = self.call_stack.last().unwrap();
+        let ret_height = self.stack.call.len();
+        self.stack.call.push(frame);
+        while self.stack.call.len() > ret_height {
+            let frame = self.stack.call.last().unwrap();
             let Some(instr) = frame.function.instrs.get(frame.pc) else {
-                if let Some(frame) = self.call_stack.pop() {
+                if let Some(frame) = self.stack.call.pop() {
                     if frame.dfn {
-                        self.dfn_stack.pop();
+                        self.stack.dfn.pop();
                     }
                 }
                 continue;
@@ -467,19 +461,20 @@ impl<'io> Uiua<'io> {
             // println!("  {:?}", instr);
             let res = match instr {
                 Instr::Push(val) => {
-                    self.stack.push(val.clone());
+                    self.stack.value.push(val.clone());
                     Ok(())
                 }
                 Instr::BeginArray => {
-                    self.array_stack.push(self.stack.len());
+                    self.stack.array.push(self.stack.value.len());
                     Ok(())
                 }
                 &Instr::EndArray(span) => (|| {
-                    let start = self.array_stack.pop().unwrap();
-                    if start > self.stack.len() {
+                    let start = self.stack.array.pop().unwrap();
+                    if start > self.stack.value.len() {
                         return Err(self.error("Array removed elements"));
                     }
-                    let values: Vec<_> = self.stack.drain(start..).map(rc_take).rev().collect();
+                    let values: Vec<_> =
+                        self.stack.value.drain(start..).map(rc_take).rev().collect();
                     self.push_span(span, None);
                     let val = Value::from_row_values(values, self)?;
                     self.pop_span();
@@ -494,8 +489,8 @@ impl<'io> Uiua<'io> {
                 })(),
                 &Instr::Call(span) => self.call_with_span(span),
                 Instr::DfnVal(n) => {
-                    let value = self.dfn_stack.last().unwrap().args[*n].clone();
-                    self.stack.push(value);
+                    let value = self.stack.dfn.last().unwrap().args[*n].clone();
+                    self.stack.value.push(value);
                     Ok(())
                 }
                 Instr::If(if_true, if_false) => {
@@ -525,23 +520,23 @@ impl<'io> Uiua<'io> {
             };
             if let Err(mut err) = res {
                 // Trace errors
-                let frames = self.call_stack.split_off(ret_height);
+                let frames = self.stack.call.split_off(ret_height);
                 for frame in frames {
                     err = self.trace_error(err, frame);
                 }
                 return Err(err);
             } else {
                 // Go to next instruction
-                self.call_stack.last_mut().unwrap().pc += 1;
+                self.stack.call.last_mut().unwrap().pc += 1;
             }
         }
         Ok(())
     }
     fn push_span(&mut self, span: usize, prim: Option<Primitive>) {
-        self.call_stack.last_mut().unwrap().spans.push((span, prim));
+        self.stack.call.last_mut().unwrap().spans.push((span, prim));
     }
     fn pop_span(&mut self) {
-        self.call_stack.last_mut().unwrap().spans.pop();
+        self.stack.call.last_mut().unwrap().spans.pop();
     }
     fn call_with_span(&mut self, call_span: usize) -> UiuaResult {
         let value = self.pop("called function")?;
@@ -550,14 +545,19 @@ impl<'io> Uiua<'io> {
                 let mut dfn = false;
                 if let Some(n) = f.dfn_args {
                     let n = n as usize;
-                    if self.stack.len() < n {
+                    if self.stack.value.len() < n {
                         return Err(self.spans[call_span]
                             .clone()
                             .sp(format!("not enough arguments for dfn of {n} values"))
                             .into());
                     }
-                    let args = self.stack.drain(self.stack.len() - n..).rev().collect();
-                    self.dfn_stack.push(DfnFrame {
+                    let args = self
+                        .stack
+                        .value
+                        .drain(self.stack.value.len() - n..)
+                        .rev()
+                        .collect();
+                    self.stack.dfn.push(DfnFrame {
                         function: f.clone(),
                         args,
                     });
@@ -574,8 +574,8 @@ impl<'io> Uiua<'io> {
             }
             Ok(())
         } else {
-            self.stack.pop();
-            self.stack.push(value);
+            self.stack.value.pop();
+            self.stack.value.push(value);
             Ok(())
         }
     }
@@ -586,7 +586,8 @@ impl<'io> Uiua<'io> {
     }
     pub fn recur(&mut self) -> UiuaResult {
         let dfn = self
-            .dfn_stack
+            .stack
+            .dfn
             .last()
             .ok_or_else(|| self.error("Cannot recur outside of dfn"))?;
         self.push(dfn.function.clone());
@@ -613,7 +614,7 @@ impl<'io> Uiua<'io> {
         }
     }
     fn span_index(&self) -> usize {
-        self.call_stack.last().map_or(0, |frame| {
+        self.stack.call.last().map_or(0, |frame| {
             frame
                 .spans
                 .last()
@@ -631,7 +632,7 @@ impl<'io> Uiua<'io> {
     }
     /// Pop a value from the stack
     pub fn pop(&mut self, arg: impl StackArg) -> UiuaResult<Rc<Value>> {
-        self.stack.pop().ok_or_else(|| {
+        self.stack.value.pop().ok_or_else(|| {
             self.error(format!(
                 "Stack was empty when evaluating {}",
                 arg.arg_name()
@@ -640,7 +641,7 @@ impl<'io> Uiua<'io> {
     }
     /// Pop a value from the antistack
     pub fn antipop(&mut self, arg: impl StackArg) -> UiuaResult<Rc<Value>> {
-        self.antistack.pop().ok_or_else(|| {
+        self.stack.anti.pop().ok_or_else(|| {
             self.error(format!(
                 "Antistack was empty when evaluating {}",
                 arg.arg_name()
@@ -655,25 +656,25 @@ impl<'io> Uiua<'io> {
     }
     /// Push a value onto the stack
     pub fn push(&mut self, val: impl Into<Value>) {
-        self.stack.push(Rc::new(val.into()));
+        self.stack.value.push(Rc::new(val.into()));
     }
     pub fn push_ref(&mut self, val: Rc<Value>) {
-        self.stack.push(val);
+        self.stack.value.push(val);
     }
     /// Push a value onto the antistack
     pub fn antipush(&mut self, val: impl Into<Value>) {
-        self.antistack.push(Rc::new(val.into()));
+        self.stack.anti.push(Rc::new(val.into()));
     }
     pub fn antipush_ref(&mut self, val: Rc<Value>) {
-        self.antistack.push(val);
+        self.stack.anti.push(val);
     }
     /// Take the entire stack
     pub fn take_stack(&mut self) -> Vec<Rc<Value>> {
-        take(&mut self.stack)
+        take(&mut self.stack.value)
     }
     /// Clone the entire stack
     pub fn clone_stack(&self) -> Vec<Rc<Value>> {
-        self.stack.clone()
+        self.stack.value.clone()
     }
     pub(crate) fn monadic_ref<V: Into<Value>>(&mut self, f: fn(&Value) -> V) -> UiuaResult {
         let value = self.pop(1)?;
@@ -736,16 +737,16 @@ impl<'io> Uiua<'io> {
         Ok(())
     }
     pub(crate) fn stack_size(&self) -> usize {
-        self.stack.len()
+        self.stack.value.len()
     }
     pub(crate) fn antistack_size(&self) -> usize {
-        self.antistack.len()
+        self.stack.anti.len()
     }
     pub(crate) fn truncate_stack(&mut self, size: usize) {
-        self.stack.truncate(size);
+        self.stack.value.truncate(size);
     }
     pub(crate) fn truncate_antistack(&mut self, size: usize) {
-        self.antistack.truncate(size);
+        self.stack.anti.truncate(size);
     }
 }
 

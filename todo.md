@@ -1,9 +1,15 @@
+- Fix and refine fill behavior
+- Fix typos
 - Rework imports
 - Make a better rand API
+- Simplify dyadic module
+- Web stderr
+- Function array coercion
 - Docs
   - IO primitives
     - Let web backend open "example" file for testing
   - Imports and use
+  - Modules
   - Design
 - Better solution to string formatting
 - Threads

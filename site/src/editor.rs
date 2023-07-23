@@ -8,7 +8,9 @@ use uiua::{
     value_to_wav_bytes, Uiua, UiuaResult,
 };
 use wasm_bindgen::{JsCast, UnwrapThrowExt};
-use web_sys::{Event, HtmlAudioElement, HtmlDivElement, HtmlImageElement, HtmlTextAreaElement};
+use web_sys::{
+    Event, HtmlAudioElement, HtmlDivElement, HtmlImageElement, HtmlTextAreaElement, MouseEvent,
+};
 
 use crate::{backend::WebBackend, prim_class};
 
@@ -213,7 +215,16 @@ pub fn Editor<'a>(
                 .flatten()
                 .unwrap_or_default();
             let title = format!("{}\n{}", p.name().unwrap_or_default(), extra);
-            let onclick = move |_| replace_code(&p.to_string());
+            let onclick = move |event: MouseEvent| {
+                if event.ctrl_key() {
+                    // Redirect to the docs page
+                    _ = window()
+                        .location()
+                        .set_href(&format!("/primitive/{p:?}").to_lowercase());
+                } else {
+                    replace_code(&p.to_string());
+                }
+            };
             let onmouseover = move |_| {
                 if let Some(doc) = p.doc() {
                     set_glyph_doc.set(doc.short.clone());
@@ -317,6 +328,7 @@ pub fn Editor<'a>(
                     </div>
                     <div id={glyph_doc_id.get()} class="glyph-doc" style="display: none">
                         { move || glyph_doc.get() }
+                        <div class="glyph-doc-ctrl-click">"Ctrl+click for more info"</div>
                     </div>
                     <textarea
                         id={code_id.get()}

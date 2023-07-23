@@ -315,6 +315,11 @@ li {
     z-index: 1;
 }
 
+.glyph-doc-ctrl-click {
+    font-size: 0.6em;
+    color: #888;
+}
+
 .code-font {
     font-family: "Code Font";
 }

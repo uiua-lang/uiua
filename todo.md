@@ -1,9 +1,8 @@
-- Ctrl-click glyph buttons
 - Rework imports
 - Make a better rand API
 - Docs
-  - Functions and Dfns
   - IO primitives
+    - Let web backend open "example" file for testing
   - Imports and use
   - Design
 - Better solution to string formatting

@@ -157,7 +157,7 @@ primitive!(
     // Stack ops
     /// Duplicate the top value on the stack
     ///
-    /// ex: . 1 2 3
+    /// ex: [. 1 2 3]
     ///
     /// This can be used to make a monadic left-hook, such as a palindrome checker:
     /// ex: ≅⇌. "friend"
@@ -165,11 +165,11 @@ primitive!(
     (1(2), Dup, Stack, "duplicate" + '.'),
     /// Duplicate the second-to-top value to the top of the stack
     ///
-    /// ex: , 1 2 3
+    /// ex: [, 1 2 3]
     (2(3), Over, Stack, "over" + ','),
     /// Swap the top two values on the stack
     ///
-    /// ex: ~ 1 2 3 4
+    /// ex: [~ 1 2 3 4]
     ///
     /// When combined with [duplicate], this can be used to make a monadic right-hook or monadic fork, such as an average calculator:
     /// ex: ÷≢~/+. 1_8_2_5
@@ -179,12 +179,12 @@ primitive!(
     /// Pop the top value off the stack and push it to the antistack
     ///
     /// This is the inverse of [load].
-    /// ex: ⇞ 1 2 ⇟ 3
+    /// ex: [⇞ 1 2 ⇟ 3 4]
     (1(0){1}, Save, Stack, "save" + '⇟'),
     /// Pop the top value off the antistack and push it to the stack
     ///
     /// This is the inverse of [save].
-    /// ex: ⇞ 1 2 ⇟ 3
+    /// ex: [⇞ 1 2 ⇟ 3 4]
     (0[1](1), Load, Stack, "load" + '⇞'),
     // Pervasive monadic ops
     /// Logical not (equivalent to 1 - x)

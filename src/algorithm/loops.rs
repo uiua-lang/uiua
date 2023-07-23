@@ -32,7 +32,7 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
 }
 
 fn generic_fold(f: Rc<Value>, xs: Value, init: Option<Rc<Value>>, env: &mut Uiua) -> UiuaResult {
-    let mut rows = xs.into_rows();
+    let mut rows = xs.into_rows_rev();
     let mut acc = init
         .or_else(|| rows.next().map(Rc::new))
         .ok_or_else(|| env.error("Cannot reduce empty array"))?;
@@ -80,7 +80,7 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
 
 fn generic_scan(f: Rc<Value>, xs: Value, env: &mut Uiua) -> UiuaResult {
     if xs.row_count() == 0 {
-        env.push(xs.empty_row());
+        env.push(xs.first_dim_zero());
         return Ok(());
     }
     let row_count = xs.row_count();
@@ -315,6 +315,7 @@ impl<T: ArrayValue> Array<T> {
             1 => self
                 .data
                 .iter()
+                .rev()
                 .cloned()
                 .reduce(f)
                 .unwrap_or(identity)

@@ -442,16 +442,25 @@ primitive!(
     // Modifiers
     /// Apply a reducing function to an array
     /// For reducing with an initial value, see [fold].
+    /// Unlike other modifiers, [reduce] and [fold] traverse the array from right to left.
     ///
     /// ex: /+ 1_2_3_4_5
     /// ex: /- 1_2_3_4_5
     /// ex: /(-~) 1_2_3_4_5
     /// ex: /(×+1) 1_2_3_4_5
+    ///
+    /// [reduce] traverses the array backwards so that [reduce][noop] unloads all rows onto the stack with the first row on top.
+    /// ex: /· 1_2_3
+    /// ex: /· [1_2 3_4]
     (Reduce, MonadicModifier { modifier: 1 }, "reduce" + '/'),
     /// Apply a reducing function to an array with an initial value
     /// For reducing without an initial value, see [reduce].
+    /// Unlike other modifiers, [fold] and [reduce] traverse the array from right to left.
     ///
     /// ex: ⌿+ 10 1_2_3_4
+    ///
+    /// [fold] traverses the array backwards so that [join] appends to the front of an accumulator array.
+    /// ex: ⌿⊂ [] 1_2_3_4
     (Fold, MonadicModifier { modifier: 1 }, "fold" + '⌿'),
     /// Reduce, but keep intermediate values
     ///

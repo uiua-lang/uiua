@@ -61,6 +61,14 @@ impl Value {
             Self::Func(array) => Box::new(array.into_rows().map(Value::from)),
         }
     }
+    pub fn into_rows_rev(self) -> Box<dyn Iterator<Item = Self>> {
+        match self {
+            Self::Num(array) => Box::new(array.into_rows_rev().map(Value::from)),
+            Self::Byte(array) => Box::new(array.into_rows_rev().map(Value::from)),
+            Self::Char(array) => Box::new(array.into_rows_rev().map(Value::from)),
+            Self::Func(array) => Box::new(array.into_rows_rev().map(Value::from)),
+        }
+    }
     pub fn into_flat_values(self) -> Box<dyn Iterator<Item = Self>> {
         match self {
             Self::Num(array) => Box::new(array.data.into_iter().map(Value::from)),
@@ -104,12 +112,12 @@ impl Value {
             Array::flat_len,
         )
     }
-    pub fn empty_row(&self) -> Self {
+    pub fn first_dim_zero(&self) -> Self {
         match self {
-            Self::Num(array) => array.empty_row().into(),
-            Self::Byte(array) => array.empty_row().into(),
-            Self::Char(array) => array.empty_row().into(),
-            Self::Func(array) => array.empty_row().into(),
+            Self::Num(array) => array.first_dim_zero().into(),
+            Self::Byte(array) => array.first_dim_zero().into(),
+            Self::Char(array) => array.first_dim_zero().into(),
+            Self::Func(array) => array.first_dim_zero().into(),
         }
     }
     pub fn rank(&self) -> usize {

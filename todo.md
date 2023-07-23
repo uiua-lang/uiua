@@ -1,8 +1,9 @@
 - Rework imports
+- Make a better rand API
 - Docs
   - Functions and Dfns
   - IO primitives
-  - Imports
+  - Imports and use
   - Design
 - Better solution to string formatting
 - Threads

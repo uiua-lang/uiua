@@ -304,6 +304,12 @@ pub struct Row<'a, T> {
     row: usize,
 }
 
+impl<'a, T: ArrayValue> fmt::Debug for Row<'a, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", &**self)
+    }
+}
+
 impl<'a, T> Clone for Row<'a, T> {
     fn clone(&self) -> Self {
         Row {
@@ -330,7 +336,7 @@ impl<'a, T: ArrayValue> Deref for Row<'a, T> {
 
 impl<'a, T: ArrayValue> PartialEq for Row<'a, T> {
     fn eq(&self, other: &Self) -> bool {
-        self.iter().zip(&**other).all(|(a, b)| a.eq(b))
+        self.len() == other.len() && self.iter().zip(&**other).all(|(a, b)| a.eq(b))
     }
 }
 
@@ -348,7 +354,7 @@ impl<'a, T: ArrayValue> Ord for Row<'a, T> {
             .zip(&**other)
             .map(|(a, b)| a.cmp(b))
             .find(|o| o != &Ordering::Equal)
-            .unwrap_or_else(|| self.array.data.len().cmp(&other.array.data.len()))
+            .unwrap_or_else(|| self.len().cmp(&other.len()))
     }
 }
 

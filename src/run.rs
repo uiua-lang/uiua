@@ -1,14 +1,14 @@
 use std::{
     collections::{HashMap, HashSet},
     fs,
-    mem::take,
+    mem::{replace, take},
     path::{Path, PathBuf},
     rc::Rc,
 };
 
 use crate::{
     ast::*,
-    function::{Function, FunctionId, Instr},
+    function::*,
     lex::{Sp, Span},
     parse::parse,
     primitive::Primitive,
@@ -27,8 +27,8 @@ pub struct Uiua<'io> {
     globals: Vec<Rc<Value>>,
     spans: Vec<Span>,
     // Runtime
-    stack: Stacks,
-    lower_stacks: Vec<Stacks>,
+    stack: Scope,
+    lower_stacks: Vec<Scope>,
     mode: RunMode,
     // IO
     current_imports: HashSet<PathBuf>,
@@ -37,7 +37,8 @@ pub struct Uiua<'io> {
 }
 
 #[derive(Default, Clone)]
-struct Stacks {
+#[must_use]
+pub struct Scope {
     value: Vec<Rc<Value>>,
     anti: Vec<Rc<Value>>,
     array: Vec<usize>,
@@ -85,7 +86,7 @@ impl<'io> Uiua<'io> {
     pub fn with_stdio() -> Self {
         Uiua {
             spans: vec![Span::Builtin],
-            stack: Stacks::default(),
+            stack: Scope::default(),
             lower_stacks: Vec::new(),
             globals: Vec::new(),
             new_functions: Vec::new(),
@@ -130,11 +131,10 @@ impl<'io> Uiua<'io> {
     /// those names will not.
     ///
     /// All other runtime state, including the stack, will also be restored.
-    pub fn in_scope<T>(&mut self, f: impl FnOnce(&mut Self) -> T) -> T {
+    pub fn in_scope<T>(&mut self, f: impl FnOnce(&mut Self) -> UiuaResult<T>) -> UiuaResult<Scope> {
         self.lower_stacks.push(take(&mut self.stack));
-        let res = f(self);
-        self.stack = self.lower_stacks.pop().unwrap();
-        res
+        f(self)?;
+        Ok(replace(&mut self.stack, self.lower_stacks.pop().unwrap()))
     }
     fn load_impl(&mut self, input: &str, path: Option<&Path>) -> UiuaResult<&mut Self> {
         let (items, errors) = parse(input, path);
@@ -182,12 +182,25 @@ impl<'io> Uiua<'io> {
             )));
         }
         if !self.imports.contains_key(path) {
-            self.in_scope(|env| env.load_str_path(input, path).map(drop))?;
-            let module_stack = self.take_stack();
-            self.imports.insert(path.into(), module_stack);
+            let scope = self.in_scope(|env| env.load_str_path(input, path).map(drop))?;
+            self.push_scope_imports(scope);
         }
         self.stack.value.extend(self.imports[path].iter().cloned());
         Ok(())
+    }
+    fn push_scope_imports(&mut self, scope: Scope) {
+        let mut functions = Vec::new();
+        for (name, i) in scope.names {
+            match &*self.globals[i] {
+                Value::Func(f) if f.shape.is_empty() => functions.push(f.data[0].clone()),
+                value => functions.push(Rc::new(Function {
+                    id: FunctionId::Named(name),
+                    instrs: vec![Instr::Push(value.clone().into())],
+                    dfn_args: None,
+                })),
+            }
+        }
+        self.push(functions);
     }
     fn items(&mut self, items: Vec<Item>, in_test: bool) -> UiuaResult {
         for item in items {
@@ -202,7 +215,10 @@ impl<'io> Uiua<'io> {
                 .any(|w| matches!(w.value, Word::Primitive(Primitive::Io(IoOp::Import))))
         }
         match item {
-            Item::Scoped { items, test } => self.in_scope(|env| env.items(items, test))?,
+            Item::Scoped { items, test } => {
+                let scope = self.in_scope(|env| env.items(items, test))?;
+                self.push_scope_imports(scope);
+            }
             Item::Words(words, _) => {
                 let can_run = match self.mode {
                     RunMode::Normal => !in_test,
@@ -540,8 +556,9 @@ impl<'io> Uiua<'io> {
     }
     fn call_with_span(&mut self, call_span: usize) -> UiuaResult {
         let value = self.pop("called function")?;
-        if let Value::Func(fs) = &*value {
-            for f in &fs.data {
+        match rc_take(value) {
+            Value::Func(f) if f.shape.is_empty() => {
+                let f = f.into_scalar().unwrap();
                 let mut dfn = false;
                 if let Some(n) = f.dfn_args {
                     let n = n as usize;
@@ -564,19 +581,19 @@ impl<'io> Uiua<'io> {
                     dfn = true;
                 }
                 let new_frame = StackFrame {
-                    function: f.clone(),
+                    function: f,
                     call_span,
                     spans: Vec::new(),
                     pc: 0,
                     dfn,
                 };
-                self.exec(new_frame)?;
+                self.exec(new_frame)
             }
-            Ok(())
-        } else {
-            self.stack.value.pop();
-            self.stack.value.push(value);
-            Ok(())
+            value => {
+                self.stack.value.pop();
+                self.push(value);
+                Ok(())
+            }
         }
     }
     /// Call the top of the stack as a function

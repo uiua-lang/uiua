@@ -113,6 +113,13 @@ impl<T: ArrayValue> Array<T> {
     pub fn rank(&self) -> usize {
         self.shape.len()
     }
+    pub fn into_scalar(self) -> Result<T, Self> {
+        if self.shape.is_empty() {
+            Ok(self.data.into_iter().next().unwrap())
+        } else {
+            Err(self)
+        }
+    }
     pub fn rows(
         &self,
     ) -> impl ExactSizeIterator<Item = Row<T>> + DoubleEndedIterator<Item = Row<T>> {

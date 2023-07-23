@@ -267,21 +267,19 @@ impl<'io> Uiua<'io> {
     fn push_instr(&mut self, instr: Instr) {
         let instrs = self.new_functions.last_mut().unwrap();
         match (instrs.last_mut(), instr) {
-            (Some(Instr::Primitive(last, _)), Instr::Primitive(new, new_span)) => {
-                match (&last, new) {
-                    (Primitive::Reverse, Primitive::First) => *last = Primitive::Last,
-                    (Primitive::Reverse, Primitive::Last) => *last = Primitive::First,
-                    (a, b)
-                        if a.args() == a.outputs()
-                            && b.args() == b.outputs()
-                            && a.inverse() == Some(b) =>
-                    {
-                        instrs.pop();
-                    }
-                    _ => instrs.push(Instr::Primitive(new, new_span)),
+            (Some(Instr::Prim(last, _)), Instr::Prim(new, new_span)) => match (&last, new) {
+                (Primitive::Reverse, Primitive::First) => *last = Primitive::Last,
+                (Primitive::Reverse, Primitive::Last) => *last = Primitive::First,
+                (a, b)
+                    if a.args() == a.outputs()
+                        && b.args() == b.outputs()
+                        && a.inverse() == Some(b) =>
+                {
+                    instrs.pop();
                 }
-            }
-            (_, Instr::Primitive(Primitive::Noop, _)) => {}
+                _ => instrs.push(Instr::Prim(new, new_span)),
+            },
+            (_, Instr::Prim(Primitive::Noop, _)) => {}
             (_, instr) => instrs.push(instr),
         }
     }
@@ -407,11 +405,11 @@ impl<'io> Uiua<'io> {
     fn primitive(&mut self, prim: Primitive, span: Span, call: bool) {
         let span = self.add_span(span);
         if call {
-            self.push_instr(Instr::Primitive(prim, span));
+            self.push_instr(Instr::Prim(prim, span));
         } else {
             self.push_instr(Instr::Push(Rc::new(Value::from(Function {
                 id: FunctionId::Primitive(prim),
-                instrs: vec![Instr::Primitive(prim, span)],
+                instrs: vec![Instr::Prim(prim, span)],
                 dfn_args: None,
             }))))
         }
@@ -464,7 +462,7 @@ impl<'io> Uiua<'io> {
                     self.stack.push(val.into());
                     Ok(())
                 })(),
-                &Instr::Primitive(prim, span) => (|| {
+                &Instr::Prim(prim, span) => (|| {
                     self.push_span(span, Some(prim));
                     prim.run(self)?;
                     self.pop_span();

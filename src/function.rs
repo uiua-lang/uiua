@@ -7,7 +7,7 @@ pub enum Instr {
     Push(Rc<Value>),
     BeginArray,
     EndArray(usize),
-    Primitive(Primitive, usize),
+    Prim(Primitive, usize),
     Call(usize),
     DfnVal(usize),
 }
@@ -18,7 +18,7 @@ impl fmt::Display for Instr {
             Instr::Push(val) => write!(f, "{val}"),
             Instr::BeginArray => write!(f, "]"),
             Instr::EndArray(_) => write!(f, "["),
-            Instr::Primitive(prim, _) => write!(f, "{prim}"),
+            Instr::Prim(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => write!(f, ":"),
             Instr::DfnVal(n) => write!(f, "{}", (*n as u8 + b'a') as char),
         }
@@ -36,7 +36,7 @@ impl From<Primitive> for Function {
     fn from(prim: Primitive) -> Self {
         Self {
             id: FunctionId::Primitive(prim),
-            instrs: vec![Instr::Primitive(prim, 0)],
+            instrs: vec![Instr::Prim(prim, 0)],
             dfn_args: None,
         }
     }
@@ -119,48 +119,40 @@ fn invert_primitive(prim: Primitive, span: usize) -> Option<Vec<Instr>> {
     Some(match prim {
         Primitive::Sqrt => vec![
             Instr::Push(Rc::new(2.0.into())),
-            Instr::Primitive(Primitive::Pow, span),
+            Instr::Prim(Primitive::Pow, span),
         ],
-        prim => vec![Instr::Primitive(prim.inverse()?, span)],
+        prim => vec![Instr::Prim(prim.inverse()?, span)],
     })
 }
 
 fn invert_instr_fragment(instrs: &[Instr]) -> Option<Vec<Instr>> {
+    use Instr::*;
+    use Primitive::*;
     Some(match instrs {
-        [Instr::Primitive(prim, span)] => invert_primitive(*prim, *span)?,
-        [Instr::Push(val), Instr::Primitive(Primitive::Rotate, span)] => vec![
-            Instr::Push(val.clone()),
-            Instr::Primitive(Primitive::Neg, *span),
-            Instr::Primitive(Primitive::Rotate, *span),
-        ],
-        [Instr::Push(val), Instr::Primitive(Primitive::Neg, _), Instr::Primitive(Primitive::Rotate, span)] =>
-        {
-            vec![
-                Instr::Push(val.clone()),
-                Instr::Primitive(Primitive::Rotate, *span),
-            ]
+        [Prim(prim, span)] => invert_primitive(*prim, *span)?,
+        [Push(val), Prim(Rotate, span)] => {
+            vec![Push(val.clone()), Prim(Neg, *span), Prim(Rotate, *span)]
         }
-        [Instr::Push(val), Instr::Primitive(Primitive::Add, span)] => vec![
-            Instr::Push(val.clone()),
-            Instr::Primitive(Primitive::Sub, *span),
-        ],
-        [Instr::Push(val), Instr::Primitive(Primitive::Sub, span)] => vec![
-            Instr::Push(val.clone()),
-            Instr::Primitive(Primitive::Add, *span),
-        ],
-        [Instr::Push(val), Instr::Primitive(Primitive::Mul, span)] => vec![
-            Instr::Push(val.clone()),
-            Instr::Primitive(Primitive::Div, *span),
-        ],
-        [Instr::Push(val), Instr::Primitive(Primitive::Div, span)] => vec![
-            Instr::Push(val.clone()),
-            Instr::Primitive(Primitive::Mul, *span),
-        ],
-        [Instr::Push(val), Instr::Primitive(Primitive::Pow, span)] => vec![
-            Instr::Push(Rc::new(1.into())),
-            Instr::Push(val.clone()),
-            Instr::Primitive(Primitive::Div, *span),
-            Instr::Primitive(Primitive::Pow, *span),
+        [Push(val), Prim(Neg, _), Prim(Rotate, span)] => {
+            vec![Push(val.clone()), Prim(Rotate, *span)]
+        }
+        [Push(val), Prim(Add, span)] => {
+            vec![Push(val.clone()), Prim(Sub, *span)]
+        }
+        [Push(val), Prim(Sub, span)] => {
+            vec![Push(val.clone()), Prim(Add, *span)]
+        }
+        [Push(val), Prim(Mul, span)] => {
+            vec![Push(val.clone()), Prim(Div, *span)]
+        }
+        [Push(val), Prim(Div, span)] => {
+            vec![Push(val.clone()), Prim(Mul, *span)]
+        }
+        [Push(val), Prim(Pow, span)] => vec![
+            Push(Rc::new(1.into())),
+            Push(val.clone()),
+            Prim(Div, *span),
+            Prim(Pow, *span),
         ],
         _ => return None,
     })

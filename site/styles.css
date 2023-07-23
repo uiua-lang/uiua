@@ -39,7 +39,7 @@ tr:nth-child(even) {
     background-color: #0001;
 }
 
-table {
+.bordered-table {
     border: 0.2em solid #0005;
     border-radius: 0.5em;
 }
@@ -390,4 +390,14 @@ li {
     .tutorial-nav>* {
         background-color: #fff8;
     }
+}
+
+.primitive-list {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+}
+
+.primitive-list>* {
+    margin-bottom: 0.5em;
 }

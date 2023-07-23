@@ -7,6 +7,7 @@ use std::{
     sync::{Mutex, OnceLock},
 };
 
+use enum_iterator::Sequence;
 use hound::{SampleFormat, WavSpec, WavWriter};
 use image::{DynamicImage, ImageOutputFormat};
 use rand::prelude::*;
@@ -18,7 +19,7 @@ macro_rules! io_op {
         $args:literal$(($outputs:expr))?,
         $variant:ident, $name:literal
     )),* $(,)?) => {
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
         pub enum IoOp {
             $($variant),*
         }

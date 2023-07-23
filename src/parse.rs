@@ -257,8 +257,7 @@ impl Parser {
         Some(span.sp(Word::Strand(items)))
     }
     fn try_modified(&mut self) -> Option<Sp<Word>> {
-        let Some((modifier, margs)) = Primitive::ALL
-            .into_iter()
+        let Some((modifier, margs)) = Primitive::all()
             .filter_map(|prim| prim.modifier_args().map(|margs| (prim, margs)))
             .find_map(|(prim, margs)| {
                 self.try_exact(prim)
@@ -316,7 +315,7 @@ impl Parser {
         })
     }
     fn try_prim(&mut self) -> Option<Sp<Primitive>> {
-        for prim in Primitive::ALL {
+        for prim in Primitive::all() {
             let op_span = self
                 .try_exact(prim)
                 .or_else(|| prim.ascii().and_then(|simple| self.try_exact(simple)));

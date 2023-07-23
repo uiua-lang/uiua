@@ -1,11 +1,11 @@
 mod primitive;
 
-use std::{fmt::Display, ops::RangeBounds};
+use std::{fmt::Display, iter::once};
 
 use enum_iterator::{all, Sequence};
 use leptos::*;
 use leptos_router::*;
-use uiua::primitive::Primitive;
+use uiua::primitive::{PrimClass, Primitive};
 
 use crate::{code::*, editor::*};
 
@@ -13,17 +13,53 @@ pub use primitive::*;
 
 #[component]
 pub fn DocsHome(cx: Scope) -> impl IntoView {
-    let range_a = ..Primitive::Not;
-    let range_b = Primitive::Not..Primitive::Match;
-    let range_c = Primitive::Match..Primitive::Reduce;
-    let range_d = Primitive::Reduce..Primitive::Throw;
-    let range_e = Primitive::Throw..;
-    fn primitives<R: RangeBounds<Primitive>>(cx: Scope, range: R) -> impl IntoView {
-        Primitive::ALL
-            .into_iter()
-            .filter(|p| range.contains(p) && p.doc().is_some_and(|doc| !doc.examples.is_empty()))
-            .map(|p| view! { cx, <li><PrimCode prim=p/></li> })
-            .collect::<Vec<_>>()
+    let primitives: Vec<_> = PrimClass::all()
+        .map(|class| {
+            let of_class: Vec<_> = Primitive::all()
+                .filter(|p| p.class() == class && p.name().is_some())
+                .map(|p| {
+                    view! { cx, <PrimCode prim=p/> }
+                })
+                .collect();
+            let (header, description) = match class {
+                PrimClass::Stack => ("Stack", "Modify the stack"),
+                PrimClass::MonadicPervasive => {
+                    ("Monadic Pervasive", "Operate on every item in an array")
+                }
+                PrimClass::DyadicPervasive => (
+                    "Dyadic Pervasive",
+                    "Operate on every pair of items in two arrays",
+                ),
+                PrimClass::MonadicArray => ("Monadic Array", "Operate on a single array"),
+                PrimClass::DyadicArray => ("Dyadic Array", "Operate on two arrays"),
+                PrimClass::MonadicModifier => (
+                    "Monadic Modifiers",
+                    "Apply a function in some way to an array",
+                ),
+                PrimClass::DyadicModifier => (
+                    "Dyadic Modifiers",
+                    "Apply a function in some way to two arrays",
+                ),
+                PrimClass::OtherModifier => ("Other Modifiers", ""),
+                PrimClass::Control => ("Control", "Control the flow of execution"),
+                PrimClass::Misc => ("Miscellaneous", ""),
+                PrimClass::Constant => ("Constants", "Push a constant value onto the stack"),
+                PrimClass::Io => ("I/O", "Do input and output"),
+            };
+            view! { cx,
+                <td style="vertical-align: top;"><div>
+                    <h3>{ header }</h3>
+                    <p>{ description }</p>
+                    <div class="primitive-list">{ of_class }</div>
+                </div></td>
+            }
+        })
+        .collect();
+
+    let mut rows: Vec<_> = Vec::new();
+    let mut class_iter = primitives.into_iter();
+    while let Some(first) = class_iter.next() {
+        rows.push(view!(cx, <tr>{once(first).chain(class_iter.next()).collect::<Vec<_>>()}</tr>));
     }
 
     view! { cx,
@@ -36,13 +72,9 @@ pub fn DocsHome(cx: Scope) -> impl IntoView {
                 .collect::<Vec<_>>()
             }
         </ul>
-        <h2>"Primitives"</h2>
-        <div style="display: flex;">
-            <div><ul>{ primitives(cx, range_a) }{ primitives(cx, range_e) }</ul></div>
-            <div><ul>{ primitives(cx, range_b) }</ul></div>
-            <div><ul>{ primitives(cx, range_c) }</ul></div>
-            <div><ul>{ primitives(cx, range_d) }</ul></div>
-        </div>
+        <br/>
+        <h2>"Functions"</h2>
+        <table>{ rows }</table>
     }
 }
 
@@ -158,8 +190,7 @@ fn TutorialNav(cx: Scope, page: TutorialPage) -> impl IntoView {
 
 #[component]
 fn TutorialBasic(cx: Scope) -> impl IntoView {
-    let primitive_table: Vec<_> = Primitive::ALL
-        .into_iter()
+    let primitive_table: Vec<_> = Primitive::all()
         .filter_map(|p| {
             if let (Some(name), Some(ascii), Some(_)) = (p.name(), p.ascii(), p.unicode()) {
                 Some(view! { cx,
@@ -262,7 +293,7 @@ fn TutorialMath(cx: Scope) -> impl IntoView {
             <h2>"Math and Comparison"</h2>
             <p>"Uiua supports all the basic math operations as well as comparison, min/max, and rounding:"</p>
             <div style="display: flex; justify-content: space-evenly;">
-                <table>
+                <table class="bordered-table">
                     <tr>
                         <th>"Name"</th>
                         <th>"ASCII"</th>
@@ -271,7 +302,7 @@ fn TutorialMath(cx: Scope) -> impl IntoView {
                     </tr>
                     {math_table}
                 </table>
-                <table>
+                <table class="bordered-table">
                     <tr>
                         <th>"Name"</th>
                         <th>"ASCII"</th>

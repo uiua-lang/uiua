@@ -200,8 +200,7 @@ pub fn Editor<'a>(
     let onmouseleave = move |_| {
         _ = glyph_doc_element().style().set_property("display", "none");
     };
-    let mut glyph_buttons: Vec<_> = Primitive::ALL
-        .iter()
+    let mut glyph_buttons: Vec<_> = Primitive::all()
         .filter_map(|p| {
             let text = p
                 .unicode()
@@ -221,7 +220,7 @@ pub fn Editor<'a>(
                     _ = glyph_doc_element().style().remove_property("display");
                 }
             };
-            let class = format!("glyph-button glyph-title {}", prim_class(*p));
+            let class = format!("glyph-button glyph-title {}", prim_class(p));
             Some(view! { cx,
                 <button
                     class=class

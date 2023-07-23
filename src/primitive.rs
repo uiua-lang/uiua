@@ -487,7 +487,7 @@ primitive!(
     (Bridge, DyadicModifier { modifier: 1 }, "bridge" + '≑'),
     /// Apply a function to a fixed value and each row of an array
     ///
-    /// ex: ∹⊂ 2_3_4 1
+    /// ex: ∹⊂ 1 2_3_4
     /// ex: ∹⊂ 1_2_3 4_5_6
     (Distribute, DyadicModifier { modifier: 1 }, "distribute" + '∹'),
     /// Apply a function to each combination of elements of two arrays

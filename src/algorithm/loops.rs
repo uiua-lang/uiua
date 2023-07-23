@@ -211,13 +211,13 @@ pub fn bridge(env: &mut Uiua) -> UiuaResult {
 
 pub fn distribute(env: &mut Uiua) -> UiuaResult {
     let f = env.pop(1)?;
-    let xs = rc_take(env.pop(2)?);
-    let y = rc_take(env.pop(3)?);
+    let x = rc_take(env.pop(2)?);
+    let ys = rc_take(env.pop(3)?);
     const BREAK_ERROR: &str = "break is not allowed in distribute";
-    let mut new_rows = Vec::with_capacity(xs.row_count());
-    for x in xs.into_rows() {
-        env.push(y.clone());
-        env.push(x);
+    let mut new_rows = Vec::with_capacity(ys.row_count());
+    for y in ys.into_rows() {
+        env.push(y);
+        env.push(x.clone());
         env.push_ref(f.clone());
         env.call_error_on_break(BREAK_ERROR)?;
         new_rows.push(rc_take(env.pop("distribute's function result")?));

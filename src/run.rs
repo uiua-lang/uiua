@@ -36,7 +36,7 @@ pub struct Uiua<'io> {
     pub(crate) io: &'io dyn IoBackend,
 }
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 #[must_use]
 pub struct Scope {
     value: Vec<Rc<Value>>,
@@ -44,23 +44,6 @@ pub struct Scope {
     dfn: Vec<DfnFrame>,
     call: Vec<StackFrame>,
     names: HashMap<Ident, usize>,
-}
-
-impl Default for Scope {
-    fn default() -> Self {
-        Self {
-            value: Vec::new(),
-            array: Vec::new(),
-            dfn: Vec::new(),
-            call: Vec::new(),
-            names: Primitive::all()
-                .filter(|p| p.format_name().is_none())
-                .filter_map(|p| p.name())
-                .enumerate()
-                .map(|(i, name)| (name.into(), i))
-                .collect(),
-        }
-    }
 }
 
 #[derive(Clone)]
@@ -104,10 +87,7 @@ impl<'io> Uiua<'io> {
             spans: vec![Span::Builtin],
             stack: Scope::default(),
             lower_stacks: Vec::new(),
-            globals: Primitive::all()
-                .filter(|p| p.format_name().is_none() && p.name().is_some())
-                .map(|p| Rc::new(p.into()))
-                .collect(),
+            globals: Vec::new(),
             new_functions: Vec::new(),
             new_dfns: Vec::new(),
             current_imports: HashSet::new(),
@@ -383,6 +363,10 @@ impl<'io> Uiua<'io> {
             for (prim, _) in prims.into_iter().rev() {
                 self.primitive(prim, span.clone(), call);
             }
+        } else if let Some(prim) =
+            Primitive::all().find(|p| p.name().is_some_and(|name| ident == name))
+        {
+            self.primitive(prim, span.clone(), call);
         } else {
             if let Some(dfn) = self.new_dfns.last_mut() {
                 if ident.as_str().len() == 1 {

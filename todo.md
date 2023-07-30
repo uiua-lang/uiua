@@ -1,27 +1,20 @@
 - Put name-only builtins in scope instead of parsing
 - Fix and refine fill behavior
-- Fix typos
+- Function array coercion
+- Revert module exports to be explicit
 - Make a better rand API
 - Simplify dyadic module
-- Function array coercion
 - Simplify editor examples
+- Benchmarking
 - Docs
   - IO primitives
     - Let web backend open "example" file for testing
   - Imports and use
   - Modules
   - Design
-- Better solution to string formatting
+- Fix typos
 - Threads
 - Make grid formatting less vertical
-- More array functions
-  - Progressive index of
-  - Nudge
-  - Amend
-- Optimized functions
-  - Reduces:
-    - Join all
-  - Make group and partition allocate less
 - Multimedia
   - Sound input
   - Webcam input?

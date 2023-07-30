@@ -1,10 +1,10 @@
-- Fix and refine fill behavior
 - Function array coercion
 - Revert module exports to be explicit
 - Make a better rand API
 - Simplify dyadic module
 - Simplify editor examples
 - Benchmarking
+- Fix couple filling
 - Docs
   - IO primitives
     - Let web backend open "example" file for testing

@@ -273,13 +273,6 @@ primitive!(
     (1, First, MonadicArray, "first" + '⊢'),
     /// The last element of an array
     (1, Last, MonadicArray),
-    /// Allow an array to be combined with arrays of incompatible shapes
-    /// This sets the array's fill flag.
-    ///
-    /// Character arrays have the fill flag set by default.
-    ///
-    /// Operations like [couple] that would normally fail with mismatched shapes will instead fill the array with the fill value.
-    (1, Fill, MonadicArray, "fill" + '∘'),
     /// Remove fill elements from the end of an array
     (1, Truncate, MonadicArray, "truncate" + '⍛'),
     /// Reverse the rows of an array
@@ -769,7 +762,6 @@ impl Primitive {
             Primitive::Last => env.monadic_env(Value::last)?,
             Primitive::Len => env.monadic_ref(Value::len)?,
             Primitive::Rank => env.monadic_ref(Value::rank)?,
-            Primitive::Fill => env.monadic_mut(|v| *v.fill_mut() = true)?,
             Primitive::Truncate => env.monadic_mut(Value::truncate)?,
             Primitive::Fold => loops::fold(env)?,
             Primitive::Reduce => loops::reduce(env)?,

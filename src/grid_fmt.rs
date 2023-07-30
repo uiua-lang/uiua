@@ -155,9 +155,6 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 // Add brackets to vectors
                 if !stringy {
                     grid[0].insert(0, '[');
-                    if self.fill {
-                        grid[0].insert(1, '∘');
-                    }
                     grid[0].push(']');
                 }
             } else {
@@ -172,9 +169,6 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 );
                 grid[0][0] = '┌';
                 grid[0][1] = '─';
-                if self.fill {
-                    grid[0][2] = '∘';
-                }
                 for i in 0..self.rank() {
                     grid[i + 1][0] = '·';
                 }
@@ -198,9 +192,6 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
 
         if just_dims {
             let mut s = String::from('[');
-            if self.fill {
-                s.push('∘');
-            }
             for (i, d) in self.shape.iter().enumerate() {
                 if i > 0 {
                     s.push_str(" × ");

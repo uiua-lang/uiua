@@ -143,14 +143,6 @@ impl Value {
             Array::validate_shape,
         )
     }
-    pub fn fill_mut(&mut self) -> &mut bool {
-        self.generic_mut(
-            |arr| &mut arr.fill,
-            |arr| &mut arr.fill,
-            |arr| &mut arr.fill,
-            |arr| &mut arr.fill,
-        )
-    }
     pub fn truncate(&mut self) {
         self.generic_mut(
             Array::truncate,

@@ -109,7 +109,6 @@ impl TutorialPage {
                 <PrimCode prim=Len/>
                 <PrimCode prim=Rank/>
                 <PrimCode prim=Shape/>
-                <PrimCode prim=Fill/>
                 ")")
             .into_view(cx),
             _ => view!(cx, {}).into_view(cx),
@@ -365,18 +364,13 @@ fn TutorialArrays(cx: Scope) -> impl IntoView {
             <p>"When doing a pervasive operation on two arrays, their shape "<i>"prefixes"</i>" must match."</p>
             <Editor examples={&["+[1 2] [3 4 5]", "△10_20\n△[3_4_5 6_7_8]\n+10_20 [3_4_5 6_7_8]"]}/>
             <br/>
-            <h2><PrimCode prim=Fill/>" and the Flat Array Model"</h2>
+            <h2>"The Flat Array Model"</h2>
             <hr/>
             <p>"Most modern array languages allow arrays to contain arrays. The simplest model for this is the "<a href="https://aplwiki.com/wiki/Box">"Boxed Array Model"</a>" used in J, where an array may be an array of \"boxes\", which can contain any value but which must be boxed and unboxed. APL uses the "<a href="https://aplwiki.com/wiki/Array_model#Nested_array_theory">"Nested Array Model"</a>", making nested arrays a little easier to access. BQN uses the "<a href="https://mlochbaum.github.io/BQN/doc/based.html">"Based Array Model"</a>"."</p>
             <p>"Uiua does not use any of these. It sticks to the Flat Array Model of the original APL. In Uiua, "<b>"you cannot nest arrays inside other arrays"</b>"."</p>
             <p>"This may seem like a regression, but this model was picked for two reasons. For one, it is easier to make array algorithms fast when you only have to check their type once. More importantly than the implementation, however, is that the Flat Array Model makes array primitives easier to reason about. In Uiua, you never have to wonder whether a function like "<PrimCode prim=Windows/>" or "<PrimCode prim=Partition/>" returns an array or an array of arrays. The answer is always the same."</p>
             <p>"If you have worked with other array languages, you may be thinking, \"Sure, the Flat Array Model is simple, but it is very limited. How do you represent arrays with subarrays of different lengths?\" The answer is "<b>"fill values"</b>"."</p>
-            <p>"Many operations that work on multiple arrays will return an error if the arrays have mismatched lengths or shapes. The most basic is stack notation, like in the error in the example above."</p>
-            <p>"The "<PrimCode prim=Fill/>" function sets an array to use "<i>"fill values"</i>" to make array shapes match so that operations like this succeed:"</p>
-            <Editor examples={&["[∘[1 2] [3 4 5]]", "[[1 2 3] ∘[4] ∘[5 6]]"]}/>
-            <p>"Only one of the arrays needs to be fill-marked for this to work. The fill flag does not carry to result arrays."</p>
-            <p>"Every array type is not fill by default, except for character arrays:"</p>
-            <Editor examples={&["[\"Hello\" \"my\" \"friend\"]"]} help={&["Notice the lack of the fill function"]}/>
+            <p>"Many operations that work on multiple arrays will insert fill values when shapes do not match. The most basic is stack notation, like in the error in the example above."</p>
         </div>
     }
 }

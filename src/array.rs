@@ -13,7 +13,6 @@ use crate::{function::Function, primitive::Primitive, Byte, Uiua, UiuaResult};
 pub struct Array<T> {
     pub(crate) shape: Vec<usize>,
     pub(crate) data: Vec<T>,
-    pub(crate) fill: bool,
 }
 
 impl<T: ArrayValue> Default for Array<T> {
@@ -21,7 +20,6 @@ impl<T: ArrayValue> Default for Array<T> {
         Self {
             shape: vec![0],
             data: Vec::new(),
-            fill: T::DEFAULT_FILL,
         }
     }
 }
@@ -79,11 +77,7 @@ impl<T: ArrayValue> Array<T> {
     #[track_caller]
     pub fn new(shape: Vec<usize>, data: Vec<T>) -> Self {
         validate_shape(&shape, &data);
-        Self {
-            shape,
-            data,
-            fill: T::DEFAULT_FILL,
-        }
+        Self { shape, data }
     }
     #[track_caller]
     #[inline(always)]
@@ -133,9 +127,6 @@ impl<T: ArrayValue> Array<T> {
         let row_len = self.row_len();
         &self.data[row * row_len..(row + 1) * row_len]
     }
-    pub fn reset_fill(&mut self) {
-        self.fill = T::DEFAULT_FILL;
-    }
     pub fn convert<U>(self) -> Array<U>
     where
         T: Into<U>,
@@ -143,7 +134,6 @@ impl<T: ArrayValue> Array<T> {
         Array {
             shape: self.shape,
             data: self.data.into_iter().map(Into::into).collect(),
-            fill: self.fill,
         }
     }
     pub fn into_rows(self) -> impl Iterator<Item = Self> {
@@ -198,7 +188,7 @@ impl<T: ArrayValue> Array<T> {
     }
     /// Remove fill elements from the end of the array
     pub fn truncate(&mut self) {
-        if !self.fill || self.rank() == 0 {
+        if self.rank() == 0 {
             return;
         }
         let mut new_len = self.row_count();
@@ -213,21 +203,16 @@ impl<T: ArrayValue> Array<T> {
         self.shape[0] = new_len;
     }
     #[track_caller]
-    pub fn from_row_arrays(
-        values: impl IntoIterator<Item = Self>,
-        fill: bool,
-        env: &Uiua,
-    ) -> UiuaResult<Self> {
+    pub fn from_row_arrays(values: impl IntoIterator<Item = Self>, env: &Uiua) -> UiuaResult<Self> {
         let mut row_values = values.into_iter();
         let Some(mut value) = row_values.next() else {
             return Ok(Self::default());
         };
         let mut count = 1;
-        for mut row in row_values {
-            row.fill |= fill;
+        for row in row_values {
             count += 1;
             value = if count == 2 {
-                value.couple(row, env)?
+                value.couple(row)?
             } else {
                 value.join_impl(row, false, env)?
             };
@@ -392,7 +377,6 @@ impl<'a, T: ArrayValue> Arrayish for Row<'a, T> {
 
 pub trait ArrayValue: Clone + Debug + Display {
     const NAME: &'static str;
-    const DEFAULT_FILL: bool = false;
     fn cmp(&self, other: &Self) -> Ordering;
     fn fill_value() -> Self;
     fn eq(&self, other: &Self) -> bool {
@@ -438,7 +422,6 @@ impl ArrayValue for Byte {
 
 impl ArrayValue for char {
     const NAME: &'static str = "character";
-    const DEFAULT_FILL: bool = true;
     fn cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(self, other)
     }

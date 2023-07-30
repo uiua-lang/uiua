@@ -123,7 +123,6 @@ impl<T: ArrayValue> Array<T> {
                     }
                     self.data.extend(other.data);
                     self.shape[0] += other.shape[0];
-                    self.reset_fill();
                     self
                 } else if ash[1..] == bsh[..] {
                     if truncate {
@@ -131,7 +130,6 @@ impl<T: ArrayValue> Array<T> {
                     }
                     self.data.extend(other.data);
                     self.shape[0] += 1;
-                    self.reset_fill();
                     self
                 } else if ash[..] == bsh[1..] {
                     if truncate {
@@ -139,9 +137,8 @@ impl<T: ArrayValue> Array<T> {
                     }
                     self.data.extend(other.data);
                     self.shape.insert(0, other.shape[0] + 1);
-                    self.reset_fill();
                     self
-                } else if self.fill || other.fill {
+                } else {
                     if truncate {
                         self.truncate();
                         other.truncate();
@@ -210,11 +207,6 @@ impl<T: ArrayValue> Array<T> {
                             )))
                         }
                     }
-                } else {
-                    return Err(env.error(format!(
-                        "Cannot join {} arrays with shapes {ash:?} and {bsh:?}",
-                        T::NAME
-                    )));
                 }
             }
         };
@@ -468,12 +460,12 @@ fn rotate<T>(by: &[isize], shape: &[usize], data: &mut [T]) {
 impl Value {
     pub fn couple(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
         Ok(match (self, other) {
-            (Value::Num(a), Value::Num(b)) => a.couple(b, env)?.into(),
-            (Value::Byte(a), Value::Byte(b)) => a.couple(b, env)?.into(),
-            (Value::Char(a), Value::Char(b)) => a.couple(b, env)?.into(),
-            (Value::Func(a), Value::Func(b)) => a.couple(b, env)?.into(),
-            (Value::Num(a), Value::Byte(b)) => a.couple(b.convert(), env)?.into(),
-            (Value::Byte(a), Value::Num(b)) => a.convert().couple(b, env)?.into(),
+            (Value::Num(a), Value::Num(b)) => a.couple(b)?.into(),
+            (Value::Byte(a), Value::Byte(b)) => a.couple(b)?.into(),
+            (Value::Char(a), Value::Char(b)) => a.couple(b)?.into(),
+            (Value::Func(a), Value::Func(b)) => a.couple(b)?.into(),
+            (Value::Num(a), Value::Byte(b)) => a.couple(b.convert())?.into(),
+            (Value::Byte(a), Value::Num(b)) => a.convert().couple(b)?.into(),
             (a, b) => {
                 return Err(env.error(format!(
                     "Cannot couple {} array with {} array",
@@ -486,29 +478,21 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn couple(mut self, mut other: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn couple(mut self, mut other: Self) -> UiuaResult<Self> {
         if self.shape != other.shape {
-            if self.fill || other.fill {
-                let fill = T::fill_value();
-                let mut new_shape = vec![0; self.shape.len().max(other.shape.len())];
-                for i in 0..new_shape.len() {
-                    new_shape[i] = self.shape.get(i).max(other.shape.get(i)).copied().unwrap();
-                }
-                let target_size = new_shape.iter().product();
-                self.data.resize(target_size, fill.clone());
-                self.shape = new_shape.clone();
-                other.data.resize(target_size, fill);
-                other.shape = new_shape;
-            } else {
-                return Err(env.error(format!(
-                    "Cannot couple arrays of different shapes {:?} and {:?}",
-                    self.shape, other.shape,
-                )));
+            let fill = T::fill_value();
+            let mut new_shape = vec![0; self.shape.len().max(other.shape.len())];
+            for i in 0..new_shape.len() {
+                new_shape[i] = self.shape.get(i).max(other.shape.get(i)).copied().unwrap();
             }
+            let target_size = new_shape.iter().product();
+            self.data.resize(target_size, fill.clone());
+            self.shape = new_shape.clone();
+            other.data.resize(target_size, fill);
+            other.shape = new_shape;
         }
         self.data.append(&mut other.data);
         self.shape.insert(0, 2);
-        self.reset_fill();
         self.validate_shape();
         Ok(self)
     }
@@ -895,14 +879,14 @@ impl<T: ArrayValue> Array<T> {
         }
         let mut rows = groups
             .into_iter()
-            .map(|row_arrays| Self::from_row_arrays(row_arrays, true, env))
+            .map(|row_arrays| Self::from_row_arrays(row_arrays, env))
             .collect::<UiuaResult<Vec<_>>>()?;
         for row in &mut rows {
             while row.rank() < self.rank() {
                 row.shape.insert(0, 1);
             }
         }
-        Self::from_row_arrays(rows, true, env)
+        Self::from_row_arrays(rows, env)
     }
 }
 
@@ -937,13 +921,13 @@ impl<T: ArrayValue> Array<T> {
         }
         let mut rows = groups
             .into_iter()
-            .map(|row_arrays| Self::from_row_arrays(row_arrays, true, env))
+            .map(|row_arrays| Self::from_row_arrays(row_arrays, env))
             .collect::<UiuaResult<Vec<_>>>()?;
         for row in &mut rows {
             while row.rank() < self.rank() {
                 row.shape.insert(0, 1);
             }
         }
-        Self::from_row_arrays(rows, true, env)
+        Self::from_row_arrays(rows, env)
     }
 }

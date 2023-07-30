@@ -9,12 +9,8 @@ use std::{
 use enum_iterator::{all, Sequence};
 
 use crate::{
-    algorithm::{dyadic, loops},
-    function::FunctionId,
-    io::*,
-    lex::Simple,
-    value::*,
-    Uiua, UiuaError, UiuaResult,
+    algorithm::loops, function::FunctionId, io::*, lex::Simple, value::*, Uiua, UiuaError,
+    UiuaResult,
 };
 
 macro_rules! primitive {
@@ -748,7 +744,7 @@ impl Primitive {
             Primitive::Deduplicate => env.monadic_mut(Value::deduplicate)?,
             Primitive::Member => env.dyadic_ref_env(Value::member)?,
             Primitive::Find => env.dyadic_ref_env(Value::find)?,
-            Primitive::IndexOf => env.dyadic_ref_env(dyadic::index_of)?,
+            Primitive::IndexOf => env.dyadic_ref_env(Value::index_of)?,
             Primitive::Group => env.dyadic_ref_env(Value::group)?,
             Primitive::Partition => env.dyadic_ref_env(Value::partition)?,
             Primitive::Call => env.call()?,

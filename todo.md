@@ -1,5 +1,4 @@
 - Make a better rand API
-- Simplify dyadic module
 - Simplify editor examples
 - Benchmarking
 - Fix couple filling

@@ -1,4 +1,4 @@
-pub mod dyadic;
+mod dyadic;
 pub mod loops;
-pub mod monadic;
+mod monadic;
 pub mod pervade;

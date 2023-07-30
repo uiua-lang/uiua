@@ -796,61 +796,62 @@ fn member<A: Arrayish>(
     Ok(())
 }
 
-pub fn index_of(searched_for: &Value, searched_in: &Value, env: &Uiua) -> UiuaResult<Value> {
-    Ok(match (searched_for, searched_in) {
-        (Value::Num(a), Value::Num(b)) => index_of_generic(a, b, env)?.into(),
-        (a, b) => {
-            return Err(env.error(format!(
-                "Cannot look for indices of {} in {}",
-                a.type_name(),
-                b.type_name(),
-            )))
-        }
-    })
+impl Value {
+    pub fn index_of(&self, searched_in: &Value, env: &Uiua) -> UiuaResult<Value> {
+        Ok(match (self, searched_in) {
+            (Value::Num(a), Value::Num(b)) => a.index_of(b, env)?.into(),
+            (a, b) => {
+                return Err(env.error(format!(
+                    "Cannot look for indices of {} in {}",
+                    a.type_name(),
+                    b.type_name(),
+                )))
+            }
+        })
+    }
 }
 
-fn index_of_generic<T: ArrayValue>(
-    searched_for: &Array<T>,
-    searched_in: &Array<T>,
-    env: &Uiua,
-) -> UiuaResult<Array<f64>> {
-    if searched_in.rank() == 0 {
-        return Err(env.error("Cannot look for indices of a scalar array"));
-    }
-    if searched_for.rank() == 0 {
-        if searched_in.rank() != 1 {
-            return Err(env.error(format!(
-                "Cannot look for indices of a scalar array in an array of shape {:?}",
-                searched_in.shape
-            )));
+impl<T: ArrayValue> Array<T> {
+    fn index_of(&self, searched_in: &Array<T>, env: &Uiua) -> UiuaResult<Array<f64>> {
+        if searched_in.rank() == 0 {
+            return Err(env.error("Cannot look for indices of a scalar array"));
         }
-        return Ok((searched_in
-            .data
-            .iter()
-            .position(|a| a.eq(&searched_for.data[0]))
-            .unwrap_or_else(|| searched_in.row_count()) as f64)
-            .into());
-    } else {
-        if searched_for.shape[1..] != searched_in.shape[1..] {
-            return Err(env.error(format!(
-                "Cannot get index in array of different shape: {:?} vs {:?}",
-                searched_for.shape, searched_in.shape
-            )));
+        let searched_for = self;
+        if searched_for.rank() == 0 {
+            if searched_in.rank() != 1 {
+                return Err(env.error(format!(
+                    "Cannot look for indices of a scalar array in an array of shape {:?}",
+                    searched_in.shape
+                )));
+            }
+            return Ok((searched_in
+                .data
+                .iter()
+                .position(|a| a.eq(&searched_for.data[0]))
+                .unwrap_or_else(|| searched_in.row_count()) as f64)
+                .into());
+        } else {
+            if searched_for.shape[1..] != searched_in.shape[1..] {
+                return Err(env.error(format!(
+                    "Cannot get index in array of different shape: {:?} vs {:?}",
+                    searched_for.shape, searched_in.shape
+                )));
+            }
+            let mut result = Vec::with_capacity(searched_for.row_count());
+            let mut indices = BTreeMap::new();
+            for (i, row) in searched_in.rows().enumerate() {
+                indices.insert(row, i);
+            }
+            for row in searched_for.rows() {
+                result.push(
+                    indices
+                        .get(&row)
+                        .map(|i| *i as f64)
+                        .unwrap_or_else(|| searched_in.row_count() as f64),
+                );
+            }
+            Ok(Array::from(result))
         }
-        let mut result = Vec::with_capacity(searched_for.row_count());
-        let mut indices = BTreeMap::new();
-        for (i, row) in searched_in.rows().enumerate() {
-            indices.insert(row, i);
-        }
-        for row in searched_for.rows() {
-            result.push(
-                indices
-                    .get(&row)
-                    .map(|i| *i as f64)
-                    .unwrap_or_else(|| searched_in.row_count() as f64),
-            );
-        }
-        Ok(Array::from(result))
     }
 }
 

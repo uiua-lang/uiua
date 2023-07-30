@@ -351,7 +351,7 @@ impl<'io> Uiua<'io> {
                 let span = self.add_span(span);
                 self.push_instr(Instr::Call(span));
             }
-        } else if let Some(prims) = Primitive::from_multiname(ident.as_str()) {
+        } else if let Some(prims) = Primitive::from_format_name_multi(ident.as_str()) {
             for (prim, _) in prims.into_iter().rev() {
                 self.primitive(prim, span.clone(), call);
             }

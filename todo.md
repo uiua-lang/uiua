@@ -1,4 +1,3 @@
-- Make a better rand API
 - Simplify editor examples
 - Benchmarking
 - Fix couple filling

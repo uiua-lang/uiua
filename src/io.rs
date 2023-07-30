@@ -1,5 +1,4 @@
 use std::{
-    cell::RefCell,
     collections::HashMap,
     env,
     fs::{self, File},
@@ -10,7 +9,6 @@ use std::{
 use enum_iterator::Sequence;
 use hound::{SampleFormat, WavSpec, WavWriter};
 use image::{DynamicImage, ImageOutputFormat};
-use rand::prelude::*;
 
 use crate::{array::Array, grid_fmt::GridFmt, rc_take, value::Value, Byte, Uiua, UiuaResult};
 
@@ -55,7 +53,6 @@ io_op! {
     (0, ScanLine, "ScanLine"),
     (0, Args, "Args"),
     (1, Var, "Var"),
-    (0, Rand, "Rand"),
     (1, FOpen, "FOpen"),
     (1, FCreate, "FCreate"),
     (1, FClose, "FClose"),
@@ -108,7 +105,6 @@ pub trait IoBackend {
     fn print_str(&self, s: &str) -> Result<(), String> {
         self.write(Handle::STDOUT, s.as_bytes())
     }
-    fn rand(&self) -> f64;
     fn show_image(&self, image: DynamicImage) -> Result<(), String> {
         Err("Showing images not supported in this environment".into())
     }
@@ -193,15 +189,11 @@ fn stdio<T>(mut f: impl FnMut(&mut GlobalStdIo) -> T) -> T {
 }
 
 thread_local! {
-    static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::seed_from_u64(instant::now().to_bits()));
     #[cfg(feature = "rodio")]
-    static AUDIO_STREAM: RefCell<Option<rodio::OutputStream>> = RefCell::new(None);
+    static AUDIO_STREAM: std::cell::RefCell<Option<rodio::OutputStream>> = None.into();
 }
 
 impl IoBackend for StdIo {
-    fn rand(&self) -> f64 {
-        RNG.with(|rng| rng.borrow_mut().gen())
-    }
     fn var(&self, name: &str) -> Option<String> {
         env::var(name).ok()
     }
@@ -364,10 +356,6 @@ impl IoOp {
                     .as_string(env, "Augument to var must be a string")?;
                 let var = env.io.var(&key).unwrap_or_default();
                 env.push(var);
-            }
-            IoOp::Rand => {
-                let num = env.io.rand();
-                env.push(num);
             }
             IoOp::FOpen => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;

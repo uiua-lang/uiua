@@ -1,4 +1,5 @@
 use std::{
+    cell::RefCell,
     f64::{consts::PI, INFINITY},
     fmt,
     mem::take,
@@ -7,6 +8,7 @@ use std::{
 };
 
 use enum_iterator::{all, Sequence};
+use rand::prelude::*;
 
 use crate::{
     algorithm::loops, function::FunctionId, io::*, lex::Simple, value::*, Uiua, UiuaError,
@@ -588,7 +590,27 @@ primitive!(
     /// ex: parsenum "3.1415926535897932"
     /// ex: parsenum "dog"
     (1, ParseNum, Misc, "parsenum"),
-    /// Import a function from another file
+    /// Generate a random number between 0 and 1
+    /// If you need a seeded random number, use [gen].
+    ///
+    /// ex: rand
+    /// ex: [rand rand rand]
+    ///
+    /// Use [multiply] and [floor] to generate a random integer in a range.
+    /// ex: [⍥(⌊*10 rand)5]
+    (0, Rand, Misc, "rand"),
+    /// Generate a random number between 0 and 1 from a seed, as well as the next seed
+    /// If you don't care about a seed, you can use [rand].
+    ///
+    /// The same seed will always produce the same random number.
+    /// ex: [;gen gen gen 0]
+    /// ex: [;⍥gen3 0]
+    /// ex: [;⍥gen3 1]
+    ///
+    /// Use [multiply] and [floor] to generate a random integer in a range.
+    /// ex: [;⍥(~⌊*10~gen)5 0]
+    (1(2), Gen, Misc, "gen"),
+    /// Use a named function exported from a module
     (1, Use, Misc, "use"),
     // Constants
     (0(1), Pi, Constant, "pi" + 'π'),
@@ -631,7 +653,12 @@ impl Primitive {
             _ => return None,
         })
     }
+    /// Find a primitive by its proper name
     pub fn from_name(name: &str) -> Option<Self> {
+        Self::from_format_name(name).or_else(|| Self::all().find(|p| p.name() == Some(name)))
+    }
+    /// Try to parse a primitive from a name prefix
+    pub fn from_format_name(name: &str) -> Option<Self> {
         if name.chars().any(char::is_uppercase) {
             return None;
         }
@@ -647,7 +674,8 @@ impl Primitive {
         let exact_match = res.format_name().map_or(false, |i| i == name);
         (exact_match || matching.next().is_none()).then_some(res)
     }
-    pub fn from_multiname(name: &str) -> Option<Vec<(Self, &str)>> {
+    /// Try to parse multiple primitives from the concatentation of their name prefixes
+    pub fn from_format_name_multi(name: &str) -> Option<Vec<(Self, &str)>> {
         if name == "pi" || name == "π" {
             return Some(vec![(Primitive::Pi, name)]);
         }
@@ -664,7 +692,7 @@ impl Primitive {
             for len in (3..=name.len() - start).rev() {
                 let start_index = indices[start];
                 let end_index = indices[start + len - 1];
-                if let Some(p) = Primitive::from_name(&name[start_index..=end_index]) {
+                if let Some(p) = Primitive::from_format_name(&name[start_index..=end_index]) {
                     prims.push((p, &name[start_index..=end_index]));
                     start += len;
                     continue 'outer;
@@ -673,7 +701,7 @@ impl Primitive {
             break None;
         }
     }
-    /// The name of the primitive that the formatter will replace
+    /// The longest name of the primitive that the formatter will replace
     pub fn format_name(&self) -> Option<&'static str> {
         if [
             Primitive::Sin,
@@ -849,6 +877,21 @@ impl Primitive {
                 env.monadic_ref(|v| v.shape().iter().copied().collect::<Value>())?
             }
             Primitive::String => env.monadic_ref(|v| v.to_string())?,
+            Primitive::Rand => {
+                thread_local! {
+                    static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::seed_from_u64(instant::now().to_bits()));
+                }
+                env.push(RNG.with(|rng| rng.borrow_mut().gen::<f64>()));
+            }
+            Primitive::Gen => {
+                let seed = env.pop(1)?;
+                let mut rng =
+                    SmallRng::seed_from_u64(seed.as_num(env, "gen expects a number")?.to_bits());
+                let val: f64 = rng.gen();
+                let next_seed = f64::from_bits(rng.gen::<u64>());
+                env.push(val);
+                env.push(next_seed);
+            }
             Primitive::Use => {
                 let name = env.pop(1)?.as_string(env, "Use name must be a string")?;
                 let lib = env.pop(2)?;
@@ -971,9 +1014,12 @@ impl PrimExample {
 
 #[test]
 fn primitive_from_name() {
-    assert_eq!(Primitive::from_name("rev"), Some(Primitive::Reverse));
-    assert_eq!(Primitive::from_name("re"), None);
-    assert_eq!(Primitive::from_name("resh"), Some(Primitive::Reshape));
+    assert_eq!(Primitive::from_format_name("rev"), Some(Primitive::Reverse));
+    assert_eq!(Primitive::from_format_name("re"), None);
+    assert_eq!(
+        Primitive::from_format_name("resh"),
+        Some(Primitive::Reshape)
+    );
 }
 
 #[cfg(test)]
@@ -994,18 +1040,18 @@ fn glyph_size() {
 #[test]
 fn from_multiname() {
     assert!(matches!(
-        &*Primitive::from_multiname("rev").expect("rev"),
+        &*Primitive::from_format_name_multi("rev").expect("rev"),
         [(Primitive::Reverse, _)]
     ));
     assert!(matches!(
-        &*Primitive::from_multiname("revrev").expect("revrev"),
+        &*Primitive::from_format_name_multi("revrev").expect("revrev"),
         [(Primitive::Reverse, _), (Primitive::Reverse, _)]
     ));
     assert!(matches!(
-        &*Primitive::from_multiname("tabrepl").unwrap(),
+        &*Primitive::from_format_name_multi("tabrepl").unwrap(),
         [(Primitive::Table, _), (Primitive::Replicate, _)]
     ));
-    assert_eq!(Primitive::from_multiname("foo"), None);
+    assert_eq!(Primitive::from_format_name_multi("foo"), None);
 }
 
 #[cfg(test)]
@@ -1013,7 +1059,7 @@ fn from_multiname() {
 fn word_collisions() {
     let mut collisions = 0;
     for word in std::fs::read_to_string("src/words.txt").unwrap().lines() {
-        if let Some(prims) = Primitive::from_multiname(word) {
+        if let Some(prims) = Primitive::from_format_name_multi(word) {
             println!("{word:>10}: {prims:?}");
             collisions += 1;
         }

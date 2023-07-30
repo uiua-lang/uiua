@@ -1,12 +1,10 @@
 use std::{cell::RefCell, io::Cursor};
 
-use rand::prelude::*;
 use uiua::{Handle, IoBackend};
 
 pub struct WebBackend {
     pub stdout: RefCell<String>,
     pub stderr: RefCell<String>,
-    rng: RefCell<SmallRng>,
     pub image_bytes: RefCell<Option<Vec<u8>>>,
     pub audio_bytes: RefCell<Option<Vec<u8>>>,
 }
@@ -16,7 +14,6 @@ impl Default for WebBackend {
         Self {
             stdout: String::new().into(),
             stderr: String::new().into(),
-            rng: SmallRng::seed_from_u64(instant::now().to_bits()).into(),
             image_bytes: None.into(),
             audio_bytes: None.into(),
         }
@@ -24,9 +21,6 @@ impl Default for WebBackend {
 }
 
 impl IoBackend for WebBackend {
-    fn rand(&self) -> f64 {
-        self.rng.borrow_mut().gen()
-    }
     fn write(&self, handle: Handle, contents: &[u8]) -> Result<(), String> {
         match handle {
             Handle::STDOUT => {

@@ -514,7 +514,7 @@ impl Lexer {
                     while let Some(c) = self.next_char_if(is_basically_alphabetic) {
                         ident.push(c);
                     }
-                    if let Some(prims) = Primitive::from_multiname(&ident) {
+                    if let Some(prims) = Primitive::from_format_name_multi(&ident) {
                         let mut start = start;
                         for (prim, frag) in prims {
                             let end = Loc {

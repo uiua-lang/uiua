@@ -591,7 +591,7 @@ primitive!(
     /// ex: parsenum "17"
     /// ex: parsenum "3.1415926535897932"
     /// ex: parsenum "dog"
-    (1, Parse, Misc, "parsenumber"),
+    (1, ParseNum, Misc, "parsenum"),
     /// Import a function from another file
     (1, Use, Misc, "use"),
     // Constants
@@ -754,7 +754,7 @@ impl Primitive {
             Primitive::Group => env.dyadic_ref_env(Value::group)?,
             Primitive::Partition => env.dyadic_ref_env(Value::partition)?,
             Primitive::Call => env.call()?,
-            Primitive::Parse => env.monadic_env(|v, env| v.parse_num(env))?,
+            Primitive::ParseNum => env.monadic_env(|v, env| v.parse_num(env))?,
             Primitive::Range => env.monadic_ref_env(Value::range)?,
             Primitive::Reverse => env.monadic_mut(Value::reverse)?,
             Primitive::Deshape => env.monadic_mut(Value::deshape)?,

@@ -27,7 +27,10 @@ fn parse_doc(cx: Scope, line: &str) -> impl IntoView {
 #[component]
 pub fn PrimDocsPage(cx: Scope) -> impl IntoView {
     let prim_name = move || use_params_map(cx).with(|p| p.get("prim_name").cloned());
-    let prim = move || prim_name().and_then(|name| Primitive::from_name(&name));
+    let prim = move || {
+        prim_name()
+            .and_then(|name| Primitive::all().find(|p| name == format!("{p:?}").to_lowercase()))
+    };
 
     let ex_lines = move || {
         prim()

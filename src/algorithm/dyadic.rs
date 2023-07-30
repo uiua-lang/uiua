@@ -1,7 +1,6 @@
 use std::{
     cmp::{self, Ordering},
     collections::BTreeMap,
-    iter::repeat,
 };
 
 use crate::{array::*, value::Value, Byte, Uiua, UiuaResult};
@@ -45,14 +44,12 @@ impl Value {
     }
     pub(crate) fn join_impl(self, other: Self, truncate: bool, env: &Uiua) -> UiuaResult<Self> {
         Ok(match (self, other) {
-            (Value::Num(a), Value::Num(b)) => Value::Num(a.join_impl(b, truncate, env)?),
-            (Value::Byte(a), Value::Byte(b)) => Value::Byte(a.join_impl(b, truncate, env)?),
-            (Value::Char(a), Value::Char(b)) => Value::Char(a.join_impl(b, truncate, env)?),
-            (Value::Func(a), Value::Func(b)) => Value::Func(a.join_impl(b, truncate, env)?),
-            (Value::Byte(a), Value::Num(b)) => Value::Num(a.convert().join_impl(b, truncate, env)?),
-            (Value::Num(a), Value::Byte(b)) => {
-                Value::Num(a.join_impl(b.convert(), truncate, env)?)
-            }
+            (Value::Num(a), Value::Num(b)) => Value::Num(a.join_impl(b, truncate)),
+            (Value::Byte(a), Value::Byte(b)) => Value::Byte(a.join_impl(b, truncate)),
+            (Value::Char(a), Value::Char(b)) => Value::Char(a.join_impl(b, truncate)),
+            (Value::Func(a), Value::Func(b)) => Value::Func(a.join_impl(b, truncate)),
+            (Value::Byte(a), Value::Num(b)) => Value::Num(a.convert().join_impl(b, truncate)),
+            (Value::Num(a), Value::Byte(b)) => Value::Num(a.join_impl(b.convert(), truncate)),
             (a, b) => {
                 return Err(env.error(format!(
                     "Cannot join {} array and {} array",
@@ -65,153 +62,56 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn join(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
-        self.join_impl(other, true, env)
+    pub fn join(self, other: Self) -> Self {
+        self.join_impl(other, true)
     }
-    pub(crate) fn join_impl(
-        mut self,
-        mut other: Self,
-        truncate: bool,
-        env: &Uiua,
-    ) -> UiuaResult<Self> {
-        let res = match (self.shape.as_slice(), other.shape.as_slice()) {
-            ([], []) => {
+    pub(crate) fn join_impl(mut self, mut other: Self, truncate: bool) -> Self {
+        if truncate {
+            self.truncate();
+            other.truncate();
+        }
+        let res = match self.rank().cmp(&other.rank()) {
+            Ordering::Less => {
+                let mut target_shape = max_shape(&self.shape, &other.shape);
+                let row_shape = &target_shape[1..];
+                self.fill_to_shape(row_shape);
+                other.fill_to_shape(&target_shape);
                 self.data.extend(other.data);
-                self.shape = vec![self.flat_len()];
+                target_shape[0] += 1;
+                self.shape = target_shape;
                 self
             }
-            ([], bsh) => {
-                if bsh.len() == 1 {
-                    if truncate {
-                        other.truncate();
-                    }
-                    other.data.insert(0, self.data.remove(0));
-                    other.shape = vec![other.flat_len()];
-                    other
-                } else {
-                    return Err(env.error(format!(
-                        "Cannot join a scalar to a rank {} array",
-                        bsh.len()
-                    )));
-                }
+            Ordering::Greater => {
+                let mut target_shape = max_shape(&self.shape, &other.shape);
+                let row_shape = &target_shape[1..];
+                self.fill_to_shape(&target_shape);
+                other.fill_to_shape(row_shape);
+                self.data.extend(other.data);
+                target_shape[0] += 1;
+                self.shape = target_shape;
+                self
             }
-            (ash, []) => {
-                if ash.len() == 1 {
-                    if truncate {
-                        self.truncate();
-                    }
+            Ordering::Equal => {
+                if self.rank() == 0 {
+                    debug_assert_eq!(other.rank(), 0);
                     self.data.push(other.data.remove(0));
-                    self.shape = vec![self.flat_len()];
+                    self.shape = vec![2];
                     self
                 } else {
-                    return Err(env.error(format!(
-                        "Cannot join a rank {} array to a scalar",
-                        ash.len()
-                    )));
-                }
-            }
-            (ash, bsh) => {
-                if ash.len().abs_diff(bsh.len()) > 1 {
-                    return Err(env.error(format!(
-                        "Cannot join arrays with a rank difference > 1 (shapes are {ash:?} and {bsh:?})",
-                    )));
-                }
-                if ash[1..] == bsh[1..] {
-                    if truncate {
-                        self.truncate();
-                        other.truncate();
+                    let new_row_shape = max_shape(&self.shape[1..], &other.shape[1..]);
+                    for array in [&mut self, &mut other] {
+                        let mut new_shape = new_row_shape.clone();
+                        new_shape.insert(0, array.shape[0]);
+                        array.fill_to_shape(&new_shape);
                     }
                     self.data.extend(other.data);
                     self.shape[0] += other.shape[0];
                     self
-                } else if ash[1..] == bsh[..] {
-                    if truncate {
-                        self.truncate();
-                    }
-                    self.data.extend(other.data);
-                    self.shape[0] += 1;
-                    self
-                } else if ash[..] == bsh[1..] {
-                    if truncate {
-                        other.truncate();
-                    }
-                    self.data.extend(other.data);
-                    self.shape.insert(0, other.shape[0] + 1);
-                    self
-                } else {
-                    if truncate {
-                        self.truncate();
-                        other.truncate();
-                    }
-                    let ash = &self.shape;
-                    let bsh = &other.shape;
-                    let fill = T::fill_value();
-                    match ash.len() as i8 - bsh.len() as i8 {
-                        0 => {
-                            let mut new_row_shape = vec![0; ash.len().max(bsh.len()) - 1];
-                            for i in 0..new_row_shape.len() {
-                                new_row_shape[i] =
-                                    ash.get(i + 1).max(bsh.get(i + 1)).copied().unwrap();
-                            }
-                            let new_row_len: usize = new_row_shape.iter().product();
-                            let mut new_shape = new_row_shape;
-                            new_shape.insert(0, self.row_count() + other.row_count());
-                            let mut new_data = Vec::with_capacity(new_shape.iter().product());
-                            for row in self.rows().chain(other.rows()) {
-                                new_data.extend(row.iter().cloned());
-                                new_data.extend(repeat(fill.clone()).take(new_row_len - row.len()));
-                            }
-                            Array::new(new_shape, new_data)
-                        }
-                        1 => {
-                            let mut new_row_shape = ash[1..].to_vec();
-                            for (n, r) in new_row_shape.iter_mut().zip(bsh.iter()) {
-                                *n = (*n).max(*r);
-                            }
-                            let new_row_len: usize = new_row_shape.iter().product();
-                            let mut new_shape = new_row_shape;
-                            new_shape.insert(0, ash[0] + 1);
-                            let mut new_data = Vec::with_capacity(new_shape.iter().product());
-                            for row in self.rows() {
-                                new_data.extend(row.iter().cloned());
-                                new_data.extend(repeat(fill.clone()).take(new_row_len - row.len()));
-                            }
-                            let other_data_len = other.data.len();
-                            new_data.extend(other.data);
-                            new_data.extend(repeat(fill).take(new_row_len - other_data_len));
-                            Array::new(new_shape, new_data)
-                        }
-                        -1 => {
-                            let mut new_row_shape = bsh[1..].to_vec();
-                            for (n, r) in new_row_shape.iter_mut().zip(ash.iter()) {
-                                *n = (*n).max(*r);
-                            }
-                            let new_row_len: usize = new_row_shape.iter().product();
-                            let mut new_shape = new_row_shape;
-                            new_shape.insert(0, bsh[0] + 1);
-                            let mut new_data = Vec::with_capacity(new_shape.iter().product());
-                            let self_data_len = self.data.len();
-                            new_data.extend(self.data);
-                            new_data.extend(repeat(fill.clone()).take(new_row_len - self_data_len));
-                            for row in other.rows() {
-                                new_data.extend(row.iter().cloned());
-                                new_data.extend(repeat(fill.clone()).take(new_row_len - row.len()));
-                            }
-                            Array::new(new_shape, new_data)
-                        }
-                        diff => {
-                            return Err(env.error(format!(
-                                "Can only join arrays with a maximum rank difference of 1, \
-                                but {ash:?} and {bsh:?} have a difference of {}",
-                                diff.abs()
-                            )))
-                        }
-                    }
                 }
             }
         };
         res.validate_shape();
-        Ok(res)
+        res
     }
 }
 
@@ -460,12 +360,12 @@ fn rotate<T>(by: &[isize], shape: &[usize], data: &mut [T]) {
 impl Value {
     pub fn couple(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
         Ok(match (self, other) {
-            (Value::Num(a), Value::Num(b)) => a.couple(b)?.into(),
-            (Value::Byte(a), Value::Byte(b)) => a.couple(b)?.into(),
-            (Value::Char(a), Value::Char(b)) => a.couple(b)?.into(),
-            (Value::Func(a), Value::Func(b)) => a.couple(b)?.into(),
-            (Value::Num(a), Value::Byte(b)) => a.couple(b.convert())?.into(),
-            (Value::Byte(a), Value::Num(b)) => a.convert().couple(b)?.into(),
+            (Value::Num(a), Value::Num(b)) => a.couple(b).into(),
+            (Value::Byte(a), Value::Byte(b)) => a.couple(b).into(),
+            (Value::Char(a), Value::Char(b)) => a.couple(b).into(),
+            (Value::Func(a), Value::Func(b)) => a.couple(b).into(),
+            (Value::Num(a), Value::Byte(b)) => a.couple(b.convert()).into(),
+            (Value::Byte(a), Value::Num(b)) => a.convert().couple(b).into(),
             (a, b) => {
                 return Err(env.error(format!(
                     "Cannot couple {} array with {} array",
@@ -516,6 +416,20 @@ fn shape_index_to_data_index(index: &[usize], shape: &[usize]) -> Option<usize> 
     Some(data_index)
 }
 
+fn max_shape(a: &[usize], b: &[usize]) -> Vec<usize> {
+    let mut new_shape = vec![0; a.len().max(b.len())];
+    for i in 0..new_shape.len() {
+        let j = new_shape.len() - i - 1;
+        if a.len() > i {
+            new_shape[j] = a[a.len() - i - 1];
+        }
+        if b.len() > i {
+            new_shape[j] = new_shape[j].max(b[b.len() - i - 1]);
+        }
+    }
+    new_shape
+}
+
 #[test]
 fn shape_index_to_data_index_test() {
     for (index, shape, expected_data_index) in [
@@ -540,11 +454,8 @@ impl<T: ArrayValue> Array<T> {
         let target_size = shape.iter().product();
         let mut new_data = vec![T::fill_value(); target_size];
         let mut curr = vec![0; shape.len()];
-        println!("self shape = {:?}", self.shape);
-        println!("target shape = {shape:?}");
         for new_data_index in 0..target_size {
             data_index_to_shape_index(new_data_index, shape, &mut curr);
-            println!("curr = {curr:?}");
             if let Some(data_index) = shape_index_to_data_index(&curr, &self.shape) {
                 new_data[new_data_index] = self.data[data_index].clone();
             }
@@ -552,25 +463,16 @@ impl<T: ArrayValue> Array<T> {
         self.data = new_data;
         self.shape = shape.to_vec();
     }
-    pub fn couple(mut self, mut other: Self) -> UiuaResult<Self> {
+    pub fn couple(mut self, mut other: Self) -> Self {
         if self.shape != other.shape {
-            let mut new_shape = vec![0; self.shape.len().max(other.shape.len())];
-            for i in 0..new_shape.len() {
-                let j = new_shape.len() - i - 1;
-                if self.shape.len() > i {
-                    new_shape[j] = self.shape[self.shape.len() - i - 1];
-                }
-                if other.shape.len() > i {
-                    new_shape[j] = new_shape[j].max(other.shape[other.shape.len() - i - 1]);
-                }
-            }
+            let new_shape = max_shape(&self.shape, &other.shape);
             self.fill_to_shape(&new_shape);
             other.fill_to_shape(&new_shape);
         }
         self.data.append(&mut other.data);
         self.shape.insert(0, 2);
         self.validate_shape();
-        Ok(self)
+        self
     }
 }
 
@@ -935,16 +837,16 @@ impl Value {
     pub fn group(&self, grouped: &Self, env: &Uiua) -> UiuaResult<Self> {
         let indices = self.as_naturals(env, "Group indices must be a list of natural numbers")?;
         Ok(match grouped {
-            Value::Num(a) => a.group(&indices, env)?.into(),
-            Value::Byte(a) => a.group(&indices, env)?.into(),
-            Value::Char(a) => a.group(&indices, env)?.into(),
-            Value::Func(a) => a.group(&indices, env)?.into(),
+            Value::Num(a) => a.group(&indices)?.into(),
+            Value::Byte(a) => a.group(&indices)?.into(),
+            Value::Char(a) => a.group(&indices)?.into(),
+            Value::Func(a) => a.group(&indices)?.into(),
         })
     }
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn group(&self, indices: &[usize], env: &Uiua) -> UiuaResult<Self> {
+    pub fn group(&self, indices: &[usize]) -> UiuaResult<Self> {
         let Some(max_index) = indices.iter().max() else {
             return Ok(Self::new(self.shape.clone(), Vec::new()));
         };
@@ -956,14 +858,14 @@ impl<T: ArrayValue> Array<T> {
         }
         let mut rows = groups
             .into_iter()
-            .map(|row_arrays| Self::from_row_arrays(row_arrays, env))
+            .map(|row_arrays| Self::from_row_arrays(row_arrays))
             .collect::<UiuaResult<Vec<_>>>()?;
         for row in &mut rows {
             while row.rank() < self.rank() {
                 row.shape.insert(0, 1);
             }
         }
-        Self::from_row_arrays(rows, env)
+        Self::from_row_arrays(rows)
     }
 }
 
@@ -972,16 +874,16 @@ impl Value {
         let markers =
             self.as_naturals(env, "Partition markers must be a list of natural numbers")?;
         Ok(match partitioned {
-            Value::Num(a) => a.partition(&markers, env)?.into(),
-            Value::Byte(a) => a.partition(&markers, env)?.into(),
-            Value::Char(a) => a.partition(&markers, env)?.into(),
-            Value::Func(a) => a.partition(&markers, env)?.into(),
+            Value::Num(a) => a.partition(&markers)?.into(),
+            Value::Byte(a) => a.partition(&markers)?.into(),
+            Value::Char(a) => a.partition(&markers)?.into(),
+            Value::Func(a) => a.partition(&markers)?.into(),
         })
     }
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn partition(&self, markers: &[usize], env: &Uiua) -> UiuaResult<Self> {
+    pub fn partition(&self, markers: &[usize]) -> UiuaResult<Self> {
         let mut groups = Vec::new();
         let mut last_marker = usize::MAX;
         for (row, &marker) in self.rows().zip(markers) {
@@ -998,13 +900,13 @@ impl<T: ArrayValue> Array<T> {
         }
         let mut rows = groups
             .into_iter()
-            .map(|row_arrays| Self::from_row_arrays(row_arrays, env))
+            .map(|row_arrays| Self::from_row_arrays(row_arrays))
             .collect::<UiuaResult<Vec<_>>>()?;
         for row in &mut rows {
             while row.rank() < self.rank() {
                 row.shape.insert(0, 1);
             }
         }
-        Self::from_row_arrays(rows, env)
+        Self::from_row_arrays(rows)
     }
 }

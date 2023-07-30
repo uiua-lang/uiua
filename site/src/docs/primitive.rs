@@ -8,12 +8,13 @@ use crate::{code::PrimCode, editor::Editor};
 #[allow(unused_braces)]
 fn parse_doc(cx: Scope, line: &str) -> impl IntoView {
     thread_local! {
-        static RE: Regex = Regex::new(r"\[(.*?)\]|`(.*?)`|([^`\[\]]+)").unwrap();
+        static RE: Regex = Regex::new(r"\[(.*?)\]|`(.*?)`|\*(.*?)\*|([^\[\]`\*]+)").unwrap();
     }
     RE.with(|re| {
         re.captures_iter(line)
             .map(|c| c.extract())
             .map(|(mat, [s])| {
+                log!("mat: {mat:?}, s: {s}", mat = mat, s = s);
                 let s = s.to_string();
                 if mat.starts_with('[') {
                     if let Some(prim) = Primitive::from_name(&s) {
@@ -23,6 +24,8 @@ fn parse_doc(cx: Scope, line: &str) -> impl IntoView {
                     }
                 } else if mat.starts_with('`') {
                     view!(cx, <code>{s}</code>).into_view(cx)
+                } else if mat.starts_with('*') {
+                    view!(cx, <em>{s}</em>).into_view(cx)
                 } else {
                     view!(cx, { s }).into_view(cx)
                 }

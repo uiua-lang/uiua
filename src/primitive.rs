@@ -261,9 +261,12 @@ primitive!(
     /// ex: ⇡5
     /// ex: ⇡2_3
     (1, Range, MonadicArray, "range" + '⇡'),
-    /// The first element of an array
+    /// The first row of an array
     ///
     /// ex: ⊢1_2_3
+    /// ex: ⊢[1_2 3_4 5_6]
+    /// ex: ⊢[]
+    /// ex: ⊢1
     (1, First, MonadicArray, "first" + '⊢'),
     /// The last element of an array
     (1, Last, MonadicArray),
@@ -332,21 +335,39 @@ primitive!(
     (2, NotMatch, DyadicArray, "notmatch" + '≇'),
     /// Append two arrays or an array and a scalar
     ///
-    /// The arrays cannot have a [rank] difference greater than 1.
-    ///
+    /// For scalars, it is equivalent to [couple].
     /// ex: ⊂ 1 2
+    ///
+    /// If the arrays have the same [rank], it will append the second array to the first.
+    /// ex: ⊂ [1 2] [3 4]
+    ///
+    /// If the arrays have the same [rank], but their shapes are different, then the arrays will be filled so that the join makes sense.
+    /// ex: ⊂ [1_2 3_4] [5_6_7 8_9_10]
+    ///
+    /// If the arrays have a [rank] difference of 1, then the array with the smaller [rank] will be prepended or appended to the other as a row.
     /// ex: ⊂ 1 [2 3]
     /// ex: ⊂ [1 2] 3
-    /// ex: ⊂ [1 2] [3 4]
+    /// ex: ⊂ [1_2] [3_4 5_6]
+    /// ex: ⊂ [1_2 3_4] [5_6]
+    ///
+    /// If the arrays have a [rank] difference greater than 1, then the arrays will be filled so that the join makes sense.
     /// ex: ⊂ 1 [2_3 4_5]
+    /// ex: ⊂ [1_2] [[3_4 5_6] [7_8 9_10]]
     (2, Join, DyadicArray, "join" + '⊂'),
     /// Combine two arrays as rows of a new array
     ///
-    /// Before coupling, the arrays are filled to make their [shape]s match.
+    /// For scalars, it is equivalent to [join].
+    /// ex: ⊟ 1 2
     ///
+    /// For arrays, a new array is created with the first array as the first row and the second array as the second row.
     /// ex: ⊟ [1 2 3] [4 5 6]
+    ///
+    /// Before coupling, the arrays are filled to make their [shape]s match.
     /// ex: ⊟ [1 2 3] [4 5]
+    /// ex: ⊟ 1 [2 3]
     /// ex: ⊟ [1 2 3] [4_5 6_7]
+    ///
+    /// [first] of the [shape] of the coupled array will *always* be `2`.
     (2, Couple, DyadicArray, "couple" + '⊟'),
     /// Index a single row or element from an array
     ///

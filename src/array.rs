@@ -7,7 +7,7 @@ use std::{
     slice::{Chunks, ChunksMut},
 };
 
-use crate::{function::Function, primitive::Primitive, Byte, Uiua, UiuaResult};
+use crate::{function::Function, primitive::Primitive, Byte, UiuaResult};
 
 #[derive(Clone)]
 pub struct Array<T> {
@@ -203,7 +203,7 @@ impl<T: ArrayValue> Array<T> {
         self.shape[0] = new_len;
     }
     #[track_caller]
-    pub fn from_row_arrays(values: impl IntoIterator<Item = Self>, env: &Uiua) -> UiuaResult<Self> {
+    pub fn from_row_arrays(values: impl IntoIterator<Item = Self>) -> UiuaResult<Self> {
         let mut row_values = values.into_iter();
         let Some(mut value) = row_values.next() else {
             return Ok(Self::default());
@@ -212,9 +212,9 @@ impl<T: ArrayValue> Array<T> {
         for row in row_values {
             count += 1;
             value = if count == 2 {
-                value.couple(row)?
+                value.couple(row)
             } else {
-                value.join_impl(row, false, env)?
+                value.join_impl(row, false)
             };
         }
         if count == 1 {

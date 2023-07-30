@@ -98,6 +98,9 @@ impl<T: ArrayValue> Array<T> {
         if self.rank() == 0 {
             return Err(env.error("Cannot take first of a scalar"));
         }
+        if self.shape[0] == 0 {
+            return Err(env.error("Cannot take first of an empty array"));
+        }
         let row_len = self.row_len();
         self.shape.remove(0);
         self.data.truncate(row_len);

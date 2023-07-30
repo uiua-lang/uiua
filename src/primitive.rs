@@ -342,8 +342,7 @@ primitive!(
     (2, Join, DyadicArray, "join" + '⊂'),
     /// Combine two arrays as rows of a new array
     ///
-    /// The arrays do not need to have the same [length], but they must have the same [rank].
-    /// Mismatched lengths will be filled.
+    /// Before coupling, the arrays are filled to make their [shape]s match.
     ///
     /// ex: ⊟ [1 2 3] [4 5 6]
     /// ex: ⊟ [1 2 3] [4 5]

@@ -460,12 +460,12 @@ fn rotate<T>(by: &[isize], shape: &[usize], data: &mut [T]) {
 impl Value {
     pub fn couple(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
         Ok(match (self, other) {
-            (Value::Num(a), Value::Num(b)) => a.couple(b, env)?.into(),
-            (Value::Byte(a), Value::Byte(b)) => a.couple(b, env)?.into(),
-            (Value::Char(a), Value::Char(b)) => a.couple(b, env)?.into(),
-            (Value::Func(a), Value::Func(b)) => a.couple(b, env)?.into(),
-            (Value::Num(a), Value::Byte(b)) => a.couple(b.convert(), env)?.into(),
-            (Value::Byte(a), Value::Num(b)) => a.convert().couple(b, env)?.into(),
+            (Value::Num(a), Value::Num(b)) => a.couple(b)?.into(),
+            (Value::Byte(a), Value::Byte(b)) => a.couple(b)?.into(),
+            (Value::Char(a), Value::Char(b)) => a.couple(b)?.into(),
+            (Value::Func(a), Value::Func(b)) => a.couple(b)?.into(),
+            (Value::Num(a), Value::Byte(b)) => a.couple(b.convert())?.into(),
+            (Value::Byte(a), Value::Num(b)) => a.convert().couple(b)?.into(),
             (a, b) => {
                 return Err(env.error(format!(
                     "Cannot couple {} array with {} array",
@@ -477,26 +477,95 @@ impl Value {
     }
 }
 
-impl<T: ArrayValue> Array<T> {
-    pub fn couple(mut self, mut other: Self, env: &Uiua) -> UiuaResult<Self> {
-        if self.rank() != other.rank() {
-            return Err(env.error(format!(
-                "Cannot couple arrays with different ranks ({} and {})",
-                self.rank(),
-                other.rank(),
-            )));
+fn data_index_to_shape_index(mut index: usize, shape: &[usize], out: &mut [usize]) -> bool {
+    debug_assert_eq!(shape.len(), out.len());
+    if index >= shape.iter().product() {
+        return false;
+    }
+    for (&s, o) in shape.iter().zip(out).rev() {
+        *o = index % s;
+        index /= s;
+    }
+    true
+}
+
+#[test]
+fn data_index_to_shape_index_test() {
+    let mut out = [0, 0];
+    for (index, shape, expected_out, expected_success) in [
+        (2, [2, 3], [0, 2], true),
+        (2, [1, 3], [0, 2], true),
+        (3, [2, 3], [1, 0], true),
+        (3, [1, 3], [1, 0], false),
+    ] {
+        let success = data_index_to_shape_index(index, &shape, &mut out);
+        assert_eq!(out, expected_out);
+        assert_eq!(success, expected_success);
+    }
+}
+
+fn shape_index_to_data_index(index: &[usize], shape: &[usize]) -> Option<usize> {
+    debug_assert_eq!(shape.len(), index.len());
+    let mut data_index = 0;
+    for (&s, &i) in shape.iter().zip(index) {
+        if i >= s {
+            return None;
         }
+        data_index = data_index * s + i;
+    }
+    Some(data_index)
+}
+
+#[test]
+fn shape_index_to_data_index_test() {
+    for (index, shape, expected_data_index) in [
+        ([0, 2], [2, 3], Some(2)),
+        ([0, 2], [1, 3], Some(2)),
+        ([1, 0], [2, 3], Some(3)),
+        ([1, 0], [1, 3], None),
+    ] {
+        let data_index = shape_index_to_data_index(&index, &shape);
+        assert_eq!(data_index, expected_data_index);
+    }
+}
+
+impl<T: ArrayValue> Array<T> {
+    pub fn fill_to_shape(&mut self, shape: &[usize]) {
+        while self.rank() < shape.len() {
+            self.shape.insert(0, 1);
+        }
+        if self.shape == shape {
+            return;
+        }
+        let target_size = shape.iter().product();
+        let mut new_data = vec![T::fill_value(); target_size];
+        let mut curr = vec![0; shape.len()];
+        println!("self shape = {:?}", self.shape);
+        println!("target shape = {shape:?}");
+        for new_data_index in 0..target_size {
+            data_index_to_shape_index(new_data_index, shape, &mut curr);
+            println!("curr = {curr:?}");
+            if let Some(data_index) = shape_index_to_data_index(&curr, &self.shape) {
+                new_data[new_data_index] = self.data[data_index].clone();
+            }
+        }
+        self.data = new_data;
+        self.shape = shape.to_vec();
+    }
+    pub fn couple(mut self, mut other: Self) -> UiuaResult<Self> {
         if self.shape != other.shape {
-            let fill = T::fill_value();
             let mut new_shape = vec![0; self.shape.len().max(other.shape.len())];
             for i in 0..new_shape.len() {
-                new_shape[i] = self.shape.get(i).max(other.shape.get(i)).copied().unwrap();
+                let j = new_shape.len() - i - 1;
+                if self.shape.len() > i {
+                    new_shape[j] = self.shape[self.shape.len() - i - 1];
+                }
+                if other.shape.len() > i {
+                    new_shape[j] = new_shape[j].max(other.shape[other.shape.len() - i - 1]);
+                }
             }
-            let target_size = new_shape.iter().product();
-            self.data.resize(target_size, fill.clone());
-            self.shape = new_shape.clone();
-            other.data.resize(target_size, fill);
-            other.shape = new_shape;
+            self.fill_to_shape(&new_shape);
+            other.fill_to_shape(&new_shape);
         }
         self.data.append(&mut other.data);
         self.shape.insert(0, 2);

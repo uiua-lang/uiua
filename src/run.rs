@@ -36,7 +36,7 @@ pub struct Uiua<'io> {
     pub(crate) io: &'io dyn IoBackend,
 }
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 #[must_use]
 pub struct Scope {
     value: Vec<Rc<Value>>,
@@ -45,6 +45,24 @@ pub struct Scope {
     dfn: Vec<DfnFrame>,
     call: Vec<StackFrame>,
     names: HashMap<Ident, usize>,
+}
+
+impl Default for Scope {
+    fn default() -> Self {
+        Self {
+            value: Vec::new(),
+            anti: Vec::new(),
+            array: Vec::new(),
+            dfn: Vec::new(),
+            call: Vec::new(),
+            names: Primitive::all()
+                .filter(|p| p.format_name().is_none())
+                .filter_map(|p| p.name())
+                .enumerate()
+                .map(|(i, name)| (name.into(), i))
+                .collect(),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -88,7 +106,10 @@ impl<'io> Uiua<'io> {
             spans: vec![Span::Builtin],
             stack: Scope::default(),
             lower_stacks: Vec::new(),
-            globals: Vec::new(),
+            globals: Primitive::all()
+                .filter(|p| p.format_name().is_none() && p.name().is_some())
+                .map(|p| Rc::new(p.into()))
+                .collect(),
             new_functions: Vec::new(),
             new_dfns: Vec::new(),
             current_imports: HashSet::new(),

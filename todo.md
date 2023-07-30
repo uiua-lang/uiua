@@ -1,4 +1,3 @@
-- Put name-only builtins in scope instead of parsing
 - Fix and refine fill behavior
 - Function array coercion
 - Revert module exports to be explicit

@@ -464,6 +464,12 @@ impl From<Function> for Value {
     }
 }
 
+impl From<Primitive> for Value {
+    fn from(prim: Primitive) -> Self {
+        Function::from(prim).into()
+    }
+}
+
 macro_rules! value_un_impl {
     ($name:ident, $(($variant:ident, $f:ident)),* $(,)?) => {
         impl Value {
@@ -485,7 +491,7 @@ macro_rules! value_un_impl_all {
     }
 }
 
-value_un_impl_all!(neg, not, abs, sign, sqrt, sin, cos, asin, acos, floor, ceil, round);
+value_un_impl_all!(neg, not, abs, sign, sqrt, sin, cos, tan, asin, acos, floor, ceil, round);
 
 macro_rules! value_bin_impl {
     ($name:ident, $(($va:ident, $vb:ident, $f:ident)),* $(,)?) => {

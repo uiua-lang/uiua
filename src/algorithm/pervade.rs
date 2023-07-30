@@ -141,6 +141,18 @@ pub mod cos {
         env.error(format!("Cannot get the cosine of {a}"))
     }
 }
+pub mod tan {
+    use super::*;
+    pub fn num(a: f64) -> f64 {
+        a.tan()
+    }
+    pub fn byte(a: Byte) -> f64 {
+        f64::from(a).tan()
+    }
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
+        env.error(format!("Cannot get the tangent of {a}"))
+    }
+}
 pub mod asin {
     use super::*;
     pub fn num(a: f64) -> f64 {

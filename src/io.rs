@@ -28,12 +28,6 @@ macro_rules! io_op {
             pub const ALL: [Self; 0 $(+ {stringify!($variant); 1})*] = [
                 $(Self::$variant,)*
             ];
-            pub fn from_name(s: &str) -> Option<Self> {
-                match s {
-                    $($name => Some(Self::$variant)),*,
-                    _ => None
-                }
-            }
             pub fn name(&self) -> &'static str {
                 match self {
                     $(Self::$variant => $name),*
@@ -55,31 +49,31 @@ macro_rules! io_op {
 }
 
 io_op! {
-    (1(0), Show, "show"),
-    (1(0), Prin, "prin"),
-    (1(0), Print, "print"),
-    (0, ScanLine, "scanline"),
-    (0, Args, "args"),
-    (1, Var, "var"),
-    (0, Rand, "rand"),
-    (1, FOpen, "fopen"),
-    (1, FCreate, "fcreate"),
-    (1, FClose, "fclose"),
-    (1, FExists, "fexists"),
-    (1, FListDir, "flistdir"),
-    (1, FIsFile, "fisfile"),
-    (1, ReadAllStr, "freadallstr"),
-    (1, ReadAllBytes, "freadallbytes"),
-    (1, ReadStr, "readstr"),
-    (1, WriteStr, "writestr"),
-    (1, ReadBytes, "readbytes"),
-    (1, WriteBytes, "writebytes"),
-    (1, Import, "import"),
-    (0, Now, "now"),
-    (1, ImRead, "imread"),
-    (1, ImWrite, "imwrite"),
-    (1(0), ImShow, "imshow"),
-    (1(0), AudioPlay, "audioplay"),
+    (1(0), Show, "Show"),
+    (1(0), Prin, "Prin"),
+    (1(0), Print, "Print"),
+    (0, ScanLine, "ScanLine"),
+    (0, Args, "Args"),
+    (1, Var, "Var"),
+    (0, Rand, "Rand"),
+    (1, FOpen, "FOpen"),
+    (1, FCreate, "FCreate"),
+    (1, FClose, "FClose"),
+    (1, FExists, "FExists"),
+    (1, FListDir, "FListDir"),
+    (1, FIsFile, "FIsFile"),
+    (1, ReadAllStr, "FReadAllStr"),
+    (1, ReadAllBytes, "FReadAllBytes"),
+    (1, ReadStr, "ReadStr"),
+    (1, WriteStr, "WriteStr"),
+    (1, ReadBytes, "ReadBytes"),
+    (1, WriteBytes, "WriteBytes"),
+    (1, Import, "Import"),
+    (0, Now, "Now"),
+    (1, ImRead, "ImRead"),
+    (1, ImWrite, "ImWrite"),
+    (1(0), ImShow, "ImShow"),
+    (1(0), AudioPlay, "AudioPlay"),
 }
 
 /// A handle to an IO stream

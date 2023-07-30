@@ -207,6 +207,7 @@ primitive!(
     (1, Sqrt, MonadicPervasive, "sqrt" + '√'),
     (1, Sin, MonadicPervasive, "sine"),
     (1, Cos, MonadicPervasive, "cosine"),
+    (1, Tan, MonadicPervasive, "tangent"),
     (1, Asin, MonadicPervasive),
     (1, Acos, MonadicPervasive),
     (1, Floor, MonadicPervasive, "floor" + '⌊'),
@@ -236,7 +237,7 @@ primitive!(
     /// ex: ↥ 3 5
     /// ex: ↥ [1 4 2] [3 7 1]
     (2, Max, DyadicPervasive, "maximum" + '↥'),
-    (2, Atan, DyadicPervasive, "atan"),
+    (2, Atan, DyadicPervasive, "atangent"),
     // Monadic array ops
     /// The number of rows in an array
     ///
@@ -647,9 +648,6 @@ impl Primitive {
         if name.chars().any(char::is_uppercase) {
             return None;
         }
-        if let Some(io) = IoOp::from_name(name) {
-            return Some(Primitive::Io(io));
-        }
         if name == "pi" || name == "π" {
             return Some(Primitive::Pi);
         }
@@ -657,9 +655,9 @@ impl Primitive {
             return None;
         }
         let mut matching =
-            Primitive::all().filter(|p| p.name().map_or(false, |pn| pn.starts_with(name)));
+            Primitive::all().filter(|p| p.format_name().map_or(false, |pn| pn.starts_with(name)));
         let res = matching.next()?;
-        let exact_match = res.name().map_or(false, |i| i == name);
+        let exact_match = res.format_name().map_or(false, |i| i == name);
         (exact_match || matching.next().is_none()).then_some(res)
     }
     pub fn from_multiname(name: &str) -> Option<Vec<(Self, &str)>> {
@@ -688,6 +686,23 @@ impl Primitive {
             break None;
         }
     }
+    /// The name of the primitive that the formatter will replace
+    pub fn format_name(&self) -> Option<&'static str> {
+        if [
+            Primitive::Sin,
+            Primitive::Cos,
+            Primitive::Tan,
+            Primitive::Atan,
+        ]
+        .contains(self)
+        {
+            return self.name();
+        }
+        if self.ascii().is_some() || self.unicode().is_none() {
+            return None;
+        }
+        self.name()
+    }
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
             Primitive::Pi => env.push(PI),
@@ -700,6 +715,7 @@ impl Primitive {
             Primitive::Sqrt => env.monadic_env(Value::sqrt)?,
             Primitive::Sin => env.monadic_env(Value::sin)?,
             Primitive::Cos => env.monadic_env(Value::cos)?,
+            Primitive::Tan => env.monadic_env(Value::tan)?,
             Primitive::Asin => env.monadic_env(Value::asin)?,
             Primitive::Acos => env.monadic_env(Value::acos)?,
             Primitive::Floor => env.monadic_env(Value::floor)?,

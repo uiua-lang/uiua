@@ -521,13 +521,8 @@ impl Lexer {
                                 col: start.col + frag.chars().count(),
                                 ..start
                             };
-                            let token = if prim.unicode().is_some() || prim.ascii().is_some() {
-                                Glyph(prim)
-                            } else {
-                                Ident(frag.into())
-                            };
                             self.tokens.push(Sp {
-                                value: token,
+                                value: Glyph(prim),
                                 span: self.make_span(start, end),
                             });
                             start = end;

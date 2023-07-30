@@ -1,4 +1,4 @@
-- Simplify editor examples
+- Improve SEO
 - Benchmarking
 - Fix couple filling
 - Docs

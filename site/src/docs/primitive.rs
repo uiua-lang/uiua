@@ -40,10 +40,8 @@ pub fn PrimDocsPage(cx: Scope) -> impl IntoView {
                     .iter()
                     .map(|ex| {
                         view!(cx,
-                            <div>
-                                <p>{parse_doc(cx, &ex.primer)}</p>
-                                <Editor examples=&[&ex.input]/>
-                            </div>
+                            <p>{parse_doc(cx, &ex.primer)}</p>
+                            <Editor examples=&[&ex.input]/>
                         )
                         .into_view(cx)
                     })

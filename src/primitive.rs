@@ -340,13 +340,10 @@ primitive!(
     /// ex: ⊂ [1 2] [3 4]
     /// ex: ⊂ 1 [2_3 4_5]
     (2, Join, DyadicArray, "join" + '⊂'),
-    /// Combine two arrays as rows
-    ///
-    /// Un[fill]ed arrays must have the same [shape].
+    /// Combine two arrays as rows of a new array
     ///
     /// ex: ⊟ [1 2 3] [4 5 6]
     /// ex: ⊟ [1 2 3] [4 5]
-    /// ex: ⊟ [1 2 3] ∘[4 5]
     (2, Couple, DyadicArray, "couple" + '⊟'),
     /// Index a single row or element from an array
     ///

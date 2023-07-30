@@ -94,6 +94,7 @@ pub fn MainPage(cx: Scope) -> impl IntoView {
             <Editor
                 examples=examples::EXAMPLES
                 size=EditorSize::Medium
+                mode=EditorMode::Multiple
                 help={&[
                     "Type some or all of a glyph's name, then run to format the names into glyphs.",
                     "You can run with ctrl/shift + enter.",

@@ -22,29 +22,40 @@ pub enum EditorSize {
     Pad,
 }
 
+#[derive(Default)]
+pub enum EditorMode {
+    #[default]
+    Progressive,
+    Multiple,
+}
+
 #[component]
 #[allow(clippy::needless_lifetimes)]
 pub fn Editor<'a>(
     cx: Scope,
+    #[prop(optional)] example: &'a str,
     #[prop(optional)] examples: &'a [&'a str],
     #[prop(optional)] size: EditorSize,
     #[prop(optional)] help: &'static [&'static str],
-    #[prop(optional)] progressive: bool,
+    #[prop(optional)] mode: EditorMode,
 ) -> impl IntoView {
-    let id = format!("{:?}", cx.id);
-    let examples: Vec<String> = if examples.is_empty() {
-        vec![String::new()]
-    } else if progressive {
-        examples
-            .iter()
-            .map(|s| s.to_string())
-            .scan(String::new(), |acc, s| {
-                *acc = format!("{s} {acc}");
-                Some(format_str(acc).unwrap_or_else(|_| acc.clone()))
-            })
-            .collect()
-    } else {
-        examples.iter().map(|s| s.to_string()).collect()
+    let id: String = format!("{:?}", cx.id);
+    let examples = Some(example)
+        .filter(|ex| !ex.is_empty() || examples.is_empty())
+        .into_iter()
+        .chain(examples.iter().copied());
+    let examples: Vec<String> = match mode {
+        EditorMode::Progressive => {
+            let mut examples: Vec<_> = examples
+                .scan(String::new(), |acc, s| {
+                    *acc = format!("{s} {acc}");
+                    Some(acc.clone())
+                })
+                .collect();
+            examples.rotate_right(1);
+            examples
+        }
+        EditorMode::Multiple => examples.map(Into::into).collect(),
     };
     let code_max_lines = if let EditorSize::Pad = size {
         10
@@ -313,7 +324,7 @@ pub fn Editor<'a>(
     set_timeout(move || run(false), Duration::from_millis(0));
 
     view! { cx,
-        <div>
+        <div id="editor-wrapper">
             <div id="editor">
                 <div style=glyph_buttons_style>
                     <div class="glyph-buttons">{glyph_buttons}</div>

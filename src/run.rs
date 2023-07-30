@@ -40,7 +40,6 @@ pub struct Uiua<'io> {
 #[must_use]
 pub struct Scope {
     value: Vec<Rc<Value>>,
-    anti: Vec<Rc<Value>>,
     array: Vec<usize>,
     dfn: Vec<DfnFrame>,
     call: Vec<StackFrame>,
@@ -51,7 +50,6 @@ impl Default for Scope {
     fn default() -> Self {
         Self {
             value: Vec::new(),
-            anti: Vec::new(),
             array: Vec::new(),
             dfn: Vec::new(),
             call: Vec::new(),
@@ -677,15 +675,6 @@ impl<'io> Uiua<'io> {
             ))
         })
     }
-    /// Pop a value from the antistack
-    pub fn antipop(&mut self, arg: impl StackArg) -> UiuaResult<Rc<Value>> {
-        self.stack.anti.pop().ok_or_else(|| {
-            self.error(format!(
-                "Antistack was empty when evaluating {}",
-                arg.arg_name()
-            ))
-        })
-    }
     /// Pop a result value from the stack
     ///
     /// Equivalent to `Self::pop("result")`
@@ -698,13 +687,6 @@ impl<'io> Uiua<'io> {
     }
     pub fn push_ref(&mut self, val: Rc<Value>) {
         self.stack.value.push(val);
-    }
-    /// Push a value onto the antistack
-    pub fn antipush(&mut self, val: impl Into<Value>) {
-        self.stack.anti.push(Rc::new(val.into()));
-    }
-    pub fn antipush_ref(&mut self, val: Rc<Value>) {
-        self.stack.anti.push(val);
     }
     /// Take the entire stack
     pub fn take_stack(&mut self) -> Vec<Rc<Value>> {
@@ -777,14 +759,8 @@ impl<'io> Uiua<'io> {
     pub(crate) fn stack_size(&self) -> usize {
         self.stack.value.len()
     }
-    pub(crate) fn antistack_size(&self) -> usize {
-        self.stack.anti.len()
-    }
     pub(crate) fn truncate_stack(&mut self, size: usize) {
         self.stack.value.truncate(size);
-    }
-    pub(crate) fn truncate_antistack(&mut self, size: usize) {
-        self.stack.anti.truncate(size);
     }
 }
 

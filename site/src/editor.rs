@@ -314,43 +314,45 @@ pub fn Editor<'a>(
 
     view! { cx,
         <div>
-            <div id="editor" class=editor_class>
+            <div id="editor">
                 <div style=glyph_buttons_style>
                     <div class="glyph-buttons">{glyph_buttons}</div>
                 </div>
-                <div id="code-area">
-                    <div id="code-right-side">
-                        <button
-                            id="glyphs-toggle-button"
-                            title=show_glyphs_title
-                            on:click=toggle_show_glyphs>{show_glyphs_text}</button>
-                        <div id="example-tracker">{example_text}</div>
+                <div class=editor_class>
+                    <div id="code-area">
+                        <div id="code-right-side">
+                            <button
+                                id="glyphs-toggle-button"
+                                title=show_glyphs_title
+                                on:click=toggle_show_glyphs>{show_glyphs_text}</button>
+                            <div id="example-tracker">{example_text}</div>
+                        </div>
+                        <div id={glyph_doc_id.get()} class="glyph-doc" style="display: none">
+                            { move || glyph_doc.get() }
+                            <div class="glyph-doc-ctrl-click">"Ctrl+click for more info"</div>
+                        </div>
+                        <textarea
+                            id={code_id.get()}
+                            spellcheck="false"
+                            class={format!("code {code_class}")}
+                            style={format!("height: {code_height_em}em")}
+                            on:input=code_input>{ move || code.get() }</textarea>
                     </div>
-                    <div id={glyph_doc_id.get()} class="glyph-doc" style="display: none">
-                        { move || glyph_doc.get() }
-                        <div class="glyph-doc-ctrl-click">"Ctrl+click for more info"</div>
-                    </div>
-                    <textarea
-                        id={code_id.get()}
-                        spellcheck="false"
-                        class={format!("code {code_class}")}
-                        style={format!("height: {code_height_em}em")}
-                        on:input=code_input>{ move || code.get() }</textarea>
-                </div>
-                <div id={output_id.get()} class="output">
-                    <div id="output-text">{ move || output.get() }</div>
-                    <div id="code-buttons">
-                        <button id="run-button" class="code-button" on:click=move |_| run(true)>{ "Run" }</button>
-                        <button
-                            id="prev-example"
-                            class="code-button"
-                            style=example_arrow_style
-                            on:click=prev_example title="Previous example">{ "<" } </button>
-                        <button
-                            id="next-example"
-                            class=next_button_class
-                            style=example_arrow_style
-                            on:click=next_example title="Next example">{ ">" } </button>
+                    <div id={output_id.get()} class="output">
+                        <div id="output-text">{ move || output.get() }</div>
+                        <div id="code-buttons">
+                            <button id="run-button" class="code-button" on:click=move |_| run(true)>{ "Run" }</button>
+                            <button
+                                id="prev-example"
+                                class="code-button"
+                                style=example_arrow_style
+                                on:click=prev_example title="Previous example">{ "<" } </button>
+                            <button
+                                id="next-example"
+                                class=next_button_class
+                                style=example_arrow_style
+                                on:click=next_example title="Next example">{ ">" } </button>
+                        </div>
                     </div>
                 </div>
                 <div>

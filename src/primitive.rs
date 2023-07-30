@@ -176,16 +176,6 @@ primitive!(
     (2(2), Flip, Stack, "flip" + '~'),
     /// Pop the top value off the stack
     (1(0), Pop, Stack, "pop" + ';'),
-    /// Pop the top value off the stack and push it to the antistack
-    ///
-    /// This is the inverse of [load].
-    /// ex: [⇞ 1 2 ⇟ 3 4]
-    (1(0){1}, Save, Stack, "save" + '⇟'),
-    /// Pop the top value off the antistack and push it to the stack
-    ///
-    /// This is the inverse of [save].
-    /// ex: [⇞ 1 2 ⇟ 3 4]
-    (0[1](1), Load, Stack, "load" + '⇞'),
     // Pervasive monadic ops
     /// Logical not (equivalent to 1 - x)
     ///
@@ -219,7 +209,13 @@ primitive!(
     (2, Lt, DyadicPervasive, "less than" + '<'),
     (2, Le, DyadicPervasive, "less or equal", LessEqual + '≤'),
     (2, Gt, DyadicPervasive, "greater than" + '>'),
-    (2, Ge, DyadicPervasive, "greater or equal", GreaterEqual + '≥'),
+    (
+        2,
+        Ge,
+        DyadicPervasive,
+        "greater or equal",
+        GreaterEqual + '≥'
+    ),
     (2, Add, DyadicPervasive, "add" + '+'),
     (2, Sub, DyadicPervasive, "subtract" + '-'),
     (2, Mul, DyadicPervasive, "multiply", Star + '×'),
@@ -492,7 +488,11 @@ primitive!(
     ///
     /// ex: ∹⊂ 1 2_3_4
     /// ex: ∹⊂ 1_2_3 4_5_6
-    (Distribute, DyadicModifier { modifier: 1 }, "distribute" + '∹'),
+    (
+        Distribute,
+        DyadicModifier { modifier: 1 },
+        "distribute" + '∹'
+    ),
     /// Apply a function to each combination of elements of two arrays
     /// This is the element-wise version of [cross].
     ///
@@ -629,8 +629,6 @@ impl Primitive {
             Asin => Sin,
             Acos => Cos,
             Reverse => Reverse,
-            Save => Load,
-            Load => Save,
             Transpose => InvTranspose,
             InvTranspose => Transpose,
             Debug => Debug,
@@ -815,23 +813,13 @@ impl Primitive {
             Primitive::Pop => {
                 env.pop(1)?;
             }
-            Primitive::Save => {
-                let x = env.pop(1)?;
-                env.antipush_ref(x);
-            }
-            Primitive::Load => {
-                let x = env.antipop(1)?;
-                env.push_ref(x);
-            }
             Primitive::Try => {
                 let f = env.pop(1)?;
                 let handler = env.pop(2)?;
                 let size = env.stack_size();
-                let antisize = env.antistack_size();
                 env.push_ref(f);
                 if let Err(e) = env.call() {
                     env.truncate_stack(size);
-                    env.truncate_antistack(antisize);
                     env.push(e.message());
                     env.push_ref(handler);
                     env.call()?;

@@ -254,6 +254,7 @@ li {
 
 .glyph-buttons {
     padding: 0.1em;
+    font-size: 1.4em;
     display: flex;
     flex-wrap: wrap;
     justify-content: space-evenly;
@@ -262,7 +263,7 @@ li {
 
 .glyph-button {
     font-family: "Code Font";
-    font-size: 0.94em;
+    font-size: 0.96em;
     padding: 0.1em;
     margin: 0em;
     background-color: transparent;

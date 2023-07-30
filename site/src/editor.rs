@@ -7,7 +7,7 @@ use uiua::{
     format::format_str, primitive::Primitive, value::Value, value_to_image_bytes,
     value_to_wav_bytes, Uiua, UiuaResult,
 };
-use wasm_bindgen::{JsCast, UnwrapThrowExt};
+use wasm_bindgen::JsCast;
 use web_sys::{
     Event, HtmlAudioElement, HtmlDivElement, HtmlImageElement, HtmlTextAreaElement, MouseEvent,
 };
@@ -39,7 +39,7 @@ pub fn Editor<'a>(
     #[prop(optional)] help: &'static [&'static str],
     #[prop(optional)] mode: EditorMode,
 ) -> impl IntoView {
-    let id: String = format!("{:?}", cx.id);
+    let id = format!("{:?}", cx.id);
     let examples = Some(example)
         .filter(|ex| !ex.is_empty() || examples.is_empty())
         .into_iter()
@@ -197,7 +197,7 @@ pub fn Editor<'a>(
 
     // Run the code when Ctrl+Enter or Shift+Enter is pressed
     window_event_listener(keydown, move |event| {
-        let event = event.dyn_ref::<web_sys::KeyboardEvent>().unwrap_throw();
+        let event = event.dyn_ref::<web_sys::KeyboardEvent>().unwrap();
         if event.key() == "Enter" && (event.ctrl_key() || event.shift_key()) {
             run(true);
         }
@@ -205,8 +205,7 @@ pub fn Editor<'a>(
 
     // Update the code when the textarea is changed
     let code_input = move |event: Event| {
-        let text_area: HtmlTextAreaElement =
-            event.target().unwrap_throw().dyn_into().unwrap_throw();
+        let text_area: HtmlTextAreaElement = event.target().unwrap().dyn_into().unwrap();
         set_code.set(text_area.value());
     };
     let (glyph_doc, set_glyph_doc) = create_signal(cx, String::new());
@@ -466,10 +465,11 @@ fn run_code(code: &str) -> UiuaResult<RunOutput> {
     })
 }
 
+#[track_caller]
 fn element<T: JsCast>(id: &str) -> T {
-    document()
-        .get_element_by_id(id)
-        .unwrap_throw()
-        .dyn_into::<T>()
-        .unwrap_throw()
+    if let Some(elem) = document().get_element_by_id(id) {
+        elem.dyn_into::<T>().unwrap()
+    } else {
+        panic!("#{id} not found")
+    }
 }

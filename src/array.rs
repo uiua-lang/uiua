@@ -212,7 +212,7 @@ impl<T: ArrayValue> Array<T> {
         for row in row_values {
             count += 1;
             value = if count == 2 {
-                value.couple(row)?
+                value.couple(row, env)?
             } else {
                 value.join_impl(row, false, env)?
             };

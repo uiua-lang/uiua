@@ -371,7 +371,7 @@ impl<T: ArrayValue> Array<T> {
     }
 }
 
-pub fn rank(env: &mut Uiua) -> UiuaResult {
+pub fn level(env: &mut Uiua) -> UiuaResult {
     let n = env.pop(1)?.as_int(env, "Rank must be a single integer")?;
     let f = env.pop(2)?;
     let xs = rc_take(env.pop(3)?);
@@ -381,12 +381,12 @@ pub fn rank(env: &mut Uiua) -> UiuaResult {
     }
     let irank = xs.rank() as isize;
     let n = ((-n % irank + irank) % irank) as usize;
-    let res = rank_recursive(f, xs, n, env)?;
+    let res = level_recursive(f, xs, n, env)?;
     env.push(res);
     Ok(())
 }
 
-fn rank_recursive(f: Rc<Value>, value: Value, n: usize, env: &mut Uiua) -> UiuaResult<Value> {
+fn level_recursive(f: Rc<Value>, value: Value, n: usize, env: &mut Uiua) -> UiuaResult<Value> {
     if n == 0 {
         env.push(value);
         env.push_ref(f);
@@ -395,7 +395,7 @@ fn rank_recursive(f: Rc<Value>, value: Value, n: usize, env: &mut Uiua) -> UiuaR
     } else {
         let mut rows = Vec::with_capacity(value.row_count());
         for row in value.into_rows() {
-            rows.push(rank_recursive(f.clone(), row, n - 1, env)?);
+            rows.push(level_recursive(f.clone(), row, n - 1, env)?);
         }
         Value::from_row_values(rows, env)
     }

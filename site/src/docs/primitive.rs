@@ -1,27 +1,34 @@
 use leptos::*;
 use leptos_router::*;
+use regex::Regex;
 use uiua::primitive::Primitive;
 
 use crate::{code::PrimCode, editor::Editor};
 
 #[allow(unused_braces)]
 fn parse_doc(cx: Scope, line: &str) -> impl IntoView {
-    line.split('[')
-        .flat_map(|s| {
-            let (p, s) = s.split_once(']').unwrap_or(("", s));
-            if let Some(prim) = Primitive::from_name(p) {
-                [
-                    view!(cx, <PrimCode prim=prim/>).into_view(cx),
-                    view!(cx, { s.to_string() }).into_view(cx),
-                ]
-            } else {
-                [
-                    view!(cx, { p.to_string() }).into_view(cx),
-                    view!(cx, { s.to_string() }).into_view(cx),
-                ]
-            }
-        })
-        .collect::<Vec<_>>()
+    thread_local! {
+        static RE: Regex = Regex::new(r"\[(.*?)\]|`(.*?)`|([^`\[\]]+)").unwrap();
+    }
+    RE.with(|re| {
+        re.captures_iter(line)
+            .map(|c| c.extract())
+            .map(|(mat, [s])| {
+                let s = s.to_string();
+                if mat.starts_with('[') {
+                    if let Some(prim) = Primitive::from_name(&s) {
+                        view!(cx, <PrimCode prim=prim/>).into_view(cx)
+                    } else {
+                        view!(cx, "["{s}"]").into_view(cx)
+                    }
+                } else if mat.starts_with('`') {
+                    view!(cx, <code>{s}</code>).into_view(cx)
+                } else {
+                    view!(cx, { s }).into_view(cx)
+                }
+            })
+            .collect::<Vec<_>>()
+    })
 }
 
 #[component]
@@ -40,7 +47,7 @@ pub fn PrimDocsPage(cx: Scope) -> impl IntoView {
                     .iter()
                     .map(|ex| {
                         view!(cx,
-                            <p>{parse_doc(cx, &ex.primer)}</p>
+                            {ex.primer.lines().map(|line| view!(cx, <p>{parse_doc(cx, line)}</p>)).collect::<Vec<_>>()}
                             <Editor examples=&[&ex.input]/>
                         )
                         .into_view(cx)

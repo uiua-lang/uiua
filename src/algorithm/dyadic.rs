@@ -460,12 +460,12 @@ fn rotate<T>(by: &[isize], shape: &[usize], data: &mut [T]) {
 impl Value {
     pub fn couple(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
         Ok(match (self, other) {
-            (Value::Num(a), Value::Num(b)) => a.couple(b)?.into(),
-            (Value::Byte(a), Value::Byte(b)) => a.couple(b)?.into(),
-            (Value::Char(a), Value::Char(b)) => a.couple(b)?.into(),
-            (Value::Func(a), Value::Func(b)) => a.couple(b)?.into(),
-            (Value::Num(a), Value::Byte(b)) => a.couple(b.convert())?.into(),
-            (Value::Byte(a), Value::Num(b)) => a.convert().couple(b)?.into(),
+            (Value::Num(a), Value::Num(b)) => a.couple(b, env)?.into(),
+            (Value::Byte(a), Value::Byte(b)) => a.couple(b, env)?.into(),
+            (Value::Char(a), Value::Char(b)) => a.couple(b, env)?.into(),
+            (Value::Func(a), Value::Func(b)) => a.couple(b, env)?.into(),
+            (Value::Num(a), Value::Byte(b)) => a.couple(b.convert(), env)?.into(),
+            (Value::Byte(a), Value::Num(b)) => a.convert().couple(b, env)?.into(),
             (a, b) => {
                 return Err(env.error(format!(
                     "Cannot couple {} array with {} array",
@@ -478,7 +478,14 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn couple(mut self, mut other: Self) -> UiuaResult<Self> {
+    pub fn couple(mut self, mut other: Self, env: &Uiua) -> UiuaResult<Self> {
+        if self.rank() != other.rank() {
+            return Err(env.error(format!(
+                "Cannot couple arrays with different ranks ({} and {})",
+                self.rank(),
+                other.rank(),
+            )));
+        }
         if self.shape != other.shape {
             let fill = T::fill_value();
             let mut new_shape = vec![0; self.shape.len().max(other.shape.len())];

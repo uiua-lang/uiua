@@ -175,7 +175,7 @@ primitive!(
     /// Pop the top value off the stack
     (1(0), Pop, Stack, "pop" + ';'),
     // Pervasive monadic ops
-    /// Logical not (equivalent to 1 - x)
+    /// Logical not (equivalent to `1 - x`)
     ///
     /// ex: ¬1
     /// ex: ¬[0 1 1 0]
@@ -342,8 +342,12 @@ primitive!(
     (2, Join, DyadicArray, "join" + '⊂'),
     /// Combine two arrays as rows of a new array
     ///
+    /// The arrays do not need to have the same [length], but they must have the same [rank].
+    /// Mismatched lengths will be filled.
+    ///
     /// ex: ⊟ [1 2 3] [4 5 6]
     /// ex: ⊟ [1 2 3] [4 5]
+    /// ex: ⊟ [1 2 3] [4_5 6_7]
     (2, Couple, DyadicArray, "couple" + '⊟'),
     /// Index a single row or element from an array
     ///
@@ -351,7 +355,6 @@ primitive!(
     /// ex: ⊡ 1_1 .[1_2_3 4_5_6]
     ///
     /// [pick] combined with [call] is the easiest way to emulate an if-else expression.
-    /// This idiom is optimized in the compiler to use fewer cycles.
     /// ex: :⊡~("not 5")_("5") =5 3
     (2, Pick, DyadicArray, "pick" + '⊡'),
     /// Select multiple elements from an array
@@ -452,13 +455,13 @@ primitive!(
     /// ex: \+ 1_2_3_4
     /// ex: \- 1_2_3_4
     /// ex: \(-~) 1_2_3_4
-    /// ex: \(⊂∘) 1_2_3_4
+    /// ex: \⊂ 1_2_3_4
     (Scan, MonadicModifier { modifier: 1 }, "scan" + '\\'),
     /// Apply a function to each element of an array
     /// This is the element-wise version of [rows].
     ///
     /// ex: ∵(⊟.) 1_2_3_4
-    /// ex: ∵(∘⇡) 1_2_3_4
+    /// ex: ∵⇡ 1_2_3_4
     (Each, MonadicModifier { modifier: 1 }, "each" + '∵'),
     /// Pervade a function through two arrays
     /// For operations that are already pervasive, like [add], this is redundant.
@@ -472,6 +475,10 @@ primitive!(
     ///
     /// ex: /+ [1_2_3 4_5_6 7_8_9]  # Sum columns
     /// ex: ≡/+ [1_2_3 4_5_6 7_8_9]  # Sum rows
+    ///
+    /// [rows] is equivalent to [level]`¯1`.
+    /// ex: ⍚¯1/+ [1_2_3 4_5_6 7_8_9]
+    /// ex: ≡/+   [1_2_3 4_5_6 7_8_9]
     (Rows, MonadicModifier { modifier: 1 }, "rows" + '≡'),
     /// Apply a function to each pair of rows in two arrays
     /// This is the row-wise version of [zip].
@@ -533,11 +540,16 @@ primitive!(
     (Under, OtherModifier { modifier: 2 }, "under" + '⍜'),
     /// Apply a function at a different array depth
     ///
+    /// [level]`0` does nothing.
+    /// [level]`¯1` is equivalent to [rows], applying the function to each row of the array's major axis.
+    /// [level]`1` applies the function to each row of the array's last axis.
+    ///
     /// ex: ↯2_2_3 ⇡12
     /// ex: /+ ↯2_2_3 ⇡12
     /// ex: ⍚0/+ ↯2_2_3 ⇡12
     /// ex: ⍚¯1/+ ↯2_2_3 ⇡12
     /// ex: ⍚¯2/+ ↯2_2_3 ⇡12
+    /// ex: ⍚1/+ ↯2_2_3 ⇡12
     (Level, OtherModifier { modifier: 2 }, "level" + '⍚'),
     /// Call a function and catch errors
     ///
@@ -793,7 +805,7 @@ impl Primitive {
             Primitive::Cross => loops::cross(env)?,
             Primitive::Scan => loops::scan(env)?,
             Primitive::Repeat => loops::repeat(env)?,
-            Primitive::Level => loops::rank(env)?,
+            Primitive::Level => loops::level(env)?,
             Primitive::Reshape => {
                 let shape = env.pop(1)?;
                 let mut array = env.pop(2)?;

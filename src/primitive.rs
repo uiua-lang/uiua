@@ -655,11 +655,11 @@ impl Primitive {
         if name == "pi" || name == "π" {
             return Some(vec![(Primitive::Pi, name)]);
         }
-        if name.len() < 3 {
-            return None;
-        }
         let mut start = 0;
         let indices: Vec<usize> = name.char_indices().map(|(i, _)| i).collect();
+        if indices.len() < 3 {
+            return None;
+        }
         let mut prims = Vec::new();
         'outer: loop {
             if start == name.len() {
@@ -859,11 +859,12 @@ impl Primitive {
                 let lowername = name.to_lowercase();
                 let f = match &*lib {
                     Value::Func(fs) => fs.data.iter().find_map(|f| {
-                        matches!(&f.id, FunctionId::Named(n) if n.as_str().to_lowercase() == lowername)
+                        matches!(&f.id, FunctionId::Named(n) if n == lowername.as_str())
                             .then(|| f.clone())
                     }),
-                    _ => None
-                }.ok_or_else(|| env.error(format!("No function found for {name:?}")))?;
+                    _ => None,
+                }
+                .ok_or_else(|| env.error(format!("No function found for {name:?}")))?;
                 env.push(f);
             }
             Primitive::Io(io) => io.run(env)?,

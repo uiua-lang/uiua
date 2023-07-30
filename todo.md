@@ -1,4 +1,3 @@
-- Revert module exports to be explicit
 - Make a better rand API
 - Simplify dyadic module
 - Simplify editor examples

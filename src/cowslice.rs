@@ -3,6 +3,7 @@ use std::{
     cmp::Ordering,
     fmt,
     hash::{Hash, Hasher},
+    iter::{Skip, Take},
     ops::{Bound, Deref, DerefMut, RangeBounds},
 };
 
@@ -239,10 +240,13 @@ impl<T: Hash> Hash for CowSlice<T> {
 
 impl<T: Clone> IntoIterator for CowSlice<T> {
     type Item = T;
-    type IntoIter = <Vec<T> as IntoIterator>::IntoIter;
+    type IntoIter = Take<Skip<<EcoVec<T> as IntoIterator>::IntoIter>>;
     #[allow(clippy::unnecessary_to_owned)]
     fn into_iter(self) -> Self::IntoIter {
-        self.to_vec().into_iter()
+        self.data
+            .into_iter()
+            .skip(self.start)
+            .take(self.end - self.start)
     }
 }
 

@@ -113,7 +113,7 @@ impl<T: ArrayValue> Array<T> {
         let row_len = self.row_len();
         self.shape.remove(0);
         let prefix_len = self.data.len() - row_len;
-        self.data.modify(|data| data.truncate(prefix_len));
+        self.data = self.data.into_iter().skip(prefix_len).collect();
         Ok(self)
     }
 }

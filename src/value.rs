@@ -81,7 +81,7 @@ impl Value {
         match self {
             Self::Num(_) => "number",
             Self::Byte(_) => "byte",
-            Self::Char(_) => "char",
+            Self::Char(_) => "character",
             Self::Func(_) => "function",
         }
     }

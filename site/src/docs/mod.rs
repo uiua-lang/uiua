@@ -84,6 +84,7 @@ pub enum TutorialPage {
     Basic,
     Math,
     Arrays,
+    Types,
     Bindings,
     Functions,
 }
@@ -97,6 +98,7 @@ impl TutorialPage {
             Self::Basic => "Basic Stack Operations and Formatting",
             Self::Math => "Math and Comparison",
             Self::Arrays => "Arrays",
+            Self::Types => "Types",
             Self::Bindings => "Bindings",
             Self::Functions => "Modifiers and Functions",
         }
@@ -127,6 +129,7 @@ pub fn DocsPage(cx: Scope) -> impl IntoView {
             TutorialPage::Basic => view! { cx, <TutorialBasic/> }.into_view(cx),
             TutorialPage::Math => view! { cx, <TutorialMath/> }.into_view(cx),
             TutorialPage::Arrays => view! { cx, <TutorialArrays/> }.into_view(cx),
+            TutorialPage::Types => view! { cx, <TutorialTypes/> }.into_view(cx),
             TutorialPage::Bindings => view! { cx, <TutorialBindings/> }.into_view(cx),
             TutorialPage::Functions => view! { cx, <TutorialFunctions/> }.into_view(cx),
         };
@@ -384,6 +387,59 @@ fn TutorialArrays(cx: Scope) -> impl IntoView {
             <p>"If you have worked with other array languages, you may be thinking, \"Sure, the Flat Array Model is simple, but it is very limited. How do you represent arrays with subarrays of different lengths?\" The answer is "<b>"fill values"</b>"."</p>
             <p>"Many operations that work on multiple arrays will insert fill values when shapes do not match. The most basic is stack notation, like in the error in the example above."</p>
         </div>
+    }
+}
+
+#[component]
+fn TutorialTypes(cx: Scope) -> impl IntoView {
+    use Primitive::*;
+    view! { cx,
+        <h2>"Types"</h2>
+        <p>"Every value in Uiua is an array. However, different arrays on the stack can have different "<em>"types"</em>" of items. Every element of an array is always the same type. Unlike some other array programming languages, Uiua arrays cannot have elements of different types."</p>
+        <p>"There are only three types of arrays:"</p>
+        <ul>
+            <li><b>"Number"</b></li>
+            <li><b>"Character"</b></li>
+            <li><b>"Function"</b></li>
+        </ul>
+        <br/>
+        <h2>"Numbers"</h2>
+        <hr/>
+        <p>"Numbers are decimal numbers with floating precision. They are represented as 64-bit floating-point."</p>
+        <Editor example="[5 0 3.2 ¯1.1 π ∞]"/>
+        <p>"Most math operations can only be applied to numbers."</p>
+        <p>"Even though numbers can have a fractional part, many built-in functions require whole numbers. These functions will return an error if given a non-whole number."</p>
+        <p>"One such example is "<PrimCode prim=Pick/>"."</p>
+        <Editor example="⊡ 2 [4 7 9 1 0]"/>
+        <Editor example="⊡ 3.1 [4 7 9 1 0]"/>
+        <p>"If you want to convert a number to a whole number, you can use "<PrimCode prim=Floor/>", "<PrimCode prim=Ceil/>", or "<PrimCode prim=Round/>"."</p>
+        <br/>
+        <h2>"Characters"</h2>
+        <hr/>
+        <p>"Characters are represented as 32-bit Unicode codepoints."</p>
+        <p>"Character literals, delimited by "<code>"'"</code>"s, create "<PrimCode prim=Rank/><code>"0"</code>" character arrays."</p>
+        <Editor example="'a' 'b' 'c'"/>
+        <p>"String literals, delimited by "<code>"\""</code>"s, create "<PrimCode prim=Rank/><code>"1"</code>" character arrays."</p>
+        <Editor example="\"Hello, World!\""/>
+        <p>"Characters and numbers exist in an "<a href="https://en.wikipedia.org/wiki/Affine_space">"affine space."</a></p>
+        <p>"You can add or subtract a number from a character to get another character."</p>
+        <p>"You can subtract two characters to get a number."</p>
+        <p>"No other arithmetic operations can be done on characters."</p>
+        <Editor example="+1 'a'"/>
+        <Editor example="-'a' 'z'"/>
+        <Editor example="+'a' 'b'"/>
+        <br/>
+        <h2>"Functions"</h2>
+        <hr/>
+        <p>"Functions are usually used as scalars, but they are still arrays. Most array operations that work on number and character arrays work on arrays of functions as well."</p>
+        <p>"Functions will be discussed more in a "<A href="/docs/functions">"later section"</A>"."</p>
+        <br/>
+        <h2>"Type agreement"</h2>
+        <hr/>
+        <p>"For functions that work on the structure of arrays rather than their elements, the types of the arrays must match."</p>
+        <Editor example="⊂ 1_2 3"/>
+        <Editor example="⊟ \"Hello\" \"World\""/>
+        <Editor example="⊟ 1_2_3 \"dog\""/>
     }
 }
 

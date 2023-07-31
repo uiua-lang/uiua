@@ -12,7 +12,7 @@ use web_sys::{
     Event, HtmlAudioElement, HtmlDivElement, HtmlImageElement, HtmlTextAreaElement, MouseEvent,
 };
 
-use crate::{backend::WebBackend, prim_class};
+use crate::{backend::WebBackend, element, prim_class};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum EditorSize {
@@ -463,13 +463,4 @@ fn run_code(code: &str) -> UiuaResult<RunOutput> {
         image_bytes,
         audio_bytes,
     })
-}
-
-#[track_caller]
-fn element<T: JsCast>(id: &str) -> T {
-    if let Some(elem) = document().get_element_by_id(id) {
-        elem.dyn_into::<T>().unwrap()
-    } else {
-        panic!("#{id} not found")
-    }
 }

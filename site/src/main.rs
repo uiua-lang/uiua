@@ -10,6 +10,7 @@ use leptos::*;
 use leptos_router::*;
 use rand::prelude::*;
 use uiua::primitive::Primitive;
+use wasm_bindgen::JsCast;
 use web_sys::HtmlAudioElement;
 
 use crate::{docs::*, editor::*, pad::*};
@@ -20,11 +21,17 @@ thread_local! {
 
 pub fn main() {
     console_error_panic_hook::set_once();
-    mount_to_body(|cx| view! { cx, <Site/> })
+    mount_to_body(|cx| view!(cx, <Site/>));
 }
 
 #[component]
 pub fn Site(cx: Scope) -> impl IntoView {
+    document()
+        .body()
+        .unwrap()
+        .remove_child(&element("top"))
+        .unwrap();
+
     view! { cx,
         <Router>
             <main>
@@ -206,5 +213,14 @@ fn prim_class(prim: Primitive) -> &'static str {
             Some(3) => code_font!("triadic-function-button"),
             _ => code_font!("variadic-function-button"),
         }
+    }
+}
+
+#[track_caller]
+fn element<T: JsCast>(id: &str) -> T {
+    if let Some(elem) = document().get_element_by_id(id) {
+        elem.dyn_into::<T>().unwrap()
+    } else {
+        panic!("#{id} not found")
     }
 }

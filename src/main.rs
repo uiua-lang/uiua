@@ -71,9 +71,8 @@ fn watch() -> io::Result<()> {
     {
         entry.path()
     } else {
-        let path = PathBuf::from("scratch.ua");
-        fs::write(&path, "Hello, World!")?;
-        path
+        fs::write(&main, "\"Hello, World!\"")?;
+        main
     };
     _ = open::that(&open_path);
 

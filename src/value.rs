@@ -495,7 +495,7 @@ macro_rules! value_bin_impl {
             pub fn $name(&self, other: &Self, env: &Uiua) -> UiuaResult<Self> {
                 Ok(match (self, other) {
                     $((Value::$va(a), Value::$vb(b)) => {
-                        bin_pervade(a, b, env, $name::$f)?.into()
+                        bin_pervade(a, b, $name::$f).into()
                     },)*
                     (a, b) => return Err($name::error(a.type_name(), b.type_name(), env)),
                 })

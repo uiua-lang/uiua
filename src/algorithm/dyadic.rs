@@ -481,6 +481,44 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
+    pub fn fill(&mut self, fill: Self, env: &Uiua) -> UiuaResult {
+        match (&mut *self, fill) {
+            (Value::Num(a), Value::Num(b)) => a.fill(b, env),
+            (Value::Byte(a), Value::Byte(b)) => a.fill(b, env),
+            (Value::Char(a), Value::Char(b)) => a.fill(b, env),
+            (Value::Func(a), Value::Func(b)) => a.fill(b, env),
+            (Value::Num(a), Value::Byte(b)) => a.fill(b.convert(), env),
+            (Value::Byte(a), Value::Num(b)) => {
+                let mut a = a.clone().convert();
+                a.fill(b, env)?;
+                *self = a.into();
+                Ok(())
+            }
+            (a, b) => Err(env.error(format!(
+                "Cannot couple {} array with {} array",
+                a.type_name(),
+                b.type_name()
+            ))),
+        }
+    }
+}
+
+impl<T: ArrayValue> Array<T> {
+    pub fn fill(&mut self, fill: Self, env: &Uiua) -> UiuaResult {
+        if fill.rank() != 0 {
+            return Err(env.error("Cannot fill with non-scalar array"));
+        }
+        let fill = fill.data.into_iter().next().unwrap();
+        for elem in &mut *self.data {
+            if elem.is_fill_value() {
+                *elem = fill.clone();
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Value {
     pub fn select(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
         let indices = self.as_indices(env, "Indices must be a list of integers")?;
         Ok(match from {

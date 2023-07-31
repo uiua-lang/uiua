@@ -654,9 +654,6 @@ impl<'io> Uiua<'io> {
     pub fn push(&mut self, val: impl Into<Value>) {
         self.stack.push(val.into());
     }
-    pub fn push_ref(&mut self, val: Value) {
-        self.stack.push(val);
-    }
     /// Take the entire stack
     pub fn take_stack(&mut self) -> Vec<Value> {
         take(&mut self.stack)
@@ -689,7 +686,7 @@ impl<'io> Uiua<'io> {
     pub(crate) fn monadic_mut(&mut self, f: fn(&mut Value)) -> UiuaResult {
         let mut a = self.pop(1)?;
         f(&mut a);
-        self.push_ref(a);
+        self.push(a);
         Ok(())
     }
     pub(crate) fn dyadic_ref<V: Into<Value>>(&mut self, f: fn(&Value, &Value) -> V) -> UiuaResult {

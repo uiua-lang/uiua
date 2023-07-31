@@ -35,15 +35,15 @@ fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> Uiu
         .or_else(|| rows.next())
         .ok_or_else(|| env.error("Cannot reduce empty array"))?;
     for row in rows {
-        env.push_ref(acc);
+        env.push(acc);
         env.push(row);
-        env.push_ref(f.clone());
+        env.push(f.clone());
         if env.call_catch_break()? {
             return Ok(());
         }
         acc = env.pop("reduced function result")?;
     }
-    env.push_ref(acc);
+    env.push(acc);
     Ok(())
 }
 
@@ -92,7 +92,7 @@ fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
         let start_height = env.stack_size();
         env.push(row);
         env.push(acc.clone());
-        env.push_ref(f.clone());
+        env.push(f.clone());
         let should_break = env.call_catch_break()?;
         let new_acc = env.pop("scanned function result")?;
         if should_break {
@@ -115,7 +115,7 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
     let mut values = xs.into_flat_values();
     while let Some(val) = values.next() {
         env.push(val);
-        env.push_ref(f.clone());
+        env.push(f.clone());
         let broke = env.call_catch_break()?;
         new_values.push(env.pop("each's function result")?);
         if broke {
@@ -151,7 +151,7 @@ pub fn zip(env: &mut Uiua) -> UiuaResult {
         |x, y, env| {
             env.push(y);
             env.push(x);
-            env.push_ref(f.clone());
+            env.push(f.clone());
             env.call_error_on_break(BREAK_ERROR)?;
             env.pop("zip's function result")
         },
@@ -171,7 +171,7 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
     let mut old_rows = xs.into_rows();
     while let Some(row) = old_rows.next() {
         env.push(row);
-        env.push_ref(f.clone());
+        env.push(f.clone());
         let broke = env.call_catch_break()?;
         new_rows.push(env.pop("rows' function result")?);
         if broke {
@@ -205,7 +205,7 @@ pub fn bridge(env: &mut Uiua) -> UiuaResult {
     for (x, y) in x_rows.into_iter().zip(y_rows) {
         env.push(y);
         env.push(x);
-        env.push_ref(f.clone());
+        env.push(f.clone());
         env.call_error_on_break(BREAK_ERROR)?;
         new_rows.push(env.pop("bridge's function result")?);
     }
@@ -223,7 +223,7 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
     for y in ys.into_rows() {
         env.push(y);
         env.push(x.clone());
-        env.push_ref(f.clone());
+        env.push(f.clone());
         env.call_error_on_break(BREAK_ERROR)?;
         new_rows.push(env.pop("distribute's function result")?);
     }
@@ -245,7 +245,7 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
         for y in y_values.iter().cloned() {
             env.push(y);
             env.push(x.clone());
-            env.push_ref(f.clone());
+            env.push(f.clone());
             env.call_error_on_break(BREAK_ERROR)?;
             let item = env.pop("tabled function result")?;
             item.validate_shape();
@@ -273,7 +273,7 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
         for y_row in y_rows.iter().cloned() {
             env.push(y_row);
             env.push(x_row.clone());
-            env.push_ref(f.clone());
+            env.push(f.clone());
             env.call_error_on_break(BREAK_ERROR)?;
             let item = env.pop("crossed function result")?;
             item.validate_shape();
@@ -297,7 +297,7 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
     )?;
     if n == f64::INFINITY {
         loop {
-            env.push_ref(f.clone());
+            env.push(f.clone());
             if env.call_catch_break()? {
                 break;
             }
@@ -307,7 +307,7 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
             return Err(env.error("Repetitions must be a single natural number or infinity"));
         };
         for _ in 0..n as u64 {
-            env.push_ref(f.clone());
+            env.push(f.clone());
             if env.call_catch_break()? {
                 return Ok(());
             }
@@ -398,7 +398,7 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
 fn level_recursive(f: Value, value: Value, n: usize, env: &mut Uiua) -> UiuaResult<Value> {
     if n == 0 {
         env.push(value);
-        env.push_ref(f);
+        env.push(f);
         env.call_error_on_break("break is not allowed in rank")?;
         Ok(env.pop("rank's function result")?)
     } else {

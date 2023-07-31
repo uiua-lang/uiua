@@ -270,7 +270,10 @@ primitive!(
     /// The last element of an array
     (1, Last, MonadicArray),
     /// Remove fill elements from the end of an array
-    (1, Truncate, MonadicArray, "truncate" + '⍛'),
+    ///
+    /// ex: /· \⊂1_2_3_4
+    /// ex: /⌀ \⊂1_2_3_4
+    (1, Truncate, MonadicArray, "truncate" + '⌀'),
     /// Reverse the rows of an array
     ///
     /// ex: ⇌1_2_3_9
@@ -368,6 +371,10 @@ primitive!(
     ///
     /// [first] of the [shape] of the coupled array will *always* be `2`.
     (2, Couple, DyadicArray, "couple" + '⊟'),
+    /// Replace the fill elements of an array with a scalar
+    ///
+    /// ex: ⍛∞.\⊂1_2_3_4
+    (2, Fill, DyadicArray, "fill" + '⍛'),
     /// Index a single row or element from an array
     ///
     /// ex: ⊡ 2 [8 3 9 2 0]
@@ -804,6 +811,12 @@ impl Primitive {
             Primitive::Drop => env.dyadic_env(Value::drop)?,
             Primitive::Rotate => env.dyadic_ref_own_env(Value::rotate)?,
             Primitive::Couple => env.dyadic_env(Value::couple)?,
+            Primitive::Fill => {
+                let fill = env.pop(1)?;
+                let mut array = env.pop(2)?;
+                array.fill(fill, env)?;
+                env.push(array);
+            }
             Primitive::Sort => env.monadic_mut(Value::sort)?,
             Primitive::Grade => env.monadic_ref_env(|v, env| v.grade(env))?,
             Primitive::Indices => env.monadic_ref_env(|v, env| v.indices(env))?,
@@ -842,7 +855,7 @@ impl Primitive {
                 let shape = env.pop(1)?;
                 let mut array = env.pop(2)?;
                 array.reshape(&shape, env)?;
-                env.push_ref(array);
+                env.push(array);
             }
             Primitive::Break => {
                 let n = env.pop(1)?.as_nat(env, "break expects a natural number")?;
@@ -855,25 +868,25 @@ impl Primitive {
                 let value = env.pop(1)?;
                 env.io.print_str(&value.show()).map_err(|e| env.error(e))?;
                 env.io.print_str("\n").map_err(|e| env.error(e))?;
-                env.push_ref(value);
+                env.push(value);
             }
             Primitive::Dup => {
                 let x = env.pop(1)?;
-                env.push_ref(x.clone());
-                env.push_ref(x);
+                env.push(x.clone());
+                env.push(x);
             }
             Primitive::Flip => {
                 let a = env.pop(1)?;
                 let b = env.pop(2)?;
-                env.push_ref(a);
-                env.push_ref(b);
+                env.push(a);
+                env.push(b);
             }
             Primitive::Over => {
                 let a = env.pop(1)?;
                 let b = env.pop(2)?;
-                env.push_ref(b.clone());
-                env.push_ref(a);
-                env.push_ref(b);
+                env.push(b.clone());
+                env.push(a);
+                env.push(b);
             }
             Primitive::Pop => {
                 env.pop(1)?;
@@ -882,11 +895,11 @@ impl Primitive {
                 let f = env.pop(1)?;
                 let handler = env.pop(2)?;
                 let size = env.stack_size();
-                env.push_ref(f);
+                env.push(f);
                 if let Err(e) = env.call() {
                     env.truncate_stack(size);
                     env.push(e.message());
-                    env.push_ref(handler);
+                    env.push(handler);
                     env.call()?;
                 }
             }
@@ -900,9 +913,9 @@ impl Primitive {
                 let f = env.pop(1)?;
                 let g = env.pop(2)?;
                 let inv_f = f.invert(env)?;
-                env.push_ref(f);
+                env.push(f);
                 env.call()?;
-                env.push_ref(g);
+                env.push(g);
                 env.call()?;
                 env.push(inv_f);
                 env.call()?;

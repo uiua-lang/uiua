@@ -201,7 +201,8 @@ impl<T: ArrayValue> Array<T> {
         if self.rank() == 0 {
             return;
         }
-        let mut new_len = self.row_count();
+        let row_count = self.row_count();
+        let mut new_len = row_count;
         for (i, row) in self.row_slices().enumerate().rev() {
             if row.iter().all(|x| x.is_fill_value()) {
                 new_len = i;
@@ -209,7 +210,7 @@ impl<T: ArrayValue> Array<T> {
                 break;
             }
         }
-        if new_len == self.row_count() {
+        if new_len == row_count {
             return;
         }
         self.data.truncate(new_len * self.row_len());

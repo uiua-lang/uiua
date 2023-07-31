@@ -6,30 +6,22 @@ use std::{
 
 use crate::{array::*, Byte, Uiua, UiuaError, UiuaResult};
 
-use super::max_shape;
-
 pub fn bin_pervade<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
     a: &Array<A>,
     b: &Array<B>,
+    env: &Uiua,
     f: impl Fn(A, B) -> C + Copy,
-) -> Array<C> {
-    let mut a = a;
-    let mut b = b;
-    let mut filled_a;
-    let mut filled_b;
+) -> UiuaResult<Array<C>> {
     if !a.shape_prefixes_match(&b) {
-        filled_a = a.clone();
-        filled_b = b.clone();
-        let new_shape = max_shape(a.shape(), b.shape());
-        filled_a.fill_to_shape(&new_shape);
-        filled_b.fill_to_shape(&new_shape);
-        a = &filled_a;
-        b = &filled_b;
+        return Err(env.error(format!(
+            "Shapes {:?} and {:?} do not match",
+            a.shape, b.shape
+        )));
     }
     let shape = a.shape().max(b.shape()).to_vec();
     let mut data = Vec::with_capacity(a.flat_len().max(b.flat_len()));
     bin_pervade_recursive(a, b, &mut data, f);
-    (shape, data).into()
+    Ok((shape, data).into())
 }
 
 fn bin_pervade_recursive<A: Arrayish, B: Arrayish, C: ArrayValue>(

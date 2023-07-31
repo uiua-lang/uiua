@@ -16,6 +16,7 @@ crossbeam-channel.optional = true
 crossbeam-channel.version = "0.5.8"
 ctrlc.optional = true
 ctrlc.version = "3"
+ecow.git = "https://github.com/kaikalii/ecow"
 enum-iterator = "1"
 hound = "3"
 image.default-features = false

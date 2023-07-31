@@ -410,7 +410,7 @@ macro_rules! value_from {
         }
         impl From<(Vec<usize>, Vec<$ty>)> for Value {
             fn from((shape, data): (Vec<usize>, Vec<$ty>)) -> Self {
-                Self::$variant(Array::new(shape, data))
+                Self::$variant((shape, data).into())
             }
         }
         impl FromIterator<$ty> for Value {

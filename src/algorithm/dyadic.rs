@@ -1,6 +1,7 @@
 use std::{
     cmp::{self, Ordering},
     collections::BTreeMap,
+    mem::take,
 };
 
 use crate::{array::*, value::Value, Byte, Uiua, UiuaResult};
@@ -27,11 +28,13 @@ impl<T: ArrayValue> Array<T> {
         self.shape = shape;
         let target_len: usize = self.shape.iter().product();
         if self.data.len() < target_len {
-            self.data.reserve(target_len - self.data.len());
             let start = self.data.len();
-            for i in 0..target_len - start {
-                self.data.push(self.data[i % start].clone());
-            }
+            self.data.modify(|data| {
+                data.reserve(target_len - data.len());
+                for i in 0..target_len - start {
+                    data.push(data[i % start].clone());
+                }
+            });
         } else {
             self.data.truncate(target_len);
         }
@@ -95,7 +98,7 @@ impl<T: ArrayValue> Array<T> {
             Ordering::Equal => {
                 if self.rank() == 0 {
                     debug_assert_eq!(other.rank(), 0);
-                    self.data.push(other.data.remove(0));
+                    self.data.extend(other.data.into_iter().next());
                     self.shape = vec![2];
                     self
                 } else {
@@ -150,12 +153,16 @@ impl<T: ArrayValue> Array<T> {
         } else if amount.iter().all(|&n| n <= 1) {
             let row_len = self.row_len();
             let mut new_row_count = self.row_count();
-            for (r, &n) in amount.iter().enumerate().rev() {
-                if n == 0 {
-                    self.data.drain(r * row_len..(r + 1) * row_len);
-                    new_row_count -= 1;
+            self.data.modify(|data| {
+                for (r, &n) in amount.iter().enumerate().rev() {
+                    if n == 0 {
+                        let mut iter = take(data).into_iter();
+                        *data = iter.by_ref().take(r * row_len).collect();
+                        data.extend(iter.skip(row_len));
+                        new_row_count -= 1;
+                    }
                 }
-            }
+            });
             self.shape[0] = new_row_count;
         } else {
             let mut new_data = Vec::new();
@@ -163,11 +170,11 @@ impl<T: ArrayValue> Array<T> {
             for (row, &n) in self.rows().zip(amount) {
                 new_len += n;
                 for _ in 0..n {
-                    new_data.extend_from_slice(&row);
+                    new_data.extend_from_slice(&row.data);
                 }
             }
             self.shape[0] = new_len;
-            self.data = new_data;
+            self.data = new_data.into();
         }
         self.validate_shape();
         Ok(self)
@@ -204,18 +211,23 @@ impl<T: ArrayValue> Array<T> {
                 )));
             }
         }
-        for (d, (&s, &i)) in self.shape.iter().zip(index).enumerate() {
-            let row_len: usize = self.shape[d + 1..].iter().product();
-            let i = if i >= 0 {
-                i as usize
-            } else {
-                (s as isize + i) as usize
-            };
-            let start = i * row_len;
-            let end = start + row_len;
-            self.data.drain(end..);
-            self.data.drain(..start);
-        }
+        self.data.modify(|data| {
+            for (d, (&s, &i)) in self.shape.iter().zip(index).enumerate() {
+                let row_len: usize = self.shape[d + 1..].iter().product();
+                let i = if i >= 0 {
+                    i as usize
+                } else {
+                    (s as isize + i) as usize
+                };
+                let start = i * row_len;
+                let end = start + row_len;
+                *data = take(data)
+                    .into_iter()
+                    .skip(start)
+                    .take(end - start)
+                    .collect();
+            }
+        });
         self.shape.drain(..index.len());
         Ok(self)
     }
@@ -260,16 +272,18 @@ impl<T: ArrayValue> Array<T> {
                 )));
             }
         }
-        for (d, (&s, &i)) in self.shape.iter().zip(index).enumerate() {
-            let row_len: usize = self.shape[d + 1..].iter().product();
-            let i = if i >= 0 {
-                i as usize
-            } else {
-                (s as isize + i) as usize
-            };
-            let end = i * row_len;
-            self.data.drain(end..);
-        }
+        self.data.modify(|data| {
+            for (d, (&s, &i)) in self.shape.iter().zip(index).enumerate() {
+                let row_len: usize = self.shape[d + 1..].iter().product();
+                let i = if i >= 0 {
+                    i as usize
+                } else {
+                    (s as isize + i) as usize
+                };
+                let end = i * row_len;
+                data.truncate(end);
+            }
+        });
         for (s, i) in self.shape.iter_mut().zip(index) {
             *s = i.unsigned_abs();
         }
@@ -292,16 +306,18 @@ impl<T: ArrayValue> Array<T> {
                 )));
             }
         }
-        for (d, (&s, &i)) in self.shape.iter().zip(index).enumerate() {
-            let row_len: usize = self.shape[d + 1..].iter().product();
-            let i = if i >= 0 {
-                i as usize
-            } else {
-                (s as isize + i) as usize
-            };
-            let start = i * row_len;
-            self.data.drain(..start);
-        }
+        self.data.modify(|data| {
+            for (d, (&s, &i)) in self.shape.iter().zip(index).enumerate() {
+                let row_len: usize = self.shape[d + 1..].iter().product();
+                let i = if i >= 0 {
+                    i as usize
+                } else {
+                    (s as isize + i) as usize
+                };
+                let start = i * row_len;
+                *data = take(data).into_iter().skip(start).collect();
+            }
+        });
         for (s, i) in self.shape.iter_mut().zip(index) {
             *s -= i.unsigned_abs();
         }
@@ -461,7 +477,7 @@ impl<T: ArrayValue> Array<T> {
                 new_data[new_data_index] = self.data[data_index].clone();
             }
         }
-        self.data = new_data;
+        self.data = new_data.into();
         self.shape = shape.to_vec();
     }
     pub fn couple(mut self, mut other: Self) -> Self {
@@ -471,7 +487,7 @@ impl<T: ArrayValue> Array<T> {
             self.fill_to_shape(&new_shape);
             other.fill_to_shape(&new_shape);
         }
-        self.data.append(&mut other.data);
+        self.data.extend(other.data);
         self.shape.insert(0, 2);
         self.validate_shape();
         self
@@ -515,7 +531,7 @@ impl<T: ArrayValue> Array<T> {
         }
         let mut shape = self.shape.clone();
         shape[0] = indices.len();
-        Ok(Array::new(shape, selected))
+        Ok((shape, selected).into())
     }
 }
 
@@ -597,7 +613,7 @@ impl<T: ArrayValue> Array<T> {
                     continue 'windows;
                 }
             }
-            break Ok(Array::new(new_shape, dst));
+            break Ok((new_shape, dst).into());
         }
     }
 }
@@ -701,7 +717,7 @@ impl<T: ArrayValue> Array<T> {
                     continue 'windows;
                 }
             }
-            break Ok(Array::new(output_shape, dst));
+            break Ok((output_shape, dst).into());
         }
     }
 }
@@ -731,7 +747,7 @@ impl<T: ArrayValue> Array<T> {
         let shape = cmp::max_by_key(self.shape(), of.shape(), |s| s.len());
         let mut result = Vec::with_capacity(shape.iter().product());
         member(self, of, &mut result, env)?;
-        Ok(Array::new(shape.to_vec(), result))
+        Ok((shape.to_vec(), result).into())
     }
 }
 
@@ -850,12 +866,12 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     pub fn group(&self, indices: &[usize]) -> UiuaResult<Self> {
         let Some(max_index) = indices.iter().max() else {
-            return Ok(Self::new(self.shape.clone(), Vec::new()));
+            return Ok((self.shape.clone(), Vec::new()).into());
         };
         let mut groups: Vec<Vec<Array<T>>> = vec![Vec::new(); max_index + 1];
         for (r, &g) in indices.iter().enumerate() {
             if g < self.row_count() {
-                groups[g].push(Self::new(self.shape[1..].to_vec(), self.row(r).to_vec()));
+                groups[g].push((self.shape[1..].to_vec(), self.row(r).to_vec()).into());
             }
         }
         let mut rows = groups
@@ -893,10 +909,7 @@ impl<T: ArrayValue> Array<T> {
                 if marker != last_marker {
                     groups.push(Vec::new());
                 }
-                groups
-                    .last_mut()
-                    .unwrap()
-                    .push(Self::new(self.shape[1..].to_vec(), row.to_vec()));
+                groups.last_mut().unwrap().push(row);
             }
             last_marker = marker;
         }

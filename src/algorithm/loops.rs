@@ -6,6 +6,7 @@ use std::{
 use crate::{
     algorithm::pervade::bin_pervade_generic,
     array::{Array, ArrayValue},
+    cowslice::cowslice,
     primitive::Primitive,
     rc_take,
     value::Value,
@@ -335,7 +336,7 @@ impl<T: ArrayValue> Array<T> {
                 let row_len: usize = self.row_len();
                 if self.row_count() == 0 {
                     self.shape.remove(0);
-                    self.data = vec![identity; row_len];
+                    self.data = cowslice![identity; row_len];
                     return self;
                 }
                 for i in 1..self.row_count() {
@@ -376,7 +377,7 @@ impl<T: ArrayValue> Array<T> {
                         new_data.push(f(new_data[start + i].clone(), r));
                     }
                 }
-                Array::new(shape, new_data)
+                (shape, new_data).into()
             }
         }
     }

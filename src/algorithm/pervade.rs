@@ -22,7 +22,7 @@ pub fn bin_pervade<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
     let shape = a.shape().max(b.shape()).to_vec();
     let mut data = Vec::with_capacity(a.flat_len().max(b.flat_len()));
     bin_pervade_recursive(a, b, &mut data, f);
-    Ok(Array::new(shape, data))
+    Ok((shape, data).into())
 }
 
 fn bin_pervade_recursive<A: Arrayish, B: Arrayish, C: ArrayValue>(

@@ -42,7 +42,7 @@ impl Value {
         if shape.len() > 1 {
             shape.push(shape.len());
         }
-        let array = Array::new(shape, data);
+        let array = Array::new(shape, data.into());
         Ok(array.into())
     }
 }
@@ -113,7 +113,7 @@ impl<T: ArrayValue> Array<T> {
         let row_len = self.row_len();
         self.shape.remove(0);
         let prefix_len = self.data.len() - row_len;
-        self.data.drain(0..prefix_len);
+        self.data.modify(|data| data.truncate(prefix_len));
         Ok(self)
     }
 }
@@ -181,7 +181,7 @@ impl<T: ArrayValue> Array<T> {
                 temp.push(self.data[i * row_len + j].clone());
             }
         }
-        self.data = temp;
+        self.data = temp.into();
         self.shape.rotate_left(1);
     }
     pub fn inv_transpose(&mut self) {
@@ -197,7 +197,7 @@ impl<T: ArrayValue> Array<T> {
                 temp.push(self.data[i * col_len + j].clone());
             }
         }
-        self.data = temp;
+        self.data = temp.into();
         self.shape.rotate_right(1);
     }
 }
@@ -266,12 +266,12 @@ impl<T: ArrayValue> Array<T> {
         let mut seen = BTreeSet::new();
         let mut new_len = 0;
         for row in self.rows() {
-            if seen.insert(row) {
-                deduped.extend_from_slice(&row);
+            if seen.insert(row.clone()) {
+                deduped.extend_from_slice(&row.data);
                 new_len += 1;
             }
         }
-        self.data = deduped;
+        self.data = deduped.into();
         self.shape[0] = new_len;
     }
 }
@@ -362,7 +362,7 @@ impl Value {
                             .into(),
                     );
                 }
-                Self::Func(Array::new(fs.shape.clone(), invs))
+                Self::Func((fs.shape.clone(), invs).into())
             }
             v => return Err(env.error(format!("Cannot invert {}", v.type_name()))),
         })

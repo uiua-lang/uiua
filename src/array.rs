@@ -2,24 +2,28 @@ use std::{
     cmp::Ordering,
     fmt::{self, Debug, Display},
     iter::repeat,
-    ops::Deref,
     rc::Rc,
     slice::{Chunks, ChunksMut},
 };
 
-use crate::{function::Function, primitive::Primitive, Byte, UiuaResult};
+use crate::{
+    cowslice::{cowslice, CowSlice},
+    function::Function,
+    primitive::Primitive,
+    Byte, UiuaResult,
+};
 
 #[derive(Clone)]
 pub struct Array<T> {
     pub(crate) shape: Vec<usize>,
-    pub(crate) data: Vec<T>,
+    pub(crate) data: CowSlice<T>,
 }
 
 impl<T: ArrayValue> Default for Array<T> {
     fn default() -> Self {
         Self {
             shape: vec![0],
-            data: Vec::new(),
+            data: CowSlice::new(),
         }
     }
 }
@@ -75,7 +79,7 @@ fn validate_shape<T>(shape: &[usize], data: &[T]) {
 
 impl<T: ArrayValue> Array<T> {
     #[track_caller]
-    pub fn new(shape: Vec<usize>, data: Vec<T>) -> Self {
+    pub fn new(shape: Vec<usize>, data: CowSlice<T>) -> Self {
         validate_shape(&shape, &data);
         Self { shape, data }
     }
@@ -85,7 +89,7 @@ impl<T: ArrayValue> Array<T> {
         validate_shape(&self.shape, &self.data);
     }
     pub fn unit(data: T) -> Self {
-        Self::new(Vec::new(), vec![data])
+        Self::new(Vec::new(), cowslice![data])
     }
     pub fn row_count(&self) -> usize {
         self.shape.first().copied().unwrap_or(1)
@@ -116,8 +120,8 @@ impl<T: ArrayValue> Array<T> {
     }
     pub fn rows(
         &self,
-    ) -> impl ExactSizeIterator<Item = Row<T>> + DoubleEndedIterator<Item = Row<T>> {
-        (0..self.row_count()).map(|row| Row { array: self, row })
+    ) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator<Item = Self> + '_ {
+        (0..self.row_count()).map(|row| self.row_slice(row))
     }
     pub fn rows_mut(&mut self) -> ChunksMut<T> {
         let row_len = self.row_len();
@@ -127,9 +131,16 @@ impl<T: ArrayValue> Array<T> {
         let row_len = self.row_len();
         &self.data[row * row_len..(row + 1) * row_len]
     }
+    pub fn row_slice(&self, row: usize) -> Self {
+        let row_len = self.row_len();
+        let start = row * row_len;
+        let end = start + row_len;
+        Self::new(self.shape[1..].to_vec(), self.data.slice(start..end))
+    }
     pub fn convert<U>(self) -> Array<U>
     where
         T: Into<U>,
+        U: Clone,
     {
         Array {
             shape: self.shape,
@@ -148,7 +159,7 @@ impl<T: ArrayValue> Array<T> {
         (0..row_count)
             .map(move |_| Array::new(row_shape.clone(), data.by_ref().take(row_len).collect()))
     }
-    pub fn into_rows_rev(mut self) -> impl Iterator<Item = Self> {
+    pub fn into_rows_rev(self) -> impl Iterator<Item = Self> {
         let row_len = self.row_len();
         let mut row_shape = self.shape.clone();
         let row_count = if row_shape.is_empty() {
@@ -156,9 +167,11 @@ impl<T: ArrayValue> Array<T> {
         } else {
             row_shape.remove(0)
         };
+        let mut data = self.data.into_iter().rev();
         (0..row_count).map(move |_| {
-            let end = self.data.len() - row_len;
-            Array::new(row_shape.clone(), self.data.drain(end..).collect())
+            let mut row: CowSlice<_> = data.by_ref().take(row_len).collect();
+            row.reverse();
+            Array::new(row_shape.clone(), row)
         })
     }
     pub fn val_eq<U: Into<T> + Clone>(&self, other: &Array<U>) -> bool {
@@ -184,7 +197,7 @@ impl<T: ArrayValue> Array<T> {
         }
         let mut shape = self.shape.clone();
         shape[0] = 0;
-        Array::new(shape, Vec::new())
+        Array::new(shape, CowSlice::new())
     }
     /// Remove fill elements from the end of the array
     pub fn truncate(&mut self) {
@@ -193,7 +206,7 @@ impl<T: ArrayValue> Array<T> {
         }
         let mut new_len = self.row_count();
         for (i, row) in self.rows().enumerate().rev() {
-            if row.iter().all(|x| x.is_fill_value()) {
+            if row.data.iter().all(|x| x.is_fill_value()) {
                 new_len = i;
             } else {
                 break;
@@ -268,14 +281,26 @@ impl<T: ArrayValue> From<T> for Array<T> {
     }
 }
 
+impl<T: ArrayValue> From<(Vec<usize>, CowSlice<T>)> for Array<T> {
+    fn from((shape, data): (Vec<usize>, CowSlice<T>)) -> Self {
+        Self::new(shape, data)
+    }
+}
+
 impl<T: ArrayValue> From<(Vec<usize>, Vec<T>)> for Array<T> {
     fn from((shape, data): (Vec<usize>, Vec<T>)) -> Self {
-        Self::new(shape, data)
+        Self::new(shape, data.into())
     }
 }
 
 impl<T: ArrayValue> From<Vec<T>> for Array<T> {
     fn from(data: Vec<T>) -> Self {
+        Self::new(vec![data.len()], data.into())
+    }
+}
+
+impl<T: ArrayValue> From<CowSlice<T>> for Array<T> {
+    fn from(data: CowSlice<T>) -> Self {
         Self::new(vec![data.len()], data)
     }
 }
@@ -302,76 +327,7 @@ impl FromIterator<String> for Array<char> {
             data.extend(line.chars());
             data.extend(repeat('\x00').take(max_len - line.chars().count()));
         }
-        Array::new(shape, data)
-    }
-}
-
-pub struct Row<'a, T> {
-    array: &'a Array<T>,
-    row: usize,
-}
-
-impl<'a, T: ArrayValue> fmt::Debug for Row<'a, T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", &**self)
-    }
-}
-
-impl<'a, T> Clone for Row<'a, T> {
-    fn clone(&self) -> Self {
-        Row {
-            array: self.array,
-            row: self.row,
-        }
-    }
-}
-
-impl<'a, T> Copy for Row<'a, T> {}
-
-impl<'a, T: ArrayValue> AsRef<[T]> for Row<'a, T> {
-    fn as_ref(&self) -> &[T] {
-        self.array.row(self.row)
-    }
-}
-
-impl<'a, T: ArrayValue> Deref for Row<'a, T> {
-    type Target = [T];
-    fn deref(&self) -> &Self::Target {
-        self.array.row(self.row)
-    }
-}
-
-impl<'a, T: ArrayValue> PartialEq for Row<'a, T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.len() == other.len() && self.iter().zip(&**other).all(|(a, b)| a.eq(b))
-    }
-}
-
-impl<'a, T: ArrayValue> Eq for Row<'a, T> {}
-
-impl<'a, T: ArrayValue> PartialOrd for Row<'a, T> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl<'a, T: ArrayValue> Ord for Row<'a, T> {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.iter()
-            .zip(&**other)
-            .map(|(a, b)| a.cmp(b))
-            .find(|o| o != &Ordering::Equal)
-            .unwrap_or_else(|| self.len().cmp(&other.len()))
-    }
-}
-
-impl<'a, T: ArrayValue> Arrayish for Row<'a, T> {
-    type Value = T;
-    fn shape(&self) -> &[usize] {
-        &self.array.shape[1..]
-    }
-    fn data(&self) -> &[T] {
-        self
+        (shape, data).into()
     }
 }
 

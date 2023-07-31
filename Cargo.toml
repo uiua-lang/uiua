@@ -7,55 +7,44 @@ version = "0.1.0"
 
 [dependencies]
 ariadne = "0.2.0"
+clap.features = ["derive"]
+clap.optional = true
+clap.version = "4"
+color-backtrace.optional = true
+color-backtrace.version = "0.5.1"
+ctrlc.optional = true
+ctrlc.version = "3"
 enum-iterator = "1"
 hound = "3"
-instant = "0.1.12"
-term_size = "0.3.2"
-
-[dependencies.color-backtrace]
-optional = true
-version = "0.5.1"
-
-[dependencies.clap]
-features = ["derive"]
-optional = true
-version = "4"
-
-[dependencies.ctrlc]
-optional = true
-version = "3"
-
-[dependencies.image]
-default-features = false
-features = [
+image.default-features = false
+image.features = [
   "bmp",
   "gif",
   "ico",
   "jpeg",
   "png",
 ]
-version = "0.24.5"
+image.version = "0.24.5"
+instant = "0.1.12"
+notify.optional = true
+notify.version = "5"
+open.optional = true
+open.version = "4"
+rand.default-features = false
+rand.features = ["small_rng"]
+rand.version = "0.8.5"
+rodio.optional = true
+rodio.version = "0.17.1"
+term_size = "0.3.2"
+viuer.optional = true
+viuer.version = "0.6.2"
 
-[dependencies.notify]
-optional = true
-version = "5"
+[dev-dependencies]
+criterion = {version = "0.5.1", features = ["html_reports"]}
 
-[dependencies.open]
-optional = true
-version = "4"
-
-[dependencies.rand]
-default-features = false
-features = ["small_rng"]
-version = "0.8.5"
-
-[dependencies.rodio]
-optional = true
-version = "0.17.1"
-
-[dependencies.viuer]
-optional = true
-version = "0.6.2"
+# [[bench]]
+# harness = false
+# name = "my_benchmark"
 
 [features]
 binary = ["ctrlc", "notify", "clap", "open", "color-backtrace"]

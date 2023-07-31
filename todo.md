@@ -1,4 +1,3 @@
-- Improve SEO
 - Benchmarking
 - Fix couple filling
 - Docs

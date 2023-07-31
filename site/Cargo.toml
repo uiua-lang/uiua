@@ -8,29 +8,17 @@ base64 = "0.21.0"
 console_error_panic_hook = "0.1.7"
 enum-iterator = "1"
 image = "0.24.5"
+instant.features = ['wasm-bindgen']
+instant.version = "0.1.12"
+leptos = "0.4.5"
+leptos_router.features = ["csr"]
+leptos_router.version = "0.4.5"
+rand.default-features = false
+rand.features = ["small_rng"]
+rand.version = "0.8.5"
 regex = "1.9"
+uiua.default-features = false
+uiua.path = ".."
 wasm-bindgen = "0.2.84"
-
-[dependencies.web-sys]
-features = ["CssStyleDeclaration", "Storage", "HtmlAudioElement"]
-version = "0.3.61"
-
-[dependencies.instant]
-features = ['wasm-bindgen']
-version = "0.1.12"
-
-[dependencies.leptos]
-version = "0.4.5"
-
-[dependencies.leptos_router]
-features = ["csr"]
-version = "0.4.5"
-
-[dependencies.rand]
-default-features = false
-features = ["small_rng"]
-version = "0.8.5"
-
-[dependencies.uiua]
-default-features = false
-path = ".."
+web-sys.features = ["CssStyleDeclaration", "Storage", "HtmlAudioElement"]
+web-sys.version = "0.3.61"

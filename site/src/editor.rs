@@ -198,7 +198,13 @@ pub fn Editor<'a>(
     // Run the code when Ctrl+Enter or Shift+Enter is pressed
     window_event_listener(keydown, move |event| {
         let event = event.dyn_ref::<web_sys::KeyboardEvent>().unwrap();
-        if event.key() == "Enter" && (event.ctrl_key() || event.shift_key()) {
+        let focused = || {
+            event
+                .target()
+                .and_then(|t| t.dyn_into::<HtmlTextAreaElement>().ok())
+                .is_some_and(|t| t.id() == code_id.get())
+        };
+        if event.key() == "Enter" && (event.ctrl_key() || event.shift_key()) && focused() {
             run(true);
         }
     });
@@ -351,7 +357,7 @@ pub fn Editor<'a>(
                     <div id={output_id.get()} class="output">
                         <div id="output-text">{ move || output.get() }</div>
                         <div id="code-buttons">
-                            <button id="run-button" class="code-button" on:click=move |_| run(true)>{ "Run" }</button>
+                            <button class="code-button" on:click=move |_| run(true)>{ "Run" }</button>
                             <button
                                 id="prev-example"
                                 class="code-button"

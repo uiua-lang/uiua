@@ -1,4 +1,3 @@
-- Don't run every editor
 - Share more data in arrays
 - Docs
   - IO primitives

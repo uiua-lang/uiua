@@ -14,7 +14,10 @@ pub enum Value {
 }
 
 unsafe fn _value_size() {
+    #[cfg(target_pointer_width = "64")]
     let _: [u8; 64] = std::mem::transmute(Value::from(0));
+    #[cfg(target_pointer_width = "32")]
+    let _: [u8; 32] = std::mem::transmute(Value::from(0));
 }
 
 impl Default for Value {

@@ -1,5 +1,5 @@
-- Benchmarking
-- Fix couple filling
+- Don't run every editor
+- Share more data in arrays
 - Docs
   - IO primitives
     - Let web backend open "example" file for testing

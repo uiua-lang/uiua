@@ -1,3 +1,5 @@
+//! Pretty printing Uiua arrays
+
 use std::{
     any::type_name,
     f64::{consts::PI, INFINITY},

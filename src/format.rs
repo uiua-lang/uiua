@@ -1,3 +1,5 @@
+//! Functions for formatting Uiua code.
+
 use std::{fs, path::Path};
 
 use crate::{ast::*, lex::Sp, parse::parse, UiuaError, UiuaResult};

@@ -101,6 +101,8 @@ io_op! {
     /// Write bytes to a stream
     (1, WriteBytes, "WriteBytes"),
     /// Import a file as a module
+    ///
+    /// ex: import "example.ua"
     (1, Import, "Import"),
     /// Get the current time in milliseconds
     (0, Now, "Now"),

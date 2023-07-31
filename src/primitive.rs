@@ -645,6 +645,13 @@ primitive!(
     /// ex: [;⍥(~⌊*10~gen)5 0]
     (1(2), Gen, Misc, "gen"),
     /// Use a named function exported from a module
+    ///
+    /// Can be used after [Import].
+    ///
+    /// ex: import "example.ua"
+    ///   : square ← use "square".
+    ///   : increment ← use "increment"
+    ///   : square increment 5
     (1, Use, Misc, "use"),
     // Constants
     (0(1), Pi, Constant, "pi" + 'π'),
@@ -970,6 +977,11 @@ impl PrimDoc {
                     input,
                     output: OnceLock::new(),
                 });
+            } else if let Some(ex) = line.strip_prefix(':') {
+                if let Some(example) = examples.last_mut() {
+                    example.input.push('\n');
+                    example.input.push_str(ex.trim());
+                }
             } else if short.is_empty() {
                 short = line.into();
             } else {

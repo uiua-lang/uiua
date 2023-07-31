@@ -1,4 +1,4 @@
-use std::{cell::RefCell, io::Cursor};
+use std::{cell::RefCell, collections::HashMap, io::Cursor};
 
 use uiua::{Handle, IoBackend};
 
@@ -7,6 +7,7 @@ pub struct WebBackend {
     pub stderr: RefCell<String>,
     pub image_bytes: RefCell<Option<Vec<u8>>>,
     pub audio_bytes: RefCell<Option<Vec<u8>>>,
+    pub files: RefCell<HashMap<String, Vec<u8>>>,
 }
 
 impl Default for WebBackend {
@@ -16,6 +17,17 @@ impl Default for WebBackend {
             stderr: String::new().into(),
             image_bytes: None.into(),
             audio_bytes: None.into(),
+            files: HashMap::from([(
+                "example.ua".into(),
+                "\
+Square ← ×.
+Double ← +.
+Increment ← +1
+Square_Double_Increment
+                "
+                .into(),
+            )])
+            .into(),
         }
     }
 }
@@ -45,6 +57,19 @@ impl IoBackend for WebBackend {
             .map_err(|e| format!("Failed to show image: {e}"))?;
         *self.image_bytes.borrow_mut() = Some(bytes.into_inner());
         Ok(())
+    }
+    fn file_write_all(&self, path: &str, contents: &[u8]) -> Result<(), String> {
+        self.files
+            .borrow_mut()
+            .insert(path.to_string(), contents.to_vec());
+        Ok(())
+    }
+    fn file_read_all(&self, path: &str) -> Result<Vec<u8>, String> {
+        self.files
+            .borrow()
+            .get(path)
+            .cloned()
+            .ok_or_else(|| format!("File not found: {path}"))
     }
     fn play_audio(&self, wav_bytes: Vec<u8>) -> Result<(), String> {
         *self.audio_bytes.borrow_mut() = Some(wav_bytes);

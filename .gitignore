@@ -1,7 +1,6 @@
 .vscode
 .idea
 /target
-/docs
 site/dist
 /uiua-modules
 

@@ -7,6 +7,17 @@ use std::{
     rc::Rc,
 };
 
+macro_rules! cowslice {
+    ($($item:expr),* $(,)?) => {
+        $crate::cowslice::CowSlice::from([$($item),*])
+    };
+    ($item:expr; $len:expr) => {
+        $crate::cowslice::CowSlice::from([$item; $len])
+    }
+}
+
+pub(crate) use cowslice;
+
 pub type Ptr<T> = Rc<T>;
 
 pub struct CowSlice<T> {
@@ -207,5 +218,36 @@ impl<T: PartialEq, const N: usize> PartialEq<[T; N]> for CowSlice<T> {
 impl<T: Hash> Hash for CowSlice<T> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (**self).hash(state)
+    }
+}
+
+impl<T: Clone> IntoIterator for CowSlice<T> {
+    type Item = T;
+    type IntoIter = <Vec<T> as IntoIterator>::IntoIter;
+    #[allow(clippy::unnecessary_to_owned)]
+    fn into_iter(self) -> Self::IntoIter {
+        self.to_vec().into_iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a CowSlice<T> {
+    type Item = &'a T;
+    type IntoIter = <&'a [T] as IntoIterator>::IntoIter;
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<'a, T: Clone> IntoIterator for &'a mut CowSlice<T> {
+    type Item = &'a mut T;
+    type IntoIter = <&'a mut [T] as IntoIterator>::IntoIter;
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
+    }
+}
+
+impl<T> FromIterator<T> for CowSlice<T> {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        Self::from(iter.into_iter().collect::<Vec<_>>())
     }
 }

@@ -11,6 +11,8 @@ mod io;
 pub mod lex;
 pub mod parse;
 pub mod primitive;
+#[doc(hidden)]
+pub mod profile;
 pub mod run;
 pub mod value;
 

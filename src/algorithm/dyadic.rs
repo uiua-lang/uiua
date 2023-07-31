@@ -66,6 +66,7 @@ impl<T: ArrayValue> Array<T> {
         self.join_impl(other, true)
     }
     pub(crate) fn join_impl(mut self, mut other: Self, truncate: bool) -> Self {
+        crate::profile_function!();
         if truncate {
             self.truncate();
             other.truncate();
@@ -464,6 +465,7 @@ impl<T: ArrayValue> Array<T> {
         self.shape = shape.to_vec();
     }
     pub fn couple(mut self, mut other: Self) -> Self {
+        crate::profile_function!();
         if self.shape != other.shape {
             let new_shape = max_shape(&self.shape, &other.shape);
             self.fill_to_shape(&new_shape);

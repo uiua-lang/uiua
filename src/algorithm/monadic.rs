@@ -169,6 +169,7 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     pub fn transpose(&mut self) {
+        crate::profile_function!();
         if self.shape.len() < 2 || self.shape[0] == 0 {
             return;
         }
@@ -184,6 +185,7 @@ impl<T: ArrayValue> Array<T> {
         self.shape.rotate_left(1);
     }
     pub fn inv_transpose(&mut self) {
+        crate::profile_function!();
         if self.shape.len() < 2 || self.shape[0] == 0 {
             return;
         }

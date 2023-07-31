@@ -8,9 +8,10 @@ u ← ↥<0.2~>0.7.+×2 ×.~/·x
 c ← √/+ⁿ2 x
 ⍉⊂~-¬u <1 c +0.1 ≡(↧<0.95 c)rgb";
 const AVG: &str = "Avg ← ÷≢~/+.\nAvg 0_2_1_5";
-const AUDIO: &str = "\
-Wave ← sin ×2×π ×~ ÷~ ⇡.44100
-÷≢~ /+∵Wave .[220 277.18 329.63]";
+const CHORD: &str = "\
+H ← ⁿ~2÷12
+[×H10.~ ×H7.~ ×H4. 220]
+÷≢~ ≡/+ sine ×2×π ⊞× ÷~ ⇡.44100.";
 const QUADRATIC: &str = "\
 Quadratic ← {÷ ×2a -b ⊟¯. √- ××4a c ⁿ2 b}
 Quadratic 1 2 0";
@@ -35,7 +36,7 @@ const CHART: &str = "⊞(⊡ ⌊×5rand ·_._∴_↥_⍋ ;;).⇡15";
 const ERRORS: &str = "# Change this ↓ to a 0\n!\"Oh no bad!\" 1\nprint \"All is well\"";
 
 pub const EXAMPLES: &[&str] = &[
-    UIUA, FORMAT, D3, LOGO, AVG, AUDIO, QUADRATIC, STRIPES, PALINDROME, RULE_30, PRIMES,
+    UIUA, FORMAT, D3, LOGO, AVG, CHORD, QUADRATIC, STRIPES, PALINDROME, RULE_30, PRIMES,
     MANDELBROT, CHART, ERRORS,
 ];
 

@@ -12,6 +12,8 @@ clap.optional = true
 clap.version = "4"
 color-backtrace.optional = true
 color-backtrace.version = "0.5.1"
+crossbeam-channel.optional = true
+crossbeam-channel.version = "0.5.8"
 ctrlc.optional = true
 ctrlc.version = "3"
 enum-iterator = "1"
@@ -25,6 +27,9 @@ image.features = [
   "png",
 ]
 image.version = "0.24.5"
+indexmap.features = ["serde"]
+indexmap.optional = true
+indexmap.version = "1"
 instant = "0.1.12"
 notify.optional = true
 notify.version = "5"
@@ -35,21 +40,20 @@ rand.features = ["small_rng"]
 rand.version = "0.8.5"
 rodio.optional = true
 rodio.version = "0.17.1"
+serde.features = ["derive"]
+serde.optional = true
+serde.version = "1"
+serde_yaml.optional = true
+serde_yaml.version = "0.9.25"
 term_size = "0.3.2"
 viuer.optional = true
 viuer.version = "0.6.2"
-
-[dev-dependencies]
-criterion = {version = "0.5.1", features = ["html_reports"]}
-
-# [[bench]]
-# harness = false
-# name = "my_benchmark"
 
 [features]
 binary = ["ctrlc", "notify", "clap", "open", "color-backtrace"]
 debug = []
 default = ["binary", "rodio", "viuer"]
+profile = ["crossbeam-channel", "serde", "serde_yaml", "indexmap"]
 
 [[bin]]
 name = "uiua"

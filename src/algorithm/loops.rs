@@ -13,6 +13,7 @@ use crate::{
 };
 
 pub fn reduce(env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
     let f = env.pop(1)?;
     let xs = rc_take(env.pop(2)?);
     match (f.as_primitive(), xs) {
@@ -50,6 +51,7 @@ fn generic_fold(f: Rc<Value>, xs: Value, init: Option<Rc<Value>>, env: &mut Uiua
 }
 
 pub fn fold(env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
     let f = env.pop(1)?;
     let acc = env.pop(2)?;
     let xs = rc_take(env.pop(3)?);
@@ -57,6 +59,7 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
 }
 
 pub fn scan(env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
     let f = env.pop(1)?;
     let xs = rc_take(env.pop(2)?);
     if xs.rank() == 0 {
@@ -107,6 +110,7 @@ fn generic_scan(f: Rc<Value>, xs: Value, env: &mut Uiua) -> UiuaResult {
 }
 
 pub fn each(env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
     let f = env.pop(1)?;
     let xs = rc_take(env.pop(2)?);
     let mut new_values = Vec::with_capacity(xs.flat_len());
@@ -132,6 +136,7 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
 }
 
 pub fn zip(env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
     let f = env.pop(1)?;
     let xs = rc_take(env.pop(2)?);
     let ys = rc_take(env.pop(3)?);
@@ -162,6 +167,7 @@ pub fn zip(env: &mut Uiua) -> UiuaResult {
 }
 
 pub fn rows(env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
     let f = env.pop(1)?;
     let xs = rc_take(env.pop(2)?);
     let mut new_rows = Vec::with_capacity(xs.row_count());
@@ -184,6 +190,7 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
 }
 
 pub fn bridge(env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
     let f = env.pop(1)?;
     let xs = rc_take(env.pop(2)?);
     let ys = rc_take(env.pop(3)?);
@@ -210,6 +217,7 @@ pub fn bridge(env: &mut Uiua) -> UiuaResult {
 }
 
 pub fn distribute(env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
     let f = env.pop(1)?;
     let x = rc_take(env.pop(2)?);
     let ys = rc_take(env.pop(3)?);
@@ -227,6 +235,7 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
 }
 
 pub fn table(env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
     let f = env.pop(1)?;
     let xs = rc_take(env.pop(2)?);
     let ys = rc_take(env.pop(3)?);
@@ -255,6 +264,7 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
 }
 
 pub fn cross(env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
     let f = env.pop(1)?;
     let xs = rc_take(env.pop(2)?);
     let ys = rc_take(env.pop(3)?);
@@ -282,6 +292,7 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
 }
 
 pub fn repeat(env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
     let f = env.pop(1)?;
     let n = env.pop(2)?.as_num(
         env,
@@ -372,6 +383,7 @@ impl<T: ArrayValue> Array<T> {
 }
 
 pub fn level(env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
     let n = env.pop(1)?.as_int(env, "Rank must be a single integer")?;
     let f = env.pop(2)?;
     let xs = rc_take(env.pop(3)?);

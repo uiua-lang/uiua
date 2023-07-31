@@ -31,7 +31,9 @@ fn main() {
 
 fn run() -> UiuaResult {
     let app = App::parse();
-    if let Some(command) = app.command {
+    if cfg!(feature = "profile") {
+        uiua::profile::run_profile();
+    } else if let Some(command) = app.command {
         match command {
             Command::Fmt { path } => {
                 if let Some(path) = path {

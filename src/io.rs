@@ -10,13 +10,19 @@ use enum_iterator::Sequence;
 use hound::{SampleFormat, WavSpec, WavWriter};
 use image::{DynamicImage, ImageOutputFormat};
 
-use crate::{array::Array, grid_fmt::GridFmt, rc_take, value::Value, Byte, Uiua, UiuaResult};
+use crate::{
+    array::Array, grid_fmt::GridFmt, primitive::PrimDoc, rc_take, value::Value, Byte, Uiua,
+    UiuaResult,
+};
 
 macro_rules! io_op {
-    ($((
-        $args:literal$(($outputs:expr))?,
-        $variant:ident, $name:literal
-    )),* $(,)?) => {
+    ($(
+        $(#[doc = $doc:literal])*
+        (
+            $args:literal$(($outputs:expr))?,
+            $variant:ident, $name:literal
+        )
+    ),* $(,)?) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
         pub enum IoOp {
             $($variant),*
@@ -42,34 +48,110 @@ macro_rules! io_op {
                     _ => Some(1)
                 }
             }
+            pub fn doc(&self) -> Option<&'static PrimDoc> {
+                match self {
+                    $(IoOp::$variant => {
+                        let doc_str = concat!($($doc, "\n"),*);
+                        static DOC: OnceLock<PrimDoc> = OnceLock::new();
+                        if doc_str.is_empty() {
+                            return None;
+                        }
+                        Some(DOC.get_or_init(|| PrimDoc::from_lines(doc_str)))
+                    },)*
+                }
+            }
         }
     };
 }
 
 io_op! {
+    /// Print a nicely formatted representation of a value to stdout
     (1(0), Show, "Show"),
+    /// Print a value to stdout
     (1(0), Prin, "Prin"),
+    /// Print a value to stdout followed by a newline
     (1(0), Print, "Print"),
+    /// Read a line from stdin
     (0, ScanLine, "ScanLine"),
+    /// Get the command line arguments
     (0, Args, "Args"),
+    /// Get the value of an environment variable
     (1, Var, "Var"),
+    /// Open a file and return a handle to it
     (1, FOpen, "FOpen"),
+    /// Create a file and return a handle to it
     (1, FCreate, "FCreate"),
+    /// Close a file handle
     (1, FClose, "FClose"),
+    /// Check if a file exists at a path
     (1, FExists, "FExists"),
+    /// List the contents of a directory
     (1, FListDir, "FListDir"),
+    /// Check if a path is a file
     (1, FIsFile, "FIsFile"),
+    /// Read all the contents of a file into a string
     (1, ReadAllStr, "FReadAllStr"),
+    /// Read all the contents of a file into a byte array
     (1, ReadAllBytes, "FReadAllBytes"),
-    (1, ReadStr, "ReadStr"),
+    /// Read at most n bytes from a stream
+    (2, ReadStr, "ReadStr"),
+    /// Write a string to a stream
     (1, WriteStr, "WriteStr"),
+    /// Read at most n bytes from a stream
     (1, ReadBytes, "ReadBytes"),
+    /// Write bytes to a stream
     (1, WriteBytes, "WriteBytes"),
+    /// Import a file as a module
     (1, Import, "Import"),
+    /// Get the current time in milliseconds
     (0, Now, "Now"),
+    /// Read an image from a file
+    ///
+    /// Supported formats are `jpg`, `png`, `bmp`, `gif`, and `ico`.
     (1, ImRead, "ImRead"),
+    /// Write an image to a file
+    ///
+    /// The first argument is the path, and the second is the image.
+    ///
+    /// The image must be a rank 2 or 3 numeric array.
+    /// Axes 0 and 1 contain the rows and columns of the image.
+    /// A rank 2 array is a grayscale image.
+    /// A rank 3 array is an RGB image.
+    /// In a rank 3 image array, the last axis must be length 1, 2, 3, or 4.
+    /// A length 1 last axis is a grayscale image.
+    /// A length 2 last axis is a grayscale image with an alpha channel.
+    /// A length 3 last axis is an RGB image.
+    /// A length 4 last axis is an RGB image with an alpha channel.
+    ///
+    /// The format is determined by the file extension.
+    /// Supported formats are `jpg`, `png`, `bmp`, `gif`, and `ico`.
     (1, ImWrite, "ImWrite"),
+    /// Show an image
+    ///
+    /// How the image is shown depends on the IO backend.
+    ///
+    /// In the default backend, the image is shown in the terminal.
+    /// On the web, the image is shown in the output area.
+    ///
+    /// The image must be a rank 2 or 3 numeric array.
+    /// Axes 0 and 1 contain the rows and columns of the image.
+    /// A rank 2 array is a grayscale image.
+    /// A rank 3 array is an RGB image.
+    /// In a rank 3 image array, the last axis must be length 1, 2, 3, or 4.
+    /// A length 1 last axis is a grayscale image.
+    /// A length 2 last axis is a grayscale image with an alpha channel.
+    /// A length 3 last axis is an RGB image.
+    /// A length 4 last axis is an RGB image with an alpha channel.
     (1(0), ImShow, "ImShow"),
+    /// Play some audio
+    ///
+    /// The audio must be a rank 1 or 2 numeric array.
+    ///
+    /// A rank 1 array is a list of mono audio samples.
+    /// For a rank 2 array, each row is a channel.
+    ///
+    /// The samples must be between -1 and 1.
+    /// The sample rate is 44100 Hz.
     (1(0), AudioPlay, "AudioPlay"),
 }
 
@@ -530,6 +612,7 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
 }
 
 pub fn value_to_wav_bytes(audio: &Value) -> Result<Vec<u8>, String> {
+    // We use i16 samples for compatibility with Firefox (if I remember correctly)
     let values: Vec<i16> = match audio {
         Value::Num(nums) => nums
             .data
@@ -539,7 +622,7 @@ pub fn value_to_wav_bytes(audio: &Value) -> Result<Vec<u8>, String> {
         Value::Byte(byte) => byte
             .data
             .iter()
-            .map(|&b| b.value().map_or(i16::MIN, |_| i16::MAX))
+            .map(|&b| b.value().map_or(0, |_| i16::MAX))
             .collect(),
         _ => return Err("Audio must be a numeric array".into()),
     };

@@ -12,9 +12,8 @@ fn parse_doc(cx: Scope, line: &str) -> impl IntoView {
     }
     RE.with(|re| {
         re.captures_iter(line)
-            .map(|c| c.extract())
-            .map(|(mat, [s])| {
-                log!("mat: {mat:?}, s: {s}", mat = mat, s = s);
+            .map(|c| {
+                let (mat, [s]) = c.extract();
                 let s = s.to_string();
                 if mat.starts_with('[') {
                     if let Some(prim) = Primitive::from_name(&s) {

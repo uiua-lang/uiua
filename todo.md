@@ -1,7 +1,6 @@
 - Share more data in arrays
 - Docs
-  - IO primitives
-    - Let web backend open "example" file for testing
+  - Let web backend open virtual files
   - Imports and use
   - Modules
   - Design
@@ -16,6 +15,7 @@
   - FFI
   - check OS
   - unicode utils
+- contenteditable-based editor
 - LSP?
 - Tooling
   - Basic package manager

@@ -120,9 +120,9 @@ macro_rules! primitive {
                         if doc_str.is_empty() {
                             return None;
                         }
-                        Some(DOC.get_or_init(|| PrimDoc::from_str(doc_str)))
+                        Some(DOC.get_or_init(|| PrimDoc::from_lines(doc_str)))
                     },)*
-                    _ => None,
+                    Primitive::Io(op) => op.doc(),
                 }
             }
         }
@@ -955,7 +955,7 @@ pub struct PrimDoc {
 }
 
 impl PrimDoc {
-    fn from_str(s: &str) -> Self {
+    pub fn from_lines(s: &str) -> Self {
         let mut short = String::new();
         let mut examples = Vec::new();
         let mut primer = String::new();

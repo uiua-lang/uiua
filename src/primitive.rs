@@ -595,6 +595,12 @@ primitive!(
     ///
     /// To check for a base case, you can use [pick].
     /// ex: {:⊡~·_↬ <10.×2} 1
+    ///
+    /// Here is a recursive factorial function:
+    /// ex: {:⊡~(×a ↬-1a)_(1) <2a} 5
+    ///
+    /// Here is a recursive fibonacci function:
+    /// ex: {:⊡~(+ ↬-1a ↬-2a)_(a) <2a} 10
     (1(0), Recur, Control, "recur" + '↬'),
     /// Debug print a value without popping it
     ///

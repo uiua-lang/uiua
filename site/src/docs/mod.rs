@@ -445,7 +445,7 @@ fn TutorialFunctions(cx: Scope) -> impl IntoView {
             <Editor example="Quadratic ← {÷ ×2a -b ⊟¯. √- ××4a c ⁿ2 b}\nQuadratic 1 2 0"/>
             <p>"Dfns are also required if you want to use "<PrimCode prim=Recur/>". The dfn that contains the "<PrimCode prim=Recur/>" will be the thing that recurs."</p>
             <p>"Here is a recursive fibonacci function."</p>
-            <Editor example="{:⊡~(+ ↬-2a ↬-1a)_(a)≤2a} 10"/>
+            <Editor example="{:⊡~(+ ↬-1a ↬-2a)_(a) <2a} 10"/>
         </div>
     }
 }

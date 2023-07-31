@@ -1,7 +1,17 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+  <title>Uiua</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="icon" href="/favicon.ico">
+  <noscript>
+    <style>
+      .jsonly {
+        display: none
+      }
+    </style>
+  </noscript>
   <!-- Begin Single Page Apps for GitHub Pages -->
   <script type="text/javascript">
     // Single Page Apps for GitHub Pages
@@ -28,7 +38,7 @@
   <!-- End Single Page Apps for GitHub Pages -->
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Uiua</title>
+  <meta name="description" content="A stack-oriented array programming language" />
   <link data-trunk rel="copy-file" href="404.html" />
   <link data-trunk rel="css" href="styles.css" />
   <link data-trunk rel="copy-file" href="DejaVuSansMono.ttf" />
@@ -40,12 +50,28 @@
 
 <body>
   <div id="top">
-    <h1><img src="/uiua-logo.png" style="height: 1em"></img>Uiua</h1>
-    <br />
-    <div id="subtitle">A stack-oriented array programming language</div>
-    <noscript>
-      <p>This page requires JavaScript to run. Please enable JavaScript in your browser and try again.</p>
-    </noscript>
+    <div id="header">
+      <h1><img src="/uiua-logo.png" style="height: 1em" alt="Uiua"></img> Uiua</h1>
+      <div id="nav">
+        <p><a href="https://github.com/kaikalii/uiua">GitHub</a></p>
+        <p><a href="/">Home</a></p>
+      </div>
+    </div>
+    <div>
+      <div id="subtitle">
+        <p>A stack-oriented array programming language</p>
+      </div>
+      <div id="links">
+        <p><a href="/docs">Documentation</a></p>
+        <p><a href="/pad">Pad</a></p>
+      </div>
+    </div>
+    <div>
+      <noscript>
+        <p>JavaScript is required on this site.</p>
+      </noscript>
+      <p class="jsonly"><em>Loading...</em></p>
+    </div>
   </div>
 </body>
 

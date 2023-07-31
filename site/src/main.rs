@@ -37,7 +37,7 @@ pub fn Site(cx: Scope) -> impl IntoView {
             <main>
                 <div id="top">
                     <div id="header">
-                        <h1><img src="/uiua-logo.png" style="height: 1em"></img>" Uiua"</h1>
+                        <h1><img src="/uiua-logo.png" style="height: 1em" alt="Uiua"></img>" Uiua"</h1>
                         <div id="nav">
                             <p><a href="https://github.com/kaikalii/uiua">"GitHub"</a></p>
                             <p><a href="/">"Home"</a></p>
@@ -95,8 +95,8 @@ pub fn MainPage(cx: Scope) -> impl IntoView {
         <div>
             <div id="subtitle">{ subtitle }</div>
             <div id="links">
-                <p><A href="docs">"Documentation"</A></p>
-                <p><A href="pad">"Pad"</A></p>
+                <p><A href="/docs">"Documentation"</A></p>
+                <p><A href="/pad">"Pad"</A></p>
             </div>
             <Editor
                 examples=examples::EXAMPLES

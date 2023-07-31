@@ -1391,7 +1391,6 @@ impl PartialEq for Value {
             #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Byte(b)) => a == b,
             (Value::Char(a), Value::Char(b)) => a == b,
-
             (Value::Complex(a), Value::Complex(b)) => a == b,
             (Value::Box(a), Value::Box(b)) => a == b,
             #[cfg(feature = "bytes")]
@@ -1421,7 +1420,6 @@ impl Ord for Value {
             (Value::Num(a), Value::Num(b)) => a.cmp(b),
             #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Byte(b)) => a.cmp(b),
-
             (Value::Complex(a), Value::Complex(b)) => a.cmp(b),
             (Value::Char(a), Value::Char(b)) => a.cmp(b),
             (Value::Box(a), Value::Box(b)) => a.cmp(b),
@@ -1435,9 +1433,7 @@ impl Ord for Value {
             (Value::Byte(_), _) => Ordering::Less,
             #[cfg(feature = "bytes")]
             (_, Value::Byte(_)) => Ordering::Greater,
-
             (Value::Complex(_), _) => Ordering::Less,
-
             (_, Value::Complex(_)) => Ordering::Greater,
             (Value::Char(_), _) => Ordering::Less,
             (_, Value::Char(_)) => Ordering::Greater,
@@ -1452,7 +1448,6 @@ impl Hash for Value {
             Value::Num(arr) => arr.hash(state),
             #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.hash(state),
-
             Value::Complex(arr) => arr.hash(state),
             Value::Char(arr) => arr.hash(state),
             Value::Box(arr) => arr.hash(state),
@@ -1466,7 +1461,6 @@ impl fmt::Display for Value {
             Value::Num(n) => n.grid_string().fmt(f),
             #[cfg(feature = "bytes")]
             Value::Byte(b) => b.grid_string().fmt(f),
-
             Value::Complex(c) => c.grid_string().fmt(f),
             Value::Box(v) => v.grid_string().fmt(f),
             Value::Char(c) if c.rank() < 2 => c.fmt(f),

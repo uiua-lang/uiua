@@ -1,6 +1,5 @@
 - Share array shapes?
 - Docs
-  - Let web backend open virtual files
   - Imports and use
     - Modules
   - Design

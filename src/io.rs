@@ -4,6 +4,8 @@ use std::{
     fs::{self, File},
     io::{stderr, stdin, stdout, Cursor, Read, Write},
     sync::{Mutex, OnceLock},
+    thread::sleep,
+    time::Duration,
 };
 
 use enum_iterator::Sequence;
@@ -154,6 +156,11 @@ io_op! {
     /// The samples must be between -1 and 1.
     /// The sample rate is 44100 Hz.
     (1(0), AudioPlay, "AudioPlay"),
+    /// Sleep for n milliseconds
+    ///
+    /// On the web, this example will hang for 2 seconds.
+    /// ex: rand sleep 2000
+    (1(0), Sleep, "Sleep"),
 }
 
 /// A handle to an IO stream
@@ -245,6 +252,9 @@ pub trait IoBackend {
         self.write(handle, contents)?;
         self.close_file(handle)?;
         Ok(())
+    }
+    fn sleep(&self, ms: f64) -> Result<(), String> {
+        Err("Sleeping is not supported in this environment".into())
     }
 }
 
@@ -400,6 +410,10 @@ impl IoBackend for StdIo {
         handle
             .play_raw(decoder.convert_samples())
             .map_err(|e| format!("Failed to play audio: {e}"))?;
+        Ok(())
+    }
+    fn sleep(&self, ms: f64) -> Result<(), String> {
+        sleep(Duration::from_secs_f64(ms / 1000.0));
         Ok(())
     }
 }
@@ -559,6 +573,13 @@ impl IoOp {
                 let value = env.pop(1)?;
                 let bytes = value_to_wav_bytes(&value).map_err(|e| env.error(e))?;
                 env.io.play_audio(bytes).map_err(|e| env.error(e))?;
+            }
+            IoOp::Sleep => {
+                let ms = env
+                    .pop(1)?
+                    .as_num(env, "Sleep time must be a number")?
+                    .max(0.0);
+                env.io.sleep(ms).map_err(|e| env.error(e))?;
             }
         }
         Ok(())

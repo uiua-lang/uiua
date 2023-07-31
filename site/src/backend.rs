@@ -75,4 +75,9 @@ impl IoBackend for WebBackend {
         *self.audio_bytes.borrow_mut() = Some(wav_bytes);
         Ok(())
     }
+    fn sleep(&self, ms: f64) -> Result<(), String> {
+        let start = instant::now();
+        while instant::now() - start < ms {}
+        Ok(())
+    }
 }

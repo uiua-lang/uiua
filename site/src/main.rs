@@ -183,7 +183,7 @@ mod code {
             (None, true) => None,
             (None, false) => prim.name().map(Into::into),
         };
-        view!(cx, <a href=href style="text-decoration: none;">
+        view!(cx, <a href=href class="prim-code-a">
             <code class="prim-code" title=title><span class=class>{ symbol }</span>{name}</code>
         </a>)
     }

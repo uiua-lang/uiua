@@ -287,6 +287,10 @@ li {
     width: 7em;
 }
 
+.prim-code-a {
+    text-decoration: none;
+}
+
 .prim-code[title]:hover::after {
     content: attr(title);
     position: absolute;
@@ -299,6 +303,7 @@ li {
     border-radius: 0.2em;
     left: -10.2em;
     width: 10em;
+    text-decoration: none;
 }
 
 .glyph-button:hover {

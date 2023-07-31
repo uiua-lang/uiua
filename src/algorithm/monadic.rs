@@ -236,9 +236,9 @@ impl<T: ArrayValue> Array<T> {
         }
         let mut indices = (0..self.flat_len()).collect::<Vec<_>>();
         indices.sort_by(|&a, &b| {
-            self.row(a)
+            self.row_slice(a)
                 .iter()
-                .zip(self.row(b))
+                .zip(self.row_slice(b))
                 .map(|(a, b)| a.cmp(b))
                 .find(|x| x != &Ordering::Equal)
                 .unwrap_or(Ordering::Equal)

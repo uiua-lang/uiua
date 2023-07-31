@@ -652,7 +652,9 @@ impl<'io> Uiua<'io> {
     }
     /// Push a value onto the stack
     pub fn push(&mut self, val: impl Into<Value>) {
-        self.stack.push(val.into());
+        let mut val = val.into();
+        val.truncate();
+        self.stack.push(val);
     }
     pub fn push_ref(&mut self, val: Value) {
         self.stack.push(val);

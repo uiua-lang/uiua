@@ -871,7 +871,7 @@ impl<T: ArrayValue> Array<T> {
         let mut groups: Vec<Vec<Array<T>>> = vec![Vec::new(); max_index + 1];
         for (r, &g) in indices.iter().enumerate() {
             if g < self.row_count() {
-                groups[g].push(self.row_slice(r));
+                groups[g].push(self.row(r));
             }
         }
         let mut rows = groups

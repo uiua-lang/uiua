@@ -13,6 +13,10 @@ pub enum Value {
     Func(Array<Rc<Function>>),
 }
 
+unsafe fn _value_size() {
+    let _: [u8; 64] = std::mem::transmute(Value::from(0));
+}
+
 impl Default for Value {
     fn default() -> Self {
         Array::<Byte>::default().into()
@@ -112,7 +116,7 @@ impl Value {
             Array::flat_len,
         )
     }
-    pub fn first_dim_zero(&self) -> Self {
+    pub(crate) fn first_dim_zero(&self) -> Self {
         match self {
             Self::Num(array) => array.first_dim_zero().into(),
             Self::Byte(array) => array.first_dim_zero().into(),

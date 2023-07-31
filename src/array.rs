@@ -3,7 +3,7 @@ use std::{
     fmt::{self, Debug, Display},
     iter::repeat,
     rc::Rc,
-    slice::{Chunks, ChunksMut},
+    slice::Chunks,
 };
 
 use crate::{
@@ -118,20 +118,17 @@ impl<T: ArrayValue> Array<T> {
             Err(self)
         }
     }
-    pub fn rows(
-        &self,
-    ) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator<Item = Self> + '_ {
-        (0..self.row_count()).map(|row| self.row_slice(row))
+    pub fn rows(&self) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator + '_ {
+        (0..self.row_count()).map(|row| self.row(row))
     }
-    pub fn rows_mut(&mut self) -> ChunksMut<T> {
-        let row_len = self.row_len();
-        self.data.chunks_mut(row_len)
+    pub fn row_slices(&self) -> impl ExactSizeIterator<Item = &[T]> + DoubleEndedIterator {
+        (0..self.row_count()).map(move |row| self.row_slice(row))
     }
-    pub fn row(&self, row: usize) -> &[T] {
+    pub fn row_slice(&self, row: usize) -> &[T] {
         let row_len = self.row_len();
         &self.data[row * row_len..(row + 1) * row_len]
     }
-    pub fn row_slice(&self, row: usize) -> Self {
+    pub fn row(&self, row: usize) -> Self {
         let row_len = self.row_len();
         let start = row * row_len;
         let end = start + row_len;
@@ -191,7 +188,7 @@ impl<T: ArrayValue> Array<T> {
             .find(|o| o != &Ordering::Equal)
             .unwrap_or_else(|| self.data.len().cmp(&other.data.len()))
     }
-    pub fn first_dim_zero(&self) -> Self {
+    pub(crate) fn first_dim_zero(&self) -> Self {
         if self.rank() == 0 {
             return self.clone();
         }
@@ -205,12 +202,15 @@ impl<T: ArrayValue> Array<T> {
             return;
         }
         let mut new_len = self.row_count();
-        for (i, row) in self.rows().enumerate().rev() {
-            if row.data.iter().all(|x| x.is_fill_value()) {
+        for (i, row) in self.row_slices().enumerate().rev() {
+            if row.iter().all(|x| x.is_fill_value()) {
                 new_len = i;
             } else {
                 break;
             }
+        }
+        if new_len == self.row_count() {
+            return;
         }
         self.data.truncate(new_len * self.row_len());
         self.shape[0] = new_len;

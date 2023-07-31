@@ -119,13 +119,6 @@ impl From<f64> for Byte {
     }
 }
 
-fn rc_take<T: Clone>(rc: Rc<T>) -> T {
-    match Rc::try_unwrap(rc) {
-        Ok(x) => x,
-        Err(rc) => (*rc).clone(),
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Ident(Rc<str>);
 

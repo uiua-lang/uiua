@@ -1,14 +1,10 @@
-use std::{
-    ops::{Add, Mul},
-    rc::Rc,
-};
+use std::ops::{Add, Mul};
 
 use crate::{
     algorithm::pervade::bin_pervade_generic,
     array::{Array, ArrayValue},
     cowslice::cowslice,
     primitive::Primitive,
-    rc_take,
     value::Value,
     Uiua, UiuaResult,
 };
@@ -16,7 +12,7 @@ use crate::{
 pub fn reduce(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(1)?;
-    let xs = rc_take(env.pop(2)?);
+    let xs = env.pop(2)?;
     match (f.as_primitive(), xs) {
         (Some(prim), Value::Num(nums)) => {
             let arr = match prim {
@@ -33,10 +29,10 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
     }
 }
 
-fn generic_fold(f: Rc<Value>, xs: Value, init: Option<Rc<Value>>, env: &mut Uiua) -> UiuaResult {
+fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
     let mut rows = xs.into_rows_rev();
     let mut acc = init
-        .or_else(|| rows.next().map(Rc::new))
+        .or_else(|| rows.next())
         .ok_or_else(|| env.error("Cannot reduce empty array"))?;
     for row in rows {
         env.push_ref(acc);
@@ -55,14 +51,14 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(1)?;
     let acc = env.pop(2)?;
-    let xs = rc_take(env.pop(3)?);
+    let xs = env.pop(3)?;
     generic_fold(f, xs, Some(acc), env)
 }
 
 pub fn scan(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(1)?;
-    let xs = rc_take(env.pop(2)?);
+    let xs = env.pop(2)?;
     if xs.rank() == 0 {
         return Err(env.error("Cannot scan rank 0 array"));
     }
@@ -82,7 +78,7 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
     }
 }
 
-fn generic_scan(f: Rc<Value>, xs: Value, env: &mut Uiua) -> UiuaResult {
+fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     if xs.row_count() == 0 {
         env.push(xs.first_dim_zero());
         return Ok(());
@@ -98,7 +94,7 @@ fn generic_scan(f: Rc<Value>, xs: Value, env: &mut Uiua) -> UiuaResult {
         env.push(acc.clone());
         env.push_ref(f.clone());
         let should_break = env.call_catch_break()?;
-        let new_acc = rc_take(env.pop("scanned function result")?);
+        let new_acc = env.pop("scanned function result")?;
         if should_break {
             env.truncate_stack(start_height);
             break;
@@ -113,7 +109,7 @@ fn generic_scan(f: Rc<Value>, xs: Value, env: &mut Uiua) -> UiuaResult {
 pub fn each(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(1)?;
-    let xs = rc_take(env.pop(2)?);
+    let xs = env.pop(2)?;
     let mut new_values = Vec::with_capacity(xs.flat_len());
     let mut new_shape = xs.shape().to_vec();
     let mut values = xs.into_flat_values();
@@ -121,7 +117,7 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
         env.push(val);
         env.push_ref(f.clone());
         let broke = env.call_catch_break()?;
-        new_values.push(rc_take(env.pop("each's function result")?));
+        new_values.push(env.pop("each's function result")?);
         if broke {
             for val in values {
                 new_values.push(val);
@@ -139,8 +135,8 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
 pub fn zip(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(1)?;
-    let xs = rc_take(env.pop(2)?);
-    let ys = rc_take(env.pop(3)?);
+    let xs = env.pop(2)?;
+    let ys = env.pop(3)?;
     let xs_shape = xs.shape().to_vec();
     let ys_shape = ys.shape().to_vec();
     let xs_values: Vec<_> = xs.into_flat_values().collect();
@@ -157,7 +153,7 @@ pub fn zip(env: &mut Uiua) -> UiuaResult {
             env.push(x);
             env.push_ref(f.clone());
             env.call_error_on_break(BREAK_ERROR)?;
-            env.pop("zip's function result").map(rc_take)
+            env.pop("zip's function result")
         },
     )?;
     let mut zipped = Value::from_row_values(values, env)?;
@@ -170,14 +166,14 @@ pub fn zip(env: &mut Uiua) -> UiuaResult {
 pub fn rows(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(1)?;
-    let xs = rc_take(env.pop(2)?);
+    let xs = env.pop(2)?;
     let mut new_rows = Vec::with_capacity(xs.row_count());
     let mut old_rows = xs.into_rows();
     while let Some(row) = old_rows.next() {
         env.push(row);
         env.push_ref(f.clone());
         let broke = env.call_catch_break()?;
-        new_rows.push(rc_take(env.pop("rows' function result")?));
+        new_rows.push(env.pop("rows' function result")?);
         if broke {
             for row in old_rows {
                 new_rows.push(row);
@@ -193,8 +189,8 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
 pub fn bridge(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(1)?;
-    let xs = rc_take(env.pop(2)?);
-    let ys = rc_take(env.pop(3)?);
+    let xs = env.pop(2)?;
+    let ys = env.pop(3)?;
     const BREAK_ERROR: &str = "break is not allowed in bridge";
     if xs.row_count() != ys.row_count() {
         return Err(env.error(format!(
@@ -211,7 +207,7 @@ pub fn bridge(env: &mut Uiua) -> UiuaResult {
         env.push(x);
         env.push_ref(f.clone());
         env.call_error_on_break(BREAK_ERROR)?;
-        new_rows.push(rc_take(env.pop("bridge's function result")?));
+        new_rows.push(env.pop("bridge's function result")?);
     }
     env.push(Value::from_row_values(new_rows, env)?);
     Ok(())
@@ -220,8 +216,8 @@ pub fn bridge(env: &mut Uiua) -> UiuaResult {
 pub fn distribute(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(1)?;
-    let x = rc_take(env.pop(2)?);
-    let ys = rc_take(env.pop(3)?);
+    let x = env.pop(2)?;
+    let ys = env.pop(3)?;
     const BREAK_ERROR: &str = "break is not allowed in distribute";
     let mut new_rows = Vec::with_capacity(ys.row_count());
     for y in ys.into_rows() {
@@ -229,7 +225,7 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
         env.push(x.clone());
         env.push_ref(f.clone());
         env.call_error_on_break(BREAK_ERROR)?;
-        new_rows.push(rc_take(env.pop("distribute's function result")?));
+        new_rows.push(env.pop("distribute's function result")?);
     }
     env.push(Value::from_row_values(new_rows, env)?);
     Ok(())
@@ -238,8 +234,8 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
 pub fn table(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(1)?;
-    let xs = rc_take(env.pop(2)?);
-    let ys = rc_take(env.pop(3)?);
+    let xs = env.pop(2)?;
+    let ys = env.pop(3)?;
     const BREAK_ERROR: &str = "break is not allowed in table";
     let mut new_shape = xs.shape().to_vec();
     new_shape.extend_from_slice(ys.shape());
@@ -251,7 +247,7 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
             env.push(x.clone());
             env.push_ref(f.clone());
             env.call_error_on_break(BREAK_ERROR)?;
-            let item = rc_take(env.pop("tabled function result")?);
+            let item = env.pop("tabled function result")?;
             item.validate_shape();
             items.push(item);
         }
@@ -267,8 +263,8 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
 pub fn cross(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(1)?;
-    let xs = rc_take(env.pop(2)?);
-    let ys = rc_take(env.pop(3)?);
+    let xs = env.pop(2)?;
+    let ys = env.pop(3)?;
     const BREAK_ERROR: &str = "break is not allowed in cross";
     let mut new_shape = vec![xs.len(), ys.len()];
     let mut items = Vec::with_capacity(xs.len() * ys.len());
@@ -279,7 +275,7 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
             env.push(x_row.clone());
             env.push_ref(f.clone());
             env.call_error_on_break(BREAK_ERROR)?;
-            let item = rc_take(env.pop("crossed function result")?);
+            let item = env.pop("crossed function result")?;
             item.validate_shape();
             items.push(item);
         }
@@ -387,7 +383,7 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let n = env.pop(1)?.as_int(env, "Rank must be a single integer")?;
     let f = env.pop(2)?;
-    let xs = rc_take(env.pop(3)?);
+    let xs = env.pop(3)?;
     if xs.rank() == 0 {
         env.push(xs);
         return Ok(());
@@ -399,12 +395,12 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn level_recursive(f: Rc<Value>, value: Value, n: usize, env: &mut Uiua) -> UiuaResult<Value> {
+fn level_recursive(f: Value, value: Value, n: usize, env: &mut Uiua) -> UiuaResult<Value> {
     if n == 0 {
         env.push(value);
         env.push_ref(f);
         env.call_error_on_break("break is not allowed in rank")?;
-        Ok(rc_take(env.pop("rank's function result")?))
+        Ok(env.pop("rank's function result")?)
     } else {
         let mut rows = Vec::with_capacity(value.row_count());
         for row in value.into_rows() {

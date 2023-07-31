@@ -12,7 +12,6 @@ use crate::{
     lex::{Sp, Span},
     parse::parse,
     primitive::Primitive,
-    rc_take,
     value::Value,
     Ident, IoBackend, IoOp, StdIo, TraceFrame, UiuaError, UiuaResult,
 };
@@ -24,16 +23,16 @@ pub struct Uiua<'io> {
     new_functions: Vec<Vec<Instr>>,
     new_dfns: Vec<Vec<u8>>,
     // Statics
-    globals: Vec<Rc<Value>>,
+    globals: Vec<Value>,
     spans: Vec<Span>,
     // Runtime
-    stack: Vec<Rc<Value>>,
+    stack: Vec<Value>,
     scope: Scope,
     lower_scopes: Vec<Scope>,
     mode: RunMode,
     // IO
     current_imports: HashSet<PathBuf>,
-    imports: HashMap<PathBuf, Vec<Rc<Value>>>,
+    imports: HashMap<PathBuf, Vec<Value>>,
     pub(crate) io: &'io dyn IoBackend,
 }
 
@@ -57,7 +56,7 @@ struct StackFrame {
 #[derive(Clone)]
 struct DfnFrame {
     function: Rc<Function>,
-    args: Vec<Rc<Value>>,
+    args: Vec<Value>,
 }
 
 impl<'io> Default for Uiua<'io> {
@@ -133,7 +132,7 @@ impl<'io> Uiua<'io> {
     pub fn in_scope<T>(
         &mut self,
         f: impl FnOnce(&mut Self) -> UiuaResult<T>,
-    ) -> UiuaResult<Vec<Rc<Value>>> {
+    ) -> UiuaResult<Vec<Value>> {
         self.lower_scopes.push(take(&mut self.scope));
         let start_height = self.stack.len();
         f(self)?;
@@ -248,7 +247,7 @@ impl<'io> Uiua<'io> {
                 instrs,
                 dfn_args: None,
             };
-            Value::from(func).into()
+            Value::from(func)
         } else {
             let instrs = self.compile_words(binding.words)?;
             self.exec_global_instrs(instrs)?;
@@ -280,7 +279,7 @@ impl<'io> Uiua<'io> {
                 [.., Instr::BeginArray, Instr::Push(if_true), Instr::Push(if_false), Instr::EndArray(_), Instr::Prim(Primitive::Flip, _), Instr::Prim(Primitive::Pick, _)],
                 Instr::Prim(Primitive::Call, span),
             ) => {
-                if let (Value::Func(if_true), Value::Func(if_false)) = (&**if_true, &**if_false) {
+                if let (Value::Func(if_true), Value::Func(if_false)) = (&*if_true, &*if_false) {
                     if if_true.shape.is_empty() && if_false.shape.is_empty() {
                         let if_true = if_true.data[0].clone();
                         let if_false = if_false.data[0].clone();
@@ -317,10 +316,10 @@ impl<'io> Uiua<'io> {
                 let n: f64 = n
                     .parse()
                     .map_err(|e| word.span.sp(format!("invalid number {n:?}: {e}")))?;
-                self.push_instr(Instr::Push(Rc::new(n.into())));
+                self.push_instr(Instr::Push(n.into()));
             }
-            Word::Char(c) => self.push_instr(Instr::Push(Rc::new(c.into()))),
-            Word::String(s) => self.push_instr(Instr::Push(Rc::new(s.into()))),
+            Word::Char(c) => self.push_instr(Instr::Push(c.into())),
+            Word::String(s) => self.push_instr(Instr::Push(s.into())),
             Word::Ident(ident) => self.ident(ident, word.span, call)?,
             Word::Strand(items) => {
                 self.push_instr(Instr::BeginArray);
@@ -345,7 +344,7 @@ impl<'io> Uiua<'io> {
     fn ident(&mut self, ident: Ident, span: Span, call: bool) -> UiuaResult {
         if let Some(idx) = self.scope.names.get(&ident) {
             let value = self.globals[*idx].clone();
-            let is_function = matches!(&*value, Value::Func(_));
+            let is_function = matches!(value, Value::Func(_));
             self.push_instr(Instr::Push(value));
             if is_function && call {
                 let span = self.add_span(span);
@@ -378,7 +377,7 @@ impl<'io> Uiua<'io> {
     fn func(&mut self, func: Func, _span: Span) -> UiuaResult {
         let instrs = self.compile_words(func.body)?;
         if let [Instr::Push(f), Instr::Call(..)] = instrs.as_slice() {
-            if matches!(&**f, Value::Func(_)) {
+            if matches!(f, Value::Func(_)) {
                 self.push_instr(Instr::Push(f.clone()));
                 return Ok(());
             }
@@ -388,7 +387,7 @@ impl<'io> Uiua<'io> {
             instrs,
             dfn_args: None,
         };
-        self.push_instr(Instr::Push(Rc::new(func.into())));
+        self.push_instr(Instr::Push(func.into()));
         Ok(())
     }
     fn dfn(&mut self, func: Func, span: Span, call: bool) -> UiuaResult {
@@ -402,7 +401,7 @@ impl<'io> Uiua<'io> {
             instrs,
             dfn_args: Some(dfn_size),
         };
-        self.push_instr(Instr::Push(Rc::new(func.into())));
+        self.push_instr(Instr::Push(func.into()));
         if call {
             self.push_instr(Instr::Call(span));
         }
@@ -422,7 +421,7 @@ impl<'io> Uiua<'io> {
             instrs,
             dfn_args: None,
         };
-        self.push_instr(Instr::Push(Rc::new(func.into())));
+        self.push_instr(Instr::Push(func.into()));
         if call {
             let span = self.add_span(modified.modifier.span);
             self.push_instr(Instr::Call(span));
@@ -434,11 +433,11 @@ impl<'io> Uiua<'io> {
         if call {
             self.push_instr(Instr::Prim(prim, span));
         } else {
-            self.push_instr(Instr::Push(Rc::new(Value::from(Function {
+            self.push_instr(Instr::Push(Value::from(Function {
                 id: FunctionId::Primitive(prim),
                 instrs: vec![Instr::Prim(prim, span)],
                 dfn_args: None,
-            }))))
+            })))
         }
     }
     fn exec_global_instrs(&mut self, instrs: Vec<Instr>) -> UiuaResult {
@@ -484,7 +483,7 @@ impl<'io> Uiua<'io> {
                     if start > self.stack.len() {
                         return Err(self.error("Array removed elements"));
                     }
-                    let values: Vec<_> = self.stack.drain(start..).map(rc_take).rev().collect();
+                    let values: Vec<_> = self.stack.drain(start..).rev().collect();
                     self.push_span(span, None);
                     let val = Value::from_row_values(values, self)?;
                     self.pop_span();
@@ -550,7 +549,7 @@ impl<'io> Uiua<'io> {
     }
     fn call_with_span(&mut self, call_span: usize) -> UiuaResult {
         let value = self.pop("called function")?;
-        match rc_take(value) {
+        match value {
             Value::Func(f) if f.shape.is_empty() => {
                 let f = f.into_scalar().unwrap();
                 let mut dfn = false;
@@ -637,7 +636,7 @@ impl<'io> Uiua<'io> {
         UiuaError::Run(self.span().clone().sp(message.to_string()))
     }
     /// Pop a value from the stack
-    pub fn pop(&mut self, arg: impl StackArg) -> UiuaResult<Rc<Value>> {
+    pub fn pop(&mut self, arg: impl StackArg) -> UiuaResult<Value> {
         self.stack.pop().ok_or_else(|| {
             self.error(format!(
                 "Stack was empty when evaluating {}",
@@ -648,22 +647,22 @@ impl<'io> Uiua<'io> {
     /// Pop a result value from the stack
     ///
     /// Equivalent to `Self::pop("result")`
-    pub fn pop_result(&mut self) -> UiuaResult<Rc<Value>> {
+    pub fn pop_result(&mut self) -> UiuaResult<Value> {
         self.pop("result")
     }
     /// Push a value onto the stack
     pub fn push(&mut self, val: impl Into<Value>) {
-        self.stack.push(Rc::new(val.into()));
+        self.stack.push(val.into());
     }
-    pub fn push_ref(&mut self, val: Rc<Value>) {
+    pub fn push_ref(&mut self, val: Value) {
         self.stack.push(val);
     }
     /// Take the entire stack
-    pub fn take_stack(&mut self) -> Vec<Rc<Value>> {
+    pub fn take_stack(&mut self) -> Vec<Value> {
         take(&mut self.stack)
     }
     /// Clone the entire stack
-    pub fn clone_stack(&self) -> Vec<Rc<Value>> {
+    pub fn clone_stack(&self) -> Vec<Value> {
         self.stack.clone()
     }
     pub(crate) fn monadic_ref<V: Into<Value>>(&mut self, f: fn(&Value) -> V) -> UiuaResult {
@@ -675,7 +674,7 @@ impl<'io> Uiua<'io> {
         &mut self,
         f: fn(Value, &Self) -> UiuaResult<V>,
     ) -> UiuaResult {
-        let value = rc_take(self.pop(1)?);
+        let value = self.pop(1)?;
         self.push(f(value, self)?);
         Ok(())
     }
@@ -689,7 +688,7 @@ impl<'io> Uiua<'io> {
     }
     pub(crate) fn monadic_mut(&mut self, f: fn(&mut Value)) -> UiuaResult {
         let mut a = self.pop(1)?;
-        f(Rc::make_mut(&mut a));
+        f(&mut a);
         self.push_ref(a);
         Ok(())
     }
@@ -705,7 +704,7 @@ impl<'io> Uiua<'io> {
     ) -> UiuaResult {
         let a = self.pop(1)?;
         let b = self.pop(2)?;
-        self.push(f(rc_take(a), rc_take(b), self)?);
+        self.push(f(a, b, self)?);
         Ok(())
     }
     pub(crate) fn dyadic_ref_env<V: Into<Value>>(
@@ -723,7 +722,7 @@ impl<'io> Uiua<'io> {
     ) -> UiuaResult {
         let a = self.pop(1)?;
         let b = self.pop(2)?;
-        self.push(f(&a, rc_take(b), self)?);
+        self.push(f(&a, b, self)?);
         Ok(())
     }
     pub(crate) fn stack_size(&self) -> usize {

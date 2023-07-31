@@ -11,8 +11,7 @@ use hound::{SampleFormat, WavSpec, WavWriter};
 use image::{DynamicImage, ImageOutputFormat};
 
 use crate::{
-    array::Array, grid_fmt::GridFmt, primitive::PrimDoc, rc_take, value::Value, Byte, Uiua,
-    UiuaResult,
+    array::Array, grid_fmt::GridFmt, primitive::PrimDoc, value::Value, Byte, Uiua, UiuaResult,
 };
 
 macro_rules! io_op {
@@ -485,8 +484,9 @@ impl IoOp {
                 env.push(Array::<Byte>::from_iter(bytes));
             }
             IoOp::WriteBytes => {
-                let bytes =
-                    rc_take(env.pop(1)?).into_bytes(env, "Contents must be a 1D array of bytes")?;
+                let bytes = env
+                    .pop(1)?
+                    .into_bytes(env, "Contents must be a 1D array of bytes")?;
                 let handle = env.pop(2)?.as_nat(env, "Handle must be an integer")?.into();
                 env.io.write(handle, &bytes).map_err(|e| env.error(e))?;
             }

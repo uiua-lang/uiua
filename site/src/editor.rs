@@ -1,4 +1,4 @@
-use std::{rc::Rc, time::Duration};
+use std::time::Duration;
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use image::ImageOutputFormat;
@@ -386,7 +386,7 @@ pub fn Editor<'a>(
 struct RunOutput {
     stdout: String,
     stderr: String,
-    stack: Vec<Rc<Value>>,
+    stack: Vec<Value>,
     image_bytes: Option<Vec<u8>>,
     audio_bytes: Option<Vec<u8>>,
 }

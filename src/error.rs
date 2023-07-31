@@ -3,7 +3,6 @@ use std::{
     error::Error,
     fmt, fs, io,
     path::{Path, PathBuf},
-    rc::Rc,
     sync::Arc,
 };
 
@@ -26,7 +25,7 @@ pub enum UiuaError {
         error: Box<Self>,
         trace: Vec<TraceFrame>,
     },
-    Throw(Rc<Value>, Span),
+    Throw(Box<Value>, Span),
     Break(usize, Span),
 }
 

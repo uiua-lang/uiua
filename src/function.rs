@@ -4,7 +4,7 @@ use crate::{lex::Span, primitive::Primitive, value::Value, Ident};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Instr {
-    Push(Rc<Value>),
+    Push(Value),
     BeginArray,
     EndArray(usize),
     Prim(Primitive, usize),
@@ -119,10 +119,7 @@ impl fmt::Display for FunctionId {
 
 fn invert_primitive(prim: Primitive, span: usize) -> Option<Vec<Instr>> {
     Some(match prim {
-        Primitive::Sqrt => vec![
-            Instr::Push(Rc::new(2.0.into())),
-            Instr::Prim(Primitive::Pow, span),
-        ],
+        Primitive::Sqrt => vec![Instr::Push(2.0.into()), Instr::Prim(Primitive::Pow, span)],
         prim => vec![Instr::Prim(prim.inverse()?, span)],
     })
 }
@@ -151,7 +148,7 @@ fn invert_instr_fragment(instrs: &[Instr]) -> Option<Vec<Instr>> {
             vec![Push(val.clone()), Prim(Mul, *span)]
         }
         [Push(val), Prim(Pow, span)] => vec![
-            Push(Rc::new(1.into())),
+            Push(1.into()),
             Push(val.clone()),
             Prim(Div, *span),
             Prim(Pow, *span),

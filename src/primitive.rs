@@ -3,7 +3,6 @@ use std::{
     f64::{consts::PI, INFINITY},
     fmt,
     mem::take,
-    rc::Rc,
     sync::OnceLock,
 };
 
@@ -835,7 +834,7 @@ impl Primitive {
             Primitive::Reshape => {
                 let shape = env.pop(1)?;
                 let mut array = env.pop(2)?;
-                Rc::make_mut(&mut array).reshape(&shape, env)?;
+                array.reshape(&shape, env)?;
                 env.push_ref(array);
             }
             Primitive::Break => {
@@ -905,7 +904,7 @@ impl Primitive {
                 let msg = env.pop(1)?;
                 let cond = env.pop(2)?;
                 if cond.as_nat(env, "").map_or(true, |n| n == 0) {
-                    return Err(UiuaError::Throw(msg, env.span().clone()));
+                    return Err(UiuaError::Throw(msg.into(), env.span().clone()));
                 }
             }
             Primitive::Shape => {
@@ -931,7 +930,7 @@ impl Primitive {
                 let name = env.pop(1)?.as_string(env, "Use name must be a string")?;
                 let lib = env.pop(2)?;
                 let lowername = name.to_lowercase();
-                let f = match &*lib {
+                let f = match lib {
                     Value::Func(fs) => fs.data.iter().find_map(|f| {
                         matches!(&f.id, FunctionId::Named(n) if n == lowername.as_str())
                             .then(|| f.clone())

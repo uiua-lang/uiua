@@ -9,5 +9,5 @@ glyph_test.txt
 !*/uiua-logo.png
 uiua-temp
 *.wav
-docs
+/docs
 profile.yaml

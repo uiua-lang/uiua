@@ -91,18 +91,20 @@ io_op! {
     /// Check if a path is a file
     (1, FIsFile, "FIsFile"),
     /// Read all the contents of a file into a string
-    (1, ReadAllStr, "FReadAllStr"),
+    (1, FReadAllStr, "FReadAllStr"),
     /// Read all the contents of a file into a byte array
-    (1, ReadAllBytes, "FReadAllBytes"),
+    (1, FReadAllBytes, "FReadAllBytes"),
+    /// Write the entire contents of an array to a file
+    (2, FWriteAll, "FWriteAll"),
     /// Read at most n bytes from a stream
     (2, ReadStr, "ReadStr"),
-    /// Write a string to a stream
-    (1, WriteStr, "WriteStr"),
     /// Read at most n bytes from a stream
     (1, ReadBytes, "ReadBytes"),
-    /// Write bytes to a stream
-    (1, WriteBytes, "WriteBytes"),
-    /// Import a file as a module
+    /// Write an array to a stream
+    (1, Write, "Write"),
+    /// Run the code from a file in a scope
+    ///
+    /// If the file has already been imported, its code will not be run again, but the values it originally pushed onto the stack will be pushed again.
     ///
     /// ex: import "example.ua"
     (1, Import, "Import"),
@@ -475,17 +477,6 @@ impl IoOp {
                 let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
                 env.push(s);
             }
-            IoOp::ReadAllStr => {
-                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let bytes = env.io.file_read_all(&path).map_err(|e| env.error(e))?;
-                let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
-                env.push(s);
-            }
-            IoOp::WriteStr => {
-                let s = env.pop(1)?.as_string(env, "Contents must be a string")?;
-                let handle = env.pop(2)?.as_nat(env, "Handle must be an integer")?.into();
-                env.io.write(handle, s.as_ref()).map_err(|e| env.error(e))?;
-            }
             IoOp::ReadBytes => {
                 let count = env.pop(1)?.as_nat(env, "Count must be an integer")?;
                 let handle = env.pop(2)?.as_nat(env, "Handle must be an integer")?.into();
@@ -493,18 +484,41 @@ impl IoOp {
                 let bytes = bytes.into_iter().map(Into::into);
                 env.push(Array::<Byte>::from_iter(bytes));
             }
-            IoOp::ReadAllBytes => {
+            IoOp::Write => {
+                let data = env.pop(1)?;
+                let handle = env.pop(2)?.as_nat(env, "Handle must be an integer")?.into();
+                let bytes: Vec<u8> = match data {
+                    Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
+                    Value::Byte(arr) => arr.data.iter().filter_map(|x| x.value()).collect(),
+                    Value::Char(arr) => arr.data.iter().collect::<String>().into(),
+                    Value::Func(_) => return Err(env.error("Cannot write function array to file")),
+                };
+                env.io.write(handle, &bytes).map_err(|e| env.error(e))?;
+            }
+            IoOp::FReadAllStr => {
+                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                let bytes = env.io.file_read_all(&path).map_err(|e| env.error(e))?;
+                let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
+                env.push(s);
+            }
+            IoOp::FReadAllBytes => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let bytes = env.io.file_read_all(&path).map_err(|e| env.error(e))?;
                 let bytes = bytes.into_iter().map(Into::into);
                 env.push(Array::<Byte>::from_iter(bytes));
             }
-            IoOp::WriteBytes => {
-                let bytes = env
-                    .pop(1)?
-                    .into_bytes(env, "Contents must be a 1D array of bytes")?;
-                let handle = env.pop(2)?.as_nat(env, "Handle must be an integer")?.into();
-                env.io.write(handle, &bytes).map_err(|e| env.error(e))?;
+            IoOp::FWriteAll => {
+                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                let data = env.pop(2)?;
+                let bytes: Vec<u8> = match data {
+                    Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
+                    Value::Byte(arr) => arr.data.iter().filter_map(|x| x.value()).collect(),
+                    Value::Char(arr) => arr.data.iter().collect::<String>().into(),
+                    Value::Func(_) => return Err(env.error("Cannot write function array to file")),
+                };
+                env.io
+                    .file_write_all(&path, &bytes)
+                    .map_err(|e| env.error(e))?;
             }
             IoOp::FExists => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
@@ -523,12 +537,6 @@ impl IoOp {
             }
             IoOp::Import => {
                 let path = env.pop(1)?.as_string(env, "Import path must be a string")?;
-                if env.stack_size() > 0 {
-                    return Err(env.error(format!(
-                        "Stack must be empty before import, but there are {} items on it",
-                        env.stack_size()
-                    )));
-                }
                 let input =
                     String::from_utf8(env.io.file_read_all(&path).map_err(|e| env.error(e))?)
                         .map_err(|e| env.error(format!("Failed to read file: {e}")))?;

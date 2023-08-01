@@ -651,7 +651,7 @@ primitive!(
     /// Use [multiply] and [floor] to generate a random integer in a range.
     /// ex: [;⍥(~⌊*10~gen)5 0]
     (1(2), Gen, Misc, "gen"),
-    /// Use a named function exported from a module
+    /// Extract a named function from a module
     ///
     /// Can be used after [Import].
     ///
@@ -659,7 +659,7 @@ primitive!(
     ///   : square ← use "square".
     ///   : increment ← use "increment"
     ///   : square increment 5
-    (1, Use, Misc, "use"),
+    (2, Use, Misc, "use"),
     // Constants
     (0(1), Pi, Constant, "pi" + 'π'),
     (0(1), Infinity, Constant, "infinity" + '∞')

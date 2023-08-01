@@ -10,6 +10,12 @@ pub struct WebBackend {
     pub files: RefCell<HashMap<String, Vec<u8>>>,
 }
 
+pub static EXAMPLE_UA: &str = "\
+Square ← ×.
+Double ← +.
+Increment ← +1
+Square_Double_Increment";
+
 impl Default for WebBackend {
     fn default() -> Self {
         Self {
@@ -17,17 +23,7 @@ impl Default for WebBackend {
             stderr: String::new().into(),
             image_bytes: None.into(),
             audio_bytes: None.into(),
-            files: HashMap::from([(
-                "example.ua".into(),
-                "\
-Square ← ×.
-Double ← +.
-Increment ← +1
-Square_Double_Increment
-                "
-                .into(),
-            )])
-            .into(),
+            files: HashMap::from([("example.ua".into(), EXAMPLE_UA.into())]).into(),
         }
     }
 }

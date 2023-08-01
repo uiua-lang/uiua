@@ -1,12 +1,8 @@
-- Share array shapes?
+- Tau
 - Docs
-  - Imports and use
-    - Modules
-  - Design
   - Zen
 - Fix typos
 - Threads
-- Make grid formatting less vertical
 - Multimedia
   - Sound input
   - Webcam input?
@@ -15,8 +11,13 @@
   - FFI
   - check OS
   - unicode utils
-- contenteditable-based editor
-- LSP?
+  - run commands
 - Tooling
-  - Basic package manager
+  - LSP backend
+  - contenteditable-based web editor
+  - LSP frontends
+    - VSCode
+    - Neovim
+  - Basic package manager?
+    - Maybe just be content with git submodules
 - Custom monospace font

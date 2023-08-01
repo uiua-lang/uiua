@@ -236,7 +236,7 @@ pub fn Editor<'a>(
                     // Redirect to the docs page
                     _ = window()
                         .location()
-                        .set_href(&format!("/primitive/{p:?}").to_lowercase());
+                        .set_href(&format!("/docs/{p:?}").to_lowercase());
                 } else {
                     replace_code(&p.to_string());
                 }

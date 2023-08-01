@@ -70,7 +70,7 @@ pub fn Editor<'a>(
     let (audio_id, _) = create_signal(cx, format!("audio{id}"));
     let (glyph_doc_id, _) = create_signal(cx, format!("glyphdoc{id}"));
 
-    let code_element = move || -> HtmlTextAreaElement { element(&code_id.get()) };
+    let code_element = move || -> HtmlDivElement { element(&code_id.get()) };
     let output_element = move || -> HtmlDivElement { element(&output_id.get()) };
     let image_element = move || -> HtmlImageElement { element(&image_id.get()) };
     let audio_element = move || -> HtmlAudioElement { element(&audio_id.get()) };
@@ -347,12 +347,14 @@ pub fn Editor<'a>(
                             { move || glyph_doc.get() }
                             <div class="glyph-doc-ctrl-click">"Ctrl+click for more info"</div>
                         </div>
-                        <textarea
+                        // The text area
+                        <div
                             id={code_id.get()}
+                            contenteditable="true"
                             spellcheck="false"
                             class={format!("code {code_class}")}
                             style={format!("height: {code_height_em}em")}
-                            on:input=code_input>{ move || code.get() }</textarea>
+                            on:input=code_input>{ move || code.get() }</div>
                     </div>
                     <div id={output_id.get()} class="output">
                         <div id="output-text">{ move || output.get() }</div>

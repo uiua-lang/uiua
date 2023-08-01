@@ -67,7 +67,7 @@ li {
         outline: 0.1em solid #fff4;
     }
 
-    textarea {
+    .code {
         color: #eef;
         background-color: #445;
     }
@@ -113,7 +113,7 @@ li {
         outline: 0.1em solid #0004;
     }
 
-    textarea {
+    .code {
         color: #344;
         background-color: #eff;
     }

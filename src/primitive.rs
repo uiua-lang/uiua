@@ -1,6 +1,9 @@
 use std::{
     cell::RefCell,
-    f64::{consts::PI, INFINITY},
+    f64::{
+        consts::{PI, TAU},
+        INFINITY,
+    },
     fmt,
     mem::take,
     sync::OnceLock,
@@ -190,15 +193,32 @@ primitive!(
     /// ex: ¯ 1
     /// ex: ¯ ¯3
     (1, Neg, MonadicPervasive, "negate", Backtick + '¯'),
+    /// The absolute value of a number
+    ///
+    /// ex: ⌵ ¯1
+    /// ex: ⌵ 1
+    ///
+    /// The symbol looks like the graph of `|x|`.
     (1, Abs, MonadicPervasive, "absolute value" + '⌵'),
+    /// The square root of a number
     (1, Sqrt, MonadicPervasive, "sqrt" + '√'),
+    /// The sine of a number
+    ///
+    /// You can get an arcsine function with [invert].
     (1, Sin, MonadicPervasive, "sine"),
+    /// The cosine of a number
+    ///
+    /// You can get an arccosine function with [invert].
     (1, Cos, MonadicPervasive, "cosine"),
+    /// The tangent of a number
     (1, Tan, MonadicPervasive, "tangent"),
     (1, Asin, MonadicPervasive),
     (1, Acos, MonadicPervasive),
+    /// Round to the nearest integer towards `¯∞`
     (1, Floor, MonadicPervasive, "floor" + '⌊'),
+    /// Round to the nearest integer towards `∞`
     (1, Ceil, MonadicPervasive, "ceiling" + '⌈'),
+    /// Round to the nearest integer
     (1, Round, MonadicPervasive, "round" + '⁅'),
     // Pervasive dyadic ops
     (2, Eq, DyadicPervasive, "equals", Equal),
@@ -634,6 +654,9 @@ primitive!(
     ///
     /// While this may seem useless, one way to use it is to put all of an array's values on the stack.
     /// ex: /· [1 2 3]
+    ///
+    /// The formatter converts an empty `()` function into [noop].
+    /// ex: ()
     (0, Noop, Misc, "noop" + '·'),
     /// Convert a value to a string
     ///
@@ -675,7 +698,11 @@ primitive!(
     ///   : square increment 5
     (2, Use, Misc, "use"),
     // Constants
+    /// The ratio of a circle's circumference to its diameter
     (0(1), Pi, Constant, "pi" + 'π'),
+    /// The ratio of a circle's circumference to its radius
+    (0(1), Tau, Constant, "tau" + 'τ'),
+    /// The biggest number
     (0(1), Infinity, Constant, "infinity" + '∞')
 );
 
@@ -727,6 +754,9 @@ impl Primitive {
         if name == "pi" || name == "π" {
             return Some(Primitive::Pi);
         }
+        if name == "tau" || name == "τ" {
+            return Some(Primitive::Tau);
+        }
         if name.len() < 3 {
             return None;
         }
@@ -740,6 +770,9 @@ impl Primitive {
     pub fn from_format_name_multi(name: &str) -> Option<Vec<(Self, &str)>> {
         if name == "pi" || name == "π" {
             return Some(vec![(Primitive::Pi, name)]);
+        }
+        if name == "tau" || name == "τ" {
+            return Some(vec![(Primitive::Tau, name)]);
         }
         let mut start = 0;
         let indices: Vec<usize> = name.char_indices().map(|(i, _)| i).collect();
@@ -783,6 +816,7 @@ impl Primitive {
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
             Primitive::Pi => env.push(PI),
+            Primitive::Tau => env.push(TAU),
             Primitive::Infinity => env.push(INFINITY),
             Primitive::Noop => {}
             Primitive::Not => env.monadic_env(Value::not)?,

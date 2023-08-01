@@ -2,7 +2,10 @@
 
 use std::{
     any::type_name,
-    f64::{consts::PI, INFINITY},
+    f64::{
+        consts::{PI, TAU},
+        INFINITY,
+    },
     iter::once,
     mem::take,
     rc::Rc,
@@ -50,6 +53,8 @@ impl GridFmt for f64 {
             let minus = if *self < -0.0 { "¯" } else { "" };
             let s = if (positive - PI).abs() < 1e-12 {
                 format!("{minus}π")
+            } else if (positive - TAU).abs() < 1e-12 {
+                format!("{minus}τ")
             } else if positive == INFINITY {
                 format!("{minus}∞")
             } else {

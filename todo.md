@@ -1,4 +1,3 @@
-- Tau
 - Docs
   - Zen
 - Fix member

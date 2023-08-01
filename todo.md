@@ -1,6 +1,5 @@
 - Docs
   - Zen
-- Fix member
 - Threads
 - Multimedia
   - Sound input

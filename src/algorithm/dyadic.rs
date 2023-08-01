@@ -1,8 +1,4 @@
-use std::{
-    cmp::{self, Ordering},
-    collections::BTreeMap,
-    mem::take,
-};
+use std::{cmp::Ordering, collections::BTreeMap, mem::take};
 
 use crate::{algorithm::max_shape, array::*, value::Value, Byte, Uiua, UiuaResult};
 
@@ -749,71 +745,39 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     pub fn member(&self, of: &Self, env: &Uiua) -> UiuaResult<Self> {
         Ok(match (self, of) {
-            (Value::Num(a), Value::Num(b)) => a.member(b, env)?.into(),
-            (Value::Byte(a), Value::Byte(b)) => a.member(b, env)?.into(),
-            (Value::Char(a), Value::Char(b)) => a.member(b, env)?.into(),
-            (Value::Func(a), Value::Func(b)) => a.member(b, env)?.into(),
-            (Value::Num(a), Value::Byte(b)) => a.member(&b.clone().convert(), env)?.into(),
-            (Value::Byte(a), Value::Num(b)) => a.clone().convert().member(b, env)?.into(),
+            (Value::Num(a), Value::Num(b)) => a.member(b),
+            (Value::Byte(a), Value::Byte(b)) => a.member(b),
+            (Value::Char(a), Value::Char(b)) => a.member(b),
+            (Value::Func(a), Value::Func(b)) => a.member(b),
+            (Value::Num(a), Value::Byte(b)) => a.member(&b.clone().convert()),
+            (Value::Byte(a), Value::Num(b)) => a.clone().convert().member(b),
             (a, b) => {
                 return Err(env.error(format!(
-                    "Cannot look for members of {} in {}",
+                    "Cannot look for members of {} array in {} array",
                     b.type_name(),
                     a.type_name()
                 )))
             }
-        })
+        }
+        .into())
     }
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn member(&self, of: &Self, env: &Uiua) -> UiuaResult<Array<Byte>> {
-        let shape = cmp::max_by_key(self.shape(), of.shape(), |s| s.len());
-        let mut result = Vec::with_capacity(shape.iter().product());
-        member(self, of, &mut result, env)?;
-        Ok((shape.to_vec(), result).into())
-    }
-}
-
-fn member<A: Arrayish>(
-    elems: &A,
-    of: &impl Arrayish<Value = A::Value>,
-    result: &mut Vec<Byte>,
-    env: &Uiua,
-) -> UiuaResult {
-    match elems.rank().cmp(&of.rank()) {
-        Ordering::Equal => {
-            if elems.shape()[1..] != of.shape()[1..] {
-                return Err(env.error(format!(
-                    "Cannot compare arrays of different shapes: {:?} and {:?}",
-                    elems.shape(),
-                    of.shape()
-                )));
-            }
-            'elem: for elem in elems.rows() {
-                for of in of.rows() {
-                    if elem.len() == of.len() && elem.iter().zip(of).all(|(a, b)| a.eq(b)) {
-                        result.push(Byte::Value(1));
-                        continue 'elem;
-                    }
+    pub fn member(&self, of: &Self) -> Array<Byte> {
+        let elems = self;
+        let mut result_data = Vec::with_capacity(elems.row_count());
+        'elem: for elem in elems.rows() {
+            for of in of.rows() {
+                if elem == of {
+                    result_data.push(Byte::Value(1));
+                    continue 'elem;
                 }
-                result.push(Byte::Value(0));
             }
+            result_data.push(Byte::Value(0));
         }
-        Ordering::Greater => {
-            for row in elems.rows() {
-                let row = (&elems.shape()[1..], row);
-                member(&row, of, result, env)?;
-            }
-        }
-        Ordering::Less => {
-            for row in of.rows() {
-                let row = (&of.shape()[1..], row);
-                member(elems, &row, result, env)?;
-            }
-        }
+        Array::from(result_data)
     }
-    Ok(())
 }
 
 impl Value {
@@ -898,16 +862,13 @@ impl<T: ArrayValue> Array<T> {
                 groups[g].push(self.row(r));
             }
         }
-        let mut rows = groups
-            .into_iter()
-            .map(|row_arrays| Self::from_row_arrays(row_arrays))
-            .collect::<UiuaResult<Vec<_>>>()?;
+        let mut rows: Vec<Array<T>> = groups.into_iter().map(Self::from_row_arrays).collect();
         for row in &mut rows {
             while row.rank() < self.rank() {
                 row.shape.insert(0, 1);
             }
         }
-        Self::from_row_arrays(rows)
+        Ok(Self::from_row_arrays(rows))
     }
 }
 
@@ -937,15 +898,12 @@ impl<T: ArrayValue> Array<T> {
             }
             last_marker = marker;
         }
-        let mut rows = groups
-            .into_iter()
-            .map(|row_arrays| Self::from_row_arrays(row_arrays))
-            .collect::<UiuaResult<Vec<_>>>()?;
+        let mut rows: Vec<Array<T>> = groups.into_iter().map(Self::from_row_arrays).collect();
         for row in &mut rows {
             while row.rank() < self.rank() {
                 row.shape.insert(0, 1);
             }
         }
-        Self::from_row_arrays(rows)
+        Ok(Self::from_row_arrays(rows))
     }
 }

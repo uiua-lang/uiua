@@ -10,7 +10,7 @@ use crate::{
     cowslice::{cowslice, CowSlice},
     function::Function,
     primitive::Primitive,
-    Byte, UiuaResult,
+    Byte,
 };
 
 #[derive(Clone)]
@@ -217,10 +217,10 @@ impl<T: ArrayValue> Array<T> {
         self.shape[0] = new_len;
     }
     #[track_caller]
-    pub fn from_row_arrays(values: impl IntoIterator<Item = Self>) -> UiuaResult<Self> {
+    pub fn from_row_arrays(values: impl IntoIterator<Item = Self>) -> Self {
         let mut row_values = values.into_iter();
         let Some(mut value) = row_values.next() else {
-            return Ok(Self::default());
+            return Self::default();
         };
         let mut count = 1;
         for row in row_values {
@@ -234,26 +234,33 @@ impl<T: ArrayValue> Array<T> {
         if count == 1 {
             value.shape.insert(0, 1);
         }
-        Ok(value)
+        value
+    }
+    fn is_all_fill(&self) -> bool {
+        self.data.iter().all(|x| x.is_fill_value())
     }
 }
 
 impl<T: ArrayValue> PartialEq for Array<T> {
     fn eq(&self, other: &Self) -> bool {
-        if !(self.shape == other.shape && self.data.len() == other.data.len()) {
+        if self.rank() != other.rank() {
             return false;
         }
-        let a = self
-            .data
-            .iter()
-            .skip_while(|x| x.is_fill_value())
-            .take_while(|x| !x.is_fill_value());
-        let b = other
-            .data
-            .iter()
-            .skip_while(|x| x.is_fill_value())
-            .take_while(|x| !x.is_fill_value());
-        a.zip(b).all(|(a, b)| a.cmp(b) == Ordering::Equal)
+        match self.rank() {
+            0 => self.data[0].eq(&other.data[0]),
+            1 => {
+                let mut a = self.data.iter().take_while(|x| !x.is_fill_value());
+                let mut b = other.data.iter().take_while(|x| !x.is_fill_value());
+                a.by_ref().zip(b.by_ref()).all(|(a, b)| a.eq(b))
+                    && a.next().is_none()
+                    && b.next().is_none()
+            }
+            _ => {
+                let a = self.rows().take_while(|x| !x.is_all_fill());
+                let b = other.rows().take_while(|x| !x.is_all_fill());
+                a.eq(b)
+            }
+        }
     }
 }
 

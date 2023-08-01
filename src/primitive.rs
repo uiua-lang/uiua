@@ -353,14 +353,14 @@ primitive!(
     /// ex: ⊝7_7_8_0_1_2_0
     (1, Deduplicate, MonadicArray, "deduplicate" + '⊝'),
     // Dyadic array ops
-    /// Check if two arrays' elements match exactly
+    /// Check if two arrays are the same, ignoring fill elements
     ///
     /// ex: ≅ 1_2_3 [1 2 3]
     /// ex: ≅ 1_2_3 [1 2]
     ///
     /// See also: [notmatch]
     (2, Match, DyadicArray, "match" + '≅'),
-    /// Check if two arrays' elements do not match exactly
+    /// Check if two arrays are not the same, ignoring fill elements
     ///
     /// ex: ≇ 1_2_3 [1 2 3]
     /// ex: ≇ 1_2_3 [1 2]
@@ -463,9 +463,17 @@ primitive!(
     /// This can be used as a filter.
     /// ex: ‡ ≥'a' ."lOWERCASe onLY"
     (2, Replicate, DyadicArray, "replicate" + '‡'),
-    /// Check if each element of an array is a member of another array
+    /// Check if each row of an array exists in another array
     ///
+    /// The result is always a [rank]`1` array of booleans with the same number of elements as the first array's [length].
+    ///
+    /// ex: ∊ 2 [1 2 3]
+    /// ex: ∊ 5 [1 2 3]
     /// ex: ∊ [1 2 3] [0 3 4 5 1]
+    /// ex: ∊ "cat"_"dog" "bird"_"cat"_"fish"
+    ///
+    /// With the help of [deduplicate] and [replicate], you can use [member] to get a set intersection.
+    /// ex: ‡∊,⊝~⊝ "abracadabra" "that's really cool"
     (2, Member, DyadicArray, "member" + '∊'),
     /// Find the occurences of one array in another
     ///

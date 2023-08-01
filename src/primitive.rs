@@ -302,6 +302,8 @@ primitive!(
     (1, Last, MonadicArray),
     /// Remove fill elements from the end of an array
     ///
+    /// Using [noop] to unpack an array onto the stack preserves the fill values.
+    /// Use [truncate] instead to remove them.
     /// ex: /· \⊂1_2_3_4
     /// ex: /⌀ \⊂1_2_3_4
     (1, Truncate, MonadicArray, "truncate" + '⌀'),
@@ -357,16 +359,8 @@ primitive!(
     ///
     /// ex: ≅ 1_2_3 [1 2 3]
     /// ex: ≅ 1_2_3 [1 2]
-    ///
-    /// See also: [notmatch]
+    /// ex: ≅ 1_2 .⊢[1_2 4_5_6]
     (2, Match, DyadicArray, "match" + '≅'),
-    /// Check if two arrays are not the same, ignoring fill elements
-    ///
-    /// ex: ≇ 1_2_3 [1 2 3]
-    /// ex: ≇ 1_2_3 [1 2]
-    ///
-    /// See also: [match]
-    (2, NotMatch, DyadicArray, "notmatch" + '≇'),
     /// Append two arrays or an array and a scalar
     ///
     /// For scalars, it is equivalent to [couple].
@@ -663,6 +657,10 @@ primitive!(
     /// While this may seem useless, one way to use it is to put all of an array's values on the stack.
     /// ex: /· [1 2 3]
     ///
+    /// If you use this on an array that has fill values, the fill values will not be removed.
+    /// To remove them, use [truncate] instead.
+    /// ex: /· \⊂1_2_3_4
+    ///
     /// The formatter converts an empty `()` function into [noop].
     /// ex: ()
     (0, Noop, Misc, "noop" + '·'),
@@ -857,7 +855,6 @@ impl Primitive {
             Primitive::Max => env.dyadic_ref_env(Value::max)?,
             Primitive::Atan => env.dyadic_ref_env(Value::atan2)?,
             Primitive::Match => env.dyadic_ref(|a, b| a == b)?,
-            Primitive::NotMatch => env.dyadic_ref(|a, b| a != b)?,
             Primitive::Join => env.dyadic_env(Value::join)?,
             Primitive::Transpose => env.monadic_mut(Value::transpose)?,
             Primitive::InvTranspose => env.monadic_mut(Value::inv_transpose)?,

@@ -343,6 +343,7 @@ impl<'io> Uiua<'io> {
     }
     fn ident(&mut self, ident: Ident, span: Span, call: bool) -> UiuaResult {
         if let Some(idx) = self.scope.names.get(&ident) {
+            // Name exists in scope
             let value = self.globals[*idx].clone();
             let is_function = matches!(value, Value::Func(_));
             self.push_instr(Instr::Push(value));
@@ -351,18 +352,21 @@ impl<'io> Uiua<'io> {
                 self.push_instr(Instr::Call(span));
             }
         } else if let Some(prims) = Primitive::from_format_name_multi(ident.as_str()) {
+            // Name is a formattable primitive
             for (prim, _) in prims.into_iter().rev() {
                 self.primitive(prim, span.clone(), call);
             }
         } else if let Some(prim) =
             Primitive::all().find(|p| p.name().is_some_and(|name| ident == name))
         {
+            // Name is a non-formattable primitive
             self.primitive(prim, span.clone(), call);
         } else {
             if let Some(dfn) = self.new_dfns.last_mut() {
                 if ident.as_str().len() == 1 {
                     let c = ident.as_str().chars().next().unwrap();
                     if c.is_ascii_lowercase() {
+                        // Name is a dfn argument
                         let idx = c as u8 - b'a';
                         dfn.push(idx);
                         self.push_instr(Instr::DfnVal(idx as usize));
@@ -498,9 +502,22 @@ impl<'io> Uiua<'io> {
                 })(),
                 &Instr::Call(span) => self.call_with_span(span),
                 Instr::DfnVal(n) => {
-                    let value = self.scope.dfn.last().unwrap().args[*n].clone();
-                    self.stack.push(value);
-                    Ok(())
+                    if let Some(dfn) = self.scope.dfn.last() {
+                        if let Some(value) = dfn.args.get(*n).cloned() {
+                            self.stack.push(value);
+                            Ok(())
+                        } else {
+                            Err(self.error(format!(
+                                "Function references dfn argument `{}` outside of its dfn",
+                                (*n as u8 + b'a') as char
+                            )))
+                        }
+                    } else {
+                        Err(self.error(format!(
+                            "Function references dfn argument `{}` outside of a dfn",
+                            (*n as u8 + b'a') as char
+                        )))
+                    }
                 }
                 Instr::If(if_true, if_false) => {
                     let if_true = if_true.clone();

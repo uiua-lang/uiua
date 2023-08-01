@@ -33,7 +33,7 @@ fn parse_doc(cx: Scope, line: &str) -> impl IntoView {
 }
 
 #[component]
-pub fn PrimDocsPage(cx: Scope, prim: Primitive) -> impl IntoView {
+pub fn PrimDocs(cx: Scope, prim: Primitive) -> impl IntoView {
     let ex_lines = move || {
         prim.doc()
             .map(|doc| {

@@ -113,25 +113,59 @@ impl IntoParam for TutorialPage {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DocsPage {
+    Tutorial(TutorialPage),
+    Primitive(Primitive),
+}
+
+impl IntoParam for DocsPage {
+    fn into_param(value: Option<&str>, name: &str) -> Result<Self, ParamsError> {
+        let value = value.unwrap_or("");
+        all::<TutorialPage>()
+            .find(|p| p.path() == value)
+            .map(Self::Tutorial)
+            .or_else(|| {
+                Primitive::all()
+                    .find(|p| format!("{p:?}").to_lowercase() == value)
+                    .map(Self::Primitive)
+            })
+            .ok_or_else(|| ParamsError::MissingParam(name.to_string()))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Params)]
 pub struct DocsParams {
-    page: TutorialPage,
+    page: DocsPage,
 }
 
 #[component]
-pub fn DocsPage(cx: Scope) -> impl IntoView {
+pub fn Docs(cx: Scope) -> impl IntoView {
     move || {
         let Ok(params) = use_params::<DocsParams>(cx).get() else {
             return view! { cx, <Redirect path="/docs"/> }.into_view(cx);
         };
         let page = params.page;
         let page_view = match page {
-            TutorialPage::Basic => view! { cx, <TutorialBasic/> }.into_view(cx),
-            TutorialPage::Math => view! { cx, <TutorialMath/> }.into_view(cx),
-            TutorialPage::Arrays => view! { cx, <TutorialArrays/> }.into_view(cx),
-            TutorialPage::Types => view! { cx, <TutorialTypes/> }.into_view(cx),
-            TutorialPage::Bindings => view! { cx, <TutorialBindings/> }.into_view(cx),
-            TutorialPage::Functions => view! { cx, <TutorialFunctions/> }.into_view(cx),
+            DocsPage::Tutorial(tut) => {
+                let tut_view = match tut {
+                    TutorialPage::Basic => view! { cx, <TutorialBasic/> }.into_view(cx),
+                    TutorialPage::Math => view! { cx, <TutorialMath/> }.into_view(cx),
+                    TutorialPage::Arrays => view! { cx, <TutorialArrays/> }.into_view(cx),
+                    TutorialPage::Types => view! { cx, <TutorialTypes/> }.into_view(cx),
+                    TutorialPage::Bindings => view! { cx, <TutorialBindings/> }.into_view(cx),
+                    TutorialPage::Functions => view! { cx, <TutorialFunctions/> }.into_view(cx),
+                };
+                view! { cx,
+                    <TutorialNav page=tut/>
+                    { tut_view }
+                    <br/>
+                    <br/>
+                    <TutorialNav page=tut/>
+                }
+                .into_view(cx)
+            }
+            DocsPage::Primitive(prim) => view!(cx, <PrimDocsPage prim=prim/>).into_view(cx),
         };
 
         view! { cx,
@@ -139,11 +173,8 @@ pub fn DocsPage(cx: Scope) -> impl IntoView {
                 <A href="/docs">"Back to Docs Home"</A>
                 <br/>
                 <br/>
-                <TutorialNav page=page/>
                 { page_view }
-                <br/>
-                <br/>
-                <TutorialNav page=page/>
+                <A href="/docs">"Back to Docs Home"</A>
             </div>
         }
         .into_view(cx)

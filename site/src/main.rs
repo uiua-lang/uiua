@@ -46,11 +46,8 @@ pub fn Site(cx: Scope) -> impl IntoView {
                     <Routes>
                         <Route path="" view=|cx| view!(cx, <MainPage/>)/>
                         <Route path="docs" view=|cx| view!(cx, <Outlet/>)>
-                            <Route path=":page" view=|cx| view!(cx, <DocsPage/>)/>
+                            <Route path=":page" view=|cx| view!(cx, <Docs/>)/>
                             <Route path="" view=|cx| view!(cx, <DocsHome/>)/>
-                        </Route>
-                        <Route path="primitive" view=|cx| view!(cx, <Outlet/>)>
-                            <Route path=":prim_name" view=|cx| view!(cx, <PrimDocsPage/>)/>
                         </Route>
                         <Route path="pad" view=|cx| view!(cx, <Pad/>)/>
                     </Routes>
@@ -169,7 +166,7 @@ mod code {
             "".to_string()
         };
         let href = if prim.doc().is_some() {
-            Some(format!("/primitive/{prim:?}").to_lowercase())
+            Some(format!("/docs/{prim:?}").to_lowercase())
         } else {
             None
         };

@@ -378,7 +378,7 @@ impl IoBackend for StdIo {
             }),
         }
     }
-    #[cfg(feature = "viuer")]
+    #[cfg(feature = "terminal_image")]
     fn show_image(&self, image: DynamicImage) -> Result<(), String> {
         let (width, height) = if image.width() > image.height() {
             (term_size::dimensions().map(|(w, _)| w as u32), None)
@@ -401,7 +401,7 @@ impl IoBackend for StdIo {
         .map(drop)
         .map_err(|e| format!("Failed to show image: {e}"))
     }
-    #[cfg(feature = "rodio")]
+    #[cfg(feature = "audio")]
     fn play_audio(&self, wav_bytes: Vec<u8>) -> Result<(), String> {
         use rodio::Source;
         let decoder = rodio::Decoder::new_wav(Cursor::new(wav_bytes))

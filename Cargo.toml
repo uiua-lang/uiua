@@ -47,14 +47,22 @@ serde.version = "1"
 serde_yaml.optional = true
 serde_yaml.version = "0.9.25"
 term_size = "0.3.2"
+tokio.features = ["io-std", "rt"]
+tokio.optional = true
+tokio.version = "1"
+tower-lsp.optional = true
+tower-lsp.version = "0.19.0"
 viuer.optional = true
 viuer.version = "0.6.2"
 
 [features]
-binary = ["ctrlc", "notify", "clap", "open", "color-backtrace"]
+audio = ["rodio"]
+binary = ["ctrlc", "notify", "clap", "open", "color-backtrace", "lsp"]
 debug = []
-default = ["binary", "rodio", "viuer"]
+default = ["binary", "audio", "terminal_image"]
+lsp = ["tower-lsp", "tokio"]
 profile = ["crossbeam-channel", "serde", "serde_yaml", "indexmap"]
+terminal_image = ["viuer"]
 
 [[bin]]
 name = "uiua"

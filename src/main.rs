@@ -54,6 +54,8 @@ fn run() -> UiuaResult {
                 format_file(&path)?;
                 Uiua::default().mode(RunMode::Test).load_file(path)?;
             }
+            #[cfg(feature = "lsp")]
+            Command::Lsp => uiua::lsp::run_server(),
         }
     } else if let Err(e) = watch() {
         eprintln!("Error creating watch file {e}");
@@ -155,6 +157,9 @@ enum Command {
     Run,
     #[clap(about = "Format and test main.ua")]
     Test,
+    #[cfg(feature = "lsp")]
+    #[clap(about = "Run the Language Server")]
+    Lsp,
 }
 
 fn uiua_files() -> Vec<PathBuf> {

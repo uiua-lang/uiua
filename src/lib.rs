@@ -10,6 +10,7 @@ pub mod function;
 mod grid_fmt;
 mod io;
 pub mod lex;
+pub mod lsp;
 pub mod parse;
 pub mod primitive;
 #[doc(hidden)]

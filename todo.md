@@ -1,5 +1,3 @@
-- Docs
-  - Zen
 - Threads
 - Multimedia
   - Sound input

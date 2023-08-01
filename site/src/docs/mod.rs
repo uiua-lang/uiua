@@ -1,3 +1,4 @@
+mod design;
 mod primitive;
 mod tutorial;
 
@@ -9,6 +10,7 @@ use leptos_router::*;
 use uiua::primitive::{PrimClass, Primitive};
 
 use crate::code::*;
+use design::*;
 use primitive::*;
 use tutorial::*;
 
@@ -72,6 +74,11 @@ pub fn DocsHome(cx: Scope) -> impl IntoView {
             .collect::<Vec<_>>()
         }</ul>
         <br/>
+        <h2>"Other Docs"</h2>
+        <ul>
+            <li><A href="/docs/design">"Design"</A>" - reasons for some of Uiua's design decisions"</li>
+        </ul>
+        <br/>
         <h2>"Functions"</h2>
         <table>{ rows }</table>
     }
@@ -81,6 +88,7 @@ pub fn DocsHome(cx: Scope) -> impl IntoView {
 pub enum DocsPage {
     Tutorial(TutorialPage),
     Primitive(Primitive),
+    Design,
 }
 
 impl IntoParam for DocsPage {
@@ -93,6 +101,10 @@ impl IntoParam for DocsPage {
                 Primitive::all()
                     .find(|p| format!("{p:?}").to_lowercase() == value)
                     .map(Self::Primitive)
+            })
+            .or(match value {
+                "design" => Some(Self::Design),
+                _ => None,
             })
             .ok_or_else(|| ParamsError::MissingParam(name.to_string()))
     }
@@ -113,6 +125,7 @@ pub fn Docs(cx: Scope) -> impl IntoView {
         let page_view = match page {
             DocsPage::Tutorial(tut) => view!(cx, <Tutorial page=tut/>).into_view(cx),
             DocsPage::Primitive(prim) => view!(cx, <PrimDocs prim=prim/>).into_view(cx),
+            DocsPage::Design => view!(cx, <Design/>).into_view(cx),
         };
 
         view! { cx,
@@ -121,6 +134,8 @@ pub fn Docs(cx: Scope) -> impl IntoView {
                 <br/>
                 <br/>
                 { page_view }
+                <br/>
+                <br/>
                 <A href="/docs">"Back to Docs Home"</A>
             </div>
         }

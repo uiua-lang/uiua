@@ -230,7 +230,14 @@ primitive!(
     /// ex: ↥ 3 5
     /// ex: ↥ [1 4 2] [3 7 1]
     (2, Max, DyadicPervasive, "maximum" + '↥'),
-    (2, Atan, DyadicPervasive, "atangent"),
+    /// The arctangent of two numbers
+    ///
+    /// This takes a `y` and `x` argument and returns the angle in radians in the range `(-π, π]`.
+    ///
+    /// ex: ∠ 1 0
+    /// ex: ∠ ¯1 0
+    /// ex: ∠ √2 √2
+    (2, Atan, DyadicPervasive, "atangent" + '∠'),
     // Monadic array ops
     /// The number of rows in an array
     ///
@@ -247,6 +254,8 @@ primitive!(
     /// ex: ∴[]
     /// ex: ∴1_2_3
     /// ex: ∴[1_2 3_4 5_6]
+    ///
+    /// It is three dots arranged in a triangle because it is counting [shape].
     (1, Rank, MonadicArray, "rank" + '∴'),
     /// The dimensions of an array
     ///
@@ -254,6 +263,8 @@ primitive!(
     /// ex: △[]
     /// ex: △1_2_3
     /// ex: △[1_2 3_4 5_6]
+    ///
+    /// It is a triangle because a triangle is a shape.
     (1, Shape, MonadicArray, "shape" + '△'),
     /// Make an array of [0, x)
     ///
@@ -281,14 +292,17 @@ primitive!(
     (1, Reverse, MonadicArray, "reverse" + '⇌'),
     /// Make an array 1-dimensional
     ///
+    /// ex: ♭5
     /// ex: ♭[1_2 3_4 5_6]
+    ///
+    /// It looks like `♭` because it flattens the array.
+    ///
+    /// See also: [reshape]
     (1, Deshape, MonadicArray, "deshape" + '♭'),
     /// Rotate the shape of an array
     ///
     /// ex: ⍉.[1_2 3_4 5_6]
     /// ex: ⍉.[[1_2 3_4] [5_6 7_8]]
-    ///
-    /// See also: [reshape]
     (1, Transpose, MonadicArray, "transpose" + '⍉'),
     (1, InvTranspose, MonadicArray),
     /// Sort the rows of an array
@@ -322,7 +336,6 @@ primitive!(
     /// Check if two arrays' elements match exactly
     ///
     /// ex: ≅ 1_2_3 [1 2 3]
-    ///
     /// ex: ≅ 1_2_3 [1 2]
     ///
     /// See also: [notmatch]
@@ -330,7 +343,6 @@ primitive!(
     /// Check if two arrays' elements do not match exactly
     ///
     /// ex: ≇ 1_2_3 [1 2 3]
-    ///
     /// ex: ≇ 1_2_3 [1 2]
     ///
     /// See also: [match]
@@ -408,7 +420,7 @@ primitive!(
     /// ex: ↯ 5 2
     /// ex: ↯ 3_7 1_2_3_4
     ///
-    /// See also: [reshape]
+    /// See also: [deshape]
     (2, Reshape, DyadicArray, "reshape" + '↯'),
     /// Rotate the elements of an array by n
     ///
@@ -435,9 +447,11 @@ primitive!(
     ///
     /// ex: ∊ [1 2 3] [0 3 4 5 1]
     (2, Member, DyadicArray, "member" + '∊'),
-    /// Find the indices of an element in an array
+    /// Find the occurences of one array in another
     ///
     /// ex: ⌕ 5 [1 8 5 2 3 5 4 5 6 7]
+    /// ex: ⌕ "ab" "abracadabra"
+    /// ex: ⌕ 1_2 . ↯4_4⇡3
     (2, Find, DyadicArray, "find" + '⌕'),
     /// Find the first index of an element in an array
     ///

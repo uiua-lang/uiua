@@ -1,7 +1,7 @@
 - Tau
 - Docs
   - Zen
-- Fix typos
+- Fix member
 - Threads
 - Multimedia
   - Sound input

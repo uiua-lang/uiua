@@ -99,9 +99,9 @@ io_op! {
     /// Read at most n bytes from a stream
     (2, ReadStr, "ReadStr"),
     /// Read at most n bytes from a stream
-    (1, ReadBytes, "ReadBytes"),
+    (2, ReadBytes, "ReadBytes"),
     /// Write an array to a stream
-    (1, Write, "Write"),
+    (2, Write, "Write"),
     /// Run the code from a file in a scope
     ///
     /// If the file has already been imported, its code will not be run again, but the values it originally pushed onto the stack will be pushed again.
@@ -130,7 +130,7 @@ io_op! {
     ///
     /// The format is determined by the file extension.
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, and `ico`.
-    (1, ImWrite, "ImWrite"),
+    (2, ImWrite, "ImWrite"),
     /// Show an image
     ///
     /// How the image is shown depends on the IO backend.

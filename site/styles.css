@@ -289,6 +289,8 @@ li {
 
 .prim-code-a {
     text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .prim-code[title]:hover::after {
@@ -304,6 +306,8 @@ li {
     left: -10.2em;
     width: 10em;
     text-decoration: none;
+    white-space: normal;
+    overflow: visible;
 }
 
 .glyph-button:hover {

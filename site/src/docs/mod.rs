@@ -66,19 +66,17 @@ pub fn DocsHome(cx: Scope) -> impl IntoView {
     }
 
     view! { cx,
-        <h2>"Documentation"</h2>
+        <h1>"Documentation"</h1>
         <h2>"Tutorial"</h2>
         <p>"These are meant to be read in order:"</p>
         <ul>{ all::<TutorialPage>()
             .map(|p| view!(cx, <li><A href={p.path()}>{p.title()}</A></li>))
             .collect::<Vec<_>>()
         }</ul>
-        <br/>
         <h2>"Other Docs"</h2>
         <ul>
             <li><A href="/docs/design">"Design"</A>" - reasons for some of Uiua's design decisions"</li>
         </ul>
-        <br/>
         <h2>"Functions"</h2>
         <table>{ rows }</table>
     }

@@ -2,7 +2,6 @@
 /Cargo.lock
 *.uiua
 *.ua
-.vscode
 site/dist
 glyph_test.txt
 *.png

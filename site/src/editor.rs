@@ -185,7 +185,8 @@ pub fn Editor<'a>(
                 .chain(code.chars().skip(end))
                 .collect();
             set_code_html(&text);
-            set_code_cursor(start + 1, start + 1);
+            let offset = inserted.chars().count() as u32;
+            set_code_cursor(start + offset, start + offset);
         };
     };
 
@@ -275,7 +276,7 @@ pub fn Editor<'a>(
                     .take((end - start) as usize)
                     .collect();
                 log!("copy: {:?}", text);
-                js_sys::eval(&format!("navigator.clipboard.writeText({:?})", text)).unwrap();
+                _ = window().navigator().clipboard().unwrap().write_text(&text);
             }
             "x" if event.ctrl_key() => {
                 let (start, end) = get_code_cursor().unwrap();
@@ -287,15 +288,8 @@ pub fn Editor<'a>(
                     .take((end - start) as usize)
                     .collect();
                 log!("cut: {:?}", text);
-                js_sys::eval(&format!("navigator.clipboard.writeText({:?})", text)).unwrap();
+                _ = window().navigator().clipboard().unwrap().write_text(&text);
                 remove_code(start, end);
-            }
-            "v" if event.ctrl_key() => {
-                // Getting the clipboard string isn't actually allowed.
-                // What we can do it delete the highlighted text.
-                let (start, end) = get_code_cursor().unwrap();
-                remove_code(start, end);
-                handled = false;
             }
             _ => handled = false,
         }
@@ -304,6 +298,16 @@ pub fn Editor<'a>(
             event.stop_propagation();
         }
     });
+
+    // Handle paste evens
+    let code_paste = move |event: Event| {
+        let event = event.dyn_into::<web_sys::ClipboardEvent>().unwrap();
+        event.prevent_default();
+        event.stop_propagation();
+        let text = event.clipboard_data().unwrap().get_data("text").unwrap();
+        log!("paste: {:?}", text);
+        replace_code(&text);
+    };
 
     // Update the code when the textarea is changed
     let code_input = move |event: Event| {
@@ -315,9 +319,8 @@ pub fn Editor<'a>(
         }
         log!("text before update: {:?}", parent.inner_text());
         if let Some((start, _)) = get_code_cursor() {
-            let (text, extra_newlines) = code_text_impl(&code_id.get());
-            set_code_html(&text);
-            set_code_cursor(start + extra_newlines, start + extra_newlines);
+            set_code_html(&code_text());
+            set_code_cursor(start, start);
         }
     };
 
@@ -488,7 +491,8 @@ pub fn Editor<'a>(
                                 spellcheck="false"
                                 class="code-entry"
                                 style={format!("height: {code_height_em}em;")}
-                                on:input=code_input>
+                                on:input=code_input
+                                on:paste=code_paste>
                                 "<uninitialized>"
                             </div>
                         </div>
@@ -532,9 +536,6 @@ fn children_of(node: &Node) -> impl Iterator<Item = Node> {
 }
 
 fn code_text(id: &str) -> String {
-    code_text_impl(id).0
-}
-fn code_text_impl(id: &str) -> (String, u32) {
     let parent = element::<HtmlDivElement>(id);
     let mut text = String::new();
     for (i, div_node) in children_of(&parent).enumerate() {
@@ -548,37 +549,8 @@ fn code_text_impl(id: &str) -> (String, u32) {
         }
     }
     log!("code text:  {:?}", text);
-    log!("inner text: {:?}", parent.inner_text());
 
-    let inner = parent.inner_text();
-    let mut text = text.chars();
-    let mut inner = inner.chars();
-    let mut correct_text = String::new();
-    let mut extra_newlines = 0;
-    while let Some((t, i)) = text.next().zip(inner.next()) {
-        if t == i {
-            log!("{:?} matches", t);
-            correct_text.push(t);
-        } else {
-            log!("{:?} and {:?} don't match", t, i);
-            if i == '\n' {
-                extra_newlines += 1;
-                correct_text.push('\n');
-            }
-            for i in inner.by_ref() {
-                if i == t {
-                    log!("{:?} matches", t);
-                    correct_text.push(t);
-                    break;
-                }
-                log!("consume {:?}", i);
-            }
-        }
-    }
-    log!("correct text: {:?}", correct_text);
-    log!("extra newlines: {:?}", extra_newlines);
-
-    (correct_text, extra_newlines)
+    text
 }
 
 fn get_code_cursor(id: &str) -> Option<(u32, u32)> {

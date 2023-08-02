@@ -291,11 +291,19 @@ li {
     font-size: 1em;
 }
 
-#glyphs-toggle-button[title]:hover::after {
+#glyphs-toggle-button[title]:hover:after {
+    font-size: 0.6em;
+}
+
+.editor-right-button {
+    font-weight: bolder;
+}
+
+.editor-right-button[title]:hover::after {
     content: attr(title);
     position: absolute;
     font-family: "Code Font";
-    font-size: 0.6em;
+    font-size: 1em;
     left: calc(-8em - 50%);
     top: calc(50% - 0.6em);
     color: #eee;

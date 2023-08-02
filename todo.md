@@ -1,5 +1,3 @@
-- Simplify lexer a bit
-- Linkable pad
 - Threads
 - Multimedia
   - Sound input

@@ -45,10 +45,7 @@ pub fn Site(cx: Scope) -> impl IntoView {
                     </div>
                     <Routes>
                         <Route path="" view=|cx| view!(cx, <MainPage/>)/>
-                        <Route path="docs" view=|cx| view!(cx, <Outlet/>)>
-                            <Route path=":page" view=|cx| view!(cx, <Docs/>)/>
-                            <Route path="" view=|cx| view!(cx, <DocsHome/>)/>
-                        </Route>
+                        <Route path="docs/:page?" view=|cx| view!(cx, <Docs/>)/>
                         <Route path="pad" view=|cx| view!(cx, <Pad/>)/>
                     </Routes>
                 </div>

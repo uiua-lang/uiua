@@ -9,7 +9,7 @@ use uiua::{
     value::Value,
     value_to_image_bytes, value_to_wav_bytes, Uiua, UiuaResult,
 };
-use wasm_bindgen::JsCast;
+use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{Event, HtmlAudioElement, HtmlDivElement, HtmlImageElement, MouseEvent, Node};
 
 use crate::{backend::WebBackend, element, prim_class};
@@ -48,7 +48,10 @@ pub fn Editor<'a>(
         EditorMode::Progressive => {
             let mut examples: Vec<_> = examples
                 .scan(String::new(), |acc, s| {
-                    *acc = format!("{s} {acc}");
+                    if !acc.is_empty() {
+                        acc.insert(0, ' ');
+                    }
+                    acc.insert_str(0, s);
                     Some(acc.clone())
                 })
                 .collect();
@@ -79,21 +82,9 @@ pub fn Editor<'a>(
     // Track line count
     let (line_count, set_line_count) = create_signal(cx, 1);
 
-    let get_saved_code = || {
-        window()
-            .local_storage()
-            .ok()
-            .flatten()
-            .and_then(|storage| storage.get_item("code").ok().flatten())
-    };
     let (initial_code, set_initial_code) = create_signal(
         cx,
-        Some(
-            (matches!(size, EditorSize::Pad))
-                .then(get_saved_code)
-                .flatten()
-                .unwrap_or_else(|| examples.get(0).cloned().unwrap_or_else(|| example.into())),
-        ),
+        Some(examples.get(0).cloned().unwrap_or_else(|| example.into())),
     );
 
     let (example, set_example) = create_signal(cx, 0);
@@ -102,9 +93,14 @@ pub fn Editor<'a>(
     let code_text = move || code_text(&code_id.get());
     let get_code_cursor = move || get_code_cursor(&code_id.get());
     let set_code_cursor = move |start, end| set_code_cursor(&code_id.get(), start, end);
+    let (copied_link, set_copied_link) = create_signal(cx, false);
+    let (copied_code, set_copied_code) = create_signal(cx, false);
+
     let set_code_html = move |code: &str| {
         set_code_html(&code_id.get(), code);
         set_line_count.set(children_of(&code_element()).count());
+        set_copied_link.set(false);
+        set_copied_code.set(false);
     };
 
     // Run the code
@@ -158,12 +154,6 @@ pub fn Editor<'a>(
                 } else {
                     _ = audio_element().style().set_property("display", "none");
                     audio_element().set_src("");
-                }
-                // Save the code for Pad editor
-                if let EditorSize::Pad = size {
-                    if let Ok(Some(storage)) = window().local_storage() {
-                        _ = storage.set_item("code", &input);
-                    }
                 }
             }
             Err(e) => {
@@ -460,6 +450,46 @@ pub fn Editor<'a>(
             .collect::<Vec<_>>()
     };
 
+    // Copy a link to the code
+    let copy_link = move |_| {
+        let url = format!(
+            "https://uiua.org/pad?src={}",
+            urlencoding::encode(&code_text())
+        );
+        _ = window().navigator().clipboard().unwrap().write_text(&url);
+        window()
+            .history()
+            .unwrap()
+            .push_state_with_url(
+                &JsValue::NULL,
+                "",
+                Some(&format!("/pad?src={}", urlencoding::encode(&code_text()))),
+            )
+            .unwrap();
+        set_copied_link.set(true);
+    };
+    let copy_link_title = move || {
+        if copied_link.get() {
+            "Copied!"
+        } else {
+            "Copy a link to this code"
+        }
+    };
+
+    // Copy the code
+    let copy_code = move |_| {
+        let code = code_text();
+        _ = window().navigator().clipboard().unwrap().write_text(&code);
+        set_copied_code.set(true);
+    };
+    let copy_code_title = move || {
+        if copied_code.get() {
+            "Copied!"
+        } else {
+            "Copy this code"
+        }
+    };
+
     // Render
     view! { cx,
         <div id="editor-wrapper">
@@ -471,7 +501,20 @@ pub fn Editor<'a>(
                     <div id="code-area">
                         <div id="code-right-side">
                             <button
+                                class="editor-right-button"
+                                title=copy_code_title
+                                on:click=copy_code>
+                                "📋"
+                            </button>
+                            <button
+                                class="editor-right-button"
+                                title=copy_link_title
+                                on:click=copy_link>
+                                "🔗"
+                            </button>
+                            <button
                                 id="glyphs-toggle-button"
+                                class="editor-right-button"
                                 title=show_glyphs_title
                                 on:click=toggle_show_glyphs>{show_glyphs_text}</button>
                             <div id="example-tracker">{example_text}</div>
@@ -548,7 +591,7 @@ fn code_text(id: &str) -> String {
             text.push_str(&fragment);
         }
     }
-    log!("code text:  {:?}", text);
+    log!("code text: {:?}", text);
 
     text
 }
@@ -649,6 +692,12 @@ fn set_code_html(id: &str, code: &str) {
 
     log!("code_to_html: {:?}", code);
 
+    let elem = element::<HtmlDivElement>(id);
+    if code.is_empty() {
+        elem.set_inner_html("<div class=\"code-line\"><br/></div>");
+        return;
+    }
+
     let mut html = "<div class=\"code-line\">".to_string();
 
     let chars: Vec<char> = code.chars().collect();
@@ -738,11 +787,11 @@ fn set_code_html(id: &str, code: &str) {
         )
         .replace("<span class=\"code-span\"></span>", "");
 
-    if html.is_empty() {
-        html = "<div class=\"code-line\"><span class=\"code-span\"> </span></div>".to_string();
-    }
+    // if html.is_empty() {
+    //     html = "<div class=\"code-line\"><span class=\"code-span\"> </span></div>".to_string();
+    // }
 
-    element::<HtmlDivElement>(id).set_inner_html(&html);
+    elem.set_inner_html(&html);
 }
 
 struct RunOutput {

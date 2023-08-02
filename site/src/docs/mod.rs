@@ -15,7 +15,7 @@ use primitive::*;
 use tutorial::*;
 
 #[component]
-pub fn DocsHome(cx: Scope) -> impl IntoView {
+fn DocsHome(cx: Scope) -> impl IntoView {
     let primitives: Vec<_> = PrimClass::all()
         .map(|class| {
             let of_class: Vec<_> = Primitive::all()
@@ -117,7 +117,7 @@ pub struct DocsParams {
 pub fn Docs(cx: Scope) -> impl IntoView {
     move || {
         let Ok(params) = use_params::<DocsParams>(cx).get() else {
-            return view!(cx, <Redirect path="/docs"/>).into_view(cx);
+            return view!(cx, <DocsHome/>).into_view(cx);
         };
         let page = params.page;
         let page_view = match page {

@@ -385,20 +385,33 @@ li {
     color: #77f;
 }
 
-.triadic-function-button {
-    color: #c73;
-}
-
 .modifier1-button {
-    color: #cc3;
+    color: #dd3;
 }
 
 .modifier2-button {
     color: #c3c;
 }
 
-.anti-function-button {
-    color: #4dd;
+@media (prefers-color-scheme: dark) {
+    .string-literal-span {
+        color: #4fa;
+    }
+}
+
+@media (prefers-color-scheme: light) {
+    .string-literal-span {
+        color: #1c9;
+    }
+}
+
+.number-literal-span {
+    color: #f84;
+}
+
+
+.comment-span {
+    color: #888;
 }
 
 #editor-help {

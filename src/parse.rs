@@ -183,9 +183,9 @@ impl Parser {
             return None;
         })
     }
-    fn comment(&mut self) -> Option<String> {
+    fn comment(&mut self) -> Option<Sp<String>> {
         self.next_token_map(Token::as_comment)
-            .map(|s| s.value.into())
+            .map(|s| s.map(Into::into))
     }
     fn try_binding(&mut self) -> Option<Binding> {
         let start = self.index;

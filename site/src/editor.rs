@@ -7,7 +7,7 @@ use uiua::{
     format::format_str, primitive::Primitive, value::Value, value_to_image_bytes,
     value_to_wav_bytes, Uiua, UiuaResult,
 };
-use wasm_bindgen::{JsCast, JsValue};
+use wasm_bindgen::JsCast;
 use web_sys::{Event, HtmlAudioElement, HtmlDivElement, HtmlImageElement, MouseEvent, Node};
 
 use crate::{backend::WebBackend, element, prim_class};
@@ -95,32 +95,35 @@ pub fn Editor<'a>(
 
     // Run the code
     let run = move |format: bool| {
-        set_output.set(String::new());
+        // Get code
         let code_elem = code_element();
         let mut code_string = code_elem.inner_text();
         if code_string == "<uninitialized>" {
             code_string = code.get();
         }
-        let range = get_cursor_position(&code_elem);
+        let range = get_code_cursor(&code_elem);
+
+        // Format code
         let input = if format {
             if let Ok(formatted) = format_str(&code_string) {
                 let formatted = formatted.trim();
-                code_elem.set_inner_html(&code_to_html(formatted));
+                code_elem.set_inner_html(&code_to_html(formatted, false));
                 set_code.set(formatted.to_string());
                 formatted.into()
             } else {
-                code_elem.set_inner_html(&code_to_html(&code_string));
+                code_elem.set_inner_html(&code_to_html(&code_string, false));
                 code_string
             }
         } else {
-            code_elem.set_inner_html(&code_to_html(&code_string));
+            code_elem.set_inner_html(&code_to_html(&code_string, false));
             code_string
         };
         if let Some((start, end)) = range {
-            _ = set_selection_range(&code_elem, start, end);
+            set_code_cursor(&code_elem, start, end);
         }
-        log!("input: {:?}", input);
         set_line_count.set(children_of(&code_elem).count());
+
+        // Run code
         match run_code(&input) {
             Ok(output) => {
                 // Show text output
@@ -161,7 +164,7 @@ pub fn Editor<'a>(
     // Replace the selected text in the editor with the given string
     let replace_code = move |inserted: &str| {
         let elem = code_element();
-        if let Some((start, end)) = get_cursor_position(&elem) {
+        if let Some((start, end)) = get_code_cursor(&elem) {
             let (start, end) = (start.min(end), start.max(end) as usize);
             let text: String = code
                 .get()
@@ -170,9 +173,9 @@ pub fn Editor<'a>(
                 .chain(inserted.chars())
                 .chain(code.get().chars().skip(end))
                 .collect();
-            elem.set_inner_html(&code_to_html(&text));
+            elem.set_inner_html(&code_to_html(&text, false));
             _ = elem.focus();
-            _ = set_selection_range(&elem, start + 1, start + 1);
+            set_code_cursor(&elem, start + 1, start + 1);
             set_code.set(text);
         };
     };
@@ -184,7 +187,7 @@ pub fn Editor<'a>(
             set_example.update(|e| {
                 *e = (*e + 1) % examples.len();
                 set_code.set(examples[*e].to_string());
-                code_element().set_inner_html(&code_to_html(&examples[*e]));
+                code_element().set_inner_html(&code_to_html(&examples[*e], false));
                 run(false);
             })
         }
@@ -196,7 +199,7 @@ pub fn Editor<'a>(
             set_example.update(|e| {
                 *e = (*e + examples.len() - 1) % examples.len();
                 set_code.set(examples[*e].to_string());
-                code_element().set_inner_html(&code_to_html(&examples[*e]));
+                code_element().set_inner_html(&code_to_html(&examples[*e], false));
                 run(false);
             })
         }
@@ -220,12 +223,43 @@ pub fn Editor<'a>(
 
     // Update the code when the textarea is changed
     let code_input = move |event: Event| {
+        let event = event.dyn_into::<web_sys::InputEvent>().unwrap();
         let parent = code_element();
         let child: HtmlDivElement = event.target().unwrap().dyn_into().unwrap();
         if parent.contains(Some(&child)) {
-            log!("{:?}", parent.inner_text());
-            set_code.set(parent.inner_text());
+            log!("text before update: {:?}", parent.inner_text());
+            if let Some((start, _)) = get_code_cursor(&parent) {
+                let text = parent.inner_text();
+                let before_c = if start == 0 {
+                    None
+                } else {
+                    text.chars().nth(start as usize - 1)
+                };
+                let after_c = text.chars().nth(start as usize);
+                log!("chars at cursor: {:?}|{:?}", before_c, after_c);
+                let ty = event.input_type();
+                let smaller = matches!(ty.as_str(), "deleteContentBackward");
+                parent.set_inner_html(&code_to_html(&text, smaller));
+                match ty.as_str() {
+                    "insertText" | "deleteContentForward" => {
+                        set_code_cursor(&parent, start, start);
+                    }
+                    "deleteContentBackward" => {
+                        let target = if before_c == Some('\n') {
+                            start - 1
+                        } else {
+                            start
+                        };
+                        set_code_cursor(&parent, target, target);
+                    }
+                    "insertParagraph" => {
+                        set_code_cursor(&parent, start + 1, start + 1);
+                    }
+                    ty => log!("Unhandled input type: {:?}", ty),
+                }
+            }
             set_line_count.set(children_of(&parent).count());
+            set_code.set(parent.inner_text());
         }
     };
 
@@ -527,7 +561,7 @@ fn children_of(node: &Node) -> impl Iterator<Item = Node> {
     })
 }
 
-fn get_cursor_position(parent: &HtmlDivElement) -> Option<(u32, u32)> {
+fn get_code_cursor(parent: &HtmlDivElement) -> Option<(u32, u32)> {
     let sel = window().get_selection().ok()??;
     let (anchor_node, anchor_offset) = (sel.anchor_node()?, sel.anchor_offset());
     let (focus_node, focus_offset) = (sel.focus_node()?, sel.focus_offset());
@@ -542,7 +576,7 @@ fn get_cursor_position(parent: &HtmlDivElement) -> Option<(u32, u32)> {
         let mut start = None;
         let mut end = None;
         let mut curr = 0;
-        for node in children_of(parent) {
+        for node in children_of(parent).flat_map(|n| children_of(&n)) {
             if node.contains(Some(&anchor_node)) {
                 start = Some(curr + anchor_offset);
             }
@@ -550,32 +584,37 @@ fn get_cursor_position(parent: &HtmlDivElement) -> Option<(u32, u32)> {
                 end = Some(curr + focus_offset);
             }
             // Increment curr by the length of the text in the node
-            let elem = node.dyn_ref::<HtmlDivElement>().unwrap();
-            let len = elem.inner_text().chars().count() as u32;
-            curr += len + 1;
+            let len = node.text_content().unwrap().chars().count() as u32;
+            curr += len;
         }
         let (start, end) = (start.min(end), start.max(end));
         start.zip(end)
     }
 }
 
-fn set_selection_range(elem: &HtmlDivElement, mut start: u32, mut end: u32) -> Result<(), JsValue> {
-    log!("set_selection_range({}, {})", start, end);
+fn set_code_cursor(elem: &HtmlDivElement, mut start: u32, mut end: u32) {
+    log!("set_code_cursor({}, {})", start, end);
     log!("element inner text: {:?}", elem.inner_text());
     let max_len = elem.inner_text().chars().count() as u32;
     start = start.min(max_len);
     end = end.min(max_len);
-    for node in children_of(elem)
+
+    let nodes: Vec<Node> = children_of(elem)
         .flat_map(|n| children_of(&n))
         .flat_map(|n| children_of(&n))
-    {
+        .collect();
+
+    let node_count = nodes.len();
+    for (i, node) in nodes.into_iter().enumerate() {
         let text_content = node.text_content().unwrap();
-        log!("text content: {:?}", text_content);
-        let text_len = text_content.chars().count() as u32 + 1;
-        if start >= text_len {
+        let text_len = text_content.chars().count() as u32;
+        if start >= text_len && i != node_count - 1 {
             start -= text_len;
             end -= text_len;
         } else {
+            log!("ended on: {:?}", text_content);
+            start = start.min(text_len);
+            end = end.min(text_len);
             log!("start: {}, end: {}", start, end);
             let range = document().create_range().unwrap();
             range.set_start(&node, start).unwrap();
@@ -583,25 +622,83 @@ fn set_selection_range(elem: &HtmlDivElement, mut start: u32, mut end: u32) -> R
             let sel = window().get_selection().unwrap().unwrap();
             sel.remove_all_ranges().unwrap();
             sel.add_range(&range).unwrap();
-            break;
+            return;
         }
     }
-    Ok(())
 }
 
-fn code_to_html(code: &str) -> String {
-    code.lines()
-        .map(|l| {
-            if l.is_empty() {
-                return r#"<div><span class="code-span">
-</span></div>"#
-                    .to_string();
+fn code_to_html(code: &str, smaller: bool) -> String {
+    use uiua::{lex::Span, lsp::*};
+
+    log!("code_to_html: {:?}", code);
+
+    let mut html = "<div>".to_string();
+
+    let chars: Vec<char> = code.chars().collect();
+
+    let push_unspanned = |html: &mut String, mut start: usize, end: &mut usize| {
+        start = start.min(chars.len());
+        if *end >= start {
+            return;
+        }
+        html.push_str(r#"<span class="code-span">"#);
+        let mut unspanned = String::new();
+        while *end < start {
+            if chars[*end] == '\n' {
+                html.push_str(&unspanned);
+                unspanned.clear();
+                html.push_str("</span></div><div><span class=\"code-span\">");
+                *end += 1;
+                let mut newline_count: usize = !smaller as usize;
+                while *end < start && chars[*end] == '\n' {
+                    newline_count += 1;
+                    *end += 1;
+                }
+                log!("newline_count: {}", newline_count);
+                for _ in 0..newline_count / 2 {
+                    html.push_str("\n</span></div><div><span class=\"code-span\">");
+                }
+                continue;
             }
-            format!(
-                r#"<div>
-    <span class="code-span">{l}</span>
-</div>"#,
-            )
-        })
-        .collect()
+            unspanned.push(chars[*end]);
+            *end += 1;
+        }
+        html.push_str(&unspanned);
+        html.push_str("</span>");
+    };
+
+    let mut end = 0;
+    for span in spans(code) {
+        let kind = span.value;
+        if let Span::Code(span) = span.span {
+            push_unspanned(&mut html, span.start.pos, &mut end);
+
+            let text: String = chars[span.start.pos..span.end.pos].iter().collect();
+            let color_class = match kind {
+                SpanKind::Primitive(prim) => prim_class(prim),
+                SpanKind::Number => "number-literal-span",
+                SpanKind::String => "string-literal-span",
+                SpanKind::Comment => "comment-span",
+            };
+            html.push_str(&format!(
+                r#"<span class="code-span {color_class}">{text}</span>"#,
+            ));
+
+            end = span.end.pos;
+        } else {
+            unreachable!("parsed span is not a code span")
+        }
+    }
+
+    push_unspanned(&mut html, code.len(), &mut end);
+
+    html.push_str("</div>");
+
+    html = html
+        .replace("<span class=\"code-span\"></span>", "")
+        .replace("<div></div>", "");
+    if html.is_empty() {
+        html = "<div><span class=\"code-span\"> </span></div>".to_string();
+    }
+    html
 }

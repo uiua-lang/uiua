@@ -1,4 +1,5 @@
 - Make parsing errors more recoverable
+- Simplify lexer a bit
 - Threads
 - Multimedia
   - Sound input

@@ -55,7 +55,7 @@ fn format_item(output: &mut String, item: &Item) {
             format_words(output, w);
             if let Some(comment) = comment {
                 output.push_str("  # ");
-                output.push_str(comment);
+                output.push_str(&comment.value);
             }
         }
         Item::Binding(binding, comment) => {
@@ -64,12 +64,12 @@ fn format_item(output: &mut String, item: &Item) {
             format_words(output, &binding.words);
             if let Some(comment) = comment {
                 output.push_str("  # ");
-                output.push_str(comment);
+                output.push_str(&comment.value);
             }
         }
         Item::Comment(comment) => {
             output.push_str("# ");
-            output.push_str(comment);
+            output.push_str(&comment.value);
         }
         Item::Newlines => {}
     }

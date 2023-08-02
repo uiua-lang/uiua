@@ -13,7 +13,8 @@ pub fn lex(input: &str, file: Option<&Path>) -> (Vec<Sp<Token>>, Vec<Sp<LexError
     Lexer {
         input_chars: input.chars().collect(),
         loc: Loc {
-            pos: 0,
+            char_pos: 0,
+            byte_pos: 0,
             line: 1,
             col: 1,
         },
@@ -51,7 +52,8 @@ pub type LexResult<T = ()> = Result<T, Sp<LexError>>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Loc {
-    pub pos: usize,
+    pub char_pos: usize,
+    pub byte_pos: usize,
     pub line: usize,
     pub col: usize,
 }
@@ -65,7 +67,8 @@ impl fmt::Display for Loc {
 impl Default for Loc {
     fn default() -> Self {
         Self {
-            pos: 0,
+            char_pos: 0,
+            byte_pos: 0,
             line: 1,
             col: 1,
         }
@@ -76,6 +79,21 @@ impl Default for Loc {
 pub enum Span {
     Code(CodeSpan),
     Builtin,
+}
+
+impl From<CodeSpan> for Span {
+    fn from(span: CodeSpan) -> Self {
+        Self::Code(span)
+    }
+}
+
+impl Span {
+    pub fn sp<T>(self, value: T) -> Sp<T, Self> {
+        Sp { value, span: self }
+    }
+    pub fn error(&self, msg: impl Into<String>) -> UiuaError {
+        self.clone().sp(msg.into()).into()
+    }
 }
 
 #[derive(Clone)]
@@ -117,23 +135,10 @@ impl fmt::Display for Span {
     }
 }
 
-impl Span {
-    pub fn merge(self, end: Self) -> Self {
-        match (self, end) {
-            (Span::Code(a), Span::Code(b)) => Span::Code(a.merge(b)),
-            (Span::Builtin, Span::Builtin) => Span::Builtin,
-            _ => panic!("cannot merge builtin and code span"),
-        }
-    }
+impl CodeSpan {
     pub(crate) const fn sp<T>(self, value: T) -> Sp<T> {
         Sp { value, span: self }
     }
-    pub fn error(&self, msg: impl Into<String>) -> UiuaError {
-        self.clone().sp(msg.into()).into()
-    }
-}
-
-impl CodeSpan {
     pub fn merge(self, end: Self) -> Self {
         CodeSpan {
             start: self.start.min(end.start),
@@ -175,9 +180,9 @@ impl Hash for CodeSpan {
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Sp<T> {
+pub struct Sp<T, S = CodeSpan> {
     pub value: T,
-    pub span: Span,
+    pub span: S,
 }
 
 impl<T> Sp<T> {
@@ -216,20 +221,29 @@ impl<T: Clone> Sp<&T> {
     }
 }
 
-impl<T: fmt::Debug> fmt::Debug for Sp<T> {
+impl<T: fmt::Debug, S: fmt::Display> fmt::Debug for Sp<T, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}: ", self.span)?;
         self.value.fmt(f)
     }
 }
 
-impl<T: fmt::Display> fmt::Display for Sp<T> {
+impl<T: fmt::Display, S: fmt::Display> fmt::Display for Sp<T, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}: {}", self.span, self.value)
     }
 }
 
 impl<T: Error> Error for Sp<T> {}
+
+impl<T> From<Sp<T>> for Sp<T, Span> {
+    fn from(value: Sp<T>) -> Self {
+        Self {
+            value: value.value,
+            span: Span::Code(value.span),
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
@@ -369,7 +383,7 @@ struct Lexer {
 
 impl Lexer {
     fn peek_char(&self) -> Option<char> {
-        self.input_chars.get(self.loc.pos).copied()
+        self.input_chars.get(self.loc.char_pos).copied()
     }
     fn update_loc(&mut self, c: char) {
         match c {
@@ -380,10 +394,11 @@ impl Lexer {
             '\r' => {}
             _ => self.loc.col += 1,
         }
-        self.loc.pos += 1;
+        self.loc.char_pos += 1;
+        self.loc.byte_pos += c.len_utf8();
     }
     fn next_char_if(&mut self, f: impl Fn(char) -> bool) -> Option<char> {
-        let c = *self.input_chars.get(self.loc.pos)?;
+        let c = *self.input_chars.get(self.loc.char_pos)?;
         if !f(c) {
             return None;
         }
@@ -406,16 +421,16 @@ impl Lexer {
         }
         true
     }
-    fn make_span(&self, start: Loc, end: Loc) -> Span {
-        Span::Code(CodeSpan {
+    fn make_span(&self, start: Loc, end: Loc) -> CodeSpan {
+        CodeSpan {
             start,
             end,
             file: self.file.clone(),
             input: self.input.clone(),
-        })
+        }
     }
-    fn end_span(&self, start: Loc) -> Span {
-        assert!(self.loc.pos > start.pos, "empty span");
+    fn end_span(&self, start: Loc) -> CodeSpan {
+        assert!(self.loc.char_pos > start.char_pos, "empty span");
         self.make_span(start, self.loc)
     }
     fn end(&mut self, token: impl Into<Token>, start: Loc) {
@@ -531,7 +546,7 @@ impl Lexer {
                         for (prim, frag) in prims {
                             let end = Loc {
                                 col: start.col + frag.chars().count(),
-                                pos: start.pos + frag.chars().count(),
+                                char_pos: start.char_pos + frag.chars().count(),
                                 ..start
                             };
                             self.tokens.push(Sp {

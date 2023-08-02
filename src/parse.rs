@@ -99,22 +99,20 @@ impl Parser {
             None
         }
     }
-    fn try_exact(&mut self, token: impl Into<Token>) -> Option<Span> {
+    fn try_exact(&mut self, token: impl Into<Token>) -> Option<CodeSpan> {
         let token = token.into();
         self.next_token_map(|t| (t == &token).then_some(()))
             .map(|t| t.span)
     }
-    fn last_span(&self) -> Span {
+    fn last_span(&self) -> CodeSpan {
         if let Some(token) = self.tokens.get(self.index) {
             token.span.clone()
         } else {
             let mut span = self.tokens.last().unwrap().span.clone();
-            if let Span::Code(span) = &mut span {
-                span.start = span.end;
-                if self.tokens.len() > span.end.pos {
-                    span.end.pos += 1;
-                    span.end.col += 1;
-                }
+            span.start = span.end;
+            if self.tokens.len() > span.end.char_pos {
+                span.end.char_pos += 1;
+                span.end.col += 1;
             }
             span
         }
@@ -354,7 +352,7 @@ impl Parser {
             body,
         })))
     }
-    fn expect_close(&mut self, simple: Simple) -> Span {
+    fn expect_close(&mut self, simple: Simple) -> CodeSpan {
         if let Some(span) = self.try_exact(simple) {
             span
         } else {

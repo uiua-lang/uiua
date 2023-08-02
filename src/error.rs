@@ -20,7 +20,7 @@ pub enum UiuaError {
     Load(PathBuf, io::Error),
     Format(PathBuf, io::Error),
     Parse(Vec<Sp<ParseError>>),
-    Run(Sp<String>),
+    Run(Sp<String, Span>),
     Traced {
         error: Box<Self>,
         trace: Vec<TraceFrame>,
@@ -31,9 +31,15 @@ pub enum UiuaError {
 
 pub type UiuaResult<T = ()> = Result<T, UiuaError>;
 
+impl From<Sp<String, Span>> for UiuaError {
+    fn from(value: Sp<String, Span>) -> Self {
+        Self::Run(value)
+    }
+}
+
 impl From<Sp<String>> for UiuaError {
     fn from(value: Sp<String>) -> Self {
-        Self::Run(value)
+        Self::Run(value.into())
     }
 }
 
@@ -156,25 +162,27 @@ impl UiuaError {
             UiuaError::Parse(errors) => report(
                 errors
                     .iter()
-                    .map(|error| (error.value.to_string(), &error.span)),
+                    .map(|error| (error.value.to_string(), error.span.clone().into())),
                 complex_output,
             ),
-            UiuaError::Run(error) => report([(&error.value, &error.span)], complex_output),
+            UiuaError::Run(error) => report([(&error.value, error.span.clone())], complex_output),
             UiuaError::Traced { error, trace } => {
                 let mut s = error.show(complex_output);
                 format_trace(&mut s, trace).unwrap();
                 s
             }
-            UiuaError::Throw(message, span) => report([(&message, span)], complex_output),
-            UiuaError::Break(_, span) => report([("break outside of loop", span)], complex_output),
+            UiuaError::Throw(message, span) => report([(&message, span.clone())], complex_output),
+            UiuaError::Break(_, span) => {
+                report([("break outside of loop", span.clone())], complex_output)
+            }
             _ => self.to_string(),
         }
     }
 }
 
-fn report<'a, I, T>(errors: I, complex_output: bool) -> String
+fn report<I, T>(errors: I, complex_output: bool) -> String
 where
-    I: IntoIterator<Item = (T, &'a Span)>,
+    I: IntoIterator<Item = (T, Span)>,
     T: ToString,
 {
     let config = Config::default()
@@ -193,12 +201,15 @@ where
                 input: Source::from(&span.input),
                 files: HashMap::new(),
             });
-            let report =
-                Report::<CodeSpan>::build(ReportKind::Error, span.file.clone(), span.start.pos)
-                    .with_message(message)
-                    .with_label(Label::new(span.clone()).with_color(color))
-                    .with_config(config)
-                    .finish();
+            let report = Report::<CodeSpan>::build(
+                ReportKind::Error,
+                span.file.clone(),
+                span.start.char_pos,
+            )
+            .with_message(message)
+            .with_label(Label::new(span.clone()).with_color(color))
+            .with_config(config)
+            .finish();
             let _ = report.write(cache, &mut buffer);
         } else {
             if !buffer.ends_with(b"\n") {
@@ -218,10 +229,10 @@ impl ariadne::Span for CodeSpan {
         &self.file
     }
     fn start(&self) -> usize {
-        self.start.pos
+        self.start.char_pos
     }
     fn end(&self) -> usize {
-        self.end.pos
+        self.end.char_pos
     }
 }
 

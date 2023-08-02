@@ -9,7 +9,7 @@ use std::{
 use crate::{
     ast::*,
     function::*,
-    lex::{Sp, Span},
+    lex::{CodeSpan, Sp, Span},
     parse::parse,
     primitive::Primitive,
     value::Value,
@@ -234,9 +234,9 @@ impl<'io> Uiua<'io> {
         }
         Ok(())
     }
-    fn add_span(&mut self, span: Span) -> usize {
+    fn add_span(&mut self, span: impl Into<Span>) -> usize {
         let idx = self.spans.len();
-        self.spans.push(span);
+        self.spans.push(span.into());
         idx
     }
     fn binding(&mut self, binding: Binding) -> UiuaResult {
@@ -341,7 +341,7 @@ impl<'io> Uiua<'io> {
         }
         Ok(())
     }
-    fn ident(&mut self, ident: Ident, span: Span, call: bool) -> UiuaResult {
+    fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool) -> UiuaResult {
         if let Some(idx) = self.scope.names.get(&ident) {
             // Name exists in scope
             let value = self.globals[*idx].clone();
@@ -378,7 +378,7 @@ impl<'io> Uiua<'io> {
         }
         Ok(())
     }
-    fn func(&mut self, func: Func, _span: Span) -> UiuaResult {
+    fn func(&mut self, func: Func, _span: CodeSpan) -> UiuaResult {
         let instrs = self.compile_words(func.body)?;
         if let [Instr::Push(f), Instr::Call(..)] = instrs.as_slice() {
             if matches!(f, Value::Func(_)) {
@@ -394,7 +394,7 @@ impl<'io> Uiua<'io> {
         self.push_instr(Instr::Push(func.into()));
         Ok(())
     }
-    fn dfn(&mut self, func: Func, span: Span, call: bool) -> UiuaResult {
+    fn dfn(&mut self, func: Func, span: CodeSpan, call: bool) -> UiuaResult {
         self.new_dfns.push(Vec::new());
         let instrs = self.compile_words(func.body)?;
         let refs = self.new_dfns.pop().unwrap();
@@ -432,7 +432,7 @@ impl<'io> Uiua<'io> {
         }
         Ok(())
     }
-    fn primitive(&mut self, prim: Primitive, span: Span, call: bool) {
+    fn primitive(&mut self, prim: Primitive, span: CodeSpan, call: bool) {
         let span = self.add_span(span);
         if call {
             self.push_instr(Instr::Prim(prim, span));

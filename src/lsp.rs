@@ -44,21 +44,16 @@ fn words_spans(words: Vec<Sp<Word>>) -> Vec<Sp<SpanKind>> {
             Word::String(_) => spans.push(word.span.sp(SpanKind::String)),
             Word::Ident(ident) => {
                 if let Some(prims) = Primitive::from_format_name_multi(ident.as_str()) {
-                    let span = if let Span::Code(span) = word.span {
-                        span
-                    } else {
-                        unreachable!()
-                    };
-                    let mut start = span.start;
+                    let mut start = word.span.start;
                     spans.extend(prims.iter().map(|(prim, s)| {
                         let mut end = start;
                         end.col += s.chars().count();
-                        end.pos += s.chars().count();
-                        let span = Span::Code(CodeSpan {
+                        end.char_pos += s.chars().count();
+                        let span = CodeSpan {
                             start,
                             end,
-                            ..span.clone()
-                        });
+                            ..word.span.clone()
+                        };
                         start = end;
                         span.sp(SpanKind::Primitive(*prim))
                     }));
@@ -86,7 +81,7 @@ pub use server::run_server;
 
 use crate::{
     ast::{Item, Word},
-    lex::{CodeSpan, Sp, Span},
+    lex::{CodeSpan, Sp},
     parse::parse,
     primitive::Primitive,
 };

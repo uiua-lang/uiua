@@ -1,6 +1,6 @@
 use std::{fmt, rc::Rc};
 
-use crate::{lex::Span, primitive::Primitive, value::Value, Ident};
+use crate::{lex::CodeSpan, primitive::Primitive, value::Value, Ident};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Instr {
@@ -87,7 +87,7 @@ impl Function {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum FunctionId {
     Named(Ident),
-    Anonymous(Span),
+    Anonymous(CodeSpan),
     Primitive(Primitive),
     Constant,
     Main,

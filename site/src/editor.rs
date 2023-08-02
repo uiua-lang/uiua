@@ -645,7 +645,7 @@ fn set_code_cursor(id: &str, mut start: u32, mut end: u32) {
 }
 
 fn set_code_html(id: &str, code: &str) {
-    use uiua::{lex::Span, lsp::*};
+    use uiua::lsp::*;
 
     log!("code_to_html: {:?}", code);
 
@@ -686,42 +686,45 @@ fn set_code_html(id: &str, code: &str) {
     let mut end = 0;
     for span in spans(code) {
         let kind = span.value;
-        if let Span::Code(span) = span.span {
-            push_unspanned(&mut html, span.start.pos, &mut end);
+        let span = span.span;
+        push_unspanned(&mut html, span.start.char_pos, &mut end);
 
-            let text: String = chars[span.start.pos..span.end.pos].iter().collect();
-            // log!("spanned: {:?}", text);
-            let color_class = match kind {
-                SpanKind::Primitive(prim) => match prim.class() {
-                    PrimClass::Stack => "{}",
-                    _ => prim_class(prim),
-                },
-                SpanKind::Number => "number-literal-span",
-                SpanKind::String => "string-literal-span",
-                SpanKind::Comment => "comment-span",
-            };
+        let text: String = chars[span.start.char_pos..span.end.char_pos]
+            .iter()
+            .collect();
+        // log!("spanned: {:?}", text);
+        let color_class = match kind {
+            SpanKind::Primitive(prim) => match prim.class() {
+                PrimClass::Stack => "{}",
+                _ => prim_class(prim),
+            },
+            SpanKind::Number => "number-literal-span",
+            SpanKind::String => "string-literal-span",
+            SpanKind::Comment => "comment-span",
+        };
 
-            html.push_str(&if let SpanKind::Primitive(prim) = kind {
-                let name = prim.name().unwrap_or_default();
-                if let Some(doc) = prim.doc() {
-                    // let href = format!("/docs/{prim:?}").to_lowercase();
-                    let title = format!("{}: {}", name, doc.short);
-                    format!(
-                        r#"<span class="code-span code-hover {color_class}" title={title:?}>{text}</span>"#
-                    )
-                } else {
-                    format!(
-                        r#"<span class="code-span code-hover {color_class}" title={name:?}>{text}</span>"#
-                    )
-                }
+        html.push_str(&if let SpanKind::Primitive(prim) = kind {
+            let name = prim.name().unwrap_or_default();
+            if let Some(doc) = prim.doc() {
+                let title = format!("{}: {}", name, doc.short);
+                format!(
+                    r#"<span 
+                        class="code-span 
+                        code-hover {color_class}" 
+                        title={title:?}>{text}</span>"#
+                )
             } else {
-                format!(r#"<span class="code-span {color_class}">{text}</span>"#)
-            });
-
-            end = span.end.pos;
+                format!(
+                    r#"<span 
+                        class="code-span code-hover {color_class}" 
+                        title={name:?}>{text}</span>"#
+                )
+            }
         } else {
-            unreachable!("parsed span is not a code span")
-        }
+            format!(r#"<span class="code-span {color_class}">{text}</span>"#)
+        });
+
+        end = span.end.char_pos;
     }
 
     push_unspanned(&mut html, code.len(), &mut end);

@@ -1,6 +1,4 @@
-- Make parsing errors more recoverable
 - Simplify lexer a bit
-- Improve editor behavior
 - Threads
 - Multimedia
   - Sound input

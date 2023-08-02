@@ -9,7 +9,7 @@ use std::{
 
 use crate::{primitive::Primitive, Ident, UiuaError};
 
-pub fn lex(input: &str, file: Option<&Path>) -> LexResult<Vec<Sp<Token>>> {
+pub fn lex(input: &str, file: Option<&Path>) -> (Vec<Sp<Token>>, Vec<Sp<LexError>>) {
     Lexer {
         input_chars: input.chars().collect(),
         loc: Loc {
@@ -20,6 +20,7 @@ pub fn lex(input: &str, file: Option<&Path>) -> LexResult<Vec<Sp<Token>>> {
         file: file.map(Into::into),
         input: input.into(),
         tokens: Vec::new(),
+        errors: Vec::new(),
     }
     .run()
 }
@@ -363,6 +364,7 @@ struct Lexer {
     file: Option<Arc<Path>>,
     input: Arc<str>,
     tokens: Vec<Sp<Token>>,
+    errors: Vec<Sp<LexError>>,
 }
 
 impl Lexer {
@@ -422,7 +424,7 @@ impl Lexer {
             span: self.end_span(start),
         })
     }
-    fn run(mut self) -> LexResult<Vec<Sp<Token>>> {
+    fn run(mut self) -> (Vec<Sp<Token>>, Vec<Sp<LexError>>) {
         use {self::Simple::*, Token::*};
         loop {
             let start = self.loc;
@@ -476,14 +478,21 @@ impl Lexer {
                     let char = match self.character(&mut escaped, '\'') {
                         Ok(Some(c)) => c,
                         Ok(None) => {
-                            return Err(self.end_span(start).sp(LexError::ExpectedCharacter(None)))
+                            self.errors
+                                .push(self.end_span(start).sp(LexError::ExpectedCharacter(None)));
+                            continue;
                         }
-                        Err(e) => return Err(self.end_span(start).sp(LexError::InvalidEscape(e))),
+                        Err(e) => {
+                            self.errors
+                                .push(self.end_span(start).sp(LexError::InvalidEscape(e)));
+                            continue;
+                        }
                     };
                     if !self.next_char_exact('\'') {
-                        return Err(self
-                            .end_span(start)
-                            .sp(LexError::ExpectedCharacter(Some('\''))));
+                        self.errors.push(
+                            self.end_span(start)
+                                .sp(LexError::ExpectedCharacter(Some('\''))),
+                        );
                     }
                     self.end(Char(char), start)
                 }
@@ -496,14 +505,16 @@ impl Lexer {
                             Ok(Some(c)) => string.push(c),
                             Ok(None) => break,
                             Err(e) => {
-                                return Err(self.end_span(start).sp(LexError::InvalidEscape(e)))
+                                self.errors
+                                    .push(self.end_span(start).sp(LexError::InvalidEscape(e)));
                             }
                         }
                     }
                     if !self.next_char_exact('"') {
-                        return Err(self
-                            .end_span(start)
-                            .sp(LexError::ExpectedCharacter(Some('"'))));
+                        self.errors.push(
+                            self.end_span(start)
+                                .sp(LexError::ExpectedCharacter(Some('"'))),
+                        );
                     }
                     self.end(Str(string), start)
                 }
@@ -548,13 +559,19 @@ impl Lexer {
                 c => {
                     if let Some(prim) = Primitive::from_unicode(c) {
                         self.end(Glyph(prim), start)
-                    } else {
-                        return Err(self.end_span(start).sp(LexError::UnexpectedChar(c)));
+                    } else if !self
+                        .errors
+                        .iter()
+                        .last()
+                        .map_or(true, |e| matches!(e.value, LexError::UnexpectedChar(_)))
+                    {
+                        self.errors
+                            .push(self.end_span(start).sp(LexError::UnexpectedChar(c)));
                     }
                 }
             };
         }
-        Ok(self.tokens)
+        (self.tokens, self.errors)
     }
     fn number(&mut self, init: char) -> String {
         // Whole part
@@ -600,7 +617,7 @@ impl Lexer {
         number
     }
     fn character(&mut self, escaped: &mut bool, escape_char: char) -> Result<Option<char>, char> {
-        let Some(c) = self.next_char_if(|c| c != escape_char || *escaped) else {
+        let Some(c) = self.next_char_if(|c| c != '\n' && (c != escape_char || *escaped)) else {
             return Ok(None);
         };
         Ok(Some(if *escaped {

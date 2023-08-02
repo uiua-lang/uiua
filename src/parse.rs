@@ -63,14 +63,15 @@ impl Error for ParseError {}
 pub type ParseResult<T = ()> = Result<T, Sp<ParseError>>;
 
 pub fn parse(input: &str, path: Option<&Path>) -> (Vec<Item>, Vec<Sp<ParseError>>) {
-    let tokens = match lex(input, path) {
-        Ok(tokens) => tokens,
-        Err(e) => return (Vec::new(), vec![e.map(ParseError::Lex)]),
-    };
+    let (tokens, lex_errors) = lex(input, path);
+    let errors = lex_errors
+        .into_iter()
+        .map(|e| e.map(ParseError::Lex))
+        .collect();
     let mut parser = Parser {
         tokens,
         index: 0,
-        errors: Vec::new(),
+        errors,
     };
     let items = parser.items(true);
     if parser.errors.is_empty() && parser.index < parser.tokens.len() {

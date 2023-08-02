@@ -4,8 +4,10 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use image::ImageOutputFormat;
 use leptos::{ev::keydown, *};
 use uiua::{
-    format::format_str, primitive::Primitive, value::Value, value_to_image_bytes,
-    value_to_wav_bytes, Uiua, UiuaResult,
+    format::format_str,
+    primitive::{PrimClass, Primitive},
+    value::Value,
+    value_to_image_bytes, value_to_wav_bytes, Uiua, UiuaResult,
 };
 use wasm_bindgen::JsCast;
 use web_sys::{Event, HtmlAudioElement, HtmlDivElement, HtmlImageElement, MouseEvent, Node};
@@ -636,32 +638,31 @@ fn code_to_html(code: &str, smaller: bool) -> String {
 
     let chars: Vec<char> = code.chars().collect();
 
-    let push_unspanned = |html: &mut String, mut start: usize, end: &mut usize| {
-        start = start.min(chars.len());
-        if *end >= start {
+    let push_unspanned = |html: &mut String, mut target: usize, curr: &mut usize| {
+        target = target.min(chars.len());
+        if *curr >= target {
             return;
         }
         html.push_str(r#"<span class="code-span">"#);
         let mut unspanned = String::new();
-        while *end < start {
-            if chars[*end] == '\n' {
+        while *curr < target {
+            if chars[*curr] == '\n' {
                 html.push_str(&unspanned);
                 unspanned.clear();
                 html.push_str("</span></div><div><span class=\"code-span\">");
-                *end += 1;
+                *curr += 1;
                 let mut newline_count: usize = !smaller as usize;
-                while *end < start && chars[*end] == '\n' {
+                while *curr < target && chars[*curr] == '\n' {
                     newline_count += 1;
-                    *end += 1;
+                    *curr += 1;
                 }
-                log!("newline_count: {}", newline_count);
                 for _ in 0..newline_count / 2 {
                     html.push_str("\n</span></div><div><span class=\"code-span\">");
                 }
                 continue;
             }
-            unspanned.push(chars[*end]);
-            *end += 1;
+            unspanned.push(chars[*curr]);
+            *curr += 1;
         }
         html.push_str(&unspanned);
         html.push_str("</span>");
@@ -675,7 +676,10 @@ fn code_to_html(code: &str, smaller: bool) -> String {
 
             let text: String = chars[span.start.pos..span.end.pos].iter().collect();
             let color_class = match kind {
-                SpanKind::Primitive(prim) => prim_class(prim),
+                SpanKind::Primitive(prim) => match prim.class() {
+                    PrimClass::Stack => "{}",
+                    _ => prim_class(prim),
+                },
                 SpanKind::Number => "number-literal-span",
                 SpanKind::String => "string-literal-span",
                 SpanKind::Comment => "comment-span",

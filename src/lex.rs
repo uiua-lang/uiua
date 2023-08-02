@@ -96,7 +96,7 @@ impl fmt::Display for CodeSpan {
         if let Some(file) = &self.file {
             write!(f, "{}:{}", file.to_string_lossy(), self.start)
         } else {
-            write!(f, "{}", self.start)
+            write!(f, "{:?}", self.start)
         }
     }
 }
@@ -413,6 +413,7 @@ impl Lexer {
         })
     }
     fn end_span(&self, start: Loc) -> Span {
+        assert!(self.loc.pos > start.pos, "empty span");
         self.make_span(start, self.loc)
     }
     fn end(&mut self, token: impl Into<Token>, start: Loc) {
@@ -519,6 +520,7 @@ impl Lexer {
                         for (prim, frag) in prims {
                             let end = Loc {
                                 col: start.col + frag.chars().count(),
+                                pos: start.pos + frag.chars().count(),
                                 ..start
                             };
                             self.tokens.push(Sp {

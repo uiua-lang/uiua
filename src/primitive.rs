@@ -151,6 +151,12 @@ impl PrimClass {
     pub fn all() -> impl Iterator<Item = Self> {
         all()
     }
+    pub fn is_pervasive(&self) -> bool {
+        matches!(
+            self,
+            PrimClass::MonadicPervasive | PrimClass::DyadicPervasive
+        )
+    }
 }
 
 primitive!(

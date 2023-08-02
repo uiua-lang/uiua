@@ -62,6 +62,8 @@ fn words_spans(words: Vec<Sp<Word>>) -> Vec<Sp<SpanKind>> {
                         start = end;
                         span.sp(SpanKind::Primitive(*prim))
                     }));
+                } else if let Some(prim) = Primitive::from_name(ident.as_str()) {
+                    spans.push(word.span.sp(SpanKind::Primitive(prim)));
                 }
             }
             Word::Strand(items) => spans.extend(words_spans(items)),

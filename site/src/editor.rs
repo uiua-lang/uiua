@@ -404,7 +404,7 @@ pub fn Editor<'a>(
                     <div class="output-frame">
                         <div id={output_id.get()} class="output">
                             <div id="output-text">{ move || output.get() }</div>
-                            <img id=move || image_id.get() src=""/>
+                            <img id=move || image_id.get() style="border-radius: 1em;" src=""/>
                             <audio id=move || audio_id.get() src="" style="display:none" controls autoplay/>
                         </div>
                         <div id="code-buttons">

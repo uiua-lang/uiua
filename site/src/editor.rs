@@ -191,6 +191,9 @@ pub fn Editor<'a>(
 
     // Remove a code range
     let remove_code = move |start: u32, end: u32| {
+        if start == end {
+            return;
+        }
         let (start, end) = (start.min(end), start.max(end) as usize);
         let code = code_text();
         let text: String = code
@@ -235,21 +238,16 @@ pub fn Editor<'a>(
         if !focused {
             return;
         }
+        let mut handled = true;
         match event.key().as_str() {
             "Enter" => {
-                event.prevent_default();
-                event.stop_propagation();
                 if event.ctrl_key() || event.shift_key() {
-                    // Run the code when Ctrl+Enter or Shift+Enter is pressed
                     run(true);
                 } else {
-                    // Insert a newline when Enter is pressed
                     replace_code("\n");
                 }
             }
             "Backspace" => {
-                event.prevent_default();
-                event.stop_propagation();
                 let (start, end) = get_code_cursor().unwrap();
                 if start == end {
                     if start > 0 {
@@ -260,8 +258,6 @@ pub fn Editor<'a>(
                 }
             }
             "Delete" => {
-                event.prevent_default();
-                event.stop_propagation();
                 let (start, end) = get_code_cursor().unwrap();
                 if start == end {
                     remove_code(start, start + 1);
@@ -269,7 +265,43 @@ pub fn Editor<'a>(
                     remove_code(start, end);
                 }
             }
-            _ => {}
+            "c" if event.ctrl_key() => {
+                let (start, end) = get_code_cursor().unwrap();
+                let (start, end) = (start.min(end), start.max(end));
+                let code = code_text();
+                let text: String = code
+                    .chars()
+                    .skip(start as usize)
+                    .take((end - start) as usize)
+                    .collect();
+                log!("copy: {:?}", text);
+                js_sys::eval(&format!("navigator.clipboard.writeText({:?})", text)).unwrap();
+            }
+            "x" if event.ctrl_key() => {
+                let (start, end) = get_code_cursor().unwrap();
+                let (start, end) = (start.min(end), start.max(end));
+                let code = code_text();
+                let text: String = code
+                    .chars()
+                    .skip(start as usize)
+                    .take((end - start) as usize)
+                    .collect();
+                log!("cut: {:?}", text);
+                js_sys::eval(&format!("navigator.clipboard.writeText({:?})", text)).unwrap();
+                remove_code(start, end);
+            }
+            "v" if event.ctrl_key() => {
+                // Getting the clipboard string isn't actually allowed.
+                // What we can do it delete the highlighted text.
+                let (start, end) = get_code_cursor().unwrap();
+                remove_code(start, end);
+                handled = false;
+            }
+            _ => handled = false,
+        }
+        if handled {
+            event.prevent_default();
+            event.stop_propagation();
         }
     });
 
@@ -283,16 +315,9 @@ pub fn Editor<'a>(
         }
         log!("text before update: {:?}", parent.inner_text());
         if let Some((start, _)) = get_code_cursor() {
-            let text = parent.inner_text();
-            let before_c = if start == 0 {
-                None
-            } else {
-                text.chars().nth(start as usize - 1)
-            };
-            let after_c = text.chars().nth(start as usize);
-            log!("chars at cursor: {:?}|{:?}", before_c, after_c);
+            let (text, extra_newlines) = code_text_impl(&code_id.get());
             set_code_html(&text);
-            set_code_cursor(start, start);
+            set_code_cursor(start + extra_newlines, start + extra_newlines);
         }
     };
 
@@ -507,6 +532,9 @@ fn children_of(node: &Node) -> impl Iterator<Item = Node> {
 }
 
 fn code_text(id: &str) -> String {
+    code_text_impl(id).0
+}
+fn code_text_impl(id: &str) -> (String, u32) {
     let parent = element::<HtmlDivElement>(id);
     let mut text = String::new();
     for (i, div_node) in children_of(&parent).enumerate() {
@@ -514,11 +542,43 @@ fn code_text(id: &str) -> String {
             text.push('\n');
         }
         for span_node in children_of(&div_node) {
-            text.push_str(&span_node.text_content().unwrap());
+            let fragment = span_node.text_content().unwrap();
+            // log!("text fragment: {:?}", fragment);
+            text.push_str(&fragment);
         }
     }
-    log!("code_text: {:?}", text);
-    text
+    log!("code text:  {:?}", text);
+    log!("inner text: {:?}", parent.inner_text());
+
+    let inner = parent.inner_text();
+    let mut text = text.chars();
+    let mut inner = inner.chars();
+    let mut correct_text = String::new();
+    let mut extra_newlines = 0;
+    while let Some((t, i)) = text.next().zip(inner.next()) {
+        if t == i {
+            log!("{:?} matches", t);
+            correct_text.push(t);
+        } else {
+            log!("{:?} and {:?} don't match", t, i);
+            if i == '\n' {
+                extra_newlines += 1;
+                correct_text.push('\n');
+            }
+            for i in inner.by_ref() {
+                if i == t {
+                    log!("{:?} matches", t);
+                    correct_text.push(t);
+                    break;
+                }
+                log!("consume {:?}", i);
+            }
+        }
+    }
+    log!("correct text: {:?}", correct_text);
+    log!("extra newlines: {:?}", extra_newlines);
+
+    (correct_text, extra_newlines)
 }
 
 fn get_code_cursor(id: &str) -> Option<(u32, u32)> {
@@ -601,7 +661,6 @@ fn set_code_cursor(id: &str, mut start: u32, mut end: u32) {
         log!("ended on: {:?}", text_content);
         start = start.min(text_len);
         end = end.min(text_len);
-        log!("start: {:?}, end: {:?}", start, end);
         let range = document().create_range().unwrap();
         range.set_start(&text_node, start).unwrap();
         range.set_end(&text_node, end).unwrap();

@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{iter, time::Duration};
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use image::ImageOutputFormat;
@@ -7,10 +7,8 @@ use uiua::{
     format::format_str, primitive::Primitive, value::Value, value_to_image_bytes,
     value_to_wav_bytes, Uiua, UiuaResult,
 };
-use wasm_bindgen::JsCast;
-use web_sys::{
-    Event, HtmlAudioElement, HtmlDivElement, HtmlImageElement, HtmlTextAreaElement, MouseEvent,
-};
+use wasm_bindgen::{JsCast, JsValue};
+use web_sys::{Event, HtmlAudioElement, HtmlDivElement, HtmlImageElement, MouseEvent, Node};
 
 use crate::{backend::WebBackend, element, prim_class};
 
@@ -86,7 +84,7 @@ pub fn Editor<'a>(
     let code = (matches!(size, EditorSize::Pad))
         .then(get_saved_code)
         .flatten()
-        .unwrap_or_else(|| examples[0].to_string());
+        .unwrap_or_else(|| examples.get(0).cloned().unwrap_or_else(|| example.into()));
 
     let (example, set_example) = create_signal(cx, 0);
     let (code, set_code) = create_signal(cx, code);
@@ -96,21 +94,26 @@ pub fn Editor<'a>(
     let run = move |format: bool| {
         set_output.set(String::new());
         let code_elem = code_element();
-        let code_string = code_elem.value();
+        let mut code_string = code_elem.inner_text();
+        if code_string == "<uninitialized>" {
+            code_string = code.get();
+        }
         let input = if format {
             if let Ok(formatted) = format_str(&code_string) {
                 let formatted = formatted.trim();
-                let range = (code_elem.selection_start(), code_elem.selection_end());
-                code_elem.set_value(formatted);
-                if let (Ok(Some(start)), Ok(Some(end))) = range {
-                    _ = code_elem.set_selection_range(start, end);
+                let range = get_cursor_position(&code_elem);
+                code_elem.set_inner_html(&code_to_html(formatted));
+                if let Some((start, end)) = range {
+                    _ = set_selection_range(&code_elem, start, end);
                 }
                 set_code.set(formatted.to_string());
                 formatted.into()
             } else {
+                code_elem.set_inner_html(&code_to_html(&code_string));
                 code_string
             }
         } else {
+            code_elem.set_inner_html(&code_to_html(&code_string));
             code_string
         };
         match run_code(&input) {
@@ -144,7 +147,6 @@ pub fn Editor<'a>(
                 }
             }
             Err(e) => {
-                log!("{}", e.show(false));
                 set_output.set(e.show(false));
                 _ = output_element().style().set_property("color", "#f33");
             }
@@ -154,7 +156,7 @@ pub fn Editor<'a>(
     // Replace the selected text in the editor with the given string
     let replace_code = move |inserted: &str| {
         let elem = code_element();
-        if let (Ok(Some(start)), Ok(Some(end))) = (elem.selection_start(), elem.selection_end()) {
+        if let Some((start, end)) = get_cursor_position(&elem) {
             let (start, end) = (start.min(end), start.max(end) as usize);
             let text: String = code
                 .get()
@@ -163,9 +165,9 @@ pub fn Editor<'a>(
                 .chain(inserted.chars())
                 .chain(code.get().chars().skip(end))
                 .collect();
-            elem.set_value(&text);
+            elem.set_inner_html(&code_to_html(&text));
             _ = elem.focus();
-            _ = elem.set_selection_range(start + 1, start + 1);
+            _ = set_selection_range(&elem, start + 1, start + 1);
             set_code.set(text);
         };
     };
@@ -177,7 +179,7 @@ pub fn Editor<'a>(
             set_example.update(|e| {
                 *e = (*e + 1) % examples.len();
                 set_code.set(examples[*e].to_string());
-                code_element().set_value(&examples[*e]);
+                code_element().set_inner_html(&code_to_html(&examples[*e]));
                 run(false);
             })
         }
@@ -189,7 +191,7 @@ pub fn Editor<'a>(
             set_example.update(|e| {
                 *e = (*e + examples.len() - 1) % examples.len();
                 set_code.set(examples[*e].to_string());
-                code_element().set_value(&examples[*e]);
+                code_element().set_inner_html(&code_to_html(&examples[*e]));
                 run(false);
             })
         }
@@ -201,7 +203,7 @@ pub fn Editor<'a>(
         let focused = || {
             event
                 .target()
-                .and_then(|t| t.dyn_into::<HtmlTextAreaElement>().ok())
+                .and_then(|t| t.dyn_into::<HtmlDivElement>().ok())
                 .is_some_and(|t| t.id() == code_id.get())
         };
         if event.key() == "Enter" && (event.ctrl_key() || event.shift_key()) && focused() {
@@ -211,13 +213,17 @@ pub fn Editor<'a>(
 
     // Update the code when the textarea is changed
     let code_input = move |event: Event| {
-        let text_area: HtmlTextAreaElement = event.target().unwrap().dyn_into().unwrap();
-        set_code.set(text_area.value());
+        let text_area: HtmlDivElement = event.target().unwrap().dyn_into().unwrap();
+        set_code.set(text_area.inner_text());
     };
+
+    // Glyph hover doc
     let (glyph_doc, set_glyph_doc) = create_signal(cx, String::new());
     let onmouseleave = move |_| {
         _ = glyph_doc_element().style().set_property("display", "none");
     };
+
+    // Glyph buttons
     let mut glyph_buttons: Vec<_> = Primitive::all()
         .filter_map(|p| {
             let text = p
@@ -259,6 +265,7 @@ pub fn Editor<'a>(
         })
         .collect();
 
+    // Additional code buttons
     for (glyph, title) in [
         ("_", "strand"),
         ("[]", "array"),
@@ -276,17 +283,20 @@ pub fn Editor<'a>(
         });
     }
 
+    // Select a class for the editor and code area
     let (editor_class, code_class) = match size {
         EditorSize::Small => ("small-editor", "small-code"),
         EditorSize::Medium | EditorSize::Pad => ("medium-editor", "medium-code"),
     };
 
+    // Hide the example arrows if there is only one example
     let example_arrow_style = if examples.len() <= 1 {
         "display:none"
     } else {
         ""
     };
 
+    // Show or hide the glyph buttons
     let (show_glyphs, set_show_glyphs) = create_signal(
         cx,
         match size {
@@ -295,6 +305,7 @@ pub fn Editor<'a>(
         },
     );
 
+    // Glyphs toggle button
     let show_glyphs_text = move || if show_glyphs.get() { "↥" } else { "↧" };
     let show_glyphs_title = move || {
         if show_glyphs.get() {
@@ -305,6 +316,7 @@ pub fn Editor<'a>(
     };
     let toggle_show_glyphs = move |_| set_show_glyphs.update(|s| *s = !*s);
 
+    // Hide the glyph buttons if the editor is small
     let glyph_buttons_style = move || {
         if show_glyphs.get() {
             ""
@@ -313,10 +325,12 @@ pub fn Editor<'a>(
         }
     };
 
+    // Show the example number if there are multiple examples
     let examples_len = examples.len();
     let example_text =
         move || (examples_len > 1).then(|| format!("{}/{}", example.get() + 1, examples_len));
 
+    // Select a class for the next example button
     let next_button_class = move || {
         if example.get() == examples_len - 1 {
             "code-button"
@@ -328,6 +342,7 @@ pub fn Editor<'a>(
     // This ensures the output of the first example is shown
     set_timeout(move || run(false), Duration::from_millis(0));
 
+    // Render
     view! { cx,
         <div id="editor-wrapper">
             <div id="editor">
@@ -354,7 +369,9 @@ pub fn Editor<'a>(
                             spellcheck="false"
                             class={format!("code {code_class}")}
                             style={format!("height: {code_height_em}em")}
-                            on:input=code_input>{ move || code.get() }</div>
+                            on:input=code_input>
+                            "<uninitialized>"
+                        </div>
                     </div>
                     <div id={output_id.get()} class="output">
                         <div id="output-text">{ move || output.get() }</div>
@@ -471,4 +488,87 @@ fn run_code(code: &str) -> UiuaResult<RunOutput> {
         image_bytes,
         audio_bytes,
     })
+}
+
+fn children_of(node: &Node) -> impl Iterator<Item = Node> {
+    let mut curr = node.first_child();
+    iter::from_fn(move || {
+        let node = curr.take()?;
+        curr = node.next_sibling();
+        Some(node)
+    })
+}
+
+fn get_cursor_position(parent: &HtmlDivElement) -> Option<(u32, u32)> {
+    let sel = window().get_selection().ok()??;
+    let (anchor_node, anchor_offset) = (sel.anchor_node()?, sel.anchor_offset());
+    let (focus_node, focus_offset) = (sel.focus_node()?, sel.focus_offset());
+    if anchor_node == ****parent {
+        Some((
+            anchor_offset.min(focus_offset),
+            anchor_offset.max(focus_offset),
+        ))
+    } else if !parent.contains(Some(&anchor_node)) || !parent.contains(Some(&focus_node)) {
+        None
+    } else {
+        let mut start = None;
+        let mut end = None;
+        let mut curr = 0;
+        for node in children_of(parent) {
+            if node.contains(Some(&anchor_node)) {
+                start = Some(curr + anchor_offset);
+            }
+            if node.contains(Some(&focus_node)) {
+                end = Some(curr + focus_offset);
+            }
+            // Increment curr by the length of the text in the node
+            let elem = node.dyn_ref::<HtmlDivElement>().unwrap();
+            let len = elem.inner_text().chars().count() as u32;
+            curr += len + 1;
+        }
+        let (start, end) = (start.min(end), start.max(end));
+        start.zip(end)
+    }
+}
+
+fn terminal_child(node: &Node) -> Option<Node> {
+    let mut curr = node.first_child()?;
+    while let Some(next) = curr.first_child() {
+        curr = next;
+    }
+    Some(curr)
+}
+
+fn set_selection_range(elem: &HtmlDivElement, mut start: u32, mut end: u32) -> Result<(), JsValue> {
+    for node in children_of(elem) {
+        let elem = node.dyn_ref::<HtmlDivElement>().unwrap();
+        let text_len = elem.inner_text().chars().count() as u32 + 1;
+        if start >= text_len {
+            start -= text_len;
+            end -= text_len;
+        } else {
+            start = start.min(text_len);
+            end = end.min(text_len);
+            let range = document().create_range()?;
+            range.set_start(&terminal_child(&node).unwrap(), start)?;
+            range.set_end(&terminal_child(&node).unwrap(), end)?;
+            let sel = window().get_selection()?.unwrap();
+            sel.remove_all_ranges()?;
+            sel.add_range(&range)?;
+            break;
+        }
+    }
+    Ok(())
+}
+
+fn code_to_html(code: &str) -> String {
+    code.lines()
+        .map(|l| {
+            format!(
+                r#"<div>
+    <span class="code-span">{l}</span>
+</div>"#,
+            )
+        })
+        .collect()
 }

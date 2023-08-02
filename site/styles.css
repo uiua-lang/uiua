@@ -198,8 +198,17 @@ li {
     border: none;
     padding: 0.3em 3.5em 0.3em 0.3em;
     min-height: 1.8em;
+    overflow-y: auto;
+}
+
+.line-num {
+    color: #8888;
+}
+
+.code-span {
     font-size: 1em;
     font-family: "Code Font";
+    white-space: pre;
 }
 
 .output {

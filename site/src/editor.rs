@@ -2,10 +2,7 @@ use std::{iter, time::Duration};
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use image::ImageOutputFormat;
-use leptos::{
-    ev::{focus, keydown},
-    *,
-};
+use leptos::{ev::keydown, *};
 use uiua::{
     format::format_str,
     primitive::{PrimClass, Primitive},
@@ -105,12 +102,14 @@ pub fn Editor<'a>(
     let code_text = move || code_text(&code_id.get());
     let get_code_cursor = move || get_code_cursor(&code_id.get());
     let set_code_cursor = move |start, end| set_code_cursor(&code_id.get(), start, end);
-    let set_code_html = move |code: &str| set_code_html(&code_id.get(), code);
+    let set_code_html = move |code: &str| {
+        set_code_html(&code_id.get(), code);
+        set_line_count.set(children_of(&code_element()).count());
+    };
 
     // Run the code
     let run = move |format: bool| {
         // Get code
-        let code_elem = code_element();
         let mut code_text = code_text();
         if let Some(code) = initial_code.get() {
             code_text = code;
@@ -135,7 +134,6 @@ pub fn Editor<'a>(
         if let Some((start, end)) = range {
             set_code_cursor(start, end);
         }
-        set_line_count.set(children_of(&code_elem).count());
 
         // Run code
         match run_code(&input) {
@@ -191,6 +189,19 @@ pub fn Editor<'a>(
         };
     };
 
+    // Remove a code range
+    let remove_code = move |start: u32, end: u32| {
+        let (start, end) = (start.min(end), start.max(end) as usize);
+        let code = code_text();
+        let text: String = code
+            .chars()
+            .take(start as usize)
+            .chain(code.chars().skip(end))
+            .collect();
+        set_code_html(&text);
+        set_code_cursor(start, start);
+    };
+
     // Go to the next example
     let next_example = {
         let examples = examples.clone();
@@ -234,16 +245,29 @@ pub fn Editor<'a>(
                 } else {
                     // Insert a newline when Enter is pressed
                     replace_code("\n");
-                    set_line_count.set(children_of(&code_element()).count());
                 }
             }
             "Backspace" => {
                 event.prevent_default();
                 event.stop_propagation();
+                let (start, end) = get_code_cursor().unwrap();
+                if start == end {
+                    if start > 0 {
+                        remove_code(start - 1, start);
+                    }
+                } else {
+                    remove_code(start, end);
+                }
             }
             "Delete" => {
                 event.prevent_default();
                 event.stop_propagation();
+                let (start, end) = get_code_cursor().unwrap();
+                if start == end {
+                    remove_code(start, start + 1);
+                } else {
+                    remove_code(start, end);
+                }
             }
             _ => {}
         }
@@ -269,7 +293,6 @@ pub fn Editor<'a>(
             log!("chars at cursor: {:?}|{:?}", before_c, after_c);
             set_code_html(&text);
             set_code_cursor(start, start);
-            set_line_count.set(children_of(&parent).count());
         }
     };
 
@@ -548,7 +571,7 @@ fn set_code_cursor(id: &str, mut start: u32, mut end: u32) {
                 text_content = "\n".into();
                 text_len = 1;
                 last_node = Some(div_node.first_child().unwrap());
-                log!("newline {} -> {}", start + 1, start);
+                // log!("newline {} -> {}", start + 1, start);
             } else {
                 break 'divs;
             }
@@ -563,12 +586,12 @@ fn set_code_cursor(id: &str, mut start: u32, mut end: u32) {
                 text_len = 0;
                 last_node = Some(span_node);
             }
-            log!("text_content: {:?}", text_content);
-            log!("text_len: {:?}", text_len);
+            // log!("text_content: {:?}", text_content);
+            // log!("text_len: {:?}", text_len);
             if start > text_len {
                 start -= text_len;
                 end -= text_len;
-                log!("{} -> {}", start + text_len, start);
+                // log!("{} -> {}", start + text_len, start);
             } else {
                 break 'divs;
             }

@@ -7,7 +7,7 @@ use std::{
     sync::Arc,
 };
 
-use crate::{primitive::Primitive, Ident, UiuaError};
+use crate::{primitive::Primitive, UiuaError};
 
 pub fn lex(input: &str, file: Option<&Path>) -> (Vec<Sp<Token>>, Vec<Sp<LexError>>) {
     Lexer {
@@ -115,7 +115,7 @@ impl fmt::Display for CodeSpan {
         if let Some(file) = &self.file {
             write!(f, "{}:{}", file.to_string_lossy(), self.start)
         } else {
-            write!(f, "{:?}", self.start)
+            write!(f, "{}", self.start)
         }
     }
 }
@@ -145,6 +145,9 @@ impl CodeSpan {
             end: self.end.max(end.end),
             ..self
         }
+    }
+    pub fn as_str(&self) -> &str {
+        &self.input[self.start.byte_pos..self.end.byte_pos]
     }
 }
 
@@ -247,9 +250,9 @@ impl<T> From<Sp<T>> for Sp<T, Span> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
-    Comment(String),
-    Ident(Ident),
-    Number(String),
+    Comment,
+    Ident,
+    Number,
     Char(char),
     Str(String),
     Simple(Simple),
@@ -257,18 +260,6 @@ pub enum Token {
 }
 
 impl Token {
-    pub fn as_ident(&self) -> Option<&Ident> {
-        match self {
-            Token::Ident(ident) => Some(ident),
-            _ => None,
-        }
-    }
-    pub fn as_number(&self) -> Option<&str> {
-        match self {
-            Token::Number(real) => Some(real),
-            _ => None,
-        }
-    }
     pub fn as_char(&self) -> Option<char> {
         match self {
             Token::Char(char) => Some(*char),
@@ -285,26 +276,6 @@ impl Token {
         match self {
             Token::Glyph(glyph) => Some(*glyph),
             _ => None,
-        }
-    }
-    pub fn as_comment(&self) -> Option<&str> {
-        match self {
-            Token::Comment(comment) => Some(comment),
-            _ => None,
-        }
-    }
-}
-
-impl fmt::Display for Token {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Token::Comment(comment) => write!(f, "// {comment}"),
-            Token::Ident(ident) => write!(f, "{ident}"),
-            Token::Number(real) => write!(f, "{real}"),
-            Token::Char(char) => write!(f, "{char:?}"),
-            Token::Str(s) => write!(f, "{s:?}"),
-            Token::Simple(simple) => write!(f, "{simple}"),
-            Token::Glyph(glyph) => write!(f, "{glyph}"),
         }
     }
 }
@@ -455,16 +426,15 @@ impl Lexer {
                 ']' => self.end(CloseBracket, start),
                 '_' => self.end(Underscore, start),
                 '`' => {
-                    let number = self.number('-');
-                    if number.len() > 1 {
-                        self.end(Number(number), start)
+                    if self.number('-') {
+                        self.end(Number, start)
                     } else {
                         self.end(Backtick, start)
                     }
                 }
                 '¯' if self.peek_char().filter(char::is_ascii_digit).is_some() => {
-                    let number = self.number('-');
-                    self.end(Number(number), start)
+                    self.number('-');
+                    self.end(Number, start)
                 }
                 '*' => self.end(Star, start),
                 '%' => self.end(Percent, start),
@@ -485,7 +455,7 @@ impl Lexer {
                     if comment.starts_with(' ') {
                         comment.remove(0);
                     }
-                    self.end(Comment(comment), start)
+                    self.end(Comment, start)
                 }
                 // Characters
                 '\'' => {
@@ -534,7 +504,7 @@ impl Lexer {
                     self.end(Str(string), start)
                 }
                 // Identifiers and selectors
-                c if is_custom_glyph(c) => self.end(Ident(c.to_string().into()), start),
+                c if is_custom_glyph(c) => self.end(Ident, start),
                 c if is_basically_alphabetic(c) => {
                     let mut ident = String::new();
                     ident.push(c);
@@ -556,13 +526,13 @@ impl Lexer {
                             start = end;
                         }
                     } else {
-                        self.end(Ident(ident.into()), start)
+                        self.end(Ident, start)
                     }
                 }
                 // Numbers
                 c if c.is_ascii_digit() => {
-                    let number = self.number(c);
-                    self.end(Number(number), start)
+                    self.number(c);
+                    self.end(Number, start)
                 }
                 // Newlines
                 '\n' => self.end(Newline, start),
@@ -588,48 +558,39 @@ impl Lexer {
         }
         (self.tokens, self.errors)
     }
-    fn number(&mut self, init: char) -> String {
+    fn number(&mut self, init: char) -> bool {
         // Whole part
-        let mut number = String::from(init);
-        while let Some(c) = self.next_char_if(|c| c.is_ascii_digit()) {
-            number.push(c);
+        let mut got_digit = false;
+        while self.next_char_if(|c| c.is_ascii_digit()).is_some() {
+            got_digit = true;
+        }
+        if !init.is_ascii_digit() && !got_digit {
+            return false;
         }
         // Fractional part
         let before_dot = self.loc;
         if self.next_char_exact('.') {
-            number.push('.');
             let mut has_decimal = false;
-            while let Some(c) = self.next_char_if(|c| c.is_ascii_digit()) {
-                number.push(c);
+            while self.next_char_if(|c| c.is_ascii_digit()).is_some() {
                 has_decimal = true;
             }
             if !has_decimal {
                 self.loc = before_dot;
-                number.pop();
             }
         }
         // Exponent
         let loc_before_e = self.loc;
-        let number_before_e = number.len();
-        if let Some(e) = self.next_char_if(|c| c == 'e' || c == 'E') {
-            number.push(e);
-            if self
-                .next_char_if(|c| c == '-' || c == '`' || c == '¯')
-                .is_some()
-            {
-                number.push('-');
-            }
+        if self.next_char_if(|c| c == 'e' || c == 'E').is_some() {
+            self.next_char_if(|c| c == '-' || c == '`' || c == '¯');
             let mut got_digit = false;
-            while let Some(c) = self.next_char_if(|c| c.is_ascii_digit()) {
-                number.push(c);
+            while self.next_char_if(|c| c.is_ascii_digit()).is_some() {
                 got_digit = true;
             }
             if !got_digit {
                 self.loc = loc_before_e;
-                number.truncate(number_before_e);
             }
         }
-        number
+        true
     }
     fn character(&mut self, escaped: &mut bool, escape_char: char) -> Result<Option<char>, char> {
         let Some(c) = self.next_char_if(|c| c != '\n' && (c != escape_char || *escaped)) else {

@@ -50,7 +50,7 @@ impl fmt::Display for ParseError {
                     write!(f, "{exp}")?;
                 }
                 if let Some(found) = found {
-                    write!(f, ", found `{}`", found.value)?;
+                    write!(f, ", found `{}`", found.span.as_str())?;
                 }
                 Ok(())
             }
@@ -183,8 +183,9 @@ impl Parser {
         })
     }
     fn comment(&mut self) -> Option<Sp<String>> {
-        self.next_token_map(Token::as_comment)
-            .map(|s| s.map(Into::into))
+        let span = self.try_exact(Token::Comment)?;
+        let s = span.as_str().trim_start_matches(['#', ' ']).into();
+        Some(span.sp(s))
     }
     fn try_binding(&mut self) -> Option<Binding> {
         let start = self.index;
@@ -202,7 +203,9 @@ impl Parser {
         })
     }
     fn try_ident(&mut self) -> Option<Sp<Ident>> {
-        self.next_token_map(|token| token.as_ident().cloned())
+        let span = self.try_exact(Token::Ident)?;
+        let s = span.as_str().into();
+        Some(span.sp(s))
     }
     fn try_words(&mut self) -> Option<Vec<Sp<Word>>> {
         let mut words = Vec::new();
@@ -292,8 +295,9 @@ impl Parser {
             prim.map(Word::Primitive)
         } else if let Some(ident) = self.try_ident() {
             ident.map(Word::Ident)
-        } else if let Some(r) = self.next_token_map(Token::as_number) {
-            r.map(Into::into).map(Word::Number)
+        } else if let Some(span) = self.try_exact(Token::Number) {
+            let s = span.as_str().replace(['`', '¯'], "-");
+            span.sp(Word::Number(s))
         } else if let Some(c) = self.next_token_map(Token::as_char) {
             c.map(Into::into).map(Word::Char)
         } else if let Some(s) = self.next_token_map(Token::as_string) {

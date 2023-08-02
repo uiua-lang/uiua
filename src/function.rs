@@ -110,7 +110,7 @@ impl fmt::Display for FunctionId {
         match self {
             FunctionId::Named(name) => write!(f, "`{name}`"),
             FunctionId::Anonymous(span) => write!(f, "fn from {span}"),
-            FunctionId::Primitive(id) => write!(f, "{id}"),
+            FunctionId::Primitive(prim) => write!(f, "{prim}"),
             FunctionId::Constant => write!(f, "constant"),
             FunctionId::Main => write!(f, "main"),
         }

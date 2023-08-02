@@ -224,6 +224,23 @@ li {
     font-size: 1em;
     font-family: "Code Font";
     white-space: pre;
+    text-decoration: none;
+}
+
+.code-hover[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    font-family: "Code Font";
+    font-size: 0.7em;
+    bottom: 100%;
+    color: #eee;
+    background-color: #000b;
+    padding: 0.2em;
+    border-radius: 0.2em;
+    left: 0;
+    text-decoration: none;
+    white-space: normal;
+    overflow: visible;
 }
 
 .output-frame {

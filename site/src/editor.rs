@@ -700,9 +700,23 @@ fn set_code_html(id: &str, code: &str) {
                 SpanKind::String => "string-literal-span",
                 SpanKind::Comment => "comment-span",
             };
-            html.push_str(&format!(
-                r#"<span class="code-span {color_class}">{text}</span>"#,
-            ));
+
+            html.push_str(&if let SpanKind::Primitive(prim) = kind {
+                let name = prim.name().unwrap_or_default();
+                if let Some(doc) = prim.doc() {
+                    // let href = format!("/docs/{prim:?}").to_lowercase();
+                    let title = format!("{}: {}", name, doc.short);
+                    format!(
+                        r#"<span class="code-span code-hover {color_class}" title={title:?}>{text}</span>"#
+                    )
+                } else {
+                    format!(
+                        r#"<span class="code-span code-hover {color_class}" title={name:?}>{text}</span>"#
+                    )
+                }
+            } else {
+                format!(r#"<span class="code-span {color_class}">{text}</span>"#)
+            });
 
             end = span.end.pos;
         } else {

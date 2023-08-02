@@ -199,9 +199,20 @@ li {
     padding: 0.3em 3.5em 0.3em 0.3em;
     min-height: 1.8em;
     overflow-y: auto;
+    display: flex;
 }
 
-.line-num {
+.code-entry {
+    outline: none;
+    border: none;
+    width: 100%;
+}
+
+.line-numbers {
+    width: 1.5em;
+}
+
+.line-number {
     color: #8888;
 }
 
@@ -211,14 +222,18 @@ li {
     white-space: pre;
 }
 
-.output {
-    white-space: pre-wrap;
+.output-frame {
     display: flex;
     justify-content: space-between;
 }
 
+.output {
+    white-space: pre-wrap;
+    margin-left: 1.75em;
+}
+
 #output-text {
-    padding: 0.3em;
+    padding: 0.3em 0 0.2em 0;
     font-family: "Code Font";
 }
 

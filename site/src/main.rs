@@ -213,10 +213,16 @@ fn prim_class(prim: Primitive) -> &'static str {
     }
 }
 
+fn get_element<T: JsCast>(id: &str) -> Option<T> {
+    document()
+        .get_element_by_id(id)
+        .map(|elem| elem.dyn_into().unwrap())
+}
+
 #[track_caller]
 fn element<T: JsCast>(id: &str) -> T {
-    if let Some(elem) = document().get_element_by_id(id) {
-        elem.dyn_into::<T>().unwrap()
+    if let Some(elem) = get_element(id) {
+        elem
     } else {
         panic!("#{id} not found")
     }

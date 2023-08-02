@@ -1,3 +1,4 @@
+- Make parsing errors more recoverable
 - Threads
 - Multimedia
   - Sound input
@@ -10,7 +11,6 @@
   - run commands
 - Tooling
   - LSP backend
-  - contenteditable-based web editor
   - LSP frontends
     - VSCode
     - Neovim

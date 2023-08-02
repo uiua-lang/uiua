@@ -60,7 +60,7 @@ pub fn Editor<'a>(
     } else {
         examples.iter().map(|e| e.lines().count()).max().unwrap()
     };
-    let code_height_em = code_max_lines as f32 * 1.2 + 0.6;
+    let code_height_em = code_max_lines as f32 * 1.2;
 
     let (code_id, _) = create_signal(cx, format!("code{id}"));
     let (output_id, _) = create_signal(cx, format!("output{id}"));
@@ -73,6 +73,9 @@ pub fn Editor<'a>(
     let image_element = move || -> HtmlImageElement { element(&image_id.get()) };
     let audio_element = move || -> HtmlAudioElement { element(&audio_id.get()) };
     let glyph_doc_element = move || -> HtmlDivElement { element(&glyph_doc_id.get()) };
+
+    // Track line count
+    let (line_count, set_line_count) = create_signal(cx, 1);
 
     let get_saved_code = || {
         window()
@@ -98,14 +101,11 @@ pub fn Editor<'a>(
         if code_string == "<uninitialized>" {
             code_string = code.get();
         }
+        let range = get_cursor_position(&code_elem);
         let input = if format {
             if let Ok(formatted) = format_str(&code_string) {
                 let formatted = formatted.trim();
-                let range = get_cursor_position(&code_elem);
                 code_elem.set_inner_html(&code_to_html(formatted));
-                if let Some((start, end)) = range {
-                    _ = set_selection_range(&code_elem, start, end);
-                }
                 set_code.set(formatted.to_string());
                 formatted.into()
             } else {
@@ -116,6 +116,11 @@ pub fn Editor<'a>(
             code_elem.set_inner_html(&code_to_html(&code_string));
             code_string
         };
+        if let Some((start, end)) = range {
+            _ = set_selection_range(&code_elem, start, end);
+        }
+        log!("input: {:?}", input);
+        set_line_count.set(children_of(&code_elem).count());
         match run_code(&input) {
             Ok(output) => {
                 // Show text output
@@ -207,14 +212,21 @@ pub fn Editor<'a>(
                 .is_some_and(|t| t.id() == code_id.get())
         };
         if event.key() == "Enter" && (event.ctrl_key() || event.shift_key()) && focused() {
+            event.prevent_default();
+            event.stop_propagation();
             run(true);
         }
     });
 
     // Update the code when the textarea is changed
     let code_input = move |event: Event| {
-        let text_area: HtmlDivElement = event.target().unwrap().dyn_into().unwrap();
-        set_code.set(text_area.inner_text());
+        let parent = code_element();
+        let child: HtmlDivElement = event.target().unwrap().dyn_into().unwrap();
+        if parent.contains(Some(&child)) {
+            log!("{:?}", parent.inner_text());
+            set_code.set(parent.inner_text());
+            set_line_count.set(children_of(&parent).count());
+        }
     };
 
     // Glyph hover doc
@@ -284,9 +296,9 @@ pub fn Editor<'a>(
     }
 
     // Select a class for the editor and code area
-    let (editor_class, code_class) = match size {
-        EditorSize::Small => ("small-editor", "small-code"),
-        EditorSize::Medium | EditorSize::Pad => ("medium-editor", "medium-code"),
+    let editor_class = match size {
+        EditorSize::Small => "small-editor",
+        EditorSize::Medium | EditorSize::Pad => "medium-editor",
     };
 
     // Hide the example arrows if there is only one example
@@ -342,6 +354,17 @@ pub fn Editor<'a>(
     // This ensures the output of the first example is shown
     set_timeout(move || run(false), Duration::from_millis(0));
 
+    // Line numbers
+    let line_numbers = move |cx| {
+        (0..line_count.get().max(1))
+            .map(|i| {
+                view!(cx, <div>
+                    <span class="code-span line-number">{i + 1}</span>
+                </div>)
+            })
+            .collect::<Vec<_>>()
+    };
+
     // Render
     view! { cx,
         <div id="editor-wrapper">
@@ -362,19 +385,28 @@ pub fn Editor<'a>(
                             { move || glyph_doc.get() }
                             <div class="glyph-doc-ctrl-click">"Ctrl+click for more info"</div>
                         </div>
-                        // The text area
-                        <div
-                            id={code_id.get()}
-                            contenteditable="true"
-                            spellcheck="false"
-                            class={format!("code {code_class}")}
-                            style={format!("height: {code_height_em}em")}
-                            on:input=code_input>
-                            "<uninitialized>"
+                        <div class="code">
+                            <div class="line-numbers">
+                                { move || line_numbers(cx) }
+                            </div>
+                            // The text entry area
+                            <div
+                                id={code_id.get()}
+                                contenteditable="true"
+                                spellcheck="false"
+                                class="code-entry"
+                                style={format!("height: {code_height_em}em;")}
+                                on:input=code_input>
+                                "<uninitialized>"
+                            </div>
                         </div>
                     </div>
-                    <div id={output_id.get()} class="output">
-                        <div id="output-text">{ move || output.get() }</div>
+                    <div class="output-frame">
+                        <div id={output_id.get()} class="output">
+                            <div id="output-text">{ move || output.get() }</div>
+                            <img id=move || image_id.get() src=""/>
+                            <audio id=move || audio_id.get() src="" style="display:none" controls autoplay/>
+                        </div>
                         <div id="code-buttons">
                             <button class="code-button" on:click=move |_| run(true)>{ "Run" }</button>
                             <button
@@ -389,10 +421,6 @@ pub fn Editor<'a>(
                                 on:click=next_example title="Next example">{ ">" } </button>
                         </div>
                     </div>
-                </div>
-                <div>
-                    <img id=move || image_id.get() src=""/>
-                    <audio id=move || audio_id.get() src="" style="display:none" controls autoplay/>
                 </div>
             </div>
             <div id="editor-help">
@@ -531,30 +559,30 @@ fn get_cursor_position(parent: &HtmlDivElement) -> Option<(u32, u32)> {
     }
 }
 
-fn terminal_child(node: &Node) -> Option<Node> {
-    let mut curr = node.first_child()?;
-    while let Some(next) = curr.first_child() {
-        curr = next;
-    }
-    Some(curr)
-}
-
 fn set_selection_range(elem: &HtmlDivElement, mut start: u32, mut end: u32) -> Result<(), JsValue> {
-    for node in children_of(elem) {
-        let elem = node.dyn_ref::<HtmlDivElement>().unwrap();
-        let text_len = elem.inner_text().chars().count() as u32 + 1;
+    log!("set_selection_range({}, {})", start, end);
+    log!("element inner text: {:?}", elem.inner_text());
+    let max_len = elem.inner_text().chars().count() as u32;
+    start = start.min(max_len);
+    end = end.min(max_len);
+    for node in children_of(elem)
+        .flat_map(|n| children_of(&n))
+        .flat_map(|n| children_of(&n))
+    {
+        let text_content = node.text_content().unwrap();
+        log!("text content: {:?}", text_content);
+        let text_len = text_content.chars().count() as u32 + 1;
         if start >= text_len {
             start -= text_len;
             end -= text_len;
         } else {
-            start = start.min(text_len);
-            end = end.min(text_len);
-            let range = document().create_range()?;
-            range.set_start(&terminal_child(&node).unwrap(), start)?;
-            range.set_end(&terminal_child(&node).unwrap(), end)?;
-            let sel = window().get_selection()?.unwrap();
-            sel.remove_all_ranges()?;
-            sel.add_range(&range)?;
+            log!("start: {}, end: {}", start, end);
+            let range = document().create_range().unwrap();
+            range.set_start(&node, start).unwrap();
+            range.set_end(&node, end).unwrap();
+            let sel = window().get_selection().unwrap().unwrap();
+            sel.remove_all_ranges().unwrap();
+            sel.add_range(&range).unwrap();
             break;
         }
     }
@@ -564,6 +592,11 @@ fn set_selection_range(elem: &HtmlDivElement, mut start: u32, mut end: u32) -> R
 fn code_to_html(code: &str) -> String {
     code.lines()
         .map(|l| {
+            if l.is_empty() {
+                return r#"<div><span class="code-span">
+</span></div>"#
+                    .to_string();
+            }
             format!(
                 r#"<div>
     <span class="code-span">{l}</span>

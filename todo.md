@@ -1,16 +1,29 @@
 - Fix scopes' access to previous bindings (but not files)
-- String formatting
+- Style editor cursor
+- Add a non-random subtitle
+- Format strings
+- Rename IO to sys
 - IO buffering
   - Read until
 - Editor history
 - Docs
   - Native interpreter and installation
   - Tests
-- Prevent IO from blocking watch
+  - Technical details
+  - Explain loop directions
+- Make watch run processes
 - Rework front page
-- Trig glyphs
+- More functions
+  - Bits
+  - Spawn?
+  - Parallel?
 - More inverses
 - Threads
+- Proper 404 page
+- Trig Rework
+- Logarithms
+- Optimizations
+  - Windowed reduce
 - Multimedia
   - Sound input
   - Webcam input?

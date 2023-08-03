@@ -8,7 +8,6 @@ mod error;
 pub mod format;
 pub mod function;
 mod grid_fmt;
-mod io;
 pub mod lex;
 pub mod lsp;
 pub mod parse;
@@ -16,6 +15,7 @@ pub mod primitive;
 #[doc(hidden)]
 pub mod profile;
 pub mod run;
+mod sys;
 pub mod value;
 
 use std::{
@@ -25,7 +25,7 @@ use std::{
     rc::Rc,
 };
 
-pub use {error::*, io::*, run::Uiua};
+pub use {error::*, run::Uiua, sys::*};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Byte {

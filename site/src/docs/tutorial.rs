@@ -3,7 +3,7 @@ use std::fmt::Display;
 use enum_iterator::{all, Sequence};
 use leptos::*;
 use leptos_router::*;
-use uiua::{primitive::Primitive, IoOp};
+use uiua::{primitive::Primitive, SysOp};
 
 use crate::{backend::EXAMPLE_UA, code::*, editor::*};
 
@@ -439,11 +439,11 @@ twin ← use "twin" mymodule
 plusfive ← use "PlusFive" mymodule
 
 Twin PlusFive 3"#/>
-        <h2><PrimCode prim=Io(IoOp::Import)/></h2>
-        <p>"Finally, we reach the point of all of this. You can import other files as scopes with "<PrimCode prim=Io(IoOp::Import)/>"."</p>
+        <h2><PrimCode prim=Sys(SysOp::Import)/></h2>
+        <p>"Finally, we reach the point of all of this. You can import other files as scopes with "<PrimCode prim=Sys(SysOp::Import)/>"."</p>
         <p>"The website's editor has an example file that you can import called "<code>"example.ua"</code>". Its contents is:"</p>
         <Editor example=EXAMPLE_UA/>
-        <p>"You can import it with "<PrimCode prim=Io(IoOp::Import)/>" and then "<PrimCode prim=Use/>" to extract the functions."</p>
+        <p>"You can import it with "<PrimCode prim=Sys(SysOp::Import)/>" and then "<PrimCode prim=Use/>" to extract the functions."</p>
         <p>"By using "<PrimCode prim=Dup/>" on the imported module, you can repetedly extract functions from it. Notice the lack of a "<PrimCode prim=Dup glyph_only=true/>" after the last "<PrimCode prim=Use/>"."</p>
         <Editor example=r#"import "example.ua"
 square ← use "square".
@@ -451,7 +451,7 @@ double ← use "double".
 increment ← use "increment"
 
 increment square double 5"#/>
-        <p><PrimCode prim=Io(IoOp::Import)/>" only imports a given file once and caches the results. Subsequent imports of the same file (from anywhere) will not run the file's code again, but they will push its stack values again."</p>
+        <p><PrimCode prim=Sys(SysOp::Import)/>" only imports a given file once and caches the results. Subsequent imports of the same file (from anywhere) will not run the file's code again, but they will push its stack values again."</p>
         <p>"In this example, we make some code that prints a message and then generates a random number. We then write the code to a file and import it 3 times. Notice that the message is only printed once, and the same number is returned every time."</p>
         <Editor example=r#"code ← "print \"Loading module\"\nrand"
 FWriteAll "test.ua" code

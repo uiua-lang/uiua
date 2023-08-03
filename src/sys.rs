@@ -18,7 +18,7 @@ use crate::{
     array::Array, grid_fmt::GridFmt, primitive::PrimDoc, value::Value, Byte, Uiua, UiuaResult,
 };
 
-macro_rules! io_op {
+macro_rules! sys_op {
     ($(
         $(#[doc = $doc:literal])*
         (
@@ -27,11 +27,11 @@ macro_rules! io_op {
         )
     ),* $(,)?) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
-        pub enum IoOp {
+        pub enum SysOp {
             $($variant),*
         }
 
-        impl IoOp {
+        impl SysOp {
             pub const ALL: [Self; 0 $(+ {stringify!($variant); 1})*] = [
                 $(Self::$variant,)*
             ];
@@ -42,18 +42,18 @@ macro_rules! io_op {
             }
             pub fn args(&self) -> u8 {
                 match self {
-                    $(IoOp::$variant => $args,)*
+                    $(SysOp::$variant => $args,)*
                 }
             }
             pub fn outputs(&self) -> Option<u8> {
                 match self {
-                    $($(IoOp::$variant => $outputs.into(),)?)*
+                    $($(SysOp::$variant => $outputs.into(),)?)*
                     _ => Some(1)
                 }
             }
             pub fn doc(&self) -> Option<&'static PrimDoc> {
                 match self {
-                    $(IoOp::$variant => {
+                    $(SysOp::$variant => {
                         let doc_str = concat!($($doc, "\n"),*);
                         static DOC: OnceLock<PrimDoc> = OnceLock::new();
                         if doc_str.is_empty() {
@@ -67,7 +67,7 @@ macro_rules! io_op {
     };
 }
 
-io_op! {
+sys_op! {
     /// Print a nicely formatted representation of a value to stdout
     (1(0), Show, "Show"),
     /// Print a value to stdout
@@ -133,7 +133,7 @@ io_op! {
     (2, ImWrite, "ImWrite"),
     /// Show an image
     ///
-    /// How the image is shown depends on the IO backend.
+    /// How the image is shown depends on the system backend.
     ///
     /// In the default backend, the image is shown in the terminal.
     /// On the web, the image is shown in the output area.
@@ -200,7 +200,7 @@ impl From<Handle> for Value {
 }
 
 #[allow(unused_variables)]
-pub trait IoBackend {
+pub trait SysBackend {
     fn print_str(&self, s: &str) -> Result<(), String> {
         self.write(Handle::STDOUT, s.as_bytes())
     }
@@ -278,22 +278,22 @@ pub trait IoBackend {
 }
 
 #[derive(Default)]
-pub struct StdIo;
+pub struct NativeSys;
 
-struct GlobalStdIo {
+struct GlobalNativeSys {
     next_handle: Handle,
     files: HashMap<Handle, File>,
     tcp_listeners: HashMap<Handle, TcpListener>,
     tcp_sockets: HashMap<Handle, TcpStream>,
 }
 
-enum IoStream<'a> {
+enum SysStream<'a> {
     File(&'a mut File),
     TcpListener(&'a mut TcpListener),
     TcpSocket(&'a mut TcpStream),
 }
 
-impl Default for GlobalStdIo {
+impl Default for GlobalNativeSys {
     fn default() -> Self {
         Self {
             next_handle: Handle::FIRST_UNRESERVED,
@@ -304,7 +304,7 @@ impl Default for GlobalStdIo {
     }
 }
 
-impl GlobalStdIo {
+impl GlobalNativeSys {
     fn new_handle(&mut self) -> Handle {
         for _ in 0..u64::MAX {
             let handle = self.next_handle;
@@ -318,22 +318,22 @@ impl GlobalStdIo {
         }
         panic!("Ran out of file handles");
     }
-    fn get_stream(&mut self, handle: Handle) -> Result<IoStream, String> {
+    fn get_stream(&mut self, handle: Handle) -> Result<SysStream, String> {
         Ok(if let Some(file) = self.files.get_mut(&handle) {
-            IoStream::File(file)
+            SysStream::File(file)
         } else if let Some(listener) = self.tcp_listeners.get_mut(&handle) {
-            IoStream::TcpListener(listener)
+            SysStream::TcpListener(listener)
         } else if let Some(socket) = self.tcp_sockets.get_mut(&handle) {
-            IoStream::TcpSocket(socket)
+            SysStream::TcpSocket(socket)
         } else {
             return Err("Invalid file handle".to_string());
         })
     }
 }
 
-static STDIO: OnceLock<Mutex<GlobalStdIo>> = OnceLock::new();
+static STDIO: OnceLock<Mutex<GlobalNativeSys>> = OnceLock::new();
 
-fn stdio<T>(mut f: impl FnMut(&mut GlobalStdIo) -> T) -> T {
+fn stdio<T>(mut f: impl FnMut(&mut GlobalNativeSys) -> T) -> T {
     f(&mut STDIO.get_or_init(Default::default).lock().unwrap())
 }
 
@@ -342,7 +342,7 @@ thread_local! {
     static AUDIO_STREAM: std::cell::RefCell<Option<rodio::OutputStream>> = None.into();
 }
 
-impl IoBackend for StdIo {
+impl SysBackend for NativeSys {
     fn var(&self, name: &str) -> Option<String> {
         env::var(name).ok()
     }
@@ -396,17 +396,17 @@ impl IoBackend for StdIo {
             Handle::STDERR => Err("Cannot read from stderr".into()),
             _ => stdio(|io| {
                 Ok(match io.get_stream(handle)? {
-                    IoStream::File(file) => {
+                    SysStream::File(file) => {
                         let mut buf = Vec::new();
                         file.take(len as u64)
                             .read_to_end(&mut buf)
                             .map_err(|e| e.to_string())?;
                         buf
                     }
-                    IoStream::TcpListener(_) => {
+                    SysStream::TcpListener(_) => {
                         return Err("Cannot read from a tcp listener".to_string())
                     }
-                    IoStream::TcpSocket(socket) => {
+                    SysStream::TcpSocket(socket) => {
                         let mut buf = Vec::new();
                         socket
                             .take(len as u64)
@@ -424,9 +424,9 @@ impl IoBackend for StdIo {
             Handle::STDOUT => stdout().lock().write_all(conts).map_err(|e| e.to_string()),
             Handle::STDERR => stderr().lock().write_all(conts).map_err(|e| e.to_string()),
             _ => stdio(|io| match io.get_stream(handle)? {
-                IoStream::File(file) => file.write_all(conts).map_err(|e| e.to_string()),
-                IoStream::TcpListener(_) => Err("Cannot write to a tcp listener".to_string()),
-                IoStream::TcpSocket(socket) => socket.write_all(conts).map_err(|e| e.to_string()),
+                SysStream::File(file) => file.write_all(conts).map_err(|e| e.to_string()),
+                SysStream::TcpListener(_) => Err("Cannot write to a tcp listener".to_string()),
+                SysStream::TcpSocket(socket) => socket.write_all(conts).map_err(|e| e.to_string()),
             }),
         }
     }
@@ -515,67 +515,67 @@ impl IoBackend for StdIo {
     }
 }
 
-impl IoOp {
+impl SysOp {
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
-            IoOp::Show => {
+            SysOp::Show => {
                 let s = env.pop(1)?.grid_string();
                 env.io.print_str(&s).map_err(|e| env.error(e))?;
                 env.io.print_str("\n").map_err(|e| env.error(e))?;
             }
-            IoOp::Prin => {
+            SysOp::Prin => {
                 let val = env.pop(1)?;
                 env.io
                     .print_str(&val.to_string())
                     .map_err(|e| env.error(e))?;
             }
-            IoOp::Print => {
+            SysOp::Print => {
                 let val = env.pop(1)?;
                 env.io
                     .print_str(&val.to_string())
                     .map_err(|e| env.error(e))?;
                 env.io.print_str("\n").map_err(|e| env.error(e))?;
             }
-            IoOp::ScanLine => {
+            SysOp::ScanLine => {
                 let line = env.io.scan_line();
                 env.push(line);
             }
-            IoOp::Args => {
+            SysOp::Args => {
                 let args = env.io.args();
                 env.push(Array::<char>::from_iter(args));
             }
-            IoOp::Var => {
+            SysOp::Var => {
                 let key = env
                     .pop(1)?
                     .as_string(env, "Augument to var must be a string")?;
                 let var = env.io.var(&key).unwrap_or_default();
                 env.push(var);
             }
-            IoOp::FOpen => {
+            SysOp::FOpen => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let handle = env.io.open_file(&path).map_err(|e| env.error(e))?;
                 env.push(handle);
             }
-            IoOp::FCreate => {
+            SysOp::FCreate => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let handle = env.io.create_file(&path).map_err(|e| env.error(e))?;
                 env.push(handle.0 as f64);
             }
-            IoOp::ReadStr => {
+            SysOp::ReadStr => {
                 let count = env.pop(1)?.as_nat(env, "Count must be an integer")?;
                 let handle = env.pop(2)?.as_nat(env, "Handle must be an integer")?.into();
                 let bytes = env.io.read(handle, count).map_err(|e| env.error(e))?;
                 let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
                 env.push(s);
             }
-            IoOp::ReadBytes => {
+            SysOp::ReadBytes => {
                 let count = env.pop(1)?.as_nat(env, "Count must be an integer")?;
                 let handle = env.pop(2)?.as_nat(env, "Handle must be an integer")?.into();
                 let bytes = env.io.read(handle, count).map_err(|e| env.error(e))?;
                 let bytes = bytes.into_iter().map(Into::into);
                 env.push(Array::<Byte>::from_iter(bytes));
             }
-            IoOp::Write => {
+            SysOp::Write => {
                 let data = env.pop(1)?;
                 let handle = env.pop(2)?.as_nat(env, "Handle must be an integer")?.into();
                 let bytes: Vec<u8> = match data {
@@ -586,19 +586,19 @@ impl IoOp {
                 };
                 env.io.write(handle, &bytes).map_err(|e| env.error(e))?;
             }
-            IoOp::FReadAllStr => {
+            SysOp::FReadAllStr => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let bytes = env.io.file_read_all(&path).map_err(|e| env.error(e))?;
                 let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
                 env.push(s);
             }
-            IoOp::FReadAllBytes => {
+            SysOp::FReadAllBytes => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let bytes = env.io.file_read_all(&path).map_err(|e| env.error(e))?;
                 let bytes = bytes.into_iter().map(Into::into);
                 env.push(Array::<Byte>::from_iter(bytes));
             }
-            IoOp::FWriteAll => {
+            SysOp::FWriteAll => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let data = env.pop(2)?;
                 let bytes: Vec<u8> = match data {
@@ -611,30 +611,30 @@ impl IoOp {
                     .file_write_all(&path, &bytes)
                     .map_err(|e| env.error(e))?;
             }
-            IoOp::FExists => {
+            SysOp::FExists => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let exists = env.io.file_exists(&path);
                 env.push(exists);
             }
-            IoOp::FListDir => {
+            SysOp::FListDir => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let paths = env.io.list_dir(&path).map_err(|e| env.error(e))?;
                 env.push(Array::<char>::from_iter(paths));
             }
-            IoOp::FIsFile => {
+            SysOp::FIsFile => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let is_file = env.io.is_file(&path).map_err(|e| env.error(e))?;
                 env.push(is_file);
             }
-            IoOp::Import => {
+            SysOp::Import => {
                 let path = env.pop(1)?.as_string(env, "Import path must be a string")?;
                 let input =
                     String::from_utf8(env.io.file_read_all(&path).map_err(|e| env.error(e))?)
                         .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
                 env.import(&input, path.as_ref())?;
             }
-            IoOp::Now => env.push(instant::now()),
-            IoOp::ImRead => {
+            SysOp::Now => env.push(instant::now()),
+            SysOp::ImRead => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let bytes = env.io.file_read_all(&path).map_err(|e| env.error(e))?;
                 let image = image::load_from_memory(&bytes)
@@ -645,7 +645,7 @@ impl IoOp {
                 let array = Array::<Byte>::from((shape, bytes));
                 env.push(array);
             }
-            IoOp::ImWrite => {
+            SysOp::ImWrite => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let value = env.pop(2)?;
                 let ext = path.split('.').last().unwrap_or("");
@@ -663,39 +663,39 @@ impl IoOp {
                     .file_write_all(&path, &bytes)
                     .map_err(|e| env.error(e))?;
             }
-            IoOp::ImShow => {
+            SysOp::ImShow => {
                 let value = env.pop(1)?;
                 let image = value_to_image(&value).map_err(|e| env.error(e))?;
                 env.io.show_image(image).map_err(|e| env.error(e))?;
             }
-            IoOp::AudioPlay => {
+            SysOp::AudioPlay => {
                 let value = env.pop(1)?;
                 let bytes = value_to_wav_bytes(&value).map_err(|e| env.error(e))?;
                 env.io.play_audio(bytes).map_err(|e| env.error(e))?;
             }
-            IoOp::Sleep => {
+            SysOp::Sleep => {
                 let ms = env
                     .pop(1)?
                     .as_num(env, "Sleep time must be a number")?
                     .max(0.0);
                 env.io.sleep(ms).map_err(|e| env.error(e))?;
             }
-            IoOp::TcpListen => {
+            SysOp::TcpListen => {
                 let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
                 let handle = env.io.tcp_listen(&addr).map_err(|e| env.error(e))?;
                 env.push(handle);
             }
-            IoOp::TcpAccept => {
+            SysOp::TcpAccept => {
                 let handle = env.pop(1)?.as_nat(env, "Handle must be an integer")?.into();
                 let new_handle = env.io.tcp_accept(handle).map_err(|e| env.error(e))?;
                 env.push(new_handle);
             }
-            IoOp::TcpConnect => {
+            SysOp::TcpConnect => {
                 let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
                 let handle = env.io.tcp_connect(&addr).map_err(|e| env.error(e))?;
                 env.push(handle);
             }
-            IoOp::Close => {
+            SysOp::Close => {
                 let handle = env.pop(1)?.as_nat(env, "Handle must be an integer")?.into();
                 env.io.close(handle).map_err(|e| env.error(e))?;
             }

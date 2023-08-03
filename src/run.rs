@@ -13,7 +13,7 @@ use crate::{
     parse::parse,
     primitive::Primitive,
     value::Value,
-    Ident, IoBackend, IoOp, StdIo, TraceFrame, UiuaError, UiuaResult,
+    Ident, NativeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
 };
 
 /// The Uiua runtime
@@ -33,7 +33,7 @@ pub struct Uiua<'io> {
     // IO
     current_imports: HashSet<PathBuf>,
     imports: HashMap<PathBuf, Vec<Value>>,
-    pub(crate) io: &'io dyn IoBackend,
+    pub(crate) io: &'io dyn SysBackend,
 }
 
 #[derive(Default, Clone)]
@@ -62,7 +62,7 @@ struct DfnFrame {
 
 impl<'io> Default for Uiua<'io> {
     fn default() -> Self {
-        Self::with_stdio()
+        Self::with_native_sys()
     }
 }
 
@@ -81,7 +81,7 @@ pub enum RunMode {
 
 impl<'io> Uiua<'io> {
     /// Create a new Uiua runtime with the standard IO backend
-    pub fn with_stdio() -> Self {
+    pub fn with_native_sys() -> Self {
         Uiua {
             spans: vec![Span::Builtin],
             stack: Vec::new(),
@@ -93,11 +93,11 @@ impl<'io> Uiua<'io> {
             current_imports: HashSet::new(),
             imports: HashMap::new(),
             mode: RunMode::Normal,
-            io: &StdIo,
+            io: &NativeSys,
         }
     }
     /// Create a new Uiua runtime with a custom IO backend
-    pub fn with_backend(io: &'io dyn IoBackend) -> Self {
+    pub fn with_backend(io: &'io dyn SysBackend) -> Self {
         Uiua {
             io,
             ..Default::default()
@@ -205,7 +205,7 @@ impl<'io> Uiua<'io> {
         fn words_have_import(words: &[Sp<Word>]) -> bool {
             words
                 .iter()
-                .any(|w| matches!(w.value, Word::Primitive(Primitive::Io(IoOp::Import))))
+                .any(|w| matches!(w.value, Word::Primitive(Primitive::Sys(SysOp::Import))))
         }
         match item {
             Item::Scoped { items, test } => {

@@ -47,7 +47,7 @@ fn DocsHome(cx: Scope) -> impl IntoView {
                 PrimClass::Control => ("Control", "Control the flow of execution"),
                 PrimClass::Misc => ("Miscellaneous", ""),
                 PrimClass::Constant => ("Constants", "Push a constant value onto the stack"),
-                PrimClass::Io => ("I/O", "Do input and output"),
+                PrimClass::Sys => ("System", "Interact with the system"),
             };
             view! { cx,
                 <td style="vertical-align: top;"><div>

@@ -1,25 +1,24 @@
-- Rename IO to sys
 - IO buffering
   - Read until
-- Editor history
 - Docs
   - Native interpreter and installation
   - Tests
   - Technical details
   - Explain loop directions
-- Rework front page
 - Fill with array
 - More functions
   - Bits
   - Spawn?
   - Parallel?
 - More inverses
+- Editor history
 - Threads
 - Proper 404 page
 - Rework names
 - Logarithms
 - Optimizations
   - Windowed reduce
+- Rework front page
 - Multimedia
   - Sound input
   - Webcam input?

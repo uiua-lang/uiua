@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, io::Cursor};
 
-use uiua::{Handle, IoBackend};
+use uiua::{Handle, SysBackend};
 
 pub struct WebBackend {
     pub stdout: RefCell<String>,
@@ -28,7 +28,7 @@ impl Default for WebBackend {
     }
 }
 
-impl IoBackend for WebBackend {
+impl SysBackend for WebBackend {
     fn write(&self, handle: Handle, contents: &[u8]) -> Result<(), String> {
         match handle {
             Handle::STDOUT => {

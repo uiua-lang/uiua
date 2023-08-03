@@ -13,7 +13,7 @@ use enum_iterator::{all, Sequence};
 use rand::prelude::*;
 
 use crate::{
-    algorithm::loops, function::FunctionId, io::*, lex::Simple, value::*, Uiua, UiuaError,
+    algorithm::loops, function::FunctionId, lex::Simple, sys::*, value::*, Uiua, UiuaError,
     UiuaResult,
 };
 
@@ -29,7 +29,7 @@ macro_rules! primitive {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
         pub enum Primitive {
             $($name,)*
-            Io(IoOp)
+            Sys(SysOp)
         }
 
         impl Primitive {
@@ -40,13 +40,13 @@ macro_rules! primitive {
             pub fn name(&self) -> Option<&'static str > {
                 match self {
                     $(Primitive::$name => { None::<&'static str> $(;Some($ident))? },)*
-                    Primitive::Io(op) => Some(op.name())
+                    Primitive::Sys(op) => Some(op.name())
                 }
             }
             pub fn class(&self) -> PrimClass {
                 match self {
                     $(Primitive::$name => PrimClass::$class,)*
-                    Primitive::Io(_) => PrimClass::Io,
+                    Primitive::Sys(_) => PrimClass::Sys,
                 }
             }
             pub fn ascii(&self) -> Option<Simple> {
@@ -91,14 +91,14 @@ macro_rules! primitive {
             pub fn args(&self) -> Option<u8> {
                 match self {
                     $($($(Primitive::$name => Some($args),)?)?)*
-                    Primitive::Io(op) => Some(op.args()),
+                    Primitive::Sys(op) => Some(op.args()),
                     _ => None
                 }
             }
             pub fn outputs(&self) -> Option<u8> {
                 match self {
                     $($($(Primitive::$name => $outputs.into(),)?)?)*
-                    Primitive::Io(op) => op.outputs(),
+                    Primitive::Sys(op) => op.outputs(),
                     _ => Some(1)
                 }
             }
@@ -124,7 +124,7 @@ macro_rules! primitive {
                         }
                         Some(DOC.get_or_init(|| PrimDoc::from_lines(doc_str)))
                     },)*
-                    Primitive::Io(op) => op.doc(),
+                    Primitive::Sys(op) => op.doc(),
                 }
             }
         }
@@ -144,7 +144,7 @@ pub enum PrimClass {
     OtherModifier,
     Misc,
     Constant,
-    Io,
+    Sys,
 }
 
 impl PrimClass {
@@ -670,7 +670,7 @@ primitive!(
     /// Debug print a value without popping it
     ///
     /// ex: /+ | 1_2_3
-    (1, Debug, Io, "debug" + '|'),
+    (1, Debug, Sys, "debug" + '|'),
     /// Call a function
     ///
     /// ex: :(+) 1 2
@@ -1029,7 +1029,7 @@ impl Primitive {
                 .ok_or_else(|| env.error(format!("No function found for {name:?}")))?;
                 env.push(f);
             }
-            Primitive::Io(io) => io.run(env)?,
+            Primitive::Sys(io) => io.run(env)?,
         }
         Ok(())
     }
@@ -1123,7 +1123,7 @@ pub struct PrimExample {
 impl PrimExample {
     pub fn output(&self) -> &Result<Vec<String>, String> {
         self.output.get_or_init(|| {
-            Uiua::with_backend(&StdIo)
+            Uiua::with_backend(&NativeSys)
                 .load_str(&self.input)
                 .map(|env| env.take_stack().into_iter().map(|val| val.show()).collect())
                 .map_err(|e| {

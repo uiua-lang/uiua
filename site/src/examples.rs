@@ -45,7 +45,7 @@ pub const EXAMPLES: &[&str] = &[
 fn test_examples() {
     use uiua::Uiua;
     for example in EXAMPLES {
-        Uiua::with_stdio()
+        Uiua::with_native_sys()
             .load_str(example)
             .unwrap_or_else(|e| panic!("Example failed:\n{example}\n{e}"));
     }

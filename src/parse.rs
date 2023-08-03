@@ -12,6 +12,7 @@ use crate::{
 pub enum ParseError {
     Lex(LexError),
     Expected(Vec<Expectation>, Option<Box<Sp<Token>>>),
+    InvalidNumber(String),
 }
 
 #[derive(Debug)]
@@ -54,6 +55,7 @@ impl fmt::Display for ParseError {
                 }
                 Ok(())
             }
+            ParseError::InvalidNumber(s) => write!(f, "invalid number `{s}`"),
         }
     }
 }
@@ -296,8 +298,17 @@ impl Parser {
         } else if let Some(ident) = self.try_ident() {
             ident.map(Word::Ident)
         } else if let Some(span) = self.try_exact(Token::Number) {
-            let s = span.as_str().replace(['`', '¯'], "-");
-            span.sp(Word::Number(s))
+            let s = span.as_str().to_string();
+            let parseable = s.replace(['`', '¯'], "-");
+            let n: f64 = match parseable.parse() {
+                Ok(n) => n,
+                Err(_) => {
+                    self.errors
+                        .push(self.last_span().sp(ParseError::InvalidNumber(s.clone())));
+                    0.0
+                }
+            };
+            span.sp(Word::Number(s, n))
         } else if let Some(c) = self.next_token_map(Token::as_char) {
             c.map(Into::into).map(Word::Char)
         } else if let Some(s) = self.next_token_map(Token::as_string) {

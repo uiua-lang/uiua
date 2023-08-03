@@ -312,10 +312,7 @@ impl<'io> Uiua<'io> {
     }
     fn word(&mut self, word: Sp<Word>, call: bool) -> UiuaResult {
         match word.value {
-            Word::Number(n) => {
-                let n: f64 = n
-                    .parse()
-                    .map_err(|e| word.span.sp(format!("invalid number {n:?}: {e}")))?;
+            Word::Number(_, n) => {
                 self.push_instr(Instr::Push(n.into()));
             }
             Word::Char(c) => self.push_instr(Instr::Push(c.into())),

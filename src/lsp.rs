@@ -39,7 +39,7 @@ fn words_spans(words: Vec<Sp<Word>>) -> Vec<Sp<SpanKind>> {
     let mut spans = Vec::new();
     for word in words {
         match word.value {
-            Word::Number(_) => spans.push(word.span.sp(SpanKind::Number)),
+            Word::Number(..) => spans.push(word.span.sp(SpanKind::Number)),
             Word::Char(_) => spans.push(word.span.sp(SpanKind::String)),
             Word::String(_) => spans.push(word.span.sp(SpanKind::String)),
             Word::Ident(ident) => {

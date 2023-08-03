@@ -190,10 +190,10 @@ primitive!(
     (1, Not, MonadicPervasive, "not" + '¬'),
     /// Numerical sign (1, ¯1, or 0)
     ///
-    /// ex: $ 1
-    /// ex: $ ¯5
-    /// ex: $ [¯2 ¯1 0 1 2]
-    (1, Sign, MonadicPervasive, "sign" + '$'),
+    /// ex: ± 1
+    /// ex: ± ¯5
+    /// ex: ± [¯2 ¯1 0 1 2]
+    (1, Sign, MonadicPervasive, "sign" + '±'),
     /// Negate a number
     ///
     /// ex: ¯ 1

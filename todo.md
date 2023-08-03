@@ -1,4 +1,3 @@
-- Fix under inverse transpose
 - Docs
   - Design
     - Identifiers and Formatting

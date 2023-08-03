@@ -129,6 +129,9 @@ fn invert_instr_fragment(instrs: &[Instr]) -> Option<Vec<Instr>> {
     use Primitive::*;
     Some(match instrs {
         [Prim(prim, span)] => invert_primitive(*prim, *span)?,
+        [Push(val), Prim(Invert, span)] => {
+            vec![Prim(val.as_primitive()?, *span)]
+        }
         [Push(val), Prim(Rotate, span)] => {
             vec![Push(val.clone()), Prim(Neg, *span), Prim(Rotate, *span)]
         }
@@ -172,6 +175,9 @@ fn invert_instrs(instrs: &[Instr]) -> Option<Vec<Instr>> {
         } else {
             len += 1;
         }
+    }
+    if len > 1 {
+        return None;
     }
     Some(inverted)
 }

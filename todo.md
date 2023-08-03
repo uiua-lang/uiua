@@ -1,4 +1,3 @@
-- Style editor cursor
 - Add a non-random subtitle
 - Format strings
 - Fix take

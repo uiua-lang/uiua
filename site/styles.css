@@ -112,6 +112,10 @@ li {
     .glyph-button:hover {
         background-color: #0003;
     }
+
+    .code-entry {
+        caret-color: white;
+    }
 }
 
 @media (prefers-color-scheme: light) {
@@ -169,6 +173,10 @@ li {
 
     .glyph-button:hover {
         background-color: #fffa;
+    }
+
+    .code-entry {
+        caret-color: black;
     }
 }
 

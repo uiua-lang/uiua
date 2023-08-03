@@ -210,14 +210,12 @@ primitive!(
     (1, Sqrt, MonadicPervasive, "sqrt" + '√'),
     /// The sine of a number
     ///
+    /// You can get a cosine function with [sine][add][eta].
     /// You can get an arcsine function with [invert].
-    (1, Sin, MonadicPervasive, "sine"),
-    /// The cosine of a number
-    ///
-    /// You can get an arccosine function with [invert].
-    (1, Cos, MonadicPervasive, "cosine"),
-    /// The tangent of a number
-    (1, Tan, MonadicPervasive, "tangent"),
+    /// You can get an arccosine function with [invert]`(`[sine][add][eta]`)`.
+    /// You can get a tangent function with [divide][sine][add][eta][sin][flip]
+    (1, Sin, MonadicPervasive, "sine" + '○'),
+    (1, Cos, MonadicPervasive),
     (1, Asin, MonadicPervasive),
     (1, Acos, MonadicPervasive),
     /// Round to the nearest integer towards `¯∞`
@@ -725,9 +723,11 @@ primitive!(
     ///   : square increment 5
     (2, Use, Misc, "use"),
     // Constants
+    /// The number of radians in a quarter circle, or π/2
+    (0(1), Eta, Constant, "eta" + 'η'),
     /// The ratio of a circle's circumference to its diameter
     (0(1), Pi, Constant, "pi" + 'π'),
-    /// The ratio of a circle's circumference to its radius
+    /// The ratio of a circle's circumference to its radius, or 2π
     (0(1), Tau, Constant, "tau" + 'τ'),
     /// The biggest number
     (0(1), Infinity, Constant, "infinity" + '∞')
@@ -784,6 +784,9 @@ impl Primitive {
         if name == "tau" || name == "τ" {
             return Some(Primitive::Tau);
         }
+        if name == "eta" || name == "η" {
+            return Some(Primitive::Tau);
+        }
         if name.len() < 3 {
             return None;
         }
@@ -800,6 +803,9 @@ impl Primitive {
         }
         if name == "tau" || name == "τ" {
             return Some(vec![(Primitive::Tau, name)]);
+        }
+        if name == "eta" || name == "η" {
+            return Some(vec![(Primitive::Eta, name)]);
         }
         let mut start = 0;
         let indices: Vec<usize> = name.char_indices().map(|(i, _)| i).collect();
@@ -825,16 +831,6 @@ impl Primitive {
     }
     /// The longest name of the primitive that the formatter will replace
     pub fn format_name(&self) -> Option<&'static str> {
-        if [
-            Primitive::Sin,
-            Primitive::Cos,
-            Primitive::Tan,
-            Primitive::Atan,
-        ]
-        .contains(self)
-        {
-            return self.name();
-        }
         if self.ascii().is_some() || self.unicode().is_none() {
             return None;
         }
@@ -842,6 +838,7 @@ impl Primitive {
     }
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
+            Primitive::Eta => env.push(PI / 2.0),
             Primitive::Pi => env.push(PI),
             Primitive::Tau => env.push(TAU),
             Primitive::Infinity => env.push(INFINITY),
@@ -853,7 +850,6 @@ impl Primitive {
             Primitive::Sqrt => env.monadic_env(Value::sqrt)?,
             Primitive::Sin => env.monadic_env(Value::sin)?,
             Primitive::Cos => env.monadic_env(Value::cos)?,
-            Primitive::Tan => env.monadic_env(Value::tan)?,
             Primitive::Asin => env.monadic_env(Value::asin)?,
             Primitive::Acos => env.monadic_env(Value::acos)?,
             Primitive::Floor => env.monadic_env(Value::floor)?,

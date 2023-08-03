@@ -274,13 +274,14 @@ impl<'io> Uiua<'io> {
         Ok(())
     }
     fn push_instr(&mut self, instr: Instr) {
+        use Primitive::*;
         let instrs = self.new_functions.last_mut().unwrap();
         // Optimizations
         match (instrs.as_mut_slice(), instr) {
             // Call pick = if
             (
-                [.., Instr::BeginArray, Instr::Push(if_true), Instr::Push(if_false), Instr::EndArray(_), Instr::Prim(Primitive::Flip, _), Instr::Prim(Primitive::Pick, _)],
-                Instr::Prim(Primitive::Call, span),
+                [.., Instr::BeginArray, Instr::Push(if_true), Instr::Push(if_false), Instr::EndArray(_), Instr::Prim(Flip, _), Instr::Prim(Pick, _)],
+                Instr::Prim(Call, span),
             ) => {
                 if let (Value::Func(if_true), Value::Func(if_false)) = (&*if_true, &*if_false) {
                     if if_true.shape.is_empty() && if_false.shape.is_empty() {
@@ -293,12 +294,18 @@ impl<'io> Uiua<'io> {
                         return;
                     }
                 }
-                instrs.push(Instr::Prim(Primitive::Call, span))
+                instrs.push(Instr::Prim(Call, span))
+            }
+            // Cosine
+            ([.., Instr::Prim(Eta, _), Instr::Prim(Add, _)], Instr::Prim(Sin, span)) => {
+                instrs.pop();
+                instrs.pop();
+                instrs.push(Instr::Prim(Cos, span));
             }
             // First reverse = last
             ([.., Instr::Prim(top, _)], Instr::Prim(new, new_span)) => match (&top, new) {
-                (Primitive::Reverse, Primitive::First) => *top = Primitive::Last,
-                (Primitive::Reverse, Primitive::Last) => *top = Primitive::First,
+                (Reverse, First) => *top = Last,
+                (Reverse, Last) => *top = First,
                 (a, b)
                     if a.args() == a.outputs()
                         && b.args() == b.outputs()
@@ -309,7 +316,7 @@ impl<'io> Uiua<'io> {
                 _ => instrs.push(Instr::Prim(new, new_span)),
             },
             // Ignore noops
-            (_, Instr::Prim(Primitive::Noop, _)) => {}
+            (_, Instr::Prim(Noop, _)) => {}
             (_, instr) => instrs.push(instr),
         }
     }

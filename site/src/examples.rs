@@ -11,7 +11,7 @@ const AVG: &str = "Avg ← ÷≢~/+.\nAvg 0_2_1_5";
 const CHORD: &str = "\
 H ← ⁿ~2÷12
 [×H10.~ ×H7.~ ×H4. 220]
-÷≢~ ≡/+ sine ×2×π ⊞× ÷~ ⇡.44100.";
+÷≢~ ≡/+ ○×τ ⊞× ÷~ ⇡.44100.";
 const QUADRATIC: &str = "\
 Quadratic ← {÷ ×2a -b ⊟¯. √- ××4a c ⁿ2 b}
 Quadratic 1 2 0";
@@ -19,7 +19,7 @@ const STRIPES: &str = "\
 r ← ⊞+.⇡300
 g ← ⊞↥.⇡300
 b ← ⊞-.⇡300
-⍉ ÷2 +1.2 sin ÷10[r g b]";
+⍉ ÷2 +1.2 ○ ÷10[r g b]";
 const PALINDROME: &str = r#"words ← "uiua racecar wow cool!"
 ≑⊂~ ⊏~[" ❌" " ✅"] ≡(≅⇌.). ⊘≠' '. words"#;
 const RULE_30: &str = "\

@@ -16,7 +16,7 @@
 - More inverses
 - Threads
 - Proper 404 page
-- Trig Rework
+- Rework names
 - Logarithms
 - Optimizations
   - Windowed reduce

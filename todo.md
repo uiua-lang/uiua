@@ -1,4 +1,3 @@
-- Fix scopes' access to previous bindings (but not files)
 - Style editor cursor
 - Add a non-random subtitle
 - Format strings

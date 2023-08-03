@@ -42,6 +42,7 @@ pub struct Scope {
     dfn: Vec<DfnFrame>,
     call: Vec<StackFrame>,
     names: HashMap<Ident, usize>,
+    local: bool,
 }
 
 #[derive(Clone)]
@@ -131,9 +132,11 @@ impl<'io> Uiua<'io> {
     /// All other runtime state other than the stack, will also be restored.
     pub fn in_scope<T>(
         &mut self,
+        local: bool,
         f: impl FnOnce(&mut Self) -> UiuaResult<T>,
     ) -> UiuaResult<Vec<Value>> {
         self.lower_scopes.push(take(&mut self.scope));
+        self.scope.local = local;
         let start_height = self.stack.len();
         f(self)?;
         let end_height = self.stack.len();
@@ -186,7 +189,7 @@ impl<'io> Uiua<'io> {
             )));
         }
         if !self.imports.contains_key(path) {
-            let import = self.in_scope(|env| env.load_str_path(input, path).map(drop))?;
+            let import = self.in_scope(false, |env| env.load_str_path(input, path).map(drop))?;
             self.imports.insert(path.into(), import);
         }
         self.stack.extend(self.imports[path].iter().cloned());
@@ -206,7 +209,7 @@ impl<'io> Uiua<'io> {
         }
         match item {
             Item::Scoped { items, test } => {
-                let scope_stack = self.in_scope(|env| env.items(items, test))?;
+                let scope_stack = self.in_scope(true, |env| env.items(items, test))?;
                 self.stack.extend(scope_stack);
             }
             Item::Words(words, _) => {
@@ -339,7 +342,13 @@ impl<'io> Uiua<'io> {
         Ok(())
     }
     fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool) -> UiuaResult {
-        if let Some(idx) = self.scope.names.get(&ident) {
+        if let Some(idx) = self.scope.names.get(&ident).or_else(|| {
+            self.lower_scopes
+                .last()
+                .filter(|_| self.scope.local)?
+                .names
+                .get(&ident)
+        }) {
             // Name exists in scope
             let value = self.globals[*idx].clone();
             let is_function = matches!(value, Value::Func(_));

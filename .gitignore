@@ -1,5 +1,6 @@
 /target
 /Cargo.lock
+/docs
 *.uiua
 *.ua
 site/dist
@@ -8,5 +9,4 @@ glyph_test.txt
 !*/uiua-logo.png
 uiua-temp
 *.wav
-/docs
 profile.yaml

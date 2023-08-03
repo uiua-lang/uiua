@@ -320,7 +320,6 @@ li {
     position: absolute;
     top: 0.1em;
     right: 0.2em;
-    opacity: 0.5;
     font-size: 1em;
     align-items: center;
 }
@@ -337,6 +336,11 @@ li {
 
 .editor-right-button {
     font-weight: bolder;
+    opacity: 0.5;
+}
+
+.editor-right-button:hover {
+    opacity: 1;
 }
 
 .editor-right-button[title]:hover::after {
@@ -347,7 +351,7 @@ li {
     left: calc(-8em - 50%);
     top: calc(50% - 0.6em);
     color: #eee;
-    background-color: #000d;
+    background-color: #000b;
     padding: 0.2em;
     border-radius: 0.2em;
     width: 8em;

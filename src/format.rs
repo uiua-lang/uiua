@@ -84,7 +84,7 @@ fn format_words(output: &mut String, words: &[Sp<Word>]) {
 
 fn format_word(output: &mut String, word: &Word) {
     match word {
-        Word::Number(s, _) => output.push_str(&s.replace('-', "¯")),
+        Word::Number(s, _) => output.push_str(&s.replace(['-', '`'], "¯")),
         Word::Char(c) => output.push_str(&format!("{:?}", c)),
         Word::String(s) => output.push_str(&format!("{:?}", s)),
         Word::Ident(ident) => output.push_str(&ident.0),

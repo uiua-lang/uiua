@@ -1,4 +1,3 @@
-- Ctrl/Shift/Alt modifiers in editor
 - Fix under inverse transpose
 - Docs
   - Design

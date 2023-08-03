@@ -221,11 +221,14 @@ pub fn Editor<'a>(
 
     // Handle key events
     window_event_listener(keydown, move |event| {
+        let Some(code_id) = code_id.try_get() else {
+            return;
+        };
         let event = event.dyn_ref::<web_sys::KeyboardEvent>().unwrap();
         let focused = event
             .target()
             .and_then(|t| t.dyn_into::<HtmlDivElement>().ok())
-            .is_some_and(|t| t.id() == code_id.get());
+            .is_some_and(|t| t.id() == code_id);
         if !focused {
             return;
         }
@@ -281,6 +284,35 @@ pub fn Editor<'a>(
                 _ = window().navigator().clipboard().unwrap().write_text(&text);
                 remove_code(start, end);
             }
+            key @ ("ArrowUp" | "ArrowDown") if event.alt_key() => {
+                let (_, end) = get_code_cursor().unwrap();
+                let (line, col) = line_col(&code_text(), end as usize);
+                let line_index = line - 1;
+                let up = key == "ArrowUp";
+                let mut lines: Vec<String> = code_text().lines().map(Into::into).collect();
+                if up && line_index > 0 || !up && line_index < lines.len() - 1 {
+                    let swap_index = if up { line_index - 1 } else { line_index + 1 };
+                    lines.swap(line_index, swap_index);
+                    let swapped: String = lines.join("\n");
+                    set_code_html(&swapped);
+                    let mut new_end = 0;
+                    for (i, line) in lines.iter().enumerate() {
+                        if i == swap_index {
+                            let line_len = line.chars().count();
+                            if col < line_len {
+                                new_end += col as u32;
+                                new_end -= 1;
+                            } else {
+                                new_end += line_len as u32;
+                            }
+                            break;
+                        }
+                        new_end += line.chars().count() as u32 + 1;
+                    }
+                    set_code_cursor(new_end, new_end);
+                }
+            }
+            "ArrowLeft" | "ArrowRight" if event.alt_key() => {}
             key => {
                 log!("key: {:?}", key);
                 handled = false;
@@ -571,6 +603,23 @@ pub fn Editor<'a>(
     }
 }
 
+fn line_col(s: &str, pos: usize) -> (usize, usize) {
+    let mut line = 1;
+    let mut col = 1;
+    for (i, c) in s.chars().enumerate() {
+        if i == pos {
+            break;
+        }
+        if c == '\n' {
+            line += 1;
+            col = 1;
+        } else {
+            col += 1;
+        }
+    }
+    (line, col)
+}
+
 fn children_of(node: &Node) -> impl Iterator<Item = Node> {
     let mut curr = node.first_child();
     iter::from_fn(move || {
@@ -606,8 +655,8 @@ fn get_code_cursor(id: &str) -> Option<(u32, u32)> {
     if !parent.contains(Some(&anchor_node)) || !parent.contains(Some(&focus_node)) {
         return None;
     }
-    let mut start = anchor_offset.min(focus_offset);
-    let mut end = anchor_offset.max(focus_offset);
+    let mut start = anchor_offset;
+    let mut end = focus_offset;
     let mut curr = 0;
     for (i, div_node) in children_of(&parent).enumerate() {
         if i > 0 {

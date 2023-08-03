@@ -101,6 +101,8 @@ sys_op! {
     (2, ReadStr, "ReadStr"),
     /// Read at most n bytes from a stream
     (2, ReadBytes, "ReadBytes"),
+    /// Read from a stream until a delimiter is reached
+    (2, ReadUntil, "ReadUntil"),
     /// Write an array to a stream
     (2, Write, "Write"),
     /// Run the code from a file in a scope
@@ -238,6 +240,20 @@ pub trait SysBackend {
     }
     fn read(&self, handle: Handle, count: usize) -> Result<Vec<u8>, String> {
         Err("This IO operation is not supported in this environment".into())
+    }
+    fn read_until(&self, handle: Handle, delim: &[u8]) -> Result<Vec<u8>, String> {
+        let mut buffer = Vec::new();
+        loop {
+            let bytes = self.read(handle, 1)?;
+            if bytes.is_empty() {
+                break;
+            }
+            buffer.extend_from_slice(&bytes);
+            if buffer.ends_with(delim) {
+                break;
+            }
+        }
+        Ok(buffer)
     }
     fn write(&self, handle: Handle, contents: &[u8]) -> Result<(), String> {
         Err("This IO operation is not supported in this environment".into())
@@ -577,6 +593,43 @@ impl SysOp {
                 let bytes = env.io.read(handle, count).map_err(|e| env.error(e))?;
                 let bytes = bytes.into_iter().map(Into::into);
                 env.push(Array::<Byte>::from_iter(bytes));
+            }
+            SysOp::ReadUntil => {
+                let delim = env.pop(1)?;
+                let handle = env.pop(2)?.as_nat(env, "Handle must be an integer")?.into();
+                if delim.rank() > 1 {
+                    return Err(env.error("Delimiter must be a rank 0 or 1 string or byte array"));
+                }
+                match delim {
+                    Value::Num(arr) => {
+                        let delim: Vec<u8> = arr.data.iter().map(|&x| x as u8).collect();
+                        let bytes = env
+                            .io
+                            .read_until(handle, &delim)
+                            .map_err(|e| env.error(e))?;
+                        let bytes: Vec<Byte> = bytes.into_iter().map(Byte::from).collect();
+                        env.push(bytes);
+                    }
+                    Value::Byte(arr) => {
+                        let delim: Vec<u8> = arr.data.iter().filter_map(|x| x.value()).collect();
+                        let bytes = env
+                            .io
+                            .read_until(handle, &delim)
+                            .map_err(|e| env.error(e))?;
+                        let bytes: Vec<Byte> = bytes.into_iter().map(Byte::from).collect();
+                        env.push(bytes);
+                    }
+                    Value::Char(arr) => {
+                        let delim: Vec<u8> = arr.data.iter().collect::<String>().into();
+                        let bytes = env
+                            .io
+                            .read_until(handle, &delim)
+                            .map_err(|e| env.error(e))?;
+                        let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
+                        env.push(s);
+                    }
+                    _ => return Err(env.error("Delimiter must be a string or byte array")),
+                }
             }
             SysOp::Write => {
                 let data = env.pop(1)?;

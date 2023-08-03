@@ -32,12 +32,14 @@ pub fn Design(cx: Scope) -> impl IntoView {
             </ul>
         </p>
         <p>"I think this clarity makes writing long tacit expression much more workable."</p>
+
         <h2>"The Flat Array Model"</h2>
         <p>"Veterans of existing array languages may view Uiua's flat array model as a step backwards."</p>
         <p>"All modern array languages allow both heterogenous arrays and nested arrays. Uiua, however, requires that all elements of an array be of the same type, and it forbids the nesting of arrays."</p>
         <p>"Uiua forgoes these features for the sake of simplicity, both in the implementation of the interpreter and in the language itself. It is easier to reason about both the semantics and performance of code when arrays are flat and homogenous."</p>
         <p>"Uiua allows something resembling nested arrays with its fill elements. I find that filled arrays are sufficient for most applications where I would want nested arrays."</p>
         <p>"Array homogeneity it less limiting in Uiua than other array languages because while types cannot be mixed in an array, they "<em>"can"</em>" be mixed on the stack. Arrays which are associated but which have different types can be passed around together relatively easily."</p>
+
         <h2>"The Glyphs"</h2>
         <p>"Most of Uiua's glyphs were chosen for one of a few reasons:"</p>
         <ul>
@@ -47,6 +49,7 @@ pub fn Design(cx: Scope) -> impl IntoView {
             <li>"It kind of reminds me of what it does. Some of my favorites are "<PrimCode prim=Table/>", "<PrimCode prim=Reshape/>", "<PrimCode prim=Rotate/>", "<PrimCode prim=Deshape/>", "<PrimCode prim=Find/>", and "<PrimCode prim=Recur/>"."</li>
             <li>"Its function is kind of abstract, but there are other related functions, so they all use related glyphs. For example, "<PrimCode prim=Fold/>" in relation to "<PrimCode prim=Reduce/>", and also all the indexing/finding/grouping functions like"<PrimCode prim=Indices/>", "<PrimCode prim=Classify/>", "<PrimCode prim=Group/>", etc."</li>
         </ul>
+
         <h2>"No Local Variables"</h2>
         <p>"While Uiua does technically have local variables in the form of dfn arguments, they are very limited in that they can only be used in the dfn body and can only be single-letter names."</p>
         <p>"Forbidding general local variables has a few benefits:"</p>
@@ -55,5 +58,19 @@ pub fn Design(cx: Scope) -> impl IntoView {
             <li>"It forces you to write beautiful tacit code, which I would argue Uiua enables better than almost any other programming language."</li>
             <li>"It frees you from the burden of naming things."</li>
         </ul>
+
+        <h2>"Identifiers and Formatting"</h2>
+        <p>"I made the decision to have a formatter that turns names into Unicode glyphs about as soon as I started using Unicode glyphs. I did not want to require special editor support like APL and BQN do."</p>
+        <p>"The advantage of a file-watching formatter is that the only feature your editor needs is the ability to automatically reload files if they change on disk. You don't need special keybinds or plugins or anything."</p>
+        <p>"The other nice thing about a formatter is that it makes it easier to get started with the language. You do not have to memorize a bunch of keyboard shortcuts to type the glyphs. You just need to learn their names."</p>
+
+        <h2>"Inspiration"</h2>
+        <h3>"BQN"</h3>
+        <p>"The main language that inspired Uiua is "<a href="https://mlochbaum.github.io/bqncrate/">BQN</a>". While I had heard about APL before, BQN was my first real exposure to the power of the array paradigm. I think the language is an astounding feat of engineering. Marshall is both a genius and a great comminicator."</p>
+        <p>"However, as you can read above, a lot of Uiua's design descisions are responses to things I "<em>"didn't"</em>" like about BQN. There were a bunch of little pain-point that I though I could improve on."</p>
+        <br/>
+        <h3>"The Array Cast"</h3>
+        <p>"During the period of Uiua's development, I spent a lot of time listening to "<a href="https://arraycast.com/">"The Array Cast"</a>", a podcast about array languages. The conversations about the design and implementation of APL, J, K, Q, and BQN are both inpirational and informative. The guys have such a depth and breadth of knowledge on the topic. I really recommend giving it a listen."</p>
+        <p>"Thanks to "<a href = "https://github.com/codereport">"Con"</a><a href="https://www.youtube.com/@code_report">"or"</a>", Bob, Stephen, Adám, "<a href="https://github.com/mlochbaum">"Marshall"</a>", Richard, and all the guests."</p>
     }
 }

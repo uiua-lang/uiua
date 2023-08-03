@@ -1,8 +1,8 @@
 - Docs
-  - Design
-    - Identifiers and Formatting
-    - Inspiration
+  - Native interpreter and installation
+- Rework front page
 - Threads
+- More inverses
 - Multimedia
   - Sound input
   - Webcam input?

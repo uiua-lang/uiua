@@ -281,7 +281,10 @@ pub fn Editor<'a>(
                 _ = window().navigator().clipboard().unwrap().write_text(&text);
                 remove_code(start, end);
             }
-            _ => handled = false,
+            key => {
+                log!("key: {:?}", key);
+                handled = false;
+            }
         }
         if handled {
             event.prevent_default();
@@ -307,7 +310,6 @@ pub fn Editor<'a>(
         if !parent.contains(Some(&child)) {
             return;
         }
-        log!("text before update: {:?}", parent.inner_text());
         if let Some((start, _)) = get_code_cursor() {
             set_code_html(&code_text());
             set_code_cursor(start, start);
@@ -591,7 +593,7 @@ fn code_text(id: &str) -> String {
             text.push_str(&fragment);
         }
     }
-    log!("code text: {:?}", text);
+    // log!("code text: {:?}", text);
 
     text
 }
@@ -623,19 +625,18 @@ fn get_code_cursor(id: &str) -> Option<(u32, u32)> {
             curr += len;
         }
     }
-    log!("get_code_cursor -> {:?}, {:?}", start, end);
+    // log!("get_code_cursor -> {:?}, {:?}", start, end);
     Some((start, end))
 }
 
 fn set_code_cursor(id: &str, mut start: u32, mut end: u32) {
     let elem = element::<HtmlDivElement>(id);
-    log!("set_code_cursor({}, {})", start, end);
+    // log!("set_code_cursor({}, {})", start, end);
     let code = code_text(id);
     let max_len = code.chars().count() as u32;
     start = start.min(max_len);
     end = end.min(max_len);
 
-    let mut text_content = String::new();
     let mut text_len = 0;
     let mut last_node = None;
     'divs: for (i, div_node) in children_of(&elem).enumerate() {
@@ -643,37 +644,30 @@ fn set_code_cursor(id: &str, mut start: u32, mut end: u32) {
             if start > 0 {
                 start -= 1;
                 end -= 1;
-                text_content = "\n".into();
                 text_len = 1;
                 last_node = Some(div_node.first_child().unwrap());
-                // log!("newline {} -> {}", start + 1, start);
             } else {
                 break 'divs;
             }
         }
         for span_node in children_of(&div_node) {
             if let Some(node) = span_node.first_child() {
-                text_content = node.text_content().unwrap();
-                text_len = text_content.chars().count() as u32;
+                text_len = node.text_content().unwrap().chars().count() as u32;
                 last_node = Some(node);
             } else {
-                text_content = "\n".into();
                 text_len = 0;
                 last_node = Some(span_node);
             }
-            // log!("text_content: {:?}", text_content);
-            // log!("text_len: {:?}", text_len);
             if start > text_len {
                 start -= text_len;
                 end -= text_len;
-                // log!("{} -> {}", start + text_len, start);
             } else {
                 break 'divs;
             }
         }
     }
     if let Some(text_node) = last_node {
-        log!("ended on: {:?}", text_content);
+        // log!("ended on: {:?}", text_content);
         start = start.min(text_len);
         end = end.min(text_len);
         let range = document().create_range().unwrap();
@@ -690,7 +684,7 @@ fn set_code_cursor(id: &str, mut start: u32, mut end: u32) {
 fn set_code_html(id: &str, code: &str) {
     use uiua::lsp::*;
 
-    log!("code_to_html: {:?}", code);
+    // log!("code_to_html: {:?}", code);
 
     let elem = element::<HtmlDivElement>(id);
     if code.is_empty() {

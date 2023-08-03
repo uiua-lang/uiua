@@ -1,6 +1,12 @@
+- Fix scopes' access to previous bindings (but not files)
+- String formatting
+- IO buffering
+  - Read until
+- Editor history
 - Docs
   - Native interpreter and installation
   - Tests
+- Prevent IO from blocking watch
 - Rework front page
 - Trig glyphs
 - More inverses
@@ -9,7 +15,11 @@
   - Sound input
   - Webcam input?
 - System APIs
-  - Sockets
+  - UDP Sockets
+  - TCP Socket utils
+    - Get address
+    - blocking/nonblocking
+    - timeouts
   - FFI
   - check OS
   - unicode utils

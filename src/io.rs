@@ -3,6 +3,8 @@ use std::{
     env,
     fs::{self, File},
     io::{stderr, stdin, stdout, Cursor, Read, Write},
+    mem::take,
+    net::*,
     sync::{Mutex, OnceLock},
     thread::sleep,
     time::Duration,
@@ -82,8 +84,6 @@ io_op! {
     (1, FOpen, "FOpen"),
     /// Create a file and return a handle to it
     (1, FCreate, "FCreate"),
-    /// Close a file handle
-    (1, FClose, "FClose"),
     /// Check if a file exists at a path
     (1, FExists, "FExists"),
     /// List the contents of a directory
@@ -163,6 +163,13 @@ io_op! {
     /// On the web, this example will hang for 2 seconds.
     /// ex: rand sleep 2000
     (1(0), Sleep, "Sleep"),
+    (1, TcpListen, "TcpListen"),
+    (1, TcpAccept, "TcpAccept"),
+    (1, TcpConnect, "TcpConnect"),
+    /// Close a stream by its handle
+    ///
+    /// This will close files, tcp listeners, and tcp sockets.
+    (1, Close, "Close"),
 }
 
 /// A handle to an IO stream
@@ -240,24 +247,34 @@ pub trait IoBackend {
     fn open_file(&self, path: &str) -> Result<Handle, String> {
         Err("This IO operation is not supported in this environment".into())
     }
-    fn close_file(&self, handle: Handle) -> Result<(), String> {
-        Err("This IO operation is not supported in this environment".into())
-    }
     fn file_read_all(&self, path: &str) -> Result<Vec<u8>, String> {
         let handle = self.open_file(path)?;
         let bytes = self.read(handle, usize::MAX)?;
-        self.close_file(handle)?;
+        self.close(handle)?;
         Ok(bytes)
     }
     fn file_write_all(&self, path: &str, contents: &[u8]) -> Result<(), String> {
         let handle = self.create_file(path)?;
         self.write(handle, contents)?;
-        self.close_file(handle)?;
+        self.close(handle)?;
         Ok(())
     }
     fn sleep(&self, ms: f64) -> Result<(), String> {
         Err("Sleeping is not supported in this environment".into())
     }
+    fn tcp_listen(&self, addr: &str) -> Result<Handle, String> {
+        Err("TCP listeners are not supported in this environment".into())
+    }
+    fn tcp_accept(&self, handle: Handle) -> Result<Handle, String> {
+        Err("TCP listeners are not supported in this environment".into())
+    }
+    fn tcp_connect(&self, addr: &str) -> Result<Handle, String> {
+        Err("TCP sockets are not supported in this environment".into())
+    }
+    fn close(&self, handle: Handle) -> Result<(), String> {
+        Ok(())
+    }
+    fn teardown(&self) {}
 }
 
 #[derive(Default)]
@@ -266,6 +283,14 @@ pub struct StdIo;
 struct GlobalStdIo {
     next_handle: Handle,
     files: HashMap<Handle, File>,
+    tcp_listeners: HashMap<Handle, TcpListener>,
+    tcp_sockets: HashMap<Handle, TcpStream>,
+}
+
+enum IoStream<'a> {
+    File(&'a mut File),
+    TcpListener(&'a mut TcpListener),
+    TcpSocket(&'a mut TcpStream),
 }
 
 impl Default for GlobalStdIo {
@@ -273,7 +298,36 @@ impl Default for GlobalStdIo {
         Self {
             next_handle: Handle::FIRST_UNRESERVED,
             files: HashMap::new(),
+            tcp_listeners: HashMap::new(),
+            tcp_sockets: HashMap::new(),
         }
+    }
+}
+
+impl GlobalStdIo {
+    fn new_handle(&mut self) -> Handle {
+        for _ in 0..u64::MAX {
+            let handle = self.next_handle;
+            self.next_handle.0 = self.next_handle.0.overflowing_add(1).0;
+            if !self.files.contains_key(&handle)
+                && !self.tcp_listeners.contains_key(&handle)
+                && !self.tcp_sockets.contains_key(&handle)
+            {
+                return handle;
+            }
+        }
+        panic!("Ran out of file handles");
+    }
+    fn get_stream(&mut self, handle: Handle) -> Result<IoStream, String> {
+        Ok(if let Some(file) = self.files.get_mut(&handle) {
+            IoStream::File(file)
+        } else if let Some(listener) = self.tcp_listeners.get_mut(&handle) {
+            IoStream::TcpListener(listener)
+        } else if let Some(socket) = self.tcp_sockets.get_mut(&handle) {
+            IoStream::TcpSocket(socket)
+        } else {
+            return Err("Invalid file handle".to_string());
+        })
     }
 }
 
@@ -313,8 +367,7 @@ impl IoBackend for StdIo {
     }
     fn open_file(&self, path: &str) -> Result<Handle, String> {
         stdio(|io| {
-            let handle = io.next_handle;
-            io.next_handle.0 += 1;
+            let handle = io.new_handle();
             let file = File::open(path).map_err(|e| e.to_string())?;
             io.files.insert(handle, file);
             Ok(handle)
@@ -322,19 +375,10 @@ impl IoBackend for StdIo {
     }
     fn create_file(&self, path: &str) -> Result<Handle, String> {
         stdio(|io| {
-            let handle = io.next_handle;
-            io.next_handle.0 += 1;
+            let handle = io.new_handle();
             let file = File::create(path).map_err(|e| e.to_string())?;
             io.files.insert(handle, file);
             Ok(handle)
-        })
-    }
-    fn close_file(&self, handle: Handle) -> Result<(), String> {
-        stdio(|io| {
-            io.files
-                .remove(&handle)
-                .ok_or_else(|| "Invalid file handle".to_string())?;
-            Ok(())
         })
     }
     fn read(&self, handle: Handle, len: usize) -> Result<Vec<u8>, String> {
@@ -351,15 +395,26 @@ impl IoBackend for StdIo {
             Handle::STDOUT => Err("Cannot read from stdout".into()),
             Handle::STDERR => Err("Cannot read from stderr".into()),
             _ => stdio(|io| {
-                if let Some(file) = io.files.get_mut(&handle) {
-                    let mut buf = Vec::new();
-                    file.take(len as u64)
-                        .read_to_end(&mut buf)
-                        .map_err(|e| e.to_string())?;
-                    Ok(buf)
-                } else {
-                    Err("Invalid file handle".to_string())
-                }
+                Ok(match io.get_stream(handle)? {
+                    IoStream::File(file) => {
+                        let mut buf = Vec::new();
+                        file.take(len as u64)
+                            .read_to_end(&mut buf)
+                            .map_err(|e| e.to_string())?;
+                        buf
+                    }
+                    IoStream::TcpListener(_) => {
+                        return Err("Cannot read from a tcp listener".to_string())
+                    }
+                    IoStream::TcpSocket(socket) => {
+                        let mut buf = Vec::new();
+                        socket
+                            .take(len as u64)
+                            .read_to_end(&mut buf)
+                            .map_err(|e| e.to_string())?;
+                        buf
+                    }
+                })
             }),
         }
     }
@@ -368,13 +423,10 @@ impl IoBackend for StdIo {
             Handle::STDIN => Err("Cannot write to stdin".into()),
             Handle::STDOUT => stdout().lock().write_all(conts).map_err(|e| e.to_string()),
             Handle::STDERR => stderr().lock().write_all(conts).map_err(|e| e.to_string()),
-            _ => stdio(|io| {
-                if let Some(file) = io.files.get_mut(&handle) {
-                    file.write_all(conts).map_err(|e| e.to_string())?;
-                    Ok(())
-                } else {
-                    Err("Invalid file handle".to_string())
-                }
+            _ => stdio(|io| match io.get_stream(handle)? {
+                IoStream::File(file) => file.write_all(conts).map_err(|e| e.to_string()),
+                IoStream::TcpListener(_) => Err("Cannot write to a tcp listener".to_string()),
+                IoStream::TcpSocket(socket) => socket.write_all(conts).map_err(|e| e.to_string()),
             }),
         }
     }
@@ -417,6 +469,49 @@ impl IoBackend for StdIo {
     fn sleep(&self, ms: f64) -> Result<(), String> {
         sleep(Duration::from_secs_f64(ms / 1000.0));
         Ok(())
+    }
+    fn tcp_listen(&self, addr: &str) -> Result<Handle, String> {
+        stdio(|io| {
+            let handle = io.new_handle();
+            let listener = TcpListener::bind(addr).map_err(|e| e.to_string())?;
+            io.tcp_listeners.insert(handle, listener);
+            Ok(handle)
+        })
+    }
+    fn tcp_accept(&self, handle: Handle) -> Result<Handle, String> {
+        stdio(|io| {
+            let listener = io
+                .tcp_listeners
+                .get_mut(&handle)
+                .ok_or_else(|| "Invalid tcp listener handle".to_string())?;
+            let (stream, _) = listener.accept().map_err(|e| e.to_string())?;
+            let handle = io.new_handle();
+            io.tcp_sockets.insert(handle, stream);
+            Ok(handle)
+        })
+    }
+    fn tcp_connect(&self, addr: &str) -> Result<Handle, String> {
+        stdio(|io| {
+            let handle = io.new_handle();
+            let stream = TcpStream::connect(addr).map_err(|e| e.to_string())?;
+            io.tcp_sockets.insert(handle, stream);
+            Ok(handle)
+        })
+    }
+    fn close(&self, handle: Handle) -> Result<(), String> {
+        stdio(|io| {
+            if io.files.remove(&handle).is_some()
+                || io.tcp_listeners.remove(&handle).is_some()
+                || io.tcp_sockets.remove(&handle).is_some()
+            {
+                Ok(())
+            } else {
+                Err("Invalid stream handle".to_string())
+            }
+        })
+    }
+    fn teardown(&self) {
+        stdio(take);
     }
 }
 
@@ -465,10 +560,6 @@ impl IoOp {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let handle = env.io.create_file(&path).map_err(|e| env.error(e))?;
                 env.push(handle.0 as f64);
-            }
-            IoOp::FClose => {
-                let handle = env.pop(1)?.as_nat(env, "Handle must be an integer")?.into();
-                env.io.close_file(handle).map_err(|e| env.error(e))?;
             }
             IoOp::ReadStr => {
                 let count = env.pop(1)?.as_nat(env, "Count must be an integer")?;
@@ -588,6 +679,25 @@ impl IoOp {
                     .as_num(env, "Sleep time must be a number")?
                     .max(0.0);
                 env.io.sleep(ms).map_err(|e| env.error(e))?;
+            }
+            IoOp::TcpListen => {
+                let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
+                let handle = env.io.tcp_listen(&addr).map_err(|e| env.error(e))?;
+                env.push(handle);
+            }
+            IoOp::TcpAccept => {
+                let handle = env.pop(1)?.as_nat(env, "Handle must be an integer")?.into();
+                let new_handle = env.io.tcp_accept(handle).map_err(|e| env.error(e))?;
+                env.push(new_handle);
+            }
+            IoOp::TcpConnect => {
+                let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
+                let handle = env.io.tcp_connect(&addr).map_err(|e| env.error(e))?;
+                env.push(handle);
+            }
+            IoOp::Close => {
+                let handle = env.pop(1)?.as_nat(env, "Handle must be an integer")?.into();
+                env.io.close(handle).map_err(|e| env.error(e))?;
             }
         }
         Ok(())

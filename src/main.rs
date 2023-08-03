@@ -11,7 +11,7 @@ use std::{
 use clap::Parser;
 use instant::Instant;
 use notify::{EventKind, RecursiveMode, Watcher};
-use uiua::{format::format_file, run::RunMode, Uiua, UiuaResult};
+use uiua::{format::format_file, run::RunMode, IoBackend, StdIo, Uiua, UiuaResult};
 
 fn main() {
     color_backtrace::install();
@@ -105,6 +105,7 @@ fn watch() -> io::Result<()> {
                 }
                 Err(e) => eprintln!("{}", e.show(true)),
             }
+            StdIo.teardown();
             print_watching();
         }
         Err(e) => {

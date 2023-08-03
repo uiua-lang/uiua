@@ -100,31 +100,51 @@ li {
     .important-button:hover {
         background-color: #579;
     }
+
+    .tutorial-nav>* {
+        background-color: #1d2c3a;
+    }
+
+    tr:nth-child(even) {
+        background-color: #0001;
+    }
+
+    .glyph-button:hover {
+        background-color: #0003;
+    }
 }
 
 @media (prefers-color-scheme: light) {
     body {
         color: #344;
-        background-color: #d0e8ee;
+        background-color: #c6e7ec;
     }
 
     #editor {
-        background-color: #e0f8ff;
+        background-color: #dff2f3;
         outline: 0.1em solid #0004;
     }
 
     .code {
         color: #344;
-        background-color: #eff;
+        background-color: #f4f6f6;
     }
 
     button {
         color: #344;
-        background-color: #cee;
+        background-color: #f6f8f8;
     }
 
     button:hover {
-        background-color: #dff;
+        background-color: #fdffff;
+    }
+
+    a:link {
+        color: #0099ad;
+    }
+
+    a:visited {
+        color: #6a4bfb;
     }
 
     code {
@@ -132,11 +152,23 @@ li {
     }
 
     .important-button {
-        background-color: #6de;
+        background-color: #aadae0;
     }
 
     .important-button:hover {
-        background-color: #8ef;
+        background-color: #bee2e7;
+    }
+
+    .tutorial-nav>* {
+        background-color: #f6f8f8;
+    }
+
+    tr:nth-child(even) {
+        background-color: #fff1;
+    }
+
+    .glyph-button:hover {
+        background-color: #fffa;
     }
 }
 
@@ -214,13 +246,13 @@ li {
 
 @media (prefers-color-scheme: dark) {
     .line-numbers {
-        color: #333d4c;
+        color: #3f4b5d;
     }
 }
 
 @media (prefers-color-scheme: light) {
     .line-numbers {
-        color: #888;
+        color: #bcc9ca;
     }
 }
 
@@ -242,7 +274,7 @@ li {
     font-size: 0.7em;
     bottom: 100%;
     color: #eee;
-    background-color: #000b;
+    background-color: #000c;
     padding: 0.2em;
     border-radius: 0.2em;
     left: 0;
@@ -378,10 +410,6 @@ li {
     overflow: visible;
 }
 
-.glyph-button:hover {
-    background-color: #0002;
-}
-
 .glyph-doc {
     position: absolute;
     top: 1em;
@@ -482,18 +510,6 @@ li {
 
 .tutorial-nav>*:empty {
     background-color: #0000;
-}
-
-@media (prefers-color-scheme: dark) {
-    .tutorial-nav>* {
-        background-color: #1d2c3a;
-    }
-}
-
-@media (prefers-color-scheme: light) {
-    .tutorial-nav>* {
-        background-color: #fff8;
-    }
 }
 
 .primitive-list {

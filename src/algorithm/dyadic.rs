@@ -1,4 +1,11 @@
-use std::{cmp::Ordering, collections::BTreeMap, mem::take};
+use std::{
+    cmp::Ordering,
+    collections::BTreeMap,
+    iter::repeat,
+    mem::{swap, take},
+};
+
+use ecow::EcoVec;
 
 use crate::{algorithm::max_shape, array::*, value::Value, Byte, Uiua, UiuaResult};
 
@@ -259,30 +266,35 @@ impl<T: ArrayValue> Array<T> {
                 index.len()
             )));
         }
-        for (d, (&s, &i)) in self.shape.iter().zip(index).enumerate() {
-            let s = s as isize;
-            if i > s || i < -s {
-                return Err(env.error(format!(
-                    "Index {i} is out of bounds of length {s} (dimension {d}) in shape {:?}",
-                    self.shape
-                )));
-            }
-        }
         self.data.modify(|data| {
-            for (d, (&s, &i)) in self.shape.iter().zip(index).enumerate() {
+            for (d, (&s, &taking)) in self.shape.iter().zip(index).enumerate() {
                 let row_len: usize = self.shape[d + 1..].iter().product();
-                let i = if i >= 0 {
-                    i as usize
+                if taking >= 0 {
+                    let end = taking as usize * row_len;
+                    if end > data.len() {
+                        data.extend(repeat(T::fill_value()).take(end - data.len()));
+                    } else {
+                        data.truncate(end);
+                    }
                 } else {
-                    (s as isize + i) as usize
+                    let taking = taking.unsigned_abs();
+                    let start_index = s.saturating_sub(taking);
+                    let start = start_index * row_len;
+                    *data = take(data).into_iter().skip(start).collect();
+                    if taking > s {
+                        let mut prefix: EcoVec<T> = repeat(T::fill_value())
+                            .take((taking - s) * row_len)
+                            .collect();
+                        swap(data, &mut prefix);
+                        data.extend(prefix);
+                    }
                 };
-                let end = i * row_len;
-                data.truncate(end);
             }
         });
         for (s, i) in self.shape.iter_mut().zip(index) {
             *s = i.unsigned_abs();
         }
+        self.validate_shape();
         Ok(self)
     }
     pub fn drop(mut self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
@@ -293,30 +305,24 @@ impl<T: ArrayValue> Array<T> {
                 index.len()
             )));
         }
-        for (d, (&s, &i)) in self.shape.iter().zip(index).enumerate() {
-            let s = s as isize;
-            if i > s || i < -s {
-                return Err(env.error(format!(
-                    "Index {i} is out of bounds of length {s} (dimension {d}) in shape {:?}",
-                    self.shape
-                )));
-            }
-        }
         self.data.modify(|data| {
-            for (d, (&s, &i)) in self.shape.iter().zip(index).enumerate() {
+            for (d, (&s, &dropping)) in self.shape.iter().zip(index).enumerate() {
                 let row_len: usize = self.shape[d + 1..].iter().product();
-                let i = if i >= 0 {
-                    i as usize
+                if dropping >= 0 {
+                    let start = dropping as usize * row_len;
+                    *data = take(data).into_iter().skip(start).collect();
                 } else {
-                    (s as isize + i) as usize
+                    let dropping = dropping.unsigned_abs();
+                    let end_index = s.saturating_sub(dropping);
+                    let end = end_index * row_len;
+                    data.truncate(end);
                 };
-                let start = i * row_len;
-                *data = take(data).into_iter().skip(start).collect();
             }
         });
         for (s, i) in self.shape.iter_mut().zip(index) {
-            *s -= i.unsigned_abs();
+            *s = s.saturating_sub(i.unsigned_abs());
         }
+        self.validate_shape();
         Ok(self)
     }
 }

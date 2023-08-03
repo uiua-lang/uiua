@@ -424,12 +424,31 @@ primitive!(
     ///
     /// ex: ↙ 3 [8 3 9 2 0]
     /// ex: ↙ ¯3 [8 3 9 2 0]
+    /// ex: ↙ 2 ↯3_3⇡9
+    /// ex: ↙ ¯2 ↯3_3⇡9
+    ///
+    /// Taking more than the length of the array will extend the array with fill elements.
+    /// ex: ↙ 7 [8 3 9 2 0]
+    /// ex: ↙ ¯7 [8 3 9 2 0]
+    /// ex: ↙ 5 ↯3_3⇡9
+    /// ex: ↙ ¯5 ↯3_3⇡9
+    ///
+    /// To extend with a specific value, use [fill];
+    /// ex: ⍛0 ↙10 [1 2 3 4 5]
     (2, Take, DyadicArray, "take" + '↙'),
     /// Drop the first n elements of an array
     /// This is the opposite of [take].
     ///
     /// ex: ↘ 3 [8 3 9 2 0]
     /// ex: ↘ ¯3 [8 3 9 2 0]
+    /// ex: ↘ 2 ↯3_3⇡9
+    /// ex: ↘ ¯2 ↯3_3⇡9
+    ///
+    /// Dropping more than the length of the array will leave an empty array.
+    /// ex: ↘ 7 [8 3 9 2 0]
+    /// ex: ↘ ¯7 [8 3 9 2 0]
+    /// ex: ↘ 5 ↯3_3⇡9
+    /// ex: ↘ ¯5 ↯3_3⇡9
     (2, Drop, DyadicArray, "drop" + '↘'),
     /// Change the shape of an array
     ///

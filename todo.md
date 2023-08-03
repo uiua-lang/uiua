@@ -1,4 +1,3 @@
-- Fix take
 - Rename IO to sys
 - IO buffering
   - Read until
@@ -10,6 +9,7 @@
   - Explain loop directions
 - Make watch run processes
 - Rework front page
+- Fill with array
 - More functions
   - Bits
   - Spawn?

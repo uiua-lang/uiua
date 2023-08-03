@@ -1,8 +1,10 @@
 - Docs
   - Native interpreter and installation
+  - Tests
 - Rework front page
-- Threads
+- Trig glyphs
 - More inverses
+- Threads
 - Multimedia
   - Sound input
   - Webcam input?

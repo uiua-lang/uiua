@@ -1142,20 +1142,6 @@ fn primitive_from_name() {
 
 #[cfg(test)]
 #[test]
-fn glyph_size() {
-    use std::{fs::File, io::Write};
-    let mut file = File::create("glyph_test.txt").unwrap();
-    writeln!(file, "A |").unwrap();
-    writeln!(file, "a |").unwrap();
-    for p in Primitive::all() {
-        if let Some(glyph) = p.unicode() {
-            writeln!(file, "{} |", glyph).unwrap();
-        }
-    }
-}
-
-#[cfg(test)]
-#[test]
 fn from_multiname() {
     assert!(matches!(
         &*Primitive::from_format_name_multi("rev").expect("rev"),
@@ -1170,17 +1156,4 @@ fn from_multiname() {
         [(Primitive::Table, _), (Primitive::Replicate, _)]
     ));
     assert_eq!(Primitive::from_format_name_multi("foo"), None);
-}
-
-#[cfg(test)]
-#[test]
-fn word_collisions() {
-    let mut collisions = 0;
-    for word in std::fs::read_to_string("src/words.txt").unwrap().lines() {
-        if let Some(prims) = Primitive::from_format_name_multi(word) {
-            println!("{word:>10}: {prims:?}");
-            collisions += 1;
-        }
-    }
-    println!("{collisions} collisions")
 }

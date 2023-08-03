@@ -1,3 +1,9 @@
+- Ctrl/Shift/Alt modifiers in editor
+- Fix under inverse transpose
+- Docs
+  - Design
+    - Identifiers and Formatting
+    - Inspiration
 - Threads
 - Multimedia
   - Sound input

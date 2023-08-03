@@ -248,7 +248,7 @@ impl<'io> Uiua<'io> {
             let func = Function {
                 id: FunctionId::Named(binding.name.value.clone()),
                 instrs,
-                dfn_args: None,
+                kind: FunctionKind::Normal,
             };
             Value::from(func)
         } else {
@@ -320,6 +320,27 @@ impl<'io> Uiua<'io> {
             }
             Word::Char(c) => self.push_instr(Instr::Push(c.into())),
             Word::String(s) => self.push_instr(Instr::Push(s.into())),
+            Word::FormatString(frags) => {
+                let f = Function {
+                    id: FunctionId::Anonymous(word.span.clone()),
+                    instrs: Vec::new(),
+                    kind: FunctionKind::Dynamic(Rc::new(move |env| {
+                        let mut formatted = String::new();
+                        for (i, frag) in frags.iter().enumerate() {
+                            if i > 0 {
+                                let val = env.pop(format!("format argument {i}"))?;
+                                formatted.push_str(&format!("{}", val));
+                            }
+                            formatted.push_str(frag);
+                        }
+                        env.push(formatted);
+                        Ok(())
+                    })),
+                };
+                self.push_instr(Instr::Push(f.into()));
+                let span = self.add_span(word.span);
+                self.push_instr(Instr::Call(span));
+            }
             Word::Ident(ident) => self.ident(ident, word.span, call)?,
             Word::Strand(items) => {
                 self.push_instr(Instr::BeginArray);
@@ -395,7 +416,7 @@ impl<'io> Uiua<'io> {
         let func = Function {
             id: func.id,
             instrs,
-            dfn_args: None,
+            kind: FunctionKind::Normal,
         };
         self.push_instr(Instr::Push(func.into()));
         Ok(())
@@ -409,7 +430,7 @@ impl<'io> Uiua<'io> {
         let func = Function {
             id: func.id,
             instrs,
-            dfn_args: Some(dfn_size),
+            kind: FunctionKind::Dfn(dfn_size),
         };
         self.push_instr(Instr::Push(func.into()));
         if call {
@@ -429,7 +450,7 @@ impl<'io> Uiua<'io> {
         let func = Function {
             id: FunctionId::Anonymous(modified.modifier.span.clone()),
             instrs,
-            dfn_args: None,
+            kind: FunctionKind::Normal,
         };
         self.push_instr(Instr::Push(func.into()));
         if call {
@@ -446,7 +467,7 @@ impl<'io> Uiua<'io> {
             self.push_instr(Instr::Push(Value::from(Function {
                 id: FunctionId::Primitive(prim),
                 instrs: vec![Instr::Prim(prim, span)],
-                dfn_args: None,
+                kind: FunctionKind::Normal,
             })))
         }
     }
@@ -454,7 +475,7 @@ impl<'io> Uiua<'io> {
         let func = Function {
             id: FunctionId::Main,
             instrs,
-            dfn_args: None,
+            kind: FunctionKind::Normal,
         };
         self.exec(StackFrame {
             function: Rc::new(func),
@@ -576,20 +597,36 @@ impl<'io> Uiua<'io> {
             Value::Func(f) if f.shape.is_empty() => {
                 let f = f.into_scalar().unwrap();
                 let mut dfn = false;
-                if let Some(n) = f.dfn_args {
-                    let n = n as usize;
-                    if self.stack.len() < n {
-                        return Err(self.spans[call_span]
-                            .clone()
-                            .sp(format!("not enough arguments for dfn of {n} values"))
-                            .into());
+                match &f.kind {
+                    FunctionKind::Normal => {}
+                    FunctionKind::Dfn(n) => {
+                        let n = *n as usize;
+                        if self.stack.len() < n {
+                            return Err(self.spans[call_span]
+                                .clone()
+                                .sp(format!("not enough arguments for dfn of {n} values"))
+                                .into());
+                        }
+                        let args = self.stack.drain(self.stack.len() - n..).rev().collect();
+                        self.scope.dfn.push(DfnFrame {
+                            function: f.clone(),
+                            args,
+                        });
+                        dfn = true;
                     }
-                    let args = self.stack.drain(self.stack.len() - n..).rev().collect();
-                    self.scope.dfn.push(DfnFrame {
-                        function: f.clone(),
-                        args,
-                    });
-                    dfn = true;
+                    FunctionKind::Dynamic(ff) => {
+                        let new_frame = StackFrame {
+                            function: f.clone(),
+                            call_span,
+                            spans: Vec::new(),
+                            pc: 0,
+                            dfn: false,
+                        };
+                        self.scope.call.push(new_frame);
+                        ff(self)?;
+                        self.scope.call.pop();
+                        return Ok(());
+                    }
                 }
                 let new_frame = StackFrame {
                     function: f,
@@ -601,7 +638,7 @@ impl<'io> Uiua<'io> {
                 self.exec(new_frame)
             }
             value => {
-                self.stack.pop();
+                self.pop("replaced value")?;
                 self.push(value);
                 Ok(())
             }
@@ -757,26 +794,32 @@ impl<'io> Uiua<'io> {
 ///
 /// If the stack is empty, the error message will be "Stack was empty when evaluating {arg_name}"
 pub trait StackArg {
-    fn arg_name(&self) -> String;
+    fn arg_name(self) -> String;
 }
 
 impl StackArg for usize {
-    fn arg_name(&self) -> String {
+    fn arg_name(self) -> String {
         format!("argument {self}")
     }
 }
 impl StackArg for u8 {
-    fn arg_name(&self) -> String {
+    fn arg_name(self) -> String {
         format!("argument {self}")
     }
 }
 impl StackArg for i32 {
-    fn arg_name(&self) -> String {
+    fn arg_name(self) -> String {
         format!("argument {self}")
     }
 }
 impl<'a> StackArg for &'a str {
-    fn arg_name(&self) -> String {
+    fn arg_name(self) -> String {
         self.to_string()
+    }
+}
+
+impl StackArg for String {
+    fn arg_name(self) -> String {
+        self
     }
 }

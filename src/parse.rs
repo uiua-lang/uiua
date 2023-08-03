@@ -313,6 +313,8 @@ impl Parser {
             c.map(Into::into).map(Word::Char)
         } else if let Some(s) = self.next_token_map(Token::as_string) {
             s.map(Into::into).map(Word::String)
+        } else if let Some(frags) = self.next_token_map(Token::as_format_string) {
+            frags.map(Into::into).map(Word::FormatString)
         } else if let Some(expr) = self.try_func() {
             expr
         } else if let Some(expr) = self.try_dfn() {

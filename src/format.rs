@@ -78,22 +78,23 @@ fn format_item(output: &mut String, item: &Item) {
 
 fn format_words(output: &mut String, words: &[Sp<Word>]) {
     for word in trim_spaces(words) {
-        format_word(output, &word.value);
+        format_word(output, word);
     }
 }
 
-fn format_word(output: &mut String, word: &Word) {
-    match word {
+fn format_word(output: &mut String, word: &Sp<Word>) {
+    match &word.value {
         Word::Number(s, _) => output.push_str(&s.replace(['-', '`'], "¯")),
         Word::Char(c) => output.push_str(&format!("{:?}", c)),
         Word::String(s) => output.push_str(&format!("{:?}", s)),
+        Word::FormatString(_) => output.push_str(word.span.as_str()),
         Word::Ident(ident) => output.push_str(&ident.0),
         Word::Strand(items) => {
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
                     output.push('_');
                 }
-                format_word(output, &item.value);
+                format_word(output, item);
             }
         }
         Word::Array(items) => {

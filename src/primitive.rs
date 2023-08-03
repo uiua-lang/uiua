@@ -670,10 +670,6 @@ primitive!(
     /// The formatter converts an empty `()` function into [noop].
     /// ex: ()
     (0, Noop, Misc, "noop" + '·'),
-    /// Convert a value to a string
-    ///
-    /// ex: string 5
-    (1, String, Misc, "string"),
     /// Parse a string as a number
     ///
     /// ex: parsenum "17"
@@ -989,7 +985,6 @@ impl Primitive {
             Primitive::Shape => {
                 env.monadic_ref(|v| v.shape().iter().copied().collect::<Value>())?
             }
-            Primitive::String => env.monadic_ref(|v| v.to_string())?,
             Primitive::Rand => {
                 thread_local! {
                     static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::seed_from_u64(instant::now().to_bits()));

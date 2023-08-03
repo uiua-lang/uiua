@@ -1,4 +1,3 @@
-- Format strings
 - Fix take
 - Rename IO to sys
 - IO buffering

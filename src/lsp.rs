@@ -42,6 +42,7 @@ fn words_spans(words: Vec<Sp<Word>>) -> Vec<Sp<SpanKind>> {
             Word::Number(..) => spans.push(word.span.sp(SpanKind::Number)),
             Word::Char(_) => spans.push(word.span.sp(SpanKind::String)),
             Word::String(_) => spans.push(word.span.sp(SpanKind::String)),
+            Word::FormatString(_) => spans.push(word.span.sp(SpanKind::String)),
             Word::Ident(ident) => {
                 if let Some(prims) = Primitive::from_format_name_multi(ident.as_str()) {
                     let mut start = word.span.start;

@@ -372,6 +372,7 @@ fn TutorialFunctions(cx: Scope) -> impl IntoView {
         <p><PrimCode prim=Scan/>" is similar, but it returns all the intermediate results."</p>
         <Editor example="\\+ 1_2_3_4"/>
         <p><A href="/docs">"The main docs page"</A>" lists all of the built-in modifiers."</p>
+
         <h2>"Inline Functions"</h2>
         <p>"In addition to creating a new function with a capitalized binding name, as discussed in the "<A href="/docs/bindings">"previous sections"</A>", functions in Uiua can also be created with "<code>"(...)"</code>"."</p>
         <p>"This is usually only necessary when you need to call multiple functions within a modifier."</p>
@@ -379,6 +380,7 @@ fn TutorialFunctions(cx: Scope) -> impl IntoView {
         <Editor example="∵(⊂÷~1.) 1_2_4_5"/>
         <p>"Or, if you wanted to get the last element of each row of an array, you could use "<PrimCode prim=Rows/>"."</p>
         <Editor example="A ← [2_5_3 0_2_1 0_0_2]\nA\n≡(⊢⇌)A"/>
+
         <h2>"Dfns"</h2>
         <p>"A dfn (pronounced \"dee-fun\") is a block of code that can bind values locally to single-character names."</p>
         <p>"Dfns are created with "<code>"{...}"</code>"."</p>
@@ -394,6 +396,15 @@ fn TutorialFunctions(cx: Scope) -> impl IntoView {
         <Editor example="{:⊡~(+ ↬-1a ↬-2a)_(a) <2a} 10"/>
         <p>"It is an error to access a dfn's argument outside of the dfn. This is only possible if you smuggle out the argument reference inside a function."</p>
         <Editor example=":{(a)}5"/>
+
+        <h2>"Format Strings"</h2>
+        <p>"Prefixing a string with "<code>"$"</code>", creates a format string. A format string is a function that, like a dfn, is called immediately. It takes an argument for each "<code>"{}"</code>" in the string and replaces it with the stringified version."</p>
+        <Editor example="$\"Hello, {}!\" \"World\""/>
+        <Editor example="Greet ← $\"Hello, {}!\"\nGreet \"user\""/>
+        <Editor example="x ← 5\n$\"x = {}\" x"/>
+        <Editor example="$\"{}, {}, and {}\" 1 2 3"/>
+        <p>"If you need to use a literal "<code>"{"</code>" or "<code>"}"</code>", you can escape them with "<code>"{{"</code>" and "<code>"}}"</code>"."</p>
+        <Editor example="$\"{{}} {{{}}}\" 27"/>
     }
 }
 

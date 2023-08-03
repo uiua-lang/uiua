@@ -1,6 +1,6 @@
-use std::{fmt, rc::Rc};
+use std::{cmp::Ordering, fmt, rc::Rc};
 
-use crate::{lex::CodeSpan, primitive::Primitive, value::Value, Ident};
+use crate::{lex::CodeSpan, primitive::Primitive, value::Value, Ident, Uiua, UiuaResult};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Instr {
@@ -27,11 +27,18 @@ impl fmt::Display for Instr {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone)]
 pub struct Function {
     pub id: FunctionId,
     pub instrs: Vec<Instr>,
-    pub dfn_args: Option<u8>,
+    pub kind: FunctionKind,
+}
+
+#[derive(Clone)]
+pub enum FunctionKind {
+    Normal,
+    Dfn(u8),
+    Dynamic(Rc<dyn Fn(&mut Uiua) -> UiuaResult>),
 }
 
 impl From<Primitive> for Function {
@@ -39,8 +46,30 @@ impl From<Primitive> for Function {
         Self {
             id: FunctionId::Primitive(prim),
             instrs: vec![Instr::Prim(prim, 0)],
-            dfn_args: None,
+            kind: FunctionKind::Normal,
         }
+    }
+}
+
+impl PartialEq for Function {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id && self.instrs == other.instrs
+    }
+}
+
+impl Eq for Function {}
+
+impl PartialOrd for Function {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Function {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.id
+            .cmp(&other.id)
+            .then_with(|| self.instrs.cmp(&other.instrs))
     }
 }
 
@@ -58,7 +87,10 @@ impl fmt::Display for Function {
         if let Some(prim) = self.as_primitive() {
             return write!(f, "{prim}");
         }
-        if self.dfn_args.is_some() {
+        if let FunctionKind::Dynamic(_) = self.kind {
+            return write!(f, "<dynamic>");
+        }
+        if let FunctionKind::Dfn(_) = self.kind {
             write!(f, "{{")?;
         } else {
             write!(f, "(")?;
@@ -66,7 +98,7 @@ impl fmt::Display for Function {
         for instr in self.instrs.iter().rev() {
             instr.fmt(f)?;
         }
-        if self.dfn_args.is_some() {
+        if let FunctionKind::Dfn(_) = self.kind {
             write!(f, "}}")?;
         } else {
             write!(f, ")")?;
@@ -184,10 +216,13 @@ fn invert_instrs(instrs: &[Instr]) -> Option<Vec<Instr>> {
 
 impl Function {
     pub fn inverse(&self) -> Option<Self> {
+        if !matches!(self.kind, FunctionKind::Normal) {
+            return None;
+        }
         Some(Function {
             id: self.id.clone(),
             instrs: invert_instrs(&self.instrs)?,
-            dfn_args: self.dfn_args,
+            kind: FunctionKind::Normal,
         })
     }
 }

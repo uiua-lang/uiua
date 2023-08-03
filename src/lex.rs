@@ -255,6 +255,7 @@ pub enum Token {
     Number,
     Char(char),
     Str(String),
+    FormatStr(Vec<String>),
     Simple(Simple),
     Glyph(Primitive),
 }
@@ -269,6 +270,12 @@ impl Token {
     pub fn as_string(&self) -> Option<&str> {
         match self {
             Token::Str(string) => Some(string),
+            _ => None,
+        }
+    }
+    pub fn as_format_string(&self) -> Option<&[String]> {
+        match self {
+            Token::FormatStr(string) => Some(string),
             _ => None,
         }
     }
@@ -482,7 +489,14 @@ impl Lexer {
                     self.end(Char(char), start)
                 }
                 // Strings
-                '"' => {
+                '"' | '$' => {
+                    let format = c == '$';
+                    if format && !self.next_char_exact('"') {
+                        self.errors.push(
+                            self.end_span(start)
+                                .sp(LexError::ExpectedCharacter(Some('"'))),
+                        );
+                    }
                     let mut string = String::new();
                     let mut escaped = false;
                     loop {
@@ -501,7 +515,44 @@ impl Lexer {
                                 .sp(LexError::ExpectedCharacter(Some('"'))),
                         );
                     }
-                    self.end(Str(string), start)
+                    if format {
+                        let mut frags: Vec<String> = Vec::new();
+                        let mut curr = String::new();
+                        let mut chars = string.chars();
+                        while let Some(c) = chars.next() {
+                            match c {
+                                '{' => match chars.next() {
+                                    Some('}') => {
+                                        frags.push(curr);
+                                        curr = String::new();
+                                    }
+                                    Some('{') => curr.push('{'),
+                                    Some(c) => self
+                                        .errors
+                                        .push(self.end_span(start).sp(LexError::UnexpectedChar(c))),
+                                    None => self.errors.push(
+                                        self.end_span(start)
+                                            .sp(LexError::ExpectedCharacter(Some('}'))),
+                                    ),
+                                },
+                                '}' => match chars.next() {
+                                    Some('}') => curr.push('}'),
+                                    Some(c) => self
+                                        .errors
+                                        .push(self.end_span(start).sp(LexError::UnexpectedChar(c))),
+                                    None => self.errors.push(
+                                        self.end_span(start)
+                                            .sp(LexError::ExpectedCharacter(Some('}'))),
+                                    ),
+                                },
+                                c => curr.push(c),
+                            }
+                        }
+                        frags.push(curr);
+                        self.end(FormatStr(frags), start)
+                    } else {
+                        self.end(Str(string), start)
+                    }
                 }
                 // Identifiers and selectors
                 c if is_custom_glyph(c) => self.end(Ident, start),

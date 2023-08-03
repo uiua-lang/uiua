@@ -97,6 +97,14 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         if self.shape.is_empty() {
             return self.data[0].fmt_grid();
         }
+        let stringy = type_name::<T>() == type_name::<char>();
+        if self.shape == [0] {
+            return if stringy {
+                vec![vec!['"', '"']]
+            } else {
+                vec![vec!['[', ']']]
+            };
+        }
         // Fill the metagrid
         let mut metagrid = Metagrid::new();
 

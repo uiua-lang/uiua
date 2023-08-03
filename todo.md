@@ -1,5 +1,3 @@
-- IO buffering
-  - Read until
 - Docs
   - Native interpreter and installation
   - Tests
@@ -10,6 +8,7 @@
   - Bits
   - Spawn?
   - Parallel?
+  - Read until
 - More inverses
 - Editor history
 - Threads

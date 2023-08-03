@@ -7,6 +7,7 @@ version = "0.1.0"
 
 [dependencies]
 ariadne = "0.2.0"
+bufreaderwriter = "0.2.4"
 clap.features = ["derive"]
 clap.optional = true
 clap.version = "4"

@@ -10,6 +10,7 @@ use std::{
     time::Duration,
 };
 
+use bufreaderwriter::seq::BufReaderWriterSeq;
 use enum_iterator::Sequence;
 use hound::{SampleFormat, WavSpec, WavWriter};
 use image::{DynamicImage, ImageOutputFormat};
@@ -280,17 +281,19 @@ pub trait SysBackend {
 #[derive(Default)]
 pub struct NativeSys;
 
+type Buffered<T> = BufReaderWriterSeq<T>;
+
 struct GlobalNativeSys {
     next_handle: Handle,
-    files: HashMap<Handle, File>,
+    files: HashMap<Handle, Buffered<File>>,
     tcp_listeners: HashMap<Handle, TcpListener>,
-    tcp_sockets: HashMap<Handle, TcpStream>,
+    tcp_sockets: HashMap<Handle, Buffered<TcpStream>>,
 }
 
 enum SysStream<'a> {
-    File(&'a mut File),
+    File(&'a mut Buffered<File>),
     TcpListener(&'a mut TcpListener),
-    TcpSocket(&'a mut TcpStream),
+    TcpSocket(&'a mut Buffered<TcpStream>),
 }
 
 impl Default for GlobalNativeSys {
@@ -331,10 +334,10 @@ impl GlobalNativeSys {
     }
 }
 
-static STDIO: OnceLock<Mutex<GlobalNativeSys>> = OnceLock::new();
+static NATIVE_SYS: OnceLock<Mutex<GlobalNativeSys>> = OnceLock::new();
 
 fn stdio<T>(mut f: impl FnMut(&mut GlobalNativeSys) -> T) -> T {
-    f(&mut STDIO.get_or_init(Default::default).lock().unwrap())
+    f(&mut NATIVE_SYS.get_or_init(Default::default).lock().unwrap())
 }
 
 thread_local! {
@@ -369,7 +372,7 @@ impl SysBackend for NativeSys {
         stdio(|io| {
             let handle = io.new_handle();
             let file = File::open(path).map_err(|e| e.to_string())?;
-            io.files.insert(handle, file);
+            io.files.insert(handle, Buffered::new_reader(file));
             Ok(handle)
         })
     }
@@ -377,7 +380,7 @@ impl SysBackend for NativeSys {
         stdio(|io| {
             let handle = io.new_handle();
             let file = File::create(path).map_err(|e| e.to_string())?;
-            io.files.insert(handle, file);
+            io.files.insert(handle, Buffered::new_writer(file));
             Ok(handle)
         })
     }
@@ -486,7 +489,7 @@ impl SysBackend for NativeSys {
                 .ok_or_else(|| "Invalid tcp listener handle".to_string())?;
             let (stream, _) = listener.accept().map_err(|e| e.to_string())?;
             let handle = io.new_handle();
-            io.tcp_sockets.insert(handle, stream);
+            io.tcp_sockets.insert(handle, Buffered::new_reader(stream));
             Ok(handle)
         })
     }
@@ -494,7 +497,7 @@ impl SysBackend for NativeSys {
         stdio(|io| {
             let handle = io.new_handle();
             let stream = TcpStream::connect(addr).map_err(|e| e.to_string())?;
-            io.tcp_sockets.insert(handle, stream);
+            io.tcp_sockets.insert(handle, Buffered::new_writer(stream));
             Ok(handle)
         })
     }

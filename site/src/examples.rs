@@ -1,4 +1,4 @@
-const UIUA: &str = r#"≡⊢ ⊘≥'A'. "Um, I um...arrays""#;
+const UIUA: &str = "\"Um, I um...arrays\"\n≡⊢ ⊘≥'A'.";
 const FORMAT: &str = "# Click Run to format!\nfold(join~/+drop`2.;)0_1range10";
 const D3: &str = "↯~⇡/×.2_3_4";
 const LOGO: &str = "\

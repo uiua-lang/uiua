@@ -1,4 +1,3 @@
-- Add a non-random subtitle
 - Format strings
 - Fix take
 - Rename IO to sys

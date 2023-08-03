@@ -116,6 +116,10 @@ li {
     .code-entry {
         caret-color: white;
     }
+
+    #subtitle {
+        color: #d1daeca0;
+    }
 }
 
 @media (prefers-color-scheme: light) {
@@ -178,6 +182,10 @@ li {
     .code-entry {
         caret-color: black;
     }
+
+    #subtitle {
+        color: #344a;
+    }
 }
 
 #top {
@@ -188,18 +196,24 @@ li {
 #header {
     display: flex;
     justify-content: space-between;
+    align-items: center;
+}
+
+#header-left {
+    display: flex;
+    align-items: baseline;
+}
+
+#subtitle {
+    margin-left: 1.5em;
+    font-size: 1em;
+    font-weight: bold;
+    font-style: italic;
 }
 
 #nav {
     display: flex;
     gap: 1em;
-}
-
-#subtitle {
-    margin-top: -1em;
-    display: flex;
-    justify-content: space-between;
-    font-size: 1.5em;
 }
 
 #links {

@@ -4,32 +4,55 @@ mod editor;
 mod examples;
 mod pad;
 
-use std::cell::RefCell;
-
 use leptos::*;
 use leptos_router::*;
-use rand::prelude::*;
 use uiua::primitive::Primitive;
 use wasm_bindgen::JsCast;
 use web_sys::HtmlAudioElement;
 
 use crate::{docs::*, editor::*, pad::*};
 
-thread_local! {
-    static SUBTITLE: RefCell<Option<usize>>  = RefCell::new(None);
-}
-
 pub fn main() {
     console_error_panic_hook::set_once();
+
+    document()
+        .body()
+        .unwrap()
+        .remove_child(&element("top"))
+        .unwrap();
+
     mount_to_body(|cx| view!(cx, <Site/>));
 }
 
 #[component]
 pub fn Site(cx: Scope) -> impl IntoView {
-    document()
-        .body()
-        .unwrap()
-        .remove_child(&element("top"))
+    // Choose a random subtitle
+    let subtitles = [
+        "A stack-oriented array programming language".into_view(cx),
+        "An array-oriented stack programming language".into_view(cx),
+        "A programming language for point-free enjoyers".into_view(cx),
+        "A programming language for variable dislikers".into_view(cx),
+        "What if APL was a FORTH?".into_view(cx),
+        "What if FORTH was an APL?".into_view(cx),
+        view!(cx, "Check out "<a href="https://arraycast.com/">"The Array Cast"</a>).into_view(cx),
+        "Isn't a stack a sort of array?".into_view(cx),
+        "It's got um...I um...arrays".into_view(cx),
+        view!(cx, <a href="https://youtu.be/seVSlKazsNk">"Point-Free or Die"</a>).into_view(cx),
+        "Notation as a tool of thot".into_view(cx),
+        "Do you like this page Marshall?".into_view(cx),
+        "Conor Dyadic Hookstra".into_view(cx),
+    ];
+    let local_storage = window().local_storage().unwrap().unwrap();
+    let mut visits: usize = local_storage
+        .get_item("visits")
+        .ok()
+        .flatten()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0);
+    let subtitle = subtitles[visits % subtitles.len()].clone();
+    visits = visits.overflowing_add(1).0;
+    local_storage
+        .set_item("visits", &visits.to_string())
         .unwrap();
 
     view! { cx,
@@ -37,7 +60,10 @@ pub fn Site(cx: Scope) -> impl IntoView {
             <main>
                 <div id="top">
                     <div id="header">
-                        <h1><img src="/uiua-logo.png" style="height: 1em" alt="Uiua"></img>" Uiua"</h1>
+                        <div id="header-left">
+                            <h1><img src="/uiua-logo.png" style="height: 1em" alt="Uiua logo"></img>"Uiua"</h1>
+                            <p id="subtitle">{ subtitle }</p>
+                        </div>
                         <div id="nav">
                             <p><a href="https://github.com/kaikalii/uiua">"GitHub"</a></p>
                             <p><a href="/">"Home"</a></p>
@@ -59,51 +85,23 @@ pub fn Site(cx: Scope) -> impl IntoView {
 
 #[component]
 pub fn MainPage(cx: Scope) -> impl IntoView {
-    // Choose a random subtitle
-    let subtitles = [
-        view!(cx, <p>"A stack-oriented array programming language"</p>),
-        view!(cx, <p>"An array-oriented stack programming language"</p>),
-        view!(cx, <p>"A programming language for point-free enjoyers"</p>),
-        view!(cx, <p>"A programming language for variable dislikers"</p>),
-        view!(cx, <p>"What if APL was a FORTH?"</p>),
-        view!(cx, <p>"What if FORTH was an APL?"</p>),
-        view!(cx, <p>"Isn't a stack a sort of array?"</p>),
-        view!(cx, <p>"It's got um...I um...arrays"</p>),
-        view!(cx, <p><a href="https://youtu.be/seVSlKazsNk">"Point-Free or Die"</a></p>),
-        view!(cx, <p>"Notation as a tool of thot"</p>),
-        view!(cx, <p>"Do you like this page Marshall?"</p>),
-        view!(cx, <p>"Conor Dyadic Hookstra"</p>),
-    ];
-    let index = SUBTITLE.with(|s| {
-        *s.borrow_mut().get_or_insert_with(|| {
-            let mut rng = SmallRng::seed_from_u64(instant::now().to_bits());
-            // Prefers lower indices
-            let index = rng.gen_range(0.0..(subtitles.len() as f64).cbrt());
-            index.powi(3) as usize
-        })
-    });
-    let subtitle = subtitles[index].clone();
-
     view! {
         cx,
-        <div>
-            <div id="subtitle">{ subtitle }</div>
-            <div id="links">
-                <p><A href="/docs">"Documentation"</A></p>
-                <p><A href="/pad">"Pad"</A></p>
-            </div>
-            <Editor
-                examples=examples::EXAMPLES
-                size=EditorSize::Medium
-                mode=EditorMode::Multiple
-                help={&[
-                    "Type some or all of a glyph's name, then run to format the names into glyphs.",
-                    "You can run with ctrl/shift + enter.",
-                ]}/>
-            <br/>
-            <br/>
-            <MainText/>
+        <div id="links">
+            <p><A href="/docs">"Documentation"</A></p>
+            <p><A href="/pad">"Pad"</A></p>
         </div>
+        <Editor
+            examples=examples::EXAMPLES
+            size=EditorSize::Medium
+            mode=EditorMode::Multiple
+            help={&[
+                "Type some or all of a glyph's name, then run to format the names into glyphs.",
+                "You can run with ctrl/shift + enter.",
+            ]}/>
+        <br/>
+        <br/>
+        <MainText/>
     }
 }
 
@@ -115,7 +113,7 @@ fn MainText(cx: Scope) -> impl IntoView {
         }
     };
 
-    view! { cx, <div>
+    view! { cx,
         <p>"Uiua ("<i>"wee-wuh "</i><button on:click=borat class="sound-button">"🔉"</button>") is a stack-oriented array programming language with a focus on tacit code (code without named values). Its semantics and primitives (and this site) are largely inspired by "<a href="https://mlochbaum.github.io/BQN/">"BQN"</a>", but it combines the array paradigm with the stack-oriented paradigm to make writing point-free code more workable."</p>
         <hr/>
         <h3>"How is Uiua like other array languages?"</h3>
@@ -142,7 +140,7 @@ fn MainText(cx: Scope) -> impl IntoView {
         <p>"Unlike most array languages, Uiua does not overload primitives depending on whether they are passed one or two arguments. Functions in Uiua can take any number of arguments, but an individual function always takes the "<i>"same"</i>" number of arguments."</p>
         <p>"This ends up meaning that Uiua requires way more glyphs to have one for every primitive. There simply are not enough keys on them keyboard to type them without using a bunch of hard-to-remeber shortcuts. Also, I think it's annoying to need special editor support to be able to write code properly."</p>
         <p>"To solve these issues, Uiua has a formatter that automatically converts ASCII names and characters into glyphs. You can type the name of a glyph (or a digraph, like "<code>">="</code>" for "<PrimCode prim=Primitive::Ge glyph_only=true/>"), and the formatter will turn it into the corresponding glyph. Alternatively, the editors embedded in this site have a button for each glyph."</p>
-    </div>}
+    }
 }
 
 mod code {

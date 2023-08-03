@@ -2,6 +2,7 @@
 - Style editor cursor
 - Add a non-random subtitle
 - Format strings
+- Fix take
 - Rename IO to sys
 - IO buffering
   - Read until

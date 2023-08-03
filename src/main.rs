@@ -1,8 +1,8 @@
 use std::{
-    fs,
+    env, fs,
     io::{self, stderr, Write},
     path::{Path, PathBuf},
-    process::exit,
+    process::{self, exit},
     sync::mpsc::channel,
     thread::sleep,
     time::Duration,
@@ -11,7 +11,7 @@ use std::{
 use clap::Parser;
 use instant::Instant;
 use notify::{EventKind, RecursiveMode, Watcher};
-use uiua::{format::format_file, run::RunMode, IoBackend, StdIo, Uiua, UiuaResult};
+use uiua::{format::format_file, run::RunMode, Uiua, UiuaResult};
 
 fn main() {
     color_backtrace::install();
@@ -44,21 +44,32 @@ fn run() -> UiuaResult {
                     }
                 }
             }
-            Command::Run => {
-                let path = PathBuf::from("main.ua");
-                format_file(&path)?;
-                Uiua::default().mode(RunMode::Normal).load_file(path)?;
+            Command::Run { path, no_format } => {
+                let path = path.unwrap_or_else(|| PathBuf::from("main.ua"));
+                if !no_format {
+                    format_file(&path)?;
+                }
+                let mut rt = Uiua::default().mode(RunMode::Normal);
+                rt.load_file(path)?;
+                for value in rt.take_stack() {
+                    println!("{}", value.show());
+                }
             }
-            Command::Test => {
-                let path = PathBuf::from("main.ua");
+            Command::Test { path } => {
+                let path = path.unwrap_or_else(|| PathBuf::from("main.ua"));
                 format_file(&path)?;
                 Uiua::default().mode(RunMode::Test).load_file(path)?;
+            }
+            Command::Watch => {
+                if let Err(e) = watch() {
+                    eprintln!("Error watching file: {e}");
+                }
             }
             #[cfg(feature = "lsp")]
             Command::Lsp => uiua::lsp::run_server(),
         }
     } else if let Err(e) = watch() {
-        eprintln!("Error creating watch file {e}");
+        eprintln!("Error watching file: {e}");
     }
     Ok(())
 }
@@ -83,39 +94,43 @@ fn watch() -> io::Result<()> {
     watcher
         .watch(Path::new("."), RecursiveMode::Recursive)
         .unwrap();
-    let run = |path: &Path| match format_file(path).or_else(|_| {
-        sleep(Duration::from_millis(100));
-        format_file(path)
-    }) {
-        Ok(formatted) => {
-            if formatted.is_empty() {
-                clear_watching();
-                print_watching();
-                return;
-            }
-            clear_watching();
-            match Uiua::default()
-                .mode(RunMode::Watch)
-                .load_str_path(&formatted, path)
-            {
-                Ok(env) => {
-                    for value in env.take_stack() {
-                        println!("{}", value.show());
-                    }
+    let mut child: Option<process::Child> = None;
+    let run = |path: &Path, child: &mut Option<process::Child>| -> io::Result<()> {
+        if let Some(mut child) = child.take() {
+            _ = child.kill();
+            print_watching();
+        }
+        match format_file(path).or_else(|_| {
+            sleep(Duration::from_millis(100));
+            format_file(path)
+        }) {
+            Ok(formatted) => {
+                if formatted.is_empty() {
+                    clear_watching();
+                    print_watching();
+                    return Ok(());
                 }
-                Err(e) => eprintln!("{}", e.show(true)),
+                clear_watching();
+                *child = Some(
+                    process::Command::new(env::current_exe().unwrap())
+                        .arg("run")
+                        .arg(path)
+                        .arg("--no-format")
+                        .spawn()
+                        .unwrap(),
+                );
             }
-            StdIo.teardown();
-            print_watching();
+            Err(e) => {
+                clear_watching();
+                eprintln!("{}", e.show(true));
+                print_watching();
+            }
         }
-        Err(e) => {
-            clear_watching();
-            eprintln!("{}", e.show(true));
-            print_watching();
-        }
+        Ok(())
     };
-    run(&open_path);
+    run(&open_path, &mut child)?;
     let mut last_time = Instant::now();
+    let mut ended = false;
     loop {
         sleep(Duration::from_millis(10));
         if let Some(path) = recv
@@ -127,8 +142,17 @@ fn watch() -> io::Result<()> {
             .last()
         {
             if last_time.elapsed() > Duration::from_millis(100) {
-                run(&path);
+                run(&path, &mut child)?;
+                ended = false;
                 last_time = Instant::now();
+            }
+        }
+        if !ended {
+            if let Some(child) = &mut child {
+                if child.try_wait()?.is_some() {
+                    print_watching();
+                    ended = true;
+                }
             }
         }
     }
@@ -136,12 +160,6 @@ fn watch() -> io::Result<()> {
 
 #[derive(Parser)]
 struct App {
-    #[clap(
-        help = "Path to the uiua file to run",
-        long_help = "Path to the uiua file to run. This can be ommitted if there is \
-                     only one uiua file in the current directory."
-    )]
-    path: Option<PathBuf>,
     #[clap(subcommand)]
     command: Option<Command>,
 }
@@ -154,10 +172,16 @@ enum Command {
                       replacing named primitives with their unicode equivalents"
     )]
     Fmt { path: Option<PathBuf> },
-    #[clap(about = "Format and run main.ua")]
-    Run,
-    #[clap(about = "Format and test main.ua")]
-    Test,
+    #[clap(about = "Format and run a file")]
+    Run {
+        path: Option<PathBuf>,
+        #[clap(long, help = "Don't format the file before running")]
+        no_format: bool,
+    },
+    #[clap(about = "Format and test a file")]
+    Test { path: Option<PathBuf> },
+    #[clap(about = "Run a main.ua in watch mode. This is the default command")]
+    Watch,
     #[cfg(feature = "lsp")]
     #[clap(about = "Run the Language Server")]
     Lsp,
@@ -178,9 +202,8 @@ fn print_watching() {
     stderr().flush().unwrap();
 }
 fn clear_watching() {
-    eprint!(
+    eprintln!(
         "\r{}",
         "―".repeat(term_size::dimensions().map_or(10, |(w, _)| w))
     );
-    stderr().flush().unwrap();
 }

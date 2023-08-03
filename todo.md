@@ -7,7 +7,6 @@
   - Tests
   - Technical details
   - Explain loop directions
-- Make watch run processes
 - Rework front page
 - Fill with array
 - More functions

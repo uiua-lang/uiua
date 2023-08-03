@@ -58,35 +58,35 @@ li {
 
 @media (prefers-color-scheme: dark) {
     body {
-        color: #eef;
-        background-color: #223;
+        color: #d1daec;
+        background-color: #141a1f;
     }
 
     #editor {
-        background-color: #334;
-        outline: 0.1em solid #fff4;
+        outline: 0.1em solid #606468;
+        background-color: #19232d;
     }
 
     .code {
-        color: #eef;
-        background-color: #445;
+        color: #d1daec;
+        background-color: #1d2c3a;
     }
 
     button {
-        color: #eef;
-        background-color: #445;
+        color: #d1daec;
+        background-color: #1d2c3a;
     }
 
     button:hover {
-        background-color: #556;
+        background-color: #2d3c4a;
     }
 
     a:link {
-        color: #3cf;
+        color: #6fadea;
     }
 
     a:visited {
-        color: #88f;
+        color: #947bec;
     }
 
     code {
@@ -94,11 +94,11 @@ li {
     }
 
     .important-button {
-        background-color: #45a;
+        background-color: #33577b;
     }
 
     .important-button:hover {
-        background-color: #67c;
+        background-color: #579;
     }
 }
 
@@ -212,8 +212,16 @@ li {
     width: 1.5em;
 }
 
-.line-number {
-    color: #8888;
+@media (prefers-color-scheme: dark) {
+    .line-numbers {
+        color: #333d4c;
+    }
+}
+
+@media (prefers-color-scheme: light) {
+    .line-numbers {
+        color: #888;
+    }
 }
 
 .code-line {
@@ -307,7 +315,7 @@ li {
     left: calc(-8em - 50%);
     top: calc(50% - 0.6em);
     color: #eee;
-    background-color: #000b;
+    background-color: #000d;
     padding: 0.2em;
     border-radius: 0.2em;
     width: 8em;
@@ -360,7 +368,7 @@ li {
     font-size: 0.8em;
     bottom: 100%;
     color: #eee;
-    background-color: #000b;
+    background-color: #000d;
     padding: 0.2em;
     border-radius: 0.2em;
     left: -10.2em;
@@ -399,32 +407,32 @@ li {
 }
 
 .variadic-function-button {
-    color: #aaa;
+    color: #888;
 }
 
 .noadic-function-button {
-    color: #c33;
+    color: #ed5e6a;
 }
 
 .monadic-function-button {
-    color: #30ba30;
+    color: #95d16a;
 }
 
 .dyadic-function-button {
-    color: #77f;
+    color: #54b0fc;
 }
 
 .modifier1-button {
-    color: #dd3;
+    color: #f0c36f;
 }
 
 .modifier2-button {
-    color: #c3c;
+    color: #cc6be9;
 }
 
 @media (prefers-color-scheme: dark) {
     .string-literal-span {
-        color: #4fa;
+        color: #20f9fc;
     }
 }
 
@@ -478,7 +486,7 @@ li {
 
 @media (prefers-color-scheme: dark) {
     .tutorial-nav>* {
-        background-color: #fff1;
+        background-color: #1d2c3a;
     }
 }
 

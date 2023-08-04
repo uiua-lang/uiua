@@ -11,7 +11,7 @@ use std::{
 use clap::Parser;
 use instant::Instant;
 use notify::{EventKind, RecursiveMode, Watcher};
-use uiua::{format::format_file, run::RunMode, Uiua, UiuaResult};
+use uiua::{format::format_file, run::RunMode, Uiua, UiuaError, UiuaResult};
 
 fn main() {
     color_backtrace::install();
@@ -100,30 +100,32 @@ fn watch() -> io::Result<()> {
             _ = child.kill();
             print_watching();
         }
-        match format_file(path).or_else(|_| {
-            sleep(Duration::from_millis(100));
-            format_file(path)
-        }) {
-            Ok(formatted) => {
-                if formatted.is_empty() {
+        for i in 0..10 {
+            match format_file(path) {
+                Ok(formatted) => {
+                    if formatted.is_empty() {
+                        clear_watching();
+                        print_watching();
+                        return Ok(());
+                    }
                     clear_watching();
-                    print_watching();
-                    return Ok(());
+                    *child = Some(
+                        process::Command::new(env::current_exe().unwrap())
+                            .arg("run")
+                            .arg(path)
+                            .arg("--no-format")
+                            .spawn()
+                            .unwrap(),
+                    );
+                    break;
                 }
-                clear_watching();
-                *child = Some(
-                    process::Command::new(env::current_exe().unwrap())
-                        .arg("run")
-                        .arg(path)
-                        .arg("--no-format")
-                        .spawn()
-                        .unwrap(),
-                );
-            }
-            Err(e) => {
-                clear_watching();
-                eprintln!("{}", e.show(true));
-                print_watching();
+                Err(UiuaError::Format(..)) => sleep(Duration::from_millis((i + 1) * 10)),
+                Err(e) => {
+                    clear_watching();
+                    eprintln!("{}", e.show(true));
+                    print_watching();
+                    break;
+                }
             }
         }
         Ok(())

@@ -163,11 +163,9 @@ impl Parser {
     fn try_item(&mut self, parse_scopes: bool) -> Option<Item> {
         self.try_exact(Spaces);
         Some(if let Some(binding) = self.try_binding() {
-            Item::Binding(binding, self.comment())
+            Item::Binding(binding)
         } else if let Some(words) = self.try_words() {
-            Item::Words(words, self.comment())
-        } else if let Some(comment) = self.comment() {
-            Item::Comment(comment)
+            Item::Words(words)
         } else if parse_scopes && self.try_exact(TripleMinus).is_some() {
             let items = self.items(false);
             if self.try_exact(TripleMinus).is_none() {
@@ -240,7 +238,9 @@ impl Parser {
         lines
     }
     fn try_word(&mut self) -> Option<Sp<Word>> {
-        self.try_strand()
+        self.comment()
+            .map(|c| c.map(Word::Comment))
+            .or_else(|| self.try_strand())
     }
     fn try_strand(&mut self) -> Option<Sp<Word>> {
         let Some(word) = self.try_modified() else {

@@ -212,7 +212,7 @@ impl<'io> Uiua<'io> {
                 let scope_stack = self.in_scope(true, |env| env.items(items, test))?;
                 self.stack.extend(scope_stack);
             }
-            Item::Words(words, _) => {
+            Item::Words(words) => {
                 let can_run = match self.mode {
                     RunMode::Normal => !in_test,
                     RunMode::Test => in_test,
@@ -223,7 +223,7 @@ impl<'io> Uiua<'io> {
                     self.exec_global_instrs(instrs)?;
                 }
             }
-            Item::Binding(binding, _) => {
+            Item::Binding(binding) => {
                 let can_run = match self.mode {
                     RunMode::Normal | RunMode::Watch => true,
                     RunMode::Test => in_test,
@@ -233,7 +233,6 @@ impl<'io> Uiua<'io> {
                 }
             }
             Item::Newlines => {}
-            Item::Comment(_) => {}
         }
         Ok(())
     }
@@ -367,7 +366,7 @@ impl<'io> Uiua<'io> {
             Word::Dfn(func) => self.dfn(func, word.span, call)?,
             Word::Primitive(p) => self.primitive(p, word.span, call),
             Word::Modified(m) => self.modified(*m, call)?,
-            Word::Spaces => {}
+            Word::Spaces | Word::Comment(_) => {}
         }
         Ok(())
     }

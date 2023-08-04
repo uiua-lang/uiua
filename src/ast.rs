@@ -5,10 +5,9 @@ use crate::{function::FunctionId, lex::Sp, primitive::Primitive, Ident};
 #[derive(Debug, Clone)]
 pub enum Item {
     Scoped { items: Vec<Item>, test: bool },
-    Words(Vec<Sp<Word>>, Option<Sp<String>>),
-    Binding(Binding, Option<Sp<String>>),
+    Words(Vec<Sp<Word>>),
+    Binding(Binding),
     Newlines,
-    Comment(Sp<String>),
 }
 
 #[derive(Debug, Clone)]
@@ -30,6 +29,7 @@ pub enum Word {
     Dfn(Func),
     Primitive(Primitive),
     Modified(Box<Modified>),
+    Comment(String),
     Spaces,
 }
 
@@ -60,6 +60,7 @@ impl fmt::Debug for Word {
             Word::Primitive(prim) => prim.fmt(f),
             Word::Modified(modified) => modified.fmt(f),
             Word::Spaces => write!(f, "' '"),
+            Word::Comment(comment) => write!(f, "# {comment}"),
         }
     }
 }

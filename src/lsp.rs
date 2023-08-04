@@ -16,20 +16,9 @@ fn items_spans(items: Vec<Item>) -> Vec<Sp<SpanKind>> {
     for item in items {
         match item {
             Item::Scoped { items, .. } => spans.extend(items_spans(items)),
-            Item::Words(words, comment) => {
-                if let Some(comment) = comment {
-                    spans.push(comment.span.sp(SpanKind::Comment));
-                }
-                spans.extend(words_spans(words));
-            }
-            Item::Binding(binding, comment) => {
-                if let Some(comment) = comment {
-                    spans.push(comment.span.sp(SpanKind::Comment));
-                }
-                spans.extend(words_spans(binding.words));
-            }
+            Item::Words(words) => spans.extend(words_spans(words)),
+            Item::Binding(binding) => spans.extend(words_spans(binding.words)),
             Item::Newlines => {}
-            Item::Comment(comment) => spans.push(comment.span.sp(SpanKind::Comment)),
         }
     }
     spans
@@ -72,6 +61,7 @@ fn words_spans(words: Vec<Sp<Word>>) -> Vec<Sp<SpanKind>> {
                 spans.extend(words_spans(m.words));
             }
             Word::Spaces => {}
+            Word::Comment(_) => spans.push(word.span.sp(SpanKind::Comment)),
         }
     }
     spans

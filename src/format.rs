@@ -51,25 +51,13 @@ fn format_item(output: &mut String, item: &Item) {
             }
             output.push_str(delim);
         }
-        Item::Words(w, comment) => {
+        Item::Words(w) => {
             format_words(output, w);
-            if let Some(comment) = comment {
-                output.push_str("  # ");
-                output.push_str(&comment.value);
-            }
         }
-        Item::Binding(binding, comment) => {
+        Item::Binding(binding) => {
             output.push_str(&binding.name.value.0);
             output.push_str(" ← ");
             format_words(output, &binding.words);
-            if let Some(comment) = comment {
-                output.push_str("  # ");
-                output.push_str(&comment.value);
-            }
-        }
-        Item::Comment(comment) => {
-            output.push_str("# ");
-            output.push_str(&comment.value);
         }
         Item::Newlines => {}
     }
@@ -118,6 +106,10 @@ fn format_word(output: &mut String, word: &Sp<Word>) {
             format_words(output, &m.words);
         }
         Word::Spaces => output.push(' '),
+        Word::Comment(comment) => {
+            output.push_str("# ");
+            output.push_str(comment);
+        }
     }
 }
 

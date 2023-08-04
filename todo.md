@@ -1,4 +1,3 @@
-- Swap distribute order
 - Index of with any type
 - Docs
   - Native interpreter and installation

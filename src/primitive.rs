@@ -592,10 +592,13 @@ primitive!(
     /// ex: ≑⊂ 1_2 [4_5 6_7]
     /// ex: ≑⌿+ 1_2 [4_5 6_7]
     (Bridge, DyadicModifier { modifier: 1 }, "bridge" + '≑'),
-    /// Apply a function to a fixed value and each row of an array
+    /// Apply a function to each row of an array and a fixed value
     ///
-    /// ex: ∹⊂ 1 2_3_4
+    /// ex: ∹⊂ 1_2_3 4
     /// ex: ∹⊂ 1_2_3 4_5_6
+    ///
+    /// One nice use of this is to call multiple functions on a single argument.
+    /// ex: ∹:√_¯_⌊_⌈_(×4) 6.25
     (
         Distribute,
         DyadicModifier { modifier: 1 },

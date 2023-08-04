@@ -16,10 +16,8 @@ const QUADRATIC: &str = "\
 Quadratic ← {÷ ×2a -b ⊟¯. √- ××4a c ⁿ2 b}
 Quadratic 1 2 0";
 const STRIPES: &str = "\
-r ← ⊞+.⇡300
-g ← ⊞↥.⇡300
-b ← ⊞-.⇡300
-⍉ ÷2 +1.2 ○ ÷10[r g b]";
+∵{⊞a.⇡300}+_↥_-
+⍉ ÷2 +1.2 ○ ÷10";
 const PALINDROME: &str = r#"words ← "uiua racecar wow cool!"
 ≑⊂~ ⊏~[" ❌" " ✅"] ≡(≅⇌.). ⊘≠' '. words"#;
 const RULE_30: &str = "\

@@ -4,6 +4,7 @@
   - Technical details
   - Explain loop directions
   - Comments
+  - Note that modifier parsing works on dfns as well
 - More functions
   - Spawn?
   - Parallel?

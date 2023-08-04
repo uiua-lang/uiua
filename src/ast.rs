@@ -21,7 +21,7 @@ pub enum Word {
     Number(String, f64),
     Char(char),
     String(String),
-    FormatString(Vec<String>),
+    FormatString(Vec<Vec<String>>),
     Ident(Ident),
     Strand(Vec<Sp<Word>>),
     Array(Vec<Vec<Sp<Word>>>),
@@ -41,10 +41,12 @@ impl fmt::Debug for Word {
             Word::String(string) => write!(f, "{string:?}"),
             Word::FormatString(parts) => {
                 write!(f, "$\"")?;
-                for part in parts {
-                    let escaped = format!("{part:?}");
-                    let part = &escaped[1..escaped.len() - 1];
-                    write!(f, "{part}")?;
+                for line in parts {
+                    for part in line {
+                        let escaped = format!("{part:?}");
+                        let part = &escaped[1..escaped.len() - 1];
+                        write!(f, "{part}")?;
+                    }
                 }
                 write!(f, "\"")
             }

@@ -255,7 +255,7 @@ pub enum Token {
     Number,
     Char(char),
     Str(String),
-    FormatStr(Vec<String>),
+    FormatStr(Vec<String>, bool),
     Simple(Simple),
     Glyph(Primitive),
 }
@@ -273,9 +273,11 @@ impl Token {
             _ => None,
         }
     }
-    pub fn as_format_string(&self) -> Option<&[String]> {
+    pub fn as_format_string(&self, multiline: Option<bool>) -> Option<(&[String], bool)> {
         match self {
-            Token::FormatStr(string) => Some(string),
+            Token::FormatStr(string, m) if multiline.map_or(true, |n| *m == n) => {
+                Some((string, *m))
+            }
             _ => None,
         }
     }
@@ -467,7 +469,7 @@ impl Lexer {
                 // Characters
                 '\'' => {
                     let mut escaped = false;
-                    let char = match self.character(&mut escaped, '\'') {
+                    let char = match self.character(&mut escaped, Some('\'')) {
                         Ok(Some(c)) => c,
                         Ok(None) => {
                             self.errors
@@ -491,16 +493,12 @@ impl Lexer {
                 // Strings
                 '"' | '$' => {
                     let format = c == '$';
-                    if format && !self.next_char_exact('"') {
-                        self.errors.push(
-                            self.end_span(start)
-                                .sp(LexError::ExpectedCharacter(Some('"'))),
-                        );
-                    }
+                    let multiline = format && self.next_char_exact(' ');
                     let mut string = String::new();
                     let mut escaped = false;
                     loop {
-                        match self.character(&mut escaped, '"') {
+                        let escape_char = if multiline { None } else { Some('"') };
+                        match self.character(&mut escaped, escape_char) {
                             Ok(Some(c)) => string.push(c),
                             Ok(None) => break,
                             Err(e) => {
@@ -509,7 +507,7 @@ impl Lexer {
                             }
                         }
                     }
-                    if !self.next_char_exact('"') {
+                    if !multiline && !self.next_char_exact('"') {
                         self.errors.push(
                             self.end_span(start)
                                 .sp(LexError::ExpectedCharacter(Some('"'))),
@@ -549,7 +547,7 @@ impl Lexer {
                             }
                         }
                         frags.push(curr);
-                        self.end(FormatStr(frags), start)
+                        self.end(FormatStr(frags, multiline), start)
                     } else {
                         self.end(Str(string), start)
                     }
@@ -643,8 +641,12 @@ impl Lexer {
         }
         true
     }
-    fn character(&mut self, escaped: &mut bool, escape_char: char) -> Result<Option<char>, char> {
-        let Some(c) = self.next_char_if(|c| c != '\n' && (c != escape_char || *escaped)) else {
+    fn character(
+        &mut self,
+        escaped: &mut bool,
+        escape_char: Option<char>,
+    ) -> Result<Option<char>, char> {
+        let Some(c) = self.next_char_if(|c| c != '\n' && (Some(c) != escape_char || *escaped)) else {
             return Ok(None);
         };
         Ok(Some(if *escaped {

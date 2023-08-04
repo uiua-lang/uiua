@@ -8,7 +8,6 @@
   - Comments
   - Note that modifier parsing works on dfns as well
   - Note that operations can span multiple lines
-- Multiline functions and dfns
 - Multiline strings
 - Rework names
 - Logarithms

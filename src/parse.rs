@@ -332,8 +332,19 @@ impl Parser {
             c.map(Into::into).map(Word::Char)
         } else if let Some(s) = self.next_token_map(Token::as_string) {
             s.map(Into::into).map(Word::String)
-        } else if let Some(frags) = self.next_token_map(Token::as_format_string) {
-            frags.map(Into::into).map(Word::FormatString)
+        } else if let Some(s) = self.next_token_map(|t| t.as_format_string(None)) {
+            let mut span = s.span;
+            let (frags, multiline) = s.value;
+            if multiline {
+                let mut frags = vec![frags.to_vec()];
+                while let Some(next) = self.next_token_map(|t| t.as_format_string(Some(true))) {
+                    span = span.merge(next.span);
+                    frags.push(next.value.0.into());
+                }
+                span.sp(Word::FormatString(frags))
+            } else {
+                span.sp(Word::FormatString(vec![frags.into()]))
+            }
         } else if let Some(expr) = self.try_func() {
             expr
         } else if let Some(expr) = self.try_dfn() {

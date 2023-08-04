@@ -326,18 +326,22 @@ impl<'io> Uiua<'io> {
             }
             Word::Char(c) => self.push_instr(Instr::Push(c.into())),
             Word::String(s) => self.push_instr(Instr::Push(s.into())),
-            Word::FormatString(frags) => {
+            Word::FormatString(lines) => {
                 let f = Function {
                     id: FunctionId::Anonymous(word.span.clone()),
                     instrs: Vec::new(),
                     kind: FunctionKind::Dynamic(Rc::new(move |env| {
                         let mut formatted = String::new();
-                        for (i, frag) in frags.iter().enumerate() {
-                            if i > 0 {
-                                let val = env.pop(format!("format argument {i}"))?;
-                                formatted.push_str(&format!("{}", val));
+                        let mut i = 0;
+                        for frags in &lines {
+                            for (j, frag) in frags.iter().enumerate() {
+                                if j > 0 {
+                                    let val = env.pop(format!("format argument {i}"))?;
+                                    formatted.push_str(&format!("{}", val));
+                                    i += 1;
+                                }
+                                formatted.push_str(frag);
                             }
-                            formatted.push_str(frag);
                         }
                         env.push(formatted);
                         Ok(())

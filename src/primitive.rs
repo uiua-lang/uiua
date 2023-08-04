@@ -325,6 +325,18 @@ primitive!(
     ///
     /// See also: [reshape]
     (1, Deshape, MonadicArray, "deshape" + '♭'),
+    /// Encode an array as bits (little-endian)
+    ///
+    /// The result will always be 1 [rank] higher than the input.
+    /// ex: ⋯27
+    /// ex: ⋯⇡8
+    /// ex: ⋯[1_2 3_4 5_6]
+    ///
+    /// To turn the bits back into numbers, use [invert].
+    /// ex: ↶⋯[1 0 1 0]
+    /// ex: ↶⋯[1_1_1 0_0_0 0_1_1]
+    (1, Bits, MonadicArray, "bits" + '⋯'),
+    (1, InverseBits, MonadicArray),
     /// Rotate the shape of an array
     ///
     /// ex: ⍉.[1_2 3_4 5_6]
@@ -771,6 +783,8 @@ impl Primitive {
             Reverse => Reverse,
             Transpose => InvTranspose,
             InvTranspose => Transpose,
+            Bits => InverseBits,
+            InverseBits => Bits,
             Debug => Debug,
             _ => return None,
         })
@@ -915,6 +929,8 @@ impl Primitive {
             Primitive::Len => env.monadic_ref(Value::len)?,
             Primitive::Rank => env.monadic_ref(Value::rank)?,
             Primitive::Truncate => env.monadic_mut(Value::truncate)?,
+            Primitive::Bits => env.monadic_ref_env(Value::bits)?,
+            Primitive::InverseBits => env.monadic_ref_env(Value::inverse_bits)?,
             Primitive::Fold => loops::fold(env)?,
             Primitive::Reduce => loops::reduce(env)?,
             Primitive::Each => loops::each(env)?,

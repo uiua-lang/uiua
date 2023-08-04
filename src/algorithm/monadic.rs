@@ -5,7 +5,7 @@ use std::{
     ptr,
 };
 
-use crate::{array::*, value::Value, Uiua, UiuaResult};
+use crate::{array::*, value::Value, Byte, Uiua, UiuaResult};
 
 impl Value {
     pub fn deshape(&mut self) {
@@ -366,5 +366,95 @@ impl Value {
             }
             v => return Err(env.error(format!("Cannot invert {}", v.type_name()))),
         })
+    }
+}
+
+impl Value {
+    pub fn bits(&self, env: &Uiua) -> UiuaResult<Array<Byte>> {
+        match self {
+            Value::Byte(n) => n.convert_ref().bits(env),
+            Value::Num(n) => n.bits(env),
+            _ => Err(env.error("Argument to bits must be an array of natural numbers")),
+        }
+    }
+    pub fn inverse_bits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
+        match self {
+            Value::Byte(n) => n.inverse_bits(env),
+            Value::Num(n) => n.convert_ref().inverse_bits(env),
+            _ => Err(env.error("Argument to inverse_bits must be an array of naturals")),
+        }
+    }
+}
+
+impl Array<f64> {
+    pub fn bits(&self, env: &Uiua) -> UiuaResult<Array<Byte>> {
+        let mut nats = Vec::new();
+        for &n in &self.data {
+            if n.is_fill_value() {
+                nats.push(0);
+                continue;
+            }
+            if n.fract() != 0.0 {
+                return Err(env.error("Array must be a list of naturals"));
+            }
+            nats.push(n as u128);
+        }
+        let mut max = if let Some(max) = nats.iter().max() {
+            *max
+        } else {
+            let mut shape = self.shape.clone();
+            shape.push(0);
+            return Ok((shape, Vec::new()).into());
+        };
+        let mut max_bits = 0;
+        while max != 0 {
+            max_bits += 1;
+            max >>= 1;
+        }
+        let mut new_data = Vec::with_capacity(self.data.len() * max_bits);
+        // Little endian
+        for n in nats {
+            for i in (0..max_bits).rev() {
+                new_data.push(Byte::Value((n & (1 << i) != 0) as u8));
+            }
+        }
+        let mut shape = self.shape.clone();
+        shape.push(max_bits);
+        let arr = Array::new(shape, new_data.into());
+        arr.validate_shape();
+        Ok(arr)
+    }
+}
+
+impl Array<Byte> {
+    pub fn inverse_bits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
+        let mut bools = Vec::with_capacity(self.data.len());
+        for b in &self.data {
+            match b {
+                Byte::Value(b) if *b > 1 => {
+                    return Err(env.error("Array must be a list of booleans"))
+                }
+                Byte::Value(b) => bools.push(*b != 0),
+                Byte::Fill => bools.push(false),
+            }
+        }
+        if self.rank() == 0 {
+            return Ok(Array::from(bools[0] as u8 as f64));
+        }
+        let mut shape = self.shape.clone();
+        let bit_string_len = shape.pop().unwrap();
+        let mut new_data = Vec::with_capacity(self.data.len() / bit_string_len);
+        // Little endian
+        for bits in bools.chunks_exact(bit_string_len) {
+            let mut n = 0;
+            for &b in bits {
+                n <<= 1;
+                n |= b as u128;
+            }
+            new_data.push(n as f64);
+        }
+        let arr = Array::new(shape, new_data.into());
+        arr.validate_shape();
+        Ok(arr)
     }
 }

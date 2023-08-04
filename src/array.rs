@@ -144,6 +144,16 @@ impl<T: ArrayValue> Array<T> {
             data: self.data.into_iter().map(Into::into).collect(),
         }
     }
+    pub fn convert_ref<U>(&self) -> Array<U>
+    where
+        T: Into<U>,
+        U: Clone,
+    {
+        Array {
+            shape: self.shape.clone(),
+            data: self.data.iter().cloned().map(Into::into).collect(),
+        }
+    }
     pub fn into_rows(self) -> impl Iterator<Item = Self> {
         let row_len = self.row_len();
         let mut row_shape = self.shape.clone();
@@ -322,6 +332,12 @@ impl<T: ArrayValue> FromIterator<T> for Array<T> {
 impl From<String> for Array<char> {
     fn from(s: String) -> Self {
         Self::new(vec![s.len()], s.chars().collect())
+    }
+}
+
+impl From<Vec<bool>> for Array<Byte> {
+    fn from(data: Vec<bool>) -> Self {
+        Self::new(vec![data.len()], data.into_iter().map(Byte::from).collect())
     }
 }
 

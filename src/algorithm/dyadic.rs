@@ -507,11 +507,13 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     pub fn fill(&mut self, fill: Self, env: &Uiua) -> UiuaResult {
-        if fill.rank() != 0 {
-            return Err(env.error("Cannot fill with non-scalar array"));
+        if !self.shape.ends_with(&fill.shape) {
+            return Err(env.error(format!(
+                "Cannot fill array with shape {:?} with array with shape {:?}",
+                self.shape, fill.shape
+            )));
         }
-        let fill = fill.data.into_iter().next().unwrap();
-        for elem in &mut *self.data {
+        for (elem, fill) in self.data.iter_mut().zip(fill.data.iter().cycle()) {
             if elem.is_fill_value() {
                 *elem = fill.clone();
             }

@@ -3,7 +3,6 @@
   - Tests
   - Technical details
   - Explain loop directions
-- Fill with array
 - More functions
   - Bits
   - Spawn?
@@ -18,6 +17,8 @@
 - Optimizations
   - Windowed reduce
 - Rework front page
+- Pretty array shape formatting in error messages
+- Search docs
 - Multimedia
   - Sound input
   - Webcam input?

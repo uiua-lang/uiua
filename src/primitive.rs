@@ -401,9 +401,15 @@ primitive!(
     ///
     /// [first] of the [shape] of the coupled array will *always* be `2`.
     (2, Couple, DyadicArray, "couple" + '⊟'),
-    /// Replace the fill elements of an array with a scalar
+    /// Replace the fill elements of an array with a elements from another.
     ///
-    /// ex: ⍛∞.\⊂1_2_3_4
+    /// The most basic case is filling with a scalar
+    /// ex: ⍛7 .↙10⇡5
+    /// ex: ⍛7 .↙5↯3_3⇡9
+    ///
+    /// The [shape] of the array being filled must end with the [shape] of the fill array.
+    /// ex: ⍛1_2_3 .↙5↯3_3⇡9
+    /// ex: ⍛1_2_3_4 .↙5↯3_3⇡9
     (2, Fill, DyadicArray, "fill" + '⍛'),
     /// Index a single row or element from an array
     ///

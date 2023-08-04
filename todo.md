@@ -3,7 +3,8 @@
   - Native interpreter and installation
   - Tests
   - Technical details
-  - Explain loop directions
+  - Loops
+    - Explain loop directions
   - Comments
   - Note that modifier parsing works on dfns as well
   - Note that operations can span multiple lines

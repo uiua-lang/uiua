@@ -1,5 +1,5 @@
 const UIUA: &str = "\"Um, I um...arrays\"\n≡⊢ ⊘≥'A'.";
-const FORMAT: &str = "# Click Run to format!\nfold(join~/+drop`2.;)0_1range10";
+const FORMAT: &str = "# Click Run to format!\nfold(join~/+take`2.;)0_1range10";
 const D3: &str = "↯~⇡/×.2_3_4";
 const LOGO: &str = "\
 x ← ↶⍉⊞⊟. ÷÷2~ -÷2,⇡.200
@@ -19,7 +19,7 @@ const STRIPES: &str = "\
 ∵{⊞a.⇡300}+_↥_-
 ⍉ ÷2 +1.2 ○ ÷10";
 const PALINDROME: &str = r#"words ← "uiua racecar wow cool!"
-≑⊂~ ⊏~[" ❌" " ✅"] ≡(≅⇌.). ⊘≠' '. words"#;
+≍⊂~ ⊏~[" ❌" " ✅"] ≡(≅⇌.). ⊘≠' '. words"#;
 const RULE_30: &str = "\
 Thirty ← ≡(↥≅0_1_1 ~=1 /+.) ◫3 ⊂~0 ⊂0
 size ← 600

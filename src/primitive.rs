@@ -569,13 +569,6 @@ primitive!(
     /// ex: ∵(⊟.) 1_2_3_4
     /// ex: ∵⇡ 1_2_3_4
     (Each, MonadicModifier { modifier: 1 }, "each" + '∵'),
-    /// Pervade a function through two arrays
-    /// For operations that are already pervasive, like [add], this is redundant.
-    /// This is the element-wise version of [bridge].
-    ///
-    /// ex: ∺⊂ 1_2_3 4_5_6
-    /// ex: ∺⊂ 1_2 [4_5 6_7]
-    (Zip, DyadicModifier { modifier: 1 }, "zip" + '∺'),
     /// Apply a function to each row of an array
     /// This is the row-wise version of [each].
     ///
@@ -586,24 +579,41 @@ primitive!(
     /// ex: ⍚¯1/+ [1_2_3 4_5_6 7_8_9]
     /// ex: ≡/+   [1_2_3 4_5_6 7_8_9]
     (Rows, MonadicModifier { modifier: 1 }, "rows" + '≡'),
+    /// Pervade a function through two arrays
+    /// For operations that are already pervasive, like [add], this is redundant.
+    /// This is the element-wise version of [bridge].
+    ///
+    /// ex: ≕⊂ 1_2_3 4_5_6
+    /// ex: ≕⊂ 1_2 [4_5 6_7]
+    (Zip, DyadicModifier { modifier: 1 }, "zip" + '≕'),
     /// Apply a function to each pair of rows in two arrays
     /// This is the row-wise version of [zip].
     ///
-    /// ex: ≑⊂ 1_2 [4_5 6_7]
-    /// ex: ≑⌿+ 1_2 [4_5 6_7]
-    (Bridge, DyadicModifier { modifier: 1 }, "bridge" + '≑'),
-    /// Apply a function to each row of an array and a fixed value
+    /// ex: ≍⊂ 1_2 [4_5 6_7]
+    /// ex: ≍⌿+ 1_2 [4_5 6_7]
+    (Bridge, DyadicModifier { modifier: 1 }, "bridge" + '≍'),
+    /// Apply a function to each element of an array and a fixed value
+    /// This is the element-wise version of [plow].
     ///
-    /// ex: ∹⊂ 1_2_3 4
-    /// ex: ∹⊂ 1_2_3 4_5_6
+    /// ex: ≐⊂ 1_2_3 4
+    /// ex: ≐⊂ 1_2_3 4_5_6
     ///
-    /// One nice use of this is to call multiple functions on a single argument.
-    /// ex: ∹:√_¯_⌊_⌈_(×4) 6.25
+    /// One nice use of this is to [call] multiple functions on a single argument.
+    /// ex: ≐:√_¯_⌊_⌈_(×4) 6.25
     (
         Distribute,
         DyadicModifier { modifier: 1 },
-        "distribute" + '∹'
+        "distribute" + '≐'
     ),
+    /// Apply a function to each row of an array and a fixed value
+    /// This is the row-wise version of [distribute].
+    ///
+    /// ex: ⫫⊂ 1_2_3 4
+    /// ex: ⫫⊂ 1_2_3 4_5_6
+    ///
+    /// One nice use of this is to [call] multiple functions on a single argument.
+    /// ex: ⫫:√_¯_⌊_⌈_(×4) 6.25
+    (Plow, DyadicModifier { modifier: 1 }, "plow" + '⫫'),
     /// Apply a function to each combination of elements of two arrays
     /// This is the element-wise version of [cross].
     ///
@@ -944,6 +954,7 @@ impl Primitive {
             Primitive::Rows => loops::rows(env)?,
             Primitive::Bridge => loops::bridge(env)?,
             Primitive::Distribute => loops::distribute(env)?,
+            Primitive::Plow => loops::plow(env)?,
             Primitive::Table => loops::table(env)?,
             Primitive::Cross => loops::cross(env)?,
             Primitive::Scan => loops::scan(env)?,

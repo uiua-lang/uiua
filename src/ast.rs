@@ -59,7 +59,7 @@ impl fmt::Debug for Word {
             }
             Word::Primitive(prim) => prim.fmt(f),
             Word::Modified(modified) => modified.fmt(f),
-            Word::Spaces => write!(f, " "),
+            Word::Spaces => write!(f, "' '"),
         }
     }
 }
@@ -67,15 +67,17 @@ impl fmt::Debug for Word {
 #[derive(Clone)]
 pub struct Func {
     pub id: FunctionId,
-    pub body: Vec<Sp<Word>>,
+    pub body: Vec<Vec<Sp<Word>>>,
 }
 
 impl fmt::Debug for Func {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut d = f.debug_tuple("func");
         d.field(&self.id);
-        for word in &self.body {
-            d.field(&word.value);
+        for line in &self.body {
+            for word in line {
+                d.field(&word.value);
+            }
         }
         d.finish()
     }

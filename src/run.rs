@@ -413,7 +413,10 @@ impl<'io> Uiua<'io> {
         Ok(())
     }
     fn func(&mut self, func: Func, _span: CodeSpan) -> UiuaResult {
-        let instrs = self.compile_words(func.body)?;
+        let mut instrs = Vec::new();
+        for line in func.body {
+            instrs.extend(self.compile_words(line)?);
+        }
         if let [Instr::Push(f), Instr::Call(..)] = instrs.as_slice() {
             if matches!(f, Value::Func(_)) {
                 self.push_instr(Instr::Push(f.clone()));
@@ -430,7 +433,10 @@ impl<'io> Uiua<'io> {
     }
     fn dfn(&mut self, func: Func, span: CodeSpan, call: bool) -> UiuaResult {
         self.new_dfns.push(Vec::new());
-        let instrs = self.compile_words(func.body)?;
+        let mut instrs = Vec::new();
+        for line in func.body {
+            instrs.extend(self.compile_words(line)?);
+        }
         let refs = self.new_dfns.pop().unwrap();
         let span = self.add_span(span);
         let dfn_size = refs.into_iter().max().map(|n| n + 1).unwrap_or(0);

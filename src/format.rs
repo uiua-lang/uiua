@@ -104,12 +104,12 @@ fn format_word(output: &mut String, word: &Sp<Word>) {
         }
         Word::Func(func) => {
             output.push('(');
-            format_words(output, &func.body);
+            format_function_body(output, &func.body);
             output.push(')');
         }
         Word::Dfn(dfn) => {
             output.push('{');
-            format_words(output, &dfn.body);
+            format_function_body(output, &dfn.body);
             output.push('}');
         }
         Word::Primitive(prim) => output.push_str(&prim.to_string()),
@@ -118,6 +118,29 @@ fn format_word(output: &mut String, word: &Sp<Word>) {
             format_words(output, &m.words);
         }
         Word::Spaces => output.push(' '),
+    }
+}
+
+fn format_function_body(output: &mut String, lines: &[Vec<Sp<Word>>]) {
+    if lines.len() <= 1 {
+        format_words(output, &lines[0]);
+    } else {
+        let curr_line = output.lines().last().unwrap_or_default();
+        let curr_line_pos = curr_line.chars().count();
+        let compact = curr_line_pos <= 10 || curr_line.starts_with(' ');
+        let indent = if compact { curr_line_pos } else { 2 };
+        for (i, line) in lines.iter().enumerate() {
+            if i > 0 || !compact {
+                output.push('\n');
+                for _ in 0..indent {
+                    output.push(' ');
+                }
+            }
+            format_words(output, line);
+        }
+        if !compact {
+            output.push('\n');
+        }
     }
 }
 
@@ -137,6 +160,9 @@ fn trim_spaces(words: &[Sp<Word>]) -> &[Sp<Word>] {
         } else {
             break;
         }
+    }
+    if start >= end {
+        return &[];
     }
     &words[start..end]
 }

@@ -220,6 +220,25 @@ impl Parser {
             Some(words)
         }
     }
+    fn multiline_words(&mut self) -> Vec<Vec<Sp<Word>>> {
+        let mut lines = Vec::new();
+        while self.try_exact(Newline).is_some() || self.try_exact(Spaces).is_some() {}
+        while let Some(words) = self.try_words() {
+            lines.push(words);
+            let mut newlines = 0;
+            while self.try_exact(Newline).is_some() {
+                newlines += 1;
+                while self.try_exact(Spaces).is_some() {}
+            }
+            if newlines > 1 {
+                lines.push(Vec::new());
+            }
+        }
+        if lines.last().is_some_and(|line| line.is_empty()) {
+            lines.pop();
+        }
+        lines
+    }
     fn try_word(&mut self) -> Option<Sp<Word>> {
         self.try_strand()
     }
@@ -345,7 +364,7 @@ impl Parser {
         let Some(start) = self.try_exact(OpenParen) else {
             return None;
         };
-        let body = self.try_words().unwrap_or_default();
+        let body = self.multiline_words();
         let end = self.expect_close(CloseParen);
         let span = start.merge(end);
         Some(span.clone().sp(if body.is_empty() {
@@ -361,7 +380,7 @@ impl Parser {
         let Some(start) = self.try_exact(OpenCurly) else {
             return None;
         };
-        let body = self.try_words().unwrap_or_default();
+        let body = self.multiline_words();
         let end = self.expect_close(CloseCurly);
         let span = start.merge(end);
         Some(span.clone().sp(Word::Dfn(Func {

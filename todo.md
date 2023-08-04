@@ -5,16 +5,17 @@
   - Explain loop directions
   - Comments
   - Note that modifier parsing works on dfns as well
-- More functions
-  - Spawn?
-  - Parallel?
+  - Note that operations can span multiple lines
+- Multiline functions and dfns
 - Multiline strings
-- More inverses
-- Editor history
-- Threads
-- Proper 404 page
 - Rework names
 - Logarithms
+- Editor history
+- More inverses
+- Threads
+  - Spawn threads
+  - Parallelize loops
+- Proper 404 page
 - Make certain float functions propogate fill elements
 - Optimizations
   - Windowed reduce
@@ -35,6 +36,7 @@
   - check OS
   - unicode utils
   - run commands
+  - handle kind?
 - Tooling
   - LSP backend
   - LSP frontends

@@ -61,7 +61,7 @@ pub fn Site(cx: Scope) -> impl IntoView {
                 <div id="top">
                     <div id="header">
                         <div id="header-left">
-                            <h1><img src="/uiua-logo.png" style="height: 1em" alt="Uiua logo"></img>"Uiua"</h1>
+                            <h1><img src="/uiua-logo.png" style="height: 1em" alt="Uiua logo"></img>" Uiua"</h1>
                             <p id="subtitle">{ subtitle }</p>
                         </div>
                         <div id="nav">

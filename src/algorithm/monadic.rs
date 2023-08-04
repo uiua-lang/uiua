@@ -412,9 +412,9 @@ impl Array<f64> {
             max >>= 1;
         }
         let mut new_data = Vec::with_capacity(self.data.len() * max_bits);
-        // Little endian
+        // Big endian
         for n in nats {
-            for i in (0..max_bits).rev() {
+            for i in 0..max_bits {
                 new_data.push(Byte::Value((n & (1 << i) != 0) as u8));
             }
         }
@@ -444,12 +444,13 @@ impl Array<Byte> {
         let mut shape = self.shape.clone();
         let bit_string_len = shape.pop().unwrap();
         let mut new_data = Vec::with_capacity(self.data.len() / bit_string_len);
-        // Little endian
+        // Big endian
         for bits in bools.chunks_exact(bit_string_len) {
             let mut n = 0;
-            for &b in bits {
-                n <<= 1;
-                n |= b as u128;
+            for (i, b) in bits.iter().enumerate() {
+                if *b {
+                    n |= 1 << i;
+                }
             }
             new_data.push(n as f64);
         }

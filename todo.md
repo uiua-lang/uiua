@@ -14,11 +14,13 @@
 - Proper 404 page
 - Rework names
 - Logarithms
+- Make certain float functions propogate fill elements
 - Optimizations
   - Windowed reduce
 - Rework front page
 - Pretty array shape formatting in error messages
 - Search docs
+- Parse primitive docs in main crate
 - Multimedia
   - Sound input
   - Webcam input?

@@ -325,7 +325,7 @@ primitive!(
     ///
     /// See also: [reshape]
     (1, Deshape, MonadicArray, "deshape" + '♭'),
-    /// Encode an array as bits (little-endian)
+    /// Encode an array as bits (big-endian)
     ///
     /// The result will always be 1 [rank] higher than the input.
     /// ex: ⋯27
@@ -334,7 +334,10 @@ primitive!(
     ///
     /// To turn the bits back into numbers, use [invert].
     /// ex: ↶⋯[1 0 1 0]
-    /// ex: ↶⋯[1_1_1 0_0_0 0_1_1]
+    /// ex: ↶⋯[1_1_1 0_1_0 0_1_1]
+    ///
+    /// Bits are encoded in big-endian so that any fill elements do not affect the result.
+    /// ex: ↶⋯.\⊂◿2⇡6
     (1, Bits, MonadicArray, "bits" + '⋯'),
     (1, InverseBits, MonadicArray),
     /// Rotate the shape of an array

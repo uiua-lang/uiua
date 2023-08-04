@@ -271,9 +271,9 @@ fn TutorialArrays(cx: Scope) -> impl IntoView {
         <p>"From shape we can derive two closely-related properties called "<b>"length"</b>" and "<b>"rank"</b>"."</p>
         <p><PrimCode prim=Len/>" is the number of "<i>"major cells"</i>" of the array. This is the number of elements for a 1D array and the number of rows for a 2D array. Length is always equal to the first number in the shape (or 1 if the shape is empty)."</p>
         <p><PrimCode prim=Rank/>" is the number of dimensions of the array."</p>
-        <Editor example="△[1 2 3]\n≢[1 2 3]\n∴[1 2 3]"/>
+        <Editor example="△[1 2 3]\n⧻[1 2 3]\n∴[1 2 3]"/>
         <p><PrimCode prim=Rank/>" is equivalent to the "<PrimCode prim=Len/>" of the "<PrimCode prim=Shape/>"."</p>
-        <Editor example="= ∴[1 2 3] ≢△[1 2 3]"/>
+        <Editor example="= ∴[1 2 3] ⧻△[1 2 3]"/>
         <h2>"Pervasion"</h2>
         <p>"Most operations that apply to scalars are what is called "<i>"pervasive"</i>" when it comes to arrays. This means that the operations automatically applies to every item in the array."</p>
         <Editor example="+1 1_2_3\n√[4 9 16]\n+1_2_3 4_5_6"/>

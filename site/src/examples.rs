@@ -7,11 +7,11 @@ rgb ← [×.⊢⇌x ×.⊢x ∵0.5⊢x]
 u ← ↥<0.2~>0.7.+×2 ×.~/·x
 c ← √/+ⁿ2 x
 ⍉⊂~-¬u <1 c +0.1 ≡(↧<0.95 c)rgb";
-const AVG: &str = "Avg ← ÷≢~/+.\nAvg 0_2_1_5";
+const AVG: &str = "Avg ← ÷⧻~/+.\nAvg 0_2_1_5";
 const CHORD: &str = "\
 H ← ⁿ~2÷12
 [×H10.~ ×H7.~ ×H4. 220]
-÷≢~ ≡/+ ○×τ ⊞× ÷~ ⇡.44100.";
+÷⧻~ ≡/+ ○×τ ⊞× ÷~ ⇡.44100.";
 const QUADRATIC: &str = "\
 Quadratic ← {÷ ×2a -b ⊟¯. √- ××4a c ⁿ2 b}
 Quadratic 1 2 0";

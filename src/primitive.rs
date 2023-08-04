@@ -178,7 +178,7 @@ primitive!(
     /// ex: [~ 1 2 3 4]
     ///
     /// When combined with [duplicate], this can be used to make a monadic right-hook or monadic fork, such as an average calculator:
-    /// ex: ÷≢~/+. 1_8_2_5
+    /// ex: ÷⧻~/+. 1_8_2_5
     (2(2), Flip, Stack, "flip" + '~'),
     /// Pop the top value off the stack
     (1(0), Pop, Stack, "pop" + ';'),
@@ -265,11 +265,11 @@ primitive!(
     // Monadic array ops
     /// The number of rows in an array
     ///
-    /// ex: ≢5
-    /// ex: ≢[]
-    /// ex: ≢1_2_3
-    /// ex: ≢[1_2 3_4 5_6]
-    (1, Len, MonadicArray, "length" + '≢'),
+    /// ex: ⧻5
+    /// ex: ⧻[]
+    /// ex: ⧻1_2_3
+    /// ex: ⧻[1_2 3_4 5_6]
+    (1, Len, MonadicArray, "length" + '⧻'),
     /// The number of dimensions in an array
     ///
     /// [rank] is equivalent to [length] of [shape].

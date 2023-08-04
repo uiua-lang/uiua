@@ -3,11 +3,11 @@
   - Tests
   - Technical details
   - Explain loop directions
+  - Comments
 - More functions
-  - Bits
   - Spawn?
   - Parallel?
-  - Read until
+- Multiline strings
 - More inverses
 - Editor history
 - Threads

@@ -339,7 +339,7 @@ impl Parser {
         } else if let Some(expr) = self.try_dfn() {
             expr
         } else if let Some(start) = self.try_exact(OpenBracket) {
-            let items = self.try_words().unwrap_or_default();
+            let items = self.multiline_words();
             let end = self.expect_close(CloseBracket);
             let span = start.merge(end);
             span.sp(Word::Array(items))

@@ -99,17 +99,17 @@ fn format_word(output: &mut String, word: &Sp<Word>) {
         }
         Word::Array(items) => {
             output.push('[');
-            format_words(output, items);
+            format_multiline_words(output, items);
             output.push(']');
         }
         Word::Func(func) => {
             output.push('(');
-            format_function_body(output, &func.body);
+            format_multiline_words(output, &func.body);
             output.push(')');
         }
         Word::Dfn(dfn) => {
             output.push('{');
-            format_function_body(output, &dfn.body);
+            format_multiline_words(output, &dfn.body);
             output.push('}');
         }
         Word::Primitive(prim) => output.push_str(&prim.to_string()),
@@ -121,7 +121,7 @@ fn format_word(output: &mut String, word: &Sp<Word>) {
     }
 }
 
-fn format_function_body(output: &mut String, lines: &[Vec<Sp<Word>>]) {
+fn format_multiline_words(output: &mut String, lines: &[Vec<Sp<Word>>]) {
     if lines.len() <= 1 {
         format_words(output, &lines[0]);
     } else {
@@ -132,8 +132,10 @@ fn format_function_body(output: &mut String, lines: &[Vec<Sp<Word>>]) {
         for (i, line) in lines.iter().enumerate() {
             if i > 0 || !compact {
                 output.push('\n');
-                for _ in 0..indent {
-                    output.push(' ');
+                if !line.is_empty() {
+                    for _ in 0..indent {
+                        output.push(' ');
+                    }
                 }
             }
             format_words(output, line);

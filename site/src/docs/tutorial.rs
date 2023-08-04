@@ -242,6 +242,7 @@ fn TutorialArrays(cx: Scope) -> impl IntoView {
     view! { cx,
         <h1>"Arrays"</h1>
         <p>"Uiua is, first and foremost, an array language. The only composite data type is the multimensional array. Arrays have a lot of nice properties, and the language's built-in functions are designed to make it easy to work with them. If you've only ever programmed in non-array languages, then this will be a completely foreign paradigm. In most array languages, most data structures and control flow are replaced with operations on arrays."</p>
+
         <h2>"Creating Arrays"</h2>
         <p>"Other than with functions, Uiua has two ways to create arrays. They are called "<i>"strand notation"</i>" and "<i>"stack notation"</i>"."</p>
         <p><b>"Strand notation"</b>" uses underscores to connect elements."</p>
@@ -261,6 +262,21 @@ fn TutorialArrays(cx: Scope) -> impl IntoView {
         <Editor example="[1_2_3 4_5_6]"/>
         <Editor example="[...[1 2 3]]"/>
         <p>"More preceisely, stack notation "<PrimCode prim=Couple/>"s the first two stack items created between the "<code>"[]"</code>" and "<PrimCode prim=Join/>"s the to that coupling."</p>
+        <p>"Unlike strand notation, stack notation may span multiple lines. The lines are still executed in the normal order."</p>
+        <Editor example="\
+[1 2 3
+ 4 5 6
+ 7 8 9]"/>
+        <Editor example="\
+[[1 2 3]
+ [4 5 6]
+ [7 8 9]]"/>
+        <p>"If you want the rows to be in the order that they appear in the code, use "<PrimCode prim=Reverse/>"."</p>
+        <Editor example="\
+⇌[[1 2 3]
+  [4 5 6]
+  [7 8 9]]"/>
+
         <h2><PrimCode prim=Shape/>", "<PrimCode prim=Len/>", and "<PrimCode prim=Rank/></h2>
         <p>"Other than their data, arrays also have a property called their "<b>"shape"</b>". Shape is a list of non-negative integers that describes the array's size along each of its axes."</p>
         <p>"We can get the array's shape with the "<PrimCode prim=Shape/>" function. It's a triangle because a triangle is a shape."</p>
@@ -274,12 +290,14 @@ fn TutorialArrays(cx: Scope) -> impl IntoView {
         <Editor example="△[1 2 3]\n⧻[1 2 3]\n∴[1 2 3]"/>
         <p><PrimCode prim=Rank/>" is equivalent to the "<PrimCode prim=Len/>" of the "<PrimCode prim=Shape/>"."</p>
         <Editor example="= ∴[1 2 3] ⧻△[1 2 3]"/>
+
         <h2>"Pervasion"</h2>
         <p>"Most operations that apply to scalars are what is called "<i>"pervasive"</i>" when it comes to arrays. This means that the operations automatically applies to every item in the array."</p>
         <Editor example="+1 1_2_3\n√[4 9 16]\n+1_2_3 4_5_6"/>
         <p>"When doing a pervasive operation on two arrays, their shape "<i>"prefixes"</i>" must match."</p>
         <Editor example="+[1 2] [3 4 5]"/>
         <Editor example="△10_20\n△[3_4_5 6_7_8]\n+10_20 [3_4_5 6_7_8]"/>
+
         <h2>"The Flat Array Model"</h2>
         <p>"Most modern array languages allow arrays to contain arrays. The simplest model for this is the "<a href="https://aplwiki.com/wiki/Box">"Boxed Array Model"</a>" used in J, where an array may be an array of \"boxes\", which can contain any value but which must be boxed and unboxed. APL uses the "<a href="https://aplwiki.com/wiki/Array_model#Nested_array_theory">"Nested Array Model"</a>", making nested arrays a little easier to access. BQN uses the "<a href="https://mlochbaum.github.io/BQN/doc/based.html">"Based Array Model"</a>"."</p>
         <p>"Uiua does not use any of these. It sticks to the Flat Array Model of the original APL. In Uiua, "<b>"you cannot nest arrays inside other arrays"</b>"."</p>

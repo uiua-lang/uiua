@@ -63,7 +63,7 @@ fn words_spans(words: Vec<Sp<Word>>) -> Vec<Sp<SpanKind>> {
                 }
             }
             Word::Strand(items) => spans.extend(words_spans(items)),
-            Word::Array(items) => spans.extend(words_spans(items)),
+            Word::Array(items) => spans.extend(items.into_iter().flat_map(words_spans)),
             Word::Func(f) => spans.extend(f.body.into_iter().flat_map(words_spans)),
             Word::Dfn(dfn) => spans.extend(dfn.body.into_iter().flat_map(words_spans)),
             Word::Primitive(prim) => spans.push(word.span.sp(SpanKind::Primitive(prim))),

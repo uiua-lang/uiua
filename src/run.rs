@@ -357,7 +357,9 @@ impl<'io> Uiua<'io> {
             }
             Word::Array(items) => {
                 self.push_instr(Instr::BeginArray);
-                self.words(items, true)?;
+                for item in items {
+                    self.words(item, true)?;
+                }
                 let span = self.add_span(word.span);
                 self.push_instr(Instr::EndArray(span));
             }

@@ -25,7 +25,7 @@ pub enum Word {
     FormatString(Vec<String>),
     Ident(Ident),
     Strand(Vec<Sp<Word>>),
-    Array(Vec<Sp<Word>>),
+    Array(Vec<Vec<Sp<Word>>>),
     Func(Func),
     Dfn(Func),
     Primitive(Primitive),

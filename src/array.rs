@@ -85,6 +85,7 @@ impl<T: ArrayValue> Array<T> {
     }
     #[track_caller]
     #[inline(always)]
+    /// Debug only function to validate that the shape matches the data length
     pub(crate) fn validate_shape(&self) {
         validate_shape(&self.shape, &self.data);
     }
@@ -129,6 +130,9 @@ impl<T: ArrayValue> Array<T> {
         &self.data[row * row_len..(row + 1) * row_len]
     }
     pub fn row(&self, row: usize) -> Self {
+        if self.rank() == 0 {
+            return self.clone();
+        }
         let row_len = self.row_len();
         let start = row * row_len;
         let end = start + row_len;

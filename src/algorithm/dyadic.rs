@@ -784,7 +784,10 @@ impl<T: ArrayValue> Array<T> {
             }
             result_data.push(Byte::Value(0));
         }
-        Array::from(result_data)
+        let shape = self.shape.iter().cloned().take(1).collect();
+        let res = Array::new(shape, result_data.into());
+        res.validate_shape();
+        res
     }
 }
 

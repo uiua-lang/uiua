@@ -1,4 +1,3 @@
-- Fix member with scalar
 - Swap distribute order
 - Index of with any type
 - Docs

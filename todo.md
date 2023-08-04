@@ -1,3 +1,6 @@
+- Fix member with scalar
+- Swap distribute order
+- Index of with any type
 - Docs
   - Native interpreter and installation
   - Tests
@@ -10,6 +13,7 @@
 - Multiline strings
 - Rework names
 - Logarithms
+- Fix AudioPlay
 - Editor history
 - More inverses
 - Threads

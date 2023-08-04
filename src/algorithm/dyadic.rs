@@ -795,6 +795,11 @@ impl Value {
     pub fn index_of(&self, searched_in: &Value, env: &Uiua) -> UiuaResult<Value> {
         Ok(match (self, searched_in) {
             (Value::Num(a), Value::Num(b)) => a.index_of(b, env)?.into(),
+            (Value::Byte(a), Value::Byte(b)) => a.index_of(b, env)?.into(),
+            (Value::Char(a), Value::Char(b)) => a.index_of(b, env)?.into(),
+            (Value::Func(a), Value::Func(b)) => a.index_of(b, env)?.into(),
+            (Value::Num(a), Value::Byte(b)) => a.index_of(&b.clone().convert(), env)?.into(),
+            (Value::Byte(a), Value::Num(b)) => a.clone().convert().index_of(b, env)?.into(),
             (a, b) => {
                 return Err(env.error(format!(
                     "Cannot look for indices of {} in {}",

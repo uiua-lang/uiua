@@ -1,4 +1,3 @@
-- Index of with any type
 - Docs
   - Native interpreter and installation
   - Tests

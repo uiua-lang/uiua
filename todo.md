@@ -3,6 +3,7 @@
   - Native interpreter and installation
   - Tests
   - Technical details
+  - Fill semantics
   - Loops
     - Explain loop directions
   - Comments

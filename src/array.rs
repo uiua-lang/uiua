@@ -263,15 +263,29 @@ impl<T: ArrayValue> PartialEq for Array<T> {
         match self.rank() {
             0 => self.data[0].eq(&other.data[0]),
             1 => {
-                let mut a = self.data.iter().take_while(|x| !x.is_fill_value());
-                let mut b = other.data.iter().take_while(|x| !x.is_fill_value());
+                let mut a = self
+                    .data
+                    .iter()
+                    .skip_while(|x| x.is_fill_value())
+                    .take_while(|x| !x.is_fill_value());
+                let mut b = other
+                    .data
+                    .iter()
+                    .skip_while(|x| x.is_fill_value())
+                    .take_while(|x| !x.is_fill_value());
                 a.by_ref().zip(b.by_ref()).all(|(a, b)| a.eq(b))
                     && a.next().is_none()
                     && b.next().is_none()
             }
             _ => {
-                let a = self.rows().take_while(|x| !x.is_all_fill());
-                let b = other.rows().take_while(|x| !x.is_all_fill());
+                let a = self
+                    .rows()
+                    .skip_while(|x| x.is_all_fill())
+                    .take_while(|x| x.is_all_fill());
+                let b = other
+                    .rows()
+                    .skip_while(|x| !x.is_all_fill())
+                    .take_while(|x| !x.is_all_fill());
                 a.eq(b)
             }
         }
@@ -288,12 +302,41 @@ impl<T: ArrayValue> PartialOrd for Array<T> {
 
 impl<T: ArrayValue> Ord for Array<T> {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.data
-            .iter()
-            .zip(&other.data)
-            .map(|(a, b)| a.cmp(b))
-            .find(|o| o != &Ordering::Equal)
-            .unwrap_or_else(|| self.data.len().cmp(&other.data.len()))
+        let rank_cmp = self.rank().cmp(&other.rank());
+        if rank_cmp != Ordering::Equal {
+            return rank_cmp;
+        }
+        match self.rank() {
+            0 => self.data[0].cmp(&other.data[0]),
+            1 => {
+                let mut a = self
+                    .data
+                    .iter()
+                    .skip_while(|x| x.is_fill_value())
+                    .take_while(|x| !x.is_fill_value());
+                let mut b = other
+                    .data
+                    .iter()
+                    .skip_while(|x| x.is_fill_value())
+                    .take_while(|x| !x.is_fill_value());
+                a.by_ref()
+                    .zip(b.by_ref())
+                    .map(|(a, b)| a.cmp(b))
+                    .find(|o| o != &Ordering::Equal)
+                    .unwrap_or_else(|| a.count().cmp(&b.count()))
+            }
+            _ => {
+                let a = self
+                    .rows()
+                    .skip_while(|x| x.is_all_fill())
+                    .take_while(|x| x.is_all_fill());
+                let b = other
+                    .rows()
+                    .skip_while(|x| !x.is_all_fill())
+                    .take_while(|x| !x.is_all_fill());
+                a.cmp(b)
+            }
+        }
     }
 }
 

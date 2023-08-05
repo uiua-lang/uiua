@@ -437,7 +437,7 @@ impl<'io> Uiua<'io> {
                     }
                 }
             }
-            return Err(span.sp(format!("unknown identifier {}", ident)).into());
+            return Err(span.sp(format!("unknown identifier `{}`", ident)).into());
         }
         Ok(())
     }

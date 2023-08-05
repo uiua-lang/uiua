@@ -5,14 +5,12 @@ mod tutorial;
 use std::{collections::HashSet, iter::once};
 
 use enum_iterator::all;
+use instant::Duration;
 use leptos::*;
 use leptos_router::*;
 use uiua::primitive::{PrimClass, Primitive};
 use wasm_bindgen::JsCast;
-use web_sys::{
-    Event, HtmlHeadingElement, HtmlInputElement, ScrollBehavior, ScrollIntoViewOptions,
-    ScrollLogicalPosition,
-};
+use web_sys::{Event, HtmlInputElement, ScrollBehavior, ScrollIntoViewOptions};
 
 use crate::{code::*, element};
 use design::*;
@@ -22,8 +20,8 @@ use tutorial::*;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DocsPage {
     Tutorial(TutorialPage),
-    Primitive(Primitive),
     Design,
+    Search(String),
 }
 
 impl IntoParam for DocsPage {
@@ -32,14 +30,10 @@ impl IntoParam for DocsPage {
         all::<TutorialPage>()
             .find(|p| p.path() == value)
             .map(Self::Tutorial)
-            .or_else(|| {
-                Primitive::all()
-                    .find(|p| format!("{p:?}").to_lowercase() == value)
-                    .map(Self::Primitive)
-            })
             .or(match value {
+                "" => None,
                 "design" => Some(Self::Design),
-                _ => None,
+                value => Some(Self::Search(value.into())),
             })
             .ok_or_else(|| ParamsError::MissingParam(name.to_string()))
     }
@@ -59,8 +53,8 @@ pub fn Docs(cx: Scope) -> impl IntoView {
         let page = params.page;
         let page_view = match page {
             DocsPage::Tutorial(tut) => view!(cx, <Tutorial page=tut/>).into_view(cx),
-            DocsPage::Primitive(prim) => view!(cx, <PrimDocs prim=prim/>).into_view(cx),
             DocsPage::Design => view!(cx, <Design/>).into_view(cx),
+            DocsPage::Search(search) => view!(cx, <DocsHome search=search/>).into_view(cx),
         };
 
         view! { cx,
@@ -76,41 +70,77 @@ pub fn Docs(cx: Scope) -> impl IntoView {
     }
 }
 
-pub fn scroll_to_docs_functions(options: &ScrollIntoViewOptions) {
-    element::<HtmlHeadingElement>("functions")
+fn scroll_to_docs_functions(options: &ScrollIntoViewOptions) {
+    element::<HtmlInputElement>("function-search")
         .scroll_into_view_with_scroll_into_view_options(options);
 }
 
 #[component]
-fn DocsHome(cx: Scope) -> impl IntoView {
-    let (results, set_result) = create_signal(cx, Allowed::all().table(cx).into_view(cx));
-    let mut old_allowed = Allowed::all();
-    let search_input = move |event: Event| {
-        scroll_to_docs_functions(
-            ScrollIntoViewOptions::new()
-                .behavior(ScrollBehavior::Smooth)
-                .block(ScrollLogicalPosition::Nearest),
-        );
-        let elem: HtmlInputElement = event.target().unwrap().dyn_into().unwrap();
-        let allowed = Allowed::from_search(&elem.value());
-        if allowed == old_allowed {
+fn DocsHome(cx: Scope, #[prop(optional)] search: String) -> impl IntoView {
+    let search = urlencoding::decode(&search)
+        .map(|s| s.into_owned())
+        .unwrap_or_default();
+    let (search, _) = create_signal(cx, search);
+    let (results, set_result) = create_signal(cx, None);
+    let (clear_button, set_clear_button) = create_signal(cx, None);
+    let (old_allowed, set_old_allowed) = create_signal(cx, Allowed::all());
+    let update_search = move |text: &str| {
+        // Update clear button
+        set_clear_button.set(if text.is_empty() {
+            None
+        } else {
+            let (redirect, set_redirect) = create_signal(cx, None);
+            let clear_search = move |_| {
+                set_redirect.set(Some(
+                    Redirect(
+                        cx,
+                        RedirectProps {
+                            path: "/docs",
+                            options: Some(NavigateOptions {
+                                scroll: false,
+                                ..Default::default()
+                            }),
+                        },
+                    )
+                    .into_view(cx),
+                ));
+            };
+            Some(view!(cx, {redirect}<button on:click=clear_search>"✕"</button>).into_view(cx))
+        });
+
+        // Derive allowed primitives
+        let allowed = Allowed::from_search(text);
+        if allowed == old_allowed.get() && results.get().is_some() {
             return;
         }
-        old_allowed = allowed.clone();
-        set_result.set(if allowed.classes.is_empty() && allowed.prims.is_empty() {
-            // No Results
-            view!(cx, <p>"No results"</p>).into_view(cx)
-        } else if allowed.prims.len() == 1
-            && [PrimClass::all().count(), 1].contains(&allowed.classes.len())
-        {
-            // Only one result
-            let prim = allowed.prims.into_iter().next().unwrap();
+        if !text.is_empty() {
             scroll_to_docs_functions(ScrollIntoViewOptions::new().behavior(ScrollBehavior::Smooth));
-            view!(cx, <PrimDocs prim=prim/>).into_view(cx)
-        } else {
-            // Multiple results
-            allowed.table(cx).into_view(cx)
-        })
+        }
+        set_old_allowed.set(allowed.clone());
+        set_result.set(Some(
+            if allowed.classes.is_empty() && allowed.prims.is_empty() {
+                // No Results
+                view!(cx, <p>"No results"</p>).into_view(cx)
+            } else if allowed.prims.len() == 1
+                && [PrimClass::all().count(), 1].contains(&allowed.classes.len())
+            {
+                // Only one result
+                let prim = allowed.prims.into_iter().next().unwrap();
+                scroll_to_docs_functions(
+                    ScrollIntoViewOptions::new().behavior(ScrollBehavior::Instant),
+                );
+                view!(cx, <PrimDocs prim=prim/>).into_view(cx)
+            } else {
+                // Multiple results
+                allowed.table(cx).into_view(cx)
+            },
+        ));
+    };
+
+    set_timeout(move || update_search(&search.get()), Duration::from_secs(0));
+    let search_input = move |event: Event| {
+        let elem: HtmlInputElement = event.target().unwrap().dyn_into().unwrap();
+        update_search(&elem.value());
     };
 
     view! { cx,
@@ -126,12 +156,17 @@ fn DocsHome(cx: Scope) -> impl IntoView {
             <li><A href="/docs/design">"Design"</A>" - reasons for some of Uiua's design decisions"</li>
         </ul>
         <h2 id="functions" class="doc-functions">"Functions"</h2>
-        <input
-            id="function-search"
-            type="text"
-            on:input=search_input
-            pattern="[^0-9]"
-            placeholder="⌕ Search by name, glyph, or category..."/>
+        <span class="input-span">
+            "⌕ "
+            <input
+                id="function-search"
+                type="text"
+                value={ search.get() }
+                on:input=search_input
+                pattern="[^0-9]"
+                placeholder="Search by name, glyph, or category..."/>
+            { move || clear_button.get() }
+        </span>
         { move|| results.get() }
         <div style="height: 100vh;"></div>
     }
@@ -151,7 +186,7 @@ impl Allowed {
         }
     }
     fn from_search(search: &str) -> Self {
-        let search = search.to_lowercase();
+        let search = search.trim().to_lowercase();
         let parts: Vec<_> = search
             .split([' ', ','])
             .filter(|&part| part.chars().any(|c| !c.is_ascii_digit()))
@@ -160,20 +195,42 @@ impl Allowed {
             return Self::all();
         }
         let mut prims = HashSet::new();
-        for &part in &parts {
-            let all = Primitive::all;
-            if let Some(prim) = all().find(|p| p.name().is_some_and(|name| name == part)) {
-                prims.insert(prim);
-                continue;
+        let all = Primitive::all;
+        let prim_matching_part_exactly = |part: &str| -> Option<Primitive> {
+            all()
+                .find(|p| p.name().is_some_and(|name| name.to_lowercase() == part))
+                .or_else(|| {
+                    all().find(|p| p.ascii().is_some_and(|simple| part == simple.to_string()))
+                })
+                .or_else(|| {
+                    all().find(|p| {
+                        p.unicode()
+                            .is_some_and(|unicode| part.chars().all(|c| c == unicode))
+                    })
+                })
+        };
+        if let Some(prim) = prim_matching_part_exactly(&search) {
+            prims.insert(prim);
+        } else {
+            for &part in &parts {
+                if let Some(prim) = prim_matching_part_exactly(part) {
+                    prims.insert(prim);
+                    continue;
+                }
+                let matches = all()
+                    .filter(|p| {
+                        p.name()
+                            .is_some_and(|name| name.to_lowercase().starts_with(part))
+                    })
+                    .chain(all().filter(|p| {
+                        p.ascii()
+                            .is_some_and(|simple| part.contains(&simple.to_string()))
+                    }))
+                    .chain(
+                        all().filter(|p| p.unicode().is_some_and(|unicode| part.contains(unicode))),
+                    );
+                prims.extend(matches);
             }
-            let matches = all()
-                .filter(|p| p.name().is_some_and(|name| name.starts_with(part)))
-                .chain(all().filter(|p| {
-                    p.ascii()
-                        .is_some_and(|simple| part.contains(&simple.to_string()))
-                }))
-                .chain(all().filter(|p| p.unicode().is_some_and(|unicode| part.contains(unicode))));
-            prims.extend(matches);
         }
         let mut classes: HashSet<PrimClass> = PrimClass::all().collect();
         'parts: for part in &parts {

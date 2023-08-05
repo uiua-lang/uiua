@@ -160,11 +160,10 @@ mod code {
         } else {
             "".to_string()
         };
-        let href = if prim.doc().is_some() {
-            Some(format!("/docs/{prim:?}").to_lowercase())
-        } else {
-            None
-        };
+        let href = prim
+            .name()
+            .map(|name| format!("/docs/{name}"))
+            .unwrap_or_default();
         let title = match (prim.doc().filter(|_| !hide_docs), show_name) {
             (Some(doc), true) => Some(doc.short.clone()),
             (Some(doc), false) => Some(format!(
@@ -175,9 +174,9 @@ mod code {
             (None, true) => None,
             (None, false) => prim.name().map(Into::into),
         };
-        view!(cx, <a href=href class="prim-code-a">
+        view!(cx, <A href=href class="prim-code-a">
             <code class="prim-code" title=title><span class=class>{ symbol }</span>{name}</code>
-        </a>)
+        </A>)
     }
 }
 use code::*;

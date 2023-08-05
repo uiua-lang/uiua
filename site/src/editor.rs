@@ -3,6 +3,7 @@ use std::{cell::RefCell, iter, mem::replace, rc::Rc, time::Duration};
 use base64::{engine::general_purpose::STANDARD, Engine};
 use image::ImageOutputFormat;
 use leptos::{ev::keydown, *};
+use leptos_router::{Redirect, RedirectProps};
 use uiua::{
     format::{format_str, FormatConfig},
     primitive::{PrimClass, Primitive},
@@ -10,12 +11,9 @@ use uiua::{
     value_to_image_bytes, value_to_wav_bytes, Uiua, UiuaResult,
 };
 use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{
-    Event, EventInit, HtmlAudioElement, HtmlDivElement, HtmlImageElement, MouseEvent, Node,
-    ScrollBehavior, ScrollIntoViewOptions,
-};
+use web_sys::{Event, HtmlAudioElement, HtmlDivElement, HtmlImageElement, MouseEvent, Node};
 
-use crate::{backend::WebBackend, docs::scroll_to_docs_functions, element, prim_class};
+use crate::{backend::WebBackend, element, prim_class};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum EditorSize {
@@ -554,37 +552,20 @@ pub fn Editor<'a>(
                 .flatten()
                 .unwrap_or_default();
             let title = format!("{}\n{}", p.name().unwrap_or_default(), extra);
+            let (redirect, set_redirect) = create_signal(cx, None);
             let onclick = move |event: MouseEvent| {
                 if event.ctrl_key() {
                     // Redirect to the docs page
-                    let location = window().location();
-                    let href = location.href().unwrap();
-                    let href = href.as_str();
-                    if href
-                        .split_once('#')
-                        .map(|(a, _)| a)
-                        .unwrap_or(href)
-                        .ends_with("docs")
-                    {
-                        let element = element::<web_sys::HtmlInputElement>("function-search");
-                        element.set_value(p.name().unwrap_or_default());
-                        element
-                            .dispatch_event(
-                                &Event::new_with_event_init_dict(
-                                    "input",
-                                    EventInit::new().bubbles(true),
-                                )
-                                .unwrap(),
-                            )
-                            .unwrap();
-                        scroll_to_docs_functions(
-                            ScrollIntoViewOptions::new().behavior(ScrollBehavior::Smooth),
-                        );
-                    } else {
-                        _ = window()
-                            .location()
-                            .set_href(&format!("/docs/{p:?}").to_lowercase());
-                    }
+                    set_redirect.set(Some(
+                        Redirect(
+                            cx,
+                            RedirectProps {
+                                path: format!("/docs/{}", p.name().unwrap_or_default()),
+                                options: None,
+                            },
+                        )
+                        .into_view(cx),
+                    ));
                 } else {
                     replace_code(&p.to_string());
                 }
@@ -596,14 +577,18 @@ pub fn Editor<'a>(
                 }
             };
             let class = format!("glyph-button glyph-title {}", prim_class(p));
-            Some(view! { cx,
-                <button
-                    class=class
-                    title=title
-                    on:click=onclick
-                    on:mouseover=onmouseover
-                    on:mouseleave=onmouseleave>{ text }</button>
-            })
+            Some(
+                view! { cx,
+                    { move || redirect.get() }
+                    <button
+                        class=class
+                        title=title
+                        on:click=onclick
+                        on:mouseover=onmouseover
+                        on:mouseleave=onmouseleave>{ text }</button>
+                }
+                .into_view(cx),
+            )
         })
         .collect();
 
@@ -620,9 +605,12 @@ pub fn Editor<'a>(
         ("#", "comment"),
     ] {
         let onclick = move |_| replace_code(glyph);
-        glyph_buttons.push(view! { cx,
-            <button class="glyph-button" title=title on:click=onclick>{glyph}</button>
-        });
+        glyph_buttons.push(
+            view! { cx,
+                <button class="glyph-button" title=title on:click=onclick>{glyph}</button>
+            }
+            .into_view(cx),
+        );
     }
 
     // Select a class for the editor and code area

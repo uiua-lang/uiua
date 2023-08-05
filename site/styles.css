@@ -68,6 +68,7 @@ li {
     }
 
     .code,
+    .input-span,
     input[type=text] {
         color: #d1daec;
         background-color: #1d2c3a;
@@ -135,6 +136,7 @@ li {
     }
 
     .code,
+    .input-span,
     input[type=text] {
         color: #344;
         background-color: #f4f6f6;
@@ -551,6 +553,7 @@ li {
     margin-bottom: 0.5em;
 }
 
+.input-span,
 input[type=text] {
     font-size: 1em;
     border-radius: 0.5em;
@@ -561,7 +564,7 @@ input[type=text] {
     width: 50%;
 }
 
-.doc-functions {
-    scroll-margin-bottom: 20em;
-    scroll-behavior: smooth;
+#function-search {
+    scroll-margin-top: 5em;
+    scroll-margin-bottom: 5em;
 }

@@ -1,5 +1,3 @@
-- Replace primitives docs pages with docs home search
-- Rework names
 - Make certain float functions propogate fill elements
 - If-like function
 - Parse primitive docs in main crate

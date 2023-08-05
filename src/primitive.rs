@@ -22,13 +22,13 @@ macro_rules! primitive {
         $(#[doc = $doc:literal])*
         (
             $($($args:literal)? $([$antiargs:literal])? $(($outputs:expr))? $({$antioutputs:literal})?,)?
-            $name:ident, $class:ident $({$modifier:ident: $margs:literal})?
-            $(,$ident:literal)? $(,$ascii:ident)? $(+ $character:literal)?
+            $variant:ident, $class:ident $({$modifier:ident: $margs:literal})?
+            $(,$names:expr)?
         )
     ),* $(,)?) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
         pub enum Primitive {
-            $($name,)*
+            $($variant,)*
             Sys(SysOp)
         }
 
@@ -37,45 +37,21 @@ macro_rules! primitive {
                 all()
             }
             #[allow(path_statements)]
-            pub fn name(&self) -> Option<&'static str > {
+            pub fn names(&self) -> Option<PrimNames> {
                 match self {
-                    $(Primitive::$name => { None::<&'static str> $(;Some($ident))? },)*
-                    Primitive::Sys(op) => Some(op.name())
+                    $(Primitive::$variant => { None::<PrimNames> $(; Some($names.into()))* },)*
+                    Primitive::Sys(op) => Some(op.name().into())
                 }
             }
             pub fn class(&self) -> PrimClass {
                 match self {
-                    $(Primitive::$name => PrimClass::$class,)*
+                    $(Primitive::$variant => PrimClass::$class,)*
                     Primitive::Sys(_) => PrimClass::Sys,
-                }
-            }
-            pub fn ascii(&self) -> Option<Simple> {
-                match self {
-                    $($(Primitive::$name => Some(Simple::$ascii),)?)*
-                    _ => None
-                }
-            }
-            pub fn unicode(&self) -> Option<char> {
-                match self {
-                    $($(Primitive::$name => Some($character),)?)*
-                    _ => None
-                }
-            }
-            pub fn from_simple(s: Simple) -> Option<Self> {
-                match s {
-                    $($(Simple::$ascii => Some(Self::$name),)?)*
-                    _ => None
-                }
-            }
-            pub fn from_unicode(c: char) -> Option<Self> {
-                match c {
-                    $($($character => Some(Self::$name),)?)*
-                    _ => None
                 }
             }
             pub fn is_modifier(&self) -> bool {
                 match self {
-                    $($(Primitive::$name => {
+                    $($(Primitive::$variant => {
                         stringify!($modifier);
                         true
                     },)?)*
@@ -84,39 +60,39 @@ macro_rules! primitive {
             }
             pub fn modifier_args(&self) -> Option<u8> {
                 match self {
-                    $($(Primitive::$name => Some($margs),)?)*
+                    $($(Primitive::$variant => Some($margs),)?)*
                     _ => None
                 }
             }
             pub fn args(&self) -> Option<u8> {
                 match self {
-                    $($($(Primitive::$name => Some($args),)?)?)*
+                    $($($(Primitive::$variant => Some($args),)?)?)*
                     Primitive::Sys(op) => Some(op.args()),
                     _ => None
                 }
             }
             pub fn outputs(&self) -> Option<u8> {
                 match self {
-                    $($($(Primitive::$name => $outputs.into(),)?)?)*
+                    $($($(Primitive::$variant => $outputs.into(),)?)?)*
                     Primitive::Sys(op) => op.outputs(),
                     _ => Some(1)
                 }
             }
             pub fn antiargs(&self) -> Option<u8> {
                 match self {
-                    $($($(Primitive::$name => Some($antiargs),)?)?)*
+                    $($($(Primitive::$variant => Some($antiargs),)?)?)*
                     _ => None
                 }
             }
             pub fn antioutputs(&self) -> Option<u8> {
                 match self {
-                    $($($(Primitive::$name => Some($antioutputs),)?)?)*
+                    $($($(Primitive::$variant => Some($antioutputs),)?)?)*
                     _ => None
                 }
             }
             pub fn doc(&self) -> Option<&'static PrimDoc> {
                 match self {
-                    $(Primitive::$name => {
+                    $(Primitive::$variant => {
                         let doc_str = concat!($($doc, "\n"),*);
                         static DOC: OnceLock<PrimDoc> = OnceLock::new();
                         if doc_str.is_empty() {
@@ -162,6 +138,48 @@ impl PrimClass {
     }
 }
 
+/// The names of a primitive
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct PrimNames {
+    pub text: &'static str,
+    pub ascii: Option<Simple>,
+    pub unicode: Option<char>,
+}
+
+impl PrimNames {
+    pub fn is_formattable(&self) -> bool {
+        self.unicode.is_some()
+    }
+}
+
+impl From<&'static str> for PrimNames {
+    fn from(text: &'static str) -> Self {
+        Self {
+            text,
+            ascii: None,
+            unicode: None,
+        }
+    }
+}
+impl From<(&'static str, char)> for PrimNames {
+    fn from((text, unicode): (&'static str, char)) -> Self {
+        Self {
+            text,
+            ascii: None,
+            unicode: Some(unicode),
+        }
+    }
+}
+impl From<(&'static str, Simple, char)> for PrimNames {
+    fn from((text, ascii, unicode): (&'static str, Simple, char)) -> Self {
+        Self {
+            text,
+            ascii: Some(ascii),
+            unicode: Some(unicode),
+        }
+    }
+}
+
 primitive!(
     // Stack ops
     /// Duplicate the top value on the stack
@@ -171,20 +189,20 @@ primitive!(
     /// This can be used to make a monadic left-hook, such as a palindrome checker:
     /// ex: ≅⇌. "friend"
     /// ex: ≅⇌. "racecar"
-    (1(2), Dup, Stack, "duplicate" + '.'),
+    (1(2), Dup, Stack, ("duplicate", '.')),
     /// Duplicate the second-to-top value to the top of the stack
     ///
     /// ex: [, 1 2 3]
-    (2(3), Over, Stack, "over" + ','),
+    (2(3), Over, Stack, ("over", ',')),
     /// Swap the top two values on the stack
     ///
     /// ex: [~ 1 2 3 4]
     ///
     /// When combined with [duplicate], this can be used to make a monadic right-hook or monadic fork, such as an average calculator:
     /// ex: ÷⧻~/+. 1_8_2_5
-    (2(2), Flip, Stack, "flip" + '~'),
+    (2(2), Flip, Stack, ("flip", '~')),
     /// Pop the top value off the stack
-    (1(0), Pop, Stack, "pop" + ';'),
+    (1(0), Pop, Stack, ("pop", ';')),
     // Pervasive monadic ops
     /// Logical not
     ///
@@ -195,27 +213,27 @@ primitive!(
     /// This is equivalent to `subtract``flip``1`
     /// ex: ¬7
     /// ex: ¬[1 2 3 4]
-    (1, Not, MonadicPervasive, "not" + '¬'),
+    (1, Not, MonadicPervasive, ("not", '¬')),
     /// Numerical sign (1, ¯1, or 0)
     ///
     /// ex: ± 1
     /// ex: ± ¯5
     /// ex: ± [¯2 ¯1 0 1 2]
-    (1, Sign, MonadicPervasive, "sign" + '±'),
+    (1, Sign, MonadicPervasive, ("sign", '±')),
     /// Negate a number
     ///
     /// ex: ¯ 1
     /// ex: ¯ ¯3
-    (1, Neg, MonadicPervasive, "negate", Backtick + '¯'),
+    (1, Neg, MonadicPervasive, ("negate", Simple::Backtick, '¯')),
     /// The absolute value of a number
     ///
     /// ex: ⌵ ¯1
     /// ex: ⌵ 1
     ///
     /// The symbol looks like the graph of `|x|`.
-    (1, Abs, MonadicPervasive, "absolute value" + '⌵'),
+    (1, Abs, MonadicPervasive, ("absolute value", '⌵')),
     /// The square root of a number
-    (1, Sqrt, MonadicPervasive, "sqrt" + '√'),
+    (1, Sqrt, MonadicPervasive, ("sqrt", '√')),
     /// The sine of a number
     ///
     /// ex: ○ 1
@@ -228,46 +246,55 @@ primitive!(
     /// ex: ↶(○+η) 1
     /// You can get a tangent function by [divide]ing the [sine] by the cosine.
     /// ex: ÷○+η~○. 0
-    (1, Sin, MonadicPervasive, "sine" + '○'),
+    (1, Sin, MonadicPervasive, ("sine", '○')),
     (1, Cos, MonadicPervasive),
     (1, Asin, MonadicPervasive),
     (1, Acos, MonadicPervasive),
     /// Round to the nearest integer towards `¯∞`
-    (1, Floor, MonadicPervasive, "floor" + '⌊'),
+    (1, Floor, MonadicPervasive, ("floor", '⌊')),
     /// Round to the nearest integer towards `∞`
-    (1, Ceil, MonadicPervasive, "ceiling" + '⌈'),
+    (1, Ceil, MonadicPervasive, ("ceiling", '⌈')),
     /// Round to the nearest integer
-    (1, Round, MonadicPervasive, "round" + '⁅'),
+    (1, Round, MonadicPervasive, ("round", '⁅')),
     // Pervasive dyadic ops
-    (2, Eq, DyadicPervasive, "equals", Equal),
-    (2, Ne, DyadicPervasive, "not equals", BangEqual + '≠'),
-    (2, Lt, DyadicPervasive, "less than" + '<'),
-    (2, Le, DyadicPervasive, "less or equal", LessEqual + '≤'),
-    (2, Gt, DyadicPervasive, "greater than" + '>'),
+    (2, Eq, DyadicPervasive, ("equals", Simple::Equal, '=')),
+    (
+        2,
+        Ne,
+        DyadicPervasive,
+        ("not equals", Simple::BangEqual, '≠')
+    ),
+    (2, Lt, DyadicPervasive, ("less than", '<')),
+    (
+        2,
+        Le,
+        DyadicPervasive,
+        ("less or equal", Simple::LessEqual, '≤')
+    ),
+    (2, Gt, DyadicPervasive, ("greater than", '>')),
     (
         2,
         Ge,
         DyadicPervasive,
-        "greater or equal",
-        GreaterEqual + '≥'
+        ("greater or equal", Simple::GreaterEqual, '≥')
     ),
-    (2, Add, DyadicPervasive, "add" + '+'),
-    (2, Sub, DyadicPervasive, "subtract" + '-'),
-    (2, Mul, DyadicPervasive, "multiply", Star + '×'),
-    (2, Div, DyadicPervasive, "divide", Percent + '÷'),
-    (2, Mod, DyadicPervasive, "modulus" + '◿'),
-    (2, Pow, DyadicPervasive, "power" + 'ⁿ'),
+    (2, Add, DyadicPervasive, ("add", '+')),
+    (2, Sub, DyadicPervasive, ("subtract", '-')),
+    (2, Mul, DyadicPervasive, ("multiply", Simple::Star, '×')),
+    (2, Div, DyadicPervasive, ("divide", Simple::Percent, '÷')),
+    (2, Mod, DyadicPervasive, ("modulus", '◿')),
+    (2, Pow, DyadicPervasive, ("power", 'ⁿ')),
     (2, Log, DyadicPervasive),
     /// Take the minimum of two arrays
     ///
     /// ex: ↧ 3 5
     /// ex: ↧ [1 4 2] [3 7 1]
-    (2, Min, DyadicPervasive, "minimum" + '↧'),
+    (2, Min, DyadicPervasive, ("minimum", '↧')),
     /// Take the maximum of two arrays
     ///
     /// ex: ↥ 3 5
     /// ex: ↥ [1 4 2] [3 7 1]
-    (2, Max, DyadicPervasive, "maximum" + '↥'),
+    (2, Max, DyadicPervasive, ("maximum", '↥')),
     /// The arctangent of two numbers
     ///
     /// This takes a `y` and `x` argument and returns the angle in radians in the range `(-π, π]`.
@@ -275,7 +302,7 @@ primitive!(
     /// ex: ∠ 1 0
     /// ex: ∠ ¯1 0
     /// ex: ∠ √2 √2
-    (2, Atan, DyadicPervasive, "atangent" + '∠'),
+    (2, Atan, DyadicPervasive, ("atangent", '∠')),
     // Monadic array ops
     /// The number of rows in an array
     ///
@@ -283,7 +310,7 @@ primitive!(
     /// ex: ⧻[]
     /// ex: ⧻1_2_3
     /// ex: ⧻[1_2 3_4 5_6]
-    (1, Len, MonadicArray, "length" + '⧻'),
+    (1, Len, MonadicArray, ("length", '⧻')),
     /// The number of dimensions in an array
     ///
     /// [rank] is equivalent to [length] of [shape].
@@ -294,7 +321,7 @@ primitive!(
     /// ex: ∴[1_2 3_4 5_6]
     ///
     /// It is three dots arranged in a triangle because it is counting [shape].
-    (1, Rank, MonadicArray, "rank" + '∴'),
+    (1, Rank, MonadicArray, ("rank", '∴')),
     /// The dimensions of an array
     ///
     /// ex: △5
@@ -303,19 +330,19 @@ primitive!(
     /// ex: △[1_2 3_4 5_6]
     ///
     /// It is a triangle because a triangle is a shape.
-    (1, Shape, MonadicArray, "shape" + '△'),
+    (1, Shape, MonadicArray, ("shape", '△')),
     /// Make an array of [0, x)
     ///
     /// ex: ⇡5
     /// ex: ⇡2_3
-    (1, Range, MonadicArray, "range" + '⇡'),
+    (1, Range, MonadicArray, ("range", '⇡')),
     /// The first row of an array
     ///
     /// ex: ⊢1_2_3
     /// ex: ⊢[1_2 3_4 5_6]
     /// ex: ⊢[]
     /// ex: ⊢1
-    (1, First, MonadicArray, "first" + '⊢'),
+    (1, First, MonadicArray, ("first", '⊢')),
     /// The last element of an array
     (1, Last, MonadicArray),
     /// Remove fill elements from the end of an array
@@ -324,12 +351,12 @@ primitive!(
     /// Use [truncate] instead to remove them.
     /// ex: /· \⊂1_2_3_4
     /// ex: /⌀ \⊂1_2_3_4
-    (1, Truncate, MonadicArray, "truncate" + '⌀'),
+    (1, Truncate, MonadicArray, ("truncate", '⌀')),
     /// Reverse the rows of an array
     ///
     /// ex: ⇌1_2_3_9
     /// ex: ⇌[1_2 3_4 5_6]
-    (1, Reverse, MonadicArray, "reverse" + '⇌'),
+    (1, Reverse, MonadicArray, ("reverse", '⇌')),
     /// Make an array 1-dimensional
     ///
     /// ex: ♭5
@@ -338,7 +365,7 @@ primitive!(
     /// It looks like `♭` because it flattens the array.
     ///
     /// See also: [reshape]
-    (1, Deshape, MonadicArray, "deshape" + '♭'),
+    (1, Deshape, MonadicArray, ("deshape", '♭')),
     /// Encode an array as bits (big-endian)
     ///
     /// The result will always be 1 [rank] higher than the input.
@@ -352,7 +379,7 @@ primitive!(
     ///
     /// Bits are encoded in big-endian so that any fill elements do not affect the result.
     /// ex: ↶⋯.\⊂◿2⇡6
-    (1, Bits, MonadicArray, "bits" + '⋯'),
+    (1, Bits, MonadicArray, ("bits", '⋯')),
     (1, InverseBits, MonadicArray),
     /// Rotate the shape of an array
     ///
@@ -361,14 +388,14 @@ primitive!(
     ///
     /// `shape``transpose` is always equivalent to `rotate``1``shape`.
     /// ex: ≅ △⍉ ~ ↻1△ .[1_2 3_4 5_6]
-    (1, Transpose, MonadicArray, "transpose" + '⍉'),
+    (1, Transpose, MonadicArray, ("transpose", '⍉')),
     (1, InvTranspose, MonadicArray),
     /// Sort the rows of an array
     ///
     /// ex: ∧6_2_7_0_¯1_5
     ///
     /// See also: [grade]
-    (1, Sort, MonadicArray, "sort" + '∧'),
+    (1, Sort, MonadicArray, ("sort", '∧')),
     /// Grade the rows of an array
     ///
     /// ex: ⍋6_2_7_0_¯1_5
@@ -377,26 +404,26 @@ primitive!(
     /// ex: ⊏⍋.6_2_7_0_¯1_5
     ///
     /// See also: [sort]
-    (1, Grade, MonadicArray, "grade" + '⍋'),
+    (1, Grade, MonadicArray, ("grade", '⍋')),
     /// Repeat the index of each array element the element's value times
     ///
     /// ex: ⊙2_0_4_1
-    (1, Indices, MonadicArray, "indices" + '⊙'),
+    (1, Indices, MonadicArray, ("indices", '⊙')),
     /// Assign a unique index to each unique element in an array
     ///
     /// ex: ⊛7_7_8_0_1_2_0
-    (1, Classify, MonadicArray, "classify" + '⊛'),
+    (1, Classify, MonadicArray, ("classify", '⊛')),
     /// Remove duplicate elements from an array
     ///
     /// ex: ⊝7_7_8_0_1_2_0
-    (1, Deduplicate, MonadicArray, "deduplicate" + '⊝'),
+    (1, Deduplicate, MonadicArray, ("deduplicate", '⊝')),
     // Dyadic array ops
     /// Check if two arrays are the same, ignoring fill elements
     ///
     /// ex: ≅ 1_2_3 [1 2 3]
     /// ex: ≅ 1_2_3 [1 2]
     /// ex: ≅ 1_2 .⊢[1_2 4_5_6]
-    (2, Match, DyadicArray, "match" + '≅'),
+    (2, Match, DyadicArray, ("match", '≅')),
     /// Append two arrays end-to-end
     ///
     /// For scalars, it is equivalent to [couple].
@@ -418,7 +445,7 @@ primitive!(
     /// If the arrays have a [rank] difference greater than 1, then the arrays will be filled so that the join makes sense.
     /// ex: ⊂ 1 [2_3 4_5]
     /// ex: ⊂ [1_2] [[3_4 5_6] [7_8 9_10]]
-    (2, Join, DyadicArray, "join" + '⊂'),
+    (2, Join, DyadicArray, ("join", '⊂')),
     /// Combine two arrays as rows of a new array
     ///
     /// For scalars, it is equivalent to [join].
@@ -433,7 +460,7 @@ primitive!(
     /// ex: ⊟ [1 2 3] [4_5 6_7]
     ///
     /// `first``shape` of the coupled array will *always* be `2`.
-    (2, Couple, DyadicArray, "couple" + '⊟'),
+    (2, Couple, DyadicArray, ("couple", '⊟')),
     /// Replace the fill elements of an array with a elements from another.
     ///
     /// The most basic case is filling with a scalar
@@ -443,7 +470,7 @@ primitive!(
     /// The [shape] of the array being filled must end with the [shape] of the fill array.
     /// ex: ⍛1_2_3 .↙5↯3_3⇡9
     /// ex: ⍛1_2_3_4 .↙5↯3_3⇡9
-    (2, Fill, DyadicArray, "fill" + '⍛'),
+    (2, Fill, DyadicArray, ("fill", '⍛')),
     /// Index a single row or element from an array
     ///
     /// ex: ⊡ 2 [8 3 9 2 0]
@@ -451,11 +478,11 @@ primitive!(
     ///
     /// `pick` combined with [call] is the easiest way to emulate an if-else expression.
     /// ex: :⊡~("not 5")_("5") =5 3
-    (2, Pick, DyadicArray, "pick" + '⊡'),
+    (2, Pick, DyadicArray, ("pick", '⊡')),
     /// Select multiple elements from an array
     ///
     /// ex: ⊏ 4_2 [8 3 9 2 0]
-    (2, Select, DyadicArray, "select" + '⊏'),
+    (2, Select, DyadicArray, ("select", '⊏')),
     /// Take the first n elements of an array
     /// This is the opposite of [drop].
     ///
@@ -472,7 +499,7 @@ primitive!(
     ///
     /// To extend with a specific value, use [fill];
     /// ex: ⍛0 ↙10 [1 2 3 4 5]
-    (2, Take, DyadicArray, "take" + '↙'),
+    (2, Take, DyadicArray, ("take", '↙')),
     /// Drop the first n elements of an array
     /// This is the opposite of [take].
     ///
@@ -486,7 +513,7 @@ primitive!(
     /// ex: ↘ ¯7 [8 3 9 2 0]
     /// ex: ↘ 5 ↯3_3⇡9
     /// ex: ↘ ¯5 ↯3_3⇡9
-    (2, Drop, DyadicArray, "drop" + '↘'),
+    (2, Drop, DyadicArray, ("drop", '↘')),
     /// Change the shape of an array
     ///
     /// Shapes that have fewer elements than the original array will truncate it.
@@ -497,13 +524,13 @@ primitive!(
     /// ex: ↯ 3_7 1_2_3_4
     ///
     /// See also: [deshape]
-    (2, Reshape, DyadicArray, "reshape" + '↯'),
+    (2, Reshape, DyadicArray, ("reshape", '↯')),
     /// Rotate the elements of an array by n
     ///
     /// ex: ↻1 ⇡5
     /// ex: ↻2 ⇡5
     /// ex: ↻¯1 ⇡5
-    (2, Rotate, DyadicArray, "rotate" + '↻'),
+    (2, Rotate, DyadicArray, ("rotate", '↻')),
     /// The n-wise windows of an array
     ///
     /// Multi-dimensional window sizes are supported.
@@ -511,14 +538,14 @@ primitive!(
     /// ex: ◫2 .⇡4
     /// ex: ◫4 .⇡6
     /// ex: ◫ 2_2 .[1_2_3 4_5_6 7_8_9]
-    (2, Windows, DyadicArray, "windows" + '◫'),
+    (2, Windows, DyadicArray, ("windows", '◫')),
     /// Use an array to replicate the elements of another array
     ///
     /// ex: ‡ [1 0 2 1 4] [8 3 9 2 0]
     ///
     /// This can be used as a filter.
     /// ex: ‡ ≥'a' ."lOWERCASe onLY"
-    (2, Replicate, DyadicArray, "replicate" + '‡'),
+    (2, Replicate, DyadicArray, ("replicate", '‡')),
     /// Check if each row of an array exists in another array
     ///
     /// The result is always a [rank]`1` array of booleans with the same number of elements as the first array's [length].
@@ -530,29 +557,29 @@ primitive!(
     ///
     /// With the help of [deduplicate] and [replicate], you can use [member] to get a set intersection.
     /// ex: ‡∊,⊝~⊝ "abracadabra" "that's really cool"
-    (2, Member, DyadicArray, "member" + '∊'),
+    (2, Member, DyadicArray, ("member", '∊')),
     /// Find the occurences of one array in another
     ///
     /// ex: ⌕ 5 [1 8 5 2 3 5 4 5 6 7]
     /// ex: ⌕ "ab" "abracadabra"
     /// ex: ⌕ 1_2 . ↯4_4⇡3
-    (2, Find, DyadicArray, "find" + '⌕'),
+    (2, Find, DyadicArray, ("find", '⌕')),
     /// Find the first index of an element in an array
     ///
     /// ex: ⊗ 5 [1 8 5 2 3 5 4 5 6 7]
-    (2, IndexOf, DyadicArray, "indexof" + '⊗'),
+    (2, IndexOf, DyadicArray, ("indexof", '⊗')),
     /// Group elements of an array into buckets by index
     ///
     /// ex: ⊕ [0 1 0 2 1 1] [1 2 3 4 5 6]
     /// ex: ⊕ =0◿2. [1 2 3 4 5 6]
-    (2, Group, DyadicArray, "group" + '⊕'),
+    (2, Group, DyadicArray, ("group", '⊕')),
     /// Group elements of an array into buckets by sequential keys
     ///
     /// The first array must be rank 1, and the arrays must have the same length.
     /// Buckets with mismatched lengths have fill elements.
     /// ex: ⊘ [1 1 2 2 2 3] [1 2 3 4 5 6]
     /// ex: ⊘ ≠' '. "Hey there friendo"
-    (2, Partition, DyadicArray, "partition" + '⊘'),
+    (2, Partition, DyadicArray, ("partition", '⊘')),
     // Modifiers
     /// Apply a reducing function to an array
     /// For reducing with an initial value, see [fold].
@@ -571,26 +598,26 @@ primitive!(
     /// [reduce] traverses the array backwards so that `reduce``noop` unloads all rows onto the stack with the first row on top.
     /// ex: /· 1_2_3
     /// ex: /· [1_2 3_4]
-    (Reduce, MonadicModifier { modifier: 1 }, "reduce" + '/'),
+    (Reduce, MonadicModifier { modifier: 1 }, ("reduce", '/')),
     /// Apply a reducing function to an array with an initial value
     /// For reducing without an initial value, see [reduce].
     /// Unlike other modifiers, [fold] and [reduce] traverse the array from right to left.
     ///
     /// ex: ⌿+ 10 1_2_3_4
-    (Fold, MonadicModifier { modifier: 1 }, "fold" + '⌿'),
+    (Fold, MonadicModifier { modifier: 1 }, ("fold", '⌿')),
     /// Reduce, but keep intermediate values
     ///
     /// ex: \+ 1_2_3_4
     /// ex: \- 1_2_3_4
     /// ex: \(-~) 1_2_3_4
     /// ex: \⊂ 1_2_3_4
-    (Scan, MonadicModifier { modifier: 1 }, "scan" + '\\'),
+    (Scan, MonadicModifier { modifier: 1 }, ("scan", '\\')),
     /// Apply a function to each element of an array
     /// This is the element-wise version of [rows].
     ///
     /// ex: ∵(⊟.) 1_2_3_4
     /// ex: ∵⇡ 1_2_3_4
-    (Each, MonadicModifier { modifier: 1 }, "each" + '∵'),
+    (Each, MonadicModifier { modifier: 1 }, ("each", '∵')),
     /// Apply a function to each row of an array
     /// This is the row-wise version of [each].
     ///
@@ -600,7 +627,7 @@ primitive!(
     /// [rows] is equivalent to [level]`¯1`.
     /// ex: ⍚¯1/+ [1_2_3 4_5_6 7_8_9]
     /// ex: ≡/+   [1_2_3 4_5_6 7_8_9]
-    (Rows, MonadicModifier { modifier: 1 }, "rows" + '≡'),
+    (Rows, MonadicModifier { modifier: 1 }, ("rows", '≡')),
     /// Pervade a function through two arrays
     /// This is the element-wise version of [bridge].
     ///
@@ -610,13 +637,13 @@ primitive!(
     /// For operations that are already pervasive, like `add` or `maximum`, `zip` is redundant.
     /// ex: + 1_2_3 [4_5 6_7 8_9]
     ///   : ≕+ 1_2_3 [4_5 6_7 8_9]
-    (Zip, DyadicModifier { modifier: 1 }, "zip" + '≕'),
+    (Zip, DyadicModifier { modifier: 1 }, ("zip", '≕')),
     /// Apply a function to each pair of rows in two arrays
     /// This is the row-wise version of [zip].
     ///
     /// ex: ≍⊂ 1_2 [4_5 6_7]
     /// ex: ≍⌿+ 1_2 [4_5 6_7]
-    (Bridge, DyadicModifier { modifier: 1 }, "bridge" + '≍'),
+    (Bridge, DyadicModifier { modifier: 1 }, ("bridge", '≍')),
     /// Apply a function to each element of an array and a fixed value
     /// This is the element-wise version of [plow].
     ///
@@ -628,7 +655,7 @@ primitive!(
     (
         Distribute,
         DyadicModifier { modifier: 1 },
-        "distribute" + '≐'
+        ("distribute", '≐')
     ),
     /// Apply a function to each row of an array and a fixed value
     /// This is the row-wise version of [distribute].
@@ -638,18 +665,18 @@ primitive!(
     ///
     /// One nice use of this is to [call] multiple functions on a single argument.
     /// ex: ⫫:√_¯_⌊_⌈_(×4) 6.25
-    (Plow, DyadicModifier { modifier: 1 }, "plow" + '⫫'),
+    (Plow, DyadicModifier { modifier: 1 }, ("plow", '⫫')),
     /// Apply a function to each combination of elements of two arrays
     /// This is the element-wise version of [cross].
     ///
     /// ex: ⊞+ 1_2_3 4_5_6
     /// ex: ⊞⊂ 1_2 3_4
-    (Table, DyadicModifier { modifier: 1 }, "table" + '⊞'),
+    (Table, DyadicModifier { modifier: 1 }, ("table", '⊞')),
     /// Apply a function to each combination of rows of two arrays
     /// This is the row-wise version of [table].
     ///
     /// ex: ⊠⊂ [1_2 3_4] [5_6 7_8]
-    (Cross, DyadicModifier { modifier: 1 }, "cross" + '⊠'),
+    (Cross, DyadicModifier { modifier: 1 }, ("cross", '⊠')),
     /// Repeat a function a number of times
     ///
     /// ex: ⍥(+2) 5 0
@@ -661,13 +688,13 @@ primitive!(
     /// Repeating for [infinity] times will create an infinite loop.
     /// You can use [break] to break out of the loop.
     /// ex: ⍥(⎋>1000. ×2)∞ 1
-    (Repeat, OtherModifier { modifier: 1 }, "repeat" + '⍥'),
+    (Repeat, OtherModifier { modifier: 1 }, ("repeat", '⍥')),
     /// Invert the behavior of a function
     /// Most functions are not invertible.
     ///
     /// ex: √2
     /// ex: ↶√2
-    (Invert, OtherModifier { modifier: 1 }, "invert" + '↶'),
+    (Invert, OtherModifier { modifier: 1 }, ("invert", '↶')),
     /// Apply a function under another
     /// This is a more powerful version of [invert].
     ///
@@ -680,7 +707,7 @@ primitive!(
     ///
     /// [under][transpose] is sometimes useful.
     /// ex: ⍜⍉(↙2).↯3_4⇡12
-    (Under, OtherModifier { modifier: 2 }, "under" + '⍜'),
+    (Under, OtherModifier { modifier: 2 }, ("under", '⍜')),
     /// Apply a function at a different array depth
     ///
     /// `level``0` does nothing.
@@ -693,12 +720,12 @@ primitive!(
     /// ex: ⍚¯1/+ ↯2_2_3 ⇡12
     /// ex: ⍚¯2/+ ↯2_2_3 ⇡12
     /// ex: ⍚1/+ ↯2_2_3 ⇡12
-    (Level, OtherModifier { modifier: 2 }, "level" + '⍚'),
+    (Level, OtherModifier { modifier: 2 }, ("level", '⍚')),
     /// Call a function and catch errors
     ///
     /// ex: ?(+1 2)"failure"
     /// ex: ?(+'a' 'b')"failure"
-    (Try, OtherModifier { modifier: 2 }, "try" + '?'),
+    (Try, OtherModifier { modifier: 2 }, ("try", '?')),
     // Misc
     /// Throw an error
     ///
@@ -712,14 +739,14 @@ primitive!(
     /// Use [duplicate] if you do not care about the message.
     /// ex: !. =6 6
     /// ex: !. =8 9
-    (2, Throw, Control, "throw" + '!'),
+    (2, Throw, Control, ("throw", '!')),
     /// Break out of a loop
     /// Expects a non-negative integer. This integer is how many loops will be broken out of.
     /// Loops that can be broken out of are [reduce], [fold], [scan], [each], [rows], and [repeat].
     ///
     /// ex: /(⎋>10.+) ⇌⇡40  # Break when the sum exceeds 10
     /// ex: ⍥(⎋>100.×2)∞ 1  # Break when the product exceeds 100
-    (1(0), Break, Control, "break" + '⎋'),
+    (1(0), Break, Control, ("break", '⎋')),
     /// Call the current dfn recursively
     /// Only dfns can be recurred in.
     ///
@@ -731,15 +758,15 @@ primitive!(
     ///
     /// Here is a recursive fibonacci function:
     /// ex: {:⊡~(+ ↬-1a ↬-2a)_(a) <2a} 10
-    (1(0), Recur, Control, "recur" + '↬'),
+    (1(0), Recur, Control, ("recur", '↬')),
     /// Debug print a value without popping it
     ///
     /// ex: /+ | 1_2_3
-    (1, Debug, Sys, "debug" + '|'),
+    (1, Debug, Sys, ("debug", '|')),
     /// Call a function
     ///
     /// ex: :(+) 1 2
-    (1(None), Call, Misc, "call" + ':'),
+    (1(None), Call, Misc, ("call", ':')),
     /// Do nothing
     ///
     /// While this may seem useless, one way to use it is to pass it to [reduce], which will put all of an array's values on the stack.
@@ -751,7 +778,7 @@ primitive!(
     ///
     /// The formatter converts an empty `()` function into `noop`.
     /// ex: ()
-    (0, Noop, Misc, "noop" + '·'),
+    (0, Noop, Misc, ("noop", '·')),
     /// Parse a string as a number
     ///
     /// ex: parsenum "17"
@@ -792,19 +819,19 @@ primitive!(
     ///
     /// Equivalent to `divide``2``pi` or `divide``4``tau`
     /// ex: [η ÷2π ÷4τ]
-    (0(1), Eta, Constant, "eta" + 'η'),
+    (0(1), Eta, Constant, ("eta", 'η')),
     /// The ratio of a circle's circumference to its diameter
     ///
     /// Equivalent to `multiply``2``eta` or `divide``2``tau`
     /// ex: [×2η π ÷2τ]
-    (0(1), Pi, Constant, "pi" + 'π'),
+    (0(1), Pi, Constant, ("pi", 'π')),
     /// The ratio of a circle's circumference to its radius
     ///
     /// Equivalent to `multiply``4``eta` or `multiply``2``pi`
     /// ex: [×4η ×2π τ]
-    (0(1), Tau, Constant, "tau" + 'τ'),
+    (0(1), Tau, Constant, ("tau", 'τ')),
     /// The biggest number
-    (0(1), Infinity, Constant, "infinity" + '∞')
+    (0(1), Infinity, Constant, ("infinity", '∞'))
 );
 
 fn _keep_primitive_small(_: std::convert::Infallible) {
@@ -826,6 +853,25 @@ impl fmt::Display for Primitive {
 }
 
 impl Primitive {
+    pub fn name(&self) -> Option<&'static str> {
+        self.names().map(|n| n.text)
+    }
+    pub fn ascii(&self) -> Option<Simple> {
+        self.names().and_then(|n| n.ascii)
+    }
+    pub fn unicode(&self) -> Option<char> {
+        self.names().and_then(|n| n.unicode)
+    }
+    /// Find a primitive by its text name
+    pub fn from_name(name: &str) -> Option<Self> {
+        Self::all().find(|p| p.name() == Some(name))
+    }
+    pub fn from_simple(s: Simple) -> Option<Self> {
+        Self::all().find(|p| p.ascii() == Some(s))
+    }
+    pub fn from_unicode(c: char) -> Option<Self> {
+        Self::all().find(|p| p.unicode() == Some(c))
+    }
     pub fn inverse(&self) -> Option<Self> {
         use Primitive::*;
         Some(match self {
@@ -845,10 +891,6 @@ impl Primitive {
             _ => return None,
         })
     }
-    /// Find a primitive by its proper name
-    pub fn from_name(name: &str) -> Option<Self> {
-        Self::from_format_name(name).or_else(|| Self::all().find(|p| p.name() == Some(name)))
-    }
     /// Try to parse a primitive from a name prefix
     pub fn from_format_name(name: &str) -> Option<Self> {
         if name.chars().any(char::is_uppercase) {
@@ -866,10 +908,12 @@ impl Primitive {
         if name.len() < 3 {
             return None;
         }
-        let mut matching =
-            Primitive::all().filter(|p| p.format_name().map_or(false, |pn| pn.starts_with(name)));
+        let mut matching = Primitive::all().filter(|p| {
+            p.names()
+                .is_some_and(|n| n.is_formattable() && n.text.starts_with(name))
+        });
         let res = matching.next()?;
-        let exact_match = res.format_name().map_or(false, |i| i == name);
+        let exact_match = res.names().unwrap().text == name;
         (exact_match || matching.next().is_none()).then_some(res)
     }
     /// Try to parse multiple primitives from the concatentation of their name prefixes
@@ -906,11 +950,6 @@ impl Primitive {
             }
             break None;
         }
-    }
-    /// The longest name of the primitive that the formatter will replace
-    pub fn format_name(&self) -> Option<&'static str> {
-        self.unicode()?;
-        self.name()
     }
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {

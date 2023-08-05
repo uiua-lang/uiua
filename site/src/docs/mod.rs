@@ -10,7 +10,7 @@ use leptos::*;
 use leptos_router::*;
 use uiua::primitive::{PrimClass, Primitive};
 use wasm_bindgen::JsCast;
-use web_sys::{Event, HtmlInputElement, ScrollBehavior, ScrollIntoViewOptions};
+use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoViewOptions};
 
 use crate::{code::*, element};
 use design::*;
@@ -89,23 +89,16 @@ fn DocsHome(cx: Scope, #[prop(optional)] search: String) -> impl IntoView {
         set_clear_button.set(if text.is_empty() {
             None
         } else {
-            let (redirect, set_redirect) = create_signal(cx, None);
+            // let (redirect, set_redirect) = create_signal(cx, None);
             let clear_search = move |_| {
-                set_redirect.set(Some(
-                    Redirect(
-                        cx,
-                        RedirectProps {
-                            path: "/docs",
-                            options: Some(NavigateOptions {
-                                scroll: false,
-                                ..Default::default()
-                            }),
-                        },
-                    )
-                    .into_view(cx),
-                ));
+                let search_input = element::<HtmlInputElement>("function-search");
+                search_input.set_value("");
+                _ = search_input.dispatch_event(
+                    &Event::new_with_event_init_dict("input", EventInit::new().bubbles(true))
+                        .unwrap(),
+                );
             };
-            Some(view!(cx, {redirect}<button on:click=clear_search>"✕"</button>).into_view(cx))
+            Some(view!(cx, {}<button on:click=clear_search>"✕"</button>).into_view(cx))
         });
 
         // Derive allowed primitives
@@ -148,7 +141,7 @@ fn DocsHome(cx: Scope, #[prop(optional)] search: String) -> impl IntoView {
         <h2 id="tutorial">"Tutorial"</h2>
         <p>"These are meant to be read in order:"</p>
         <ul>{ all::<TutorialPage>()
-            .map(|p| view!(cx, <li><A href={p.path()}>{p.title()}</A></li>))
+            .map(|p| view!(cx, <li><A href={format!("/docs/{}", p.path())}>{p.title()}</A></li>))
             .collect::<Vec<_>>()
         }</ul>
         <h2 id="other-docs">"Other Docs"</h2>
@@ -168,7 +161,7 @@ fn DocsHome(cx: Scope, #[prop(optional)] search: String) -> impl IntoView {
             { move || clear_button.get() }
         </span>
         { move|| results.get() }
-        <div style="height: 100vh;"></div>
+        <div style="height: 50vh;"></div>
     }
 }
 
@@ -197,17 +190,13 @@ impl Allowed {
         let mut prims = HashSet::new();
         let all = Primitive::all;
         let prim_matching_part_exactly = |part: &str| -> Option<Primitive> {
-            all()
-                .find(|p| p.name().is_some_and(|name| name.to_lowercase() == part))
-                .or_else(|| {
-                    all().find(|p| p.ascii().is_some_and(|simple| part == simple.to_string()))
+            all().find(|p| {
+                p.names().is_some_and(|n| {
+                    n.text.to_lowercase() == part
+                        || n.ascii.is_some_and(|a| a.to_string() == part)
+                        || n.unicode.is_some_and(|u| part.chars().all(|c| c == u))
                 })
-                .or_else(|| {
-                    all().find(|p| {
-                        p.unicode()
-                            .is_some_and(|unicode| part.chars().all(|c| c == unicode))
-                    })
-                })
+            })
         };
         if let Some(prim) = prim_matching_part_exactly(&search) {
             prims.insert(prim);

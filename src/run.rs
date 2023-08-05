@@ -282,7 +282,7 @@ impl<'io> Uiua<'io> {
                 [.., Instr::BeginArray, Instr::Push(if_true), Instr::Push(if_false), Instr::EndArray(_), Instr::Prim(Flip, _), Instr::Prim(Pick, _)],
                 Instr::Prim(Call, span),
             ) => {
-                if let (Value::Func(if_true), Value::Func(if_false)) = (&*if_true, &*if_false) {
+                if let (Value::Func(if_true), Value::Func(if_false)) = (&**if_true, &**if_false) {
                     if if_true.shape.is_empty() && if_false.shape.is_empty() {
                         let if_true = if_true.data[0].clone();
                         let if_false = if_false.data[0].clone();
@@ -322,10 +322,10 @@ impl<'io> Uiua<'io> {
     fn word(&mut self, word: Sp<Word>, call: bool) -> UiuaResult {
         match word.value {
             Word::Number(_, n) => {
-                self.push_instr(Instr::Push(n.into()));
+                self.push_instr(Instr::push(n));
             }
-            Word::Char(c) => self.push_instr(Instr::Push(c.into())),
-            Word::String(s) => self.push_instr(Instr::Push(s.into())),
+            Word::Char(c) => self.push_instr(Instr::push(c)),
+            Word::String(s) => self.push_instr(Instr::push(s)),
             Word::FormatString(frags) => {
                 let f = Function {
                     id: FunctionId::Anonymous(word.span.clone()),
@@ -343,7 +343,7 @@ impl<'io> Uiua<'io> {
                         Ok(())
                     })),
                 };
-                self.push_instr(Instr::Push(f.into()));
+                self.push_instr(Instr::push(f));
                 let span = self.add_span(word.span);
                 self.push_instr(Instr::Call(span));
             }
@@ -371,7 +371,7 @@ impl<'io> Uiua<'io> {
                         Ok(())
                     })),
                 };
-                self.push_instr(Instr::Push(f.into()));
+                self.push_instr(Instr::push(f));
                 let span = self.add_span(word.span);
                 self.push_instr(Instr::Call(span));
             }
@@ -409,7 +409,7 @@ impl<'io> Uiua<'io> {
             // Name exists in scope
             let value = self.globals[*idx].clone();
             let should_call = matches!(&value, Value::Func(f) if f.shape.is_empty());
-            self.push_instr(Instr::Push(value));
+            self.push_instr(Instr::push(value));
             if should_call && call {
                 let span = self.add_span(span);
                 self.push_instr(Instr::Call(span));
@@ -447,7 +447,7 @@ impl<'io> Uiua<'io> {
             instrs.extend(self.compile_words(line)?);
         }
         if let [Instr::Push(f), Instr::Call(..)] = instrs.as_slice() {
-            if matches!(f, Value::Func(_)) {
+            if matches!(**f, Value::Func(_)) {
                 self.push_instr(Instr::Push(f.clone()));
                 return Ok(());
             }
@@ -457,7 +457,7 @@ impl<'io> Uiua<'io> {
             instrs,
             kind: FunctionKind::Normal,
         };
-        self.push_instr(Instr::Push(func.into()));
+        self.push_instr(Instr::push(func));
         Ok(())
     }
     fn dfn(&mut self, func: Func, span: CodeSpan, call: bool) -> UiuaResult {
@@ -474,7 +474,7 @@ impl<'io> Uiua<'io> {
             instrs,
             kind: FunctionKind::Dfn(dfn_size),
         };
-        self.push_instr(Instr::Push(func.into()));
+        self.push_instr(Instr::push(func));
         if call {
             self.push_instr(Instr::Call(span));
         }
@@ -494,7 +494,7 @@ impl<'io> Uiua<'io> {
             instrs,
             kind: FunctionKind::Normal,
         };
-        self.push_instr(Instr::Push(func.into()));
+        self.push_instr(Instr::push(func));
         if call {
             let span = self.add_span(modified.modifier.span);
             self.push_instr(Instr::Call(span));
@@ -506,11 +506,11 @@ impl<'io> Uiua<'io> {
         if call {
             self.push_instr(Instr::Prim(prim, span));
         } else {
-            self.push_instr(Instr::Push(Value::from(Function {
+            self.push_instr(Instr::push(Function {
                 id: FunctionId::Primitive(prim),
                 instrs: vec![Instr::Prim(prim, span)],
                 kind: FunctionKind::Normal,
-            })))
+            }));
         }
     }
     fn exec_global_instrs(&mut self, instrs: Vec<Instr>) -> UiuaResult {
@@ -544,7 +544,7 @@ impl<'io> Uiua<'io> {
             // println!("  {:?}", instr);
             let res = match instr {
                 Instr::Push(val) => {
-                    self.stack.push(val.clone());
+                    self.stack.push(Value::clone(val));
                     Ok(())
                 }
                 Instr::BeginArray => {

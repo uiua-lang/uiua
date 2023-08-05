@@ -4,13 +4,23 @@ use crate::{lex::CodeSpan, primitive::Primitive, value::Value, Ident, Uiua, Uiua
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Instr {
-    Push(Value),
+    Push(Box<Value>),
     BeginArray,
     EndArray(usize),
     Prim(Primitive, usize),
     Call(usize),
     DfnVal(usize),
     If(Rc<Function>, Rc<Function>),
+}
+
+impl Instr {
+    pub fn push(val: impl Into<Value>) -> Self {
+        Self::Push(Box::new(val.into()))
+    }
+}
+
+fn _instr_size() {
+    let _: [u8; 24] = unsafe { std::mem::transmute(Instr::BeginArray) };
 }
 
 impl fmt::Display for Instr {
@@ -151,7 +161,7 @@ impl fmt::Display for FunctionId {
 
 fn invert_primitive(prim: Primitive, span: usize) -> Option<Vec<Instr>> {
     Some(match prim {
-        Primitive::Sqrt => vec![Instr::Push(2.0.into()), Instr::Prim(Primitive::Pow, span)],
+        Primitive::Sqrt => vec![Instr::push(2.0), Instr::Prim(Primitive::Pow, span)],
         prim => vec![Instr::Prim(prim.inverse()?, span)],
     })
 }
@@ -183,7 +193,7 @@ fn invert_instr_fragment(instrs: &[Instr]) -> Option<Vec<Instr>> {
             vec![Push(val.clone()), Prim(Mul, *span)]
         }
         [Push(val), Prim(Pow, span)] => vec![
-            Push(1.into()),
+            Instr::push(1),
             Push(val.clone()),
             Prim(Div, *span),
             Prim(Pow, *span),

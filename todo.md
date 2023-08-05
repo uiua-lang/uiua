@@ -1,12 +1,20 @@
+- Fix forced extra newline in formatter
+- Improce sine docs
+- Reference circle constants in eachother
+- Fix failing hilight + backspace in editor
 - Replace primitives docs pages with docs home search
 - Rework names
 - Make certain float functions propogate fill elements
 - Parse primitive docs in main crate
 - Match APL equivalents in docs search
 - Docs
+  - Testing and run modes
   - Native interpreter and installation
-  - Tests
   - Technical details
+    - Rust
+    - Leptos
+    - Array representation
+    - Bytecode
   - Fill semantics
   - Loops
     - Explain loop directions

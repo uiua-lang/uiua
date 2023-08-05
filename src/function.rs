@@ -19,10 +19,6 @@ impl Instr {
     }
 }
 
-fn _instr_size() {
-    let _: [u8; 24] = unsafe { std::mem::transmute(Instr::BeginArray) };
-}
-
 impl fmt::Display for Instr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

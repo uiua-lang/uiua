@@ -213,10 +213,16 @@ primitive!(
     (1, Sqrt, MonadicPervasive, "sqrt" + '√'),
     /// The sine of a number
     ///
-    /// You can get a cosine function with [sine][add][eta].
+    /// ex: ○ 1
+    ///
+    /// You can get a cosine function by [add]ing [eta].
+    /// ex: ○+η 1
     /// You can get an arcsine function with [invert].
-    /// You can get an arccosine function with [invert]`(`[sine][add][eta]`)`.
-    /// You can get a tangent function with [divide][sine][add][eta][sin][flip]
+    /// ex: ↶○ 1
+    /// You can get an arccosine function by [invert]ing the cosine.
+    /// ex: ↶(○+η) 1
+    /// You can get a tangent function by [divide]ing the [sine] by the cosine.
+    /// ex: ÷○+η~○. 0
     (1, Sin, MonadicPervasive, "sine" + '○'),
     (1, Cos, MonadicPervasive),
     (1, Asin, MonadicPervasive),
@@ -347,6 +353,9 @@ primitive!(
     ///
     /// ex: ⍉.[1_2 3_4 5_6]
     /// ex: ⍉.[[1_2 3_4] [5_6 7_8]]
+    ///
+    /// [shape][transpose] is always equivalent to [rotate]`1`[shape].
+    /// ex: ≅ △⍉ ~ ↻1△ .[1_2 3_4 5_6]
     (1, Transpose, MonadicArray, "transpose" + '⍉'),
     (1, InvTranspose, MonadicArray),
     /// Sort the rows of an array
@@ -687,9 +696,16 @@ primitive!(
     // Misc
     /// Throw an error
     ///
+    /// Expects a message and a test value.
+    /// If the test value is anything but `1`, then the message will be thrown as an error.
+    ///
     /// ex: !"Oh no!" "any array"
     /// ex: !"Oh no!" 1
     /// ex: !"Oh no!" 0
+    ///
+    /// Use [duplicate] if you do not care about the message.
+    /// ex: !. =6 6
+    /// ex: !. =8 9
     (2, Throw, Control, "throw" + '!'),
     /// Break out of a loop
     /// Expects a non-negative integer. This integer is how many loops will be broken out of.
@@ -720,7 +736,7 @@ primitive!(
     (1(None), Call, Misc, "call" + ':'),
     /// Do nothing
     ///
-    /// While this may seem useless, one way to use it is to put all of an array's values on the stack.
+    /// While this may seem useless, one way to use it is to pass it to [reduce], which will put all of an array's values on the stack.
     /// ex: /· [1 2 3]
     ///
     /// If you use this on an array that has fill values, the fill values will not be removed.
@@ -766,11 +782,20 @@ primitive!(
     ///   : square increment 5
     (2, Use, Misc, "use"),
     // Constants
-    /// The number of radians in a quarter circle, or π/2
+    /// The number of radians in a quarter circle
+    ///
+    /// Equivalent to [divide]`2`[pi] or [divide]`4`[tau]
+    /// ex: [η ÷2π ÷4τ]
     (0(1), Eta, Constant, "eta" + 'η'),
     /// The ratio of a circle's circumference to its diameter
+    ///
+    /// Equivalent to [multiply]`2`[eta] or [divide]`2`[tau]
+    /// ex: [×2η π ÷2τ]
     (0(1), Pi, Constant, "pi" + 'π'),
-    /// The ratio of a circle's circumference to its radius, or 2π
+    /// The ratio of a circle's circumference to its radius
+    ///
+    /// Equivalent to [multiply]`4`[eta] or [multiply]`2`[pi]
+    /// ex: [×4η ×2π τ]
     (0(1), Tau, Constant, "tau" + 'τ'),
     /// The biggest number
     (0(1), Infinity, Constant, "infinity" + '∞')

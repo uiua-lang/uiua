@@ -1,12 +1,13 @@
 - Fix forced extra newline in formatter
-- Improce sine docs
-- Reference circle constants in eachother
 - Fix failing hilight + backspace in editor
 - Replace primitives docs pages with docs home search
 - Rework names
 - Make certain float functions propogate fill elements
 - Parse primitive docs in main crate
-- Match APL equivalents in docs search
+- Match APL equivalents and unicode names in docs search
+- Allow primitives in docs markup without names
+- Function array coercion
+  - Maybe constant modifier
 - Docs
   - Testing and run modes
   - Native interpreter and installation

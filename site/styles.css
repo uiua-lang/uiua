@@ -67,7 +67,8 @@ li {
         background-color: #19232d;
     }
 
-    .code {
+    .code,
+    input[type=text] {
         color: #d1daec;
         background-color: #1d2c3a;
     }
@@ -133,7 +134,8 @@ li {
         outline: 0.1em solid #0004;
     }
 
-    .code {
+    .code,
+    input[type=text] {
         color: #344;
         background-color: #f4f6f6;
     }
@@ -547,4 +549,19 @@ li {
 
 .primitive-list>* {
     margin-bottom: 0.5em;
+}
+
+input[type=text] {
+    font-size: 1em;
+    border-radius: 0.5em;
+    padding: 0.5em;
+    box-sizing: border-box;
+    outline: none;
+    border: none;
+    width: 50%;
+}
+
+.doc-functions {
+    scroll-margin-bottom: 20em;
+    scroll-behavior: smooth;
 }

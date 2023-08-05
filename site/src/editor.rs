@@ -155,7 +155,6 @@ pub fn Editor<'a>(
                 before,
                 after,
             };
-            log!("set_code: {new_curr:?}");
             let prev = replace(&mut *self.curr.borrow_mut(), new_curr);
             let changed = prev.code != code;
             if changed {
@@ -231,22 +230,24 @@ pub fn Editor<'a>(
     let run = move |format: bool| {
         // Get code
         let mut code_text = code_text();
+        let mut cursor = Cursor::Keep;
         if let Some(code) = initial_code.get() {
             code_text = code;
             set_initial_code.set(None);
+            cursor = Cursor::Ignore;
         }
 
         // Format code
         let input = if format {
             if let Ok(formatted) = format_str(&code_text) {
-                state().set_code(&formatted, Cursor::Keep);
+                state().set_code(&formatted, cursor);
                 formatted
             } else {
-                state().set_code(&code_text, Cursor::Keep);
+                state().set_code(&code_text, cursor);
                 code_text
             }
         } else {
-            state().set_code(&code_text, Cursor::Keep);
+            state().set_code(&code_text, cursor);
             code_text
         };
 
@@ -387,7 +388,6 @@ pub fn Editor<'a>(
                     .skip(start as usize)
                     .take((end - start) as usize)
                     .collect();
-                log!("copy: {:?}", text);
                 _ = window().navigator().clipboard().unwrap().write_text(&text);
             }
             "x" if event.ctrl_key() => {
@@ -399,7 +399,6 @@ pub fn Editor<'a>(
                     .skip(start as usize)
                     .take((end - start) as usize)
                     .collect();
-                log!("cut: {:?}", text);
                 _ = window().navigator().clipboard().unwrap().write_text(&text);
                 remove_code(start, end);
             }
@@ -448,7 +447,6 @@ pub fn Editor<'a>(
         event.prevent_default();
         event.stop_propagation();
         let text = event.clipboard_data().unwrap().get_data("text").unwrap();
-        log!("paste: {:?}", text);
         replace_code(&text);
     };
 

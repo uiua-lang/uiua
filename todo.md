@@ -18,7 +18,7 @@
   - Windowed reduce
 - Rework front page
 - Pretty array shape formatting in error messages
-- Search docs
+- Match APL equivalents in docs search
 - Parse primitive docs in main crate
 - Multimedia
   - Sound input

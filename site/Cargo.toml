@@ -30,5 +30,8 @@ web-sys.features = [
   "DataTransfer",
   "Navigator",
   "Permissions",
+  "ScrollIntoViewOptions",
+  "ScrollBehavior",
+  "ScrollLogicalPosition",
 ]
 web-sys.version = "0.3.61"

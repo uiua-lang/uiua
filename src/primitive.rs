@@ -131,7 +131,7 @@ macro_rules! primitive {
     };
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Sequence)]
 pub enum PrimClass {
     Stack,
     Control,
@@ -156,6 +156,9 @@ impl PrimClass {
             self,
             PrimClass::MonadicPervasive | PrimClass::DyadicPervasive
         )
+    }
+    pub fn primitives(self) -> impl Iterator<Item = Primitive> {
+        Primitive::all().filter(move |prim| prim.class() == self)
     }
 }
 
@@ -875,9 +878,7 @@ impl Primitive {
     }
     /// The longest name of the primitive that the formatter will replace
     pub fn format_name(&self) -> Option<&'static str> {
-        if self.ascii().is_some() || self.unicode().is_none() {
-            return None;
-        }
+        self.unicode()?;
         self.name()
     }
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {

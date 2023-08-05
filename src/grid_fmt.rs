@@ -55,6 +55,8 @@ impl GridFmt for f64 {
                 format!("{minus}π")
             } else if (positive - TAU).abs() < 1e-12 {
                 format!("{minus}τ")
+            } else if (positive - PI / 2.0).abs() < 1e-12 {
+                format!("{minus}η")
             } else if positive == INFINITY {
                 format!("{minus}∞")
             } else {

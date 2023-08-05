@@ -356,6 +356,24 @@ pub fn Editor<'a>(
             return;
         }
         let mut handled = true;
+        /// For determining if ctrl+backspace/delete should remove a sequence of characters
+        fn char_class(c: char) -> u8 {
+            if c.is_ascii_alphabetic() {
+                1
+            } else if c.is_ascii_digit() {
+                2
+            } else if c == '\n' {
+                3
+            } else if c == '\'' {
+                4
+            } else if c == '"' {
+                5
+            } else if "()[]{}".contains(c) {
+                7
+            } else {
+                0
+            }
+        }
         match event.key().as_str() {
             "Enter" => {
                 if event.ctrl_key() || event.shift_key() {
@@ -368,7 +386,26 @@ pub fn Editor<'a>(
                 let (start, end) = get_code_cursor().unwrap();
                 if start == end {
                     if start > 0 {
-                        remove_code(start - 1, start);
+                        let mut removal_count = 1;
+                        if event.ctrl_key() {
+                            removal_count = 0;
+                            let code = code_text();
+                            let chars: Vec<_> = code.chars().take(start as usize).collect();
+                            let last_char = *chars.last().unwrap();
+                            let class = char_class(last_char);
+                            let mut encountered_space = false;
+                            for &c in chars.iter().rev() {
+                                if c.is_whitespace() && c != '\n'
+                                    || char_class(c) == class && !encountered_space
+                                {
+                                    removal_count += 1;
+                                } else {
+                                    break;
+                                }
+                                encountered_space |= c.is_whitespace();
+                            }
+                        }
+                        remove_code(start - removal_count, start);
                     }
                 } else {
                     remove_code(start, end);
@@ -377,7 +414,26 @@ pub fn Editor<'a>(
             "Delete" => {
                 let (start, end) = get_code_cursor().unwrap();
                 if start == end {
-                    remove_code(start, start + 1);
+                    let mut removal_count = 1;
+                    if event.ctrl_key() {
+                        removal_count = 0;
+                        let code = code_text();
+                        let chars: Vec<_> = code.chars().skip(end as usize).collect();
+                        let first_char = *chars.first().unwrap();
+                        let class = char_class(first_char);
+                        let mut encountered_space = false;
+                        for &c in chars.iter() {
+                            if c.is_whitespace() && c != '\n'
+                                || char_class(c) == class && !encountered_space
+                            {
+                                removal_count += 1;
+                            } else {
+                                break;
+                            }
+                            encountered_space |= c.is_whitespace();
+                        }
+                    }
+                    remove_code(start, start + removal_count);
                 } else {
                     remove_code(start, end);
                 }

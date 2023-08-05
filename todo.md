@@ -1,3 +1,8 @@
+- Replace primitives docs pages with docs home search
+- Rework names
+- Make certain float functions propogate fill elements
+- Parse primitive docs in main crate
+- Match APL equivalents in docs search
 - Docs
   - Native interpreter and installation
   - Tests
@@ -5,21 +10,17 @@
   - Fill semantics
   - Loops
     - Explain loop directions
-- Rework names
 - Logarithms
+- Rework front page
+- Pretty array shape formatting in error messages
 - Fix AudioPlay
+- Proper 404 page
 - More inverses
 - Threads
   - Spawn threads
   - Parallelize loops
-- Proper 404 page
-- Make certain float functions propogate fill elements
 - Optimizations
   - Windowed reduce
-- Rework front page
-- Pretty array shape formatting in error messages
-- Match APL equivalents in docs search
-- Parse primitive docs in main crate
 - Multimedia
   - Sound input
   - Webcam input?

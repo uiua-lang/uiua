@@ -7,10 +7,7 @@ use std::{collections::HashSet, iter::once};
 use enum_iterator::all;
 use leptos::*;
 use leptos_router::*;
-use uiua::{
-    lex::is_basically_alphabetic,
-    primitive::{PrimClass, Primitive},
-};
+use uiua::primitive::{PrimClass, Primitive};
 use wasm_bindgen::JsCast;
 use web_sys::{
     Event, HtmlHeadingElement, HtmlInputElement, ScrollBehavior, ScrollIntoViewOptions,
@@ -79,7 +76,7 @@ pub fn Docs(cx: Scope) -> impl IntoView {
     }
 }
 
-fn scroll_to_functions(options: &ScrollIntoViewOptions) {
+pub fn scroll_to_docs_functions(options: &ScrollIntoViewOptions) {
     element::<HtmlHeadingElement>("functions")
         .scroll_into_view_with_scroll_into_view_options(options);
 }
@@ -89,7 +86,7 @@ fn DocsHome(cx: Scope) -> impl IntoView {
     let (results, set_result) = create_signal(cx, Allowed::all().table(cx).into_view(cx));
     let mut old_allowed = Allowed::all();
     let search_input = move |event: Event| {
-        scroll_to_functions(
+        scroll_to_docs_functions(
             ScrollIntoViewOptions::new()
                 .behavior(ScrollBehavior::Smooth)
                 .block(ScrollLogicalPosition::Nearest),
@@ -108,7 +105,7 @@ fn DocsHome(cx: Scope) -> impl IntoView {
         {
             // Only one result
             let prim = allowed.prims.into_iter().next().unwrap();
-            scroll_to_functions(ScrollIntoViewOptions::new().behavior(ScrollBehavior::Smooth));
+            scroll_to_docs_functions(ScrollIntoViewOptions::new().behavior(ScrollBehavior::Smooth));
             view!(cx, <PrimDocs prim=prim/>).into_view(cx)
         } else {
             // Multiple results
@@ -155,21 +152,21 @@ impl Allowed {
     }
     fn from_search(search: &str) -> Self {
         let search = search.to_lowercase();
-        let mut parts: Vec<_> = search
+        let parts: Vec<_> = search
             .split([' ', ','])
-            .filter(|part| {
-                part.chars()
-                    .any(|c| !is_basically_alphabetic(c) && !c.is_ascii_digit())
-                    || part.chars().filter(|c| is_basically_alphabetic(*c)).count() >= 3
-            })
+            .filter(|&part| part.chars().any(|c| !c.is_ascii_digit()))
             .collect();
         if parts.is_empty() {
             return Self::all();
         }
         let mut prims = HashSet::new();
-        parts.retain(|&part| {
+        for &part in &parts {
             let all = Primitive::all;
-            let matches = Primitive::all()
+            if let Some(prim) = all().find(|p| p.name().is_some_and(|name| name == part)) {
+                prims.insert(prim);
+                continue;
+            }
+            let matches = all()
                 .filter(|p| p.name().is_some_and(|name| name.starts_with(part)))
                 .chain(all().filter(|p| {
                     p.ascii()
@@ -177,8 +174,7 @@ impl Allowed {
                 }))
                 .chain(all().filter(|p| p.unicode().is_some_and(|unicode| part.contains(unicode))));
             prims.extend(matches);
-            true
-        });
+        }
         let mut classes: HashSet<PrimClass> = PrimClass::all().collect();
         'parts: for part in &parts {
             for (pattern, pat_classes) in [

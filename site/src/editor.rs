@@ -10,9 +10,12 @@ use uiua::{
     value_to_image_bytes, value_to_wav_bytes, Uiua, UiuaResult,
 };
 use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{Event, HtmlAudioElement, HtmlDivElement, HtmlImageElement, MouseEvent, Node};
+use web_sys::{
+    Event, EventInit, HtmlAudioElement, HtmlDivElement, HtmlImageElement, MouseEvent, Node,
+    ScrollBehavior, ScrollIntoViewOptions,
+};
 
-use crate::{backend::WebBackend, element, prim_class};
+use crate::{backend::WebBackend, docs::scroll_to_docs_functions, element, prim_class};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum EditorSize {
@@ -486,9 +489,34 @@ pub fn Editor<'a>(
             let onclick = move |event: MouseEvent| {
                 if event.ctrl_key() {
                     // Redirect to the docs page
-                    _ = window()
-                        .location()
-                        .set_href(&format!("/docs/{p:?}").to_lowercase());
+                    let location = window().location();
+                    let href = location.href().unwrap();
+                    let href = href.as_str();
+                    if href
+                        .split_once('#')
+                        .map(|(a, _)| a)
+                        .unwrap_or(href)
+                        .ends_with("docs")
+                    {
+                        let element = element::<web_sys::HtmlInputElement>("function-search");
+                        element.set_value(p.name().unwrap_or_default());
+                        element
+                            .dispatch_event(
+                                &Event::new_with_event_init_dict(
+                                    "input",
+                                    EventInit::new().bubbles(true),
+                                )
+                                .unwrap(),
+                            )
+                            .unwrap();
+                        scroll_to_docs_functions(
+                            ScrollIntoViewOptions::new().behavior(ScrollBehavior::Smooth),
+                        );
+                    } else {
+                        _ = window()
+                            .location()
+                            .set_href(&format!("/docs/{p:?}").to_lowercase());
+                    }
                 } else {
                     replace_code(&p.to_string());
                 }

@@ -11,7 +11,11 @@ use std::{
 use clap::Parser;
 use instant::Instant;
 use notify::{EventKind, RecursiveMode, Watcher};
-use uiua::{format::format_file, run::RunMode, Uiua, UiuaError, UiuaResult};
+use uiua::{
+    format::{format_file, FormatConfig},
+    run::RunMode,
+    Uiua, UiuaError, UiuaResult,
+};
 
 fn main() {
     color_backtrace::install();
@@ -34,20 +38,21 @@ fn run() -> UiuaResult {
     if cfg!(feature = "profile") {
         uiua::profile::run_profile();
     } else if let Some(command) = app.command {
+        let config = FormatConfig::default();
         match command {
             Command::Fmt { path } => {
                 if let Some(path) = path {
-                    format_file(path)?;
+                    format_file(path, &config)?;
                 } else {
                     for path in uiua_files() {
-                        format_file(path)?;
+                        format_file(path, &config)?;
                     }
                 }
             }
             Command::Run { path, no_format } => {
                 let path = path.unwrap_or_else(|| PathBuf::from("main.ua"));
                 if !no_format {
-                    format_file(&path)?;
+                    format_file(&path, &config)?;
                 }
                 let mut rt = Uiua::default().mode(RunMode::Normal);
                 rt.load_file(path)?;
@@ -57,7 +62,7 @@ fn run() -> UiuaResult {
             }
             Command::Test { path } => {
                 let path = path.unwrap_or_else(|| PathBuf::from("main.ua"));
-                format_file(&path)?;
+                format_file(&path, &config)?;
                 Uiua::default().mode(RunMode::Test).load_file(path)?;
             }
             Command::Watch => {
@@ -95,13 +100,14 @@ fn watch() -> io::Result<()> {
         .watch(Path::new("."), RecursiveMode::Recursive)
         .unwrap();
     let mut child: Option<process::Child> = None;
+    let config = FormatConfig::default();
     let run = |path: &Path, child: &mut Option<process::Child>| -> io::Result<()> {
         if let Some(mut child) = child.take() {
             _ = child.kill();
             print_watching();
         }
         for i in 0..10 {
-            match format_file(path) {
+            match format_file(path, &config) {
                 Ok(formatted) => {
                     if formatted.is_empty() {
                         clear_watching();

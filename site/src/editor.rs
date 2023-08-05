@@ -4,7 +4,7 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use image::ImageOutputFormat;
 use leptos::{ev::keydown, *};
 use uiua::{
-    format::format_str,
+    format::{format_str, FormatConfig},
     primitive::{PrimClass, Primitive},
     value::Value,
     value_to_image_bytes, value_to_wav_bytes, Uiua, UiuaResult,
@@ -242,7 +242,13 @@ pub fn Editor<'a>(
 
         // Format code
         let input = if format {
-            if let Ok(formatted) = format_str(&code_text) {
+            if let Ok(formatted) = format_str(
+                &code_text,
+                &FormatConfig {
+                    trailing_newline: false,
+                    ..Default::default()
+                },
+            ) {
                 state().set_code(&formatted, cursor);
                 formatted
             } else {

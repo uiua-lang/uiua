@@ -175,7 +175,7 @@ pub fn Editor<'a>(
             }
         }
         fn set_cursor(&self, to: (u32, u32)) {
-            set_code_cursor_impl(&self.code_id.get(), to.0, to.1);
+            set_code_cursor(&self.code_id.get(), to.0, to.1);
         }
         fn set_code_html(&self, code: &str) {
             set_code_html(&self.code_id.get(), code);
@@ -832,7 +832,7 @@ fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
     Some((start, end))
 }
 
-fn set_code_cursor_impl(id: &str, mut start: u32, mut end: u32) {
+fn set_code_cursor(id: &str, mut start: u32, mut end: u32) {
     // log!("set_code_cursor({}, {})", start, end);
 
     let elem = element::<HtmlDivElement>(id);
@@ -875,9 +875,6 @@ fn set_code_cursor_impl(id: &str, mut start: u32, mut end: u32) {
         let sel = window().get_selection().unwrap().unwrap();
         sel.remove_all_ranges().unwrap();
         sel.add_range(&range).unwrap();
-        if start > end {
-            sel.extend_with_offset(&text_node, start).unwrap();
-        }
         elem.focus().unwrap();
         get_code_cursor_impl(id);
     }

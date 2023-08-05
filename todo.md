@@ -1,11 +1,9 @@
-- Fix forced extra newline in formatter
-- Fix failing hilight + backspace in editor
 - Replace primitives docs pages with docs home search
 - Rework names
 - Make certain float functions propogate fill elements
+- If-like function
 - Parse primitive docs in main crate
 - Match APL equivalents and unicode names in docs search
-- Allow primitives in docs markup without names
 - Function array coercion
   - Maybe constant modifier
 - Docs

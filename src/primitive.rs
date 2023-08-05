@@ -186,10 +186,15 @@ primitive!(
     /// Pop the top value off the stack
     (1(0), Pop, Stack, "pop" + ';'),
     // Pervasive monadic ops
-    /// Logical not (equivalent to `1 - x`)
+    /// Logical not
     ///
+    /// ex: ¬0
     /// ex: ¬1
     /// ex: ¬[0 1 1 0]
+    ///
+    /// This is equivalent to `subtract``flip``1`
+    /// ex: ¬7
+    /// ex: ¬[1 2 3 4]
     (1, Not, MonadicPervasive, "not" + '¬'),
     /// Numerical sign (1, ¯1, or 0)
     ///
@@ -354,7 +359,7 @@ primitive!(
     /// ex: ⍉.[1_2 3_4 5_6]
     /// ex: ⍉.[[1_2 3_4] [5_6 7_8]]
     ///
-    /// [shape][transpose] is always equivalent to [rotate]`1`[shape].
+    /// `shape``transpose` is always equivalent to `rotate``1``shape`.
     /// ex: ≅ △⍉ ~ ↻1△ .[1_2 3_4 5_6]
     (1, Transpose, MonadicArray, "transpose" + '⍉'),
     (1, InvTranspose, MonadicArray),
@@ -427,7 +432,7 @@ primitive!(
     /// ex: ⊟ 1 [2 3]
     /// ex: ⊟ [1 2 3] [4_5 6_7]
     ///
-    /// [first] of the [shape] of the coupled array will *always* be `2`.
+    /// `first``shape` of the coupled array will *always* be `2`.
     (2, Couple, DyadicArray, "couple" + '⊟'),
     /// Replace the fill elements of an array with a elements from another.
     ///
@@ -444,7 +449,7 @@ primitive!(
     /// ex: ⊡ 2 [8 3 9 2 0]
     /// ex: ⊡ 1_1 .[1_2_3 4_5_6]
     ///
-    /// [pick] combined with [call] is the easiest way to emulate an if-else expression.
+    /// `pick` combined with [call] is the easiest way to emulate an if-else expression.
     /// ex: :⊡~("not 5")_("5") =5 3
     (2, Pick, DyadicArray, "pick" + '⊡'),
     /// Select multiple elements from an array
@@ -558,7 +563,7 @@ primitive!(
     /// ex: /(-~) 1_2_3_4_5
     /// ex: /(×+1) 1_2_3_4_5
     ///
-    /// [reduce] traverses the array backwards so that [reduce][noop] unloads all rows onto the stack with the first row on top.
+    /// `reduce` traverses the array backwards so that `reduce``noop` unloads all rows onto the stack with the first row on top.
     /// ex: /· 1_2_3
     /// ex: /· [1_2 3_4]
     (Reduce, MonadicModifier { modifier: 1 }, "reduce" + '/'),
@@ -568,7 +573,7 @@ primitive!(
     ///
     /// ex: ⌿+ 10 1_2_3_4
     ///
-    /// [fold] traverses the array backwards so that [join] appends to the front of an accumulator array.
+    /// `fold` traverses the array backwards so that [join] appends to the front of an accumulator array.
     /// ex: ⌿⊂ [] 1_2_3_4
     (Fold, MonadicModifier { modifier: 1 }, "fold" + '⌿'),
     /// Reduce, but keep intermediate values
@@ -590,7 +595,7 @@ primitive!(
     /// ex: /+ [1_2_3 4_5_6 7_8_9]  # Sum columns
     /// ex: ≡/+ [1_2_3 4_5_6 7_8_9]  # Sum rows
     ///
-    /// [rows] is equivalent to [level]`¯1`.
+    /// `rows` is equivalent to [level]`¯1`.
     /// ex: ⍚¯1/+ [1_2_3 4_5_6 7_8_9]
     /// ex: ≡/+   [1_2_3 4_5_6 7_8_9]
     (Rows, MonadicModifier { modifier: 1 }, "rows" + '≡'),
@@ -600,7 +605,7 @@ primitive!(
     /// ex: ≕⊂ 1_2_3 4_5_6
     /// ex: ≕⊂ 1_2 [4_5 6_7]
     ///
-    /// For operations that are already pervasive, like [add], [zip] is redundant.
+    /// For operations that are already pervasive, like `add` or `maximum`, `zip` is redundant.
     /// ex: + 1_2_3 [4_5 6_7 8_9]
     ///   : ≕+ 1_2_3 [4_5 6_7 8_9]
     (Zip, DyadicModifier { modifier: 1 }, "zip" + '≕'),
@@ -648,7 +653,7 @@ primitive!(
     /// ex: ⍥(+2) 5 0
     /// ex: ⍥(⊂2) 5 []
     ///
-    /// One interesting use of [repeat] is to collect some number of stack values into an array.
+    /// One interesting use of `repeat` is to collect some number of stack values into an array.
     /// ex: ⍥⊂3 [] 1 2 3
     ///
     /// Repeating for [infinity] times will create an infinite loop.
@@ -671,15 +676,14 @@ primitive!(
     /// Here, we negate 5, subtract 2, then negate again.
     /// ex: ⍜¯(-2) 5
     ///
-    /// Uiua has no built-in function to get the last element of an array.
-    /// Instead, we can use [first] under [reverse]:
-    /// ex: ⍜⇌⊢ 1_2_3
+    /// `under`[transpose] is sometimes useful.
+    /// ex: ⍜⍉(↙2).↯3_4⇡12
     (Under, OtherModifier { modifier: 2 }, "under" + '⍜'),
     /// Apply a function at a different array depth
     ///
-    /// [level]`0` does nothing.
-    /// [level]`¯1` is equivalent to [rows], applying the function to each row of the array's major axis.
-    /// [level]`1` applies the function to each row of the array's last axis.
+    /// `level``0` does nothing.
+    /// `level``¯1` is equivalent to [rows], applying the function to each row of the array's major axis.
+    /// `level``1` applies the function to each row of the array's last axis.
     ///
     /// ex: ↯2_2_3 ⇡12
     /// ex: /+ ↯2_2_3 ⇡12
@@ -743,7 +747,7 @@ primitive!(
     /// To remove them, use [truncate] instead.
     /// ex: /· \⊂1_2_3_4
     ///
-    /// The formatter converts an empty `()` function into [noop].
+    /// The formatter converts an empty `()` function into `noop`.
     /// ex: ()
     (0, Noop, Misc, "noop" + '·'),
     /// Parse a string as a number
@@ -784,17 +788,17 @@ primitive!(
     // Constants
     /// The number of radians in a quarter circle
     ///
-    /// Equivalent to [divide]`2`[pi] or [divide]`4`[tau]
+    /// Equivalent to `divide``2``pi` or `divide``4``tau`
     /// ex: [η ÷2π ÷4τ]
     (0(1), Eta, Constant, "eta" + 'η'),
     /// The ratio of a circle's circumference to its diameter
     ///
-    /// Equivalent to [multiply]`2`[eta] or [divide]`2`[tau]
+    /// Equivalent to `multiply``2``eta` or `divide``2``tau`
     /// ex: [×2η π ÷2τ]
     (0(1), Pi, Constant, "pi" + 'π'),
     /// The ratio of a circle's circumference to its radius
     ///
-    /// Equivalent to [multiply]`4`[eta] or [multiply]`2`[pi]
+    /// Equivalent to `multiply``4``eta` or `multiply``2``pi`
     /// ex: [×4η ×2π τ]
     (0(1), Tau, Constant, "tau" + 'τ'),
     /// The biggest number
@@ -855,7 +859,7 @@ impl Primitive {
             return Some(Primitive::Tau);
         }
         if name == "eta" || name == "η" {
-            return Some(Primitive::Tau);
+            return Some(Primitive::Eta);
         }
         if name.len() < 3 {
             return None;

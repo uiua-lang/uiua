@@ -21,7 +21,11 @@ fn parse_doc(cx: Scope, line: &str) -> impl IntoView {
                         view!(cx, "["{s}"]").into_view(cx)
                     }
                 } else if mat.starts_with('`') {
-                    view!(cx, <code>{s}</code>).into_view(cx)
+                    if let Some(prim) = Primitive::from_name(&s) {
+                        view!(cx, <PrimCode prim=prim glyph_only=true/>).into_view(cx)
+                    } else {
+                        view!(cx, <code>{s}</code>).into_view(cx)
+                    }
                 } else if mat.starts_with('*') {
                     view!(cx, <em>{s}</em>).into_view(cx)
                 } else {

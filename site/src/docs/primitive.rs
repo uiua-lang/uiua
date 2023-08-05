@@ -42,7 +42,7 @@ pub fn PrimDocs(cx: Scope, prim: Primitive) -> impl IntoView {
                     .map(|ex| {
                         view!(cx,
                             {ex.primer.lines().map(|line| view!(cx, <p>{parse_doc(cx, line)}</p>)).collect::<Vec<_>>()}
-                            <Editor examples=&[&ex.input]/>
+                            <Editor example={ &ex.input }/>
                         )
                         .into_view(cx)
                     })

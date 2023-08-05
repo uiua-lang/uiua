@@ -380,10 +380,11 @@ primitive!(
     /// ex: ≅ 1_2_3 [1 2]
     /// ex: ≅ 1_2 .⊢[1_2 4_5_6]
     (2, Match, DyadicArray, "match" + '≅'),
-    /// Append two arrays or an array and a scalar
+    /// Append two arrays end-to-end
     ///
     /// For scalars, it is equivalent to [couple].
     /// ex: ⊂ 1 2
+    ///   : ⊟ 1 2
     ///
     /// If the arrays have the same [rank], it will append the second array to the first.
     /// ex: ⊂ [1 2] [3 4]
@@ -530,6 +531,8 @@ primitive!(
     (2, Group, DyadicArray, "group" + '⊕'),
     /// Group elements of an array into buckets by sequential keys
     ///
+    /// The first array must be rank 1, and the arrays must have the same length.
+    /// Buckets with mismatched lengths have fill elements.
     /// ex: ⊘ [1 1 2 2 2 3] [1 2 3 4 5 6]
     /// ex: ⊘ ≠' '. "Hey there friendo"
     (2, Partition, DyadicArray, "partition" + '⊘'),
@@ -580,11 +583,14 @@ primitive!(
     /// ex: ≡/+   [1_2_3 4_5_6 7_8_9]
     (Rows, MonadicModifier { modifier: 1 }, "rows" + '≡'),
     /// Pervade a function through two arrays
-    /// For operations that are already pervasive, like [add], this is redundant.
     /// This is the element-wise version of [bridge].
     ///
     /// ex: ≕⊂ 1_2_3 4_5_6
     /// ex: ≕⊂ 1_2 [4_5 6_7]
+    ///
+    /// For operations that are already pervasive, like [add], [zip] is redundant.
+    /// ex: + 1_2_3 [4_5 6_7 8_9]
+    ///   : ≕+ 1_2_3 [4_5 6_7 8_9]
     (Zip, DyadicModifier { modifier: 1 }, "zip" + '≕'),
     /// Apply a function to each pair of rows in two arrays
     /// This is the row-wise version of [zip].
@@ -853,13 +859,15 @@ impl Primitive {
             if start == name.len() {
                 break Some(prims);
             }
-            for len in (3..=name.len() - start).rev() {
+            for len in (2..=name.len() - start).rev() {
                 let start_index = indices[start];
                 let end_index = indices[start + len - 1];
                 if let Some(p) = Primitive::from_format_name(&name[start_index..=end_index]) {
-                    prims.push((p, &name[start_index..=end_index]));
-                    start += len;
-                    continue 'outer;
+                    if len >= 3 || p == Primitive::Pi {
+                        prims.push((p, &name[start_index..=end_index]));
+                        start += len;
+                        continue 'outer;
+                    }
                 }
             }
             break None;

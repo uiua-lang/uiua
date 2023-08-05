@@ -5,9 +5,7 @@
   - Fill semantics
   - Loops
     - Explain loop directions
-  - Comments
   - Note that modifier parsing works on dfns as well
-  - Note that operations can span multiple lines
 - Multiline strings
 - Rework names
 - Logarithms

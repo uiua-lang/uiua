@@ -18,6 +18,20 @@ use tutorial::*;
 fn DocsHome(cx: Scope) -> impl IntoView {
     let primitives: Vec<_> = PrimClass::all()
         .map(|class| {
+            let id = match class {
+                PrimClass::Stack => "stack-functions",
+                PrimClass::MonadicPervasive => "monadic-pervasive-functions",
+                PrimClass::DyadicPervasive => "dyadic-pervasive-functions",
+                PrimClass::MonadicArray => "monadic-array-functions",
+                PrimClass::DyadicArray => "dyadic-array-functions",
+                PrimClass::MonadicModifier => "monadic-modifiers",
+                PrimClass::DyadicModifier => "dyadic-modifiers",
+                PrimClass::OtherModifier => "other-modifiers",
+                PrimClass::Control => "control-functions",
+                PrimClass::Misc => "misc-functions",
+                PrimClass::Constant => "constant-functions",
+                PrimClass::Sys => "system-functions",
+            };
             let of_class: Vec<_> = Primitive::all()
                 .filter(|p| p.class() == class && p.name().is_some())
                 .map(|p| {
@@ -50,7 +64,7 @@ fn DocsHome(cx: Scope) -> impl IntoView {
                 PrimClass::Sys => ("System", "Interact with the system"),
             };
             view! { cx,
-                <td style="vertical-align: top;"><div>
+                <td id=id style="vertical-align: top;"><div>
                     <h3>{ header }</h3>
                     <p>{ description }</p>
                     <div class="primitive-list">{ of_class }</div>
@@ -67,17 +81,17 @@ fn DocsHome(cx: Scope) -> impl IntoView {
 
     view! { cx,
         <h1>"Documentation"</h1>
-        <h2>"Tutorial"</h2>
+        <h2 id="tutorial">"Tutorial"</h2>
         <p>"These are meant to be read in order:"</p>
         <ul>{ all::<TutorialPage>()
             .map(|p| view!(cx, <li><A href={p.path()}>{p.title()}</A></li>))
             .collect::<Vec<_>>()
         }</ul>
-        <h2>"Other Docs"</h2>
+        <h2 id="other-docs">"Other Docs"</h2>
         <ul>
             <li><A href="/docs/design">"Design"</A>" - reasons for some of Uiua's design decisions"</li>
         </ul>
-        <h2>"Functions"</h2>
+        <h2 id="functions">"Functions"</h2>
         <table>{ rows }</table>
     }
 }

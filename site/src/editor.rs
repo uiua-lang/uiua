@@ -38,6 +38,7 @@ pub fn Editor<'a>(
     #[prop(optional)] size: EditorSize,
     #[prop(optional)] help: &'static [&'static str],
     #[prop(optional)] mode: EditorMode,
+    #[prop(optional)] progress_lines: bool,
 ) -> impl IntoView {
     let id = format!("{:?}", cx.id);
     let examples = Some(example)
@@ -46,15 +47,28 @@ pub fn Editor<'a>(
         .chain(examples.iter().copied());
     let examples: Vec<String> = match mode {
         EditorMode::Progressive => {
-            let mut examples: Vec<_> = examples
-                .scan(String::new(), |acc, s| {
-                    if !acc.is_empty() {
-                        acc.insert(0, ' ');
-                    }
-                    acc.insert_str(0, s);
-                    Some(acc.clone())
-                })
-                .collect();
+            let mut examples: Vec<_> = if progress_lines {
+                examples
+                    .scan(String::new(), |acc, s| {
+                        if !acc.is_empty() {
+                            acc.push('\n');
+                        }
+                        acc.push_str(s);
+                        Some(acc.clone())
+                    })
+                    .collect()
+            } else {
+                examples
+                    .rev()
+                    .scan(String::new(), |acc, s| {
+                        if !acc.is_empty() {
+                            acc.insert(0, ' ');
+                        }
+                        acc.insert_str(0, s);
+                        Some(acc.clone())
+                    })
+                    .collect()
+            };
             examples.rotate_right(1);
             examples
         }

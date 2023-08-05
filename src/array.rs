@@ -459,10 +459,10 @@ impl ArrayValue for char {
         ""
     }
     fn fill_value() -> Self {
-        '\x00'
+        '\0'
     }
     fn is_fill_value(&self) -> bool {
-        *self == '\x00'
+        *self == '\0'
     }
 }
 

@@ -429,19 +429,27 @@ pub mod log {
 pub mod max {
     use super::*;
     pub fn num_num(a: f64, b: f64) -> f64 {
-        a.max(b)
+        if a.is_nan() || b.is_nan() {
+            f64::NAN
+        } else {
+            a.max(b)
+        }
     }
     pub fn byte_byte(a: Byte, b: Byte) -> Byte {
-        a.op_or_value(b, u8::max)
+        a.op(b, u8::max)
     }
     pub fn char_char(a: char, b: char) -> char {
-        a.max(b)
+        if a.is_fill_value() || b.is_fill_value() {
+            char::fill_value()
+        } else {
+            a.max(b)
+        }
     }
     pub fn num_byte(a: f64, b: Byte) -> f64 {
-        (a).max(f64::from(b))
+        num_num(a, b.into())
     }
     pub fn byte_num(a: Byte, b: f64) -> f64 {
-        f64::from(a).max(b)
+        num_num(a.into(), b)
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the max of {a} and {b}"))
@@ -451,19 +459,27 @@ pub mod max {
 pub mod min {
     use super::*;
     pub fn num_num(a: f64, b: f64) -> f64 {
-        a.min(b)
+        if a.is_nan() || b.is_nan() {
+            f64::NAN
+        } else {
+            a.min(b)
+        }
     }
     pub fn byte_byte(a: Byte, b: Byte) -> Byte {
-        a.op_or_value(b, u8::min)
+        a.op(b, u8::min)
     }
     pub fn char_char(a: char, b: char) -> char {
-        a.min(b)
+        if a.is_fill_value() || b.is_fill_value() {
+            char::fill_value()
+        } else {
+            a.min(b)
+        }
     }
     pub fn num_byte(a: f64, b: Byte) -> f64 {
-        (a).min(f64::from(b))
+        num_num(a, b.into())
     }
     pub fn byte_num(a: Byte, b: f64) -> f64 {
-        f64::from(a).min(b)
+        num_num(a.into(), b)
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the min of {a} and {b}"))

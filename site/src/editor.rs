@@ -158,6 +158,7 @@ pub fn Editor<'a>(
                 before,
                 after,
             };
+            // log!("set_code: {:?}", new_curr);
             let prev = replace(&mut *self.curr.borrow_mut(), new_curr);
             let changed = prev.code != code;
             if changed {
@@ -328,28 +329,16 @@ pub fn Editor<'a>(
         state().set_code(&new, Cursor::Set(start, start));
     };
 
-    // Go to the next example
-    let next_example = {
-        let examples = examples.clone();
-        move |_| {
-            set_example.update(|e| {
-                *e = (*e + 1) % examples.len();
-                state().set_code(&examples[*e], Cursor::Ignore);
-                state().clear_history();
-                run(false);
-            })
+    // Update the code when the textarea is changed
+    let code_input = move |event: Event| {
+        let event = event.dyn_into::<web_sys::InputEvent>().unwrap();
+        let parent = code_element();
+        let child: HtmlDivElement = event.target().unwrap().dyn_into().unwrap();
+        if !parent.contains(Some(&child)) {
+            return;
         }
-    };
-    // Go to the previous example
-    let prev_example = {
-        let examples = examples.clone();
-        move |_| {
-            set_example.update(|e| {
-                *e = (*e + examples.len() - 1) % examples.len();
-                state().set_code(&examples[*e], Cursor::Ignore);
-                state().clear_history();
-                run(false);
-            })
+        if let Some((start, _)) = get_code_cursor() {
+            state().set_code(&code_text(), Cursor::Set(start, start));
         }
     };
 
@@ -464,16 +453,28 @@ pub fn Editor<'a>(
         replace_code(&text);
     };
 
-    // Update the code when the textarea is changed
-    let code_input = move |event: Event| {
-        let event = event.dyn_into::<web_sys::InputEvent>().unwrap();
-        let parent = code_element();
-        let child: HtmlDivElement = event.target().unwrap().dyn_into().unwrap();
-        if !parent.contains(Some(&child)) {
-            return;
+    // Go to the next example
+    let next_example = {
+        let examples = examples.clone();
+        move |_| {
+            set_example.update(|e| {
+                *e = (*e + 1) % examples.len();
+                state().set_code(&examples[*e], Cursor::Ignore);
+                state().clear_history();
+                run(false);
+            })
         }
-        if let Some((start, _)) = get_code_cursor() {
-            state().set_code(&code_text(), Cursor::Set(start, start));
+    };
+    // Go to the previous example
+    let prev_example = {
+        let examples = examples.clone();
+        move |_| {
+            set_example.update(|e| {
+                *e = (*e + examples.len() - 1) % examples.len();
+                state().set_code(&examples[*e], Cursor::Ignore);
+                state().clear_history();
+                run(false);
+            })
         }
     };
 
@@ -796,7 +797,9 @@ fn code_text(id: &str) -> String {
             text.push_str(&fragment);
         }
     }
-    // log!("code text: {:?}", text);
+    if text.is_empty() {
+        return parent.inner_text();
+    }
 
     text
 }

@@ -255,7 +255,8 @@ pub enum Token {
     Number,
     Char(char),
     Str(String),
-    FormatStr(Vec<String>, bool),
+    FormatStr(Vec<String>),
+    MultilineString(Vec<String>),
     Simple(Simple),
     Glyph(Primitive),
 }
@@ -273,11 +274,15 @@ impl Token {
             _ => None,
         }
     }
-    pub fn as_format_string(&self, multiline: Option<bool>) -> Option<(&[String], bool)> {
+    pub fn as_format_string(&self) -> Option<Vec<String>> {
         match self {
-            Token::FormatStr(string, m) if multiline.map_or(true, |n| *m == n) => {
-                Some((string, *m))
-            }
+            Token::FormatStr(frags) => Some(frags.clone()),
+            _ => None,
+        }
+    }
+    pub fn as_multiline_string(&self) -> Option<Vec<String>> {
+        match self {
+            Token::MultilineString(parts) => Some(parts.clone()),
             _ => None,
         }
     }
@@ -493,63 +498,49 @@ impl Lexer {
                 // Strings
                 '"' | '$' => {
                     let format = c == '$';
-                    let multiline = format && self.next_char_exact(' ');
-                    let mut string = String::new();
-                    let mut escaped = false;
-                    loop {
-                        let escape_char = if multiline { None } else { Some('"') };
-                        match self.character(&mut escaped, escape_char) {
-                            Ok(Some(c)) => string.push(c),
-                            Ok(None) => break,
-                            Err(e) => {
-                                self.errors
-                                    .push(self.end_span(start).sp(LexError::InvalidEscape(e)));
+                    if format && self.next_char_exact(' ') {
+                        // Multiline strings
+                        let mut start = start;
+                        loop {
+                            let inner = self.parse_string_contents(start, None);
+                            let string = self.parse_format_fragments(start, &inner);
+                            self.end(MultilineString(string), start);
+                            let checkpoint = self.loc;
+                            while self.next_char_exact('\r') {}
+                            if self.next_char_exact('\n') {
+                                while self
+                                    .next_char_if(|c| c.is_whitespace() && c != '\n')
+                                    .is_some()
+                                {}
+                                start = self.loc;
+                                if self.next_chars_exact("$ ") {
+                                    continue;
+                                }
                             }
+                            self.loc = checkpoint;
+                            break;
                         }
+                        continue;
                     }
-                    if !multiline && !self.next_char_exact('"') {
+                    if format && !self.next_char_exact('"') {
+                        self.errors.push(
+                            self.end_span(start)
+                                .sp(LexError::ExpectedCharacter(Some('"'))),
+                        );
+                    }
+                    // Single-line strings
+                    let inner = self.parse_string_contents(start, Some('"'));
+                    if !self.next_char_exact('"') {
                         self.errors.push(
                             self.end_span(start)
                                 .sp(LexError::ExpectedCharacter(Some('"'))),
                         );
                     }
                     if format {
-                        let mut frags: Vec<String> = Vec::new();
-                        let mut curr = String::new();
-                        let mut chars = string.chars();
-                        while let Some(c) = chars.next() {
-                            match c {
-                                '{' => match chars.next() {
-                                    Some('}') => {
-                                        frags.push(curr);
-                                        curr = String::new();
-                                    }
-                                    Some('{') => curr.push('{'),
-                                    Some(c) => self
-                                        .errors
-                                        .push(self.end_span(start).sp(LexError::UnexpectedChar(c))),
-                                    None => self.errors.push(
-                                        self.end_span(start)
-                                            .sp(LexError::ExpectedCharacter(Some('}'))),
-                                    ),
-                                },
-                                '}' => match chars.next() {
-                                    Some('}') => curr.push('}'),
-                                    Some(c) => self
-                                        .errors
-                                        .push(self.end_span(start).sp(LexError::UnexpectedChar(c))),
-                                    None => self.errors.push(
-                                        self.end_span(start)
-                                            .sp(LexError::ExpectedCharacter(Some('}'))),
-                                    ),
-                                },
-                                c => curr.push(c),
-                            }
-                        }
-                        frags.push(curr);
-                        self.end(FormatStr(frags, multiline), start)
+                        let frags = self.parse_format_fragments(start, &inner);
+                        self.end(FormatStr(frags), start)
                     } else {
-                        self.end(Str(string), start)
+                        self.end(Str(inner), start)
                     }
                 }
                 // Identifiers and selectors
@@ -646,7 +637,7 @@ impl Lexer {
         escaped: &mut bool,
         escape_char: Option<char>,
     ) -> Result<Option<char>, char> {
-        let Some(c) = self.next_char_if(|c| c != '\n' && (Some(c) != escape_char || *escaped)) else {
+        let Some(c) = self.next_char_if(|c| !"\r\n".contains(c) && (Some(c) != escape_char || *escaped)) else {
             return Ok(None);
         };
         Ok(Some(if *escaped {
@@ -659,8 +650,6 @@ impl Lexer {
                 '\\' => '\\',
                 '"' => '"',
                 '\'' => '\'',
-                '{' => '{',
-                '}' => '}',
                 c => return Err(c),
             }
         } else if c == '\\' {
@@ -669,6 +658,57 @@ impl Lexer {
         } else {
             c
         }))
+    }
+    fn parse_string_contents(&mut self, start: Loc, escape_char: Option<char>) -> String {
+        let mut string = String::new();
+        let mut escaped = false;
+        loop {
+            match self.character(&mut escaped, escape_char) {
+                Ok(Some(c)) => string.push(c),
+                Ok(None) => break,
+                Err(e) => {
+                    self.errors
+                        .push(self.end_span(start).sp(LexError::InvalidEscape(e)));
+                }
+            }
+        }
+        string
+    }
+    fn parse_format_fragments(&mut self, start: Loc, s: &str) -> Vec<String> {
+        let mut frags: Vec<String> = Vec::new();
+        let mut curr = String::new();
+        let mut chars = s.chars();
+        while let Some(c) = chars.next() {
+            match c {
+                '{' => match chars.next() {
+                    Some('}') => {
+                        frags.push(curr);
+                        curr = String::new();
+                    }
+                    Some('{') => curr.push('{'),
+                    Some(c) => self
+                        .errors
+                        .push(self.end_span(start).sp(LexError::UnexpectedChar(c))),
+                    None => self.errors.push(
+                        self.end_span(start)
+                            .sp(LexError::ExpectedCharacter(Some('}'))),
+                    ),
+                },
+                '}' => match chars.next() {
+                    Some('}') => curr.push('}'),
+                    Some(c) => self
+                        .errors
+                        .push(self.end_span(start).sp(LexError::UnexpectedChar(c))),
+                    None => self.errors.push(
+                        self.end_span(start)
+                            .sp(LexError::ExpectedCharacter(Some('}'))),
+                    ),
+                },
+                c => curr.push(c),
+            }
+        }
+        frags.push(curr);
+        frags
     }
 }
 

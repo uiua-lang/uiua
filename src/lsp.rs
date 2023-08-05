@@ -29,9 +29,12 @@ fn words_spans(words: Vec<Sp<Word>>) -> Vec<Sp<SpanKind>> {
     for word in words {
         match word.value {
             Word::Number(..) => spans.push(word.span.sp(SpanKind::Number)),
-            Word::Char(_) => spans.push(word.span.sp(SpanKind::String)),
-            Word::String(_) => spans.push(word.span.sp(SpanKind::String)),
-            Word::FormatString(_) => spans.push(word.span.sp(SpanKind::String)),
+            Word::Char(_) | Word::String(_) | Word::FormatString(_) => {
+                spans.push(word.span.sp(SpanKind::String))
+            }
+            Word::MultilineString(lines) => {
+                spans.extend(lines.into_iter().map(|line| line.span.sp(SpanKind::String)))
+            }
             Word::Ident(ident) => {
                 if let Some(prims) = Primitive::from_format_name_multi(ident.as_str()) {
                     let mut start = word.span.start;

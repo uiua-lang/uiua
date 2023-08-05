@@ -326,21 +326,45 @@ impl<'io> Uiua<'io> {
             }
             Word::Char(c) => self.push_instr(Instr::Push(c.into())),
             Word::String(s) => self.push_instr(Instr::Push(s.into())),
-            Word::FormatString(lines) => {
+            Word::FormatString(frags) => {
+                let f = Function {
+                    id: FunctionId::Anonymous(word.span.clone()),
+                    instrs: Vec::new(),
+                    kind: FunctionKind::Dynamic(Rc::new(move |env| {
+                        let mut formatted = String::new();
+                        for (i, frag) in frags.iter().enumerate() {
+                            if i > 0 {
+                                let val = env.pop(format!("format argument {i}"))?;
+                                formatted.push_str(&format!("{}", val));
+                            }
+                            formatted.push_str(frag);
+                        }
+                        env.push(formatted);
+                        Ok(())
+                    })),
+                };
+                self.push_instr(Instr::Push(f.into()));
+                let span = self.add_span(word.span);
+                self.push_instr(Instr::Call(span));
+            }
+            Word::MultilineString(lines) => {
                 let f = Function {
                     id: FunctionId::Anonymous(word.span.clone()),
                     instrs: Vec::new(),
                     kind: FunctionKind::Dynamic(Rc::new(move |env| {
                         let mut formatted = String::new();
                         let mut i = 0;
-                        for frags in &lines {
-                            for (j, frag) in frags.iter().enumerate() {
-                                if j > 0 {
+                        for (j, line) in lines.iter().enumerate() {
+                            if j > 0 {
+                                formatted.push_str("\r\n");
+                            }
+                            for (k, frag) in line.value.iter().enumerate() {
+                                if k > 0 {
                                     let val = env.pop(format!("format argument {i}"))?;
                                     formatted.push_str(&format!("{}", val));
-                                    i += 1;
                                 }
                                 formatted.push_str(frag);
+                                i += 1;
                             }
                         }
                         env.push(formatted);

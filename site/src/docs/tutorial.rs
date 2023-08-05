@@ -319,6 +319,7 @@ fn TutorialTypes(cx: Scope) -> impl IntoView {
             <li><b>"Character"</b></li>
             <li><b>"Function"</b></li>
         </ul>
+
         <h2>"Numbers"</h2>
         <p>"Numbers are decimal numbers with floating precision. They are represented as 64-bit floating-point."</p>
         <Editor example="[5 0 3.2 ¯1.1 π ∞]"/>
@@ -328,12 +329,16 @@ fn TutorialTypes(cx: Scope) -> impl IntoView {
         <Editor example="⊡ 2 [4 7 9 1 0]"/>
         <Editor example="⊡ 3.1 [4 7 9 1 0]"/>
         <p>"If you want to convert a number to a whole number, you can use "<PrimCode prim=Floor/>", "<PrimCode prim=Ceil/>", or "<PrimCode prim=Round/>"."</p>
+
         <h2>"Characters"</h2>
         <p>"Characters are represented as 32-bit Unicode codepoints."</p>
         <p>"Character literals, delimited by "<code>"'"</code>"s, create "<PrimCode prim=Rank/><code>"0"</code>" character arrays."</p>
         <Editor example="['a' 'b' 'c']"/>
         <p>"String literals, delimited by "<code>"\""</code>"s, create "<PrimCode prim=Rank/><code>"1"</code>" character arrays."</p>
         <Editor example="\"Hello, World!\""/>
+        <p>"You can make strings span multiple lines with a "<code>"$"</code>" followed by a space on each line."</p>
+        <p>"These do not require "<code>"\""</code>"s."</p>
+        <Editor example="print $ Hello, \n      $ World!"/>
         <p>"Characters and numbers exist in an "<a href="https://en.wikipedia.org/wiki/Affine_space">"affine space."</a></p>
         <p>"You can add or subtract a number from a character to get another character."</p>
         <p>"You can subtract two characters to get a number."</p>
@@ -341,6 +346,7 @@ fn TutorialTypes(cx: Scope) -> impl IntoView {
         <Editor example="+1 'a'"/>
         <Editor example="-'a' 'z'"/>
         <Editor example="+'a' 'b'"/>
+
         <h2>"Functions"</h2>
         <p>"Functions are usually used as scalars, but they are still arrays. Most array operations that work on number and character arrays work on arrays of functions as well."</p>
         <p>"Functions will be discussed more in a "<A href="/docs/functions">"later section"</A>"."</p>
@@ -423,6 +429,8 @@ fn TutorialFunctions(cx: Scope) -> impl IntoView {
         <Editor example="$\"{}, {}, and {}\" 1 2 3"/>
         <p>"If you need to use a literal "<code>"{"</code>" or "<code>"}"</code>", you can escape them with "<code>"{{"</code>" and "<code>"}}"</code>"."</p>
         <Editor example="$\"{{}} {{{}}}\" 27"/>
+        <p>"Multiline strings are implicitly format strings."</p>
+        <Editor example="{a b +a b}1 2\nprint $ Do you know what {} + {} is?\n      $ It's {}!"/>
     }
 }
 

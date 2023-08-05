@@ -6,9 +6,7 @@ use crate::{ast::*, lex::Sp, parse::parse, UiuaError, UiuaResult};
 
 pub fn format_items(items: &[Item]) -> String {
     let mut output = String::new();
-    for item in items {
-        format_item(&mut output, item);
-    }
+    format_items_impl(&mut output, items);
     output
 }
 
@@ -40,15 +38,20 @@ pub fn format_file<P: AsRef<Path>>(path: P) -> UiuaResult<String> {
     Ok(formatted)
 }
 
+fn format_items_impl(output: &mut String, items: &[Item]) {
+    for item in items {
+        format_item(output, item);
+        output.push('\n');
+    }
+}
+
 fn format_item(output: &mut String, item: &Item) {
     match item {
         Item::Scoped { items, test } => {
             let delim = if *test { "~~~" } else { "---" };
             output.push_str(delim);
             output.push('\n');
-            for item in items {
-                format_item(output, item);
-            }
+            format_items_impl(output, items);
             output.push_str(delim);
         }
         Item::Words(w) => {
@@ -61,7 +64,6 @@ fn format_item(output: &mut String, item: &Item) {
         }
         Item::Newlines => {}
     }
-    output.push('\n');
 }
 
 fn format_words(output: &mut String, words: &[Sp<Word>]) {
@@ -76,6 +78,22 @@ fn format_word(output: &mut String, word: &Sp<Word>) {
         Word::Char(c) => output.push_str(&format!("{:?}", c)),
         Word::String(s) => output.push_str(&format!("{:?}", s)),
         Word::FormatString(_) => output.push_str(word.span.as_str()),
+        Word::MultilineString(lines) => {
+            let curr_line_pos = if output.ends_with('\n') {
+                0
+            } else {
+                output.lines().last().unwrap_or_default().chars().count()
+            };
+            for (i, line) in lines.iter().enumerate() {
+                if i > 0 {
+                    output.push('\n');
+                    for _ in 0..curr_line_pos {
+                        output.push(' ');
+                    }
+                }
+                output.push_str(line.span.as_str());
+            }
+        }
         Word::Ident(ident) => output.push_str(&ident.0),
         Word::Strand(items) => {
             for (i, item) in items.iter().enumerate() {
@@ -118,7 +136,11 @@ fn format_multiline_words(output: &mut String, lines: &[Vec<Sp<Word>>]) {
         format_words(output, &lines[0]);
     } else {
         let curr_line = output.lines().last().unwrap_or_default();
-        let curr_line_pos = curr_line.chars().count();
+        let curr_line_pos = if output.ends_with('\n') {
+            0
+        } else {
+            curr_line.chars().count()
+        };
         let compact = curr_line_pos <= 10 || curr_line.starts_with(' ');
         let indent = if compact { curr_line_pos } else { 2 };
         for (i, line) in lines.iter().enumerate() {

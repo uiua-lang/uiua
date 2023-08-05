@@ -1,4 +1,4 @@
-use std::{iter, time::Duration};
+use std::{cell::RefCell, iter, mem::replace, rc::Rc, time::Duration};
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use image::ImageOutputFormat;
@@ -105,17 +105,127 @@ pub fn Editor<'a>(
     let (output, set_output) = create_signal(cx, String::new());
 
     let code_text = move || code_text(&code_id.get());
-    let get_code_cursor = move || get_code_cursor(&code_id.get());
-    let set_code_cursor = move |start, end| set_code_cursor(&code_id.get(), start, end);
+    let get_code_cursor = move || get_code_cursor_impl(&code_id.get());
     let (copied_link, set_copied_link) = create_signal(cx, false);
     let (copied_code, set_copied_code) = create_signal(cx, false);
 
-    let set_code_html = move |code: &str| {
-        set_code_html(&code_id.get(), code);
-        set_line_count.set(children_of(&code_element()).count());
-        set_copied_link.set(false);
-        set_copied_code.set(false);
-    };
+    /// Handles set the code in the editor, setting the cursor, and managing the history
+    struct State {
+        code_id: ReadSignal<String>,
+        set_line_count: WriteSignal<usize>,
+        set_copied_link: WriteSignal<bool>,
+        set_copied_code: WriteSignal<bool>,
+        past: RefCell<Vec<Record>>,
+        future: RefCell<Vec<Record>>,
+        curr: RefCell<Record>,
+    }
+
+    #[derive(Debug)]
+    struct Record {
+        code: String,
+        before: (u32, u32),
+        after: (u32, u32),
+    }
+
+    #[derive(Clone, Copy)]
+    enum Cursor {
+        Set(u32, u32),
+        Keep,
+        Ignore,
+    }
+
+    impl State {
+        fn set_code(&self, code: &str, cursor: Cursor) {
+            let after = match cursor {
+                Cursor::Set(start, end) => (start, end),
+                Cursor::Keep => get_code_cursor_impl(&self.code_id.get()).unwrap_or_else(|| {
+                    let len = code.chars().count() as u32;
+                    (len, len)
+                }),
+                Cursor::Ignore => {
+                    let len = code.chars().count() as u32;
+                    (len, len)
+                }
+            };
+            let before = get_code_cursor_impl(&self.code_id.get())
+                .or_else(|| self.past.borrow().last().map(|r| r.after))
+                .unwrap_or(after);
+            let new_curr = Record {
+                code: code.into(),
+                before,
+                after,
+            };
+            log!("set_code: {new_curr:?}");
+            let prev = replace(&mut *self.curr.borrow_mut(), new_curr);
+            let changed = prev.code != code;
+            if changed {
+                self.past.borrow_mut().push(prev);
+                self.future.borrow_mut().clear();
+            }
+            set_code_html(&self.code_id.get(), code);
+            if !matches!(cursor, Cursor::Ignore) {
+                self.set_cursor(after);
+            }
+            if changed {
+                self.set_changed();
+            }
+        }
+        fn set_cursor(&self, to: (u32, u32)) {
+            set_code_cursor_impl(&self.code_id.get(), to.0, to.1);
+        }
+        fn set_code_html(&self, code: &str) {
+            set_code_html(&self.code_id.get(), code);
+        }
+        fn set_changed(&self) {
+            self.set_copied_link.set(false);
+            self.set_copied_code.set(false);
+            self.set_line_count
+                .set(children_of(&element(&self.code_id.get())).count());
+        }
+        fn clear_history(&self) {
+            self.past.borrow_mut().clear();
+            self.future.borrow_mut().clear();
+        }
+        fn undo(&self) {
+            if let Some(prev) = self.past.borrow_mut().pop() {
+                self.set_code_html(&prev.code);
+                let mut curr = self.curr.borrow_mut();
+                self.set_cursor(curr.before);
+                self.future.borrow_mut().push(replace(&mut *curr, prev));
+                self.set_changed();
+            }
+        }
+        fn redo(&self) {
+            if let Some(next) = self.future.borrow_mut().pop() {
+                self.set_code_html(&next.code);
+                let mut curr = self.curr.borrow_mut();
+                self.set_cursor(next.after);
+                self.past.borrow_mut().push(replace(&mut *curr, next));
+                self.set_changed();
+            }
+        }
+    }
+
+    let state = Rc::new(State {
+        code_id,
+        set_line_count,
+        set_copied_link,
+        set_copied_code,
+        past: Default::default(),
+        future: Default::default(),
+        curr: {
+            let code = initial_code.get().unwrap();
+            let len = code.chars().count() as u32;
+            Record {
+                code,
+                before: (len, len),
+                after: (len, len),
+            }
+        }
+        .into(),
+    });
+    let (state, _) = create_signal(cx, state);
+    let state = move || state.get();
 
     // Run the code
     let run = move |format: bool| {
@@ -125,25 +235,20 @@ pub fn Editor<'a>(
             code_text = code;
             set_initial_code.set(None);
         }
-        let range = get_code_cursor();
 
         // Format code
         let input = if format {
             if let Ok(formatted) = format_str(&code_text) {
-                let formatted = formatted.trim();
-                set_code_html(formatted);
-                formatted.into()
+                state().set_code(&formatted, Cursor::Keep);
+                formatted
             } else {
-                set_code_html(&code_text);
+                state().set_code(&code_text, Cursor::Keep);
                 code_text
             }
         } else {
-            set_code_html(&code_text);
+            state().set_code(&code_text, Cursor::Keep);
             code_text
         };
-        if let Some((start, end)) = range {
-            set_code_cursor(start, end);
-        }
 
         // Run code
         match run_code(&input) {
@@ -182,15 +287,14 @@ pub fn Editor<'a>(
         if let Some((start, end)) = get_code_cursor() {
             let (start, end) = (start.min(end), start.max(end) as usize);
             let code = code_text();
-            let text: String = code
+            let new: String = code
                 .chars()
                 .take(start as usize)
                 .chain(inserted.chars())
                 .chain(code.chars().skip(end))
                 .collect();
-            set_code_html(&text);
             let offset = inserted.chars().count() as u32;
-            set_code_cursor(start + offset, start + offset);
+            state().set_code(&new, Cursor::Set(start + offset, start + offset));
         };
     };
 
@@ -201,13 +305,12 @@ pub fn Editor<'a>(
         }
         let (start, end) = (start.min(end), start.max(end) as usize);
         let code = code_text();
-        let text: String = code
+        let new: String = code
             .chars()
             .take(start as usize)
             .chain(code.chars().skip(end))
             .collect();
-        set_code_html(&text);
-        set_code_cursor(start, start);
+        state().set_code(&new, Cursor::Set(start, start));
     };
 
     // Go to the next example
@@ -216,7 +319,8 @@ pub fn Editor<'a>(
         move |_| {
             set_example.update(|e| {
                 *e = (*e + 1) % examples.len();
-                set_code_html(&examples[*e]);
+                state().set_code(&examples[*e], Cursor::Ignore);
+                state().clear_history();
                 run(false);
             })
         }
@@ -227,7 +331,8 @@ pub fn Editor<'a>(
         move |_| {
             set_example.update(|e| {
                 *e = (*e + examples.len() - 1) % examples.len();
-                set_code_html(&examples[*e]);
+                state().set_code(&examples[*e], Cursor::Ignore);
+                state().clear_history();
                 run(false);
             })
         }
@@ -298,17 +403,19 @@ pub fn Editor<'a>(
                 _ = window().navigator().clipboard().unwrap().write_text(&text);
                 remove_code(start, end);
             }
+            "z" if event.ctrl_key() => state().undo(),
+            "y" if event.ctrl_key() => state().redo(),
             key @ ("ArrowUp" | "ArrowDown") if event.alt_key() => {
                 let (_, end) = get_code_cursor().unwrap();
-                let (line, col) = line_col(&code_text(), end as usize);
+                let code = code_text();
+                let (line, col) = line_col(&code, end as usize);
                 let line_index = line - 1;
                 let up = key == "ArrowUp";
-                let mut lines: Vec<String> = code_text().lines().map(Into::into).collect();
+                let mut lines: Vec<String> = code.lines().map(Into::into).collect();
                 if up && line_index > 0 || !up && line_index < lines.len() - 1 {
                     let swap_index = if up { line_index - 1 } else { line_index + 1 };
                     lines.swap(line_index, swap_index);
                     let swapped: String = lines.join("\n");
-                    set_code_html(&swapped);
                     let mut new_end = 0;
                     for (i, line) in lines.iter().enumerate() {
                         if i == swap_index {
@@ -323,14 +430,11 @@ pub fn Editor<'a>(
                         }
                         new_end += line.chars().count() as u32 + 1;
                     }
-                    set_code_cursor(new_end, new_end);
+                    state().set_code(&swapped, Cursor::Set(new_end, new_end));
                 }
             }
             "ArrowLeft" | "ArrowRight" if event.alt_key() => {}
-            key => {
-                log!("key: {:?}", key);
-                handled = false;
-            }
+            _ => handled = false,
         }
         if handled {
             event.prevent_default();
@@ -357,8 +461,7 @@ pub fn Editor<'a>(
             return;
         }
         if let Some((start, _)) = get_code_cursor() {
-            set_code_html(&code_text());
-            set_code_cursor(start, start);
+            state().set_code(&code_text(), Cursor::Set(start, start));
         }
     };
 
@@ -661,7 +764,7 @@ fn code_text(id: &str) -> String {
     text
 }
 
-fn get_code_cursor(id: &str) -> Option<(u32, u32)> {
+fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
     let parent = element::<HtmlDivElement>(id);
     let sel = window().get_selection().ok()??;
     let (anchor_node, anchor_offset) = (sel.anchor_node()?, sel.anchor_offset());
@@ -692,14 +795,10 @@ fn get_code_cursor(id: &str) -> Option<(u32, u32)> {
     Some((start, end))
 }
 
-fn set_code_cursor(id: &str, mut start: u32, mut end: u32) {
-    let elem = element::<HtmlDivElement>(id);
+fn set_code_cursor_impl(id: &str, mut start: u32, mut end: u32) {
     // log!("set_code_cursor({}, {})", start, end);
-    let code = code_text(id);
-    let max_len = code.chars().count() as u32;
-    start = start.min(max_len);
-    end = end.min(max_len);
 
+    let elem = element::<HtmlDivElement>(id);
     let mut text_len = 0;
     let mut last_node = None;
     'divs: for (i, div_node) in children_of(&elem).enumerate() {
@@ -739,15 +838,18 @@ fn set_code_cursor(id: &str, mut start: u32, mut end: u32) {
         let sel = window().get_selection().unwrap().unwrap();
         sel.remove_all_ranges().unwrap();
         sel.add_range(&range).unwrap();
+        if start > end {
+            sel.extend_with_offset(&text_node, start).unwrap();
+        }
         elem.focus().unwrap();
-        get_code_cursor(id);
+        get_code_cursor_impl(id);
     }
 }
 
 fn set_code_html(id: &str, code: &str) {
     use uiua::lsp::*;
 
-    // log!("code_to_html: {:?}", code);
+    // log!("set_code_html({:?})", code);
 
     let elem = element::<HtmlDivElement>(id);
     if code.is_empty() {

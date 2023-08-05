@@ -170,6 +170,8 @@ pub fn Editor<'a>(
             }
             if changed {
                 self.set_changed();
+            } else {
+                self.set_line_count();
             }
         }
         fn set_cursor(&self, to: (u32, u32)) {
@@ -181,6 +183,9 @@ pub fn Editor<'a>(
         fn set_changed(&self) {
             self.set_copied_link.set(false);
             self.set_copied_code.set(false);
+            self.set_line_count();
+        }
+        fn set_line_count(&self) {
             self.set_line_count
                 .set(children_of(&element(&self.code_id.get())).count());
         }
@@ -735,12 +740,12 @@ pub fn Editor<'a>(
                                 id="prev-example"
                                 class="code-button"
                                 style=example_arrow_style
-                                on:click=prev_example title="Previous example">{ "<" } </button>
+                                on:click=prev_example>{ "<" } </button>
                             <button
                                 id="next-example"
                                 class=next_button_class
                                 style=example_arrow_style
-                                on:click=next_example title="Next example">{ ">" } </button>
+                                on:click=next_example>{ ">" } </button>
                         </div>
                     </div>
                 </div>

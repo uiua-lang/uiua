@@ -560,10 +560,15 @@ primitive!(
     ///
     /// ex: /+ 1_2_3_4_5
     /// ex: /- 1_2_3_4_5
-    /// ex: /(-~) 1_2_3_4_5
+    ///
+    /// If you want to see the intermediate values, you can use [scan], [flip], and [reverse].
+    /// ex: /-     1_2_3_4_5
+    ///   : \(-~)⇌ 1_2_3_4_5
+    ///
+    /// You can can fold with arbitrary functions.
     /// ex: /(×+1) 1_2_3_4_5
     ///
-    /// `reduce` traverses the array backwards so that `reduce``noop` unloads all rows onto the stack with the first row on top.
+    /// [reduce] traverses the array backwards so that `reduce``noop` unloads all rows onto the stack with the first row on top.
     /// ex: /· 1_2_3
     /// ex: /· [1_2 3_4]
     (Reduce, MonadicModifier { modifier: 1 }, "reduce" + '/'),
@@ -572,9 +577,6 @@ primitive!(
     /// Unlike other modifiers, [fold] and [reduce] traverse the array from right to left.
     ///
     /// ex: ⌿+ 10 1_2_3_4
-    ///
-    /// `fold` traverses the array backwards so that [join] appends to the front of an accumulator array.
-    /// ex: ⌿⊂ [] 1_2_3_4
     (Fold, MonadicModifier { modifier: 1 }, "fold" + '⌿'),
     /// Reduce, but keep intermediate values
     ///
@@ -595,7 +597,7 @@ primitive!(
     /// ex: /+ [1_2_3 4_5_6 7_8_9]  # Sum columns
     /// ex: ≡/+ [1_2_3 4_5_6 7_8_9]  # Sum rows
     ///
-    /// `rows` is equivalent to [level]`¯1`.
+    /// [rows] is equivalent to [level]`¯1`.
     /// ex: ⍚¯1/+ [1_2_3 4_5_6 7_8_9]
     /// ex: ≡/+   [1_2_3 4_5_6 7_8_9]
     (Rows, MonadicModifier { modifier: 1 }, "rows" + '≡'),
@@ -676,7 +678,7 @@ primitive!(
     /// Here, we negate 5, subtract 2, then negate again.
     /// ex: ⍜¯(-2) 5
     ///
-    /// `under`[transpose] is sometimes useful.
+    /// [under][transpose] is sometimes useful.
     /// ex: ⍜⍉(↙2).↯3_4⇡12
     (Under, OtherModifier { modifier: 2 }, "under" + '⍜'),
     /// Apply a function at a different array depth

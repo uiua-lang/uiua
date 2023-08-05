@@ -408,9 +408,9 @@ impl<'io> Uiua<'io> {
         }) {
             // Name exists in scope
             let value = self.globals[*idx].clone();
-            let is_function = matches!(value, Value::Func(_));
+            let should_call = matches!(&value, Value::Func(f) if f.shape.is_empty());
             self.push_instr(Instr::Push(value));
-            if is_function && call {
+            if should_call && call {
                 let span = self.add_span(span);
                 self.push_instr(Instr::Call(span));
             }
@@ -657,32 +657,37 @@ impl<'io> Uiua<'io> {
                         dfn = true;
                     }
                     FunctionKind::Dynamic(ff) => {
-                        let new_frame = StackFrame {
+                        self.scope.call.push(StackFrame {
                             function: f.clone(),
                             call_span,
                             spans: Vec::new(),
                             pc: 0,
                             dfn: false,
-                        };
-                        self.scope.call.push(new_frame);
+                        });
                         ff(self)?;
                         self.scope.call.pop();
                         return Ok(());
                     }
                 }
-                let new_frame = StackFrame {
+                self.exec(StackFrame {
                     function: f,
                     call_span,
                     spans: Vec::new(),
                     pc: 0,
                     dfn,
-                };
-                self.exec(new_frame)
+                })
             }
             value => {
-                self.pop("replaced value")?;
-                self.push(value);
-                Ok(())
+                if self.stack.pop().is_some() {
+                    self.push(value);
+                    Ok(())
+                } else {
+                    Err(UiuaError::Run(
+                        self.spans[call_span]
+                            .clone()
+                            .sp(format!("Stack was empty when evaluating {}", value)),
+                    ))
+                }
             }
         }
     }

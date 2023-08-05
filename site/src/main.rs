@@ -65,7 +65,7 @@ pub fn Site(cx: Scope) -> impl IntoView {
                             <p id="subtitle">{ subtitle }</p>
                         </div>
                         <div id="nav">
-                            <p><a href="https://github.com/kaikalii/uiua">"GitHub"</a></p>
+                            <p><a href="https://github.com/uiua-lang/uiua">"GitHub"</a></p>
                             <p><a href="/">"Home"</a></p>
                         </div>
                     </div>

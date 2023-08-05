@@ -2,7 +2,7 @@
 edition = "2021"
 name = "uiua"
 readme = "readme.md"
-repository = "https://github.com/kaikalii/uiua"
+repository = "https://github.com/uiua-lang/uiua"
 version = "0.1.0"
 
 [dependencies]

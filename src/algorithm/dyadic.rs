@@ -718,7 +718,7 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     pub fn find(&self, searched: &Self, env: &Uiua) -> UiuaResult<Array<Byte>> {
-        if self.rank() > searched.rank() {
+        if self.rank() > searched.rank() || self.len() > searched.len() {
             return Err(env.error(format!(
                 "Cannot search for array of shape {:?} in array of shape {:?}",
                 self.shape, searched.shape

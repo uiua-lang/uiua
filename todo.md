@@ -1,4 +1,3 @@
-- Ctrl+/ in editor
 - Match APL equivalents and unicode names in docs search
 - Docs
   - Testing and run modes

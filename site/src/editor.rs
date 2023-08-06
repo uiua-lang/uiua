@@ -461,6 +461,32 @@ pub fn Editor<'a>(
             }
             "z" if event.ctrl_key() => state().undo(),
             "y" if event.ctrl_key() => state().redo(),
+            "/" if event.ctrl_key() => {
+                let code = code_text();
+                let (start, end) = get_code_cursor().unwrap();
+                let (start, end) = (start.min(end), start.max(end));
+                let (start_line, _) = line_col(&code, start as usize);
+                let (end_line, _) = line_col(&code, end as usize);
+                let mut lines: Vec<String> = code.lines().map(Into::into).collect();
+                let range = &mut lines[start_line - 1..end_line];
+                if range.iter().all(|line| line.trim().starts_with('#')) {
+                    // Toggle comments off
+                    for line in range {
+                        if line.starts_with("# ") {
+                            line.replace_range(0..2, "");
+                        } else {
+                            *line = line.trim_start_matches('#').into();
+                        }
+                    }
+                } else {
+                    // Toggle comments on
+                    for line in range {
+                        line.insert_str(0, "# ");
+                    }
+                }
+                let new_code = lines.join("\n");
+                state().set_code(&new_code, Cursor::Set(start, end));
+            }
             key @ ("ArrowUp" | "ArrowDown") if event.alt_key() => {
                 let (_, end) = get_code_cursor().unwrap();
                 let code = code_text();

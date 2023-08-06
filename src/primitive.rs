@@ -593,7 +593,9 @@ primitive!(
     /// ex: ⊘ [1 1 2 2 2 3] [1 2 3 4 5 6]
     ///
     /// This can be used to split an array by a delimiter.
-    /// ex: ⊘ ≠' '. "Hey there friendo"
+    /// ex: ⊘ ≠' '. $ Hey there friendo
+    /// For non-scalar delimiters, you may have to get a little more creative.
+    /// ex: ⊘/↧⊞≠~, " | " $ Um | I | um | arrays
     (2, Partition, DyadicArray, ("partition", '⊘')),
     // Modifiers
     /// Apply a reducing function to an array

@@ -40,7 +40,7 @@ impl<T: ArrayValue> fmt::Display for Array<T> {
             1 => {
                 let (start, end) = T::format_delims();
                 write!(f, "{}", start)?;
-                for (i, x) in self.data.iter().enumerate() {
+                for (i, x) in self.data.iter().filter(|v| !v.is_fill_value()).enumerate() {
                     if i > 0 {
                         write!(f, "{}", T::format_sep())?;
                     }

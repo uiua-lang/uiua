@@ -1,5 +1,6 @@
 - Match APL equivalents and unicode names in docs search
 - Add bracket surround to editor
+- Unfirst
 - Docs
   - Testing and run modes
   - Native interpreter and installation
@@ -22,6 +23,7 @@
   - Parallelize loops
 - Optimizations
   - Windowed reduce
+  - Table with simple function
 - Multimedia
   - Sound input
   - Webcam input?

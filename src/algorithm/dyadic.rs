@@ -739,7 +739,7 @@ impl<T: ArrayValue> Array<T> {
             .map(|(a, b)| a + 1 - b)
             .collect();
 
-        let mut dst = Vec::new();
+        let mut data = Vec::new();
         let mut corner = vec![0; searched.shape.len()];
         let mut curr = vec![0; searched.shape.len()];
 
@@ -748,7 +748,7 @@ impl<T: ArrayValue> Array<T> {
             for i in curr.iter_mut() {
                 *i = 0;
             }
-            // Search the window at the current corner
+            // Search the window whose top-left is the current corner
             'items: loop {
                 // Get index for the current item in the searched array
                 let mut searched_index = 0;
@@ -771,7 +771,7 @@ impl<T: ArrayValue> Array<T> {
                     false
                 };
                 if !same {
-                    dst.push(Byte::from(false));
+                    data.push(Byte::from(false));
                     break;
                 }
                 // Go to the next item
@@ -783,7 +783,7 @@ impl<T: ArrayValue> Array<T> {
                         continue 'items;
                     }
                 }
-                dst.push(Byte::from(true));
+                data.push(Byte::from(true));
                 break;
             }
             // Go to the next corner
@@ -795,7 +795,9 @@ impl<T: ArrayValue> Array<T> {
                     continue 'windows;
                 }
             }
-            break Ok((output_shape, dst).into());
+            let arr = Array::new(output_shape, data.into());
+            arr.validate_shape();
+            break Ok(arr);
         }
     }
 }

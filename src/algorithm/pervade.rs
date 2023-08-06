@@ -95,7 +95,13 @@ pub mod abs {
 pub mod sign {
     use super::*;
     pub fn num(a: f64) -> f64 {
-        a.signum()
+        if a.is_nan() {
+            f64::NAN
+        } else if a == 0.0 {
+            0.0
+        } else {
+            a.signum()
+        }
     }
     pub fn byte(a: Byte) -> Byte {
         a.map(|a| (a != 0) as u8)

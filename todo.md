@@ -1,4 +1,5 @@
 - Match APL equivalents and unicode names in docs search
+- Add bracket surround to editor
 - Docs
   - Testing and run modes
   - Native interpreter and installation

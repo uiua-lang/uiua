@@ -173,22 +173,27 @@ fn invert_primitive(prim: Primitive, span: usize) -> Option<Vec<Instr>> {
     })
 }
 
-fn invert_instrs(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
+fn invert_instrs(instrs: &[Instr]) -> Option<Vec<Instr>> {
+    if instrs.is_empty() {
+        return Some(Vec::new());
+    }
     let mut inverted = Vec::new();
-    let mut start = 0;
-    let mut len = 1;
-    while start + len <= instrs.len() {
-        if let Some(mut inverted_fragment) = invert_instr_fragment(&instrs[start..start + len]) {
+    let mut start = instrs.len() - 1;
+    let mut end = instrs.len();
+    loop {
+        if let Some(mut inverted_fragment) = invert_instr_fragment(&instrs[start..end]) {
             inverted_fragment.append(&mut inverted);
             inverted = inverted_fragment;
-            start += len;
-            len = 1;
+            if start == 0 {
+                break;
+            }
+            end = start;
+            start = end - 1;
+        } else if start == 0 {
+            return None;
         } else {
-            len += 1;
+            start -= 1;
         }
-    }
-    if len > 1 {
-        return invert_scalar_pattern(&mut instrs).filter(|_| instrs.is_empty());
     }
     // println!("inverted {:?} to {:?}", instrs, inverted);
     Some(inverted)
@@ -354,14 +359,20 @@ fn invert_log_pattern(input: &mut &[Instr]) -> Option<Vec<Instr>> {
     }
 }
 
-fn invert_scalar_pattern(input: &mut &[Instr]) -> Option<Vec<Instr>> {
-    Val.extract(input)?;
-    Some(vec![Instr::Prim(Primitive::Pop, 0)])
-}
-
 pub struct Val;
 impl InstrPattern for Val {
     fn extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
+        if input.is_empty() {
+            return None;
+        }
+        for len in (1..input.len()).rev() {
+            let chunk = &input[..len];
+            if instrs_args_outputs(chunk) == Some((0, 1)) {
+                let res = chunk.to_vec();
+                *input = &input[len..];
+                return Some(res);
+            }
+        }
         match input.get(0) {
             Some(instr @ (Instr::Push(_) | Instr::DfnVal(_))) => {
                 *input = &input[1..];
@@ -393,5 +404,62 @@ impl InstrPattern for Val {
             }
             _ => None,
         }
+    }
+}
+
+/// Count the number of arguments and outputs of list of instructions.
+fn instrs_args_outputs(instrs: &[Instr]) -> Option<(usize, usize)> {
+    let mut args = 0;
+    let mut outputs = 0;
+    let mut instrs = instrs.iter();
+    while let Some(instr) = instrs.next() {
+        match instr {
+            Instr::Push(_) | Instr::DfnVal(_) => outputs += 1,
+            Instr::Prim(prim, _) => {
+                if let Some((..)) = prim.modifier_args() {
+                    // TODO: handle modifiers
+                    return None;
+                } else {
+                    let pargs = prim.args()? as usize;
+                    let consumed_outputs = pargs.min(outputs);
+                    outputs -= consumed_outputs;
+                    args += pargs - consumed_outputs;
+                    outputs += prim.outputs()? as usize;
+                }
+            }
+            Instr::BeginArray => {
+                let mut depth = 1;
+                for instr in instrs.by_ref() {
+                    match instr {
+                        Instr::BeginArray => depth += 1,
+                        Instr::EndArray(_) => {
+                            depth -= 1;
+                            if depth == 0 {
+                                break;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                outputs += 1;
+            }
+            Instr::EndArray(_) => return None,
+            Instr::Call(_) => return None,
+        }
+    }
+    Some((args, outputs))
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use Primitive::*;
+    #[test]
+    fn instrs_args_outputs() {
+        let mut instrs = vec![Instr::push(10), Instr::push(2), Instr::Prim(Pow, 0)];
+        assert_eq!(Some((0, 1)), super::instrs_args_outputs(&instrs));
+
+        instrs.push(Instr::Prim(Add, 0));
+        assert_eq!(Some((1, 1)), super::instrs_args_outputs(&instrs));
     }
 }

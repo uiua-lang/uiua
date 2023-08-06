@@ -188,7 +188,7 @@ fn prim_class(prim: Primitive) -> &'static str {
         };
     }
 
-    if let Some(m) = prim.modifier_args() {
+    if let Some((m, _)) = prim.modifier_args() {
         if m == 1 {
             code_font!("modifier1-button")
         } else {

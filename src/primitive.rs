@@ -707,6 +707,9 @@ primitive!(
     /// Here, we negate 5, subtract 2, then negate again.
     /// ex: ⍜¯(-2) 5
     ///
+    /// One interesting use of `under` is to round a number to a certain number of decimal places.
+    /// ex: ⍜(×ⁿ4 10)⁅ π
+    ///
     /// [under][transpose] is sometimes useful.
     /// ex: ⍜⍉(↙2).↯3_4⇡12
     ([2, 1, 1], Under, OtherModifier, ("under", '⍜')),

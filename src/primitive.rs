@@ -591,6 +591,8 @@ primitive!(
     /// The first array must be rank 1, and the arrays must have the same length.
     /// Buckets with mismatched lengths have fill elements.
     /// ex: ⊘ [1 1 2 2 2 3] [1 2 3 4 5 6]
+    ///
+    /// This can be used to split an array by a delimiter.
     /// ex: ⊘ ≠' '. "Hey there friendo"
     (2, Partition, DyadicArray, ("partition", '⊘')),
     // Modifiers

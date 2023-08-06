@@ -1130,8 +1130,8 @@ fn run_code(code: &str) -> UiuaResult<RunOutput> {
     let audio_bytes = io.audio_bytes.into_inner().or_else(|| {
         for i in 0..values.len() {
             let value = &values[i];
-            if let Ok(bytes) = value_to_wav_bytes(value) {
-                if value.len() > 1000 {
+            if value.len() > 1000 {
+                if let Ok(bytes) = value_to_wav_bytes(value) {
                     values.remove(i);
                     return Some(bytes);
                 }

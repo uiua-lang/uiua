@@ -810,7 +810,7 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
 
 pub fn value_to_wav_bytes(audio: &Value) -> Result<Vec<u8>, String> {
     // We use i16 samples for compatibility with Firefox (if I remember correctly)
-    let values: Vec<i16> = match audio {
+    let mut values: Vec<i16> = match audio {
         Value::Num(nums) => nums
             .data
             .iter()
@@ -823,6 +823,9 @@ pub fn value_to_wav_bytes(audio: &Value) -> Result<Vec<u8>, String> {
             .collect(),
         _ => return Err("Audio must be a numeric array".into()),
     };
+    if values.is_empty() {
+        values.push(0);
+    }
     let (length, channels) = match audio.rank() {
         1 => (values.len(), vec![values]),
         2 => (

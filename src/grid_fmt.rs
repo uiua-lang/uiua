@@ -180,16 +180,16 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 let height = grid.len();
                 pad_grid_center(
                     width + 4,
-                    (height + 2).max(self.rank() + 2),
+                    (height + 2).max(self.rank() + 1),
                     false,
                     &mut grid,
                 );
-                grid[0][0] = '┌';
+                grid[0][0] = '╭';
                 grid[0][1] = '─';
-                for i in 0..self.rank() {
-                    grid[i + 1][0] = '·';
+                for i in 0..self.rank().saturating_sub(1) {
+                    grid[i + 1][0] = '╷';
                 }
-                *grid.last_mut().unwrap().last_mut().unwrap() = '┘';
+                *grid.last_mut().unwrap().last_mut().unwrap() = '╯';
                 // Handle really big grid
                 if let Some((w, _)) = term_size::dimensions() {
                     for row in grid.iter_mut() {

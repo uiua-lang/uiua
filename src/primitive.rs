@@ -22,8 +22,12 @@ macro_rules! primitive {
     ($(
         $(#[doc = $doc:literal])*
         (
-            $($($args:literal)? $([$antiargs:literal])? $(($outputs:expr))? $({$antioutputs:literal})?,)?
-            $variant:ident, $class:ident $({$modifier:ident: $margs:literal})?
+            $(
+                $($args:literal)?
+                $(($outputs:expr))?
+                $([$mod_func_args:expr, $mod_array_args:expr $(,$mod_inner_args:expr)?])?
+            ,)?
+            $variant:ident, $class:ident
             $(,$names:expr)?
         )
     ),* $(,)?) => {
@@ -50,18 +54,15 @@ macro_rules! primitive {
                     Primitive::Sys(_) => PrimClass::Sys,
                 }
             }
-            pub fn is_modifier(&self) -> bool {
+            pub fn modifier_args(&self) -> Option<(u8, u8)> {
                 match self {
-                    $($(Primitive::$variant => {
-                        stringify!($modifier);
-                        true
-                    },)?)*
-                    _ => false
+                    $($($(Primitive::$variant => Some(($mod_func_args, $mod_array_args)),)?)?)*
+                    _ => None
                 }
             }
-            pub fn modifier_args(&self) -> Option<u8> {
+            pub fn modifier_inner_args(&self) -> Option<u8> {
                 match self {
-                    $($(Primitive::$variant => Some($margs),)?)*
+                    $($($($(Primitive::$variant => Some($mod_inner_args),)?)?)?)*
                     _ => None
                 }
             }
@@ -603,26 +604,26 @@ primitive!(
     /// [reduce] traverses the array backwards so that `reduce``noop` unloads all rows onto the stack with the first row on top.
     /// ex: /· 1_2_3
     /// ex: /· [1_2 3_4]
-    (Reduce, MonadicModifier { modifier: 1 }, ("reduce", '/')),
+    ([1, 1, 2], Reduce, MonadicModifier, ("reduce", '/')),
     /// Apply a reducing function to an array with an initial value
     /// For reducing without an initial value, see [reduce].
     /// Unlike other modifiers, [fold] and [reduce] traverse the array from right to left.
     ///
     /// ex: ⌿+ 10 1_2_3_4
-    (Fold, MonadicModifier { modifier: 1 }, ("fold", '⌿')),
+    ([1, 2, 2], Fold, MonadicModifier, ("fold", '⌿')),
     /// Reduce, but keep intermediate values
     ///
     /// ex: \+ 1_2_3_4
     /// ex: \- 1_2_3_4
     /// ex: \(-~) 1_2_3_4
     /// ex: \⊂ 1_2_3_4
-    (Scan, MonadicModifier { modifier: 1 }, ("scan", '\\')),
+    ([1, 1, 2], Scan, MonadicModifier, ("scan", '\\')),
     /// Apply a function to each element of an array
     /// This is the element-wise version of [rows].
     ///
     /// ex: ∵(⊟.) 1_2_3_4
     /// ex: ∵⇡ 1_2_3_4
-    (Each, MonadicModifier { modifier: 1 }, ("each", '∵')),
+    ([1, 1, 1], Each, MonadicModifier, ("each", '∵')),
     /// Apply a function to each row of an array
     /// This is the row-wise version of [each].
     ///
@@ -632,7 +633,7 @@ primitive!(
     /// [rows] is equivalent to [level]`¯1`.
     /// ex: ⍚¯1/+ [1_2_3 4_5_6 7_8_9]
     /// ex: ≡/+   [1_2_3 4_5_6 7_8_9]
-    (Rows, MonadicModifier { modifier: 1 }, ("rows", '≡')),
+    ([1, 1, 1], Rows, MonadicModifier, ("rows", '≡')),
     /// Pervade a function through two arrays
     /// This is the element-wise version of [bridge].
     ///
@@ -642,13 +643,13 @@ primitive!(
     /// For operations that are already pervasive, like `add` or `maximum`, `zip` is redundant.
     /// ex: + 1_2_3 [4_5 6_7 8_9]
     ///   : ≕+ 1_2_3 [4_5 6_7 8_9]
-    (Zip, DyadicModifier { modifier: 1 }, ("zip", '≕')),
+    ([1, 2, 2], Zip, DyadicModifier, ("zip", '≕')),
     /// Apply a function to each pair of rows in two arrays
     /// This is the row-wise version of [zip].
     ///
     /// ex: ≍⊂ 1_2 [4_5 6_7]
     /// ex: ≍⌿+ 1_2 [4_5 6_7]
-    (Bridge, DyadicModifier { modifier: 1 }, ("bridge", '≍')),
+    ([1, 2, 2], Bridge, DyadicModifier, ("bridge", '≍')),
     /// Apply a function to each element of an array and a fixed value
     /// This is the element-wise version of [plow].
     ///
@@ -657,11 +658,7 @@ primitive!(
     ///
     /// One nice use of this is to [call] multiple functions on a single argument.
     /// ex: ≐:√_¯_⌊_⌈_(×4) 6.25
-    (
-        Distribute,
-        DyadicModifier { modifier: 1 },
-        ("distribute", '≐')
-    ),
+    ([1, 2, 2], Distribute, DyadicModifier, ("distribute", '≐')),
     /// Apply a function to each row of an array and a fixed value
     /// This is the row-wise version of [distribute].
     ///
@@ -670,18 +667,18 @@ primitive!(
     ///
     /// One nice use of this is to [call] multiple functions on a single argument.
     /// ex: ⫫:√_¯_⌊_⌈_(×4) 6.25
-    (Plow, DyadicModifier { modifier: 1 }, ("plow", '⫫')),
+    ([1, 2, 2], Plow, DyadicModifier, ("plow", '⫫')),
     /// Apply a function to each combination of elements of two arrays
     /// This is the element-wise version of [cross].
     ///
     /// ex: ⊞+ 1_2_3 4_5_6
     /// ex: ⊞⊂ 1_2 3_4
-    (Table, DyadicModifier { modifier: 1 }, ("table", '⊞')),
+    ([1, 2, 2], Table, DyadicModifier, ("table", '⊞')),
     /// Apply a function to each combination of rows of two arrays
     /// This is the row-wise version of [table].
     ///
     /// ex: ⊠⊂ [1_2 3_4] [5_6 7_8]
-    (Cross, DyadicModifier { modifier: 1 }, ("cross", '⊠')),
+    ([1, 2, 2], Cross, DyadicModifier, ("cross", '⊠')),
     /// Repeat a function a number of times
     ///
     /// ex: ⍥(+2) 5 0
@@ -693,13 +690,13 @@ primitive!(
     /// Repeating for [infinity] times will create an infinite loop.
     /// You can use [break] to break out of the loop.
     /// ex: ⍥(⎋>1000. ×2)∞ 1
-    (Repeat, OtherModifier { modifier: 1 }, ("repeat", '⍥')),
+    ([1, 1], Repeat, OtherModifier, ("repeat", '⍥')),
     /// Invert the behavior of a function
     /// Most functions are not invertible.
     ///
     /// ex: √2
     /// ex: ↶√2
-    (Invert, OtherModifier { modifier: 1 }, ("invert", '↶')),
+    ([1, 1], Invert, OtherModifier, ("invert", '↶')),
     /// Apply a function under another
     /// This is a more powerful version of [invert].
     ///
@@ -712,7 +709,7 @@ primitive!(
     ///
     /// [under][transpose] is sometimes useful.
     /// ex: ⍜⍉(↙2).↯3_4⇡12
-    (Under, OtherModifier { modifier: 2 }, ("under", '⍜')),
+    ([2, 1, 1], Under, OtherModifier, ("under", '⍜')),
     /// Apply a function at a different array depth
     ///
     /// `level``0` does nothing.
@@ -725,12 +722,12 @@ primitive!(
     /// ex: ⍚¯1/+ ↯2_2_3 ⇡12
     /// ex: ⍚¯2/+ ↯2_2_3 ⇡12
     /// ex: ⍚1/+ ↯2_2_3 ⇡12
-    (Level, OtherModifier { modifier: 2 }, ("level", '⍚')),
+    ([2, 1, 1], Level, OtherModifier, ("level", '⍚')),
     /// Call a function and catch errors
     ///
     /// ex: ?(+1 2)"failure"
     /// ex: ?(+'a' 'b')"failure"
-    (Try, OtherModifier { modifier: 2 }, ("try", '?')),
+    ([2, 0], Try, OtherModifier, ("try", '?')),
     /// Call a function
     ///
     /// When passing a scalar function array, the function is simply called.
@@ -884,6 +881,9 @@ impl Primitive {
     }
     pub fn from_unicode(c: char) -> Option<Self> {
         Self::all().find(|p| p.unicode() == Some(c))
+    }
+    pub fn is_modifier(&self) -> bool {
+        self.modifier_args().is_some()
     }
     pub fn inverse(&self) -> Option<Self> {
         use Primitive::*;

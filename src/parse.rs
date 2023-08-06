@@ -282,7 +282,7 @@ impl Parser {
     fn try_modified(&mut self) -> Option<Sp<Word>> {
         let Some((modifier, margs)) = Primitive::all()
             .filter_map(|prim| prim.modifier_args().map(|margs| (prim, margs)))
-            .find_map(|(prim, margs)| {
+            .find_map(|(prim, (margs, _))| {
                 self.try_exact(prim)
                     .or_else(|| prim.ascii().and_then(|simple| self.try_exact(simple)))
                     .map(|span| (span.sp(prim), margs))

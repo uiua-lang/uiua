@@ -79,18 +79,6 @@ macro_rules! primitive {
                     _ => Some(1)
                 }
             }
-            pub fn antiargs(&self) -> Option<u8> {
-                match self {
-                    $($($(Primitive::$variant => Some($antiargs),)?)?)*
-                    _ => None
-                }
-            }
-            pub fn antioutputs(&self) -> Option<u8> {
-                match self {
-                    $($($(Primitive::$variant => Some($antioutputs),)?)?)*
-                    _ => None
-                }
-            }
             pub fn doc(&self) -> Option<&'static PrimDoc> {
                 match self {
                     $(Primitive::$variant => {
@@ -300,7 +288,7 @@ primitive!(
     (2, Div, DyadicPervasive, ("divide", Simple::Percent, '÷')),
     (2, Mod, DyadicPervasive, ("modulus", '◿')),
     (2, Pow, DyadicPervasive, ("power", 'ⁿ')),
-    (2, Log, DyadicPervasive),
+    (2, Log, DyadicPervasive, ("logarithm", 'ₙ')),
     /// Take the minimum of two arrays
     ///
     /// ex: ↧ 3 5
@@ -953,22 +941,23 @@ impl Primitive {
         if name == "eta" || name == "η" {
             return Some(vec![(Primitive::Eta, name)]);
         }
-        let mut start = 0;
         let indices: Vec<usize> = name.char_indices().map(|(i, _)| i).collect();
         if indices.len() < 3 {
             return None;
         }
         let mut prims = Vec::new();
+        let mut start = 0;
         'outer: loop {
-            if start == name.len() {
+            if start == indices.len() {
                 break Some(prims);
             }
-            for len in (2..=name.len() - start).rev() {
+            for len in (2..=indices.len() - start).rev() {
                 let start_index = indices[start];
                 let end_index = indices[start + len - 1];
-                if let Some(p) = Primitive::from_format_name(&name[start_index..=end_index]) {
+                let sub_name = &name[start_index..=end_index];
+                if let Some(p) = Primitive::from_format_name(sub_name) {
                     if len >= 3 || p == Primitive::Pi {
-                        prims.push((p, &name[start_index..=end_index]));
+                        prims.push((p, sub_name));
                         start += len;
                         continue 'outer;
                     }

@@ -203,7 +203,6 @@ fn primitive_rows(cx: Scope, prims: impl IntoIterator<Item = Primitive>) -> Vec<
     prims
         .into_iter()
         .map(|p| {
-            let name = p.name();
             let glyph = p.unicode();
             let ascii = p
                 .ascii()
@@ -211,9 +210,8 @@ fn primitive_rows(cx: Scope, prims: impl IntoIterator<Item = Primitive>) -> Vec<
                 .or_else(|| glyph.filter(|c| c.is_ascii()).map(|c| c.to_string()));
             view! { cx,
                 <tr>
-                    <td>{maybe_code(cx, name)}</td>
+                    <td><PrimCode prim=p/></td>
                     <td>{maybe_code(cx, ascii)}</td>
-                    <td><PrimCode prim=p glyph_only=true/></td>
                     <td>{view!(cx, <code>{p.args()}</code>)}</td>
                 </tr>
             }
@@ -227,10 +225,15 @@ fn TutorialMath(cx: Scope) -> impl IntoView {
     let math_table = primitive_rows(
         cx,
         [
-            Add, Sub, Mul, Div, Mod, Pow, Neg, Abs, Ceil, Floor, Round, Sqrt, Sign,
+            Add, Sub, Mul, Div, Mod, Pow, Log, Neg, Abs, Ceil, Floor, Round, Sqrt, Sign,
         ],
     );
-    let comp_table = primitive_rows(cx, [Eq, Ne, Lt, Gt, Le, Ge, Min, Max, Floor, Ceil, Round]);
+    let comp_table = primitive_rows(
+        cx,
+        [
+            Eq, Ne, Lt, Gt, Le, Ge, Min, Max, Floor, Ceil, Round, Sin, Atan,
+        ],
+    );
 
     view! { cx,
         <h1>"Math and Comparison"</h1>
@@ -238,18 +241,16 @@ fn TutorialMath(cx: Scope) -> impl IntoView {
         <div id="ascii-glyphs" style="display: flex; justify-content: space-evenly;">
             <table class="bordered-table">
                 <tr>
-                    <th>"Name"</th>
+                    <th>"Function"</th>
                     <th>"ASCII"</th>
-                    <th>"Glyph"</th>
                     <th>"Args"</th>
                 </tr>
                 {math_table}
             </table>
             <table class="bordered-table">
                 <tr>
-                    <th>"Name"</th>
+                    <th>"Function"</th>
                     <th>"ASCII"</th>
-                    <th>"Glyph"</th>
                     <th>"Args"</th>
                 </tr>
                 {comp_table}

@@ -428,7 +428,7 @@ pub mod log {
         f64::from(b).log(a)
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the root of {a} to {b}"))
+        env.error(format!("Cannot get the log base {b} of {a}"))
     }
 }
 

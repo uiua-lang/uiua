@@ -1,6 +1,6 @@
-- Match APL equivalents and unicode names in docs search
+- Derive instruction list arg and output counts
+- Pretty array shape formatting in error messages
 - Add bracket surround to editor
-- Unfirst
 - Docs
   - Testing and run modes
   - Native interpreter and installation
@@ -12,9 +12,7 @@
   - Fill semantics
   - Loops
     - Explain loop directions
-- Logarithms
 - Rework front page
-- Pretty array shape formatting in error messages
 - Fix AudioPlay
 - Proper 404 page
 - More inverses

@@ -155,46 +155,23 @@ impl fmt::Display for FunctionId {
     }
 }
 
+impl Function {
+    pub fn inverse(&self) -> Option<Self> {
+        if !matches!(self.kind, FunctionKind::Normal) {
+            return None;
+        }
+        Some(Function {
+            id: self.id.clone(),
+            instrs: invert_instrs(&self.instrs)?,
+            kind: FunctionKind::Normal,
+        })
+    }
+}
+
 fn invert_primitive(prim: Primitive, span: usize) -> Option<Vec<Instr>> {
     Some(match prim {
         Primitive::Sqrt => vec![Instr::push(2.0), Instr::Prim(Primitive::Pow, span)],
         prim => vec![Instr::Prim(prim.inverse()?, span)],
-    })
-}
-
-fn invert_instr_fragment(instrs: &[Instr]) -> Option<Vec<Instr>> {
-    use Instr::*;
-    use Primitive::*;
-    Some(match instrs {
-        [Prim(prim, span)] => invert_primitive(*prim, *span)?,
-        [Push(val), Prim(Invert, span)] => {
-            vec![Prim(val.as_primitive()?, *span)]
-        }
-        [Push(val), Prim(Rotate, span)] => {
-            vec![Push(val.clone()), Prim(Neg, *span), Prim(Rotate, *span)]
-        }
-        [Push(val), Prim(Neg, _), Prim(Rotate, span)] => {
-            vec![Push(val.clone()), Prim(Rotate, *span)]
-        }
-        [Push(val), Prim(Add, span)] => {
-            vec![Push(val.clone()), Prim(Sub, *span)]
-        }
-        [Push(val), Prim(Sub, span)] => {
-            vec![Push(val.clone()), Prim(Add, *span)]
-        }
-        [Push(val), Prim(Mul, span)] => {
-            vec![Push(val.clone()), Prim(Div, *span)]
-        }
-        [Push(val), Prim(Div, span)] => {
-            vec![Push(val.clone()), Prim(Mul, *span)]
-        }
-        [Push(val), Prim(Pow, span)] => vec![
-            Instr::push(1),
-            Push(val.clone()),
-            Prim(Div, *span),
-            Prim(Pow, *span),
-        ],
-        _ => return None,
     })
 }
 
@@ -208,8 +185,6 @@ fn invert_instrs(instrs: &[Instr]) -> Option<Vec<Instr>> {
             inverted = inverted_fragment;
             start += len;
             len = 1;
-        } else if len >= 3 {
-            return None;
         } else {
             len += 1;
         }
@@ -220,15 +195,142 @@ fn invert_instrs(instrs: &[Instr]) -> Option<Vec<Instr>> {
     Some(inverted)
 }
 
-impl Function {
-    pub fn inverse(&self) -> Option<Self> {
-        if !matches!(self.kind, FunctionKind::Normal) {
+fn invert_instr_fragment(instrs: &[Instr]) -> Option<Vec<Instr>> {
+    use Instr::*;
+    use Primitive::*;
+    if let [Prim(prim, span)] = instrs {
+        return invert_primitive(*prim, *span);
+    }
+
+    let patterns: &[&dyn InstrPattern] = &[
+        &(Val, ([Rotate], [Neg, Rotate])),
+        &(Val, ([Add], [Sub])),
+        &(Val, ([Sub], [Add])),
+        &(Val, ([Mul], [Div])),
+        &(Val, ([Div], [Mul])),
+        &invert_pow_pattern,
+        &invert_scalar_pattern,
+    ];
+
+    for pattern in patterns {
+        let mut input = instrs;
+        if let Some(inverted) = pattern.extract(&mut input) {
+            if input.is_empty() {
+                return Some(inverted);
+            }
+        }
+    }
+
+    None
+}
+
+trait InstrPattern {
+    fn extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>>;
+}
+
+impl<A: InstrPattern, B: InstrPattern> InstrPattern for (A, B) {
+    fn extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
+        let (a, b) = self;
+        let mut a = a.extract(input)?;
+        let b = b.extract(input)?;
+        a.extend(b);
+        Some(a)
+    }
+}
+
+impl InstrPattern for (&[Primitive], &[Primitive]) {
+    fn extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
+        let (a, b) = *self;
+        if a.len() > input.len() {
             return None;
         }
-        Some(Function {
-            id: self.id.clone(),
-            instrs: invert_instrs(&self.instrs)?,
-            kind: FunctionKind::Normal,
-        })
+        let mut spans = Vec::new();
+        for (instr, prim) in input.iter().zip(a.iter()) {
+            match instr {
+                Instr::Prim(instr_prim, span) if instr_prim == prim => spans.push(*span),
+                _ => return None,
+            }
+        }
+        *input = &input[a.len()..];
+        Some(
+            b.iter()
+                .zip(spans.iter().cycle())
+                .map(|(p, s)| Instr::Prim(*p, *s))
+                .collect(),
+        )
+    }
+}
+
+impl<const A: usize, const B: usize> InstrPattern for ([Primitive; A], [Primitive; B]) {
+    fn extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
+        let (a, b) = *self;
+        (a.as_ref(), b.as_ref()).extract(input)
+    }
+}
+
+impl<F> InstrPattern for F
+where
+    F: Fn(&mut &[Instr]) -> Option<Vec<Instr>>,
+{
+    fn extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
+        self(input)
+    }
+}
+
+fn invert_pow_pattern(input: &mut &[Instr]) -> Option<Vec<Instr>> {
+    let val = Val.extract(input)?;
+    let next = input.get(0)?;
+    if let Instr::Prim(Primitive::Pow, span) = next {
+        *input = &input[1..];
+        Some(vec![
+            Instr::push(1),
+            val[0].clone(),
+            Instr::Prim(Primitive::Div, *span),
+            Instr::Prim(Primitive::Pow, *span),
+        ])
+    } else {
+        None
+    }
+}
+
+fn invert_scalar_pattern(input: &mut &[Instr]) -> Option<Vec<Instr>> {
+    Val.extract(input)?;
+    Some(vec![Instr::Prim(Primitive::Pop, 0)])
+}
+
+pub struct Val;
+impl InstrPattern for Val {
+    fn extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
+        match input.get(0) {
+            Some(instr @ (Instr::Push(_) | Instr::DfnVal(_))) => {
+                *input = &input[1..];
+                Some(vec![instr.clone()])
+            }
+            Some(instr @ Instr::Prim(prim, _))
+                if prim.args() == Some(0) && prim.outputs() == Some(1) =>
+            {
+                *input = &input[1..];
+                Some(vec![instr.clone()])
+            }
+            Some(Instr::BeginArray) => {
+                let mut depth = 1;
+                let mut i = 1;
+                loop {
+                    if let Instr::EndArray(_) = input.get(i)? {
+                        depth -= 1;
+                        if depth == 0 {
+                            break;
+                        }
+                    } else if let Instr::BeginArray = input.get(i)? {
+                        depth += 1;
+                    }
+                    i += 1;
+                }
+                let array_construction = &input[..=i];
+                *input = &input[i + 1..];
+                Some(array_construction.to_vec())
+            }
+            _ => None,
+        }
     }
 }

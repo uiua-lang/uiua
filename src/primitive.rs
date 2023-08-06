@@ -900,6 +900,7 @@ impl Primitive {
     pub fn inverse(&self) -> Option<Self> {
         use Primitive::*;
         Some(match self {
+            Noop => Noop,
             Flip => Flip,
             Neg => Neg,
             Not => Not,

@@ -372,7 +372,9 @@ pub fn Editor<'a>(
                 0
             }
         }
-        match event.key().as_str() {
+        let key = event.key();
+        let key = key.as_str();
+        match key {
             "Enter" => {
                 if event.ctrl_key() || event.shift_key() {
                     run(true);
@@ -486,6 +488,32 @@ pub fn Editor<'a>(
                 }
                 let new_code = lines.join("\n");
                 state().set_code(&new_code, Cursor::Set(start, end));
+            }
+            "\"" | "(" | "[" | "{" => {
+                // Surround the selected text with delimiters
+                let (start, end) = get_code_cursor().unwrap();
+                if start != end {
+                    let open = key;
+                    let close = match open {
+                        "\"" => "\"",
+                        "(" => ")",
+                        "[" => "]",
+                        "{" => "}",
+                        _ => unreachable!(),
+                    };
+                    let (start, end) = (start.min(end), start.max(end));
+                    let code = code_text();
+                    let mut chars = code.chars();
+                    let mut new_code = String::new();
+                    new_code.extend(chars.by_ref().take(start as usize));
+                    new_code.push_str(open);
+                    new_code.extend(chars.by_ref().take((end - start) as usize));
+                    new_code.push_str(close);
+                    new_code.extend(chars);
+                    state().set_code(&new_code, Cursor::Set(start + 1, end + 1));
+                } else {
+                    handled = false;
+                }
             }
             key @ ("ArrowUp" | "ArrowDown") if event.alt_key() => {
                 let (_, end) = get_code_cursor().unwrap();

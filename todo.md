@@ -1,4 +1,3 @@
-- Add bracket surround to editor
 - Boolean arrays
 - Docs
   - Testing and run modes

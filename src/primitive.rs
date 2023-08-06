@@ -1,16 +1,17 @@
 use std::{
+    borrow::Cow,
     cell::RefCell,
     f64::{
         consts::{PI, TAU},
         INFINITY,
     },
     fmt,
-    mem::take,
     sync::OnceLock,
 };
 
 use enum_iterator::{all, Sequence};
 use rand::prelude::*;
+use regex::Regex;
 
 use crate::{
     algorithm::loops, function::FunctionId, lex::Simple, sys::*, value::*, Uiua, UiuaError,
@@ -240,10 +241,13 @@ primitive!(
     ///
     /// You can get a cosine function by [add]ing [eta].
     /// ex: ○+η 1
+    ///
     /// You can get an arcsine function with [invert].
     /// ex: ↶○ 1
+    ///
     /// You can get an arccosine function by [invert]ing the cosine.
     /// ex: ↶(○+η) 1
+    ///
     /// You can get a tangent function by [divide]ing the [sine] by the cosine.
     /// ex: ÷○+η~○. 0
     (1, Sin, MonadicPervasive, ("sine", '○')),
@@ -864,7 +868,7 @@ impl Primitive {
     }
     /// Find a primitive by its text name
     pub fn from_name(name: &str) -> Option<Self> {
-        Self::all().find(|p| p.name() == Some(name))
+        Self::all().find(|p| p.names().is_some_and(|n| n.text.eq_ignore_ascii_case(name)))
     }
     pub fn from_simple(s: Simple) -> Option<Self> {
         Self::all().find(|p| p.ascii() == Some(s))
@@ -1136,10 +1140,9 @@ impl Primitive {
             Primitive::Use => {
                 let name = env.pop(1)?.as_string(env, "Use name must be a string")?;
                 let lib = env.pop(2)?;
-                let lowername = name.to_lowercase();
                 let f = match lib {
                     Value::Func(fs) => fs.data.iter().find_map(|f| {
-                        matches!(&f.id, FunctionId::Named(n) if n == lowername.as_str())
+                        matches!(&f.id, FunctionId::Named(n) if n.as_str().eq_ignore_ascii_case(&name))
                             .then(|| f.clone())
                     }),
                     _ => None,
@@ -1155,90 +1158,103 @@ impl Primitive {
 
 #[derive(Default, Debug)]
 pub struct PrimDoc {
-    pub short: String,
-    pub examples: Vec<PrimExample>,
-    pub outro: String,
+    pub short: Vec<PrimDocFragment>,
+    pub lines: Vec<PrimDocLine>,
 }
 
 impl PrimDoc {
-    pub fn from_lines(s: &str) -> Self {
-        let mut short = String::new();
-        let mut examples = Vec::new();
-        let mut primer = String::new();
-        for line in s.lines() {
-            let line = line.trim();
-            if line.is_empty() {
-                continue;
-            }
-            if let Some(ex) = line.strip_prefix("ex:") {
-                let input = ex.trim().to_owned();
-                examples.push(PrimExample {
-                    primer: take(&mut primer),
-                    input,
-                    output: OnceLock::new(),
-                });
-            } else if let Some(ex) = line.strip_prefix(':') {
-                if let Some(example) = examples.last_mut() {
-                    example.input.push('\n');
-                    example.input.push_str(ex.trim());
-                }
-            } else if short.is_empty() {
-                short = line.into();
-            } else {
-                primer.push_str(line);
-                primer.push('\n');
-            }
-        }
-        let outro = take(&mut primer);
-        Self {
-            short,
-            examples,
-            outro,
-        }
-    }
-}
-
-impl fmt::Display for PrimDoc {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "{}", self.short.trim())?;
-        for ex in &self.examples {
-            if !ex.primer.is_empty() {
-                writeln!(f, "primer: {}", ex.primer)?;
-            }
-            writeln!(f, "ex: {}", ex.input)?;
-            match ex.output() {
-                Ok(output) => {
-                    for formatted in output {
-                        for (i, line) in formatted.lines().enumerate() {
-                            if i == 0 {
-                                write!(f, " => ")?
-                            } else {
-                                write!(f, "    ")?;
-                            }
-                            writeln!(f, "{line}")?;
-                        }
+    pub fn short_text(&self) -> Cow<str> {
+        if self.short.len() == 1 {
+            match &self.short[0] {
+                PrimDocFragment::Text(t) => return Cow::Borrowed(t),
+                PrimDocFragment::Code(c) => return Cow::Borrowed(c),
+                PrimDocFragment::Emphasis(e) => return Cow::Borrowed(e),
+                PrimDocFragment::Primitive { prim, named: true } => {
+                    if let Some(s) = prim.name() {
+                        return Cow::Owned(s.to_owned());
                     }
                 }
-                Err(e) => {
-                    writeln!(f, " => error: {e}")?;
+                PrimDocFragment::Primitive { .. } => {}
+            }
+        }
+        let mut s = String::new();
+        for frag in &self.short {
+            match frag {
+                PrimDocFragment::Text(t) => s.push_str(t),
+                PrimDocFragment::Code(c) => s.push_str(c),
+                PrimDocFragment::Emphasis(e) => s.push_str(e),
+                PrimDocFragment::Primitive { prim, named } => {
+                    let mut name = String::new();
+                    if *named {
+                        s.push_str(prim.name().unwrap_or_else(|| {
+                            name = format!("{prim:?}");
+                            &name
+                        }));
+                    } else if let Some(c) = prim.unicode() {
+                        s.push(c);
+                    } else {
+                        s.push_str(prim.name().unwrap_or_else(|| {
+                            name = format!("{prim:?}");
+                            &name
+                        }));
+                    }
                 }
             }
         }
-        if !self.outro.is_empty() {
-            writeln!(f)?;
+        Cow::Owned(s)
+    }
+    pub fn from_lines(s: &str) -> Self {
+        let mut short = Vec::new();
+        let mut lines = Vec::new();
+        for line in s.lines() {
+            let line = line.trim();
+            if let Some(ex) = line.strip_prefix("ex:") {
+                let input = ex.trim().to_owned();
+                lines.push(PrimDocLine::Example(PrimExample {
+                    input,
+                    output: OnceLock::new(),
+                }));
+            } else if let Some(ex) = line.strip_prefix(':') {
+                if let Some(PrimDocLine::Example(example)) = lines.last_mut() {
+                    example.input.push('\n');
+                    example.input.push_str(ex.trim());
+                } else {
+                    lines.push(PrimDocLine::Text(parse_doc_line_fragments(line)));
+                }
+            } else if short.is_empty() {
+                short = parse_doc_line_fragments(line);
+            } else {
+                lines.push(PrimDocLine::Text(parse_doc_line_fragments(line)));
+            }
         }
-        Ok(())
+        while let Some(PrimDocLine::Text(frags)) = lines.first() {
+            if frags.is_empty() {
+                lines.remove(0);
+            } else {
+                break;
+            }
+        }
+        while let Some(PrimDocLine::Text(frags)) = lines.last() {
+            if frags.is_empty() {
+                lines.pop();
+            } else {
+                break;
+            }
+        }
+        Self { short, lines }
     }
 }
 
 #[derive(Debug)]
 pub struct PrimExample {
-    pub primer: String,
-    pub input: String,
+    input: String,
     output: OnceLock<Result<Vec<String>, String>>,
 }
 
 impl PrimExample {
+    pub fn input(&self) -> &str {
+        &self.input
+    }
     pub fn output(&self) -> &Result<Vec<String>, String> {
         self.output.get_or_init(|| {
             Uiua::with_backend(&NativeSys)
@@ -1256,6 +1272,54 @@ impl PrimExample {
                 })
         })
     }
+}
+
+#[derive(Debug)]
+pub enum PrimDocLine {
+    Text(Vec<PrimDocFragment>),
+    Example(PrimExample),
+}
+
+#[derive(Debug, Clone)]
+pub enum PrimDocFragment {
+    Text(String),
+    Code(String),
+    Emphasis(String),
+    Primitive { prim: Primitive, named: bool },
+}
+
+fn parse_doc_line_fragments(line: &str) -> Vec<PrimDocFragment> {
+    thread_local! {
+        static RE: Regex = Regex::new(r"\[(.*?)\]|`(.*?)`|\*(.*?)\*|([^\[\]`\*]+)").unwrap();
+    }
+    RE.with(|re| {
+        re.captures_iter(line)
+            .map(|c| {
+                let (mat, [s]) = c.extract();
+                if mat.starts_with('[') {
+                    if let Some(prim) =
+                        Primitive::from_name(s).or_else(|| Primitive::from_format_name(s))
+                    {
+                        PrimDocFragment::Primitive { prim, named: true }
+                    } else {
+                        PrimDocFragment::Text(mat.into())
+                    }
+                } else if mat.starts_with('`') {
+                    if let Some(prim) =
+                        Primitive::from_name(s).or_else(|| Primitive::from_format_name(s))
+                    {
+                        PrimDocFragment::Primitive { prim, named: false }
+                    } else {
+                        PrimDocFragment::Code(s.into())
+                    }
+                } else if mat.starts_with('*') {
+                    PrimDocFragment::Emphasis(s.into())
+                } else {
+                    PrimDocFragment::Text(s.into())
+                }
+            })
+            .collect::<Vec<_>>()
+    })
 }
 
 #[test]

@@ -68,7 +68,7 @@ li {
     }
 
     .code,
-    .input-span,
+    .input-div,
     input[type=text] {
         color: #d1daec;
         background-color: #1d2c3a;
@@ -136,7 +136,7 @@ li {
     }
 
     .code,
-    .input-span,
+    .input-div,
     input[type=text] {
         color: #344;
         background-color: #f4f6f6;
@@ -553,15 +553,22 @@ li {
     margin-bottom: 0.5em;
 }
 
-.input-span,
-input[type=text] {
+.input-div {
+    display: flex;
+    align-items: center;
     font-size: 1em;
     border-radius: 0.5em;
     padding: 0.5em;
-    box-sizing: border-box;
+    width: min(100%, max(30%, 20em));
+}
+
+input[type=text] {
+    font-size: 1em;
+    border-radius: 0.5em;
+    padding: 0 0.5em;
     outline: none;
     border: none;
-    width: 50%;
+    width: 100%;
 }
 
 #function-search {

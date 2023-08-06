@@ -165,11 +165,11 @@ mod code {
             .map(|name| format!("/docs/{name}"))
             .unwrap_or_default();
         let title = match (prim.doc().filter(|_| !hide_docs), show_name) {
-            (Some(doc), true) => Some(doc.short.clone()),
+            (Some(doc), true) => Some(doc.short_text().into_owned()),
             (Some(doc), false) => Some(format!(
                 "{}: {}",
                 prim.name().unwrap_or_default(),
-                doc.short
+                doc.short_text()
             )),
             (None, true) => None,
             (None, false) => prim.name().map(Into::into),

@@ -14,7 +14,6 @@ js-sys = "0.3"
 leptos = "0.4.5"
 leptos_router.features = ["csr"]
 leptos_router.version = "0.4.5"
-regex = "1.9"
 uiua.default-features = false
 uiua.path = ".."
 urlencoding = "2"

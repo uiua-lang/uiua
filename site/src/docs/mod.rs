@@ -149,7 +149,7 @@ fn DocsHome(cx: Scope, #[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/design">"Design"</A>" - reasons for some of Uiua's design decisions"</li>
         </ul>
         <h2 id="functions" class="doc-functions">"Functions"</h2>
-        <span class="input-span">
+        <div class="input-div">
             "⌕ "
             <input
                 id="function-search"
@@ -159,7 +159,7 @@ fn DocsHome(cx: Scope, #[prop(optional)] search: String) -> impl IntoView {
                 pattern="[^0-9]"
                 placeholder="Search by name, glyph, or category..."/>
             { move || clear_button.get() }
-        </span>
+        </div>
         { move|| results.get() }
         <div style="height: 50vh;"></div>
     }

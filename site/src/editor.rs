@@ -572,7 +572,7 @@ pub fn Editor<'a>(
             };
             let onmouseover = move |_| {
                 if let Some(doc) = p.doc() {
-                    set_glyph_doc.set(doc.short.clone());
+                    set_glyph_doc.set(doc.short_text().into_owned());
                     _ = glyph_doc_element().style().remove_property("display");
                 }
             };
@@ -995,7 +995,7 @@ fn set_code_html(id: &str, code: &str) {
         html.push_str(&if let SpanKind::Primitive(prim) = kind {
             let name = prim.name().unwrap_or_default();
             if let Some(doc) = prim.doc() {
-                let title = format!("{}: {}", name, doc.short);
+                let title = format!("{}: {}", name, doc.short_text());
                 format!(
                     r#"<span 
                         class="code-span 

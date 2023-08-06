@@ -1,5 +1,4 @@
 - If-like function
-- Parse primitive docs in main crate
 - Match APL equivalents and unicode names in docs search
 - Function array coercion
   - Maybe constant modifier

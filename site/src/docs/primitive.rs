@@ -1,66 +1,45 @@
 use leptos::*;
-use regex::Regex;
-use uiua::primitive::Primitive;
+use uiua::primitive::{PrimDocFragment, PrimDocLine, Primitive};
 
 use crate::{code::PrimCode, editor::Editor};
 
-#[allow(unused_braces)]
-fn parse_doc(cx: Scope, line: &str) -> impl IntoView {
-    thread_local! {
-        static RE: Regex = Regex::new(r"\[(.*?)\]|`(.*?)`|\*(.*?)\*|([^\[\]`\*]+)").unwrap();
+fn doc_line_fragments_to_view(cx: Scope, fragments: &[PrimDocFragment]) -> View {
+    if fragments.is_empty() {
+        return view!(cx, <br/>).into_view(cx);
     }
-    RE.with(|re| {
-        re.captures_iter(line)
-            .map(|c| {
-                let (mat, [s]) = c.extract();
-                let s = s.to_string();
-                if mat.starts_with('[') {
-                    if let Some(prim) = Primitive::from_name(&s) {
-                        view!(cx, <PrimCode prim=prim/>).into_view(cx)
-                    } else {
-                        view!(cx, "["{s}"]").into_view(cx)
-                    }
-                } else if mat.starts_with('`') {
-                    if let Some(prim) = Primitive::from_name(&s) {
-                        view!(cx, <PrimCode prim=prim glyph_only=true/>).into_view(cx)
-                    } else {
-                        view!(cx, <code>{s}</code>).into_view(cx)
-                    }
-                } else if mat.starts_with('*') {
-                    view!(cx, <em>{s}</em>).into_view(cx)
-                } else {
-                    view!(cx, { s }).into_view(cx)
-                }
-            })
-            .collect::<Vec<_>>()
-    })
+    fragments
+        .iter()
+        .map(|frag| match frag {
+            PrimDocFragment::Text(s) => s.into_view(cx),
+            PrimDocFragment::Code(s) => view!(cx, <code>{s}</code>).into_view(cx),
+            PrimDocFragment::Emphasis(s) => view!(cx, <em>{s}</em>).into_view(cx),
+            &PrimDocFragment::Primitive { prim, named } => {
+                view!(cx, <PrimCode prim=prim glyph_only={!named}/>).into_view(cx)
+            }
+        })
+        .collect::<Vec<_>>()
+        .into_view(cx)
+}
+
+fn doc_lines_to_view(cx: Scope, lines: &[PrimDocLine]) -> impl IntoView {
+    lines
+        .iter()
+        .map(|line| match line {
+            PrimDocLine::Text(frags) => {
+                view!(cx, <p style="white-space: pre-wrap">{doc_line_fragments_to_view(cx, frags)}</p>).into_view(cx)
+            }
+            PrimDocLine::Example(ex) => view!(cx, <Editor example={ ex.input() }/>).into_view(cx),
+        })
+        .collect::<Vec<_>>()
 }
 
 #[component]
 pub fn PrimDocs(cx: Scope, prim: Primitive) -> impl IntoView {
-    let ex_lines = move || {
-        prim.doc()
-            .map(|doc| {
-                doc.examples
-                    .iter()
-                    .map(|ex| {
-                        view!(cx,
-                            {ex.primer.lines().map(|line| view!(cx, <p>{parse_doc(cx, line)}</p>)).collect::<Vec<_>>()}
-                            <Editor example={ &ex.input }/>
-                        )
-                        .into_view(cx)
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_default()
-    };
-
     let body = move || {
         prim.doc().map(|doc| {
             view! { cx,
-                <p style="white-space: pre-wrap">{parse_doc(cx, &doc.short)}</p>
-                { ex_lines }
-                <p style="white-space: pre-wrap">{parse_doc(cx, &doc.outro)}</p>
+                <p style="white-space: pre-wrap">{doc_line_fragments_to_view(cx, &doc.short)}</p>
+                { doc_lines_to_view(cx, &doc.lines) }
             }
         })
     };

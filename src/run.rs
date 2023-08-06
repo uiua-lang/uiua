@@ -277,24 +277,6 @@ impl<'io> Uiua<'io> {
         let instrs = self.new_functions.last_mut().unwrap();
         // Optimizations
         match (instrs.as_mut_slice(), instr) {
-            // Call pick = if
-            (
-                [.., Instr::BeginArray, Instr::Push(if_true), Instr::Push(if_false), Instr::EndArray(_), Instr::Prim(Flip, _), Instr::Prim(Pick, _)],
-                Instr::Prim(Call, span),
-            ) => {
-                if let (Value::Func(if_true), Value::Func(if_false)) = (&**if_true, &**if_false) {
-                    if if_true.shape.is_empty() && if_false.shape.is_empty() {
-                        let if_true = if_true.data[0].clone();
-                        let if_false = if_false.data[0].clone();
-                        for _ in 0..6 {
-                            instrs.pop().unwrap();
-                        }
-                        instrs.push(Instr::If(if_true, if_false));
-                        return;
-                    }
-                }
-                instrs.push(Instr::Prim(Call, span))
-            }
             // Cosine
             ([.., Instr::Prim(Eta, _), Instr::Prim(Add, _)], Instr::Prim(Sin, span)) => {
                 instrs.pop();
@@ -591,30 +573,6 @@ impl<'io> Uiua<'io> {
                             (*n as u8 + b'a') as char
                         )))
                     }
-                }
-                Instr::If(if_true, if_false) => {
-                    let if_true = if_true.clone();
-                    let if_false = if_false.clone();
-                    (|| {
-                        let value = self.pop(2)?;
-                        let condition = value.as_nat(self, "Index must be a list of integers")?;
-                        match condition {
-                            0 => {
-                                self.push(if_false);
-                                self.call()?;
-                            }
-                            1 => {
-                                self.push(if_true);
-                                self.call()?;
-                            }
-                            n => {
-                                return Err(self.error(format!(
-                                "Index {n} is out of bounds of length 2 (dimension 1) in shape [2]"
-                            )))
-                            }
-                        }
-                        Ok(())
-                    })()
                 }
             };
             if let Err(mut err) = res {

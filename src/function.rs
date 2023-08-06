@@ -10,7 +10,6 @@ pub enum Instr {
     Prim(Primitive, usize),
     Call(usize),
     DfnVal(usize),
-    If(Rc<Function>, Rc<Function>),
 }
 
 impl Instr {
@@ -28,7 +27,6 @@ impl fmt::Display for Instr {
             Instr::Prim(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => write!(f, ":"),
             Instr::DfnVal(n) => write!(f, "{}", (*n as u8 + b'a') as char),
-            Instr::If(if_true, if_false) => write!(f, "(if {if_true} {if_false})"),
         }
     }
 }

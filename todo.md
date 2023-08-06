@@ -1,4 +1,3 @@
-- Pretty array shape formatting in error messages
 - Add bracket surround to editor
 - Boolean arrays
 - Docs

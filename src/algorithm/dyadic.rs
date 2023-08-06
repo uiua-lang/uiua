@@ -9,7 +9,6 @@ use std::{
 use ecow::EcoVec;
 
 use crate::{
-    algorithm::max_shape,
     array::*,
     cowslice::CowSlice,
     function::{Function, FunctionId, FunctionKind, Instr},
@@ -118,6 +117,20 @@ impl Value {
     }
 }
 
+fn max_shape(a: &[usize], b: &[usize]) -> Vec<usize> {
+    let mut new_shape = vec![0; a.len().max(b.len())];
+    for i in 0..new_shape.len() {
+        let j = new_shape.len() - i - 1;
+        if a.len() > i {
+            new_shape[j] = a[a.len() - i - 1];
+        }
+        if b.len() > i {
+            new_shape[j] = new_shape[j].max(b[b.len() - i - 1]);
+        }
+    }
+    new_shape
+}
+
 impl<T: ArrayValue> Array<T> {
     pub fn join(self, other: Self) -> Self {
         self.join_impl(other, true)
@@ -190,8 +203,8 @@ impl<T: ArrayValue> Array<T> {
     pub fn replicate(mut self, amount: &[usize], env: &Uiua) -> UiuaResult<Self> {
         if self.row_count() != amount.len() {
             return Err(env.error(format!(
-                "Cannot replicate array with shape {:?} with array of length {}",
-                self.shape,
+                "Cannot replicate array with shape {} with array of length {}",
+                self.format_shape(),
                 amount.len()
             )));
         }
@@ -260,8 +273,8 @@ impl<T: ArrayValue> Array<T> {
             let s = s as isize;
             if i >= s || i < -s {
                 return Err(env.error(format!(
-                    "Index {i} is out of bounds of length {s} (dimension {d}) in shape {:?}",
-                    self.shape
+                    "Index {i} is out of bounds of length {s} (dimension {d}) in shape {}",
+                    self.format_shape()
                 )));
             }
         }
@@ -559,8 +572,9 @@ impl<T: ArrayValue> Array<T> {
     pub fn fill(&mut self, fill: Self, env: &Uiua) -> UiuaResult {
         if !self.shape.ends_with(&fill.shape) {
             return Err(env.error(format!(
-                "Cannot fill array with shape {:?} with array with shape {:?}",
-                self.shape, fill.shape
+                "Cannot fill array with shape {} with array with shape {}",
+                self.format_shape(),
+                fill.format_shape()
             )));
         }
         for (elem, fill) in self.data.iter_mut().zip(fill.data.iter().cycle()) {
@@ -629,15 +643,15 @@ impl<T: ArrayValue> Array<T> {
     pub fn windows(&self, size_spec: &[usize], env: &Uiua) -> UiuaResult<Self> {
         if size_spec.len() > self.shape.len() {
             return Err(env.error(format!(
-                "Window size {size_spec:?} has too many axes for shape {:?}",
-                self.shape
+                "Window size {size_spec:?} has too many axes for shape {}",
+                self.format_shape()
             )));
         }
         for (i, (size, sh)) in size_spec.iter().zip(&self.shape).enumerate() {
             if *size > *sh {
                 return Err(env.error(format!(
-                    "Cannot take window of size {size} along axis {i} of shape {:?}",
-                    self.shape
+                    "Cannot take window of size {size} along axis {i} of shape {}",
+                    self.format_shape()
                 )));
             }
         }
@@ -720,8 +734,9 @@ impl<T: ArrayValue> Array<T> {
     pub fn find(&self, searched: &Self, env: &Uiua) -> UiuaResult<Array<Byte>> {
         if self.rank() > searched.rank() || self.len() > searched.len() {
             return Err(env.error(format!(
-                "Cannot search for array of shape {:?} in array of shape {:?}",
-                self.shape, searched.shape
+                "Cannot search for array of shape {} in array of shape {}",
+                self.format_shape(),
+                searched.format_shape()
             )));
         }
 
@@ -872,8 +887,8 @@ impl<T: ArrayValue> Array<T> {
         if searched_for.rank() == 0 {
             if searched_in.rank() != 1 {
                 return Err(env.error(format!(
-                    "Cannot look for indices of a scalar array in an array of shape {:?}",
-                    searched_in.shape
+                    "Cannot look for indices of a scalar array in an array of shape {}",
+                    searched_in.format_shape()
                 )));
             }
             return Ok((searched_in
@@ -885,8 +900,9 @@ impl<T: ArrayValue> Array<T> {
         } else {
             if searched_for.shape[1..] != searched_in.shape[1..] {
                 return Err(env.error(format!(
-                    "Cannot get index in array of different shape: {:?} vs {:?}",
-                    searched_for.shape, searched_in.shape
+                    "Cannot get index in array of different shape: {} vs {}",
+                    searched_for.format_shape(),
+                    searched_in.format_shape()
                 )));
             }
             let mut result = Vec::with_capacity(searched_for.row_count());

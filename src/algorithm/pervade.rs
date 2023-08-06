@@ -14,8 +14,9 @@ pub fn bin_pervade<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
 ) -> UiuaResult<Array<C>> {
     if !a.shape_prefixes_match(&b) {
         return Err(env.error(format!(
-            "Shapes {:?} and {:?} do not match",
-            a.shape, b.shape
+            "Shapes {} and {} do not match",
+            a.format_shape(),
+            b.format_shape()
         )));
     }
     let shape = a.shape().max(b.shape()).to_vec();

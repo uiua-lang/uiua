@@ -8,7 +8,7 @@ use std::{
     time::Duration,
 };
 
-use clap::Parser;
+use clap::{error::ErrorKind, Parser};
 use instant::Instant;
 use notify::{EventKind, RecursiveMode, Watcher};
 use uiua::{
@@ -21,84 +21,132 @@ fn main() {
     color_backtrace::install();
 
     let _ = ctrlc::set_handler(|| {
-        if let Ok(App { command: None, .. }) = App::try_parse() {
+        if let Ok(App::Watch) | Err(_) = App::try_parse() {
             clear_watching();
         }
         exit(0)
     });
 
     if let Err(e) = run() {
-        eprintln!("{}", e.show(true));
+        println!("{}", e.show(true));
         exit(1);
     }
 }
 
 fn run() -> UiuaResult {
-    let app = App::parse();
     if cfg!(feature = "profile") {
         uiua::profile::run_profile();
-    } else if let Some(command) = app.command {
-        let config = FormatConfig::default();
-        match command {
-            Command::Fmt { path } => {
-                if let Some(path) = path {
-                    format_file(path, &config)?;
-                } else {
-                    for path in uiua_files() {
-                        format_file(path, &config)?;
+        return Ok(());
+    }
+    match App::try_parse() {
+        Ok(app) => {
+            let config = FormatConfig::default();
+            match app {
+                App::Init => {
+                    if let Some(path) = working_file_path() {
+                        eprintln!("File already exists: {}", path.display());
+                    } else {
+                        fs::write("main.ua", "\"Hello, World!\"").unwrap();
+                        _ = open::that("main.ua");
                     }
                 }
-            }
-            Command::Run { path, no_format } => {
-                let path = path.unwrap_or_else(|| PathBuf::from("main.ua"));
-                if !no_format {
-                    format_file(&path, &config)?;
+                App::Fmt { path } => {
+                    if let Some(path) = path {
+                        format_file(path, &config)?;
+                    } else {
+                        for path in uiua_files() {
+                            format_file(path, &config)?;
+                        }
+                    }
                 }
-                let mut rt = Uiua::default().mode(RunMode::Normal);
-                rt.load_file(path)?;
-                for value in rt.take_stack() {
-                    println!("{}", value.show());
+                App::Run { path, no_format } => {
+                    if let Some(path) = path.or_else(working_file_path) {
+                        if !no_format {
+                            format_file(&path, &config)?;
+                        }
+                        let mut rt = Uiua::default().mode(RunMode::Normal);
+                        rt.load_file(path)?;
+                        for value in rt.take_stack() {
+                            println!("{}", value.show());
+                        }
+                    } else {
+                        eprintln!("{NO_UA_FILE}");
+                    }
                 }
+                App::Test { path } => {
+                    if let Some(path) = path.or_else(working_file_path) {
+                        format_file(&path, &config)?;
+                        Uiua::default().mode(RunMode::Test).load_file(path)?;
+                        println!("No failures!");
+                    } else {
+                        eprintln!("{NO_UA_FILE}");
+                        return Ok(());
+                    }
+                }
+                App::Watch => {
+                    if let Some(path) = working_file_path() {
+                        _ = open::that(&path);
+                        if let Err(e) = watch(&path) {
+                            eprintln!("Error watching file: {e}");
+                        }
+                    } else {
+                        eprintln!("{NO_UA_FILE}");
+                    }
+                }
+                #[cfg(feature = "lsp")]
+                App::Lsp => uiua::lsp::run_server(),
             }
-            Command::Test { path } => {
-                let path = path.unwrap_or_else(|| PathBuf::from("main.ua"));
-                format_file(&path, &config)?;
-                Uiua::default().mode(RunMode::Test).load_file(path)?;
-            }
-            Command::Watch => {
-                if let Err(e) = watch() {
+        }
+        Err(e) if e.kind() == ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
+            if let Some(path) = working_file_path() {
+                _ = open::that(&path);
+                if let Err(e) = watch(&path) {
                     eprintln!("Error watching file: {e}");
                 }
+            } else {
+                _ = e.print();
+                eprintln!("\n{NO_UA_FILE}");
             }
-            #[cfg(feature = "lsp")]
-            Command::Lsp => uiua::lsp::run_server(),
         }
-    } else if let Err(e) = watch() {
-        eprintln!("Error watching file: {e}");
+        Err(e) => _ = e.print(),
     }
     Ok(())
 }
 
-fn watch() -> io::Result<()> {
-    let main = PathBuf::from("main.ua");
-    let open_path = if main.exists() {
+const NO_UA_FILE: &str =
+    "No .ua file found nearby. Initialize one in the current directory with `uiua init`";
+
+fn working_file_path() -> Option<PathBuf> {
+    let in_src = PathBuf::from("src.main.ua");
+    let main = if in_src.exists() {
+        in_src
+    } else {
+        PathBuf::from("main.ua")
+    };
+    Some(if main.exists() {
         main
-    } else if let Some(entry) = fs::read_dir("")?
+    } else if let Some(entry) = fs::read_dir("")
+        .into_iter()
+        .chain(fs::read_dir("src"))
+        .flatten()
         .filter_map(Result::ok)
         .find(|entry| entry.path().extension().map_or(false, |ext| ext == "ua"))
     {
         entry.path()
     } else {
-        fs::write(&main, "\"Hello, World!\"")?;
-        main
-    };
-    _ = open::that(&open_path);
+        return None;
+    })
+}
 
+fn watch(open_path: &Path) -> io::Result<()> {
     let (send, recv) = channel();
     let mut watcher = notify::recommended_watcher(send).unwrap();
     watcher
         .watch(Path::new("."), RecursiveMode::Recursive)
         .unwrap();
+
+    println!("Watching for changes... (end with ctrl+C, use `uiua help` to see options)");
+
     let mut child: Option<process::Child> = None;
     let config = FormatConfig::default();
     let run = |path: &Path, child: &mut Option<process::Child>| -> io::Result<()> {
@@ -106,7 +154,8 @@ fn watch() -> io::Result<()> {
             _ = child.kill();
             print_watching();
         }
-        for i in 0..10 {
+        const TRIES: u8 = 10;
+        for i in 0..TRIES {
             match format_file(path, &config) {
                 Ok(formatted) => {
                     if formatted.is_empty() {
@@ -123,20 +172,21 @@ fn watch() -> io::Result<()> {
                             .spawn()
                             .unwrap(),
                     );
-                    break;
+                    return Ok(());
                 }
-                Err(UiuaError::Format(..)) => sleep(Duration::from_millis((i + 1) * 10)),
+                Err(UiuaError::Format(..)) => sleep(Duration::from_millis((i as u64 + 1) * 10)),
                 Err(e) => {
                     clear_watching();
-                    eprintln!("{}", e.show(true));
+                    println!("{}", e.show(true));
                     print_watching();
-                    break;
+                    return Ok(());
                 }
             }
         }
+        println!("Failed to format file after {TRIES} tries");
         Ok(())
     };
-    run(&open_path, &mut child)?;
+    run(open_path, &mut child)?;
     let mut last_time = Instant::now();
     let mut ended = false;
     loop {
@@ -167,19 +217,9 @@ fn watch() -> io::Result<()> {
 }
 
 #[derive(Parser)]
-struct App {
-    #[clap(subcommand)]
-    command: Option<Command>,
-}
-
-#[derive(Parser)]
-enum Command {
-    #[clap(
-        about = "Format a uiua file or all files in the current directory",
-        long_about = "Format a uiua file or all files in the current directory, \
-                      replacing named primitives with their unicode equivalents"
-    )]
-    Fmt { path: Option<PathBuf> },
+enum App {
+    #[clap(about = "Initialize a new main.ua file")]
+    Init,
     #[clap(about = "Format and run a file")]
     Run {
         path: Option<PathBuf>,
@@ -188,8 +228,10 @@ enum Command {
     },
     #[clap(about = "Format and test a file")]
     Test { path: Option<PathBuf> },
-    #[clap(about = "Run a main.ua in watch mode. This is the default command")]
+    #[clap(about = "Run a main.ua in watch mode")]
     Watch,
+    #[clap(about = "Format a uiua file or all files in the current directory")]
+    Fmt { path: Option<PathBuf> },
     #[cfg(feature = "lsp")]
     #[clap(about = "Run the Language Server")]
     Lsp,
@@ -210,7 +252,7 @@ fn print_watching() {
     stderr().flush().unwrap();
 }
 fn clear_watching() {
-    eprintln!(
+    println!(
         "\r{}",
         "―".repeat(term_size::dimensions().map_or(10, |(w, _)| w))
     );

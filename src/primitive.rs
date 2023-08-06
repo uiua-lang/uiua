@@ -367,6 +367,11 @@ primitive!(
     /// ex: ♭5
     /// ex: ♭[1_2 3_4 5_6]
     ///
+    /// [deshape] *only* changes the [shape] of an array. It does not remove fill elements.
+    /// If you want to flatten an array and remove fill elements, use [reduce][join].
+    /// ex: ♭  \⊂⇡4
+    ///   : /⊂ \⊂⇡4
+    ///
     /// It looks like `♭` because it flattens the array.
     ///
     /// See also: [reshape]
@@ -539,7 +544,7 @@ primitive!(
     ///
     /// ex: ◫2 .⇡4
     /// ex: ◫4 .⇡6
-    /// ex: ◫ 2_2 .[1_2_3 4_5_6 7_8_9]
+    /// ex: ◫2_2 .[1_2_3 4_5_6 7_8_9]
     (2, Windows, DyadicArray, ("windows", '◫')),
     /// Use an array to replicate the elements of another array
     ///
@@ -613,21 +618,21 @@ primitive!(
     ([1, 2, 2], Fold, MonadicModifier, ("fold", '⌿')),
     /// Reduce, but keep intermediate values
     ///
-    /// ex: \+ 1_2_3_4
-    /// ex: \- 1_2_3_4
+    /// ex: \+    1_2_3_4
+    /// ex: \-    1_2_3_4
     /// ex: \(-~) 1_2_3_4
-    /// ex: \⊂ 1_2_3_4
+    /// ex: \⊂    1_2_3_4
     ([1, 1, 2], Scan, MonadicModifier, ("scan", '\\')),
     /// Apply a function to each element of an array
     /// This is the element-wise version of [rows].
     ///
     /// ex: ∵(⊟.) 1_2_3_4
-    /// ex: ∵⇡ 1_2_3_4
+    /// ex: ∵⇡     1_2_3_4
     ([1, 1, 1], Each, MonadicModifier, ("each", '∵')),
     /// Apply a function to each row of an array
     /// This is the row-wise version of [each].
     ///
-    /// ex: /+ [1_2_3 4_5_6 7_8_9]  # Sum columns
+    /// ex:  /+ [1_2_3 4_5_6 7_8_9]  # Sum columns
     /// ex: ≡/+ [1_2_3 4_5_6 7_8_9]  # Sum rows
     ///
     /// [rows] is equivalent to [level]`¯1`.
@@ -641,13 +646,13 @@ primitive!(
     /// ex: ≕⊂ 1_2 [4_5 6_7]
     ///
     /// For operations that are already pervasive, like `add` or `maximum`, `zip` is redundant.
-    /// ex: + 1_2_3 [4_5 6_7 8_9]
+    /// ex:  + 1_2_3 [4_5 6_7 8_9]
     ///   : ≕+ 1_2_3 [4_5 6_7 8_9]
     ([1, 2, 2], Zip, DyadicModifier, ("zip", '≕')),
     /// Apply a function to each pair of rows in two arrays
     /// This is the row-wise version of [zip].
     ///
-    /// ex: ≍⊂ 1_2 [4_5 6_7]
+    /// ex: ≍⊂  1_2 [4_5 6_7]
     /// ex: ≍⌿+ 1_2 [4_5 6_7]
     ([1, 2, 2], Bridge, DyadicModifier, ("bridge", '≍')),
     /// Apply a function to each element of an array and a fixed value
@@ -1222,22 +1227,31 @@ impl PrimDoc {
         let mut lines = Vec::new();
         for line in s.lines() {
             let line = line.trim();
-            if let Some(ex) = line.strip_prefix("ex:") {
-                let input = ex.trim().to_owned();
+            if let Some(mut ex) = line.strip_prefix("ex:") {
+                // Example
+                if ex.starts_with(' ') {
+                    ex = &ex[1..]
+                }
                 lines.push(PrimDocLine::Example(PrimExample {
-                    input,
+                    input: ex.into(),
                     output: OnceLock::new(),
                 }));
-            } else if let Some(ex) = line.strip_prefix(':') {
+            } else if let Some(mut ex) = line.strip_prefix(':') {
+                // Continue example
+                if ex.starts_with(' ') {
+                    ex = &ex[1..]
+                }
                 if let Some(PrimDocLine::Example(example)) = lines.last_mut() {
                     example.input.push('\n');
-                    example.input.push_str(ex.trim());
+                    example.input.push_str(ex);
                 } else {
                     lines.push(PrimDocLine::Text(parse_doc_line_fragments(line)));
                 }
             } else if short.is_empty() {
+                // Set short
                 short = parse_doc_line_fragments(line);
             } else {
+                // Add line
                 lines.push(PrimDocLine::Text(parse_doc_line_fragments(line)));
             }
         }

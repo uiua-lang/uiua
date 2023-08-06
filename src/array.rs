@@ -499,6 +499,9 @@ pub trait Arrayish {
     fn shape_prefixes_match(&self, other: &impl Arrayish) -> bool {
         self.shape().iter().zip(other.shape()).all(|(a, b)| a == b)
     }
+    fn format_shape(&self) -> FormatShape<'_> {
+        FormatShape(self.shape())
+    }
 }
 
 impl<'a, T> Arrayish for &'a T
@@ -541,5 +544,27 @@ impl<T: ArrayValue> Arrayish for (&[usize], &mut [T]) {
     }
     fn data(&self) -> &[Self::Value] {
         self.1
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct FormatShape<'a>(&'a [usize]);
+
+impl<'a> fmt::Debug for FormatShape<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self}")
+    }
+}
+
+impl<'a> fmt::Display for FormatShape<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[")?;
+        for (i, dim) in self.0.iter().enumerate() {
+            if i > 0 {
+                write!(f, " × ")?;
+            }
+            write!(f, "{dim}")?;
+        }
+        write!(f, "]")
     }
 }

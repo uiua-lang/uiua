@@ -1,6 +1,6 @@
-- Derive instruction list arg and output counts
 - Pretty array shape formatting in error messages
 - Add bracket surround to editor
+- Boolean arrays
 - Docs
   - Testing and run modes
   - Native interpreter and installation

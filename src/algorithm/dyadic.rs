@@ -3,11 +3,64 @@ use std::{
     collections::BTreeMap,
     iter::repeat,
     mem::{swap, take},
+    rc::Rc,
 };
 
 use ecow::EcoVec;
 
-use crate::{algorithm::max_shape, array::*, value::Value, Byte, Uiua, UiuaResult};
+use crate::{
+    algorithm::max_shape,
+    array::*,
+    cowslice::CowSlice,
+    function::{Function, FunctionId, FunctionKind, Instr},
+    value::Value,
+    Byte, Uiua, UiuaResult,
+};
+
+impl Value {
+    fn coerce_to_functions<T, E: ToString>(
+        self,
+        other: Self,
+        env: &Uiua,
+        on_success: impl FnOnce(Array<Rc<Function>>, Array<Rc<Function>>) -> UiuaResult<T>,
+        on_error: impl FnOnce(&str, &str) -> E,
+    ) -> UiuaResult<T> {
+        match (self, other) {
+            (Value::Func(a), Value::Func(b)) => on_success(a, b),
+            (Value::Func(a), mut b) => {
+                let shape = take(b.shape_mut());
+                let new_data: CowSlice<_> = b
+                    .into_flat_values()
+                    .map(|b| {
+                        Rc::new(Function {
+                            id: FunctionId::Constant,
+                            instrs: vec![Instr::Push(b.into()), Instr::Call(env.span_index())],
+                            kind: FunctionKind::Normal,
+                        })
+                    })
+                    .collect();
+                let b = Array::new(shape, new_data);
+                on_success(a, b)
+            }
+            (mut a, Value::Func(b)) => {
+                let shape = take(a.shape_mut());
+                let new_data: CowSlice<_> = a
+                    .into_flat_values()
+                    .map(|a| {
+                        Rc::new(Function {
+                            id: FunctionId::Constant,
+                            instrs: vec![Instr::Push(a.into()), Instr::Call(env.span_index())],
+                            kind: FunctionKind::Normal,
+                        })
+                    })
+                    .collect();
+                let a = Array::new(shape, new_data);
+                on_success(a, b)
+            }
+            (a, b) => Err(env.error(on_error(a.type_name(), b.type_name()))),
+        }
+    }
+}
 
 impl Value {
     pub fn reshape(&mut self, shape: &Self, env: &Uiua) -> UiuaResult {
@@ -53,16 +106,14 @@ impl Value {
             (Value::Num(a), Value::Num(b)) => Value::Num(a.join_impl(b, truncate)),
             (Value::Byte(a), Value::Byte(b)) => Value::Byte(a.join_impl(b, truncate)),
             (Value::Char(a), Value::Char(b)) => Value::Char(a.join_impl(b, truncate)),
-            (Value::Func(a), Value::Func(b)) => Value::Func(a.join_impl(b, truncate)),
             (Value::Byte(a), Value::Num(b)) => Value::Num(a.convert().join_impl(b, truncate)),
             (Value::Num(a), Value::Byte(b)) => Value::Num(a.join_impl(b.convert(), truncate)),
-            (a, b) => {
-                return Err(env.error(format!(
-                    "Cannot join {} array and {} array",
-                    a.type_name(),
-                    b.type_name()
-                )))
-            }
+            (a, b) => a.coerce_to_functions(
+                b,
+                env,
+                |a, b| Ok(Value::Func(a.join_impl(b, truncate))),
+                |a, b| format!("Cannot join {a} array and {b} array"),
+            )?,
         })
     }
 }
@@ -385,13 +436,12 @@ impl Value {
             (Value::Func(a), Value::Func(b)) => a.couple(b).into(),
             (Value::Num(a), Value::Byte(b)) => a.couple(b.convert()).into(),
             (Value::Byte(a), Value::Num(b)) => a.convert().couple(b).into(),
-            (a, b) => {
-                return Err(env.error(format!(
-                    "Cannot couple {} array with {} array",
-                    a.type_name(),
-                    b.type_name()
-                )))
-            }
+            (a, b) => a.coerce_to_functions(
+                b,
+                env,
+                |a, b| Ok(Value::Func(a.couple(b))),
+                |a, b| format!("Cannot couple {a} array with {b} array"),
+            )?,
         })
     }
 }

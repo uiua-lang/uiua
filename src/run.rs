@@ -725,7 +725,7 @@ impl<'io> Uiua<'io> {
             },
         }
     }
-    fn span_index(&self) -> usize {
+    pub(crate) fn span_index(&self) -> usize {
         self.scope.call.last().map_or(0, |frame| {
             frame
                 .spans

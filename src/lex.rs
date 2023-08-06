@@ -503,7 +503,7 @@ impl Lexer {
                         let mut start = start;
                         loop {
                             let inner = self.parse_string_contents(start, None);
-                            let string = self.parse_format_fragments(start, &inner);
+                            let string = parse_format_fragments(&inner);
                             self.end(MultilineString(string), start);
                             let checkpoint = self.loc;
                             while self.next_char_exact('\r') {}
@@ -537,7 +537,7 @@ impl Lexer {
                         );
                     }
                     if format {
-                        let frags = self.parse_format_fragments(start, &inner);
+                        let frags = parse_format_fragments(&inner);
                         self.end(FormatStr(frags), start)
                     } else {
                         self.end(Str(inner), start)
@@ -650,6 +650,7 @@ impl Lexer {
                 '\\' => '\\',
                 '"' => '"',
                 '\'' => '\'',
+                '_' => char::MAX,
                 c => return Err(c),
             }
         } else if c == '\\' {
@@ -674,42 +675,23 @@ impl Lexer {
         }
         string
     }
-    fn parse_format_fragments(&mut self, start: Loc, s: &str) -> Vec<String> {
-        let mut frags: Vec<String> = Vec::new();
-        let mut curr = String::new();
-        let mut chars = s.chars();
-        while let Some(c) = chars.next() {
-            match c {
-                '{' => match chars.next() {
-                    Some('}') => {
-                        frags.push(curr);
-                        curr = String::new();
-                    }
-                    Some('{') => curr.push('{'),
-                    Some(c) => self
-                        .errors
-                        .push(self.end_span(start).sp(LexError::UnexpectedChar(c))),
-                    None => self.errors.push(
-                        self.end_span(start)
-                            .sp(LexError::ExpectedCharacter(Some('}'))),
-                    ),
-                },
-                '}' => match chars.next() {
-                    Some('}') => curr.push('}'),
-                    Some(c) => self
-                        .errors
-                        .push(self.end_span(start).sp(LexError::UnexpectedChar(c))),
-                    None => self.errors.push(
-                        self.end_span(start)
-                            .sp(LexError::ExpectedCharacter(Some('}'))),
-                    ),
-                },
-                c => curr.push(c),
+}
+
+fn parse_format_fragments(s: &str) -> Vec<String> {
+    let mut frags: Vec<String> = Vec::new();
+    let mut curr = String::new();
+    for c in s.chars() {
+        match c {
+            '_' => {
+                frags.push(curr);
+                curr = String::new();
             }
+            char::MAX => curr.push('_'),
+            c => curr.push(c),
         }
-        frags.push(curr);
-        frags
     }
+    frags.push(curr);
+    frags
 }
 
 pub fn is_basically_alphabetic(c: char) -> bool {

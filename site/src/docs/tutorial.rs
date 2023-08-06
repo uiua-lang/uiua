@@ -374,7 +374,8 @@ fn TutorialTypes(cx: Scope) -> impl IntoView {
         <h2 id="characters">"Characters"</h2>
         <p>"Characters are represented as 32-bit Unicode codepoints."</p>
         <p>"Character literals, delimited by "<code>"'"</code>"s, create "<PrimCode prim=Rank/><code>"0"</code>" character arrays."</p>
-        <Editor example="['a' 'b' 'c']"/>
+        <Editor example="'a' 'b'"/>
+        <Editor example="['u' 'i' 'u' 'a']"/>
         <p>"String literals, delimited by "<code>"\""</code>"s, create "<PrimCode prim=Rank/><code>"1"</code>" character arrays."</p>
         <Editor example="\"Hello, World!\""/>
         <p>"You can make strings span multiple lines with a "<code>"$"</code>" followed by a space on each line."</p>
@@ -479,15 +480,15 @@ fn TutorialFunctions(cx: Scope) -> impl IntoView {
         <Editor example="\\{-a ×a b} 1_2_3_4_5"/>
 
         <h2 id="format-strings">"Format Strings"</h2>
-        <p>"Prefixing a string with "<code>"$"</code>", creates a format string. A format string is a function that, like a dfn, is called immediately. It takes an argument for each "<code>"{}"</code>" in the string and replaces it with the stringified version."</p>
-        <Editor example="$\"Hello, {}!\" \"World\""/>
-        <Editor example="Greet ← $\"Hello, {}!\"\nGreet \"user\""/>
-        <Editor example="x ← 5\n$\"x = {}\" x"/>
-        <Editor example="$\"{}, {}, and {}\" 1 2 3"/>
-        <p>"If you need to use a literal "<code>"{"</code>" or "<code>"}"</code>", you can escape them with "<code>"{{"</code>" and "<code>"}}"</code>"."</p>
-        <Editor example="$\"{{}} {{{}}}\" 27"/>
+        <p>"Prefixing a string with "<code>"$"</code>", creates a format string. A format string is a function that, like a dfn, is called immediately. It takes an argument for each "<code>"_"</code>" in the string and replaces it with the stringified version."</p>
+        <Editor example="$\"Hello, _!\" \"World\""/>
+        <Editor example="Greet ← $\"Hello, _!\"\nGreet \"user\""/>
+        <Editor example="x ← 5\n$\"x = _\" x"/>
+        <Editor example="$\"_, _, and _\" 1 2 3"/>
+        <p>"If you need to use a literal "<code>"_"</code>", you can escape them with "<code>"\\"</code>"."</p>
+        <Editor example="$\"\\__\\_\" 27"/>
         <p>"Multi-line strings are implicitly format strings."</p>
-        <Editor example="{a b +a b}1 2\nprint $ Do you know what {} + {} is?\n      $ It's {}!"/>
+        <Editor example="{a b +a b}1 2\nprint $ Do you know what _ + _ is?\n      $ It's _!"/>
     }
 }
 
@@ -501,7 +502,7 @@ fn TutorialModules(cx: Scope) -> impl IntoView {
         <h2 id="scopes">"Scopes"</h2>
         <p>"Scopes are a way to create a temporary namespace for bindings that are only used in a small part of your code. Only the names that you want to escape a scope are usable outside it."</p>
         <p>"Scopes begin and end with triple hyphens "<code>"---"</code>". All names declared inside a scope are not available outside of it."</p>
-        <Editor example="---\nfoo ← 5\n---\nfoo"/>
+        <Editor example="---\nfoo ← 5\n---\nfoo # foo is not available here"/>
         <p>"Values pushed to the stack inside a scope remain on the stack after the scope ends."</p>
         <p>"You can bind values that were pushed to the stack inside an ended scope by using a "<code>"←"</code>" with nothing on the right side."</p>
         <Editor example="---\na ← 3\nb ← 5\n+ a b\n× a b\n---\nc ← \nd ←\nc_d"/>
@@ -513,7 +514,7 @@ fn TutorialModules(cx: Scope) -> impl IntoView {
         <p>"The only way to name a function is to bind it. Named functions can be put into arrays by stranding or surrounding the names with "<code>"()"</code>"."</p>
         <p><PrimCode prim=Use/>" takes the name of the function as a string and the module and returns the function."</p>
         <p>"If you want to give the function a name in the current scope, the name on the left side of the "<code>"←"</code>" must "<em>"not"</em>" be capitalized. (If you do capitalize it, you will end up with a function that returns a function.)"</p>
-        <p>"The point of all of this is it allows you to export functions by name from a scope."</p>
+        <p>"This allows you to export functions by name from a scope."</p>
         <Editor example=r#"---
 PlusFive ← +5
 Twin ← ⊟.

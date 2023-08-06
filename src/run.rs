@@ -471,7 +471,6 @@ impl<'io> Uiua<'io> {
             instrs.extend(self.compile_words(line)?);
         }
         let refs = self.new_dfns.pop().unwrap();
-        let span = self.add_span(span);
         let dfn_size = refs.into_iter().max().map(|n| n + 1).unwrap_or(0);
         let func = Function {
             id: func.id,
@@ -480,6 +479,7 @@ impl<'io> Uiua<'io> {
         };
         self.push_instr(Instr::push(func));
         if call {
+            let span = self.add_span(span);
             self.push_instr(Instr::Call(span));
         }
         Ok(())

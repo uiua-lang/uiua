@@ -344,8 +344,10 @@ impl<'io> Uiua<'io> {
                     })),
                 };
                 self.push_instr(Instr::push(f));
-                let span = self.add_span(word.span);
-                self.push_instr(Instr::Call(span));
+                if call {
+                    let span = self.add_span(word.span);
+                    self.push_instr(Instr::Call(span));
+                }
             }
             Word::MultilineString(lines) => {
                 let f = Function {
@@ -372,8 +374,10 @@ impl<'io> Uiua<'io> {
                     })),
                 };
                 self.push_instr(Instr::push(f));
-                let span = self.add_span(word.span);
-                self.push_instr(Instr::Call(span));
+                if call {
+                    let span = self.add_span(word.span);
+                    self.push_instr(Instr::Call(span));
+                }
             }
             Word::Ident(ident) => self.ident(ident, word.span, call)?,
             Word::Strand(items) => {
@@ -647,10 +651,8 @@ impl<'io> Uiua<'io> {
                         FunctionKind::Dfn(n) => {
                             let n = *n as usize;
                             if self.stack.len() < n {
-                                break Err(self.spans[call_span]
-                                    .clone()
-                                    .sp(format!("not enough arguments for dfn of {n} values"))
-                                    .into());
+                                let message = format!("not enough arguments for dfn of {n} values");
+                                break Err(self.spans[call_span].clone().sp(message).into());
                             }
                             let args = self.stack.drain(self.stack.len() - n..).rev().collect();
                             self.scope.dfn.push(DfnFrame {

@@ -89,7 +89,7 @@ c ← √/+ⁿ2 x
             print!("\rProfiling... warmup {}/{}", i + 1, WARMUP_RUNS);
             stdout().flush().unwrap();
             for (_, bench) in BENCHMARKS {
-                Uiua::with_stdio().load_str(bench).unwrap();
+                Uiua::with_native_sys().load_str(bench).unwrap();
             }
         }
 
@@ -101,7 +101,7 @@ c ← √/+ⁿ2 x
             stdout().flush().unwrap();
             for (name, bench) in BENCHMARKS {
                 profile_scope!(name);
-                Uiua::with_stdio().load_str(bench).unwrap();
+                Uiua::with_native_sys().load_str(bench).unwrap();
             }
         }
 

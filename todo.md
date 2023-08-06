@@ -1,7 +1,5 @@
-- If-like function
+- Ctrl+/ in editor
 - Match APL equivalents and unicode names in docs search
-- Function array coercion
-  - Maybe constant modifier
 - Docs
   - Testing and run modes
   - Native interpreter and installation

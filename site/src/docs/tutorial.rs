@@ -472,7 +472,7 @@ fn TutorialFunctions(cx: Scope) -> impl IntoView {
         <Editor example="Quadratic ← {÷ ×2a -b ⊟¯. √- ××4a c ⁿ2 b}\nQuadratic 1 2 0"/>
         <p>"Dfns are also required if you want to use "<PrimCode prim=Recur/>". The dfn that contains the "<PrimCode prim=Recur/>" will be the thing that recurs."</p>
         <p>"Here is a recursive fibonacci function."</p>
-        <Editor example="{:⊡~(+ ↬-1a ↬-2a)_(a) <2a} 10"/>
+        <Editor example="{:(+ ↬-1a ↬-2a)_a <2a} 10"/>
         <p>"It is an error to access a dfn's argument outside of the dfn. This is only possible if you smuggle out the argument reference inside a function."</p>
         <Editor example=":{(a)}5"/>
         <p>"Dfns that immediately follow a modifier are called as the modifier's function."</p>

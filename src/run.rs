@@ -634,68 +634,72 @@ impl<'io> Uiua<'io> {
         self.scope.call.last_mut().unwrap().spans.pop();
     }
     fn call_with_span(&mut self, call_span: usize) -> UiuaResult {
-        let value = self.pop("called function")?;
-        match value {
-            Value::Func(f) if f.shape.is_empty() => {
-                let f = f.into_scalar().unwrap();
-                let mut dfn = false;
-                match &f.kind {
-                    FunctionKind::Normal => {}
-                    FunctionKind::Dfn(n) => {
-                        let n = *n as usize;
-                        if self.stack.len() < n {
-                            return Err(self.spans[call_span]
-                                .clone()
-                                .sp(format!("not enough arguments for dfn of {n} values"))
-                                .into());
+        let mut value = self.pop("called function")?;
+        let mut first_pass = true;
+        loop {
+            match value {
+                Value::Func(f) if f.shape.is_empty() => {
+                    // Call function
+                    let f = f.into_scalar().unwrap();
+                    let mut dfn = false;
+                    match &f.kind {
+                        FunctionKind::Normal => {}
+                        FunctionKind::Dfn(n) => {
+                            let n = *n as usize;
+                            if self.stack.len() < n {
+                                break Err(self.spans[call_span]
+                                    .clone()
+                                    .sp(format!("not enough arguments for dfn of {n} values"))
+                                    .into());
+                            }
+                            let args = self.stack.drain(self.stack.len() - n..).rev().collect();
+                            self.scope.dfn.push(DfnFrame {
+                                function: f.clone(),
+                                args,
+                            });
+                            dfn = true;
                         }
-                        let args = self.stack.drain(self.stack.len() - n..).rev().collect();
-                        self.scope.dfn.push(DfnFrame {
-                            function: f.clone(),
-                            args,
-                        });
-                        dfn = true;
+                        FunctionKind::Dynamic(ff) => {
+                            self.scope.call.push(StackFrame {
+                                function: f.clone(),
+                                call_span,
+                                spans: Vec::new(),
+                                pc: 0,
+                                dfn: false,
+                            });
+                            ff(self)?;
+                            self.scope.call.pop();
+                            break Ok(());
+                        }
                     }
-                    FunctionKind::Dynamic(ff) => {
-                        self.scope.call.push(StackFrame {
-                            function: f.clone(),
-                            call_span,
-                            spans: Vec::new(),
-                            pc: 0,
-                            dfn: false,
-                        });
-                        ff(self)?;
-                        self.scope.call.pop();
-                        return Ok(());
-                    }
+                    break self.exec(StackFrame {
+                        function: f,
+                        call_span,
+                        spans: Vec::new(),
+                        pc: 0,
+                        dfn,
+                    });
                 }
-                self.exec(StackFrame {
-                    function: f,
-                    call_span,
-                    spans: Vec::new(),
-                    pc: 0,
-                    dfn,
-                })
-            }
-            value => {
-                if self.stack.pop().is_some() {
+                Value::Func(_) if first_pass => {
+                    // Call non-scalar function array
+                    let index = self.pop("index")?;
+                    value = index.pick(value, self)?;
+                    first_pass = false;
+                }
+                value => {
                     self.push(value);
-                    Ok(())
-                } else {
-                    Err(UiuaError::Run(
-                        self.spans[call_span]
-                            .clone()
-                            .sp(format!("Stack was empty when evaluating {}", value)),
-                    ))
+                    break Ok(());
                 }
             }
         }
     }
     /// Call the top of the stack as a function
+    #[inline]
     pub fn call(&mut self) -> UiuaResult {
         let call_span = self.span_index();
         self.call_with_span(call_span)
     }
+    #[inline]
     pub fn recur(&mut self) -> UiuaResult {
         let dfn = self
             .scope

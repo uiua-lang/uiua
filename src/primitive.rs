@@ -204,6 +204,18 @@ primitive!(
     (2(2), Flip, Stack, ("flip", '~')),
     /// Pop the top value off the stack
     (1(0), Pop, Stack, ("pop", ';')),
+    /// Do nothing
+    ///
+    /// While this may seem useless, one way to use it is to pass it to [reduce], which will put all of an array's values on the stack.
+    /// ex: /· [1 2 3]
+    ///
+    /// If you use this on an array that has fill values, the fill values will not be removed.
+    /// To remove them, use [truncate] instead.
+    /// ex: /· \⊂1_2_3_4
+    ///
+    /// The formatter converts an empty `()` function into `noop`.
+    /// ex: () # Try running to format
+    (0, Noop, Stack, ("noop", '·')),
     // Pervasive monadic ops
     /// Logical not
     ///
@@ -479,9 +491,6 @@ primitive!(
     ///
     /// ex: ⊡ 2 [8 3 9 2 0]
     /// ex: ⊡ 1_1 .[1_2_3 4_5_6]
-    ///
-    /// `pick` combined with [call] is the easiest way to emulate an if-else expression.
-    /// ex: :⊡~("not 5")_("5") =5 3
     (2, Pick, DyadicArray, ("pick", '⊡')),
     /// Select multiple elements from an array
     ///
@@ -730,6 +739,30 @@ primitive!(
     /// ex: ?(+1 2)"failure"
     /// ex: ?(+'a' 'b')"failure"
     (Try, OtherModifier { modifier: 2 }, ("try", '?')),
+    /// Call a function
+    ///
+    /// When passing a scalar function array, the function is simply called.
+    /// ex: :(+5) 2
+    ///
+    /// Non-function scalars can be called. They pop nothing and push themselves.
+    /// ex: :5
+    /// This is not useful on its own, but we'll see below how it can be used.
+    ///
+    /// The behavior when passing a non-scalar array is different.
+    /// An additional argument is expected, which is the index of the function to call.
+    /// With this, you can do if-else expressions.
+    /// ex: Abs ← :·_¯ <0.
+    ///   : Abs 5
+    ///   : Abs ¯2
+    /// This is equivalent to [call][pick][flip]:
+    /// ex: Abs ← :⊡~·_¯ <0.
+    ///
+    /// Using [call] in this way is *not* recursive. If the selected value is also a function array, it will not be called unless you used [call] again, wich will pop another index.
+    /// ex:  :[+_- ×_÷] 1   3 12
+    /// ex:  :[+_- ×_÷] 1_1 3 12
+    /// ex:  :[+_- ×_÷] 1 1 3 12
+    /// ex: ::[+_- ×_÷] 1 1 3 12
+    (1(None), Call, Control, ("call", ':')),
     // Misc
     /// Throw an error
     ///
@@ -754,35 +787,19 @@ primitive!(
     /// Call the current dfn recursively
     /// Only dfns can be recurred in.
     ///
-    /// To check for a base case, you can use [pick].
-    /// ex: {:⊡~·_↬ <10.×2} 1
+    /// To check for a base case, you can use [call].
+    /// ex: {:·_↬ <10.×2} 1
     ///
     /// Here is a recursive factorial function:
-    /// ex: {:⊡~(×a ↬-1a)_(1) <2a} 5
+    /// ex: {:(×a ↬-1a)_1 <2a} 5
     ///
     /// Here is a recursive fibonacci function:
-    /// ex: {:⊡~(+ ↬-1a ↬-2a)_(a) <2a} 10
+    /// ex: {:(+ ↬-1a ↬-2a)_a <2a} 10
     (1(0), Recur, Control, ("recur", '↬')),
     /// Debug print a value without popping it
     ///
     /// ex: /+ | 1_2_3
     (1, Debug, Sys, ("debug", '|')),
-    /// Call a function
-    ///
-    /// ex: :(+) 1 2
-    (1(None), Call, Misc, ("call", ':')),
-    /// Do nothing
-    ///
-    /// While this may seem useless, one way to use it is to pass it to [reduce], which will put all of an array's values on the stack.
-    /// ex: /· [1 2 3]
-    ///
-    /// If you use this on an array that has fill values, the fill values will not be removed.
-    /// To remove them, use [truncate] instead.
-    /// ex: /· \⊂1_2_3_4
-    ///
-    /// The formatter converts an empty `()` function into `noop`.
-    /// ex: ()
-    (0, Noop, Misc, ("noop", '·')),
     /// Parse a string as a number
     ///
     /// ex: parsenum "17"

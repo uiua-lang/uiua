@@ -3,7 +3,7 @@ const FORMAT: &str = "# Click Run to format!\nfold(join~/+take`2.;)0_1range10";
 const D3: &str = "↯~⇡/×.2_3_4";
 const LOGO: &str = "\
 x ← ↶⍉⊞⊟. ÷÷2~ -÷2,⇡.200
-rgb ← [×.⊢⇌x ×.⊢x ∵0.5⊢x]
+rgb ← [×.⊢⇌x ×.⊢x ↯△⊢x0.5]
 u ← ↥<0.2~>0.7.+×2 ×.~/·x
 c ← √/+ⁿ2 x
 ⍉⊂~-¬u <1 c +0.1 ≡(↧<0.95 c)rgb";
@@ -19,7 +19,7 @@ const STRIPES: &str = "\
 ∵{⊞a.⇡300}+_↥_-
 ⍉ ÷2 +1.2 ○ ÷10";
 const PALINDROME: &str = r#"$ uiua racecar wow cool!
-≍⊂~ ⊏~[" ❌" " ✅"] ≡(≅⇌.). ⊘≠' '."#;
+≍⊂⍛' '~ ⊏~"❌✅" ≡(≅⇌.). ⊘≠' '."#;
 const RULE_30: &str = "\
 Thirty ← ≡(↥≅0_1_1 ~=1 /+.) ◫3 ⊂~0 ⊂0
 size ← 600

@@ -271,6 +271,7 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
             Primitive::Div => xs.table(ys, Div::div),
             Primitive::Max => xs.table(ys, f64::max),
             Primitive::Min => xs.table(ys, f64::min),
+            Primitive::Join | Primitive::Couple => xs.table_join_or_couple(ys),
             _ => return generic_table(f, Value::Num(xs), Value::Num(ys), env),
         }),
         (Some(prim), Value::Byte(xs), Value::Byte(ys)) => match prim {
@@ -280,6 +281,7 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
             Primitive::Div => env.push(xs.table(ys, |a, b| f64::from(a) / f64::from(b))),
             Primitive::Max => env.push(xs.table(ys, |a, b| a.op(b, u8::max))),
             Primitive::Min => env.push(xs.table(ys, |a, b| a.op(b, u8::min))),
+            Primitive::Join | Primitive::Couple => env.push(xs.table_join_or_couple(ys)),
             _ => generic_table(f, Value::Byte(xs), Value::Byte(ys), env)?,
         },
         (_, xs, ys) => generic_table(f, xs, ys, env)?,
@@ -439,6 +441,19 @@ impl<T: ArrayValue> Array<T> {
         }
         let mut new_shape = self.shape;
         new_shape.extend_from_slice(&other.shape);
+        (new_shape, new_data).into()
+    }
+    fn table_join_or_couple(self, other: Self) -> Self {
+        let mut new_data = Vec::with_capacity(self.data.len() * other.data.len() * 2);
+        for x in self.data {
+            for y in other.data.iter().cloned() {
+                new_data.push(x.clone());
+                new_data.push(y);
+            }
+        }
+        let mut new_shape = self.shape;
+        new_shape.extend_from_slice(&other.shape);
+        new_shape.push(2);
         (new_shape, new_data).into()
     }
 }

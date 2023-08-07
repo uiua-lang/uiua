@@ -73,3 +73,6 @@ name = "uiua"
 
 [workspace]
 members = ["site"]
+
+[profile.release]
+lto = true

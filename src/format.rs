@@ -176,7 +176,7 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig) {
 }
 
 fn format_multiline_words(output: &mut String, lines: &[Vec<Sp<Word>>], config: &FormatConfig) {
-    if lines.len() <= 1 {
+    if lines.len() == 1 {
         format_words(output, &lines[0], config);
     } else {
         let curr_line = output.lines().last().unwrap_or_default();

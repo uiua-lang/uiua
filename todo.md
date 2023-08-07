@@ -17,7 +17,6 @@
   - Parallelize loops
 - Optimizations
   - Windowed reduce
-  - Table with simple function
 - Multimedia
   - Sound input
   - Webcam input?

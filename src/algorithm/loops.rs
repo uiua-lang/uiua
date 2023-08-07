@@ -1,4 +1,4 @@
-use std::ops::{Add, Mul};
+use std::ops::{Add, Div, Mul, Sub};
 
 use crate::{
     algorithm::pervade::bin_pervade_generic,
@@ -13,20 +13,25 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(1)?;
     let xs = env.pop(2)?;
+
     match (f.as_primitive(), xs) {
-        (Some(prim), Value::Num(nums)) => {
-            let arr = match prim {
-                Primitive::Add => nums.reduce(0.0, Add::add),
-                Primitive::Mul => nums.reduce(1.0, Mul::mul),
-                Primitive::Max => nums.reduce(f64::NEG_INFINITY, f64::max),
-                Primitive::Min => nums.reduce(f64::INFINITY, f64::min),
-                _ => return generic_fold(f, Value::Num(nums), None, env),
-            };
-            env.push(arr);
-            Ok(())
-        }
-        (_, xs) => generic_fold(f, xs, None, env),
+        (Some(prim), Value::Num(nums)) => env.push(match prim {
+            Primitive::Add => nums.reduce(0.0, Add::add),
+            Primitive::Mul => nums.reduce(1.0, Mul::mul),
+            Primitive::Max => nums.reduce(f64::NEG_INFINITY, f64::max),
+            Primitive::Min => nums.reduce(f64::INFINITY, f64::min),
+            _ => return generic_fold(f, Value::Num(nums), None, env),
+        }),
+        (Some(prim), Value::Byte(bytes)) => env.push(match prim {
+            Primitive::Add => bytes.reduce(0.0, |a, b| a + f64::from(b)),
+            Primitive::Mul => bytes.reduce(1.0, |a, b| a * f64::from(b)),
+            Primitive::Max => bytes.reduce(f64::NEG_INFINITY, |a, b| a.max(f64::from(b))),
+            Primitive::Min => bytes.reduce(f64::INFINITY, |a, b| a.min(f64::from(b))),
+            _ => return generic_fold(f, Value::Byte(bytes), None, env),
+        }),
+        (_, xs) => generic_fold(f, xs, None, env)?,
     }
+    Ok(())
 }
 
 fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
@@ -258,6 +263,31 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
     let f = env.pop(1)?;
     let xs = env.pop(2)?;
     let ys = env.pop(3)?;
+    match (f.as_primitive(), xs, ys) {
+        (Some(prim), Value::Num(xs), Value::Num(ys)) => env.push(match prim {
+            Primitive::Add => xs.table(ys, Add::add),
+            Primitive::Sub => xs.table(ys, Sub::sub),
+            Primitive::Mul => xs.table(ys, Mul::mul),
+            Primitive::Div => xs.table(ys, Div::div),
+            Primitive::Max => xs.table(ys, f64::max),
+            Primitive::Min => xs.table(ys, f64::min),
+            _ => return generic_table(f, Value::Num(xs), Value::Num(ys), env),
+        }),
+        (Some(prim), Value::Byte(xs), Value::Byte(ys)) => match prim {
+            Primitive::Add => env.push(xs.table(ys, |a, b| f64::from(a) + f64::from(b))),
+            Primitive::Sub => env.push(xs.table(ys, |a, b| f64::from(a) - f64::from(b))),
+            Primitive::Mul => env.push(xs.table(ys, |a, b| f64::from(a) * f64::from(b))),
+            Primitive::Div => env.push(xs.table(ys, |a, b| f64::from(a) / f64::from(b))),
+            Primitive::Max => env.push(xs.table(ys, |a, b| a.op(b, u8::max))),
+            Primitive::Min => env.push(xs.table(ys, |a, b| a.op(b, u8::min))),
+            _ => generic_table(f, Value::Byte(xs), Value::Byte(ys), env)?,
+        },
+        (_, xs, ys) => generic_table(f, xs, ys, env)?,
+    }
+    Ok(())
+}
+
+fn generic_table(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     const BREAK_ERROR: &str = "break is not allowed in table";
     let mut new_shape = xs.shape().to_vec();
     new_shape.extend_from_slice(ys.shape());
@@ -339,33 +369,30 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn reduce(mut self, identity: T, f: impl Fn(T, T) -> T) -> Self {
+    pub fn reduce<R: ArrayValue>(mut self, identity: R, f: impl Fn(R, T) -> R) -> Array<R> {
         match self.shape.len() {
-            0 => self,
-            1 => self
-                .data
-                .iter()
-                .rev()
-                .cloned()
-                .reduce(f)
-                .unwrap_or(identity)
+            0 => (
+                vec![],
+                vec![f(identity, self.data.into_iter().next().unwrap())],
+            )
                 .into(),
+            1 => self.data.into_iter().rev().fold(identity, f).into(),
             _ => {
                 let row_len: usize = self.row_len();
                 if self.row_count() == 0 {
                     self.shape.remove(0);
-                    self.data = cowslice![identity; row_len];
-                    return self;
+                    let data = cowslice![identity; row_len];
+                    return (self.shape, data).into();
                 }
-                for i in 1..self.row_count() {
+                let mut new_data = vec![identity; row_len];
+                for i in 0..self.row_count() {
                     let start = i * row_len;
                     for j in 0..row_len {
-                        self.data[j] = f(self.data[j].clone(), self.data[start + j].clone());
+                        new_data[j] = f(new_data[j].clone(), self.data[start + j].clone());
                     }
                 }
-                self.data.truncate(row_len);
                 self.shape.remove(0);
-                self
+                (self.shape, new_data).into()
             }
         }
     }
@@ -398,6 +425,21 @@ impl<T: ArrayValue> Array<T> {
                 (shape, new_data).into()
             }
         }
+    }
+    fn table<U: ArrayValue, R: ArrayValue>(
+        self,
+        other: Array<U>,
+        f: impl Fn(U, T) -> R,
+    ) -> Array<R> {
+        let mut new_data = Vec::with_capacity(self.data.len() * other.data.len());
+        for x in self.data {
+            for y in other.data.iter().cloned() {
+                new_data.push(f(y, x.clone()));
+            }
+        }
+        let mut new_shape = self.shape;
+        new_shape.extend_from_slice(&other.shape);
+        (new_shape, new_data).into()
     }
 }
 

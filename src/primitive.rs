@@ -383,6 +383,10 @@ primitive!(
     /// ex: ⋯⇡8
     /// ex: ⋯[1_2 3_4 5_6]
     ///
+    /// One use of [bits] is to get all subsets of an array.
+    /// You get the [length] of the array, raise `2` to the [power] of it, encode the [range] into [bits], and then [plow][replicate] the array with the bits.
+    /// ex: ⫫‡⋯⇡ⁿ~2⧻.[1 2 3]
+    ///
     /// To turn the bits back into numbers, use [invert].
     /// ex: ↶⋯[1 0 1 0]
     /// ex: ↶⋯[1_1_1 0_1_0 0_1_1]

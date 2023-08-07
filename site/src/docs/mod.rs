@@ -1,5 +1,6 @@
 mod design;
 mod primitive;
+mod technical;
 mod tutorial;
 
 use std::{collections::HashSet, iter::once};
@@ -15,13 +16,15 @@ use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoView
 use crate::{code::*, element};
 use design::*;
 use primitive::*;
+use technical::*;
 use tutorial::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DocsPage {
     Tutorial(TutorialPage),
-    Design,
     Search(String),
+    Design,
+    Technical,
 }
 
 impl IntoParam for DocsPage {
@@ -33,6 +36,7 @@ impl IntoParam for DocsPage {
             .or(match value {
                 "" => None,
                 "design" => Some(Self::Design),
+                "technical" => Some(Self::Technical),
                 value => Some(Self::Search(value.into())),
             })
             .ok_or_else(|| ParamsError::MissingParam(name.to_string()))
@@ -53,8 +57,9 @@ pub fn Docs(cx: Scope) -> impl IntoView {
         let page = params.page;
         let page_view = match page {
             DocsPage::Tutorial(tut) => view!(cx, <Tutorial page=tut/>).into_view(cx),
-            DocsPage::Design => view!(cx, <Design/>).into_view(cx),
             DocsPage::Search(search) => view!(cx, <DocsHome search=search/>).into_view(cx),
+            DocsPage::Design => Design(cx).into_view(cx),
+            DocsPage::Technical => Technical(cx).into_view(cx),
         };
 
         view! { cx,
@@ -147,6 +152,7 @@ fn DocsHome(cx: Scope, #[prop(optional)] search: String) -> impl IntoView {
         <h2 id="other-docs">"Other Docs"</h2>
         <ul>
             <li><A href="/docs/design">"Design"</A>" - reasons for some of Uiua's design decisions"</li>
+            <li><A href="/docs/technical">"Technical Details"</A>" - notes on the implementation of the Uiua interpreter and this website"</li>
         </ul>
         <h2 id="functions" class="doc-functions">"Functions"</h2>
         <div class="input-div">

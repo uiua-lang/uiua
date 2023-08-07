@@ -1,11 +1,7 @@
+- Function fill different form Noop
 - Docs
   - Testing and run modes
   - Native interpreter and installation
-  - Technical details
-    - Rust
-    - Leptos
-    - Array representation
-    - Bytecode
   - Fill semantics
   - Loops
     - Explain loop directions

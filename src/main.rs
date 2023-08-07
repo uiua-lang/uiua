@@ -14,7 +14,7 @@ use notify::{EventKind, RecursiveMode, Watcher};
 use uiua::{
     format::{format_file, FormatConfig},
     run::RunMode,
-    Uiua, UiuaError, UiuaResult,
+    NativeSys, SysBackend, Uiua, UiuaError, UiuaResult,
 };
 
 fn main() {
@@ -64,8 +64,9 @@ fn run() -> UiuaResult {
                         if !no_format {
                             format_file(&path, &config)?;
                         }
-                        let mut rt = Uiua::default().mode(RunMode::Normal);
+                        let mut rt = Uiua::with_native_sys().mode(RunMode::Normal);
                         rt.load_file(path)?;
+                        NativeSys.teardown();
                         for value in rt.take_stack() {
                             println!("{}", value.show());
                         }
@@ -76,7 +77,10 @@ fn run() -> UiuaResult {
                 App::Test { path } => {
                     if let Some(path) = path.or_else(working_file_path) {
                         format_file(&path, &config)?;
-                        Uiua::default().mode(RunMode::Test).load_file(path)?;
+                        Uiua::with_native_sys()
+                            .mode(RunMode::Test)
+                            .load_file(path)?;
+                        NativeSys.teardown();
                         println!("No failures!");
                     } else {
                         eprintln!("{NO_UA_FILE}");

@@ -3,7 +3,6 @@ use std::{
     env,
     fs::{self, File},
     io::{stderr, stdin, stdout, Cursor, Read, Write},
-    mem::take,
     net::*,
     sync::{Mutex, OnceLock},
     thread::sleep,
@@ -210,7 +209,7 @@ pub trait SysBackend {
     fn show_image(&self, image: DynamicImage) -> Result<(), String> {
         Err("Showing images not supported in this environment".into())
     }
-    fn play_audio(&self, wav_bytes: Vec<u8>) -> Result<(), String> {
+    fn play_audio(&self, wave_bytes: Vec<u8>) -> Result<(), String> {
         Err("Playing audio not supported in this environment".into())
     }
     fn scan_line(&self) -> String {
@@ -304,6 +303,8 @@ struct GlobalNativeSys {
     files: HashMap<Handle, Buffered<File>>,
     tcp_listeners: HashMap<Handle, TcpListener>,
     tcp_sockets: HashMap<Handle, Buffered<TcpStream>>,
+    #[cfg(feature = "audio")]
+    audio_thread_handles: Vec<std::thread::JoinHandle<()>>,
 }
 
 enum SysStream<'a> {
@@ -319,6 +320,8 @@ impl Default for GlobalNativeSys {
             files: HashMap::new(),
             tcp_listeners: HashMap::new(),
             tcp_sockets: HashMap::new(),
+            #[cfg(feature = "audio")]
+            audio_thread_handles: Vec::new(),
         }
     }
 }
@@ -352,13 +355,8 @@ impl GlobalNativeSys {
 
 static NATIVE_SYS: OnceLock<Mutex<GlobalNativeSys>> = OnceLock::new();
 
-fn stdio<T>(mut f: impl FnMut(&mut GlobalNativeSys) -> T) -> T {
+fn sys<T>(f: impl FnOnce(&mut GlobalNativeSys) -> T) -> T {
     f(&mut NATIVE_SYS.get_or_init(Default::default).lock().unwrap())
-}
-
-thread_local! {
-    #[cfg(feature = "rodio")]
-    static AUDIO_STREAM: std::cell::RefCell<Option<rodio::OutputStream>> = None.into();
 }
 
 impl SysBackend for NativeSys {
@@ -385,7 +383,7 @@ impl SysBackend for NativeSys {
         Ok(paths)
     }
     fn open_file(&self, path: &str) -> Result<Handle, String> {
-        stdio(|io| {
+        sys(|io| {
             let handle = io.new_handle();
             let file = File::open(path).map_err(|e| e.to_string())?;
             io.files.insert(handle, Buffered::new_reader(file));
@@ -393,7 +391,7 @@ impl SysBackend for NativeSys {
         })
     }
     fn create_file(&self, path: &str) -> Result<Handle, String> {
-        stdio(|io| {
+        sys(|io| {
             let handle = io.new_handle();
             let file = File::create(path).map_err(|e| e.to_string())?;
             io.files.insert(handle, Buffered::new_writer(file));
@@ -413,7 +411,7 @@ impl SysBackend for NativeSys {
             }
             Handle::STDOUT => Err("Cannot read from stdout".into()),
             Handle::STDERR => Err("Cannot read from stderr".into()),
-            _ => stdio(|io| {
+            _ => sys(|io| {
                 Ok(match io.get_stream(handle)? {
                     SysStream::File(file) => {
                         let mut buf = Vec::new();
@@ -442,7 +440,7 @@ impl SysBackend for NativeSys {
             Handle::STDIN => Err("Cannot write to stdin".into()),
             Handle::STDOUT => stdout().lock().write_all(conts).map_err(|e| e.to_string()),
             Handle::STDERR => stderr().lock().write_all(conts).map_err(|e| e.to_string()),
-            _ => stdio(|io| match io.get_stream(handle)? {
+            _ => sys(|io| match io.get_stream(handle)? {
                 SysStream::File(file) => file.write_all(conts).map_err(|e| e.to_string()),
                 SysStream::TcpListener(_) => Err("Cannot write to a tcp listener".to_string()),
                 SysStream::TcpSocket(socket) => socket.write_all(conts).map_err(|e| e.to_string()),
@@ -474,54 +472,75 @@ impl SysBackend for NativeSys {
     }
     #[cfg(feature = "audio")]
     fn play_audio(&self, wav_bytes: Vec<u8>) -> Result<(), String> {
-        use rodio::Source;
-        let decoder = rodio::Decoder::new_wav(Cursor::new(wav_bytes))
-            .map_err(|e| format!("Failed to decode audio: {e}"))?;
-        let (stream, handle) = rodio::OutputStream::try_default()
-            .map_err(|e| format!("Failed to create audio output stream: {e}"))?;
-        AUDIO_STREAM.with(|s| *s.borrow_mut() = Some(stream));
-        handle
-            .play_raw(decoder.convert_samples())
-            .map_err(|e| format!("Failed to play audio: {e}"))?;
-        Ok(())
+        sys(|sys| {
+            use hodaun::*;
+            let (send, recv) = crossbeam_channel::unbounded();
+            sys.audio_thread_handles.push(std::thread::spawn(move || {
+                match default_output::<Stereo>() {
+                    Ok(mut mixer) => {
+                        send.send(Ok(())).unwrap();
+                        let source = match wav::WavSource::new(std::collections::VecDeque::from(
+                            wav_bytes,
+                        )) {
+                            Ok(source) => source,
+                            Err(e) => {
+                                send.send(Err(format!("Failed to read wav bytes: {e}")).unwrap())
+                                    .unwrap();
+                                return;
+                            }
+                        };
+                        mixer.add(source.resample());
+                        mixer.block();
+                    }
+                    Err(e) => {
+                        send.send(Err(format!(
+                            "Failed to initialize audio output stream: {e}"
+                        )
+                        .to_string()))
+                            .unwrap();
+                    }
+                }
+            }));
+            recv.recv().unwrap()
+        })
     }
     fn sleep(&self, ms: f64) -> Result<(), String> {
         sleep(Duration::from_secs_f64(ms / 1000.0));
         Ok(())
     }
     fn tcp_listen(&self, addr: &str) -> Result<Handle, String> {
-        stdio(|io| {
-            let handle = io.new_handle();
+        sys(|sys| {
+            let handle = sys.new_handle();
             let listener = TcpListener::bind(addr).map_err(|e| e.to_string())?;
-            io.tcp_listeners.insert(handle, listener);
+            sys.tcp_listeners.insert(handle, listener);
             Ok(handle)
         })
     }
     fn tcp_accept(&self, handle: Handle) -> Result<Handle, String> {
-        stdio(|io| {
-            let listener = io
+        sys(|sys| {
+            let listener = sys
                 .tcp_listeners
                 .get_mut(&handle)
                 .ok_or_else(|| "Invalid tcp listener handle".to_string())?;
             let (stream, _) = listener.accept().map_err(|e| e.to_string())?;
-            let handle = io.new_handle();
-            io.tcp_sockets.insert(handle, Buffered::new_reader(stream));
+            let handle = sys.new_handle();
+            sys.tcp_sockets.insert(handle, Buffered::new_reader(stream));
             Ok(handle)
         })
     }
     fn tcp_connect(&self, addr: &str) -> Result<Handle, String> {
-        stdio(|io| {
-            let handle = io.new_handle();
+        sys(|sys| {
+            let handle = sys.new_handle();
             let stream = TcpStream::connect(addr).map_err(|e| e.to_string())?;
-            io.tcp_sockets.insert(handle, Buffered::new_writer(stream));
+            sys.tcp_sockets.insert(handle, Buffered::new_writer(stream));
             Ok(handle)
         })
     }
     fn close(&self, handle: Handle) -> Result<(), String> {
-        stdio(|io| {
-            if io.files.remove(&handle).is_some()
-                || io.tcp_listeners.remove(&handle).is_some()
-                || io.tcp_sockets.remove(&handle).is_some()
+        sys(|sys| {
+            if sys.files.remove(&handle).is_some()
+                || sys.tcp_listeners.remove(&handle).is_some()
+                || sys.tcp_sockets.remove(&handle).is_some()
             {
                 Ok(())
             } else {
@@ -530,7 +549,10 @@ impl SysBackend for NativeSys {
         })
     }
     fn teardown(&self) {
-        stdio(take);
+        #[cfg(feature = "audio")]
+        for audio_thread_handle in sys(std::mem::take).audio_thread_handles {
+            audio_thread_handle.join().unwrap();
+        }
     }
 }
 
@@ -539,58 +561,58 @@ impl SysOp {
         match self {
             SysOp::Show => {
                 let s = env.pop(1)?.grid_string();
-                env.io.print_str(&s).map_err(|e| env.error(e))?;
-                env.io.print_str("\n").map_err(|e| env.error(e))?;
+                env.sys.print_str(&s).map_err(|e| env.error(e))?;
+                env.sys.print_str("\n").map_err(|e| env.error(e))?;
             }
             SysOp::Prin => {
                 let val = env.pop(1)?;
-                env.io
+                env.sys
                     .print_str(&val.to_string())
                     .map_err(|e| env.error(e))?;
             }
             SysOp::Print => {
                 let val = env.pop(1)?;
-                env.io
+                env.sys
                     .print_str(&val.to_string())
                     .map_err(|e| env.error(e))?;
-                env.io.print_str("\n").map_err(|e| env.error(e))?;
+                env.sys.print_str("\n").map_err(|e| env.error(e))?;
             }
             SysOp::ScanLine => {
-                let line = env.io.scan_line();
+                let line = env.sys.scan_line();
                 env.push(line);
             }
             SysOp::Args => {
-                let args = env.io.args();
+                let args = env.sys.args();
                 env.push(Array::<char>::from_iter(args));
             }
             SysOp::Var => {
                 let key = env
                     .pop(1)?
                     .as_string(env, "Augument to var must be a string")?;
-                let var = env.io.var(&key).unwrap_or_default();
+                let var = env.sys.var(&key).unwrap_or_default();
                 env.push(var);
             }
             SysOp::FOpen => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let handle = env.io.open_file(&path).map_err(|e| env.error(e))?;
+                let handle = env.sys.open_file(&path).map_err(|e| env.error(e))?;
                 env.push(handle);
             }
             SysOp::FCreate => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let handle = env.io.create_file(&path).map_err(|e| env.error(e))?;
+                let handle = env.sys.create_file(&path).map_err(|e| env.error(e))?;
                 env.push(handle.0 as f64);
             }
             SysOp::ReadStr => {
                 let count = env.pop(1)?.as_nat(env, "Count must be an integer")?;
                 let handle = env.pop(2)?.as_nat(env, "Handle must be an integer")?.into();
-                let bytes = env.io.read(handle, count).map_err(|e| env.error(e))?;
+                let bytes = env.sys.read(handle, count).map_err(|e| env.error(e))?;
                 let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
                 env.push(s);
             }
             SysOp::ReadBytes => {
                 let count = env.pop(1)?.as_nat(env, "Count must be an integer")?;
                 let handle = env.pop(2)?.as_nat(env, "Handle must be an integer")?.into();
-                let bytes = env.io.read(handle, count).map_err(|e| env.error(e))?;
+                let bytes = env.sys.read(handle, count).map_err(|e| env.error(e))?;
                 let bytes = bytes.into_iter().map(Into::into);
                 env.push(Array::<Byte>::from_iter(bytes));
             }
@@ -604,7 +626,7 @@ impl SysOp {
                     Value::Num(arr) => {
                         let delim: Vec<u8> = arr.data.iter().map(|&x| x as u8).collect();
                         let bytes = env
-                            .io
+                            .sys
                             .read_until(handle, &delim)
                             .map_err(|e| env.error(e))?;
                         let bytes: Vec<Byte> = bytes.into_iter().map(Byte::from).collect();
@@ -613,7 +635,7 @@ impl SysOp {
                     Value::Byte(arr) => {
                         let delim: Vec<u8> = arr.data.iter().filter_map(|x| x.value()).collect();
                         let bytes = env
-                            .io
+                            .sys
                             .read_until(handle, &delim)
                             .map_err(|e| env.error(e))?;
                         let bytes: Vec<Byte> = bytes.into_iter().map(Byte::from).collect();
@@ -622,7 +644,7 @@ impl SysOp {
                     Value::Char(arr) => {
                         let delim: Vec<u8> = arr.data.iter().collect::<String>().into();
                         let bytes = env
-                            .io
+                            .sys
                             .read_until(handle, &delim)
                             .map_err(|e| env.error(e))?;
                         let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
@@ -640,17 +662,17 @@ impl SysOp {
                     Value::Char(arr) => arr.data.iter().collect::<String>().into(),
                     Value::Func(_) => return Err(env.error("Cannot write function array to file")),
                 };
-                env.io.write(handle, &bytes).map_err(|e| env.error(e))?;
+                env.sys.write(handle, &bytes).map_err(|e| env.error(e))?;
             }
             SysOp::FReadAllStr => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let bytes = env.io.file_read_all(&path).map_err(|e| env.error(e))?;
+                let bytes = env.sys.file_read_all(&path).map_err(|e| env.error(e))?;
                 let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
                 env.push(s);
             }
             SysOp::FReadAllBytes => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let bytes = env.io.file_read_all(&path).map_err(|e| env.error(e))?;
+                let bytes = env.sys.file_read_all(&path).map_err(|e| env.error(e))?;
                 let bytes = bytes.into_iter().map(Into::into);
                 env.push(Array::<Byte>::from_iter(bytes));
             }
@@ -663,36 +685,36 @@ impl SysOp {
                     Value::Char(arr) => arr.data.iter().collect::<String>().into(),
                     Value::Func(_) => return Err(env.error("Cannot write function array to file")),
                 };
-                env.io
+                env.sys
                     .file_write_all(&path, &bytes)
                     .map_err(|e| env.error(e))?;
             }
             SysOp::FExists => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let exists = env.io.file_exists(&path);
+                let exists = env.sys.file_exists(&path);
                 env.push(exists);
             }
             SysOp::FListDir => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let paths = env.io.list_dir(&path).map_err(|e| env.error(e))?;
+                let paths = env.sys.list_dir(&path).map_err(|e| env.error(e))?;
                 env.push(Array::<char>::from_iter(paths));
             }
             SysOp::FIsFile => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let is_file = env.io.is_file(&path).map_err(|e| env.error(e))?;
+                let is_file = env.sys.is_file(&path).map_err(|e| env.error(e))?;
                 env.push(is_file);
             }
             SysOp::Import => {
                 let path = env.pop(1)?.as_string(env, "Import path must be a string")?;
                 let input =
-                    String::from_utf8(env.io.file_read_all(&path).map_err(|e| env.error(e))?)
+                    String::from_utf8(env.sys.file_read_all(&path).map_err(|e| env.error(e))?)
                         .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
                 env.import(&input, path.as_ref())?;
             }
             SysOp::Now => env.push(instant::now()),
             SysOp::ImRead => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let bytes = env.io.file_read_all(&path).map_err(|e| env.error(e))?;
+                let bytes = env.sys.file_read_all(&path).map_err(|e| env.error(e))?;
                 let image = image::load_from_memory(&bytes)
                     .map_err(|e| env.error(format!("Failed to read image: {}", e)))?
                     .into_rgba8();
@@ -715,45 +737,45 @@ impl SysOp {
                 };
                 let bytes =
                     value_to_image_bytes(&value, output_format).map_err(|e| env.error(e))?;
-                env.io
+                env.sys
                     .file_write_all(&path, &bytes)
                     .map_err(|e| env.error(e))?;
             }
             SysOp::ImShow => {
                 let value = env.pop(1)?;
                 let image = value_to_image(&value).map_err(|e| env.error(e))?;
-                env.io.show_image(image).map_err(|e| env.error(e))?;
+                env.sys.show_image(image).map_err(|e| env.error(e))?;
             }
             SysOp::AudioPlay => {
                 let value = env.pop(1)?;
-                let bytes = value_to_wav_bytes(&value).map_err(|e| env.error(e))?;
-                env.io.play_audio(bytes).map_err(|e| env.error(e))?;
+                let bytes = value_to_wav_bytes_f32(&value).map_err(|e| env.error(e))?;
+                env.sys.play_audio(bytes).map_err(|e| env.error(e))?;
             }
             SysOp::Sleep => {
                 let ms = env
                     .pop(1)?
                     .as_num(env, "Sleep time must be a number")?
                     .max(0.0);
-                env.io.sleep(ms).map_err(|e| env.error(e))?;
+                env.sys.sleep(ms).map_err(|e| env.error(e))?;
             }
             SysOp::TcpListen => {
                 let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
-                let handle = env.io.tcp_listen(&addr).map_err(|e| env.error(e))?;
+                let handle = env.sys.tcp_listen(&addr).map_err(|e| env.error(e))?;
                 env.push(handle);
             }
             SysOp::TcpAccept => {
                 let handle = env.pop(1)?.as_nat(env, "Handle must be an integer")?.into();
-                let new_handle = env.io.tcp_accept(handle).map_err(|e| env.error(e))?;
+                let new_handle = env.sys.tcp_accept(handle).map_err(|e| env.error(e))?;
                 env.push(new_handle);
             }
             SysOp::TcpConnect => {
                 let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
-                let handle = env.io.tcp_connect(&addr).map_err(|e| env.error(e))?;
+                let handle = env.sys.tcp_connect(&addr).map_err(|e| env.error(e))?;
                 env.push(handle);
             }
             SysOp::Close => {
                 let handle = env.pop(1)?.as_nat(env, "Handle must be an integer")?.into();
-                env.io.close(handle).map_err(|e| env.error(e))?;
+                env.sys.close(handle).map_err(|e| env.error(e))?;
             }
         }
         Ok(())
@@ -808,29 +830,21 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
     })
 }
 
-pub fn value_to_wav_bytes(audio: &Value) -> Result<Vec<u8>, String> {
-    // We use i16 samples for compatibility with Firefox (if I remember correctly)
-    let mut values: Vec<i16> = match audio {
-        Value::Num(nums) => nums
-            .data
-            .iter()
-            .map(|&f| (f.clamp(-1.0, 1.0) * i16::MAX as f64) as i16)
-            .collect(),
+pub fn value_to_sample(audio: &Value) -> Result<Vec<[f32; 2]>, String> {
+    let unrolled: Vec<f32> = match audio {
+        Value::Num(nums) => nums.data.iter().map(|&f| f as f32).collect(),
         Value::Byte(byte) => byte
             .data
             .iter()
-            .map(|&b| b.value().map_or(0, |_| i16::MAX))
+            .map(|&b| b.value().map_or(0, |b| b.min(1)) as f32)
             .collect(),
         _ => return Err("Audio must be a numeric array".into()),
     };
-    if values.is_empty() {
-        values.push(0);
-    }
-    let (length, channels) = match audio.rank() {
-        1 => (values.len(), vec![values]),
+    let (length, mut channels) = match audio.rank() {
+        1 => (unrolled.len(), vec![unrolled]),
         2 => (
             audio.row_len(),
-            values
+            unrolled
                 .chunks_exact(audio.row_len())
                 .map(|c| c.to_vec())
                 .collect(),
@@ -841,15 +855,89 @@ pub fn value_to_wav_bytes(audio: &Value) -> Result<Vec<u8>, String> {
             ))
         }
     };
+    if channels.is_empty() {
+        channels.push(vec![0.0; length]);
+    }
+    let mut sterio = Vec::new();
+    if channels.len() == 1 {
+        for sample in channels.into_iter().next().unwrap() {
+            sterio.push([sample, sample]);
+        }
+    } else {
+        for i in 0..length {
+            let left = channels[0][i];
+            let right = channels[1][i];
+            sterio.push([left, right]);
+        }
+    }
+    Ok(sterio)
+}
+
+pub fn value_to_audio_channes(audio: &Value) -> Result<Vec<Vec<f64>>, String> {
+    let interleaved: Vec<f64> = match audio {
+        Value::Num(nums) => nums.data.iter().copied().collect(),
+        Value::Byte(byte) => byte
+            .data
+            .iter()
+            .map(|&b| b.value().map_or(0, |b| b.min(1)) as f64)
+            .collect(),
+        _ => return Err("Audio must be a numeric array".into()),
+    };
+    let (length, mut channels) = match audio.rank() {
+        1 => (interleaved.len(), vec![interleaved]),
+        2 => (
+            audio.row_len(),
+            interleaved
+                .chunks_exact(audio.row_len())
+                .map(|c| c.to_vec())
+                .collect(),
+        ),
+        n => {
+            return Err(format!(
+                "Audio must be a rank 1 or 2 numeric array, but it is rank {n}"
+            ))
+        }
+    };
+    if channels.is_empty() {
+        channels.push(vec![0.0; length]);
+    }
+    Ok(channels)
+}
+
+pub fn value_to_wav_bytes(audio: &Value) -> Result<Vec<u8>, String> {
+    value_to_wav_bytes_impl(
+        audio,
+        |f| (f * i16::MAX as f64) as i16,
+        16,
+        SampleFormat::Int,
+    )
+}
+
+pub fn value_to_wav_bytes_f32(audio: &Value) -> Result<Vec<u8>, String> {
+    value_to_wav_bytes_impl(audio, |f| f as f32, 32, SampleFormat::Float)
+}
+
+fn value_to_wav_bytes_impl<T: hound::Sample + Copy>(
+    audio: &Value,
+    convert_samples: impl Fn(f64) -> T + Copy,
+    bits_per_sample: u16,
+    sample_format: SampleFormat,
+) -> Result<Vec<u8>, String> {
+    // We use i16 samples for compatibility with Firefox (if I remember correctly)
+    let channels = value_to_audio_channes(audio)?;
+    let channels: Vec<Vec<T>> = channels
+        .into_iter()
+        .map(|c| c.into_iter().map(convert_samples).collect())
+        .collect();
     let spec = WavSpec {
         channels: channels.len() as u16,
         sample_rate: 44100,
-        bits_per_sample: 16,
-        sample_format: SampleFormat::Int,
+        bits_per_sample,
+        sample_format,
     };
     let mut bytes = Cursor::new(Vec::new());
     let mut writer = WavWriter::new(&mut bytes, spec).map_err(|e| e.to_string())?;
-    for i in 0..length {
+    for i in 0..channels[0].len() {
         for channel in &channels {
             writer
                 .write_sample(channel[i])

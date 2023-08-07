@@ -1,4 +1,3 @@
-- Boolean arrays
 - Docs
   - Testing and run modes
   - Native interpreter and installation
@@ -11,7 +10,6 @@
   - Loops
     - Explain loop directions
 - Rework front page
-- Fix AudioPlay
 - Proper 404 page
 - More inverses
 - Threads

@@ -33,7 +33,7 @@ pub struct Uiua<'io> {
     // IO
     current_imports: HashSet<PathBuf>,
     imports: HashMap<PathBuf, Vec<Value>>,
-    pub(crate) io: &'io dyn SysBackend,
+    pub(crate) sys: &'io dyn SysBackend,
 }
 
 #[derive(Default, Clone)]
@@ -93,15 +93,18 @@ impl<'io> Uiua<'io> {
             current_imports: HashSet::new(),
             imports: HashMap::new(),
             mode: RunMode::Normal,
-            io: &NativeSys,
+            sys: &NativeSys,
         }
     }
     /// Create a new Uiua runtime with a custom IO backend
     pub fn with_backend(io: &'io dyn SysBackend) -> Self {
         Uiua {
-            io,
+            sys: io,
             ..Default::default()
         }
+    }
+    pub fn backend(&self) -> &'io dyn SysBackend {
+        self.sys
     }
     /// Set the [`RunMode`]
     ///

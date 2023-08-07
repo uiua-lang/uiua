@@ -449,13 +449,19 @@ impl SysBackend for NativeSys {
     }
     #[cfg(feature = "terminal_image")]
     fn show_image(&self, image: DynamicImage) -> Result<(), String> {
-        let (width, height) = if image.width() > image.height() {
-            (term_size::dimensions().map(|(w, _)| w as u32), None)
+        let (width, height) = if let Some((w, h)) = term_size::dimensions() {
+            let (tw, th) = (w as u32, h.saturating_sub(1) as u32);
+            let (iw, ih) = (image.width(), image.height() / 2);
+            let scaled_to_height = (iw * th / ih, th);
+            let scaled_to_width = (tw, ih * tw / iw);
+            let (w, h) = if scaled_to_height.0 <= tw {
+                scaled_to_height
+            } else {
+                scaled_to_width
+            };
+            (Some(w), Some(h))
         } else {
-            (
-                None,
-                term_size::dimensions().map(|(_, h)| h.saturating_sub(1) as u32),
-            )
+            (None, None)
         };
         viuer::print(
             &image,

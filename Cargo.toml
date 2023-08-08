@@ -44,7 +44,6 @@ open.version = "4"
 rand.default-features = false
 rand.features = ["small_rng"]
 rand.version = "0.8.5"
-regex = "1.9"
 serde.features = ["derive"]
 serde.optional = true
 serde.version = "1"

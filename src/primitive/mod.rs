@@ -14,7 +14,6 @@ use std::{
 
 use enum_iterator::{all, Sequence};
 use rand::prelude::*;
-use regex::Regex;
 
 use crate::{
     algorithm::loops, function::FunctionId, lex::Simple, sys::*, value::*, Uiua, UiuaError,
@@ -484,37 +483,78 @@ pub enum PrimDocFragment {
 }
 
 fn parse_doc_line_fragments(line: &str) -> Vec<PrimDocFragment> {
-    thread_local! {
-        static RE: Regex = Regex::new(r"\[(.*?)\]|`(.*?)`|\*(.*?)\*|([^\[\]`\*]+)").unwrap();
+    let mut frags = Vec::new();
+    #[derive(PartialEq, Eq)]
+    enum FragKind {
+        Text,
+        Code,
+        Emphasis,
+        Primitive,
     }
-    RE.with(|re| {
-        re.captures_iter(line)
-            .map(|c| {
-                let (mat, [s]) = c.extract();
-                if mat.starts_with('[') {
-                    if let Some(prim) =
-                        Primitive::from_name(s).or_else(|| Primitive::from_format_name(s))
-                    {
-                        PrimDocFragment::Primitive { prim, named: true }
-                    } else {
-                        PrimDocFragment::Text(mat.into())
-                    }
-                } else if mat.starts_with('`') {
-                    if let Some(prim) =
-                        Primitive::from_name(s).or_else(|| Primitive::from_format_name(s))
-                    {
-                        PrimDocFragment::Primitive { prim, named: false }
-                    } else {
-                        PrimDocFragment::Code(s.into())
-                    }
-                } else if mat.starts_with('*') {
-                    PrimDocFragment::Emphasis(s.into())
+    impl FragKind {
+        fn open(&self) -> &str {
+            match self {
+                FragKind::Text => "",
+                FragKind::Code => "`",
+                FragKind::Emphasis => "*",
+                FragKind::Primitive => "[",
+            }
+        }
+    }
+    let mut curr = String::new();
+    let mut kind = FragKind::Text;
+    for c in line.chars() {
+        match c {
+            '`' if kind == FragKind::Code => {
+                if let Some(prim) = Primitive::from_name(&curr) {
+                    frags.push(PrimDocFragment::Primitive { prim, named: false });
                 } else {
-                    PrimDocFragment::Text(s.into())
+                    frags.push(PrimDocFragment::Code(curr));
                 }
-            })
-            .collect::<Vec<_>>()
-    })
+                curr = String::new();
+                kind = FragKind::Text;
+            }
+            '`' if kind == FragKind::Text => {
+                frags.push(PrimDocFragment::Text(curr));
+                curr = String::new();
+                kind = FragKind::Code;
+            }
+            '*' if kind == FragKind::Emphasis => {
+                frags.push(PrimDocFragment::Emphasis(curr));
+                curr = String::new();
+                kind = FragKind::Text;
+            }
+            '*' if kind == FragKind::Text => {
+                frags.push(PrimDocFragment::Text(curr));
+                curr = String::new();
+                kind = FragKind::Emphasis;
+            }
+            '[' if kind == FragKind::Text => {
+                frags.push(PrimDocFragment::Text(curr));
+                curr = String::new();
+                kind = FragKind::Primitive;
+            }
+            ']' if kind == FragKind::Primitive => {
+                if let Some(prim) = Primitive::from_name(&curr) {
+                    frags.push(PrimDocFragment::Primitive { prim, named: true });
+                } else {
+                    frags.push(PrimDocFragment::Text(curr));
+                }
+                curr = String::new();
+                kind = FragKind::Text;
+            }
+            ']' if kind == FragKind::Text => {
+                frags.push(PrimDocFragment::Text(curr));
+                curr = String::new();
+            }
+            c => curr.push(c),
+        }
+    }
+    curr.insert_str(0, kind.open());
+    if !curr.is_empty() {
+        frags.push(PrimDocFragment::Text(curr));
+    }
+    frags
 }
 
 #[test]

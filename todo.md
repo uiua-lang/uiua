@@ -4,7 +4,6 @@
   - Loops
     - Explain loop directions
 - Rework front page
-- Proper 404 page
 - More inverses
 - Threads
   - Spawn threads

@@ -73,6 +73,7 @@ pub fn Site(cx: Scope) -> impl IntoView {
                         <Route path="" view=|cx| view!(cx, <MainPage/>)/>
                         <Route path="docs/:page?" view=|cx| view!(cx, <Docs/>)/>
                         <Route path="pad" view=|cx| view!(cx, <Pad/>)/>
+                        <Route path="*" view=|cx| view!(cx, <NotFound/>)/>
                     </Routes>
                 </div>
                 <br/>
@@ -141,6 +142,15 @@ fn MainText(cx: Scope) -> impl IntoView {
         <p>"Unlike most array languages, Uiua does not overload primitives depending on whether they are passed one or two arguments. Functions in Uiua can take any number of arguments, but an individual function always takes the "<i>"same"</i>" number of arguments."</p>
         <p>"This ends up meaning that Uiua requires way more glyphs to have one for every primitive. There simply are not enough keys on them keyboard to type them without using a bunch of hard-to-remeber shortcuts. Also, I think it's annoying to need special editor support to be able to write code properly."</p>
         <p>"To solve these issues, Uiua has a formatter that automatically converts ASCII names and characters into glyphs. You can type the name of a glyph (or a digraph, like "<code>">="</code>" for "<PrimCode prim=Primitive::Ge glyph_only=true/>"), and the formatter will turn it into the corresponding glyph. Alternatively, the editors embedded in this site have a button for each glyph."</p>
+    }
+}
+
+#[component]
+fn NotFound(cx: Scope) -> impl IntoView {
+    view! { cx,
+        <h1>"Page not found"</h1>
+        <Editor example="$ Where could it be?\n×101⧻⊘≠' '."/>
+        <h3><A href="/">"Go home"</A></h3>
     }
 }
 

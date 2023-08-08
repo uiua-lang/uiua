@@ -695,7 +695,7 @@ fn parse_format_fragments(s: &str) -> Vec<String> {
 }
 
 pub fn is_basically_alphabetic(c: char) -> bool {
-    c.is_alphabetic() && !"ⁿₙ".contains(c)
+    c.is_alphabetic() && !"ⁿₙηπτ".contains(c)
 }
 
 pub fn is_custom_glyph(c: char) -> bool {

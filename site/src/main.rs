@@ -88,6 +88,7 @@ pub fn MainPage(cx: Scope) -> impl IntoView {
     view! {
         cx,
         <div id="links">
+            <p><A href="/docs/install">"Installation"</A></p>
             <p><A href="/docs">"Documentation"</A></p>
             <p><A href="/pad">"Pad"</A></p>
         </div>

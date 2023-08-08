@@ -3,8 +3,6 @@
 - Function fill different form Noop
 - Docs
   - Testing and run modes
-  - Native interpreter and installation
-  - Fill semantics
   - Loops
     - Explain loop directions
 - Rework front page

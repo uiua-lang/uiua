@@ -260,6 +260,11 @@ li {
     display: flex;
 }
 
+.code-block {
+    display: block;
+    white-space: pre-wrap
+}
+
 .code-entry {
     outline: none;
     border: none;

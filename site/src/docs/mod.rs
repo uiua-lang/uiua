@@ -23,6 +23,7 @@ pub enum DocsPage {
     Search(String),
     Design,
     Technical,
+    Install,
 }
 
 impl IntoParam for DocsPage {
@@ -35,6 +36,7 @@ impl IntoParam for DocsPage {
                 "" => None,
                 "design" => Some(Self::Design),
                 "technical" => Some(Self::Technical),
+                "install" => Some(Self::Install),
                 value => Some(Self::Search(value.into())),
             })
             .ok_or_else(|| ParamsError::MissingParam(name.to_string()))
@@ -58,6 +60,7 @@ pub fn Docs(cx: Scope) -> impl IntoView {
             DocsPage::Search(search) => view!(cx, <DocsHome search=search/>).into_view(cx),
             DocsPage::Design => Design(cx).into_view(cx),
             DocsPage::Technical => Technical(cx).into_view(cx),
+            DocsPage::Install => Install(cx).into_view(cx),
         };
 
         view! { cx,
@@ -149,6 +152,7 @@ fn DocsHome(cx: Scope, #[prop(optional)] search: String) -> impl IntoView {
         }</ul>
         <h2 id="other-docs">"Other Docs"</h2>
         <ul>
+            <li><A href="/docs/install">"Installation"</A>" - how to install and use Uiua's interpreter"</li>
             <li><A href="/docs/design">"Design"</A>" - reasons for some of Uiua's design decisions"</li>
             <li><A href="/docs/technical">"Technical Details"</A>" - notes on the implementation of the Uiua interpreter and this website"</li>
         </ul>

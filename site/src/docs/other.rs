@@ -104,3 +104,30 @@ pub fn Technical(cx: Scope) -> impl IntoView {
         <p>"The online editor is implemented as a "<code>"contenteditable"</code>" div with lots of custom behaviors."</p>
     }
 }
+
+#[component]
+pub fn Install(cx: Scope) -> impl IntoView {
+    view! { cx,
+        <h2>"Installing Uiua"</h2>
+        <p>"Currently, the native Uiua interpreter must be built from source."</p>
+        <p>"You will need a "<a href="https://www.rust-lang.org/tools/install">"Rust"</a>" installation, as well as Git."</p>
+        <p>"Once you have those, run the following commands:"</p>
+        <code class="code-block">
+r#"git clone https://github.com/uiua-lang/uiua
+cd uiua
+cargo install --path ."#
+        </code>
+
+        <h2>"Basic Usage"</h2>
+        <p>"Running just "<code>"uiua"</code>" will display the help message if there are no "<code>".ua"</code>" files in the directory."</p>
+        <p>"You can initialize a "<code>"main.ua"</code>" with "<code>"uiua init"</code>"."</p>
+        <p>"Once a "<code>".ua"</code>" file exists, running "<code>"uiua"</code>" will begin watching the directory for changes. If you edit and save a "<code>".ua"</code>" file, the interpreter will automatically format and run it."</p>
+        <p>"You should configure you editor so that it automatically reloads files if they change on disk. This will allow you to see the formatted file as soon as it is saved."</p>
+        <p>"Use "<code>"uiua run"</code>" to format and run a file without watching it."</p>
+        <p>"Use "<code>"uiua fmt"</code>" to format a file without running it."</p>
+        <p>"Use "<code>"uiua test"</code>" to run tests."</p>
+
+        <h2>"Font"</h2>
+        <p>"The Uiua glyphs were chosen to be compatible specifically with "<a href="https://dejavu-fonts.github.io/Download.html">"DejaVu Sans Mono"</a>". It is recommended that you install this font to get the best experience with Uiua."</p>
+    }
+}

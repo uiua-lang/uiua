@@ -99,7 +99,19 @@ use crate::{
 
 #[cfg(feature = "lsp")]
 mod server {
-    use tower_lsp::{jsonrpc::Result, lsp_types::*, *};
+    use super::*;
+
+    use crate::{
+        format::{format_str, FormatConfig},
+        lex::Loc,
+    };
+
+    use dashmap::DashMap;
+    use tower_lsp::{
+        jsonrpc::{Error, Result},
+        lsp_types::*,
+        *,
+    };
 
     pub fn run_server() {
         tokio::runtime::Builder::new_current_thread()
@@ -109,14 +121,29 @@ mod server {
                 let stdin = tokio::io::stdin();
                 let stdout = tokio::io::stdout();
 
-                let (service, socket) = LspService::new(|client| Backend { client });
+                let (service, socket) = LspService::new(|client| Backend {
+                    client,
+                    docs: DashMap::new(),
+                });
                 Server::new(stdin, stdout, socket).serve(service).await;
             });
     }
 
-    #[derive(Debug)]
     struct Backend {
         client: Client,
+        docs: DashMap<Url, Doc>,
+    }
+
+    struct Doc {
+        code: String,
+        spans: Vec<Sp<SpanKind>>,
+    }
+
+    impl Doc {
+        fn new(code: String) -> Self {
+            let spans = spans(&code);
+            Self { code, spans }
+        }
     }
 
     #[tower_lsp::async_trait]
@@ -124,8 +151,27 @@ mod server {
         async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
             Ok(InitializeResult {
                 capabilities: ServerCapabilities {
+                    text_document_sync: Some(TextDocumentSyncCapability::Kind(
+                        TextDocumentSyncKind::FULL,
+                    )),
                     hover_provider: Some(HoverProviderCapability::Simple(true)),
-                    completion_provider: Some(CompletionOptions::default()),
+                    document_formatting_provider: Some(OneOf::Left(true)),
+                    semantic_tokens_provider: Some(
+                        SemanticTokensServerCapabilities::SemanticTokensOptions(
+                            SemanticTokensOptions {
+                                legend: SemanticTokensLegend {
+                                    token_types: vec![
+                                        SemanticTokenType::STRING,
+                                        SemanticTokenType::NUMBER,
+                                        SemanticTokenType::COMMENT,
+                                    ],
+                                    ..Default::default()
+                                },
+                                full: Some(SemanticTokensFullOptions::Bool(true)),
+                                ..Default::default()
+                            },
+                        ),
+                    ),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -134,28 +180,158 @@ mod server {
 
         async fn initialized(&self, _: InitializedParams) {
             self.client
-                .log_message(MessageType::INFO, "server initialized!")
+                .log_message(MessageType::INFO, "Uiua language server initialized")
                 .await;
+        }
+
+        async fn did_open(&self, param: DidOpenTextDocumentParams) {
+            self.docs
+                .insert(param.text_document.uri, Doc::new(param.text_document.text));
+        }
+
+        async fn did_change(&self, params: DidChangeTextDocumentParams) {
+            self.docs.insert(
+                params.text_document.uri,
+                Doc::new(params.content_changes[0].text.clone()),
+            );
+        }
+
+        async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
+            let doc = if let Some(doc) = self
+                .docs
+                .get(&params.text_document_position_params.text_document.uri)
+            {
+                doc
+            } else {
+                return Ok(None);
+            };
+            let (line, col) = lsp_pos_to_uiua(params.text_document_position_params.position);
+            for sp in &doc.spans {
+                if sp.span.contains_line_col(line, col) {
+                    match sp.value {
+                        SpanKind::Primitive(prim) => {
+                            if let Some(name) = prim.name() {
+                                return Ok(Some(Hover {
+                                    contents: HoverContents::Scalar(MarkedString::String(
+                                        name.into(),
+                                    )),
+                                    range: Some(uiua_span_to_lsp(&sp.span)),
+                                }));
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            Ok(None)
+        }
+
+        async fn formatting(
+            &self,
+            params: DocumentFormattingParams,
+        ) -> Result<Option<Vec<TextEdit>>> {
+            self.client
+                .log_message(
+                    MessageType::INFO,
+                    format!("Formatting {}", params.text_document.uri),
+                )
+                .await;
+            let doc = if let Some(doc) = self.docs.get(&params.text_document.uri) {
+                doc
+            } else {
+                return Ok(None);
+            };
+            let formatted = format_str(
+                &doc.code,
+                &FormatConfig {
+                    multiline_indent: params.options.tab_size as usize,
+                    ..Default::default()
+                },
+            )
+            .map_err(|_| Error::parse_error())?;
+            let line = formatted.lines().count() as u32;
+            let column = formatted
+                .lines()
+                .last()
+                .map(|s| s.len() as u32)
+                .unwrap_or(0);
+            let range = Range::new(Position::new(0, 0), Position::new(line, column));
+            Ok(Some(vec![TextEdit {
+                range,
+                new_text: formatted,
+            }]))
+        }
+
+        async fn semantic_tokens_full(
+            &self,
+            params: SemanticTokensParams,
+        ) -> Result<Option<SemanticTokensResult>> {
+            self.client
+                .log_message(
+                    MessageType::INFO,
+                    format!("Semantic tokens {}", params.text_document.uri),
+                )
+                .await;
+            let doc = if let Some(doc) = self.docs.get(&params.text_document.uri) {
+                doc
+            } else {
+                return Ok(None);
+            };
+            let mut tokens = Vec::new();
+            for sp in &doc.spans {
+                let token_type = match sp.value {
+                    SpanKind::String => 0,
+                    SpanKind::Number => 1,
+                    SpanKind::Comment => 2,
+                    _ => continue,
+                };
+                let span = &sp.span;
+                let start = uiua_loc_to_lsp(span.start);
+                tokens.push(SemanticToken {
+                    delta_line: start.line,
+                    delta_start: start.character,
+                    length: (span.end.char_pos - span.start.char_pos) as u32,
+                    token_type,
+                    token_modifiers_bitset: 0,
+                });
+            }
+            Ok(Some(SemanticTokensResult::Tokens(SemanticTokens {
+                result_id: None,
+                data: tokens,
+            })))
+        }
+
+        async fn semantic_tokens_full_delta(
+            &self,
+            params: SemanticTokensDeltaParams,
+        ) -> Result<Option<SemanticTokensFullDeltaResult>> {
+            self.client
+                .log_message(
+                    MessageType::INFO,
+                    format!("Semantic tokens delta {}", params.text_document.uri),
+                )
+                .await;
+            Ok(None)
         }
 
         async fn shutdown(&self) -> Result<()> {
             Ok(())
         }
+    }
 
-        async fn completion(&self, _: CompletionParams) -> Result<Option<CompletionResponse>> {
-            Ok(Some(CompletionResponse::Array(vec![
-                CompletionItem::new_simple("Hello".to_string(), "Some detail".to_string()),
-                CompletionItem::new_simple("Bye".to_string(), "More detail".to_string()),
-            ])))
-        }
+    fn lsp_pos_to_uiua(pos: Position) -> (usize, usize) {
+        (pos.line as usize + 1, pos.character as usize + 1)
+    }
 
-        async fn hover(&self, _: HoverParams) -> Result<Option<Hover>> {
-            Ok(Some(Hover {
-                contents: HoverContents::Scalar(MarkedString::String(
-                    "You're hovering!".to_string(),
-                )),
-                range: None,
-            }))
-        }
+    fn uiua_loc_to_lsp(loc: Loc) -> Position {
+        Position::new(loc.line as u32 - 1, loc.col as u32 - 1)
+    }
+
+    fn uiua_locs_to_lsp(start: Loc, end: Loc) -> Range {
+        Range::new(uiua_loc_to_lsp(start), uiua_loc_to_lsp(end))
+    }
+
+    fn uiua_span_to_lsp(span: &CodeSpan) -> Range {
+        uiua_locs_to_lsp(span.start, span.end)
     }
 }

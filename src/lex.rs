@@ -149,6 +149,15 @@ impl CodeSpan {
     pub fn as_str(&self) -> &str {
         &self.input[self.start.byte_pos..self.end.byte_pos]
     }
+    pub fn contains_line_col(&self, line: usize, col: usize) -> bool {
+        if self.start.line == self.end.line {
+            self.start.line == line && (self.start.col..=self.end.col).contains(&col)
+        } else {
+            (self.start.line..=self.end.line).contains(&line)
+                && (self.start.line < line || col >= self.start.col)
+                && (self.end.line > line || col <= self.end.col)
+        }
+    }
 }
 
 impl PartialEq for CodeSpan {

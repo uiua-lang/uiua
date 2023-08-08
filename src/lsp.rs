@@ -4,6 +4,7 @@ pub enum SpanKind {
     String,
     Number,
     Comment,
+    Strand,
 }
 
 pub fn spans(input: &str) -> Vec<Sp<SpanKind>> {
@@ -54,7 +55,23 @@ fn words_spans(words: Vec<Sp<Word>>) -> Vec<Sp<SpanKind>> {
                     spans.push(word.span.sp(SpanKind::Primitive(prim)));
                 }
             }
-            Word::Strand(items) => spans.extend(words_spans(items)),
+            Word::Strand(items) => {
+                let mut prev_span: Option<CodeSpan> = None;
+                for item in words_spans(items) {
+                    if let Some(prev) = prev_span {
+                        spans.push(
+                            CodeSpan {
+                                start: prev.end,
+                                end: item.span.start,
+                                ..word.span.clone()
+                            }
+                            .sp(SpanKind::Strand),
+                        )
+                    }
+                    prev_span = Some(item.span.clone());
+                    spans.push(item);
+                }
+            }
             Word::Array(items) => spans.extend(items.into_iter().flat_map(words_spans)),
             Word::Func(f) => spans.extend(f.body.into_iter().flat_map(words_spans)),
             Word::Dfn(dfn) => spans.extend(dfn.body.into_iter().flat_map(words_spans)),

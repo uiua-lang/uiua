@@ -1044,6 +1044,7 @@ fn set_code_html(id: &str, code: &str) {
             SpanKind::Number => "number-literal-span",
             SpanKind::String => "string-literal-span",
             SpanKind::Comment => "comment-span",
+            SpanKind::Strand => "strand-span",
         };
 
         html.push_str(&if let SpanKind::Primitive(prim) = kind {

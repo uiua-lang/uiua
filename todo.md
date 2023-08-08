@@ -1,4 +1,3 @@
-- Function composition inlining
 - Docs
   - Testing and run modes
   - Loops

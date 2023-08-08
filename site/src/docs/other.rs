@@ -4,9 +4,9 @@ use uiua::primitive::Primitive;
 use crate::{code::PrimCode, editor::Editor};
 
 #[component]
-pub fn Design(cx: Scope) -> impl IntoView {
+pub fn Design() -> impl IntoView {
     use Primitive::*;
-    view! { cx,
+    view! {
         <h1>"Design"</h1>
         <p>"This page explains the reasons for some of Uiua's design decisions."</p>
         <p>"It serves as a "<a href="https://news.knowledia.com/US/en/articles/more-software-projects-need-defenses-of-design-85ea9e23ffd85f5fde5a2d3d42001393cbce169a">"defense of design"</a>"."</p>
@@ -77,8 +77,8 @@ pub fn Design(cx: Scope) -> impl IntoView {
 }
 
 #[component]
-pub fn Technical(cx: Scope) -> impl IntoView {
-    view! { cx,
+pub fn Technical() -> impl IntoView {
+    view! {
         <h1>"Technical Details"</h1>
 
         <h2>"The Interpreter"</h2>
@@ -106,8 +106,8 @@ pub fn Technical(cx: Scope) -> impl IntoView {
 }
 
 #[component]
-pub fn Install(cx: Scope) -> impl IntoView {
-    view! { cx,
+pub fn Install() -> impl IntoView {
+    view! {
         <h2>"Installing Uiua"</h2>
         <p>"Currently, the native Uiua interpreter must be built from source."</p>
         <p>"You will need a "<a href="https://www.rust-lang.org/tools/install">"Rust"</a>" installation, as well as Git."</p>

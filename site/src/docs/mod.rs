@@ -49,21 +49,21 @@ pub struct DocsParams {
 }
 
 #[component]
-pub fn Docs(cx: Scope) -> impl IntoView {
+pub fn Docs() -> impl IntoView {
     move || {
-        let Ok(params) = use_params::<DocsParams>(cx).get() else {
-            return view!(cx, <DocsHome/>).into_view(cx);
+        let Ok(params) = use_params::<DocsParams>().get() else {
+            return view!( <DocsHome/>).into_view();
         };
         let page = params.page;
         let page_view = match page {
-            DocsPage::Tutorial(tut) => view!(cx, <Tutorial page=tut/>).into_view(cx),
-            DocsPage::Search(search) => view!(cx, <DocsHome search=search/>).into_view(cx),
-            DocsPage::Design => Design(cx).into_view(cx),
-            DocsPage::Technical => Technical(cx).into_view(cx),
-            DocsPage::Install => Install(cx).into_view(cx),
+            DocsPage::Tutorial(tut) => view!( <Tutorial page=tut/>).into_view(),
+            DocsPage::Search(search) => view!( <DocsHome search=search/>).into_view(),
+            DocsPage::Design => Design().into_view(),
+            DocsPage::Technical => Technical().into_view(),
+            DocsPage::Install => Install().into_view(),
         };
 
-        view! { cx,
+        view! {
             <A href="/docs">"Back to Docs Home"</A>
             <br/>
             <br/>
@@ -72,7 +72,7 @@ pub fn Docs(cx: Scope) -> impl IntoView {
             <br/>
             <A href="/docs">"Back to Docs Home"</A>
         }
-        .into_view(cx)
+        .into_view()
     }
 }
 
@@ -82,20 +82,20 @@ fn scroll_to_docs_functions(options: &ScrollIntoViewOptions) {
 }
 
 #[component]
-fn DocsHome(cx: Scope, #[prop(optional)] search: String) -> impl IntoView {
+fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
     let search = urlencoding::decode(&search)
         .map(|s| s.into_owned())
         .unwrap_or_default();
-    let (search, _) = create_signal(cx, search);
-    let (results, set_result) = create_signal(cx, None);
-    let (clear_button, set_clear_button) = create_signal(cx, None);
-    let (old_allowed, set_old_allowed) = create_signal(cx, Allowed::all());
+    let (search, _) = create_signal(search);
+    let (results, set_result) = create_signal(None);
+    let (clear_button, set_clear_button) = create_signal(None);
+    let (old_allowed, set_old_allowed) = create_signal(Allowed::all());
     let update_search = move |text: &str| {
         // Update clear button
         set_clear_button.set(if text.is_empty() {
             None
         } else {
-            // let (redirect, set_redirect) = create_signal(cx, None);
+            // let (redirect, set_redirect) = create_signal( None);
             let clear_search = move |_| {
                 let search_input = element::<HtmlInputElement>("function-search");
                 search_input.set_value("");
@@ -104,7 +104,7 @@ fn DocsHome(cx: Scope, #[prop(optional)] search: String) -> impl IntoView {
                         .unwrap(),
                 );
             };
-            Some(view!(cx, {}<button on:click=clear_search>"✕"</button>).into_view(cx))
+            Some(view!( {}<button on:click=clear_search>"✕"</button>).into_view())
         });
 
         // Derive allowed primitives
@@ -119,7 +119,7 @@ fn DocsHome(cx: Scope, #[prop(optional)] search: String) -> impl IntoView {
         set_result.set(Some(
             if allowed.classes.is_empty() && allowed.prims.is_empty() {
                 // No Results
-                view!(cx, <p>"No results"</p>).into_view(cx)
+                view!( <p>"No results"</p>).into_view()
             } else if allowed.prims.len() == 1
                 && [PrimClass::all().count(), 1].contains(&allowed.classes.len())
             {
@@ -128,10 +128,10 @@ fn DocsHome(cx: Scope, #[prop(optional)] search: String) -> impl IntoView {
                 scroll_to_docs_functions(
                     ScrollIntoViewOptions::new().behavior(ScrollBehavior::Instant),
                 );
-                view!(cx, <PrimDocs prim=prim/>).into_view(cx)
+                view!( <PrimDocs prim=prim/>).into_view()
             } else {
                 // Multiple results
-                allowed.table(cx).into_view(cx)
+                allowed.table().into_view()
             },
         ));
     };
@@ -142,12 +142,12 @@ fn DocsHome(cx: Scope, #[prop(optional)] search: String) -> impl IntoView {
         update_search(&elem.value());
     };
 
-    view! { cx,
+    view! {
         <h1>"Documentation"</h1>
         <h2 id="tutorial">"Tutorial"</h2>
         <p>"These are meant to be read in order:"</p>
         <ul>{ all::<TutorialPage>()
-            .map(|p| view!(cx, <li><A href={format!("/docs/{}", p.path())}>{p.title()}</A></li>))
+            .map(|p| view!( <li><A href={format!("/docs/{}", p.path())}>{p.title()}</A></li>))
             .collect::<Vec<_>>()
         }</ul>
         <h2 id="other-docs">"Other Docs"</h2>
@@ -301,7 +301,7 @@ impl Allowed {
         }
         Self { classes, prims }
     }
-    fn table(&self, cx: Scope) -> impl IntoView {
+    fn table(&self) -> impl IntoView {
         let mut table_cells = Vec::new();
         for class in PrimClass::all() {
             if !self.classes.contains(&class) {
@@ -324,7 +324,7 @@ impl Allowed {
             let of_class: Vec<_> = Primitive::all()
                 .filter(|p| self.prims.contains(p) && p.class() == class && p.name().is_some())
                 .map(|p| {
-                    view! { cx, <PrimCode prim=p/> }
+                    view! {  <PrimCode prim=p/> }
                 })
                 .collect();
             if of_class.is_empty() {
@@ -355,7 +355,7 @@ impl Allowed {
                 PrimClass::Constant => ("Constants", "Push a constant value onto the stack"),
                 PrimClass::Sys => ("System", "Interact with the system"),
             };
-            table_cells.push(view! { cx,
+            table_cells.push(view! {
                 <td id=id style="vertical-align: top;"><div>
                     <h3>{ header }</h3>
                     <p>{ description }</p>
@@ -367,10 +367,8 @@ impl Allowed {
         let mut rows: Vec<_> = Vec::new();
         let mut class_iter = table_cells.into_iter();
         while let Some(first) = class_iter.next() {
-            rows.push(
-                view!(cx, <tr>{once(first).chain(class_iter.next()).collect::<Vec<_>>()}</tr>),
-            );
+            rows.push(view!( <tr>{once(first).chain(class_iter.next()).collect::<Vec<_>>()}</tr>));
         }
-        view!(cx, <table>{ rows }</table>)
+        view!( <table>{ rows }</table>)
     }
 }

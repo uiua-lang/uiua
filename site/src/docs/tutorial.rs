@@ -37,17 +37,17 @@ impl TutorialPage {
 }
 
 #[component]
-pub fn Tutorial(cx: Scope, page: TutorialPage) -> impl IntoView {
+pub fn Tutorial(page: TutorialPage) -> impl IntoView {
     let tut_view = match page {
-        TutorialPage::Basic => view! { cx, <TutorialBasic/> }.into_view(cx),
-        TutorialPage::Math => view! { cx, <TutorialMath/> }.into_view(cx),
-        TutorialPage::Arrays => view! { cx, <TutorialArrays/> }.into_view(cx),
-        TutorialPage::Types => view! { cx, <TutorialTypes/> }.into_view(cx),
-        TutorialPage::Bindings => view! { cx, <TutorialBindings/> }.into_view(cx),
-        TutorialPage::Functions => view! { cx, <TutorialFunctions/> }.into_view(cx),
-        TutorialPage::Modules => view! { cx, <TutorialModules/> }.into_view(cx),
+        TutorialPage::Basic => view! {  <TutorialBasic/> }.into_view(),
+        TutorialPage::Math => view! {  <TutorialMath/> }.into_view(),
+        TutorialPage::Arrays => view! {  <TutorialArrays/> }.into_view(),
+        TutorialPage::Types => view! {  <TutorialTypes/> }.into_view(),
+        TutorialPage::Bindings => view! {  <TutorialBindings/> }.into_view(),
+        TutorialPage::Functions => view! {  <TutorialFunctions/> }.into_view(),
+        TutorialPage::Modules => view! {  <TutorialModules/> }.into_view(),
     };
-    view! { cx,
+    view! {
         <TutorialNav page=page/>
         { tut_view }
         <br/>
@@ -65,25 +65,25 @@ impl IntoParam for TutorialPage {
 }
 
 #[component]
-fn TutorialNav(cx: Scope, page: TutorialPage) -> impl IntoView {
+fn TutorialNav(page: TutorialPage) -> impl IntoView {
     let next = move || {
         page.next()
             .map(|p| {
-                view!(cx, <div><A href=format!("/docs/{}", p.path())>{p.title()}</A>" 〉"</div>)
-                    .into_view(cx)
+                view!( <div><A href=format!("/docs/{}", p.path())>{p.title()}</A>" 〉"</div>)
+                    .into_view()
             })
-            .unwrap_or_else(|| view!(cx, <div/>).into_view(cx))
+            .unwrap_or_else(|| view!( <div/>).into_view())
     };
     let previous = move || {
         page.previous()
             .map(|p| {
-                view!(cx, <div>"〈 "<A href=format!("/docs/{}", p.path())>{p.title()}</A></div>)
-                    .into_view(cx)
+                view!( <div>"〈 "<A href=format!("/docs/{}", p.path())>{p.title()}</A></div>)
+                    .into_view()
             })
-            .unwrap_or_else(|| view!(cx, <div/>).into_view(cx))
+            .unwrap_or_else(|| view!( <div/>).into_view())
     };
 
-    view! { cx,
+    view! {
         <div class="tutorial-nav">
             { previous }
             { next }
@@ -92,13 +92,13 @@ fn TutorialNav(cx: Scope, page: TutorialPage) -> impl IntoView {
 }
 
 #[component]
-fn TutorialBasic(cx: Scope) -> impl IntoView {
+fn TutorialBasic() -> impl IntoView {
     use Primitive::*;
 
     let primitive_table: Vec<_> = Primitive::all()
         .filter_map(|p| {
             if let (Some(name), Some(ascii), Some(_)) = (p.name(), p.ascii(), p.unicode()) {
-                Some(view! { cx,
+                Some(view! {
                     <tr>
                         <td><code>{ name }</code></td>
                         <td><code>{ ascii.to_string() }</code></td>
@@ -111,7 +111,7 @@ fn TutorialBasic(cx: Scope) -> impl IntoView {
         })
         .collect();
 
-    view! { cx,
+    view! {
         <h1>"Basic Stack Operations and Formatting"</h1>
         <h2 id="the-stack">"The Stack"</h2>
         <p>"In Uiua, all operations operate on a global stack. Lines of code are evaluated from right-to-left, top-to-bottom"</p>
@@ -191,15 +191,15 @@ fn TutorialBasic(cx: Scope) -> impl IntoView {
     }
 }
 
-fn maybe_code<T: Display>(cx: Scope, val: Option<T>) -> impl IntoView {
+fn maybe_code<T: Display>(val: Option<T>) -> impl IntoView {
     if let Some(val) = val {
-        view! { cx, <code>{ val.to_string() }</code> }.into_view(cx)
+        view! {  <code>{ val.to_string() }</code> }.into_view()
     } else {
-        view! { cx, "" }.into_view(cx)
+        view! {  "" }.into_view()
     }
 }
 
-fn primitive_rows(cx: Scope, prims: impl IntoIterator<Item = Primitive>) -> Vec<impl IntoView> {
+fn primitive_rows(prims: impl IntoIterator<Item = Primitive>) -> Vec<impl IntoView> {
     prims
         .into_iter()
         .map(|p| {
@@ -208,11 +208,11 @@ fn primitive_rows(cx: Scope, prims: impl IntoIterator<Item = Primitive>) -> Vec<
                 .ascii()
                 .map(|s| s.to_string())
                 .or_else(|| glyph.filter(|c| c.is_ascii()).map(|c| c.to_string()));
-            view! { cx,
+            view! {
                 <tr>
                     <td><PrimCode prim=p/></td>
-                    <td>{maybe_code(cx, ascii)}</td>
-                    <td>{view!(cx, <code>{p.args()}</code>)}</td>
+                    <td>{maybe_code( ascii)}</td>
+                    <td>{view!( <code>{p.args()}</code>)}</td>
                 </tr>
             }
         })
@@ -220,22 +220,16 @@ fn primitive_rows(cx: Scope, prims: impl IntoIterator<Item = Primitive>) -> Vec<
 }
 
 #[component]
-fn TutorialMath(cx: Scope) -> impl IntoView {
+fn TutorialMath() -> impl IntoView {
     use Primitive::*;
-    let math_table = primitive_rows(
-        cx,
-        [
-            Add, Sub, Mul, Div, Mod, Pow, Log, Neg, Abs, Ceil, Floor, Round, Sqrt, Sign,
-        ],
-    );
-    let comp_table = primitive_rows(
-        cx,
-        [
-            Eq, Ne, Lt, Gt, Le, Ge, Min, Max, Floor, Ceil, Round, Sin, Atan,
-        ],
-    );
+    let math_table = primitive_rows([
+        Add, Sub, Mul, Div, Mod, Pow, Log, Neg, Abs, Ceil, Floor, Round, Sqrt, Sign,
+    ]);
+    let comp_table = primitive_rows([
+        Eq, Ne, Lt, Gt, Le, Ge, Min, Max, Floor, Ceil, Round, Sin, Atan,
+    ]);
 
-    view! { cx,
+    view! {
         <h1>"Math and Comparison"</h1>
         <p>"Uiua supports all the basic math operations as well as comparison, min/max, and rounding."</p>
         <div id="ascii-glyphs" style="display: flex; justify-content: space-evenly;">
@@ -279,9 +273,9 @@ fn TutorialMath(cx: Scope) -> impl IntoView {
 }
 
 #[component]
-fn TutorialArrays(cx: Scope) -> impl IntoView {
+fn TutorialArrays() -> impl IntoView {
     use Primitive::*;
-    view! { cx,
+    view! {
         <h1>"Arrays"</h1>
         <p>"Uiua is, first and foremost, an array language. The only composite data type is the multimensional array. Arrays have a lot of nice properties, and the language's built-in functions are designed to make it easy to work with them. If you've only ever programmed in non-array languages, then this will be a completely foreign paradigm. In most array languages, most data structures and control flow are replaced with operations on arrays."</p>
 
@@ -350,9 +344,9 @@ fn TutorialArrays(cx: Scope) -> impl IntoView {
 }
 
 #[component]
-fn TutorialTypes(cx: Scope) -> impl IntoView {
+fn TutorialTypes() -> impl IntoView {
     use Primitive::*;
-    view! { cx,
+    view! {
         <h1>"Types"</h1>
         <p>"Every value in Uiua is an array. However, different arrays on the stack can have different "<em>"types"</em>" of items. Every element of an array is always the same type. Unlike some other array programming languages, Uiua arrays cannot have elements of different types."</p>
         <p>"There are only three types of arrays:"</p>
@@ -409,9 +403,9 @@ fn TutorialTypes(cx: Scope) -> impl IntoView {
 }
 
 #[component]
-fn TutorialBindings(cx: Scope) -> impl IntoView {
+fn TutorialBindings() -> impl IntoView {
     use Primitive::*;
-    view! { cx,
+    view! {
         <h1>"Bindings"</h1>
         <p>"Bindings are global names that can be given to Uiua values. They are denoted with "<code>"←"</code>", which the formatter will convert from "<code>"="</code>" when appropriate."</p>
         <Editor example="a = 3\nb = 5\n+ a b" help={&["", "Try running to format the ="]}/>
@@ -441,9 +435,9 @@ fn TutorialBindings(cx: Scope) -> impl IntoView {
 }
 
 #[component]
-fn TutorialFunctions(cx: Scope) -> impl IntoView {
+fn TutorialFunctions() -> impl IntoView {
     use Primitive::*;
-    view! { cx,
+    view! {
         <h1>"Modifiers and Functions"</h1>
 
         <h2 id="modifiers">"Modifiers"</h2>
@@ -494,15 +488,15 @@ fn TutorialFunctions(cx: Scope) -> impl IntoView {
 }
 
 #[component]
-fn TutorialModules(cx: Scope) -> impl IntoView {
+fn TutorialModules() -> impl IntoView {
     use Primitive::*;
-    view! { cx,
+    view! {
         <h1>"Modules"</h1>
         <p>"Modules are a way to organize your code in Uiua."</p>
 
-        <h2 id="scopes">"Scopes"</h2>
-        <p>"Scopes are a way to create a temporary namespace for bindings that are only used in a small part of your code. Only the names that you want to escape a scope are usable outside it."</p>
-        <p>"Scopes begin and end with triple hyphens "<code>"---"</code>". All names declared inside a scope are not available outside of it."</p>
+        <h2 id="scopes">"s"</h2>
+        <p>"s are a way to create a temporary namespace for bindings that are only used in a small part of your code. Only the names that you want to escape a scope are usable outside it."</p>
+        <p>"s begin and end with triple hyphens "<code>"---"</code>". All names declared inside a scope are not available outside of it."</p>
         <Editor example="---\nfoo ← 5\n---\nfoo # foo is not available here"/>
         <p>"Values pushed to the stack inside a scope remain on the stack after the scope ends."</p>
         <p>"You can bind values that were pushed to the stack inside an ended scope by using a "<code>"←"</code>" with nothing on the right side."</p>

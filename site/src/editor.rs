@@ -1,4 +1,10 @@
-use std::{cell::RefCell, iter, mem::replace, rc::Rc, time::Duration};
+use std::{
+    cell::{Cell, RefCell},
+    iter,
+    mem::replace,
+    rc::Rc,
+    time::Duration,
+};
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use image::ImageOutputFormat;
@@ -30,10 +36,13 @@ pub enum EditorMode {
     Multiple,
 }
 
+thread_local! {
+    static ID: Cell<u64> = Cell::new(0);
+}
+
 #[component]
 #[allow(clippy::needless_lifetimes)]
 pub fn Editor<'a>(
-    cx: Scope,
     #[prop(optional)] example: &'a str,
     #[prop(optional)] examples: &'a [&'a str],
     #[prop(optional)] size: EditorSize,
@@ -41,7 +50,11 @@ pub fn Editor<'a>(
     #[prop(optional)] mode: EditorMode,
     #[prop(optional)] progress_lines: bool,
 ) -> impl IntoView {
-    let id = format!("{:?}", cx.id);
+    let id = ID.with(|id| {
+        let i = id.get();
+        id.set(i + 1);
+        i
+    });
     let examples = Some(example)
         .filter(|ex| !ex.is_empty() || examples.is_empty())
         .into_iter()
@@ -82,11 +95,11 @@ pub fn Editor<'a>(
     };
     let code_height_em = code_max_lines as f32 * 1.2;
 
-    let (code_id, _) = create_signal(cx, format!("code{id}"));
-    let (output_id, _) = create_signal(cx, format!("output{id}"));
-    let (image_id, _) = create_signal(cx, format!("image{id}"));
-    let (audio_id, _) = create_signal(cx, format!("audio{id}"));
-    let (glyph_doc_id, _) = create_signal(cx, format!("glyphdoc{id}"));
+    let (code_id, _) = create_signal(format!("code{id}"));
+    let (output_id, _) = create_signal(format!("output{id}"));
+    let (image_id, _) = create_signal(format!("image{id}"));
+    let (audio_id, _) = create_signal(format!("audio{id}"));
+    let (glyph_doc_id, _) = create_signal(format!("glyphdoc{id}"));
 
     let code_element = move || -> HtmlDivElement { element(&code_id.get()) };
     let output_element = move || -> HtmlDivElement { element(&output_id.get()) };
@@ -95,20 +108,19 @@ pub fn Editor<'a>(
     let glyph_doc_element = move || -> HtmlDivElement { element(&glyph_doc_id.get()) };
 
     // Track line count
-    let (line_count, set_line_count) = create_signal(cx, 1);
+    let (line_count, set_line_count) = create_signal(1);
 
-    let (initial_code, set_initial_code) = create_signal(
-        cx,
-        Some(examples.get(0).cloned().unwrap_or_else(|| example.into())),
-    );
+    let (initial_code, set_initial_code) = create_signal(Some(
+        examples.get(0).cloned().unwrap_or_else(|| example.into()),
+    ));
 
-    let (example, set_example) = create_signal(cx, 0);
-    let (output, set_output) = create_signal(cx, String::new());
+    let (example, set_example) = create_signal(0);
+    let (output, set_output) = create_signal(String::new());
 
     let code_text = move || code_text(&code_id.get());
     let get_code_cursor = move || get_code_cursor_impl(&code_id.get());
-    let (copied_link, set_copied_link) = create_signal(cx, false);
-    let (copied_code, set_copied_code) = create_signal(cx, false);
+    let (copied_link, set_copied_link) = create_signal(false);
+    let (copied_code, set_copied_code) = create_signal(false);
 
     /// Handles set the code in the editor, setting the cursor, and managing the history
     struct State {
@@ -230,7 +242,7 @@ pub fn Editor<'a>(
         }
         .into(),
     });
-    let (state, _) = create_signal(cx, state);
+    let (state, _) = create_signal(state);
     let state = move || state.get();
 
     // Run the code
@@ -587,7 +599,7 @@ pub fn Editor<'a>(
     };
 
     // Glyph hover doc
-    let (glyph_doc, set_glyph_doc) = create_signal(cx, String::new());
+    let (glyph_doc, set_glyph_doc) = create_signal(String::new());
     let onmouseleave = move |_| {
         _ = glyph_doc_element().style().set_property("display", "none");
     };
@@ -606,19 +618,16 @@ pub fn Editor<'a>(
                 .flatten()
                 .unwrap_or_default();
             let title = format!("{}\n{}", p.name().unwrap_or_default(), extra);
-            let (redirect, set_redirect) = create_signal(cx, None);
+            let (redirect, set_redirect) = create_signal(None);
             let onclick = move |event: MouseEvent| {
                 if event.ctrl_key() {
                     // Redirect to the docs page
                     set_redirect.set(Some(
-                        Redirect(
-                            cx,
-                            RedirectProps {
-                                path: format!("/docs/{}", p.name().unwrap_or_default()),
-                                options: None,
-                            },
-                        )
-                        .into_view(cx),
+                        Redirect(RedirectProps {
+                            path: format!("/docs/{}", p.name().unwrap_or_default()),
+                            options: None,
+                        })
+                        .into_view(),
                     ));
                 } else {
                     replace_code(&p.to_string());
@@ -632,7 +641,7 @@ pub fn Editor<'a>(
             };
             let class = format!("glyph-button glyph-title {}", prim_class(p));
             Some(
-                view! { cx,
+                view! {
                     { move || redirect.get() }
                     <button
                         class=class
@@ -641,7 +650,7 @@ pub fn Editor<'a>(
                         on:mouseover=onmouseover
                         on:mouseleave=onmouseleave>{ text }</button>
                 }
-                .into_view(cx),
+                .into_view(),
             )
         })
         .collect();
@@ -660,10 +669,10 @@ pub fn Editor<'a>(
     ] {
         let onclick = move |_| replace_code(glyph);
         glyph_buttons.push(
-            view! { cx,
+            view! {
                 <button class="glyph-button" title=title on:click=onclick>{glyph}</button>
             }
-            .into_view(cx),
+            .into_view(),
         );
     }
 
@@ -681,13 +690,10 @@ pub fn Editor<'a>(
     };
 
     // Show or hide the glyph buttons
-    let (show_glyphs, set_show_glyphs) = create_signal(
-        cx,
-        match size {
-            EditorSize::Small => false,
-            EditorSize::Medium | EditorSize::Pad => true,
-        },
-    );
+    let (show_glyphs, set_show_glyphs) = create_signal(match size {
+        EditorSize::Small => false,
+        EditorSize::Medium | EditorSize::Pad => true,
+    });
 
     // Glyphs toggle button
     let show_glyphs_text = move || if show_glyphs.get() { "↥" } else { "↧" };
@@ -727,10 +733,10 @@ pub fn Editor<'a>(
     set_timeout(move || run(false), Duration::from_millis(0));
 
     // Line numbers
-    let line_numbers = move |cx| {
+    let line_numbers = move || {
         (0..line_count.get().max(1))
             .map(|i| {
-                view!(cx, <div>
+                view!( <div>
                     <span class="code-span line-number">{i + 1}</span>
                 </div>)
             })
@@ -778,7 +784,7 @@ pub fn Editor<'a>(
     };
 
     // Render
-    view! { cx,
+    view! {
         <div id="editor-wrapper">
             <div id="editor">
                 <div style=glyph_buttons_style>
@@ -812,7 +818,7 @@ pub fn Editor<'a>(
                         </div>
                         <div class="code">
                             <div class="line-numbers">
-                                { move || line_numbers(cx) }
+                                { line_numbers }
                             </div>
                             // The text entry area
                             <div
@@ -850,7 +856,7 @@ pub fn Editor<'a>(
                 </div>
             </div>
             <div id="editor-help">
-                { help.iter().map(|s| view! { cx, <p>{*s}</p> }).collect::<Vec<_>>() }
+                { help.iter().map(|s| view! {  <p>{*s}</p> }).collect::<Vec<_>>() }
             </div>
         </div>
     }

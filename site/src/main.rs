@@ -21,26 +21,26 @@ pub fn main() {
         .remove_child(&element("top"))
         .unwrap();
 
-    mount_to_body(|cx| view!(cx, <Site/>));
+    mount_to_body(|| view!( <Site/>));
 }
 
 #[component]
-pub fn Site(cx: Scope) -> impl IntoView {
+pub fn Site() -> impl IntoView {
     // Choose a random subtitle
     let subtitles = [
-        "A stack-oriented array programming language".into_view(cx),
-        "An array-oriented stack programming language".into_view(cx),
-        "A programming language for point-free enjoyers".into_view(cx),
-        "A programming language for variable dislikers".into_view(cx),
-        "What if APL was a FORTH?".into_view(cx),
-        "What if FORTH was an APL?".into_view(cx),
-        view!(cx, "Check out "<a href="https://arraycast.com/">"The Array Cast"</a>).into_view(cx),
-        "Isn't a stack a sort of array?".into_view(cx),
-        "It's got um...I um...arrays".into_view(cx),
-        view!(cx, <a href="https://youtu.be/seVSlKazsNk">"Point-Free or Die"</a>).into_view(cx),
-        "Notation as a tool of thot".into_view(cx),
-        "Do you like this page Marshall?".into_view(cx),
-        "Conor Dyadic Hookstra".into_view(cx),
+        "A stack-oriented array programming language".into_view(),
+        "An array-oriented stack programming language".into_view(),
+        "A programming language for point-free enjoyers".into_view(),
+        "A programming language for variable dislikers".into_view(),
+        "What if APL was a FORTH?".into_view(),
+        "What if FORTH was an APL?".into_view(),
+        view!( "Check out "<a href="https://arraycast.com/">"The Array Cast"</a>).into_view(),
+        "Isn't a stack a sort of array?".into_view(),
+        "It's got um...I um...arrays".into_view(),
+        view!( <a href="https://youtu.be/seVSlKazsNk">"Point-Free or Die"</a>).into_view(),
+        "Notation as a tool of thot".into_view(),
+        "Do you like this page Marshall?".into_view(),
+        "Conor Dyadic Hookstra".into_view(),
     ];
     let local_storage = window().local_storage().unwrap().unwrap();
     let mut visits: usize = local_storage
@@ -55,7 +55,7 @@ pub fn Site(cx: Scope) -> impl IntoView {
         .set_item("visits", &visits.to_string())
         .unwrap();
 
-    view! { cx,
+    view! {
         <Router>
             <main>
                 <div id="top">
@@ -70,10 +70,10 @@ pub fn Site(cx: Scope) -> impl IntoView {
                         </div>
                     </div>
                     <Routes>
-                        <Route path="" view=|cx| view!(cx, <MainPage/>)/>
-                        <Route path="docs/:page?" view=|cx| view!(cx, <Docs/>)/>
-                        <Route path="pad" view=|cx| view!(cx, <Pad/>)/>
-                        <Route path="*" view=|cx| view!(cx, <NotFound/>)/>
+                        <Route path="" view=|| view!( <MainPage/>)/>
+                        <Route path="docs/:page?" view=|| view!( <Docs/>)/>
+                        <Route path="pad" view=|| view!( <Pad/>)/>
+                        <Route path="*" view=|| view!( <NotFound/>)/>
                     </Routes>
                 </div>
                 <br/>
@@ -85,9 +85,9 @@ pub fn Site(cx: Scope) -> impl IntoView {
 }
 
 #[component]
-pub fn MainPage(cx: Scope) -> impl IntoView {
+pub fn MainPage() -> impl IntoView {
     view! {
-        cx,
+
         <div id="links">
             <p><A href="/docs/install">"Installation"</A></p>
             <p><A href="/docs">"Documentation"</A></p>
@@ -108,14 +108,14 @@ pub fn MainPage(cx: Scope) -> impl IntoView {
 }
 
 #[component]
-fn MainText(cx: Scope) -> impl IntoView {
+fn MainText() -> impl IntoView {
     let borat = |_| {
         if let Ok(audio) = HtmlAudioElement::new_with_src("/weewah.mp3") {
             _ = audio.play();
         }
     };
 
-    view! { cx,
+    view! {
         <p>"Uiua ("<i>"wee-wuh "</i><button on:click=borat class="sound-button">"🔉"</button>") is a stack-oriented array programming language with a focus on tacit code (code without named values). Its semantics and primitives (and this site) are largely inspired by "<a href="https://mlochbaum.github.io/BQN/">"BQN"</a>", but it combines the array paradigm with the stack-oriented paradigm to make writing point-free code more workable."</p>
         <hr/>
         <h3>"How is Uiua like other array languages?"</h3>
@@ -146,8 +146,8 @@ fn MainText(cx: Scope) -> impl IntoView {
 }
 
 #[component]
-fn NotFound(cx: Scope) -> impl IntoView {
-    view! { cx,
+fn NotFound() -> impl IntoView {
+    view! {
         <h1>"Page not found"</h1>
         <Editor example="$ Where could it be?\n×101⧻⊘≠' '."/>
         <h3><A href="/">"Go home"</A></h3>
@@ -158,7 +158,6 @@ mod code {
     use super::*;
     #[component]
     pub fn PrimCode(
-        cx: Scope,
         prim: Primitive,
         #[prop(optional)] glyph_only: bool,
         #[prop(optional)] hide_docs: bool,
@@ -185,7 +184,7 @@ mod code {
             (None, true) => None,
             (None, false) => prim.name().map(Into::into),
         };
-        view!(cx, <A href=href class="prim-code-a">
+        view!( <A href=href class="prim-code-a">
             <code class="prim-code" title=title><span class=class>{ symbol }</span>{name}</code>
         </A>)
     }

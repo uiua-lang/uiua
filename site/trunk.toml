@@ -2,4 +2,3 @@
 dist = "../docs"
 filehash = false
 public_url = "/"
-release = true

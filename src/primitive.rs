@@ -731,7 +731,10 @@ primitive!(
     /// Here, we negate 5, subtract 2, then negate again.
     /// ex: ⍜¯(-2) 5
     ///
-    /// One interesting use of `under` is to round a number to a certain number of decimal places.
+    /// If you want to insert a value somewhere in the middle of an array, you can use [under], [rotate], and [join].
+    /// ex: ⍜(↻3)(⊂π)1_2_3_4_5
+    ///
+    /// You can use [under] with [round] to round to a specific number of decimal places.
     /// ex: ⍜(×ⁿ4 10)⁅ π
     ///
     /// [under][transpose] is sometimes useful.

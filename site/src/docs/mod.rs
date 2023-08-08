@@ -1,6 +1,5 @@
-mod design;
+mod other;
 mod primitive;
-mod technical;
 mod tutorial;
 
 use std::{collections::HashSet, iter::once};
@@ -14,9 +13,8 @@ use wasm_bindgen::JsCast;
 use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoViewOptions};
 
 use crate::{code::*, element};
-use design::*;
+use other::*;
 use primitive::*;
-use technical::*;
 use tutorial::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

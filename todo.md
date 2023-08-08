@@ -1,3 +1,5 @@
+- Function composition inlining
+- Make pick work with index rank > 1
 - Function fill different form Noop
 - Docs
   - Testing and run modes
@@ -12,7 +14,7 @@
   - Spawn threads
   - Parallelize loops
 - Optimizations
-  - Windowed reduce
+  - Windowed reduce?
 - Multimedia
   - Sound input
   - Webcam input?

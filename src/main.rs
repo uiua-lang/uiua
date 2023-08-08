@@ -1,3 +1,6 @@
+#[cfg(not(feature = "binary"))]
+compile_error!("To compile the uiua interpreter binary, you must enable the `binary` feature flag");
+
 use std::{
     env, fs,
     io::{self, stderr, Write},

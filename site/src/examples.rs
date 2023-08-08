@@ -31,7 +31,6 @@ Z ← ⊟/- ⁿ2 ~×2 /×.⇌
 ⇌↶⍉⊞⊟.×4 ÷~-÷2,⇡. 300
 <2 √/+ ⁿ2;~⍥(+Z ~,)20 ↯~0△.";
 const CHART: &str = "⊞(⊡ ⌊×5rand ·_._∴_↥_⍋ ;;).⇡15";
-const ERRORS: &str = "# Change this ↓ to a 0\n!\"Oh no bad!\" 1\nprint \"All is well\"";
 
 pub const EXAMPLES: &[&str] = &[
     UIUA, FORMAT, D3, LOGO, AVG, CHORD, QUADRATIC, STRIPES, PALINDROME, RULE_30, PRIMES,

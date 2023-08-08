@@ -62,7 +62,7 @@ pub mod not {
         1.0 - a
     }
     pub fn byte(a: Byte) -> Byte {
-        a.map(|a| 1u8.saturating_sub(a))
+        a.map(|a| 1 - a)
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot negate {a}"))
@@ -105,7 +105,7 @@ pub mod sign {
         }
     }
     pub fn byte(a: Byte) -> Byte {
-        a.map(|a| (a != 0) as u8)
+        a.map(|a| a.signum())
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the sign of {a}"))
@@ -443,7 +443,7 @@ pub mod max {
         }
     }
     pub fn byte_byte(a: Byte, b: Byte) -> Byte {
-        a.op(b, u8::max)
+        a.op(b, i16::max)
     }
     pub fn char_char(a: char, b: char) -> char {
         if a.is_fill_value() || b.is_fill_value() {
@@ -473,7 +473,7 @@ pub mod min {
         }
     }
     pub fn byte_byte(a: Byte, b: Byte) -> Byte {
-        a.op(b, u8::min)
+        a.op(b, i16::min)
     }
     pub fn char_char(a: char, b: char) -> char {
         if a.is_fill_value() || b.is_fill_value() {

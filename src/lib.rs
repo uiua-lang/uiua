@@ -25,51 +25,40 @@ use std::{
     rc::Rc,
 };
 
+use array::ArrayValue;
+
 pub use {error::*, run::Uiua, sys::*};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Byte {
-    Value(u8),
-    Fill,
-}
+pub struct Byte(pub i16);
 
 impl Byte {
-    pub fn map(self, f: impl FnOnce(u8) -> u8) -> Self {
-        match self {
-            Byte::Value(x) => Byte::Value(f(x)),
-            Byte::Fill => Byte::Fill,
+    pub fn map(self, f: impl FnOnce(i16) -> i16) -> Self {
+        if self.is_fill_value() {
+            self
+        } else {
+            Byte(f(self.0))
         }
     }
-    pub fn op(self, other: Self, f: impl FnOnce(u8, u8) -> u8) -> Self {
-        match (self, other) {
-            (Byte::Value(x), Byte::Value(y)) => Byte::Value(f(x, y)),
-            _ => Byte::Fill,
+    pub fn op(self, other: Self, f: impl FnOnce(i16, i16) -> i16) -> Self {
+        if self.is_fill_value() || other.is_fill_value() {
+            Byte::fill_value()
+        } else {
+            Byte(f(self.0, other.0))
         }
     }
-    pub fn op_or_value(self, other: Self, f: impl FnOnce(u8, u8) -> u8) -> Self {
-        match (self, other) {
-            (Byte::Value(x), Byte::Value(y)) => Byte::Value(f(x, y)),
-            (Byte::Value(x), Byte::Fill) => Byte::Value(x),
-            (Byte::Fill, Byte::Value(y)) => Byte::Value(y),
-            _ => Byte::Fill,
+    pub fn or(self, default: i16) -> i16 {
+        if self.is_fill_value() {
+            default
+        } else {
+            self.0
         }
     }
-    pub fn or(self, default: u8) -> u8 {
-        match self {
-            Byte::Value(x) => x,
-            Byte::Fill => default,
-        }
-    }
-    pub fn map_or<T>(self, default: T, f: impl FnOnce(u8) -> T) -> T {
-        match self {
-            Byte::Value(x) => f(x),
-            Byte::Fill => default,
-        }
-    }
-    pub fn value(self) -> Option<u8> {
-        match self {
-            Byte::Value(x) => Some(x),
-            Byte::Fill => None,
+    pub fn value(self) -> Option<i16> {
+        if self.is_fill_value() {
+            None
+        } else {
+            Some(self.0)
         }
     }
 }
@@ -82,40 +71,42 @@ impl fmt::Debug for Byte {
 
 impl fmt::Display for Byte {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Byte::Value(x) => write!(f, "{x}"),
-            Byte::Fill => write!(f, " "),
+        if self.is_fill_value() {
+            write!(f, "_")
+        } else {
+            write!(f, "{}", self.0)
         }
     }
 }
 
 impl From<Byte> for f64 {
     fn from(b: Byte) -> Self {
-        match b {
-            Byte::Value(x) => x as f64,
-            Byte::Fill => f64::NAN,
+        if b.is_fill_value() {
+            f64::fill_value()
+        } else {
+            b.0 as f64
         }
     }
 }
 
 impl From<bool> for Byte {
     fn from(x: bool) -> Self {
-        Byte::Value(x as u8)
+        Byte(x as i16)
     }
 }
 
 impl From<u8> for Byte {
     fn from(x: u8) -> Self {
-        Byte::Value(x)
+        Byte(x as i16)
     }
 }
 
 impl From<f64> for Byte {
     fn from(x: f64) -> Self {
         if x.is_nan() {
-            Byte::Fill
+            Byte::fill_value()
         } else {
-            Byte::Value(x as u8)
+            Byte(x as i16)
         }
     }
 }

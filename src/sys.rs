@@ -639,7 +639,11 @@ impl SysOp {
                         env.push(bytes);
                     }
                     Value::Byte(arr) => {
-                        let delim: Vec<u8> = arr.data.iter().filter_map(|x| x.value()).collect();
+                        let delim: Vec<u8> = arr
+                            .data
+                            .iter()
+                            .filter_map(|x| x.value().map(|b| b as u8))
+                            .collect();
                         let bytes = env
                             .sys
                             .read_until(handle, &delim)
@@ -664,7 +668,11 @@ impl SysOp {
                 let handle = env.pop(2)?.as_nat(env, "Handle must be an integer")?.into();
                 let bytes: Vec<u8> = match data {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
-                    Value::Byte(arr) => arr.data.iter().filter_map(|x| x.value()).collect(),
+                    Value::Byte(arr) => arr
+                        .data
+                        .iter()
+                        .filter_map(|x| x.value().map(|b| b as u8))
+                        .collect(),
                     Value::Char(arr) => arr.data.iter().collect::<String>().into(),
                     Value::Func(_) => return Err(env.error("Cannot write function array to file")),
                 };
@@ -687,7 +695,11 @@ impl SysOp {
                 let data = env.pop(2)?;
                 let bytes: Vec<u8> = match data {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
-                    Value::Byte(arr) => arr.data.iter().filter_map(|x| x.value()).collect(),
+                    Value::Byte(arr) => arr
+                        .data
+                        .iter()
+                        .filter_map(|x| x.value().map(|b| b as u8))
+                        .collect(),
                     Value::Char(arr) => arr.data.iter().collect::<String>().into(),
                     Value::Func(_) => return Err(env.error("Cannot write function array to file")),
                 };
@@ -806,7 +818,11 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
             .iter()
             .map(|f| (*f * 255.0).floor() as u8)
             .collect(),
-        Value::Byte(bytes) => bytes.data.iter().map(|&b| b.or(0).min(1) * 255).collect(),
+        Value::Byte(bytes) => bytes
+            .data
+            .iter()
+            .map(|&b| b.or(0).min(1) as u8 * 255)
+            .collect(),
         _ => return Err("Image must be a numeric array".into()),
     };
     #[allow(clippy::match_ref_pats)]

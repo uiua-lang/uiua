@@ -228,11 +228,14 @@ impl Value {
                         env.error(format!("{requirement}, but its rank is {}", bytes.rank()))
                     );
                 }
-                match bytes.data[0] {
-                    Byte::Value(b) => b as usize,
-                    Byte::Fill => {
-                        return Err(env.error(format!("{requirement}, but it is a fill byte")))
+                if let Some(b) = bytes.data[0].value() {
+                    if b >= 0 {
+                        b as usize
+                    } else {
+                        return Err(env.error(format!("{requirement}, but it is negative")));
                     }
+                } else {
+                    return Err(env.error(format!("{requirement}, but it is a fill byte")));
                 }
             }
             value => {
@@ -260,11 +263,10 @@ impl Value {
                         env.error(format!("{requirement}, but its rank is {}", bytes.rank()))
                     );
                 }
-                match bytes.data[0] {
-                    Byte::Value(b) => b as isize,
-                    Byte::Fill => {
-                        return Err(env.error(format!("{requirement}, but it is a fill byte")))
-                    }
+                if let Some(b) = bytes.data[0].value() {
+                    b as isize
+                } else {
+                    return Err(env.error(format!("{requirement}, but it is a fill byte")));
                 }
             }
             value => {
@@ -288,11 +290,10 @@ impl Value {
                         env.error(format!("{requirement}, but its rank is {}", bytes.rank()))
                     );
                 }
-                match bytes.data[0] {
-                    Byte::Value(b) => b as f64,
-                    Byte::Fill => {
-                        return Err(env.error(format!("{requirement}, but it is a fill byte")))
-                    }
+                if let Some(b) = bytes.data[0].value() {
+                    b as f64
+                } else {
+                    return Err(env.error(format!("{requirement}, but it is a fill byte")));
                 }
             }
             value => {
@@ -339,7 +340,7 @@ impl Value {
                 }
                 let mut result = Vec::with_capacity(bytes.row_count());
                 for &byte in bytes.data() {
-                    let num = byte.map_or(f64::fill_value(), |b| b as f64);
+                    let num = byte.value().map(|b| b as f64).unwrap_or(f64::fill_value());
                     if !test(num) {
                         return Err(env.error(requirement));
                     }
@@ -374,7 +375,10 @@ impl Value {
                 if a.rank() != 1 {
                     return Err(env.error(format!("{requirement}, but its rank is {}", a.rank())));
                 }
-                a.data.into_iter().filter_map(Byte::value).collect()
+                a.data
+                    .into_iter()
+                    .filter_map(|b| b.value().map(|b| b as u8))
+                    .collect()
             }
             Value::Num(a) => {
                 if a.rank() != 1 {
@@ -441,7 +445,7 @@ impl FromIterator<usize> for Value {
 
 impl From<bool> for Value {
     fn from(b: bool) -> Self {
-        Value::from(Byte::Value(b as u8))
+        Value::from(Byte(b as i16))
     }
 }
 

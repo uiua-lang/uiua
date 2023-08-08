@@ -6,7 +6,7 @@ use crate::{
     cowslice::cowslice,
     primitive::Primitive,
     value::Value,
-    Uiua, UiuaResult,
+    Byte, Uiua, UiuaResult,
 };
 
 pub fn reduce(env: &mut Uiua) -> UiuaResult {
@@ -269,8 +269,8 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
             Primitive::Sub => xs.table(ys, Sub::sub),
             Primitive::Mul => xs.table(ys, Mul::mul),
             Primitive::Div => xs.table(ys, Div::div),
-            Primitive::Max => xs.table(ys, f64::max),
             Primitive::Min => xs.table(ys, f64::min),
+            Primitive::Max => xs.table(ys, f64::max),
             Primitive::Join | Primitive::Couple => xs.table_join_or_couple(ys),
             _ => return generic_table(f, Value::Num(xs), Value::Num(ys), env),
         }),
@@ -279,8 +279,8 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
             Primitive::Sub => env.push(xs.table(ys, |a, b| f64::from(a) - f64::from(b))),
             Primitive::Mul => env.push(xs.table(ys, |a, b| f64::from(a) * f64::from(b))),
             Primitive::Div => env.push(xs.table(ys, |a, b| f64::from(a) / f64::from(b))),
-            Primitive::Max => env.push(xs.table(ys, |a, b| a.op(b, u8::max))),
-            Primitive::Min => env.push(xs.table(ys, |a, b| a.op(b, u8::min))),
+            Primitive::Min => env.push(xs.table(ys, |a, b| Byte(i16::min(a.0, b.0)))),
+            Primitive::Max => env.push(xs.table(ys, |a, b| a.op(b, i16::min))),
             Primitive::Join | Primitive::Couple => env.push(xs.table_join_or_couple(ys)),
             _ => generic_table(f, Value::Byte(xs), Value::Byte(ys), env)?,
         },

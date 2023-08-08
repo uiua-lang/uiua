@@ -259,6 +259,9 @@ impl Value {
                             "Index must be an array of integers, but {n} is not an integer"
                         )));
                     }
+                    if n.is_fill_value() {
+                        return Err(env.error("Index may not contain fill values"));
+                    }
                     index_data.push(n as isize);
                 }
                 (arr.shape, index_data)
@@ -266,10 +269,10 @@ impl Value {
             Value::Byte(arr) => {
                 let mut index_data = Vec::with_capacity(arr.flat_len());
                 for n in arr.data {
-                    match n {
-                        Byte::Value(n) => index_data.push(n as isize),
-                        Byte::Fill => return Err(env.error("Index may not contain fill values")),
+                    if n.is_fill_value() {
+                        return Err(env.error("Index may not contain fill values"));
                     }
+                    index_data.push(n.0 as isize);
                 }
                 (arr.shape, index_data)
             }
@@ -905,11 +908,11 @@ impl<T: ArrayValue> Array<T> {
         'elem: for elem in elems.rows() {
             for of in of.rows() {
                 if elem == of {
-                    result_data.push(Byte::Value(1));
+                    result_data.push(Byte(1));
                     continue 'elem;
                 }
             }
-            result_data.push(Byte::Value(0));
+            result_data.push(Byte(0));
         }
         let shape = self.shape.iter().cloned().take(1).collect();
         let res = Array::new(shape, result_data.into());

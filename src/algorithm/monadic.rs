@@ -415,7 +415,7 @@ impl Array<f64> {
         // Big endian
         for n in nats {
             for i in 0..max_bits {
-                new_data.push(Byte::Value((n & (1 << i) != 0) as u8));
+                new_data.push(Byte::from(n & (1 << i) != 0));
             }
         }
         let mut shape = self.shape.clone();
@@ -429,13 +429,14 @@ impl Array<f64> {
 impl Array<Byte> {
     pub fn inverse_bits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         let mut bools = Vec::with_capacity(self.data.len());
-        for b in &self.data {
-            match b {
-                Byte::Value(b) if *b > 1 => {
-                    return Err(env.error("Array must be a list of booleans"))
-                }
-                Byte::Value(b) => bools.push(*b != 0),
-                Byte::Fill => bools.push(false),
+        for &b in &self.data {
+            if b.0 > 1 {
+                return Err(env.error("Array must be a list of booleans"));
+            }
+            if b.is_fill_value() {
+                bools.push(false);
+            } else {
+                bools.push(b.0 != 0);
             }
         }
         if self.rank() == 0 {

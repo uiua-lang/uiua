@@ -452,10 +452,10 @@ impl ArrayValue for Byte {
         Ord::cmp(self, other)
     }
     fn fill_value() -> Self {
-        Byte::Fill
+        Byte(i16::MIN)
     }
     fn is_fill_value(&self) -> bool {
-        *self == Byte::Fill
+        self.0 == i16::MIN
     }
 }
 

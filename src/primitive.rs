@@ -338,8 +338,15 @@ primitive!(
     (1, Shape, MonadicArray, ("shape", '△')),
     /// Make an array of [0, x)
     ///
+    /// The [rank] of the input must be `0` or `1`.
     /// ex: ⇡5
     /// ex: ⇡2_3
+    ///
+    /// When creating ranges with upper bounds that a [rank]`1` (lists), [pick]ing the generated range array from an array with the [shape] of the input will yield that array.
+    /// ex:     [1_2_3 4_5_6]
+    ///   :    △[1_2_3 4_5_6]
+    ///   :   ⇡△[1_2_3 4_5_6]
+    ///   : ⊡⇡△.[1_2_3 4_5_6]
     (1, Range, MonadicArray, ("range", '⇡')),
     /// The first row of an array
     ///
@@ -485,14 +492,22 @@ primitive!(
     /// ex: ⍛1_2_3 .↙5↯3_3⇡9
     /// ex: ⍛1_2_3_4 .↙5↯3_3⇡9
     (2, Fill, DyadicArray, ("fill", '⍛')),
-    /// Index a single row or element from an array
+    /// Index a row or elements from an array
     ///
+    /// An index with [rank] `0` or `1` will pick a single row or element from an array.
     /// ex: ⊡ 2 [8 3 9 2 0]
     /// ex: ⊡ 1_1 .[1_2_3 4_5_6]
+    ///
+    /// If the index's [rank] is `2` or greater, then multiple rows or elements will be picked.
+    /// ex: ⊡ [1_2 0_1] [1_2_3 4_5_6]
+    ///
+    /// For index [rank] `2` or greater, it should hold that `pick``range``shape``duplicate``x` is equivalent to `x`.
+    /// ex: ⊡⇡△. [1_2_3 4_5_6]
     (2, Pick, DyadicArray, ("pick", '⊡')),
-    /// Select multiple elements from an array
+    /// Select multiple rows from an array
     ///
     /// ex: ⊏ 4_2 [8 3 9 2 0]
+    /// ex: ⊏ 0_2_1_1 [1_2_3 4_5_6 7_8_9]
     (2, Select, DyadicArray, ("select", '⊏')),
     /// Take the first n elements of an array
     /// This is the opposite of [drop].

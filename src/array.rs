@@ -143,10 +143,22 @@ impl<T: ArrayValue> Array<T> {
         T: Into<U>,
         U: Clone,
     {
+        self.convert_with(Into::into)
+    }
+    pub fn convert_with<U: Clone>(self, f: impl FnMut(T) -> U) -> Array<U> {
         Array {
             shape: self.shape,
-            data: self.data.into_iter().map(Into::into).collect(),
+            data: self.data.into_iter().map(f).collect(),
         }
+    }
+    pub fn try_convert_with<U: Clone, E>(
+        self,
+        f: impl FnMut(T) -> Result<U, E>,
+    ) -> Result<Array<U>, E> {
+        Ok(Array {
+            shape: self.shape,
+            data: self.data.into_iter().map(f).collect::<Result<_, _>>()?,
+        })
     }
     pub fn convert_ref<U>(&self) -> Array<U>
     where
@@ -548,7 +560,7 @@ impl<T: ArrayValue> Arrayish for (&[usize], &mut [T]) {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct FormatShape<'a>(&'a [usize]);
+pub struct FormatShape<'a>(pub &'a [usize]);
 
 impl<'a> fmt::Debug for FormatShape<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

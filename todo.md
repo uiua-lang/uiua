@@ -1,6 +1,4 @@
 - Function composition inlining
-- Make pick work with index rank > 1
-- Function fill different form Noop
 - Docs
   - Testing and run modes
   - Loops

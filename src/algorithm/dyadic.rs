@@ -249,19 +249,84 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
+    pub(crate) fn into_shaped_indices(self, env: &Uiua) -> UiuaResult<(Vec<usize>, Vec<isize>)> {
+        Ok(match self {
+            Value::Num(arr) => {
+                let mut index_data = Vec::with_capacity(arr.flat_len());
+                for n in arr.data {
+                    if n.fract() != 0.0 {
+                        return Err(env.error(format!(
+                            "Index must be an array of integers, but {n} is not an integer"
+                        )));
+                    }
+                    index_data.push(n as isize);
+                }
+                (arr.shape, index_data)
+            }
+            Value::Byte(arr) => {
+                let mut index_data = Vec::with_capacity(arr.flat_len());
+                for n in arr.data {
+                    match n {
+                        Byte::Value(n) => index_data.push(n as isize),
+                        Byte::Fill => return Err(env.error("Index may not contain fill values")),
+                    }
+                }
+                (arr.shape, index_data)
+            }
+            value => {
+                return Err(env.error(format!(
+                    "Index must be an array of integers, not {}",
+                    value.type_name()
+                )))
+            }
+        })
+    }
     pub fn pick(self, from: Self, env: &Uiua) -> UiuaResult<Self> {
-        let index = self.as_indices(env, "Index must be a list of integers")?;
+        let (index_shape, index_data) = self.into_shaped_indices(env)?;
         Ok(match from {
-            Value::Num(a) => Value::Num(a.pick(&index, env)?),
-            Value::Byte(a) => Value::Byte(a.pick(&index, env)?),
-            Value::Char(a) => Value::Char(a.pick(&index, env)?),
-            Value::Func(a) => Value::Func(a.pick(&index, env)?),
+            Value::Num(a) => Value::Num(a.pick_shaped(&index_shape, &index_data, env)?),
+            Value::Byte(a) => Value::Byte(a.pick_shaped(&index_shape, &index_data, env)?),
+            Value::Char(a) => Value::Char(a.pick_shaped(&index_shape, &index_data, env)?),
+            Value::Func(a) => Value::Func(a.pick_shaped(&index_shape, &index_data, env)?),
         })
     }
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn pick(mut self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
+    fn pick_shaped(
+        &self,
+        index_shape: &[usize],
+        index_data: &[isize],
+        env: &Uiua,
+    ) -> UiuaResult<Self> {
+        if index_shape.len() <= 1 {
+            self.pick(index_data, env)
+        } else {
+            let (shape, data) = self.pick_shaped_impl(index_shape, index_data, env)?;
+            Ok(Array::new(shape, data.into()))
+        }
+    }
+    fn pick_shaped_impl(
+        &self,
+        index_shape: &[usize],
+        index_data: &[isize],
+        env: &Uiua,
+    ) -> UiuaResult<(Vec<usize>, Vec<T>)> {
+        println!("index shape: {:?}", index_shape);
+        println!("array shape: {:?}", self.shape);
+        let index_row_len = index_shape[1..].iter().product();
+        let mut new_data =
+            Vec::with_capacity(index_shape[..index_shape.len() - 1].iter().product());
+        for index_row in index_data.chunks(index_row_len) {
+            let row = self.pick_shaped(&index_shape[1..], index_row, env)?;
+            new_data.extend_from_slice(&row.data);
+        }
+        let mut new_shape = index_shape[0..index_shape.len() - 1].to_vec();
+        new_shape.extend_from_slice(&self.shape[*index_shape.last().unwrap()..]);
+        println!("new shape: {:?}", new_shape);
+        Ok((new_shape, new_data))
+    }
+    pub fn pick(&self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
         if index.len() > self.rank() {
             return Err(env.error(format!(
                 "Cannot pick from rank {} array with index of length {}",
@@ -278,25 +343,20 @@ impl<T: ArrayValue> Array<T> {
                 )));
             }
         }
-        self.data.modify(|data| {
-            for (d, (&s, &i)) in self.shape.iter().zip(index).enumerate() {
-                let row_len: usize = self.shape[d + 1..].iter().product();
-                let i = if i >= 0 {
-                    i as usize
-                } else {
-                    (s as isize + i) as usize
-                };
-                let start = i * row_len;
-                let end = start + row_len;
-                *data = take(data)
-                    .into_iter()
-                    .skip(start)
-                    .take(end - start)
-                    .collect();
-            }
-        });
-        self.shape.drain(..index.len());
-        Ok(self)
+        let mut picked = self.data.clone();
+        for (d, (&s, &i)) in self.shape.iter().zip(index).enumerate() {
+            let row_len: usize = self.shape[d + 1..].iter().product();
+            let i = if i >= 0 {
+                i as usize
+            } else {
+                (s as isize + i) as usize
+            };
+            let start = i * row_len;
+            let end = start + row_len;
+            picked = picked.slice(start..end);
+        }
+        let shape = self.shape[index.len()..].to_vec();
+        Ok((shape, picked).into())
     }
 }
 

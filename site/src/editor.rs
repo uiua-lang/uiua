@@ -9,7 +9,7 @@ use std::{
 use base64::{engine::general_purpose::STANDARD, Engine};
 use image::ImageOutputFormat;
 use leptos::{ev::keydown, *};
-use leptos_router::{Redirect, RedirectProps};
+use leptos_router::{use_navigate, NavigateOptions};
 use uiua::{
     format::{format_str, FormatConfig},
     primitive::{PrimClass, Primitive},
@@ -618,17 +618,13 @@ pub fn Editor<'a>(
                 .flatten()
                 .unwrap_or_default();
             let title = format!("{}\n{}", p.name().unwrap_or_default(), extra);
-            let (redirect, set_redirect) = create_signal(None);
             let onclick = move |event: MouseEvent| {
                 if event.ctrl_key() {
                     // Redirect to the docs page
-                    set_redirect.set(Some(
-                        Redirect(RedirectProps {
-                            path: format!("/docs/{}", p.name().unwrap_or_default()),
-                            options: None,
-                        })
-                        .into_view(),
-                    ));
+                    use_navigate()(
+                        &format!("/docs/{}", p.name().unwrap_or_default()),
+                        NavigateOptions::default(),
+                    );
                 } else {
                     replace_code(&p.to_string());
                 }
@@ -642,7 +638,6 @@ pub fn Editor<'a>(
             let class = format!("glyph-button glyph-title {}", prim_class(p));
             Some(
                 view! {
-                    { move || redirect.get() }
                     <button
                         class=class
                         title=title

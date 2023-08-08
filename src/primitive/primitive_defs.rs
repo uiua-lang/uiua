@@ -803,19 +803,19 @@ primitive!(
     (1, Debug, Sys, ("debug", '|')),
     /// Parse a string as a number
     ///
-    /// ex: parsenum "17"
-    /// ex: parsenum "3.1415926535897932"
-    /// ex: parsenum "dog"
-    (1, ParseNum, Misc, "parsenum"),
+    /// ex: parse "17"
+    /// ex: parse "3.1415926535897932"
+    /// ex: parse "dog"
+    (1, Parse, Misc, "parse"),
     /// Generate a random number between 0 and 1
     /// If you need a seeded random number, use [gen].
     ///
-    /// ex: rand
-    /// ex: [rand rand rand]
+    /// ex: ⚂
+    /// ex: [⚂⚂⚂]
     ///
     /// Use [multiply] and [floor] to generate a random integer in a range.
-    /// ex: [⍥(⌊*10 rand)5]
-    (0, Rand, Misc, "rand"),
+    /// ex: [⍥(⌊*10 ⚂)5]
+    (0, Rand, Misc, ("random", '⚂')),
     /// Generate a random number between 0 and 1 from a seed, as well as the next seed
     /// If you don't care about a seed, you can use [rand].
     ///

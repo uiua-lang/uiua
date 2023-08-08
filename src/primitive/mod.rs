@@ -204,7 +204,7 @@ impl Primitive {
             Primitive::Group => env.dyadic_ref_env(Value::group)?,
             Primitive::Partition => env.dyadic_ref_env(Value::partition)?,
             Primitive::Call => env.call()?,
-            Primitive::ParseNum => env.monadic_env(|v, env| v.parse_num(env))?,
+            Primitive::Parse => env.monadic_env(|v, env| v.parse_num(env))?,
             Primitive::Range => env.monadic_ref_env(Value::range)?,
             Primitive::Reverse => env.monadic_mut(Value::reverse)?,
             Primitive::Deshape => env.monadic_mut(Value::deshape)?,

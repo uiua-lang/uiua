@@ -2,7 +2,6 @@
 - Docs
   - Testing and run modes
   - Loops
-    - Explain loop directions
 - Rework front page
 - More inverses
 - Threads

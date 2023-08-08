@@ -853,7 +853,8 @@ primitive!(
     /// ex: [×4η ×2π τ]
     (0(1), Tau, Constant, ("tau", 'τ')),
     /// The biggest number
-    (0(1), Infinity, Constant, ("infinity", '∞'))
+    (0(1), Infinity, Constant, ("infinity", '∞')),
+    (0(None), FillValue, Stack),
 );
 
 fn _keep_primitive_small(_: std::convert::Infallible) {
@@ -868,6 +869,8 @@ impl fmt::Display for Primitive {
             write!(f, "{}", s)
         } else if let Some(s) = self.name() {
             write!(f, "{}", s)
+        } else if let Primitive::FillValue = self {
+            write!(f, "_")
         } else {
             write!(f, "{:?}", self)
         }
@@ -984,7 +987,7 @@ impl Primitive {
             Primitive::Pi => env.push(PI),
             Primitive::Tau => env.push(TAU),
             Primitive::Infinity => env.push(INFINITY),
-            Primitive::Noop => {}
+            Primitive::Noop | Primitive::FillValue => {}
             Primitive::Not => env.monadic_env(Value::not)?,
             Primitive::Neg => env.monadic_env(Value::neg)?,
             Primitive::Abs => env.monadic_env(Value::abs)?,

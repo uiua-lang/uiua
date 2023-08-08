@@ -34,7 +34,7 @@ const CHART: &str = "⊞(⊡ ⌊×5rand ·_._∴_↥_⍋ ;;).⇡15";
 
 pub const EXAMPLES: &[&str] = &[
     UIUA, FORMAT, D3, LOGO, AVG, CHORD, QUADRATIC, STRIPES, PALINDROME, RULE_30, PRIMES,
-    MANDELBROT, CHART, ERRORS,
+    MANDELBROT, CHART,
 ];
 
 #[cfg(test)]

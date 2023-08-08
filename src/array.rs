@@ -472,10 +472,10 @@ impl ArrayValue for Rc<Function> {
         Ord::cmp(self, other)
     }
     fn fill_value() -> Self {
-        Rc::new(Primitive::Noop.into())
+        Rc::new(Primitive::FillValue.into())
     }
     fn is_fill_value(&self) -> bool {
-        self.as_primitive() == Some(Primitive::Noop)
+        self.as_primitive() == Some(Primitive::FillValue)
     }
 }
 

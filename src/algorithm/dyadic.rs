@@ -315,8 +315,6 @@ impl<T: ArrayValue> Array<T> {
         index_data: &[isize],
         env: &Uiua,
     ) -> UiuaResult<(Vec<usize>, Vec<T>)> {
-        println!("index shape: {:?}", index_shape);
-        println!("array shape: {:?}", self.shape);
         let index_row_len = index_shape[1..].iter().product();
         let mut new_data =
             Vec::with_capacity(index_shape[..index_shape.len() - 1].iter().product());
@@ -326,7 +324,6 @@ impl<T: ArrayValue> Array<T> {
         }
         let mut new_shape = index_shape[0..index_shape.len() - 1].to_vec();
         new_shape.extend_from_slice(&self.shape[*index_shape.last().unwrap()..]);
-        println!("new shape: {:?}", new_shape);
         Ok((new_shape, new_data))
     }
     pub fn pick(&self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {

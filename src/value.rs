@@ -364,6 +364,56 @@ impl Value {
             }
         })
     }
+    pub(crate) fn as_number_array<T: Clone>(
+        &self,
+        env: &Uiua,
+        requirement: &'static str,
+        test_shape: fn(&[usize]) -> bool,
+        test_num: fn(f64) -> bool,
+        convert_num: fn(f64) -> T,
+    ) -> UiuaResult<Array<T>> {
+        Ok(match self {
+            Value::Num(nums) => {
+                if !test_shape(self.shape()) {
+                    return Err(env.error(format!(
+                        "{requirement}, but its shape is {}",
+                        nums.format_shape()
+                    )));
+                }
+                let mut result = Vec::with_capacity(nums.flat_len());
+                for &num in nums.data() {
+                    if !test_num(num) {
+                        return Err(env.error(requirement));
+                    }
+                    result.push(convert_num(num));
+                }
+                (self.shape().to_vec(), result).into()
+            }
+            Value::Byte(bytes) => {
+                if !test_shape(self.shape()) {
+                    return Err(env.error(format!(
+                        "{requirement}, but its shape is {}",
+                        bytes.format_shape()
+                    )));
+                }
+                let mut result = Vec::with_capacity(bytes.flat_len());
+                for &byte in bytes.data() {
+                    let num = byte.value().map(|b| b as f64).unwrap_or(f64::fill_value());
+                    if !test_num(num) {
+                        return Err(env.error(requirement));
+                    }
+                    result.push(convert_num(num));
+                }
+                (self.shape().to_vec(), result).into()
+            }
+            value => {
+                return Err(env.error(format!(
+                    "{requirement}, but its type is {}",
+                    value.type_name()
+                )))
+            }
+        })
+    }
     pub fn as_string(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<String> {
         if let Value::Char(chars) = self {
             if chars.rank() > 1 {

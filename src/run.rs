@@ -824,6 +824,13 @@ Square_Double_Increment";
         capture_count: usize,
         f: impl FnOnce(&mut Self) -> UiuaResult + Send + 'static,
     ) -> UiuaResult<Value> {
+        if self.stack.len() < capture_count {
+            return Err(self.error(format!(
+                "Excepted at least {} value(s) on the stack, but there are {}",
+                capture_count,
+                self.stack.len()
+            )))?;
+        }
         let env = Uiua {
             new_functions: Vec::new(),
             new_dfns: Vec::new(),
@@ -847,12 +854,36 @@ Square_Double_Increment";
             .map_err(|e| self.error(e))
     }
     pub(crate) fn wait(&mut self, handle: Value) -> UiuaResult {
-        let handle = Handle(handle.as_nat(self, "Handle must be a natural number")? as u64);
-        let thread_stack = self
-            .backend
-            .wait(handle)
-            .map_err(|e| e.unwrap_or_else(|e| self.error(e)))?;
-        self.stack.extend(thread_stack);
+        let handles = handle.as_number_array(
+            self,
+            "Handle must be an array of natural numbers",
+            |_| true,
+            |n| n.fract() == 0.0 && n >= 0.0,
+            |n| Handle(n as u64),
+        )?;
+        if handles.shape.is_empty() {
+            let handle = handles.data.into_iter().next().unwrap();
+            let thread_stack = self
+                .backend
+                .wait(handle)
+                .map_err(|e| e.unwrap_or_else(|e| self.error(e)))?;
+            self.stack.extend(thread_stack);
+        } else {
+            let mut rows = Vec::new();
+            for handle in handles.data {
+                let thread_stack = self
+                    .backend
+                    .wait(handle)
+                    .map_err(|e| e.unwrap_or_else(|e| self.error(e)))?;
+                let row = if thread_stack.len() == 1 {
+                    thread_stack.into_iter().next().unwrap()
+                } else {
+                    Value::from_row_values(thread_stack, self)?
+                };
+                rows.push(row);
+            }
+            self.push(Value::from_row_values(rows, self)?);
+        }
         Ok(())
     }
 }

@@ -78,7 +78,7 @@ fn validate_shape<T>(shape: &[usize], data: &[T]) {
     );
 }
 
-impl<T: ArrayValue> Array<T> {
+impl<T> Array<T> {
     #[track_caller]
     pub fn new(shape: Vec<usize>, data: CowSlice<T>) -> Self {
         validate_shape(&shape, &data);
@@ -90,6 +90,9 @@ impl<T: ArrayValue> Array<T> {
     pub(crate) fn validate_shape(&self) {
         validate_shape(&self.shape, &self.data);
     }
+}
+
+impl<T: ArrayValue> Array<T> {
     pub fn unit(data: T) -> Self {
         Self::new(Vec::new(), cowslice![data])
     }
@@ -359,13 +362,13 @@ impl<T: ArrayValue> From<T> for Array<T> {
     }
 }
 
-impl<T: ArrayValue> From<(Vec<usize>, CowSlice<T>)> for Array<T> {
+impl<T> From<(Vec<usize>, CowSlice<T>)> for Array<T> {
     fn from((shape, data): (Vec<usize>, CowSlice<T>)) -> Self {
         Self::new(shape, data)
     }
 }
 
-impl<T: ArrayValue> From<(Vec<usize>, Vec<T>)> for Array<T> {
+impl<T: Clone> From<(Vec<usize>, Vec<T>)> for Array<T> {
     fn from((shape, data): (Vec<usize>, Vec<T>)) -> Self {
         Self::new(shape, data.into())
     }

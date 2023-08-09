@@ -34,6 +34,8 @@ pub struct Uiua<'io> {
     current_imports: HashSet<PathBuf>,
     imports: HashMap<PathBuf, Vec<Value>>,
     pub(crate) sys: &'io dyn SysBackend,
+    /// The example Uiua program that is available from certain sys functions
+    pub(crate) example_ua: String,
 }
 
 #[derive(Default, Clone)]
@@ -80,6 +82,13 @@ pub enum RunMode {
 }
 
 impl<'io> Uiua<'io> {
+    #[doc(hidden)]
+    pub const DEFAULT_EXAMPLE_UA: &'static str = "\
+Square ← ×.
+Double ← +.
+Increment ← +1
+Square_Double_Increment";
+
     /// Create a new Uiua runtime with the standard IO backend
     pub fn with_native_sys() -> Self {
         Uiua {
@@ -94,6 +103,7 @@ impl<'io> Uiua<'io> {
             imports: HashMap::new(),
             mode: RunMode::Normal,
             sys: &NativeSys,
+            example_ua: Self::DEFAULT_EXAMPLE_UA.into(),
         }
     }
     /// Create a new Uiua runtime with a custom IO backend

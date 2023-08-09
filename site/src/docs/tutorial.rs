@@ -3,9 +3,9 @@ use std::fmt::Display;
 use enum_iterator::{all, Sequence};
 use leptos::*;
 use leptos_router::*;
-use uiua::{primitive::Primitive, SysOp};
+use uiua::{primitive::Primitive, SysOp, Uiua};
 
-use crate::{backend::EXAMPLE_UA, code::*, editor::*};
+use crate::{code::*, editor::*};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
 #[repr(u8)]
@@ -524,7 +524,7 @@ Twin PlusFive 3"#/>
         <h2 id="import"><PrimCode prim=Sys(SysOp::Import)/></h2>
         <p>"Finally, we reach the point of all of this. You can import other files as scopes with "<PrimCode prim=Sys(SysOp::Import)/>"."</p>
         <p>"The website's editor has an example file that you can import called "<code>"example.ua"</code>". Its contents is:"</p>
-        <Editor example=EXAMPLE_UA/>
+        <Editor example=Uiua::DEFAULT_EXAMPLE_UA/>
         <p>"You can import it with "<PrimCode prim=Sys(SysOp::Import)/>" and then "<PrimCode prim=Use/>" to extract the functions."</p>
         <p>"By using "<PrimCode prim=Dup/>" on the imported module, you can repetedly extract functions from it. Notice the lack of a "<PrimCode prim=Dup glyph_only=true/>" after the last "<PrimCode prim=Use/>"."</p>
         <Editor example=r#"import "example.ua"

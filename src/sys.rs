@@ -680,13 +680,33 @@ impl SysOp {
             }
             SysOp::FReadAllStr => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let bytes = env.sys.file_read_all(&path).map_err(|e| env.error(e))?;
+                let bytes = env
+                    .sys
+                    .file_read_all(&path)
+                    .or_else(|e| {
+                        if path == "example.ua" {
+                            Ok(env.example_ua.as_bytes().to_vec())
+                        } else {
+                            Err(e)
+                        }
+                    })
+                    .map_err(|e| env.error(e))?;
                 let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
                 env.push(s);
             }
             SysOp::FReadAllBytes => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let bytes = env.sys.file_read_all(&path).map_err(|e| env.error(e))?;
+                let bytes = env
+                    .sys
+                    .file_read_all(&path)
+                    .or_else(|e| {
+                        if path == "example.ua" {
+                            Ok(env.example_ua.as_bytes().to_vec())
+                        } else {
+                            Err(e)
+                        }
+                    })
+                    .map_err(|e| env.error(e))?;
                 let bytes = bytes.into_iter().map(Into::into);
                 env.push(Array::<Byte>::from_iter(bytes));
             }
@@ -705,6 +725,14 @@ impl SysOp {
                 };
                 env.sys
                     .file_write_all(&path, &bytes)
+                    .or_else(|e| {
+                        if path == "example.ua" {
+                            env.example_ua = String::from_utf8(bytes).map_err(|e| e.to_string())?;
+                            Ok(())
+                        } else {
+                            Err(e)
+                        }
+                    })
                     .map_err(|e| env.error(e))?;
             }
             SysOp::FExists => {
@@ -724,9 +752,19 @@ impl SysOp {
             }
             SysOp::Import => {
                 let path = env.pop(1)?.as_string(env, "Import path must be a string")?;
-                let input =
-                    String::from_utf8(env.sys.file_read_all(&path).map_err(|e| env.error(e))?)
-                        .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
+                let input = String::from_utf8(
+                    env.sys
+                        .file_read_all(&path)
+                        .or_else(|e| {
+                            if path == "example.ua" {
+                                Ok(env.example_ua.as_bytes().to_vec())
+                            } else {
+                                Err(e)
+                            }
+                        })
+                        .map_err(|e| env.error(e))?,
+                )
+                .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
                 env.import(&input, path.as_ref())?;
             }
             SysOp::Now => env.push(instant::now()),

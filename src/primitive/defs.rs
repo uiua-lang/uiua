@@ -457,8 +457,8 @@ primitive!(
     ///
     /// ex: ⊢1_2_3
     /// ex: ⊢[1_2 3_4 5_6]
-    /// ex: ⊢[]
-    /// ex: ⊢1
+    /// ex! ⊢[]
+    /// ex! ⊢1
     (1, First, MonadicArray, ("first", '⊢')),
     /// The last element of an array
     (1, Last, MonadicArray),
@@ -597,7 +597,7 @@ primitive!(
     ///
     /// The [shape] of the array being filled must end with the [shape] of the fill array.
     /// ex: ⍛1_2_3 .↙5↯3_3⇡9
-    /// ex: ⍛1_2_3_4 .↙5↯3_3⇡9
+    /// ex! ⍛1_2_3_4 .↙5↯3_3⇡9
     (2, Fill, DyadicArray, ("fill", '⍛')),
     /// Index a row or elements from an array
     ///
@@ -895,13 +895,13 @@ primitive!(
     /// Expects a message and a test value.
     /// If the test value is anything but `1`, then the message will be thrown as an error.
     ///
-    /// ex: !"Oh no!" "any array"
+    /// ex! !"Oh no!" "any array"
     /// ex: !"Oh no!" 1
-    /// ex: !"Oh no!" 0
+    /// ex! !"Oh no!" 0
     ///
     /// Use [duplicate] if you do not care about the message.
     /// ex: !. =6 6
-    /// ex: !. =8 9
+    /// ex! !. =8 9
     (2, Throw, Control, ("throw", '!')),
     /// Break out of a loop
     /// Expects a non-negative integer. This integer is how many loops will be broken out of.
@@ -930,7 +930,7 @@ primitive!(
     ///
     /// ex: parse "17"
     /// ex: parse "3.1415926535897932"
-    /// ex: parse "dog"
+    /// ex! parse "dog"
     (1, Parse, Misc, "parse"),
     /// Generate a random number between 0 and 1
     /// If you need a seeded random number, use [gen].
@@ -939,7 +939,7 @@ primitive!(
     /// ex: [⚂⚂⚂]
     ///
     /// Use [multiply] and [floor] to generate a random integer in a range.
-    /// ex: [⍥(⌊*10 ⚂)5]
+    /// ex: ⌊×10 [⍥⚂5]
     (0, Rand, Misc, ("random", '⚂')),
     /// Generate a random number between 0 and 1 from a seed, as well as the next seed
     /// If you don't care about a seed, you can use [rand].

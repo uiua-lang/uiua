@@ -400,6 +400,17 @@ impl PrimDoc {
                 }
                 lines.push(PrimDocLine::Example(PrimExample {
                     input: ex.into(),
+                    should_error: false,
+                    output: OnceLock::new(),
+                }));
+            } else if let Some(mut ex) = line.strip_prefix("ex!") {
+                // Example
+                if ex.starts_with(' ') {
+                    ex = &ex[1..]
+                }
+                lines.push(PrimDocLine::Example(PrimExample {
+                    input: ex.into(),
+                    should_error: true,
                     output: OnceLock::new(),
                 }));
             } else if let Some(mut ex) = line.strip_prefix(':') {
@@ -442,12 +453,16 @@ impl PrimDoc {
 #[derive(Debug)]
 pub struct PrimExample {
     input: String,
+    should_error: bool,
     output: OnceLock<Result<Vec<String>, String>>,
 }
 
 impl PrimExample {
     pub fn input(&self) -> &str {
         &self.input
+    }
+    pub fn should_error(&self) -> bool {
+        self.should_error
     }
     pub fn output(&self) -> &Result<Vec<String>, String> {
         self.output.get_or_init(|| {
@@ -557,79 +572,104 @@ fn parse_doc_line_fragments(line: &str) -> Vec<PrimDocFragment> {
     frags
 }
 
-#[test]
-fn primitive_from_name() {
-    assert_eq!(Primitive::from_format_name("rev"), Some(Primitive::Reverse));
-    assert_eq!(Primitive::from_format_name("re"), None);
-    assert_eq!(
-        Primitive::from_format_name("resh"),
-        Some(Primitive::Reshape)
-    );
-}
-
 #[cfg(test)]
-#[test]
-fn from_multiname() {
-    assert!(matches!(
-        &*Primitive::from_format_name_multi("rev").expect("rev"),
-        [(Primitive::Reverse, _)]
-    ));
-    assert!(matches!(
-        &*Primitive::from_format_name_multi("revrev").expect("revrev"),
-        [(Primitive::Reverse, _), (Primitive::Reverse, _)]
-    ));
-    assert!(matches!(
-        &*Primitive::from_format_name_multi("tabrepl").unwrap(),
-        [(Primitive::Table, _), (Primitive::Replicate, _)]
-    ));
-    assert_eq!(Primitive::from_format_name_multi("foo"), None);
-}
+mod tests {
+    use super::*;
 
-#[cfg(test)]
-#[test]
-fn gen_grammar_file() {
-    fn gen_group(prims: impl Iterator<Item = Primitive> + Clone) -> String {
-        let glyphs = prims
-            .clone()
-            .filter_map(|p| p.unicode())
-            .collect::<String>()
-            .replace('\\', "\\\\\\\\")
-            .replace('-', "\\\\-");
-        let names: Vec<String> = prims
-            .filter_map(|p| p.names())
-            .filter(|p| p.is_name_formattable())
-            .map(|n| n.text.to_string())
-            .map(|name| {
-                let min_len = (2..)
-                    .find(|&n| Primitive::from_format_name(&name[..n]).is_some())
-                    .unwrap();
-                let mut start: String = name.chars().take(min_len).collect();
-                let mut end = String::new();
-                for c in name.chars().skip(min_len) {
-                    start.push('(');
-                    start.push(c);
-                    end.push_str(")?");
+    #[test]
+    fn prim_docs() {
+        for prim in Primitive::all() {
+            if let Some(doc) = prim.doc() {
+                for line in &doc.lines {
+                    if let PrimDocLine::Example(ex) = line {
+                        if let Err(e) = Uiua::with_native_sys().load_str(&ex.input) {
+                            if !ex.should_error {
+                                panic!("\nExample failed: {}\n{}", ex.input, e);
+                            }
+                        } else if ex.should_error {
+                            panic!("Example should have failed: {}", ex.input);
+                        }
+                    }
                 }
-                format!("{}{}", start, end)
-            })
-            .collect();
-        let names = names.join("|");
-        format!("([{glyphs}]|{names})")
+            }
+        }
     }
 
-    let noadic_functions =
-        gen_group(Primitive::all().filter(|p| p.modifier_args().is_none() && p.args() == Some(0)));
-    let monadic_functions =
-        gen_group(Primitive::all().filter(|p| p.modifier_args().is_none() && p.args() == Some(1)));
-    let dyadic_functions =
-        gen_group(Primitive::all().filter(|p| p.modifier_args().is_none() && p.args() == Some(2)));
-    let monadic_modifiers =
-        gen_group(Primitive::all().filter(|p| matches!(p.modifier_args(), Some((1, _)))));
-    let dyadic_modifiers: String =
-        gen_group(Primitive::all().filter(|p| matches!(p.modifier_args(), Some((2, _)))));
+    #[test]
+    fn primitive_from_name() {
+        assert_eq!(Primitive::from_format_name("rev"), Some(Primitive::Reverse));
+        assert_eq!(Primitive::from_format_name("re"), None);
+        assert_eq!(
+            Primitive::from_format_name("resh"),
+            Some(Primitive::Reshape)
+        );
+    }
 
-    let text = format!(
-        r##"{{
+    #[test]
+    fn from_multiname() {
+        assert!(matches!(
+            &*Primitive::from_format_name_multi("rev").expect("rev"),
+            [(Primitive::Reverse, _)]
+        ));
+        assert!(matches!(
+            &*Primitive::from_format_name_multi("revrev").expect("revrev"),
+            [(Primitive::Reverse, _), (Primitive::Reverse, _)]
+        ));
+        assert!(matches!(
+            &*Primitive::from_format_name_multi("tabrepl").unwrap(),
+            [(Primitive::Table, _), (Primitive::Replicate, _)]
+        ));
+        assert_eq!(Primitive::from_format_name_multi("foo"), None);
+    }
+
+    #[cfg(test)]
+    #[test]
+    fn gen_grammar_file() {
+        fn gen_group(prims: impl Iterator<Item = Primitive> + Clone) -> String {
+            let glyphs = prims
+                .clone()
+                .filter_map(|p| p.unicode())
+                .collect::<String>()
+                .replace('\\', "\\\\\\\\")
+                .replace('-', "\\\\-");
+            let names: Vec<String> = prims
+                .filter_map(|p| p.names())
+                .filter(|p| p.is_name_formattable())
+                .map(|n| n.text.to_string())
+                .map(|name| {
+                    let min_len = (2..)
+                        .find(|&n| Primitive::from_format_name(&name[..n]).is_some())
+                        .unwrap();
+                    let mut start: String = name.chars().take(min_len).collect();
+                    let mut end = String::new();
+                    for c in name.chars().skip(min_len) {
+                        start.push('(');
+                        start.push(c);
+                        end.push_str(")?");
+                    }
+                    format!("{}{}", start, end)
+                })
+                .collect();
+            let names = names.join("|");
+            format!("([{glyphs}]|{names})")
+        }
+
+        let noadic_functions = gen_group(
+            Primitive::all().filter(|p| p.modifier_args().is_none() && p.args() == Some(0)),
+        );
+        let monadic_functions = gen_group(
+            Primitive::all().filter(|p| p.modifier_args().is_none() && p.args() == Some(1)),
+        );
+        let dyadic_functions = gen_group(
+            Primitive::all().filter(|p| p.modifier_args().is_none() && p.args() == Some(2)),
+        );
+        let monadic_modifiers =
+            gen_group(Primitive::all().filter(|p| matches!(p.modifier_args(), Some((1, _)))));
+        let dyadic_modifiers: String =
+            gen_group(Primitive::all().filter(|p| matches!(p.modifier_args(), Some((2, _)))));
+
+        let text = format!(
+            r##"{{
 	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
 	"name": "Uiua",
 	"patterns": [
@@ -711,7 +751,8 @@ fn gen_grammar_file() {
     }},
 	"scopeName": "source.uiua"
 }}"##
-    );
+        );
 
-    std::fs::write("uiua.tmLanguage.json", text).expect("Failed to write grammar file");
+        std::fs::write("uiua.tmLanguage.json", text).expect("Failed to write grammar file");
+    }
 }

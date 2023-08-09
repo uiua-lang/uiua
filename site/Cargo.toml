@@ -6,7 +6,7 @@ version = "0.1.0"
 [dependencies]
 base64 = "0.21.0"
 console_error_panic_hook = "0.1.7"
-enum-iterator = "1"
+enum-iterator = "1.4.1"
 image = "0.24.5"
 instant.features = ['wasm-bindgen']
 instant.version = "0.1.12"

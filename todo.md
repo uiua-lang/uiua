@@ -23,6 +23,5 @@
   - run commands
   - handle kind?
 - Tooling
-  - Basic package manager?
-    - Maybe just be content with git submodules
+  - Primitive details in LSP
 - Custom monospace font

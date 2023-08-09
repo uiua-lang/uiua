@@ -20,7 +20,7 @@ macro_rules! primitive {
         }
 
         impl Primitive {
-            pub fn all() -> impl Iterator<Item = Self> {
+            pub fn all() -> impl Iterator<Item = Self> + Clone {
                 all()
             }
             #[allow(path_statements)]

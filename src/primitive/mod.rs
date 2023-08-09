@@ -588,28 +588,45 @@ fn from_multiname() {
 #[cfg(test)]
 #[test]
 fn gen_grammar_file() {
-    let noadic_functions: String = Primitive::all()
-        .filter(|p| p.modifier_args().is_none() && p.args() == Some(0))
-        .filter_map(|p| p.unicode())
-        .collect();
-    let monadic_functions: String = Primitive::all()
-        .filter(|p| p.modifier_args().is_none() && p.args() == Some(1))
-        .filter_map(|p| p.unicode())
-        .collect();
-    let dyadic_functions = Primitive::all()
-        .filter(|p| p.modifier_args().is_none() && p.args() == Some(2))
-        .filter_map(|p| p.unicode())
-        .collect::<String>()
-        .replace('-', "\\\\-");
-    let monadic_modifiers = Primitive::all()
-        .filter(|p| matches!(p.modifier_args(), Some((1, _))))
-        .filter_map(|p| p.unicode())
-        .collect::<String>()
-        .replace('\\', "\\\\\\\\");
-    let dyadic_modifiers: String = Primitive::all()
-        .filter(|p| matches!(p.modifier_args(), Some((2, _))))
-        .filter_map(|p| p.unicode())
-        .collect();
+    fn gen_group(prims: impl Iterator<Item = Primitive> + Clone) -> String {
+        let glyphs = prims
+            .clone()
+            .filter_map(|p| p.unicode())
+            .collect::<String>()
+            .replace('\\', "\\\\\\\\")
+            .replace('-', "\\\\-");
+        let names: Vec<String> = prims
+            .filter_map(|p| p.names())
+            .filter(|p| p.is_formattable())
+            .map(|n| n.text.to_string())
+            .map(|name| {
+                let min_len = (2..)
+                    .find(|&n| Primitive::from_format_name(&name[..n]).is_some())
+                    .unwrap();
+                let mut start: String = name.chars().take(min_len).collect();
+                let mut end = String::new();
+                for c in name.chars().skip(min_len) {
+                    start.push('(');
+                    start.push(c);
+                    end.push_str(")?");
+                }
+                format!("{}{}", start, end)
+            })
+            .collect();
+        let names = names.join("|");
+        format!("([{glyphs}]|{names})")
+    }
+
+    let noadic_functions =
+        gen_group(Primitive::all().filter(|p| p.modifier_args().is_none() && p.args() == Some(0)));
+    let monadic_functions =
+        gen_group(Primitive::all().filter(|p| p.modifier_args().is_none() && p.args() == Some(1)));
+    let dyadic_functions =
+        gen_group(Primitive::all().filter(|p| p.modifier_args().is_none() && p.args() == Some(2)));
+    let monadic_modifiers =
+        gen_group(Primitive::all().filter(|p| matches!(p.modifier_args(), Some((1, _)))));
+    let dyadic_modifiers: String =
+        gen_group(Primitive::all().filter(|p| matches!(p.modifier_args(), Some((2, _)))));
 
     let text = format!(
         r##"{{
@@ -673,23 +690,23 @@ fn gen_grammar_file() {
 		}},
 		"noadic": {{
 			"name": "entity.name.tag.uiua",
-            "match": "[{noadic_functions}]"
+            "match": "{noadic_functions}"
         }},
 		"monadic": {{
 			"name": "string.quoted",
-            "match": "[{monadic_functions}]"
+            "match": "{monadic_functions}"
         }},
 		"dyadic": {{
 			"name": "entity.name.function.uiua",
-            "match": "[{dyadic_functions}]"
+            "match": "{dyadic_functions}"
         }},
 		"mod1": {{
 			"name": "entity.name.type.uiua",
-            "match": "[{monadic_modifiers}]"
+            "match": "{monadic_modifiers}"
         }},
 		"mod2": {{
 			"name": "keyword.control.uiua",
-            "match": "[{dyadic_modifiers}]"
+            "match": "{dyadic_modifiers}"
         }}
     }},
 	"scopeName": "source.uiua"

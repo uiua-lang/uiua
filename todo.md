@@ -3,11 +3,9 @@
   - Loops
   - Audio
   - Images
+  - Threads
 - Rework front page
 - More inverses
-- Threads
-  - Spawn threads
-  - Parallelize loops
 - Optimizations
   - Windowed reduce?
 - Multimedia

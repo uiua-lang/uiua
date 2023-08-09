@@ -6,6 +6,8 @@ use std::{
     sync::Arc,
 };
 
+use parking_lot::Mutex;
+
 use crate::{
     ast::*,
     function::*,
@@ -23,16 +25,16 @@ pub struct Uiua {
     new_functions: Vec<Vec<Instr>>,
     new_dfns: Vec<Vec<u8>>,
     // Statics
-    globals: Vec<Value>,
-    spans: Vec<Span>,
+    globals: Arc<Mutex<Vec<Value>>>,
+    spans: Arc<Mutex<Vec<Span>>>,
     // Runtime
     stack: Vec<Value>,
     scope: Scope,
     lower_scopes: Vec<Scope>,
     mode: RunMode,
     // IO
-    current_imports: HashSet<PathBuf>,
-    imports: HashMap<PathBuf, Vec<Value>>,
+    current_imports: Arc<Mutex<HashSet<PathBuf>>>,
+    imports: Arc<Mutex<HashMap<PathBuf, Vec<Value>>>>,
     pub(crate) backend: Arc<dyn SysBackend>,
     /// The example Uiua program that is available from certain sys functions
     pub(crate) example_ua: String,
@@ -92,15 +94,15 @@ Square_Double_Increment";
     /// Create a new Uiua runtime with the standard IO backend
     pub fn with_native_sys() -> Self {
         Uiua {
-            spans: vec![Span::Builtin],
+            spans: Arc::new(Mutex::new(vec![Span::Builtin])),
             stack: Vec::new(),
             scope: Scope::default(),
             lower_scopes: Vec::new(),
-            globals: Vec::new(),
+            globals: Arc::new(Mutex::new(Vec::new())),
             new_functions: Vec::new(),
             new_dfns: Vec::new(),
-            current_imports: HashSet::new(),
-            imports: HashMap::new(),
+            current_imports: Arc::new(Mutex::new(HashSet::new())),
+            imports: Arc::new(Mutex::new(HashMap::new())),
             mode: RunMode::Normal,
             backend: Arc::new(NativeSys),
             example_ua: Self::DEFAULT_EXAMPLE_UA.into(),
@@ -165,11 +167,11 @@ Square_Double_Increment";
             return Err(errors.into());
         }
         if let Some(path) = path {
-            self.current_imports.insert(path.into());
+            self.current_imports.lock().insert(path.into());
         }
         let res = self.items(items, false);
         if let Some(path) = path {
-            self.current_imports.remove(path);
+            self.current_imports.lock().remove(path);
         }
         res.map(|_| self)
     }
@@ -179,13 +181,13 @@ Square_Double_Increment";
             if let Some(prim) = prim {
                 frames.push(TraceFrame {
                     id: FunctionId::Primitive(*prim),
-                    span: self.spans[*span].clone(),
+                    span: self.spans.lock()[*span].clone(),
                 });
             }
         }
         frames.push(TraceFrame {
             id: frame.function.id.clone(),
-            span: self.spans[frame.call_span].clone(),
+            span: self.spans.lock()[frame.call_span].clone(),
         });
         if let UiuaError::Traced { trace, .. } = &mut error {
             trace.extend(frames);
@@ -198,17 +200,17 @@ Square_Double_Increment";
         }
     }
     pub(crate) fn import(&mut self, input: &str, path: &Path) -> UiuaResult {
-        if self.current_imports.contains(path) {
+        if self.current_imports.lock().contains(path) {
             return Err(self.error(format!(
                 "cycle detected importing {}",
                 path.to_string_lossy()
             )));
         }
-        if !self.imports.contains_key(path) {
+        if !self.imports.lock().contains_key(path) {
             let import = self.in_scope(false, |env| env.load_str_path(input, path).map(drop))?;
-            self.imports.insert(path.into(), import);
+            self.imports.lock().insert(path.into(), import);
         }
-        self.stack.extend(self.imports[path].iter().cloned());
+        self.stack.extend(self.imports.lock()[path].iter().cloned());
         Ok(())
     }
     fn items(&mut self, items: Vec<Item>, in_test: bool) -> UiuaResult {
@@ -253,8 +255,9 @@ Square_Double_Increment";
         Ok(())
     }
     fn add_span(&mut self, span: impl Into<Span>) -> usize {
-        let idx = self.spans.len();
-        self.spans.push(span.into());
+        let mut spans = self.spans.lock();
+        let idx = spans.len();
+        spans.push(span.into());
         idx
     }
     fn binding(&mut self, binding: Binding) -> UiuaResult {
@@ -271,8 +274,9 @@ Square_Double_Increment";
             self.exec_global_instrs(instrs)?;
             self.stack.pop().unwrap_or_default()
         };
-        let idx = self.globals.len();
-        self.globals.push(val);
+        let mut globals = self.globals.lock();
+        let idx = globals.len();
+        globals.push(val);
         self.scope.names.insert(binding.name.value, idx);
         Ok(())
     }
@@ -409,7 +413,7 @@ Square_Double_Increment";
                 .get(&ident)
         }) {
             // Name exists in scope
-            let value = self.globals[*idx].clone();
+            let value = self.globals.lock()[*idx].clone();
             let should_call = matches!(&value, Value::Func(f) if f.shape.is_empty());
             self.push_instr(Instr::push(value));
             if should_call && call {
@@ -623,7 +627,7 @@ Square_Double_Increment";
                             let n = *n as usize;
                             if self.stack.len() < n {
                                 let message = format!("not enough arguments for dfn of {n} values");
-                                break Err(self.spans[call_span].clone().sp(message).into());
+                                break Err(self.spans.lock()[call_span].clone().sp(message).into());
                             }
                             let args = self.stack.drain(self.stack.len() - n..).rev().collect();
                             if let Some(bottom) = self.scope.array.last_mut() {
@@ -715,8 +719,8 @@ Square_Double_Increment";
         })
     }
     /// Get the span of the current function call
-    pub fn span(&self) -> &Span {
-        &self.spans[self.span_index()]
+    pub fn span(&self) -> Span {
+        self.spans.lock()[self.span_index()].clone()
     }
     /// Construct an error with the current span
     pub fn error(&self, message: impl ToString) -> UiuaError {

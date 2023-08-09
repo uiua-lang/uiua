@@ -43,6 +43,7 @@ notify.optional = true
 notify.version = "5"
 open.optional = true
 open.version = "4"
+parking_lot = "0.12.1"
 rand.default-features = false
 rand.features = ["small_rng"]
 rand.version = "0.8.5"

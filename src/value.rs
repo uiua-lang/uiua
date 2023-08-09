@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, fmt, rc::Rc};
+use std::{cmp::Ordering, fmt, sync::Arc};
 
 use crate::{
     algorithm::pervade::*, array::*, function::Function, grid_fmt::GridFmt, primitive::Primitive,
@@ -10,7 +10,7 @@ pub enum Value {
     Num(Array<f64>),
     Byte(Array<Byte>),
     Char(Array<char>),
-    Func(Array<Rc<Function>>),
+    Func(Array<Arc<Function>>),
 }
 
 unsafe fn _value_size() {
@@ -163,7 +163,7 @@ impl Value {
         n: impl FnOnce(&'a Array<f64>) -> T,
         b: impl FnOnce(&'a Array<Byte>) -> T,
         c: impl FnOnce(&'a Array<char>) -> T,
-        f: impl FnOnce(&'a Array<Rc<Function>>) -> T,
+        f: impl FnOnce(&'a Array<Arc<Function>>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
@@ -177,7 +177,7 @@ impl Value {
         n: impl FnOnce(&'a mut Array<f64>) -> T,
         b: impl FnOnce(&'a mut Array<Byte>) -> T,
         c: impl FnOnce(&'a mut Array<char>) -> T,
-        f: impl FnOnce(&'a mut Array<Rc<Function>>) -> T,
+        f: impl FnOnce(&'a mut Array<Arc<Function>>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
@@ -443,7 +443,7 @@ macro_rules! value_from {
 value_from!(f64, Num);
 value_from!(Byte, Byte);
 value_from!(char, Char);
-value_from!(Rc<Function>, Func);
+value_from!(Arc<Function>, Func);
 
 impl FromIterator<usize> for Value {
     fn from_iter<I: IntoIterator<Item = usize>>(iter: I) -> Self {
@@ -471,7 +471,7 @@ impl From<String> for Value {
 
 impl From<Function> for Value {
     fn from(f: Function) -> Self {
-        Rc::new(f).into()
+        Arc::new(f).into()
     }
 }
 

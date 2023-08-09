@@ -3,7 +3,7 @@ use std::{
     collections::BTreeMap,
     iter::repeat,
     mem::{swap, take},
-    rc::Rc,
+    sync::Arc,
 };
 
 use ecow::EcoVec;
@@ -21,7 +21,7 @@ impl Value {
         self,
         other: Self,
         env: &Uiua,
-        on_success: impl FnOnce(Array<Rc<Function>>, Array<Rc<Function>>) -> UiuaResult<T>,
+        on_success: impl FnOnce(Array<Arc<Function>>, Array<Arc<Function>>) -> UiuaResult<T>,
         on_error: impl FnOnce(&str, &str) -> E,
     ) -> UiuaResult<T> {
         match (self, other) {
@@ -31,7 +31,7 @@ impl Value {
                 let new_data: CowSlice<_> = b
                     .into_flat_values()
                     .map(|b| {
-                        Rc::new(Function {
+                        Arc::new(Function {
                             id: FunctionId::Constant,
                             instrs: vec![Instr::Push(b.into()), Instr::Call(env.span_index())],
                             kind: FunctionKind::Normal,
@@ -46,7 +46,7 @@ impl Value {
                 let new_data: CowSlice<_> = a
                     .into_flat_values()
                     .map(|a| {
-                        Rc::new(Function {
+                        Arc::new(Function {
                             id: FunctionId::Constant,
                             instrs: vec![Instr::Push(a.into()), Instr::Call(env.span_index())],
                             kind: FunctionKind::Normal,

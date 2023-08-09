@@ -8,7 +8,7 @@ use std::{
     },
     iter::once,
     mem::take,
-    rc::Rc,
+    sync::Arc,
 };
 
 use crate::{
@@ -77,7 +77,7 @@ impl GridFmt for char {
     }
 }
 
-impl GridFmt for Rc<Function> {
+impl GridFmt for Arc<Function> {
     fn fmt_grid(&self) -> Grid {
         vec![self.to_string().chars().collect()]
     }

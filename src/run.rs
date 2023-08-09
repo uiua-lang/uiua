@@ -3,7 +3,7 @@ use std::{
     fs,
     mem::take,
     path::{Path, PathBuf},
-    rc::Rc,
+    sync::Arc,
 };
 
 use crate::{
@@ -49,7 +49,7 @@ pub struct Scope {
 
 #[derive(Clone)]
 struct StackFrame {
-    function: Rc<Function>,
+    function: Arc<Function>,
     call_span: usize,
     pc: usize,
     spans: Vec<(usize, Option<Primitive>)>,
@@ -58,7 +58,7 @@ struct StackFrame {
 
 #[derive(Clone)]
 struct DfnFrame {
-    function: Rc<Function>,
+    function: Arc<Function>,
     args: Vec<Value>,
 }
 
@@ -325,7 +325,7 @@ Square_Double_Increment";
                 let f = Function {
                     id: FunctionId::Anonymous(word.span.clone()),
                     instrs: Vec::new(),
-                    kind: FunctionKind::Dynamic(Rc::new(move |env| {
+                    kind: FunctionKind::Dynamic(Arc::new(move |env| {
                         let mut formatted = String::new();
                         for (i, frag) in frags.iter().enumerate() {
                             if i > 0 {
@@ -348,7 +348,7 @@ Square_Double_Increment";
                 let f = Function {
                     id: FunctionId::Anonymous(word.span.clone()),
                     instrs: Vec::new(),
-                    kind: FunctionKind::Dynamic(Rc::new(move |env| {
+                    kind: FunctionKind::Dynamic(Arc::new(move |env| {
                         let mut formatted = String::new();
                         let mut i = 0;
                         for (j, line) in lines.iter().enumerate() {
@@ -519,7 +519,7 @@ Square_Double_Increment";
             kind: FunctionKind::Normal,
         };
         self.exec(StackFrame {
-            function: Rc::new(func),
+            function: Arc::new(func),
             call_span: 0,
             spans: Vec::new(),
             pc: 0,

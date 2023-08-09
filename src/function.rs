@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, fmt, rc::Rc};
+use std::{cmp::Ordering, fmt, sync::Arc};
 
 use crate::{lex::CodeSpan, primitive::Primitive, value::Value, Ident, Uiua, UiuaResult};
 
@@ -42,7 +42,7 @@ pub struct Function {
 pub enum FunctionKind {
     Normal,
     Dfn(u8),
-    Dynamic(Rc<dyn Fn(&mut Uiua) -> UiuaResult>),
+    Dynamic(Arc<dyn Fn(&mut Uiua) -> UiuaResult>),
 }
 
 impl From<Primitive> for Function {

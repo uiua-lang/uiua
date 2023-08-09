@@ -2,8 +2,8 @@ use std::{
     cmp::Ordering,
     fmt::{self, Debug, Display},
     iter::repeat,
-    rc::Rc,
     slice::Chunks,
+    sync::Arc,
 };
 
 use crate::{
@@ -479,13 +479,13 @@ impl ArrayValue for char {
     }
 }
 
-impl ArrayValue for Rc<Function> {
+impl ArrayValue for Arc<Function> {
     const NAME: &'static str = "function";
     fn cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(self, other)
     }
     fn fill_value() -> Self {
-        Rc::new(Primitive::FillValue.into())
+        Arc::new(Primitive::FillValue.into())
     }
     fn is_fill_value(&self) -> bool {
         self.as_primitive() == Some(Primitive::FillValue)

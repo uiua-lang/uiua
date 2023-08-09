@@ -22,7 +22,7 @@ use std::{
     cmp::Ordering,
     fmt,
     hash::{Hash, Hasher},
-    rc::Rc,
+    sync::Arc,
 };
 
 use array::ArrayValue;
@@ -113,7 +113,7 @@ impl From<f64> for Byte {
 }
 
 #[derive(Debug, Clone)]
-pub struct Ident(Rc<str>);
+pub struct Ident(Arc<str>);
 
 impl Ident {
     pub fn is_functiony(&self) -> bool {
@@ -132,13 +132,13 @@ impl fmt::Display for Ident {
 
 impl<'a> From<&'a str> for Ident {
     fn from(s: &'a str) -> Self {
-        Ident(Rc::from(s))
+        Ident(Arc::from(s))
     }
 }
 
 impl From<String> for Ident {
     fn from(s: String) -> Self {
-        Ident(Rc::from(s))
+        Ident(Arc::from(s))
     }
 }
 

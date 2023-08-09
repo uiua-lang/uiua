@@ -1,7 +1,7 @@
 use std::{
     cell::{Cell, RefCell},
     iter,
-    mem::replace,
+    mem::{replace, take},
     rc::Rc,
     time::Duration,
 };
@@ -1144,8 +1144,10 @@ impl RunOutput {
 /// Returns the output and the formatted code
 fn run_code(code: &str) -> UiuaResult<RunOutput> {
     let io = WebBackend::default();
-    let mut values = Uiua::with_backend(&io).load_str(code)?.take_stack();
-    let image_bytes = io.image_bytes.into_inner().or_else(|| {
+    let mut env = Uiua::with_backend(io);
+    let mut values = env.load_str(code)?.take_stack();
+    let io = env.downcast_backend::<WebBackend>().unwrap();
+    let image_bytes = take(&mut *io.image_bytes.lock().unwrap()).or_else(|| {
         for i in 0..values.len() {
             let value = &values[i];
             if let Ok(bytes) = value_to_image_bytes(value, ImageOutputFormat::Png) {
@@ -1157,7 +1159,7 @@ fn run_code(code: &str) -> UiuaResult<RunOutput> {
         }
         None
     });
-    let audio_bytes = io.audio_bytes.into_inner().or_else(|| {
+    let audio_bytes = take(&mut *io.audio_bytes.lock().unwrap()).or_else(|| {
         for i in 0..values.len() {
             let value = &values[i];
             if value.len() > 1000 {
@@ -1169,9 +1171,11 @@ fn run_code(code: &str) -> UiuaResult<RunOutput> {
         }
         None
     });
+    let stdout = take(&mut *io.stdout.lock().unwrap());
+    let stderr = take(&mut *io.stderr.lock().unwrap());
     Ok(RunOutput {
-        stdout: io.stdout.into_inner(),
-        stderr: io.stderr.into_inner(),
+        stdout,
+        stderr,
         stack: values,
         image_bytes,
         audio_bytes,

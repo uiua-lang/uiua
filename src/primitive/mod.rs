@@ -243,8 +243,10 @@ impl Primitive {
             Primitive::Recur => env.recur()?,
             Primitive::Debug => {
                 let value = env.pop(1)?;
-                env.sys.print_str(&value.show()).map_err(|e| env.error(e))?;
-                env.sys.print_str("\n").map_err(|e| env.error(e))?;
+                env.backend
+                    .print_str(&value.show())
+                    .map_err(|e| env.error(e))?;
+                env.backend.print_str("\n").map_err(|e| env.error(e))?;
                 env.push(value);
             }
             Primitive::Dup => {
@@ -466,7 +468,7 @@ impl PrimExample {
     }
     pub fn output(&self) -> &Result<Vec<String>, String> {
         self.output.get_or_init(|| {
-            Uiua::with_backend(&NativeSys)
+            Uiua::with_native_sys()
                 .load_str(&self.input)
                 .map(|env| env.take_stack().into_iter().map(|val| val.show()).collect())
                 .map_err(|e| {

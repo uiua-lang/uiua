@@ -18,7 +18,7 @@ use crate::{
 
 /// The Uiua runtime
 #[derive(Clone)]
-pub struct Uiua<'io> {
+pub struct Uiua {
     // Compilation
     new_functions: Vec<Vec<Instr>>,
     new_dfns: Vec<Vec<u8>>,
@@ -33,7 +33,7 @@ pub struct Uiua<'io> {
     // IO
     current_imports: HashSet<PathBuf>,
     imports: HashMap<PathBuf, Vec<Value>>,
-    pub(crate) sys: &'io dyn SysBackend,
+    pub(crate) backend: Arc<dyn SysBackend>,
     /// The example Uiua program that is available from certain sys functions
     pub(crate) example_ua: String,
 }
@@ -62,7 +62,7 @@ struct DfnFrame {
     args: Vec<Value>,
 }
 
-impl<'io> Default for Uiua<'io> {
+impl Default for Uiua {
     fn default() -> Self {
         Self::with_native_sys()
     }
@@ -81,7 +81,7 @@ pub enum RunMode {
     Watch,
 }
 
-impl<'io> Uiua<'io> {
+impl Uiua {
     #[doc(hidden)]
     pub const DEFAULT_EXAMPLE_UA: &'static str = "\
 Square ← ×.
@@ -102,19 +102,22 @@ Square_Double_Increment";
             current_imports: HashSet::new(),
             imports: HashMap::new(),
             mode: RunMode::Normal,
-            sys: &NativeSys,
+            backend: Arc::new(NativeSys),
             example_ua: Self::DEFAULT_EXAMPLE_UA.into(),
         }
     }
     /// Create a new Uiua runtime with a custom IO backend
-    pub fn with_backend(io: &'io dyn SysBackend) -> Self {
+    pub fn with_backend(backend: impl SysBackend) -> Self {
         Uiua {
-            sys: io,
+            backend: Arc::new(backend),
             ..Default::default()
         }
     }
-    pub fn backend(&self) -> &'io dyn SysBackend {
-        self.sys
+    pub fn backend(&self) -> &dyn SysBackend {
+        &*self.backend
+    }
+    pub fn downcast_backend<T: SysBackend>(&self) -> Option<&T> {
+        self.backend.any().downcast_ref()
     }
     /// Set the [`RunMode`]
     ///

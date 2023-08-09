@@ -1,11 +1,12 @@
 use std::{
+    any::Any,
     collections::HashMap,
     env,
     fs::{self, File},
     io::{stderr, stdin, stdout, Cursor, Read, Write},
     net::*,
     sync::{Mutex, OnceLock},
-    thread::sleep,
+    thread::{sleep, spawn, JoinHandle},
     time::Duration,
 };
 
@@ -15,7 +16,8 @@ use hound::{SampleFormat, WavSpec, WavWriter};
 use image::{DynamicImage, ImageOutputFormat};
 
 use crate::{
-    array::Array, grid_fmt::GridFmt, primitive::PrimDoc, value::Value, Byte, Uiua, UiuaResult,
+    array::Array, grid_fmt::GridFmt, primitive::PrimDoc, value::Value, Byte, Uiua, UiuaError,
+    UiuaResult,
 };
 
 macro_rules! sys_op {
@@ -202,7 +204,8 @@ impl From<Handle> for Value {
 }
 
 #[allow(unused_variables)]
-pub trait SysBackend {
+pub trait SysBackend: Any + Send + Sync + 'static {
+    fn any(&self) -> &dyn Any;
     fn print_str(&self, s: &str) -> Result<(), String> {
         self.write(Handle::STDOUT, s.as_bytes())
     }
@@ -290,6 +293,18 @@ pub trait SysBackend {
     fn close(&self, handle: Handle) -> Result<(), String> {
         Ok(())
     }
+    fn spawn(
+        &self,
+        env: &Uiua,
+        f: Box<dyn FnOnce(&mut Uiua) -> UiuaResult + Send>,
+    ) -> Result<Handle, String> {
+        Err("Spawning threads is not supported in this environment".into())
+    }
+    fn join(&self, handle: Handle) -> Result<Vec<Value>, Result<UiuaError, String>> {
+        Err(Err(
+            "Joining threads is not supported in this environment".into()
+        ))
+    }
     fn teardown(&self) {}
 }
 
@@ -303,8 +318,9 @@ struct GlobalNativeSys {
     files: HashMap<Handle, Buffered<File>>,
     tcp_listeners: HashMap<Handle, TcpListener>,
     tcp_sockets: HashMap<Handle, Buffered<TcpStream>>,
+    threads: HashMap<Handle, JoinHandle<UiuaResult<Vec<Value>>>>,
     #[cfg(feature = "audio")]
-    audio_thread_handles: Vec<std::thread::JoinHandle<()>>,
+    audio_thread_handles: Vec<JoinHandle<()>>,
 }
 
 enum SysStream<'a> {
@@ -320,6 +336,7 @@ impl Default for GlobalNativeSys {
             files: HashMap::new(),
             tcp_listeners: HashMap::new(),
             tcp_sockets: HashMap::new(),
+            threads: HashMap::new(),
             #[cfg(feature = "audio")]
             audio_thread_handles: Vec::new(),
         }
@@ -360,6 +377,9 @@ fn sys<T>(f: impl FnOnce(&mut GlobalNativeSys) -> T) -> T {
 }
 
 impl SysBackend for NativeSys {
+    fn any(&self) -> &dyn Any {
+        self
+    }
     fn var(&self, name: &str) -> Option<String> {
         env::var(name).ok()
     }
@@ -554,6 +574,35 @@ impl SysBackend for NativeSys {
             }
         })
     }
+    fn spawn(
+        &self,
+        env: &Uiua,
+        f: Box<dyn FnOnce(&mut Uiua) -> UiuaResult + Send>,
+    ) -> Result<Handle, String> {
+        let mut env = env.clone();
+        let thread = spawn(move || {
+            f(&mut env)?;
+            Ok(env.take_stack())
+        });
+        sys(|sys| {
+            let handle = sys.new_handle();
+            sys.threads.insert(handle, thread);
+            Ok(handle)
+        })
+    }
+    fn join(&self, handle: Handle) -> Result<Vec<Value>, Result<UiuaError, String>> {
+        sys(|sys| {
+            let thread = sys
+                .threads
+                .remove(&handle)
+                .ok_or_else(|| Err("Invalid thread handle".to_string()))?;
+            match thread.join() {
+                Ok(Ok(stack)) => Ok(stack),
+                Ok(Err(e)) => Err(Ok(e)),
+                Err(e) => Err(Err(format!("Thread panicked: {:?}", e))),
+            }
+        })
+    }
     fn teardown(&self) {
         #[cfg(feature = "audio")]
         for audio_thread_handle in sys(std::mem::take).audio_thread_handles {
@@ -567,58 +616,58 @@ impl SysOp {
         match self {
             SysOp::Show => {
                 let s = env.pop(1)?.grid_string();
-                env.sys.print_str(&s).map_err(|e| env.error(e))?;
-                env.sys.print_str("\n").map_err(|e| env.error(e))?;
+                env.backend.print_str(&s).map_err(|e| env.error(e))?;
+                env.backend.print_str("\n").map_err(|e| env.error(e))?;
             }
             SysOp::Prin => {
                 let val = env.pop(1)?;
-                env.sys
+                env.backend
                     .print_str(&val.to_string())
                     .map_err(|e| env.error(e))?;
             }
             SysOp::Print => {
                 let val = env.pop(1)?;
-                env.sys
+                env.backend
                     .print_str(&val.to_string())
                     .map_err(|e| env.error(e))?;
-                env.sys.print_str("\n").map_err(|e| env.error(e))?;
+                env.backend.print_str("\n").map_err(|e| env.error(e))?;
             }
             SysOp::ScanLine => {
-                let line = env.sys.scan_line();
+                let line = env.backend.scan_line();
                 env.push(line);
             }
             SysOp::Args => {
-                let args = env.sys.args();
+                let args = env.backend.args();
                 env.push(Array::<char>::from_iter(args));
             }
             SysOp::Var => {
                 let key = env
                     .pop(1)?
                     .as_string(env, "Augument to var must be a string")?;
-                let var = env.sys.var(&key).unwrap_or_default();
+                let var = env.backend.var(&key).unwrap_or_default();
                 env.push(var);
             }
             SysOp::FOpen => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let handle = env.sys.open_file(&path).map_err(|e| env.error(e))?;
+                let handle = env.backend.open_file(&path).map_err(|e| env.error(e))?;
                 env.push(handle);
             }
             SysOp::FCreate => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let handle = env.sys.create_file(&path).map_err(|e| env.error(e))?;
+                let handle = env.backend.create_file(&path).map_err(|e| env.error(e))?;
                 env.push(handle.0 as f64);
             }
             SysOp::ReadStr => {
                 let count = env.pop(1)?.as_nat(env, "Count must be an integer")?;
                 let handle = env.pop(2)?.as_nat(env, "Handle must be an integer")?.into();
-                let bytes = env.sys.read(handle, count).map_err(|e| env.error(e))?;
+                let bytes = env.backend.read(handle, count).map_err(|e| env.error(e))?;
                 let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
                 env.push(s);
             }
             SysOp::ReadBytes => {
                 let count = env.pop(1)?.as_nat(env, "Count must be an integer")?;
                 let handle = env.pop(2)?.as_nat(env, "Handle must be an integer")?.into();
-                let bytes = env.sys.read(handle, count).map_err(|e| env.error(e))?;
+                let bytes = env.backend.read(handle, count).map_err(|e| env.error(e))?;
                 let bytes = bytes.into_iter().map(Into::into);
                 env.push(Array::<Byte>::from_iter(bytes));
             }
@@ -632,7 +681,7 @@ impl SysOp {
                     Value::Num(arr) => {
                         let delim: Vec<u8> = arr.data.iter().map(|&x| x as u8).collect();
                         let bytes = env
-                            .sys
+                            .backend
                             .read_until(handle, &delim)
                             .map_err(|e| env.error(e))?;
                         let bytes: Vec<Byte> = bytes.into_iter().map(Byte::from).collect();
@@ -645,7 +694,7 @@ impl SysOp {
                             .filter_map(|x| x.value().map(|b| b as u8))
                             .collect();
                         let bytes = env
-                            .sys
+                            .backend
                             .read_until(handle, &delim)
                             .map_err(|e| env.error(e))?;
                         let bytes: Vec<Byte> = bytes.into_iter().map(Byte::from).collect();
@@ -654,7 +703,7 @@ impl SysOp {
                     Value::Char(arr) => {
                         let delim: Vec<u8> = arr.data.iter().collect::<String>().into();
                         let bytes = env
-                            .sys
+                            .backend
                             .read_until(handle, &delim)
                             .map_err(|e| env.error(e))?;
                         let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
@@ -676,12 +725,14 @@ impl SysOp {
                     Value::Char(arr) => arr.data.iter().collect::<String>().into(),
                     Value::Func(_) => return Err(env.error("Cannot write function array to file")),
                 };
-                env.sys.write(handle, &bytes).map_err(|e| env.error(e))?;
+                env.backend
+                    .write(handle, &bytes)
+                    .map_err(|e| env.error(e))?;
             }
             SysOp::FReadAllStr => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let bytes = env
-                    .sys
+                    .backend
                     .file_read_all(&path)
                     .or_else(|e| {
                         if path == "example.ua" {
@@ -697,7 +748,7 @@ impl SysOp {
             SysOp::FReadAllBytes => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let bytes = env
-                    .sys
+                    .backend
                     .file_read_all(&path)
                     .or_else(|e| {
                         if path == "example.ua" {
@@ -723,7 +774,7 @@ impl SysOp {
                     Value::Char(arr) => arr.data.iter().collect::<String>().into(),
                     Value::Func(_) => return Err(env.error("Cannot write function array to file")),
                 };
-                env.sys
+                env.backend
                     .file_write_all(&path, &bytes)
                     .or_else(|e| {
                         if path == "example.ua" {
@@ -737,23 +788,23 @@ impl SysOp {
             }
             SysOp::FExists => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let exists = env.sys.file_exists(&path);
+                let exists = env.backend.file_exists(&path);
                 env.push(exists);
             }
             SysOp::FListDir => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let paths = env.sys.list_dir(&path).map_err(|e| env.error(e))?;
+                let paths = env.backend.list_dir(&path).map_err(|e| env.error(e))?;
                 env.push(Array::<char>::from_iter(paths));
             }
             SysOp::FIsFile => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let is_file = env.sys.is_file(&path).map_err(|e| env.error(e))?;
+                let is_file = env.backend.is_file(&path).map_err(|e| env.error(e))?;
                 env.push(is_file);
             }
             SysOp::Import => {
                 let path = env.pop(1)?.as_string(env, "Import path must be a string")?;
                 let input = String::from_utf8(
-                    env.sys
+                    env.backend
                         .file_read_all(&path)
                         .or_else(|e| {
                             if path == "example.ua" {
@@ -770,7 +821,7 @@ impl SysOp {
             SysOp::Now => env.push(instant::now()),
             SysOp::ImRead => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let bytes = env.sys.file_read_all(&path).map_err(|e| env.error(e))?;
+                let bytes = env.backend.file_read_all(&path).map_err(|e| env.error(e))?;
                 let image = image::load_from_memory(&bytes)
                     .map_err(|e| env.error(format!("Failed to read image: {}", e)))?
                     .into_rgba8();
@@ -793,45 +844,45 @@ impl SysOp {
                 };
                 let bytes =
                     value_to_image_bytes(&value, output_format).map_err(|e| env.error(e))?;
-                env.sys
+                env.backend
                     .file_write_all(&path, &bytes)
                     .map_err(|e| env.error(e))?;
             }
             SysOp::ImShow => {
                 let value = env.pop(1)?;
                 let image = value_to_image(&value).map_err(|e| env.error(e))?;
-                env.sys.show_image(image).map_err(|e| env.error(e))?;
+                env.backend.show_image(image).map_err(|e| env.error(e))?;
             }
             SysOp::AudioPlay => {
                 let value = env.pop(1)?;
                 let bytes = value_to_wav_bytes_f32(&value).map_err(|e| env.error(e))?;
-                env.sys.play_audio(bytes).map_err(|e| env.error(e))?;
+                env.backend.play_audio(bytes).map_err(|e| env.error(e))?;
             }
             SysOp::Sleep => {
                 let ms = env
                     .pop(1)?
                     .as_num(env, "Sleep time must be a number")?
                     .max(0.0);
-                env.sys.sleep(ms).map_err(|e| env.error(e))?;
+                env.backend.sleep(ms).map_err(|e| env.error(e))?;
             }
             SysOp::TcpListen => {
                 let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
-                let handle = env.sys.tcp_listen(&addr).map_err(|e| env.error(e))?;
+                let handle = env.backend.tcp_listen(&addr).map_err(|e| env.error(e))?;
                 env.push(handle);
             }
             SysOp::TcpAccept => {
                 let handle = env.pop(1)?.as_nat(env, "Handle must be an integer")?.into();
-                let new_handle = env.sys.tcp_accept(handle).map_err(|e| env.error(e))?;
+                let new_handle = env.backend.tcp_accept(handle).map_err(|e| env.error(e))?;
                 env.push(new_handle);
             }
             SysOp::TcpConnect => {
                 let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
-                let handle = env.sys.tcp_connect(&addr).map_err(|e| env.error(e))?;
+                let handle = env.backend.tcp_connect(&addr).map_err(|e| env.error(e))?;
                 env.push(handle);
             }
             SysOp::Close => {
                 let handle = env.pop(1)?.as_nat(env, "Handle must be an integer")?.into();
-                env.sys.close(handle).map_err(|e| env.error(e))?;
+                env.backend.close(handle).map_err(|e| env.error(e))?;
             }
         }
         Ok(())

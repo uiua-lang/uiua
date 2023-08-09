@@ -1,13 +1,13 @@
-use std::{cell::RefCell, collections::HashMap, io::Cursor};
+use std::{any::Any, collections::HashMap, io::Cursor, sync::Mutex};
 
 use uiua::{Handle, SysBackend};
 
 pub struct WebBackend {
-    pub stdout: RefCell<String>,
-    pub stderr: RefCell<String>,
-    pub image_bytes: RefCell<Option<Vec<u8>>>,
-    pub audio_bytes: RefCell<Option<Vec<u8>>>,
-    pub files: RefCell<HashMap<String, Vec<u8>>>,
+    pub stdout: Mutex<String>,
+    pub stderr: Mutex<String>,
+    pub image_bytes: Mutex<Option<Vec<u8>>>,
+    pub audio_bytes: Mutex<Option<Vec<u8>>>,
+    pub files: Mutex<HashMap<String, Vec<u8>>>,
 }
 
 impl Default for WebBackend {
@@ -23,17 +23,22 @@ impl Default for WebBackend {
 }
 
 impl SysBackend for WebBackend {
+    fn any(&self) -> &dyn Any {
+        self
+    }
     fn write(&self, handle: Handle, contents: &[u8]) -> Result<(), String> {
         match handle {
             Handle::STDOUT => {
                 self.stdout
-                    .borrow_mut()
+                    .lock()
+                    .unwrap()
                     .push_str(&String::from_utf8_lossy(contents));
                 Ok(())
             }
             Handle::STDERR => {
                 self.stderr
-                    .borrow_mut()
+                    .lock()
+                    .unwrap()
                     .push_str(&String::from_utf8_lossy(contents));
                 Ok(())
             }
@@ -45,24 +50,26 @@ impl SysBackend for WebBackend {
         image
             .write_to(&mut bytes, image::ImageOutputFormat::Png)
             .map_err(|e| format!("Failed to show image: {e}"))?;
-        *self.image_bytes.borrow_mut() = Some(bytes.into_inner());
+        *self.image_bytes.lock().unwrap() = Some(bytes.into_inner());
         Ok(())
     }
     fn file_write_all(&self, path: &str, contents: &[u8]) -> Result<(), String> {
         self.files
-            .borrow_mut()
+            .lock()
+            .unwrap()
             .insert(path.to_string(), contents.to_vec());
         Ok(())
     }
     fn file_read_all(&self, path: &str) -> Result<Vec<u8>, String> {
         self.files
-            .borrow()
+            .lock()
+            .unwrap()
             .get(path)
             .cloned()
             .ok_or_else(|| format!("File not found: {path}"))
     }
     fn play_audio(&self, wav_bytes: Vec<u8>) -> Result<(), String> {
-        *self.audio_bytes.borrow_mut() = Some(wav_bytes);
+        *self.audio_bytes.lock().unwrap() = Some(wav_bytes);
         Ok(())
     }
     fn sleep(&self, ms: f64) -> Result<(), String> {

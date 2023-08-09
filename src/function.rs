@@ -42,7 +42,7 @@ pub struct Function {
 pub enum FunctionKind {
     Normal,
     Dfn(u8),
-    Dynamic(Arc<dyn Fn(&mut Uiua) -> UiuaResult>),
+    Dynamic(Arc<dyn Fn(&mut Uiua) -> UiuaResult + Send + Sync>),
 }
 
 impl From<Primitive> for Function {

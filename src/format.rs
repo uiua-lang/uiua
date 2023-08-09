@@ -1,6 +1,6 @@
 //! Functions for formatting Uiua code.
 
-use std::{fs, path::Path};
+use std::{env, fs, path::Path};
 
 use crate::{ast::*, lex::Sp, parse::parse, UiuaError, UiuaResult};
 
@@ -75,7 +75,10 @@ pub fn format_file<P: AsRef<Path>>(path: P, config: &FormatConfig) -> UiuaResult
     if formatted == input {
         return Ok(formatted);
     }
-    fs::write(path, &formatted).map_err(|e| UiuaError::Format(path.to_path_buf(), e))?;
+    let dont_write = env::var("UIUA_NO_FORMAT").is_ok_and(|val| val == "1");
+    if !dont_write {
+        fs::write(path, &formatted).map_err(|e| UiuaError::Format(path.to_path_buf(), e))?;
+    }
     Ok(formatted)
 }
 

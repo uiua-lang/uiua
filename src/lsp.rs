@@ -104,6 +104,7 @@ mod server {
     use crate::{
         format::{format_str, FormatConfig},
         lex::Loc,
+        Uiua,
     };
 
     use dashmap::DashMap;
@@ -118,6 +119,8 @@ mod server {
             .build()
             .unwrap()
             .block_on(async {
+                std::env::set_var("UIUA_NO_FORMAT", "1");
+
                 let stdin = tokio::io::stdin();
                 let stdout = tokio::io::stdout();
 
@@ -148,7 +151,10 @@ mod server {
 
     #[tower_lsp::async_trait]
     impl LanguageServer for Backend {
-        async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
+        async fn initialize(&self, _params: InitializeParams) -> Result<InitializeResult> {
+            self.client
+                .log_message(MessageType::INFO, format!("{:#?}", _params.capabilities))
+                .await;
             Ok(InitializeResult {
                 capabilities: ServerCapabilities {
                     text_document_sync: Some(TextDocumentSyncCapability::Kind(
@@ -159,19 +165,23 @@ mod server {
                     semantic_tokens_provider: Some(
                         SemanticTokensServerCapabilities::SemanticTokensOptions(
                             SemanticTokensOptions {
+                                work_done_progress_options: WorkDoneProgressOptions::default(),
                                 legend: SemanticTokensLegend {
                                     token_types: vec![
                                         SemanticTokenType::STRING,
                                         SemanticTokenType::NUMBER,
                                         SemanticTokenType::COMMENT,
                                     ],
-                                    ..Default::default()
+                                    token_modifiers: vec![],
                                 },
-                                full: Some(SemanticTokensFullOptions::Bool(true)),
-                                ..Default::default()
+                                range: Some(true),
+                                full: Some(SemanticTokensFullOptions::Delta { delta: Some(false) }),
                             },
                         ),
                     ),
+                    document_symbol_provider: Some(OneOf::Left(true)),
+                    document_highlight_provider: Some(OneOf::Left(true)),
+                    inline_value_provider: Some(OneOf::Left(true)),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -230,12 +240,6 @@ mod server {
             &self,
             params: DocumentFormattingParams,
         ) -> Result<Option<Vec<TextEdit>>> {
-            self.client
-                .log_message(
-                    MessageType::INFO,
-                    format!("Formatting {}", params.text_document.uri),
-                )
-                .await;
             let doc = if let Some(doc) = self.docs.get(&params.text_document.uri) {
                 doc
             } else {
@@ -249,17 +253,44 @@ mod server {
                 },
             )
             .map_err(|_| Error::parse_error())?;
-            let line = formatted.lines().count() as u32;
-            let column = formatted
-                .lines()
-                .last()
-                .map(|s| s.len() as u32)
-                .unwrap_or(0);
-            let range = Range::new(Position::new(0, 0), Position::new(line, column));
+            let range = Range::new(Position::new(0, 0), Position::new(u32::MAX, u32::MAX));
             Ok(Some(vec![TextEdit {
                 range,
                 new_text: formatted,
             }]))
+        }
+
+        async fn inline_value(
+            &self,
+            params: InlineValueParams,
+        ) -> Result<Option<Vec<InlineValue>>> {
+            self.client
+                .log_message(
+                    MessageType::INFO,
+                    format!("Inline value {}", params.text_document.uri),
+                )
+                .await;
+            let doc = if let Some(doc) = self.docs.get(&params.text_document.uri) {
+                doc
+            } else {
+                return Ok(None);
+            };
+            Ok(
+                if let Ok(env) = Uiua::with_native_sys().load_str(&doc.code) {
+                    let stack = env.take_stack();
+                    let mut text = String::new();
+                    for val in stack {
+                        text.push_str(&val.show());
+                    }
+                    let range = Range {
+                        start: Position::new(0, 0),
+                        end: Position::new(u32::MAX, u32::MAX),
+                    };
+                    Some(vec![InlineValue::Text(InlineValueText { range, text })])
+                } else {
+                    None
+                },
+            )
         }
 
         async fn semantic_tokens_full(
@@ -278,6 +309,8 @@ mod server {
                 return Ok(None);
             };
             let mut tokens = Vec::new();
+            let mut prev_line = 0;
+            let mut prev_char = 0;
             for sp in &doc.spans {
                 let token_type = match sp.value {
                     SpanKind::String => 0,
@@ -287,13 +320,20 @@ mod server {
                 };
                 let span = &sp.span;
                 let start = uiua_loc_to_lsp(span.start);
+                let delta_start = if start.character > prev_char {
+                    start.character - prev_char
+                } else {
+                    start.character
+                };
                 tokens.push(SemanticToken {
-                    delta_line: start.line,
-                    delta_start: start.character,
+                    delta_line: start.line - prev_line,
+                    delta_start,
                     length: (span.end.char_pos - span.start.char_pos) as u32,
                     token_type,
                     token_modifiers_bitset: 0,
                 });
+                prev_line = start.line;
+                prev_char = start.character;
             }
             Ok(Some(SemanticTokensResult::Tokens(SemanticTokens {
                 result_id: None,
@@ -309,6 +349,48 @@ mod server {
                 .log_message(
                     MessageType::INFO,
                     format!("Semantic tokens delta {}", params.text_document.uri),
+                )
+                .await;
+            Ok(None)
+        }
+
+        async fn semantic_tokens_range(
+            &self,
+            params: SemanticTokensRangeParams,
+        ) -> Result<Option<SemanticTokensRangeResult>> {
+            self.client
+                .log_message(
+                    MessageType::INFO,
+                    format!("Semantic tokens range {}", params.text_document.uri),
+                )
+                .await;
+            Ok(None)
+        }
+
+        async fn document_highlight(
+            &self,
+            params: DocumentHighlightParams,
+        ) -> Result<Option<Vec<DocumentHighlight>>> {
+            self.client
+                .log_message(
+                    MessageType::INFO,
+                    format!(
+                        "Document highlight {}",
+                        params.text_document_position_params.text_document.uri
+                    ),
+                )
+                .await;
+            Ok(None)
+        }
+
+        async fn document_symbol(
+            &self,
+            params: DocumentSymbolParams,
+        ) -> Result<Option<DocumentSymbolResponse>> {
+            self.client
+                .log_message(
+                    MessageType::INFO,
+                    format!("Document symbol {}", params.text_document.uri),
                 )
                 .await;
             Ok(None)

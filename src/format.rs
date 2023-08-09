@@ -65,7 +65,6 @@ fn format_impl(input: &str, path: Option<&Path>, config: &FormatConfig) -> UiuaR
     let (items, errors) = parse(input, path);
     if errors.is_empty() {
         Ok(format_items(&items, config))
-        // Ok(input.into())
     } else {
         Err(errors.into())
     }

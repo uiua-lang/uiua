@@ -584,3 +584,117 @@ fn from_multiname() {
     ));
     assert_eq!(Primitive::from_format_name_multi("foo"), None);
 }
+
+#[cfg(test)]
+#[test]
+fn gen_grammar_file() {
+    let noadic_functions: String = Primitive::all()
+        .filter(|p| p.modifier_args().is_none() && p.args() == Some(0))
+        .filter_map(|p| p.unicode())
+        .collect();
+    let monadic_functions: String = Primitive::all()
+        .filter(|p| p.modifier_args().is_none() && p.args() == Some(1))
+        .filter_map(|p| p.unicode())
+        .collect();
+    let dyadic_functions = Primitive::all()
+        .filter(|p| p.modifier_args().is_none() && p.args() == Some(2))
+        .filter_map(|p| p.unicode())
+        .collect::<String>()
+        .replace('-', "\\\\-");
+    let monadic_modifiers = Primitive::all()
+        .filter(|p| matches!(p.modifier_args(), Some((1, _))))
+        .filter_map(|p| p.unicode())
+        .collect::<String>()
+        .replace('\\', "\\\\\\\\");
+    let dyadic_modifiers: String = Primitive::all()
+        .filter(|p| matches!(p.modifier_args(), Some((2, _))))
+        .filter_map(|p| p.unicode())
+        .collect();
+
+    let text = format!(
+        r##"{{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Uiua",
+	"patterns": [
+		{{
+			"include": "#comments"
+		}},
+		{{
+			"include": "#keywords"
+		}},
+		{{
+			"include": "#strings"
+		}},
+        {{
+            "include": "#characters"
+        }},
+		{{
+			"include": "#numbers"
+		}},
+        {{
+            "include": "#strand"
+        }},
+		{{
+			"include": "#noadic"
+		}},
+		{{
+			"include": "#monadic"
+		}},
+		{{
+			"include": "#dyadic"
+		}},
+		{{
+			"include": "#mod1"
+		}},
+		{{
+			"include": "#mod2"
+		}}
+	],
+	"repository": {{
+		"comments": {{
+			"name": "comment.line.uiua",
+			"match": "#.*$"
+		}},
+		"strings": {{
+			"name": "constant.character.escape",
+			"match": "(\".*\"|\\$.*$)"
+		}},
+        "characters": {{
+            "name": "constant.character.escape",
+            "match": "'\\\\?.'"
+        }},
+		"numbers": {{
+			"name": "constant.numeric.uiua",
+			"match": "\\d+(\\.\\d+(e[+-]?\\d+)?)?"
+		}},
+		"strand": {{
+			"name": "comment.line",
+			"match": "_"
+		}},
+		"noadic": {{
+			"name": "entity.name.tag.uiua",
+            "match": "[{noadic_functions}]"
+        }},
+		"monadic": {{
+			"name": "string.quoted",
+            "match": "[{monadic_functions}]"
+        }},
+		"dyadic": {{
+			"name": "entity.name.function.uiua",
+            "match": "[{dyadic_functions}]"
+        }},
+		"mod1": {{
+			"name": "entity.name.type.uiua",
+            "match": "[{monadic_modifiers}]"
+        }},
+		"mod2": {{
+			"name": "keyword.control.uiua",
+            "match": "[{dyadic_modifiers}]"
+        }}
+    }},
+	"scopeName": "source.uiua"
+}}"##
+    );
+
+    std::fs::write("uiua.tmLanguage.json", text).expect("Failed to write grammar file");
+}

@@ -1,6 +1,8 @@
 - Docs
   - Testing and run modes
   - Loops
+  - Audio
+  - Images
 - Rework front page
 - More inverses
 - Threads

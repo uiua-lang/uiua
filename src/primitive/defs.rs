@@ -2,6 +2,7 @@ use super::*;
 
 macro_rules! primitive {
     ($(
+        #[doc = $doc_rust:literal]
         $(#[doc = $doc:literal])*
         (
             $(
@@ -15,7 +16,10 @@ macro_rules! primitive {
     ),* $(,)?) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
         pub enum Primitive {
-            $($variant,)*
+            $(
+                #[doc = $doc_rust]
+                $variant,
+            )*
             Sys(SysOp)
         }
 
@@ -65,7 +69,7 @@ macro_rules! primitive {
             pub fn doc(&self) -> Option<&'static PrimDoc> {
                 match self {
                     $(Primitive::$variant => {
-                        let doc_str = concat!($($doc, "\n"),*);
+                        let doc_str = concat!($doc_rust, $($doc, "\n"),*);
                         static DOC: OnceLock<PrimDoc> = OnceLock::new();
                         if doc_str.is_empty() {
                             return None;
@@ -119,8 +123,8 @@ pub struct PrimNames {
 }
 
 impl PrimNames {
-    pub fn is_formattable(&self) -> bool {
-        self.unicode.is_some()
+    pub fn is_name_formattable(&self) -> bool {
+        self.unicode.is_some() && self.ascii.is_none()
     }
 }
 
@@ -193,6 +197,7 @@ primitive!(
     /// ex: ¬0
     /// ex: ¬1
     /// ex: ¬[0 1 1 0]
+    /// ex: ¬[0 1 2 3]
     ///
     /// This is equivalent to `subtract``flip``1`
     /// ex: ¬7
@@ -208,6 +213,7 @@ primitive!(
     ///
     /// ex: ¯ 1
     /// ex: ¯ ¯3
+    /// ex: ¯ [1 2 ¯3]
     (1, Neg, MonadicPervasive, ("negate", Simple::Backtick, '¯')),
     /// The absolute value of a number
     ///
@@ -234,43 +240,160 @@ primitive!(
     /// You can get a tangent function by [divide]ing the [sine] by the cosine.
     /// ex: ÷○+η~○. 0
     (1, Sin, MonadicPervasive, ("sine", '○')),
+    /// The cosine of a number
     (1, Cos, MonadicPervasive),
+    /// The arcsine of a number
     (1, Asin, MonadicPervasive),
+    /// The arccosine of a number
     (1, Acos, MonadicPervasive),
     /// Round to the nearest integer towards `¯∞`
+    ///
+    /// ex: ⌊1.5
+    /// ex: ⌊¯1.5
+    /// ex: ⌊[1.5 ¯1.5 0.5 ¯0.5]
     (1, Floor, MonadicPervasive, ("floor", '⌊')),
     /// Round to the nearest integer towards `∞`
+    ///
+    /// ex: ⌈1.5
+    /// ex: ⌈¯1.5
+    /// ex: ⌈[1.5 ¯1.5 0.5 ¯0.5]
     (1, Ceil, MonadicPervasive, ("ceiling", '⌈')),
     /// Round to the nearest integer
+    ///
+    /// ex: ⁅1.2
+    /// ex: ⁅¯1.2
+    /// ex: ⁅1.5
+    /// ex: ⁅[0.1 π 2 9.9 7.5]
     (1, Round, MonadicPervasive, ("round", '⁅')),
     // Pervasive dyadic ops
+    /// Compare for equality
+    ///
+    /// ex: =1 2
+    /// ex: =5 5
+    /// ex: =1 [1 2 3]
+    /// ex: = [1 2 2] [1 2 3]
     (2, Eq, DyadicPervasive, ("equals", Simple::Equal, '=')),
+    /// Compare for inequality
+    ///
+    /// ex: ≠1 2
+    /// ex: ≠5 5
+    /// ex: ≠1 [1 2 3]
+    /// ex: ≠ [1 2 2] [1 2 3]
     (
         2,
         Ne,
         DyadicPervasive,
         ("not equals", Simple::BangEqual, '≠')
     ),
+    /// Compare for less than
+    ///
+    /// The first value is checked to be less than the second.
+    /// This is so you can think of `<``x` as a single unit.
+    ///
+    /// ex: <1 2
+    /// ex: <5 5
+    /// ex: <7 3
+    /// ex: <2 [1 2 3]
+    /// ex: < [1 2 2] [1 2 3]
     (2, Lt, DyadicPervasive, ("less than", '<')),
+    /// Compare for less than or equal
+    ///
+    /// The first value is checked to be less than or equal to the second.
+    /// This is so you can think of `≤``x` as a single unit.
+    ///
+    /// ex: ≤1 2
+    /// ex: ≤5 5
+    /// ex: ≤7 3
+    /// ex: ≤2 [1 2 3]
+    /// ex: ≤ [1 2 2] [1 2 3]
     (
         2,
         Le,
         DyadicPervasive,
         ("less or equal", Simple::LessEqual, '≤')
     ),
+    /// Compare for greater than
+    ///
+    /// The first value is checked to be greater than the second.
+    /// This is so you can think of `>``x` as a single unit.
+    ///
+    /// ex: >1 2
+    /// ex: >5 5
+    /// ex: >7 3
+    /// ex: >2 [1 2 3]
+    /// ex: > [1 2 2] [1 2 3]
     (2, Gt, DyadicPervasive, ("greater than", '>')),
+    /// Compare for greater than or equal
+    ///
+    /// The first value is checked to be greater than or equal to the second.
+    /// This is so you can think of `≥``x` as a single unit.
+    ///
+    /// ex: ≥1 2
+    /// ex: ≥5 5
+    /// ex: ≥7 3
+    /// ex: ≥2 [1 2 3]
+    /// ex: ≥ [1 2 2] [1 2 3]
     (
         2,
         Ge,
         DyadicPervasive,
         ("greater or equal", Simple::GreaterEqual, '≥')
     ),
+    /// Add values
+    ///
+    /// ex: +1 2
+    /// ex: +1 [2 3 4]
+    /// ex: + [1 2 3] [4 5 6]
     (2, Add, DyadicPervasive, ("add", '+')),
+    /// Subtract values
+    ///
+    /// The first value is subtracted from the second.
+    /// This is so you can think of `-``x` as a single unit.
+    ///
+    /// ex: -1 2
+    /// ex: -1 [2 3 4]
+    /// ex: - [1 2 3] [4 5 6]
     (2, Sub, DyadicPervasive, ("subtract", '-')),
+    /// Multiply values
+    ///
+    /// ex: ×3 5
+    /// ex: ×2 [1 2 3]
+    /// ex: × [1 2 3] [4 5 6]
     (2, Mul, DyadicPervasive, ("multiply", Simple::Star, '×')),
+    /// Divide values
+    ///
+    /// The second value is divided by the first.
+    /// This is so you can think of `÷``x` as a single unit.
+    ///
+    /// ex: ÷3 12
+    /// ex: ÷2 [1 2 3]
+    /// ex: ÷ [1 2 3] [4 5 6]
     (2, Div, DyadicPervasive, ("divide", Simple::Percent, '÷')),
+    /// Modulo values
+    ///
+    /// The second value is divided by the first, and the remainder is returned.
+    /// This is so you can think of `◿``x` as a single unit.
+    ///
+    /// ex: ◿10 27
+    /// ex: ◿5 [3 7 14]
+    /// ex: ◿ [3 4 5] [10 10 10]
     (2, Mod, DyadicPervasive, ("modulus", '◿')),
+    /// Raise a value to a power
+    ///
+    /// The second value is raised to the power of the first.
+    /// This is so you can think of `ⁿ``x` as a single unit.
+    ///
+    /// ex: ⁿ2 3
+    /// ex: ⁿ2 [1 2 3]
+    /// ex: ⁿ [1 2 3] [4 5 6]
     (2, Pow, DyadicPervasive, ("power", 'ⁿ')),
+    /// The based logarithm of a number
+    ///
+    /// The first value is the base, and the second value is the power.
+    ///
+    /// ex: ₙ2 8
+    /// ex: ₙ2 [8 16 32]
+    /// ex: ₙ [2 3 4] [16 27 1024]
     (2, Log, DyadicPervasive, ("logarithm", 'ₙ')),
     /// Take the minimum of two arrays
     ///
@@ -324,7 +447,7 @@ primitive!(
     /// ex: ⇡5
     /// ex: ⇡2_3
     ///
-    /// When creating ranges with upper bounds that a [rank]`1` (lists), [pick]ing the generated range array from an array with the [shape] of the input will yield that array.
+    /// When creating ranges with upper bounds that are [rank]`1`, [pick]ing the generated range array from an array with the [shape] of the input will yield that array.
     /// ex:     [1_2_3 4_5_6]
     ///   :    △[1_2_3 4_5_6]
     ///   :   ⇡△[1_2_3 4_5_6]
@@ -383,6 +506,7 @@ primitive!(
     /// Bits are encoded in big-endian so that any fill elements do not affect the result.
     /// ex: ↶⋯.\⊂◿2⇡6
     (1, Bits, MonadicArray, ("bits", '⋯')),
+    /// Inverse of Bits
     (1, InverseBits, MonadicArray),
     /// Rotate the shape of an array
     ///
@@ -392,6 +516,7 @@ primitive!(
     /// `shape``transpose` is always equivalent to `rotate``1``shape`.
     /// ex: ≅ △⍉ ~ ↻1△ .[1_2 3_4 5_6]
     (1, Transpose, MonadicArray, ("transpose", '⍉')),
+    /// Inverse of Transpose
     (1, InvTranspose, MonadicArray),
     /// Sort the rows of an array
     ///
@@ -854,5 +979,6 @@ primitive!(
     (0(1), Tau, Constant, ("tau", 'τ')),
     /// The biggest number
     (0(1), Infinity, Constant, ("infinity", '∞')),
+    /// The function fill value
     (0(None), FillValue, Stack),
 );

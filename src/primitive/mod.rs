@@ -1,5 +1,5 @@
-mod primitive_defs;
-pub use primitive_defs::*;
+mod defs;
+pub use defs::*;
 
 use std::{
     borrow::Cow,
@@ -98,7 +98,7 @@ impl Primitive {
         }
         let mut matching = Primitive::all().filter(|p| {
             p.names()
-                .is_some_and(|n| n.is_formattable() && n.text.starts_with(name))
+                .is_some_and(|n| n.is_name_formattable() && n.text.starts_with(name))
         });
         let res = matching.next()?;
         let exact_match = res.names().unwrap().text == name;
@@ -597,7 +597,7 @@ fn gen_grammar_file() {
             .replace('-', "\\\\-");
         let names: Vec<String> = prims
             .filter_map(|p| p.names())
-            .filter(|p| p.is_formattable())
+            .filter(|p| p.is_name_formattable())
             .map(|n| n.text.to_string())
             .map(|name| {
                 let min_len = (2..)

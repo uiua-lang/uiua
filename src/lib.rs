@@ -29,6 +29,7 @@ use array::ArrayValue;
 
 pub use {error::*, run::Uiua, sys::*};
 
+/// Uiua's byte type
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Byte(pub i16);
 

@@ -46,6 +46,51 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
+pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
+    mut arr: Array<T>,
+    identity: R,
+    f: impl Fn(T, R) -> R,
+) -> Array<R> {
+    match arr.shape.len() {
+        0 => (vec![], vec![arr.data.into_iter().next().unwrap().into()]).into(),
+        1 => {
+            let mut vals = arr.data.into_iter().rev();
+            (
+                vec![],
+                vec![if let Some(acc) = vals.next() {
+                    vals.fold(acc.into(), flip(f))
+                } else {
+                    identity
+                }],
+            )
+                .into()
+        }
+        _ => {
+            let row_len = arr.row_len();
+            let row_count = arr.row_count();
+            if row_count == 0 {
+                arr.shape.remove(0);
+                let data = cowslice![identity; row_len];
+                return (arr.shape, data).into();
+            }
+            let mut row_indices = (0..row_count).rev();
+            let mut new_data: Vec<R> = arr.data[row_indices.next().unwrap() * row_len..]
+                .iter()
+                .cloned()
+                .map(Into::into)
+                .collect();
+            for i in row_indices {
+                let start = i * row_len;
+                for j in 0..row_len {
+                    new_data[j] = f(arr.data[start + j].clone(), new_data[j].clone());
+                }
+            }
+            arr.shape.remove(0);
+            (arr.shape, new_data).into()
+        }
+    }
+}
+
 fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
     let mut rows = xs.into_rows_rev();
     let mut acc = init
@@ -110,6 +155,40 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
             Ok(())
         }
         (_, xs) => generic_scan(f, xs, env),
+    }
+}
+
+fn fast_scan<T: ArrayValue>(mut arr: Array<T>, f: impl Fn(T, T) -> T) -> Array<T> {
+    match arr.shape.len() {
+        0 => unreachable!("fast_scan called on unit array, should have been guarded against"),
+        1 => {
+            if arr.row_count() == 0 {
+                return arr;
+            }
+            let mut acc = arr.data[0].clone();
+            for val in arr.data.iter_mut().skip(1) {
+                acc = f(acc, val.clone());
+                *val = acc.clone();
+            }
+            arr
+        }
+        _ => {
+            let row_len: usize = arr.row_len();
+            if arr.row_count() == 0 {
+                return arr;
+            }
+            let shape = arr.shape.clone();
+            let mut new_data = Vec::with_capacity(arr.data.len());
+            let mut rows = arr.into_rows();
+            new_data.extend(rows.next().unwrap().data);
+            for row in rows {
+                let start = new_data.len() - row_len;
+                for (i, r) in row.data.into_iter().enumerate() {
+                    new_data.push(f(new_data[start + i].clone(), r));
+                }
+            }
+            (shape, new_data).into()
+        }
     }
 }
 
@@ -348,6 +427,36 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
+fn fast_table<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
+    a: Array<A>,
+    b: Array<B>,
+    f: impl Fn(B, A) -> C,
+) -> Array<C> {
+    let mut new_data = Vec::with_capacity(a.data.len() * b.data.len());
+    for x in a.data {
+        for y in b.data.iter().cloned() {
+            new_data.push(f(y, x.clone()));
+        }
+    }
+    let mut new_shape = a.shape;
+    new_shape.extend_from_slice(&b.shape);
+    (new_shape, new_data).into()
+}
+
+fn fast_table_join_or_couple<T: ArrayValue>(a: Array<T>, b: Array<T>) -> Array<T> {
+    let mut new_data = Vec::with_capacity(a.data.len() * b.data.len() * 2);
+    for x in a.data {
+        for y in b.data.iter().cloned() {
+            new_data.push(x.clone());
+            new_data.push(y);
+        }
+    }
+    let mut new_shape = a.shape;
+    new_shape.extend_from_slice(&b.shape);
+    new_shape.push(2);
+    (new_shape, new_data).into()
+}
+
 fn generic_table(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     const BREAK_ERROR: &str = "break is not allowed in table";
     let mut new_shape = xs.shape().to_vec();
@@ -427,114 +536,6 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
         }
     }
     Ok(())
-}
-
-pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
-    mut arr: Array<T>,
-    identity: R,
-    f: impl Fn(T, R) -> R,
-) -> Array<R> {
-    match arr.shape.len() {
-        0 => (vec![], vec![arr.data.into_iter().next().unwrap().into()]).into(),
-        1 => {
-            let mut vals = arr.data.into_iter().rev();
-            (
-                vec![],
-                vec![if let Some(acc) = vals.next() {
-                    vals.fold(acc.into(), flip(f))
-                } else {
-                    identity
-                }],
-            )
-                .into()
-        }
-        _ => {
-            let row_len = arr.row_len();
-            let row_count = arr.row_count();
-            if row_count == 0 {
-                arr.shape.remove(0);
-                let data = cowslice![identity; row_len];
-                return (arr.shape, data).into();
-            }
-            let mut row_indices = (0..row_count).rev();
-            let mut new_data: Vec<R> = arr.data[row_indices.next().unwrap() * row_len..]
-                .iter()
-                .cloned()
-                .map(Into::into)
-                .collect();
-            for i in row_indices {
-                let start = i * row_len;
-                for j in 0..row_len {
-                    new_data[j] = f(arr.data[start + j].clone(), new_data[j].clone());
-                }
-            }
-            arr.shape.remove(0);
-            (arr.shape, new_data).into()
-        }
-    }
-}
-fn fast_scan<T: ArrayValue>(mut arr: Array<T>, f: impl Fn(T, T) -> T) -> Array<T> {
-    match arr.shape.len() {
-        0 => unreachable!("fast_scan called on unit array, should have been guarded against"),
-        1 => {
-            if arr.row_count() == 0 {
-                return arr;
-            }
-            let mut acc = arr.data[0].clone();
-            for val in arr.data.iter_mut().skip(1) {
-                acc = f(acc, val.clone());
-                *val = acc.clone();
-            }
-            arr
-        }
-        _ => {
-            let row_len: usize = arr.row_len();
-            if arr.row_count() == 0 {
-                return arr;
-            }
-            let shape = arr.shape.clone();
-            let mut new_data = Vec::with_capacity(arr.data.len());
-            let mut rows = arr.into_rows();
-            new_data.extend(rows.next().unwrap().data);
-            for row in rows {
-                let start = new_data.len() - row_len;
-                for (i, r) in row.data.into_iter().enumerate() {
-                    new_data.push(f(new_data[start + i].clone(), r));
-                }
-            }
-            (shape, new_data).into()
-        }
-    }
-}
-
-fn fast_table<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
-    a: Array<A>,
-    b: Array<B>,
-    f: impl Fn(B, A) -> C,
-) -> Array<C> {
-    let mut new_data = Vec::with_capacity(a.data.len() * b.data.len());
-    for x in a.data {
-        for y in b.data.iter().cloned() {
-            new_data.push(f(y, x.clone()));
-        }
-    }
-    let mut new_shape = a.shape;
-    new_shape.extend_from_slice(&b.shape);
-    (new_shape, new_data).into()
-}
-
-fn fast_table_join_or_couple<T: ArrayValue>(a: Array<T>, b: Array<T>) -> Array<T> {
-    let mut new_data = Vec::with_capacity(a.data.len() * b.data.len() * 2);
-    for x in a.data {
-        for y in b.data.iter().cloned() {
-            new_data.push(x.clone());
-            new_data.push(y);
-        }
-    }
-    let mut new_shape = a.shape;
-    new_shape.extend_from_slice(&b.shape);
-    new_shape.push(2);
-    (new_shape, new_data).into()
 }
 
 pub fn level(env: &mut Uiua) -> UiuaResult {

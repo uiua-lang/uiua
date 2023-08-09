@@ -27,6 +27,7 @@ impl<T: ArrayValue> Default for Array<T> {
         }
     }
 }
+
 impl<T: ArrayValue> fmt::Debug for Array<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{self}")

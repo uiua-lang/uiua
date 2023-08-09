@@ -295,12 +295,12 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     }
     fn spawn(
         &self,
-        env: &Uiua,
+        env: Uiua,
         f: Box<dyn FnOnce(&mut Uiua) -> UiuaResult + Send>,
     ) -> Result<Handle, String> {
         Err("Spawning threads is not supported in this environment".into())
     }
-    fn join(&self, handle: Handle) -> Result<Vec<Value>, Result<UiuaError, String>> {
+    fn wait(&self, handle: Handle) -> Result<Vec<Value>, Result<UiuaError, String>> {
         Err(Err(
             "Joining threads is not supported in this environment".into()
         ))
@@ -576,10 +576,9 @@ impl SysBackend for NativeSys {
     }
     fn spawn(
         &self,
-        env: &Uiua,
+        mut env: Uiua,
         f: Box<dyn FnOnce(&mut Uiua) -> UiuaResult + Send>,
     ) -> Result<Handle, String> {
-        let mut env = env.clone();
         let thread = spawn(move || {
             f(&mut env)?;
             Ok(env.take_stack())
@@ -590,7 +589,7 @@ impl SysBackend for NativeSys {
             Ok(handle)
         })
     }
-    fn join(&self, handle: Handle) -> Result<Vec<Value>, Result<UiuaError, String>> {
+    fn wait(&self, handle: Handle) -> Result<Vec<Value>, Result<UiuaError, String>> {
         sys(|sys| {
             let thread = sys
                 .threads
@@ -659,21 +658,30 @@ impl SysOp {
             }
             SysOp::ReadStr => {
                 let count = env.pop(1)?.as_nat(env, "Count must be an integer")?;
-                let handle = env.pop(2)?.as_nat(env, "Handle must be an integer")?.into();
+                let handle = env
+                    .pop(2)?
+                    .as_nat(env, "Handle must be an natural number")?
+                    .into();
                 let bytes = env.backend.read(handle, count).map_err(|e| env.error(e))?;
                 let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
                 env.push(s);
             }
             SysOp::ReadBytes => {
                 let count = env.pop(1)?.as_nat(env, "Count must be an integer")?;
-                let handle = env.pop(2)?.as_nat(env, "Handle must be an integer")?.into();
+                let handle = env
+                    .pop(2)?
+                    .as_nat(env, "Handle must be an natural number")?
+                    .into();
                 let bytes = env.backend.read(handle, count).map_err(|e| env.error(e))?;
                 let bytes = bytes.into_iter().map(Into::into);
                 env.push(Array::<Byte>::from_iter(bytes));
             }
             SysOp::ReadUntil => {
                 let delim = env.pop(1)?;
-                let handle = env.pop(2)?.as_nat(env, "Handle must be an integer")?.into();
+                let handle = env
+                    .pop(2)?
+                    .as_nat(env, "Handle must be an natural number")?
+                    .into();
                 if delim.rank() > 1 {
                     return Err(env.error("Delimiter must be a rank 0 or 1 string or byte array"));
                 }
@@ -714,7 +722,10 @@ impl SysOp {
             }
             SysOp::Write => {
                 let data = env.pop(1)?;
-                let handle = env.pop(2)?.as_nat(env, "Handle must be an integer")?.into();
+                let handle = env
+                    .pop(2)?
+                    .as_nat(env, "Handle must be an natural number")?
+                    .into();
                 let bytes: Vec<u8> = match data {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
                     Value::Byte(arr) => arr
@@ -871,7 +882,10 @@ impl SysOp {
                 env.push(handle);
             }
             SysOp::TcpAccept => {
-                let handle = env.pop(1)?.as_nat(env, "Handle must be an integer")?.into();
+                let handle = env
+                    .pop(1)?
+                    .as_nat(env, "Handle must be an natural number")?
+                    .into();
                 let new_handle = env.backend.tcp_accept(handle).map_err(|e| env.error(e))?;
                 env.push(new_handle);
             }
@@ -881,7 +895,10 @@ impl SysOp {
                 env.push(handle);
             }
             SysOp::Close => {
-                let handle = env.pop(1)?.as_nat(env, "Handle must be an integer")?.into();
+                let handle = env
+                    .pop(1)?
+                    .as_nat(env, "Handle must be an natural number")?
+                    .into();
                 env.backend.close(handle).map_err(|e| env.error(e))?;
             }
         }

@@ -13,7 +13,7 @@ use crate::{
     parse::parse,
     primitive::Primitive,
     value::Value,
-    Ident, NativeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
+    Handle, Ident, NativeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
 };
 
 /// The Uiua runtime
@@ -818,6 +818,42 @@ Square_Double_Increment";
     }
     pub(crate) fn truncate_stack(&mut self, size: usize) {
         self.stack.truncate(size);
+    }
+    pub(crate) fn spawn(
+        &mut self,
+        capture_count: usize,
+        f: impl FnOnce(&mut Self) -> UiuaResult + Send + 'static,
+    ) -> UiuaResult<Value> {
+        let env = Uiua {
+            new_functions: Vec::new(),
+            new_dfns: Vec::new(),
+            globals: self.globals.clone(),
+            spans: self.spans.clone(),
+            stack: self
+                .stack
+                .drain(self.stack.len() - capture_count..)
+                .collect(),
+            scope: self.scope.clone(),
+            lower_scopes: self.lower_scopes.last().cloned().into_iter().collect(),
+            mode: self.mode,
+            current_imports: self.current_imports.clone(),
+            imports: self.imports.clone(),
+            backend: self.backend.clone(),
+            example_ua: self.example_ua.clone(),
+        };
+        self.backend
+            .spawn(env, Box::new(f))
+            .map(Value::from)
+            .map_err(|e| self.error(e))
+    }
+    pub(crate) fn wait(&mut self, handle: Value) -> UiuaResult {
+        let handle = Handle(handle.as_nat(self, "Handle must be a natural number")? as u64);
+        let thread_stack = self
+            .backend
+            .wait(handle)
+            .map_err(|e| e.unwrap_or_else(|e| self.error(e)))?;
+        self.stack.extend(thread_stack);
+        Ok(())
     }
 }
 

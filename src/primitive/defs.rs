@@ -865,6 +865,24 @@ primitive!(
     /// ex: ?(+1 2)"failure"
     /// ex: ?(+'a' 'b')"failure"
     ([2, 0], Try, OtherModifier, ("try", '?')),
+    // Misc
+    /// Throw an error
+    ///
+    /// Expects a message and a test value.
+    /// If the test value is anything but `1`, then the message will be thrown as an error.
+    ///
+    /// ex! !"Oh no!" "any array"
+    /// ex: !"Oh no!" 1
+    /// ex! !"Oh no!" 0
+    ///
+    /// Use [duplicate] if you do not care about the message.
+    /// ex: !. =6 6
+    /// ex! !. =8 9
+    (2, Throw, Control, ("throw", '!')),
+    /// Spawn a thread
+    ([2, 0], Spawn, OtherModifier, ("spawn", '↰')),
+    /// Wait for a thread to finish and push its results to the stack
+    (1, Wait, Misc, ("wait", '↲')),
     /// Call a function
     ///
     /// When passing a scalar function array, the function is simply called.
@@ -889,20 +907,6 @@ primitive!(
     /// ex:  :[+_- ×_÷] 1 1 3 12
     /// ex: ::[+_- ×_÷] 1 1 3 12
     (1(None), Call, Control, ("call", ':')),
-    // Misc
-    /// Throw an error
-    ///
-    /// Expects a message and a test value.
-    /// If the test value is anything but `1`, then the message will be thrown as an error.
-    ///
-    /// ex! !"Oh no!" "any array"
-    /// ex: !"Oh no!" 1
-    /// ex! !"Oh no!" 0
-    ///
-    /// Use [duplicate] if you do not care about the message.
-    /// ex: !. =6 6
-    /// ex! !. =8 9
-    (2, Throw, Control, ("throw", '!')),
     /// Break out of a loop
     /// Expects a non-negative integer. This integer is how many loops will be broken out of.
     /// Loops that can be broken out of are [reduce], [fold], [scan], [each], [rows], and [repeat].

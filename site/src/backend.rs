@@ -1,6 +1,14 @@
-use std::{any::Any, collections::HashMap, io::Cursor, sync::Mutex};
+use std::{
+    any::Any,
+    collections::HashMap,
+    io::Cursor,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Mutex,
+    },
+};
 
-use uiua::{Handle, SysBackend};
+use uiua::{value::Value, Handle, SysBackend, Uiua, UiuaError, UiuaResult};
 
 pub struct WebBackend {
     pub stdout: Mutex<String>,
@@ -8,6 +16,8 @@ pub struct WebBackend {
     pub image_bytes: Mutex<Option<Vec<u8>>>,
     pub audio_bytes: Mutex<Option<Vec<u8>>>,
     pub files: Mutex<HashMap<String, Vec<u8>>>,
+    next_thread_id: AtomicU64,
+    thread_results: Mutex<HashMap<Handle, UiuaResult<Vec<Value>>>>,
 }
 
 impl Default for WebBackend {
@@ -18,6 +28,8 @@ impl Default for WebBackend {
             image_bytes: None.into(),
             audio_bytes: None.into(),
             files: HashMap::new().into(),
+            next_thread_id: 0.into(),
+            thread_results: HashMap::new().into(),
         }
     }
 }
@@ -76,5 +88,23 @@ impl SysBackend for WebBackend {
         let start = instant::now();
         while instant::now() - start < ms {}
         Ok(())
+    }
+    fn spawn(
+        &self,
+        env: Uiua,
+        f: Box<dyn FnOnce(&mut Uiua) -> UiuaResult + Send>,
+    ) -> Result<Handle, String> {
+        let handle = Handle(self.next_thread_id.fetch_add(1, Ordering::SeqCst));
+        let mut env = env.clone();
+        let res = f(&mut env).map(|_| env.take_stack());
+        self.thread_results.lock().unwrap().insert(handle, res);
+        Ok(handle)
+    }
+    fn wait(&self, handle: Handle) -> Result<Vec<Value>, Result<UiuaError, String>> {
+        match self.thread_results.lock().unwrap().remove(&handle) {
+            Some(Ok(stack)) => Ok(stack),
+            Some(Err(err)) => Err(Ok(err)),
+            None => Err(Err("Invalid thread handle".into())),
+        }
     }
 }

@@ -337,6 +337,19 @@ impl Primitive {
                 .ok_or_else(|| env.error(format!("No function found for {name:?}")))?;
                 env.push(f);
             }
+            Primitive::Spawn => {
+                let n = env.pop(1)?.as_nat(env, "spawn expects a natural number")?;
+                let f = env.pop(2)?;
+                let handle = env.spawn(n, move |env| {
+                    env.push(f);
+                    env.call()
+                })?;
+                env.push(handle);
+            }
+            Primitive::Wait => {
+                let handle = env.pop(1)?;
+                env.wait(handle)?;
+            }
             Primitive::Sys(io) => io.run(env)?,
         }
         Ok(())

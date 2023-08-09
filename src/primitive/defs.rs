@@ -802,13 +802,13 @@ primitive!(
     /// Apply a function to each combination of elements of two arrays
     /// This is the element-wise version of [cross].
     ///
-    /// ex: ⊞+ 1_2_3 4_5_6
+    /// ex: ⊞+ 1_2_3 4_5_6_7
     /// ex: ⊞⊂ 1_2 3_4
     ([1, 2, 2], Table, DyadicModifier, ("table", '⊞')),
     /// Apply a function to each combination of rows of two arrays
     /// This is the row-wise version of [table].
     ///
-    /// ex: ⊠⊂ [1_2 3_4] [5_6 7_8]
+    /// ex: ⊠⊂ [1_2 3_4 5_6] [7_8 7_10]
     ([1, 2, 2], Cross, DyadicModifier, ("cross", '⊠')),
     /// Repeat a function a number of times
     ///

@@ -202,6 +202,14 @@ impl Value {
         }
         None
     }
+    pub(crate) fn as_flipped_primitive(&self) -> Option<(Primitive, bool)> {
+        if let Value::Func(fs) = self {
+            if fs.rank() == 0 {
+                return fs.data[0].as_flipped_primitive();
+            }
+        }
+        None
+    }
     pub fn as_indices(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<isize>> {
         self.as_number_list(env, requirement, |f| f % 1.0 == 0.0, |f| f as isize)
     }

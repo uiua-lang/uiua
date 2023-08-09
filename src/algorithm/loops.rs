@@ -9,24 +9,36 @@ use crate::{
     Byte, Uiua, UiuaResult,
 };
 
+fn flip<A, B, C>(f: impl Fn(A, B) -> C) -> impl Fn(B, A) -> C {
+    move |b, a| f(a, b)
+}
+
 pub fn reduce(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(1)?;
     let xs = env.pop(2)?;
 
-    match (f.as_primitive(), xs) {
-        (Some(prim), Value::Num(nums)) => env.push(match prim {
-            Primitive::Add => nums.reduce(0.0, Add::add),
-            Primitive::Mul => nums.reduce(1.0, Mul::mul),
-            Primitive::Max => nums.reduce(f64::NEG_INFINITY, f64::max),
-            Primitive::Min => nums.reduce(f64::INFINITY, f64::min),
+    match (f.as_flipped_primitive(), xs) {
+        (Some((prim, flipped)), Value::Num(nums)) => env.push(match prim {
+            Primitive::Add => fast_reduce(nums, 0.0, Add::add),
+            Primitive::Sub if flipped => fast_reduce(nums, 0.0, Sub::sub),
+            Primitive::Sub => fast_reduce(nums, 0.0, flip(Sub::sub)),
+            Primitive::Mul => fast_reduce(nums, 1.0, Mul::mul),
+            Primitive::Div if flipped => fast_reduce(nums, 1.0, Div::div),
+            Primitive::Div => fast_reduce(nums, 1.0, flip(Div::div)),
+            Primitive::Max => fast_reduce(nums, f64::NEG_INFINITY, f64::max),
+            Primitive::Min => fast_reduce(nums, f64::INFINITY, f64::min),
             _ => return generic_fold(f, Value::Num(nums), None, env),
         }),
-        (Some(prim), Value::Byte(bytes)) => env.push(match prim {
-            Primitive::Add => bytes.reduce(0.0, |a, b| a + f64::from(b)),
-            Primitive::Mul => bytes.reduce(1.0, |a, b| a * f64::from(b)),
-            Primitive::Max => bytes.reduce(f64::NEG_INFINITY, |a, b| a.max(f64::from(b))),
-            Primitive::Min => bytes.reduce(f64::INFINITY, |a, b| a.min(f64::from(b))),
+        (Some((prim, flipped)), Value::Byte(bytes)) => env.push(match prim {
+            Primitive::Add => fast_reduce(bytes, 0.0, |a, b| f64::from(a) + b),
+            Primitive::Sub if flipped => fast_reduce(bytes, 0.0, |a, b| f64::from(a) - b),
+            Primitive::Sub => fast_reduce(bytes, 0.0, |a, b| b - f64::from(a)),
+            Primitive::Mul => fast_reduce(bytes, 1.0, |a, b| f64::from(a) * b),
+            Primitive::Div if flipped => fast_reduce(bytes, 1.0, |a, b| f64::from(a) / b),
+            Primitive::Div => fast_reduce(bytes, 1.0, |a, b| b / f64::from(a)),
+            Primitive::Max => fast_reduce(bytes, f64::NEG_INFINITY, |a, b| f64::from(a).max(b)),
+            Primitive::Min => fast_reduce(bytes, f64::INFINITY, |a, b| f64::from(a).min(b)),
             _ => return generic_fold(f, Value::Byte(bytes), None, env),
         }),
         (_, xs) => generic_fold(f, xs, None, env)?,
@@ -67,16 +79,34 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
     if xs.rank() == 0 {
         return Err(env.error("Cannot scan rank 0 array"));
     }
-    match (f.as_primitive(), xs) {
-        (Some(prim), Value::Num(nums)) => {
+    match (f.as_flipped_primitive(), xs) {
+        (Some((prim, flipped)), Value::Num(nums)) => {
             let arr = match prim {
-                Primitive::Add => nums.scan(0.0, Add::add),
-                Primitive::Mul => nums.scan(1.0, Mul::mul),
-                Primitive::Max => nums.scan(f64::NEG_INFINITY, f64::max),
-                Primitive::Min => nums.scan(f64::INFINITY, f64::min),
+                Primitive::Add => fast_scan(nums, Add::add),
+                Primitive::Sub if flipped => fast_scan(nums, Sub::sub),
+                Primitive::Sub => fast_scan(nums, flip(Sub::sub)),
+                Primitive::Mul => fast_scan(nums, Mul::mul),
+                Primitive::Div if flipped => fast_scan(nums, Div::div),
+                Primitive::Div => fast_scan(nums, flip(Div::div)),
+                Primitive::Max => fast_scan(nums, f64::max),
+                Primitive::Min => fast_scan(nums, f64::min),
                 _ => return generic_scan(f, Value::Num(nums), env),
             };
             env.push(arr);
+            Ok(())
+        }
+        (Some((prim, flipped)), Value::Byte(bytes)) => {
+            match prim {
+                Primitive::Add => env.push(fast_scan::<f64>(bytes.convert(), Add::add)),
+                Primitive::Sub if flipped => env.push(fast_scan::<f64>(bytes.convert(), Sub::sub)),
+                Primitive::Sub => env.push(fast_scan::<f64>(bytes.convert(), flip(Sub::sub))),
+                Primitive::Mul => env.push(fast_scan::<f64>(bytes.convert(), Mul::mul)),
+                Primitive::Div if flipped => env.push(fast_scan::<f64>(bytes.convert(), Div::div)),
+                Primitive::Div => env.push(fast_scan::<f64>(bytes.convert(), flip(Div::div))),
+                Primitive::Max => env.push(fast_scan(bytes, |a, b| a.op(b, i16::max))),
+                Primitive::Min => env.push(fast_scan(bytes, |a, b| a.op(b, i16::min))),
+                _ => return generic_scan(f, Value::Byte(bytes), env),
+            }
             Ok(())
         }
         (_, xs) => generic_scan(f, xs, env),
@@ -258,32 +288,61 @@ pub fn plow(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
+fn swap_if<T>(swap: bool, a: T, b: T) -> (T, T) {
+    if swap {
+        (b, a)
+    } else {
+        (a, b)
+    }
+}
+
 pub fn table(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(1)?;
     let xs = env.pop(2)?;
     let ys = env.pop(3)?;
-    match (f.as_primitive(), xs, ys) {
-        (Some(prim), Value::Num(xs), Value::Num(ys)) => env.push(match prim {
-            Primitive::Add => xs.table(ys, Add::add),
-            Primitive::Sub => xs.table(ys, Sub::sub),
-            Primitive::Mul => xs.table(ys, Mul::mul),
-            Primitive::Div => xs.table(ys, Div::div),
-            Primitive::Min => xs.table(ys, f64::min),
-            Primitive::Max => xs.table(ys, f64::max),
-            Primitive::Join | Primitive::Couple => xs.table_join_or_couple(ys),
-            _ => return generic_table(f, Value::Num(xs), Value::Num(ys), env),
-        }),
-        (Some(prim), Value::Byte(xs), Value::Byte(ys)) => match prim {
-            Primitive::Add => env.push(xs.table(ys, |a, b| f64::from(a) + f64::from(b))),
-            Primitive::Sub => env.push(xs.table(ys, |a, b| f64::from(a) - f64::from(b))),
-            Primitive::Mul => env.push(xs.table(ys, |a, b| f64::from(a) * f64::from(b))),
-            Primitive::Div => env.push(xs.table(ys, |a, b| f64::from(a) / f64::from(b))),
-            Primitive::Min => env.push(xs.table(ys, |a, b| Byte(i16::min(a.0, b.0)))),
-            Primitive::Max => env.push(xs.table(ys, |a, b| a.op(b, i16::min))),
-            Primitive::Join | Primitive::Couple => env.push(xs.table_join_or_couple(ys)),
-            _ => generic_table(f, Value::Byte(xs), Value::Byte(ys), env)?,
-        },
+    match (f.as_flipped_primitive(), xs, ys) {
+        #[cfg(not(debug))]
+        (Some((prim, flipped)), Value::Num(xs), Value::Num(ys)) => {
+            let (xs, ys) = swap_if(flipped, xs, ys);
+            env.push(match prim {
+                Primitive::Add => fast_table(xs, ys, Add::add),
+                Primitive::Sub if flipped => fast_table(xs, ys, Sub::sub),
+                Primitive::Sub => fast_table(xs, ys, flip(Sub::sub)),
+                Primitive::Mul => fast_table(xs, ys, Mul::mul),
+                Primitive::Div if flipped => fast_table(xs, ys, Div::div),
+                Primitive::Div => fast_table(xs, ys, flip(Div::div)),
+                Primitive::Min => fast_table(xs, ys, f64::min),
+                Primitive::Max => fast_table(xs, ys, f64::max),
+                Primitive::Join | Primitive::Couple => fast_table_join_or_couple(xs, ys),
+                _ => {
+                    let (xs, ys) = swap_if(flipped, xs, ys);
+                    return generic_table(f, Value::Num(xs), Value::Num(ys), env);
+                }
+            })
+        }
+        (Some((prim, flipped)), Value::Byte(xs), Value::Byte(ys)) => {
+            let (xs, ys) = swap_if(flipped, xs, ys);
+            match prim {
+                Primitive::Add => env.push(fast_table(xs, ys, |a, b| f64::from(a) + f64::from(b))),
+                Primitive::Sub if flipped => {
+                    env.push(fast_table(xs, ys, |a, b| f64::from(a) - f64::from(b)))
+                }
+                Primitive::Sub => env.push(fast_table(xs, ys, |a, b| f64::from(b) - f64::from(a))),
+                Primitive::Mul => env.push(fast_table(xs, ys, |a, b| f64::from(a) * f64::from(b))),
+                Primitive::Div if flipped => {
+                    env.push(fast_table(xs, ys, |a, b| f64::from(a) / f64::from(b)))
+                }
+                Primitive::Div => env.push(fast_table(xs, ys, |a, b| f64::from(b) / f64::from(a))),
+                Primitive::Min => env.push(fast_table(xs, ys, |a, b| Byte(i16::min(a.0, b.0)))),
+                Primitive::Max => env.push(fast_table(xs, ys, |a, b| a.op(b, i16::min))),
+                Primitive::Join | Primitive::Couple => env.push(fast_table_join_or_couple(xs, ys)),
+                _ => {
+                    let (xs, ys) = swap_if(flipped, xs, ys);
+                    generic_table(f, Value::Byte(xs), Value::Byte(ys), env)?
+                }
+            }
+        }
         (_, xs, ys) => generic_table(f, xs, ys, env)?,
     }
     Ok(())
@@ -370,92 +429,112 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-impl<T: ArrayValue> Array<T> {
-    pub fn reduce<R: ArrayValue>(mut self, identity: R, f: impl Fn(R, T) -> R) -> Array<R> {
-        match self.shape.len() {
-            0 => (
+pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
+    mut arr: Array<T>,
+    identity: R,
+    f: impl Fn(T, R) -> R,
+) -> Array<R> {
+    match arr.shape.len() {
+        0 => (vec![], vec![arr.data.into_iter().next().unwrap().into()]).into(),
+        1 => {
+            let mut vals = arr.data.into_iter().rev();
+            (
                 vec![],
-                vec![f(identity, self.data.into_iter().next().unwrap())],
+                vec![if let Some(acc) = vals.next() {
+                    vals.fold(acc.into(), flip(f))
+                } else {
+                    identity
+                }],
             )
-                .into(),
-            1 => self.data.into_iter().rev().fold(identity, f).into(),
-            _ => {
-                let row_len: usize = self.row_len();
-                if self.row_count() == 0 {
-                    self.shape.remove(0);
-                    let data = cowslice![identity; row_len];
-                    return (self.shape, data).into();
-                }
-                let mut new_data = vec![identity; row_len];
-                for i in 0..self.row_count() {
-                    let start = i * row_len;
-                    for j in 0..row_len {
-                        new_data[j] = f(new_data[j].clone(), self.data[start + j].clone());
-                    }
-                }
-                self.shape.remove(0);
-                (self.shape, new_data).into()
+                .into()
+        }
+        _ => {
+            let row_len = arr.row_len();
+            let row_count = arr.row_count();
+            if row_count == 0 {
+                arr.shape.remove(0);
+                let data = cowslice![identity; row_len];
+                return (arr.shape, data).into();
             }
+            let mut row_indices = (0..row_count).rev();
+            let mut new_data: Vec<R> = arr.data[row_indices.next().unwrap() * row_len..]
+                .iter()
+                .cloned()
+                .map(Into::into)
+                .collect();
+            for i in row_indices {
+                let start = i * row_len;
+                for j in 0..row_len {
+                    new_data[j] = f(arr.data[start + j].clone(), new_data[j].clone());
+                }
+            }
+            arr.shape.remove(0);
+            (arr.shape, new_data).into()
         }
     }
-    fn scan(mut self, identity: T, f: impl Fn(T, T) -> T) -> Self {
-        match self.shape.len() {
-            0 => unreachable!("scan_nums called on unit array, should have been guarded against"),
-            1 => {
-                let mut acc = identity;
-                for val in self.data.iter_mut() {
-                    acc = f(val.clone(), acc);
-                    *val = acc.clone();
-                }
-                self
+}
+fn fast_scan<T: ArrayValue>(mut arr: Array<T>, f: impl Fn(T, T) -> T) -> Array<T> {
+    match arr.shape.len() {
+        0 => unreachable!("fast_scan called on unit array, should have been guarded against"),
+        1 => {
+            if arr.row_count() == 0 {
+                return arr;
             }
-            _ => {
-                let row_len: usize = self.row_len();
-                if self.row_count() == 0 {
-                    return self;
-                }
-                let shape = self.shape.clone();
-                let mut new_data = Vec::with_capacity(self.data.len());
-                let mut rows = self.into_rows();
-                new_data.extend(rows.next().unwrap().data);
-                for row in rows {
-                    let start = new_data.len() - row_len;
-                    for (i, r) in row.data.into_iter().enumerate() {
-                        new_data.push(f(new_data[start + i].clone(), r));
-                    }
-                }
-                (shape, new_data).into()
+            let mut acc = arr.data[0].clone();
+            for val in arr.data.iter_mut().skip(1) {
+                acc = f(acc, val.clone());
+                *val = acc.clone();
             }
+            arr
+        }
+        _ => {
+            let row_len: usize = arr.row_len();
+            if arr.row_count() == 0 {
+                return arr;
+            }
+            let shape = arr.shape.clone();
+            let mut new_data = Vec::with_capacity(arr.data.len());
+            let mut rows = arr.into_rows();
+            new_data.extend(rows.next().unwrap().data);
+            for row in rows {
+                let start = new_data.len() - row_len;
+                for (i, r) in row.data.into_iter().enumerate() {
+                    new_data.push(f(new_data[start + i].clone(), r));
+                }
+            }
+            (shape, new_data).into()
         }
     }
-    fn table<U: ArrayValue, R: ArrayValue>(
-        self,
-        other: Array<U>,
-        f: impl Fn(U, T) -> R,
-    ) -> Array<R> {
-        let mut new_data = Vec::with_capacity(self.data.len() * other.data.len());
-        for x in self.data {
-            for y in other.data.iter().cloned() {
-                new_data.push(f(y, x.clone()));
-            }
+}
+
+fn fast_table<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
+    a: Array<A>,
+    b: Array<B>,
+    f: impl Fn(B, A) -> C,
+) -> Array<C> {
+    let mut new_data = Vec::with_capacity(a.data.len() * b.data.len());
+    for x in a.data {
+        for y in b.data.iter().cloned() {
+            new_data.push(f(y, x.clone()));
         }
-        let mut new_shape = self.shape;
-        new_shape.extend_from_slice(&other.shape);
-        (new_shape, new_data).into()
     }
-    fn table_join_or_couple(self, other: Self) -> Self {
-        let mut new_data = Vec::with_capacity(self.data.len() * other.data.len() * 2);
-        for x in self.data {
-            for y in other.data.iter().cloned() {
-                new_data.push(x.clone());
-                new_data.push(y);
-            }
+    let mut new_shape = a.shape;
+    new_shape.extend_from_slice(&b.shape);
+    (new_shape, new_data).into()
+}
+
+fn fast_table_join_or_couple<T: ArrayValue>(a: Array<T>, b: Array<T>) -> Array<T> {
+    let mut new_data = Vec::with_capacity(a.data.len() * b.data.len() * 2);
+    for x in a.data {
+        for y in b.data.iter().cloned() {
+            new_data.push(x.clone());
+            new_data.push(y);
         }
-        let mut new_shape = self.shape;
-        new_shape.extend_from_slice(&other.shape);
-        new_shape.push(2);
-        (new_shape, new_data).into()
     }
+    let mut new_shape = a.shape;
+    new_shape.extend_from_slice(&b.shape);
+    new_shape.push(2);
+    (new_shape, new_data).into()
 }
 
 pub fn level(env: &mut Uiua) -> UiuaResult {

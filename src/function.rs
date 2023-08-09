@@ -118,6 +118,15 @@ impl Function {
             _ => None,
         }
     }
+    pub(crate) fn as_flipped_primitive(&self) -> Option<(Primitive, bool)> {
+        match &self.id {
+            FunctionId::Primitive(prim) => Some((*prim, false)),
+            _ => match self.instrs.as_slice() {
+                [Instr::Prim(Primitive::Flip, _), Instr::Prim(prim, _)] => Some((*prim, true)),
+                _ => None,
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

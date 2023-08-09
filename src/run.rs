@@ -552,9 +552,6 @@ Square_Double_Increment";
                 }
                 &Instr::EndArray(span) => (|| {
                     let start = self.scope.array.pop().unwrap();
-                    if start > self.stack.len() {
-                        return Err(self.error("Array removed elements"));
-                    }
                     let values: Vec<_> = self.stack.drain(start..).rev().collect();
                     self.push_span(span, None);
                     let val = Value::from_row_values(values, self)?;
@@ -626,6 +623,9 @@ Square_Double_Increment";
                                 break Err(self.spans[call_span].clone().sp(message).into());
                             }
                             let args = self.stack.drain(self.stack.len() - n..).rev().collect();
+                            if let Some(bottom) = self.scope.array.last_mut() {
+                                *bottom = (*bottom).min(self.stack.len());
+                            }
                             self.scope.dfn.push(DfnFrame {
                                 function: f.clone(),
                                 args,
@@ -721,12 +721,16 @@ Square_Double_Increment";
     }
     /// Pop a value from the stack
     pub fn pop(&mut self, arg: impl StackArg) -> UiuaResult<Value> {
-        self.stack.pop().ok_or_else(|| {
+        let res = self.stack.pop().ok_or_else(|| {
             self.error(format!(
                 "Stack was empty when evaluating {}",
                 arg.arg_name()
             ))
-        })
+        });
+        if let Some(bottom) = self.scope.array.last_mut() {
+            *bottom = (*bottom).min(self.stack.len());
+        }
+        res
     }
     /// Pop a result value from the stack
     ///

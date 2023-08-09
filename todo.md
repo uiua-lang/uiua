@@ -1,4 +1,3 @@
-- Let stack notation pop
 - Docs
   - Testing and run modes
   - Loops

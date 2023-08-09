@@ -45,8 +45,11 @@ impl Default for FormatConfig {
 pub fn format_items(items: &[Item], config: &FormatConfig) -> String {
     let mut output = String::new();
     format_items_impl(&mut output, items, config);
-    if !config.trailing_newline {
+    while output.ends_with('\n') {
         output.pop();
+    }
+    if config.trailing_newline {
+        output.push('\n');
     }
     output
 }

@@ -112,6 +112,13 @@ impl fmt::Display for Function {
 }
 
 impl Function {
+    pub fn constant(value: impl Into<Value>) -> Self {
+        Function {
+            id: FunctionId::Constant,
+            instrs: vec![Instr::push(value.into())],
+            kind: FunctionKind::Normal,
+        }
+    }
     pub fn as_primitive(&self) -> Option<Primitive> {
         match &self.id {
             FunctionId::Primitive(prim) => Some(*prim),
@@ -127,6 +134,29 @@ impl Function {
             },
         }
     }
+    pub fn compose(self, other: Self) -> Self {
+        match (&self.kind, &other.kind) {
+            (FunctionKind::Dynamic(_), _) | (_, FunctionKind::Dynamic(_)) => Function {
+                id: self.id.clone().compose(other.id.clone()),
+                instrs: vec![
+                    Instr::push(other),
+                    Instr::Call(0),
+                    Instr::push(self),
+                    Instr::Call(0),
+                ],
+                kind: FunctionKind::Normal,
+            },
+            _ => Function {
+                id: self.id.compose(other.id),
+                instrs: {
+                    let mut instrs = other.instrs;
+                    instrs.extend(self.instrs);
+                    instrs
+                },
+                kind: FunctionKind::Normal,
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -136,6 +166,27 @@ pub enum FunctionId {
     Primitive(Primitive),
     Constant,
     Main,
+    Composed(Vec<Self>),
+}
+
+impl FunctionId {
+    pub fn compose(self, other: Self) -> Self {
+        match (self, other) {
+            (FunctionId::Composed(mut a), FunctionId::Composed(b)) => {
+                a.extend(b);
+                FunctionId::Composed(a)
+            }
+            (FunctionId::Composed(mut a), b) => {
+                a.push(b);
+                FunctionId::Composed(a)
+            }
+            (a, FunctionId::Composed(mut b)) => {
+                b.insert(0, a);
+                FunctionId::Composed(b)
+            }
+            (a, b) => FunctionId::Composed(vec![a, b]),
+        }
+    }
 }
 
 impl From<Ident> for FunctionId {
@@ -158,6 +209,7 @@ impl fmt::Display for FunctionId {
             FunctionId::Primitive(prim) => write!(f, "{prim}"),
             FunctionId::Constant => write!(f, "constant"),
             FunctionId::Main => write!(f, "main"),
+            FunctionId::Composed(ids) => write!(f, "{ids:?}"),
         }
     }
 }

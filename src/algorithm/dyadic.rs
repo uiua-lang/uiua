@@ -45,13 +45,7 @@ impl Value {
                 let shape = take(a.shape_mut());
                 let new_data: CowSlice<_> = a
                     .into_flat_values()
-                    .map(|a| {
-                        Arc::new(Function {
-                            id: FunctionId::Constant,
-                            instrs: vec![Instr::Push(a.into()), Instr::Call(env.span_index())],
-                            kind: FunctionKind::Normal,
-                        })
-                    })
+                    .map(|a| Arc::new(Function::constant(a)))
                     .collect();
                 let a = Array::new(shape, new_data);
                 on_success(a, b)

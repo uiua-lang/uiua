@@ -579,6 +579,13 @@ value_bin_impl!(
     (Char, Byte, char_byte),
     (Byte, Num, byte_num),
     (Num, Byte, num_byte),
+    (Func, Func, func_func),
+    (Func, Num, func_any),
+    (Func, Byte, func_any),
+    (Func, Char, func_any),
+    (Num, Func, any_func),
+    (Byte, Func, any_func),
+    (Char, Func, any_func),
 );
 
 value_bin_impl!(

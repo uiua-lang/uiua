@@ -447,6 +447,9 @@ pub fn Editor<'a>(
                     remove_code(start, end);
                 }
             }
+            "Tab" => {
+                replace_code("\t");
+            }
             "c" if event.ctrl_key() => {
                 let (start, end) = get_code_cursor().unwrap();
                 let (start, end) = (start.min(end), start.max(end));

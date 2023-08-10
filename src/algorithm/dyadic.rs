@@ -365,12 +365,30 @@ impl Value {
             Value::Func(a) => Value::Func(a.drop(&index, env)?),
         })
     }
+    pub(crate) fn untake(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+        let index = index.as_indices(env, "Index must be a list of integers")?;
+        Ok(match (self, into) {
+            (Value::Num(a), Value::Num(b)) => Value::Num(a.untake(&index, b, env)?),
+            (Value::Byte(a), Value::Byte(b)) => Value::Byte(a.untake(&index, b, env)?),
+            (Value::Char(a), Value::Char(b)) => Value::Char(a.untake(&index, b, env)?),
+            (Value::Func(a), Value::Func(b)) => Value::Func(a.untake(&index, b, env)?),
+            (Value::Num(a), Value::Byte(b)) => Value::Num(a.untake(&index, b.convert(), env)?),
+            (Value::Byte(a), Value::Num(b)) => Value::Num(a.convert().untake(&index, b, env)?),
+            (a, b) => {
+                return Err(env.error(format!(
+                    "Cannot untake {} into {}",
+                    a.type_name(),
+                    b.type_name()
+                )))
+            }
+        })
+    }
 }
 
 impl<T: ArrayValue> Array<T> {
     pub fn take(mut self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
-        match index {
-            [] => Ok(self),
+        Ok(match index {
+            [] => self,
             &[taking] => {
                 let row_len = self.row_len();
                 let row_count = self.row_count();
@@ -404,7 +422,7 @@ impl<T: ArrayValue> Array<T> {
                     self.shape[0] = abs_taking;
                 }
                 self.validate_shape();
-                Ok(self)
+                self
             }
             &[taking, ref sub_index @ ..] => {
                 if index.len() > self.rank() {
@@ -456,13 +474,13 @@ impl<T: ArrayValue> Array<T> {
                 };
                 arr.shape[0] = abs_taking;
                 arr.validate_shape();
-                Ok(arr)
+                arr
             }
-        }
+        })
     }
     pub fn drop(mut self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
-        match index {
-            [] => Ok(self),
+        Ok(match index {
+            [] => self,
             &[dropping] => {
                 let row_len = self.row_len();
                 let row_count = self.row_count();
@@ -485,7 +503,7 @@ impl<T: ArrayValue> Array<T> {
                 }
                 self.shape[0] = self.shape[0].saturating_sub(abs_dropping);
                 self.validate_shape();
-                Ok(self)
+                self
             }
             &[dropping, ref sub_index @ ..] => {
                 if index.len() > self.rank() {
@@ -510,9 +528,48 @@ impl<T: ArrayValue> Array<T> {
                 };
                 let arr = Array::from_row_arrays(new_rows);
                 arr.validate_shape();
-                Ok(arr)
+                arr
             }
+        })
+    }
+    fn untake(self, index: &[isize], mut into: Self, env: &Uiua) -> UiuaResult<Self> {
+        let from = self;
+        if from.rank() != into.rank() {
+            return Err(env.error(format!(
+                "Cannot untake rank {} array into rank {} array",
+                from.rank(),
+                into.rank()
+            )));
         }
+        Ok(match index {
+            [] => into,
+            &[untaking] => {
+                let abs_untaking = untaking.unsigned_abs();
+                let into_row_len = into.row_len();
+                let into_row_count = into.row_count();
+                into.data.modify(|data| {
+                    if untaking >= 0 {
+                        for (from, into) in from.row_slices().zip(
+                            data.make_mut()
+                                .chunks_exact_mut(into_row_len)
+                                .take(abs_untaking),
+                        ) {
+                            into.clone_from_slice(from);
+                        }
+                    } else {
+                        let start = into_row_count.saturating_sub(abs_untaking);
+                        for (from, into) in from
+                            .row_slices()
+                            .zip(data.make_mut().chunks_exact_mut(into_row_len).skip(start))
+                        {
+                            into.clone_from_slice(from);
+                        }
+                    }
+                });
+                into
+            }
+            _ => return Err(env.error("Under multidimensional take is not yet implemented")),
+        })
     }
 }
 

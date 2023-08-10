@@ -634,6 +634,8 @@ primitive!(
     /// To extend with a specific value, use [fill];
     /// ex: ⍛0 ↙10 [1 2 3 4 5]
     (2, Take, DyadicArray, ("take", '↙')),
+    /// End step of under take
+    (3, Untake, Misc),
     /// Drop the first n elements of an array
     ///
     /// This is the opposite of [take].
@@ -849,6 +851,9 @@ primitive!(
     /// It applies f to x, then applies g to the result.
     /// It then applies the inverse of f to the result of g.
     ///
+    /// Any function that can be [invert]ed can be used with [under].
+    /// Some functions that can't be inverted can still be used with [under].
+    ///
     /// Here, we negate 5, subtract 2, then negate again.
     /// ex: ⍜¯(-2) 5
     ///
@@ -858,8 +863,8 @@ primitive!(
     /// You can use [under] with [round] to round to a specific number of decimal places.
     /// ex: ⍜(×ⁿ4 10)⁅ π
     ///
-    /// [under][transpose] is sometimes useful.
-    /// ex: ⍜⍉(↙2).↯3_4⇡12
+    /// You can use [under] [take] to modify only part of an array.
+    /// ex: ⍜(↙2)(×10) 1_2_3_4_5
     ([2, 1, 1], Under, OtherModifier, ("under", '⍜')),
     /// Apply a function at a different array depth
     ///

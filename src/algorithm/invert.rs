@@ -22,16 +22,16 @@ impl Function {
         } else {
             let (befores, afters) = under_instrs(&self.instrs)?;
             Some((
-               Function{
+                Function {
                     id: self.id.clone(),
                     instrs: befores,
                     kind: FunctionKind::Normal,
                 },
-                Function{
+                Function {
                     id: self.id.clone(),
                     instrs: afters,
                     kind: FunctionKind::Normal,
-                }
+                },
             ))
         }
     }
@@ -73,7 +73,7 @@ fn invert_instr_fragment(instrs: &[Instr]) -> Option<Vec<Instr>> {
         });
     }
 
-    let patterns: &[&dyn InstrPattern] = &[
+    let patterns: &[&dyn InvertPattern] = &[
         &(Val, ([Rotate], [Neg, Rotate])),
         &(Val, IgnoreMany(Flip), ([Add], [Sub])),
         &(Val, ([Sub], [Add])),
@@ -85,7 +85,7 @@ fn invert_instr_fragment(instrs: &[Instr]) -> Option<Vec<Instr>> {
 
     for pattern in patterns {
         let mut input = instrs;
-        if let Some(inverted) = pattern.extract(&mut input) {
+        if let Some(inverted) = pattern.invert_extract(&mut input) {
             if input.is_empty() {
                 return Some(inverted);
             }
@@ -122,37 +122,65 @@ fn under_instrs(instrs: &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
             start -= 1;
         }
     }
-    // println!("inverted {:?} to {:?}", instrs, inverted);
+    // println!("under {:?} to {:?} {:?}", instrs, befores, afters);
     Some((befores, afters))
 }
 
 fn under_instr_fragment(instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr>)> {
+    use Primitive::*;
     if let Some(inverted) = invert_instr_fragment(instrs) {
         return Some((Cow::Borrowed(instrs), inverted));
     }
+
+    let patterns: &[&dyn UnderPattern] = &[&(Val, ([Take], [Over, Over, Take], [Untake]))];
+
+    for pattern in patterns {
+        let mut input = instrs;
+        if let Some((befores, afters)) = pattern.under_extract(&mut input) {
+            if input.is_empty() {
+                return Some((Cow::Owned(befores), afters));
+            }
+        }
+    }
+
     None
 }
 
-trait InstrPattern {
-    fn extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>>;
+trait InvertPattern {
+    fn invert_extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>>;
 }
 
-impl<A: InstrPattern, B: InstrPattern> InstrPattern for (A, B) {
-    fn extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
+trait UnderPattern {
+    fn under_extract(&self, input: &mut &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)>;
+}
+
+impl<A: InvertPattern, B: InvertPattern> InvertPattern for (A, B) {
+    fn invert_extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
         let (a, b) = self;
-        let mut a = a.extract(input)?;
-        let b = b.extract(input)?;
+        let mut a = a.invert_extract(input)?;
+        let b = b.invert_extract(input)?;
         a.extend(b);
         Some(a)
     }
 }
 
-impl<A: InstrPattern, B: InstrPattern, C: InstrPattern> InstrPattern for (A, B, C) {
-    fn extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
+impl<A: UnderPattern, B: UnderPattern> UnderPattern for (A, B) {
+    fn under_extract(&self, input: &mut &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
+        let (a, b) = self;
+        let (mut a_before, a_after) = a.under_extract(input)?;
+        let (b_before, mut b_after) = b.under_extract(input)?;
+        a_before.extend(b_before);
+        b_after.extend(a_after);
+        Some((a_before, b_after))
+    }
+}
+
+impl<A: InvertPattern, B: InvertPattern, C: InvertPattern> InvertPattern for (A, B, C) {
+    fn invert_extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
         let (a, b, c) = self;
-        let mut a = a.extract(input)?;
-        let b = b.extract(input)?;
-        let c = c.extract(input)?;
+        let mut a = a.invert_extract(input)?;
+        let b = b.invert_extract(input)?;
+        let c = c.invert_extract(input)?;
         a.extend(b);
         a.extend(c);
         Some(a)
@@ -160,19 +188,19 @@ impl<A: InstrPattern, B: InstrPattern, C: InstrPattern> InstrPattern for (A, B, 
 }
 
 struct IgnoreMany<T>(T);
-impl<T: InstrPattern> InstrPattern for IgnoreMany<T> {
-    fn extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
-        while self.0.extract(input).is_some() {}
+impl<T: InvertPattern> InvertPattern for IgnoreMany<T> {
+    fn invert_extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
+        while self.0.invert_extract(input).is_some() {}
         Some(Vec::new())
     }
 }
 
 struct AnyOf<T, const N: usize>([T; N]);
-impl<T: InstrPattern, const N: usize> InstrPattern for AnyOf<T, N> {
-    fn extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
+impl<T: InvertPattern, const N: usize> InvertPattern for AnyOf<T, N> {
+    fn invert_extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
         for pattern in self.0.iter() {
             let mut inp = *input;
-            if let Some(inverted) = pattern.extract(&mut inp) {
+            if let Some(inverted) = pattern.invert_extract(&mut inp) {
                 *input = inp;
                 return Some(inverted);
             }
@@ -181,8 +209,8 @@ impl<T: InstrPattern, const N: usize> InstrPattern for AnyOf<T, N> {
     }
 }
 
-impl InstrPattern for Primitive {
-    fn extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
+impl InvertPattern for Primitive {
+    fn invert_extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
         let next = input.get(0)?;
         match next {
             Instr::Prim(prim, span) if prim == self => {
@@ -194,8 +222,8 @@ impl InstrPattern for Primitive {
     }
 }
 
-impl InstrPattern for (&[Primitive], &[Primitive]) {
-    fn extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
+impl InvertPattern for (&[Primitive], &[Primitive]) {
+    fn invert_extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
         let (a, b) = *self;
         if a.len() > input.len() {
             return None;
@@ -217,24 +245,60 @@ impl InstrPattern for (&[Primitive], &[Primitive]) {
     }
 }
 
-impl<const A: usize, const B: usize> InstrPattern for ([Primitive; A], [Primitive; B]) {
-    fn extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
-        let (a, b) = *self;
-        (a.as_ref(), b.as_ref()).extract(input)
+impl UnderPattern for (&[Primitive], &[Primitive], &[Primitive]) {
+    fn under_extract(&self, input: &mut &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
+        let (a, b, c) = *self;
+        if a.len() > input.len() {
+            return None;
+        }
+        let mut spans = Vec::new();
+        for (instr, prim) in input.iter().zip(a.iter()) {
+            match instr {
+                Instr::Prim(instr_prim, span) if instr_prim == prim => spans.push(*span),
+                _ => return None,
+            }
+        }
+        *input = &input[a.len()..];
+        Some((
+            b.iter()
+                .zip(spans.iter().cycle())
+                .map(|(p, s)| Instr::Prim(*p, *s))
+                .collect(),
+            c.iter()
+                .zip(spans.iter().cycle())
+                .map(|(p, s)| Instr::Prim(*p, *s))
+                .collect(),
+        ))
     }
 }
 
-impl<F> InstrPattern for F
+impl<const A: usize, const B: usize> InvertPattern for ([Primitive; A], [Primitive; B]) {
+    fn invert_extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
+        let (a, b) = *self;
+        (a.as_ref(), b.as_ref()).invert_extract(input)
+    }
+}
+
+impl<const A: usize, const B: usize, const C: usize> UnderPattern
+    for ([Primitive; A], [Primitive; B], [Primitive; C])
+{
+    fn under_extract(&self, input: &mut &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
+        let (a, b, c) = *self;
+        (a.as_ref(), b.as_ref(), c.as_ref()).under_extract(input)
+    }
+}
+
+impl<F> InvertPattern for F
 where
     F: Fn(&mut &[Instr]) -> Option<Vec<Instr>>,
 {
-    fn extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
+    fn invert_extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
         self(input)
     }
 }
 
 fn invert_pow_pattern(input: &mut &[Instr]) -> Option<Vec<Instr>> {
-    let val = Val.extract(input)?;
+    let val = Val.invert_extract(input)?;
     let next = input.get(0)?;
     if let Instr::Prim(Primitive::Pow, span) = next {
         *input = &input[1..];
@@ -250,7 +314,7 @@ fn invert_pow_pattern(input: &mut &[Instr]) -> Option<Vec<Instr>> {
 }
 
 fn invert_log_pattern(input: &mut &[Instr]) -> Option<Vec<Instr>> {
-    let val = Val.extract(input)?;
+    let val = Val.invert_extract(input)?;
     let next = input.get(0)?;
     if let Instr::Prim(Primitive::Log, span) = next {
         *input = &input[1..];
@@ -265,8 +329,8 @@ fn invert_log_pattern(input: &mut &[Instr]) -> Option<Vec<Instr>> {
 }
 
 pub struct Val;
-impl InstrPattern for Val {
-    fn extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
+impl InvertPattern for Val {
+    fn invert_extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
         if input.is_empty() {
             return None;
         }
@@ -309,6 +373,11 @@ impl InstrPattern for Val {
             }
             _ => None,
         }
+    }
+}
+impl UnderPattern for Val {
+    fn under_extract(&self, input: &mut &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
+        self.invert_extract(input).map(|v| (v, Vec::new()))
     }
 }
 

@@ -109,11 +109,11 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
 
         // Derive allowed primitives
         let allowed = Allowed::from_search(text);
-        if allowed == old_allowed.get() && results.get().is_some() {
-            return;
-        }
         if !text.is_empty() {
             scroll_to_docs_functions(ScrollIntoViewOptions::new().behavior(ScrollBehavior::Smooth));
+        }
+        if allowed == old_allowed.get() && results.get().is_some() {
+            return;
         }
         set_old_allowed.set(allowed.clone());
         set_result.set(Some(
@@ -134,6 +134,19 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
                 allowed.table().into_view()
             },
         ));
+        let text = text.to_string();
+        set_timeout(
+            move || {
+                if element::<HtmlInputElement>("function-search").value() == text {
+                    BrowserIntegration {}.navigate(&LocationChange {
+                        value: format!("/docs/{}", urlencoding::encode(&text)),
+                        scroll: false,
+                        ..Default::default()
+                    })
+                }
+            },
+            Duration::from_secs(2),
+        );
     };
 
     set_timeout(move || update_search(&search.get()), Duration::from_secs(0));
@@ -169,7 +182,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             { move || clear_button.get() }
         </div>
         { move|| results.get() }
-        <div style="height: 50vh;"></div>
+        <div style="height: 80vh;"></div>
     }
 }
 

@@ -1,3 +1,4 @@
+- Chain functions without parens
 - Docs
   - Testing and run modes
   - Loops

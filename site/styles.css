@@ -585,6 +585,6 @@ input[type=text] {
 }
 
 #function-search {
-    scroll-margin-top: 5em;
-    scroll-margin-bottom: 5em;
+    scroll-margin-top: 1em;
+    scroll-margin-bottom: 1em;
 }

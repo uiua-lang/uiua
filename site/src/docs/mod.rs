@@ -86,7 +86,6 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
     let search = urlencoding::decode(&search)
         .map(|s| s.into_owned())
         .unwrap_or_default();
-    let (search, _) = create_signal(search);
     let (results, set_result) = create_signal(None);
     let (clear_button, set_clear_button) = create_signal(None);
     let (old_allowed, set_old_allowed) = create_signal(Allowed::all());
@@ -149,7 +148,13 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         );
     };
 
-    set_timeout(move || update_search(&search.get()), Duration::from_secs(0));
+    set_timeout(
+        {
+            let search = search.clone();
+            move || update_search(&search)
+        },
+        Duration::from_secs(0),
+    );
     let search_input = move |event: Event| {
         let elem: HtmlInputElement = event.target().unwrap().dyn_into().unwrap();
         update_search(&elem.value());
@@ -175,7 +180,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <input
                 id="function-search"
                 type="text"
-                value={ search.get() }
+                value=search
                 on:input=search_input
                 pattern="[^0-9]"
                 placeholder="Search by name, glyph, or category..."/>

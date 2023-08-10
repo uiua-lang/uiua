@@ -1,4 +1,5 @@
 - Chain functions without parens
+- Add functions together
 - Docs
   - Testing and run modes
   - Loops

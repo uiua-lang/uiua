@@ -894,8 +894,37 @@ primitive!(
     /// ex! !. =8 9
     (2, Throw, Control, ("throw", '!')),
     /// Spawn a thread
+    ///
+    /// Expects a number and a function.
+    /// The number is the number of arguments to pop from the stack and pass to the function.
+    /// The function is called in a new thread.
+    /// A handle that can be passed to [wait] is pushed to the stack. Handles are just numbers.
+    /// [wait] consumes the handle and appends the thread's stack to the current stack.
+    /// ex:  ↰1⇡ 10
+    ///   : ↲↰1⇡ 10
+    /// ex:  ↰2(+10+) 1 2
+    ///   : ↲↰2(+10+) 1 2
+    ///
+    /// You can use [each] to spawn a thread for each element of an array.
+    /// ex: ∵↰1(/+⇡×.) ⇡10
+    ///
+    /// [wait] will call [each] implicitly.
+    /// ex: ↯3_3⇡9
+    ///   : ↲≡↰1/+.
     ([2, 0], Spawn, OtherModifier, ("spawn", '↰')),
     /// Wait for a thread to finish and push its results to the stack
+    ///
+    /// The argument must be a handle returned by [spawn].
+    /// ex: ↲↰1(/+⇡) 10
+    ///
+    /// If the handle has already been [wait]ed on, then an error is thrown.
+    /// ex! h ← ↰1(/+⇡) 10
+    ///   : ↲h
+    ///   : ↲h
+    ///
+    /// [wait] will call [each] implicitly.
+    /// ex: ↯3_3⇡9
+    ///   : ↲≡↰1/+.
     (1, Wait, Misc, ("wait", '↲')),
     /// Call a function
     ///

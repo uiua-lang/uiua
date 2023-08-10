@@ -446,7 +446,7 @@ fn TutorialFunctions() -> impl IntoView {
         <Editor example="/+ 1_2_3_4"/>
         <p><PrimCode prim=Scan/>" is similar, but it returns all the intermediate results."</p>
         <Editor example="\\+ 1_2_3_4"/>
-        <p>"The main docs page has "<A href="/docs#monadic-modifiers">"a list"</A>" of all of the built-in modifiers."</p>
+        <p>"The main docs page has "<A href="/docs/modifier">"a list"</A>" of all of the built-in modifiers."</p>
 
         <h2 id="inline-functions">"Inline Functions"</h2>
         <p>"In addition to creating a new function with a capitalized binding name, as discussed in the "<A href="/docs/bindings">"previous sections"</A>", functions in Uiua can also be created with "<code>"(...)"</code>"."</p>

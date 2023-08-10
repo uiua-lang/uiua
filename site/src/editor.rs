@@ -95,17 +95,17 @@ pub fn Editor<'a>(
     };
     let code_height_em = code_max_lines as f32 * 1.2;
 
-    let (code_id, _) = create_signal(format!("code{id}"));
-    let (output_id, _) = create_signal(format!("output{id}"));
-    let (image_id, _) = create_signal(format!("image{id}"));
-    let (audio_id, _) = create_signal(format!("audio{id}"));
-    let (glyph_doc_id, _) = create_signal(format!("glyphdoc{id}"));
+    let code_id = move || format!("code{id}");
+    let output_id = move || format!("output{id}");
+    let image_id = move || format!("image{id}");
+    let audio_id = move || format!("audio{id}");
+    let glyph_doc_id = move || format!("glyphdoc{id}");
 
-    let code_element = move || -> HtmlDivElement { element(&code_id.get()) };
-    let output_element = move || -> HtmlDivElement { element(&output_id.get()) };
-    let image_element = move || -> HtmlImageElement { element(&image_id.get()) };
-    let audio_element = move || -> HtmlAudioElement { element(&audio_id.get()) };
-    let glyph_doc_element = move || -> HtmlDivElement { element(&glyph_doc_id.get()) };
+    let code_element = move || -> HtmlDivElement { element(&code_id()) };
+    let output_element = move || -> HtmlDivElement { element(&output_id()) };
+    let image_element = move || -> HtmlImageElement { element(&image_id()) };
+    let audio_element = move || -> HtmlAudioElement { element(&audio_id()) };
+    let glyph_doc_element = move || -> HtmlDivElement { element(&glyph_doc_id()) };
 
     // Track line count
     let (line_count, set_line_count) = create_signal(1);
@@ -117,14 +117,14 @@ pub fn Editor<'a>(
     let (example, set_example) = create_signal(0);
     let (output, set_output) = create_signal(String::new());
 
-    let code_text = move || code_text(&code_id.get());
-    let get_code_cursor = move || get_code_cursor_impl(&code_id.get());
+    let code_text = move || code_text(&code_id());
+    let get_code_cursor = move || get_code_cursor_impl(&code_id());
     let (copied_link, set_copied_link) = create_signal(false);
     let (copied_code, set_copied_code) = create_signal(false);
 
     /// Handles set the code in the editor, setting the cursor, and managing the history
     struct State {
-        code_id: ReadSignal<String>,
+        code_id: String,
         set_line_count: WriteSignal<usize>,
         set_copied_link: WriteSignal<bool>,
         set_copied_code: WriteSignal<bool>,
@@ -151,7 +151,7 @@ pub fn Editor<'a>(
         fn set_code(&self, code: &str, cursor: Cursor) {
             let after = match cursor {
                 Cursor::Set(start, end) => (start, end),
-                Cursor::Keep => get_code_cursor_impl(&self.code_id.get()).unwrap_or_else(|| {
+                Cursor::Keep => get_code_cursor_impl(&self.code_id).unwrap_or_else(|| {
                     let len = code.chars().count() as u32;
                     (len, len)
                 }),
@@ -160,7 +160,7 @@ pub fn Editor<'a>(
                     (len, len)
                 }
             };
-            let before = get_code_cursor_impl(&self.code_id.get())
+            let before = get_code_cursor_impl(&self.code_id)
                 .or_else(|| self.past.borrow().last().map(|r| r.after))
                 .unwrap_or(after);
             let new_curr = Record {
@@ -175,7 +175,7 @@ pub fn Editor<'a>(
                 self.past.borrow_mut().push(prev);
                 self.future.borrow_mut().clear();
             }
-            set_code_html(&self.code_id.get(), code);
+            set_code_html(&self.code_id, code);
             if !matches!(cursor, Cursor::Ignore) {
                 self.set_cursor(after);
             }
@@ -186,10 +186,10 @@ pub fn Editor<'a>(
             }
         }
         fn set_cursor(&self, to: (u32, u32)) {
-            set_code_cursor(&self.code_id.get(), to.0, to.1);
+            set_code_cursor(&self.code_id, to.0, to.1);
         }
         fn set_code_html(&self, code: &str) {
-            set_code_html(&self.code_id.get(), code);
+            set_code_html(&self.code_id, code);
         }
         fn set_changed(&self) {
             self.set_copied_link.set(false);
@@ -198,7 +198,7 @@ pub fn Editor<'a>(
         }
         fn set_line_count(&self) {
             self.set_line_count
-                .set(children_of(&element(&self.code_id.get())).count());
+                .set(children_of(&element(&self.code_id)).count());
         }
         fn clear_history(&self) {
             self.past.borrow_mut().clear();
@@ -225,14 +225,14 @@ pub fn Editor<'a>(
     }
 
     let state = Rc::new(State {
-        code_id,
+        code_id: code_id(),
         set_line_count,
         set_copied_link,
         set_copied_code,
         past: Default::default(),
         future: Default::default(),
         curr: {
-            let code = initial_code.get().unwrap();
+            let code = initial_code.get_untracked().unwrap();
             let len = code.chars().count() as u32;
             Record {
                 code,
@@ -354,14 +354,11 @@ pub fn Editor<'a>(
 
     // Handle key events
     window_event_listener(keydown, move |event| {
-        let Some(code_id) = code_id.try_get() else {
-            return;
-        };
         let event = event.dyn_ref::<web_sys::KeyboardEvent>().unwrap();
         let focused = event
             .target()
             .and_then(|t| t.dyn_into::<HtmlDivElement>().ok())
-            .is_some_and(|t| t.id() == code_id);
+            .is_some_and(|t| t.id() == code_id());
         if !focused {
             return;
         }
@@ -807,7 +804,7 @@ pub fn Editor<'a>(
                                 on:click=toggle_show_glyphs>{show_glyphs_text}</button>
                             <div id="example-tracker">{example_text}</div>
                         </div>
-                        <div id={glyph_doc_id.get()} class="glyph-doc" style="display: none">
+                        <div id={glyph_doc_id} class="glyph-doc" style="display: none">
                             { move || glyph_doc.get() }
                             <div class="glyph-doc-ctrl-click">"Ctrl+click for more info"</div>
                         </div>
@@ -817,7 +814,7 @@ pub fn Editor<'a>(
                             </div>
                             // The text entry area
                             <div
-                                id={code_id.get()}
+                                id={code_id}
                                 contenteditable="true"
                                 spellcheck="false"
                                 class="code-entry"
@@ -829,10 +826,10 @@ pub fn Editor<'a>(
                         </div>
                     </div>
                     <div class="output-frame">
-                        <div id={output_id.get()} class="output">
-                            <div id="output-text">{ move || output.get() }</div>
-                            <img id=move || image_id.get() style="border-radius: 1em;" src=""/>
-                            <audio id=move || audio_id.get() src="" style="display:none" controls autoplay/>
+                        <div id={output_id} class="output">
+                            <div id="output-text">{ output }</div>
+                            <img id=image_id style="border-radius: 1em;" src=""/>
+                            <audio id=audio_id src="" style="display:none" controls autoplay/>
                         </div>
                         <div id="code-buttons">
                             <button class="code-button" on:click=move |_| run(true)>{ "Run" }</button>

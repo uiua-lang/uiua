@@ -20,6 +20,83 @@ use crate::{
     UiuaResult,
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Sequence)]
+pub enum PrimClass {
+    Stack,
+    Control,
+    MonadicPervasive,
+    DyadicPervasive,
+    MonadicArray,
+    DyadicArray,
+    MonadicModifier,
+    DyadicModifier,
+    OtherModifier,
+    Misc,
+    Constant,
+    Sys,
+}
+
+impl PrimClass {
+    pub fn all() -> impl Iterator<Item = Self> {
+        all()
+    }
+    pub fn is_pervasive(&self) -> bool {
+        matches!(
+            self,
+            PrimClass::MonadicPervasive | PrimClass::DyadicPervasive
+        )
+    }
+    pub fn primitives(self) -> impl Iterator<Item = Primitive> {
+        Primitive::all().filter(move |prim| prim.class() == self)
+    }
+}
+
+/// The names of a primitive
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct PrimNames {
+    pub text: &'static str,
+    pub ascii: Option<Simple>,
+    pub unicode: Option<char>,
+}
+
+impl PrimNames {
+    pub fn is_name_formattable(&self) -> bool {
+        if let Some(c) = self.unicode {
+            (c as u32) > 127 && self.ascii.is_none()
+        } else {
+            self.text.chars().all(|c| c.is_lowercase())
+        }
+    }
+}
+
+impl From<&'static str> for PrimNames {
+    fn from(text: &'static str) -> Self {
+        Self {
+            text,
+            ascii: None,
+            unicode: None,
+        }
+    }
+}
+impl From<(&'static str, char)> for PrimNames {
+    fn from((text, unicode): (&'static str, char)) -> Self {
+        Self {
+            text,
+            ascii: None,
+            unicode: Some(unicode),
+        }
+    }
+}
+impl From<(&'static str, Simple, char)> for PrimNames {
+    fn from((text, ascii, unicode): (&'static str, Simple, char)) -> Self {
+        Self {
+            text,
+            ascii: Some(ascii),
+            unicode: Some(unicode),
+        }
+    }
+}
+
 impl fmt::Display for Primitive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(c) = self.unicode() {

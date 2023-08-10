@@ -1,6 +1,6 @@
 - Docs
+  - Search primitives
   - Testing and run modes
-  - Loops
   - Audio
   - Images
   - Threads

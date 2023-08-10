@@ -75,9 +75,6 @@ pub fn Editor<'a>(
                 examples
                     .rev()
                     .scan(String::new(), |acc, s| {
-                        if !acc.is_empty() {
-                            acc.insert(0, ' ');
-                        }
                         acc.insert_str(0, s);
                         Some(acc.clone())
                     })

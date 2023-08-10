@@ -1,9 +1,23 @@
+@font-face {
+    font-family: "Code Font";
+    src: url(DejaVuSansMono.ttf) format("truetype");
+}
+
+@font-face {
+    font-family: "Main Font";
+    src: url(DejaVuSans.ttf) format("truetype");
+}
+
 html * {
-    font-family: Arial;
+    font-family: "Main Font"
 }
 
 html {
     font-size: 110%;
+}
+
+p {
+    line-height: 1.5em;
 }
 
 h2 {
@@ -339,11 +353,6 @@ li {
 .code-button {
     font-size: 1em;
     margin: 0 0 0 0.2em;
-}
-
-@font-face {
-    font-family: "Code Font";
-    src: url(DejaVuSansMono.ttf) format("truetype");
 }
 
 #code-right-side {

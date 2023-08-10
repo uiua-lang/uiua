@@ -1,5 +1,6 @@
 mod other;
 mod primitive;
+mod tour;
 mod tutorial;
 
 use std::{collections::HashSet, iter::once};
@@ -15,10 +16,12 @@ use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoView
 use crate::{code::*, element};
 use other::*;
 use primitive::*;
+use tour::*;
 use tutorial::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DocsPage {
+    Tour,
     Tutorial(TutorialPage),
     Search(String),
     Design,
@@ -34,6 +37,7 @@ impl IntoParam for DocsPage {
             .map(Self::Tutorial)
             .or(match value {
                 "" => None,
+                "tour" => Some(Self::Tour),
                 "design" => Some(Self::Design),
                 "technical" => Some(Self::Technical),
                 "install" => Some(Self::Install),
@@ -56,6 +60,7 @@ pub fn Docs() -> impl IntoView {
         };
         let page = params.page;
         let page_view = match page {
+            DocsPage::Tour => Tour().into_view(),
             DocsPage::Tutorial(tut) => view!( <Tutorial page=tut/>).into_view(),
             DocsPage::Search(search) => view!( <DocsHome search=search/>).into_view(),
             DocsPage::Design => Design().into_view(),
@@ -162,8 +167,12 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
 
     view! {
         <h1>"Documentation"</h1>
+        <h2>"Language Tour"</h2>
+        <p>"If you want to jump right in, check out the "<A href="/docs/tour">"Language Tour"</A>"!"</p>
+        <p>"Otherwise, read on for more detailed documentation."</p>
         <h2 id="tutorial">"Tutorial"</h2>
-        <p>"These are meant to be read in order:"</p>
+        <p>"These introduce Uiua concepts one at a time, each tutorial building on the previous."</p>
+        <p>"They are meant to be read in order, but feel free to skip around!"</p>
         <ul>{ all::<TutorialPage>()
             .map(|p| view!( <li><A href={format!("/docs/{}", p.path())}>{p.title()}</A></li>))
             .collect::<Vec<_>>()

@@ -1,4 +1,3 @@
-- More general select
 - Docs
   - Testing and run modes
   - Loops

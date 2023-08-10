@@ -86,7 +86,7 @@ impl<T> Array<T> {
     }
     #[track_caller]
     #[inline(always)]
-    /// Debug only function to validate that the shape matches the data length
+    /// Debug-only function to validate that the shape matches the data length
     pub(crate) fn validate_shape(&self) {
         validate_shape(&self.shape, &self.data);
     }

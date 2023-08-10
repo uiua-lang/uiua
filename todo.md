@@ -1,5 +1,6 @@
 - Under take/drop
 - Chain functions without parens
+- More general select
 - Docs
   - Testing and run modes
   - Loops

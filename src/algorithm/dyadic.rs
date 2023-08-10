@@ -1,12 +1,4 @@
-use std::{
-    cmp::Ordering,
-    collections::BTreeMap,
-    iter::repeat,
-    mem::{swap, take},
-    sync::Arc,
-};
-
-use ecow::EcoVec;
+use std::{cmp::Ordering, collections::BTreeMap, iter::repeat, mem::take, sync::Arc};
 
 use crate::{
     array::*,
@@ -377,43 +369,96 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     pub fn take(mut self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
-        if index.len() > self.rank() {
-            return Err(env.error(format!(
-                "Cannot take from rank {} array with index of length {}",
-                self.rank(),
-                index.len()
-            )));
-        }
-        self.data.modify(|data| {
-            for (d, (&s, &taking)) in self.shape.iter().zip(index).enumerate() {
-                let row_len: usize = self.shape[d + 1..].iter().product();
-                if taking >= 0 {
-                    let end = taking as usize * row_len;
-                    if end > data.len() {
-                        data.extend(repeat(T::fill_value()).take(end - data.len()));
+        match index {
+            [] => Ok(self),
+            &[taking] => {
+                let row_len = self.row_len();
+                let row_count = self.row_count();
+                let abs_taking = taking.unsigned_abs();
+                self.data.modify(|data| {
+                    if taking >= 0 {
+                        if abs_taking > row_count {
+                            data.extend(
+                                repeat(T::fill_value()).take((abs_taking - row_count) * row_len),
+                            );
+                        } else {
+                            data.truncate(abs_taking * row_len);
+                        }
                     } else {
-                        data.truncate(end);
+                        *data = if abs_taking > row_count {
+                            repeat(T::fill_value())
+                                .take((abs_taking - row_count) * row_len)
+                                .chain(take(data))
+                                .collect()
+                        } else {
+                            take(data)
+                                .into_iter()
+                                .skip((row_count - abs_taking) * row_len)
+                                .collect()
+                        };
                     }
+                });
+                if self.shape.is_empty() {
+                    self.shape.push(abs_taking);
                 } else {
-                    let taking = taking.unsigned_abs();
-                    let start_index = s.saturating_sub(taking);
-                    let start = start_index * row_len;
-                    *data = take(data).into_iter().skip(start).collect();
-                    if taking > s {
-                        let mut prefix: EcoVec<T> = repeat(T::fill_value())
-                            .take((taking - s) * row_len)
-                            .collect();
-                        swap(data, &mut prefix);
-                        data.extend(prefix);
-                    }
-                };
+                    self.shape[0] = abs_taking;
+                }
+                self.validate_shape();
+                Ok(self)
             }
-        });
-        for (s, i) in self.shape.iter_mut().zip(index) {
-            *s = i.unsigned_abs();
+            &[taking, ref sub_index @ ..] => {
+                if index.len() > self.rank() {
+                    return Err(env.error(format!(
+                        "Cannot take from rank {} array with index of length {}",
+                        self.rank(),
+                        index.len()
+                    )));
+                }
+                let abs_taking = taking.unsigned_abs();
+                if sub_index
+                    .iter()
+                    .zip(&self.shape[1..])
+                    .all(|(&i, &s)| i.unsigned_abs() == s)
+                {
+                    return self.take(&[taking], env);
+                }
+                let mut new_rows = Vec::with_capacity(abs_taking);
+                let mut arr = if taking >= 0 {
+                    // Take in each row
+                    for row in self.rows().take(abs_taking) {
+                        new_rows.push(row.take(sub_index, env)?);
+                    }
+                    let mut arr = Array::from_row_arrays(new_rows);
+                    // Extend with fill values if necessary
+                    if abs_taking > arr.row_count() {
+                        let row_len = arr.row_len();
+                        arr.data.extend(
+                            repeat(T::fill_value()).take((abs_taking - arr.row_count()) * row_len),
+                        );
+                    }
+                    arr
+                } else {
+                    let start = self.row_count().saturating_sub(abs_taking);
+                    // Take in each row
+                    for row in self.rows().skip(start) {
+                        new_rows.push(row.take(sub_index, env)?);
+                    }
+                    let mut arr = Array::from_row_arrays(new_rows);
+                    // Prepend with fill values if necessary
+                    if abs_taking > arr.row_count() {
+                        let row_len = arr.row_len();
+                        arr.data = repeat(T::fill_value())
+                            .take((abs_taking - arr.row_count()) * row_len)
+                            .chain(arr.data)
+                            .collect();
+                    }
+                    arr
+                };
+                arr.shape[0] = abs_taking;
+                arr.validate_shape();
+                Ok(arr)
+            }
         }
-        self.validate_shape();
-        Ok(self)
     }
     pub fn drop(mut self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
         if index.len() > self.rank() {

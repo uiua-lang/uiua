@@ -931,24 +931,22 @@ primitive!(
     /// When passing a scalar function array, the function is simply called.
     /// ex: :(+5) 2
     ///
-    /// Non-function scalars can be called. They pop nothing and push themselves.
-    /// ex: :5
-    /// This is not useful on its own, but we'll see below how it can be used.
-    ///
     /// The behavior when passing a non-scalar array is different.
     /// An additional argument is expected, which is the index of the function to call.
     /// With this, you can do if-else expressions.
-    /// ex: Abs ← :·_¯ <0.
+    /// ex: Abs ← :·_¯ <0. # If less than 0, negate
     ///   : Abs 5
     ///   : Abs ¯2
     /// This is equivalent to [call][pick][flip]:
     /// ex: Abs ← :⊡~·_¯ <0.
+    ///   : Abs 5
+    ///   : Abs ¯2
     ///
     /// Using [call] in this way is *not* recursive. If the selected value is also a function array, it will not be called unless you used [call] again, wich will pop another index.
-    /// ex:  :[+_- ×_÷] 1   3 12
-    /// ex:  :[+_- ×_÷] 1_1 3 12
-    /// ex:  :[+_- ×_÷] 1 1 3 12
-    /// ex: ::[+_- ×_÷] 1 1 3 12
+    /// ex:  :[+_- ×_÷] 1   3 12 # Pick a function array
+    /// ex:  :[+_- ×_÷] 1_0 3 12 # Call the function at 1_0
+    /// ex:  :[+_- ×_÷] 1 0 3 12 # Not enough calls
+    /// ex: ::[+_- ×_÷] 1 0 3 12 # 2 calls is enough
     (1(None), Call, Control, ("call", ':')),
     /// Break out of a loop
     ///

@@ -420,16 +420,6 @@ Square_Double_Increment";
                 let span = self.add_span(span);
                 self.push_instr(Instr::Call(span));
             }
-        } else if let Some(prims) = Primitive::from_format_name_multi(ident.as_str()) {
-            // Name is a formattable primitive
-            for (prim, _) in prims.into_iter().rev() {
-                self.primitive(prim, span.clone(), call);
-            }
-        } else if let Some(prim) =
-            Primitive::all().find(|p| p.name().is_some_and(|name| ident == name))
-        {
-            // Name is a non-formattable primitive
-            self.primitive(prim, span.clone(), call);
         } else {
             if let Some(dfn) = self.new_dfns.last_mut() {
                 if ident.as_str().len() == 1 {

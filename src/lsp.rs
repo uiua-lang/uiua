@@ -36,25 +36,7 @@ fn words_spans(words: Vec<Sp<Word>>) -> Vec<Sp<SpanKind>> {
             Word::MultilineString(lines) => {
                 spans.extend(lines.into_iter().map(|line| line.span.sp(SpanKind::String)))
             }
-            Word::Ident(ident) => {
-                if let Some(prims) = Primitive::from_format_name_multi(ident.as_str()) {
-                    let mut start = word.span.start;
-                    spans.extend(prims.iter().map(|(prim, s)| {
-                        let mut end = start;
-                        end.col += s.chars().count();
-                        end.char_pos += s.chars().count();
-                        let span = CodeSpan {
-                            start,
-                            end,
-                            ..word.span.clone()
-                        };
-                        start = end;
-                        span.sp(SpanKind::Primitive(*prim))
-                    }));
-                } else if let Some(prim) = Primitive::from_name(ident.as_str()) {
-                    spans.push(word.span.sp(SpanKind::Primitive(prim)));
-                }
-            }
+            Word::Ident(_) => {}
             Word::Strand(items) => {
                 let mut prev_span: Option<CodeSpan> = None;
                 for item in words_spans(items) {

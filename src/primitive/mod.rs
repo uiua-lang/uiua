@@ -189,6 +189,12 @@ impl Primitive {
                 env.push(from.untake(index, into, env)?);
             }
             Primitive::Drop => env.dyadic_env(Value::drop)?,
+            Primitive::Undrop => {
+                let from = env.pop(1)?;
+                let index = env.pop(2)?;
+                let into = env.pop(3)?;
+                env.push(from.undrop(index, into, env)?);
+            }
             Primitive::Rotate => env.dyadic_ref_own_env(Value::rotate)?,
             Primitive::Couple => env.dyadic_env(Value::couple)?,
             Primitive::Fill => {

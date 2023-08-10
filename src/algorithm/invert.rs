@@ -132,7 +132,10 @@ fn under_instr_fragment(instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr>)> 
         return Some((Cow::Borrowed(instrs), inverted));
     }
 
-    let patterns: &[&dyn UnderPattern] = &[&(Val, ([Take], [Over, Over, Take], [Untake]))];
+    let patterns: &[&dyn UnderPattern] = &[
+        &(Val, ([Take], [Over, Over, Take], [Untake])),
+        &(Val, ([Drop], [Over, Over, Drop], [Undrop])),
+    ];
 
     for pattern in patterns {
         let mut input = instrs;

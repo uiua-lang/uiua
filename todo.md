@@ -1,4 +1,3 @@
-- Under take/drop
 - Chain functions without parens
 - More general select
 - Docs

@@ -383,6 +383,24 @@ impl Value {
             }
         })
     }
+    pub(crate) fn undrop(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+        let index = index.as_indices(env, "Index must be a list of integers")?;
+        Ok(match (self, into) {
+            (Value::Num(a), Value::Num(b)) => Value::Num(a.undrop(&index, b, env)?),
+            (Value::Byte(a), Value::Byte(b)) => Value::Byte(a.undrop(&index, b, env)?),
+            (Value::Char(a), Value::Char(b)) => Value::Char(a.undrop(&index, b, env)?),
+            (Value::Func(a), Value::Func(b)) => Value::Func(a.undrop(&index, b, env)?),
+            (Value::Num(a), Value::Byte(b)) => Value::Num(a.undrop(&index, b.convert(), env)?),
+            (Value::Byte(a), Value::Num(b)) => Value::Num(a.convert().undrop(&index, b, env)?),
+            (a, b) => {
+                return Err(env.error(format!(
+                    "Cannot undrop {} into {}",
+                    a.type_name(),
+                    b.type_name()
+                )))
+            }
+        })
+    }
 }
 
 impl<T: ArrayValue> Array<T> {
@@ -604,6 +622,20 @@ impl<T: ArrayValue> Array<T> {
                 arr
             }
         })
+    }
+    fn undrop(self, index: &[isize], into: Self, env: &Uiua) -> UiuaResult<Self> {
+        let index: Vec<isize> = index
+            .iter()
+            .zip(&into.shape)
+            .map(|(&i, &s)| {
+                if i >= 0 {
+                    i - s as isize
+                } else {
+                    i + s as isize
+                }
+            })
+            .collect();
+        self.untake(&index, into, env)
     }
 }
 

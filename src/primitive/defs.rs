@@ -651,6 +651,8 @@ primitive!(
     /// ex: ↘ 5 ↯3_3⇡9
     /// ex: ↘ ¯5 ↯3_3⇡9
     (2, Drop, DyadicArray, ("drop", '↘')),
+    /// End step of under drop
+    (3, Undrop, Misc),
     /// Change the shape of an array
     ///
     /// Shapes that have fewer elements than the original array will truncate it.

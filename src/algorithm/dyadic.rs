@@ -438,8 +438,8 @@ impl<T: ArrayValue> Array<T> {
                     }
                     arr
                 } else {
-                    let start = self.row_count().saturating_sub(abs_taking);
                     // Take in each row
+                    let start = self.row_count().saturating_sub(abs_taking);
                     for row in self.rows().skip(start) {
                         new_rows.push(row.take(sub_index, env)?);
                     }
@@ -461,32 +461,58 @@ impl<T: ArrayValue> Array<T> {
         }
     }
     pub fn drop(mut self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
-        if index.len() > self.rank() {
-            return Err(env.error(format!(
-                "Cannot drop from rank {} array with index of length {}",
-                self.rank(),
-                index.len()
-            )));
-        }
-        self.data.modify(|data| {
-            for (d, (&s, &dropping)) in self.shape.iter().zip(index).enumerate() {
-                let row_len: usize = self.shape[d + 1..].iter().product();
-                if dropping >= 0 {
-                    let start = dropping as usize * row_len;
-                    *data = take(data).into_iter().skip(start).collect();
-                } else {
-                    let dropping = dropping.unsigned_abs();
-                    let end_index = s.saturating_sub(dropping);
-                    let end = end_index * row_len;
-                    data.truncate(end);
-                };
+        match index {
+            [] => Ok(self),
+            &[dropping] => {
+                let row_len = self.row_len();
+                let row_count = self.row_count();
+                let abs_dropping = dropping.unsigned_abs();
+                self.data.modify(|data| {
+                    *data = if dropping >= 0 {
+                        take(data)
+                            .into_iter()
+                            .skip(abs_dropping * row_len)
+                            .collect()
+                    } else {
+                        take(data)
+                            .into_iter()
+                            .take((row_count.saturating_sub(abs_dropping)) * row_len)
+                            .collect()
+                    };
+                });
+                if self.shape.is_empty() {
+                    self.shape.push(1);
+                }
+                self.shape[0] = self.shape[0].saturating_sub(abs_dropping);
+                self.validate_shape();
+                Ok(self)
             }
-        });
-        for (s, i) in self.shape.iter_mut().zip(index) {
-            *s = s.saturating_sub(i.unsigned_abs());
+            &[dropping, ref sub_index @ ..] => {
+                if index.len() > self.rank() {
+                    return Err(env.error(format!(
+                        "Cannot drop from rank {} array with index of length {}",
+                        self.rank(),
+                        index.len()
+                    )));
+                }
+                let abs_dropping = dropping.unsigned_abs();
+                let mut new_rows = Vec::with_capacity(abs_dropping);
+                let row_count = self.row_count();
+                if dropping >= 0 {
+                    for row in self.rows().skip(abs_dropping) {
+                        new_rows.push(row.drop(sub_index, env)?);
+                    }
+                } else {
+                    let end = row_count.saturating_sub(abs_dropping);
+                    for row in self.rows().take(end) {
+                        new_rows.push(row.drop(sub_index, env)?);
+                    }
+                };
+                let arr = Array::from_row_arrays(new_rows);
+                arr.validate_shape();
+                Ok(arr)
+            }
         }
-        self.validate_shape();
-        Ok(self)
     }
 }
 

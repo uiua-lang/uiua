@@ -375,6 +375,12 @@ fn swap_if<T>(swap: bool, a: T, b: T) -> (T, T) {
     }
 }
 
+fn bin_bool<T: ArrayValue>(
+    f: impl Fn(T::Unfilled, T::Unfilled) -> bool + Copy,
+) -> impl Fn(T, T) -> Byte {
+    move |x, y| x.bin_map(y, f)
+}
+
 pub fn table(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(1)?;
@@ -384,25 +390,45 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
         #[cfg(not(debug))]
         (Some((prim, flipped)), Value::Num(xs), Value::Num(ys)) => {
             let (xs, ys) = swap_if(flipped, xs, ys);
-            env.push(match prim {
-                Primitive::Add => fast_table(xs, ys, Add::add),
-                Primitive::Sub if flipped => fast_table(xs, ys, Sub::sub),
-                Primitive::Sub => fast_table(xs, ys, flip(Sub::sub)),
-                Primitive::Mul => fast_table(xs, ys, Mul::mul),
-                Primitive::Div if flipped => fast_table(xs, ys, Div::div),
-                Primitive::Div => fast_table(xs, ys, flip(Div::div)),
-                Primitive::Min => fast_table(xs, ys, f64::min),
-                Primitive::Max => fast_table(xs, ys, f64::max),
-                Primitive::Join | Primitive::Couple => fast_table_join_or_couple(xs, ys),
+            match prim {
+                Primitive::Eq => env.push(fast_table(xs, ys, bin_bool(|x, y| x == y))),
+                Primitive::Ne => env.push(fast_table(xs, ys, bin_bool(|x, y| x != y))),
+                Primitive::Lt if flipped => env.push(fast_table(xs, ys, bin_bool(|x, y| x < y))),
+                Primitive::Lt => env.push(fast_table(xs, ys, bin_bool(|x, y| y < x))),
+                Primitive::Gt if flipped => env.push(fast_table(xs, ys, bin_bool(|x, y| x > y))),
+                Primitive::Gt => env.push(fast_table(xs, ys, bin_bool(|x, y| y > x))),
+                Primitive::Le if flipped => env.push(fast_table(xs, ys, bin_bool(|x, y| x <= y))),
+                Primitive::Le => env.push(fast_table(xs, ys, bin_bool(|x, y| y <= x))),
+                Primitive::Ge if flipped => env.push(fast_table(xs, ys, bin_bool(|x, y| x >= y))),
+                Primitive::Ge => env.push(fast_table(xs, ys, bin_bool(|x, y| y >= x))),
+                Primitive::Add => env.push(fast_table(xs, ys, Add::add)),
+                Primitive::Sub if flipped => env.push(fast_table(xs, ys, Sub::sub)),
+                Primitive::Sub => env.push(fast_table(xs, ys, flip(Sub::sub))),
+                Primitive::Mul => env.push(fast_table(xs, ys, Mul::mul)),
+                Primitive::Div if flipped => env.push(fast_table(xs, ys, Div::div)),
+                Primitive::Div => env.push(fast_table(xs, ys, flip(Div::div))),
+                Primitive::Min => env.push(fast_table(xs, ys, f64::min)),
+                Primitive::Max => env.push(fast_table(xs, ys, f64::max)),
+                Primitive::Join | Primitive::Couple => env.push(fast_table_join_or_couple(xs, ys)),
                 _ => {
                     let (xs, ys) = swap_if(flipped, xs, ys);
                     return generic_table(f, Value::Num(xs), Value::Num(ys), env);
                 }
-            })
+            }
         }
         (Some((prim, flipped)), Value::Byte(xs), Value::Byte(ys)) => {
             let (xs, ys) = swap_if(flipped, xs, ys);
             match prim {
+                Primitive::Eq => env.push(fast_table(xs, ys, bin_bool(|x, y| x == y))),
+                Primitive::Ne => env.push(fast_table(xs, ys, bin_bool(|x, y| x != y))),
+                Primitive::Lt if flipped => env.push(fast_table(xs, ys, bin_bool(|x, y| x < y))),
+                Primitive::Lt => env.push(fast_table(xs, ys, bin_bool(|x, y| y < x))),
+                Primitive::Gt if flipped => env.push(fast_table(xs, ys, bin_bool(|x, y| x > y))),
+                Primitive::Gt => env.push(fast_table(xs, ys, bin_bool(|x, y| y > x))),
+                Primitive::Le if flipped => env.push(fast_table(xs, ys, bin_bool(|x, y| x <= y))),
+                Primitive::Le => env.push(fast_table(xs, ys, bin_bool(|x, y| y <= x))),
+                Primitive::Ge if flipped => env.push(fast_table(xs, ys, bin_bool(|x, y| x >= y))),
+                Primitive::Ge => env.push(fast_table(xs, ys, bin_bool(|x, y| y >= x))),
                 Primitive::Add => env.push(fast_table(xs, ys, |a, b| f64::from(a) + f64::from(b))),
                 Primitive::Sub if flipped => {
                     env.push(fast_table(xs, ys, |a, b| f64::from(a) - f64::from(b)))

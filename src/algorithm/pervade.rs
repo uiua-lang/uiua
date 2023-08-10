@@ -231,19 +231,13 @@ macro_rules! cmp_impl {
                 ($ordering $eq Ordering::Greater).into()
             }
             pub fn num_num(a: f64, b: f64) -> Byte {
-                (b.partial_cmp(&a)
-                    .unwrap_or_else(|| b.is_nan().cmp(&a.is_nan()))
-                    $eq $ordering).into()
+                a.bin_map(b, |a, b| b.partial_cmp(&a).unwrap() $eq $ordering)
             }
             pub fn byte_num(a: Byte, b: f64) -> Byte {
-                (b.partial_cmp(&a.into())
-                    .unwrap_or_else(|| b.is_nan().cmp(&false))
-                    $eq $ordering).into()
+                f64::from(a).bin_map(b, |a, b| b.partial_cmp(&a).unwrap() $eq $ordering)
             }
             pub fn num_byte(a: f64, b: Byte) -> Byte {
-                (f64::from(b).partial_cmp(&a)
-                    .unwrap_or_else(|| false.cmp(&a.is_nan()))
-                    $eq $ordering).into()
+                a.bin_map(f64::from(b), |a, b| b.partial_cmp(&a).unwrap() $eq $ordering)
             }
             pub fn generic<T: Ord>(a: T, b: T) -> Byte {
                 (b.cmp(&a) $eq $ordering).into()

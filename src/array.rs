@@ -208,13 +208,13 @@ impl<T: ArrayValue> Array<T> {
                 .data
                 .iter()
                 .zip(&other.data)
-                .all(|(a, b)| T::eq(a, &b.clone().into()))
+                .all(|(a, b)| T::array_eq(a, &b.clone().into()))
     }
     pub fn val_cmp<U: Into<T> + Clone>(&self, other: &Array<U>) -> Ordering {
         self.data
             .iter()
             .zip(&other.data)
-            .map(|(a, b)| a.cmp(&b.clone().into()))
+            .map(|(a, b)| a.array_cmp(&b.clone().into()))
             .find(|o| o != &Ordering::Equal)
             .unwrap_or_else(|| self.data.len().cmp(&other.data.len()))
     }
@@ -277,7 +277,7 @@ impl<T: ArrayValue> PartialEq for Array<T> {
             return false;
         }
         match self.rank() {
-            0 => self.data[0].eq(&other.data[0]),
+            0 => self.data[0].array_eq(&other.data[0]),
             1 => {
                 let mut a = self
                     .data
@@ -289,7 +289,7 @@ impl<T: ArrayValue> PartialEq for Array<T> {
                     .iter()
                     .skip_while(|x| x.is_fill_value())
                     .take_while(|x| !x.is_fill_value());
-                a.by_ref().zip(b.by_ref()).all(|(a, b)| a.eq(b))
+                a.by_ref().zip(b.by_ref()).all(|(a, b)| a.array_eq(b))
                     && a.next().is_none()
                     && b.next().is_none()
             }
@@ -323,7 +323,7 @@ impl<T: ArrayValue> Ord for Array<T> {
             return rank_cmp;
         }
         match self.rank() {
-            0 => self.data[0].cmp(&other.data[0]),
+            0 => self.data[0].array_cmp(&other.data[0]),
             1 => {
                 let mut a = self
                     .data
@@ -337,7 +337,7 @@ impl<T: ArrayValue> Ord for Array<T> {
                     .take_while(|x| !x.is_fill_value());
                 a.by_ref()
                     .zip(b.by_ref())
-                    .map(|(a, b)| a.cmp(b))
+                    .map(|(a, b)| a.array_cmp(b))
                     .find(|o| o != &Ordering::Equal)
                     .unwrap_or_else(|| a.count().cmp(&b.count()))
             }
@@ -420,10 +420,12 @@ impl FromIterator<String> for Array<char> {
 
 pub trait ArrayValue: Clone + Debug + Display {
     const NAME: &'static str;
-    fn cmp(&self, other: &Self) -> Ordering;
+    type Unfilled;
+    fn array_cmp(&self, other: &Self) -> Ordering;
     fn fill_value() -> Self;
-    fn eq(&self, other: &Self) -> bool {
-        self.cmp(other) == Ordering::Equal
+    fn unfilled(self) -> Option<Self::Unfilled>;
+    fn array_eq(&self, other: &Self) -> bool {
+        self.array_cmp(other) == Ordering::Equal
     }
     fn format_delims() -> (&'static str, &'static str) {
         ("[", "]")
@@ -434,11 +436,30 @@ pub trait ArrayValue: Clone + Debug + Display {
     fn is_fill_value(&self) -> bool {
         false
     }
+    fn bin_map<T: ArrayValue, U: Into<T>>(
+        self,
+        other: Self,
+        f: impl Fn(Self::Unfilled, Self::Unfilled) -> U,
+    ) -> T {
+        if let Some((a, b)) = self.unfilled().zip(other.unfilled()) {
+            f(a, b).into()
+        } else {
+            T::fill_value()
+        }
+    }
 }
 
 impl ArrayValue for f64 {
     const NAME: &'static str = "number";
-    fn cmp(&self, other: &Self) -> Ordering {
+    type Unfilled = f64;
+    fn unfilled(self) -> Option<Self::Unfilled> {
+        if self.is_nan() {
+            None
+        } else {
+            Some(self)
+        }
+    }
+    fn array_cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other)
             .unwrap_or_else(|| self.is_nan().cmp(&other.is_nan()))
     }
@@ -452,7 +473,11 @@ impl ArrayValue for f64 {
 
 impl ArrayValue for Byte {
     const NAME: &'static str = "byte";
-    fn cmp(&self, other: &Self) -> Ordering {
+    type Unfilled = i16;
+    fn unfilled(self) -> Option<Self::Unfilled> {
+        self.value()
+    }
+    fn array_cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(self, other)
     }
     fn fill_value() -> Self {
@@ -465,7 +490,15 @@ impl ArrayValue for Byte {
 
 impl ArrayValue for char {
     const NAME: &'static str = "character";
-    fn cmp(&self, other: &Self) -> Ordering {
+    type Unfilled = char;
+    fn unfilled(self) -> Option<Self::Unfilled> {
+        if self == '\0' {
+            None
+        } else {
+            Some(self)
+        }
+    }
+    fn array_cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(self, other)
     }
     fn format_delims() -> (&'static str, &'static str) {
@@ -484,7 +517,15 @@ impl ArrayValue for char {
 
 impl ArrayValue for Arc<Function> {
     const NAME: &'static str = "function";
-    fn cmp(&self, other: &Self) -> Ordering {
+    type Unfilled = Arc<Function>;
+    fn unfilled(self) -> Option<Self::Unfilled> {
+        if self.as_primitive() == Some(Primitive::FillValue) {
+            None
+        } else {
+            Some(self)
+        }
+    }
+    fn array_cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(self, other)
     }
     fn fill_value() -> Self {

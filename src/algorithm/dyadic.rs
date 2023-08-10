@@ -1029,7 +1029,7 @@ impl<T: ArrayValue> Array<T> {
                 }
                 // Compare the current items in the two arrays
                 let same = if let Some(searched_for) = self.data.get(search_for_index) {
-                    searched.data[searched_index].eq(searched_for)
+                    searched.data[searched_index].array_eq(searched_for)
                 } else {
                     false
                 };
@@ -1142,7 +1142,7 @@ impl<T: ArrayValue> Array<T> {
             return Ok((searched_in
                 .data
                 .iter()
-                .position(|a| a.eq(&searched_for.data[0]))
+                .position(|a| a.array_eq(&searched_for.data[0]))
                 .unwrap_or_else(|| searched_in.row_count()) as f64)
                 .into());
         } else {

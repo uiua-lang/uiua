@@ -240,7 +240,7 @@ impl<T: ArrayValue> Array<T> {
             self.row_slice(a)
                 .iter()
                 .zip(self.row_slice(b))
-                .map(|(a, b)| a.cmp(b))
+                .map(|(a, b)| a.array_cmp(b))
                 .find(|x| x != &Ordering::Equal)
                 .unwrap_or(Ordering::Equal)
         });
@@ -322,7 +322,7 @@ fn merge_sort_rows<T: ArrayValue>(row_len: usize, data: &mut [T]) {
             (Some(l), Some(r)) => {
                 let mut ordering = Ordering::Equal;
                 for (l, r) in l.iter().zip(r) {
-                    ordering = l.cmp(r);
+                    ordering = l.array_cmp(r);
                     if ordering != Ordering::Equal {
                         break;
                     }

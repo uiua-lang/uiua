@@ -124,7 +124,11 @@ pub struct PrimNames {
 
 impl PrimNames {
     pub fn is_name_formattable(&self) -> bool {
-        self.unicode.is_some_and(|c| (c as u32) > 127) && self.ascii.is_none()
+        if let Some(c) = self.unicode {
+            (c as u32) > 127 && self.ascii.is_none()
+        } else {
+            self.text.chars().all(|c| c.is_lowercase())
+        }
     }
 }
 

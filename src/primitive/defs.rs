@@ -589,7 +589,7 @@ primitive!(
     ///
     /// `first``shape` of the coupled array will *always* be `2`.
     (2, Couple, DyadicArray, ("couple", '⊟')),
-    /// Replace the fill elements of an array with a elements from another.
+    /// Replace the fill elements of an array with a elements from another
     ///
     /// The most basic case is filling with a scalar
     /// ex: ⍛7 .↙10⇡5
@@ -617,6 +617,7 @@ primitive!(
     /// ex: ⊏ 0_2_1_1 [1_2_3 4_5_6 7_8_9]
     (2, Select, DyadicArray, ("select", '⊏')),
     /// Take the first n elements of an array
+    ///
     /// This is the opposite of [drop].
     ///
     /// ex: ↙ 3 [8 3 9 2 0]
@@ -634,6 +635,7 @@ primitive!(
     /// ex: ⍛0 ↙10 [1 2 3 4 5]
     (2, Take, DyadicArray, ("take", '↙')),
     /// Drop the first n elements of an array
+    ///
     /// This is the opposite of [take].
     ///
     /// ex: ↘ 3 [8 3 9 2 0]
@@ -719,6 +721,7 @@ primitive!(
     (2, Partition, DyadicArray, ("partition", '⊘')),
     // Modifiers
     /// Apply a reducing function to an array
+    ///
     /// For reducing with an initial value, see [fold].
     /// Unlike other modifiers, [reduce] and [fold] traverse the array from right to left.
     ///
@@ -737,6 +740,7 @@ primitive!(
     /// ex: /· [1_2 3_4]
     ([1, 1, 2], Reduce, MonadicModifier, ("reduce", '/')),
     /// Apply a reducing function to an array with an initial value
+    ///
     /// For reducing without an initial value, see [reduce].
     /// Unlike other modifiers, [fold] and [reduce] traverse the array from right to left.
     ///
@@ -750,12 +754,14 @@ primitive!(
     /// ex: \⊂    1_2_3_4
     ([1, 1, 2], Scan, MonadicModifier, ("scan", '\\')),
     /// Apply a function to each element of an array
+    ///
     /// This is the element-wise version of [rows].
     ///
     /// ex: ∵(⊟.) 1_2_3_4
     /// ex: ∵⇡     1_2_3_4
     ([1, 1, 1], Each, MonadicModifier, ("each", '∵')),
     /// Apply a function to each row of an array
+    ///
     /// This is the row-wise version of [each].
     ///
     /// ex:  /+ [1_2_3 4_5_6 7_8_9]  # Sum columns
@@ -766,6 +772,7 @@ primitive!(
     /// ex: ≡/+   [1_2_3 4_5_6 7_8_9]
     ([1, 1, 1], Rows, MonadicModifier, ("rows", '≡')),
     /// Pervade a function through two arrays
+    ///
     /// This is the element-wise version of [bridge].
     ///
     /// ex: ≕⊂ 1_2_3 4_5_6
@@ -776,12 +783,14 @@ primitive!(
     ///   : ≕+ 1_2_3 [4_5 6_7 8_9]
     ([1, 2, 2], Zip, DyadicModifier, ("zip", '≕')),
     /// Apply a function to each pair of rows in two arrays
+    ///
     /// This is the row-wise version of [zip].
     ///
     /// ex: ≍⊂  1_2 [4_5 6_7]
     /// ex: ≍⌿+ 1_2 [4_5 6_7]
     ([1, 2, 2], Bridge, DyadicModifier, ("bridge", '≍')),
     /// Apply a function to each element of an array and a fixed value
+    ///
     /// This is the element-wise version of [plow].
     ///
     /// ex: ≐⊂ 1_2_3 4
@@ -791,6 +800,7 @@ primitive!(
     /// ex: ≐:√_¯_⌊_⌈_(×4) 6.25
     ([1, 2, 2], Distribute, DyadicModifier, ("distribute", '≐')),
     /// Apply a function to each row of an array and a fixed value
+    ///
     /// This is the row-wise version of [distribute].
     ///
     /// ex: ⫫⊂ 1_2_3 4
@@ -800,12 +810,14 @@ primitive!(
     /// ex: ⫫:√_¯_⌊_⌈_(×4) 6.25
     ([1, 2, 2], Plow, DyadicModifier, ("plow", '⫫')),
     /// Apply a function to each combination of elements of two arrays
+    ///
     /// This is the element-wise version of [cross].
     ///
     /// ex: ⊞+ 1_2_3 4_5_6_7
     /// ex: ⊞⊂ 1_2 3_4
     ([1, 2, 2], Table, DyadicModifier, ("table", '⊞')),
     /// Apply a function to each combination of rows of two arrays
+    ///
     /// This is the row-wise version of [table].
     ///
     /// ex: ⊠⊂ [1_2 3_4 5_6] [7_8 7_10]
@@ -823,12 +835,14 @@ primitive!(
     /// ex: ⍥(⎋>1000. ×2)∞ 1
     ([1, 1], Repeat, OtherModifier, ("repeat", '⍥')),
     /// Invert the behavior of a function
+    ///
     /// Most functions are not invertible.
     ///
     /// ex: √2
     /// ex: ↶√2
     ([1, 1], Invert, OtherModifier, ("invert", '↶')),
     /// Apply a function under another
+    ///
     /// This is a more powerful version of [invert].
     ///
     /// [under] takes 2 functions f and g and another argument x.
@@ -908,6 +922,7 @@ primitive!(
     /// ex: ::[+_- ×_÷] 1 1 3 12
     (1(None), Call, Control, ("call", ':')),
     /// Break out of a loop
+    ///
     /// Expects a non-negative integer. This integer is how many loops will be broken out of.
     /// Loops that can be broken out of are [reduce], [fold], [scan], [each], [rows], and [repeat].
     ///
@@ -915,6 +930,7 @@ primitive!(
     /// ex: ⍥(⎋>100.×2)∞ 1  # Break when the product exceeds 100
     (1(0), Break, Control, ("break", '⎋')),
     /// Call the current dfn recursively
+    ///
     /// Only dfns can be recurred in.
     ///
     /// To check for a base case, you can use [call].
@@ -946,6 +962,7 @@ primitive!(
     /// ex: ⌊×10 [⍥⚂5]
     (0, Rand, Misc, ("random", '⚂')),
     /// Generate a random number between 0 and 1 from a seed, as well as the next seed
+    ///
     /// If you don't care about a seed, you can use [rand].
     ///
     /// The same seed will always produce the same random number.

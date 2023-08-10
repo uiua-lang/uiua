@@ -6,7 +6,7 @@ repository = "https://github.com/uiua-lang/uiua"
 version = "0.1.0"
 
 [dependencies]
-ariadne = "0.2.0"
+ariadne = "0.3.0"
 bufreaderwriter = "0.2.4"
 clap.features = ["derive"]
 clap.optional = true

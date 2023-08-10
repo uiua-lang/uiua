@@ -185,9 +185,7 @@ where
     I: IntoIterator<Item = (T, Span)>,
     T: ToString,
 {
-    let config = Config::default()
-        .with_color(complex_output)
-        .with_multiline_arrows(false);
+    let config = Config::default().with_color(complex_output);
     let color = if complex_output {
         Color::Red
     } else {

@@ -1,6 +1,5 @@
-- Chain functions without parens
 - Under take/drop
-- Better primitive name resolution
+- Chain functions without parens
 - Docs
   - Testing and run modes
   - Loops

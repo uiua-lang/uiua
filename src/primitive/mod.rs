@@ -291,12 +291,12 @@ impl Primitive {
             Primitive::Under => {
                 let f = env.pop(1)?;
                 let g = env.pop(2)?;
-                let inv_f = f.invert(env)?;
-                env.push(f);
+                let (f_before, f_after) = f.under(env)?;
+                env.push(f_before);
                 env.call()?;
                 env.push(g);
                 env.call()?;
-                env.push(inv_f);
+                env.push(f_after);
                 env.call()?;
             }
             Primitive::Throw => {

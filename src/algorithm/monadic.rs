@@ -3,6 +3,7 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     iter::repeat,
     ptr,
+    sync::Arc,
 };
 
 use crate::{array::*, value::Value, Byte, Uiua, UiuaResult};
@@ -363,6 +364,25 @@ impl Value {
                     );
                 }
                 Self::Func((fs.shape.clone(), invs).into())
+            }
+            v => return Err(env.error(format!("Cannot invert {}", v.type_name()))),
+        })
+    }
+    pub fn under(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+        Ok(match self {
+            Self::Func(fs) => {
+                let mut befores = Vec::with_capacity(fs.len());
+                let mut afters = Vec::with_capacity(fs.len());
+                for f in fs.data {
+                    let f = Arc::try_unwrap(f).unwrap_or_else(|f| (*f).clone());
+                    let (before, after) = f.under().ok_or_else(|| env.error("No inverse found"))?;
+                    befores.push(before.into());
+                    afters.push(after.into());
+                }
+                (
+                    Self::Func((fs.shape.clone(), befores).into()),
+                    Self::Func((fs.shape.clone(), afters).into()),
+                )
             }
             v => return Err(env.error(format!("Cannot invert {}", v.type_name()))),
         })

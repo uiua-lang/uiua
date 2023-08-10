@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::{
     function::{Function, FunctionKind, Instr},
     primitive::Primitive,
@@ -13,6 +15,25 @@ impl Function {
             instrs: invert_instrs(&self.instrs)?,
             kind: FunctionKind::Normal,
         })
+    }
+    pub fn under(self) -> Option<(Self, Self)> {
+        if let Some(f) = self.inverse() {
+            Some((self, f))
+        } else {
+            let (befores, afters) = under_instrs(&self.instrs)?;
+            Some((
+               Function{
+                    id: self.id.clone(),
+                    instrs: befores,
+                    kind: FunctionKind::Normal,
+                },
+                Function{
+                    id: self.id.clone(),
+                    instrs: afters,
+                    kind: FunctionKind::Normal,
+                }
+            ))
+        }
     }
 }
 
@@ -71,6 +92,44 @@ fn invert_instr_fragment(instrs: &[Instr]) -> Option<Vec<Instr>> {
         }
     }
 
+    None
+}
+
+fn under_instrs(instrs: &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
+    if instrs.is_empty() {
+        return Some((Vec::new(), Vec::new()));
+    }
+    let mut befores = Vec::new();
+    let mut afters = Vec::new();
+    let mut start = instrs.len() - 1;
+    let mut end = instrs.len();
+    loop {
+        if let Some((before, mut after)) = under_instr_fragment(&instrs[start..end]) {
+            after.append(&mut afters);
+            afters = after;
+            match before {
+                Cow::Borrowed(before) => befores.extend_from_slice(before),
+                Cow::Owned(before) => befores.extend(before),
+            }
+            if start == 0 {
+                break;
+            }
+            end = start;
+            start = end - 1;
+        } else if start == 0 {
+            return None;
+        } else {
+            start -= 1;
+        }
+    }
+    // println!("inverted {:?} to {:?}", instrs, inverted);
+    Some((befores, afters))
+}
+
+fn under_instr_fragment(instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr>)> {
+    if let Some(inverted) = invert_instr_fragment(instrs) {
+        return Some((Cow::Borrowed(instrs), inverted));
+    }
     None
 }
 

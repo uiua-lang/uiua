@@ -708,17 +708,14 @@ primitive!(
     /// ex:  /+ [1_2_3 4_5_6 7_8_9]  # Sum columns
     /// ex: ≡/+ [1_2_3 4_5_6 7_8_9]  # Sum rows
     ///
+    /// The number of arrays used depends on how many arguments the function takes.
+    /// ex: ≡⊂  1_2 [4_5 6_7]
+    /// ex: ≡⌿+ 1_2 [4_5 6_7]
+    ///
     /// [rows] is equivalent to [level]`¯1`.
     /// ex: ⍚¯1/+ [1_2_3 4_5_6 7_8_9]
     /// ex: ≡/+   [1_2_3 4_5_6 7_8_9]
     ([1, 1, 1], Rows, MonadicModifier, ("rows", '≡')),
-    /// Apply a function to each pair of rows in two arrays
-    ///
-    /// This is the row-wise version of [zip].
-    ///
-    /// ex: ≍⊂  1_2 [4_5 6_7]
-    /// ex: ≍⌿+ 1_2 [4_5 6_7]
-    ([1, 2, 2], Bridge, DyadicModifier, ("bridge", '≍')),
     /// Apply a function to each element of an array and a fixed value
     ///
     /// This is the element-wise version of [plow].

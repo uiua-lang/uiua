@@ -305,7 +305,6 @@ impl Primitive {
             Primitive::Reduce => loops::reduce(env)?,
             Primitive::Each => loops::each(env)?,
             Primitive::Rows => loops::rows(env)?,
-            Primitive::Bridge => loops::bridge(env)?,
             Primitive::Distribute => loops::distribute(env)?,
             Primitive::Plow => loops::plow(env)?,
             Primitive::Table => loops::table(env)?,

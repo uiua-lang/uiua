@@ -299,10 +299,10 @@ fn eachn(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
             )));
         }
     }
-    let row_count = args[0].row_count();
+    let elem_count = args[0].flat_len();
     let mut arg_elems: Vec<_> = args.into_iter().map(|v| v.into_flat_values()).collect();
     let mut new_values = Vec::new();
-    for _ in 0..row_count {
+    for _ in 0..elem_count {
         for arg in arg_elems.iter_mut().rev() {
             env.push(arg.next().unwrap());
         }
@@ -318,7 +318,29 @@ fn eachn(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
 pub fn rows(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(1)?;
-    let xs = env.pop(2)?;
+    let (args, _) = f.args_delta().unwrap_or((1, 0));
+    match args {
+        0 => Err(env.error("rows' function must take at least one argument")),
+        1 => {
+            let xs = env.pop(2)?;
+            rows1(f, xs, env)
+        }
+        2 => {
+            let xs = env.pop(2)?;
+            let ys = env.pop(3)?;
+            rows2(f, xs, ys, env)
+        }
+        n => {
+            let mut args = Vec::with_capacity(n);
+            for i in 0..n {
+                args.push(env.pop(i + 2)?);
+            }
+            rowsn(f, args, env)
+        }
+    }
+}
+
+fn rows1(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     let mut new_rows = Vec::with_capacity(xs.row_count());
     let mut old_rows = xs.into_rows();
     while let Some(row) = old_rows.next() {
@@ -338,12 +360,7 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub fn bridge(env: &mut Uiua) -> UiuaResult {
-    crate::profile_function!();
-    let f = env.pop(1)?;
-    let xs = env.pop(2)?;
-    let ys = env.pop(3)?;
-    const BREAK_ERROR: &str = "break is not allowed in bridge";
+fn rows2(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     if xs.row_count() != ys.row_count() {
         return Err(env.error(format!(
             "Cannot bridge arrays with different number of rows {} and {}",
@@ -358,10 +375,27 @@ pub fn bridge(env: &mut Uiua) -> UiuaResult {
         env.push(y);
         env.push(x);
         env.push(f.clone());
-        env.call_error_on_break(BREAK_ERROR)?;
+        env.call_error_on_break("break is not allowed in bridge")?;
         new_rows.push(env.pop("bridge's function result")?);
     }
     env.push(Value::from_row_values(new_rows, env)?);
+    Ok(())
+}
+
+fn rowsn(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+    let row_count = args[0].row_count();
+    let mut arg_elems: Vec<_> = args.into_iter().map(|v| v.into_rows()).collect();
+    let mut new_values = Vec::new();
+    for _ in 0..row_count {
+        for arg in arg_elems.iter_mut().rev() {
+            env.push(arg.next().unwrap());
+        }
+        env.push(f.clone());
+        env.call_error_on_break("break is not allowed in each")?;
+        new_values.push(env.pop("each's function result")?);
+    }
+    let eached = Value::from_row_values(new_values, env)?;
+    env.push(eached);
     Ok(())
 }
 

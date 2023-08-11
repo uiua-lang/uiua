@@ -1,6 +1,5 @@
 - Rework site output
-- Unify some monadic and dyadic modifiers
-  - rows and bridge
+- Cache function args/delta
 - Require certain kinds of names for functions?
 - Rethink fill values
   - Set the fill value of an array?

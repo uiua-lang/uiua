@@ -19,7 +19,7 @@ const STRIPES: &str = "\
 ∵{⊞a.⇡300}+_↥_-
 ⍉ ÷2 +1.2 ○ ÷10";
 const PALINDROME: &str = r#"$ uiua racecar wow cool!
-≍⊂ ⊏~"❌✅" ≡(≅⇌.). ⊘≠' '."#;
+≡⊂ ⊏~"❌✅" ≡(≅⇌.). ⊘≠' '."#;
 const RULE_30: &str = "\
 Thirty ← ≡(↥≅0_1_1 ~=1 /+.) ◫3 ⊂~0 ⊂0
 size ← 500

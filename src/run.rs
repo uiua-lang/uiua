@@ -234,8 +234,8 @@ impl Uiua {
             }
             Item::Binding(binding) => {
                 let can_run = match self.mode {
-                    RunMode::Normal | RunMode::Watch => true,
-                    RunMode::Test => in_test,
+                    RunMode::Normal => !in_test,
+                    RunMode::Watch | RunMode::Test => true,
                 };
                 if can_run || words_have_import(&binding.words) {
                     self.binding(binding)?;

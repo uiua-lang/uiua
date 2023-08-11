@@ -148,6 +148,9 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig) {
                 }
                 format_word(output, item, config);
             }
+            if items.len() == 1 {
+                output.push('_');
+            }
         }
         Word::Array(items) => {
             output.push('[');

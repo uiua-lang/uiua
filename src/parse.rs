@@ -13,12 +13,12 @@ pub enum ParseError {
     Lex(LexError),
     Expected(Vec<Expectation>, Option<Box<Sp<Token>>>),
     InvalidNumber(String),
+    Unexpected(Token),
 }
 
 #[derive(Debug)]
 pub enum Expectation {
     Term,
-    Eof,
     Simple(AsciiToken),
 }
 
@@ -32,7 +32,6 @@ impl fmt::Display for Expectation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Expectation::Term => write!(f, "term"),
-            Expectation::Eof => write!(f, "end of file"),
             Expectation::Simple(s) => write!(f, "`{s}`"),
         }
     }
@@ -56,6 +55,7 @@ impl fmt::Display for ParseError {
                 Ok(())
             }
             ParseError::InvalidNumber(s) => write!(f, "invalid number `{s}`"),
+            ParseError::Unexpected(_) => write!(f, "unexpected token"),
         }
     }
 }
@@ -77,7 +77,12 @@ pub fn parse(input: &str, path: Option<&Path>) -> (Vec<Item>, Vec<Sp<ParseError>
     };
     let items = parser.items(true);
     if parser.errors.is_empty() && parser.index < parser.tokens.len() {
-        parser.errors.push(parser.expected([Expectation::Eof]));
+        parser.errors.push(
+            parser
+                .tokens
+                .remove(parser.index)
+                .map(ParseError::Unexpected),
+        );
     }
     (items, parser.errors)
 }
@@ -106,26 +111,23 @@ impl Parser {
         self.next_token_map(|t| (t == &token).then_some(()))
             .map(|t| t.span)
     }
-    fn last_span(&self) -> CodeSpan {
-        if let Some(token) = self.tokens.get(self.index) {
+    fn prev_span(&self) -> CodeSpan {
+        if let Some(token) = self.tokens.get(self.index.saturating_sub(1)) {
             token.span.clone()
         } else {
-            let mut span = self.tokens.last().unwrap().span.clone();
-            span.start = span.end;
-            if self.tokens.len() > span.end.char_pos {
-                span.end.char_pos += 1;
-                span.end.col += 1;
-            }
-            span
+            self.tokens.last().unwrap().span.clone()
         }
     }
     fn expected<I: Into<Expectation>>(
         &self,
         expectations: impl IntoIterator<Item = I>,
     ) -> Sp<ParseError> {
-        self.last_span().sp(ParseError::Expected(
+        self.prev_span().sp(ParseError::Expected(
             expectations.into_iter().map(Into::into).collect(),
-            self.tokens.get(self.index).cloned().map(Box::new),
+            self.tokens
+                .get(self.index.saturating_sub(1))
+                .cloned()
+                .map(Box::new),
         ))
     }
     #[allow(unused)]
@@ -133,7 +135,7 @@ impl Parser {
         &mut self,
         expectations: impl IntoIterator<Item = I>,
     ) {
-        let err = self.last_span().sp(ParseError::Expected(
+        let err = self.prev_span().sp(ParseError::Expected(
             expectations.into_iter().map(Into::into).collect(),
             None,
         ));
@@ -243,26 +245,43 @@ impl Parser {
             .or_else(|| self.try_strand())
     }
     fn try_strand(&mut self) -> Option<Sp<Word>> {
-        let Some(word) = self.try_modified() else {
-            return None;
-        };
+        let word = self.try_modified()?;
+        if let Word::Spaces = word.value {
+            return Some(word);
+        }
         let mut items = Vec::new();
-        while let Some(uspan) = self.try_exact(Underscore) {
+        let mut single = false;
+        while self.try_exact(Underscore).is_some() {
             let item = match self.try_modified() {
-                Some(item) => {
+                Some(mut item) => {
                     if let Word::Spaces = item.value {
+                        if items.is_empty() {
+                            single = true;
+                            break;
+                        }
                         self.errors.push(self.expected([Expectation::Term]));
+                        item = match self.try_modified() {
+                            Some(item) => item,
+                            None => {
+                                self.errors.push(self.expected([Expectation::Term]));
+                                break;
+                            }
+                        };
                     }
                     item
                 }
+                None if items.is_empty() => {
+                    single = true;
+                    break;
+                }
                 None => {
                     self.errors.push(self.expected([Expectation::Term]));
-                    uspan.sp(Word::Primitive(Primitive::Noop))
+                    break;
                 }
             };
             items.push(item);
         }
-        if items.is_empty() {
+        if items.is_empty() && !single {
             return Some(word);
         }
         items.insert(0, word);
@@ -323,7 +342,7 @@ impl Parser {
                 Ok(n) => n,
                 Err(_) => {
                     self.errors
-                        .push(self.last_span().sp(ParseError::InvalidNumber(s.clone())));
+                        .push(self.prev_span().sp(ParseError::InvalidNumber(s.clone())));
                     0.0
                 }
             };
@@ -404,7 +423,7 @@ impl Parser {
         } else {
             self.errors
                 .push(self.expected([Expectation::Term, Expectation::Simple(simple)]));
-            self.last_span()
+            self.prev_span()
         }
     }
 }

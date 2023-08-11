@@ -1,5 +1,4 @@
 - Rework site output
-- Refine strand parsing
 - Unify some monadic and dyadic modifiers
   - each and zip
   - rows and bridge

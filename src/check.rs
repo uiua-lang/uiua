@@ -13,14 +13,14 @@ pub(crate) fn instrs_stack_delta(instrs: &[Instr]) -> Option<(usize, isize)> {
         min_height: START_HEIGHT,
     };
     if let Err(_e) = env.instrs(instrs) {
-        // println!("instrs: {:?}", instrs);
-        // println!("unable to count a/Δ: {}", _e);
+        println!("instrs: {:?}", instrs);
+        println!("unable to count a/Δ: {}", _e);
         return None;
     }
     let args = START_HEIGHT.saturating_sub(env.min_height);
     let delta = env.stack.len() as isize - START_HEIGHT as isize;
-    // println!("instrs: {:?}", instrs);
-    // println!("args/Δ: {}/{}", args, delta);
+    println!("instrs: {:?}", instrs);
+    println!("args/Δ: {}/{}", args, delta);
     Some((args, delta))
 }
 
@@ -125,6 +125,7 @@ impl<'a> VirtualEnv<'a> {
                         self.stack.push(a);
                         self.stack.push(b);
                     }
+                    Call => self.handle_call()?,
                     _ => {
                         let args = prim.args().ok_or("Prim had indeterminate args")?;
                         for _ in 0..args {
@@ -137,22 +138,7 @@ impl<'a> VirtualEnv<'a> {
                         }
                     }
                 },
-                Instr::Call(_) => {
-                    if let Some(BasicValue::Func(f)) = self.stack.last() {
-                        let (a, d) = f.args_delta().ok_or_else(|| {
-                            format!("Call's function {f:?} had indeterminate a/Δ")
-                        })?;
-                        for _ in 0..a {
-                            self.pop()?;
-                        }
-                        self.set_min_height();
-                        for _ in 0..(d + a as isize).max(0) {
-                            self.stack.push(BasicValue::Other);
-                        }
-                    } else {
-                        return Err("Call without a function".into());
-                    }
-                }
+                Instr::Call(_) => self.handle_call()?,
             }
             self.set_min_height();
         }
@@ -165,6 +151,23 @@ impl<'a> VirtualEnv<'a> {
         self.min_height = self.min_height.min(self.stack.len());
         if let Some(h) = self.array_stack.last_mut() {
             *h = (*h).min(self.stack.len());
+        }
+    }
+    fn handle_call(&mut self) -> Result<(), String> {
+        if let Some(BasicValue::Func(f)) = self.stack.last() {
+            let (a, d) = f
+                .args_delta()
+                .ok_or_else(|| format!("Call's function {f:?} had indeterminate a/Δ"))?;
+            for _ in 0..a {
+                self.pop()?;
+            }
+            self.set_min_height();
+            for _ in 0..(d + a as isize).max(0) {
+                self.stack.push(BasicValue::Other);
+            }
+            Ok(())
+        } else {
+            Err("Call without a function".into())
         }
     }
     fn handle_mod(

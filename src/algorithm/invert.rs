@@ -1,7 +1,8 @@
 use std::borrow::Cow;
 
 use crate::{
-    function::{instrs_stack_delta, Function, FunctionKind, Instr},
+    check::instrs_stack_delta,
+    function::{Function, FunctionKind, Instr},
     primitive::Primitive,
 };
 

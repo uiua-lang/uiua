@@ -3,6 +3,7 @@
 mod algorithm;
 pub mod array;
 pub mod ast;
+mod check;
 mod cowslice;
 mod error;
 pub mod format;

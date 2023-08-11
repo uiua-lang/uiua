@@ -10,6 +10,7 @@ use parking_lot::Mutex;
 
 use crate::{
     ast::*,
+    check::instrs_stack_delta,
     function::*,
     lex::{CodeSpan, Sp, Span},
     parse::parse,

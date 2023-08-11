@@ -260,11 +260,11 @@ impl Uiua {
                 self.stack.pop().unwrap_or_default()
             }
             _ => {
-                let func = Function {
-                    id: FunctionId::Named(binding.name.value.clone()),
+                let func = Function::new(
+                    FunctionId::Named(binding.name.value.clone()),
                     instrs,
-                    kind: FunctionKind::Normal,
-                };
+                    FunctionKind::Normal,
+                );
                 Value::from(func)
             }
         };
@@ -316,10 +316,10 @@ impl Uiua {
             Word::Char(c) => self.push_instr(Instr::push(c)),
             Word::String(s) => self.push_instr(Instr::push(s)),
             Word::FormatString(frags) => {
-                let f = Function {
-                    id: FunctionId::Anonymous(word.span.clone()),
-                    instrs: Vec::new(),
-                    kind: FunctionKind::Dynamic {
+                let f = Function::new(
+                    FunctionId::Anonymous(word.span.clone()),
+                    Vec::new(),
+                    FunctionKind::Dynamic {
                         inputs: frags.len() as u8 - 1,
                         delta: 1 - frags.len() as i8,
                         f: Arc::new(move |env| {
@@ -335,7 +335,7 @@ impl Uiua {
                             Ok(())
                         }),
                     },
-                };
+                );
                 self.push_instr(Instr::push(f));
                 if call {
                     let span = self.add_span(word.span);
@@ -343,10 +343,10 @@ impl Uiua {
                 }
             }
             Word::MultilineString(lines) => {
-                let f = Function {
-                    id: FunctionId::Anonymous(word.span.clone()),
-                    instrs: Vec::new(),
-                    kind: FunctionKind::Dynamic {
+                let f = Function::new(
+                    FunctionId::Anonymous(word.span.clone()),
+                    Vec::new(),
+                    FunctionKind::Dynamic {
                         inputs: lines.iter().map(|l| l.value.len() as u8 - 1).sum(),
                         delta: 1 - lines.len() as i8,
                         f: Arc::new(move |env| {
@@ -369,7 +369,7 @@ impl Uiua {
                             Ok(())
                         }),
                     },
-                };
+                );
                 self.push_instr(Instr::push(f));
                 if call {
                     let span = self.add_span(word.span);
@@ -450,11 +450,7 @@ impl Uiua {
                 return Ok(());
             }
         }
-        let func = Function {
-            id: func.id,
-            instrs,
-            kind: FunctionKind::Normal,
-        };
+        let func = Function::new(func.id, instrs, FunctionKind::Normal);
         self.push_instr(Instr::push(func));
         Ok(())
     }
@@ -466,11 +462,7 @@ impl Uiua {
         }
         let refs = self.new_dfns.pop().unwrap();
         let dfn_size = refs.into_iter().max().map(|n| n + 1).unwrap_or(0);
-        let func = Function {
-            id: func.id,
-            instrs,
-            kind: FunctionKind::Dfn(dfn_size),
-        };
+        let func = Function::new(func.id, instrs, FunctionKind::Dfn(dfn_size));
         self.push_instr(Instr::push(func));
         if call {
             let span = self.add_span(span);
@@ -492,11 +484,11 @@ impl Uiua {
                 true,
             );
             let instrs = self.new_functions.pop().unwrap();
-            let func = Function {
-                id: FunctionId::Anonymous(modified.modifier.span),
+            let func = Function::new(
+                FunctionId::Anonymous(modified.modifier.span),
                 instrs,
-                kind: FunctionKind::Normal,
-            };
+                FunctionKind::Normal,
+            );
             self.push_instr(Instr::push(func));
         }
         Ok(())
@@ -506,19 +498,15 @@ impl Uiua {
         if call {
             self.push_instr(Instr::Prim(prim, span));
         } else {
-            self.push_instr(Instr::push(Function {
-                id: FunctionId::Primitive(prim),
-                instrs: vec![Instr::Prim(prim, span)],
-                kind: FunctionKind::Normal,
-            }));
+            self.push_instr(Instr::push(Function::new(
+                FunctionId::Primitive(prim),
+                [Instr::Prim(prim, span)],
+                FunctionKind::Normal,
+            )));
         }
     }
     fn exec_global_instrs(&mut self, instrs: Vec<Instr>) -> UiuaResult {
-        let func = Function {
-            id: FunctionId::Main,
-            instrs,
-            kind: FunctionKind::Normal,
-        };
+        let func = Function::new(FunctionId::Main, instrs, FunctionKind::Normal);
         self.exec(StackFrame {
             function: Arc::new(func),
             call_span: 0,

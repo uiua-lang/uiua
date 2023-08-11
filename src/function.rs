@@ -1,5 +1,7 @@
 use std::{cmp::Ordering, fmt, sync::Arc};
 
+use thread_local::ThreadLocal;
+
 use crate::{
     check::instrs_stack_delta, lex::CodeSpan, primitive::Primitive, value::Value, Ident, Uiua,
     UiuaResult,
@@ -45,6 +47,18 @@ pub struct Function {
     pub id: FunctionId,
     pub instrs: Vec<Instr>,
     pub kind: FunctionKind,
+    ad_cache: Arc<ThreadLocal<Option<(usize, isize)>>>,
+}
+
+impl Function {
+    pub fn new(id: FunctionId, instrs: impl Into<Vec<Instr>>, kind: FunctionKind) -> Self {
+        Self {
+            id,
+            instrs: instrs.into(),
+            kind,
+            ad_cache: ThreadLocal::new().into(),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -60,11 +74,11 @@ pub enum FunctionKind {
 
 impl From<Primitive> for Function {
     fn from(prim: Primitive) -> Self {
-        Self {
-            id: FunctionId::Primitive(prim),
-            instrs: vec![Instr::Prim(prim, 0)],
-            kind: FunctionKind::Normal,
-        }
+        Self::new(
+            FunctionId::Primitive(prim),
+            [Instr::Prim(prim, 0)],
+            FunctionKind::Normal,
+        )
     }
 }
 
@@ -128,7 +142,7 @@ impl Function {
     /// Get how many arguments this function takes and by how much it changes the height of the stack.
     /// Returns `None` if either of these values are dynamic.
     pub fn args_delta(&self) -> Option<(usize, isize)> {
-        match self.kind {
+        *self.ad_cache.get_or(|| match self.kind {
             FunctionKind::Normal => instrs_stack_delta(&self.instrs),
             FunctionKind::Dfn(n) => {
                 let (mut args, mut delta) = instrs_stack_delta(&self.instrs)?;
@@ -137,14 +151,14 @@ impl Function {
                 Some((args, delta))
             }
             FunctionKind::Dynamic { inputs, delta, .. } => Some((inputs as usize, delta as isize)),
-        }
+        })
     }
     pub fn constant(value: impl Into<Value>) -> Self {
-        Function {
-            id: FunctionId::Constant,
-            instrs: vec![Instr::push(value.into())],
-            kind: FunctionKind::Normal,
-        }
+        Function::new(
+            FunctionId::Constant,
+            [Instr::push(value.into())],
+            FunctionKind::Normal,
+        )
     }
     pub fn as_primitive(&self) -> Option<Primitive> {
         match &self.id {
@@ -163,25 +177,25 @@ impl Function {
     }
     pub fn compose(self, other: Self) -> Self {
         match (&self.kind, &other.kind) {
-            (FunctionKind::Dynamic { .. }, _) | (_, FunctionKind::Dynamic { .. }) => Function {
-                id: self.id.clone().compose(other.id.clone()),
-                instrs: vec![
+            (FunctionKind::Dynamic { .. }, _) | (_, FunctionKind::Dynamic { .. }) => Function::new(
+                self.id.clone().compose(other.id.clone()),
+                [
                     Instr::push(other),
                     Instr::Call(0),
                     Instr::push(self),
                     Instr::Call(0),
                 ],
-                kind: FunctionKind::Normal,
-            },
-            _ => Function {
-                id: self.id.compose(other.id),
-                instrs: {
+                FunctionKind::Normal,
+            ),
+            _ => Function::new(
+                self.id.compose(other.id),
+                {
                     let mut instrs = other.instrs;
                     instrs.extend(self.instrs);
                     instrs
                 },
-                kind: FunctionKind::Normal,
-            },
+                FunctionKind::Normal,
+            ),
         }
     }
 }

@@ -54,6 +54,7 @@ serde.version = "1"
 serde_yaml.optional = true
 serde_yaml.version = "0.9.25"
 term_size = "0.3.2"
+thread_local = "1"
 tokio.features = ["io-std", "rt"]
 tokio.optional = true
 tokio.version = "1"

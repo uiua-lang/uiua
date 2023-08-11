@@ -11,11 +11,11 @@ impl Function {
         if !matches!(self.kind, FunctionKind::Normal) {
             return None;
         }
-        Some(Function {
-            id: self.id.clone(),
-            instrs: invert_instrs(&self.instrs)?,
-            kind: FunctionKind::Normal,
-        })
+        Some(Function::new(
+            self.id.clone(),
+            invert_instrs(&self.instrs)?,
+            FunctionKind::Normal,
+        ))
     }
     pub fn under(self) -> Option<(Self, Self)> {
         if let Some(f) = self.inverse() {
@@ -23,16 +23,8 @@ impl Function {
         } else {
             let (befores, afters) = under_instrs(&self.instrs)?;
             Some((
-                Function {
-                    id: self.id.clone(),
-                    instrs: befores,
-                    kind: FunctionKind::Normal,
-                },
-                Function {
-                    id: self.id.clone(),
-                    instrs: afters,
-                    kind: FunctionKind::Normal,
-                },
+                Function::new(self.id.clone(), befores, FunctionKind::Normal),
+                Function::new(self.id.clone(), afters, FunctionKind::Normal),
             ))
         }
     }

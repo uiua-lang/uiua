@@ -23,11 +23,11 @@ impl Value {
                 let new_data: CowSlice<_> = b
                     .into_flat_values()
                     .map(|b| {
-                        Arc::new(Function {
-                            id: FunctionId::Constant,
-                            instrs: vec![Instr::Push(b.into()), Instr::Call(env.span_index())],
-                            kind: FunctionKind::Normal,
-                        })
+                        Arc::new(Function::new(
+                            FunctionId::Constant,
+                            vec![Instr::Push(b.into()), Instr::Call(env.span_index())],
+                            FunctionKind::Normal,
+                        ))
                     })
                     .collect();
                 let b = Array::new(shape, new_data);

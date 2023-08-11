@@ -1,6 +1,8 @@
 use std::{cmp::Ordering, fmt, sync::Arc};
 
-use crate::{lex::CodeSpan, primitive::Primitive, value::Value, Ident, Uiua, UiuaResult};
+use crate::{
+    array::Array, lex::CodeSpan, primitive::Primitive, value::Value, Ident, Uiua, UiuaResult,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Instr {
@@ -15,6 +17,12 @@ pub enum Instr {
 impl Instr {
     pub fn push(val: impl Into<Value>) -> Self {
         Self::Push(Box::new(val.into()))
+    }
+    pub fn as_push(&self) -> Option<&Value> {
+        match self {
+            Instr::Push(val) => Some(val),
+            _ => None,
+        }
     }
 }
 
@@ -42,7 +50,11 @@ pub struct Function {
 pub enum FunctionKind {
     Normal,
     Dfn(u8),
-    Dynamic(Arc<dyn Fn(&mut Uiua) -> UiuaResult + Send + Sync>),
+    Dynamic {
+        f: Arc<dyn Fn(&mut Uiua) -> UiuaResult + Send + Sync>,
+        inputs: u8,
+        outputs: u8,
+    },
 }
 
 impl From<Primitive> for Function {
@@ -91,7 +103,7 @@ impl fmt::Display for Function {
         if let Some(prim) = self.as_primitive() {
             return write!(f, "{prim}");
         }
-        if let FunctionKind::Dynamic(_) = self.kind {
+        if let FunctionKind::Dynamic { .. } = self.kind {
             return write!(f, "<dynamic>");
         }
         if let FunctionKind::Dfn(_) = self.kind {
@@ -112,6 +124,16 @@ impl fmt::Display for Function {
 }
 
 impl Function {
+    pub fn args_delta(&self) -> Option<(usize, isize)> {
+        if let FunctionKind::Dynamic {
+            inputs, outputs, ..
+        } = &self.kind
+        {
+            Some((*inputs as usize, *outputs as isize - *inputs as isize))
+        } else {
+            instrs_stack_delta(&self.instrs)
+        }
+    }
     pub fn constant(value: impl Into<Value>) -> Self {
         Function {
             id: FunctionId::Constant,
@@ -136,7 +158,7 @@ impl Function {
     }
     pub fn compose(self, other: Self) -> Self {
         match (&self.kind, &other.kind) {
-            (FunctionKind::Dynamic(_), _) | (_, FunctionKind::Dynamic(_)) => Function {
+            (FunctionKind::Dynamic { .. }, _) | (_, FunctionKind::Dynamic { .. }) => Function {
                 id: self.id.clone().compose(other.id.clone()),
                 instrs: vec![
                     Instr::push(other),
@@ -211,5 +233,181 @@ impl fmt::Display for FunctionId {
             FunctionId::Main => write!(f, "main"),
             FunctionId::Composed(ids) => write!(f, "{ids:?}"),
         }
+    }
+}
+
+/// Count the number of arguments and outputs of list of instructions.
+pub(crate) fn instrs_stack_delta(instrs: &[Instr]) -> Option<(usize, isize)> {
+    const START_HEIGHT: usize = 16;
+    let mut env = VirtualEnv {
+        stack: vec![None; START_HEIGHT],
+        array_stack: Vec::new(),
+        min_height: START_HEIGHT,
+    };
+    if let Err(_e) = env.instrs(instrs) {
+        // println!("instrs: {:?}", instrs);
+        // println!("unable to count a/o: {}", _e);
+        return None;
+    }
+    let args = START_HEIGHT.saturating_sub(env.min_height);
+    let delta = env.stack.len() as isize - START_HEIGHT as isize;
+    // println!("instrs: {:?}", instrs);
+    // println!("args/delta: {}/{}", args, delta);
+    Some((args, delta))
+}
+
+struct VirtualEnv<'a> {
+    stack: Vec<Option<&'a Function>>,
+    array_stack: Vec<usize>,
+    min_height: usize,
+}
+
+impl<'a> VirtualEnv<'a> {
+    pub fn instrs(&mut self, instrs: &'a [Instr]) -> Result<(), String> {
+        use Primitive::*;
+        for instr in instrs {
+            match instr {
+                Instr::Push(val) => {
+                    self.stack
+                        .push(val.as_func_array().and_then(Array::as_scalar).map(|f| &**f));
+                }
+                Instr::DfnVal(_) => self.stack.push(None),
+                Instr::BeginArray => self.array_stack.push(self.stack.len()),
+                Instr::EndArray(_) => {
+                    self.stack.truncate(
+                        self.array_stack
+                            .pop()
+                            .ok_or("EndArray without BeginArray")?,
+                    );
+                    self.stack.push(None);
+                }
+                Instr::Prim(prim, _) => match prim {
+                    Reduce | Scan => {
+                        if let Some(f) = self.pop()? {
+                            let (a, d) = f.args_delta().ok_or_else(|| {
+                                format!("{prim}'s function {f:?} had indeterminate a/o")
+                            })?;
+                            if d != -1 {
+                                return Err(format!(
+                                    "{prim}'s function {f:?} had {d} delta, expected 1"
+                                ));
+                            }
+                            if a != 2 {
+                                return Err(format!(
+                                    "{prim}'s function {f:?} had {a} args, expected 2"
+                                ));
+                            }
+                            self.pop()?;
+                            self.set_min_height();
+                            self.stack.push(None);
+                        } else {
+                            return Err("Reduce without function".into());
+                        }
+                    }
+                    Fold => {
+                        if let Some(f) = self.pop()? {
+                            let (a, d) = f.args_delta().ok_or_else(|| {
+                                format!("{prim}'s function {f:?} had indeterminate a/o")
+                            })?;
+                            if d != -1 {
+                                return Err(format!(
+                                    "{prim}'s function {f:?} had {d} delta, expected 1"
+                                ));
+                            }
+                            if a != 2 {
+                                return Err(format!(
+                                    "{prim}'s function {f:?} had {a} args, expected 2"
+                                ));
+                            }
+                            self.pop()?;
+                            self.pop()?;
+                            self.set_min_height();
+                            self.stack.push(None);
+                        } else {
+                            return Err("Reduce without function".into());
+                        }
+                    }
+                    _ => {
+                        if let Some((..)) = prim.modifier_args() {
+                        } else {
+                            for _ in 0..prim.args().ok_or("Prim had indeterminate args")? {
+                                self.pop()?;
+                            }
+                            self.set_min_height();
+                            for _ in 0..prim.outputs().ok_or("Prim had indeterminate outputs")? {
+                                self.stack.push(None);
+                            }
+                        }
+                    }
+                },
+                Instr::Call(_) => return Err("Call in instrs".into()),
+            }
+            self.set_min_height();
+        }
+        Ok(())
+    }
+    fn pop(&mut self) -> Result<Option<&'a Function>, String> {
+        Ok(self.stack.pop().ok_or("function is too complex")?)
+    }
+    fn set_min_height(&mut self) {
+        self.min_height = self.min_height.min(self.stack.len());
+        if let Some(h) = self.array_stack.last_mut() {
+            *h = (*h).min(self.stack.len());
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use Instr::*;
+    use Primitive::*;
+    fn push<T>(val: T) -> Instr
+    where
+        T: Into<Value>,
+    {
+        Push(val.into().into())
+    }
+    #[test]
+    fn instrs_args_outputs() {
+        let check = super::instrs_stack_delta;
+
+        assert_eq!(Some((0, 0)), check(&[]));
+        assert_eq!(Some((0, 0)), check(&[Prim(Noop, 0)]));
+
+        assert_eq!(Some((0, 1)), check(&[push(10), push(2), Prim(Pow, 0)]));
+        assert_eq!(
+            Some((1, 0)),
+            check(&[push(10), push(2), Prim(Pow, 0), Prim(Add, 0)])
+        );
+        assert_eq!(Some((1, 0)), check(&[push(1), Prim(Add, 0)]));
+
+        assert_eq!(
+            Some((0, 1)),
+            check(&[BeginArray, push(3), push(2), push(1), EndArray(0)])
+        );
+        assert_eq!(
+            Some((1, 0)),
+            check(&[
+                BeginArray,
+                push(3),
+                push(2),
+                push(1),
+                EndArray(0),
+                Prim(Add, 0)
+            ])
+        );
+        assert_eq!(
+            Some((0, 1)),
+            check(&[
+                BeginArray,
+                push(3),
+                push(2),
+                push(1),
+                EndArray(0),
+                push(Add),
+                Prim(Reduce, 0)
+            ])
+        );
     }
 }

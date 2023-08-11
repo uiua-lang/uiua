@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use crate::{
-    function::{Function, FunctionKind, Instr},
+    function::{instrs_stack_delta, Function, FunctionKind, Instr},
     primitive::Primitive,
 };
 
@@ -335,11 +335,11 @@ pub struct Val;
 impl InvertPattern for Val {
     fn invert_extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
         if input.is_empty() {
-            return None;
+            return Some(Vec::new());
         }
         for len in (1..input.len()).rev() {
             let chunk = &input[..len];
-            if instrs_args_outputs(chunk) == Some((0, 1)) {
+            if instrs_stack_delta(chunk) == Some((0, 1)) {
                 let res = chunk.to_vec();
                 *input = &input[len..];
                 return Some(res);
@@ -381,62 +381,5 @@ impl InvertPattern for Val {
 impl UnderPattern for Val {
     fn under_extract(&self, input: &mut &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
         self.invert_extract(input).map(|v| (v, Vec::new()))
-    }
-}
-
-/// Count the number of arguments and outputs of list of instructions.
-fn instrs_args_outputs(instrs: &[Instr]) -> Option<(usize, usize)> {
-    let mut args = 0;
-    let mut outputs = 0;
-    let mut instrs = instrs.iter();
-    while let Some(instr) = instrs.next() {
-        match instr {
-            Instr::Push(_) | Instr::DfnVal(_) => outputs += 1,
-            Instr::Prim(prim, _) => {
-                if let Some((..)) = prim.modifier_args() {
-                    // TODO: handle modifiers
-                    return None;
-                } else {
-                    let pargs = prim.args()? as usize;
-                    let consumed_outputs = pargs.min(outputs);
-                    outputs -= consumed_outputs;
-                    args += pargs - consumed_outputs;
-                    outputs += prim.outputs()? as usize;
-                }
-            }
-            Instr::BeginArray => {
-                let mut depth = 1;
-                for instr in instrs.by_ref() {
-                    match instr {
-                        Instr::BeginArray => depth += 1,
-                        Instr::EndArray(_) => {
-                            depth -= 1;
-                            if depth == 0 {
-                                break;
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-                outputs += 1;
-            }
-            Instr::EndArray(_) => return None,
-            Instr::Call(_) => return None,
-        }
-    }
-    Some((args, outputs))
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use Primitive::*;
-    #[test]
-    fn instrs_args_outputs() {
-        let mut instrs = vec![Instr::push(10), Instr::push(2), Instr::Prim(Pow, 0)];
-        assert_eq!(Some((0, 1)), super::instrs_args_outputs(&instrs));
-
-        instrs.push(Instr::Prim(Add, 0));
-        assert_eq!(Some((1, 1)), super::instrs_args_outputs(&instrs));
     }
 }

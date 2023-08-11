@@ -38,6 +38,30 @@ impl fmt::Debug for Value {
 }
 
 impl Value {
+    pub fn as_num_array(&self) -> Option<&Array<f64>> {
+        match self {
+            Self::Num(array) => Some(array),
+            _ => None,
+        }
+    }
+    pub fn as_byte_array(&self) -> Option<&Array<Byte>> {
+        match self {
+            Self::Byte(array) => Some(array),
+            _ => None,
+        }
+    }
+    pub fn as_char_array(&self) -> Option<&Array<char>> {
+        match self {
+            Self::Char(array) => Some(array),
+            _ => None,
+        }
+    }
+    pub fn as_func_array(&self) -> Option<&Array<Arc<Function>>> {
+        match self {
+            Self::Func(array) => Some(array),
+            _ => None,
+        }
+    }
     pub fn from_row_values(
         values: impl IntoIterator<Item = Value>,
         env: &Uiua,

@@ -238,6 +238,7 @@ Square_Double_Increment";
                 };
                 if can_run || words_have_import(&words) {
                     let instrs = self.compile_words(words)?;
+                    // println!("executing: {:?}", instrs);
                     self.exec_global_instrs(instrs)?;
                 }
             }
@@ -332,18 +333,22 @@ Square_Double_Increment";
                 let f = Function {
                     id: FunctionId::Anonymous(word.span.clone()),
                     instrs: Vec::new(),
-                    kind: FunctionKind::Dynamic(Arc::new(move |env| {
-                        let mut formatted = String::new();
-                        for (i, frag) in frags.iter().enumerate() {
-                            if i > 0 {
-                                let val = env.pop(format!("format argument {i}"))?;
-                                formatted.push_str(&format!("{}", val));
+                    kind: FunctionKind::Dynamic {
+                        inputs: frags.len() as u8 - 1,
+                        outputs: 1,
+                        f: Arc::new(move |env| {
+                            let mut formatted = String::new();
+                            for (i, frag) in frags.iter().enumerate() {
+                                if i > 0 {
+                                    let val = env.pop(format!("format argument {i}"))?;
+                                    formatted.push_str(&format!("{}", val));
+                                }
+                                formatted.push_str(frag);
                             }
-                            formatted.push_str(frag);
-                        }
-                        env.push(formatted);
-                        Ok(())
-                    })),
+                            env.push(formatted);
+                            Ok(())
+                        }),
+                    },
                 };
                 self.push_instr(Instr::push(f));
                 if call {
@@ -355,25 +360,29 @@ Square_Double_Increment";
                 let f = Function {
                     id: FunctionId::Anonymous(word.span.clone()),
                     instrs: Vec::new(),
-                    kind: FunctionKind::Dynamic(Arc::new(move |env| {
-                        let mut formatted = String::new();
-                        let mut i = 0;
-                        for (j, line) in lines.iter().enumerate() {
-                            if j > 0 {
-                                formatted.push_str("\r\n");
-                            }
-                            for (k, frag) in line.value.iter().enumerate() {
-                                if k > 0 {
-                                    let val = env.pop(format!("format argument {i}"))?;
-                                    formatted.push_str(&format!("{}", val));
+                    kind: FunctionKind::Dynamic {
+                        inputs: lines.iter().map(|l| l.value.len() as u8 - 1).sum(),
+                        outputs: 1,
+                        f: Arc::new(move |env| {
+                            let mut formatted = String::new();
+                            let mut i = 0;
+                            for (j, line) in lines.iter().enumerate() {
+                                if j > 0 {
+                                    formatted.push_str("\r\n");
                                 }
-                                formatted.push_str(frag);
-                                i += 1;
+                                for (k, frag) in line.value.iter().enumerate() {
+                                    if k > 0 {
+                                        let val = env.pop(format!("format argument {i}"))?;
+                                        formatted.push_str(&format!("{}", val));
+                                    }
+                                    formatted.push_str(frag);
+                                    i += 1;
+                                }
                             }
-                        }
-                        env.push(formatted);
-                        Ok(())
-                    })),
+                            env.push(formatted);
+                            Ok(())
+                        }),
+                    },
                 };
                 self.push_instr(Instr::push(f));
                 if call {
@@ -483,23 +492,25 @@ Square_Double_Increment";
         Ok(())
     }
     fn modified(&mut self, modified: Modified, call: bool) -> UiuaResult {
-        self.new_functions.push(Vec::new());
-        self.words(modified.words, false)?;
-        self.primitive(
-            modified.modifier.value,
-            modified.modifier.span.clone(),
-            true,
-        );
-        let instrs = self.new_functions.pop().unwrap();
-        let func = Function {
-            id: FunctionId::Anonymous(modified.modifier.span.clone()),
-            instrs,
-            kind: FunctionKind::Normal,
-        };
-        self.push_instr(Instr::push(func));
         if call {
+            self.words(modified.words, false)?;
             let span = self.add_span(modified.modifier.span);
-            self.push_instr(Instr::Call(span));
+            self.push_instr(Instr::Prim(modified.modifier.value, span));
+        } else {
+            self.new_functions.push(Vec::new());
+            self.words(modified.words, false)?;
+            self.primitive(
+                modified.modifier.value,
+                modified.modifier.span.clone(),
+                true,
+            );
+            let instrs = self.new_functions.pop().unwrap();
+            let func = Function {
+                id: FunctionId::Anonymous(modified.modifier.span),
+                instrs,
+                kind: FunctionKind::Normal,
+            };
+            self.push_instr(Instr::push(func));
         }
         Ok(())
     }
@@ -635,7 +646,7 @@ Square_Double_Increment";
                             });
                             dfn = true;
                         }
-                        FunctionKind::Dynamic(ff) => {
+                        FunctionKind::Dynamic { f: ff, .. } => {
                             self.scope.call.push(StackFrame {
                                 function: f.clone(),
                                 call_span,

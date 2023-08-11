@@ -123,6 +123,13 @@ impl<T: ArrayValue> Array<T> {
             Err(self)
         }
     }
+    pub fn as_scalar(&self) -> Option<&T> {
+        if self.shape.is_empty() {
+            Some(&self.data[0])
+        } else {
+            None
+        }
+    }
     pub fn rows(&self) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator + '_ {
         (0..self.row_count()).map(|row| self.row(row))
     }

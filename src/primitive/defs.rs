@@ -117,7 +117,7 @@ primitive!(
     ///
     /// The formatter converts an empty `()` function into `noop`.
     /// ex: () # Try running to format
-    (0, Noop, Stack, ("noop", '·')),
+    (0(0), Noop, Stack, ("noop", '·')),
     // Pervasive monadic ops
     /// Logical not
     ///

@@ -36,8 +36,6 @@ pub struct Uiua {
     current_imports: Arc<Mutex<HashSet<PathBuf>>>,
     imports: Arc<Mutex<HashMap<PathBuf, Vec<Value>>>>,
     pub(crate) backend: Arc<dyn SysBackend>,
-    /// The example Uiua program that is available from certain sys functions
-    pub(crate) example_ua: String,
 }
 
 #[derive(Default, Clone)]
@@ -84,13 +82,6 @@ pub enum RunMode {
 }
 
 impl Uiua {
-    #[doc(hidden)]
-    pub const DEFAULT_EXAMPLE_UA: &'static str = "\
-Square ← ×.
-Double ← +.
-Increment ← +1
-Square_Double_Increment";
-
     /// Create a new Uiua runtime with the standard IO backend
     pub fn with_native_sys() -> Self {
         Uiua {
@@ -105,7 +96,6 @@ Square_Double_Increment";
             imports: Arc::new(Mutex::new(HashMap::new())),
             mode: RunMode::Normal,
             backend: Arc::new(NativeSys),
-            example_ua: Self::DEFAULT_EXAMPLE_UA.into(),
         }
     }
     /// Create a new Uiua runtime with a custom IO backend
@@ -262,18 +252,20 @@ Square_Double_Increment";
         idx
     }
     fn binding(&mut self, binding: Binding) -> UiuaResult {
-        let val = if binding.name.value.is_functiony() {
-            let instrs = self.compile_words(binding.words)?;
-            let func = Function {
-                id: FunctionId::Named(binding.name.value.clone()),
-                instrs,
-                kind: FunctionKind::Normal,
-            };
-            Value::from(func)
-        } else {
-            let instrs = self.compile_words(binding.words)?;
-            self.exec_global_instrs(instrs)?;
-            self.stack.pop().unwrap_or_default()
+        let instrs = self.compile_words(binding.words)?;
+        let val = match instrs_stack_delta(&instrs) {
+            Some((n, _)) if n <= self.stack.len() => {
+                self.exec_global_instrs(instrs)?;
+                self.stack.pop().unwrap_or_default()
+            }
+            _ => {
+                let func = Function {
+                    id: FunctionId::Named(binding.name.value.clone()),
+                    instrs,
+                    kind: FunctionKind::Normal,
+                };
+                Value::from(func)
+            }
         };
         let mut globals = self.globals.lock();
         let idx = globals.len();
@@ -850,7 +842,6 @@ Square_Double_Increment";
             current_imports: self.current_imports.clone(),
             imports: self.imports.clone(),
             backend: self.backend.clone(),
-            example_ua: self.example_ua.clone(),
         };
         self.backend
             .spawn(env, Box::new(f))

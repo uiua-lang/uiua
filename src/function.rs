@@ -213,6 +213,15 @@ impl FunctionId {
     }
 }
 
+impl PartialEq<&str> for FunctionId {
+    fn eq(&self, other: &&str) -> bool {
+        match self {
+            FunctionId::Named(name) => name == other,
+            _ => false,
+        }
+    }
+}
+
 impl From<Ident> for FunctionId {
     fn from(name: Ident) -> Self {
         Self::Named(name)
@@ -242,7 +251,7 @@ impl fmt::Display for FunctionId {
 pub(crate) fn instrs_stack_delta(instrs: &[Instr]) -> Option<(usize, isize)> {
     const START_HEIGHT: usize = 16;
     let mut env = VirtualEnv {
-        stack: vec![None; START_HEIGHT],
+        stack: vec![BasicValue::Other; START_HEIGHT],
         array_stack: Vec::new(),
         min_height: START_HEIGHT,
     };
@@ -259,9 +268,16 @@ pub(crate) fn instrs_stack_delta(instrs: &[Instr]) -> Option<(usize, isize)> {
 }
 
 struct VirtualEnv<'a> {
-    stack: Vec<Option<&'a Function>>,
+    stack: Vec<BasicValue<'a>>,
     array_stack: Vec<usize>,
     min_height: usize,
+}
+
+#[derive(Clone, Copy)]
+enum BasicValue<'a> {
+    Func(&'a Function),
+    Num(f64),
+    Other,
 }
 
 impl<'a> VirtualEnv<'a> {
@@ -270,10 +286,16 @@ impl<'a> VirtualEnv<'a> {
         for instr in instrs {
             match instr {
                 Instr::Push(val) => {
-                    self.stack
-                        .push(val.as_func_array().and_then(Array::as_scalar).map(|f| &**f));
+                    let val = if let Some(f) = val.as_func_array().and_then(Array::as_scalar) {
+                        BasicValue::Func(f)
+                    } else if let Some(n) = val.as_num_array().and_then(Array::as_scalar) {
+                        BasicValue::Num(*n)
+                    } else {
+                        BasicValue::Other
+                    };
+                    self.stack.push(val);
                 }
-                Instr::DfnVal(_) => self.stack.push(None),
+                Instr::DfnVal(_) => self.stack.push(BasicValue::Other),
                 Instr::BeginArray => self.array_stack.push(self.stack.len()),
                 Instr::EndArray(_) => {
                     self.stack.truncate(
@@ -281,7 +303,7 @@ impl<'a> VirtualEnv<'a> {
                             .pop()
                             .ok_or("EndArray without BeginArray")?,
                     );
-                    self.stack.push(None);
+                    self.stack.push(BasicValue::Other);
                 }
                 Instr::Prim(prim, _) => {
                     let mod_ad = match prim {
@@ -289,10 +311,21 @@ impl<'a> VirtualEnv<'a> {
                         Fold => Some((2, -1, 2)),
                         Each | Rows => Some((1, 0, 1)),
                         Zip | Bridge | Distribute | Plow | Table | Cross => Some((2, -1, 2)),
+                        Spawn => {
+                            if let Some(BasicValue::Num(n)) = self.stack.pop() {
+                                if n.fract() == 0.0 && n >= 0.0 {
+                                    Some((1, 0, n as usize))
+                                } else {
+                                    None
+                                }
+                            } else {
+                                None
+                            }
+                        }
                         _ => None,
                     };
                     if let Some((f_args, f_delta, m_args)) = mod_ad {
-                        if let Some(f) = self.pop()? {
+                        if let BasicValue::Func(f) = self.pop()? {
                             let (a, d) = f.args_delta().ok_or_else(|| {
                                 format!("{prim}'s function {f:?} had indeterminate a/o")
                             })?;
@@ -310,7 +343,7 @@ impl<'a> VirtualEnv<'a> {
                                 self.pop()?;
                             }
                             self.set_min_height();
-                            self.stack.push(None);
+                            self.stack.push(BasicValue::Other);
                         } else {
                             return Err(format!("{prim} without function"));
                         }
@@ -324,7 +357,7 @@ impl<'a> VirtualEnv<'a> {
                         self.set_min_height();
                         let delta = prim.delta().ok_or("Prim had indeterminate delta")?;
                         for _ in 0..delta + args as i8 {
-                            self.stack.push(None);
+                            self.stack.push(BasicValue::Other);
                         }
                     }
                 }
@@ -334,7 +367,7 @@ impl<'a> VirtualEnv<'a> {
         }
         Ok(())
     }
-    fn pop(&mut self) -> Result<Option<&'a Function>, String> {
+    fn pop(&mut self) -> Result<BasicValue<'a>, String> {
         Ok(self.stack.pop().ok_or("function is too complex")?)
     }
     fn set_min_height(&mut self) {

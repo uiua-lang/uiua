@@ -5,7 +5,7 @@ use std::{
     fs::{self, File},
     io::{stderr, stdin, stdout, Cursor, Read, Write},
     net::*,
-    sync::{Mutex, OnceLock},
+    sync::OnceLock,
     thread::{sleep, spawn, JoinHandle},
     time::Duration,
 };
@@ -14,11 +14,27 @@ use bufreaderwriter::seq::BufReaderWriterSeq;
 use enum_iterator::Sequence;
 use hound::{SampleFormat, WavSpec, WavWriter};
 use image::{DynamicImage, ImageOutputFormat};
+use once_cell::sync::Lazy;
+use parking_lot::Mutex;
 
 use crate::{
     array::Array, grid_fmt::GridFmt, primitive::PrimDoc, value::Value, Byte, Uiua, UiuaError,
     UiuaResult,
 };
+
+pub fn example_ua<T>(f: impl FnOnce(&mut String) -> T) -> T {
+    static EXAMPLE_UA: Lazy<Mutex<String>> = Lazy::new(|| {
+        Mutex::new(
+            "\
+Square ← ×.
+Double ← +.
+Increment ← +1
+Square_Double_Increment"
+                .into(),
+        )
+    });
+    f(&mut EXAMPLE_UA.lock())
+}
 
 macro_rules! sys_op {
     ($(
@@ -374,7 +390,7 @@ impl GlobalNativeSys {
 static NATIVE_SYS: OnceLock<Mutex<GlobalNativeSys>> = OnceLock::new();
 
 fn sys<T>(f: impl FnOnce(&mut GlobalNativeSys) -> T) -> T {
-    f(&mut NATIVE_SYS.get_or_init(Default::default).lock().unwrap())
+    f(&mut NATIVE_SYS.get_or_init(Default::default).lock())
 }
 
 impl SysBackend for NativeSys {
@@ -748,7 +764,7 @@ impl SysOp {
                     .file_read_all(&path)
                     .or_else(|e| {
                         if path == "example.ua" {
-                            Ok(env.example_ua.as_bytes().to_vec())
+                            Ok(example_ua(|ex| ex.as_bytes().to_vec()))
                         } else {
                             Err(e)
                         }
@@ -764,7 +780,7 @@ impl SysOp {
                     .file_read_all(&path)
                     .or_else(|e| {
                         if path == "example.ua" {
-                            Ok(env.example_ua.as_bytes().to_vec())
+                            Ok(example_ua(|ex| ex.as_bytes().to_vec()))
                         } else {
                             Err(e)
                         }
@@ -790,7 +806,8 @@ impl SysOp {
                     .file_write_all(&path, &bytes)
                     .or_else(|e| {
                         if path == "example.ua" {
-                            env.example_ua = String::from_utf8(bytes).map_err(|e| e.to_string())?;
+                            let new_ex = String::from_utf8(bytes).map_err(|e| e.to_string())?;
+                            example_ua(move |ex| *ex = new_ex);
                             Ok(())
                         } else {
                             Err(e)
@@ -820,7 +837,7 @@ impl SysOp {
                         .file_read_all(&path)
                         .or_else(|e| {
                             if path == "example.ua" {
-                                Ok(env.example_ua.as_bytes().to_vec())
+                                Ok(example_ua(|ex| ex.as_bytes().to_vec()))
                             } else {
                                 Err(e)
                             }

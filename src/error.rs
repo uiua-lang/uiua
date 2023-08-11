@@ -9,6 +9,7 @@ use std::{
 use ariadne::{Color, Config, Label, Report, ReportKind, Source};
 
 use crate::{
+    example_ua,
     function::FunctionId,
     lex::{CodeSpan, Sp, Span},
     parse::ParseError,
@@ -244,8 +245,15 @@ impl ariadne::Cache<SourceId> for Cache {
         match id {
             Some(path) => {
                 if !self.files.contains_key(id) {
-                    let text =
-                        fs::read_to_string(path).map_err(|e| Box::new(e) as Box<dyn fmt::Debug>)?;
+                    let text = fs::read_to_string(path)
+                        .or_else(|e| {
+                            if path.to_string_lossy() == "example.ua" {
+                                Ok(example_ua(|ex| ex.clone()))
+                            } else {
+                                Err(e)
+                            }
+                        })
+                        .map_err(|e| Box::new(e) as Box<dyn fmt::Debug>)?;
                     let source = Source::from(text);
                     self.files.insert(id.clone(), source);
                 }

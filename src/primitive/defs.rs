@@ -142,7 +142,12 @@ primitive!(
     /// ex: ¯ 1
     /// ex: ¯ ¯3
     /// ex: ¯ [1 2 ¯3]
-    (1, Neg, MonadicPervasive, ("negate", Simple::Backtick, '¯')),
+    (
+        1,
+        Neg,
+        MonadicPervasive,
+        ("negate", AsciiToken::Backtick, '¯')
+    ),
     /// The absolute value of a number
     ///
     /// ex: ⌵ ¯1
@@ -199,7 +204,7 @@ primitive!(
     /// ex: =5 5
     /// ex: =1 [1 2 3]
     /// ex: = [1 2 2] [1 2 3]
-    (2, Eq, DyadicPervasive, ("equals", Simple::Equal, '=')),
+    (2, Eq, DyadicPervasive, ("equals", AsciiToken::Equal, '=')),
     /// Compare for inequality
     ///
     /// ex: ≠1 2
@@ -210,7 +215,7 @@ primitive!(
         2,
         Ne,
         DyadicPervasive,
-        ("not equals", Simple::BangEqual, '≠')
+        ("not equals", AsciiToken::BangEqual, '≠')
     ),
     /// Compare for less than
     ///
@@ -237,7 +242,7 @@ primitive!(
         2,
         Le,
         DyadicPervasive,
-        ("less or equal", Simple::LessEqual, '≤')
+        ("less or equal", AsciiToken::LessEqual, '≤')
     ),
     /// Compare for greater than
     ///
@@ -264,7 +269,7 @@ primitive!(
         2,
         Ge,
         DyadicPervasive,
-        ("greater or equal", Simple::GreaterEqual, '≥')
+        ("greater or equal", AsciiToken::GreaterEqual, '≥')
     ),
     /// Add values
     ///
@@ -286,7 +291,7 @@ primitive!(
     /// ex: ×3 5
     /// ex: ×2 [1 2 3]
     /// ex: × [1 2 3] [4 5 6]
-    (2, Mul, DyadicPervasive, ("multiply", Simple::Star, '×')),
+    (2, Mul, DyadicPervasive, ("multiply", AsciiToken::Star, '×')),
     /// Divide values
     ///
     /// The second value is divided by the first.
@@ -295,7 +300,12 @@ primitive!(
     /// ex: ÷3 12
     /// ex: ÷2 [1 2 3]
     /// ex: ÷ [1 2 3] [4 5 6]
-    (2, Div, DyadicPervasive, ("divide", Simple::Percent, '÷')),
+    (
+        2,
+        Div,
+        DyadicPervasive,
+        ("divide", AsciiToken::Percent, '÷')
+    ),
     /// Modulo values
     ///
     /// The second value is divided by the first, and the remainder is returned.

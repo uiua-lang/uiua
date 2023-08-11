@@ -116,9 +116,6 @@ impl From<f64> for Byte {
 pub struct Ident(Arc<str>);
 
 impl Ident {
-    pub fn is_functiony(&self) -> bool {
-        self.0.starts_with(|c: char| !c.is_lowercase())
-    }
     pub fn as_str(&self) -> &str {
         &self.0
     }

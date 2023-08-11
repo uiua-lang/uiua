@@ -15,10 +15,7 @@ use std::{
 use enum_iterator::{all, Sequence};
 use rand::prelude::*;
 
-use crate::{
-    algorithm::loops, function::FunctionId, lex::Simple, sys::*, value::*, Uiua, UiuaError,
-    UiuaResult,
-};
+use crate::{algorithm::loops, lex::AsciiToken, sys::*, value::*, Uiua, UiuaError, UiuaResult};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Sequence)]
 pub enum PrimClass {
@@ -55,7 +52,7 @@ impl PrimClass {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PrimNames {
     pub text: &'static str,
-    pub ascii: Option<Simple>,
+    pub ascii: Option<AsciiToken>,
     pub unicode: Option<char>,
 }
 
@@ -87,8 +84,8 @@ impl From<(&'static str, char)> for PrimNames {
         }
     }
 }
-impl From<(&'static str, Simple, char)> for PrimNames {
-    fn from((text, ascii, unicode): (&'static str, Simple, char)) -> Self {
+impl From<(&'static str, AsciiToken, char)> for PrimNames {
+    fn from((text, ascii, unicode): (&'static str, AsciiToken, char)) -> Self {
         Self {
             text,
             ascii: Some(ascii),
@@ -117,7 +114,7 @@ impl Primitive {
     pub fn name(&self) -> Option<&'static str> {
         self.names().map(|n| n.text)
     }
-    pub fn ascii(&self) -> Option<Simple> {
+    pub fn ascii(&self) -> Option<AsciiToken> {
         self.names().and_then(|n| n.ascii)
     }
     pub fn unicode(&self) -> Option<char> {
@@ -127,7 +124,7 @@ impl Primitive {
     pub fn from_name(name: &str) -> Option<Self> {
         Self::all().find(|p| p.names().is_some_and(|n| n.text.eq_ignore_ascii_case(name)))
     }
-    pub fn from_simple(s: Simple) -> Option<Self> {
+    pub fn from_simple(s: AsciiToken) -> Option<Self> {
         Self::all().find(|p| p.ascii() == Some(s))
     }
     pub fn from_unicode(c: char) -> Option<Self> {
@@ -416,15 +413,11 @@ impl Primitive {
             Primitive::Use => {
                 let name = env.pop(1)?.as_string(env, "Use name must be a string")?;
                 let lib = env.pop(2)?;
-                let f = match lib {
-                    Value::Func(fs) => fs.data.iter().find_map(|f| {
-                        matches!(&f.id, FunctionId::Named(n) if n.as_str().eq_ignore_ascii_case(&name))
-                            .then(|| f.clone())
-                    }),
-                    _ => None,
-                }
-                .ok_or_else(|| env.error(format!("No function found for {name:?}")))?;
-                env.push(f);
+                let f = lib
+                    .as_func_array()
+                    .and_then(|fs| fs.data.iter().find(|f| f.id == name.as_str()))
+                    .ok_or_else(|| env.error(format!("No function found for {name:?}")))?;
+                env.push(f.clone());
             }
             Primitive::Spawn => {
                 let n = env.pop(1)?.as_nat(env, "spawn expects a natural number")?;

@@ -3,7 +3,7 @@ use std::{error::Error, fmt, path::Path};
 use crate::{
     ast::*,
     function::FunctionId,
-    lex::{Simple::*, *},
+    lex::{AsciiToken::*, *},
     primitive::Primitive,
     Ident,
 };
@@ -19,11 +19,11 @@ pub enum ParseError {
 pub enum Expectation {
     Term,
     Eof,
-    Simple(Simple),
+    Simple(AsciiToken),
 }
 
-impl From<Simple> for Expectation {
-    fn from(simple: Simple) -> Self {
+impl From<AsciiToken> for Expectation {
+    fn from(simple: AsciiToken) -> Self {
         Expectation::Simple(simple)
     }
 }
@@ -398,7 +398,7 @@ impl Parser {
             body,
         })))
     }
-    fn expect_close(&mut self, simple: Simple) -> CodeSpan {
+    fn expect_close(&mut self, simple: AsciiToken) -> CodeSpan {
         if let Some(span) = self.try_exact(simple) {
             span
         } else {

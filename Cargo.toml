@@ -41,6 +41,7 @@ indexmap.version = "1"
 instant = "0.1.12"
 notify.optional = true
 notify.version = "5"
+once_cell = "1"
 open.optional = true
 open.version = "4"
 parking_lot = "0.12.1"

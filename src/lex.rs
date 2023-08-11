@@ -266,7 +266,7 @@ pub enum Token {
     Str(String),
     FormatStr(Vec<String>),
     MultilineString(Vec<String>),
-    Simple(Simple),
+    Simple(AsciiToken),
     Glyph(Primitive),
 }
 
@@ -304,7 +304,7 @@ impl Token {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Simple {
+pub enum AsciiToken {
     OpenParen,
     CloseParen,
     OpenCurly,
@@ -327,35 +327,35 @@ pub enum Simple {
     TripleTilde,
 }
 
-impl fmt::Display for Simple {
+impl fmt::Display for AsciiToken {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Simple::OpenParen => write!(f, "("),
-            Simple::CloseParen => write!(f, ")"),
-            Simple::OpenCurly => write!(f, "{{"),
-            Simple::CloseCurly => write!(f, "}}"),
-            Simple::OpenBracket => write!(f, "["),
-            Simple::CloseBracket => write!(f, "]"),
-            Simple::Underscore => write!(f, "_"),
-            Simple::Bang => write!(f, "!"),
-            Simple::Star => write!(f, "*"),
-            Simple::Percent => write!(f, "%"),
-            Simple::Equal => write!(f, "="),
-            Simple::BangEqual => write!(f, "!="),
-            Simple::LessEqual => write!(f, "<="),
-            Simple::GreaterEqual => write!(f, ">="),
-            Simple::Backtick => write!(f, "`"),
-            Simple::LeftArrow => write!(f, "←"),
-            Simple::Newline => write!(f, "\\n"),
-            Simple::Spaces => write!(f, " "),
-            Simple::TripleMinus => write!(f, "---"),
-            Simple::TripleTilde => write!(f, "~~~"),
+            AsciiToken::OpenParen => write!(f, "("),
+            AsciiToken::CloseParen => write!(f, ")"),
+            AsciiToken::OpenCurly => write!(f, "{{"),
+            AsciiToken::CloseCurly => write!(f, "}}"),
+            AsciiToken::OpenBracket => write!(f, "["),
+            AsciiToken::CloseBracket => write!(f, "]"),
+            AsciiToken::Underscore => write!(f, "_"),
+            AsciiToken::Bang => write!(f, "!"),
+            AsciiToken::Star => write!(f, "*"),
+            AsciiToken::Percent => write!(f, "%"),
+            AsciiToken::Equal => write!(f, "="),
+            AsciiToken::BangEqual => write!(f, "!="),
+            AsciiToken::LessEqual => write!(f, "<="),
+            AsciiToken::GreaterEqual => write!(f, ">="),
+            AsciiToken::Backtick => write!(f, "`"),
+            AsciiToken::LeftArrow => write!(f, "←"),
+            AsciiToken::Newline => write!(f, "\\n"),
+            AsciiToken::Spaces => write!(f, " "),
+            AsciiToken::TripleMinus => write!(f, "---"),
+            AsciiToken::TripleTilde => write!(f, "~~~"),
         }
     }
 }
 
-impl From<Simple> for Token {
-    fn from(s: Simple) -> Self {
+impl From<AsciiToken> for Token {
+    fn from(s: AsciiToken) -> Self {
         Self::Simple(s)
     }
 }
@@ -434,7 +434,7 @@ impl Lexer {
         })
     }
     fn run(mut self) -> (Vec<Sp<Token>>, Vec<Sp<LexError>>) {
-        use {self::Simple::*, Token::*};
+        use {self::AsciiToken::*, Token::*};
         loop {
             let start = self.loc;
             let Some(c) = self.next_char() else {

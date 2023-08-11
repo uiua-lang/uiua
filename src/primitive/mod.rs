@@ -383,7 +383,7 @@ impl Primitive {
                 env.push(f_after);
                 env.call()?;
             }
-            Primitive::Throw => {
+            Primitive::Assert => {
                 let msg = env.pop(1)?;
                 let cond = env.pop(2)?;
                 if cond.as_nat(env, "").map_or(true, |n| n == 0) {

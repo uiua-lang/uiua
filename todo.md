@@ -1,6 +1,3 @@
-- Rethink fill values
-  - Set the fill value of an array?
-  - Modifier to specify the fill?
 - Require certain kinds of names for functions?
 - Docs
   - Search primitives

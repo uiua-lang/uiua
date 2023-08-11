@@ -809,7 +809,7 @@ primitive!(
     /// ex: ?(+1 2)"failure"
     /// ex: ?(+'a' 'b')"failure"
     ([2, 0], Try, OtherModifier, ("try", '?')),
-    /// Throw an error
+    /// Throw an error if a condition is not met
     ///
     /// Expects a message and a test value.
     /// If the test value is anything but `1`, then the message will be thrown as an error.
@@ -821,7 +821,7 @@ primitive!(
     /// Use [duplicate] if you do not care about the message.
     /// ex: !. =6 6
     /// ex! !. =8 9
-    (2, Throw, Control, ("throw", '!')),
+    (2, Assert, Control, ("assert", '!')),
     /// Spawn a thread
     ///
     /// Expects a number and a function.

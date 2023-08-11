@@ -334,13 +334,24 @@ li {
 }
 
 .output {
+    display: flex;
+    flex-direction: column;
     white-space: pre-wrap;
     margin-left: 1.75em;
-}
-
-#output-text {
     padding: 0.3em 0;
     font-family: "Code Font";
+}
+
+.output-item {
+    font-family: inherit;
+}
+
+.output-error {
+    color: #f33;
+}
+
+.output-image {
+    border-radius: 0.5em;
 }
 
 #code-buttons {

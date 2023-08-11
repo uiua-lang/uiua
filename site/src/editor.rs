@@ -13,13 +13,15 @@ use leptos_router::{use_navigate, NavigateOptions};
 use uiua::{
     format::{format_str, FormatConfig},
     primitive::{PrimClass, Primitive},
-    value::Value,
-    value_to_image_bytes, value_to_wav_bytes, Uiua, UiuaResult,
+    value_to_image_bytes, value_to_wav_bytes, Uiua,
 };
 use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{Event, HtmlAudioElement, HtmlDivElement, HtmlImageElement, MouseEvent, Node};
+use web_sys::{Event, HtmlDivElement, MouseEvent, Node};
 
-use crate::{backend::WebBackend, element, prim_class};
+use crate::{
+    backend::{OutputItem, WebBackend},
+    element, prim_class,
+};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum EditorSize {
@@ -93,15 +95,9 @@ pub fn Editor<'a>(
     let code_height_em = code_max_lines as f32 * 1.2;
 
     let code_id = move || format!("code{id}");
-    let output_id = move || format!("output{id}");
-    let image_id = move || format!("image{id}");
-    let audio_id = move || format!("audio{id}");
     let glyph_doc_id = move || format!("glyphdoc{id}");
 
     let code_element = move || -> HtmlDivElement { element(&code_id()) };
-    let output_element = move || -> HtmlDivElement { element(&output_id()) };
-    let image_element = move || -> HtmlImageElement { element(&image_id()) };
-    let audio_element = move || -> HtmlAudioElement { element(&audio_id()) };
     let glyph_doc_element = move || -> HtmlDivElement { element(&glyph_doc_id()) };
 
     // Track line count
@@ -112,7 +108,7 @@ pub fn Editor<'a>(
     ));
 
     let (example, set_example) = create_signal(0);
-    let (output, set_output) = create_signal(String::new());
+    let (output, set_output) = create_signal(View::default());
 
     let code_text = move || code_text(&code_id());
     let get_code_cursor = move || get_code_cursor_impl(&code_id());
@@ -165,7 +161,6 @@ pub fn Editor<'a>(
                 before,
                 after,
             };
-            // log!("set_code: {:?}", new_curr);
             let prev = replace(&mut *self.curr.borrow_mut(), new_curr);
             let changed = prev.code != code;
             if changed {
@@ -274,35 +269,34 @@ pub fn Editor<'a>(
         };
 
         // Run code
-        match run_code(&input) {
-            Ok(output) => {
-                // Show text output
-                set_output.set(output.text());
-                _ = output_element().style().remove_property("color");
-                // Show image output
-                if let Some(image_bytes) = output.image_bytes {
-                    _ = image_element().style().remove_property("display");
-                    let encoded = STANDARD.encode(image_bytes);
-                    image_element().set_src(&format!("data:image/png;base64,{encoded}"));
-                } else {
-                    _ = image_element().style().set_property("display", "none");
-                    image_element().set_src("");
-                }
-                // Show audio output
-                if let Some(audio_bytes) = output.audio_bytes {
-                    _ = audio_element().style().remove_property("display");
-                    let encoded = STANDARD.encode(audio_bytes);
-                    audio_element().set_src(&format!("data:audio/wav;base64,{encoded}"));
-                } else {
-                    _ = audio_element().style().set_property("display", "none");
-                    audio_element().set_src("");
-                }
-            }
-            Err(e) => {
-                set_output.set(e.show(false));
-                _ = output_element().style().set_property("color", "#f33");
-            }
-        }
+        let output = run_code(&input);
+        let mut allow_autoplay = true;
+        set_output.set(
+            output
+                .into_iter()
+                .map(|item| match item {
+                    OutputItem::String(s) => view!(<div class="output-item">{s}</div>).into_view(),
+                    OutputItem::Image(bytes) => {
+                        let encoded = STANDARD.encode(bytes);
+                        view!(<img class="output-image" src={format!("data:image/png;base64,{encoded}")} />).into_view()
+                    }
+                    OutputItem::Audio(bytes) => {
+                        let encoded = STANDARD.encode(bytes);
+                        let src = format!("data:audio/wav;base64,{}", encoded);
+                        if allow_autoplay {
+                            allow_autoplay = false;
+                            view!(<audio controls autoplay src=src/>).into_view()
+                        } else {
+                            view!(<audio controls src=src/>).into_view()
+                        }
+                    }
+                    OutputItem::Error(error) => {
+                        view!(<div class="output-item output-error">{error}</div>).into_view()
+                    }
+                })
+                .collect::<Vec<_>>()
+                .into_view(),
+        );
     };
 
     // Replace the selected text in the editor with the given string
@@ -826,10 +820,8 @@ pub fn Editor<'a>(
                         </div>
                     </div>
                     <div class="output-frame">
-                        <div id={output_id} class="output">
-                            <div id="output-text">{ output }</div>
-                            <img id=image_id style="border-radius: 1em;" src=""/>
-                            <audio id=audio_id src="" style="display:none" controls autoplay/>
+                        <div class="output">
+                            { move || output.get() }
                         </div>
                         <div id="code-buttons">
                             <button class="code-button" on:click=move |_| run(true)>{ "Run" }</button>
@@ -1087,94 +1079,64 @@ fn set_code_html(id: &str, code: &str) {
     elem.set_inner_html(&html);
 }
 
-struct RunOutput {
-    stdout: String,
-    stderr: String,
-    stack: Vec<Value>,
-    image_bytes: Option<Vec<u8>>,
-    audio_bytes: Option<Vec<u8>>,
-}
-
-impl RunOutput {
-    fn text(&self) -> String {
-        let mut s = String::new();
-        let groups = (!self.stack.is_empty()) as u8
-            + (!self.stdout.is_empty()) as u8
-            + (!self.stderr.is_empty()) as u8;
-        if !self.stdout.is_empty() {
-            if groups >= 2 {
-                s.push_str("stdout:\n");
-            }
-            s.push_str(&self.stdout);
-            if !self.stdout.ends_with('\n') {
-                s.push('\n');
-            }
-        }
-        if !self.stderr.is_empty() {
-            if groups >= 2 {
-                if !s.is_empty() {
-                    s.push('\n');
-                }
-                s.push_str("stderr:\n");
-            }
-            s.push_str(&self.stderr);
-            if !self.stderr.ends_with('\n') {
-                s.push('\n');
-            }
-        }
-        if !self.stack.is_empty() {
-            if groups >= 2 {
-                if !s.is_empty() {
-                    s.push('\n');
-                }
-                s.push_str("stack:\n");
-            }
-            for val in &self.stack {
-                s.push_str(&val.show());
-                s.push('\n');
-            }
-        }
-        s
-    }
-}
-
 /// Returns the output and the formatted code
-fn run_code(code: &str) -> UiuaResult<RunOutput> {
+fn run_code(code: &str) -> Vec<OutputItem> {
     let io = WebBackend::default();
     let mut env = Uiua::with_backend(io);
-    let mut values = env.load_str(code)?.take_stack();
+    let mut error = None;
+    let values = match env.load_str(code) {
+        Ok(env) => env.take_stack(),
+        Err(e) => {
+            error = Some(e);
+            env.take_stack()
+        }
+    };
     let io = env.downcast_backend::<WebBackend>().unwrap();
-    let image_bytes = take(&mut *io.image_bytes.lock().unwrap()).or_else(|| {
-        for i in 0..values.len() {
-            let value = &values[i];
-            if let Ok(bytes) = value_to_image_bytes(value, ImageOutputFormat::Png) {
-                if value.shape().iter().product::<usize>() > 100 {
-                    values.remove(i);
-                    return Some(bytes);
-                }
-            }
-        }
-        None
-    });
-    let audio_bytes = take(&mut *io.audio_bytes.lock().unwrap()).or_else(|| {
-        for i in 0..values.len() {
-            let value = &values[i];
-            if value.len() > 1000 {
-                if let Ok(bytes) = value_to_wav_bytes(value) {
-                    values.remove(i);
-                    return Some(bytes);
-                }
-            }
-        }
-        None
-    });
     let stdout = take(&mut *io.stdout.lock().unwrap());
+    let mut stack = Vec::new();
+    for value in values {
+        if let Ok(bytes) = value_to_image_bytes(&value, ImageOutputFormat::Png) {
+            if value.shape().iter().product::<usize>() > 100 {
+                stack.push(OutputItem::Image(bytes));
+                continue;
+            }
+        }
+        if value.len() > 1000 {
+            if let Ok(bytes) = value_to_wav_bytes(&value) {
+                stack.push(OutputItem::Audio(bytes));
+                continue;
+            }
+        }
+        for line in value.show().lines() {
+            stack.push(OutputItem::String(line.to_string()));
+        }
+    }
     let stderr = take(&mut *io.stderr.lock().unwrap());
-    Ok(RunOutput {
-        stdout,
-        stderr,
-        stack: values,
-        image_bytes,
-        audio_bytes,
-    })
+
+    let label =
+        ((!stack.is_empty()) as u8) + ((!stdout.is_empty()) as u8) + ((!stderr.is_empty()) as u8)
+            >= 2;
+    let mut output = Vec::new();
+    if !stdout.is_empty() {
+        if label {
+            output.push(OutputItem::String("stdout:".to_string()));
+        }
+        output.extend(stdout);
+    }
+    if !stderr.is_empty() {
+        if label {
+            output.push(OutputItem::String("stderr:".to_string()));
+        }
+        output.extend(stderr.lines().map(|line| OutputItem::String(line.into())));
+    }
+    if !stack.is_empty() {
+        if label {
+            output.push(OutputItem::String("stack:".to_string()));
+        }
+        output.extend(stack);
+    }
+    if let Some(error) = error {
+        output.push(OutputItem::Error(error.to_string()));
+    }
+    output
 }

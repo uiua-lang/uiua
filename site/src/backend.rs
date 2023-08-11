@@ -11,10 +11,8 @@ use std::{
 use uiua::{value::Value, Handle, SysBackend, Uiua, UiuaError, UiuaResult};
 
 pub struct WebBackend {
-    pub stdout: Mutex<String>,
+    pub stdout: Mutex<Vec<OutputItem>>,
     pub stderr: Mutex<String>,
-    pub image_bytes: Mutex<Option<Vec<u8>>>,
-    pub audio_bytes: Mutex<Option<Vec<u8>>>,
     pub files: Mutex<HashMap<String, Vec<u8>>>,
     next_thread_id: AtomicU64,
     thread_results: Mutex<HashMap<Handle, UiuaResult<Vec<Value>>>>,
@@ -23,15 +21,20 @@ pub struct WebBackend {
 impl Default for WebBackend {
     fn default() -> Self {
         Self {
-            stdout: String::new().into(),
+            stdout: Vec::new().into(),
             stderr: String::new().into(),
-            image_bytes: None.into(),
-            audio_bytes: None.into(),
             files: HashMap::new().into(),
             next_thread_id: 0.into(),
             thread_results: HashMap::new().into(),
         }
     }
+}
+
+pub enum OutputItem {
+    String(String),
+    Image(Vec<u8>),
+    Audio(Vec<u8>),
+    Error(String),
 }
 
 impl SysBackend for WebBackend {
@@ -41,10 +44,11 @@ impl SysBackend for WebBackend {
     fn write(&self, handle: Handle, contents: &[u8]) -> Result<(), String> {
         match handle {
             Handle::STDOUT => {
-                self.stdout
-                    .lock()
-                    .unwrap()
-                    .push_str(&String::from_utf8_lossy(contents));
+                let s = String::from_utf8_lossy(contents);
+                let mut stdout = self.stdout.lock().unwrap();
+                for line in s.lines() {
+                    stdout.push(OutputItem::String(line.into()));
+                }
                 Ok(())
             }
             Handle::STDERR => {
@@ -54,7 +58,7 @@ impl SysBackend for WebBackend {
                     .push_str(&String::from_utf8_lossy(contents));
                 Ok(())
             }
-            _ => Err("Only stdout and stderr are supported".into()),
+            _ => Err("Only stdout and stderr are supported on the website".into()),
         }
     }
     fn show_image(&self, image: image::DynamicImage) -> Result<(), String> {
@@ -62,7 +66,10 @@ impl SysBackend for WebBackend {
         image
             .write_to(&mut bytes, image::ImageOutputFormat::Png)
             .map_err(|e| format!("Failed to show image: {e}"))?;
-        *self.image_bytes.lock().unwrap() = Some(bytes.into_inner());
+        self.stdout
+            .lock()
+            .unwrap()
+            .push(OutputItem::Image(bytes.into_inner()));
         Ok(())
     }
     fn file_write_all(&self, path: &str, contents: &[u8]) -> Result<(), String> {
@@ -81,7 +88,10 @@ impl SysBackend for WebBackend {
             .ok_or_else(|| format!("File not found: {path}"))
     }
     fn play_audio(&self, wav_bytes: Vec<u8>) -> Result<(), String> {
-        *self.audio_bytes.lock().unwrap() = Some(wav_bytes);
+        self.stdout
+            .lock()
+            .unwrap()
+            .push(OutputItem::Audio(wav_bytes));
         Ok(())
     }
     fn sleep(&self, ms: f64) -> Result<(), String> {

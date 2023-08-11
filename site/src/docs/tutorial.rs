@@ -425,7 +425,7 @@ fn TutorialBindings() -> impl IntoView {
         <Editor example="×6 7\nanswer ←\n[answer]"/>
 
         <h2 id="binding-functions">"Binding Functions"</h2>
-        <p>"If you start a binding with a captial letter or an unused glyph, then instead of evaluating its right side immediately, the right side will be bound as a function."</p>
+        <p>"If the code on the right side of the "<code>"←"</code>" looks like a function, then instead of evaluating its right side immediately, the right side will be bound as a function."</p>
         <p>"This is the primary way to make named functions in Uiua."</p>
         <Editor example="TimesThree ← ×3\nTimesThree 7"/>
         <Editor example="👋 ← ⊂\"Hello, \"\n👋 \"World!\""/>
@@ -508,7 +508,6 @@ fn TutorialModules() -> impl IntoView {
         <p>"A module is an array of "<em>"named"</em>" functions."</p>
         <p>"The only way to name a function is to bind it. Named functions can be put into arrays by stranding or surrounding the names with "<code>"()"</code>"."</p>
         <p><PrimCode prim=Use/>" takes the name of the function as a string and the module and returns the function."</p>
-        <p>"If you want to give the function a name in the current scope, the name on the left side of the "<code>"←"</code>" must "<em>"not"</em>" be capitalized. (If you do capitalize it, you will end up with a function that returns a function.)"</p>
         <p>"This allows you to export functions by name from a scope."</p>
         <Editor example=r#"---
 PlusFive ← +5

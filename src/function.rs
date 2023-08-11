@@ -53,7 +53,7 @@ pub enum FunctionKind {
     Dynamic {
         f: Arc<dyn Fn(&mut Uiua) -> UiuaResult + Send + Sync>,
         inputs: u8,
-        outputs: u8,
+        delta: i8,
     },
 }
 
@@ -127,11 +127,8 @@ impl Function {
     /// Get how many arguments this function takes and by how much it changes the height of the stack.
     /// Returns `None` if either of these values are dynamic.
     pub fn args_delta(&self) -> Option<(usize, isize)> {
-        if let FunctionKind::Dynamic {
-            inputs, outputs, ..
-        } = &self.kind
-        {
-            Some((*inputs as usize, *outputs as isize - *inputs as isize))
+        if let FunctionKind::Dynamic { inputs, delta, .. } = &self.kind {
+            Some((*inputs as usize, *delta as isize))
         } else {
             instrs_stack_delta(&self.instrs)
         }

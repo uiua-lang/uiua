@@ -2,7 +2,7 @@
 - Unify some monadic and dyadic modifiers
   - each and zip
   - rows and bridge
-- Make binding functionness depend on adicity
+- Require certain kinds of names for functions?
 - Rethink fill values
   - Set the fill value of an array?
   - Modifier to specify the fill?

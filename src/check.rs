@@ -152,7 +152,7 @@ impl<'a> VirtualEnv<'a> {
         }
     }
     fn handle_call(&mut self) -> Result<(), String> {
-        if let Some(BasicValue::Func(f)) = self.stack.last() {
+        if let BasicValue::Func(f) = self.pop()? {
             let (a, d) = f
                 .args_delta()
                 .ok_or_else(|| format!("Call's function {f:?} had indeterminate a/Δ"))?;

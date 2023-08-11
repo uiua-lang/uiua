@@ -619,7 +619,11 @@ impl Uiua {
                         FunctionKind::Dfn(n) => {
                             let n = *n as usize;
                             if self.stack.len() < n {
-                                let message = format!("not enough arguments for dfn of {n} values");
+                                let message = format!(
+                                    "not enough arguments for dfn of {} value{}",
+                                    n,
+                                    if n == 1 { "" } else { "s" }
+                                );
                                 break Err(self.spans.lock()[call_span].clone().sp(message).into());
                             }
                             let args = self.stack.drain(self.stack.len() - n..).rev().collect();

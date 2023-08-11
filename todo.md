@@ -1,5 +1,6 @@
-- Rework site output
+- Always parse dnf args first
 - Cache function args/delta
+- Rework site output
 - Require certain kinds of names for functions?
 - Rethink fill values
   - Set the fill value of an array?

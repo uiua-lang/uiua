@@ -128,10 +128,15 @@ impl Function {
     /// Get how many arguments this function takes and by how much it changes the height of the stack.
     /// Returns `None` if either of these values are dynamic.
     pub fn args_delta(&self) -> Option<(usize, isize)> {
-        if let FunctionKind::Dynamic { inputs, delta, .. } = &self.kind {
-            Some((*inputs as usize, *delta as isize))
-        } else {
-            instrs_stack_delta(&self.instrs)
+        match self.kind {
+            FunctionKind::Normal => instrs_stack_delta(&self.instrs),
+            FunctionKind::Dfn(n) => {
+                let (mut args, mut delta) = instrs_stack_delta(&self.instrs)?;
+                args += n as usize;
+                delta -= n as isize;
+                Some((args, delta))
+            }
+            FunctionKind::Dynamic { inputs, delta, .. } => Some((inputs as usize, delta as isize)),
         }
     }
     pub fn constant(value: impl Into<Value>) -> Self {

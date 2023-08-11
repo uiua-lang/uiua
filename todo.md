@@ -1,5 +1,5 @@
-- Always parse dnf args first
 - Cache function args/delta
+- Refine run modes
 - Rework site output
 - Require certain kinds of names for functions?
 - Rethink fill values

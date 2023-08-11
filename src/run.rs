@@ -400,6 +400,19 @@ impl Uiua {
         Ok(())
     }
     fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool) -> UiuaResult {
+        if let Some(dfn) = self.new_dfns.last_mut() {
+            // Dfn argument
+            if ident.as_str().len() == 1 {
+                let c = ident.as_str().chars().next().unwrap();
+                if c.is_ascii_lowercase() {
+                    // Name is a dfn argument
+                    let idx = c as u8 - b'a';
+                    dfn.push(idx);
+                    self.push_instr(Instr::DfnVal(idx as usize));
+                    return Ok(());
+                }
+            }
+        }
         if let Some(idx) = self.scope.names.get(&ident).or_else(|| {
             self.lower_scopes
                 .last()
@@ -422,18 +435,6 @@ impl Uiua {
             let span = self.add_span(span);
             self.push_instr(Instr::Prim(prim, span));
         } else {
-            if let Some(dfn) = self.new_dfns.last_mut() {
-                if ident.as_str().len() == 1 {
-                    let c = ident.as_str().chars().next().unwrap();
-                    if c.is_ascii_lowercase() {
-                        // Name is a dfn argument
-                        let idx = c as u8 - b'a';
-                        dfn.push(idx);
-                        self.push_instr(Instr::DfnVal(idx as usize));
-                        return Ok(());
-                    }
-                }
-            }
             return Err(span.sp(format!("unknown identifier `{}`", ident)).into());
         }
         Ok(())

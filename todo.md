@@ -1,8 +1,8 @@
-- Derive function adicity
-  - Unify some monadic and dyadic modifiers
-    - each and zip
-    - rows and bridge
-  - Make binding functionness depend on adicity
+- Express primitive signature as args/delta instead of args/output
+- Unify some monadic and dyadic modifiers
+  - each and zip
+  - rows and bridge
+- Make binding functionness depend on adicity
 - Rethink fill values
   - Set the fill value of an array?
   - Modifier to specify the fill?

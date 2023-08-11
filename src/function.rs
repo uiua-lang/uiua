@@ -124,6 +124,8 @@ impl fmt::Display for Function {
 }
 
 impl Function {
+    /// Get how many arguments this function takes and by how much it changes the height of the stack.
+    /// Returns `None` if either of these values are dynamic.
     pub fn args_delta(&self) -> Option<(usize, isize)> {
         if let FunctionKind::Dynamic {
             inputs, outputs, ..
@@ -281,65 +283,49 @@ impl<'a> VirtualEnv<'a> {
                     );
                     self.stack.push(None);
                 }
-                Instr::Prim(prim, _) => match prim {
-                    Reduce | Scan => {
+                Instr::Prim(prim, _) => {
+                    let mod_ad = match prim {
+                        Reduce | Scan => Some((2, -1, 1)),
+                        Fold => Some((2, -1, 2)),
+                        Each | Rows => Some((1, 0, 1)),
+                        Zip | Bridge | Distribute | Plow | Table | Cross => Some((2, -1, 2)),
+                        _ => None,
+                    };
+                    if let Some((f_args, f_delta, m_args)) = mod_ad {
                         if let Some(f) = self.pop()? {
                             let (a, d) = f.args_delta().ok_or_else(|| {
                                 format!("{prim}'s function {f:?} had indeterminate a/o")
                             })?;
-                            if d != -1 {
+                            if a != f_args {
                                 return Err(format!(
-                                    "{prim}'s function {f:?} had {d} delta, expected 1"
+                                    "{prim}'s function {f:?} had {a} args, expected {f_args}"
                                 ));
                             }
-                            if a != 2 {
+                            if d != f_delta {
                                 return Err(format!(
-                                    "{prim}'s function {f:?} had {a} args, expected 2"
+                                    "{prim}'s function {f:?} had {d} delta, expected {f_delta}"
                                 ));
                             }
-                            self.pop()?;
-                            self.set_min_height();
-                            self.stack.push(None);
-                        } else {
-                            return Err("Reduce without function".into());
-                        }
-                    }
-                    Fold => {
-                        if let Some(f) = self.pop()? {
-                            let (a, d) = f.args_delta().ok_or_else(|| {
-                                format!("{prim}'s function {f:?} had indeterminate a/o")
-                            })?;
-                            if d != -1 {
-                                return Err(format!(
-                                    "{prim}'s function {f:?} had {d} delta, expected 1"
-                                ));
-                            }
-                            if a != 2 {
-                                return Err(format!(
-                                    "{prim}'s function {f:?} had {a} args, expected 2"
-                                ));
-                            }
-                            self.pop()?;
-                            self.pop()?;
-                            self.set_min_height();
-                            self.stack.push(None);
-                        } else {
-                            return Err("Reduce without function".into());
-                        }
-                    }
-                    _ => {
-                        if let Some((..)) = prim.modifier_args() {
-                        } else {
-                            for _ in 0..prim.args().ok_or("Prim had indeterminate args")? {
+                            for _ in 0..m_args {
                                 self.pop()?;
                             }
                             self.set_min_height();
-                            for _ in 0..prim.outputs().ok_or("Prim had indeterminate outputs")? {
-                                self.stack.push(None);
-                            }
+                            self.stack.push(None);
+                        } else {
+                            return Err(format!("{prim} without function"));
+                        }
+                    } else if let Some((..)) = prim.modifier_args() {
+                        return Err(format!("{prim}'s signature is not yet supported"));
+                    } else {
+                        for _ in 0..prim.args().ok_or("Prim had indeterminate args")? {
+                            self.pop()?;
+                        }
+                        self.set_min_height();
+                        for _ in 0..prim.outputs().ok_or("Prim had indeterminate outputs")? {
+                            self.stack.push(None);
                         }
                     }
-                },
+                }
                 Instr::Call(_) => return Err("Call in instrs".into()),
             }
             self.set_min_height();

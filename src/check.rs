@@ -125,6 +125,7 @@ impl<'a> VirtualEnv<'a> {
                         self.stack.push(b);
                     }
                     Call => self.handle_call()?,
+                    Recur => return Err("Recur present".into()),
                     _ => {
                         let args = prim.args().ok_or("Prim had indeterminate args")?;
                         for _ in 0..args {

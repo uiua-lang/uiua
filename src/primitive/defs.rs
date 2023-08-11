@@ -897,7 +897,7 @@ primitive!(
     ///
     /// Here is a recursive fibonacci function:
     /// ex: {:(+ ↬-1a ↬-2a)_a <2a} 10
-    (0(0), Recur, Control, ("recur", '↬')),
+    (0(None), Recur, Control, ("recur", '↬')),
     /// Debug print a value without popping it
     ///
     /// ex: /+ | 1_2_3

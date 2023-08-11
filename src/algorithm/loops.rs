@@ -223,21 +223,37 @@ fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
 pub fn each(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(1)?;
-    let xs = env.pop(2)?;
+    let (args, _) = f.args_delta().unwrap_or((1, 0));
+    match args {
+        0 => Err(env.error("each's function must take at least one argument")),
+        1 => {
+            let xs = env.pop(2)?;
+            each1(f, xs, env)
+        }
+        2 => {
+            let xs = env.pop(2)?;
+            let ys = env.pop(3)?;
+            each2(f, xs, ys, env)
+        }
+        n => {
+            let mut args = Vec::with_capacity(n);
+            for i in 0..n {
+                args.push(env.pop(i + 2)?);
+            }
+            eachn(f, args, env)
+        }
+    }
+}
+
+fn each1(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     let mut new_values = Vec::with_capacity(xs.flat_len());
     let mut new_shape = xs.shape().to_vec();
-    let mut values = xs.into_flat_values();
-    while let Some(val) = values.next() {
+    let values = xs.into_flat_values();
+    for val in values {
         env.push(val);
         env.push(f.clone());
-        let broke = env.call_catch_break()?;
+        env.call_error_on_break("break is not allowed in each")?;
         new_values.push(env.pop("each's function result")?);
-        if broke {
-            for val in values {
-                new_values.push(val);
-            }
-            break;
-        }
     }
     let mut eached = Value::from_row_values(new_values, env)?;
     new_shape.extend_from_slice(&eached.shape()[1..]);
@@ -246,16 +262,11 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub fn zip(env: &mut Uiua) -> UiuaResult {
-    crate::profile_function!();
-    let f = env.pop(1)?;
-    let xs = env.pop(2)?;
-    let ys = env.pop(3)?;
+fn each2(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     let xs_shape = xs.shape().to_vec();
     let ys_shape = ys.shape().to_vec();
     let xs_values: Vec<_> = xs.into_flat_values().collect();
     let ys_values: Vec<_> = ys.into_flat_values().collect();
-    const BREAK_ERROR: &str = "break is not allowed in zip";
     let (mut shape, values) = bin_pervade_generic(
         &xs_shape,
         xs_values,
@@ -266,14 +277,41 @@ pub fn zip(env: &mut Uiua) -> UiuaResult {
             env.push(y);
             env.push(x);
             env.push(f.clone());
-            env.call_error_on_break(BREAK_ERROR)?;
+            env.call_error_on_break("break is not allowed in each")?;
             env.pop("zip's function result")
         },
     )?;
-    let mut zipped = Value::from_row_values(values, env)?;
-    shape.extend_from_slice(&zipped.shape()[1..]);
-    *zipped.shape_mut() = shape;
-    env.push(zipped);
+    let mut eached = Value::from_row_values(values, env)?;
+    shape.extend_from_slice(&eached.shape()[1..]);
+    *eached.shape_mut() = shape;
+    env.push(eached);
+    Ok(())
+}
+
+fn eachn(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+    for win in args.windows(2) {
+        if win[0].shape() != win[1].shape() {
+            return Err(env.error(format!(
+                "The shapes in each of 3 or more arrays must all match, but shapes {} and {} cannot be eached together. \
+                If you want more flexibility, use rows.",
+                win[0].format_shape(),
+                win[1].format_shape()
+            )));
+        }
+    }
+    let row_count = args[0].row_count();
+    let mut arg_elems: Vec<_> = args.into_iter().map(|v| v.into_flat_values()).collect();
+    let mut new_values = Vec::new();
+    for _ in 0..row_count {
+        for arg in arg_elems.iter_mut().rev() {
+            env.push(arg.next().unwrap());
+        }
+        env.push(f.clone());
+        env.call_error_on_break("break is not allowed in each")?;
+        new_values.push(env.pop("each's function result")?);
+    }
+    let eached = Value::from_row_values(new_values, env)?;
+    env.push(eached);
     Ok(())
 }
 

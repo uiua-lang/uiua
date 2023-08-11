@@ -13,14 +13,14 @@ pub(crate) fn instrs_stack_delta(instrs: &[Instr]) -> Option<(usize, isize)> {
         min_height: START_HEIGHT,
     };
     if let Err(_e) = env.instrs(instrs) {
-        println!("instrs: {:?}", instrs);
-        println!("unable to count a/Δ: {}", _e);
+        // println!("instrs: {:?}", instrs);
+        // println!("unable to count a/Δ: {}", _e);
         return None;
     }
     let args = START_HEIGHT.saturating_sub(env.min_height);
     let delta = env.stack.len() as isize - START_HEIGHT as isize;
-    println!("instrs: {:?}", instrs);
-    println!("args/Δ: {}/{}", args, delta);
+    // println!("instrs: {:?}", instrs);
+    // println!("args/Δ: {}/{}", args, delta);
     Some((args, delta))
 }
 
@@ -67,7 +67,7 @@ impl<'a> VirtualEnv<'a> {
                     Reduce | Scan => self.handle_mod(prim, 2, -1, 1)?,
                     Fold => self.handle_mod(prim, 2, -1, 2)?,
                     Each | Rows => self.handle_mod(prim, 1, 0, 1)?,
-                    Zip | Bridge | Distribute | Plow | Table | Cross => {
+                    Bridge | Distribute | Plow | Table | Cross => {
                         self.handle_mod(prim, 2, -1, 2)?
                     }
                     Spawn => {

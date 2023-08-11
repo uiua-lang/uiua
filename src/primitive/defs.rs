@@ -691,12 +691,15 @@ primitive!(
     /// ex: \(-~) 1_2_3_4
     /// ex: \⊂    1_2_3_4
     ([1, 1, 2], Scan, MonadicModifier, ("scan", '\\')),
-    /// Apply a function to each element of an array
+    /// Apply a function to each element of an array or between elements of arrays
     ///
     /// This is the element-wise version of [rows].
     ///
+    /// The number of arrays used depends on how many arguments the function takes.
     /// ex: ∵(⊟.) 1_2_3_4
     /// ex: ∵⇡     1_2_3_4
+    /// ex: ∵⊂ 1_2_3 4_5_6
+    /// ex: ∵⊂ 1_2 [4_5 6_7]
     ([1, 1, 1], Each, MonadicModifier, ("each", '∵')),
     /// Apply a function to each row of an array
     ///
@@ -709,17 +712,6 @@ primitive!(
     /// ex: ⍚¯1/+ [1_2_3 4_5_6 7_8_9]
     /// ex: ≡/+   [1_2_3 4_5_6 7_8_9]
     ([1, 1, 1], Rows, MonadicModifier, ("rows", '≡')),
-    /// Pervade a function through two arrays
-    ///
-    /// This is the element-wise version of [bridge].
-    ///
-    /// ex: ≕⊂ 1_2_3 4_5_6
-    /// ex: ≕⊂ 1_2 [4_5 6_7]
-    ///
-    /// For operations that are already pervasive, like `add` or `maximum`, `zip` is redundant.
-    /// ex:  + 1_2_3 [4_5 6_7 8_9]
-    ///   : ≕+ 1_2_3 [4_5 6_7 8_9]
-    ([1, 2, 2], Zip, DyadicModifier, ("zip", '≕')),
     /// Apply a function to each pair of rows in two arrays
     ///
     /// This is the row-wise version of [zip].

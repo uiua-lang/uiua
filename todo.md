@@ -1,6 +1,5 @@
 - Rework site output
 - Unify some monadic and dyadic modifiers
-  - each and zip
   - rows and bridge
 - Require certain kinds of names for functions?
 - Rethink fill values

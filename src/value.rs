@@ -38,6 +38,13 @@ impl fmt::Debug for Value {
 }
 
 impl Value {
+    pub fn args_delta(&self) -> Option<(usize, isize)> {
+        if let Some(f) = self.as_func_array().and_then(Array::as_scalar) {
+            f.args_delta()
+        } else {
+            Some((0, 1))
+        }
+    }
     pub fn as_num_array(&self) -> Option<&Array<f64>> {
         match self {
             Self::Num(array) => Some(array),
@@ -119,6 +126,9 @@ impl Value {
     pub fn shape(&self) -> &[usize] {
         self.generic_ref(Array::shape, Array::shape, Array::shape, Array::shape)
     }
+    pub fn shape_prefixes_match(&self, other: &Self) -> bool {
+        self.shape().iter().zip(other.shape()).all(|(a, b)| a == b)
+    }
     pub fn row_count(&self) -> usize {
         self.generic_ref(
             Array::row_count,
@@ -150,6 +160,14 @@ impl Value {
             Self::Char(array) => array.first_dim_zero().into(),
             Self::Func(array) => array.first_dim_zero().into(),
         }
+    }
+    pub fn format_shape(&self) -> FormatShape {
+        self.generic_ref(
+            Array::format_shape,
+            Array::format_shape,
+            Array::format_shape,
+            Array::format_shape,
+        )
     }
     pub fn rank(&self) -> usize {
         self.shape().len()

@@ -35,6 +35,7 @@ struct VirtualEnv<'a> {
 enum BasicValue<'a> {
     Func(&'a Function),
     Num(f64),
+    Arr(usize),
     Other,
 }
 
@@ -56,17 +57,17 @@ impl<'a> VirtualEnv<'a> {
                 Instr::DfnVal(_) => self.stack.push(BasicValue::Other),
                 Instr::BeginArray => self.array_stack.push(self.stack.len()),
                 Instr::EndArray(_) => {
-                    self.stack.truncate(
-                        self.array_stack
-                            .pop()
-                            .ok_or("EndArray without BeginArray")?,
-                    );
-                    self.stack.push(BasicValue::Other);
+                    let len = self
+                        .array_stack
+                        .pop()
+                        .ok_or("EndArray without BeginArray")?;
+                    self.stack.truncate(len);
+                    self.stack.push(BasicValue::Arr(len));
                 }
                 Instr::Prim(prim, _) => match prim {
                     Reduce | Scan => self.handle_mod(prim, 2, -1, 1)?,
                     Fold => self.handle_mod(prim, 2, -1, 2)?,
-                    Each | Rows => self.handle_mod(prim, 1, 0, 1)?,
+                    Each | Rows => self.handle_variadic_mod(prim)?,
                     Distribute | Plow | Table | Cross => self.handle_mod(prim, 2, -1, 2)?,
                     Spawn => {
                         if let Some(BasicValue::Num(n)) = self.stack.pop() {
@@ -190,6 +191,24 @@ impl<'a> VirtualEnv<'a> {
                 ));
             }
             for _ in 0..m_args {
+                self.pop()?;
+            }
+            self.set_min_height();
+            self.stack.push(BasicValue::Other);
+            Ok(())
+        } else {
+            Err(format!("{prim} without function"))
+        }
+    }
+    fn handle_variadic_mod(&mut self, prim: &Primitive) -> Result<(), String> {
+        if let BasicValue::Func(f) = self.pop()? {
+            let (a, d) = f
+                .args_delta()
+                .ok_or_else(|| format!("{prim}'s function {f:?} had indeterminate a/Δ"))?;
+            if a as isize + d != 1 {
+                return Err(format!("{prim}'s function {f:?} did not return 1 value",));
+            }
+            for _ in 0..a {
                 self.pop()?;
             }
             self.set_min_height();

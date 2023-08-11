@@ -1,10 +1,8 @@
-- Cache function args/delta
-- Refine run modes
 - Rework site output
-- Require certain kinds of names for functions?
 - Rethink fill values
   - Set the fill value of an array?
   - Modifier to specify the fill?
+- Require certain kinds of names for functions?
 - Docs
   - Search primitives
   - Testing and run modes

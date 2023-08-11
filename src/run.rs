@@ -229,7 +229,6 @@ impl Uiua {
                 };
                 if can_run || words_have_import(&words) {
                     let instrs = self.compile_words(words)?;
-                    // println!("executing: {:?}", instrs);
                     self.exec_global_instrs(instrs)?;
                 }
             }

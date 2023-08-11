@@ -7,7 +7,7 @@ macro_rules! primitive {
         (
             $(
                 $($args:literal)?
-                $(($outputs:expr))?
+                $(($delta:expr))?
                 $([$mod_func_args:expr, $mod_array_args:expr $(,$mod_inner_args:expr)?])?
             ,)?
             $variant:ident, $class:ident
@@ -59,10 +59,12 @@ macro_rules! primitive {
                     _ => None
                 }
             }
-            pub fn outputs(&self) -> Option<u8> {
+            #[allow(unreachable_patterns)]
+            pub fn delta(&self) -> Option<i8> {
                 match self {
-                    $($($(Primitive::$variant => $outputs.into(),)?)?)*
-                    Primitive::Sys(op) => op.outputs(),
+                    $($($(Primitive::$variant => $delta.into(),)?)?)*
+                    $($($(Primitive::$variant => (1 - $args).into(),)?)?)*
+                    Primitive::Sys(op) => op.delta(),
                     _ => Some(1)
                 }
             }
@@ -84,7 +86,6 @@ macro_rules! primitive {
 }
 
 primitive!(
-    // Stack ops
     /// Duplicate the top value on the stack
     ///
     /// ex: [. 1 2 3]
@@ -92,20 +93,20 @@ primitive!(
     /// This can be used to make a monadic left-hook, such as a palindrome checker:
     /// ex: ≅⇌. "friend"
     /// ex: ≅⇌. "racecar"
-    (1(2), Dup, Stack, ("duplicate", '.')),
+    (1(1), Dup, Stack, ("duplicate", '.')),
     /// Duplicate the second-to-top value to the top of the stack
     ///
     /// ex: [, 1 2 3]
-    (2(3), Over, Stack, ("over", ',')),
+    (2(1), Over, Stack, ("over", ',')),
     /// Swap the top two values on the stack
     ///
     /// ex: [~ 1 2 3 4]
     ///
     /// When combined with [duplicate], this can be used to make a monadic right-hook or monadic fork, such as an average calculator:
     /// ex: ÷⧻~/+. 1_8_2_5
-    (2(2), Flip, Stack, ("flip", '~')),
+    (2(0), Flip, Stack, ("flip", '~')),
     /// Pop the top value off the stack
-    (1(0), Pop, Stack, ("pop", ';')),
+    (1(-1), Pop, Stack, ("pop", ';')),
     /// Do nothing
     ///
     /// While this may seem useless, one way to use it is to pass it to [reduce], which will put all of an array's values on the stack.
@@ -192,7 +193,6 @@ primitive!(
     /// ex: ⁅1.5
     /// ex: ⁅[0.1 π 2 9.9 7.5]
     (1, Round, MonadicPervasive, ("round", '⁅')),
-    // Pervasive dyadic ops
     /// Compare for equality
     ///
     /// ex: =1 2
@@ -340,7 +340,6 @@ primitive!(
     /// ex: ∠ ¯1 0
     /// ex: ∠ √2 √2
     (2, Atan, DyadicPervasive, ("atangent", '∠')),
-    // Monadic array ops
     /// The number of rows in an array
     ///
     /// ex: ⧻5
@@ -472,7 +471,6 @@ primitive!(
     ///
     /// ex: ⊝7_7_8_0_1_2_0
     (1, Deduplicate, MonadicArray, ("deduplicate", '⊝')),
-    // Dyadic array ops
     /// Check if two arrays are the same, ignoring fill elements
     ///
     /// ex: ≅ 1_2_3 [1 2 3]
@@ -650,7 +648,6 @@ primitive!(
     /// For non-scalar delimiters, you may have to get a little more creative.
     /// ex: ⊘/↧⊞≠~, " | " $ Um | I | um | arrays
     (2, Partition, DyadicArray, ("partition", '⊘')),
-    // Modifiers
     /// Apply a reducing function to an array
     ///
     /// For reducing with an initial value, see [fold].
@@ -813,7 +810,6 @@ primitive!(
     /// ex: ?(+1 2)"failure"
     /// ex: ?(+'a' 'b')"failure"
     ([2, 0], Try, OtherModifier, ("try", '?')),
-    // Misc
     /// Throw an error
     ///
     /// Expects a message and a test value.
@@ -889,7 +885,7 @@ primitive!(
     ///
     /// ex: /(⎋>10.+) ⇌⇡40  # Break when the sum exceeds 10
     /// ex: ⍥(⎋>100.×2)∞ 1  # Break when the product exceeds 100
-    (1(0), Break, Control, ("break", '⎋')),
+    (1(-1), Break, Control, ("break", '⎋')),
     /// Call the current dfn recursively
     ///
     /// Only dfns can be recurred in.
@@ -902,7 +898,7 @@ primitive!(
     ///
     /// Here is a recursive fibonacci function:
     /// ex: {:(+ ↬-1a ↬-2a)_a <2a} 10
-    (1(0), Recur, Control, ("recur", '↬')),
+    (0(0), Recur, Control, ("recur", '↬')),
     /// Debug print a value without popping it
     ///
     /// ex: /+ | 1_2_3
@@ -933,7 +929,7 @@ primitive!(
     ///
     /// Use [multiply] and [floor] to generate a random integer in a range.
     /// ex: [;⍥(~⌊*10~gen)5 0]
-    (1(2), Gen, Misc, "gen"),
+    (1(1), Gen, Misc, "gen"),
     /// Extract a named function from a module
     ///
     /// Can be used after [Import].
@@ -943,7 +939,6 @@ primitive!(
     ///   : increment ← use "increment"
     ///   : square increment 5
     (2, Use, Misc, "use"),
-    // Constants
     /// The number of radians in a quarter circle
     ///
     /// Equivalent to `divide``2``pi` or `divide``4``tau`
@@ -962,5 +957,5 @@ primitive!(
     /// The biggest number
     (0(1), Infinity, Constant, ("infinity", '∞')),
     /// The function fill value
-    (0(None), FillValue, Stack),
+    (0(0), FillValue, Stack),
 );

@@ -1,4 +1,3 @@
-- Express primitive signature as args/delta instead of args/output
 - Unify some monadic and dyadic modifiers
   - each and zip
   - rows and bridge

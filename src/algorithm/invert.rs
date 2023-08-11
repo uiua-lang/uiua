@@ -351,7 +351,7 @@ impl InvertPattern for Val {
                 Some(vec![instr.clone()])
             }
             Some(instr @ Instr::Prim(prim, _))
-                if prim.args() == Some(0) && prim.outputs() == Some(1) =>
+                if prim.args() == Some(0) && prim.delta() == Some(0) =>
             {
                 *input = &input[1..];
                 Some(vec![instr.clone()])

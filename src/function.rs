@@ -317,11 +317,13 @@ impl<'a> VirtualEnv<'a> {
                     } else if let Some((..)) = prim.modifier_args() {
                         return Err(format!("{prim}'s signature is not yet supported"));
                     } else {
-                        for _ in 0..prim.args().ok_or("Prim had indeterminate args")? {
+                        let args = prim.args().ok_or("Prim had indeterminate args")?;
+                        for _ in 0..args {
                             self.pop()?;
                         }
                         self.set_min_height();
-                        for _ in 0..prim.outputs().ok_or("Prim had indeterminate outputs")? {
+                        let delta = prim.delta().ok_or("Prim had indeterminate delta")?;
+                        for _ in 0..delta + args as i8 {
                             self.stack.push(None);
                         }
                     }

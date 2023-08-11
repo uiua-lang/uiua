@@ -308,13 +308,6 @@ Square_Double_Increment";
             ([.., Instr::Prim(top, _)], Instr::Prim(new, new_span)) => match (&top, new) {
                 (Reverse, First) => *top = Last,
                 (Reverse, Last) => *top = First,
-                (a, b)
-                    if a.args() == a.outputs()
-                        && b.args() == b.outputs()
-                        && a.inverse() == Some(b) =>
-                {
-                    instrs.pop();
-                }
                 _ => instrs.push(Instr::Prim(new, new_span)),
             },
             // Ignore noops

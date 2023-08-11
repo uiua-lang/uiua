@@ -24,7 +24,7 @@ macro_rules! sys_op {
     ($(
         $(#[doc = $doc:literal])*
         (
-            $args:literal$(($outputs:expr))?,
+            $args:literal$(($delta:expr))?,
             $variant:ident, $name:literal
         )
     ),* $(,)?) => {
@@ -47,10 +47,11 @@ macro_rules! sys_op {
                     $(SysOp::$variant => $args,)*
                 }
             }
-            pub fn outputs(&self) -> Option<u8> {
+            #[allow(unreachable_patterns)]
+            pub fn delta(&self) -> Option<i8> {
                 match self {
-                    $($(SysOp::$variant => $outputs.into(),)?)*
-                    _ => Some(1)
+                    $($(SysOp::$variant => $delta.into(),)?)*
+                    $(SysOp::$variant => (1 - $args as i8).into(),)*
                 }
             }
             pub fn doc(&self) -> Option<&'static PrimDoc> {
@@ -71,11 +72,11 @@ macro_rules! sys_op {
 
 sys_op! {
     /// Print a nicely formatted representation of a value to stdout
-    (1(0), Show, "Show"),
+    (1(-1), Show, "Show"),
     /// Print a value to stdout
-    (1(0), Prin, "Prin"),
+    (1(-1), Prin, "Prin"),
     /// Print a value to stdout followed by a newline
-    (1(0), Print, "Print"),
+    (1(-1), Print, "Print"),
     /// Read a line from stdin
     (0, ScanLine, "ScanLine"),
     /// Get the command line arguments
@@ -151,7 +152,7 @@ sys_op! {
     /// A length 2 last axis is a grayscale image with an alpha channel.
     /// A length 3 last axis is an RGB image.
     /// A length 4 last axis is an RGB image with an alpha channel.
-    (1(0), ImShow, "ImShow"),
+    (1(-1), ImShow, "ImShow"),
     /// Play some audio
     ///
     /// The audio must be a rank 1 or 2 numeric array.
@@ -161,12 +162,12 @@ sys_op! {
     ///
     /// The samples must be between -1 and 1.
     /// The sample rate is 44100 Hz.
-    (1(0), AudioPlay, "AudioPlay"),
+    (1(-1), AudioPlay, "AudioPlay"),
     /// Sleep for n milliseconds
     ///
     /// On the web, this example will hang for 2 seconds.
     /// ex: rand sleep 2000
-    (1(0), Sleep, "Sleep"),
+    (1(-1), Sleep, "Sleep"),
     (1, TcpListen, "TcpListen"),
     (1, TcpAccept, "TcpAccept"),
     (1, TcpConnect, "TcpConnect"),

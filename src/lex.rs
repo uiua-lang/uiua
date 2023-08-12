@@ -268,6 +268,9 @@ pub enum Token {
     MultilineString(Vec<String>),
     Simple(AsciiToken),
     Glyph(Primitive),
+    LeftArrow,
+    Newline,
+    Spaces,
 }
 
 impl Token {
@@ -319,9 +322,6 @@ pub enum AsciiToken {
     LessEqual,
     GreaterEqual,
     Backtick,
-    LeftArrow,
-    Newline,
-    Spaces,
     TripleMinus,
     TripleTilde,
 }
@@ -343,9 +343,6 @@ impl fmt::Display for AsciiToken {
             AsciiToken::LessEqual => write!(f, "<="),
             AsciiToken::GreaterEqual => write!(f, ">="),
             AsciiToken::Backtick => write!(f, "`"),
-            AsciiToken::LeftArrow => write!(f, "←"),
-            AsciiToken::Newline => write!(f, "\\n"),
-            AsciiToken::Spaces => write!(f, " "),
             AsciiToken::TripleMinus => write!(f, "---"),
             AsciiToken::TripleTilde => write!(f, "~~~"),
         }

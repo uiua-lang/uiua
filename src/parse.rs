@@ -3,7 +3,7 @@ use std::{error::Error, fmt, path::Path};
 use crate::{
     ast::*,
     function::FunctionId,
-    lex::{AsciiToken::*, *},
+    lex::{AsciiToken::*, Token::*, *},
     primitive::Primitive,
     Ident,
 };

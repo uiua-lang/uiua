@@ -135,6 +135,7 @@ primitive!(
     ///
     /// ex: ± 1
     /// ex: ± ¯5
+    /// ex: ± 0
     /// ex: ± [¯2 ¯1 0 1 2]
     (1, Sign, MonadicPervasive, ("sign", '±')),
     /// Negate a number
@@ -822,26 +823,28 @@ primitive!(
     /// If the first function errors, the second function is called with the error value.
     ///
     /// Normal runtime errors become strings.
-    /// ex: ?(+1 2)$"Error: _"
-    /// ex: ?(+'a' 'b')$"Error: _"
+    /// ex: ⍣(+1 2)$"Error: _"
+    /// ex: ⍣(+'a' 'b')$"Error: _"
     ///
     /// Errors thrown with [assert] can be any value.
-    /// ex: ?(!5 1 3)(×5)
-    /// ex: ?(!5 0 3)(×5)
-    ([2, 0], Try, OtherModifier, ("try", '?')),
+    /// ex: ⍣(⍤5 1 3)(×5)
+    /// ex: ⍣(⍤5 0 3)(×5)
+    ([2, 0], Try, OtherModifier, ("try", '⍣')),
     /// Throw an error if a condition is not met
     ///
     /// Expects a message and a test value.
     /// If the test value is anything but `1`, then the message will be thrown as an error.
     ///
-    /// ex! !"Oh no!" "any array"
-    /// ex: !"Oh no!" 1
-    /// ex! !"Oh no!" 0
+    /// ex! ⍤"Oh no!" "any array"
+    /// ex: ⍤"Oh no!" 1
+    /// ex! ⍤"Oh no!" 0
     ///
     /// Use [duplicate] if you do not care about the message.
-    /// ex: !. =6 6
-    /// ex! !. =8 9
-    (2, Assert, Control, ("assert", '!')),
+    /// ex: ⍤. =6 6
+    /// ex! ⍤. =8 9
+    ///
+    /// Errors thrown by [assert] can be caught with [try].
+    (2, Assert, Control, ("assert", '⍤')),
     /// Spawn a thread
     ///
     /// Expects a number and a function.

@@ -551,14 +551,14 @@ fn TutorialTesting() -> impl IntoView {
         <p>"Similar to the "<A href="/docs/modules">"scopes discussed in the previous section"</A>", Uiua has "<em>"test scopes"</em>"."</p>
         <p>"Instead of "<code>"---"</code>", test scopes begin and end with "<code>"~~~"</code>"."</p>
         <p>"Test scopes are meant to be used with "<PrimCode prim=Assert/>"."</p>
-        <Editor example="Square ← ×.\n~~~\n!.=9 Square 3\n!.=225 Square 15\n~~~"/>
+        <Editor example="Square ← ×.\n~~~\n⍤.=9 Square 3\n⍤.=225 Square 15\n~~~"/>
         <p><PrimCode prim=Assert/>" will return an error when its second argument is anything other than "<code>"1"</code>"."</p>
-        <Editor example="Square ← ×.\n~~~\n!.=25 Square 4\n~~~"/>
+        <Editor example="Square ← ×.\n~~~\n⍤.=25 Square 4\n~~~"/>
         <p>"The first argument to "<PrimCode prim=Assert/>" is the value that will be thrown if the assertion fails. In the examples above, we have simply been "<PrimCode prim=Dup/>"ing the test value. We can throw a message instead."</p>
         <Editor example=r#"Square ← ×.
 ~~~
-!"3² is not 9!" =9 Square 3
-!"4² is not 25!" =25 Square 4
+⍤"3² is not 9!" =9 Square 3
+⍤"4² is not 25!" =25 Square 4
 ~~~"#/>
 
         <h2 id="run-modes">"Run Modes"</h2>

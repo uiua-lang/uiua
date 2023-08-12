@@ -175,7 +175,7 @@ mod code {
             .name()
             .map(|name| format!("/docs/{name}"))
             .unwrap_or_default();
-        let title = match (prim.doc().filter(|_| !hide_docs), show_name) {
+        let mut title = match (prim.doc().filter(|_| !hide_docs), show_name) {
             (Some(doc), true) => Some(doc.short_text().into_owned()),
             (Some(doc), false) => Some(format!(
                 "{}: {}",
@@ -185,6 +185,9 @@ mod code {
             (None, true) => None,
             (None, false) => prim.name().map(Into::into),
         };
+        if let Some((title, ascii)) = title.as_mut().zip(prim.ascii()) {
+            *title = format!("({}) {}", ascii, title);
+        }
         view!( <A href=href class="prim-code-a">
             <code class="prim-code" title=title><span class=class>{ symbol }</span>{name}</code>
         </A>)

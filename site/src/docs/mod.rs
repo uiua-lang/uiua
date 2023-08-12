@@ -171,7 +171,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         <p>"If you want to jump right in, check out the "<A href="/docs/tour">"Language Tour"</A>"!"</p>
         <p>"Otherwise, read on for more detailed documentation."</p>
         <h2 id="tutorial">"Tutorial"</h2>
-        <p>"These introduce Uiua concepts one at a time, each tutorial building on the previous."</p>
+        <p>"These introduce Uiua concepts one at a time, each tutorial building on the previous. They go into much more depth than the language tour."</p>
         <p>"They are meant to be read in order, but feel free to skip around!"</p>
         <ul>{ all::<TutorialPage>()
             .map(|p| view!( <li><A href={format!("/docs/{}", p.path())}>{p.title()}</A></li>))

@@ -612,13 +612,10 @@ pub fn Editor<'a>(
                 .unicode()
                 .map(Into::into)
                 .or_else(|| p.ascii().map(|s| s.to_string()))?;
-            let extra = p
-                .unicode()
-                .is_some()
-                .then(|| p.ascii().map(|s| s.to_string()))
-                .flatten()
-                .unwrap_or_default();
-            let title = format!("{}\n{}", p.name().unwrap_or_default(), extra);
+            let mut title = p.name().unwrap_or_default().to_string();
+            if let Some(ascii) = p.ascii() {
+                title = format!("({}) {}", ascii, title);
+            }
             let onclick = move |event: MouseEvent| {
                 if event.ctrl_key() {
                     // Redirect to the docs page
@@ -1052,7 +1049,10 @@ fn set_code_html(id: &str, code: &str) {
         html.push_str(&if let SpanKind::Primitive(prim) = kind {
             let name = prim.name().unwrap_or_default();
             if let Some(doc) = prim.doc() {
-                let title = format!("{}: {}", name, doc.short_text());
+                let mut title = format!("{}: {}", name, doc.short_text());
+                if let Some(ascii) = prim.ascii() {
+                    title = format!("({}) {}", ascii, title);
+                }
                 format!(
                     r#"<span 
                         class="code-span 

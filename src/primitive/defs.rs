@@ -205,7 +205,7 @@ primitive!(
     /// ex: =5 5
     /// ex: =1 [1 2 3]
     /// ex: = [1 2 2] [1 2 3]
-    (2, Eq, DyadicPervasive, ("equals", AsciiToken::Equal, '=')),
+    (2, Eq, DyadicPervasive, ("equals", '=')),
     /// Compare for inequality
     ///
     /// ex: ≠1 2

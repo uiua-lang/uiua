@@ -83,6 +83,13 @@ impl UiuaError {
             error => error.to_string(),
         }
     }
+    pub fn value(self) -> Value {
+        match self {
+            UiuaError::Throw(value, _) => *value,
+            UiuaError::Traced { error, .. } => error.value(),
+            error => error.message().into(),
+        }
+    }
     pub fn break_data(self) -> Result<(usize, Span), Self> {
         match self {
             UiuaError::Traced { error, trace } => {

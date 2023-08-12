@@ -361,7 +361,7 @@ impl Primitive {
                 env.push(f);
                 if let Err(e) = env.call() {
                     env.truncate_stack(size);
-                    env.push(e.message());
+                    env.push(e.value());
                     env.push(handler);
                     env.call()?;
                 }
@@ -386,7 +386,7 @@ impl Primitive {
             Primitive::Assert => {
                 let msg = env.pop(1)?;
                 let cond = env.pop(2)?;
-                if cond.as_nat(env, "").map_or(true, |n| n == 0) {
+                if !cond.as_nat(env, "").is_ok_and(|n| n == 1) {
                     return Err(UiuaError::Throw(msg.into(), env.span().clone()));
                 }
             }

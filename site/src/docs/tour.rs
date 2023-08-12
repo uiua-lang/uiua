@@ -37,7 +37,9 @@ pub fn Tour() -> impl IntoView {
         <Editor examples={&["×", "+", "+ ", "1 ", "2 ", "3 ", "4"]}/>
         <p><PrimCode prim=Dup/>" duplicates the top value on the stack."</p>
         <Editor examples={&["×", ".", "3"]}/>
-        <p>"For math function where the order matters, like "<PrimCode prim=Sub/>" and "<PrimCode prim=Div/>", what would normally be the second argument comes first. This is so you can think of fragments like "<PrimCode prim=Sub glyph_only=true/><code>"2"</code>" as a single unit."</p>
+        <p><PrimCode prim=Dup/>" is often used in the examples on this site to show the both the input and output of a function."</p>
+        <Editor example="√.225"/>
+        <p>"For math function where the order matters, like "<PrimCode prim=Sub/>" and "<PrimCode prim=Div/>", what would normally be the second argument is instead the first. This is so you can think of fragments like "<PrimCode prim=Sub glyph_only=true/><code>"2"</code>" as a single unit."</p>
         <p><PrimCode prim=Flip/>" swaps the top two values on the stack."</p>
         <Editor example="-3 10\n-~3 10"/>
         <p>"By the way, since "<code>"-"</code>" is for "<PrimCode prim=Sub/>", use "<code>"`"</code>" for negative numbers. The formatter will turn in into a nice "<code>"¯"</code>"."</p>
@@ -89,7 +91,7 @@ pub fn Tour() -> impl IntoView {
         <p><PrimCode prim=Take/>" and "<PrimCode prim=Drop/>" can be used to get just part of an array."</p>
         <Editor example="↙3 [1 2 3 4 5]\n↘3 [1 2 3 4 5]"/>
         <p><PrimCode prim=Transpose/>" rotates the axes of an array."</p>
-        <Editor example="trans.[1_2_3 4_5_6] # 🏳️‍⚧️"/>
+        <Editor example="trans.[1_2_3 4_5_6]"/>
 
         <h2 id="functions">"Functions"</h2>
         <p>"If you bind a name with "<code>"←"</code>", and the thing on the right doesn't have enough arguments, the code will not be run until the name is used."</p>

@@ -326,6 +326,8 @@ li {
     text-decoration: none;
     white-space: normal;
     overflow: visible;
+    -webkit-text-fill-color: #eee;
+    -moz-text-fill-color: #eee;
 }
 
 .output-frame {
@@ -441,6 +443,8 @@ li {
     border-radius: 0.2em;
     left: -7em;
     width: 7em;
+    -webkit-text-fill-color: #eee;
+    -moz-text-fill-color: #eee;
 }
 
 .prim-code-a {
@@ -464,6 +468,8 @@ li {
     white-space: normal;
     overflow: visible;
     line-height: 1em;
+    -webkit-text-fill-color: #eee;
+    -moz-text-fill-color: #eee;
 }
 
 .glyph-doc {
@@ -512,6 +518,24 @@ li {
 
 .modifier2-button {
     color: #cc6be9;
+}
+
+.trans {
+    background-image: linear-gradient(180deg,
+            #5BCEFA 29%,
+            #F5A9B8 29%,
+            #F5A9B8 43%,
+            #FFFFFF 43%,
+            #FFFFFF 57%,
+            #F5A9B8 57%,
+            #F5A9B8 71%,
+            #5BCEFA 71%);
+    background-size: 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -moz-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    -moz-text-fill-color: transparent;
 }
 
 @media (prefers-color-scheme: dark) {

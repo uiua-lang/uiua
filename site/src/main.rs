@@ -199,7 +199,9 @@ fn prim_class(prim: Primitive) -> &'static str {
         };
     }
 
-    if let Some((m, _)) = prim.modifier_args() {
+    if prim == Primitive::Transpose {
+        code_font!("monadic-function-button trans")
+    } else if let Some((m, _)) = prim.modifier_args() {
         if m == 1 {
             code_font!("modifier1-button")
         } else {

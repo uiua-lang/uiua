@@ -172,6 +172,8 @@ fn TutorialBasic() -> impl IntoView {
         <p>"In general, functions do not leave their arguments on the stack. If you want to reuse a value, you must "<PrimCode prim=Dup/>" it first."</p>
         <p>"For example, if you wanted to square a number, you could "<PrimCode prim=Dup/>" it, then "<PrimCode prim=Mul/>"."</p>
         <Editor example="×.4"/>
+        <p><PrimCode prim=Dup/>" is often used in the examples on this site to show the both the input and output of a function."</p>
+        <Editor example="√.144"/>
         <br/>
         <h2><PrimCode prim=Flip/></h2>
         <p><PrimCode prim=Flip/>" swaps the top two items on the stack."</p>

@@ -1,3 +1,4 @@
+- Improve array debug impl
 - Maybe get rid of plow or distribute
 - Docs
   - Search primitives

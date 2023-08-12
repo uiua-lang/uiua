@@ -819,8 +819,15 @@ primitive!(
     ([2, 1], Level, OtherModifier, ("level", '⍚')),
     /// Call a function and catch errors
     ///
-    /// ex: ?(+1 2)"failure"
-    /// ex: ?(+'a' 'b')"failure"
+    /// If the first function errors, the second function is called with the error value.
+    ///
+    /// Normal runtime errors become strings.
+    /// ex: ?(+1 2)$"Error: _"
+    /// ex: ?(+'a' 'b')$"Error: _"
+    ///
+    /// Errors thrown with [assert] can be any value.
+    /// ex: ?(!5 1 3)(×5)
+    /// ex: ?(!5 0 3)(×5)
     ([2, 0], Try, OtherModifier, ("try", '?')),
     /// Throw an error if a condition is not met
     ///
@@ -868,6 +875,10 @@ primitive!(
     /// ex: ↯3_3⇡9
     ///   : ↲≡↰1/+.
     (1, Wait, Misc, ("wait", '↲')),
+    /// Debug print a value without popping it
+    ///
+    /// ex: /+ | 1_2_3
+    (1, Debug, Sys, ("debug", '|')),
     /// Call a function
     ///
     /// When passing a scalar function array, the function is simply called.
@@ -911,10 +922,6 @@ primitive!(
     /// Here is a recursive fibonacci function:
     /// ex: {:(+ ↬-1a ↬-2a)_a <2a} 10
     (0(None), Recur, Control, ("recur", '↬')),
-    /// Debug print a value without popping it
-    ///
-    /// ex: /+ | 1_2_3
-    (1, Debug, Sys, ("debug", '|')),
     /// Parse a string as a number
     ///
     /// ex: parse "17"

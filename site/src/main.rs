@@ -98,7 +98,7 @@ pub fn MainPage() -> impl IntoView {
             size=EditorSize::Medium
             mode=EditorMode::Multiple
             help={&[
-                "Type some or all of a glyph's name, then run to format the names into glyphs.",
+                "Type a glyph's name, then run to format the names into glyphs.",
                 "You can run with ctrl/shift + enter.",
             ]}/>
         <br/>

@@ -9,6 +9,7 @@ use std::{
 use crate::{
     cowslice::{cowslice, CowSlice},
     function::Function,
+    grid_fmt::GridFmt,
     primitive::Primitive,
     Byte,
 };
@@ -28,13 +29,19 @@ impl<T: ArrayValue> Default for Array<T> {
     }
 }
 
-impl<T: ArrayValue> fmt::Debug for Array<T> {
+impl<T: ArrayValue> fmt::Debug for Array<T>
+where
+    Array<T>: GridFmt,
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{self}")
+        write!(f, "{}", self)
     }
 }
 
-impl<T: ArrayValue> fmt::Display for Array<T> {
+impl<T: ArrayValue> fmt::Display for Array<T>
+where
+    Array<T>: GridFmt,
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.rank() {
             0 => write!(f, "{}", self.data[0]),
@@ -50,18 +57,7 @@ impl<T: ArrayValue> fmt::Display for Array<T> {
                 write!(f, "{}", end)
             }
             _ => {
-                write!(f, "[")?;
-                for (i, dim) in self.shape().iter().enumerate() {
-                    if i > 0 {
-                        write!(f, " ")?;
-                    }
-                    write!(f, "{dim}")?;
-                }
-                write!(f, ",")?;
-                for val in &self.data {
-                    write!(f, " {}", val)?;
-                }
-                write!(f, "]")
+                write!(f, "\n{}", self.grid_string())
             }
         }
     }

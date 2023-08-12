@@ -1,3 +1,6 @@
+- Remove rank function?
+- Move optimizations
+- Finish tour
 - Docs
   - Search primitives
   - Audio

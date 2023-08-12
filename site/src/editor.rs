@@ -746,15 +746,17 @@ pub fn Editor<'a>(
             urlencoding::encode(&code_text())
         );
         _ = window().navigator().clipboard().unwrap().write_text(&url);
-        window()
-            .history()
-            .unwrap()
-            .push_state_with_url(
-                &JsValue::NULL,
-                "",
-                Some(&format!("/pad?src={}", urlencoding::encode(&code_text()))),
-            )
-            .unwrap();
+        if let EditorSize::Pad = size {
+            window()
+                .history()
+                .unwrap()
+                .push_state_with_url(
+                    &JsValue::NULL,
+                    "",
+                    Some(&format!("/pad?src={}", urlencoding::encode(&code_text()))),
+                )
+                .unwrap();
+        }
         set_copied_link.set(true);
     };
     let copy_link_title = move || {

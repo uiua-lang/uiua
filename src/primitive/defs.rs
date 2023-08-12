@@ -932,6 +932,7 @@ primitive!(
     /// ex! parse "dog"
     (1, Parse, Misc, "parse"),
     /// Generate a random number between 0 and 1
+    ///
     /// If you need a seeded random number, use [gen].
     ///
     /// ex: ⚂

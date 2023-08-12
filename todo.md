@@ -1,7 +1,5 @@
-- Maybe get rid of plow or distribute
 - Docs
   - Search primitives
-  - Testing and run modes
   - Audio
   - Images
   - Threads

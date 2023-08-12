@@ -62,12 +62,17 @@ fn run() -> UiuaResult {
                         }
                     }
                 }
-                App::Run { path, no_format } => {
+                App::Run {
+                    path,
+                    no_format,
+                    mode,
+                } => {
                     if let Some(path) = path.or_else(working_file_path) {
                         if !no_format {
                             format_file(&path, &config)?;
                         }
-                        let mut rt = Uiua::with_native_sys().mode(RunMode::Normal);
+                        let mode = mode.unwrap_or(RunMode::Normal);
+                        let mut rt = Uiua::with_native_sys().with_mode(mode);
                         rt.load_file(path)?;
                         NativeSys.teardown();
                         for value in rt.take_stack() {
@@ -81,7 +86,7 @@ fn run() -> UiuaResult {
                     if let Some(path) = path.or_else(working_file_path) {
                         format_file(&path, &config)?;
                         Uiua::with_native_sys()
-                            .mode(RunMode::Test)
+                            .with_mode(RunMode::Test)
                             .load_file(path)?;
                         NativeSys.teardown();
                         println!("No failures!");
@@ -176,6 +181,7 @@ fn watch(open_path: &Path) -> io::Result<()> {
                             .arg("run")
                             .arg(path)
                             .arg("--no-format")
+                            .args(["--mode", "all"])
                             .spawn()
                             .unwrap(),
                     );
@@ -232,6 +238,8 @@ enum App {
         path: Option<PathBuf>,
         #[clap(long, help = "Don't format the file before running")]
         no_format: bool,
+        #[clap(long, help = "Run the file in a specific mode")]
+        mode: Option<RunMode>,
     },
     #[clap(about = "Format and test a file")]
     Test { path: Option<PathBuf> },

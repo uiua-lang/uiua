@@ -404,14 +404,13 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
     let f = env.pop(1)?;
     let xs = env.pop(2)?;
     let y = env.pop(3)?;
-    const BREAK_ERROR: &str = "break is not allowed in distribute";
     let mut new_elems = Vec::with_capacity(xs.flat_len());
     let mut new_shape = xs.shape().to_vec();
     for x in xs.into_flat_values() {
         env.push(y.clone());
         env.push(x);
         env.push(f.clone());
-        env.call_error_on_break(BREAK_ERROR)?;
+        env.call_error_on_break("break is not allowed in distribute")?;
         new_elems.push(env.pop("distribute's function result")?);
     }
     let mut values = Value::from_row_values(new_elems, env)?;
@@ -426,13 +425,12 @@ pub fn plow(env: &mut Uiua) -> UiuaResult {
     let f = env.pop(1)?;
     let xs = env.pop(2)?;
     let y = env.pop(3)?;
-    const BREAK_ERROR: &str = "break is not allowed in plow";
     let mut new_rows = Vec::with_capacity(xs.row_count());
     for x in xs.into_rows() {
         env.push(y.clone());
         env.push(x);
         env.push(f.clone());
-        env.call_error_on_break(BREAK_ERROR)?;
+        env.call_error_on_break("break is not allowed in plow")?;
         new_rows.push(env.pop("plow's function result")?);
     }
     env.push(Value::from_row_values(new_rows, env)?);

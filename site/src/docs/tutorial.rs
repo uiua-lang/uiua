@@ -8,7 +8,6 @@ use uiua::{example_ua, primitive::Primitive, SysOp};
 use crate::{code::*, editor::*};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
-#[repr(u8)]
 pub enum TutorialPage {
     Basic,
     Math,
@@ -17,6 +16,7 @@ pub enum TutorialPage {
     Bindings,
     Functions,
     Modules,
+    Testing,
 }
 
 impl TutorialPage {
@@ -32,6 +32,7 @@ impl TutorialPage {
             Self::Bindings => "Bindings",
             Self::Functions => "Modifiers and Functions",
             Self::Modules => "Modules",
+            Self::Testing => "Testing",
         }
     }
 }
@@ -46,6 +47,7 @@ pub fn Tutorial(page: TutorialPage) -> impl IntoView {
         TutorialPage::Bindings => view! {  <TutorialBindings/> }.into_view(),
         TutorialPage::Functions => view! {  <TutorialFunctions/> }.into_view(),
         TutorialPage::Modules => view! {  <TutorialModules/> }.into_view(),
+        TutorialPage::Testing => view! {  <TutorialTesting/> }.into_view(),
     };
     view! {
         <TutorialNav page=page/>
@@ -494,7 +496,7 @@ fn TutorialModules() -> impl IntoView {
         <h1>"Modules"</h1>
         <p>"Modules are a way to organize your code in Uiua."</p>
 
-        <h2 id="scopes">"s"</h2>
+        <h2 id="scopes">"Scopes"</h2>
         <p>"s are a way to create a temporary namespace for bindings that are only used in a small part of your code. Only the names that you want to escape a scope are usable outside it."</p>
         <p>"s begin and end with triple hyphens "<code>"---"</code>". All names declared inside a scope are not available outside of it."</p>
         <Editor example="---\nfoo ← 5\n---\nfoo # foo is not available here"/>
@@ -537,5 +539,34 @@ increment square double 5"#/>
         <Editor example=r#"code ← "print \"Loading module\"\nrand"
 FWriteAll "test.ua" code
 ⍥(import "test.ua")3"#/>
+    }
+}
+
+#[component]
+fn TutorialTesting() -> impl IntoView {
+    use Primitive::*;
+    view! {
+        <h1>"Testing"</h1>
+        <h2 id="test-scopes">"Test Scopes"</h2>
+        <p>"Similar to the "<A href="/docs/modules">"scopes discussed in the previous section"</A>", Uiua has "<em>"test scopes"</em>"."</p>
+        <p>"Instead of "<code>"---"</code>", test scopes begin and end with "<code>"~~~"</code>"."</p>
+        <p>"Test scopes are meant to be used with "<PrimCode prim=Assert/>"."</p>
+        <Editor example="Square ← ×.\n~~~\n!.=9 Square 3\n!.=225 Square 15\n~~~"/>
+        <p><PrimCode prim=Assert/>" will return an error when its second argument is anything other than "<code>"1"</code>"."</p>
+        <Editor example="Square ← ×.\n~~~\n!.=25 Square 4\n~~~"/>
+        <p>"The first argument to "<PrimCode prim=Assert/>" is the value that will be thrown if the assertion fails. In the examples above, we have simply been "<PrimCode prim=Dup/>"ing the test value. We can throw a message instead."</p>
+        <Editor example=r#"Square ← ×.
+~~~
+!"3² is not 9!" =9 Square 3
+!"4² is not 25!" =25 Square 4
+~~~"#/>
+
+        <h2 id="run-modes">"Run Modes"</h2>
+        <p>"Whether tests will run or not depends on how you run the code."</p>
+        <p>"On this website, both test and non-test code will always be run."</p>
+        <p>"However, if you use the "<A href="/docs/install">"native interpreter"</A>", you have a few options."</p>
+        <p><code>"uiua watch"</code>" will run all code, including tests."</p>
+        <p><code>"uiua run"</code>" will only run non-test code."</p>
+        <p><code>"uiua test"</code>" will only run test code, but also any non-test bindings and any non-test code which makes imports."</p>
     }
 }

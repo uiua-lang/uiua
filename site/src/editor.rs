@@ -13,6 +13,7 @@ use leptos_router::{use_navigate, NavigateOptions};
 use uiua::{
     format::{format_str, FormatConfig},
     primitive::{PrimClass, Primitive},
+    run::RunMode,
     value_to_image_bytes, value_to_wav_bytes, Uiua,
 };
 use wasm_bindgen::{JsCast, JsValue};
@@ -1091,7 +1092,7 @@ fn set_code_html(id: &str, code: &str) {
 /// Returns the output and the formatted code
 fn run_code(code: &str) -> Vec<OutputItem> {
     let io = WebBackend::default();
-    let mut env = Uiua::with_backend(io);
+    let mut env = Uiua::with_backend(io).with_mode(RunMode::All);
     let mut error = None;
     let values = match env.load_str(code) {
         Ok(env) => env.take_stack(),

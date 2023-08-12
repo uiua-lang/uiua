@@ -3,6 +3,7 @@ use std::{
     fs,
     mem::take,
     path::{Path, PathBuf},
+    str::FromStr,
     sync::Arc,
 };
 
@@ -72,14 +73,27 @@ impl Default for Uiua {
 /// A mode that affects how non-binding lines are run
 ///
 /// Regardless of the mode, lines with a call to `import` will always be run
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub enum RunMode {
     /// Only run lines outside of test blocks
+    #[default]
     Normal,
     /// Only run non-binding lines inside of test blocks
     Test,
     /// Run everything
-    Watch,
+    All,
+}
+
+impl FromStr for RunMode {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "normal" => Ok(RunMode::Normal),
+            "test" => Ok(RunMode::Test),
+            "all" => Ok(RunMode::All),
+            _ => Err(format!("unknown run mode `{}`", s)),
+        }
+    }
 }
 
 impl Uiua {
@@ -115,9 +129,13 @@ impl Uiua {
     /// Set the [`RunMode`]
     ///
     /// Default is [`RunMode::Normal`]
-    pub fn mode(mut self, mode: RunMode) -> Self {
+    pub fn with_mode(mut self, mode: RunMode) -> Self {
         self.mode = mode;
         self
+    }
+    /// Get the [`RunMode`]
+    pub fn mode(&self) -> RunMode {
+        self.mode
     }
     /// Load a Uiua file from a path
     pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<&mut Self> {
@@ -225,7 +243,7 @@ impl Uiua {
                 let can_run = match self.mode {
                     RunMode::Normal => !in_test,
                     RunMode::Test => in_test,
-                    RunMode::Watch => true,
+                    RunMode::All => true,
                 };
                 if can_run || words_have_import(&words) {
                     let instrs = self.compile_words(words)?;
@@ -235,7 +253,7 @@ impl Uiua {
             Item::Binding(binding) => {
                 let can_run = match self.mode {
                     RunMode::Normal => !in_test,
-                    RunMode::Watch | RunMode::Test => true,
+                    RunMode::All | RunMode::Test => true,
                 };
                 if can_run || words_have_import(&binding.words) {
                     self.binding(binding)?;

@@ -1,4 +1,4 @@
-- Require certain kinds of names for functions?
+- Maybe get rid of plow or distribute
 - Docs
   - Search primitives
   - Testing and run modes
@@ -6,6 +6,9 @@
   - Images
   - Threads
 - Rework front page
+- Tooling
+  - Primitive details in LSP
+- Test suite
 - More inverses
 - Optimizations
   - Windowed reduce?
@@ -23,6 +26,4 @@
   - unicode utils
   - run commands
   - handle kind?
-- Tooling
-  - Primitive details in LSP
 - Custom monospace font

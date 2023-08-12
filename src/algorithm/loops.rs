@@ -638,30 +638,93 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
 
 pub fn level(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let n = env.pop(1)?.as_int(env, "Rank must be a single integer")?;
+    let ns = env
+        .pop(1)?
+        .as_indices(env, "Rank must be a list of integers")?;
     let f = env.pop(2)?;
-    let xs = env.pop(3)?;
-    if xs.rank() == 0 {
-        env.push(xs);
-        return Ok(());
+    match ns.as_slice() {
+        [] => return Err(env.error("Rank list cannot be empty")),
+        &[n] => {
+            let xs = env.pop(3)?;
+            if xs.rank() == 0 {
+                env.push(xs);
+                return Ok(());
+            }
+            let irank = xs.rank() as isize;
+            let n = ((-n % irank + irank) % irank) as usize;
+            let res = monadic_level_recursive(f, xs, n, env)?;
+            env.push(res);
+        }
+        is => {
+            let mut args = Vec::with_capacity(ns.len());
+            let mut ns: Vec<usize> = Vec::with_capacity(ns.len());
+            for i in 0..is.len() {
+                let arg = env.pop(i + 3)?;
+                let irank = arg.rank() as isize;
+                let n = ((-is[i] % irank + irank) % irank) as usize;
+                ns.push(n);
+                args.push(arg);
+            }
+            println!("ns: {:?}", ns);
+            let res = multi_level_recursive(f, args, &ns, env)?;
+            env.push(res);
+        }
     }
-    let irank = xs.rank() as isize;
-    let n = ((-n % irank + irank) % irank) as usize;
-    let res = level_recursive(f, xs, n, env)?;
-    env.push(res);
     Ok(())
 }
 
-fn level_recursive(f: Value, value: Value, n: usize, env: &mut Uiua) -> UiuaResult<Value> {
+fn monadic_level_recursive(f: Value, value: Value, n: usize, env: &mut Uiua) -> UiuaResult<Value> {
     if n == 0 {
         env.push(value);
         env.push(f);
-        env.call_error_on_break("break is not allowed in rank")?;
-        Ok(env.pop("rank's function result")?)
+        env.call_error_on_break("break is not allowed in level")?;
+        Ok(env.pop("level's function result")?)
     } else {
         let mut rows = Vec::with_capacity(value.row_count());
         for row in value.into_rows() {
-            rows.push(level_recursive(f.clone(), row, n - 1, env)?);
+            rows.push(monadic_level_recursive(f.clone(), row, n - 1, env)?);
+        }
+        Value::from_row_values(rows, env)
+    }
+}
+
+fn multi_level_recursive(
+    f: Value,
+    args: Vec<Value>,
+    ns: &[usize],
+    env: &mut Uiua,
+) -> UiuaResult<Value> {
+    if ns.iter().all(|&n| n == 0) {
+        for arg in args {
+            env.push(arg);
+        }
+        env.push(f);
+        env.call_error_on_break("break is not allowed in level")?;
+        Ok(env.pop("level's function result")?)
+    } else {
+        let arg_with_max_row_count = args.iter().max_by_key(|v| v.row_count()).unwrap();
+        for arg in &args {
+            if !arg.shape_prefixes_match(arg_with_max_row_count) {
+                return Err(env.error(format!(
+                    "Cannot level arrays with shapes {} and {}",
+                    arg_with_max_row_count.format_shape(),
+                    arg.format_shape()
+                )));
+            }
+        }
+        let row_count = arg_with_max_row_count.row_count();
+        let mut rows = Vec::with_capacity(row_count);
+        let mut row_args = args.clone();
+        let mut dec_ns = ns.to_vec();
+        for n in dec_ns.iter_mut() {
+            *n = n.saturating_sub(1);
+        }
+        for i in 0..row_count {
+            for (j, (arg, n)) in args.iter().zip(ns).enumerate() {
+                row_args[j] = if *n == 0 { arg.clone() } else { arg.row(i) };
+            }
+            let row = multi_level_recursive(f.clone(), row_args.clone(), &dec_ns, env)?;
+            rows.push(row);
         }
         Value::from_row_values(rows, env)
     }

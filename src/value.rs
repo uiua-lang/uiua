@@ -200,6 +200,14 @@ impl Value {
             Array::truncate,
         )
     }
+    pub fn row(&self, i: usize) -> Self {
+        self.generic_ref(
+            |arr| arr.row(i).into(),
+            |arr| arr.row(i).into(),
+            |arr| arr.row(i).into(),
+            |arr| arr.row(i).into(),
+        )
+    }
     pub fn generic_ref<'a, T: 'a>(
         &'a self,
         n: impl FnOnce(&'a Array<f64>) -> T,

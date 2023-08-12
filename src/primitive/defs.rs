@@ -793,17 +793,30 @@ primitive!(
     ([2, 1, 1], Under, OtherModifier, ("under", '⍜')),
     /// Apply a function at a different array depth
     ///
+    /// Expects a rank to operate on, a function, and an array.
+    ///
     /// `level``0` does nothing.
     /// `level``¯1` is equivalent to [rows], applying the function to each row of the array's major axis.
     /// `level``1` applies the function to each row of the array's last axis.
     ///
+    /// One nice way to see what this means is to test it using [reverse].
+    /// For each of these examples, pay attention to the number passed to [level] and which elements change position.
     /// ex: ↯2_2_3 ⇡12
-    /// ex: /+ ↯2_2_3 ⇡12
-    /// ex: ⍚0/+ ↯2_2_3 ⇡12
-    /// ex: ⍚¯1/+ ↯2_2_3 ⇡12
-    /// ex: ⍚¯2/+ ↯2_2_3 ⇡12
-    /// ex: ⍚1/+ ↯2_2_3 ⇡12
-    ([2, 1, 1], Level, OtherModifier, ("level", '⍚')),
+    /// ex: ⇌ ↯2_2_3 ⇡12
+    /// ex: ⍚0⇌ ↯2_2_3 ⇡12
+    /// ex: ⍚¯1⇌ ↯2_2_3 ⇡12
+    /// ex: ⍚¯2⇌ ↯2_2_3 ⇡12
+    /// ex: ⍚1⇌ ↯2_2_3 ⇡12
+    ///
+    /// [level] can operate on multiple arrays at once if passed a list of ranks.
+    /// While `level``¯1` is equivelent to [rows] called with a single array, `level``[¯1 ¯1]` is equivalent to [rows] called with two arrays, and so on.
+    /// ex: a ← ↯3_3   ⇡9
+    ///   : b ← ↯3_3+10⇡9
+    ///   :        ≡⊂ a b
+    ///   : ⍚[¯1 ¯1]⊂ a b
+    ///
+    /// The flexibility of [level] means it is not that fast. When possible, prefer to use [rows] or [plow] when possible.
+    ([2, 1], Level, OtherModifier, ("level", '⍚')),
     /// Call a function and catch errors
     ///
     /// ex: ?(+1 2)"failure"

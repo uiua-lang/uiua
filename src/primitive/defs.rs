@@ -705,16 +705,16 @@ primitive!(
     ///
     /// This is the row-wise version of [each].
     ///
-    /// ex:  /+ [1_2_3 4_5_6 7_8_9]  # Sum columns
-    /// ex: ≡/+ [1_2_3 4_5_6 7_8_9]  # Sum rows
+    /// ex:  /+ [1_2_3 4_5_6 7_8_9]  # Sum each row with the next
+    /// ex: ≡/+ [1_2_3 4_5_6 7_8_9]  # Sum the elements of each row
     ///
     /// The number of arrays used depends on how many arguments the function takes.
     /// ex: ≡⊂  1_2 [4_5 6_7]
     /// ex: ≡⌿+ 1_2 [4_5 6_7]
     ///
-    /// [rows] is equivalent to [level]`¯1`.
+    /// [rows] is equivalent to [level]`¯1` (or `level``[¯1 ¯1 ..]` for multiple arrays).
     /// ex: ⍚¯1/+ [1_2_3 4_5_6 7_8_9]
-    /// ex: ≡/+   [1_2_3 4_5_6 7_8_9]
+    /// ex:   ≡/+ [1_2_3 4_5_6 7_8_9]
     ([1, 1, 1], Rows, MonadicModifier, ("rows", '≡')),
     /// Apply a function to each element of an array and a fixed value
     ///

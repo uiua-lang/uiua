@@ -153,7 +153,8 @@ pub fn Editor<'a>(
                     (len, len)
                 }
             };
-            let before = get_code_cursor_impl(&self.code_id)
+            let maybe_before = get_code_cursor_impl(&self.code_id);
+            let before = maybe_before
                 .or_else(|| self.past.borrow().last().map(|r| r.after))
                 .unwrap_or(after);
             let new_curr = Record {
@@ -168,7 +169,11 @@ pub fn Editor<'a>(
                 self.future.borrow_mut().clear();
             }
             set_code_html(&self.code_id, code);
-            if !matches!(cursor, Cursor::Ignore) {
+            if matches!(cursor, Cursor::Ignore) {
+                if let Some(before) = maybe_before {
+                    self.set_cursor(before);
+                }
+            } else {
                 self.set_cursor(after);
             }
             if changed {
@@ -238,10 +243,14 @@ pub fn Editor<'a>(
     let state = move || state.get();
 
     // Run the code
-    let run = move |format: bool| {
+    let run = move |format: bool, set_cursor: bool| {
         // Get code
         let mut code_text = code_text();
-        let mut cursor = Cursor::Keep;
+        let mut cursor = if set_cursor {
+            Cursor::Keep
+        } else {
+            Cursor::Ignore
+        };
         if let Some(code) = initial_code.get() {
             code_text = code;
             set_initial_code.set(None);
@@ -377,7 +386,7 @@ pub fn Editor<'a>(
         match key {
             "Enter" => {
                 if event.ctrl_key() || event.shift_key() {
-                    run(true);
+                    run(true, true);
                 } else {
                     replace_code("\n");
                 }
@@ -572,7 +581,7 @@ pub fn Editor<'a>(
                 *e = (*e + 1) % examples.len();
                 state().set_code(&examples[*e], Cursor::Ignore);
                 state().clear_history();
-                run(false);
+                run(false, false);
             })
         }
     };
@@ -584,7 +593,7 @@ pub fn Editor<'a>(
                 *e = (*e + examples.len() - 1) % examples.len();
                 state().set_code(&examples[*e], Cursor::Ignore);
                 state().clear_history();
-                run(false);
+                run(false, false);
             })
         }
     };
@@ -716,7 +725,7 @@ pub fn Editor<'a>(
     };
 
     // This ensures the output of the first example is shown
-    set_timeout(move || run(false), Duration::from_millis(0));
+    set_timeout(move || run(false, false), Duration::from_millis(0));
 
     // Line numbers
     let line_numbers = move || {
@@ -824,7 +833,7 @@ pub fn Editor<'a>(
                             { move || output.get() }
                         </div>
                         <div id="code-buttons">
-                            <button class="code-button" on:click=move |_| run(true)>{ "Run" }</button>
+                            <button class="code-button" on:click=move |_| run(true, false)>{ "Run" }</button>
                             <button
                                 id="prev-example"
                                 class="code-button"
@@ -1136,7 +1145,7 @@ fn run_code(code: &str) -> Vec<OutputItem> {
         output.extend(stack);
     }
     if let Some(error) = error {
-        output.push(OutputItem::Error(error.to_string()));
+        output.push(OutputItem::Error(error.show(false)));
     }
     output
 }

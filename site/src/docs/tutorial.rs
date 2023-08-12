@@ -123,11 +123,11 @@ fn TutorialBasic() -> impl IntoView {
         <p>"For example, "<PrimCode prim=Primitive::Add glyph_only=true/>" pops two values off the stack and pushes their sum."</p>
         <Editor example="+ 1 2"/>
         <p><PrimCode prim=Primitive::Mul glyph_only=true/>", of course, multiplies the two values instead."</p>
-        <Editor examples={&["+", "1", "×", "2", "3"]} help={&["", "Try the arrows to see how the stack changes with each operation."]}/>
+        <Editor examples={&["+ ", "1 ", "× ", "2 ", "3"]} help={&["", "Try the arrows to see how the stack changes with each operation."]}/>
         <p>"In the editor, items that end up on the "<em>"top"</em>" of the stack are shown at the "<em>"bottom"</em>" of the output. This is so that consecutive lines of code show their outputs in the correct order."</p>
         <Editor example="5\n+1 2\n\"Hello, World!\"\n+1 'a'"/>
         <p>"Operations can span multiple lines. Every line uses the same stack!"</p>
-        <Editor examples={&["1 2", "+", "5", "×"]} progress_lines=true/>
+        <Editor examples={&["1 2 ", "+ ", "5 ", "×"]} progress_lines=true/>
 
         <h2 id="comments">"Comments"</h2>
         <p>"Comments are denoted with "<code>"#"</code>" and run to the end of the line."</p>
@@ -139,7 +139,7 @@ fn TutorialBasic() -> impl IntoView {
         <Editor example="# Click Run to format!\n%6 *3 8" help={&["", "⇡Click⇡"]}/>
         <p>"Most built-in functions have names you can type rather than symbols. Formatting works on these too. "<em><b>"This is the primary way of entering Uiua's glyphs."</b></em></p>
         <p>"Try formatting the lines below by clicking "<b>"Run"</b>"."</p>
-        <Editor examples=&{["max", "sqrt", "10", "mod", "10", "pow", "2", "8"]}/>
+        <Editor examples=&{["max ", "sqrt ", "10 ", "mod ", "10 ", "pow ", "2 ", "8"]}/>
         <Editor example="abs +`1 `2"/>
         <p>"You don't have to type the whole name, just enough to disambiguate it from others"</p>
         <Editor example="(cei ceil ceili ceilin ceiling)"/>
@@ -187,7 +187,7 @@ fn TutorialBasic() -> impl IntoView {
         <h2><PrimCode prim=Pop/></h2>
         <p><PrimCode prim=Pop/>" removes the top item from the stack."</p>
         <p>"This is useful when you want to discard a value that you do not need."</p>
-        <Editor examples={&["1", ";", "2", "3", "4", ";", "5", "6"]}/>
+        <Editor examples={&["1 ", "; ", "2 ", "3 ", "4 ", "; ", "5 ", "6"]}/>
     }
 }
 
@@ -265,7 +265,7 @@ fn TutorialMath() -> impl IntoView {
         <Editor example="=2 5"/>
         <Editor example="=2 2"/>
         <p>"Because of how stack operations work, you can delay operations until after all the arguments are on the stack."</p>
-        <Editor examples={&["×", "+", "+", "1", "2", "3", "4"]} help={&["", "Click the arrows to see how the expression is built up"]}/>
+        <Editor examples={&["×", "+", "+", "1 ", "2 ", "3 ", "4"]} help={&["", "Click the arrows to see how the expression is built up"]}/>
         <p>"This is not special syntax. All the numbers are pushed to the stack, then the operators work on them."</p>
         <p>"Remember that you can type the names of operators and then run to format them."</p>
         <Editor example="# Click Run to format!\nmax sqrt2 mod10 abs`31" help={&["", "⇡Click⇡"]}/>

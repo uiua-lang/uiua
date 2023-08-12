@@ -463,6 +463,7 @@ li {
     text-decoration: none;
     white-space: normal;
     overflow: visible;
+    line-height: 1em;
 }
 
 .glyph-doc {

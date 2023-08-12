@@ -158,24 +158,22 @@ impl From<Vec<Sp<ParseError>>> for UiuaError {
 impl Error for UiuaError {}
 
 impl UiuaError {
-    pub fn show(&self, complex_output: bool) -> String {
+    pub fn show(&self, color: bool) -> String {
         match self {
             UiuaError::Parse(errors) => report(
                 errors
                     .iter()
                     .map(|error| (error.value.to_string(), error.span.clone().into())),
-                complex_output,
+                color,
             ),
-            UiuaError::Run(error) => report([(&error.value, error.span.clone())], complex_output),
+            UiuaError::Run(error) => report([(&error.value, error.span.clone())], color),
             UiuaError::Traced { error, trace } => {
-                let mut s = error.show(complex_output);
+                let mut s = error.show(color);
                 format_trace(&mut s, trace).unwrap();
                 s
             }
-            UiuaError::Throw(message, span) => report([(&message, span.clone())], complex_output),
-            UiuaError::Break(_, span) => {
-                report([("break outside of loop", span.clone())], complex_output)
-            }
+            UiuaError::Throw(message, span) => report([(&message, span.clone())], color),
+            UiuaError::Break(_, span) => report([("break outside of loop", span.clone())], color),
             _ => self.to_string(),
         }
     }

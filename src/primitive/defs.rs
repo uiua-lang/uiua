@@ -357,6 +357,23 @@ primitive!(
     /// ex: ⧻[]
     /// ex: ⧻1_2_3
     /// ex: ⧻[1_2 3_4 5_6]
+    ///
+    /// [length] is equivalent to the [first] of the [shape] *unless* the last row is a fill value.
+    /// When the last row is a fill value, [length] only counts up until the last fill value.
+    /// ex: x ← ↙5 1_2_3
+    ///   :   x
+    ///   :  ⧻x
+    ///   : ⊢△x
+    /// A row is considered a fill value if all of its elements are fill values.
+    /// ex: x ← ↙5 ⇌∵⇡⇡5
+    ///   :   x
+    ///   :  ⧻x
+    ///   : ⊢△x
+    /// Because of this, [length] of an array with intermediate fill values is not very useful.
+    /// ex: x ← ⍉[⍥(↙+1⌊×⚂∶⇡.5)5]
+    ///   :      x
+    ///   :    ≡⧻x
+    ///   : ≡(⊢△)x
     (1, Len, MonadicArray, ("length", '⧻')),
     /// The number of dimensions in an array
     ///

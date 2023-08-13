@@ -13,13 +13,6 @@ pub enum Value {
     Func(Array<Arc<Function>>),
 }
 
-unsafe fn _value_size() {
-    #[cfg(target_pointer_width = "64")]
-    let _: [u8; 56] = std::mem::transmute(Value::from(0));
-    #[cfg(target_pointer_width = "32")]
-    let _: [u8; 32] = std::mem::transmute(Value::from(0));
-}
-
 impl Default for Value {
     fn default() -> Self {
         Array::<Byte>::default().into()
@@ -174,7 +167,7 @@ impl Value {
     }
     #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
-        self.generic_ref(Array::len, Array::len, Array::len, Array::len)
+        self.generic_ref(Array::length, Array::length, Array::length, Array::length)
     }
     pub fn shape_mut(&mut self) -> &mut Vec<usize> {
         self.generic_mut(

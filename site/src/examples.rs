@@ -1,5 +1,5 @@
 const UIUA: &str = "\"Um, I um...arrays\"\n≡⊢ ⊘≥'A'.";
-const FORMAT: &str = "# Click Run to format!\nfold(join∶/+take`2.;)0_1range10";
+const FORMAT: &str = "# Click Run to format!\nfold(join∶/+take`2.;)rang2range10";
 const D3: &str = "↯∶⇡/×.2_3_4";
 const LOGO: &str = "\
 x ← ↶⍉⊞⊟. ÷÷2∶ -÷2,⇡.200

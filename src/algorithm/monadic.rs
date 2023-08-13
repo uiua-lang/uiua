@@ -135,15 +135,15 @@ impl<T: ArrayValue> Array<T> {
         if self.shape.is_empty() {
             return;
         }
-        let cells = self.shape[0];
-        let cell_size: usize = self.shape.iter().skip(1).product();
-        for i in 0..cells / 2 {
-            let left = i * cell_size;
-            let right = (cells - i - 1) * cell_size;
+        let row_count = self.row_count();
+        let row_len = self.row_len();
+        for i in 0..row_count / 2 {
+            let left = i * row_len;
+            let right = (row_count - i - 1) * row_len;
             let left = &mut self.data[left] as *mut T;
             let right = &mut self.data[right] as *mut T;
             unsafe {
-                ptr::swap_nonoverlapping(left, right, cell_size);
+                ptr::swap_nonoverlapping(left, right, row_len);
             }
         }
     }
@@ -355,7 +355,7 @@ impl Value {
     pub fn invert(&self, env: &Uiua) -> UiuaResult<Self> {
         Ok(match self {
             Self::Func(fs) => {
-                let mut invs = Vec::with_capacity(fs.len());
+                let mut invs = Vec::with_capacity(fs.length());
                 for f in &fs.data {
                     invs.push(
                         f.inverse()
@@ -371,8 +371,8 @@ impl Value {
     pub fn under(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
         Ok(match self {
             Self::Func(fs) => {
-                let mut befores = Vec::with_capacity(fs.len());
-                let mut afters = Vec::with_capacity(fs.len());
+                let mut befores = Vec::with_capacity(fs.length());
+                let mut afters = Vec::with_capacity(fs.length());
                 for f in fs.data {
                     let f = Arc::try_unwrap(f).unwrap_or_else(|f| (*f).clone());
                     let (before, after) = f.under().ok_or_else(|| env.error("No inverse found"))?;

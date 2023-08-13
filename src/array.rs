@@ -96,9 +96,30 @@ impl<T: ArrayValue> Array<T> {
         self.shape.first().copied().unwrap_or(1)
     }
     #[allow(clippy::len_without_is_empty)]
-    pub fn len(&self) -> usize {
+    pub fn length(&self) -> usize {
         if self.rank() == 1 {
-            self.data.iter().take_while(|x| !x.is_fill_value()).count()
+            if self.data.last().is_some_and(T::is_fill_value) {
+                let end_fill_count = self
+                    .data
+                    .iter()
+                    .rev()
+                    .take_while(|x| x.is_fill_value())
+                    .count();
+                self.data.len() - end_fill_count
+            } else {
+                self.data.len()
+            }
+        } else if self
+            .row_slices()
+            .last()
+            .is_some_and(|x| x.iter().all(T::is_fill_value))
+        {
+            let end_fill_count = self
+                .row_slices()
+                .rev()
+                .take_while(|x| x.iter().all(T::is_fill_value))
+                .count();
+            self.row_count() - end_fill_count
         } else {
             self.row_count()
         }

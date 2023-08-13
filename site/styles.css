@@ -538,6 +538,12 @@ li {
     -moz-text-fill-color: transparent;
 }
 
+@media (prefers-color-scheme: light) {
+    .trans {
+        -webkit-text-stroke: 0.2px #000;
+    }
+}
+
 @media (prefers-color-scheme: dark) {
     .string-literal-span {
         color: #20f9fc;

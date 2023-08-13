@@ -20,7 +20,7 @@ use crate::{algorithm::loops, lex::AsciiToken, sys::*, value::*, Uiua, UiuaError
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Sequence)]
 pub enum PrimClass {
     Stack,
-    Control,
+    Constant,
     MonadicPervasive,
     DyadicPervasive,
     MonadicArray,
@@ -28,8 +28,8 @@ pub enum PrimClass {
     MonadicModifier,
     DyadicModifier,
     OtherModifier,
+    Control,
     Misc,
-    Constant,
     Sys,
 }
 

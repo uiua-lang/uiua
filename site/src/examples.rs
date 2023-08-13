@@ -13,8 +13,9 @@ const CHORD: &str = "\
 ×220 ⁿ∶2÷12
 ÷⧻∶ ≡/+ ○×τ ⊞× ÷∶⇡.44100.";
 const QUADRATIC: &str = "\
-Quadratic ← {÷ ×2a -b ⊟¯. √- ××4a c ⁿ2 b}
-Quadratic 1 2 0";
+Quad ← {√- ××4a c ⁿ2 b
+        ÷ ×2a -b ⊟¯.}
+Quad 1 2 0";
 const STRIPES: &str = "\
 ∵{⊞a.⇡300}+_↥_-
 ⍉ ÷2 +1.2 ○ ÷10";
@@ -25,7 +26,7 @@ Thirty ← ≡(↥≅0_1_1 ∶=1 /+.) ◫3 ⊂∶0 ⊂0
 size ← 500
 start ← =÷2 size ⇡+1 size
 ⇌[⍥(Thirty.)÷2 size start]";
-const PRIMES: &str = "‡∵(=2 /+ =⌊.÷⇡.).+1 ⇡50";
+const PRIMES: &str = "‡∵(=2 /+ =⌊.÷⇡.).⇡50";
 const MANDELBROT: &str = "\
 Z ← ⊟/- ⁿ2 ∶×2 /×.⇌
 ⇌↶⍉⊞⊟.×4 ÷∶-÷2,⇡. 300

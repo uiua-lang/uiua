@@ -203,7 +203,8 @@ pub fn Editor<'a>(
             self.future.borrow_mut().clear();
         }
         fn undo(&self) {
-            if let Some(prev) = self.past.borrow_mut().pop() {
+            let prev = self.past.borrow_mut().pop();
+            if let Some(prev) = prev {
                 self.set_code_html(&prev.code);
                 let mut curr = self.curr.borrow_mut();
                 self.set_cursor(curr.before);

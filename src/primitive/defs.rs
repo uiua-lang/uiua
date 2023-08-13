@@ -683,8 +683,8 @@ primitive!(
     /// For reducing without an initial value, see [reduce].
     /// Unlike other modifiers, [fold] and [reduce] traverse the array from right to left.
     ///
-    /// ex: ⌿+ 10 1_2_3_4
-    ([1, 2, 2], Fold, MonadicModifier, ("fold", '⌿')),
+    /// ex: ¦+ 10 1_2_3_4
+    ([1, 2, 2], Fold, MonadicModifier, ("fold", '¦')),
     /// Reduce, but keep intermediate values
     ///
     /// ex: \+    1_2_3_4
@@ -711,7 +711,7 @@ primitive!(
     ///
     /// The number of arrays used depends on how many arguments the function takes.
     /// ex: ≡⊂  1_2 [4_5 6_7]
-    /// ex: ≡⌿+ 1_2 [4_5 6_7]
+    /// ex: ≡¦+ 1_2 [4_5 6_7]
     ///
     /// [rows] is equivalent to [level]`¯1` (or `level``[¯1 ¯1 ..]` for multiple arrays).
     /// ex: ⍚¯1/+ [1_2_3 4_5_6 7_8_9]

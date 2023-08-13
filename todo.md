@@ -3,6 +3,7 @@
 - Proofread Design page
 - Change stack function colors
 - Remove distribute or change its glyph
+- Remove sort
 - Move optimizations
 - Finish tour
 - Docs

@@ -557,7 +557,7 @@ primitive!(
     ///
     /// `first``shape` of the coupled array will *always* be `2`.
     (2, Couple, DyadicArray, ("couple", '⊟')),
-    /// Replace the fill elements of an array with a elements from another
+    /// Replace the fill elements of an array with elements from another
     ///
     /// The most basic case is filling with a scalar
     /// ex: ⍛7 .↙10⇡5
@@ -693,8 +693,6 @@ primitive!(
     ///
     /// This can be used to split an array by a delimiter.
     /// ex: ⊜ ≠' '. $ Hey there friendo
-    /// For non-scalar delimiters, you may have to get a little more creative.
-    /// ex: ⊜/↧⊞≠∶, " | " $ Um | I | um | arrays
     (2, Partition, DyadicArray, ("partition", '⊜')),
     /// Apply a reducing function to an array
     ///
@@ -762,7 +760,7 @@ primitive!(
     /// ex: ≐⊂ 1_2_3 4_5_6
     ///
     /// One nice use of this is to [call] multiple functions on a single argument.
-    /// ex: ≐:√_¯_⌊_⌈_(×4) 6.25
+    /// ex: ≐!√_¯_⌊_⌈_(×4) 6.25
     ([1, 2, 2], Distribute, DyadicModifier, ("distribute", '≐')),
     /// Apply a function to each row of an array and a fixed value
     ///
@@ -772,7 +770,7 @@ primitive!(
     /// ex: ⫫⊂ 1_2_3 4_5_6
     ///
     /// One nice use of this is to [call] multiple functions on a single argument.
-    /// ex: ⫫:√_¯_⌊_⌈_(×4) 6.25
+    /// ex: ⫫!√_¯_⌊_⌈_(×4) 6.25
     ([1, 2, 2], Plow, DyadicModifier, ("plow", '⫫')),
     /// Apply a function to each combination of elements of two arrays
     ///
@@ -956,13 +954,13 @@ primitive!(
     /// Only dfns can be recurred in.
     ///
     /// To check for a base case, you can use [call].
-    /// ex: {:·_↬ <10.×2} 1
+    /// ex: {!·_↬ <10.×2} 1
     ///
     /// Here is a recursive factorial function:
-    /// ex: {:(×a ↬-1a)_1 <2a} 5
+    /// ex: {!(×a ↬-1a)_1 <2a} 5
     ///
     /// Here is a recursive fibonacci function:
-    /// ex: {:(+ ↬-1a ↬-2a)_a <2a} 10
+    /// ex: {!(+ ↬-1a ↬-2a)_a <2a} 10
     (0(None), Recur, Control, ("recur", '↬')),
     /// Parse a string as a number
     ///

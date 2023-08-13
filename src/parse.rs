@@ -391,9 +391,7 @@ impl Parser {
     }
     fn try_func(&mut self) -> Option<Sp<Word>> {
         let start = self.try_exact(OpenParen)?;
-        dbg!();
         let body = self.multiline_words();
-        dbg!(&body);
         let end = self.expect_close(CloseParen);
         let span = start.merge(end);
         Some(span.clone().sp(if body.is_empty() {

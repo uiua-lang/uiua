@@ -102,7 +102,14 @@ primitive!(
     ///
     /// ex: [∶ 1 2 3 4]
     ///
-    /// When combined with [duplicate], this can be used to make a monadic right-hook or monadic fork, such as in this average calculator:
+    /// When combined with [duplicate], you can apply two different functions to the same value.
+    /// If you have two functions `f` and `g`, the pattern `f``flip``g``duplicate` will call both functions on the top value.
+    /// This is a very common pattern.
+    /// For example, maybe you want to find all the uppercase letters in a string.
+    /// ex: $ Characters On uppercase OnLy
+    ///   : ‡×≥'A'∶≤'Z'..
+    /// Or maybe you want to calculate the averge of a list of numbers.
+    /// Here, we get the [length] and the `reduce``add``sum` of the list, then [divide] them.
     /// ex: ÷⧻∶/+. 1_8_2_5
     (2(0), Flip, Stack, ("flip", AsciiToken::Colon, '∶')),
     /// Pop the top value off the stack

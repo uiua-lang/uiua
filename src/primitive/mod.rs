@@ -747,15 +747,15 @@ mod tests {
             format!("([{glyphs}]|{names})")
         }
 
-        let noadic_functions = gen_group(
-            Primitive::all().filter(|p| p.modifier_args().is_none() && p.args() == Some(0)),
-        );
-        let monadic_functions = gen_group(
-            Primitive::all().filter(|p| p.modifier_args().is_none() && p.args() == Some(1)),
-        );
-        let dyadic_functions = gen_group(
-            Primitive::all().filter(|p| p.modifier_args().is_none() && p.args() == Some(2)),
-        );
+        let noadic_functions = gen_group(Primitive::all().filter(|p| {
+            p.class() != PrimClass::Stack && p.modifier_args().is_none() && p.args() == Some(0)
+        }));
+        let monadic_functions = gen_group(Primitive::all().filter(|p| {
+            p.class() != PrimClass::Stack && p.modifier_args().is_none() && p.args() == Some(1)
+        }));
+        let dyadic_functions = gen_group(Primitive::all().filter(|p| {
+            p.class() != PrimClass::Stack && p.modifier_args().is_none() && p.args() == Some(2)
+        }));
         let monadic_modifiers =
             gen_group(Primitive::all().filter(|p| matches!(p.modifier_args(), Some((1, _)))));
         let dyadic_modifiers: String =
@@ -768,9 +768,6 @@ mod tests {
 	"patterns": [
 		{{
 			"include": "#comments"
-		}},
-		{{
-			"include": "#keywords"
 		}},
 		{{
 			"include": "#strings"

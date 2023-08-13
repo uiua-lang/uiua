@@ -13,7 +13,7 @@ use uiua::primitive::{PrimClass, Primitive};
 use wasm_bindgen::JsCast;
 use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoViewOptions};
 
-use crate::{code::*, element};
+use crate::{element, PrimCode};
 use other::*;
 use primitive::*;
 use tour::*;

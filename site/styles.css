@@ -496,6 +496,18 @@ li {
     font-family: "Code Font";
 }
 
+@media (prefers-color-scheme: dark) {
+    .stack-function-button {
+        color: #d1daec;
+    }
+}
+
+@media (prefers-color-scheme: light) {
+    .stack-function-button {
+        color: #344;
+    }
+}
+
 .variadic-function-button {
     color: #888;
 }

@@ -2,7 +2,7 @@ use leptos::*;
 use leptos_router::*;
 use uiua::primitive::Primitive;
 
-use crate::{code::PrimCode, editor::Editor};
+use crate::{editor::Editor, PrimCode};
 
 #[component]
 pub fn Tour() -> impl IntoView {

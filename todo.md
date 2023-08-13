@@ -1,6 +1,4 @@
 - Rework front page
-- Fix tabling with comparison functions
-- Change stack function colors
 - Remove distribute or change its glyph
 - Use | for something else
 - Try to compress on binding

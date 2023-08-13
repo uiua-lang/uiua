@@ -6,7 +6,7 @@ mod pad;
 
 use leptos::*;
 use leptos_router::*;
-use uiua::primitive::Primitive;
+use uiua::primitive::{PrimClass, Primitive};
 use wasm_bindgen::JsCast;
 use web_sys::HtmlAudioElement;
 
@@ -161,45 +161,41 @@ fn NotFound() -> impl IntoView {
     }
 }
 
-mod code {
-    use super::*;
-    #[component]
-    pub fn PrimCode(
-        prim: Primitive,
-        #[prop(optional)] glyph_only: bool,
-        #[prop(optional)] hide_docs: bool,
-    ) -> impl IntoView {
-        let show_name = !glyph_only;
-        let class = prim_class(prim);
-        let symbol = prim.to_string();
-        let name = if let Some(name) = prim.name().filter(|name| show_name && symbol != *name) {
-            format!(" {}", name)
-        } else {
-            "".to_string()
-        };
-        let href = prim
-            .name()
-            .map(|name| format!("/docs/{name}"))
-            .unwrap_or_default();
-        let mut title = match (prim.doc().filter(|_| !hide_docs), show_name) {
-            (Some(doc), true) => Some(doc.short_text().into_owned()),
-            (Some(doc), false) => Some(format!(
-                "{}: {}",
-                prim.name().unwrap_or_default(),
-                doc.short_text()
-            )),
-            (None, true) => None,
-            (None, false) => prim.name().map(Into::into),
-        };
-        if let Some((title, ascii)) = title.as_mut().zip(prim.ascii()) {
-            *title = format!("({}) {}", ascii, title);
-        }
-        view!( <A href=href class="prim-code-a">
+#[component]
+pub fn PrimCode(
+    prim: Primitive,
+    #[prop(optional)] glyph_only: bool,
+    #[prop(optional)] hide_docs: bool,
+) -> impl IntoView {
+    let show_name = !glyph_only;
+    let class = prim_class(prim);
+    let symbol = prim.to_string();
+    let name = if let Some(name) = prim.name().filter(|name| show_name && symbol != *name) {
+        format!(" {}", name)
+    } else {
+        "".to_string()
+    };
+    let href = prim
+        .name()
+        .map(|name| format!("/docs/{name}"))
+        .unwrap_or_default();
+    let mut title = match (prim.doc().filter(|_| !hide_docs), show_name) {
+        (Some(doc), true) => Some(doc.short_text().into_owned()),
+        (Some(doc), false) => Some(format!(
+            "{}: {}",
+            prim.name().unwrap_or_default(),
+            doc.short_text()
+        )),
+        (None, true) => None,
+        (None, false) => prim.name().map(Into::into),
+    };
+    if let Some((title, ascii)) = title.as_mut().zip(prim.ascii()) {
+        *title = format!("({}) {}", ascii, title);
+    }
+    view!( <A href=href class="prim-code-a">
             <code class="prim-code" title=title><span class=class>{ symbol }</span>{name}</code>
         </A>)
-    }
 }
-use code::*;
 
 fn prim_class(prim: Primitive) -> &'static str {
     macro_rules! code_font {
@@ -210,6 +206,8 @@ fn prim_class(prim: Primitive) -> &'static str {
 
     if prim == Primitive::Transpose {
         code_font!("monadic-function-button trans")
+    } else if let PrimClass::Stack = prim.class() {
+        code_font!("stack-function-button")
     } else if let Some((m, _)) = prim.modifier_args() {
         if m == 1 {
             code_font!("modifier1-button")

@@ -1,7 +1,7 @@
 use leptos::*;
 use uiua::primitive::Primitive;
 
-use crate::{code::PrimCode, editor::Editor};
+use crate::{editor::Editor, PrimCode};
 
 #[component]
 pub fn Design() -> impl IntoView {

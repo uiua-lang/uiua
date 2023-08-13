@@ -1,7 +1,7 @@
 use leptos::*;
 use uiua::primitive::{PrimDocFragment, PrimDocLine, Primitive};
 
-use crate::{code::PrimCode, editor::Editor};
+use crate::{editor::Editor, PrimCode};
 
 fn doc_line_fragments_to_view(fragments: &[PrimDocFragment]) -> View {
     if fragments.is_empty() {

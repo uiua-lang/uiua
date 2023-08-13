@@ -1,4 +1,3 @@
-- Remove rank function?
 - Move optimizations
 - Finish tour
 - Docs

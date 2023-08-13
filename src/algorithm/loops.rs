@@ -654,14 +654,17 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
             env.push(res);
         }
         is => {
-            let mut args = Vec::with_capacity(ns.len());
-            let mut ns: Vec<usize> = Vec::with_capacity(ns.len());
+            let mut args = Vec::with_capacity(is.len());
             for i in 0..is.len() {
                 let arg = env.pop(i + 3)?;
+                args.push(arg);
+            }
+            args.reverse();
+            let mut ns: Vec<usize> = Vec::with_capacity(is.len());
+            for (i, arg) in args.iter().enumerate() {
                 let irank = arg.rank() as isize;
                 let n = ((-is[i] % irank + irank) % irank) as usize;
                 ns.push(n);
-                args.push(arg);
             }
             let res = multi_level_recursive(f, args, &ns, env)?;
             env.push(res);

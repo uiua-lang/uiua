@@ -1,7 +1,6 @@
 use std::{
     cmp::Ordering,
     collections::{BTreeMap, BTreeSet},
-    iter::repeat,
     ptr,
     sync::Arc,
 };
@@ -278,15 +277,6 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
-    pub fn indices(&self, env: &Uiua) -> UiuaResult<Self> {
-        let nats =
-            self.as_naturals(env, "Argument to indices must be a list of natural numbers")?;
-        let mut indices = Vec::new();
-        for (i, n) in nats.into_iter().enumerate() {
-            indices.extend(repeat(i as f64).take(n));
-        }
-        Ok(Self::from_iter(indices))
-    }
     pub fn sort(&mut self) {
         self.generic_mut(Array::sort, Array::sort, Array::sort, Array::sort)
     }

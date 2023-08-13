@@ -501,10 +501,6 @@ primitive!(
     ///
     /// See also: [sort]
     (1, Grade, MonadicArray, ("grade", '⍋')),
-    /// Repeat the index of each array element the element's value times
-    ///
-    /// ex: ⊙2_0_4_1
-    (1, Indices, MonadicArray, ("indices", '⊙')),
     /// Assign a unique index to each unique element in an array
     ///
     /// ex: ⊛7_7_8_0_1_2_0

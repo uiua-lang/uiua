@@ -279,7 +279,6 @@ impl Primitive {
             }
             Primitive::Sort => env.monadic_mut(Value::sort)?,
             Primitive::Grade => env.monadic_ref_env(|v, env| v.grade(env))?,
-            Primitive::Indices => env.monadic_ref_env(|v, env| v.indices(env))?,
             Primitive::Select => env.dyadic_ref_env(Value::select)?,
             Primitive::Windows => env.dyadic_ref_env(Value::windows)?,
             Primitive::Classify => env.monadic_ref_env(Value::classify)?,

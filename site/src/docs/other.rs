@@ -95,8 +95,8 @@ pub fn Technical() -> impl IntoView {
         <ul>
             <li>"Numbers are filled with "<code>"NaN"</code>"s."</li>
             <li>"Characters are filled with the null character "<code>"\\0"</code>"."</li>
-            <li>"Functions are filled with "<PrimCode prim=Primitive::Noop/>"."</li>
-            <li>"Regrettably, unlike the other three types, Rust's "<code>"u8"</code>" type does not have a suitable value to use as fill. Because of this, the actual element type of byte arrays is a Rust "<code>"enum"</code>" which has a variant for the actual value and a variant for the fill state. While this technically only adds a single bit of information to each element, alignment demands that every byte element use 2 bytes of memory. This means that any file read into memory will take up twice as much space as it does on disk. While this is a 4x improvement on potentially storing every byte as an "<code>"f64"</code>", it is 2x less space efficent than if the fill states were stored seperately from the values. However, I have deemed the runtime overhead and increased code complexity this would introduce to not be worth it."</li>
+            <li>"Functions are filled with a special version of "<PrimCode prim=Primitive::Noop/>" which is distinct from the normal one."</li>
+            <li>"Regrettably, unlike the other three types, Rust's "<code>"u8"</code>" type does not have a suitable value to use as fill. Because of this, the actual element type of byte arrays is a Rust "<code>"i16"</code>" where the minimum value is the fill value. This means that any file read into memory will take up twice as much space as it does on disk. While this is a 4x improvement on potentially storing every byte as an "<code>"f64"</code>", it is 2x less space efficent than if the fill states were stored seperately from the values. However, I have deemed the runtime overhead and increased code complexity this would introduce to not be worth it."</li>
         </ul>
 
         <h2>"The Website"</h2>

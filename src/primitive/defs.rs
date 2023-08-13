@@ -486,12 +486,6 @@ primitive!(
     (1, Transpose, MonadicArray, ("transpose", '⍉')),
     /// Inverse of Transpose
     (1, InvTranspose, MonadicArray),
-    /// Sort the rows of an array
-    ///
-    /// ex: ⍙6_2_7_0_¯1_5
-    ///
-    /// See also: [grade]
-    (1, Sort, MonadicArray, ("sort", '⍙')),
     /// Grade the rows of an array
     ///
     /// ex: ⍋6_2_7_0_¯1_5

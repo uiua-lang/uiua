@@ -277,7 +277,6 @@ impl Primitive {
                 array.fill(fill, env)?;
                 env.push(array);
             }
-            Primitive::Sort => env.monadic_mut(Value::sort)?,
             Primitive::Grade => env.monadic_ref_env(|v, env| v.grade(env))?,
             Primitive::Select => env.dyadic_ref_env(Value::select)?,
             Primitive::Windows => env.dyadic_ref_env(Value::windows)?,

@@ -1,10 +1,14 @@
+- Rework front page
+- Use | for something else
+- Proofread Design page
+- Change stack function colors
+- Remove distribute or change its glyph
 - Move optimizations
 - Finish tour
 - Docs
   - Audio
   - Images
   - Threads
-- Rework front page
 - Tooling
   - Primitive details in LSP
 - Test suite
@@ -24,5 +28,5 @@
   - check OS
   - unicode utils
   - run commands
-  - handle kind?
+  - stream handle kind?
 - Custom monospace font

@@ -315,6 +315,7 @@ pub enum AsciiToken {
     OpenBracket,
     CloseBracket,
     Underscore,
+    Colon,
     Star,
     Percent,
     Equal,
@@ -336,6 +337,7 @@ impl fmt::Display for AsciiToken {
             AsciiToken::OpenBracket => write!(f, "["),
             AsciiToken::CloseBracket => write!(f, "]"),
             AsciiToken::Underscore => write!(f, "_"),
+            AsciiToken::Colon => write!(f, ":"),
             AsciiToken::Star => write!(f, "*"),
             AsciiToken::Percent => write!(f, "%"),
             AsciiToken::Equal => write!(f, "="),
@@ -443,6 +445,7 @@ impl Lexer {
                 '[' => self.end(OpenBracket, start),
                 ']' => self.end(CloseBracket, start),
                 '_' => self.end(Underscore, start),
+                ':' => self.end(Colon, start),
                 '`' => {
                     if self.number('-') {
                         self.end(Number, start)

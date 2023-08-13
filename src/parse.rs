@@ -390,10 +390,10 @@ impl Parser {
         None
     }
     fn try_func(&mut self) -> Option<Sp<Word>> {
-        let Some(start) = self.try_exact(OpenParen) else {
-            return None;
-        };
+        let start = self.try_exact(OpenParen)?;
+        dbg!();
         let body = self.multiline_words();
+        dbg!(&body);
         let end = self.expect_close(CloseParen);
         let span = start.merge(end);
         Some(span.clone().sp(if body.is_empty() {
@@ -406,9 +406,7 @@ impl Parser {
         }))
     }
     fn try_dfn(&mut self) -> Option<Sp<Word>> {
-        let Some(start) = self.try_exact(OpenCurly) else {
-            return None;
-        };
+        let start = self.try_exact(OpenCurly)?;
         let body = self.multiline_words();
         let end = self.expect_close(CloseCurly);
         let span = start.merge(end);
@@ -417,12 +415,12 @@ impl Parser {
             body,
         })))
     }
-    fn expect_close(&mut self, simple: AsciiToken) -> CodeSpan {
-        if let Some(span) = self.try_exact(simple) {
+    fn expect_close(&mut self, ascii: AsciiToken) -> CodeSpan {
+        if let Some(span) = self.try_exact(ascii) {
             span
         } else {
             self.errors
-                .push(self.expected([Expectation::Term, Expectation::Simple(simple)]));
+                .push(self.expected([Expectation::Term, Expectation::Simple(ascii)]));
             self.prev_span()
         }
     }

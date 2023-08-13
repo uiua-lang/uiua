@@ -41,7 +41,7 @@ pub fn Tour() -> impl IntoView {
         <Editor example="√.225"/>
         <p>"For math function where the order matters, like "<PrimCode prim=Sub/>" and "<PrimCode prim=Div/>", what would normally be the second argument is instead the first. This is so you can think of fragments like "<PrimCode prim=Sub glyph_only=true/><code>"2"</code>" as a single unit."</p>
         <p><PrimCode prim=Flip/>" swaps the top two values on the stack."</p>
-        <Editor example="-3 10\n-~3 10"/>
+        <Editor example="-3 10\n-∶3 10"/>
         <p>"By the way, since "<code>"-"</code>" is for "<PrimCode prim=Sub/>", use "<code>"`"</code>" for negative numbers. The formatter will turn in into a nice "<code>"¯"</code>"."</p>
         <Editor example="`10"/>
 

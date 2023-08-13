@@ -100,11 +100,11 @@ primitive!(
     (2(1), Over, Stack, ("over", ',')),
     /// Swap the top two values on the stack
     ///
-    /// ex: [~ 1 2 3 4]
+    /// ex: [∶ 1 2 3 4]
     ///
     /// When combined with [duplicate], this can be used to make a monadic right-hook or monadic fork, such as an average calculator:
-    /// ex: ÷⧻~/+. 1_8_2_5
-    (2(0), Flip, Stack, ("flip", '~')),
+    /// ex: ÷⧻∶/+. 1_8_2_5
+    (2(0), Flip, Stack, ("flip", AsciiToken::Colon, '∶')),
     /// Pop the top value off the stack
     (1(-1), Pop, Stack, ("pop", ';')),
     /// Do nothing
@@ -172,7 +172,7 @@ primitive!(
     /// ex: ↶(○+η) 1
     ///
     /// You can get a tangent function by [divide]ing the [sine] by the cosine.
-    /// ex: ÷○+η~○. 0
+    /// ex: ÷○+η∶○. 0
     (1, Sin, MonadicPervasive, ("sine", '○')),
     /// The cosine of a number
     (1, Cos, MonadicPervasive),
@@ -205,7 +205,7 @@ primitive!(
     /// ex: =5 5
     /// ex: =1 [1 2 3]
     /// ex: = [1 2 2] [1 2 3]
-    (2, Eq, DyadicPervasive, ("equals", '=')),
+    (2, Eq, DyadicPervasive, ("equals", AsciiToken::Equal, '=')),
     /// Compare for inequality
     ///
     /// ex: ≠1 2
@@ -434,7 +434,7 @@ primitive!(
     ///
     /// One use of [bits] is to get all subsets of an array.
     /// You get the [length] of the array, raise `2` to the [power] of it, encode the [range] into [bits], and then [plow][replicate] the array with the bits.
-    /// ex: ⫫‡⋯⇡ⁿ~2⧻.[1 2 3]
+    /// ex: ⫫‡⋯⇡ⁿ∶2⧻.[1 2 3]
     ///
     /// To turn the bits back into numbers, use [invert].
     /// ex: ↶⋯[1 0 1 0]
@@ -451,7 +451,7 @@ primitive!(
     /// ex: ⍉.[[1_2 3_4] [5_6 7_8]]
     ///
     /// `shape``transpose` is always equivalent to `rotate``1``shape`.
-    /// ex: ≅ △⍉ ~ ↻1△ .[1_2 3_4 5_6]
+    /// ex: ≅ △⍉ ∶ ↻1△ .[1_2 3_4 5_6]
     (1, Transpose, MonadicArray, ("transpose", '⍉')),
     /// Inverse of Transpose
     (1, InvTranspose, MonadicArray),
@@ -631,7 +631,7 @@ primitive!(
     /// ex: ∊ "cat"_"dog" "bird"_"cat"_"fish"
     ///
     /// With the help of [deduplicate] and [replicate], you can use [member] to get a set intersection.
-    /// ex: ‡∊,⊝~⊝ "abracadabra" "that's really cool"
+    /// ex: ‡∊,⊝∶⊝ "abracadabra" "that's really cool"
     (2, Member, DyadicArray, ("member", '∊')),
     /// Find the occurences of one array in another
     ///
@@ -657,7 +657,7 @@ primitive!(
     /// This can be used to split an array by a delimiter.
     /// ex: ⊘ ≠' '. $ Hey there friendo
     /// For non-scalar delimiters, you may have to get a little more creative.
-    /// ex: ⊘/↧⊞≠~, " | " $ Um | I | um | arrays
+    /// ex: ⊘/↧⊞≠∶, " | " $ Um | I | um | arrays
     (2, Partition, DyadicArray, ("partition", '⊘')),
     /// Apply a reducing function to an array
     ///
@@ -669,7 +669,7 @@ primitive!(
     ///
     /// If you want to see the intermediate values, you can use [scan], [flip], and [reverse].
     /// ex: /-     1_2_3_4_5
-    ///   : \(-~)⇌ 1_2_3_4_5
+    ///   : \(-∶)⇌ 1_2_3_4_5
     ///
     /// You can can fold with arbitrary functions.
     /// ex: /(×+1) 1_2_3_4_5
@@ -689,7 +689,7 @@ primitive!(
     ///
     /// ex: \+    1_2_3_4
     /// ex: \-    1_2_3_4
-    /// ex: \(-~) 1_2_3_4
+    /// ex: \(-∶) 1_2_3_4
     /// ex: \⊂    1_2_3_4
     ([1, 1, 2], Scan, MonadicModifier, ("scan", '\\')),
     /// Apply a function to each element of an array or between elements of arrays
@@ -885,25 +885,25 @@ primitive!(
     /// Call a function
     ///
     /// When passing a scalar function array, the function is simply called.
-    /// ex: :(+5) 2
+    /// ex: !(+5) 2
     ///
     /// The behavior when passing a non-scalar array is different.
     /// An additional argument is expected, which is the index of the function to call.
     /// With this, you can do if-else expressions.
-    /// ex: Abs ← :·_¯ <0. # If less than 0, negate
+    /// ex: Abs ← !·_¯ <0. # If less than 0, negate
     ///   : Abs 5
     ///   : Abs ¯2
     /// This is equivalent to [call][pick][flip]:
-    /// ex: Abs ← :⊡~·_¯ <0.
+    /// ex: Abs ← !⊡∶·_¯ <0.
     ///   : Abs 5
     ///   : Abs ¯2
     ///
     /// Using [call] in this way is *not* recursive. If the selected value is also a function array, it will not be called unless you used [call] again, wich will pop another index.
-    /// ex:  :[+_- ×_÷] 1   3 12 # Pick a function array
-    /// ex:  :[+_- ×_÷] 1_0 3 12 # Call the function at 1_0
-    /// ex:  :[+_- ×_÷] 1 0 3 12 # Not enough calls
-    /// ex: ::[+_- ×_÷] 1 0 3 12 # 2 calls is enough
-    (1(None), Call, Control, ("call", ':')),
+    /// ex:  ![+_- ×_÷] 1   3 12 # Pick a function array
+    /// ex:  ![+_- ×_÷] 1_0 3 12 # Call the function at 1_0
+    /// ex:  ![+_- ×_÷] 1 0 3 12 # Not enough calls
+    /// ex: !![+_- ×_÷] 1 0 3 12 # 2 calls is enough
+    (1(None), Call, Control, ("call", '!')),
     /// Break out of a loop
     ///
     /// Expects a non-negative integer. This integer is how many loops will be broken out of.
@@ -951,7 +951,7 @@ primitive!(
     /// ex: [;⍥gen3 1]
     ///
     /// Use [multiply] and [floor] to generate a random integer in a range.
-    /// ex: [;⍥(~⌊*10~gen)5 0]
+    /// ex: [;⍥(∶⌊*10∶gen)5 0]
     (1(1), Gen, Misc, "gen"),
     /// Extract a named function from a module
     ///

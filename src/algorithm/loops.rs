@@ -663,7 +663,6 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
                 ns.push(n);
                 args.push(arg);
             }
-            println!("ns: {:?}", ns);
             let res = multi_level_recursive(f, args, &ns, env)?;
             env.push(res);
         }

@@ -813,7 +813,7 @@ primitive!(
     ///
     /// Expects a rank to operate on, a function, and an array.
     ///
-    /// `level``0` does nothing.
+    /// `level``0` applies the function normally, on the array's major axis.
     /// `level``¯1` is equivalent to [rows], applying the function to each row of the array's major axis.
     /// `level``1` applies the function to each row of the array's last axis.
     ///
@@ -833,7 +833,7 @@ primitive!(
     ///   :        ≡⊂ a b
     ///   : ⍚[¯1 ¯1]⊂ a b
     ///
-    /// The flexibility of [level] means it is not that fast. When possible, prefer to use [rows] or [plow] when possible.
+    /// The flexibility of [level] means it is not that fast. When possible, prefer to use [rows] or [plow], as they are optimized for their common cases.
     ([2, 1], Level, OtherModifier, ("level", '⍚')),
     /// Call a function and catch errors
     ///

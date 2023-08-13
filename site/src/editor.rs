@@ -634,15 +634,16 @@ pub fn Editor<'a>(
                     _ = glyph_doc_element().style().remove_property("display");
                 }
             };
-            let class = format!("glyph-button glyph-title {}", prim_class(p));
             Some(
                 view! {
                     <button
-                        class=class
+                        class="glyph-button glyph-title"
                         title=title
                         on:click=onclick
                         on:mouseover=onmouseover
-                        on:mouseleave=onmouseleave>{ text }</button>
+                        on:mouseleave=onmouseleave>
+                        <div class={prim_class(p)}>{ text }</div>
+                    </button>
                 }
                 .into_view(),
             )

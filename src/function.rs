@@ -170,6 +170,7 @@ impl Function {
         match &self.id {
             FunctionId::Primitive(prim) => Some((*prim, false)),
             _ => match self.instrs.as_slice() {
+                [Instr::Prim(prim, _)] => Some((*prim, false)),
                 [Instr::Prim(Primitive::Flip, _), Instr::Prim(prim, _)] => Some((*prim, true)),
                 _ => None,
             },

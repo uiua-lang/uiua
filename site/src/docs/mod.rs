@@ -1,6 +1,6 @@
-mod other;
+pub mod other;
 mod primitive;
-mod tour;
+pub mod tour;
 mod tutorial;
 
 use std::{collections::HashSet, iter::once};
@@ -62,7 +62,7 @@ pub fn Docs() -> impl IntoView {
         let page_view = match page {
             DocsPage::Tour => Tour().into_view(),
             DocsPage::Tutorial(tut) => view!( <Tutorial page=tut/>).into_view(),
-            DocsPage::Search(search) => view!( <DocsHome search=search/>).into_view(),
+            DocsPage::Search(search) => return view!( <DocsHome search=search/>).into_view(),
             DocsPage::Design => Design().into_view(),
             DocsPage::Technical => Technical().into_view(),
             DocsPage::Install => Install().into_view(),
@@ -196,7 +196,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             { move || clear_button.get() }
         </div>
         { move|| results.get() }
-        <div style="height: 80vh;"></div>
+        <div style="height: 85vh;"></div>
     }
 }
 

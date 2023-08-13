@@ -10,7 +10,11 @@ use uiua::primitive::Primitive;
 use wasm_bindgen::JsCast;
 use web_sys::HtmlAudioElement;
 
-use crate::{docs::*, editor::*, pad::*};
+use crate::{
+    docs::{other::Install, tour::Tour, *},
+    editor::*,
+    pad::*,
+};
 
 pub fn main() {
     console_error_panic_hook::set_once();
@@ -73,6 +77,8 @@ pub fn Site() -> impl IntoView {
                         <Route path="" view=|| view!( <MainPage/>)/>
                         <Route path="docs/:page?" view=|| view!( <Docs/>)/>
                         <Route path="pad" view=|| view!( <Pad/>)/>
+                        <Route path="install" view=|| view!( <Install/>)/>
+                        <Route path="tour" view=|| view!( <Tour/>)/>
                         <Route path="*" view=|| view!( <NotFound/>)/>
                     </Routes>
                 </div>
@@ -89,9 +95,9 @@ pub fn MainPage() -> impl IntoView {
     view! {
 
         <div id="links">
-            <p><A href="/docs/install">"Installation"</A></p>
+            <p><A href="/install">"Installation"</A></p>
             <p><A href="/docs">"Documentation"</A></p>
-            <p><A href="/docs/tour">"Language Tour"</A></p>
+            <p><A href="/tour">"Language Tour"</A></p>
             <p><A href="/pad">"Pad"</A></p>
         </div>
         <Editor

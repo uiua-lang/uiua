@@ -488,13 +488,13 @@ primitive!(
     (1, InvTranspose, MonadicArray),
     /// Grade the rows of an array
     ///
-    /// ex: ⍋6_2_7_0_¯1_5
+    /// ex: ⌂6_2_7_0_¯1_5
     ///
     /// Using the grading as a selector in [select] yields the sorted array.
-    /// ex: ⊏⍋.6_2_7_0_¯1_5
+    /// ex: ⊏⌂.6_2_7_0_¯1_5
     ///
     /// See also: [sort]
-    (1, Grade, MonadicArray, ("grade", '⍋')),
+    (1, Grade, MonadicArray, ("grade", '⌂')),
     /// Assign a unique index to each unique element in an array
     ///
     /// ex: ⊛7_7_8_0_1_2_0

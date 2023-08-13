@@ -33,7 +33,7 @@ Z ← ⊟/- ⁿ2 ∶×2 /×.⇌
 <2 √/+ ⁿ2;∶⍥(+Z ∶,)20 ↯∶0△.";
 const CHART: &str = "\
 $ The forest calls
-⊞(⊡ ⌊×⚂⧻. ·_._∴_↥_⍋ ;;).⇡15";
+⊞(⊡ ⌊×⚂⧻. ·_._∴_↥_⇡ ;;).⇡15";
 
 pub const EXAMPLES: &[&str] = &[
     UIUA, FORMAT, D3, LOGO, AVG, CHORD, QUADRATIC, STRIPES, PALINDROME, RULE_30, PRIMES,

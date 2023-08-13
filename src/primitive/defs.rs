@@ -502,7 +502,7 @@ primitive!(
     ///
     /// When combined with [group], you can do things like counting the number of occurrences of each character in a string.
     /// ex: $ Count the characters is this string
-    ///   : ∵$"_ _" ≡⊢∶≡⧻.⊕⊛.⍙
+    ///   : ∵$"_ _" ≡⊢∶≡⧻.⊕⊛.⊏⌂.
     (1, Classify, MonadicArray, ("classify", '⊛')),
     /// Remove duplicate elements from an array
     ///
@@ -676,7 +676,7 @@ primitive!(
     ///
     /// When combined with [classify], you can do things like counting the number of occurrences of each character in a string.
     /// ex: $ Count the characters is this string
-    ///   : ∵$"_ _" ≡⊢∶≡⧻.⊕⊛.⍙
+    ///   : ∵$"_ _" ≡⊢∶≡⧻.⊕⊛.⊏⌂.
     (2, Group, DyadicArray, ("group", '⊕')),
     /// Group elements of an array into buckets by sequential keys
     ///

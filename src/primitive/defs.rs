@@ -909,10 +909,6 @@ primitive!(
     /// ex: ↯3_3⇡9
     ///   : ↲≡↰1/+.
     (1, Wait, Misc, ("wait", '↲')),
-    /// Debug print a value without popping it
-    ///
-    /// ex: /+ | 1_2_3
-    (1, Debug, Sys, ("debug", '|')),
     /// Call a function
     ///
     /// When passing a scalar function array, the function is simply called.

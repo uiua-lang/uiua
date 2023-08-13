@@ -45,7 +45,7 @@ pub fn Design() -> impl IntoView {
         <p>"Most of Uiua's glyphs were chosen for one of a few reasons:"</p>
         <ul>
             <li>"It is a common mathematical symbol, such as "<PrimCode prim=Add/>", "<PrimCode prim=Sub/>", and "<PrimCode prim=Pi/>"."</li>
-            <li>"It is a very commonly used function and should create little line noise, such as "<PrimCode prim=Dup/>" and "<PrimCode prim=Debug/>"."</li>
+            <li>"It is a very commonly used function and should create little line noise, such as "<PrimCode prim=Dup/>" and "<PrimCode prim=Flip/>"."</li>
             <li>"It is used in other array languages, such as "<PrimCode prim=Reduce/>", "<PrimCode prim=Grade/>", and "<PrimCode prim=Transpose/>"."</li>
             <li>"It kind of reminds me of what it does. Some of my favorites are "<PrimCode prim=Table/>", "<PrimCode prim=Reshape/>", "<PrimCode prim=Rotate/>", "<PrimCode prim=Deshape/>", "<PrimCode prim=Find/>", and "<PrimCode prim=Recur/>"."</li>
             <li>"Its function is kind of abstract, but there are other related functions, so they all use related glyphs. For example, "<PrimCode prim=Fold/>" in relation to "<PrimCode prim=Reduce/>", and also all the indexing/finding/grouping functions like"<PrimCode prim=Classify/>", "<PrimCode prim=Group/>", etc."</li>

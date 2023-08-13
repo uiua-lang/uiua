@@ -149,7 +149,6 @@ impl Primitive {
             InvTranspose => Transpose,
             Bits => InverseBits,
             InverseBits => Bits,
-            Debug => Debug,
             _ => return None,
         })
     }
@@ -323,14 +322,6 @@ impl Primitive {
                 }
             }
             Primitive::Recur => env.recur()?,
-            Primitive::Debug => {
-                let value = env.pop(1)?;
-                env.backend
-                    .print_str(&value.show())
-                    .map_err(|e| env.error(e))?;
-                env.backend.print_str("\n").map_err(|e| env.error(e))?;
-                env.push(value);
-            }
             Primitive::Dup => {
                 let x = env.pop(1)?;
                 env.push(x.clone());

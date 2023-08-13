@@ -1,6 +1,5 @@
 - Rework front page
 - Remove distribute or change its glyph
-- Use | for something else
 - Proofread Design page
 - Move optimizations
 - Finish tour

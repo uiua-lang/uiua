@@ -21,7 +21,7 @@ pub fn Design() -> impl IntoView {
         <br/>
         <h3>"Expressions"</h3>
         <p>"Long tacit expressions in most array languages can get very unwieldy. Because binary operations are infix, you have to parse the tree structure in your head before you can start determining the order of operations."</p>
-        <p>"For example, in BQN, you can trim matches from the beginning of a string with "<a style="text-decoration: none;" href="https://mlochbaum.github.io/bqncrate/?q=Remove%20cells%20that%20appear%20in%20x%20from%20beginning%20of%20y#"><code>"x(∧`∘∊˜¬⊸/⊢)y"</code></a>". "</p>
+        <p>"For example, in BQN, you can trim matches from the beginning of a string with "<a style="text-decoration: none;" href="https://mlochbaum.github.io/bqncrate/?q=Remove%20cells%20that%20appear%20in%20x%20from%20beginning%20of%20y#"><code>"x(⍙`∘∊˜¬⊸/⊢)y"</code></a>". "</p>
         <p>"In contrast, here is there equivalent in Uiua, implemented the same way:"</p>
         <Editor example="Trim ← ‡¬\\×∊,\n"/>
         <p>
@@ -68,8 +68,8 @@ pub fn Design() -> impl IntoView {
 
         <h2>"Inspiration"</h2>
         <h3>"BQN"</h3>
-        <p>"The main language that inspired Uiua is "<a href="https://mlochbaum.github.io/bqncrate/">BQN</a>". While I had heard about APL before, BQN was my first real exposure to the power of the array paradigm. I think the language is an astounding feat of engineering. Marshall is both a genius and a great comminicator."</p>
-        <p>"However, as you can read above, a lot of Uiua's design descisions are responses to things I "<em>"didn't"</em>" like about BQN. There were a bunch of little pain-point that I though I could improve on."</p>
+        <p>"The main language that inspired Uiua is "<a href="https://mlochbaum.github.io/bqncrate/">BQN</a>". While I had heard about APL before, BQN was my first real exposure to the power of the array paradigm. I think the language is an astounding feat of engineering. Marshall is both a genius and a great communicator."</p>
+        <p>"However, as you can read above, a lot of Uiua's design descisions are responses to things I "<em>"didn't"</em>" like about BQN. There were a bunch of little pain-points that I though I could improve on."</p>
         <br/>
         <h3>"The Array Cast"</h3>
         <p>"During the period of Uiua's development, I spent a lot of time listening to "<a href="https://arraycast.com/">"The Array Cast"</a>", a podcast about array languages. The conversations about the design and implementation of APL, J, K, Q, and BQN are both inpirational and informative. The guys have such a depth and breadth of knowledge on the topic. I really recommend giving it a listen."</p>

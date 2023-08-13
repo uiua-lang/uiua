@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, fmt, sync::Arc};
+use std::{cmp::Ordering, fmt, mem::take, sync::Arc};
 
 use crate::{
     algorithm::pervade::*, array::*, function::Function, grid_fmt::GridFmt, primitive::Primitive,
@@ -500,6 +500,22 @@ impl Value {
                 )))
             }
         })
+    }
+    /// Turn a number array into a byte array if no information is lost.
+    pub fn compress(&mut self) {
+        if let Value::Num(nums) = self {
+            if nums
+                .data
+                .iter()
+                .all(|n| n.fract() == 0.0 && *n <= i16::MAX as f64 && *n > i16::MIN as f64)
+            {
+                let mut bytes = Vec::with_capacity(nums.flat_len());
+                for n in take(&mut nums.data) {
+                    bytes.push(Byte(n as i16));
+                }
+                *self = (take(&mut nums.shape), bytes).into();
+            }
+        }
     }
 }
 

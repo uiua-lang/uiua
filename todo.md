@@ -1,7 +1,6 @@
 - Rework front page
 - Remove distribute or change its glyph
 - Use | for something else
-- Try to compress on binding
 - Proofread Design page
 - Move optimizations
 - Finish tour

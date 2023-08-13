@@ -271,7 +271,7 @@ impl Uiua {
     }
     fn binding(&mut self, binding: Binding) -> UiuaResult {
         let instrs = self.compile_words(binding.words)?;
-        let val = match instrs_stack_delta(&instrs) {
+        let mut val = match instrs_stack_delta(&instrs) {
             Some((n, _)) if n <= self.stack.len() => {
                 self.exec_global_instrs(instrs)?;
                 self.stack.pop().unwrap_or_default()
@@ -285,6 +285,7 @@ impl Uiua {
                 Value::from(func)
             }
         };
+        val.compress();
         let mut globals = self.globals.lock();
         let idx = globals.len();
         globals.push(val);

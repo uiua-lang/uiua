@@ -1,7 +1,6 @@
 - Move optimizations
 - Finish tour
 - Docs
-  - Search primitives
   - Audio
   - Images
   - Threads

@@ -90,7 +90,7 @@ primitive!(
     ///
     /// ex: [. 1 2 3]
     ///
-    /// This can be used to make a monadic left-hook, such as a palindrome checker:
+    /// This can be used to make a monadic left-hook, such as in this palindrome checker:
     /// ex: ≅⇌. "friend"
     /// ex: ≅⇌. "racecar"
     (1(1), Dup, Stack, ("duplicate", '.')),
@@ -102,7 +102,7 @@ primitive!(
     ///
     /// ex: [∶ 1 2 3 4]
     ///
-    /// When combined with [duplicate], this can be used to make a monadic right-hook or monadic fork, such as an average calculator:
+    /// When combined with [duplicate], this can be used to make a monadic right-hook or monadic fork, such as in this average calculator:
     /// ex: ÷⧻∶/+. 1_8_2_5
     (2(0), Flip, Stack, ("flip", AsciiToken::Colon, '∶')),
     /// Pop the top value off the stack
@@ -113,8 +113,8 @@ primitive!(
     /// ex: /· [1 2 3]
     ///
     /// If you use this on an array that has fill values, the fill values will not be removed.
-    /// To remove them, use [truncate] instead.
     /// ex: /· \⊂1_2_3_4
+    /// To remove them, use [truncate] instead.
     ///
     /// The formatter converts an empty `()` function into `noop`.
     /// ex: () # Try running to format
@@ -418,9 +418,14 @@ primitive!(
     (1, Last, MonadicArray),
     /// Remove fill elements from the end of an array
     ///
+    /// ex: ⌀.↙5 1_2_3
+    /// Rows are considered fill values if all of their elements are fill values.
+    /// ex: ⌀.↙5↯3_3⇡9
+    /// ex: ⌀.⇌∵⇡⇡5
+    ///
     /// Using [noop] to unpack an array onto the stack preserves the fill values.
-    /// Use [truncate] instead to remove them.
     /// ex: /· \⊂1_2_3_4
+    /// Use [truncate] instead to remove them.
     /// ex: /⌀ \⊂1_2_3_4
     (1, Truncate, MonadicArray, ("truncate", '⌀')),
     /// Reverse the rows of an array
@@ -468,7 +473,9 @@ primitive!(
     /// ex: ⍉.[[1_2 3_4] [5_6 7_8]]
     ///
     /// `shape``transpose` is always equivalent to `rotate``1``shape`.
-    /// ex: ≅ △⍉ ∶ ↻1△ .[1_2 3_4 5_6]
+    /// ex: [1_2 3_4 5_6]
+    ///   : ↻1△ .
+    ///   : △⍉  ∶
     (1, Transpose, MonadicArray, ("transpose", '⍉')),
     /// Inverse of Transpose
     (1, InvTranspose, MonadicArray),
@@ -494,6 +501,11 @@ primitive!(
     /// Assign a unique index to each unique element in an array
     ///
     /// ex: ⊛7_7_8_0_1_2_0
+    /// ex: ⊛"Hello, World!"
+    ///
+    /// When combined with [group], you can do things like counting the number of occurrences of each character in a string.
+    /// ex: $ Count the characters is this string
+    ///   : ∵$"_ _" ≡⊢∶≡⧻.⊕⊛.⍙
     (1, Classify, MonadicArray, ("classify", '⊛')),
     /// Remove duplicate elements from an array
     ///
@@ -664,18 +676,23 @@ primitive!(
     ///
     /// ex: ⊕ [0 1 0 2 1 1] [1 2 3 4 5 6]
     /// ex: ⊕ =0◿2. [1 2 3 4 5 6]
+    ///
+    /// When combined with [classify], you can do things like counting the number of occurrences of each character in a string.
+    /// ex: $ Count the characters is this string
+    ///   : ∵$"_ _" ≡⊢∶≡⧻.⊕⊛.⍙
     (2, Group, DyadicArray, ("group", '⊕')),
     /// Group elements of an array into buckets by sequential keys
     ///
     /// The first array must be rank 1, and the arrays must have the same length.
     /// Buckets with mismatched lengths have fill elements.
-    /// ex: ⊘ [1 1 2 2 2 3] [1 2 3 4 5 6]
+    /// Elements that match `0` keys will be omitted.
+    /// ex: ⊜ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     ///
     /// This can be used to split an array by a delimiter.
-    /// ex: ⊘ ≠' '. $ Hey there friendo
+    /// ex: ⊜ ≠' '. $ Hey there friendo
     /// For non-scalar delimiters, you may have to get a little more creative.
-    /// ex: ⊘/↧⊞≠∶, " | " $ Um | I | um | arrays
-    (2, Partition, DyadicArray, ("partition", '⊘')),
+    /// ex: ⊜/↧⊞≠∶, " | " $ Um | I | um | arrays
+    (2, Partition, DyadicArray, ("partition", '⊜')),
     /// Apply a reducing function to an array
     ///
     /// For reducing with an initial value, see [fold].
@@ -765,7 +782,9 @@ primitive!(
     ///
     /// This is the row-wise version of [table].
     ///
-    /// ex: ⊠⊂ [1_2 3_4 5_6] [7_8 7_10]
+    /// ex: a ← .[1_2 3_4 5_6]
+    ///   : b ← .[7_8 9_10]
+    ///   : ⊠⊂ a b
     ([1, 2, 2], Cross, DyadicModifier, ("cross", '⊠')),
     /// Repeat a function a number of times
     ///

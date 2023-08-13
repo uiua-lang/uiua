@@ -1,9 +1,10 @@
+- Remove sort
 - Rework front page
-- Use | for something else
-- Proofread Design page
+- Fix tabling with comparison functions
 - Change stack function colors
 - Remove distribute or change its glyph
-- Remove sort
+- Use | for something else
+- Proofread Design page
 - Move optimizations
 - Finish tour
 - Docs

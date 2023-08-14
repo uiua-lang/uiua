@@ -116,6 +116,8 @@ pub fn MainPage() -> impl IntoView {
 
 #[component]
 fn MainText() -> impl IntoView {
+    use Primitive::*;
+
     let borat = |_| {
         if let Ok(audio) = HtmlAudioElement::new_with_src("/weewah.mp3") {
             _ = audio.play();
@@ -123,32 +125,48 @@ fn MainText() -> impl IntoView {
     };
 
     view! {
-        <p>"Uiua ("<i>"wee-wuh "</i><button on:click=borat class="sound-button">"🔉"</button>") is a stack-oriented array programming language with a focus on tacit code (code without named values). Its semantics and primitives (and this site) are largely inspired by "<a href="https://mlochbaum.github.io/BQN/">"BQN"</a>", but it combines the array paradigm with the stack-oriented paradigm to make writing point-free code more workable."</p>
-        <hr/>
-        <h3>"How is Uiua like other array languages?"</h3>
-        <p>"Like APL, J, BQN, and many other array languages, Uiua's primary data type is the array. Arrays are multidimensional and rank-polymorphic, meaning that many operation automatically apply to every element."</p>
-        <p>"Uiua features:"</p>
-        <ul>
-            <li>"A rich set of primitives"</li>
-            <li>"Arrays following the wonderfully simple "<a href="https://aplwiki.com/wiki/Array_model#Flat_array_theory">"Flat Array Model"</a>", with no boxing"</li>
-            <li>"Basic IO facilities"</li>
-            <li>"A deterministic formatter"</li>
-        </ul>
-        <hr/>
-        <h3>"How is Uiua different from other array languages?"</h3>
-        <p>"Uiua does away with the infix notation of most array languages for a more general prefix notation. While functions still take arguments, they pull those arguments from the stack and push their results back on. This enables a lot of cool stuff, particularly in the realm of tacit code."</p>
-        <p>"Uiua also features:"</p>
-        <ul>
-            <li>"Hook and fork constructs without parenthesis"</li>
-            <li>"Stack-to-array syntax for building arrays with stack operations"</li>
-            <li>"Primitives specifically for stack operations"</li>
-            <li>"No function overloading. Every glyph has one name and does one thing."</li>
-        </ul>
-        <hr/>
-        <h3>"How does writing the glyphs work?"</h3>
-        <p>"Unlike most array languages, Uiua does not overload primitives depending on whether they are passed one or two arguments. Functions in Uiua can take any number of arguments, but an individual function always takes the "<i>"same"</i>" number of arguments."</p>
-        <p>"This ends up meaning that Uiua requires way more glyphs to have one for every primitive. There simply are not enough keys on them keyboard to type them without using a bunch of hard-to-remeber shortcuts. Also, I think it's annoying to need special editor support to be able to write code properly."</p>
-        <p>"To solve these issues, Uiua has a formatter that automatically converts ASCII names and characters into glyphs. You can type the name of a glyph (or a digraph, like "<code>">="</code>" for "<PrimCode prim=Primitive::Ge glyph_only=true/>"), and the formatter will turn it into the corresponding glyph. Alternatively, the editors embedded in this site have a button for each glyph."</p>
+        <p style="font-size: 130%">"Uiua ("<i>"wee-wuh "</i><button on:click=borat class="sound-button">"🔉"</button>") is a stack-oriented array programming language with a focus on "<a href="https://en.wikipedia.org/wiki/Tacit_programming">"tacit"</a>" code."</p>
+        <div class="features">
+            <div>
+                <h2>"A Loving Union"</h2>
+                <p>"Uiua combines the stack-oriented and array-oriented paradigms in a single language. Combining these already terse paradigms results in code with a very high information density and little syntactic noise."</p>
+                <Editor example="⇌⍥(⊂/+↙2.)8⊟.1"/>
+
+                <h2>"True Arrays"</h2>
+                <p>"Uiua's one and only composite data type, the array, is based on those of APL, J, and BQN. They are multidimensional and rank-polymorphic, meaning that an operation that applies to one item also applies to many items."</p>
+                <Editor example="+1↯3_4⇡12"/>
+
+                <h2>"Rich Primitives"</h2>
+                <p>"Uiua has a lots of built-in functions for all your array manipulation needs. Just a few examples:"</p>
+                <p><PrimCode prim=Partition/>" for splitting arrays by sequential keys:"</p>
+                <Editor example=r#"⊜≠' '."Oh boy, neat!""#/>
+                <p><PrimCode prim=Select/>" for re-sequencing array items:"</p>
+                <Editor example=r#"⊏ 0_8_8_1 "clever yo""#/>
+                <p><PrimCode prim=Under/>" for modifiying only part of an array (among other things):"</p>
+                <Editor example="⍜(↙2)(×10) 1_2_3_4_5"/>
+
+                <h2>"System APIs"</h2>
+                <p>"Uiua has functions for spawning threads, interacting with the file system, communicating over network sockets, and "<A href="/docs/system">"more"</A>"."</p>
+            </div>
+            <div>
+                <h2>"Friendly Glyphs"</h2>
+                <p>"Uiua uses special characters for built-in functions that remind you what they do!"</p>
+                <Editor example="⚂ # Random number"/>
+                <Editor example="⇡8 # Range up to"/>
+                <Editor example="⇌ 1_2_3_4 # Reverse"/>
+                <Editor example="⌕ 2 [0 2 5 1 2] # Find"/>
+
+                <h2>"Unicode Formatter"</h2>
+                <p>"Uiua has the terseness and expressivity afforded by Unicode glyphs without the need for a special keyboard or editor support. Instead, the language comes with a formatter that converts the names of built-in functions into glyphs."</p>
+                <Editor example="floor*10[repeatrand5]" help={&["", "Click to format ⇡⇡⇡⇡"]}/>
+
+                <h2>"Multimedia Output"</h2>
+                <p>"Uiua has built-in facilities for generating images and audio. Just make arrays of the pixel data or audio samples!"</p>
+                <Editor example="⊞<÷∶⇡.100÷4+2○÷30⇡300"/>
+                <Editor example="÷∶⇡.44100\n÷2/+○⊞×⊟×1.5.220×τ"/>
+                <p>"The Uiua logo was made with Uiua! Check the examples at the top of the page."</p>
+            </div>
+        </div>
     }
 }
 

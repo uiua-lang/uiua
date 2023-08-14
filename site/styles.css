@@ -241,6 +241,20 @@ li {
     justify-content: space-between;
 }
 
+.features {
+    display: flex;
+    justify-content: space-between;
+    gap: 2em;
+}
+
+.features>* {
+    flex: 1;
+}
+
+.features>*>h2 {
+    margin-top: 1em;
+}
+
 #editor {
     border-radius: 0.5em;
 }

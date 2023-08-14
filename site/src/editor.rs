@@ -289,16 +289,16 @@ pub fn Editor<'a>(
                     OutputItem::String(s) => view!(<div class="output-item">{s}</div>).into_view(),
                     OutputItem::Image(bytes) => {
                         let encoded = STANDARD.encode(bytes);
-                        view!(<img class="output-image" src={format!("data:image/png;base64,{encoded}")} />).into_view()
+                        view!(<div><img class="output-image" src={format!("data:image/png;base64,{encoded}")} /></div>).into_view()
                     }
                     OutputItem::Audio(bytes) => {
                         let encoded = STANDARD.encode(bytes);
                         let src = format!("data:audio/wav;base64,{}", encoded);
                         if allow_autoplay {
                             allow_autoplay = false;
-                            view!(<audio controls autoplay src=src/>).into_view()
+                            view!(<div><audio controls autoplay src=src/></div>).into_view()
                         } else {
-                            view!(<audio controls src=src/>).into_view()
+                            view!(<div><audio controls src=src/></div>).into_view()
                         }
                     }
                     OutputItem::Error(error) => {

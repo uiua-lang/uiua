@@ -1,4 +1,4 @@
-- Rework front page
+- Under invert
 - Remove distribute or change its glyph
 - Proofread Design page
 - Move optimizations

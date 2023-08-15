@@ -67,7 +67,10 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     pub fn reshape(&mut self, shape: Vec<usize>) {
         self.shape = shape;
-        let target_len: usize = self.shape.iter().product();
+        if self.data.is_empty() {
+            return;
+        }
+        let target_len: usize = self.flat_len();
         if self.data.len() < target_len {
             let start = self.data.len();
             self.data.modify(|data| {

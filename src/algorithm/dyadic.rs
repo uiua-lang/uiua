@@ -1193,7 +1193,7 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     pub fn group(&self, grouped: &Self, env: &Uiua) -> UiuaResult<Self> {
-        let indices = self.as_naturals(env, "Group indices must be a list of natural numbers")?;
+        let indices = self.as_indices(env, "Group indices must be a list of integers")?;
         Ok(match grouped {
             Value::Num(a) => a.group(&indices)?.into(),
             Value::Byte(a) => a.group(&indices)?.into(),
@@ -1204,14 +1204,14 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn group(&self, indices: &[usize]) -> UiuaResult<Self> {
-        let Some(max_index) = indices.iter().max() else {
+    pub fn group(&self, indices: &[isize]) -> UiuaResult<Self> {
+        let Some(&max_index) = indices.iter().max() else {
             return Ok((self.shape.clone(), Vec::new()).into());
         };
-        let mut groups: Vec<Vec<Array<T>>> = vec![Vec::new(); max_index + 1];
+        let mut groups: Vec<Vec<Array<T>>> = vec![Vec::new(); max_index.max(0) as usize + 1];
         for (r, &g) in indices.iter().enumerate() {
-            if g < self.row_count() {
-                groups[g].push(self.row(r));
+            if g >= 0 && r < self.row_count() {
+                groups[g as usize].push(self.row(r));
             }
         }
         let mut rows: Vec<Array<T>> = groups.into_iter().map(Self::from_row_arrays).collect();

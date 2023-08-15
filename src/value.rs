@@ -400,10 +400,7 @@ impl Value {
                 result
             }
             value => {
-                return Err(env.error(format!(
-                    "{requirement}, but its type is {}",
-                    value.type_name()
-                )))
+                return Err(env.error(format!("{requirement}, but it is {}s", value.type_name())))
             }
         })
     }

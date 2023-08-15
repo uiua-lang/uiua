@@ -1,6 +1,6 @@
 - Rework use semantics
-- Proofread Design page
 - Move optimizations
+- Intercept Ctrl+A in editor
 - Finish tour
 - Docs
   - Audio

@@ -58,11 +58,7 @@ pub struct PrimNames {
 
 impl PrimNames {
     pub fn is_name_formattable(&self) -> bool {
-        if let Some(c) = self.unicode {
-            (c as u32) > 127 && self.ascii.is_none()
-        } else {
-            self.text.chars().all(|c| c.is_lowercase())
-        }
+        self.ascii.is_none() && self.unicode.is_some_and(|c| (c as u32) > 127)
     }
 }
 
@@ -171,8 +167,10 @@ impl Primitive {
             return None;
         }
         let mut matching = Primitive::all().filter(|p| {
-            p.names()
-                .is_some_and(|n| n.is_name_formattable() && n.text.starts_with(name))
+            p.names().is_some_and(|n| {
+                n.is_name_formattable() && n.text.starts_with(name)
+                    || n.ascii.is_none() && n.unicode.is_none() && name == n.text
+            })
         });
         let res = matching.next()?;
         let exact_match = res.names().unwrap().text == name;

@@ -88,53 +88,53 @@ macro_rules! sys_op {
 
 sys_op! {
     /// Print a nicely formatted representation of a value to stdout
-    (1(-1), Show, "Show"),
+    (1(-1), Show, "show"),
     /// Print a value to stdout
-    (1(-1), Prin, "Prin"),
+    (1(-1), Prin, "prin"),
     /// Print a value to stdout followed by a newline
-    (1(-1), Print, "Print"),
+    (1(-1), Print, "print"),
     /// Read a line from stdin
-    (0, ScanLine, "ScanLine"),
+    (0, ScanLine, "scanline"),
     /// Get the command line arguments
-    (0, Args, "Args"),
+    (0, Args, "args"),
     /// Get the value of an environment variable
-    (1, Var, "Var"),
+    (1, Var, "var"),
     /// Open a file and return a handle to it
-    (1, FOpen, "FOpen"),
+    (1, FOpen, "fopen"),
     /// Create a file and return a handle to it
-    (1, FCreate, "FCreate"),
+    (1, FCreate, "fcreate"),
     /// Check if a file exists at a path
-    (1, FExists, "FExists"),
+    (1, FExists, "fexists"),
     /// List the contents of a directory
-    (1, FListDir, "FListDir"),
+    (1, FListDir, "flistdir"),
     /// Check if a path is a file
-    (1, FIsFile, "FIsFile"),
+    (1, FIsFile, "fisfile"),
     /// Read all the contents of a file into a string
-    (1, FReadAllStr, "FReadAllStr"),
+    (1, FReadAllStr, "freadallstr"),
     /// Read all the contents of a file into a byte array
-    (1, FReadAllBytes, "FReadAllBytes"),
+    (1, FReadAllBytes, "freadallbytes"),
     /// Write the entire contents of an array to a file
-    (2, FWriteAll, "FWriteAll"),
+    (2, FWriteAll, "fwriteall"),
     /// Read at most n bytes from a stream
-    (2, ReadStr, "ReadStr"),
+    (2, ReadStr, "readstr"),
     /// Read at most n bytes from a stream
-    (2, ReadBytes, "ReadBytes"),
+    (2, ReadBytes, "readbytes"),
     /// Read from a stream until a delimiter is reached
-    (2, ReadUntil, "ReadUntil"),
+    (2, ReadUntil, "readuntil"),
     /// Write an array to a stream
-    (2, Write, "Write"),
+    (2, Write, "write"),
     /// Run the code from a file in a scope
     ///
     /// If the file has already been imported, its code will not be run again, but the values it originally pushed onto the stack will be pushed again.
     ///
     /// ex: import "example.ua"
-    (1, Import, "Import"),
+    (1, Import, "import"),
     /// Get the current time in milliseconds
-    (0, Now, "Now"),
+    (0, Now, "now"),
     /// Read an image from a file
     ///
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, and `ico`.
-    (1, ImRead, "ImRead"),
+    (1, ImRead, "imread"),
     /// Write an image to a file
     ///
     /// The first argument is the path, and the second is the image.
@@ -151,7 +151,7 @@ sys_op! {
     ///
     /// The format is determined by the file extension.
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, and `ico`.
-    (2, ImWrite, "ImWrite"),
+    (2, ImWrite, "imwrite"),
     /// Show an image
     ///
     /// How the image is shown depends on the system backend.
@@ -168,7 +168,7 @@ sys_op! {
     /// A length 2 last axis is a grayscale image with an alpha channel.
     /// A length 3 last axis is an RGB image.
     /// A length 4 last axis is an RGB image with an alpha channel.
-    (1(-1), ImShow, "ImShow"),
+    (1(-1), ImShow, "imshow"),
     /// Play some audio
     ///
     /// The audio must be a rank 1 or 2 numeric array.
@@ -178,19 +178,19 @@ sys_op! {
     ///
     /// The samples must be between -1 and 1.
     /// The sample rate is 44100 Hz.
-    (1(-1), AudioPlay, "AudioPlay"),
+    (1(-1), AudioPlay, "audioplay"),
     /// Sleep for n milliseconds
     ///
     /// On the web, this example will hang for 2 seconds.
     /// ex: rand sleep 2000
-    (1(-1), Sleep, "Sleep"),
-    (1, TcpListen, "TcpListen"),
-    (1, TcpAccept, "TcpAccept"),
-    (1, TcpConnect, "TcpConnect"),
+    (1(-1), Sleep, "sleep"),
+    (1, TcpListen, "tcplisten"),
+    (1, TcpAccept, "tcpaccept"),
+    (1, TcpConnect, "tcpconnect"),
     /// Close a stream by its handle
     ///
     /// This will close files, tcp listeners, and tcp sockets.
-    (1, Close, "Close"),
+    (1, Close, "close"),
 }
 
 /// A handle to an IO stream

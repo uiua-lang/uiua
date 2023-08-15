@@ -804,9 +804,9 @@ primitive!(
     ///
     /// This is a more powerful version of [invert].
     ///
-    /// [under] takes 2 functions f and g and another argument x.
-    /// It applies f to x, then applies g to the result.
-    /// It then applies the inverse of f to the result of g.
+    /// [under] takes 2 functions `f` and `g` and another argument `x`.
+    /// It applies `f` to `x`, then applies `g` to the result.
+    /// It then applies the inverse of `f` to the result of `g`.
     ///
     /// Any function that can be [invert]ed can be used with [under].
     /// Some functions that can't be inverted can still be used with [under].

@@ -748,26 +748,18 @@ primitive!(
     /// ex: ⍚¯1/+ [1_2_3 4_5_6 7_8_9]
     /// ex:   ≡/+ [1_2_3 4_5_6 7_8_9]
     ([1, 1, 1], Rows, MonadicModifier, ("rows", '≡')),
-    /// Apply a function to each element of an array and a fixed value
-    ///
-    /// This is the element-wise version of [plow].
-    ///
-    /// ex: ≐⊂ 1_2_3 4
-    /// ex: ≐⊂ 1_2_3 4_5_6
-    ///
-    /// One nice use of this is to [call] multiple functions on a single argument.
-    /// ex: ≐!√_¯_⌊_⌈_(×4) 6.25
-    ([1, 2, 2], Distribute, DyadicModifier, ("distribute", '≐')),
     /// Apply a function to each row of an array and a fixed value
-    ///
-    /// This is the row-wise version of [distribute].
     ///
     /// ex: ⫫⊂ 1_2_3 4
     /// ex: ⫫⊂ 1_2_3 4_5_6
     ///
     /// One nice use of this is to [call] multiple functions on a single argument.
     /// ex: ⫫!√_¯_⌊_⌈_(×4) 6.25
-    ([1, 2, 2], Plow, DyadicModifier, ("plow", '⫫')),
+    ///
+    /// [distribute] is equivalent to [level]`[¯1``infinity``]`.
+    /// ex:       ⫫⊂ 1_2_3 4_5_6
+    ///   : ⍚[¯1 ∞]⊂ 1_2_3 4_5_6
+    ([1, 2, 2], Distribute, DyadicModifier, ("distribute", '⫫')),
     /// Apply a function to each combination of elements of two arrays
     ///
     /// This is the element-wise version of [cross].

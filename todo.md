@@ -1,6 +1,4 @@
-- Document new level behavior
 - Rework use semantics
-- Remove distribute or change its glyph
 - Proofread Design page
 - Move optimizations
 - Finish tour

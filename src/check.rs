@@ -68,7 +68,7 @@ impl<'a> VirtualEnv<'a> {
                     Reduce | Scan => self.handle_mod(prim, 2, -1, 1)?,
                     Fold => self.handle_mod(prim, 2, -1, 2)?,
                     Each | Rows => self.handle_variadic_mod(prim)?,
-                    Distribute | Plow | Table | Cross => self.handle_mod(prim, 2, -1, 2)?,
+                    Distribute | Table | Cross => self.handle_mod(prim, 2, -1, 2)?,
                     Spawn => {
                         if let Some(BasicValue::Num(n)) = self.stack.pop() {
                             if n.fract() == 0.0 && n >= 0.0 {

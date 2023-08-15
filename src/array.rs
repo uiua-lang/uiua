@@ -163,6 +163,10 @@ impl<T: ArrayValue> Array<T> {
         if self.rank() == 0 {
             return self.clone();
         }
+        let row_count = self.row_count();
+        if row >= row_count {
+            panic!("row index out of bounds: {} >= {}", row, row_count);
+        }
         let row_len = self.row_len();
         let start = row * row_len;
         let end = start + row_len;

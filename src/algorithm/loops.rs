@@ -738,7 +738,7 @@ fn multi_level_recursive(
         let (&n_with_max_row_count, arg_with_max_row_count) = ns
             .iter()
             .zip(&args)
-            .max_by_key(|(_, v)| v.shape().first().copied().unwrap_or(v.flat_len()))
+            .max_by_key(|&(&n, v)| if n == 0 { 1 } else { v.shape()[0] })
             .unwrap();
         for (n, arg) in ns.iter().zip(&args) {
             if !arg.shape()[..*n]
@@ -747,17 +747,19 @@ fn multi_level_recursive(
                 .all(|(a, b)| a == b)
             {
                 return Err(env.error(format!(
-                    "Cannot level arrays with shapes {} and {}",
+                    "Cannot level with ranks {} and {} arrays with shapes {} and {}",
+                    arg_with_max_row_count.rank() - n_with_max_row_count,
+                    arg.rank() - n,
                     arg_with_max_row_count.format_shape(),
                     arg.format_shape()
                 )));
             }
         }
-        let row_count = arg_with_max_row_count
-            .shape()
-            .first()
-            .copied()
-            .unwrap_or(arg_with_max_row_count.flat_len());
+        let row_count = if n_with_max_row_count == 0 {
+            1
+        } else {
+            arg_with_max_row_count.shape()[0]
+        };
         let mut rows = Vec::with_capacity(row_count);
         let mut row_args = args.clone();
         let mut dec_ns = ns.to_vec();

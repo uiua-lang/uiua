@@ -828,19 +828,22 @@ primitive!(
     /// Apply a function at a different array depth
     ///
     /// Expects a rank to operate on, a function, and an array.
+    /// The rank supplied indicates the desired rank of the operand.
+    /// The array will be split into arrays of that rank, and the function will be applied to each of those arrays.
     ///
-    /// `level``0` applies the function normally, on the array's major axis.
+    /// `level``0` is equivalent to [each], applying the function to each element of the array.
     /// `level``¯1` is equivalent to [rows], applying the function to each row of the array's major axis.
     /// `level``1` applies the function to each row of the array's last axis.
+    /// `level``infinity` calls the function on the array without splitting it.
     ///
     /// One nice way to see what this means is to test it using [reverse].
     /// For each of these examples, pay attention to the number passed to [level] and which elements change position.
     /// ex: ↯2_2_3 ⇡12
-    /// ex: ⇌ ↯2_2_3 ⇡12
-    /// ex: ⍚0⇌ ↯2_2_3 ⇡12
-    /// ex: ⍚¯1⇌ ↯2_2_3 ⇡12
-    /// ex: ⍚¯2⇌ ↯2_2_3 ⇡12
-    /// ex: ⍚1⇌ ↯2_2_3 ⇡12
+    /// ex: ⇌ ↯2_2_3 ⇡12 # Reverse as normal
+    /// ex: ⍚0⇌ ↯2_2_3 ⇡12 # Reverse each element (does nothing)
+    /// ex: ⍚¯1⇌ ↯2_2_3 ⇡12 # Reverse each row
+    /// ex: ⍚¯2⇌ ↯2_2_3 ⇡12 # Reverse each row of each row
+    /// ex: ⍚1⇌ ↯2_2_3 ⇡12 # Reverse each last axis row
     ///
     /// [level] can operate on multiple arrays at once if passed a list of ranks.
     /// While `level``¯1` is equivelent to [rows] called with a single array, `level``[¯1 ¯1]` is equivalent to [rows] called with two arrays, and so on.
@@ -849,7 +852,9 @@ primitive!(
     ///   :        ≡⊂ a b
     ///   : ⍚[¯1 ¯1]⊂ a b
     ///
-    /// The flexibility of [level] means it is not that fast. When possible, prefer to use [rows] or [plow], as they are optimized for their common cases.
+    /// [level]`[¯1``infinity``]` is equivalent to [plow].
+    /// ex:       ⫫⊂ 1_2_3 4_5_6
+    ///   : ⍚[¯1 ∞]⊂ 1_2_3 4_5_6
     ([2, 1], Level, OtherModifier, ("level", '⍚')),
     /// Call a function and catch errors
     ///

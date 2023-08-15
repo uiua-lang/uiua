@@ -452,6 +452,11 @@ pub fn Editor<'a>(
             "Tab" => {
                 replace_code("\t");
             }
+            "a" if event.ctrl_key() => {
+                let code = code_text();
+                log!("{:?}", code);
+                state().set_code(&code, Cursor::Set(0, code.chars().count() as u32));
+            }
             "c" if event.ctrl_key() => {
                 let (start, end) = get_code_cursor().unwrap();
                 let (start, end) = (start.min(end), start.max(end));
@@ -934,46 +939,46 @@ fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
     Some((start, end))
 }
 
-fn set_code_cursor(id: &str, mut start: u32, mut end: u32) {
+fn set_code_cursor(id: &str, start: u32, end: u32) {
     // log!("set_code_cursor({}, {})", start, end);
 
     let elem = element::<HtmlDivElement>(id);
-    let mut text_len = 0;
-    let mut last_node = None;
-    'divs: for (i, div_node) in children_of(&elem).enumerate() {
-        if i > 0 {
-            if start > 0 {
-                start -= 1;
-                end -= 1;
-                text_len = 1;
-                last_node = Some(div_node.first_child().unwrap());
-            } else {
-                break 'divs;
+    let find_pos = |mut pos: u32| {
+        let mut text_len;
+        let mut last_node = None;
+        'divs: for (i, div_node) in children_of(&elem).enumerate() {
+            if i > 0 {
+                if pos > 0 {
+                    pos -= 1;
+                    last_node = Some(div_node.first_child().unwrap());
+                } else {
+                    break 'divs;
+                }
+            }
+            for span_node in children_of(&div_node) {
+                if let Some(node) = span_node.first_child() {
+                    text_len = node.text_content().unwrap().chars().count() as u32;
+                    last_node = Some(node);
+                } else {
+                    text_len = 0;
+                    last_node = Some(span_node);
+                }
+                if pos > text_len {
+                    pos -= text_len;
+                } else {
+                    break 'divs;
+                }
             }
         }
-        for span_node in children_of(&div_node) {
-            if let Some(node) = span_node.first_child() {
-                text_len = node.text_content().unwrap().chars().count() as u32;
-                last_node = Some(node);
-            } else {
-                text_len = 0;
-                last_node = Some(span_node);
-            }
-            if start > text_len {
-                start -= text_len;
-                end -= text_len;
-            } else {
-                break 'divs;
-            }
-        }
-    }
-    if let Some(text_node) = last_node {
+        (last_node, pos)
+    };
+    let (start_node, start_len) = find_pos(start);
+    let (end_node, end_len) = find_pos(end);
+    if let Some((start_node, end_node)) = start_node.zip(end_node) {
         // log!("ended on: {:?}", text_content);
-        start = start.min(text_len);
-        end = end.min(text_len);
         let range = document().create_range().unwrap();
-        range.set_start(&text_node, start).unwrap();
-        range.set_end(&text_node, end).unwrap();
+        range.set_start(&start_node, start_len).unwrap();
+        range.set_end(&end_node, end_len).unwrap();
         let sel = window().get_selection().unwrap().unwrap();
         sel.remove_all_ranges().unwrap();
         sel.add_range(&range).unwrap();

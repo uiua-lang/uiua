@@ -1,6 +1,4 @@
-- Rework use semantics
 - Move optimizations
-- Intercept Ctrl+A in editor
 - Finish tour
 - Docs
   - Audio

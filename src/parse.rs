@@ -332,12 +332,7 @@ impl Parser {
     }
     fn try_term(&mut self) -> Option<Sp<Word>> {
         Some(if let Some(prim) = self.try_prim() {
-            if let Some(c) = prim.value.as_constant() {
-                let s = prim.span.as_str().into();
-                prim.span.sp(Word::Number(s, c))
-            } else {
-                prim.map(Word::Primitive)
-            }
+            prim.map(Word::Primitive)
         } else if let Some(ident) = self.try_ident() {
             ident.map(Word::Ident)
         } else if let Some(span) = self.try_exact(Token::Number) {

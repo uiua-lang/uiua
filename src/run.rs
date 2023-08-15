@@ -513,7 +513,7 @@ impl Uiua {
     }
     fn primitive(&mut self, prim: Primitive, span: CodeSpan, call: bool) {
         let span = self.add_span(span);
-        if call {
+        if call || prim.as_constant().is_some() {
             self.push_instr(Instr::Prim(prim, span));
         } else {
             self.push_instr(Instr::push(Function::new(

@@ -673,6 +673,9 @@ primitive!(
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),
     /// Group elements of an array into buckets by index
     ///
+    /// The first argument must be a [rank]`1` integer array, and the arguments must have the same length.
+    /// Buckets with mismatched lengths have fill elements.
+    /// Keys `less than``0` will be omitted.
     /// ex: ⊕ [0 1 0 2 1 1] [1 2 3 4 5 6]
     /// ex: ⊕ =0◿2. [1 2 3 4 5 6]
     ///
@@ -682,9 +685,9 @@ primitive!(
     (2, Group, DyadicArray, ("group", '⊕')),
     /// Group elements of an array into buckets by sequential keys
     ///
-    /// The first array must be rank 1, and the arrays must have the same length.
+    /// The first argument must be a [rank]`1` integer array, and the arguments must have the same length.
     /// Buckets with mismatched lengths have fill elements.
-    /// Elements that match `0` keys will be omitted.
+    /// Keys `less or equal``0` will be omitted.
     /// ex: ⊜ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     ///
     /// This can be used to split an array by a delimiter.

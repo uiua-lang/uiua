@@ -1,5 +1,7 @@
 - Move optimizations
 - Finish tour
+- Make member more general
+- Under pick
 - Docs
   - Audio
   - Images

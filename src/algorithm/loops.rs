@@ -642,9 +642,18 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
 
 pub fn level(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let ns = env
-        .pop(1)?
-        .as_indices(env, "Rank must be a list of integers")?;
+    let ns = env.pop(1)?.as_number_list(
+        env,
+        "Rank must be a list of integers",
+        |n| n.fract() == 0.0 || n == f64::INFINITY,
+        |n| {
+            if n == f64::INFINITY {
+                None
+            } else {
+                Some(n as isize)
+            }
+        },
+    )?;
     let f = env.pop(2)?;
     match ns.as_slice() {
         [] => return Err(env.error("Rank list cannot be empty")),
@@ -654,7 +663,17 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
                 env.push(xs);
                 return Ok(());
             }
-            let irank = xs.rank() as isize;
+            let n = match n {
+                Some(0) => return each1(f, xs, env),
+                Some(-1) => return rows1(f, xs, env),
+                None => {
+                    env.push(xs);
+                    env.push(f);
+                    return env.call();
+                }
+                Some(n) => n,
+            };
+            let irank = xs.rank().max(1) as isize;
             let n = ((-n % irank + irank) % irank) as usize;
             let res = monadic_level_recursive(f, xs, n, env)?;
             env.push(res);
@@ -665,12 +684,16 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
                 let arg = env.pop(i + 3)?;
                 args.push(arg);
             }
-            args.reverse();
             let mut ns: Vec<usize> = Vec::with_capacity(is.len());
             for (i, arg) in args.iter().enumerate() {
-                let irank = arg.rank() as isize;
-                let n = ((-is[i] % irank + irank) % irank) as usize;
-                ns.push(n);
+                ns.push(match is[i] {
+                    None => 0,
+                    Some(0) => arg.rank(),
+                    Some(n) => {
+                        let irank = arg.rank().max(1) as isize;
+                        ((-n % irank + irank) % irank) as usize
+                    }
+                });
             }
             let res = multi_level_recursive(f, args, &ns, env)?;
             env.push(res);
@@ -683,7 +706,7 @@ fn monadic_level_recursive(f: Value, value: Value, n: usize, env: &mut Uiua) -> 
     if n == 0 {
         env.push(value);
         env.push(f);
-        env.call_error_on_break("break is not allowed in level")?;
+        env.call()?;
         Ok(env.pop("level's function result")?)
     } else {
         let mut rows = Vec::with_capacity(value.row_count());
@@ -701,16 +724,24 @@ fn multi_level_recursive(
     env: &mut Uiua,
 ) -> UiuaResult<Value> {
     if ns.iter().all(|&n| n == 0) {
-        for arg in args {
+        for arg in args.into_iter().rev() {
             env.push(arg);
         }
         env.push(f);
-        env.call_error_on_break("break is not allowed in level")?;
+        env.call()?;
         Ok(env.pop("level's function result")?)
     } else {
-        let arg_with_max_row_count = args.iter().max_by_key(|v| v.row_count()).unwrap();
-        for arg in &args {
-            if !arg.shape_prefixes_match(arg_with_max_row_count) {
+        let (&n_with_max_row_count, arg_with_max_row_count) = ns
+            .iter()
+            .zip(&args)
+            .max_by_key(|(_, v)| v.shape().first().copied().unwrap_or(v.flat_len()))
+            .unwrap();
+        for (n, arg) in ns.iter().zip(&args) {
+            if !arg.shape()[..*n]
+                .iter()
+                .zip(&arg_with_max_row_count.shape()[..n_with_max_row_count])
+                .all(|(a, b)| a == b)
+            {
                 return Err(env.error(format!(
                     "Cannot level arrays with shapes {} and {}",
                     arg_with_max_row_count.format_shape(),
@@ -718,7 +749,11 @@ fn multi_level_recursive(
                 )));
             }
         }
-        let row_count = arg_with_max_row_count.row_count();
+        let row_count = arg_with_max_row_count
+            .shape()
+            .first()
+            .copied()
+            .unwrap_or(arg_with_max_row_count.flat_len());
         let mut rows = Vec::with_capacity(row_count);
         let mut row_args = args.clone();
         let mut dec_ns = ns.to_vec();

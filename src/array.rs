@@ -153,10 +153,12 @@ impl<T: ArrayValue> Array<T> {
     pub fn row_slices(&self) -> impl ExactSizeIterator<Item = &[T]> + DoubleEndedIterator {
         (0..self.row_count()).map(move |row| self.row_slice(row))
     }
+    #[track_caller]
     pub fn row_slice(&self, row: usize) -> &[T] {
         let row_len = self.row_len();
         &self.data[row * row_len..(row + 1) * row_len]
     }
+    #[track_caller]
     pub fn row(&self, row: usize) -> Self {
         if self.rank() == 0 {
             return self.clone();

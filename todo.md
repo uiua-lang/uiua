@@ -1,7 +1,6 @@
-- Color system function names
-- Remove distribute or change its glyph
+- Document new level behavior
 - Rework use semantics
-- Compose modifier
+- Remove distribute or change its glyph
 - Proofread Design page
 - Move optimizations
 - Finish tour

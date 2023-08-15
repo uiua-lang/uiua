@@ -35,6 +35,7 @@ impl<T> CowSlice<T> {
 }
 
 impl<T: Clone> CowSlice<T> {
+    #[track_caller]
     pub fn slice<R>(&self, range: R) -> Self
     where
         R: RangeBounds<usize>,

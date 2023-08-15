@@ -360,7 +360,7 @@ impl Value {
             |f| f as usize,
         )
     }
-    fn as_number_list<T>(
+    pub(crate) fn as_number_list<T>(
         &self,
         env: &Uiua,
         requirement: &'static str,

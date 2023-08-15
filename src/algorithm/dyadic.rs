@@ -1226,8 +1226,7 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     pub fn partition(&self, partitioned: &Self, env: &Uiua) -> UiuaResult<Self> {
-        let markers =
-            self.as_naturals(env, "Partition markers must be a list of natural numbers")?;
+        let markers = self.as_indices(env, "Partition markers must be a list of integers")?;
         Ok(match partitioned {
             Value::Num(a) => a.partition(&markers)?.into(),
             Value::Byte(a) => a.partition(&markers)?.into(),
@@ -1238,11 +1237,11 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn partition(&self, markers: &[usize]) -> UiuaResult<Self> {
+    pub fn partition(&self, markers: &[isize]) -> UiuaResult<Self> {
         let mut groups = Vec::new();
-        let mut last_marker = usize::MAX;
+        let mut last_marker = isize::MAX;
         for (row, &marker) in self.rows().zip(markers) {
-            if marker != 0 {
+            if marker > 0 {
                 if marker != last_marker {
                     groups.push(Vec::new());
                 }

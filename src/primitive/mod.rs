@@ -212,6 +212,15 @@ impl Primitive {
             break None;
         }
     }
+    pub fn as_constant(&self) -> Option<f64> {
+        Some(match self {
+            Primitive::Pi => PI,
+            Primitive::Tau => TAU,
+            Primitive::Eta => PI / 2.0,
+            Primitive::Infinity => INFINITY,
+            _ => return None
+        })
+    }
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
             Primitive::Eta => env.push(PI / 2.0),

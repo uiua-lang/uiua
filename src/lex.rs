@@ -564,6 +564,7 @@ impl Lexer {
                             let end = Loc {
                                 col: start.col + frag.chars().count(),
                                 char_pos: start.char_pos + frag.chars().count(),
+                                byte_pos: start.byte_pos + frag.len(),
                                 ..start
                             };
                             self.tokens.push(Sp {

@@ -2,7 +2,7 @@
 
 use std::{env, fs, path::Path};
 
-use crate::{ast::*, lex::Sp, parse::parse, UiuaError, UiuaResult};
+use crate::{ast::*, grid_fmt::GridFmt, lex::Sp, parse::parse, UiuaError, UiuaResult};
 
 #[derive(Debug, Clone)]
 pub struct FormatConfig {
@@ -120,7 +120,9 @@ fn format_words(output: &mut String, words: &[Sp<Word>], config: &FormatConfig) 
 
 fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig) {
     match &word.value {
-        Word::Number(s, _) => output.push_str(&s.replace(['-', '`'], "¯")),
+        Word::Number(_, n) => {
+            output.push_str(&n.grid_string());
+        }
         Word::Char(c) => output.push_str(&format!("{:?}", c)),
         Word::String(s) => output.push_str(&format!("{:?}", s)),
         Word::FormatString(_) => output.push_str(word.span.as_str()),

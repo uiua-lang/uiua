@@ -36,7 +36,7 @@ impl fmt::Display for Instr {
             Instr::BeginArray => write!(f, "]"),
             Instr::EndArray(_) => write!(f, "["),
             Instr::Prim(prim, _) => write!(f, "{prim}"),
-            Instr::Call(_) => write!(f, ":"),
+            Instr::Call(_) => write!(f, "!"),
             Instr::DfnVal(n) => write!(f, "{}", (*n as u8 + b'a') as char),
         }
     }

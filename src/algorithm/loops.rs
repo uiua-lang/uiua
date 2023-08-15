@@ -644,7 +644,7 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let ns = env.pop(1)?.as_number_list(
         env,
-        "Rank must be a list of integers",
+        "Elements of rank list must be integers or infinity",
         |n| n.fract() == 0.0 || n == f64::INFINITY,
         |n| {
             if n == f64::INFINITY {
@@ -656,14 +656,14 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
     )?;
     let f = env.pop(2)?;
     match ns.as_slice() {
-        [] => return Err(env.error("Rank list cannot be empty")),
+        [] => return Ok(()),
         &[n] => {
             let xs = env.pop(3)?;
             if xs.rank() == 0 {
                 env.push(xs);
                 return Ok(());
             }
-            let n = match n {
+            let rank = match n {
                 Some(0) => return each1(f, xs, env),
                 Some(-1) => return rows1(f, xs, env),
                 None => {
@@ -673,8 +673,12 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
                 }
                 Some(n) => n,
             };
-            let irank = xs.rank().max(1) as isize;
-            let n = ((-n % irank + irank) % irank) as usize;
+            let rank = if rank < 0 {
+                (xs.rank() as isize + rank).max(0) as usize
+            } else {
+                (rank as usize).min(xs.rank())
+            };
+            let n = xs.rank() - rank;
             let res = monadic_level_recursive(f, xs, n, env)?;
             env.push(res);
         }
@@ -686,14 +690,14 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
             }
             let mut ns: Vec<usize> = Vec::with_capacity(is.len());
             for (i, arg) in args.iter().enumerate() {
-                ns.push(match is[i] {
-                    None => 0,
-                    Some(0) => arg.rank(),
-                    Some(n) => {
-                        let irank = arg.rank().max(1) as isize;
-                        ((-n % irank + irank) % irank) as usize
-                    }
-                });
+                let rank = is[i].unwrap_or(arg.rank() as isize);
+                let rank = if rank < 0 {
+                    (arg.rank() as isize + rank).max(0) as usize
+                } else {
+                    (rank as usize).min(arg.rank())
+                };
+                let n = arg.rank() - rank;
+                ns.push(n);
             }
             let res = multi_level_recursive(f, args, &ns, env)?;
             env.push(res);

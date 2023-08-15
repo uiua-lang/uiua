@@ -972,10 +972,12 @@ fn set_code_cursor(id: &str, start: u32, end: u32) {
         }
         (last_node, pos)
     };
-    let (start_node, start_len) = find_pos(start);
-    let (end_node, end_len) = find_pos(end);
+    let (start_node, mut start_len) = find_pos(start);
+    let (end_node, mut end_len) = find_pos(end);
     if let Some((start_node, end_node)) = start_node.zip(end_node) {
         // log!("ended on: {:?}", text_content);
+        start_len = start_len.min(start_node.text_content().unwrap().chars().count() as u32);
+        end_len = end_len.min(end_node.text_content().unwrap().chars().count() as u32);
         let range = document().create_range().unwrap();
         range.set_start(&start_node, start_len).unwrap();
         range.set_end(&end_node, end_len).unwrap();

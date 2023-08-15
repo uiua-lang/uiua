@@ -66,11 +66,11 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     pub fn reshape(&mut self, shape: Vec<usize>) {
-        self.shape = shape;
         if self.data.is_empty() {
             return;
         }
-        let target_len: usize = self.flat_len();
+        let target_len: usize = shape.iter().product();
+        self.shape = shape;
         if self.data.len() < target_len {
             let start = self.data.len();
             self.data.modify(|data| {
@@ -1112,20 +1112,38 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     pub fn member(&self, of: &Self) -> Array<Byte> {
         let elems = self;
-        let mut result_data = Vec::with_capacity(elems.row_count());
-        'elem: for elem in elems.rows() {
-            for of in of.rows() {
-                if elem == of {
-                    result_data.push(Byte(1));
-                    continue 'elem;
+        match elems.rank().cmp(&of.rank()) {
+            Ordering::Equal => {
+                let mut result_data = Vec::with_capacity(elems.row_count());
+                'elem: for elem in elems.rows() {
+                    for of in of.rows() {
+                        if elem == of {
+                            result_data.push(Byte(1));
+                            continue 'elem;
+                        }
+                    }
+                    result_data.push(Byte(0));
                 }
+                let shape = self.shape.iter().cloned().take(1).collect();
+                let res = Array::new(shape, result_data.into());
+                res.validate_shape();
+                res
             }
-            result_data.push(Byte(0));
+            Ordering::Greater => {
+                let mut rows = Vec::with_capacity(elems.row_count());
+                for elem in elems.rows() {
+                    rows.push(elem.member(of));
+                }
+                Array::from_row_arrays(rows)
+            }
+            Ordering::Less => {
+                let mut rows = Vec::with_capacity(of.row_count());
+                for of in of.rows() {
+                    rows.push(elems.member(&of));
+                }
+                Array::from_row_arrays(rows)
+            }
         }
-        let shape = self.shape.iter().cloned().take(1).collect();
-        let res = Array::new(shape, result_data.into());
-        res.validate_shape();
-        res
     }
 }
 

@@ -659,7 +659,7 @@ primitive!(
     /// ex: ∊ "cat"_"dog" "bird"_"cat"_"fish"
     ///
     /// With the help of [deduplicate] and [replicate], you can use [member] to get a set intersection.
-    /// ex: ‡∊,⊝∶⊝ "abracadabra" "that's really cool"
+    /// ex: ⊝‡∊, "abracadabra" "that's really cool"
     (2, Member, DyadicArray, ("member", '∊')),
     /// Find the occurences of one array in another
     ///

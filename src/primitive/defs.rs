@@ -462,7 +462,7 @@ primitive!(
     /// ex: ⋯[1_2 3_4 5_6]
     ///
     /// One use of [bits] is to get all subsets of an array.
-    /// You get the [length] of the array, raise `2` to the [power] of it, encode the [range] into [bits], and then [plow][replicate] the array with the bits.
+    /// You get the [length] of the array, raise `2` to the [power] of it, encode the [range] into [bits], and then [ditribute][replicate] the array with the bits.
     /// ex: ⫫‡⋯⇡ⁿ∶2⧻.[1 2 3]
     ///
     /// To turn the bits back into numbers, use [invert].
@@ -844,7 +844,7 @@ primitive!(
     ///   :        ≡⊂ a b
     ///   : ⍚[¯1 ¯1]⊂ a b
     ///
-    /// [level]`[¯1``infinity``]` is equivalent to [plow].
+    /// [level]`[¯1``infinity``]` is equivalent to [distribute].
     /// ex:       ⫫⊂ 1_2_3 4_5_6
     ///   : ⍚[¯1 ∞]⊂ 1_2_3 4_5_6
     ([2, 1], Level, OtherModifier, ("level", '⍚')),

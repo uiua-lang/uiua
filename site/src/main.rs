@@ -62,7 +62,7 @@ pub fn Site() -> impl IntoView {
     view! {
         <Router>
             <main>
-                <div id="top">
+                <div id="top" class="top">
                     <div id="header">
                         <div id="header-left">
                             <h1><img src="/uiua-logo.png" style="height: 1em" alt="Uiua logo"></img>" Uiua"</h1>
@@ -74,12 +74,12 @@ pub fn Site() -> impl IntoView {
                         </div>
                     </div>
                     <Routes>
-                        <Route path="" view=|| view!( <MainPage/>)/>
-                        <Route path="docs/:page?" view=|| view!( <Docs/>)/>
-                        <Route path="pad" view=|| view!( <Pad/>)/>
-                        <Route path="install" view=|| view!( <Install/>)/>
-                        <Route path="tour" view=|| view!( <Tour/>)/>
-                        <Route path="*" view=|| view!( <NotFound/>)/>
+                        <Route path="" view=MainPage/>
+                        <Route path="docs/:page?" view=Docs/>
+                        <Route path="pad" view=Pad/>
+                        <Route path="install" view=Install/>
+                        <Route path="tour" view=Tour/>
+                        <Route path="*" view=NotFound/>
                     </Routes>
                 </div>
                 <br/>
@@ -92,8 +92,15 @@ pub fn Site() -> impl IntoView {
 
 #[component]
 pub fn MainPage() -> impl IntoView {
-    view! {
+    use Primitive::*;
 
+    let borat = |_| {
+        if let Ok(audio) = HtmlAudioElement::new_with_src("/weewah.mp3") {
+            _ = audio.play();
+        }
+    };
+
+    view! {
         <div id="links">
             <p><A href="/install">"Installation"</A></p>
             <p><A href="/docs">"Documentation"</A></p>
@@ -109,62 +116,59 @@ pub fn MainPage() -> impl IntoView {
                 "You can run with ctrl/shift + enter.",
             ]}/>
         <br/>
-        <br/>
-        <MainText/>
-    }
-}
-
-#[component]
-fn MainText() -> impl IntoView {
-    use Primitive::*;
-
-    let borat = |_| {
-        if let Ok(audio) = HtmlAudioElement::new_with_src("/weewah.mp3") {
-            _ = audio.play();
-        }
-    };
-
-    view! {
-        <p style="font-size: 130%">"Uiua ("<i>"wee-wuh "</i><button on:click=borat class="sound-button">"🔉"</button>") is a stack-oriented array programming language with a focus on "<a href="https://en.wikipedia.org/wiki/Tacit_programming">"tacit"</a>" code."</p>
+        <p style="font-size: 130%">"Uiua "<span style="font-size: 70%; opacity: 0.8;">"("<i>"wee-wuh "</i><button on:click=borat class="sound-button">"🔉"</button>")"</span>" is a stack-oriented array programming language with a focus on simplicity, expressiveness, and "<a href="https://en.wikipedia.org/wiki/Tacit_programming">"tacit"</a>" code."</p>
         <div class="features">
             <div>
-                <h2>"A Loving Union"</h2>
-                <p>"Uiua combines the stack-oriented and array-oriented paradigms in a single language. Combining these already terse paradigms results in code with a very high information density and little syntactic noise."</p>
-                <Editor example="⇌⍥(⊂/+↙2.)8⊟.1"/>
-
-                <h2>"True Arrays"</h2>
-                <p>"Uiua's one and only composite data type, the array, is based on those of APL, J, and BQN. They are multidimensional and rank-polymorphic, meaning that an operation that applies to one item also applies to many items."</p>
-                <Editor example="+1↯3_4⇡12"/>
-
-                <h2>"Rich Primitives"</h2>
-                <p>"Uiua has a lots of built-in functions for all your array manipulation needs. Just a few examples:"</p>
-                <p><PrimCode prim=Partition/>" for splitting arrays by sequential keys:"</p>
-                <Editor example=r#"⊜≠' '."Oh boy, neat!""#/>
-                <p><PrimCode prim=Select/>" for re-sequencing array items:"</p>
-                <Editor example=r#"⊏ 0_8_8_1 "clever yo""#/>
-                <p><PrimCode prim=Under/>" for modifiying only part of an array (among other things):"</p>
-                <Editor example="⍜(↙2)(×10) 1_2_3_4_5"/>
-
-                <h2>"System APIs"</h2>
-                <p>"Uiua has functions for spawning threads, interacting with the file system, communicating over network sockets, and "<A href="/docs/system">"more"</A>"."</p>
+                <div>
+                    <h2>"A Loving Union"</h2>
+                    <p>"Uiua combines the stack-oriented and array-oriented paradigms in a single language. Combining these already terse paradigms results in code with a very high information density and little syntactic noise."</p>
+                    <Editor example="⇌⍥(⊂/+↙2.)8⊟.1"/>
+                </div>
+                <div>
+                    <h2>"True Arrays"</h2>
+                    <p>"Uiua's one and only composite data type, the array, is based on those of APL, J, and BQN. They are multidimensional and rank-polymorphic, meaning that an operation that applies to one item also applies to many items."</p>
+                    <Editor example="+1↯3_4⇡12"/>
+                </div>
+                <div>
+                    <h2>"Rich Primitives"</h2>
+                    <p>"Uiua has a lots of built-in functions for all your array manipulation needs. Just a few examples:"</p>
+                    <p><PrimCode prim=Partition/>" for splitting arrays by sequential keys:"</p>
+                    <Editor example=r#"⊜≠' '."Oh boy, neat!""#/>
+                    <p><PrimCode prim=Select/>" for re-sequencing array items:"</p>
+                    <Editor example=r#"⊏ 2_1_3_0_4 "loco!""#/>
+                    <p><PrimCode prim=Under/>" for modifiying only part of an array (among other things):"</p>
+                    <Editor example="⍜(↙2)(×10) 1_2_3_4_5"/>
+                </div>
+                <div>
+                    <h2>"Syntactic Simplicity"</h2>
+                    <p>"Uiua has a simple context-free grammar. Code runs from right to left, top to bottom, with only "<A href="/docs/functions#modifiers">"one precedence rule"</A>". As operators are to the left of their operands, Uiua code looks a little bit like a Lisp, but with fewer parentheses."</p>
+                </div>
             </div>
             <div>
-                <h2>"Friendly Glyphs"</h2>
-                <p>"Uiua uses special characters for built-in functions that remind you what they do!"</p>
-                <Editor example="⚂ # Random number"/>
-                <Editor example="⇡8 # Range up to"/>
-                <Editor example="⇌ 1_2_3_4 # Reverse"/>
-                <Editor example="⌕ 2 [0 2 5 1 2] # Find"/>
-
-                <h2>"Unicode Formatter"</h2>
-                <p>"Uiua has the terseness and expressivity afforded by Unicode glyphs without the need for a special keyboard or editor support. Instead, the language comes with a formatter that converts the names of built-in functions into glyphs."</p>
-                <Editor example="floor*10[repeatrand5]" help={&["", "Click to format ⇡⇡⇡⇡"]}/>
-
-                <h2>"Multimedia Output"</h2>
-                <p>"Uiua has built-in facilities for generating images and audio. Just make arrays of the pixel data or audio samples!"</p>
-                <Editor example="⊞<÷∶⇡.100÷4+2○÷30⇡300"/>
-                <Editor example="÷∶⇡.44100\n÷2/+○⊞×⊟×1.5.220×τ"/>
-                <p>"The Uiua logo was made with Uiua! Check the examples at the top of the page."</p>
+                <div>
+                    <h2>"Friendly Glyphs"</h2>
+                    <p>"Uiua uses special characters for built-in functions that remind you what they do!"</p>
+                    <Editor example="⚂ # Random number"/>
+                    <Editor example="⇡8 # Range up to"/>
+                    <Editor example="⇌ 1_2_3_4 # Reverse"/>
+                    <Editor example="⌕ 2 [0 2 5 1 2] # Find"/>
+                </div>
+                <div>
+                    <h2>"Unicode Formatter"</h2>
+                    <p>"Uiua has the terseness and expressivity afforded by Unicode glyphs without the need for a special keyboard or editor support. Instead, the language comes with a formatter that converts the names of built-in functions into glyphs."</p>
+                    <Editor example="floor*10[repeatrand5]" help={&["", "Click to format ⇡⇡⇡⇡"]}/>
+                </div>
+                <div>
+                    <h2>"Multimedia Output"</h2>
+                    <p>"Uiua has built-in facilities for generating images and audio. Just make arrays of the pixel data or audio samples!"</p>
+                    <Editor example="⊞(<+⇡3○/·÷30⊟∶)⇡100⇡300"/>
+                    <Editor example="÷3/+○⊞×⊟×1.5.220×τ÷∶⇡.44100"/>
+                    <p>"The Uiua logo was made with Uiua! Check the examples at the top of the page."</p>
+                </div>
+                <div>
+                    <h2>"System APIs"</h2>
+                    <p>"Uiua has functions for spawning threads, interacting with the file system, communicating over network sockets, and "<A href="/docs/system">"more"</A>"."</p>
+                </div>
             </div>
         </div>
     }

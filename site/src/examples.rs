@@ -5,7 +5,7 @@ const LOGO: &str = "\
 x ← ↶⍉⊞⊟. ÷÷2∶ -÷2,⇡.200
 rgb ← [×.⊢⇌x ×.⊢x ↯△⊢x0.5]
 u ← ↥<0.2∶>0.7.+×2 ×.∶/·x
-C ← <∶√/+ⁿ2 x
+c ← <∶√/+ⁿ2 x
 ⍉⊂∶-¬u c1 +0.1 ⫫↧rgb c0.95";
 const AVG: &str = "Avg ← ÷⧻∶/+.\nAvg 0_2_1_5";
 const CHORD: &str = "\
@@ -13,9 +13,9 @@ const CHORD: &str = "\
 ×220 ⁿ∶2÷12
 ÷⧻∶ ≡/+ ○×τ ⊞× ÷∶⇡.44100.";
 const QUADRATIC: &str = "\
-Quad ← {√- ××4a c ⁿ2 b
+Quadratic ← {√- ××4a c ⁿ2 b
         ÷ ×2a -b ⊟¯.}
-Quad 1 2 0";
+Quadratic 1 2 0";
 const STRIPES: &str = "\
 ∵{⊞a.⇡300}+_↥_-
 ⍉ ÷2 +1.2 ○ ÷10";

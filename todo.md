@@ -1,5 +1,9 @@
 - Under invert
+- Under couple
+- Color system function names
 - Remove distribute or change its glyph
+- Rework use semantics
+- Compose modifier
 - Proofread Design page
 - Move optimizations
 - Finish tour

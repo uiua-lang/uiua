@@ -21,7 +21,7 @@ p {
 }
 
 h2 {
-    margin: 2em 0 1em 0;
+    margin: 2em 0 0.5em 0;
     padding-bottom: 0.3em;
     border-bottom-width: 0.08em;
     border-bottom-style: solid;
@@ -243,16 +243,16 @@ li {
 
 .features {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
-    gap: 2em;
+    gap: min(3em, 3vw);
+    width: min(120%, 90vw);
+    margin-left: calc(-0.5 * (min(120%, 90vw) - 100%));
 }
 
 .features>* {
-    flex: 1;
-}
-
-.features>*>h2 {
-    margin-top: 1em;
+    flex: 1 1 22em;
+    width: 0;
 }
 
 #editor {
@@ -600,15 +600,16 @@ li {
 }
 
 #editor-help {
-    margin-top: -0.6em;
+    margin: 0.4em 0 -0.4em 0;
     font-size: 1em;
     opacity: 0.5;
     display: flex;
     justify-content: space-between;
 }
 
-#editor-help:empty {
-    margin-top: 0;
+#editor-help>* {
+    line-height: 1em;
+    margin: 0;
 }
 
 .sound-button {

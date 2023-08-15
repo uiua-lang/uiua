@@ -281,7 +281,7 @@ pub fn Editor<'a>(
 
         // Run code
         let output = run_code(&input);
-        let mut allow_autoplay = true;
+        let mut allow_autoplay = !matches!(size, EditorSize::Small);
         set_output.set(
             output
                 .into_iter()
@@ -826,7 +826,7 @@ pub fn Editor<'a>(
                                 style={format!("height: {code_height_em}em;")}
                                 on:input=code_input
                                 on:paste=code_paste>
-                                "<uninitialized>"
+                                "Loading..."
                             </div>
                         </div>
                     </div>
@@ -851,7 +851,7 @@ pub fn Editor<'a>(
                 </div>
             </div>
             <div id="editor-help">
-                { help.iter().map(|s| view! {  <p>{*s}</p> }).collect::<Vec<_>>() }
+                { help.iter().map(|s| view!(<p>{*s}</p>)).collect::<Vec<_>>() }
             </div>
         </div>
     }

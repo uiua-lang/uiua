@@ -52,7 +52,6 @@ fn invert_instrs(instrs: &[Instr]) -> Option<Vec<Instr>> {
             start -= 1;
         }
     }
-    // println!("inverted {:?} to {:?}", instrs, inverted);
     Some(inverted)
 }
 
@@ -67,6 +66,7 @@ fn invert_instr_fragment(instrs: &[Instr]) -> Option<Vec<Instr>> {
     }
 
     let patterns: &[&dyn InvertPattern] = &[
+        &(Val, ([Invert], [Primitive::Call])),
         &(Val, ([Rotate], [Neg, Rotate])),
         &(Val, IgnoreMany(Flip), ([Add], [Sub])),
         &(Val, ([Sub], [Add])),

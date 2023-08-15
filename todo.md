@@ -1,4 +1,3 @@
-- Under invert
 - Under couple
 - Color system function names
 - Remove distribute or change its glyph

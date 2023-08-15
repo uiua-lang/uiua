@@ -215,9 +215,11 @@ pub fn PrimCode(
     if let Some((title, ascii)) = title.as_mut().zip(prim.ascii()) {
         *title = format!("({}) {}", ascii, title);
     }
-    view!( <A href=href class="prim-code-a">
-            <code class="prim-code" title=title><span class=class>{ symbol }</span>{name}</code>
-        </A>)
+    view! {
+        <A href=href class="prim-code-a">
+            <code class="prim-code" data-title=title><span class=class>{ symbol }</span>{name}</code>
+        </A>
+    }
 }
 
 fn prim_class(prim: Primitive) -> &'static str {

@@ -638,7 +638,7 @@ pub fn Editor<'a>(
                 view! {
                     <button
                         class="glyph-button glyph-title"
-                        title=title
+                        data-title=title
                         on:click=onclick
                         on:mouseover=onmouseover
                         on:mouseleave=onmouseleave>
@@ -665,7 +665,7 @@ pub fn Editor<'a>(
         let onclick = move |_| replace_code(glyph);
         glyph_buttons.push(
             view! {
-                <button class="glyph-button" title=title on:click=onclick>{glyph}</button>
+                <button class="glyph-button" data-title=title on:click=onclick>{glyph}</button>
             }
             .into_view(),
         );
@@ -792,20 +792,20 @@ pub fn Editor<'a>(
                         <div id="code-right-side">
                             <button
                                 class="editor-right-button"
-                                title=copy_code_title
+                                data-title=copy_code_title
                                 on:click=copy_code>
                                 "📋"
                             </button>
                             <button
                                 class="editor-right-button"
-                                title=copy_link_title
+                                data-title=copy_link_title
                                 on:click=copy_link>
                                 "🔗"
                             </button>
                             <button
                                 id="glyphs-toggle-button"
                                 class="editor-right-button"
-                                title=show_glyphs_title
+                                data-title=show_glyphs_title
                                 on:click=toggle_show_glyphs>{show_glyphs_text}</button>
                             <div id="example-tracker">{example_text}</div>
                         </div>
@@ -1057,15 +1057,14 @@ fn set_code_html(id: &str, code: &str) {
                 }
                 format!(
                     r#"<span 
-                        class="code-span 
-                        code-hover {color_class}" 
-                        title={title:?}>{text}</span>"#
+                        class="code-span code-hover {color_class}" 
+                        data-title={title:?}>{text}</span>"#
                 )
             } else {
                 format!(
                     r#"<span 
                         class="code-span code-hover {color_class}" 
-                        title={name:?}>{text}</span>"#
+                        data-title={name:?}>{text}</span>"#
                 )
             }
         } else {

@@ -326,19 +326,19 @@ li {
     text-decoration: none;
 }
 
-.code-hover[title]:hover::after {
-    content: attr(title);
+.code-hover:hover::after {
+    content: attr(data-title);
     position: absolute;
     font-family: "Code Font";
     font-size: 0.7em;
-    bottom: 100%;
     color: #eee;
     background-color: #000c;
     padding: 0.2em;
     border-radius: 0.2em;
-    left: 0;
+    margin-top: -1.5em;
+    margin-left: -2em;
     text-decoration: none;
-    white-space: normal;
+    white-space: nowrap;
     overflow: visible;
     -webkit-text-fill-color: #eee;
     -moz-text-fill-color: #eee;
@@ -397,7 +397,7 @@ li {
     font-size: 1em;
 }
 
-#glyphs-toggle-button[title]:hover:after {
+#glyphs-toggle-button:hover:after {
     font-size: 0.6em;
 }
 
@@ -410,8 +410,8 @@ li {
     opacity: 1;
 }
 
-.editor-right-button[title]:hover::after {
-    content: attr(title);
+.editor-right-button:hover::after {
+    content: attr(data-title);
     position: absolute;
     font-family: "Code Font";
     font-size: 1em;
@@ -445,8 +445,8 @@ li {
     background-color: transparent;
 }
 
-.glyph-button[title]:hover::after {
-    content: attr(title);
+.glyph-button:hover::after {
+    content: attr(data-title);
     position: absolute;
     font-family: "Code Font";
     font-size: 0.7em;
@@ -466,8 +466,8 @@ li {
     white-space: nowrap;
 }
 
-.prim-code[title]:hover::after {
-    content: attr(title);
+.prim-code:hover::after {
+    content: attr(data-title);
     position: absolute;
     font-family: "Code Font";
     font-size: 0.8em;

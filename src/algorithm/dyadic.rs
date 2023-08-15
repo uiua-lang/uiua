@@ -705,6 +705,14 @@ impl Value {
             )?,
         })
     }
+    pub fn uncouple(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+        match self {
+            Value::Num(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
+            Value::Byte(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
+            Value::Char(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
+            Value::Func(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
+        }
+    }
 }
 
 fn data_index_to_shape_index(mut index: usize, shape: &[usize], out: &mut [usize]) -> bool {
@@ -790,6 +798,18 @@ impl<T: ArrayValue> Array<T> {
         self.shape.insert(0, 2);
         self.validate_shape();
         self
+    }
+    pub fn uncouple(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+        if self.row_count() != 2 {
+            return Err(env.error(format!(
+                "Cannot uncouple array with {} rows",
+                self.row_count()
+            )));
+        }
+        let mut rows = self.into_rows();
+        let first = rows.next().unwrap();
+        let second = rows.next().unwrap();
+        Ok((first, second))
     }
 }
 

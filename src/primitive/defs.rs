@@ -551,6 +551,8 @@ primitive!(
     ///
     /// `first``shape` of the coupled array will *always* be `2`.
     (2, Couple, DyadicArray, ("couple", '⊟')),
+    /// Split an array into two arrays
+    (1(1), Uncouple, MonadicArray),
     /// Replace the fill elements of an array with elements from another
     ///
     /// The most basic case is filling with a scalar

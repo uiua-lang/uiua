@@ -149,6 +149,7 @@ impl Primitive {
             InvTranspose => Transpose,
             Bits => InverseBits,
             InverseBits => Bits,
+            Couple => Uncouple,
             _ => return None,
         })
     }
@@ -270,6 +271,12 @@ impl Primitive {
             }
             Primitive::Rotate => env.dyadic_ref_own_env(Value::rotate)?,
             Primitive::Couple => env.dyadic_env(Value::couple)?,
+            Primitive::Uncouple => {
+                let coupled = env.pop(1)?;
+                let (a, b) = coupled.uncouple(env)?;
+                env.push(b);
+                env.push(a);
+            }
             Primitive::Fill => {
                 let fill = env.pop(1)?;
                 let mut array = env.pop(2)?;

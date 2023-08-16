@@ -1,7 +1,9 @@
 use std::{
+    backtrace::Backtrace,
     collections::{HashMap, HashSet},
     fs,
     mem::take,
+    panic::{catch_unwind, AssertUnwindSafe},
     path::{Path, PathBuf},
     str::FromStr,
     sync::Arc,
@@ -178,7 +180,25 @@ impl Uiua {
         if let Some(path) = path {
             self.current_imports.lock().insert(path.into());
         }
-        let res = self.items(items, false);
+        let res = match catch_unwind(AssertUnwindSafe(|| self.items(items, false))) {
+            Ok(Ok(())) => Ok(()),
+            Ok(Err(e)) => Err(e),
+            Err(_) => Err(self.error(format!(
+                "\
+The interpreter has crashed!
+Hooray! You found a bug!
+Please report this at http://github.com/uiua-lang/uiua/issues
+
+code:
+{}
+{}
+backtrace:
+{}",
+                self.span(),
+                input,
+                Backtrace::force_capture()
+            ))),
+        };
         if let Some(path) = path {
             self.current_imports.lock().remove(path);
         }

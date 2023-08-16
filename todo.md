@@ -1,7 +1,8 @@
-- Cache inverses and unders
-- Under pick
 - Maybe use ~ for formattable dfn args
 - Fill modifier?
+- Cache inverses and unders
+- Standardize error messages
+- Under pick
 - Finish tour
 - Docs
   - Audio

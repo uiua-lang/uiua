@@ -210,8 +210,8 @@ impl Primitive {
             }
             for len in (2..=indices.len() - start).rev() {
                 let start_index = indices[start];
-                let end_index = indices[start + len - 1];
-                let sub_name = &name[start_index..=end_index];
+                let end_index = indices.get(start + len).copied().unwrap_or(name.len());
+                let sub_name = &name[start_index..end_index];
                 if let Some(p) = Primitive::from_format_name(sub_name) {
                     if len >= 3 || p == Primitive::Pi {
                         prims.push((p, sub_name));

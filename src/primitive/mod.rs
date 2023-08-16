@@ -218,7 +218,7 @@ impl Primitive {
             Primitive::Tau => TAU,
             Primitive::Eta => PI / 2.0,
             Primitive::Infinity => INFINITY,
-            _ => return None
+            _ => return None,
         })
     }
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
@@ -729,7 +729,8 @@ mod tests {
                 .collect::<String>()
                 .replace('\\', "\\\\\\\\")
                 .replace('-', "\\\\-");
-            let names: Vec<String> = prims
+            let format_names = prims
+                .clone()
                 .filter_map(|p| p.names())
                 .filter(|p| p.is_name_formattable())
                 .map(|n| n.text.to_string())
@@ -746,9 +747,15 @@ mod tests {
                     }
                     format!("{}{}", start, end)
                 })
-                .collect();
-            let names = names.join("|");
-            format!("([{glyphs}]|{names})")
+                .collect::<Vec<_>>()
+                .join("|");
+            let literal_names = prims
+                .filter_map(|p| p.names())
+                .filter(|p| !p.is_name_formattable() && p.ascii.is_none() && p.unicode.is_none())
+                .map(|n| n.text.to_string())
+                .collect::<Vec<_>>()
+                .join("|");
+            format!("([{glyphs}]|{format_names}|{literal_names})")
         }
 
         let noadic_functions = gen_group(Primitive::all().filter(|p| {

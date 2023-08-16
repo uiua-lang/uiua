@@ -953,7 +953,11 @@ impl<T: ArrayValue> Array<T> {
             }
         }
         let mut shape = self.shape.clone();
-        shape[0] = indices.len();
+        if let Some(s) = shape.get_mut(0) {
+            *s = indices.len();
+        } else {
+            shape.push(indices.len());
+        }
         Ok((shape, selected).into())
     }
 }

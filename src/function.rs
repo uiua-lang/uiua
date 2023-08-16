@@ -32,7 +32,7 @@ impl Instr {
 impl fmt::Display for Instr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Instr::Push(val) => write!(f, "{val}"),
+            Instr::Push(val) => write!(f, "{val:?}"),
             Instr::BeginArray => write!(f, "]"),
             Instr::EndArray(_) => write!(f, "["),
             Instr::Prim(prim, _) => write!(f, "{prim}"),
@@ -126,7 +126,10 @@ impl fmt::Display for Function {
         } else {
             write!(f, "(")?;
         }
-        for instr in self.instrs.iter().rev() {
+        for (i, instr) in self.instrs.iter().rev().enumerate() {
+            if i > 0 {
+                write!(f, " ")?;
+            }
             instr.fmt(f)?;
         }
         if let FunctionKind::Dfn(_) = self.kind {

@@ -94,7 +94,7 @@ fn under_instrs(instrs: &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
     }
     let mut befores = Vec::new();
     let mut afters = Vec::new();
-    let mut start = instrs.len() - 1;
+    let mut start = 0;
     let mut end = instrs.len();
     loop {
         if let Some((before, mut after)) = under_instr_fragment(&instrs[start..end]) {
@@ -108,11 +108,11 @@ fn under_instrs(instrs: &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
                 break;
             }
             end = start;
-            start = end - 1;
+            start = 0;
         } else if start == 0 {
             return None;
         } else {
-            start -= 1;
+            start += 1;
         }
     }
     // println!("under {:?} to {:?} {:?}", instrs, befores, afters);
@@ -127,8 +127,11 @@ fn under_instr_fragment(instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr>)> 
 
     let patterns: &[&dyn UnderPattern] = &[
         &(Val, ([Take], [Over, Over, Take], [Untake])),
+        &([Take], [Over, Over, Take], [Untake]),
         &(Val, ([Drop], [Over, Over, Drop], [Undrop])),
+        &([Drop], [Over, Over, Drop], [Undrop]),
         &(Val, ([Select], [Over, Over, Select], [Unselect])),
+        &([Select], [Over, Over, Select], [Unselect]),
     ];
 
     for pattern in patterns {

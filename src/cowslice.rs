@@ -145,6 +145,16 @@ impl<T: Clone> From<Vec<T>> for CowSlice<T> {
     }
 }
 
+impl<T: Clone> From<CowSlice<T>> for Vec<T> {
+    fn from(mut slice: CowSlice<T>) -> Self {
+        if slice.data.is_unique() && slice.start == 0 && slice.end == slice.data.len() as u32 {
+            slice.data.into_iter().collect()
+        } else {
+            slice.to_vec()
+        }
+    }
+}
+
 impl<T: Clone> From<EcoVec<T>> for CowSlice<T> {
     fn from(data: EcoVec<T>) -> Self {
         Self {

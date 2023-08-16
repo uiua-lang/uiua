@@ -313,7 +313,7 @@ fn invert_pow_pattern(input: &mut &[Instr]) -> Option<Vec<Instr>> {
     if let Instr::Prim(Primitive::Pow, span) = next {
         *input = &input[1..];
         Some(vec![
-            Instr::push(1),
+            Instr::push(1u8),
             val[0].clone(),
             Instr::Prim(Primitive::Div, *span),
             Instr::Prim(Primitive::Pow, *span),

@@ -9,8 +9,7 @@ use crate::{
     cowslice::{cowslice, CowSlice},
     function::Function,
     grid_fmt::GridFmt,
-    primitive::Primitive,
-    Byte,
+    Uiua, UiuaResult,
 };
 
 #[derive(Clone)]
@@ -47,7 +46,7 @@ where
             1 => {
                 let (start, end) = T::format_delims();
                 write!(f, "{}", start)?;
-                for (i, x) in self.data.iter().filter(|v| !v.is_fill_value()).enumerate() {
+                for (i, x) in self.data.iter().enumerate() {
                     if i > 0 {
                         write!(f, "{}", T::format_sep())?;
                     }
@@ -93,35 +92,6 @@ impl<T: ArrayValue> Array<T> {
     }
     pub fn row_count(&self) -> usize {
         self.shape.first().copied().unwrap_or(1)
-    }
-    #[allow(clippy::len_without_is_empty)]
-    pub fn length(&self) -> usize {
-        if self.rank() == 1 {
-            if self.data.last().is_some_and(T::is_fill_value) {
-                let end_fill_count = self
-                    .data
-                    .iter()
-                    .rev()
-                    .take_while(|x| x.is_fill_value())
-                    .count();
-                self.data.len() - end_fill_count
-            } else {
-                self.data.len()
-            }
-        } else if self
-            .row_slices()
-            .last()
-            .is_some_and(|x| x.iter().all(T::is_fill_value))
-        {
-            let end_fill_count = self
-                .row_slices()
-                .rev()
-                .take_while(|x| x.iter().all(T::is_fill_value))
-                .count();
-            self.row_count() - end_fill_count
-        } else {
-            self.row_count()
-        }
     }
     pub fn flat_len(&self) -> usize {
         self.data.len()
@@ -204,9 +174,12 @@ impl<T: ArrayValue> Array<T> {
         T: Into<U>,
         U: Clone,
     {
+        self.convert_ref_with(Into::into)
+    }
+    pub fn convert_ref_with<U: Clone>(&self, f: impl FnMut(T) -> U) -> Array<U> {
         Array {
             shape: self.shape.clone(),
-            data: self.data.iter().cloned().map(Into::into).collect(),
+            data: self.data.iter().cloned().map(f).collect(),
         }
     }
     pub fn into_rows(self) -> impl Iterator<Item = Self> {
@@ -261,85 +234,38 @@ impl<T: ArrayValue> Array<T> {
         shape[0] = 0;
         Array::new(shape, CowSlice::new())
     }
-    /// Remove fill elements from the end of the array
-    pub fn truncate(&mut self) {
-        if self.rank() == 0 {
-            return;
-        }
-        let row_count = self.row_count();
-        let mut new_len = row_count;
-        for (i, row) in self.row_slices().enumerate().rev() {
-            if row.iter().all(|x| x.is_fill_value()) {
-                new_len = i;
-            } else {
-                break;
-            }
-        }
-        if new_len == row_count {
-            return;
-        }
-        self.data.truncate(new_len * self.row_len());
-        self.shape[0] = new_len;
-    }
     #[track_caller]
-    pub fn from_row_arrays(values: impl IntoIterator<Item = Self>) -> Self {
+    pub fn from_row_arrays(values: impl IntoIterator<Item = Self>, env: &Uiua) -> UiuaResult<Self> {
         let mut row_values = values.into_iter();
         let Some(mut value) = row_values.next() else {
-            return Self::default();
+            return Ok(Self::default());
         };
         let mut count = 1;
         for row in row_values {
             count += 1;
             value = if count == 2 {
-                value.couple(row)
+                value.couple(row, env)?
             } else {
-                value.join_impl(row, false)
+                value.join(row, env)?
             };
         }
         if count == 1 {
             value.shape.insert(0, 1);
         }
-        value
-    }
-    fn is_all_fill(&self) -> bool {
-        self.data.iter().all(|x| x.is_fill_value())
+        value.validate_shape();
+        Ok(value)
     }
 }
 
 impl<T: ArrayValue> PartialEq for Array<T> {
     fn eq(&self, other: &Self) -> bool {
-        if self.rank() != other.rank() {
+        if self.shape() != other.shape() {
             return false;
         }
-        match self.rank() {
-            0 => self.data[0].array_eq(&other.data[0]),
-            1 => {
-                let mut a = self
-                    .data
-                    .iter()
-                    .skip_while(|x| x.is_fill_value())
-                    .take_while(|x| !x.is_fill_value());
-                let mut b = other
-                    .data
-                    .iter()
-                    .skip_while(|x| x.is_fill_value())
-                    .take_while(|x| !x.is_fill_value());
-                a.by_ref().zip(b.by_ref()).all(|(a, b)| a.array_eq(b))
-                    && a.next().is_none()
-                    && b.next().is_none()
-            }
-            _ => {
-                let a = self
-                    .rows()
-                    .skip_while(|x| x.is_all_fill())
-                    .take_while(|x| x.is_all_fill());
-                let b = other
-                    .rows()
-                    .skip_while(|x| !x.is_all_fill())
-                    .take_while(|x| !x.is_all_fill());
-                a.eq(b)
-            }
-        }
+        self.data
+            .iter()
+            .zip(&other.data)
+            .all(|(a, b)| a.array_eq(b))
     }
 }
 
@@ -357,37 +283,12 @@ impl<T: ArrayValue> Ord for Array<T> {
         if rank_cmp != Ordering::Equal {
             return rank_cmp;
         }
-        match self.rank() {
-            0 => self.data[0].array_cmp(&other.data[0]),
-            1 => {
-                let mut a = self
-                    .data
-                    .iter()
-                    .skip_while(|x| x.is_fill_value())
-                    .take_while(|x| !x.is_fill_value());
-                let mut b = other
-                    .data
-                    .iter()
-                    .skip_while(|x| x.is_fill_value())
-                    .take_while(|x| !x.is_fill_value());
-                a.by_ref()
-                    .zip(b.by_ref())
-                    .map(|(a, b)| a.array_cmp(b))
-                    .find(|o| o != &Ordering::Equal)
-                    .unwrap_or_else(|| a.count().cmp(&b.count()))
-            }
-            _ => {
-                let a = self
-                    .rows()
-                    .skip_while(|x| x.is_all_fill())
-                    .take_while(|x| x.is_all_fill());
-                let b = other
-                    .rows()
-                    .skip_while(|x| !x.is_all_fill())
-                    .take_while(|x| !x.is_all_fill());
-                a.cmp(b)
-            }
-        }
+        self.data
+            .iter()
+            .zip(&other.data)
+            .map(|(a, b)| a.array_cmp(b))
+            .find(|o| o != &Ordering::Equal)
+            .unwrap_or_else(|| self.data.len().cmp(&other.data.len()))
     }
 }
 
@@ -433,15 +334,15 @@ impl From<String> for Array<char> {
     }
 }
 
-impl From<Vec<bool>> for Array<Byte> {
+impl From<Vec<bool>> for Array<u8> {
     fn from(data: Vec<bool>) -> Self {
-        Self::new(vec![data.len()], data.into_iter().map(Byte::from).collect())
+        Self::new(vec![data.len()], data.into_iter().map(u8::from).collect())
     }
 }
 
-impl From<bool> for Array<Byte> {
+impl From<bool> for Array<u8> {
     fn from(data: bool) -> Self {
-        Self::new(vec![], vec![Byte::from(data)].into())
+        Self::new(vec![], vec![u8::from(data)].into())
     }
 }
 
@@ -461,10 +362,7 @@ impl FromIterator<String> for Array<char> {
 
 pub trait ArrayValue: Clone + Debug + Display + GridFmt {
     const NAME: &'static str;
-    type Unfilled;
     fn array_cmp(&self, other: &Self) -> Ordering;
-    fn fill_value() -> Self;
-    fn unfilled(self) -> Option<Self::Unfilled>;
     fn array_eq(&self, other: &Self) -> bool {
         self.array_cmp(other) == Ordering::Equal
     }
@@ -474,71 +372,25 @@ pub trait ArrayValue: Clone + Debug + Display + GridFmt {
     fn format_sep() -> &'static str {
         " "
     }
-    fn is_fill_value(&self) -> bool {
-        false
-    }
-    fn bin_map<T: ArrayValue, U: Into<T>>(
-        self,
-        other: Self,
-        f: impl Fn(Self::Unfilled, Self::Unfilled) -> U,
-    ) -> T {
-        if let Some((a, b)) = self.unfilled().zip(other.unfilled()) {
-            f(a, b).into()
-        } else {
-            T::fill_value()
-        }
-    }
 }
 
 impl ArrayValue for f64 {
     const NAME: &'static str = "number";
-    type Unfilled = f64;
-    fn unfilled(self) -> Option<Self::Unfilled> {
-        if self.is_nan() {
-            None
-        } else {
-            Some(self)
-        }
-    }
     fn array_cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other)
             .unwrap_or_else(|| self.is_nan().cmp(&other.is_nan()))
     }
-    fn fill_value() -> Self {
-        f64::NAN
-    }
-    fn is_fill_value(&self) -> bool {
-        self.is_nan()
-    }
 }
 
-impl ArrayValue for Byte {
+impl ArrayValue for u8 {
     const NAME: &'static str = "byte";
-    type Unfilled = i16;
-    fn unfilled(self) -> Option<Self::Unfilled> {
-        self.value()
-    }
     fn array_cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(self, other)
-    }
-    fn fill_value() -> Self {
-        Byte(i16::MIN)
-    }
-    fn is_fill_value(&self) -> bool {
-        self.0 == i16::MIN
     }
 }
 
 impl ArrayValue for char {
     const NAME: &'static str = "character";
-    type Unfilled = char;
-    fn unfilled(self) -> Option<Self::Unfilled> {
-        if self == '\0' {
-            None
-        } else {
-            Some(self)
-        }
-    }
     fn array_cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(self, other)
     }
@@ -548,32 +400,12 @@ impl ArrayValue for char {
     fn format_sep() -> &'static str {
         ""
     }
-    fn fill_value() -> Self {
-        '\0'
-    }
-    fn is_fill_value(&self) -> bool {
-        *self == '\0'
-    }
 }
 
 impl ArrayValue for Arc<Function> {
     const NAME: &'static str = "function";
-    type Unfilled = Arc<Function>;
-    fn unfilled(self) -> Option<Self::Unfilled> {
-        if let Some((Primitive::FillValue, _)) = self.as_primitive() {
-            None
-        } else {
-            Some(self)
-        }
-    }
     fn array_cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(self, other)
-    }
-    fn fill_value() -> Self {
-        Arc::new(Primitive::FillValue.into())
-    }
-    fn is_fill_value(&self) -> bool {
-        self.as_primitive() == Some((Primitive::FillValue, 0))
     }
 }
 

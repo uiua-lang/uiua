@@ -15,7 +15,6 @@ use crate::{
     array::{Array, ArrayValue},
     function::Function,
     value::Value,
-    Byte,
 };
 
 type Grid<T = char> = Vec<Vec<T>>;
@@ -34,46 +33,34 @@ pub trait GridFmt {
     }
 }
 
-impl GridFmt for Byte {
+impl GridFmt for u8 {
     fn fmt_grid(&self) -> Grid {
-        if self.is_fill_value() {
-            vec![vec!['_']]
-        } else {
-            vec![self.to_string().chars().collect()]
-        }
+        vec![self.to_string().chars().collect()]
     }
 }
 
 impl GridFmt for f64 {
     fn fmt_grid(&self) -> Grid {
-        if self.is_fill_value() {
-            vec![vec!['_']]
+        let positive = (self.abs() * 1e12).round() / 1e12;
+        let minus = if *self < -0.0 { "¯" } else { "" };
+        let s = if (positive - PI).abs() < 1e-12 {
+            format!("{minus}π")
+        } else if (positive - TAU).abs() < 1e-12 {
+            format!("{minus}τ")
+        } else if (positive - PI / 2.0).abs() < 1e-12 {
+            format!("{minus}η")
+        } else if positive == INFINITY {
+            format!("{minus}∞")
         } else {
-            let positive = (self.abs() * 1e12).round() / 1e12;
-            let minus = if *self < -0.0 { "¯" } else { "" };
-            let s = if (positive - PI).abs() < 1e-12 {
-                format!("{minus}π")
-            } else if (positive - TAU).abs() < 1e-12 {
-                format!("{minus}τ")
-            } else if (positive - PI / 2.0).abs() < 1e-12 {
-                format!("{minus}η")
-            } else if positive == INFINITY {
-                format!("{minus}∞")
-            } else {
-                format!("{minus}{positive}")
-            };
-            vec![s.chars().collect()]
-        }
+            format!("{minus}{positive}")
+        };
+        vec![s.chars().collect()]
     }
 }
 
 impl GridFmt for char {
     fn fmt_grid(&self) -> Grid {
-        if self.is_fill_value() {
-            vec![vec![' ']]
-        } else {
-            vec![format!("{self:?}").chars().collect()]
-        }
+        vec![format!("{self:?}").chars().collect()]
     }
 }
 
@@ -243,13 +230,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
         let mut row = Vec::with_capacity(shape[0]);
         if stringy {
             let mut s = String::new();
-            s.extend(data.iter().map(|c| {
-                if c.is_fill_value() {
-                    " ".into()
-                } else {
-                    c.to_string()
-                }
-            }));
+            s.extend(data.iter().map(|c| c.to_string()));
             row.push(vec![format!("{s:?}").chars().collect()]);
         } else {
             for (i, val) in data.iter().enumerate() {

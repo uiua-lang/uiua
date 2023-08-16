@@ -5,7 +5,7 @@ use std::{
     sync::Arc,
 };
 
-use crate::{array::*, value::Value, Byte, Uiua, UiuaResult};
+use crate::{array::*, value::Value, Uiua, UiuaResult};
 
 impl Value {
     pub fn deshape(&mut self) {
@@ -288,7 +288,7 @@ impl Value {
     pub fn invert(&self, env: &Uiua) -> UiuaResult<Self> {
         Ok(match self {
             Self::Func(fs) => {
-                let mut invs = Vec::with_capacity(fs.length());
+                let mut invs = Vec::with_capacity(fs.row_count());
                 for f in &fs.data {
                     invs.push(
                         f.inverse()
@@ -304,8 +304,8 @@ impl Value {
     pub fn under(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
         Ok(match self {
             Self::Func(fs) => {
-                let mut befores = Vec::with_capacity(fs.length());
-                let mut afters = Vec::with_capacity(fs.length());
+                let mut befores = Vec::with_capacity(fs.row_count());
+                let mut afters = Vec::with_capacity(fs.row_count());
                 for f in fs.data {
                     let f = Arc::try_unwrap(f).unwrap_or_else(|f| (*f).clone());
                     let (before, after) = f.under().ok_or_else(|| env.error("No inverse found"))?;
@@ -323,7 +323,7 @@ impl Value {
 }
 
 impl Value {
-    pub fn bits(&self, env: &Uiua) -> UiuaResult<Array<Byte>> {
+    pub fn bits(&self, env: &Uiua) -> UiuaResult<Array<u8>> {
         match self {
             Value::Byte(n) => n.convert_ref().bits(env),
             Value::Num(n) => n.bits(env),
@@ -333,20 +333,16 @@ impl Value {
     pub fn inverse_bits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         match self {
             Value::Byte(n) => n.inverse_bits(env),
-            Value::Num(n) => n.convert_ref().inverse_bits(env),
+            Value::Num(n) => n.convert_ref_with(|n| n as u8).inverse_bits(env),
             _ => Err(env.error("Argument to inverse_bits must be an array of naturals")),
         }
     }
 }
 
 impl Array<f64> {
-    pub fn bits(&self, env: &Uiua) -> UiuaResult<Array<Byte>> {
+    pub fn bits(&self, env: &Uiua) -> UiuaResult<Array<u8>> {
         let mut nats = Vec::new();
         for &n in &self.data {
-            if n.is_fill_value() {
-                nats.push(0);
-                continue;
-            }
             if n.fract() != 0.0 {
                 return Err(env.error("Array must be a list of naturals"));
             }
@@ -368,7 +364,7 @@ impl Array<f64> {
         // Big endian
         for n in nats {
             for i in 0..max_bits {
-                new_data.push(Byte::from(n & (1 << i) != 0));
+                new_data.push(u8::from(n & (1 << i) != 0));
             }
         }
         let mut shape = self.shape.clone();
@@ -379,18 +375,14 @@ impl Array<f64> {
     }
 }
 
-impl Array<Byte> {
+impl Array<u8> {
     pub fn inverse_bits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         let mut bools = Vec::with_capacity(self.data.len());
         for &b in &self.data {
-            if b.0 > 1 {
+            if b > 1 {
                 return Err(env.error("Array must be a list of booleans"));
             }
-            if b.is_fill_value() {
-                bools.push(false);
-            } else {
-                bools.push(b.0 != 0);
-            }
+            bools.push(b != 0);
         }
         if self.rank() == 0 {
             return Ok(Array::from(bools[0] as u8 as f64));

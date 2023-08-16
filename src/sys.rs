@@ -18,8 +18,7 @@ use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 
 use crate::{
-    array::Array, grid_fmt::GridFmt, primitive::PrimDoc, value::Value, Byte, Uiua, UiuaError,
-    UiuaResult,
+    array::Array, grid_fmt::GridFmt, primitive::PrimDoc, value::Value, Uiua, UiuaError, UiuaResult,
 };
 
 pub fn example_ua<T>(f: impl FnOnce(&mut String) -> T) -> T {
@@ -691,7 +690,7 @@ impl SysOp {
                     .into();
                 let bytes = env.backend.read(handle, count).map_err(|e| env.error(e))?;
                 let bytes = bytes.into_iter().map(Into::into);
-                env.push(Array::<Byte>::from_iter(bytes));
+                env.push(Array::<u8>::from_iter(bytes));
             }
             SysOp::ReadUntil => {
                 let delim = env.pop(1)?;
@@ -709,20 +708,14 @@ impl SysOp {
                             .backend
                             .read_until(handle, &delim)
                             .map_err(|e| env.error(e))?;
-                        let bytes: Vec<Byte> = bytes.into_iter().map(Byte::from).collect();
                         env.push(bytes);
                     }
                     Value::Byte(arr) => {
-                        let delim: Vec<u8> = arr
-                            .data
-                            .iter()
-                            .filter_map(|x| x.value().map(|b| b as u8))
-                            .collect();
+                        let delim: Vec<u8> = arr.data.into();
                         let bytes = env
                             .backend
                             .read_until(handle, &delim)
                             .map_err(|e| env.error(e))?;
-                        let bytes: Vec<Byte> = bytes.into_iter().map(Byte::from).collect();
                         env.push(bytes);
                     }
                     Value::Char(arr) => {
@@ -745,11 +738,7 @@ impl SysOp {
                     .into();
                 let bytes: Vec<u8> = match data {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
-                    Value::Byte(arr) => arr
-                        .data
-                        .iter()
-                        .filter_map(|x| x.value().map(|b| b as u8))
-                        .collect(),
+                    Value::Byte(arr) => arr.data.into(),
                     Value::Char(arr) => arr.data.iter().collect::<String>().into(),
                     Value::Func(_) => return Err(env.error("Cannot write function array to file")),
                 };
@@ -787,18 +776,14 @@ impl SysOp {
                     })
                     .map_err(|e| env.error(e))?;
                 let bytes = bytes.into_iter().map(Into::into);
-                env.push(Array::<Byte>::from_iter(bytes));
+                env.push(Array::<u8>::from_iter(bytes));
             }
             SysOp::FWriteAll => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let data = env.pop(2)?;
                 let bytes: Vec<u8> = match data {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
-                    Value::Byte(arr) => arr
-                        .data
-                        .iter()
-                        .filter_map(|x| x.value().map(|b| b as u8))
-                        .collect(),
+                    Value::Byte(arr) => arr.data.into(),
                     Value::Char(arr) => arr.data.iter().collect::<String>().into(),
                     Value::Func(_) => return Err(env.error("Cannot write function array to file")),
                 };
@@ -855,8 +840,7 @@ impl SysOp {
                     .map_err(|e| env.error(format!("Failed to read image: {}", e)))?
                     .into_rgba8();
                 let shape = vec![image.height() as usize, image.width() as usize, 4];
-                let bytes: Vec<Byte> = image.into_raw().into_iter().map(Into::into).collect();
-                let array = Array::<Byte>::from((shape, bytes));
+                let array = Array::<u8>::from((shape, bytes));
                 env.push(array);
             }
             SysOp::ImWrite => {
@@ -942,11 +926,7 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
             .iter()
             .map(|f| (*f * 255.0).floor() as u8)
             .collect(),
-        Value::Byte(bytes) => bytes
-            .data
-            .iter()
-            .map(|&b| b.or(0).min(1) as u8 * 255)
-            .collect(),
+        Value::Byte(bytes) => bytes.data.to_vec(),
         _ => return Err("Image must be a numeric array".into()),
     };
     #[allow(clippy::match_ref_pats)]
@@ -979,11 +959,7 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
 pub fn value_to_sample(audio: &Value) -> Result<Vec<[f32; 2]>, String> {
     let unrolled: Vec<f32> = match audio {
         Value::Num(nums) => nums.data.iter().map(|&f| f as f32).collect(),
-        Value::Byte(byte) => byte
-            .data
-            .iter()
-            .map(|&b| b.value().map_or(0, |b| b.min(1)) as f32)
-            .collect(),
+        Value::Byte(byte) => byte.data.iter().map(|&b| b as f32).collect(),
         _ => return Err("Audio must be a numeric array".into()),
     };
     let (length, mut channels) = match audio.rank() {
@@ -1022,11 +998,7 @@ pub fn value_to_sample(audio: &Value) -> Result<Vec<[f32; 2]>, String> {
 pub fn value_to_audio_channes(audio: &Value) -> Result<Vec<Vec<f64>>, String> {
     let interleaved: Vec<f64> = match audio {
         Value::Num(nums) => nums.data.iter().copied().collect(),
-        Value::Byte(byte) => byte
-            .data
-            .iter()
-            .map(|&b| b.value().map_or(0, |b| b.min(1)) as f64)
-            .collect(),
+        Value::Byte(byte) => byte.data.iter().map(|&b| b as f64).collect(),
         _ => return Err("Audio must be a numeric array".into()),
     };
     let (length, mut channels) = match audio.rank() {

@@ -6,7 +6,7 @@ use crate::{
     cowslice::cowslice,
     primitive::Primitive,
     value::Value,
-    Byte, Uiua, UiuaResult,
+    Uiua, UiuaResult,
 };
 
 fn flip<A, B, C>(f: impl Fn(A, B) -> C) -> impl Fn(B, A) -> C {
@@ -148,8 +148,8 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
                 Primitive::Mul => env.push(fast_scan::<f64>(bytes.convert(), Mul::mul)),
                 Primitive::Div if flipped => env.push(fast_scan::<f64>(bytes.convert(), Div::div)),
                 Primitive::Div => env.push(fast_scan::<f64>(bytes.convert(), flip(Div::div))),
-                Primitive::Max => env.push(fast_scan(bytes, |a, b| a.op(b, i16::max))),
-                Primitive::Min => env.push(fast_scan(bytes, |a, b| a.op(b, i16::min))),
+                Primitive::Max => env.push(fast_scan(bytes, u8::max)),
+                Primitive::Min => env.push(fast_scan(bytes, u8::min)),
                 _ => return generic_scan(f, Value::Byte(bytes), env),
             }
             Ok(())
@@ -416,10 +416,8 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn bin_bool<T: ArrayValue>(
-    f: impl Fn(T::Unfilled, T::Unfilled) -> bool + Copy,
-) -> impl Fn(T, T) -> Byte {
-    move |x, y| x.bin_map(y, f)
+fn bin_bool<T: ArrayValue>(f: impl Fn(T, T) -> bool + Copy) -> impl Fn(T, T) -> u8 {
+    move |x, y| f(x, y) as u8
 }
 
 pub fn table(env: &mut Uiua) -> UiuaResult {
@@ -466,8 +464,8 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
                 env.push(fast_table(xs, ys, |a, b| f64::from(a) / f64::from(b)))
             }
             Primitive::Div => env.push(fast_table(xs, ys, |a, b| f64::from(b) / f64::from(a))),
-            Primitive::Min => env.push(fast_table(xs, ys, |a, b| Byte(i16::min(a.0, b.0)))),
-            Primitive::Max => env.push(fast_table(xs, ys, |a, b| a.op(b, i16::max))),
+            Primitive::Min => env.push(fast_table(xs, ys, u8::min)),
+            Primitive::Max => env.push(fast_table(xs, ys, u8::max)),
             Primitive::Join | Primitive::Couple => env.push(fast_table_join_or_couple(xs, ys)),
             _ => generic_table(f, Value::Byte(xs), Value::Byte(ys), env)?,
         },
@@ -569,8 +567,8 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
     let xs = env.pop(2)?;
     let ys = env.pop(3)?;
     const BREAK_ERROR: &str = "break is not allowed in cross";
-    let mut new_shape = vec![xs.len(), ys.len()];
-    let mut items = Vec::with_capacity(xs.len() * ys.len());
+    let mut new_shape = vec![xs.row_count(), ys.row_count()];
+    let mut items = Vec::with_capacity(xs.row_count() * ys.row_count());
     let y_rows = ys.into_rows().collect::<Vec<_>>();
     for x_row in xs.into_rows() {
         for y_row in y_rows.iter().cloned() {

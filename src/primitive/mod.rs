@@ -98,8 +98,6 @@ impl fmt::Display for Primitive {
             write!(f, "{}", s)
         } else if let Some(s) = self.name() {
             write!(f, "{}", s)
-        } else if let Primitive::FillValue = self {
-            write!(f, "_")
         } else {
             use Primitive::*;
             match self {
@@ -236,7 +234,7 @@ impl Primitive {
             Primitive::Pi => env.push(PI),
             Primitive::Tau => env.push(TAU),
             Primitive::Infinity => env.push(INFINITY),
-            Primitive::Noop | Primitive::FillValue => {}
+            Primitive::Noop => {}
             Primitive::Not => env.monadic_env(Value::not)?,
             Primitive::Neg => env.monadic_env(Value::neg)?,
             Primitive::Abs => env.monadic_env(Value::abs)?,
@@ -293,12 +291,6 @@ impl Primitive {
                 env.push(b);
                 env.push(a);
             }
-            Primitive::Fill => {
-                let fill = env.pop(1)?;
-                let mut array = env.pop(2)?;
-                array.fill(fill, env)?;
-                env.push(array);
-            }
             Primitive::Grade => env.monadic_ref_env(|v, env| v.grade(env))?,
             Primitive::Select => env.dyadic_ref_env(Value::select)?,
             Primitive::Unselect => {
@@ -322,9 +314,8 @@ impl Primitive {
             Primitive::Deshape => env.monadic_mut(Value::deshape)?,
             Primitive::First => env.monadic_env(Value::first)?,
             Primitive::Last => env.monadic_env(Value::last)?,
-            Primitive::Len => env.monadic_ref(Value::len)?,
+            Primitive::Len => env.monadic_ref(Value::row_count)?,
             Primitive::Rank => env.monadic_ref(Value::rank)?,
-            Primitive::Truncate => env.monadic_mut(Value::truncate)?,
             Primitive::Bits => env.monadic_ref_env(Value::bits)?,
             Primitive::InverseBits => env.monadic_ref_env(Value::inverse_bits)?,
             Primitive::Fold => loops::fold(env)?,

@@ -1121,7 +1121,7 @@ fn run_code(code: &str) -> Vec<OutputItem> {
                 continue;
             }
         }
-        if value.len() > 1000 {
+        if value.row_count() > 1000 {
             if let Ok(bytes) = value_to_wav_bytes(&value) {
                 stack.push(OutputItem::Audio(bytes));
                 continue;

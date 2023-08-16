@@ -4,7 +4,7 @@ use std::{
     slice::{self, Chunks},
 };
 
-use crate::{array::*, Byte, Uiua, UiuaError, UiuaResult};
+use crate::{array::*, Uiua, UiuaError, UiuaResult};
 
 #[allow(clippy::len_without_is_empty)]
 pub trait Arrayish {
@@ -126,8 +126,8 @@ pub mod not {
     pub fn num(a: f64) -> f64 {
         1.0 - a
     }
-    pub fn byte(a: Byte) -> Byte {
-        a.map(|a| 1 - a)
+    pub fn byte(a: u8) -> f64 {
+        num(a.into())
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot negate {a}"))
@@ -139,7 +139,7 @@ pub mod neg {
     pub fn num(a: f64) -> f64 {
         -a
     }
-    pub fn byte(a: Byte) -> f64 {
+    pub fn byte(a: u8) -> f64 {
         -f64::from(a)
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
@@ -151,7 +151,7 @@ pub mod abs {
     pub fn num(a: f64) -> f64 {
         a.abs()
     }
-    pub fn byte(a: Byte) -> Byte {
+    pub fn byte(a: u8) -> u8 {
         a
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
@@ -169,8 +169,8 @@ pub mod sign {
             a.signum()
         }
     }
-    pub fn byte(a: Byte) -> Byte {
-        a.map(|a| a.signum())
+    pub fn byte(a: u8) -> u8 {
+        (a > 0) as u8
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the sign of {a}"))
@@ -181,7 +181,7 @@ pub mod sqrt {
     pub fn num(a: f64) -> f64 {
         a.sqrt()
     }
-    pub fn byte(a: Byte) -> f64 {
+    pub fn byte(a: u8) -> f64 {
         f64::from(a).sqrt()
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
@@ -193,7 +193,7 @@ pub mod sin {
     pub fn num(a: f64) -> f64 {
         a.sin()
     }
-    pub fn byte(a: Byte) -> f64 {
+    pub fn byte(a: u8) -> f64 {
         f64::from(a).sin()
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
@@ -205,7 +205,7 @@ pub mod cos {
     pub fn num(a: f64) -> f64 {
         a.cos()
     }
-    pub fn byte(a: Byte) -> f64 {
+    pub fn byte(a: u8) -> f64 {
         f64::from(a).cos()
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
@@ -217,7 +217,7 @@ pub mod tan {
     pub fn num(a: f64) -> f64 {
         a.tan()
     }
-    pub fn byte(a: Byte) -> f64 {
+    pub fn byte(a: u8) -> f64 {
         f64::from(a).tan()
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
@@ -229,7 +229,7 @@ pub mod asin {
     pub fn num(a: f64) -> f64 {
         a.asin()
     }
-    pub fn byte(a: Byte) -> f64 {
+    pub fn byte(a: u8) -> f64 {
         f64::from(a).asin()
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
@@ -241,7 +241,7 @@ pub mod acos {
     pub fn num(a: f64) -> f64 {
         a.acos()
     }
-    pub fn byte(a: Byte) -> f64 {
+    pub fn byte(a: u8) -> f64 {
         f64::from(a).acos()
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
@@ -253,7 +253,7 @@ pub mod floor {
     pub fn num(a: f64) -> f64 {
         a.floor()
     }
-    pub fn byte(a: Byte) -> Byte {
+    pub fn byte(a: u8) -> u8 {
         a
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
@@ -265,7 +265,7 @@ pub mod ceil {
     pub fn num(a: f64) -> f64 {
         a.ceil()
     }
-    pub fn byte(a: Byte) -> Byte {
+    pub fn byte(a: u8) -> u8 {
         a
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
@@ -277,7 +277,7 @@ pub mod round {
     pub fn num(a: f64) -> f64 {
         a.round()
     }
-    pub fn byte(a: Byte) -> Byte {
+    pub fn byte(a: u8) -> u8 {
         a
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
@@ -289,22 +289,22 @@ macro_rules! cmp_impl {
     ($name:ident $eq:tt $ordering:expr) => {
         pub mod $name {
             use super::*;
-            pub fn always_greater<A, B>(_: A, _: B) -> Byte {
+            pub fn always_greater<A, B>(_: A, _: B) -> u8 {
                 ($ordering $eq Ordering::Less).into()
             }
-            pub fn always_less<A, B>(_: A, _: B) -> Byte {
+            pub fn always_less<A, B>(_: A, _: B) -> u8 {
                 ($ordering $eq Ordering::Greater).into()
             }
-            pub fn num_num(a: f64, b: f64) -> Byte {
-                a.bin_map(b, |a, b| b.partial_cmp(&a).unwrap() $eq $ordering)
+            pub fn num_num(a: f64, b: f64) -> u8 {
+                (a.array_cmp(&b) $eq $ordering) as u8
             }
-            pub fn byte_num(a: Byte, b: f64) -> Byte {
-                f64::from(a).bin_map(b, |a, b| b.partial_cmp(&a).unwrap() $eq $ordering)
+            pub fn byte_num(a: u8, b: f64) -> u8 {
+                (f64::from(a).array_cmp(&b) $eq $ordering) as u8
             }
-            pub fn num_byte(a: f64, b: Byte) -> Byte {
-                a.bin_map(f64::from(b), |a, b| b.partial_cmp(&a).unwrap() $eq $ordering)
+            pub fn num_byte(a: f64, b: u8) -> u8 {
+                (a.array_cmp(&f64::from(b)) $eq $ordering) as u8
             }
-            pub fn generic<T: Ord>(a: T, b: T) -> Byte {
+            pub fn generic<T: Ord>(a: T, b: T) -> u8 {
                 (b.cmp(&a) $eq $ordering).into()
             }
             pub fn error<T: Display>(a: T, b: T, _env: &Uiua) -> UiuaError {
@@ -330,13 +330,13 @@ pub mod add {
     pub fn num_num(a: f64, b: f64) -> f64 {
         b + a
     }
-    pub fn byte_byte(a: Byte, b: Byte) -> f64 {
+    pub fn byte_byte(a: u8, b: u8) -> f64 {
         f64::from(a) + f64::from(b)
     }
-    pub fn byte_num(a: Byte, b: f64) -> f64 {
+    pub fn byte_num(a: u8, b: f64) -> f64 {
         b + f64::from(a)
     }
-    pub fn num_byte(a: f64, b: Byte) -> f64 {
+    pub fn num_byte(a: f64, b: u8) -> f64 {
         a + f64::from(b)
     }
     pub fn num_char(a: f64, b: char) -> char {
@@ -345,15 +345,11 @@ pub mod add {
     pub fn char_num(a: char, b: f64) -> char {
         char::from_u32((b as i64 + a as i64) as u32).unwrap_or('\0')
     }
-    pub fn byte_char(a: Byte, b: char) -> char {
-        a.value()
-            .map(|a| char::from_u32((b as i64 + a as i64) as u32).unwrap_or('\0'))
-            .unwrap_or_default()
+    pub fn byte_char(a: u8, b: char) -> char {
+        char::from_u32((b as i64 + a as i64) as u32).unwrap_or('\0')
     }
-    pub fn char_byte(a: char, b: Byte) -> char {
-        b.value()
-            .map(|b| char::from_u32((b as i64 + a as i64) as u32).unwrap_or('\0'))
-            .unwrap_or_default()
+    pub fn char_byte(a: char, b: u8) -> char {
+        char::from_u32((b as i64 + a as i64) as u32).unwrap_or('\0')
     }
     pub fn func_func(a: Arc<Function>, b: Arc<Function>) -> Arc<Function> {
         let a = Arc::try_unwrap(a).unwrap_or_else(|a| (*a).clone());
@@ -378,13 +374,13 @@ pub mod sub {
     pub fn num_num(a: f64, b: f64) -> f64 {
         b - a
     }
-    pub fn byte_byte(a: Byte, b: Byte) -> f64 {
+    pub fn byte_byte(a: u8, b: u8) -> f64 {
         f64::from(b) - f64::from(a)
     }
-    pub fn byte_num(a: Byte, b: f64) -> f64 {
+    pub fn byte_num(a: u8, b: f64) -> f64 {
         b - f64::from(a)
     }
-    pub fn num_byte(a: f64, b: Byte) -> f64 {
+    pub fn num_byte(a: f64, b: u8) -> f64 {
         f64::from(b) - a
     }
     pub fn num_char(a: f64, b: char) -> char {
@@ -393,10 +389,8 @@ pub mod sub {
     pub fn char_char(a: char, b: char) -> f64 {
         ((b as i64) - (a as i64)) as f64
     }
-    pub fn byte_char(a: Byte, b: char) -> char {
-        a.value()
-            .map(|a| char::from_u32(((b as i64) - (a as i64)) as u32).unwrap_or('\0'))
-            .unwrap_or_default()
+    pub fn byte_char(a: u8, b: char) -> char {
+        char::from_u32(((b as i64) - (a as i64)) as u32).unwrap_or('\0')
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot subtract {a} from {b}"))
@@ -408,13 +402,13 @@ pub mod mul {
     pub fn num_num(a: f64, b: f64) -> f64 {
         b * a
     }
-    pub fn byte_byte(a: Byte, b: Byte) -> f64 {
+    pub fn byte_byte(a: u8, b: u8) -> f64 {
         f64::from(b) * f64::from(a)
     }
-    pub fn byte_num(a: Byte, b: f64) -> f64 {
+    pub fn byte_num(a: u8, b: f64) -> f64 {
         b * f64::from(a)
     }
-    pub fn num_byte(a: f64, b: Byte) -> f64 {
+    pub fn num_byte(a: f64, b: u8) -> f64 {
         f64::from(b) * a
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
@@ -427,13 +421,13 @@ pub mod div {
     pub fn num_num(a: f64, b: f64) -> f64 {
         b / a
     }
-    pub fn byte_byte(a: Byte, b: Byte) -> f64 {
+    pub fn byte_byte(a: u8, b: u8) -> f64 {
         f64::from(b) / f64::from(a)
     }
-    pub fn byte_num(a: Byte, b: f64) -> f64 {
+    pub fn byte_num(a: u8, b: f64) -> f64 {
         b / f64::from(a)
     }
-    pub fn num_byte(a: f64, b: Byte) -> f64 {
+    pub fn num_byte(a: f64, b: u8) -> f64 {
         f64::from(b) / a
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
@@ -446,14 +440,14 @@ pub mod modulus {
     pub fn num_num(a: f64, b: f64) -> f64 {
         (b % a + a) % a
     }
-    pub fn byte_byte(a: Byte, b: Byte) -> f64 {
+    pub fn byte_byte(a: u8, b: u8) -> f64 {
         f64::from(b) % f64::from(a)
     }
-    pub fn byte_num(a: Byte, b: f64) -> f64 {
+    pub fn byte_num(a: u8, b: f64) -> f64 {
         let a = f64::from(a);
         (b % a + a) % a
     }
-    pub fn num_byte(a: f64, b: Byte) -> f64 {
+    pub fn num_byte(a: f64, b: u8) -> f64 {
         (f64::from(b) % a + a) % a
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
@@ -476,13 +470,13 @@ pub mod pow {
     pub fn num_num(a: f64, b: f64) -> f64 {
         b.powf(a)
     }
-    pub fn byte_byte(a: Byte, b: Byte) -> f64 {
+    pub fn byte_byte(a: u8, b: u8) -> f64 {
         f64::from(b).powf(f64::from(a))
     }
-    pub fn byte_num(a: Byte, b: f64) -> f64 {
+    pub fn byte_num(a: u8, b: f64) -> f64 {
         b.powf(f64::from(a))
     }
-    pub fn num_byte(a: f64, b: Byte) -> f64 {
+    pub fn num_byte(a: f64, b: u8) -> f64 {
         f64::from(b).powf(a)
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
@@ -495,13 +489,13 @@ pub mod log {
     pub fn num_num(a: f64, b: f64) -> f64 {
         b.log(a)
     }
-    pub fn byte_byte(a: Byte, b: Byte) -> f64 {
+    pub fn byte_byte(a: u8, b: u8) -> f64 {
         f64::from(b).log(f64::from(a))
     }
-    pub fn byte_num(a: Byte, b: f64) -> f64 {
+    pub fn byte_num(a: u8, b: f64) -> f64 {
         b.log(f64::from(a))
     }
-    pub fn num_byte(a: f64, b: Byte) -> f64 {
+    pub fn num_byte(a: f64, b: u8) -> f64 {
         f64::from(b).log(a)
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
@@ -518,20 +512,16 @@ pub mod max {
             a.max(b)
         }
     }
-    pub fn byte_byte(a: Byte, b: Byte) -> Byte {
-        a.op(b, i16::max)
+    pub fn byte_byte(a: u8, b: u8) -> u8 {
+        a.max(b)
     }
     pub fn char_char(a: char, b: char) -> char {
-        if a.is_fill_value() || b.is_fill_value() {
-            char::fill_value()
-        } else {
-            a.max(b)
-        }
+        a.max(b)
     }
-    pub fn num_byte(a: f64, b: Byte) -> f64 {
+    pub fn num_byte(a: f64, b: u8) -> f64 {
         num_num(a, b.into())
     }
-    pub fn byte_num(a: Byte, b: f64) -> f64 {
+    pub fn byte_num(a: u8, b: f64) -> f64 {
         num_num(a.into(), b)
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
@@ -548,20 +538,16 @@ pub mod min {
             a.min(b)
         }
     }
-    pub fn byte_byte(a: Byte, b: Byte) -> Byte {
-        a.op(b, i16::min)
+    pub fn byte_byte(a: u8, b: u8) -> u8 {
+        a.min(b)
     }
     pub fn char_char(a: char, b: char) -> char {
-        if a.is_fill_value() || b.is_fill_value() {
-            char::fill_value()
-        } else {
-            a.min(b)
-        }
+        a.min(b)
     }
-    pub fn num_byte(a: f64, b: Byte) -> f64 {
+    pub fn num_byte(a: f64, b: u8) -> f64 {
         num_num(a, b.into())
     }
-    pub fn byte_num(a: Byte, b: f64) -> f64 {
+    pub fn byte_num(a: u8, b: f64) -> f64 {
         num_num(a.into(), b)
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {

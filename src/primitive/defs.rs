@@ -119,10 +119,6 @@ primitive!(
     /// While this may seem useless, one way to use it is to pass it to [reduce], which will put all of an array's values on the stack.
     /// ex: /· [1 2 3]
     ///
-    /// If you use this on an array that has fill values, the fill values will not be removed.
-    /// ex: /· \⊂1_2_3_4
-    /// To remove them, use [truncate] instead.
-    ///
     /// The formatter converts an empty `()` function into `noop`.
     /// ex: () # Try running to format
     (0(0), Noop, Stack, ("noop", '·')),
@@ -423,18 +419,6 @@ primitive!(
     (1, First, MonadicArray, ("first", '⊢')),
     /// The last element of an array
     (1, Last, MonadicArray),
-    /// Remove fill elements from the end of an array
-    ///
-    /// ex: ⌀.↙5 1_2_3
-    /// Rows are considered fill values if all of their elements are fill values.
-    /// ex: ⌀.↙5↯3_3⇡9
-    /// ex: ⌀.⇌∵⇡⇡5
-    ///
-    /// Using [noop] to unpack an array onto the stack preserves the fill values.
-    /// ex: /· \⊂1_2_3_4
-    /// Use [truncate] instead to remove them.
-    /// ex: /⌀ \⊂1_2_3_4
-    (1, Truncate, MonadicArray, ("truncate", '⌀')),
     /// Reverse the rows of an array
     ///
     /// ex: ⇌1_2_3_9
@@ -555,16 +539,6 @@ primitive!(
     (2, Couple, DyadicArray, ("couple", '⊟')),
     /// Split an array into two arrays
     (1(1), Uncouple, MonadicArray),
-    /// Replace the fill elements of an array with elements from another
-    ///
-    /// The most basic case is filling with a scalar
-    /// ex: ⍛7 .↙10⇡5
-    /// ex: ⍛7 .↙5↯3_3⇡9
-    ///
-    /// The [shape] of the array being filled must end with the [shape] of the fill array.
-    /// ex: ⍛1_2_3 .↙5↯3_3⇡9
-    /// ex! ⍛1_2_3_4 .↙5↯3_3⇡9
-    (2, Fill, DyadicArray, ("fill", '⍛')),
     /// Index a row or elements from an array
     ///
     /// An index with [rank] `0` or `1` will pick a single row or element from an array.
@@ -1039,6 +1013,4 @@ primitive!(
     (0(1), Tau, Constant, ("tau", 'τ')),
     /// The biggest number
     (0(1), Infinity, Constant, ("infinity", '∞')),
-    /// The function fill value
-    (0(0), FillValue, Stack),
 );

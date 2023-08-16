@@ -1,11 +1,11 @@
-use std::{cmp::Ordering, iter::repeat, mem::take, sync::Arc};
+use std::{cmp::Ordering, mem::take, sync::Arc};
 
 use crate::{
     array::*,
     cowslice::CowSlice,
     function::{Function, FunctionId, FunctionKind, Instr},
     value::Value,
-    Byte, Uiua, UiuaResult,
+    Uiua, UiuaResult,
 };
 
 impl Value {
@@ -13,11 +13,11 @@ impl Value {
         self,
         other: Self,
         env: &Uiua,
-        on_success: impl FnOnce(Array<Arc<Function>>, Array<Arc<Function>>) -> UiuaResult<T>,
+        on_success: impl FnOnce(Array<Arc<Function>>, Array<Arc<Function>>, &Uiua) -> UiuaResult<T>,
         on_error: impl FnOnce(&str, &str) -> E,
     ) -> UiuaResult<T> {
         match (self, other) {
-            (Value::Func(a), Value::Func(b)) => on_success(a, b),
+            (Value::Func(a), Value::Func(b)) => on_success(a, b, env),
             (Value::Func(a), mut b) => {
                 let shape = take(b.shape_mut());
                 let new_data: CowSlice<_> = b
@@ -31,7 +31,7 @@ impl Value {
                     })
                     .collect();
                 let b = Array::new(shape, new_data);
-                on_success(a, b)
+                on_success(a, b, env)
             }
             (mut a, Value::Func(b)) => {
                 let shape = take(a.shape_mut());
@@ -40,7 +40,7 @@ impl Value {
                     .map(|a| Arc::new(Function::constant(a)))
                     .collect();
                 let a = Array::new(shape, new_data);
-                on_success(a, b)
+                on_success(a, b, env)
             }
             (a, b) => Err(env.error(on_error(a.type_name(), b.type_name()))),
         }
@@ -87,19 +87,16 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     pub fn join(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
-        self.join_impl(other, true, env)
-    }
-    pub(crate) fn join_impl(self, other: Self, truncate: bool, env: &Uiua) -> UiuaResult<Self> {
         Ok(match (self, other) {
-            (Value::Num(a), Value::Num(b)) => Value::Num(a.join_impl(b, truncate)),
-            (Value::Byte(a), Value::Byte(b)) => Value::Byte(a.join_impl(b, truncate)),
-            (Value::Char(a), Value::Char(b)) => Value::Char(a.join_impl(b, truncate)),
-            (Value::Byte(a), Value::Num(b)) => Value::Num(a.convert().join_impl(b, truncate)),
-            (Value::Num(a), Value::Byte(b)) => Value::Num(a.join_impl(b.convert(), truncate)),
+            (Value::Num(a), Value::Num(b)) => a.join(b, env)?.into(),
+            (Value::Byte(a), Value::Byte(b)) => a.join(b, env)?.into(),
+            (Value::Char(a), Value::Char(b)) => a.join(b, env)?.into(),
+            (Value::Byte(a), Value::Num(b)) => a.convert().join(b, env)?.into(),
+            (Value::Num(a), Value::Byte(b)) => a.join(b.convert(), env)?.into(),
             (a, b) => a.coerce_to_functions(
                 b,
                 env,
-                |a, b| Ok(Value::Func(a.join_impl(b, truncate))),
+                |a, b, env| a.join(b, env).map(Into::into),
                 |a, b| format!("Cannot join {a} array and {b} array"),
             )?,
         })
@@ -121,34 +118,46 @@ fn max_shape(a: &[usize], b: &[usize]) -> Vec<usize> {
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn join(self, other: Self) -> Self {
-        self.join_impl(other, true)
-    }
-    pub(crate) fn join_impl(mut self, mut other: Self, truncate: bool) -> Self {
+    pub(crate) fn join(mut self, mut other: Self, env: &Uiua) -> UiuaResult<Self> {
         crate::profile_function!();
-        if truncate {
-            self.truncate();
-            other.truncate();
-        }
         let res = match self.rank().cmp(&other.rank()) {
             Ordering::Less => {
-                let mut target_shape = max_shape(&self.shape, &other.shape);
-                let row_shape = &target_shape[1..];
-                self.fill_to_shape(row_shape);
-                other.fill_to_shape(&target_shape);
+                if other.rank() - self.rank() > 1 {
+                    return Err(env.error(format!(
+                        "Cannot join rank {} array with rank {} array",
+                        self.rank(),
+                        other.rank()
+                    )));
+                }
+                if self.shape() != &other.shape()[1..] {
+                    return Err(env.error(format!(
+                        "Cannot join arrays of shapes {} and {}",
+                        self.format_shape(),
+                        other.format_shape()
+                    )));
+                }
                 self.data.extend(other.data);
-                target_shape[0] += 1;
-                self.shape = target_shape;
+                self.shape = other.shape;
+                self.shape[0] += 1;
                 self
             }
             Ordering::Greater => {
-                let mut target_shape = max_shape(&self.shape, &other.shape);
-                let row_shape = &target_shape[1..];
-                self.fill_to_shape(&target_shape);
-                other.fill_to_shape(row_shape);
+                if self.rank() - other.rank() > 1 {
+                    return Err(env.error(format!(
+                        "Cannot join rank {} array with rank {} array",
+                        self.rank(),
+                        other.rank()
+                    )));
+                }
+                if &self.shape()[1..] != other.shape() {
+                    return Err(env.error(format!(
+                        "Cannot join arrays of shapes {} and {}",
+                        self.format_shape(),
+                        other.format_shape()
+                    )));
+                }
                 self.data.extend(other.data);
-                target_shape[0] += 1;
-                self.shape = target_shape;
+                self.shape[0] += 1;
                 self
             }
             Ordering::Equal => {
@@ -158,11 +167,11 @@ impl<T: ArrayValue> Array<T> {
                     self.shape = vec![2];
                     self
                 } else {
+                    if self.shape[1..] != other.shape[1..] {}
                     let new_row_shape = max_shape(&self.shape[1..], &other.shape[1..]);
                     for array in [&mut self, &mut other] {
                         let mut new_shape = new_row_shape.clone();
                         new_shape.insert(0, array.shape[0]);
-                        array.fill_to_shape(&new_shape);
                     }
                     self.data.extend(other.data);
                     self.shape[0] += other.shape[0];
@@ -171,7 +180,7 @@ impl<T: ArrayValue> Array<T> {
             }
         };
         res.validate_shape();
-        res
+        Ok(res)
     }
 }
 
@@ -248,9 +257,6 @@ impl Value {
                             "Index must be an array of integers, but {n} is not an integer"
                         )));
                     }
-                    if n.is_fill_value() {
-                        return Err(env.error("Index may not contain fill values"));
-                    }
                     index_data.push(n as isize);
                 }
                 (arr.shape, index_data)
@@ -258,16 +264,13 @@ impl Value {
             Value::Byte(arr) => {
                 let mut index_data = Vec::with_capacity(arr.flat_len());
                 for n in arr.data {
-                    if n.is_fill_value() {
-                        return Err(env.error("Index may not contain fill values"));
-                    }
-                    index_data.push(n.0 as isize);
+                    index_data.push(n as isize);
                 }
                 (arr.shape, index_data)
             }
             value => {
                 return Err(env.error(format!(
-                    "Index must be an array of integers, not {}",
+                    "Index must be an array of integers, not {}s",
                     value.type_name()
                 )))
             }
@@ -416,25 +419,12 @@ impl<T: ArrayValue> Array<T> {
                 let abs_taking = taking.unsigned_abs();
                 self.data.modify(|data| {
                     if taking >= 0 {
-                        if abs_taking > row_count {
-                            data.extend(
-                                repeat(T::fill_value()).take((abs_taking - row_count) * row_len),
-                            );
-                        } else {
-                            data.truncate(abs_taking * row_len);
-                        }
-                    } else {
-                        *data = if abs_taking > row_count {
-                            repeat(T::fill_value())
-                                .take((abs_taking - row_count) * row_len)
-                                .chain(take(data))
-                                .collect()
-                        } else {
-                            take(data)
-                                .into_iter()
-                                .skip((row_count - abs_taking) * row_len)
-                                .collect()
-                        };
+                        data.truncate(abs_taking * row_len);
+                    } else if abs_taking <= row_count {
+                        *data = take(data)
+                            .into_iter()
+                            .skip((row_count - abs_taking) * row_len)
+                            .collect();
                     }
                 });
                 if self.shape.is_empty() {
@@ -467,31 +457,14 @@ impl<T: ArrayValue> Array<T> {
                     for row in self.rows().take(abs_taking) {
                         new_rows.push(row.take(sub_index, env)?);
                     }
-                    let mut arr = Array::from_row_arrays(new_rows);
-                    // Extend with fill values if necessary
-                    if abs_taking > arr.row_count() {
-                        let row_len = arr.row_len();
-                        arr.data.extend(
-                            repeat(T::fill_value()).take((abs_taking - arr.row_count()) * row_len),
-                        );
-                    }
-                    arr
+                    Array::from_row_arrays(new_rows, env)?
                 } else {
                     // Take in each row
                     let start = self.row_count().saturating_sub(abs_taking);
                     for row in self.rows().skip(start) {
                         new_rows.push(row.take(sub_index, env)?);
                     }
-                    let mut arr = Array::from_row_arrays(new_rows);
-                    // Prepend with fill values if necessary
-                    if abs_taking > arr.row_count() {
-                        let row_len = arr.row_len();
-                        arr.data = repeat(T::fill_value())
-                            .take((abs_taking - arr.row_count()) * row_len)
-                            .chain(arr.data)
-                            .collect();
-                    }
-                    arr
+                    Array::from_row_arrays(new_rows, env)?
                 };
                 arr.shape[0] = abs_taking;
                 arr.validate_shape();
@@ -547,9 +520,7 @@ impl<T: ArrayValue> Array<T> {
                         new_rows.push(row.drop(sub_index, env)?);
                     }
                 };
-                let arr = Array::from_row_arrays(new_rows);
-                arr.validate_shape();
-                arr
+                Array::from_row_arrays(new_rows, env)?
             }
         })
     }
@@ -620,9 +591,7 @@ impl<T: ArrayValue> Array<T> {
                         new_rows.push(from.untake(sub_index, into, env)?);
                     }
                 }
-                let arr = Array::from_row_arrays(new_rows);
-                arr.validate_shape();
-                arr
+                Array::from_row_arrays(new_rows, env)?
             }
         })
     }
@@ -694,16 +663,16 @@ fn rotate<T>(by: &[isize], shape: &[usize], data: &mut [T]) {
 impl Value {
     pub fn couple(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
         Ok(match (self, other) {
-            (Value::Num(a), Value::Num(b)) => a.couple(b).into(),
-            (Value::Byte(a), Value::Byte(b)) => a.couple(b).into(),
-            (Value::Char(a), Value::Char(b)) => a.couple(b).into(),
-            (Value::Func(a), Value::Func(b)) => a.couple(b).into(),
-            (Value::Num(a), Value::Byte(b)) => a.couple(b.convert()).into(),
-            (Value::Byte(a), Value::Num(b)) => a.convert().couple(b).into(),
+            (Value::Num(a), Value::Num(b)) => a.couple(b, env)?.into(),
+            (Value::Byte(a), Value::Byte(b)) => a.couple(b, env)?.into(),
+            (Value::Char(a), Value::Char(b)) => a.couple(b, env)?.into(),
+            (Value::Func(a), Value::Func(b)) => a.couple(b, env)?.into(),
+            (Value::Num(a), Value::Byte(b)) => a.couple(b.convert(), env)?.into(),
+            (Value::Byte(a), Value::Num(b)) => a.convert().couple(b, env)?.into(),
             (a, b) => a.coerce_to_functions(
                 b,
                 env,
-                |a, b| Ok(Value::Func(a.couple(b))),
+                |a, b, env| a.couple(b, env).map(Into::into),
                 |a, b| format!("Cannot couple {a} array with {b} array"),
             )?,
         })
@@ -718,89 +687,20 @@ impl Value {
     }
 }
 
-fn data_index_to_shape_index(mut index: usize, shape: &[usize], out: &mut [usize]) -> bool {
-    debug_assert_eq!(shape.len(), out.len());
-    if index >= shape.iter().product() {
-        return false;
-    }
-    for (&s, o) in shape.iter().zip(out).rev() {
-        *o = index % s;
-        index /= s;
-    }
-    true
-}
-
-#[test]
-fn data_index_to_shape_index_test() {
-    let mut out = [0, 0];
-    for (index, shape, expected_out, expected_success) in [
-        (2, [2, 3], [0, 2], true),
-        (2, [1, 3], [0, 2], true),
-        (3, [2, 3], [1, 0], true),
-        (3, [1, 3], [1, 0], false),
-    ] {
-        let success = data_index_to_shape_index(index, &shape, &mut out);
-        assert_eq!(out, expected_out);
-        assert_eq!(success, expected_success);
-    }
-}
-
-fn shape_index_to_data_index(index: &[usize], shape: &[usize]) -> Option<usize> {
-    debug_assert_eq!(shape.len(), index.len());
-    let mut data_index = 0;
-    for (&s, &i) in shape.iter().zip(index) {
-        if i >= s {
-            return None;
-        }
-        data_index = data_index * s + i;
-    }
-    Some(data_index)
-}
-
-#[test]
-fn shape_index_to_data_index_test() {
-    for (index, shape, expected_data_index) in [
-        ([0, 2], [2, 3], Some(2)),
-        ([0, 2], [1, 3], Some(2)),
-        ([1, 0], [2, 3], Some(3)),
-        ([1, 0], [1, 3], None),
-    ] {
-        let data_index = shape_index_to_data_index(&index, &shape);
-        assert_eq!(data_index, expected_data_index);
-    }
-}
-
 impl<T: ArrayValue> Array<T> {
-    pub fn fill_to_shape(&mut self, shape: &[usize]) {
-        while self.rank() < shape.len() {
-            self.shape.insert(0, 1);
-        }
-        if self.shape == shape {
-            return;
-        }
-        let target_size = shape.iter().product();
-        let mut new_data = vec![T::fill_value(); target_size];
-        let mut curr = vec![0; shape.len()];
-        for new_data_index in 0..target_size {
-            data_index_to_shape_index(new_data_index, shape, &mut curr);
-            if let Some(data_index) = shape_index_to_data_index(&curr, &self.shape) {
-                new_data[new_data_index] = self.data[data_index].clone();
-            }
-        }
-        self.data = new_data.into();
-        self.shape = shape.to_vec();
-    }
-    pub fn couple(mut self, mut other: Self) -> Self {
+    pub fn couple(mut self, other: Self, env: &Uiua) -> UiuaResult<Self> {
         crate::profile_function!();
         if self.shape != other.shape {
-            let new_shape = max_shape(&self.shape, &other.shape);
-            self.fill_to_shape(&new_shape);
-            other.fill_to_shape(&new_shape);
+            return Err(env.error(format!(
+                "Cannot couple arrays with shapes {} and {}",
+                self.format_shape(),
+                other.format_shape()
+            )));
         }
         self.data.extend(other.data);
         self.shape.insert(0, 2);
         self.validate_shape();
-        self
+        Ok(self)
     }
     pub fn uncouple(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
         if self.row_count() != 2 {
@@ -817,67 +717,22 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
-    pub fn fill(&mut self, fill: Self, env: &Uiua) -> UiuaResult {
-        match (&mut *self, fill) {
-            (Value::Num(a), Value::Num(b)) => a.fill(b, env),
-            (Value::Byte(a), Value::Byte(b)) => a.fill(b, env),
-            (Value::Char(a), Value::Char(b)) => a.fill(b, env),
-            (Value::Func(a), Value::Func(b)) => a.fill(b, env),
-            (Value::Num(a), Value::Byte(b)) => a.fill(b.convert(), env),
-            (Value::Byte(a), Value::Num(b)) => {
-                let mut a = a.clone().convert();
-                a.fill(b, env)?;
-                *self = a.into();
-                Ok(())
-            }
-            (a, b) => Err(env.error(format!(
-                "Cannot couple {} array with {} array",
-                a.type_name(),
-                b.type_name()
-            ))),
-        }
-    }
-}
-
-impl<T: ArrayValue> Array<T> {
-    pub fn fill(&mut self, fill: Self, env: &Uiua) -> UiuaResult {
-        if !self.shape.ends_with(&fill.shape) {
-            return Err(env.error(format!(
-                "Cannot fill array with shape {} with array with shape {}",
-                self.format_shape(),
-                fill.format_shape()
-            )));
-        }
-        for (elem, fill) in self.data.iter_mut().zip(fill.data.iter().cycle()) {
-            if elem.is_fill_value() {
-                *elem = fill.clone();
-            }
-        }
-        Ok(())
-    }
-}
-
-impl Value {
-    fn as_index_array<'a>(&'a self, env: &Uiua) -> UiuaResult<(&'a [usize], Vec<Option<isize>>)> {
+    fn as_index_array<'a>(&'a self, env: &Uiua) -> UiuaResult<(&'a [usize], Vec<isize>)> {
         let mut indices = Vec::with_capacity(self.flat_len());
         match self {
             Value::Num(arr) => {
                 for &i in arr.data.iter() {
-                    if i.is_fill_value() {
-                        indices.push(None);
-                        continue;
-                    }
                     if i.fract() != 0.0 {
                         return Err(
                             env.error(format!("Indices must be integers, but {} is not", i))
                         );
                     }
-                    indices.push(Some(i as isize));
+                    indices.push(i as isize);
                 }
             }
             Value::Byte(arr) => {
-                for i in arr.data.iter() {
-                    indices.push(i.value().map(|i| i as isize));
+                for &i in arr.data.iter() {
+                    indices.push(i as isize);
                 }
             }
             v => {
@@ -931,7 +786,7 @@ impl<T: ArrayValue> Array<T> {
     fn select_impl(
         &self,
         indices_shape: &[usize],
-        indices: &[Option<isize>],
+        indices: &[isize],
         env: &Uiua,
     ) -> UiuaResult<Self> {
         if indices_shape.len() > 1 {
@@ -941,7 +796,7 @@ impl<T: ArrayValue> Array<T> {
             for indices_row in indices.chunks_exact(row_len) {
                 rows.push(self.select_impl(&indices_shape[1..], indices_row, env)?);
             }
-            Ok(Array::from_row_arrays(rows))
+            Array::from_row_arrays(rows, env)
         } else {
             let mut res = self.select(indices, env)?;
             if indices_shape.is_empty() {
@@ -953,7 +808,7 @@ impl<T: ArrayValue> Array<T> {
     fn unselect_impl(
         &self,
         indices_shape: &[usize],
-        indices: &[Option<isize>],
+        indices: &[isize],
         into: Self,
         env: &Uiua,
     ) -> UiuaResult<Self> {
@@ -963,37 +818,33 @@ impl<T: ArrayValue> Array<T> {
             self.unselect(indices, into, env)
         }
     }
-    fn select(&self, indices: &[Option<isize>], env: &Uiua) -> UiuaResult<Self> {
+    fn select(&self, indices: &[isize], env: &Uiua) -> UiuaResult<Self> {
         let mut selected = Vec::with_capacity(self.row_len() * indices.len());
         let row_len = self.row_len();
         let row_count = self.row_count();
         for &i in indices {
-            if let Some(i) = i {
-                let i = if i >= 0 {
-                    let ui = i as usize;
-                    if ui >= row_count {
-                        return Err(env.error(format!(
-                            "Index {} is out of bounds of length {}",
-                            i, row_count
-                        )));
-                    }
-                    ui
-                } else {
-                    let pos_i = (row_count as isize + i) as usize;
-                    if pos_i >= row_count {
-                        return Err(env.error(format!(
-                            "Index {} is out of bounds of length {}",
-                            i, row_count
-                        )));
-                    }
-                    pos_i
-                };
-                let start = i * row_len;
-                let end = start + row_len;
-                selected.extend_from_slice(&self.data[start..end]);
+            let i = if i >= 0 {
+                let ui = i as usize;
+                if ui >= row_count {
+                    return Err(env.error(format!(
+                        "Index {} is out of bounds of length {}",
+                        i, row_count
+                    )));
+                }
+                ui
             } else {
-                selected.extend(repeat(T::fill_value()).take(row_len));
-            }
+                let pos_i = (row_count as isize + i) as usize;
+                if pos_i >= row_count {
+                    return Err(env.error(format!(
+                        "Index {} is out of bounds of length {}",
+                        i, row_count
+                    )));
+                }
+                pos_i
+            };
+            let start = i * row_len;
+            let end = start + row_len;
+            selected.extend_from_slice(&self.data[start..end]);
         }
         let mut shape = self.shape.clone();
         if let Some(s) = shape.get_mut(0) {
@@ -1005,7 +856,7 @@ impl<T: ArrayValue> Array<T> {
         arr.validate_shape();
         Ok(arr)
     }
-    fn unselect(&self, indices: &[Option<isize>], mut into: Self, env: &Uiua) -> UiuaResult<Self> {
+    fn unselect(&self, indices: &[isize], mut into: Self, env: &Uiua) -> UiuaResult<Self> {
         if self.row_count() != indices.len() {
             return Err(env.error(
                 "Attempted to undo selection, but the shape of the selected array changed",
@@ -1014,31 +865,29 @@ impl<T: ArrayValue> Array<T> {
         let into_row_len = into.row_len();
         let into_row_count = into.row_count();
         for (&i, row) in indices.iter().zip(self.rows()) {
-            if let Some(i) = i {
-                let i = if i >= 0 {
-                    let ui = i as usize;
-                    if ui >= into_row_count {
-                        return Err(env.error(format!(
-                            "Index {} is out of bounds of length {}",
-                            i, into_row_count
-                        )));
-                    }
-                    ui
-                } else {
-                    let pos_i = (into_row_count as isize + i) as usize;
-                    if pos_i >= into_row_count {
-                        return Err(env.error(format!(
-                            "Index {} is out of bounds of length {}",
-                            i, into_row_count
-                        )));
-                    }
-                    pos_i
-                };
-                let start = i * into_row_len;
-                let end = start + into_row_len;
-                for (i, x) in (start..end).zip(row.data) {
-                    into.data[i] = x.clone();
+            let i = if i >= 0 {
+                let ui = i as usize;
+                if ui >= into_row_count {
+                    return Err(env.error(format!(
+                        "Index {} is out of bounds of length {}",
+                        i, into_row_count
+                    )));
                 }
+                ui
+            } else {
+                let pos_i = (into_row_count as isize + i) as usize;
+                if pos_i >= into_row_count {
+                    return Err(env.error(format!(
+                        "Index {} is out of bounds of length {}",
+                        i, into_row_count
+                    )));
+                }
+                pos_i
+            };
+            let start = i * into_row_len;
+            let end = start + into_row_len;
+            for (i, x) in (start..end).zip(row.data) {
+                into.data[i] = x.clone();
             }
         }
         Ok(into)
@@ -1149,8 +998,8 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn find(&self, searched: &Self, env: &Uiua) -> UiuaResult<Array<Byte>> {
-        if self.rank() > searched.rank() || self.length() > searched.length() {
+    pub fn find(&self, searched: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
+        if self.rank() > searched.rank() || self.row_count() > searched.row_count() {
             return Err(env.error(format!(
                 "Cannot search for array of shape {} in array of shape {}",
                 self.format_shape(),
@@ -1204,7 +1053,7 @@ impl<T: ArrayValue> Array<T> {
                     false
                 };
                 if !same {
-                    data.push(Byte::from(false));
+                    data.push(0);
                     break;
                 }
                 // Go to the next item
@@ -1216,7 +1065,7 @@ impl<T: ArrayValue> Array<T> {
                         continue 'items;
                     }
                 }
-                data.push(Byte::from(true));
+                data.push(1);
                 break;
             }
             // Go to the next corner
@@ -1238,12 +1087,12 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     pub fn member(&self, of: &Self, env: &Uiua) -> UiuaResult<Self> {
         Ok(match (self, of) {
-            (Value::Num(a), Value::Num(b)) => a.member(b),
-            (Value::Byte(a), Value::Byte(b)) => a.member(b),
-            (Value::Char(a), Value::Char(b)) => a.member(b),
-            (Value::Func(a), Value::Func(b)) => a.member(b),
-            (Value::Num(a), Value::Byte(b)) => a.member(&b.clone().convert()),
-            (Value::Byte(a), Value::Num(b)) => a.clone().convert().member(b),
+            (Value::Num(a), Value::Num(b)) => a.member(b, env)?.into(),
+            (Value::Byte(a), Value::Byte(b)) => a.member(b, env)?.into(),
+            (Value::Char(a), Value::Char(b)) => a.member(b, env)?.into(),
+            (Value::Func(a), Value::Func(b)) => a.member(b, env)?.into(),
+            (Value::Num(a), Value::Byte(b)) => a.member(&b.clone().convert(), env)?.into(),
+            (Value::Byte(a), Value::Num(b)) => a.clone().convert().member(b, env)?.into(),
             (a, b) => {
                 return Err(env.error(format!(
                     "Cannot look for members of {} array in {} array",
@@ -1251,25 +1100,24 @@ impl Value {
                     a.type_name()
                 )))
             }
-        }
-        .into())
+        })
     }
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn member(&self, of: &Self) -> Array<Byte> {
+    pub fn member(&self, of: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
         let elems = self;
-        match elems.rank().cmp(&of.rank()) {
+        Ok(match elems.rank().cmp(&of.rank()) {
             Ordering::Equal => {
                 let mut result_data = Vec::with_capacity(elems.row_count());
                 'elem: for elem in elems.rows() {
                     for of in of.rows() {
                         if elem == of {
-                            result_data.push(Byte(1));
+                            result_data.push(1);
                             continue 'elem;
                         }
                     }
-                    result_data.push(Byte(0));
+                    result_data.push(0);
                 }
                 let shape = self.shape.iter().cloned().take(1).collect();
                 let res = Array::new(shape, result_data.into());
@@ -1279,34 +1127,34 @@ impl<T: ArrayValue> Array<T> {
             Ordering::Greater => {
                 let mut rows = Vec::with_capacity(elems.row_count());
                 for elem in elems.rows() {
-                    rows.push(elem.member(of));
+                    rows.push(elem.member(of, env)?);
                 }
-                Array::from_row_arrays(rows)
+                Array::from_row_arrays(rows, env)?
             }
             Ordering::Less => {
                 if of.rank() - elems.rank() == 1 {
-                    return (of.rows().any(|r| r == *elems)).into();
+                    (of.rows().any(|r| r == *elems)).into()
                 } else {
                     let mut rows = Vec::with_capacity(of.row_count());
                     for of in of.rows() {
-                        rows.push(elems.member(&of));
+                        rows.push(elems.member(&of, env)?);
                     }
-                    Array::from_row_arrays(rows)
+                    Array::from_row_arrays(rows, env)?
                 }
             }
-        }
+        })
     }
 }
 
 impl Value {
     pub fn index_of(&self, searched_in: &Value, env: &Uiua) -> UiuaResult<Value> {
         Ok(match (self, searched_in) {
-            (Value::Num(a), Value::Num(b)) => a.index_of(b).into(),
-            (Value::Byte(a), Value::Byte(b)) => a.index_of(b).into(),
-            (Value::Char(a), Value::Char(b)) => a.index_of(b).into(),
-            (Value::Func(a), Value::Func(b)) => a.index_of(b).into(),
-            (Value::Num(a), Value::Byte(b)) => a.index_of(&b.clone().convert()).into(),
-            (Value::Byte(a), Value::Num(b)) => a.clone().convert().index_of(b).into(),
+            (Value::Num(a), Value::Num(b)) => a.index_of(b, env)?.into(),
+            (Value::Byte(a), Value::Byte(b)) => a.index_of(b, env)?.into(),
+            (Value::Char(a), Value::Char(b)) => a.index_of(b, env)?.into(),
+            (Value::Func(a), Value::Func(b)) => a.index_of(b, env)?.into(),
+            (Value::Num(a), Value::Byte(b)) => a.index_of(&b.clone().convert(), env)?.into(),
+            (Value::Byte(a), Value::Num(b)) => a.clone().convert().index_of(b, env)?.into(),
             (a, b) => {
                 return Err(env.error(format!(
                     "Cannot look for indices of {} in {}",
@@ -1319,9 +1167,9 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    fn index_of(&self, searched_in: &Array<T>) -> Array<f64> {
+    fn index_of(&self, searched_in: &Array<T>, env: &Uiua) -> UiuaResult<Array<f64>> {
         let searched_for = self;
-        match searched_for.rank().cmp(&searched_in.rank()) {
+        Ok(match searched_for.rank().cmp(&searched_in.rank()) {
             Ordering::Equal => {
                 let mut result_data = Vec::with_capacity(searched_for.row_count());
                 'elem: for elem in searched_for.rows() {
@@ -1341,26 +1189,26 @@ impl<T: ArrayValue> Array<T> {
             Ordering::Greater => {
                 let mut rows = Vec::with_capacity(searched_for.row_count());
                 for elem in searched_for.rows() {
-                    rows.push(elem.index_of(searched_in));
+                    rows.push(elem.index_of(searched_in, env)?);
                 }
-                Array::from_row_arrays(rows)
+                Array::from_row_arrays(rows, env)?
             }
             Ordering::Less => {
                 if searched_in.rank() - searched_for.rank() == 1 {
-                    return (searched_in
+                    (searched_in
                         .rows()
                         .position(|r| r == *searched_for)
                         .unwrap_or(searched_in.row_count()) as f64)
-                        .into();
+                        .into()
                 } else {
                     let mut rows = Vec::with_capacity(searched_in.row_count());
                     for of in searched_in.rows() {
-                        rows.push(searched_for.index_of(&of));
+                        rows.push(searched_for.index_of(&of, env)?);
                     }
-                    Array::from_row_arrays(rows)
+                    Array::from_row_arrays(rows, env)?
                 }
             }
-        }
+        })
     }
 }
 
@@ -1368,16 +1216,16 @@ impl Value {
     pub fn group(&self, grouped: &Self, env: &Uiua) -> UiuaResult<Self> {
         let indices = self.as_indices(env, "Group indices must be a list of integers")?;
         Ok(match grouped {
-            Value::Num(a) => a.group(&indices)?.into(),
-            Value::Byte(a) => a.group(&indices)?.into(),
-            Value::Char(a) => a.group(&indices)?.into(),
-            Value::Func(a) => a.group(&indices)?.into(),
+            Value::Num(a) => a.group(&indices, env)?.into(),
+            Value::Byte(a) => a.group(&indices, env)?.into(),
+            Value::Char(a) => a.group(&indices, env)?.into(),
+            Value::Func(a) => a.group(&indices, env)?.into(),
         })
     }
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn group(&self, indices: &[isize]) -> UiuaResult<Self> {
+    pub fn group(&self, indices: &[isize], env: &Uiua) -> UiuaResult<Self> {
         let Some(&max_index) = indices.iter().max() else {
             return Ok((self.shape.clone(), Vec::new()).into());
         };
@@ -1387,13 +1235,16 @@ impl<T: ArrayValue> Array<T> {
                 groups[g as usize].push(self.row(r));
             }
         }
-        let mut rows: Vec<Array<T>> = groups.into_iter().map(Self::from_row_arrays).collect();
+        let mut rows: Vec<Array<T>> = groups
+            .into_iter()
+            .map(|g| Array::from_row_arrays(g, env))
+            .collect::<UiuaResult<_>>()?;
         for row in &mut rows {
             while row.rank() < self.rank() {
                 row.shape.insert(0, 1);
             }
         }
-        Ok(Self::from_row_arrays(rows))
+        Self::from_row_arrays(rows, env)
     }
 }
 
@@ -1401,16 +1252,16 @@ impl Value {
     pub fn partition(&self, partitioned: &Self, env: &Uiua) -> UiuaResult<Self> {
         let markers = self.as_indices(env, "Partition markers must be a list of integers")?;
         Ok(match partitioned {
-            Value::Num(a) => a.partition(&markers)?.into(),
-            Value::Byte(a) => a.partition(&markers)?.into(),
-            Value::Char(a) => a.partition(&markers)?.into(),
-            Value::Func(a) => a.partition(&markers)?.into(),
+            Value::Num(a) => a.partition(&markers, env)?.into(),
+            Value::Byte(a) => a.partition(&markers, env)?.into(),
+            Value::Char(a) => a.partition(&markers, env)?.into(),
+            Value::Func(a) => a.partition(&markers, env)?.into(),
         })
     }
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn partition(&self, markers: &[isize]) -> UiuaResult<Self> {
+    pub fn partition(&self, markers: &[isize], env: &Uiua) -> UiuaResult<Self> {
         let mut groups = Vec::new();
         let mut last_marker = isize::MAX;
         for (row, &marker) in self.rows().zip(markers) {
@@ -1422,12 +1273,15 @@ impl<T: ArrayValue> Array<T> {
             }
             last_marker = marker;
         }
-        let mut rows: Vec<Array<T>> = groups.into_iter().map(Self::from_row_arrays).collect();
+        let mut rows: Vec<Array<T>> = groups
+            .into_iter()
+            .map(|g| Array::from_row_arrays(g, env))
+            .collect::<UiuaResult<_>>()?;
         for row in &mut rows {
             while row.rank() < self.rank() {
                 row.shape.insert(0, 1);
             }
         }
-        Ok(Self::from_row_arrays(rows))
+        Self::from_row_arrays(rows, env)
     }
 }

@@ -2,20 +2,20 @@ use std::{cmp::Ordering, fmt, mem::take, sync::Arc};
 
 use crate::{
     algorithm::pervade::*, array::*, function::Function, grid_fmt::GridFmt, primitive::Primitive,
-    Byte, Uiua, UiuaResult,
+    Uiua, UiuaResult,
 };
 
 #[derive(Clone)]
 pub enum Value {
     Num(Array<f64>),
-    Byte(Array<Byte>),
+    Byte(Array<u8>),
     Char(Array<char>),
     Func(Array<Arc<Function>>),
 }
 
 impl Default for Value {
     fn default() -> Self {
-        Array::<Byte>::default().into()
+        Array::<u8>::default().into()
     }
 }
 
@@ -44,7 +44,7 @@ impl Value {
             _ => None,
         }
     }
-    pub fn as_byte_array(&self) -> Option<&Array<Byte>> {
+    pub fn as_byte_array(&self) -> Option<&Array<u8>> {
         match self {
             Self::Byte(array) => Some(array),
             _ => None,
@@ -76,7 +76,7 @@ impl Value {
             value = if count == 2 {
                 value.couple(row, env)?
             } else {
-                value.join_impl(row, false, env)?
+                value.join(row, env)?
             };
         }
         if count == 1 {
@@ -165,10 +165,6 @@ impl Value {
     pub fn rank(&self) -> usize {
         self.shape().len()
     }
-    #[allow(clippy::len_without_is_empty)]
-    pub fn len(&self) -> usize {
-        self.generic_ref(Array::length, Array::length, Array::length, Array::length)
-    }
     pub fn shape_mut(&mut self) -> &mut Vec<usize> {
         self.generic_mut(
             |arr| &mut arr.shape,
@@ -185,14 +181,6 @@ impl Value {
             Array::validate_shape,
         )
     }
-    pub fn truncate(&mut self) {
-        self.generic_mut(
-            Array::truncate,
-            Array::truncate,
-            Array::truncate,
-            Array::truncate,
-        )
-    }
     pub fn row(&self, i: usize) -> Self {
         self.generic_ref(
             |arr| arr.row(i).into(),
@@ -204,7 +192,7 @@ impl Value {
     pub fn generic_ref<'a, T: 'a>(
         &'a self,
         n: impl FnOnce(&'a Array<f64>) -> T,
-        b: impl FnOnce(&'a Array<Byte>) -> T,
+        b: impl FnOnce(&'a Array<u8>) -> T,
         c: impl FnOnce(&'a Array<char>) -> T,
         f: impl FnOnce(&'a Array<Arc<Function>>) -> T,
     ) -> T {
@@ -218,7 +206,7 @@ impl Value {
     pub fn generic_mut<'a, T: 'a>(
         &'a mut self,
         n: impl FnOnce(&'a mut Array<f64>) -> T,
-        b: impl FnOnce(&'a mut Array<Byte>) -> T,
+        b: impl FnOnce(&'a mut Array<u8>) -> T,
         c: impl FnOnce(&'a mut Array<char>) -> T,
         f: impl FnOnce(&'a mut Array<Arc<Function>>) -> T,
     ) -> T {
@@ -279,15 +267,7 @@ impl Value {
                         env.error(format!("{requirement}, but its rank is {}", bytes.rank()))
                     );
                 }
-                if let Some(b) = bytes.data[0].value() {
-                    if b >= 0 {
-                        b as usize
-                    } else {
-                        return Err(env.error(format!("{requirement}, but it is negative")));
-                    }
-                } else {
-                    return Err(env.error(format!("{requirement}, but it is a fill byte")));
-                }
+                bytes.data[0] as usize
             }
             value => {
                 return Err(env.error(format!("{requirement}, but it is {}", value.type_name())))
@@ -314,11 +294,7 @@ impl Value {
                         env.error(format!("{requirement}, but its rank is {}", bytes.rank()))
                     );
                 }
-                if let Some(b) = bytes.data[0].value() {
-                    b as isize
-                } else {
-                    return Err(env.error(format!("{requirement}, but it is a fill byte")));
-                }
+                bytes.data[0] as isize
             }
             value => {
                 return Err(env.error(format!("{requirement}, but it is {}", value.type_name())))
@@ -341,11 +317,7 @@ impl Value {
                         env.error(format!("{requirement}, but its rank is {}", bytes.rank()))
                     );
                 }
-                if let Some(b) = bytes.data[0].value() {
-                    b as f64
-                } else {
-                    return Err(env.error(format!("{requirement}, but it is a fill byte")));
-                }
+                bytes.data[0] as f64
             }
             value => {
                 return Err(env.error(format!("{requirement}, but it is {}", value.type_name())))
@@ -391,7 +363,7 @@ impl Value {
                 }
                 let mut result = Vec::with_capacity(bytes.row_count());
                 for &byte in bytes.data() {
-                    let num = byte.value().map(|b| b as f64).unwrap_or(f64::fill_value());
+                    let num = byte as f64;
                     if !test(num) {
                         return Err(env.error(requirement));
                     }
@@ -438,7 +410,7 @@ impl Value {
                 }
                 let mut result = Vec::with_capacity(bytes.flat_len());
                 for &byte in bytes.data() {
-                    let num = byte.value().map(|b| b as f64).unwrap_or(f64::fill_value());
+                    let num = byte as f64;
                     if !test_num(num) {
                         return Err(env.error(requirement));
                     }
@@ -473,10 +445,7 @@ impl Value {
                 if a.rank() != 1 {
                     return Err(env.error(format!("{requirement}, but its rank is {}", a.rank())));
                 }
-                a.data
-                    .into_iter()
-                    .filter_map(|b| b.value().map(|b| b as u8))
-                    .collect()
+                a.data.into()
             }
             Value::Num(a) => {
                 if a.rank() != 1 {
@@ -504,11 +473,11 @@ impl Value {
             if nums
                 .data
                 .iter()
-                .all(|n| n.fract() == 0.0 && *n <= i16::MAX as f64 && *n > i16::MIN as f64)
+                .all(|n| n.fract() == 0.0 && *n <= u8::MAX as f64 && *n >= 0.0)
             {
                 let mut bytes = Vec::with_capacity(nums.flat_len());
                 for n in take(&mut nums.data) {
-                    bytes.push(Byte(n as i16));
+                    bytes.push(n as u8);
                 }
                 *self = (take(&mut nums.shape), bytes).into();
             }
@@ -547,7 +516,7 @@ macro_rules! value_from {
 }
 
 value_from!(f64, Num);
-value_from!(Byte, Byte);
+value_from!(u8, Byte);
 value_from!(char, Char);
 value_from!(Arc<Function>, Func);
 
@@ -559,7 +528,7 @@ impl FromIterator<usize> for Value {
 
 impl From<bool> for Value {
     fn from(b: bool) -> Self {
-        Value::from(Byte(b as i16))
+        Value::from(b as u8)
     }
 }
 
@@ -584,6 +553,12 @@ impl From<Function> for Value {
 impl From<Primitive> for Value {
     fn from(prim: Primitive) -> Self {
         Function::from(prim).into()
+    }
+}
+
+impl From<i32> for Value {
+    fn from(i: i32) -> Self {
+        Value::from(i as f64)
     }
 }
 

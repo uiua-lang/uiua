@@ -448,7 +448,7 @@ impl FromIterator<String> for Array<char> {
     }
 }
 
-pub trait ArrayValue: Clone + Debug + Display {
+pub trait ArrayValue: Clone + Debug + Display + GridFmt {
     const NAME: &'static str;
     type Unfilled;
     fn array_cmp(&self, other: &Self) -> Ordering;

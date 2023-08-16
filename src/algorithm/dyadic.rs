@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::BTreeMap, iter::repeat, mem::take, sync::Arc};
+use std::{cmp::Ordering, iter::repeat, mem::take, sync::Arc};
 
 use crate::{
     array::*,
@@ -1150,12 +1150,12 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     pub fn index_of(&self, searched_in: &Value, env: &Uiua) -> UiuaResult<Value> {
         Ok(match (self, searched_in) {
-            (Value::Num(a), Value::Num(b)) => a.index_of(b, env)?.into(),
-            (Value::Byte(a), Value::Byte(b)) => a.index_of(b, env)?.into(),
-            (Value::Char(a), Value::Char(b)) => a.index_of(b, env)?.into(),
-            (Value::Func(a), Value::Func(b)) => a.index_of(b, env)?.into(),
-            (Value::Num(a), Value::Byte(b)) => a.index_of(&b.clone().convert(), env)?.into(),
-            (Value::Byte(a), Value::Num(b)) => a.clone().convert().index_of(b, env)?.into(),
+            (Value::Num(a), Value::Num(b)) => a.index_of(b).into(),
+            (Value::Byte(a), Value::Byte(b)) => a.index_of(b).into(),
+            (Value::Char(a), Value::Char(b)) => a.index_of(b).into(),
+            (Value::Func(a), Value::Func(b)) => a.index_of(b).into(),
+            (Value::Num(a), Value::Byte(b)) => a.index_of(&b.clone().convert()).into(),
+            (Value::Byte(a), Value::Num(b)) => a.clone().convert().index_of(b).into(),
             (a, b) => {
                 return Err(env.error(format!(
                     "Cannot look for indices of {} in {}",
@@ -1168,46 +1168,47 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    fn index_of(&self, searched_in: &Array<T>, env: &Uiua) -> UiuaResult<Array<f64>> {
-        if searched_in.rank() == 0 {
-            return Err(env.error("Cannot look for indices of a scalar array"));
-        }
+    fn index_of(&self, searched_in: &Array<T>) -> Array<f64> {
         let searched_for = self;
-        if searched_for.rank() == 0 {
-            if searched_in.rank() != 1 {
-                return Err(env.error(format!(
-                    "Cannot look for indices of a scalar array in an array of shape {}",
-                    searched_in.format_shape()
-                )));
+        match searched_for.rank().cmp(&searched_in.rank()) {
+            Ordering::Equal => {
+                let mut result_data = Vec::with_capacity(searched_for.row_count());
+                'elem: for elem in searched_for.rows() {
+                    for (i, of) in searched_in.rows().enumerate() {
+                        if elem == of {
+                            result_data.push(i as f64);
+                            continue 'elem;
+                        }
+                    }
+                    result_data.push(searched_in.row_count() as f64);
+                }
+                let shape = self.shape.iter().cloned().take(1).collect();
+                let res = Array::new(shape, result_data.into());
+                res.validate_shape();
+                res
             }
-            return Ok((searched_in
-                .data
-                .iter()
-                .position(|a| a.array_eq(&searched_for.data[0]))
-                .unwrap_or_else(|| searched_in.row_count()) as f64)
-                .into());
-        } else {
-            if searched_for.shape[1..] != searched_in.shape[1..] {
-                return Err(env.error(format!(
-                    "Cannot get index in array of different shape: {} vs {}",
-                    searched_for.format_shape(),
-                    searched_in.format_shape()
-                )));
+            Ordering::Greater => {
+                let mut rows = Vec::with_capacity(searched_for.row_count());
+                for elem in searched_for.rows() {
+                    rows.push(elem.index_of(searched_in));
+                }
+                Array::from_row_arrays(rows)
             }
-            let mut result = Vec::with_capacity(searched_for.row_count());
-            let mut indices = BTreeMap::new();
-            for (i, row) in searched_in.rows().enumerate() {
-                indices.insert(row, i);
+            Ordering::Less => {
+                if searched_in.rank() - searched_for.rank() == 1 {
+                    return (searched_in
+                        .rows()
+                        .position(|r| r == *searched_for)
+                        .unwrap_or(searched_in.row_count()) as f64)
+                        .into();
+                } else {
+                    let mut rows = Vec::with_capacity(searched_in.row_count());
+                    for of in searched_in.rows() {
+                        rows.push(searched_for.index_of(&of));
+                    }
+                    Array::from_row_arrays(rows)
+                }
             }
-            for row in searched_for.rows() {
-                result.push(
-                    indices
-                        .get(&row)
-                        .map(|i| *i as f64)
-                        .unwrap_or_else(|| searched_in.row_count() as f64),
-                );
-            }
-            Ok(Array::from(result))
         }
     }
 }

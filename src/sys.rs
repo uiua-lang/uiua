@@ -920,13 +920,14 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
     if ![2, 3].contains(&value.rank()) {
         return Err("Image must be a rank 2 or 3 numeric array".into());
     }
+    println!("image value is {:?}", value.type_name());
     let bytes = match value {
         Value::Num(nums) => nums
             .data
             .iter()
             .map(|f| (*f * 255.0).floor() as u8)
             .collect(),
-        Value::Byte(bytes) => bytes.data.to_vec(),
+        Value::Byte(bytes) => bytes.data.iter().map(|&b| (b > 0) as u8 * 255).collect(),
         _ => return Err("Image must be a numeric array".into()),
     };
     #[allow(clippy::match_ref_pats)]

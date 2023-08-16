@@ -296,13 +296,13 @@ macro_rules! cmp_impl {
                 ($ordering $eq Ordering::Greater).into()
             }
             pub fn num_num(a: f64, b: f64) -> u8 {
-                (a.array_cmp(&b) $eq $ordering) as u8
+                (b.array_cmp(&a) $eq $ordering) as u8
             }
             pub fn byte_num(a: u8, b: f64) -> u8 {
-                (f64::from(a).array_cmp(&b) $eq $ordering) as u8
+                (b.array_cmp(&f64::from(a)) $eq $ordering) as u8
             }
             pub fn num_byte(a: f64, b: u8) -> u8 {
-                (a.array_cmp(&f64::from(b)) $eq $ordering) as u8
+                (f64::from(b).array_cmp(&a) $eq $ordering) as u8
             }
             pub fn generic<T: Ord>(a: T, b: T) -> u8 {
                 (b.cmp(&a) $eq $ordering).into()

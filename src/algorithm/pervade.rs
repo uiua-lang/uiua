@@ -322,9 +322,6 @@ cmp_impl!(is_gt == Ordering::Greater);
 cmp_impl!(is_ge != Ordering::Less);
 
 pub mod add {
-    use std::sync::Arc;
-
-    use crate::{function::Function, value::Value};
 
     use super::*;
     pub fn num_num(a: f64, b: f64) -> f64 {
@@ -350,19 +347,6 @@ pub mod add {
     }
     pub fn char_byte(a: char, b: u8) -> char {
         char::from_u32((b as i64 + a as i64) as u32).unwrap_or('\0')
-    }
-    pub fn func_func(a: Arc<Function>, b: Arc<Function>) -> Arc<Function> {
-        let a = Arc::try_unwrap(a).unwrap_or_else(|a| (*a).clone());
-        let b = Arc::try_unwrap(b).unwrap_or_else(|b| (*b).clone());
-        Arc::new(a.compose(b))
-    }
-    pub fn func_any<B: Into<Value>>(a: Arc<Function>, b: B) -> Arc<Function> {
-        let a = Arc::try_unwrap(a).unwrap_or_else(|a| (*a).clone());
-        Arc::new(a.compose(Function::constant(b)))
-    }
-    pub fn any_func<A: Into<Value>>(a: A, b: Arc<Function>) -> Arc<Function> {
-        let b = Arc::try_unwrap(b).unwrap_or_else(|b| (*b).clone());
-        Arc::new(Function::constant(a).compose(b))
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot add {a} and {b}"))

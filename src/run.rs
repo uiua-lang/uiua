@@ -488,6 +488,7 @@ backtrace:
         for line in func.body {
             instrs.extend(self.compile_words(line)?);
         }
+        // If the function is just a call to another function, just push that function
         if let [Instr::Push(f), Instr::Call(..)] = instrs.as_slice() {
             if matches!(**f, Value::Func(_)) {
                 self.push_instr(Instr::Push(f.clone()));

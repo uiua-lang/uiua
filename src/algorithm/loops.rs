@@ -761,11 +761,16 @@ pub fn partition(env: &mut Uiua) -> UiuaResult {
     let markers = markers.as_indices(env, "Partition markers must be a list of integers")?;
     let values = env.pop(3)?;
     let groups = values.partition_groups(&markers, env)?;
+    let mut rows = Vec::with_capacity(groups.len());
     for group in groups {
         env.push(group);
         env.push(f.clone());
         env.call_error_on_break("break is not allowed in partition")?;
+        rows.push(env.pop("partition's function result")?);
     }
+    rows.reverse();
+    let res = Value::from_row_values(rows, env)?;
+    env.push(res);
     Ok(())
 }
 
@@ -830,11 +835,16 @@ pub fn group(env: &mut Uiua) -> UiuaResult {
     let indices = indices.as_indices(env, "Group indices must be a list of integers")?;
     let values = env.pop(3)?;
     let groups = values.group_groups(&indices, env)?;
+    let mut rows = Vec::with_capacity(groups.len());
     for group in groups {
         env.push(group);
         env.push(f.clone());
         env.call_error_on_break("break is not allowed in group")?;
+        rows.push(env.pop("group's function result")?);
     }
+    rows.reverse();
+    let res = Value::from_row_values(rows, env)?;
+    env.push(res);
     Ok(())
 }
 

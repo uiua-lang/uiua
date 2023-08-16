@@ -329,20 +329,22 @@ backtrace:
         let instrs = self.new_functions.last_mut().unwrap();
         // Optimizations
         match (instrs.as_mut_slice(), instr) {
+            // Ignore noops
+            (_, Instr::Prim(Noop, _)) => {}
+            // Cancel out inverses
+            ([.., Instr::Prim(a, _)], Instr::Prim(b, _)) if a.inverse() == Some(b) => {
+                instrs.pop();
+            }
             // Cosine
             ([.., Instr::Prim(Eta, _), Instr::Prim(Add, _)], Instr::Prim(Sin, span)) => {
                 instrs.pop();
                 instrs.pop();
                 instrs.push(Instr::Prim(Cos, span));
             }
+            // Len shape = rank
+            ([.., Instr::Prim(top @ Shape, _)], Instr::Prim(Len, _)) => *top = Rank,
             // First reverse = last
-            ([.., Instr::Prim(top, _)], Instr::Prim(new, new_span)) => match (&top, new) {
-                (Reverse, First) => *top = Last,
-                (Reverse, Last) => *top = First,
-                _ => instrs.push(Instr::Prim(new, new_span)),
-            },
-            // Ignore noops
-            (_, Instr::Prim(Noop, _)) => {}
+            ([.., Instr::Prim(top @ Reverse, _)], Instr::Prim(First, _)) => *top = Last,
             (_, instr) => instrs.push(instr),
         }
     }

@@ -101,7 +101,16 @@ impl fmt::Display for Primitive {
         } else if let Primitive::FillValue = self {
             write!(f, "_")
         } else {
-            write!(f, "{:?}", self)
+            use Primitive::*;
+            match self {
+                InvTranspose => write!(f, "↶{Transpose}"),
+                InverseBits => write!(f, "↶{Bits}"),
+                Uncouple => write!(f, "↶{Uncouple}"),
+                Untake => write!(f, "↶{Take}"),
+                Undrop => write!(f, "↶{Drop}"),
+                Cos => write!(f, "{Sin}{Add}{Add}"),
+                _ => write!(f, "{self:?}"),
+            }
         }
     }
 }

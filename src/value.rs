@@ -237,7 +237,7 @@ impl Value {
             Self::Func(array) => array.grid_string(),
         }
     }
-    pub fn as_primitive(&self) -> Option<Primitive> {
+    pub fn as_primitive(&self) -> Option<(Primitive, usize)> {
         if let Value::Func(fs) = self {
             if fs.rank() == 0 {
                 return fs.data[0].as_primitive();

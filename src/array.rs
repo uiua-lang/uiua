@@ -555,7 +555,7 @@ impl ArrayValue for Arc<Function> {
     const NAME: &'static str = "function";
     type Unfilled = Arc<Function>;
     fn unfilled(self) -> Option<Self::Unfilled> {
-        if self.as_primitive() == Some(Primitive::FillValue) {
+        if let Some((Primitive::FillValue, _)) = self.as_primitive() {
             None
         } else {
             Some(self)
@@ -568,7 +568,7 @@ impl ArrayValue for Arc<Function> {
         Arc::new(Primitive::FillValue.into())
     }
     fn is_fill_value(&self) -> bool {
-        self.as_primitive() == Some(Primitive::FillValue)
+        self.as_primitive() == Some((Primitive::FillValue, 0))
     }
 }
 

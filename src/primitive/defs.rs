@@ -535,6 +535,8 @@ primitive!(
     /// If the arrays have a [rank] difference greater than 1, then the arrays will be filled so that the join makes sense.
     /// ex: ⊂ 1 [2_3 4_5]
     /// ex: ⊂ [1_2] [[3_4 5_6] [7_8 9_10]]
+    ///
+    /// [join]'s glyphs is `⊂` because it kind of looks like a magnet pulling its two arguments together.
     (2, Join, DyadicArray, ("join", '⊂')),
     /// Combine two arrays as rows of a new array
     ///

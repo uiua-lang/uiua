@@ -1,10 +1,12 @@
-- Move optimizations
+- Cache inverses and unders
 - Finish tour
+- Explore using stack-unpacked arrays as jagged arrays
 - Under pick
 - Docs
   - Audio
   - Images
   - Threads
+  - System
 - Tooling
   - Primitive details in LSP
 - Test suite

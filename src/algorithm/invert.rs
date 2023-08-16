@@ -30,7 +30,8 @@ impl Function {
     }
 }
 
-fn invert_instrs(instrs: &[Instr]) -> Option<Vec<Instr>> {
+pub(crate) fn invert_instrs(instrs: &[Instr]) -> Option<Vec<Instr>> {
+    // println!("invert {:?}", instrs);
     if instrs.is_empty() {
         return Some(Vec::new());
     }
@@ -52,17 +53,26 @@ fn invert_instrs(instrs: &[Instr]) -> Option<Vec<Instr>> {
             start -= 1;
         }
     }
+    // println!("inverted {:?} to {:?}", instrs, inverted);
     Some(inverted)
 }
 
 fn invert_instr_fragment(instrs: &[Instr]) -> Option<Vec<Instr>> {
     use Instr::*;
     use Primitive::*;
-    if let [Prim(prim, span)] = instrs {
-        return Some(match prim {
-            Primitive::Sqrt => vec![Instr::push(2.0), Instr::Prim(Primitive::Pow, *span)],
-            prim => vec![Instr::Prim(prim.inverse()?, *span)],
-        });
+    match instrs {
+        [Prim(prim, span)] => {
+            return Some(match prim {
+                Primitive::Sqrt => vec![Instr::push(2.0), Instr::Prim(Primitive::Pow, *span)],
+                prim => vec![Instr::Prim(prim.inverse()?, *span)],
+            })
+        }
+        [Push(val)] => {
+            if let Some((prim, span)) = val.as_primitive() {
+                return Some(vec![Instr::Prim(prim.inverse()?, span)]);
+            }
+        }
+        _ => {}
     }
 
     let patterns: &[&dyn InvertPattern] = &[

@@ -115,7 +115,7 @@ impl fmt::Display for Function {
         if let FunctionId::Named(name) = &self.id {
             return write!(f, "{name}");
         }
-        if let Some(prim) = self.as_primitive() {
+        if let Some((prim, _)) = self.as_primitive() {
             return write!(f, "{prim}");
         }
         if let FunctionKind::Dynamic { .. } = self.kind {
@@ -160,9 +160,9 @@ impl Function {
             FunctionKind::Normal,
         )
     }
-    pub fn as_primitive(&self) -> Option<Primitive> {
-        match &self.id {
-            FunctionId::Primitive(prim) => Some(*prim),
+    pub fn as_primitive(&self) -> Option<(Primitive, usize)> {
+        match self.instrs.as_slice() {
+            [Instr::Prim(prim, span)] => Some((*prim, *span)),
             _ => None,
         }
     }

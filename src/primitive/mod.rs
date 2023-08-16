@@ -15,7 +15,10 @@ use std::{
 use enum_iterator::{all, Sequence};
 use rand::prelude::*;
 
-use crate::{algorithm::loops, lex::AsciiToken, sys::*, value::*, Uiua, UiuaError, UiuaResult};
+use crate::{
+    algorithm::loops, function::Function, lex::AsciiToken, sys::*, value::*, Uiua, UiuaError,
+    UiuaResult,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Sequence)]
 pub enum PrimClass {
@@ -270,6 +273,11 @@ impl Primitive {
             Primitive::Pick => env.dyadic_oo_env(Value::pick)?,
             Primitive::Replicate => env.dyadic_ro_env(Value::replicate)?,
             Primitive::Take => env.dyadic_oo_env(Value::take)?,
+            Primitive::Constant => {
+                let val = env.pop(1)?;
+                let constant = Function::constant(val);
+                env.push(constant);
+            }
             Primitive::Untake => {
                 let from = env.pop(1)?;
                 let index = env.pop(2)?;

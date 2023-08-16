@@ -464,11 +464,8 @@ primitive!(
     ///
     /// ex: ⊝7_7_8_0_1_2_0
     (1, Deduplicate, MonadicArray, ("deduplicate", '⊝')),
-    /// Check if two arrays are exactly the same
-    ///
-    /// ex: ≅ 1_2_3 [1 2 3]
-    /// ex: ≅ 1_2_3 [1 2]
-    (2, Match, DyadicArray, ("match", '≅')),
+    /// Turn an array into a constant function
+    (1, Constant, MonadicArray, ("constant", '□')),
     /// Append two arrays end-to-end
     ///
     /// For scalars, it is equivalent to [couple].
@@ -505,6 +502,11 @@ primitive!(
     (2, Couple, DyadicArray, ("couple", '⊟')),
     /// Split an array into two arrays
     (1(1), Uncouple, MonadicArray),
+    /// Check if two arrays are exactly the same
+    ///
+    /// ex: ≅ 1_2_3 [1 2 3]
+    /// ex: ≅ 1_2_3 [1 2]
+    (2, Match, DyadicArray, ("match", '≅')),
     /// Index a row or elements from an array
     ///
     /// An index with [rank] `0` or `1` will pick a single row or element from an array.

@@ -41,111 +41,115 @@ enum BasicValue<'a> {
 
 impl<'a> VirtualEnv<'a> {
     pub fn instrs(&mut self, instrs: &'a [Instr]) -> Result<(), String> {
-        use Primitive::*;
         for instr in instrs {
-            match instr {
-                Instr::Push(val) => {
-                    let val = if let Some(f) = val.as_func_array().and_then(Array::as_scalar) {
-                        BasicValue::Func(f)
-                    } else if let Some(n) = val.as_num_array().and_then(Array::as_scalar) {
-                        BasicValue::Num(*n)
+            self.instr(instr)?;
+        }
+        Ok(())
+    }
+    fn instr(&mut self, instr: &'a Instr) -> Result<(), String> {
+        use Primitive::*;
+        match instr {
+            Instr::Push(val) => {
+                let val = if let Some(f) = val.as_func_array().and_then(Array::as_scalar) {
+                    BasicValue::Func(f)
+                } else if let Some(n) = val.as_num_array().and_then(Array::as_scalar) {
+                    BasicValue::Num(*n)
+                } else {
+                    BasicValue::Other
+                };
+                self.stack.push(val);
+            }
+            Instr::DfnVal(_) => self.stack.push(BasicValue::Other),
+            Instr::BeginArray => self.array_stack.push(self.stack.len()),
+            Instr::EndArray(_) => {
+                let len = self
+                    .array_stack
+                    .pop()
+                    .ok_or("EndArray without BeginArray")?;
+                self.stack.truncate(len);
+                self.stack.push(BasicValue::Arr(len));
+            }
+            Instr::Prim(prim, _) => match prim {
+                Reduce | Scan => self.handle_mod(prim, 2, -1, 1)?,
+                Fold => self.handle_mod(prim, 2, -1, 2)?,
+                Each | Rows => self.handle_variadic_mod(prim)?,
+                Distribute | Table | Cross => self.handle_mod(prim, 2, -1, 2)?,
+                Spawn => {
+                    if let Some(BasicValue::Num(n)) = self.stack.pop() {
+                        if n.fract() == 0.0 && n >= 0.0 {
+                            self.handle_mod(prim, 1, 0, n as usize)?
+                        } else {
+                            return Err("Spawn without a natural number".into());
+                        }
                     } else {
-                        BasicValue::Other
-                    };
+                        return Err("Spawn without a number".into());
+                    }
+                }
+                Repeat => {
+                    let f = self.pop()?;
+                    let n = self.pop()?;
+                    if let BasicValue::Num(n) = n {
+                        if n.fract() == 0.0 && n >= 0.0 {
+                            let n = n as usize;
+                            if let BasicValue::Func(f) = f {
+                                let (f_args, f_delta) = f.args_delta().ok_or_else(|| {
+                                    format!("Repeat's function {f:?} had indeterminate a/Δ")
+                                })?;
+                                let m_args = -f_delta.min(0) as usize * n;
+                                self.stack.push(BasicValue::Func(f));
+                                self.handle_mod(prim, f_args, f_delta, m_args)?
+                            } else {
+                                self.handle_mod(prim, 0, 1, n)?
+                            }
+                        } else {
+                            return Err("Repeat without a natural number".into());
+                        }
+                    } else {
+                        return Err("Repeat without a number".into());
+                    }
+                }
+                Dup => {
+                    let val = self.pop()?;
+                    self.set_min_height();
+                    self.stack.push(val);
                     self.stack.push(val);
                 }
-                Instr::DfnVal(_) => self.stack.push(BasicValue::Other),
-                Instr::BeginArray => self.array_stack.push(self.stack.len()),
-                Instr::EndArray(_) => {
-                    let len = self
-                        .array_stack
-                        .pop()
-                        .ok_or("EndArray without BeginArray")?;
-                    self.stack.truncate(len);
-                    self.stack.push(BasicValue::Arr(len));
+                Flip => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    self.set_min_height();
+                    self.stack.push(a);
+                    self.stack.push(b);
                 }
-                Instr::Prim(prim, _) => match prim {
-                    Reduce | Scan => self.handle_mod(prim, 2, -1, 1)?,
-                    Fold => self.handle_mod(prim, 2, -1, 2)?,
-                    Each | Rows => self.handle_variadic_mod(prim)?,
-                    Distribute | Table | Cross => self.handle_mod(prim, 2, -1, 2)?,
-                    Spawn => {
-                        if let Some(BasicValue::Num(n)) = self.stack.pop() {
-                            if n.fract() == 0.0 && n >= 0.0 {
-                                self.handle_mod(prim, 1, 0, n as usize)?
-                            } else {
-                                return Err("Spawn without a natural number".into());
-                            }
-                        } else {
-                            return Err("Spawn without a number".into());
-                        }
-                    }
-                    Repeat => {
-                        let f = self.pop()?;
-                        let n = self.pop()?;
-                        if let BasicValue::Num(n) = n {
-                            if n.fract() == 0.0 && n >= 0.0 {
-                                let n = n as usize;
-                                if let BasicValue::Func(f) = f {
-                                    let (f_args, f_delta) = f.args_delta().ok_or_else(|| {
-                                        format!("Repeat's function {f:?} had indeterminate a/Δ")
-                                    })?;
-                                    let m_args = -f_delta.min(0) as usize * n;
-                                    self.stack.push(BasicValue::Func(f));
-                                    self.handle_mod(prim, f_args, f_delta, m_args)?
-                                } else {
-                                    self.handle_mod(prim, 0, 1, n)?
-                                }
-                            } else {
-                                return Err("Repeat without a natural number".into());
-                            }
-                        } else {
-                            return Err("Repeat without a number".into());
-                        }
-                    }
-                    Dup => {
-                        let val = self.pop()?;
-                        self.set_min_height();
-                        self.stack.push(val);
-                        self.stack.push(val);
-                    }
-                    Flip => {
-                        let a = self.pop()?;
-                        let b = self.pop()?;
-                        self.set_min_height();
-                        self.stack.push(a);
-                        self.stack.push(b);
-                    }
-                    Pop => {
+                Pop => {
+                    self.pop()?;
+                    self.set_min_height();
+                }
+                Over => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    self.set_min_height();
+                    self.stack.push(b);
+                    self.stack.push(a);
+                    self.stack.push(b);
+                }
+                Call => self.handle_call()?,
+                Recur => return Err("Recur present".into()),
+                _ => {
+                    let args = prim.args().ok_or("Prim had indeterminate args")?;
+                    for _ in 0..args {
                         self.pop()?;
-                        self.set_min_height();
                     }
-                    Over => {
-                        let a = self.pop()?;
-                        let b = self.pop()?;
-                        self.set_min_height();
-                        self.stack.push(b);
-                        self.stack.push(a);
-                        self.stack.push(b);
+                    self.set_min_height();
+                    let delta = prim.delta().ok_or("Prim had indeterminate delta")?;
+                    for _ in 0..delta + args as i8 {
+                        self.stack.push(BasicValue::Other);
                     }
-                    Call => self.handle_call()?,
-                    Recur => return Err("Recur present".into()),
-                    _ => {
-                        let args = prim.args().ok_or("Prim had indeterminate args")?;
-                        for _ in 0..args {
-                            self.pop()?;
-                        }
-                        self.set_min_height();
-                        let delta = prim.delta().ok_or("Prim had indeterminate delta")?;
-                        for _ in 0..delta + args as i8 {
-                            self.stack.push(BasicValue::Other);
-                        }
-                    }
-                },
-                Instr::Call(_) => self.handle_call()?,
-            }
-            self.set_min_height();
+                }
+            },
+            Instr::Call(_) => self.handle_call()?,
         }
+        self.set_min_height();
         Ok(())
     }
     fn pop(&mut self) -> Result<BasicValue<'a>, String> {

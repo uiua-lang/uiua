@@ -1,7 +1,7 @@
-- Infallible from_row_arrays
 - Cache inverses and unders
 - Finish tour
 - Under pick
+- Maybe use ~ for formattable dfn args
 - Docs
   - Audio
   - Images

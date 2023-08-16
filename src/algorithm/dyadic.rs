@@ -1194,8 +1194,8 @@ impl Value {
             (a, b) => {
                 return Err(env.error(format!(
                     "Cannot look for members of {} array in {} array",
+                    a.type_name(),
                     b.type_name(),
-                    a.type_name()
                 )))
             }
         })

@@ -1,4 +1,4 @@
-const UIUA: &str = "\"Um, I um...arrays\"\n[⊜⊢]≥'A'.";
+const UIUA: &str = "\"Um, I um...arrays\"\n⊜⊢≥'A'.";
 const FORMAT: &str = "# Click Run to format!\nrepeat(join∶/+take`2.)10range2";
 const D3: &str = "↯∶⇡/×.2_3_4";
 const LOGO: &str = "\
@@ -20,7 +20,7 @@ const STRIPES: &str = "\
 ∵{⊞a.⇡300}+_↥_-
 ⍉ ÷2 +1.2 ○ ÷10";
 const PALINDROME: &str = r#"$ uiua racecar wow cool!
-⊜(⊂⊏∶"❌✅" ≅⇌..)≠' '."#;
+;⊜(0⊂⊏∶"❌✅" ≅⇌..)≠' '."#;
 const RULE_30: &str = "\
 Thirty ← ≡(↥≅0_1_1 ∶=1 /+.) ◫3 ⊂∶0 ⊂0
 size ← 500

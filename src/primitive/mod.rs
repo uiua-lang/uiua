@@ -156,6 +156,7 @@ impl Primitive {
             Bits => InverseBits,
             InverseBits => Bits,
             Couple => Uncouple,
+            Call => Constant,
             _ => return None,
         })
     }

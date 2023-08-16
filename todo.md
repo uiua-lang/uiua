@@ -1,7 +1,8 @@
 - Cache inverses and unders
-- Finish tour
 - Under pick
 - Maybe use ~ for formattable dfn args
+- Fill modifier?
+- Finish tour
 - Docs
   - Audio
   - Images

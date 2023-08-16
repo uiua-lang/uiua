@@ -721,32 +721,46 @@ primitive!(
     ([1, 2, 2], Cross, DyadicModifier, ("cross", '⊠')),
     /// Group elements of an array into buckets by index
     ///
-    /// The function processes each group in order.
-    /// The first argument must be a [rank]`1` integer array, and the arguments must have the same length.
+    /// Takes a function and two arrays.
+    /// The arrays must be the same [length].
+    /// The first array must be [rank]`1` and contain integers.
+    /// Rows in the second array will be grouped into buckets by the indices in the first array.
     /// Keys `less than``0` will be omitted.
-    /// Using [noop] as the function will just put each group on the stack.
-    /// ex: ⊕· [0 1 0 2 1 1] [1 2 3 4 5 6]
+    /// The function then processes each group in order, and the results are concatenated together.
     /// ex: ⊕· =0◿2. [1 2 3 4 5 6]
+    /// If the values returned by the function do not have the same [shape], concatenation will fail.
+    /// It is common to use [constant] to encapsulate groups of different [shape]s.
+    /// ex: ⊕□ [0 1 0 2 1 1] [1 2 3 4 5 6]
     ///
     /// If you wanted to get the length of each group, use [length].
     /// ex: ⊕⧻ [0 1 0 2 1 1] [1 2 3 4 5 6]
     ///
     /// When combined with [classify], you can do things like counting the number of occurrences of each character in a string.
     /// ex: $ Count the characters is this string
-    ///   : ⊕($"_ _"⊢∶⧻.) ⊛.⊏⌂.
+    ///   : ⊕($"_:_"⊢∶⧻.) ⊛.⊏⌂.
+    ///
+    /// [group] is closely related to [partition].
     ([1, 1, 2], Group, DyadicModifier, ("group", '⊕')),
     /// Group elements of an array into buckets by sequential keys
     ///
-    /// The first argument must be a [rank]`1` integer array, and the arguments must have the same length.
+    /// Takes a function and two arrays.
+    /// The arrays must be the same [length].
+    /// The first array must be [rank]`1` and contain integers.
+    /// Runs of rows in the second array that line up with sequential keys in the first array will be grouped together.
     /// Keys `less or equal``0` will be omitted.
-    /// Using [noop] as the function will just put each group on the stack.
-    /// ex: ⊜· [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
+    /// The function then processes each group in order, and the results are concatenated together.
+    /// ex: ⊜· [0 0 2 2 1 1 3 3] [1 2 3 4 5 6 7 8]
+    /// If the values returned by the function do not have the same [shape], concatenation will fail.
+    /// It is common to use [constant] to encapsulate groups of different [shape]s.
+    /// ex: ⊜□ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     ///
     /// If you wanted to get the length of each group, use [length].
-    /// ex: ⊜· [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
+    /// ex: ⊜⧻ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     ///
     /// This can be used to split an array by a delimiter.
-    /// ex: ⊜· ≠' '. $ Hey there friendo
+    /// ex: ⊜□ ≠' '. $ Hey there friendo
+    ///
+    /// [partition] is closely related to [group].
     ([1, 1, 2], Partition, DyadicModifier, ("partition", '⊜')),
     /// Repeat a function a number of times
     ///

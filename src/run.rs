@@ -180,11 +180,14 @@ impl Uiua {
         if let Some(path) = path {
             self.current_imports.lock().insert(path.into());
         }
-        let res = match catch_unwind(AssertUnwindSafe(|| self.items(items, false))) {
-            Ok(Ok(())) => Ok(()),
-            Ok(Err(e)) => Err(e),
-            Err(_) => Err(self.error(format!(
-                "\
+        let res = if cfg!(debug_assertions) {
+            self.items(items, false)
+        } else {
+            match catch_unwind(AssertUnwindSafe(|| self.items(items, false))) {
+                Ok(Ok(())) => Ok(()),
+                Ok(Err(e)) => Err(e),
+                Err(_) => Err(self.error(format!(
+                    "\
 The interpreter has crashed!
 Hooray! You found a bug!
 Please report this at http://github.com/uiua-lang/uiua/issues
@@ -194,10 +197,11 @@ code:
 {}
 backtrace:
 {}",
-                self.span(),
-                input,
-                Backtrace::force_capture()
-            ))),
+                    self.span(),
+                    input,
+                    Backtrace::force_capture()
+                ))),
+            }
         };
         if let Some(path) = path {
             self.current_imports.lock().remove(path);

@@ -583,10 +583,8 @@ impl<T: ArrayValue> Array<T> {
                             .collect();
                     }
                 });
-                if self.shape.is_empty() {
-                    self.shape.push(abs_taking);
-                } else {
-                    self.shape[0] = abs_taking;
+                if let Some(s) = self.shape.get_mut(0) {
+                    *s = (*s).min(abs_taking)
                 }
                 self.validate_shape();
                 self
@@ -622,7 +620,7 @@ impl<T: ArrayValue> Array<T> {
                     }
                     Array::from_row_arrays(new_rows, env)?
                 };
-                arr.shape[0] = abs_taking;
+                arr.shape[0] = arr.shape[0].min(abs_taking);
                 arr.validate_shape();
                 arr
             }

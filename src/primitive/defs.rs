@@ -361,22 +361,9 @@ primitive!(
     /// ex: ⧻1_2_3
     /// ex: ⧻[1_2 3_4 5_6]
     ///
-    /// [length] is equivalent to the [first] of the [shape] *unless* the last row is a fill value.
-    /// When the last row is a fill value, [length] only counts up until the last fill value.
-    /// ex: x ← ↙5 1_2_3
-    ///   :   x
-    ///   :  ⧻x
-    ///   : ⊢△x
-    /// A row is considered a fill value if all of its elements are fill values.
-    /// ex: x ← ↙5 ⇌∵⇡⇡5
-    ///   :   x
-    ///   :  ⧻x
-    ///   : ⊢△x
-    /// Because of this, [length] of an array with intermediate fill values is not very useful.
-    /// ex: x ← ⍉[⍥(↙+1⌊×⚂∶⇡.5)5]
-    ///   :      x
-    ///   :    ≡⧻x
-    ///   : ≡(⊢△)x
+    /// [length] is equivalent to the [first] of the [shape].
+    /// ex:  ⧻[1_2_3 4_5_6]
+    ///   : ⊢△[1_2_3 4_5_6]
     (1, Len, MonadicArray, ("length", '⧻')),
     /// The number of dimensions in an array
     ///
@@ -427,12 +414,8 @@ primitive!(
     /// Make an array 1-dimensional
     ///
     /// ex: ♭5
+    /// ex: ♭[1 2 3]
     /// ex: ♭[1_2 3_4 5_6]
-    ///
-    /// [deshape] *only* changes the [shape] of an array. It does not remove fill elements.
-    /// If you want to flatten an array and remove fill elements, use [reduce][join].
-    /// ex: ♭  \⊂⇡4
-    ///   : /⊂ \⊂⇡4
     ///
     /// It looks like `♭` because it flattens the array.
     ///
@@ -444,17 +427,6 @@ primitive!(
     /// ex: ⋯27
     /// ex: ⋯⇡8
     /// ex: ⋯[1_2 3_4 5_6]
-    ///
-    /// One use of [bits] is to get all subsets of an array.
-    /// You get the [length] of the array, raise `2` to the [power] of it, encode the [range] into [bits], and then [ditribute][replicate] the array with the bits.
-    /// ex: ⫫‡⋯⇡ⁿ∶2⧻.[1 2 3]
-    ///
-    /// To turn the bits back into numbers, use [invert].
-    /// ex: ↶⋯[1 0 1 0]
-    /// ex: ↶⋯[1_1_1 0_1_0 0_1_1]
-    ///
-    /// Bits are encoded in big-endian so that any fill elements do not affect the result.
-    /// ex: ↶⋯.\⊂◿2⇡6
     (1, Bits, MonadicArray, ("bits", '⋯')),
     /// Inverse of Bits
     (1, InverseBits, MonadicArray),
@@ -486,17 +458,16 @@ primitive!(
     ///
     /// When combined with [group], you can do things like counting the number of occurrences of each character in a string.
     /// ex: $ Count the characters is this string
-    ///   : ∵$"_ _" ≡⊢∶≡⧻.⊕⊛.⊏⌂.
+    ///   : ⊕($"_ _"⊢∶⧻.) ⊛.⊏⌂.
     (1, Classify, MonadicArray, ("classify", '⊛')),
     /// Remove duplicate elements from an array
     ///
     /// ex: ⊝7_7_8_0_1_2_0
     (1, Deduplicate, MonadicArray, ("deduplicate", '⊝')),
-    /// Check if two arrays are the same, ignoring fill elements
+    /// Check if two arrays are exactly the same
     ///
     /// ex: ≅ 1_2_3 [1 2 3]
     /// ex: ≅ 1_2_3 [1 2]
-    /// ex: ≅ 1_2 .⊢[1_2 4_5_6]
     (2, Match, DyadicArray, ("match", '≅')),
     /// Append two arrays end-to-end
     ///
@@ -507,8 +478,8 @@ primitive!(
     /// If the arrays have the same [rank], it will append the second array to the first.
     /// ex: ⊂ [1 2] [3 4]
     ///
-    /// If the arrays have the same [rank], but their shapes are different, then the arrays will be filled so that the join makes sense.
-    /// ex: ⊂ [1_2 3_4] [5_6_7 8_9_10]
+    /// Arrays that do not have equal [shape] suffixes cannot be joined.
+    /// ex! ⊂ [1_2 3_4] [5_6_7 8_9_10]
     ///
     /// If the arrays have a [rank] difference of 1, then the array with the smaller [rank] will be prepended or appended to the other as a row.
     /// ex: ⊂ 1 [2 3]
@@ -516,24 +487,19 @@ primitive!(
     /// ex: ⊂ [1_2] [3_4 5_6]
     /// ex: ⊂ [1_2 3_4] [5_6]
     ///
-    /// If the arrays have a [rank] difference greater than 1, then the arrays will be filled so that the join makes sense.
-    /// ex: ⊂ 1 [2_3 4_5]
-    /// ex: ⊂ [1_2] [[3_4 5_6] [7_8 9_10]]
-    ///
     /// [join]'s glyphs is `⊂` because it kind of looks like a magnet pulling its two arguments together.
     (2, Join, DyadicArray, ("join", '⊂')),
     /// Combine two arrays as rows of a new array
     ///
     /// For scalars, it is equivalent to [join].
     /// ex: ⊟ 1 2
+    ///   : ⊂ 1 2
     ///
     /// For arrays, a new array is created with the first array as the first row and the second array as the second row.
     /// ex: ⊟ [1 2 3] [4 5 6]
     ///
-    /// Before coupling, the arrays are filled to make their [shape]s match.
-    /// ex: ⊟ [1 2 3] [4 5]
-    /// ex: ⊟ 1 [2 3]
-    /// ex: ⊟ [1 2 3] [4_5 6_7]
+    /// Arrays with different shapes cannot be [couple]ed.
+    /// ex! ⊟ [1 2 3] [4 5]
     ///
     /// `first``shape` of the coupled array will *always* be `2`.
     (2, Couple, DyadicArray, ("couple", '⊟')),
@@ -562,7 +528,6 @@ primitive!(
     /// If the selector's [rank] is `greater than``1`, then earch row of the selector will be selected seperately.
     /// ex: ⊏ [0_1 1_2 2_3] [2 3 5 7]
     /// ex: ⊏ [0_1 1_2 2_0] [1_2_3 4_5_6 7_8_9]
-    /// ex: ⊏ [4_0_5 7_1_2_3 0_1_2_3_4_12] "Hello, World!"
     (2, Select, DyadicArray, ("select", '⊏')),
     /// End step of under select
     (3, Unselect, Misc),
@@ -575,14 +540,9 @@ primitive!(
     /// ex: ↙ 2 ↯3_3⇡9
     /// ex: ↙ ¯2 ↯3_3⇡9
     ///
-    /// Taking more than the length of the array will extend the array with fill elements.
+    /// Taking more than the length of the array will do nothing.
     /// ex: ↙ 7 [8 3 9 2 0]
-    /// ex: ↙ ¯7 [8 3 9 2 0]
-    /// ex: ↙ 5 ↯3_3⇡9
     /// ex: ↙ ¯5 ↯3_3⇡9
-    ///
-    /// To extend with a specific value, use [fill];
-    /// ex: ⍛0 ↙10 [1 2 3 4 5]
     (2, Take, DyadicArray, ("take", '↙')),
     /// End step of under take
     (3, Untake, Misc),
@@ -649,7 +609,6 @@ primitive!(
     /// ex: ∊ [4 5 6] [1_2_3 4_5_6]
     /// ex: ∊ [1_2_3 4_5_6] [3 4 5]
     /// ex: ∊ 2 [1_2_3 4_5_6]
-    /// ex: ∊ "cat"_"dog" "bird"_"cat"_"fish"
     ///
     /// With the help of [deduplicate] and [replicate], you can use [member] to get a set intersection.
     /// ex: ⊝‡∊, "abracadabra" "that's really cool"
@@ -665,7 +624,6 @@ primitive!(
     /// ex: ⊗ [4 5 6] [1_2_3 4_5_6]
     /// ex: ⊗ [1_2_3 4_5_6] [3 4 5]
     /// ex: ⊗ 2 [1_2_3 4_5_6]
-    /// ex: ⊗ "cat"_"dog" "bird"_"cat"_"fish"
     ///
     /// You can use the returned indices with [select] to get the rows that were found.
     /// If you expect on of the searched-for rows to be missing, you can [join] a default item to the end of the [select]ed-from array.
@@ -707,7 +665,6 @@ primitive!(
     /// ex: \+    1_2_3_4
     /// ex: \-    1_2_3_4
     /// ex: \(-∶) 1_2_3_4
-    /// ex: \⊂    1_2_3_4
     ([1, 1, 2], Scan, MonadicModifier, ("scan", '\\')),
     /// Apply a function to each element of an array or between elements of arrays
     ///
@@ -715,7 +672,6 @@ primitive!(
     ///
     /// The number of arrays used depends on how many arguments the function takes.
     /// ex: ∵(⊟.) 1_2_3_4
-    /// ex: ∵⇡     1_2_3_4
     /// ex: ∵⊂ 1_2_3 4_5_6
     /// ex: ∵⊂ 1_2 [4_5 6_7]
     ([1, 1, 1], Each, MonadicModifier, ("each", '∵')),
@@ -763,25 +719,32 @@ primitive!(
     ([1, 2, 2], Cross, DyadicModifier, ("cross", '⊠')),
     /// Group elements of an array into buckets by index
     ///
+    /// The function processes each group in order.
     /// The first argument must be a [rank]`1` integer array, and the arguments must have the same length.
-    /// Buckets with mismatched lengths have fill elements.
     /// Keys `less than``0` will be omitted.
-    /// ex: ⊕ [0 1 0 2 1 1] [1 2 3 4 5 6]
-    /// ex: ⊕ =0◿2. [1 2 3 4 5 6]
+    /// Using [noop] as the function will just put each group on the stack.
+    /// ex: ⊕· [0 1 0 2 1 1] [1 2 3 4 5 6]
+    /// ex: ⊕· =0◿2. [1 2 3 4 5 6]
+    ///
+    /// If you wanted to get the length of each group, use [length].
+    /// ex: ⊕⧻ [0 1 0 2 1 1] [1 2 3 4 5 6]
     ///
     /// When combined with [classify], you can do things like counting the number of occurrences of each character in a string.
     /// ex: $ Count the characters is this string
-    ///   : ∵$"_ _" ≡⊢∶≡⧻.⊕⊛.⊏⌂.
+    ///   : ⊕($"_ _"⊢∶⧻.) ⊛.⊏⌂.
     ([1, 1, 2], Group, DyadicModifier, ("group", '⊕')),
     /// Group elements of an array into buckets by sequential keys
     ///
     /// The first argument must be a [rank]`1` integer array, and the arguments must have the same length.
-    /// Buckets with mismatched lengths have fill elements.
     /// Keys `less or equal``0` will be omitted.
-    /// ex: ⊜ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
+    /// Using [noop] as the function will just put each group on the stack.
+    /// ex: ⊜· [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
+    ///
+    /// If you wanted to get the length of each group, use [length].
+    /// ex: ⊜· [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     ///
     /// This can be used to split an array by a delimiter.
-    /// ex: ⊜ ≠' '. $ Hey there friendo
+    /// ex: ⊜· ≠' '. $ Hey there friendo
     ([1, 1, 2], Partition, DyadicModifier, ("partition", '⊜')),
     /// Repeat a function a number of times
     ///

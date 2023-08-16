@@ -577,8 +577,16 @@ primitive!(
     (2, Pick, DyadicArray, ("pick", '⊡')),
     /// Select multiple rows from an array
     ///
+    /// For a scalar selector, [select] is equivalent to [pick].
+    /// ex: ⊏ 2 [8 3 9 2 0]
+    ///   : ⊡ 2 [8 3 9 2 0]
+    /// For a [rank]`1` selector, [select] will pick multiple items from an array.
     /// ex: ⊏ 4_2 [8 3 9 2 0]
     /// ex: ⊏ 0_2_1_1 [1_2_3 4_5_6 7_8_9]
+    /// If the selector's [rank] is `greater than``1`, then earch row of the selector will be selected seperately.
+    /// ex: ⊏ [0_1 1_2 2_3] [2 3 5 7]
+    /// ex: ⊏ [0_1 1_2 2_0] [1_2_3 4_5_6 7_8_9]
+    /// ex: ⊏ [4_0_5 7_1_2_3 0_1_2_3_4_12] "Hello, World!"
     (2, Select, DyadicArray, ("select", '⊏')),
     /// Take the first n elements of an array
     ///

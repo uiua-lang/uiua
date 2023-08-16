@@ -859,38 +859,98 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     pub fn select(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
-        let indices = self.as_indices(env, "Indices must be a list of integers")?;
+        let mut indices = Vec::with_capacity(self.flat_len());
+        match self {
+            Value::Num(arr) => {
+                for &i in arr.data.iter() {
+                    if i.is_fill_value() {
+                        indices.push(None);
+                        continue;
+                    }
+                    if i.fract() != 0.0 {
+                        return Err(
+                            env.error(format!("Indices must be integers, but {} is not", i))
+                        );
+                    }
+                    indices.push(Some(i as isize));
+                }
+            }
+            Value::Byte(arr) => {
+                for i in arr.data.iter() {
+                    indices.push(i.value().map(|i| i as isize));
+                }
+            }
+            v => {
+                return Err(env.error(format!(
+                    "Indices must be an array of integers, but it is {}s",
+                    v.type_name()
+                )))
+            }
+        }
+        let indices_shape = self.shape();
         Ok(match from {
-            Value::Num(a) => a.select(&indices, env)?.into(),
-            Value::Byte(a) => a.select(&indices, env)?.into(),
-            Value::Char(a) => a.select(&indices, env)?.into(),
-            Value::Func(a) => a.select(&indices, env)?.into(),
+            Value::Num(a) => a.select_impl(indices_shape, &indices, env)?.into(),
+            Value::Byte(a) => a.select_impl(indices_shape, &indices, env)?.into(),
+            Value::Char(a) => a.select_impl(indices_shape, &indices, env)?.into(),
+            Value::Func(a) => a.select_impl(indices_shape, &indices, env)?.into(),
         })
     }
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn select(&self, indices: &[isize], env: &Uiua) -> UiuaResult<Self> {
-        if self.rank() == 0 {
-            return Err(env.error("Cannot select from a rank 0 array"));
+    fn select_impl(
+        &self,
+        indices_shape: &[usize],
+        indices: &[Option<isize>],
+        env: &Uiua,
+    ) -> UiuaResult<Self> {
+        if indices_shape.len() > 1 {
+            let row_count = indices_shape[0];
+            let row_len = indices_shape[1..].iter().product();
+            let mut rows = Vec::with_capacity(row_count);
+            for row in indices.chunks_exact(row_len) {
+                rows.push(self.select_impl(&indices_shape[1..], row, env)?);
+            }
+            Ok(Array::from_row_arrays(rows))
+        } else {
+            let mut res = self.select(indices, env)?;
+            if indices_shape.is_empty() {
+                res.shape.clear();
+            }
+            Ok(res)
         }
+    }
+    fn select(&self, indices: &[Option<isize>], env: &Uiua) -> UiuaResult<Self> {
         let mut selected = Vec::with_capacity(self.row_len() * indices.len());
         let row_len = self.row_len();
+        let row_count = self.row_count();
         for &i in indices {
-            let i = if i >= 0 {
-                i as usize
+            if let Some(i) = i {
+                let i = if i >= 0 {
+                    let ui = i as usize;
+                    if ui >= row_count {
+                        return Err(env.error(format!(
+                            "Index {} is out of bounds of length {}",
+                            i, row_count
+                        )));
+                    }
+                    ui
+                } else {
+                    let pos_i = (row_count as isize + i) as usize;
+                    if pos_i >= row_count {
+                        return Err(env.error(format!(
+                            "Index {} is out of bounds of length {}",
+                            i, row_count
+                        )));
+                    }
+                    pos_i
+                };
+                let start = i * row_len;
+                let end = start + row_len;
+                selected.extend_from_slice(&self.data[start..end]);
             } else {
-                (self.shape[0] as isize + i) as usize
-            };
-            if i >= self.shape[0] {
-                return Err(env.error(format!(
-                    "Index {} is out of bounds of length {}",
-                    i, self.shape[0]
-                )));
+                selected.extend(repeat(T::fill_value()).take(row_len));
             }
-            let start = i * row_len;
-            let end = start + row_len;
-            selected.extend_from_slice(&self.data[start..end]);
         }
         let mut shape = self.shape.clone();
         shape[0] = indices.len();

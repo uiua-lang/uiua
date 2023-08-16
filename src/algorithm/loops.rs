@@ -771,36 +771,40 @@ pub fn partition(env: &mut Uiua) -> UiuaResult {
 
 impl Value {
     pub fn partition_groups(&self, markers: &[isize], env: &Uiua) -> UiuaResult<Vec<Self>> {
-        match self {
+        Ok(match self {
             Value::Num(arr) => arr
-                .partition_groups(markers, env)
-                .map(|r| r.map(Into::into))
+                .partition_groups(markers, env)?
+                .map(Into::into)
                 .collect(),
             Value::Byte(arr) => arr
-                .partition_groups(markers, env)
-                .map(|r| r.map(Into::into))
+                .partition_groups(markers, env)?
+                .map(Into::into)
                 .collect(),
             Value::Char(arr) => arr
-                .partition_groups(markers, env)
-                .map(|r| r.map(Into::into))
+                .partition_groups(markers, env)?
+                .map(Into::into)
                 .collect(),
             Value::Func(arr) => arr
-                .partition_groups(markers, env)
-                .map(|r| r.map(Into::into))
+                .partition_groups(markers, env)?
+                .map(Into::into)
                 .collect(),
-        }
+        })
     }
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn partition_groups<'env>(
+    pub fn partition_groups(
         &self,
         markers: &[isize],
-        env: &'env Uiua,
-    ) -> impl Iterator<Item = UiuaResult<Self>> + 'env
-    where
-        T: 'env,
-    {
+        env: &Uiua,
+    ) -> UiuaResult<impl Iterator<Item = Self>> {
+        if markers.len() != self.row_count() {
+            return Err(env.error(format!(
+                "Cannot partition array of shape {} with markers of length {}",
+                self.format_shape(),
+                markers.len()
+            )));
+        }
         let mut groups = Vec::new();
         let mut last_marker = isize::MAX;
         for (row, &marker) in self.rows().zip(markers) {
@@ -812,7 +816,7 @@ impl<T: ArrayValue> Array<T> {
             }
             last_marker = marker;
         }
-        groups.into_iter().map(|g| Array::from_row_arrays(g, env))
+        Ok(groups.into_iter().map(Array::from_row_arrays_infallible))
     }
 }
 
@@ -833,39 +837,30 @@ pub fn group(env: &mut Uiua) -> UiuaResult {
 
 impl Value {
     pub fn group_groups(&self, indices: &[isize], env: &Uiua) -> UiuaResult<Vec<Self>> {
-        match self {
-            Value::Num(arr) => arr
-                .group_groups(indices, env)
-                .map(|r| r.map(Into::into))
-                .collect(),
-            Value::Byte(arr) => arr
-                .group_groups(indices, env)
-                .map(|r| r.map(Into::into))
-                .collect(),
-            Value::Char(arr) => arr
-                .group_groups(indices, env)
-                .map(|r| r.map(Into::into))
-                .collect(),
-            Value::Func(arr) => arr
-                .group_groups(indices, env)
-                .map(|r| r.map(Into::into))
-                .collect(),
-        }
+        Ok(match self {
+            Value::Num(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
+            Value::Byte(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
+            Value::Char(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
+            Value::Func(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
+        })
     }
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn group_groups<'env>(
+    pub fn group_groups(
         &self,
         indices: &[isize],
-        env: &'env Uiua,
-    ) -> impl Iterator<Item = UiuaResult<Self>> + 'env
-    where
-        T: 'env,
-    {
-        let from_row_arrays = |g: Vec<Self>| Array::from_row_arrays(g, env);
+        env: &Uiua,
+    ) -> UiuaResult<impl Iterator<Item = Self>> {
+        if indices.len() != self.row_count() {
+            return Err(env.error(format!(
+                "Cannot group array of shape {} with indices of length {}",
+                self.format_shape(),
+                indices.len()
+            )));
+        }
         let Some(&max_index) = indices.iter().max() else {
-            return Vec::<Vec<Self>>::new().into_iter().map(from_row_arrays);
+            return Ok(Vec::<Vec<Self>>::new().into_iter().map(Array::from_row_arrays_infallible));
         };
         let mut groups: Vec<Vec<Self>> = vec![Vec::new(); max_index.max(0) as usize + 1];
         for (r, &g) in indices.iter().enumerate() {
@@ -873,6 +868,6 @@ impl<T: ArrayValue> Array<T> {
                 groups[g as usize].push(self.row(r));
             }
         }
-        groups.into_iter().map(from_row_arrays)
+        Ok(groups.into_iter().map(Array::from_row_arrays_infallible))
     }
 }

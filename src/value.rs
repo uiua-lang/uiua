@@ -62,28 +62,6 @@ impl Value {
             _ => None,
         }
     }
-    pub fn from_row_values(
-        values: impl IntoIterator<Item = Value>,
-        env: &Uiua,
-    ) -> UiuaResult<Self> {
-        let mut row_values = values.into_iter();
-        let Some(mut value) = row_values.next() else {
-            return Ok(Value::default());
-        };
-        let mut count = 1;
-        for row in row_values {
-            count += 1;
-            value = if count == 2 {
-                value.couple(row, env)?
-            } else {
-                value.join(row, env)?
-            };
-        }
-        if count == 1 {
-            value.shape_mut().insert(0, 1);
-        }
-        Ok(value)
-    }
     pub fn into_rows(self) -> Box<dyn Iterator<Item = Self>> {
         match self {
             Self::Num(array) => Box::new(array.into_rows().map(Value::from)),

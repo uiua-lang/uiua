@@ -9,7 +9,6 @@ use crate::{
     cowslice::{cowslice, CowSlice},
     function::Function,
     grid_fmt::GridFmt,
-    Uiua, UiuaResult,
 };
 
 #[derive(Clone)]
@@ -233,27 +232,6 @@ impl<T: ArrayValue> Array<T> {
         let mut shape = self.shape.clone();
         shape[0] = 0;
         Array::new(shape, CowSlice::new())
-    }
-    #[track_caller]
-    pub fn from_row_arrays(values: impl IntoIterator<Item = Self>, env: &Uiua) -> UiuaResult<Self> {
-        let mut row_values = values.into_iter();
-        let Some(mut value) = row_values.next() else {
-            return Ok(Self::default());
-        };
-        let mut count = 1;
-        for row in row_values {
-            count += 1;
-            value = if count == 2 {
-                value.couple(row, env)?
-            } else {
-                value.join(row, env)?
-            };
-        }
-        if count == 1 {
-            value.shape.insert(0, 1);
-        }
-        value.validate_shape();
-        Ok(value)
     }
 }
 

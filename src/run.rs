@@ -810,13 +810,13 @@ backtrace:
         self.push(a);
         Ok(())
     }
-    pub(crate) fn dyadic_ref<V: Into<Value>>(&mut self, f: fn(&Value, &Value) -> V) -> UiuaResult {
+    pub(crate) fn dyadic_rr<V: Into<Value>>(&mut self, f: fn(&Value, &Value) -> V) -> UiuaResult {
         let a = self.pop(1)?;
         let b = self.pop(2)?;
         self.push(f(&a, &b));
         Ok(())
     }
-    pub(crate) fn dyadic_env<V: Into<Value>>(
+    pub(crate) fn dyadic_oo_env<V: Into<Value>>(
         &mut self,
         f: fn(Value, Value, &Self) -> UiuaResult<V>,
     ) -> UiuaResult {
@@ -825,7 +825,7 @@ backtrace:
         self.push(f(a, b, self)?);
         Ok(())
     }
-    pub(crate) fn dyadic_ref_env<V: Into<Value>>(
+    pub(crate) fn dyadic_rr_env<V: Into<Value>>(
         &mut self,
         f: fn(&Value, &Value, &Self) -> UiuaResult<V>,
     ) -> UiuaResult {
@@ -834,7 +834,7 @@ backtrace:
         self.push(f(&a, &b, self)?);
         Ok(())
     }
-    pub(crate) fn dyadic_ref_own_env<V: Into<Value>>(
+    pub(crate) fn dyadic_ro_env<V: Into<Value>>(
         &mut self,
         f: fn(&Value, Value, &Self) -> UiuaResult<V>,
     ) -> UiuaResult {

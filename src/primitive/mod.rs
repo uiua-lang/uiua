@@ -247,44 +247,44 @@ impl Primitive {
             Primitive::Floor => env.monadic_env(Value::floor)?,
             Primitive::Ceil => env.monadic_env(Value::ceil)?,
             Primitive::Round => env.monadic_env(Value::round)?,
-            Primitive::Eq => env.dyadic_ref_env(Value::is_eq)?,
-            Primitive::Ne => env.dyadic_ref_env(Value::is_ne)?,
-            Primitive::Lt => env.dyadic_ref_env(Value::is_lt)?,
-            Primitive::Le => env.dyadic_ref_env(Value::is_le)?,
-            Primitive::Gt => env.dyadic_ref_env(Value::is_gt)?,
-            Primitive::Ge => env.dyadic_ref_env(Value::is_ge)?,
-            Primitive::Add => env.dyadic_ref_env(Value::add)?,
-            Primitive::Sub => env.dyadic_ref_env(Value::sub)?,
-            Primitive::Mul => env.dyadic_ref_env(Value::mul)?,
-            Primitive::Div => env.dyadic_ref_env(Value::div)?,
-            Primitive::Mod => env.dyadic_ref_env(Value::modulus)?,
-            Primitive::Pow => env.dyadic_ref_env(Value::pow)?,
-            Primitive::Log => env.dyadic_ref_env(Value::log)?,
-            Primitive::Min => env.dyadic_ref_env(Value::min)?,
-            Primitive::Max => env.dyadic_ref_env(Value::max)?,
-            Primitive::Atan => env.dyadic_ref_env(Value::atan2)?,
-            Primitive::Match => env.dyadic_ref(|a, b| a == b)?,
-            Primitive::Join => env.dyadic_env(Value::join)?,
+            Primitive::Eq => env.dyadic_rr_env(Value::is_eq)?,
+            Primitive::Ne => env.dyadic_rr_env(Value::is_ne)?,
+            Primitive::Lt => env.dyadic_rr_env(Value::is_lt)?,
+            Primitive::Le => env.dyadic_rr_env(Value::is_le)?,
+            Primitive::Gt => env.dyadic_rr_env(Value::is_gt)?,
+            Primitive::Ge => env.dyadic_rr_env(Value::is_ge)?,
+            Primitive::Add => env.dyadic_rr_env(Value::add)?,
+            Primitive::Sub => env.dyadic_rr_env(Value::sub)?,
+            Primitive::Mul => env.dyadic_rr_env(Value::mul)?,
+            Primitive::Div => env.dyadic_rr_env(Value::div)?,
+            Primitive::Mod => env.dyadic_rr_env(Value::modulus)?,
+            Primitive::Pow => env.dyadic_rr_env(Value::pow)?,
+            Primitive::Log => env.dyadic_rr_env(Value::log)?,
+            Primitive::Min => env.dyadic_rr_env(Value::min)?,
+            Primitive::Max => env.dyadic_rr_env(Value::max)?,
+            Primitive::Atan => env.dyadic_rr_env(Value::atan2)?,
+            Primitive::Match => env.dyadic_rr(|a, b| a == b)?,
+            Primitive::Join => env.dyadic_oo_env(Value::join)?,
             Primitive::Transpose => env.monadic_mut(Value::transpose)?,
             Primitive::InvTranspose => env.monadic_mut(Value::inv_transpose)?,
-            Primitive::Pick => env.dyadic_env(Value::pick)?,
-            Primitive::Replicate => env.dyadic_ref_own_env(Value::replicate)?,
-            Primitive::Take => env.dyadic_env(Value::take)?,
+            Primitive::Pick => env.dyadic_oo_env(Value::pick)?,
+            Primitive::Replicate => env.dyadic_ro_env(Value::replicate)?,
+            Primitive::Take => env.dyadic_oo_env(Value::take)?,
             Primitive::Untake => {
                 let from = env.pop(1)?;
                 let index = env.pop(2)?;
                 let into = env.pop(3)?;
                 env.push(from.untake(index, into, env)?);
             }
-            Primitive::Drop => env.dyadic_env(Value::drop)?,
+            Primitive::Drop => env.dyadic_oo_env(Value::drop)?,
             Primitive::Undrop => {
                 let from = env.pop(1)?;
                 let index = env.pop(2)?;
                 let into = env.pop(3)?;
                 env.push(from.undrop(index, into, env)?);
             }
-            Primitive::Rotate => env.dyadic_ref_own_env(Value::rotate)?,
-            Primitive::Couple => env.dyadic_env(Value::couple)?,
+            Primitive::Rotate => env.dyadic_ro_env(Value::rotate)?,
+            Primitive::Couple => env.dyadic_oo_env(Value::couple)?,
             Primitive::Uncouple => {
                 let coupled = env.pop(1)?;
                 let (a, b) = coupled.uncouple(env)?;
@@ -292,21 +292,21 @@ impl Primitive {
                 env.push(a);
             }
             Primitive::Grade => env.monadic_ref_env(|v, env| v.grade(env))?,
-            Primitive::Select => env.dyadic_ref_env(Value::select)?,
+            Primitive::Select => env.dyadic_rr_env(Value::select)?,
             Primitive::Unselect => {
                 let from = env.pop(1)?;
                 let index = env.pop(2)?;
                 let into = env.pop(3)?;
                 env.push(from.unselect(index, into, env)?);
             }
-            Primitive::Windows => env.dyadic_ref_env(Value::windows)?,
+            Primitive::Windows => env.dyadic_rr_env(Value::windows)?,
             Primitive::Classify => env.monadic_ref_env(Value::classify)?,
             Primitive::Deduplicate => env.monadic_mut(Value::deduplicate)?,
-            Primitive::Member => env.dyadic_ref_env(Value::member)?,
-            Primitive::Find => env.dyadic_ref_env(Value::find)?,
-            Primitive::IndexOf => env.dyadic_ref_env(Value::index_of)?,
-            Primitive::Group => env.dyadic_ref_env(Value::group)?,
-            Primitive::Partition => env.dyadic_ref_env(Value::partition)?,
+            Primitive::Member => env.dyadic_rr_env(Value::member)?,
+            Primitive::Find => env.dyadic_rr_env(Value::find)?,
+            Primitive::IndexOf => env.dyadic_rr_env(Value::index_of)?,
+            Primitive::Group => env.dyadic_rr_env(Value::group)?,
+            Primitive::Partition => env.dyadic_rr_env(Value::partition)?,
             Primitive::Call => env.call()?,
             Primitive::Parse => env.monadic_env(|v, env| v.parse_num(env))?,
             Primitive::Range => env.monadic_ref_env(Value::range)?,

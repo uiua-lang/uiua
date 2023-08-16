@@ -126,12 +126,7 @@ impl fmt::Display for Function {
         } else {
             write!(f, "(")?;
         }
-        for (i, instr) in self.instrs.iter().rev().enumerate() {
-            if i > 0 {
-                write!(f, " ")?;
-            }
-            instr.fmt(f)?;
-        }
+        write!(f, "{}", self.format_inner())?;
         if let FunctionKind::Dfn(_) = self.kind {
             write!(f, "}}")?;
         } else {
@@ -142,6 +137,25 @@ impl fmt::Display for Function {
 }
 
 impl Function {
+    pub(crate) fn format_inner(&self) -> String {
+        if let FunctionId::Named(name) = &self.id {
+            return name.as_str().into();
+        }
+        if let Some((prim, _)) = self.as_primitive() {
+            return prim.to_string();
+        }
+        if let FunctionKind::Dynamic { .. } = self.kind {
+            return "<dynamic>".into();
+        }
+        let mut s = String::new();
+        for (i, instr) in self.instrs.iter().rev().enumerate() {
+            if i > 0 {
+                s.push(' ');
+            }
+            s.push_str(&instr.to_string());
+        }
+        s
+    }
     /// Get how many arguments this function takes and by how much it changes the height of the stack.
     /// Returns `None` if either of these values are dynamic.
     pub fn args_delta(&self) -> Option<(usize, isize)> {

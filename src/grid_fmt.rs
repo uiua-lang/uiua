@@ -13,7 +13,7 @@ use std::{
 
 use crate::{
     array::{Array, ArrayValue},
-    function::Function,
+    function::{Function, FunctionKind},
     value::Value,
 };
 
@@ -66,7 +66,34 @@ impl GridFmt for char {
 
 impl GridFmt for Arc<Function> {
     fn fmt_grid(&self) -> Grid {
-        vec![self.to_string().chars().collect()]
+        let mut grid: Grid = self
+            .format_inner()
+            .lines()
+            .map(|s| s.chars().collect())
+            .collect();
+        if grid.len() == 1 {
+            if let FunctionKind::Dfn(_) = self.kind {
+                grid[0].insert(0, '{');
+                grid[0].push('}');
+            } else {
+                grid[0].insert(0, '(');
+                grid[0].push(')');
+            }
+            return grid;
+        }
+        let row_count = grid.len();
+        for (i, row) in grid.iter_mut().enumerate() {
+            let (start, end) = if i == 0 {
+                ('⎛', '⎞')
+            } else if i == row_count - 1 {
+                ('⎝', '⎠')
+            } else {
+                ('⎜', '⎟')
+            };
+            row.insert(0, start);
+            row.push(end);
+        }
+        grid
     }
 }
 

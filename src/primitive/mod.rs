@@ -292,6 +292,12 @@ impl Primitive {
             }
             Primitive::Grade => env.monadic_ref_env(|v, env| v.grade(env))?,
             Primitive::Select => env.dyadic_ref_env(Value::select)?,
+            Primitive::Unselect => {
+                let from = env.pop(1)?;
+                let index = env.pop(2)?;
+                let into = env.pop(3)?;
+                env.push(from.unselect(index, into, env)?);
+            }
             Primitive::Windows => env.dyadic_ref_env(Value::windows)?,
             Primitive::Classify => env.monadic_ref_env(Value::classify)?,
             Primitive::Deduplicate => env.monadic_mut(Value::deduplicate)?,

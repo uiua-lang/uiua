@@ -128,6 +128,7 @@ fn under_instr_fragment(instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr>)> 
     let patterns: &[&dyn UnderPattern] = &[
         &(Val, ([Take], [Over, Over, Take], [Untake])),
         &(Val, ([Drop], [Over, Over, Drop], [Undrop])),
+        &(Val, ([Select], [Over, Over, Select], [Unselect])),
     ];
 
     for pattern in patterns {

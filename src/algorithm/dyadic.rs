@@ -858,7 +858,7 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
-    pub fn select(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
+    fn as_index_array<'a>(&'a self, env: &Uiua) -> UiuaResult<(&'a [usize], Vec<Option<isize>>)> {
         let mut indices = Vec::with_capacity(self.flat_len());
         match self {
             Value::Num(arr) => {
@@ -887,12 +887,42 @@ impl Value {
                 )))
             }
         }
-        let indices_shape = self.shape();
+        Ok((self.shape(), indices))
+    }
+    pub fn select(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
+        let (indices_shape, indices) = self.as_index_array(env)?;
         Ok(match from {
             Value::Num(a) => a.select_impl(indices_shape, &indices, env)?.into(),
             Value::Byte(a) => a.select_impl(indices_shape, &indices, env)?.into(),
             Value::Char(a) => a.select_impl(indices_shape, &indices, env)?.into(),
             Value::Func(a) => a.select_impl(indices_shape, &indices, env)?.into(),
+        })
+    }
+    pub fn unselect(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+        let (ind_shape, ind) = index.as_index_array(env)?;
+        let mut sorted_indices = ind.clone();
+        sorted_indices.sort();
+        if sorted_indices.windows(2).any(|win| win[0] == win[1]) {
+            return Err(env.error("Cannot undo selection with duplicate indices"));
+        }
+        Ok(match (self, into) {
+            (Value::Num(a), Value::Num(b)) => a.unselect_impl(ind_shape, &ind, b, env)?.into(),
+            (Value::Byte(a), Value::Byte(b)) => a.unselect_impl(ind_shape, &ind, b, env)?.into(),
+            (Value::Char(a), Value::Char(b)) => a.unselect_impl(ind_shape, &ind, b, env)?.into(),
+            (Value::Func(a), Value::Func(b)) => a.unselect_impl(ind_shape, &ind, b, env)?.into(),
+            (Value::Num(a), Value::Byte(b)) => {
+                a.unselect_impl(ind_shape, &ind, b.convert(), env)?.into()
+            }
+            (Value::Byte(a), Value::Num(b)) => {
+                a.convert().unselect_impl(ind_shape, &ind, b, env)?.into()
+            }
+            (a, b) => {
+                return Err(env.error(format!(
+                    "Cannot untake {} into {}",
+                    a.type_name(),
+                    b.type_name()
+                )))
+            }
         })
     }
 }
@@ -908,16 +938,29 @@ impl<T: ArrayValue> Array<T> {
             let row_count = indices_shape[0];
             let row_len = indices_shape[1..].iter().product();
             let mut rows = Vec::with_capacity(row_count);
-            for row in indices.chunks_exact(row_len) {
-                rows.push(self.select_impl(&indices_shape[1..], row, env)?);
+            for indices_row in indices.chunks_exact(row_len) {
+                rows.push(self.select_impl(&indices_shape[1..], indices_row, env)?);
             }
             Ok(Array::from_row_arrays(rows))
         } else {
             let mut res = self.select(indices, env)?;
             if indices_shape.is_empty() {
-                res.shape.clear();
+                res.shape.remove(0);
             }
             Ok(res)
+        }
+    }
+    fn unselect_impl(
+        &self,
+        indices_shape: &[usize],
+        indices: &[Option<isize>],
+        into: Self,
+        env: &Uiua,
+    ) -> UiuaResult<Self> {
+        if indices_shape.len() > 1 {
+            Err(env.error("Cannot undo multi-dimensional selection"))
+        } else {
+            self.unselect(indices, into, env)
         }
     }
     fn select(&self, indices: &[Option<isize>], env: &Uiua) -> UiuaResult<Self> {
@@ -958,7 +1001,47 @@ impl<T: ArrayValue> Array<T> {
         } else {
             shape.push(indices.len());
         }
-        Ok((shape, selected).into())
+        let arr = Array::new(shape, selected.into());
+        arr.validate_shape();
+        Ok(arr)
+    }
+    fn unselect(&self, indices: &[Option<isize>], mut into: Self, env: &Uiua) -> UiuaResult<Self> {
+        if self.row_count() != indices.len() {
+            return Err(env.error(
+                "Attempted to undo selection, but the shape of the selected array changed",
+            ));
+        }
+        let into_row_len = into.row_len();
+        let into_row_count = into.row_count();
+        for (&i, row) in indices.iter().zip(self.rows()) {
+            if let Some(i) = i {
+                let i = if i >= 0 {
+                    let ui = i as usize;
+                    if ui >= into_row_count {
+                        return Err(env.error(format!(
+                            "Index {} is out of bounds of length {}",
+                            i, into_row_count
+                        )));
+                    }
+                    ui
+                } else {
+                    let pos_i = (into_row_count as isize + i) as usize;
+                    if pos_i >= into_row_count {
+                        return Err(env.error(format!(
+                            "Index {} is out of bounds of length {}",
+                            i, into_row_count
+                        )));
+                    }
+                    pos_i
+                };
+                let start = i * into_row_len;
+                let end = start + into_row_len;
+                for (i, x) in (start..end).zip(row.data) {
+                    into.data[i] = x.clone();
+                }
+            }
+        }
+        Ok(into)
     }
 }
 

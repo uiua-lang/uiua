@@ -588,6 +588,8 @@ primitive!(
     /// ex: ⊏ [0_1 1_2 2_0] [1_2_3 4_5_6 7_8_9]
     /// ex: ⊏ [4_0_5 7_1_2_3 0_1_2_3_4_12] "Hello, World!"
     (2, Select, DyadicArray, ("select", '⊏')),
+    /// End step of under select
+    (3, Unselect, Misc),
     /// Take the first n elements of an array
     ///
     /// This is the opposite of [drop].

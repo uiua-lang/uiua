@@ -103,22 +103,8 @@ impl Value {
     }
 }
 
-fn max_shape(a: &[usize], b: &[usize]) -> Vec<usize> {
-    let mut new_shape = vec![0; a.len().max(b.len())];
-    for i in 0..new_shape.len() {
-        let j = new_shape.len() - i - 1;
-        if a.len() > i {
-            new_shape[j] = a[a.len() - i - 1];
-        }
-        if b.len() > i {
-            new_shape[j] = new_shape[j].max(b[b.len() - i - 1]);
-        }
-    }
-    new_shape
-}
-
 impl<T: ArrayValue> Array<T> {
-    pub(crate) fn join(mut self, mut other: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn join(mut self, other: Self, env: &Uiua) -> UiuaResult<Self> {
         crate::profile_function!();
         let res = match self.rank().cmp(&other.rank()) {
             Ordering::Less => {
@@ -167,11 +153,12 @@ impl<T: ArrayValue> Array<T> {
                     self.shape = vec![2];
                     self
                 } else {
-                    if self.shape[1..] != other.shape[1..] {}
-                    let new_row_shape = max_shape(&self.shape[1..], &other.shape[1..]);
-                    for array in [&mut self, &mut other] {
-                        let mut new_shape = new_row_shape.clone();
-                        new_shape.insert(0, array.shape[0]);
+                    if self.shape[1..] != other.shape[1..] {
+                        return Err(env.error(format!(
+                            "Cannot join arrays of shapes {} and {}",
+                            self.format_shape(),
+                            other.format_shape()
+                        )));
                     }
                     self.data.extend(other.data);
                     self.shape[0] += other.shape[0];

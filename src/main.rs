@@ -5,7 +5,7 @@ use std::{
     env, fs,
     io::{self, stderr, Write},
     path::{Path, PathBuf},
-    process::{self, exit},
+    process::{exit, Child, Command},
     sync::mpsc::channel,
     thread::sleep,
     time::Duration,
@@ -14,6 +14,8 @@ use std::{
 use clap::{error::ErrorKind, Parser};
 use instant::Instant;
 use notify::{EventKind, RecursiveMode, Watcher};
+use once_cell::sync::Lazy;
+use parking_lot::Mutex;
 use uiua::{
     format::{format_file, FormatConfig},
     run::RunMode,
@@ -24,10 +26,18 @@ fn main() {
     color_backtrace::install();
 
     let _ = ctrlc::set_handler(|| {
-        if let Ok(App::Watch) | Err(_) = App::try_parse() {
-            clear_watching();
+        let mut child = WATCH_CHILD.lock();
+        if let Some(ch) = &mut *child {
+            _ = ch.kill();
+            *child = None;
+            println!("# Program interrupted");
+            print_watching();
+        } else {
+            if let Ok(App::Watch) | Err(_) = App::try_parse() {
+                clear_watching_with(" ", "");
+            }
+            exit(0)
         }
-        exit(0)
     });
 
     if let Err(e) = run() {
@@ -35,6 +45,8 @@ fn main() {
         exit(1);
     }
 }
+
+static WATCH_CHILD: Lazy<Mutex<Option<Child>>> = Lazy::new(Default::default);
 
 fn run() -> UiuaResult {
     if cfg!(feature = "profile") {
@@ -159,10 +171,9 @@ fn watch(open_path: &Path) -> io::Result<()> {
 
     println!("Watching for changes... (end with ctrl+C, use `uiua help` to see options)");
 
-    let mut child: Option<process::Child> = None;
     let config = FormatConfig::default();
-    let run = |path: &Path, child: &mut Option<process::Child>| -> io::Result<()> {
-        if let Some(mut child) = child.take() {
+    let run = |path: &Path| -> io::Result<()> {
+        if let Some(mut child) = WATCH_CHILD.lock().take() {
             _ = child.kill();
             print_watching();
         }
@@ -176,8 +187,8 @@ fn watch(open_path: &Path) -> io::Result<()> {
                         return Ok(());
                     }
                     clear_watching();
-                    *child = Some(
-                        process::Command::new(env::current_exe().unwrap())
+                    *WATCH_CHILD.lock() = Some(
+                        Command::new(env::current_exe().unwrap())
                             .arg("run")
                             .arg(path)
                             .arg("--no-format")
@@ -199,9 +210,8 @@ fn watch(open_path: &Path) -> io::Result<()> {
         println!("Failed to format file after {TRIES} tries");
         Ok(())
     };
-    run(open_path, &mut child)?;
+    run(open_path)?;
     let mut last_time = Instant::now();
-    let mut ended = false;
     loop {
         sleep(Duration::from_millis(10));
         if let Some(path) = recv
@@ -213,17 +223,15 @@ fn watch(open_path: &Path) -> io::Result<()> {
             .last()
         {
             if last_time.elapsed() > Duration::from_millis(100) {
-                run(&path, &mut child)?;
-                ended = false;
+                run(&path)?;
                 last_time = Instant::now();
             }
         }
-        if !ended {
-            if let Some(child) = &mut child {
-                if child.try_wait()?.is_some() {
-                    print_watching();
-                    ended = true;
-                }
+        let mut child = WATCH_CHILD.lock();
+        if let Some(ch) = &mut *child {
+            if ch.try_wait()?.is_some() {
+                print_watching();
+                *child = None;
             }
         }
     }
@@ -267,8 +275,13 @@ fn print_watching() {
     stderr().flush().unwrap();
 }
 fn clear_watching() {
-    println!(
-        "\r{}",
-        "―".repeat(term_size::dimensions().map_or(10, |(w, _)| w))
+    clear_watching_with("―", "\n")
+}
+
+fn clear_watching_with(s: &str, end: &str) {
+    print!(
+        "\r{}{}",
+        s.repeat(term_size::dimensions().map_or(10, |(w, _)| w)),
+        end,
     );
 }

@@ -676,28 +676,6 @@ primitive!(
     ///
     /// [indexof] is closely related to [member].
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),
-    /// Group elements of an array into buckets by index
-    ///
-    /// The first argument must be a [rank]`1` integer array, and the arguments must have the same length.
-    /// Buckets with mismatched lengths have fill elements.
-    /// Keys `less than``0` will be omitted.
-    /// ex: ⊕ [0 1 0 2 1 1] [1 2 3 4 5 6]
-    /// ex: ⊕ =0◿2. [1 2 3 4 5 6]
-    ///
-    /// When combined with [classify], you can do things like counting the number of occurrences of each character in a string.
-    /// ex: $ Count the characters is this string
-    ///   : ∵$"_ _" ≡⊢∶≡⧻.⊕⊛.⊏⌂.
-    (2, Group, DyadicArray, ("group", '⊕')),
-    /// Group elements of an array into buckets by sequential keys
-    ///
-    /// The first argument must be a [rank]`1` integer array, and the arguments must have the same length.
-    /// Buckets with mismatched lengths have fill elements.
-    /// Keys `less or equal``0` will be omitted.
-    /// ex: ⊜ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
-    ///
-    /// This can be used to split an array by a delimiter.
-    /// ex: ⊜ ≠' '. $ Hey there friendo
-    (2, Partition, DyadicArray, ("partition", '⊜')),
     /// Apply a reducing function to an array
     ///
     /// For reducing with an initial value, see [fold].
@@ -783,6 +761,28 @@ primitive!(
     ///   : b ← .[7_8 9_10]
     ///   : ⊠⊂ a b
     ([1, 2, 2], Cross, DyadicModifier, ("cross", '⊠')),
+    /// Group elements of an array into buckets by index
+    ///
+    /// The first argument must be a [rank]`1` integer array, and the arguments must have the same length.
+    /// Buckets with mismatched lengths have fill elements.
+    /// Keys `less than``0` will be omitted.
+    /// ex: ⊕ [0 1 0 2 1 1] [1 2 3 4 5 6]
+    /// ex: ⊕ =0◿2. [1 2 3 4 5 6]
+    ///
+    /// When combined with [classify], you can do things like counting the number of occurrences of each character in a string.
+    /// ex: $ Count the characters is this string
+    ///   : ∵$"_ _" ≡⊢∶≡⧻.⊕⊛.⊏⌂.
+    ([1, 1, 2], Group, DyadicModifier, ("group", '⊕')),
+    /// Group elements of an array into buckets by sequential keys
+    ///
+    /// The first argument must be a [rank]`1` integer array, and the arguments must have the same length.
+    /// Buckets with mismatched lengths have fill elements.
+    /// Keys `less or equal``0` will be omitted.
+    /// ex: ⊜ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
+    ///
+    /// This can be used to split an array by a delimiter.
+    /// ex: ⊜ ≠' '. $ Hey there friendo
+    ([1, 1, 2], Partition, DyadicModifier, ("partition", '⊜')),
     /// Repeat a function a number of times
     ///
     /// ex: ⍥(+2) 5 0

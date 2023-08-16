@@ -305,8 +305,6 @@ impl Primitive {
             Primitive::Member => env.dyadic_rr_env(Value::member)?,
             Primitive::Find => env.dyadic_rr_env(Value::find)?,
             Primitive::IndexOf => env.dyadic_rr_env(Value::index_of)?,
-            Primitive::Group => env.dyadic_rr_env(Value::group)?,
-            Primitive::Partition => env.dyadic_rr_env(Value::partition)?,
             Primitive::Call => env.call()?,
             Primitive::Parse => env.monadic_env(|v, env| v.parse_num(env))?,
             Primitive::Range => env.monadic_ref_env(Value::range)?,
@@ -328,6 +326,8 @@ impl Primitive {
             Primitive::Scan => loops::scan(env)?,
             Primitive::Repeat => loops::repeat(env)?,
             Primitive::Level => loops::level(env)?,
+            Primitive::Group => loops::group(env)?,
+            Primitive::Partition => loops::partition(env)?,
             Primitive::Reshape => {
                 let shape = env.pop(1)?;
                 let mut array = env.pop(2)?;

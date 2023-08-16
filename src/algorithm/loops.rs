@@ -753,3 +753,126 @@ fn multi_level_recursive(
         Value::from_row_values(rows, env)
     }
 }
+
+pub fn partition(env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
+    let f = env.pop(1)?;
+    let markers = env.pop(2)?;
+    let markers = markers.as_indices(env, "Partition markers must be a list of integers")?;
+    let values = env.pop(3)?;
+    let groups = values.partition_groups(&markers, env)?;
+    for group in groups {
+        env.push(group);
+        env.push(f.clone());
+        env.call_error_on_break("break is not allowed in partition")?;
+    }
+    Ok(())
+}
+
+impl Value {
+    pub fn partition_groups(&self, markers: &[isize], env: &Uiua) -> UiuaResult<Vec<Self>> {
+        match self {
+            Value::Num(arr) => arr
+                .partition_groups(markers, env)
+                .map(|r| r.map(Into::into))
+                .collect(),
+            Value::Byte(arr) => arr
+                .partition_groups(markers, env)
+                .map(|r| r.map(Into::into))
+                .collect(),
+            Value::Char(arr) => arr
+                .partition_groups(markers, env)
+                .map(|r| r.map(Into::into))
+                .collect(),
+            Value::Func(arr) => arr
+                .partition_groups(markers, env)
+                .map(|r| r.map(Into::into))
+                .collect(),
+        }
+    }
+}
+
+impl<T: ArrayValue> Array<T> {
+    pub fn partition_groups<'env>(
+        &self,
+        markers: &[isize],
+        env: &'env Uiua,
+    ) -> impl Iterator<Item = UiuaResult<Self>> + 'env
+    where
+        T: 'env,
+    {
+        let mut groups = Vec::new();
+        let mut last_marker = isize::MAX;
+        for (row, &marker) in self.rows().zip(markers) {
+            if marker > 0 {
+                if marker != last_marker {
+                    groups.push(Vec::new());
+                }
+                groups.last_mut().unwrap().push(row);
+            }
+            last_marker = marker;
+        }
+        groups.into_iter().map(|g| Array::from_row_arrays(g, env))
+    }
+}
+
+pub fn group(env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
+    let f = env.pop(1)?;
+    let indices = env.pop(2)?;
+    let indices = indices.as_indices(env, "Group indices must be a list of integers")?;
+    let values = env.pop(3)?;
+    let groups = values.group_groups(&indices, env)?;
+    for group in groups {
+        env.push(group);
+        env.push(f.clone());
+        env.call_error_on_break("break is not allowed in group")?;
+    }
+    Ok(())
+}
+
+impl Value {
+    pub fn group_groups(&self, indices: &[isize], env: &Uiua) -> UiuaResult<Vec<Self>> {
+        match self {
+            Value::Num(arr) => arr
+                .group_groups(indices, env)
+                .map(|r| r.map(Into::into))
+                .collect(),
+            Value::Byte(arr) => arr
+                .group_groups(indices, env)
+                .map(|r| r.map(Into::into))
+                .collect(),
+            Value::Char(arr) => arr
+                .group_groups(indices, env)
+                .map(|r| r.map(Into::into))
+                .collect(),
+            Value::Func(arr) => arr
+                .group_groups(indices, env)
+                .map(|r| r.map(Into::into))
+                .collect(),
+        }
+    }
+}
+
+impl<T: ArrayValue> Array<T> {
+    pub fn group_groups<'env>(
+        &self,
+        indices: &[isize],
+        env: &'env Uiua,
+    ) -> impl Iterator<Item = UiuaResult<Self>> + 'env
+    where
+        T: 'env,
+    {
+        let from_row_arrays = |g: Vec<Self>| Array::from_row_arrays(g, env);
+        let Some(&max_index) = indices.iter().max() else {
+            return Vec::<Vec<Self>>::new().into_iter().map(from_row_arrays);
+        };
+        let mut groups: Vec<Vec<Self>> = vec![Vec::new(); max_index.max(0) as usize + 1];
+        for (r, &g) in indices.iter().enumerate() {
+            if g >= 0 && r < self.row_count() {
+                groups[g as usize].push(self.row(r));
+            }
+        }
+        groups.into_iter().map(from_row_arrays)
+    }
+}

@@ -2,7 +2,6 @@ use std::{
     cmp::Ordering,
     fmt::{self, Debug, Display},
     iter::repeat,
-    slice::Chunks,
     sync::Arc,
 };
 
@@ -132,6 +131,12 @@ impl<T: ArrayValue> Array<T> {
     }
     pub fn rank(&self) -> usize {
         self.shape.len()
+    }
+    pub fn shape(&self) -> &[usize] {
+        &self.shape
+    }
+    pub fn format_shape(&self) -> FormatShape<'_> {
+        FormatShape(self.shape())
     }
     pub fn into_scalar(self) -> Result<T, Self> {
         if self.shape.is_empty() {
@@ -569,74 +574,6 @@ impl ArrayValue for Arc<Function> {
     }
     fn is_fill_value(&self) -> bool {
         self.as_primitive() == Some((Primitive::FillValue, 0))
-    }
-}
-
-#[allow(clippy::len_without_is_empty)]
-pub trait Arrayish {
-    type Value: ArrayValue;
-    fn shape(&self) -> &[usize];
-    fn data(&self) -> &[Self::Value];
-    fn rank(&self) -> usize {
-        self.shape().len()
-    }
-    fn flat_len(&self) -> usize {
-        self.data().len()
-    }
-    fn row_len(&self) -> usize {
-        self.shape().iter().skip(1).product()
-    }
-    fn rows(&self) -> Chunks<Self::Value> {
-        self.data().chunks(self.row_len())
-    }
-    fn shape_prefixes_match(&self, other: &impl Arrayish) -> bool {
-        self.shape().iter().zip(other.shape()).all(|(a, b)| a == b)
-    }
-    fn format_shape(&self) -> FormatShape<'_> {
-        FormatShape(self.shape())
-    }
-}
-
-impl<'a, T> Arrayish for &'a T
-where
-    T: Arrayish,
-{
-    type Value = T::Value;
-    fn shape(&self) -> &[usize] {
-        T::shape(self)
-    }
-    fn data(&self) -> &[Self::Value] {
-        T::data(self)
-    }
-}
-
-impl<T: ArrayValue> Arrayish for Array<T> {
-    type Value = T;
-    fn shape(&self) -> &[usize] {
-        &self.shape
-    }
-    fn data(&self) -> &[Self::Value] {
-        &self.data
-    }
-}
-
-impl<T: ArrayValue> Arrayish for (&[usize], &[T]) {
-    type Value = T;
-    fn shape(&self) -> &[usize] {
-        self.0
-    }
-    fn data(&self) -> &[Self::Value] {
-        self.1
-    }
-}
-
-impl<T: ArrayValue> Arrayish for (&[usize], &mut [T]) {
-    type Value = T;
-    fn shape(&self) -> &[usize] {
-        self.0
-    }
-    fn data(&self) -> &[Self::Value] {
-        self.1
     }
 }
 

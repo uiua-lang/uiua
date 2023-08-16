@@ -1,10 +1,75 @@
 use std::{
     cmp::{self, Ordering},
     fmt::Display,
-    slice,
+    slice::{self, Chunks},
 };
 
 use crate::{array::*, Byte, Uiua, UiuaError, UiuaResult};
+
+#[allow(clippy::len_without_is_empty)]
+pub trait Arrayish {
+    type Value: ArrayValue;
+    fn shape(&self) -> &[usize];
+    fn data(&self) -> &[Self::Value];
+    fn rank(&self) -> usize {
+        self.shape().len()
+    }
+    fn flat_len(&self) -> usize {
+        self.data().len()
+    }
+    fn row_len(&self) -> usize {
+        self.shape().iter().skip(1).product()
+    }
+    fn rows(&self) -> Chunks<Self::Value> {
+        self.data().chunks(self.row_len())
+    }
+    fn shape_prefixes_match(&self, other: &impl Arrayish) -> bool {
+        self.shape().iter().zip(other.shape()).all(|(a, b)| a == b)
+    }
+}
+
+impl<'a, T> Arrayish for &'a T
+where
+    T: Arrayish,
+{
+    type Value = T::Value;
+    fn shape(&self) -> &[usize] {
+        T::shape(self)
+    }
+    fn data(&self) -> &[Self::Value] {
+        T::data(self)
+    }
+}
+
+impl<T: ArrayValue> Arrayish for Array<T> {
+    type Value = T;
+    fn shape(&self) -> &[usize] {
+        &self.shape
+    }
+    fn data(&self) -> &[Self::Value] {
+        &self.data
+    }
+}
+
+impl<T: ArrayValue> Arrayish for (&[usize], &[T]) {
+    type Value = T;
+    fn shape(&self) -> &[usize] {
+        self.0
+    }
+    fn data(&self) -> &[Self::Value] {
+        self.1
+    }
+}
+
+impl<T: ArrayValue> Arrayish for (&[usize], &mut [T]) {
+    type Value = T;
+    fn shape(&self) -> &[usize] {
+        self.0
+    }
+    fn data(&self) -> &[Self::Value] {
+        self.1
+    }
+}
 
 pub fn bin_pervade<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
     a: &Array<A>,

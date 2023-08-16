@@ -649,27 +649,46 @@ primitive!(
     /// This can be used as a filter.
     /// ex: ‡ ≥'a' ."lOWERCASe onLY"
     (2, Replicate, DyadicArray, ("replicate", '‡')),
-    /// Check if each row of an array exists in another array
-    ///
-    /// The result is always a [rank]`1` array of booleans with the same number of elements as the first array's [length].
-    ///
-    /// ex: ∊ 2 [1 2 3]
-    /// ex: ∊ 5 [1 2 3]
-    /// ex: ∊ [1 2 3] [0 3 4 5 1]
-    /// ex: ∊ "cat"_"dog" "bird"_"cat"_"fish"
-    ///
-    /// With the help of [deduplicate] and [replicate], you can use [member] to get a set intersection.
-    /// ex: ⊝‡∊, "abracadabra" "that's really cool"
-    (2, Member, DyadicArray, ("member", '∊')),
     /// Find the occurences of one array in another
     ///
     /// ex: ⌕ 5 [1 8 5 2 3 5 4 5 6 7]
     /// ex: ⌕ "ab" "abracadabra"
     /// ex: ⌕ 1_2 . ↯4_4⇡3
     (2, Find, DyadicArray, ("find", '⌕')),
-    /// Find the first index of an element in an array
+    /// Check if each row of one array exists in another
     ///
-    /// ex: ⊗ 5 [1 8 5 2 3 5 4 5 6 7]
+    /// ex: ∊ 2 [1 2 3]
+    /// ex: ∊ 5 [1 2 3]
+    /// ex: ∊ [1 2 3] [0 3 4 5 1]
+    /// ex: ∊ [4 5 6] [1_2_3 4_5_6]
+    /// ex: ∊ [1_2_3 4_5_6] [3 4 5]
+    /// ex: ∊ 2 [1_2_3 4_5_6]
+    /// ex: ∊ "cat"_"dog" "bird"_"cat"_"fish"
+    ///
+    /// With the help of [deduplicate] and [replicate], you can use [member] to get a set intersection.
+    /// ex: ⊝‡∊, "abracadabra" "that's really cool"
+    ///
+    /// [member] is closely related to [indexof].
+    (2, Member, DyadicArray, ("member", '∊')),
+    /// Find the index of each row of one array in another
+    ///
+    /// If the index cannot be found, the [length] of the searched-in array is returned.
+    /// ex: ⊗ 2 [1 2 3]
+    /// ex: ⊗ 5 [1 2 3]
+    /// ex: ⊗ [1 2 3] [0 3 4 5 1]
+    /// ex: ⊗ [4 5 6] [1_2_3 4_5_6]
+    /// ex: ⊗ [1_2_3 4_5_6] [3 4 5]
+    /// ex: ⊗ 2 [1_2_3 4_5_6]
+    /// ex: ⊗ "cat"_"dog" "bird"_"cat"_"fish"
+    ///
+    /// You can use the returned indices with [select] to get the rows that were found.
+    /// If you expect on of the searched-for rows to be missing, you can [join] a default item to the end of the [select]ed-from array.
+    /// ex: of ← .[1 2 3 4 5]
+    ///   : in ← [2 3 5 7 11 13]
+    ///   : .⊗of in
+    ///   : ⊏∶⊂in∞
+    ///
+    /// [indexof] is closely related to [member].
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),
     /// Group elements of an array into buckets by index
     ///

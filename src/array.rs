@@ -434,6 +434,12 @@ impl From<Vec<bool>> for Array<Byte> {
     }
 }
 
+impl From<bool> for Array<Byte> {
+    fn from(data: bool) -> Self {
+        Self::new(vec![], vec![Byte::from(data)].into())
+    }
+}
+
 impl FromIterator<String> for Array<char> {
     fn from_iter<I: IntoIterator<Item = String>>(iter: I) -> Self {
         let mut lines: Vec<String> = iter.into_iter().collect();

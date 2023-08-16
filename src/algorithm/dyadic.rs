@@ -1137,11 +1137,15 @@ impl<T: ArrayValue> Array<T> {
                 Array::from_row_arrays(rows)
             }
             Ordering::Less => {
-                let mut rows = Vec::with_capacity(of.row_count());
-                for of in of.rows() {
-                    rows.push(elems.member(&of));
+                if of.rank() - elems.rank() == 1 {
+                    return (of.rows().any(|r| r == *elems)).into();
+                } else {
+                    let mut rows = Vec::with_capacity(of.row_count());
+                    for of in of.rows() {
+                        rows.push(elems.member(&of));
+                    }
+                    Array::from_row_arrays(rows)
                 }
-                Array::from_row_arrays(rows)
             }
         }
     }

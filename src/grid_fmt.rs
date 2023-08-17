@@ -66,6 +66,15 @@ impl GridFmt for char {
 
 impl GridFmt for Arc<Function> {
     fn fmt_grid(&self) -> Grid {
+        Function::fmt_grid(self)
+    }
+}
+
+impl GridFmt for Function {
+    fn fmt_grid(&self) -> Grid {
+        if let Some((prim, _)) = self.as_primitive() {
+            return vec![prim.to_string().chars().collect()];
+        }
         let mut grid: Grid = self
             .format_inner()
             .lines()

@@ -719,6 +719,18 @@ primitive!(
     ///   : b ← .[7_8 9_10]
     ///   : ⊠⊂ a b
     ([1, 2, 2], Cross, DyadicModifier, ("cross", '⊠')),
+    /// Repeat a function a number of times
+    ///
+    /// ex: ⍥(+2) 5 0
+    /// ex: ⍥(⊂2) 5 []
+    ///
+    /// One interesting use of `repeat` is to collect some number of stack values into an array.
+    /// ex: ⍥⊂3 [] 1 2 3
+    ///
+    /// Repeating for [infinity] times will create an infinite loop.
+    /// You can use [break] to break out of the loop.
+    /// ex: ⍥(⎋>1000. ×2)∞ 1
+    ([1, 1], Repeat, OtherModifier, ("repeat", '⍥')),
     /// Group elements of an array into buckets by index
     ///
     /// Takes a function and two arrays.
@@ -762,18 +774,6 @@ primitive!(
     ///
     /// [partition] is closely related to [group].
     ([1, 1, 2], Partition, DyadicModifier, ("partition", '⊜')),
-    /// Repeat a function a number of times
-    ///
-    /// ex: ⍥(+2) 5 0
-    /// ex: ⍥(⊂2) 5 []
-    ///
-    /// One interesting use of `repeat` is to collect some number of stack values into an array.
-    /// ex: ⍥⊂3 [] 1 2 3
-    ///
-    /// Repeating for [infinity] times will create an infinite loop.
-    /// You can use [break] to break out of the loop.
-    /// ex: ⍥(⎋>1000. ×2)∞ 1
-    ([1, 1], Repeat, OtherModifier, ("repeat", '⍥')),
     /// Invert the behavior of a function
     ///
     /// Most functions are not invertible.
@@ -804,6 +804,8 @@ primitive!(
     /// You can use [under] [take] to modify only part of an array.
     /// ex: ⍜(↙2)(×10) 1_2_3_4_5
     ([2, 1, 1], Under, OtherModifier, ("under", '⍜')),
+    /// Set a fill context
+    ([2, 1], Fill, OtherModifier, ("fill", '⍛')),
     /// Apply a function at a different array depth
     ///
     /// Expects a rank to operate on, a function, and an array.

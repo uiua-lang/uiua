@@ -9,6 +9,7 @@ use crate::{
     cowslice::{cowslice, CowSlice},
     function::Function,
     grid_fmt::GridFmt,
+    Uiua,
 };
 
 #[derive(Clone)]
@@ -340,6 +341,7 @@ impl FromIterator<String> for Array<char> {
 
 pub trait ArrayValue: Clone + Debug + Display + GridFmt {
     const NAME: &'static str;
+    fn get_fill(env: &Uiua) -> Option<Self>;
     fn array_cmp(&self, other: &Self) -> Ordering;
     fn array_eq(&self, other: &Self) -> bool {
         self.array_cmp(other) == Ordering::Equal
@@ -354,6 +356,9 @@ pub trait ArrayValue: Clone + Debug + Display + GridFmt {
 
 impl ArrayValue for f64 {
     const NAME: &'static str = "number";
+    fn get_fill(env: &Uiua) -> Option<Self> {
+        env.num_fill()
+    }
     fn array_cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other)
             .unwrap_or_else(|| self.is_nan().cmp(&other.is_nan()))
@@ -362,6 +367,9 @@ impl ArrayValue for f64 {
 
 impl ArrayValue for u8 {
     const NAME: &'static str = "byte";
+    fn get_fill(env: &Uiua) -> Option<Self> {
+        env.byte_fill()
+    }
     fn array_cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(self, other)
     }
@@ -369,6 +377,9 @@ impl ArrayValue for u8 {
 
 impl ArrayValue for char {
     const NAME: &'static str = "character";
+    fn get_fill(env: &Uiua) -> Option<Self> {
+        env.char_fill()
+    }
     fn array_cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(self, other)
     }
@@ -382,6 +393,9 @@ impl ArrayValue for char {
 
 impl ArrayValue for Arc<Function> {
     const NAME: &'static str = "function";
+    fn get_fill(env: &Uiua) -> Option<Self> {
+        env.func_fill()
+    }
     fn array_cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(self, other)
     }

@@ -400,6 +400,14 @@ impl Primitive {
                 env.push(f_after);
                 env.call()?;
             }
+            Primitive::Fill => {
+                let fill = env.pop(1)?;
+                let f = env.pop(2)?;
+                env.with_fill(fill, |env| {
+                    env.push(f);
+                    env.call()
+                })?;
+            }
             Primitive::Assert => {
                 let msg = env.pop(1)?;
                 let cond = env.pop(2)?;

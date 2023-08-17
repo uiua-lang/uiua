@@ -11,12 +11,21 @@ use crate::{
 trait ErrorContext: Copy {
     type Error;
     fn error(self, msg: impl ToString) -> Self::Error;
+    fn env(&self) -> Option<&Uiua> {
+        None
+    }
+    fn fill<T: ArrayValue>(self) -> Option<T> {
+        self.env().and_then(T::get_fill)
+    }
 }
 
 impl ErrorContext for &Uiua {
     type Error = UiuaError;
     fn error(self, msg: impl ToString) -> Self::Error {
         self.error(msg)
+    }
+    fn env(&self) -> Option<&Uiua> {
+        Some(self)
     }
 }
 
@@ -31,12 +40,12 @@ impl Value {
     fn coerce_to_functions<T, C: ErrorContext, E: ToString>(
         self,
         other: Self,
-        err_ctx: C,
+        ctx: C,
         on_success: impl FnOnce(Array<Arc<Function>>, Array<Arc<Function>>, C) -> Result<T, C::Error>,
         on_error: impl FnOnce(&str, &str) -> E,
     ) -> Result<T, C::Error> {
         match (self, other) {
-            (Value::Func(a), Value::Func(b)) => on_success(a, b, err_ctx),
+            (Value::Func(a), Value::Func(b)) => on_success(a, b, ctx),
             (Value::Func(a), mut b) => {
                 let shape = take(b.shape_mut());
                 let new_data: CowSlice<_> = b
@@ -50,7 +59,7 @@ impl Value {
                     })
                     .collect();
                 let b = Array::new(shape, new_data);
-                on_success(a, b, err_ctx)
+                on_success(a, b, ctx)
             }
             (mut a, Value::Func(b)) => {
                 let shape = take(a.shape_mut());
@@ -59,10 +68,392 @@ impl Value {
                     .map(|a| Arc::new(Function::constant(a)))
                     .collect();
                 let a = Array::new(shape, new_data);
-                on_success(a, b, err_ctx)
+                on_success(a, b, ctx)
             }
-            (a, b) => Err(err_ctx.error(on_error(a.type_name(), b.type_name()))),
+            (a, b) => Err(ctx.error(on_error(a.type_name(), b.type_name()))),
         }
+    }
+}
+
+fn max_shape(a: &[usize], b: &[usize]) -> Vec<usize> {
+    let mut new_shape = vec![0; a.len().max(b.len())];
+    for i in 0..new_shape.len() {
+        let j = new_shape.len() - i - 1;
+        if a.len() > i {
+            new_shape[j] = a[a.len() - i - 1];
+        }
+        if b.len() > i {
+            new_shape[j] = new_shape[j].max(b[b.len() - i - 1]);
+        }
+    }
+    new_shape
+}
+
+fn data_index_to_shape_index(mut index: usize, shape: &[usize], out: &mut [usize]) -> bool {
+    debug_assert_eq!(shape.len(), out.len());
+    if index >= shape.iter().product() {
+        return false;
+    }
+    for (&s, o) in shape.iter().zip(out).rev() {
+        *o = index % s;
+        index /= s;
+    }
+    true
+}
+
+#[test]
+fn data_index_to_shape_index_test() {
+    let mut out = [0, 0];
+    for (index, shape, expected_out, expected_success) in [
+        (2, [2, 3], [0, 2], true),
+        (2, [1, 3], [0, 2], true),
+        (3, [2, 3], [1, 0], true),
+        (3, [1, 3], [1, 0], false),
+    ] {
+        let success = data_index_to_shape_index(index, &shape, &mut out);
+        assert_eq!(out, expected_out);
+        assert_eq!(success, expected_success);
+    }
+}
+
+fn shape_index_to_data_index(index: &[usize], shape: &[usize]) -> Option<usize> {
+    debug_assert_eq!(shape.len(), index.len());
+    let mut data_index = 0;
+    for (&s, &i) in shape.iter().zip(index) {
+        if i >= s {
+            return None;
+        }
+        data_index = data_index * s + i;
+    }
+    Some(data_index)
+}
+
+#[test]
+fn shape_index_to_data_index_test() {
+    for (index, shape, expected_data_index) in [
+        ([0, 2], [2, 3], Some(2)),
+        ([0, 2], [1, 3], Some(2)),
+        ([1, 0], [2, 3], Some(3)),
+        ([1, 0], [1, 3], None),
+    ] {
+        let data_index = shape_index_to_data_index(&index, &shape);
+        assert_eq!(data_index, expected_data_index);
+    }
+}
+
+impl<T: ArrayValue> Array<T> {
+    pub fn fill_to_shape(&mut self, shape: &[usize], fill_value: T) {
+        while self.rank() < shape.len() {
+            self.shape.insert(0, 1);
+        }
+        if self.shape == shape {
+            return;
+        }
+        let target_size = shape.iter().product();
+        let mut new_data = vec![fill_value; target_size];
+        let mut curr = vec![0; shape.len()];
+        for new_data_index in 0..target_size {
+            data_index_to_shape_index(new_data_index, shape, &mut curr);
+            if let Some(data_index) = shape_index_to_data_index(&curr, &self.shape) {
+                new_data[new_data_index] = self.data[data_index].clone();
+            }
+        }
+        self.data = new_data.into();
+        self.shape = shape.to_vec();
+    }
+}
+
+impl Value {
+    pub fn join(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
+        self.join_impl(other, env)
+    }
+    pub fn join_infallible(self, other: Self) -> Self {
+        self.join_impl(other, ()).unwrap()
+    }
+    // pub fn join(self, other: Self, env: &Uiua) -> UiuaResult<Self> {}
+    fn join_impl<E: ErrorContext>(self, other: Self, ctx: E) -> Result<Self, E::Error> {
+        Ok(match (self, other) {
+            (Value::Num(a), Value::Num(b)) => a.join_impl(b, ctx)?.into(),
+            (Value::Byte(a), Value::Byte(b)) => a.join_impl(b, ctx)?.into(),
+            (Value::Char(a), Value::Char(b)) => a.join_impl(b, ctx)?.into(),
+            (Value::Byte(a), Value::Num(b)) => a.convert().join_impl(b, ctx)?.into(),
+            (Value::Num(a), Value::Byte(b)) => a.join_impl(b.convert(), ctx)?.into(),
+            (a, b) => a.coerce_to_functions(
+                b,
+                ctx,
+                |a, b, env| Ok(a.join_impl(b, env)?.into()),
+                |a, b| format!("Cannot join {a} array and {b} array"),
+            )?,
+        })
+    }
+    fn append<E: ErrorContext>(self, other: Self, ctx: E, action: &str) -> Result<Self, E::Error> {
+        Ok(match (self, other) {
+            (Value::Num(a), Value::Num(b)) => a.append(b, ctx, action)?.into(),
+            (Value::Byte(a), Value::Byte(b)) => a.append(b, ctx, action)?.into(),
+            (Value::Char(a), Value::Char(b)) => a.append(b, ctx, action)?.into(),
+            (Value::Byte(a), Value::Num(b)) => a.convert().append(b, ctx, action)?.into(),
+            (Value::Num(a), Value::Byte(b)) => a.append(b.convert(), ctx, action)?.into(),
+            (a, b) => a.coerce_to_functions(
+                b,
+                ctx,
+                |a, b, env| Ok(a.append(b, env, action)?.into()),
+                |a, b| format!("Cannot {action} {a} array with {b} array"),
+            )?,
+        })
+    }
+}
+
+impl<T: ArrayValue> Array<T> {
+    pub fn join(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
+        self.join_impl(other, env)
+    }
+    pub fn join_infallible(self, other: Self) -> Self {
+        self.join_impl(other, ()).unwrap()
+    }
+    fn join_impl<E: ErrorContext>(mut self, mut other: Self, ctx: E) -> Result<Self, E::Error> {
+        crate::profile_function!();
+        let res = match self.rank().cmp(&other.rank()) {
+            Ordering::Less => {
+                let target_shape = if let Some(fill) = ctx.fill::<T>() {
+                    let target_shape = max_shape(&self.shape, &other.shape);
+                    let row_shape = &target_shape[1..];
+                    self.fill_to_shape(row_shape, fill.clone());
+                    other.fill_to_shape(&target_shape, fill);
+                    target_shape
+                } else {
+                    if other.rank() - self.rank() > 1 {
+                        return Err(ctx.error(format!(
+                            "Cannot join rank {} array with rank {} array",
+                            self.rank(),
+                            other.rank()
+                        )));
+                    }
+                    if self.shape() != &other.shape()[1..] {
+                        return Err(ctx.error(format!(
+                            "Cannot join arrays of shapes {} and {}",
+                            self.format_shape(),
+                            other.format_shape()
+                        )));
+                    }
+                    other.shape
+                };
+                self.data.extend(other.data);
+                self.shape = target_shape;
+                self.shape[0] += 1;
+                self
+            }
+            Ordering::Greater => self.append(other, ctx, "join")?,
+            Ordering::Equal => {
+                if self.rank() == 0 {
+                    debug_assert_eq!(other.rank(), 0);
+                    self.data.extend(other.data.into_iter().next());
+                    self.shape = vec![2];
+                    self
+                } else {
+                    if let Some(fill) = ctx.fill::<T>() {
+                        let new_row_shape = max_shape(&self.shape[1..], &other.shape[1..]);
+                        for (array, fill) in [(&mut self, fill.clone()), (&mut other, fill)] {
+                            let mut new_shape = new_row_shape.clone();
+                            new_shape.insert(0, array.shape[0]);
+                            array.fill_to_shape(&new_shape, fill);
+                        }
+                    } else if self.shape[1..] != other.shape[1..] {
+                        return Err(ctx.error(format!(
+                            "Cannot join arrays of shapes {} and {}",
+                            self.format_shape(),
+                            other.format_shape()
+                        )));
+                    }
+                    self.data.extend(other.data);
+                    self.shape[0] += other.shape[0];
+                    self
+                }
+            }
+        };
+        res.validate_shape();
+        Ok(res)
+    }
+    fn append<E: ErrorContext>(
+        mut self,
+        mut other: Self,
+        ctx: E,
+        action: &str,
+    ) -> Result<Self, E::Error> {
+        let target_shape = if let Some(fill) = ctx.fill::<T>() {
+            while self.rank() <= other.rank() {
+                self.shape.push(1);
+            }
+            let target_shape = max_shape(&self.shape, &other.shape);
+            let row_shape = &target_shape[1..];
+            self.fill_to_shape(&target_shape, fill.clone());
+            other.fill_to_shape(row_shape, fill);
+            target_shape
+        } else {
+            if self.rank() <= other.rank() || self.rank() - other.rank() > 1 {
+                return Err(ctx.error(format!(
+                    "Cannot {} rank {} array with rank {} array",
+                    action,
+                    self.rank(),
+                    other.rank()
+                )));
+            }
+            if &self.shape()[1..] != other.shape() {
+                return Err(ctx.error(format!(
+                    "Cannot {} arrays of shapes {} and {}",
+                    action,
+                    self.format_shape(),
+                    other.format_shape()
+                )));
+            }
+            take(&mut self.shape)
+        };
+        self.data.extend(other.data);
+        self.shape = target_shape;
+        self.shape[0] += 1;
+        Ok(self)
+    }
+}
+
+impl Value {
+    pub fn couple(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
+        self.couple_impl(other, env)
+    }
+    pub fn couple_infallible(self, other: Self) -> Self {
+        self.couple_impl(other, ()).unwrap()
+    }
+    fn couple_impl<E: ErrorContext>(self, other: Self, ctx: E) -> Result<Self, E::Error> {
+        Ok(match (self, other) {
+            (Value::Num(a), Value::Num(b)) => a.couple_impl(b, ctx)?.into(),
+            (Value::Byte(a), Value::Byte(b)) => a.couple_impl(b, ctx)?.into(),
+            (Value::Char(a), Value::Char(b)) => a.couple_impl(b, ctx)?.into(),
+            (Value::Func(a), Value::Func(b)) => a.couple_impl(b, ctx)?.into(),
+            (Value::Num(a), Value::Byte(b)) => a.couple_impl(b.convert(), ctx)?.into(),
+            (Value::Byte(a), Value::Num(b)) => a.convert().couple_impl(b, ctx)?.into(),
+            (a, b) => a.coerce_to_functions(
+                b,
+                ctx,
+                |a, b, ctx| Ok(a.couple_impl(b, ctx)?.into()),
+                |a, b| format!("Cannot couple {a} array with {b} array"),
+            )?,
+        })
+    }
+    pub fn uncouple(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+        match self {
+            Value::Num(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
+            Value::Byte(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
+            Value::Char(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
+            Value::Func(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
+        }
+    }
+}
+
+impl<T: ArrayValue> Array<T> {
+    pub fn couple(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
+        self.couple_impl(other, env)
+    }
+    pub fn couple_infallible(self, other: Self) -> Self {
+        self.couple_impl(other, ()).unwrap()
+    }
+    fn couple_impl<E: ErrorContext>(mut self, mut other: Self, ctx: E) -> Result<Self, E::Error> {
+        crate::profile_function!();
+        if self.shape != other.shape {
+            if let Some(fill) = ctx.fill::<T>() {
+                let new_shape = max_shape(&self.shape, &other.shape);
+                self.fill_to_shape(&new_shape, fill.clone());
+                other.fill_to_shape(&new_shape, fill);
+            } else {
+                return Err(ctx.error(format!(
+                    "Cannot couple arrays with shapes {} and {}",
+                    self.format_shape(),
+                    other.format_shape()
+                )));
+            }
+        }
+        self.data.extend(other.data);
+        self.shape.insert(0, 2);
+        self.validate_shape();
+        Ok(self)
+    }
+    pub fn uncouple(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+        if self.row_count() != 2 {
+            return Err(env.error(format!(
+                "Cannot uncouple array with {} rows",
+                self.row_count()
+            )));
+        }
+        let mut rows = self.into_rows();
+        let first = rows.next().unwrap();
+        let second = rows.next().unwrap();
+        Ok((first, second))
+    }
+}
+
+impl Value {
+    pub fn from_row_values(
+        values: impl IntoIterator<Item = Value>,
+        env: &Uiua,
+    ) -> UiuaResult<Self> {
+        Self::from_row_values_impl(values, env)
+    }
+    pub fn from_row_values_infallible(values: impl IntoIterator<Item = Value>) -> Self {
+        Self::from_row_values_impl(values, ()).unwrap()
+    }
+    fn from_row_values_impl<E: ErrorContext>(
+        values: impl IntoIterator<Item = Value>,
+        ctx: E,
+    ) -> Result<Self, E::Error> {
+        let mut row_values = values.into_iter();
+        let Some(mut value) = row_values.next() else {
+            return Ok(Value::default());
+        };
+        let mut count = 1;
+        for row in row_values {
+            count += 1;
+            value = if count == 2 {
+                value.couple_impl(row, ctx)?
+            } else {
+                value.append(row, ctx, "append")?
+            };
+        }
+        if count == 1 {
+            value.shape_mut().insert(0, 1);
+        }
+        Ok(value)
+    }
+}
+
+impl<T: ArrayValue> Array<T> {
+    #[track_caller]
+    pub fn from_row_arrays(values: impl IntoIterator<Item = Self>, env: &Uiua) -> UiuaResult<Self> {
+        Self::from_row_arrays_impl(values, env)
+    }
+    #[track_caller]
+    pub fn from_row_arrays_infallible(values: impl IntoIterator<Item = Self>) -> Self {
+        Self::from_row_arrays_impl(values, ()).unwrap()
+    }
+    #[track_caller]
+    fn from_row_arrays_impl<E: ErrorContext>(
+        values: impl IntoIterator<Item = Self>,
+        ctx: E,
+    ) -> Result<Self, E::Error> {
+        let mut row_values = values.into_iter();
+        let Some(mut value) = row_values.next() else {
+            return Ok(Self::default());
+        };
+        let mut count = 1;
+        for row in row_values {
+            count += 1;
+            value = if count == 2 {
+                value.couple_impl(row, ctx)?
+            } else {
+                value.append(row, ctx, "append")?
+            };
+        }
+        if count == 1 {
+            value.shape.insert(0, 1);
+        }
+        value.validate_shape();
+        Ok(value)
     }
 }
 
@@ -101,242 +492,6 @@ impl<T: ArrayValue> Array<T> {
         } else {
             self.data.truncate(target_len);
         }
-    }
-}
-
-impl Value {
-    pub fn join(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
-        self.join_impl(other, env)
-    }
-    pub fn join_infallible(self, other: Self) -> Self {
-        self.join_impl(other, ()).unwrap()
-    }
-    // pub fn join(self, other: Self, env: &Uiua) -> UiuaResult<Self> {}
-    fn join_impl<E: ErrorContext>(self, other: Self, err_ctx: E) -> Result<Self, E::Error> {
-        Ok(match (self, other) {
-            (Value::Num(a), Value::Num(b)) => a.join_impl(b, err_ctx)?.into(),
-            (Value::Byte(a), Value::Byte(b)) => a.join_impl(b, err_ctx)?.into(),
-            (Value::Char(a), Value::Char(b)) => a.join_impl(b, err_ctx)?.into(),
-            (Value::Byte(a), Value::Num(b)) => a.convert().join_impl(b, err_ctx)?.into(),
-            (Value::Num(a), Value::Byte(b)) => a.join_impl(b.convert(), err_ctx)?.into(),
-            (a, b) => a.coerce_to_functions(
-                b,
-                err_ctx,
-                |a, b, env| Ok(a.join_impl(b, env)?.into()),
-                |a, b| format!("Cannot join {a} array and {b} array"),
-            )?,
-        })
-    }
-}
-
-impl<T: ArrayValue> Array<T> {
-    pub fn join(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
-        self.join_impl(other, env)
-    }
-    pub fn join_infallible(self, other: Self) -> Self {
-        self.join_impl(other, ()).unwrap()
-    }
-    fn join_impl<E: ErrorContext>(mut self, other: Self, err_ctx: E) -> Result<Self, E::Error> {
-        crate::profile_function!();
-        let res = match self.rank().cmp(&other.rank()) {
-            Ordering::Less => {
-                if other.rank() - self.rank() > 1 {
-                    return Err(err_ctx.error(format!(
-                        "Cannot join rank {} array with rank {} array",
-                        self.rank(),
-                        other.rank()
-                    )));
-                }
-                if self.shape() != &other.shape()[1..] {
-                    return Err(err_ctx.error(format!(
-                        "Cannot join arrays of shapes {} and {}",
-                        self.format_shape(),
-                        other.format_shape()
-                    )));
-                }
-                self.data.extend(other.data);
-                self.shape = other.shape;
-                self.shape[0] += 1;
-                self
-            }
-            Ordering::Greater => {
-                if self.rank() - other.rank() > 1 {
-                    return Err(err_ctx.error(format!(
-                        "Cannot join rank {} array with rank {} array",
-                        self.rank(),
-                        other.rank()
-                    )));
-                }
-                if &self.shape()[1..] != other.shape() {
-                    return Err(err_ctx.error(format!(
-                        "Cannot join arrays of shapes {} and {}",
-                        self.format_shape(),
-                        other.format_shape()
-                    )));
-                }
-                self.data.extend(other.data);
-                self.shape[0] += 1;
-                self
-            }
-            Ordering::Equal => {
-                if self.rank() == 0 {
-                    debug_assert_eq!(other.rank(), 0);
-                    self.data.extend(other.data.into_iter().next());
-                    self.shape = vec![2];
-                    self
-                } else {
-                    if self.shape[1..] != other.shape[1..] {
-                        return Err(err_ctx.error(format!(
-                            "Cannot join arrays of shapes {} and {}",
-                            self.format_shape(),
-                            other.format_shape()
-                        )));
-                    }
-                    self.data.extend(other.data);
-                    self.shape[0] += other.shape[0];
-                    self
-                }
-            }
-        };
-        res.validate_shape();
-        Ok(res)
-    }
-}
-
-impl Value {
-    pub fn couple(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
-        self.couple_impl(other, env)
-    }
-    pub fn couple_infallible(self, other: Self) -> Self {
-        self.couple_impl(other, ()).unwrap()
-    }
-    fn couple_impl<E: ErrorContext>(self, other: Self, err_ctx: E) -> Result<Self, E::Error> {
-        Ok(match (self, other) {
-            (Value::Num(a), Value::Num(b)) => a.couple_impl(b, err_ctx)?.into(),
-            (Value::Byte(a), Value::Byte(b)) => a.couple_impl(b, err_ctx)?.into(),
-            (Value::Char(a), Value::Char(b)) => a.couple_impl(b, err_ctx)?.into(),
-            (Value::Func(a), Value::Func(b)) => a.couple_impl(b, err_ctx)?.into(),
-            (Value::Num(a), Value::Byte(b)) => a.couple_impl(b.convert(), err_ctx)?.into(),
-            (Value::Byte(a), Value::Num(b)) => a.convert().couple_impl(b, err_ctx)?.into(),
-            (a, b) => a.coerce_to_functions(
-                b,
-                err_ctx,
-                |a, b, err_ctx| Ok(a.couple_impl(b, err_ctx)?.into()),
-                |a, b| format!("Cannot couple {a} array with {b} array"),
-            )?,
-        })
-    }
-    pub fn uncouple(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
-        match self {
-            Value::Num(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
-            Value::Byte(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
-            Value::Char(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
-            Value::Func(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
-        }
-    }
-}
-
-impl<T: ArrayValue> Array<T> {
-    pub fn couple(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
-        self.couple_impl(other, env)
-    }
-    pub fn couple_infallible(self, other: Self) -> Self {
-        self.couple_impl(other, ()).unwrap()
-    }
-    fn couple_impl<E: ErrorContext>(mut self, other: Self, err_ctx: E) -> Result<Self, E::Error> {
-        crate::profile_function!();
-        if self.shape != other.shape {
-            return Err(err_ctx.error(format!(
-                "Cannot couple arrays with shapes {} and {}",
-                self.format_shape(),
-                other.format_shape()
-            )));
-        }
-        self.data.extend(other.data);
-        self.shape.insert(0, 2);
-        self.validate_shape();
-        Ok(self)
-    }
-    pub fn uncouple(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
-        if self.row_count() != 2 {
-            return Err(env.error(format!(
-                "Cannot uncouple array with {} rows",
-                self.row_count()
-            )));
-        }
-        let mut rows = self.into_rows();
-        let first = rows.next().unwrap();
-        let second = rows.next().unwrap();
-        Ok((first, second))
-    }
-}
-
-impl Value {
-    pub fn from_row_values(
-        values: impl IntoIterator<Item = Value>,
-        env: &Uiua,
-    ) -> UiuaResult<Self> {
-        Self::from_row_values_impl(values, env)
-    }
-    pub fn from_row_values_infallible(values: impl IntoIterator<Item = Value>) -> Self {
-        Self::from_row_values_impl(values, ()).unwrap()
-    }
-    fn from_row_values_impl<E: ErrorContext>(
-        values: impl IntoIterator<Item = Value>,
-        err_ctx: E,
-    ) -> Result<Self, E::Error> {
-        let mut row_values = values.into_iter();
-        let Some(mut value) = row_values.next() else {
-            return Ok(Value::default());
-        };
-        let mut count = 1;
-        for row in row_values {
-            count += 1;
-            value = if count == 2 {
-                value.couple_impl(row, err_ctx)?
-            } else {
-                value.join_impl(row, err_ctx)?
-            };
-        }
-        if count == 1 {
-            value.shape_mut().insert(0, 1);
-        }
-        Ok(value)
-    }
-}
-
-impl<T: ArrayValue> Array<T> {
-    #[track_caller]
-    pub fn from_row_arrays(values: impl IntoIterator<Item = Self>, env: &Uiua) -> UiuaResult<Self> {
-        Self::from_row_arrays_impl(values, env)
-    }
-    #[track_caller]
-    pub fn from_row_arrays_infallible(values: impl IntoIterator<Item = Self>) -> Self {
-        Self::from_row_arrays_impl(values, ()).unwrap()
-    }
-    #[track_caller]
-    fn from_row_arrays_impl<E: ErrorContext>(
-        values: impl IntoIterator<Item = Self>,
-        err_ctx: E,
-    ) -> Result<Self, E::Error> {
-        let mut row_values = values.into_iter();
-        let Some(mut value) = row_values.next() else {
-            return Ok(Self::default());
-        };
-        let mut count = 1;
-        for row in row_values {
-            count += 1;
-            value = if count == 2 {
-                value.couple_impl(row, err_ctx)?
-            } else {
-                value.join_impl(row, err_ctx)?
-            };
-        }
-        if count == 1 {
-            value.shape.insert(0, 1);
-        }
-        value.validate_shape();
-        Ok(value)
     }
 }
 

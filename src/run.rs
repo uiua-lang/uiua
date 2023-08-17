@@ -49,6 +49,15 @@ pub struct Scope {
     call: Vec<StackFrame>,
     names: HashMap<Ident, usize>,
     local: bool,
+    fills: Fills,
+}
+
+#[derive(Default, Clone)]
+struct Fills {
+    nums: Vec<f64>,
+    bytes: Vec<u8>,
+    chars: Vec<char>,
+    functions: Vec<Arc<Function>>,
 }
 
 #[derive(Clone)]
@@ -853,6 +862,83 @@ backtrace:
     }
     pub(crate) fn truncate_stack(&mut self, size: usize) {
         self.stack.truncate(size);
+    }
+    pub(crate) fn num_fill(&self) -> Option<f64> {
+        self.scope.fills.nums.last().copied()
+    }
+    pub(crate) fn byte_fill(&self) -> Option<u8> {
+        self.scope.fills.bytes.last().copied()
+    }
+    pub(crate) fn char_fill(&self) -> Option<char> {
+        self.scope.fills.chars.last().copied()
+    }
+    pub(crate) fn func_fill(&self) -> Option<Arc<Function>> {
+        self.scope.fills.functions.last().cloned()
+    }
+    pub(crate) fn with_fill(
+        &mut self,
+        fill: Value,
+        f: impl FnOnce(&mut Self) -> UiuaResult,
+    ) -> UiuaResult {
+        let mut set = false;
+        let mut pushed_byte = false;
+        match &fill {
+            Value::Num(n) => {
+                if let Some(&n) = n.as_scalar() {
+                    self.scope.fills.nums.push(n);
+                    if n.fract() == 0.0 && (0.0..=255.0).contains(&n) {
+                        self.scope.fills.bytes.push(n as u8);
+                        pushed_byte = true;
+                    }
+                    set = true;
+                }
+            }
+            Value::Byte(b) => {
+                if let Some(&b) = b.as_scalar() {
+                    self.scope.fills.bytes.push(b);
+                    self.scope.fills.nums.push(b as f64);
+                    set = true;
+                }
+            }
+            Value::Char(c) => {
+                if let Some(&c) = c.as_scalar() {
+                    self.scope.fills.chars.push(c);
+                    set = true;
+                }
+            }
+            Value::Func(f) => {
+                if let Some(f) = f.as_scalar() {
+                    self.scope.fills.functions.push(f.clone());
+                    set = true;
+                }
+            }
+        }
+        if !set {
+            return Err(self.error(format!(
+                "Fill values must be scalar, but its shape is {}",
+                fill.format_shape()
+            )));
+        }
+        let res = f(self);
+        match fill {
+            Value::Num(_) => {
+                self.scope.fills.nums.pop();
+                if pushed_byte {
+                    self.scope.fills.bytes.pop();
+                }
+            }
+            Value::Byte(_) => {
+                self.scope.fills.bytes.pop();
+                self.scope.fills.nums.pop();
+            }
+            Value::Char(_) => {
+                self.scope.fills.chars.pop();
+            }
+            Value::Func(_) => {
+                self.scope.fills.functions.pop();
+            }
+        }
+        res
     }
     pub(crate) fn spawn(
         &mut self,

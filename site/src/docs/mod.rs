@@ -116,6 +116,20 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         if !text.is_empty() {
             scroll_to_docs_functions(ScrollIntoViewOptions::new().behavior(ScrollBehavior::Smooth));
         }
+        let text = text.to_string();
+        set_timeout(
+            move || {
+                if element::<HtmlInputElement>("function-search").value() == text {
+                    BrowserIntegration {}.navigate(&LocationChange {
+                        value: format!("/docs/{}", urlencoding::encode(&text)),
+                        scroll: false,
+                        replace: false,
+                        ..Default::default()
+                    })
+                }
+            },
+            Duration::from_secs(2),
+        );
         if allowed == old_allowed.get() && results.get().is_some() {
             return;
         }
@@ -138,19 +152,6 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
                 allowed.table().into_view()
             },
         ));
-        let text = text.to_string();
-        set_timeout(
-            move || {
-                if element::<HtmlInputElement>("function-search").value() == text {
-                    BrowserIntegration {}.navigate(&LocationChange {
-                        value: format!("/docs/{}", urlencoding::encode(&text)),
-                        scroll: false,
-                        ..Default::default()
-                    })
-                }
-            },
-            Duration::from_secs(2),
-        );
     };
 
     set_timeout(

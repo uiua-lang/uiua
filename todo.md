@@ -1,4 +1,3 @@
-- Maybe use ~ for formattable dfn args
 - Standardize error messages
 - Cache inverses and unders
 - Under pick

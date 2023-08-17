@@ -482,12 +482,12 @@ fn TutorialFunctions() -> impl IntoView {
         <Editor example="[1 2]\n[∶ 1 2]\n[{b̥ḁ} 1 2]"/>
         <p>"Dfns are particularly useful when you have to juggle three or more arguments."</p>
         <p>"If you tried to implement the "<a href="https://en.wikipedia.org/wiki/Quadratic_formula">quadratic formula</a>" with only stack operations, you would have a very hard time. Thankfully, dfns make it pretty simple."</p>
-        <Editor example="Quadratic ← {÷ ×2ḁ -b̥ ⊟¯. √- ××4ḁ c̥ ⁿ2 b̥}\nQuadratic 1 2 0"/>
+        <Editor example="Quadratic ← {÷ ×2ḁ -b̥ ⊟¯. √- ××4ḁc̥ ⁿ2b̥}\nQuadratic 1 2 0"/>
         <p>"Dfns are also required if you want to use "<PrimCode prim=Recur/>". The dfn that contains the "<PrimCode prim=Recur/>" will be the thing that recurs."</p>
         <p>"Here is a recursive fibonacci function."</p>
-        <Editor example="{:(+ ↬-1ḁ ↬-2ḁ)_ḁ <2ḁ} 10"/>
+        <Editor example="{!(+ ↬-1ḁ ↬-2ḁ)_ḁ <2ḁ} 10"/>
         <p>"It is an error to access a dfn's argument outside of the dfn. This is only possible if you smuggle out the argument reference inside a function."</p>
-        <Editor example=":{(ḁ)}5"/>
+        <Editor example="!{(ḁ)}5"/>
         <p>"Dfns that immediately follow a modifier are called as the modifier's function."</p>
         <Editor example="\\{-ḁ×ḁb̥} 1_2_3_4_5"/>
 

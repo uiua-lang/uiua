@@ -998,10 +998,10 @@ primitive!(
     /// ex: {!·_↬ <10.×2} 1
     ///
     /// Here is a recursive factorial function:
-    /// ex: {!(×a ↬-1a)_1 <2a} 5
+    /// ex: {!(×ḁ ↬-1ḁ)_1 <2ḁ} 5
     ///
     /// Here is a recursive fibonacci function:
-    /// ex: {!(+ ↬-1a ↬-2a)_a <2a} 10
+    /// ex: {!(+ ↬-1ḁ ↬-2ḁ)_ḁ <2ḁ} 10
     (0(None), Recur, Control, ("recur", '↬')),
     /// Parse a string as a number
     ///

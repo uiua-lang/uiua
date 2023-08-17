@@ -315,7 +315,10 @@ impl Token {
     }
 }
 
-pub const DFN_ARG_SYMBOL: char = '̥';
+/// The symbol used to denote a dfn arg
+///
+/// It is the combining ring below character.
+pub const DFN_ARG_SYMBOL: char = '\u{325}';
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct DfnArg(pub u8);

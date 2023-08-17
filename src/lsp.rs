@@ -1,3 +1,10 @@
+use crate::{
+    ast::{Item, Word},
+    lex::{CodeSpan, Loc, Sp},
+    parse::parse,
+    primitive::Primitive,
+};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SpanKind {
     Primitive(Primitive),
@@ -39,20 +46,27 @@ fn words_spans(words: Vec<Sp<Word>>) -> Vec<Sp<SpanKind>> {
             Word::Ident(_) => {}
             Word::DfnArg(_) => {}
             Word::Strand(items) => {
-                let mut prev_span: Option<CodeSpan> = None;
-                for item in words_spans(items) {
-                    if let Some(prev) = prev_span {
-                        spans.push(
-                            CodeSpan {
-                                start: prev.end,
-                                end: item.span.start,
-                                ..word.span.clone()
-                            }
-                            .sp(SpanKind::Strand),
-                        )
+                for (i, word) in items.into_iter().enumerate() {
+                    let item_spans = words_spans(vec![word]);
+                    if i > 0 {
+                        if let Some(first_item) = item_spans.first() {
+                            let end = first_item.span.start;
+                            spans.push(
+                                CodeSpan {
+                                    start: Loc {
+                                        char_pos: end.char_pos - 1,
+                                        byte_pos: end.byte_pos - 1,
+                                        col: end.col - 1,
+                                        ..end
+                                    },
+                                    end,
+                                    ..first_item.span.clone()
+                                }
+                                .sp(SpanKind::Strand),
+                            )
+                        }
                     }
-                    prev_span = Some(item.span.clone());
-                    spans.push(item);
+                    spans.extend(item_spans);
                 }
             }
             Word::Array(items) => spans.extend(items.into_iter().flat_map(words_spans)),
@@ -72,13 +86,6 @@ fn words_spans(words: Vec<Sp<Word>>) -> Vec<Sp<SpanKind>> {
 
 #[cfg(feature = "lsp")]
 pub use server::run_server;
-
-use crate::{
-    ast::{Item, Word},
-    lex::{CodeSpan, Sp},
-    parse::parse,
-    primitive::Primitive,
-};
 
 #[cfg(feature = "lsp")]
 mod server {

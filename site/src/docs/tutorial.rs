@@ -338,7 +338,7 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example="+[1 2] [3 4 5]"/>
         <Editor example="△10_20\n△[3_4_5 6_7_8]\n+10_20 [3_4_5 6_7_8]"/>
 
-        <h2 id="flat-array-model">"The Flat Array Model"</h2>
+        <h2 id="array-model">"The Array Model"</h2>
         <p>"Most modern array languages allow arrays to contain arrays. The simplest model for this is the "<a href="https://aplwiki.com/wiki/Box">"Boxed Array Model"</a>" used in J, where an array may be an array of \"boxes\", which can contain any value but which must be boxed and unboxed. APL uses the "<a href="https://aplwiki.com/wiki/Array_model#Nested_array_theory">"Nested Array Model"</a>", making nested arrays a little easier to access. BQN uses the "<a href="https://mlochbaum.github.io/BQN/doc/based.html">"Based Array Model"</a>"."</p>
         <p>"Uiua does not use any of these. It sticks to the Flat Array Model of the original APL. In Uiua, "<b>"you cannot nest arrays inside other arrays"</b>"."</p>
         <p>"This may seem like a regression, but this model was picked for two reasons. For one, it is easier to make array algorithms fast when you only have to check their type once. More importantly than the implementation, however, is that the Flat Array Model makes array functions easier to reason about. In Uiua, you never have to wonder whether a function like "<PrimCode prim=Windows/>" or "<PrimCode prim=Partition/>" return an array or an array of arrays. The answer is always the same."</p>

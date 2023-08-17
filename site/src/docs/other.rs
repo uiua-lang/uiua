@@ -7,11 +7,11 @@ use crate::{editor::Editor, PrimCode};
 pub fn Design() -> impl IntoView {
     use Primitive::*;
     view! {
-        <h1>"Design"</h1>
+        <h1 id="design">"Design"</h1>
         <p>"This page explains the reasons for some of Uiua's design decisions."</p>
         <p>"It serves as a "<a href="https://news.knowledia.com/US/en/articles/more-software-projects-need-defenses-of-design-85ea9e23ffd85f5fde5a2d3d42001393cbce169a">"defense of design"</a>"."</p>
 
-        <h2>"Stack Orientation"</h2>
+        <h2 id="stack-orientation">"Stack Orientation"</h2>
         <h3>"Combinators"</h3>
         <p>"When I first started developing Uiua, it was neither stack-oriented nor array-oriented. What it "<em>"did"</em>" focus a lot on was "<em>"combinators"</em>". I had this whole heirarchy of language-level operators that let you construct arbitrarily complex combinators relatively succinctly."</p>
         <p>"I discovered what a lot of others have discovered when delving deep into tacit code: it's really hard to read and write and reason about."</p>
@@ -27,32 +27,31 @@ pub fn Design() -> impl IntoView {
         <p>
             "You'll notice that stack orientation simplifies the expression in a few ways:"
             <ul>
-                <li>"There is no Uiua code corresponding to the BQN combinators "<code>"∘"</code>" and "<code>"⊸"</code>" and the identity function "<code>"⊢"</code>". Function composition is implicit."</li>
+                <li>"There is no Uiua code corresponding to the BQN combinators "<code>"∘"</code>" and "<code>"⊸"</code>". Function composition is implicit."</li>
                 <li>"Functions are executed right-to-left instead of in a tree ordering."</li>
                 <li>"The expression does not require "<code>"()"</code>"s. In fact, no Uiua expression requires explicit grouping. "<code>"()"</code>" is used to make inline functions instead."</li>
             </ul>
         </p>
         <p>"I think this clarity makes writing long tacit expression much more workable."</p>
 
-        <h2>"The Flat Array Model"</h2>
-        <p>"Veterans of existing array languages may view Uiua's flat array model as a step backwards."</p>
-        <p>"All modern array languages allow both heterogenous arrays and nested arrays. Uiua, however, requires that all elements of an array be of the same type, and it forbids the nesting of arrays."</p>
-        <p>"Uiua forgoes these features for the sake of simplicity, both in the implementation of the interpreter and in the language itself. It is easier to reason about both the semantics and performance of code when arrays are flat and homogenous."</p>
-        <p>"Uiua allows something resembling nested arrays with its fill elements. I find that filled arrays are sufficient for most applications where I would want nested arrays."</p>
-        <p>"Array homogeneity it less limiting in Uiua than other array languages because while types cannot be mixed in an array, they "<em>"can"</em>" be mixed on the stack. Arrays which are associated but which have different types can be passed around together relatively easily."</p>
+        <h2 id="array-model">"The Array Model"</h2>
+        <p>"Uiua's array model went through a lot of iterations during development. At first, it used a flat, vector-based model ala K and Q. Then, I switched to BQN's Based array model. That was really complicated to implement primitives for, so I tried something else."</p>
+        <p>"I switched to a flat array model with \"fill elements\". While arrays could not be nested, operations which would create nested arrays in other languages would instead create jagged arrays with special fill elements at the end of some rows. While this worked, the code was scattered everywhere with checks for fill elements, because they had to propogate through everything. It also had the unfortunate effect of making byte arrays take up 2 bytes of space, since a bit had to be used to indicate whether the byte was a fill element or not. Also, a lot of operations, such as "<PrimCode prim=Transpose/>", don't really make a lot of sense with jagged arrays."</p>
+        <p>"Finally, I switched to the current model, which resembles J's Boxed array model. While you can do something resemblind J's "<code>"box <"</code>" using "<PrimCode prim=Constant/>" (and "<code>"open >"</code>" with "<PrimCode prim=Call/>"), I designed functions like "<PrimCode prim=Partition/>" and "<PrimCode prim=Group/>" to allow selecting uniformly-shaped rows from a non-uniform list in an effort to minimize interaction with jagged data."</p>
+        <p>"The fact that the stack is always available also makes putting non-uniform data in arrays less necessary."</p>
 
-        <h2>"The Glyphs"</h2>
+        <h2 id="array-model">"The Glyphs"</h2>
         <p>"Most of Uiua's glyphs were chosen for one of a few reasons:"</p>
         <ul>
             <li>"It is a common mathematical symbol, such as "<PrimCode prim=Add/>", "<PrimCode prim=Sub/>", and "<PrimCode prim=Pi/>"."</li>
             <li>"It is a very commonly used function and should create little line noise, such as "<PrimCode prim=Dup/>" and "<PrimCode prim=Flip/>"."</li>
             <li>"It is used in other array languages, such as "<PrimCode prim=Reduce/>", "<PrimCode prim=Scan/>", and "<PrimCode prim=Transpose/>"."</li>
             <li>"It kind of reminds me of what it does. Some of my favorites are "<PrimCode prim=Table/>", "<PrimCode prim=Reshape/>", "<PrimCode prim=Rotate/>", "<PrimCode prim=Deshape/>", "<PrimCode prim=Find/>", and "<PrimCode prim=Recur/>"."</li>
-            <li>"Its function is kind of abstract, but there are other related functions, so they all use related glyphs. For example, "<PrimCode prim=Fold/>" in relation to "<PrimCode prim=Reduce/>", and also all the indexing/finding/grouping functions like"<PrimCode prim=Classify/>", "<PrimCode prim=Group/>", "<PrimCode prim=Deduplicate/>", etc."</li>
+            <li>"Its function is kind of abstract, but there are other related functions, so they all use related glyphs. For example, "<PrimCode prim=Fold/>" has this nice symmetry with "<PrimCode prim=Reduce/>" and "<PrimCode prim=Scan/>". The indexing/finding/grouping functions like"<PrimCode prim=Classify/>", "<PrimCode prim=Group/>", "<PrimCode prim=Deduplicate/>", etc are all circles."</li>
             <li>"I think they look like cute little guys: "<PrimCode prim=Assert/>" and "<PrimCode prim=Try/></li>
         </ul>
 
-        <h2>"No Local Variables"</h2>
+        <h2 id="no-local-variables">"No Local Variables"</h2>
         <p>"While Uiua does technically have local variables in the form of dfn arguments, they are very limited in that they can only be used in the dfn body and can only be single-letter names."</p>
         <p>"Forbidding general local variables has a few benefits:"</p>
         <ul>
@@ -61,12 +60,12 @@ pub fn Design() -> impl IntoView {
             <li>"It frees you from the burden of naming things."</li>
         </ul>
 
-        <h2>"Identifiers and Formatting"</h2>
+        <h2 id="identifiers-and-formatting">"Identifiers and Formatting"</h2>
         <p>"I made the decision to have a formatter that turns names into Unicode glyphs about as soon as I started using Unicode glyphs. I did not want to require special keyboard or editor support like APL and BQN do."</p>
         <p>"The advantage of a file-watching formatter is that the only feature your editor needs is the ability to automatically reload files if they change on disk. You don't need special keybinds or plugins or anything."</p>
         <p>"The other nice thing about a formatter is that it makes it easier to get started with the language. You do not have to memorize a bunch of keyboard shortcuts to type the glyphs. You just need to learn their names."</p>
 
-        <h2>"Inspiration"</h2>
+        <h2 id="inspiration">"Inspiration"</h2>
         <h3>"BQN"</h3>
         <p>"The main language that inspired Uiua is "<a href="https://mlochbaum.github.io/BQN/">BQN</a>". While I had heard about APL before, BQN was my first real exposure to the power of the array paradigm. I think the language is an astounding feat of engineering. Marshall is both a genius and a great communicator."</p>
         <p>"However, as you can read above, a lot of Uiua's design descisions are responses to things I "<em>"didn't"</em>" like about BQN. There were a bunch of little pain-points that I though I could improve on."</p>
@@ -92,14 +91,7 @@ pub fn Technical() -> impl IntoView {
         <h2>"Arrays"</h2>
         <p>"Values on the stack are implemented as Rust "<code>"enum"</code>"s, where each variant contains a different array type."</p>
         <p>"While the language itself only has 3 types, the interpreter has 1 extra: a byte array. IO streams and operations which have boolean results return byte arrays for space efficiency."</p>
-        <h3>"Fill Values"</h3>
-        <p>"Each array type uses a different fill value:"</p>
-        <ul>
-            <li>"Numbers are filled with "<code>"NaN"</code>"s."</li>
-            <li>"Characters are filled with the null character "<code>"\\0"</code>"."</li>
-            <li>"Functions are filled with a special version of "<PrimCode prim=Primitive::Noop/>" which is distinct from the normal one."</li>
-            <li>"Regrettably, unlike the other three types, Rust's "<code>"u8"</code>" type does not have a suitable value to use as fill. Because of this, the actual element type of byte arrays is a Rust "<code>"i16"</code>" where the minimum value is the fill value. This means that any file read into memory will take up twice as much space as it does on disk. While this is a 4x improvement on potentially storing every byte as an "<code>"f64"</code>", it is 2x less space efficent than if the fill states were stored seperately from the values. However, I have deemed the runtime overhead and increased code complexity this would introduce to not be worth it."</li>
-        </ul>
+        <p>"Array elements are stored in a reference-counted contiguous-memory container I call a "<em>"CowSlice"</em>" or clone-on-write slice. When an array is modified, its data is only copied if it is shared with another array. In addition, pulling out the rows of an array only increments the reference count of the data, and the row arrays have modified shapes and strides."</p>
 
         <h2>"The Website"</h2>
         <p>"The Uiua website is written using the "<a href="https://leptos.dev/">Leptos</a>" framework and hosted on GitHub pages."</p>

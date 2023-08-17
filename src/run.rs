@@ -437,12 +437,24 @@ backtrace:
                 self.push_instr(Instr::EndArray(span));
             }
             Word::Array(items) => {
+                if !call {
+                    self.new_functions.push(Vec::new());
+                }
                 self.push_instr(Instr::BeginArray);
                 for item in items {
                     self.words(item, true)?;
                 }
-                let span = self.add_span(word.span);
+                let span = self.add_span(word.span.clone());
                 self.push_instr(Instr::EndArray(span));
+                if !call {
+                    let instrs = self.new_functions.pop().unwrap();
+                    let func = Function::new(
+                        FunctionId::Anonymous(word.span),
+                        instrs,
+                        FunctionKind::Normal,
+                    );
+                    self.push_instr(Instr::push(func));
+                }
             }
             Word::Func(func) => self.func(func, word.span)?,
             Word::Dfn(func) => self.dfn(func, word.span, call)?,

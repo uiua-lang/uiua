@@ -619,7 +619,10 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
 
 pub fn level(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let ns = env.pop(1)?.as_number_list(
+    let get_ns = env.pop(1)?;
+    env.push(get_ns);
+    env.call_error_on_break("break is not allowed in level")?;
+    let ns = env.pop("level's rank list")?.as_number_list(
         env,
         "Elements of rank list must be integers or infinity",
         |n| n.fract() == 0.0 || n == f64::INFINITY,

@@ -325,11 +325,11 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example="△[[1 2 3] [4 5 6]]"/>
         <Editor example="△[...[1 2 3]]"/>
         <p>"From shape we can derive two closely-related properties called "<b>"length"</b>" and "<b>"rank"</b>"."</p>
-        <p><PrimCode prim=Len/>" is the number of "<em>"major cells"</em>" of the array. This is the number of elements for a 1D array and the number of rows for a 2D array. Length is always equal to the first number in the shape (or 1 if the shape is empty)."</p>
+        <p><PrimCode prim=Len/>" is the number of "<em>"rows"</em>" of the array. This is the number of elements for a 1D array and the number of rows for a 2D array. Length is always equal to the first number in the shape (or 1 if the shape is empty)."</p>
         <p><PrimCode prim=Rank/>" is the number of dimensions of the array."</p>
         <Editor example="△[1 2 3]\n⧻[1 2 3]\n∴[1 2 3]"/>
         <p><PrimCode prim=Rank/>" is equivalent to the "<PrimCode prim=Len/>" of the "<PrimCode prim=Shape/>"."</p>
-        <Editor example="= ∴[1 2 3] ⧻△[1 2 3]"/>
+        <Editor example=" ∴[1_2 3_4]\n⧻△[1_2 3_4]"/>
 
         <h2 id="pervasion">"Pervasion"</h2>
         <p>"Most operations that apply to scalars are what is called "<em>"pervasive"</em>" when it comes to arrays. This means that the operations automatically applies to every item in the array."</p>
@@ -339,11 +339,15 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example="△10_20\n△[3_4_5 6_7_8]\n+10_20 [3_4_5 6_7_8]"/>
 
         <h2 id="array-model">"The Array Model"</h2>
-        <p>"Most modern array languages allow arrays to contain arrays. The simplest model for this is the "<a href="https://aplwiki.com/wiki/Box">"Boxed Array Model"</a>" used in J, where an array may be an array of \"boxes\", which can contain any value but which must be boxed and unboxed. APL uses the "<a href="https://aplwiki.com/wiki/Array_model#Nested_array_theory">"Nested Array Model"</a>", making nested arrays a little easier to access. BQN uses the "<a href="https://mlochbaum.github.io/BQN/doc/based.html">"Based Array Model"</a>"."</p>
-        <p>"Uiua does not use any of these. It sticks to the Flat Array Model of the original APL. In Uiua, "<b>"you cannot nest arrays inside other arrays"</b>"."</p>
-        <p>"This may seem like a regression, but this model was picked for two reasons. For one, it is easier to make array algorithms fast when you only have to check their type once. More importantly than the implementation, however, is that the Flat Array Model makes array functions easier to reason about. In Uiua, you never have to wonder whether a function like "<PrimCode prim=Windows/>" or "<PrimCode prim=Partition/>" return an array or an array of arrays. The answer is always the same."</p>
-        <p>"If you have worked with other array languages, you may be thinking, \"Sure, the Flat Array Model is simple, but it is very limited. How do you represent arrays with subarrays of different lengths?\" The answer is "<b>"fill values"</b>"."</p>
-        <p>"Many operations that work on multiple arrays will insert fill values when shapes do not match. The most basic is stack notation, like in the error in the example above."</p>
+        <p>"For curious array afficionados, Uiua uses an array model resembling "<a href="https://aplwiki.com/wiki/Box">"J's Boxed array model"</a>"."</p>
+        <p>"All arrays are flat and homogenous. Arrays always have a rectangular shape and (mostly) cannot be nested. Different types of data, like numbers and characters, cannot be mixed in the same array."</p>
+        <p>"However, there is an escape hatch for when you really want jagged or mixed-type arrays. In J, an irregular or non-homogenous array is constructed as an array of "<em>"boxes"</em>". In Uiua, it is a normal array of functions."</p>
+        <Editor example="['a' 1 [7 8 9]]"/>
+        <p>"By using "<PrimCode prim=Constant/>", we can turn any value into a function that pushes that value onto the stack. We can then put these functions into an array like any other."</p>
+        <Editor example="[□'a' □1 □[7 8 9]]"/>
+        <p>"To get the values back on the stack, we can simply use "<PrimCode prim=Reduce/><PrimCode prim=Call/>"."</p>
+        <Editor example="/![□'a' □1 □[7 8 9]]"/>
+        <p>"For more about working with constant function arrays, see "<PrimCode prim=Constant/>"'s documentation."</p>
     }
 }
 

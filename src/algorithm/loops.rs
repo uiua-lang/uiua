@@ -92,20 +92,38 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
 }
 
 fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
-    let mut rows = xs.into_rows_rev();
-    let mut acc = init
-        .or_else(|| rows.next())
-        .ok_or_else(|| env.error("Cannot reduce empty array"))?;
-    for row in rows {
-        env.push(acc);
-        env.push(row);
-        env.push(f.clone());
-        if env.call_catch_break()? {
-            return Ok(());
+    match f.args_delta() {
+        Some((0 | 1, _)) => {
+            for row in xs.into_rows_rev() {
+                env.push(row);
+                env.push(f.clone());
+                if env.call_catch_break()? {
+                    return Ok(());
+                }
+            }
         }
-        acc = env.pop("reduced function result")?;
+        Some((2, _)) | None => {
+            let mut rows = xs.into_rows_rev();
+            let mut acc = init
+                .or_else(|| rows.next())
+                .ok_or_else(|| env.error("Cannot reduce empty array"))?;
+            for row in rows {
+                env.push(acc);
+                env.push(row);
+                env.push(f.clone());
+                if env.call_catch_break()? {
+                    return Ok(());
+                }
+                acc = env.pop("reduced function result")?;
+            }
+            env.push(acc);
+        }
+        Some((args, _)) => {
+            return Err(env.error(format!(
+                "Cannot reduce a function that takes {args} arguments"
+            )))
+        }
     }
-    env.push(acc);
     Ok(())
 }
 
@@ -764,17 +782,7 @@ pub fn partition(env: &mut Uiua) -> UiuaResult {
     let markers = markers.as_indices(env, "Partition markers must be a list of integers")?;
     let values = env.pop(3)?;
     let groups = values.partition_groups(&markers, env)?;
-    let mut rows = Vec::with_capacity(groups.len());
-    for group in groups {
-        env.push(group);
-        env.push(f.clone());
-        env.call_error_on_break("break is not allowed in partition")?;
-        rows.push(env.pop("partition's function result")?);
-    }
-    rows.reverse();
-    let res = Value::from_row_values(rows, env)?;
-    env.push(res);
-    Ok(())
+    collapse_groups(f, groups, "partition", env)
 }
 
 impl Value {
@@ -838,17 +846,7 @@ pub fn group(env: &mut Uiua) -> UiuaResult {
     let indices = indices.as_indices(env, "Group indices must be a list of integers")?;
     let values = env.pop(3)?;
     let groups = values.group_groups(&indices, env)?;
-    let mut rows = Vec::with_capacity(groups.len());
-    for group in groups {
-        env.push(group);
-        env.push(f.clone());
-        env.call_error_on_break("break is not allowed in group")?;
-        rows.push(env.pop("group's function result")?);
-    }
-    rows.reverse();
-    let res = Value::from_row_values(rows, env)?;
-    env.push(res);
-    Ok(())
+    collapse_groups(f, groups, "group", env)
 }
 
 impl Value {
@@ -889,4 +887,47 @@ impl<T: ArrayValue> Array<T> {
             .rev()
             .map(Array::from_row_arrays_infallible))
     }
+}
+
+fn collapse_groups<G>(f: Value, groups: G, name: &str, env: &mut Uiua) -> UiuaResult
+where
+    G: IntoIterator<Item = Value>,
+    G::IntoIter: ExactSizeIterator,
+{
+    let mut groups = groups.into_iter();
+    match f.args_delta() {
+        Some((0 | 1, _)) | None => {
+            let mut rows = Vec::with_capacity(groups.len());
+            for group in groups {
+                env.push(group);
+                env.push(f.clone());
+                env.call_error_on_break_with(|| format!("break is not allowed in {name}"))?;
+                rows.push(env.pop(|| format!("{name}'s function result"))?);
+            }
+            rows.reverse();
+            let res = Value::from_row_values(rows, env)?;
+            env.push(res);
+        }
+        Some((2, _)) => {
+            let mut acc = groups
+                .next()
+                .ok_or_else(|| env.error(format!("Cannot reduce empty {name} result")))?;
+            for row in groups {
+                env.push(acc);
+                env.push(row);
+                env.push(f.clone());
+                if env.call_catch_break()? {
+                    return Ok(());
+                }
+                acc = env.pop("reduced function result")?;
+            }
+            env.push(acc);
+        }
+        Some((args, _)) => {
+            return Err(env.error(format!(
+                "Cannot {name} with a function that takes {args} arguments"
+            )))
+        }
+    }
+    Ok(())
 }

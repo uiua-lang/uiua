@@ -465,6 +465,30 @@ primitive!(
     /// ex: ⊝7_7_8_0_1_2_0
     (1, Deduplicate, MonadicArray, ("deduplicate", '⊝')),
     /// Turn an array into a constant function
+    ///
+    /// This is Uiua's primary way to create nested or mixed-type arrays.
+    /// Normally, arrays can only be created if their rows have the same shape and type.
+    /// [fill] can help you with the shape part, but it is not always wanted, and it can't help with the type part.
+    /// ex: ['a' 3 7_8_9]
+    /// [constant] turns any array into a function that pushes that array onto the stack.
+    /// These functions are just like any other, so they can be put in arrays themselves.
+    /// ex: [□'a' □3 □7_8_9]
+    /// Use [call] to get the values back out.
+    /// ex: !□1_2_3
+    /// [reduce][call] will unpack an array of constant functions onto the stack.
+    /// ex: /![□'a' □3 □7_8_9]
+    ///
+    /// You would not normally construct arrays like the one above.
+    /// The more important use case of [constant] is for jagged or nested data.
+    /// If you want to collect unevenly-sized groups from [partition] or [group], without [fill]ing, you must use [constant].
+    /// ex: $ Words of different lengths
+    ///   : ⊜□≠' '.
+    ///
+    /// If you want to manipulate the arrays inside a constant function array without removing them, you can use [each][under][call].
+    /// ex: $ Reverse these words
+    ///   : ⊜□≠' '.
+    ///   : ∵⍜!⇌.
+    /// This works because [call] [invert]ed is [constant]. For each element, it [call]s the function to get the array out, [reverse]s it, then [constant]s it again.
     (1, Constant, MonadicArray, ("constant", '□')),
     /// Append two arrays end-to-end
     ///
@@ -744,8 +768,11 @@ primitive!(
     /// The first array must be [rank]`1` and contain integers.
     /// Rows in the second array will be grouped into buckets by the indices in the first array.
     /// Keys `less than``0` will be omitted.
-    /// The function then processes each group in order, and the results are concatenated together.
-    /// ex: ⊕· =0◿2. [1 2 3 4 5 6]
+    /// The function then processes each group in order. The result depends on what the function is.
+    /// If the function takes 0 or 1 arguments, then [group] behaves like [each].
+    /// ex: ⊕· [0 2 2 1 0 1] [1 2 3 4 5 6]
+    /// If the function takes 2 arguments, then [group] behaves like [reduce].
+    /// ex: ⊕⊂ [0 2 2 1 0 1] [1 2 3 4 5 6]
     /// If the values returned by the function do not have the same [shape], concatenation will fail.
     /// It is common to use [constant] to encapsulate groups of different [shape]s.
     /// ex: ⊕□ [0 1 0 2 1 1] [1 2 3 4 5 6]
@@ -764,10 +791,13 @@ primitive!(
     /// Takes a function and two arrays.
     /// The arrays must be the same [length].
     /// The first array must be [rank]`1` and contain integers.
-    /// Runs of rows in the second array that line up with sequential keys in the first array will be grouped together.
+    /// Rows in the second array that line up with sequential keys in the first array will be grouped together.
     /// Keys `less or equal``0` will be omitted.
-    /// The function then processes each group in order, and the results are concatenated together.
+    /// The function then processes each group in order. The result depends on what the function is.
+    /// If the function takes 0 or 1 arguments, then [partition] behaves like [each].
     /// ex: ⊜· [0 0 2 2 1 1 3 3] [1 2 3 4 5 6 7 8]
+    /// If the function takes 2 arguments, then [partition] behaves like [reduce].
+    /// ex: ⊜⊂ [0 0 2 2 1 1 3 3] [1 2 3 4 5 6 7 8]
     /// If the values returned by the function do not have the same [shape], concatenation will fail.
     /// It is common to use [constant] to encapsulate groups of different [shape]s.
     /// ex: ⊜□ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
@@ -950,7 +980,7 @@ primitive!(
     /// ex:  ![+_- ×_÷] 1_0 3 12 # Call the function at 1_0
     /// ex:  ![+_- ×_÷] 1 0 3 12 # Not enough calls
     /// ex: !![+_- ×_÷] 1 0 3 12 # 2 calls is enough
-    (1(None), Call, Control, ("call", '!')),
+    (1, Call, Control, ("call", '!')),
     /// Break out of a loop
     ///
     /// Expects a non-negative integer. This integer is how many loops will be broken out of.

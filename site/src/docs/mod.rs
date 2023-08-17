@@ -235,6 +235,10 @@ impl Allowed {
         };
         if let Some(prim) = prim_matching_part_exactly(&search) {
             prims.insert(prim);
+            return Self {
+                classes: [prim.class()].into(),
+                prims,
+            };
         } else {
             for &part in &parts {
                 if let Some(prim) = prim_matching_part_exactly(part) {

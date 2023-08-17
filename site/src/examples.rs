@@ -2,10 +2,10 @@ const UIUA: &str = "\"Um, I um...arrays\"\n⊜⊢≥'A'.";
 const FORMAT: &str = "# Click Run to format!\nrepeat(join∶/+take`2.)10range2";
 const D3: &str = "↯∶⇡/×.2_3_4";
 const LOGO: &str = "\
-x ← ↶⍉⊞⊟. ÷÷2∶ -÷2,⇡.200
-rgb ← [×.⊢⇌x ×.⊢x ↯△⊢x0.5]
-u ← ↥<0.2∶>0.7.+×2 ×.∶/·x
-c ← <∶√/+ⁿ2 x
+xy ← ↶⍉⊞⊟. ÷÷2∶ -÷2,⇡.200
+rgb ← [∶↶⊟×.xy ↯△⊢xy0.5]
+u ← ↥<0.2∶>0.7.+×2 ×.∶/·xy
+c ← <∶√/+ⁿ2 xy
 ⍉⊂∶-¬u c1 +0.1 ⫫↧rgb c0.95";
 const AVG: &str = "Avg ← ÷⧻∶/+.\nAvg 0_2_1_5";
 const CHORD: &str = "\
@@ -13,14 +13,14 @@ const CHORD: &str = "\
 ×220 ⁿ∶2÷12
 ÷⧻∶ ≡/+ ○×τ ⊞× ÷∶⇡.44100.";
 const QUADRATIC: &str = "\
-Quadratic ← {√- ××4a c ⁿ2 b
+Quad ← {√- ××4a c ⁿ2 b
         ÷ ×2a -b ⊟¯.}
-Quadratic 1 2 0";
+Quad 1 2 0";
 const STRIPES: &str = "\
 ∵{⊞a.⇡300}+_↥_-
 ⍉ ÷2 +1.2 ○ ÷10";
 const PALINDROME: &str = r#"$ uiua racecar wow cool!
-;⊜(0⊂⊏∶"❌✅" ≅⇌..)≠' '."#;
+⍛' '⊜(⊂⊏∶"❌✅" ≅⇌..)≠' '."#;
 const RULE_30: &str = "\
 Thirty ← ≡(↥≅0_1_1 ∶=1 /+.) ◫3 ⊂∶0 ⊂0
 size ← 500

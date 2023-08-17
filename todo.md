@@ -1,6 +1,8 @@
 - Maybe use ~ for formattable dfn args
 - Cache inverses and unders
 - Standardize error messages
+- Allow fill for pervasive ops
+- Change args/delta to args/outputs
 - Under pick
 - Finish tour
 - Docs

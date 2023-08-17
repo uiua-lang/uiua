@@ -133,7 +133,7 @@ impl<'a> VirtualEnv<'a> {
                     self.stack.push(a);
                     self.stack.push(b);
                 }
-                Call => self.handle_call()?,
+                Call => self.handle_call(true)?,
                 Recur => return Err("Recur present".into()),
                 _ => {
                     let args = prim.args().ok_or("Prim had indeterminate args")?;
@@ -147,7 +147,7 @@ impl<'a> VirtualEnv<'a> {
                     }
                 }
             },
-            Instr::Call(_) => self.handle_call()?,
+            Instr::Call(_) => self.handle_call(false)?,
         }
         self.set_min_height();
         Ok(())
@@ -161,22 +161,24 @@ impl<'a> VirtualEnv<'a> {
             *h = (*h).min(self.stack.len());
         }
     }
-    fn handle_call(&mut self) -> Result<(), String> {
-        if let BasicValue::Func(f) = self.pop()? {
-            let (a, d) = f
-                .args_delta()
-                .ok_or_else(|| format!("Call's function {f:?} had indeterminate a/Δ"))?;
-            for _ in 0..a {
-                self.pop()?;
+    fn handle_call(&mut self, explicit: bool) -> Result<(), String> {
+        match self.pop()? {
+            BasicValue::Func(f) => {
+                let (a, d) = f
+                    .args_delta()
+                    .ok_or_else(|| format!("Call's function {f:?} had indeterminate a/Δ"))?;
+                for _ in 0..a {
+                    self.pop()?;
+                }
+                self.set_min_height();
+                for _ in 0..(d + a as isize).max(0) {
+                    self.stack.push(BasicValue::Other);
+                }
             }
-            self.set_min_height();
-            for _ in 0..(d + a as isize).max(0) {
-                self.stack.push(BasicValue::Other);
-            }
-            Ok(())
-        } else {
-            Err("Call without a function".into())
+            val if explicit => self.stack.push(val),
+            _ => return Err("Call without function".into()),
         }
+        Ok(())
     }
     fn handle_mod(
         &mut self,

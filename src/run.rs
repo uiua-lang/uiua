@@ -752,10 +752,13 @@ backtrace:
         }
     }
     pub fn call_error_on_break(&mut self, message: &str) -> UiuaResult {
+        self.call_error_on_break_with(|| message.into())
+    }
+    pub fn call_error_on_break_with(&mut self, message: impl FnOnce() -> String) -> UiuaResult {
         match self.call() {
             Ok(_) => Ok(()),
             Err(e) => match e.break_data() {
-                Ok((0, span)) => Err(span.sp(message.into()).into()),
+                Ok((0, span)) => Err(span.sp(message()).into()),
                 Ok((n, span)) => Err(UiuaError::Break(n - 1, span)),
                 Err(e) => Err(e),
             },
@@ -1051,5 +1054,15 @@ impl<'a> StackArg for &'a str {
 impl StackArg for String {
     fn arg_name(self) -> String {
         self
+    }
+}
+
+impl<F, T> StackArg for F
+where
+    F: FnOnce() -> T,
+    T: StackArg,
+{
+    fn arg_name(self) -> String {
+        self().arg_name()
     }
 }

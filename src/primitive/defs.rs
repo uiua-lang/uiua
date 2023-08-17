@@ -863,6 +863,9 @@ primitive!(
     /// Because array construction is implemented in terms of [couple] and [join], [fill] can be used when building arrays.
     /// ex: ⍛0[1 2_3 4_5_6]
     ///
+    /// [fill] also works with pervasive operations where the shapes don't match.
+    /// ex: ⍛0+ 1_2_3 10_9_8_7_6_5
+    ///
     /// Many functions, like [scan] and [partition], implicitly build arrays and require compatible shapes.
     /// [fill] can be used with them as well. In some cases, this prevents the need to use [constant].
     /// ex: ⍛0\⊂ 1_2_3_4_5

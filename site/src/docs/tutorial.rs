@@ -301,7 +301,7 @@ fn TutorialArrays() -> impl IntoView {
         <p>"Of course, you can also use stack notation to make multidimensional arrays."</p>
         <Editor example="[1_2_3 4_5_6]"/>
         <Editor example="[...[1 2 3]]"/>
-        <p>"More preceisely, stack notation "<PrimCode prim=Couple/>"s the first two stack items created between the "<code>"[]"</code>" and "<PrimCode prim=Join/>"s the to that coupling."</p>
+        <p>"More preceisely, stack notation "<PrimCode prim=Couple/>"s the first two stack items created between the "<code>"[]"</code>"s and "<PrimCode prim=Join/>"s the rest to that coupling."</p>
         <p>"Unlike strand notation, stack notation may span multiple lines. The lines are still executed in the normal order."</p>
         <Editor example="\
 [1 2 3
@@ -337,6 +337,9 @@ fn TutorialArrays() -> impl IntoView {
         <p>"When doing a pervasive operation on two arrays, their shape "<em>"prefixes"</em>" must match."</p>
         <Editor example="+[1 2] [3 4 5]"/>
         <Editor example="△10_20\n△[3_4_5 6_7_8]\n+10_20 [3_4_5 6_7_8]"/>
+        <p>"If you want to do some pervasive operation on arrays whose shapes do not match, you can set a default values with "<PrimCode prim=Fill/>". Any places where the shapes don't match will be filled in with that value."</p>
+        <Editor example="⍛0-[1 2] [3 4 5 6 7]"/>
+        <p><PrimCode prim=Fill/>" can be used in a lot of other cases. See its documentation for more."</p>
 
         <h2 id="array-model">"The Array Model"</h2>
         <p>"For curious array afficionados, Uiua uses an array model resembling "<a href="https://aplwiki.com/wiki/Box">"J's Boxed array model"</a>"."</p>

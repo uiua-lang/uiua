@@ -37,6 +37,7 @@ fn words_spans(words: Vec<Sp<Word>>) -> Vec<Sp<SpanKind>> {
                 spans.extend(lines.into_iter().map(|line| line.span.sp(SpanKind::String)))
             }
             Word::Ident(_) => {}
+            Word::DfnArg(_) => {}
             Word::Strand(items) => {
                 let mut prev_span: Option<CodeSpan> = None;
                 for item in words_spans(items) {

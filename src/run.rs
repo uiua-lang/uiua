@@ -15,7 +15,7 @@ use crate::{
     ast::*,
     check::instrs_args_outputs,
     function::*,
-    lex::{CodeSpan, Sp, Span},
+    lex::{CodeSpan, DfnArg, Sp, Span},
     parse::parse,
     primitive::Primitive,
     value::Value,
@@ -27,7 +27,7 @@ use crate::{
 pub struct Uiua {
     // Compilation
     new_functions: Vec<Vec<Instr>>,
-    new_dfns: Vec<Vec<u8>>,
+    new_dfns: Vec<Vec<DfnArg>>,
     // Statics
     globals: Arc<Mutex<Vec<Value>>>,
     spans: Arc<Mutex<Vec<Span>>>,
@@ -430,6 +430,7 @@ backtrace:
                 }
             }
             Word::Ident(ident) => self.ident(ident, word.span, call)?,
+            Word::DfnArg(arg) => self.dfn_arg(arg, word.span)?,
             Word::Strand(items) => {
                 self.push_instr(Instr::BeginArray);
                 self.words(items, false)?;
@@ -465,19 +466,6 @@ backtrace:
         Ok(())
     }
     fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool) -> UiuaResult {
-        if let Some(dfn) = self.new_dfns.last_mut() {
-            // Dfn argument
-            if ident.as_str().len() == 1 {
-                let c = ident.as_str().chars().next().unwrap();
-                if c.is_ascii_lowercase() {
-                    // Name is a dfn argument
-                    let idx = c as u8 - b'a';
-                    dfn.push(idx);
-                    self.push_instr(Instr::DfnVal(idx as usize));
-                    return Ok(());
-                }
-            }
-        }
         if let Some(idx) = self.scope.names.get(&ident).or_else(|| {
             self.lower_scopes
                 .last()
@@ -504,6 +492,15 @@ backtrace:
         }
         Ok(())
     }
+    fn dfn_arg(&mut self, arg: DfnArg, span: CodeSpan) -> UiuaResult {
+        if let Some(dfn) = self.new_dfns.last_mut() {
+            dfn.push(arg);
+            self.push_instr(Instr::DfnVal(arg));
+            Ok(())
+        } else {
+            Err(span.sp("dfn argument outside of dfn".to_string()).into())
+        }
+    }
     fn func(&mut self, func: Func, _span: CodeSpan) -> UiuaResult {
         let mut instrs = Vec::new();
         for line in func.body {
@@ -527,7 +524,7 @@ backtrace:
             instrs.extend(self.compile_words(line)?);
         }
         let refs = self.new_dfns.pop().unwrap();
-        let dfn_size = refs.into_iter().max().map(|n| n + 1).unwrap_or(0);
+        let dfn_size = refs.into_iter().max().map(|arg| arg.0 + 1).unwrap_or(0);
         let func = Function::new(func.id, instrs, FunctionKind::Dfn(dfn_size));
         self.push_instr(Instr::push(func));
         if call {
@@ -621,21 +618,19 @@ backtrace:
                     Ok(())
                 })(),
                 &Instr::Call(span) => self.call_with_span(span),
-                Instr::DfnVal(n) => {
+                Instr::DfnVal(arg) => {
                     if let Some(dfn) = self.scope.dfn.last() {
-                        if let Some(value) = dfn.args.get(*n).cloned() {
+                        if let Some(value) = dfn.args.get(arg.0 as usize).cloned() {
                             self.stack.push(value);
                             Ok(())
                         } else {
                             Err(self.error(format!(
-                                "Function references dfn argument `{}` outside of its dfn",
-                                (*n as u8 + b'a') as char
+                                "Function references dfn argument `{arg}` outside of its dfn"
                             )))
                         }
                     } else {
                         Err(self.error(format!(
-                            "Function references dfn argument `{}` outside of a dfn",
-                            (*n as u8 + b'a') as char
+                            "Function references dfn argument `{arg}` outside of a dfn"
                         )))
                     }
                 }

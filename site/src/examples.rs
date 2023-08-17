@@ -13,11 +13,11 @@ const CHORD: &str = "\
 ×220 ⁿ∶2÷12
 ÷⧻∶ ≡/+ ○×τ ⊞× ÷∶⇡.44100.";
 const QUADRATIC: &str = "\
-Quad ← {√- ××4a c ⁿ2 b
-        ÷ ×2a -b ⊟¯.}
+Quad ← {√- ××4ḁ c̥ ⁿ2 b̥
+        ÷ ×2ḁ -b̥ ⊟¯.}
 Quad 1 2 0";
 const STRIPES: &str = "\
-∵{⊞a.⇡300}+_↥_-
+∵{⊞ḁ.⇡300}+_↥_-
 ⍉ ÷2 +1.2 ○ ÷10";
 const PALINDROME: &str = r#"$ uiua racecar wow cool!
 ⍛@ ⊜(⊂⊏∶"❌✅" ≅⇌..)≠@ ."#;

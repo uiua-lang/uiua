@@ -3,8 +3,11 @@ use std::{cmp::Ordering, fmt, sync::Arc};
 use thread_local::ThreadLocal;
 
 use crate::{
-    check::instrs_args_outputs, lex::CodeSpan, primitive::Primitive, value::Value, Ident, Uiua,
-    UiuaResult,
+    check::instrs_args_outputs,
+    lex::{CodeSpan, DfnArg},
+    primitive::Primitive,
+    value::Value,
+    Ident, Uiua, UiuaResult,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -14,7 +17,7 @@ pub enum Instr {
     EndArray(usize),
     Prim(Primitive, usize),
     Call(usize),
-    DfnVal(usize),
+    DfnVal(DfnArg),
 }
 
 impl Instr {
@@ -37,7 +40,7 @@ impl fmt::Display for Instr {
             Instr::EndArray(_) => write!(f, "["),
             Instr::Prim(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => write!(f, "!"),
-            Instr::DfnVal(n) => write!(f, "{}", (*n as u8 + b'a') as char),
+            Instr::DfnVal(arg) => write!(f, "{arg}"),
         }
     }
 }

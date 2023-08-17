@@ -148,6 +148,7 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig) {
             }
         }
         Word::Ident(ident) => output.push_str(&ident.0),
+        Word::DfnArg(arg) => output.push_str(&arg.to_string()),
         Word::Strand(items) => {
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {

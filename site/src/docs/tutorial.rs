@@ -473,19 +473,23 @@ fn TutorialFunctions() -> impl IntoView {
         <p>"A dfn (pronounced \"dee-fun\") is a block of code that can bind values locally to single-character names."</p>
         <p>"Dfns are created with "<code>"{...}"</code>"."</p>
         <p>"Unlike functions created with "<code>"(...)"</code>", dfns are called imediately, much like a built-in function."</p>
-        <p>"The number of arguments that a dfn takes is determined by which single-character lowercase ASCII names it refers to. This means you can use any of 26 names: "<code>"a"</code>", "<code>"b"</code>", "<code>"c"</code>", ... "<code>"z"</code>". A dfn that only refers to "<code>"a"</code>" takes 1 argument. A dfn that refers to "<code>"z"</code>" takes 26."</p>
+        <p>"Inside a dfn, you can reference "<em>"dfn arguments"</em>". These special names map to the arguments passed to the dfn."</p>
+        <p>"Dfn arguments take the form of a lowercase ASCII letter with a combining "<code>"∘"</code>"below."</p>
+        <p>"If you type a "<code>"~"</code>" followed by an ASCII letter, the formatter will turn it into a dfn argument."</p>
+        <Editor example="{~a}5"/>
+        <p>"The number of arguments that a dfn takes is determined by which dfn arguments it refers to. A dfn that only refers to "<code>"ḁ"</code>" takes 1 argument. A dfn that refers to "<code>"z̥"</code>" takes 26."</p>
         <p>"As an example, you could use a dfn to manually implement "<PrimCode prim=Flip/>" (don't do this)."</p>
-        <Editor example="[1 2]\n[∶ 1 2]\n[{b a} 1 2]"/>
+        <Editor example="[1 2]\n[∶ 1 2]\n[{b̥ḁ} 1 2]"/>
         <p>"Dfns are particularly useful when you have to juggle three or more arguments."</p>
         <p>"If you tried to implement the "<a href="https://en.wikipedia.org/wiki/Quadratic_formula">quadratic formula</a>" with only stack operations, you would have a very hard time. Thankfully, dfns make it pretty simple."</p>
-        <Editor example="Quadratic ← {÷ ×2a -b ⊟¯. √- ××4a c ⁿ2 b}\nQuadratic 1 2 0"/>
+        <Editor example="Quadratic ← {÷ ×2ḁ -b̥ ⊟¯. √- ××4ḁ c̥ ⁿ2 b̥}\nQuadratic 1 2 0"/>
         <p>"Dfns are also required if you want to use "<PrimCode prim=Recur/>". The dfn that contains the "<PrimCode prim=Recur/>" will be the thing that recurs."</p>
         <p>"Here is a recursive fibonacci function."</p>
-        <Editor example="{:(+ ↬-1a ↬-2a)_a <2a} 10"/>
+        <Editor example="{:(+ ↬-1ḁ ↬-2ḁ)_ḁ <2ḁ} 10"/>
         <p>"It is an error to access a dfn's argument outside of the dfn. This is only possible if you smuggle out the argument reference inside a function."</p>
-        <Editor example=":{(a)}5"/>
+        <Editor example=":{(ḁ)}5"/>
         <p>"Dfns that immediately follow a modifier are called as the modifier's function."</p>
-        <Editor example="\\{-a ×a b} 1_2_3_4_5"/>
+        <Editor example="\\{-ḁ×ḁb̥} 1_2_3_4_5"/>
 
         <h2 id="format-strings">"Format Strings"</h2>
         <p>"Prefixing a string with "<code>"$"</code>", creates a format string. A format string is a function that, like a dfn, is called immediately. It takes an argument for each "<code>"_"</code>" in the string and replaces it with the stringified version."</p>
@@ -496,7 +500,7 @@ fn TutorialFunctions() -> impl IntoView {
         <p>"If you need to use a literal "<code>"_"</code>", you can escape them with "<code>"\\"</code>"."</p>
         <Editor example="$\"\\__\\_\" 27"/>
         <p>"Multi-line strings are implicitly format strings."</p>
-        <Editor example="{a b +a b}1 2\nprint $ Do you know what _ + _ is?\n      $ It's _!"/>
+        <Editor example="{ḁ b̥ +ḁ b̥}1 2\nprint $ Do you know what _ + _ is?\n      $ It's _!"/>
     }
 }
 

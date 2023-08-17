@@ -347,6 +347,8 @@ impl Parser {
                 }
             };
             span.sp(Word::Number(s, n))
+        } else if let Some(arg) = self.next_token_map(Token::as_dfn_arg) {
+            arg.map(Word::DfnArg)
         } else if let Some(c) = self.next_token_map(Token::as_char) {
             c.map(Into::into).map(Word::Char)
         } else if let Some(s) = self.next_token_map(Token::as_string) {

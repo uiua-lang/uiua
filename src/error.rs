@@ -114,13 +114,13 @@ fn format_trace<F: fmt::Write>(f: &mut F, trace: &[TraceFrame]) -> fmt::Result {
     let max_id_length = trace
         .iter()
         .filter(|frame| frame.span != Span::Builtin)
-        .map(|frame| frame.id.to_string().len())
+        .map(|frame| frame.id.to_string().chars().count())
         .max()
         .unwrap_or(0);
     let max_span_length = trace
         .iter()
         .map(|frame| match &frame.span {
-            Span::Code(span) => span.to_string().len(),
+            Span::Code(span) => span.to_string().chars().count(),
             Span::Builtin => 0,
         })
         .max()
@@ -222,7 +222,19 @@ where
             buffer.extend(message.to_string().into_bytes());
         }
     }
-    String::from_utf8_lossy(&buffer).trim().into()
+    let s = String::from_utf8_lossy(&buffer);
+    let s = s.trim();
+    s.lines()
+        .filter(|line| {
+            ![
+                "│",
+                "\u{1b}[38;5;246m│\u{1b}[0m",
+                "\u{1b}[38;5;240m  │\u{1b}[0m",
+            ]
+            .contains(&line.trim())
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 type SourceId = Option<Arc<Path>>;

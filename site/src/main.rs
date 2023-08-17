@@ -191,7 +191,7 @@ pub fn PrimCode(
     #[prop(optional)] hide_docs: bool,
 ) -> impl IntoView {
     let show_name = !glyph_only;
-    let class = prim_class(prim);
+    let span_class = prim_class(prim);
     let symbol = prim.to_string();
     let name = if let Some(name) = prim.name().filter(|name| show_name && symbol != *name) {
         format!(" {}", name)
@@ -215,9 +215,10 @@ pub fn PrimCode(
     if let Some((title, ascii)) = title.as_mut().zip(prim.ascii()) {
         *title = format!("({}) {}", ascii, title);
     }
+    let code_class = if title.is_some() { "prim-code" } else { "" };
     view! {
         <A href=href class="prim-code-a">
-            <code class="prim-code" data-title=title><span class=class>{ symbol }</span>{name}</code>
+            <code class=code_class data-title=title><span class=span_class>{ symbol }</span>{name}</code>
         </A>
     }
 }

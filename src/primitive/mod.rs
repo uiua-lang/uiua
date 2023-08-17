@@ -702,7 +702,6 @@ mod tests {
             if let Some(doc) = prim.doc() {
                 for line in &doc.lines {
                     if let PrimDocLine::Example(ex) = line {
-                        println!("Example: {}", ex.input);
                         if let Err(e) = Uiua::with_native_sys().load_str(&ex.input) {
                             if !ex.should_error {
                                 panic!("\nExample failed: {}\n{}", ex.input, e);

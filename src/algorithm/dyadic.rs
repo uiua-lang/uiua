@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, convert::Infallible, mem::take, sync::Arc};
+use std::{cmp::Ordering, convert::Infallible, iter::repeat, mem::take, sync::Arc};
 
 use crate::{
     array::*,
@@ -377,8 +377,9 @@ impl<T: ArrayValue> Array<T> {
     pub fn uncouple(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
         if self.row_count() != 2 {
             return Err(env.error(format!(
-                "Cannot uncouple array with {} rows",
-                self.row_count()
+                "Cannot uncouple array with {} row{}",
+                self.row_count(),
+                if self.row_count() == 1 { "" } else { "s" }
             )));
         }
         let mut rows = self.into_rows();
@@ -728,18 +729,57 @@ impl<T: ArrayValue> Array<T> {
                 let row_len = self.row_len();
                 let row_count = self.row_count();
                 let abs_taking = taking.unsigned_abs();
+                let mut filled = false;
                 self.data.modify(|data| {
                     if taking >= 0 {
-                        data.truncate(abs_taking * row_len);
-                    } else if abs_taking <= row_count {
-                        *data = take(data)
-                            .into_iter()
-                            .skip((row_count - abs_taking) * row_len)
-                            .collect();
+                        if abs_taking > row_count {
+                            if let Some(fill) = T::get_fill(env) {
+                                filled = true;
+                                data.extend(repeat(fill).take((abs_taking - row_count) * row_len));
+                            } else {
+                                return Err(env.error(format!(
+                                    "Cannot take {} rows from array with {} row{}",
+                                    abs_taking,
+                                    row_count,
+                                    if row_count == 1 { "" } else { "s" }
+                                )));
+                            }
+                        } else {
+                            data.truncate(abs_taking * row_len);
+                        }
+                    } else {
+                        *data = if abs_taking > row_count {
+                            if let Some(fill) = T::get_fill(env) {
+                                filled = true;
+                                repeat(fill)
+                                    .take((abs_taking - row_count) * row_len)
+                                    .chain(take(data))
+                                    .collect()
+                            } else {
+                                return Err(env.error(format!(
+                                    "Cannot take {} rows from array with {} row{}",
+                                    abs_taking,
+                                    row_count,
+                                    if row_count == 1 { "" } else { "s" }
+                                )));
+                            }
+                        } else {
+                            take(data)
+                                .into_iter()
+                                .skip((row_count - abs_taking) * row_len)
+                                .collect()
+                        };
                     }
-                });
+                    Ok(())
+                })?;
                 if let Some(s) = self.shape.get_mut(0) {
-                    *s = (*s).min(abs_taking)
+                    *s = if filled {
+                        abs_taking
+                    } else {
+                        (*s).min(abs_taking)
+                    };
+                } else if filled {
+                    self.shape.push(abs_taking);
                 }
                 self.validate_shape();
                 self
@@ -766,16 +806,51 @@ impl<T: ArrayValue> Array<T> {
                     for row in self.rows().take(abs_taking) {
                         new_rows.push(row.take(sub_index, env)?);
                     }
-                    Array::from_row_arrays(new_rows, env)?
+                    let mut arr = Array::from_row_arrays_infallible(new_rows);
+                    // Extend with fill values if necessary
+                    if abs_taking > arr.row_count() {
+                        if let Some(fill) = T::get_fill(env) {
+                            let row_len = arr.row_len();
+                            arr.data.extend(
+                                repeat(fill).take((abs_taking - arr.row_count()) * row_len),
+                            );
+                        } else {
+                            return Err(env.error(format!(
+                                "Cannot take {} rows from array with {} row{}",
+                                abs_taking,
+                                arr.row_count(),
+                                if arr.row_count() == 1 { "" } else { "s" }
+                            )));
+                        }
+                    }
+                    arr
                 } else {
                     // Take in each row
                     let start = self.row_count().saturating_sub(abs_taking);
                     for row in self.rows().skip(start) {
                         new_rows.push(row.take(sub_index, env)?);
                     }
-                    Array::from_row_arrays(new_rows, env)?
+                    let mut arr = Array::from_row_arrays_infallible(new_rows);
+                    // Prepend with fill values if necessary
+                    if abs_taking > arr.row_count() {
+                        if let Some(fill) = T::get_fill(env) {
+                            let row_len = arr.row_len();
+                            arr.data = repeat(fill)
+                                .take((abs_taking - arr.row_count()) * row_len)
+                                .chain(arr.data)
+                                .collect();
+                        } else {
+                            return Err(env.error(format!(
+                                "Cannot take {} rows from array with {} row{}",
+                                abs_taking,
+                                arr.row_count(),
+                                if arr.row_count() == 1 { "" } else { "s" }
+                            )));
+                        }
+                    }
+                    arr
                 };
-                arr.shape[0] = arr.shape[0].min(abs_taking);
+                arr.shape[0] = abs_taking;
                 arr.validate_shape();
                 arr
             }

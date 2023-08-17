@@ -542,9 +542,10 @@ primitive!(
     /// ex: ↙ 2 ↯3_3⇡9
     /// ex: ↙ ¯2 ↯3_3⇡9
     ///
-    /// Taking more than the length of the array will do nothing.
-    /// ex: ↙ 7 [8 3 9 2 0]
-    /// ex: ↙ ¯5 ↯3_3⇡9
+    /// By default, taking more than the length of the array will throw an error.
+    /// ex! ↙7 [8 3 9 2 0]
+    /// If you would like to fill the excess length with some fill value, use [fill].
+    /// ex: ⍛π↙7 [8 3 9 2 0]
     (2, Take, DyadicArray, ("take", '↙')),
     /// End step of under take
     (3, Untake, Misc),

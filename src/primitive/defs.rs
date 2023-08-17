@@ -474,15 +474,18 @@ primitive!(
     ///
     /// If the arrays have the same [rank], it will append the second array to the first.
     /// ex: ⊂ [1 2] [3 4]
-    ///
-    /// Arrays that do not have equal [shape] suffixes cannot be joined.
-    /// ex! ⊂ [1_2 3_4] [5_6_7 8_9_10]
+    /// ex: ⊂ [1_2 3_4] [5_6 7_8]
     ///
     /// If the arrays have a [rank] difference of 1, then the array with the smaller [rank] will be prepended or appended to the other as a row.
     /// ex: ⊂ 1 [2 3]
     /// ex: ⊂ [1 2] 3
-    /// ex: ⊂ [1_2] [3_4 5_6]
-    /// ex: ⊂ [1_2 3_4] [5_6]
+    /// ex: ⊂ 1_2 [3_4 5_6]
+    /// ex: ⊂ [1_2 3_4] 5_6
+    ///
+    /// By default, arrays that do not have equal [shape] suffixes cannot be joined.
+    /// ex! ⊂ [1_2 3_4] [5_6_7 8_9_10]
+    /// Use [fill] to make their shapes compatible.
+    /// ex: ⍛0⊂ [1_2 3_4] [5_6_7 8_9_10]
     ///
     /// [join]'s glyphs is `⊂` because it kind of looks like a magnet pulling its two arguments together.
     (2, Join, DyadicArray, ("join", '⊂')),
@@ -495,8 +498,10 @@ primitive!(
     /// For arrays, a new array is created with the first array as the first row and the second array as the second row.
     /// ex: ⊟ [1 2 3] [4 5 6]
     ///
-    /// Arrays with different shapes cannot be [couple]ed.
+    /// By default, arrays with different shapes cannot be [couple]ed.
     /// ex! ⊟ [1 2 3] [4 5]
+    /// Use [fill] to make their shapes match
+    /// ex: ⍛∞⊟ [1 2 3] [4 5]
     ///
     /// `first``shape` of the coupled array will *always* be `2`.
     (2, Couple, DyadicArray, ("couple", '⊟')),
@@ -806,6 +811,32 @@ primitive!(
     /// ex: ⍜(↙2)(×10) 1_2_3_4_5
     ([2, 1, 1], Under, OtherModifier, ("under", '⍜')),
     /// Set a fill context
+    ///
+    /// By default, some operations require that arrays have some compatible [shape].
+    /// [fill] allows you to specify a value that will be used to extend the shape of one or both of the operands to make an operation succeed.
+    /// The first argument is the fill value, and the second argument is a function in which the fill value will be used.
+    ///
+    /// [fill] allows you to set default values for [take].
+    /// ex: ⍛0↙7 [8 3 9 2 1]
+    /// ex: ⍛π↙¯6 [1 2 3]
+    /// ex: ⍛42↙4 [1_2_3 4_5_6]
+    ///
+    /// Using [fill] with [couple] will fill both arrays until their shapes match.
+    /// ex: ⍛0⊟ 1 2_3
+    /// ex: ⍛0⊟ 1_2 3_4_5_6
+    /// ex: ⍛0⊟ 1_2_3 [4_5 6_7]
+    ///
+    /// Using [fill] with [join] will fill both arrays until the [join] makes sense.
+    /// ex: ⍛0⊂ 1 [2_3_4 5_6_7]
+    /// ex: ⍛0⊂ [1_2 3_4] 5_6_7
+    ///
+    /// Because array construction is implemented in terms of [couple] and [join], [fill] can be used when building arrays.
+    /// ex: ⍛0[1 2_3 4_5_6]
+    ///
+    /// Many functions, like [scan] and [partition], implicitly build arrays and require compatible shapes.
+    /// [fill] can be used with them as well. In some cases, this prevents the need to use [constant].
+    /// ex: ⍛0\⊂ 1_2_3_4_5
+    /// ex: ⍛' '⊜·≠' '. "No □ needed!"
     ([2, 1], Fill, OtherModifier, ("fill", '⍛')),
     /// Apply a function at a different array depth
     ///

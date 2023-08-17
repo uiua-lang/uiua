@@ -1,8 +1,10 @@
-- Maybe use ~ for formattable dfn args
-- Cache inverses and unders
-- Standardize error messages
+- Use @ for characters
+- Fix empty hovers on PrimCodes
 - Allow fill for pervasive ops
 - Change args/delta to args/outputs
+- Maybe use ~ for formattable dfn args
+- Standardize error messages
+- Cache inverses and unders
 - Under pick
 - Finish tour
 - Docs

@@ -1,4 +1,3 @@
-- Use @ for characters
 - Fix empty hovers on PrimCodes
 - Allow fill for pervasive ops
 - Change args/delta to args/outputs

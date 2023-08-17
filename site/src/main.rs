@@ -133,7 +133,7 @@ pub fn MainPage() -> impl IntoView {
                     <h2>"Rich Primitives"</h2>
                     <p>"Uiua has a lots of built-in functions for all your array manipulation needs. Just a few examples:"</p>
                     <p><PrimCode prim=Partition/>" for splitting arrays by sequential keys:"</p>
-                    <Editor example=r#"⍛' '⊜·≠' '."Oh boy, neat!""#/>
+                    <Editor example=r#"⍛@ ⊜·≠@ ."Oh boy, neat!""#/>
                     <p><PrimCode prim=Select/>" for re-sequencing array items:"</p>
                     <Editor example=r#"⊏ 2_1_3_0_4 "loco!""#/>
                     <p><PrimCode prim=Under/>" for modifiying only part of an array (among other things):"</p>
@@ -179,7 +179,7 @@ pub fn MainPage() -> impl IntoView {
 fn NotFound() -> impl IntoView {
     view! {
         <h1>"Page not found"</h1>
-        <Editor example="$ Where could it be?\n×101⧻⊜≠' '."/>
+        <Editor example="$ Where could it be?\n×101⧻⊜⧻≠@ ."/>
         <h3><A href="/">"Go home"</A></h3>
     }
 }

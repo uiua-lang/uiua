@@ -656,21 +656,22 @@ pub fn Editor<'a>(
         .collect();
 
     // Additional code buttons
-    for (glyph, title) in [
-        ("_", "strand"),
-        ("[]", "array"),
-        ("()", "function"),
-        ("{}", "dfn"),
-        ("¯", "negative\n`"),
-        ("'", "character"),
-        ("\"", "string"),
-        ("←", "binding"),
-        ("#", "comment"),
+    for (glyph, title, class) in [
+        ("_", "strand", "strand-span"),
+        ("[]", "array", ""),
+        ("()", "function", ""),
+        ("{}", "dfn", ""),
+        ("¯", "negative\n`", "number-literal-span"),
+        ("@", "character", "string-literal-span"),
+        ("\"", "string", "string-literal-span"),
+        ("←", "binding", ""),
+        ("#", "comment", "comment-span"),
     ] {
         let onclick = move |_| replace_code(glyph);
+        let class = format!("glyph-button {class}");
         glyph_buttons.push(
             view! {
-                <button class="glyph-button" data-title=title on:click=onclick>{glyph}</button>
+                <button class=class data-title=title on:click=onclick>{glyph}</button>
             }
             .into_view(),
         );
@@ -1055,27 +1056,40 @@ fn set_code_html(id: &str, code: &str) {
             SpanKind::Strand => "strand-span",
         };
 
-        html.push_str(&if let SpanKind::Primitive(prim) = kind {
-            let name = prim.name().unwrap_or_default();
-            if let Some(doc) = prim.doc() {
-                let mut title = format!("{}: {}", name, doc.short_text());
-                if let Some(ascii) = prim.ascii() {
-                    title = format!("({}) {}", ascii, title);
+        html.push_str(&match kind {
+            SpanKind::Primitive(prim) => {
+                let name = prim.name().unwrap_or_default();
+                if let Some(doc) = prim.doc() {
+                    let mut title = format!("{}: {}", name, doc.short_text());
+                    if let Some(ascii) = prim.ascii() {
+                        title = format!("({}) {}", ascii, title);
+                    }
+                    format!(
+                        r#"<span 
+                            class="code-span code-hover {color_class}" 
+                            data-title={title:?}>{text}</span>"#
+                    )
+                } else {
+                    format!(
+                        r#"<span 
+                            class="code-span code-hover {color_class}" 
+                            data-title={name:?}>{text}</span>"#
+                    )
                 }
+            }
+            SpanKind::String => {
+                let title = if text.starts_with('@') {
+                    "character"
+                } else {
+                    "string"
+                };
                 format!(
-                    r#"<span 
-                        class="code-span code-hover {color_class}" 
-                        data-title={title:?}>{text}</span>"#
-                )
-            } else {
-                format!(
-                    r#"<span 
-                        class="code-span code-hover {color_class}" 
-                        data-title={name:?}>{text}</span>"#
+                    r#"<span
+                            class="code-span code-hover {color_class}" 
+                            data-title={title}>{text}</span>"#
                 )
             }
-        } else {
-            format!(r#"<span class="code-span {color_class}">{text}</span>"#)
+            _ => format!(r#"<span class="code-span {color_class}">{text}</span>"#),
         });
 
         end = span.end.char_pos;

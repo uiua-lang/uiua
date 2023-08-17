@@ -107,7 +107,7 @@ primitive!(
     /// This is a very common pattern.
     /// For example, maybe you want to find all the uppercase letters in a string.
     /// ex: $ Characters On uppercase OnLy
-    ///   : ‡×≥'A'∶≤'Z'..
+    ///   : ‡×≥@A∶≤@Z..
     /// Or maybe you want to calculate the averge of a list of numbers.
     /// Here, we get the [length] and the `reduce``add``sum` of the list, then [divide] them.
     /// ex: ÷⧻∶/+. 1_8_2_5
@@ -469,24 +469,24 @@ primitive!(
     /// This is Uiua's primary way to create nested or mixed-type arrays.
     /// Normally, arrays can only be created if their rows have the same shape and type.
     /// [fill] can help you with the shape part, but it is not always wanted, and it can't help with the type part.
-    /// ex: ['a' 3 7_8_9]
+    /// ex! [@a 3 7_8_9]
     /// [constant] turns any array into a function that pushes that array onto the stack.
     /// These functions are just like any other, so they can be put in arrays themselves.
-    /// ex: [□'a' □3 □7_8_9]
+    /// ex: [□@a □3 □7_8_9]
     /// Use [call] to get the values back out.
     /// ex: !□1_2_3
     /// [reduce][call] will unpack an array of constant functions onto the stack.
-    /// ex: /![□'a' □3 □7_8_9]
+    /// ex: /![□@a □3 □7_8_9]
     ///
     /// You would not normally construct arrays like the one above.
     /// The more important use case of [constant] is for jagged or nested data.
     /// If you want to collect unevenly-sized groups from [partition] or [group], without [fill]ing, you must use [constant].
     /// ex: $ Words of different lengths
-    ///   : ⊜□≠' '.
+    ///   : ⊜□≠@ .
     ///
     /// If you want to manipulate the arrays inside a constant function array without removing them, you can use [each][under][call].
     /// ex: $ Reverse these words
-    ///   : ⊜□≠' '.
+    ///   : ⊜□≠@ .
     ///   : ∵⍜!⇌.
     /// This works because [call] [invert]ed is [constant]. For each element, it [call]s the function to get the array out, [reverse]s it, then [constant]s it again.
     (1, Constant, MonadicArray, ("constant", '□')),
@@ -625,7 +625,7 @@ primitive!(
     /// ex: ‡ [1 0 2 1 4] [8 3 9 2 0]
     ///
     /// This can be used as a filter.
-    /// ex: ‡ ≥'a' ."lOWERCASe onLY"
+    /// ex: ‡ ≥@a ."lOWERCASe onLY"
     (2, Replicate, DyadicArray, ("replicate", '‡')),
     /// Find the occurences of one array in another
     ///
@@ -806,7 +806,7 @@ primitive!(
     /// ex: ⊜⧻ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     ///
     /// This can be used to split an array by a delimiter.
-    /// ex: ⊜□ ≠' '. $ Hey there friendo
+    /// ex: ⊜□ ≠@ . $ Hey there friendo
     ///
     /// [partition] is closely related to [group].
     ([1, 1, 2], Partition, DyadicModifier, ("partition", '⊜')),
@@ -866,7 +866,7 @@ primitive!(
     /// Many functions, like [scan] and [partition], implicitly build arrays and require compatible shapes.
     /// [fill] can be used with them as well. In some cases, this prevents the need to use [constant].
     /// ex: ⍛0\⊂ 1_2_3_4_5
-    /// ex: ⍛' '⊜·≠' '. "No □ needed!"
+    /// ex: ⍛' '⊜·≠@ . "No □ needed!"
     ([2, 1], Fill, OtherModifier, ("fill", '⍛')),
     /// Apply a function at a different array depth
     ///
@@ -905,7 +905,7 @@ primitive!(
     ///
     /// Normal runtime errors become strings.
     /// ex: ⍣(+1 2)$"Error: _"
-    /// ex: ⍣(+'a' 'b')$"Error: _"
+    /// ex: ⍣(+@a @b)$"Error: _"
     ///
     /// Errors thrown with [assert] can be any value.
     /// ex: ⍣(⍤5 1 3)(×5)

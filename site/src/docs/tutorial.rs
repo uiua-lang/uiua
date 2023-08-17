@@ -127,7 +127,7 @@ fn TutorialBasic() -> impl IntoView {
         <p><PrimCode prim=Primitive::Mul glyph_only=true/>", of course, multiplies the two values instead."</p>
         <Editor examples={&["+ ", "1 ", "× ", "2 ", "3"]} help={&["", "Try the arrows to see how the stack changes with each operation."]}/>
         <p>"In the editor, items that end up on the "<em>"top"</em>" of the stack are shown at the "<em>"bottom"</em>" of the output. This is so that consecutive lines of code show their outputs in the correct order."</p>
-        <Editor example="5\n+1 2\n\"Hello, World!\"\n+1 'a'"/>
+        <Editor example="5\n+1 2\n\"Hello, World!\"\n+1 @a"/>
         <p>"Operations can span multiple lines. Every line uses the same stack!"</p>
         <Editor examples={&["1 2 ", "+ ", "5 ", "×"]} progress_lines=true/>
 
@@ -342,11 +342,11 @@ fn TutorialArrays() -> impl IntoView {
         <p>"For curious array afficionados, Uiua uses an array model resembling "<a href="https://aplwiki.com/wiki/Box">"J's Boxed array model"</a>"."</p>
         <p>"All arrays are flat and homogenous. Arrays always have a rectangular shape and (mostly) cannot be nested. Different types of data, like numbers and characters, cannot be mixed in the same array."</p>
         <p>"However, there is an escape hatch for when you really want jagged or mixed-type arrays. In J, an irregular or non-homogenous array is constructed as an array of "<em>"boxes"</em>". In Uiua, it is a normal array of functions."</p>
-        <Editor example="['a' 1 [7 8 9]]"/>
+        <Editor example="[@a 1 [7 8 9]]"/>
         <p>"By using "<PrimCode prim=Constant/>", we can turn any value into a function that pushes that value onto the stack. We can then put these functions into an array like any other."</p>
-        <Editor example="[□'a' □1 □[7 8 9]]"/>
+        <Editor example="[□@a □1 □[7 8 9]]"/>
         <p>"To get the values back on the stack, we can simply use "<PrimCode prim=Reduce/><PrimCode prim=Call/>"."</p>
-        <Editor example="/![□'a' □1 □[7 8 9]]"/>
+        <Editor example="/![□@a □1 □[7 8 9]]"/>
         <p>"For more about working with constant function arrays, see "<PrimCode prim=Constant/>"'s documentation."</p>
     }
 }
@@ -376,9 +376,11 @@ fn TutorialTypes() -> impl IntoView {
 
         <h2 id="characters">"Characters"</h2>
         <p>"Characters are represented as 32-bit Unicode codepoints."</p>
-        <p>"Character literals, delimited by "<code>"'"</code>"s, create "<PrimCode prim=Rank/><code>"0"</code>" character arrays."</p>
-        <Editor example="'a' 'b'"/>
-        <Editor example="['u' 'i' 'u' 'a']"/>
+        <p>"Character literals, denoted with a preceding "<code>"@"</code>", create "<PrimCode prim=Rank/><code>"0"</code>" character arrays."</p>
+        <Editor example="@a @b"/>
+        <Editor example="[@u @i @u @a]"/>
+        <p>"Characters like newline or null need to be escaped with "<code>"\\"</code>", but a space does not."</p>
+        <Editor example=r#"[@\r @\0 @ ]"#/>
         <p>"String literals, delimited by "<code>"\""</code>"s, create "<PrimCode prim=Rank/><code>"1"</code>" character arrays."</p>
         <Editor example="\"Hello, World!\""/>
         <p>"You can make strings span multiple lines with a "<code>"$"</code>" followed by a space on each line."</p>
@@ -394,9 +396,9 @@ fn TutorialTypes() -> impl IntoView {
         <p>"You can "<PrimCode prim=Sub/>" a "<span class="number-literal-span">"number"</span>" from a character to get another character."</p>
         <p>"You can "<PrimCode prim=Sub/>" two "<span class="string-literal-span">"characters"</span>" to get a "<span class="number-literal-span">"number"</span>"."</p>
         <p><em>"No"</em>" other arithmetic operations can be done on "<span class="string-literal-span">"characters"</span>"."</p>
-        <Editor example="+1 'a'"/>
-        <Editor example="-'a' 'z'"/>
-        <Editor example="+'a' 'b'"/>
+        <Editor example="+1 @a"/>
+        <Editor example="-@a @z"/>
+        <Editor example="+@a @b"/>
 
         <h2 id="functions">"Functions"</h2>
         <p>"Functions are usually used as scalars, but they are still arrays. Most array operations that work on number and character arrays work on arrays of functions as well."</p>

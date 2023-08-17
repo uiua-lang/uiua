@@ -60,7 +60,9 @@ impl GridFmt for f64 {
 
 impl GridFmt for char {
     fn fmt_grid(&self) -> Grid {
-        vec![format!("{self:?}").chars().collect()]
+        let formatted = format!("{self:?}");
+        let formatted = &formatted[1..formatted.len() - 1];
+        vec![once('@').chain(formatted.chars()).collect()]
     }
 }
 

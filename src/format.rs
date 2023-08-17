@@ -123,7 +123,12 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig) {
         Word::Number(_, n) => {
             output.push_str(&n.grid_string());
         }
-        Word::Char(c) => output.push_str(&format!("{:?}", c)),
+        Word::Char(c) => {
+            let formatted = format!("{c:?}");
+            let formatted = &formatted[1..formatted.len() - 1];
+            output.push('@');
+            output.push_str(formatted);
+        }
         Word::String(s) => output.push_str(&format!("{:?}", s)),
         Word::FormatString(_) => output.push_str(word.span.as_str()),
         Word::MultilineString(lines) => {

@@ -479,9 +479,9 @@ impl Lexer {
                     self.end(Comment, start)
                 }
                 // Characters
-                '\'' => {
+                '@' => {
                     let mut escaped = false;
-                    let char = match self.character(&mut escaped, Some('\'')) {
+                    let char = match self.character(&mut escaped, None) {
                         Ok(Some(c)) => c,
                         Ok(None) => {
                             self.errors
@@ -494,12 +494,6 @@ impl Lexer {
                             continue;
                         }
                     };
-                    if !self.next_char_exact('\'') {
-                        self.errors.push(
-                            self.end_span(start)
-                                .sp(LexError::ExpectedCharacter(Some('\''))),
-                        );
-                    }
                     self.end(Char(char), start)
                 }
                 // Strings

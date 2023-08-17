@@ -1,4 +1,3 @@
-- Change args/delta to args/outputs
 - Maybe use ~ for formattable dfn args
 - Standardize error messages
 - Cache inverses and unders

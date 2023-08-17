@@ -59,12 +59,10 @@ macro_rules! primitive {
                     _ => None
                 }
             }
-            #[allow(unreachable_patterns)]
-            pub fn delta(&self) -> Option<i8> {
+            pub fn outputs(&self) -> Option<u8> {
                 match self {
                     $($($(Primitive::$variant => $delta.into(),)?)?)*
-                    $($($(Primitive::$variant => (1 - $args).into(),)?)?)*
-                    Primitive::Sys(op) => op.delta(),
+                    Primitive::Sys(op) => Some(op.outputs()),
                     _ => Some(1)
                 }
             }
@@ -93,11 +91,11 @@ primitive!(
     /// This can be used to make a monadic left-hook, such as in this palindrome checker:
     /// ex: ≅⇌. "friend"
     /// ex: ≅⇌. "racecar"
-    (1(1), Dup, Stack, ("duplicate", '.')),
+    (1(2), Dup, Stack, ("duplicate", '.')),
     /// Duplicate the second-to-top value to the top of the stack
     ///
     /// ex: [, 1 2 3]
-    (2(1), Over, Stack, ("over", ',')),
+    (2(3), Over, Stack, ("over", ',')),
     /// Swap the top two values on the stack
     ///
     /// ex: [∶ 1 2 3 4]
@@ -111,9 +109,9 @@ primitive!(
     /// Or maybe you want to calculate the averge of a list of numbers.
     /// Here, we get the [length] and the `reduce``add``sum` of the list, then [divide] them.
     /// ex: ÷⧻∶/+. 1_8_2_5
-    (2(0), Flip, Stack, ("flip", AsciiToken::Colon, '∶')),
+    (2(2), Flip, Stack, ("flip", AsciiToken::Colon, '∶')),
     /// Pop the top value off the stack
-    (1(-1), Pop, Stack, ("pop", ';')),
+    (1(0), Pop, Stack, ("pop", ';')),
     /// Do nothing
     ///
     /// While this may seem useless, one way to use it is to pass it to [reduce], which will put all of an array's values on the stack.
@@ -530,7 +528,7 @@ primitive!(
     /// `first``shape` of the coupled array will *always* be `2`.
     (2, Couple, DyadicArray, ("couple", '⊟')),
     /// Split an array into two arrays
-    (1(1), Uncouple, MonadicArray),
+    (1(2), Uncouple, MonadicArray),
     /// Check if two arrays are exactly the same
     ///
     /// ex: ≅ 1_2_3 [1 2 3]
@@ -991,7 +989,7 @@ primitive!(
     ///
     /// ex: /(⎋>10.+) ⇌⇡40  # Break when the sum exceeds 10
     /// ex: ⍥(⎋>100.×2)∞ 1  # Break when the product exceeds 100
-    (1(-1), Break, Control, ("break", '⎋')),
+    (1(0), Break, Control, ("break", '⎋')),
     /// Call the current dfn recursively
     ///
     /// Only dfns can be recurred in.
@@ -1032,7 +1030,7 @@ primitive!(
     ///
     /// Use [multiply] and [floor] to generate a random integer in a range.
     /// ex: [;⍥(∶⌊*10∶gen)5 0]
-    (1(1), Gen, Misc, "gen"),
+    (1(2), Gen, Misc, "gen"),
     /// Extract a named function from a module
     ///
     /// Can be used after [Import].

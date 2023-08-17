@@ -13,7 +13,7 @@ use parking_lot::Mutex;
 
 use crate::{
     ast::*,
-    check::instrs_stack_delta,
+    check::instrs_args_outputs,
     function::*,
     lex::{CodeSpan, Sp, Span},
     parse::parse,
@@ -304,7 +304,7 @@ backtrace:
     }
     fn binding(&mut self, binding: Binding) -> UiuaResult {
         let instrs = self.compile_words(binding.words)?;
-        let mut val = match instrs_stack_delta(&instrs) {
+        let mut val = match instrs_args_outputs(&instrs) {
             Some((n, _)) if n <= self.stack.len() => {
                 self.exec_global_instrs(instrs)?;
                 self.stack.pop().unwrap_or_default()
@@ -373,8 +373,8 @@ backtrace:
                     FunctionId::Anonymous(word.span.clone()),
                     Vec::new(),
                     FunctionKind::Dynamic {
-                        inputs: frags.len() as u8 - 1,
-                        delta: 1 - frags.len() as i8,
+                        args: frags.len() as u8 - 1,
+                        outputs: 1,
                         f: Arc::new(move |env| {
                             let mut formatted = String::new();
                             for (i, frag) in frags.iter().enumerate() {
@@ -400,8 +400,8 @@ backtrace:
                     FunctionId::Anonymous(word.span.clone()),
                     Vec::new(),
                     FunctionKind::Dynamic {
-                        inputs: lines.iter().map(|l| l.value.len() as u8 - 1).sum(),
-                        delta: 1 - lines.len() as i8,
+                        args: lines.iter().map(|l| l.value.len() as u8 - 1).sum(),
+                        outputs: 1,
                         f: Arc::new(move |env| {
                             let mut formatted = String::new();
                             let mut i = 0;

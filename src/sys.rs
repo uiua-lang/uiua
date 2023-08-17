@@ -39,7 +39,7 @@ macro_rules! sys_op {
     ($(
         $(#[doc = $doc:literal])*
         (
-            $args:literal$(($delta:expr))?,
+            $args:literal$(($outputs:expr))?,
             $variant:ident, $name:literal
         )
     ),* $(,)?) => {
@@ -63,10 +63,10 @@ macro_rules! sys_op {
                 }
             }
             #[allow(unreachable_patterns)]
-            pub fn delta(&self) -> Option<i8> {
+            pub fn outputs(&self) -> u8 {
                 match self {
-                    $($(SysOp::$variant => $delta.into(),)?)*
-                    $(SysOp::$variant => (1 - $args as i8).into(),)*
+                    $($(SysOp::$variant => $outputs.into(),)?)*
+                    _ => 1
                 }
             }
             pub fn doc(&self) -> Option<&'static PrimDoc> {
@@ -87,11 +87,11 @@ macro_rules! sys_op {
 
 sys_op! {
     /// Print a nicely formatted representation of a value to stdout
-    (1(-1), Show, "show"),
+    (1(0), Show, "show"),
     /// Print a value to stdout
-    (1(-1), Prin, "prin"),
+    (1(0), Prin, "prin"),
     /// Print a value to stdout followed by a newline
-    (1(-1), Print, "print"),
+    (1(0), Print, "print"),
     /// Read a line from stdin
     (0, ScanLine, "scanline"),
     /// Get the command line arguments
@@ -167,7 +167,7 @@ sys_op! {
     /// A length 2 last axis is a grayscale image with an alpha channel.
     /// A length 3 last axis is an RGB image.
     /// A length 4 last axis is an RGB image with an alpha channel.
-    (1(-1), ImShow, "imshow"),
+    (1(0), ImShow, "imshow"),
     /// Play some audio
     ///
     /// The audio must be a rank 1 or 2 numeric array.
@@ -177,12 +177,12 @@ sys_op! {
     ///
     /// The samples must be between -1 and 1.
     /// The sample rate is 44100 Hz.
-    (1(-1), AudioPlay, "audioplay"),
+    (1(0), AudioPlay, "audioplay"),
     /// Sleep for n milliseconds
     ///
     /// On the web, this example will hang for 2 seconds.
     /// ex: rand sleep 2000
-    (1(-1), Sleep, "sleep"),
+    (1(0), Sleep, "sleep"),
     (1, TcpListen, "tcplisten"),
     (1, TcpAccept, "tcpaccept"),
     (1, TcpConnect, "tcpconnect"),

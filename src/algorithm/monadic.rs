@@ -48,7 +48,6 @@ impl Value {
 }
 
 fn range(shape: &[usize]) -> Vec<f64> {
-    println!("range: {:?}", shape);
     if shape.is_empty() {
         return vec![0.0];
     }

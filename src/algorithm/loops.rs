@@ -92,7 +92,7 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
 }
 
 fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
-    match f.args_delta() {
+    match f.args_outputs() {
         Some((0 | 1, _)) => {
             for row in xs.into_rows_rev() {
                 env.push(row);
@@ -241,7 +241,7 @@ fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
 pub fn each(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(1)?;
-    let (args, _) = f.args_delta().unwrap_or((1, 0));
+    let (args, _) = f.args_outputs().unwrap_or((1, 0));
     match args {
         0 => Err(env.error("each's function must take at least one argument")),
         1 => {
@@ -336,7 +336,7 @@ fn eachn(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
 pub fn rows(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(1)?;
-    let (args, _) = f.args_delta().unwrap_or((1, 0));
+    let (args, _) = f.args_outputs().unwrap_or((1, 1));
     match args {
         0 => Err(env.error("rows' function must take at least one argument")),
         1 => {
@@ -895,7 +895,7 @@ where
     G::IntoIter: ExactSizeIterator,
 {
     let mut groups = groups.into_iter();
-    match f.args_delta() {
+    match f.args_outputs() {
         Some((0 | 1, _)) | None => {
             let mut rows = Vec::with_capacity(groups.len());
             for group in groups {

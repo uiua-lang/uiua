@@ -31,9 +31,9 @@ impl fmt::Debug for Value {
 }
 
 impl Value {
-    pub fn args_delta(&self) -> Option<(usize, isize)> {
+    pub fn args_outputs(&self) -> Option<(usize, usize)> {
         if let Some(f) = self.as_func_array().and_then(Array::as_scalar) {
-            f.args_delta()
+            f.args_outputs()
         } else {
             Some((0, 1))
         }

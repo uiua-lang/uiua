@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use crate::{
-    check::instrs_stack_delta,
+    check::instrs_args_outputs,
     function::{Function, FunctionKind, Instr},
     primitive::Primitive,
 };
@@ -346,7 +346,7 @@ impl InvertPattern for Val {
         }
         for len in (1..input.len()).rev() {
             let chunk = &input[..len];
-            if instrs_stack_delta(chunk) == Some((0, 1)) {
+            if instrs_args_outputs(chunk) == Some((0, 1)) {
                 let res = chunk.to_vec();
                 *input = &input[len..];
                 return Some(res);
@@ -358,7 +358,7 @@ impl InvertPattern for Val {
                 Some(vec![instr.clone()])
             }
             Some(instr @ Instr::Prim(prim, _))
-                if prim.args() == Some(0) && prim.delta() == Some(0) =>
+                if prim.args() == Some(0) && prim.outputs() == Some(0) =>
             {
                 *input = &input[1..];
                 Some(vec![instr.clone()])

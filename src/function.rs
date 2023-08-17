@@ -3,7 +3,7 @@ use std::{cmp::Ordering, fmt, sync::Arc};
 use thread_local::ThreadLocal;
 
 use crate::{
-    check::instrs_stack_delta, lex::CodeSpan, primitive::Primitive, value::Value, Ident, Uiua,
+    check::instrs_args_outputs, lex::CodeSpan, primitive::Primitive, value::Value, Ident, Uiua,
     UiuaResult,
 };
 
@@ -47,7 +47,7 @@ pub struct Function {
     pub id: FunctionId,
     pub instrs: Vec<Instr>,
     pub kind: FunctionKind,
-    ad_cache: Arc<ThreadLocal<Option<(usize, isize)>>>,
+    ad_cache: Arc<ThreadLocal<Option<(usize, usize)>>>,
 }
 
 impl Function {
@@ -67,8 +67,8 @@ pub enum FunctionKind {
     Dfn(u8),
     Dynamic {
         f: Arc<dyn Fn(&mut Uiua) -> UiuaResult + Send + Sync>,
-        inputs: u8,
-        delta: i8,
+        args: u8,
+        outputs: u8,
     },
 }
 
@@ -156,18 +156,17 @@ impl Function {
         }
         s
     }
-    /// Get how many arguments this function takes and by how much it changes the height of the stack.
+    /// Get how many arguments this function pops off the stack and how many it pushes.
     /// Returns `None` if either of these values are dynamic.
-    pub fn args_delta(&self) -> Option<(usize, isize)> {
+    pub fn args_outputs(&self) -> Option<(usize, usize)> {
         *self.ad_cache.get_or(|| match self.kind {
-            FunctionKind::Normal => instrs_stack_delta(&self.instrs),
+            FunctionKind::Normal => instrs_args_outputs(&self.instrs),
             FunctionKind::Dfn(n) => {
-                let (mut args, mut delta) = instrs_stack_delta(&self.instrs)?;
+                let (mut args, outputs) = instrs_args_outputs(&self.instrs)?;
                 args += n as usize;
-                delta -= n as isize;
-                Some((args, delta))
+                Some((args, outputs))
             }
-            FunctionKind::Dynamic { inputs, delta, .. } => Some((inputs as usize, delta as isize)),
+            FunctionKind::Dynamic { args, outputs, .. } => Some((args as usize, outputs as usize)),
         })
     }
     pub fn constant(value: impl Into<Value>) -> Self {

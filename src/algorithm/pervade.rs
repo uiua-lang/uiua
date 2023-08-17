@@ -6,6 +6,8 @@ use std::{
 
 use crate::{array::*, Uiua, UiuaError, UiuaResult};
 
+use super::max_shape;
+
 #[allow(clippy::len_without_is_empty)]
 pub trait Arrayish {
     type Value: ArrayValue;
@@ -77,12 +79,78 @@ pub fn bin_pervade<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
     env: &Uiua,
     f: impl Fn(A, B) -> C + Copy,
 ) -> UiuaResult<Array<C>> {
+    let mut a = a;
+    let mut b = b;
+    let mut reshaped_a;
+    let mut reshaped_b;
     if !a.shape_prefixes_match(&b) {
-        return Err(env.error(format!(
-            "Shapes {} and {} do not match",
-            a.format_shape(),
-            b.format_shape()
-        )));
+        match a.row_count().cmp(&b.row_count()) {
+            Ordering::Less => {
+                if let Some(fill) = A::get_fill(env) {
+                    let mut target_shape = a.shape().to_vec();
+                    target_shape[0] = b.row_count();
+                    reshaped_a = a.clone();
+                    reshaped_a.fill_to_shape(&target_shape, fill);
+                    a = &reshaped_a;
+                }
+            }
+            Ordering::Greater => {
+                if let Some(fill) = B::get_fill(env) {
+                    let mut target_shape = b.shape().to_vec();
+                    target_shape[0] = a.row_count();
+                    reshaped_b = b.clone();
+                    reshaped_b.fill_to_shape(&target_shape, fill);
+                    b = &reshaped_b;
+                }
+            }
+            Ordering::Equal => {}
+        }
+        if !a.shape_prefixes_match(&b) {
+            match a.rank().cmp(&b.rank()) {
+                Ordering::Less => {
+                    if let Some(fill) = A::get_fill(env) {
+                        let mut target_shape = a.shape.clone();
+                        target_shape.insert(0, b.row_count());
+                        reshaped_a = a.clone();
+                        reshaped_a.fill_to_shape(&target_shape, fill);
+                        a = &reshaped_a;
+                    }
+                }
+                Ordering::Greater => {
+                    if let Some(fill) = B::get_fill(env) {
+                        let mut target_shape = b.shape.clone();
+                        target_shape.insert(0, a.row_count());
+                        reshaped_b = b.clone();
+                        reshaped_b.fill_to_shape(&target_shape, fill);
+                        b = &reshaped_b;
+                    }
+                }
+                Ordering::Equal => {
+                    let target_shape = max_shape(a.shape(), b.shape());
+                    if a.shape() != target_shape {
+                        if let Some(fill) = A::get_fill(env) {
+                            reshaped_a = a.clone();
+                            reshaped_a.fill_to_shape(&target_shape, fill);
+                            a = &reshaped_a;
+                        }
+                    }
+                    if b.shape() != target_shape {
+                        if let Some(fill) = B::get_fill(env) {
+                            reshaped_b = b.clone();
+                            reshaped_b.fill_to_shape(&target_shape, fill);
+                            b = &reshaped_b;
+                        }
+                    }
+                }
+            }
+            if !a.shape_prefixes_match(&b) {
+                return Err(env.error(format!(
+                    "Shapes {} and {} do not match",
+                    a.format_shape(),
+                    b.format_shape()
+                )));
+            }
+        }
     }
     let shape = a.shape().max(b.shape()).to_vec();
     let mut data = Vec::with_capacity(a.flat_len().max(b.flat_len()));
@@ -99,7 +167,7 @@ fn bin_pervade_recursive<A: Arrayish, B: Arrayish, C: ArrayValue>(
     match (a.shape(), b.shape()) {
         ([], []) => c.push(f(a.data()[0].clone(), b.data()[0].clone())),
         (ash, bsh) if ash == bsh => {
-            for (a, b) in a.data().iter().zip(b.data().iter()) {
+            for (a, b) in a.data().iter().zip(b.data()) {
                 c.push(f(a.clone(), b.clone()));
             }
         }

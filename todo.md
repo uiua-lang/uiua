@@ -1,4 +1,3 @@
-- Allow fill for pervasive ops
 - Change args/delta to args/outputs
 - Maybe use ~ for formattable dfn args
 - Standardize error messages

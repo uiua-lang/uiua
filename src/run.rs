@@ -339,6 +339,7 @@ backtrace:
         Ok(())
     }
     fn push_instr(&mut self, instr: Instr) {
+        use Instr::*;
         use Primitive::*;
         let instrs = self.new_functions.last_mut().unwrap();
         // Optimizations
@@ -359,6 +360,29 @@ backtrace:
             ([.., Instr::Prim(top @ Shape, _)], Instr::Prim(Len, _)) => *top = Rank,
             // First reverse = last
             ([.., Instr::Prim(top @ Reverse, _)], Instr::Prim(First, _)) => *top = Last,
+            // Under couple
+            ([.., Push(g), Push(f)], instr) => {
+                if let (Prim(Under, span), Some(((Couple, _), g_func))) =
+                    (&instr, f.as_primitive().zip(g.as_function()))
+                {
+                    if let Some((1, 1)) = g_func.args_outputs() {
+                        dbg!();
+                        let g = g.clone();
+                        instrs.pop();
+                        instrs.pop();
+                        instrs.extend([
+                            Prim(Flip, *span),
+                            Push(g.clone()),
+                            Instr::Call(*span),
+                            Prim(Flip, *span),
+                            Push(g),
+                            Instr::Call(*span),
+                        ]);
+                        return;
+                    }
+                }
+                instrs.push(instr);
+            }
             (_, instr) => instrs.push(instr),
         }
     }

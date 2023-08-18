@@ -137,7 +137,7 @@ pub fn MainPage() -> impl IntoView {
                     <p><PrimCode prim=Select/>" for re-sequencing array items:"</p>
                     <Editor example=r#"⊏ 2_1_3_0_4 "loco!""#/>
                     <p><PrimCode prim=Under/>" for modifiying only part of an array (among other things):"</p>
-                    <Editor example="⍜(↙2)(×10) 1_2_3_4_5"/>
+                    <Editor example="⍜'↙2'×10 1_2_3_4_5"/>
                 </div>
                 <div>
                     <h2>"Syntactic Simplicity"</h2>
@@ -162,7 +162,7 @@ pub fn MainPage() -> impl IntoView {
                 <div>
                     <h2>"Multimedia Output"</h2>
                     <p>"Uiua has built-in facilities for generating images and audio. Just make arrays of the pixel data or audio samples!"</p>
-                    <Editor example="⊞(<+⇡3○/·÷30⊟∶)⇡100⇡300"/>
+                    <Editor example="⊞(<+⇡3○⍜⊟'÷30∶)⇡100⇡300"/>
                     <Editor example="÷3/+○⊞×⊟×1.5.220×τ÷∶⇡.44100"/>
                     <p>"The Uiua logo was made with Uiua! Check example 4 at the top of the page."</p>
                 </div>

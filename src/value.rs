@@ -68,6 +68,9 @@ impl Value {
             _ => None,
         }
     }
+    pub fn as_function(&self) -> Option<&Arc<Function>> {
+        self.as_func_array().and_then(Array::as_scalar)
+    }
     pub fn into_rows(self) -> Box<dyn Iterator<Item = Self>> {
         match self {
             Self::Num(array) => Box::new(array.into_rows().map(Value::from)),

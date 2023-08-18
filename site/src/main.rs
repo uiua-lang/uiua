@@ -2,7 +2,11 @@ mod backend;
 mod docs;
 mod editor;
 mod examples;
+mod other;
 mod pad;
+mod primitive;
+mod tour;
+mod tutorial;
 
 use leptos::*;
 use leptos_router::*;
@@ -10,11 +14,7 @@ use uiua::primitive::{PrimClass, Primitive};
 use wasm_bindgen::JsCast;
 use web_sys::HtmlAudioElement;
 
-use crate::{
-    docs::{other::Install, tour::Tour, *},
-    editor::*,
-    pad::*,
-};
+use crate::{docs::*, editor::*, other::*, pad::*, tour::*};
 
 pub fn main() {
     console_error_panic_hook::set_once();

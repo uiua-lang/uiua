@@ -1,8 +1,3 @@
-pub mod other;
-mod primitive;
-pub mod tour;
-mod tutorial;
-
 use std::{collections::HashSet, iter::once};
 
 use enum_iterator::all;
@@ -13,11 +8,14 @@ use uiua::primitive::{PrimClass, Primitive};
 use wasm_bindgen::JsCast;
 use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoViewOptions};
 
-use crate::{element, PrimCode};
-use other::*;
-use primitive::*;
-use tour::*;
-use tutorial::*;
+use crate::{
+    element,
+    other::{Design, Install, Technical},
+    primitive::PrimDocs,
+    tour::Tour,
+    tutorial::{Tutorial, TutorialPage},
+    PrimCode,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DocsPage {

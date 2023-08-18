@@ -137,6 +137,9 @@ impl Function {
             ad_cache: ThreadLocal::new().into(),
         }
     }
+    pub fn into_inner(f: Arc<Self>) -> Self {
+        Arc::try_unwrap(f).unwrap_or_else(|f| (*f).clone())
+    }
     pub(crate) fn format_inner(&self) -> String {
         if let FunctionId::Named(name) = &self.id {
             return name.as_str().into();

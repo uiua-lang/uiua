@@ -587,6 +587,17 @@ macro_rules! value_un_impl {
                     $(Self::$variant(array) => {
                         (array.shape, array.data.into_iter().map($name::$f).collect::<Vec<_>>()).into()
                     },)*
+                    Value::Func(mut array) => {
+                        let mut new_data = Vec::with_capacity(array.flat_len());
+                        for f in array.data {
+                            match Function::into_inner(f).into_constant() {
+                                Ok(value) => new_data.push(Arc::new(Function::constant(value.$name(env)?))),
+                                Err(_) => return Err($name::error("function", env)),
+                            }
+                        }
+                        array.data = new_data.into();
+                        array.into()
+                    }
                     val => return Err($name::error(val.type_name(), env))
                 })
             }

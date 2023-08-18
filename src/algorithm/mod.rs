@@ -1,3 +1,7 @@
+use std::convert::Infallible;
+
+use crate::{array::ArrayValue, Uiua, UiuaError};
+
 mod dyadic;
 pub(crate) mod invert;
 pub mod loops;
@@ -16,4 +20,32 @@ fn max_shape(a: &[usize], b: &[usize]) -> Vec<usize> {
         }
     }
     new_shape
+}
+
+pub trait ErrorContext: Copy {
+    type Error;
+    fn error(self, msg: impl ToString) -> Self::Error;
+    fn env(&self) -> Option<&Uiua> {
+        None
+    }
+    fn fill<T: ArrayValue>(self) -> Option<T> {
+        self.env().and_then(T::get_fill)
+    }
+}
+
+impl ErrorContext for &Uiua {
+    type Error = UiuaError;
+    fn error(self, msg: impl ToString) -> Self::Error {
+        self.error(msg)
+    }
+    fn env(&self) -> Option<&Uiua> {
+        Some(self)
+    }
+}
+
+impl ErrorContext for () {
+    type Error = Infallible;
+    fn error(self, msg: impl ToString) -> Self::Error {
+        panic!("{}", msg.to_string())
+    }
 }

@@ -358,6 +358,14 @@ impl Function {
             ),
         }
     }
+    pub fn signature_compatible_with(&self, other: &Self) -> Option<bool> {
+        match (self.args_outputs(), other.args_outputs()) {
+            (Some((a, b)), Some((c, d))) => {
+                Some(a as isize - b as isize == c as isize - d as isize)
+            }
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

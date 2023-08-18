@@ -6,6 +6,12 @@ use crate::{
 
 /// Count the number of arguments and the stack Δ of a function.
 pub(crate) fn instrs_args_outputs(instrs: &[Instr]) -> Option<(usize, usize)> {
+    if let [Instr::Prim(prim, _)] = instrs {
+        if let Some((a, o)) = prim.args().zip(prim.outputs()) {
+            return Some((a as usize, o as usize));
+        }
+    }
+
     const START_HEIGHT: usize = 16;
     let mut env = VirtualEnv {
         stack: vec![BasicValue::Other; START_HEIGHT],

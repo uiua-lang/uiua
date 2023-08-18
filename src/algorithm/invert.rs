@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, cell::RefCell, collections::HashMap};
 
 use crate::{
     check::instrs_args_outputs,
@@ -31,10 +31,18 @@ impl Function {
 }
 
 pub(crate) fn invert_instrs(instrs: &[Instr]) -> Option<Vec<Instr>> {
-    // println!("invert {:?}", instrs);
     if instrs.is_empty() {
         return Some(Vec::new());
     }
+
+    thread_local! {
+        static INVERT_CACHE: RefCell<HashMap<Vec<Instr>, Option<Vec<Instr>>>> = RefCell::new(HashMap::new());
+    }
+    if let Some(inverted) = INVERT_CACHE.with(|cache| cache.borrow().get(instrs).cloned()) {
+        return inverted;
+    }
+
+    // println!("invert {:?}", instrs);
     let mut inverted = Vec::new();
     let mut start = instrs.len() - 1;
     let mut end = instrs.len();
@@ -54,6 +62,11 @@ pub(crate) fn invert_instrs(instrs: &[Instr]) -> Option<Vec<Instr>> {
         }
     }
     // println!("inverted {:?} to {:?}", instrs, inverted);
+    INVERT_CACHE.with(|cache| {
+        cache
+            .borrow_mut()
+            .insert(instrs.to_vec(), Some(inverted.clone()))
+    });
     Some(inverted)
 }
 
@@ -98,10 +111,20 @@ fn invert_instr_fragment(instrs: &[Instr]) -> Option<Vec<Instr>> {
     None
 }
 
-fn under_instrs(instrs: &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
+type Under = (Vec<Instr>, Vec<Instr>);
+
+fn under_instrs(instrs: &[Instr]) -> Option<Under> {
     if instrs.is_empty() {
         return Some((Vec::new(), Vec::new()));
     }
+
+    thread_local! {
+        static UNDER_CACHE: RefCell<HashMap<Vec<Instr>, Option<Under>>> = RefCell::new(HashMap::new());
+    }
+    if let Some(under) = UNDER_CACHE.with(|cache| cache.borrow().get(instrs).cloned()) {
+        return under;
+    }
+
     let mut befores = Vec::new();
     let mut afters = Vec::new();
     let mut start = 0;
@@ -126,7 +149,13 @@ fn under_instrs(instrs: &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
         }
     }
     // println!("under {:?} to {:?} {:?}", instrs, befores, afters);
-    Some((befores, afters))
+    let under = (befores, afters);
+    UNDER_CACHE.with(|cache| {
+        cache
+            .borrow_mut()
+            .insert(instrs.to_vec(), Some(under.clone()))
+    });
+    Some(under)
 }
 
 fn under_instr_fragment(instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr>)> {
@@ -161,7 +190,7 @@ trait InvertPattern {
 }
 
 trait UnderPattern {
-    fn under_extract(&self, input: &mut &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)>;
+    fn under_extract(&self, input: &mut &[Instr]) -> Option<Under>;
 }
 
 impl<A: InvertPattern, B: InvertPattern> InvertPattern for (A, B) {
@@ -175,7 +204,7 @@ impl<A: InvertPattern, B: InvertPattern> InvertPattern for (A, B) {
 }
 
 impl<A: UnderPattern, B: UnderPattern> UnderPattern for (A, B) {
-    fn under_extract(&self, input: &mut &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
+    fn under_extract(&self, input: &mut &[Instr]) -> Option<Under> {
         let (a, b) = self;
         let (mut a_before, a_after) = a.under_extract(input)?;
         let (b_before, mut b_after) = b.under_extract(input)?;
@@ -256,7 +285,7 @@ impl InvertPattern for (&[Primitive], &[Primitive]) {
 }
 
 impl UnderPattern for (&[Primitive], &[Primitive], &[Primitive]) {
-    fn under_extract(&self, input: &mut &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
+    fn under_extract(&self, input: &mut &[Instr]) -> Option<Under> {
         let (a, b, c) = *self;
         if a.len() > input.len() {
             return None;
@@ -292,7 +321,7 @@ impl<const A: usize, const B: usize> InvertPattern for ([Primitive; A], [Primiti
 impl<const A: usize, const B: usize, const C: usize> UnderPattern
     for ([Primitive; A], [Primitive; B], [Primitive; C])
 {
-    fn under_extract(&self, input: &mut &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
+    fn under_extract(&self, input: &mut &[Instr]) -> Option<Under> {
         let (a, b, c) = *self;
         (a.as_ref(), b.as_ref(), c.as_ref()).under_extract(input)
     }
@@ -386,7 +415,7 @@ impl InvertPattern for Val {
     }
 }
 impl UnderPattern for Val {
-    fn under_extract(&self, input: &mut &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
+    fn under_extract(&self, input: &mut &[Instr]) -> Option<Under> {
         self.invert_extract(input).map(|v| (v, Vec::new()))
     }
 }

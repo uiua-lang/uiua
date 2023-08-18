@@ -1,4 +1,3 @@
-- Cache inverses and unders
 - Under pick
 - Finish tour
 - Docs

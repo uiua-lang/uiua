@@ -1,4 +1,10 @@
-use std::{cmp::Ordering, fmt, mem::take, sync::Arc};
+use std::{
+    cmp::Ordering,
+    fmt,
+    hash::{Hash, Hasher},
+    mem::take,
+    sync::Arc,
+};
 
 use crate::{
     algorithm::pervade::*, array::*, function::Function, grid_fmt::GridFmt, primitive::Primitive,
@@ -769,6 +775,29 @@ impl Ord for Value {
             (_, Value::Byte(_)) => Ordering::Greater,
             (Value::Char(_), _) => Ordering::Less,
             (_, Value::Char(_)) => Ordering::Greater,
+        }
+    }
+}
+
+impl Hash for Value {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            Value::Num(arr) => {
+                0u8.hash(state);
+                arr.hash(state);
+            }
+            Value::Byte(arr) => {
+                1u8.hash(state);
+                arr.hash(state);
+            }
+            Value::Char(arr) => {
+                2u8.hash(state);
+                arr.hash(state);
+            }
+            Value::Func(arr) => {
+                3u8.hash(state);
+                arr.hash(state);
+            }
         }
     }
 }

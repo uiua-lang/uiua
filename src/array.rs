@@ -1,6 +1,7 @@
 use std::{
     cmp::Ordering,
     fmt::{self, Debug, Display},
+    hash::{Hash, Hasher},
     iter::repeat,
     sync::Arc,
 };
@@ -304,6 +305,13 @@ impl<T: ArrayValue> Ord for Array<T> {
     }
 }
 
+impl<T: ArrayValue> Hash for Array<T> {
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        self.shape.hash(hasher);
+        self.data.iter().for_each(|x| x.array_hash(hasher));
+    }
+}
+
 impl<T: ArrayValue> From<T> for Array<T> {
     fn from(data: T) -> Self {
         Self::unit(data)
@@ -376,6 +384,7 @@ pub trait ArrayValue: Clone + Debug + Display + GridFmt {
     const NAME: &'static str;
     fn get_fill(env: &Uiua) -> Option<Self>;
     fn array_cmp(&self, other: &Self) -> Ordering;
+    fn array_hash<H: Hasher>(&self, hasher: &mut H);
     fn array_eq(&self, other: &Self) -> bool {
         self.array_cmp(other) == Ordering::Equal
     }
@@ -396,6 +405,16 @@ impl ArrayValue for f64 {
         self.partial_cmp(other)
             .unwrap_or_else(|| self.is_nan().cmp(&other.is_nan()))
     }
+    fn array_hash<H: Hasher>(&self, hasher: &mut H) {
+        let v = if self.is_nan() {
+            f64::NAN
+        } else if *self == 0.0 && self.is_sign_negative() {
+            0.0
+        } else {
+            *self
+        };
+        v.to_bits().hash(hasher)
+    }
 }
 
 impl ArrayValue for u8 {
@@ -405,6 +424,9 @@ impl ArrayValue for u8 {
     }
     fn array_cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(self, other)
+    }
+    fn array_hash<H: Hasher>(&self, hasher: &mut H) {
+        self.hash(hasher)
     }
 }
 
@@ -422,6 +444,9 @@ impl ArrayValue for char {
     fn format_sep() -> &'static str {
         ""
     }
+    fn array_hash<H: Hasher>(&self, hasher: &mut H) {
+        self.hash(hasher)
+    }
 }
 
 impl ArrayValue for Arc<Function> {
@@ -431,6 +456,9 @@ impl ArrayValue for Arc<Function> {
     }
     fn array_cmp(&self, other: &Self) -> Ordering {
         Ord::cmp(self, other)
+    }
+    fn array_hash<H: Hasher>(&self, hasher: &mut H) {
+        self.hash(hasher)
     }
 }
 

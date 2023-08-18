@@ -1,4 +1,9 @@
-use std::{cmp::Ordering, fmt, sync::Arc};
+use std::{
+    cmp::Ordering,
+    fmt,
+    hash::{Hash, Hasher},
+    sync::Arc,
+};
 
 use thread_local::ThreadLocal;
 
@@ -10,7 +15,7 @@ use crate::{
     Ident, Uiua, UiuaResult,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone)]
 pub enum Instr {
     Push(Box<Value>),
     BeginArray,
@@ -18,6 +23,75 @@ pub enum Instr {
     Prim(Primitive, usize),
     Call(usize),
     DfnVal(DfnArg),
+}
+
+impl PartialEq for Instr {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Push(a), Self::Push(b)) => a == b,
+            (Self::BeginArray, Self::BeginArray) => true,
+            (Self::EndArray(_), Self::EndArray(_)) => true,
+            (Self::Prim(a, _), Self::Prim(b, _)) => a == b,
+            (Self::Call(_), Self::Call(_)) => true,
+            (Self::DfnVal(a), Self::DfnVal(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for Instr {}
+
+impl PartialOrd for Instr {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Instr {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self, other) {
+            (Self::Push(a), Self::Push(b)) => a.cmp(b),
+            (Self::BeginArray, Self::BeginArray) => Ordering::Equal,
+            (Self::EndArray(_), Self::EndArray(_)) => Ordering::Equal,
+            (Self::Prim(a, _), Self::Prim(b, _)) => a.cmp(b),
+            (Self::Call(_), Self::Call(_)) => Ordering::Equal,
+            (Self::DfnVal(a), Self::DfnVal(b)) => a.cmp(b),
+            (Self::Push(_), _) => Ordering::Less,
+            (Self::BeginArray, Self::Push(_)) => Ordering::Greater,
+            (Self::BeginArray, _) => Ordering::Less,
+            (Self::EndArray(_), Self::Push(_) | Self::BeginArray) => Ordering::Greater,
+            (Self::EndArray(_), _) => Ordering::Less,
+            (Self::Prim(_, _), Self::Push(_) | Self::BeginArray | Self::EndArray(_)) => {
+                Ordering::Greater
+            }
+            (Self::Prim(_, _), _) => Ordering::Less,
+            (Self::Call(_), Self::DfnVal(_)) => Ordering::Less,
+            (Self::Call(_), _) => Ordering::Greater,
+            (Self::DfnVal(_), _) => Ordering::Greater,
+        }
+    }
+}
+
+impl Hash for Instr {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            Instr::Push(val) => {
+                0u8.hash(state);
+                val.hash(state);
+            }
+            Instr::BeginArray => 1u8.hash(state),
+            Instr::EndArray(_) => 2u8.hash(state),
+            Instr::Prim(p, _) => {
+                3u8.hash(state);
+                p.hash(state);
+            }
+            Instr::Call(_) => 4u8.hash(state),
+            Instr::DfnVal(arg) => {
+                5u8.hash(state);
+                arg.hash(state);
+            }
+        }
+    }
 }
 
 impl Instr {
@@ -53,15 +127,45 @@ pub struct Function {
     ad_cache: Arc<ThreadLocal<Option<(usize, usize)>>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum FunctionKind {
     Normal,
     Dfn(u8),
-    Dynamic {
-        f: Arc<dyn Fn(&mut Uiua) -> UiuaResult + Send + Sync>,
-        args: u8,
-        outputs: u8,
-    },
+    Dynamic(DynamicFunctionKind),
+}
+
+#[derive(Clone)]
+pub struct DynamicFunctionKind {
+    pub f: Arc<dyn Fn(&mut Uiua) -> UiuaResult + Send + Sync>,
+    pub id: u64,
+    pub args: u8,
+    pub outputs: u8,
+}
+
+impl PartialEq for DynamicFunctionKind {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for DynamicFunctionKind {}
+
+impl PartialOrd for DynamicFunctionKind {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for DynamicFunctionKind {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.id.cmp(&other.id)
+    }
+}
+
+impl Hash for DynamicFunctionKind {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
 }
 
 impl From<Primitive> for Function {
@@ -93,6 +197,14 @@ impl Ord for Function {
         self.id
             .cmp(&other.id)
             .then_with(|| self.instrs.cmp(&other.instrs))
+    }
+}
+
+impl Hash for Function {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+        self.instrs.hash(state);
+        self.kind.hash(state);
     }
 }
 
@@ -169,7 +281,9 @@ impl Function {
                 args += n as usize;
                 Some((args, outputs))
             }
-            FunctionKind::Dynamic { args, outputs, .. } => Some((args as usize, outputs as usize)),
+            FunctionKind::Dynamic(DynamicFunctionKind { args, outputs, .. }) => {
+                Some((args as usize, outputs as usize))
+            }
         })
     }
     pub fn is_constant(&self) -> bool {

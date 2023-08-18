@@ -1,7 +1,8 @@
 use std::{
     backtrace::Backtrace,
-    collections::{HashMap, HashSet},
+    collections::{hash_map::DefaultHasher, HashMap, HashSet},
     fs,
+    hash::{Hash, Hasher},
     mem::take,
     panic::{catch_unwind, AssertUnwindSafe},
     path::{Path, PathBuf},
@@ -372,7 +373,12 @@ backtrace:
                 let f = Function::new(
                     FunctionId::Anonymous(word.span.clone()),
                     Vec::new(),
-                    FunctionKind::Dynamic {
+                    FunctionKind::Dynamic(DynamicFunctionKind {
+                        id: {
+                            let mut hasher = DefaultHasher::new();
+                            frags.hash(&mut hasher);
+                            hasher.finish()
+                        },
                         args: frags.len() as u8 - 1,
                         outputs: 1,
                         f: Arc::new(move |env| {
@@ -387,7 +393,7 @@ backtrace:
                             env.push(formatted);
                             Ok(())
                         }),
-                    },
+                    }),
                 );
                 self.push_instr(Instr::push(f));
                 if call {
@@ -399,7 +405,12 @@ backtrace:
                 let f = Function::new(
                     FunctionId::Anonymous(word.span.clone()),
                     Vec::new(),
-                    FunctionKind::Dynamic {
+                    FunctionKind::Dynamic(DynamicFunctionKind {
+                        id: {
+                            let mut hasher = DefaultHasher::new();
+                            lines.hash(&mut hasher);
+                            hasher.finish()
+                        },
                         args: lines.iter().map(|l| l.value.len() as u8 - 1).sum(),
                         outputs: 1,
                         f: Arc::new(move |env| {
@@ -421,7 +432,7 @@ backtrace:
                             env.push(formatted);
                             Ok(())
                         }),
-                    },
+                    }),
                 );
                 self.push_instr(Instr::push(f));
                 if call {
@@ -686,7 +697,7 @@ backtrace:
                             });
                             dfn = true;
                         }
-                        FunctionKind::Dynamic { f: ff, .. } => {
+                        FunctionKind::Dynamic(dfk) => {
                             self.scope.call.push(StackFrame {
                                 function: f.clone(),
                                 call_span,
@@ -694,7 +705,7 @@ backtrace:
                                 pc: 0,
                                 dfn: false,
                             });
-                            ff(self)?;
+                            (dfk.f)(self)?;
                             self.scope.call.pop();
                             break Ok(());
                         }

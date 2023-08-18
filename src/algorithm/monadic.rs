@@ -79,30 +79,29 @@ fn range(shape: &[usize]) -> Vec<f64> {
 
 impl Value {
     pub fn first(self, env: &Uiua) -> UiuaResult<Self> {
-        Ok(match self {
-            Self::Num(array) => array.first(env)?.into(),
-            Self::Byte(array) => array.first(env)?.into(),
-            Self::Char(array) => array.first(env)?.into(),
-            Self::Func(array) => array.first(env)?.into(),
-        })
+        self.generic_into(
+            |a| a.first(env).map(Into::into),
+            |a| a.first(env).map(Into::into),
+            |a| a.first(env).map(Into::into),
+            |a| a.first(env).map(Into::into),
+        )
     }
     pub fn last(self, env: &Uiua) -> UiuaResult<Self> {
-        Ok(match self {
-            Self::Num(array) => array.last(env)?.into(),
-            Self::Byte(array) => array.last(env)?.into(),
-            Self::Char(array) => array.last(env)?.into(),
-            Self::Func(array) => array.last(env)?.into(),
-        })
+        self.generic_into(
+            |a| a.last(env).map(Into::into),
+            |a| a.last(env).map(Into::into),
+            |a| a.last(env).map(Into::into),
+            |a| a.last(env).map(Into::into),
+        )
     }
 }
 
 impl<T: ArrayValue> Array<T> {
     pub fn first(mut self, env: &Uiua) -> UiuaResult<Self> {
-        if self.rank() == 0 {
-            return Err(env.error("Cannot take first of a scalar"));
-        }
-        if self.shape[0] == 0 {
-            return Err(env.error("Cannot take first of an empty array"));
+        match &*self.shape {
+            [] => return Err(env.error("Cannot take first of a scalar")),
+            [0] => return Err(env.error("Cannot take first of an empty array")),
+            _ => {}
         }
         let row_len = self.row_len();
         self.shape.remove(0);
@@ -110,8 +109,10 @@ impl<T: ArrayValue> Array<T> {
         Ok(self)
     }
     pub fn last(mut self, env: &Uiua) -> UiuaResult<Self> {
-        if self.rank() == 0 {
-            return Err(env.error("Cannot take last of a scalar"));
+        match &*self.shape {
+            [] => return Err(env.error("Cannot take last of a scalar")),
+            [0] => return Err(env.error("Cannot take last of an empty array")),
+            _ => {}
         }
         let row_len = self.row_len();
         self.shape.remove(0);
@@ -215,20 +216,18 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     pub fn grade(&self, env: &Uiua) -> UiuaResult<Self> {
-        Ok(Self::from_iter(match self {
-            Self::Num(array) => array.grade(env)?,
-            Self::Byte(array) => array.grade(env)?,
-            Self::Char(array) => array.grade(env)?,
-            Self::Func(array) => array.grade(env)?,
-        }))
+        self.generic_ref_env(Array::grade, Array::grade, Array::grade, Array::grade, env)
+            .map(Self::from_iter)
     }
     pub fn classify(&self, env: &Uiua) -> UiuaResult<Self> {
-        Ok(Self::from_iter(match self {
-            Self::Num(array) => array.classify(env)?,
-            Self::Byte(array) => array.classify(env)?,
-            Self::Char(array) => array.classify(env)?,
-            Self::Func(array) => array.classify(env)?,
-        }))
+        self.generic_ref_env(
+            Array::classify,
+            Array::classify,
+            Array::classify,
+            Array::classify,
+            env,
+        )
+        .map(Self::from_iter)
     }
     pub fn deduplicate(&mut self) {
         self.generic_mut(

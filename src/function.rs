@@ -53,17 +53,6 @@ pub struct Function {
     ad_cache: Arc<ThreadLocal<Option<(usize, usize)>>>,
 }
 
-impl Function {
-    pub fn new(id: FunctionId, instrs: impl Into<Vec<Instr>>, kind: FunctionKind) -> Self {
-        Self {
-            id,
-            instrs: instrs.into(),
-            kind,
-            ad_cache: ThreadLocal::new().into(),
-        }
-    }
-}
-
 #[derive(Clone)]
 pub enum FunctionKind {
     Normal,
@@ -140,6 +129,14 @@ impl fmt::Display for Function {
 }
 
 impl Function {
+    pub fn new(id: FunctionId, instrs: impl Into<Vec<Instr>>, kind: FunctionKind) -> Self {
+        Self {
+            id,
+            instrs: instrs.into(),
+            kind,
+            ad_cache: ThreadLocal::new().into(),
+        }
+    }
     pub(crate) fn format_inner(&self) -> String {
         if let FunctionId::Named(name) = &self.id {
             return name.as_str().into();
@@ -172,6 +169,9 @@ impl Function {
             FunctionKind::Dynamic { args, outputs, .. } => Some((args as usize, outputs as usize)),
         })
     }
+    pub fn is_constant(&self) -> bool {
+        matches!(&*self.instrs, [Instr::Push(_)])
+    }
     pub fn constant(value: impl Into<Value>) -> Self {
         Function::new(
             FunctionId::Constant,
@@ -182,6 +182,29 @@ impl Function {
     pub fn as_primitive(&self) -> Option<(Primitive, usize)> {
         match self.instrs.as_slice() {
             [Instr::Prim(prim, span)] => Some((*prim, *span)),
+            _ => None,
+        }
+    }
+    pub fn into_constant(self) -> Result<Value, Self> {
+        if self.is_constant() {
+            if let Instr::Push(val) = self.instrs.into_iter().next().unwrap() {
+                Ok(*val)
+            } else {
+                unreachable!();
+            }
+        } else {
+            Err(self)
+        }
+    }
+    pub fn as_constant(&self) -> Option<&Value> {
+        match self.instrs.as_slice() {
+            [Instr::Push(val)] => Some(val),
+            _ => None,
+        }
+    }
+    pub fn as_constant_mut(&mut self) -> Option<&mut Value> {
+        match self.instrs.as_mut_slice() {
+            [Instr::Push(val)] => Some(val),
             _ => None,
         }
     }

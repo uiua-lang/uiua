@@ -144,12 +144,12 @@ impl Value {
         self.shape().len()
     }
     pub fn shape_mut(&mut self) -> &mut Vec<usize> {
-        self.generic_mut(
-            |arr| &mut arr.shape,
-            |arr| &mut arr.shape,
-            |arr| &mut arr.shape,
-            |arr| &mut arr.shape,
-        )
+        match self {
+            Self::Num(array) => &mut array.shape,
+            Self::Byte(array) => &mut array.shape,
+            Self::Char(array) => &mut array.shape,
+            Self::Func(array) => &mut array.shape,
+        }
     }
     pub(crate) fn validate_shape(&self) {
         self.generic_ref(
@@ -167,6 +167,23 @@ impl Value {
             |arr| arr.row(i).into(),
         )
     }
+    pub fn generic_into<T>(
+        self,
+        n: impl FnOnce(Array<f64>) -> T,
+        b: impl FnOnce(Array<u8>) -> T,
+        c: impl FnOnce(Array<char>) -> T,
+        f: impl FnOnce(Array<Arc<Function>>) -> T,
+    ) -> T {
+        match self {
+            Self::Num(array) => n(array),
+            Self::Byte(array) => b(array),
+            Self::Char(array) => c(array),
+            Self::Func(array) => match array.into_constant() {
+                Ok(value) => value.generic_into(n, b, c, f),
+                Err(array) => f(array),
+            },
+        }
+    }
     pub fn generic_ref<'a, T: 'a>(
         &'a self,
         n: impl FnOnce(&'a Array<f64>) -> T,
@@ -178,21 +195,43 @@ impl Value {
             Self::Num(array) => n(array),
             Self::Byte(array) => b(array),
             Self::Char(array) => c(array),
-            Self::Func(array) => f(array),
+            Self::Func(array) => {
+                if let Some(value) = array.as_constant() {
+                    value.generic_ref(n, b, c, f)
+                } else {
+                    f(array)
+                }
+            }
         }
     }
-    pub fn generic_mut<'a, T: 'a>(
-        &'a mut self,
-        n: impl FnOnce(&'a mut Array<f64>) -> T,
-        b: impl FnOnce(&'a mut Array<u8>) -> T,
-        c: impl FnOnce(&'a mut Array<char>) -> T,
-        f: impl FnOnce(&'a mut Array<Arc<Function>>) -> T,
+    pub fn generic_ref_env<'a, T: 'a>(
+        &'a self,
+        n: impl FnOnce(&'a Array<f64>, &Uiua) -> UiuaResult<T>,
+        b: impl FnOnce(&'a Array<u8>, &Uiua) -> UiuaResult<T>,
+        c: impl FnOnce(&'a Array<char>, &Uiua) -> UiuaResult<T>,
+        f: impl FnOnce(&'a Array<Arc<Function>>, &Uiua) -> UiuaResult<T>,
+        env: &Uiua,
+    ) -> UiuaResult<T> {
+        self.generic_ref(|a| n(a, env), |a| b(a, env), |a| c(a, env), |a| f(a, env))
+    }
+    pub fn generic_mut<T>(
+        &mut self,
+        n: impl FnOnce(&mut Array<f64>) -> T,
+        b: impl FnOnce(&mut Array<u8>) -> T,
+        c: impl FnOnce(&mut Array<char>) -> T,
+        f: impl FnOnce(&mut Array<Arc<Function>>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
             Self::Byte(array) => b(array),
             Self::Char(array) => c(array),
-            Self::Func(array) => f(array),
+            Self::Func(array) => {
+                if let Some(value) = array.as_constant_mut() {
+                    value.generic_mut(n, b, c, f)
+                } else {
+                    f(array)
+                }
+            }
         }
     }
     pub fn show(&self) -> String {

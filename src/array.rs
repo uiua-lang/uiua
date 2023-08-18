@@ -9,6 +9,7 @@ use crate::{
     cowslice::{cowslice, CowSlice},
     function::Function,
     grid_fmt::GridFmt,
+    value::Value,
     Uiua,
 };
 
@@ -118,6 +119,13 @@ impl<T: ArrayValue> Array<T> {
     pub fn as_scalar(&self) -> Option<&T> {
         if self.shape.is_empty() {
             Some(&self.data[0])
+        } else {
+            None
+        }
+    }
+    pub fn as_scalar_mut(&mut self) -> Option<&mut T> {
+        if self.shape.is_empty() {
+            Some(&mut self.data[0])
         } else {
             None
         }
@@ -233,6 +241,31 @@ impl<T: ArrayValue> Array<T> {
         let mut shape = self.shape.clone();
         shape[0] = 0;
         Array::new(shape, CowSlice::new())
+    }
+}
+
+impl Array<Arc<Function>> {
+    pub fn into_constant(self) -> Result<Value, Self> {
+        match self.into_scalar() {
+            Ok(f) => {
+                if f.is_constant() {
+                    Ok(match Arc::try_unwrap(f) {
+                        Ok(f) => f.into_constant().unwrap(),
+                        Err(f) => f.as_constant().unwrap().clone(),
+                    })
+                } else {
+                    Err(f.into())
+                }
+            }
+            Err(a) => Err(a),
+        }
+    }
+    pub fn as_constant(&self) -> Option<&Value> {
+        self.as_scalar().and_then(|f| f.as_constant())
+    }
+    pub fn as_constant_mut(&mut self) -> Option<&mut Value> {
+        self.as_scalar_mut()
+            .and_then(|f| Arc::make_mut(f).as_constant_mut())
     }
 }
 

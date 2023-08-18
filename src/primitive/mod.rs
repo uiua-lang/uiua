@@ -791,9 +791,9 @@ mod tests {
             p.class() != PrimClass::Stack && p.modifier_args().is_none() && p.args() == Some(2)
         }));
         let monadic_modifiers =
-            gen_group(Primitive::all().filter(|p| matches!(p.modifier_args(), Some((1, _)))));
+            gen_group(Primitive::all().filter(|p| matches!(p.modifier_args(), Some(1))));
         let dyadic_modifiers: String =
-            gen_group(Primitive::all().filter(|p| matches!(p.modifier_args(), Some((2, _)))));
+            gen_group(Primitive::all().filter(|p| matches!(p.modifier_args(), Some(2))));
 
         let text = format!(
             r##"{{

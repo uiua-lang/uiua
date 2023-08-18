@@ -8,7 +8,7 @@ macro_rules! primitive {
             $(
                 $($args:literal)?
                 $(($delta:expr))?
-                $([$mod_func_args:expr, $mod_array_args:expr $(,$mod_inner_args:expr)?])?
+                $([$mod_args:expr])?
             ,)?
             $variant:ident, $class:ident
             $(,$names:expr)?
@@ -40,15 +40,9 @@ macro_rules! primitive {
                     Primitive::Sys(_) => PrimClass::Sys,
                 }
             }
-            pub fn modifier_args(&self) -> Option<(u8, u8)> {
+            pub fn modifier_args(&self) -> Option<u8> {
                 match self {
-                    $($($(Primitive::$variant => Some(($mod_func_args, $mod_array_args)),)?)?)*
-                    _ => None
-                }
-            }
-            pub fn modifier_inner_args(&self) -> Option<u8> {
-                match self {
-                    $($($($(Primitive::$variant => Some($mod_inner_args),)?)?)?)*
+                    $($($(Primitive::$variant => Some($mod_args),)?)?)*
                     _ => None
                 }
             }
@@ -682,20 +676,20 @@ primitive!(
     /// [reduce] traverses the array backwards so that `reduce``noop` unloads all rows onto the stack with the first row on top.
     /// ex: /· 1_2_3
     /// ex: /· [1_2 3_4]
-    ([1, 1, 2], Reduce, MonadicModifier, ("reduce", '/')),
+    ([1], Reduce, MonadicModifier, ("reduce", '/')),
     /// Apply a reducing function to an array with an initial value
     ///
     /// For reducing without an initial value, see [reduce].
     /// Unlike other modifiers, [fold] and [reduce] traverse the array from right to left.
     ///
     /// ex: ∧+ 10 1_2_3_4
-    ([1, 2, 2], Fold, MonadicModifier, ("fold", '∧')),
+    ([1], Fold, MonadicModifier, ("fold", '∧')),
     /// Reduce, but keep intermediate values
     ///
     /// ex: \+   1_2_3_4
     /// ex: \-   1_2_3_4
     /// ex: \'-∶ 1_2_3_4
-    ([1, 1, 2], Scan, MonadicModifier, ("scan", '\\')),
+    ([1], Scan, MonadicModifier, ("scan", '\\')),
     /// Apply a function to each element of an array or between elements of arrays
     ///
     /// This is the element-wise version of [rows].
@@ -704,7 +698,7 @@ primitive!(
     /// ex: ∵'⊟. 1_2_3_4
     /// ex: ∵⊂ 1_2_3 4_5_6
     /// ex: ∵⊂ 1_2 [4_5 6_7]
-    ([1, 1, 1], Each, MonadicModifier, ("each", '∵')),
+    ([1], Each, MonadicModifier, ("each", '∵')),
     /// Apply a function to each row of an array
     ///
     /// This is the row-wise version of [each].
@@ -719,7 +713,7 @@ primitive!(
     /// [rows] is equivalent to [level]`¯1` (or `level``[¯1 ¯1 ..]` for multiple arrays).
     /// ex: ⍚¯1/+ [1_2_3 4_5_6 7_8_9]
     /// ex:   ≡/+ [1_2_3 4_5_6 7_8_9]
-    ([1, 1, 1], Rows, MonadicModifier, ("rows", '≡')),
+    ([1], Rows, MonadicModifier, ("rows", '≡')),
     /// Apply a function to each row of an array and a fixed value
     ///
     /// ex: ⫫⊂ 1_2_3 4
@@ -731,14 +725,14 @@ primitive!(
     /// [distribute] is equivalent to [level]`[¯1``infinity``]`.
     /// ex:       ⫫⊂ 1_2_3 4_5_6
     ///   : ⍚[¯1 ∞]⊂ 1_2_3 4_5_6
-    ([1, 2, 2], Distribute, DyadicModifier, ("distribute", '⫫')),
+    ([1], Distribute, DyadicModifier, ("distribute", '⫫')),
     /// Apply a function to each combination of elements of two arrays
     ///
     /// This is the element-wise version of [cross].
     ///
     /// ex: ⊞+ 1_2_3 4_5_6_7
     /// ex: ⊞⊂ 1_2 3_4
-    ([1, 2, 2], Table, DyadicModifier, ("table", '⊞')),
+    ([1], Table, DyadicModifier, ("table", '⊞')),
     /// Apply a function to each combination of rows of two arrays
     ///
     /// This is the row-wise version of [table].
@@ -746,7 +740,7 @@ primitive!(
     /// ex: a ← .[1_2 3_4 5_6]
     ///   : b ← .[7_8 9_10]
     ///   : ⊠⊂ a b
-    ([1, 2, 2], Cross, DyadicModifier, ("cross", '⊠')),
+    ([1], Cross, DyadicModifier, ("cross", '⊠')),
     /// Repeat a function a number of times
     ///
     /// ex: ⍥'+2 5 0
@@ -758,7 +752,7 @@ primitive!(
     /// Repeating for [infinity] times will create an infinite loop.
     /// You can use [break] to break out of the loop.
     /// ex: ⍥(⎋>1000. ×2)∞ 1
-    ([1, 1], Repeat, OtherModifier, ("repeat", '⍥')),
+    ([1], Repeat, OtherModifier, ("repeat", '⍥')),
     /// Group elements of an array into buckets by index
     ///
     /// Takes a function and two arrays.
@@ -783,7 +777,7 @@ primitive!(
     ///   : ⊕($"_:_"⊢∶⧻.) ⊛.⊏⌂.
     ///
     /// [group] is closely related to [partition].
-    ([1, 1, 2], Group, DyadicModifier, ("group", '⊕')),
+    ([1], Group, DyadicModifier, ("group", '⊕')),
     /// Group elements of an array into buckets by sequential keys
     ///
     /// Takes a function and two arrays.
@@ -807,14 +801,14 @@ primitive!(
     /// ex: ⊜□ ≠@ . $ Hey there friendo
     ///
     /// [partition] is closely related to [group].
-    ([1, 1, 2], Partition, DyadicModifier, ("partition", '⊜')),
+    ([1], Partition, DyadicModifier, ("partition", '⊜')),
     /// Invert the behavior of a function
     ///
     /// Most functions are not invertible.
     ///
     /// ex: √2
     /// ex: ↶√2
-    ([1, 1], Invert, OtherModifier, ("invert", '↶')),
+    ([1], Invert, OtherModifier, ("invert", '↶')),
     /// Apply a function under another
     ///
     /// This is a more powerful version of [invert].
@@ -837,7 +831,7 @@ primitive!(
     ///
     /// You can use [under] [take] to modify only part of an array.
     /// ex: ⍜'↙2'×10 1_2_3_4_5
-    ([2, 1, 1], Under, OtherModifier, ("under", '⍜')),
+    ([2], Under, OtherModifier, ("under", '⍜')),
     /// Set a fill context
     ///
     /// By default, some operations require that arrays have some compatible [shape].
@@ -868,7 +862,7 @@ primitive!(
     /// [fill] can be used with them as well. In some cases, this prevents the need to use [constant].
     /// ex: ⍛0\⊂ 1_2_3_4_5
     /// ex: ⍛' '⊜·≠@ . "No □ needed!"
-    ([2, 1], Fill, OtherModifier, ("fill", '⍛')),
+    ([2], Fill, OtherModifier, ("fill", '⍛')),
     /// Apply a function at a different array depth
     ///
     /// Expects a rank to operate on, a function, and an array.
@@ -899,7 +893,7 @@ primitive!(
     /// [level]`[¯1``infinity``]` is equivalent to [distribute].
     /// ex:       ⫫⊂ 1_2_3 4_5_6
     ///   : ⍚[¯1 ∞]⊂ 1_2_3 4_5_6
-    ([2, 1], Level, OtherModifier, ("level", '⍚')),
+    ([2], Level, OtherModifier, ("level", '⍚')),
     /// Call a function and catch errors
     ///
     /// If the first function errors, the second function is called with the error value.
@@ -911,7 +905,7 @@ primitive!(
     /// Errors thrown with [assert] can be any value.
     /// ex: ⍣(⍤5 1 3)(×5)
     /// ex: ⍣(⍤5 0 3)(×5)
-    ([2, 0], Try, OtherModifier, ("try", '⍣')),
+    ([2], Try, OtherModifier, ("try", '⍣')),
     /// Throw an error if a condition is not met
     ///
     /// Expects a message and a test value.
@@ -945,7 +939,7 @@ primitive!(
     /// [wait] will call [each] implicitly.
     /// ex: ↯3_3⇡9
     ///   : ↲≡↰1/+.
-    ([2, 0], Spawn, OtherModifier, ("spawn", '↰')),
+    ([2], Spawn, OtherModifier, ("spawn", '↰')),
     /// Wait for a thread to finish and push its results to the stack
     ///
     /// The argument must be a handle returned by [spawn].

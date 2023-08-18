@@ -1,5 +1,3 @@
-- Make constant function grid formatting prettier
-- Standardize error messages
 - Cache inverses and unders
 - Under pick
 - Finish tour

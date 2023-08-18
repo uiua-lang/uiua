@@ -344,7 +344,7 @@ impl Primitive {
                 env.push(array);
             }
             Primitive::Break => {
-                let n = env.pop(1)?.as_nat(env, "break expects a natural number")?;
+                let n = env.pop(1)?.as_nat(env, "Break expects a natural number")?;
                 if n > 0 {
                     return Err(UiuaError::Break(n - 1, env.span().clone()));
                 }
@@ -427,7 +427,7 @@ impl Primitive {
             Primitive::Gen => {
                 let seed = env.pop(1)?;
                 let mut rng =
-                    SmallRng::seed_from_u64(seed.as_num(env, "gen expects a number")?.to_bits());
+                    SmallRng::seed_from_u64(seed.as_num(env, "Gen expects a number")?.to_bits());
                 let val: f64 = rng.gen();
                 let next_seed = f64::from_bits(rng.gen::<u64>());
                 env.push(val);
@@ -443,7 +443,7 @@ impl Primitive {
                 env.push(f.clone());
             }
             Primitive::Spawn => {
-                let n = env.pop(1)?.as_nat(env, "spawn expects a natural number")?;
+                let n = env.pop(1)?.as_nat(env, "Spawn expects a natural number")?;
                 let f = env.pop(2)?;
                 let handle = env.spawn(n, move |env| {
                     env.push(f);

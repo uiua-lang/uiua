@@ -243,7 +243,7 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
     let f = env.pop(1)?;
     let (args, _) = f.args_outputs().unwrap_or((1, 0));
     match args {
-        0 => Err(env.error("each's function must take at least one argument")),
+        0 => Err(env.error("Each's function must take at least one argument")),
         1 => {
             let xs = env.pop(2)?;
             each1(f, xs, env)
@@ -338,7 +338,7 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
     let f = env.pop(1)?;
     let (args, _) = f.args_outputs().unwrap_or((1, 1));
     match args {
-        0 => Err(env.error("rows' function must take at least one argument")),
+        0 => Err(env.error("Rows' function must take at least one argument")),
         1 => {
             let xs = env.pop(2)?;
             rows1(f, xs, env)

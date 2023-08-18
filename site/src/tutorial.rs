@@ -468,6 +468,8 @@ fn TutorialFunctions() -> impl IntoView {
         <Editor example="∵(⊂÷∶1.) 1_2_4_5"/>
         <p>"Or, if you wanted to get the last element of each row of an array, you could use "<PrimCode prim=Rows/>"."</p>
         <Editor example="A ← [2_5_3 0_2_1 0_0_2]\nA\n≡(⊢⇌)A"/>
+        <p>"If you want to make an inline function with exactly 2 terms, you can use a single preceding "<code>"'"</code>" instead of "<code>"()"</code>"s and save 1 character of space!"</p>
+        <Editor example="/(-∶) 1_2_3_4_5\n/'-∶ 1_2_3_4_5"/>
 
         <h2 id="dfns">"Dfns"</h2>
         <p>"A dfn (pronounced \"dee-fun\") is a block of code that can bind values locally to single-character names."</p>

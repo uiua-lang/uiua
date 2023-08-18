@@ -674,7 +674,7 @@ primitive!(
     ///
     /// If you want to see the intermediate values, you can use [scan], [flip], and [reverse].
     /// ex: /-     1_2_3_4_5
-    ///   : \(-∶)⇌ 1_2_3_4_5
+    ///   : \'-∶ ⇌ 1_2_3_4_5
     ///
     /// You can can fold with arbitrary functions.
     /// ex: /(×+1) 1_2_3_4_5
@@ -692,16 +692,16 @@ primitive!(
     ([1, 2, 2], Fold, MonadicModifier, ("fold", '∧')),
     /// Reduce, but keep intermediate values
     ///
-    /// ex: \+    1_2_3_4
-    /// ex: \-    1_2_3_4
-    /// ex: \(-∶) 1_2_3_4
+    /// ex: \+   1_2_3_4
+    /// ex: \-   1_2_3_4
+    /// ex: \'-∶ 1_2_3_4
     ([1, 1, 2], Scan, MonadicModifier, ("scan", '\\')),
     /// Apply a function to each element of an array or between elements of arrays
     ///
     /// This is the element-wise version of [rows].
     ///
     /// The number of arrays used depends on how many arguments the function takes.
-    /// ex: ∵(⊟.) 1_2_3_4
+    /// ex: ∵'⊟. 1_2_3_4
     /// ex: ∵⊂ 1_2_3 4_5_6
     /// ex: ∵⊂ 1_2 [4_5 6_7]
     ([1, 1, 1], Each, MonadicModifier, ("each", '∵')),
@@ -749,8 +749,8 @@ primitive!(
     ([1, 2, 2], Cross, DyadicModifier, ("cross", '⊠')),
     /// Repeat a function a number of times
     ///
-    /// ex: ⍥(+2) 5 0
-    /// ex: ⍥(⊂2) 5 []
+    /// ex: ⍥'+2 5 0
+    /// ex: ⍥'⊂2 5 []
     ///
     /// One interesting use of `repeat` is to collect some number of stack values into an array.
     /// ex: ⍥⊂3 [] 1 2 3
@@ -827,16 +827,16 @@ primitive!(
     /// Some functions that can't be inverted can still be used with [under].
     ///
     /// Here, we negate 5, subtract 2, then negate again.
-    /// ex: ⍜¯(-2) 5
+    /// ex: ⍜¯'-2 5
     ///
     /// If you want to insert a value somewhere in the middle of an array, you can use [under], [rotate], and [join].
-    /// ex: ⍜(↻3)(⊂π)1_2_3_4_5
+    /// ex: ⍜'↻3'⊂π 1_2_3_4_5
     ///
     /// You can use [under] with [round] to round to a specific number of decimal places.
     /// ex: ⍜(×ⁿ4 10)⁅ π
     ///
     /// You can use [under] [take] to modify only part of an array.
-    /// ex: ⍜(↙2)(×10) 1_2_3_4_5
+    /// ex: ⍜'↙2'×10 1_2_3_4_5
     ([2, 1, 1], Under, OtherModifier, ("under", '⍜')),
     /// Set a fill context
     ///

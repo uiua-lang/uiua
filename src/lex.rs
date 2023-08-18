@@ -351,6 +351,7 @@ pub enum AsciiToken {
     Backtick,
     TripleMinus,
     TripleTilde,
+    SingleQuote,
 }
 
 impl fmt::Display for AsciiToken {
@@ -373,6 +374,7 @@ impl fmt::Display for AsciiToken {
             AsciiToken::Backtick => write!(f, "`"),
             AsciiToken::TripleMinus => write!(f, "---"),
             AsciiToken::TripleTilde => write!(f, "~~~"),
+            AsciiToken::SingleQuote => write!(f, "'"),
         }
     }
 }
@@ -489,6 +491,7 @@ impl Lexer {
                     self.number('-');
                     self.end(Number, start)
                 }
+                '\'' => self.end(SingleQuote, start),
                 '*' => self.end(Star, start),
                 '%' => self.end(Percent, start),
                 '=' => self.end(Equal, start),

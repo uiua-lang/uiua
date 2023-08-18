@@ -165,10 +165,15 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig) {
             format_multiline_words(output, items, config);
             output.push(']');
         }
-        Word::Func(func) => {
-            output.push('(');
-            format_multiline_words(output, &func.body, config);
-            output.push(')');
+        Word::Func(func, bind) => {
+            if *bind {
+                output.push('\'');
+                format_multiline_words(output, &func.body, config);
+            } else {
+                output.push('(');
+                format_multiline_words(output, &func.body, config);
+                output.push(')');
+            }
         }
         Word::Dfn(dfn) => {
             output.push('{');

@@ -32,7 +32,7 @@ pub enum Word {
     DfnArg(DfnArg),
     Strand(Vec<Sp<Word>>),
     Array(Vec<Vec<Sp<Word>>>),
-    Func(Func),
+    Func(Func, bool),
     Dfn(Func),
     Primitive(Primitive),
     Modified(Box<Modified>),
@@ -70,7 +70,7 @@ impl fmt::Debug for Word {
             Word::DfnArg(arg) => write!(f, "arg({arg})"),
             Word::Array(array) => write!(f, "array({array:?})"),
             Word::Strand(items) => write!(f, "strand({items:?})"),
-            Word::Func(func) => func.fmt(f),
+            Word::Func(func, _) => func.fmt(f),
             Word::Dfn(func) => {
                 write!(f, "{{")?;
                 func.fmt(f)?;

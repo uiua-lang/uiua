@@ -468,7 +468,7 @@ backtrace:
                     self.push_instr(Instr::push(func));
                 }
             }
-            Word::Func(func) => self.func(func, word.span)?,
+            Word::Func(func, _) => self.func(func, word.span)?,
             Word::Dfn(func) => self.dfn(func, word.span, call)?,
             Word::Primitive(p) => self.primitive(p, word.span, call),
             Word::Modified(m) => self.modified(*m, call)?,

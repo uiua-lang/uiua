@@ -286,7 +286,7 @@ impl Parser {
         }
         items.insert(0, word);
         for item in &mut items {
-            if let Word::Func(func) = &item.value {
+            if let Word::Func(func, _) = &item.value {
                 if func.body.is_empty() {
                     item.value = Word::Primitive(Primitive::Noop);
                 }
@@ -392,18 +392,41 @@ impl Parser {
         None
     }
     fn try_func(&mut self) -> Option<Sp<Word>> {
-        let start = self.try_exact(OpenParen)?;
-        let body = self.multiline_words();
-        let end = self.expect_close(CloseParen);
-        let span = start.merge(end);
-        Some(span.clone().sp(if body.is_empty() {
-            Word::Primitive(Primitive::Noop)
-        } else {
-            Word::Func(Func {
-                id: FunctionId::Anonymous(span),
-                body,
+        Some(if let Some(start) = self.try_exact(OpenParen) {
+            let body = self.multiline_words();
+            let end = self.expect_close(CloseParen);
+            let span = start.merge(end);
+            span.clone().sp(if body.is_empty() {
+                Word::Primitive(Primitive::Noop)
+            } else {
+                Word::Func(
+                    Func {
+                        id: FunctionId::Anonymous(span),
+                        body,
+                    },
+                    false,
+                )
             })
-        }))
+        } else if let Some(start) = self.try_exact(SingleQuote) {
+            let Some(first) = self.try_term() else {
+                self.errors.push(self.expected([Expectation::Term]));
+                return None;
+            };
+            let Some(second) = self.try_term() else {
+                self.errors.push(self.expected([Expectation::Term]));
+                return None;
+            };
+            let span = start.merge(second.span.clone());
+            span.clone().sp(Word::Func(
+                Func {
+                    id: FunctionId::Anonymous(span),
+                    body: vec![vec![first, second]],
+                },
+                true,
+            ))
+        } else {
+            return None;
+        })
     }
     fn try_dfn(&mut self) -> Option<Sp<Word>> {
         let start = self.try_exact(OpenCurly)?;

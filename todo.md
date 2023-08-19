@@ -1,3 +1,5 @@
+- Add a way to prevent modifier binding
+- Make pick and select use the fill context
 - Finish tour
 - Under pick
 - Docs

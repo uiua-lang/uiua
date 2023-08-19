@@ -223,6 +223,14 @@ pub fn PrimCode(
     }
 }
 
+#[component]
+pub fn PrimCodes<const N: usize>(prims: [Primitive; N]) -> impl IntoView {
+    prims
+        .into_iter()
+        .map(|prim| view!(<PrimCode prim=prim glyph_only=true/>))
+        .collect::<Vec<_>>()
+}
+
 fn prim_class(prim: Primitive) -> &'static str {
     macro_rules! code_font {
         ($class:literal) => {

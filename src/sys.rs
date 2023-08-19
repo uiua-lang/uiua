@@ -125,8 +125,11 @@ sys_op! {
     /// Run the code from a file in a scope
     ///
     /// If the file has already been imported, its code will not be run again, but the values it originally pushed onto the stack will be pushed again.
-    ///
-    /// ex: import "example.ua"
+    /// Functions can be extracted from the [import]ed modules with [use].
+    /// ex: .import "example.ua"
+    ///   : double ← use "double".
+    ///   : square ← use "square"
+    ///   : square double 5
     (1, Import, "import"),
     /// Get the current time in milliseconds
     (0, Now, "now"),

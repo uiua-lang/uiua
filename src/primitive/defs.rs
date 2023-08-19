@@ -82,9 +82,16 @@ primitive!(
     ///
     /// ex: [. 1 2 3]
     ///
-    /// This can be used to make a monadic left-hook, such as in this palindrome checker:
+    /// [duplicate] is often used in examples to show both the input and output of a function.
+    /// ex: √.144
+    /// ex: .[1 2 3]
+    ///   : +1⇌
+    ///
+    /// [duplicate] can be used to make a monadic left-hook, such as in this palindrome checker:
     /// ex: ≅⇌. "friend"
     /// ex: ≅⇌. "racecar"
+    /// Another commonly hooked function is [replicate].
+    /// ex: ‡=0◿3. [1 4 2 3 9 1 0 6 2 6 3]
     (1(2), Dup, Stack, ("duplicate", '.')),
     /// Duplicate the second-to-top value to the top of the stack
     ///
@@ -623,10 +630,12 @@ primitive!(
     (2, Windows, DyadicArray, ("windows", '◫')),
     /// Use an array to replicate the elements of another array
     ///
+    /// The first array is the number of times to replicate each element of the second array.
     /// ex: ‡ [1 0 2 1 4] [8 3 9 2 0]
     ///
     /// This can be used as a filter.
-    /// ex: ‡ ≥@a ."lOWERCASe onLY"
+    /// In this example, the input string is [duplicate]ed, and a mask is created from it using `greater or equal``@a`. Then, [replicate] uses the mask to filter the string.
+    /// ex: ‡ ≥@a . "lOWERCASe onLY"
     (2, Replicate, DyadicArray, ("replicate", '‡')),
     /// Find the occurences of one array in another
     ///
@@ -643,8 +652,8 @@ primitive!(
     /// ex: ∊ [1_2_3 4_5_6] [3 4 5]
     /// ex: ∊ 2 [1_2_3 4_5_6]
     ///
-    /// With the help of [deduplicate] and [replicate], you can use [member] to get a set intersection.
-    /// ex: ⊝‡∊, "abracadabra" "that's really cool"
+    /// With the help of [replicate], you can use [member] to get a set intersection.
+    /// ex: ‡∊, "abracadabra" "that's really cool"
     ///
     /// [member] is closely related to [indexof].
     (2, Member, DyadicArray, ("member", '∊')),
@@ -659,7 +668,7 @@ primitive!(
     /// ex: ⊗ 2 [1_2_3 4_5_6]
     ///
     /// You can use the returned indices with [select] to get the rows that were found.
-    /// If you expect on of the searched-for rows to be missing, you can [join] a default item to the end of the [select]ed-from array.
+    /// If you expect one of the searched-for rows to be missing, you can [join] a default item to the end of the [select]ed-from array.
     /// ex: of ← .[1 2 3 4 5]
     ///   : in ← [2 3 5 7 11 13]
     ///   : .⊗of in

@@ -711,7 +711,8 @@ impl<T: ArrayValue> Array<T> {
                                 data.extend(repeat(fill).take((abs_taking - row_count) * row_len));
                             } else {
                                 return Err(env.error(format!(
-                                    "Cannot take {} rows from array with {} row{}",
+                                    "Cannot take {} rows from array with {} row{} \
+                                    outside a fill context",
                                     abs_taking,
                                     row_count,
                                     if row_count == 1 { "" } else { "s" }
@@ -730,7 +731,8 @@ impl<T: ArrayValue> Array<T> {
                                     .collect()
                             } else {
                                 return Err(env.error(format!(
-                                    "Cannot take {} rows from array with {} row{}",
+                                    "Cannot take {} rows from array with {} row{} \
+                                    outside a fill context",
                                     abs_taking,
                                     row_count,
                                     if row_count == 1 { "" } else { "s" }
@@ -789,7 +791,8 @@ impl<T: ArrayValue> Array<T> {
                             );
                         } else {
                             return Err(env.error(format!(
-                                "Cannot take {} rows from array with {} row{}",
+                                "Cannot take {} rows from array with {} row{} \
+                                outside a fill context",
                                 abs_taking,
                                 arr.row_count(),
                                 if arr.row_count() == 1 { "" } else { "s" }
@@ -814,7 +817,8 @@ impl<T: ArrayValue> Array<T> {
                                 .collect();
                         } else {
                             return Err(env.error(format!(
-                                "Cannot take {} rows from array with {} row{}",
+                                "Cannot take {} rows from array with {} row{} \
+                                outside a fill context",
                                 abs_taking,
                                 arr.row_count(),
                                 if arr.row_count() == 1 { "" } else { "s" }

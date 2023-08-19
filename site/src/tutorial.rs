@@ -5,7 +5,7 @@ use leptos::*;
 use leptos_router::*;
 use uiua::{example_ua, primitive::Primitive, SysOp};
 
-use crate::{editor::*, PrimCode};
+use crate::{editor::*, PrimCode, PrimCodes};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
 pub enum TutorialPage {
@@ -172,7 +172,7 @@ fn TutorialBasic() -> impl IntoView {
         <p>"In general, functions do not leave their arguments on the stack. If you want to reuse a value, you must "<PrimCode prim=Dup/>" it first."</p>
         <p>"For example, if you wanted to square a number, you could "<PrimCode prim=Dup/>" it, then "<PrimCode prim=Mul/>"."</p>
         <Editor example="×.4"/>
-        <p><PrimCode prim=Dup/>" is often used in the examples on this site to show the both the input and output of a function."</p>
+        <p><PrimCode prim=Dup/>" is often used in the examples on this site to show both the input and output of a function."</p>
         <Editor example="√.144"/>
         <br/>
         <h2><PrimCode prim=Flip/></h2>
@@ -400,18 +400,21 @@ fn TutorialTypes() -> impl IntoView {
         <p>"You can "<PrimCode prim=Sub/>" two "<span class="string-literal-span">"characters"</span>" to get a "<span class="number-literal-span">"number"</span>"."</p>
         <p><em>"No"</em>" other arithmetic operations can be done on "<span class="string-literal-span">"characters"</span>"."</p>
         <Editor example="+1 @a"/>
+        <Editor example="-8 \"Uiua\""/>
         <Editor example="-@a @z"/>
         <Editor example="+@a @b"/>
 
         <h2 id="functions">"Functions"</h2>
         <p>"Functions are usually used as scalars, but they are still arrays. Most array operations that work on number and character arrays work on arrays of functions as well."</p>
-        <p>"Functions will be discussed more in a "<A href="/docs/functions">"later section"</A>"."</p>
+        <p>"Functions will be discussed more in some "<A href="/docs/bindings#binding-functions">"later"</A>" "<A href="/docs/functions">"sections"</A>"."</p>
 
         <h2>"Type agreement"</h2>
         <p id="type-agreement">"For functions that work on the structure of arrays rather than their values, the types of the arrays must match."</p>
         <Editor example="⊂ 1_2 3"/>
         <Editor example="⊟ \"Hello\" \"World\""/>
         <Editor example="⊟ 1_2_3 \"dog\""/>
+        <p>"There is an exception for functions. Any function that pushes 1 value onto the stack can be put in an array with a non-function. In this case, the non-function will be turned into a function, similar to "<PrimCode prim=Constant/>"."</p>
+        <Editor example="⊟ 5 (+1 2)"/>
     }
 }
 
@@ -428,18 +431,18 @@ fn TutorialBindings() -> impl IntoView {
         <Editor example="variable_1 ← 5"/>
         <p>"Bindings are case-insensitive."</p>
         <Editor example="foo ← 5\n+ FOO fOo"/>
-        <p>"The compiler can somtimes mistake all-lowercase binding names for unformatted built-in functions."</p>
-        <p>"Here, the compiler thinks that "<code>"part"</code>" is "<PrimCode prim=Partition/>"."</p>
+        <p>"The parser can somtimes mistake all-lowercase binding names for unformatted built-in functions."</p>
+        <p>"Here, the parser thinks that "<code>"part"</code>" is "<PrimCode prim=Partition/>"."</p>
         <Editor example="part = 5" help={&["", "Run to format and reveal why this does not work"]}/>
         <p>"To fix this issue, simply change the binding's capitalization."</p>
         <Editor example="Part ← 5\n×2 Part"/>
-        <p>"Binding lines run the code right of the "<code>"←"</code>", then pop the top value off the stack and bind it to the name on the left."</p>
+        <p>"Bindings run the code right of the "<code>"←"</code>", then pop the top value off the stack and bind it to the name on the left."</p>
         <p>"Note, though, that an empty right side is perfectly valid! This means you can bind values that were create on previous lines."</p>
         <Editor example="×6 7\nanswer ←\n[answer]"/>
 
         <h2 id="binding-functions">"Binding Functions"</h2>
         <p>"If the code on the right side of the "<code>"←"</code>" looks like a function, then instead of evaluating its right side immediately, the right side will be bound as a function."</p>
-        <p>"This is the primary way to make named functions in Uiua."</p>
+        <p>"This is how you make named functions in Uiua."</p>
         <Editor example="TimesThree ← ×3\nTimesThree 7"/>
         <Editor example="👋 ← ⊂\"Hello, \"\n👋 \"World!\""/>
         <Editor example="⍨ ← ∶\n⍪ ← ⊂\n⍳ ← ⇡\n⍪⍨⍳3⍳5 # Truly an abomination"/>
@@ -456,6 +459,7 @@ fn TutorialFunctions() -> impl IntoView {
         <h2 id="modifiers">"Modifiers"</h2>
         <p>"Modifiers are functions that take other functions. If you immediately follow a modifier with its function arguments, the functions will be called inside the modifier rather than outside."</p>
         <p>"For example, "<PrimCode prim=Reduce/>" applies a function \"between\" all rows of an array."</p>
+        <p><PrimCodes prims={[Reduce, Add]}/>" is therefore the sum of all the rows of an array."</p>
         <Editor example="/+ 1_2_3_4"/>
         <p><PrimCode prim=Scan/>" is similar, but it returns all the intermediate results."</p>
         <Editor example="\\+ 1_2_3_4"/>
@@ -467,7 +471,7 @@ fn TutorialFunctions() -> impl IntoView {
         <p>"For example, if you wanted to make an array that pairs each element of an array with its reciprocal, you could use "<PrimCode prim=Each/>"."</p>
         <Editor example="∵(⊂÷∶1.) 1_2_4_5"/>
         <p>"Or, if you wanted to get the last element of each row of an array, you could use "<PrimCode prim=Rows/>"."</p>
-        <Editor example="A ← [2_5_3 0_2_1 0_0_2]\nA\n≡(⊢⇌)A"/>
+        <Editor example="≡(⊢⇌) .[2_5_3 0_2_1 0_0_2]"/>
         <p>"If you want to make an inline function with exactly 2 terms, you can use a single preceding "<code>"'"</code>" instead of "<code>"()"</code>"s and save 1 character of space!"</p>
         <Editor example="/(-∶) 1_2_3_4_5\n/'-∶ 1_2_3_4_5"/>
 
@@ -492,8 +496,8 @@ fn TutorialModules() -> impl IntoView {
         <p>"Modules are a way to organize your code in Uiua."</p>
 
         <h2 id="scopes">"Scopes"</h2>
-        <p>"s are a way to create a temporary namespace for bindings that are only used in a small part of your code. Only the names that you want to escape a scope are usable outside it."</p>
-        <p>"s begin and end with triple hyphens "<code>"---"</code>". All names declared inside a scope are not available outside of it."</p>
+        <p>"Scopes are a way to create a temporary namespace for bindings that are only used in a small part of your code. Only the names that you want to escape a scope are usable outside it."</p>
+        <p>"Scopes begin and end with triple hyphens "<code>"---"</code>". All names declared inside a scope are not available outside of it."</p>
         <Editor example="---\nfoo ← 5\n---\nfoo # foo is not available here"/>
         <p>"Values pushed to the stack inside a scope remain on the stack after the scope ends."</p>
         <p>"You can bind values that were pushed to the stack inside an ended scope by using a "<code>"←"</code>" with nothing on the right side."</p>

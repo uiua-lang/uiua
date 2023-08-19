@@ -115,7 +115,9 @@ primitive!(
     /// ex: () # Try running to format
     (0(0), Noop, Stack, ("noop", '·')),
     /// Move a value from the stack to the antistack
-    (1(0), Save, Stack, ("save", '^')),
+    (1(0), Save, Stack, ("save", AsciiToken::Caret, '↑')),
+    /// Move a value from the antistack to the stack
+    (0(1), Load, Stack, ("load", '↓')),
     /// Call a function on the antistack
     ([1], Anti, Stack, ("anti", '~')),
     // Pervasive monadic ops

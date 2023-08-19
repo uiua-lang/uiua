@@ -95,8 +95,9 @@ fn invert_instr_fragment(instrs: &[Instr]) -> Option<Vec<Instr>> {
         &(Val, ([Sub], [Add])),
         &(Val, IgnoreMany(Flip), ([Mul], [Div])),
         &(Val, ([Div], [Mul])),
-        &(invert_pow_pattern),
-        &(invert_log_pattern),
+        &Modified(Anti, [Noop], Save),
+        &invert_pow_pattern,
+        &invert_log_pattern,
     ];
 
     for pattern in patterns {
@@ -367,7 +368,27 @@ fn invert_log_pattern(input: &mut &[Instr]) -> Option<Vec<Instr>> {
     }
 }
 
-pub struct Val;
+struct Modified<const N: usize>(Primitive, [Primitive; N], Primitive);
+impl<const N: usize> InvertPattern for Modified<N> {
+    fn invert_extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
+        if let [Instr::Push(val), Instr::Prim(prim, span), ..] = input {
+            if let Some(f) = val.as_function() {
+                if *prim == self.0
+                    && N == f.instrs.len()
+                    && f.instrs.iter().zip(&self.1).all(
+                        |(instr, prim)| matches!(instr, Instr::Prim(prim2, _) if prim2 == prim),
+                    )
+                {
+                    *input = &input[2..];
+                    return Some(vec![Instr::Prim(self.2, *span)]);
+                }
+            }
+        }
+        None
+    }
+}
+
+struct Val;
 impl InvertPattern for Val {
     fn invert_extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
         if input.is_empty() {

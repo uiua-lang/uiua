@@ -157,6 +157,8 @@ impl Primitive {
             InverseBits => Bits,
             Couple => Uncouple,
             Call => Constant,
+            Load => Save,
+            Save => Load,
             _ => return None,
         })
     }
@@ -374,6 +376,10 @@ impl Primitive {
             Primitive::Save => {
                 let val = env.pop(1)?;
                 env.push_anti(val);
+            }
+            Primitive::Load => {
+                let val = env.pop_anti(1)?;
+                env.push(val);
             }
             Primitive::Anti => {
                 let f = env.pop(1)?;

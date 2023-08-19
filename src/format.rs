@@ -2,7 +2,9 @@
 
 use std::{env, fs, path::Path};
 
-use crate::{ast::*, grid_fmt::GridFmt, lex::Sp, parse::parse, UiuaError, UiuaResult};
+use crate::{
+    ast::*, grid_fmt::GridFmt, lex::Sp, parse::parse, primitive::Primitive, UiuaError, UiuaResult,
+};
 
 #[derive(Debug, Clone)]
 pub struct FormatConfig {
@@ -182,6 +184,19 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig) {
         }
         Word::Primitive(prim) => output.push_str(&prim.to_string()),
         Word::Modified(m) => {
+            // Special case for `anti noop` -> `load`
+            if let (
+                Primitive::Anti,
+                [Sp {
+                    value: Word::Primitive(Primitive::Noop),
+                    ..
+                }],
+            ) = (m.modifier.value, &m.words[..])
+            {
+                output.push(Primitive::Load.names().unwrap().unicode.unwrap());
+                return;
+            }
+            // Normal case
             output.push_str(&m.modifier.value.to_string());
             format_words(output, &m.words, config);
         }

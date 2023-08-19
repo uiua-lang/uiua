@@ -1,10 +1,6 @@
-- Bring back the anti-stack
-  - Operations
-    - Save - moves a value from the stack to the anti-stack
-    - Load - moves a value from the anti-stack to the stack
-    - Anti - run a function on the anti-stack and pop the result to the stack
-  - Maybe remove dfns
-    - Keep recursion by passing recur a number to recur out of
+- Maybe remove dfns
+  - Keep recursion by passing recur a number to recur out of
+- Repeat with negative values
 - Finish tour
 - Under pick
 - Docs

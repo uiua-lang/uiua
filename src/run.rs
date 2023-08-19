@@ -827,6 +827,19 @@ backtrace:
         }
         res
     }
+    /// Pop a value from the antistack
+    pub fn pop_anti(&mut self, arg: impl StackArg) -> UiuaResult<Value> {
+        let res = self.antistack.pop().ok_or_else(|| {
+            self.error(format!(
+                "Antistack was empty when evaluating {}",
+                arg.arg_name()
+            ))
+        });
+        if let Some(bottom) = self.scope.antiarray.last_mut() {
+            *bottom = (*bottom).min(self.antistack.len());
+        }
+        res
+    }
     /// Push a value onto the stack
     pub fn push(&mut self, val: impl Into<Value>) {
         self.stack.push(val.into());

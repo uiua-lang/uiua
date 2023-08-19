@@ -610,11 +610,12 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
 pub fn repeat(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(1)?;
-    let n = env.pop(2)?.as_num(
-        env,
-        "Repetitions must be a single natural number or infinity",
-    )?;
-    if n == f64::INFINITY {
+    let n = env
+        .pop(2)?
+        .as_num(env, "Repetitions must be a single integer or infinity")?;
+
+    if n.is_infinite() {
+        let f = if n < 0.0 { f.invert(env)? } else { f };
         loop {
             env.push(f.clone());
             if env.call_catch_break()? {
@@ -623,9 +624,10 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
         }
     } else {
         if n.fract().abs() > f64::EPSILON {
-            return Err(env.error("Repetitions must be a single natural number or infinity"));
+            return Err(env.error("Repetitions must be a single integer or infinity"));
         };
-        for _ in 0..n as u64 {
+        let f = if n < 0.0 { f.invert(env)? } else { f };
+        for _ in 0..n.abs() as usize {
             env.push(f.clone());
             if env.call_catch_break()? {
                 return Ok(());

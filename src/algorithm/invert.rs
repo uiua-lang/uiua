@@ -95,9 +95,10 @@ fn invert_instr_fragment(instrs: &[Instr]) -> Option<Vec<Instr>> {
         &(Val, ([Sub], [Add])),
         &(Val, IgnoreMany(Flip), ([Mul], [Div])),
         &(Val, ([Div], [Mul])),
-        &Modified(Anti, [Noop], Save),
         &invert_pow_pattern,
         &invert_log_pattern,
+        &invert_load_pattern,
+        &invert_repeat_pattern,
     ];
 
     for pattern in patterns {
@@ -368,22 +369,29 @@ fn invert_log_pattern(input: &mut &[Instr]) -> Option<Vec<Instr>> {
     }
 }
 
-struct Modified<const N: usize>(Primitive, [Primitive; N], Primitive);
-impl<const N: usize> InvertPattern for Modified<N> {
-    fn invert_extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
-        if let [Instr::Push(val), Instr::Prim(prim, span), ..] = input {
-            if let Some(f) = val.as_function() {
-                if *prim == self.0
-                    && N == f.instrs.len()
-                    && f.instrs.iter().zip(&self.1).all(
-                        |(instr, prim)| matches!(instr, Instr::Prim(prim2, _) if prim2 == prim),
-                    )
-                {
-                    *input = &input[2..];
-                    return Some(vec![Instr::Prim(self.2, *span)]);
-                }
+fn invert_load_pattern(input: &mut &[Instr]) -> Option<Vec<Instr>> {
+    if let [Instr::Push(val), Instr::Prim(Primitive::Anti, span), ..] = input {
+        if let Some(f) = val.as_function() {
+            if let [Instr::Prim(Primitive::Noop, _)] = &f.instrs[..] {
+                *input = &input[2..];
+                return Some(vec![Instr::Prim(Primitive::Save, *span)]);
             }
         }
+    }
+    None
+}
+
+fn invert_repeat_pattern(input: &mut &[Instr]) -> Option<Vec<Instr>> {
+    let start = *input;
+    let mut instrs = Val.invert_extract(input)?;
+    if let [Instr::Push(f), Instr::Prim(Primitive::Repeat, span), ..] = input {
+        instrs.push(Instr::Prim(Primitive::Neg, *span));
+        instrs.push(Instr::Push(f.clone()));
+        instrs.push(Instr::Prim(Primitive::Repeat, *span));
+        *input = &input[2..];
+        Some(instrs)
+    } else {
+        *input = start;
         None
     }
 }

@@ -1,6 +1,5 @@
 - Maybe remove dfns
   - Keep recursion by passing recur a number to recur out of
-- Repeat with negative values
 - Finish tour
 - Under pick
 - Docs

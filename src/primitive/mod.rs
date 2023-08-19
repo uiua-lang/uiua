@@ -795,13 +795,15 @@ mod tests {
                 })
                 .collect::<Vec<_>>()
                 .join("|");
-            let literal_names = prims
+            let mut literal_names: Vec<String> = prims
                 .filter_map(|p| p.names())
                 .filter(|p| !p.is_name_formattable() && p.ascii.is_none() && p.unicode.is_none())
                 .map(|n| n.text.to_string())
-                .collect::<Vec<_>>()
-                .join("|");
-            format!("([{glyphs}]|{format_names}|{literal_names})")
+                .collect();
+            literal_names.sort_by_key(|s| s.len());
+            literal_names.reverse();
+            let literal_names = literal_names.join("|");
+            format!("([{glyphs}]|{format_names}|({literal_names}))")
         }
 
         let noadic_functions = gen_group(Primitive::all().filter(|p| {

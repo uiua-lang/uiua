@@ -287,7 +287,7 @@ impl Parser {
         items.insert(0, word);
         for item in &mut items {
             if let Word::Func(func, _) = &item.value {
-                if func.body.is_empty() {
+                if func.lines.is_empty() {
                     item.value = Word::Primitive(Primitive::Noop);
                 }
             }
@@ -398,7 +398,7 @@ impl Parser {
                 Word::Func(
                     Func {
                         id: FunctionId::Anonymous(span),
-                        body,
+                        lines: body,
                     },
                     false,
                 )
@@ -421,7 +421,7 @@ impl Parser {
             span.clone().sp(Word::Func(
                 Func {
                     id: FunctionId::Anonymous(span),
-                    body: vec![body],
+                    lines: vec![body],
                 },
                 true,
             ))

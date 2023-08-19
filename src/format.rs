@@ -134,6 +134,10 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig) {
         Word::String(s) => output.push_str(&format!("{:?}", s)),
         Word::FormatString(_) => output.push_str(word.span.as_str()),
         Word::MultilineString(lines) => {
+            if lines.len() == 1 {
+                output.push_str(lines[0].span.as_str());
+                return;
+            }
             let curr_line_pos = if output.ends_with('\n') {
                 0
             } else {
@@ -148,7 +152,6 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig) {
                 }
                 output.push_str(line.span.as_str());
             }
-            output.push('\n');
         }
         Word::Ident(ident) => output.push_str(&ident.0),
         Word::Strand(items) => {
@@ -164,16 +167,16 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig) {
         }
         Word::Array(items) => {
             output.push('[');
-            format_multiline_words(output, items, config);
+            format_multiline_words(output, items, config, true);
             output.push(']');
         }
         Word::Func(func, bind) => {
             if *bind {
                 output.push('\'');
-                format_multiline_words(output, &func.body, config);
+                format_words(output, &func.lines[0], config);
             } else {
                 output.push('(');
-                format_multiline_words(output, &func.body, config);
+                format_multiline_words(output, &func.lines, config, false);
                 output.push(')');
             }
         }
@@ -206,38 +209,45 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig) {
     }
 }
 
-fn format_multiline_words(output: &mut String, lines: &[Vec<Sp<Word>>], config: &FormatConfig) {
-    if lines.len() == 1 {
+fn format_multiline_words(
+    output: &mut String,
+    lines: &[Vec<Sp<Word>>],
+    config: &FormatConfig,
+    allow_compact: bool,
+) {
+    if lines.len() == 1 && !lines[0].iter().any(|word| word_is_multiline(&word.value)) {
         format_words(output, &lines[0], config);
+        return;
+    }
+    let curr_line = output.lines().last().unwrap_or_default();
+    let curr_line_pos = if output.ends_with('\n') {
+        0
     } else {
-        let curr_line = output.lines().last().unwrap_or_default();
-        let curr_line_pos = if output.ends_with('\n') {
-            0
-        } else {
-            curr_line.chars().count()
-        };
-        let compact = config.compact_multiline.unwrap_or_else(|| {
+        curr_line.chars().count()
+    };
+    let compact = allow_compact
+        && config.compact_multiline.unwrap_or_else(|| {
             curr_line_pos <= config.multiline_compact_threshold || curr_line.starts_with(' ')
-        });
-        let indent = if compact {
-            curr_line_pos
-        } else {
-            config.multiline_indent
-        };
-        for (i, line) in lines.iter().enumerate() {
-            if i > 0 || !compact {
-                output.push('\n');
-                if !line.is_empty() {
-                    for _ in 0..indent {
-                        output.push(' ');
-                    }
+        })
+        && (lines.iter().flatten()).all(|word| !word_is_multiline(&word.value));
+    let indent = if compact {
+        curr_line_pos
+    } else {
+        config.multiline_indent
+    };
+    for (i, line) in lines.iter().enumerate() {
+        if i > 0 || !compact {
+            output.push('\n');
+            if !line.is_empty() {
+                for _ in 0..indent {
+                    output.push(' ');
                 }
             }
-            format_words(output, line, config);
         }
-        if !compact {
-            output.push('\n');
-        }
+        format_words(output, line, config);
+    }
+    if !compact {
+        output.push('\n');
     }
 }
 
@@ -262,4 +272,28 @@ fn trim_spaces(words: &[Sp<Word>]) -> &[Sp<Word>] {
         return &[];
     }
     &words[start..end]
+}
+
+fn word_is_multiline(word: &Word) -> bool {
+    match word {
+        Word::Number(_, _) => false,
+        Word::Char(_) => false,
+        Word::String(_) => false,
+        Word::FormatString(_) => false,
+        Word::MultilineString(lines) => lines.len() > 1,
+        Word::Ident(_) => false,
+        Word::Strand(_) => false,
+        Word::Array(items) => items.iter().any(|lines| {
+            lines.len() > 1 || lines.iter().any(|word| word_is_multiline(&word.value))
+        }),
+        Word::Func(func, bind) => {
+            !bind
+                && (func.lines.len() > 1
+                    || (func.lines.iter().flatten()).any(|word| word_is_multiline(&word.value)))
+        }
+        Word::Primitive(_) => false,
+        Word::Modified(m) => m.words.iter().any(|word| word_is_multiline(&word.value)),
+        Word::Comment(_) => false,
+        Word::Spaces => false,
+    }
 }

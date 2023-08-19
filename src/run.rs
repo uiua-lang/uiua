@@ -520,7 +520,7 @@ backtrace:
     }
     fn func(&mut self, func: Func, _span: CodeSpan) -> UiuaResult {
         let mut instrs = Vec::new();
-        for line in func.body {
+        for line in func.lines {
             instrs.extend(self.compile_words(line)?);
         }
         // If the function is just a call to another function, just push that function

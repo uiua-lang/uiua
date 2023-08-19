@@ -1,13 +1,27 @@
+# A simple HTTP server good enough to serve Uiua's website
+# 
+# To do that, compile the site with trunk:
+# ```
+# cd site
+# trunk build --release
+# cd ..
+# ```
+# Then run:
+# ```
+# uiua run examples/http_server.ua
+# ```
+
 # Bind TCP listener
 listener ← tcplisten "0.0.0.0:8080"
 print $ Server started
 
-
 # Mime types
 getext ← !⊢⇌ ⊜□ ≠@. .
-↶⊟⍉[[□"js" □"text/javascript"]
-    [□"html" □"text/html"]
-    [□"wasm" □"application/wasm" ]]
+↶⊟⍉[
+  [□"js" □"text/javascript"]
+  [□"html" □"text/html"]
+  [□"wasm" □"application/wasm"]
+]
 extmimeExt ← 
 extmimeMime ← 
 extmime ← !⊏∶⊂extmimeMime □⊂"text/"∶ ⊗∶extmimeExt□.
@@ -23,7 +37,6 @@ response ← (
           $ Content-Type: _
           $ 
           $ 
-
 )
 
 # Handlers
@@ -33,8 +46,10 @@ handlepageloaderror ← (
   /↥⌕"The system cannot find the file specified".
   !servererror_(notfound;)
 )
-page ← ⍣(extmime getext ∶freadallbytes.
-         response "200 OK")handlepageloaderror ⊂"docs"
+page ← ⍣(
+  extmime getext ∶freadallbytes.
+  response "200 OK"
+)handlepageloaderror ⊂"docs"
 home ← page "/index.html"
 
 respond ← close ⍜↑(

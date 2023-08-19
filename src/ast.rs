@@ -74,14 +74,14 @@ impl fmt::Debug for Word {
 #[derive(Clone)]
 pub struct Func {
     pub id: FunctionId,
-    pub body: Vec<Vec<Sp<Word>>>,
+    pub lines: Vec<Vec<Sp<Word>>>,
 }
 
 impl fmt::Debug for Func {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut d = f.debug_tuple("func");
         d.field(&self.id);
-        for line in &self.body {
+        for line in &self.lines {
             for word in line {
                 d.field(&word.value);
             }

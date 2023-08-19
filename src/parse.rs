@@ -286,7 +286,7 @@ impl Parser {
         }
         items.insert(0, word);
         for item in &mut items {
-            if let Word::Func(func, _) = &item.value {
+            if let Word::Func(func) = &item.value {
                 if func.lines.is_empty() {
                     item.value = Word::Primitive(Primitive::Noop);
                 }
@@ -369,7 +369,18 @@ impl Parser {
             let items = self.multiline_words();
             let end = self.expect_close(CloseBracket);
             let span = start.merge(end);
-            span.sp(Word::Array(items))
+            span.sp(Word::Array(Arr {
+                lines: items,
+                constant: false,
+            }))
+        } else if let Some(start) = self.try_exact(OpenCurly) {
+            let items = self.multiline_words();
+            let end = self.expect_close(CloseCurly);
+            let span = start.merge(end);
+            span.sp(Word::Array(Arr {
+                lines: items,
+                constant: true,
+            }))
         } else if let Some(spaces) = self.try_spaces() {
             spaces
         } else {
@@ -395,13 +406,11 @@ impl Parser {
             span.clone().sp(if body.is_empty() {
                 Word::Primitive(Primitive::Noop)
             } else {
-                Word::Func(
-                    Func {
-                        id: FunctionId::Anonymous(span),
-                        lines: body,
-                    },
-                    false,
-                )
+                Word::Func(Func {
+                    id: FunctionId::Anonymous(span),
+                    lines: body,
+                    bind: false,
+                })
             })
         } else if let Some(start) = self.try_exact(SingleQuote) {
             self.try_spaces();
@@ -418,13 +427,11 @@ impl Parser {
             let span = start.merge(second.span.clone());
             body.push(second);
             body.extend(self.try_spaces());
-            span.clone().sp(Word::Func(
-                Func {
-                    id: FunctionId::Anonymous(span),
-                    lines: vec![body],
-                },
-                true,
-            ))
+            span.clone().sp(Word::Func(Func {
+                id: FunctionId::Anonymous(span),
+                lines: vec![body],
+                bind: true,
+            }))
         } else {
             return None;
         })

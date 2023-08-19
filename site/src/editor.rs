@@ -659,6 +659,7 @@ pub fn Editor<'a>(
     for (glyph, title, class, replace) in [
         ("_", "strand", "strand-span", None),
         ("[]", "array", "", None),
+        ("{}", "constant array", "", None),
         ("()", "function", "", None),
         ("'", "bind", "", None),
         ("¯", "negative\n`", "number-literal-span", None),

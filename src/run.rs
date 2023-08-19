@@ -331,6 +331,10 @@ backtrace:
         }
         Ok(())
     }
+    /// Push an instruction to the current function being compiled
+    ///
+    /// Also performs some optimizations if the instruction and the previous
+    /// instruction form some known pattern
     fn push_instr(&mut self, instr: Instr) {
         use Instr::*;
         use Primitive::*;
@@ -462,18 +466,24 @@ backtrace:
                 self.push_instr(Instr::BeginArray);
                 self.words(items, false)?;
                 let span = self.add_span(word.span);
-                self.push_instr(Instr::EndArray(span));
+                self.push_instr(Instr::EndArray {
+                    span,
+                    constant: false,
+                });
             }
-            Word::Array(items) => {
+            Word::Array(arr) => {
                 if !call {
                     self.new_functions.push(Vec::new());
                 }
                 self.push_instr(Instr::BeginArray);
-                for item in items {
-                    self.words(item, true)?;
+                for lines in arr.lines {
+                    self.words(lines, true)?;
                 }
                 let span = self.add_span(word.span.clone());
-                self.push_instr(Instr::EndArray(span));
+                self.push_instr(Instr::EndArray {
+                    span,
+                    constant: arr.constant,
+                });
                 if !call {
                     let instrs = self.new_functions.pop().unwrap();
                     let func = Function::new(
@@ -484,7 +494,7 @@ backtrace:
                     self.push_instr(Instr::push(func));
                 }
             }
-            Word::Func(func, _) => self.func(func, word.span)?,
+            Word::Func(func) => self.func(func, word.span)?,
             Word::Primitive(p) => self.primitive(p, word.span, call),
             Word::Modified(m) => self.modified(*m, call)?,
             Word::Spaces | Word::Comment(_) => {}
@@ -598,10 +608,19 @@ backtrace:
                     self.scope.array.push(self.stack.len());
                     Ok(())
                 }
-                &Instr::EndArray(span) => (|| {
+                &Instr::EndArray { span, constant } => (|| {
                     let start = self.scope.array.pop().unwrap();
-                    let values: Vec<_> = self.stack.drain(start..).rev().collect();
                     self.push_span(span, None);
+                    let values = self.stack.drain(start..).rev();
+                    let values: Vec<Value> = if constant {
+                        values
+                            .map(Function::constant)
+                            .map(Arc::new)
+                            .map(Value::from)
+                            .collect()
+                    } else {
+                        values.collect()
+                    };
                     let val = Value::from_row_values(values, self)?;
                     self.pop_span();
                     self.push(val);

@@ -66,7 +66,7 @@ impl<'a> VirtualEnv<'a> {
                 self.stack.push(val);
             }
             Instr::BeginArray => self.array_stack.push(self.stack.len()),
-            Instr::EndArray(_) => {
+            Instr::EndArray { .. } => {
                 let len = self
                     .array_stack
                     .pop()
@@ -265,7 +265,16 @@ mod test {
 
         assert_eq!(
             Some((0, 1)),
-            check(&[BeginArray, push(3), push(2), push(1), EndArray(0)])
+            check(&[
+                BeginArray,
+                push(3),
+                push(2),
+                push(1),
+                EndArray {
+                    span: 0,
+                    constant: false
+                }
+            ])
         );
         assert_eq!(
             Some((1, 1)),
@@ -274,7 +283,10 @@ mod test {
                 push(3),
                 push(2),
                 push(1),
-                EndArray(0),
+                EndArray {
+                    span: 0,
+                    constant: false
+                },
                 Prim(Add, 0)
             ])
         );
@@ -285,7 +297,10 @@ mod test {
                 push(3),
                 push(2),
                 push(1),
-                EndArray(0),
+                EndArray {
+                    span: 0,
+                    constant: false
+                },
                 push(Add),
                 Prim(Reduce, 0)
             ])

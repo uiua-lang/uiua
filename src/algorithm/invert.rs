@@ -425,7 +425,7 @@ impl InvertPattern for Val {
                 let mut depth = 1;
                 let mut i = 1;
                 loop {
-                    if let Instr::EndArray(_) = input.get(i)? {
+                    if let Instr::EndArray { .. } = input.get(i)? {
                         depth -= 1;
                         if depth == 0 {
                             break;

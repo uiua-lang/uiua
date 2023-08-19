@@ -363,14 +363,19 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
-    pub fn from_row_values(
-        values: impl IntoIterator<Item = Value>,
-        env: &Uiua,
-    ) -> UiuaResult<Self> {
-        Self::from_row_values_impl(values, env)
+    pub fn from_row_values<V>(values: V, env: &Uiua) -> UiuaResult<Self>
+    where
+        V: IntoIterator,
+        V::Item: Into<Value>,
+    {
+        Self::from_row_values_impl(values.into_iter().map(Into::into), env)
     }
-    pub fn from_row_values_infallible(values: impl IntoIterator<Item = Value>) -> Self {
-        Self::from_row_values_impl(values, ()).unwrap()
+    pub fn from_row_values_infallible<V>(values: V) -> Self
+    where
+        V: IntoIterator,
+        V::Item: Into<Value>,
+    {
+        Self::from_row_values_impl(values.into_iter().map(Into::into), ()).unwrap()
     }
     fn from_row_values_impl<C: FillContext>(
         values: impl IntoIterator<Item = Value>,

@@ -116,7 +116,7 @@ pub fn MainPage() -> impl IntoView {
                 "You can run with ctrl/shift + enter.",
             ]}/>
         <br/>
-        <p style="font-size: 130%">"Uiua "<span style="font-size: 70%; opacity: 0.8;">"("<i>"wee-wuh "</i><button on:click=borat class="sound-button">"🔉"</button>")"</span>" is a stack-oriented array programming language with a focus on simplicity, expressiveness, and "<a href="https://en.wikipedia.org/wiki/Tacit_programming">"tacit"</a>" code."</p>
+        <p style="font-size: 130%">"Uiua "<span style="font-size: 70%; opacity: 0.8;">"("<i>"wee-wuh "</i><button on:click=borat class="sound-button">"🔉"</button>")"</span>" is a stack-oriented array programming language with a focus on simplicity, beauty, and "<a href="https://en.wikipedia.org/wiki/Tacit_programming">"tacit"</a>" code."</p>
         <div class="features">
             <div>
                 <div>

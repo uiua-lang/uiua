@@ -16,7 +16,7 @@ use crate::{
 pub enum Instr {
     Push(Box<Value>),
     BeginArray,
-    EndArray(usize),
+    EndArray { constant: bool, span: usize },
     Prim(Primitive, usize),
     Call(usize),
 }
@@ -26,7 +26,7 @@ impl PartialEq for Instr {
         match (self, other) {
             (Self::Push(a), Self::Push(b)) => a == b,
             (Self::BeginArray, Self::BeginArray) => true,
-            (Self::EndArray(_), Self::EndArray(_)) => true,
+            (Self::EndArray { .. }, Self::EndArray { .. }) => true,
             (Self::Prim(a, _), Self::Prim(b, _)) => a == b,
             (Self::Call(_), Self::Call(_)) => true,
             _ => false,
@@ -47,15 +47,15 @@ impl Ord for Instr {
         match (self, other) {
             (Self::Push(a), Self::Push(b)) => a.cmp(b),
             (Self::BeginArray, Self::BeginArray) => Ordering::Equal,
-            (Self::EndArray(_), Self::EndArray(_)) => Ordering::Equal,
+            (Self::EndArray { .. }, Self::EndArray { .. }) => Ordering::Equal,
             (Self::Prim(a, _), Self::Prim(b, _)) => a.cmp(b),
             (Self::Call(_), Self::Call(_)) => Ordering::Equal,
             (Self::Push(_), _) => Ordering::Less,
             (Self::BeginArray, Self::Push(_)) => Ordering::Greater,
             (Self::BeginArray, _) => Ordering::Less,
-            (Self::EndArray(_), Self::Push(_) | Self::BeginArray) => Ordering::Greater,
-            (Self::EndArray(_), _) => Ordering::Less,
-            (Self::Prim(_, _), Self::Push(_) | Self::BeginArray | Self::EndArray(_)) => {
+            (Self::EndArray { .. }, Self::Push(_) | Self::BeginArray) => Ordering::Greater,
+            (Self::EndArray { .. }, _) => Ordering::Less,
+            (Self::Prim(_, _), Self::Push(_) | Self::BeginArray | Self::EndArray { .. }) => {
                 Ordering::Greater
             }
             (Self::Prim(_, _), _) => Ordering::Less,
@@ -72,7 +72,7 @@ impl Hash for Instr {
                 val.hash(state);
             }
             Instr::BeginArray => 1u8.hash(state),
-            Instr::EndArray(_) => 2u8.hash(state),
+            Instr::EndArray { .. } => 2u8.hash(state),
             Instr::Prim(p, _) => {
                 3u8.hash(state);
                 p.hash(state);
@@ -99,7 +99,7 @@ impl fmt::Display for Instr {
         match self {
             Instr::Push(val) => write!(f, "{val:?}"),
             Instr::BeginArray => write!(f, "]"),
-            Instr::EndArray(_) => write!(f, "["),
+            Instr::EndArray { .. } => write!(f, "["),
             Instr::Prim(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => write!(f, "!"),
         }

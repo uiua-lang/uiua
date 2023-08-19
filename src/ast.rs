@@ -25,8 +25,8 @@ pub enum Word {
     MultilineString(Vec<Sp<Vec<String>>>),
     Ident(Ident),
     Strand(Vec<Sp<Word>>),
-    Array(Vec<Vec<Sp<Word>>>),
-    Func(Func, bool),
+    Array(Arr),
+    Func(Func),
     Primitive(Primitive),
     Modified(Box<Modified>),
     Comment(String),
@@ -60,9 +60,9 @@ impl fmt::Debug for Word {
                 Ok(())
             }
             Word::Ident(ident) => write!(f, "ident({ident})"),
-            Word::Array(array) => write!(f, "array({array:?})"),
+            Word::Array(arr) => arr.fmt(f),
             Word::Strand(items) => write!(f, "strand({items:?})"),
-            Word::Func(func, _) => func.fmt(f),
+            Word::Func(func) => func.fmt(f),
             Word::Primitive(prim) => prim.fmt(f),
             Word::Modified(modified) => modified.fmt(f),
             Word::Spaces => write!(f, "' '"),
@@ -72,9 +72,28 @@ impl fmt::Debug for Word {
 }
 
 #[derive(Clone)]
+pub struct Arr {
+    pub lines: Vec<Vec<Sp<Word>>>,
+    pub constant: bool,
+}
+
+impl fmt::Debug for Arr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut d = f.debug_tuple("arr");
+        for line in &self.lines {
+            for word in line {
+                d.field(&word.value);
+            }
+        }
+        d.finish()
+    }
+}
+
+#[derive(Clone)]
 pub struct Func {
     pub id: FunctionId,
     pub lines: Vec<Vec<Sp<Word>>>,
+    pub bind: bool,
 }
 
 impl fmt::Debug for Func {

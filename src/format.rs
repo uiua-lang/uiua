@@ -165,13 +165,21 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig) {
                 output.push('_');
             }
         }
-        Word::Array(items) => {
-            output.push('[');
-            format_multiline_words(output, items, config, true);
-            output.push(']');
+        Word::Array(arr) => {
+            if arr.constant {
+                output.push('{');
+            } else {
+                output.push('[');
+            }
+            format_multiline_words(output, &arr.lines, config, true);
+            if arr.constant {
+                output.push('}');
+            } else {
+                output.push(']');
+            }
         }
-        Word::Func(func, bind) => {
-            if *bind {
+        Word::Func(func) => {
+            if func.bind {
                 output.push('\'');
                 format_words(output, &func.lines[0], config);
             } else {
@@ -283,11 +291,11 @@ fn word_is_multiline(word: &Word) -> bool {
         Word::MultilineString(lines) => lines.len() > 1,
         Word::Ident(_) => false,
         Word::Strand(_) => false,
-        Word::Array(items) => items.iter().any(|lines| {
+        Word::Array(arr) => arr.lines.iter().any(|lines| {
             lines.len() > 1 || lines.iter().any(|word| word_is_multiline(&word.value))
         }),
-        Word::Func(func, bind) => {
-            !bind
+        Word::Func(func) => {
+            !func.bind
                 && (func.lines.len() > 1
                     || (func.lines.iter().flatten()).any(|word| word_is_multiline(&word.value)))
         }

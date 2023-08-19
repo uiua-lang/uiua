@@ -18,9 +18,9 @@ print $ Server started
 # Mime types
 getext ← !⊢⇌ ⊜□ ≠@. .
 ↶⊟⍉[
-  [□"js" □"text/javascript"]
-  [□"html" □"text/html"]
-  [□"wasm" □"application/wasm"]
+  {"js" "text/javascript"}
+  {"html" "text/html"}
+  {"wasm" "application/wasm"}
 ]
 extmimeExt ← 
 extmimeMime ← 

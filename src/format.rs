@@ -103,19 +103,19 @@ fn format_item(output: &mut String, item: &Item, config: &FormatConfig) {
             output.push_str(delim);
         }
         Item::Words(w) => {
-            format_words(output, w, config);
+            format_words(output, w, config, true);
         }
         Item::Binding(binding) => {
             output.push_str(&binding.name.value.0);
             output.push_str(" ← ");
-            format_words(output, &binding.words, config);
+            format_words(output, &binding.words, config, true);
         }
         Item::Newlines => {}
     }
 }
 
-fn format_words(output: &mut String, words: &[Sp<Word>], config: &FormatConfig) {
-    for word in trim_spaces(words) {
+fn format_words(output: &mut String, words: &[Sp<Word>], config: &FormatConfig, trim_end: bool) {
+    for word in trim_spaces(words, trim_end) {
         format_word(output, word, config);
     }
 }
@@ -181,7 +181,7 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig) {
         Word::Func(func) => {
             if func.bind {
                 output.push('\'');
-                format_words(output, &func.lines[0], config);
+                format_words(output, &func.lines[0], config, false);
             } else {
                 output.push('(');
                 format_multiline_words(output, &func.lines, config, false);
@@ -204,7 +204,7 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig) {
             }
             // Normal case
             output.push_str(&m.modifier.value.to_string());
-            format_words(output, &m.words, config);
+            format_words(output, &m.words, config, true);
         }
         Word::Spaces => output.push(' '),
         Word::Comment(comment) => {
@@ -224,7 +224,7 @@ fn format_multiline_words(
     allow_compact: bool,
 ) {
     if lines.len() == 1 && !lines[0].iter().any(|word| word_is_multiline(&word.value)) {
-        format_words(output, &lines[0], config);
+        format_words(output, &lines[0], config, true);
         return;
     }
     let curr_line = output.lines().last().unwrap_or_default();
@@ -252,14 +252,14 @@ fn format_multiline_words(
                 }
             }
         }
-        format_words(output, line, config);
+        format_words(output, line, config, true);
     }
     if !compact {
         output.push('\n');
     }
 }
 
-fn trim_spaces(words: &[Sp<Word>]) -> &[Sp<Word>] {
+fn trim_spaces(words: &[Sp<Word>], trim_end: bool) -> &[Sp<Word>] {
     let mut start = 0;
     for word in words {
         if let Word::Spaces = word.value {
@@ -269,11 +269,13 @@ fn trim_spaces(words: &[Sp<Word>]) -> &[Sp<Word>] {
         }
     }
     let mut end = words.len();
-    for word in words.iter().rev() {
-        if let Word::Spaces = word.value {
-            end -= 1;
-        } else {
-            break;
+    if trim_end {
+        for word in words.iter().rev() {
+            if let Word::Spaces = word.value {
+                end -= 1;
+            } else {
+                break;
+            }
         }
     }
     if start >= end {

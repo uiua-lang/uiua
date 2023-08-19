@@ -611,23 +611,21 @@ impl<T: ArrayValue> Array<T> {
                 index.len()
             )));
         }
+        let mut picked = self.data.clone();
         for (d, (&s, &i)) in self.shape.iter().zip(index).enumerate() {
+            let row_len: usize = self.shape[d + 1..].iter().product();
             let s = s as isize;
             if i >= s || i < -s {
+                if let Some(fill) = env.fill::<T>() {
+                    picked = vec![fill; row_len].into();
+                    continue;
+                }
                 return Err(env.error(format!(
                     "Index {i} is out of bounds of length {s} (dimension {d}) in shape {}",
                     self.format_shape()
                 )));
             }
-        }
-        let mut picked = self.data.clone();
-        for (d, (&s, &i)) in self.shape.iter().zip(index).enumerate() {
-            let row_len: usize = self.shape[d + 1..].iter().product();
-            let i = if i >= 0 {
-                i as usize
-            } else {
-                (s as isize + i) as usize
-            };
+            let i = if i >= 0 { i as usize } else { (s + i) as usize };
             let start = i * row_len;
             let end = start + row_len;
             picked = picked.slice(start..end);
@@ -1131,6 +1129,10 @@ impl<T: ArrayValue> Array<T> {
             let i = if i >= 0 {
                 let ui = i as usize;
                 if ui >= row_count {
+                    if let Some(fill) = env.fill::<T>() {
+                        selected.extend(repeat(fill).take(row_len));
+                        continue;
+                    }
                     return Err(env.error(format!(
                         "Index {} is out of bounds of length {}",
                         i, row_count
@@ -1140,6 +1142,10 @@ impl<T: ArrayValue> Array<T> {
             } else {
                 let pos_i = (row_count as isize + i) as usize;
                 if pos_i >= row_count {
+                    if let Some(fill) = env.fill::<T>() {
+                        selected.extend(repeat(fill).take(row_len));
+                        continue;
+                    }
                     return Err(env.error(format!(
                         "Index {} is out of bounds of length {}",
                         i, row_count

@@ -879,7 +879,10 @@ primitive!(
     /// Many functions, like [scan] and [partition], implicitly build arrays and require compatible shapes.
     /// [fill] can be used with them as well. In some cases, this prevents the need to use [constant].
     /// ex: ⍛0\⊂ 1_2_3_4_5
-    /// ex: ⍛' '⊜·≠@ . "No □ needed!"
+    /// ex: ⍛@ ⊜·≠@ . "No □ needed!"
+    ///
+    /// [fill] will prevent [pick] and [select] from throwing an error if an index is out of bounds.
+    /// ex: ⍛∞⊏ 3_7_0 [8 3 9 2 0]
     ([2], Fill, OtherModifier, ("fill", '⍛')),
     /// Apply a function at a different array depth
     ///

@@ -1,5 +1,5 @@
 @font-face {
-    font-family: "Code Font";
+    font-family: "Code Font", monospace;
     src: url(DejaVuSansMono.ttf) format("truetype");
 }
 
@@ -9,7 +9,7 @@
 }
 
 html * {
-    font-family: "Main Font"
+    font-family: "Main Font", sans-serif;
 }
 
 html {
@@ -41,7 +41,7 @@ button:active {
 }
 
 code {
-    font-family: "Code Font";
+    font-family: "Code Font", monospace;
     border-radius: 0.2em;
     padding: 0.2em;
     position: relative;
@@ -321,7 +321,7 @@ li {
 
 .code-span {
     font-size: 1em;
-    font-family: "Code Font";
+    font-family: "Code Font", monospace;
     white-space: pre;
     text-decoration: none;
 }
@@ -329,7 +329,7 @@ li {
 .code-hover:hover::after {
     content: attr(data-title);
     position: absolute;
-    font-family: "Code Font";
+    font-family: "Code Font", monospace;
     font-size: 0.7em;
     color: #eee;
     background-color: #000c;
@@ -355,7 +355,7 @@ li {
     white-space: pre-wrap;
     margin-left: 1.75em;
     padding: 0.3em 0;
-    font-family: "Code Font";
+    font-family: "Code Font", monospace;
 }
 
 .output-item {
@@ -413,7 +413,7 @@ li {
 .editor-right-button:hover::after {
     content: attr(data-title);
     position: absolute;
-    font-family: "Code Font";
+    font-family: "Code Font", monospace;
     font-size: 1em;
     left: calc(-8em - 50%);
     top: calc(50% - 0.6em);
@@ -438,7 +438,7 @@ li {
 }
 
 .glyph-button {
-    font-family: "Code Font";
+    font-family: "Code Font", monospace;
     font-size: 0.97em;
     padding: 0.07em;
     margin: 0em;
@@ -448,7 +448,7 @@ li {
 .glyph-button:hover::after {
     content: attr(data-title);
     position: absolute;
-    font-family: "Code Font";
+    font-family: "Code Font", monospace;
     font-size: 0.7em;
     bottom: 100%;
     color: #eee;
@@ -469,7 +469,7 @@ li {
 .prim-code:hover::after {
     content: attr(data-title);
     position: absolute;
-    font-family: "Code Font";
+    font-family: "Code Font", monospace;
     font-size: 0.8em;
     bottom: 100%;
     color: #eee;
@@ -497,7 +497,7 @@ li {
     color: #eee;
     background-color: #000b;
     white-space: pre-wrap;
-    font-family: "Code Font";
+    font-family: "Code Font", monospace;
     z-index: 1;
 }
 
@@ -507,7 +507,7 @@ li {
 }
 
 .code-font {
-    font-family: "Code Font";
+    font-family: "Code Font", monospace;
 }
 
 @media (prefers-color-scheme: dark) {

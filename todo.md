@@ -1,4 +1,11 @@
+- Make working with different length strings more ergonomic
+  - Trait for comparing array types?
+  - Use {}s for auto-constant?
 - Add a way to prevent modifier binding
+- Fix multiline formatting
+- Add a way to check types
+- Figure out why tcp socket doesn't work in thread
+- Let errors be rethrown
 - Finish tour
 - Under pick
 - Docs
@@ -8,6 +15,7 @@
   - System
 - Tooling
   - Primitive details in LSP
+  - Function comments in LSP
 - Test suite
 - More inverses
 - Optimizations

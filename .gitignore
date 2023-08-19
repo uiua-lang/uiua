@@ -1,7 +1,6 @@
 /target
 /Cargo.lock
 /docs
-*.uiua
 *.ua
 site/dist
 glyph_test.txt
@@ -11,3 +10,5 @@ uiua-temp
 *.wav
 profile.yaml
 uiua.tmLanguage.json
+!examples/*.ua
+.vscode

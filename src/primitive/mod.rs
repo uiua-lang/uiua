@@ -106,7 +106,7 @@ impl fmt::Display for Primitive {
             match self {
                 InvTranspose => write!(f, "↶{Transpose}"),
                 InverseBits => write!(f, "↶{Bits}"),
-                Uncouple => write!(f, "↶{Uncouple}"),
+                Uncouple => write!(f, "↶{Couple}"),
                 Untake => write!(f, "↶{Take}"),
                 Undrop => write!(f, "↶{Drop}"),
                 Cos => write!(f, "{Sin}{Add}{Add}"),

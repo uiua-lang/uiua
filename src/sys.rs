@@ -113,7 +113,7 @@ sys_op! {
     /// Read all the contents of a file into a byte array
     (1, FReadAllBytes, "freadallbytes"),
     /// Write the entire contents of an array to a file
-    (2, FWriteAll, "fwriteall"),
+    (2(0), FWriteAll, "fwriteall"),
     /// Read at most n bytes from a stream
     (2, ReadStr, "readstr"),
     /// Read at most n bytes from a stream
@@ -121,7 +121,7 @@ sys_op! {
     /// Read from a stream until a delimiter is reached
     (2, ReadUntil, "readuntil"),
     /// Write an array to a stream
-    (2, Write, "write"),
+    (2(0), Write, "write"),
     /// Run the code from a file in a scope
     ///
     /// If the file has already been imported, its code will not be run again, but the values it originally pushed onto the stack will be pushed again.
@@ -153,7 +153,7 @@ sys_op! {
     ///
     /// The format is determined by the file extension.
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, and `ico`.
-    (2, ImWrite, "imwrite"),
+    (2(0), ImWrite, "imwrite"),
     /// Show an image
     ///
     /// How the image is shown depends on the system backend.

@@ -311,7 +311,7 @@ impl Parser {
         let mut args = Vec::new();
         for _ in 0..margs {
             self.try_spaces();
-            if let Some(arg) = self.try_modified() {
+            if let Some(arg) = self.try_strand() {
                 args.push(arg);
             } else {
                 break;

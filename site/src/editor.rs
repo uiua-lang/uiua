@@ -661,8 +661,6 @@ pub fn Editor<'a>(
         ("[]", "array", "", None),
         ("()", "function", "", None),
         ("'", "bind", "", None),
-        ("{}", "dfn", "", None),
-        ("ḁ", "dfn argument", "", Some("̥")),
         ("¯", "negative\n`", "number-literal-span", None),
         ("@", "character", "string-literal-span", None),
         ("\"", "string", "string-literal-span", None),

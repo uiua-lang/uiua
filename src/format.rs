@@ -16,7 +16,7 @@ pub struct FormatConfig {
     ///
     /// Default: `true`
     pub comment_space_after_hash: bool,
-    /// The number of spaces to indent multiline arrays, functions, and dfns
+    /// The number of spaces to indent multiline arrays and functions
     ///
     /// Default: `2`
     pub multiline_indent: usize,
@@ -24,9 +24,9 @@ pub struct FormatConfig {
     ///
     /// Default: `None`
     ///
-    /// If `None`, then multiline arrays, functions, and dfns that start on or before `multiline_compact_threshold` will be compact, and those that start after will not be.
+    /// If `None`, then multiline arrays and functions that start on or before `multiline_compact_threshold` will be compact, and those that start after will not be.
     pub compact_multiline: Option<bool>,
-    /// The number of characters on line preceding a multiline array, function, or dfn, at or before which the multiline will be compact.
+    /// The number of characters on line preceding a multiline array or function, at or before which the multiline will be compact.
     ///
     /// Default: `10`
     pub multiline_compact_threshold: usize,

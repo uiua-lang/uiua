@@ -32,7 +32,6 @@ pub enum LexError {
     ExpectedCharacter(Option<char>),
     InvalidEscape(char),
     ExpectedNumber,
-    InvalidDfnArg(char),
 }
 
 impl fmt::Display for LexError {
@@ -43,7 +42,6 @@ impl fmt::Display for LexError {
             LexError::ExpectedCharacter(None) => write!(f, "expected character"),
             LexError::InvalidEscape(c) => write!(f, "invalid escape character {c:?}"),
             LexError::ExpectedNumber => write!(f, "expected number"),
-            LexError::InvalidDfnArg(c) => write!(f, "invalid dfn arg {c:?}"),
         }
     }
 }

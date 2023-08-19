@@ -17,7 +17,7 @@ pub fn Design() -> impl IntoView {
         <p>"I discovered what a lot of others have discovered when delving deep into tacit code: it's really hard to read and write and reason about."</p>
         <p>"Eventually, I moved to a stack-oriented model and discovered that you can write almost any 1 or 2 argument combinator with just "<PrimCode prim=Dup/>", "<PrimCode prim=Over/>", and "<PrimCode prim=Flip/>"."</p>
         <p>"Of course, I also made the discovery that juggling 3 or more values on the stack also imposes a high cognitive load on the developer, which is why, unlike some other stack-oriented languages, Uiua does not have a function that rotates values on the stack ("<PrimCode prim=Rotate/>" rotates a single array)."</p>
-        <p>"Thankfully, the array paradigm saved the day with the idea of dfns, which I expanded to be able to take way more arguments, so you can still write complex yet concise combinators."</p>
+        <p>"Eventually, I added the antistack. By having another stack available, you can more easily access arbitrary stack values, and you increase the number of \"local\" variables at hand."</p>
         <br/>
         <h3>"Expressions"</h3>
         <p>"Long tacit expressions in most array languages can get very unwieldy. Because binary operations are infix, you have to parse the tree structure in your head before you can start determining the order of operations."</p>
@@ -52,7 +52,6 @@ pub fn Design() -> impl IntoView {
         </ul>
 
         <h2 id="no-local-variables">"No Local Variables"</h2>
-        <p>"While Uiua does technically have local variables in the form of dfn arguments, they are very limited in that they can only be used in the dfn body and can only be single-letter names."</p>
         <p>"Forbidding general local variables has a few benefits:"</p>
         <ul>
             <li>"I don't have to implement them (score!)"</li>

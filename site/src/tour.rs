@@ -32,12 +32,12 @@ pub fn Tour() -> impl IntoView {
 
         <h2 id="the-stack">"The Stack"</h2>
         <p>"A number in Uiua code pushes its value to the stack. On the website's editor, the values on "<em>"top"</em>" of the stack are displayed at the "<em>"bottom"</em>". This is so that sequential lines of code show their result in the correct order."</p>
-        <Editor example="10 11\n'c'\n+1 2\n\"Hello, World!\"\n# By the way, comments start with #"/>
+        <Editor example="10 11\n@c\n+1 2\n\"Hello, World!\"\n# By the way, comments start with #"/>
         <p>"If you like, you can put values on the stack first, then operate on them."</p>
         <Editor examples={&["×", "+", "+ ", "1 ", "2 ", "3 ", "4"]}/>
         <p><PrimCode prim=Dup/>" duplicates the top value on the stack."</p>
         <Editor examples={&["×", ".", "3"]}/>
-        <p><PrimCode prim=Dup/>" is often used in the examples on this site to show the both the input and output of a function."</p>
+        <p><PrimCode prim=Dup/>" is often used in the examples on this site to show both the input and output of a function."</p>
         <Editor example="√.225"/>
         <p>"For math function where the order matters, like "<PrimCode prim=Sub/>" and "<PrimCode prim=Div/>", what would normally be the second argument is instead the first. This is so you can think of fragments like "<PrimCode prim=Sub glyph_only=true/><code>"2"</code>" as a single unit."</p>
         <p><PrimCode prim=Flip/>" swaps the top two values on the stack."</p>
@@ -47,11 +47,11 @@ pub fn Tour() -> impl IntoView {
 
         <h2 id="arrays">"Arrays"</h2>
         <p>"So far, we have only talked about the stack part of Uiua. Now, lets talk about the most important part: Arrays!"</p>
-        <p>"An array is a rectangular collection of elements arranged along some number of axis."</p>
-        <p>"An array with no axes is called a scalar. All the numbers is the axmples above are scalars."</p>
+        <p>"An array is a rectangular collection of elements arranged along some number of axes."</p>
+        <p>"An array with no axes is called a scalar. All the numbers is the examples above are scalars."</p>
         <p>"An array with one axis is called a list."</p>
         <p>"An array with two axes is called a table."</p>
-        <p>"You can make simple lists by putting "<code>"_"</code>" between the elements."</p>
+        <p>"You can make simple lists by putting "<code>"_"</code>"s between the elements."</p>
         <Editor example="1_2_3_4"/>
         <p>"You can also just surround them with "<code>"[]"</code>"s."</p>
         <Editor example="[5 6 7 8]"/>
@@ -65,7 +65,7 @@ pub fn Tour() -> impl IntoView {
         <Editor example="×2 [1 2 3]"/>
         <Editor example="+ 1_2_3 4_5_6"/>
         <Editor example="× 2_10 [1_2_3 4_5_6]"/>
-        <p>"Array have a "<PrimCode prim=Shape/>" that describes how many elements they have along each axis."</p>
+        <p>"Arrays have a "<PrimCode prim=Shape/>" that describes how many elements they have along each axis."</p>
         <p>"The "<PrimCode prim=First/>" item in the "<PrimCode prim=Shape/>" is also called the "<PrimCode prim=Len/>"."</p>
         <p>"The "<PrimCode prim=Len/>" of the "<PrimCode prim=Shape/>" is the "<PrimCode prim=Rank/>"."</p>
         <Editor example="△5\n△[]\n△[9 1 6]\n△[4_π_9 1_5_∞]"/>
@@ -100,7 +100,7 @@ pub fn Tour() -> impl IntoView {
 
         <h2 id="modifiers">"Modifiers"</h2>
         <p>"Modifiers (called operators or adverbs in some other array languages) are functions that take other functions as arguments. The built-in modifiers are parsed so that if their function argument(s) immediately follow them, the function is run inside the modifier rather than before it."</p>
-        <p><PrimCode prim=Reduce/>" is a modifier many array-language afficionados will be familiar with. It takes its function and applies it to the first two rows of an array, then to each result and the next element."</p>
+        <p><PrimCode prim=Reduce/>" is a modifier many array-language aficionados will be familiar with. It takes its function and applies it to the first two rows of an array, then to each result and the next element."</p>
         <p>"One basic use of "<PrimCode prim=Reduce/>" is to sum an array."</p>
         <Editor example="/+ [1 2 3 4 5]"/>
         <p>"It works on multi-dimensional arrays too! In this case, it adds each row to the next."</p>

@@ -513,6 +513,8 @@ primitive!(
     (2, Join, DyadicArray, ("join", '⊂')),
     /// Combine two arrays as rows of a new array
     ///
+    /// `first``shape` of the coupled array will *always* be `2`.
+    ///
     /// For scalars, it is equivalent to [join].
     /// ex: ⊟ 1 2
     ///   : ⊂ 1 2
@@ -525,7 +527,8 @@ primitive!(
     /// Use [fill] to make their shapes match
     /// ex: ⍛∞⊟ [1 2 3] [4 5]
     ///
-    /// `first``shape` of the coupled array will *always* be `2`.
+    /// [couple] is compatible with [under].
+    /// ex: ⍜⊟'×2 3 5
     (2, Couple, DyadicArray, ("couple", '⊟')),
     /// Split an array into two arrays
     (1(2), Uncouple, MonadicArray),

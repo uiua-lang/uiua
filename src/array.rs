@@ -7,7 +7,7 @@ use std::{
 };
 
 use crate::{
-    algorithm::ErrorContext,
+    algorithm::FillContext,
     cowslice::{cowslice, CowSlice},
     function::Function,
     grid_fmt::GridFmt,
@@ -396,7 +396,7 @@ pub trait ArrayValue: Clone + Debug + Display + GridFmt {
     fn format_sep() -> &'static str {
         " "
     }
-    fn group_compatibility<E: ErrorContext>(&self, other: &Self, ctx: E) -> Result<(), E::Error> {
+    fn group_compatibility<C: FillContext>(&self, other: &Self, ctx: C) -> Result<(), C::Error> {
         Ok(())
     }
 }
@@ -465,7 +465,7 @@ impl ArrayValue for Arc<Function> {
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         self.hash(hasher)
     }
-    fn group_compatibility<E: ErrorContext>(&self, other: &Self, ctx: E) -> Result<(), E::Error> {
+    fn group_compatibility<C: FillContext>(&self, other: &Self, ctx: C) -> Result<(), C::Error> {
         match self.signature_compatible_with(other) {
             Some(false) => Err(ctx.error("Functions have incompatible signatures")),
             Some(true) | None => Ok(()),

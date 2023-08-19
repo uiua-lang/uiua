@@ -22,30 +22,28 @@ fn max_shape(a: &[usize], b: &[usize]) -> Vec<usize> {
     new_shape
 }
 
-pub trait ErrorContext: Copy {
+pub trait FillContext: Copy {
     type Error;
     fn error(self, msg: impl ToString) -> Self::Error;
-    fn env(&self) -> Option<&Uiua> {
-        None
-    }
-    fn fill<T: ArrayValue>(self) -> Option<T> {
-        self.env().and_then(T::get_fill)
-    }
+    fn fill<T: ArrayValue>(self) -> Option<T>;
 }
 
-impl ErrorContext for &Uiua {
+impl FillContext for &Uiua {
     type Error = UiuaError;
     fn error(self, msg: impl ToString) -> Self::Error {
         self.error(msg)
     }
-    fn env(&self) -> Option<&Uiua> {
-        Some(self)
+    fn fill<T: ArrayValue>(self) -> Option<T> {
+        T::get_fill(self)
     }
 }
 
-impl ErrorContext for () {
+impl FillContext for () {
     type Error = Infallible;
     fn error(self, msg: impl ToString) -> Self::Error {
         panic!("{}", msg.to_string())
+    }
+    fn fill<T: ArrayValue>(self) -> Option<T> {
+        None
     }
 }

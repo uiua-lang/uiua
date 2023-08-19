@@ -9,10 +9,10 @@ use crate::{
     Uiua, UiuaResult,
 };
 
-use super::ErrorContext;
+use super::FillContext;
 
 impl Value {
-    fn coerce_to_functions<T, C: ErrorContext, E: ToString>(
+    fn coerce_to_functions<T, C: FillContext, E: ToString>(
         self,
         other: Self,
         ctx: C,
@@ -132,7 +132,7 @@ impl Value {
         self.join_impl(other, ()).unwrap()
     }
     // pub fn join(self, other: Self, env: &Uiua) -> UiuaResult<Self> {}
-    fn join_impl<E: ErrorContext>(self, other: Self, ctx: E) -> Result<Self, E::Error> {
+    fn join_impl<C: FillContext>(self, other: Self, ctx: C) -> Result<Self, C::Error> {
         Ok(match (self, other) {
             (Value::Num(a), Value::Num(b)) => a.join_impl(b, ctx)?.into(),
             (Value::Byte(a), Value::Byte(b)) => a.join_impl(b, ctx)?.into(),
@@ -147,7 +147,7 @@ impl Value {
             )?,
         })
     }
-    fn append<E: ErrorContext>(self, other: Self, ctx: E, action: &str) -> Result<Self, E::Error> {
+    fn append<C: FillContext>(self, other: Self, ctx: C, action: &str) -> Result<Self, C::Error> {
         Ok(match (self, other) {
             (Value::Num(a), Value::Num(b)) => a.append(b, ctx, action)?.into(),
             (Value::Byte(a), Value::Byte(b)) => a.append(b, ctx, action)?.into(),
@@ -171,7 +171,7 @@ impl<T: ArrayValue> Array<T> {
     pub fn join_infallible(self, other: Self) -> Self {
         self.join_impl(other, ()).unwrap()
     }
-    fn join_impl<E: ErrorContext>(mut self, mut other: Self, ctx: E) -> Result<Self, E::Error> {
+    fn join_impl<C: FillContext>(mut self, mut other: Self, ctx: C) -> Result<Self, C::Error> {
         crate::profile_function!();
         let res = match self.rank().cmp(&other.rank()) {
             Ordering::Less => {
@@ -240,12 +240,12 @@ impl<T: ArrayValue> Array<T> {
         res.validate_shape();
         Ok(res)
     }
-    fn append<E: ErrorContext>(
+    fn append<C: FillContext>(
         mut self,
         mut other: Self,
-        ctx: E,
+        ctx: C,
         action: &str,
-    ) -> Result<Self, E::Error> {
+    ) -> Result<Self, C::Error> {
         let target_shape = if let Some(fill) = ctx.fill::<T>() {
             while self.rank() <= other.rank() {
                 self.shape.push(1);
@@ -291,7 +291,7 @@ impl Value {
     pub fn couple_infallible(self, other: Self) -> Self {
         self.couple_impl(other, ()).unwrap()
     }
-    fn couple_impl<E: ErrorContext>(self, other: Self, ctx: E) -> Result<Self, E::Error> {
+    fn couple_impl<C: FillContext>(self, other: Self, ctx: C) -> Result<Self, C::Error> {
         Ok(match (self, other) {
             (Value::Num(a), Value::Num(b)) => a.couple_impl(b, ctx)?.into(),
             (Value::Byte(a), Value::Byte(b)) => a.couple_impl(b, ctx)?.into(),
@@ -324,7 +324,7 @@ impl<T: ArrayValue> Array<T> {
     pub fn couple_infallible(self, other: Self) -> Self {
         self.couple_impl(other, ()).unwrap()
     }
-    fn couple_impl<E: ErrorContext>(mut self, mut other: Self, ctx: E) -> Result<Self, E::Error> {
+    fn couple_impl<C: FillContext>(mut self, mut other: Self, ctx: C) -> Result<Self, C::Error> {
         crate::profile_function!();
         if self.shape != other.shape {
             if let Some(fill) = ctx.fill::<T>() {
@@ -372,10 +372,10 @@ impl Value {
     pub fn from_row_values_infallible(values: impl IntoIterator<Item = Value>) -> Self {
         Self::from_row_values_impl(values, ()).unwrap()
     }
-    fn from_row_values_impl<E: ErrorContext>(
+    fn from_row_values_impl<C: FillContext>(
         values: impl IntoIterator<Item = Value>,
-        ctx: E,
-    ) -> Result<Self, E::Error> {
+        ctx: C,
+    ) -> Result<Self, C::Error> {
         let mut row_values = values.into_iter();
         let Some(mut value) = row_values.next() else {
             return Ok(Value::default());
@@ -406,10 +406,10 @@ impl<T: ArrayValue> Array<T> {
         Self::from_row_arrays_impl(values, ()).unwrap()
     }
     #[track_caller]
-    fn from_row_arrays_impl<E: ErrorContext>(
+    fn from_row_arrays_impl<C: FillContext>(
         values: impl IntoIterator<Item = Self>,
-        ctx: E,
-    ) -> Result<Self, E::Error> {
+        ctx: C,
+    ) -> Result<Self, C::Error> {
         let mut row_values = values.into_iter();
         let Some(mut value) = row_values.next() else {
             return Ok(Self::default());

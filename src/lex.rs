@@ -502,21 +502,6 @@ impl Lexer {
                 // Scope delimiters
                 '-' if self.next_chars_exact("--") => self.end(TripleMinus, start),
                 '~' if self.next_chars_exact("~~") => self.end(TripleTilde, start),
-                '~' => {
-                    if let Some(c) = self.next_char() {
-                        if c.is_ascii_lowercase() {
-                            self.end(self::DfnArg(c as u8 - b'a'), start);
-                        } else {
-                            self.errors.push(
-                                self.end_span(start)
-                                    .sp(LexError::ExpectedCharacter(Some(c))),
-                            );
-                        }
-                    } else {
-                        self.errors
-                            .push(self.end_span(start).sp(LexError::ExpectedCharacter(None)));
-                    }
-                }
                 // Comments
                 '#' => {
                     let mut comment = String::new();

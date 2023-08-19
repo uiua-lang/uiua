@@ -371,6 +371,20 @@ impl Primitive {
             Primitive::Pop => {
                 env.pop(1)?;
             }
+            Primitive::Save => {
+                let val = env.pop(1)?;
+                env.push_anti(val);
+            }
+            Primitive::Anti => {
+                let f = env.pop(1)?;
+                env.with_stacks_swapped(|env| {
+                    env.push(f);
+                    env.call()?;
+                    let val = env.pop("antistack return value")?;
+                    env.push_anti(val);
+                    Ok(())
+                })?;
+            }
             Primitive::Try => {
                 let f = env.pop(1)?;
                 let handler = env.pop(2)?;

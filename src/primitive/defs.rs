@@ -114,6 +114,10 @@ primitive!(
     /// The formatter converts an empty `()` function into `noop`.
     /// ex: () # Try running to format
     (0(0), Noop, Stack, ("noop", '·')),
+    /// Move a value from the stack to the antistack
+    (1(0), Save, Stack, ("save", '^')),
+    /// Call a function on the antistack
+    ([1], Anti, Stack, ("anti", '~')),
     // Pervasive monadic ops
     /// Logical not
     ///

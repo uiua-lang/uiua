@@ -990,18 +990,22 @@ primitive!(
     /// ex: /(⎋>10.+) ⇌⇡40  # Break when the sum exceeds 10
     /// ex: ⍥(⎋>100.×2)∞ 1  # Break when the product exceeds 100
     (1(0), Break, Control, ("break", '⎋')),
-    /// Call the current dfn recursively
+    /// Call a function recursively
     ///
-    /// Only dfns can be recurred in.
+    /// Expects a natural number. This number is how many levels up the recured function is.
+    /// `recur``0` does nothing.
+    /// `recur``1` calls current function.
+    /// `recur``2` calls the function that called the current function, and so on.
     ///
-    /// To check for a base case, you can use [call].
-    /// ex: {!·_↬ <10.×2} 1
+    /// Here, we recur until the value is not `less than``10`.
+    /// ex: !(↬<10.×2) 1
     ///
     /// Here is a recursive factorial function:
-    /// ex: {!(×ḁ ↬-1ḁ)_1 <2ḁ} 5
+    /// ex: !(×↬>2.-1.) 5
     ///
-    /// Here is a recursive fibonacci function:
-    /// ex: {!(+ ↬-1ḁ ↬-2ḁ)_ḁ <2ḁ} 10
+    /// Here is a recursive fibonacci function.
+    /// It uses [call] to decide whether to recur.
+    /// ex: !(!(+↬2-1∶↬2-2.)_· <2.) 10
     (0(None), Recur, Control, ("recur", '↬')),
     /// Parse a string as a number
     ///

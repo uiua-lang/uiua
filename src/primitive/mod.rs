@@ -351,7 +351,10 @@ impl Primitive {
                     return Err(UiuaError::Break(n - 1, env.span().clone()));
                 }
             }
-            Primitive::Recur => env.recur()?,
+            Primitive::Recur => {
+                let n = env.pop(1)?.as_nat(env, "Recur expects a natural number")?;
+                env.recur(n)?;
+            }
             Primitive::Dup => {
                 let x = env.pop(1)?;
                 env.push(x.clone());

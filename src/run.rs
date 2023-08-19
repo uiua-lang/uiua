@@ -74,7 +74,6 @@ struct StackFrame {
 
 #[derive(Clone)]
 struct DfnFrame {
-    function: Arc<Function>,
     args: Vec<Value>,
 }
 
@@ -718,10 +717,7 @@ backtrace:
                             if let Some(bottom) = self.scope.array.last_mut() {
                                 *bottom = (*bottom).min(self.stack.len());
                             }
-                            self.scope.dfn.push(DfnFrame {
-                                function: f.clone(),
-                                args,
-                            });
+                            self.scope.dfn.push(DfnFrame { args });
                             dfn = true;
                         }
                         FunctionKind::Dynamic(dfk) => {
@@ -765,13 +761,19 @@ backtrace:
         self.call_with_span(call_span)
     }
     #[inline]
-    pub fn recur(&mut self) -> UiuaResult {
-        let dfn = self
-            .scope
-            .dfn
-            .last()
-            .ok_or_else(|| self.error("Cannot recur outside of dfn"))?;
-        self.push(dfn.function.clone());
+    pub fn recur(&mut self, n: usize) -> UiuaResult {
+        if n == 0 {
+            return Ok(());
+        }
+        if n > self.scope.call.len() {
+            return Err(self.error(format!(
+                "Cannot recur {} levels up, only {} levels down",
+                n,
+                self.scope.call.len()
+            )));
+        }
+        let f = self.scope.call[self.scope.call.len() - n].function.clone();
+        self.push(f);
         self.call()
     }
     pub fn call_catch_break(&mut self) -> UiuaResult<bool> {

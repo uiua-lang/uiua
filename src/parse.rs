@@ -163,7 +163,7 @@ impl Parser {
         items
     }
     fn try_item(&mut self, parse_scopes: bool) -> Option<Item> {
-        self.try_exact(Spaces);
+        self.try_spaces();
         Some(if let Some(binding) = self.try_binding() {
             Item::Binding(binding)
         } else if let Some(words) = self.try_words() {
@@ -192,12 +192,12 @@ impl Parser {
     fn try_binding(&mut self) -> Option<Binding> {
         let start = self.index;
         Some(if let Some(ident) = self.try_ident() {
-            self.try_exact(Spaces);
+            self.try_spaces();
             if self.try_exact(Equal).is_none() && self.try_exact(LeftArrow).is_none() {
                 self.index = start;
                 return None;
             }
-            self.try_exact(Spaces);
+            self.try_spaces();
             let words = self.try_words().unwrap_or_default();
             Binding { name: ident, words }
         } else {
@@ -222,13 +222,13 @@ impl Parser {
     }
     fn multiline_words(&mut self) -> Vec<Vec<Sp<Word>>> {
         let mut lines = Vec::new();
-        while self.try_exact(Newline).is_some() || self.try_exact(Spaces).is_some() {}
+        while self.try_exact(Newline).is_some() || self.try_spaces().is_some() {}
         while let Some(words) = self.try_words() {
             lines.push(words);
             let mut newlines = 0;
             while self.try_exact(Newline).is_some() {
                 newlines += 1;
-                while self.try_exact(Spaces).is_some() {}
+                self.try_spaces();
             }
             if newlines > 1 {
                 lines.push(Vec::new());
@@ -310,7 +310,7 @@ impl Parser {
         };
         let mut args = Vec::new();
         for _ in 0..margs {
-            self.try_exact(Spaces);
+            self.try_spaces();
             if let Some(arg) = self.try_modified() {
                 args.push(arg);
             } else {
@@ -370,8 +370,8 @@ impl Parser {
             let end = self.expect_close(CloseBracket);
             let span = start.merge(end);
             span.sp(Word::Array(items))
-        } else if let Some(span) = self.try_exact(Spaces) {
-            span.sp(Word::Spaces)
+        } else if let Some(spaces) = self.try_spaces() {
+            spaces
         } else {
             return None;
         })
@@ -404,25 +404,33 @@ impl Parser {
                 )
             })
         } else if let Some(start) = self.try_exact(SingleQuote) {
+            self.try_spaces();
             let Some(first) = self.try_term() else {
                 self.errors.push(self.expected([Expectation::Term]));
                 return None;
             };
+            let mut body = vec![first];
+            body.extend(self.try_spaces());
             let Some(second) = self.try_term() else {
                 self.errors.push(self.expected([Expectation::Term]));
                 return None;
             };
             let span = start.merge(second.span.clone());
+            body.push(second);
+            body.extend(self.try_spaces());
             span.clone().sp(Word::Func(
                 Func {
                     id: FunctionId::Anonymous(span),
-                    body: vec![vec![first, second]],
+                    body: vec![body],
                 },
                 true,
             ))
         } else {
             return None;
         })
+    }
+    fn try_spaces(&mut self) -> Option<Sp<Word>> {
+        self.try_exact(Spaces).map(|span| span.sp(Word::Spaces))
     }
     fn expect_close(&mut self, ascii: AsciiToken) -> CodeSpan {
         if let Some(span) = self.try_exact(ascii) {

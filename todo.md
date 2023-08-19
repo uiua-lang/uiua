@@ -1,5 +1,3 @@
-- Maybe remove dfns
-  - Keep recursion by passing recur a number to recur out of
 - Finish tour
 - Under pick
 - Docs

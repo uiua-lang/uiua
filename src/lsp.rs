@@ -44,7 +44,6 @@ fn words_spans(words: Vec<Sp<Word>>) -> Vec<Sp<SpanKind>> {
                 spans.extend(lines.into_iter().map(|line| line.span.sp(SpanKind::String)))
             }
             Word::Ident(_) => {}
-            Word::DfnArg(_) => {}
             Word::Strand(items) => {
                 for (i, word) in items.into_iter().enumerate() {
                     let item_spans = words_spans(vec![word]);
@@ -71,7 +70,6 @@ fn words_spans(words: Vec<Sp<Word>>) -> Vec<Sp<SpanKind>> {
             }
             Word::Array(items) => spans.extend(items.into_iter().flat_map(words_spans)),
             Word::Func(f, _) => spans.extend(f.body.into_iter().flat_map(words_spans)),
-            Word::Dfn(dfn) => spans.extend(dfn.body.into_iter().flat_map(words_spans)),
             Word::Primitive(prim) => spans.push(word.span.sp(SpanKind::Primitive(prim))),
             Word::Modified(m) => {
                 spans.push(m.modifier.map(SpanKind::Primitive));

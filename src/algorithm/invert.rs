@@ -411,7 +411,7 @@ impl InvertPattern for Val {
             }
         }
         match input.get(0) {
-            Some(instr @ (Instr::Push(_) | Instr::DfnVal(_))) => {
+            Some(instr @ Instr::Push(_)) => {
                 *input = &input[1..];
                 Some(vec![instr.clone()])
             }

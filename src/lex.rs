@@ -270,7 +270,6 @@ pub enum Token {
     MultilineString(Vec<String>),
     Simple(AsciiToken),
     Glyph(Primitive),
-    DfnArg(DfnArg),
     LeftArrow,
     Newline,
     Spaces,
@@ -306,29 +305,6 @@ impl Token {
             Token::Glyph(glyph) => Some(*glyph),
             _ => None,
         }
-    }
-    pub fn as_dfn_arg(&self) -> Option<DfnArg> {
-        match self {
-            Token::DfnArg(arg) => Some(*arg),
-            _ => None,
-        }
-    }
-}
-
-/// The symbol used to denote a dfn arg
-///
-/// It is the combining ring below character.
-pub const DFN_ARG_SYMBOL: char = '\u{325}';
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct DfnArg(pub u8);
-
-impl fmt::Display for DfnArg {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.0 >= 26 {
-            return write!(f, "invalid dfn arg ({})", self.0);
-        }
-        write!(f, "{}{DFN_ARG_SYMBOL}", (b'a' + self.0) as char)
     }
 }
 
@@ -390,12 +366,6 @@ impl From<AsciiToken> for Token {
 impl From<Primitive> for Token {
     fn from(p: Primitive) -> Self {
         Self::Glyph(p)
-    }
-}
-
-impl From<DfnArg> for Token {
-    fn from(d: DfnArg) -> Self {
-        Self::DfnArg(d)
     }
 }
 
@@ -585,60 +555,30 @@ impl Lexer {
                 // Identifiers and selectors
                 c if is_custom_glyph(c) => self.end(Ident, start),
                 c if is_basically_alphabetic(c) => {
-                    let mut ident = String::new();
-                    ident.push(c);
-                    let mut dfn_arg = None;
+                    let mut ident = c.to_string();
                     // Collect characters
                     while let Some(c) = self.next_char_if(is_basically_alphabetic) {
                         ident.push(c);
                     }
-                    // Try to parse dfn arg
-                    if self.next_char_exact(DFN_ARG_SYMBOL) {
-                        if let Some(c) = ident.pop() {
-                            if c.is_ascii_lowercase() {
-                                dfn_arg = Some(c as u8 - b'a');
-                            } else {
-                                self.errors
-                                    .push(self.end_span(start).sp(LexError::InvalidDfnArg(c)));
-                            }
-                        } else {
-                            self.errors
-                                .push(self.end_span(start).sp(LexError::ExpectedCharacter(None)));
+                    // Try to parse as primitives
+                    if let Some(prims) = Primitive::from_format_name_multi(&ident) {
+                        let mut start = start;
+                        for (prim, frag) in prims {
+                            let end = Loc {
+                                col: start.col + frag.chars().count(),
+                                char_pos: start.char_pos + frag.chars().count(),
+                                byte_pos: start.byte_pos + frag.len(),
+                                ..start
+                            };
+                            self.tokens.push(Sp {
+                                value: Glyph(prim),
+                                span: self.make_span(start, end),
+                            });
+                            start = end;
                         }
-                    }
-                    if dfn_arg.is_some() {
-                        self.loc.byte_pos -= 1 + DFN_ARG_SYMBOL.len_utf8();
-                        self.loc.char_pos -= 2;
-                        self.loc.col -= 2;
-                    }
-                    if !ident.is_empty() {
-                        // Try to parse as primitives
-                        if let Some(prims) = Primitive::from_format_name_multi(&ident) {
-                            let mut start = start;
-                            for (prim, frag) in prims {
-                                let end = Loc {
-                                    col: start.col + frag.chars().count(),
-                                    char_pos: start.char_pos + frag.chars().count(),
-                                    byte_pos: start.byte_pos + frag.len(),
-                                    ..start
-                                };
-                                self.tokens.push(Sp {
-                                    value: Glyph(prim),
-                                    span: self.make_span(start, end),
-                                });
-                                start = end;
-                            }
-                        } else {
-                            // Lone ident
-                            self.end(Ident, start)
-                        }
-                    }
-                    if let Some(dfn_arg) = dfn_arg {
-                        let start = self.loc;
-                        self.loc.byte_pos += 1 + DFN_ARG_SYMBOL.len_utf8();
-                        self.loc.char_pos += 2;
-                        self.loc.col += 2;
-                        self.end(self::DfnArg(dfn_arg), start);
+                    } else {
+                        // Lone ident
+                        self.end(Ident, start)
                     }
                 }
                 // Numbers

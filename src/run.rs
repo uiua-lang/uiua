@@ -16,7 +16,7 @@ use crate::{
     ast::*,
     check::instrs_args_outputs,
     function::*,
-    lex::{CodeSpan, DfnArg, Sp, Span},
+    lex::{CodeSpan, Sp, Span},
     parse::parse,
     primitive::Primitive,
     value::Value,
@@ -28,7 +28,6 @@ use crate::{
 pub struct Uiua {
     // Compilation
     new_functions: Vec<Vec<Instr>>,
-    new_dfns: Vec<Vec<DfnArg>>,
     // Statics
     globals: Arc<Mutex<Vec<Value>>>,
     spans: Arc<Mutex<Vec<Span>>>,
@@ -48,7 +47,6 @@ pub struct Uiua {
 pub struct Scope {
     array: Vec<usize>,
     antiarray: Vec<usize>,
-    dfn: Vec<DfnFrame>,
     call: Vec<StackFrame>,
     names: HashMap<Ident, usize>,
     local: bool,
@@ -69,12 +67,6 @@ struct StackFrame {
     call_span: usize,
     pc: usize,
     spans: Vec<(usize, Option<Primitive>)>,
-    dfn: bool,
-}
-
-#[derive(Clone)]
-struct DfnFrame {
-    args: Vec<Value>,
 }
 
 impl Default for Uiua {
@@ -120,7 +112,6 @@ impl Uiua {
             lower_scopes: Vec::new(),
             globals: Arc::new(Mutex::new(Vec::new())),
             new_functions: Vec::new(),
-            new_dfns: Vec::new(),
             current_imports: Arc::new(Mutex::new(HashSet::new())),
             imports: Arc::new(Mutex::new(HashMap::new())),
             mode: RunMode::Normal,
@@ -467,7 +458,6 @@ backtrace:
                 }
             }
             Word::Ident(ident) => self.ident(ident, word.span, call)?,
-            Word::DfnArg(arg) => self.dfn_arg(arg, word.span)?,
             Word::Strand(items) => {
                 self.push_instr(Instr::BeginArray);
                 self.words(items, false)?;
@@ -495,7 +485,6 @@ backtrace:
                 }
             }
             Word::Func(func, _) => self.func(func, word.span)?,
-            Word::Dfn(func) => self.dfn(func, word.span, call)?,
             Word::Primitive(p) => self.primitive(p, word.span, call),
             Word::Modified(m) => self.modified(*m, call)?,
             Word::Spaces | Word::Comment(_) => {}
@@ -529,15 +518,6 @@ backtrace:
         }
         Ok(())
     }
-    fn dfn_arg(&mut self, arg: DfnArg, span: CodeSpan) -> UiuaResult {
-        if let Some(dfn) = self.new_dfns.last_mut() {
-            dfn.push(arg);
-            self.push_instr(Instr::DfnVal(arg));
-            Ok(())
-        } else {
-            Err(span.sp("dfn argument outside of dfn".to_string()).into())
-        }
-    }
     fn func(&mut self, func: Func, _span: CodeSpan) -> UiuaResult {
         let mut instrs = Vec::new();
         for line in func.body {
@@ -552,22 +532,6 @@ backtrace:
         }
         let func = Function::new(func.id, instrs, FunctionKind::Normal);
         self.push_instr(Instr::push(func));
-        Ok(())
-    }
-    fn dfn(&mut self, func: Func, span: CodeSpan, call: bool) -> UiuaResult {
-        self.new_dfns.push(Vec::new());
-        let mut instrs = Vec::new();
-        for line in func.body {
-            instrs.extend(self.compile_words(line)?);
-        }
-        let refs = self.new_dfns.pop().unwrap();
-        let dfn_size = refs.into_iter().max().map(|arg| arg.0 + 1).unwrap_or(0);
-        let func = Function::new(func.id, instrs, FunctionKind::Dfn(dfn_size));
-        self.push_instr(Instr::push(func));
-        if call {
-            let span = self.add_span(span);
-            self.push_instr(Instr::Call(span));
-        }
         Ok(())
     }
     fn modified(&mut self, modified: Modified, call: bool) -> UiuaResult {
@@ -612,7 +576,6 @@ backtrace:
             call_span: 0,
             spans: Vec::new(),
             pc: 0,
-            dfn: false,
         })
     }
     fn exec(&mut self, frame: StackFrame) -> UiuaResult {
@@ -621,11 +584,7 @@ backtrace:
         while self.scope.call.len() > ret_height {
             let frame = self.scope.call.last().unwrap();
             let Some(instr) = frame.function.instrs.get(frame.pc) else {
-                if let Some(frame) = self.scope.call.pop() {
-                    if frame.dfn {
-                        self.scope.dfn.pop();
-                    }
-                }
+                self.scope.call.pop();
                 continue;
             };
             // println!("{:?}", self.stack);
@@ -655,22 +614,6 @@ backtrace:
                     Ok(())
                 })(),
                 &Instr::Call(span) => self.call_with_span(span),
-                Instr::DfnVal(arg) => {
-                    if let Some(dfn) = self.scope.dfn.last() {
-                        if let Some(value) = dfn.args.get(arg.0 as usize).cloned() {
-                            self.stack.push(value);
-                            Ok(())
-                        } else {
-                            Err(self.error(format!(
-                                "Function references dfn argument `{arg}` outside of its dfn"
-                            )))
-                        }
-                    } else {
-                        Err(self.error(format!(
-                            "Function references dfn argument `{arg}` outside of a dfn"
-                        )))
-                    }
-                }
             };
             if let Err(mut err) = res {
                 // Trace errors
@@ -700,33 +643,14 @@ backtrace:
                 Value::Func(f) if f.shape.is_empty() => {
                     // Call function
                     let f = f.into_scalar().unwrap();
-                    let mut dfn = false;
                     match &f.kind {
                         FunctionKind::Normal => {}
-                        FunctionKind::Dfn(n) => {
-                            let n = *n as usize;
-                            if self.stack.len() < n {
-                                let message = format!(
-                                    "not enough arguments for dfn of {} value{}",
-                                    n,
-                                    if n == 1 { "" } else { "s" }
-                                );
-                                break Err(self.spans.lock()[call_span].clone().sp(message).into());
-                            }
-                            let args = self.stack.drain(self.stack.len() - n..).rev().collect();
-                            if let Some(bottom) = self.scope.array.last_mut() {
-                                *bottom = (*bottom).min(self.stack.len());
-                            }
-                            self.scope.dfn.push(DfnFrame { args });
-                            dfn = true;
-                        }
                         FunctionKind::Dynamic(dfk) => {
                             self.scope.call.push(StackFrame {
                                 function: f.clone(),
                                 call_span,
                                 spans: Vec::new(),
                                 pc: 0,
-                                dfn: false,
                             });
                             (dfk.f)(self)?;
                             self.scope.call.pop();
@@ -738,7 +662,6 @@ backtrace:
                         call_span,
                         spans: Vec::new(),
                         pc: 0,
-                        dfn,
                     });
                 }
                 Value::Func(_) if first_pass => {
@@ -1025,7 +948,6 @@ backtrace:
         }
         let env = Uiua {
             new_functions: Vec::new(),
-            new_dfns: Vec::new(),
             globals: self.globals.clone(),
             spans: self.spans.clone(),
             stack: self

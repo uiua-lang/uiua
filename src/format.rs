@@ -150,7 +150,6 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig) {
             }
         }
         Word::Ident(ident) => output.push_str(&ident.0),
-        Word::DfnArg(arg) => output.push_str(&arg.to_string()),
         Word::Strand(items) => {
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
@@ -176,11 +175,6 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig) {
                 format_multiline_words(output, &func.body, config);
                 output.push(')');
             }
-        }
-        Word::Dfn(dfn) => {
-            output.push('{');
-            format_multiline_words(output, &dfn.body, config);
-            output.push('}');
         }
         Word::Primitive(prim) => output.push_str(&prim.to_string()),
         Word::Modified(m) => {

@@ -13,7 +13,7 @@ use std::{
 
 use crate::{
     array::{Array, ArrayValue},
-    function::{Function, FunctionKind},
+    function::Function,
     value::Value,
 };
 
@@ -83,13 +83,8 @@ impl GridFmt for Function {
             .map(|s| s.chars().collect())
             .collect();
         if grid.len() == 1 {
-            if let FunctionKind::Dfn(_) = self.kind {
-                grid[0].insert(0, '{');
-                grid[0].push('}');
-            } else {
-                grid[0].insert(0, '(');
-                grid[0].push(')');
-            }
+            grid[0].insert(0, '(');
+            grid[0].push(')');
             return grid;
         }
         let row_count = grid.len();

@@ -347,8 +347,6 @@ impl Parser {
                 }
             };
             span.sp(Word::Number(s, n))
-        } else if let Some(arg) = self.next_token_map(Token::as_dfn_arg) {
-            arg.map(Word::DfnArg)
         } else if let Some(c) = self.next_token_map(Token::as_char) {
             c.map(Into::into).map(Word::Char)
         } else if let Some(s) = self.next_token_map(Token::as_string) {
@@ -366,8 +364,6 @@ impl Parser {
             let span = start.merge(end);
             span.sp(Word::MultilineString(lines))
         } else if let Some(expr) = self.try_func() {
-            expr
-        } else if let Some(expr) = self.try_dfn() {
             expr
         } else if let Some(start) = self.try_exact(OpenBracket) {
             let items = self.multiline_words();
@@ -427,16 +423,6 @@ impl Parser {
         } else {
             return None;
         })
-    }
-    fn try_dfn(&mut self) -> Option<Sp<Word>> {
-        let start = self.try_exact(OpenCurly)?;
-        let body = self.multiline_words();
-        let end = self.expect_close(CloseCurly);
-        let span = start.merge(end);
-        Some(span.clone().sp(Word::Dfn(Func {
-            id: FunctionId::Anonymous(span),
-            body,
-        })))
     }
     fn expect_close(&mut self, ascii: AsciiToken) -> CodeSpan {
         if let Some(span) = self.try_exact(ascii) {

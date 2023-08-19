@@ -8,11 +8,8 @@ use std::{
 use thread_local::ThreadLocal;
 
 use crate::{
-    check::instrs_args_outputs,
-    lex::{CodeSpan, DfnArg},
-    primitive::Primitive,
-    value::Value,
-    Ident, Uiua, UiuaResult,
+    check::instrs_args_outputs, lex::CodeSpan, primitive::Primitive, value::Value, Ident, Uiua,
+    UiuaResult,
 };
 
 #[derive(Debug, Clone)]
@@ -22,7 +19,6 @@ pub enum Instr {
     EndArray(usize),
     Prim(Primitive, usize),
     Call(usize),
-    DfnVal(DfnArg),
 }
 
 impl PartialEq for Instr {
@@ -33,7 +29,6 @@ impl PartialEq for Instr {
             (Self::EndArray(_), Self::EndArray(_)) => true,
             (Self::Prim(a, _), Self::Prim(b, _)) => a == b,
             (Self::Call(_), Self::Call(_)) => true,
-            (Self::DfnVal(a), Self::DfnVal(b)) => a == b,
             _ => false,
         }
     }
@@ -55,7 +50,6 @@ impl Ord for Instr {
             (Self::EndArray(_), Self::EndArray(_)) => Ordering::Equal,
             (Self::Prim(a, _), Self::Prim(b, _)) => a.cmp(b),
             (Self::Call(_), Self::Call(_)) => Ordering::Equal,
-            (Self::DfnVal(a), Self::DfnVal(b)) => a.cmp(b),
             (Self::Push(_), _) => Ordering::Less,
             (Self::BeginArray, Self::Push(_)) => Ordering::Greater,
             (Self::BeginArray, _) => Ordering::Less,
@@ -65,9 +59,7 @@ impl Ord for Instr {
                 Ordering::Greater
             }
             (Self::Prim(_, _), _) => Ordering::Less,
-            (Self::Call(_), Self::DfnVal(_)) => Ordering::Less,
             (Self::Call(_), _) => Ordering::Greater,
-            (Self::DfnVal(_), _) => Ordering::Greater,
         }
     }
 }
@@ -86,10 +78,6 @@ impl Hash for Instr {
                 p.hash(state);
             }
             Instr::Call(_) => 4u8.hash(state),
-            Instr::DfnVal(arg) => {
-                5u8.hash(state);
-                arg.hash(state);
-            }
         }
     }
 }
@@ -114,7 +102,6 @@ impl fmt::Display for Instr {
             Instr::EndArray(_) => write!(f, "["),
             Instr::Prim(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => write!(f, "!"),
-            Instr::DfnVal(arg) => write!(f, "{arg}"),
         }
     }
 }
@@ -130,7 +117,6 @@ pub struct Function {
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum FunctionKind {
     Normal,
-    Dfn(u8),
     Dynamic(DynamicFunctionKind),
 }
 
@@ -225,17 +211,9 @@ impl fmt::Display for Function {
         if let FunctionKind::Dynamic { .. } = self.kind {
             return write!(f, "<dynamic>");
         }
-        if let FunctionKind::Dfn(_) = self.kind {
-            write!(f, "{{")?;
-        } else {
-            write!(f, "(")?;
-        }
+        write!(f, "(")?;
         write!(f, "{}", self.format_inner())?;
-        if let FunctionKind::Dfn(_) = self.kind {
-            write!(f, "}}")?;
-        } else {
-            write!(f, ")")?;
-        }
+        write!(f, ")")?;
         Ok(())
     }
 }
@@ -276,11 +254,6 @@ impl Function {
     pub fn args_outputs(&self) -> Option<(usize, usize)> {
         *self.ad_cache.get_or(|| match self.kind {
             FunctionKind::Normal => instrs_args_outputs(&self.instrs),
-            FunctionKind::Dfn(n) => {
-                let (mut args, outputs) = instrs_args_outputs(&self.instrs)?;
-                args += n as usize;
-                Some((args, outputs))
-            }
             FunctionKind::Dynamic(DynamicFunctionKind { args, outputs, .. }) => {
                 Some((args as usize, outputs as usize))
             }

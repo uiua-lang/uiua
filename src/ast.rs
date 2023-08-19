@@ -1,11 +1,6 @@
 use std::fmt;
 
-use crate::{
-    function::FunctionId,
-    lex::{DfnArg, Sp},
-    primitive::Primitive,
-    Ident,
-};
+use crate::{function::FunctionId, lex::Sp, primitive::Primitive, Ident};
 
 #[derive(Debug, Clone)]
 pub enum Item {
@@ -29,11 +24,9 @@ pub enum Word {
     FormatString(Vec<String>),
     MultilineString(Vec<Sp<Vec<String>>>),
     Ident(Ident),
-    DfnArg(DfnArg),
     Strand(Vec<Sp<Word>>),
     Array(Vec<Vec<Sp<Word>>>),
     Func(Func, bool),
-    Dfn(Func),
     Primitive(Primitive),
     Modified(Box<Modified>),
     Comment(String),
@@ -67,15 +60,9 @@ impl fmt::Debug for Word {
                 Ok(())
             }
             Word::Ident(ident) => write!(f, "ident({ident})"),
-            Word::DfnArg(arg) => write!(f, "arg({arg})"),
             Word::Array(array) => write!(f, "array({array:?})"),
             Word::Strand(items) => write!(f, "strand({items:?})"),
             Word::Func(func, _) => func.fmt(f),
-            Word::Dfn(func) => {
-                write!(f, "{{")?;
-                func.fmt(f)?;
-                write!(f, "}}")
-            }
             Word::Primitive(prim) => prim.fmt(f),
             Word::Modified(modified) => modified.fmt(f),
             Word::Spaces => write!(f, "' '"),

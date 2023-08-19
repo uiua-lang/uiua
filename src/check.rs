@@ -65,7 +65,6 @@ impl<'a> VirtualEnv<'a> {
                 };
                 self.stack.push(val);
             }
-            Instr::DfnVal(_) => self.stack.push(BasicValue::Other),
             Instr::BeginArray => self.array_stack.push(self.stack.len()),
             Instr::EndArray(_) => {
                 let len = self

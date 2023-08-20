@@ -1099,6 +1099,17 @@ primitive!(
     /// ex: [⍥tag5]
     ///   : [⍥tag5]
     (0, Tag, Misc, "tag"),
+    /// Check the type of an array
+    ///
+    /// `0` indicates a number array.
+    /// `1` indicates a character array.
+    /// `2` indicates a function array.
+    /// ex: type 5
+    /// ex: type "hello"
+    /// ex: type (+)
+    /// ex: ∵ type  {10 "dog" (≅⇌.)}
+    ///   : ∵'type! {10 "dog" (≅⇌.)}
+    (1, Type, Misc, "type"),
     /// The number of radians in a quarter circle
     ///
     /// Equivalent to `divide``2``pi` or `divide``4``tau`

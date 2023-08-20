@@ -474,6 +474,14 @@ impl Primitive {
                 let tag = NEXT_TAG.fetch_add(1, atomic::Ordering::Relaxed);
                 env.push(tag);
             }
+            Primitive::Type => {
+                let val = env.pop(1)?;
+                env.push(match val {
+                    Value::Num(_) | Value::Byte(_) => 0,
+                    Value::Char(_) => 1,
+                    Value::Func(_) => 2,
+                });
+            }
             Primitive::Spawn => {
                 let n = env.pop(1)?.as_nat(env, "Spawn expects a natural number")?;
                 let f = env.pop(2)?;

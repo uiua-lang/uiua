@@ -142,7 +142,7 @@ primitive!(
     ///
     /// [load] is equivalent to (and formats from) [anti][noop].
     /// ex: [~() 2 3 ↑4 5]
-    (0(1), Load, Stack, ("load", '↓')),
+    (0, Load, Stack, ("load", '↓')),
     /// Call a function on the antistack and move the result to the stack
     ///
     /// [anti][noop] is equivalent to (and formats to) [load].
@@ -1093,21 +1093,27 @@ primitive!(
     ///   : increment ← use "increment"
     ///   : square increment 5
     (2, Use, Misc, "use"),
+    /// Generate a unique tag
+    ///
+    /// Tags are just numbers and are unique across multiple threads, but not across multiple runs.
+    /// ex: [⍥tag5]
+    ///   : [⍥tag5]
+    (0, Tag, Misc, "tag"),
     /// The number of radians in a quarter circle
     ///
     /// Equivalent to `divide``2``pi` or `divide``4``tau`
     /// ex: [η ÷2π ÷4τ]
-    (0(1), Eta, Constant, ("eta", 'η')),
+    (0, Eta, Constant, ("eta", 'η')),
     /// The ratio of a circle's circumference to its diameter
     ///
     /// Equivalent to `multiply``2``eta` or `divide``2``tau`
     /// ex: [×2η π ÷2τ]
-    (0(1), Pi, Constant, ("pi", 'π')),
+    (0, Pi, Constant, ("pi", 'π')),
     /// The ratio of a circle's circumference to its radius
     ///
     /// Equivalent to `multiply``4``eta` or `multiply``2``pi`
     /// ex: [×4η ×2π τ]
-    (0(1), Tau, Constant, ("tau", 'τ')),
+    (0, Tau, Constant, ("tau", 'τ')),
     /// The biggest number
-    (0(1), Infinity, Constant, ("infinity", '∞')),
+    (0, Infinity, Constant, ("infinity", '∞')),
 );

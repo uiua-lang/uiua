@@ -9,7 +9,10 @@ use std::{
         INFINITY,
     },
     fmt,
-    sync::OnceLock,
+    sync::{
+        atomic::{self, AtomicUsize},
+        OnceLock,
+    },
 };
 
 use enum_iterator::{all, Sequence};
@@ -464,6 +467,11 @@ impl Primitive {
                     .and_then(|fs| fs.data.iter().find(|f| f.id == name.as_str()))
                     .ok_or_else(|| env.error(format!("No function found for {name:?}")))?;
                 env.push(f.clone());
+            }
+            Primitive::Tag => {
+                static NEXT_TAG: AtomicUsize = AtomicUsize::new(0);
+                let tag = NEXT_TAG.fetch_add(1, atomic::Ordering::Relaxed);
+                env.push(tag);
             }
             Primitive::Spawn => {
                 let n = env.pop(1)?.as_nat(env, "Spawn expects a natural number")?;

@@ -2,7 +2,6 @@
 - Add a way to check types
 - Figure out why tcp socket doesn't work in thread
 - Let errors be rethrown
-- Add tag generating function
 - Finish tour
 - Under pick
 - Docs

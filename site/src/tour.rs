@@ -2,7 +2,7 @@ use leptos::*;
 use leptos_router::*;
 use uiua::primitive::Primitive;
 
-use crate::{editor::Editor, PrimCode};
+use crate::{editor::Editor, examples::LOGO, PrimCode};
 
 #[component]
 pub fn Tour() -> impl IntoView {
@@ -107,11 +107,30 @@ pub fn Tour() -> impl IntoView {
         <Editor example="/+ .[1_2_3 4_5_6 7_8_9]"/>
         <p><PrimCode prim=Rows/>" applies a function to each row of an array."</p>
         <Editor example="x ← [1_2_3 4_5_6 7_8_9]\n  x\n ⇌x\n≡⇌x"/>
+        <p><PrimCode prim=Rows/>" also works "<em>"between"</em>" two arrays if it is given a binary function like "<PrimCode prim=Join/>"."</p>
+        <Editor example="≡⊂ [1_2 3_4] [5_6 7_8]"/>
         <br/>
         <h3 id="inline-functions">"Inline Functions"</h3>
         <p>"If you need a more complex function for a modifier, you can make an inline function by surrounding code with "<code>"()"</code>"s."</p>
         <p>"Let's use "<PrimCode prim=Each/>" to get the sum of all the numbers up to each element of an array."</p>
         <Editor example="∵(/+ ⇡ +1) .[1_2_3 4_5_6 7_8_9]"/>
         <p>"There are bunch of other modifiers that are useful in different situations. You can find a "<A href="/docs/modifier">"list of them"</A>" on the main docs page."</p>
+
+        <h2 id="multimedia">"Multimedia"</h2>
+        <p>"Uiua can natively generate images and audio."</p>
+        <p>"On this site, simply leaving an array on the stack that "<em>"looks"</em>" like image or audio data will display it."</p>
+        <h3>"Images"</h3>
+        <p>"Image data can either be a "<PrimCode prim=Rank/><code>"2"</code>" array of grayscale pixel data or a "<PrimCode prim=Rank/><code>"3"</code>" array of grayscale with alpha, RGBA, or RGBA pixel data."</p>
+        <p>"This minimal example uses three different functions on x/y coordinates to generate RGB values and make a pretty gradient."</p>
+        <Editor example="⍉⫫(⊞ ∶,)+_-_× ÷∶⇡.100"/>
+        <p>"The Uiua logo is made with Uiua itself!"</p>
+        <Editor example=LOGO/>
+        <h3>"Audio"</h3>
+        <p>"Audio data is just an array of numbers between -1 and 1. The numbers are interpreted as samples of a waveform."</p>
+        <p>"This minimal example plays a series of notes."</p>
+        <Editor example="\
+[0 2 4 7 12 9 7 4 0]
+×220 ⁿ∶2÷12
+÷2 ○×τ ♭⊞× ∶÷∶⇡÷2 .44100"/>
     }
 }

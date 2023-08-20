@@ -1,7 +1,7 @@
 const UIUA: &str = "\"Um, I um...arrays\"\n⊜⊢≥@A.";
 const FORMAT: &str = "# Click Run to format!\nrepeat(join∶/+take`2.)10range2";
 const D3: &str = "↯∶⇡/×.2_3_4";
-const LOGO: &str = "\
+pub const LOGO: &str = "\
 xy ← ↶⍉⊞⊟. ÷÷2∶ -÷2,⇡.200
 rgb ← [∶↶⊟×.xy ↯△⊢xy0.5]
 u ← ↥<0.2∶>0.7.+×2 ×.∶/·xy

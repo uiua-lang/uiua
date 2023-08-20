@@ -1,19 +1,23 @@
 use std::{
     any::Any,
-    collections::HashMap,
     env,
     fs::{self, File},
     io::{stderr, stdin, stdout, Cursor, Read, Write},
     net::*,
-    sync::OnceLock,
+    sync::{
+        atomic::{self, AtomicU64},
+        OnceLock,
+    },
     thread::{sleep, spawn, JoinHandle},
     time::Duration,
 };
 
 use bufreaderwriter::seq::BufReaderWriterSeq;
+use dashmap::DashMap;
 use enum_iterator::Sequence;
 use hound::{SampleFormat, WavSpec, WavWriter};
 use image::{DynamicImage, ImageOutputFormat};
+use lockfree::queue::Queue;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 
@@ -335,42 +339,41 @@ pub struct NativeSys;
 type Buffered<T> = BufReaderWriterSeq<T>;
 
 struct GlobalNativeSys {
-    next_handle: Handle,
-    files: HashMap<Handle, Buffered<File>>,
-    tcp_listeners: HashMap<Handle, TcpListener>,
-    tcp_sockets: HashMap<Handle, Buffered<TcpStream>>,
-    threads: HashMap<Handle, JoinHandle<UiuaResult<Vec<Value>>>>,
+    next_handle: AtomicU64,
+    files: DashMap<Handle, Buffered<File>>,
+    tcp_listeners: DashMap<Handle, TcpListener>,
+    tcp_sockets: DashMap<Handle, Buffered<TcpStream>>,
+    threads: DashMap<Handle, JoinHandle<UiuaResult<Vec<Value>>>>,
     #[cfg(feature = "audio")]
-    audio_thread_handles: Vec<JoinHandle<()>>,
-    colored_errors: HashMap<String, String>,
+    audio_thread_handles: Queue<JoinHandle<()>>,
+    colored_errors: DashMap<String, String>,
 }
 
 enum SysStream<'a> {
-    File(&'a mut Buffered<File>),
-    TcpListener(&'a mut TcpListener),
-    TcpSocket(&'a mut Buffered<TcpStream>),
+    File(dashmap::mapref::one::RefMut<'a, Handle, Buffered<File>>),
+    TcpListener(dashmap::mapref::one::RefMut<'a, Handle, TcpListener>),
+    TcpSocket(dashmap::mapref::one::RefMut<'a, Handle, Buffered<TcpStream>>),
 }
 
 impl Default for GlobalNativeSys {
     fn default() -> Self {
         Self {
-            next_handle: Handle::FIRST_UNRESERVED,
-            files: HashMap::new(),
-            tcp_listeners: HashMap::new(),
-            tcp_sockets: HashMap::new(),
-            threads: HashMap::new(),
+            next_handle: Handle::FIRST_UNRESERVED.0.into(),
+            files: DashMap::new(),
+            tcp_listeners: DashMap::new(),
+            tcp_sockets: DashMap::new(),
+            threads: DashMap::new(),
             #[cfg(feature = "audio")]
-            audio_thread_handles: Vec::new(),
-            colored_errors: HashMap::new(),
+            audio_thread_handles: Queue::new(),
+            colored_errors: DashMap::new(),
         }
     }
 }
 
 impl GlobalNativeSys {
-    fn new_handle(&mut self) -> Handle {
+    fn new_handle(&self) -> Handle {
         for _ in 0..u64::MAX {
-            let handle = self.next_handle;
-            self.next_handle.0 = self.next_handle.0.overflowing_add(1).0;
+            let handle = Handle(self.next_handle.fetch_add(1, atomic::Ordering::Relaxed));
             if !self.files.contains_key(&handle)
                 && !self.tcp_listeners.contains_key(&handle)
                 && !self.tcp_sockets.contains_key(&handle)
@@ -380,7 +383,7 @@ impl GlobalNativeSys {
         }
         panic!("Ran out of file handles");
     }
-    fn get_stream(&mut self, handle: Handle) -> Result<SysStream, String> {
+    fn get_stream(&self, handle: Handle) -> Result<SysStream, String> {
         Ok(if let Some(file) = self.files.get_mut(&handle) {
             SysStream::File(file)
         } else if let Some(listener) = self.tcp_listeners.get_mut(&handle) {
@@ -393,20 +396,16 @@ impl GlobalNativeSys {
     }
 }
 
-static NATIVE_SYS: OnceLock<Mutex<GlobalNativeSys>> = OnceLock::new();
-
-fn sys<T>(f: impl FnOnce(&mut GlobalNativeSys) -> T) -> T {
-    f(&mut NATIVE_SYS.get_or_init(Default::default).lock())
-}
+static NATIVE_SYS: Lazy<GlobalNativeSys> = Lazy::new(Default::default);
 
 impl SysBackend for NativeSys {
     fn any(&self) -> &dyn Any {
         self
     }
     fn save_error_color(&self, error: &UiuaError) {
-        sys(|sys| {
-            sys.colored_errors.insert(error.message(), error.show(true));
-        });
+        NATIVE_SYS
+            .colored_errors
+            .insert(error.message(), error.show(true));
     }
     fn var(&self, name: &str) -> Option<String> {
         env::var(name).ok()
@@ -431,20 +430,16 @@ impl SysBackend for NativeSys {
         Ok(paths)
     }
     fn open_file(&self, path: &str) -> Result<Handle, String> {
-        sys(|io| {
-            let handle = io.new_handle();
-            let file = File::open(path).map_err(|e| e.to_string())?;
-            io.files.insert(handle, Buffered::new_reader(file));
-            Ok(handle)
-        })
+        let handle = NATIVE_SYS.new_handle();
+        let file = File::open(path).map_err(|e| e.to_string())?;
+        NATIVE_SYS.files.insert(handle, Buffered::new_reader(file));
+        Ok(handle)
     }
     fn create_file(&self, path: &str) -> Result<Handle, String> {
-        sys(|io| {
-            let handle = io.new_handle();
-            let file = File::create(path).map_err(|e| e.to_string())?;
-            io.files.insert(handle, Buffered::new_writer(file));
-            Ok(handle)
-        })
+        let handle = NATIVE_SYS.new_handle();
+        let file = File::create(path).map_err(|e| e.to_string())?;
+        NATIVE_SYS.files.insert(handle, Buffered::new_writer(file));
+        Ok(handle)
     }
     fn read(&self, handle: Handle, len: usize) -> Result<Vec<u8>, String> {
         match handle {
@@ -459,38 +454,38 @@ impl SysBackend for NativeSys {
             }
             Handle::STDOUT => Err("Cannot read from stdout".into()),
             Handle::STDERR => Err("Cannot read from stderr".into()),
-            _ => sys(|io| {
-                Ok(match io.get_stream(handle)? {
-                    SysStream::File(file) => {
-                        let mut buf = Vec::new();
-                        file.take(len as u64)
-                            .read_to_end(&mut buf)
-                            .map_err(|e| e.to_string())?;
-                        buf
-                    }
-                    SysStream::TcpListener(_) => {
-                        return Err("Cannot read from a tcp listener".to_string())
-                    }
-                    SysStream::TcpSocket(socket) => {
-                        let mut buf = Vec::new();
-                        socket
-                            .take(len as u64)
-                            .read_to_end(&mut buf)
-                            .map_err(|e| e.to_string())?;
-                        buf
-                    }
-                })
+            _ => Ok(match NATIVE_SYS.get_stream(handle)? {
+                SysStream::File(mut file) => {
+                    let mut buf = Vec::new();
+                    Write::by_ref(&mut *file)
+                        .take(len as u64)
+                        .read_to_end(&mut buf)
+                        .map_err(|e| e.to_string())?;
+                    buf
+                }
+                SysStream::TcpListener(_) => {
+                    return Err("Cannot read from a tcp listener".to_string())
+                }
+                SysStream::TcpSocket(mut socket) => {
+                    let mut buf = Vec::new();
+                    Write::by_ref(&mut *socket)
+                        .take(len as u64)
+                        .read_to_end(&mut buf)
+                        .map_err(|e| e.to_string())?;
+                    buf
+                }
             }),
         }
     }
     fn write(&self, handle: Handle, conts: &[u8]) -> Result<(), String> {
         let mut conts = conts;
         let colored;
-        if let Some(colored_error) = sys(|sys| {
-            sys.colored_errors
-                .get(String::from_utf8_lossy(conts).as_ref())
-                .cloned()
-        }) {
+        if let Some(colored_error) = NATIVE_SYS
+            .colored_errors
+            .get(String::from_utf8_lossy(conts).as_ref())
+            .as_deref()
+            .cloned()
+        {
             colored = colored_error;
             conts = colored.as_bytes();
         }
@@ -498,11 +493,13 @@ impl SysBackend for NativeSys {
             Handle::STDIN => Err("Cannot write to stdin".into()),
             Handle::STDOUT => stdout().lock().write_all(conts).map_err(|e| e.to_string()),
             Handle::STDERR => stderr().lock().write_all(conts).map_err(|e| e.to_string()),
-            _ => sys(|io| match io.get_stream(handle)? {
-                SysStream::File(file) => file.write_all(conts).map_err(|e| e.to_string()),
+            _ => match NATIVE_SYS.get_stream(handle)? {
+                SysStream::File(mut file) => file.write_all(conts).map_err(|e| e.to_string()),
                 SysStream::TcpListener(_) => Err("Cannot write to a tcp listener".to_string()),
-                SysStream::TcpSocket(socket) => socket.write_all(conts).map_err(|e| e.to_string()),
-            }),
+                SysStream::TcpSocket(mut socket) => {
+                    socket.write_all(conts).map_err(|e| e.to_string())
+                }
+            },
         }
     }
     #[cfg(feature = "terminal_image")]
@@ -536,10 +533,11 @@ impl SysBackend for NativeSys {
     }
     #[cfg(feature = "audio")]
     fn play_audio(&self, wav_bytes: Vec<u8>) -> Result<(), String> {
-        sys(|sys| {
-            use hodaun::*;
-            let (send, recv) = crossbeam_channel::unbounded();
-            sys.audio_thread_handles.push(std::thread::spawn(move || {
+        use hodaun::*;
+        let (send, recv) = crossbeam_channel::unbounded();
+        NATIVE_SYS
+            .audio_thread_handles
+            .push(std::thread::spawn(move || {
                 match default_output::<Stereo>() {
                     Ok(mut mixer) => {
                         send.send(Ok(())).unwrap();
@@ -565,52 +563,48 @@ impl SysBackend for NativeSys {
                     }
                 }
             }));
-            recv.recv().unwrap()
-        })
+        recv.recv().unwrap()
     }
     fn sleep(&self, ms: f64) -> Result<(), String> {
         sleep(Duration::from_secs_f64(ms / 1000.0));
         Ok(())
     }
     fn tcp_listen(&self, addr: &str) -> Result<Handle, String> {
-        sys(|sys| {
-            let handle = sys.new_handle();
-            let listener = TcpListener::bind(addr).map_err(|e| e.to_string())?;
-            sys.tcp_listeners.insert(handle, listener);
-            Ok(handle)
-        })
+        let handle = NATIVE_SYS.new_handle();
+        let listener = TcpListener::bind(addr).map_err(|e| e.to_string())?;
+        NATIVE_SYS.tcp_listeners.insert(handle, listener);
+        Ok(handle)
     }
     fn tcp_accept(&self, handle: Handle) -> Result<Handle, String> {
-        sys(|sys| {
-            let listener = sys
-                .tcp_listeners
-                .get_mut(&handle)
-                .ok_or_else(|| "Invalid tcp listener handle".to_string())?;
-            let (stream, _) = listener.accept().map_err(|e| e.to_string())?;
-            let handle = sys.new_handle();
-            sys.tcp_sockets.insert(handle, Buffered::new_reader(stream));
-            Ok(handle)
-        })
+        let listener = NATIVE_SYS
+            .tcp_listeners
+            .get_mut(&handle)
+            .ok_or_else(|| "Invalid tcp listener handle".to_string())?;
+        let (stream, _) = listener.accept().map_err(|e| e.to_string())?;
+        drop(listener);
+        let handle = NATIVE_SYS.new_handle();
+        NATIVE_SYS
+            .tcp_sockets
+            .insert(handle, Buffered::new_reader(stream));
+        Ok(handle)
     }
     fn tcp_connect(&self, addr: &str) -> Result<Handle, String> {
-        sys(|sys| {
-            let handle = sys.new_handle();
-            let stream = TcpStream::connect(addr).map_err(|e| e.to_string())?;
-            sys.tcp_sockets.insert(handle, Buffered::new_writer(stream));
-            Ok(handle)
-        })
+        let handle = NATIVE_SYS.new_handle();
+        let stream = TcpStream::connect(addr).map_err(|e| e.to_string())?;
+        NATIVE_SYS
+            .tcp_sockets
+            .insert(handle, Buffered::new_writer(stream));
+        Ok(handle)
     }
     fn close(&self, handle: Handle) -> Result<(), String> {
-        sys(|sys| {
-            if sys.files.remove(&handle).is_some()
-                || sys.tcp_listeners.remove(&handle).is_some()
-                || sys.tcp_sockets.remove(&handle).is_some()
-            {
-                Ok(())
-            } else {
-                Err("Invalid stream handle".to_string())
-            }
-        })
+        if NATIVE_SYS.files.remove(&handle).is_some()
+            || NATIVE_SYS.tcp_listeners.remove(&handle).is_some()
+            || NATIVE_SYS.tcp_sockets.remove(&handle).is_some()
+        {
+            Ok(())
+        } else {
+            Err("Invalid stream handle".to_string())
+        }
     }
     fn spawn(
         &self,
@@ -621,29 +615,32 @@ impl SysBackend for NativeSys {
             f(&mut env)?;
             Ok(env.take_stack())
         });
-        sys(|sys| {
-            let handle = sys.new_handle();
-            sys.threads.insert(handle, thread);
-            Ok(handle)
-        })
+        let handle = NATIVE_SYS.new_handle();
+        NATIVE_SYS.threads.insert(handle, thread);
+        Ok(handle)
     }
     fn wait(&self, handle: Handle) -> Result<Vec<Value>, Result<UiuaError, String>> {
-        sys(|sys| {
-            let thread = sys
-                .threads
-                .remove(&handle)
-                .ok_or_else(|| Err("Invalid thread handle".to_string()))?;
-            match thread.join() {
-                Ok(Ok(stack)) => Ok(stack),
-                Ok(Err(e)) => Err(Ok(e)),
-                Err(e) => Err(Err(format!("Thread panicked: {:?}", e))),
-            }
-        })
+        let (_, thread) = NATIVE_SYS
+            .threads
+            .remove(&handle)
+            .ok_or_else(|| Err("Invalid thread handle".to_string()))?;
+        match thread.join() {
+            Ok(Ok(stack)) => Ok(stack),
+            Ok(Err(e)) => Err(Ok(e)),
+            Err(e) => Err(Err(format!("Thread panicked: {:?}", e))),
+        }
     }
     fn teardown(&self) {
         #[cfg(feature = "audio")]
-        for audio_thread_handle in sys(std::mem::take).audio_thread_handles {
-            audio_thread_handle.join().unwrap();
+        {
+            NATIVE_SYS.files.clear();
+            NATIVE_SYS.tcp_listeners.clear();
+            NATIVE_SYS.tcp_sockets.clear();
+            NATIVE_SYS.threads.clear();
+            NATIVE_SYS.colored_errors.clear();
+            for audio_thread_handle in NATIVE_SYS.audio_thread_handles.pop_iter() {
+                audio_thread_handle.join().unwrap();
+            }
         }
     }
 }

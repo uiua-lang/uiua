@@ -1,5 +1,5 @@
+- Fix nested multiline formatting
 - Add a way to prevent modifier binding
-- Figure out why tcp socket doesn't work in thread
 - Finish tour
 - Under pick
 - Docs

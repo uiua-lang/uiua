@@ -1,4 +1,4 @@
-# A simple HTTP server good enough to serve Uiua's website
+# A simple, parallel HTTP server good enough to serve Uiua's website
 # 
 # To do that, compile the site with trunk:
 # ```
@@ -52,7 +52,8 @@ page ← ⍣(
 )handlepageloaderror ⊂"docs"
 home ← page "/index.html"
 
-respond ← close ⍜↑(
+respond ← ↰1(
+  close ⍜↑(
   # Extract path from request
   !⊡1 ⊜□≠@ . readuntil "\r\n\r\n"~.
   print "Request:"
@@ -63,6 +64,7 @@ respond ← close ⍜↑(
 
   # Send response
   write∶~.
+)
 )
 
 ⍥(⍣(respond)print tcpaccept listener)∞

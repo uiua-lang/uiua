@@ -92,6 +92,7 @@ mod server {
     use crate::{
         format::{format_str, FormatConfig},
         lex::Loc,
+        primitive::PrimDocFragment,
         Uiua,
     };
 
@@ -204,24 +205,54 @@ mod server {
                 return Ok(None);
             };
             let (line, col) = lsp_pos_to_uiua(params.text_document_position_params.position);
+            let mut prim_range = None;
             for sp in &doc.spans {
                 if sp.span.contains_line_col(line, col) {
                     match sp.value {
                         SpanKind::Primitive(prim) => {
-                            if let Some(name) = prim.name() {
-                                return Ok(Some(Hover {
-                                    contents: HoverContents::Scalar(MarkedString::String(
-                                        name.into(),
-                                    )),
-                                    range: Some(uiua_span_to_lsp(&sp.span)),
-                                }));
+                            if prim.name().is_some() {
+                                prim_range = Some((prim, uiua_span_to_lsp(&sp.span)));
                             }
                         }
                         _ => {}
                     }
                 }
             }
-            Ok(None)
+            Ok(if let Some((prim, range)) = prim_range {
+                let mut contents = vec![MarkedString::String(prim.name().unwrap().into())];
+                if let Some(doc) = prim.doc() {
+                    contents.push(MarkedString::String(
+                        doc.short
+                            .iter()
+                            .map(|frag| match frag {
+                                PrimDocFragment::Text(text) => text.clone(),
+                                PrimDocFragment::Code(code) => code.clone(),
+                                PrimDocFragment::Emphasis(text) => text.clone(),
+                                PrimDocFragment::Primitive { prim, named } => {
+                                    let name = prim.name().unwrap();
+                                    if *named {
+                                        if let Some(unicode) = prim.unicode() {
+                                            format!("{} {}", unicode, name)
+                                        } else {
+                                            name.into()
+                                        }
+                                    } else if let Some(unicode) = prim.unicode() {
+                                        unicode.into()
+                                    } else {
+                                        name.into()
+                                    }
+                                }
+                            })
+                            .collect(),
+                    ))
+                }
+                Some(Hover {
+                    contents: HoverContents::Array(contents),
+                    range: Some(range),
+                })
+            } else {
+                None
+            })
         }
 
         async fn formatting(

@@ -6,7 +6,6 @@
   - Threads
   - System
 - Tooling
-  - Primitive details in LSP
   - Function comments in LSP
 - Test suite
 - More inverses

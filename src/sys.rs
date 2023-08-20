@@ -17,7 +17,6 @@ use dashmap::DashMap;
 use enum_iterator::Sequence;
 use hound::{SampleFormat, WavSpec, WavWriter};
 use image::{DynamicImage, ImageOutputFormat};
-use lockfree::queue::Queue;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 
@@ -345,7 +344,7 @@ struct GlobalNativeSys {
     tcp_sockets: DashMap<Handle, Buffered<TcpStream>>,
     threads: DashMap<Handle, JoinHandle<UiuaResult<Vec<Value>>>>,
     #[cfg(feature = "audio")]
-    audio_thread_handles: Queue<JoinHandle<()>>,
+    audio_thread_handles: lockfree::queue::Queue<JoinHandle<()>>,
     colored_errors: DashMap<String, String>,
 }
 
@@ -364,7 +363,7 @@ impl Default for GlobalNativeSys {
             tcp_sockets: DashMap::new(),
             threads: DashMap::new(),
             #[cfg(feature = "audio")]
-            audio_thread_handles: Queue::new(),
+            audio_thread_handles: lockfree::queue::Queue::new(),
             colored_errors: DashMap::new(),
         }
     }
@@ -939,7 +938,6 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
     if ![2, 3].contains(&value.rank()) {
         return Err("Image must be a rank 2 or 3 numeric array".into());
     }
-    println!("image value is {:?}", value.type_name());
     let bytes = match value {
         Value::Num(nums) => nums
             .data

@@ -38,7 +38,8 @@ indexmap.features = ["serde"]
 indexmap.optional = true
 indexmap.version = "1"
 instant = "0.1.12"
-lockfree = "0.5.1"
+lockfree.optional = true
+lockfree.version = "0.5.1"
 notify.optional = true
 notify.version = "5"
 once_cell = "1"
@@ -64,7 +65,7 @@ viuer.optional = true
 viuer.version = "0.6.2"
 
 [features]
-audio = ["hodaun", "crossbeam-channel"]
+audio = ["hodaun", "crossbeam-channel", "lockfree"]
 binary = ["ctrlc", "notify", "clap", "open", "color-backtrace", "lsp"]
 debug = []
 default = ["binary", "audio", "terminal_image"]

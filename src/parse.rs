@@ -309,12 +309,14 @@ impl Parser {
             return self.try_term();
         };
         let mut args = Vec::new();
-        for _ in 0..margs {
-            self.try_spaces();
-            if let Some(arg) = self.try_strand() {
-                args.push(arg);
-            } else {
-                break;
+        if self.try_spaces().is_none() {
+            for _ in 0..margs {
+                self.try_spaces();
+                if let Some(arg) = self.try_strand() {
+                    args.push(arg);
+                } else {
+                    break;
+                }
             }
         }
         Some(if args.is_empty() {

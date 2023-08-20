@@ -195,7 +195,12 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig, dept
                 output.push(')');
             }
         }
-        Word::Primitive(prim) => output.push_str(&prim.to_string()),
+        Word::Primitive(prim) => {
+            output.push_str(&prim.to_string());
+            if prim.is_modifier() {
+                output.push(' ');
+            }
+        }
         Word::Modified(m) => {
             // Special case for `anti noop` -> `load`
             if let (

@@ -1107,7 +1107,7 @@ primitive!(
     /// ex: type 5
     /// ex: type "hello"
     /// ex: type (+)
-    /// ex: ∵ type  {10 "dog" (≅⇌.)}
+    /// ex: ∵type  {10 "dog" (≅⇌.)}
     ///   : ∵'type! {10 "dog" (≅⇌.)}
     (1, Type, Misc, "type"),
     /// The number of radians in a quarter circle

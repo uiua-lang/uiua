@@ -311,11 +311,6 @@ fn TutorialArrays() -> impl IntoView {
 [[1 2 3]
  [4 5 6]
  [7 8 9]]"/>
-        <p>"If you want the rows to be in the order that they appear in the code, use "<PrimCode prim=Reverse/>"."</p>
-        <Editor example="\
-⇌[[1 2 3]
-  [4 5 6]
-  [7 8 9]]"/>
 
         <h2 id="shape-len-rank"><PrimCode prim=Shape/>", "<PrimCode prim=Len/>", and "<PrimCode prim=Rank/></h2>
         <p>"Other than their data, arrays also have a property called their "<b>"shape"</b>". Shape is a list of non-negative integers that describes the array's size along each of its axes."</p>

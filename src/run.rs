@@ -476,7 +476,7 @@ backtrace:
                     self.new_functions.push(Vec::new());
                 }
                 self.push_instr(Instr::BeginArray);
-                for lines in arr.lines {
+                for lines in arr.lines.into_iter().rev() {
                     self.words(lines, true)?;
                 }
                 let span = self.add_span(word.span.clone());

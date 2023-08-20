@@ -54,17 +54,17 @@ home ← page "/index.html"
 
 respond ← ↰1(
   close ⍜↑(
-  # Extract path from request
-  !⊡1 ⊜□≠@ . readuntil "\r\n\r\n"~.
-  print "Request:"
-  print.
+    # Extract path from request
+    !⊡1 ⊜□≠@ . readuntil "\r\n\r\n"~.
+    print "Request:"
+    print.
 
-  # Route to handler
-  !(page)_(home;) ≅"/"..
+    # Route to handler
+    !(page)_(home;) ≅"/"..
 
-  # Send response
-  write∶~.
-)
+    # Send response
+    write∶~.
+  )
 )
 
 ⍥(⍣(respond)print tcpaccept listener)∞

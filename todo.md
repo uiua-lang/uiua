@@ -1,4 +1,3 @@
-- Fix nested multiline formatting
 - Add a way to prevent modifier binding
 - Finish tour
 - Under pick

@@ -104,24 +104,30 @@ fn format_item(output: &mut String, item: &Item, config: &FormatConfig) {
             output.push_str(delim);
         }
         Item::Words(w) => {
-            format_words(output, w, config, true);
+            format_words(output, w, config, true, 0);
         }
         Item::Binding(binding) => {
             output.push_str(&binding.name.value.0);
             output.push_str(" ← ");
-            format_words(output, &binding.words, config, true);
+            format_words(output, &binding.words, config, true, 0);
         }
         Item::Newlines => {}
     }
 }
 
-fn format_words(output: &mut String, words: &[Sp<Word>], config: &FormatConfig, trim_end: bool) {
+fn format_words(
+    output: &mut String,
+    words: &[Sp<Word>],
+    config: &FormatConfig,
+    trim_end: bool,
+    depth: usize,
+) {
     for word in trim_spaces(words, trim_end) {
-        format_word(output, word, config);
+        format_word(output, word, config, depth);
     }
 }
 
-fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig) {
+fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig, depth: usize) {
     match &word.value {
         Word::Number(_, n) => {
             output.push_str(&n.grid_string());
@@ -160,7 +166,7 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig) {
                 if i > 0 {
                     output.push('_');
                 }
-                format_word(output, item, config);
+                format_word(output, item, config, depth);
             }
             if items.len() == 1 {
                 output.push('_');
@@ -172,7 +178,7 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig) {
             } else {
                 output.push('[');
             }
-            format_multiline_words(output, &arr.lines, config, true);
+            format_multiline_words(output, &arr.lines, config, true, depth + 1);
             if arr.constant {
                 output.push('}');
             } else {
@@ -182,10 +188,10 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig) {
         Word::Func(func) => {
             if func.bind {
                 output.push('\'');
-                format_words(output, &func.lines[0], config, false);
+                format_words(output, &func.lines[0], config, false, depth + 1);
             } else {
                 output.push('(');
-                format_multiline_words(output, &func.lines, config, false);
+                format_multiline_words(output, &func.lines, config, false, depth + 1);
                 output.push(')');
             }
         }
@@ -205,7 +211,7 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig) {
             }
             // Normal case
             output.push_str(&m.modifier.value.to_string());
-            format_words(output, &m.words, config, true);
+            format_words(output, &m.words, config, true, depth);
         }
         Word::Spaces => output.push(' '),
         Word::Comment(comment) => {
@@ -223,26 +229,27 @@ fn format_multiline_words(
     lines: &[Vec<Sp<Word>>],
     config: &FormatConfig,
     allow_compact: bool,
+    depth: usize,
 ) {
     if lines.len() == 1 && !lines[0].iter().any(|word| word_is_multiline(&word.value)) {
-        format_words(output, &lines[0], config, true);
+        format_words(output, &lines[0], config, true, depth);
         return;
     }
     let curr_line = output.lines().last().unwrap_or_default();
-    let curr_line_pos = if output.ends_with('\n') {
+    let start_line_pos = if output.ends_with('\n') {
         0
     } else {
         curr_line.chars().count()
     };
     let compact = allow_compact
         && config.compact_multiline.unwrap_or_else(|| {
-            curr_line_pos <= config.multiline_compact_threshold || curr_line.starts_with(' ')
+            start_line_pos <= config.multiline_compact_threshold || curr_line.starts_with(' ')
         })
         && (lines.iter().flatten()).all(|word| !word_is_multiline(&word.value));
     let indent = if compact {
-        curr_line_pos
+        start_line_pos
     } else {
-        config.multiline_indent
+        config.multiline_indent * depth
     };
     for (i, line) in lines.iter().enumerate() {
         if i > 0 || !compact {
@@ -253,10 +260,13 @@ fn format_multiline_words(
                 }
             }
         }
-        format_words(output, line, config, true);
+        format_words(output, line, config, true, depth);
     }
     if !compact {
         output.push('\n');
+        for _ in 0..config.multiline_indent * depth.saturating_sub(1) {
+            output.push(' ');
+        }
     }
 }
 

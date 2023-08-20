@@ -113,6 +113,7 @@ impl fmt::Display for Primitive {
                 Untake => write!(f, "↶{Take}"),
                 Undrop => write!(f, "↶{Drop}"),
                 Cos => write!(f, "{Sin}{Add}{Add}"),
+                Last => write!(f, "{First}{Reverse}"),
                 _ => write!(f, "{self:?}"),
             }
         }

@@ -74,14 +74,15 @@ fn format_impl(input: &str, path: Option<&Path>, config: &FormatConfig) -> UiuaR
 
 pub fn format_file<P: AsRef<Path>>(path: P, config: &FormatConfig) -> UiuaResult<String> {
     let path = path.as_ref();
-    let input = fs::read_to_string(path).map_err(|e| UiuaError::Load(path.to_path_buf(), e))?;
+    let input =
+        fs::read_to_string(path).map_err(|e| UiuaError::Load(path.to_path_buf(), e.into()))?;
     let formatted = format(&input, path, config)?;
     if formatted == input {
         return Ok(formatted);
     }
     let dont_write = env::var("UIUA_NO_FORMAT").is_ok_and(|val| val == "1");
     if !dont_write {
-        fs::write(path, &formatted).map_err(|e| UiuaError::Format(path.to_path_buf(), e))?;
+        fs::write(path, &formatted).map_err(|e| UiuaError::Format(path.to_path_buf(), e.into()))?;
     }
     Ok(formatted)
 }

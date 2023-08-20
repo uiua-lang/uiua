@@ -16,10 +16,10 @@ use crate::{
     value::Value,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum UiuaError {
-    Load(PathBuf, io::Error),
-    Format(PathBuf, io::Error),
+    Load(PathBuf, Arc<io::Error>),
+    Format(PathBuf, Arc<io::Error>),
     Parse(Vec<Sp<ParseError>>),
     Run(Sp<String, Span>),
     Traced {

@@ -8,7 +8,7 @@ use crate::{
     Ident,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ParseError {
     Lex(LexError),
     Expected(Vec<Expectation>, Option<Box<Sp<Token>>>),
@@ -16,7 +16,7 @@ pub enum ParseError {
     Unexpected(Token),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expectation {
     Term,
     Simple(AsciiToken),

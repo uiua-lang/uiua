@@ -26,7 +26,7 @@ pub fn lex(input: &str, file: Option<&Path>) -> (Vec<Sp<Token>>, Vec<Sp<LexError
     .run()
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum LexError {
     UnexpectedChar(char),
     ExpectedCharacter(Option<char>),

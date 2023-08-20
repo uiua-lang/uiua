@@ -145,7 +145,7 @@ impl Uiua {
     /// Load a Uiua file from a path
     pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<&mut Self> {
         let path = path.as_ref();
-        let input = fs::read_to_string(path).map_err(|e| UiuaError::Load(path.into(), e))?;
+        let input = fs::read_to_string(path).map_err(|e| UiuaError::Load(path.into(), e.into()))?;
         self.load_impl(&input, Some(path))
     }
     /// Load a Uiua file from a string

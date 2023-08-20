@@ -225,6 +225,8 @@ impl From<Handle> for Value {
 #[allow(unused_variables)]
 pub trait SysBackend: Any + Send + Sync + 'static {
     fn any(&self) -> &dyn Any;
+    /// Save a color-formatted version of an error message for later printing
+    fn save_error_color(&self, error: &UiuaError) {}
     fn print_str(&self, s: &str) -> Result<(), String> {
         self.write(Handle::STDOUT, s.as_bytes())
     }
@@ -340,6 +342,7 @@ struct GlobalNativeSys {
     threads: HashMap<Handle, JoinHandle<UiuaResult<Vec<Value>>>>,
     #[cfg(feature = "audio")]
     audio_thread_handles: Vec<JoinHandle<()>>,
+    colored_errors: HashMap<String, String>,
 }
 
 enum SysStream<'a> {
@@ -358,6 +361,7 @@ impl Default for GlobalNativeSys {
             threads: HashMap::new(),
             #[cfg(feature = "audio")]
             audio_thread_handles: Vec::new(),
+            colored_errors: HashMap::new(),
         }
     }
 }
@@ -398,6 +402,11 @@ fn sys<T>(f: impl FnOnce(&mut GlobalNativeSys) -> T) -> T {
 impl SysBackend for NativeSys {
     fn any(&self) -> &dyn Any {
         self
+    }
+    fn save_error_color(&self, error: &UiuaError) {
+        sys(|sys| {
+            sys.colored_errors.insert(error.message(), error.show(true));
+        });
     }
     fn var(&self, name: &str) -> Option<String> {
         env::var(name).ok()
@@ -475,6 +484,16 @@ impl SysBackend for NativeSys {
         }
     }
     fn write(&self, handle: Handle, conts: &[u8]) -> Result<(), String> {
+        let mut conts = conts;
+        let colored;
+        if let Some(colored_error) = sys(|sys| {
+            sys.colored_errors
+                .get(String::from_utf8_lossy(conts).as_ref())
+                .cloned()
+        }) {
+            colored = colored_error;
+            conts = colored.as_bytes();
+        }
         match handle {
             Handle::STDIN => Err("Cannot write to stdin".into()),
             Handle::STDOUT => stdout().lock().write_all(conts).map_err(|e| e.to_string()),

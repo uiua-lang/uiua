@@ -1,7 +1,6 @@
 - Add a way to prevent modifier binding
 - Add a way to check types
 - Figure out why tcp socket doesn't work in thread
-- Let errors be rethrown
 - Finish tour
 - Under pick
 - Docs

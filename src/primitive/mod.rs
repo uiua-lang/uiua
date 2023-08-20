@@ -404,6 +404,7 @@ impl Primitive {
                 env.push(f);
                 if let Err(e) = env.call() {
                     env.truncate_stack(size);
+                    env.backend.save_error_color(&e);
                     env.push(e.value());
                     env.push(handler);
                     env.call()?;

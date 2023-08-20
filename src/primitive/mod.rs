@@ -789,11 +789,22 @@ mod tests {
         fn gen_group(prims: impl Iterator<Item = Primitive> + Clone) -> String {
             let glyphs = prims
                 .clone()
-                .filter_map(|p| p.unicode())
+                .flat_map(|p| {
+                    p.unicode()
+                        .into_iter()
+                        .chain(p.ascii().into_iter().flat_map(|ascii| {
+                            Some(ascii.to_string())
+                                .filter(|s| s.len() == 1)
+                                .into_iter()
+                                .flat_map(|s| s.chars().collect::<Vec<_>>())
+                        }))
+                })
                 .collect::<String>()
                 .replace('\\', "\\\\\\\\")
-                .replace('-', "\\\\-");
-            let format_names = prims
+                .replace('-', "\\\\-")
+                .replace('*', "\\\\*")
+                .replace('^', "\\\\^");
+            let format_names: String = prims
                 .clone()
                 .filter_map(|p| p.names())
                 .filter(|p| p.is_name_formattable())
@@ -809,21 +820,21 @@ mod tests {
                         start.push(c);
                         end.push_str(")?");
                     }
-                    format!("{}{}", start, end)
+                    format!("|\\\\b{}{}\\\\b", start, end)
                 })
-                .collect::<Vec<_>>()
-                .join("|");
+                .collect();
             let mut literal_names: Vec<String> = prims
                 .filter_map(|p| p.names())
                 .filter(|p| !p.is_name_formattable() && p.ascii.is_none() && p.unicode.is_none())
-                .map(|n| n.text.to_string())
+                .map(|n| format!("|\\\\b{}\\\\b", n.text))
                 .collect();
             literal_names.sort_by_key(|s| s.len());
             literal_names.reverse();
-            let literal_names = literal_names.join("|");
-            format!("([{glyphs}]|{format_names}|({literal_names}))")
+            let literal_names = literal_names.join("");
+            format!("[{glyphs}]{format_names}{literal_names}")
         }
 
+        let stack_functions = gen_group(Primitive::all().filter(|p| p.class() == PrimClass::Stack));
         let noadic_functions = gen_group(Primitive::all().filter(|p| {
             p.class() != PrimClass::Stack && p.modifier_args().is_none() && p.args() == Some(0)
         }));
@@ -833,10 +844,14 @@ mod tests {
         let dyadic_functions = gen_group(Primitive::all().filter(|p| {
             p.class() != PrimClass::Stack && p.modifier_args().is_none() && p.args() == Some(2)
         }));
-        let monadic_modifiers =
-            gen_group(Primitive::all().filter(|p| matches!(p.modifier_args(), Some(1))));
-        let dyadic_modifiers: String =
-            gen_group(Primitive::all().filter(|p| matches!(p.modifier_args(), Some(2))));
+        let monadic_modifiers = gen_group(
+            Primitive::all()
+                .filter(|p| p.class() != PrimClass::Stack && matches!(p.modifier_args(), Some(1))),
+        );
+        let dyadic_modifiers: String = gen_group(
+            Primitive::all()
+                .filter(|p| p.class() != PrimClass::Stack && matches!(p.modifier_args(), Some(2))),
+        );
 
         let text = format!(
             r##"{{
@@ -859,6 +874,9 @@ mod tests {
             "include": "#strand"
         }},
 		{{
+			"include": "#stack"
+		}},
+		{{
 			"include": "#noadic"
 		}},
 		{{
@@ -872,20 +890,27 @@ mod tests {
 		}},
 		{{
 			"include": "#mod2"
-		}}
+		}},
+        {{
+            "include": "#idents"
+        }}
 	],
 	"repository": {{
+        "idents": {{
+            "name": "variable.parameter.uiua",
+            "match": "\\b[a-zA-Z]+\\b"
+        }},
 		"comments": {{
 			"name": "comment.line.uiua",
 			"match": "#.*$"
 		}},
 		"strings": {{
 			"name": "constant.character.escape",
-			"match": "(\".*\"|\\$.*$)"
+			"match": "\"[^\"]*\"|\\$.*$"
 		}},
         "characters": {{
             "name": "constant.character.escape",
-            "match": "'\\\\?.'"
+            "match": "@\\\\?."
         }},
 		"numbers": {{
 			"name": "constant.numeric.uiua",
@@ -895,6 +920,9 @@ mod tests {
 			"name": "comment.line",
 			"match": "_"
 		}},
+        "stack": {{
+            "match": "{stack_functions}"
+        }},
 		"noadic": {{
 			"name": "entity.name.tag.uiua",
             "match": "{noadic_functions}"

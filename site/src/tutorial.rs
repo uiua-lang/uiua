@@ -530,7 +530,7 @@ fn TutorialAntistack() -> impl IntoView {
     use Primitive::*;
     view! {
         <h1>"The Antistack"</h1>
-        <p>"Uiua does not have named local variables. With only "<PrimCode prim=Dup/>", "<PrimCode prim=Flip/>", and "<PrimCode prim=Flip/>", how do you juggle more than 2 values at a time?"</p>
+        <p>"Uiua does not have named local variables. With only "<PrimCode prim=Dup/>", "<PrimCode prim=Flip/>", and "<PrimCode prim=Over/>", how do you juggle more than 2 values at a time?"</p>
         <p>"One thing you could do is collect all the values you want to work with into an array, rearrange them, and then unpack them back onto the stack."</p>
         <p>"However, this is a lot of work, is inefficient, and does not work for non-homogenous values."</p>
         <p>"Uiua actually has two value stacks, the stack, and the "<em>"antistack"</em>". Values can be freely moved between the stack and antistack with a few functions."</p>
@@ -550,7 +550,7 @@ fn TutorialAntistack() -> impl IntoView {
         <p>"The answer is "<PrimCode prim=Anti/>"."</p>
         <p><PrimCode prim=Anti/>" is a modifier that runs its function on the antistack instead of the stack and then moves the result to the stack."</p>
         <p>"You can copy the top value from the antistack to the stack with "<PrimCode prim=Anti/><PrimCode prim=Dup/>". You can do the same with the second-to-top value with"<PrimCode prim=Anti/><PrimCode prim=Over/>"."</p>
-        <Editor example="[1 ↓ 2 ↓ 3 ~. 4 ~, 5 ~. 6 ↑↑ 7 8]"/>
+        <Editor example="[1 ↓ 2 ↓ 3~. 4~, 5~. 6 ↑↑ 7 8]"/>
         <p>"The effectively gives you an additional 2 values that you can easily access without messing up the stack."</p>
         <br/>
         <p>"For a more concrete example, let's say you wanted to write a function that computes the "<a href="https://en.wikipedia.org/wiki/Quadratic_formula">"Quadratic Formula"</a>". It takes three values and uses them all in different positions and repetitions. With only the stack, you would have a very hard time juggling them."</p>

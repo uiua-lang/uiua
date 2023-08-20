@@ -1,6 +1,6 @@
-- Finish tour
 - Under pick
 - Docs
+  - Fill tutorial
   - Audio
   - Images
   - Threads

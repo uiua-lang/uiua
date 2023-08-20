@@ -121,6 +121,34 @@ pub fn Tour() -> impl IntoView {
         <p>"Small inline functions with only 2 terms can also be created with a preceding "<code>"'"</code>"."</p>
         <Editor example="≡'⊢⇌ .[1_2_3 4_5_6 7_8_9]"/>
 
+        <h2 id="fill-and-nested-arrays"><PrimCode prim=Fill/>" and Nested Arrays"</h2>
+        <p>"Here is an array that cannot be constructed normally because its rows have different "<PrimCode prim=Len/>"s."</p>
+        <Editor example="[1 2_3_4 5_6]"/>
+        <p>"One way to make this array work is to use the "<PrimCode prim=Fill/>" modifier. You give it a fill value and a function or array that would fail with mismatched shapes, and it will fill in the missing values with the fill value."</p>
+        <Editor example="⍛0[1 2_3_4 5_6]"/>
+        <p><PrimCode prim=Fill/>" works with lots of functions. Another one is "<PrimCode prim=Take/>" when the amount you are taking is more than the length of the array."</p>
+        <Editor example="⍛π↙5 [1 2 3]"/>
+        <br/>
+        <p><PrimCode prim=Fill/>" is nice, but you don't always want to fill in the missing elements. Sometimes the you need to mix values of different shapes or types in an array. To understand Uiua's solution to this problem, you must first understand its "<em>"array model"</em>"."</p>
+        <p>"Uiua's array model is similar to that of J. Arrays must be rectangular and cannot mix types. However, the "<PrimCode prim=Constant/>" function can turn any value into a function that pushes that value to the stack. That value can then be extracted with "<PrimCode prim=Call/>". This is similar to J's boxes."</p>
+        <Editor example="[□1 □2_3_4 □5_6]"/>
+        <p>"Having to use "<PrimCode prim=Constant/>" on every value is kind of annoying, so there is a special syntax for "<PrimCode prim=Constant/>" arrays that uses "<code>"{}"</code>"s instead of "<code>"[]"</code>"s."</p>
+        <Editor example="{1 2_3_4 5_6}"/>
+        <p>"Most monadic functions work on "<PrimCode prim=Constant/>" elements without needing to "<PrimCode prim=Call/>" them."</p>
+        <Editor example="{1 2_3_4 5_6}\n∵⇌.\n∵⧻."/>
+        <p>"For more complex operations, though, you'll need to use "<PrimCode prim=Call/>". Using it with "<PrimCode prim=Under/>" will re-"<PrimCode prim=Constant/>" the result."</p>
+        <Editor example="{\"dog\" \"cat\" \"fish\"}\n∵⍜!(⊂∶⇌.)."/>
+
+        <h2 id="the-antistack">"The Antistack"</h2>
+        <p>"Uiua has a second stack that is usually used to store values that you don't want to muck up the main stack."</p>
+        <p>"You can move values to the antistack with "<PrimCode prim=Save/>" and move them back with "<PrimCode prim=Load/>"."</p>
+        <Editor example="[↓1 2 3 ↑4 5]"/>
+        <p>"You can use "<PrimCode prim=Anti/>" to run a function on the antistack instead of the main stack."</p>
+        <Editor example="[~(+×.) 1 2 3 ↑↑ 4 5]"/>
+        <p>"With "<PrimCode prim=Dup/>" and "<PrimCode prim=Over/>", this gives you access to 2 values that you can save off and reuse as needed."</p>
+        <Editor example="[1 ↓ 2 ↓ 3~. 4~, 5~. 6 ↑↑ 7 8]"/>
+        <p>"All this lets Uiua get away with the fact that it doesn't have named local variables."</p>
+
         <h2 id="multimedia">"Multimedia"</h2>
         <p>"Uiua can natively generate images and audio."</p>
         <p>"On this site, simply leaving an array on the stack that "<em>"looks"</em>" like image or audio data will display it."</p>

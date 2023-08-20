@@ -82,6 +82,9 @@ impl GridFmt for Function {
             .lines()
             .map(|s| s.chars().collect())
             .collect();
+        if self.is_constant() {
+            return grid;
+        }
         if grid.len() == 1 {
             grid[0].insert(0, '(');
             grid[0].push(')');

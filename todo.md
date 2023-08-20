@@ -1,6 +1,5 @@
 - Add a way to prevent modifier binding
 - Add a way to check types
-- Improve constant function array formatting
 - Figure out why tcp socket doesn't work in thread
 - Let errors be rethrown
 - Add tag generating function

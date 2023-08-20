@@ -5,6 +5,7 @@
   - Images
   - Threads
   - System
+  - Guided examples
 - Tooling
   - Function comments in LSP
 - Test suite

@@ -1034,6 +1034,13 @@ pub fn value_to_audio_channes(audio: &Value) -> Result<Vec<Vec<f64>>, String> {
             ))
         }
     };
+    if channels.len() > 5 {
+        return Err(format!(
+            "Audio can have at most 5 channels, but its shape is {}",
+            audio.format_shape()
+        ));
+    }
+
     if channels.is_empty() {
         channels.push(vec![0.0; length]);
     }

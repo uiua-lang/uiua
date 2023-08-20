@@ -111,6 +111,10 @@ impl<T: ArrayValue> Array<T> {
     pub fn format_shape(&self) -> FormatShape<'_> {
         FormatShape(self.shape())
     }
+    pub fn depth(&self) -> usize {
+        let max_subrank = self.data.iter().map(|x| x.subrank()).max().unwrap_or(0);
+        self.rank() + max_subrank
+    }
     pub fn into_scalar(self) -> Result<T, Self> {
         if self.shape.is_empty() {
             Ok(self.data.into_iter().next().unwrap())
@@ -243,6 +247,39 @@ impl<T: ArrayValue> Array<T> {
         let mut shape = self.shape.clone();
         shape[0] = 0;
         Array::new(shape, CowSlice::new())
+    }
+    pub fn try_cmp<U>(&self, other: &Array<U>) -> Result<Ordering, ArrayCmpError>
+    where
+        T: TryArrayCmp<U>,
+        U: ArrayValue,
+    {
+        let depth_cmp = self.depth().cmp(&other.depth());
+        if depth_cmp != Ordering::Equal {
+            return Ok(depth_cmp);
+        }
+        for (a, b) in self.data.iter().zip(&other.data) {
+            let cmp = a.try_array_cmp(b)?;
+            if cmp != Ordering::Equal {
+                return Ok(cmp);
+            }
+        }
+        Ok(self.data.len().cmp(&other.data.len()))
+    }
+    pub fn try_eq<U>(&self, other: &Array<U>) -> Result<bool, ArrayCmpError>
+    where
+        T: TryArrayCmp<U>,
+        U: ArrayValue,
+    {
+        println!("compare {self} and {other}");
+        if self.depth() != other.depth() {
+            return Ok(false);
+        }
+        for (a, b) in self.data.iter().zip(&other.data) {
+            if !a.try_array_eq(b)? {
+                return Ok(false);
+            }
+        }
+        Ok(self.data.len() == other.data.len())
     }
 }
 
@@ -399,6 +436,9 @@ pub trait ArrayValue: Clone + Debug + Display + GridFmt {
     fn group_compatibility<C: FillContext>(&self, other: &Self, ctx: C) -> Result<(), C::Error> {
         Ok(())
     }
+    fn subrank(&self) -> usize {
+        0
+    }
 }
 
 impl ArrayValue for f64 {
@@ -470,6 +510,79 @@ impl ArrayValue for Arc<Function> {
             Some(false) => Err(ctx.error("Functions have incompatible signatures")),
             Some(true) | None => Ok(()),
         }
+    }
+    fn subrank(&self) -> usize {
+        self.as_constant().map_or(0, Value::rank)
+    }
+}
+
+#[derive(Debug)]
+pub enum ArrayCmpError {
+    WrongType(&'static str),
+    NotConstant,
+}
+
+impl fmt::Display for ArrayCmpError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::WrongType(ty) => write!(f, "constant function has wrong type: {ty}"),
+            Self::NotConstant => write!(f, "function is not constant"),
+        }
+    }
+}
+
+pub trait TryArrayCmp<U>: ArrayValue {
+    fn try_array_cmp(&self, other: &U) -> Result<Ordering, ArrayCmpError>;
+    fn try_array_eq(&self, other: &U) -> Result<bool, ArrayCmpError> {
+        self.try_array_cmp(other).map(|o| o == Ordering::Equal)
+    }
+}
+
+impl<T> TryArrayCmp<T> for T
+where
+    T: ArrayValue,
+{
+    fn try_array_cmp(&self, other: &T) -> Result<Ordering, ArrayCmpError> {
+        Ok(self.array_cmp(other))
+    }
+}
+
+macro_rules! try_array_cmp_function {
+    ($ty:ty, $value_as:ident) => {
+        impl TryArrayCmp<Arc<Function>> for $ty {
+            fn try_array_cmp(&self, other: &Arc<Function>) -> Result<Ordering, ArrayCmpError> {
+                let constant = other.as_constant().ok_or(ArrayCmpError::NotConstant)?;
+                Ok(self.array_cmp(
+                    constant
+                        .$value_as()
+                        .ok_or_else(|| ArrayCmpError::WrongType(constant.type_name()))?
+                        .as_scalar()
+                        .ok_or(ArrayCmpError::NotConstant)?,
+                ))
+            }
+        }
+
+        impl TryArrayCmp<$ty> for Arc<Function> {
+            fn try_array_cmp(&self, other: &$ty) -> Result<Ordering, ArrayCmpError> {
+                other.try_array_cmp(self).map(Ordering::reverse)
+            }
+        }
+    };
+}
+
+try_array_cmp_function!(f64, as_num_array);
+try_array_cmp_function!(u8, as_byte_array);
+try_array_cmp_function!(char, as_char_array);
+
+impl TryArrayCmp<f64> for u8 {
+    fn try_array_cmp(&self, other: &f64) -> Result<Ordering, ArrayCmpError> {
+        Ok((*self as f64).array_cmp(other))
+    }
+}
+
+impl TryArrayCmp<u8> for f64 {
+    fn try_array_cmp(&self, other: &u8) -> Result<Ordering, ArrayCmpError> {
+        Ok(self.array_cmp(&(*other as f64)))
     }
 }
 

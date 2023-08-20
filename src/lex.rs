@@ -113,7 +113,17 @@ impl fmt::Debug for CodeSpan {
 impl fmt::Display for CodeSpan {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(file) = &self.file {
-            write!(f, "{}:{}", file.to_string_lossy(), self.start)
+            let file = file.to_string_lossy();
+            let mut file = file.into_owned();
+            if let Some(s) = file.strip_prefix("C:\\Users\\") {
+                if let Some((_, sub)) = s.split_once('\\') {
+                    file = format!("~\\{}", sub);
+                } else {
+                    file = s.to_string();
+                }
+            }
+            let file = file.replace("\\.\\", "\\");
+            write!(f, "{}:{}", file, self.start)
         } else {
             write!(f, "{}", self.start)
         }

@@ -512,10 +512,12 @@ primitive!(
     /// [constant] turns any array into a function that pushes that array onto the stack.
     /// These functions are just like any other, so they can be put in arrays themselves.
     /// ex: [□@a □3 □7_8_9]
+    /// The more ergonomic way to make constant function arrays is to use `{}`s instead of `[]`s.
+    /// ex: {@a 3 7_8_9}
     /// Use [call] to get the values back out.
     /// ex: !□1_2_3
     /// [reduce][call] will unpack an array of constant functions onto the stack.
-    /// ex: /![□@a □3 □7_8_9]
+    /// ex: /!{@a 3 7_8_9}
     ///
     /// You would not normally construct arrays like the one above.
     /// The more important use case of [constant] is for jagged or nested data.
@@ -523,11 +525,16 @@ primitive!(
     /// ex: $ Words of different lengths
     ///   : ⊜□≠@ .
     ///
-    /// If you want to manipulate the arrays inside a constant function array without removing them, you can use [each][under][call].
+    /// Most monadic functions, like [reverse], will work on constant function elements without needing to [call] them.
     /// ex: $ Reverse these words
     ///   : ⊜□≠@ .
-    ///   : ∵⍜!⇌.
-    /// This works because [call] [invert]ed is [constant]. For each element, it [call]s the function to get the array out, [reverse]s it, then [constant]s it again.
+    ///   : ∵⇌.
+    ///
+    /// For more complex operations, you can use [each][under][call].
+    /// ex: $ Prepend the word length
+    ///   : ⊜□≠@ .
+    ///   : ∵⍜!($"_ _"⧻.).
+    /// This works because [call] [invert]ed is [constant]. For each element, it [call]s the constant function to get the array out, does something to it, then [constant]s the result.
     (1, Constant, MonadicArray, ("constant", '□')),
     /// Append two arrays end-to-end
     ///

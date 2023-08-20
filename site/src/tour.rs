@@ -90,8 +90,11 @@ pub fn Tour() -> impl IntoView {
         <Editor example="fir[1_2_3 4_5_6]"/>
         <p><PrimCode prim=Take/>" and "<PrimCode prim=Drop/>" can be used to get just part of an array."</p>
         <Editor example="↙3 [1 2 3 4 5]\n↘3 [1 2 3 4 5]"/>
+        <p><PrimCode prim=Reshape/>" changes the shape of an array while keeping the elements in the same order."</p>
+        <Editor example="↯3_3 .⇡9"/>
         <p><PrimCode prim=Transpose/>" rotates the axes of an array."</p>
         <Editor example="trans.[1_2_3 4_5_6]"/>
+        <p>"Uiua has a lot of built-in functions like these. You can explore their documentation on the "<A href="/docs#functions">"main docs page"</A>"."</p>
 
         <h2 id="functions">"Functions"</h2>
         <p>"If you bind a name with "<code>"←"</code>", and the thing on the right doesn't have enough arguments, the code will not be run until the name is used."</p>

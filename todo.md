@@ -1,3 +1,4 @@
+- Fix multiline array formatting
 - Finish tour
 - Under pick
 - Docs

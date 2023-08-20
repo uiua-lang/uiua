@@ -341,15 +341,54 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example="⍛0-[1 2] [3 4 5 6 7]"/>
         <p><PrimCode prim=Fill/>" can be used in a lot of other cases. See its documentation for more."</p>
 
+        <h2 id="useful-array-operations">"Useful Array Operations"</h2>
+        <p>"You don't need to memorize all of these right now. This is just a brief introduction to some of the array operations so that you won't be surprised when you see them later."</p>
+        <p>"If you ever see a glyph that you don't recognize in an example, you can mouse it in the editor to learn its name. You can also click the names of functions in the text to see their documentation."</p>
+        <p><PrimCode prim=Range/>" creates an array of all the natural numbers less than a maximum."</p>
+        <Editor example="⇡10"/>
+        <p><PrimCode prim=First/>" gets the first row of an array."</p>
+        <Editor example="⊢ [4 7 1]"/>
+        <Editor example="⊢ [1_2 3_4 5_6]"/>
+        <p><PrimCode prim=Reverse/>" reverses the rows of an array."</p>
+        <Editor example="⇌ [4 7 1]"/>
+        <Editor example="⇌ [1_2 3_4 5_6]"/>
+        <p><PrimCode prim=Rotate/>" rotates the rows of an array by some amount."</p>
+        <Editor example="↻2 [1 2 3 4 5]"/>
+        <p><PrimCode prim=Deshape/>" flattens an array into a 1D array."</p>
+        <Editor example="♭ .[1_2 3_4 5_6]"/>
+        <p><PrimCode prim=Reshape/>" changes the shape of an array while keeping the elements in the same order."</p>
+        <Editor example="↯3_3 .⇡9"/>
+        <p><PrimCode prim=Take/>" and "<PrimCode prim=Drop/>" isolate part of an array."</p>
+        <Editor example="↙3 [1 2 3 4 5]\n↘3 [1 2 3 4 5]"/>
+
         <h2 id="array-model">"The Array Model"</h2>
         <p>"For curious array afficionados, Uiua uses an array model resembling "<a href="https://aplwiki.com/wiki/Box">"J's Boxed array model"</a>"."</p>
         <p>"All arrays are flat and homogenous. Arrays always have a rectangular shape and (mostly) cannot be nested. Different types of data, like numbers and characters, cannot be mixed in the same array."</p>
         <p>"However, there is an escape hatch for when you really want jagged or mixed-type arrays. In J, an irregular or non-homogenous array is constructed as an array of "<em>"boxes"</em>". In Uiua, it is a normal array of functions."</p>
-        <Editor example="[@a 1 [7 8 9]]"/>
+        <Editor example="[1 2 [7 8 9]]"/>
         <p>"By using "<PrimCode prim=Constant/>", we can turn any value into a function that pushes that value onto the stack. We can then put these functions into an array like any other."</p>
-        <Editor example="[□@a □1 □[7 8 9]]"/>
+        <Editor example="[□1 □2 □[7 8 9]]"/>
         <p>"To get the values back on the stack, we can simply use "<PrimCode prim=Reduce/><PrimCode prim=Call/>"."</p>
-        <Editor example="/![□@a □1 □[7 8 9]]"/>
+        <Editor example="/![□1 □2 □[7 8 9]]"/>
+        <p>"Having to write "<PrimCode prim=Constant glyph_only=true/>" everywhere is annoying, and so..."</p>
+
+        <h2 id="nested-arrays">"Nested Arrays"</h2>
+        <p>"Uiua has a special syntax for making arrays where every item is "<PrimCode prim=Constant/>"."</p>
+        <p>"Using "<code>"{}"</code>"s instead of "<code>"[]"</code>"s for stack array notation will automatically "<PrimCode prim=Constant/>" every item."</p>
+        <Editor example="{1 2 [7 8 9]}"/>
+        <p>"This is very useful for making lists of strings."</p>
+        <Editor example=r#"langs ← .["Uiua" "APL" "J" "BQN" "K" "Q"]"#/>
+        <Editor example=r#"langs ← .{"Uiua" "APL" "J" "BQN" "K" "Q"}"#/>
+        <p>"Many monadic functions will work on "<PrimCode prim=Constant/>" elements without needing to use "<PrimCode prim=Call/>"."</p>
+        <Editor example=
+r#"langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
+⧻⊢langs"#/>
+        <p>"Dyadic functions, however, usually need both operands to be the same type, so you must either "<PrimCode prim=Call/>" the constant elements or "<PrimCode prim=Constant/>" the normal ones."</p>
+        <p>"For example, to check if a string is in the list with "<PrimCode prim=Member/>", you would need to "<PrimCode prim=Constant/>" the string first."</p>
+        <Editor example=
+r#"langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
+∊ □"APL" langs"#/>
+
         <p>"For more about working with constant function arrays, see "<PrimCode prim=Constant/>"'s documentation."</p>
     }
 }

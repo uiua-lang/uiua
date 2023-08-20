@@ -54,14 +54,13 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
     f: impl Fn(T, R) -> R,
 ) -> Array<R> {
     match arr.shape.len() {
-        0 => (
+        0 => Array::new(
             tiny_vec![],
             vec![arr.data.into_iter().next().unwrap().into()],
-        )
-            .into(),
+        ),
         1 => {
             let mut vals = arr.data.into_iter().rev();
-            (
+            Array::new(
                 tiny_vec![],
                 vec![if let Some(acc) = vals.next() {
                     vals.fold(acc.into(), flip(f))
@@ -69,7 +68,6 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
                     identity
                 }],
             )
-                .into()
         }
         _ => {
             let row_len = arr.row_len();
@@ -77,7 +75,7 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
             if row_count == 0 {
                 arr.shape.remove(0);
                 let data = cowslice![identity; row_len];
-                return (arr.shape, data).into();
+                return Array::new(arr.shape, data);
             }
             let mut row_indices = (0..row_count).rev();
             let mut new_data: Vec<R> = arr.data[row_indices.next().unwrap() * row_len..]
@@ -92,7 +90,7 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
                 }
             }
             arr.shape.remove(0);
-            (arr.shape, new_data).into()
+            Array::new(arr.shape, new_data)
         }
     }
 }
@@ -211,7 +209,7 @@ fn fast_scan<T: ArrayValue>(mut arr: Array<T>, f: impl Fn(T, T) -> T) -> Array<T
                     new_data.push(f(new_data[start + i].clone(), r));
                 }
             }
-            (shape, new_data).into()
+            Array::new(shape, new_data)
         }
     }
 }
@@ -544,7 +542,7 @@ fn fast_table<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
     }
     let mut new_shape = a.shape;
     new_shape.extend_from_slice(&b.shape);
-    (new_shape, new_data).into()
+    Array::new(new_shape, new_data)
 }
 
 fn fast_table_join_or_couple<T: ArrayValue>(a: Array<T>, b: Array<T>) -> Array<T> {
@@ -558,7 +556,7 @@ fn fast_table_join_or_couple<T: ArrayValue>(a: Array<T>, b: Array<T>) -> Array<T
     let mut new_shape = a.shape;
     new_shape.extend_from_slice(&b.shape);
     new_shape.push(2);
-    (new_shape, new_data).into()
+    Array::new(new_shape, new_data)
 }
 
 fn generic_table(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {

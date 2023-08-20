@@ -318,30 +318,6 @@ impl<T: ArrayValue> From<T> for Array<T> {
     }
 }
 
-impl<T> From<(Shape, CowSlice<T>)> for Array<T> {
-    fn from((shape, data): (Shape, CowSlice<T>)) -> Self {
-        Self::new(shape, data)
-    }
-}
-
-impl<T: Clone> From<(Shape, Vec<T>)> for Array<T> {
-    fn from((shape, data): (Shape, Vec<T>)) -> Self {
-        Self::new(shape, data)
-    }
-}
-
-impl<T> From<(&[usize], CowSlice<T>)> for Array<T> {
-    fn from((shape, data): (&[usize], CowSlice<T>)) -> Self {
-        Self::new(shape, data)
-    }
-}
-
-impl<T: Clone> From<(&[usize], Vec<T>)> for Array<T> {
-    fn from((shape, data): (&[usize], Vec<T>)) -> Self {
-        Self::new(shape, data)
-    }
-}
-
 impl<T: ArrayValue> From<Vec<T>> for Array<T> {
     fn from(data: Vec<T>) -> Self {
         Self::new(tiny_vec![data.len()], data)
@@ -391,7 +367,7 @@ impl FromIterator<String> for Array<char> {
             data.extend(line.chars());
             data.extend(repeat('\x00').take(max_len - line.chars().count()));
         }
-        (shape, data).into()
+        Array::new(shape, data)
     }
 }
 

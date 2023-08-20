@@ -859,7 +859,7 @@ impl SysOp {
                     .map_err(|e| env.error(format!("Failed to read image: {}", e)))?
                     .into_rgba8();
                 let shape = tiny_vec![image.height() as usize, image.width() as usize, 4];
-                let array = Array::<u8>::from((shape, bytes));
+                let array = Array::<u8>::new(shape, bytes);
                 env.push(array);
             }
             SysOp::ImWrite => {

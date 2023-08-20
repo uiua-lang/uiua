@@ -300,7 +300,7 @@ impl Value {
                             .into(),
                     );
                 }
-                Self::Func((fs.shape.clone(), invs).into())
+                Self::Func(Array::new(fs.shape.clone(), invs))
             }
             v => return Err(env.error(format!("Cannot invert {}", v.type_name()))),
         })
@@ -317,8 +317,8 @@ impl Value {
                     afters.push(after.into());
                 }
                 (
-                    Self::Func((fs.shape.clone(), befores).into()),
-                    Self::Func((fs.shape.clone(), afters).into()),
+                    Self::Func(Array::new(fs.shape.clone(), befores)),
+                    Self::Func(Array::new(fs.shape.clone(), afters)),
                 )
             }
             v => return Err(env.error(format!("Cannot invert {}", v.type_name()))),
@@ -357,7 +357,7 @@ impl Array<f64> {
         } else {
             let mut shape = self.shape.clone();
             shape.push(0);
-            return Ok((shape, Vec::new()).into());
+            return Ok(Array::new(shape, Vec::new()));
         };
         let mut max_bits = 0;
         while max != 0 {

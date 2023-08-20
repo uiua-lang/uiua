@@ -639,7 +639,7 @@ impl<T: ArrayValue> Array<T> {
             picked = picked.slice(start..end);
         }
         let shape = Shape::from(&self.shape[index.len()..]);
-        Ok((shape, picked).into())
+        Ok(Array::new(shape, picked))
     }
 }
 
@@ -1291,7 +1291,7 @@ impl<T: ArrayValue> Array<T> {
                     continue 'windows;
                 }
             }
-            break Ok((new_shape, dst).into());
+            break Ok(Array::new(new_shape, dst));
         }
     }
 }

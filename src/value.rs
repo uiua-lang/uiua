@@ -425,7 +425,7 @@ impl Value {
                     }
                     result.push(convert_num(num));
                 }
-                (self.shape(), result).into()
+                Array::new(self.shape(), result)
             }
             Value::Byte(bytes) => {
                 if !test_shape(self.shape()) {
@@ -442,7 +442,7 @@ impl Value {
                     }
                     result.push(convert_num(num));
                 }
-                (self.shape(), result).into()
+                Array::new(self.shape(), result)
             }
             value => {
                 return Err(env.error(format!(
@@ -530,7 +530,7 @@ macro_rules! value_from {
         }
         impl From<(Shape, Vec<$ty>)> for Value {
             fn from((shape, data): (Shape, Vec<$ty>)) -> Self {
-                Self::$variant((shape, data).into())
+                Self::$variant(Array::new(shape, data))
             }
         }
         impl FromIterator<$ty> for Value {

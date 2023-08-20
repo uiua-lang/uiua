@@ -236,7 +236,9 @@ fn format_multiline_words(
     allow_compact: bool,
     depth: usize,
 ) {
-    if lines.len() == 1 && !lines[0].iter().any(|word| word_is_multiline(&word.value)) {
+    if lines.len() == 1
+        && (lines[0].len() == 1 || !lines[0].iter().any(|word| word_is_multiline(&word.value)))
+    {
         format_words(output, &lines[0], config, true, depth);
         return;
     }
@@ -309,13 +311,16 @@ fn word_is_multiline(word: &Word) -> bool {
         Word::MultilineString(lines) => lines.len() > 1,
         Word::Ident(_) => false,
         Word::Strand(_) => false,
-        Word::Array(arr) => arr.lines.iter().any(|lines| {
-            lines.len() > 1 || lines.iter().any(|word| word_is_multiline(&word.value))
-        }),
+        Word::Array(arr) => {
+            arr.lines.len() > 1
+                || (arr.lines.iter()).any(|words| {
+                    words.len() > 1 && words.iter().any(|word| word_is_multiline(&word.value))
+                })
+        }
         Word::Func(func) => {
-            !func.bind
-                && (func.lines.len() > 1
-                    || (func.lines.iter().flatten()).any(|word| word_is_multiline(&word.value)))
+            func.lines.len() > 1
+                || (func.lines.iter())
+                    .any(|words| words.iter().any(|word| word_is_multiline(&word.value)))
         }
         Word::Primitive(_) => false,
         Word::Modified(m) => m.words.iter().any(|word| word_is_multiline(&word.value)),

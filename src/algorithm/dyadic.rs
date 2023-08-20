@@ -1409,12 +1409,6 @@ impl Value {
             (Value::Func(a), Value::Func(b)) => a.member(b, env)?.into(),
             (Value::Num(a), Value::Byte(b)) => a.member(b, env)?.into(),
             (Value::Byte(a), Value::Num(b)) => a.member(b, env)?.into(),
-            (Value::Func(a), Value::Num(b)) => a.member(b, env)?.into(),
-            (Value::Func(a), Value::Byte(b)) => a.member(b, env)?.into(),
-            (Value::Func(a), Value::Char(b)) => a.member(b, env)?.into(),
-            (Value::Num(a), Value::Func(b)) => a.member(b, env)?.into(),
-            (Value::Byte(a), Value::Func(b)) => a.member(b, env)?.into(),
-            (Value::Char(a), Value::Func(b)) => a.member(b, env)?.into(),
             (a, b) => {
                 return Err(env.error(format!(
                     "Cannot look for members of {} array in {} array",
@@ -1429,7 +1423,7 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     pub fn member<U>(&self, of: &Array<U>, env: &Uiua) -> UiuaResult<Array<u8>>
     where
-        T: TryArrayCmp<U>,
+        T: ArrayCmp<U>,
         U: ArrayValue,
     {
         let elems = self;
@@ -1438,15 +1432,9 @@ impl<T: ArrayValue> Array<T> {
                 let mut result_data = Vec::with_capacity(elems.row_count());
                 'elem: for elem in elems.rows() {
                     for of in of.rows() {
-                        match elem.try_eq(&of) {
-                            Ok(true) => {
-                                result_data.push(1);
-                                continue 'elem;
-                            }
-                            Ok(false) => {}
-                            Err(e) => {
-                                return Err(env.error(format!("Cannot compare array because {e}")))
-                            }
+                        if elem == of {
+                            result_data.push(1);
+                            continue 'elem;
                         }
                     }
                     result_data.push(0);
@@ -1465,16 +1453,7 @@ impl<T: ArrayValue> Array<T> {
             }
             Ordering::Less => {
                 if of.depth() - elems.depth() == 1 {
-                    for of in of.rows() {
-                        match elems.try_eq(&of) {
-                            Ok(true) => return Ok(1.into()),
-                            Ok(false) => {}
-                            Err(e) => {
-                                return Err(env.error(format!("Cannot compare array because {e}")))
-                            }
-                        }
-                    }
-                    0.into()
+                    of.rows().any(|r| *elems == r).into()
                 } else {
                     let mut rows = Vec::with_capacity(of.row_count());
                     for of in of.rows() {

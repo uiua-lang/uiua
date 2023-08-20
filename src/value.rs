@@ -748,8 +748,8 @@ impl PartialEq for Value {
             (Value::Byte(a), Value::Byte(b)) => a == b,
             (Value::Char(a), Value::Char(b)) => a == b,
             (Value::Func(a), Value::Func(b)) => a == b,
-            (Value::Num(a), Value::Byte(b)) => a.val_eq(b),
-            (Value::Byte(a), Value::Num(b)) => b.val_eq(a),
+            (Value::Num(a), Value::Byte(b)) => a == b,
+            (Value::Byte(a), Value::Num(b)) => a == b,
             _ => false,
         }
     }
@@ -766,12 +766,12 @@ impl PartialOrd for Value {
 impl Ord for Value {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
-            (Value::Num(a), Value::Num(b)) => a.val_cmp(b),
-            (Value::Byte(a), Value::Byte(b)) => a.val_cmp(b),
-            (Value::Char(a), Value::Char(b)) => a.val_cmp(b),
-            (Value::Func(a), Value::Func(b)) => a.val_cmp(b),
-            (Value::Num(a), Value::Byte(b)) => a.val_cmp(b),
-            (Value::Byte(a), Value::Num(b)) => b.val_cmp(a).reverse(),
+            (Value::Num(a), Value::Num(b)) => a.cmp(b),
+            (Value::Byte(a), Value::Byte(b)) => a.cmp(b),
+            (Value::Char(a), Value::Char(b)) => a.cmp(b),
+            (Value::Func(a), Value::Func(b)) => a.cmp(b),
+            (Value::Num(a), Value::Byte(b)) => a.partial_cmp(b).unwrap(),
+            (Value::Byte(a), Value::Num(b)) => a.partial_cmp(b).unwrap(),
             (Value::Num(_), _) => Ordering::Less,
             (_, Value::Num(_)) => Ordering::Greater,
             (Value::Byte(_), _) => Ordering::Less,

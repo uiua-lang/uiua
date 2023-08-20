@@ -223,23 +223,6 @@ impl<T: ArrayValue> Array<T> {
             Array::new(row_shape.clone(), row)
         })
     }
-    pub fn val_eq<U: Into<T> + Clone>(&self, other: &Array<U>) -> bool {
-        self.shape == other.shape
-            && self.data.len() == other.data.len()
-            && self
-                .data
-                .iter()
-                .zip(&other.data)
-                .all(|(a, b)| T::array_eq(a, &b.clone().into()))
-    }
-    pub fn val_cmp<U: Into<T> + Clone>(&self, other: &Array<U>) -> Ordering {
-        self.data
-            .iter()
-            .zip(&other.data)
-            .map(|(a, b)| a.array_cmp(&b.clone().into()))
-            .find(|o| o != &Ordering::Equal)
-            .unwrap_or_else(|| self.data.len().cmp(&other.data.len()))
-    }
     pub(crate) fn first_dim_zero(&self) -> Self {
         if self.rank() == 0 {
             return self.clone();
@@ -247,39 +230,6 @@ impl<T: ArrayValue> Array<T> {
         let mut shape = self.shape.clone();
         shape[0] = 0;
         Array::new(shape, CowSlice::new())
-    }
-    pub fn try_cmp<U>(&self, other: &Array<U>) -> Result<Ordering, ArrayCmpError>
-    where
-        T: TryArrayCmp<U>,
-        U: ArrayValue,
-    {
-        let depth_cmp = self.depth().cmp(&other.depth());
-        if depth_cmp != Ordering::Equal {
-            return Ok(depth_cmp);
-        }
-        for (a, b) in self.data.iter().zip(&other.data) {
-            let cmp = a.try_array_cmp(b)?;
-            if cmp != Ordering::Equal {
-                return Ok(cmp);
-            }
-        }
-        Ok(self.data.len().cmp(&other.data.len()))
-    }
-    pub fn try_eq<U>(&self, other: &Array<U>) -> Result<bool, ArrayCmpError>
-    where
-        T: TryArrayCmp<U>,
-        U: ArrayValue,
-    {
-        println!("compare {self} and {other}");
-        if self.depth() != other.depth() {
-            return Ok(false);
-        }
-        for (a, b) in self.data.iter().zip(&other.data) {
-            if !a.try_array_eq(b)? {
-                return Ok(false);
-            }
-        }
-        Ok(self.data.len() == other.data.len())
     }
 }
 
@@ -308,8 +258,8 @@ impl Array<Arc<Function>> {
     }
 }
 
-impl<T: ArrayValue> PartialEq for Array<T> {
-    fn eq(&self, other: &Self) -> bool {
+impl<T: ArrayValue + ArrayCmp<U>, U: ArrayValue> PartialEq<Array<U>> for Array<T> {
+    fn eq(&self, other: &Array<U>) -> bool {
         if self.shape() != other.shape() {
             return false;
         }
@@ -322,24 +272,26 @@ impl<T: ArrayValue> PartialEq for Array<T> {
 
 impl<T: ArrayValue> Eq for Array<T> {}
 
-impl<T: ArrayValue> PartialOrd for Array<T> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.val_cmp(other))
+impl<T: ArrayValue + ArrayCmp<U>, U: ArrayValue> PartialOrd<Array<U>> for Array<T> {
+    fn partial_cmp(&self, other: &Array<U>) -> Option<Ordering> {
+        let rank_cmp = self.rank().cmp(&other.rank());
+        if rank_cmp != Ordering::Equal {
+            return Some(rank_cmp);
+        }
+        let cmp = self
+            .data
+            .iter()
+            .zip(&other.data)
+            .map(|(a, b)| a.array_cmp(b))
+            .find(|o| o != &Ordering::Equal)
+            .unwrap_or_else(|| self.data.len().cmp(&other.data.len()));
+        Some(cmp)
     }
 }
 
 impl<T: ArrayValue> Ord for Array<T> {
     fn cmp(&self, other: &Self) -> Ordering {
-        let rank_cmp = self.rank().cmp(&other.rank());
-        if rank_cmp != Ordering::Equal {
-            return rank_cmp;
-        }
-        self.data
-            .iter()
-            .zip(&other.data)
-            .map(|(a, b)| a.array_cmp(b))
-            .find(|o| o != &Ordering::Equal)
-            .unwrap_or_else(|| self.data.len().cmp(&other.data.len()))
+        self.partial_cmp(other).unwrap()
     }
 }
 
@@ -419,14 +371,10 @@ impl FromIterator<String> for Array<char> {
 }
 
 #[allow(unused_variables)]
-pub trait ArrayValue: Clone + Debug + Display + GridFmt {
+pub trait ArrayValue: Clone + Debug + Display + GridFmt + ArrayCmp {
     const NAME: &'static str;
     fn get_fill(env: &Uiua) -> Option<Self>;
-    fn array_cmp(&self, other: &Self) -> Ordering;
     fn array_hash<H: Hasher>(&self, hasher: &mut H);
-    fn array_eq(&self, other: &Self) -> bool {
-        self.array_cmp(other) == Ordering::Equal
-    }
     fn format_delims() -> (&'static str, &'static str) {
         ("[", "]")
     }
@@ -446,10 +394,6 @@ impl ArrayValue for f64 {
     fn get_fill(env: &Uiua) -> Option<Self> {
         env.num_fill()
     }
-    fn array_cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other)
-            .unwrap_or_else(|| self.is_nan().cmp(&other.is_nan()))
-    }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         let v = if self.is_nan() {
             f64::NAN
@@ -467,9 +411,6 @@ impl ArrayValue for u8 {
     fn get_fill(env: &Uiua) -> Option<Self> {
         env.byte_fill()
     }
-    fn array_cmp(&self, other: &Self) -> Ordering {
-        Ord::cmp(self, other)
-    }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         self.hash(hasher)
     }
@@ -479,9 +420,6 @@ impl ArrayValue for char {
     const NAME: &'static str = "character";
     fn get_fill(env: &Uiua) -> Option<Self> {
         env.char_fill()
-    }
-    fn array_cmp(&self, other: &Self) -> Ordering {
-        Ord::cmp(self, other)
     }
     fn format_delims() -> (&'static str, &'static str) {
         ("", "")
@@ -498,9 +436,6 @@ impl ArrayValue for Arc<Function> {
     const NAME: &'static str = "function";
     fn get_fill(env: &Uiua) -> Option<Self> {
         env.func_fill()
-    }
-    fn array_cmp(&self, other: &Self) -> Ordering {
-        Ord::cmp(self, other)
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         self.hash(hasher)
@@ -531,58 +466,47 @@ impl fmt::Display for ArrayCmpError {
     }
 }
 
-pub trait TryArrayCmp<U>: ArrayValue {
-    fn try_array_cmp(&self, other: &U) -> Result<Ordering, ArrayCmpError>;
-    fn try_array_eq(&self, other: &U) -> Result<bool, ArrayCmpError> {
-        self.try_array_cmp(other).map(|o| o == Ordering::Equal)
+pub trait ArrayCmp<U = Self> {
+    fn array_cmp(&self, other: &U) -> Ordering;
+    fn array_eq(&self, other: &U) -> bool {
+        self.array_cmp(other) == Ordering::Equal
     }
 }
 
-impl<T> TryArrayCmp<T> for T
-where
-    T: ArrayValue,
-{
-    fn try_array_cmp(&self, other: &T) -> Result<Ordering, ArrayCmpError> {
-        Ok(self.array_cmp(other))
+impl ArrayCmp for f64 {
+    fn array_cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other)
+            .unwrap_or_else(|| self.is_nan().cmp(&other.is_nan()))
     }
 }
 
-macro_rules! try_array_cmp_function {
-    ($ty:ty, $value_as:ident) => {
-        impl TryArrayCmp<Arc<Function>> for $ty {
-            fn try_array_cmp(&self, other: &Arc<Function>) -> Result<Ordering, ArrayCmpError> {
-                let constant = other.as_constant().ok_or(ArrayCmpError::NotConstant)?;
-                Ok(self.array_cmp(
-                    constant
-                        .$value_as()
-                        .ok_or_else(|| ArrayCmpError::WrongType(constant.type_name()))?
-                        .as_scalar()
-                        .ok_or(ArrayCmpError::NotConstant)?,
-                ))
-            }
-        }
-
-        impl TryArrayCmp<$ty> for Arc<Function> {
-            fn try_array_cmp(&self, other: &$ty) -> Result<Ordering, ArrayCmpError> {
-                other.try_array_cmp(self).map(Ordering::reverse)
-            }
-        }
-    };
-}
-
-try_array_cmp_function!(f64, as_num_array);
-try_array_cmp_function!(u8, as_byte_array);
-try_array_cmp_function!(char, as_char_array);
-
-impl TryArrayCmp<f64> for u8 {
-    fn try_array_cmp(&self, other: &f64) -> Result<Ordering, ArrayCmpError> {
-        Ok((*self as f64).array_cmp(other))
+impl ArrayCmp for u8 {
+    fn array_cmp(&self, other: &Self) -> Ordering {
+        self.cmp(other)
     }
 }
 
-impl TryArrayCmp<u8> for f64 {
-    fn try_array_cmp(&self, other: &u8) -> Result<Ordering, ArrayCmpError> {
-        Ok(self.array_cmp(&(*other as f64)))
+impl ArrayCmp for char {
+    fn array_cmp(&self, other: &Self) -> Ordering {
+        self.cmp(other)
+    }
+}
+
+impl ArrayCmp for Arc<Function> {
+    fn array_cmp(&self, other: &Self) -> Ordering {
+        self.cmp(other)
+    }
+}
+
+impl ArrayCmp<f64> for u8 {
+    fn array_cmp(&self, other: &f64) -> Ordering {
+        (*self as f64).array_cmp(other)
+    }
+}
+
+impl ArrayCmp<u8> for f64 {
+    fn array_cmp(&self, other: &u8) -> Ordering {
+        self.array_cmp(&(*other as f64))
     }
 }
 

@@ -768,16 +768,16 @@ primitive!(
     ([1], Rows, MonadicModifier, ("rows", '≡')),
     /// Apply a function to each row of an array and a fixed value
     ///
-    /// ex: ⫫⊂ 1_2_3 4
-    /// ex: ⫫⊂ 1_2_3 4_5_6
+    /// ex: ∺⊂ 1_2_3 4
+    /// ex: ∺⊂ 1_2_3 4_5_6
     ///
     /// One nice use of this is to [call] multiple functions on a single argument.
-    /// ex: ⫫!√_¯_⌊_⌈_(×4) 6.25
+    /// ex: ∺!√_¯_⌊_⌈_(×4) 6.25
     ///
     /// [distribute] is equivalent to [level]`[¯1``infinity``]`.
-    /// ex:       ⫫⊂ 1_2_3 4_5_6
+    /// ex:       ∺⊂ 1_2_3 4_5_6
     ///   : ⍚[¯1 ∞]⊂ 1_2_3 4_5_6
-    ([1], Distribute, DyadicModifier, ("distribute", '⫫')),
+    ([1], Distribute, DyadicModifier, ("distribute", '∺')),
     /// Apply a function to each combination of elements of two arrays
     ///
     /// This is the element-wise version of [cross].
@@ -946,7 +946,7 @@ primitive!(
     ///   : ⍚[¯1 ¯1]⊂ a b
     ///
     /// [level]`[¯1``infinity``]` is equivalent to [distribute].
-    /// ex:       ⫫⊂ 1_2_3 4_5_6
+    /// ex:       ∺⊂ 1_2_3 4_5_6
     ///   : ⍚[¯1 ∞]⊂ 1_2_3 4_5_6
     ([2], Level, OtherModifier, ("level", '⍚')),
     /// Call a function and catch errors

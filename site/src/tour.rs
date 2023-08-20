@@ -109,7 +109,7 @@ pub fn Tour() -> impl IntoView {
         <p>"It works on multi-dimensional arrays too! In this case, it adds each row to the next."</p>
         <Editor example="/+ .[1_2_3 4_5_6 7_8_9]"/>
         <p><PrimCode prim=Rows/>" applies a function to each row of an array."</p>
-        <Editor example="x ← [1_2_3 4_5_6 7_8_9]\n  x\n ⇌x\n≡⇌x"/>
+        <Editor example="x ← [1_2_3 4_5_6]\n  x\n ⇌x\n≡⇌x"/>
         <p><PrimCode prim=Rows/>" also works "<em>"between"</em>" two arrays if it is given a binary function like "<PrimCode prim=Join/>"."</p>
         <Editor example="≡⊂ [1_2 3_4] [5_6 7_8]"/>
         <p>"There are bunch of other modifiers that are useful in different situations. You can find a "<A href="/docs/modifier">"list of them"</A>" on the main docs page."</p>
@@ -165,5 +165,10 @@ pub fn Tour() -> impl IntoView {
 ↯×4⧻.[0 2 4 7 12 9 7 4]
 ×220 ⁿ∶2÷12
 ÷2 ○×τ ♭⊞× ∶÷∶⇡⁅÷8 .44100"/>
+
+        <h2 id="next-steps">"Next Steps"</h2>
+        <p>"If you want a more in-depth introduction to Uiua, you can check out the "<A href="/docs/basic">"tutorial"</A>"."</p>
+        <p>"For information on specific functions and modifiers, see the "<A href="/docs#functions">"functions section"</A>" of the main docs page."</p>
+        <p>"To see some cool examples, click through the editor at the top of the "<A href="/">"home page"</A>"."</p>
     }
 }

@@ -1,5 +1,3 @@
-- Make working with different length strings more ergonomic
-  - Trait for comparing array types?
 - Add a way to prevent modifier binding
 - Add a way to check types
 - Improve constant function array formatting

@@ -123,6 +123,8 @@ primitive!(
     (0(0), Noop, Stack, ("noop", '·')),
     /// Move a value from the stack to the antistack
     ///
+    /// Formats from `^`.
+    ///
     /// Get the value back with [load].
     /// ex: [↓ 1 2 3 ↑4 5]
     ///
@@ -238,6 +240,8 @@ primitive!(
     (2, Eq, DyadicPervasive, ("equals", AsciiToken::Equal, '=')),
     /// Compare for inequality
     ///
+    /// Formats from `!=`.
+    ///
     /// ex: ≠1 2
     /// ex: ≠5 5
     /// ex: ≠1 [1 2 3]
@@ -260,6 +264,8 @@ primitive!(
     /// ex: < [1 2 2] [1 2 3]
     (2, Lt, DyadicPervasive, ("less than", '<')),
     /// Compare for less than or equal
+    ///
+    /// Formats from `<=`.
     ///
     /// The first value is checked to be less than or equal to the second.
     /// This is so you can think of `≤``x` as a single unit.
@@ -287,6 +293,8 @@ primitive!(
     /// ex: > [1 2 2] [1 2 3]
     (2, Gt, DyadicPervasive, ("greater than", '>')),
     /// Compare for greater than or equal
+    ///
+    /// Formats from `>=`.
     ///
     /// The first value is checked to be greater than or equal to the second.
     /// This is so you can think of `≥``x` as a single unit.
@@ -319,11 +327,15 @@ primitive!(
     (2, Sub, DyadicPervasive, ("subtract", '-')),
     /// Multiply values
     ///
+    /// Formats from `*`.
+    ///
     /// ex: ×3 5
     /// ex: ×2 [1 2 3]
     /// ex: × [1 2 3] [4 5 6]
     (2, Mul, DyadicPervasive, ("multiply", AsciiToken::Star, '×')),
     /// Divide values
+    ///
+    /// Formats from `%`.
     ///
     /// The second value is divided by the first.
     /// This is so you can think of `÷``x` as a single unit.

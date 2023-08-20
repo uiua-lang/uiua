@@ -19,6 +19,7 @@ use hound::{SampleFormat, WavSpec, WavWriter};
 use image::{DynamicImage, ImageOutputFormat};
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
+use tinyvec::tiny_vec;
 
 use crate::{
     array::Array, grid_fmt::GridFmt, primitive::PrimDoc, value::Value, Uiua, UiuaError, UiuaResult,
@@ -857,7 +858,7 @@ impl SysOp {
                 let image = image::load_from_memory(&bytes)
                     .map_err(|e| env.error(format!("Failed to read image: {}", e)))?
                     .into_rgba8();
-                let shape = vec![image.height() as usize, image.width() as usize, 4];
+                let shape = tiny_vec![image.height() as usize, image.width() as usize, 4];
                 let array = Array::<u8>::from((shape, bytes));
                 env.push(array);
             }

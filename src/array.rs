@@ -6,6 +6,8 @@ use std::{
     sync::Arc,
 };
 
+use tinyvec::{tiny_vec, TinyVec};
+
 use crate::{
     algorithm::FillContext,
     cowslice::{cowslice, CowSlice},
@@ -17,14 +19,16 @@ use crate::{
 
 #[derive(Clone)]
 pub struct Array<T> {
-    pub(crate) shape: Vec<usize>,
+    pub(crate) shape: Shape,
     pub(crate) data: CowSlice<T>,
 }
+
+pub type Shape = TinyVec<[usize; 3]>;
 
 impl<T: ArrayValue> Default for Array<T> {
     fn default() -> Self {
         Self {
-            shape: vec![0],
+            shape: tiny_vec![0],
             data: CowSlice::new(),
         }
     }
@@ -77,7 +81,9 @@ fn validate_shape<T>(shape: &[usize], data: &[T]) {
 
 impl<T> Array<T> {
     #[track_caller]
-    pub fn new(shape: Vec<usize>, data: CowSlice<T>) -> Self {
+    pub fn new(shape: impl Into<Shape>, data: impl Into<CowSlice<T>>) -> Self {
+        let shape = shape.into();
+        let data = data.into();
         validate_shape(&shape, &data);
         Self { shape, data }
     }
@@ -91,7 +97,7 @@ impl<T> Array<T> {
 
 impl<T: ArrayValue> Array<T> {
     pub fn unit(data: T) -> Self {
-        Self::new(Vec::new(), cowslice![data])
+        Self::new(Shape::new(), cowslice![data])
     }
     pub fn row_count(&self) -> usize {
         self.shape.first().copied().unwrap_or(1)
@@ -159,7 +165,7 @@ impl<T: ArrayValue> Array<T> {
         let row_len = self.row_len();
         let start = row * row_len;
         let end = start + row_len;
-        Self::new(self.shape[1..].to_vec(), self.data.slice(start..end))
+        Self::new(&self.shape[1..], self.data.slice(start..end))
     }
     pub fn convert<U>(self) -> Array<U>
     where
@@ -205,8 +211,12 @@ impl<T: ArrayValue> Array<T> {
             row_shape.remove(0)
         };
         let mut data = self.data.into_iter();
-        (0..row_count)
-            .map(move |_| Array::new(row_shape.clone(), data.by_ref().take(row_len).collect()))
+        (0..row_count).map(move |_| {
+            Array::new(
+                row_shape.clone(),
+                data.by_ref().take(row_len).collect::<CowSlice<_>>(),
+            )
+        })
     }
     pub fn into_rows_rev(self) -> impl Iterator<Item = Self> {
         let row_len = self.row_len();
@@ -308,27 +318,39 @@ impl<T: ArrayValue> From<T> for Array<T> {
     }
 }
 
-impl<T> From<(Vec<usize>, CowSlice<T>)> for Array<T> {
-    fn from((shape, data): (Vec<usize>, CowSlice<T>)) -> Self {
+impl<T> From<(Shape, CowSlice<T>)> for Array<T> {
+    fn from((shape, data): (Shape, CowSlice<T>)) -> Self {
         Self::new(shape, data)
     }
 }
 
-impl<T: Clone> From<(Vec<usize>, Vec<T>)> for Array<T> {
-    fn from((shape, data): (Vec<usize>, Vec<T>)) -> Self {
-        Self::new(shape, data.into())
+impl<T: Clone> From<(Shape, Vec<T>)> for Array<T> {
+    fn from((shape, data): (Shape, Vec<T>)) -> Self {
+        Self::new(shape, data)
+    }
+}
+
+impl<T> From<(&[usize], CowSlice<T>)> for Array<T> {
+    fn from((shape, data): (&[usize], CowSlice<T>)) -> Self {
+        Self::new(shape, data)
+    }
+}
+
+impl<T: Clone> From<(&[usize], Vec<T>)> for Array<T> {
+    fn from((shape, data): (&[usize], Vec<T>)) -> Self {
+        Self::new(shape, data)
     }
 }
 
 impl<T: ArrayValue> From<Vec<T>> for Array<T> {
     fn from(data: Vec<T>) -> Self {
-        Self::new(vec![data.len()], data.into())
+        Self::new(tiny_vec![data.len()], data)
     }
 }
 
 impl<T: ArrayValue> From<CowSlice<T>> for Array<T> {
     fn from(data: CowSlice<T>) -> Self {
-        Self::new(vec![data.len()], data)
+        Self::new(tiny_vec![data.len()], data)
     }
 }
 
@@ -340,19 +362,22 @@ impl<T: ArrayValue> FromIterator<T> for Array<T> {
 
 impl From<String> for Array<char> {
     fn from(s: String) -> Self {
-        Self::new(vec![s.len()], s.chars().collect())
+        Self::new(tiny_vec![s.len()], s.chars().collect::<CowSlice<_>>())
     }
 }
 
 impl From<Vec<bool>> for Array<u8> {
     fn from(data: Vec<bool>) -> Self {
-        Self::new(vec![data.len()], data.into_iter().map(u8::from).collect())
+        Self::new(
+            tiny_vec![data.len()],
+            data.into_iter().map(u8::from).collect::<CowSlice<_>>(),
+        )
     }
 }
 
 impl From<bool> for Array<u8> {
     fn from(data: bool) -> Self {
-        Self::new(vec![], vec![u8::from(data)].into())
+        Self::new(tiny_vec![], vec![u8::from(data)])
     }
 }
 
@@ -361,7 +386,7 @@ impl FromIterator<String> for Array<char> {
         let mut lines: Vec<String> = iter.into_iter().collect();
         let max_len = lines.iter().map(|s| s.chars().count()).max().unwrap_or(0);
         let mut data = Vec::with_capacity(max_len * lines.len());
-        let shape = vec![lines.len(), max_len];
+        let shape = tiny_vec![lines.len(), max_len];
         for line in lines.drain(..) {
             data.extend(line.chars());
             data.extend(repeat('\x00').take(max_len - line.chars().count()));

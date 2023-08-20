@@ -127,14 +127,14 @@ pub fn bin_pervade<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
                 }
                 Ordering::Equal => {
                     let target_shape = max_shape(a.shape(), b.shape());
-                    if a.shape() != target_shape {
+                    if a.shape() != &*target_shape {
                         if let Some(fill) = A::get_fill(env) {
                             reshaped_a = a.clone();
                             reshaped_a.fill_to_shape(&target_shape, fill);
                             a = &reshaped_a;
                         }
                     }
-                    if b.shape() != target_shape {
+                    if b.shape() != &*target_shape {
                         if let Some(fill) = B::get_fill(env) {
                             reshaped_b = b.clone();
                             reshaped_b.fill_to_shape(&target_shape, fill);
@@ -152,7 +152,7 @@ pub fn bin_pervade<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
             }
         }
     }
-    let shape = a.shape().max(b.shape()).to_vec();
+    let shape = Shape::from(a.shape().max(b.shape()));
     let mut data = Vec::with_capacity(a.flat_len().max(b.flat_len()));
     bin_pervade_recursive(a, b, &mut data, f);
     Ok((shape, data).into())
@@ -673,8 +673,8 @@ pub fn bin_pervade_generic<A: PervasiveInput, B: PervasiveInput, C: Default>(
     b: B,
     env: &mut Uiua,
     f: impl FnMut(A::OwnedItem, B::OwnedItem, &mut Uiua) -> UiuaResult<C> + Copy,
-) -> UiuaResult<(Vec<usize>, Vec<C>)> {
-    let c_shape = cmp::max(a_shape, b_shape).to_vec();
+) -> UiuaResult<(Shape, Vec<C>)> {
+    let c_shape = Shape::from(cmp::max(a_shape, b_shape));
     let c_len: usize = c_shape.iter().product();
     let mut c: Vec<C> = Vec::with_capacity(c_len);
     for _ in 0..c_len {

@@ -152,7 +152,7 @@ impl Value {
     pub fn rank(&self) -> usize {
         self.shape().len()
     }
-    pub fn shape_mut(&mut self) -> &mut Vec<usize> {
+    pub fn shape_mut(&mut self) -> &mut Shape {
         match self {
             Self::Num(array) => &mut array.shape,
             Self::Byte(array) => &mut array.shape,
@@ -425,7 +425,7 @@ impl Value {
                     }
                     result.push(convert_num(num));
                 }
-                (self.shape().to_vec(), result).into()
+                (self.shape(), result).into()
             }
             Value::Byte(bytes) => {
                 if !test_shape(self.shape()) {
@@ -442,7 +442,7 @@ impl Value {
                     }
                     result.push(convert_num(num));
                 }
-                (self.shape().to_vec(), result).into()
+                (self.shape(), result).into()
             }
             value => {
                 return Err(env.error(format!(
@@ -528,8 +528,8 @@ macro_rules! value_from {
                 Self::$variant(Array::from(vec))
             }
         }
-        impl From<(Vec<usize>, Vec<$ty>)> for Value {
-            fn from((shape, data): (Vec<usize>, Vec<$ty>)) -> Self {
+        impl From<(Shape, Vec<$ty>)> for Value {
+            fn from((shape, data): (Shape, Vec<$ty>)) -> Self {
                 Self::$variant((shape, data).into())
             }
         }

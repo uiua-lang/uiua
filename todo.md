@@ -1,3 +1,4 @@
+- Simplify Array::from impls
 - Finish tour
 - Under pick
 - Docs

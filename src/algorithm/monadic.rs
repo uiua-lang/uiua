@@ -5,6 +5,8 @@ use std::{
     sync::Arc,
 };
 
+use tinyvec::tiny_vec;
+
 use crate::{array::*, value::Value, Uiua, UiuaResult};
 
 impl Value {
@@ -27,23 +29,23 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     pub fn deshape(&mut self) {
-        self.shape = vec![self.flat_len()];
+        self.shape = tiny_vec![self.flat_len()];
     }
 }
 
 impl Value {
     pub fn range(&self, env: &Uiua) -> UiuaResult<Self> {
-        let mut shape = self.as_naturals(
+        let shape = &self.as_naturals(
             env,
             "Range max should be a single natural number \
             or a list of natural numbers",
         )?;
+        let mut shape = Shape::from(shape.as_slice());
         let data = range(&shape);
         if shape.len() > 1 {
             shape.push(shape.len());
         }
-        let array = Array::new(shape, data.into());
-        Ok(array.into())
+        Ok(Array::new(shape, data).into())
     }
 }
 
@@ -371,7 +373,7 @@ impl Array<f64> {
         }
         let mut shape = self.shape.clone();
         shape.push(max_bits);
-        let arr = Array::new(shape, new_data.into());
+        let arr = Array::new(shape, new_data);
         arr.validate_shape();
         Ok(arr)
     }
@@ -402,7 +404,7 @@ impl Array<u8> {
             }
             new_data.push(n as f64);
         }
-        let arr = Array::new(shape, new_data.into());
+        let arr = Array::new(shape, new_data);
         arr.validate_shape();
         Ok(arr)
     }

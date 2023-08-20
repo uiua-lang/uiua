@@ -1,8 +1,10 @@
 use std::ops::{Add, Div, Mul, Sub};
 
+use tinyvec::tiny_vec;
+
 use crate::{
     algorithm::pervade::bin_pervade_generic,
-    array::{Array, ArrayValue},
+    array::{Array, ArrayValue, Shape},
     cowslice::cowslice,
     primitive::Primitive,
     value::Value,
@@ -52,11 +54,15 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
     f: impl Fn(T, R) -> R,
 ) -> Array<R> {
     match arr.shape.len() {
-        0 => (vec![], vec![arr.data.into_iter().next().unwrap().into()]).into(),
+        0 => (
+            tiny_vec![],
+            vec![arr.data.into_iter().next().unwrap().into()],
+        )
+            .into(),
         1 => {
             let mut vals = arr.data.into_iter().rev();
             (
-                vec![],
+                tiny_vec![],
                 vec![if let Some(acc) = vals.next() {
                     vals.fold(acc.into(), flip(f))
                 } else {
@@ -265,7 +271,7 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
 
 fn each1(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     let mut new_values = Vec::with_capacity(xs.flat_len());
-    let mut new_shape = xs.shape().to_vec();
+    let mut new_shape = Shape::from(xs.shape());
     let values = xs.into_flat_values();
     for val in values {
         env.push(val);
@@ -492,6 +498,7 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
+#[allow(clippy::result_large_err)]
 fn table_nums(
     prim: Primitive,
     flipped: bool,
@@ -556,7 +563,7 @@ fn fast_table_join_or_couple<T: ArrayValue>(a: Array<T>, b: Array<T>) -> Array<T
 
 fn generic_table(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     const BREAK_ERROR: &str = "break is not allowed in table";
-    let mut new_shape = xs.shape().to_vec();
+    let mut new_shape = Shape::from(xs.shape());
     new_shape.extend_from_slice(ys.shape());
     let mut items = Vec::with_capacity(xs.flat_len() * ys.flat_len());
     let y_values = ys.into_flat_values().collect::<Vec<_>>();
@@ -585,7 +592,7 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
     let xs = env.pop(2)?;
     let ys = env.pop(3)?;
     const BREAK_ERROR: &str = "break is not allowed in cross";
-    let mut new_shape = vec![xs.row_count(), ys.row_count()];
+    let mut new_shape = tiny_vec![xs.row_count(), ys.row_count()];
     let mut items = Vec::with_capacity(xs.row_count() * ys.row_count());
     let y_rows = ys.into_rows().collect::<Vec<_>>();
     for x_row in xs.into_rows() {

@@ -1,6 +1,9 @@
 use std::convert::Infallible;
 
-use crate::{array::ArrayValue, Uiua, UiuaError};
+use crate::{
+    array::{ArrayValue, Shape},
+    Uiua, UiuaError,
+};
 
 mod dyadic;
 pub(crate) mod invert;
@@ -8,8 +11,12 @@ pub mod loops;
 mod monadic;
 pub mod pervade;
 
-fn max_shape(a: &[usize], b: &[usize]) -> Vec<usize> {
-    let mut new_shape = vec![0; a.len().max(b.len())];
+fn max_shape(a: &[usize], b: &[usize]) -> Shape {
+    let shape_len = a.len().max(b.len());
+    let mut new_shape = Shape::with_capacity(shape_len);
+    for _ in 0..shape_len {
+        new_shape.push(0);
+    }
     for i in 0..new_shape.len() {
         let j = new_shape.len() - i - 1;
         if a.len() > i {

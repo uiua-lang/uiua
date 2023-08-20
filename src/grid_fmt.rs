@@ -123,7 +123,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             return self.data[0].fmt_grid();
         }
         let stringy = type_name::<T>() == type_name::<char>();
-        if self.shape == [0] {
+        if *self.shape == [0] {
             return if stringy {
                 vec![vec!['"', '"']]
             } else {

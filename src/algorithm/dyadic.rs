@@ -1,5 +1,7 @@
 use std::{cmp::Ordering, iter::repeat, mem::take, sync::Arc};
 
+use tinyvec::tiny_vec;
+
 use crate::{
     algorithm::max_shape,
     array::*,
@@ -120,7 +122,7 @@ impl<T: ArrayValue> Array<T> {
             }
         }
         self.data = new_data.into();
-        self.shape = shape.to_vec();
+        self.shape = shape.into();
     }
 }
 
@@ -211,7 +213,7 @@ impl<T: ArrayValue> Array<T> {
                 if self.rank() == 0 {
                     debug_assert_eq!(other.rank(), 0);
                     self.data.extend(other.data.into_iter().next());
-                    self.shape = vec![2];
+                    self.shape = tiny_vec![2];
                     self
                 } else {
                     if let Some(fill) = ctx.fill::<T>() {
@@ -443,6 +445,7 @@ impl Value {
             "Shape should be a single natural number \
             or a list of natural numbers",
         )?;
+        let target_shape = Shape::from(&*target_shape);
         match self {
             Value::Num(a) => a.reshape(target_shape),
             Value::Byte(a) => a.reshape(target_shape),
@@ -454,7 +457,7 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn reshape(&mut self, shape: Vec<usize>) {
+    pub fn reshape(&mut self, shape: Shape) {
         if self.data.is_empty() {
             return;
         }
@@ -537,7 +540,7 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
-    pub(crate) fn into_shaped_indices(self, env: &Uiua) -> UiuaResult<(Vec<usize>, Vec<isize>)> {
+    pub(crate) fn into_shaped_indices(self, env: &Uiua) -> UiuaResult<(Shape, Vec<isize>)> {
         Ok(match self {
             Value::Num(arr) => {
                 let mut index_data = Vec::with_capacity(arr.flat_len());
@@ -588,7 +591,7 @@ impl<T: ArrayValue> Array<T> {
             self.pick(index_data, env)
         } else {
             let (shape, data) = self.pick_shaped_impl(index_shape, index_data, env)?;
-            Ok(Array::new(shape, data.into()))
+            Ok(Array::new(shape, data))
         }
     }
     fn pick_shaped_impl(
@@ -596,7 +599,7 @@ impl<T: ArrayValue> Array<T> {
         index_shape: &[usize],
         index_data: &[isize],
         env: &Uiua,
-    ) -> UiuaResult<(Vec<usize>, Vec<T>)> {
+    ) -> UiuaResult<(Shape, Vec<T>)> {
         let index_row_len = index_shape[1..].iter().product();
         let mut new_data =
             Vec::with_capacity(index_shape[..index_shape.len() - 1].iter().product());
@@ -604,7 +607,7 @@ impl<T: ArrayValue> Array<T> {
             let row = self.pick_shaped(&index_shape[1..], index_row, env)?;
             new_data.extend_from_slice(&row.data);
         }
-        let mut new_shape = index_shape[0..index_shape.len() - 1].to_vec();
+        let mut new_shape = Shape::from(&index_shape[0..index_shape.len() - 1]);
         new_shape.extend_from_slice(&self.shape[*index_shape.last().unwrap()..]);
         Ok((new_shape, new_data))
     }
@@ -635,7 +638,7 @@ impl<T: ArrayValue> Array<T> {
             let end = start + row_len;
             picked = picked.slice(start..end);
         }
-        let shape = self.shape[index.len()..].to_vec();
+        let shape = Shape::from(&self.shape[index.len()..]);
         Ok((shape, picked).into())
     }
 }
@@ -1168,7 +1171,7 @@ impl<T: ArrayValue> Array<T> {
         } else {
             shape.push(indices.len());
         }
-        let arr = Array::new(shape, selected.into());
+        let arr = Array::new(shape, selected);
         arr.validate_shape();
         Ok(arr)
     }
@@ -1239,10 +1242,10 @@ impl<T: ArrayValue> Array<T> {
             }
         }
         // Determine the shape of the windows array
-        let mut new_shape = Vec::with_capacity(self.shape.len() + size_spec.len());
+        let mut new_shape = Shape::with_capacity(self.shape.len() + size_spec.len());
         new_shape.extend(self.shape.iter().zip(size_spec).map(|(a, b)| a - b + 1));
-        new_shape.extend(size_spec);
-        new_shape.extend(&self.shape[size_spec.len()..]);
+        new_shape.extend_from_slice(size_spec);
+        new_shape.extend_from_slice(&self.shape[size_spec.len()..]);
         // Make a new window shape with the same rank as the windowed array
         let mut true_size: Vec<usize> = Vec::with_capacity(self.shape.len());
         true_size.extend(size_spec);
@@ -1330,7 +1333,7 @@ impl<T: ArrayValue> Array<T> {
         }
 
         // Determine the ouput shape
-        let output_shape: Vec<usize> = searched
+        let output_shape: Shape = searched
             .shape
             .iter()
             .zip(&searched_for_shape)
@@ -1393,7 +1396,7 @@ impl<T: ArrayValue> Array<T> {
                     continue 'windows;
                 }
             }
-            let arr = Array::new(output_shape, data.into());
+            let arr = Array::new(output_shape, data);
             arr.validate_shape();
             break Ok(arr);
         }
@@ -1439,8 +1442,8 @@ impl<T: ArrayValue> Array<T> {
                     }
                     result_data.push(0);
                 }
-                let shape = self.shape.iter().cloned().take(1).collect();
-                let res = Array::new(shape, result_data.into());
+                let shape: Shape = self.shape.iter().cloned().take(1).collect();
+                let res = Array::new(shape, result_data);
                 res.validate_shape();
                 res
             }
@@ -1501,8 +1504,8 @@ impl<T: ArrayValue> Array<T> {
                     }
                     result_data.push(searched_in.row_count() as f64);
                 }
-                let shape = self.shape.iter().cloned().take(1).collect();
-                let res = Array::new(shape, result_data.into());
+                let shape: Shape = self.shape.iter().cloned().take(1).collect();
+                let res = Array::new(shape, result_data);
                 res.validate_shape();
                 res
             }

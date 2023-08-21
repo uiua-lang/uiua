@@ -185,14 +185,25 @@ sys_op! {
     /// The samples must be between -1 and 1.
     /// The sample rate is 44100 Hz.
     (1(0), AudioPlay, "audioplay"),
-    /// Sleep for n milliseconds
+    /// Sleep for n seconds
     ///
     /// On the web, this example will hang for 2 seconds.
-    /// ex: rand sleep 2000
+    /// ex: rand sleep 2
     (1(0), Sleep, "sleep"),
+    /// Create a TCP listener and bind it to an address
     (1, TcpListen, "tcplisten"),
+    /// Accept a connection with a TCP listener
     (1, TcpAccept, "tcpaccept"),
+    /// Create a TCP socket and connect it to an address
     (1, TcpConnect, "tcpconnect"),
+    /// Set a TCP socket to non-blocking mode
+    (1, TcpSetNonBlocking, "tcpsetnonblocking"),
+    /// Set the read timeout of a TCP socket in seconds
+    (2(0), TcpSetReadTimeout, "tcpsetreadtimeout"),
+    /// Set the write timeout of a TCP socket in seconds
+    (2(0), TcpSetWriteTimeout, "tcpsetwritetimeout"),
+    /// Get the connection address of a TCP socket
+    (1, TcpAddr, "tcpaddr"),
     /// Close a stream by its handle
     ///
     /// This will close files, tcp listeners, and tcp sockets.
@@ -303,7 +314,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         self.close(handle)?;
         Ok(())
     }
-    fn sleep(&self, ms: f64) -> Result<(), String> {
+    fn sleep(&self, seconds: f64) -> Result<(), String> {
         Err("Sleeping is not supported in this environment".into())
     }
     fn tcp_listen(&self, addr: &str) -> Result<Handle, String> {
@@ -313,6 +324,26 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         Err("TCP listeners are not supported in this environment".into())
     }
     fn tcp_connect(&self, addr: &str) -> Result<Handle, String> {
+        Err("TCP sockets are not supported in this environment".into())
+    }
+    fn tcp_addr(&self, handle: Handle) -> Result<String, String> {
+        Err("TCP sockets are not supported in this environment".into())
+    }
+    fn tcp_set_non_blocking(&self, handle: Handle, non_blocking: bool) -> Result<(), String> {
+        Err("TCP sockets are not supported in this environment".into())
+    }
+    fn tcp_set_read_timeout(
+        &self,
+        handle: Handle,
+        timeout: Option<Duration>,
+    ) -> Result<(), String> {
+        Err("TCP sockets are not supported in this environment".into())
+    }
+    fn tcp_set_write_timeout(
+        &self,
+        handle: Handle,
+        timeout: Option<Duration>,
+    ) -> Result<(), String> {
         Err("TCP sockets are not supported in this environment".into())
     }
     fn close(&self, handle: Handle) -> Result<(), String> {
@@ -565,8 +596,8 @@ impl SysBackend for NativeSys {
             }));
         recv.recv().unwrap()
     }
-    fn sleep(&self, ms: f64) -> Result<(), String> {
-        sleep(Duration::from_secs_f64(ms / 1000.0));
+    fn sleep(&self, seconds: f64) -> Result<(), String> {
+        sleep(Duration::from_secs_f64(seconds));
         Ok(())
     }
     fn tcp_listen(&self, addr: &str) -> Result<Handle, String> {
@@ -595,6 +626,58 @@ impl SysBackend for NativeSys {
             .tcp_sockets
             .insert(handle, Buffered::new_writer(stream));
         Ok(handle)
+    }
+    fn tcp_addr(&self, handle: Handle) -> Result<String, String> {
+        let socket = NATIVE_SYS
+            .tcp_sockets
+            .get(&handle)
+            .ok_or_else(|| "Invalid tcp socket handle".to_string())?;
+        Ok(socket
+            .get_ref()
+            .peer_addr()
+            .map_err(|e| e.to_string())?
+            .to_string())
+    }
+    fn tcp_set_non_blocking(&self, handle: Handle, non_blocking: bool) -> Result<(), String> {
+        let socket = NATIVE_SYS
+            .tcp_sockets
+            .get(&handle)
+            .ok_or_else(|| "Invalid tcp socket handle".to_string())?;
+        socket
+            .get_ref()
+            .set_nonblocking(non_blocking)
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+    fn tcp_set_read_timeout(
+        &self,
+        handle: Handle,
+        timeout: Option<Duration>,
+    ) -> Result<(), String> {
+        let socket = NATIVE_SYS
+            .tcp_sockets
+            .get(&handle)
+            .ok_or_else(|| "Invalid tcp socket handle".to_string())?;
+        socket
+            .get_ref()
+            .set_read_timeout(timeout)
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+    fn tcp_set_write_timeout(
+        &self,
+        handle: Handle,
+        timeout: Option<Duration>,
+    ) -> Result<(), String> {
+        let socket = NATIVE_SYS
+            .tcp_sockets
+            .get(&handle)
+            .ok_or_else(|| "Invalid tcp socket handle".to_string())?;
+        socket
+            .get_ref()
+            .set_write_timeout(timeout)
+            .map_err(|e| e.to_string())?;
+        Ok(())
     }
     fn close(&self, handle: Handle) -> Result<(), String> {
         if NATIVE_SYS.files.remove(&handle).is_some()
@@ -891,11 +974,11 @@ impl SysOp {
                 env.backend.play_audio(bytes).map_err(|e| env.error(e))?;
             }
             SysOp::Sleep => {
-                let ms = env
+                let seconds = env
                     .pop(1)?
                     .as_num(env, "Sleep time must be a number")?
                     .max(0.0);
-                env.backend.sleep(ms).map_err(|e| env.error(e))?;
+                env.backend.sleep(seconds).map_err(|e| env.error(e))?;
             }
             SysOp::TcpListen => {
                 let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
@@ -914,6 +997,53 @@ impl SysOp {
                 let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
                 let handle = env.backend.tcp_connect(&addr).map_err(|e| env.error(e))?;
                 env.push(handle);
+            }
+            SysOp::TcpAddr => {
+                let handle = env
+                    .pop(1)?
+                    .as_nat(env, "Handle must be an natural number")?
+                    .into();
+                let addr = env.backend.tcp_addr(handle).map_err(|e| env.error(e))?;
+                env.push(addr);
+            }
+            SysOp::TcpSetNonBlocking => {
+                let handle = env
+                    .pop(1)?
+                    .as_nat(env, "Handle must be an natural number")?
+                    .into();
+                env.backend
+                    .tcp_set_non_blocking(handle, true)
+                    .map_err(|e| env.error(e))?;
+            }
+            SysOp::TcpSetReadTimeout => {
+                let timeout = env.pop(1)?.as_num(env, "Timeout must be a number")?.abs();
+                let timeout = if timeout.is_infinite() {
+                    None
+                } else {
+                    Some(Duration::from_secs_f64(timeout))
+                };
+                let handle = env
+                    .pop(2)?
+                    .as_nat(env, "Handle must be an natural number")?
+                    .into();
+                env.backend
+                    .tcp_set_read_timeout(handle, timeout)
+                    .map_err(|e| env.error(e))?;
+            }
+            SysOp::TcpSetWriteTimeout => {
+                let timeout = env.pop(1)?.as_num(env, "Timeout must be a number")?.abs();
+                let timeout = if timeout.is_infinite() {
+                    None
+                } else {
+                    Some(Duration::from_secs_f64(timeout))
+                };
+                let handle = env
+                    .pop(2)?
+                    .as_nat(env, "Handle must be an natural number")?
+                    .into();
+                env.backend
+                    .tcp_set_write_timeout(handle, timeout)
+                    .map_err(|e| env.error(e))?;
             }
             SysOp::Close => {
                 let handle = env

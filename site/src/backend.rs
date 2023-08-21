@@ -94,9 +94,9 @@ impl SysBackend for WebBackend {
             .push(OutputItem::Audio(wav_bytes));
         Ok(())
     }
-    fn sleep(&self, ms: f64) -> Result<(), String> {
+    fn sleep(&self, seconds: f64) -> Result<(), String> {
         let start = instant::now();
-        while instant::now() - start < ms {}
+        while (instant::now() - start) / 1000.0 < seconds {}
         Ok(())
     }
     fn spawn(

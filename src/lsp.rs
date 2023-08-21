@@ -1,9 +1,93 @@
+use std::{collections::BTreeMap, slice, sync::Arc};
+
 use crate::{
     ast::{Item, Word},
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
     primitive::Primitive,
+    Ident,
 };
+
+pub struct LspDoc {
+    pub input: String,
+    pub spans: Vec<Sp<SpanKind>>,
+    pub bindings: BindingsInfo,
+}
+
+type BindingsInfo = BTreeMap<Sp<Ident>, Arc<BindingInfo>>;
+
+impl LspDoc {
+    fn new(input: String) -> Self {
+        let (items, _) = parse(&input, None);
+        let spans = items_spans(&items);
+        let bindings = bindings_info(&items);
+        Self {
+            input,
+            spans,
+            bindings,
+        }
+    }
+}
+
+pub struct BindingInfo {
+    pub span: CodeSpan,
+    pub comment: Option<String>,
+}
+
+fn bindings_info(items: &[Item]) -> BindingsInfo {
+    let mut bindings = BindingsInfo::new();
+    let mut scope_bindings = Vec::new();
+    let mut last_comment: Option<String> = None;
+    for item in items {
+        match item {
+            Item::Scoped { items, .. } => scope_bindings.push(bindings_info(items)),
+            Item::Words(words) => {
+                if let [Sp {
+                    value: Word::Comment(comment),
+                    ..
+                }] = words.as_slice()
+                {
+                    let full = last_comment.get_or_insert_with(String::new);
+                    if !full.is_empty() {
+                        if comment.trim().is_empty() {
+                            full.push('\n');
+                            full.push('\n');
+                        } else {
+                            full.push(' ');
+                        }
+                    }
+                    full.push_str(comment.trim());
+                } else {
+                    last_comment = None;
+                    for word in words {
+                        if let Word::Ident(ident) = &word.value {
+                            if let Some((_, info)) =
+                                bindings.iter().rev().find(|(name, _)| name.value == *ident)
+                            {
+                                let info = info.clone();
+                                bindings.insert(word.span.clone().sp(ident.clone()), info);
+                            }
+                        }
+                    }
+                }
+            }
+            Item::Binding(binding) => {
+                let comment = last_comment.take();
+                bindings.insert(
+                    binding.name.clone(),
+                    BindingInfo {
+                        comment,
+                        span: binding.name.span.clone(),
+                    }
+                    .into(),
+                );
+            }
+            Item::Newlines => {}
+        }
+    }
+    scope_bindings.push(bindings);
+    scope_bindings.into_iter().flatten().collect()
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SpanKind {
@@ -16,37 +100,37 @@ pub enum SpanKind {
 
 pub fn spans(input: &str) -> Vec<Sp<SpanKind>> {
     let (items, _) = parse(input, None);
-    items_spans(items)
+    items_spans(&items)
 }
 
-fn items_spans(items: Vec<Item>) -> Vec<Sp<SpanKind>> {
+fn items_spans(items: &[Item]) -> Vec<Sp<SpanKind>> {
     let mut spans = Vec::new();
     for item in items {
         match item {
             Item::Scoped { items, .. } => spans.extend(items_spans(items)),
             Item::Words(words) => spans.extend(words_spans(words)),
-            Item::Binding(binding) => spans.extend(words_spans(binding.words)),
+            Item::Binding(binding) => spans.extend(words_spans(&binding.words)),
             Item::Newlines => {}
         }
     }
     spans
 }
 
-fn words_spans(words: Vec<Sp<Word>>) -> Vec<Sp<SpanKind>> {
+fn words_spans(words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
     let mut spans = Vec::new();
     for word in words {
-        match word.value {
-            Word::Number(..) => spans.push(word.span.sp(SpanKind::Number)),
+        match &word.value {
+            Word::Number(..) => spans.push(word.span.clone().sp(SpanKind::Number)),
             Word::Char(_) | Word::String(_) | Word::FormatString(_) => {
-                spans.push(word.span.sp(SpanKind::String))
+                spans.push(word.span.clone().sp(SpanKind::String))
             }
             Word::MultilineString(lines) => {
-                spans.extend(lines.into_iter().map(|line| line.span.sp(SpanKind::String)))
+                spans.extend((lines.iter()).map(|line| line.span.clone().sp(SpanKind::String)))
             }
             Word::Ident(_) => {}
             Word::Strand(items) => {
-                for (i, word) in items.into_iter().enumerate() {
-                    let item_spans = words_spans(vec![word]);
+                for (i, word) in items.iter().enumerate() {
+                    let item_spans = words_spans(slice::from_ref(word));
                     if i > 0 {
                         if let Some(first_item) = item_spans.first() {
                             let end = first_item.span.start;
@@ -68,15 +152,15 @@ fn words_spans(words: Vec<Sp<Word>>) -> Vec<Sp<SpanKind>> {
                     spans.extend(item_spans);
                 }
             }
-            Word::Array(arr) => spans.extend(arr.lines.into_iter().flat_map(words_spans)),
-            Word::Func(func) => spans.extend(func.lines.into_iter().flat_map(words_spans)),
-            Word::Primitive(prim) => spans.push(word.span.sp(SpanKind::Primitive(prim))),
+            Word::Array(arr) => spans.extend(arr.lines.iter().flat_map(|w| words_spans(w))),
+            Word::Func(func) => spans.extend(func.lines.iter().flat_map(|w| words_spans(w))),
+            Word::Primitive(prim) => spans.push(word.span.clone().sp(SpanKind::Primitive(*prim))),
             Word::Modified(m) => {
-                spans.push(m.modifier.map(SpanKind::Primitive));
-                spans.extend(words_spans(m.words));
+                spans.push(m.modifier.clone().map(SpanKind::Primitive));
+                spans.extend(words_spans(&m.words));
             }
             Word::Spaces => {}
-            Word::Comment(_) => spans.push(word.span.sp(SpanKind::Comment)),
+            Word::Comment(_) => spans.push(word.span.clone().sp(SpanKind::Comment)),
         }
     }
     spans
@@ -123,19 +207,7 @@ mod server {
 
     struct Backend {
         client: Client,
-        docs: DashMap<Url, Doc>,
-    }
-
-    struct Doc {
-        code: String,
-        spans: Vec<Sp<SpanKind>>,
-    }
-
-    impl Doc {
-        fn new(code: String) -> Self {
-            let spans = spans(&code);
-            Self { code, spans }
-        }
+        docs: DashMap<Url, LspDoc>,
     }
 
     #[tower_lsp::async_trait]
@@ -184,14 +256,16 @@ mod server {
         }
 
         async fn did_open(&self, param: DidOpenTextDocumentParams) {
-            self.docs
-                .insert(param.text_document.uri, Doc::new(param.text_document.text));
+            self.docs.insert(
+                param.text_document.uri,
+                LspDoc::new(param.text_document.text),
+            );
         }
 
         async fn did_change(&self, params: DidChangeTextDocumentParams) {
             self.docs.insert(
                 params.text_document.uri,
-                Doc::new(params.content_changes[0].text.clone()),
+                LspDoc::new(params.content_changes[0].text.clone()),
             );
         }
 
@@ -218,7 +292,13 @@ mod server {
                     }
                 }
             }
-            Ok(if let Some((prim, range)) = prim_range {
+            let mut binding_range = None;
+            for (ident, binding) in &doc.bindings {
+                if ident.span.contains_line_col(line, col) {
+                    binding_range = Some((ident, binding, uiua_span_to_lsp(&ident.span)));
+                }
+            }
+            Ok(Some(if let Some((prim, range)) = prim_range {
                 let mut contents = vec![MarkedString::String(prim.name().unwrap().into())];
                 if let Some(doc) = prim.doc() {
                     contents.push(MarkedString::String(
@@ -246,13 +326,22 @@ mod server {
                             .collect(),
                     ))
                 }
-                Some(Hover {
+                Hover {
                     contents: HoverContents::Array(contents),
                     range: Some(range),
-                })
+                }
+            } else if let Some((ident, binding, range)) = binding_range {
+                let mut contents = vec![MarkedString::String(ident.value.as_str().into())];
+                if let Some(comment) = &binding.comment {
+                    contents.push(MarkedString::String(comment.clone()))
+                }
+                Hover {
+                    contents: HoverContents::Array(contents),
+                    range: Some(range),
+                }
             } else {
-                None
-            })
+                return Ok(None);
+            }))
         }
 
         async fn formatting(
@@ -265,7 +354,7 @@ mod server {
                 return Ok(None);
             };
             let formatted = format_str(
-                &doc.code,
+                &doc.input,
                 &FormatConfig {
                     multiline_indent: params.options.tab_size as usize,
                     ..Default::default()
@@ -295,7 +384,7 @@ mod server {
                 return Ok(None);
             };
             Ok(
-                if let Ok(env) = Uiua::with_native_sys().load_str(&doc.code) {
+                if let Ok(env) = Uiua::with_native_sys().load_str(&doc.input) {
                     let stack = env.take_stack();
                     let mut text = String::new();
                     for val in stack {

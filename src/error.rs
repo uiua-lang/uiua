@@ -207,7 +207,7 @@ where
             });
             let report = Report::<CodeSpan>::build(
                 ReportKind::Error,
-                span.file.clone(),
+                span.path.clone(),
                 span.start.char_pos,
             )
             .with_message(message)
@@ -242,7 +242,7 @@ type SourceId = Option<Arc<Path>>;
 impl ariadne::Span for CodeSpan {
     type SourceId = SourceId;
     fn source(&self) -> &Self::SourceId {
-        &self.file
+        &self.path
     }
     fn start(&self) -> usize {
         self.start.char_pos

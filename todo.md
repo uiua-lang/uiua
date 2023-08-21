@@ -2,16 +2,14 @@
   - Images
   - System functions
   - Guided examples
-- Encode/decode audio/images
-- Tooling
-  - Function comments in LSP
 - Test suite
-- More inverses
 - Optimizations
   - Windowed reduce?
 - Multimedia
   - Sound input
   - Webcam input?
+  - Audio encoding/decoding functions
+  - Image encoding/decoding functions
 - System APIs
   - UDP Sockets
   - TCP Socket utils
@@ -22,5 +20,3 @@
   - check OS
   - unicode utils
   - run commands
-  - stream handle kind?
-- Custom monospace font

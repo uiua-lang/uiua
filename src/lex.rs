@@ -100,7 +100,7 @@ impl Span {
 pub struct CodeSpan {
     pub start: Loc,
     pub end: Loc,
-    pub file: Option<Arc<Path>>,
+    pub path: Option<Arc<Path>>,
     pub input: Arc<str>,
 }
 
@@ -112,8 +112,8 @@ impl fmt::Debug for CodeSpan {
 
 impl fmt::Display for CodeSpan {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(file) = &self.file {
-            let file = file.to_string_lossy();
+        if let Some(path) = &self.path {
+            let file = path.to_string_lossy();
             let mut file = file.into_owned();
             if let Some(s) = file.strip_prefix("C:\\Users\\") {
                 if let Some((_, sub)) = s.split_once('\\') {
@@ -172,7 +172,7 @@ impl CodeSpan {
 
 impl PartialEq for CodeSpan {
     fn eq(&self, other: &Self) -> bool {
-        self.start == other.start && self.end == other.end && self.file == other.file
+        self.start == other.start && self.end == other.end && self.path == other.path
     }
 }
 
@@ -189,7 +189,7 @@ impl Ord for CodeSpan {
         self.start
             .cmp(&other.start)
             .then(self.end.cmp(&other.end))
-            .then(self.file.cmp(&other.file))
+            .then(self.path.cmp(&other.path))
     }
 }
 
@@ -197,7 +197,7 @@ impl Hash for CodeSpan {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.start.hash(state);
         self.end.hash(state);
-        self.file.hash(state);
+        self.path.hash(state);
     }
 }
 
@@ -430,7 +430,7 @@ impl Lexer {
         CodeSpan {
             start,
             end,
-            file: self.file.clone(),
+            path: self.file.clone(),
             input: self.input.clone(),
         }
     }

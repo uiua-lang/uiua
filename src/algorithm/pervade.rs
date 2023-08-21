@@ -23,7 +23,7 @@ pub trait Arrayish {
         self.shape().iter().skip(1).product()
     }
     fn rows(&self) -> Chunks<Self::Value> {
-        self.data().chunks(self.row_len())
+        self.data().chunks(self.row_len().max(1))
     }
     fn shape_prefixes_match(&self, other: &impl Arrayish) -> bool {
         self.shape().iter().zip(other.shape()).all(|(a, b)| a == b)

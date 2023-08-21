@@ -3,7 +3,7 @@
 isprime ← =2 /+ =⌊.÷⇡.
 primes ← ‡∵isprime.⇡
 goldbach ← ∵(
-  ‡/+=↓⊞+..primes↑.
-  ⊂/+.⊟⊢∶⊢⇌.
+  ‡/+=~.⊞+..primes↑.
+  ⊂↓⊟⊢∶⊢⇌.
 )×2+2⇡
 goldbach 10

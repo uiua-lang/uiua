@@ -887,7 +887,7 @@ impl SysOp {
             }
             SysOp::AudioPlay => {
                 let value = env.pop(1)?;
-                let bytes = value_to_wav_bytes_f32(&value).map_err(|e| env.error(e))?;
+                let bytes = value_to_wav_bytes(&value).map_err(|e| env.error(e))?;
                 env.backend.play_audio(bytes).map_err(|e| env.error(e))?;
             }
             SysOp::Sleep => {
@@ -1049,16 +1049,19 @@ pub fn value_to_audio_channes(audio: &Value) -> Result<Vec<Vec<f64>>, String> {
 }
 
 pub fn value_to_wav_bytes(audio: &Value) -> Result<Vec<u8>, String> {
-    value_to_wav_bytes_impl(
-        audio,
-        |f| (f * i16::MAX as f64) as i16,
-        16,
-        SampleFormat::Int,
-    )
-}
-
-pub fn value_to_wav_bytes_f32(audio: &Value) -> Result<Vec<u8>, String> {
-    value_to_wav_bytes_impl(audio, |f| f as f32, 32, SampleFormat::Float)
+    #[cfg(not(feature = "audio"))]
+    {
+        value_to_wav_bytes_impl(
+            audio,
+            |f| (f * i16::MAX as f64) as i16,
+            16,
+            SampleFormat::Int,
+        )
+    }
+    #[cfg(feature = "audio")]
+    {
+        value_to_wav_bytes_impl(audio, |f| f as f32, 32, SampleFormat::Float)
+    }
 }
 
 fn value_to_wav_bytes_impl<T: hound::Sample + Copy>(

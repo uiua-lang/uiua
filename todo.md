@@ -1,11 +1,8 @@
-- Under pick
 - Docs
-  - Fill tutorial
-  - Audio
   - Images
-  - Threads
-  - System
+  - System functions
   - Guided examples
+- Encode/decode audio/images
 - Tooling
   - Function comments in LSP
 - Test suite

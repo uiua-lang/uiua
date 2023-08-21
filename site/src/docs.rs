@@ -10,7 +10,7 @@ use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoView
 
 use crate::{
     element,
-    other::{Design, Install, Technical},
+    other::*,
     primitive::PrimDocs,
     tour::Tour,
     tutorial::{Tutorial, TutorialPage},
@@ -25,6 +25,7 @@ pub enum DocsPage {
     Design,
     Technical,
     Install,
+    Audio,
 }
 
 impl IntoParam for DocsPage {
@@ -39,6 +40,7 @@ impl IntoParam for DocsPage {
                 "design" => Some(Self::Design),
                 "technical" => Some(Self::Technical),
                 "install" => Some(Self::Install),
+                "audio" => Some(Self::Audio),
                 value => Some(Self::Search(value.into())),
             })
             .ok_or_else(|| ParamsError::MissingParam(name.to_string()))
@@ -64,6 +66,7 @@ pub fn Docs() -> impl IntoView {
             DocsPage::Design => Design().into_view(),
             DocsPage::Technical => Technical().into_view(),
             DocsPage::Install => Install().into_view(),
+            DocsPage::Audio => Audio().into_view(),
         };
 
         view! {
@@ -181,6 +184,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/install">"Installation"</A>" - how to install and use Uiua's interpreter"</li>
             <li><A href="/docs/design">"Design"</A>" - reasons for some of Uiua's design decisions"</li>
             <li><A href="/docs/technical">"Technical Details"</A>" - notes on the implementation of the Uiua interpreter and this website"</li>
+            <li><A href="/docs/audio">"Audio"</A>" - how to generate and play audio"</li>
         </ul>
         <h2 id="functions" class="doc-functions">"Functions"</h2>
         <div class="input-div">

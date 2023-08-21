@@ -14,7 +14,7 @@ use uiua::{
     format::{format_str, FormatConfig},
     primitive::{PrimClass, Primitive},
     run::RunMode,
-    value_to_image_bytes, value_to_wav_bytes, Uiua,
+    value_to_image_bytes, value_to_wav_bytes_i16, Uiua,
 };
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{Event, HtmlDivElement, MouseEvent, Node};
@@ -1136,8 +1136,8 @@ fn run_code(code: &str) -> Vec<OutputItem> {
                 continue;
             }
         }
-        if value.row_count() > 1000 {
-            if let Ok(bytes) = value_to_wav_bytes(&value) {
+        if value.shape().last().is_some_and(|&n| n >= 1000) {
+            if let Ok(bytes) = value_to_wav_bytes_i16(&value) {
                 stack.push(OutputItem::Audio(bytes));
                 continue;
             }

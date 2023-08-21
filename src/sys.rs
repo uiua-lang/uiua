@@ -135,7 +135,7 @@ sys_op! {
     ///   : square ← use "square"
     ///   : square double 5
     (1, Import, "import"),
-    /// Get the current time in milliseconds
+    /// Get the current time in seconds
     (0, Now, "now"),
     /// Read an image from a file
     ///
@@ -934,7 +934,7 @@ impl SysOp {
                 .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
                 env.import(&input, path.as_ref())?;
             }
-            SysOp::Now => env.push(instant::now()),
+            SysOp::Now => env.push(instant::now() / 1000.0),
             SysOp::ImRead => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let bytes = env.backend.file_read_all(&path).map_err(|e| env.error(e))?;

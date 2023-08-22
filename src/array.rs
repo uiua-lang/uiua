@@ -2,7 +2,6 @@ use std::{
     cmp::Ordering,
     fmt::{self, Debug, Display},
     hash::{Hash, Hasher},
-    iter::repeat,
     sync::Arc,
 };
 
@@ -357,17 +356,15 @@ impl From<bool> for Array<u8> {
     }
 }
 
-impl FromIterator<String> for Array<char> {
+impl FromIterator<String> for Array<Arc<Function>> {
     fn from_iter<I: IntoIterator<Item = String>>(iter: I) -> Self {
-        let mut lines: Vec<String> = iter.into_iter().collect();
-        let max_len = lines.iter().map(|s| s.chars().count()).max().unwrap_or(0);
-        let mut data = Vec::with_capacity(max_len * lines.len());
-        let shape = tiny_vec![lines.len(), max_len];
-        for line in lines.drain(..) {
-            data.extend(line.chars());
-            data.extend(repeat('\x00').take(max_len - line.chars().count()));
-        }
-        Array::new(shape, data)
+        Array::from(
+            iter.into_iter()
+                .map(Array::from)
+                .map(Function::constant)
+                .map(Arc::new)
+                .collect::<CowSlice<_>>(),
+        )
     }
 }
 

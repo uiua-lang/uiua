@@ -6,7 +6,7 @@ use std::{
     net::*,
     sync::{
         atomic::{self, AtomicU64},
-        OnceLock,
+        Arc, OnceLock,
     },
     thread::{sleep, spawn, JoinHandle},
     time::Duration,
@@ -22,7 +22,8 @@ use parking_lot::Mutex;
 use tinyvec::tiny_vec;
 
 use crate::{
-    array::Array, grid_fmt::GridFmt, primitive::PrimDoc, value::Value, Uiua, UiuaError, UiuaResult,
+    array::Array, function::Function, grid_fmt::GridFmt, primitive::PrimDoc, value::Value, Uiua,
+    UiuaError, UiuaResult,
 };
 
 pub fn example_ua<T>(f: impl FnOnce(&mut String) -> T) -> T {
@@ -442,7 +443,7 @@ impl SysBackend for NativeSys {
         env::var(name).ok()
     }
     fn args(&self) -> Vec<String> {
-        env::args().collect()
+        env::args().skip(1).collect()
     }
     fn file_exists(&self, path: &str) -> bool {
         fs::metadata(path).is_ok()
@@ -755,7 +756,7 @@ impl SysOp {
             }
             SysOp::Args => {
                 let args = env.backend.args();
-                env.push(Array::<char>::from_iter(args));
+                env.push(Array::<Arc<Function>>::from_iter(args));
             }
             SysOp::Var => {
                 let key = env
@@ -910,7 +911,7 @@ impl SysOp {
             SysOp::FListDir => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let paths = env.backend.list_dir(&path).map_err(|e| env.error(e))?;
-                env.push(Array::<char>::from_iter(paths));
+                env.push(Array::<Arc<Function>>::from_iter(paths));
             }
             SysOp::FIsFile => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;

@@ -238,7 +238,7 @@ backtrace:
     pub(crate) fn import(&mut self, input: &str, path: &Path) -> UiuaResult {
         if self.current_imports.lock().contains(path) {
             return Err(self.error(format!(
-                "cycle detected importing {}",
+                "Cycle detected importing {}",
                 path.to_string_lossy()
             )));
         }

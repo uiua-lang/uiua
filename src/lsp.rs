@@ -1,93 +1,11 @@
-use std::{collections::BTreeMap, slice, sync::Arc};
+use std::slice;
 
 use crate::{
     ast::{Item, Word},
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
     primitive::Primitive,
-    Ident,
 };
-
-pub struct LspDoc {
-    pub input: String,
-    pub spans: Vec<Sp<SpanKind>>,
-    pub bindings: BindingsInfo,
-}
-
-type BindingsInfo = BTreeMap<Sp<Ident>, Arc<BindingInfo>>;
-
-impl LspDoc {
-    fn new(input: String) -> Self {
-        let (items, _) = parse(&input, None);
-        let spans = items_spans(&items);
-        let bindings = bindings_info(&items);
-        Self {
-            input,
-            spans,
-            bindings,
-        }
-    }
-}
-
-pub struct BindingInfo {
-    pub span: CodeSpan,
-    pub comment: Option<String>,
-}
-
-fn bindings_info(items: &[Item]) -> BindingsInfo {
-    let mut bindings = BindingsInfo::new();
-    let mut scope_bindings = Vec::new();
-    let mut last_comment: Option<String> = None;
-    for item in items {
-        match item {
-            Item::Scoped { items, .. } => scope_bindings.push(bindings_info(items)),
-            Item::Words(words) => {
-                if let [Sp {
-                    value: Word::Comment(comment),
-                    ..
-                }] = words.as_slice()
-                {
-                    let full = last_comment.get_or_insert_with(String::new);
-                    if !full.is_empty() {
-                        if comment.trim().is_empty() {
-                            full.push('\n');
-                            full.push('\n');
-                        } else {
-                            full.push(' ');
-                        }
-                    }
-                    full.push_str(comment.trim());
-                } else {
-                    last_comment = None;
-                    for word in words {
-                        if let Word::Ident(ident) = &word.value {
-                            if let Some((_, info)) =
-                                bindings.iter().rev().find(|(name, _)| name.value == *ident)
-                            {
-                                let info = info.clone();
-                                bindings.insert(word.span.clone().sp(ident.clone()), info);
-                            }
-                        }
-                    }
-                }
-            }
-            Item::Binding(binding) => {
-                let comment = last_comment.take();
-                bindings.insert(
-                    binding.name.clone(),
-                    BindingInfo {
-                        comment,
-                        span: binding.name.span.clone(),
-                    }
-                    .into(),
-                );
-            }
-            Item::Newlines => {}
-        }
-    }
-    scope_bindings.push(bindings);
-    scope_bindings.into_iter().flatten().collect()
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SpanKind {
@@ -171,14 +89,7 @@ pub use server::run_server;
 
 #[cfg(feature = "lsp")]
 mod server {
-    use super::*;
-
-    use crate::{
-        format::{format_str, FormatConfig},
-        lex::Loc,
-        primitive::PrimDocFragment,
-        Uiua,
-    };
+    use std::{collections::BTreeMap, sync::Arc};
 
     use dashmap::DashMap;
     use tower_lsp::{
@@ -186,6 +97,96 @@ mod server {
         lsp_types::*,
         *,
     };
+
+    use super::*;
+
+    use crate::{
+        format::{format_str, FormatConfig},
+        lex::Loc,
+        primitive::PrimDocFragment,
+        Ident, Uiua,
+    };
+
+    pub struct LspDoc {
+        pub input: String,
+        pub spans: Vec<Sp<SpanKind>>,
+        pub bindings: BindingsInfo,
+    }
+
+    type BindingsInfo = BTreeMap<Sp<Ident>, Arc<BindingInfo>>;
+
+    impl LspDoc {
+        fn new(input: String) -> Self {
+            let (items, _) = parse(&input, None);
+            let spans = items_spans(&items);
+            let bindings = bindings_info(&items);
+            Self {
+                input,
+                spans,
+                bindings,
+            }
+        }
+    }
+
+    pub struct BindingInfo {
+        pub span: CodeSpan,
+        pub comment: Option<String>,
+    }
+
+    fn bindings_info(items: &[Item]) -> BindingsInfo {
+        let mut bindings = BindingsInfo::new();
+        let mut scope_bindings = Vec::new();
+        let mut last_comment: Option<String> = None;
+        for item in items {
+            match item {
+                Item::Scoped { items, .. } => scope_bindings.push(bindings_info(items)),
+                Item::Words(words) => {
+                    if let [Sp {
+                        value: Word::Comment(comment),
+                        ..
+                    }] = words.as_slice()
+                    {
+                        let full = last_comment.get_or_insert_with(String::new);
+                        if !full.is_empty() {
+                            if comment.trim().is_empty() {
+                                full.push('\n');
+                                full.push('\n');
+                            } else {
+                                full.push(' ');
+                            }
+                        }
+                        full.push_str(comment.trim());
+                    } else {
+                        last_comment = None;
+                        for word in words {
+                            if let Word::Ident(ident) = &word.value {
+                                if let Some((_, info)) =
+                                    bindings.iter().rev().find(|(name, _)| name.value == *ident)
+                                {
+                                    let info = info.clone();
+                                    bindings.insert(word.span.clone().sp(ident.clone()), info);
+                                }
+                            }
+                        }
+                    }
+                }
+                Item::Binding(binding) => {
+                    let comment = last_comment.take();
+                    bindings.insert(
+                        binding.name.clone(),
+                        BindingInfo {
+                            comment,
+                            span: binding.name.span.clone(),
+                        }
+                        .into(),
+                    );
+                }
+                Item::Newlines => {}
+            }
+        }
+        scope_bindings.push(bindings);
+        scope_bindings.into_iter().flatten().collect()
+    }
 
     pub fn run_server() {
         tokio::runtime::Builder::new_current_thread()

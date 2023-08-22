@@ -1,7 +1,6 @@
 # Calculate the primes that add up to the first n even numbers
 
-isprime ← =2 /+ =⌊.÷⇡.
-primes ← ‡∵isprime.⇡
+primes ← ‡¬∊∶♭⊞×...+2⇡
 goldbach ← ∵(
   ‡/+=~.⊞+..primes↑.
   ⊂↓⊟⊢∶⊢⇌.

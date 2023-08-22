@@ -116,10 +116,6 @@ impl<T: ArrayValue> Array<T> {
     pub fn format_shape(&self) -> FormatShape<'_> {
         FormatShape(self.shape())
     }
-    pub fn depth(&self) -> usize {
-        let max_subrank = self.data.iter().map(|x| x.subrank()).max().unwrap_or(0);
-        self.rank() + max_subrank
-    }
     pub fn into_scalar(self) -> Result<T, Self> {
         if self.shape.is_empty() {
             Ok(self.data.into_iter().next().unwrap())

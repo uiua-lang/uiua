@@ -1473,7 +1473,7 @@ impl<T: ArrayValue> Array<T> {
         U: ArrayValue,
     {
         let elems = self;
-        Ok(match elems.depth().cmp(&of.depth()) {
+        Ok(match elems.rank().cmp(&of.rank()) {
             Ordering::Equal => {
                 let mut result_data = Vec::with_capacity(elems.row_count());
                 'elem: for elem in elems.rows() {
@@ -1498,7 +1498,7 @@ impl<T: ArrayValue> Array<T> {
                 Array::from_row_arrays(rows, env)?
             }
             Ordering::Less => {
-                if of.depth() - elems.depth() == 1 {
+                if of.rank() - elems.rank() == 1 {
                     of.rows().any(|r| *elems == r).into()
                 } else {
                     let mut rows = Vec::with_capacity(of.row_count());

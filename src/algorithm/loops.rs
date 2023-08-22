@@ -245,9 +245,15 @@ fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
 pub fn each(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(1)?;
-    let (args, _) = f.args_outputs().unwrap_or((1, 0));
+    let (args, outputs) = f.args_outputs().unwrap_or((1, 0));
+    if outputs > 1 {
+        return Err(env.error(format!(
+            "Each's function must return 0 or 1 values, but it returns {}",
+            outputs
+        )));
+    }
     match args {
-        0 => Err(env.error("Each's function must take at least one argument")),
+        0 => Ok(()),
         1 => {
             let xs = env.pop(2)?;
             each1(f, xs, env)

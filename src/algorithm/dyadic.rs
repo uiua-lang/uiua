@@ -1549,6 +1549,19 @@ impl<T: ArrayValue> Array<T> {
         Ok(match searched_for.rank().cmp(&searched_in.rank()) {
             Ordering::Equal => {
                 let mut result_data = Vec::with_capacity(searched_for.row_count());
+                if searched_for.rank() == 1 {
+                    for elem in &searched_for.data {
+                        result_data.push(
+                            searched_in
+                                .data
+                                .iter()
+                                .position(|of| elem.array_eq(of))
+                                .unwrap_or(searched_in.row_count())
+                                as f64,
+                        );
+                    }
+                    return Ok(Array::from(result_data));
+                }
                 'elem: for elem in searched_for.rows() {
                     for (i, of) in searched_in.rows().enumerate() {
                         if elem == of {
@@ -1572,11 +1585,23 @@ impl<T: ArrayValue> Array<T> {
             }
             Ordering::Less => {
                 if searched_in.rank() - searched_for.rank() == 1 {
-                    (searched_in
-                        .rows()
-                        .position(|r| r == *searched_for)
-                        .unwrap_or(searched_in.row_count()) as f64)
-                        .into()
+                    if searched_for.rank() == 0 {
+                        let searched_for = &searched_for.data[0];
+                        Array::from(
+                            searched_in
+                                .data
+                                .iter()
+                                .position(|of| searched_for.array_eq(of))
+                                .unwrap_or(searched_in.row_count())
+                                as f64,
+                        )
+                    } else {
+                        (searched_in
+                            .rows()
+                            .position(|r| r == *searched_for)
+                            .unwrap_or(searched_in.row_count()) as f64)
+                            .into()
+                    }
                 } else {
                     let mut rows = Vec::with_capacity(searched_in.row_count());
                     for of in searched_in.rows() {

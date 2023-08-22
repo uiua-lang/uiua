@@ -1476,6 +1476,12 @@ impl<T: ArrayValue> Array<T> {
         Ok(match elems.rank().cmp(&of.rank()) {
             Ordering::Equal => {
                 let mut result_data = Vec::with_capacity(elems.row_count());
+                if elems.rank() == 1 {
+                    for elem in &elems.data {
+                        result_data.push(of.data.iter().any(|of| elem.array_eq(of)) as u8);
+                    }
+                    return Ok(Array::from(result_data));
+                }
                 'elem: for elem in elems.rows() {
                     for of in of.rows() {
                         if elem == of {
@@ -1499,7 +1505,12 @@ impl<T: ArrayValue> Array<T> {
             }
             Ordering::Less => {
                 if of.rank() - elems.rank() == 1 {
-                    of.rows().any(|r| *elems == r).into()
+                    if elems.rank() == 0 {
+                        let elem = &elems.data[0];
+                        Array::from(of.data.iter().any(|of| elem.array_eq(of)) as u8)
+                    } else {
+                        of.rows().any(|r| *elems == r).into()
+                    }
                 } else {
                     let mut rows = Vec::with_capacity(of.row_count());
                     for of in of.rows() {

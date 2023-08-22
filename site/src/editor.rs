@@ -1169,6 +1169,10 @@ fn run_code(code: &str) -> Vec<OutputItem> {
         output.extend(stack);
     }
     if let Some(error) = error {
+        if output.len() > 10 {
+            output.truncate(10);
+            output.push(OutputItem::String("...Additional output truncated".into()));
+        }
         output.push(OutputItem::Error(error.show(false)));
     }
     output

@@ -5,6 +5,9 @@
   - Guided examples
 - Test suite
 - Optimizations
+  - Rank 1 member
+    - Per-element cmp
+    - Dedup
   - Windowed reduce?
 - Multimedia
   - Sound input

@@ -10,6 +10,7 @@ use std::{
     sync::Arc,
 };
 
+use instant::Duration;
 use parking_lot::Mutex;
 
 use crate::{
@@ -37,6 +38,8 @@ pub struct Uiua {
     scope: Scope,
     lower_scopes: Vec<Scope>,
     mode: RunMode,
+    execution_limit: Option<f64>,
+    execution_start: f64,
     // IO
     current_imports: Arc<Mutex<HashSet<PathBuf>>>,
     imports: Arc<Mutex<HashMap<PathBuf, Vec<Value>>>>,
@@ -116,6 +119,8 @@ impl Uiua {
             imports: Arc::new(Mutex::new(HashMap::new())),
             mode: RunMode::Normal,
             backend: Arc::new(NativeSys),
+            execution_limit: None,
+            execution_start: 0.0,
         }
     }
     /// Create a new Uiua runtime with a custom IO backend
@@ -130,6 +135,11 @@ impl Uiua {
     }
     pub fn downcast_backend<T: SysBackend>(&self) -> Option<&T> {
         self.backend.any().downcast_ref()
+    }
+    /// Limit the execution duration
+    pub fn with_execution_limit(mut self, limit: Duration) -> Self {
+        self.execution_limit = Some(limit.as_millis() as f64);
+        self
     }
     /// Set the [`RunMode`]
     ///
@@ -176,6 +186,7 @@ impl Uiua {
         Ok(self.stack.split_off(start_height.min(end_height)))
     }
     fn load_impl(&mut self, input: &str, path: Option<&Path>) -> UiuaResult<&mut Self> {
+        self.execution_start = instant::now();
         let (items, errors) = parse(input, path);
         if !errors.is_empty() {
             return Err(errors.into());
@@ -643,6 +654,11 @@ backtrace:
             } else {
                 // Go to next instruction
                 self.scope.call.last_mut().unwrap().pc += 1;
+                if let Some(limit) = self.execution_limit {
+                    if instant::now() - self.execution_start > limit {
+                        return Err(self.error("Maximum execution time exceeded"));
+                    }
+                }
             }
         }
         Ok(())
@@ -979,6 +995,8 @@ backtrace:
             current_imports: self.current_imports.clone(),
             imports: self.imports.clone(),
             backend: self.backend.clone(),
+            execution_limit: self.execution_limit,
+            execution_start: self.execution_start,
         };
         self.backend
             .spawn(env, Box::new(f))

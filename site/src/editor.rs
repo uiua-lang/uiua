@@ -1107,17 +1107,15 @@ fn set_code_html(id: &str, code: &str) {
         )
         .replace("<span class=\"code-span\"></span>", "");
 
-    // if html.is_empty() {
-    //     html = "<div class=\"code-line\"><span class=\"code-span\"> </span></div>".to_string();
-    // }
-
     elem.set_inner_html(&html);
 }
 
 /// Returns the output and the formatted code
 fn run_code(code: &str) -> Vec<OutputItem> {
     let io = WebBackend::default();
-    let mut env = Uiua::with_backend(io).with_mode(RunMode::All);
+    let mut env = Uiua::with_backend(io)
+        .with_mode(RunMode::All)
+        .with_execution_limit(Duration::from_secs(10));
     let mut error = None;
     let values = match env.load_str(code) {
         Ok(env) => env.take_stack(),

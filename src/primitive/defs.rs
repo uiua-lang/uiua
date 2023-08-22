@@ -597,6 +597,8 @@ primitive!(
     /// For index [rank] `2` or greater, it should hold that `pick``range``shape``duplicate``x` is equivalent to `x`.
     /// ex: ⊡⇡△. [1_2_3 4_5_6]
     (2, Pick, DyadicArray, ("pick", '⊡')),
+    /// End step of under pick
+    (3, Unpick, Misc),
     /// Select multiple rows from an array
     ///
     /// For a scalar selector, [select] is equivalent to [pick].

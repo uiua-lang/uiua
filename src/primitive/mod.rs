@@ -277,7 +277,6 @@ impl Primitive {
             Primitive::Join => env.dyadic_oo_env(Value::join)?,
             Primitive::Transpose => env.monadic_mut(Value::transpose)?,
             Primitive::InvTranspose => env.monadic_mut(Value::inv_transpose)?,
-            Primitive::Pick => env.dyadic_oo_env(Value::pick)?,
             Primitive::Replicate => env.dyadic_ro_env(Value::replicate)?,
             Primitive::Take => env.dyadic_oo_env(Value::take)?,
             Primitive::Constant => {
@@ -307,6 +306,13 @@ impl Primitive {
                 env.push(a);
             }
             Primitive::Grade => env.monadic_ref_env(|v, env| v.grade(env))?,
+            Primitive::Pick => env.dyadic_oo_env(Value::pick)?,
+            Primitive::Unpick => {
+                let from = env.pop(1)?;
+                let index = env.pop(2)?;
+                let into = env.pop(3)?;
+                env.push(from.unpick(index, into, env)?);
+            }
             Primitive::Select => env.dyadic_rr_env(Value::select)?,
             Primitive::Unselect => {
                 let from = env.pop(1)?;

@@ -578,6 +578,25 @@ impl Value {
             Value::Func(a) => Value::Func(a.pick_shaped(&index_shape, &index_data, env)?),
         })
     }
+    pub fn unpick(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+        let index = index.as_indices(env, "Index must be an array of integers")?;
+        Ok(match (self, into) {
+            (Value::Num(a), Value::Num(b)) => a.unpick_impl(&index, b, env)?.into(),
+            (Value::Byte(a), Value::Byte(b)) => a.unpick_impl(&index, b, env)?.into(),
+            (Value::Char(a), Value::Char(b)) => a.unpick_impl(&index, b, env)?.into(),
+            (Value::Func(a), Value::Func(b)) => a.unpick_impl(&index, b, env)?.into(),
+            (Value::Num(a), Value::Byte(b)) => a.unpick_impl(&index, b.convert(), env)?.into(),
+            (Value::Byte(a), Value::Num(b)) => a.convert().unpick_impl(&index, b, env)?.into(),
+            (a, b) => a
+                .coerce_to_functions(
+                    b,
+                    env,
+                    |a, b, env| a.unpick_impl(&index, b, env),
+                    |a, b| format!("Cannot unpick {a} array from {b} array"),
+                )?
+                .into(),
+        })
+    }
 }
 
 impl<T: ArrayValue> Array<T> {
@@ -640,6 +659,29 @@ impl<T: ArrayValue> Array<T> {
         }
         let shape = Shape::from(&self.shape[index.len()..]);
         Ok(Array::new(shape, picked))
+    }
+    fn unpick_impl(self, index: &[isize], mut from: Self, env: &Uiua) -> UiuaResult<Self> {
+        let expected_shape = &from.shape()[index.len()..];
+        if self.shape != expected_shape {
+            return Err(
+                env.error("Attempted to undo pick, but the shape of the selected array changed")
+            );
+        }
+        let mut start = 0;
+        for (i, (&ind, &f)) in index.iter().zip(from.shape()).enumerate() {
+            let ind = if ind >= 0 {
+                ind as usize
+            } else {
+                (f as isize + ind) as usize
+            };
+            start += ind * from.shape[i + 1..].iter().product::<usize>();
+        }
+        from.data.modify(|data| {
+            for (f, i) in data.make_mut().iter_mut().skip(start).zip(self.data) {
+                *f = i;
+            }
+        });
+        Ok(from)
     }
 }
 
@@ -1178,7 +1220,8 @@ impl<T: ArrayValue> Array<T> {
     fn unselect(&self, indices: &[isize], mut into: Self, env: &Uiua) -> UiuaResult<Self> {
         if self.row_count() != indices.len() {
             return Err(env.error(
-                "Attempted to undo selection, but the shape of the selected array changed",
+                "Attempted to undo selection, but \
+                the shape of the selected array changed",
             ));
         }
         let into_row_len = into.row_len();

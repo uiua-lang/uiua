@@ -363,7 +363,6 @@ backtrace:
                     (&instr, f.as_primitive().zip(g.as_function()))
                 {
                     if let Some((1, 1)) = g_func.args_outputs() {
-                        dbg!();
                         let g = g.clone();
                         instrs.pop();
                         instrs.pop();

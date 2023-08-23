@@ -440,23 +440,46 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     pub fn reshape(&mut self, shape: &Self, env: &Uiua) -> UiuaResult {
-        let target_shape = shape.as_naturals(
-            env,
-            "Shape should be a single natural number \
-            or a list of natural numbers",
-        )?;
-        let target_shape = Shape::from(&*target_shape);
-        match self {
-            Value::Num(a) => a.reshape(target_shape),
-            Value::Byte(a) => a.reshape(target_shape),
-            Value::Char(a) => a.reshape(target_shape),
-            Value::Func(a) => a.reshape(target_shape),
+        if let Ok(n) = shape.as_nat(env, "") {
+            match self {
+                Value::Num(a) => a.reshape_scalar(n),
+                Value::Byte(a) => a.reshape_scalar(n),
+                Value::Char(a) => a.reshape_scalar(n),
+                Value::Func(a) => a.reshape_scalar(n),
+            }
+        } else {
+            let target_shape = shape.as_naturals(
+                env,
+                "Shape should be a single natural number \
+                or a list of natural numbers",
+            )?;
+            let target_shape = Shape::from(&*target_shape);
+            match self {
+                Value::Num(a) => a.reshape(target_shape),
+                Value::Byte(a) => a.reshape(target_shape),
+                Value::Char(a) => a.reshape(target_shape),
+                Value::Func(a) => a.reshape(target_shape),
+            }
         }
         Ok(())
     }
 }
 
 impl<T: ArrayValue> Array<T> {
+    pub fn reshape_scalar(&mut self, count: usize) {
+        self.data.modify(|data| {
+            if count == 0 {
+                data.clear();
+                return;
+            }
+            data.reserve(count * data.len());
+            let row = data.clone();
+            for _ in 1..count {
+                data.extend_from_slice(&row);
+            }
+        });
+        self.shape.insert(0, count);
+    }
     pub fn reshape(&mut self, shape: Shape) {
         if self.data.is_empty() {
             return;

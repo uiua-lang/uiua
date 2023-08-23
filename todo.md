@@ -1,6 +1,6 @@
 - Under rotate
-- Restack function
 - Docs
+  - Advanced stack manipulation
   - Remove antistack from design
   - Control flow
   - Images

@@ -30,11 +30,11 @@ bytes ← -@\0
 # Make response: status mime bytes
 response ← (
   ∋··(⧻.)
-  ⊂ bytes print. $ HTTP/1.1 _
-                 $ Content-Type: _
-                 $ Content-Length: _
-                 $ 
-                 $ 
+  ⊂ bytes $ HTTP/1.1 _
+          $ Content-Type: _
+          $ Content-Length: _
+          $ 
+          $ 
 )
 
 # Handlers

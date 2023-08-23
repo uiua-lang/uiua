@@ -642,12 +642,15 @@ primitive!(
     (3, Undrop, Misc),
     /// Change the shape of an array
     ///
-    /// Shapes that have fewer elements than the original array will truncate it.
-    /// Shapes that have more elements than the original array will repeat elements.
-    ///
     /// ex: ↯ 2_3 [1 2 3 4 5 6]
-    /// ex: ↯ 5 2
+    /// Shapes that have fewer elements than the original array will truncate it.
+    /// ex: ↯ 2_2 [1_2_3 4_5_6]
+    /// Shapes that have more elements than the original array will repeat elements.
+    /// ex: ↯ [5] 2
     /// ex: ↯ 3_7 1_2_3_4
+    /// Scalar shapes will copy the array as rows of a new array.
+    /// ex: ↯ [4] [1 2 3 4 5]
+    ///   : ↯  4  [1 2 3 4 5]
     ///
     /// See also: [deshape]
     (2, Reshape, DyadicArray, ("reshape", '↯')),
@@ -656,13 +659,17 @@ primitive!(
     /// ex: ↻1 ⇡5
     /// ex: ↻2 ⇡5
     /// ex: ↻¯1 ⇡5
+    /// ex: ↻2 .↯3_4⇡12
+    ///
+    /// Multi-dimensional rotations are supported.
+    /// ex: ↻1_2 .↯4_5⇡20
     (2, Rotate, DyadicArray, ("rotate", '↻')),
     /// The n-wise windows of an array
     ///
-    /// Multi-dimensional window sizes are supported.
-    ///
     /// ex: ◫2 .⇡4
     /// ex: ◫4 .⇡6
+    ///
+    /// Multi-dimensional window sizes are supported.
     /// ex: ◫2_2 .[1_2_3 4_5_6 7_8_9]
     (2, Windows, DyadicArray, ("windows", '◫')),
     /// Use an array to replicate the elements of another array

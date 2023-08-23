@@ -87,11 +87,11 @@ impl<'a> VirtualEnv<'a> {
             }
             Instr::BeginArray => self.array_stack.push(self.stack.len()),
             Instr::EndArray { .. } => {
-                let len = self
+                let bottom = self
                     .array_stack
                     .pop()
                     .ok_or("EndArray without BeginArray")?;
-                let mut items: Vec<_> = self.stack.drain(self.stack.len() - len..).collect();
+                let mut items: Vec<_> = self.stack.drain(bottom..).collect();
                 items.reverse();
                 self.stack.push(BasicValue::Arr(items));
             }

@@ -139,16 +139,6 @@ pub fn Tour() -> impl IntoView {
         <p>"For more complex operations, though, you'll need to use "<PrimCode prim=Call/>". Using it with "<PrimCode prim=Under/>" will re-"<PrimCode prim=Constant/>" the result."</p>
         <Editor example="{\"dog\" \"cat\" \"fish\"}\n∵⍜!(⊂∶⇌.)."/>
 
-        <h2 id="the-antistack">"The Antistack"</h2>
-        <p>"Uiua has a second stack that is usually used to store values that you don't want to muck up the main stack."</p>
-        <p>"You can move values to the antistack with "<PrimCode prim=Save/>" and move them back with "<PrimCode prim=Load/>"."</p>
-        <Editor example="[↓1 2 3 ↑4 5]"/>
-        <p>"You can use "<PrimCode prim=Anti/>" to run a function on the antistack instead of the main stack."</p>
-        <Editor example="[~(+×.) 1 2 3 ↑↑ 4 5]"/>
-        <p>"With "<PrimCode prim=Dup/>" and "<PrimCode prim=Over/>", this gives you access to 2 values that you can save off and reuse as needed."</p>
-        <Editor example="[1 ↓ 2 ↓ 3~. 4~, 5~. 6 ↑↑ 7 8]"/>
-        <p>"All this lets Uiua get away with the fact that it doesn't have named local variables."</p>
-
         <h2 id="multimedia">"Multimedia"</h2>
         <p>"Uiua can natively generate images and audio."</p>
         <p>"On this site, simply leaving an array on the stack that "<em>"looks"</em>" like image or audio data will display it."</p>

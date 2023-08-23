@@ -121,36 +121,10 @@ primitive!(
     /// The formatter converts an empty `()` function into `noop`.
     /// ex: () # Try running to format
     (0(0), Noop, Stack, ("noop", '·')),
-    /// Move a value from the stack to the antistack
-    ///
-    /// Formats from `^`.
-    ///
-    /// Get the value back with [load].
-    /// ex: [↓ 1 2 3 ↑4 5]
-    ///
-    /// If you want to temporarily get a value on the top of the stack out of the way while you work on values below it, you can use [under][save].
-    /// ex: [⍜↑+ 1 2 3 4]
-    /// You can use as many `save`s as values you want to move out of the way.
-    /// ex: [⍜(↑↑↑)+ 1 2 3 4 5]
-    /// For deep stack manipulation, use this with [repeat].
-    /// ex: [⍜(⍥↑8)+ 1 2 3 4 5 6 7 8 9 10]
-    (1(0), Save, Stack, ("save", AsciiToken::Caret, '↑')),
-    /// Move a value from the antistack to the stack
-    ///
-    /// Move values to the antistack in the first place with [save].
-    /// ex: [↓ 1 2 3 ↑4 5]
-    ///
-    /// [load] is equivalent to (and formats from) [anti][noop].
-    /// ex: [⤹() 2 3 ↑4 5]
-    (0, Load, Stack, ("load", '↓')),
-    /// Call a function on the antistack and move the result to the stack
-    ///
-    /// [anti][noop] is equivalent to (and formats to) [load].
-    /// ex: [⤹() 2 3 ↑4 5]
-    ///
-    /// Combining [anti] with [duplicate] and [over] gives you a way to randomly sample up to two values from the antistack.
-    /// ex: [↓↓⤹,⤹.⤹,⤹,⤹.] ↑↑ 0 1
-    ([1], Anti, Stack, ("anti", '⤹')),
+    /// Move the top value on the stack 2 places down
+    (3(3), Roll, Stack, ("roll", '↷')),
+    /// Move the third value on the stack to the top
+    (3(3), Unroll, Stack),
     // Pervasive monadic ops
     /// Logical not
     ///
@@ -198,10 +172,10 @@ primitive!(
     /// ex: ○+η 1
     ///
     /// You can get an arcsine function with [invert].
-    /// ex: ↶○ 1
+    /// ex: ⌀○ 1
     ///
     /// You can get an arccosine function by [invert]ing the cosine.
-    /// ex: ↶(○+η) 1
+    /// ex: ⌀(○+η) 1
     ///
     /// You can get a tangent function by [divide]ing the [sine] by the cosine.
     /// ex: ÷○+η∶○. 0
@@ -868,8 +842,8 @@ primitive!(
     /// Most functions are not invertible.
     ///
     /// ex: √2
-    /// ex: ↶√2
-    ([1], Invert, OtherModifier, ("invert", '↶')),
+    /// ex: ⌀√2
+    ([1], Invert, OtherModifier, ("invert", '⌀')),
     /// Apply a function under another
     ///
     /// This is a more powerful version of [invert].

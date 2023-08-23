@@ -97,7 +97,6 @@ fn invert_instr_fragment(instrs: &[Instr]) -> Option<Vec<Instr>> {
         &(Val, ([Div], [Mul])),
         &invert_pow_pattern,
         &invert_log_pattern,
-        &invert_load_pattern,
         &invert_repeat_pattern,
     ];
 
@@ -369,18 +368,6 @@ fn invert_log_pattern(input: &mut &[Instr]) -> Option<Vec<Instr>> {
     } else {
         None
     }
-}
-
-fn invert_load_pattern(input: &mut &[Instr]) -> Option<Vec<Instr>> {
-    if let [Instr::Push(val), Instr::Prim(Primitive::Anti, span), ..] = input {
-        if let Some(f) = val.as_function() {
-            if let [Instr::Prim(Primitive::Noop, _)] = &f.instrs[..] {
-                *input = &input[2..];
-                return Some(vec![Instr::Prim(Primitive::Save, *span)]);
-            }
-        }
-    }
-    None
 }
 
 fn invert_repeat_pattern(input: &mut &[Instr]) -> Option<Vec<Instr>> {

@@ -3,8 +3,7 @@
 use std::{env, fs, path::Path};
 
 use crate::{
-    ast::*, function::Signature, grid_fmt::GridFmt, lex::Sp, parse::parse, primitive::Primitive,
-    UiuaError, UiuaResult,
+    ast::*, function::Signature, grid_fmt::GridFmt, lex::Sp, parse::parse, UiuaError, UiuaResult,
 };
 
 #[derive(Debug, Clone)]
@@ -219,19 +218,6 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig, dept
             }
         }
         Word::Modified(m) => {
-            // Special case for `anti noop` -> `load`
-            if let (
-                Primitive::Anti,
-                [Sp {
-                    value: Word::Primitive(Primitive::Noop),
-                    ..
-                }],
-            ) = (m.modifier.value, &m.operands[..])
-            {
-                output.push(Primitive::Load.names().unwrap().unicode.unwrap());
-                return;
-            }
-            // Normal case
             output.push_str(&m.modifier.value.to_string());
             format_words(output, &m.operands, config, true, depth);
         }

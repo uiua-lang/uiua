@@ -5,7 +5,7 @@ use leptos::*;
 use leptos_router::*;
 use uiua::{example_ua, primitive::Primitive, SysOp};
 
-use crate::{editor::*, examples::QUADRATIC, PrimCode, PrimCodes};
+use crate::{editor::*, PrimCode, PrimCodes};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
 pub enum TutorialPage {
@@ -15,7 +15,6 @@ pub enum TutorialPage {
     Types,
     Bindings,
     Functions,
-    Antistack,
     Modules,
     Testing,
 }
@@ -32,7 +31,6 @@ impl TutorialPage {
             Self::Types => "Types",
             Self::Bindings => "Bindings",
             Self::Functions => "Modifiers and Functions",
-            Self::Antistack => "The Antistack",
             Self::Modules => "Modules",
             Self::Testing => "Testing",
         }
@@ -48,7 +46,6 @@ pub fn Tutorial(page: TutorialPage) -> impl IntoView {
         TutorialPage::Types => view! {  <TutorialTypes/> }.into_view(),
         TutorialPage::Bindings => view! {  <TutorialBindings/> }.into_view(),
         TutorialPage::Functions => view! {  <TutorialFunctions/> }.into_view(),
-        TutorialPage::Antistack => view! {  <TutorialAntistack/> }.into_view(),
         TutorialPage::Modules => view! {  <TutorialModules/> }.into_view(),
         TutorialPage::Testing => view! {  <TutorialTesting/> }.into_view(),
     };
@@ -540,40 +537,6 @@ X 5"/>
         <p>"Stack signatures are useful for documenting functions and for making sure that functions are used correctly."</p>
         <p>"In addition, an error is thrown if a function's signature can be derived and the derived signature does not match the declared signature. This can help validate that a function works correctly."</p>
         <Editor example="≡(|2 ↻.) 1_2_3 ↯3_3⇡9"/>
-    }
-}
-
-#[component]
-fn TutorialAntistack() -> impl IntoView {
-    use Primitive::*;
-    view! {
-        <h1>"The Antistack"</h1>
-        <p>"Uiua does not have named local variables. With only "<PrimCode prim=Dup/>", "<PrimCode prim=Flip/>", and "<PrimCode prim=Over/>", how do you juggle more than 2 values at a time?"</p>
-        <p>"One thing you could do is collect all the values you want to work with into an array, rearrange them, and then unpack them back onto the stack."</p>
-        <p>"However, this is a lot of work, is inefficient, and does not work for non-homogenous values."</p>
-        <p>"Uiua actually has two value stacks, the stack, and the "<em>"antistack"</em>". Values can be freely moved between the stack and antistack with a few functions."</p>
-
-        <h2 id="save-and-load"><PrimCode prim=Save/>" and "<PrimCode prim=Load/></h2>
-        <p><PrimCode prim=Save/>" moves a value from the stack to the antistack."</p>
-        <p><PrimCode prim=Load/>" moves a value from the antistack to the stack."</p>
-        <Editor example="[↓1 2 3 ↑4 5]"/>
-        <p>"This is useful for when you want to work on values that are not on the top of the stack without "<PrimCode prim=Pop/>"ping."</p>
-        <Editor example="[↓↓+↑↑ 1 2 3 4]"/>
-        <p><PrimCode prim=Save/>" and "<PrimCode prim=Load/>" also work with "<PrimCode prim=Under/>"."</p>
-        <Editor example="[⍜'↑↑+ 1 2 3 4]"/>
-
-        <h2 id="anti"><PrimCode prim=Anti/></h2>
-        <p><PrimCode prim=Load/>" can move a value from the antistack to the stack, but what if you want to just copy it?"</p>
-        <p>"You "<em>"could"</em>" just "<PrimCode prim=Load/>", "<PrimCode prim=Dup/>" and "<PrimCode prim=Save/>" again. That's fine, but what if you want the second-to-top value from the antistack? Then things would get more complicated. What if you want to run arbitrary code on the antistack?"</p>
-        <p>"The answer is "<PrimCode prim=Anti/>"."</p>
-        <p><PrimCode prim=Anti/>" is a modifier that runs its function on the antistack instead of the stack and then moves the result to the stack."</p>
-        <p>"You can copy the top value from the antistack to the stack with "<PrimCode prim=Anti/><PrimCode prim=Dup/>". You can do the same with the second-to-top value with"<PrimCode prim=Anti/><PrimCode prim=Over/>"."</p>
-        <Editor example="[1 ↓ 2 ↓ 3~. 4~, 5~. 6 ↑↑ 7 8]"/>
-        <p>"This effectively gives you an additional 2 values that you can easily access without messing up the stack."</p>
-        <br/>
-        <p>"For a more concrete example, let's say you wanted to write a function that computes the "<a href="https://en.wikipedia.org/wiki/Quadratic_formula">"Quadratic Formula"</a>". It takes three values and uses them all in different positions and repetitions. With only the stack, you would have a very hard time juggling them."</p>
-        <p>"With the antistack, you can "<PrimCode prim=Save/>" "<code>"a"</code>" and "<code>"b"</code>", do the single operation that involves "<code>"c"</code>", and then use "<PrimCode prim=Anti/>" and "<PrimCode prim=Load/>" whenever you need "<code>"a"</code>" or "<code>"b"</code>"."</p>
-        <Editor example=QUADRATIC/>
     }
 }
 

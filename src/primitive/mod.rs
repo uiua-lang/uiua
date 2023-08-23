@@ -111,11 +111,11 @@ impl fmt::Display for Primitive {
         } else {
             use Primitive::*;
             match self {
-                InvTranspose => write!(f, "↶{Transpose}"),
-                InverseBits => write!(f, "↶{Bits}"),
-                Uncouple => write!(f, "↶{Couple}"),
-                Untake => write!(f, "↶{Take}"),
-                Undrop => write!(f, "↶{Drop}"),
+                InvTranspose => write!(f, "⌀{Transpose}"),
+                InverseBits => write!(f, "⌀{Bits}"),
+                Uncouple => write!(f, "⌀{Couple}"),
+                Untake => write!(f, "⌀{Take}"),
+                Undrop => write!(f, "⌀{Drop}"),
                 Cos => write!(f, "{Sin}{Add}{Add}"),
                 Last => write!(f, "{First}{Reverse}"),
                 _ => write!(f, "{self:?}"),
@@ -165,8 +165,8 @@ impl Primitive {
             InverseBits => Bits,
             Couple => Uncouple,
             Call => Constant,
-            Load => Save,
-            Save => Load,
+            Roll => Unroll,
+            Unroll => Roll,
             _ => return None,
         })
     }
@@ -393,23 +393,21 @@ impl Primitive {
             Primitive::Pop => {
                 env.pop(1)?;
             }
-            Primitive::Save => {
-                let val = env.pop(1)?;
-                env.push_anti(val);
+            Primitive::Roll => {
+                let a = env.pop(1)?;
+                let b = env.pop(2)?;
+                let c = env.pop(3)?;
+                env.push(a);
+                env.push(c);
+                env.push(b);
             }
-            Primitive::Load => {
-                let val = env.pop_anti(1)?;
-                env.push(val);
-            }
-            Primitive::Anti => {
-                let f = env.pop(1)?;
-                env.with_stacks_swapped(|env| {
-                    env.push(f);
-                    env.call()?;
-                    let val = env.pop("antistack return value")?;
-                    env.push_anti(val);
-                    Ok(())
-                })?;
+            Primitive::Unroll => {
+                let a = env.pop(1)?;
+                let b = env.pop(2)?;
+                let c = env.pop(3)?;
+                env.push(b);
+                env.push(a);
+                env.push(c);
             }
             Primitive::Invert => {
                 let f = env.pop(1)?;

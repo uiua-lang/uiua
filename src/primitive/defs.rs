@@ -126,6 +126,20 @@ primitive!(
     /// Move the third value on the stack to the top
     (3(3), Unroll, Stack, ("unroll", '↶')),
     /// Rearrange the stack
+    ///
+    /// [restack] is the most powerful stack manipulation function.
+    /// It is similar to [select], except it works on the stack instead of an array.
+    ///
+    /// [restack] takes a list of indices and rearranges those values on the stack in the given order.
+    /// ex: ⇵[1 0 2 2] 1 2 3
+    ///
+    /// All other built-in stack manipulation functions can be implemented with [restack].
+    /// [duplicate] is `⇵``[0 0]`.
+    /// [over] is `⇵``[1 0 1]`.
+    /// [flip] is `⇵``[1 0]`.
+    /// [pop] is `⇵``[1]`.
+    /// [roll] is `⇵``[1 2 0]`.
+    /// [unroll] is `⇵``[2 0 1]`.
     (1(None), Restack, Stack, ("restack", '⇵')),
     // Pervasive monadic ops
     /// Logical not

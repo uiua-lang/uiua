@@ -1,9 +1,8 @@
 - Add forking functions
-  - Trident
   - Tines
-  - Remove antistack again
 - Under rotate
 - Docs
+  - Remove antistack from design
   - Control flow
   - Images
   - System functions

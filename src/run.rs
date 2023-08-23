@@ -3,7 +3,7 @@ use std::{
     collections::{hash_map::DefaultHasher, HashMap, HashSet},
     fs,
     hash::{Hash, Hasher},
-    mem::{swap, take},
+    mem::take,
     panic::{catch_unwind, AssertUnwindSafe},
     path::{Path, PathBuf},
     str::FromStr,
@@ -34,7 +34,6 @@ pub struct Uiua {
     spans: Arc<Mutex<Vec<Span>>>,
     // Runtime
     stack: Vec<Value>,
-    antistack: Vec<Value>,
     scope: Scope,
     lower_scopes: Vec<Scope>,
     mode: RunMode,
@@ -49,7 +48,6 @@ pub struct Uiua {
 #[derive(Default, Clone)]
 pub struct Scope {
     array: Vec<usize>,
-    antiarray: Vec<usize>,
     call: Vec<StackFrame>,
     names: HashMap<Ident, usize>,
     local: bool,
@@ -110,7 +108,6 @@ impl Uiua {
         Uiua {
             spans: Arc::new(Mutex::new(vec![Span::Builtin])),
             stack: Vec::new(),
-            antistack: Vec::new(),
             scope: Scope::default(),
             lower_scopes: Vec::new(),
             globals: Arc::new(Mutex::new(Vec::new())),
@@ -830,41 +827,12 @@ backtrace:
         }
         res
     }
-    /// Pop a value from the antistack
-    pub fn pop_anti(&mut self, arg: impl StackArg) -> UiuaResult<Value> {
-        let res = self.antistack.pop().ok_or_else(|| {
-            self.error(format!(
-                "Antistack was empty when evaluating {}",
-                arg.arg_name()
-            ))
-        });
-        if let Some(bottom) = self.scope.antiarray.last_mut() {
-            *bottom = (*bottom).min(self.antistack.len());
-        }
-        res
-    }
     /// Push a value onto the stack
     pub fn push(&mut self, val: impl Into<Value>) {
         self.stack.push(val.into());
     }
-    /// Push a value onto the antistack
-    pub fn push_anti(&mut self, val: impl Into<Value>) {
-        self.antistack.push(val.into());
-    }
-    /// Do something on the antistack
-    pub fn with_stacks_swapped(&mut self, f: impl FnOnce(&mut Self) -> UiuaResult) -> UiuaResult {
-        swap(&mut self.stack, &mut self.antistack);
-        swap(&mut self.scope.array, &mut self.scope.antiarray);
-        let res = f(self);
-        swap(&mut self.stack, &mut self.antistack);
-        swap(&mut self.scope.array, &mut self.scope.antiarray);
-        res
-    }
     /// Take the entire stack
-    ///
-    /// Clears the antistack as well
     pub fn take_stack(&mut self) -> Vec<Value> {
-        self.antistack.clear();
         take(&mut self.stack)
     }
     pub(crate) fn monadic_ref<V: Into<Value>>(&mut self, f: fn(&Value) -> V) -> UiuaResult {
@@ -1032,7 +1000,6 @@ backtrace:
                 .stack
                 .drain(self.stack.len() - capture_count..)
                 .collect(),
-            antistack: Vec::new(),
             scope: self.scope.clone(),
             lower_scopes: self.lower_scopes.last().cloned().into_iter().collect(),
             mode: self.mode,

@@ -23,7 +23,7 @@ pub(crate) fn instrs_signature(instrs: &[Instr]) -> Option<Signature> {
     };
     if let Err(_e) = env.instrs(instrs) {
         // println!("instrs: {:?}", instrs);
-        // println!("unable to count a/o: {}", _e);
+        // println!("unable to count sig: {}", _e);
         return None;
     }
     let args = START_HEIGHT.saturating_sub(env.min_height);
@@ -46,6 +46,23 @@ enum BasicValue<'a> {
     Num(f64),
     Arr(usize),
     Other,
+}
+
+impl<'a> BasicValue<'a> {
+    fn signature(&self) -> Option<Signature> {
+        match self {
+            BasicValue::Func(f) => f.signature(),
+            BasicValue::Num(_) => Some(Signature {
+                args: 0,
+                outputs: 1,
+            }),
+            BasicValue::Arr(_) => Some(Signature {
+                args: 0,
+                outputs: 1,
+            }),
+            BasicValue::Other => None,
+        }
+    }
 }
 
 impl<'a> VirtualEnv<'a> {
@@ -101,7 +118,7 @@ impl<'a> VirtualEnv<'a> {
                             let n = n as usize;
                             if let BasicValue::Func(f) = f {
                                 let sig = f.signature().ok_or_else(|| {
-                                    format!("Repeat's function {f:?} had indeterminate a/o")
+                                    format!("Repeat's function {f:?} had indeterminate sig")
                                 })?;
                                 let m_args = sig.outputs * n;
                                 self.stack.push(BasicValue::Func(f));
@@ -114,6 +131,43 @@ impl<'a> VirtualEnv<'a> {
                         }
                     } else {
                         return Err("Repeat without a number".into());
+                    }
+                }
+                Fork => {
+                    let f = self.pop()?;
+                    let g = self.pop()?;
+                    self.pop()?;
+                    self.pop()?;
+                    self.set_min_height();
+                    let f_sig = f
+                        .signature()
+                        .ok_or("Fork's function had indeterminate sig")?;
+                    let g_sig = g
+                        .signature()
+                        .ok_or("Fork's function had indeterminate sig")?;
+                    for _ in 0..f_sig.outputs + g_sig.outputs {
+                        self.stack.push(BasicValue::Other);
+                    }
+                }
+                Trident => {
+                    let f = self.pop()?;
+                    let g = self.pop()?;
+                    let h = self.pop()?;
+                    self.pop()?;
+                    self.pop()?;
+                    self.pop()?;
+                    self.set_min_height();
+                    let f_sig = f
+                        .signature()
+                        .ok_or("Fork's function had indeterminate sig")?;
+                    let g_sig = g
+                        .signature()
+                        .ok_or("Fork's function had indeterminate sig")?;
+                    let h_sig = h
+                        .signature()
+                        .ok_or("Fork's function had indeterminate sig")?;
+                    for _ in 0..f_sig.outputs + g_sig.outputs + h_sig.outputs {
+                        self.stack.push(BasicValue::Other);
                     }
                 }
                 Dup => {
@@ -140,6 +194,24 @@ impl<'a> VirtualEnv<'a> {
                     self.stack.push(b);
                     self.stack.push(a);
                     self.stack.push(b);
+                }
+                Roll => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    let c = self.pop()?;
+                    self.set_min_height();
+                    self.stack.push(a);
+                    self.stack.push(c);
+                    self.stack.push(b);
+                }
+                Unroll => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    let c = self.pop()?;
+                    self.set_min_height();
+                    self.stack.push(b);
+                    self.stack.push(a);
+                    self.stack.push(c);
                 }
                 Call => self.handle_call(true)?,
                 Recur => return Err("Recur present".into()),
@@ -174,7 +246,7 @@ impl<'a> VirtualEnv<'a> {
             BasicValue::Func(f) => {
                 let sig = f
                     .signature()
-                    .ok_or_else(|| format!("Call's function {f:?} had indeterminate a/o"))?;
+                    .ok_or_else(|| format!("Call's function {f:?} had indeterminate sig"))?;
                 for _ in 0..sig.args {
                     self.pop()?;
                 }
@@ -202,7 +274,7 @@ impl<'a> VirtualEnv<'a> {
             };
             let sig = f
                 .signature()
-                .ok_or_else(|| format!("{prim}'s function {f:?} had indeterminate a/o"))?;
+                .ok_or_else(|| format!("{prim}'s function {f:?} had indeterminate sig"))?;
             if sig.args != inner_sig.args {
                 return Err(format!(
                     "{prim}'s function {f:?} had {} args, expected {}",
@@ -229,7 +301,7 @@ impl<'a> VirtualEnv<'a> {
         if let BasicValue::Func(f) = self.pop()? {
             let sig = f
                 .signature()
-                .ok_or_else(|| format!("{prim}'s function {f:?} had indeterminate a/o"))?;
+                .ok_or_else(|| format!("{prim}'s function {f:?} had indeterminate sig"))?;
             if sig.outputs != 1 {
                 return Err(format!("{prim}'s function {f:?} did not return 1 value",));
             }

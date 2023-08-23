@@ -17,11 +17,9 @@ print $ Server started
 
 # Mime types
 getext ← !⊢⇌ ⊜□ ≠@. .
-⌀⊟⍉[
-  {"js" "text/javascript"}
-  {"html" "text/html"}
-  {"wasm" "application/wasm"}
-]
+⌀⊟⍉[{"js" "text/javascript"}
+    {"html" "text/html"}
+    {"wasm" "application/wasm"}]
 extmimeExt ← 
 extmimeMime ← 
 extmime ← !⊏∶⊂extmimeMime □⊂"text/"∶ ⊗∶extmimeExt□.
@@ -31,12 +29,12 @@ bytes ← -@\0
 
 # Make response: status mime bytes
 response ← (
-  ↓ ∶↓ ⧻. ↑↑
-  ⊂ bytes $ HTTP/1.1 _
-          $ Content-Length: _
-          $ Content-Type: _
-          $ 
-          $ 
+  ∋··(⧻.)
+  ⊂ bytes print. $ HTTP/1.1 _
+                 $ Content-Type: _
+                 $ Content-Length: _
+                 $ 
+                 $ 
 )
 
 # Handlers
@@ -53,18 +51,19 @@ page ← ⍣(
 home ← page "/index.html"
 
 respond ← ↰1(
-  close ⍜↑(
-    # Extract path from request
-    !⊡1 ⊜□≠@ . readuntil "\r\n\r\n"~.
-    print "Request:"
-    print.
+  # Extract path from request
+  !⊡1 ⊜□≠@ . readuntil "\r\n\r\n".
+  print "Request:"
+  print.
 
-    # Route to handler
-    !(page)_(home;) ≅"/"..
+  # Route to handler
+  !(|1 page)_(|1 home;) ≅"/".
+  print "Response:"
+  prin⧻.
+  print " bytes"
 
-    # Send response
-    write∶~.
-  )
+  # Send response
+  ↢(|2 0 close;)(|2 0 write)
 )
 
 ⍥(⍣(respond)print tcpaccept listener)∞

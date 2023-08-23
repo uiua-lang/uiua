@@ -208,7 +208,7 @@ sys_op! {
     /// Close a stream by its handle
     ///
     /// This will close files, tcp listeners, and tcp sockets.
-    (1, Close, "close"),
+    (1(0), Close, "close"),
 }
 
 /// A handle to an IO stream

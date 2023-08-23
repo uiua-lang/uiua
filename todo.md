@@ -1,6 +1,5 @@
-- Add forking functions
-  - Tines
 - Under rotate
+- Restack function
 - Docs
   - Remove antistack from design
   - Control flow

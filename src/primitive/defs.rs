@@ -124,7 +124,7 @@ primitive!(
     /// Move the top value on the stack 2 places down
     (3(3), Roll, Stack, ("roll", '↷')),
     /// Move the third value on the stack to the top
-    (3(3), Unroll, Stack),
+    (3(3), Unroll, Stack, ("unroll", '↶')),
     // Pervasive monadic ops
     /// Logical not
     ///

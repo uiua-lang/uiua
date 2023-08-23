@@ -1,4 +1,3 @@
-- Under rotate
 - Docs
   - Advanced stack manipulation
   - Remove antistack from design

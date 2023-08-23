@@ -969,7 +969,7 @@ impl<T: ArrayValue> Array<T> {
             [] => into,
             &[untaking] => {
                 let abs_untaking = untaking.unsigned_abs();
-                if from.row_count() == abs_untaking {
+                if from.shape[1..] == into.shape[1..] {
                     let into_row_len = into.row_len();
                     let into_row_count = into.row_count();
                     into.data.modify(|data| {
@@ -994,22 +994,28 @@ impl<T: ArrayValue> Array<T> {
                 } else if from.rank() == into.rank() {
                     let into = into.drop(&[untaking], env)?;
                     if untaking >= 0 {
-                        from.join(into, env)?
+                        from.join(into, env)
                     } else {
-                        into.join(from, env)?
+                        into.join(from, env)
                     }
+                    .map_err(|_| {
+                        env.error(
+                            "Attempted to undo take, but the taken section \
+                            was modified to an incompatible shape",
+                        )
+                    })?
                 } else {
                     return Err(env.error(format!(
-                        "Attempted to undo take, but the taken section's \
-                        row count was modified from {} to {}",
-                        abs_untaking,
-                        from.row_count()
+                        "Attempted to undo take, but the shape of the taken section's \
+                        rows was modified from {} to {}",
+                        FormatShape(&into.shape[1..]),
+                        FormatShape(&from.shape[1..])
                     )));
                 }
             }
             &[untaking, ref sub_index @ ..] => {
                 let abs_untaking = untaking.unsigned_abs();
-                if from.row_count() == abs_untaking {
+                if from.shape[1..] == into.shape[1..] {
                     let into_row_count = into.row_count();
                     let mut new_rows = Vec::with_capacity(into_row_count);
                     if untaking >= 0 {
@@ -1028,16 +1034,22 @@ impl<T: ArrayValue> Array<T> {
                 } else if from.rank() == into.rank() {
                     let into = into.drop(&[untaking], env)?;
                     if untaking >= 0 {
-                        from.join(into, env)?
+                        from.join(into, env)
                     } else {
-                        into.join(from, env)?
+                        into.join(from, env)
                     }
+                    .map_err(|_| {
+                        env.error(
+                            "Attempted to undo take, but the taken section \
+                            was modified to an incompatible shape",
+                        )
+                    })?
                 } else {
                     return Err(env.error(format!(
-                        "Attempted to undo take, but the taken section's \
-                    row count was modified from {} to {}",
-                        abs_untaking,
-                        from.row_count()
+                        "Attempted to undo take, but the shape of the taken section's \
+                        rows was modified from {} to {}",
+                        FormatShape(&into.shape[1..]),
+                        FormatShape(&from.shape[1..])
                     )));
                 }
             }

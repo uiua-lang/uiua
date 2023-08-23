@@ -959,7 +959,9 @@ primitive!(
     ///   : ⍚[¯1 ∞]⊂ 1_2_3 4_5_6
     ([2], Level, OtherModifier, ("level", '⍚')),
     /// Call 2 functions on 2 values
-    ([2], Fork, OtherModifier, ("fork", '~')),
+    ([2], Fork, OtherModifier, ("fork", '↢')),
+    /// Call 3 functions on 3 values
+    ([3], Trident, OtherModifier, ("trident", '∋')),
     /// Call a function and catch errors
     ///
     /// If the first function errors, the second function is called with the error value.

@@ -437,6 +437,7 @@ impl Primitive {
                 })?;
             }
             Primitive::Fork => fork::fork(env)?,
+            Primitive::Trident => fork::trident(env)?,
             Primitive::Try => {
                 let f = env.pop(1)?;
                 let handler = env.pop(2)?;

@@ -1126,3 +1126,21 @@ where
         self().arg_name()
     }
 }
+
+pub struct FunctionArg<T>(pub T);
+pub struct ArrayArg<T>(pub T);
+
+impl<T: StackArg> StackArg for FunctionArg<T> {
+    fn arg_name(self) -> String {
+        format!("function {}", self.0.arg_name())
+    }
+}
+
+impl<T> StackArg for ArrayArg<T>
+where
+    T: StackArg,
+{
+    fn arg_name(self) -> String {
+        format!("array {}", self.0.arg_name())
+    }
+}

@@ -6,6 +6,7 @@ use crate::{
 };
 
 mod dyadic;
+pub mod fork;
 pub(crate) mod invert;
 pub mod loops;
 mod monadic;

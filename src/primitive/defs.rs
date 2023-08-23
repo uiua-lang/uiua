@@ -141,16 +141,16 @@ primitive!(
     /// ex: [↓ 1 2 3 ↑4 5]
     ///
     /// [load] is equivalent to (and formats from) [anti][noop].
-    /// ex: [~() 2 3 ↑4 5]
+    /// ex: [⤹() 2 3 ↑4 5]
     (0, Load, Stack, ("load", '↓')),
     /// Call a function on the antistack and move the result to the stack
     ///
     /// [anti][noop] is equivalent to (and formats to) [load].
-    /// ex: [~() 2 3 ↑4 5]
+    /// ex: [⤹() 2 3 ↑4 5]
     ///
     /// Combining [anti] with [duplicate] and [over] gives you a way to randomly sample up to two values from the antistack.
-    /// ex: [↓↓~,~.~,~,~.] ↑↑ 0 1
-    ([1], Anti, Stack, ("anti", '~')),
+    /// ex: [↓↓⤹,⤹.⤹,⤹,⤹.] ↑↑ 0 1
+    ([1], Anti, Stack, ("anti", '⤹')),
     // Pervasive monadic ops
     /// Logical not
     ///
@@ -958,6 +958,8 @@ primitive!(
     /// ex:       ∺⊂ 1_2_3 4_5_6
     ///   : ⍚[¯1 ∞]⊂ 1_2_3 4_5_6
     ([2], Level, OtherModifier, ("level", '⍚')),
+    /// Call 2 functions on 2 values
+    ([2], Fork, OtherModifier, ("fork", '~')),
     /// Call a function and catch errors
     ///
     /// If the first function errors, the second function is called with the error value.

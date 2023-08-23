@@ -19,8 +19,12 @@ use enum_iterator::{all, Sequence};
 use rand::prelude::*;
 
 use crate::{
-    algorithm::loops, function::Function, lex::AsciiToken, sys::*, value::*, Uiua, UiuaError,
-    UiuaResult,
+    algorithm::{fork, loops},
+    function::Function,
+    lex::AsciiToken,
+    sys::*,
+    value::*,
+    Uiua, UiuaError, UiuaResult,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Sequence)]
@@ -335,6 +339,9 @@ impl Primitive {
             Primitive::Last => env.monadic_env(Value::last)?,
             Primitive::Len => env.monadic_ref(Value::row_count)?,
             Primitive::Rank => env.monadic_ref(Value::rank)?,
+            Primitive::Shape => {
+                env.monadic_ref(|v| v.shape().iter().copied().collect::<Value>())?
+            }
             Primitive::Bits => env.monadic_ref_env(Value::bits)?,
             Primitive::InverseBits => env.monadic_ref_env(Value::inverse_bits)?,
             Primitive::Fold => loops::fold(env)?,
@@ -404,19 +411,6 @@ impl Primitive {
                     Ok(())
                 })?;
             }
-            Primitive::Try => {
-                let f = env.pop(1)?;
-                let handler = env.pop(2)?;
-                let size = env.stack_size();
-                env.push(f);
-                if let Err(e) = env.call() {
-                    env.truncate_stack(size);
-                    env.backend.save_error_color(&e);
-                    env.push(e.value());
-                    env.push(handler);
-                    env.call()?;
-                }
-            }
             Primitive::Invert => {
                 let f = env.pop(1)?;
                 let inv_f = f.invert(env)?;
@@ -442,15 +436,26 @@ impl Primitive {
                     env.call()
                 })?;
             }
+            Primitive::Fork => fork::fork(env)?,
+            Primitive::Try => {
+                let f = env.pop(1)?;
+                let handler = env.pop(2)?;
+                let size = env.stack_size();
+                env.push(f);
+                if let Err(e) = env.call() {
+                    env.truncate_stack(size);
+                    env.backend.save_error_color(&e);
+                    env.push(e.value());
+                    env.push(handler);
+                    env.call()?;
+                }
+            }
             Primitive::Assert => {
                 let msg = env.pop(1)?;
                 let cond = env.pop(2)?;
                 if !cond.as_nat(env, "").is_ok_and(|n| n == 1) {
                     return Err(UiuaError::Throw(msg.into(), env.span().clone()));
                 }
-            }
-            Primitive::Shape => {
-                env.monadic_ref(|v| v.shape().iter().copied().collect::<Value>())?
             }
             Primitive::Rand => {
                 thread_local! {

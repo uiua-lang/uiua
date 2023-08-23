@@ -1,3 +1,7 @@
+- Add forking functions
+  - Trident
+  - Roads
+  - Remove antistack again
 - Under rotate
 - Docs
   - Control flow

@@ -305,7 +305,7 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example="[1_2_3 4_5_6]"/>
         <Editor example="[...[1 2 3]]"/>
         <p>"More preceisely, stack notation "<PrimCode prim=Couple/>"s the first two stack items created between the "<code>"[]"</code>"s and "<PrimCode prim=Join/>"s the rest to that coupling."</p>
-        <p>"Unlike strand notation, stack notation may span multiple lines. The lines are still executed in the normal order."</p>
+        <p>"Unlike strand notation, stack notation may span multiple lines. The lines are still executed right-to-left, but they are executud bottom-to-top so that the arrays come out the same way they look in the code."</p>
         <Editor example="\
 [1 2 3
  4 5 6
@@ -511,6 +511,13 @@ fn TutorialFunctions() -> impl IntoView {
         <Editor example="≡(⊢⇌) .[2_5_3 0_2_1 0_0_2]"/>
         <p>"If you want to make an inline function with exactly 2 terms, you can use a single preceding "<code>"'"</code>" instead of "<code>"()"</code>"s and save 1 character of space!"</p>
         <Editor example="/(-∶) 1_2_3_4_5\n/'-∶ 1_2_3_4_5"/>
+        <p>"Inline functions may span multiple lines. Unlike multiline stack notation arrays, which run bottom-to-top, multiline inline functions run top-to-bottom as other code does."</p>
+        <Editor example="\
+X ← (
+  ⊞=.⇡
+  ↥⇌.
+)
+X 5"/>
 
         <h2 id="format-strings">"Format Strings"</h2>
         <p>"Prefixing a string with "<code>"$"</code>", creates a format string. A format string is a function that is called immediately. It takes an argument for each "<code>"_"</code>" in the string and replaces it with the stringified version."</p>
@@ -522,6 +529,15 @@ fn TutorialFunctions() -> impl IntoView {
         <Editor example="$\"\\__\\_\" 27"/>
         <p>"Multi-line strings are implicitly format strings."</p>
         <Editor example="⍜⊟(∶/+.) 1 2\nprint $ Do you know what _ + _ is?\n      $ It's _!"/>
+
+        <h2 id="stack-signatures">"Stack Signatures"</h2>
+        <p>"Bindings and inline functions can have a "<em>"stack signature"</em>" declared with a "<code>"|"</code>" followed by 2 numbers. The first number is the number of arguments the function pops from the stack. The second number is the number of values the function pushes to the stack."</p>
+        <p>"In bindings, the "<code>"|"</code>" comes after the "<code>"←"</code>". In inline functions, it comes after the "<code>"("</code>"."</p>
+        <Editor example="TimesThree ← |1 1 ×3\nTimesThree 7"/>
+        <Editor example="∵(|2 1 ⊟.×) 1_2_3 4_5_6"/>
+        <p>"Stack signatures are useful for documenting functions and for making sure that functions are used correctly."</p>
+        <p>"In addition, an error is thrown if a function's signature can be derived and the derived signature does not match the declared signature. This can help validate that a function works correctly."</p>
+        <Editor example="≡(|2 1 ↻.) 1_2_3 ↯3_3⇡9"/>
     }
 }
 

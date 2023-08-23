@@ -141,7 +141,7 @@ pub fn MainPage() -> impl IntoView {
                 </div>
                 <div>
                     <h2>"Syntactic Simplicity"</h2>
-                    <p>"Uiua has a simple context-free grammar. Code runs from right to left, top to bottom, with only "<A href="/docs/functions#modifiers">"one precedence rule"</A>". As operators are to the left of their operands, Uiua code looks a little bit like a Lisp, but with fewer parentheses."</p>
+                    <p>"Uiua has a simple, context-free, LL(2) grammar. Code runs from right to left, top to bottom, with only "<A href="/docs/functions#modifiers">"one precedence rule"</A>". As operators are to the left of their operands, Uiua code looks a little bit like a Lisp, but with fewer parentheses."</p>
                 </div>
             </div>
             <div>

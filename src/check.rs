@@ -225,34 +225,41 @@ impl<'a> VirtualEnv<'a> {
                     self.stack.push(c);
                 }
                 Restack => {
-                    if let BasicValue::Arr(items) = self.pop()? {
-                        let mut indices = Vec::with_capacity(items.len());
-                        for item in items {
-                            if let BasicValue::Num(n) = item {
-                                if n.fract() == 0.0 && n >= 0.0 {
-                                    indices.push(n as usize);
+                    let ns = match self.pop()? {
+                        BasicValue::Arr(items) => {
+                            let mut ns = Vec::with_capacity(items.len());
+                            for item in items {
+                                if let BasicValue::Num(n) = item {
+                                    ns.push(n);
                                 } else {
-                                    return Err("Restack with a non-natural number".into());
+                                    return Err("Restack with an unknown index".into());
                                 }
-                            } else {
-                                return Err("Restack with an unknown index".into());
                             }
+                            ns
                         }
-                        if indices.is_empty() {
-                            self.set_min_height();
-                        } else {
-                            let max_index = *indices.iter().max().unwrap();
-                            let mut values = Vec::with_capacity(max_index + 1);
-                            for _ in 0..=max_index {
-                                values.push(self.pop()?);
-                            }
-                            self.set_min_height();
-                            for index in indices.into_iter().rev() {
-                                self.stack.push(values[index].clone());
-                            }
-                        }
+                        BasicValue::Num(n) => vec![n],
+                        _ => return Err("Restack without an array".into()),
+                    };
+                    if ns.is_empty() {
+                        self.set_min_height();
                     } else {
-                        return Err("Restack without an array".into());
+                        let mut indices = Vec::with_capacity(ns.len());
+                        for n in ns {
+                            if n.fract() == 0.0 && n >= 0.0 {
+                                indices.push(n as usize);
+                            } else {
+                                return Err("Restack with a non-natural index".into());
+                            }
+                        }
+                        let max_index = *indices.iter().max().unwrap();
+                        let mut values = Vec::with_capacity(max_index + 1);
+                        for _ in 0..=max_index {
+                            values.push(self.pop()?);
+                        }
+                        self.set_min_height();
+                        for index in indices.into_iter().rev() {
+                            self.stack.push(values[index].clone());
+                        }
                     }
                 }
                 Call => self.handle_call(true)?,

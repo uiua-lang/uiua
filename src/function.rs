@@ -111,7 +111,8 @@ pub struct Function {
     pub id: FunctionId,
     pub instrs: Vec<Instr>,
     pub kind: FunctionKind,
-    ad_cache: Arc<Mutex<Option<Option<Signature>>>>,
+    // Calculating the signature of a function can be expensive, so we cache it.
+    signature_cache: Arc<Mutex<Option<Option<Signature>>>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -131,7 +132,7 @@ impl Signature {
 
 impl fmt::Display for Signature {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "|{} {}", self.args, self.outputs)
+        write!(f, "|{}.{}", self.args, self.outputs)
     }
 }
 
@@ -244,11 +245,11 @@ impl Function {
             id,
             instrs: instrs.into(),
             kind,
-            ad_cache: Mutex::new(None).into(),
+            signature_cache: Mutex::new(None).into(),
         }
     }
     pub fn set_signature(&self, sig: Signature) {
-        *self.ad_cache.lock() = Some(Some(sig));
+        *self.signature_cache.lock() = Some(Some(sig));
     }
     pub fn into_inner(f: Arc<Self>) -> Self {
         Arc::try_unwrap(f).unwrap_or_else(|f| (*f).clone())
@@ -275,10 +276,13 @@ impl Function {
     /// Get how many arguments this function pops off the stack and how many it pushes.
     /// Returns `None` if either of these values are dynamic.
     pub fn signature(&self) -> Option<Signature> {
-        *self.ad_cache.lock().get_or_insert_with(|| match self.kind {
-            FunctionKind::Normal => instrs_signature(&self.instrs),
-            FunctionKind::Dynamic(DynamicFunctionKind { signature, .. }) => Some(signature),
-        })
+        *self
+            .signature_cache
+            .lock()
+            .get_or_insert_with(|| match self.kind {
+                FunctionKind::Normal => instrs_signature(&self.instrs),
+                FunctionKind::Dynamic(DynamicFunctionKind { signature, .. }) => Some(signature),
+            })
     }
     pub fn is_constant(&self) -> bool {
         matches!(&*self.instrs, [Instr::Push(_)])

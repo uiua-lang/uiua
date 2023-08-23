@@ -14,15 +14,14 @@ pub enum ParseError {
     Expected(Vec<Expectation>, Option<Box<Sp<Token>>>),
     InvalidNumber(String),
     Unexpected(Token),
-    InvalidArgCount(f64),
-    InvalidOutCount(f64),
+    InvalidArgCount(String),
+    InvalidOutCount(String),
 }
 
 #[derive(Debug, Clone)]
 pub enum Expectation {
     Term,
-    ArgCount,
-    OutCount,
+    ArgOutCount,
     Simple(AsciiToken),
 }
 
@@ -36,8 +35,7 @@ impl fmt::Display for Expectation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Expectation::Term => write!(f, "term"),
-            Expectation::ArgCount => write!(f, "argument count"),
-            Expectation::OutCount => write!(f, "output count"),
+            Expectation::ArgOutCount => write!(f, "argument/output count"),
             Expectation::Simple(s) => write!(f, "`{s}`"),
         }
     }
@@ -225,25 +223,42 @@ impl Parser {
         Some(span.sp(s))
     }
     fn try_signature(&mut self) -> Option<Sp<Signature>> {
-        fn get_count(parser: &mut Parser, ex: Expectation, f: fn(f64) -> ParseError) -> usize {
-            if let Some(sn) = parser.try_num() {
-                let n = sn.value.1;
-                if n.fract() == 0.0 && n >= 0.0 {
-                    n as usize
-                } else {
-                    parser.errors.push(sn.span.sp(f(n)));
-                    1
-                }
-            } else {
-                parser.errors.push(parser.expected([ex]));
-                1
-            }
-        }
         let start = self.try_exact(Bar)?;
         self.try_spaces();
-        let args = get_count(self, Expectation::ArgCount, ParseError::InvalidArgCount);
-        self.try_spaces();
-        let outs = get_count(self, Expectation::OutCount, ParseError::InvalidOutCount);
+        let (args, outs) = if let Some(sn) = self.try_num() {
+            if let Some((a, o)) = sn.value.0.split_once('.') {
+                let a = match a.parse() {
+                    Ok(a) => a,
+                    Err(_) => {
+                        self.errors
+                            .push(self.prev_span().sp(ParseError::InvalidArgCount(a.into())));
+                        1
+                    }
+                };
+                let o = match o.parse() {
+                    Ok(o) => o,
+                    Err(_) => {
+                        self.errors
+                            .push(self.prev_span().sp(ParseError::InvalidOutCount(o.into())));
+                        1
+                    }
+                };
+                (a, o)
+            } else {
+                let a = match sn.value.0.parse() {
+                    Ok(a) => a,
+                    Err(_) => {
+                        self.errors
+                            .push(self.prev_span().sp(ParseError::InvalidArgCount(sn.value.0)));
+                        1
+                    }
+                };
+                (a, 1)
+            }
+        } else {
+            self.errors.push(self.expected([Expectation::ArgOutCount]));
+            (1usize, 1usize)
+        };
         let end = self.prev_span();
         self.try_spaces();
         let span = start.merge(end);

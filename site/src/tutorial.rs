@@ -531,13 +531,15 @@ X 5"/>
         <Editor example="⍜⊟(∶/+.) 1 2\nprint $ Do you know what _ + _ is?\n      $ It's _!"/>
 
         <h2 id="stack-signatures">"Stack Signatures"</h2>
-        <p>"Bindings and inline functions can have a "<em>"stack signature"</em>" declared with a "<code>"|"</code>" followed by 2 numbers. The first number is the number of arguments the function pops from the stack. The second number is the number of values the function pushes to the stack."</p>
+        <p>"Bindings and inline functions can have a "<em>"stack signature"</em>" declared with a "<code>"|"</code>" followed by 1 or 2 numbers seperated by a "<code>"."</code>". The first number is the number of arguments the function pops from the stack. The second number is the number of values the function pushes to the stack."</p>
+        <p>"The second number is optional. If it is not given, it is assumed to be 1."</p>
         <p>"In bindings, the "<code>"|"</code>" comes after the "<code>"←"</code>". In inline functions, it comes after the "<code>"("</code>"."</p>
-        <Editor example="TimesThree ← |1 1 ×3\nTimesThree 7"/>
-        <Editor example="∵(|2 1 ⊟.×) 1_2_3 4_5_6"/>
+        <Editor example="TimesThree ← |1.1 ×3\nTimesThree 7"/>
+        <Editor example="TimesThree ← |1   ×3\nTimesThree 7"/>
+        <Editor example="∵(|2.1 ⊟.×) 1_2_3 4_5_6"/>
         <p>"Stack signatures are useful for documenting functions and for making sure that functions are used correctly."</p>
         <p>"In addition, an error is thrown if a function's signature can be derived and the derived signature does not match the declared signature. This can help validate that a function works correctly."</p>
-        <Editor example="≡(|2 1 ↻.) 1_2_3 ↯3_3⇡9"/>
+        <Editor example="≡(|2 ↻.) 1_2_3 ↯3_3⇡9"/>
     }
 }
 

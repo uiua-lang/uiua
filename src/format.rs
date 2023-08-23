@@ -122,8 +122,10 @@ fn format_item(output: &mut String, item: &Item, config: &FormatConfig) {
 fn format_signature(output: &mut String, sig: Signature) {
     output.push('|');
     output.push_str(&sig.args.to_string());
-    output.push(' ');
-    output.push_str(&sig.outputs.to_string());
+    if sig.outputs != 1 {
+        output.push('.');
+        output.push_str(&sig.outputs.to_string());
+    }
     output.push(' ');
 }
 

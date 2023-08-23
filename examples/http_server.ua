@@ -63,7 +63,7 @@ respond ← ↰1(
   print " bytes"
 
   # Send response
-  ↢(|2 0 close;)(|2 0 write)
+  ⊃(|2 0 close;)(|2 0 write)
 )
 
 ⍥(⍣(respond)print tcpaccept listener)∞

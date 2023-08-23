@@ -2,7 +2,7 @@
 
 primes ← ‡¬∊∶♭⊞×...+2⇡
 goldbach ← ∵(|1 
-  ‡∶↢·(/+=⊞+.)primes..
+  ‡∶⊃·(/+=⊞+.)primes..
   ⊂∶⊟⊢∶⊢⇌.
 )×2+2⇡
 goldbach 10

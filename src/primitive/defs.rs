@@ -959,8 +959,8 @@ primitive!(
     /// With 0 or 1 arguments, the second function will be passed the second value.
     /// With 2 arguments, either function will be passed both values.
     ///
-    /// ex: ⊟↢×+ 3 5
-    ([2], Fork, OtherModifier, ("fork", '↢')),
+    /// ex: ⊟⊃×+ 3 5
+    ([2], Fork, OtherModifier, ("fork", '⊃')),
     /// Call 3 functions on 3 values
     ///
     /// [trident] is a very powerfull function when juggling 3 values.

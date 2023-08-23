@@ -15,6 +15,7 @@ pub enum TutorialPage {
     Types,
     Bindings,
     Functions,
+    AdvancedStack,
     Modules,
     Testing,
 }
@@ -31,6 +32,7 @@ impl TutorialPage {
             Self::Types => "Types",
             Self::Bindings => "Bindings",
             Self::Functions => "Modifiers and Functions",
+            Self::AdvancedStack => "Advanced Stack Manipulation",
             Self::Modules => "Modules",
             Self::Testing => "Testing",
         }
@@ -40,14 +42,15 @@ impl TutorialPage {
 #[component]
 pub fn Tutorial(page: TutorialPage) -> impl IntoView {
     let tut_view = match page {
-        TutorialPage::Basic => view! {  <TutorialBasic/> }.into_view(),
-        TutorialPage::Math => view! {  <TutorialMath/> }.into_view(),
-        TutorialPage::Arrays => view! {  <TutorialArrays/> }.into_view(),
-        TutorialPage::Types => view! {  <TutorialTypes/> }.into_view(),
-        TutorialPage::Bindings => view! {  <TutorialBindings/> }.into_view(),
-        TutorialPage::Functions => view! {  <TutorialFunctions/> }.into_view(),
-        TutorialPage::Modules => view! {  <TutorialModules/> }.into_view(),
-        TutorialPage::Testing => view! {  <TutorialTesting/> }.into_view(),
+        TutorialPage::Basic => TutorialBasic().into_view(),
+        TutorialPage::Math => TutorialMath().into_view(),
+        TutorialPage::Arrays => TutorialArrays().into_view(),
+        TutorialPage::Types => TutorialTypes().into_view(),
+        TutorialPage::Bindings => TutorialBindings().into_view(),
+        TutorialPage::Functions => TutorialFunctions().into_view(),
+        TutorialPage::AdvancedStack => TutorialAdvancedStack().into_view(),
+        TutorialPage::Modules => TutorialModules().into_view(),
+        TutorialPage::Testing => TutorialTesting().into_view(),
     };
     view! {
         <TutorialNav page=page/>
@@ -537,6 +540,29 @@ X 5"/>
         <p>"Stack signatures are useful for documenting functions and for making sure that functions are used correctly."</p>
         <p>"In addition, an error is thrown if a function's signature can be derived and the derived signature does not match the declared signature. This can help validate that a function works correctly."</p>
         <Editor example="≡(|2 ↻.) 1_2_3 ↯3_3⇡9"/>
+    }
+}
+
+#[component]
+fn TutorialAdvancedStack() -> impl IntoView {
+    use Primitive::*;
+    view! {
+        <h1>"Advanced Stack Manipulation"</h1>
+        <p>"Uiua does not have local variables. With only "<PrimCode prim=Dup/>", "<PrimCode prim=Flip/>", and "<PrimCode prim=Over/>", how do you work with more than 2 values at a time?"</p>
+
+        <h2 id="roll-and-unroll"><PrimCode prim=Roll/>" and "<PrimCode prim=Unroll/></h2>
+        <p>"The "<PrimCode prim=Roll/>" and "<PrimCode prim=Unroll/>" both work on the top 3 stack values. They do exactly what their glyphs indicate."</p>
+        <p><PrimCode prim=Roll/>" moves the top value on the stack 2 places down."</p>
+        <p><PrimCode prim=Unroll/>" moves the third value on the stack to the top."</p>
+        <Editor example="[↷ 1 2 3 4]\n[↶ 1 2 3 4]"/>
+
+        <h2 id="fork"><PrimCode prim=Fork/></h2>
+        <p>"Let's say you wanted both the sum and the product of two numbers. One way to do this would be to use both "<PrimCode prim=Over/>" and "<PrimCode prim=Roll/>"."</p>
+        <Editor example="+↷×,, 3 5"/>
+        <p>"A better way to do this is to use the "<PrimCode prim=Fork/>" modifier, which calls each of two functions on a pair of arguments."</p>
+        <Editor example="⊃+× 3 5"/>
+        <p>"If you use a function that only take 0 or 1 arguments, it will be called with only the corresponding value."</p>
+
     }
 }
 

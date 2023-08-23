@@ -125,6 +125,8 @@ primitive!(
     (3(3), Roll, Stack, ("roll", '↷')),
     /// Move the third value on the stack to the top
     (3(3), Unroll, Stack, ("unroll", '↶')),
+    /// Rearrange the stack
+    (1(None), Restack, Stack, ("restack", '⇵')),
     // Pervasive monadic ops
     /// Logical not
     ///

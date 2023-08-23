@@ -3,6 +3,24 @@ use crate::{
     Uiua, UiuaResult,
 };
 
+pub fn restack(env: &mut Uiua) -> UiuaResult {
+    let indices = env
+        .pop(1)?
+        .as_naturals(env, "Restack indices must be a list of natural numbers")?;
+    if indices.is_empty() {
+        return Ok(());
+    }
+    let max_index = *indices.iter().max().unwrap();
+    let mut values = Vec::with_capacity(max_index + 1);
+    for i in 0..=max_index {
+        values.push(env.pop(i + 2)?);
+    }
+    for index in indices.into_iter().rev() {
+        env.push(values[index].clone());
+    }
+    Ok(())
+}
+
 pub fn fork(env: &mut Uiua) -> UiuaResult {
     let f = env.pop(FunctionArg(1))?;
     let g = env.pop(FunctionArg(2))?;

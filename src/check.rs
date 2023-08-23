@@ -40,11 +40,11 @@ struct VirtualEnv<'a> {
     min_height: usize,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 enum BasicValue<'a> {
     Func(&'a Function),
     Num(f64),
-    Arr(usize),
+    Arr(Vec<Self>),
     Other,
 }
 
@@ -91,8 +91,9 @@ impl<'a> VirtualEnv<'a> {
                     .array_stack
                     .pop()
                     .ok_or("EndArray without BeginArray")?;
-                self.stack.truncate(len);
-                self.stack.push(BasicValue::Arr(len));
+                let mut items: Vec<_> = self.stack.drain(self.stack.len() - len..).collect();
+                items.reverse();
+                self.stack.push(BasicValue::Arr(items));
             }
             Instr::Prim(prim, _) => match prim {
                 Reduce | Scan => self.handle_mod(prim, 2, 1, 1)?,
@@ -183,7 +184,7 @@ impl<'a> VirtualEnv<'a> {
                 Dup => {
                     let val = self.pop()?;
                     self.set_min_height();
-                    self.stack.push(val);
+                    self.stack.push(val.clone());
                     self.stack.push(val);
                 }
                 Flip => {
@@ -201,7 +202,7 @@ impl<'a> VirtualEnv<'a> {
                     let a = self.pop()?;
                     let b = self.pop()?;
                     self.set_min_height();
-                    self.stack.push(b);
+                    self.stack.push(b.clone());
                     self.stack.push(a);
                     self.stack.push(b);
                 }
@@ -222,6 +223,37 @@ impl<'a> VirtualEnv<'a> {
                     self.stack.push(b);
                     self.stack.push(a);
                     self.stack.push(c);
+                }
+                Restack => {
+                    if let BasicValue::Arr(items) = self.pop()? {
+                        let mut indices = Vec::with_capacity(items.len());
+                        for item in items {
+                            if let BasicValue::Num(n) = item {
+                                if n.fract() == 0.0 && n >= 0.0 {
+                                    indices.push(n as usize);
+                                } else {
+                                    return Err("Restack with a non-natural number".into());
+                                }
+                            } else {
+                                return Err("Restack with an unknown index".into());
+                            }
+                        }
+                        if indices.is_empty() {
+                            self.set_min_height();
+                        } else {
+                            let max_index = *indices.iter().max().unwrap();
+                            let mut values = Vec::with_capacity(max_index + 1);
+                            for _ in 0..=max_index {
+                                values.push(self.pop()?);
+                            }
+                            self.set_min_height();
+                            for index in indices.into_iter().rev() {
+                                self.stack.push(values[index].clone());
+                            }
+                        }
+                    } else {
+                        return Err("Restack without an array".into());
+                    }
                 }
                 Call => self.handle_call(true)?,
                 Recur => return Err("Recur present".into()),

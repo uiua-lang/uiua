@@ -409,6 +409,7 @@ impl Primitive {
                 env.push(a);
                 env.push(c);
             }
+            Primitive::Restack => fork::restack(env)?,
             Primitive::Invert => {
                 let f = env.pop(1)?;
                 let inv_f = f.invert(env)?;

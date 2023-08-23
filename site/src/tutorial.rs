@@ -562,12 +562,12 @@ fn TutorialAntistack() -> impl IntoView {
 
         <h2 id="anti"><PrimCode prim=Anti/></h2>
         <p><PrimCode prim=Load/>" can move a value from the antistack to the stack, but what if you want to just copy it?"</p>
-        <p>"You "<em>"could"</em>" just "<PrimCode prim=Dup/>" and "<PrimCode prim=Save/>". That's fine, but what if you want the second-to-top value from the antistack? Then things would get more complicated. What if you want to run arbitrary code on the antistack?"</p>
+        <p>"You "<em>"could"</em>" just "<PrimCode prim=Load/>", "<PrimCode prim=Dup/>" and "<PrimCode prim=Save/>" again. That's fine, but what if you want the second-to-top value from the antistack? Then things would get more complicated. What if you want to run arbitrary code on the antistack?"</p>
         <p>"The answer is "<PrimCode prim=Anti/>"."</p>
         <p><PrimCode prim=Anti/>" is a modifier that runs its function on the antistack instead of the stack and then moves the result to the stack."</p>
         <p>"You can copy the top value from the antistack to the stack with "<PrimCode prim=Anti/><PrimCode prim=Dup/>". You can do the same with the second-to-top value with"<PrimCode prim=Anti/><PrimCode prim=Over/>"."</p>
         <Editor example="[1 ↓ 2 ↓ 3~. 4~, 5~. 6 ↑↑ 7 8]"/>
-        <p>"The effectively gives you an additional 2 values that you can easily access without messing up the stack."</p>
+        <p>"This effectively gives you an additional 2 values that you can easily access without messing up the stack."</p>
         <br/>
         <p>"For a more concrete example, let's say you wanted to write a function that computes the "<a href="https://en.wikipedia.org/wiki/Quadratic_formula">"Quadratic Formula"</a>". It takes three values and uses them all in different positions and repetitions. With only the stack, you would have a very hard time juggling them."</p>
         <p>"With the antistack, you can "<PrimCode prim=Save/>" "<code>"a"</code>" and "<code>"b"</code>", do the single operation that involves "<code>"c"</code>", and then use "<PrimCode prim=Anti/>" and "<PrimCode prim=Load/>" whenever you need "<code>"a"</code>" or "<code>"b"</code>"."</p>

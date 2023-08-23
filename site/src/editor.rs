@@ -656,19 +656,20 @@ pub fn Editor<'a>(
         .collect();
 
     // Additional code buttons
-    for (glyph, title, class, replace) in [
-        ("_", "strand", "strand-span", None),
-        ("[]", "array", "", None),
-        ("{}", "constant array", "", None),
-        ("()", "function", "", None),
-        ("'", "bind", "", None),
-        ("¯", "negative\n`", "number-literal-span", None),
-        ("@", "character", "string-literal-span", None),
-        ("\"", "string", "string-literal-span", None),
-        ("←", "binding", "", None),
-        ("#", "comment", "comment-span", None),
+    for (glyph, title, class) in [
+        ("_", "strand", "strand-span"),
+        ("[]", "array", ""),
+        ("{}", "constant array", ""),
+        ("()", "function", ""),
+        ("'", "bind", ""),
+        ("¯", "negative\n`", "number-literal-span"),
+        ("@", "character", "string-literal-span"),
+        ("\"", "string", "string-literal-span"),
+        ("←", "binding", ""),
+        ("|", "signature", ""),
+        ("#", "comment", "comment-span"),
     ] {
-        let onclick = move |_| replace_code(replace.unwrap_or(glyph));
+        let onclick = move |_| replace_code(glyph);
         let class = format!("glyph-button {class}");
         glyph_buttons.push(
             view! {

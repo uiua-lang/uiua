@@ -327,7 +327,7 @@ backtrace:
                         return Err(UiuaError::Run(Span::Code(declared_sig.span.clone()).sp(
                             format!(
                                 "Function signature mismatch: \
-                            declared {} but inferred {}",
+                                 declared {} but inferred {}",
                                 declared_sig.value, sig
                             ),
                         )));
@@ -568,6 +568,22 @@ backtrace:
         for line in func.lines {
             instrs.extend(self.compile_words(line)?);
         }
+
+        // Validate signature
+        if let Some(declared_sig) = &func.signature {
+            if let Some(sig) = instrs_signature(&instrs) {
+                if declared_sig.value != sig {
+                    return Err(UiuaError::Run(Span::Code(declared_sig.span.clone()).sp(
+                        format!(
+                            "Function signature mismatch: \
+                            declared {} but inferred {}",
+                            declared_sig.value, sig
+                        ),
+                    )));
+                }
+            }
+        }
+
         // If the function is just a call to another function, just push that function
         if let [Instr::Push(f), Instr::Call(..)] = instrs.as_slice() {
             if matches!(**f, Value::Func(_)) {
@@ -575,8 +591,11 @@ backtrace:
                 return Ok(());
             }
         }
-        let func = Function::new(func.id, instrs, FunctionKind::Normal);
-        self.push_instr(Instr::push(func));
+        let function = Function::new(func.id, instrs, FunctionKind::Normal);
+        if let Some(declared_sig) = &func.signature {
+            function.set_signature(declared_sig.value);
+        }
+        self.push_instr(Instr::push(function));
         Ok(())
     }
     fn modified(&mut self, modified: Modified, call: bool) -> UiuaResult {

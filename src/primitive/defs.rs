@@ -122,8 +122,12 @@ primitive!(
     /// ex: () # Try running to format
     (0(0), Noop, Stack, ("noop", '·')),
     /// Move the top value on the stack 2 places down
+    ///
+    /// ex: [↷ 1 2 3 4]
     (3(3), Roll, Stack, ("roll", '↷')),
     /// Move the third value on the stack to the top
+    ///
+    /// ex: [↶ 1 2 3 4]
     (3(3), Unroll, Stack, ("unroll", '↶')),
     /// Rearrange the stack
     ///
@@ -131,7 +135,7 @@ primitive!(
     /// It is similar to [select], except it works on the stack instead of an array.
     ///
     /// [restack] takes a list of indices and rearranges those values on the stack in the given order.
-    /// ex: ⇵[1 0 2 2] 1 2 3
+    /// ex: [⇵[1 0 2 2] 1 2 3]
     ///
     /// All other built-in stack manipulation functions can be implemented with [restack].
     /// [duplicate] is `⇵``[0 0]`.
@@ -949,8 +953,29 @@ primitive!(
     ///   : ⍚[¯1 ∞]⊂ 1_2_3 4_5_6
     ([2], Level, OtherModifier, ("level", '⍚')),
     /// Call 2 functions on 2 values
+    ///
+    /// Each function may take 0, 1, or 2 arguments.
+    /// With 0 or 1 arguments, the first function will be passed the first value.
+    /// With 0 or 1 arguments, the second function will be passed the second value.
+    /// With 2 arguments, either function will be passed both values.
+    ///
+    /// ex: ⊟↢×+ 3 5
     ([2], Fork, OtherModifier, ("fork", '↢')),
     /// Call 3 functions on 3 values
+    ///
+    /// [trident] is a very powerfull function when juggling 3 values.
+    /// Each function may take up to 3 arguments.
+    /// Let's say the three values are `a`, `b`, and `c`.
+    /// The first function will be passed up to `a`, `b`, and `c` in that order.
+    /// The second function will be passed up to `b`, `c`, and `a` in that order.
+    /// The third function will be passed up to `c`, `a`, and `b` in that order.
+    ///
+    /// A good example use case is when implementing the quadratic formula.
+    /// ex: Quad ← ÷∶+↷∋(×2)¯(⊟¯.√-∶ⁿ2∶×4×)
+    ///   : Quad 1 2 0
+    /// The first function passed to [trident] [multiply]s `a` by `2`.
+    /// The second function [negate]s `b`.
+    /// The third function calculates the discriminant.
     ([3], Trident, OtherModifier, ("trident", '∋')),
     /// Call a function and catch errors
     ///

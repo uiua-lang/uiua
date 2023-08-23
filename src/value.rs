@@ -7,7 +7,11 @@ use std::{
 };
 
 use crate::{
-    algorithm::pervade::*, array::*, function::Function, grid_fmt::GridFmt, primitive::Primitive,
+    algorithm::pervade::*,
+    array::*,
+    function::{Function, Signature},
+    grid_fmt::GridFmt,
+    primitive::Primitive,
     Uiua, UiuaResult,
 };
 
@@ -37,11 +41,11 @@ impl fmt::Debug for Value {
 }
 
 impl Value {
-    pub fn args_outputs(&self) -> Option<(usize, usize)> {
+    pub fn signature(&self) -> Option<Signature> {
         if let Some(f) = self.as_func_array().and_then(Array::as_scalar) {
-            f.args_outputs()
+            f.signature()
         } else {
-            Some((0, 1))
+            Some(Signature::new(0u8, 1u8))
         }
     }
     pub fn as_num_array(&self) -> Option<&Array<f64>> {

@@ -2,7 +2,7 @@ use std::{error::Error, fmt, path::Path};
 
 use crate::{
     ast::*,
-    function::FunctionId,
+    function::{FunctionId, Signature},
     lex::{AsciiToken::*, Token::*, *},
     primitive::Primitive,
     Ident,
@@ -14,11 +14,15 @@ pub enum ParseError {
     Expected(Vec<Expectation>, Option<Box<Sp<Token>>>),
     InvalidNumber(String),
     Unexpected(Token),
+    InvalidArgCount(f64),
+    InvalidOutCount(f64),
 }
 
 #[derive(Debug, Clone)]
 pub enum Expectation {
     Term,
+    ArgCount,
+    OutCount,
     Simple(AsciiToken),
 }
 
@@ -32,6 +36,8 @@ impl fmt::Display for Expectation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Expectation::Term => write!(f, "term"),
+            Expectation::ArgCount => write!(f, "argument count"),
+            Expectation::OutCount => write!(f, "output count"),
             Expectation::Simple(s) => write!(f, "`{s}`"),
         }
     }
@@ -56,6 +62,8 @@ impl fmt::Display for ParseError {
             }
             ParseError::InvalidNumber(s) => write!(f, "invalid number `{s}`"),
             ParseError::Unexpected(_) => write!(f, "unexpected token"),
+            ParseError::InvalidArgCount(n) => write!(f, "invalid argument count `{n}`"),
+            ParseError::InvalidOutCount(n) => write!(f, "invalid output count `{n}`"),
         }
     }
 }
@@ -198,8 +206,15 @@ impl Parser {
                 return None;
             }
             self.try_spaces();
+            let sig = self.try_signature();
             let words = self.try_words().unwrap_or_default();
-            Binding { name: ident, words }
+            Binding {
+                name: ident,
+                body: Words {
+                    words,
+                    signature: sig,
+                },
+            }
         } else {
             return None;
         })
@@ -208,6 +223,31 @@ impl Parser {
         let span = self.try_exact(Token::Ident)?;
         let s = span.as_str().into();
         Some(span.sp(s))
+    }
+    fn try_signature(&mut self) -> Option<Sp<Signature>> {
+        fn get_count(parser: &mut Parser, ex: Expectation, f: fn(f64) -> ParseError) -> usize {
+            if let Some(sn) = parser.try_num() {
+                let n = sn.value.1;
+                if n.fract() == 0.0 && n >= 0.0 {
+                    n as usize
+                } else {
+                    parser.errors.push(sn.span.sp(f(n)));
+                    1
+                }
+            } else {
+                parser.errors.push(parser.expected([ex]));
+                1
+            }
+        }
+        let start = self.try_exact(Bar)?;
+        self.try_spaces();
+        let args = get_count(self, Expectation::ArgCount, ParseError::InvalidArgCount);
+        self.try_spaces();
+        let outs = get_count(self, Expectation::OutCount, ParseError::InvalidOutCount);
+        let end = self.prev_span();
+        self.try_spaces();
+        let span = start.merge(end);
+        Some(span.sp(Signature::new(args, outs)))
     }
     fn try_words(&mut self) -> Option<Vec<Sp<Word>>> {
         let mut words = Vec::new();
@@ -328,7 +368,7 @@ impl Parser {
                 .merge(args.last().unwrap().span.clone());
             span.sp(Word::Modified(Box::new(Modified {
                 modifier,
-                words: args,
+                operands: args,
             })))
         })
     }
@@ -337,18 +377,8 @@ impl Parser {
             prim.map(Word::Primitive)
         } else if let Some(ident) = self.try_ident() {
             ident.map(Word::Ident)
-        } else if let Some(span) = self.try_exact(Token::Number) {
-            let s = span.as_str().to_string();
-            let parseable = s.replace(['`', '¯'], "-");
-            let n: f64 = match parseable.parse() {
-                Ok(n) => n,
-                Err(_) => {
-                    self.errors
-                        .push(self.prev_span().sp(ParseError::InvalidNumber(s.clone())));
-                    0.0
-                }
-            };
-            span.sp(Word::Number(s, n))
+        } else if let Some(sn) = self.try_num() {
+            sn.map(|(s, n)| Word::Number(s, n))
         } else if let Some(c) = self.next_token_map(Token::as_char) {
             c.map(Into::into).map(Word::Char)
         } else if let Some(s) = self.next_token_map(Token::as_string) {
@@ -389,6 +419,20 @@ impl Parser {
             return None;
         })
     }
+    fn try_num(&mut self) -> Option<Sp<(String, f64)>> {
+        let span = self.try_exact(Token::Number)?;
+        let s = span.as_str().to_string();
+        let parseable = s.replace(['`', '¯'], "-");
+        let n: f64 = match parseable.parse() {
+            Ok(n) => n,
+            Err(_) => {
+                self.errors
+                    .push(self.prev_span().sp(ParseError::InvalidNumber(s.clone())));
+                0.0
+            }
+        };
+        Some(span.sp((s, n)))
+    }
     fn try_prim(&mut self) -> Option<Sp<Primitive>> {
         for prim in Primitive::all() {
             let op_span = self
@@ -402,6 +446,8 @@ impl Parser {
     }
     fn try_func(&mut self) -> Option<Sp<Word>> {
         Some(if let Some(start) = self.try_exact(OpenParen) {
+            while self.try_exact(Newline).is_some() || self.try_spaces().is_some() {}
+            let signature = self.try_signature();
             let body = self.multiline_words();
             let end = self.expect_close(CloseParen);
             let span = start.merge(end);
@@ -410,6 +456,7 @@ impl Parser {
             } else {
                 Word::Func(Func {
                     id: FunctionId::Anonymous(span),
+                    signature,
                     lines: body,
                     bind: false,
                 })
@@ -431,6 +478,7 @@ impl Parser {
             body.extend(self.try_spaces());
             span.clone().sp(Word::Func(Func {
                 id: FunctionId::Anonymous(span),
+                signature: None,
                 lines: vec![body],
                 bind: true,
             }))

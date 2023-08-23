@@ -6,6 +6,7 @@ use crate::{
     algorithm::pervade::bin_pervade_generic,
     array::{Array, ArrayValue, Shape},
     cowslice::cowslice,
+    function::Signature,
     primitive::Primitive,
     value::Value,
     Uiua, UiuaResult,
@@ -96,8 +97,8 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
 }
 
 fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
-    match f.args_outputs() {
-        Some((0 | 1, _)) => {
+    match f.signature().map(|sig| sig.args) {
+        Some(0 | 1) => {
             for row in xs.into_rows_rev() {
                 env.push(row);
                 env.push(f.clone());
@@ -106,7 +107,7 @@ fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> Uiu
                 }
             }
         }
-        Some((2, _)) | None => {
+        Some(2) | None => {
             let mut rows = xs.into_rows_rev();
             let mut acc = init
                 .or_else(|| rows.next())
@@ -122,7 +123,7 @@ fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> Uiu
             }
             env.push(acc);
         }
-        Some((args, _)) => {
+        Some(args) => {
             return Err(env.error(format!(
                 "Cannot reduce a function that takes {args} arguments"
             )))
@@ -245,14 +246,14 @@ fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
 pub fn each(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(1)?;
-    let (args, outputs) = f.args_outputs().unwrap_or((1, 0));
-    if outputs > 1 {
+    let sig = f.signature().unwrap_or(Signature::new(1u8, 0u8));
+    if sig.outputs > 1 {
         return Err(env.error(format!(
             "Each's function must return 0 or 1 values, but it returns {}",
-            outputs
+            sig.outputs
         )));
     }
-    match args {
+    match sig.args {
         0 => Ok(()),
         1 => {
             let xs = env.pop(2)?;
@@ -346,9 +347,15 @@ fn eachn(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
 pub fn rows(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(1)?;
-    let (args, _) = f.args_outputs().unwrap_or((1, 1));
-    match args {
-        0 => Err(env.error("Rows' function must take at least one argument")),
+    let sig = f.signature().unwrap_or(Signature::new(1u8, 0u8));
+    if sig.outputs > 1 {
+        return Err(env.error(format!(
+            "Rows' function must return 0 or 1 values, but it returns {}",
+            sig.outputs
+        )));
+    }
+    match sig.args {
+        0 => Ok(()),
         1 => {
             let xs = env.pop(2)?;
             rows1(f, xs, env)
@@ -908,8 +915,8 @@ where
     G::IntoIter: ExactSizeIterator,
 {
     let mut groups = groups.into_iter();
-    match f.args_outputs() {
-        Some((0 | 1, _)) | None => {
+    match f.signature().map(|sig| sig.args) {
+        Some(0 | 1) | None => {
             let mut rows = Vec::with_capacity(groups.len());
             for group in groups {
                 env.push(group);
@@ -921,7 +928,7 @@ where
             let res = Value::from_row_values(rows, env)?;
             env.push(res);
         }
-        Some((2, _)) => {
+        Some(2) => {
             let mut acc = groups
                 .next()
                 .ok_or_else(|| env.error(format!("Cannot reduce empty {name} result")))?;
@@ -936,7 +943,7 @@ where
             }
             env.push(acc);
         }
-        Some((args, _)) => {
+        Some(args) => {
             return Err(env.error(format!(
                 "Cannot {name} with a function that takes {args} arguments"
             )))

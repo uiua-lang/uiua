@@ -1,6 +1,11 @@
 use std::fmt;
 
-use crate::{function::FunctionId, lex::Sp, primitive::Primitive, Ident};
+use crate::{
+    function::{FunctionId, Signature},
+    lex::Sp,
+    primitive::Primitive,
+    Ident,
+};
 
 #[derive(Debug, Clone)]
 pub enum Item {
@@ -11,9 +16,15 @@ pub enum Item {
 }
 
 #[derive(Debug, Clone)]
+pub struct Words {
+    pub words: Vec<Sp<Word>>,
+    pub signature: Option<Sp<Signature>>,
+}
+
+#[derive(Debug, Clone)]
 pub struct Binding {
     pub name: Sp<Ident>,
-    pub words: Vec<Sp<Word>>,
+    pub body: Words,
 }
 
 #[derive(Clone)]
@@ -92,6 +103,7 @@ impl fmt::Debug for Arr {
 #[derive(Clone)]
 pub struct Func {
     pub id: FunctionId,
+    pub signature: Option<Sp<Signature>>,
     pub lines: Vec<Vec<Sp<Word>>>,
     pub bind: bool,
 }
@@ -112,13 +124,13 @@ impl fmt::Debug for Func {
 #[derive(Clone)]
 pub struct Modified {
     pub modifier: Sp<Primitive>,
-    pub words: Vec<Sp<Word>>,
+    pub operands: Vec<Sp<Word>>,
 }
 
 impl fmt::Debug for Modified {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self.modifier.value)?;
-        for word in &self.words {
+        for word in &self.operands {
             write!(f, "({:?})", word.value)?;
         }
         Ok(())

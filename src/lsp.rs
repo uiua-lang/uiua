@@ -27,7 +27,7 @@ fn items_spans(items: &[Item]) -> Vec<Sp<SpanKind>> {
         match item {
             Item::Scoped { items, .. } => spans.extend(items_spans(items)),
             Item::Words(words) => spans.extend(words_spans(words)),
-            Item::Binding(binding) => spans.extend(words_spans(&binding.words)),
+            Item::Binding(binding) => spans.extend(words_spans(&binding.body.words)),
             Item::Newlines => {}
         }
     }
@@ -75,7 +75,7 @@ fn words_spans(words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
             Word::Primitive(prim) => spans.push(word.span.clone().sp(SpanKind::Primitive(*prim))),
             Word::Modified(m) => {
                 spans.push(m.modifier.clone().map(SpanKind::Primitive));
-                spans.extend(words_spans(&m.words));
+                spans.extend(words_spans(&m.operands));
             }
             Word::Spaces => {}
             Word::Comment(_) => spans.push(word.span.clone().sp(SpanKind::Comment)),

@@ -3,7 +3,8 @@
 use std::{env, fs, path::Path};
 
 use crate::{
-    ast::*, grid_fmt::GridFmt, lex::Sp, parse::parse, primitive::Primitive, UiuaError, UiuaResult,
+    ast::*, function::Signature, grid_fmt::GridFmt, lex::Sp, parse::parse, primitive::Primitive,
+    UiuaError, UiuaResult,
 };
 
 #[derive(Debug, Clone)]
@@ -109,10 +110,21 @@ fn format_item(output: &mut String, item: &Item, config: &FormatConfig) {
         Item::Binding(binding) => {
             output.push_str(&binding.name.value.0);
             output.push_str(" ← ");
-            format_words(output, &binding.words, config, true, 0);
+            if let Some(sig) = &binding.body.signature {
+                format_signature(output, sig.value);
+            }
+            format_words(output, &binding.body.words, config, true, 0);
         }
         Item::Newlines => {}
     }
+}
+
+fn format_signature(output: &mut String, sig: Signature) {
+    output.push('|');
+    output.push_str(&sig.args.to_string());
+    output.push(' ');
+    output.push_str(&sig.outputs.to_string());
+    output.push(' ');
 }
 
 fn format_words(
@@ -191,6 +203,9 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig, dept
                 format_words(output, &func.lines[0], config, false, depth + 1);
             } else {
                 output.push('(');
+                if let Some(sig) = &func.signature {
+                    format_signature(output, sig.value);
+                }
                 format_multiline_words(output, &func.lines, config, false, depth + 1);
                 output.push(')');
             }
@@ -209,14 +224,14 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig, dept
                     value: Word::Primitive(Primitive::Noop),
                     ..
                 }],
-            ) = (m.modifier.value, &m.words[..])
+            ) = (m.modifier.value, &m.operands[..])
             {
                 output.push(Primitive::Load.names().unwrap().unicode.unwrap());
                 return;
             }
             // Normal case
             output.push_str(&m.modifier.value.to_string());
-            format_words(output, &m.words, config, true, depth);
+            format_words(output, &m.operands, config, true, depth);
         }
         Word::Spaces => output.push(' '),
         Word::Comment(comment) => {
@@ -323,7 +338,7 @@ fn word_is_multiline(word: &Word) -> bool {
                     .any(|words| words.iter().any(|word| word_is_multiline(&word.value)))
         }
         Word::Primitive(_) => false,
-        Word::Modified(m) => m.words.iter().any(|word| word_is_multiline(&word.value)),
+        Word::Modified(m) => m.operands.iter().any(|word| word_is_multiline(&word.value)),
         Word::Comment(_) => false,
         Word::Spaces => false,
     }

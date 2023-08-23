@@ -1,7 +1,7 @@
 use std::{borrow::Cow, cell::RefCell, collections::HashMap};
 
 use crate::{
-    check::instrs_args_outputs,
+    check::instrs_signature,
     function::{Function, FunctionKind, Instr},
     primitive::Primitive,
 };
@@ -406,10 +406,12 @@ impl InvertPattern for Val {
         }
         for len in (1..input.len()).rev() {
             let chunk = &input[..len];
-            if instrs_args_outputs(chunk) == Some((0, 1)) {
-                let res = chunk.to_vec();
-                *input = &input[len..];
-                return Some(res);
+            if let Some(sig) = instrs_signature(chunk) {
+                if sig.args == 0 && sig.outputs == 1 {
+                    let res = chunk.to_vec();
+                    *input = &input[len..];
+                    return Some(res);
+                }
             }
         }
         match input.get(0) {

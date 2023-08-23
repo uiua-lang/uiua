@@ -15,7 +15,7 @@ use parking_lot::Mutex;
 
 use crate::{
     ast::*,
-    check::instrs_args_outputs,
+    check::instrs_signature,
     function::*,
     lex::{CodeSpan, Sp, Span},
     parse::parse,
@@ -293,7 +293,7 @@ backtrace:
                     RunMode::Normal => !in_test,
                     RunMode::All | RunMode::Test => true,
                 };
-                if can_run || words_have_import(&binding.words) {
+                if can_run || words_have_import(&binding.body.words) {
                     self.binding(binding)?;
                 }
             }
@@ -308,20 +308,40 @@ backtrace:
         idx
     }
     fn binding(&mut self, binding: Binding) -> UiuaResult {
-        let instrs = self.compile_words(binding.words)?;
-        let mut val = match instrs_args_outputs(&instrs) {
-            Some((n, _)) if n <= self.stack.len() => {
-                self.exec_global_instrs(instrs)?;
-                self.stack.pop().unwrap_or_default()
+        let instrs = self.compile_words(binding.body.words)?;
+        let make_fn = |instrs: Vec<Instr>| {
+            let func = Function::new(
+                FunctionId::Named(binding.name.value.clone()),
+                instrs,
+                FunctionKind::Normal,
+            );
+            if let Some(sig) = &binding.body.signature {
+                func.set_signature(sig.value);
             }
-            _ => {
-                let func = Function::new(
-                    FunctionId::Named(binding.name.value.clone()),
-                    instrs,
-                    FunctionKind::Normal,
-                );
-                Value::from(func)
+            Value::from(func)
+        };
+        let mut val = match instrs_signature(&instrs) {
+            Some(sig) => {
+                if let Some(declared_sig) = &binding.body.signature {
+                    if declared_sig.value != sig {
+                        return Err(UiuaError::Run(Span::Code(declared_sig.span.clone()).sp(
+                            format!(
+                                "Function signature mismatch: \
+                            declared {} but inferred {}",
+                                declared_sig.value, sig
+                            ),
+                        )));
+                    }
+                }
+
+                if sig.args <= self.stack.len() {
+                    self.exec_global_instrs(instrs)?;
+                    self.stack.pop().unwrap_or_default()
+                } else {
+                    make_fn(instrs)
+                }
             }
+            _ => make_fn(instrs),
         };
         val.compress();
         let mut globals = self.globals.lock();
@@ -373,7 +393,11 @@ backtrace:
                 if let (Prim(Under, span), Some(((Couple, _), g_func))) =
                     (&instr, f.as_primitive().zip(g.as_function()))
                 {
-                    if let Some((1, 1)) = g_func.args_outputs() {
+                    if let Some(Signature {
+                        args: 1,
+                        outputs: 1,
+                    }) = g_func.signature()
+                    {
                         let g = g.clone();
                         instrs.pop();
                         instrs.pop();
@@ -410,8 +434,7 @@ backtrace:
                             frags.hash(&mut hasher);
                             hasher.finish()
                         },
-                        args: frags.len() as u8 - 1,
-                        outputs: 1,
+                        signature: Signature::new(frags.len() as u8 - 1, 1u8),
                         f: Arc::new(move |env| {
                             let mut formatted = String::new();
                             for (i, frag) in frags.iter().enumerate() {
@@ -442,8 +465,10 @@ backtrace:
                             lines.hash(&mut hasher);
                             hasher.finish()
                         },
-                        args: lines.iter().map(|l| l.value.len() as u8 - 1).sum(),
-                        outputs: 1,
+                        signature: Signature::new(
+                            lines.iter().map(|l| l.value.len() as u8 - 1).sum::<u8>(),
+                            1u8,
+                        ),
                         f: Arc::new(move |env| {
                             let mut formatted = String::new();
                             let mut i = 0;
@@ -556,12 +581,12 @@ backtrace:
     }
     fn modified(&mut self, modified: Modified, call: bool) -> UiuaResult {
         if call {
-            self.words(modified.words, false)?;
+            self.words(modified.operands, false)?;
             let span = self.add_span(modified.modifier.span);
             self.push_instr(Instr::Prim(modified.modifier.value, span));
         } else {
             self.new_functions.push(Vec::new());
-            self.words(modified.words, false)?;
+            self.words(modified.operands, false)?;
             self.primitive(
                 modified.modifier.value,
                 modified.modifier.span.clone(),

@@ -1,14 +1,17 @@
 use crate::{
     array::Array,
-    function::{Function, Instr},
+    function::{Function, Instr, Signature},
     primitive::Primitive,
 };
 
 /// Count the number of arguments and the stack Δ of a function.
-pub(crate) fn instrs_args_outputs(instrs: &[Instr]) -> Option<(usize, usize)> {
+pub(crate) fn instrs_signature(instrs: &[Instr]) -> Option<Signature> {
     if let [Instr::Prim(prim, _)] = instrs {
-        if let Some((a, o)) = prim.args().zip(prim.outputs()) {
-            return Some((a as usize, o as usize));
+        if let Some((args, outputs)) = prim.args().zip(prim.outputs()) {
+            return Some(Signature {
+                args: args as usize,
+                outputs: outputs as usize,
+            });
         }
     }
 
@@ -27,7 +30,7 @@ pub(crate) fn instrs_args_outputs(instrs: &[Instr]) -> Option<(usize, usize)> {
     let outputs = env.stack.len() - env.min_height;
     // println!("instrs: {:?}", instrs);
     // println!("args/outputs: {}/{}", args, outputs);
-    Some((args, outputs))
+    Some(Signature { args, outputs })
 }
 
 /// An environment that emulates the runtime but only keeps track of the stack.
@@ -97,12 +100,12 @@ impl<'a> VirtualEnv<'a> {
                         if n.fract() == 0.0 && n >= 0.0 {
                             let n = n as usize;
                             if let BasicValue::Func(f) = f {
-                                let (f_args, f_outputs) = f.args_outputs().ok_or_else(|| {
+                                let sig = f.signature().ok_or_else(|| {
                                     format!("Repeat's function {f:?} had indeterminate a/o")
                                 })?;
-                                let m_args = f_outputs * n;
+                                let m_args = sig.outputs * n;
                                 self.stack.push(BasicValue::Func(f));
-                                self.handle_mod(prim, f_args, f_outputs, m_args)?
+                                self.handle_mod(prim, sig.args, sig.outputs, m_args)?
                             } else {
                                 self.handle_mod(prim, 0, 1, n)?
                             }
@@ -169,14 +172,14 @@ impl<'a> VirtualEnv<'a> {
     fn handle_call(&mut self, explicit: bool) -> Result<(), String> {
         match self.pop()? {
             BasicValue::Func(f) => {
-                let (a, o) = f
-                    .args_outputs()
+                let sig = f
+                    .signature()
                     .ok_or_else(|| format!("Call's function {f:?} had indeterminate a/o"))?;
-                for _ in 0..a {
+                for _ in 0..sig.args {
                     self.pop()?;
                 }
                 self.set_min_height();
-                for _ in 0..o {
+                for _ in 0..sig.outputs {
                     self.stack.push(BasicValue::Other);
                 }
             }
@@ -193,17 +196,23 @@ impl<'a> VirtualEnv<'a> {
         m_args: usize,
     ) -> Result<(), String> {
         if let BasicValue::Func(f) = self.pop()? {
-            let (a, o) = f
-                .args_outputs()
+            let inner_sig = Signature {
+                args: f_args,
+                outputs: f_outputs,
+            };
+            let sig = f
+                .signature()
                 .ok_or_else(|| format!("{prim}'s function {f:?} had indeterminate a/o"))?;
-            if a != f_args {
+            if sig.args != inner_sig.args {
                 return Err(format!(
-                    "{prim}'s function {f:?} had {a} args, expected {f_args}"
+                    "{prim}'s function {f:?} had {} args, expected {}",
+                    sig.args, inner_sig.args
                 ));
             }
-            if o != f_outputs {
+            if sig.outputs != inner_sig.outputs {
                 return Err(format!(
-                    "{prim}'s function {f:?} had {o} outputs, expected {f_outputs}"
+                    "{prim}'s function {f:?} had {} outputs, expected {}",
+                    sig.outputs, inner_sig.outputs
                 ));
             }
             for _ in 0..m_args {
@@ -218,13 +227,13 @@ impl<'a> VirtualEnv<'a> {
     }
     fn handle_variadic_mod(&mut self, prim: &Primitive) -> Result<(), String> {
         if let BasicValue::Func(f) = self.pop()? {
-            let (a, o) = f
-                .args_outputs()
+            let sig = f
+                .signature()
                 .ok_or_else(|| format!("{prim}'s function {f:?} had indeterminate a/o"))?;
-            if o != 1 {
+            if sig.outputs != 1 {
                 return Err(format!("{prim}'s function {f:?} did not return 1 value",));
             }
-            for _ in 0..a {
+            for _ in 0..sig.args {
                 self.pop()?;
             }
             self.set_min_height();
@@ -250,21 +259,26 @@ mod test {
         Push(val.into().into())
     }
     #[test]
-    fn instrs_args_outputs() {
-        let check = super::instrs_args_outputs;
+    fn instrs_signature() {
+        let check = super::instrs_signature;
+        fn sig(a: usize, o: usize) -> Signature {
+            Signature {
+                args: a,
+                outputs: o,
+            }
+        }
+        assert_eq!(Some(sig(0, 0)), check(&[]));
+        assert_eq!(Some(sig(0, 0)), check(&[Prim(Noop, 0)]));
 
-        assert_eq!(Some((0, 0)), check(&[]));
-        assert_eq!(Some((0, 0)), check(&[Prim(Noop, 0)]));
-
-        assert_eq!(Some((0, 1)), check(&[push(10), push(2), Prim(Pow, 0)]));
+        assert_eq!(Some(sig(0, 1)), check(&[push(10), push(2), Prim(Pow, 0)]));
         assert_eq!(
-            Some((1, 1)),
+            Some(sig(1, 1)),
             check(&[push(10), push(2), Prim(Pow, 0), Prim(Add, 0)])
         );
-        assert_eq!(Some((1, 1)), check(&[push(1), Prim(Add, 0)]));
+        assert_eq!(Some(sig(1, 1)), check(&[push(1), Prim(Add, 0)]));
 
         assert_eq!(
-            Some((0, 1)),
+            Some(sig(0, 1)),
             check(&[
                 BeginArray,
                 push(3),
@@ -277,7 +291,7 @@ mod test {
             ])
         );
         assert_eq!(
-            Some((1, 1)),
+            Some(sig(1, 1)),
             check(&[
                 BeginArray,
                 push(3),
@@ -291,7 +305,7 @@ mod test {
             ])
         );
         assert_eq!(
-            Some((0, 1)),
+            Some(sig(0, 1)),
             check(&[
                 BeginArray,
                 push(3),

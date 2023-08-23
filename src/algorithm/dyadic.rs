@@ -969,7 +969,36 @@ impl<T: ArrayValue> Array<T> {
             [] => into,
             &[untaking] => {
                 let abs_untaking = untaking.unsigned_abs();
-                if from.row_count() != abs_untaking {
+                if from.row_count() == abs_untaking {
+                    let into_row_len = into.row_len();
+                    let into_row_count = into.row_count();
+                    into.data.modify(|data| {
+                        if untaking >= 0 {
+                            for (from, into) in from
+                                .row_slices()
+                                .zip(data.make_mut().chunks_exact_mut(into_row_len))
+                            {
+                                into.clone_from_slice(from);
+                            }
+                        } else {
+                            let start = into_row_count.saturating_sub(abs_untaking);
+                            for (from, into) in from
+                                .row_slices()
+                                .zip(data.make_mut().chunks_exact_mut(into_row_len).skip(start))
+                            {
+                                into.clone_from_slice(from);
+                            }
+                        }
+                    });
+                    into
+                } else if from.rank() == into.rank() {
+                    let into = into.drop(&[untaking], env)?;
+                    if untaking >= 0 {
+                        from.join(into, env)?
+                    } else {
+                        into.join(from, env)?
+                    }
+                } else {
                     return Err(env.error(format!(
                         "Attempted to undo take, but the taken section's \
                         row count was modified from {} to {}",
@@ -977,53 +1006,40 @@ impl<T: ArrayValue> Array<T> {
                         from.row_count()
                     )));
                 }
-                let into_row_len = into.row_len();
-                let into_row_count = into.row_count();
-                into.data.modify(|data| {
-                    if untaking >= 0 {
-                        for (from, into) in from
-                            .row_slices()
-                            .zip(data.make_mut().chunks_exact_mut(into_row_len))
-                        {
-                            into.clone_from_slice(from);
-                        }
-                    } else {
-                        let start = into_row_count.saturating_sub(abs_untaking);
-                        for (from, into) in from
-                            .row_slices()
-                            .zip(data.make_mut().chunks_exact_mut(into_row_len).skip(start))
-                        {
-                            into.clone_from_slice(from);
-                        }
-                    }
-                });
-                into
             }
             &[untaking, ref sub_index @ ..] => {
                 let abs_untaking = untaking.unsigned_abs();
-                if from.row_count() != abs_untaking {
+                if from.row_count() == abs_untaking {
+                    let into_row_count = into.row_count();
+                    let mut new_rows = Vec::with_capacity(into_row_count);
+                    if untaking >= 0 {
+                        for (from, into) in from.rows().zip(into.rows()) {
+                            new_rows.push(from.untake(sub_index, into, env)?);
+                        }
+                        new_rows.extend(into.rows().skip(abs_untaking));
+                    } else {
+                        let start = into_row_count.saturating_sub(abs_untaking);
+                        new_rows.extend(into.rows().take(start));
+                        for (from, into) in from.rows().zip(into.rows().skip(start)) {
+                            new_rows.push(from.untake(sub_index, into, env)?);
+                        }
+                    }
+                    Array::from_row_arrays(new_rows, env)?
+                } else if from.rank() == into.rank() {
+                    let into = into.drop(&[untaking], env)?;
+                    if untaking >= 0 {
+                        from.join(into, env)?
+                    } else {
+                        into.join(from, env)?
+                    }
+                } else {
                     return Err(env.error(format!(
                         "Attempted to undo take, but the taken section's \
-                        row count was modified from {} to {}",
+                    row count was modified from {} to {}",
                         abs_untaking,
                         from.row_count()
                     )));
                 }
-                let into_row_count = into.row_count();
-                let mut new_rows = Vec::with_capacity(into_row_count);
-                if untaking >= 0 {
-                    for (from, into) in from.rows().zip(into.rows()) {
-                        new_rows.push(from.untake(sub_index, into, env)?);
-                    }
-                    new_rows.extend(into.rows().skip(abs_untaking));
-                } else {
-                    let start = into_row_count.saturating_sub(abs_untaking);
-                    new_rows.extend(into.rows().take(start));
-                    for (from, into) in from.rows().zip(into.rows().skip(start)) {
-                        new_rows.push(from.untake(sub_index, into, env)?);
-                    }
-                }
-                Array::from_row_arrays(new_rows, env)?
             }
         })
     }

@@ -139,13 +139,17 @@ impl<'a> VirtualEnv<'a> {
                     self.pop()?;
                     self.pop()?;
                     self.set_min_height();
-                    let f_sig = f
+                    let f_out = f
                         .signature()
-                        .ok_or("Fork's function had indeterminate sig")?;
-                    let g_sig = g
+                        .ok_or("Fork's function had indeterminate sig")?
+                        .outputs
+                        .max(1);
+                    let g_out = g
                         .signature()
-                        .ok_or("Fork's function had indeterminate sig")?;
-                    for _ in 0..f_sig.outputs + g_sig.outputs {
+                        .ok_or("Fork's function had indeterminate sig")?
+                        .outputs
+                        .max(1);
+                    for _ in 0..f_out + g_out {
                         self.stack.push(BasicValue::Other);
                     }
                 }
@@ -157,16 +161,22 @@ impl<'a> VirtualEnv<'a> {
                     self.pop()?;
                     self.pop()?;
                     self.set_min_height();
-                    let f_sig = f
+                    let f_out = f
                         .signature()
-                        .ok_or("Fork's function had indeterminate sig")?;
-                    let g_sig = g
+                        .ok_or("Fork's function had indeterminate sig")?
+                        .outputs
+                        .max(1);
+                    let g_out = g
                         .signature()
-                        .ok_or("Fork's function had indeterminate sig")?;
-                    let h_sig = h
+                        .ok_or("Fork's function had indeterminate sig")?
+                        .outputs
+                        .max(1);
+                    let h_out = h
                         .signature()
-                        .ok_or("Fork's function had indeterminate sig")?;
-                    for _ in 0..f_sig.outputs + g_sig.outputs + h_sig.outputs {
+                        .ok_or("Fork's function had indeterminate sig")?
+                        .outputs
+                        .max(1);
+                    for _ in 0..f_out + g_out + h_out {
                         self.stack.push(BasicValue::Other);
                     }
                 }

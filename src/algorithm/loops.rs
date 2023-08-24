@@ -8,6 +8,7 @@ use crate::{
     cowslice::cowslice,
     function::Signature,
     primitive::Primitive,
+    run::{ArrayArg, FunctionArg},
     value::Value,
     Uiua, UiuaResult,
 };
@@ -18,8 +19,8 @@ fn flip<A, B, C>(f: impl Fn(A, B) -> C) -> impl Fn(B, A) -> C {
 
 pub fn reduce(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop(1)?;
-    let xs = env.pop(2)?;
+    let f = env.pop(FunctionArg(1))?;
+    let xs = env.pop(ArrayArg(2))?;
 
     match (f.as_flipped_primitive(), xs) {
         (Some((prim, flipped)), Value::Num(nums)) => env.push(match prim {
@@ -134,16 +135,16 @@ fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> Uiu
 
 pub fn fold(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop(1)?;
-    let acc = env.pop(2)?;
-    let xs = env.pop(3)?;
+    let f = env.pop(FunctionArg(1))?;
+    let acc = env.pop(ArrayArg(2))?;
+    let xs = env.pop(ArrayArg(3))?;
     generic_fold(f, xs, Some(acc), env)
 }
 
 pub fn scan(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop(1)?;
-    let xs = env.pop(2)?;
+    let f = env.pop(FunctionArg(1))?;
+    let xs = env.pop(ArrayArg(2))?;
     if xs.rank() == 0 {
         return Err(env.error("Cannot scan rank 0 array"));
     }
@@ -245,7 +246,7 @@ fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
 
 pub fn each(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop(1)?;
+    let f = env.pop(FunctionArg(1))?;
     let sig = f.signature().unwrap_or(Signature::new(1u8, 0u8));
     if sig.outputs > 1 {
         return Err(env.error(format!(
@@ -256,18 +257,18 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
     match sig.args {
         0 => Ok(()),
         1 => {
-            let xs = env.pop(2)?;
+            let xs = env.pop(ArrayArg(2))?;
             each1(f, xs, env)
         }
         2 => {
-            let xs = env.pop(2)?;
-            let ys = env.pop(3)?;
+            let xs = env.pop(ArrayArg(2))?;
+            let ys = env.pop(ArrayArg(3))?;
             each2(f, xs, ys, env)
         }
         n => {
             let mut args = Vec::with_capacity(n);
             for i in 0..n {
-                args.push(env.pop(i + 2)?);
+                args.push(env.pop(ArrayArg(i + 1))?);
             }
             eachn(f, args, env)
         }
@@ -346,7 +347,7 @@ fn eachn(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
 
 pub fn rows(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop(1)?;
+    let f = env.pop(FunctionArg(1))?;
     let sig = f.signature().unwrap_or(Signature::new(1u8, 0u8));
     if sig.outputs > 1 {
         return Err(env.error(format!(
@@ -357,18 +358,18 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
     match sig.args {
         0 => Ok(()),
         1 => {
-            let xs = env.pop(2)?;
+            let xs = env.pop(ArrayArg(2))?;
             rows1(f, xs, env)
         }
         2 => {
-            let xs = env.pop(2)?;
-            let ys = env.pop(3)?;
+            let xs = env.pop(ArrayArg(2))?;
+            let ys = env.pop(ArrayArg(3))?;
             rows2(f, xs, ys, env)
         }
         n => {
             let mut args = Vec::with_capacity(n);
             for i in 0..n {
-                args.push(env.pop(i + 2)?);
+                args.push(env.pop(ArrayArg(i + 1))?);
             }
             rowsn(f, args, env)
         }
@@ -436,9 +437,9 @@ fn rowsn(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
 
 pub fn distribute(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop(1)?;
-    let xs = env.pop(2)?;
-    let y = env.pop(3)?;
+    let f = env.pop(FunctionArg(1))?;
+    let xs = env.pop(ArrayArg(2))?;
+    let y = env.pop(ArrayArg(3))?;
     let mut new_rows = Vec::with_capacity(xs.row_count());
     for x in xs.into_rows() {
         env.push(y.clone());
@@ -457,9 +458,9 @@ fn bin_bool<T: ArrayValue>(f: impl Fn(T, T) -> bool + Copy) -> impl Fn(T, T) -> 
 
 pub fn table(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop(1)?;
-    let xs = env.pop(2)?;
-    let ys = env.pop(3)?;
+    let f = env.pop(FunctionArg(1))?;
+    let xs = env.pop(ArrayArg(2))?;
+    let ys = env.pop(ArrayArg(3))?;
     match (f.as_flipped_primitive(), xs, ys) {
         (Some((prim, flipped)), Value::Num(xs), Value::Num(ys)) => {
             if let Err((xs, ys)) = table_nums(prim, flipped, xs, ys, env) {
@@ -599,9 +600,9 @@ fn generic_table(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
 
 pub fn cross(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop(1)?;
-    let xs = env.pop(2)?;
-    let ys = env.pop(3)?;
+    let f = env.pop(FunctionArg(1))?;
+    let xs = env.pop(ArrayArg(2))?;
+    let ys = env.pop(ArrayArg(3))?;
     const BREAK_ERROR: &str = "break is not allowed in cross";
     let mut new_shape = tiny_vec![xs.row_count(), ys.row_count()];
     let mut items = Vec::with_capacity(xs.row_count() * ys.row_count());
@@ -627,7 +628,7 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
 
 pub fn repeat(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop(1)?;
+    let f = env.pop(FunctionArg(1))?;
     let n = env
         .pop(2)?
         .as_num(env, "Repetitions must be a single integer or infinity")?;
@@ -657,7 +658,7 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
 
 pub fn level(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let get_ns = env.pop(1)?;
+    let get_ns = env.pop(FunctionArg(1))?;
     env.push(get_ns);
     env.call_error_on_break("break is not allowed in level")?;
     let ns = env.pop("level's rank list")?.as_number_list(
@@ -672,11 +673,11 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
             }
         },
     )?;
-    let f = env.pop(2)?;
+    let f = env.pop(FunctionArg(2))?;
     match ns.as_slice() {
         [] => return Ok(()),
         &[n] => {
-            let xs = env.pop(3)?;
+            let xs = env.pop(ArrayArg(3))?;
             if xs.rank() == 0 {
                 env.push(xs);
                 return Ok(());
@@ -703,7 +704,7 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
         is => {
             let mut args = Vec::with_capacity(is.len());
             for i in 0..is.len() {
-                let arg = env.pop(i + 3)?;
+                let arg = env.pop(ArrayArg(i + 1))?;
                 args.push(arg);
             }
             let mut ns: Vec<usize> = Vec::with_capacity(is.len());
@@ -797,10 +798,10 @@ fn multi_level_recursive(
 
 pub fn partition(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop(1)?;
-    let markers = env.pop(2)?;
+    let f = env.pop(FunctionArg(1))?;
+    let markers = env.pop(ArrayArg(2))?;
     let markers = markers.as_indices(env, "Partition markers must be a list of integers")?;
-    let values = env.pop(3)?;
+    let values = env.pop(ArrayArg(3))?;
     let groups = values.partition_groups(&markers, env)?;
     collapse_groups(f, groups, "partition", env)
 }
@@ -861,10 +862,10 @@ impl<T: ArrayValue> Array<T> {
 
 pub fn group(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop(1)?;
-    let indices = env.pop(2)?;
+    let f = env.pop(FunctionArg(1))?;
+    let indices = env.pop(ArrayArg(2))?;
     let indices = indices.as_indices(env, "Group indices must be a list of integers")?;
-    let values = env.pop(3)?;
+    let values = env.pop(ArrayArg(3))?;
     let groups = values.group_groups(&indices, env)?;
     collapse_groups(f, groups, "group", env)
 }

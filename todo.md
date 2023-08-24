@@ -1,4 +1,3 @@
-- Name arguments better for errors
 - Rethink nested arrays
 - Improve array formatting
 - Better native experience with TUI

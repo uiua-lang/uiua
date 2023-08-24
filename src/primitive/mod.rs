@@ -22,6 +22,7 @@ use crate::{
     algorithm::{fork, loops},
     function::Function,
     lex::AsciiToken,
+    run::FunctionArg,
     sys::*,
     value::*,
     Uiua, UiuaError, UiuaResult,
@@ -411,14 +412,14 @@ impl Primitive {
             }
             Primitive::Restack => fork::restack(env)?,
             Primitive::Invert => {
-                let f = env.pop(1)?;
+                let f = env.pop(FunctionArg(1))?;
                 let inv_f = f.invert(env)?;
                 env.push(inv_f);
                 env.call()?;
             }
             Primitive::Under => {
-                let f = env.pop(1)?;
-                let g = env.pop(2)?;
+                let f = env.pop(FunctionArg(1))?;
+                let g = env.pop(FunctionArg(2))?;
                 let (f_before, f_after) = f.under(env)?;
                 env.push(f_before);
                 env.call()?;
@@ -428,8 +429,8 @@ impl Primitive {
                 env.call()?;
             }
             Primitive::Fill => {
-                let fill = env.pop(1)?;
-                let f = env.pop(2)?;
+                let fill = env.pop(FunctionArg(1))?;
+                let f = env.pop(FunctionArg(2))?;
                 env.with_fill(fill, |env| {
                     env.push(f);
                     env.call()
@@ -438,8 +439,8 @@ impl Primitive {
             Primitive::Fork => fork::fork(env)?,
             Primitive::Trident => fork::trident(env)?,
             Primitive::Try => {
-                let f = env.pop(1)?;
-                let handler = env.pop(2)?;
+                let f = env.pop(FunctionArg(1))?;
+                let handler = env.pop(FunctionArg(2))?;
                 let size = env.stack_size();
                 env.push(f);
                 if let Err(e) = env.call() {
@@ -495,8 +496,10 @@ impl Primitive {
                 });
             }
             Primitive::Spawn => {
-                let n = env.pop(1)?.as_nat(env, "Spawn expects a natural number")?;
-                let f = env.pop(2)?;
+                let n = env
+                    .pop("thread stack size")?
+                    .as_nat(env, "Spawn expects a natural number")?;
+                let f = env.pop("thread function")?;
                 let handle = env.spawn(n, move |env| {
                     env.push(f);
                     env.call()

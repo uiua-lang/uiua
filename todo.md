@@ -1,4 +1,3 @@
-- Improve invert code with a trait?
 - Add more examples to under docs
 - Make sure multi arg level actually works
 - Fix an inverse caching problem
@@ -12,6 +11,7 @@
   - Guided examples
 - Test suite
 - Optimizations
+  - Dyadic level
   - Windowed reduce?
 - Multimedia
   - Sound input

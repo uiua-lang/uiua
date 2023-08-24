@@ -1,5 +1,7 @@
+- Fix under take/drop
 - Optimize constant arrays
-- Improve invert code
+- Improve invert code with a trait?
+- Add more examples to under docs
 - Docs
   - Control flow
   - Images

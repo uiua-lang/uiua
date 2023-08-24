@@ -558,7 +558,11 @@ backtrace:
                         _ => unreachable!(),
                     });
                     self.push_span(span, None);
-                    let val = Value::from_row_values(values, self)?;
+                    let val = if arr.constant {
+                        Value::from_row_values(values.map(Function::constant), self)
+                    } else {
+                        Value::from_row_values(values, self)
+                    }?;
                     self.pop_span();
                     self.push_instr(Instr::push(val));
                 } else {

@@ -1,4 +1,3 @@
-- Add more examples to under docs
 - Make sure multi arg level actually works
 - Fix an inverse caching problem
 - Rethink nested arrays

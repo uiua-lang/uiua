@@ -882,19 +882,30 @@ primitive!(
     /// It then applies the inverse of `f` to the result of `g`.
     ///
     /// Any function that can be [invert]ed can be used with [under].
-    /// Some functions that can't be inverted can still be used with [under].
+    /// Some functions that can't be [invert]ed can still be used with [under].
     ///
     /// Here, we negate 5, subtract 2, then negate again.
-    /// ex: ⍜¯'-2 5
+    /// ex: ⍜¯(-2) 5
+    /// You can use [under] with [round] to round to a specific number of decimal places.
+    /// ex: ⍜(×ⁿ4 10)⁅ π
+    /// [under][couple] will perform the same operation on the top two values on the stack.
+    /// ex: ⍜⊟⇡ 3 5
+    ///
+    /// The above examples involve an *arithmetic* under. That is, [invert]`f` is well-definined independent of [under]'s concept of "undoing".
+    /// The remaining examples below involve `f`s which cannot be normally [invert]ed, but which are valid as functions to use with [under].
     ///
     /// If you want to insert a value somewhere in the middle of an array, you can use [under], [rotate], and [join].
     /// ex: ⍜'↻3'⊂π 1_2_3_4_5
-    ///
-    /// You can use [under] with [round] to round to a specific number of decimal places.
-    /// ex: ⍜(×ⁿ4 10)⁅ π
-    ///
-    /// You can use [under] [take] to modify only part of an array.
-    /// ex: ⍜'↙2'×10 1_2_3_4_5
+    /// You can use [under][first] to apply a function to the first row of an array.
+    /// ex: ⍜⊢(-:10) 1_2_3_4_5
+    /// If you need to work on more of the array's rows, can use [under] with [take] or [drop].
+    /// ex: ⍜'↙3'×10 1_2_3_4_5
+    /// ex: ⍜'↘3'×10 1_2_3_4_5
+    /// [pick] and [select] also work.
+    /// ex: ⍜⊡'×10 2_1 ↯3_3⇡9
+    /// ex: ⍜⊏'×10 1_3 1_2_3_4_5
+    /// Although, [under][select] only works if the indices are unique.
+    /// ex! ⍜⊏'×10 1_3_3 1_2_3_4_5
     ([2], Under, OtherModifier, ("under", '⍜')),
     /// Set a fill context
     ///

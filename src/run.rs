@@ -45,13 +45,34 @@ pub struct Uiua {
     pub(crate) backend: Arc<dyn SysBackend>,
 }
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct Scope {
     array: Vec<usize>,
     call: Vec<StackFrame>,
     names: HashMap<Ident, usize>,
     local: bool,
     fills: Fills,
+}
+
+impl Default for Scope {
+    fn default() -> Self {
+        Self {
+            array: Vec::new(),
+            call: vec![StackFrame {
+                function: Arc::new(Function::new(
+                    FunctionId::Main,
+                    Vec::new(),
+                    FunctionKind::Normal,
+                )),
+                call_span: 0,
+                pc: 0,
+                spans: Vec::new(),
+            }],
+            names: HashMap::new(),
+            local: false,
+            fills: Fills::default(),
+        }
+    }
 }
 
 #[derive(Default, Clone)]
@@ -496,34 +517,65 @@ backtrace:
             Word::Ident(ident) => self.ident(ident, word.span, call)?,
             Word::Strand(items) => {
                 self.push_instr(Instr::BeginArray);
-                self.words(items, false)?;
+                let inner = self.compile_words(items)?;
                 let span = self.add_span(word.span);
-                self.push_instr(Instr::EndArray {
-                    span,
-                    constant: false,
-                });
+                let instrs = self.new_functions.last_mut().unwrap();
+                if inner.iter().all(|instr| matches!(instr, Instr::Push(_))) {
+                    // Inline constant arrays
+                    instrs.pop();
+                    let values = inner.into_iter().rev().map(|instr| match instr {
+                        Instr::Push(v) => *v,
+                        _ => unreachable!(),
+                    });
+                    self.push_span(span, None);
+                    let val = Value::from_row_values(values, self)?;
+                    self.pop_span();
+                    self.push_instr(Instr::push(val));
+                } else {
+                    // Normal case
+                    instrs.extend(inner);
+                    self.push_instr(Instr::EndArray {
+                        span,
+                        constant: false,
+                    });
+                }
             }
             Word::Array(arr) => {
                 if !call {
                     self.new_functions.push(Vec::new());
                 }
                 self.push_instr(Instr::BeginArray);
+                let mut inner = Vec::new();
                 for lines in arr.lines.into_iter().rev() {
-                    self.words(lines, true)?;
+                    inner.extend(self.compile_words(lines)?);
                 }
                 let span = self.add_span(word.span.clone());
-                self.push_instr(Instr::EndArray {
-                    span,
-                    constant: arr.constant,
-                });
-                if !call {
-                    let instrs = self.new_functions.pop().unwrap();
-                    let func = Function::new(
-                        FunctionId::Anonymous(word.span),
-                        instrs,
-                        FunctionKind::Normal,
-                    );
-                    self.push_instr(Instr::push(func));
+                let instrs = self.new_functions.last_mut().unwrap();
+                if call && inner.iter().all(|instr| matches!(instr, Instr::Push(_))) {
+                    instrs.pop();
+                    let values = inner.into_iter().rev().map(|instr| match instr {
+                        Instr::Push(v) => *v,
+                        _ => unreachable!(),
+                    });
+                    self.push_span(span, None);
+                    let val = Value::from_row_values(values, self)?;
+                    self.pop_span();
+                    self.push_instr(Instr::push(val));
+                } else {
+                    instrs.extend(inner);
+                    self.push_instr(Instr::EndArray {
+                        span,
+                        constant: arr.constant,
+                    });
+                    if !call {
+                        let instrs = self.new_functions.pop().unwrap();
+                        let func = Function::new(
+                            FunctionId::Anonymous(word.span),
+                            instrs,
+                            FunctionKind::Normal,
+                        );
+                        self.push_instr(Instr::push(func));
+                    }
                 }
             }
             Word::Func(func) => self.func(func, word.span)?,

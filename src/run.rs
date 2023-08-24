@@ -697,7 +697,7 @@ backtrace:
                 self.scope.call.last_mut().unwrap().pc += 1;
                 if let Some(limit) = self.execution_limit {
                     if instant::now() - self.execution_start > limit {
-                        return Err(self.error("Maximum execution time exceeded"));
+                        return Err(UiuaError::Timeout(self.span()));
                     }
                 }
             }

@@ -28,6 +28,7 @@ pub enum UiuaError {
     },
     Throw(Box<Value>, Span),
     Break(usize, Span),
+    Timeout(Span),
 }
 
 pub type UiuaResult<T = ()> = Result<T, UiuaError>;
@@ -72,6 +73,7 @@ impl fmt::Display for UiuaError {
             }
             UiuaError::Throw(value, span) => write!(f, "{span}: {value}"),
             UiuaError::Break(_, span) => write!(f, "{span}: break outside of loop"),
+            UiuaError::Timeout(_) => write!(f, "Maximum execution time exceeded"),
         }
     }
 }
@@ -100,6 +102,12 @@ impl UiuaError {
             }
             UiuaError::Break(n, span) => Ok((n, span)),
             error => Err(error),
+        }
+    }
+    pub fn base(self) -> Self {
+        match self {
+            UiuaError::Traced { error, .. } => error.base(),
+            error => error,
         }
     }
 }
@@ -181,6 +189,9 @@ impl UiuaError {
             }
             UiuaError::Throw(message, span) => report([(&message, span.clone())], color),
             UiuaError::Break(_, span) => report([("break outside of loop", span.clone())], color),
+            UiuaError::Timeout(span) => {
+                report([("Maximum execution time exceeded", span.clone())], color)
+            }
             _ => self.to_string(),
         }
     }

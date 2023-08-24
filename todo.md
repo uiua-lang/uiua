@@ -1,4 +1,3 @@
-- Under first/last
 - Docs
   - Control flow
   - Images

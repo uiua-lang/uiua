@@ -175,6 +175,8 @@ fn under_instr_fragment(instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr>)> 
         &(Val, ([Pick], [Over, Over, Pick], [Unpick])),
         &([Pick], [Over, Over, Pick], [Unpick]),
         &([Rotate], [Flip, Over, Rotate], [Flip, Neg, Rotate]),
+        &([First], [Dup, First], [Join]),
+        &([Last], [Dup, Last], [Flip, Join]),
     ];
 
     for pattern in patterns {

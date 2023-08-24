@@ -1,5 +1,3 @@
-- Make sure multi arg level actually works
-- Fix an inverse caching problem
 - Rethink nested arrays
 - Improve array formatting
 - Better native experience with TUI

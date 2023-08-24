@@ -27,8 +27,8 @@ impl PartialEq for Instr {
             (Self::Push(a), Self::Push(b)) => a == b,
             (Self::BeginArray, Self::BeginArray) => true,
             (Self::EndArray { .. }, Self::EndArray { .. }) => true,
-            (Self::Prim(a, _), Self::Prim(b, _)) => a == b,
-            (Self::Call(_), Self::Call(_)) => true,
+            (Self::Prim(a, s_span), Self::Prim(b, b_span)) => a == b && s_span == b_span,
+            (Self::Call(a), Self::Call(b)) => a == b,
             _ => false,
         }
     }
@@ -48,8 +48,10 @@ impl Ord for Instr {
             (Self::Push(a), Self::Push(b)) => a.cmp(b),
             (Self::BeginArray, Self::BeginArray) => Ordering::Equal,
             (Self::EndArray { .. }, Self::EndArray { .. }) => Ordering::Equal,
-            (Self::Prim(a, _), Self::Prim(b, _)) => a.cmp(b),
-            (Self::Call(_), Self::Call(_)) => Ordering::Equal,
+            (Self::Prim(a, a_span), Self::Prim(b, b_span)) => {
+                a.cmp(b).then_with(|| a_span.cmp(b_span))
+            }
+            (Self::Call(a), Self::Call(b)) => a.cmp(b),
             (Self::Push(_), _) => Ordering::Less,
             (Self::BeginArray, Self::Push(_)) => Ordering::Greater,
             (Self::BeginArray, _) => Ordering::Less,
@@ -73,11 +75,15 @@ impl Hash for Instr {
             }
             Instr::BeginArray => 1u8.hash(state),
             Instr::EndArray { .. } => 2u8.hash(state),
-            Instr::Prim(p, _) => {
+            Instr::Prim(p, span) => {
                 3u8.hash(state);
                 p.hash(state);
+                span.hash(state);
             }
-            Instr::Call(_) => 4u8.hash(state),
+            Instr::Call(span) => {
+                4u8.hash(state);
+                span.hash(state);
+            }
         }
     }
 }

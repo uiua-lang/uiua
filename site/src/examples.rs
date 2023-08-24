@@ -30,13 +30,14 @@ const MANDELBROT: &str = "\
 Z ← ⊟/- ⁿ2 ∶×2 /×.⇌
 ⇌⌀⍉⊞⊟.×4 ÷∶-÷2,⇡. 300
 <2 √/+ ⁿ2;∶⍥(+Z ∶,)20 ↯∶0△.";
-const CHART: &str = "\
-$ The forest calls
-⊞(⊡ ⌊×⚂⧻. ·_∶_∴_±_⇡ ;;).⇡15";
+const LIFE: &str = "\
+⍛0↙⊟.5 ⋯2_4_7
+life ← (↥↧↶=2∶=3.-,/+/+≡(⊠↻ -1⇡3)∺↻-1⇡3.)
+⍥(life.)3";
 
 pub const EXAMPLES: &[&str] = &[
     UIUA, FORMAT, D3, LOGO, AVG, CHORD, QUADRATIC, STRIPES, PALINDROME, RULE_30, PRIMES,
-    MANDELBROT, CHART,
+    MANDELBROT, LIFE,
 ];
 
 #[cfg(test)]

@@ -818,7 +818,7 @@ mod tests {
                 .replace('-', "\\\\-")
                 .replace('*', "\\\\*")
                 .replace('^', "\\\\^");
-            let format_names: String = prims
+            let format_names: Vec<_> = prims
                 .clone()
                 .filter_map(|p| p.names())
                 .filter(|p| p.is_name_formattable())
@@ -834,18 +834,19 @@ mod tests {
                         start.push(c);
                         end.push_str(")?");
                     }
-                    format!("|\\\\b{}{}\\\\b", start, end)
+                    format!("{}{}", start, end)
                 })
                 .collect();
-            let mut literal_names: Vec<String> = prims
+            let format_names = format_names.join("|");
+            let mut literal_names: Vec<_> = prims
                 .filter_map(|p| p.names())
                 .filter(|p| !p.is_name_formattable() && p.ascii.is_none() && p.unicode.is_none())
-                .map(|n| format!("|\\\\b{}\\\\b", n.text))
+                .map(|n| format!("|{}", n.text))
                 .collect();
             literal_names.sort_by_key(|s| s.len());
             literal_names.reverse();
             let literal_names = literal_names.join("");
-            format!("[{glyphs}]{format_names}{literal_names}")
+            format!(r#"[{glyphs}]|(?<![a-zA-Z])({format_names}{literal_names})(?![a-zA-Z])"#)
         }
 
         let stack_functions = gen_group(Primitive::all().filter(|p| p.class() == PrimClass::Stack));

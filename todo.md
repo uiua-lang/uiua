@@ -1,6 +1,5 @@
 - Under first/last
 - Docs
-  - Advanced stack manipulation
   - Remove antistack from design
   - Control flow
   - Images

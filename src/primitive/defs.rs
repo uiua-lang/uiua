@@ -966,6 +966,10 @@ primitive!(
     /// With 0 or 1 arguments, the second function will be passed the second value.
     /// With 2 arguments, either function will be passed both values.
     ///
+    /// We can see how this works with [join].
+    /// ex: [⊃·· 1 2]
+    /// ex: [⊃⊂⊂ 1 2]
+    ///
     /// ex: ⊟⊃×+ 3 5
     ([2], Fork, OtherModifier, ("fork", '⊃')),
     /// Call 3 functions on 3 values
@@ -976,6 +980,11 @@ primitive!(
     /// The first function will be passed up to `a`, `b`, and `c` in that order.
     /// The second function will be passed up to `b`, `c`, and `a` in that order.
     /// The third function will be passed up to `c`, `a`, and `b` in that order.
+    ///
+    /// We can see how this all works with [join].
+    /// ex: [∋··· 1 2 3]
+    /// ex: [∋⊂⊂⊂ 1 2 3]
+    /// ex: [∋'⊂⊂'⊂⊂'⊂⊂ 1 2 3]
     ///
     /// A good example use case is when implementing the quadratic formula.
     /// ex: Quad ← ÷∶+↷∋(×2)¯(⊟¯.√-∶ⁿ2∶×4×)

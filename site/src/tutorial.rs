@@ -5,7 +5,7 @@ use leptos::*;
 use leptos_router::*;
 use uiua::{example_ua, primitive::Primitive, SysOp};
 
-use crate::{editor::*, PrimCode, PrimCodes};
+use crate::{editor::*, examples::QUADRATIC, PrimCode, PrimCodes};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
 pub enum TutorialPage {
@@ -551,7 +551,7 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <p>"Uiua does not have local variables. With only "<PrimCode prim=Dup/>", "<PrimCode prim=Flip/>", and "<PrimCode prim=Over/>", how do you work with more than 2 values at a time?"</p>
 
         <h2 id="roll-and-unroll"><PrimCode prim=Roll/>" and "<PrimCode prim=Unroll/></h2>
-        <p>"The "<PrimCode prim=Roll/>" and "<PrimCode prim=Unroll/>" both work on the top 3 stack values. They do exactly what their glyphs indicate."</p>
+        <p>"The "<PrimCode prim=Roll/>" and "<PrimCode prim=Unroll/>" functions both work on the top 3 stack values. They do exactly what their glyphs indicate."</p>
         <p><PrimCode prim=Roll/>" moves the top value on the stack 2 places down."</p>
         <p><PrimCode prim=Unroll/>" moves the third value on the stack to the top."</p>
         <Editor example="[↷ 1 2 3 4]\n[↶ 1 2 3 4]"/>
@@ -561,8 +561,32 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <Editor example="+↷×,, 3 5"/>
         <p>"A better way to do this is to use the "<PrimCode prim=Fork/>" modifier, which calls each of two functions on a pair of arguments."</p>
         <Editor example="⊃+× 3 5"/>
-        <p>"If you use a function that only take 0 or 1 arguments, it will be called with only the corresponding value."</p>
+        <p>"If you use a function that only takes 0 or 1 arguments, it will be called with only the corresponding value."</p>
+        <Editor example="⊟⊃'×4'+1 3 5"/>
+        <p>"However, with only monadic functions, it is often shorter to just use "<PrimCode prim=Flip/>"."</p>
+        <Editor example="⊟⊃'×4'+1 3 5\n⊟:+1:×4  3 5"/>
 
+        <h2 id="trident"><PrimCode prim=Trident/></h2>
+        <p><PrimCode prim=Trident/>" is similar to "<PrimCode prim=Fork/>", except it applies 3 functions to 3 arguments."</p>
+        <p>"The functions may take up to 3 arguments. The first function will be passed the three arguments in order, and the second and third functions will be passed the successive "<PrimCode prim=Roll/>"s of the arguments. We can see how this works with "<PrimCode prim=Join/></p>
+        <Editor example="[∋··· 1 2 3]"/>
+        <Editor example="[∋⊂⊂⊂ 1 2 3]"/>
+        <Editor example="[∋'⊂⊂'⊂⊂'⊂⊂ 1 2 3]"/>
+
+        <h2 id="restack"><PrimCode prim=Restack/></h2>
+        <p><PrimCode prim=Restack/>" is the most powerful stack-manipulation function. All other stack-manipulation functions can be implemented with "<PrimCode prim=Restack/>"."</p>
+        <p>"Its behavior is similar to "<PrimCode prim=Select/>", except instead of selecting from an array, it selects from the stack."</p>
+        <p>"It takes a single array of natural numbers and rearranges the stack accordingly."</p>
+        <Editor example="⇵[1 3 0 0] \"x\" 2 [5 6 7] (+)"/>
+
+        <h2 id="a-motivating-example">"A Motivating Example"</h2>
+        <p>"Implementing the "<a href="https://en.wikipedia.org/wiki/Quadratic_formula">"quadratic formula"</a>" requires juggling 3 values."</p>
+        <p>"There are two ways you could approach this."</p>
+        <p>"The first way is to use "<PrimCode prim=Trident/>" and exploit the way it orders the arguments to its functions. This is what is done in an example on the homepage."</p>
+        <Editor example=QUADRATIC/>
+        <p>"The second way is to use "<PrimCode prim=Restack/>" to rearrange the arguments into the exact order needed to just do all the operations at once."</p>
+        <Editor example="Quad ← ÷×2∶-∶⊟¯.√-∶ⁿ2∶×4×⇵[0 2 1 1 0]\nQuad 1 2 0"/>
+        <p><PrimCode prim=Trident/>" is the obvious winner here in terms of both clarity and concision, but as soon as you have more than 3 arguments, "<PrimCode prim=Restack/>" becomes a necessity."</p>
     }
 }
 

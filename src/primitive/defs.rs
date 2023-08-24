@@ -828,7 +828,7 @@ primitive!(
     /// If the function takes 2 arguments, then [group] behaves like [reduce].
     /// ex: ⊕⊂ [0 2 2 1 0 1] [1 2 3 4 5 6]
     /// If the values returned by the function do not have the same [shape], concatenation will fail.
-    /// ex: ⊕· [0 1 0 2 1 1] [1 2 3 4 5 6]
+    /// ex! ⊕· [0 1 0 2 1 1] [1 2 3 4 5 6]
     /// It is common to use [constant] to encapsulate groups of different [shape]s.
     /// ex: ⊕□ [0 1 0 2 1 1] [1 2 3 4 5 6]
     ///
@@ -854,7 +854,7 @@ primitive!(
     /// If the function takes 2 arguments, then [partition] behaves like [reduce].
     /// ex: ⊜⊂ [0 0 2 2 1 1 3 3] [1 2 3 4 5 6 7 8]
     /// If the values returned by the function do not have the same [shape], concatenation will fail.
-    /// ex: ⊜· [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
+    /// ex! ⊜· [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     /// It is common to use [constant] to encapsulate groups of different [shape]s.
     /// ex: ⊜□ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     ///
@@ -1076,7 +1076,7 @@ primitive!(
     /// ex:  ![+_- ×_÷] 1_0 3 12 # Call the function at 1_0
     /// ex:  ![+_- ×_÷] 1 0 3 12 # Not enough calls
     /// ex: !![+_- ×_÷] 1 0 3 12 # 2 calls is enough
-    (1(None), Call, Control, ("call", '!')),
+    (1, Call, Control, ("call", '!')),
     /// Break out of a loop
     ///
     /// Expects a non-negative integer. This integer is how many loops will be broken out of.

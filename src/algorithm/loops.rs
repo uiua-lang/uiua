@@ -398,7 +398,7 @@ fn rows1(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
 fn rows2(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     if xs.row_count() != ys.row_count() {
         return Err(env.error(format!(
-            "Cannot bridge arrays with different number of rows {} and {}",
+            "Cannot rows arrays with different number of rows {} and {}",
             xs.row_count(),
             ys.row_count()
         )));
@@ -410,8 +410,8 @@ fn rows2(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
         env.push(y);
         env.push(x);
         env.push(f.clone());
-        env.call_error_on_break("break is not allowed in bridge")?;
-        new_rows.push(env.pop("bridge's function result")?);
+        env.call_error_on_break("break is not allowed in rows")?;
+        new_rows.push(env.pop("rows's function result")?);
     }
     env.push(Value::from_row_values(new_rows, env)?);
     Ok(())

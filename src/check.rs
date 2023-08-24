@@ -2,6 +2,7 @@ use crate::{
     array::Array,
     function::{Function, Instr, Signature},
     primitive::Primitive,
+    value::Value,
 };
 
 /// Count the number of arguments and the stack Δ of a function.
@@ -22,14 +23,14 @@ pub(crate) fn instrs_signature(instrs: &[Instr]) -> Option<Signature> {
         min_height: START_HEIGHT,
     };
     if let Err(_e) = env.instrs(instrs) {
-        // println!("instrs: {:?}", instrs);
-        // println!("unable to count sig: {}", _e);
+        println!("instrs: {:?}", instrs);
+        println!("unable to count sig: {}", _e);
         return None;
     }
     let args = START_HEIGHT.saturating_sub(env.min_height);
     let outputs = env.stack.len() - env.min_height;
-    // println!("instrs: {:?}", instrs);
-    // println!("args/outputs: {}/{}", args, outputs);
+    println!("instrs: {:?}", instrs);
+    println!("args/outputs: {}/{}", args, outputs);
     Some(Signature { args, outputs })
 }
 
@@ -63,6 +64,22 @@ impl<'a> BasicValue<'a> {
             BasicValue::Other => None,
         }
     }
+    fn from_val(value: &'a Value) -> Self {
+        if let Some(f) = value.as_func_array().and_then(Array::as_scalar) {
+            BasicValue::Func(f)
+        } else if let Some(n) = value.as_num_array().and_then(Array::as_scalar) {
+            BasicValue::Num(*n)
+        } else if value.rank() == 1 {
+            BasicValue::Arr(match value {
+                Value::Num(n) => n.data.iter().map(|n| BasicValue::Num(*n)).collect(),
+                Value::Byte(b) => b.data.iter().map(|b| BasicValue::Num(*b as f64)).collect(),
+                Value::Char(c) => c.data.iter().map(|_| BasicValue::Other).collect(),
+                Value::Func(f) => f.data.iter().map(|f| BasicValue::Func(f)).collect(),
+            })
+        } else {
+            BasicValue::Other
+        }
+    }
 }
 
 impl<'a> VirtualEnv<'a> {
@@ -76,14 +93,7 @@ impl<'a> VirtualEnv<'a> {
         use Primitive::*;
         match instr {
             Instr::Push(val) => {
-                let val = if let Some(f) = val.as_func_array().and_then(Array::as_scalar) {
-                    BasicValue::Func(f)
-                } else if let Some(n) = val.as_num_array().and_then(Array::as_scalar) {
-                    BasicValue::Num(*n)
-                } else {
-                    BasicValue::Other
-                };
-                self.stack.push(val);
+                self.stack.push(BasicValue::from_val(val));
             }
             Instr::BeginArray => self.array_stack.push(self.stack.len()),
             Instr::EndArray { .. } => {
@@ -280,6 +290,7 @@ impl<'a> VirtualEnv<'a> {
             Instr::Call(_) => self.handle_call(false)?,
         }
         self.set_min_height();
+        println!("{instr:?} -> {}", self.stack.len());
         Ok(())
     }
     fn pop(&mut self) -> Result<BasicValue<'a>, String> {
@@ -302,6 +313,40 @@ impl<'a> VirtualEnv<'a> {
                 }
                 self.set_min_height();
                 for _ in 0..sig.outputs {
+                    self.stack.push(BasicValue::Other);
+                }
+            }
+            BasicValue::Arr(items) => {
+                let mut fs = Vec::new();
+                for item in items {
+                    if let BasicValue::Func(f) = item {
+                        fs.push(f);
+                    } else {
+                        return Err("Call with non-function array".into());
+                    }
+                }
+                let mut max_args = 0;
+                let mut max_outputs = 0;
+                for f in &fs {
+                    let sig = f
+                        .signature()
+                        .ok_or_else(|| format!("Call's function {f:?} had indeterminate sig"))?;
+                    max_args = max_args.max(sig.args);
+                    max_outputs = max_outputs.max(sig.outputs);
+                }
+                for win in fs.windows(2) {
+                    match win[0].signature_compatible_with(win[1]) {
+                        Some(true) => {}
+                        Some(false) => return Err("Call with incompatible functions".into()),
+                        None => return Err("Call with indeterminate functions".into()),
+                    }
+                }
+                dbg!(max_args, max_outputs);
+                for _ in 0..max_args {
+                    self.pop()?;
+                }
+                self.set_min_height();
+                for _ in 0..max_outputs {
                     self.stack.push(BasicValue::Other);
                 }
             }

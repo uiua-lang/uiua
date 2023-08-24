@@ -551,7 +551,7 @@ primitive!(
     /// Use [fill] to make their shapes compatible.
     /// ex: ⍛0⊂ [1_2 3_4] [5_6_7 8_9_10]
     ///
-    /// [join]'s glyphs is `⊂` because it kind of looks like a magnet pulling its two arguments together.
+    /// [join]'s glyph is `⊂` because it kind of looks like a magnet pulling its two arguments together.
     (2, Join, DyadicArray, ("join", '⊂')),
     /// Combine two arrays as rows of a new array
     ///

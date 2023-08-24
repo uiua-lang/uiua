@@ -9,7 +9,6 @@ use std::{
 use base64::{engine::general_purpose::STANDARD, Engine};
 use image::ImageOutputFormat;
 use leptos::{ev::keydown, *};
-use leptos_router::{use_navigate, NavigateOptions};
 use uiua::{
     format::{format_str, FormatConfig},
     primitive::{PrimClass, Primitive},
@@ -624,11 +623,13 @@ pub fn Editor<'a>(
             }
             let onclick = move |event: MouseEvent| {
                 if event.ctrl_key() {
-                    // Redirect to the docs page
-                    use_navigate()(
-                        &format!("/docs/{}", p.name().unwrap_or_default()),
-                        NavigateOptions::default(),
-                    );
+                    // Open the docs page
+                    window()
+                        .open_with_url_and_target(
+                            &format!("/docs/{}", p.name().unwrap_or_default()),
+                            "_blank",
+                        )
+                        .unwrap();
                 } else {
                     replace_code(&p.to_string());
                 }

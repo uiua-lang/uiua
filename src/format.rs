@@ -50,7 +50,7 @@ pub fn format_items(items: &[Item], config: &FormatConfig) -> String {
     while output.ends_with('\n') {
         output.pop();
     }
-    if config.trailing_newline {
+    if config.trailing_newline && !output.trim().is_empty() {
         output.push('\n');
     }
     output

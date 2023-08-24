@@ -2,6 +2,7 @@
 - Improve array formatting
 - Better native experience with TUI
 - Shorted system function names
+- Lsp should return all spans
 - Docs
   - Control flow
   - Images

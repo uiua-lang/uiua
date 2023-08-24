@@ -16,8 +16,7 @@ pub fn Design() -> impl IntoView {
         <p>"When I first started developing Uiua, it was neither stack-oriented nor array-oriented. What it "<em>"did"</em>" focus a lot on was "<em>"combinators"</em>". I had this whole heirarchy of language-level operators that let you construct arbitrarily complex combinators relatively succinctly."</p>
         <p>"I discovered what a lot of others have discovered when delving deep into tacit code: it's really hard to read and write and reason about."</p>
         <p>"Eventually, I moved to a stack-oriented model and discovered that you can write almost any 1 or 2 argument combinator with just "<PrimCode prim=Dup/>", "<PrimCode prim=Over/>", and "<PrimCode prim=Flip/>"."</p>
-        <p>"Of course, I also made the discovery that juggling 3 or more values on the stack also imposes a high cognitive load on the developer, which is why, unlike some other stack-oriented languages, Uiua does not have a function that rotates values on the stack ("<PrimCode prim=Rotate/>" rotates a single array)."</p>
-        <p>"Eventually, I added the antistack. By having another stack available, you can more easily access arbitrary stack values, and you increase the number of \"local\" variables at hand."</p>
+        <p>"Of course, I also made the discovery that juggling 3 or more values on the stack also imposes a high cognitive load on the developer, but I added "<PrimCode prim=Roll/>" and "<PrimCode prim=Unroll/>" anyway, because they are super useful. "<PrimCode prim=Fork/>" is based on the fork structure from other array languages, and it inspired by own invention, "<PrimCode prim=Trident/>"."</p>
         <br/>
         <h3>"Expressions"</h3>
         <p>"Long tacit expressions in most array languages can get very unwieldy. Because binary operations are infix, you have to parse the tree structure in your head before you can start determining the order of operations."</p>
@@ -55,7 +54,7 @@ pub fn Design() -> impl IntoView {
         <p>"Forbidding general local variables has a few benefits:"</p>
         <ul>
             <li>"I don't have to implement them (score!)"</li>
-            <li>"It forces you to write beautiful tacit code, which I would argue Uiua enables better than almost any other programming language."</li>
+            <li>"It forces you to write (often beautiful) tacit code, which I would argue Uiua enables better than almost any other programming language."</li>
             <li>"It frees you from the burden of naming things."</li>
         </ul>
 

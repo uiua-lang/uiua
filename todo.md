@@ -1,6 +1,5 @@
 - Under first/last
 - Docs
-  - Remove antistack from design
   - Control flow
   - Images
   - System functions

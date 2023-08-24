@@ -20,7 +20,7 @@ fn flip<A, B, C>(f: impl Fn(A, B) -> C) -> impl Fn(B, A) -> C {
 pub fn reduce(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(FunctionArg(1))?;
-    let xs = env.pop(ArrayArg(2))?;
+    let xs = env.pop(ArrayArg(1))?;
 
     match (f.as_flipped_primitive(), xs) {
         (Some((prim, flipped)), Value::Num(nums)) => env.push(match prim {
@@ -136,15 +136,15 @@ fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> Uiu
 pub fn fold(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(FunctionArg(1))?;
-    let acc = env.pop(ArrayArg(2))?;
-    let xs = env.pop(ArrayArg(3))?;
+    let acc = env.pop(ArrayArg(1))?;
+    let xs = env.pop(ArrayArg(2))?;
     generic_fold(f, xs, Some(acc), env)
 }
 
 pub fn scan(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(FunctionArg(1))?;
-    let xs = env.pop(ArrayArg(2))?;
+    let xs = env.pop(ArrayArg(1))?;
     if xs.rank() == 0 {
         return Err(env.error("Cannot scan rank 0 array"));
     }
@@ -257,12 +257,12 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
     match sig.args {
         0 => Ok(()),
         1 => {
-            let xs = env.pop(ArrayArg(2))?;
+            let xs = env.pop(ArrayArg(1))?;
             each1(f, xs, env)
         }
         2 => {
-            let xs = env.pop(ArrayArg(2))?;
-            let ys = env.pop(ArrayArg(3))?;
+            let xs = env.pop(ArrayArg(1))?;
+            let ys = env.pop(ArrayArg(2))?;
             each2(f, xs, ys, env)
         }
         n => {
@@ -358,12 +358,12 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
     match sig.args {
         0 => Ok(()),
         1 => {
-            let xs = env.pop(ArrayArg(2))?;
+            let xs = env.pop(ArrayArg(1))?;
             rows1(f, xs, env)
         }
         2 => {
-            let xs = env.pop(ArrayArg(2))?;
-            let ys = env.pop(ArrayArg(3))?;
+            let xs = env.pop(ArrayArg(1))?;
+            let ys = env.pop(ArrayArg(2))?;
             rows2(f, xs, ys, env)
         }
         n => {
@@ -438,8 +438,8 @@ fn rowsn(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
 pub fn distribute(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(FunctionArg(1))?;
-    let xs = env.pop(ArrayArg(2))?;
-    let y = env.pop(ArrayArg(3))?;
+    let xs = env.pop(ArrayArg(1))?;
+    let y = env.pop(ArrayArg(2))?;
     let mut new_rows = Vec::with_capacity(xs.row_count());
     for x in xs.into_rows() {
         env.push(y.clone());
@@ -459,8 +459,8 @@ fn bin_bool<T: ArrayValue>(f: impl Fn(T, T) -> bool + Copy) -> impl Fn(T, T) -> 
 pub fn table(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(FunctionArg(1))?;
-    let xs = env.pop(ArrayArg(2))?;
-    let ys = env.pop(ArrayArg(3))?;
+    let xs = env.pop(ArrayArg(1))?;
+    let ys = env.pop(ArrayArg(2))?;
     match (f.as_flipped_primitive(), xs, ys) {
         (Some((prim, flipped)), Value::Num(xs), Value::Num(ys)) => {
             if let Err((xs, ys)) = table_nums(prim, flipped, xs, ys, env) {
@@ -601,8 +601,8 @@ fn generic_table(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
 pub fn cross(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(FunctionArg(1))?;
-    let xs = env.pop(ArrayArg(2))?;
-    let ys = env.pop(ArrayArg(3))?;
+    let xs = env.pop(ArrayArg(1))?;
+    let ys = env.pop(ArrayArg(2))?;
     const BREAK_ERROR: &str = "break is not allowed in cross";
     let mut new_shape = tiny_vec![xs.row_count(), ys.row_count()];
     let mut items = Vec::with_capacity(xs.row_count() * ys.row_count());
@@ -677,7 +677,7 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
     match ns.as_slice() {
         [] => return Ok(()),
         &[n] => {
-            let xs = env.pop(ArrayArg(3))?;
+            let xs = env.pop(ArrayArg(1))?;
             if xs.rank() == 0 {
                 env.push(xs);
                 return Ok(());
@@ -799,9 +799,9 @@ fn multi_level_recursive(
 pub fn partition(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(FunctionArg(1))?;
-    let markers = env.pop(ArrayArg(2))?;
+    let markers = env.pop(ArrayArg(1))?;
     let markers = markers.as_indices(env, "Partition markers must be a list of integers")?;
-    let values = env.pop(ArrayArg(3))?;
+    let values = env.pop(ArrayArg(2))?;
     let groups = values.partition_groups(&markers, env)?;
     collapse_groups(f, groups, "partition", env)
 }
@@ -863,9 +863,9 @@ impl<T: ArrayValue> Array<T> {
 pub fn group(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(FunctionArg(1))?;
-    let indices = env.pop(ArrayArg(2))?;
+    let indices = env.pop(ArrayArg(1))?;
     let indices = indices.as_indices(env, "Group indices must be a list of integers")?;
-    let values = env.pop(ArrayArg(3))?;
+    let values = env.pop(ArrayArg(2))?;
     let groups = values.group_groups(&indices, env)?;
     collapse_groups(f, groups, "group", env)
 }

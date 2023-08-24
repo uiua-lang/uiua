@@ -96,14 +96,15 @@ impl<'a> VirtualEnv<'a> {
                 self.stack.push(BasicValue::Arr(items));
             }
             Instr::Prim(prim, _) => match prim {
-                Reduce | Scan => self.handle_mod(prim, 2, 1, 1)?,
-                Fold => self.handle_mod(prim, 2, 1, 2)?,
+                Reduce | Scan => self.handle_mod(prim, Some(2), 1, 1)?,
+                Fold => self.handle_mod(prim, Some(2), 1, 2)?,
                 Each | Rows => self.handle_variadic_mod(prim)?,
-                Distribute | Table | Cross => self.handle_mod(prim, 2, 1, 2)?,
+                Distribute | Table | Cross => self.handle_mod(prim, Some(2), 1, 2)?,
+                Group | Partition => self.handle_mod(prim, None, 1, 2)?,
                 Spawn => {
                     if let Some(BasicValue::Num(n)) = self.stack.pop() {
                         if n.fract() == 0.0 && n >= 0.0 {
-                            self.handle_mod(prim, 1, 1, n as usize)?
+                            self.handle_mod(prim, Some(1), 1, n as usize)?
                         } else {
                             return Err("Spawn without a natural number".into());
                         }
@@ -123,9 +124,9 @@ impl<'a> VirtualEnv<'a> {
                                 })?;
                                 let m_args = sig.outputs * n;
                                 self.stack.push(BasicValue::Func(f));
-                                self.handle_mod(prim, sig.args, sig.outputs, m_args)?
+                                self.handle_mod(prim, Some(sig.args), sig.outputs, m_args)?
                             } else {
-                                self.handle_mod(prim, 0, 1, n)?
+                                self.handle_mod(prim, Some(0), 1, n)?
                             }
                         } else {
                             return Err("Repeat without a natural number".into());
@@ -312,28 +313,26 @@ impl<'a> VirtualEnv<'a> {
     fn handle_mod(
         &mut self,
         prim: &Primitive,
-        f_args: usize,
+        f_args: Option<usize>,
         f_outputs: usize,
         m_args: usize,
     ) -> Result<(), String> {
         if let BasicValue::Func(f) = self.pop()? {
-            let inner_sig = Signature {
-                args: f_args,
-                outputs: f_outputs,
-            };
             let sig = f
                 .signature()
                 .ok_or_else(|| format!("{prim}'s function {f:?} had indeterminate sig"))?;
-            if sig.args != inner_sig.args {
-                return Err(format!(
-                    "{prim}'s function {f:?} had {} args, expected {}",
-                    sig.args, inner_sig.args
-                ));
+            if let Some(f_args) = f_args {
+                if sig.args != f_args {
+                    return Err(format!(
+                        "{prim}'s function {f:?} had {} args, expected {}",
+                        sig.args, f_args
+                    ));
+                }
             }
-            if sig.outputs != inner_sig.outputs {
+            if sig.outputs != f_outputs {
                 return Err(format!(
                     "{prim}'s function {f:?} had {} outputs, expected {}",
-                    sig.outputs, inner_sig.outputs
+                    sig.outputs, f_outputs
                 ));
             }
             for _ in 0..m_args {

@@ -3,6 +3,9 @@
 - Improve invert code with a trait?
 - Add more examples to under docs
 - Make sure multi arg level actually works
+- Rethink nested arrays
+- Improve array formatting
+- Better native experience with TUI
 - Docs
   - Control flow
   - Images

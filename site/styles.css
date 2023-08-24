@@ -666,3 +666,19 @@ input[type=text] {
     scroll-margin-top: 1em;
     scroll-margin-bottom: 1em;
 }
+
+.running-text {
+    animation: fadeAnimation 1s infinite;
+}
+
+@keyframes fadeAnimation {
+
+    0%,
+    100% {
+        opacity: 0.5;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}

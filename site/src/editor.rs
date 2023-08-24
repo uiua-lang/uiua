@@ -279,12 +279,12 @@ pub fn Editor<'a>(
         };
 
         // Run code
-        let output = run_code(&input);
-        let mut allow_autoplay = !matches!(size, EditorSize::Small);
-        set_output.set(
-            output
-                .into_iter()
-                .map(|item| match item {
+        set_output.set(view!(<div class="running-text">"Running"</div>).into_view());
+        set_timeout(
+            move || {
+                let output = run_code(&input);
+                let mut allow_autoplay = !matches!(size, EditorSize::Small);
+                let render_output_item = |item| match item {
                     OutputItem::String(s) => view!(<div class="output-item">{s}</div>).into_view(),
                     OutputItem::Image(bytes) => {
                         let encoded = STANDARD.encode(bytes);
@@ -303,9 +303,11 @@ pub fn Editor<'a>(
                     OutputItem::Error(error) => {
                         view!(<div class="output-item output-error">{error}</div>).into_view()
                     }
-                })
-                .collect::<Vec<_>>()
-                .into_view(),
+                };
+                let items: Vec<_> = output.into_iter().map(render_output_item).collect();
+                set_output.set(items.into_view());
+            },
+            Duration::ZERO,
         );
     };
 

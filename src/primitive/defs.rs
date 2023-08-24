@@ -144,7 +144,7 @@ primitive!(
     /// [pop] is `⇵``[1]`.
     /// [roll] is `⇵``[1 2 0]`.
     /// [unroll] is `⇵``[2 0 1]`.
-    (1(None), Restack, Stack, ("restack", '⇵')),
+    ((None), Restack, Stack, ("restack", '⇵')),
     // Pervasive monadic ops
     /// Logical not
     ///
@@ -738,20 +738,20 @@ primitive!(
     /// [reduce] traverses the array backwards so that `reduce``noop` unloads all rows onto the stack with the first row on top.
     /// ex: /· 1_2_3
     /// ex: /· [1_2 3_4]
-    ([1], Reduce, MonadicModifier, ("reduce", '/')),
+    (1[1], Reduce, MonadicModifier, ("reduce", '/')),
     /// Apply a reducing function to an array with an initial value
     ///
     /// For reducing without an initial value, see [reduce].
     /// Unlike other modifiers, [fold] and [reduce] traverse the array from right to left.
     ///
     /// ex: ∧+ 10 1_2_3_4
-    ([1], Fold, MonadicModifier, ("fold", '∧')),
+    (2[1], Fold, MonadicModifier, ("fold", '∧')),
     /// Reduce, but keep intermediate values
     ///
     /// ex: \+   1_2_3_4
     /// ex: \-   1_2_3_4
     /// ex: \'-∶ 1_2_3_4
-    ([1], Scan, MonadicModifier, ("scan", '\\')),
+    (1[1], Scan, MonadicModifier, ("scan", '\\')),
     /// Apply a function to each element of an array or between elements of arrays
     ///
     /// This is the element-wise version of [rows].
@@ -787,14 +787,14 @@ primitive!(
     /// [distribute] is equivalent to [level]`[¯1``infinity``]`.
     /// ex:       ∺⊂ 1_2_3 4_5_6
     ///   : ⍚[¯1 ∞]⊂ 1_2_3 4_5_6
-    ([1], Distribute, DyadicModifier, ("distribute", '∺')),
+    (2[1], Distribute, DyadicModifier, ("distribute", '∺')),
     /// Apply a function to each combination of elements of two arrays
     ///
     /// This is the element-wise version of [cross].
     ///
     /// ex: ⊞+ 1_2_3 4_5_6_7
     /// ex: ⊞⊂ 1_2 3_4
-    ([1], Table, DyadicModifier, ("table", '⊞')),
+    (2[1], Table, DyadicModifier, ("table", '⊞')),
     /// Apply a function to each combination of rows of two arrays
     ///
     /// This is the row-wise version of [table].
@@ -802,7 +802,7 @@ primitive!(
     /// ex: a ← .[1_2 3_4 5_6]
     ///   : b ← .[7_8 9_10]
     ///   : ⊠⊂ a b
-    ([1], Cross, DyadicModifier, ("cross", '⊠')),
+    (2[1], Cross, DyadicModifier, ("cross", '⊠')),
     /// Repeat a function a number of times
     ///
     /// ex: ⍥'+2 5 0
@@ -814,7 +814,7 @@ primitive!(
     /// Repeating for [infinity] times will create an infinite loop.
     /// You can use [break] to break out of the loop.
     /// ex: ⍥(⎋>1000. ×2)∞ 1
-    ([1], Repeat, OtherModifier, ("repeat", '⍥')),
+    (1[1], Repeat, OtherModifier, ("repeat", '⍥')),
     /// Group elements of an array into buckets by index
     ///
     /// Takes a function and two arrays.
@@ -828,10 +828,11 @@ primitive!(
     /// If the function takes 2 arguments, then [group] behaves like [reduce].
     /// ex: ⊕⊂ [0 2 2 1 0 1] [1 2 3 4 5 6]
     /// If the values returned by the function do not have the same [shape], concatenation will fail.
+    /// ex: ⊕· [0 1 0 2 1 1] [1 2 3 4 5 6]
     /// It is common to use [constant] to encapsulate groups of different [shape]s.
     /// ex: ⊕□ [0 1 0 2 1 1] [1 2 3 4 5 6]
     ///
-    /// If you wanted to get the length of each group, use [length].
+    /// If you want to get the length of each group, use [length].
     /// ex: ⊕⧻ [0 1 0 2 1 1] [1 2 3 4 5 6]
     ///
     /// When combined with [classify], you can do things like counting the number of occurrences of each character in a string.
@@ -839,7 +840,7 @@ primitive!(
     ///   : ⊕($"_:_"⊢∶⧻.) ⊛.⊏⌂.
     ///
     /// [group] is closely related to [partition].
-    ([1], Group, DyadicModifier, ("group", '⊕')),
+    (2[1], Group, DyadicModifier, ("group", '⊕')),
     /// Group elements of an array into buckets by sequential keys
     ///
     /// Takes a function and two arrays.
@@ -853,17 +854,18 @@ primitive!(
     /// If the function takes 2 arguments, then [partition] behaves like [reduce].
     /// ex: ⊜⊂ [0 0 2 2 1 1 3 3] [1 2 3 4 5 6 7 8]
     /// If the values returned by the function do not have the same [shape], concatenation will fail.
+    /// ex: ⊜· [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     /// It is common to use [constant] to encapsulate groups of different [shape]s.
     /// ex: ⊜□ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     ///
-    /// If you wanted to get the length of each group, use [length].
+    /// If you want to get the length of each group, use [length].
     /// ex: ⊜⧻ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     ///
     /// This can be used to split an array by a delimiter.
     /// ex: ⊜□ ≠@ . $ Hey there friendo
     ///
     /// [partition] is closely related to [group].
-    ([1], Partition, DyadicModifier, ("partition", '⊜')),
+    (2[1], Partition, DyadicModifier, ("partition", '⊜')),
     /// Invert the behavior of a function
     ///
     /// Most functions are not invertible.
@@ -971,7 +973,7 @@ primitive!(
     /// ex: [⊃⊂⊂ 1 2]
     ///
     /// ex: ⊟⊃×+ 3 5
-    ([2], Fork, OtherModifier, ("fork", '⊃')),
+    (2[2], Fork, OtherModifier, ("fork", '⊃')),
     /// Call 3 functions on 3 values
     ///
     /// [trident] is a very powerfull function when juggling 3 values.
@@ -992,7 +994,7 @@ primitive!(
     /// The first function passed to [trident] [multiply]s `a` by `2`.
     /// The second function [negate]s `b`.
     /// The third function calculates the discriminant.
-    ([3], Trident, OtherModifier, ("trident", '∋')),
+    (3[3], Trident, OtherModifier, ("trident", '∋')),
     /// Call a function and catch errors
     ///
     /// If the first function errors, the second function is called with the error value.
@@ -1074,7 +1076,7 @@ primitive!(
     /// ex:  ![+_- ×_÷] 1_0 3 12 # Call the function at 1_0
     /// ex:  ![+_- ×_÷] 1 0 3 12 # Not enough calls
     /// ex: !![+_- ×_÷] 1 0 3 12 # 2 calls is enough
-    (1, Call, Control, ("call", '!')),
+    (1(None), Call, Control, ("call", '!')),
     /// Break out of a loop
     ///
     /// Expects a non-negative integer. This integer is how many loops will be broken out of.
@@ -1099,7 +1101,7 @@ primitive!(
     /// Here is a recursive fibonacci function.
     /// It uses [call] to decide whether to recur.
     /// ex: !(!(+↬2-1∶↬2-2.)_· <2.) 10
-    (0(None), Recur, Control, ("recur", '↬')),
+    (1(None), Recur, Control, ("recur", '↬')),
     /// Parse a string as a number
     ///
     /// ex: parse "17"

@@ -805,13 +805,13 @@ primitive!(
     (2[1], Cross, DyadicModifier, ("cross", '⊠')),
     /// Repeat a function a number of times
     ///
-    /// ex: ⍥'+2 5 0
-    /// ex: ⍥'⊂2 5 []
+    /// ex: ⍥(+2)5 0
+    /// ex: ⍥(⊂2)5 []
     ///
     /// One interesting use of `repeat` is to collect some number of stack values into an array.
     /// ex: ⍥⊂3 [] 1 2 3
     ///
-    /// Repeating for [infinity] times will create an infinite loop.
+    /// Repeating [infinity] times will create an infinite loop.
     /// You can use [break] to break out of the loop.
     /// ex: ⍥(⎋>1000. ×2)∞ 1
     (1[1], Repeat, OtherModifier, ("repeat", '⍥')),

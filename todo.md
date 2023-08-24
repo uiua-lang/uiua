@@ -1,8 +1,8 @@
-- Fix under take/drop
 - Optimize constant arrays
 - Improve invert code with a trait?
 - Add more examples to under docs
 - Make sure multi arg level actually works
+- Fix an inverse caching problem
 - Rethink nested arrays
 - Improve array formatting
 - Better native experience with TUI

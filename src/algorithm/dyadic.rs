@@ -969,7 +969,20 @@ impl<T: ArrayValue> Array<T> {
             [] => into,
             &[untaking] => {
                 let abs_untaking = untaking.unsigned_abs();
-                if from.shape[1..] == into.shape[1..] {
+                if from.rank() == into.rank() {
+                    let into = into.drop(&[untaking], env)?;
+                    if untaking >= 0 {
+                        from.join(into, env)
+                    } else {
+                        into.join(from, env)
+                    }
+                    .map_err(|_| {
+                        env.error(
+                            "Attempted to undo take, but the taken section \
+                            was modified to an incompatible shape",
+                        )
+                    })?
+                } else if abs_untaking == from.row_count() {
                     let into_row_len = into.row_len();
                     let into_row_count = into.row_count();
                     into.data.modify(|data| {
@@ -991,7 +1004,18 @@ impl<T: ArrayValue> Array<T> {
                         }
                     });
                     into
-                } else if from.rank() == into.rank() {
+                } else {
+                    return Err(env.error(format!(
+                        "Attempted to undo take, but the shape of the taken section's \
+                        rows was modified from {} to {}",
+                        FormatShape(&into.shape[1..]),
+                        FormatShape(&from.shape[1..])
+                    )));
+                }
+            }
+            &[untaking, ref sub_index @ ..] => {
+                let abs_untaking = untaking.unsigned_abs();
+                if from.rank() == into.rank() {
                     let into = into.drop(&[untaking], env)?;
                     if untaking >= 0 {
                         from.join(into, env)
@@ -1004,18 +1028,7 @@ impl<T: ArrayValue> Array<T> {
                             was modified to an incompatible shape",
                         )
                     })?
-                } else {
-                    return Err(env.error(format!(
-                        "Attempted to undo take, but the shape of the taken section's \
-                        rows was modified from {} to {}",
-                        FormatShape(&into.shape[1..]),
-                        FormatShape(&from.shape[1..])
-                    )));
-                }
-            }
-            &[untaking, ref sub_index @ ..] => {
-                let abs_untaking = untaking.unsigned_abs();
-                if from.shape[1..] == into.shape[1..] {
+                } else if abs_untaking == from.row_count() {
                     let into_row_count = into.row_count();
                     let mut new_rows = Vec::with_capacity(into_row_count);
                     if untaking >= 0 {
@@ -1031,19 +1044,6 @@ impl<T: ArrayValue> Array<T> {
                         }
                     }
                     Array::from_row_arrays(new_rows, env)?
-                } else if from.rank() == into.rank() {
-                    let into = into.drop(&[untaking], env)?;
-                    if untaking >= 0 {
-                        from.join(into, env)
-                    } else {
-                        into.join(from, env)
-                    }
-                    .map_err(|_| {
-                        env.error(
-                            "Attempted to undo take, but the taken section \
-                            was modified to an incompatible shape",
-                        )
-                    })?
                 } else {
                     return Err(env.error(format!(
                         "Attempted to undo take, but the shape of the taken section's \

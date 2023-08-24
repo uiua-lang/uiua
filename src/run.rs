@@ -302,7 +302,7 @@ backtrace:
                     RunMode::All => true,
                 };
                 if can_run || words_have_import(&words) {
-                    let instrs = self.compile_words(words)?;
+                    let instrs = self.compile_words(words, true)?;
                     self.exec_global_instrs(instrs)?;
                 }
             }
@@ -326,7 +326,7 @@ backtrace:
         idx
     }
     fn binding(&mut self, binding: Binding) -> UiuaResult {
-        let instrs = self.compile_words(binding.body.words)?;
+        let instrs = self.compile_words(binding.body.words, true)?;
         let make_fn = |instrs: Vec<Instr>| {
             let func = Function::new(
                 FunctionId::Named(binding.name.value.clone()),
@@ -368,9 +368,9 @@ backtrace:
         self.scope.names.insert(binding.name.value, idx);
         Ok(())
     }
-    fn compile_words(&mut self, words: Vec<Sp<Word>>) -> UiuaResult<Vec<Instr>> {
+    fn compile_words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult<Vec<Instr>> {
         self.new_functions.push(Vec::new());
-        self.words(words, true)?;
+        self.words(words, call)?;
         let instrs = self.new_functions.pop().unwrap();
         Ok(instrs)
     }
@@ -517,7 +517,7 @@ backtrace:
             Word::Ident(ident) => self.ident(ident, word.span, call)?,
             Word::Strand(items) => {
                 self.push_instr(Instr::BeginArray);
-                let inner = self.compile_words(items)?;
+                let inner = self.compile_words(items, false)?;
                 let span = self.add_span(word.span);
                 let instrs = self.new_functions.last_mut().unwrap();
                 if inner.iter().all(|instr| matches!(instr, Instr::Push(_))) {
@@ -547,7 +547,7 @@ backtrace:
                 self.push_instr(Instr::BeginArray);
                 let mut inner = Vec::new();
                 for lines in arr.lines.into_iter().rev() {
-                    inner.extend(self.compile_words(lines)?);
+                    inner.extend(self.compile_words(lines, true)?);
                 }
                 let span = self.add_span(word.span.clone());
                 let instrs = self.new_functions.last_mut().unwrap();
@@ -619,7 +619,7 @@ backtrace:
     fn func(&mut self, func: Func, _span: CodeSpan) -> UiuaResult {
         let mut instrs = Vec::new();
         for line in func.lines {
-            instrs.extend(self.compile_words(line)?);
+            instrs.extend(self.compile_words(line, true)?);
         }
 
         // Validate signature

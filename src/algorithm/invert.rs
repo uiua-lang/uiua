@@ -4,6 +4,7 @@ use crate::{
     check::instrs_signature,
     function::{Function, FunctionKind, Instr},
     primitive::Primitive,
+    value::Value,
 };
 
 impl Function {
@@ -165,6 +166,15 @@ fn under_instr_fragment(instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr>)> 
         return Some((Cow::Borrowed(instrs), inverted));
     }
 
+    macro_rules! at {
+        ($prim:expr) => {
+            |span| Instr::Prim($prim, span)
+        };
+    }
+    fn push(val: impl Into<Value>) -> Instr {
+        Instr::push(val.into())
+    }
+
     let patterns: &[&dyn UnderPattern] = &[
         &(Val, ([Take], [Over, Over, Take], [Untake])),
         &([Take], [Over, Over, Take], [Untake]),
@@ -175,8 +185,16 @@ fn under_instr_fragment(instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr>)> 
         &(Val, ([Pick], [Over, Over, Pick], [Unpick])),
         &([Pick], [Over, Over, Pick], [Unpick]),
         &([Rotate], [Flip, Over, Rotate], [Flip, Neg, Rotate]),
-        &([First], [Dup, First], [Join]),
-        &([Last], [Dup, Last], [Flip, Join]),
+        &(
+            [First],
+            [at!(Dup), at!(First)],
+            [at!(Flip), |_| push(1), at!(Drop), at!(Flip), at!(Join)],
+        ),
+        &(
+            [Last],
+            [at!(Dup), at!(Last)],
+            [at!(Flip), |_| push(-1), at!(Drop), at!(Join)],
+        ),
     ];
 
     for pattern in patterns {
@@ -317,6 +335,37 @@ impl UnderPattern for (&[Primitive], &[Primitive], &[Primitive]) {
     }
 }
 
+impl<F, G> UnderPattern for (&[Primitive], &[F], &[G])
+where
+    F: Fn(usize) -> Instr,
+    G: Fn(usize) -> Instr,
+{
+    fn under_extract(&self, input: &mut &[Instr]) -> Option<Under> {
+        let (a, b, c) = *self;
+        if a.len() > input.len() {
+            return None;
+        }
+        let mut spans = Vec::new();
+        for (instr, prim) in input.iter().zip(a.iter()) {
+            match instr {
+                Instr::Prim(instr_prim, span) if instr_prim == prim => spans.push(*span),
+                _ => return None,
+            }
+        }
+        *input = &input[a.len()..];
+        Some((
+            b.iter()
+                .zip(spans.iter().cycle())
+                .map(|(f, s)| f(*s))
+                .collect(),
+            c.iter()
+                .zip(spans.iter().cycle())
+                .map(|(f, s)| f(*s))
+                .collect(),
+        ))
+    }
+}
+
 impl<const A: usize, const B: usize> InvertPattern for ([Primitive; A], [Primitive; B]) {
     fn invert_extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {
         let (a, b) = *self;
@@ -328,7 +377,19 @@ impl<const A: usize, const B: usize, const C: usize> UnderPattern
     for ([Primitive; A], [Primitive; B], [Primitive; C])
 {
     fn under_extract(&self, input: &mut &[Instr]) -> Option<Under> {
-        let (a, b, c) = *self;
+        let (a, b, c) = self;
+        (a.as_ref(), b.as_ref(), c.as_ref()).under_extract(input)
+    }
+}
+
+impl<F, G, const A: usize, const B: usize, const C: usize> UnderPattern
+    for ([Primitive; A], [F; B], [G; C])
+where
+    F: Fn(usize) -> Instr,
+    G: Fn(usize) -> Instr,
+{
+    fn under_extract(&self, input: &mut &[Instr]) -> Option<Under> {
+        let (a, b, c) = self;
         (a.as_ref(), b.as_ref(), c.as_ref()).under_extract(input)
     }
 }

@@ -1,3 +1,5 @@
+- Optimize constant arrays
+- Improve invert code
 - Docs
   - Control flow
   - Images

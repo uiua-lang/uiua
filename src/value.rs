@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     cmp::Ordering,
     fmt,
     hash::{Hash, Hasher},
@@ -513,6 +514,20 @@ impl Value {
             }
         }
     }
+    fn coerce_as_function(&self) -> Cow<Array<Arc<Function>>> {
+        match self {
+            Value::Num(arr) => {
+                Cow::Owned(arr.convert_ref_with(|n| Arc::new(Function::constant(n))))
+            }
+            Value::Byte(arr) => {
+                Cow::Owned(arr.convert_ref_with(|n| Arc::new(Function::constant(n))))
+            }
+            Value::Char(arr) => {
+                Cow::Owned(arr.convert_ref_with(|n| Arc::new(Function::constant(n))))
+            }
+            Value::Func(arr) => Cow::Borrowed(arr),
+        }
+    }
 }
 
 macro_rules! value_from {
@@ -629,11 +644,38 @@ value_un_impl_all!(neg, not, abs, sign, sqrt, sin, cos, tan, asin, acos, floor, 
 macro_rules! value_bin_impl {
     ($name:ident, $(($va:ident, $vb:ident, $f:ident)),* $(,)?) => {
         impl Value {
+            #[allow(unreachable_patterns)]
             pub fn $name(&self, other: &Self, env: &Uiua) -> UiuaResult<Self> {
                 Ok(match (self, other) {
                     $((Value::$va(a), Value::$vb(b)) => {
-                        bin_pervade(a, b, env, $name::$f)?.into()
+                        bin_pervade(a, b, env, InfalliblePervasiveFn::new($name::$f))?.into()
                     },)*
+                    (Value::Func(a), b) => {
+                        match a.as_constant() {
+                            Some(a) => Value::$name(a, b, env)?,
+                            None => {
+                                let b = b.coerce_as_function();
+                                bin_pervade(a, &b, env, FalliblePerasiveFn::new(|a: Arc<Function>, b: Arc<Function>, env: &Uiua| {
+                                    let a = a.as_constant().ok_or_else(|| env.error("First argument is not a constant function"))?;
+                                    let b = b.as_constant().ok_or_else(|| env.error("Second argument is not a constant function"))?;
+                                    Ok(Arc::new(Function::constant(Value::$name(a, b, env)?)))
+                                }))?.into()
+                            }
+                        }
+                    },
+                    (a, Value::Func(b)) => {
+                        match b.as_constant() {
+                            Some(b) => Value::$name(a, b, env)?,
+                            None => {
+                                let a = a.coerce_as_function();
+                                bin_pervade(&a, b, env, FalliblePerasiveFn::new(|a: Arc<Function>, b: Arc<Function>, env: &Uiua| {
+                                    let a = a.as_constant().ok_or_else(|| env.error("First argument is not a constant function"))?;
+                                    let b = b.as_constant().ok_or_else(|| env.error("Second argument is not a constant function"))?;
+                                    Ok(Arc::new(Function::constant(Value::$name(a, b, env)?)))
+                                }))?.into()
+                            }
+                        }
+                    },
                     (a, b) => return Err($name::error(a.type_name(), b.type_name(), env)),
                 })
             }

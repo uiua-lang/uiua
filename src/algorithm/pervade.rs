@@ -1,6 +1,7 @@
 use std::{
     cmp::{self, Ordering},
     fmt::Display,
+    marker::PhantomData,
     slice::{self, Chunks},
 };
 
@@ -73,11 +74,54 @@ impl<T: ArrayValue> Arrayish for (&[usize], &mut [T]) {
     }
 }
 
+pub trait PervasiveFn<A, B> {
+    type Output;
+    fn call(&self, a: A, b: B, env: &Uiua) -> UiuaResult<Self::Output>;
+}
+
+#[derive(Clone)]
+pub struct InfalliblePervasiveFn<A, B, C, F>(F, PhantomData<(A, B, C)>);
+
+impl<A, B, C, F> InfalliblePervasiveFn<A, B, C, F> {
+    pub fn new(f: F) -> Self {
+        Self(f, PhantomData)
+    }
+}
+
+impl<A, B, C, F> PervasiveFn<A, B> for InfalliblePervasiveFn<A, B, C, F>
+where
+    F: Fn(A, B) -> C,
+{
+    type Output = C;
+    fn call(&self, a: A, b: B, _env: &Uiua) -> UiuaResult<Self::Output> {
+        Ok((self.0)(a, b))
+    }
+}
+
+#[derive(Clone)]
+pub struct FalliblePerasiveFn<A, B, C, F>(F, PhantomData<(A, B, C)>);
+
+impl<A, B, C, F> FalliblePerasiveFn<A, B, C, F> {
+    pub fn new(f: F) -> Self {
+        Self(f, PhantomData)
+    }
+}
+
+impl<A, B, C, F> PervasiveFn<A, B> for FalliblePerasiveFn<A, B, C, F>
+where
+    F: Fn(A, B, &Uiua) -> UiuaResult<C>,
+{
+    type Output = C;
+    fn call(&self, a: A, b: B, env: &Uiua) -> UiuaResult<Self::Output> {
+        (self.0)(a, b, env)
+    }
+}
+
 pub fn bin_pervade<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
     a: &Array<A>,
     b: &Array<B>,
     env: &Uiua,
-    f: impl Fn(A, B) -> C + Copy,
+    f: impl PervasiveFn<A, B, Output = C> + Clone,
 ) -> UiuaResult<Array<C>> {
     let mut a = a;
     let mut b = b;
@@ -154,7 +198,7 @@ pub fn bin_pervade<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
     }
     let shape = Shape::from(a.shape().max(b.shape()));
     let mut data = Vec::with_capacity(a.flat_len().max(b.flat_len()));
-    bin_pervade_recursive(a, b, &mut data, f);
+    bin_pervade_recursive(a, b, &mut data, env, f)?;
     Ok(Array::new(shape, data))
 }
 
@@ -162,31 +206,33 @@ fn bin_pervade_recursive<A: Arrayish, B: Arrayish, C: ArrayValue>(
     a: &A,
     b: &B,
     c: &mut Vec<C>,
-    f: impl Fn(A::Value, B::Value) -> C + Copy,
-) {
+    env: &Uiua,
+    f: impl PervasiveFn<A::Value, B::Value, Output = C> + Clone,
+) -> UiuaResult {
     match (a.shape(), b.shape()) {
-        ([], []) => c.push(f(a.data()[0].clone(), b.data()[0].clone())),
+        ([], []) => c.push(f.call(a.data()[0].clone(), b.data()[0].clone(), env)?),
         (ash, bsh) if ash == bsh => {
             for (a, b) in a.data().iter().zip(b.data()) {
-                c.push(f(a.clone(), b.clone()));
+                c.push(f.call(a.clone(), b.clone(), env)?);
             }
         }
         ([], bsh) => {
             for brow in b.rows() {
-                bin_pervade_recursive(a, &(&bsh[1..], brow), c, f);
+                bin_pervade_recursive(a, &(&bsh[1..], brow), c, env, f.clone())?;
             }
         }
         (ash, []) => {
             for arow in a.rows() {
-                bin_pervade_recursive(&(&ash[1..], arow), b, c, f);
+                bin_pervade_recursive(&(&ash[1..], arow), b, c, env, f.clone())?;
             }
         }
         (ash, bsh) => {
             for (arow, brow) in a.rows().zip(b.rows()) {
-                bin_pervade_recursive(&(&ash[1..], arow), &(&bsh[1..], brow), c, f);
+                bin_pervade_recursive(&(&ash[1..], arow), &(&bsh[1..], brow), c, env, f.clone())?;
             }
         }
     }
+    Ok(())
 }
 
 pub mod not {

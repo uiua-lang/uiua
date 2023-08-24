@@ -514,7 +514,15 @@ impl Value {
             }
         }
     }
-    fn coerce_as_function(&self) -> Cow<Array<Arc<Function>>> {
+    pub fn coerce_to_function(self) -> Array<Arc<Function>> {
+        match self {
+            Value::Num(arr) => arr.convert_with(|n| Arc::new(Function::constant(n))),
+            Value::Byte(arr) => arr.convert_with(|n| Arc::new(Function::constant(n))),
+            Value::Char(arr) => arr.convert_with(|n| Arc::new(Function::constant(n))),
+            Value::Func(arr) => arr,
+        }
+    }
+    pub fn coerce_as_function(&self) -> Cow<Array<Arc<Function>>> {
         match self {
             Value::Num(arr) => {
                 Cow::Owned(arr.convert_ref_with(|n| Arc::new(Function::constant(n))))
@@ -857,7 +865,13 @@ impl fmt::Display for Value {
             Value::Num(n) => n.fmt(f),
             Value::Byte(b) => b.fmt(f),
             Value::Char(c) => c.fmt(f),
-            Value::Func(func) => func.fmt(f),
+            Value::Func(func) => {
+                if let Some(val) = func.as_constant() {
+                    val.fmt(f)
+                } else {
+                    func.fmt(f)
+                }
+            }
         }
     }
 }

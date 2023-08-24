@@ -77,14 +77,14 @@ impl GridFmt for Function {
         if let Some((prim, _)) = self.as_primitive() {
             return vec![prim.to_string().chars().collect()];
         }
+        if let Some(value) = self.as_constant() {
+            return value.fmt_grid();
+        }
         let mut grid: Grid = self
             .format_inner()
             .lines()
             .map(|s| s.chars().collect())
             .collect();
-        if self.is_constant() {
-            return grid;
-        }
         if grid.len() == 1 {
             grid[0].insert(0, '(');
             grid[0].push(')');

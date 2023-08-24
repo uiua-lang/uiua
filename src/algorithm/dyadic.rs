@@ -2,14 +2,7 @@ use std::{cmp::Ordering, iter::repeat, mem::take, sync::Arc};
 
 use tinyvec::tiny_vec;
 
-use crate::{
-    algorithm::max_shape,
-    array::*,
-    cowslice::CowSlice,
-    function::{Function, FunctionId, FunctionKind, Instr},
-    value::Value,
-    Uiua, UiuaResult,
-};
+use crate::{algorithm::max_shape, array::*, function::Function, value::Value, Uiua, UiuaResult};
 
 use super::FillContext;
 
@@ -23,30 +16,8 @@ impl Value {
     ) -> Result<T, C::Error> {
         match (self, other) {
             (Value::Func(a), Value::Func(b)) => on_success(a, b, ctx),
-            (Value::Func(a), mut b) => {
-                let shape = take(b.shape_mut());
-                let new_data: CowSlice<_> = b
-                    .into_flat_values()
-                    .map(|b| {
-                        Arc::new(Function::new(
-                            FunctionId::Constant,
-                            vec![Instr::Push(b.into()), Instr::Call(0)],
-                            FunctionKind::Normal,
-                        ))
-                    })
-                    .collect();
-                let b = Array::new(shape, new_data);
-                on_success(a, b, ctx)
-            }
-            (mut a, Value::Func(b)) => {
-                let shape = take(a.shape_mut());
-                let new_data: CowSlice<_> = a
-                    .into_flat_values()
-                    .map(|a| Arc::new(Function::constant(a)))
-                    .collect();
-                let a = Array::new(shape, new_data);
-                on_success(a, b, ctx)
-            }
+            (Value::Func(a), b) => on_success(a, b.coerce_to_function(), ctx),
+            (a, Value::Func(b)) => on_success(a.coerce_to_function(), b, ctx),
             (a, b) => Err(ctx.error(on_error(a.type_name(), b.type_name()))),
         }
     }

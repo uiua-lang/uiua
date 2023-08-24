@@ -2,6 +2,7 @@
 - Rethink nested arrays
 - Improve array formatting
 - Better native experience with TUI
+- Shorted system function names
 - Docs
   - Control flow
   - Images

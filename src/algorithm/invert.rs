@@ -1,4 +1,4 @@
-use std::{borrow::Cow, cell::RefCell, collections::HashMap};
+use std::{borrow::Cow, cell::RefCell, collections::HashMap, fmt};
 
 use crate::{
     check::instrs_signature,
@@ -71,7 +71,7 @@ pub(crate) fn invert_instrs(instrs: &[Instr]) -> Option<Vec<Instr>> {
     Some(inverted)
 }
 
-fn invert_instr_fragment(instrs: &[Instr]) -> Option<Vec<Instr>> {
+fn invert_instr_fragment(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
     use Instr::*;
     use Primitive::*;
     match instrs {
@@ -101,13 +101,20 @@ fn invert_instr_fragment(instrs: &[Instr]) -> Option<Vec<Instr>> {
         &invert_repeat_pattern,
     ];
 
-    for pattern in patterns {
-        let mut input = instrs;
-        if let Some(inverted) = pattern.invert_extract(&mut input) {
-            if input.is_empty() {
-                return Some(inverted);
+    let mut inverted = Vec::new();
+    'find_pattern: loop {
+        for pattern in patterns {
+            let mut input = instrs;
+            if let Some(inv) = pattern.invert_extract(&mut input) {
+                inverted.extend(inv);
+                if input.is_empty() {
+                    return Some(inverted);
+                }
+                instrs = input;
+                continue 'find_pattern;
             }
         }
+        break;
     }
 
     None
@@ -160,7 +167,7 @@ fn under_instrs(instrs: &[Instr]) -> Option<Under> {
     Some(under)
 }
 
-fn under_instr_fragment(instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr>)> {
+fn under_instr_fragment(mut instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr>)> {
     use Primitive::*;
     if let Some(inverted) = invert_instr_fragment(instrs) {
         return Some((Cow::Borrowed(instrs), inverted));
@@ -189,19 +196,29 @@ fn under_instr_fragment(instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr>)> 
         &([Shape], [Dup, Shape], [Reshape]),
     ];
 
-    for pattern in patterns {
-        let mut input = instrs;
-        if let Some((befores, afters)) = pattern.under_extract(&mut input) {
-            if input.is_empty() {
-                return Some((Cow::Owned(befores), afters));
+    let mut befores = Vec::new();
+    let mut afters = Vec::new();
+    'find_pattern: loop {
+        for pattern in patterns {
+            let mut input = instrs;
+            if let Some((bef, aft)) = pattern.under_extract(&mut input) {
+                // println!("matched under pattern: {pattern:?}");
+                befores.extend(bef);
+                afters = aft.into_iter().chain(afters).collect();
+                if input.is_empty() {
+                    return Some((Cow::Owned(befores), afters));
+                }
+                instrs = input;
+                continue 'find_pattern;
             }
         }
+        break;
     }
 
     None
 }
 
-trait AsInstr {
+trait AsInstr: fmt::Debug {
     fn as_instr(&self, span: usize) -> Instr;
     fn i(&self) -> Box<dyn AsInstr>
     where
@@ -233,7 +250,7 @@ trait InvertPattern {
     fn invert_extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>>;
 }
 
-trait UnderPattern {
+trait UnderPattern: fmt::Debug {
     fn under_extract(&self, input: &mut &[Instr]) -> Option<Under>;
 }
 
@@ -439,6 +456,7 @@ fn invert_repeat_pattern(input: &mut &[Instr]) -> Option<Vec<Instr>> {
     }
 }
 
+#[derive(Debug)]
 struct Val;
 impl InvertPattern for Val {
     fn invert_extract(&self, input: &mut &[Instr]) -> Option<Vec<Instr>> {

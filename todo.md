@@ -1,6 +1,7 @@
 - Improve array formatting
 - Better native experience with TUI
 - Lsp should return all spans
+- Make invert algorithms less state-y
 - Docs
   - Control flow
   - Images

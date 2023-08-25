@@ -1,7 +1,6 @@
-- Require signatures when one cannot be inferred
+- Shorten system function names
 - Improve array formatting
 - Better native experience with TUI
-- Shorted system function names
 - Lsp should return all spans
 - Docs
   - Control flow

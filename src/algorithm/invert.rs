@@ -186,6 +186,7 @@ fn under_instr_fragment(instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr>)> 
             [Dup, Last],
             [Flip.i(), (-1).i(), Drop.i(), Join.i()],
         ),
+        &([Shape], [Dup, Shape], [Reshape]),
     ];
 
     for pattern in patterns {

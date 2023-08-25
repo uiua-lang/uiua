@@ -16,7 +16,6 @@ pub(crate) fn instrs_signature(instrs: &[Instr]) -> Result<Signature, String> {
         }
     }
 
-    // println!("start instrs: {:?}", instrs);
     const START_HEIGHT: usize = 16;
     let mut env = VirtualEnv {
         stack: vec![BasicValue::Other; START_HEIGHT],

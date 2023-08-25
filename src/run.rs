@@ -327,19 +327,17 @@ backtrace:
     }
     fn binding(&mut self, binding: Binding) -> UiuaResult {
         let instrs = self.compile_words(binding.body.words, true)?;
-        let make_fn = |instrs: Vec<Instr>| {
+        let make_fn = |instrs: Vec<Instr>, sig: Signature| {
             let func = Function::new(
                 FunctionId::Named(binding.name.value.clone()),
                 instrs,
                 FunctionKind::Normal,
             );
-            if let Some(sig) = &binding.body.signature {
-                func.set_signature(sig.value);
-            }
+            func.set_signature(sig);
             Value::from(func)
         };
         let mut val = match instrs_signature(&instrs) {
-            Some(sig) => {
+            Ok(sig) => {
                 if let Some(declared_sig) = &binding.body.signature {
                     if declared_sig.value != sig {
                         return Err(UiuaError::Run(Span::Code(declared_sig.span.clone()).sp(
@@ -356,10 +354,19 @@ backtrace:
                     self.exec_global_instrs(instrs)?;
                     self.stack.pop().unwrap_or_default()
                 } else {
-                    make_fn(instrs)
+                    make_fn(instrs, sig)
                 }
             }
-            _ => make_fn(instrs),
+            Err(e) => {
+                if let Some(sig) = binding.body.signature {
+                    make_fn(instrs, sig.value)
+                } else {
+                    return Err(UiuaError::Run(
+                        Span::Code(binding.name.span.clone())
+                            .sp(format!("Cannot infer function signature: {e}")),
+                    ));
+                }
+            }
         };
         val.compress();
         let mut globals = self.globals.lock();
@@ -411,7 +418,7 @@ backtrace:
                 if let (Prim(Under, span), Some(((Couple, _), g_func))) =
                     (&instr, f.as_primitive().zip(g.as_function()))
                 {
-                    if let Some(Signature {
+                    if let Ok(Signature {
                         args: 1,
                         outputs: 1,
                     }) = g_func.signature()
@@ -616,25 +623,10 @@ backtrace:
         }
         Ok(())
     }
-    fn func(&mut self, func: Func, _span: CodeSpan) -> UiuaResult {
+    fn func(&mut self, func: Func, span: CodeSpan) -> UiuaResult {
         let mut instrs = Vec::new();
         for line in func.lines {
             instrs.extend(self.compile_words(line, true)?);
-        }
-
-        // Validate signature
-        if let Some(declared_sig) = &func.signature {
-            if let Some(sig) = instrs_signature(&instrs) {
-                if declared_sig.value != sig {
-                    return Err(UiuaError::Run(Span::Code(declared_sig.span.clone()).sp(
-                        format!(
-                            "Function signature mismatch: \
-                            declared {} but inferred {}",
-                            declared_sig.value, sig
-                        ),
-                    )));
-                }
-            }
         }
 
         // If the function is just a call to another function, just push that function
@@ -644,10 +636,31 @@ backtrace:
                 return Ok(());
             }
         }
+
         let function = Function::new(func.id, instrs, FunctionKind::Normal);
+        // Validate signature
         if let Some(declared_sig) = &func.signature {
-            function.set_signature(declared_sig.value);
+            if let Ok(sig) = function.signature() {
+                // Ensure the inferred signature matches the declared signature
+                if declared_sig.value != sig {
+                    return Err(UiuaError::Run(Span::Code(declared_sig.span.clone()).sp(
+                        format!(
+                            "Function signature mismatch: \
+                            declared {} but inferred {}",
+                            declared_sig.value, sig
+                        ),
+                    )));
+                }
+            } else {
+                // Use the declared signature
+                function.set_signature(declared_sig.value);
+            }
+        } else if let Err(e) = function.signature() {
+            return Err(UiuaError::Run(
+                Span::Code(span.clone()).sp(format!("Cannot infer function signature: {e}")),
+            ));
         }
+
         self.push_instr(Instr::push(function));
         Ok(())
     }

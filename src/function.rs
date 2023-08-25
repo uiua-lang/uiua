@@ -118,7 +118,7 @@ pub struct Function {
     pub instrs: Vec<Instr>,
     pub kind: FunctionKind,
     // Calculating the signature of a function can be expensive, so we cache it.
-    signature_cache: Arc<Mutex<Option<Option<Signature>>>>,
+    signature_cache: Arc<Mutex<Option<Result<Signature, String>>>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -133,6 +133,12 @@ impl Signature {
             args: args.into(),
             outputs: outputs.into(),
         }
+    }
+    pub fn compatible_with(self, other: Self) -> bool {
+        self.args as isize - self.outputs as isize == other.args as isize - other.outputs as isize
+    }
+    pub fn max_with(self, other: Self) -> Self {
+        Self::new(self.args.max(other.args), self.outputs.max(other.outputs))
     }
 }
 
@@ -255,7 +261,7 @@ impl Function {
         }
     }
     pub fn set_signature(&self, sig: Signature) {
-        *self.signature_cache.lock() = Some(Some(sig));
+        *self.signature_cache.lock() = Some(Ok(sig));
     }
     pub fn into_inner(f: Arc<Self>) -> Self {
         Arc::try_unwrap(f).unwrap_or_else(|f| (*f).clone())
@@ -281,14 +287,16 @@ impl Function {
     }
     /// Get how many arguments this function pops off the stack and how many it pushes.
     /// Returns `None` if either of these values are dynamic.
-    pub fn signature(&self) -> Option<Signature> {
-        *self
-            .signature_cache
+    pub fn signature(&self) -> Result<Signature, String> {
+        self.signature_cache
             .lock()
             .get_or_insert_with(|| match self.kind {
                 FunctionKind::Normal => instrs_signature(&self.instrs),
-                FunctionKind::Dynamic(DynamicFunctionKind { signature, .. }) => Some(signature),
+                FunctionKind::Dynamic(DynamicFunctionKind { signature, .. }) => Ok(signature),
             })
+            .as_ref()
+            .map(|sig| *sig)
+            .map_err(|e| e.clone())
     }
     pub fn is_constant(&self) -> bool {
         matches!(&*self.instrs, [Instr::Push(_)])
@@ -360,14 +368,6 @@ impl Function {
                 },
                 FunctionKind::Normal,
             ),
-        }
-    }
-    pub fn signature_compatible_with(&self, other: &Self) -> Option<bool> {
-        match (self.signature(), other.signature()) {
-            (Some(a), Some(b)) => {
-                Some(a.args as isize - a.outputs as isize == b.args as isize - b.outputs as isize)
-            }
-            _ => None,
         }
     }
 }

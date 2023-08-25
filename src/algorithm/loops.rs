@@ -99,7 +99,7 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
 
 fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
     match f.signature().map(|sig| sig.args) {
-        Some(0 | 1) => {
+        Ok(0 | 1) => {
             for row in xs.into_rows_rev() {
                 env.push(row);
                 env.push(f.clone());
@@ -108,7 +108,7 @@ fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> Uiu
                 }
             }
         }
-        Some(2) | None => {
+        Ok(2) | Err(_) => {
             let mut rows = xs.into_rows_rev();
             let mut acc = init
                 .or_else(|| rows.next())
@@ -124,7 +124,7 @@ fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> Uiu
             }
             env.push(acc);
         }
-        Some(args) => {
+        Ok(args) => {
             return Err(env.error(format!(
                 "Cannot reduce a function that takes {args} arguments"
             )))
@@ -917,7 +917,7 @@ where
 {
     let mut groups = groups.into_iter();
     match f.signature().map(|sig| sig.args) {
-        Some(0 | 1) | None => {
+        Ok(0 | 1) | Err(_) => {
             let mut rows = Vec::with_capacity(groups.len());
             for group in groups {
                 env.push(group);
@@ -929,7 +929,7 @@ where
             let res = Value::from_row_values(rows, env)?;
             env.push(res);
         }
-        Some(2) => {
+        Ok(2) => {
             let mut acc = groups
                 .next()
                 .ok_or_else(|| env.error(format!("Cannot reduce empty {name} result")))?;
@@ -944,7 +944,7 @@ where
             }
             env.push(acc);
         }
-        Some(args) => {
+        Ok(args) => {
             return Err(env.error(format!(
                 "Cannot {name} with a function that takes {args} arguments"
             )))

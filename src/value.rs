@@ -42,11 +42,11 @@ impl fmt::Debug for Value {
 }
 
 impl Value {
-    pub fn signature(&self) -> Option<Signature> {
+    pub fn signature(&self) -> Result<Signature, String> {
         if let Some(f) = self.as_func_array().and_then(Array::as_scalar) {
             f.signature()
         } else {
-            Some(Signature::new(0u8, 1u8))
+            Ok(Signature::new(0u8, 1u8))
         }
     }
     pub fn as_num_array(&self) -> Option<&Array<f64>> {

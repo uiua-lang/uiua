@@ -435,9 +435,12 @@ impl ArrayValue for Arc<Function> {
         self.hash(hasher)
     }
     fn group_compatibility<C: FillContext>(&self, other: &Self, ctx: C) -> Result<(), C::Error> {
-        match self.signature_compatible_with(other) {
-            Some(false) => Err(ctx.error("Functions have incompatible signatures")),
-            Some(true) | None => Ok(()),
+        let a = self.signature().map_err(|e| ctx.error(e))?;
+        let b = other.signature().map_err(|e| ctx.error(e))?;
+        if a.compatible_with(b) {
+            Ok(())
+        } else {
+            Err(ctx.error("Functions have incompatible signatures"))
         }
     }
     fn subrank(&self) -> usize {

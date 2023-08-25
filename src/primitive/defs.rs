@@ -1109,14 +1109,16 @@ primitive!(
     /// `recur``2` calls the function that called the current function, and so on.
     ///
     /// Here, we recur until the value is not `less than``10`.
-    /// ex: !(↬<10.×2) 1
+    /// ex: !(|1 ↬<10.×2) 1
+    ///
+    /// [recur] prevents function signature analysis from working, so functions that contain recur must be annotated with a signature with `|`.
     ///
     /// Here is a recursive factorial function:
-    /// ex: !(×↬>2.-1.) 5
+    /// ex: !(|1 ×↬>2.-1.) 5
     ///
     /// Here is a recursive fibonacci function.
     /// It uses [call] to decide whether to recur.
-    /// ex: !(!(+↬2-1∶↬2-2.)_· <2.) 10
+    /// ex: !(!(|1 +↬2-1∶↬2-2.)_· <2.) 10
     (1(None), Recur, Control, ("recur", '↬')),
     /// Parse a string as a number
     ///

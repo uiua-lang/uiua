@@ -4,7 +4,7 @@ const D3: &str = "↯∶⇡/×.2_3_4";
 pub const LOGO: &str = "\
 xy ← ⌀⍉⊞⊟. ÷÷2∶ -÷2,⇡.200
 rgb ← [∶⌀⊟×.xy ↯△⊢xy0.5]
-u ← ↥<0.2∶>0.7.+×2 ×.∶/·xy
+u ← ↥<0.2∶>0.7.+×2 ×.∶⌀⊟xy
 c ← <∶√/+ⁿ2 xy
 ⍉⊂∶-¬u c1 +0.1 ∺↧rgb c0.95";
 const AVG: &str = "Avg ← ÷⧻∶/+.\nAvg 0_2_1_5";
@@ -16,7 +16,7 @@ pub const QUADRATIC: &str = "\
 Quad ← ÷∶+↷∋(×2)¯(⊟¯.√+ⁿ2∶××¯4)
 Quad 1 2 0";
 const STRIPES: &str = "\
-∺(⊞ ∶,)+_↥_- ⇡300
+∺(|1 ⊞ ∶,)+_↥_- ⇡300
 ⍉ ÷2 +1.2 ○ ÷10";
 const PALINDROME: &str = r#"$ uiua racecar wow cool!
 ⍛@ ⊜(⊂⊏∶"❌✅" ≅⇌..)≠@ ."#;

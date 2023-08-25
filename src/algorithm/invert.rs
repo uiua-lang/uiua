@@ -446,7 +446,7 @@ impl InvertPattern for Val {
         }
         for len in (1..input.len()).rev() {
             let chunk = &input[..len];
-            if let Some(sig) = instrs_signature(chunk) {
+            if let Ok(sig) = instrs_signature(chunk) {
                 if sig.args == 0 && sig.outputs == 1 {
                     let res = chunk.to_vec();
                     *input = &input[len..];

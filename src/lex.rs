@@ -37,11 +37,11 @@ pub enum LexError {
 impl fmt::Display for LexError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LexError::UnexpectedChar(c) => write!(f, "unexpected char {c:?}"),
-            LexError::ExpectedCharacter(Some(c)) => write!(f, "expected {c:?}"),
-            LexError::ExpectedCharacter(None) => write!(f, "expected character"),
-            LexError::InvalidEscape(c) => write!(f, "invalid escape character {c:?}"),
-            LexError::ExpectedNumber => write!(f, "expected number"),
+            LexError::UnexpectedChar(c) => write!(f, "Unexpected char {c:?}"),
+            LexError::ExpectedCharacter(Some(c)) => write!(f, "Expected {c:?}"),
+            LexError::ExpectedCharacter(None) => write!(f, "Expected character"),
+            LexError::InvalidEscape(c) => write!(f, "Invalid escape character {c:?}"),
+            LexError::ExpectedNumber => write!(f, "Expected number"),
         }
     }
 }

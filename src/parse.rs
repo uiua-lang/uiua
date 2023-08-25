@@ -16,6 +16,7 @@ pub enum ParseError {
     Unexpected(Token),
     InvalidArgCount(String),
     InvalidOutCount(String),
+    AmpersandBindingName,
 }
 
 #[derive(Debug, Clone)]
@@ -46,7 +47,7 @@ impl fmt::Display for ParseError {
         match self {
             ParseError::Lex(e) => write!(f, "{e}"),
             ParseError::Expected(exps, found) => {
-                write!(f, "expected ")?;
+                write!(f, "Expected ")?;
                 for (i, exp) in exps.iter().enumerate() {
                     if i > 0 {
                         write!(f, ", ")?;
@@ -58,10 +59,11 @@ impl fmt::Display for ParseError {
                 }
                 Ok(())
             }
-            ParseError::InvalidNumber(s) => write!(f, "invalid number `{s}`"),
-            ParseError::Unexpected(_) => write!(f, "unexpected token"),
-            ParseError::InvalidArgCount(n) => write!(f, "invalid argument count `{n}`"),
-            ParseError::InvalidOutCount(n) => write!(f, "invalid output count `{n}`"),
+            ParseError::InvalidNumber(s) => write!(f, "Invalid number `{s}`"),
+            ParseError::Unexpected(_) => write!(f, "Unexpected token"),
+            ParseError::InvalidArgCount(n) => write!(f, "Invalid argument count `{n}`"),
+            ParseError::InvalidOutCount(n) => write!(f, "Invalid output count `{n}`"),
+            ParseError::AmpersandBindingName => write!(f, "Binding names may not contain `&`"),
         }
     }
 }
@@ -198,6 +200,10 @@ impl Parser {
     fn try_binding(&mut self) -> Option<Binding> {
         let start = self.index;
         Some(if let Some(ident) = self.try_ident() {
+            if ident.value.as_str().contains('&') {
+                self.errors
+                    .push(self.prev_span().sp(ParseError::AmpersandBindingName));
+            }
             self.try_spaces();
             if self.try_exact(Equal).is_none() && self.try_exact(LeftArrow).is_none() {
                 self.index = start;

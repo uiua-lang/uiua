@@ -425,7 +425,7 @@ fn TutorialTypes() -> impl IntoView {
         <Editor example="\"Hello, World!\""/>
         <p>"You can make strings span multiple lines with a "<code>"$"</code>" followed by a space on each line."</p>
         <p>"These do not require "<code>"\""</code>"s."</p>
-        <Editor example="print $ Hello, \n      $ World!"/>
+        <Editor example="&p $ Hello, \n      $ World!"/>
         <p>"This style of string is also useful when your string contains a lot of quotes that you don't want to escape."</p>
         <Editor example="$ An then she was like, \"No way!\"\n$ And I was like, \"Way...\""/>
         <br/>
@@ -528,7 +528,7 @@ X 5"/>
         <p>"If you need to use a literal "<code>"_"</code>", you can escape them with "<code>"\\"</code>"."</p>
         <Editor example="$\"\\__\\_\" 27"/>
         <p>"Multi-line strings are implicitly format strings."</p>
-        <Editor example="↶+,, 1 2\nprint $ Do you know what _ + _ is?\n      $ It's _!"/>
+        <Editor example="↶+,, 1 2\n&p $ Do you know what _ + _ is?\n      $ It's _!"/>
 
         <h2 id="stack-signatures">"Stack Signatures"</h2>
         <p>"Bindings and inline functions can have a "<em>"stack signature"</em>" declared with a "<code>"|"</code>" followed by 1 or 2 numbers seperated by a "<code>"."</code>". The first number is the number of arguments the function pops from the stack. The second number is the number of values the function pushes to the stack."</p>
@@ -627,13 +627,14 @@ plusfive ← use "PlusFive" mymodule
 
 Twin PlusFive 3"#/>
 
-        <h2 id="import"><PrimCode prim=Sys(SysOp::Import)/></h2>
+        <h2 id="import">"Importing with "<PrimCode prim=Sys(SysOp::Import)/></h2>
         <p>"Finally, we reach the point of all of this. You can import other files as scopes with "<PrimCode prim=Sys(SysOp::Import)/>"."</p>
+        <p>"System functions like "<PrimCode prim=Sys(SysOp::Import)/>" are prefixed with "<code>"&"</code>" so that the names of your own functions don't collide with them."</p>
         <p>"The website's editor has an example file that you can import called "<code>"example.ua"</code>". Its contents is:"</p>
         <Editor example={ &example_ua(|ex| ex.clone()) }/>
         <p>"You can import it with "<PrimCode prim=Sys(SysOp::Import)/>" and then "<PrimCode prim=Use/>" to extract the functions."</p>
         <p>"By using "<PrimCode prim=Dup/>" on the imported module, you can repetedly extract functions from it. Notice the lack of a "<PrimCode prim=Dup glyph_only=true/>" after the last "<PrimCode prim=Use/>"."</p>
-        <Editor example=r#"import "example.ua"
+        <Editor example=r#"&i "example.ua"
 square ← use "square".
 double ← use "double".
 increment ← use "increment"
@@ -641,9 +642,11 @@ increment ← use "increment"
 increment square double 5"#/>
         <p><PrimCode prim=Sys(SysOp::Import)/>" only imports a given file once and caches the results. Subsequent imports of the same file (from anywhere) will not run the file's code again, but they will push its stack values again."</p>
         <p>"In this example, we make some code that prints a message and then generates a random number. We then write the code to a file and import it 3 times. Notice that the message is only printed once, and the same number is returned every time."</p>
-        <Editor example=r#"code ← "print \"Loading module\"\nrand"
-FWriteAll "test.ua" code
-⍥(import "test.ua")3"#/>
+        <Editor example="\
+code ← $ &p \"Loading module\"
+       $ rand
+&fwa \"test.ua\" code
+⍥(&i \"test.ua\")3"/>
     }
 }
 

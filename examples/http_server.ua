@@ -12,8 +12,8 @@
 # ```
 
 # Bind TCP listener
-listener ← tcplisten "0.0.0.0:8080"
-print $ Server started
+listener ← &tcpl "0.0.0.0:8080"
+&p $ Server started
 
 # Mime types
 getext ← !⊢⇌ ⊜□ ≠@. .
@@ -45,25 +45,25 @@ handlepageloaderror ← (
   !servererror_(notfound;)
 )
 page ← ⍣(
-  extmime getext ∶freadallbytes.
+  extmime getext ∶&frab.
   response "200 OK"
 )handlepageloaderror ⊂"docs"
 home ← page "/index.html"
 
 respond ← ↰1(
   # Extract path from request
-  !⊡1 ⊜□≠@ . readuntil "\r\n\r\n".
-  print "Request:"
-  print.
+  !⊡1 ⊜□≠@ . &ru "\r\n\r\n".
+  &p "Request:"
+  &p.
 
   # Route to handler
   !(|1 page)_(|1 home;) ≅"/".
-  print "Response:"
-  prin⧻.
-  print " bytes"
+  &p "Response:"
+  &pp⧻.
+  &p " bytes"
 
   # Send response
-  ;;⊃(|2 0 close;)(|2 0 write)
+  ;;⊃(|2 0 &cl;)(|2 0 &w)
 )
 
-⍥(⍣(respond)print tcpaccept listener)∞
+⍥(⍣(respond)&p &tcpa listener)∞

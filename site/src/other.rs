@@ -164,6 +164,6 @@ s ← ○×τ⊞×f
         <p>"If running code in the native Uiua interpreter, arrays will not be automatically turned into audio."</p>
         <p>"Instead, you must use the "<PrimCode prim=Sys(SysOp::AudioPlay)/>" system function to play it."</p>
         <p><PrimCode prim=Sys(SysOp::AudioPlay)/>" should fine on the website as well, but it is not necessary."</p>
-        <Editor example="audioplay÷2×¬◿1×4∶±○×τ×55.÷∶⇡×2. 44100"/>
+        <Editor example="&ap÷2×¬◿1×4∶±○×τ×55.÷∶⇡×2. 44100"/>
     }
 }

@@ -776,7 +776,10 @@ backtrace:
             };
             if let Err(mut err) = res {
                 // Trace errors
-                let frames = self.scope.call.split_off(ret_height);
+                let frames = self
+                    .scope
+                    .call
+                    .split_off(ret_height.min(self.scope.call.len()));
                 for frame in frames {
                     err = self.trace_error(err, frame);
                 }

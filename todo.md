@@ -1,4 +1,3 @@
-- Shorten system function names
 - Improve array formatting
 - Better native experience with TUI
 - Lsp should return all spans

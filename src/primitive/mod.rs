@@ -179,21 +179,14 @@ impl Primitive {
         if name.chars().any(char::is_uppercase) {
             return None;
         }
-        if name == "pi" || name == "π" {
-            return Some(Primitive::Pi);
-        }
-        if name == "tau" || name == "τ" {
-            return Some(Primitive::Tau);
-        }
-        if name == "eta" || name == "η" {
-            return Some(Primitive::Eta);
-        }
-        if name.len() < 3 {
+        if name.len() < 2 {
             return None;
         }
         let mut matching = Primitive::all().filter(|p| {
             p.names().is_some_and(|n| {
-                n.is_name_formattable() && n.text.starts_with(name)
+                n.is_name_formattable()
+                    && n.text.starts_with(name)
+                    && (name.len() >= 3 || n.text.len() < 3)
                     || n.ascii.is_none() && n.unicode.is_none() && name == n.text
             })
         });
@@ -203,17 +196,8 @@ impl Primitive {
     }
     /// Try to parse multiple primitives from the concatentation of their name prefixes
     pub fn from_format_name_multi(name: &str) -> Option<Vec<(Self, &str)>> {
-        if name == "pi" || name == "π" {
-            return Some(vec![(Primitive::Pi, name)]);
-        }
-        if name == "tau" || name == "τ" {
-            return Some(vec![(Primitive::Tau, name)]);
-        }
-        if name == "eta" || name == "η" {
-            return Some(vec![(Primitive::Eta, name)]);
-        }
         let indices: Vec<usize> = name.char_indices().map(|(i, _)| i).collect();
-        if indices.len() < 3 {
+        if indices.len() < 2 {
             return None;
         }
         let mut prims = Vec::new();
@@ -227,7 +211,7 @@ impl Primitive {
                 let end_index = indices.get(start + len).copied().unwrap_or(name.len());
                 let sub_name = &name[start_index..end_index];
                 if let Some(p) = Primitive::from_format_name(sub_name) {
-                    if len >= 3 || p == Primitive::Pi {
+                    if len >= 2 || p == Primitive::Pi {
                         prims.push((p, sub_name));
                         start += len;
                         continue 'outer;
@@ -842,7 +826,7 @@ mod tests {
                 .filter(|p| p.is_name_formattable())
                 .map(|n| n.text.to_string())
                 .map(|name| {
-                    let min_len = (2..)
+                    let min_len = (2..=name.len())
                         .find(|&n| Primitive::from_format_name(&name[..n]).is_some())
                         .unwrap();
                     let mut start: String = name.chars().take(min_len).collect();
@@ -931,7 +915,7 @@ mod tests {
 	"repository": {{
         "idents": {{
             "name": "variable.parameter.uiua",
-            "match": "\\b[&a-zA-Z]+\\b"
+            "match": "\\b[a-zA-Z]+\\b"
         }},
 		"comments": {{
 			"name": "comment.line.uiua",

@@ -929,18 +929,11 @@ impl<T: ArrayValue> Array<T> {
     }
     fn untake(self, index: &[isize], mut into: Self, env: &Uiua) -> UiuaResult<Self> {
         let from = self;
-        if from.rank() != into.rank() {
-            return Err(env.error(format!(
-                "Cannot untake rank {} array into rank {} array",
-                from.rank(),
-                into.rank()
-            )));
-        }
         Ok(match index {
             [] => into,
             &[untaking] => {
                 let abs_untaking = untaking.unsigned_abs();
-                if from.rank() == into.rank() {
+                if from.rank() == into.rank() || into.rank().saturating_sub(from.rank()) == 1 {
                     let into = into.drop(&[untaking], env)?;
                     if untaking >= 0 {
                         from.join(into, env)

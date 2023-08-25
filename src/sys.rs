@@ -590,7 +590,7 @@ impl SysBackend for NativeSys {
                         )) {
                             Ok(source) => source,
                             Err(e) => {
-                                send.send(Err(format!("Failed to read wav bytes: {e}")).unwrap())
+                                send.send(Err(format!("Failed to read wav bytes: {e}")))
                                     .unwrap();
                                 return;
                             }

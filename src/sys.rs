@@ -99,6 +99,11 @@ sys_op! {
     (1(0), Print, "&p"),
     /// Read a line from stdin
     (0, ScanLine, "&sc"),
+    /// Get the size of the terminal
+    ///
+    /// The result is a 2-element array of the height and width of the terminal.
+    /// Height comes first so that the array can be used as a shape in [reshape].
+    (0, TermSize, "&ts"),
     /// Get the command line arguments
     (0, Args, "&args"),
     /// Get the value of an environment variable
@@ -264,6 +269,9 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     }
     fn var(&self, name: &str) -> Option<String> {
         None
+    }
+    fn term_size(&self) -> Result<(usize, usize), String> {
+        Err("Getting the terminal size is not supported in this environment".into())
     }
     fn args(&self) -> Vec<String> {
         Vec::new()
@@ -438,6 +446,10 @@ impl SysBackend for NativeSys {
         NATIVE_SYS
             .colored_errors
             .insert(error.message(), error.show(true));
+    }
+    fn term_size(&self) -> Result<(usize, usize), String> {
+        let (w, h) = term_size::dimensions().ok_or("Failed to get terminal size")?;
+        Ok((w, h.saturating_sub(1)))
     }
     fn var(&self, name: &str) -> Option<String> {
         env::var(name).ok()
@@ -753,6 +765,10 @@ impl SysOp {
             SysOp::ScanLine => {
                 let line = env.backend.scan_line();
                 env.push(line);
+            }
+            SysOp::TermSize => {
+                let (width, height) = env.backend.term_size().map_err(|e| env.error(e))?;
+                env.push(vec![height as f64, width as f64])
             }
             SysOp::Args => {
                 let args = env.backend.args();

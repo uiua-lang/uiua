@@ -30,7 +30,12 @@ fn items_spans(items: &[Item]) -> Vec<Sp<SpanKind>> {
         match item {
             Item::Scoped { items, .. } => spans.extend(items_spans(items)),
             Item::Words(words) => spans.extend(words_spans(words)),
-            Item::Binding(binding) => spans.extend(words_spans(&binding.body.words)),
+            Item::Binding(binding) => {
+                if let Some(sig) = &binding.signature {
+                    spans.push(sig.span.clone().sp(SpanKind::Signature));
+                }
+                spans.extend(words_spans(&binding.words));
+            }
             Item::Newlines(span) => spans.push(span.clone().sp(SpanKind::Whitespace)),
         }
     }
@@ -74,7 +79,12 @@ fn words_spans(words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
                 }
             }
             Word::Array(arr) => spans.extend(arr.lines.iter().flat_map(|w| words_spans(w))),
-            Word::Func(func) => spans.extend(func.lines.iter().flat_map(|w| words_spans(w))),
+            Word::Func(func) => {
+                if let Some(sig) = &func.signature {
+                    spans.push(sig.span.clone().sp(SpanKind::Signature));
+                }
+                spans.extend(func.lines.iter().flat_map(|w| words_spans(w)));
+            }
             Word::Primitive(prim) => spans.push(word.span.clone().sp(SpanKind::Primitive(*prim))),
             Word::Modified(m) => {
                 spans.push(m.modifier.clone().map(SpanKind::Primitive));

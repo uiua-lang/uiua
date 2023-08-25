@@ -312,7 +312,7 @@ backtrace:
                     RunMode::Normal => !in_test,
                     RunMode::All | RunMode::Test => true,
                 };
-                if can_run || words_have_import(&binding.body.words) {
+                if can_run || words_have_import(&binding.words) {
                     self.binding(binding)?;
                 }
             }
@@ -327,7 +327,7 @@ backtrace:
         idx
     }
     fn binding(&mut self, binding: Binding) -> UiuaResult {
-        let instrs = self.compile_words(binding.body.words, true)?;
+        let instrs = self.compile_words(binding.words, true)?;
         let make_fn = |instrs: Vec<Instr>, sig: Signature| {
             let func = Function::new(
                 FunctionId::Named(binding.name.value.clone()),
@@ -339,7 +339,7 @@ backtrace:
         };
         let mut val = match instrs_signature(&instrs) {
             Ok(sig) => {
-                if let Some(declared_sig) = &binding.body.signature {
+                if let Some(declared_sig) = &binding.signature {
                     if declared_sig.value != sig {
                         return Err(UiuaError::Run(Span::Code(declared_sig.span.clone()).sp(
                             format!(
@@ -359,7 +359,7 @@ backtrace:
                 }
             }
             Err(e) => {
-                if let Some(sig) = binding.body.signature {
+                if let Some(sig) = binding.signature {
                     make_fn(instrs, sig.value)
                 } else {
                     return Err(UiuaError::Run(

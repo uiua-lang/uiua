@@ -16,15 +16,10 @@ pub enum Item {
 }
 
 #[derive(Debug, Clone)]
-pub struct Words {
-    pub words: Vec<Sp<Word>>,
-    pub signature: Option<Sp<Signature>>,
-}
-
-#[derive(Debug, Clone)]
 pub struct Binding {
     pub name: Sp<Ident>,
-    pub body: Words,
+    pub signature: Option<Sp<Signature>>,
+    pub words: Vec<Sp<Word>>,
 }
 
 #[derive(Clone)]

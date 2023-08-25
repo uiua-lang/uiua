@@ -216,10 +216,8 @@ impl Parser {
             let words = self.try_words().unwrap_or_default();
             Binding {
                 name: ident,
-                body: Words {
-                    words,
-                    signature: sig,
-                },
+                words,
+                signature: sig,
             }
         } else {
             return None;

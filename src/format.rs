@@ -109,10 +109,10 @@ fn format_item(output: &mut String, item: &Item, config: &FormatConfig) {
         Item::Binding(binding) => {
             output.push_str(&binding.name.value.0);
             output.push_str(" ← ");
-            if let Some(sig) = &binding.body.signature {
+            if let Some(sig) = &binding.signature {
                 format_signature(output, sig.value);
             }
-            format_words(output, &binding.body.words, config, true, 0);
+            format_words(output, &binding.words, config, true, 0);
         }
         Item::Newlines(_) => {}
     }

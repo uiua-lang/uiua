@@ -5,8 +5,6 @@ use std::{
     sync::Arc,
 };
 
-use parking_lot::Mutex;
-
 use crate::{
     check::instrs_signature, lex::CodeSpan, primitive::Primitive, value::Value, Ident, Uiua,
     UiuaResult,
@@ -117,8 +115,7 @@ pub struct Function {
     pub id: FunctionId,
     pub instrs: Vec<Instr>,
     pub kind: FunctionKind,
-    // Calculating the signature of a function can be expensive, so we cache it.
-    signature_cache: Arc<Mutex<Option<Result<Signature, String>>>>,
+    signature: Result<Signature, String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -128,11 +125,8 @@ pub struct Signature {
 }
 
 impl Signature {
-    pub fn new(args: impl Into<usize>, outputs: impl Into<usize>) -> Self {
-        Self {
-            args: args.into(),
-            outputs: outputs.into(),
-        }
+    pub fn new(args: usize, outputs: usize) -> Self {
+        Self { args, outputs }
     }
     pub fn compatible_with(self, other: Self) -> bool {
         self.args as isize - self.outputs as isize == other.args as isize - other.outputs as isize
@@ -158,7 +152,6 @@ pub enum FunctionKind {
 pub struct DynamicFunctionKind {
     pub f: Arc<dyn Fn(&mut Uiua) -> UiuaResult + Send + Sync>,
     pub id: u64,
-    pub signature: Signature,
 }
 
 impl PartialEq for DynamicFunctionKind {
@@ -193,6 +186,11 @@ impl From<Primitive> for Function {
             FunctionId::Primitive(prim),
             [Instr::Prim(prim, 0)],
             FunctionKind::Normal,
+            if let Some((args, outputs)) = prim.args().zip(prim.outputs()) {
+                Ok(Signature::new(args as usize, outputs as usize))
+            } else {
+                Err(format!("{prim} has no signature"))
+            },
         )
     }
 }
@@ -252,16 +250,27 @@ impl fmt::Display for Function {
 }
 
 impl Function {
-    pub fn new(id: FunctionId, instrs: impl Into<Vec<Instr>>, kind: FunctionKind) -> Self {
+    pub fn new(
+        id: FunctionId,
+        instrs: impl Into<Vec<Instr>>,
+        kind: FunctionKind,
+        signature: Result<Signature, String>,
+    ) -> Self {
         Self {
             id,
             instrs: instrs.into(),
             kind,
-            signature_cache: Mutex::new(None).into(),
+            signature,
         }
     }
-    pub fn set_signature(&self, sig: Signature) {
-        *self.signature_cache.lock() = Some(Ok(sig));
+    pub fn new_inferred(id: FunctionId, instrs: impl Into<Vec<Instr>>, kind: FunctionKind) -> Self {
+        let instrs = instrs.into();
+        Self {
+            id,
+            signature: instrs_signature(&instrs),
+            instrs,
+            kind,
+        }
     }
     pub fn into_inner(f: Arc<Self>) -> Self {
         Arc::try_unwrap(f).unwrap_or_else(|f| (*f).clone())
@@ -288,15 +297,7 @@ impl Function {
     /// Get how many arguments this function pops off the stack and how many it pushes.
     /// Returns `None` if either of these values are dynamic.
     pub fn signature(&self) -> Result<Signature, String> {
-        self.signature_cache
-            .lock()
-            .get_or_insert_with(|| match self.kind {
-                FunctionKind::Normal => instrs_signature(&self.instrs),
-                FunctionKind::Dynamic(DynamicFunctionKind { signature, .. }) => Ok(signature),
-            })
-            .as_ref()
-            .map(|sig| *sig)
-            .map_err(|e| e.clone())
+        self.signature.clone()
     }
     pub fn is_constant(&self) -> bool {
         matches!(&*self.instrs, [Instr::Push(_)])
@@ -306,6 +307,7 @@ impl Function {
             FunctionId::Constant,
             [Instr::push(value.into())],
             FunctionKind::Normal,
+            Ok(Signature::new(0, 1)),
         )
     }
     pub fn as_primitive(&self) -> Option<(Primitive, usize)> {
@@ -345,29 +347,6 @@ impl Function {
                 [Instr::Prim(Primitive::Flip, _), Instr::Prim(prim, _)] => Some((*prim, true)),
                 _ => None,
             },
-        }
-    }
-    pub fn compose(self, other: Self) -> Self {
-        match (&self.kind, &other.kind) {
-            (FunctionKind::Dynamic { .. }, _) | (_, FunctionKind::Dynamic { .. }) => Function::new(
-                self.id.clone().compose(other.id.clone()),
-                [
-                    Instr::push(other),
-                    Instr::Call(0),
-                    Instr::push(self),
-                    Instr::Call(0),
-                ],
-                FunctionKind::Normal,
-            ),
-            _ => Function::new(
-                self.id.compose(other.id),
-                {
-                    let mut instrs = other.instrs;
-                    instrs.extend(self.instrs);
-                    instrs
-                },
-                FunctionKind::Normal,
-            ),
         }
     }
 }

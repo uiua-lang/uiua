@@ -46,7 +46,7 @@ impl Value {
         if let Some(f) = self.as_func_array().and_then(Array::as_scalar) {
             f.signature()
         } else {
-            Ok(Signature::new(0u8, 1u8))
+            Ok(Signature::new(0, 1))
         }
     }
     pub fn as_num_array(&self) -> Option<&Array<f64>> {

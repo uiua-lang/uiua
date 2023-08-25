@@ -247,7 +247,7 @@ fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
 pub fn each(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(FunctionArg(1))?;
-    let sig = f.signature().unwrap_or(Signature::new(1u8, 0u8));
+    let sig = f.signature().unwrap_or(Signature::new(1, 0));
     if sig.outputs > 1 {
         return Err(env.error(format!(
             "Each's function must return 0 or 1 values, but it returns {}",
@@ -348,7 +348,7 @@ fn eachn(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
 pub fn rows(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(FunctionArg(1))?;
-    let sig = f.signature().unwrap_or(Signature::new(1u8, 0u8));
+    let sig = f.signature().unwrap_or(Signature::new(1, 0));
     if sig.outputs > 1 {
         return Err(env.error(format!(
             "Rows' function must return 0 or 1 values, but it returns {}",

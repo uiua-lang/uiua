@@ -368,7 +368,7 @@ impl<'a> VirtualEnv<'a> {
             BasicValue::Func(f) => {
                 let sig = f
                     .signature()
-                    .map_err(|e| format!("call's function {f:?} had indeterminate sig: {e}"))?;
+                    .map_err(|e| format!("call's function {f:?} has indeterminate sig: {e}"))?;
                 for _ in 0..sig.args {
                     self.pop()?;
                 }
@@ -424,7 +424,7 @@ impl<'a> VirtualEnv<'a> {
             if let Some(f_args) = f_args {
                 if sig.args != f_args {
                     return Err(format!(
-                        "{prim}'s function {f:?} had {} args, expected {}",
+                        "{prim}'s function {f:?} has {} args, expected {}",
                         sig.args, f_args
                     ));
                 }
@@ -432,7 +432,7 @@ impl<'a> VirtualEnv<'a> {
             if let Some(f_outputs) = f_outputs {
                 if sig.outputs != f_outputs {
                     return Err(format!(
-                        "{prim}'s function {f:?} had {} outputs, expected {}",
+                        "{prim}'s function {f:?} has {} outputs, expected {}",
                         sig.outputs, f_outputs
                     ));
                 }

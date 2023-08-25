@@ -12,7 +12,7 @@ impl Function {
         if !matches!(self.kind, FunctionKind::Normal) {
             return None;
         }
-        Some(Function::new(
+        Some(Function::new_inferred(
             self.id.clone(),
             invert_instrs(&self.instrs)?,
             FunctionKind::Normal,
@@ -24,8 +24,8 @@ impl Function {
         } else {
             let (befores, afters) = under_instrs(&self.instrs)?;
             Some((
-                Function::new(self.id.clone(), befores, FunctionKind::Normal),
-                Function::new(self.id.clone(), afters, FunctionKind::Normal),
+                Function::new_inferred(self.id.clone(), befores, FunctionKind::Normal),
+                Function::new_inferred(self.id.clone(), afters, FunctionKind::Normal),
             ))
         }
     }

@@ -63,6 +63,7 @@ impl Default for Scope {
                     FunctionId::Main,
                     Vec::new(),
                     FunctionKind::Normal,
+                    Ok(Signature::new(0, 0)),
                 )),
                 call_span: 0,
                 pc: 0,
@@ -332,8 +333,8 @@ backtrace:
                 FunctionId::Named(binding.name.value.clone()),
                 instrs,
                 FunctionKind::Normal,
+                Ok(sig),
             );
-            func.set_signature(sig);
             Value::from(func)
         };
         let mut val = match instrs_signature(&instrs) {
@@ -450,6 +451,7 @@ backtrace:
             Word::Char(c) => self.push_instr(Instr::push(c)),
             Word::String(s) => self.push_instr(Instr::push(s)),
             Word::FormatString(frags) => {
+                let signature = Signature::new(frags.len() - 1, 1);
                 let f = Function::new(
                     FunctionId::Anonymous(word.span.clone()),
                     Vec::new(),
@@ -459,7 +461,6 @@ backtrace:
                             frags.hash(&mut hasher);
                             hasher.finish()
                         },
-                        signature: Signature::new(frags.len() as u8 - 1, 1u8),
                         f: Arc::new(move |env| {
                             let mut formatted = String::new();
                             for (i, frag) in frags.iter().enumerate() {
@@ -473,6 +474,7 @@ backtrace:
                             Ok(())
                         }),
                     }),
+                    Ok(signature),
                 );
                 self.push_instr(Instr::push(f));
                 if call {
@@ -481,6 +483,7 @@ backtrace:
                 }
             }
             Word::MultilineString(lines) => {
+                let signature = Signature::new(lines.iter().map(|l| l.value.len() - 1).sum(), 1);
                 let f = Function::new(
                     FunctionId::Anonymous(word.span.clone()),
                     Vec::new(),
@@ -490,10 +493,6 @@ backtrace:
                             lines.hash(&mut hasher);
                             hasher.finish()
                         },
-                        signature: Signature::new(
-                            lines.iter().map(|l| l.value.len() as u8 - 1).sum::<u8>(),
-                            1u8,
-                        ),
                         f: Arc::new(move |env| {
                             let mut formatted = String::new();
                             let mut i = 0;
@@ -514,6 +513,7 @@ backtrace:
                             Ok(())
                         }),
                     }),
+                    Ok(signature),
                 );
                 self.push_instr(Instr::push(f));
                 if call {
@@ -580,7 +580,7 @@ backtrace:
                     });
                     if !call {
                         let instrs = self.new_functions.pop().unwrap();
-                        let func = Function::new(
+                        let func = Function::new_inferred(
                             FunctionId::Anonymous(word.span),
                             instrs,
                             FunctionKind::Normal,
@@ -637,30 +637,34 @@ backtrace:
             }
         }
 
-        let function = Function::new(func.id, instrs, FunctionKind::Normal);
         // Validate signature
-        if let Some(declared_sig) = &func.signature {
-            if let Ok(sig) = function.signature() {
-                // Ensure the inferred signature matches the declared signature
-                if declared_sig.value != sig {
-                    return Err(UiuaError::Run(Span::Code(declared_sig.span.clone()).sp(
-                        format!(
-                            "Function signature mismatch: \
+        let sig = match instrs_signature(&instrs) {
+            Ok(sig) => {
+                if let Some(declared_sig) = &func.signature {
+                    if declared_sig.value != sig {
+                        return Err(UiuaError::Run(Span::Code(declared_sig.span.clone()).sp(
+                            format!(
+                                "Function signature mismatch: \
                             declared {} but inferred {}",
-                            declared_sig.value, sig
-                        ),
-                    )));
+                                declared_sig.value, sig
+                            ),
+                        )));
+                    }
                 }
-            } else {
-                // Use the declared signature
-                function.set_signature(declared_sig.value);
+                sig
             }
-        } else if let Err(e) = function.signature() {
-            return Err(UiuaError::Run(
-                Span::Code(span.clone()).sp(format!("Cannot infer function signature: {e}")),
-            ));
-        }
-
+            Err(e) => {
+                if let Some(declared_sig) = &func.signature {
+                    declared_sig.value
+                } else {
+                    return Err(UiuaError::Run(
+                        Span::Code(span.clone())
+                            .sp(format!("Cannot infer function signature: {e}")),
+                    ));
+                }
+            }
+        };
+        let function = Function::new(func.id, instrs, FunctionKind::Normal, Ok(sig));
         self.push_instr(Instr::push(function));
         Ok(())
     }
@@ -678,12 +682,23 @@ backtrace:
                 true,
             );
             let instrs = self.new_functions.pop().unwrap();
-            let func = Function::new(
-                FunctionId::Anonymous(modified.modifier.span),
-                instrs,
-                FunctionKind::Normal,
-            );
-            self.push_instr(Instr::push(func));
+            match instrs_signature(&instrs) {
+                Ok(sig) => {
+                    let func = Function::new(
+                        FunctionId::Anonymous(modified.modifier.span),
+                        instrs,
+                        FunctionKind::Normal,
+                        Ok(sig),
+                    );
+                    self.push_instr(Instr::push(func));
+                }
+                Err(e) => {
+                    return Err(UiuaError::Run(
+                        Span::Code(modified.modifier.span.clone())
+                            .sp(format!("Cannot infer function signature: {e}")),
+                    ));
+                }
+            }
         }
         Ok(())
     }
@@ -696,11 +711,16 @@ backtrace:
                 FunctionId::Primitive(prim),
                 [Instr::Prim(prim, span)],
                 FunctionKind::Normal,
+                if let Some((args, outputs)) = prim.args().zip(prim.outputs()) {
+                    Ok(Signature::new(args as usize, outputs as usize))
+                } else {
+                    Err(format!("{prim} has no signature"))
+                },
             )));
         }
     }
     fn exec_global_instrs(&mut self, instrs: Vec<Instr>) -> UiuaResult {
-        let func = Function::new(FunctionId::Main, instrs, FunctionKind::Normal);
+        let func = Function::new_inferred(FunctionId::Main, instrs, FunctionKind::Normal);
         self.exec(StackFrame {
             function: Arc::new(func),
             call_span: 0,

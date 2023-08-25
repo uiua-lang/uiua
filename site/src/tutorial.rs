@@ -528,7 +528,7 @@ X 5"/>
         <p>"If you need to use a literal "<code>"_"</code>", you can escape them with "<code>"\\"</code>"."</p>
         <Editor example="$\"\\__\\_\" 27"/>
         <p>"Multi-line strings are implicitly format strings."</p>
-        <Editor example="⍜⊟(∶/+.) 1 2\nprint $ Do you know what _ + _ is?\n      $ It's _!"/>
+        <Editor example="↶+,, 1 2\nprint $ Do you know what _ + _ is?\n      $ It's _!"/>
 
         <h2 id="stack-signatures">"Stack Signatures"</h2>
         <p>"Bindings and inline functions can have a "<em>"stack signature"</em>" declared with a "<code>"|"</code>" followed by 1 or 2 numbers seperated by a "<code>"."</code>". The first number is the number of arguments the function pops from the stack. The second number is the number of values the function pushes to the stack."</p>

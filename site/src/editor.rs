@@ -1069,6 +1069,7 @@ fn set_code_html(id: &str, code: &str) {
             SpanKind::String => "string-literal-span",
             SpanKind::Comment => "comment-span",
             SpanKind::Strand => "strand-span",
+            _ => "",
         };
 
         html.push_str(&match kind {

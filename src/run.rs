@@ -316,7 +316,7 @@ backtrace:
                     self.binding(binding)?;
                 }
             }
-            Item::Newlines => {}
+            Item::Newlines(_) => {}
         }
         Ok(())
     }

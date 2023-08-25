@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{
     function::{FunctionId, Signature},
-    lex::Sp,
+    lex::{CodeSpan, Sp},
     primitive::Primitive,
     Ident,
 };
@@ -12,7 +12,7 @@ pub enum Item {
     Scoped { items: Vec<Item>, test: bool },
     Words(Vec<Sp<Word>>),
     Binding(Binding),
-    Newlines,
+    Newlines(CodeSpan),
 }
 
 #[derive(Debug, Clone)]

@@ -14,6 +14,9 @@ pub enum SpanKind {
     Number,
     Comment,
     Strand,
+    Ident,
+    Signature,
+    Whitespace,
 }
 
 pub fn spans(input: &str) -> Vec<Sp<SpanKind>> {
@@ -28,7 +31,7 @@ fn items_spans(items: &[Item]) -> Vec<Sp<SpanKind>> {
             Item::Scoped { items, .. } => spans.extend(items_spans(items)),
             Item::Words(words) => spans.extend(words_spans(words)),
             Item::Binding(binding) => spans.extend(words_spans(&binding.body.words)),
-            Item::Newlines => {}
+            Item::Newlines(span) => spans.push(span.clone().sp(SpanKind::Whitespace)),
         }
     }
     spans
@@ -45,7 +48,7 @@ fn words_spans(words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
             Word::MultilineString(lines) => {
                 spans.extend((lines.iter()).map(|line| line.span.clone().sp(SpanKind::String)))
             }
-            Word::Ident(_) => {}
+            Word::Ident(_) => spans.push(word.span.clone().sp(SpanKind::Ident)),
             Word::Strand(items) => {
                 for (i, word) in items.iter().enumerate() {
                     let item_spans = words_spans(slice::from_ref(word));
@@ -77,7 +80,7 @@ fn words_spans(words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
                 spans.push(m.modifier.clone().map(SpanKind::Primitive));
                 spans.extend(words_spans(&m.operands));
             }
-            Word::Spaces => {}
+            Word::Spaces => spans.push(word.span.clone().sp(SpanKind::Whitespace)),
             Word::Comment(_) => spans.push(word.span.clone().sp(SpanKind::Comment)),
         }
     }
@@ -181,7 +184,7 @@ mod server {
                         .into(),
                     );
                 }
-                Item::Newlines => {}
+                Item::Newlines(_) => {}
             }
         }
         scope_bindings.push(bindings);

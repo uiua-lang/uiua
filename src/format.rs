@@ -114,7 +114,7 @@ fn format_item(output: &mut String, item: &Item, config: &FormatConfig) {
             }
             format_words(output, &binding.body.words, config, true, 0);
         }
-        Item::Newlines => {}
+        Item::Newlines(_) => {}
     }
 }
 

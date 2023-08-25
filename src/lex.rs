@@ -660,7 +660,9 @@ impl Lexer {
         escaped: &mut bool,
         escape_char: Option<char>,
     ) -> Result<Option<char>, char> {
-        let Some(c) = self.next_char_if(|c| !"\r\n".contains(c) && (Some(c) != escape_char || *escaped)) else {
+        let Some(c) =
+            self.next_char_if(|c| !"\r\n".contains(c) && (Some(c) != escape_char || *escaped))
+        else {
             return Ok(None);
         };
         Ok(Some(if *escaped {

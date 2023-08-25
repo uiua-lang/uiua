@@ -895,7 +895,10 @@ impl<T: ArrayValue> Array<T> {
             )));
         }
         let Some(&max_index) = indices.iter().max() else {
-            return Ok(Vec::<Vec<Self>>::new().into_iter().rev().map(Array::from_row_arrays_infallible));
+            return Ok(Vec::<Vec<Self>>::new()
+                .into_iter()
+                .rev()
+                .map(Array::from_row_arrays_infallible));
         };
         let mut groups: Vec<Vec<Self>> = vec![Vec::new(); max_index.max(0) as usize + 1];
         for (r, &g) in indices.iter().enumerate() {

@@ -366,7 +366,8 @@ impl Parser {
                 self.try_exact(prim)
                     .or_else(|| prim.ascii().and_then(|simple| self.try_exact(simple)))
                     .map(|span| (span.sp(prim), margs))
-            }) else {
+            })
+        else {
             return self.try_term();
         };
         let mut args = Vec::new();

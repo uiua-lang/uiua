@@ -420,7 +420,7 @@ fn TutorialTypes() -> impl IntoView {
         <Editor example="@a @b"/>
         <Editor example="[@u @i @u @a]"/>
         <p>"Characters like newline or null need to be escaped with "<code>"\\"</code>", but a space does not."</p>
-        <Editor example=r#"[@\r @\0 @ ]"#/>
+        <Editor example="[@\\r @\\0 @ ]"/>
         <p>"String literals, delimited by "<code>"\""</code>"s, create "<PrimCode prim=Rank/><code>"1"</code>" character arrays."</p>
         <Editor example="\"Hello, World!\""/>
         <p>"You can make strings span multiple lines with a "<code>"$"</code>" followed by a space on each line."</p>

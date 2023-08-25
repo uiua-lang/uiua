@@ -296,9 +296,10 @@ pub fn Editor<'a>(
                         let src = format!("data:audio/wav;base64,{}", encoded);
                         if allow_autoplay {
                             allow_autoplay = false;
-                            view!(<div><audio controls autoplay src=src/></div>).into_view()
+                            view!(<div><audio class="output-audio" controls autoplay src=src/></div>).into_view()
                         } else {
-                            view!(<div><audio controls src=src/></div>).into_view()
+                            view!(<div><audio class="output-audio" controls src=src/></div>)
+                                .into_view()
                         }
                     }
                     OutputItem::Error(error) => {
@@ -801,6 +802,10 @@ pub fn Editor<'a>(
                 </div>
                 <div class=editor_class>
                     <div id="code-area">
+                        <div id={glyph_doc_id} class="glyph-doc" style="display: none">
+                            { move || glyph_doc.get() }
+                            <div class="glyph-doc-ctrl-click">"Ctrl+click for more info"</div>
+                        </div>
                         <div id="code-right-side">
                             <button
                                 class="editor-right-button"
@@ -818,12 +823,9 @@ pub fn Editor<'a>(
                                 id="glyphs-toggle-button"
                                 class="editor-right-button"
                                 data-title=show_glyphs_title
-                                on:click=toggle_show_glyphs>{show_glyphs_text}</button>
+                                on:click=toggle_show_glyphs>{show_glyphs_text}
+                            </button>
                             <div id="example-tracker">{example_text}</div>
-                        </div>
-                        <div id={glyph_doc_id} class="glyph-doc" style="display: none">
-                            { move || glyph_doc.get() }
-                            <div class="glyph-doc-ctrl-click">"Ctrl+click for more info"</div>
                         </div>
                         <div class="code">
                             <div class="line-numbers">

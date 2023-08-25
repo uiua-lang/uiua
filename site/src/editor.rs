@@ -11,6 +11,7 @@ use image::ImageOutputFormat;
 use leptos::{ev::keydown, *};
 use uiua::{
     format::{format_str, FormatConfig},
+    lex::is_ident_char,
     primitive::{PrimClass, Primitive},
     run::RunMode,
     value_to_image_bytes, value_to_wav_bytes, Uiua,
@@ -368,7 +369,7 @@ pub fn Editor<'a>(
         let mut handled = true;
         /// For determining if ctrl+backspace/delete should remove a sequence of characters
         fn char_class(c: char) -> u8 {
-            if c.is_ascii_alphabetic() {
+            if is_ident_char(c) {
                 1
             } else if c.is_ascii_digit() {
                 2

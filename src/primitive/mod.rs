@@ -126,6 +126,9 @@ impl fmt::Display for Primitive {
 }
 
 impl Primitive {
+    pub fn all() -> impl Iterator<Item = Self> + Clone {
+        all()
+    }
     pub fn name(&self) -> Option<&'static str> {
         self.names().map(|n| n.text)
     }
@@ -752,14 +755,29 @@ mod tests {
     use super::*;
 
     #[test]
+    fn name_collisions() {
+        for a in Primitive::all() {
+            for b in Primitive::all() {
+                if a == b {
+                    continue;
+                }
+                if let Some((an, bn)) = a.name().zip(b.name()) {
+                    assert_ne!(an, bn, "{:?} and {:?} have the same name", a, b)
+                }
+            }
+        }
+    }
+
+    #[test]
     fn prim_docs() {
         for prim in Primitive::all() {
             if let Some(doc) = prim.doc() {
                 for line in &doc.lines {
                     if let PrimDocLine::Example(ex) = line {
+                        println!("{prim} example:\n{}", ex.input);
                         if let Err(e) = Uiua::with_native_sys().load_str(&ex.input) {
                             if !ex.should_error {
-                                panic!("\nExample failed: {}\n{}", ex.input, e);
+                                panic!("\nExample failed:\n{}\n{}", ex.input, e);
                             }
                         } else if ex.should_error {
                             panic!("Example should have failed: {}", ex.input);

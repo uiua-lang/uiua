@@ -35,6 +35,13 @@ impl Ident {
     pub fn as_str(&self) -> &str {
         &self.0
     }
+    fn lower_chars(&self) -> impl Iterator<Item = char> + '_ {
+        lower_chars(&self.0)
+    }
+}
+
+fn lower_chars(s: &str) -> impl Iterator<Item = char> + '_ {
+    s.chars().flat_map(|c| c.to_lowercase())
 }
 
 impl fmt::Display for Ident {
@@ -57,7 +64,7 @@ impl From<String> for Ident {
 
 impl PartialEq for Ident {
     fn eq(&self, other: &Self) -> bool {
-        self.0.to_lowercase() == other.0.to_lowercase()
+        self.lower_chars().eq(other.lower_chars())
     }
 }
 
@@ -65,30 +72,30 @@ impl Eq for Ident {}
 
 impl PartialOrd for Ident {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.0.to_lowercase().partial_cmp(&other.0.to_lowercase())
+        self.lower_chars().partial_cmp(other.lower_chars())
     }
 }
 
 impl Ord for Ident {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.0.to_lowercase().cmp(&other.0.to_lowercase())
+        self.lower_chars().cmp(other.lower_chars())
     }
 }
 
 impl Hash for Ident {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.to_lowercase().hash(state)
+        self.lower_chars().for_each(|c| c.hash(state))
     }
 }
 
 impl PartialEq<str> for Ident {
     fn eq(&self, other: &str) -> bool {
-        self.0.to_lowercase() == other.to_lowercase()
+        self.lower_chars().eq(lower_chars(other))
     }
 }
 
 impl<'a> PartialEq<&'a str> for Ident {
     fn eq(&self, other: &&'a str) -> bool {
-        self.0.to_lowercase() == other.to_lowercase()
+        self.lower_chars().eq(lower_chars(other))
     }
 }

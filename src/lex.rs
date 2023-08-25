@@ -565,10 +565,10 @@ impl Lexer {
                 }
                 // Identifiers and selectors
                 c if is_custom_glyph(c) => self.end(Ident, start),
-                c if is_basically_alphabetic(c) => {
+                c if is_ident_char(c) => {
                     let mut ident = c.to_string();
                     // Collect characters
-                    while let Some(c) = self.next_char_if(is_basically_alphabetic) {
+                    while let Some(c) = self.next_char_if(is_ident_char) {
                         ident.push(c);
                     }
                     // Try to parse as primitives
@@ -717,10 +717,10 @@ fn parse_format_fragments(s: &str) -> Vec<String> {
     frags
 }
 
-pub fn is_basically_alphabetic(c: char) -> bool {
-    c.is_alphabetic() && !"ⁿₙηπτ".contains(c)
+pub fn is_ident_char(c: char) -> bool {
+    c.is_alphabetic() && !"ⁿₙηπτ".contains(c) || c == '&'
 }
 
 pub fn is_custom_glyph(c: char) -> bool {
-    c as u32 > 127 && !is_basically_alphabetic(c) && Primitive::from_unicode(c).is_none()
+    c as u32 > 127 && !is_ident_char(c) && Primitive::from_unicode(c).is_none()
 }

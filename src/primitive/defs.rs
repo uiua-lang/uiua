@@ -24,9 +24,6 @@ macro_rules! primitive {
         }
 
         impl Primitive {
-            pub fn all() -> impl Iterator<Item = Self> + Clone {
-                all()
-            }
             #[allow(path_statements)]
             pub fn names(&self) -> Option<PrimNames> {
                 match self {
@@ -1150,9 +1147,9 @@ primitive!(
     (1(2), Gen, Misc, "gen"),
     /// Extract a named function from a module
     ///
-    /// Can be used after [Import].
+    /// Can be used after [&i].
     ///
-    /// ex: import "example.ua"
+    /// ex: &i "example.ua"
     ///   : square ← use "square".
     ///   : increment ← use "increment"
     ///   : square increment 5

@@ -834,7 +834,7 @@ primitive!(
     ///
     /// When combined with [classify], you can do things like counting the number of occurrences of each character in a string.
     /// ex: $ Count the characters is this string
-    ///   : ⊕{⊃⊢⧻.} ⊛.⊏⌂.
+    ///   : ⊕{⊢∶⧻.} ⊛.⊏⌂.
     ///
     /// [group] is closely related to [partition].
     (2[1], Group, DyadicModifier, ("group", '⊕')),

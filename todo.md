@@ -1,4 +1,4 @@
-- Rethink nested arrays
+- Require signatures when one cannot be inferred
 - Improve array formatting
 - Better native experience with TUI
 - Shorted system function names

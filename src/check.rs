@@ -16,6 +16,7 @@ pub(crate) fn instrs_signature(instrs: &[Instr]) -> Option<Signature> {
         }
     }
 
+    // println!("start instrs: {:?}", instrs);
     const START_HEIGHT: usize = 16;
     let mut env = VirtualEnv {
         stack: vec![BasicValue::Other; START_HEIGHT],
@@ -23,14 +24,14 @@ pub(crate) fn instrs_signature(instrs: &[Instr]) -> Option<Signature> {
         min_height: START_HEIGHT,
     };
     if let Err(_e) = env.instrs(instrs) {
-        println!("instrs: {:?}", instrs);
-        println!("unable to count sig: {}", _e);
+        // println!("end instrs: {:?}", instrs);
+        // println!("unable to count sig: {}", _e);
         return None;
     }
     let args = START_HEIGHT.saturating_sub(env.min_height);
     let outputs = env.stack.len() - env.min_height;
-    println!("instrs: {:?}", instrs);
-    println!("args/outputs: {}/{}", args, outputs);
+    // println!("end instrs: {:?}", instrs);
+    // println!("args/outputs: {}/{}", args, outputs);
     Some(Signature { args, outputs })
 }
 
@@ -290,7 +291,7 @@ impl<'a> VirtualEnv<'a> {
             Instr::Call(_) => self.handle_call(false)?,
         }
         self.set_min_height();
-        println!("{instr:?} -> {}", self.stack.len());
+        // println!("{instr:?} -> {}/{}", self.min_height, self.stack.len());
         Ok(())
     }
     fn pop(&mut self) -> Result<BasicValue<'a>, String> {
@@ -341,7 +342,7 @@ impl<'a> VirtualEnv<'a> {
                         None => return Err("Call with indeterminate functions".into()),
                     }
                 }
-                dbg!(max_args, max_outputs);
+                self.pop()?; // Pop the index
                 for _ in 0..max_args {
                     self.pop()?;
                 }

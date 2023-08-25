@@ -108,7 +108,34 @@ impl<'a> VirtualEnv<'a> {
                 Fold => self.handle_mod(prim, Some(2), Some(1), 2)?,
                 Each | Rows => self.handle_variadic_mod(prim)?,
                 Distribute | Table | Cross => self.handle_mod(prim, Some(2), Some(1), 2)?,
-                Group | Partition => self.handle_mod(prim, None, Some(1), 2)?,
+                Group | Partition => {
+                    if let BasicValue::Func(f) = self.pop()? {
+                        let sig = f.signature()?;
+                        if sig.outputs == 0 && sig.args != 0 {
+                            return Err(format!("{prim}'s function {f} has no outputs"));
+                        }
+                        self.pop()?; // Pop the array
+                        self.set_min_height();
+                        match sig.args {
+                            0 => {}
+                            1 | 2 => {
+                                if sig.outputs != 1 {
+                                    return Err(format!(
+                                        "{prim}'s function {f} has {} outputs, expected 1",
+                                        sig.outputs
+                                    ));
+                                }
+                            }
+                            n => {
+                                return Err(format!(
+                                    "{prim}'s function {f} has {n} args, expected 0, 1, or 2"
+                                ))
+                            }
+                        }
+                    } else {
+                        return Err(format!("{prim} with non-function"));
+                    }
+                }
                 Spawn => {
                     if let Some(BasicValue::Num(n)) = self.stack.pop() {
                         if n.fract() == 0.0 && n >= 0.0 {
@@ -238,6 +265,11 @@ impl<'a> VirtualEnv<'a> {
                     } else {
                         return Err("under with non-function".into());
                     }
+                }
+                Fill => {
+                    self.pop()?;
+                    let f = self.pop()?;
+                    self.handle_sig(f.signature()?)?;
                 }
                 Dup => {
                     let val = self.pop()?;

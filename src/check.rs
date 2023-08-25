@@ -212,9 +212,31 @@ impl<'a> VirtualEnv<'a> {
                             for _ in 0..sig.outputs {
                                 self.stack.push(BasicValue::Other);
                             }
+                        } else {
+                            // We could return an error here,
+                            // but the "no inverse found" error is more useful.
                         }
                     } else {
-                        return Err("invert non-function".into());
+                        return Err("invert with non-function".into());
+                    }
+                }
+                Under => {
+                    let f = self.pop()?;
+                    let g = self.pop()?;
+                    if let (BasicValue::Func(f), BasicValue::Func(g)) = (f, g) {
+                        if let Some((before, after)) = f.clone().under() {
+                            let g_sig = g.signature()?;
+                            let before_sig = before.signature()?;
+                            let after_sig = after.signature()?;
+                            self.handle_sig(before_sig)?;
+                            self.handle_sig(g_sig)?;
+                            self.handle_sig(after_sig)?;
+                        } else {
+                            // We could return an error here,
+                            // but the "no inverse found" error is more useful.
+                        }
+                    } else {
+                        return Err("under with non-function".into());
                     }
                 }
                 Dup => {
@@ -330,6 +352,16 @@ impl<'a> VirtualEnv<'a> {
         if let Some(h) = self.array_stack.last_mut() {
             *h = (*h).min(self.stack.len());
         }
+    }
+    fn handle_sig(&mut self, sig: Signature) -> Result<(), String> {
+        for _ in 0..sig.args {
+            self.pop()?;
+        }
+        self.set_min_height();
+        for _ in 0..sig.outputs {
+            self.stack.push(BasicValue::Other);
+        }
+        Ok(())
     }
     fn handle_call(&mut self, explicit: bool) -> Result<(), String> {
         match self.pop()? {

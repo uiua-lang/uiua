@@ -14,6 +14,7 @@ use std::{
 use crate::{
     array::{Array, ArrayValue},
     function::Function,
+    primitive::Primitive,
     value::Value,
 };
 
@@ -21,10 +22,10 @@ type Grid<T = char> = Vec<Vec<T>>;
 type Metagrid = Grid<Grid>;
 
 pub trait GridFmt {
-    fn fmt_grid(&self) -> Grid;
+    fn fmt_grid(&self, boxed: bool) -> Grid;
     fn grid_string(&self) -> String {
         let mut s: String = self
-            .fmt_grid()
+            .fmt_grid(false)
             .into_iter()
             .flat_map(|v| v.into_iter().chain(once('\n')))
             .collect();
@@ -33,14 +34,22 @@ pub trait GridFmt {
     }
 }
 
+fn boxed_scalar(boxed: bool) -> impl Iterator<Item = char> {
+    boxed
+        .then_some(Primitive::Constant.unicode().unwrap())
+        .into_iter()
+}
+
 impl GridFmt for u8 {
-    fn fmt_grid(&self) -> Grid {
-        vec![self.to_string().chars().collect()]
+    fn fmt_grid(&self, boxed: bool) -> Grid {
+        vec![boxed_scalar(boxed)
+            .chain(self.to_string().chars())
+            .collect()]
     }
 }
 
 impl GridFmt for f64 {
-    fn fmt_grid(&self) -> Grid {
+    fn fmt_grid(&self, boxed: bool) -> Grid {
         let positive = (self.abs() * 1e12).round() / 1e12;
         let minus = if *self < -0.0 { "¯" } else { "" };
         let s = if (positive - PI).abs() < 1e-12 {
@@ -54,31 +63,37 @@ impl GridFmt for f64 {
         } else {
             format!("{minus}{positive}")
         };
-        vec![s.chars().collect()]
+        vec![boxed_scalar(boxed).chain(s.chars()).collect()]
     }
 }
 
 impl GridFmt for char {
-    fn fmt_grid(&self) -> Grid {
+    fn fmt_grid(&self, boxed: bool) -> Grid {
         let formatted = format!("{self:?}");
         let formatted = &formatted[1..formatted.len() - 1];
-        vec![once('@').chain(formatted.chars()).collect()]
+        vec![once(if boxed {
+            Primitive::Constant.unicode().unwrap()
+        } else {
+            '@'
+        })
+        .chain(formatted.chars())
+        .collect()]
     }
 }
 
 impl GridFmt for Arc<Function> {
-    fn fmt_grid(&self) -> Grid {
-        Function::fmt_grid(self)
+    fn fmt_grid(&self, boxed: bool) -> Grid {
+        Function::fmt_grid(self, boxed)
     }
 }
 
 impl GridFmt for Function {
-    fn fmt_grid(&self) -> Grid {
+    fn fmt_grid(&self, _: bool) -> Grid {
         if let Some((prim, _)) = self.as_primitive() {
             return vec![prim.to_string().chars().collect()];
         }
         if let Some(value) = self.as_constant() {
-            return value.fmt_grid();
+            return value.fmt_grid(true);
         }
         let mut grid: Grid = self
             .format_inner()
@@ -107,20 +122,20 @@ impl GridFmt for Function {
 }
 
 impl GridFmt for Value {
-    fn fmt_grid(&self) -> Grid {
+    fn fmt_grid(&self, boxed: bool) -> Grid {
         match self {
-            Value::Num(array) => array.fmt_grid(),
-            Value::Byte(array) => array.fmt_grid(),
-            Value::Char(array) => array.fmt_grid(),
-            Value::Func(array) => array.fmt_grid(),
+            Value::Num(array) => array.fmt_grid(boxed),
+            Value::Byte(array) => array.fmt_grid(boxed),
+            Value::Char(array) => array.fmt_grid(boxed),
+            Value::Func(array) => array.fmt_grid(boxed),
         }
     }
 }
 
 impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
-    fn fmt_grid(&self) -> Grid {
+    fn fmt_grid(&self, boxed: bool) -> Grid {
         if self.shape.is_empty() {
-            return self.data[0].fmt_grid();
+            return self.data[0].fmt_grid(boxed);
         }
         let stringy = type_name::<T>() == type_name::<char>();
         if *self.shape == [0] {
@@ -193,9 +208,10 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             let row_count = grid.len();
             if row_count == 1 && self.rank() == 1 {
                 // Add brackets to vectors
+                let (left, right) = if boxed { ('⟦', '⟧') } else { ('[', ']') };
                 if !stringy {
-                    grid[0].insert(0, '[');
-                    grid[0].push(']');
+                    grid[0].insert(0, left);
+                    grid[0].push(right);
                 }
             } else {
                 // Add corners to non-vectors
@@ -207,12 +223,12 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     false,
                     &mut grid,
                 );
-                grid[0][0] = '╭';
+                grid[0][0] = if boxed { '╓' } else { '╭' };
                 grid[0][1] = '─';
                 for i in 0..self.rank().saturating_sub(1) {
-                    grid[i + 1][0] = '╷';
+                    grid[i + 1][0] = if boxed { '║' } else { '╷' };
                 }
-                *grid.last_mut().unwrap().last_mut().unwrap() = '╯';
+                *grid.last_mut().unwrap().last_mut().unwrap() = if boxed { '╜' } else { '╯' };
                 // Handle really big grid
                 if let Some((w, _)) = term_size::dimensions() {
                     for row in grid.iter_mut() {
@@ -259,7 +275,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
     }
     let rank = shape.len();
     if rank == 0 {
-        metagrid.push(vec![data[0].fmt_grid()]);
+        metagrid.push(vec![data[0].fmt_grid(false)]);
         return;
     }
     if rank == 1 {
@@ -270,7 +286,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
             row.push(vec![format!("{s:?}").chars().collect()]);
         } else {
             for (i, val) in data.iter().enumerate() {
-                let mut grid = val.fmt_grid();
+                let mut grid = val.fmt_grid(false);
                 if i > 0 {
                     pad_grid_min(grid[0].len() + 1, grid.len(), &mut grid)
                 }

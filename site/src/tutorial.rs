@@ -538,7 +538,11 @@ X 5"/>
         <Editor example="TimesThree ← |1   ×3\nTimesThree 7"/>
         <Editor example="∵(|2.1 ⊟.×) 1_2_3 4_5_6"/>
         <p>"Stack signatures are useful for documenting functions and for making sure that functions are used correctly."</p>
-        <p>"In addition, an error is thrown if a function's signature can be derived and the derived signature does not match the declared signature. This can help validate that a function works correctly."</p>
+        <p>"A signature declartion is "<em>"required"</em>" if the function's signature cannot be infered. The compiler can usually infer a function's signature unless you are doing something weird with higher-order functions or fiddling with function arrays."</p>
+        <Editor example="∺(⊞ ∶,)+_- .⇡9"/>
+        <p>"Simply add a signature declaration to fix this."</p>
+        <Editor example="∺(|1 ⊞ ∶,)+_-⇡3"/>
+        <p>"In addition, an error is thrown if a function's signature can be inferred and the inferred signature does not match the declared signature. This can help validate that a function is correct."</p>
         <Editor example="≡(|2 ↻.) 1_2_3 ↯3_3⇡9"/>
     }
 }

@@ -672,9 +672,9 @@ primitive!(
     /// Use an array to replicate the elements of another array
     ///
     /// The first array is the number of times to replicate each element of the second array.
-    /// ex: ‡ [1 0 2 1 4] [8 3 9 2 0]
+    /// ex: ‡ [1 0 2 3 1] [8 3 9 2 0]
     ///
-    /// This can be used as a filter.
+    /// By making the first array a mask derived from the second, [replicate] becomes a filter.
     /// In this example, the input string is [duplicate]ed, and a mask is created from it using `greater or equal``@a`. Then, [replicate] uses the mask to filter the string.
     /// ex: ‡ ≥@a . "lOWERCASe onLY"
     (2, Replicate, DyadicArray, ("replicate", '‡')),
@@ -834,7 +834,7 @@ primitive!(
     ///
     /// When combined with [classify], you can do things like counting the number of occurrences of each character in a string.
     /// ex: $ Count the characters is this string
-    ///   : ⊕($"_:_"⊢∶⧻.) ⊛.⊏⌂.
+    ///   : ⊕{⊃⊢⧻.} ⊛.⊏⌂.
     ///
     /// [group] is closely related to [partition].
     (2[1], Group, DyadicModifier, ("group", '⊕')),

@@ -9,6 +9,7 @@ use std::{
 use base64::{engine::general_purpose::STANDARD, Engine};
 use image::ImageOutputFormat;
 use leptos::{ev::keydown, *};
+use leptos_router::{use_navigate, NavigateOptions};
 use uiua::{
     format::{format_str, FormatConfig},
     lex::is_ident_char,
@@ -634,6 +635,12 @@ pub fn Editor<'a>(
                             "_blank",
                         )
                         .unwrap();
+                } else if event.shift_key() {
+                    // Redirect to the docs page
+                    use_navigate()(
+                        &format!("/docs/{}", p.name().unwrap_or_default()),
+                        NavigateOptions::default(),
+                    );
                 } else {
                     replace_code(&p.to_string());
                 }
@@ -804,7 +811,7 @@ pub fn Editor<'a>(
                     <div id="code-area">
                         <div id={glyph_doc_id} class="glyph-doc" style="display: none">
                             { move || glyph_doc.get() }
-                            <div class="glyph-doc-ctrl-click">"Ctrl+click for more info"</div>
+                            <div class="glyph-doc-ctrl-click">"Shift+click for more info (Ctrl+click for new tab)"</div>
                         </div>
                         <div id="code-right-side">
                             <button

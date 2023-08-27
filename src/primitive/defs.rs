@@ -415,7 +415,7 @@ primitive!(
     ///
     /// It is a triangle because a triangle is a shape.
     (1, Shape, MonadicArray, ("shape", '△')),
-    /// Make an array of [0, x)
+    /// Make an array of all natural numbers less than a number
     ///
     /// The [rank] of the input must be `0` or `1`.
     /// ex: ⇡5

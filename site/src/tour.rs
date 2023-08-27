@@ -12,16 +12,16 @@ pub fn Tour() -> impl IntoView {
 
         <h2 id="the-union-of-two-paradigms">"The Union of Two Paradigms"</h2>
         <p>"Uiua is a programming language that incorporates two of the less-common programming paradigms: "<b>"array-oriented"</b>" and "<b>"stack-oriented"</b>"."</p>
-        <p>"An "<b>"array-oriented"</b>" language is one where the primary data structure is the array. In array languages many operations that can apply to a single value can also apply to every value in an array. This is known as "<em>"rank-polymorphism"</em>"."</p>
-        <p>"A "<b>"stack-oriented"</b>" language is one where all operations manipulate a global stack of values. Functions pop values off the top of the stack, perform their calculation, then push the values back on to the stack."</p>
+        <p>"An "<b>"array-oriented"</b>" language is one where the primary data structure is the array. In array languages, many operations that can apply to a single value can also apply to every value in an array. This is known as "<em>"rank-polymorphism"</em>"."</p>
+        <p>"A "<b>"stack-oriented"</b>" language is one where all operations manipulate a global stack of values. Functions pop values off the top of the stack, perform their calculation, then push the results back on to the stack."</p>
         <p>"In Uiua, functions work on a global stack of arrays."</p>
         <p>"Thats enough introduction, lets see some code!"</p>
         <Editor examples={&["+", "1", "×", "2 ", "⇡", "10"]}/>
         <p>"Uiua code runs from right to left, top to bottom. Operators are put to the "<em>"left"</em>" of their arguments, rather that in between."</p>
-        <p>"This program makes an array of all the numbers less than 10, multiplies each one by 2, then adds 1 to each one."</p>
+        <p>"This program makes an array of all the numbers less than 10, multiplies each one by 2, then adds 1 to each."</p>
         <p>"If you want to see how that works step-by-step, try clicking the arrows beside the Run button."</p>
         <p>"Now, I can already hear you asking, "<em>"\"Wait, what is that funny arrow? How am I supposed to type the multiplication sign?\""</em></p>
-        <p>"Unlike some other array languages, Uiua does not require a special keyboard or an editor with custom keybindings. Instead, you can type either the ASCII symbol or the name of a built-in function, then the Uiua formatter will convert it to the correct unicode glyph."</p>
+        <p>"Unlike some other array languages, Uiua does not require a special keyboard configuration or an editor with custom keybindings. Instead, you can type either the ASCII symbol or the name of a built-in function, then the Uiua formatter will convert it to the correct unicode glyph."</p>
         <p>"In this case, the ASCII symbol for multiplication is "<code>"*"</code>" and the name of the funny arrow is "<PrimCode prim=Range/>"."</p>
         <p>"On this website, you can format by clicking "<b>"Run"</b>" or by pressing "<b>"Ctrl+Enter"</b>" with the cursor in the text area. Try it out!"</p>
         <Editor example="+1*2 range10" help={&["", "Click! ⇡⇡⇡⇡"]}/>
@@ -39,8 +39,8 @@ pub fn Tour() -> impl IntoView {
         <Editor examples={&["×", ".", "3"]}/>
         <p><PrimCode prim=Dup/>" is often used in the examples on this site to show both the input and output of a function."</p>
         <Editor example="√.225"/>
-        <p>"For math function where the order matters, like "<PrimCode prim=Sub/>" and "<PrimCode prim=Div/>", what would normally be the second argument is instead the first. This is so you can think of fragments like "<PrimCode prim=Sub glyph_only=true/><code>"2"</code>" as a single unit."</p>
-        <p><PrimCode prim=Flip/>" swaps the top two values on the stack."</p>
+        <p>"For math functions where the order matters, like "<PrimCode prim=Sub/>" and "<PrimCode prim=Div/>", what would normally be the second argument is instead the first. This is so you can think of fragments like "<PrimCode prim=Sub glyph_only=true/><code>"2"</code>" as a single unit."</p>
+        <p>"If you want them to work the other way, you can use "<PrimCode prim=Flip/>", which swaps the top two values on the stack."</p>
         <Editor example="-3 10\n-∶3 10"/>
         <p>"By the way, since "<code>"-"</code>" is for "<PrimCode prim=Sub/>", use "<code>"`"</code>" for negative numbers. The formatter will turn in into a nice "<code>"¯"</code>"."</p>
         <Editor example="`10"/>
@@ -49,26 +49,25 @@ pub fn Tour() -> impl IntoView {
         <p>"So far, we have only talked about the stack part of Uiua. Now, lets talk about the most important part: Arrays!"</p>
         <p>"An array is a rectangular collection of elements arranged along some number of axes."</p>
         <p>"An array with no axes is called a scalar. All the numbers is the examples above are scalars."</p>
-        <p>"An array with one axis is called a list."</p>
-        <p>"An array with two axes is called a table."</p>
+        <p>"An array with one axis is often called a list or a vector. An array with two axes is often called a table or a matrix."</p>
         <p>"You can make simple lists by putting "<code>"_"</code>"s between the elements."</p>
         <Editor example="1_2_3_4"/>
         <p>"You can also just surround them with "<code>"[]"</code>"s."</p>
         <Editor example="[5 6 7 8]"/>
         <p>"But wait! You can put whatever code you want between the brackets! The code runs from right to left as normal, and any values pushed to the stack get put in the array!"</p>
-        <Editor example="[÷2 . -36 . ×4 100]"/>
+        <Editor example="[×3 . -2 . 10]"/>
         <p>"If you put arrays inside others, you can make arrays with multiple dimensions."</p>
         <Editor example="[1_2_3 [4 5 6] 7_8_9]"/>
         <Editor example="[×3. 4_5_6]"/>
-        <p>"Operations that are "<em>"pervasive"</em>" apply to every element of an array or every pair of elements between two arrays. All the math operators are pervasive!"</p>
+        <p>"Some operations are "<em>"pervasive"</em>", which means they apply to every element of an array or every pair of elements between two arrays. All the math operators are pervasive!"</p>
         <Editor example="√[4 9 16]"/>
         <Editor example="×2 [1 2 3]"/>
         <Editor example="+ 1_2_3 4_5_6"/>
         <Editor example="× 2_10 [1_2_3 4_5_6]"/>
         <p>"Arrays have a "<PrimCode prim=Shape/>" that describes how many elements they have along each axis."</p>
-        <p>"The "<PrimCode prim=First/>" item in the "<PrimCode prim=Shape/>" is also called the "<PrimCode prim=Len/>"."</p>
-        <p>"The "<PrimCode prim=Len/>" of the "<PrimCode prim=Shape/>" is the "<PrimCode prim=Rank/>"."</p>
         <Editor example="△5\n△[]\n△[9 1 6]\n△[4_π_9 1_5_∞]"/>
+        <p>"The "<PrimCode prim=Rank/>" of an array is the number of axes it has."</p>
+        <p>"The "<PrimCode prim=Len/>" is the number of rows it has along its first axis."</p>
         <Editor example="a ← [1_2_3_4 5_6_7_8 9_10_11_12]\n△a\n⧻a\n∴a"/>
         <p>"If you want to type that fancy "<code>"←"</code>" so you can gives names to arrays, you can type "<code>"="</code>" after a name at the start of a line, and the formatter will convert it for you."</p>
         <Editor example="x = 5\n+x x"/>
@@ -97,13 +96,13 @@ pub fn Tour() -> impl IntoView {
         <p>"Uiua has a lot of built-in functions like these. You can explore their documentation on the "<A href="/docs#functions">"main docs page"</A>"."</p>
 
         <h2 id="functions">"Functions"</h2>
-        <p>"If you bind a name with "<code>"←"</code>", and the thing on the right doesn't have enough arguments, the code will not be run until the name is used."</p>
+        <p>"If you bind a name with "<code>"←"</code>", and there are not enough values on the stack for the code on the right to run, the code will be bound as a function and will not run until the name is used."</p>
         <Editor example="f ← +1\nf5"/>
         <Editor example="👋 ← ⊂\"Hello, \"\n👋\"World\""/>
 
         <h2 id="modifiers">"Modifiers"</h2>
         <p>"Modifiers (called operators or adverbs in some other array languages) are functions that take other functions as arguments. The built-in modifiers are parsed so that if their function argument(s) immediately follow them, the function is run inside the modifier rather than before it."</p>
-        <p><PrimCode prim=Reduce/>" is a modifier many array-language aficionados will be familiar with. It takes its function and applies it to the first two rows of an array, then to each result and the next element."</p>
+        <p><PrimCode prim=Reduce/>" is a modifier many array-language aficionados will be familiar with. It takes its function and applies it \"between\" the items of an array."</p>
         <p>"One basic use of "<PrimCode prim=Reduce/>" is to sum an array."</p>
         <Editor example="/+ [1 2 3 4 5]"/>
         <p>"It works on multi-dimensional arrays too! In this case, it adds each row to the next."</p>
@@ -117,8 +116,10 @@ pub fn Tour() -> impl IntoView {
         <h2 id="inline-functions">"Inline Functions"</h2>
         <p>"If you need a more complex function for a modifier, you can make an inline function by surrounding code with "<code>"()"</code>"s."</p>
         <p>"Let's use "<PrimCode prim=Each/>" to get the sum of all the numbers up to each element of an array."</p>
+        <p>"For "<PrimCode prim=Each/>" element, we'll "<PrimCode prim=Add/><code>"1"</code>", get the "<PrimCode prim=Range/>" up to that number, then "<PrimCode prim=Reduce/>" it with "<PrimCode prim=Add/>"."</p>
         <Editor example="∵(/+ ⇡ +1) .[1_2_3 4_5_6 7_8_9]"/>
         <p>"Small inline functions with only 2 terms can also be created with a preceding "<code>"'"</code>"."</p>
+        <p>"Here, we use "<PrimCode prim=First/>" after "<PrimCode prim=Reverse/>" to get the last element of each row."</p>
         <Editor example="≡'⊢⇌ .[1_2_3 4_5_6 7_8_9]"/>
 
         <h2 id="fill-and-nested-arrays"><PrimCode prim=Fill/>" and Nested Arrays"</h2>
@@ -134,8 +135,9 @@ pub fn Tour() -> impl IntoView {
         <Editor example="[□1 □2_3_4 □5_6]"/>
         <p>"Having to use "<PrimCode prim=Constant/>" on every value is kind of annoying, so there is a special syntax for "<PrimCode prim=Constant/>" arrays that uses "<code>"{}"</code>"s instead of "<code>"[]"</code>"s."</p>
         <Editor example="{1 2_3_4 5_6}"/>
-        <p>"Most monadic functions work on "<PrimCode prim=Constant/>" elements without needing to "<PrimCode prim=Call/>" them."</p>
+        <p>"Many simple functions work on "<PrimCode prim=Constant/>" elements without needing to "<PrimCode prim=Call/>" them."</p>
         <Editor example="{1 2_3_4 5_6}\n∵⇌.\n∵⧻."/>
+        <Editor example="+5 {1 2_3_4 5_6}"/>
         <p>"For more complex operations, though, you'll need to use "<PrimCode prim=Call/>". Using it with "<PrimCode prim=Under/>" will re-"<PrimCode prim=Constant/>" the result."</p>
         <Editor example="{\"dog\" \"cat\" \"fish\"}\n∵⍜!(⊂∶⇌.)."/>
 
@@ -143,7 +145,7 @@ pub fn Tour() -> impl IntoView {
         <p>"Uiua can natively generate images and audio."</p>
         <p>"On this site, simply leaving an array on the stack that "<em>"looks"</em>" like image or audio data will display it."</p>
         <h3>"Images"</h3>
-        <p>"Image data can either be a "<PrimCode prim=Rank/><code>"2"</code>" array of grayscale pixel data or a "<PrimCode prim=Rank/><code>"3"</code>" array of grayscale with alpha, RGBA, or RGBA pixel data."</p>
+        <p>"Image data can either be a "<PrimCode prim=Rank/><code>"2"</code>" array of grayscale pixel data or a "<PrimCode prim=Rank/><code>"3"</code>" array of grayscale with alpha, RGB, or RGBA pixel data."</p>
         <p>"This minimal example uses three different functions on x/y coordinates to generate RGB values and make a pretty gradient."</p>
         <Editor example="⍉∺(|1 ⊞ ∶,)+_-_× ÷∶⇡.100"/>
         <p>"The Uiua logo is made with Uiua itself!"</p>
@@ -152,13 +154,14 @@ pub fn Tour() -> impl IntoView {
         <p>"Audio data is just an array of numbers between -1 and 1. The numbers are interpreted as samples of a waveform."</p>
         <p>"This example plays a series of notes."</p>
         <Editor example="\
-↯×4⧻.[0 2 4 7 12 9 7 4]
+↯4[0 2 4 7 12 9 7 4]
 ×220 ⁿ∶2÷12
 ÷2 ○×τ ♭⊞× ∶÷∶⇡⁅÷8 .44100"/>
 
         <h2 id="next-steps">"Next Steps"</h2>
         <p>"If you want a more in-depth introduction to Uiua, you can check out the "<A href="/docs/basic">"tutorial"</A>"."</p>
+        <p>"For information on installing the native Uiua interpreter, see the "<A href="/install">"install page"</A>"."</p>
         <p>"For information on specific functions and modifiers, see the "<A href="/docs#functions">"functions section"</A>" of the main docs page."</p>
-        <p>"To see some cool examples, click through the editor at the top of the "<A href="/">"home page"</A>"."</p>
+        <p>"To see some cool examples, click through the editor at the top of the "<A href="/">"home page"</A>". There are also some interesting, longer examples in the "<a href="https://github.com/uiua-lang/uiua/tree/main/examples">" main Uiua repository on GitHub"</a>"."</p>
     }
 }

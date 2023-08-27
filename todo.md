@@ -4,7 +4,6 @@
   - Parser needs to track:
     - Bracket spans
     - Binding arrow span
-- Make invert algorithms less state-y
 - Docs
   - Control flow
   - Images

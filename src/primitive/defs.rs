@@ -735,21 +735,21 @@ primitive!(
     /// [reduce] traverses the array backwards so that `reduce``noop` unloads all rows onto the stack with the first row on top.
     /// ex: /· 1_2_3
     /// ex: /· [1_2 3_4]
-    (1[1], Reduce, MonadicModifier, ("reduce", '/')),
+    (1[1], Reduce, AggregatingModifier, ("reduce", '/')),
     /// Apply a reducing function to an array with an initial value
     ///
     /// For reducing without an initial value, see [reduce].
     /// Unlike other modifiers, [fold] and [reduce] traverse the array from right to left.
     ///
     /// ex: ∧+ 10 1_2_3_4
-    (2[1], Fold, MonadicModifier, ("fold", '∧')),
+    (2[1], Fold, AggregatingModifier, ("fold", '∧')),
     /// Reduce, but keep intermediate values
     ///
     /// ex: \+   1_2_3_4
     /// ex: \-   1_2_3_4
     /// ex: \'-∶ 1_2_3_4
-    (1[1], Scan, MonadicModifier, ("scan", '\\')),
-    /// Apply a function to each element of an array or between elements of arrays
+    (1[1], Scan, AggregatingModifier, ("scan", '\\')),
+    /// Apply a function to each element of an array or arrays
     ///
     /// This is the element-wise version of [rows].
     ///
@@ -757,8 +757,8 @@ primitive!(
     /// ex: ∵'⊟. 1_2_3_4
     /// ex: ∵⊂ 1_2_3 4_5_6
     /// ex: ∵⊂ 1_2 [4_5 6_7]
-    ([1], Each, MonadicModifier, ("each", '∵')),
-    /// Apply a function to each row of an array
+    ([1], Each, IteratingModifier, ("each", '∵')),
+    /// Apply a function to each row of an array or arrays
     ///
     /// This is the row-wise version of [each].
     ///
@@ -772,7 +772,7 @@ primitive!(
     /// [rows] is equivalent to [level]`¯1` (or `level``[¯1 ¯1 ..]` for multiple arrays).
     /// ex: ⍚¯1/+ [1_2_3 4_5_6 7_8_9]
     /// ex:   ≡/+ [1_2_3 4_5_6 7_8_9]
-    ([1], Rows, MonadicModifier, ("rows", '≡')),
+    ([1], Rows, IteratingModifier, ("rows", '≡')),
     /// Apply a function to each row of an array and a fixed value
     ///
     /// ex: ∺⊂ 1_2_3 4
@@ -784,14 +784,14 @@ primitive!(
     /// [distribute] is equivalent to [level]`[¯1``infinity``]`.
     /// ex:       ∺⊂ 1_2_3 4_5_6
     ///   : ⍚[¯1 ∞]⊂ 1_2_3 4_5_6
-    (2[1], Distribute, DyadicModifier, ("distribute", '∺')),
+    (2[1], Distribute, IteratingModifier, ("distribute", '∺')),
     /// Apply a function to each combination of elements of two arrays
     ///
     /// This is the element-wise version of [cross].
     ///
     /// ex: ⊞+ 1_2_3 4_5_6_7
     /// ex: ⊞⊂ 1_2 3_4
-    (2[1], Table, DyadicModifier, ("table", '⊞')),
+    (2[1], Table, IteratingModifier, ("table", '⊞')),
     /// Apply a function to each combination of rows of two arrays
     ///
     /// This is the row-wise version of [table].
@@ -799,7 +799,7 @@ primitive!(
     /// ex: a ← .[1_2 3_4 5_6]
     ///   : b ← .[7_8 9_10]
     ///   : ⊠⊂ a b
-    (2[1], Cross, DyadicModifier, ("cross", '⊠')),
+    (2[1], Cross, IteratingModifier, ("cross", '⊠')),
     /// Repeat a function a number of times
     ///
     /// ex: ⍥(+2)5 0
@@ -811,7 +811,7 @@ primitive!(
     /// Repeating [infinity] times will create an infinite loop.
     /// You can use [break] to break out of the loop.
     /// ex: ⍥(⎋>1000. ×2)∞ 1
-    (1[1], Repeat, OtherModifier, ("repeat", '⍥')),
+    (1[1], Repeat, IteratingModifier, ("repeat", '⍥')),
     /// Group elements of an array into buckets by index
     ///
     /// Takes a function and two arrays.
@@ -837,7 +837,7 @@ primitive!(
     ///   : ⊕{⊢∶⧻.} ⊛.⊏⌂.
     ///
     /// [group] is closely related to [partition].
-    (2[1], Group, DyadicModifier, ("group", '⊕')),
+    (2[1], Group, AggregatingModifier, ("group", '⊕')),
     /// Group elements of an array into buckets by sequential keys
     ///
     /// Takes a function and two arrays.
@@ -862,7 +862,7 @@ primitive!(
     /// ex: ⊜□ ≠@ . $ Hey there friendo
     ///
     /// [partition] is closely related to [group].
-    (2[1], Partition, DyadicModifier, ("partition", '⊜')),
+    (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
     /// Invert the behavior of a function
     ///
     /// Most functions are not invertible.
@@ -973,7 +973,7 @@ primitive!(
     /// `level``1` will always apply to [rank]`1` arrays, no matter how many dimensions the original array has.
     /// ex: ⍚[1 1]⊂ ↯3_3⇡9 10_11_12 # Join two rank 1 arrays
     /// ex: ⍚[1 0]⊂ ↯3_3⇡9 10_11_12 # Join a rank 1 arrays with scalars
-    ([2], Level, OtherModifier, ("level", '⍚')),
+    ([2], Level, IteratingModifier, ("level", '⍚')),
     /// Call 2 functions on 2 values
     ///
     /// Each function may take 0, 1, or 2 arguments.

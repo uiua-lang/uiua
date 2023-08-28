@@ -274,28 +274,23 @@ impl Allowed {
                 ("array", &[PrimClass::MonadicArray, PrimClass::DyadicArray]),
                 (
                     "monadic",
-                    &[
-                        PrimClass::MonadicPervasive,
-                        PrimClass::MonadicArray,
-                        PrimClass::MonadicModifier,
-                    ],
+                    &[PrimClass::MonadicPervasive, PrimClass::MonadicArray],
                 ),
                 (
                     "dyadic",
-                    &[
-                        PrimClass::DyadicPervasive,
-                        PrimClass::DyadicArray,
-                        PrimClass::DyadicModifier,
-                    ],
+                    &[PrimClass::DyadicPervasive, PrimClass::DyadicArray],
                 ),
                 (
                     "modifier",
                     &[
-                        PrimClass::MonadicModifier,
-                        PrimClass::DyadicModifier,
+                        PrimClass::AggregatingModifier,
+                        PrimClass::IteratingModifier,
                         PrimClass::OtherModifier,
                     ],
                 ),
+                ("aggregating", &[PrimClass::AggregatingModifier]),
+                ("iterating", &[PrimClass::IteratingModifier]),
+                ("other", &[PrimClass::OtherModifier]),
                 ("control", &[PrimClass::Control]),
                 ("misc", &[PrimClass::Misc]),
                 ("constant", &[PrimClass::Constant]),
@@ -347,8 +342,8 @@ impl Allowed {
                 PrimClass::DyadicPervasive => "dyadic-pervasive-functions",
                 PrimClass::MonadicArray => "monadic-array-functions",
                 PrimClass::DyadicArray => "dyadic-array-functions",
-                PrimClass::MonadicModifier => "monadic-modifiers",
-                PrimClass::DyadicModifier => "dyadic-modifiers",
+                PrimClass::AggregatingModifier => "aggregating-modifiers",
+                PrimClass::IteratingModifier => "iterating-modifiers",
                 PrimClass::OtherModifier => "other-modifiers",
                 PrimClass::Control => "control-functions",
                 PrimClass::Misc => "misc-functions",
@@ -375,13 +370,13 @@ impl Allowed {
                 ),
                 PrimClass::MonadicArray => ("Monadic Array", "Operate on a single array"),
                 PrimClass::DyadicArray => ("Dyadic Array", "Operate on two arrays"),
-                PrimClass::MonadicModifier => (
-                    "Monadic Modifiers",
-                    "Apply a function in some way to an array",
+                PrimClass::IteratingModifier => (
+                    "Iterating Modifiers",
+                    "Iterate and apply a function to an array or arrays",
                 ),
-                PrimClass::DyadicModifier => (
-                    "Dyadic Modifiers",
-                    "Apply a function in some way to two arrays",
+                PrimClass::AggregatingModifier => (
+                    "Aggregating Modifiers",
+                    "Apply a function to aggregate an array",
                 ),
                 PrimClass::OtherModifier => ("Other Modifiers", ""),
                 PrimClass::Control => ("Control", "Control the flow of execution"),

@@ -379,7 +379,7 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
 fn rows1(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     let mut new_rows = Vec::with_capacity(xs.row_count());
     let mut old_rows = xs.into_rows();
-    while let Some(row) = old_rows.next() {
+    for row in old_rows.by_ref() {
         env.push(row);
         env.push(f.clone());
         let broke = env.call_catch_break()?;

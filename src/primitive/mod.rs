@@ -923,7 +923,7 @@ mod tests {
 		}},
 		"strings": {{
 			"name": "constant.character.escape",
-			"match": "\"[^\"]*\"|\\$.*$"
+			"match": "\\$?\"([^\"]|\\\")*\"|\\$ .*$"
 		}},
         "characters": {{
             "name": "constant.character.escape",

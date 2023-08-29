@@ -619,7 +619,7 @@ backtrace:
             let span = self.add_span(span);
             self.push_instr(Instr::Prim(prim, span));
         } else {
-            return Err(span.sp(format!("unknown identifier `{}`", ident)).into());
+            return Err(span.sp(format!("Unknown identifier `{}`", ident)).into());
         }
         Ok(())
     }

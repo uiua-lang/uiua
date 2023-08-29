@@ -104,7 +104,6 @@ impl Value {
     pub fn join_infallible(self, other: Self) -> Self {
         self.join_impl(other, ()).unwrap()
     }
-    // pub fn join(self, other: Self, env: &Uiua) -> UiuaResult<Self> {}
     fn join_impl<C: FillContext>(self, other: Self, ctx: C) -> Result<Self, C::Error> {
         Ok(match (self, other) {
             (Value::Num(a), Value::Num(b)) => a.join_impl(b, ctx)?.into(),

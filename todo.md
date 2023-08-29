@@ -1,6 +1,5 @@
 - Improve array formatting
 - Better native experience with TUI
-- Change modifier classes
 - Lsp should return all spans
   - Parser needs to track:
     - Bracket spans

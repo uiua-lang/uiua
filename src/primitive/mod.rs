@@ -483,11 +483,13 @@ impl Primitive {
                 });
             }
             Primitive::Spawn => {
-                let n = env
-                    .pop("thread stack size")?
-                    .as_nat(env, "Spawn expects a natural number")?;
                 let f = env.pop("thread function")?;
-                let handle = env.spawn(n, move |env| {
+                let sig = f.signature().map_err(|e| {
+                    env.error(format!(
+                        "Spawn's function signature could not be inferred: {e}"
+                    ))
+                })?;
+                let handle = env.spawn(sig.args, move |env| {
                     env.push(f);
                     env.call()
                 })?;

@@ -50,7 +50,7 @@ page ← ⍣(
 )handlepageloaderror ⊂"docs"
 home ← page "/index.html"
 
-respond ← ↰1(
+respond ← ↰(
   # Extract path from request
   !⊡1 ⊜□≠@ . &ru "\r\n\r\n".
   &p "Request:"

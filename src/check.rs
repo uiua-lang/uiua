@@ -103,10 +103,10 @@ impl<'a> VirtualEnv<'a> {
                 self.stack.push(BasicValue::Arr(items));
             }
             Instr::Prim(prim, _) => match prim {
-                Reduce | Scan => self.handle_mod(prim, Some(2), Some(1), 1)?,
-                Fold => self.handle_mod(prim, Some(2), Some(1), 2)?,
+                Reduce | Scan => self.handle_mod(prim, Some(2), Some(1), 1, None)?,
+                Fold => self.handle_mod(prim, Some(2), Some(1), 2, None)?,
                 Each | Rows => self.handle_variadic_mod(prim)?,
-                Distribute | Table | Cross => self.handle_mod(prim, Some(2), Some(1), 2)?,
+                Distribute | Table | Cross => self.handle_mod(prim, Some(2), Some(1), 2, None)?,
                 Group | Partition => {
                     if let BasicValue::Func(f) = self.pop()? {
                         let sig = f.signature()?;
@@ -135,17 +135,7 @@ impl<'a> VirtualEnv<'a> {
                         return Err(format!("{prim} with non-function"));
                     }
                 }
-                Spawn => {
-                    if let Some(BasicValue::Num(n)) = self.stack.pop() {
-                        if n.fract() == 0.0 && n >= 0.0 {
-                            self.handle_mod(prim, Some(1), None, n as usize)?
-                        } else {
-                            return Err("spawn without a natural number".into());
-                        }
-                    } else {
-                        return Err("spawn without a number".into());
-                    }
-                }
+                Spawn => self.handle_mod(prim, None, None, 1, Some(1))?,
                 Repeat => {
                     let f = self.pop()?;
                     let n = self.pop()?;
@@ -156,9 +146,15 @@ impl<'a> VirtualEnv<'a> {
                                 let sig = f.signature()?;
                                 let m_args = sig.outputs * n;
                                 self.stack.push(BasicValue::Func(f));
-                                self.handle_mod(prim, Some(sig.args), Some(sig.outputs), m_args)?
+                                self.handle_mod(
+                                    prim,
+                                    Some(sig.args),
+                                    Some(sig.outputs),
+                                    m_args,
+                                    None,
+                                )?
                             } else {
-                                self.handle_mod(prim, Some(0), Some(1), n)?
+                                self.handle_mod(prim, Some(0), Some(1), n, None)?
                             }
                         } else {
                             return Err("repeat without a natural number".into());
@@ -449,6 +445,7 @@ impl<'a> VirtualEnv<'a> {
         f_args: Option<usize>,
         f_outputs: Option<usize>,
         m_args: usize,
+        m_outputs: Option<usize>,
     ) -> Result<(), String> {
         if let BasicValue::Func(f) = self.pop()? {
             let sig = f.signature()?;
@@ -472,7 +469,7 @@ impl<'a> VirtualEnv<'a> {
                 self.pop()?;
             }
             self.set_min_height();
-            let outputs = f_outputs.unwrap_or(sig.outputs);
+            let outputs = m_outputs.unwrap_or(f_outputs.unwrap_or(sig.outputs));
             for _ in 0..outputs {
                 self.stack.push(BasicValue::Other);
             }

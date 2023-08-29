@@ -629,13 +629,6 @@ backtrace:
             instrs.extend(self.compile_words(line, true)?);
         }
 
-        // If the function is just a call to another function, just push that function
-        if let [Instr::Push(f), Instr::Call(..)] = instrs.as_slice() {
-            if let Some(f) = f.as_function() {
-                instrs = vec![Instr::push(f.clone())]
-            }
-        }
-
         // Validate signature
         let sig = match instrs_signature(&instrs) {
             Ok(sig) => {

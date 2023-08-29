@@ -90,10 +90,7 @@ impl<'a> VirtualEnv<'a> {
     fn instr(&mut self, instr: &'a Instr) -> Result<(), String> {
         use Primitive::*;
         match instr {
-            Instr::Push(val) => {
-                self.stack.push(BasicValue::from_val(val));
-                self.handle_call(false)?;
-            }
+            Instr::Push(val) => self.stack.push(BasicValue::from_val(val)),
             Instr::BeginArray => self.array_stack.push(self.stack.len()),
             Instr::EndArray { .. } => {
                 let bottom = self

@@ -662,7 +662,7 @@ li {
     font-size: 1em;
     border-radius: 0.5em;
     padding: 0.5em;
-    width: min(100%, max(30%, 20em));
+    width: min(100%, max(30%, 22em));
 }
 
 input[type=text] {

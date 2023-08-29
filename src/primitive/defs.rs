@@ -1039,7 +1039,8 @@ primitive!(
     ///
     /// Expects a number and a function.
     /// The number is the number of arguments to pop from the stack and pass to the function.
-    /// The function is called in a new thread.
+    /// In the native interpreter, the function is called in a new OS thread.
+    /// In the web editor, the function is called and blocks until it returns.
     /// A handle that can be passed to [wait] is pushed to the stack. Handles are just numbers.
     /// [wait] consumes the handle and appends the thread's stack to the current stack.
     /// ex:  ↰1⇡ 10

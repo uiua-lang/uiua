@@ -170,10 +170,10 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
     view! {
         <h1>"Documentation"</h1>
         <h2>"Language Tour"</h2>
-        <p>"If you want to jump right in, check out the "<A href="/docs/tour">"Language Tour"</A>"!"</p>
+        <p>"If you want to jump right in, check out the "<A href="/docs/tour">"Language Tour"</A>" for a high-level overview!"</p>
         <p>"Otherwise, read on for more detailed documentation."</p>
         <h2 id="tutorial">"Tutorial"</h2>
-        <p>"These introduce Uiua concepts one at a time, each tutorial building on the previous. They go into much more depth than the language tour."</p>
+        <p>"These pages introduce Uiua concepts one at a time, each tutorial building on the previous. They go into much more depth than the language tour."</p>
         <p>"They are meant to be read in order, but feel free to skip around!"</p>
         <ul>{ all::<TutorialPage>()
             .map(|p| view!( <li><A href={format!("/docs/{}", p.path())}>{p.title()}</A></li>))
@@ -362,11 +362,11 @@ impl Allowed {
             let (header, description) = match class {
                 PrimClass::Stack => ("Stack", "Modify the stack"),
                 PrimClass::MonadicPervasive => {
-                    ("Monadic Pervasive", "Operate on every item in an array")
+                    ("Monadic Pervasive", "Operate on every element in an array")
                 }
                 PrimClass::DyadicPervasive => (
                     "Dyadic Pervasive",
-                    "Operate on every pair of items in two arrays",
+                    "Operate on every pair of elements in two arrays",
                 ),
                 PrimClass::MonadicArray => ("Monadic Array", "Operate on a single array"),
                 PrimClass::DyadicArray => ("Dyadic Array", "Operate on two arrays"),

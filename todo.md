@@ -1,3 +1,4 @@
+- Make spawn use the function's argument count
 - Improve array formatting
 - Better native experience with TUI
 - Lsp should return all spans

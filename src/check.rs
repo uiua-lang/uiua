@@ -211,7 +211,7 @@ impl<'a> VirtualEnv<'a> {
                     let handler_sig = handler.signature()?;
                     if !f_sig.compatible_with(handler_sig) {
                         return Err(format!(
-                            "try functions have incompatible signatures {f_sig} and {handler_sig}"
+                            "try's functions have incompatible signatures {f_sig} and {handler_sig}"
                         ));
                     }
                     let sig = f_sig.max_with(handler_sig);

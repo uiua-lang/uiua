@@ -50,7 +50,7 @@ page ← ⍣(
 )handlepageloaderror ⊂"docs"
 home ← page "/index.html"
 
-respond ← ↰(
+respond ← ;↰(
   # Extract path from request
   !⊡1 ⊜□≠@ . &ru "\r\n\r\n".
   &p "Request:"
@@ -66,4 +66,4 @@ respond ← ↰(
   ;;⊃(|2 0 &cl;)(|2 0 &w)
 )
 
-⍥(⍣(respond)&p &tcpa listener)∞
+⍥(⍣respond(&p) &tcpa listener)∞

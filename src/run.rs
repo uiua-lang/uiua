@@ -631,9 +631,8 @@ backtrace:
 
         // If the function is just a call to another function, just push that function
         if let [Instr::Push(f), Instr::Call(..)] = instrs.as_slice() {
-            if matches!(**f, Value::Func(_)) {
-                self.push_instr(Instr::Push(f.clone()));
-                return Ok(());
+            if let Some(f) = f.as_function() {
+                instrs = vec![Instr::push(f.clone())]
             }
         }
 
@@ -644,8 +643,7 @@ backtrace:
                     if declared_sig.value != sig {
                         return Err(UiuaError::Run(Span::Code(declared_sig.span.clone()).sp(
                             format!(
-                                "Function signature mismatch: \
-                            declared {} but inferred {}",
+                                "Function signature mismatch: declared {} but inferred {}",
                                 declared_sig.value, sig
                             ),
                         )));

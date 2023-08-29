@@ -15,7 +15,7 @@ pub(crate) fn instrs_signature(instrs: &[Instr]) -> Result<Signature, String> {
             });
         }
     }
-
+    // println!("Checking {:?}", instrs);
     const START_HEIGHT: usize = 16;
     let mut env = VirtualEnv {
         stack: vec![BasicValue::Other; START_HEIGHT],
@@ -25,6 +25,7 @@ pub(crate) fn instrs_signature(instrs: &[Instr]) -> Result<Signature, String> {
     env.instrs(instrs)?;
     let args = START_HEIGHT.saturating_sub(env.min_height);
     let outputs = env.stack.len() - env.min_height;
+    // println!("Checked {:?} -> {}/{}", instrs, args, outputs);
     Ok(Signature { args, outputs })
 }
 
@@ -35,7 +36,7 @@ struct VirtualEnv<'a> {
     min_height: usize,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 enum BasicValue<'a> {
     Func(&'a Function),
     Num(f64),
@@ -91,6 +92,7 @@ impl<'a> VirtualEnv<'a> {
         match instr {
             Instr::Push(val) => {
                 self.stack.push(BasicValue::from_val(val));
+                self.handle_call(false)?;
             }
             Instr::BeginArray => self.array_stack.push(self.stack.len()),
             Instr::EndArray { .. } => {
@@ -102,6 +104,7 @@ impl<'a> VirtualEnv<'a> {
                 items.reverse();
                 self.stack.push(BasicValue::Arr(items));
             }
+            Instr::Call(_) => self.handle_call(false)?,
             Instr::Prim(prim, _) => match prim {
                 Reduce | Scan => self.handle_mod(prim, Some(2), Some(1), 1, None)?,
                 Fold => self.handle_mod(prim, Some(2), Some(1), 2, None)?,
@@ -365,7 +368,6 @@ impl<'a> VirtualEnv<'a> {
                     }
                 }
             },
-            Instr::Call(_) => self.handle_call(false)?,
         }
         self.set_min_height();
         // println!("{instr:?} -> {}/{}", self.min_height, self.stack.len());
@@ -434,8 +436,7 @@ impl<'a> VirtualEnv<'a> {
                     self.stack.push(BasicValue::Other);
                 }
             }
-            val if explicit => self.stack.push(val),
-            _ => return Err("call without function".into()),
+            val => self.stack.push(val),
         }
         Ok(())
     }

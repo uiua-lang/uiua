@@ -1,9 +1,5 @@
-- Improve array formatting
-- Better native experience with TUI
-- Lsp should return all spans
-  - Parser needs to track:
-    - Bracket spans
-    - Binding arrow span
+- Allow each/rows/etc with 0 outputs
+- Publish vscode extension
 - Docs
   - Control flow
   - Images

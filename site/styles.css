@@ -491,7 +491,7 @@ li {
     left: -10.2em;
     width: 10em;
     text-decoration: none;
-    white-space: normal;
+    white-space: pre-wrap;
     overflow: visible;
     line-height: 1em;
     -webkit-text-fill-color: #eee;

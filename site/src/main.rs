@@ -202,23 +202,28 @@ pub fn PrimCode(
         .name()
         .map(|name| format!("/docs/{name}"))
         .unwrap_or_default();
-    let mut title = match (prim.doc().filter(|_| !hide_docs), show_name) {
-        (Some(doc), true) => Some(doc.short_text().into_owned()),
-        (Some(doc), false) => Some(format!(
-            "{}: {}",
-            prim.name().unwrap_or_default(),
-            doc.short_text()
-        )),
-        (None, true) => None,
-        (None, false) => prim.name().map(Into::into),
-    };
-    if let Some((title, ascii)) = title.as_mut().zip(prim.ascii()) {
-        *title = format!("({}) {}", ascii, title);
+    let mut title = String::new();
+    if let Some(ascii) = prim.ascii() {
+        title.push_str(&format!("({}) ", ascii));
     }
-    let code_class = if title.is_some() { "prim-code" } else { "" };
+    if let Some(name) = prim.name() {
+        if prim.unicode().is_some() {
+            title.push_str(name);
+        }
+    }
+    if let Primitive::Sys(op) = prim {
+        title.push_str(op.long_name());
+        title.push('\n');
+    }
+    if let Some(doc) = prim.doc().filter(|_| !hide_docs) {
+        if show_name && !matches!(prim, Primitive::Sys(_)) {
+            title.push_str(": ");
+        }
+        title.push_str(&doc.short_text());
+    }
     view! {
         <A href=href class="prim-code-a">
-            <code class=code_class data-title=title><span class=span_class>{ symbol }</span>{name}</code>
+            <code class="prim-code" data-title=title><span class=span_class>{ symbol }</span>{name}</code>
         </A>
     }
 }

@@ -45,7 +45,7 @@ macro_rules! sys_op {
         $(#[doc = $doc:literal])*
         (
             $args:literal$(($outputs:expr))?,
-            $variant:ident, $name:literal
+            $variant:ident, $name:literal, $long_name:literal
         )
     ),* $(,)?) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
@@ -60,6 +60,11 @@ macro_rules! sys_op {
             pub fn name(&self) -> &'static str {
                 match self {
                     $(Self::$variant => $name),*
+                }
+            }
+            pub fn long_name(&self) -> &'static str {
+                match self {
+                    $(Self::$variant => $long_name),*
                 }
             }
             pub fn args(&self) -> u8 {
@@ -92,46 +97,46 @@ macro_rules! sys_op {
 
 sys_op! {
     /// Print a nicely formatted representation of a value to stdout
-    (1(0), Show, "&s"),
+    (1(0), Show, "&s", "show"),
     /// Print a value to stdout
-    (1(0), Prin, "&pp"),
+    (1(0), Prin, "&pf", "print and flush"),
     /// Print a value to stdout followed by a newline
-    (1(0), Print, "&p"),
+    (1(0), Print, "&p", "print with newline"),
     /// Read a line from stdin
-    (0, ScanLine, "&sc"),
+    (0, ScanLine, "&sc", "scan line"),
     /// Get the size of the terminal
     ///
     /// The result is a 2-element array of the height and width of the terminal.
     /// Height comes first so that the array can be used as a shape in [reshape].
-    (0, TermSize, "&ts"),
+    (0, TermSize, "&ts", "terminal size"),
     /// Get the command line arguments
-    (0, Args, "&args"),
+    (0, Args, "&args", "arguments"),
     /// Get the value of an environment variable
-    (1, Var, "&var"),
+    (1, Var, "&var", "environment variable"),
     /// Open a file and return a handle to it
-    (1, FOpen, "&fo"),
+    (1, FOpen, "&fo", "file - open"),
     /// Create a file and return a handle to it
-    (1, FCreate, "&fc"),
+    (1, FCreate, "&fc", "file - create"),
     /// Check if a file exists at a path
-    (1, FExists, "&fe"),
+    (1, FExists, "&fe", "file - exists"),
     /// List the contents of a directory
-    (1, FListDir, "&fld"),
+    (1, FListDir, "&fld", "file - list directory"),
     /// Check if a path is a file
-    (1, FIsFile, "&fif"),
+    (1, FIsFile, "&fif", "file - is file"),
     /// Read all the contents of a file into a string
-    (1, FReadAllStr, "&fras"),
+    (1, FReadAllStr, "&fras", "file - read all to string"),
     /// Read all the contents of a file into a byte array
-    (1, FReadAllBytes, "&frab"),
+    (1, FReadAllBytes, "&frab", "file - read all to bytes"),
     /// Write the entire contents of an array to a file
-    (2(0), FWriteAll, "&fwa"),
+    (2(0), FWriteAll, "&fwa", "file - write all"),
     /// Read at most n bytes from a stream
-    (2, ReadStr, "&rs"),
+    (2, ReadStr, "&rs", "read to string"),
     /// Read at most n bytes from a stream
-    (2, ReadBytes, "&rb"),
+    (2, ReadBytes, "&rb", "read to bytes"),
     /// Read from a stream until a delimiter is reached
-    (2, ReadUntil, "&ru"),
+    (2, ReadUntil, "&ru", "read until"),
     /// Write an array to a stream
-    (2(0), Write, "&w"),
+    (2(0), Write, "&w", "write"),
     /// Run the code from a file in a scope
     ///
     /// If the file has already been imported, its code will not be run again, but the values it originally pushed onto the stack will be pushed again.
@@ -140,13 +145,13 @@ sys_op! {
     ///   : double ← use "double".
     ///   : square ← use "square"
     ///   : square double 5
-    (1, Import, "&i"),
+    (1, Import, "&i", "import"),
     /// Get the current time in seconds
-    (0, Now, "&n"),
+    (0, Now, "&n", "now"),
     /// Decode an image from a byte array
     ///
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, and `ico`.
-    (1, ImDecode, "&imd"),
+    (1, ImDecode, "&imd", "image - decode"),
     /// Encode an image into a byte array with the specified format
     ///
     /// The first argument is the format, and the second is the image.
@@ -162,7 +167,7 @@ sys_op! {
     /// A length 4 last axis is an RGB image with an alpha channel.
     ///
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, and `ico`.
-    (2, ImEncode, "&ime"),
+    (2, ImEncode, "&ime", "image - encode"),
     /// Show an image
     ///
     /// How the image is shown depends on the system backend.
@@ -179,7 +184,7 @@ sys_op! {
     /// A length 2 last axis is a grayscale image with an alpha channel.
     /// A length 3 last axis is an RGB image.
     /// A length 4 last axis is an RGB image with an alpha channel.
-    (1(0), ImShow, "&ims"),
+    (1(0), ImShow, "&ims", "image - show"),
     /// Play some audio
     ///
     /// The audio must be a rank 1 or 2 numeric array.
@@ -189,30 +194,30 @@ sys_op! {
     ///
     /// The samples must be between -1 and 1.
     /// The sample rate is 44100 Hz.
-    (1(0), AudioPlay, "&ap"),
+    (1(0), AudioPlay, "&ap", "audio - play"),
     /// Sleep for n seconds
     ///
     /// On the web, this example will hang for 1 second.
     /// ex: ⚂ &sl 1
-    (1(0), Sleep, "&sl"),
+    (1(0), Sleep, "&sl", "sleep"),
     /// Create a TCP listener and bind it to an address
-    (1, TcpListen, "&tcpl"),
+    (1, TcpListen, "&tcpl", "tcp - listen"),
     /// Accept a connection with a TCP listener
-    (1, TcpAccept, "&tcpa"),
+    (1, TcpAccept, "&tcpa", "tcp - accept"),
     /// Create a TCP socket and connect it to an address
-    (1, TcpConnect, "&tcpc"),
+    (1, TcpConnect, "&tcpc", "tcp - connect"),
     /// Set a TCP socket to non-blocking mode
-    (1, TcpSetNonBlocking, "&tcpsnb"),
+    (1, TcpSetNonBlocking, "&tcpsnb", "tcp - set non-blocking"),
     /// Set the read timeout of a TCP socket in seconds
-    (2(0), TcpSetReadTimeout, "&tcpsrt"),
+    (2(0), TcpSetReadTimeout, "&tcpsrt", "tcp - set read timeout"),
     /// Set the write timeout of a TCP socket in seconds
-    (2(0), TcpSetWriteTimeout, "&tcpswt"),
+    (2(0), TcpSetWriteTimeout, "&tcpswt", "tcp - set write timeout"),
     /// Get the connection address of a TCP socket
-    (1, TcpAddr, "&tcpaddr"),
+    (1, TcpAddr, "&tcpaddr", "tcp - address"),
     /// Close a stream by its handle
     ///
     /// This will close files, tcp listeners, and tcp sockets.
-    (1(0), Close, "&cl"),
+    (1(0), Close, "&cl", "close"),
 }
 
 /// A handle to an IO stream

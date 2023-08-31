@@ -73,6 +73,11 @@ pub fn PrimDocs(prim: Primitive) -> impl IntoView {
         }
         sig.push_str(" function");
     }
+    let long_name = if let Primitive::Sys(op) = prim {
+        Some(format!(" - {}", op.long_name()))
+    } else {
+        None
+    };
     let body = prim.doc().map(|doc| {
         view! {
             <p style="white-space: pre-wrap">{doc_line_fragments_to_view( &doc.short)}</p>
@@ -82,7 +87,7 @@ pub fn PrimDocs(prim: Primitive) -> impl IntoView {
 
     view! {
         <div>
-            <h1><PrimCode prim=prim hide_docs=true/></h1>
+            <h1><PrimCode prim=prim hide_docs=true/>{ long_name }</h1>
             <p><h3>{ sig }</h3></p>
             { body }
         </div>

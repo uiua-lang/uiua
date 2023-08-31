@@ -248,42 +248,64 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(FunctionArg(1))?;
     let sig = f.signature().unwrap_or(Signature::new(1, 0));
-    if sig.outputs > 1 {
-        return Err(env.error(format!(
-            "Each's function must return 0 or 1 values, but it returns {}",
-            sig.outputs
-        )));
-    }
+    let output = match sig.outputs {
+        0 => false,
+        1 => true,
+        n => {
+            return Err(env.error(format!(
+                "Each's function must return 0 or 1 values, but it returns {}",
+                n
+            )))
+        }
+    };
     match sig.args {
         0 => Ok(()),
         1 => {
             let xs = env.pop(ArrayArg(1))?;
-            each1(f, xs, env)
+            if output {
+                each1_1(f, xs, env)
+            } else {
+                each1_0(f, xs, env)
+            }
         }
         2 => {
             let xs = env.pop(ArrayArg(1))?;
             let ys = env.pop(ArrayArg(2))?;
-            each2(f, xs, ys, env)
+            if output {
+                each2_1(f, xs, ys, env)
+            } else {
+                each2_0(f, xs, ys, env)
+            }
         }
         n => {
             let mut args = Vec::with_capacity(n);
             for i in 0..n {
                 args.push(env.pop(ArrayArg(i + 1))?);
             }
-            eachn(f, args, env)
+            if output {
+                eachn_1(f, args, env)
+            } else {
+                eachn_0(f, args, env)
+            }
         }
     }
 }
 
-fn each1(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
+fn each1_1(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     let mut new_values = Vec::with_capacity(xs.flat_len());
     let mut new_shape = Shape::from(xs.shape());
-    let values = xs.into_flat_values();
-    for val in values {
+    let mut old_values = xs.into_flat_values();
+    for val in old_values.by_ref() {
         env.push(val);
         env.push(f.clone());
-        env.call_error_on_break("break is not allowed in each")?;
+        let broke = env.call_catch_break()?;
         new_values.push(env.pop("each's function result")?);
+        if broke {
+            for row in old_values {
+                new_values.push(row);
+            }
+            break;
+        }
     }
     let mut eached = Value::from_row_values(new_values, env)?;
     new_shape.extend_from_slice(&eached.shape()[1..]);
@@ -292,7 +314,20 @@ fn each1(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn each2(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+fn each1_0(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
+    let values = xs.into_flat_values();
+    for val in values {
+        env.push(val);
+        env.push(f.clone());
+        let broke = env.call_catch_break()?;
+        if broke {
+            break;
+        }
+    }
+    Ok(())
+}
+
+fn each2_1(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     let xs_shape = xs.shape().to_vec();
     let ys_shape = ys.shape().to_vec();
     let xs_values: Vec<_> = xs.into_flat_values().collect();
@@ -307,8 +342,8 @@ fn each2(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             env.push(y);
             env.push(x);
             env.push(f.clone());
-            env.call_error_on_break("break is not allowed in each")?;
-            env.pop("zip's function result")
+            env.call_error_on_break("break is not allowed in multi-argument each")?;
+            env.pop("each's function result")
         },
     )?;
     let mut eached = Value::from_row_values(values, env)?;
@@ -318,7 +353,29 @@ fn each2(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn eachn(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+fn each2_0(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+    let xs_shape = xs.shape().to_vec();
+    let ys_shape = ys.shape().to_vec();
+    let xs_values: Vec<_> = xs.into_flat_values().collect();
+    let ys_values: Vec<_> = ys.into_flat_values().collect();
+    bin_pervade_generic(
+        &xs_shape,
+        xs_values,
+        &ys_shape,
+        ys_values,
+        env,
+        |x, y, env| {
+            env.push(y);
+            env.push(x);
+            env.push(f.clone());
+            env.call_error_on_break("break is not allowed multi-argument in each")?;
+            Ok(())
+        },
+    )?;
+    Ok(())
+}
+
+fn eachn_1(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     for win in args.windows(2) {
         if win[0].shape() != win[1].shape() {
             return Err(env.error(format!(
@@ -337,7 +394,7 @@ fn eachn(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
             env.push(arg.next().unwrap());
         }
         env.push(f.clone());
-        env.call_error_on_break("break is not allowed in each")?;
+        env.call_error_on_break("break is not allowed in multi-argument each")?;
         new_values.push(env.pop("each's function result")?);
     }
     let eached = Value::from_row_values(new_values, env)?;
@@ -345,38 +402,77 @@ fn eachn(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
+fn eachn_0(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+    for win in args.windows(2) {
+        if win[0].shape() != win[1].shape() {
+            return Err(env.error(format!(
+                "The shapes in each of 3 or more arrays must all match, but shapes {} and {} cannot be eached together. \
+                If you want more flexibility, use rows.",
+                win[0].format_shape(),
+                win[1].format_shape()
+            )));
+        }
+    }
+    let elem_count = args[0].flat_len();
+    let mut arg_elems: Vec<_> = args.into_iter().map(|v| v.into_flat_values()).collect();
+    for _ in 0..elem_count {
+        for arg in arg_elems.iter_mut().rev() {
+            env.push(arg.next().unwrap());
+        }
+        env.push(f.clone());
+        env.call_error_on_break("break is not allowed in multi-argument each")?;
+    }
+    Ok(())
+}
+
 pub fn rows(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(FunctionArg(1))?;
     let sig = f.signature().unwrap_or(Signature::new(1, 0));
-    if sig.outputs > 1 {
-        return Err(env.error(format!(
-            "Rows' function must return 0 or 1 values, but it returns {}",
-            sig.outputs
-        )));
-    }
+    let output = match sig.outputs {
+        0 => false,
+        1 => true,
+        n => {
+            return Err(env.error(format!(
+                "Rows's function must return 0 or 1 values, but it returns {}",
+                n
+            )))
+        }
+    };
     match sig.args {
         0 => Ok(()),
         1 => {
             let xs = env.pop(ArrayArg(1))?;
-            rows1(f, xs, env)
+            if output {
+                rows1_1(f, xs, env)
+            } else {
+                rows1_0(f, xs, env)
+            }
         }
         2 => {
             let xs = env.pop(ArrayArg(1))?;
             let ys = env.pop(ArrayArg(2))?;
-            rows2(f, xs, ys, env)
+            if output {
+                rows2_1(f, xs, ys, env)
+            } else {
+                rows2_0(f, xs, ys, env)
+            }
         }
         n => {
             let mut args = Vec::with_capacity(n);
             for i in 0..n {
                 args.push(env.pop(ArrayArg(i + 1))?);
             }
-            rowsn(f, args, env)
+            if output {
+                rowsn_1(f, args, env)
+            } else {
+                rowsn_0(f, args, env)
+            }
         }
     }
 }
 
-fn rows1(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
+fn rows1_1(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     let mut new_rows = Vec::with_capacity(xs.row_count());
     let mut old_rows = xs.into_rows();
     for row in old_rows.by_ref() {
@@ -396,7 +492,19 @@ fn rows1(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn rows2(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+fn rows1_0(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
+    for row in xs.into_rows() {
+        env.push(row);
+        env.push(f.clone());
+        let broke = env.call_catch_break()?;
+        if broke {
+            break;
+        }
+    }
+    Ok(())
+}
+
+fn rows2_1(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     if xs.row_count() != ys.row_count() {
         return Err(env.error(format!(
             "Cannot rows arrays with different number of rows {} and {}",
@@ -411,14 +519,33 @@ fn rows2(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
         env.push(y);
         env.push(x);
         env.push(f.clone());
-        env.call_error_on_break("break is not allowed in rows")?;
+        env.call_error_on_break("break is not allowed in multi-argument rows")?;
         new_rows.push(env.pop("rows's function result")?);
     }
     env.push(Value::from_row_values(new_rows, env)?);
     Ok(())
 }
 
-fn rowsn(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+fn rows2_0(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+    if xs.row_count() != ys.row_count() {
+        return Err(env.error(format!(
+            "Cannot rows arrays with different number of rows {} and {}",
+            xs.row_count(),
+            ys.row_count()
+        )));
+    }
+    let x_rows = xs.into_rows();
+    let y_rows = ys.into_rows();
+    for (x, y) in x_rows.into_iter().zip(y_rows) {
+        env.push(y);
+        env.push(x);
+        env.push(f.clone());
+        env.call_error_on_break("break is not allowed in multi-argument rows")?;
+    }
+    Ok(())
+}
+
+fn rowsn_1(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     let row_count = args[0].row_count();
     let mut arg_elems: Vec<_> = args.into_iter().map(|v| v.into_rows()).collect();
     let mut new_values = Vec::new();
@@ -427,11 +554,24 @@ fn rowsn(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
             env.push(arg.next().unwrap());
         }
         env.push(f.clone());
-        env.call_error_on_break("break is not allowed in each")?;
+        env.call_error_on_break("break is not allowed in multi-argument each")?;
         new_values.push(env.pop("each's function result")?);
     }
     let eached = Value::from_row_values(new_values, env)?;
     env.push(eached);
+    Ok(())
+}
+
+fn rowsn_0(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+    let row_count = args[0].row_count();
+    let mut arg_elems: Vec<_> = args.into_iter().map(|v| v.into_rows()).collect();
+    for _ in 0..row_count {
+        for arg in arg_elems.iter_mut().rev() {
+            env.push(arg.next().unwrap());
+        }
+        env.push(f.clone());
+        env.call_error_on_break("break is not allowed in multi-argument each")?;
+    }
     Ok(())
 }
 
@@ -574,7 +714,6 @@ fn fast_table_join_or_couple<T: ArrayValue>(a: Array<T>, b: Array<T>) -> Array<T
 }
 
 fn generic_table(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
-    const BREAK_ERROR: &str = "break is not allowed in table";
     let mut new_shape = Shape::from(xs.shape());
     new_shape.extend_from_slice(ys.shape());
     let mut items = Vec::with_capacity(xs.flat_len() * ys.flat_len());
@@ -584,7 +723,7 @@ fn generic_table(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             env.push(y);
             env.push(x.clone());
             env.push(f.clone());
-            env.call_error_on_break(BREAK_ERROR)?;
+            env.call_error_on_break("break is not allowed in table")?;
             let item = env.pop("tabled function result")?;
             item.validate_shape();
             items.push(item);
@@ -603,7 +742,6 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
     let f = env.pop(FunctionArg(1))?;
     let xs = env.pop(ArrayArg(1))?;
     let ys = env.pop(ArrayArg(2))?;
-    const BREAK_ERROR: &str = "break is not allowed in cross";
     let mut new_shape = tiny_vec![xs.row_count(), ys.row_count()];
     let mut items = Vec::with_capacity(xs.row_count() * ys.row_count());
     let y_rows = ys.into_rows().collect::<Vec<_>>();
@@ -612,7 +750,7 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
             env.push(y_row);
             env.push(x_row.clone());
             env.push(f.clone());
-            env.call_error_on_break(BREAK_ERROR)?;
+            env.call_error_on_break("break is not allowed in cross")?;
             let item = env.pop("crossed function result")?;
             item.validate_shape();
             items.push(item);
@@ -683,8 +821,8 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
                 return Ok(());
             }
             let rank = match n {
-                Some(0) => return each1(f, xs, env),
-                Some(-1) => return rows1(f, xs, env),
+                Some(0) => return each1_1(f, xs, env),
+                Some(-1) => return rows1_1(f, xs, env),
                 None => {
                     env.push(xs);
                     env.push(f);

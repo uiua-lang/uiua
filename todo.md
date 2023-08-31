@@ -1,4 +1,3 @@
-- Allow each/rows/etc with 0 outputs
 - Publish vscode extension
 - Docs
   - Control flow

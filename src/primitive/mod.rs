@@ -881,7 +881,13 @@ mod tests {
 			"include": "#comments"
 		}},
 		{{
-			"include": "#strings"
+			"include": "#strings-multiline"
+		}},
+		{{
+			"include": "#strings-format"
+		}},
+		{{
+			"include": "#strings-normal"
 		}},
         {{
             "include": "#characters"
@@ -923,9 +929,46 @@ mod tests {
 			"name": "comment.line.uiua",
 			"match": "#.*$"
 		}},
-		"strings": {{
+		"strings-normal": {{
 			"name": "constant.character.escape",
-			"match": "\\$?\"([^\"]|\\\")*\"|\\$ .*$"
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{{
+					"name": "string.quoted",
+					"match": "\\\\[\\\\\"0nrt]"
+				}}
+			]
+		}},
+		"strings-format": {{
+			"name": "constant.character.escape",
+			"begin": "\\$\"",
+			"end": "\"",
+			"patterns": [
+				{{
+					"name": "string.quoted",
+					"match": "\\\\[\\\\\"0nrt_]"
+				}},
+				{{
+					"name": "constant.numeric",
+					"match": "(?<!\\\\)_"
+				}}
+			]
+		}},
+		"strings-multiline": {{
+			"name": "constant.character.escape",
+			"begin": "\\$ ",
+			"end": "$",
+			"patterns": [
+				{{
+					"name": "string.quoted",
+					"match": "\\\\[\\\\\"0nrt_]"
+				}},
+				{{
+					"name": "constant.numeric",
+					"match": "(?<!\\\\)_"
+				}}
+			]
 		}},
         "characters": {{
             "name": "constant.character.escape",

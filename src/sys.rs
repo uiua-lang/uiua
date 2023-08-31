@@ -15,7 +15,7 @@ use std::{
 use bufreaderwriter::seq::BufReaderWriterSeq;
 use dashmap::DashMap;
 use enum_iterator::Sequence;
-use hound::{SampleFormat, WavSpec, WavWriter};
+use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
 use image::{DynamicImage, ImageOutputFormat};
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
@@ -185,6 +185,24 @@ sys_op! {
     /// A length 3 last axis is an RGB image.
     /// A length 4 last axis is an RGB image with an alpha channel.
     (1(0), ImShow, "&ims", "image - show"),
+    /// Decode audio from a byte array
+    ///
+    /// Only the `wav` format is supported.
+    (1, AudioDecode, "&ad", "audio - decode"),
+    /// Encode audio into a byte array
+    ///
+    /// The first argument is the format, and the second is the audio samples.
+    ///
+    /// The audio samples must be a rank 1 or 2 numeric array.
+    ///
+    /// A rank 1 array is a list of mono audio samples.
+    /// For a rank 2 array, each row is a channel.
+    ///
+    /// The samples must be between -1 and 1.
+    /// The sample rate is 44100 Hz.
+    ///
+    /// Only the `wav` format is supported.
+    (2, AudioEncode, "&ae", "audio - encode"),
     /// Play some audio
     ///
     /// The audio must be a rank 1 or 2 numeric array.
@@ -961,7 +979,7 @@ impl SysOp {
                     Value::Byte(arr) => {
                         if arr.rank() != 1 {
                             return Err(env.error(format!(
-                                "Byte array must be rank 1, but is rank {}",
+                                "Image bytes array must be rank 1, but is rank {}",
                                 arr.rank()
                             )));
                         }
@@ -970,13 +988,13 @@ impl SysOp {
                     Value::Num(arr) => {
                         if arr.rank() != 1 {
                             return Err(env.error(format!(
-                                "Number array must be rank 1, but is rank {}",
+                                "Image bytes array must be rank 1, but is rank {}",
                                 arr.rank()
                             )));
                         }
                         arr.data.iter().map(|&x| x as u8).collect()
                     }
-                    _ => return Err(env.error("Image must be a numeric array")),
+                    _ => return Err(env.error("Image bytes must be a numeric array")),
                 };
                 let image = image::load_from_memory(&bytes)
                     .map_err(|e| env.error(format!("Failed to read image: {}", e)))?
@@ -1006,6 +1024,42 @@ impl SysOp {
                 let value = env.pop(1)?;
                 let image = value_to_image(&value).map_err(|e| env.error(e))?;
                 env.backend.show_image(image).map_err(|e| env.error(e))?;
+            }
+            SysOp::AudioDecode => {
+                let bytes = match env.pop(1)? {
+                    Value::Byte(arr) => {
+                        if arr.rank() != 1 {
+                            return Err(env.error(format!(
+                                "Audio bytes array must be rank 1, but is rank {}",
+                                arr.rank()
+                            )));
+                        }
+                        arr.data
+                    }
+                    Value::Num(arr) => {
+                        if arr.rank() != 1 {
+                            return Err(env.error(format!(
+                                "Audio bytes array must be rank 1, but is rank {}",
+                                arr.rank()
+                            )));
+                        }
+                        arr.data.iter().map(|&x| x as u8).collect()
+                    }
+                    _ => return Err(env.error("Audio bytes be a numeric array")),
+                };
+                let array = array_from_wav_bytes(&bytes, env).map_err(|e| env.error(e))?;
+                env.push(array);
+            }
+            SysOp::AudioEncode => {
+                let format = env
+                    .pop(1)?
+                    .as_string(env, "Audio format must be a string")?;
+                let value = env.pop(2)?;
+                let bytes = match format.as_str() {
+                    "wav" => value_to_wav_bytes(&value).map_err(|e| env.error(e))?,
+                    format => return Err(env.error(format!("Invalid audio format: {}", format))),
+                };
+                env.push(Array::<u8>::from(bytes));
             }
             SysOp::AudioPlay => {
                 let value = env.pop(1)?;
@@ -1183,7 +1237,7 @@ pub fn value_to_sample(audio: &Value) -> Result<Vec<[f32; 2]>, String> {
     Ok(sterio)
 }
 
-pub fn value_to_audio_channes(audio: &Value) -> Result<Vec<Vec<f64>>, String> {
+pub fn value_to_audio_channels(audio: &Value) -> Result<Vec<Vec<f64>>, String> {
     let interleaved: Vec<f64> = match audio {
         Value::Num(nums) => nums.data.iter().copied().collect(),
         Value::Byte(byte) => byte.data.iter().map(|&b| b as f64).collect(),
@@ -1240,7 +1294,7 @@ fn value_to_wav_bytes_impl<T: hound::Sample + Copy>(
     sample_format: SampleFormat,
 ) -> Result<Vec<u8>, String> {
     // We use i16 samples for compatibility with Firefox (if I remember correctly)
-    let channels = value_to_audio_channes(audio)?;
+    let channels = value_to_audio_channels(audio)?;
     let channels: Vec<Vec<T>> = channels
         .into_iter()
         .map(|c| c.into_iter().map(convert_samples).collect())
@@ -1264,4 +1318,46 @@ fn value_to_wav_bytes_impl<T: hound::Sample + Copy>(
         .finalize()
         .map_err(|e| format!("Failed to finalize audio: {e}"))?;
     Ok(bytes.into_inner())
+}
+
+fn array_from_wav_bytes(bytes: &[u8], env: &Uiua) -> UiuaResult<Array<f64>> {
+    let mut reader: WavReader<Cursor<&[u8]>> =
+        WavReader::new(Cursor::new(bytes)).map_err(|e| env.error(e.to_string()))?;
+    let spec = reader.spec();
+    match (spec.sample_format, spec.bits_per_sample) {
+        (SampleFormat::Int, 16) => {
+            array_from_wav_bytes_impl::<i16>(&mut reader, |i| i as f64 / i16::MAX as f64, env)
+        }
+        (SampleFormat::Int, 32) => {
+            array_from_wav_bytes_impl::<i32>(&mut reader, |i| i as f64 / i32::MAX as f64, env)
+        }
+        (SampleFormat::Float, 32) => {
+            array_from_wav_bytes_impl::<f32>(&mut reader, |f| f as f64, env)
+        }
+        (sample_format, bits_per_sample) => Err(env.error(format!(
+            "Unsupported sample format: {:?} {} bits per sample",
+            sample_format, bits_per_sample
+        ))),
+    }
+}
+
+fn array_from_wav_bytes_impl<T: hound::Sample>(
+    reader: &mut WavReader<Cursor<&[u8]>>,
+    sample_to_f64: impl Fn(T) -> f64,
+    env: &Uiua,
+) -> UiuaResult<Array<f64>> {
+    let channel_count = reader.spec().channels as usize;
+    let mut channels = vec![Vec::new(); channel_count];
+    let mut curr_channel = 0;
+    for sample in reader.samples::<T>() {
+        let sample = sample.map_err(|e| env.error(e.to_string()))?;
+        channels[curr_channel].push(sample_to_f64(sample));
+        curr_channel = (curr_channel + 1) % channel_count;
+    }
+    if channel_count == 1 {
+        let channel = channels.pop().unwrap();
+        Ok(channel.into())
+    } else {
+        Array::from_row_arrays(channels.into_iter().map(|ch| ch.into()), env)
+    }
 }

@@ -12,7 +12,6 @@
   - Sound input
   - Webcam input?
   - Audio encoding/decoding functions
-  - Image encoding/decoding functions
 - System APIs
   - UDP Sockets
   - FFI

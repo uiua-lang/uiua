@@ -143,13 +143,13 @@ sys_op! {
     (1, Import, "&i"),
     /// Get the current time in seconds
     (0, Now, "&n"),
-    /// Read an image from a file
+    /// Decode an image from a byte array
     ///
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, and `ico`.
-    (1, ImRead, "&imr"),
-    /// Write an image to a file
+    (1, ImDecode, "&imd"),
+    /// Encode an image into a byte array with the specified format
     ///
-    /// The first argument is the path, and the second is the image.
+    /// The first argument is the format, and the second is the image.
     ///
     /// The image must be a rank 2 or 3 numeric array.
     /// Axes 0 and 1 contain the rows and columns of the image.
@@ -161,9 +161,8 @@ sys_op! {
     /// A length 3 last axis is an RGB image.
     /// A length 4 last axis is an RGB image with an alpha channel.
     ///
-    /// The format is determined by the file extension.
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, and `ico`.
-    (2(0), ImWrite, "&imw"),
+    (2, ImEncode, "&ime"),
     /// Show an image
     ///
     /// How the image is shown depends on the system backend.
@@ -952,9 +951,28 @@ impl SysOp {
                 env.import(&input, path.as_ref())?;
             }
             SysOp::Now => env.push(instant::now() / 1000.0),
-            SysOp::ImRead => {
-                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let bytes = env.backend.file_read_all(&path).map_err(|e| env.error(e))?;
+            SysOp::ImDecode => {
+                let bytes = match env.pop(1)? {
+                    Value::Byte(arr) => {
+                        if arr.rank() != 1 {
+                            return Err(env.error(format!(
+                                "Byte array must be rank 1, but is rank {}",
+                                arr.rank()
+                            )));
+                        }
+                        arr.data
+                    }
+                    Value::Num(arr) => {
+                        if arr.rank() != 1 {
+                            return Err(env.error(format!(
+                                "Number array must be rank 1, but is rank {}",
+                                arr.rank()
+                            )));
+                        }
+                        arr.data.iter().map(|&x| x as u8).collect()
+                    }
+                    _ => return Err(env.error("Image must be a numeric array")),
+                };
                 let image = image::load_from_memory(&bytes)
                     .map_err(|e| env.error(format!("Failed to read image: {}", e)))?
                     .into_rgba8();
@@ -962,23 +980,22 @@ impl SysOp {
                 let array = Array::<u8>::new(shape, bytes);
                 env.push(array);
             }
-            SysOp::ImWrite => {
-                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+            SysOp::ImEncode => {
+                let format = env
+                    .pop(1)?
+                    .as_string(env, "Image format must be a string")?;
                 let value = env.pop(2)?;
-                let ext = path.split('.').last().unwrap_or("");
-                let output_format = match ext {
+                let output_format = match format.as_str() {
                     "jpg" | "jpeg" => ImageOutputFormat::Jpeg(100),
                     "png" => ImageOutputFormat::Png,
                     "bmp" => ImageOutputFormat::Bmp,
                     "gif" => ImageOutputFormat::Gif,
                     "ico" => ImageOutputFormat::Ico,
-                    _ => ImageOutputFormat::Png,
+                    format => return Err(env.error(format!("Invalid image format: {}", format))),
                 };
                 let bytes =
                     value_to_image_bytes(&value, output_format).map_err(|e| env.error(e))?;
-                env.backend
-                    .file_write_all(&path, &bytes)
-                    .map_err(|e| env.error(e))?;
+                env.push(Array::<u8>::from(bytes));
             }
             SysOp::ImShow => {
                 let value = env.pop(1)?;

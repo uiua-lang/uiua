@@ -22,8 +22,8 @@ use parking_lot::Mutex;
 use tinyvec::tiny_vec;
 
 use crate::{
-    array::Array, function::Function, grid_fmt::GridFmt, primitive::PrimDoc, value::Value, Uiua,
-    UiuaError, UiuaResult,
+    array::Array, cowslice::CowSlice, function::Function, grid_fmt::GridFmt, primitive::PrimDoc,
+    value::Value, Uiua, UiuaError, UiuaResult,
 };
 
 pub fn example_ua<T>(f: impl FnOnce(&mut String) -> T) -> T {
@@ -1000,7 +1000,14 @@ impl SysOp {
                     .map_err(|e| env.error(format!("Failed to read image: {}", e)))?
                     .into_rgba8();
                 let shape = tiny_vec![image.height() as usize, image.width() as usize, 4];
-                let array = Array::<u8>::new(shape, bytes);
+                let array = Array::<f64>::new(
+                    shape,
+                    image
+                        .into_raw()
+                        .into_iter()
+                        .map(|b| b as f64 / 255.0)
+                        .collect::<CowSlice<_>>(),
+                );
                 env.push(array);
             }
             SysOp::ImEncode => {

@@ -227,9 +227,6 @@ mod server {
     #[tower_lsp::async_trait]
     impl LanguageServer for Backend {
         async fn initialize(&self, _params: InitializeParams) -> Result<InitializeResult> {
-            self.client
-                .log_message(MessageType::INFO, format!("{:#?}", _params.capabilities))
-                .await;
             Ok(InitializeResult {
                 capabilities: ServerCapabilities {
                     text_document_sync: Some(TextDocumentSyncCapability::Kind(
@@ -250,13 +247,10 @@ mod server {
                                     token_modifiers: vec![],
                                 },
                                 range: Some(true),
-                                full: Some(SemanticTokensFullOptions::Delta { delta: Some(false) }),
+                                full: Some(SemanticTokensFullOptions::Bool(true)),
                             },
                         ),
                     ),
-                    document_symbol_provider: Some(OneOf::Left(true)),
-                    document_highlight_provider: Some(OneOf::Left(true)),
-                    inline_value_provider: Some(OneOf::Left(true)),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -461,61 +455,6 @@ mod server {
                 result_id: None,
                 data: tokens,
             })))
-        }
-
-        async fn semantic_tokens_full_delta(
-            &self,
-            params: SemanticTokensDeltaParams,
-        ) -> Result<Option<SemanticTokensFullDeltaResult>> {
-            self.client
-                .log_message(
-                    MessageType::INFO,
-                    format!("Semantic tokens delta {}", params.text_document.uri),
-                )
-                .await;
-            Ok(None)
-        }
-
-        async fn semantic_tokens_range(
-            &self,
-            params: SemanticTokensRangeParams,
-        ) -> Result<Option<SemanticTokensRangeResult>> {
-            self.client
-                .log_message(
-                    MessageType::INFO,
-                    format!("Semantic tokens range {}", params.text_document.uri),
-                )
-                .await;
-            Ok(None)
-        }
-
-        async fn document_highlight(
-            &self,
-            params: DocumentHighlightParams,
-        ) -> Result<Option<Vec<DocumentHighlight>>> {
-            self.client
-                .log_message(
-                    MessageType::INFO,
-                    format!(
-                        "Document highlight {}",
-                        params.text_document_position_params.text_document.uri
-                    ),
-                )
-                .await;
-            Ok(None)
-        }
-
-        async fn document_symbol(
-            &self,
-            params: DocumentSymbolParams,
-        ) -> Result<Option<DocumentSymbolResponse>> {
-            self.client
-                .log_message(
-                    MessageType::INFO,
-                    format!("Document symbol {}", params.text_document.uri),
-                )
-                .await;
-            Ok(None)
         }
 
         async fn shutdown(&self) -> Result<()> {

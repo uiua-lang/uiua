@@ -123,6 +123,10 @@ cargo install --path ."#
 
         <h2>"Font"</h2>
         <p>"The Uiua glyphs were chosen to be compatible specifically with "<a href="https://dejavu-fonts.github.io/Download.html">"DejaVu Sans Mono"</a>". It is recommended that you install this font to get the best experience with Uiua."</p>
+
+        <h2>"Editor Support"</h2>
+        <p>"A "<a href="https://marketplace.visualstudio.com/items?itemName=uiua-lang.uiua-vscode">"Uiua language extension for VSCode"</a>" is available."</p>
+        <p>"It requires Uiua to be installed and in your "<code>"PATH"</code>"."</p>
     }
 }
 

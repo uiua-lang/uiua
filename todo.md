@@ -1,4 +1,3 @@
-- Publish vscode extension
 - Docs
   - Control flow
   - Images

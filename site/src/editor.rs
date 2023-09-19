@@ -458,7 +458,6 @@ pub fn Editor<'a>(
             }
             "a" if event.ctrl_key() => {
                 let code = code_text();
-                log!("{:?}", code);
                 state().set_code(&code, Cursor::Set(0, code.chars().count() as u32));
             }
             "c" if event.ctrl_key() => {

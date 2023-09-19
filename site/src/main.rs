@@ -43,7 +43,7 @@ pub fn Site() -> impl IntoView {
         "It's got um...I um...arrays".into_view(),
         view!( <a href="https://youtu.be/seVSlKazsNk">"Point-Free or Die"</a>).into_view(),
         "Notation as a tool of thot".into_view(),
-        "Do you like this page Marshall?".into_view(),
+        "Do you like this page Marshall? [Yes the audio is so cool -ML]".into_view(),
         "Conor Dyadic Hookstra".into_view(),
     ];
     let local_storage = window().local_storage().unwrap().unwrap();

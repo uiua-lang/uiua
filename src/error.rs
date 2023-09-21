@@ -29,6 +29,7 @@ pub enum UiuaError {
     Throw(Box<Value>, Span),
     Break(usize, Span),
     Timeout(Span),
+    Fill(Box<Self>),
 }
 
 pub type UiuaResult<T = ()> = Result<T, UiuaError>;
@@ -74,6 +75,7 @@ impl fmt::Display for UiuaError {
             UiuaError::Throw(value, span) => write!(f, "{span}: {value}"),
             UiuaError::Break(_, span) => write!(f, "{span}: break outside of loop"),
             UiuaError::Timeout(_) => write!(f, "Maximum execution time exceeded"),
+            UiuaError::Fill(error) => error.fmt(f),
         }
     }
 }
@@ -113,9 +115,12 @@ impl UiuaError {
     pub(crate) fn is_fill(&self) -> bool {
         match self {
             UiuaError::Traced { error, .. } => error.is_fill(),
-            UiuaError::Run(error) => error.value.contains("fill"),
+            UiuaError::Fill(_) => true,
             _ => false,
         }
+    }
+    pub(crate) fn fill(self) -> Self {
+        UiuaError::Fill(Box::new(self))
     }
 }
 

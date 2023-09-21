@@ -4,7 +4,7 @@ use tinyvec::tiny_vec;
 
 use crate::{algorithm::max_shape, array::*, function::Function, value::Value, Uiua, UiuaResult};
 
-use super::{op_bytes_ref_retry_fill, op_bytes_retry_fill, FillContext};
+use super::{op2_bytes_retry_fill, op_bytes_ref_retry_fill, op_bytes_retry_fill, FillContext};
 
 impl Value {
     fn coerce_to_functions<T, C: FillContext, E: ToString>(
@@ -107,7 +107,12 @@ impl Value {
     fn join_impl<C: FillContext>(self, other: Self, ctx: C) -> Result<Self, C::Error> {
         Ok(match (self, other) {
             (Value::Num(a), Value::Num(b)) => a.join_impl(b, ctx)?.into(),
-            (Value::Byte(a), Value::Byte(b)) => a.join_impl(b, ctx)?.into(),
+            (Value::Byte(a), Value::Byte(b)) => op2_bytes_retry_fill::<_, C>(
+                a,
+                b,
+                |a, b| Ok(a.join_impl(b, ctx)?.into()),
+                |a, b| Ok(a.join_impl(b, ctx)?.into()),
+            )?,
             (Value::Char(a), Value::Char(b)) => a.join_impl(b, ctx)?.into(),
             (Value::Byte(a), Value::Num(b)) => a.convert().join_impl(b, ctx)?.into(),
             (Value::Num(a), Value::Byte(b)) => a.join_impl(b.convert(), ctx)?.into(),
@@ -122,7 +127,12 @@ impl Value {
     fn append<C: FillContext>(self, other: Self, ctx: C, action: &str) -> Result<Self, C::Error> {
         Ok(match (self, other) {
             (Value::Num(a), Value::Num(b)) => a.append(b, ctx, action)?.into(),
-            (Value::Byte(a), Value::Byte(b)) => a.append(b, ctx, action)?.into(),
+            (Value::Byte(a), Value::Byte(b)) => op2_bytes_retry_fill::<_, C>(
+                a,
+                b,
+                |a, b| Ok(a.append(b, ctx, action)?.into()),
+                |a, b| Ok(a.append(b, ctx, action)?.into()),
+            )?,
             (Value::Char(a), Value::Char(b)) => a.append(b, ctx, action)?.into(),
             (Value::Byte(a), Value::Num(b)) => a.convert().append(b, ctx, action)?.into(),
             (Value::Num(a), Value::Byte(b)) => a.append(b.convert(), ctx, action)?.into(),
@@ -155,18 +165,18 @@ impl<T: ArrayValue> Array<T> {
                     target_shape
                 } else {
                     if other.rank() - self.rank() > 1 {
-                        return Err(ctx.error(format!(
+                        return Err(C::fill_error(ctx.error(format!(
                             "Cannot join rank {} array with rank {} array",
                             self.rank(),
                             other.rank()
-                        )));
+                        ))));
                     }
                     if self.shape() != &other.shape()[1..] {
-                        return Err(ctx.error(format!(
+                        return Err(C::fill_error(ctx.error(format!(
                             "Cannot join arrays of shapes {} and {}",
                             self.format_shape(),
                             other.format_shape()
-                        )));
+                        ))));
                     }
                     other.shape
                 };
@@ -194,11 +204,11 @@ impl<T: ArrayValue> Array<T> {
                             array.fill_to_shape(&new_shape, fill);
                         }
                     } else if self.shape[1..] != other.shape[1..] {
-                        return Err(ctx.error(format!(
+                        return Err(C::fill_error(ctx.error(format!(
                             "Cannot join arrays of shapes {} and {}",
                             self.format_shape(),
                             other.format_shape()
-                        )));
+                        ))));
                     }
                     if let Some((a, b)) = self.data.last().zip(other.data.first()) {
                         a.group_compatibility(b, ctx)?;
@@ -229,20 +239,20 @@ impl<T: ArrayValue> Array<T> {
             target_shape
         } else {
             if self.rank() <= other.rank() || self.rank() - other.rank() > 1 {
-                return Err(ctx.error(format!(
+                return Err(C::fill_error(ctx.error(format!(
                     "Cannot {} rank {} array with rank {} array",
                     action,
                     self.rank(),
                     other.rank()
-                )));
+                ))));
             }
             if &self.shape()[1..] != other.shape() {
-                return Err(ctx.error(format!(
+                return Err(C::fill_error(ctx.error(format!(
                     "Cannot {} arrays of shapes {} and {}",
                     action,
                     self.format_shape(),
                     other.format_shape()
-                )));
+                ))));
             }
             take(&mut self.shape)
         };
@@ -266,7 +276,12 @@ impl Value {
     fn couple_impl<C: FillContext>(self, other: Self, ctx: C) -> Result<Self, C::Error> {
         Ok(match (self, other) {
             (Value::Num(a), Value::Num(b)) => a.couple_impl(b, ctx)?.into(),
-            (Value::Byte(a), Value::Byte(b)) => a.couple_impl(b, ctx)?.into(),
+            (Value::Byte(a), Value::Byte(b)) => op2_bytes_retry_fill::<_, C>(
+                a,
+                b,
+                |a, b| Ok(a.couple_impl(b, ctx)?.into()),
+                |a, b| Ok(a.couple_impl(b, ctx)?.into()),
+            )?,
             (Value::Char(a), Value::Char(b)) => a.couple_impl(b, ctx)?.into(),
             (Value::Func(a), Value::Func(b)) => a.couple_impl(b, ctx)?.into(),
             (Value::Num(a), Value::Byte(b)) => a.couple_impl(b.convert(), ctx)?.into(),
@@ -304,11 +319,11 @@ impl<T: ArrayValue> Array<T> {
                 self.fill_to_shape(&new_shape, fill.clone());
                 other.fill_to_shape(&new_shape, fill);
             } else {
-                return Err(ctx.error(format!(
+                return Err(C::fill_error(ctx.error(format!(
                     "Cannot couple arrays with shapes {} and {}",
                     self.format_shape(),
                     other.format_shape()
-                )));
+                ))));
             }
         }
         if let Some((a, b)) = self.data.last().zip(other.data.first()) {
@@ -759,13 +774,15 @@ impl<T: ArrayValue> Array<T> {
                                 filled = true;
                                 data.extend(repeat(fill).take((abs_taking - row_count) * row_len));
                             } else {
-                                return Err(env.error(format!(
-                                    "Cannot take {} rows from array with {} row{} \
-                                    outside a fill context",
-                                    abs_taking,
-                                    row_count,
-                                    if row_count == 1 { "" } else { "s" }
-                                )));
+                                return Err(env
+                                    .error(format!(
+                                        "Cannot take {} rows from array with {} row{} \
+                                        outside a fill context",
+                                        abs_taking,
+                                        row_count,
+                                        if row_count == 1 { "" } else { "s" }
+                                    ))
+                                    .fill());
                             }
                         } else {
                             data.truncate(abs_taking * row_len);
@@ -779,13 +796,15 @@ impl<T: ArrayValue> Array<T> {
                                     .chain(take(data))
                                     .collect()
                             } else {
-                                return Err(env.error(format!(
-                                    "Cannot take {} rows from array with {} row{} \
-                                    outside a fill context",
-                                    abs_taking,
-                                    row_count,
-                                    if row_count == 1 { "" } else { "s" }
-                                )));
+                                return Err(env
+                                    .error(format!(
+                                        "Cannot take {} rows from array with {} row{} \
+                                        outside a fill context",
+                                        abs_taking,
+                                        row_count,
+                                        if row_count == 1 { "" } else { "s" }
+                                    ))
+                                    .fill());
                             }
                         } else {
                             take(data)
@@ -839,13 +858,15 @@ impl<T: ArrayValue> Array<T> {
                                 repeat(fill).take((abs_taking - arr.row_count()) * row_len),
                             );
                         } else {
-                            return Err(env.error(format!(
-                                "Cannot take {} rows from array with {} row{} \
-                                outside a fill context",
-                                abs_taking,
-                                arr.row_count(),
-                                if arr.row_count() == 1 { "" } else { "s" }
-                            )));
+                            return Err(env
+                                .error(format!(
+                                    "Cannot take {} rows from array with {} row{} \
+                                    outside a fill context",
+                                    abs_taking,
+                                    arr.row_count(),
+                                    if arr.row_count() == 1 { "" } else { "s" }
+                                ))
+                                .fill());
                         }
                     }
                     arr
@@ -865,13 +886,15 @@ impl<T: ArrayValue> Array<T> {
                                 .chain(arr.data)
                                 .collect();
                         } else {
-                            return Err(env.error(format!(
-                                "Cannot take {} rows from array with {} row{} \
-                                outside a fill context",
-                                abs_taking,
-                                arr.row_count(),
-                                if arr.row_count() == 1 { "" } else { "s" }
-                            )));
+                            return Err(env
+                                .error(format!(
+                                    "Cannot take {} rows from array with {} row{} \
+                                    outside a fill context",
+                                    abs_taking,
+                                    arr.row_count(),
+                                    if arr.row_count() == 1 { "" } else { "s" }
+                                ))
+                                .fill());
                         }
                     }
                     arr

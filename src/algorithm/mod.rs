@@ -34,6 +34,8 @@ pub trait FillContext: Copy {
     type Error;
     fn error(self, msg: impl ToString) -> Self::Error;
     fn fill<T: ArrayValue>(self) -> Option<T>;
+    fn fill_error(error: Self::Error) -> Self::Error;
+    fn is_fill_error(error: &Self::Error) -> bool;
 }
 
 impl FillContext for &Uiua {
@@ -44,6 +46,12 @@ impl FillContext for &Uiua {
     fn fill<T: ArrayValue>(self) -> Option<T> {
         T::get_fill(self)
     }
+    fn fill_error(error: Self::Error) -> Self::Error {
+        error.fill()
+    }
+    fn is_fill_error(error: &Self::Error) -> bool {
+        error.is_fill()
+    }
 }
 
 impl FillContext for () {
@@ -53,6 +61,12 @@ impl FillContext for () {
     }
     fn fill<T: ArrayValue>(self) -> Option<T> {
         None
+    }
+    fn fill_error(error: Self::Error) -> Self::Error {
+        error
+    }
+    fn is_fill_error(error: &Self::Error) -> bool {
+        match *error {}
     }
 }
 
@@ -83,6 +97,24 @@ fn op_bytes_ref_retry_fill<T>(
         Err(err) => {
             if err.is_fill() {
                 on_nums(&bytes.clone().convert())
+            } else {
+                Err(err)
+            }
+        }
+    }
+}
+
+fn op2_bytes_retry_fill<T, C: FillContext>(
+    a: Array<u8>,
+    b: Array<u8>,
+    on_bytes: impl FnOnce(Array<u8>, Array<u8>) -> Result<T, C::Error>,
+    on_nums: impl FnOnce(Array<f64>, Array<f64>) -> Result<T, C::Error>,
+) -> Result<T, C::Error> {
+    match on_bytes(a.clone(), b.clone()) {
+        Ok(res) => Ok(res),
+        Err(err) => {
+            if C::is_fill_error(&err) {
+                on_nums(a.convert(), b.convert())
             } else {
                 Err(err)
             }

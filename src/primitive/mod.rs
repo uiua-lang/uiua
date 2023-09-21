@@ -428,11 +428,26 @@ impl Primitive {
             Primitive::Try => {
                 let f = env.pop(FunctionArg(1))?;
                 let handler = env.pop(FunctionArg(2))?;
-                let size = env.stack_size();
+                let f_args = if let Some(f) = f.as_function() {
+                    f.signature()
+                        .map_err(|e| {
+                            env.error(format!(
+                                "Try's function's signature could not be inferred: {e}"
+                            ))
+                        })?
+                        .args
+                } else {
+                    0
+                };
+                let backup = env.clone_stack_top(f_args);
+                let bottom = env.stack_size().saturating_sub(f_args);
                 env.push(f);
                 if let Err(e) = env.call() {
-                    env.truncate_stack(size);
+                    env.truncate_stack(bottom);
                     env.backend.save_error_color(&e);
+                    for val in backup {
+                        env.push(val);
+                    }
                     env.push(e.value());
                     env.push(handler);
                     env.call()?;

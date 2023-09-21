@@ -1,4 +1,3 @@
-- Make try copy top values so the stack can be fixed
 - Docs
   - Control flow
   - Images

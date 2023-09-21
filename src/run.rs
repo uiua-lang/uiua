@@ -918,6 +918,9 @@ backtrace:
     pub fn take_stack(&mut self) -> Vec<Value> {
         take(&mut self.stack)
     }
+    pub fn clone_stack_top(&mut self, n: usize) -> Vec<Value> {
+        self.stack.iter().rev().take(n).rev().cloned().collect()
+    }
     pub(crate) fn monadic_ref<V: Into<Value>>(&mut self, f: fn(&Value) -> V) -> UiuaResult {
         let value = self.pop(1)?;
         self.push(f(&value));

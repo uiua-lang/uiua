@@ -32,8 +32,9 @@ Z ← ⊟/- ⁿ2 ∶×2 /×.⇌
 <2 √/+ ⁿ2;∶⍥(+Z ∶,)20 ↯∶0△.";
 const LIFE: &str = "\
 life ← (↥↧↶=2∶=3.-,/+/+⍚1_2↻-1⇡3_3.)
-⍛0↙5_5 ⋯2_4_7
-⍥(life.)3";
+⍛0↙10_10 ⋯×4 0_2_4_7
+⍉;⍥(∶⊂↶.life)10.
+↯∶≡'↯4∵'↯4∶×4△.";
 
 pub const EXAMPLES: &[&str] = &[
     UIUA, FORMAT, D3, LOGO, AVG, CHORD, QUADRATIC, STRIPES, PALINDROME, RULE_30, PRIMES,

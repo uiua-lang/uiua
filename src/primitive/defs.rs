@@ -474,12 +474,14 @@ primitive!(
     (1, InvTranspose, MonadicArray),
     /// Grade the rows of an array
     ///
+    /// The grade of an array is the list of indices that would sort the array if used with [select].
     /// ex: ⌂6_2_7_0_¯1_5
-    ///
-    /// Using the grading as a selector in [select] yields the sorted array.
+    /// Using the grade as a selector in [select] yields the sorted array.
     /// ex: ⊏⌂.6_2_7_0_¯1_5
     ///
-    /// See also: [sort]
+    /// If we transform the array before [grade]ing, we can sort by a key.
+    /// Here, we sort the array by the [absolute value] of its elements.
+    /// ex: ⊏⌂⌵.6_2_7_0_¯1_5
     (1, Grade, MonadicArray, ("grade", '⌂')),
     /// Assign a unique index to each unique element in an array
     ///

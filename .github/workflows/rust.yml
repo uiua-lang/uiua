@@ -16,6 +16,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: Install deps
+      run: sudo apt install libasound2-dev libudev-dev pkg-config
     - name: Build
       run: cargo build --verbose
     - name: Run tests

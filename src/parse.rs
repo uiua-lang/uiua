@@ -485,13 +485,13 @@ impl Parser {
             })
         } else if let Some(start) = self.try_exact(SingleQuote) {
             self.try_spaces();
-            let Some(first) = self.try_term() else {
+            let Some(first) = self.try_strand() else {
                 self.errors.push(self.expected([Expectation::Term]));
                 return None;
             };
             let mut body = vec![first];
             body.extend(self.try_spaces());
-            let Some(second) = self.try_term() else {
+            let Some(second) = self.try_strand() else {
                 self.errors.push(self.expected([Expectation::Term]));
                 return None;
             };

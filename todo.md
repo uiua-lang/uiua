@@ -1,4 +1,3 @@
-- Fix typo on main page
 - Make reduce and fold go forward
 - Make try copy top values so the stack can be fixed
 - Docs

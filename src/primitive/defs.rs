@@ -720,26 +720,20 @@ primitive!(
     /// Apply a reducing function to an array
     ///
     /// For reducing with an initial value, see [fold].
-    /// Unlike other modifiers, [reduce] and [fold] traverse the array from right to left.
     ///
     /// ex: /+ 1_2_3_4_5
     /// ex: /- 1_2_3_4_5
     ///
-    /// If you want to see the intermediate values, you can use [scan], [flip], and [reverse].
-    /// ex: /-     1_2_3_4_5
-    ///   : \'-∶ ⇌ 1_2_3_4_5
+    /// If you want to see the intermediate values, you can use [scan].
+    /// ex: /- 1_2_3_4_5
+    ///   : \- 1_2_3_4_5
     ///
     /// You can can fold with arbitrary functions.
     /// ex: /(×+1) 1_2_3_4_5
-    ///
-    /// [reduce] traverses the array backwards so that `reduce``noop` unloads all rows onto the stack with the first row on top.
-    /// ex: /· 1_2_3
-    /// ex: /· [1_2 3_4]
     (1[1], Reduce, AggregatingModifier, ("reduce", '/')),
     /// Apply a reducing function to an array with an initial value
     ///
     /// For reducing without an initial value, see [reduce].
-    /// Unlike other modifiers, [fold] and [reduce] traverse the array from right to left.
     ///
     /// ex: ∧+ 10 1_2_3_4
     (2[1], Fold, AggregatingModifier, ("fold", '∧')),

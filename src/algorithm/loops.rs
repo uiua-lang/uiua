@@ -35,14 +35,14 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
             _ => return generic_fold(f, Value::Num(nums), None, env),
         }),
         (Some((prim, flipped)), Value::Byte(bytes)) => env.push(match prim {
-            Primitive::Add => fast_reduce(bytes, 0.0, |a, b| f64::from(a) + b),
-            Primitive::Sub if flipped => fast_reduce(bytes, 0.0, |a, b| f64::from(a) - b),
-            Primitive::Sub => fast_reduce(bytes, 0.0, |a, b| b - f64::from(a)),
-            Primitive::Mul => fast_reduce(bytes, 1.0, |a, b| f64::from(a) * b),
-            Primitive::Div if flipped => fast_reduce(bytes, 1.0, |a, b| f64::from(a) / b),
-            Primitive::Div => fast_reduce(bytes, 1.0, |a, b| b / f64::from(a)),
-            Primitive::Max => fast_reduce(bytes, f64::NEG_INFINITY, |a, b| f64::from(a).max(b)),
-            Primitive::Min => fast_reduce(bytes, f64::INFINITY, |a, b| f64::from(a).min(b)),
+            Primitive::Add => fast_reduce(bytes, 0.0, |a, b| a + f64::from(b)),
+            Primitive::Sub if flipped => fast_reduce(bytes, 0.0, |a, b| a - f64::from(b)),
+            Primitive::Sub => fast_reduce(bytes, 0.0, |a, b| f64::from(b) - a),
+            Primitive::Mul => fast_reduce(bytes, 1.0, |a, b| a * f64::from(b)),
+            Primitive::Div if flipped => fast_reduce(bytes, 1.0, |a, b| a / f64::from(b)),
+            Primitive::Div => fast_reduce(bytes, 1.0, |a, b| f64::from(b) / a),
+            Primitive::Max => fast_reduce(bytes, f64::NEG_INFINITY, |a, b| a.max(f64::from(b))),
+            Primitive::Min => fast_reduce(bytes, f64::INFINITY, |a, b| a.min(f64::from(b))),
             _ => return generic_fold(f, Value::Byte(bytes), None, env),
         }),
         (_, xs) => generic_fold(f, xs, None, env)?,
@@ -53,7 +53,7 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
 pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
     mut arr: Array<T>,
     identity: R,
-    f: impl Fn(T, R) -> R,
+    f: impl Fn(R, T) -> R,
 ) -> Array<R> {
     match arr.shape.len() {
         0 => Array::new(
@@ -61,11 +61,11 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
             vec![arr.data.into_iter().next().unwrap().into()],
         ),
         1 => {
-            let mut vals = arr.data.into_iter().rev();
+            let mut vals = arr.data.into_iter();
             Array::new(
                 tiny_vec![],
                 vec![if let Some(acc) = vals.next() {
-                    vals.fold(acc.into(), flip(f))
+                    vals.fold(acc.into(), f)
                 } else {
                     identity
                 }],
@@ -79,16 +79,15 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
                 let data = cowslice![identity; row_len];
                 return Array::new(arr.shape, data);
             }
-            let mut row_indices = (0..row_count).rev();
-            let mut new_data: Vec<R> = arr.data[row_indices.next().unwrap() * row_len..]
+            let mut new_data: Vec<R> = arr.data[..row_len]
                 .iter()
                 .cloned()
                 .map(Into::into)
                 .collect();
-            for i in row_indices {
+            for i in 1..row_count {
                 let start = i * row_len;
                 for j in 0..row_len {
-                    new_data[j] = f(arr.data[start + j].clone(), new_data[j].clone());
+                    new_data[j] = f(new_data[j].clone(), arr.data[start + j].clone());
                 }
             }
             arr.shape.remove(0);
@@ -100,7 +99,7 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
 fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
     match f.signature().map(|sig| sig.args) {
         Ok(0 | 1) => {
-            for row in xs.into_rows_rev() {
+            for row in xs.into_rows() {
                 env.push(row);
                 env.push(f.clone());
                 if env.call_catch_break()? {
@@ -109,7 +108,7 @@ fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> Uiu
             }
         }
         Ok(2) | Err(_) => {
-            let mut rows = xs.into_rows_rev();
+            let mut rows = xs.into_rows();
             let mut acc = init
                 .or_else(|| rows.next())
                 .ok_or_else(|| env.error("Cannot reduce empty array"))?;

@@ -649,14 +649,32 @@ macro_rules! value_un_impl_all {
 
 value_un_impl_all!(neg, not, abs, sign, sqrt, sin, cos, tan, asin, acos, floor, ceil, round);
 
+macro_rules! val_retry {
+    (Byte, $env:expr) => {
+        $env.num_fill().is_some()
+    };
+    ($variant:ident, $env:expr) => {
+        false
+    };
+}
+
 macro_rules! value_bin_impl {
-    ($name:ident, $(($va:ident, $vb:ident, $f:ident)),* $(,)?) => {
+    ($name:ident, $(($va:ident, $vb:ident, $f:ident $(, $retry:ident)?)),* $(,)?) => {
         impl Value {
             #[allow(unreachable_patterns)]
             pub fn $name(&self, other: &Self, env: &Uiua) -> UiuaResult<Self> {
                 Ok(match (self, other) {
                     $((Value::$va(a), Value::$vb(b)) => {
-                        bin_pervade(a, b, env, InfalliblePervasiveFn::new($name::$f))?.into()
+                        let res = bin_pervade(a, b, env, InfalliblePervasiveFn::new($name::$f));
+                        match res {
+                            Ok(arr) => arr.into(),
+                            #[allow(unreachable_code, unused_variables)]
+                            Err(e) if e.is_fill() && (val_retry!($va, env) || val_retry!($vb, env)) => {
+                                $(return bin_pervade(&a.convert_ref(), &b.convert_ref(), env, InfalliblePervasiveFn::new($name::$retry)).map(Into::into);)?
+                                return Err(e);
+                            }
+                            Err(e) => return Err(e),
+                        }
                     },)*
                     (Value::Func(a), b) => {
                         match a.as_constant() {
@@ -696,11 +714,11 @@ value_bin_impl!(
     (Num, Num, num_num),
     (Num, Char, num_char),
     (Char, Num, char_num),
-    (Byte, Byte, byte_byte),
+    (Byte, Byte, byte_byte, num_num),
     (Byte, Char, byte_char),
     (Char, Byte, char_byte),
-    (Byte, Num, byte_num),
-    (Num, Byte, num_byte),
+    (Byte, Num, byte_num, num_num),
+    (Num, Byte, num_byte, num_num),
 );
 
 value_bin_impl!(
@@ -708,46 +726,46 @@ value_bin_impl!(
     (Num, Num, num_num),
     (Num, Char, num_char),
     (Char, Char, char_char),
-    (Byte, Byte, byte_byte),
+    (Byte, Byte, byte_byte, num_num),
     (Byte, Char, byte_char),
-    (Byte, Num, byte_num),
-    (Num, Byte, num_byte),
+    (Byte, Num, byte_num, num_num),
+    (Num, Byte, num_byte, num_num),
 );
 
 value_bin_impl!(
     mul,
     (Num, Num, num_num),
-    (Byte, Byte, byte_byte),
-    (Byte, Num, byte_num),
-    (Num, Byte, num_byte),
+    (Byte, Byte, byte_byte, num_num),
+    (Byte, Num, byte_num, num_num),
+    (Num, Byte, num_byte, num_num),
 );
 value_bin_impl!(
     div,
     (Num, Num, num_num),
-    (Byte, Byte, byte_byte),
-    (Byte, Num, byte_num),
-    (Num, Byte, num_byte),
+    (Byte, Byte, byte_byte, num_num),
+    (Byte, Num, byte_num, num_num),
+    (Num, Byte, num_byte, num_num),
 );
 value_bin_impl!(
     modulus,
     (Num, Num, num_num),
-    (Byte, Byte, byte_byte),
-    (Byte, Num, byte_num),
-    (Num, Byte, num_byte),
+    (Byte, Byte, byte_byte, num_num),
+    (Byte, Num, byte_num, num_num),
+    (Num, Byte, num_byte, num_num),
 );
 value_bin_impl!(
     pow,
     (Num, Num, num_num),
-    (Byte, Byte, byte_byte),
-    (Byte, Num, byte_num),
-    (Num, Byte, num_byte),
+    (Byte, Byte, byte_byte, num_num),
+    (Byte, Num, byte_num, num_num),
+    (Num, Byte, num_byte, num_num),
 );
 value_bin_impl!(
     log,
     (Num, Num, num_num),
-    (Byte, Byte, byte_byte),
-    (Byte, Num, byte_num),
-    (Num, Byte, num_byte),
+    (Byte, Byte, byte_byte, num_num),
+    (Byte, Num, byte_num, num_num),
+    (Num, Byte, num_byte, num_num),
 );
 value_bin_impl!(atan2, (Num, Num, num_num));
 
@@ -755,18 +773,18 @@ value_bin_impl!(
     min,
     (Num, Num, num_num),
     (Char, Char, char_char),
-    (Byte, Byte, byte_byte),
-    (Byte, Num, byte_num),
-    (Num, Byte, num_byte),
+    (Byte, Byte, byte_byte, num_num),
+    (Byte, Num, byte_num, num_num),
+    (Num, Byte, num_byte, num_num),
 );
 
 value_bin_impl!(
     max,
     (Num, Num, num_num),
     (Char, Char, char_char),
-    (Byte, Byte, byte_byte),
-    (Byte, Num, byte_num),
-    (Num, Byte, num_byte),
+    (Byte, Byte, byte_byte, num_num),
+    (Byte, Num, byte_num, num_num),
+    (Num, Byte, num_byte, num_num),
 );
 
 macro_rules! cmp_impls {
@@ -776,10 +794,10 @@ macro_rules! cmp_impls {
                 $name,
                 // Value comparable
                 (Num, Num, num_num),
-                (Byte, Byte, generic),
+                (Byte, Byte, generic, num_num),
                 (Char, Char, generic),
-                (Num, Byte, num_byte),
-                (Byte, Num, byte_num),
+                (Num, Byte, num_byte, num_num),
+                (Byte, Num, byte_num, num_num),
                 // Type comparable
                 (Num, Char, always_less),
                 (Num, Func, always_less),

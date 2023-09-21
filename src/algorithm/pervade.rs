@@ -128,6 +128,7 @@ pub fn bin_pervade<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
     let mut reshaped_a;
     let mut reshaped_b;
     if !a.shape_prefixes_match(&b) {
+        // Fill in missing rows
         match a.row_count().cmp(&b.row_count()) {
             Ordering::Less => {
                 if let Some(fill) = A::get_fill(env) {
@@ -149,6 +150,7 @@ pub fn bin_pervade<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
             }
             Ordering::Equal => {}
         }
+        // Fill in missing dimensions
         if !a.shape_prefixes_match(&b) {
             match a.rank().cmp(&b.rank()) {
                 Ordering::Less => {

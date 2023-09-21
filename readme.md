@@ -21,6 +21,11 @@ cd uiua
 cargo install --path .
 ```
 
+On Linux, you may need to install some dependencies first:
+```
+apt install libasound2-dev libudev-dev pkg-config
+```
+
 ## Language Server
 
 The interpreter has a built-in language server that implements the [Language Server Protocol](https://microsoft.github.io/language-server-protocol/).

@@ -111,6 +111,8 @@ r#"git clone https://github.com/uiua-lang/uiua
 cd uiua
 cargo install --path ."#
         </code>
+        <p>"On Linux, you may need to install some dependencies first:"</p>
+        <code class="code-block">"apt install libasound2-dev libudev-dev pkg-config"</code>
 
         <h2>"Basic Usage"</h2>
         <p>"Running just "<code>"uiua"</code>" will display the help message if there are no "<code>".ua"</code>" files in the directory."</p>

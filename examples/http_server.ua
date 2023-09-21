@@ -17,7 +17,7 @@ listener ← &tcpl "0.0.0.0:8080"
 
 # Mime types
 getext ← !⊢⇌ ⊜□ ≠@. .
-⌀⊟⍉[{"js" "text/javascript"}
+⍘⊟⍉[{"js" "text/javascript"}
     {"html" "text/html"}
     {"wasm" "application/wasm"}]
 extmimeExt ← 

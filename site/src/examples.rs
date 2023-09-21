@@ -2,9 +2,9 @@ const UIUA: &str = "\"Um, I um...arrays\"\n⊜⊢≥@A.";
 const FORMAT: &str = "# Click Run to format!\nrepeat(join∶/+take`2.)10range2";
 const D3: &str = "↯∶⇡/×.2_3_4";
 pub const LOGO: &str = "\
-xy ← ⌀⍉⊞⊟. ÷÷2∶ -÷2,⇡.200
-rgb ← [∶⌀⊟×.xy ↯△⊢xy0.5]
-u ← ↥<0.2∶>0.7.+×2 ×.∶⌀⊟xy
+xy ← ⍘⍉⊞⊟. ÷÷2∶ -÷2,⇡.200
+rgb ← [∶⍘⊟×.xy ↯△⊢xy0.5]
+u ← ↥<0.2∶>0.7.+×2 ×.∶⍘⊟xy
 c ← <∶√/+ⁿ2 xy
 ⍉⊂∶-¬u c1 +0.1 ∺↧rgb c0.95";
 const AVG: &str = "Avg ← ÷⧻∶/+.\nAvg 0_2_1_5";
@@ -28,7 +28,7 @@ start ← =÷2 size ⇡+1 size
 const PRIMES: &str = "‡¬∊∶♭⊞×...+2⇡50";
 const MANDELBROT: &str = "\
 Z ← ⊟/- ⁿ2 ∶×2 /×.⇌
-⇌⌀⍉⊞⊟.×4 ÷∶-÷2,⇡. 300
+⇌⍘⍉⊞⊟.×4 ÷∶-÷2,⇡. 300
 <2 √/+ ⁿ2;∶⍥(+Z ∶,)20 ↯∶0△.";
 const LIFE: &str = "\
 life ← ↥↧↶=2∶=3.-,/+/+⍚1_2↻-1⇡3_3.

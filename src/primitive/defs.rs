@@ -189,10 +189,10 @@ primitive!(
     /// ex: ○+η 1
     ///
     /// You can get an arcsine function with [invert].
-    /// ex: ⌀○ 1
+    /// ex: ⍘○ 1
     ///
     /// You can get an arccosine function by [invert]ing the cosine.
-    /// ex: ⌀(○+η) 1
+    /// ex: ⍘(○+η) 1
     ///
     /// You can get a tangent function by [divide]ing the [sine] by the cosine.
     /// ex: ÷○+η∶○. 0
@@ -864,8 +864,24 @@ primitive!(
     /// Most functions are not invertible.
     ///
     /// ex: √2
-    /// ex: ⌀√2
-    ([1], Invert, OtherModifier, ("invert", '⌀')),
+    /// ex: ⍘√2
+    ///
+    /// [invert][couple] uncouples a [length]`2` array and pushes both rows onto the stack.
+    /// ex: ⍘⊟ .[1_2_3 4_5_6]
+    ///
+    /// [invert][transpose] transposes in the opposite direction.
+    /// This is useful for arrays with [rank]`greater than``2`.
+    /// ex: ⍘⍉ .⊟.[1_2_3 4_5_6]
+    ///
+    /// [invert][bits] converts an array of bits into a number.
+    /// ex: ⍘⋯ [1 0 1 0 1 0 1 0]
+    ///
+    /// [invert][sine] gives the arcsine.
+    /// ex: ⍘○ 1
+    ///
+    /// While more inverses exists, most of them are not useful on their own.
+    /// They are usually used within [under].
+    ([1], Invert, OtherModifier, ("invert", '⍘')),
     /// Apply a function under another
     ///
     /// This is a more powerful version of [invert].

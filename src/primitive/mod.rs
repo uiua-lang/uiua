@@ -112,11 +112,11 @@ impl fmt::Display for Primitive {
         } else {
             use Primitive::*;
             match self {
-                InvTranspose => write!(f, "⌀{Transpose}"),
-                InverseBits => write!(f, "⌀{Bits}"),
-                Uncouple => write!(f, "⌀{Couple}"),
-                Untake => write!(f, "⌀{Take}"),
-                Undrop => write!(f, "⌀{Drop}"),
+                InvTranspose => write!(f, "⍘{Transpose}"),
+                InverseBits => write!(f, "⍘{Bits}"),
+                Uncouple => write!(f, "⍘{Couple}"),
+                Untake => write!(f, "⍘{Take}"),
+                Undrop => write!(f, "⍘{Drop}"),
                 Cos => write!(f, "{Sin}{Add}{Add}"),
                 Last => write!(f, "{First}{Reverse}"),
                 _ => write!(f, "{self:?}"),

@@ -79,7 +79,6 @@ impl Default for Scope {
 #[derive(Default, Clone)]
 struct Fills {
     nums: Vec<f64>,
-    bytes: Vec<u8>,
     chars: Vec<char>,
     functions: Vec<Arc<Function>>,
 }
@@ -991,7 +990,8 @@ backtrace:
         self.scope.fills.nums.last().copied()
     }
     pub(crate) fn byte_fill(&self) -> Option<u8> {
-        self.scope.fills.bytes.last().copied()
+        let n = self.scope.fills.nums.last().copied()?;
+        (n.fract() == 0.0 && (0.0..=255.0).contains(&n)).then_some(n as u8)
     }
     pub(crate) fn char_fill(&self) -> Option<char> {
         self.scope.fills.chars.last().copied()
@@ -1006,21 +1006,15 @@ backtrace:
         f: impl FnOnce(&mut Self) -> UiuaResult,
     ) -> UiuaResult {
         let mut set = false;
-        let mut pushed_byte = false;
         match &fill {
             Value::Num(n) => {
                 if let Some(&n) = n.as_scalar() {
                     self.scope.fills.nums.push(n);
-                    if n.fract() == 0.0 && (0.0..=255.0).contains(&n) {
-                        self.scope.fills.bytes.push(n as u8);
-                        pushed_byte = true;
-                    }
                     set = true;
                 }
             }
             Value::Byte(b) => {
                 if let Some(&b) = b.as_scalar() {
-                    self.scope.fills.bytes.push(b);
                     self.scope.fills.nums.push(b as f64);
                     set = true;
                 }
@@ -1046,14 +1040,7 @@ backtrace:
         }
         let res = f(self);
         match fill {
-            Value::Num(_) => {
-                self.scope.fills.nums.pop();
-                if pushed_byte {
-                    self.scope.fills.bytes.pop();
-                }
-            }
-            Value::Byte(_) => {
-                self.scope.fills.bytes.pop();
+            Value::Num(_) | Value::Byte(_) => {
                 self.scope.fills.nums.pop();
             }
             Value::Char(_) => {

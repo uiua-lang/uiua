@@ -4,7 +4,7 @@ use tinyvec::tiny_vec;
 
 use crate::{algorithm::max_shape, array::*, function::Function, value::Value, Uiua, UiuaResult};
 
-use super::FillContext;
+use super::{op_bytes_ref_retry_fill, op_bytes_retry_fill, FillContext};
 
 impl Value {
     fn coerce_to_functions<T, C: FillContext, E: ToString>(
@@ -566,7 +566,11 @@ impl Value {
         let (index_shape, index_data) = self.into_shaped_indices(env)?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.pick_shaped(&index_shape, &index_data, env)?),
-            Value::Byte(a) => Value::Byte(a.pick_shaped(&index_shape, &index_data, env)?),
+            Value::Byte(a) => op_bytes_retry_fill(
+                a,
+                |a| Ok(a.pick_shaped(&index_shape, &index_data, env)?.into()),
+                |a| Ok(a.pick_shaped(&index_shape, &index_data, env)?.into()),
+            )?,
             Value::Char(a) => Value::Char(a.pick_shaped(&index_shape, &index_data, env)?),
             Value::Func(a) => Value::Func(a.pick_shaped(&index_shape, &index_data, env)?),
         })
@@ -683,7 +687,11 @@ impl Value {
         let index = self.as_indices(env, "Index must be a list of integers")?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.take(&index, env)?),
-            Value::Byte(a) => Value::Byte(a.take(&index, env)?),
+            Value::Byte(a) => op_bytes_retry_fill(
+                a,
+                |a| Ok(a.take(&index, env)?.into()),
+                |a| Ok(a.take(&index, env)?.into()),
+            )?,
             Value::Char(a) => Value::Char(a.take(&index, env)?),
             Value::Func(a) => Value::Func(a.take(&index, env)?),
         })
@@ -1115,7 +1123,11 @@ impl Value {
         let (indices_shape, indices) = self.as_index_array(env)?;
         Ok(match from {
             Value::Num(a) => a.select_impl(indices_shape, &indices, env)?.into(),
-            Value::Byte(a) => a.select_impl(indices_shape, &indices, env)?.into(),
+            Value::Byte(a) => op_bytes_ref_retry_fill(
+                a,
+                |a| Ok(a.select_impl(indices_shape, &indices, env)?.into()),
+                |a| Ok(a.select_impl(indices_shape, &indices, env)?.into()),
+            )?,
             Value::Char(a) => a.select_impl(indices_shape, &indices, env)?.into(),
             Value::Func(a) => a.select_impl(indices_shape, &indices, env)?.into(),
         })

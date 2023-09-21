@@ -1,8 +1,8 @@
 use std::convert::Infallible;
 
 use crate::{
-    array::{ArrayValue, Shape},
-    Uiua, UiuaError,
+    array::{Array, ArrayValue, Shape},
+    Uiua, UiuaError, UiuaResult,
 };
 
 mod dyadic;
@@ -53,5 +53,39 @@ impl FillContext for () {
     }
     fn fill<T: ArrayValue>(self) -> Option<T> {
         None
+    }
+}
+
+fn op_bytes_retry_fill<T>(
+    bytes: Array<u8>,
+    on_bytes: impl FnOnce(Array<u8>) -> UiuaResult<T>,
+    on_nums: impl FnOnce(Array<f64>) -> UiuaResult<T>,
+) -> UiuaResult<T> {
+    match on_bytes(bytes.clone()) {
+        Ok(res) => Ok(res),
+        Err(err) => {
+            if err.is_fill() {
+                on_nums(bytes.convert())
+            } else {
+                Err(err)
+            }
+        }
+    }
+}
+
+fn op_bytes_ref_retry_fill<T>(
+    bytes: &Array<u8>,
+    on_bytes: impl FnOnce(&Array<u8>) -> UiuaResult<T>,
+    on_nums: impl FnOnce(&Array<f64>) -> UiuaResult<T>,
+) -> UiuaResult<T> {
+    match on_bytes(bytes) {
+        Ok(res) => Ok(res),
+        Err(err) => {
+            if err.is_fill() {
+                on_nums(&bytes.clone().convert())
+            } else {
+                Err(err)
+            }
+        }
     }
 }

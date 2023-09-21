@@ -110,6 +110,13 @@ impl UiuaError {
             error => error,
         }
     }
+    pub(crate) fn is_fill(&self) -> bool {
+        match self {
+            UiuaError::Traced { error, .. } => error.is_fill(),
+            UiuaError::Run(error) => error.value.contains("fill"),
+            _ => false,
+        }
+    }
 }
 
 fn format_trace<F: fmt::Write>(f: &mut F, trace: &[TraceFrame]) -> fmt::Result {

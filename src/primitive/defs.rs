@@ -730,7 +730,7 @@ primitive!(
     /// ex: /- 1_2_3_4_5
     ///   : \- 1_2_3_4_5
     ///
-    /// You can can fold with arbitrary functions.
+    /// You can can reduce with arbitrary functions.
     /// ex: /(×+1) 1_2_3_4_5
     (1[1], Reduce, AggregatingModifier, ("reduce", '/')),
     /// Apply a reducing function to an array with an initial value
@@ -753,6 +753,12 @@ primitive!(
     /// ex: ∵'⊟. 1_2_3_4
     /// ex: ∵⊂ 1_2_3 4_5_6
     /// ex: ∵⊂ 1_2 [4_5 6_7]
+    ///
+    /// If the function is already pervasive, then [each] is redundant.
+    /// ex: ∵+ 1_2_3 4_5_6
+    /// ex:  + 1_2_3 4_5_6
+    ///
+    /// [each] is equivalent to [level]`0` (or `level``[0 0 …]` for multiple arrays).
     ([1], Each, IteratingModifier, ("each", '∵')),
     /// Apply a function to each row of an array or arrays
     ///
@@ -765,7 +771,7 @@ primitive!(
     /// ex: ≡⊂  1_2 [4_5 6_7]
     /// ex: ≡∧+ 1_2 [4_5 6_7]
     ///
-    /// [rows] is equivalent to [level]`¯1` (or `level``[¯1 ¯1 ..]` for multiple arrays).
+    /// [rows] is equivalent to [level]`¯1` (or `level``[¯1 ¯1 …]` for multiple arrays).
     /// ex: ⍚¯1/+ [1_2_3 4_5_6 7_8_9]
     /// ex:   ≡/+ [1_2_3 4_5_6 7_8_9]
     ([1], Rows, IteratingModifier, ("rows", '≡')),
@@ -885,6 +891,7 @@ primitive!(
     /// Apply a function under another
     ///
     /// This is a more powerful version of [invert].
+    /// Conceptually, [under] transforms a value, modifies it, then reverses the transformation.
     ///
     /// [under] takes 2 functions `f` and `g` and another argument `x`.
     /// It applies `f` to `x`, then applies `g` to the result.
@@ -906,10 +913,12 @@ primitive!(
     /// If you want to insert a value somewhere in the middle of an array, you can use [under], [rotate], and [join].
     /// ex: ⍜'↻3'⊂π 1_2_3_4_5
     /// You can use [under][first] to apply a function to the first row of an array.
-    /// ex: ⍜⊢(-:10) 1_2_3_4_5
+    /// ex: ⍜⊢'×10 1_2_3_4_5
     /// If you need to work on more of the array's rows, can use [under] with [take] or [drop].
     /// ex: ⍜'↙3'×10 1_2_3_4_5
     /// ex: ⍜'↘3'×10 1_2_3_4_5
+    /// You can chain [under]-compatible functions.
+    /// ex: ⍜(↙2↘1)'×10 1_2_3_4_5
     /// [pick] and [select] also work.
     /// ex: ⍜⊡'×10 2_1 ↯3_3⇡9
     /// ex: ⍜⊏'×10 1_3 1_2_3_4_5

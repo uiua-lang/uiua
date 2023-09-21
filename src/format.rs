@@ -142,8 +142,13 @@ fn format_words(
 
 fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig, depth: usize) {
     match &word.value {
-        Word::Number(_, n) => {
-            output.push_str(&n.grid_string());
+        Word::Number(s, n) => {
+            let grid_str = n.grid_string();
+            if grid_str.len() < s.len() {
+                output.push_str(&grid_str);
+            } else {
+                output.push_str(&s.replace('`', "¯"));
+            }
         }
         Word::Char(c) => {
             let formatted = format!("{c:?}");

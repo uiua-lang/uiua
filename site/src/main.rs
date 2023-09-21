@@ -216,7 +216,7 @@ pub fn PrimCode(
         title.push('\n');
     }
     if let Some(doc) = prim.doc().filter(|_| !hide_docs) {
-        if show_name && !matches!(prim, Primitive::Sys(_)) {
+        if show_name && !title.is_empty() && !matches!(prim, Primitive::Sys(_)) {
             title.push_str(": ");
         }
         title.push_str(&doc.short_text());

@@ -188,11 +188,13 @@ pub fn bin_pervade<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
                 }
             }
             if !a.shape_prefixes_match(&b) {
-                return Err(env.error(format!(
-                    "Shapes {} and {} do not match",
-                    a.format_shape(),
-                    b.format_shape()
-                )));
+                return Err(env
+                    .error(format!(
+                        "Shapes {} and {} do not match",
+                        a.format_shape(),
+                        b.format_shape()
+                    ))
+                    .fill());
             }
         }
     }
@@ -741,6 +743,7 @@ fn bin_pervade_recursive_generic<A: PervasiveInput, B: PervasiveInput, C>(
 ) -> UiuaResult {
     if a_shape == b_shape {
         for ((a, b), c) in a.into_iter().zip(b).zip(c) {
+            // If rust-analyzer shows an error here, it's a false positive
             *c = f(A::item(a), B::item(b), env)?;
         }
         return Ok(());

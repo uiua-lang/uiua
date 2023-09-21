@@ -106,12 +106,7 @@ impl UiuaError {
             error => Err(error),
         }
     }
-    pub fn base(self) -> Self {
-        match self {
-            UiuaError::Traced { error, .. } => error.base(),
-            error => error,
-        }
-    }
+    /// Check if the error is fill-related
     pub(crate) fn is_fill(&self) -> bool {
         match self {
             UiuaError::Traced { error, .. } => error.is_fill(),
@@ -119,6 +114,7 @@ impl UiuaError {
             _ => false,
         }
     }
+    /// Mark the error as fill-related
     pub(crate) fn fill(self) -> Self {
         UiuaError::Fill(Box::new(self))
     }

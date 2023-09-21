@@ -1,3 +1,6 @@
+- Fix typo on main page
+- Make reduce and fold go forward
+- Make try copy top values so the stack can be fixed
 - Docs
   - Control flow
   - Images
@@ -7,6 +10,7 @@
 - Optimizations
   - Dyadic level
   - Windowed reduce?
+  - Row windows
 - Multimedia
   - Sound input
   - Webcam input?

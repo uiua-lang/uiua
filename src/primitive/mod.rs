@@ -117,7 +117,9 @@ impl fmt::Display for Primitive {
                 Uncouple => write!(f, "⍘{Couple}"),
                 Untake => write!(f, "⍘{Take}"),
                 Undrop => write!(f, "⍘{Drop}"),
-                Cos => write!(f, "{Sin}{Add}{Add}"),
+                Unselect => write!(f, "⍘{Select}"),
+                Unpick => write!(f, "⍘{Pick}"),
+                Cos => write!(f, "{Sin}{Add}{Eta}"),
                 Last => write!(f, "{First}{Reverse}"),
                 _ => write!(f, "{self:?}"),
             }

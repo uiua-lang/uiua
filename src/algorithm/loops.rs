@@ -1,3 +1,5 @@
+//! Algorithms for looping modifiers
+
 use std::ops::{Add, Div, Mul, Sub};
 
 use tinyvec::tiny_vec;

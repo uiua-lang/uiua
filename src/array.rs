@@ -16,6 +16,7 @@ use crate::{
     Uiua,
 };
 
+/// Uiua's array type
 #[derive(Clone)]
 pub struct Array<T> {
     pub(crate) shape: Shape,

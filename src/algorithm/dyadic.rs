@@ -1,3 +1,5 @@
+//! Algorithms for dyadic array operations
+
 use std::{cmp::Ordering, iter::repeat, mem::take, sync::Arc};
 
 use tinyvec::tiny_vec;

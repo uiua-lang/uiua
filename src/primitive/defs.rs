@@ -1,3 +1,5 @@
+//! All primitive definitions
+
 use super::*;
 
 macro_rules! primitive {

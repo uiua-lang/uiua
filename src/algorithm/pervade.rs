@@ -1,3 +1,5 @@
+//! Algorithms for pervasive array operations
+
 use std::{
     cmp::{self, Ordering},
     fmt::Display,

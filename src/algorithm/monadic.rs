@@ -1,3 +1,5 @@
+//! Algorithms for monadic array operations
+
 use std::{
     cmp::Ordering,
     collections::{BTreeMap, BTreeSet},

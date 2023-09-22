@@ -1,3 +1,5 @@
+//! Algorithms for invert and under
+
 use std::{borrow::Cow, cell::RefCell, collections::HashMap, fmt};
 
 use crate::{

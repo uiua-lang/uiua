@@ -1,3 +1,5 @@
+//! Algorithms for performing operations on arrays
+
 use std::convert::Infallible;
 
 use crate::{

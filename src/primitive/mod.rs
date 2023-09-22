@@ -1,3 +1,7 @@
+//! Primitive definitions and top-level implementations
+//!
+//! For the meat of the actual array algorithms, see [`crate::algorithm`].
+
 mod defs;
 pub use defs::*;
 

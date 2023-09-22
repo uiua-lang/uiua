@@ -215,9 +215,10 @@ sys_op! {
     (1(0), AudioPlay, "&ap", "audio - play"),
     /// Get the sample rate of the audio output backend
     (0, AudioSampleRate, "&asr", "audio - sample rate"),
-    /// Stream audio
+    /// Synthesize and sream audio
     ///
-    /// Takes a function that take a list of sample times and returns a list of samples.
+    /// Expects a function that takes a list of sample times and returns a list of samples.
+    /// The function will be called repeatedly to generate the audio.
     (1(0), AudioStream, "&ast", "audio - stream"),
     /// Sleep for n seconds
     ///

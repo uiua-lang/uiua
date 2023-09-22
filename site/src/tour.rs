@@ -156,7 +156,7 @@ pub fn Tour() -> impl IntoView {
         <Editor example="\
 ↯4[0 2 4 7 12 9 7 4]
 ×220 ⁿ∶2÷12
-÷2 ○×τ ♭⊞× ∶÷∶⇡⁅÷8 .44100"/>
+÷2 ○×τ ♭⊞× ∶÷∶⇡⁅÷8 .&asr"/>
 
         <h2 id="next-steps">"Next Steps"</h2>
         <p>"If you want a more in-depth introduction to Uiua, you can check out the "<A href="/docs/basic">"tutorial"</A>"."</p>

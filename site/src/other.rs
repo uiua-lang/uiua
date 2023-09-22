@@ -142,17 +142,17 @@ pub fn Audio() -> impl IntoView {
         <h2 id="basic-synthesis">"Basic Synthesis"</h2>
         <p>"In the online editor, you need only make an array that looks like audio samples."</p>
         <p>"Audio samples must be eiter a "<PrimCode prim=Rank/><code>"1"</code>" array with at least 1000 elements or a "<PrimCode prim=Rank/><code>"2"</code>" array with a row for each audio channel and at least 1000 elements in each row."</p>
-        <p>"The samples must be between "<code>"-1"</code>" and "<code>"1"</code>". They will be played at a sample rate of 44100 Hz."</p>
+        <p>"The samples must be between "<code>"-1"</code>" and "<code>"1"</code>". We use the "<PrimCode prim=Sys(SysOp::AudioSampleRate)/>" system function to get the sample rate of the audio output."</p>
         <p>"For a minimal example, here is a simple 1 second sawtooth wave:"</p>
-        <Editor examples={&["%2", "◿1×220", "÷∶⇡.44100"]}/>
-        <p>"First, we make a range of 44100 numbers from 0 to 1 by getting the "<PrimCode prim=Range/>" up to 44100 and dividing it by that much. This array represents the time at each sample."</p>
+        <Editor examples={&["%2", "◿1×220", "÷∶⇡.&asr"]}/>
+        <p>"First, we make a range of numbers from 0 to 1 by getting the "<PrimCode prim=Range/>" up to the sample rate and dividing it by that much. This array represents the time at each sample."</p>
         <p>"Then, we multiply the time by 220, the frequency of an A3 note, and take the "<PrimCode prim=Mod/>"1 of that. This gives us a nice pure sawtooth wave."</p>
         <p>"Finally, the wave is a little loud on its own, so we "<PrimCode prim=Div/>" it by 2."</p>
         <br/>
         <p>"For longer time arrays, "<PrimCode prim=Mul/>" the number of sample by the number of seconds you want before calling "<PrimCode prim=Range/>" but after "<PrimCode prim=Dup/>"."</p>
-        <Editor example="%2◿1×220÷∶⇡ ×3 .44100"/>
+        <Editor example="%2◿1×220÷∶⇡ ×3 .&asr"/>
         <p>"If you "<PrimCode prim=Mul/>" by a non-integer, you may need to use "<PrimCode prim=Round/>" to prevent an error."</p>
-        <Editor example="%2◿1×220÷∶⇡ ⁅×0.5 .44100"/>
+        <Editor example="%2◿1×220÷∶⇡ ⁅×0.5 .&asr"/>
 
         <h2 id="notes">"Notes"</h2>
         <p>"My favorite way to make multiple notes is to "<PrimCode prim=Table/>" different frequencies with the time array."</p>
@@ -162,7 +162,7 @@ pub fn Audio() -> impl IntoView {
         <p>"In this example, we make both a chord and a sequence from the same notes. We use "<PrimCode prim=Sin glyph_only=true/><PrimCode prim=Mul glyph_only=true/><PrimCode prim=Tau glyph_only=true/>" to make a sine wave instead of a saw wave."</p>
         <Editor example="\
 f ← ×220ⁿ∶2÷12 [0 4 7]
-÷∶⇡.44100
+÷∶⇡.&asr
 s ← ○×τ⊞×f
 ÷⧻f/+s
 ÷⧻f/⊂s"/>
@@ -171,6 +171,6 @@ s ← ○×τ⊞×f
         <p>"If running code in the native Uiua interpreter, arrays will not be automatically turned into audio."</p>
         <p>"Instead, you must use the "<PrimCode prim=Sys(SysOp::AudioPlay)/>" system function to play it."</p>
         <p><PrimCode prim=Sys(SysOp::AudioPlay)/>" should fine on the website as well, but it is not necessary."</p>
-        <Editor example="&ap÷2×¬◿1×4∶±○×τ×55.÷∶⇡×2. 44100"/>
+        <Editor example="&ap÷2×¬◿1×4∶±○×τ×55.÷∶⇡×2. &asr"/>
     }
 }

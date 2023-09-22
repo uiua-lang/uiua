@@ -199,7 +199,7 @@ sys_op! {
     /// For a rank 2 array, each row is a channel.
     ///
     /// The samples must be between -1 and 1.
-    /// The sample rate is 44100 Hz.
+    /// The sample rate is [&asr].
     ///
     /// Only the `wav` format is supported.
     (2, AudioEncode, "&ae", "audio - encode"),
@@ -211,8 +211,10 @@ sys_op! {
     /// For a rank 2 array, each row is a channel.
     ///
     /// The samples must be between -1 and 1.
-    /// The sample rate is 44100 Hz.
+    /// The sample rate is [&asr].
     (1(0), AudioPlay, "&ap", "audio - play"),
+    /// Get the sample rate of the audio output backend
+    (0, AudioSampleRate, "&asr", "audio - sample rate"),
     /// Sleep for n seconds
     ///
     /// On the web, this example will hang for 1 second.
@@ -272,12 +274,6 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn save_error_color(&self, error: &UiuaError) {}
     fn print_str(&self, s: &str) -> Result<(), String> {
         self.write(Handle::STDOUT, s.as_bytes())
-    }
-    fn show_image(&self, image: DynamicImage) -> Result<(), String> {
-        Err("Showing images not supported in this environment".into())
-    }
-    fn play_audio(&self, wave_bytes: Vec<u8>) -> Result<(), String> {
-        Err("Playing audio not supported in this environment".into())
     }
     fn scan_line(&self) -> String {
         let mut bytes = Vec::new();
@@ -347,6 +343,15 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     }
     fn sleep(&self, seconds: f64) -> Result<(), String> {
         Err("Sleeping is not supported in this environment".into())
+    }
+    fn show_image(&self, image: DynamicImage) -> Result<(), String> {
+        Err("Showing images not supported in this environment".into())
+    }
+    fn play_audio(&self, wave_bytes: Vec<u8>) -> Result<(), String> {
+        Err("Playing audio not supported in this environment".into())
+    }
+    fn audio_sample_rate(&self) -> u32 {
+        44100
     }
     fn tcp_listen(&self, addr: &str) -> Result<Handle, String> {
         Err("TCP listeners are not supported in this environment".into())
@@ -568,6 +573,10 @@ impl SysBackend for NativeSys {
             },
         }
     }
+    fn sleep(&self, seconds: f64) -> Result<(), String> {
+        sleep(Duration::from_secs_f64(seconds));
+        Ok(())
+    }
     #[cfg(feature = "terminal_image")]
     fn show_image(&self, image: DynamicImage) -> Result<(), String> {
         let (width, height) = if let Some((w, h)) = term_size::dimensions() {
@@ -631,9 +640,14 @@ impl SysBackend for NativeSys {
             }));
         recv.recv().unwrap()
     }
-    fn sleep(&self, seconds: f64) -> Result<(), String> {
-        sleep(Duration::from_secs_f64(seconds));
-        Ok(())
+    #[cfg(feature = "audio")]
+    fn audio_sample_rate(&self) -> u32 {
+        hodaun::default_output_device()
+            .and_then(|device| {
+                hodaun::cpal::traits::DeviceTrait::default_output_config(&device).ok()
+            })
+            .map(|config| config.sample_rate().0)
+            .unwrap_or(44100)
     }
     fn tcp_listen(&self, addr: &str) -> Result<Handle, String> {
         let handle = NATIVE_SYS.new_handle();
@@ -1063,15 +1077,21 @@ impl SysOp {
                     .as_string(env, "Audio format must be a string")?;
                 let value = env.pop(2)?;
                 let bytes = match format.as_str() {
-                    "wav" => value_to_wav_bytes(&value).map_err(|e| env.error(e))?,
+                    "wav" => value_to_wav_bytes(&value, env.backend.audio_sample_rate())
+                        .map_err(|e| env.error(e))?,
                     format => return Err(env.error(format!("Invalid audio format: {}", format))),
                 };
                 env.push(Array::<u8>::from(bytes));
             }
             SysOp::AudioPlay => {
                 let value = env.pop(1)?;
-                let bytes = value_to_wav_bytes(&value).map_err(|e| env.error(e))?;
+                let bytes = value_to_wav_bytes(&value, env.backend.audio_sample_rate())
+                    .map_err(|e| env.error(e))?;
                 env.backend.play_audio(bytes).map_err(|e| env.error(e))?;
+            }
+            SysOp::AudioSampleRate => {
+                let sample_rate = env.backend.audio_sample_rate();
+                env.push(f64::from(sample_rate));
             }
             SysOp::Sleep => {
                 let seconds = env
@@ -1278,7 +1298,7 @@ pub fn value_to_audio_channels(audio: &Value) -> Result<Vec<Vec<f64>>, String> {
     Ok(channels)
 }
 
-pub fn value_to_wav_bytes(audio: &Value) -> Result<Vec<u8>, String> {
+pub fn value_to_wav_bytes(audio: &Value, sample_rate: u32) -> Result<Vec<u8>, String> {
     #[cfg(not(feature = "audio"))]
     {
         value_to_wav_bytes_impl(
@@ -1286,11 +1306,12 @@ pub fn value_to_wav_bytes(audio: &Value) -> Result<Vec<u8>, String> {
             |f| (f * i16::MAX as f64) as i16,
             16,
             SampleFormat::Int,
+            sample_rate,
         )
     }
     #[cfg(feature = "audio")]
     {
-        value_to_wav_bytes_impl(audio, |f| f as f32, 32, SampleFormat::Float)
+        value_to_wav_bytes_impl(audio, |f| f as f32, 32, SampleFormat::Float, sample_rate)
     }
 }
 
@@ -1299,6 +1320,7 @@ fn value_to_wav_bytes_impl<T: hound::Sample + Copy>(
     convert_samples: impl Fn(f64) -> T + Copy,
     bits_per_sample: u16,
     sample_format: SampleFormat,
+    sample_rate: u32,
 ) -> Result<Vec<u8>, String> {
     // We use i16 samples for compatibility with Firefox (if I remember correctly)
     let channels = value_to_audio_channels(audio)?;
@@ -1308,7 +1330,7 @@ fn value_to_wav_bytes_impl<T: hound::Sample + Copy>(
         .collect();
     let spec = WavSpec {
         channels: channels.len() as u16,
-        sample_rate: 44100,
+        sample_rate,
         bits_per_sample,
         sample_format,
     };

@@ -15,7 +15,7 @@ use uiua::{
     lex::is_ident_char,
     primitive::{PrimClass, Primitive},
     run::RunMode,
-    value_to_image_bytes, value_to_wav_bytes, Uiua,
+    value_to_image_bytes, value_to_wav_bytes, SysBackend, Uiua,
 };
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{Event, HtmlDivElement, MouseEvent, Node};
@@ -1127,6 +1127,7 @@ fn set_code_html(id: &str, code: &str) {
 /// Returns the output and the formatted code
 fn run_code(code: &str) -> Vec<OutputItem> {
     let io = WebBackend::default();
+    // Run
     let mut env = Uiua::with_backend(io)
         .with_mode(RunMode::All)
         .with_execution_limit(Duration::from_secs(10));
@@ -1138,28 +1139,33 @@ fn run_code(code: &str) -> Vec<OutputItem> {
             env.take_stack()
         }
     };
+    // Get stdout and stderr
     let io = env.downcast_backend::<WebBackend>().unwrap();
     let stdout = take(&mut *io.stdout.lock().unwrap());
     let mut stack = Vec::new();
     for value in values {
+        // Try to convert the value to audio
+        if value.shape().last().is_some_and(|&n| n >= 1000) {
+            if let Ok(bytes) = value_to_wav_bytes(&value, io.audio_sample_rate()) {
+                stack.push(OutputItem::Audio(bytes));
+                continue;
+            }
+        }
+        // Try to convert the value to an image
         if let Ok(bytes) = value_to_image_bytes(&value, ImageOutputFormat::Png) {
             if value.shape().iter().product::<usize>() > 100 {
                 stack.push(OutputItem::Image(bytes));
                 continue;
             }
         }
-        if value.shape().last().is_some_and(|&n| n >= 1000) {
-            if let Ok(bytes) = value_to_wav_bytes(&value) {
-                stack.push(OutputItem::Audio(bytes));
-                continue;
-            }
-        }
+        // Otherwise, just show the value
         for line in value.show().lines() {
             stack.push(OutputItem::String(line.to_string()));
         }
     }
     let stderr = take(&mut *io.stderr.lock().unwrap());
 
+    // Construct output
     let label =
         ((!stack.is_empty()) as u8) + ((!stdout.is_empty()) as u8) + ((!stderr.is_empty()) as u8)
             >= 2;

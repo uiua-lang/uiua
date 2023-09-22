@@ -11,7 +11,7 @@ const AVG: &str = "Avg ← ÷⧻∶/+.\nAvg 0_2_1_5";
 const CHORD: &str = "\
 [0 4 7 10]
 ×220 ⁿ∶2÷12
-÷⧻∶ ≡/+ ○×τ ⊞× ÷∶⇡.44100.";
+÷⧻∶ ≡/+ ○×τ ⊞× ÷∶⇡.&asr.";
 pub const QUADRATIC: &str = "\
 Quad ← ÷∶+↷∋(×2)¯(⊟¯.√+ⁿ2∶××¯4)
 Quad 1 2 0";

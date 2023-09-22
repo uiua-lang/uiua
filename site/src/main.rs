@@ -162,8 +162,8 @@ pub fn MainPage() -> impl IntoView {
                 <div>
                     <h2>"Multimedia Output"</h2>
                     <p>"Uiua has built-in facilities for generating images and audio. Just make arrays of the pixel data or audio samples!"</p>
-                    <Editor example="⊞(<+⇡3○⍜⊟'÷30∶)⇡100⇡300"/>
-                    <Editor example="÷3/+○⊞×⊟×1.5.220×τ÷∶⇡.44100"/>
+                    <Editor example="⍉⊠<⊞+⇡3○÷30⇡300÷30⇡100"/>
+                    <Editor example="÷3/+○⊞×⊟×1.5.220×τ÷∶⇡.&asr"/>
                     <p>"The Uiua logo was made with Uiua! Check example 4 at the top of the page."</p>
                 </div>
                 <div>

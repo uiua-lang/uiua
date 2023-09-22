@@ -215,6 +215,9 @@ sys_op! {
     (1(0), AudioPlay, "&ap", "audio - play"),
     /// Get the sample rate of the audio output backend
     (0, AudioSampleRate, "&asr", "audio - sample rate"),
+    /// Stream audio
+    ///
+    /// Takes a function that take a list of sample times and returns a list of samples.
     (1(0), AudioStream, "&ast", "audio - stream"),
     /// Sleep for n seconds
     ///
@@ -356,7 +359,6 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn audio_sample_rate(&self) -> u32 {
         44100
     }
-    fn set_audio_stream_time(&self, time: f64) {}
     fn stream_audio(&self, f: AudioStreamFn) -> Result<(), String> {
         Err("Streaming audio not supported in this environment".into())
     }
@@ -404,7 +406,6 @@ pub trait SysBackend: Any + Send + Sync + 'static {
             "Joining threads is not supported in this environment".into()
         ))
     }
-    fn teardown(&self) {}
 }
 
 #[derive(Default)]
@@ -419,9 +420,9 @@ struct GlobalNativeSys {
     tcp_sockets: DashMap<Handle, Buffered<TcpStream>>,
     threads: DashMap<Handle, JoinHandle<UiuaResult<Vec<Value>>>>,
     #[cfg(feature = "audio")]
-    audio_thread_handles: lockfree::queue::Queue<JoinHandle<()>>,
-    #[cfg(feature = "audio")]
     audio_stream_time: Mutex<Option<f64>>,
+    #[cfg(feature = "audio")]
+    audio_time_socket: Mutex<Option<Arc<std::net::UdpSocket>>>,
     colored_errors: DashMap<String, String>,
 }
 
@@ -440,9 +441,9 @@ impl Default for GlobalNativeSys {
             tcp_sockets: DashMap::new(),
             threads: DashMap::new(),
             #[cfg(feature = "audio")]
-            audio_thread_handles: lockfree::queue::Queue::new(),
-            #[cfg(feature = "audio")]
             audio_stream_time: Mutex::new(None),
+            #[cfg(feature = "audio")]
+            audio_time_socket: Mutex::new(None),
             colored_errors: DashMap::new(),
         }
     }
@@ -475,6 +476,19 @@ impl GlobalNativeSys {
 }
 
 static NATIVE_SYS: Lazy<GlobalNativeSys> = Lazy::new(Default::default);
+
+#[cfg(feature = "audio")]
+pub fn set_audio_stream_time(time: f64) {
+    *NATIVE_SYS.audio_stream_time.lock() = Some(time);
+}
+
+#[cfg(feature = "audio")]
+pub fn set_audio_stream_time_port(port: u16) -> std::io::Result<()> {
+    let socket = std::net::UdpSocket::bind(("127.0.0.1", 0))?;
+    socket.connect(("127.0.0.1", port))?;
+    *NATIVE_SYS.audio_time_socket.lock() = Some(Arc::new(socket));
+    Ok(())
+}
 
 impl SysBackend for NativeSys {
     fn any(&self) -> &dyn Any {
@@ -620,37 +634,19 @@ impl SysBackend for NativeSys {
     #[cfg(feature = "audio")]
     fn play_audio(&self, wav_bytes: Vec<u8>) -> Result<(), String> {
         use hodaun::*;
-        let (send, recv) = crossbeam_channel::unbounded();
-        NATIVE_SYS
-            .audio_thread_handles
-            .push(std::thread::spawn(move || {
-                match default_output::<Stereo>() {
-                    Ok(mut mixer) => {
-                        send.send(Ok(())).unwrap();
-                        let source = match wav::WavSource::new(std::collections::VecDeque::from(
-                            wav_bytes,
-                        )) {
-                            Ok(source) => source,
-                            Err(e) => {
-                                send.send(Err(format!("Failed to read wav bytes: {e}")))
-                                    .unwrap();
-                                return;
-                            }
-                        };
+        match default_output::<Stereo>() {
+            Ok(mut mixer) => {
+                match wav::WavSource::new(std::collections::VecDeque::from(wav_bytes)) {
+                    Ok(source) => {
                         mixer.add(source.resample());
                         mixer.block();
-                        send.send(Ok(())).unwrap();
+                        Ok(())
                     }
-                    Err(e) => {
-                        send.send(Err(format!(
-                            "Failed to initialize audio output stream: {e}"
-                        )
-                        .to_string()))
-                            .unwrap();
-                    }
+                    Err(e) => Err(format!("Failed to read wav bytes: {e}")),
                 }
-            }));
-        recv.recv().unwrap()
+            }
+            Err(e) => Err(format!("Failed to initialize audio output stream: {e}").to_string()),
+        }
     }
     #[cfg(feature = "audio")]
     fn audio_sample_rate(&self) -> u32 {
@@ -660,10 +656,6 @@ impl SysBackend for NativeSys {
             })
             .map(|config| config.sample_rate().0)
             .unwrap_or(44100)
-    }
-    #[cfg(feature = "audio")]
-    fn set_audio_stream_time(&self, time: f64) {
-        *NATIVE_SYS.audio_stream_time.lock() = Some(time);
     }
     #[cfg(feature = "audio")]
     fn stream_audio(&self, f: AudioStreamFn) -> Result<(), String> {
@@ -685,8 +677,10 @@ impl SysBackend for NativeSys {
                     times.push(self.time);
                     self.time += 1.0 / sample_rate;
                 }
-                if NATIVE_SYS.audio_stream_time.lock().is_some() {
-                    println!("<audio time>:{}", self.time);
+                if let Some(socket) = NATIVE_SYS.audio_time_socket.lock().as_ref() {
+                    if let Err(e) = socket.send(&self.time.to_be_bytes()) {
+                        eprintln!("Failed to send audio time: {e}");
+                    }
                 }
                 match (self.f)(times) {
                     Ok(samples) => {
@@ -825,19 +819,6 @@ impl SysBackend for NativeSys {
             Ok(Ok(stack)) => Ok(stack),
             Ok(Err(e)) => Err(Ok(e)),
             Err(e) => Err(Err(format!("Thread panicked: {:?}", e))),
-        }
-    }
-    fn teardown(&self) {
-        #[cfg(feature = "audio")]
-        {
-            NATIVE_SYS.files.clear();
-            NATIVE_SYS.tcp_listeners.clear();
-            NATIVE_SYS.tcp_sockets.clear();
-            NATIVE_SYS.threads.clear();
-            NATIVE_SYS.colored_errors.clear();
-            for audio_thread_handle in NATIVE_SYS.audio_thread_handles.pop_iter() {
-                audio_thread_handle.join().unwrap();
-            }
         }
     }
 }

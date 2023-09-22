@@ -562,7 +562,7 @@ mod test {
                     span: 0,
                     constant: false
                 },
-                push(Add),
+                push(Value::try_from(Add).unwrap()),
                 Prim(Reduce, 0)
             ])
         );

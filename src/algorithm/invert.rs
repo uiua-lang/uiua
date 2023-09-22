@@ -12,21 +12,22 @@ impl Function {
         if !matches!(self.kind, FunctionKind::Normal) {
             return None;
         }
-        Some(Function::new_inferred(
+        Function::new_inferred(
             self.id.clone(),
             invert_instrs(&self.instrs)?,
             FunctionKind::Normal,
-        ))
+        )
+        .ok()
     }
     pub fn under(self) -> Option<(Self, Self)> {
         if let Some(f) = self.inverse() {
             Some((self, f))
         } else {
             let (befores, afters) = under_instrs(&self.instrs)?;
-            Some((
-                Function::new_inferred(self.id.clone(), befores, FunctionKind::Normal),
-                Function::new_inferred(self.id.clone(), afters, FunctionKind::Normal),
-            ))
+            let before =
+                Function::new_inferred(self.id.clone(), befores, FunctionKind::Normal).ok()?;
+            let after = Function::new_inferred(self.id, afters, FunctionKind::Normal).ok()?;
+            Some((before, after))
         }
     }
 }

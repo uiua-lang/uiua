@@ -115,7 +115,7 @@ pub struct Function {
     pub id: FunctionId,
     pub instrs: Vec<Instr>,
     pub kind: FunctionKind,
-    signature: Result<Signature, String>,
+    signature: Signature,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -180,18 +180,19 @@ impl Hash for DynamicFunctionKind {
     }
 }
 
-impl From<Primitive> for Function {
-    fn from(prim: Primitive) -> Self {
-        Self::new(
+impl TryFrom<Primitive> for Function {
+    type Error = String;
+    fn try_from(prim: Primitive) -> Result<Self, Self::Error> {
+        Ok(Self::new(
             FunctionId::Primitive(prim),
             [Instr::Prim(prim, 0)],
             FunctionKind::Normal,
             if let Some((args, outputs)) = prim.args().zip(prim.outputs()) {
-                Ok(Signature::new(args as usize, outputs as usize))
+                Signature::new(args as usize, outputs as usize)
             } else {
-                Err(format!("{prim} has no signature"))
+                return Err(format!("{prim} has no signature"));
             },
-        )
+        ))
     }
 }
 
@@ -254,7 +255,7 @@ impl Function {
         id: FunctionId,
         instrs: impl Into<Vec<Instr>>,
         kind: FunctionKind,
-        signature: Result<Signature, String>,
+        signature: Signature,
     ) -> Self {
         Self {
             id,
@@ -263,14 +264,18 @@ impl Function {
             signature,
         }
     }
-    pub fn new_inferred(id: FunctionId, instrs: impl Into<Vec<Instr>>, kind: FunctionKind) -> Self {
+    pub fn new_inferred(
+        id: FunctionId,
+        instrs: impl Into<Vec<Instr>>,
+        kind: FunctionKind,
+    ) -> Result<Self, String> {
         let instrs = instrs.into();
-        Self {
+        Ok(Self {
             id,
-            signature: instrs_signature(&instrs),
+            signature: instrs_signature(&instrs)?,
             instrs,
             kind,
-        }
+        })
     }
     pub fn into_inner(f: Arc<Self>) -> Self {
         Arc::try_unwrap(f).unwrap_or_else(|f| (*f).clone())
@@ -297,7 +302,7 @@ impl Function {
     /// Get how many arguments this function pops off the stack and how many it pushes.
     /// Returns `None` if either of these values are dynamic.
     pub fn signature(&self) -> Signature {
-        self.signature.clone().unwrap()
+        self.signature
     }
     pub fn is_constant(&self) -> bool {
         matches!(&*self.instrs, [Instr::Push(_)])
@@ -307,7 +312,7 @@ impl Function {
             FunctionId::Constant,
             [Instr::push(value.into())],
             FunctionKind::Normal,
-            Ok(Signature::new(0, 1)),
+            Signature::new(0, 1),
         )
     }
     pub fn as_primitive(&self) -> Option<(Primitive, usize)> {

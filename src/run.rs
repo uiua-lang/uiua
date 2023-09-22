@@ -63,7 +63,7 @@ impl Default for Scope {
                     FunctionId::Main,
                     Vec::new(),
                     FunctionKind::Normal,
-                    Ok(Signature::new(0, 0)),
+                    Signature::new(0, 0),
                 )),
                 call_span: 0,
                 pc: 0,
@@ -332,7 +332,7 @@ backtrace:
                 FunctionId::Named(binding.name.value.clone()),
                 instrs,
                 FunctionKind::Normal,
-                Ok(sig),
+                sig,
             );
             Value::from(func)
         };
@@ -470,7 +470,7 @@ backtrace:
                             Ok(())
                         }),
                     }),
-                    Ok(signature),
+                    signature,
                 );
                 self.push_instr(Instr::push(f));
                 if call {
@@ -509,7 +509,7 @@ backtrace:
                             Ok(())
                         }),
                     }),
-                    Ok(signature),
+                    signature,
                 );
                 self.push_instr(Instr::push(f));
                 if call {
@@ -580,13 +580,16 @@ backtrace:
                             FunctionId::Anonymous(word.span),
                             instrs,
                             FunctionKind::Normal,
-                        );
+                        )
+                        .unwrap_or_else(|e| {
+                            panic!("failed to infer array construction function signature: {e}")
+                        });
                         self.push_instr(Instr::push(func));
                     }
                 }
             }
             Word::Func(func) => self.func(func, word.span)?,
-            Word::Primitive(p) => self.primitive(p, word.span, call),
+            Word::Primitive(p) => self.primitive(p, word.span, call)?,
             Word::Modified(m) => self.modified(*m, call)?,
             Word::Spaces | Word::Comment(_) => {}
         }
@@ -651,7 +654,7 @@ backtrace:
                 }
             }
         };
-        let function = Function::new(func.id, instrs, FunctionKind::Normal, Ok(sig));
+        let function = Function::new(func.id, instrs, FunctionKind::Normal, sig);
         self.push_instr(Instr::push(function));
         Ok(())
     }
@@ -667,7 +670,7 @@ backtrace:
                 modified.modifier.value,
                 modified.modifier.span.clone(),
                 true,
-            );
+            )?;
             let instrs = self.new_functions.pop().unwrap();
             match instrs_signature(&instrs) {
                 Ok(sig) => {
@@ -675,7 +678,7 @@ backtrace:
                         FunctionId::Anonymous(modified.modifier.span),
                         instrs,
                         FunctionKind::Normal,
-                        Ok(sig),
+                        sig,
                     );
                     self.push_instr(Instr::push(func));
                 }
@@ -689,25 +692,33 @@ backtrace:
         }
         Ok(())
     }
-    fn primitive(&mut self, prim: Primitive, span: CodeSpan, call: bool) {
+    fn primitive(&mut self, prim: Primitive, span: CodeSpan, call: bool) -> UiuaResult {
         let span = self.add_span(span);
         if call || prim.as_constant().is_some() {
             self.push_instr(Instr::Prim(prim, span));
         } else {
-            self.push_instr(Instr::push(Function::new(
-                FunctionId::Primitive(prim),
-                [Instr::Prim(prim, span)],
-                FunctionKind::Normal,
-                if let Some((args, outputs)) = prim.args().zip(prim.outputs()) {
-                    Ok(Signature::new(args as usize, outputs as usize))
-                } else {
-                    Err(format!("{prim} has no signature"))
-                },
-            )));
+            let instrs = [Instr::Prim(prim, span)];
+            let func =
+                Function::new_inferred(FunctionId::Primitive(prim), instrs, FunctionKind::Normal);
+            match func {
+                Ok(func) => self.push_instr(Instr::push(func)),
+                Err(e) => {
+                    return Err(self.error(format!(
+                        "{prim} cannot be used here because it does \
+                        not have a well-defined signature: {e}"
+                    )))
+                }
+            }
         }
+        Ok(())
     }
     fn exec_global_instrs(&mut self, instrs: Vec<Instr>) -> UiuaResult {
-        let func = Function::new_inferred(FunctionId::Main, instrs, FunctionKind::Normal);
+        let func = Function::new(
+            FunctionId::Main,
+            instrs,
+            FunctionKind::Normal,
+            Signature::new(0, 0),
+        );
         self.exec(StackFrame {
             function: Arc::new(func),
             call_span: 0,

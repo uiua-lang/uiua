@@ -215,6 +215,7 @@ sys_op! {
     (1(0), AudioPlay, "&ap", "audio - play"),
     /// Get the sample rate of the audio output backend
     (0, AudioSampleRate, "&asr", "audio - sample rate"),
+    (1(0), AudioStream, "&ast", "audio - stream"),
     /// Sleep for n seconds
     ///
     /// On the web, this example will hang for 1 second.
@@ -266,6 +267,8 @@ impl From<Handle> for Value {
         (handle.0 as f64).into()
     }
 }
+
+type AudioStreamFn = Box<dyn FnMut(Vec<f64>) -> UiuaResult<Vec<[f64; 2]>> + Send>;
 
 #[allow(unused_variables)]
 pub trait SysBackend: Any + Send + Sync + 'static {
@@ -353,6 +356,10 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn audio_sample_rate(&self) -> u32 {
         44100
     }
+    fn set_audio_stream_time(&self, time: f64) {}
+    fn stream_audio(&self, f: AudioStreamFn) -> Result<(), String> {
+        Err("Streaming audio not supported in this environment".into())
+    }
     fn tcp_listen(&self, addr: &str) -> Result<Handle, String> {
         Err("TCP listeners are not supported in this environment".into())
     }
@@ -413,6 +420,8 @@ struct GlobalNativeSys {
     threads: DashMap<Handle, JoinHandle<UiuaResult<Vec<Value>>>>,
     #[cfg(feature = "audio")]
     audio_thread_handles: lockfree::queue::Queue<JoinHandle<()>>,
+    #[cfg(feature = "audio")]
+    audio_stream_time: Mutex<Option<f64>>,
     colored_errors: DashMap<String, String>,
 }
 
@@ -432,6 +441,8 @@ impl Default for GlobalNativeSys {
             threads: DashMap::new(),
             #[cfg(feature = "audio")]
             audio_thread_handles: lockfree::queue::Queue::new(),
+            #[cfg(feature = "audio")]
+            audio_stream_time: Mutex::new(None),
             colored_errors: DashMap::new(),
         }
     }
@@ -628,6 +639,7 @@ impl SysBackend for NativeSys {
                         };
                         mixer.add(source.resample());
                         mixer.block();
+                        send.send(Ok(())).unwrap();
                     }
                     Err(e) => {
                         send.send(Err(format!(
@@ -648,6 +660,59 @@ impl SysBackend for NativeSys {
             })
             .map(|config| config.sample_rate().0)
             .unwrap_or(44100)
+    }
+    #[cfg(feature = "audio")]
+    fn set_audio_stream_time(&self, time: f64) {
+        *NATIVE_SYS.audio_stream_time.lock() = Some(time);
+    }
+    #[cfg(feature = "audio")]
+    fn stream_audio(&self, f: AudioStreamFn) -> Result<(), String> {
+        use hodaun::*;
+        struct TheSource {
+            time: f64,
+            samples: std::vec::IntoIter<[f64; 2]>,
+            f: AudioStreamFn,
+        }
+        impl Source for TheSource {
+            type Frame = Stereo;
+            fn next(&mut self, sample_rate: f64) -> Option<Self::Frame> {
+                if let Some([left, right]) = self.samples.next() {
+                    return Some(Stereo { left, right });
+                }
+                const LEN: usize = 10000;
+                let mut times = Vec::with_capacity(LEN);
+                for _ in 0..LEN {
+                    times.push(self.time);
+                    self.time += 1.0 / sample_rate;
+                }
+                if NATIVE_SYS.audio_stream_time.lock().is_some() {
+                    println!("<audio time>:{}", self.time);
+                }
+                match (self.f)(times) {
+                    Ok(samples) => {
+                        self.samples = samples.into_iter();
+                        self.next(sample_rate)
+                    }
+                    Err(e) => {
+                        eprintln!("{e}");
+                        None
+                    }
+                }
+            }
+        }
+        let source = TheSource {
+            time: NATIVE_SYS.audio_stream_time.lock().unwrap_or(0.0),
+            samples: Vec::new().into_iter(),
+            f,
+        };
+        match default_output::<Stereo>() {
+            Ok(mut mixer) => {
+                mixer.add(source);
+                mixer.block();
+                Ok(())
+            }
+            Err(e) => Err(format!("Failed to initialize audio output stream: {e}").to_string()),
+        }
     }
     fn tcp_listen(&self, addr: &str) -> Result<Handle, String> {
         let handle = NATIVE_SYS.new_handle();
@@ -1092,6 +1157,37 @@ impl SysOp {
             SysOp::AudioSampleRate => {
                 let sample_rate = env.backend.audio_sample_rate();
                 env.push(f64::from(sample_rate));
+            }
+            SysOp::AudioStream => {
+                let f = env
+                    .pop(1)?
+                    .into_function()
+                    .map_err(|_| env.error("Audio stream must be a function"))?;
+                let mut stream_env = env.clone();
+                if let Err(e) = env.backend.stream_audio(Box::new(move |time_array| {
+                    let time_array = Array::<f64>::from(time_array);
+                    stream_env.push(time_array);
+                    stream_env.push(f.clone());
+                    stream_env.call()?;
+                    let samples = &stream_env.pop(1)?;
+                    let samples = samples.as_num_array().ok_or_else(|| {
+                        stream_env.error("Audio stream function must return a numeric array")
+                    })?;
+                    match samples.shape() {
+                        [_] => Ok(samples.data.iter().map(|&x| [x, x]).collect()),
+                        [_, 2] => Ok(samples
+                            .data
+                            .chunks(2)
+                            .map(|s| [s[0], s.get(1).copied().unwrap_or(0.0)])
+                            .collect()),
+                        _ => Err(stream_env.error(format!(
+                            "Audio stream function must return a rank 1 or 2 array, but returned a rank {} array",
+                            samples.rank()
+                        ))),
+                    }
+                })) {
+                    return Err(env.error(e));
+                }
             }
             SysOp::Sleep => {
                 let seconds = env

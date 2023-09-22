@@ -3,10 +3,14 @@ compile_error!("To compile the uiua interpreter binary, you must enable the `bin
 
 use std::{
     env, fs,
-    io::{self, stderr, Write},
+    io::{self, stderr, BufRead, BufReader, Write},
     path::{Path, PathBuf},
-    process::{exit, Child, Command},
-    sync::mpsc::channel,
+    process::{exit, Child, Command, Stdio},
+    sync::{
+        atomic::{self, AtomicU64},
+        mpsc::channel,
+        Arc,
+    },
     thread::sleep,
     time::Duration,
 };
@@ -78,12 +82,16 @@ fn run() -> UiuaResult {
                     path,
                     no_format,
                     mode,
+                    audio_time,
                 } => {
                     if let Some(path) = path.or_else(working_file_path) {
                         if !no_format {
                             format_file(&path, &config)?;
                         }
                         let mode = mode.unwrap_or(RunMode::Normal);
+                        if let Some(time) = audio_time {
+                            NativeSys.set_audio_stream_time(time);
+                        }
                         let mut rt = Uiua::with_native_sys().with_mode(mode);
                         rt.load_file(path)?;
                         NativeSys.teardown();
@@ -172,6 +180,8 @@ fn watch(open_path: &Path) -> io::Result<()> {
     println!("Watching for changes... (end with ctrl+C, use `uiua help` to see options)");
 
     let config = FormatConfig::default();
+    let audio_time = Arc::new(AtomicU64::new(0f64.to_bits()));
+    let audio_time_clone = audio_time.clone();
     let run = |path: &Path| -> io::Result<()> {
         if let Some(mut child) = WATCH_CHILD.lock().take() {
             _ = child.kill();
@@ -187,12 +197,15 @@ fn watch(open_path: &Path) -> io::Result<()> {
                         return Ok(());
                     }
                     clear_watching();
+                    let audio_time =
+                        f64::from_bits(audio_time_clone.load(atomic::Ordering::Relaxed))
+                            .to_string();
                     *WATCH_CHILD.lock() = Some(
                         Command::new(env::current_exe().unwrap())
                             .arg("run")
                             .arg(path)
-                            .arg("--no-format")
-                            .args(["--mode", "all"])
+                            .args(["--no-format", "--mode", "all", "--audio-time", &audio_time])
+                            .stdout(Stdio::piped())
                             .spawn()
                             .unwrap(),
                     );
@@ -229,6 +242,20 @@ fn watch(open_path: &Path) -> io::Result<()> {
         }
         let mut child = WATCH_CHILD.lock();
         if let Some(ch) = &mut *child {
+            // Print lines from child stdout
+            for line in BufReader::new(ch.stdout.as_mut().unwrap()).lines() {
+                let line = line?;
+                if let Some((key, val)) = line.split_once(':') {
+                    if key == "<audio time>" {
+                        if let Ok(time) = val.trim().parse::<f64>() {
+                            audio_time.store(time.to_bits(), atomic::Ordering::Relaxed);
+                            continue;
+                        }
+                    }
+                }
+                println!("{line}");
+            }
+            // End the child if it's done
             if ch.try_wait()?.is_some() {
                 print_watching();
                 *child = None;
@@ -248,6 +275,8 @@ enum App {
         no_format: bool,
         #[clap(long, help = "Run the file in a specific mode")]
         mode: Option<RunMode>,
+        #[clap(long, help = "The start time of audio streaming")]
+        audio_time: Option<f64>,
     },
     #[clap(about = "Format and test a file")]
     Test { path: Option<PathBuf> },

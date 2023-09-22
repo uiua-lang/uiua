@@ -73,8 +73,20 @@ impl Value {
             _ => None,
         }
     }
+    pub fn into_func_array(self) -> Result<Array<Arc<Function>>, Self> {
+        match self {
+            Self::Func(array) => Ok(array),
+            _ => Err(self),
+        }
+    }
     pub fn as_function(&self) -> Option<&Arc<Function>> {
         self.as_func_array().and_then(Array::as_scalar)
+    }
+    pub fn into_function(self) -> Result<Arc<Function>, Self> {
+        match self.into_func_array() {
+            Ok(array) => array.into_scalar().map_err(Into::into),
+            Err(value) => Err(value),
+        }
     }
     pub fn into_rows(self) -> Box<dyn Iterator<Item = Self>> {
         match self {

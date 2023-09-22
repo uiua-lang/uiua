@@ -105,11 +105,7 @@ mod server {
     use std::{collections::BTreeMap, sync::Arc};
 
     use dashmap::DashMap;
-    use tower_lsp::{
-        jsonrpc::{Error, Result},
-        lsp_types::*,
-        *,
-    };
+    use tower_lsp::{jsonrpc::Result, lsp_types::*, *};
 
     use super::*;
 
@@ -361,14 +357,15 @@ mod server {
             } else {
                 return Ok(None);
             };
-            let formatted = format_str(
+            let Ok(formatted) = format_str(
                 &doc.input,
                 &FormatConfig {
                     multiline_indent: params.options.tab_size as usize,
                     ..Default::default()
                 },
-            )
-            .map_err(|_| Error::parse_error())?;
+            ) else {
+                return Ok(None);
+            };
             let range = Range::new(Position::new(0, 0), Position::new(u32::MAX, u32::MAX));
             Ok(Some(vec![TextEdit {
                 range,

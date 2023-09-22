@@ -3,14 +3,14 @@
   - Images
   - System functions
   - Guided examples
-- Test suite
+- Test suite - a bunch of Uiua code that shouldn't error
 - Optimizations
-  - Dyadic level
-  - Windowed reduce?
-  - Row windows
+  - Dyadic level - The dyadic case of level should have its own function
+  - Windowed reduce? - `/f◫` could be optimized, but is it necessary?
+  - Row windows - `≡f◫` should be optimized
 - Multimedia
   - Sound input
-  - Webcam input?
+  - Webcam input
 - System APIs
   - UDP Sockets
   - FFI

@@ -330,7 +330,7 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example=" ∴[1_2 3_4]\n⧻△[1_2 3_4]"/>
 
         <h2 id="pervasion">"Pervasion"</h2>
-        <p>"Most operations that apply to scalars are what is called "<em>"pervasive"</em>" when it comes to arrays. This means that the operations automatically applies to every item in the array."</p>
+        <p>"Most operations that apply to scalars are what is called "<em>"pervasive"</em>" when it comes to arrays. This means that the operation automatically applies to every item in the array."</p>
         <Editor example="+1 1_2_3"/>
         <Editor example="√[4 9 16]"/>
         <Editor example="+1_2_3 4_5_6"/>
@@ -364,7 +364,7 @@ fn TutorialArrays() -> impl IntoView {
         <h2 id="array-model">"The Array Model"</h2>
         <p>"For curious array afficionados, Uiua uses an array model resembling "<a href="https://aplwiki.com/wiki/Box">"J's Boxed array model"</a>"."</p>
         <p>"All arrays are flat and homogenous. Arrays always have a rectangular shape. Different types of data, like numbers and characters, cannot be mixed in the same array."</p>
-        <p>"However, there is an escape hatch for when you really want jagged, nested, or mixed-type arrays. In Uiua, an array of heterogenous values can be simulated with an array of functions. These functions can be used are similarly to J's boxes."</p>
+        <p>"However, there is an escape hatch for when you really want jagged, nested, or mixed-type arrays. In Uiua, an array of heterogenous values can be simulated with an array of functions. These functions can be used similarly to J's boxes."</p>
         <Editor example="[1 2 [7 8 9]]"/>
         <p>"By using "<PrimCode prim=Constant/>", we can turn any value into a function that pushes that value onto the stack. We can then put these functions into an array like any other."</p>
         <Editor example="[□1 □2 □[7 8 9]]"/>

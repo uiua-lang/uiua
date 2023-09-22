@@ -431,13 +431,7 @@ impl Primitive {
                 let f = env.pop(FunctionArg(1))?;
                 let handler = env.pop(FunctionArg(2))?;
                 let f_args = if let Some(f) = f.as_function() {
-                    f.signature()
-                        .map_err(|e| {
-                            env.error(format!(
-                                "Try's function's signature could not be inferred: {e}"
-                            ))
-                        })?
-                        .args
+                    f.signature().args
                 } else {
                     0
                 };
@@ -501,12 +495,7 @@ impl Primitive {
             }
             Primitive::Spawn => {
                 let f = env.pop("thread function")?;
-                let sig = f.signature().map_err(|e| {
-                    env.error(format!(
-                        "Spawn's function signature could not be inferred: {e}"
-                    ))
-                })?;
-                let handle = env.spawn(sig.args, move |env| {
+                let handle = env.spawn(f.signature().args, move |env| {
                     env.push(f);
                     env.call()
                 })?;

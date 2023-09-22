@@ -418,11 +418,8 @@ backtrace:
                 if let (Prim(Under, span), Some(((Couple, _), g_func))) =
                     (&instr, f.as_primitive().zip(g.as_function()))
                 {
-                    if let Ok(Signature {
-                        args: 1,
-                        outputs: 1,
-                    }) = g_func.signature()
-                    {
+                    let g_sig = g_func.signature();
+                    if g_sig.args == 1 && g_sig.outputs == 1 {
                         let g = g.clone();
                         instrs.pop();
                         instrs.pop();

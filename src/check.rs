@@ -45,21 +45,21 @@ enum BasicValue<'a> {
 }
 
 impl<'a> BasicValue<'a> {
-    fn signature(&self) -> Result<Signature, String> {
+    fn signature(&self) -> Signature {
         match self {
             BasicValue::Func(f) => f.signature(),
-            BasicValue::Num(_) => Ok(Signature {
+            BasicValue::Num(_) => Signature {
                 args: 0,
                 outputs: 1,
-            }),
-            BasicValue::Arr(_) => Ok(Signature {
+            },
+            BasicValue::Arr(_) => Signature {
                 args: 0,
                 outputs: 1,
-            }),
-            BasicValue::Other => Ok(Signature {
+            },
+            BasicValue::Other => Signature {
                 args: 0,
                 outputs: 1,
-            }),
+            },
         }
     }
     fn from_val(value: &'a Value) -> Self {
@@ -109,7 +109,7 @@ impl<'a> VirtualEnv<'a> {
                 Distribute | Table | Cross => self.handle_mod(prim, Some(2), Some(1), 2, None)?,
                 Group | Partition => {
                     if let BasicValue::Func(f) = self.pop()? {
-                        let sig = f.signature()?;
+                        let sig = f.signature();
                         if sig.outputs == 0 && sig.args != 0 {
                             return Err(format!("{prim}'s function {f} has no outputs"));
                         }
@@ -143,7 +143,7 @@ impl<'a> VirtualEnv<'a> {
                         if n.fract() == 0.0 && n >= 0.0 {
                             let n = n as usize;
                             if let BasicValue::Func(f) = f {
-                                let sig = f.signature()?;
+                                let sig = f.signature();
                                 let m_args = sig.outputs * n;
                                 self.stack.push(BasicValue::Func(f));
                                 self.handle_mod(
@@ -169,8 +169,8 @@ impl<'a> VirtualEnv<'a> {
                     self.pop()?;
                     self.pop()?;
                     self.set_min_height();
-                    let f_out = f.signature()?.outputs.max(1);
-                    let g_out = g.signature()?.outputs.max(1);
+                    let f_out = f.signature().outputs.max(1);
+                    let g_out = g.signature().outputs.max(1);
                     for _ in 0..f_out + g_out {
                         self.stack.push(BasicValue::Other);
                     }
@@ -183,9 +183,9 @@ impl<'a> VirtualEnv<'a> {
                     self.pop()?;
                     self.pop()?;
                     self.set_min_height();
-                    let f_out = f.signature()?.outputs.max(1);
-                    let g_out = g.signature()?.outputs.max(1);
-                    let h_out = h.signature()?.outputs.max(1);
+                    let f_out = f.signature().outputs.max(1);
+                    let g_out = g.signature().outputs.max(1);
+                    let h_out = h.signature().outputs.max(1);
                     for _ in 0..f_out + g_out + h_out {
                         self.stack.push(BasicValue::Other);
                     }
@@ -200,15 +200,15 @@ impl<'a> VirtualEnv<'a> {
                         self.pop()?;
                     }
                     self.set_min_height();
-                    for _ in 0..f.signature()?.outputs {
+                    for _ in 0..f.signature().outputs {
                         self.stack.push(BasicValue::Other);
                     }
                 }
                 Try => {
                     let f = self.pop()?;
                     let handler = self.pop()?;
-                    let f_sig = f.signature()?;
-                    let handler_sig = handler.signature()?;
+                    let f_sig = f.signature();
+                    let handler_sig = handler.signature();
                     if !f_sig.compatible_with(handler_sig) {
                         return Err(format!(
                             "try's functions have incompatible signatures {f_sig} and {handler_sig}"
@@ -226,7 +226,7 @@ impl<'a> VirtualEnv<'a> {
                 Invert => {
                     if let BasicValue::Func(f) = self.pop()? {
                         if let Some(inverted) = f.inverse() {
-                            let sig = inverted.signature()?;
+                            let sig = inverted.signature();
                             for _ in 0..sig.args {
                                 self.pop()?;
                             }
@@ -247,9 +247,9 @@ impl<'a> VirtualEnv<'a> {
                     let g = self.pop()?;
                     if let (BasicValue::Func(f), BasicValue::Func(g)) = (f, g) {
                         if let Some((before, after)) = f.clone().under() {
-                            let g_sig = g.signature()?;
-                            let before_sig = before.signature()?;
-                            let after_sig = after.signature()?;
+                            let g_sig = g.signature();
+                            let before_sig = before.signature();
+                            let after_sig = after.signature();
                             self.handle_sig(before_sig)?;
                             self.handle_sig(g_sig)?;
                             self.handle_sig(after_sig)?;
@@ -264,7 +264,7 @@ impl<'a> VirtualEnv<'a> {
                 Fill => {
                     self.pop()?;
                     let f = self.pop()?;
-                    self.handle_sig(f.signature()?)?;
+                    self.handle_sig(f.signature())?;
                 }
                 Dup => {
                     let val = self.pop()?;
@@ -392,9 +392,7 @@ impl<'a> VirtualEnv<'a> {
     fn handle_call(&mut self, explicit: bool) -> Result<(), String> {
         match self.pop()? {
             BasicValue::Func(f) => {
-                let sig = f
-                    .signature()
-                    .map_err(|e| format!("call's function {f:?} has indeterminate sig: {e}"))?;
+                let sig = f.signature();
                 for _ in 0..sig.args {
                     self.pop()?;
                 }
@@ -415,12 +413,12 @@ impl<'a> VirtualEnv<'a> {
                 let mut max_args = 0;
                 let mut max_outputs = 0;
                 for f in &fs {
-                    let sig = f.signature()?;
+                    let sig = f.signature();
                     max_args = max_args.max(sig.args);
                     max_outputs = max_outputs.max(sig.outputs);
                 }
                 for win in fs.windows(2) {
-                    if !win[0].signature()?.compatible_with(win[1].signature()?) {
+                    if !win[0].signature().compatible_with(win[1].signature()) {
                         return Err("call with incompatible functions".into());
                     }
                 }
@@ -446,7 +444,7 @@ impl<'a> VirtualEnv<'a> {
         m_outputs: Option<usize>,
     ) -> Result<(), String> {
         if let BasicValue::Func(f) = self.pop()? {
-            let sig = f.signature()?;
+            let sig = f.signature();
             if let Some(f_args) = f_args {
                 if sig.args != f_args {
                     return Err(format!(
@@ -478,7 +476,7 @@ impl<'a> VirtualEnv<'a> {
     }
     fn handle_variadic_mod(&mut self, prim: &Primitive) -> Result<(), String> {
         if let BasicValue::Func(f) = self.pop()? {
-            let sig = f.signature()?;
+            let sig = f.signature();
             if sig.outputs != 1 {
                 return Err(format!("{prim}'s function {f:?} did not return 1 value",));
             }

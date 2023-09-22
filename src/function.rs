@@ -296,8 +296,8 @@ impl Function {
     }
     /// Get how many arguments this function pops off the stack and how many it pushes.
     /// Returns `None` if either of these values are dynamic.
-    pub fn signature(&self) -> Result<Signature, String> {
-        self.signature.clone()
+    pub fn signature(&self) -> Signature {
+        self.signature.clone().unwrap()
     }
     pub fn is_constant(&self) -> bool {
         matches!(&*self.instrs, [Instr::Push(_)])

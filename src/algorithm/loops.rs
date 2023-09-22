@@ -6,7 +6,6 @@ use crate::{
     algorithm::pervade::bin_pervade_generic,
     array::{Array, ArrayValue, Shape},
     cowslice::cowslice,
-    function::Signature,
     primitive::Primitive,
     run::{ArrayArg, FunctionArg},
     value::Value,
@@ -97,8 +96,8 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
 }
 
 fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
-    match f.signature().map(|sig| sig.args) {
-        Ok(0 | 1) => {
+    match f.signature().args {
+        0 | 1 => {
             for row in xs.into_rows() {
                 env.push(row);
                 env.push(f.clone());
@@ -107,7 +106,7 @@ fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> Uiu
                 }
             }
         }
-        Ok(2) | Err(_) => {
+        2 => {
             let mut rows = xs.into_rows();
             let mut acc = init
                 .or_else(|| rows.next())
@@ -123,7 +122,7 @@ fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> Uiu
             }
             env.push(acc);
         }
-        Ok(args) => {
+        args => {
             return Err(env.error(format!(
                 "Cannot reduce a function that takes {args} arguments"
             )))
@@ -246,7 +245,7 @@ fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
 pub fn each(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(FunctionArg(1))?;
-    let sig = f.signature().unwrap_or(Signature::new(1, 0));
+    let sig = f.signature();
     let output = match sig.outputs {
         0 => false,
         1 => true,
@@ -427,7 +426,7 @@ fn eachn_0(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
 pub fn rows(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(FunctionArg(1))?;
-    let sig = f.signature().unwrap_or(Signature::new(1, 0));
+    let sig = f.signature();
     let output = match sig.outputs {
         0 => false,
         1 => true,
@@ -1056,8 +1055,8 @@ where
     G::IntoIter: ExactSizeIterator,
 {
     let mut groups = groups.into_iter();
-    match f.signature().map(|sig| sig.args) {
-        Ok(0 | 1) | Err(_) => {
+    match f.signature().args {
+        0 | 1 => {
             let mut rows = Vec::with_capacity(groups.len());
             for group in groups {
                 env.push(group);
@@ -1069,7 +1068,7 @@ where
             let res = Value::from_row_values(rows, env)?;
             env.push(res);
         }
-        Ok(2) => {
+        2 => {
             let mut acc = groups
                 .next()
                 .ok_or_else(|| env.error(format!("Cannot reduce empty {name} result")))?;
@@ -1084,7 +1083,7 @@ where
             }
             env.push(acc);
         }
-        Ok(args) => {
+        args => {
             return Err(env.error(format!(
                 "Cannot {name} with a function that takes {args} arguments"
             )))

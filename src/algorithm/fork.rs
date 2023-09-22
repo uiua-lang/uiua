@@ -27,10 +27,7 @@ pub fn fork(env: &mut Uiua) -> UiuaResult {
     let a = env.pop(ArrayArg(1))?;
     let b = env.pop(ArrayArg(2))?;
 
-    let f_args = f.signature().map(|sig| sig.args).unwrap_or(2);
-    let g_args = g.signature().map(|sig| sig.args).unwrap_or(2);
-
-    match g_args {
+    match g.signature().args {
         0 | 1 => {
             env.push(b.clone());
             env.push(g);
@@ -50,7 +47,7 @@ pub fn fork(env: &mut Uiua) -> UiuaResult {
         }
     }
 
-    match f_args {
+    match f.signature().args {
         0 | 1 => {
             env.push(a);
             env.push(f);
@@ -81,11 +78,7 @@ pub fn trident(env: &mut Uiua) -> UiuaResult {
     let b = env.pop(ArrayArg(2))?;
     let c = env.pop(ArrayArg(3))?;
 
-    let f_args = f.signature().map(|sig| sig.args).unwrap_or(3);
-    let g_args = g.signature().map(|sig| sig.args).unwrap_or(3);
-    let h_args = h.signature().map(|sig| sig.args).unwrap_or(3);
-
-    match h_args {
+    match h.signature().args {
         0 | 1 => {
             env.push(c.clone());
             env.push(h);
@@ -112,7 +105,7 @@ pub fn trident(env: &mut Uiua) -> UiuaResult {
         }
     }
 
-    match g_args {
+    match g.signature().args {
         0 | 1 => {
             env.push(b.clone());
             env.push(g);
@@ -139,7 +132,7 @@ pub fn trident(env: &mut Uiua) -> UiuaResult {
         }
     }
 
-    match f_args {
+    match f.signature().args {
         0 | 1 => {
             env.push(a);
             env.push(f);

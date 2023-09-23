@@ -174,7 +174,7 @@ pub fn MainPage() -> impl IntoView {
         </div>
         <div>
             <h2>"Getting Started"</h2>
-            <p>"For more examples of what Uiua code looks like and what it can do. See the examples at the top of this page."</p>
+            <p>"For more examples of what Uiua code looks like and what it can do. See the examples in the editor at the top of this page."</p>
             <p>"For a quick overview of how the language works, see the "<A href="/tour">"Language Tour"</A>"."</p>
             <p>"For a full tutorial, see the "<A href="/docs#tutorial">"Tutorial"</A>"."</p>
             <p>"For a reference of all the built-in functions, the "<A href="/docs">"Documentation"</A>" has a "<A href="/docs#functions">"full list"</A>"."</p>

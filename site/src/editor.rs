@@ -22,7 +22,7 @@ use web_sys::{Event, HtmlDivElement, MouseEvent, Node};
 
 use crate::{
     backend::{OutputItem, WebBackend},
-    element, prim_class,
+    element, prim_class, Prim,
 };
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -609,7 +609,7 @@ pub fn Editor<'a>(
     };
 
     // Glyph hover doc
-    let (glyph_doc, set_glyph_doc) = create_signal(String::new());
+    let (glyph_doc, set_glyph_doc) = create_signal(View::default());
     let onmouseleave = move |_| {
         _ = glyph_doc_element().style().set_property("display", "none");
     };
@@ -646,7 +646,14 @@ pub fn Editor<'a>(
             };
             let onmouseover = move |_| {
                 if let Some(doc) = p.doc() {
-                    set_glyph_doc.set(doc.short_text().into_owned());
+                    set_glyph_doc.set(
+                        view! {
+                            <Prim prim=p/>
+                            <br/>
+                            { doc.short_text().into_owned() }
+                        }
+                        .into_view(),
+                    );
                     _ = glyph_doc_element().style().remove_property("display");
                 }
             };

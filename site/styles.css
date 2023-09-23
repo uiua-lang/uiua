@@ -501,22 +501,22 @@ li {
 
 .glyph-doc {
     position: absolute;
-    top: 1em;
+    top: min(10%, 1em);
     left: 10%;
     padding: 0.5em;
-    font-size: 1em;
+    font-size: 0.75em;
     border-radius: 0.5em;
     max-width: 80%;
     color: #eee;
-    background-color: #000b;
+    background-color: #000c;
     white-space: pre-wrap;
     font-family: "Code Font", monospace;
     z-index: 1;
 }
 
 .glyph-doc-ctrl-click {
-    font-size: 0.6em;
-    color: #888;
+    font-size: 0.7em;
+    color: #aaa;
 }
 
 .code-font {

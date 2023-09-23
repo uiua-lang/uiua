@@ -765,11 +765,10 @@ primitive!(
     /// ex: ⊗ 2 [1_2_3 4_5_6]
     ///
     /// You can use the returned indices with [select] to get the rows that were found.
-    /// If you expect one of the searched-for rows to be missing, you can [join] a default item to the end of the [select]ed-from array.
-    /// ex: of ← .[1 2 3 4 5]
-    ///   : in ← [2 3 5 7 11 13]
-    ///   : .⊗of in
-    ///   : ⊏∶⊂in∞
+    /// If you expect one of the searched-for rows to be missing, you can use [fill] to set a default value.
+    /// ex: a ← [2 3 5 7 11 13]
+    ///   : .⊗,a [1 2 3 4 5]
+    ///   : ⍛∞⊏∶a
     ///
     /// [indexof] is closely related to [member].
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),

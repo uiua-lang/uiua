@@ -712,10 +712,12 @@ impl<T: ArrayValue> Array<T> {
                     picked = vec![fill; row_len].into();
                     continue;
                 }
-                return Err(env.error(format!(
-                    "Index {i} is out of bounds of length {s} (dimension {d}) in shape {}",
-                    self.format_shape()
-                )));
+                return Err(env
+                    .error(format!(
+                        "Index {i} is out of bounds of length {s} (dimension {d}) in shape {}",
+                        self.format_shape()
+                    ))
+                    .fill());
             }
             let i = if i >= 0 { i as usize } else { (s + i) as usize };
             let start = i * row_len;
@@ -1291,10 +1293,12 @@ impl<T: ArrayValue> Array<T> {
                         selected.extend(repeat(fill).take(row_len));
                         continue;
                     }
-                    return Err(env.error(format!(
-                        "Index {} is out of bounds of length {}",
-                        i, row_count
-                    )));
+                    return Err(env
+                        .error(format!(
+                            "Index {} is out of bounds of length {}",
+                            i, row_count
+                        ))
+                        .fill());
                 }
                 ui
             } else {
@@ -1304,10 +1308,12 @@ impl<T: ArrayValue> Array<T> {
                         selected.extend(repeat(fill).take(row_len));
                         continue;
                     }
-                    return Err(env.error(format!(
-                        "Index {} is out of bounds of length {}",
-                        i, row_count
-                    )));
+                    return Err(env
+                        .error(format!(
+                            "Index {} is out of bounds of length {}",
+                            i, row_count
+                        ))
+                        .fill());
                 }
                 pos_i
             };
@@ -1338,19 +1344,23 @@ impl<T: ArrayValue> Array<T> {
             let i = if i >= 0 {
                 let ui = i as usize;
                 if ui >= into_row_count {
-                    return Err(env.error(format!(
-                        "Index {} is out of bounds of length {}",
-                        i, into_row_count
-                    )));
+                    return Err(env
+                        .error(format!(
+                            "Index {} is out of bounds of length {}",
+                            i, into_row_count
+                        ))
+                        .fill());
                 }
                 ui
             } else {
                 let pos_i = (into_row_count as isize + i) as usize;
                 if pos_i >= into_row_count {
-                    return Err(env.error(format!(
-                        "Index {} is out of bounds of length {}",
-                        i, into_row_count
-                    )));
+                    return Err(env
+                        .error(format!(
+                            "Index {} is out of bounds of length {}",
+                            i, into_row_count
+                        ))
+                        .fill());
                 }
                 pos_i
             };

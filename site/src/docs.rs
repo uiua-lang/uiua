@@ -100,7 +100,6 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         set_clear_button.set(if text.is_empty() {
             None
         } else {
-            // let (redirect, set_redirect) = create_signal( None);
             let clear_search = move |_| {
                 let search_input = element::<HtmlInputElement>("function-search");
                 search_input.set_value("");

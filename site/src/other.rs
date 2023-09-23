@@ -1,7 +1,7 @@
 use leptos::*;
 use uiua::{primitive::Primitive, SysOp};
 
-use crate::{editor::Editor, PrimCode};
+use crate::{editor::Editor, Prim};
 
 #[component]
 pub fn Design() -> impl IntoView {
@@ -15,8 +15,8 @@ pub fn Design() -> impl IntoView {
         <h3>"Combinators"</h3>
         <p>"When I first started developing Uiua, it was neither stack-oriented nor array-oriented. What it "<em>"did"</em>" focus a lot on was "<em>"combinators"</em>". I had this whole heirarchy of language-level operators that let you construct arbitrarily complex combinators relatively succinctly."</p>
         <p>"I discovered what a lot of others have discovered when delving deep into tacit code: it's really hard to read and write and reason about."</p>
-        <p>"Eventually, I moved to a stack-oriented model and discovered that you can write almost any 1 or 2 argument combinator with just "<PrimCode prim=Dup/>", "<PrimCode prim=Over/>", and "<PrimCode prim=Flip/>"."</p>
-        <p>"Of course, I also made the discovery that juggling 3 or more values on the stack also imposes a high cognitive load on the developer, but I added "<PrimCode prim=Roll/>" and "<PrimCode prim=Unroll/>" anyway, because they are super useful. "<PrimCode prim=Fork/>" is based on the fork structure from other array languages, and it inspired my own invention, "<PrimCode prim=Trident/>"."</p>
+        <p>"Eventually, I moved to a stack-oriented model and discovered that you can write almost any 1 or 2 argument combinator with just "<Prim prim=Dup/>", "<Prim prim=Over/>", and "<Prim prim=Flip/>"."</p>
+        <p>"Of course, I also made the discovery that juggling 3 or more values on the stack also imposes a high cognitive load on the developer, but I added "<Prim prim=Roll/>" and "<Prim prim=Unroll/>" anyway, because they are super useful. "<Prim prim=Fork/>" is based on the fork structure from other array languages, and it inspired my own invention, "<Prim prim=Trident/>"."</p>
         <br/>
         <h3>"Expressions"</h3>
         <p>"Long tacit expressions in most array languages can get very unwieldy. Because binary operations are infix, you have to parse the tree structure in your head before you can start determining the order of operations."</p>
@@ -35,19 +35,19 @@ pub fn Design() -> impl IntoView {
 
         <h2 id="array-model">"The Array Model"</h2>
         <p>"Uiua's array model went through a lot of iterations during development. At first, it used a flat, vector-based model ala K and Q. Then, I switched to BQN's Based array model. That was really complicated to implement primitives for, so I tried something else."</p>
-        <p>"I switched to a flat array model with \"fill elements\". While arrays could not be nested, operations which would create nested arrays in other languages would instead create jagged arrays with special fill elements at the end of some rows. While this worked, the code was scattered everywhere with checks for fill elements, because they had to propogate through everything. It also had the unfortunate effect of making byte arrays take up 2 bytes of space, since a bit had to be used to indicate whether the byte was a fill element or not. Also, a lot of operations, such as "<PrimCode prim=Transpose/>", don't really make a lot of sense with jagged arrays."</p>
-        <p>"Finally, I switched to the current model, which resembles J's Boxed array model. While you can do something resembling J's "<code>"box <"</code>" using "<PrimCode prim=Constant/>" (and "<code>"open >"</code>" with "<PrimCode prim=Call/>"), I designed functions like "<PrimCode prim=Partition/>" and "<PrimCode prim=Group/>" to allow selecting uniformly-shaped rows from a non-uniform list in an effort to minimize interaction with jagged data."</p>
+        <p>"I switched to a flat array model with \"fill elements\". While arrays could not be nested, operations which would create nested arrays in other languages would instead create jagged arrays with special fill elements at the end of some rows. While this worked, the code was scattered everywhere with checks for fill elements, because they had to propogate through everything. It also had the unfortunate effect of making byte arrays take up 2 bytes of space, since a bit had to be used to indicate whether the byte was a fill element or not. Also, a lot of operations, such as "<Prim prim=Transpose/>", don't really make a lot of sense with jagged arrays."</p>
+        <p>"Finally, I switched to the current model, which resembles J's Boxed array model. While you can do something resembling J's "<code>"box <"</code>" using "<Prim prim=Constant/>" (and "<code>"open >"</code>" with "<Prim prim=Call/>"), I designed functions like "<Prim prim=Partition/>" and "<Prim prim=Group/>" to allow selecting uniformly-shaped rows from a non-uniform list in an effort to minimize interaction with jagged data."</p>
         <p>"The fact that the stack is always available also makes putting non-uniform data in arrays less necessary."</p>
 
         <h2 id="array-model">"The Glyphs"</h2>
         <p>"Most of Uiua's glyphs were chosen for one of a few reasons:"</p>
         <ul>
-            <li>"It is a common mathematical symbol, such as "<PrimCode prim=Add/>", "<PrimCode prim=Sub/>", and "<PrimCode prim=Pi/>"."</li>
-            <li>"It is a very commonly used function and should create little line noise, such as "<PrimCode prim=Dup/>" and "<PrimCode prim=Flip/>"."</li>
-            <li>"It is used in other array languages, such as "<PrimCode prim=Reduce/>", "<PrimCode prim=Scan/>", and "<PrimCode prim=Transpose/>"."</li>
-            <li>"It kind of reminds me of what it does. Some of my favorites are "<PrimCode prim=Table/>", "<PrimCode prim=Reshape/>", "<PrimCode prim=Rotate/>", "<PrimCode prim=Deshape/>", "<PrimCode prim=Find/>", and "<PrimCode prim=Recur/>"."</li>
-            <li>"Its function is kind of abstract, but there are other related functions, so they all use related glyphs. For example, "<PrimCode prim=Fold/>" has this nice symmetry with "<PrimCode prim=Reduce/>" and "<PrimCode prim=Scan/>". The indexing/finding/grouping functions like"<PrimCode prim=Classify/>", "<PrimCode prim=Group/>", "<PrimCode prim=Deduplicate/>", etc are all circles."</li>
-            <li>"I think they look like cute little guys: "<PrimCode prim=Assert/>" and "<PrimCode prim=Try/></li>
+            <li>"It is a common mathematical symbol, such as "<Prim prim=Add/>", "<Prim prim=Sub/>", and "<Prim prim=Pi/>"."</li>
+            <li>"It is a very commonly used function and should create little line noise, such as "<Prim prim=Dup/>" and "<Prim prim=Flip/>"."</li>
+            <li>"It is used in other array languages, such as "<Prim prim=Reduce/>", "<Prim prim=Scan/>", and "<Prim prim=Transpose/>"."</li>
+            <li>"It kind of reminds me of what it does. Some of my favorites are "<Prim prim=Table/>", "<Prim prim=Reshape/>", "<Prim prim=Rotate/>", "<Prim prim=Deshape/>", "<Prim prim=Find/>", and "<Prim prim=Recur/>"."</li>
+            <li>"Its function is kind of abstract, but there are other related functions, so they all use related glyphs. For example, "<Prim prim=Fold/>" has this nice symmetry with "<Prim prim=Reduce/>" and "<Prim prim=Scan/>". The indexing/finding/grouping functions like"<Prim prim=Classify/>", "<Prim prim=Group/>", "<Prim prim=Deduplicate/>", etc are all circles."</li>
+            <li>"I think they look like cute little guys: "<Prim prim=Assert/>" and "<Prim prim=Try/></li>
         </ul>
 
         <h2 id="no-local-variables">"No Local Variables"</h2>
@@ -67,7 +67,7 @@ pub fn Design() -> impl IntoView {
         <h3>"BQN"</h3>
         <p>"The main language that inspired Uiua is "<a href="https://mlochbaum.github.io/BQN/">BQN</a>". While I had heard about APL before, BQN was my first real exposure to the power of the array paradigm. I think the language is an astounding feat of engineering. Marshall is both a genius and a great communicator."</p>
         <p>"However, as you can read above, a lot of Uiua's design decisions are responses to things I "<em>"didn't"</em>" like about BQN. There were a bunch of little pain-points that I though I could improve on."</p>
-        <p>"A lot of the behavior of Uiua's built-in functions (and the choice of which built-ins to include) is inspired by BQN's primitives. Just a few examples are "<PrimCode prim=Transpose/>", "<PrimCode prim=Classify/>", "<PrimCode prim=Group/>", and "<PrimCode prim=Take/>"."</p>
+        <p>"A lot of the behavior of Uiua's built-in functions (and the choice of which built-ins to include) is inspired by BQN's primitives. Just a few examples are "<Prim prim=Transpose/>", "<Prim prim=Classify/>", "<Prim prim=Group/>", and "<Prim prim=Take/>"."</p>
         <p>"Another thing that was largely inspired by BQN is this website! BQN's site is excellent. I really like the way it is organized and the way it presents the language. I particularly liked the built-in editor, so I made my own version for Uiua that has syntax highlighting and history, which I reuse in all the tutorials and examples."</p>
         <br/>
         <h3>"The Array Cast"</h3>
@@ -141,25 +141,25 @@ pub fn Audio() -> impl IntoView {
 
         <h2 id="basic-synthesis">"Basic Synthesis"</h2>
         <p>"In the online editor, you need only make an array that looks like audio samples."</p>
-        <p>"Audio samples must be eiter a "<PrimCode prim=Rank/><code>"1"</code>" array with at least 1000 elements or a "<PrimCode prim=Rank/><code>"2"</code>" array with a row for each audio channel and at least 1000 elements in each row."</p>
-        <p>"The samples must be between "<code>"-1"</code>" and "<code>"1"</code>". We use the "<PrimCode prim=Sys(SysOp::AudioSampleRate)/>" system function to get the sample rate of the audio output."</p>
+        <p>"Audio samples must be eiter a "<Prim prim=Rank/><code>"1"</code>" array with at least 1000 elements or a "<Prim prim=Rank/><code>"2"</code>" array with a row for each audio channel and at least 1000 elements in each row."</p>
+        <p>"The samples must be between "<code>"-1"</code>" and "<code>"1"</code>". We use the "<Prim prim=Sys(SysOp::AudioSampleRate)/>" system function to get the sample rate of the audio output."</p>
         <p>"For a minimal example, here is a simple 1 second sawtooth wave:"</p>
         <Editor examples={&["%2", "◿1×220", "÷∶⇡.&asr"]}/>
-        <p>"First, we make a range of numbers from 0 to 1 by getting the "<PrimCode prim=Range/>" up to the sample rate and dividing it by that much. This array represents the time at each sample."</p>
-        <p>"Then, we multiply the time by 220, the frequency of an A3 note, and take the "<PrimCode prim=Mod/>"1 of that. This gives us a nice pure sawtooth wave."</p>
-        <p>"Finally, the wave is a little loud on its own, so we "<PrimCode prim=Div/>" it by 2."</p>
+        <p>"First, we make a range of numbers from 0 to 1 by getting the "<Prim prim=Range/>" up to the sample rate and dividing it by that much. This array represents the time at each sample."</p>
+        <p>"Then, we multiply the time by 220, the frequency of an A3 note, and take the "<Prim prim=Mod/>"1 of that. This gives us a nice pure sawtooth wave."</p>
+        <p>"Finally, the wave is a little loud on its own, so we "<Prim prim=Div/>" it by 2."</p>
         <br/>
-        <p>"For longer time arrays, "<PrimCode prim=Mul/>" the number of sample by the number of seconds you want before calling "<PrimCode prim=Range/>" but after "<PrimCode prim=Dup/>"."</p>
+        <p>"For longer time arrays, "<Prim prim=Mul/>" the number of sample by the number of seconds you want before calling "<Prim prim=Range/>" but after "<Prim prim=Dup/>"."</p>
         <Editor example="%2◿1×220÷∶⇡ ×3 .&asr"/>
-        <p>"If you "<PrimCode prim=Mul/>" by a non-integer, you may need to use "<PrimCode prim=Round/>" to prevent an error."</p>
+        <p>"If you "<Prim prim=Mul/>" by a non-integer, you may need to use "<Prim prim=Round/>" to prevent an error."</p>
         <Editor example="%2◿1×220÷∶⇡ ⁅×0.5 .&asr"/>
 
         <h2 id="notes">"Notes"</h2>
-        <p>"My favorite way to make multiple notes is to "<PrimCode prim=Table/>" different frequencies with the time array."</p>
-        <p>"Then, if you want a chord, you can use "<PrimCode prim=Reduce glyph_only=true/><PrimCode prim=Add glyph_only=true/>" to add them together."</p>
-        <p>"If you want sequence instead, you can use "<PrimCode prim=Reduce glyph_only=true/><PrimCode prim=Join glyph_only=true/>"."</p>
-        <p>"You can calculate freqencies "<code>"f"</code>" that are a certain number of half-steps "<code>"n"</code>" from another with the formula "<code>"f×2^(n/12)"</code>" which can be written in Uiua as"<code><PrimCode prim=Mul glyph_only=true/>"f"<PrimCode prim=Pow glyph_only=true/><PrimCode prim=Flip glyph_only=true/>"2"<PrimCode prim=Div glyph_only=true/>"12 n"</code>"."</p>
-        <p>"In this example, we make both a chord and a sequence from the same notes. We use "<PrimCode prim=Sin glyph_only=true/><PrimCode prim=Mul glyph_only=true/><PrimCode prim=Tau glyph_only=true/>" to make a sine wave instead of a saw wave."</p>
+        <p>"My favorite way to make multiple notes is to "<Prim prim=Table/>" different frequencies with the time array."</p>
+        <p>"Then, if you want a chord, you can use "<Prim prim=Reduce glyph_only=true/><Prim prim=Add glyph_only=true/>" to add them together."</p>
+        <p>"If you want sequence instead, you can use "<Prim prim=Reduce glyph_only=true/><Prim prim=Join glyph_only=true/>"."</p>
+        <p>"You can calculate freqencies "<code>"f"</code>" that are a certain number of half-steps "<code>"n"</code>" from another with the formula "<code>"f×2^(n/12)"</code>" which can be written in Uiua as"<code><Prim prim=Mul glyph_only=true/>"f"<Prim prim=Pow glyph_only=true/><Prim prim=Flip glyph_only=true/>"2"<Prim prim=Div glyph_only=true/>"12 n"</code>"."</p>
+        <p>"In this example, we make both a chord and a sequence from the same notes. We use "<Prim prim=Sin glyph_only=true/><Prim prim=Mul glyph_only=true/><Prim prim=Tau glyph_only=true/>" to make a sine wave instead of a saw wave."</p>
         <Editor example="\
 f ← ×220ⁿ∶2÷12 [0 4 7]
 ÷∶⇡.&asr
@@ -169,8 +169,8 @@ s ← ○×τ⊞×f
 
         <h2 id="native-audio">"Native Audio"</h2>
         <p>"If running code in the native Uiua interpreter, arrays will not be automatically turned into audio."</p>
-        <p>"Instead, you must use the "<PrimCode prim=Sys(SysOp::AudioPlay)/>" system function to play it."</p>
-        <p><PrimCode prim=Sys(SysOp::AudioPlay)/>" should fine on the website as well, but it is not necessary."</p>
+        <p>"Instead, you must use the "<Prim prim=Sys(SysOp::AudioPlay)/>" system function to play it."</p>
+        <p><Prim prim=Sys(SysOp::AudioPlay)/>" should fine on the website as well, but it is not necessary."</p>
         <Editor example="&ap÷2×¬◿1×4∶±○×τ×55.÷∶⇡×2. &asr"/>
     }
 }

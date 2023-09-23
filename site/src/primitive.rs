@@ -1,7 +1,7 @@
 use leptos::*;
 use uiua::primitive::{PrimClass, PrimDocFragment, PrimDocLine, Primitive};
 
-use crate::{editor::Editor, PrimCode};
+use crate::{editor::Editor, Prim};
 
 fn doc_line_fragments_to_view(fragments: &[PrimDocFragment]) -> View {
     if fragments.is_empty() {
@@ -14,7 +14,7 @@ fn doc_line_fragments_to_view(fragments: &[PrimDocFragment]) -> View {
             PrimDocFragment::Code(s) => view!( <code>{s}</code>).into_view(),
             PrimDocFragment::Emphasis(s) => view!( <em>{s}</em>).into_view(),
             &PrimDocFragment::Primitive { prim, named } => {
-                view!( <PrimCode prim=prim glyph_only={!named}/>).into_view()
+                view!( <Prim prim=prim glyph_only={!named}/>).into_view()
             }
         })
         .collect::<Vec<_>>()
@@ -87,7 +87,7 @@ pub fn PrimDocs(prim: Primitive) -> impl IntoView {
 
     view! {
         <div>
-            <h1><PrimCode prim=prim hide_docs=true/>{ long_name }</h1>
+            <h1><Prim prim=prim hide_docs=true/>{ long_name }</h1>
             <p><h3>{ sig }</h3></p>
             { body }
         </div>

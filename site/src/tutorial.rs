@@ -5,7 +5,7 @@ use leptos::*;
 use leptos_router::*;
 use uiua::{example_ua, primitive::Primitive, SysOp};
 
-use crate::{editor::*, examples::QUADRATIC, PrimCode, PrimCodes};
+use crate::{editor::*, examples::QUADRATIC, Prim, PrimCodes};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
 pub enum TutorialPage {
@@ -108,7 +108,7 @@ fn TutorialBasic() -> impl IntoView {
                         <tr>
                             <td><code>{ name }</code></td>
                             <td><code>{ ascii.to_string() }</code></td>
-                            <td><PrimCode prim=p glyph_only=true/></td>
+                            <td><Prim prim=p glyph_only=true/></td>
                         </tr>
                     });
                 }
@@ -125,9 +125,9 @@ fn TutorialBasic() -> impl IntoView {
         <Editor example="5"/>
         <Editor example="1 2 3"/>
         <p>"Operators pop values off the stack and push their results."</p>
-        <p>"For example, "<PrimCode prim=Primitive::Add glyph_only=true/>" pops two values off the stack and pushes their sum."</p>
+        <p>"For example, "<Prim prim=Primitive::Add glyph_only=true/>" pops two values off the stack and pushes their sum."</p>
         <Editor example="+ 1 2"/>
-        <p><PrimCode prim=Primitive::Mul glyph_only=true/>", of course, multiplies the two values instead."</p>
+        <p><Prim prim=Primitive::Mul glyph_only=true/>", of course, multiplies the two values instead."</p>
         <Editor examples={&["+ ", "1 ", "× ", "2 ", "3"]} help={&["", "Try the arrows to see how the stack changes with each operation."]}/>
         <p>"In the editor, items that end up on the "<em>"top"</em>" of the stack are shown at the "<em>"bottom"</em>" of the output. This is so that consecutive lines of code show their outputs in the correct order."</p>
         <Editor example="5\n+1 2\n\"Hello, World!\"\n+1 @a"/>
@@ -170,29 +170,29 @@ fn TutorialBasic() -> impl IntoView {
 
         <h2 id="stack-functions">"Stack Functions"</h2>
         <p>"There are a few functions that work on the stack itself. Some of these are critical and can be found scattered across all Uiua code."</p>
-        <h2><PrimCode prim=Dup/></h2>
-        <p><PrimCode prim=Dup/>" duplicates the top item on the stack."</p>
-        <p>"In general, functions do not leave their arguments on the stack. If you want to reuse a value, you must "<PrimCode prim=Dup/>" it first."</p>
-        <p>"For example, if you wanted to square a number, you could "<PrimCode prim=Dup/>" it, then "<PrimCode prim=Mul/>"."</p>
+        <h2><Prim prim=Dup/></h2>
+        <p><Prim prim=Dup/>" duplicates the top item on the stack."</p>
+        <p>"In general, functions do not leave their arguments on the stack. If you want to reuse a value, you must "<Prim prim=Dup/>" it first."</p>
+        <p>"For example, if you wanted to square a number, you could "<Prim prim=Dup/>" it, then "<Prim prim=Mul/>"."</p>
         <Editor example="×.4"/>
-        <p><PrimCode prim=Dup/>" is often used in the examples on this site to show both the input and output of a function."</p>
+        <p><Prim prim=Dup/>" is often used in the examples on this site to show both the input and output of a function."</p>
         <Editor example="√.144"/>
         <br/>
-        <h2><PrimCode prim=Flip/></h2>
-        <p><PrimCode prim=Flip/>" swaps the top two items on the stack."</p>
+        <h2><Prim prim=Flip/></h2>
+        <p><Prim prim=Flip/>" swaps the top two items on the stack."</p>
         <p>"This is useful when you want to call a function that takes two arguments, but the arguments are on the stack in the wrong order."</p>
-        <p>"For example, if you wanted to get the reciprocal of a number, you would "<PrimCode prim=Div/>" "<code>"1"</code>" by it. But, if the number is already on the stack, you would need to use "<PrimCode prim=Flip/>"."</p>
+        <p>"For example, if you wanted to get the reciprocal of a number, you would "<Prim prim=Div/>" "<code>"1"</code>" by it. But, if the number is already on the stack, you would need to use "<Prim prim=Flip/>"."</p>
         <Editor example="÷1 5"/>
         <Editor example="÷∶1 5"/>
         <Editor example="∶1 2 3 4 5"/>
         <br/>
-        <h2><PrimCode prim=Over/></h2>
-        <p><PrimCode prim=Over/>" is like "<PrimCode prim=Dup/>", but it duplicates the second item on the stack instead of the first."</p>
+        <h2><Prim prim=Over/></h2>
+        <p><Prim prim=Over/>" is like "<Prim prim=Dup/>", but it duplicates the second item on the stack instead of the first."</p>
         <Editor example=",1 2 3 4"/>
         <Editor example="+×, 3 5"/>
         <br/>
-        <h2><PrimCode prim=Pop/></h2>
-        <p><PrimCode prim=Pop/>" removes the top item from the stack."</p>
+        <h2><Prim prim=Pop/></h2>
+        <p><Prim prim=Pop/>" removes the top item from the stack."</p>
         <p>"This is useful when you want to discard a value that you do not need."</p>
         <Editor examples={&["1 ", "; ", "2 ", "3 ", "4 ", "; ", "5 ", "6"]}/>
     }
@@ -217,7 +217,7 @@ fn primitive_rows(prims: impl IntoIterator<Item = Primitive>) -> Vec<impl IntoVi
                 .or_else(|| glyph.filter(|c| c.is_ascii()).map(|c| c.to_string()));
             view! {
                 <tr>
-                    <td><PrimCode prim=p/></td>
+                    <td><Prim prim=p/></td>
                     <td>{maybe_code( ascii)}</td>
                     <td>{view!( <code>{p.args()}</code>)}</td>
                 </tr>
@@ -297,14 +297,14 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example="[1 2 3]"/>
         <Editor example="[¯5 37 42 π]"/>
         <p>"What's cool about stack notation is that it is "<em>"not"</em>" just a way to list elements. The code between the brackets runs from right to left as it normally would. When it is done, any items on the stack higher than when it started are put into the array. This gives you some cool ways to create arrays."</p>
-        <p>"Note that "<PrimCode prim=Dup/>" duplicates the top item on the stack."</p>
+        <p>"Note that "<Prim prim=Dup/>" duplicates the top item on the stack."</p>
         <Editor example="[...5]"/>
         <Editor example="[×2.×2.×2.×2 .2]"/>
         <Editor example="[+1 2 +3 4]"/>
         <p>"You can also use stack notation to make multidimensional arrays."</p>
         <Editor example="[1_2_3 4_5_6]"/>
         <Editor example="[...[1 2 3]]"/>
-        <p>"More preceisely, stack notation "<PrimCode prim=Couple/>"s the first two stack items created between the "<code>"[]"</code>"s and "<PrimCode prim=Join/>"s the rest to that coupling."</p>
+        <p>"More preceisely, stack notation "<Prim prim=Couple/>"s the first two stack items created between the "<code>"[]"</code>"s and "<Prim prim=Join/>"s the rest to that coupling."</p>
         <p>"Unlike strand notation, stack notation may span multiple lines. The lines are still executed right-to-left, but they are executed bottom-to-top so that the arrays come out the same way they look in the code."</p>
         <Editor example="\
 [1 2 3
@@ -315,18 +315,18 @@ fn TutorialArrays() -> impl IntoView {
  [4 5 6]
  [7 8 9]]"/>
 
-        <h2 id="shape-len-rank"><PrimCode prim=Shape/>", "<PrimCode prim=Len/>", and "<PrimCode prim=Rank/></h2>
+        <h2 id="shape-len-rank"><Prim prim=Shape/>", "<Prim prim=Len/>", and "<Prim prim=Rank/></h2>
         <p>"Other than their data, arrays also have a property called their "<b>"shape"</b>". Shape is a list of non-negative integers that describes the array's size along each of its axes."</p>
-        <p>"We can get the array's shape with the "<PrimCode prim=Shape/>" function. It's a triangle because a triangle is a shape."</p>
+        <p>"We can get the array's shape with the "<Prim prim=Shape/>" function. It's a triangle because a triangle is a shape."</p>
         <Editor example="△[1 2 3]"/>
         <Editor example="△5"/>
         <Editor example="△[[1 2 3] [4 5 6]]"/>
         <Editor example="△[...[1 2 3]]"/>
         <p>"From shape we can derive two closely-related properties called "<b>"length"</b>" and "<b>"rank"</b>"."</p>
-        <p><PrimCode prim=Len/>" is the number of "<em>"rows"</em>" of the array. This is the number of elements for a 1D array and the number of rows for a 2D array. Length is always equal to the first number in the shape (or 1 if the shape is empty)."</p>
-        <p><PrimCode prim=Rank/>" is the number of dimensions of the array."</p>
+        <p><Prim prim=Len/>" is the number of "<em>"rows"</em>" of the array. This is the number of elements for a 1D array and the number of rows for a 2D array. Length is always equal to the first number in the shape (or 1 if the shape is empty)."</p>
+        <p><Prim prim=Rank/>" is the number of dimensions of the array."</p>
         <Editor example="△[1 2 3]\n⧻[1 2 3]\n∴[1 2 3]"/>
-        <p><PrimCode prim=Rank/>" is equivalent to the "<PrimCode prim=Len/>" of the "<PrimCode prim=Shape/>"."</p>
+        <p><Prim prim=Rank/>" is equivalent to the "<Prim prim=Len/>" of the "<Prim prim=Shape/>"."</p>
         <Editor example=" ∴[1_2 3_4]\n⧻△[1_2 3_4]"/>
 
         <h2 id="pervasion">"Pervasion"</h2>
@@ -337,28 +337,28 @@ fn TutorialArrays() -> impl IntoView {
         <p>"When doing a pervasive operation on two arrays, their shape "<em>"prefixes"</em>" must match."</p>
         <Editor example="+[1 2] [3 4 5]"/>
         <Editor example="△10_20\n      △[3_4_5 6_7_8]\n+10_20 [3_4_5 6_7_8]"/>
-        <p>"If you want to do some pervasive operation on arrays whose shapes do not match, you can set a default value with "<PrimCode prim=Fill/>". Any places where the shapes don't match will be filled in with that value."</p>
+        <p>"If you want to do some pervasive operation on arrays whose shapes do not match, you can set a default value with "<Prim prim=Fill/>". Any places where the shapes don't match will be filled in with that value."</p>
         <Editor example="⍛0- [1 2] [3 4 5 6 7]"/>
-        <p><PrimCode prim=Fill/>" can be used in a lot of other cases. See its documentation for more."</p>
+        <p><Prim prim=Fill/>" can be used in a lot of other cases. See its documentation for more."</p>
 
         <h2 id="useful-array-operations">"Useful Array Operations"</h2>
         <p>"You don't need to memorize all of these right now. This is just a brief introduction to some of the array operations so that you won't be surprised when you see them later."</p>
         <p>"If you ever see a glyph that you don't recognize in an example, you can mouse over it in the editor to learn its name. You can also click the names of functions in the site text to see their documentation."</p>
-        <p><PrimCode prim=Range/>" creates an array of all the natural numbers less than a maximum."</p>
+        <p><Prim prim=Range/>" creates an array of all the natural numbers less than a maximum."</p>
         <Editor example="⇡10"/>
-        <p><PrimCode prim=First/>" gets the first row of an array."</p>
+        <p><Prim prim=First/>" gets the first row of an array."</p>
         <Editor example="⊢ [4 7 1]"/>
         <Editor example="⊢ [1_2 3_4 5_6]"/>
-        <p><PrimCode prim=Reverse/>" reverses the rows of an array."</p>
+        <p><Prim prim=Reverse/>" reverses the rows of an array."</p>
         <Editor example="⇌ [4 7 1]"/>
         <Editor example="⇌ [1_2 3_4 5_6]"/>
-        <p><PrimCode prim=Rotate/>" rotates the rows of an array by some amount."</p>
+        <p><Prim prim=Rotate/>" rotates the rows of an array by some amount."</p>
         <Editor example="↻2 [1 2 3 4 5]"/>
-        <p><PrimCode prim=Deshape/>" flattens an array into a 1D array."</p>
+        <p><Prim prim=Deshape/>" flattens an array into a 1D array."</p>
         <Editor example="♭ .[1_2 3_4 5_6]"/>
-        <p><PrimCode prim=Reshape/>" changes the shape of an array while keeping the elements in the same order."</p>
+        <p><Prim prim=Reshape/>" changes the shape of an array while keeping the elements in the same order."</p>
         <Editor example="↯3_3 .⇡9"/>
-        <p><PrimCode prim=Take/>" and "<PrimCode prim=Drop/>" isolate part of an array."</p>
+        <p><Prim prim=Take/>" and "<Prim prim=Drop/>" isolate part of an array."</p>
         <Editor example="↙3 [1 2 3 4 5]\n↘3 [1 2 3 4 5]"/>
 
         <h2 id="array-model">"The Array Model"</h2>
@@ -366,31 +366,31 @@ fn TutorialArrays() -> impl IntoView {
         <p>"All arrays are flat and homogenous. Arrays always have a rectangular shape. Different types of data, like numbers and characters, cannot be mixed in the same array."</p>
         <p>"However, there is an escape hatch for when you really want jagged, nested, or mixed-type arrays. In Uiua, an array of heterogenous values can be simulated with an array of functions. These functions can be used similarly to J's boxes."</p>
         <Editor example="[1 2 [7 8 9]]"/>
-        <p>"By using "<PrimCode prim=Constant/>", we can turn any value into a function that pushes that value onto the stack. We can then put these functions into an array like any other."</p>
+        <p>"By using "<Prim prim=Constant/>", we can turn any value into a function that pushes that value onto the stack. We can then put these functions into an array like any other."</p>
         <Editor example="[□1 □2 □[7 8 9]]"/>
-        <p>"To get the values back on the stack, we can use "<PrimCode prim=Reduce/><PrimCode prim=Call/>"."</p>
+        <p>"To get the values back on the stack, we can use "<Prim prim=Reduce/><Prim prim=Call/>"."</p>
         <Editor example="/![□1 □2 □[7 8 9]]"/>
-        <p>"Having to write "<PrimCode prim=Constant glyph_only=true/>" everywhere is annoying, and so..."</p>
+        <p>"Having to write "<Prim prim=Constant glyph_only=true/>" everywhere is annoying, and so..."</p>
 
         <h2 id="nested-arrays">"Nested Arrays"</h2>
-        <p>"Uiua has a special syntax for making arrays where every item is "<PrimCode prim=Constant/>"."</p>
-        <p>"Using "<code>"{}"</code>"s instead of "<code>"[]"</code>"s for stack array notation will automatically "<PrimCode prim=Constant/>" every item."</p>
+        <p>"Uiua has a special syntax for making arrays where every item is "<Prim prim=Constant/>"."</p>
+        <p>"Using "<code>"{}"</code>"s instead of "<code>"[]"</code>"s for stack array notation will automatically "<Prim prim=Constant/>" every item."</p>
         <Editor example="{1 2 [7 8 9]}"/>
         <p>"This is very useful for making lists of strings."</p>
         <Editor example=r#"langs ← .["Uiua" "APL" "J" "BQN" "K" "Q"]"#/>
         <Editor example=r#"langs ← .{"Uiua" "APL" "J" "BQN" "K" "Q"}"#/>
-        <p>"Many simple functions will work on "<PrimCode prim=Constant/>" elements without needing to use "<PrimCode prim=Call/>"."</p>
+        <p>"Many simple functions will work on "<Prim prim=Constant/>" elements without needing to use "<Prim prim=Call/>"."</p>
         <Editor example=
 r#"langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
 ⧻⊢langs
 +1langs"#/>
-        <p>"However, more complex functions usually need both operands to be the same type, so you must either "<PrimCode prim=Call/>" the constant elements or "<PrimCode prim=Constant/>" the normal ones."</p>
-        <p>"For example, to check if a string is in the list with "<PrimCode prim=Member/>", you would need to "<PrimCode prim=Constant/>" the string first."</p>
+        <p>"However, more complex functions usually need both operands to be the same type, so you must either "<Prim prim=Call/>" the constant elements or "<Prim prim=Constant/>" the normal ones."</p>
+        <p>"For example, to check if a string is in the list with "<Prim prim=Member/>", you would need to "<Prim prim=Constant/>" the string first."</p>
         <Editor example=
 r#"langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
 ∊ □"APL" langs"#/>
 
-        <p>"For more about working with constant function arrays, see "<PrimCode prim=Constant/>"'s documentation."</p>
+        <p>"For more about working with constant function arrays, see "<Prim prim=Constant/>"'s documentation."</p>
     }
 }
 
@@ -412,23 +412,23 @@ fn TutorialTypes() -> impl IntoView {
         <Editor example="[5 0 3.2 ¯1.1 π ∞]"/>
         <p>"Most math operations can only be applied to numbers."</p>
         <p>"Even though numbers can have a fractional part, many built-in functions require whole numbers. These functions will return an error if given a non-whole number."</p>
-        <p>"One such example is "<PrimCode prim=Pick/>"."</p>
+        <p>"One such example is "<Prim prim=Pick/>"."</p>
         <Editor example="⊡ 2 [4 7 9 1 0]"/>
         <Editor example="⊡ 3.1 [4 7 9 1 0]"/>
-        <p>"If you want to convert a number to a whole number, you can use "<PrimCode prim=Floor/>", "<PrimCode prim=Ceil/>", or "<PrimCode prim=Round/>"."</p>
+        <p>"If you want to convert a number to a whole number, you can use "<Prim prim=Floor/>", "<Prim prim=Ceil/>", or "<Prim prim=Round/>"."</p>
 
         <h2 id="characters">"Characters"</h2>
         <p>"Characters are represented as 32-bit Unicode codepoints."</p>
-        <p>"Character literals, denoted with a preceding "<code>"@"</code>", create "<PrimCode prim=Rank/><code>"0"</code>" character arrays."</p>
+        <p>"Character literals, denoted with a preceding "<code>"@"</code>", create "<Prim prim=Rank/><code>"0"</code>" character arrays."</p>
         <Editor example="@a @b"/>
         <Editor example="[@u @i @u @a]"/>
         <p>"Characters like newline or null need to be escaped with "<code>"\\"</code>", but a space does not."</p>
         <Editor example="[@\\r @\\0 @ ]"/>
-        <p>"String literals, delimited by "<code>"\""</code>"s, create "<PrimCode prim=Rank/><code>"1"</code>" character arrays."</p>
+        <p>"String literals, delimited by "<code>"\""</code>"s, create "<Prim prim=Rank/><code>"1"</code>" character arrays."</p>
         <Editor example="△.\"Hello, World!\""/>
         <p>"You can make strings span multiple lines with a "<code>"$"</code>" followed by a space on each line."</p>
         <p>"These do not require "<code>"\""</code>"s."</p>
-        <p><PrimCode prim=Sys(SysOp::Print)/>" pretty-prints a value."</p>
+        <p><Prim prim=Sys(SysOp::Print)/>" pretty-prints a value."</p>
         <Editor example="&p $ Hello, \n   $ World!"/>
         <p>"This style of string is also useful when your string contains a lot of quotes that you don't want to escape."</p>
         <Editor example="$ An then she was like, \"No way!\"\n$ And I was like, \"Way...\""/>
@@ -440,9 +440,9 @@ fn TutorialTypes() -> impl IntoView {
             let number = || view!(<span class="number-literal-span">"number"</span>);
             let character = || view!(<span class="string-literal-span">"character"</span>);
             view! {
-                <p>"You can "<PrimCode prim=Add/>" "{number}"s and "{character}"s to get another "{character}"."</p>
-                <p>"You can "<PrimCode prim=Sub/>" a "{number}" from a "{character}" to get another "{character}"."</p>
-                <p>"You can "<PrimCode prim=Sub/>" two "{character}"s to get a "{number}"."</p>
+                <p>"You can "<Prim prim=Add/>" "{number}"s and "{character}"s to get another "{character}"."</p>
+                <p>"You can "<Prim prim=Sub/>" a "{number}" from a "{character}" to get another "{character}"."</p>
+                <p>"You can "<Prim prim=Sub/>" two "{character}"s to get a "{number}"."</p>
                 <p><em>"No"</em>" other arithmetic operations can be done on "{character}"s."</p>
             }
         }
@@ -460,7 +460,7 @@ fn TutorialTypes() -> impl IntoView {
         <Editor example="⊂ 1_2 3"/>
         <Editor example="⊟ \"Hello\" \"World\""/>
         <Editor example="⊟ 1_2_3 \"dog\""/>
-        <p>"There is an exception for functions. Any function that pushes one value onto the stack can be put in an array with a non-function. In this case, the non-function will be turned into a function, similar to "<PrimCode prim=Constant/>"."</p>
+        <p>"There is an exception for functions. Any function that pushes one value onto the stack can be put in an array with a non-function. In this case, the non-function will be turned into a function, similar to "<Prim prim=Constant/>"."</p>
         <Editor example="⊟ 5 (+1 2)"/>
     }
 }
@@ -479,7 +479,7 @@ fn TutorialBindings() -> impl IntoView {
         <p>"Bindings are case-"<em>"in"</em>"sensitive."</p>
         <Editor example="foo ← 5\n+ FOO fOo"/>
         <p>"The parser can somtimes mistake all-lowercase binding names for unformatted built-in functions."</p>
-        <p>"Here, the parser thinks that "<code>"part"</code>" is "<PrimCode prim=Partition/>"."</p>
+        <p>"Here, the parser thinks that "<code>"part"</code>" is "<Prim prim=Partition/>"."</p>
         <Editor example="part = 5" help={&["", "Run to format and reveal why this does not work"]}/>
         <p>"To fix this issue, simply change the binding's capitalization."</p>
         <Editor example="Part = 5\n*2 Part"/>
@@ -505,19 +505,19 @@ fn TutorialFunctions() -> impl IntoView {
 
         <h2 id="modifiers">"Modifiers"</h2>
         <p>"Modifiers are functions that take other functions. If you immediately follow a modifier with its function arguments, the functions will be called inside the modifier rather than outside."</p>
-        <p>"For example, "<PrimCode prim=Reduce/>" applies a function \"between\" all rows of an array."</p>
+        <p>"For example, "<Prim prim=Reduce/>" applies a function \"between\" all rows of an array."</p>
         <p><PrimCodes prims={[Reduce, Add]}/>" is therefore the sum of all the rows of an array."</p>
         <Editor example="/+ 1_2_3_4"/>
-        <p><PrimCode prim=Scan/>" is similar, but it returns all the intermediate results."</p>
+        <p><Prim prim=Scan/>" is similar, but it returns all the intermediate results."</p>
         <Editor example="\\+ 1_2_3_4"/>
         <p>"The main docs page has "<A href="/docs/modifier">"a list"</A>" of all of the built-in modifiers."</p>
 
         <h2 id="inline-functions">"Inline Functions"</h2>
         <p>"In addition to creating a new function with a capitalized binding name, as discussed in the "<A href="/docs/bindings">"previous section"</A>", functions in Uiua can also be created by surrounding code with "<code>"()"</code>"s."</p>
         <p>"This is usually only necessary when you need to call multiple functions within a modifier."</p>
-        <p>"For example, if you wanted to make an array that pairs each element of an array with its reciprocal, you could use "<PrimCode prim=Each/>"."</p>
+        <p>"For example, if you wanted to make an array that pairs each element of an array with its reciprocal, you could use "<Prim prim=Each/>"."</p>
         <Editor example="∵(⊂÷∶1.) 1_2_4_5"/>
-        <p>"Or, if you wanted to get the last element of each row of an array, you could use "<PrimCode prim=Rows/>"."</p>
+        <p>"Or, if you wanted to get the last element of each row of an array, you could use "<Prim prim=Rows/>"."</p>
         <Editor example="≡(⊢⇌) .[2_5_3 0_2_1 0_0_2]"/>
         <p>"If you want to make an inline function with exactly 2 terms, you can use a single preceding "<code>"'"</code>" instead of "<code>"()"</code>"s and save 1 character of space!"</p>
         <Editor example="/(-∶) 1_2_3_4_5\n/'-∶ 1_2_3_4_5"/>
@@ -548,7 +548,7 @@ X 5"/>
         <Editor example="TimesThree ← |1   ×3\nTimesThree 7"/>
         <Editor example="∵(|2.1 ⊟.×) 1_2_3 4_5_6"/>
         <p>"Stack signatures are useful for documenting functions to make sure that they are used correctly."</p>
-        <p>"A signature declaration is "<em>"required"</em>" if the function's signature cannot be infered. The compiler can usually infer a function's signature unless you are doing something weird with higher-order functions or fiddling with function arrays, or if you are using "<PrimCode prim=Recur/>"sion."</p>
+        <p>"A signature declaration is "<em>"required"</em>" if the function's signature cannot be infered. The compiler can usually infer a function's signature unless you are doing something weird with higher-order functions or fiddling with function arrays, or if you are using "<Prim prim=Recur/>"sion."</p>
         <Editor example="∺(⊞ ∶,)+_-⇡3"/>
         <p>"Simply add a signature declaration to fix this."</p>
         <Editor example="∺(|1 ⊞ ∶,)+_-⇡3"/>
@@ -562,45 +562,45 @@ fn TutorialAdvancedStack() -> impl IntoView {
     use Primitive::*;
     view! {
         <h1>"Advanced Stack Manipulation"</h1>
-        <p>"Uiua does not have local variables. With only "<PrimCode prim=Dup/>", "<PrimCode prim=Flip/>", and "<PrimCode prim=Over/>", how do you work with more than 2 values at a time?"</p>
+        <p>"Uiua does not have local variables. With only "<Prim prim=Dup/>", "<Prim prim=Flip/>", and "<Prim prim=Over/>", how do you work with more than 2 values at a time?"</p>
 
-        <h2 id="roll-and-unroll"><PrimCode prim=Roll/>" and "<PrimCode prim=Unroll/></h2>
-        <p>"The "<PrimCode prim=Roll/>" and "<PrimCode prim=Unroll/>" functions both work on the top 3 stack values. They do exactly what their glyphs indicate."</p>
-        <p><PrimCode prim=Roll/>" moves the top value on the stack 2 places down."</p>
-        <p><PrimCode prim=Unroll/>" moves the third value on the stack to the top."</p>
+        <h2 id="roll-and-unroll"><Prim prim=Roll/>" and "<Prim prim=Unroll/></h2>
+        <p>"The "<Prim prim=Roll/>" and "<Prim prim=Unroll/>" functions both work on the top 3 stack values. They do exactly what their glyphs indicate."</p>
+        <p><Prim prim=Roll/>" moves the top value on the stack 2 places down."</p>
+        <p><Prim prim=Unroll/>" moves the third value on the stack to the top."</p>
         <Editor example="[↷ 1 2 3 4]\n[↶ 1 2 3 4]"/>
 
-        <h2 id="fork"><PrimCode prim=Fork/></h2>
-        <p>"Let's say you wanted both the sum and the product of two numbers. One way to do this would be to use both "<PrimCode prim=Over/>" and "<PrimCode prim=Roll/>"."</p>
+        <h2 id="fork"><Prim prim=Fork/></h2>
+        <p>"Let's say you wanted both the sum and the product of two numbers. One way to do this would be to use both "<Prim prim=Over/>" and "<Prim prim=Roll/>"."</p>
         <Editor example="+↷×,, 3 5"/>
-        <p>"A better way to do this is to use the "<PrimCode prim=Fork/>" modifier, which calls each of two functions on a pair of arguments."</p>
+        <p>"A better way to do this is to use the "<Prim prim=Fork/>" modifier, which calls each of two functions on a pair of arguments."</p>
         <Editor example="⊃+× 3 5"/>
         <p>"If you use a function that only takes 0 or 1 arguments, it will be called with only the corresponding value."</p>
         <Editor example="⊟⊃'×4'+1 3 5"/>
-        <p>"However, with only monadic functions, it is often shorter to just use "<PrimCode prim=Flip/>"."</p>
+        <p>"However, with only monadic functions, it is often shorter to just use "<Prim prim=Flip/>"."</p>
         <Editor example="⊟⊃'×4'+1 3 5\n⊟∶+1∶×4 3 5"/>
 
-        <h2 id="trident"><PrimCode prim=Trident/></h2>
-        <p><PrimCode prim=Trident/>" is similar to "<PrimCode prim=Fork/>", except it applies 3 functions to 3 arguments."</p>
-        <p>"The functions may take up to 3 arguments. The first function will be passed the three arguments in order, and the second and third functions will be passed the successive "<PrimCode prim=Roll/>"s of the arguments. We can see how this works with "<PrimCode prim=Join/></p>
+        <h2 id="trident"><Prim prim=Trident/></h2>
+        <p><Prim prim=Trident/>" is similar to "<Prim prim=Fork/>", except it applies 3 functions to 3 arguments."</p>
+        <p>"The functions may take up to 3 arguments. The first function will be passed the three arguments in order, and the second and third functions will be passed the successive "<Prim prim=Roll/>"s of the arguments. We can see how this works with "<Prim prim=Join/></p>
         <Editor example="[∋··· 1 2 3]"/>
         <Editor example="[∋⊂⊂⊂ 1 2 3]"/>
         <Editor example="[∋'⊂⊂'⊂⊂'⊂⊂ 1 2 3]"/>
 
-        <h2 id="restack"><PrimCode prim=Restack/></h2>
-        <p><PrimCode prim=Restack/>" is the most powerful stack-manipulation function. All other stack-manipulation functions can be implemented with "<PrimCode prim=Restack/>"."</p>
-        <p>"Its behavior is similar to "<PrimCode prim=Select/>", except instead of selecting from an array, it selects from the stack."</p>
+        <h2 id="restack"><Prim prim=Restack/></h2>
+        <p><Prim prim=Restack/>" is the most powerful stack-manipulation function. All other stack-manipulation functions can be implemented with "<Prim prim=Restack/>"."</p>
+        <p>"Its behavior is similar to "<Prim prim=Select/>", except instead of selecting from an array, it selects from the stack."</p>
         <p>"It takes a single array of natural numbers and rearranges the stack accordingly."</p>
         <Editor example="⇵[1 3 0 0] \"x\" 2 [5 6 7] (+)"/>
 
         <h2 id="a-motivating-example">"A Motivating Example"</h2>
         <p>"Implementing the "<a href="https://en.wikipedia.org/wiki/Quadratic_formula">"quadratic formula"</a>" requires juggling 3 values."</p>
         <p>"There are two ways you could approach this."</p>
-        <p>"The first way is to use "<PrimCode prim=Trident/>" and exploit the way it orders the arguments to its functions. This is what is done in an example on the homepage."</p>
+        <p>"The first way is to use "<Prim prim=Trident/>" and exploit the way it orders the arguments to its functions. This is what is done in an example on the homepage."</p>
         <Editor example=QUADRATIC/>
-        <p>"The second way is to use "<PrimCode prim=Restack/>" to rearrange the arguments into the exact order needed to just do all the operations at once."</p>
+        <p>"The second way is to use "<Prim prim=Restack/>" to rearrange the arguments into the exact order needed to just do all the operations at once."</p>
         <Editor example="Quad ← ÷×2∶-∶⊟¯.√-∶ⁿ2∶×4×⇵[0 2 1 1 0]\nQuad 1 2 0"/>
-        <p><PrimCode prim=Trident/>" is the obvious winner here in terms of both clarity and concision, but as soon as you have more than 3 arguments, "<PrimCode prim=Restack/>" becomes a necessity."</p>
+        <p><Prim prim=Trident/>" is the obvious winner here in terms of both clarity and concision, but as soon as you have more than 3 arguments, "<Prim prim=Restack/>" becomes a necessity."</p>
     }
 }
 
@@ -620,11 +620,11 @@ fn TutorialModules() -> impl IntoView {
         <Editor example="---\na ← 3\nb ← 5\n+ a b\n× a b\n---\nc ← \nd ←\nc_d"/>
         <p>"Note that scopes can only be created at the top level of a file (but between other top-level items), and they cannot be nested."</p>
 
-        <h2 id="modules-and-use">"Modules and "<PrimCode prim=Use/></h2>
-        <p><PrimCode prim=Use/>" is a very special function that extracts a function from a "<em>module</em>"."</p>
+        <h2 id="modules-and-use">"Modules and "<Prim prim=Use/></h2>
+        <p><Prim prim=Use/>" is a very special function that extracts a function from a "<em>module</em>"."</p>
         <p>"A module is an array of "<em>"named"</em>" functions."</p>
         <p>"The only way to name a function is to bind it. Named functions can be put into arrays by stranding or surrounding the names with "<code>"()"</code>"."</p>
-        <p><PrimCode prim=Use/>" takes the name of the function as a string and the module and returns the function."</p>
+        <p><Prim prim=Use/>" takes the name of the function as a string and the module and returns the function."</p>
         <p>"This allows you to export functions by name from a scope."</p>
         <Editor example=r#"---
 PlusFive ← +5
@@ -637,20 +637,20 @@ pf ← use "PlusFive" mymodule
 
 tw pf 3"#/>
 
-        <h2 id="import">"Importing with "<PrimCode prim=Sys(SysOp::Import)/></h2>
-        <p>"Finally, we reach the point of all of this. You can import other files as scopes with "<PrimCode prim=Sys(SysOp::Import)/>"."</p>
-        <p>"System functions like "<PrimCode prim=Sys(SysOp::Import)/>" are prefixed with "<code>"&"</code>" so that the names of your own functions don't collide with them."</p>
+        <h2 id="import">"Importing with "<Prim prim=Sys(SysOp::Import)/></h2>
+        <p>"Finally, we reach the point of all of this. You can import other files as scopes with "<Prim prim=Sys(SysOp::Import)/>"."</p>
+        <p>"System functions like "<Prim prim=Sys(SysOp::Import)/>" are prefixed with "<code>"&"</code>" so that the names of your own functions don't collide with them."</p>
         <p>"The website's editor has an example file that you can import called "<code>"example.ua"</code>". Its contents is:"</p>
         <Editor example={ &example_ua(|ex| ex.clone()) }/>
-        <p>"You can import it with "<PrimCode prim=Sys(SysOp::Import)/>" and then "<PrimCode prim=Use/>" to extract the functions."</p>
-        <p>"By using "<PrimCode prim=Dup/>" on the imported module, you can repetedly extract functions from it. Notice the lack of a "<PrimCode prim=Dup glyph_only=true/>" after the last "<PrimCode prim=Use/>"."</p>
+        <p>"You can import it with "<Prim prim=Sys(SysOp::Import)/>" and then "<Prim prim=Use/>" to extract the functions."</p>
+        <p>"By using "<Prim prim=Dup/>" on the imported module, you can repetedly extract functions from it. Notice the lack of a "<Prim prim=Dup glyph_only=true/>" after the last "<Prim prim=Use/>"."</p>
         <Editor example=r#"&i "example.ua"
 square ← use "square".
 double ← use "double".
 increment ← use "increment"
 
 increment square double 5"#/>
-        <p><PrimCode prim=Sys(SysOp::Import)/>" only imports a given file once and caches the results. Subsequent imports of the same file (from anywhere) will not run the file's code again, but they "<em>"will"</em>" push its stack values again."</p>
+        <p><Prim prim=Sys(SysOp::Import)/>" only imports a given file once and caches the results. Subsequent imports of the same file (from anywhere) will not run the file's code again, but they "<em>"will"</em>" push its stack values again."</p>
         <p>"In this example, we make some code that prints a message and then generates a random number. We then write the code to a file and import it 3 times. Notice that the message is only printed once, and the same number is returned every time."</p>
         <Editor example="\
 code ← $ &p \"Loading module\"
@@ -668,11 +668,11 @@ fn TutorialTesting() -> impl IntoView {
         <h2 id="test-scopes">"Test Scopes"</h2>
         <p>"Similar to the "<A href="/docs/modules">"scopes discussed in the previous section"</A>", Uiua has "<em>"test scopes"</em>"."</p>
         <p>"Instead of "<code>"---"</code>", test scopes begin and end with "<code>"~~~"</code>"."</p>
-        <p>"Test scopes are meant to be used with "<PrimCode prim=Assert/>"."</p>
+        <p>"Test scopes are meant to be used with "<Prim prim=Assert/>"."</p>
         <Editor example="Square ← ×.\n~~~\n⍤.=9 Square 3\n⍤.=225 Square 15\n~~~"/>
-        <p><PrimCode prim=Assert/>" will return an error when its second argument is anything other than "<code>"1"</code>"."</p>
+        <p><Prim prim=Assert/>" will return an error when its second argument is anything other than "<code>"1"</code>"."</p>
         <Editor example="Square ← ×.\n~~~\n⍤.=25 Square 4\n~~~"/>
-        <p>"The first argument to "<PrimCode prim=Assert/>" is the value that will be thrown if the assertion fails. In the examples above, we have simply been "<PrimCode prim=Dup/>"ing the test value. We can throw a message instead."</p>
+        <p>"The first argument to "<Prim prim=Assert/>" is the value that will be thrown if the assertion fails. In the examples above, we have simply been "<Prim prim=Dup/>"ing the test value. We can throw a message instead."</p>
         <Editor example=r#"Square ← ×.
 ~~~
 ⍤"3² is not 9!" =9 Square 3

@@ -132,11 +132,11 @@ pub fn MainPage() -> impl IntoView {
                 <div>
                     <h2>"Rich Primitives"</h2>
                     <p>"Uiua has lots of built-in functions for all your array manipulation needs. Just a few examples:"</p>
-                    <p><PrimCode prim=Partition/>" for splitting arrays by sequential keys:"</p>
+                    <p><Prim prim=Partition/>" for splitting arrays by sequential keys:"</p>
                     <Editor example=r#"⍛@ ⊜·≠@ ."Oh boy, neat!""#/>
-                    <p><PrimCode prim=Select/>" for re-sequencing array items:"</p>
+                    <p><Prim prim=Select/>" for re-sequencing array items:"</p>
                     <Editor example=r#"⊏ 2_1_3_0_4 "loco!""#/>
-                    <p><PrimCode prim=Under/>" for modifiying only part of an array (among other things):"</p>
+                    <p><Prim prim=Under/>" for modifiying only part of an array (among other things):"</p>
                     <Editor example="⍜'↙2'×10 1_2_3_4_5"/>
                 </div>
                 <div>
@@ -192,7 +192,7 @@ fn NotFound() -> impl IntoView {
 }
 
 #[component]
-pub fn PrimCode(
+pub fn Prim(
     prim: Primitive,
     #[prop(optional)] glyph_only: bool,
     #[prop(optional)] hide_docs: bool,
@@ -250,7 +250,7 @@ pub fn PrimCode(
 pub fn PrimCodes<const N: usize>(prims: [Primitive; N]) -> impl IntoView {
     prims
         .into_iter()
-        .map(|prim| view!(<PrimCode prim=prim glyph_only=true/>))
+        .map(|prim| view!(<Prim prim=prim glyph_only=true/>))
         .collect::<Vec<_>>()
 }
 

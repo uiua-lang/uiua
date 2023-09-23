@@ -14,7 +14,7 @@ use crate::{
     primitive::PrimDocs,
     tour::Tour,
     tutorial::{Tutorial, TutorialPage},
-    PrimCode,
+    Prim,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -355,7 +355,7 @@ impl Allowed {
             let of_class: Vec<_> = Primitive::all()
                 .filter(|p| self.prims.contains(p) && p.class() == class && p.name().is_some())
                 .map(|p| {
-                    view! {  <PrimCode prim=p/> }
+                    view! {  <Prim prim=p/> }
                 })
                 .collect();
             if of_class.is_empty() {

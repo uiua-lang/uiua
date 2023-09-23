@@ -2,7 +2,7 @@ use leptos::*;
 use leptos_router::*;
 use uiua::primitive::Primitive;
 
-use crate::{editor::Editor, examples::LOGO, PrimCode};
+use crate::{editor::Editor, examples::LOGO, Prim};
 
 #[component]
 pub fn Tour() -> impl IntoView {
@@ -22,7 +22,7 @@ pub fn Tour() -> impl IntoView {
         <p>"If you want to see how that works step-by-step, try clicking the arrows beside the Run button."</p>
         <p>"Now, I can already hear you asking, "<em>"\"Wait, what is that funny arrow? How am I supposed to type the multiplication sign?\""</em></p>
         <p>"Unlike some other array languages, Uiua does not require a special keyboard configuration or an editor with custom keybindings. Instead, you can type either the ASCII symbol or the name of a built-in function, then the Uiua formatter will convert it to the correct unicode glyph."</p>
-        <p>"In this case, the ASCII symbol for multiplication is "<code>"*"</code>" and the name of the funny arrow is "<PrimCode prim=Range/>"."</p>
+        <p>"In this case, the ASCII symbol for multiplication is "<code>"*"</code>" and the name of the funny arrow is "<Prim prim=Range/>"."</p>
         <p>"On this website, you can format by clicking "<b>"Run"</b>" or by pressing "<b>"Ctrl+Enter"</b>" with the cursor in the text area. Try it out!"</p>
         <Editor example="+1*2 range10" help={&["", "Click! ⇡⇡⇡⇡"]}/>
         <p>"You don't even have to type the whole name of a built-in function, just enough to disambiguate it from the others."</p>
@@ -35,14 +35,14 @@ pub fn Tour() -> impl IntoView {
         <Editor example="10 11\n@c\n+1 2\n\"Hello, World!\"\n# By the way, comments start with #"/>
         <p>"If you like, you can put values on the stack first, then operate on them."</p>
         <Editor examples={&["×", "+", "+ ", "1 ", "2 ", "3 ", "4"]}/>
-        <p><PrimCode prim=Dup/>" duplicates the top value on the stack."</p>
+        <p><Prim prim=Dup/>" duplicates the top value on the stack."</p>
         <Editor examples={&["×", ".", "3"]}/>
-        <p><PrimCode prim=Dup/>" is often used in the examples on this site to show both the input and output of a function."</p>
+        <p><Prim prim=Dup/>" is often used in the examples on this site to show both the input and output of a function."</p>
         <Editor example="√.225"/>
-        <p>"For math functions where the order matters, like "<PrimCode prim=Sub/>" and "<PrimCode prim=Div/>", what would normally be the second argument is instead the first. This is so you can think of fragments like "<PrimCode prim=Sub glyph_only=true/><code>"2"</code>" as a single unit."</p>
-        <p>"If you want them to work the other way, you can use "<PrimCode prim=Flip/>", which swaps the top two values on the stack."</p>
+        <p>"For math functions where the order matters, like "<Prim prim=Sub/>" and "<Prim prim=Div/>", what would normally be the second argument is instead the first. This is so you can think of fragments like "<Prim prim=Sub glyph_only=true/><code>"2"</code>" as a single unit."</p>
+        <p>"If you want them to work the other way, you can use "<Prim prim=Flip/>", which swaps the top two values on the stack."</p>
         <Editor example="-3 10\n-∶3 10"/>
-        <p>"By the way, since "<code>"-"</code>" is for "<PrimCode prim=Sub/>", use "<code>"`"</code>" for negative numbers. The formatter will turn in into a nice "<code>"¯"</code>"."</p>
+        <p>"By the way, since "<code>"-"</code>" is for "<Prim prim=Sub/>", use "<code>"`"</code>" for negative numbers. The formatter will turn in into a nice "<code>"¯"</code>"."</p>
         <Editor example="`10"/>
 
         <h2 id="arrays">"Arrays"</h2>
@@ -64,10 +64,10 @@ pub fn Tour() -> impl IntoView {
         <Editor example="×2 [1 2 3]"/>
         <Editor example="+ 1_2_3 4_5_6"/>
         <Editor example="× 2_10 [1_2_3 4_5_6]"/>
-        <p>"Arrays have a "<PrimCode prim=Shape/>" that describes how many elements they have along each axis."</p>
+        <p>"Arrays have a "<Prim prim=Shape/>" that describes how many elements they have along each axis."</p>
         <Editor example="△5\n△[]\n△[9 1 6]\n△[4_π_9 1_5_∞]"/>
-        <p>"The "<PrimCode prim=Rank/>" of an array is the number of axes it has."</p>
-        <p>"The "<PrimCode prim=Len/>" is the number of rows it has along its first axis."</p>
+        <p>"The "<Prim prim=Rank/>" of an array is the number of axes it has."</p>
+        <p>"The "<Prim prim=Len/>" is the number of rows it has along its first axis."</p>
         <Editor example="a ← [1_2_3_4 5_6_7_8 9_10_11_12]\n△a\n⧻a\n∴a"/>
         <p>"If you want to type that fancy "<code>"←"</code>" so you can gives names to arrays, you can type "<code>"="</code>" after a name at the start of a line, and the formatter will convert it for you."</p>
         <Editor example="x = 5\n+x x"/>
@@ -77,21 +77,21 @@ pub fn Tour() -> impl IntoView {
         <Editor example="value ← ÷2 [2 3 4]\nVaLuE"/>
 
         <h2 id="basic-array-operations">"Basic Array Operations"</h2>
-        <p>"You can reverse an array's rows with "<PrimCode prim=Reverse/>"."</p>
+        <p>"You can reverse an array's rows with "<Prim prim=Reverse/>"."</p>
         <Editor example="rev[1 2 3] # Run to format!"/>
         <Editor example="⇌[1_2_3 4_5_6]"/>
-        <p>"You can concatenate two arrays with "<PrimCode prim=Join/>"."</p>
+        <p>"You can concatenate two arrays with "<Prim prim=Join/>"."</p>
         <Editor example="⊂1 [2 3 4]\n⊂[1 2 3] [4 5 6]"/>
-        <p>"You can make two arrays the rows of a new array with "<PrimCode prim=Couple/>"."</p>
+        <p>"You can make two arrays the rows of a new array with "<Prim prim=Couple/>"."</p>
         <Editor example="⊟[1 2 3] [4 5 6]"/>
-        <p>"You can get the first element of an array with "<PrimCode prim=First/>"."</p>
+        <p>"You can get the first element of an array with "<Prim prim=First/>"."</p>
         <Editor example="⊢[1 2 3]"/>
         <Editor example="fir[1_2_3 4_5_6]"/>
-        <p><PrimCode prim=Take/>" and "<PrimCode prim=Drop/>" can be used to get just part of an array."</p>
+        <p><Prim prim=Take/>" and "<Prim prim=Drop/>" can be used to get just part of an array."</p>
         <Editor example="↙3 [1 2 3 4 5]\n↘3 [1 2 3 4 5]"/>
-        <p><PrimCode prim=Reshape/>" changes the shape of an array while keeping the elements in the same order."</p>
+        <p><Prim prim=Reshape/>" changes the shape of an array while keeping the elements in the same order."</p>
         <Editor example="↯3_3 .⇡9"/>
-        <p><PrimCode prim=Transpose/>" rotates the axes of an array."</p>
+        <p><Prim prim=Transpose/>" rotates the axes of an array."</p>
         <Editor example="trans.[1_2_3 4_5_6]"/>
         <p>"Uiua has a lot of built-in functions like these. You can explore their documentation on the "<A href="/docs#functions">"main docs page"</A>"."</p>
 
@@ -102,50 +102,50 @@ pub fn Tour() -> impl IntoView {
 
         <h2 id="modifiers">"Modifiers"</h2>
         <p>"Modifiers (called operators or adverbs in some other array languages) are functions that take other functions as arguments. The built-in modifiers are parsed so that if their function argument(s) immediately follow them, the function is run inside the modifier rather than before it."</p>
-        <p><PrimCode prim=Reduce/>" is a modifier many array-language aficionados will be familiar with. It takes its function and applies it \"between\" the items of an array."</p>
-        <p>"One basic use of "<PrimCode prim=Reduce/>" is to sum an array."</p>
+        <p><Prim prim=Reduce/>" is a modifier many array-language aficionados will be familiar with. It takes its function and applies it \"between\" the items of an array."</p>
+        <p>"One basic use of "<Prim prim=Reduce/>" is to sum an array."</p>
         <Editor example="/+ [1 2 3 4 5]"/>
         <p>"It works on multi-dimensional arrays too! In this case, it adds each row to the next."</p>
         <Editor example="/+ .[1_2_3 4_5_6 7_8_9]"/>
-        <p><PrimCode prim=Rows/>" applies a function to each row of an array."</p>
+        <p><Prim prim=Rows/>" applies a function to each row of an array."</p>
         <Editor example="x ← [1_2_3 4_5_6]\n  x\n ⇌x\n≡⇌x"/>
-        <p><PrimCode prim=Rows/>" also works "<em>"between"</em>" two arrays if it is given a binary function like "<PrimCode prim=Join/>"."</p>
+        <p><Prim prim=Rows/>" also works "<em>"between"</em>" two arrays if it is given a binary function like "<Prim prim=Join/>"."</p>
         <Editor example="≡⊂ [1_2 3_4] [5_6 7_8]"/>
         <p>"There are bunch of other modifiers that are useful in different situations. You can find a "<A href="/docs/modifier">"list of them"</A>" on the main docs page."</p>
 
         <h2 id="inline-functions">"Inline Functions"</h2>
         <p>"If you need a more complex function for a modifier, you can make an inline function by surrounding code with "<code>"()"</code>"s."</p>
-        <p>"Let's use "<PrimCode prim=Each/>" to get the sum of all the numbers up to each element of an array."</p>
-        <p>"For "<PrimCode prim=Each/>" element, we'll "<PrimCode prim=Add/><code>"1"</code>", get the "<PrimCode prim=Range/>" up to that number, then "<PrimCode prim=Reduce/>" it with "<PrimCode prim=Add/>"."</p>
+        <p>"Let's use "<Prim prim=Each/>" to get the sum of all the numbers up to each element of an array."</p>
+        <p>"For "<Prim prim=Each/>" element, we'll "<Prim prim=Add/><code>"1"</code>", get the "<Prim prim=Range/>" up to that number, then "<Prim prim=Reduce/>" it with "<Prim prim=Add/>"."</p>
         <Editor example="∵(/+ ⇡ +1) .[1_2_3 4_5_6 7_8_9]"/>
         <p>"Small inline functions with only 2 terms can also be created with a preceding "<code>"'"</code>"."</p>
-        <p>"Here, we use "<PrimCode prim=First/>" after "<PrimCode prim=Reverse/>" to get the last element of each row."</p>
+        <p>"Here, we use "<Prim prim=First/>" after "<Prim prim=Reverse/>" to get the last element of each row."</p>
         <Editor example="≡'⊢⇌ .[1_2_3 4_5_6 7_8_9]"/>
 
-        <h2 id="fill-and-nested-arrays"><PrimCode prim=Fill/>" and Nested Arrays"</h2>
-        <p>"Here is an array that cannot be constructed normally because its rows have different "<PrimCode prim=Len/>"s."</p>
+        <h2 id="fill-and-nested-arrays"><Prim prim=Fill/>" and Nested Arrays"</h2>
+        <p>"Here is an array that cannot be constructed normally because its rows have different "<Prim prim=Len/>"s."</p>
         <Editor example="[1 2_3_4 5_6]"/>
-        <p>"One way to make this array work is to use the "<PrimCode prim=Fill/>" modifier. You give it a fill value and a function or array that would fail with mismatched shapes, and it will fill in the missing values with the fill value."</p>
+        <p>"One way to make this array work is to use the "<Prim prim=Fill/>" modifier. You give it a fill value and a function or array that would fail with mismatched shapes, and it will fill in the missing values with the fill value."</p>
         <Editor example="⍛0[1 2_3_4 5_6]"/>
-        <p><PrimCode prim=Fill/>" works with lots of functions. Another one is "<PrimCode prim=Take/>" when the amount you are taking is more than the length of the array."</p>
+        <p><Prim prim=Fill/>" works with lots of functions. Another one is "<Prim prim=Take/>" when the amount you are taking is more than the length of the array."</p>
         <Editor example="⍛π↙5 [1 2 3]"/>
         <br/>
-        <p><PrimCode prim=Fill/>" is nice, but you don't always want to fill in the missing elements. Sometimes the you need to mix values of different shapes or types in an array. To understand Uiua's solution to this problem, you must first understand its "<em>"array model"</em>"."</p>
-        <p>"Uiua's array model is similar to that of J. Arrays must be rectangular and cannot mix types. However, the "<PrimCode prim=Constant/>" function can turn any value into a function that pushes that value to the stack. That value can then be extracted with "<PrimCode prim=Call/>". This is similar to J's boxes."</p>
+        <p><Prim prim=Fill/>" is nice, but you don't always want to fill in the missing elements. Sometimes the you need to mix values of different shapes or types in an array. To understand Uiua's solution to this problem, you must first understand its "<em>"array model"</em>"."</p>
+        <p>"Uiua's array model is similar to that of J. Arrays must be rectangular and cannot mix types. However, the "<Prim prim=Constant/>" function can turn any value into a function that pushes that value to the stack. That value can then be extracted with "<Prim prim=Call/>". This is similar to J's boxes."</p>
         <Editor example="[□1 □2_3_4 □5_6]"/>
-        <p>"Having to use "<PrimCode prim=Constant/>" on every value is kind of annoying, so there is a special syntax for "<PrimCode prim=Constant/>" arrays that uses "<code>"{}"</code>"s instead of "<code>"[]"</code>"s."</p>
+        <p>"Having to use "<Prim prim=Constant/>" on every value is kind of annoying, so there is a special syntax for "<Prim prim=Constant/>" arrays that uses "<code>"{}"</code>"s instead of "<code>"[]"</code>"s."</p>
         <Editor example="{1 2_3_4 5_6}"/>
-        <p>"Many simple functions work on "<PrimCode prim=Constant/>" elements without needing to "<PrimCode prim=Call/>" them."</p>
+        <p>"Many simple functions work on "<Prim prim=Constant/>" elements without needing to "<Prim prim=Call/>" them."</p>
         <Editor example="{1 2_3_4 5_6}\n∵⇌.\n∵⧻."/>
         <Editor example="+5 {1 2_3_4 5_6}"/>
-        <p>"For more complex operations, though, you'll need to use "<PrimCode prim=Call/>". Using it with "<PrimCode prim=Under/>" will re-"<PrimCode prim=Constant/>" the result."</p>
+        <p>"For more complex operations, though, you'll need to use "<Prim prim=Call/>". Using it with "<Prim prim=Under/>" will re-"<Prim prim=Constant/>" the result."</p>
         <Editor example="{\"dog\" \"cat\" \"fish\"}\n∵⍜!(⊂∶⇌.)."/>
 
         <h2 id="multimedia">"Multimedia"</h2>
         <p>"Uiua can natively generate images and audio."</p>
         <p>"On this site, simply leaving an array on the stack that "<em>"looks"</em>" like image or audio data will display it."</p>
         <h3>"Images"</h3>
-        <p>"Image data can either be a "<PrimCode prim=Rank/><code>"2"</code>" array of grayscale pixel data or a "<PrimCode prim=Rank/><code>"3"</code>" array of grayscale with alpha, RGB, or RGBA pixel data."</p>
+        <p>"Image data can either be a "<Prim prim=Rank/><code>"2"</code>" array of grayscale pixel data or a "<Prim prim=Rank/><code>"3"</code>" array of grayscale with alpha, RGB, or RGBA pixel data."</p>
         <p>"This minimal example uses three different functions on x/y coordinates to generate RGB values and make a pretty gradient."</p>
         <Editor example="⍉∺(|1 ⊞ ∶,)+_-_× ÷∶⇡.100"/>
         <p>"The Uiua logo is made with Uiua itself!"</p>

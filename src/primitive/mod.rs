@@ -485,6 +485,13 @@ impl Primitive {
                 env.push(val);
                 env.push(next_seed);
             }
+            Primitive::Deal => {
+                let seed = env.pop(1)?.as_num(env, "Deal expects a number")?.to_bits();
+                let arr = env.pop(2)?;
+                let mut rows: Vec<Value> = arr.into_rows().collect();
+                rows.shuffle(&mut SmallRng::seed_from_u64(seed));
+                env.push(Value::from_row_values_infallible(rows));
+            }
             Primitive::Use => {
                 let name = env.pop(1)?.as_string(env, "Use name must be a string")?;
                 let lib = env.pop(2)?;

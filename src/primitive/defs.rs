@@ -1222,7 +1222,7 @@ primitive!(
     (0, Rand, Misc, ("random", '⚂')),
     /// Generate a random number between 0 and 1 from a seed, as well as the next seed
     ///
-    /// If you don't care about a seed, you can use [rand].
+    /// If you don't care about a seed, you can use [random].
     ///
     /// The same seed will always produce the same random number.
     /// ex: [;gen gen gen 0]
@@ -1232,6 +1232,14 @@ primitive!(
     /// Use [multiply] and [floor] to generate a random integer in a range.
     /// ex: [;⍥(∶⌊*10∶gen)5 0]
     (1(2), Gen, Misc, "gen"),
+    /// Randomly reorder the rows of an array with a seed
+    ///
+    /// ex: deal0 [1 2 3 4 5]
+    /// ex: deal5 [1_2 3_4 5_6 7_8]
+    /// If you don't care about a seed, just seed with [random].
+    /// ex: deal⚂ [1 2 3 4 5]
+    /// ex: deal⚂ [1_2 3_4 5_6 7_8]
+    (2, Deal, Misc, "deal"),
     /// Extract a named function from a module
     ///
     /// Can be used after [&i].

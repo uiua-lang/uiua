@@ -820,7 +820,7 @@ mod tests {
             [(Primitive::Reverse, _), (Primitive::Reverse, _)]
         ));
         assert!(matches!(
-            &*Primitive::from_format_name_multi("tabrepl").unwrap(),
+            &*Primitive::from_format_name_multi("tabkee").unwrap(),
             [(Primitive::Table, _), (Primitive::Keep, _)]
         ));
         assert_eq!(Primitive::from_format_name_multi("foo"), None);

@@ -1,6 +1,9 @@
 //! Algorithms for looping modifiers
 
-use std::ops::{Add, Div, Mul, Sub};
+use std::{
+    iter::once,
+    ops::{Add, Div, Mul, Sub},
+};
 
 use tinyvec::tiny_vec;
 
@@ -100,10 +103,18 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
 fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
     match f.signature().args {
         0 | 1 => {
-            for row in xs.into_rows() {
+            let mut rows = xs.into_rows();
+            while let Some(row) = rows.next() {
                 env.push(row);
                 env.push(f.clone());
                 if env.call_catch_break()? {
+                    let reduced = if f.signature().args == 0 {
+                        None
+                    } else {
+                        Some(env.pop("reduced function result")?)
+                    };
+                    let val = Value::from_row_values(reduced.into_iter().chain(rows), env)?;
+                    env.push(val);
                     return Ok(());
                 }
             }
@@ -113,14 +124,16 @@ fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> Uiu
             let mut acc = init
                 .or_else(|| rows.next())
                 .ok_or_else(|| env.error("Cannot reduce empty array"))?;
-            for row in rows {
+            while let Some(row) = rows.next() {
                 env.push(acc);
                 env.push(row);
                 env.push(f.clone());
-                if env.call_catch_break()? {
-                    return Ok(());
-                }
+                let should_break = env.call_catch_break()?;
                 acc = env.pop("reduced function result")?;
+                if should_break {
+                    acc = Value::from_row_values(once(acc).chain(rows), env)?;
+                    break;
+                }
             }
             env.push(acc);
         }
@@ -232,13 +245,12 @@ fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
         env.push(acc.clone());
         env.push(f.clone());
         let should_break = env.call_catch_break()?;
-        let new_acc = env.pop("scanned function result")?;
+        acc = env.pop("scanned function result")?;
+        scanned.push(acc.clone());
         if should_break {
             env.truncate_stack(start_height);
             break;
         }
-        acc = new_acc;
-        scanned.push(acc.clone());
     }
     env.push(Value::from_row_values(scanned, env)?);
     Ok(())

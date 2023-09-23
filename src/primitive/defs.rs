@@ -788,6 +788,9 @@ primitive!(
     ///
     /// You can can reduce with arbitrary functions.
     /// ex: /(×+1) 1_2_3_4_5
+    ///
+    /// [break]ing out of [reduce] appends the unreduced values to the end of the result.
+    /// ex: /(⎋1+) [3 4 8 9]
     (1[1], Reduce, AggregatingModifier, ("reduce", '/')),
     /// Apply a reducing function to an array with an initial value
     ///
@@ -802,6 +805,9 @@ primitive!(
     /// ex: \+   1_2_3_4
     /// ex: \-   1_2_3_4
     /// ex: \'-∶ 1_2_3_4
+    ///
+    /// [break]ing out of [scan] discards the unscanned values.
+    /// ex: \(⎋≥10.+) [1 2 3 4 5 6 7 8]
     (1[1], Scan, AggregatingModifier, ("scan", '\\')),
     /// Apply a function to each element of an array or arrays
     ///

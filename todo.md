@@ -5,8 +5,6 @@
   - Common idioms
   - Guided examples
 - Test suite - a bunch of Uiua code that shouldn't error
-- Modify break behavior
-  - Breaking from reduce or fold should keep unreduced values
 - Optimizations
   - Dyadic level - The dyadic case of level should have its own function
   - Windowed reduce? - `/f◫` could be optimized, but is it necessary?

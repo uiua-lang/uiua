@@ -180,22 +180,6 @@ impl Hash for DynamicFunctionKind {
     }
 }
 
-impl TryFrom<Primitive> for Function {
-    type Error = String;
-    fn try_from(prim: Primitive) -> Result<Self, Self::Error> {
-        Ok(Self::new(
-            FunctionId::Primitive(prim),
-            [Instr::Prim(prim, 0)],
-            FunctionKind::Normal,
-            if let Some((args, outputs)) = prim.args().zip(prim.outputs()) {
-                Signature::new(args as usize, outputs as usize)
-            } else {
-                return Err(format!("{prim} has no signature"));
-            },
-        ))
-    }
-}
-
 impl PartialEq for Function {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id && self.instrs == other.instrs

@@ -551,20 +551,5 @@ mod test {
                 Prim(Add, 0)
             ])
         );
-        assert_eq!(
-            Ok(sig(0, 1)),
-            check(&[
-                BeginArray,
-                push(3),
-                push(2),
-                push(1),
-                EndArray {
-                    span: 0,
-                    constant: false
-                },
-                push(Value::try_from(Add).unwrap()),
-                Prim(Reduce, 0)
-            ])
-        );
     }
 }

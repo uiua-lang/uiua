@@ -200,7 +200,8 @@ impl UiuaError {
             UiuaError::Timeout(span) => {
                 report([("Maximum execution time exceeded", span.clone())], color)
             }
-            _ => self.to_string(),
+            UiuaError::Fill(error) => error.show(color),
+            UiuaError::Load(..) | UiuaError::Format(..) => self.to_string(),
         }
     }
 }

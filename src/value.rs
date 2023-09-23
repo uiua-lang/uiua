@@ -615,13 +615,6 @@ impl From<Function> for Value {
     }
 }
 
-impl TryFrom<Primitive> for Value {
-    type Error = <Primitive as TryInto<Function>>::Error;
-    fn try_from(prim: Primitive) -> Result<Self, Self::Error> {
-        Function::try_from(prim).map(Into::into)
-    }
-}
-
 impl From<i32> for Value {
     fn from(i: i32) -> Self {
         Value::from(i as f64)

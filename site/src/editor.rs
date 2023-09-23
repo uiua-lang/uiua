@@ -700,7 +700,7 @@ pub fn Editor<'a>(
         ("[]", "array", "", Some(('[', ']'))),
         ("{}", "constant array", "", Some(('{', '}'))),
         ("()", "function", "", Some(('(', ')'))),
-        ("'", "bind", "", None),
+        ("'", "term pair", "", None),
         ("¯", "negative\n`", "number-literal-span", None),
         ("@", "character", "string-literal-span", None),
         ("\"", "string", "string-literal-span", Some(('"', '"'))),

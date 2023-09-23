@@ -204,7 +204,7 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig, dept
             }
         }
         Word::Func(func) => {
-            if func.bind {
+            if func.term_pair {
                 output.push('\'');
                 format_words(output, &func.lines[0], config, false, depth + 1);
             } else {

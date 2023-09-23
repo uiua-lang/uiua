@@ -484,7 +484,7 @@ impl Parser {
                 id: FunctionId::Anonymous(span),
                 signature,
                 lines: body,
-                bind: false,
+                term_pair: false,
             }))
         } else if let Some(start) = self.try_exact(SingleQuote) {
             self.try_spaces();
@@ -505,7 +505,7 @@ impl Parser {
                 id: FunctionId::Anonymous(span),
                 signature: None,
                 lines: vec![body],
-                bind: true,
+                term_pair: true,
             }))
         } else {
             return None;

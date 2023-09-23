@@ -277,7 +277,7 @@ impl Primitive {
             Primitive::Join => env.dyadic_oo_env(Value::join)?,
             Primitive::Transpose => env.monadic_mut(Value::transpose)?,
             Primitive::InvTranspose => env.monadic_mut(Value::inv_transpose)?,
-            Primitive::Replicate => env.dyadic_ro_env(Value::replicate)?,
+            Primitive::Keep => env.dyadic_ro_env(Value::keep)?,
             Primitive::Take => env.dyadic_oo_env(Value::take)?,
             Primitive::Constant => {
                 let val = env.pop(1)?;
@@ -821,7 +821,7 @@ mod tests {
         ));
         assert!(matches!(
             &*Primitive::from_format_name_multi("tabrepl").unwrap(),
-            [(Primitive::Table, _), (Primitive::Replicate, _)]
+            [(Primitive::Table, _), (Primitive::Keep, _)]
         ));
         assert_eq!(Primitive::from_format_name_multi("foo"), None);
     }

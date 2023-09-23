@@ -5,7 +5,6 @@
   - Common idioms
   - Guided examples
 - Test suite - a bunch of Uiua code that shouldn't error
-- Rename replicate to something that doesn't clash with repeat (not filter because that clashes with fill)
 - Modify break behavior
   - Breaking from reduce or fold should keep unreduced values
 - Optimizations

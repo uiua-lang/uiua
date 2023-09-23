@@ -491,32 +491,32 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
-    pub fn replicate(&self, replicated: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn keep(&self, keepd: Self, env: &Uiua) -> UiuaResult<Self> {
         let amount = self.as_naturals(
             env,
-            "Replication amount must be a natural number \
+            "Keep amount must be a natural number \
             or list of natural numbers",
         )?;
         Ok(if self.rank() == 0 {
-            match replicated {
-                Value::Num(a) => Value::Num(a.scalar_replicate(amount[0])),
-                Value::Byte(a) => Value::Byte(a.scalar_replicate(amount[0])),
-                Value::Char(a) => Value::Char(a.scalar_replicate(amount[0])),
-                Value::Func(a) => Value::Func(a.scalar_replicate(amount[0])),
+            match keepd {
+                Value::Num(a) => Value::Num(a.scalar_keep(amount[0])),
+                Value::Byte(a) => Value::Byte(a.scalar_keep(amount[0])),
+                Value::Char(a) => Value::Char(a.scalar_keep(amount[0])),
+                Value::Func(a) => Value::Func(a.scalar_keep(amount[0])),
             }
         } else {
-            match replicated {
-                Value::Num(a) => Value::Num(a.list_replicate(&amount, env)?),
-                Value::Byte(a) => Value::Byte(a.list_replicate(&amount, env)?),
-                Value::Char(a) => Value::Char(a.list_replicate(&amount, env)?),
-                Value::Func(a) => Value::Func(a.list_replicate(&amount, env)?),
+            match keepd {
+                Value::Num(a) => Value::Num(a.list_keep(&amount, env)?),
+                Value::Byte(a) => Value::Byte(a.list_keep(&amount, env)?),
+                Value::Char(a) => Value::Char(a.list_keep(&amount, env)?),
+                Value::Func(a) => Value::Func(a.list_keep(&amount, env)?),
             }
         })
     }
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn scalar_replicate(mut self, amount: usize) -> Self {
+    pub fn scalar_keep(mut self, amount: usize) -> Self {
         if self.rank() == 0 || amount == 1 {
             return self;
         }
@@ -535,17 +535,17 @@ impl<T: ArrayValue> Array<T> {
         });
         self
     }
-    pub fn list_replicate(mut self, amount: &[usize], env: &Uiua) -> UiuaResult<Self> {
+    pub fn list_keep(mut self, amount: &[usize], env: &Uiua) -> UiuaResult<Self> {
         if self.row_count() != amount.len() {
             return Err(env.error(format!(
-                "Cannot replicate array with shape {} with array of length {}",
+                "Cannot keep array with shape {} with array of length {}",
                 self.format_shape(),
                 amount.len()
             )));
         }
         if self.rank() == 0 {
             if amount.len() != 1 {
-                return Err(env.error("Scalar array can only be replicated with a single number"));
+                return Err(env.error("Scalar array can only be kept with a single number"));
             }
             let mut new_data = Vec::with_capacity(amount[0]);
             for _ in 0..amount[0] {

@@ -525,7 +525,20 @@ pub fn Editor<'a>(
                 let new_code = lines.join("\n");
                 state().set_code(&new_code, Cursor::Set(start, end));
             }
-            "\"" | "(" | "[" | "{" => {
+            "\"" => {
+                let (start, end) = get_code_cursor().unwrap();
+                let code = code_text();
+                if start > 0 && start == end && code.chars().nth(start as usize) == Some('"') {
+                    if code.chars().nth(start as usize - 1) == Some('"') {
+                        state().set_cursor((start + 1, start + 1));
+                    } else {
+                        replace_code("\"");
+                    }
+                } else {
+                    surround_code('"', '"');
+                }
+            }
+            "(" | "[" | "{" => {
                 // Surround the selected text with delimiters
                 let (open, close) = match key {
                     "\"" => ('"', '"'),
@@ -535,6 +548,15 @@ pub fn Editor<'a>(
                     _ => unreachable!(),
                 };
                 surround_code(open, close);
+            }
+            ")" | "]" | "}" => {
+                let (start, end) = get_code_cursor().unwrap();
+                let close = key.chars().next().unwrap();
+                if start == end && code_text().chars().nth(start as usize) == Some(close) {
+                    state().set_cursor((start + 1, start + 1));
+                } else {
+                    handled = false;
+                }
             }
             key @ ("ArrowUp" | "ArrowDown") if event.alt_key() => {
                 let (_, end) = get_code_cursor().unwrap();

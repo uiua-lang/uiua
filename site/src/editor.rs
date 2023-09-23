@@ -345,6 +345,20 @@ pub fn Editor<'a>(
         state().set_code(&new, Cursor::Set(start, start));
     };
 
+    let surround_code = move |open: char, close: char| {
+        let (start, end) = get_code_cursor().unwrap();
+        let (start, end) = (start.min(end), start.max(end));
+        let code = code_text();
+        let mut chars = code.chars();
+        let mut new_code = String::new();
+        new_code.extend(chars.by_ref().take(start as usize));
+        new_code.push(open);
+        new_code.extend(chars.by_ref().take((end - start) as usize));
+        new_code.push(close);
+        new_code.extend(chars);
+        state().set_code(&new_code, Cursor::Set(start + 1, end + 1));
+    };
+
     // Update the code when the textarea is changed
     let code_input = move |event: Event| {
         let event = event.dyn_into::<web_sys::InputEvent>().unwrap();
@@ -513,29 +527,14 @@ pub fn Editor<'a>(
             }
             "\"" | "(" | "[" | "{" => {
                 // Surround the selected text with delimiters
-                let (start, end) = get_code_cursor().unwrap();
-                if start != end {
-                    let open = key;
-                    let close = match open {
-                        "\"" => "\"",
-                        "(" => ")",
-                        "[" => "]",
-                        "{" => "}",
-                        _ => unreachable!(),
-                    };
-                    let (start, end) = (start.min(end), start.max(end));
-                    let code = code_text();
-                    let mut chars = code.chars();
-                    let mut new_code = String::new();
-                    new_code.extend(chars.by_ref().take(start as usize));
-                    new_code.push_str(open);
-                    new_code.extend(chars.by_ref().take((end - start) as usize));
-                    new_code.push_str(close);
-                    new_code.extend(chars);
-                    state().set_code(&new_code, Cursor::Set(start + 1, end + 1));
-                } else {
-                    handled = false;
-                }
+                let (open, close) = match key {
+                    "\"" => ('"', '"'),
+                    "(" => ('(', ')'),
+                    "[" => ('[', ']'),
+                    "{" => ('{', '}'),
+                    _ => unreachable!(),
+                };
+                surround_code(open, close);
             }
             key @ ("ArrowUp" | "ArrowDown") if event.alt_key() => {
                 let (_, end) = get_code_cursor().unwrap();
@@ -674,20 +673,26 @@ pub fn Editor<'a>(
         .collect();
 
     // Additional code buttons
-    for (glyph, title, class) in [
-        ("_", "strand", "strand-span"),
-        ("[]", "array", ""),
-        ("{}", "constant array", ""),
-        ("()", "function", ""),
-        ("'", "bind", ""),
-        ("¯", "negative\n`", "number-literal-span"),
-        ("@", "character", "string-literal-span"),
-        ("\"", "string", "string-literal-span"),
-        ("←", "binding", ""),
-        ("|", "signature", ""),
-        ("#", "comment", "comment-span"),
+    for (glyph, title, class, surround) in [
+        ("_", "strand", "strand-span", None),
+        ("[]", "array", "", Some(('[', ']'))),
+        ("{}", "constant array", "", Some(('{', '}'))),
+        ("()", "function", "", Some(('(', ')'))),
+        ("'", "bind", "", None),
+        ("¯", "negative\n`", "number-literal-span", None),
+        ("@", "character", "string-literal-span", None),
+        ("\"", "string", "string-literal-span", Some(('"', '"'))),
+        ("←", "binding", "", None),
+        ("|", "signature", "", None),
+        ("#", "comment", "comment-span", None),
     ] {
-        let onclick = move |_| replace_code(glyph);
+        let onclick = move |_| {
+            if let Some((open, close)) = surround {
+                surround_code(open, close);
+            } else {
+                replace_code(glyph)
+            }
+        };
         let class = format!("glyph-button {class}");
         glyph_buttons.push(
             view! {

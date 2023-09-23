@@ -125,7 +125,7 @@ pub struct Signature {
 }
 
 impl Signature {
-    pub fn new(args: usize, outputs: usize) -> Self {
+    pub const fn new(args: usize, outputs: usize) -> Self {
         Self { args, outputs }
     }
     pub fn compatible_with(self, other: Self) -> bool {
@@ -133,6 +133,12 @@ impl Signature {
     }
     pub fn max_with(self, other: Self) -> Self {
         Self::new(self.args.max(other.args), self.outputs.max(other.outputs))
+    }
+}
+
+impl PartialEq<(usize, usize)> for Signature {
+    fn eq(&self, other: &(usize, usize)) -> bool {
+        self.args == other.0 && self.outputs == other.1
     }
 }
 

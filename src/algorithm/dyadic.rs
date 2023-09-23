@@ -1041,6 +1041,12 @@ impl<T: ArrayValue> Array<T> {
                     }
                     Array::from_row_arrays(new_rows, env)?
                 } else {
+                    assert_ne!(
+                        0,
+                        from.rank(),
+                        "untaking multiple dimensions from a scalar \
+                        array should not be possible"
+                    );
                     return Err(env.error(format!(
                         "Attempted to undo take, but the shape of the taken section's \
                         rows was modified from {} to {}",

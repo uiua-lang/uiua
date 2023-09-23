@@ -24,7 +24,7 @@ use rand::prelude::*;
 
 use crate::{
     algorithm::{fork, loops},
-    function::Function,
+    function::{Function, Signature},
     lex::AsciiToken,
     run::FunctionArg,
     sys::*,
@@ -413,6 +413,14 @@ impl Primitive {
             Primitive::Under => {
                 let f = env.pop(FunctionArg(1))?;
                 let g = env.pop(FunctionArg(2))?;
+                const EXPECTED_G_SIG: Signature = Signature::new(1, 1);
+                if g.signature() != EXPECTED_G_SIG {
+                    return Err(env.error(format!(
+                        "Under's second function must have a signature of {EXPECTED_G_SIG}, \
+                        but the signature of {g} is {}",
+                        g.signature()
+                    )));
+                }
                 let (f_before, f_after) = f.under(env)?;
                 env.push(f_before);
                 env.call()?;

@@ -920,6 +920,9 @@ primitive!(
     /// ex: ⍜⊏'×10 1_3 1_2_3_4_5
     /// Although, [under][select] only works if the indices are unique.
     /// ex! ⍜⊏'×10 1_3_3 1_2_3_4_5
+    ///
+    /// [under]'s second function *must* have a signature of `|1.1`.
+    /// ex! ⍜(↙2). [1 2 3]
     ([2], Under, OtherModifier, ("under", '⍜')),
     /// Set the fill value for a function
     ///

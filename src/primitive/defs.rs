@@ -89,6 +89,9 @@ primitive!(
     /// [duplicate] is often combined with [flip] to process a single value two different ways.
     /// For example, to find the average value of an array, we [divide] its sum(`reduce``add`) by its [length].
     /// ex: ÷⧻∶/+. [4 0 1 2]
+    /// Or, maybe you want to find all the numbers in an array that lie within a certain range.
+    /// Here, we use [multiply] as a logical AND function.
+    /// ex: ×≥5∶≤8. [6 2 5 9 6 5 0 4]
     /// This is a very common pattern.
     ///
     /// [duplicate] can be used to make a monadic left-hook, such as in this palindrome checker:
@@ -347,6 +350,10 @@ primitive!(
     /// ex: ×3 5
     /// ex: ×2 [1 2 3]
     /// ex: × [1 2 3] [4 5 6]
+    ///
+    /// Uiua does not have dedicated boolean logical operators.
+    /// [multiply] can be used as a logical AND.
+    /// ex: ×,,≥5∶≤8. [6 2 5 9 6 5 0 4]
     (2, Mul, DyadicPervasive, ("multiply", AsciiToken::Star, '×')),
     /// Divide values
     ///
@@ -390,11 +397,20 @@ primitive!(
     ///
     /// ex: ↧ 3 5
     /// ex: ↧ [1 4 2] [3 7 1]
+    ///
+    /// Uiua does not have dedicated boolean logical operators.
+    /// [minimum] can be used as a logical AND.
+    /// ex: ≥5∶≤8. [6 2 5 9 6 5 0 4]
+    ///   : ↧,,
     (2, Min, DyadicPervasive, ("minimum", '↧')),
     /// Take the maximum of two arrays
     ///
     /// ex: ↥ 3 5
     /// ex: ↥ [1 4 2] [3 7 1]
+    ///
+    /// Uiua does not have dedicated boolean logical operators.
+    /// [maximum] can be used as a logical OR.
+    /// ex: ↥,,≤5∶≥8. [6 2 5 9 6 5 0 4]
     (2, Max, DyadicPervasive, ("maximum", '↥')),
     /// The arctangent of two numbers
     ///

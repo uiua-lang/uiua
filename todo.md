@@ -2,8 +2,10 @@
   - Control flow
   - Images
   - System functions
+  - Common idioms
   - Guided examples
 - Test suite - a bunch of Uiua code that shouldn't error
+- Rename replicate to something that doesn't clash with repeat (not filter because that clashes with fill)
 - Optimizations
   - Dyadic level - The dyadic case of level should have its own function
   - Windowed reduce? - `/f◫` could be optimized, but is it necessary?
@@ -12,8 +14,7 @@
   - Sound input
   - Webcam input
 - System APIs
-  - UDP Sockets
-  - FFI
-  - check OS
-  - unicode utils
   - run commands
+  - check OS
+  - FFI
+  - UDP Sockets

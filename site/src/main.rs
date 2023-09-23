@@ -30,7 +30,7 @@ pub fn main() {
 
 #[component]
 pub fn Site() -> impl IntoView {
-    // Choose a random subtitle
+    // Choose a subtitle
     let subtitles = [
         "A stack-oriented array programming language".into_view(),
         "An array-oriented stack programming language".into_view(),
@@ -65,11 +65,10 @@ pub fn Site() -> impl IntoView {
                 <div id="top" class="top">
                     <div id="header">
                         <div id="header-left">
-                            <h1><img src="/uiua-logo.png" style="height: 1em" alt="Uiua logo"></img>" Uiua"</h1>
+                            <h1><A href="/"><img src="/uiua-logo.png" style="height: 1em" alt="Uiua logo" /></A>" Uiua"</h1>
                             <p id="subtitle">{ subtitle }</p>
                         </div>
                         <div id="nav">
-                            <p><a href="https://github.com/uiua-lang/uiua">"GitHub"</a></p>
                             <p><a href="/">"Home"</a></p>
                         </div>
                     </div>
@@ -105,6 +104,7 @@ pub fn MainPage() -> impl IntoView {
             <p><A href="/install">"Installation"</A></p>
             <p><A href="/docs">"Documentation"</A></p>
             <p><A href="/tour">"Language Tour"</A></p>
+            <p><a href="https://github.com/uiua-lang/uiua">"GitHub"</a></p>
             <p><A href="/pad">"Pad"</A></p>
         </div>
         <Editor

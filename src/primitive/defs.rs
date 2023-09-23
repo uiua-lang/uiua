@@ -79,12 +79,17 @@ macro_rules! primitive {
 primitive!(
     /// Duplicate the top value on the stack
     ///
-    /// ex: [. 1 2 3]
+    /// ex: [. 1 2 3 4]
     ///
     /// [duplicate] is often used in examples to show both the input and output of a function.
     /// ex: √.144
-    /// ex: .[1 2 3]
+    /// ex: .[1 2 3 4]
     ///   : +1⇌
+    ///
+    /// [duplicate] is often combined with [flip] to process a single value two different ways.
+    /// For example, to find the average value of an array, we [divide] its sum(`reduce``add`) by its [length].
+    /// ex: ÷⧻∶/+. [4 0 1 2]
+    /// This is a very common pattern.
     ///
     /// [duplicate] can be used to make a monadic left-hook, such as in this palindrome checker:
     /// ex: ≅⇌. "friend"
@@ -94,11 +99,14 @@ primitive!(
     (1(2), Dup, Stack, ("duplicate", '.')),
     /// Duplicate the second-to-top value to the top of the stack
     ///
-    /// ex: [, 1 2 3]
+    /// ex: [, 1 2 3 4 5]
+    ///
+    /// [over] is often used in examples of functions with two inputs two show both inputs and the output.
+    /// ex: [+,, +3 4 5]
     (2(3), Over, Stack, ("over", ',')),
     /// Swap the top two values on the stack
     ///
-    /// ex: [∶ 1 2 3 4]
+    /// ex: [∶ 1 2 3 4 5]
     ///
     /// When combined with [duplicate], you can apply two different functions to the same value.
     /// If you have two functions `f` and `g`, the pattern `f``flip``g``duplicate` will call both functions on the top value.
@@ -111,6 +119,12 @@ primitive!(
     /// ex: ÷⧻∶/+. 1_8_2_5
     (2(2), Flip, Stack, ("flip", AsciiToken::Colon, '∶')),
     /// Pop the top value off the stack
+    ///
+    /// This is usually used to discard values that are no longer needed.
+    ///
+    /// For example, [gen] returns both a random number and a seed for the next call.
+    /// When you have all the random numbers you need, you often want to discard the seed.
+    /// ex: ⌊×10[;⍥gen10 0]
     (1(0), Pop, Stack, ("pop", ';')),
     /// Do nothing
     ///
@@ -123,11 +137,19 @@ primitive!(
     (0(0), Noop, Stack, ("noop", '·')),
     /// Move the top value on the stack 2 places down
     ///
-    /// ex: [↷ 1 2 3 4]
+    /// ex: [↷ 1 2 3 4 5]
+    ///
+    /// If you want to operate on two values, keep them on the stack, and put the result below them, you can combine [roll] and [over].
+    /// ex: ↷+,,1 2
+    ///   : $ _ + _ = _
+    ///
+    /// See also: [unroll]
     (3(3), Roll, Stack, ("roll", '↷')),
     /// Move the third value on the stack to the top
     ///
-    /// ex: [↶ 1 2 3 4]
+    /// ex: [↶ 1 2 3 4 5]
+    ///
+    /// See also: [roll]
     (3(3), Unroll, Stack, ("unroll", '↶')),
     /// Rearrange the stack
     ///
@@ -144,6 +166,8 @@ primitive!(
     /// [pop] is `⇵``[1]`.
     /// [roll] is `⇵``[1 2 0]`.
     /// [unroll] is `⇵``[2 0 1]`.
+    ///
+    /// While [restack] is sometimes necessary, its use is generally discouraged unless absolutely necessary, as it makes code harder to read.
     ((None), Restack, Stack, ("restack", '⇵')),
     // Pervasive monadic ops
     /// Logical not
@@ -165,6 +189,8 @@ primitive!(
     /// ex: ± [¯2 ¯1 0 1 2]
     (1, Sign, MonadicPervasive, ("sign", '±')),
     /// Negate a number
+    ///
+    /// Formats from `\``.
     ///
     /// ex: ¯ 1
     /// ex: ¯ ¯3

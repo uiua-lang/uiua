@@ -124,6 +124,8 @@ impl fmt::Display for Primitive {
                 Unselect => write!(f, "⍘{Select}"),
                 Unpick => write!(f, "⍘{Pick}"),
                 Cos => write!(f, "{Sin}{Add}{Eta}"),
+                Asin => write!(f, "{Invert}{Sin}"),
+                Acos => write!(f, "{Invert}{Cos}"),
                 Last => write!(f, "{First}{Reverse}"),
                 _ => write!(f, "{self:?}"),
             }
@@ -700,8 +702,13 @@ fn parse_doc_line_fragments(line: &str) -> Vec<PrimDocFragment> {
     }
     let mut curr = String::new();
     let mut kind = FragKind::Text;
-    for c in line.chars() {
+    let mut chars = line.chars().peekable();
+    while let Some(c) = chars.next() {
         match c {
+            '\\' if chars.peek() == Some(&'`') => {
+                curr.push('`');
+                chars.next();
+            }
             '`' if kind == FragKind::Code => {
                 if let Some(prim) = Primitive::from_name(&curr) {
                     frags.push(PrimDocFragment::Primitive { prim, named: false });

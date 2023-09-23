@@ -197,10 +197,9 @@ pub fn PrimCode(
     #[prop(optional)] glyph_only: bool,
     #[prop(optional)] hide_docs: bool,
 ) -> impl IntoView {
-    let show_name = !glyph_only;
     let span_class = prim_class(prim);
     let symbol = prim.to_string();
-    let name = if let Some(name) = prim.name().filter(|name| show_name && symbol != *name) {
+    let name = if let Some(name) = prim.name().filter(|name| !glyph_only && symbol != *name) {
         format!(" {}", name)
     } else {
         "".to_string()
@@ -211,27 +210,39 @@ pub fn PrimCode(
         .unwrap_or_default();
     let mut title = String::new();
     if let Some(ascii) = prim.ascii() {
-        title.push_str(&format!("({}) ", ascii));
+        title.push_str(&format!("({})", ascii));
     }
     if let Some(name) = prim.name() {
-        if prim.unicode().is_some() {
+        if prim.unicode().is_some() && glyph_only {
+            if !title.is_empty() {
+                title.push(' ');
+            }
             title.push_str(name);
         }
     }
     if let Primitive::Sys(op) = prim {
         title.push_str(op.long_name());
+        title.push(':');
         title.push('\n');
     }
     if let Some(doc) = prim.doc().filter(|_| !hide_docs) {
-        if show_name && !title.is_empty() && !matches!(prim, Primitive::Sys(_)) {
+        if glyph_only && !title.is_empty() && !matches!(prim, Primitive::Sys(_)) {
             title.push_str(": ");
         }
         title.push_str(&doc.short_text());
     }
-    view! {
-        <A href=href class="prim-code-a">
-            <code class="prim-code" data-title=title><span class=span_class>{ symbol }</span>{name}</code>
-        </A>
+    if title.is_empty() {
+        view! {
+            <A href=href class="prim-code-a">
+                <code><span class=span_class>{ symbol }</span>{name}</code>
+            </A>
+        }
+    } else {
+        view! {
+            <A href=href class="prim-code-a">
+                <code class="prim-code" data-title=title><span class=span_class>{ symbol }</span>{name}</code>
+            </A>
+        }
     }
 }
 

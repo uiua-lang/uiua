@@ -488,7 +488,8 @@ li {
     background-color: #000d;
     padding: 0.2em;
     border-radius: 0.2em;
-    left: -10.2em;
+    left: 0;
+    pointer-events: none;
     width: 10em;
     text-decoration: none;
     white-space: pre-wrap;

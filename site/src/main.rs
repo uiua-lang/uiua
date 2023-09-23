@@ -127,7 +127,7 @@ pub fn MainPage() -> impl IntoView {
                 <div>
                     <h2>"True Arrays"</h2>
                     <p>"Uiua's one and only composite data type, the array, is based on those of APL, J, and BQN. They are multidimensional and rank-polymorphic, meaning that an operation that applies to one item also applies to many items."</p>
-                    <Editor example="+1↯3_4⇡12"/>
+                    <Editor example="+2 ↯3_4 ⇡5"/>
                 </div>
                 <div>
                     <h2>"Rich Primitives"</h2>

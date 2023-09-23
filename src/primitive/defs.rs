@@ -180,7 +180,7 @@ primitive!(
     /// ex: ⌵ ¯1
     /// ex: ⌵ 1
     ///
-    /// The symbol looks like the graph of `|x|`.
+    /// The glyph looks like the graph of `|x|`.
     (1, Abs, MonadicPervasive, ("absolute value", '⌵')),
     /// The square root of a number
     (1, Sqrt, MonadicPervasive, ("sqrt", '√')),
@@ -250,7 +250,6 @@ primitive!(
     ///
     /// The first value is checked to be less than the second.
     /// This is so you can think of `<``x` as a single unit.
-    ///
     /// ex: <1 2
     /// ex: <5 5
     /// ex: <7 3
@@ -263,7 +262,6 @@ primitive!(
     ///
     /// The first value is checked to be less than or equal to the second.
     /// This is so you can think of `≤``x` as a single unit.
-    ///
     /// ex: ≤1 2
     /// ex: ≤5 5
     /// ex: ≤7 3
@@ -279,7 +277,6 @@ primitive!(
     ///
     /// The first value is checked to be greater than the second.
     /// This is so you can think of `>``x` as a single unit.
-    ///
     /// ex: >1 2
     /// ex: >5 5
     /// ex: >7 3
@@ -292,7 +289,6 @@ primitive!(
     ///
     /// The first value is checked to be greater than or equal to the second.
     /// This is so you can think of `≥``x` as a single unit.
-    ///
     /// ex: ≥1 2
     /// ex: ≥5 5
     /// ex: ≥7 3
@@ -314,7 +310,6 @@ primitive!(
     ///
     /// The first value is subtracted from the second.
     /// This is so you can think of `-``x` as a single unit.
-    ///
     /// ex: -1 2
     /// ex: -1 [2 3 4]
     /// ex: - [1 2 3] [4 5 6]
@@ -333,7 +328,6 @@ primitive!(
     ///
     /// The second value is divided by the first.
     /// This is so you can think of `÷``x` as a single unit.
-    ///
     /// ex: ÷3 12
     /// ex: ÷2 [1 2 3]
     /// ex: ÷ [1 2 3] [4 5 6]
@@ -347,7 +341,6 @@ primitive!(
     ///
     /// The second value is divided by the first, and the remainder is returned.
     /// This is so you can think of `◿``x` as a single unit.
-    ///
     /// ex: ◿10 27
     /// ex: ◿5 [3 7 14]
     /// ex: ◿ [3 4 5] [10 10 10]
@@ -356,7 +349,6 @@ primitive!(
     ///
     /// The second value is raised to the power of the first.
     /// This is so you can think of `ⁿ``x` as a single unit.
-    ///
     /// ex: ⁿ2 3
     /// ex: ⁿ2 [1 2 3]
     /// ex: ⁿ [1 2 3] [4 5 6]
@@ -364,7 +356,6 @@ primitive!(
     /// The based logarithm of a number
     ///
     /// The first value is the base, and the second value is the power.
-    ///
     /// ex: ₙ2 8
     /// ex: ₙ2 [8 16 32]
     /// ex: ₙ [2 3 4] [16 27 1024]
@@ -382,7 +373,6 @@ primitive!(
     /// The arctangent of two numbers
     ///
     /// This takes a `y` and `x` argument and returns the angle in radians in the range `(-π, π]`.
-    ///
     /// ex: ∠ 1 0
     /// ex: ∠ ¯1 0
     /// ex: ∠ √2 √2
@@ -401,13 +391,12 @@ primitive!(
     /// The number of dimensions in an array
     ///
     /// [rank] is equivalent to [length] of [shape].
-    ///
     /// ex: ∴5
     /// ex: ∴[]
     /// ex: ∴1_2_3
     /// ex: ∴[1_2 3_4 5_6]
     ///
-    /// It is three dots arranged in a triangle because it is counting [shape].
+    /// It is three dots`∴` arranged in a triangle`△` because it is counting [shape].
     (1, Rank, MonadicArray, ("rank", '∴')),
     /// The dimensions of an array
     ///
@@ -416,7 +405,7 @@ primitive!(
     /// ex: △1_2_3
     /// ex: △[1_2 3_4 5_6]
     ///
-    /// It is a triangle because a triangle is a shape.
+    /// It is a triangle`△` because a triangle is a shape.
     (1, Shape, MonadicArray, ("shape", '△')),
     /// Make an array of all natural numbers less than a number
     ///
@@ -726,7 +715,9 @@ primitive!(
     ///
     /// For reducing with an initial value, see [fold].
     ///
+    /// `reduce``add` sums the rows of an array.
     /// ex: /+ 1_2_3_4_5
+    /// [reduce] goes from left to right. This is important for non-commutative functions like [subtract].
     /// ex: /- 1_2_3_4_5
     ///
     /// If you want to see the intermediate values, you can use [scan].
@@ -741,6 +732,8 @@ primitive!(
     /// For reducing without an initial value, see [reduce].
     ///
     /// ex: ∧+ 10 1_2_3_4
+    /// [fold] goes from left to right. This is important for non-commutative functions like [subtract].
+    /// ex: ∧- 10 1_2_3_4
     (2[1], Fold, AggregatingModifier, ("fold", '∧')),
     /// Reduce, but keep intermediate values
     ///
@@ -906,7 +899,7 @@ primitive!(
     /// Here, we negate 5, subtract 2, then negate again.
     /// ex: ⍜¯(-2) 5
     /// You can use [under] with [round] to round to a specific number of decimal places.
-    /// ex: ⍜(×ⁿ4 10)⁅ π
+    /// ex: ⍜'×1e3⁅ π
     /// [under][couple] will perform the same operation on the top two values on the stack.
     /// ex: ⍜⊟⇡ 3 5
     ///
@@ -928,9 +921,9 @@ primitive!(
     /// Although, [under][select] only works if the indices are unique.
     /// ex! ⍜⊏'×10 1_3_3 1_2_3_4_5
     ([2], Under, OtherModifier, ("under", '⍜')),
-    /// Set a fill context
+    /// Set the fill value for a function
     ///
-    /// By default, some operations require that arrays have some compatible [shape].
+    /// By default, some operations require that arrays' [shape]s are in some way compatible.
     /// [fill] allows you to specify a value that will be used to extend the shape of one or both of the operands to make an operation succeed.
     /// The first argument is the fill value, and the second argument is a function in which the fill value will be used.
     ///

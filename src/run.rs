@@ -575,14 +575,14 @@ backtrace:
                     });
                     if !call {
                         let instrs = self.new_functions.pop().unwrap();
-                        let func = Function::new_inferred(
+                        let sig =
+                            instrs_signature(&instrs).unwrap_or_else(|_| Signature::new(0, 0));
+                        let func = Function::new(
                             FunctionId::Anonymous(word.span),
                             instrs,
                             FunctionKind::Normal,
-                        )
-                        .unwrap_or_else(|e| {
-                            panic!("failed to infer array construction function signature: {e}")
-                        });
+                            sig,
+                        );
                         self.push_instr(Instr::push(func));
                     }
                 }

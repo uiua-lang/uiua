@@ -95,7 +95,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
     let (results, set_result) = create_signal(None);
     let (clear_button, set_clear_button) = create_signal(None);
     let (old_allowed, set_old_allowed) = create_signal(Allowed::all());
-    let update_search = move |text: &str| {
+    let update_search = move |text: &str, update_location: bool| {
         // Update clear button
         set_clear_button.set(if text.is_empty() {
             None
@@ -116,20 +116,23 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         if !text.is_empty() {
             scroll_to_docs_functions(ScrollIntoViewOptions::new().behavior(ScrollBehavior::Smooth));
         }
-        let text = text.to_string();
-        set_timeout(
-            move || {
-                if element::<HtmlInputElement>("function-search").value() == text {
-                    BrowserIntegration {}.navigate(&LocationChange {
-                        value: format!("/docs/{}", urlencoding::encode(&text)),
-                        scroll: false,
-                        replace: false,
-                        ..Default::default()
-                    })
-                }
-            },
-            Duration::from_secs(2),
-        );
+        if update_location {
+            let text = text.to_string();
+            set_timeout(
+                move || {
+                    let search_input = element::<HtmlInputElement>("function-search").value();
+                    if search_input == text {
+                        BrowserIntegration {}.navigate(&LocationChange {
+                            value: format!("/docs/{}", urlencoding::encode(&text)),
+                            scroll: false,
+                            replace: false,
+                            ..Default::default()
+                        })
+                    }
+                },
+                Duration::from_secs(2),
+            );
+        }
         if allowed == old_allowed.get() && results.get().is_some() {
             return;
         }
@@ -157,13 +160,13 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
     set_timeout(
         {
             let search = search.clone();
-            move || update_search(&search)
+            move || update_search(&search, false)
         },
         Duration::from_secs(0),
     );
-    let search_input = move |event: Event| {
+    let on_search_input = move |event: Event| {
         let elem: HtmlInputElement = event.target().unwrap().dyn_into().unwrap();
-        update_search(&elem.value());
+        update_search(&elem.value(), true);
     };
 
     view! {
@@ -192,7 +195,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
                 id="function-search"
                 type="text"
                 value=search
-                on:input=search_input
+                on:input=on_search_input
                 pattern="[^0-9]"
                 placeholder="Search by name, glyph, or category..."/>
             { move || clear_button.get() }

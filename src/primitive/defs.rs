@@ -479,9 +479,9 @@ primitive!(
     ///
     /// ex: ♭5
     /// ex: ♭[1 2 3]
-    /// ex: ♭[1_2 3_4 5_6]
+    /// ex: ♭.[1_2 3_4 5_6]
     ///
-    /// It looks like `♭` because it flattens the array.
+    /// It looks like `♭` because it *flat*tens the array.
     ///
     /// See also: [reshape]
     (1, Deshape, MonadicArray, ("deshape", '♭')),
@@ -491,6 +491,13 @@ primitive!(
     /// ex: ⋯27
     /// ex: ⋯⇡8
     /// ex: ⋯[1_2 3_4 5_6]
+    ///
+    /// [invert][bits] can be used to decode the bits back into numbers.
+    /// ex: ⍘⋯ [1 0 1]
+    /// ex: ⍘⋯ [0 1 1 0 1]
+    /// ex: ⍘⋯ [[0 1 1]
+    ///   :     [1 0 0]
+    ///   :     [1 1 0]]
     (1, Bits, MonadicArray, ("bits", '⋯')),
     /// Inverse of Bits
     (1, InverseBits, MonadicArray),
@@ -681,9 +688,13 @@ primitive!(
     /// Shapes that have more elements than the original array will repeat elements.
     /// ex: ↯ [5] 2
     /// ex: ↯ 3_7 1_2_3_4
+    ///
     /// Scalar shapes will copy the array as rows of a new array.
-    /// ex: ↯ [4] [1 2 3 4 5]
-    ///   : ↯  4  [1 2 3 4 5]
+    /// ex: ↯ 4 [1 2 3 4 5]
+    /// ex: ↯ 2 [1_2_3 4_5_6]
+    /// This is in constrast to scalar [keep], which repeats the rows but preserves [rank].
+    /// ex: ▽ 4 [1 2 3 4 5]
+    /// ex: ▽ 2 [1_2_3 4_5_6]
     ///
     /// See also: [deshape]
     (2, Reshape, DyadicArray, ("reshape", '↯')),
@@ -705,9 +716,9 @@ primitive!(
     /// Multi-dimensional window sizes are supported.
     /// ex: ◫2_2 .[1_2_3 4_5_6 7_8_9]
     (2, Windows, DyadicArray, ("windows", '◫')),
-    /// Use an array to keep the elements of another array
+    /// Discard or copy some rows of an array
     ///
-    /// The first array is the number of times to keep each element of the second array.
+    /// Takes two arrays. The first array is the number of copies to keep of each row of the second array.
     /// ex: ▽ [1 0 2 3 1] [8 3 9 2 0]
     ///
     /// By making the first array a mask derived from the second, [keep] becomes a filter.
@@ -717,6 +728,9 @@ primitive!(
     /// [keep] with a scalar for the first argument repeats the rows of the second argument that many times.
     /// ex: ▽ 3 [1 2 3]
     /// ex: ▽ 2 [1_2_3 4_5_6]
+    /// This is in constrast to scalar [reshape], which copies the array as rows of a new array.
+    /// ex: ↯ 3 [1 2 3]
+    /// ex: ↯ 2 [1_2_3 4_5_6]
     ///
     /// [keep]'s glyph is `▽` because its main use is to filter, and `▽` kind of looks like a coffee filter.
     (2, Keep, DyadicArray, ("keep", '▽')),

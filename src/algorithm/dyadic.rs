@@ -491,25 +491,25 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
-    pub fn keep(&self, keepd: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn keep(&self, kept: Self, env: &Uiua) -> UiuaResult<Self> {
         let amount = self.as_naturals(
             env,
             "Keep amount must be a natural number \
             or list of natural numbers",
         )?;
         Ok(if self.rank() == 0 {
-            match keepd {
-                Value::Num(a) => Value::Num(a.scalar_keep(amount[0])),
-                Value::Byte(a) => Value::Byte(a.scalar_keep(amount[0])),
-                Value::Char(a) => Value::Char(a.scalar_keep(amount[0])),
-                Value::Func(a) => Value::Func(a.scalar_keep(amount[0])),
+            match kept {
+                Value::Num(a) => a.scalar_keep(amount[0]).into(),
+                Value::Byte(a) => a.scalar_keep(amount[0]).into(),
+                Value::Char(a) => a.scalar_keep(amount[0]).into(),
+                Value::Func(a) => a.scalar_keep(amount[0]).into(),
             }
         } else {
-            match keepd {
-                Value::Num(a) => Value::Num(a.list_keep(&amount, env)?),
-                Value::Byte(a) => Value::Byte(a.list_keep(&amount, env)?),
-                Value::Char(a) => Value::Char(a.list_keep(&amount, env)?),
-                Value::Func(a) => Value::Func(a.list_keep(&amount, env)?),
+            match kept {
+                Value::Num(a) => a.list_keep(&amount, env)?.into(),
+                Value::Byte(a) => a.list_keep(&amount, env)?.into(),
+                Value::Char(a) => a.list_keep(&amount, env)?.into(),
+                Value::Func(a) => a.list_keep(&amount, env)?.into(),
             }
         })
     }

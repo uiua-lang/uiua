@@ -4,7 +4,10 @@ use std::{cmp::Ordering, iter::repeat, mem::take, sync::Arc};
 
 use tinyvec::tiny_vec;
 
-use crate::{algorithm::max_shape, array::*, function::Function, value::Value, Uiua, UiuaResult};
+use crate::{
+    algorithm::max_shape, array::*, cowslice::CowSlice, function::Function, value::Value, Uiua,
+    UiuaResult,
+};
 
 use super::{op2_bytes_retry_fill, op_bytes_ref_retry_fill, op_bytes_retry_fill, FillContext};
 
@@ -489,19 +492,50 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     pub fn replicate(&self, replicated: Self, env: &Uiua) -> UiuaResult<Self> {
-        let amount =
-            self.as_naturals(env, "Replication amount must be a list of natural numbers")?;
-        Ok(match replicated {
-            Value::Num(a) => Value::Num(a.replicate(&amount, env)?),
-            Value::Byte(a) => Value::Byte(a.replicate(&amount, env)?),
-            Value::Char(a) => Value::Char(a.replicate(&amount, env)?),
-            Value::Func(a) => Value::Func(a.replicate(&amount, env)?),
+        let amount = self.as_naturals(
+            env,
+            "Replication amount must be a natural number \
+            or list of natural numbers",
+        )?;
+        Ok(if self.rank() == 0 {
+            match replicated {
+                Value::Num(a) => Value::Num(a.scalar_replicate(amount[0])),
+                Value::Byte(a) => Value::Byte(a.scalar_replicate(amount[0])),
+                Value::Char(a) => Value::Char(a.scalar_replicate(amount[0])),
+                Value::Func(a) => Value::Func(a.scalar_replicate(amount[0])),
+            }
+        } else {
+            match replicated {
+                Value::Num(a) => Value::Num(a.list_replicate(&amount, env)?),
+                Value::Byte(a) => Value::Byte(a.list_replicate(&amount, env)?),
+                Value::Char(a) => Value::Char(a.list_replicate(&amount, env)?),
+                Value::Func(a) => Value::Func(a.list_replicate(&amount, env)?),
+            }
         })
     }
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn replicate(mut self, amount: &[usize], env: &Uiua) -> UiuaResult<Self> {
+    pub fn scalar_replicate(mut self, amount: usize) -> Self {
+        if self.rank() == 0 || amount == 1 {
+            return self;
+        }
+        if amount == 0 {
+            self.data = CowSlice::new();
+            self.shape[0] = 0;
+            return self;
+        }
+        self.shape[0] *= amount;
+        let old_data = self.data.clone();
+        self.data.modify(|data| {
+            data.reserve(data.len() * amount);
+            for _ in 1..amount {
+                data.extend_from_slice(&old_data);
+            }
+        });
+        self
+    }
+    pub fn list_replicate(mut self, amount: &[usize], env: &Uiua) -> UiuaResult<Self> {
         if self.row_count() != amount.len() {
             return Err(env.error(format!(
                 "Cannot replicate array with shape {} with array of length {}",

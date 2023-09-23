@@ -714,6 +714,10 @@ primitive!(
     /// In this example, the input string is [duplicate]ed, and a mask is created from it using `greater or equal``@a`. Then, [replicate] uses the mask to filter the string.
     /// ex: ▽≥@a . "lOWERCASe onLY"
     ///
+    /// [replicate] with a scalar for the first argument repeats the rows of the second argument that many times.
+    /// ex: ▽ 3 [1 2 3]
+    /// ex: ▽ 2 [1_2_3 4_5_6]
+    ///
     /// [replicate]'s glyph is `▽` because its main use is to filter, and `▽` kind of looks like a coffee filter.
     (2, Replicate, DyadicArray, ("replicate", '▽')),
     /// Find the occurences of one array in another

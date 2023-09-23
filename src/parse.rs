@@ -384,6 +384,13 @@ impl Parser {
         Some(if args.is_empty() {
             modifier.map(Word::Primitive)
         } else {
+            for arg in &mut args {
+                if let Word::Func(func) = &arg.value {
+                    if func.lines.is_empty() {
+                        arg.value = Word::Primitive(Primitive::Noop);
+                    }
+                }
+            }
             let span = modifier
                 .span
                 .clone()
@@ -473,16 +480,12 @@ impl Parser {
             let body = self.multiline_words();
             let end = self.expect_close(CloseParen);
             let span = start.merge(end);
-            span.clone().sp(if body.is_empty() {
-                Word::Primitive(Primitive::Noop)
-            } else {
-                Word::Func(Func {
-                    id: FunctionId::Anonymous(span),
-                    signature,
-                    lines: body,
-                    bind: false,
-                })
-            })
+            span.clone().sp(Word::Func(Func {
+                id: FunctionId::Anonymous(span),
+                signature,
+                lines: body,
+                bind: false,
+            }))
         } else if let Some(start) = self.try_exact(SingleQuote) {
             self.try_spaces();
             let Some(first) = self.try_strand() else {

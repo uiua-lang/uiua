@@ -117,8 +117,9 @@ primitive!(
     /// While this may seem useless, one way to use it is to pass it to [reduce], which will put all of an array's values on the stack.
     /// ex: /· [1 2 3]
     ///
-    /// The formatter converts an empty `()` function into `noop`.
-    /// ex: () # Try running to format
+    /// The formatter converts an empty `()` function into `noop` if it is in a strand or a modifier.
+    /// ex: /() [1 2] # Try running to format
+    ///   : ()_(+1)
     (0(0), Noop, Stack, ("noop", '·')),
     /// Move the top value on the stack 2 places down
     ///

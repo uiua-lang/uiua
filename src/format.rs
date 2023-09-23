@@ -244,6 +244,9 @@ fn format_multiline_words(
     allow_compact: bool,
     depth: usize,
 ) {
+    if lines.is_empty() {
+        return;
+    }
     if lines.len() == 1
         && (lines[0].len() == 1 || !lines[0].iter().any(|word| word_is_multiline(&word.value)))
     {

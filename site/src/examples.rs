@@ -25,7 +25,7 @@ Thirty ← ≡(↥≅0_1_1 ∶=1 /+.) ◫3 ⊂∶0 ⊂0
 size ← 500
 start ← =÷2 size ⇡+1 size
 ⇌[⍥(Thirty.)÷2 size start]";
-const PRIMES: &str = "‡¬∊∶♭⊞×...+2⇡50";
+const PRIMES: &str = "▽¬∊∶♭⊞×...+2⇡50";
 const MANDELBROT: &str = "\
 Z ← ⊟/- ⁿ2 ∶×2 /×.⇌
 ⇌⍘⍉⊞⊟.×4 ÷∶-÷2,⇡. 300

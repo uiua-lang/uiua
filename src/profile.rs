@@ -34,7 +34,7 @@ pub(crate) mod enabled {
     use crossbeam_channel::{Receiver, Sender};
 
     const BENCHMARKS: &[(&str, &str)] = &[
-        ("PRIMES", "‡¬∊∶♭⊞×...+2⇡1000"),
+        ("PRIMES", "▽¬∊∶♭⊞×...+2⇡1000"),
         (
             "STRIPES",
             "\

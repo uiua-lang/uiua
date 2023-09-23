@@ -90,7 +90,7 @@ primitive!(
     /// ex: ≅⇌. "friend"
     /// ex: ≅⇌. "racecar"
     /// Another commonly hooked function is [replicate].
-    /// ex: ‡=0◿3. [1 4 2 3 9 1 0 6 2 6 3]
+    /// ex: ▽=0◿3. [1 4 2 3 9 1 0 6 2 6 3]
     (1(2), Dup, Stack, ("duplicate", '.')),
     /// Duplicate the second-to-top value to the top of the stack
     ///
@@ -105,7 +105,7 @@ primitive!(
     /// This is a very common pattern.
     /// For example, maybe you want to find all the uppercase letters in a string.
     /// ex: $ Characters On uppercase OnLy
-    ///   : ‡×≥@A∶≤@Z..
+    ///   : ▽×≥@A∶≤@Z..
     /// Or maybe you want to calculate the averge of a list of numbers.
     /// Here, we get the [length] and the `reduce``add``sum` of the list, then [divide] them.
     /// ex: ÷⧻∶/+. 1_8_2_5
@@ -666,12 +666,14 @@ primitive!(
     /// Use an array to replicate the elements of another array
     ///
     /// The first array is the number of times to replicate each element of the second array.
-    /// ex: ‡ [1 0 2 3 1] [8 3 9 2 0]
+    /// ex: ▽ [1 0 2 3 1] [8 3 9 2 0]
     ///
     /// By making the first array a mask derived from the second, [replicate] becomes a filter.
     /// In this example, the input string is [duplicate]ed, and a mask is created from it using `greater or equal``@a`. Then, [replicate] uses the mask to filter the string.
-    /// ex: ‡ ≥@a . "lOWERCASe onLY"
-    (2, Replicate, DyadicArray, ("replicate", '‡')),
+    /// ex: ▽≥@a . "lOWERCASe onLY"
+    ///
+    /// [replicate]'s glyph is `▽` because its main use is to filter, and `▽` kind of looks like a coffee filter.
+    (2, Replicate, DyadicArray, ("replicate", '▽')),
     /// Find the occurences of one array in another
     ///
     /// ex: ⌕ 5 [1 8 5 2 3 5 4 5 6 7]
@@ -688,7 +690,7 @@ primitive!(
     /// ex: ∊ 2 [1_2_3 4_5_6]
     ///
     /// With the help of [replicate], you can use [member] to get a set intersection.
-    /// ex: ‡∊, "abracadabra" "that's really cool"
+    /// ex: ▽∊, "abracadabra" "that's really cool"
     ///
     /// [member] is closely related to [indexof].
     (2, Member, DyadicArray, ("member", '∊')),

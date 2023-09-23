@@ -517,14 +517,30 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     pub fn scalar_keep(mut self, amount: usize) -> Self {
-        if self.rank() == 0 || amount == 1 {
+        // Scalar kept
+        if self.rank() == 0 {
+            self.shape.push(amount);
+            self.data.modify(|data| {
+                let value = data[0].clone();
+                data.clear();
+                for _ in 0..amount {
+                    data.push(value.clone());
+                }
+            });
+            self.validate_shape();
             return self;
         }
+        // Keep nothing
         if amount == 0 {
             self.data = CowSlice::new();
             self.shape[0] = 0;
             return self;
         }
+        // Keep 1 is a no-op
+        if amount == 1 {
+            return self;
+        }
+        // Keep ≥2 is a repeat
         self.shape[0] *= amount;
         let old_data = self.data.clone();
         self.data.modify(|data| {
@@ -533,6 +549,7 @@ impl<T: ArrayValue> Array<T> {
                 data.extend_from_slice(&old_data);
             }
         });
+        self.validate_shape();
         self
     }
     pub fn list_keep(mut self, amount: &[usize], env: &Uiua) -> UiuaResult<Self> {

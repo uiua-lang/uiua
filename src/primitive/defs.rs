@@ -212,6 +212,10 @@ primitive!(
     /// The glyph looks like the graph of `|x|`.
     (1, Abs, MonadicPervasive, ("absolute value", '⌵')),
     /// The square root of a number
+    ///
+    /// ex: √4
+    /// ex: √[1 4 9 16]
+    /// ex: √¯1
     (1, Sqrt, MonadicPervasive, ("sqrt", '√')),
     /// The sine of a number
     ///
@@ -536,6 +540,8 @@ primitive!(
     /// Remove duplicate elements from an array
     ///
     /// ex: ⊝7_7_8_0_1_2_0
+    /// ex: ⊝"Hello, World!"
+    /// ex: ⊝[3_2 1_4 3_2 5_6 1_4 7_8]
     (1, Deduplicate, MonadicArray, ("deduplicate", '⊝')),
     /// Turn an array into a constant function
     ///

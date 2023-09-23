@@ -282,10 +282,15 @@ impl Function {
         }
         let mut s = String::new();
         for (i, instr) in self.instrs.iter().rev().enumerate() {
-            if i > 0 {
+            let instr_str = instr.to_string();
+            let add_space = (s.ends_with(char::is_alphabetic)
+                && instr_str.starts_with(char::is_alphabetic))
+                || (s.ends_with(|c: char| c.is_ascii_digit())
+                    && instr_str.starts_with(|c: char| c.is_ascii_digit()));
+            if i > 0 && add_space {
                 s.push(' ');
             }
-            s.push_str(&instr.to_string());
+            s.push_str(&instr_str);
         }
         s
     }

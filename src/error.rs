@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    convert::Infallible,
     error::Error,
     fmt, fs, io,
     path::{Path, PathBuf},
@@ -179,6 +180,12 @@ impl From<Vec<Sp<ParseError>>> for UiuaError {
 }
 
 impl Error for UiuaError {}
+
+impl From<Infallible> for UiuaError {
+    fn from(value: Infallible) -> Self {
+        match value {}
+    }
+}
 
 impl UiuaError {
     pub fn show(&self, color: bool) -> String {

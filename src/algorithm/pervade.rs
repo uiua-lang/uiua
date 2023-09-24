@@ -2,6 +2,7 @@
 
 use std::{
     cmp::{self, Ordering},
+    convert::Infallible,
     fmt::Display,
     marker::PhantomData,
     slice::{self, Chunks},
@@ -78,7 +79,8 @@ impl<T: ArrayValue> Arrayish for (&[usize], &mut [T]) {
 
 pub trait PervasiveFn<A, B> {
     type Output;
-    fn call(&self, a: A, b: B, env: &Uiua) -> UiuaResult<Self::Output>;
+    type Error;
+    fn call(&self, a: A, b: B, env: &Uiua) -> Result<Self::Output, Self::Error>;
 }
 
 #[derive(Clone)]
@@ -95,7 +97,8 @@ where
     F: Fn(A, B) -> C,
 {
     type Output = C;
-    fn call(&self, a: A, b: B, _env: &Uiua) -> UiuaResult<Self::Output> {
+    type Error = Infallible;
+    fn call(&self, a: A, b: B, _env: &Uiua) -> Result<Self::Output, Self::Error> {
         Ok((self.0)(a, b))
     }
 }
@@ -114,17 +117,20 @@ where
     F: Fn(A, B, &Uiua) -> UiuaResult<C>,
 {
     type Output = C;
+    type Error = UiuaError;
     fn call(&self, a: A, b: B, env: &Uiua) -> UiuaResult<Self::Output> {
         (self.0)(a, b, env)
     }
 }
 
-pub fn bin_pervade<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
-    a: &Array<A>,
-    b: &Array<B>,
-    env: &Uiua,
-    f: impl PervasiveFn<A, B, Output = C> + Clone,
-) -> UiuaResult<Array<C>> {
+pub fn bin_pervade<A, B, C, F>(a: &Array<A>, b: &Array<B>, env: &Uiua, f: F) -> UiuaResult<Array<C>>
+where
+    A: ArrayValue,
+    B: ArrayValue,
+    C: ArrayValue,
+    F: PervasiveFn<A, B, Output = C> + Clone,
+    F::Error: Into<UiuaError>,
+{
     let mut a = a;
     let mut b = b;
     let mut reshaped_a;
@@ -204,17 +210,23 @@ pub fn bin_pervade<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
     }
     let shape = Shape::from(a.shape().max(b.shape()));
     let mut data = Vec::with_capacity(a.flat_len().max(b.flat_len()));
-    bin_pervade_recursive(a, b, &mut data, env, f)?;
+    bin_pervade_recursive(a, b, &mut data, env, f).map_err(Into::into)?;
     Ok(Array::new(shape, data))
 }
 
-fn bin_pervade_recursive<A: Arrayish, B: Arrayish, C: ArrayValue>(
+fn bin_pervade_recursive<A, B, C, F>(
     a: &A,
     b: &B,
     c: &mut Vec<C>,
     env: &Uiua,
-    f: impl PervasiveFn<A::Value, B::Value, Output = C> + Clone,
-) -> UiuaResult {
+    f: F,
+) -> Result<(), F::Error>
+where
+    A: Arrayish,
+    B: Arrayish,
+    C: ArrayValue,
+    F: PervasiveFn<A::Value, B::Value, Output = C> + Clone,
+{
     match (a.shape(), b.shape()) {
         ([], []) => c.push(f.call(a.data()[0].clone(), b.data()[0].clone(), env)?),
         (ash, bsh) if ash == bsh => {

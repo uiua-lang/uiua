@@ -1,5 +1,4 @@
 use std::{
-    backtrace::Backtrace,
     collections::{hash_map::DefaultHasher, HashMap, HashSet},
     fs,
     hash::{Hash, Hasher},
@@ -27,30 +26,43 @@ use crate::{
 /// The Uiua runtime
 #[derive(Clone)]
 pub struct Uiua {
-    // Compilation
+    /// Functions which are under construction
     new_functions: Vec<Vec<Instr>>,
-    // Statics
+    /// Global values
     globals: Arc<Mutex<Vec<Value>>>,
+    /// Indexable spans
     spans: Arc<Mutex<Vec<Span>>>,
-    // Runtime
+    /// The thread's stack
     stack: Vec<Value>,
+    /// The current scope
     scope: Scope,
-    lower_scopes: Vec<Scope>,
+    /// Ancestor scopes of the current one
+    higher_scopes: Vec<Scope>,
+    /// Determines which How test scopes are run
     mode: RunMode,
+    /// A limit on the execution duration in milliseconds
     execution_limit: Option<f64>,
+    /// The time at which execution started
     execution_start: f64,
-    // IO
+    /// The paths of files currently being imported (used to detect import cycles)
     current_imports: Arc<Mutex<HashSet<PathBuf>>>,
+    /// The stacks of imported files
     imports: Arc<Mutex<HashMap<PathBuf, Vec<Value>>>>,
+    /// The system backend
     pub(crate) backend: Arc<dyn SysBackend>,
 }
 
 #[derive(Clone)]
 pub struct Scope {
+    /// The stack height at the start of each array currently being built
     array: Vec<usize>,
+    /// The call stack
     call: Vec<StackFrame>,
+    /// Map local names to global indices
     names: HashMap<Ident, usize>,
+    /// Whether this scope is local
     local: bool,
+    /// The current fill values
     fills: Fills,
 }
 
@@ -85,9 +97,13 @@ struct Fills {
 
 #[derive(Clone)]
 struct StackFrame {
+    /// The function being executed
     function: Arc<Function>,
+    /// The span at which the function was called
     call_span: usize,
+    /// The program counter for the function
     pc: usize,
+    /// Additional spans for error reporting
     spans: Vec<(usize, Option<Primitive>)>,
 }
 
@@ -130,7 +146,7 @@ impl Uiua {
             spans: Arc::new(Mutex::new(vec![Span::Builtin])),
             stack: Vec::new(),
             scope: Scope::default(),
-            lower_scopes: Vec::new(),
+            higher_scopes: Vec::new(),
             globals: Arc::new(Mutex::new(Vec::new())),
             new_functions: Vec::new(),
             current_imports: Arc::new(Mutex::new(HashSet::new())),
@@ -195,12 +211,12 @@ impl Uiua {
         local: bool,
         f: impl FnOnce(&mut Self) -> UiuaResult<T>,
     ) -> UiuaResult<Vec<Value>> {
-        self.lower_scopes.push(take(&mut self.scope));
+        self.higher_scopes.push(take(&mut self.scope));
         self.scope.local = local;
         let start_height = self.stack.len();
         f(self)?;
         let end_height = self.stack.len();
-        self.scope = self.lower_scopes.pop().unwrap();
+        self.scope = self.higher_scopes.pop().unwrap();
         Ok(self.stack.split_off(start_height.min(end_height)))
     }
     fn load_impl(&mut self, input: &str, path: Option<&Path>) -> UiuaResult<&mut Self> {
@@ -212,28 +228,20 @@ impl Uiua {
         if let Some(path) = path {
             self.current_imports.lock().insert(path.into());
         }
-        let res = if cfg!(debug_assertions) {
-            self.items(items, false)
-        } else {
-            match catch_unwind(AssertUnwindSafe(|| self.items(items, false))) {
-                Ok(Ok(())) => Ok(()),
-                Ok(Err(e)) => Err(e),
-                Err(_) => Err(self.error(format!(
-                    "\
+        let res = match catch_unwind(AssertUnwindSafe(|| self.items(items, false))) {
+            Ok(res) => res,
+            Err(_) => Err(self.error(format!(
+                "\
 The interpreter has crashed!
 Hooray! You found a bug!
-Please report this at http://github.com/uiua-lang/uiua/issues
+Please report this at http://github.com/uiua-lang/uiua/issues/new
 
 code:
 {}
-{}
-backtrace:
 {}",
-                    self.span(),
-                    input,
-                    Backtrace::force_capture()
-                ))),
-            }
+                self.span(),
+                input
+            ))),
         };
         if let Some(path) = path {
             self.current_imports.lock().remove(path);
@@ -596,7 +604,7 @@ backtrace:
     }
     fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool) -> UiuaResult {
         if let Some(idx) = self.scope.names.get(&ident).or_else(|| {
-            self.lower_scopes
+            self.higher_scopes
                 .last()
                 .filter(|_| self.scope.local)?
                 .names
@@ -1081,7 +1089,7 @@ backtrace:
                 .drain(self.stack.len() - capture_count..)
                 .collect(),
             scope: self.scope.clone(),
-            lower_scopes: self.lower_scopes.last().cloned().into_iter().collect(),
+            higher_scopes: self.higher_scopes.last().cloned().into_iter().collect(),
             mode: self.mode,
             current_imports: self.current_imports.clone(),
             imports: self.imports.clone(),

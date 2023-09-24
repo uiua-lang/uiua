@@ -1,14 +1,19 @@
+- Allow non-scalar fill
 - Docs
   - Control flow
+    - Call list of functions
+    - Looping modifiers
+    - Try
+    - Break
+    - Recur
   - Images
   - System functions
-  - Common idioms
-  - Guided examples
+  - Thinking with arrays
 - Expand test suite
 - Optimizations
   - Dyadic level - The dyadic case of level should have its own function
-  - Windowed reduce? - `/f◫` could be optimized, but is it necessary?
-  - Row windows - `≡f◫` should be optimized
+  - Row windows - `≡f◫` for scalar window size should be optimized to not materialize all the windows
+  - Reduce windows? - `/f◫` for scalar window size could be optimized, but is it necessary?
 - Multimedia
   - Sound input
   - Webcam input

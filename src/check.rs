@@ -18,7 +18,7 @@ pub(crate) fn instrs_signature(instrs: &[Instr]) -> Result<Signature, String> {
     // println!("Checking {:?}", instrs);
     const START_HEIGHT: usize = 16;
     let mut env = VirtualEnv {
-        stack: vec![BasicValue::Other; START_HEIGHT],
+        stack: vec![BasicValue::Unknown; START_HEIGHT],
         array_stack: Vec::new(),
         min_height: START_HEIGHT,
     };
@@ -42,6 +42,7 @@ enum BasicValue<'a> {
     Num(f64),
     Arr(Vec<Self>),
     Other,
+    Unknown,
 }
 
 impl<'a> BasicValue<'a> {
@@ -56,7 +57,7 @@ impl<'a> BasicValue<'a> {
                 args: 0,
                 outputs: 1,
             },
-            BasicValue::Other => Signature {
+            BasicValue::Other | BasicValue::Unknown => Signature {
                 args: 0,
                 outputs: 1,
             },
@@ -431,6 +432,7 @@ impl<'a> VirtualEnv<'a> {
                     self.stack.push(BasicValue::Other);
                 }
             }
+            BasicValue::Unknown => return Err("call with unknown function".into()),
             val => self.stack.push(val),
         }
         Ok(())

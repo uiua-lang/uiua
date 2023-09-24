@@ -9,7 +9,6 @@
   - Dyadic level - The dyadic case of level should have its own function
   - Windowed reduce? - `/f◫` could be optimized, but is it necessary?
   - Row windows - `≡f◫` should be optimized
-- Make call signature ambiguous in some cases (like at the beginning of a function)
 - Multimedia
   - Sound input
   - Webcam input

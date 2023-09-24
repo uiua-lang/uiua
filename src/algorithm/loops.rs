@@ -125,8 +125,8 @@ fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> Uiu
                 .or_else(|| rows.next())
                 .ok_or_else(|| env.error("Cannot reduce empty array"))?;
             while let Some(row) = rows.next() {
-                env.push(acc);
                 env.push(row);
+                env.push(acc);
                 env.push(f.clone());
                 let should_break = env.call_catch_break()?;
                 acc = env.pop("reduced function result")?;

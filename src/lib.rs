@@ -99,3 +99,17 @@ impl<'a> PartialEq<&'a str> for Ident {
         self.lower_chars().eq(lower_chars(other))
     }
 }
+
+#[test]
+fn suite() -> Result<(), Box<dyn std::error::Error>> {
+    for entry in std::fs::read_dir("tests")? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() && path.extension().is_some_and(|s| s == "ua") {
+            if let Err(e) = Uiua::with_native_sys().load_file(&path) {
+                panic!("Test failed in {}:\n{}", path.display(), e.show(true));
+            }
+        }
+    }
+    Ok(())
+}

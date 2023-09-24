@@ -103,7 +103,7 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
 fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
     match f.signature().args {
         0 | 1 => {
-            let mut rows = xs.into_rows();
+            let mut rows = init.into_iter().chain(xs.into_rows());
             while let Some(row) = rows.next() {
                 env.push(row);
                 env.push(f.clone());

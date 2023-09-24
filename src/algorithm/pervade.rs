@@ -748,6 +748,7 @@ pub fn bin_pervade_generic<A: PervasiveInput, B: PervasiveInput, C: Default>(
     Ok((c_shape, c))
 }
 
+#[allow(unused_mut)] // for a rust-analyzer false-positive
 fn bin_pervade_recursive_generic<A: PervasiveInput, B: PervasiveInput, C>(
     a_shape: &[usize],
     a: A,
@@ -758,8 +759,7 @@ fn bin_pervade_recursive_generic<A: PervasiveInput, B: PervasiveInput, C>(
     mut f: impl FnMut(A::OwnedItem, B::OwnedItem, &mut Uiua) -> UiuaResult<C> + Copy,
 ) -> UiuaResult {
     if a_shape == b_shape {
-        for ((a, b), c) in a.into_iter().zip(b).zip(c) {
-            // If rust-analyzer shows an error here, it's a false positive
+        for ((a, b), mut c) in a.into_iter().zip(b).zip(c) {
             *c = f(A::item(a), B::item(b), env)?;
         }
         return Ok(());
@@ -767,12 +767,12 @@ fn bin_pervade_recursive_generic<A: PervasiveInput, B: PervasiveInput, C>(
     match (a_shape.is_empty(), b_shape.is_empty()) {
         (true, true) => c[0] = f(a.into_only(), b.into_only(), env)?,
         (false, true) => {
-            for (a, c) in a.into_iter().zip(c) {
+            for (a, mut c) in a.into_iter().zip(c) {
                 *c = f(A::item(a), b.only(), env)?;
             }
         }
         (true, false) => {
-            for (b, c) in b.into_iter().zip(c) {
+            for (b, mut c) in b.into_iter().zip(c) {
                 *c = f(a.only(), B::item(b), env)?;
             }
         }
@@ -790,7 +790,7 @@ fn bin_pervade_recursive_generic<A: PervasiveInput, B: PervasiveInput, C>(
             let b_chunk_size = b.len() / b_cells;
             match (a_shape.len() == 1, b_shape.len() == 1) {
                 (true, true) => {
-                    for ((a, b), c) in a.into_iter().zip(b).zip(c) {
+                    for ((a, b), mut c) in a.into_iter().zip(b).zip(c) {
                         *c = f(A::item(a), B::item(b), env)?;
                     }
                 }

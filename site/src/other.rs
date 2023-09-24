@@ -49,6 +49,7 @@ pub fn Design() -> impl IntoView {
             <li>"Its function is kind of abstract, but there are other related functions, so they all use related glyphs. For example, "<Prim prim=Fold/>" has this nice symmetry with "<Prim prim=Reduce/>" and "<Prim prim=Scan/>". The indexing/finding/grouping functions like"<Prim prim=Classify/>", "<Prim prim=Group/>", "<Prim prim=Deduplicate/>", etc are all circles."</li>
             <li>"I think they look like cute little guys: "<Prim prim=Assert/>" and "<Prim prim=Try/></li>
         </ul>
+        <p>"An additional constraint is that every glyph must be present in the "<a href="https://dejavu-fonts.github.io">"DejaVu Sans Mono"</a>" font, which is the best-looking free monospace font I could find that supports the largest number of glyphs."</p>
 
         <h2 id="no-local-variables">"No Local Variables"</h2>
         <p>"Forbidding general local variables has a few benefits:"</p>

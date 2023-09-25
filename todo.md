@@ -14,6 +14,9 @@
   - Dyadic level - The dyadic case of level should have its own function
   - Row windows - `≡f◫` for scalar window size should be optimized to not materialize all the windows
   - Reduce windows? - `/f◫` for scalar window size could be optimized, but is it necessary?
+- Explore the possibility of eliminating nested arrays
+  - Would need to have ways to handle cases that require them
+  - Those cases must first be enumerated
 - Multimedia
   - Sound input
   - Webcam input

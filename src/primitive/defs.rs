@@ -1182,6 +1182,14 @@ primitive!(
     /// ex:  ![+_- ×_÷] 1_0 3 12 # Call the function at 1_0
     /// ex:  ![+_- ×_÷] 1 0 3 12 # Not enough calls
     /// ex: !![+_- ×_÷] 1 0 3 12 # 2 calls is enough
+    ///
+    /// Note that you currently cannot use [call] to call a function that does not have exactly 1 output.
+    /// So this is okay:
+    /// ex: foo ← 1 2
+    ///   : foo
+    /// But this is not:
+    /// ex! !(1 2)
+    /// This restriction allows the compiler to more easily reason about [call]. It may be lifted in the future.
     (1, Call, Control, ("call", '!')),
     /// Break out of a loop
     ///

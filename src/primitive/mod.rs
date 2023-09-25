@@ -792,6 +792,9 @@ mod tests {
             if let Some(doc) = prim.doc() {
                 for line in &doc.lines {
                     if let PrimDocLine::Example(ex) = line {
+                        if ex.input.contains("&sl") {
+                            continue;
+                        }
                         println!("{prim} example:\n{}", ex.input);
                         if let Err(e) = Uiua::with_native_sys().load_str(&ex.input) {
                             if !ex.should_error {

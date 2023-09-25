@@ -777,7 +777,9 @@ code:
                     self.pop_span();
                     Ok(())
                 })(),
-                &Instr::Call(span) => self.call_with_span(span),
+                &Instr::Call(span) => self
+                    .pop("called function")
+                    .and_then(|f| self.call_with_span(f, span)),
             };
             if let Err(mut err) = res {
                 // Trace errors
@@ -807,11 +809,10 @@ code:
     fn pop_span(&mut self) {
         self.scope.call.last_mut().unwrap().spans.pop();
     }
-    fn call_with_span(&mut self, call_span: usize) -> UiuaResult {
-        let mut value = self.pop("called function")?;
+    fn call_with_span(&mut self, mut f: Value, call_span: usize) -> UiuaResult {
         let mut first_pass = true;
         loop {
-            match value {
+            match f {
                 Value::Func(f) if f.shape.is_empty() => {
                     // Call function
                     let f = f.into_scalar().unwrap();
@@ -839,7 +840,7 @@ code:
                 Value::Func(_) if first_pass => {
                     // Call non-scalar function array
                     let index = self.pop("index")?;
-                    value = index.pick(value, self)?;
+                    f = index.pick(f, self)?;
                     first_pass = false;
                 }
                 value => {
@@ -851,9 +852,9 @@ code:
     }
     /// Call the top of the stack as a function
     #[inline]
-    pub fn call(&mut self) -> UiuaResult {
+    pub fn call(&mut self, f: impl Into<Value>) -> UiuaResult {
         let call_span = self.span_index();
-        self.call_with_span(call_span)
+        self.call_with_span(f.into(), call_span)
     }
     #[inline]
     pub fn recur(&mut self, n: usize) -> UiuaResult {
@@ -868,11 +869,10 @@ code:
             )));
         }
         let f = self.scope.call[self.scope.call.len() - n].function.clone();
-        self.push(f);
-        self.call()
+        self.call(f)
     }
-    pub fn call_catch_break(&mut self) -> UiuaResult<bool> {
-        match self.call() {
+    pub fn call_catch_break(&mut self, f: Value) -> UiuaResult<bool> {
+        match self.call(f) {
             Ok(_) => Ok(false),
             Err(e) => match e.break_data() {
                 Ok((0, _)) => Ok(true),
@@ -881,11 +881,15 @@ code:
             },
         }
     }
-    pub fn call_error_on_break(&mut self, message: &str) -> UiuaResult {
-        self.call_error_on_break_with(|| message.into())
+    pub fn call_error_on_break(&mut self, f: Value, message: &str) -> UiuaResult {
+        self.call_error_on_break_with(f, || message.into())
     }
-    pub fn call_error_on_break_with(&mut self, message: impl FnOnce() -> String) -> UiuaResult {
-        match self.call() {
+    pub fn call_error_on_break_with(
+        &mut self,
+        f: Value,
+        message: impl FnOnce() -> String,
+    ) -> UiuaResult {
+        match self.call(f) {
             Ok(_) => Ok(()),
             Err(e) => match e.break_data() {
                 Ok((0, span)) => Err(span.sp(message()).into()),

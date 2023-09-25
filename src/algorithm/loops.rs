@@ -106,8 +106,7 @@ fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> Uiu
             let mut rows = init.into_iter().chain(xs.into_rows());
             while let Some(row) = rows.next() {
                 env.push(row);
-                env.push(f.clone());
-                if env.call_catch_break()? {
+                if env.call_catch_break(f.clone())? {
                     let reduced = if f.signature().args == 0 {
                         None
                     } else {
@@ -127,8 +126,7 @@ fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> Uiu
             while let Some(row) = rows.next() {
                 env.push(row);
                 env.push(acc);
-                env.push(f.clone());
-                let should_break = env.call_catch_break()?;
+                let should_break = env.call_catch_break(f.clone())?;
                 acc = env.pop("reduced function result")?;
                 if should_break {
                     acc = Value::from_row_values(once(acc).chain(rows), env)?;
@@ -243,8 +241,7 @@ fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
         let start_height = env.stack_size();
         env.push(row);
         env.push(acc.clone());
-        env.push(f.clone());
-        let should_break = env.call_catch_break()?;
+        let should_break = env.call_catch_break(f.clone())?;
         acc = env.pop("scanned function result")?;
         scanned.push(acc.clone());
         if should_break {
@@ -309,8 +306,7 @@ fn each1_1(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     let mut old_values = xs.into_flat_values();
     for val in old_values.by_ref() {
         env.push(val);
-        env.push(f.clone());
-        let broke = env.call_catch_break()?;
+        let broke = env.call_catch_break(f.clone())?;
         new_values.push(env.pop("each's function result")?);
         if broke {
             for row in old_values {
@@ -330,8 +326,7 @@ fn each1_0(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     let values = xs.into_flat_values();
     for val in values {
         env.push(val);
-        env.push(f.clone());
-        if env.call_catch_break()? {
+        if env.call_catch_break(f.clone())? {
             break;
         }
     }
@@ -352,8 +347,7 @@ fn each2_1(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
         |x, y, env| {
             env.push(y);
             env.push(x);
-            env.push(f.clone());
-            env.call_error_on_break("break is not allowed in multi-argument each")?;
+            env.call_error_on_break(f.clone(), "break is not allowed in multi-argument each")?;
             env.pop("each's function result")
         },
     )?;
@@ -378,8 +372,7 @@ fn each2_0(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
         |x, y, env| {
             env.push(y);
             env.push(x);
-            env.push(f.clone());
-            env.call_error_on_break("break is not allowed multi-argument in each")?;
+            env.call_error_on_break(f.clone(), "break is not allowed multi-argument in each")?;
             Ok(())
         },
     )?;
@@ -404,8 +397,7 @@ fn eachn_1(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         for arg in arg_elems.iter_mut().rev() {
             env.push(arg.next().unwrap());
         }
-        env.push(f.clone());
-        env.call_error_on_break("break is not allowed in multi-argument each")?;
+        env.call_error_on_break(f.clone(), "break is not allowed in multi-argument each")?;
         new_values.push(env.pop("each's function result")?);
     }
     let eached = Value::from_row_values(new_values, env)?;
@@ -430,8 +422,7 @@ fn eachn_0(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         for arg in arg_elems.iter_mut().rev() {
             env.push(arg.next().unwrap());
         }
-        env.push(f.clone());
-        env.call_error_on_break("break is not allowed in multi-argument each")?;
+        env.call_error_on_break(f.clone(), "break is not allowed in multi-argument each")?;
     }
     Ok(())
 }
@@ -488,8 +479,7 @@ fn rows1_1(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     let mut old_rows = xs.into_rows();
     for row in old_rows.by_ref() {
         env.push(row);
-        env.push(f.clone());
-        let broke = env.call_catch_break()?;
+        let broke = env.call_catch_break(f.clone())?;
         new_rows.push(env.pop("rows' function result")?);
         if broke {
             for row in old_rows {
@@ -506,8 +496,7 @@ fn rows1_1(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
 fn rows1_0(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     for row in xs.into_rows() {
         env.push(row);
-        env.push(f.clone());
-        let broke = env.call_catch_break()?;
+        let broke = env.call_catch_break(f.clone())?;
         if broke {
             break;
         }
@@ -529,8 +518,7 @@ fn rows2_1(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     for (x, y) in x_rows.into_iter().zip(y_rows) {
         env.push(y);
         env.push(x);
-        env.push(f.clone());
-        env.call_error_on_break("break is not allowed in multi-argument rows")?;
+        env.call_error_on_break(f.clone(), "break is not allowed in multi-argument rows")?;
         new_rows.push(env.pop("rows's function result")?);
     }
     env.push(Value::from_row_values(new_rows, env)?);
@@ -550,8 +538,7 @@ fn rows2_0(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     for (x, y) in x_rows.into_iter().zip(y_rows) {
         env.push(y);
         env.push(x);
-        env.push(f.clone());
-        env.call_error_on_break("break is not allowed in multi-argument rows")?;
+        env.call_error_on_break(f.clone(), "break is not allowed in multi-argument rows")?;
     }
     Ok(())
 }
@@ -564,8 +551,7 @@ fn rowsn_1(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         for arg in arg_elems.iter_mut().rev() {
             env.push(arg.next().unwrap());
         }
-        env.push(f.clone());
-        env.call_error_on_break("break is not allowed in multi-argument each")?;
+        env.call_error_on_break(f.clone(), "break is not allowed in multi-argument each")?;
         new_values.push(env.pop("each's function result")?);
     }
     let eached = Value::from_row_values(new_values, env)?;
@@ -580,8 +566,7 @@ fn rowsn_0(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         for arg in arg_elems.iter_mut().rev() {
             env.push(arg.next().unwrap());
         }
-        env.push(f.clone());
-        env.call_error_on_break("break is not allowed in multi-argument each")?;
+        env.call_error_on_break(f.clone(), "break is not allowed in multi-argument each")?;
     }
     Ok(())
 }
@@ -595,8 +580,7 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
     for x in xs.into_rows() {
         env.push(y.clone());
         env.push(x);
-        env.push(f.clone());
-        env.call_error_on_break("break is not allowed in distribute")?;
+        env.call_error_on_break(f.clone(), "break is not allowed in distribute")?;
         new_rows.push(env.pop("distribute's function result")?);
     }
     env.push(Value::from_row_values(new_rows, env)?);
@@ -733,8 +717,7 @@ fn generic_table(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
         for y in y_values.iter().cloned() {
             env.push(y);
             env.push(x.clone());
-            env.push(f.clone());
-            env.call_error_on_break("break is not allowed in table")?;
+            env.call_error_on_break(f.clone(), "break is not allowed in table")?;
             let item = env.pop("tabled function result")?;
             item.validate_shape();
             items.push(item);
@@ -760,8 +743,7 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
         for y_row in y_rows.iter().cloned() {
             env.push(y_row);
             env.push(x_row.clone());
-            env.push(f.clone());
-            env.call_error_on_break("break is not allowed in cross")?;
+            env.call_error_on_break(f.clone(), "break is not allowed in cross")?;
             let item = env.pop("crossed function result")?;
             item.validate_shape();
             items.push(item);
@@ -785,8 +767,7 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
     if n.is_infinite() {
         let f = if n < 0.0 { f.invert(env)? } else { f };
         loop {
-            env.push(f.clone());
-            if env.call_catch_break()? {
+            if env.call_catch_break(f.clone())? {
                 break;
             }
         }
@@ -796,8 +777,7 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
         };
         let f = if n < 0.0 { f.invert(env)? } else { f };
         for _ in 0..n.abs() as usize {
-            env.push(f.clone());
-            if env.call_catch_break()? {
+            if env.call_catch_break(f.clone())? {
                 return Ok(());
             }
         }
@@ -808,8 +788,7 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
 pub fn level(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let get_ns = env.pop(FunctionArg(1))?;
-    env.push(get_ns);
-    env.call_error_on_break("break is not allowed in level")?;
+    env.call_error_on_break(get_ns, "break is not allowed in level")?;
     let ns = env.pop("level's rank list")?.as_number_list(
         env,
         "Elements of rank list must be integers or infinity",
@@ -836,8 +815,7 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
                 Some(-1) => return rows1_1(f, xs, env),
                 None => {
                     env.push(xs);
-                    env.push(f);
-                    return env.call();
+                    return env.call(f);
                 }
                 Some(n) => n,
             };
@@ -877,8 +855,7 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
 fn monadic_level_recursive(f: Value, value: Value, n: usize, env: &mut Uiua) -> UiuaResult<Value> {
     if n == 0 {
         env.push(value);
-        env.push(f);
-        env.call()?;
+        env.call(f)?;
         Ok(env.pop("level's function result")?)
     } else {
         let mut rows = Vec::with_capacity(value.row_count());
@@ -899,8 +876,7 @@ fn multi_level_recursive(
         for arg in args.into_iter().rev() {
             env.push(arg);
         }
-        env.push(f);
-        env.call()?;
+        env.call(f)?;
         Ok(env.pop("level's function result")?)
     } else {
         let (&n_with_max_row_count, arg_with_max_row_count) = ns
@@ -1073,8 +1049,9 @@ where
             let mut rows = Vec::with_capacity(groups.len());
             for group in groups {
                 env.push(group);
-                env.push(f.clone());
-                env.call_error_on_break_with(|| format!("break is not allowed in {name}"))?;
+                env.call_error_on_break_with(f.clone(), || {
+                    format!("break is not allowed in {name}")
+                })?;
                 rows.push(env.pop(|| format!("{name}'s function result"))?);
             }
             rows.reverse();
@@ -1088,8 +1065,7 @@ where
             for row in groups {
                 env.push(acc);
                 env.push(row);
-                env.push(f.clone());
-                if env.call_catch_break()? {
+                if env.call_catch_break(f.clone())? {
                     return Ok(());
                 }
                 acc = env.pop("reduced function result")?;

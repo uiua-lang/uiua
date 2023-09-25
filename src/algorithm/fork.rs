@@ -32,14 +32,12 @@ pub fn fork(env: &mut Uiua) -> UiuaResult {
     match g.signature().args {
         0 | 1 => {
             env.push(b.clone());
-            env.push(g);
-            env.call()?;
+            env.call(g)?;
         }
         2 => {
             env.push(b.clone());
             env.push(a.clone());
-            env.push(g);
-            env.call()?;
+            env.call(g)?;
         }
         n => {
             return Err(env.error(format!(
@@ -52,14 +50,12 @@ pub fn fork(env: &mut Uiua) -> UiuaResult {
     match f.signature().args {
         0 | 1 => {
             env.push(a);
-            env.push(f);
-            env.call()?;
+            env.call(f)?;
         }
         2 => {
             env.push(b);
             env.push(a);
-            env.push(f);
-            env.call()?;
+            env.call(f)?;
         }
         n => {
             return Err(env.error(format!(
@@ -83,21 +79,18 @@ pub fn trident(env: &mut Uiua) -> UiuaResult {
     match h.signature().args {
         0 | 1 => {
             env.push(c.clone());
-            env.push(h);
-            env.call()?;
+            env.call(h)?;
         }
         2 => {
             env.push(a.clone());
             env.push(c.clone());
-            env.push(h);
-            env.call()?;
+            env.call(h)?;
         }
         3 => {
             env.push(b.clone());
             env.push(a.clone());
             env.push(c.clone());
-            env.push(h);
-            env.call()?;
+            env.call(h)?;
         }
         n => {
             return Err(env.error(format!(
@@ -110,21 +103,18 @@ pub fn trident(env: &mut Uiua) -> UiuaResult {
     match g.signature().args {
         0 | 1 => {
             env.push(b.clone());
-            env.push(g);
-            env.call()?;
+            env.call(g)?;
         }
         2 => {
             env.push(c.clone());
             env.push(b.clone());
-            env.push(g);
-            env.call()?;
+            env.call(g)?;
         }
         3 => {
             env.push(a.clone());
             env.push(c.clone());
             env.push(b.clone());
-            env.push(g);
-            env.call()?;
+            env.call(g)?;
         }
         n => {
             return Err(env.error(format!(
@@ -137,21 +127,18 @@ pub fn trident(env: &mut Uiua) -> UiuaResult {
     match f.signature().args {
         0 | 1 => {
             env.push(a);
-            env.push(f);
-            env.call()?;
+            env.call(f)?;
         }
         2 => {
             env.push(b);
             env.push(a);
-            env.push(f);
-            env.call()?;
+            env.call(f)?;
         }
         3 => {
             env.push(c);
             env.push(b);
             env.push(a);
-            env.push(f);
-            env.call()?;
+            env.call(f)?;
         }
         n => {
             return Err(env.error(format!(

@@ -1236,7 +1236,7 @@ primitive!(
     /// ex: [;⍥gen3 1]
     ///
     /// Use [multiply] and [floor] to generate a random integer in a range.
-    /// ex: [;⍥(∶⌊*10∶gen)5 0]
+    /// ex: ⌊*10[;⍥gen5 0]
     (1(2), Gen, Misc, "gen"),
     /// Randomly reorder the rows of an array with a seed
     ///

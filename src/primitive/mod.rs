@@ -326,7 +326,10 @@ impl Primitive {
             Primitive::Member => env.dyadic_rr_env(Value::member)?,
             Primitive::Find => env.dyadic_rr_env(Value::find)?,
             Primitive::IndexOf => env.dyadic_rr_env(Value::index_of)?,
-            Primitive::Call => env.call()?,
+            Primitive::Call => {
+                let f = env.pop(1)?;
+                env.call(f)?
+            }
             Primitive::Parse => env.monadic_env(|v, env| v.parse_num(env))?,
             Primitive::Range => env.monadic_ref_env(Value::range)?,
             Primitive::Reverse => env.monadic_mut(Value::reverse)?,
@@ -409,8 +412,7 @@ impl Primitive {
             Primitive::Invert => {
                 let f = env.pop(FunctionArg(1))?;
                 let inv_f = f.invert(env)?;
-                env.push(inv_f);
-                env.call()?;
+                env.call(inv_f)?;
             }
             Primitive::Under => {
                 let f = env.pop(FunctionArg(1))?;
@@ -424,20 +426,14 @@ impl Primitive {
                     )));
                 }
                 let (f_before, f_after) = f.under(env)?;
-                env.push(f_before);
-                env.call()?;
-                env.push(g);
-                env.call()?;
-                env.push(f_after);
-                env.call()?;
+                env.call(f_before)?;
+                env.call(g)?;
+                env.call(f_after)?;
             }
             Primitive::Fill => {
                 let fill = env.pop(FunctionArg(1))?;
                 let f = env.pop(FunctionArg(2))?;
-                env.with_fill(fill, |env| {
-                    env.push(f);
-                    env.call()
-                })?;
+                env.with_fill(fill, |env| env.call(f))?;
             }
             Primitive::Fork => fork::fork(env)?,
             Primitive::Trident => fork::trident(env)?,
@@ -451,16 +447,14 @@ impl Primitive {
                 };
                 let backup = env.clone_stack_top(f_args);
                 let bottom = env.stack_size().saturating_sub(f_args);
-                env.push(f);
-                if let Err(e) = env.call() {
+                if let Err(e) = env.call(f) {
                     env.truncate_stack(bottom);
                     env.backend.save_error_color(&e);
                     for val in backup {
                         env.push(val);
                     }
                     env.push(e.value());
-                    env.push(handler);
-                    env.call()?;
+                    env.call(handler)?;
                 }
             }
             Primitive::Assert => {
@@ -516,10 +510,7 @@ impl Primitive {
             }
             Primitive::Spawn => {
                 let f = env.pop("thread function")?;
-                let handle = env.spawn(f.signature().args, move |env| {
-                    env.push(f);
-                    env.call()
-                })?;
+                let handle = env.spawn(f.signature().args, |env| env.call(f))?;
                 env.push(handle);
             }
             Primitive::Wait => {
@@ -776,7 +767,7 @@ mod tests {
     fn name_collisions() {
         for a in Primitive::all() {
             for b in Primitive::all() {
-                if a == b {
+                if a >= b {
                     continue;
                 }
                 if let Some((an, bn)) = a.name().zip(b.name()) {

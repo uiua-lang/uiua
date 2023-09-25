@@ -1149,8 +1149,7 @@ impl SysOp {
                 if let Err(e) = env.backend.stream_audio(Box::new(move |time_array| {
                     let time_array = Array::<f64>::from(time_array);
                     stream_env.push(time_array);
-                    stream_env.push(f.clone());
-                    stream_env.call()?;
+                    stream_env.call(f.clone())?;
                     let samples = &stream_env.pop(1)?;
                     let samples = samples.as_num_array().ok_or_else(|| {
                         stream_env.error("Audio stream function must return a numeric array")

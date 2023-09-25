@@ -1026,7 +1026,7 @@ code:
     pub(crate) fn with_fill(
         &mut self,
         fill: Value,
-        f: impl FnOnce(&mut Self) -> UiuaResult,
+        in_ctx: impl FnOnce(&mut Self) -> UiuaResult,
     ) -> UiuaResult {
         let mut set = false;
         match &fill {
@@ -1061,7 +1061,7 @@ code:
                 fill.format_shape()
             )));
         }
-        let res = f(self);
+        let res = in_ctx(self);
         match fill {
             Value::Num(_) | Value::Byte(_) => {
                 self.scope.fills.nums.pop();

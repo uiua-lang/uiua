@@ -335,7 +335,7 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example="√[4 9 16]"/>
         <Editor example="+1_2_3 4_5_6"/>
         <p>"When doing a pervasive operation on two arrays, their shape "<em>"prefixes"</em>" must match."</p>
-        <Editor example="+[1 2] [3 4 5]"/>
+        <Editor example="+[1 2] [3 4 5]"/> // Should fail
         <Editor example="△10_20\n      △[3_4_5 6_7_8]\n+10_20 [3_4_5 6_7_8]"/>
         <p>"If you want to do some pervasive operation on arrays whose shapes do not match, you can set a default value with "<Prim prim=Fill/>". Any places where the shapes don't match will be filled in with that value."</p>
         <Editor example="⍛0- [1 2] [3 4 5 6 7]"/>
@@ -365,7 +365,7 @@ fn TutorialArrays() -> impl IntoView {
         <p>"For curious array afficionados, Uiua uses an array model resembling "<a href="https://aplwiki.com/wiki/Box">"J's Boxed array model"</a>"."</p>
         <p>"All arrays are flat and homogenous. Arrays always have a rectangular shape. Different types of data, like numbers and characters, cannot be mixed in the same array."</p>
         <p>"However, there is an escape hatch for when you really want jagged, nested, or mixed-type arrays. In Uiua, an array of heterogenous values can be simulated with an array of functions. These functions can be used similarly to J's boxes."</p>
-        <Editor example="[1 2 [7 8 9]]"/>
+        <Editor example="[1 2 [7 8 9]]"/> // Should fail
         <p>"By using "<Prim prim=Constant/>", we can turn any value into a function that pushes that value onto the stack. We can then put these functions into an array like any other."</p>
         <Editor example="[□1 □2 □[7 8 9]]"/>
         <p>"To get the values back on the stack, we can use "<Prim prim=Reduce/><Prim prim=Call/>"."</p>
@@ -414,7 +414,7 @@ fn TutorialTypes() -> impl IntoView {
         <p>"Even though numbers can have a fractional part, many built-in functions require whole numbers. These functions will return an error if given a non-whole number."</p>
         <p>"One such example is "<Prim prim=Pick/>"."</p>
         <Editor example="⊡ 2 [4 7 9 1 0]"/>
-        <Editor example="⊡ 3.1 [4 7 9 1 0]"/>
+        <Editor example="⊡ 3.1 [4 7 9 1 0]"/> // Should fail
         <p>"If you want to convert a number to a whole number, you can use "<Prim prim=Floor/>", "<Prim prim=Ceil/>", or "<Prim prim=Round/>"."</p>
 
         <h2 id="characters">"Characters"</h2>
@@ -449,7 +449,7 @@ fn TutorialTypes() -> impl IntoView {
         <Editor example="+1 @a"/>
         <Editor example="-8 \"Uiua\""/>
         <Editor example="-@a @z"/>
-        <Editor example="+@a @b"/>
+        <Editor example="+@a @b"/> // Should fail
 
         <h2 id="functions">"Functions"</h2>
         <p>"Functions are usually used as scalars, but they are still arrays. Most array operations that work on number and character arrays work on arrays of functions as well."</p>
@@ -459,7 +459,7 @@ fn TutorialTypes() -> impl IntoView {
         <p id="type-agreement">"For functions that work on the structure of arrays rather than their values, the types of the arrays must match."</p>
         <Editor example="⊂ 1_2 3"/>
         <Editor example="⊟ \"Hello\" \"World\""/>
-        <Editor example="⊟ 1_2_3 \"dog\""/>
+        <Editor example="⊟ 1_2_3 \"dog\""/> // Should fail
         <p>"There is an exception for functions. Any function that pushes one value onto the stack can be put in an array with a non-function. In this case, the non-function will be turned into a function, similar to "<Prim prim=Constant/>"."</p>
         <Editor example="⊟ 5 (+1 2)"/>
     }
@@ -475,7 +475,7 @@ fn TutorialBindings() -> impl IntoView {
         <p>"Valid binding names can be made up of any sequence of uppercase or lowercase alphabetic characters OR a single non-alphanumeric character that is not already used for a Uiua function."</p>
         <Editor example="numone ← 1\nNuMtWo ← 2\n😀 ← \"happy\""/>
         <p>"Unlike most programming languages, binding names in Uiua "<em>"cannot"</em>" contain numbers or underscores."</p>
-        <Editor example="variable_1 ← 5"/>
+        <Editor example="variable_1 ← 5"/> // Should fail
         <p>"Bindings are case-"<em>"in"</em>"sensitive."</p>
         <Editor example="foo ← 5\n+ FOO fOo"/>
         <p>"The parser can somtimes mistake all-lowercase binding names for unformatted built-in functions."</p>
@@ -552,11 +552,11 @@ X 5"/>
         <Editor example="∵(|2.1 ⊟.×) 1_2_3 4_5_6"/>
         <p>"Stack signatures are useful for documenting functions to make sure that they are used correctly."</p>
         <p>"A signature declaration is "<em>"required"</em>" if the function's signature cannot be infered. The compiler can usually infer a function's signature unless you are doing something weird with higher-order functions or fiddling with function arrays, or if you are using "<Prim prim=Recur/>"sion."</p>
-        <Editor example="∺(⊞ ∶,)+_-⇡3"/>
+        <Editor example="∺(⊞ ∶,)+_-⇡3"/> // Should fail
         <p>"Simply add a signature declaration to fix this."</p>
         <Editor example="∺(|1 ⊞ ∶,)+_-⇡3"/>
         <p>"In addition, an error is thrown if a function's signature can be inferred and the inferred signature does not match the declared signature. This can help validate that a function is correct."</p>
-        <Editor example="≡(|2 ↻.) 1_2_3 ↯3_3⇡9"/>
+        <Editor example="≡(|2 ↻.) 1_2_3 ↯3_3⇡9"/> // Should fail
     }
 }
 
@@ -617,7 +617,7 @@ fn TutorialModules() -> impl IntoView {
         <h2 id="scopes">"Scopes"</h2>
         <p>"Scopes are a way to create a temporary namespace for bindings that are only used in a small part of your code. Only the names that you want to escape a scope are usable outside it."</p>
         <p>"Scopes begin and end with triple hyphens "<code>"---"</code>". All names declared inside a scope are not available outside of it."</p>
-        <Editor example="---\nfoo ← 5\n---\nfoo # foo is not available here"/>
+        <Editor example="---\nfoo ← 5\n---\nfoo # foo is not available here"/> // Should fail
         <p>"Values pushed to the stack inside a scope remain on the stack after the scope ends."</p>
         <p>"You can bind values that were pushed to the stack inside an ended scope by using a "<code>"←"</code>" with nothing on the right side."</p>
         <Editor example="---\na ← 3\nb ← 5\n+ a b\n× a b\n---\nc ← \nd ←\nc_d"/>

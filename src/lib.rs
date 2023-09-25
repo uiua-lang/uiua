@@ -101,9 +101,9 @@ impl<'a> PartialEq<&'a str> for Ident {
 }
 
 #[test]
-fn suite() -> Result<(), Box<dyn std::error::Error>> {
-    for entry in std::fs::read_dir("tests")? {
-        let entry = entry?;
+fn suite() {
+    for entry in std::fs::read_dir("tests").unwrap() {
+        let entry = entry.unwrap();
         let path = entry.path();
         if path.is_file() && path.extension().is_some_and(|s| s == "ua") {
             if let Err(e) = Uiua::with_native_sys().load_file(&path) {
@@ -111,5 +111,44 @@ fn suite() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
-    Ok(())
+}
+
+#[test]
+fn site() {
+    let mut threads = Vec::new();
+    for entry in std::fs::read_dir("site/src").unwrap() {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        for line in std::fs::read_to_string(&path).unwrap().lines() {
+            if let Some(code) = line
+                .trim()
+                .strip_prefix(r#"<Editor example=""#)
+                .and_then(|line| line.strip_suffix(r#""/>"#))
+            {
+                let code = code
+                    .replace("\\\"", "\"")
+                    .replace("\\\\", "\\")
+                    .replace("\\n", "\n");
+                if code.contains(crate::sys::SysOp::AudioPlay.name()) {
+                    continue;
+                }
+                threads.push((
+                    path.to_path_buf(),
+                    code.clone(),
+                    std::thread::spawn(move || Uiua::with_native_sys().load_str(&code).map(drop)),
+                ));
+            }
+        }
+    }
+    assert!(threads.len() > 50);
+    for (path, code, thread) in threads {
+        if let Err(e) = thread.join().unwrap() {
+            panic!(
+                "Test failed in {}\n{}\n{}",
+                path.display(),
+                code,
+                e.show(true)
+            );
+        }
+    }
 }

@@ -128,8 +128,11 @@ impl Signature {
     pub const fn new(args: usize, outputs: usize) -> Self {
         Self { args, outputs }
     }
-    pub fn compatible_with(self, other: Self) -> bool {
+    pub fn is_compatible_with(self, other: Self) -> bool {
         self.args as isize - self.outputs as isize == other.args as isize - other.outputs as isize
+    }
+    pub fn is_superset_of(self, other: Self) -> bool {
+        self.is_compatible_with(other) && self.args >= other.args
     }
     pub fn max_with(self, other: Self) -> Self {
         Self::new(self.args.max(other.args), self.outputs.max(other.outputs))

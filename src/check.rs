@@ -210,7 +210,7 @@ impl<'a> VirtualEnv<'a> {
                     let handler = self.pop()?;
                     let f_sig = f.signature();
                     let handler_sig = handler.signature();
-                    if !f_sig.compatible_with(handler_sig) {
+                    if !f_sig.is_compatible_with(handler_sig) {
                         return Err(format!(
                             "try's functions have incompatible signatures {f_sig} and {handler_sig}"
                         ));
@@ -418,7 +418,7 @@ impl<'a> VirtualEnv<'a> {
                     max_outputs = max_outputs.max(sig.outputs);
                 }
                 for win in fs.windows(2) {
-                    if !win[0].signature().compatible_with(win[1].signature()) {
+                    if !win[0].signature().is_compatible_with(win[1].signature()) {
                         return Err("call with incompatible functions".into());
                     }
                 }

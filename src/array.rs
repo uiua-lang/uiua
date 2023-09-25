@@ -436,7 +436,7 @@ impl ArrayValue for Arc<Function> {
         self.hash(hasher)
     }
     fn group_compatibility<C: FillContext>(&self, other: &Self, ctx: C) -> Result<(), C::Error> {
-        if self.signature().compatible_with(other.signature()) {
+        if self.signature().is_compatible_with(other.signature()) {
             Ok(())
         } else {
             Err(ctx.error("Functions have incompatible signatures"))

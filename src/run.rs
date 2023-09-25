@@ -345,9 +345,11 @@ code:
             Value::from(func)
         };
         let mut val = match instrs_signature(&instrs) {
-            Ok(sig) => {
+            Ok(mut sig) => {
                 if let Some(declared_sig) = &binding.signature {
-                    if declared_sig.value != sig {
+                    if declared_sig.value.is_superset_of(sig) {
+                        sig = declared_sig.value;
+                    } else {
                         return Err(UiuaError::Run(Span::Code(declared_sig.span.clone()).sp(
                             format!(
                                 "Function signature mismatch: \
@@ -637,9 +639,11 @@ code:
 
         // Validate signature
         let sig = match instrs_signature(&instrs) {
-            Ok(sig) => {
+            Ok(mut sig) => {
                 if let Some(declared_sig) = &func.signature {
-                    if declared_sig.value != sig {
+                    if declared_sig.value.is_superset_of(sig) {
+                        sig = declared_sig.value;
+                    } else {
                         return Err(UiuaError::Run(Span::Code(declared_sig.span.clone()).sp(
                             format!(
                                 "Function signature mismatch: declared {} but inferred {}",

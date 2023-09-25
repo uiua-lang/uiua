@@ -1127,7 +1127,7 @@ primitive!(
     /// ex! ⍤. =8 9
     ///
     /// Errors thrown by [assert] can be caught with [try].
-    (2, Assert, Control, ("assert", '⍤')),
+    (2(0), Assert, Control, ("assert", '⍤')),
     /// Spawn a thread
     ///
     /// Expects a function.

@@ -331,8 +331,7 @@ fn each1_0(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     for val in values {
         env.push(val);
         env.push(f.clone());
-        let broke = env.call_catch_break()?;
-        if broke {
+        if env.call_catch_break()? {
             break;
         }
     }

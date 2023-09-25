@@ -246,13 +246,12 @@ impl<'a> VirtualEnv<'a> {
                 Under => {
                     let f = self.pop()?;
                     let g = self.pop()?;
-                    if let (BasicValue::Func(f), BasicValue::Func(g)) = (f, g) {
+                    if let (BasicValue::Func(f), BasicValue::Func(_)) = (f, g) {
                         if let Some((before, after)) = f.clone().under() {
-                            let g_sig = g.signature();
                             let before_sig = before.signature();
                             let after_sig = after.signature();
                             self.handle_sig(before_sig)?;
-                            self.handle_sig(g_sig)?;
+                            self.handle_sig(Signature::new(1, 1))?;
                             self.handle_sig(after_sig)?;
                         } else {
                             // We could return an error here,

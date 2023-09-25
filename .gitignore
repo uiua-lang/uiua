@@ -2,6 +2,7 @@
 /Cargo.lock
 /docs
 *.ua
+!/tests/*.ua
 site/dist
 glyph_test.txt
 *.png

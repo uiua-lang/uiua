@@ -1,6 +1,7 @@
-- Allow non-scalar fill
 - Docs
+  - Invert bits for control flow
   - Control flow
+    - Invert bits
     - Call list of functions
     - Looping modifiers
     - Try
@@ -10,13 +11,11 @@
   - System functions
   - Thinking with arrays
 - Expand test suite
+- Allow non-scalar fill
 - Optimizations
   - Dyadic level - The dyadic case of level should have its own function
   - Row windows - `≡f◫` for scalar window size should be optimized to not materialize all the windows
   - Reduce windows? - `/f◫` for scalar window size could be optimized, but is it necessary?
-- Explore the possibility of eliminating nested arrays
-  - Would need to have ways to handle cases that require them
-  - Those cases must first be enumerated
 - Multimedia
   - Sound input
   - Webcam input

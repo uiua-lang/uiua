@@ -44,8 +44,8 @@ thread_local! {
     static ID: Cell<u64> = Cell::new(0);
 }
 
+/// An editor for Uiua code
 #[component]
-#[allow(clippy::needless_lifetimes)]
 pub fn Editor<'a>(
     #[prop(optional)] example: &'a str,
     #[prop(optional)] examples: &'a [&'a str],
@@ -59,6 +59,7 @@ pub fn Editor<'a>(
         id.set(i + 1);
         i
     });
+    // Initialize all the examples
     let examples = Some(example)
         .filter(|ex| !ex.is_empty() || examples.is_empty())
         .into_iter()
@@ -117,7 +118,7 @@ pub fn Editor<'a>(
     let (copied_link, set_copied_link) = create_signal(false);
     let (copied_code, set_copied_code) = create_signal(false);
 
-    /// Handles set the code in the editor, setting the cursor, and managing the history
+    /// Handles setting the code in the editor, setting the cursor, and managing the history
     struct State {
         code_id: String,
         set_line_count: WriteSignal<usize>,
@@ -128,6 +129,7 @@ pub fn Editor<'a>(
         curr: RefCell<Record>,
     }
 
+    /// A record of a code change
     #[derive(Debug)]
     struct Record {
         code: String,
@@ -135,6 +137,7 @@ pub fn Editor<'a>(
         after: (u32, u32),
     }
 
+    /// Ways to set the cursor
     #[derive(Clone, Copy)]
     enum Cursor {
         Set(u32, u32),
@@ -143,6 +146,7 @@ pub fn Editor<'a>(
     }
 
     impl State {
+        /// Set the code and cursor
         fn set_code(&self, code: &str, cursor: Cursor) {
             let after = match cursor {
                 Cursor::Set(start, end) => (start, end),
@@ -224,6 +228,7 @@ pub fn Editor<'a>(
         }
     }
 
+    // Initialize the state
     let state = Rc::new(State {
         code_id: code_id(),
         set_line_count,
@@ -345,6 +350,7 @@ pub fn Editor<'a>(
         state().set_code(&new, Cursor::Set(start, start));
     };
 
+    // Surround the selected text with delimiters
     let surround_code = move |open: char, close: char| {
         let (start, end) = get_code_cursor().unwrap();
         let (start, end) = (start.min(end), start.max(end));
@@ -470,10 +476,12 @@ pub fn Editor<'a>(
             "Tab" => {
                 replace_code("\t");
             }
+            // Select all
             "a" if event.ctrl_key() => {
                 let code = code_text();
                 state().set_code(&code, Cursor::Set(0, code.chars().count() as u32));
             }
+            // Copy
             "c" if event.ctrl_key() => {
                 let (start, end) = get_code_cursor().unwrap();
                 let (start, end) = (start.min(end), start.max(end));
@@ -485,6 +493,7 @@ pub fn Editor<'a>(
                     .collect();
                 _ = window().navigator().clipboard().unwrap().write_text(&text);
             }
+            // Cut
             "x" if event.ctrl_key() => {
                 let (start, end) = get_code_cursor().unwrap();
                 let (start, end) = (start.min(end), start.max(end));
@@ -497,8 +506,11 @@ pub fn Editor<'a>(
                 _ = window().navigator().clipboard().unwrap().write_text(&text);
                 remove_code(start, end);
             }
+            // Undo
             "z" if event.ctrl_key() => state().undo(),
+            // Redo
             "y" if event.ctrl_key() => state().redo(),
+            // Toggle line comment
             "/" if event.ctrl_key() => {
                 let code = code_text();
                 let (start, end) = get_code_cursor().unwrap();
@@ -525,6 +537,7 @@ pub fn Editor<'a>(
                 let new_code = lines.join("\n");
                 state().set_code(&new_code, Cursor::Set(start, end));
             }
+            // Handle double quote delimiters
             "\"" => {
                 let (start, end) = get_code_cursor().unwrap();
                 let code = code_text();
@@ -538,6 +551,7 @@ pub fn Editor<'a>(
                     surround_code('"', '"');
                 }
             }
+            // Handle open delimiters
             "(" | "[" | "{" => {
                 // Surround the selected text with delimiters
                 let (open, close) = match key {
@@ -549,6 +563,7 @@ pub fn Editor<'a>(
                 };
                 surround_code(open, close);
             }
+            // Handle close delimiters
             ")" | "]" | "}" => {
                 let (start, end) = get_code_cursor().unwrap();
                 let close = key.chars().next().unwrap();
@@ -558,6 +573,7 @@ pub fn Editor<'a>(
                     handled = false;
                 }
             }
+            // Line swapping with alt+up/down
             key @ ("ArrowUp" | "ArrowDown") if event.alt_key() => {
                 let (_, end) = get_code_cursor().unwrap();
                 let code = code_text();
@@ -586,6 +602,7 @@ pub fn Editor<'a>(
                     state().set_code(&swapped, Cursor::Set(new_end, new_end));
                 }
             }
+            // Intercept forward/back keyboard navigation
             "ArrowLeft" | "ArrowRight" if event.alt_key() => {}
             _ => handled = false,
         }
@@ -636,6 +653,7 @@ pub fn Editor<'a>(
     };
 
     // Glyph buttons
+    // These are the buttons that appear above the editor and allow the user to insert glyphs
     let mut glyph_buttons: Vec<_> = Primitive::all()
         .filter_map(|p| {
             let text = p
@@ -646,6 +664,7 @@ pub fn Editor<'a>(
             if let Some(ascii) = p.ascii() {
                 title = format!("({}) {}", ascii, title);
             }
+            // Navigate to the docs page on ctrl/shift+click
             let onclick = move |event: MouseEvent| {
                 if event.ctrl_key() {
                     // Open the docs page
@@ -665,6 +684,7 @@ pub fn Editor<'a>(
                     replace_code(&p.to_string());
                 }
             };
+            // Show the glyph doc on mouseover
             let onmouseover = move |_| {
                 if let Some(doc) = p.doc() {
                     set_glyph_doc.set(

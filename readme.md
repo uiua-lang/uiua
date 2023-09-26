@@ -7,6 +7,8 @@ Uiua (pronounced *"wee-wuh"*) is a stack-oriented array programming language.
 
 Documentation, examples, and an online interpreter can be found at [uiua.org](https://uiua.org).
 
+You can also check out the [Discord server](https://discord.gg/3r9nrfYhCc).
+
 ## Installation
 
 You can try the language without installing anything on [the website](https://uiua.org).

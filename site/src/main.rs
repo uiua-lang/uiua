@@ -104,8 +104,9 @@ pub fn MainPage() -> impl IntoView {
             <p><A href="/install">"Installation"</A></p>
             <p><A href="/docs">"Documentation"</A></p>
             <p><A href="/tour">"Language Tour"</A></p>
-            <p><a href="https://github.com/uiua-lang/uiua">"GitHub"</a></p>
             <p><A href="/pad">"Pad"</A></p>
+            <p><a href="https://discord.gg/3r9nrfYhCc">"Discord"</a></p>
+            <p><a href="https://github.com/uiua-lang/uiua">"GitHub"</a></p>
         </div>
         <Editor
             examples=examples::EXAMPLES

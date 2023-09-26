@@ -128,9 +128,11 @@ impl Signature {
     pub const fn new(args: usize, outputs: usize) -> Self {
         Self { args, outputs }
     }
+    /// Check if this signature changes the stack size by the same amount as another signature.
     pub fn is_compatible_with(self, other: Self) -> bool {
         self.args as isize - self.outputs as isize == other.args as isize - other.outputs as isize
     }
+    /// Check if this [`Signature::is_compatible_with`] another signature and has at least as many arguments.
     pub fn is_superset_of(self, other: Self) -> bool {
         self.is_compatible_with(other) && self.args >= other.args
     }

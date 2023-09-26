@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use crate::{
     array::Array,
     function::{Function, Instr, Signature},
@@ -141,24 +143,51 @@ impl<'a> VirtualEnv<'a> {
                     let f = self.pop()?;
                     let n = self.pop()?;
                     if let BasicValue::Num(n) = n {
+                        // If n is a known natural number, then the function can have any signature.
                         if n.fract() == 0.0 && n >= 0.0 {
                             let n = n as usize;
-                            if let BasicValue::Func(f) = f {
-                                let sig = f.signature();
-                                let m_args = sig.outputs * n;
-                                self.stack.push(BasicValue::Func(f));
-                                self.handle_mod(
-                                    prim,
-                                    Some(sig.args),
-                                    Some(sig.outputs),
-                                    m_args,
-                                    None,
-                                )?
-                            } else {
-                                self.handle_mod(prim, Some(0), Some(1), n, None)?
+                            if n > 0 {
+                                if let BasicValue::Func(f) = f {
+                                    let sig = f.signature();
+                                    let (args, outputs) = match sig.args.cmp(&sig.outputs) {
+                                        Ordering::Equal => (sig.args, sig.outputs),
+                                        Ordering::Less => (
+                                            (n - 1) * (sig.args - sig.outputs) + sig.args,
+                                            sig.outputs,
+                                        ),
+                                        Ordering::Greater => {
+                                            (sig.args, (n - 1) * (sig.outputs - sig.args) + 1)
+                                        }
+                                    };
+                                    for _ in 0..args {
+                                        self.pop()?;
+                                    }
+                                    self.set_min_height();
+                                    for _ in 0..outputs {
+                                        self.stack.push(BasicValue::Other);
+                                    }
+                                } else {
+                                    self.handle_mod(prim, Some(0), Some(1), n, None)?
+                                }
                             }
                         } else {
                             return Err("repeat without a natural number".into());
+                        }
+                    } else if let BasicValue::Func(f) = f {
+                        // If n is unknown, then the function must be compatible with |1.1
+                        let sig = f.signature();
+                        if f.signature().is_compatible_with(Signature::new(1, 1)) {
+                            for _ in 0..sig.args {
+                                self.pop()?;
+                            }
+                            self.set_min_height();
+                            for _ in 0..sig.outputs {
+                                self.stack.push(BasicValue::Other);
+                            }
+                        } else {
+                            return Err(format!(
+                                "repeat with no number and a function with signature {sig}"
+                            ));
                         }
                     } else {
                         return Err("repeat without a number".into());

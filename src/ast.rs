@@ -12,7 +12,7 @@ pub enum Item {
     Scoped { items: Vec<Item>, test: bool },
     Words(Vec<Sp<Word>>),
     Binding(Binding),
-    Newlines(CodeSpan),
+    ExtraNewlines(CodeSpan),
 }
 
 #[derive(Debug, Clone)]

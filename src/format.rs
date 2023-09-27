@@ -90,6 +90,7 @@ pub fn format_file<P: AsRef<Path>>(path: P, config: &FormatConfig) -> UiuaResult
 fn format_items_impl(output: &mut String, items: &[Item], config: &FormatConfig) {
     for item in items {
         format_item(output, item, config);
+        output.push('\n');
     }
 }
 
@@ -113,11 +114,7 @@ fn format_item(output: &mut String, item: &Item, config: &FormatConfig) {
             }
             format_words(output, &binding.words, config, true, 0);
         }
-        Item::Newlines(span) => {
-            for _ in span.as_str().chars().take(2) {
-                output.push('\n');
-            }
-        }
+        Item::ExtraNewlines(_) => {}
     }
 }
 

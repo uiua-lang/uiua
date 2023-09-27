@@ -974,7 +974,7 @@ fn code_text(id: &str) -> String {
         return parent.inner_text();
     }
 
-    log!("code_text -> {:?}", text);
+    // log!("code_text -> {:?}", text);
 
     text
 }

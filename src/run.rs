@@ -323,7 +323,7 @@ code:
                     self.binding(binding)?;
                 }
             }
-            Item::Newlines(_) => {}
+            Item::ExtraNewlines(_) => {}
         }
         Ok(())
     }

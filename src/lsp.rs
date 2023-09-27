@@ -36,7 +36,7 @@ fn items_spans(items: &[Item]) -> Vec<Sp<SpanKind>> {
                 }
                 spans.extend(words_spans(&binding.words));
             }
-            Item::Newlines(span) => spans.push(span.clone().sp(SpanKind::Whitespace)),
+            Item::ExtraNewlines(span) => spans.push(span.clone().sp(SpanKind::Whitespace)),
         }
     }
     spans
@@ -190,7 +190,7 @@ mod server {
                         .into(),
                     );
                 }
-                Item::Newlines(_) => {}
+                Item::ExtraNewlines(_) => {}
             }
         }
         scope_bindings.push(bindings);

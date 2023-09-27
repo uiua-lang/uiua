@@ -1,5 +1,11 @@
 {
     "rust-analyzer.cargo.extraEnv": {
         "RUSTFLAGS": "--cfg=web_sys_unstable_apis"
-    }
+    },
+    "rust-analyzer.cargo.features": [
+        "audio"
+    ],
+    "rust-analyzer.check.features": [
+        "audio"
+    ]
 }

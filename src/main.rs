@@ -6,11 +6,7 @@ use std::{
     io::{self, stderr, Write},
     path::{Path, PathBuf},
     process::{exit, Child, Command},
-    sync::{
-        atomic::{self, AtomicU64},
-        mpsc::channel,
-        Arc,
-    },
+    sync::mpsc::channel,
     thread::sleep,
     time::Duration,
 };
@@ -188,7 +184,9 @@ fn watch(open_path: &Path) -> io::Result<()> {
     println!("Watching for changes... (end with ctrl+C, use `uiua help` to see options)");
 
     let config = FormatConfig::default();
-    let audio_time = Arc::new(AtomicU64::new(0f64.to_bits()));
+    #[cfg(feature = "audio")]
+    let audio_time = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0f64.to_bits()));
+    #[cfg(feature = "audio")]
     let audio_time_clone = audio_time.clone();
     #[cfg(feature = "audio")]
     let (audio_time_socket, audio_time_port) = {
@@ -212,8 +210,9 @@ fn watch(open_path: &Path) -> io::Result<()> {
                         return Ok(());
                     }
                     clear_watching();
+                    #[cfg(feature = "audio")]
                     let audio_time =
-                        f64::from_bits(audio_time_clone.load(atomic::Ordering::Relaxed))
+                        f64::from_bits(audio_time_clone.load(std::sync::atomic::Ordering::Relaxed))
                             .to_string();
                     #[cfg(feature = "audio")]
                     let audio_port = audio_time_port.to_string();
@@ -225,7 +224,9 @@ fn watch(open_path: &Path) -> io::Result<()> {
                                 "--no-format",
                                 "--mode",
                                 "all",
+                                #[cfg(feature = "audio")]
                                 "--audio-time",
+                                #[cfg(feature = "audio")]
                                 &audio_time,
                                 #[cfg(feature = "audio")]
                                 "--audio-port",
@@ -277,7 +278,7 @@ fn watch(open_path: &Path) -> io::Result<()> {
                 let mut buf = [0; 8];
                 if audio_time_socket.recv(&mut buf).is_ok_and(|n| n == 8) {
                     let time = f64::from_be_bytes(buf);
-                    audio_time.store(time.to_bits(), atomic::Ordering::Relaxed);
+                    audio_time.store(time.to_bits(), std::sync::atomic::Ordering::Relaxed);
                 }
             }
         }

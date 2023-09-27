@@ -112,7 +112,9 @@ r#"git clone https://github.com/uiua-lang/uiua
 cd uiua
 cargo install --path ."#
         </code>
-        <p>"On Linux, you may need to install some dependencies first:"</p>
+        <p>"If you want to enable audio output, replace the "<code>"cargo"</code>" command with:"</p>
+        <code class="code-block">"cargo install --path . --features audio"</code>
+        <p>"If you want audio on Linux, you may need to install some dependencies first:"</p>
         <code class="code-block">"apt install libasound2-dev libudev-dev pkg-config"</code>
 
         <h2>"Basic Usage"</h2>

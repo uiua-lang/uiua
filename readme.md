@@ -23,7 +23,12 @@ cd uiua
 cargo install --path .
 ```
 
-On Linux, you may need to install some dependencies first:
+To enable audio output, replace the cargo command with:
+```
+cargo install --path . --features audio
+```
+
+If you want audio on Linux, you may need to install some dependencies first:
 ```
 apt install libasound2-dev libudev-dev pkg-config
 ```

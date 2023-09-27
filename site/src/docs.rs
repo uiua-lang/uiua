@@ -11,7 +11,7 @@ use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoView
 use crate::{
     element,
     other::*,
-    primitive::PrimDocs,
+    primitive::*,
     tour::Tour,
     tutorial::{Tutorial, TutorialPage},
     Prim,
@@ -26,6 +26,7 @@ pub enum DocsPage {
     Technical,
     Install,
     Audio,
+    AllFunctions,
 }
 
 impl IntoParam for DocsPage {
@@ -41,6 +42,7 @@ impl IntoParam for DocsPage {
                 "technical" => Some(Self::Technical),
                 "install" => Some(Self::Install),
                 "audio" => Some(Self::Audio),
+                "all-functions" => Some(Self::AllFunctions),
                 value => Some(Self::Search(value.into())),
             })
             .ok_or_else(|| ParamsError::MissingParam(name.to_string()))
@@ -67,6 +69,7 @@ pub fn Docs() -> impl IntoView {
             DocsPage::Technical => Technical().into_view(),
             DocsPage::Install => Install().into_view(),
             DocsPage::Audio => Audio().into_view(),
+            DocsPage::AllFunctions => AllFunctions().into_view(),
         };
 
         view! {
@@ -191,16 +194,19 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         <h2 id="catalog">"Function Catalog"</h2>
         <p>"The "<A href="/catalog">"Function Catalog"</A>" is a currated list of Uiua functions for solving common problems."</p>
         <h2 id="functions" class="doc-functions">"Functions"</h2>
-        <div class="input-div">
-            "⌕ "
-            <input
-                id="function-search"
-                type="text"
-                value=search
-                on:input=on_search_input
-                pattern="[^0-9]"
-                placeholder="Search by name, glyph, or category..."/>
-            { move || clear_button.get() }
+        <div id="function-search-wrapper">
+            <div class="input-div">
+                "⌕ "
+                <input
+                    id="function-search"
+                    type="text"
+                    value=search
+                    on:input=on_search_input
+                    pattern="[^0-9]"
+                    placeholder="Search by name, glyph, or category..."/>
+                { move || clear_button.get() }
+            </div>
+            <A href="/docs/all-functions">"Scrollable List"</A>
         </div>
         { move|| results.get() }
         <div style="height: 85vh;"></div>

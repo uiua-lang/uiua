@@ -680,6 +680,12 @@ input[type=text] {
     scroll-margin-bottom: 1em;
 }
 
+#function-search-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
 .running-text {
     animation: fadeAnimation 1s infinite;
 }

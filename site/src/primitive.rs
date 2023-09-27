@@ -1,4 +1,5 @@
 use leptos::*;
+use leptos_router::*;
 use uiua::primitive::{PrimClass, PrimDocFragment, PrimDocLine, Primitive};
 
 use crate::{editor::Editor, Prim};
@@ -85,11 +86,31 @@ pub fn PrimDocs(prim: Primitive) -> impl IntoView {
         }
     });
 
+    let id = prim.name();
+
     view! {
         <div>
-            <h1><Prim prim=prim hide_docs=true/>{ long_name }</h1>
+            <h1 id=id><Prim prim=prim hide_docs=true/>{ long_name }</h1>
             <p><h3>{ sig }</h3></p>
             { body }
         </div>
+    }
+}
+
+#[component]
+pub fn AllFunctions() -> impl IntoView {
+    view! {
+        <h1>"All Functions"</h1>
+        <p>"This is a list of every built-in function in Uiua, provided for your scrolling pleasure."</p>
+        <p>"For a searchable list, see the "<A href="/docs#functions">"main docs page"</A>"."</p>
+        {
+            Primitive::all().filter(|p| p.names().is_some()).map(|p| {
+                view! {
+                    <br/>
+                    <hr/>
+                    <PrimDocs prim=p/>
+                }
+            }).collect::<Vec<_>>()
+        }
     }
 }

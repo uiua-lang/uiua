@@ -39,7 +39,7 @@ pub fn Design() -> impl IntoView {
         <p>"Finally, I switched to the current model, which resembles J's Boxed array model. While you can do something resembling J's "<code>"box <"</code>" using "<Prim prim=Constant/>" (and "<code>"open >"</code>" with "<Prim prim=Call/>"), I designed functions like "<Prim prim=Partition/>" and "<Prim prim=Group/>" to allow selecting uniformly-shaped rows from a non-uniform list in an effort to minimize interaction with jagged data."</p>
         <p>"The fact that the stack is always available also makes putting non-uniform data in arrays less necessary."</p>
 
-        <h2 id="array-model">"The Glyphs"</h2>
+        <h2 id="glyphs">"The Glyphs"</h2>
         <p>"Most of Uiua's glyphs were chosen for one of a few reasons:"</p>
         <ul>
             <li>"It is a common mathematical symbol, such as "<Prim prim=Add/>", "<Prim prim=Sub/>", and "<Prim prim=Pi/>"."</li>

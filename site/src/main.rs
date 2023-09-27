@@ -1,4 +1,5 @@
 mod backend;
+mod catalog;
 mod docs;
 mod editor;
 mod examples;
@@ -14,7 +15,7 @@ use uiua::primitive::{PrimClass, Primitive};
 use wasm_bindgen::JsCast;
 use web_sys::HtmlAudioElement;
 
-use crate::{docs::*, editor::*, other::*, pad::*, tour::*};
+use crate::{catalog::*, docs::*, editor::*, other::*, pad::*, tour::*};
 
 pub fn main() {
     console_error_panic_hook::set_once();
@@ -75,6 +76,7 @@ pub fn Site() -> impl IntoView {
                     <Routes>
                         <Route path="" view=MainPage/>
                         <Route path="docs/:page?" view=Docs/>
+                        <Route path="catalog/:search?" view=Catalog/>
                         <Route path="pad" view=Pad/>
                         <Route path="install" view=Install/>
                         <Route path="tour" view=Tour/>

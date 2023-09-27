@@ -188,6 +188,8 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/technical">"Technical Details"</A>" - notes on the implementation of the Uiua interpreter and this website"</li>
             <li><A href="/docs/audio">"Audio"</A>" - how to generate and play audio"</li>
         </ul>
+        <h2 id="catalog">"Function Catalog"</h2>
+        <p>"The "<A href="/catalog">"Function Catalog"</A>" is a currated list of Uiua functions for solving common problems."</p>
         <h2 id="functions" class="doc-functions">"Functions"</h2>
         <div class="input-div">
             "⌕ "

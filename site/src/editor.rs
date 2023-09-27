@@ -50,15 +50,17 @@ pub fn Editor<'a>(
     #[prop(optional)] example: &'a str,
     #[prop(optional)] examples: &'a [&'a str],
     #[prop(optional)] size: EditorSize,
-    #[prop(optional)] help: &'static [&'static str],
+    #[prop(optional)] help: &'a [&'a str],
     #[prop(optional)] mode: EditorMode,
     #[prop(optional)] progress_lines: bool,
+    #[prop(optional)] no_run: bool,
 ) -> impl IntoView {
     let id = ID.with(|id| {
         let i = id.get();
         id.set(i + 1);
         i
     });
+    let help: Vec<String> = help.iter().map(|s| s.to_string()).collect();
     // Initialize all the examples
     let examples = Some(example)
         .filter(|ex| !ex.is_empty() || examples.is_empty())
@@ -798,7 +800,18 @@ pub fn Editor<'a>(
     };
 
     // This ensures the output of the first example is shown
-    set_timeout(move || run(false, false), Duration::from_millis(0));
+    set_timeout(
+        move || {
+            if no_run {
+                let code = initial_code.get().unwrap();
+                set_initial_code.set(None);
+                state().set_code(&code, Cursor::Ignore);
+            } else {
+                run(false, false)
+            }
+        },
+        Duration::from_millis(0),
+    );
 
     // Line numbers
     let line_numbers = move || {
@@ -925,7 +938,7 @@ pub fn Editor<'a>(
                 </div>
             </div>
             <div id="editor-help">
-                { help.iter().map(|s| view!(<p>{*s}</p>)).collect::<Vec<_>>() }
+                { help.iter().map(|s| view!(<p>{s}</p>)).collect::<Vec<_>>() }
             </div>
         </div>
     }
@@ -1023,7 +1036,7 @@ fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
             curr += len;
         }
     }
-    log!("get_code_cursor -> {:?}, {:?}", start, end);
+    // log!("get_code_cursor -> {:?}, {:?}", start, end);
     Some((start, end))
 }
 

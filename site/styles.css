@@ -695,3 +695,9 @@ input[type=text] {
         opacity: 1;
     }
 }
+
+.catalog-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}

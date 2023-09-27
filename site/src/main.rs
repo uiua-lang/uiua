@@ -123,7 +123,7 @@ pub fn MainPage() -> impl IntoView {
                 <div>
                     <h2>"A Loving Union"</h2>
                     <p>"Uiua combines the stack-oriented and array-oriented paradigms in a single language. Combining these already terse paradigms results in code with a very high information density and little syntactic noise."</p>
-                    <Editor example="⇌⍥(⊂/+↙2.)8⊟.1"/>
+                    <Editor example="⇌[⍥(+,,)10 1 0]"/>
                 </div>
                 <div>
                     <h2>"True Arrays"</h2>

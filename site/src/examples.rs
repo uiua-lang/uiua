@@ -1,5 +1,5 @@
 const UIUA: &str = "\"Um, I um...arrays\"\n⊜⊢≥@A.";
-const FORMAT: &str = "# Click Run to format!\nrepeat(join∶/+take`2.)10range2";
+const FORMAT: &str = "# Click Run to format!\nkeepnotmem:deshtab*...+2rang50";
 const D3: &str = "↯∶⇡/×.2_3_4";
 pub const LOGO: &str = "\
 xy ← ⍘⍉⊞⊟. ÷÷2∶ -÷2,⇡.200
@@ -25,7 +25,6 @@ Thirty ← ≡(↥≅0_1_1 ∶=1 /+.) ◫3 ⊂∶0 ⊂0
 size ← 500
 start ← =÷2 size ⇡+1 size
 ⇌[⍥(Thirty.)÷2 size start]";
-const PRIMES: &str = "▽¬∊∶♭⊞×...+2⇡50";
 const MANDELBROT: &str = "\
 Z ← ⊟/- ⁿ2 ∶×2 /×.⇌
 ⇌⍘⍉⊞⊟.×4 ÷∶-÷2,⇡. 300
@@ -37,8 +36,7 @@ life ← ↥↧↶=2∶=3.-,/+/+⍚1_2↻-1⇡3_3.
 ↯∶≡'↯4∵'↯4∶×4△.";
 
 pub const EXAMPLES: &[&str] = &[
-    UIUA, FORMAT, D3, LOGO, AVG, CHORD, QUADRATIC, STRIPES, PALINDROME, RULE_30, PRIMES,
-    MANDELBROT, LIFE,
+    UIUA, FORMAT, D3, LOGO, AVG, CHORD, QUADRATIC, STRIPES, PALINDROME, RULE_30, MANDELBROT, LIFE,
 ];
 
 #[cfg(test)]

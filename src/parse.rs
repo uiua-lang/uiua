@@ -155,18 +155,13 @@ impl Parser {
             match self.try_item(parse_scopes) {
                 Some(item) => items.push(item),
                 None => {
-                    if self.try_exact(Newline).is_none() {
+                    let Some(mut newline_span) = self.try_exact(Newline) else {
                         break;
-                    }
-                    let mut newline_span: Option<CodeSpan> = None;
+                    };
                     while let Some(span) = self.try_exact(Newline) {
-                        newline_span = Some(if let Some(prev) = newline_span.take() {
-                            prev.merge(span)
-                        } else {
-                            span
-                        });
+                        newline_span = newline_span.merge(span);
                     }
-                    items.extend(newline_span.map(Item::Newlines));
+                    items.push(Item::Newlines(newline_span));
                 }
             }
         }

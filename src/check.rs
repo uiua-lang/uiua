@@ -151,13 +151,13 @@ impl<'a> VirtualEnv<'a> {
                                     let sig = f.signature();
                                     let (args, outputs) = match sig.args.cmp(&sig.outputs) {
                                         Ordering::Equal => (sig.args, sig.outputs),
-                                        Ordering::Less => (
+                                        Ordering::Less => {
+                                            (sig.args, (n - 1) * (sig.outputs - sig.args) + 1)
+                                        }
+                                        Ordering::Greater => (
                                             (n - 1) * (sig.args - sig.outputs) + sig.args,
                                             sig.outputs,
                                         ),
-                                        Ordering::Greater => {
-                                            (sig.args, (n - 1) * (sig.outputs - sig.args) + 1)
-                                        }
                                     };
                                     for _ in 0..args {
                                         self.pop()?;

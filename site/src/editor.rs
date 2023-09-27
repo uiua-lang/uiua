@@ -974,6 +974,8 @@ fn code_text(id: &str) -> String {
         return parent.inner_text();
     }
 
+    log!("code_text -> {:?}", text);
+
     text
 }
 
@@ -1082,9 +1084,11 @@ fn set_code_html(id: &str, code: &str) {
         let mut unspanned = String::new();
         while *curr < target {
             if chars[*curr] == '\n' {
-                // log!("unspanned: {:?}", unspanned);
-                html.push_str(&unspanned);
-                unspanned.clear();
+                if !unspanned.is_empty() {
+                    // log!("unspanned: {:?}", unspanned);
+                    html.push_str(&unspanned);
+                    unspanned.clear();
+                }
                 // log!("newline");
                 html.push_str("</span></div><div class=\"code-line\">");
                 *curr += 1;
@@ -1098,8 +1102,10 @@ fn set_code_html(id: &str, code: &str) {
             unspanned.push(chars[*curr]);
             *curr += 1;
         }
-        // log!("unspanned: {:?}", unspanned);
-        html.push_str(&unspanned);
+        if !unspanned.is_empty() {
+            // log!("unspanned: {:?}", unspanned);
+            html.push_str(&unspanned);
+        }
         html.push_str("</span>");
     };
 
@@ -1112,7 +1118,7 @@ fn set_code_html(id: &str, code: &str) {
         let text: String = chars[span.start.char_pos..span.end.char_pos]
             .iter()
             .collect();
-        // log!("spanned: {:?}", text);
+        // log!("spanned: {:?} {:?}", kind, text);
         let color_class = match kind {
             SpanKind::Primitive(prim) => match prim.class() {
                 PrimClass::Stack => "{}",
@@ -1125,41 +1131,49 @@ fn set_code_html(id: &str, code: &str) {
             _ => "",
         };
 
-        html.push_str(&match kind {
-            SpanKind::Primitive(prim) => {
-                let name = prim.name().unwrap_or_default();
-                if let Some(doc) = prim.doc() {
-                    let mut title = format!("{}: {}", name, doc.short_text());
-                    if let Some(ascii) = prim.ascii() {
-                        title = format!("({}) {}", ascii, title);
-                    }
-                    format!(
-                        r#"<span 
+        if !text.is_empty() && text.chars().all(|c| c == '\n') {
+            html.push_str("</div>");
+            for _ in 0..text.chars().count() - 1 {
+                html.push_str("<div class=\"code-line\"><br/></div>");
+            }
+            html.push_str("<div class=\"code-line\">");
+        } else {
+            html.push_str(&match kind {
+                SpanKind::Primitive(prim) => {
+                    let name = prim.name().unwrap_or_default();
+                    if let Some(doc) = prim.doc() {
+                        let mut title = format!("{}: {}", name, doc.short_text());
+                        if let Some(ascii) = prim.ascii() {
+                            title = format!("({}) {}", ascii, title);
+                        }
+                        format!(
+                            r#"<span 
                             class="code-span code-hover {color_class}" 
                             data-title={title:?}>{text}</span>"#
-                    )
-                } else {
-                    format!(
-                        r#"<span 
+                        )
+                    } else {
+                        format!(
+                            r#"<span 
                             class="code-span code-hover {color_class}" 
                             data-title={name:?}>{text}</span>"#
-                    )
+                        )
+                    }
                 }
-            }
-            SpanKind::String => {
-                let title = if text.starts_with('@') {
-                    "character"
-                } else {
-                    "string"
-                };
-                format!(
-                    r#"<span
+                SpanKind::String => {
+                    let title = if text.starts_with('@') {
+                        "character"
+                    } else {
+                        "string"
+                    };
+                    format!(
+                        r#"<span
                             class="code-span code-hover {color_class}" 
                             data-title={title}>{text}</span>"#
-                )
-            }
-            _ => format!(r#"<span class="code-span {color_class}">{text}</span>"#),
-        });
+                    )
+                }
+                _ => format!(r#"<span class="code-span {color_class}">{text}</span>"#),
+            });
+        }
 
         end = span.end.char_pos;
     }
@@ -1173,7 +1187,13 @@ fn set_code_html(id: &str, code: &str) {
             "<div class=\"code-line\"><span class=\"code-span\"></span></div>",
             "<div class=\"code-line\"><br/></div>",
         )
+        .replace(
+            "<div class=\"code-line\"></div>",
+            "<div class=\"code-line\"><br/></div>",
+        )
         .replace("<span class=\"code-span\"></span>", "");
+
+    // log!("html: {}", html);
 
     elem.set_inner_html(&html);
 }

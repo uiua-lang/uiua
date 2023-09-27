@@ -1,5 +1,4 @@
 /target
-/Cargo.lock
 /docs
 *.ua
 !/tests/*.ua

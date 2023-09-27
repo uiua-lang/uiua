@@ -93,10 +93,28 @@ macro_rules! catalog {
 }
 
 catalog!(
+    /// Reverse each row of an array
+    "≡⇌ [1_2_3 4_5_6]",
+    /// Get the sum of an array
+    "/+ [1 2 3 4 5]",
+    /// Create an identity matrix
+    "⊞=.⇡ 5",
+    /// Create an X matrix
+    "↥⇌.⊞=.⇡ 5",
+    /// Get the product of an array
+    "/× [1 2 3 4 5]",
+    /// Convert a number to a string
+    "$\"_\" 17",
     /// Find the indices of all 1s
     "▽∶⇡⧻. [0 1 0 0 1]",
     /// Split an array by a delimiter
     "⊜□≠, @, \"split,this,up\"",
     /// Split an array by a delimiter with fill elements
     "⍛@ ⊜·≠, @, \"split,this,up\"",
+    /// Find the nth fibonacci number
+    ";⍥(+,∶)↶.1 10",
+    /// Filter by a fixed predicate
+    "▽ =0◿2 . ⇡10",
+    /// Filter by a dynamic predicate
+    "▽!∶, (=0◿2) ⇡10",
 );

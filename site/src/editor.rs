@@ -18,7 +18,7 @@ use uiua::{
     value_to_image_bytes, value_to_wav_bytes, SysBackend, Uiua,
 };
 use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{Event, HtmlDivElement, MouseEvent, Node};
+use web_sys::{Event, HtmlBrElement, HtmlDivElement, MouseEvent, Node};
 
 use crate::{
     backend::{OutputItem, WebBackend},
@@ -994,6 +994,23 @@ fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
         if i > 0 {
             curr += 1;
         }
+        // This is the case when you click on an empty line
+        if children_of(&div_node).count() == 1
+            && div_node
+                .first_child()
+                .unwrap()
+                .dyn_into::<HtmlBrElement>()
+                .is_ok()
+        {
+            if div_node.contains(Some(&anchor_node)) {
+                start = curr + anchor_offset;
+            }
+            if div_node.contains(Some(&focus_node)) {
+                end = curr + focus_offset;
+            }
+            continue;
+        }
+        // This is the normal case
         for span_node in children_of(&div_node) {
             if span_node.contains(Some(&anchor_node)) {
                 start = curr + anchor_offset;
@@ -1006,7 +1023,7 @@ fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
             curr += len;
         }
     }
-    // log!("get_code_cursor -> {:?}, {:?}", start, end);
+    log!("get_code_cursor -> {:?}, {:?}", start, end);
     Some((start, end))
 }
 

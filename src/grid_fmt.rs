@@ -88,12 +88,16 @@ impl GridFmt for Arc<Function> {
 }
 
 impl GridFmt for Function {
-    fn fmt_grid(&self, _: bool) -> Grid {
+    fn fmt_grid(&self, boxed: bool) -> Grid {
         if let Some((prim, _)) = self.as_primitive() {
             return vec![prim.to_string().chars().collect()];
         }
         if let Some(value) = self.as_constant() {
-            return value.fmt_grid(true);
+            let mut grid = value.fmt_grid(true);
+            if grid.len() == 1 && boxed {
+                grid[0].insert(0, '□');
+            }
+            return grid;
         }
         let mut grid: Grid = self
             .format_inner()
@@ -169,7 +173,6 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         let mut grid: Grid = Grid::new();
 
         if !just_dims {
-            let stringy = type_name::<T>() == type_name::<char>();
             fmt_array(&self.shape, &self.data, stringy, &mut metagrid);
             // Determine max row heights and column widths
             let metagrid_width = metagrid.iter().map(|row| row.len()).max().unwrap();
@@ -208,8 +211,12 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             let row_count = grid.len();
             if row_count == 1 && self.rank() == 1 {
                 // Add brackets to vectors
-                let (left, right) = if boxed { ('⟦', '⟧') } else { ('[', ']') };
-                if !stringy {
+                if stringy {
+                    if boxed {
+                        grid[0].insert(0, '□');
+                    }
+                } else {
+                    let (left, right) = if boxed { ('⟦', '⟧') } else { ('[', ']') };
                     grid[0].insert(0, left);
                     grid[0].push(right);
                 }

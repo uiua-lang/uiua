@@ -18,7 +18,7 @@ use uiua::{
     value_to_image_bytes, value_to_wav_bytes, SysBackend, Uiua,
 };
 use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{Event, HtmlBrElement, HtmlDivElement, MouseEvent, Node};
+use web_sys::{Event, HtmlBrElement, HtmlDivElement, KeyboardEvent, MouseEvent, Node};
 
 use crate::{
     backend::{OutputItem, WebBackend},
@@ -380,6 +380,20 @@ pub fn Editor<'a>(
         }
     };
 
+    let on_mac = window()
+        .navigator()
+        .user_agent()
+        .unwrap()
+        .to_lowercase()
+        .contains("mac");
+    let os_ctrl = move |event: &KeyboardEvent| {
+        if on_mac {
+            event.meta_key()
+        } else {
+            event.ctrl_key()
+        }
+    };
+
     // Handle key events
     window_event_listener(keydown, move |event| {
         let event = event.dyn_ref::<web_sys::KeyboardEvent>().unwrap();
@@ -413,7 +427,7 @@ pub fn Editor<'a>(
         let key = key.as_str();
         match key {
             "Enter" => {
-                if event.ctrl_key() || event.shift_key() {
+                if os_ctrl(event) || event.shift_key() {
                     run(true, true);
                 } else {
                     replace_code("\n");
@@ -424,7 +438,7 @@ pub fn Editor<'a>(
                 if start == end {
                     if start > 0 {
                         let mut removal_count = 1;
-                        if event.ctrl_key() {
+                        if os_ctrl(event) {
                             removal_count = 0;
                             let code = code_text();
                             let chars: Vec<_> = code.chars().take(start as usize).collect();
@@ -452,7 +466,7 @@ pub fn Editor<'a>(
                 let (start, end) = get_code_cursor().unwrap();
                 if start == end {
                     let mut removal_count = 1;
-                    if event.ctrl_key() {
+                    if os_ctrl(event) {
                         removal_count = 0;
                         let code = code_text();
                         let chars: Vec<_> = code.chars().skip(end as usize).collect();
@@ -479,12 +493,12 @@ pub fn Editor<'a>(
                 replace_code("\t");
             }
             // Select all
-            "a" if event.ctrl_key() => {
+            "a" if os_ctrl(event) => {
                 let code = code_text();
                 state().set_code(&code, Cursor::Set(0, code.chars().count() as u32));
             }
             // Copy
-            "c" if event.ctrl_key() => {
+            "c" if os_ctrl(event) => {
                 let (start, end) = get_code_cursor().unwrap();
                 let (start, end) = (start.min(end), start.max(end));
                 let code = code_text();
@@ -496,7 +510,7 @@ pub fn Editor<'a>(
                 _ = window().navigator().clipboard().unwrap().write_text(&text);
             }
             // Cut
-            "x" if event.ctrl_key() => {
+            "x" if os_ctrl(event) => {
                 let (start, end) = get_code_cursor().unwrap();
                 let (start, end) = (start.min(end), start.max(end));
                 let code = code_text();
@@ -509,11 +523,11 @@ pub fn Editor<'a>(
                 remove_code(start, end);
             }
             // Undo
-            "z" if event.ctrl_key() => state().undo(),
+            "z" if os_ctrl(event) => state().undo(),
             // Redo
-            "y" if event.ctrl_key() => state().redo(),
+            "y" if os_ctrl(event) => state().redo(),
             // Toggle line comment
-            "/" if event.ctrl_key() => {
+            "/" if os_ctrl(event) => {
                 let code = code_text();
                 let (start, end) = get_code_cursor().unwrap();
                 let (start, end) = (start.min(end), start.max(end));
@@ -668,7 +682,7 @@ pub fn Editor<'a>(
             }
             // Navigate to the docs page on ctrl/shift+click
             let onclick = move |event: MouseEvent| {
-                if event.ctrl_key() {
+                if !on_mac && event.ctrl_key() || on_mac && event.meta_key() {
                     // Open the docs page
                     window()
                         .open_with_url_and_target(

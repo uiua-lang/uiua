@@ -979,6 +979,8 @@ primitive!(
     /// The above examples involve an *arithmetic* under. That is, [invert]`f` is well-definined independent of [under]'s concept of "undoing".
     /// The remaining examples below involve `f`s which cannot be normally [invert]ed, but which are valid as functions to use with [under].
     ///
+    /// [under][deshape] will [reshape] the array after `g` finishes.
+    /// ex: ⍜♭⇌ .↯3_4⇡12
     /// If you want to insert a value somewhere in the middle of an array, you can use [under], [rotate], and [join].
     /// ex: ⍜'↻3'⊂π 1_2_3_4_5
     /// You can use [under][first] to apply a function to the first row of an array.

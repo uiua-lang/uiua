@@ -196,6 +196,7 @@ fn under_instr_fragment(mut instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr
             [Flip.i(), (-1).i(), Drop.i(), Join.i()],
         ),
         &([Shape], [Dup, Shape], [Reshape]),
+        &([Deshape], [Dup, Shape, Flip, Deshape], [Flip, Reshape]),
     ];
 
     let mut befores = Vec::new();

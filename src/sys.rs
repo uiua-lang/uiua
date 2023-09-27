@@ -2,7 +2,7 @@ use std::{
     any::Any,
     env,
     fs::{self, File},
-    io::{stderr, stdin, stdout, Cursor, Read, Write},
+    io::{stderr, stdin, stdout, BufRead, Cursor, Read, Write},
     net::*,
     sync::{
         atomic::{self, AtomicU64},
@@ -254,9 +254,9 @@ sys_op! {
 pub struct Handle(pub u64);
 
 impl Handle {
-    pub const STDIN: Self = Self(0);
-    pub const STDOUT: Self = Self(1);
-    pub const STDERR: Self = Self(2);
+    const STDIN: Self = Self(0);
+    const STDOUT: Self = Self(1);
+    const STDERR: Self = Self(2);
     pub const FIRST_UNRESERVED: Self = Self(3);
 }
 
@@ -279,18 +279,14 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn any(&self) -> &dyn Any;
     /// Save a color-formatted version of an error message for later printing
     fn save_error_color(&self, error: &UiuaError) {}
-    fn print_str(&self, s: &str) -> Result<(), String> {
-        self.write(Handle::STDOUT, s.as_bytes())
+    fn print_str_stdout(&self, s: &str) -> Result<(), String> {
+        Err("Printing to stdout is not supported in this environment".into())
     }
-    fn scan_line(&self) -> String {
-        let mut bytes = Vec::new();
-        while let Ok(b) = self.read(Handle::STDIN, 1) {
-            if b.is_empty() || b[0] == b'\n' {
-                break;
-            }
-            bytes.extend_from_slice(&b);
-        }
-        String::from_utf8_lossy(&bytes).into_owned()
+    fn print_str_stderr(&self, s: &str) -> Result<(), String> {
+        Err("Printing to stderr is not supported in this environment".into())
+    }
+    fn scan_line_stdin(&self) -> Result<String, String> {
+        Err("Reading from stdin is not supported in this environment".into())
     }
     fn var(&self, name: &str) -> Option<String> {
         None
@@ -495,6 +491,26 @@ impl SysBackend for NativeSys {
     fn any(&self) -> &dyn Any {
         self
     }
+    fn print_str_stdout(&self, s: &str) -> Result<(), String> {
+        stdout()
+            .lock()
+            .write_all(s.as_bytes())
+            .map_err(|e| e.to_string())
+    }
+    fn print_str_stderr(&self, s: &str) -> Result<(), String> {
+        stderr()
+            .lock()
+            .write_all(s.as_bytes())
+            .map_err(|e| e.to_string())
+    }
+    fn scan_line_stdin(&self) -> Result<String, String> {
+        stdin()
+            .lock()
+            .lines()
+            .next()
+            .unwrap()
+            .map_err(|e| e.to_string())
+    }
     fn save_error_color(&self, error: &UiuaError) {
         NATIVE_SYS
             .colored_errors
@@ -539,40 +555,25 @@ impl SysBackend for NativeSys {
         Ok(handle)
     }
     fn read(&self, handle: Handle, len: usize) -> Result<Vec<u8>, String> {
-        match handle {
-            Handle::STDIN => {
+        Ok(match NATIVE_SYS.get_stream(handle)? {
+            SysStream::File(mut file) => {
                 let mut buf = Vec::new();
-                stdin()
-                    .lock()
+                Write::by_ref(&mut *file)
                     .take(len as u64)
                     .read_to_end(&mut buf)
                     .map_err(|e| e.to_string())?;
-                Ok(buf)
+                buf
             }
-            Handle::STDOUT => Err("Cannot read from stdout".into()),
-            Handle::STDERR => Err("Cannot read from stderr".into()),
-            _ => Ok(match NATIVE_SYS.get_stream(handle)? {
-                SysStream::File(mut file) => {
-                    let mut buf = Vec::new();
-                    Write::by_ref(&mut *file)
-                        .take(len as u64)
-                        .read_to_end(&mut buf)
-                        .map_err(|e| e.to_string())?;
-                    buf
-                }
-                SysStream::TcpListener(_) => {
-                    return Err("Cannot read from a tcp listener".to_string())
-                }
-                SysStream::TcpSocket(mut socket) => {
-                    let mut buf = Vec::new();
-                    Write::by_ref(&mut *socket)
-                        .take(len as u64)
-                        .read_to_end(&mut buf)
-                        .map_err(|e| e.to_string())?;
-                    buf
-                }
-            }),
-        }
+            SysStream::TcpListener(_) => return Err("Cannot read from a tcp listener".to_string()),
+            SysStream::TcpSocket(mut socket) => {
+                let mut buf = Vec::new();
+                Write::by_ref(&mut *socket)
+                    .take(len as u64)
+                    .read_to_end(&mut buf)
+                    .map_err(|e| e.to_string())?;
+                buf
+            }
+        })
     }
     fn write(&self, handle: Handle, conts: &[u8]) -> Result<(), String> {
         let mut conts = conts;
@@ -586,17 +587,10 @@ impl SysBackend for NativeSys {
             colored = colored_error;
             conts = colored.as_bytes();
         }
-        match handle {
-            Handle::STDIN => Err("Cannot write to stdin".into()),
-            Handle::STDOUT => stdout().lock().write_all(conts).map_err(|e| e.to_string()),
-            Handle::STDERR => stderr().lock().write_all(conts).map_err(|e| e.to_string()),
-            _ => match NATIVE_SYS.get_stream(handle)? {
-                SysStream::File(mut file) => file.write_all(conts).map_err(|e| e.to_string()),
-                SysStream::TcpListener(_) => Err("Cannot write to a tcp listener".to_string()),
-                SysStream::TcpSocket(mut socket) => {
-                    socket.write_all(conts).map_err(|e| e.to_string())
-                }
-            },
+        match NATIVE_SYS.get_stream(handle)? {
+            SysStream::File(mut file) => file.write_all(conts).map_err(|e| e.to_string()),
+            SysStream::TcpListener(_) => Err("Cannot write to a tcp listener".to_string()),
+            SysStream::TcpSocket(mut socket) => socket.write_all(conts).map_err(|e| e.to_string()),
         }
     }
     fn sleep(&self, seconds: f64) -> Result<(), String> {
@@ -829,24 +823,28 @@ impl SysOp {
         match self {
             SysOp::Show => {
                 let s = env.pop(1)?.grid_string();
-                env.backend.print_str(&s).map_err(|e| env.error(e))?;
-                env.backend.print_str("\n").map_err(|e| env.error(e))?;
+                env.backend.print_str_stdout(&s).map_err(|e| env.error(e))?;
+                env.backend
+                    .print_str_stdout("\n")
+                    .map_err(|e| env.error(e))?;
             }
             SysOp::Prin => {
                 let val = env.pop(1)?;
                 env.backend
-                    .print_str(&val.to_string())
+                    .print_str_stdout(&val.to_string())
                     .map_err(|e| env.error(e))?;
             }
             SysOp::Print => {
                 let val = env.pop(1)?;
                 env.backend
-                    .print_str(&val.to_string())
+                    .print_str_stdout(&val.to_string())
                     .map_err(|e| env.error(e))?;
-                env.backend.print_str("\n").map_err(|e| env.error(e))?;
+                env.backend
+                    .print_str_stdout("\n")
+                    .map_err(|e| env.error(e))?;
             }
             SysOp::ScanLine => {
-                let line = env.backend.scan_line();
+                let line = env.backend.scan_line_stdin().map_err(|e| env.error(e))?;
                 env.push(line);
             }
             SysOp::TermSize => {
@@ -880,7 +878,17 @@ impl SysOp {
                     .pop(2)?
                     .as_nat(env, "Handle must be an natural number")?
                     .into();
-                let bytes = env.backend.read(handle, count).map_err(|e| env.error(e))?;
+                let bytes = match handle {
+                    Handle::STDOUT => return Err(env.error("Cannot read from stdout")),
+                    Handle::STDERR => return Err(env.error("Cannot read from stderr")),
+                    Handle::STDIN => stdin()
+                        .lock()
+                        .bytes()
+                        .take(count)
+                        .collect::<Result<Vec<_>, _>>()
+                        .map_err(|e| env.error(e))?,
+                    _ => env.backend.read(handle, count).map_err(|e| env.error(e))?,
+                };
                 let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
                 env.push(s);
             }
@@ -890,9 +898,18 @@ impl SysOp {
                     .pop(2)?
                     .as_nat(env, "Handle must be an natural number")?
                     .into();
-                let bytes = env.backend.read(handle, count).map_err(|e| env.error(e))?;
-                let bytes = bytes.into_iter().map(Into::into);
-                env.push(Array::<u8>::from_iter(bytes));
+                let bytes = match handle {
+                    Handle::STDOUT => return Err(env.error("Cannot read from stdout")),
+                    Handle::STDERR => return Err(env.error("Cannot read from stderr")),
+                    Handle::STDIN => stdin()
+                        .lock()
+                        .bytes()
+                        .take(count)
+                        .collect::<Result<Vec<_>, _>>()
+                        .map_err(|e| env.error(e))?,
+                    _ => env.backend.read(handle, count).map_err(|e| env.error(e))?,
+                };
+                env.push(bytes);
             }
             SysOp::ReadUntil => {
                 let delim = env.pop(1)?;
@@ -903,33 +920,64 @@ impl SysOp {
                 if delim.rank() > 1 {
                     return Err(env.error("Delimiter must be a rank 0 or 1 string or byte array"));
                 }
-                match delim {
-                    Value::Num(arr) => {
-                        let delim: Vec<u8> = arr.data.iter().map(|&x| x as u8).collect();
-                        let bytes = env
-                            .backend
-                            .read_until(handle, &delim)
-                            .map_err(|e| env.error(e))?;
-                        env.push(bytes);
+                match handle {
+                    Handle::STDOUT => return Err(env.error("Cannot read from stdout")),
+                    Handle::STDERR => return Err(env.error("Cannot read from stderr")),
+                    Handle::STDIN => {
+                        let mut is_string = false;
+                        let delim_bytes: Vec<u8> = match delim {
+                            Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
+                            Value::Byte(arr) => arr.data.into(),
+                            Value::Char(arr) => {
+                                is_string = true;
+                                arr.data.iter().collect::<String>().into()
+                            }
+                            _ => return Err(env.error("Delimiter must be a string or byte array")),
+                        };
+                        let mut buffer = Vec::new();
+                        let stdin = stdin().lock();
+                        for byte in stdin.bytes() {
+                            let byte = byte.map_err(|e| env.error(e))?;
+                            buffer.push(byte);
+                            if buffer.ends_with(&delim_bytes) {
+                                break;
+                            }
+                        }
+                        if is_string {
+                            let s = String::from_utf8_lossy(&buffer).into_owned();
+                            env.push(s);
+                        } else {
+                            env.push(buffer);
+                        }
                     }
-                    Value::Byte(arr) => {
-                        let delim: Vec<u8> = arr.data.into();
-                        let bytes = env
-                            .backend
-                            .read_until(handle, &delim)
-                            .map_err(|e| env.error(e))?;
-                        env.push(bytes);
-                    }
-                    Value::Char(arr) => {
-                        let delim: Vec<u8> = arr.data.iter().collect::<String>().into();
-                        let bytes = env
-                            .backend
-                            .read_until(handle, &delim)
-                            .map_err(|e| env.error(e))?;
-                        let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
-                        env.push(s);
-                    }
-                    _ => return Err(env.error("Delimiter must be a string or byte array")),
+                    _ => match delim {
+                        Value::Num(arr) => {
+                            let delim: Vec<u8> = arr.data.iter().map(|&x| x as u8).collect();
+                            let bytes = env
+                                .backend
+                                .read_until(handle, &delim)
+                                .map_err(|e| env.error(e))?;
+                            env.push(bytes);
+                        }
+                        Value::Byte(arr) => {
+                            let delim: Vec<u8> = arr.data.into();
+                            let bytes = env
+                                .backend
+                                .read_until(handle, &delim)
+                                .map_err(|e| env.error(e))?;
+                            env.push(bytes);
+                        }
+                        Value::Char(arr) => {
+                            let delim: Vec<u8> = arr.data.iter().collect::<String>().into();
+                            let bytes = env
+                                .backend
+                                .read_until(handle, &delim)
+                                .map_err(|e| env.error(e))?;
+                            let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
+                            env.push(s);
+                        }
+                        _ => return Err(env.error("Delimiter must be a string or byte array")),
+                    },
                 }
             }
             SysOp::Write => {
@@ -944,9 +992,21 @@ impl SysOp {
                     Value::Char(arr) => arr.data.iter().collect::<String>().into(),
                     Value::Func(_) => return Err(env.error("Cannot write function array to file")),
                 };
-                env.backend
-                    .write(handle, &bytes)
-                    .map_err(|e| env.error(e))?;
+                match handle {
+                    Handle::STDOUT => env
+                        .backend
+                        .print_str_stdout(&String::from_utf8_lossy(&bytes))
+                        .map_err(|e| env.error(e))?,
+                    Handle::STDERR => env
+                        .backend
+                        .print_str_stderr(&String::from_utf8_lossy(&bytes))
+                        .map_err(|e| env.error(e))?,
+                    Handle::STDIN => return Err(env.error("Cannot write to stdin")),
+                    _ => env
+                        .backend
+                        .write(handle, &bytes)
+                        .map_err(|e| env.error(e))?,
+                }
             }
             SysOp::FReadAllStr => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;

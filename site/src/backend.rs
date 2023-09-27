@@ -41,25 +41,16 @@ impl SysBackend for WebBackend {
     fn any(&self) -> &dyn Any {
         self
     }
-    fn write(&self, handle: Handle, contents: &[u8]) -> Result<(), String> {
-        match handle {
-            Handle::STDOUT => {
-                let s = String::from_utf8_lossy(contents);
-                let mut stdout = self.stdout.lock().unwrap();
-                for line in s.lines() {
-                    stdout.push(OutputItem::String(line.into()));
-                }
-                Ok(())
-            }
-            Handle::STDERR => {
-                self.stderr
-                    .lock()
-                    .unwrap()
-                    .push_str(&String::from_utf8_lossy(contents));
-                Ok(())
-            }
-            _ => Err("Only stdout and stderr are supported on the website".into()),
-        }
+    fn print_str_stdout(&self, s: &str) -> Result<(), String> {
+        self.stdout
+            .lock()
+            .unwrap()
+            .push(OutputItem::String(s.into()));
+        Ok(())
+    }
+    fn print_str_stderr(&self, s: &str) -> Result<(), String> {
+        self.stderr.lock().unwrap().push_str(s);
+        Ok(())
     }
     fn show_image(&self, image: image::DynamicImage) -> Result<(), String> {
         let mut bytes = Cursor::new(Vec::new());

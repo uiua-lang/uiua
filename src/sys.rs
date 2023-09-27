@@ -147,6 +147,8 @@ sys_op! {
     ///   : square double 5
     (1, Import, "&i", "import"),
     /// Get the current time in seconds
+    ///
+    /// ex: &n
     (0, Now, "&n", "now"),
     /// Decode an image from a byte array
     ///
@@ -214,6 +216,12 @@ sys_op! {
     /// The sample rate is [&asr].
     (1(0), AudioPlay, "&ap", "audio - play"),
     /// Get the sample rate of the audio output backend
+    ///
+    /// ex: &asr
+    /// Here is how you can generate a list of sample times for `4` seconds of audio:
+    /// ex: ÷∶⇡×, 4 &asr
+    /// Pass that to a periodic function, and you get a nice tone!
+    /// ex: ÷4○×τ×220 ÷∶⇡×, 4 &asr
     (0, AudioSampleRate, "&asr", "audio - sample rate"),
     /// Synthesize and stream audio
     ///

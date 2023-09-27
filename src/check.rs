@@ -185,9 +185,19 @@ impl<'a> VirtualEnv<'a> {
                                 self.stack.push(BasicValue::Other);
                             }
                         } else {
-                            return Err(format!(
-                                "repeat with no number and a function with signature {sig}"
-                            ));
+                            // If we are creating an array, then the function just has to have more outputs than args.
+                            let creating_array =
+                                sig.args < sig.outputs && !self.array_stack.is_empty();
+                            if creating_array {
+                                for _ in 0..sig.args {
+                                    self.pop()?;
+                                }
+                                self.set_min_height();
+                            } else {
+                                return Err(format!(
+                                    "repeat with no number and a function with signature {sig}"
+                                ));
+                            };
                         }
                     } else {
                         return Err("repeat without a number".into());

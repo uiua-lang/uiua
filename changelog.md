@@ -11,4 +11,4 @@
   - To just `/'⊂∷! {"a" "bc" "def"}`
 - Fix some correctness bugs related to `under` and `invert`
 ### Website
-- Add [right-to-left](https://uiua.org/rtl) explantation page
+- Add [right-to-left](https://uiua.org/rtl) explanation page

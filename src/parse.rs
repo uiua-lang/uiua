@@ -19,7 +19,7 @@ pub enum ParseError {
     AmpersandBindingName,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expectation {
     Term,
     ArgOutCount,
@@ -48,14 +48,28 @@ impl fmt::Display for ParseError {
             ParseError::Lex(e) => write!(f, "{e}"),
             ParseError::Expected(exps, found) => {
                 write!(f, "Expected ")?;
-                for (i, exp) in exps.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, ", ")?;
+                if exps.len() == 2 {
+                    write!(f, "{} or {}", exps[0], exps[1])?;
+                } else {
+                    for (i, exp) in exps.iter().enumerate() {
+                        if i > 0 {
+                            write!(f, ", ")?;
+                        }
+                        write!(f, "{exp}")?;
                     }
-                    write!(f, "{exp}")?;
                 }
                 if let Some(found) = found {
-                    write!(f, ", found `{}`", found.span.as_str())?;
+                    if let Token::Simple(ascii) = found.value {
+                        if exps.iter().any(|exp| exp == &Expectation::Simple(ascii)) {
+                            return Ok(());
+                        }
+                    }
+                    let found = found.span.as_str();
+                    if found == "\n" {
+                        write!(f, ", found newline")?;
+                    } else {
+                        write!(f, ", found `{found}`")?;
+                    }
                 }
                 Ok(())
             }

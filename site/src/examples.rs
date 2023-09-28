@@ -31,9 +31,9 @@ Z ← ⊟/- ⁿ2 ∶×2 /×.⇌
 <2 √/+ ⁿ2;∶⍥(+Z ∶,)20 ↯∶0△.";
 const LIFE: &str = "\
 life ← ↥↧↶=2∶=3.-,/+/+⍚1_2↻-1⇡3_3.
-⍛0↙10_10 ⋯×4 0_2_4_7
-⍉;⍥(∶⊂↶.life)10.
-↯∶≡'↯4∵'↯4∶×4△.";
+⍛0↙10_10 ⋯×4 0_2_4_7 # init
+⍉;⍥(∶⊂↶.life)10.     # run
+↯∶≡'↯4∵'↯4∶×4△.      # upscale";
 
 pub const EXAMPLES: &[&str] = &[
     UIUA, FORMAT, D3, LOGO, AVG, CHORD, QUADRATIC, STRIPES, PALINDROME, RULE_30, MANDELBROT, LIFE,

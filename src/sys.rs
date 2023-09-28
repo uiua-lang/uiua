@@ -293,6 +293,9 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn print_str_stderr(&self, s: &str) -> Result<(), String> {
         Err("Printing to stderr is not supported in this environment".into())
     }
+    fn print_str_debug(&self, s: &str) -> Result<(), String> {
+        self.print_str_stderr(s)
+    }
     fn scan_line_stdin(&self) -> Result<String, String> {
         Err("Reading from stdin is not supported in this environment".into())
     }

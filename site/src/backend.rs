@@ -13,6 +13,7 @@ use uiua::{value::Value, Handle, SysBackend, Uiua, UiuaError, UiuaResult};
 pub struct WebBackend {
     pub stdout: Mutex<Vec<OutputItem>>,
     pub stderr: Mutex<String>,
+    pub debug: Mutex<String>,
     pub files: Mutex<HashMap<String, Vec<u8>>>,
     next_thread_id: AtomicU64,
     thread_results: Mutex<HashMap<Handle, UiuaResult<Vec<Value>>>>,
@@ -23,6 +24,7 @@ impl Default for WebBackend {
         Self {
             stdout: Vec::new().into(),
             stderr: String::new().into(),
+            debug: String::new().into(),
             files: HashMap::new().into(),
             next_thread_id: 0.into(),
             thread_results: HashMap::new().into(),
@@ -42,14 +44,20 @@ impl SysBackend for WebBackend {
         self
     }
     fn print_str_stdout(&self, s: &str) -> Result<(), String> {
-        self.stdout
-            .lock()
-            .unwrap()
-            .push(OutputItem::String(s.into()));
+        for line in s.lines() {
+            self.stdout
+                .lock()
+                .unwrap()
+                .push(OutputItem::String(line.into()));
+        }
         Ok(())
     }
     fn print_str_stderr(&self, s: &str) -> Result<(), String> {
         self.stderr.lock().unwrap().push_str(s);
+        Ok(())
+    }
+    fn print_str_debug(&self, s: &str) -> Result<(), String> {
+        self.debug.lock().unwrap().push_str(s);
         Ok(())
     }
     fn show_image(&self, image: image::DynamicImage) -> Result<(), String> {

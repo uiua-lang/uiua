@@ -161,7 +161,7 @@ fn working_file_path() -> Option<PathBuf> {
     };
     Some(if main.exists() {
         main
-    } else if let Some(entry) = fs::read_dir("")
+    } else if let Some(entry) = fs::read_dir(".")
         .into_iter()
         .chain(fs::read_dir("src"))
         .flatten()
@@ -178,8 +178,8 @@ fn watch(open_path: &Path) -> io::Result<()> {
     let (send, recv) = channel();
     let mut watcher = notify::recommended_watcher(send).unwrap();
     watcher
-        .watch(Path::new(""), RecursiveMode::Recursive)
-        .unwrap();
+        .watch(Path::new("."), RecursiveMode::Recursive)
+        .unwrap_or_else(|e| panic!("Failed to watch directory: {e}"));
 
     println!("Watching for changes... (end with ctrl+C, use `uiua help` to see options)");
 
@@ -315,7 +315,7 @@ enum App {
 }
 
 fn uiua_files() -> Vec<PathBuf> {
-    fs::read_dir("")
+    fs::read_dir(".")
         .unwrap()
         .filter_map(Result::ok)
         .filter(|entry| entry.path().extension().map_or(false, |ext| ext == "ua"))

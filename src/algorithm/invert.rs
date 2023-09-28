@@ -52,8 +52,7 @@ pub(crate) fn invert_instrs(instrs: &[Instr]) -> Option<Vec<Instr>> {
     let mut end = instrs.len();
     loop {
         if let Some(mut inverted_fragment) = invert_instr_fragment(&instrs[start..end]) {
-            inverted_fragment.append(&mut inverted);
-            inverted = inverted_fragment;
+            inverted.append(&mut inverted_fragment);
             if start == 0 {
                 break;
             }

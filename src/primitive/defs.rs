@@ -1311,4 +1311,6 @@ primitive!(
     /// ex: [1 5 2 9 11 0 7 12 8 3]
     ///   : ▽×~≥5∶~≤10..
     (1, Trace, Stack, ("trace", '~')),
+    /// The inverse of trace
+    (1, InvTrace, Stack),
 );

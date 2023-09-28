@@ -147,5 +147,5 @@ uiuisms!(
     /// Trim matching suffix
     r#"▽¬⍜⇌\×∊, "thing" "remove this →thing""#,
     /// Trim whitespace
-    r#"▽×⇌⍜⊟(\↥≠@ )⇌.. "  abc xyz   ""#,
+    r#"▽×⍜'⊟⇌≡\↥.≠@ . "  abc xyz   ""#,
 );

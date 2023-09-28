@@ -136,6 +136,10 @@ impl Signature {
     pub fn is_superset_of(self, other: Self) -> bool {
         self.is_compatible_with(other) && self.args >= other.args
     }
+    /// Check if this [`Signature::is_compatible_with`] another signature and has at most as many arguments.
+    pub fn is_subset_of(self, other: Self) -> bool {
+        self.is_compatible_with(other) && self.args <= other.args
+    }
     pub fn max_with(self, other: Self) -> Self {
         Self::new(self.args.max(other.args), self.outputs.max(other.outputs))
     }

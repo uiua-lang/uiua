@@ -179,6 +179,8 @@ impl Primitive {
             Call => Constant,
             Roll => Unroll,
             Unroll => Roll,
+            Trace => InvTrace,
+            InvTrace => Trace,
             _ => return None,
         })
     }
@@ -426,7 +428,7 @@ impl Primitive {
                 let f = env.pop(FunctionArg(1))?;
                 let g = env.pop(FunctionArg(2))?;
                 const EXPECTED_G_SIG: Signature = Signature::new(1, 1);
-                if g.signature() != EXPECTED_G_SIG {
+                if !g.signature().is_subset_of(EXPECTED_G_SIG) {
                     return Err(env.error(format!(
                         "Under's second function must have a signature of {EXPECTED_G_SIG}, \
                         but the signature of {g} is {}",
@@ -525,28 +527,36 @@ impl Primitive {
                 let handle = env.pop(1)?;
                 env.wait(handle)?;
             }
-            Primitive::Trace => {
-                let val = env.pop(1)?;
-                let span = env.span().to_string();
-                let mut formatted = val.show();
-                env.push(val);
-                formatted = formatted
-                    .lines()
-                    .enumerate()
-                    .map(|(i, l)| {
-                        if i == 0 {
-                            format!("{span} {l}\n")
-                        } else {
-                            format!("{:>span$} {l}\n", "", span = span.len())
-                        }
-                    })
-                    .collect();
-                env.backend.print_str_trace(&formatted);
-            }
+            Primitive::Trace => trace(env, false)?,
+            Primitive::InvTrace => trace(env, true)?,
             Primitive::Sys(io) => io.run(env)?,
         }
         Ok(())
     }
+}
+
+fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
+    let val = env.pop(1)?;
+    let span = if inverse {
+        format!("{} {}", env.span(), Primitive::Invert)
+    } else {
+        env.span().to_string()
+    };
+    let mut formatted = val.show();
+    env.push(val);
+    formatted = formatted
+        .lines()
+        .enumerate()
+        .map(|(i, l)| {
+            if i == 0 {
+                format!("{span} {l}\n")
+            } else {
+                format!("{:>span$} {l}\n", "", span = span.len())
+            }
+        })
+        .collect();
+    env.backend.print_str_trace(&formatted);
+    Ok(())
 }
 
 #[derive(Default, Debug)]

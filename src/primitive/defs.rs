@@ -1299,4 +1299,16 @@ primitive!(
     (0, Tau, Constant, ("tau", 'τ')),
     /// The biggest number
     (0, Infinity, Constant, ("infinity", '∞')),
+    /// Debug print the top value on the stack without popping it
+    ///
+    /// ex: ?[1 2 3]
+    /// This is useful when you want to inspect an intermediate value.
+    /// For example, let's say you are trying to find all the numbers in some range:
+    /// ex: [1 5 2 9 11 0 7 12 8 3]
+    ///   : ▽×≥5∶≤10..
+    /// `greater or equal` and `less or equal` each create a partial mask.
+    /// To see them, use [trace].
+    /// ex: [1 5 2 9 11 0 7 12 8 3]
+    ///   : ▽×?≥5∶?≤10..
+    (1, Trace, Misc, ("trace", '?')),
 );

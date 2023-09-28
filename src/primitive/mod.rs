@@ -525,6 +525,24 @@ impl Primitive {
                 let handle = env.pop(1)?;
                 env.wait(handle)?;
             }
+            Primitive::Trace => {
+                let val = env.pop(1)?;
+                let span = env.span().to_string();
+                let mut formatted = val.show();
+                env.push(val);
+                formatted = formatted
+                    .lines()
+                    .enumerate()
+                    .map(|(i, l)| {
+                        if i == 0 {
+                            format!("{span} {l}\n")
+                        } else {
+                            format!("{:>span$} {l}\n", "", span = span.len())
+                        }
+                    })
+                    .collect();
+                env.backend.print_str_trace(&formatted);
+            }
             Primitive::Sys(io) => io.run(env)?,
         }
         Ok(())

@@ -13,7 +13,7 @@ use uiua::{value::Value, Handle, SysBackend, Uiua, UiuaError, UiuaResult};
 pub struct WebBackend {
     pub stdout: Mutex<Vec<OutputItem>>,
     pub stderr: Mutex<String>,
-    pub debug: Mutex<String>,
+    pub trace: Mutex<String>,
     pub files: Mutex<HashMap<String, Vec<u8>>>,
     next_thread_id: AtomicU64,
     thread_results: Mutex<HashMap<Handle, UiuaResult<Vec<Value>>>>,
@@ -24,7 +24,7 @@ impl Default for WebBackend {
         Self {
             stdout: Vec::new().into(),
             stderr: String::new().into(),
-            debug: String::new().into(),
+            trace: String::new().into(),
             files: HashMap::new().into(),
             next_thread_id: 0.into(),
             thread_results: HashMap::new().into(),
@@ -37,6 +37,7 @@ pub enum OutputItem {
     Image(Vec<u8>),
     Audio(Vec<u8>),
     Error(String),
+    Separator,
 }
 
 impl SysBackend for WebBackend {
@@ -44,11 +45,21 @@ impl SysBackend for WebBackend {
         self
     }
     fn print_str_stdout(&self, s: &str) -> Result<(), String> {
-        for line in s.lines() {
-            self.stdout
-                .lock()
-                .unwrap()
-                .push(OutputItem::String(line.into()));
+        let mut stdout = self.stdout.lock().unwrap();
+        let mut lines = s.lines();
+        let Some(first) = lines.next() else {
+            return Ok(());
+        };
+        if let Some(OutputItem::String(prev)) = stdout.last_mut() {
+            prev.push_str(first);
+        } else {
+            stdout.push(OutputItem::String(first.into()));
+        }
+        for line in lines {
+            stdout.push(OutputItem::String(line.into()));
+        }
+        if s.ends_with('\n') {
+            stdout.push(OutputItem::String("".into()));
         }
         Ok(())
     }
@@ -56,9 +67,8 @@ impl SysBackend for WebBackend {
         self.stderr.lock().unwrap().push_str(s);
         Ok(())
     }
-    fn print_str_debug(&self, s: &str) -> Result<(), String> {
-        self.debug.lock().unwrap().push_str(s);
-        Ok(())
+    fn print_str_trace(&self, s: &str) {
+        self.trace.lock().unwrap().push_str(s);
     }
     fn show_image(&self, image: image::DynamicImage) -> Result<(), String> {
         let mut bytes = Cursor::new(Vec::new());

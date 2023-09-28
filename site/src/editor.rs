@@ -295,7 +295,13 @@ pub fn Editor<'a>(
                 let output = run_code(&input);
                 let mut allow_autoplay = !matches!(size, EditorSize::Small);
                 let render_output_item = |item| match item {
-                    OutputItem::String(s) => view!(<div class="output-item">{s}</div>).into_view(),
+                    OutputItem::String(s) => {
+                        if s.is_empty() {
+                            view!(<div class="output-item"><br/></div>).into_view()
+                        } else {
+                            view!(<div class="output-item">{s}</div>).into_view()
+                        }
+                    }
                     OutputItem::Image(bytes) => {
                         let encoded = STANDARD.encode(bytes);
                         view!(<div><img class="output-image" src={format!("data:image/png;base64,{encoded}")} /></div>).into_view()
@@ -313,6 +319,9 @@ pub fn Editor<'a>(
                     }
                     OutputItem::Error(error) => {
                         view!(<div class="output-item output-error">{error}</div>).into_view()
+                    }
+                    OutputItem::Separator => {
+                        view!(<div class="output-item"><hr/></div>).into_view()
                     }
                 };
                 let items: Vec<_> = output.into_iter().map(render_output_item).collect();
@@ -738,10 +747,10 @@ pub fn Editor<'a>(
         ("{}", "constant array", "", Some(('{', '}'))),
         ("()", "function", "", Some(('(', ')'))),
         ("'", "term pair", "", None),
-        ("¯", "negative\n`", "number-literal-span", None),
+        ("¯", "negative (`)", "number-literal-span", None),
         ("@", "character", "string-literal-span", None),
         ("\"", "string", "string-literal-span", Some(('"', '"'))),
-        ("←", "binding", "", None),
+        ("←", "binding (=)", "", None),
         ("|", "signature", "", None),
         ("#", "comment", "comment-span", None),
     ] {
@@ -1283,19 +1292,31 @@ fn run_code(code: &str) -> Vec<OutputItem> {
         }
     }
     let stderr = take(&mut *io.stderr.lock().unwrap());
+    let trace = take(&mut *io.trace.lock().unwrap());
 
     // Construct output
-    let label =
-        ((!stack.is_empty()) as u8) + ((!stdout.is_empty()) as u8) + ((!stderr.is_empty()) as u8)
-            >= 2;
+    let label = ((!stack.is_empty()) as u8)
+        + ((!stdout.is_empty()) as u8)
+        + ((!stderr.is_empty()) as u8)
+        + ((!trace.is_empty()) as u8)
+        >= 2;
     let mut output = Vec::new();
+    if !trace.is_empty() {
+        output.extend(trace.lines().map(|line| OutputItem::String(line.into())));
+    }
     if !stdout.is_empty() {
+        if !output.is_empty() {
+            output.push(OutputItem::String("".into()));
+        }
         if label {
             output.push(OutputItem::String("stdout:".to_string()));
         }
         output.extend(stdout);
     }
     if !stderr.is_empty() {
+        if !output.is_empty() {
+            output.push(OutputItem::String("".into()));
+        }
         if label {
             output.push(OutputItem::String("stderr:".to_string()));
         }
@@ -1303,11 +1324,14 @@ fn run_code(code: &str) -> Vec<OutputItem> {
     }
     if !stack.is_empty() {
         if label {
-            output.push(OutputItem::String("stack:".to_string()));
+            output.push(OutputItem::Separator);
         }
         output.extend(stack);
     }
     if let Some(error) = error {
+        if !output.is_empty() {
+            output.push(OutputItem::String("".into()));
+        }
         if output.len() > 10 {
             output.truncate(10);
             output.push(OutputItem::String("...Additional output truncated".into()));

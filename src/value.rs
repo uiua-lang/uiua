@@ -260,6 +260,7 @@ impl Value {
             }
         }
     }
+    /// Get the pretty-printed string representation of the value
     pub fn show(&self) -> String {
         match self {
             Self::Num(array) => array.grid_string(),

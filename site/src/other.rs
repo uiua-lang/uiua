@@ -218,25 +218,24 @@ pub fn Changelog() -> impl IntoView {
         include_str!("../../changelog.md"),
         &ComrakOptions::default(),
     );
-    let body = node_view(root);
-    view! {
-        <h1>"Changelog"</h1>
-        { body }
-    }
+    node_view(root)
 }
 
 fn node_view<'a>(node: &'a AstNode<'a>) -> View {
     let children: Vec<_> = node.children().map(node_view).collect();
     match &node.data.borrow().value {
         NodeValue::Text(text) => text.into_view(),
-        NodeValue::Heading(heading) => match heading.level {
-            0 | 1 => view!(<h1>{children}</h1>).into_view(),
-            2 => view!(<h2>{children}</h2>).into_view(),
-            3 => view!(<h3>{children}</h3>).into_view(),
-            4 => view!(<h4>{children}</h4>).into_view(),
-            5 => view!(<h5>{children}</h5>).into_view(),
-            _ => view!(<h6>{children}</h6>).into_view(),
-        },
+        NodeValue::Heading(heading) => {
+            let id = leaf_text(node).map(|s| s.to_lowercase().replace(' ', "-"));
+            match heading.level {
+                0 | 1 => view!(<h1 id=id>{children}</h1>).into_view(),
+                2 => view!(<h2 id=id>{children}</h2>).into_view(),
+                3 => view!(<h3 id=id>{children}</h3>).into_view(),
+                4 => view!(<h4 id=id>{children}</h4>).into_view(),
+                5 => view!(<h5 id=id>{children}</h5>).into_view(),
+                _ => view!(<h6 id=id>{children}</h6>).into_view(),
+            }
+        }
         NodeValue::List(list) => match list.list_type {
             ListType::Bullet => view!(<ul>{children}</ul>).into_view(),
             ListType::Ordered => view!(<ol>{children}</ol>).into_view(),
@@ -277,7 +276,6 @@ fn leaf_text<'a>(node: &'a AstNode<'a>) -> Option<String> {
     match &node.data.borrow().value {
         NodeValue::Text(text) => Some(text.into()),
         NodeValue::Code(code) => Some(code.literal.clone()),
-        NodeValue::Link(_) => node.first_child().and_then(leaf_text),
-        _ => None,
+        _ => node.first_child().and_then(leaf_text),
     }
 }

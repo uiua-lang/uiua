@@ -1067,6 +1067,17 @@ primitive!(
     /// ex: ⍚[1 1]⊂ ↯3_3⇡9 10_11_12 # Join two rank 1 arrays
     /// ex: ⍚[1 0]⊂ ↯3_3⇡9 10_11_12 # Join a rank 1 arrays with scalars
     ([2], Level, IteratingModifier, ("level", '⍚')),
+    /// Call a function on 2 values
+    ///
+    /// The function is called on each of the top 2 values on the stack, and the results end up in the same order.
+    /// ex: ∷⇡3 5
+    ///
+    /// One good use of this is when working with [constant] data.
+    /// You can use [both][call] to get 2 [constant] values out.
+    /// ex: /(⊂∷!) {"a" "bc" "def"}
+    ///
+    /// [both]'s glyph is `∷` because, for a function `f`, it is equivalent to `f∶f∶`.
+    (2[1], Both, OtherModifier, ("both", '∷')),
     /// Call 2 functions on 2 values
     ///
     /// Each function may take 0, 1, or 2 arguments.

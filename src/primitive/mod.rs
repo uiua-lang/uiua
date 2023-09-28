@@ -445,6 +445,7 @@ impl Primitive {
                 let f = env.pop(FunctionArg(2))?;
                 env.with_fill(fill, |env| env.call(f))?;
             }
+            Primitive::Both => fork::both(env)?,
             Primitive::Fork => fork::fork(env)?,
             Primitive::Trident => fork::trident(env)?,
             Primitive::Try => {

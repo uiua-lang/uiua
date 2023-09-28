@@ -203,6 +203,15 @@ impl<'a> VirtualEnv<'a> {
                         return Err("repeat without a number".into());
                     }
                 }
+                Both => {
+                    let _f = self.pop()?;
+                    self.pop()?;
+                    self.pop()?;
+                    self.set_min_height();
+                    for _ in 0..2 {
+                        self.stack.push(BasicValue::Other);
+                    }
+                }
                 Fork => {
                     let f = self.pop()?;
                     let g = self.pop()?;

@@ -1,6 +1,7 @@
 //! Algorithms for forking modifiers
 
 use crate::{
+    function::Signature,
     run::{ArrayArg, FunctionArg},
     Uiua, UiuaResult,
 };
@@ -20,6 +21,28 @@ pub fn restack(env: &mut Uiua) -> UiuaResult {
     for index in indices.into_iter().rev() {
         env.push(values[index].clone());
     }
+    Ok(())
+}
+
+pub fn both(env: &mut Uiua) -> UiuaResult {
+    let f = env.pop(FunctionArg(1))?;
+    let a = env.pop(ArrayArg(1))?;
+    let b = env.pop(ArrayArg(2))?;
+
+    if !f.signature().is_subset_of(Signature::new(1, 1)) {
+        return Err(env.error(format!(
+            "Both's function must have a signature of {}, but {} has signature {}",
+            Signature::new(1, 1),
+            f,
+            f.signature()
+        )));
+    }
+
+    env.push(b.clone());
+    env.call(f.clone())?;
+    env.push(a.clone());
+    env.call(f)?;
+
     Ok(())
 }
 

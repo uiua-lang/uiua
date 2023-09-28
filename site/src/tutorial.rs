@@ -120,7 +120,7 @@ fn TutorialBasic() -> impl IntoView {
     view! {
         <h1>"Basic Stack Operations and Formatting"</h1>
         <h2 id="the-stack">"The Stack"</h2>
-        <p>"In Uiua, all operations operate on a global stack. Lines of code are evaluated from right-to-left, top-to-bottom"</p>
+        <p>"In Uiua, all operations operate on a global stack. Lines of code are evaluated from "<A href="/docs/rtl">"right to left"</A>", top to bottom"</p>
         <p>"A number simply pushes its value onto the stack."</p>
         <Editor example="5"/>
         <Editor example="1 2 3"/>

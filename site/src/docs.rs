@@ -30,6 +30,7 @@ pub enum DocsPage {
     AllFunctions,
     Uiuisms,
     Changelog,
+    RightToLeft,
 }
 
 impl IntoParam for DocsPage {
@@ -48,6 +49,7 @@ impl IntoParam for DocsPage {
                 "all-functions" => Some(Self::AllFunctions),
                 "isms" => Some(Self::Uiuisms),
                 "changelog" => Some(Self::Changelog),
+                "rtl" => Some(Self::RightToLeft),
                 value => Some(Self::Search(value.into())),
             })
             .ok_or_else(|| ParamsError::MissingParam(name.to_string()))
@@ -77,6 +79,7 @@ pub fn Docs() -> impl IntoView {
             DocsPage::AllFunctions => AllFunctions().into_view(),
             DocsPage::Uiuisms => Uiuisms().into_view(),
             DocsPage::Changelog => Changelog().into_view(),
+            DocsPage::RightToLeft => RightToLeft().into_view(),
         };
 
         view! {
@@ -196,6 +199,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/install">"Installation"</A>" - how to install and use Uiua's interpreter"</li>
             <li><A href="/docs/changelog">"Changelog"</A>" - what's new in each version"</li>
             <li><A href="/docs/design">"Design"</A>" - reasons for some of Uiua's design decisions"</li>
+            <li><A href="/docs/rtl">"Right-to-Left"</A>" - the answer to the most-asked question about Uiua's design gets its own page"</li>
             <li><A href="/docs/technical">"Technical Details"</A>" - notes on the implementation of the Uiua interpreter and this website"</li>
             <li><A href="/docs/audio">"Audio"</A>" - how to generate and play audio"</li>
         </ul>

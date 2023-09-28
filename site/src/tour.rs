@@ -11,13 +11,13 @@ pub fn Tour() -> impl IntoView {
         <h1>"Uiua Language Tour"</h1>
 
         <h2 id="the-union-of-two-paradigms">"The Union of Two Paradigms"</h2>
-        <p>"Uiua is a programming language that incorporates two of the less-common programming paradigms: "<b>"array-oriented"</b>" and "<b>"stack-oriented"</b>"."</p>
+        <p>"Uiua is a programming language that incorporates two of the less-common programming paradigms: "<b>"array-oriented"</b>" and "<b>"stack-based"</b>"."</p>
         <p>"An "<b>"array-oriented"</b>" language is one where the primary data structure is the array. In array languages, many operations that can apply to a single value can also apply to every value in an array. This is known as "<em>"rank-polymorphism"</em>"."</p>
-        <p>"A "<b>"stack-oriented"</b>" language is one where all operations manipulate a global stack of values. Functions pop values off the top of the stack, perform their calculation, then push the results back on to the stack."</p>
+        <p>"A "<b>"stack-based"</b>" language is one where all operations manipulate a global stack of values. Functions pop values off the top of the stack, perform their calculation, then push the results back on to the stack."</p>
         <p>"In Uiua, functions work on a global stack of arrays."</p>
         <p>"That's enough introduction, let's see some code!"</p>
         <Editor examples={&["+", "1", "×", "2 ", "⇡", "10"]}/>
-        <p>"Uiua code runs from right to left, top to bottom. Operators are put to the "<em>"left"</em>" of their arguments, rather than in between."</p>
+        <p>"Uiua code runs from "<A href="../rtl">"right to left"</A>", top to bottom. Operators are put to the "<em>"left"</em>" of their arguments, rather than in between."</p>
         <p>"This program makes an array of all the numbers less than 10, multiplies each one by 2, then adds 1 to each."</p>
         <p>"If you want to see how that works step-by-step, try clicking the arrows beside the Run button."</p>
         <p>"Now, I can already hear you asking, "<em>"\"Wait, what is that funny arrow? How am I supposed to type the multiplication sign?\""</em></p>

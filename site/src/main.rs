@@ -33,17 +33,17 @@ pub fn main() {
 pub fn Site() -> impl IntoView {
     // Choose a subtitle
     let subtitles = [
-        "A stack-oriented array programming language".into_view(),
-        "An array-oriented stack programming language".into_view(),
+        "A stack-based array programming language".into_view(),
+        "An array-oriented tacit programming language".into_view(),
         "A programming language for point-free enjoyers".into_view(),
         "A programming language for variable dislikers".into_view(),
-        "What if APL was a FORTH?".into_view(),
-        "What if FORTH was an APL?".into_view(),
-        view!( "Check out "<a href="https://arraycast.com/">"The Array Cast"</a>).into_view(),
+        view!("What if APL had no "<code>"ω"</code>"?").into_view(),
+        view!("What if BQN had no "<code>"𝕩"</code>"?").into_view(),
+        view!("What if LISP had fewer "<code>"()"</code>"s?").into_view(),
+        view!("Check out "<a href="https://arraycast.com/">"The Array Cast"</a>).into_view(),
         "Isn't a stack a sort of array?".into_view(),
+        view!(<a href="https://youtu.be/seVSlKazsNk">"Point-Free or Die"</a>).into_view(),
         "It's got um...I um...arrays".into_view(),
-        view!( <a href="https://youtu.be/seVSlKazsNk">"Point-Free or Die"</a>).into_view(),
-        "Notation as a tool of thot".into_view(),
         view!(<p style="font-size: 0.9em">"Do you like this page Marshall? (Yes the audio is so cool -"<a href="https://github.com/mlochbaum">"ML"</a>")"</p>).into_view(),
         "Conor Dyadic Hookstra".into_view(),
     ];
@@ -81,6 +81,7 @@ pub fn Site() -> impl IntoView {
                         <Route path="install" view=Install/>
                         <Route path="tour" view=Tour/>
                         <Route path="isms" view=Uiuisms/>
+                        <Route path="rtl" view=RightToLeft/>
                         <Route path="*" view=NotFound/>
                     </Routes>
                 </div>
@@ -120,12 +121,12 @@ pub fn MainPage() -> impl IntoView {
                 "You can run with ctrl/shift + enter.",
             ]}/>
         <br/>
-        <p style="font-size: 130%">"Uiua "<span style="font-size: 70%; opacity: 0.8;">"("<i>"wee-wuh "</i><button on:click=weewuh class="sound-button">"🔉"</button>")"</span>" is a stack-oriented array programming language with a focus on simplicity, beauty, and "<a href="https://en.wikipedia.org/wiki/Tacit_programming">"tacit"</a>" code."</p>
+        <p style="font-size: 130%">"Uiua "<span style="font-size: 70%; opacity: 0.8;">"("<i>"wee-wuh "</i><button on:click=weewuh class="sound-button">"🔉"</button>")"</span>" is a stack-based array programming language with a focus on simplicity, beauty, and "<a href="https://en.wikipedia.org/wiki/Tacit_programming">"tacit"</a>" code."</p>
         <div class="features">
             <div>
                 <div>
                     <h2>"A Loving Union"</h2>
-                    <p>"Uiua combines the stack-oriented and array-oriented paradigms in a single language. Combining these already terse paradigms results in code with a very high information density and little syntactic noise."</p>
+                    <p>"Uiua combines the stack-based and array-oriented paradigms in a single language. Combining these already terse paradigms results in code with a very high information density and little syntactic noise."</p>
                     <Editor example="⇌[⍥(+,,)10 1 0]"/>
                 </div>
                 <div>
@@ -145,7 +146,7 @@ pub fn MainPage() -> impl IntoView {
                 </div>
                 <div>
                     <h2>"Syntactic Simplicity"</h2>
-                    <p>"Uiua has a simple, context-free, LL(2) grammar. Code runs from right to left, top to bottom, with only "<A href="/docs/functions#modifiers">"one precedence rule"</A>". As operators are to the left of their operands, Uiua code looks a little bit like a Lisp, but with fewer parentheses."</p>
+                    <p>"Uiua has a simple, context-free, LL(2) grammar. Code runs from "<A href="/rtl">"right to left"</A>", top to bottom, with only "<A href="/docs/functions#modifiers">"one precedence rule"</A>". As operators are to the left of their operands, Uiua code looks a little bit like a Lisp, but with fewer parentheses."</p>
                 </div>
             </div>
             <div>

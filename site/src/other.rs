@@ -15,11 +15,11 @@ pub fn Design() -> impl IntoView {
         <p>"This page explains the reasons for some of Uiua's design decisions."</p>
         <p>"It serves as a "<a href="https://news.knowledia.com/US/en/articles/more-software-projects-need-defenses-of-design-85ea9e23ffd85f5fde5a2d3d42001393cbce169a">"defense of design"</a>"."</p>
 
-        <h2 id="stack-orientation">"Stack Orientation"</h2>
+        <h2 id="stack-basing">"Stack Basing"</h2>
         <h3>"Combinators"</h3>
-        <p>"When I first started developing Uiua, it was neither stack-oriented nor array-oriented. What it "<em>"did"</em>" focus a lot on was "<em>"combinators"</em>". I had this whole heirarchy of language-level operators that let you construct arbitrarily complex combinators relatively succinctly."</p>
+        <p>"When I first started developing Uiua, it was neither stack-based nor array-oriented. What it "<em>"did"</em>" focus a lot on was "<em>"combinators"</em>". I had this whole heirarchy of language-level operators that let you construct arbitrarily complex combinators relatively succinctly."</p>
         <p>"I discovered what a lot of others have discovered when delving deep into tacit code: it's really hard to read and write and reason about."</p>
-        <p>"Eventually, I moved to a stack-oriented model and discovered that you can write almost any 1 or 2 argument combinator with just "<Prim prim=Dup/>", "<Prim prim=Over/>", and "<Prim prim=Flip/>"."</p>
+        <p>"Eventually, I moved to a stack-based model and discovered that you can write almost any 1 or 2 argument combinator with just "<Prim prim=Dup/>", "<Prim prim=Over/>", and "<Prim prim=Flip/>"."</p>
         <p>"Of course, I also made the discovery that juggling 3 or more values on the stack also imposes a high cognitive load on the developer, but I added "<Prim prim=Roll/>" and "<Prim prim=Unroll/>" anyway, because they are super useful. "<Prim prim=Fork/>" is based on the fork structure from other array languages, and it inspired my own invention, "<Prim prim=Trident/>"."</p>
         <br/>
         <h3>"Expressions"</h3>
@@ -28,7 +28,7 @@ pub fn Design() -> impl IntoView {
         <p>"In contrast, here is there equivalent in Uiua, implemented the same way:"</p>
         <Editor example="Trim ← ▽¬\\×∊,"/>
         <p>
-            "You'll notice that stack orientation simplifies the expression in a few ways:"
+            "You'll notice that stack basing simplifies the expression in a few ways:"
             <ul>
                 <li>"There is no Uiua code corresponding to the BQN combinators "<code>"∘"</code>" and "<code>"⊸"</code>". Function composition is implicit."</li>
                 <li>"Functions are executed right-to-left instead of in a tree ordering."</li>
@@ -136,6 +136,34 @@ cargo install --path ."#
         <h2>"Editor Support"</h2>
         <p>"A "<a href="https://marketplace.visualstudio.com/items?itemName=uiua-lang.uiua-vscode">"Uiua language extension for VSCode"</a>" is available."</p>
         <p>"It requires Uiua to be installed and in your "<code>"PATH"</code>"."</p>
+    }
+}
+#[component]
+pub fn RightToLeft() -> impl IntoView {
+    use Primitive::*;
+    view! {
+        <h2>"Right-to-Left"</h2>
+        <p>"One of the most asked questions about Uiua is \"Why does code execute right-to-left?\" It's a valid question. Every other stack-oriented language I know goes left-to-right."</p>
+        <p>"The simple answer is that while Uiua is stack-"<em>"based"</em>", it is not stack-"<em>"oriented"</em>"."</p>
+        <p>"The misunderstanding is largely my own fault. The initial version of the website said \"stack-oriented\" everwhere and made references to FORTH. I have since rectified this."</p>
+        <p>"When you write Uiua code the stack should just be a tool, a convention. It's how you pass values around. "<strong>"The stack should not guide how you think about solving problems in Uiua."</strong></p>
+        <p>"Uiua is about composing arrays. The stack makes it possible to do this without naming local variables. This is the entire reason for its presence in the language. In particular, the stack can be used to construct arbitrary combinators and data flows. It is an extremely powerful mechanism for this purpose."</p>
+        <p>"You should not think of Uiua syntax like a FORTH. You should think of it like a "<em>"Lisp"</em>". Sure, there are way fewer parenthesis, but the structure is the same."</p>
+        <p>"Consider this Uiua expression:"</p>
+        <Editor example="≡(!·_⇌) ◿2⇡⧻. ↯∶⇡/×.4_4"/>
+        <p>"The left side of the expression is "<em>"not"</em>" the end or the beginning. It is the "<em>"root"</em>". The expression is a tree with branches that converge and diverge in different ways. It is not a list of instructions."</p>
+        <p>"This allows us to separate the execution model from the mental model. With a sperate mental model, why does it matter which direction the code executes?"</p>
+        <p>"The answer has to do with how left-to-right "<em>"natural"</em>" languages work. In English and the like, the verb in a sentence comes before the object it acts on. In addition, we often think of things in a procedural rather than a declarative way. If you think about using the "<Prim prim=Reverse/>" function on an array, you think of it as \"reversing the array\", not \"the array reversed\". If follows then that, like verbs, functions should come before their arguments."</p>
+        <p>"This is a very SVO-language-centric way of thinking, and I think that's fine."</p>
+        <hr/>
+        <p>"Enough with the philosophical. There are also some syntactic reasons that left-to-right execution would be weird."</p>
+        <p>"Consider some mathematical expressions:"</p>
+        <Editor example="√4\n-3 5"/>
+        <p>"The square root looks almost just like it does in mathematical notation. It would not be so if the "<Prim prim=Sqrt glyph_only=true/>" were to the right of the number. Similar problems arise with "<Prim prim=Neg glyph_only=true/>" and "<Prim prim=Not glyph_only=true/>"."</p>
+        <p><code>"-3"</code>" has this nice quality where it kind of becomes its own little monadic function that also has a syntactic similarity to mathematical notation. You could do something similar if the language went the other way, with "<code>"5-"</code>", but subtracting is a more common and intuitive operation than subtracting from."</p>
+        <p>"Consider the simple "<Prim prim=First/>" function:"</p>
+        <Editor example="⊢[1 2 3]"/>
+        <p>"The "<Prim prim=First glyph_only=true/>" glyph was chosen because is looks like it indicates the left side of a span (imagine some longer "<code>"⊢–––––⊣"</code>"). If it had to go on the right, there is no glyph that would indicate it quite so nicely. "<code>"⊣"</code>" has a similar aesthetic when put at the end, but that would indicate the last item rather than the first."</p>
     }
 }
 

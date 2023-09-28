@@ -402,7 +402,6 @@ code:
     /// Also performs some optimizations if the instruction and the previous
     /// instruction form some known pattern
     fn push_instr(&mut self, instr: Instr) {
-        use Instr::*;
         use Primitive::*;
         let instrs = self.new_functions.last_mut().unwrap();
         // Optimizations

@@ -100,6 +100,8 @@ uiuisms!(
     "/+ [1 2 3 4 5]",
     /// Get the product of an array
     "/× [1 2 3 4 5]",
+    /// Sort an array
+    "⊏⌂. [1 4 5 3 2]",
     /// Get n numbers between 0 and 1 inclusive
     "÷-1∶⇡. 11",
     /// Get n numbers between 0 and 1 exclusive

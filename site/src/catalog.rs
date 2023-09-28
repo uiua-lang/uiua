@@ -43,8 +43,8 @@ pub fn Catalog() -> impl IntoView {
                 .map(|(item, view)| {
                     view! {
                         <div class="catalog-item">
-                            <div style="width: 68%">{ view }</div>
-                            <div style="width: 28%">{ &item.description }</div>
+                            <div style="width: 29%">{ &item.description }</div>
+                            <div style="width: 69%">{ view }</div>
                         </div>
                     }
                 })
@@ -59,6 +59,7 @@ pub fn Catalog() -> impl IntoView {
     view! {
         <h1>"Function Catalog"</h1>
         <p>"This is a currated list of Uiua functions for solving common problems."</p>
+        <p>"You can add more by contributing to the "<a href="https://github.com/uiua-lang/uiua">"GitHub repo"</a>"."</p>
         <div class="input-div">
             <input
                 type="text"
@@ -97,24 +98,54 @@ catalog!(
     "≡⇌ [1_2_3 4_5_6]",
     /// Get the sum of an array
     "/+ [1 2 3 4 5]",
+    /// Get the product of an array
+    "/× [1 2 3 4 5]",
+    /// Get n numbers between 0 and 1 inclusive
+    "÷-1∶⇡. 11",
+    /// Get n numbers between 0 and 1 exclusive
+    "÷∶⇡. 10",
     /// Create an identity matrix
     "⊞=.⇡ 5",
     /// Create an X matrix
     "↥⇌.⊞=.⇡ 5",
-    /// Get the product of an array
-    "/× [1 2 3 4 5]",
+    /// Check if an array is a palindrome
+    r#"≅⇌. "racecar""#,
     /// Convert a number to a string
-    "$\"_\" 17",
+    r#"$"_" 17"#,
     /// Find the indices of all 1s
     "▽∶⇡⧻. [0 1 0 0 1]",
+    /// Interleave two arrays
+    "♭⍉⊟ [1 2 3 4] [5 6 7 8]",
+    /// Intersperse an item between the rows of an array
+    "↘¯1♭∺⊂∶ π [1 2 3 4]",
     /// Split an array by a delimiter
-    "⊜□≠, @, \"split,this,up\"",
+    r#"⊜□≠, @, "split,this,up""#,
     /// Split an array by a delimiter with fill elements
-    "⍛@ ⊜·≠, @, \"split,this,up\"",
+    r#"⍛@ ⊜·≠, @, "split,this,up""#,
     /// Find the nth fibonacci number
     ";⍥(+,∶)↶.1 10",
+    /// Remove all instances of an element from a list
+    "▽≠, 4 [1 4 2 0 5 4 3]",
+    /// Remove all instances of a row from an array
+    "▽∺'¬≅, 2_0 [1_4 2_0 5_3 2_0]",
     /// Filter by a fixed predicate
     "▽ =0◿2 . ⇡10",
     /// Filter by a dynamic predicate
     "▽!∶, (=0◿2) ⇡10",
+    /// Convert a string to uppercase
+    r#"-×32×≥@a∶≤@z.. "These are Words""#,
+    /// Convert a string to lowercase
+    r#"+×32×≥@A∶≤@Z.. "These are Words""#,
+    /// Check if a string is in a list of strings
+    r#"∊□ "uiua" {"apl" "bqn" "uiua"}"#,
+    /// Trim leading whitespace
+    r#"▽\↥≠@ . "   ← remove these""#,
+    /// Trim trailing whitespace
+    r#"▽⍜⇌\↥≠@ . "remove these →   ""#,
+    /// Trim matching prefix
+    r#"▽¬\×∊, "thing" "thing← remove this""#,
+    /// Trim matching suffix
+    r#"▽¬⍜⇌\×∊, "thing" "remove this →thing""#,
+    /// Trim whitespace
+    r#"▽×⇌⍜⊟(\↥≠@ )⇌.. "  abc xyz   ""#,
 );

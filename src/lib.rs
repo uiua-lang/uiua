@@ -1,3 +1,10 @@
+/*!
+The Uiua programming language
+
+This currently exists as a library only to reserve the name on crates.io.
+The current API should be considered deeply unstable.
+*/
+
 #![allow(clippy::single_match, clippy::needless_range_loop)]
 
 mod algorithm;

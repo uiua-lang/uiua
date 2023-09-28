@@ -1,9 +1,14 @@
 [package]
+categories = ["compilers", "algorithms", "multimedia", "parser-implementations"]
+description = "A stack-based array programming language"
+documentation = "https://docs.rs/uiua"
 edition = "2021"
+keywords = ["uiua", "array", "stack", "language", "apl"]
+license = "MIT"
 name = "uiua"
 readme = "readme.md"
 repository = "https://github.com/uiua-lang/uiua"
-version = "0.1.0"
+version = "0.0.1"
 
 [dependencies]
 ariadne = "0.3.0"

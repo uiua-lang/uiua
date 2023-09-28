@@ -58,7 +58,7 @@ pub fn Uiuisms() -> impl IntoView {
     };
     view! {
         <h1>"Uiuisms"</h1>
-        <p>"This is a currated list of Uiua functions for solving common problems."</p>
+        <p>"This is a curated list of Uiua functions for solving common problems."</p>
         <p>"You can add more by contributing to the "<a href="https://github.com/uiua-lang/uiua">"GitHub repo"</a>"."</p>
         <div class="input-div">
             <input

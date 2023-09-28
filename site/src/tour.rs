@@ -44,6 +44,8 @@ pub fn Tour() -> impl IntoView {
         <Editor example="-3 10\n-∶3 10"/>
         <p>"By the way, since "<code>"-"</code>" is for "<Prim prim=Sub/>", use "<code>"`"</code>" for negative numbers. The formatter will turn in into a nice "<code>"¯"</code>"."</p>
         <Editor example="`10"/>
+        <p>"You can inspect the top value on the stack at any point with "<Prim prim=Trace/>"."</p>
+        <Editor example="+1~×2~×.-3 5"/>
 
         <h2 id="arrays">"Arrays"</h2>
         <p>"So far, we have only talked about the stack part of Uiua. Now, lets talk about the most important part: Arrays!"</p>

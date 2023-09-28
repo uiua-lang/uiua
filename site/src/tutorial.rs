@@ -195,6 +195,11 @@ fn TutorialBasic() -> impl IntoView {
         <p><Prim prim=Pop/>" removes the top item from the stack."</p>
         <p>"This is useful when you want to discard a value that you do not need."</p>
         <Editor examples={&["1 ", "; ", "2 ", "3 ", "4 ", "; ", "5 ", "6"]}/>
+        <h2><Prim prim=Trace/></h2>
+        <p><Prim prim=Trace/>" prints the top item on the stack without popping it."</p>
+        <p>"It also attaches line and column numbers."</p>
+        <p>"This is useful for debugging by inpecting the stack."</p>
+        <Editor example="+1 ~ ×4 ~ ×. -3 5"/>
     }
 }
 

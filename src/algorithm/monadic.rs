@@ -139,7 +139,7 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     pub fn reverse(&mut self) {
-        if self.shape.is_empty() {
+        if self.shape.is_empty() || self.flat_len() == 0 {
             return;
         }
         let row_count = self.row_count();

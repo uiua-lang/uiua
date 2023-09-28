@@ -118,6 +118,10 @@ uiuisms!(
     r#"≅⇌. "racecar""#,
     /// Convert a number to a string
     r#"$"_" 17"#,
+    /// Convert a string to a list of code points
+    r#"-@\0 "Uiua""#,
+    /// Convert a list of code points to a string
+    r#"+@\0 [85 105 117 97]"#,
     /// Find the indices of all 1s
     "▽∶⇡⧻. [0 1 0 0 1]",
     /// Interleave two arrays
@@ -128,6 +132,8 @@ uiuisms!(
     r#"⊜□≠, @, "split,this,up""#,
     /// Split an array by a delimiter with fill elements
     r#"⍛@ ⊜·≠, @, "split,this,up""#,
+    /// Split an array into groups of contiguous equal elements
+    "⊜□. [1 1 1 2 2 1 1 4]",
     /// Find the nth fibonacci number
     ";⍥(+,∶)↶.1 10",
     /// Remove all instances of an element from a list

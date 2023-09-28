@@ -29,6 +29,7 @@ pub enum DocsPage {
     Audio,
     AllFunctions,
     Uiuisms,
+    Changelog,
 }
 
 impl IntoParam for DocsPage {
@@ -46,6 +47,7 @@ impl IntoParam for DocsPage {
                 "audio" => Some(Self::Audio),
                 "all-functions" => Some(Self::AllFunctions),
                 "isms" => Some(Self::Uiuisms),
+                "changelog" => Some(Self::Changelog),
                 value => Some(Self::Search(value.into())),
             })
             .ok_or_else(|| ParamsError::MissingParam(name.to_string()))
@@ -74,6 +76,7 @@ pub fn Docs() -> impl IntoView {
             DocsPage::Audio => Audio().into_view(),
             DocsPage::AllFunctions => AllFunctions().into_view(),
             DocsPage::Uiuisms => Uiuisms().into_view(),
+            DocsPage::Changelog => Changelog().into_view(),
         };
 
         view! {
@@ -191,6 +194,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         <h2 id="other-docs">"Other Docs"</h2>
         <ul>
             <li><A href="/docs/install">"Installation"</A>" - how to install and use Uiua's interpreter"</li>
+            <li><A href="/docs/changelog">"Changelog"</A>" - what's new in each version"</li>
             <li><A href="/docs/design">"Design"</A>" - reasons for some of Uiua's design decisions"</li>
             <li><A href="/docs/technical">"Technical Details"</A>" - notes on the implementation of the Uiua interpreter and this website"</li>
             <li><A href="/docs/audio">"Audio"</A>" - how to generate and play audio"</li>

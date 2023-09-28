@@ -6,7 +6,10 @@ use std::{
     time::Duration,
 };
 
-use base64::{engine::general_purpose::STANDARD, Engine};
+use base64::engine::{
+    general_purpose::{STANDARD, URL_SAFE},
+    Engine,
+};
 use image::ImageOutputFormat;
 use leptos::{ev::keydown, *};
 use leptos_router::{use_navigate, NavigateOptions};
@@ -850,20 +853,14 @@ pub fn Editor<'a>(
 
     // Copy a link to the code
     let copy_link = move |_| {
-        let url = format!(
-            "https://uiua.org/pad?src={}",
-            urlencoding::encode(&code_text())
-        );
+        let encoded = URL_SAFE.encode(code_text());
+        let url = format!("https://uiua.org/pad?src={encoded}");
         _ = window().navigator().clipboard().unwrap().write_text(&url);
         if let EditorSize::Pad = size {
             window()
                 .history()
                 .unwrap()
-                .push_state_with_url(
-                    &JsValue::NULL,
-                    "",
-                    Some(&format!("/pad?src={}", urlencoding::encode(&code_text()))),
-                )
+                .push_state_with_url(&JsValue::NULL, "", Some(&format!("/pad?src={encoded}")))
                 .unwrap();
         }
         set_copied_link.set(true);

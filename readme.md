@@ -13,17 +13,17 @@ You can also check out the [Discord server](https://discord.gg/3r9nrfYhCc).
 
 You can try the language without installing anything on [the website](https://uiua.org).
 
-If you want to install the interpreter locally, you will need to build it from source.
+If you want to install the interpreter locally, you will need to install it via Cargo.
 This requires [Rust](https://www.rust-lang.org/tools/install) to be installed.
 
 You can install with:
 ```
-cargo install --git https://github.com/uiua-lang/uiua uiua
+cargo install uiua
 ```
 
-To enable audio output, replace the cargo command with:
+To enable audio output, enable the `audio` feature:
 ```
-cargo install --git https://github.com/uiua-lang/uiua uiua --features audio
+cargo install uiua --features audio
 ```
 
 If you want audio on Linux, you may need to install some dependencies first:

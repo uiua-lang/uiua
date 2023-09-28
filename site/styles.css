@@ -296,7 +296,8 @@ li {
 
 .code-block {
     display: block;
-    white-space: pre-wrap
+    white-space: pre-wrap;
+    padding: 0.8em;
 }
 
 .code-entry {

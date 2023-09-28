@@ -108,16 +108,12 @@ pub fn Technical() -> impl IntoView {
 pub fn Install() -> impl IntoView {
     view! {
         <h2>"Installing Uiua"</h2>
-        <p>"Currently, the native Uiua interpreter must be built from source."</p>
-        <p>"You will need a "<a href="https://www.rust-lang.org/tools/install">"Rust"</a>" installation, as well as Git."</p>
-        <p>"Once you have those, run the following commands:"</p>
-        <code class="code-block">
-r#"git clone https://github.com/uiua-lang/uiua
-cd uiua
-cargo install --path ."#
-        </code>
-        <p>"If you want to enable audio output, replace the "<code>"cargo"</code>" command with:"</p>
-        <code class="code-block">"cargo install --path . --features audio"</code>
+        <p>"The native Uiua interpreter can be installed via Cargo."</p>
+        <p>"This requires a "<a href="https://www.rust-lang.org/tools/install">"Rust"</a>" installation."</p>
+        <p>"Once you have that, run the following command:"</p>
+        <code class="code-block">"cargo install uiua"</code>
+        <p>"If you want to enable audio output, enable the "<code>"audio"</code>" feature:"</p>
+        <code class="code-block">"cargo install uiua --features audio"</code>
         <p>"If you want audio on Linux, you may need to install some dependencies first:"</p>
         <code class="code-block">"apt install libasound2-dev libudev-dev pkg-config"</code>
 

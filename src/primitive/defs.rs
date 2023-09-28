@@ -973,8 +973,6 @@ primitive!(
     /// ex: ⍜¯(-2) 5
     /// You can use [under] with [round] to round to a specific number of decimal places.
     /// ex: ⍜'×1e3⁅ π
-    /// [under][couple] will perform the same operation on the top two values on the stack.
-    /// ex: ⍜⊟⇡ 3 5
     ///
     /// The above examples involve an *arithmetic* under. That is, [invert]`f` is well-definined independent of [under]'s concept of "undoing".
     /// The remaining examples below involve `f`s which cannot be normally [invert]ed, but which are valid as functions to use with [under].

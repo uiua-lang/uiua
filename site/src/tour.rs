@@ -15,9 +15,9 @@ pub fn Tour() -> impl IntoView {
         <p>"An "<b>"array-oriented"</b>" language is one where the primary data structure is the array. In array languages, many operations that can apply to a single value can also apply to every value in an array. This is known as "<em>"rank-polymorphism"</em>"."</p>
         <p>"A "<b>"stack-oriented"</b>" language is one where all operations manipulate a global stack of values. Functions pop values off the top of the stack, perform their calculation, then push the results back on to the stack."</p>
         <p>"In Uiua, functions work on a global stack of arrays."</p>
-        <p>"Thats enough introduction, lets see some code!"</p>
+        <p>"That's enough introduction, let's see some code!"</p>
         <Editor examples={&["+", "1", "×", "2 ", "⇡", "10"]}/>
-        <p>"Uiua code runs from right to left, top to bottom. Operators are put to the "<em>"left"</em>" of their arguments, rather that in between."</p>
+        <p>"Uiua code runs from right to left, top to bottom. Operators are put to the "<em>"left"</em>" of their arguments, rather than in between."</p>
         <p>"This program makes an array of all the numbers less than 10, multiplies each one by 2, then adds 1 to each."</p>
         <p>"If you want to see how that works step-by-step, try clicking the arrows beside the Run button."</p>
         <p>"Now, I can already hear you asking, "<em>"\"Wait, what is that funny arrow? How am I supposed to type the multiplication sign?\""</em></p>
@@ -48,9 +48,9 @@ pub fn Tour() -> impl IntoView {
         <Editor example="+1~×2~×.-3 5"/>
 
         <h2 id="arrays">"Arrays"</h2>
-        <p>"So far, we have only talked about the stack part of Uiua. Now, lets talk about the most important part: Arrays!"</p>
+        <p>"So far, we have only talked about the stack part of Uiua. Now, let's talk about the most important part: Arrays!"</p>
         <p>"An array is a rectangular collection of elements arranged along some number of axes."</p>
-        <p>"An array with no axes is called a scalar. All the numbers is the examples above are scalars."</p>
+        <p>"An array with no axes is called a scalar. All the numbers in the examples above are scalars."</p>
         <p>"An array with one axis is often called a list or a vector. An array with two axes is often called a table or a matrix."</p>
         <p>"You can make simple lists by putting "<code>"_"</code>"s between the elements."</p>
         <Editor example="1_2_3_4"/>
@@ -113,7 +113,7 @@ pub fn Tour() -> impl IntoView {
         <Editor example="x ← [1_2_3 4_5_6]\n  x\n ⇌x\n≡⇌x"/>
         <p><Prim prim=Rows/>" also works "<em>"between"</em>" two arrays if it is given a binary function like "<Prim prim=Join/>"."</p>
         <Editor example="≡⊂ [1_2 3_4] [5_6 7_8]"/>
-        <p>"There are bunch of other modifiers that are useful in different situations. You can find a "<A href="/docs/modifier">"list of them"</A>" on the main docs page."</p>
+        <p>"There are a bunch of other modifiers that are useful in different situations. You can find a "<A href="/docs/modifier">"list of them"</A>" on the main docs page."</p>
 
         <h2 id="inline-functions">"Inline Functions"</h2>
         <p>"If you need a more complex function for a modifier, you can make an inline function by surrounding code with "<code>"()"</code>"s."</p>
@@ -132,7 +132,7 @@ pub fn Tour() -> impl IntoView {
         <p><Prim prim=Fill/>" works with lots of functions. Another one is "<Prim prim=Take/>" when the amount you are taking is more than the length of the array."</p>
         <Editor example="⍛π↙5 [1 2 3]"/>
         <br/>
-        <p><Prim prim=Fill/>" is nice, but you don't always want to fill in the missing elements. Sometimes the you need to mix values of different shapes or types in an array. To understand Uiua's solution to this problem, you must first understand its "<em>"array model"</em>"."</p>
+        <p><Prim prim=Fill/>" is nice, but you don't always want to fill in the missing elements. Sometimes you need to mix values of different shapes or types in an array. To understand Uiua's solution to this problem, you must first understand its "<em>"array model"</em>"."</p>
         <p>"Uiua's array model is similar to that of J. Arrays must be rectangular and cannot mix types. However, the "<Prim prim=Constant/>" function can turn any value into a function that pushes that value to the stack. That value can then be extracted with "<Prim prim=Call/>". This is similar to J's boxes."</p>
         <Editor example="[□1 □2_3_4 □5_6]"/>
         <p>"Having to use "<Prim prim=Constant/>" on every value is kind of annoying, so there is a special syntax for "<Prim prim=Constant/>" arrays that uses "<code>"{}"</code>"s instead of "<code>"[]"</code>"s."</p>

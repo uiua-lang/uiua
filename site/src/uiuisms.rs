@@ -121,7 +121,7 @@ uiuisms!(
     /// Convert a string to a list of code points
     r#"-@\0 "Uiua""#,
     /// Convert a list of code points to a string
-    "+@\0 [85 105 117 97]",
+    r#"+@\0 [85 105 117 97]"#,
     /// Find the indices of all 1s
     "▽∶⇡⧻. [0 1 0 0 1]",
     /// Interleave two arrays

@@ -100,6 +100,10 @@ uiuisms!(
     "/+ [1 2 3 4 5]",
     /// Get the product of an array
     "/× [1 2 3 4 5]",
+    /// Get the maximum value in an array
+    "/↥ [1 4 5 3 2]",
+    /// Get the minimum value in an array
+    "/↧ [1 4 5 3 2]",
     /// Sort an array
     "⊏⌂. [1 4 5 3 2]",
     /// Get n numbers between 0 and 1 inclusive

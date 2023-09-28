@@ -653,6 +653,24 @@ primitive!(
     (2, Select, DyadicArray, ("select", '⊏')),
     /// End step of under select
     (3, Unselect, Misc),
+    /// Change the shape of an array
+    ///
+    /// ex: ↯ 2_3 [1 2 3 4 5 6]
+    /// Shapes that have fewer elements than the original array will truncate it.
+    /// ex: ↯ 2_2 [1_2_3 4_5_6]
+    /// Shapes that have more elements than the original array will repeat elements.
+    /// ex: ↯ [5] 2
+    /// ex: ↯ 3_7 1_2_3_4
+    ///
+    /// Scalar shapes will copy the array as rows of a new array.
+    /// ex: ↯ 4 [1 2 3 4 5]
+    /// ex: ↯ 2 [1_2_3 4_5_6]
+    /// This is in constrast to scalar [keep], which repeats the rows but preserves [rank].
+    /// ex: ▽ 4 [1 2 3 4 5]
+    /// ex: ▽ 2 [1_2_3 4_5_6]
+    ///
+    /// See also: [deshape]
+    (2, Reshape, DyadicArray, ("reshape", '↯')),
     /// Take the first n elements of an array
     ///
     /// This is the opposite of [drop].
@@ -686,24 +704,6 @@ primitive!(
     (2, Drop, DyadicArray, ("drop", '↘')),
     /// End step of under drop
     (3, Undrop, Misc),
-    /// Change the shape of an array
-    ///
-    /// ex: ↯ 2_3 [1 2 3 4 5 6]
-    /// Shapes that have fewer elements than the original array will truncate it.
-    /// ex: ↯ 2_2 [1_2_3 4_5_6]
-    /// Shapes that have more elements than the original array will repeat elements.
-    /// ex: ↯ [5] 2
-    /// ex: ↯ 3_7 1_2_3_4
-    ///
-    /// Scalar shapes will copy the array as rows of a new array.
-    /// ex: ↯ 4 [1 2 3 4 5]
-    /// ex: ↯ 2 [1_2_3 4_5_6]
-    /// This is in constrast to scalar [keep], which repeats the rows but preserves [rank].
-    /// ex: ▽ 4 [1 2 3 4 5]
-    /// ex: ▽ 2 [1_2_3 4_5_6]
-    ///
-    /// See also: [deshape]
-    (2, Reshape, DyadicArray, ("reshape", '↯')),
     /// Rotate the elements of an array by n
     ///
     /// ex: ↻1 ⇡5

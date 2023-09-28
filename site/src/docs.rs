@@ -14,6 +14,7 @@ use crate::{
     primitive::*,
     tour::Tour,
     tutorial::{Tutorial, TutorialPage},
+    uiuisms::Uiuisms,
     Prim,
 };
 
@@ -27,6 +28,7 @@ pub enum DocsPage {
     Install,
     Audio,
     AllFunctions,
+    Uiuisms,
 }
 
 impl IntoParam for DocsPage {
@@ -43,6 +45,7 @@ impl IntoParam for DocsPage {
                 "install" => Some(Self::Install),
                 "audio" => Some(Self::Audio),
                 "all-functions" => Some(Self::AllFunctions),
+                "isms" => Some(Self::Uiuisms),
                 value => Some(Self::Search(value.into())),
             })
             .ok_or_else(|| ParamsError::MissingParam(name.to_string()))
@@ -70,6 +73,7 @@ pub fn Docs() -> impl IntoView {
             DocsPage::Install => Install().into_view(),
             DocsPage::Audio => Audio().into_view(),
             DocsPage::AllFunctions => AllFunctions().into_view(),
+            DocsPage::Uiuisms => Uiuisms().into_view(),
         };
 
         view! {
@@ -192,7 +196,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/audio">"Audio"</A>" - how to generate and play audio"</li>
         </ul>
         <h2 id="uiuisms">"Uiuisms"</h2>
-        <p><A href="/isms">"Uiuisms"</A>" is a curated list of Uiua functions for solving common problems."</p>
+        <p><A href="/docs/isms">"Uiuisms"</A>" is a curated list of Uiua functions for solving common problems."</p>
         <h2 id="functions" class="doc-functions">"Functions"</h2>
         <div id="function-search-wrapper">
             <div class="input-div">

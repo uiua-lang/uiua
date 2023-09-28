@@ -165,5 +165,6 @@ pub fn Tour() -> impl IntoView {
         <p>"For information on installing the native Uiua interpreter, see the "<A href="/install">"install page"</A>"."</p>
         <p>"For information on specific functions and modifiers, see the "<A href="/docs#functions">"functions section"</A>" of the main docs page."</p>
         <p>"To see some cool examples, click through the editor at the top of the "<A href="/">"home page"</A>". There are also some interesting, longer examples in the "<a href="https://github.com/uiua-lang/uiua/tree/main/examples">" main Uiua repository on GitHub"</a>"."</p>
+        <p>"Check out "<A href="../isms">"Uiuisms"</A>" for a curated list of Uiua functions for solving common problems."</p>
     }
 }

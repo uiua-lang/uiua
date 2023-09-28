@@ -80,6 +80,7 @@ pub fn Site() -> impl IntoView {
                         <Route path="pad" view=Pad/>
                         <Route path="install" view=Install/>
                         <Route path="tour" view=Tour/>
+                        <Route path="isms" view=Uiuisms/>
                         <Route path="*" view=NotFound/>
                     </Routes>
                 </div>
@@ -180,7 +181,8 @@ pub fn MainPage() -> impl IntoView {
             <p>"For more examples of what Uiua code looks like and what it can do, see the examples in the editor at the top of this page."</p>
             <p>"For a quick overview of how the language works, see the "<A href="/tour">"Language Tour"</A>"."</p>
             <p>"For a full tutorial, see the "<A href="/docs#tutorial">"Tutorial"</A>"."</p>
-            <p>"For a reference of all the built-in functions, the "<A href="/docs">"Documentation"</A>" has a "<A href="/docs#functions">"full list"</A>"."</p>
+            <p>"For a reference of all the built-in functions, the documentation has a "<A href="/docs#functions">"full list"</A>"."</p>
+            <p>"For a curated list of Uiua functions for solving common problems, see "<A href="/isms">"Uiuisms"</A>"."</p>
         </div>
     }
 }

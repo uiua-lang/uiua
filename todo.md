@@ -1,4 +1,6 @@
 - Rust API
+- Make space character more visible
+- Move site-specific tests to the site repo
 - Docs
   - Invert bits for control flow
   - Control flow

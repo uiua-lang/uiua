@@ -18,14 +18,12 @@ This requires [Rust](https://www.rust-lang.org/tools/install) to be installed.
 
 You can install with:
 ```
-git clone https://github.com/uiua-lang/uiua
-cd uiua
-cargo install --path .
+cargo install --git https://github.com/uiua-lang/uiua uiua
 ```
 
 To enable audio output, replace the cargo command with:
 ```
-cargo install --path . --features audio
+cargo install --git https://github.com/uiua-lang/uiua uiua --features audio
 ```
 
 If you want audio on Linux, you may need to install some dependencies first:

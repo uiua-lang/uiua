@@ -1,5 +1,4 @@
 mod backend;
-mod catalog;
 mod docs;
 mod editor;
 mod examples;
@@ -8,6 +7,7 @@ mod pad;
 mod primitive;
 mod tour;
 mod tutorial;
+mod uiuisms;
 
 use leptos::*;
 use leptos_router::*;
@@ -15,7 +15,7 @@ use uiua::primitive::{PrimClass, Primitive};
 use wasm_bindgen::JsCast;
 use web_sys::HtmlAudioElement;
 
-use crate::{catalog::*, docs::*, editor::*, other::*, pad::*, tour::*};
+use crate::{docs::*, editor::*, other::*, pad::*, tour::*, uiuisms::*};
 
 pub fn main() {
     console_error_panic_hook::set_once();
@@ -76,7 +76,7 @@ pub fn Site() -> impl IntoView {
                     <Routes>
                         <Route path="" view=MainPage/>
                         <Route path="docs/:page?" view=Docs/>
-                        <Route path="catalog/:search?" view=Catalog/>
+                        <Route path="isms/:search?" view=Uiuisms/>
                         <Route path="pad" view=Pad/>
                         <Route path="install" view=Install/>
                         <Route path="tour" view=Tour/>

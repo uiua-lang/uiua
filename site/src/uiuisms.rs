@@ -6,21 +6,21 @@ use web_sys::{Event, HtmlInputElement};
 use crate::Editor;
 
 #[derive(Debug, Clone, PartialEq, Eq, Params)]
-pub struct CatalogParams {
+pub struct UiuismsParams {
     search: Option<String>,
 }
 
 #[component]
-pub fn Catalog() -> impl IntoView {
-    let initial_search = use_params::<CatalogParams>()
+pub fn Uiuisms() -> impl IntoView {
+    let initial_search = use_params::<UiuismsParams>()
         .get()
         .map(|p| p.search)
         .unwrap_or_default()
         .unwrap_or_default();
     let (search, _) = create_signal(initial_search);
     let (body, set_body) = create_signal(Vec::new());
-    let items: Vec<(CatalogItem, _)> = CATALOG.with(|catalog| {
-        catalog
+    let items: Vec<(Uiuism, _)> = UIUISMS.with(|uiuism| {
+        uiuism
             .iter()
             .map(|item| {
                 (
@@ -42,7 +42,7 @@ pub fn Catalog() -> impl IntoView {
                 })
                 .map(|(item, view)| {
                     view! {
-                        <div class="catalog-item">
+                        <div class="uiuism-item">
                             <div style="width: 29%">{ &item.description }</div>
                             <div style="width: 69%">{ view }</div>
                         </div>
@@ -57,7 +57,7 @@ pub fn Catalog() -> impl IntoView {
         update_search(&elem.value());
     };
     view! {
-        <h1>"Function Catalog"</h1>
+        <h1>"Uiuisms"</h1>
         <p>"This is a currated list of Uiua functions for solving common problems."</p>
         <p>"You can add more by contributing to the "<a href="https://github.com/uiua-lang/uiua">"GitHub repo"</a>"."</p>
         <div class="input-div">
@@ -73,17 +73,17 @@ pub fn Catalog() -> impl IntoView {
 }
 
 #[derive(Clone)]
-struct CatalogItem {
+struct Uiuism {
     code: String,
     description: String,
 }
 
-macro_rules! catalog {
+macro_rules! uiuisms {
     ($(#[doc = $desc:literal] $code:literal),* $(,)?) => {
         thread_local! {
-            static CATALOG: Vec<CatalogItem> = vec![
+            static UIUISMS: Vec<Uiuism> = vec![
                 $(
-                    CatalogItem {
+                    Uiuism {
                         code: $code.to_string(),
                         description: $desc.to_string(),
                     }
@@ -93,7 +93,7 @@ macro_rules! catalog {
     };
 }
 
-catalog!(
+uiuisms!(
     /// Reverse each row of an array
     "≡⇌ [1_2_3 4_5_6]",
     /// Get the sum of an array

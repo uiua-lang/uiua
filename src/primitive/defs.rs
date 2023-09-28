@@ -1310,5 +1310,5 @@ primitive!(
     /// To see them, use [trace].
     /// ex: [1 5 2 9 11 0 7 12 8 3]
     ///   : ▽×?≥5∶?≤10..
-    (1, Trace, Misc, ("trace", '?')),
+    (1, Trace, Stack, ("trace", '?')),
 );

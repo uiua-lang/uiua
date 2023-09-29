@@ -1,4 +1,5 @@
 - Rust API
+- Make windows and find return the same size array
 - Docs
   - Invert bits for control flow
   - Control flow

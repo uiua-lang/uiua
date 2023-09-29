@@ -1,3 +1,4 @@
+- Fix editor glyph tooltip going off the screen on mobile
 - Rust API
 - Make space character more visible
 - Docs

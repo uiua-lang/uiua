@@ -302,3 +302,45 @@ fn element<T: JsCast>(id: &str) -> T {
         panic!("#{id} not found")
     }
 }
+
+#[test]
+fn site() {
+    let mut threads = Vec::new();
+    for entry in std::fs::read_dir("src").unwrap() {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        for line in std::fs::read_to_string(&path).unwrap().lines() {
+            if let Some(code) = line
+                .trim()
+                .strip_prefix(r#"<Editor example=""#)
+                .and_then(|line| line.strip_suffix(r#""/>"#))
+            {
+                let code = code
+                    .replace("\\\"", "\"")
+                    .replace("\\\\", "\\")
+                    .replace("\\n", "\n");
+                if code.contains(uiua::SysOp::AudioPlay.name()) {
+                    continue;
+                }
+                threads.push((
+                    path.to_path_buf(),
+                    code.clone(),
+                    std::thread::spawn(move || {
+                        uiua::Uiua::with_native_sys().load_str(&code).map(drop)
+                    }),
+                ));
+            }
+        }
+    }
+    assert!(threads.len() > 50);
+    for (path, code, thread) in threads {
+        if let Err(e) = thread.join().unwrap() {
+            panic!(
+                "Test failed in {}\n{}\n{}",
+                path.display(),
+                code,
+                e.show(true)
+            );
+        }
+    }
+}

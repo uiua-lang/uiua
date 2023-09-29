@@ -362,7 +362,9 @@ code:
 
                 if sig.args <= self.stack.len() {
                     self.exec_global_instrs(instrs)?;
-                    self.stack.pop().unwrap_or_default()
+                    self.stack
+                        .pop()
+                        .ok_or_else(|| self.error("Nothing on the stack to bind"))?
                 } else {
                     make_fn(instrs, sig)
                 }

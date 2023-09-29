@@ -214,7 +214,7 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig, dept
         Word::Primitive(prim) => {
             output.push_str(&prim.to_string());
             if prim.is_modifier() {
-                output.push(' ');
+                output.push('^');
             }
         }
         Word::Modified(m) => {

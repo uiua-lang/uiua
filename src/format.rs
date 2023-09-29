@@ -204,17 +204,12 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig, dept
             }
         }
         Word::Func(func) => {
-            if func.term_pair {
-                output.push('\'');
-                format_words(output, &func.lines[0], config, false, depth + 1);
-            } else {
-                output.push('(');
-                if let Some(sig) = &func.signature {
-                    format_signature(output, sig.value);
-                }
-                format_multiline_words(output, &func.lines, config, false, depth + 1);
-                output.push(')');
+            output.push('(');
+            if let Some(sig) = &func.signature {
+                format_signature(output, sig.value);
             }
+            format_multiline_words(output, &func.lines, config, false, depth + 1);
+            output.push(')');
         }
         Word::Primitive(prim) => {
             output.push_str(&prim.to_string());

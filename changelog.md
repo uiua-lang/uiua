@@ -9,6 +9,8 @@
 - Add [both`∷`](https://uiua.org/docs/both) modifier
   - This can change code like `/(|2 ⊂!∶!∶) {"a" "bc" "def"}`
   - To just `/'⊂∷! {"a" "bc" "def"}`
+- Turn the term pair syntactic construct into a modifier called [bind`'`](https://uiua.org/docs/bind)
 - Fix some correctness bugs related to `under` and `invert`
+- Fix a crash when trying to reverse an empty array
 ### Website
-- Add [right-to-left](https://uiua.org/rtl) explanation page
+- Add a [right-to-left](https://uiua.org/rtl) explanation page

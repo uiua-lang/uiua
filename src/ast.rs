@@ -100,7 +100,6 @@ pub struct Func {
     pub id: FunctionId,
     pub signature: Option<Sp<Signature>>,
     pub lines: Vec<Vec<Sp<Word>>>,
-    pub term_pair: bool,
 }
 
 impl fmt::Debug for Func {

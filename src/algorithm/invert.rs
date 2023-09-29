@@ -88,6 +88,19 @@ fn invert_instr_fragment(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
                 return Some(vec![Instr::Prim(prim.inverse()?, span)]);
             }
         }
+        [gi @ Push(g), fi @ Push(f), Prim(Bind, _)] => {
+            let mut instrs = if let Some(g) = g.as_function() {
+                g.instrs.clone()
+            } else {
+                vec![gi.clone()]
+            };
+            if let Some(f) = f.as_function() {
+                instrs.extend(f.instrs.iter().cloned());
+            } else {
+                instrs.push(fi.clone());
+            }
+            return invert_instrs(&instrs);
+        }
         _ => {}
     }
 
@@ -169,9 +182,28 @@ fn under_instrs(instrs: &[Instr]) -> Option<Under> {
 }
 
 fn under_instr_fragment(mut instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr>)> {
+    use Instr::*;
     use Primitive::*;
     if let Some(inverted) = invert_instr_fragment(instrs) {
         return Some((Cow::Borrowed(instrs), inverted));
+    }
+
+    match instrs {
+        [gi @ Push(g), fi @ Push(f), Prim(Bind, _)] => {
+            let mut instrs = if let Some(g) = g.as_function() {
+                g.instrs.clone()
+            } else {
+                vec![gi.clone()]
+            };
+            if let Some(f) = f.as_function() {
+                instrs.extend(f.instrs.iter().cloned());
+            } else {
+                instrs.push(fi.clone());
+            }
+            let (before, after) = under_instrs(&instrs)?;
+            return Some((Cow::Owned(before), after));
+        }
+        _ => {}
     }
 
     let patterns: &[&dyn UnderPattern] = &[

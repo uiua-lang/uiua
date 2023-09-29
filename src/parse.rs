@@ -387,7 +387,7 @@ impl Parser {
         let mut args = Vec::new();
         if self.try_spaces().is_none() {
             for _ in 0..margs {
-                self.try_spaces();
+                args.extend(self.try_spaces());
                 if let Some(arg) = self.try_strand() {
                     args.push(arg);
                 } else {
@@ -498,28 +498,6 @@ impl Parser {
                 id: FunctionId::Anonymous(span),
                 signature,
                 lines: body,
-                term_pair: false,
-            }))
-        } else if let Some(start) = self.try_exact(SingleQuote) {
-            self.try_spaces();
-            let Some(first) = self.try_strand() else {
-                self.errors.push(self.expected([Expectation::Term]));
-                return None;
-            };
-            let mut body = vec![first];
-            body.extend(self.try_spaces());
-            let Some(second) = self.try_strand() else {
-                self.errors.push(self.expected([Expectation::Term]));
-                return None;
-            };
-            let span = start.merge(second.span.clone());
-            body.push(second);
-            body.extend(self.try_spaces());
-            span.clone().sp(Word::Func(Func {
-                id: FunctionId::Anonymous(span),
-                signature: None,
-                lines: vec![body],
-                term_pair: true,
             }))
         } else {
             return None;

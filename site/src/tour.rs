@@ -120,7 +120,7 @@ pub fn Tour() -> impl IntoView {
         <p>"Let's use "<Prim prim=Each/>" to get the sum of all the numbers up to each element of an array."</p>
         <p>"For "<Prim prim=Each/>" element, we'll "<Prim prim=Add/><code>"1"</code>", get the "<Prim prim=Range/>" up to that number, then "<Prim prim=Reduce/>" it with "<Prim prim=Add/>"."</p>
         <Editor example="∵(/+ ⇡ +1) .[1_2_3 4_5_6 7_8_9]"/>
-        <p>"Small inline functions with only 2 terms can also be created with a preceding "<code>"'"</code>"."</p>
+        <p>"Small inline functions with only 2 terms can also be replaced with the "<Prim prim=Bind/>" modifier."</p>
         <p>"Here, we use "<Prim prim=First/>" after "<Prim prim=Reverse/>" to get the last element of each row."</p>
         <Editor example="≡'⊢⇌ .[1_2_3 4_5_6 7_8_9]"/>
 

@@ -203,6 +203,19 @@ impl<'a> VirtualEnv<'a> {
                         return Err("repeat without a number".into());
                     }
                 }
+                Bind => {
+                    let f = self.pop()?;
+                    let g = self.pop()?;
+                    for val in [g, f] {
+                        for _ in 0..val.signature().args {
+                            self.pop()?;
+                        }
+                        self.set_min_height();
+                        for _ in 0..val.signature().outputs {
+                            self.stack.push(BasicValue::Other);
+                        }
+                    }
+                }
                 Both => {
                     let _f = self.pop()?;
                     self.pop()?;

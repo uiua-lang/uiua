@@ -29,7 +29,7 @@ constant!(
     /// A string identifying the operating system
     (os, std::env::consts::OS),
     /// A string identifying family of the operating system
-    (os, std::env::consts::FAMILY),
+    (family, std::env::consts::FAMILY),
     /// A string identifying the architecture of the CPU
     (arch, std::env::consts::ARCH),
     /// The executable file extension

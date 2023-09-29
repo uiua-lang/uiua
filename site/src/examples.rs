@@ -20,11 +20,10 @@ const STRIPES: &str = "\
 ⍉ ÷2 +1.2 ○ ÷10";
 const PALINDROME: &str = r#"$ uiua racecar wow cool!
 ⍛@ ⊜(⊂⊏∶"❌✅" ≅⇌..)≠@ ."#;
-const RULE_30: &str = "\
-Thirty ← ≡(↥≅0_1_1 ∶=1 /+.) ◫3 ⊂∶0 ⊂0
-size ← 500
-start ← =÷2 size ⇡+1 size
-⇌[⍥(Thirty.)÷2 size start]";
+const AUTOMATA: &str = "\
+rule ← /+⊞=∶ ⍘⋯⇌◫3⇌ ⊂∶0⊂0∶ ▽∶⇡⧻.⋯
+=÷2∶⇡+1. 500        # init
+⇌[⍥(rule30.)÷2+1⧻.] # run";
 const MANDELBROT: &str = "\
 Z ← ⊟/- ⁿ2 ∶×2 /×.⇌
 ⇌⍘⍉⊞⊟.×4 ÷∶-÷2,⇡. 300
@@ -36,7 +35,7 @@ life ← ↥↧↶=2∶=3.-,/+/+⍚1_2↻-1⇡3_3.
 ↯∶≡'↯4∵'↯4∶×4△.      # upscale";
 
 pub const EXAMPLES: &[&str] = &[
-    UIUA, FORMAT, D3, LOGO, AVG, CHORD, QUADRATIC, STRIPES, PALINDROME, RULE_30, MANDELBROT, LIFE,
+    UIUA, FORMAT, D3, LOGO, AVG, CHORD, QUADRATIC, STRIPES, PALINDROME, AUTOMATA, MANDELBROT, LIFE,
 ];
 
 #[cfg(test)]

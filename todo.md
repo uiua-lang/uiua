@@ -1,5 +1,4 @@
 - Rust API
-- Make space character more visible
 - Docs
   - Invert bits for control flow
   - Control flow

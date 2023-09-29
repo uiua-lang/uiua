@@ -1210,16 +1210,26 @@ fn set_code_html(id: &str, code: &str) {
                     }
                 }
                 SpanKind::String => {
-                    let title = if text.starts_with('@') {
-                        "character"
+                    if text == "@ " {
+                        format!(
+                            r#"<span
+                                class="code-span code-hover {color_class}" 
+                                data-title="space character">@</span><span
+                                class="code-span code-hover {color_class} underline" 
+                                data-title="space character"> </span>"#
+                        )
                     } else {
-                        "string"
-                    };
-                    format!(
-                        r#"<span
-                            class="code-span code-hover {color_class}" 
-                            data-title={title}>{text}</span>"#
-                    )
+                        let title = if text.starts_with('@') {
+                            "character"
+                        } else {
+                            "string"
+                        };
+                        format!(
+                            r#"<span
+                                class="code-span code-hover {color_class}" 
+                                data-title={title}>{text}</span>"#
+                        )
+                    }
                 }
                 _ => format!(r#"<span class="code-span {color_class}">{text}</span>"#),
             });

@@ -710,3 +710,7 @@ input[type=text] {
     justify-content: space-between;
     align-items: center;
 }
+
+.underline {
+    text-decoration: underline;
+}

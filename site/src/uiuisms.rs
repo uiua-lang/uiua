@@ -92,6 +92,15 @@ macro_rules! uiuisms {
                 ),*
             ];
         }
+
+        #[test]
+        fn uiuisms() {
+            for code in [$($code),*] {
+                if let Err(e) = uiua::Uiua::with_native_sys().load_str(code) {
+                    panic!("Uiuism failed\n{code}\n{e}");
+                }
+            }
+        }
     };
 }
 

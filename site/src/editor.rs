@@ -744,30 +744,96 @@ pub fn Editor<'a>(
         .collect();
 
     // Additional code buttons
-    for (glyph, title, class, surround) in [
-        ("_", "strand", "strand-span", None),
-        ("[]", "array", "", Some(('[', ']'))),
-        ("{}", "constant array", "", Some(('{', '}'))),
-        ("()", "function", "", Some(('(', ')'))),
-        ("¯", "negative (`)", "number-literal-span", None),
-        ("@", "character", "string-literal-span", None),
-        ("\"", "string", "string-literal-span", Some(('"', '"'))),
-        ("^", "terminate modifier", "", None),
-        ("←", "binding (=)", "", None),
-        ("|", "signature", "", None),
-        ("#", "comment", "comment-span", None),
+    for (glyph, title, class, surround, doc) in [
+        ("_", "strand", "strand-span", None, "arrays#creating-arrays"),
+        (
+            "[]",
+            "array",
+            "",
+            Some(('[', ']')),
+            "arrays#creating-arrays",
+        ),
+        (
+            "{}",
+            "constant array",
+            "",
+            Some(('{', '}')),
+            "arrays#nested-arrays",
+        ),
+        (
+            "()",
+            "function",
+            "",
+            Some(('(', ')')),
+            "functions#inline-functions",
+        ),
+        ("¯", "negative (`)", "number-literal-span", None, ""),
+        (
+            "@",
+            "character",
+            "string-literal-span",
+            None,
+            "types#characters",
+        ),
+        (
+            "$",
+            "format/multiline string",
+            "string-literal-span",
+            None,
+            "functions#format-strings",
+        ),
+        (
+            "\"",
+            "string",
+            "string-literal-span",
+            Some(('"', '"')),
+            "types#characters",
+        ),
+        (
+            "^",
+            "terminate modifier",
+            "",
+            None,
+            "functions#terminating-modifiers",
+        ),
+        ("←", "binding (=)", "", None, "bindings"),
+        ("|", "signature", "", None, "functions#stack-signatures"),
+        ("#", "comment", "comment-span", None, "basic#comments"),
     ] {
-        let onclick = move |_| {
-            if let Some((open, close)) = surround {
+        let class = format!("glyph-button {class}");
+        // Navigate to the docs page on ctrl/shift+click
+        let onclick = move |event: MouseEvent| {
+            if !doc.is_empty() && (!on_mac && event.ctrl_key() || on_mac && event.meta_key()) {
+                // Open the docs page
+                window()
+                    .open_with_url_and_target(&format!("/docs/{doc}"), "_blank")
+                    .unwrap();
+            } else if !doc.is_empty() && event.shift_key() {
+                // Redirect to the docs page
+                use_navigate()(&format!("/docs/{doc}"), NavigateOptions::default());
+            } else if let Some((open, close)) = surround {
                 surround_code(open, close);
             } else {
                 replace_code(glyph)
             }
         };
-        let class = format!("glyph-button {class}");
+        // Show the doc on mouseover
+        let onmouseover = move |_| {
+            if !doc.is_empty() {
+                set_glyph_doc.set(view!(<code>{ glyph }</code>" "{ title }).into_view());
+                _ = glyph_doc_element().style().remove_property("display");
+            }
+        };
         glyph_buttons.push(
             view! {
-                <button class=class data-title=title on:click=onclick>{glyph}</button>
+                <button
+                    class=class
+                    data-title=title
+                    on:click=onclick
+                    on:mouseover=onmouseover
+                    on:mouseleave=onmouseleave>
+                    {glyph}
+                </button>
             }
             .into_view(),
         );

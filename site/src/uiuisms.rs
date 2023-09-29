@@ -156,9 +156,9 @@ uiuisms!(
     /// Filter by a dynamic predicate
     "▽!∶, (=0◿2) ⇡10",
     /// Convert a string to uppercase
-    r#"-×32×≥@a∶≤@z.. "These are Words""#,
+    r#"-×32×≥@a,≤@z. "These are Words""#,
     /// Convert a string to lowercase
-    r#"+×32×≥@A∶≤@Z.. "These are Words""#,
+    r#"+×32×≥@A,≤@Z. "These are Words""#,
     /// Check if a string is in a list of strings
     r#"∊□ "uiua" {"apl" "bqn" "uiua"}"#,
     /// Trim leading whitespace

@@ -3,9 +3,12 @@ use comrak::{
     *,
 };
 use leptos::*;
-use uiua::{primitive::Primitive, SysOp};
+use uiua::{
+    primitive::{Primitive, CONSTANTS},
+    SysOp,
+};
 
-use crate::{editor::Editor, Prim};
+use crate::{editor::Editor, Const, Prim};
 
 #[component]
 pub fn Design() -> impl IntoView {
@@ -203,6 +206,22 @@ s ← ○×τ⊞×f
         <p>"Instead, you must use the "<Prim prim=Sys(SysOp::AudioPlay)/>" system function to play it."</p>
         <p><Prim prim=Sys(SysOp::AudioPlay)/>" should fine on the website as well, but it is not necessary."</p>
         <Editor example="&ap÷2×¬◿1×4∶±○×τ×55.÷∶⇡×2. &asr"/>
+    }
+}
+
+#[component]
+pub fn Constants() -> impl IntoView {
+    use Primitive::*;
+    view! {
+        <h1>"Constants"</h1>
+        <p>"These constants are available in every scope. However, unlike formattable constants like "<Prim prim=Pi/>", these constants can be shadowed within a scope."</p>
+        <Editor example="e\ne ← 5\ne"/>
+        <br/>
+        <div>
+        {
+            CONSTANTS.iter().map(|con| view!(<p><Const con=con/>" - "{ con.doc }</p>)).collect::<Vec<_>>()
+        }
+        </div>
     }
 }
 

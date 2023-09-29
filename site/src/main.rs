@@ -11,7 +11,7 @@ mod uiuisms;
 
 use leptos::*;
 use leptos_router::*;
-use uiua::primitive::{PrimClass, Primitive};
+use uiua::primitive::{ConstantDef, PrimClass, Primitive};
 use wasm_bindgen::JsCast;
 use web_sys::HtmlAudioElement;
 
@@ -285,6 +285,14 @@ fn prim_class(prim: Primitive) -> &'static str {
             Some(3) => code_font!("triadic-function-button"),
             _ => code_font!("variadic-function-button"),
         }
+    }
+}
+
+#[component]
+#[allow(clippy::needless_lifetimes)]
+fn Const<'a>(con: &'a ConstantDef) -> impl IntoView {
+    view! {
+        <code class="prim-code" data-title={ con.doc }>{ con.name }</code>
     }
 }
 

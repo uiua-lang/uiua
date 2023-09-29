@@ -2,6 +2,44 @@
 
 use super::*;
 
+pub struct ConstantDef {
+    pub name: &'static str,
+    pub value: Value,
+    pub doc: &'static str,
+}
+
+macro_rules! constant {
+    ($(#[doc = $doc:literal] ($name:ident, $value:expr)),* $(,)?) => {
+        /// Named constants that can be redefined
+        pub static CONSTANTS: Lazy<[ConstantDef; 0 $(+ { _ = stringify!($name) ; 1})*]> = Lazy::new(|| {
+            [$(
+                ConstantDef {
+                    name: stringify!($name),
+                    value: $value.into(),
+                    doc: $doc,
+                },
+            )*]
+        });
+    }
+}
+
+constant!(
+    /// Euler's constant
+    (e, std::f64::consts::E),
+    /// A string identifying the operating system
+    (os, std::env::consts::OS),
+    /// A string identifying family of the operating system
+    (os, std::env::consts::FAMILY),
+    /// A string identifying the architecture of the CPU
+    (arch, std::env::consts::ARCH),
+    /// The executable file extension
+    (ExeExt, std::env::consts::EXE_EXTENSION),
+    /// The file extension for shared libraries
+    (DllExt, std::env::consts::DLL_EXTENSION),
+    /// The primary path separator character
+    (sep, std::path::MAIN_SEPARATOR),
+);
+
 macro_rules! primitive {
     ($(
         #[doc = $doc_rust:literal]

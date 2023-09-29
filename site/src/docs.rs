@@ -31,6 +31,7 @@ pub enum DocsPage {
     Uiuisms,
     Changelog,
     RightToLeft,
+    Constants,
 }
 
 impl IntoParam for DocsPage {
@@ -50,6 +51,7 @@ impl IntoParam for DocsPage {
                 "isms" => Some(Self::Uiuisms),
                 "changelog" => Some(Self::Changelog),
                 "rtl" => Some(Self::RightToLeft),
+                "constants" => Some(Self::Constants),
                 value => Some(Self::Search(value.into())),
             })
             .ok_or_else(|| ParamsError::MissingParam(name.to_string()))
@@ -80,6 +82,7 @@ pub fn Docs() -> impl IntoView {
             DocsPage::Uiuisms => Uiuisms().into_view(),
             DocsPage::Changelog => Changelog().into_view(),
             DocsPage::RightToLeft => RightToLeft().into_view(),
+            DocsPage::Constants => Constants().into_view(),
         };
 
         view! {
@@ -184,9 +187,11 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
 
     view! {
         <h1>"Documentation"</h1>
+
         <h2>"Language Tour"</h2>
         <p>"If you want to jump right in, check out the "<A href="/docs/tour">"Language Tour"</A>" for a high-level overview!"</p>
         <p>"Otherwise, read on for more detailed documentation."</p>
+
         <h2 id="tutorial">"Tutorial"</h2>
         <p>"These pages introduce Uiua concepts one at a time, each tutorial building on the previous. They go into much more depth than the language tour."</p>
         <p>"They are meant to be read in order, but feel free to skip around!"</p>
@@ -194,6 +199,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             .map(|p| view!( <li><A href={format!("/docs/{}", p.path())}>{p.title()}</A></li>))
             .collect::<Vec<_>>()
         }</ul>
+
         <h2 id="other-docs">"Other Docs"</h2>
         <ul>
             <li><A href="/docs/install">"Installation"</A>" - how to install and use Uiua's interpreter"</li>
@@ -201,10 +207,12 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/design">"Design"</A>" - reasons for some of Uiua's design decisions"</li>
             <li><A href="/docs/rtl">"Right-to-Left"</A>" - the answer to the most-asked question about Uiua's design gets its own page"</li>
             <li><A href="/docs/technical">"Technical Details"</A>" - notes on the implementation of the Uiua interpreter and this website"</li>
+            <li><A href="/docs/constants">"Constants"</A>" - list shadowable constants"</li>
             <li><A href="/docs/audio">"Audio"</A>" - how to generate and play audio"</li>
         </ul>
         <h2 id="uiuisms">"Uiuisms"</h2>
         <p><A href="/docs/isms">"Uiuisms"</A>" is a curated list of Uiua functions for solving common problems."</p>
+
         <h2 id="functions" class="doc-functions">"Functions"</h2>
         <div id="function-search-wrapper">
             <div class="input-div">

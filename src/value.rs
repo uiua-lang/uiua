@@ -610,6 +610,12 @@ impl From<String> for Value {
     }
 }
 
+impl<'a> From<&'a str> for Value {
+    fn from(s: &'a str) -> Self {
+        s.chars().collect()
+    }
+}
+
 impl From<Function> for Value {
     fn from(f: Function) -> Self {
         Arc::new(f).into()

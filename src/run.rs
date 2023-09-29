@@ -18,7 +18,7 @@ use crate::{
     function::*,
     lex::{CodeSpan, Sp, Span},
     parse::parse,
-    primitive::Primitive,
+    primitive::{Primitive, CONSTANTS},
     value::Value,
     Handle, Ident, NativeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
 };
@@ -142,12 +142,18 @@ impl FromStr for RunMode {
 impl Uiua {
     /// Create a new Uiua runtime with the standard IO backend
     pub fn with_native_sys() -> Self {
+        let mut scope = Scope::default();
+        let mut globals = Vec::new();
+        for def in &*CONSTANTS {
+            scope.names.insert(def.name.into(), globals.len());
+            globals.push(def.value.clone());
+        }
         Uiua {
             spans: Arc::new(Mutex::new(vec![Span::Builtin])),
             stack: Vec::new(),
-            scope: Scope::default(),
+            scope,
             higher_scopes: Vec::new(),
-            globals: Arc::new(Mutex::new(Vec::new())),
+            globals: Arc::new(Mutex::new(globals)),
             new_functions: Vec::new(),
             current_imports: Arc::new(Mutex::new(HashSet::new())),
             imports: Arc::new(Mutex::new(HashMap::new())),

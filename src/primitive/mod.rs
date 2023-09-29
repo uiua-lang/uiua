@@ -21,6 +21,7 @@ use std::{
 };
 
 use enum_iterator::{all, Sequence};
+use once_cell::sync::Lazy;
 use rand::prelude::*;
 
 use crate::{

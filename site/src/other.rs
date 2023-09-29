@@ -141,15 +141,15 @@ pub fn RightToLeft() -> impl IntoView {
         <h2>"Right-to-Left"</h2>
         <p>"One of the most asked questions about Uiua is \"Why does code execute right-to-left?\" It's a valid question. Every other stack-oriented language I know goes left-to-right."</p>
         <p>"The simple answer is that while Uiua is stack-"<em>"based"</em>", it is not stack-"<em>"oriented"</em>"."</p>
-        <p>"The misunderstanding is largely my own fault. The initial version of the website said \"stack-oriented\" everwhere and made references to FORTH. I have since rectified this."</p>
+        <p>"The misunderstanding is largely my own fault. The initial version of the website said \"stack-oriented\" everywhere and made references to FORTH. I have since rectified this."</p>
         <p>"When you write Uiua code the stack should just be a tool, a convention. It's how you pass values around. "<strong>"The stack should not guide how you think about solving problems in Uiua."</strong></p>
         <p>"Uiua is about composing arrays. The stack makes it possible to do this without naming local variables. This is the entire reason for its presence in the language. In particular, the stack can be used to construct arbitrary combinators and data flows. It is an extremely powerful mechanism for this purpose."</p>
-        <p>"You should not think of Uiua syntax like a FORTH. You should think of it like a "<em>"Lisp"</em>". Sure, there are way fewer parenthesis, but the structure is the same."</p>
+        <p>"You should not think of Uiua syntax like a FORTH. You should think of it like a "<em>"Lisp"</em>". Sure, there are way fewer parentheses, but the structure is the same."</p>
         <p>"Consider this Uiua expression:"</p>
         <Editor example="≡(!·_⇌) ◿2⇡⧻. ↯∶⇡/×.4_4"/>
         <p>"The left side of the expression is "<em>"not"</em>" the end or the beginning. It is the "<em>"root"</em>". The expression is a tree with branches that converge and diverge in different ways. It is not a list of instructions."</p>
-        <p>"This allows us to separate the execution model from the mental model. With a sperate mental model, why does it matter which direction the code executes?"</p>
-        <p>"The answer has to do with how left-to-right "<em>"natural"</em>" languages work. In English and the like, the verb in a sentence comes before the object it acts on. In addition, we often think of things in a procedural rather than a declarative way. If you think about using the "<Prim prim=Reverse/>" function on an array, you think of it as \"reversing the array\", not \"the array reversed\". If follows then that, like verbs, functions should come before their arguments."</p>
+        <p>"This allows us to separate the execution model from the mental model. With a separate mental model, why does it matter which direction the code executes?"</p>
+        <p>"The answer has to do with how left-to-right "<em>"natural"</em>" languages work. In English and the like, the verb in a sentence comes before the object it acts on. In addition, we often think of things in a procedural rather than a declarative way. If you think about using the "<Prim prim=Reverse/>" function on an array, you think of it as \"reversing the array\", not \"the array reversed\". It follows then that, like verbs, functions should come before their arguments."</p>
         <p>"This is a very SVO-language-centric way of thinking, and I think that's fine."</p>
         <hr/>
         <p>"Enough with the philosophical. There are also some syntactic reasons that left-to-right execution would be weird."</p>
@@ -159,7 +159,7 @@ pub fn RightToLeft() -> impl IntoView {
         <p><code>"-3"</code>" has this nice quality where it kind of becomes its own little monadic function that also has a syntactic similarity to mathematical notation. You could do something similar if the language went the other way, with "<code>"5-"</code>", but subtracting is a more common and intuitive operation than subtracting from."</p>
         <p>"Consider the simple "<Prim prim=First/>" function:"</p>
         <Editor example="⊢[1 2 3]"/>
-        <p>"The "<Prim prim=First glyph_only=true/>" glyph was chosen because is looks like it indicates the left side of a span (imagine some longer "<code>"⊢–––––⊣"</code>"). If it had to go on the right, there is no glyph that would indicate it quite so nicely. "<code>"⊣"</code>" has a similar aesthetic when put at the end, but that would indicate the last item rather than the first."</p>
+        <p>"The "<Prim prim=First glyph_only=true/>" glyph was chosen because it looks like it indicates the left side of a span (imagine some longer "<code>"⊢–––––⊣"</code>"). If it had to go on the right, there is no glyph that would indicate it quite so nicely. "<code>"⊣"</code>" has a similar aesthetic when put at the end, but that would indicate the last item rather than the first."</p>
     }
 }
 

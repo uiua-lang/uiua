@@ -50,13 +50,13 @@ impl GridFmt for u8 {
 
 impl GridFmt for f64 {
     fn fmt_grid(&self, boxed: bool) -> Grid {
-        let positive = (self.abs() * 1e12).round() / 1e12;
+        let positive = self.abs();
         let minus = if *self < -0.0 { "¯" } else { "" };
-        let s = if (positive - PI).abs() < 1e-12 {
+        let s = if (positive - PI).abs() < f64::EPSILON {
             format!("{minus}π")
-        } else if (positive - TAU).abs() < 1e-12 {
+        } else if (positive - TAU).abs() < f64::EPSILON {
             format!("{minus}τ")
-        } else if (positive - PI / 2.0).abs() < 1e-12 {
+        } else if (positive - PI / 2.0).abs() < f64::EPSILON {
             format!("{minus}η")
         } else if positive == INFINITY {
             format!("{minus}∞")

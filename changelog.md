@@ -1,7 +1,12 @@
 # Uiua Changelog
 
 ## Logpoint 2 - 2023-09-29
+### Language
 - Change [trident`∋`](https://uiua.org/docs/trident) argument order to make it easier to reason about
+- Fix a bug that made numbers that were `≤``1e-12``⌵` format to `0`
+### Website
+- Make a space character `@ ` more visible by underlining the space
+
 ## Logpoint 1 - 2023-09-28
 ### Language
 - Add this changelog

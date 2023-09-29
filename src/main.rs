@@ -79,9 +79,7 @@ fn run() -> UiuaResult {
                     no_format,
                     mode,
                     #[cfg(feature = "audio")]
-                    audio_time,
-                    #[cfg(feature = "audio")]
-                    audio_port,
+                    audio_options,
                 } => {
                     if let Some(path) = path.or_else(working_file_path) {
                         if !no_format {
@@ -89,15 +87,7 @@ fn run() -> UiuaResult {
                         }
                         let mode = mode.unwrap_or(RunMode::Normal);
                         #[cfg(feature = "audio")]
-                        if let Some(time) = audio_time {
-                            uiua::set_audio_stream_time(time);
-                        }
-                        #[cfg(feature = "audio")]
-                        if let Some(port) = audio_port {
-                            if let Err(e) = uiua::set_audio_stream_time_port(port) {
-                                eprintln!("Failed to set audio time port: {e}");
-                            }
-                        }
+                        setup_audio(audio_options);
                         let mut rt = Uiua::with_native_sys().with_mode(mode);
                         rt.load_file(path)?;
                         for value in rt.take_stack() {
@@ -105,6 +95,19 @@ fn run() -> UiuaResult {
                         }
                     } else {
                         eprintln!("{NO_UA_FILE}");
+                    }
+                }
+                App::Eval {
+                    code,
+                    #[cfg(feature = "audio")]
+                    audio_options,
+                } => {
+                    #[cfg(feature = "audio")]
+                    setup_audio(audio_options);
+                    let mut rt = Uiua::with_native_sys().with_mode(RunMode::Normal);
+                    rt.load_str(&code)?;
+                    for value in rt.take_stack() {
+                        println!("{}", value.show());
                     }
                 }
                 App::Test { path } => {
@@ -297,11 +300,15 @@ enum App {
         #[clap(long, help = "Run the file in a specific mode")]
         mode: Option<RunMode>,
         #[cfg(feature = "audio")]
-        #[clap(long, help = "The start time of audio streaming")]
-        audio_time: Option<f64>,
+        #[clap(flatten)]
+        audio_options: AudioOptions,
+    },
+    #[clap(about = "Evaluate an expression and print its output")]
+    Eval {
+        code: String,
         #[cfg(feature = "audio")]
-        #[clap(long, help = "The port to update audio time on")]
-        audio_port: Option<u16>,
+        #[clap(flatten)]
+        audio_options: AudioOptions,
     },
     #[clap(about = "Format and test a file")]
     Test { path: Option<PathBuf> },
@@ -312,6 +319,28 @@ enum App {
     #[cfg(feature = "lsp")]
     #[clap(about = "Run the Language Server")]
     Lsp,
+}
+
+#[cfg(feature = "audio")]
+#[derive(clap::Args)]
+struct AudioOptions {
+    #[clap(long, help = "The start time of audio streaming")]
+    audio_time: Option<f64>,
+    #[clap(long, help = "The port to update audio time on")]
+    audio_port: Option<u16>,
+}
+
+#[cfg(feature = "audio")]
+fn setup_audio(options: AudioOptions) {
+    if let Some(time) = options.audio_time {
+        uiua::set_audio_stream_time(time);
+    }
+
+    if let Some(port) = options.audio_port {
+        if let Err(e) = uiua::set_audio_stream_time_port(port) {
+            eprintln!("Failed to set audio time port: {e}");
+        }
+    }
 }
 
 fn uiua_files() -> Vec<PathBuf> {

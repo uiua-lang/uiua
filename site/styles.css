@@ -468,8 +468,10 @@ li {
     background-color: #000a;
     padding: 0.1em;
     border-radius: 0.2em;
-    left: -7em;
+    left: -1em;
     width: 7em;
+    pointer-events: none;
+    z-index: 1;
     -webkit-text-fill-color: #eee;
     -moz-text-fill-color: #eee;
 }

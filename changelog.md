@@ -6,6 +6,8 @@
 - Add shadowable [constants](https://uiua.org/docs/constants) like `e`.
 - Change [trident`∋`](https://uiua.org/docs/trident) argument order to make it easier to reason about
 - Fix a bug that made numbers that were `≤``1e-12``⌵` format to `0`
+### Interpreter
+- Add `uiua eval` command which evaluates a Uiua expression and prints the result
 ### Website
 - Make a space character `@ ` more visible by underlining the space
 

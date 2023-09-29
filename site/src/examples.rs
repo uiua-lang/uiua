@@ -22,8 +22,8 @@ const PALINDROME: &str = r#"$ uiua racecar wow cool!
 ⍛@ ⊜(⊂⊏∶"❌✅" ≅⇌..)≠@ ."#;
 const AUTOMATA: &str = "\
 rule ← /+⊞=∶ ⍘⋯⇌◫3⇌ ⊂∶0⊂0∶ ▽∶⇡⧻.⋯
-=÷2∶⇡+1. 500        # init
-⇌[⍥(rule30.)÷2+1⧻.] # run";
+=⌊÷2∶⇡.500         # init
+⇌[⍥(rule30.)⌊÷2⧻.] # run";
 const MANDELBROT: &str = "\
 Z ← ⊟/- ⁿ2 ∶×2 /×.⇌
 ⇌⍘⍉⊞⊟.×4 ÷∶-÷2,⇡. 300

@@ -107,7 +107,7 @@ fn format_item(output: &mut String, item: &Item, config: &FormatConfig) {
             format_words(output, w, config, true, 0);
         }
         Item::Binding(binding) => {
-            output.push_str(&binding.name.value.0);
+            output.push_str(&binding.name.value);
             output.push_str(" ← ");
             if let Some(sig) = &binding.signature {
                 format_signature(output, sig.value);
@@ -178,7 +178,7 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig, dept
                 output.push_str(line.span.as_str());
             }
         }
-        Word::Ident(ident) => output.push_str(&ident.0),
+        Word::Ident(ident) => output.push_str(ident),
         Word::Strand(items) => {
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {

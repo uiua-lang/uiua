@@ -837,7 +837,7 @@ mod tests {
                         println!("{prim} example:\n{}", ex.input);
                         if let Err(e) = Uiua::with_native_sys().load_str(&ex.input) {
                             if !ex.should_error {
-                                panic!("\nExample failed:\n{}\n{}", ex.input, e);
+                                panic!("\nExample failed:\n{}\n{}", ex.input, e.show(true));
                             }
                         } else if ex.should_error {
                             panic!("Example should have failed: {}", ex.input);

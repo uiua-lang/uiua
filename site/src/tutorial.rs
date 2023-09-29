@@ -481,8 +481,7 @@ fn TutorialBindings() -> impl IntoView {
         <Editor example="numone ← 1\nNuMtWo ← 2\n😀 ← \"happy\""/>
         <p>"Unlike most programming languages, binding names in Uiua "<em>"cannot"</em>" contain numbers or underscores."</p>
         <Editor example="variable_1 ← 5"/> // Should fail
-        <p>"Bindings are case-"<em>"in"</em>"sensitive."</p>
-        <Editor example="foo ← 5\n+ FOO fOo"/>
+        <p>"Bindings are case-sensitive."</p>
         <p>"The parser can somtimes mistake all-lowercase binding names for unformatted built-in functions."</p>
         <p>"Here, the parser thinks that "<code>"part"</code>" is "<Prim prim=Partition/>"."</p>
         <Editor example="part = 5" help={&["", "Run to format and reveal why this does not work"]}/>
@@ -678,7 +677,7 @@ Twin ← ⊟.
 PlusFive_Twin
 ---
 mymodule ←
-tw ← use "twin" mymodule
+tw ← use "Twin" mymodule
 pf ← use "PlusFive" mymodule
 
 tw pf 3"#/>
@@ -691,9 +690,9 @@ tw pf 3"#/>
         <p>"You can import it with "<Prim prim=Sys(SysOp::Import)/>" and then "<Prim prim=Use/>" to extract the functions."</p>
         <p>"By using "<Prim prim=Dup/>" on the imported module, you can repetedly extract functions from it. Notice the lack of a "<Prim prim=Dup glyph_only=true/>" after the last "<Prim prim=Use/>"."</p>
         <Editor example=r#"&i "example.ua"
-square ← use "square".
-double ← use "double".
-increment ← use "increment"
+square ← use "Square".
+double ← use "Double".
+increment ← use "Increment"
 
 increment square double 5"#/>
         <p><Prim prim=Sys(SysOp::Import)/>" only imports a given file once and caches the results. Subsequent imports of the same file (from anywhere) will not run the file's code again, but they "<em>"will"</em>" push its stack values again."</p>

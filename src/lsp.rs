@@ -335,7 +335,7 @@ mod server {
                     range: Some(range),
                 }
             } else if let Some((ident, binding, range)) = binding_range {
-                let mut contents = vec![MarkedString::String(ident.value.as_str().into())];
+                let mut contents = vec![MarkedString::String(ident.value.as_ref().into())];
                 if let Some(comment) = &binding.comment {
                     contents.push(MarkedString::String(comment.clone()))
                 }

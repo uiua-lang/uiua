@@ -75,8 +75,7 @@ pub fn Tour() -> impl IntoView {
         <Editor example="x = 5\n+x x"/>
         <p><code>"←"</code>" just pops the first thing off the stack and assigns it to the name on the left, so if there is already a value on the stack, you don't actually need anything on the right."</p>
         <Editor example="×2 [2 3 4]\nx ←\nx"/>
-        <p>"Names are case-"<em>"in"</em>"sensitive and can only contain letters."</p>
-        <Editor example="value ← ÷2 [2 3 4]\nVaLuE"/>
+        <p>"Names are case-sensitive and can only contain letters."</p>
 
         <h2 id="basic-array-operations">"Basic Array Operations"</h2>
         <p>"You can reverse an array's rows with "<Prim prim=Reverse/>"."</p>

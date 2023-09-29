@@ -1319,8 +1319,8 @@ primitive!(
     /// Can be used after [&i].
     ///
     /// ex: &i "example.ua"
-    ///   : square ← use "square".
-    ///   : increment ← use "increment"
+    ///   : square ← use "Square".
+    ///   : increment ← use "Increment"
     ///   : square increment 5
     (2, Use, Misc, "use"),
     /// Generate a unique tag

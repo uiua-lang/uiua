@@ -142,8 +142,8 @@ sys_op! {
     /// If the file has already been imported, its code will not be run again, but the values it originally pushed onto the stack will be pushed again.
     /// Functions can be extracted from the imported modules with [use].
     /// ex: .&i "example.ua"
-    ///   : double ← use "double".
-    ///   : square ← use "square"
+    ///   : double ← use "Double".
+    ///   : square ← use "Square"
     ///   : square double 5
     (1, Import, "&i", "import"),
     /// Get the current time in seconds

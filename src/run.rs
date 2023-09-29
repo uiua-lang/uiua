@@ -606,7 +606,7 @@ code:
                 self.push_instr(Instr::Call(span));
             }
         } else if let Some(prim) =
-            Primitive::all().find(|p| p.names().is_some_and(|n| ident == n.text))
+            Primitive::all().find(|p| p.names().is_some_and(|n| &*ident == n.text))
         {
             // Name is a non-formattable primitive
             let span = self.add_span(span);

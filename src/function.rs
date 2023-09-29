@@ -281,7 +281,7 @@ impl Function {
     }
     pub(crate) fn format_inner(&self) -> String {
         if let FunctionId::Named(name) = &self.id {
-            return name.as_str().into();
+            return name.as_ref().into();
         }
         if let Some((prim, _)) = self.as_primitive() {
             return prim.to_string();
@@ -393,7 +393,7 @@ impl FunctionId {
 impl PartialEq<&str> for FunctionId {
     fn eq(&self, other: &&str) -> bool {
         match self {
-            FunctionId::Named(name) => name == other,
+            FunctionId::Named(name) => &&**name == other,
             _ => false,
         }
     }

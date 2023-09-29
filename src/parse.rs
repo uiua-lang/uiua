@@ -216,7 +216,7 @@ impl Parser {
     fn try_binding(&mut self) -> Option<Binding> {
         let start = self.index;
         Some(if let Some(ident) = self.try_ident() {
-            if ident.value.as_str().contains('&') {
+            if ident.value.contains('&') {
                 self.errors
                     .push(self.prev_span().sp(ParseError::AmpersandBindingName));
             }

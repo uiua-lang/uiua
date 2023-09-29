@@ -1282,7 +1282,7 @@ fn set_code_html(id: &str, code: &str) {
                             r#"<span
                                 class="code-span code-hover {color_class}" 
                                 data-title="space character">@</span><span
-                                class="code-span code-hover {color_class} underline" 
+                                class="code-span code-hover {color_class} space-character" 
                                 data-title="space character"> </span>"#
                         )
                     } else {

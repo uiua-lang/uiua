@@ -586,9 +586,20 @@ li {
     }
 }
 
+.space-character {
+    border-width: 1px;
+    border-radius: 0.2em;
+    border-style: dashed;
+    margin: 0.1em;
+}
+
 @media (prefers-color-scheme: dark) {
     .string-literal-span {
         color: #20f9fc;
+    }
+
+    .space-character {
+        border-color: #20f9fc80;
     }
 
     .strand-span {
@@ -599,6 +610,10 @@ li {
 @media (prefers-color-scheme: light) {
     .string-literal-span {
         color: #1c9;
+    }
+
+    .space-character {
+        border-color: #1c98;
     }
 
     .strand-span {
@@ -709,8 +724,4 @@ input[type=text] {
     display: flex;
     justify-content: space-between;
     align-items: center;
-}
-
-.underline {
-    text-decoration: underline;
 }

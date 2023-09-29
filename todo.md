@@ -1,5 +1,6 @@
 - Rust API
-- Make windows and find return the same size array
+- Make fill work with keep
+- Add a truncate modifier
 - Docs
   - Invert bits for control flow
   - Control flow

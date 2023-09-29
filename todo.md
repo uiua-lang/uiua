@@ -1,4 +1,6 @@
 - Fix editor glyph tooltip going off the screen on mobile
+- Change trident argument order
+- Improve trace formatting
 - Rust API
 - Make space character more visible
 - Docs

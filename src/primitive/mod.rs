@@ -940,10 +940,9 @@ mod tests {
             Primitive::all()
                 .filter(|p| p.class() != PrimClass::Stack && matches!(p.modifier_args(), Some(1))),
         );
-        let dyadic_modifiers: String = gen_group(
-            Primitive::all()
-                .filter(|p| p.class() != PrimClass::Stack && matches!(p.modifier_args(), Some(2))),
-        );
+        let dyadic_modifiers: String = gen_group(Primitive::all().filter(|p| {
+            p.class() != PrimClass::Stack && matches!(p.modifier_args(), Some(n) if n >= 2)
+        }));
 
         let text = format!(
             r##"{{

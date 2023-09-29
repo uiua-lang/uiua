@@ -1,5 +1,7 @@
 # Uiua Changelog
 
+## Logpoint 2 - 2023-09-29
+- Change [trident`∋`](https://uiua.org/docs/trident) argument order to make it easier to reason about
 ## Logpoint 1 - 2023-09-28
 ### Language
 - Add this changelog

@@ -1105,10 +1105,11 @@ primitive!(
     ///
     /// [trident] is a very powerfull function when juggling 3 values.
     /// Each function may take up to 3 arguments.
-    /// Let's say the three values are `a`, `b`, and `c`.
-    /// The first function will be passed up to `a`, `b`, and `c` in that order.
-    /// The second function will be passed up to `b`, `c`, and `a` in that order.
-    /// The third function will be passed up to `c`, `a`, and `b` in that order.
+    /// Let's say the the three functions are `f`, `g`, and `h`, and the three values are `a`, `b`, and `c`.
+    /// Any of the functions taking 1 argument will be called as `f a`, `g b`, or `h c` respectively.
+    /// Any of the functions taking 2 arguments will be called as `f a b`, `g a c`, or `h b c` respectively.
+    /// Any of the functions taking 3 argyments will be called on `a b c`.
+    ///
     ///
     /// We can see how this all works with [join].
     /// ex: [∋··· 1 2 3]
@@ -1116,7 +1117,7 @@ primitive!(
     /// ex: [∋'⊂⊂'⊂⊂'⊂⊂ 1 2 3]
     ///
     /// A good example use case is when implementing the quadratic formula.
-    /// ex: Quad ← ÷∶+↷∋(×2)¯(⊟¯.√-∶ⁿ2∶×4×)
+    /// ex: Quad ← ÷∶+↷∋(×2)¯(⊟¯.√-∶ⁿ2∶×4×↶)
     ///   : Quad 1 2 0
     /// The first function passed to [trident] [multiply]s `a` by `2`.
     /// The second function [negate]s `b`.

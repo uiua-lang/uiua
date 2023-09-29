@@ -590,7 +590,34 @@ fn TutorialAdvancedStack() -> impl IntoView {
 
         <h2 id="trident"><Prim prim=Trident/></h2>
         <p><Prim prim=Trident/>" is similar to "<Prim prim=Fork/>", except it applies 3 functions to 3 arguments."</p>
-        <p>"The functions may take up to 3 arguments. The first function will be passed the three arguments in order, and the second and third functions will be passed the successive "<Prim prim=Roll/>"s of the arguments. We can see how this works with "<Prim prim=Join/></p>
+        <p>"If we call the functions "<code>"f"</code>", "<code>"g"</code>", and "<code>"h"</code>" and call the arguments "<code>"a"</code>", "<code>"b"</code>", and "<code>"c"</code>", then "<Prim prim=Trident/>" calls "<code>"h"</code>" then "<code>"g"</code>" then "<code>"f"</code>" each with arguments according to this table:"</p>
+        <table class="bordered-table">
+            <tr>
+                <th>"Args"</th>
+                <th><code>"f"</code></th>
+                <th><code>"g"</code></th>
+                <th><code>"h"</code></th>
+            </tr>
+            <tr>
+                <td>"1"</td>
+                <td><code>"a"</code></td>
+                <td><code>"b"</code></td>
+                <td><code>"c"</code></td>
+            </tr>
+            <tr>
+                <td>"2"</td>
+                <td><code>"a b"</code></td>
+                <td><code>"a c"</code></td>
+                <td><code>"b c"</code></td>
+            </tr>
+            <tr>
+                <td>"3"</td>
+                <td><code>"a b c"</code></td>
+                <td><code>"a b c"</code></td>
+                <td><code>"a b c"</code></td>
+            </tr>
+        </table>
+        <p>"We can see how this works with "<Prim prim=Join/></p>
         <Editor example="[∋··· 1 2 3]"/>
         <Editor example="[∋⊂⊂⊂ 1 2 3]"/>
         <Editor example="[∋'⊂⊂'⊂⊂'⊂⊂ 1 2 3]"/>

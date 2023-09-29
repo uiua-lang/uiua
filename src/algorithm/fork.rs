@@ -105,20 +105,20 @@ pub fn trident(env: &mut Uiua) -> UiuaResult {
             env.call(h)?;
         }
         2 => {
-            env.push(a.clone());
             env.push(c.clone());
+            env.push(b.clone());
             env.call(h)?;
         }
         3 => {
+            env.push(c.clone());
             env.push(b.clone());
             env.push(a.clone());
-            env.push(c.clone());
             env.call(h)?;
         }
         n => {
             return Err(env.error(format!(
                 "Trident's functions may not take more than 3 arguments, \
-                but function 3 takes {n}"
+                but the third function {h} takes {n}"
             )))
         }
     }
@@ -130,19 +130,19 @@ pub fn trident(env: &mut Uiua) -> UiuaResult {
         }
         2 => {
             env.push(c.clone());
-            env.push(b.clone());
+            env.push(a.clone());
             env.call(g)?;
         }
         3 => {
-            env.push(a.clone());
             env.push(c.clone());
             env.push(b.clone());
+            env.push(a.clone());
             env.call(g)?;
         }
         n => {
             return Err(env.error(format!(
                 "Trident's functions may not take more than 3 arguments, \
-                but function 2 takes {n}"
+                but the second function {g} takes {n}"
             )))
         }
     }
@@ -166,7 +166,7 @@ pub fn trident(env: &mut Uiua) -> UiuaResult {
         n => {
             return Err(env.error(format!(
                 "Trident's functions may not take more than 3 arguments, \
-                but function 1 takes {n}"
+                but the first function {f} takes {n}"
             )))
         }
     }

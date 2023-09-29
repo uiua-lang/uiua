@@ -446,6 +446,14 @@ impl Lexer {
     }
     fn run(mut self) -> (Vec<Sp<Token>>, Vec<Sp<LexError>>) {
         use {self::AsciiToken::*, Token::*};
+        // Initial scope delimiters
+        let start = self.loc;
+        if self.next_chars_exact("---") {
+            self.end(TripleMinus, start);
+        } else if self.next_chars_exact("~~~") {
+            self.end(TripleTilde, start);
+        }
+        // Main loop
         loop {
             let start = self.loc;
             let Some(c) = self.next_char() else {
@@ -480,9 +488,6 @@ impl Lexer {
                 '>' if self.next_char_exact('=') => self.end(GreaterEqual, start),
                 '!' if self.next_char_exact('=') => self.end(BangEqual, start),
                 '←' => self.end(LeftArrow, start),
-                // Scope delimiters
-                '-' if self.next_chars_exact("--") => self.end(TripleMinus, start),
-                '~' if self.next_chars_exact("~~") => self.end(TripleTilde, start),
                 // Comments
                 '#' => {
                     let mut comment = String::new();
@@ -595,7 +600,16 @@ impl Lexer {
                     self.end(Number, start)
                 }
                 // Newlines
-                '\n' => self.end(Newline, start),
+                '\n' => {
+                    self.end(Newline, start);
+                    // Scope delimiters
+                    let start = self.loc;
+                    if self.next_chars_exact("---") {
+                        self.end(TripleMinus, start);
+                    } else if self.next_chars_exact("~~~") {
+                        self.end(TripleTilde, start);
+                    }
+                }
                 ' ' | '\t' => {
                     while self.next_char_exact(' ') || self.next_char_exact('\t') {}
                     self.end(Spaces, start)

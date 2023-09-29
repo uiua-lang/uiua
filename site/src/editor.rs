@@ -752,6 +752,7 @@ pub fn Editor<'a>(
         ("¯", "negative (`)", "number-literal-span", None),
         ("@", "character", "string-literal-span", None),
         ("\"", "string", "string-literal-span", Some(('"', '"'))),
+        ("^", "terminate modifier", "", None),
         ("←", "binding (=)", "", None),
         ("|", "signature", "", None),
         ("#", "comment", "comment-span", None),

@@ -548,6 +548,17 @@ X 5"/>
         <p>"Multi-line strings are implicitly format strings."</p>
         <Editor example="↷+,, 1 2\n&p $ Do you know what _ + _ is?\n   $ It's _!"/>
 
+        <h2 id="terminating-modifiers">"Terminating Modifiers"</h2>
+        <p>"Sometimes you don't want parse the function(s) following a modifier as being part of the modifier."</p>
+        <p>"In these cases, you can use "<code>"^"</code>" to terminate the modifier. Functions after the "<code>"^"</code>" will be considered \"outside\" of it."</p>
+        <p>"This is useful when you want the function passed to your modifier to be dynamic."</p>
+        <p>"Ignore the "<code>"|1"</code>" for now. It will be explained shortly."</p>
+        <Editor example="\
+f ← |1 /^:[1 2 3 4 5]
+f(+)
+f(×)
+f(↥)"/>
+
         <h2 id="stack-signatures">"Stack Signatures"</h2>
         <p>"Bindings and inline functions can have a "<em>"stack signature"</em>" declared with a "<code>"|"</code>" followed by 1 or 2 numbers seperated by a "<code>"."</code>". The first number is the number of arguments the function pops from the stack. The second number is the number of values the function pushes to the stack."</p>
         <p>"The second number is optional. If it is not given, it is assumed to be 1."</p>
@@ -557,9 +568,9 @@ X 5"/>
         <Editor example="∵(|2.1 ⊟.×) 1_2_3 4_5_6"/>
         <p>"Stack signatures are useful for documenting functions to make sure that they are used correctly."</p>
         <p>"A signature declaration is "<em>"required"</em>" if the function's signature cannot be infered. The compiler can usually infer a function's signature unless you are doing something weird with higher-order functions or fiddling with function arrays, or if you are using "<Prim prim=Recur/>"sion."</p>
-        <Editor example="∺(⊞ ∶,)+_-⇡3"/> // Should fail
+        <Editor example="∺(⊞^∶,)+_-⇡3"/> // Should fail
         <p>"Simply add a signature declaration to fix this."</p>
-        <Editor example="∺(|1 ⊞ ∶,)+_-⇡3"/>
+        <Editor example="∺(|1 ⊞^∶,)+_-⇡3"/>
         <p>"In addition, an error is thrown if a function's signature can be inferred and the inferred signature does not match the declared signature. This can help validate that a function is correct."</p>
         <Editor example="≡(|2 ↻.) 1_2_3 ↯3_3⇡9"/> // Should fail
     }

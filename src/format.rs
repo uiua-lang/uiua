@@ -220,6 +220,9 @@ fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig, dept
         Word::Modified(m) => {
             output.push_str(&m.modifier.value.to_string());
             format_words(output, &m.operands, config, true, depth);
+            if m.terminated {
+                output.push('^');
+            }
         }
         Word::Spaces => output.push(' '),
         Word::Comment(comment) => {

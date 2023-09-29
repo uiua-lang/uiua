@@ -2,6 +2,7 @@
 
 ## Logpoint 2 - 2023-09-29
 ### Language
+- Add `^` syntax to terminate modifier parsing. There is a basic example [in the tutorial](http://uiua.org/docs/functions#terminating-modifiers).
 - Change [trident`∋`](https://uiua.org/docs/trident) argument order to make it easier to reason about
 - Fix a bug that made numbers that were `≤``1e-12``⌵` format to `0`
 ### Website

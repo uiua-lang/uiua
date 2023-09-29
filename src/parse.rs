@@ -385,14 +385,18 @@ impl Parser {
             return self.try_term();
         };
         let mut args = Vec::new();
-        if self.try_spaces().is_none() {
-            for _ in 0..margs {
-                args.extend(self.try_spaces());
-                if let Some(arg) = self.try_strand() {
-                    args.push(arg);
-                } else {
-                    break;
-                }
+        self.try_spaces();
+        let mut terminated = false;
+        for _ in 0..margs {
+            if self.try_exact(Caret).is_some() {
+                terminated = true;
+                break;
+            }
+            args.extend(self.try_spaces());
+            if let Some(arg) = self.try_strand() {
+                args.push(arg);
+            } else {
+                break;
             }
         }
         Some(if args.is_empty() {
@@ -412,6 +416,7 @@ impl Parser {
             span.sp(Word::Modified(Box::new(Modified {
                 modifier,
                 operands: args,
+                terminated,
             })))
         })
     }

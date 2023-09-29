@@ -16,7 +16,7 @@ pub const QUADRATIC: &str = "\
 Quad ← ÷∶+↷∋(×2)¯(⊟¯.√+ⁿ2∶××¯4↶)
 Quad 1 2 0";
 const STRIPES: &str = "\
-∺(|1 ⊞ ∶,)+_↥_- ⇡300
+∺(|1 ⊞^∶,)+_↥_- ⇡300
 ⍉ ÷2 +1.2 ○ ÷10";
 const PALINDROME: &str = r#"$ uiua racecar wow cool!
 ⍛@ ⊜(⊂⊏∶"❌✅" ≅⇌..)≠@ ."#;

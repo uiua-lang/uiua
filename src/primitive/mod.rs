@@ -13,6 +13,7 @@ use std::{
         INFINITY,
     },
     fmt,
+    iter::once,
     sync::{
         atomic::{self, AtomicUsize},
         OnceLock,
@@ -549,20 +550,23 @@ fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
     } else {
         env.span().to_string()
     };
-    let mut formatted = val.show();
-    env.push(val);
-    formatted = formatted
+    let formatted = val.show();
+    const MD_ARRAY_INIT: &str = "╭─";
+    let message = if let Some(first_line) = formatted
         .lines()
-        .enumerate()
-        .map(|(i, l)| {
-            if i == 0 {
-                format!("{span} {l}\n")
-            } else {
-                format!("{:>span$} {l}\n", "", span = span.len())
-            }
-        })
-        .collect();
-    env.backend.print_str_trace(&formatted);
+        .next()
+        .filter(|line| line.starts_with(MD_ARRAY_INIT))
+    {
+        let first_line = format!("{}{}", first_line.trim(), span);
+        once(first_line.as_str())
+            .chain(formatted.lines().skip(1))
+            .map(|line| format!("{line}\n"))
+            .collect()
+    } else {
+        format!("  {span}\n{formatted}\n")
+    };
+    env.push(val);
+    env.backend.print_str_trace(&message);
     Ok(())
 }
 

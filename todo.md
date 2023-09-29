@@ -1,5 +1,3 @@
-- Change trident argument order
-- Improve trace formatting
 - Rust API
 - Make space character more visible
 - Docs

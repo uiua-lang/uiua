@@ -9,7 +9,7 @@ use tinyvec::tiny_vec;
 
 use crate::{
     algorithm::pervade::bin_pervade_generic,
-    array::{Array, ArrayValue, Shape},
+    array::{Array, ArrayValue, FormatShape, Shape},
     cowslice::cowslice,
     primitive::Primitive,
     run::{ArrayArg, FunctionArg},
@@ -909,6 +909,20 @@ fn dyadic_level_recursive(
     yn: usize,
     env: &mut Uiua,
 ) -> UiuaResult<Value> {
+    let xs_prefix = &xs.shape()[..xn];
+    let ys_prefix = &ys.shape()[..yn];
+    if !xs_prefix.iter().zip(ys_prefix).all(|(a, b)| a == b) {
+        return Err(env.error(format!(
+            "Cannot level with ranks {} and {} arrays with shapes {} and {} \
+            because shape prefixes {} and {} are not compatible",
+            xs.rank() - xn,
+            ys.rank() - yn,
+            xs.format_shape(),
+            ys.format_shape(),
+            FormatShape(xs_prefix),
+            FormatShape(ys_prefix)
+        )));
+    }
     Ok(match (xn, yn) {
         (0, 0) => {
             env.push(ys);

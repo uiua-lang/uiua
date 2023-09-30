@@ -67,7 +67,7 @@ tr:nth-child(even) {
 }
 
 li {
-    margin: -0.5em 0;
+    margin: 0.3em 0;
 }
 
 @media (prefers-color-scheme: dark) {

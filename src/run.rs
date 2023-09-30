@@ -650,6 +650,14 @@ code:
                 }
             }
         };
+
+        if let [Instr::Push(val), Instr::Call(_)] = instrs.as_slice() {
+            if let Some(f) = val.as_function() {
+                self.push_instr(Instr::push(f.clone()));
+                return Ok(());
+            }
+        }
+
         let function = Function::new(func.id, instrs, FunctionKind::Normal, sig);
         self.push_instr(Instr::push(function));
         Ok(())

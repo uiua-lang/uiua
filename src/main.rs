@@ -207,7 +207,7 @@ fn watch(open_path: &Path) -> io::Result<()> {
         for i in 0..TRIES {
             match format_file(path, &config) {
                 Ok(formatted) => {
-                    if formatted.is_empty() {
+                    if formatted.output.is_empty() {
                         clear_watching();
                         print_watching();
                         return Ok(());

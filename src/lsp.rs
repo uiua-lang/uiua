@@ -369,7 +369,7 @@ mod server {
             let range = Range::new(Position::new(0, 0), Position::new(u32::MAX, u32::MAX));
             Ok(Some(vec![TextEdit {
                 range,
-                new_text: formatted,
+                new_text: formatted.output,
             }]))
         }
 

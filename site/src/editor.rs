@@ -281,8 +281,15 @@ pub fn Editor<'a>(
                     ..Default::default()
                 },
             ) {
-                state().set_code(&formatted, cursor);
-                formatted
+                let cursor = if let Some((start, end)) = get_code_cursor() {
+                    let new_start = formatted.map_char_pos(start as usize);
+                    let new_end = formatted.map_char_pos(end as usize);
+                    Cursor::Set(new_start as u32, new_end as u32)
+                } else {
+                    cursor
+                };
+                state().set_code(&formatted.output, cursor);
+                formatted.output
             } else {
                 state().set_code(&code_text, cursor);
                 code_text

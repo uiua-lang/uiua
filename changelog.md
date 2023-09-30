@@ -14,6 +14,7 @@
 - Add `uiua eval` command which evaluates a Uiua expression and prints the result
 ### Website
 - Make a space character `@ ` more visible by underlining the space
+- Improve cursor movement when formatting in the editor
 
 ## Logpoint 1 - 2023-09-28
 ### Language

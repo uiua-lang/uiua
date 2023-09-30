@@ -1,9 +1,14 @@
 //! Functions for formatting Uiua code.
 
-use std::{env, fs, path::Path};
+use std::{collections::BTreeMap, env, fs, path::Path};
 
 use crate::{
-    ast::*, function::Signature, grid_fmt::GridFmt, lex::Sp, parse::parse, UiuaError, UiuaResult,
+    ast::*,
+    function::Signature,
+    grid_fmt::GridFmt,
+    lex::{CodeSpan, Loc, Sp},
+    parse::parse,
+    UiuaError, UiuaResult,
 };
 
 #[derive(Debug, Clone)]
@@ -44,17 +49,53 @@ impl Default for FormatConfig {
     }
 }
 
-pub fn format<P: AsRef<Path>>(input: &str, path: P, config: &FormatConfig) -> UiuaResult<String> {
+pub struct FormatOutput {
+    pub output: String,
+    pub glyph_map: BTreeMap<CodeSpan, Loc>,
+}
+
+impl FormatOutput {
+    pub fn map_char_pos(&self, pos: usize) -> usize {
+        let mut pairs = self.glyph_map.iter();
+        let Some((mut a_span, mut a_loc)) = pairs.next() else {
+            return pos;
+        };
+        if pos <= a_span.start.char_pos {
+            return pos;
+        }
+        if (a_span.start.char_pos + 1..=a_span.end.char_pos).contains(&pos) {
+            return a_loc.char_pos;
+        }
+        for (b_span, b_loc) in pairs {
+            if (a_span.end.char_pos + 1..=b_span.start.char_pos).contains(&pos) {
+                return a_loc.char_pos + (pos - a_span.end.char_pos);
+            }
+            if (b_span.start.char_pos + 1..=b_span.end.char_pos).contains(&pos) {
+                return b_loc.char_pos;
+            }
+            a_span = b_span;
+            a_loc = b_loc;
+        }
+        a_loc.char_pos + (pos - a_span.end.char_pos)
+    }
+}
+
+pub fn format<P: AsRef<Path>>(
+    input: &str,
+    path: P,
+    config: &FormatConfig,
+) -> UiuaResult<FormatOutput> {
     format_impl(input, Some(path.as_ref()), config)
 }
-pub fn format_str(input: &str, config: &FormatConfig) -> UiuaResult<String> {
+pub fn format_str(input: &str, config: &FormatConfig) -> UiuaResult<FormatOutput> {
     format_impl(input, None, config)
 }
 
-pub fn format_items(items: &[Item], config: &FormatConfig) -> String {
+pub fn format_items(items: &[Item], config: &FormatConfig) -> FormatOutput {
     let mut formatter = Formatter {
         config,
         output: String::new(),
+        glyph_map: BTreeMap::new(),
     };
     formatter.format_items(items);
     let mut output = formatter.output;
@@ -64,10 +105,17 @@ pub fn format_items(items: &[Item], config: &FormatConfig) -> String {
     if config.trailing_newline && !output.trim().is_empty() {
         output.push('\n');
     }
-    output
+    FormatOutput {
+        output,
+        glyph_map: formatter.glyph_map,
+    }
 }
 
-fn format_impl(input: &str, path: Option<&Path>, config: &FormatConfig) -> UiuaResult<String> {
+fn format_impl(
+    input: &str,
+    path: Option<&Path>,
+    config: &FormatConfig,
+) -> UiuaResult<FormatOutput> {
     let (items, errors) = parse(input, path);
     if errors.is_empty() {
         Ok(format_items(&items, config))
@@ -76,17 +124,18 @@ fn format_impl(input: &str, path: Option<&Path>, config: &FormatConfig) -> UiuaR
     }
 }
 
-pub fn format_file<P: AsRef<Path>>(path: P, config: &FormatConfig) -> UiuaResult<String> {
+pub fn format_file<P: AsRef<Path>>(path: P, config: &FormatConfig) -> UiuaResult<FormatOutput> {
     let path = path.as_ref();
     let input =
         fs::read_to_string(path).map_err(|e| UiuaError::Load(path.to_path_buf(), e.into()))?;
     let formatted = format(&input, path, config)?;
-    if formatted == input {
+    if formatted.output == input {
         return Ok(formatted);
     }
     let dont_write = env::var("UIUA_NO_FORMAT").is_ok_and(|val| val == "1");
     if !dont_write {
-        fs::write(path, &formatted).map_err(|e| UiuaError::Format(path.to_path_buf(), e.into()))?;
+        fs::write(path, &formatted.output)
+            .map_err(|e| UiuaError::Format(path.to_path_buf(), e.into()))?;
     }
     Ok(formatted)
 }
@@ -94,6 +143,7 @@ pub fn format_file<P: AsRef<Path>>(path: P, config: &FormatConfig) -> UiuaResult
 struct Formatter<'a> {
     config: &'a FormatConfig,
     output: String,
+    glyph_map: BTreeMap<CodeSpan, Loc>,
 }
 
 impl<'a> Formatter<'a> {
@@ -217,19 +267,19 @@ impl<'a> Formatter<'a> {
                 self.output.push(')');
             }
             Word::Primitive(prim) => {
-                self.output.push_str(&prim.to_string());
+                self.push(&word.span, &prim.to_string());
                 if prim.is_modifier() {
                     self.output.push('^');
                 }
             }
             Word::Modified(m) => {
-                self.output.push_str(&m.modifier.value.to_string());
+                self.push(&m.modifier.span, &m.modifier.value.to_string());
                 self.format_words(&m.operands, true, depth);
                 if m.terminated {
                     self.output.push('^');
                 }
             }
-            Word::Spaces => self.output.push(' '),
+            Word::Spaces => self.push(&word.span, " "),
             Word::Comment(comment) => {
                 self.output.push('#');
                 if self.config.comment_space_after_hash {
@@ -289,6 +339,13 @@ impl<'a> Formatter<'a> {
             }
         }
     }
+    fn push(&mut self, span: &CodeSpan, formatted: &str) {
+        self.output.push_str(formatted);
+        if span.as_str() != formatted {
+            let loc = end_loc(&self.output);
+            self.glyph_map.insert(span.clone(), loc);
+        }
+    }
 }
 
 fn trim_spaces(words: &[Sp<Word>], trim_end: bool) -> &[Sp<Word>] {
@@ -340,5 +397,28 @@ fn word_is_multiline(word: &Word) -> bool {
         Word::Modified(m) => m.operands.iter().any(|word| word_is_multiline(&word.value)),
         Word::Comment(_) => false,
         Word::Spaces => false,
+    }
+}
+
+fn end_loc(s: &str) -> Loc {
+    let mut line = 0;
+    let mut col = 0;
+    let mut char_pos = 0;
+    let mut byte_pos = 0;
+    for c in s.chars() {
+        if c == '\n' {
+            line += 1;
+            col = 0;
+        } else {
+            col += 1;
+        }
+        char_pos += 1;
+        byte_pos += c.len_utf8();
+    }
+    Loc {
+        line,
+        col,
+        char_pos,
+        byte_pos,
     }
 }

@@ -48,8 +48,6 @@ lockfree.version = "0.5.1"
 notify.optional = true
 notify.version = "5"
 once_cell = "1"
-open.optional = true
-open.version = "4"
 parking_lot = "0.12.1"
 rand.default-features = false
 rand.features = ["small_rng"]
@@ -72,7 +70,7 @@ viuer.version = "0.6.2"
 
 [features]
 audio = ["hodaun", "crossbeam-channel", "lockfree"]
-binary = ["ctrlc", "notify", "clap", "open", "color-backtrace", "lsp"]
+binary = ["ctrlc", "notify", "clap", "color-backtrace", "lsp"]
 debug = []
 default = ["binary", "terminal_image"]
 lsp = ["tower-lsp", "tokio"]

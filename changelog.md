@@ -12,6 +12,7 @@
 - Fix a bug that made numbers that were `≤``1e-12``⌵` format to `0`
 ### Interpreter
 - Add `uiua eval` command which evaluates a Uiua expression and prints the result
+- Watch commands no longer try to open the file being watched
 ### Website
 - Make a space character `@ ` more visible by underlining the space
 - Improve cursor movement when formatting in the editor

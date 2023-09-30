@@ -62,7 +62,6 @@ fn run() -> UiuaResult {
                         eprintln!("File already exists: {}", path.display());
                     } else {
                         fs::write("main.ua", "\"Hello, World!\"").unwrap();
-                        _ = open::that("main.ua");
                     }
                 }
                 App::Fmt { path } => {
@@ -124,7 +123,6 @@ fn run() -> UiuaResult {
                 }
                 App::Watch => {
                     if let Some(path) = working_file_path() {
-                        _ = open::that(&path);
                         if let Err(e) = watch(&path) {
                             eprintln!("Error watching file: {e}");
                         }
@@ -138,7 +136,6 @@ fn run() -> UiuaResult {
         }
         Err(e) if e.kind() == ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
             if let Some(path) = working_file_path() {
-                _ = open::that(&path);
                 if let Err(e) = watch(&path) {
                     eprintln!("Error watching file: {e}");
                 }

@@ -10,3 +10,6 @@ site/dist
 main.ua
 profile.yaml
 uiua.tmLanguage.json
+
+# symlink created by `nix build`
+result

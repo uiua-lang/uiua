@@ -246,9 +246,12 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     pub fn grade(&self, env: &Uiua) -> UiuaResult<Vec<usize>> {
         if self.rank() == 0 {
-            return Err(env.error("Cannot grade a rank-0 array"));
+            return Err(env.error("Cannot grade a scalar"));
         }
-        let mut indices = (0..self.flat_len()).collect::<Vec<_>>();
+        if self.flat_len() == 0 {
+            return Ok(Vec::new());
+        }
+        let mut indices = (0..self.row_count()).collect::<Vec<_>>();
         indices.sort_by(|&a, &b| {
             self.row_slice(a)
                 .iter()

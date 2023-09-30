@@ -368,7 +368,19 @@ code:
 
                 if sig.args <= self.stack.len() {
                     self.exec_global_instrs(instrs)?;
-                    self.stack.pop().unwrap_or_else(|| {
+                    if let Some(value) = self.stack.pop() {
+                        match value {
+                            Value::Func(fs) => match fs.into_scalar() {
+                                Ok(mut f) => {
+                                    Arc::make_mut(&mut f).id =
+                                        FunctionId::Named(binding.name.value.clone());
+                                    f.into()
+                                }
+                                Err(fs) => fs.into(),
+                            },
+                            val => val,
+                        }
+                    } else {
                         Function::new(
                             FunctionId::Named(binding.name.value.clone()),
                             Vec::new(),
@@ -376,7 +388,7 @@ code:
                             sig,
                         )
                         .into()
-                    })
+                    }
                 } else {
                     make_fn(instrs, sig)
                 }
@@ -657,6 +669,7 @@ code:
             }
         };
 
+        // De-nest function calls
         if let [Instr::Push(val), Instr::Call(_)] = instrs.as_slice() {
             if let Some(f) = val.as_function() {
                 self.push_instr(Instr::push(f.clone()));

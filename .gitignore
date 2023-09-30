@@ -1,7 +1,6 @@
 /target
 /docs
-*.ua
-!/tests/*.ua
+main.ua
 site/dist
 glyph_test.txt
 *.png

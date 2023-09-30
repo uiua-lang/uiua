@@ -1,5 +1,4 @@
 - Rust API
-- Multidimensional keep
 - Docs
   - Invert bits for control flow
   - Control flow

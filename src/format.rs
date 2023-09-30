@@ -44,9 +44,20 @@ impl Default for FormatConfig {
     }
 }
 
+pub fn format<P: AsRef<Path>>(input: &str, path: P, config: &FormatConfig) -> UiuaResult<String> {
+    format_impl(input, Some(path.as_ref()), config)
+}
+pub fn format_str(input: &str, config: &FormatConfig) -> UiuaResult<String> {
+    format_impl(input, None, config)
+}
+
 pub fn format_items(items: &[Item], config: &FormatConfig) -> String {
-    let mut output = String::new();
-    format_items_impl(&mut output, items, config);
+    let mut formatter = Formatter {
+        config,
+        output: String::new(),
+    };
+    formatter.format_items(items);
+    let mut output = formatter.output;
     while output.ends_with('\n') {
         output.pop();
     }
@@ -54,13 +65,6 @@ pub fn format_items(items: &[Item], config: &FormatConfig) -> String {
         output.push('\n');
     }
     output
-}
-
-pub fn format<P: AsRef<Path>>(input: &str, path: P, config: &FormatConfig) -> UiuaResult<String> {
-    format_impl(input, Some(path.as_ref()), config)
-}
-pub fn format_str(input: &str, config: &FormatConfig) -> UiuaResult<String> {
-    format_impl(input, None, config)
 }
 
 fn format_impl(input: &str, path: Option<&Path>, config: &FormatConfig) -> UiuaResult<String> {
@@ -87,201 +91,202 @@ pub fn format_file<P: AsRef<Path>>(path: P, config: &FormatConfig) -> UiuaResult
     Ok(formatted)
 }
 
-fn format_items_impl(output: &mut String, items: &[Item], config: &FormatConfig) {
-    for item in items {
-        format_item(output, item, config);
-        output.push('\n');
-    }
+struct Formatter<'a> {
+    config: &'a FormatConfig,
+    output: String,
 }
 
-fn format_item(output: &mut String, item: &Item, config: &FormatConfig) {
-    match item {
-        Item::Scoped { items, test } => {
-            let delim = if *test { "~~~" } else { "---" };
-            output.push_str(delim);
-            output.push('\n');
-            format_items_impl(output, items, config);
-            output.push_str(delim);
+impl<'a> Formatter<'a> {
+    fn format_items(&mut self, items: &[Item]) {
+        for item in items {
+            self.format_item(item);
+            self.output.push('\n');
         }
-        Item::Words(w) => {
-            format_words(output, w, config, true, 0);
-        }
-        Item::Binding(binding) => {
-            output.push_str(&binding.name.value);
-            output.push_str(" ← ");
-            if let Some(sig) = &binding.signature {
-                format_signature(output, sig.value);
+    }
+    fn format_item(&mut self, item: &Item) {
+        match item {
+            Item::Scoped { items, test } => {
+                let delim = if *test { "~~~" } else { "---" };
+                self.output.push_str(delim);
+                self.output.push('\n');
+                self.format_items(items);
+                self.output.push_str(delim);
             }
-            format_words(output, &binding.words, config, true, 0);
+            Item::Words(w) => {
+                self.format_words(w, true, 0);
+            }
+            Item::Binding(binding) => {
+                self.output.push_str(&binding.name.value);
+                self.output.push_str(" ← ");
+                if let Some(sig) = &binding.signature {
+                    self.format_signature(sig.value);
+                }
+                self.format_words(&binding.words, true, 0);
+            }
+            Item::ExtraNewlines(_) => {}
         }
-        Item::ExtraNewlines(_) => {}
     }
-}
-
-fn format_signature(output: &mut String, sig: Signature) {
-    output.push('|');
-    output.push_str(&sig.args.to_string());
-    if sig.outputs != 1 {
-        output.push('.');
-        output.push_str(&sig.outputs.to_string());
+    fn format_signature(&mut self, sig: Signature) {
+        self.output.push('|');
+        self.output.push_str(&sig.args.to_string());
+        if sig.outputs != 1 {
+            self.output.push('.');
+            self.output.push_str(&sig.outputs.to_string());
+        }
+        self.output.push(' ');
     }
-    output.push(' ');
-}
-
-fn format_words(
-    output: &mut String,
-    words: &[Sp<Word>],
-    config: &FormatConfig,
-    trim_end: bool,
-    depth: usize,
-) {
-    for word in trim_spaces(words, trim_end) {
-        format_word(output, word, config, depth);
+    fn format_words(&mut self, words: &[Sp<Word>], trim_end: bool, depth: usize) {
+        for word in trim_spaces(words, trim_end) {
+            self.format_word(word, depth);
+        }
     }
-}
-
-fn format_word(output: &mut String, word: &Sp<Word>, config: &FormatConfig, depth: usize) {
-    match &word.value {
-        Word::Number(s, n) => {
-            let grid_str = n.grid_string();
-            if grid_str.len() < s.len() {
-                output.push_str(&grid_str);
-            } else {
-                output.push_str(&s.replace('`', "¯"));
+    fn format_word(&mut self, word: &Sp<Word>, depth: usize) {
+        match &word.value {
+            Word::Number(s, n) => {
+                let grid_str = n.grid_string();
+                if grid_str.len() < s.len() {
+                    self.output.push_str(&grid_str);
+                } else {
+                    self.output.push_str(&s.replace('`', "¯"));
+                }
+            }
+            Word::Char(c) => {
+                let formatted = format!("{c:?}");
+                let formatted = &formatted[1..formatted.len() - 1];
+                self.output.push('@');
+                self.output.push_str(formatted);
+            }
+            Word::String(s) => self.output.push_str(&format!("{:?}", s)),
+            Word::FormatString(_) => self.output.push_str(word.span.as_str()),
+            Word::MultilineString(lines) => {
+                if lines.len() == 1 {
+                    self.output.push_str(lines[0].span.as_str());
+                    return;
+                }
+                let curr_line_pos = if self.output.ends_with('\n') {
+                    0
+                } else {
+                    self.output
+                        .lines()
+                        .last()
+                        .unwrap_or_default()
+                        .chars()
+                        .count()
+                };
+                for (i, line) in lines.iter().enumerate() {
+                    if i > 0 {
+                        self.output.push('\n');
+                        for _ in 0..curr_line_pos {
+                            self.output.push(' ');
+                        }
+                    }
+                    self.output.push_str(line.span.as_str());
+                }
+            }
+            Word::Ident(ident) => self.output.push_str(ident),
+            Word::Strand(items) => {
+                for (i, item) in items.iter().enumerate() {
+                    if i > 0 {
+                        self.output.push('_');
+                    }
+                    self.format_word(item, depth);
+                }
+                if items.len() == 1 {
+                    self.output.push('_');
+                }
+            }
+            Word::Array(arr) => {
+                if arr.constant {
+                    self.output.push('{');
+                } else {
+                    self.output.push('[');
+                }
+                self.format_multiline_words(&arr.lines, true, depth + 1);
+                if arr.constant {
+                    self.output.push('}');
+                } else {
+                    self.output.push(']');
+                }
+            }
+            Word::Func(func) => {
+                self.output.push('(');
+                if let Some(sig) = &func.signature {
+                    self.format_signature(sig.value);
+                }
+                self.format_multiline_words(&func.lines, false, depth + 1);
+                self.output.push(')');
+            }
+            Word::Primitive(prim) => {
+                self.output.push_str(&prim.to_string());
+                if prim.is_modifier() {
+                    self.output.push('^');
+                }
+            }
+            Word::Modified(m) => {
+                self.output.push_str(&m.modifier.value.to_string());
+                self.format_words(&m.operands, true, depth);
+                if m.terminated {
+                    self.output.push('^');
+                }
+            }
+            Word::Spaces => self.output.push(' '),
+            Word::Comment(comment) => {
+                self.output.push('#');
+                if self.config.comment_space_after_hash {
+                    self.output.push(' ');
+                }
+                self.output.push_str(comment);
             }
         }
-        Word::Char(c) => {
-            let formatted = format!("{c:?}");
-            let formatted = &formatted[1..formatted.len() - 1];
-            output.push('@');
-            output.push_str(formatted);
+    }
+    fn format_multiline_words(
+        &mut self,
+        lines: &[Vec<Sp<Word>>],
+        allow_compact: bool,
+        depth: usize,
+    ) {
+        if lines.is_empty() {
+            return;
         }
-        Word::String(s) => output.push_str(&format!("{:?}", s)),
-        Word::FormatString(_) => output.push_str(word.span.as_str()),
-        Word::MultilineString(lines) => {
-            if lines.len() == 1 {
-                output.push_str(lines[0].span.as_str());
-                return;
-            }
-            let curr_line_pos = if output.ends_with('\n') {
-                0
-            } else {
-                output.lines().last().unwrap_or_default().chars().count()
-            };
-            for (i, line) in lines.iter().enumerate() {
-                if i > 0 {
-                    output.push('\n');
-                    for _ in 0..curr_line_pos {
-                        output.push(' ');
+        if lines.len() == 1
+            && (lines[0].len() == 1 || !lines[0].iter().any(|word| word_is_multiline(&word.value)))
+        {
+            self.format_words(&lines[0], true, depth);
+            return;
+        }
+        let curr_line = self.output.lines().last().unwrap_or_default();
+        let start_line_pos = if self.output.ends_with('\n') {
+            0
+        } else {
+            curr_line.chars().count()
+        };
+        let compact = allow_compact
+            && self.config.compact_multiline.unwrap_or_else(|| {
+                start_line_pos <= self.config.multiline_compact_threshold
+                    || curr_line.starts_with(' ')
+            })
+            && (lines.iter().flatten()).all(|word| !word_is_multiline(&word.value));
+        let indent = if compact {
+            start_line_pos
+        } else {
+            self.config.multiline_indent * depth
+        };
+        for (i, line) in lines.iter().enumerate() {
+            if i > 0 || !compact {
+                self.output.push('\n');
+                if !line.is_empty() {
+                    for _ in 0..indent {
+                        self.output.push(' ');
                     }
                 }
-                output.push_str(line.span.as_str());
             }
+            self.format_words(line, true, depth);
         }
-        Word::Ident(ident) => output.push_str(ident),
-        Word::Strand(items) => {
-            for (i, item) in items.iter().enumerate() {
-                if i > 0 {
-                    output.push('_');
-                }
-                format_word(output, item, config, depth);
+        if !compact {
+            self.output.push('\n');
+            for _ in 0..self.config.multiline_indent * depth.saturating_sub(1) {
+                self.output.push(' ');
             }
-            if items.len() == 1 {
-                output.push('_');
-            }
-        }
-        Word::Array(arr) => {
-            if arr.constant {
-                output.push('{');
-            } else {
-                output.push('[');
-            }
-            format_multiline_words(output, &arr.lines, config, true, depth + 1);
-            if arr.constant {
-                output.push('}');
-            } else {
-                output.push(']');
-            }
-        }
-        Word::Func(func) => {
-            output.push('(');
-            if let Some(sig) = &func.signature {
-                format_signature(output, sig.value);
-            }
-            format_multiline_words(output, &func.lines, config, false, depth + 1);
-            output.push(')');
-        }
-        Word::Primitive(prim) => {
-            output.push_str(&prim.to_string());
-            if prim.is_modifier() {
-                output.push('^');
-            }
-        }
-        Word::Modified(m) => {
-            output.push_str(&m.modifier.value.to_string());
-            format_words(output, &m.operands, config, true, depth);
-            if m.terminated {
-                output.push('^');
-            }
-        }
-        Word::Spaces => output.push(' '),
-        Word::Comment(comment) => {
-            output.push('#');
-            if config.comment_space_after_hash {
-                output.push(' ');
-            }
-            output.push_str(comment);
-        }
-    }
-}
-
-fn format_multiline_words(
-    output: &mut String,
-    lines: &[Vec<Sp<Word>>],
-    config: &FormatConfig,
-    allow_compact: bool,
-    depth: usize,
-) {
-    if lines.is_empty() {
-        return;
-    }
-    if lines.len() == 1
-        && (lines[0].len() == 1 || !lines[0].iter().any(|word| word_is_multiline(&word.value)))
-    {
-        format_words(output, &lines[0], config, true, depth);
-        return;
-    }
-    let curr_line = output.lines().last().unwrap_or_default();
-    let start_line_pos = if output.ends_with('\n') {
-        0
-    } else {
-        curr_line.chars().count()
-    };
-    let compact = allow_compact
-        && config.compact_multiline.unwrap_or_else(|| {
-            start_line_pos <= config.multiline_compact_threshold || curr_line.starts_with(' ')
-        })
-        && (lines.iter().flatten()).all(|word| !word_is_multiline(&word.value));
-    let indent = if compact {
-        start_line_pos
-    } else {
-        config.multiline_indent * depth
-    };
-    for (i, line) in lines.iter().enumerate() {
-        if i > 0 || !compact {
-            output.push('\n');
-            if !line.is_empty() {
-                for _ in 0..indent {
-                    output.push(' ');
-                }
-            }
-        }
-        format_words(output, line, config, true, depth);
-    }
-    if !compact {
-        output.push('\n');
-        for _ in 0..config.multiline_indent * depth.saturating_sub(1) {
-            output.push(' ');
         }
     }
 }

@@ -6,6 +6,7 @@
 - Add `^` syntax to terminate modifier parsing. There is a basic example [in the tutorial](http://uiua.org/docs/functions#terminating-modifiers).
 - Add shadowable [constants](https://uiua.org/docs/constants) like `e`.
 - Change [trident`∋`](https://uiua.org/docs/trident) argument order to make it easier to reason about
+- Enable [fill`⍛`] for [keep`▽`] if the amount list is shorter than the kept array
 - Fix a bug that made numbers that were `≤``1e-12``⌵` format to `0`
 ### Interpreter
 - Add `uiua eval` command which evaluates a Uiua expression and prints the result

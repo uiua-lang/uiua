@@ -1,6 +1,6 @@
 //! Algorithms for dyadic array operations
 
-use std::{cmp::Ordering, iter::repeat, mem::take, sync::Arc};
+use std::{borrow::Cow, cmp::Ordering, iter::repeat, mem::take, sync::Arc};
 
 use tinyvec::tiny_vec;
 
@@ -553,12 +553,46 @@ impl<T: ArrayValue> Array<T> {
         self
     }
     pub fn list_keep(mut self, amount: &[usize], env: &Uiua) -> UiuaResult<Self> {
-        if self.row_count() != amount.len() {
-            return Err(env.error(format!(
-                "Cannot keep array with shape {} with array of length {}",
-                self.format_shape(),
-                amount.len()
-            )));
+        let mut amount = Cow::Borrowed(amount);
+        match amount.len().cmp(&self.row_count()) {
+            Ordering::Equal => {}
+            Ordering::Less => {
+                if let Some(fill) = env.fill::<f64>() {
+                    if fill < 0.0 || fill.fract() != 0.0 {
+                        return Err(env.error(format!(
+                            "Fill value for keep must be a non-negative\
+                            integer, but it is {fill}"
+                        )));
+                    }
+                    let fill = fill as usize;
+                    let mut new_amount = amount.to_vec();
+                    new_amount.extend(repeat(fill).take(self.row_count() - amount.len()));
+                    amount = new_amount.into();
+                } else {
+                    return Err(env.error(format!(
+                        "Cannot keep array with shape {} with array of shape {}",
+                        self.format_shape(),
+                        FormatShape(&[amount.len()])
+                    )));
+                }
+            }
+            Ordering::Greater => {
+                return Err(env.error(if env.fill::<f64>().is_some() {
+                    format!(
+                        "Cannot keep array with shape {} with array of shape {}.\
+                        A fill value is available, but keep can only been filled\
+                        if there are fewer counts than rows.",
+                        self.format_shape(),
+                        FormatShape(amount.as_ref())
+                    )
+                } else {
+                    format!(
+                        "Cannot keep array with shape {} with array of shape {}",
+                        self.format_shape(),
+                        FormatShape(amount.as_ref())
+                    )
+                }))
+            }
         }
         if self.rank() == 0 {
             if amount.len() != 1 {
@@ -586,7 +620,7 @@ impl<T: ArrayValue> Array<T> {
         } else {
             let mut new_data = Vec::new();
             let mut new_len = 0;
-            for (row, &n) in self.rows().zip(amount) {
+            for (row, &n) in self.rows().zip(amount.as_ref()) {
                 new_len += n;
                 for _ in 0..n {
                     new_data.extend_from_slice(&row.data);

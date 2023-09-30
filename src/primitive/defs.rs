@@ -776,6 +776,9 @@ primitive!(
     /// ex: ↯ 3 [1 2 3]
     /// ex: ↯ 2 [1_2_3 4_5_6]
     ///
+    /// The counts list can be [fill]ed if it is shorter than the kept array.
+    /// ex: ⍛3▽ [1 0 2] [8 3 9 2 0]
+    ///
     /// [keep]'s glyph is `▽` because its main use is to filter, and `▽` kind of looks like a coffee filter.
     (2, Keep, DyadicArray, ("keep", '▽')),
     /// Find the occurences of one array in another
@@ -1068,6 +1071,10 @@ primitive!(
     ///
     /// [fill] will prevent [pick] and [select] from throwing an error if an index is out of bounds.
     /// ex: ⍛∞⊏ 3_7_0 [8 3 9 2 0]
+    ///
+    /// [fill] allows the list of counts for [keep] to be shorter than the kept array.
+    /// This is especially useful when used with functions like [windows] or [find] which make an array shorter than their input.
+    /// ex: ⍛0▽≡/>◫2. [1 8 0 2 7 2 3]
     ([2], Fill, OtherModifier, ("fill", '⍛')),
     /// Apply a function at a different array depth
     ///

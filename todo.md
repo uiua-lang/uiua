@@ -1,6 +1,4 @@
 - Rust API
-- Make fill work with keep
-- Add a truncate modifier
 - Docs
   - Invert bits for control flow
   - Control flow
@@ -14,7 +12,6 @@
   - System functions
   - Thinking with arrays
 - Expand test suite
-- Allow non-scalar fill
 - Optimizations
   - Dyadic level - The dyadic case of level should have its own function
   - Row windows - `≡f◫` for scalar window size should be optimized to not materialize all the windows

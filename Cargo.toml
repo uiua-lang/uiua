@@ -66,8 +66,11 @@ tokio.optional = true
 tokio.version = "1"
 tower-lsp.optional = true
 tower-lsp.version = "0.19.0"
+# TODO: revert back to a main release of viuer if a new version gets cut.
 viuer.optional = true
 viuer.version = "0.6.2"
+viuer.git = "https://github.com/atanunq/viuer"
+viuer.rev = "refs/pull/51/head"
 webpki-roots.optional = true
 webpki-roots.version = "0.25.0"
 

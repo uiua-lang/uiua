@@ -122,12 +122,8 @@ fn run() -> UiuaResult {
                     }
                 }
                 App::Watch { no_format } => {
-                    if let Some(path) = working_file_path() {
-                        if let Err(e) = watch(&path, !no_format) {
-                            eprintln!("Error watching file: {e}");
-                        }
-                    } else {
-                        eprintln!("{NO_UA_FILE}");
+                    if let Err(e) = watch(working_file_path().as_deref(), !no_format) {
+                        eprintln!("Error watching file: {e}");
                     }
                 }
                 #[cfg(feature = "lsp")]
@@ -135,13 +131,8 @@ fn run() -> UiuaResult {
             }
         }
         Err(e) if e.kind() == ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
-            if let Some(path) = working_file_path() {
-                if let Err(e) = watch(&path, true) {
-                    eprintln!("Error watching file: {e}");
-                }
-            } else {
-                _ = e.print();
-                eprintln!("\n{NO_UA_FILE}");
+            if let Err(e) = watch(working_file_path().as_deref(), true) {
+                eprintln!("Error watching file: {e}");
             }
         }
         Err(e) => _ = e.print(),
@@ -153,28 +144,32 @@ const NO_UA_FILE: &str =
     "No .ua file found nearby. Initialize one in the current directory with `uiua init`";
 
 fn working_file_path() -> Option<PathBuf> {
-    let in_src = PathBuf::from("src.main.ua");
-    let main = if in_src.exists() {
-        in_src
+    let main_in_src = PathBuf::from("src/main.ua");
+    let main = if main_in_src.exists() {
+        main_in_src
     } else {
         PathBuf::from("main.ua")
     };
-    Some(if main.exists() {
-        main
-    } else if let Some(entry) = fs::read_dir(".")
-        .into_iter()
-        .chain(fs::read_dir("src"))
-        .flatten()
-        .filter_map(Result::ok)
-        .find(|entry| entry.path().extension().map_or(false, |ext| ext == "ua"))
-    {
-        entry.path()
+    if main.exists() {
+        Some(main)
     } else {
-        return None;
-    })
+        let paths: Vec<_> = fs::read_dir(".")
+            .into_iter()
+            .chain(fs::read_dir("src"))
+            .flatten()
+            .filter_map(Result::ok)
+            .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "ua"))
+            .map(|entry| entry.path())
+            .collect();
+        if paths.len() == 1 {
+            paths.into_iter().next()
+        } else {
+            None
+        }
+    }
 }
 
-fn watch(open_path: &Path, format: bool) -> io::Result<()> {
+fn watch(initial_path: Option<&Path>, format: bool) -> io::Result<()> {
     let (send, recv) = channel();
     let mut watcher = notify::recommended_watcher(send).unwrap();
     watcher
@@ -255,7 +250,9 @@ fn watch(open_path: &Path, format: bool) -> io::Result<()> {
         println!("Failed to format file after {TRIES} tries");
         Ok(())
     };
-    run(open_path)?;
+    if let Some(path) = initial_path {
+        run(path)?;
+    }
     let mut last_time = Instant::now();
     loop {
         sleep(Duration::from_millis(10));

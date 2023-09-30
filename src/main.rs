@@ -33,7 +33,7 @@ fn main() {
             println!("# Program interrupted");
             print_watching();
         } else {
-            if let Ok(App::Watch) | Err(_) = App::try_parse() {
+            if let Ok(App::Watch { .. }) | Err(_) = App::try_parse() {
                 clear_watching_with(" ", "");
             }
             exit(0)
@@ -121,9 +121,9 @@ fn run() -> UiuaResult {
                         return Ok(());
                     }
                 }
-                App::Watch => {
+                App::Watch { no_format } => {
                     if let Some(path) = working_file_path() {
-                        if let Err(e) = watch(&path) {
+                        if let Err(e) = watch(&path, !no_format) {
                             eprintln!("Error watching file: {e}");
                         }
                     } else {
@@ -136,7 +136,7 @@ fn run() -> UiuaResult {
         }
         Err(e) if e.kind() == ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
             if let Some(path) = working_file_path() {
-                if let Err(e) = watch(&path) {
+                if let Err(e) = watch(&path, true) {
                     eprintln!("Error watching file: {e}");
                 }
             } else {
@@ -174,7 +174,7 @@ fn working_file_path() -> Option<PathBuf> {
     })
 }
 
-fn watch(open_path: &Path) -> io::Result<()> {
+fn watch(open_path: &Path, format: bool) -> io::Result<()> {
     let (send, recv) = channel();
     let mut watcher = notify::recommended_watcher(send).unwrap();
     watcher
@@ -202,9 +202,14 @@ fn watch(open_path: &Path) -> io::Result<()> {
         }
         const TRIES: u8 = 10;
         for i in 0..TRIES {
-            match format_file(path, &config) {
-                Ok(formatted) => {
-                    if formatted.output.is_empty() {
+            let formatted = if format {
+                format_file(path, &config).map(|f| f.output)
+            } else {
+                fs::read_to_string(path).map_err(|e| UiuaError::Load(path.to_path_buf(), e.into()))
+            };
+            match formatted {
+                Ok(input) => {
+                    if input.is_empty() {
                         clear_watching();
                         print_watching();
                         return Ok(());
@@ -310,7 +315,10 @@ enum App {
     #[clap(about = "Format and test a file")]
     Test { path: Option<PathBuf> },
     #[clap(about = "Run a main.ua in watch mode")]
-    Watch,
+    Watch {
+        #[clap(long, help = "Don't format the file before running")]
+        no_format: bool,
+    },
     #[clap(about = "Format a uiua file or all files in the current directory")]
     Fmt { path: Option<PathBuf> },
     #[cfg(feature = "lsp")]

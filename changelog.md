@@ -1,5 +1,9 @@
 # Uiua Changelog
 
+## Logpoint 3 - 2023-09-30
+### Interpreter
+- Allow passing `--no-format` to `uiua watch`
+
 ## Logpoint 2 - 2023-09-29
 ### Language
 - Make binding names case-sensitive

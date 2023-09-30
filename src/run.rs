@@ -368,9 +368,15 @@ code:
 
                 if sig.args <= self.stack.len() {
                     self.exec_global_instrs(instrs)?;
-                    self.stack
-                        .pop()
-                        .ok_or_else(|| self.error("Nothing on the stack to bind"))?
+                    self.stack.pop().unwrap_or_else(|| {
+                        Function::new(
+                            FunctionId::Named(binding.name.value.clone()),
+                            Vec::new(),
+                            FunctionKind::Normal,
+                            sig,
+                        )
+                        .into()
+                    })
                 } else {
                     make_fn(instrs, sig)
                 }

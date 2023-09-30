@@ -15,10 +15,11 @@ use leptos::{ev::keydown, *};
 use leptos_router::{use_navigate, NavigateOptions};
 use uiua::{
     format::{format_str, FormatConfig},
+    image_to_bytes,
     lex::is_ident_char,
     primitive::{PrimClass, Primitive},
     run::RunMode,
-    value_to_image_bytes, value_to_wav_bytes, SysBackend, Uiua,
+    value_to_image, value_to_wav_bytes, SysBackend, Uiua,
 };
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{Event, HtmlBrElement, HtmlDivElement, KeyboardEvent, MouseEvent, Node};
@@ -1325,7 +1326,7 @@ fn set_code_html(id: &str, code: &str) {
     elem.set_inner_html(&html);
 }
 
-/// Returns the output and the formatted code
+/// Run code and return the output
 fn run_code(code: &str) -> Vec<OutputItem> {
     let io = WebBackend::default();
     // Run
@@ -1353,10 +1354,12 @@ fn run_code(code: &str) -> Vec<OutputItem> {
             }
         }
         // Try to convert the value to an image
-        if let Ok(bytes) = value_to_image_bytes(&value, ImageOutputFormat::Png) {
-            if value.shape().iter().product::<usize>() > 100 {
-                stack.push(OutputItem::Image(bytes));
-                continue;
+        if let Ok(image) = value_to_image(&value) {
+            if image.width() > 25 && image.height() > 25 {
+                if let Ok(bytes) = image_to_bytes(&image, ImageOutputFormat::Png) {
+                    stack.push(OutputItem::Image(bytes));
+                    continue;
+                }
             }
         }
         // Otherwise, just show the value

@@ -1327,8 +1327,12 @@ impl SysOp {
 }
 
 pub fn value_to_image_bytes(value: &Value, format: ImageOutputFormat) -> Result<Vec<u8>, String> {
+    image_to_bytes(&value_to_image(value)?, format)
+}
+
+pub fn image_to_bytes(image: &DynamicImage, format: ImageOutputFormat) -> Result<Vec<u8>, String> {
     let mut bytes = Cursor::new(Vec::new());
-    value_to_image(value)?
+    image
         .write_to(&mut bytes, format)
         .map_err(|e| format!("Failed to write image: {e}"))?;
     Ok(bytes.into_inner())

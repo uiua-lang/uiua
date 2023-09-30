@@ -314,7 +314,7 @@ enum App {
     },
     #[clap(about = "Format and test a file")]
     Test { path: Option<PathBuf> },
-    #[clap(about = "Run a main.ua in watch mode")]
+    #[clap(about = "Run .ua files in the current directory when they change")]
     Watch {
         #[clap(long, help = "Don't format the file before running")]
         no_format: bool,

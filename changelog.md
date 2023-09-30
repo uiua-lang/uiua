@@ -4,7 +4,8 @@
 ### Language
 - Make binding names case-sensitive
 - Add `^` syntax to terminate modifier parsing. There is a basic example [in the tutorial](http://uiua.org/docs/functions#terminating-modifiers).
-- Add shadowable [constants](https://uiua.org/docs/constants) like `e`.
+- Add [`&runi`](https://uiua.org/docs/&runi) and [`&runc`](https://uiua.org/docs/&runc) functions for running commands
+- Add shadowable [constants](https://uiua.org/docs/constants) like `e` and `os`
 - Change [trident`∋`](https://uiua.org/docs/trident) argument order to make it easier to reason about
 - Enable [fill`⍛`] for [keep`▽`] if the amount list is shorter than the kept array
 - Fix a bug that made numbers that were `≤``1e-12``⌵` format to `0`

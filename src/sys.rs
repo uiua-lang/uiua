@@ -4,6 +4,7 @@ use std::{
     fs::{self, File},
     io::{stderr, stdin, stdout, BufRead, Cursor, Read, Write},
     net::*,
+    process::Command,
     sync::{
         atomic::{self, AtomicU64},
         Arc, OnceLock,
@@ -150,6 +151,18 @@ sys_op! {
     ///
     /// ex: &n
     (0, Now, "&n", "now"),
+    /// Run a command and wait for it to finish
+    ///
+    /// Standard IO will be inherited.
+    ///
+    /// Expects either a string, a [rank]`2` character array, or a [rank]`1` array of [constant] strings.
+    (1(0), RunInherit, "&runi", "run command inherit"),
+    /// Run a command and wait for it to finish
+    ///
+    /// Standard IO will be captured. Stdout and stderr will each be pushed to the stack as strings.
+    ///
+    /// Expects either a string, a [rank]`2` character array, or a [rank]`1` array of [constant] strings.
+    (1(2), RunCapture, "&runc", "run command capture"),
     /// Decode an image from a byte array
     ///
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, and `ico`.
@@ -414,6 +427,16 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         Err(Err(
             "Joining threads is not supported in this environment".into()
         ))
+    }
+    fn run_command_inherit(&self, command: &str, args: &[&str]) -> Result<(), String> {
+        Err("Running commands is not supported in this environment".into())
+    }
+    fn run_command_capture(
+        &self,
+        command: &str,
+        args: &[&str],
+    ) -> Result<(String, String), String> {
+        Err("Running commands is not supported in this environment".into())
     }
 }
 
@@ -827,6 +850,29 @@ impl SysBackend for NativeSys {
             Ok(Err(e)) => Err(Ok(e)),
             Err(e) => Err(Err(format!("Thread panicked: {:?}", e))),
         }
+    }
+    fn run_command_inherit(&self, command: &str, args: &[&str]) -> Result<(), String> {
+        Command::new(command)
+            .args(args)
+            .spawn()
+            .map_err(|e| e.to_string())?
+            .wait()
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+    fn run_command_capture(
+        &self,
+        command: &str,
+        args: &[&str],
+    ) -> Result<(String, String), String> {
+        let output = Command::new(command)
+            .args(args)
+            .output()
+            .map_err(|e| e.to_string())?;
+        Ok((
+            String::from_utf8_lossy(&output.stdout).into(),
+            String::from_utf8_lossy(&output.stderr).into(),
+        ))
     }
 }
 
@@ -1321,9 +1367,87 @@ impl SysOp {
                     .into();
                 env.backend.close(handle).map_err(|e| env.error(e))?;
             }
+            SysOp::RunInherit => {
+                let (command, args) = value_to_command(&env.pop(1)?, env)?;
+                let args: Vec<_> = args.iter().map(|s| s.as_str()).collect();
+                env.backend
+                    .run_command_inherit(&command, &args)
+                    .map_err(|e| env.error(e))?;
+            }
+            SysOp::RunCapture => {
+                let (command, args) = value_to_command(&env.pop(1)?, env)?;
+                let args: Vec<_> = args.iter().map(|s| s.as_str()).collect();
+                let (stdout, stderr) = env
+                    .backend
+                    .run_command_capture(&command, &args)
+                    .map_err(|e| env.error(e))?;
+                env.push(stdout);
+                env.push(stderr);
+            }
         }
         Ok(())
     }
+}
+
+fn value_to_command(value: &Value, env: &Uiua) -> UiuaResult<(String, Vec<String>)> {
+    let mut strings = Vec::new();
+    match value {
+        Value::Char(arr) => match arr.rank() {
+            0 | 1 => strings.push(arr.data.iter().collect::<String>()),
+            2 => {
+                for row in arr.rows() {
+                    strings.push(row.data.iter().collect::<String>());
+                }
+            }
+            n => {
+                return Err(env.error(format!(
+                    "Character array as command must be rank 0, 1, \
+                    or 2, but its rank is {n}"
+                )))
+            }
+        },
+        Value::Func(arr) => match arr.rank() {
+            0 | 1 => {
+                for f in &arr.data {
+                    match f.as_constant() {
+                        Some(Value::Char(arr)) if arr.rank() <= 1 => {
+                            strings.push(arr.data.iter().collect::<String>())
+                        }
+                        Some(val) => {
+                            return Err(env.error(format!(
+                                "Function array as command must be all constant functions \
+                                returning strings, but {f} returns a {}",
+                                val.type_name()
+                            )))
+                        }
+                        None => {
+                            return Err(env.error(format!(
+                                "Function array as command must be all constant \
+                                functions, but {f} is not constant"
+                            )))
+                        }
+                    }
+                }
+            }
+            n => {
+                return Err(env.error(format!(
+                    "Function array as command must be rank 0 or 1, \
+                    but its rank is {n}"
+                )))
+            }
+        },
+        Value::Num(_) | Value::Byte(_) => {
+            return Err(env.error(format!(
+                "Command must be a string or function array, but it is {}s",
+                value.type_name()
+            )))
+        }
+    }
+    if strings.is_empty() {
+        return Err(env.error("Command array not be empty"));
+    }
+    let command = strings.remove(0);
+    Ok((command, strings))
 }
 
 pub fn value_to_image_bytes(value: &Value, format: ImageOutputFormat) -> Result<Vec<u8>, String> {

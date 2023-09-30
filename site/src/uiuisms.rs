@@ -171,4 +171,6 @@ uiuisms!(
     r#"▽¬⍜⇌\×∊, "thing" "remove this →thing""#,
     /// Trim whitespace
     r#"▽×⍜'⊟⇌≡\↥.≠@ . "  abc xyz   ""#,
+    /// Upscale a matrix
+    "▽↯⧻,/÷△.⍉▽↯⧻,30 [0_1 1_0]"
 );

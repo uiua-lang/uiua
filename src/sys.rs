@@ -114,39 +114,6 @@ sys_op! {
     (0, Args, "&args", "arguments"),
     /// Get the value of an environment variable
     (1, Var, "&var", "environment variable"),
-    /// Open a file and return a handle to it
-    (1, FOpen, "&fo", "file - open"),
-    /// Create a file and return a handle to it
-    (1, FCreate, "&fc", "file - create"),
-    /// Check if a file exists at a path
-    (1, FExists, "&fe", "file - exists"),
-    /// List the contents of a directory
-    (1, FListDir, "&fld", "file - list directory"),
-    /// Check if a path is a file
-    (1, FIsFile, "&fif", "file - is file"),
-    /// Read all the contents of a file into a string
-    (1, FReadAllStr, "&fras", "file - read all to string"),
-    /// Read all the contents of a file into a byte array
-    (1, FReadAllBytes, "&frab", "file - read all to bytes"),
-    /// Write the entire contents of an array to a file
-    (2(0), FWriteAll, "&fwa", "file - write all"),
-    /// Read at most n bytes from a stream
-    (2, ReadStr, "&rs", "read to string"),
-    /// Read at most n bytes from a stream
-    (2, ReadBytes, "&rb", "read to bytes"),
-    /// Read from a stream until a delimiter is reached
-    (2, ReadUntil, "&ru", "read until"),
-    /// Write an array to a stream
-    (2(0), Write, "&w", "write"),
-    /// Run the code from a file in a scope
-    ///
-    /// If the file has already been imported, its code will not be run again, but the values it originally pushed onto the stack will be pushed again.
-    /// Functions can be extracted from the imported modules with [use].
-    /// ex: .&i "example.ua"
-    ///   : double ← use "Double".
-    ///   : square ← use "Square"
-    ///   : square double 5
-    (1, Import, "&i", "import"),
     /// Get the current time in seconds
     ///
     /// ex: &n
@@ -165,6 +132,48 @@ sys_op! {
     (1(2), RunCapture, "&runc", "run command capture"),
     /// Change the current directory
     (1(0), ChangeDirectory, "&cd", "change directory"),
+    /// Sleep for n seconds
+    ///
+    /// On the web, this example will hang for 1 second.
+    /// ex: ⚂ &sl 1
+    (1(0), Sleep, "&sl", "sleep"),
+    /// Read at most n bytes from a stream
+    (2, ReadStr, "&rs", "read to string"),
+    /// Read at most n bytes from a stream
+    (2, ReadBytes, "&rb", "read to bytes"),
+    /// Read from a stream until a delimiter is reached
+    (2, ReadUntil, "&ru", "read until"),
+    /// Write an array to a stream
+    (2(0), Write, "&w", "write"),
+    /// Run the code from a file in a scope
+    ///
+    /// If the file has already been imported, its code will not be run again, but the values it originally pushed onto the stack will be pushed again.
+    /// Functions can be extracted from the imported modules with [use].
+    /// ex: .&i "example.ua"
+    ///   : double ← use "Double".
+    ///   : square ← use "Square"
+    ///   : square double 5
+    (1, Import, "&i", "import"),
+    /// Close a stream by its handle
+    ///
+    /// This will close files, tcp listeners, and tcp sockets.
+    (1(0), Close, "&cl", "close handle"),
+    /// Open a file and return a handle to it
+    (1, FOpen, "&fo", "file - open"),
+    /// Create a file and return a handle to it
+    (1, FCreate, "&fc", "file - create"),
+    /// Check if a file exists at a path
+    (1, FExists, "&fe", "file - exists"),
+    /// List the contents of a directory
+    (1, FListDir, "&fld", "file - list directory"),
+    /// Check if a path is a file
+    (1, FIsFile, "&fif", "file - is file"),
+    /// Read all the contents of a file into a string
+    (1, FReadAllStr, "&fras", "file - read all to string"),
+    /// Read all the contents of a file into a byte array
+    (1, FReadAllBytes, "&frab", "file - read all to bytes"),
+    /// Write the entire contents of an array to a file
+    (2(0), FWriteAll, "&fwa", "file - write all"),
     /// Decode an image from a byte array
     ///
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, and `ico`.
@@ -243,11 +252,6 @@ sys_op! {
     /// Expects a function that takes a list of sample times and returns a list of samples.
     /// The function will be called repeatedly to generate the audio.
     (1(0), AudioStream, "&ast", "audio - stream"),
-    /// Sleep for n seconds
-    ///
-    /// On the web, this example will hang for 1 second.
-    /// ex: ⚂ &sl 1
-    (1(0), Sleep, "&sl", "sleep"),
     /// Create a TCP listener and bind it to an address
     (1, TcpListen, "&tcpl", "tcp - listen"),
     /// Accept a connection with a TCP listener
@@ -262,10 +266,6 @@ sys_op! {
     (2(0), TcpSetWriteTimeout, "&tcpswt", "tcp - set write timeout"),
     /// Get the connection address of a TCP socket
     (1, TcpAddr, "&tcpaddr", "tcp - address"),
-    /// Close a stream by its handle
-    ///
-    /// This will close files, tcp listeners, and tcp sockets.
-    (1(0), Close, "&cl", "close"),
 }
 
 /// A handle to an IO stream

@@ -383,7 +383,14 @@ impl Allowed {
             let of_class: Vec<_> = Primitive::all()
                 .filter(|p| self.prims.contains(p) && p.class() == class && p.name().is_some())
                 .map(|p| {
-                    view! {  <Prim prim=p/> }
+                    if let Primitive::Sys(sysop) = p {
+                        view!(<div style="display: flex; align-items: center;">
+                            <div style="min-width: 7em;"><Prim prim=p/></div>{sysop.long_name()}
+                        </div>)
+                        .into_view()
+                    } else {
+                        view!(<Prim prim=p/>).into_view()
+                    }
                 })
                 .collect();
             if of_class.is_empty() {

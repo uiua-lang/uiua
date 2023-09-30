@@ -5,6 +5,7 @@
 - Make binding names case-sensitive
 - Add `^` syntax to terminate modifier parsing. There is a basic example [in the tutorial](http://uiua.org/docs/functions#terminating-modifiers).
 - Add [`&runi`](https://uiua.org/docs/&runi) and [`&runc`](https://uiua.org/docs/&runc) functions for running commands
+- Add [`&cd`](https://uiua.org/docs/&cd) function for changing the current working directory
 - Add shadowable [constants](https://uiua.org/docs/constants) like `e` and `os`
 - Change [trident`∋`](https://uiua.org/docs/trident) argument order to make it easier to reason about
 - Enable [fill`⍛`] for [keep`▽`] if the amount list is shorter than the kept array

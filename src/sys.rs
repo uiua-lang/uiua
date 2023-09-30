@@ -163,6 +163,8 @@ sys_op! {
     ///
     /// Expects either a string, a [rank]`2` character array, or a [rank]`1` array of [constant] strings.
     (1(2), RunCapture, "&runc", "run command capture"),
+    /// Change the current directory
+    (1(0), ChangeDirectory, "&cd", "change directory"),
     /// Decode an image from a byte array
     ///
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, and `ico`.
@@ -437,6 +439,9 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         args: &[&str],
     ) -> Result<(String, String), String> {
         Err("Running commands is not supported in this environment".into())
+    }
+    fn change_directory(&self, path: &str) -> Result<(), String> {
+        Err("Changing directories is not supported in this environment".into())
     }
 }
 
@@ -873,6 +878,9 @@ impl SysBackend for NativeSys {
             String::from_utf8_lossy(&output.stdout).into(),
             String::from_utf8_lossy(&output.stderr).into(),
         ))
+    }
+    fn change_directory(&self, path: &str) -> Result<(), String> {
+        env::set_current_dir(path).map_err(|e| e.to_string())
     }
 }
 
@@ -1383,6 +1391,12 @@ impl SysOp {
                     .map_err(|e| env.error(e))?;
                 env.push(stdout);
                 env.push(stderr);
+            }
+            SysOp::ChangeDirectory => {
+                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                env.backend
+                    .change_directory(&path)
+                    .map_err(|e| env.error(e))?;
             }
         }
         Ok(())

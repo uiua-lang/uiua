@@ -282,7 +282,7 @@ impl<'a> Formatter<'a> {
             Word::Spaces => self.push(&word.span, " "),
             Word::Comment(comment) => {
                 self.output.push('#');
-                if self.config.comment_space_after_hash {
+                if self.config.comment_space_after_hash && !comment.starts_with('!') {
                     self.output.push(' ');
                 }
                 self.output.push_str(comment);

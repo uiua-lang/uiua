@@ -206,7 +206,7 @@ impl Primitive {
         let exact_match = res.names().unwrap().text == name;
         (exact_match || matching.next().is_none()).then_some(res)
     }
-    /// Try to parse multiple primitives from the concatentation of their name prefixes
+    /// Try to parse multiple primitives from the concatenation of their name prefixes
     pub fn from_format_name_multi(name: &str) -> Option<Vec<(Self, &str)>> {
         let indices: Vec<usize> = name.char_indices().map(|(i, _)| i).collect();
         if indices.len() < 2 {

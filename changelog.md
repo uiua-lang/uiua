@@ -2,6 +2,7 @@
 
 ## Logpoint 3 - 2023-09-30
 ### Language
+- Remove the rank`∴` function
 - Remove the restriction that all functions in a non-scalar function array all have the same signature
 ### Interpreter
 - Allow passing `--no-format` to `uiua watch`

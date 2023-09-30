@@ -68,9 +68,9 @@ pub fn Tour() -> impl IntoView {
         <Editor example="× 2_10 [1_2_3 4_5_6]"/>
         <p>"Arrays have a "<Prim prim=Shape/>" that describes how many elements they have along each axis."</p>
         <Editor example="△5\n△[]\n△[9 1 6]\n△[4_π_9 1_5_∞]"/>
-        <p>"The "<Prim prim=Rank/>" of an array is the number of axes it has."</p>
+        <p>"The rank of an array is the number of axes it has."</p>
         <p>"The "<Prim prim=Len/>" is the number of rows it has along its first axis."</p>
-        <Editor example="a ← [1_2_3_4 5_6_7_8 9_10_11_12]\n△a\n⧻a\n∴a"/>
+        <Editor example="a ← [1_2_3_4 5_6_7_8 9_10_11_12]\n△a\n⧻a\n⧻△a # rank"/>
         <p>"If you want to type that fancy "<code>"←"</code>" so you can gives names to arrays, you can type "<code>"="</code>" after a name at the start of a line, and the formatter will convert it for you."</p>
         <Editor example="x = 5\n+x x"/>
         <p><code>"←"</code>" just pops the first thing off the stack and assigns it to the name on the left, so if there is already a value on the stack, you don't actually need anything on the right."</p>
@@ -146,7 +146,7 @@ pub fn Tour() -> impl IntoView {
         <p>"Uiua can natively generate images and audio."</p>
         <p>"On this site, simply leaving an array on the stack that "<em>"looks"</em>" like image or audio data will display it."</p>
         <h3>"Images"</h3>
-        <p>"Image data can either be a "<Prim prim=Rank/><code>"2"</code>" array of grayscale pixel data or a "<Prim prim=Rank/><code>"3"</code>" array of grayscale with alpha, RGB, or RGBA pixel data."</p>
+        <p>"Image data can either be a rank 2 array of grayscale pixel data or a rank 3 array of grayscale with alpha, RGB, or RGBA pixel data."</p>
         <p>"This minimal example uses three different functions on x/y coordinates to generate RGB values and make a pretty gradient."</p>
         <Editor example="⍉∺(|1 ⊞^∶,)+_-_× ÷∶⇡.100"/>
         <p>"The Uiua logo is made with Uiua itself!"</p>

@@ -349,7 +349,6 @@ impl Primitive {
             Primitive::First => env.monadic_env(Value::first)?,
             Primitive::Last => env.monadic_env(Value::last)?,
             Primitive::Len => env.monadic_ref(Value::row_count)?,
-            Primitive::Rank => env.monadic_ref(Value::rank)?,
             Primitive::Shape => {
                 env.monadic_ref(|v| v.shape().iter().copied().collect::<Value>())?
             }

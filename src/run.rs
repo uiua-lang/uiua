@@ -444,8 +444,6 @@ code:
                 instrs.pop();
                 instrs.push(Instr::Prim(Cos, span));
             }
-            // Len shape = rank
-            ([.., Instr::Prim(top @ Shape, _)], Instr::Prim(Len, _)) => *top = Rank,
             // First reverse = last
             ([.., Instr::Prim(top @ Reverse, _)], Instr::Prim(First, _)) => *top = Last,
             (_, instr) => instrs.push(instr),

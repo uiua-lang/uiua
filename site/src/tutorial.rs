@@ -142,8 +142,8 @@ fn TutorialBasic() -> impl IntoView {
         <h2 id="formatting">"Formatting"</h2>
         <p>"Most Uiua built-in functions use special unicode characters. To type multiplication and division signs, you can use "<code>"*"</code>" and "<code>"%"</code>" respectively. Then, run the code to format the ASCII characters into unicode."</p>
         <Editor example="# Click Run to format!\n%6 *3 8" help={&["", "⇡Click⇡"]}/>
-        <p>"Most built-in functions have names you can type rather than symbols. Formatting works on these too. "<em><b>"This is the primary way of entering Uiua's glyphs."</b></em></p>
-        <p>"Try formatting the lines below by clicking "<b>"Run"</b>"."</p>
+        <p>"Most built-in functions have names you can type rather than symbols. Formatting works on these too. "<em><strong>"This is the primary way of entering Uiua's glyphs."</strong></em></p>
+        <p>"Try formatting the lines below by clicking "<strong>"Run"</strong>"."</p>
         <Editor examples=&{["max ", "sqrt ", "10 ", "mod ", "10 ", "pow ", "2 ", "8"]}/>
         <Editor example="abs +`1 `2"/>
         <p>"You don't have to type the whole name, just enough to disambiguate it from others"</p>
@@ -293,12 +293,12 @@ fn TutorialArrays() -> impl IntoView {
 
         <h2 id="creating-arrays">"Creating Arrays"</h2>
         <p>"Other than with functions, Uiua has two ways to create arrays. They are called "<em>"strand notation"</em>" and "<em>"stack notation"</em>"."</p>
-        <p><b>"Strand notation"</b>" uses underscores to connect elements."</p>
+        <p><strong>"Strand notation"</strong>" uses underscores to connect elements."</p>
         <Editor example="1_2_3"/>
         <Editor example="\"Hello\"_\"World\""/>
         <Editor example="+_-_×_÷"/>
         <p>"Strand notation is good when you want to create short and/or simple arrays. For longer or more complex arrays, you can use stack notation."</p>
-        <p><b>"Stack notation"</b>" uses brackets to group elements."</p>
+        <p><strong>"Stack notation"</strong>" uses brackets to group elements."</p>
         <Editor example="[1 2 3]"/>
         <Editor example="[¯5 37 42 π]"/>
         <p>"What's cool about stack notation is that it is "<em>"not"</em>" just a way to list elements. The code between the brackets runs from right to left as it normally would. When it is done, any items on the stack higher than when it started are put into the array. This gives you some cool ways to create arrays."</p>
@@ -320,19 +320,17 @@ fn TutorialArrays() -> impl IntoView {
  [4 5 6]
  [7 8 9]]"/>
 
-        <h2 id="shape-len-rank"><Prim prim=Shape/>", "<Prim prim=Len/>", and "<Prim prim=Rank/></h2>
-        <p>"Other than their data, arrays also have a property called their "<b>"shape"</b>". Shape is a list of non-negative integers that describes the array's size along each of its axes."</p>
+        <h2 id="shape-len"><Prim prim=Shape/>" and "<Prim prim=Len/></h2>
+        <p>"Other than their data, arrays also have a property called their "<strong>"shape"</strong>". Shape is a list of non-negative integers that describes the array's size along each of its axes."</p>
         <p>"We can get the array's shape with the "<Prim prim=Shape/>" function. It's a triangle because a triangle is a shape."</p>
         <Editor example="△[1 2 3]"/>
         <Editor example="△5"/>
         <Editor example="△[[1 2 3] [4 5 6]]"/>
         <Editor example="△[...[1 2 3]]"/>
-        <p>"From shape we can derive two closely-related properties called "<b>"length"</b>" and "<b>"rank"</b>"."</p>
+        <p>"From shape we can derive two closely-related properties called "<strong>"length"</strong>" and "<strong>"rank"</strong>"."</p>
         <p><Prim prim=Len/>" is the number of "<em>"rows"</em>" of the array. This is the number of elements for a 1D array and the number of rows for a 2D array. Length is always equal to the first number in the shape (or 1 if the shape is empty)."</p>
-        <p><Prim prim=Rank/>" is the number of dimensions of the array."</p>
-        <Editor example="△[1 2 3]\n⧻[1 2 3]\n∴[1 2 3]"/>
-        <p><Prim prim=Rank/>" is equivalent to the "<Prim prim=Len/>" of the "<Prim prim=Shape/>"."</p>
-        <Editor example=" ∴[1_2 3_4]\n⧻△[1_2 3_4]"/>
+        <p><strong>"Rank"</strong>" is the number of dimensions of the array. It is equivalent to the "<Prim prim=Len/>" of the "<Prim prim=Shape/>"."</p>
+        <Editor example=" △[1_2_3 4_5_6]\n ⧻[1_2_3 4_5_6]\n⧻△[1_2_3 4_5_6]"/>
 
         <h2 id="pervasion">"Pervasion"</h2>
         <p>"Most operations that apply to scalars are what is called "<em>"pervasive"</em>" when it comes to arrays. This means that the operation automatically applies to every item in the array."</p>
@@ -407,9 +405,9 @@ fn TutorialTypes() -> impl IntoView {
         <p>"Every value in Uiua is an array. However, different arrays on the stack can have different "<em>"types"</em>" of items. Every element of an array is always the same type. Unlike some other array programming languages, Uiua arrays cannot have elements of different types."</p>
         <p>"There are only three types of arrays:"</p>
         <ul>
-            <li><b>"Number"</b></li>
-            <li><b>"Character"</b></li>
-            <li><b>"Function"</b></li>
+            <li><strong>"Number"</strong></li>
+            <li><strong>"Character"</strong></li>
+            <li><strong>"Function"</strong></li>
         </ul>
 
         <h2 id="numbers">"Numbers"</h2>
@@ -424,12 +422,12 @@ fn TutorialTypes() -> impl IntoView {
 
         <h2 id="characters">"Characters"</h2>
         <p>"Characters are represented as 32-bit Unicode codepoints."</p>
-        <p>"Character literals, denoted with a preceding "<code>"@"</code>", create "<Prim prim=Rank/><code>"0"</code>" character arrays."</p>
+        <p>"Character literals, denoted with a preceding "<code>"@"</code>", create rank 0 (scalar) character arrays."</p>
         <Editor example="@a @b"/>
         <Editor example="[@u @i @u @a]"/>
         <p>"Characters like newline or null need to be escaped with "<code>"\\"</code>", but a space does not."</p>
         <Editor example="[@\\r @\\0 @ ]"/>
-        <p>"String literals, delimited by "<code>"\""</code>"s, create "<Prim prim=Rank/><code>"1"</code>" character arrays."</p>
+        <p>"String literals, delimited by "<code>"\""</code>"s, create rank 1 character arrays."</p>
         <Editor example="△.\"Hello, World!\""/>
         <p>"You can make strings span multiple lines with a "<code>"$"</code>" followed by a space on each line."</p>
         <p>"These do not require "<code>"\""</code>"s."</p>

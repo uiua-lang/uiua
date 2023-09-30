@@ -122,13 +122,13 @@ sys_op! {
     ///
     /// Standard IO will be inherited.
     ///
-    /// Expects either a string, a [rank]`2` character array, or a [rank]`1` array of [constant] strings.
+    /// Expects either a string, a rank `2` character array, or a rank `1` array of [constant] strings.
     (1(0), RunInherit, "&runi", "run command inherit"),
     /// Run a command and wait for it to finish
     ///
     /// Standard IO will be captured. Stdout and stderr will each be pushed to the stack as strings.
     ///
-    /// Expects either a string, a [rank]`2` character array, or a [rank]`1` array of [constant] strings.
+    /// Expects either a string, a rank `2` character array, or a rank `1` array of [constant] strings.
     (1(2), RunCapture, "&runc", "run command capture"),
     /// Change the current directory
     (1(0), ChangeDirectory, "&cd", "change directory"),

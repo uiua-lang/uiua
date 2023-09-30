@@ -175,7 +175,7 @@ pub fn Audio() -> impl IntoView {
 
         <h2 id="basic-synthesis">"Basic Synthesis"</h2>
         <p>"In the online editor, you need only make an array that looks like audio samples."</p>
-        <p>"Audio samples must be eiter a "<Prim prim=Rank/><code>"1"</code>" array with at least 1000 elements or a "<Prim prim=Rank/><code>"2"</code>" array with a row for each audio channel and at least 1000 elements in each row."</p>
+        <p>"Audio samples must be eiter a rank 1 where each element is a sample or a rank 2 array where each row is a channel."</p>
         <p>"The samples must be between "<code>"-1"</code>" and "<code>"1"</code>". We use the "<Prim prim=Sys(SysOp::AudioSampleRate)/>" system function to get the sample rate of the audio output."</p>
         <p>"For a minimal example, here is a simple 1 second sawtooth wave:"</p>
         <Editor examples={&["%2", "◿1×220", "÷∶⇡.&asr"]}/>

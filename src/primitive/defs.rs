@@ -472,16 +472,6 @@ primitive!(
     /// ex:  ⧻[1_2_3 4_5_6]
     ///   : ⊢△[1_2_3 4_5_6]
     (1, Len, MonadicArray, ("length", '⧻')),
-    /// The number of dimensions in an array
-    ///
-    /// [rank] is equivalent to [length] of [shape].
-    /// ex: ∴5
-    /// ex: ∴[]
-    /// ex: ∴1_2_3
-    /// ex: ∴[1_2 3_4 5_6]
-    ///
-    /// It is three dots`∴` arranged in a triangle`△` because it is counting [shape].
-    (1, Rank, MonadicArray, ("rank", '∴')),
     /// The dimensions of an array
     ///
     /// ex: △5
@@ -493,11 +483,11 @@ primitive!(
     (1, Shape, MonadicArray, ("shape", '△')),
     /// Make an array of all natural numbers less than a number
     ///
-    /// The [rank] of the input must be `0` or `1`.
+    /// The rank of the input must be `0` or `1`.
     /// ex: ⇡5
     /// ex: ⇡2_3
     ///
-    /// When creating ranges with upper bounds that are [rank]`1`, [pick]ing the generated range array from an array with the [shape] of the input will yield that array.
+    /// When creating ranges with upper bounds that are rank `1`, [pick]ing the generated range array from an array with the [shape] of the input will yield that array.
     /// ex:     [1_2_3 4_5_6]
     ///   :    △[1_2_3 4_5_6]
     ///   :   ⇡△[1_2_3 4_5_6]
@@ -529,7 +519,7 @@ primitive!(
     (1, Deshape, MonadicArray, ("deshape", '♭')),
     /// Encode an array as bits (big-endian)
     ///
-    /// The result will always be 1 [rank] higher than the input.
+    /// The result will always be 1 rank higher than the input.
     /// ex: ⋯27
     /// ex: ⋯⇡8
     /// ex: ⋯[1_2 3_4 5_6]
@@ -620,11 +610,11 @@ primitive!(
     /// ex: ⊂ 1 2
     ///   : ⊟ 1 2
     ///
-    /// If the arrays have the same [rank], it will append the second array to the first.
+    /// If the arrays have the same rank, it will append the second array to the first.
     /// ex: ⊂ [1 2] [3 4]
     /// ex: ⊂ [1_2 3_4] [5_6 7_8]
     ///
-    /// If the arrays have a [rank] difference of 1, then the array with the smaller [rank] will be prepended or appended to the other as a row.
+    /// If the arrays have a rank difference of 1, then the array with the smaller rank will be prepended or appended to the other as a row.
     /// ex: ⊂ 1 [2 3]
     /// ex: ⊂ [1 2] 3
     /// ex: ⊂ 1_2 [3_4 5_6]
@@ -665,14 +655,14 @@ primitive!(
     (2, Match, DyadicArray, ("match", '≅')),
     /// Index a row or elements from an array
     ///
-    /// An index with [rank] `0` or `1` will pick a single row or element from an array.
+    /// An index with rank `0` or `1` will pick a single row or element from an array.
     /// ex: ⊡ 2 [8 3 9 2 0]
     /// ex: ⊡ 1_1 .[1_2_3 4_5_6]
     ///
-    /// If the index's [rank] is `2` or greater, then multiple rows or elements will be picked.
+    /// If the index's rank is `2` or greater, then multiple rows or elements will be picked.
     /// ex: ⊡ [1_2 0_1] [1_2_3 4_5_6]
     ///
-    /// For index [rank] `2` or greater, it should hold that `pick``range``shape``duplicate``x` is equivalent to `x`.
+    /// For index rank `2` or greater, it should hold that `pick``range``shape``duplicate``x` is equivalent to `x`.
     /// ex: ⊡⇡△. [1_2_3 4_5_6]
     (2, Pick, DyadicArray, ("pick", '⊡')),
     /// End step of under pick
@@ -682,10 +672,10 @@ primitive!(
     /// For a scalar selector, [select] is equivalent to [pick].
     /// ex: ⊏ 2 [8 3 9 2 0]
     ///   : ⊡ 2 [8 3 9 2 0]
-    /// For a [rank]`1` selector, [select] will pick multiple items from an array.
+    /// For a rank `1` selector, [select] will pick multiple items from an array.
     /// ex: ⊏ 4_2 [8 3 9 2 0]
     /// ex: ⊏ 0_2_1_1 [1_2_3 4_5_6 7_8_9]
-    /// If the selector's [rank] is `greater than``1`, then earch row of the selector will be selected seperately.
+    /// If the selector's rank is `greater than``1`, then earch row of the selector will be selected seperately.
     /// ex: ⊏ [0_1 1_2 2_3] [2 3 5 7]
     /// ex: ⊏ [0_1 1_2 2_0] [1_2_3 4_5_6 7_8_9]
     (2, Select, DyadicArray, ("select", '⊏')),
@@ -703,7 +693,7 @@ primitive!(
     /// Scalar shapes will copy the array as rows of a new array.
     /// ex: ↯ 4 [1 2 3 4 5]
     /// ex: ↯ 2 [1_2_3 4_5_6]
-    /// This is in constrast to scalar [keep], which repeats the rows but preserves [rank].
+    /// This is in constrast to scalar [keep], which repeats the rows but preserves rank.
     /// ex: ▽ 4 [1 2 3 4 5]
     /// ex: ▽ 2 [1_2_3 4_5_6]
     ///
@@ -928,7 +918,7 @@ primitive!(
     ///
     /// Takes a function and two arrays.
     /// The arrays must be the same [length].
-    /// The first array must be [rank]`1` and contain integers.
+    /// The first array must be rank `1` and contain integers.
     /// Rows in the second array will be grouped into buckets by the indices in the first array.
     /// Keys `less than``0` will be omitted.
     /// The function then processes each group in order. The result depends on what the function is.
@@ -954,7 +944,7 @@ primitive!(
     ///
     /// Takes a function and two arrays.
     /// The arrays must be the same [length].
-    /// The first array must be [rank]`1` and contain integers.
+    /// The first array must be rank `1` and contain integers.
     /// Rows in the second array that line up with sequential keys in the first array will be grouped together.
     /// Keys `less or equal``0` will be omitted.
     /// The function then processes each group in order. The result depends on what the function is.
@@ -986,7 +976,7 @@ primitive!(
     /// ex: ⍘⊟ .[1_2_3 4_5_6]
     ///
     /// [invert][transpose] transposes in the opposite direction.
-    /// This is useful for arrays with [rank]`greater than``2`.
+    /// This is useful for arrays with rank `greater than``2`.
     /// ex: ⍘⍉ .⊟.[1_2_3 4_5_6]
     ///
     /// [invert][bits] converts an array of bits into a number.
@@ -1107,8 +1097,8 @@ primitive!(
     /// ex:       ∺⊂ 1_2_3 4_5_6
     ///   : ⍚[¯1 ∞]⊂ 1_2_3 4_5_6
     ///
-    /// One way to think of the number(s) passed to [level] is as the [rank] of the array that the function will be applied to.
-    /// `level``1` will always apply to [rank]`1` arrays, no matter how many dimensions the original array has.
+    /// One way to think of the number(s) passed to [level] is as the rank of the array that the function will be applied to.
+    /// `level``1` will always apply to rank `1` arrays, no matter how many dimensions the original array has.
     /// ex: ⍚[1 1]⊂ ↯3_3⇡9 10_11_12 # Join two rank 1 arrays
     /// ex: ⍚[1 0]⊂ ↯3_3⇡9 10_11_12 # Join rank 1 arrays with scalars
     ([2], Level, IteratingModifier, ("level", '⍚')),

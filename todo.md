@@ -1,3 +1,4 @@
+- Remove rank function
 - Rust API
 - Docs
   - Invert bits for control flow
@@ -13,7 +14,6 @@
   - Thinking with arrays
 - Expand test suite
 - Optimizations
-  - Dyadic level - The dyadic case of level should have its own function
   - Row windows - `≡f◫` for scalar window size should be optimized to not materialize all the windows
   - Reduce windows? - `/f◫` for scalar window size could be optimized, but is it necessary?
 - Multimedia

@@ -828,6 +828,41 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
             let res = monadic_level_recursive(f, xs, n, env)?;
             env.push(res);
         }
+        &[xn, yn] => {
+            let xs = env.pop(ArrayArg(1))?;
+            let ys = env.pop(ArrayArg(2))?;
+            if xs.rank() == 0 && ys.rank() == 0 {
+                env.push(xs);
+                env.push(ys);
+                return Ok(());
+            }
+            match (xn, yn) {
+                (Some(0), Some(0)) => return each2_1(f, xs, ys, env),
+                (Some(-1), Some(-1)) => return rows2_1(f, xs, ys, env),
+                (None, None) => {
+                    env.push(ys);
+                    env.push(xs);
+                    return env.call(f);
+                }
+                _ => {}
+            }
+            let xn = xn.unwrap_or(xs.rank() as isize);
+            let yn = yn.unwrap_or(ys.rank() as isize);
+            let xn = if xn < 0 {
+                (xs.rank() as isize + xn).max(0) as usize
+            } else {
+                (xn as usize).min(xs.rank())
+            };
+            let yn = if yn < 0 {
+                (ys.rank() as isize + yn).max(0) as usize
+            } else {
+                (yn as usize).min(ys.rank())
+            };
+            let xn = xs.rank() - xn;
+            let yn = ys.rank() - yn;
+            let res = dyadic_level_recursive(f, xs, ys, xn, yn, env)?;
+            env.push(res);
+        }
         is => {
             let mut args = Vec::with_capacity(is.len());
             for i in 0..is.len() {
@@ -864,6 +899,66 @@ fn monadic_level_recursive(f: Value, value: Value, n: usize, env: &mut Uiua) -> 
         }
         Value::from_row_values(rows, env)
     }
+}
+
+fn dyadic_level_recursive(
+    f: Value,
+    xs: Value,
+    ys: Value,
+    xn: usize,
+    yn: usize,
+    env: &mut Uiua,
+) -> UiuaResult<Value> {
+    Ok(match (xn, yn) {
+        (0, 0) => {
+            env.push(ys);
+            env.push(xs);
+            env.call(f)?;
+            env.pop("level's function result")?
+        }
+        (0, yn) => {
+            let mut new_rows = Vec::with_capacity(ys.row_count());
+            for y in ys.into_rows() {
+                new_rows.push(dyadic_level_recursive(
+                    f.clone(),
+                    xs.clone(),
+                    y,
+                    xn,
+                    yn - 1,
+                    env,
+                )?);
+            }
+            Value::from_row_values(new_rows, env)?
+        }
+        (xn, 0) => {
+            let mut new_rows = Vec::with_capacity(xs.row_count());
+            for x in xs.into_rows() {
+                new_rows.push(dyadic_level_recursive(
+                    f.clone(),
+                    x,
+                    ys.clone(),
+                    xn - 1,
+                    yn,
+                    env,
+                )?);
+            }
+            Value::from_row_values(new_rows, env)?
+        }
+        (xn, yn) => {
+            let mut new_rows = Vec::with_capacity(xs.row_count());
+            for (x, y) in xs.into_rows().zip(ys.into_rows()) {
+                new_rows.push(dyadic_level_recursive(
+                    f.clone(),
+                    x,
+                    y,
+                    xn - 1,
+                    yn - 1,
+                    env,
+                )?);
+            }
+            Value::from_row_values(new_rows, env)?
+        }
+    })
 }
 
 fn multi_level_recursive(

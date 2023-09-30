@@ -1110,7 +1110,7 @@ primitive!(
     /// One way to think of the number(s) passed to [level] is as the [rank] of the array that the function will be applied to.
     /// `level``1` will always apply to [rank]`1` arrays, no matter how many dimensions the original array has.
     /// ex: ⍚[1 1]⊂ ↯3_3⇡9 10_11_12 # Join two rank 1 arrays
-    /// ex: ⍚[1 0]⊂ ↯3_3⇡9 10_11_12 # Join a rank 1 arrays with scalars
+    /// ex: ⍚[1 0]⊂ ↯3_3⇡9 10_11_12 # Join rank 1 arrays with scalars
     ([2], Level, IteratingModifier, ("level", '⍚')),
     /// Call two functions
     ///

@@ -8,8 +8,8 @@
 - Add [`&cd`](https://uiua.org/docs/&cd) function for changing the current working directory
 - Add shadowable [constants](https://uiua.org/docs/constants) like `e` and `os`
 - Change [trident`∋`](https://uiua.org/docs/trident) argument order to make it easier to reason about
-- Enable [fill`⍛`] for [keep`▽`] if the amount list is shorter than the kept array
-- Fix a bug that made numbers that were `≤``1e-12``⌵` format to `0`
+- Enable [fill`⍛`](https://uiua.org/docs/fill) for [keep`▽`](https://uiua.org/docs/keep) if the amount list is shorter than the kept array
+- Fix a bug that made numbers that were `≤` `1e-12` `⌵` format to `0`
 ### Interpreter
 - Add `uiua eval` command which evaluates a Uiua expression and prints the result
 - Watch commands no longer try to open the file being watched

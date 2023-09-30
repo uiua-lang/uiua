@@ -536,6 +536,10 @@ X ← (
 )
 X 5"/>
 
+        <h2 id="local-bindings">"A Note on Local Bindings"</h2>
+        <p>"Bindings in Uiua can "<em>"only"</em>" be global. There is no way to give a name to a value within an inline function. A "<code>"←"</code>" inside "<code>"()"</code>"s is a syntax error."</p>
+        <p>"This is a deliberate design decision. It forces you to write tacit code, a.k.a. code with functions that do not mention their arguments. Uiua is designed to make write tacit code as workable as possible."</p>
+
         <h2 id="format-strings">"Format Strings"</h2>
         <p>"Prefixing a string with "<code>"$"</code>", creates a format string. A format string is a function that is called immediately. It takes an argument for each "<code>"_"</code>" in the string and replaces it with the stringified version."</p>
         <Editor example="$\"Hello, _!\" \"World\""/>

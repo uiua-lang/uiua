@@ -185,9 +185,6 @@ impl<T: ArrayValue> Array<T> {
                     }
                     other.shape
                 };
-                if let Some((a, b)) = self.data.last().zip(other.data.first()) {
-                    a.group_compatibility(b, ctx)?;
-                }
                 self.data.extend(other.data);
                 self.shape = target_shape;
                 self.shape[0] += 1;
@@ -214,9 +211,6 @@ impl<T: ArrayValue> Array<T> {
                             self.format_shape(),
                             other.format_shape()
                         ))));
-                    }
-                    if let Some((a, b)) = self.data.last().zip(other.data.first()) {
-                        a.group_compatibility(b, ctx)?;
                     }
                     self.data.extend(other.data);
                     self.shape[0] += other.shape[0];
@@ -261,9 +255,6 @@ impl<T: ArrayValue> Array<T> {
             }
             take(&mut self.shape)
         };
-        if let Some((a, b)) = self.data.last().zip(other.data.first()) {
-            a.group_compatibility(b, ctx)?;
-        }
         self.data.extend(other.data);
         self.shape = target_shape;
         self.shape[0] += 1;
@@ -330,9 +321,6 @@ impl<T: ArrayValue> Array<T> {
                     other.format_shape()
                 ))));
             }
-        }
-        if let Some((a, b)) = self.data.last().zip(other.data.first()) {
-            a.group_compatibility(b, ctx)?;
         }
         self.data.extend(other.data);
         self.shape.insert(0, 2);

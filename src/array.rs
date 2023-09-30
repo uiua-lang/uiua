@@ -8,7 +8,6 @@ use std::{
 use tinyvec::{tiny_vec, TinyVec};
 
 use crate::{
-    algorithm::FillContext,
     cowslice::{cowslice, CowSlice},
     function::Function,
     grid_fmt::GridFmt,
@@ -376,9 +375,6 @@ pub trait ArrayValue: Clone + Debug + Display + GridFmt + ArrayCmp {
     fn format_sep() -> &'static str {
         " "
     }
-    fn group_compatibility<C: FillContext>(&self, other: &Self, ctx: C) -> Result<(), C::Error> {
-        Ok(())
-    }
     fn subrank(&self) -> usize {
         0
     }
@@ -434,13 +430,6 @@ impl ArrayValue for Arc<Function> {
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         self.hash(hasher)
-    }
-    fn group_compatibility<C: FillContext>(&self, other: &Self, ctx: C) -> Result<(), C::Error> {
-        if self.signature().is_compatible_with(other.signature()) {
-            Ok(())
-        } else {
-            Err(ctx.error("Functions have incompatible signatures"))
-        }
     }
     fn subrank(&self) -> usize {
         self.as_constant().map_or(0, Value::rank)

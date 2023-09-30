@@ -532,16 +532,14 @@ impl SysBackend for NativeSys {
         self
     }
     fn print_str_stdout(&self, s: &str) -> Result<(), String> {
-        stdout()
-            .lock()
-            .write_all(s.as_bytes())
-            .map_err(|e| e.to_string())
+        let mut stdout = stdout().lock();
+        stdout.write_all(s.as_bytes()).map_err(|e| e.to_string())?;
+        stdout.flush().map_err(|e| e.to_string())
     }
     fn print_str_stderr(&self, s: &str) -> Result<(), String> {
-        stderr()
-            .lock()
-            .write_all(s.as_bytes())
-            .map_err(|e| e.to_string())
+        let mut stderr = stderr().lock();
+        stderr.write_all(s.as_bytes()).map_err(|e| e.to_string())?;
+        stderr.flush().map_err(|e| e.to_string())
     }
     fn scan_line_stdin(&self) -> Result<String, String> {
         stdin()

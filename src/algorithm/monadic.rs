@@ -43,7 +43,7 @@ impl Value {
             or a list of natural numbers",
         )?;
         let mut shape = Shape::from(shape.as_slice());
-        let data = range(&shape);
+        let data = range(&shape, env)?;
         if shape.len() > 1 {
             shape.push(shape.len());
         }
@@ -51,14 +51,27 @@ impl Value {
     }
 }
 
-fn range(shape: &[usize]) -> Vec<f64> {
+fn range(shape: &[usize], env: &Uiua) -> UiuaResult<Vec<f64>> {
     if shape.is_empty() {
-        return vec![0.0];
+        return Ok(vec![0.0]);
     }
     if shape.contains(&0) {
-        return Vec::new();
+        return Ok(Vec::new());
     }
-    let len = shape.len() * shape.iter().product::<usize>();
+    let mut len = shape.len();
+    for &item in shape {
+        let (new, overflow) = len.overflowing_mul(item);
+        if overflow {
+            let len = shape.len() as f64 * shape.iter().map(|d| *d as f64).product::<f64>();
+            return Err(env.error(format!(
+                "Attempting to make a range from shape {} would \
+                create an array with {} elements, which is too large",
+                FormatShape(shape),
+                len
+            )));
+        }
+        len = new;
+    }
     let mut data: Vec<f64> = Vec::with_capacity(len);
     let mut curr = vec![0; shape.len()];
     loop {
@@ -71,7 +84,7 @@ fn range(shape: &[usize]) -> Vec<f64> {
             if curr[i] == shape[i] {
                 curr[i] = 0;
                 if i == 0 {
-                    return data;
+                    return Ok(data);
                 }
                 i -= 1;
             } else {

@@ -376,6 +376,18 @@ impl<'a> VirtualEnv<'a> {
                     self.stack.push(a);
                     self.stack.push(c);
                 }
+                Dip => {
+                    let f = self.pop()?;
+                    let x = self.pop()?;
+                    for _ in 0..f.signature().args {
+                        self.pop()?;
+                    }
+                    self.set_min_height();
+                    for _ in 0..f.signature().outputs {
+                        self.stack.push(BasicValue::Other);
+                    }
+                    self.stack.push(x);
+                }
                 Restack => {
                     let ns = match self.pop()? {
                         BasicValue::Arr(items) => {

@@ -699,7 +699,7 @@ pub fn Editor<'a>(
 
     // Glyph buttons
     // These are the buttons that appear above the editor and allow the user to insert glyphs
-    let mut glyph_buttons: Vec<_> = Primitive::all()
+    let mut glyph_buttons: Vec<_> = Primitive::non_deprecated()
         .filter_map(|p| {
             let text = p
                 .unicode()

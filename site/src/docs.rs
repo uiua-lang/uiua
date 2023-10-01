@@ -388,6 +388,9 @@ impl Allowed {
                             <div style="min-width: 7em;"><Prim prim=p/></div>{sysop.long_name()}
                         </div>)
                         .into_view()
+                    } else if p.is_deprecated() {
+                        view!(<div style="text-decoration: line-through;"><Prim prim=p/></div>)
+                            .into_view()
                     } else {
                         view!(<Prim prim=p/>).into_view()
                     }

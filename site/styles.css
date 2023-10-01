@@ -342,6 +342,7 @@ li {
     background-color: #000c;
     padding: 0.2em;
     border-radius: 0.2em;
+    pointer-events: none;
     margin-top: -1.5em;
     margin-left: -2em;
     text-decoration: none;
@@ -443,6 +444,7 @@ li {
     padding: 0.2em;
     border-radius: 0.2em;
     width: 8em;
+    pointer-events: none;
 }
 
 #example-tracker {

@@ -139,6 +139,9 @@ impl Primitive {
     pub fn all() -> impl Iterator<Item = Self> + Clone {
         all()
     }
+    pub fn non_deprecated() -> impl Iterator<Item = Self> + Clone {
+        Self::all().filter(|p| !p.is_deprecated())
+    }
     pub fn name(&self) -> Option<&'static str> {
         self.names().map(|n| n.text)
     }
@@ -160,6 +163,17 @@ impl Primitive {
     }
     pub fn is_modifier(&self) -> bool {
         self.modifier_args().is_some()
+    }
+    pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
+        match self {
+            Primitive::Roll | Primitive::Unroll => {
+                Some(format!("try using dip{} instead", Primitive::Dip))
+            }
+            _ => None,
+        }
+    }
+    pub fn is_deprecated(&self) -> bool {
+        self.deprecation_suggestion().is_some()
     }
     pub fn inverse(&self) -> Option<Self> {
         use Primitive::*;
@@ -418,6 +432,12 @@ impl Primitive {
                 env.push(b);
                 env.push(a);
                 env.push(c);
+            }
+            Primitive::Dip => {
+                let f = env.pop(FunctionArg(1))?;
+                let x = env.pop(1)?;
+                env.call(f)?;
+                env.push(x);
             }
             Primitive::Restack => fork::restack(env)?,
             Primitive::PushTemp => env.push_temp()?,

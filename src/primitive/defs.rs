@@ -178,6 +178,8 @@ primitive!(
     (0(0), Noop, Stack, ("noop", '·')),
     /// Move the top value on the stack 2 places down
     ///
+    /// Deprecated in favor of [dip].
+    ///
     /// ex: [↷ 1 2 3 4 5]
     ///
     /// If you want to operate on two values, keep them on the stack, and put the result below them, you can combine [roll] and [over].
@@ -188,10 +190,19 @@ primitive!(
     (3(3), Roll, Stack, ("roll", '↷')),
     /// Move the third value on the stack to the top
     ///
+    /// Deprecated in favor of [dip].
+    ///
     /// ex: [↶ 1 2 3 4 5]
     ///
     /// See also: [roll]
     (3(3), Unroll, Stack, ("unroll", '↶')),
+    /// Temporarily pop the top value off the stack and call a function
+    ///
+    /// ex: [→+ 1 2 3]
+    /// ex: [→→+ 1 2 3 4]
+    ///
+    /// [dip] replaces [roll] and [unroll], which are currently deprecated.
+    ([1], Dip, Stack, ("dip", '→')),
     /// Rearrange the stack
     ///
     /// [restack] is the most powerful stack manipulation function.

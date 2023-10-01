@@ -146,7 +146,7 @@ uiuisms!(
     /// Split an array into groups of contiguous equal elements
     "⊜□. [1 1 1 2 2 1 1 4]",
     /// Find the nth fibonacci number
-    ";⍥(+,∶)↶.1 10",
+    ";⍥(+,∶)→.∶1 10",
     /// Remove all instances of an element from a list
     "▽≠, 4 [1 4 2 0 5 4 3]",
     /// Remove all instances of a row from an array

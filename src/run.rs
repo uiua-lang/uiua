@@ -755,6 +755,23 @@ code:
         Ok(())
     }
     fn primitive(&mut self, prim: Primitive, span: CodeSpan, call: bool) -> UiuaResult {
+        if let Some(suggestion) = prim.deprecation_suggestion() {
+            let suggestion = if suggestion.is_empty() {
+                String::new()
+            } else {
+                format!(", {suggestion}")
+            };
+            self.diagnostics.insert(Diagnostic::new(
+                format!(
+                    "Warning: {}{} is deprecated and will be removed in a future version{}",
+                    prim.name().unwrap_or_default(),
+                    prim,
+                    suggestion
+                ),
+                span.clone(),
+                DiagnosticKind::Warning,
+            ));
+        }
         let span = self.add_span(span);
         if call || prim.as_constant().is_some() {
             self.push_instr(Instr::Prim(prim, span));

@@ -154,8 +154,7 @@ fn under_instrs(instrs: &[Instr]) -> Option<Under> {
     let mut end = instrs.len();
     loop {
         if let Some((before, mut after)) = under_instr_fragment(&instrs[start..end]) {
-            after.append(&mut afters);
-            afters = after;
+            afters.append(&mut after);
             match before {
                 Cow::Borrowed(before) => befores.extend_from_slice(before),
                 Cow::Owned(before) => befores.extend(before),
@@ -165,7 +164,7 @@ fn under_instrs(instrs: &[Instr]) -> Option<Under> {
             }
             end = start;
             start = 0;
-        } else if start == 0 {
+        } else if start == end - 1 {
             return None;
         } else {
             start += 1;
@@ -190,7 +189,6 @@ fn under_instr_fragment(mut instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr
 
     match instrs {
         [gi @ Push(g), fi @ Push(f), Prim(Bind, _)] => {
-            println!("bind {f:?} {g:?}");
             let mut instrs = if let Some(g) = g.as_function() {
                 g.instrs.clone()
             } else {
@@ -201,7 +199,6 @@ fn under_instr_fragment(mut instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr
             } else {
                 instrs.push(fi.clone());
             }
-            println!("bind instrs: {:?}", instrs);
             let (before, after) = under_instrs(&instrs)?;
             return Some((Cow::Owned(before), after));
         }

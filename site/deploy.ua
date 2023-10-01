@@ -1,5 +1,5 @@
 &cd "site"
-&runi {"git" "checkout" "site"}
+&runi {"git" "checkout" "site" "-f"}
 &runi {"git" "reset" "--hard" "origin/site"}
 &runi {"git" "rebase" "main"}
 &runi {"trunk" "build" "--release"}

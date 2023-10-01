@@ -565,7 +565,7 @@ impl Lexer {
                         self.end(Str(inner), start)
                     }
                 }
-                // Identifiers and selectors
+                // Identifiers and unformatted glyphs
                 c if is_custom_glyph(c) => self.end(Ident, start),
                 c if is_ident_char(c) => {
                     let mut ident = c.to_string();

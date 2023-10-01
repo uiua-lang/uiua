@@ -641,13 +641,15 @@ code:
                 self.push_instr(Instr::Call(span));
             }
         } else if let Some(prim) =
-            Primitive::all().find(|p| p.names().is_some_and(|n| &*ident == n.text))
+            Primitive::all().find(|p| p.names().is_some_and(|n| n.text == ident.as_ref()))
         {
-            // Name is a non-formattable primitive
-            let span = self.add_span(span);
-            self.push_instr(Instr::Prim(prim, span));
+            return Err(span
+                .sp(format!(
+                    "Unknown identifier `{ident}`, did you mean `{prim}`?"
+                ))
+                .into());
         } else {
-            return Err(span.sp(format!("Unknown identifier `{}`", ident)).into());
+            return Err(span.sp(format!("Unknown identifier `{ident}`")).into());
         }
         Ok(())
     }

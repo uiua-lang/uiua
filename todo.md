@@ -1,6 +1,7 @@
-- Add weave modifier
-- Optimize keep
+- Fix under deshape
 - Fix comments with leading spaces
+- Under keep
+- Optimize keep
 - Rust API
 - Docs
   - Invert bits for control flow
@@ -22,7 +23,5 @@
   - Sound input
   - Webcam input
 - System APIs
-  - run commands
-  - check OS
   - FFI
   - UDP Sockets

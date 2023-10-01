@@ -690,11 +690,10 @@ tw pf 3"#/>
         <p>"The website's editor has an example file that you can import called "<code>"example.ua"</code>". Its contents is:"</p>
         <Editor example={ &example_ua(|ex| ex.clone()) }/>
         <p>"You can import it with "<Prim prim=Sys(SysOp::Import)/>" and then "<Prim prim=Use/>" to extract the functions."</p>
-        <p>"By using "<Prim prim=Dup/>" on the imported module, you can repetedly extract functions from it. Notice the lack of a "<Prim prim=Dup glyph_only=true/>" after the last "<Prim prim=Use/>"."</p>
-        <Editor example=r#"&i "example.ua"
-square ← use "Square".
-double ← use "Double".
-increment ← use "Increment"
+        <Editor example=r#"ex ← &i "example.ua"
+square ← use "Square" ex
+double ← use "Double" ex
+increment ← use "Increment" ex
 
 increment square double 5"#/>
         <p><Prim prim=Sys(SysOp::Import)/>" only imports a given file once and caches the results. Subsequent imports of the same file (from anywhere) will not run the file's code again, but they "<em>"will"</em>" push its stack values again."</p>

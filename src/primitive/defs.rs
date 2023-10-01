@@ -1322,9 +1322,9 @@ primitive!(
     ///
     /// Can be used after [&i].
     ///
-    /// ex: &i "example.ua"
-    ///   : square ← use "Square".
-    ///   : increment ← use "Increment"
+    /// ex: ex ← &i "example.ua"
+    ///   : square ← use "Square" ex
+    ///   : increment ← use "Increment" ex
     ///   : square increment 5
     (2, Use, Misc, "use"),
     /// Generate a unique tag

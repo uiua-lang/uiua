@@ -149,9 +149,9 @@ sys_op! {
     ///
     /// If the file has already been imported, its code will not be run again, but the values it originally pushed onto the stack will be pushed again.
     /// Functions can be extracted from the imported modules with [use].
-    /// ex: .&i "example.ua"
-    ///   : double ← use "Double".
-    ///   : square ← use "Square"
+    /// ex: ex ← &i "example.ua"
+    ///   : double ← use "Double" ex
+    ///   : square ← use "Square" ex
     ///   : square double 5
     (1, Import, "&i", "import"),
     /// Close a stream by its handle

@@ -369,7 +369,7 @@ code:
                     }
                 }
 
-                if sig.args <= self.stack.len() {
+                if sig.args == 0 {
                     self.exec_global_instrs(instrs)?;
                     if let Some(value) = self.stack.pop() {
                         match value {

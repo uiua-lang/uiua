@@ -5,6 +5,7 @@
 - Remove the `|1.1` signature restriction for [under`⍜`]'s second function
 - Remove the rank`∴` function
 - Remove the restriction that all functions in a non-scalar function array all have the compatible signatures
+- Whether a binding is a constant or a function is now independent of how many values are on the stack
 ### Interpreter
 - Allow passing `--no-format` to `uiua watch`
 

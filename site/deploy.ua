@@ -6,4 +6,4 @@
 &runi {"git" "add" "--all"}
 &runi {"git" "commit" "--amend" "--no-edit"}
 &runi {"git" "push" "-f"}
-&cd ".."
+&runi {"git" "checkout" "main"}

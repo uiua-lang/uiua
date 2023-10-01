@@ -104,6 +104,10 @@ sys_op! {
     /// Print a value to stdout followed by a newline
     (1(0), Print, "&p", "print with newline"),
     /// Read a line from stdin
+    ///
+    /// The normal output is a string.
+    /// If EOF is reached, the number `0` is returned instead.
+    /// Programs that wish to properly handle EOF should check for this.
     (0, ScanLine, "&sc", "scan line"),
     /// Get the size of the terminal
     ///
@@ -312,7 +316,10 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         eprint!("{s}");
         _ = stderr().flush();
     }
-    fn scan_line_stdin(&self) -> Result<String, String> {
+    /// Read a line from stdin
+    ///
+    /// Should return `Ok(None)` if EOF is reached.
+    fn scan_line_stdin(&self) -> Result<Option<String>, String> {
         Err("Reading from stdin is not supported in this environment".into())
     }
     fn var(&self, name: &str) -> Option<String> {
@@ -541,12 +548,12 @@ impl SysBackend for NativeSys {
         stderr.write_all(s.as_bytes()).map_err(|e| e.to_string())?;
         stderr.flush().map_err(|e| e.to_string())
     }
-    fn scan_line_stdin(&self) -> Result<String, String> {
+    fn scan_line_stdin(&self) -> Result<Option<String>, String> {
         stdin()
             .lock()
             .lines()
             .next()
-            .unwrap()
+            .transpose()
             .map_err(|e| e.to_string())
     }
     fn save_error_color(&self, error: &UiuaError) {
@@ -908,8 +915,11 @@ impl SysOp {
                     .map_err(|e| env.error(e))?;
             }
             SysOp::ScanLine => {
-                let line = env.backend.scan_line_stdin().map_err(|e| env.error(e))?;
-                env.push(line);
+                if let Some(line) = env.backend.scan_line_stdin().map_err(|e| env.error(e))? {
+                    env.push(line);
+                } else {
+                    env.push(0u8);
+                }
             }
             SysOp::TermSize => {
                 let (width, height) = env.backend.term_size().map_err(|e| env.error(e))?;

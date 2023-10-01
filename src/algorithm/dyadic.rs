@@ -1037,9 +1037,9 @@ impl<T: ArrayValue> Array<T> {
     fn untake(self, index: &[isize], mut into: Self, env: &Uiua) -> UiuaResult<Self> {
         if self.rank() + index.len() - 1 != into.rank() {
             return Err(env.error(format!(
-                "Attempted to undo take, but the taken section's shape was modified from {} to {}",
-                FormatShape(&into.shape[index.len() - 1..]),
-                self.format_shape(),
+                "Attempted to undo take, but the taken section's rank was modified from {} to {}",
+                into.rank() - (index.len() - 1),
+                self.rank()
             )));
         }
         let from = self;
@@ -1140,6 +1140,13 @@ impl<T: ArrayValue> Array<T> {
         })
     }
     fn undrop(self, index: &[isize], into: Self, env: &Uiua) -> UiuaResult<Self> {
+        if self.rank() + index.len() - 1 != into.rank() {
+            return Err(env.error(format!(
+                "Attempted to undo drop, but the dropped section's rank was modified from {} to {}",
+                into.rank() - (index.len() - 1),
+                self.rank()
+            )));
+        }
         let index: Vec<isize> = index
             .iter()
             .zip(&into.shape)

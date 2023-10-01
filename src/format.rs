@@ -169,21 +169,23 @@ impl<'a> Formatter<'a> {
                 self.output.push_str(&binding.name.value);
                 self.output.push_str(" ← ");
                 if let Some(sig) = &binding.signature {
-                    self.format_signature(sig.value);
+                    self.format_signature(sig.value, true);
                 }
                 self.format_words(&binding.words, true, 0);
             }
             Item::ExtraNewlines(_) => {}
         }
     }
-    fn format_signature(&mut self, sig: Signature) {
+    fn format_signature(&mut self, sig: Signature, trailing_space: bool) {
         self.output.push('|');
         self.output.push_str(&sig.args.to_string());
         if sig.outputs != 1 {
             self.output.push('.');
             self.output.push_str(&sig.outputs.to_string());
         }
-        self.output.push(' ');
+        if trailing_space {
+            self.output.push(' ');
+        }
     }
     fn format_words(&mut self, words: &[Sp<Word>], trim_end: bool, depth: usize) {
         for word in trim_spaces(words, trim_end) {
@@ -261,7 +263,7 @@ impl<'a> Formatter<'a> {
             Word::Func(func) => {
                 self.output.push('(');
                 if let Some(sig) = &func.signature {
-                    self.format_signature(sig.value);
+                    self.format_signature(sig.value, func.lines.len() <= 1);
                 }
                 self.format_multiline_words(&func.lines, false, depth + 1);
                 self.output.push(')');

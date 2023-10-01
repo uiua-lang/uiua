@@ -16,6 +16,10 @@
       craneLib = crane.lib.${system};
       uiua-crate = craneLib.buildPackage {
         src = craneLib.cleanCargoSource (craneLib.path ./.);
+         buildInputs = nixpkgs.lib.optionals pkgs.stdenv.isDarwin [
+           pkgs.iconv
+           pkgs.darwin.apple_sdk.frameworks.CoreServices
+        ];
       };
     in
       {

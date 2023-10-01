@@ -1043,6 +1043,15 @@ pub fn Editor<'a>(
             <div id="editor-help">
                 { help.iter().map(|s| view!(<p>{s}</p>)).collect::<Vec<_>>() }
             </div>
+            <div id="editor-help">
+            {
+                if let EditorSize::Pad = size {
+                    Some("Note: Uiua is not yet stable")
+                } else {
+                    None
+                }
+            }
+            </div>
         </div>
     }
 }

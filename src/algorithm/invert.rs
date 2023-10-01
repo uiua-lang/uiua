@@ -190,6 +190,7 @@ fn under_instr_fragment(mut instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr
 
     match instrs {
         [gi @ Push(g), fi @ Push(f), Prim(Bind, _)] => {
+            println!("bind {f:?} {g:?}");
             let mut instrs = if let Some(g) = g.as_function() {
                 g.instrs.clone()
             } else {
@@ -200,34 +201,53 @@ fn under_instr_fragment(mut instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr
             } else {
                 instrs.push(fi.clone());
             }
+            println!("bind instrs: {:?}", instrs);
             let (before, after) = under_instrs(&instrs)?;
             return Some((Cow::Owned(before), after));
         }
         _ => {}
     }
 
+    macro_rules! stash2 {
+        ($before:expr, $after:expr) => {
+            (
+                [$before],
+                [Over, Over, PushTemp, PushTemp, $before],
+                [PopTemp, PopTemp, Unroll, $after],
+            )
+        };
+    }
+
     let patterns: &[&dyn UnderPattern] = &[
-        &(Val, ([Take], [Over, Over, Take], [Untake])),
-        &([Take], [Over, Over, Take], [Untake]),
-        &(Val, ([Drop], [Over, Over, Drop], [Undrop])),
-        &([Drop], [Over, Over, Drop], [Undrop]),
-        &(Val, ([Select], [Over, Over, Select], [Unselect])),
-        &([Select], [Over, Over, Select], [Unselect]),
-        &(Val, ([Pick], [Over, Over, Pick], [Unpick])),
-        &([Pick], [Over, Over, Pick], [Unpick]),
-        &([Rotate], [Flip, Over, Rotate], [Flip, Neg, Rotate]),
+        &(Val, stash2!(Take, Untake)),
+        &stash2!(Take, Untake),
+        &(Val, stash2!(Drop, Undrop)),
+        &stash2!(Drop, Undrop),
+        &(Val, stash2!(Select, Unselect)),
+        &stash2!(Select, Unselect),
+        &(Val, stash2!(Pick, Unpick)),
+        &stash2!(Pick, Unpick),
+        &(
+            [Rotate],
+            [Dup, PushTemp, Rotate],
+            [PopTemp, Flip, Neg, Rotate],
+        ),
         &(
             [First],
-            [Dup, First],
-            [Flip.i(), 1.i(), Drop.i(), Flip.i(), Join.i()],
+            [Dup, PushTemp, First],
+            [PopTemp.i(), 1.i(), Drop.i(), Flip.i(), Join.i()],
         ),
         &(
             [Last],
-            [Dup, Last],
-            [Flip.i(), (-1).i(), Drop.i(), Join.i()],
+            [Dup, PushTemp, Last],
+            [PopTemp.i(), (-1).i(), Drop.i(), Join.i()],
         ),
-        &([Shape], [Dup, Shape], [Reshape]),
-        &([Deshape], [Dup, Shape, Flip, Deshape], [Flip, Reshape]),
+        &([Shape], [Dup, PushTemp, Shape], [PopTemp, Flip, Reshape]),
+        &(
+            [Deshape],
+            [Dup, PushTemp, Shape, Flip, Deshape],
+            [PopTemp, Flip, Reshape],
+        ),
     ];
 
     let mut befores = Vec::new();

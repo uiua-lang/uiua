@@ -210,6 +210,10 @@ primitive!(
     ///
     /// While [restack] is sometimes necessary, its use is generally discouraged unless absolutely necessary, as it makes code harder to read.
     ((None), Restack, Stack, ("restack", '⇵')),
+    /// Move a value to the temp stack
+    (1(0), PushTemp, Stack),
+    /// Move a value from the temp stack
+    (0(1), PopTemp, Stack),
     // Pervasive monadic ops
     /// Logical not
     ///

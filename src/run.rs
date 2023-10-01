@@ -34,6 +34,8 @@ pub struct Uiua {
     spans: Arc<Mutex<Vec<Span>>>,
     /// The thread's stack
     stack: Vec<Value>,
+    /// The thread's temp stack
+    temp_stack: Vec<Value>,
     /// The current scope
     scope: Scope,
     /// Ancestor scopes of the current one
@@ -151,6 +153,7 @@ impl Uiua {
         Uiua {
             spans: Arc::new(Mutex::new(vec![Span::Builtin])),
             stack: Vec::new(),
+            temp_stack: Vec::new(),
             scope,
             higher_scopes: Vec::new(),
             globals: Arc::new(Mutex::new(globals)),
@@ -756,7 +759,10 @@ code:
                 self.scope.call.pop();
                 continue;
             };
-            // println!("{:?}", self.stack);
+            // for val in &self.stack {
+            //     print!("{:?} ", val);
+            // }
+            // println!();
             // println!("  {:?}", instr);
             let res = match instr {
                 Instr::Push(val) => {
@@ -946,6 +952,19 @@ code:
     pub fn push(&mut self, val: impl Into<Value>) {
         self.stack.push(val.into());
     }
+    pub(crate) fn push_temp(&mut self) -> UiuaResult {
+        let value = self.pop("value to move to temp")?;
+        self.temp_stack.push(value);
+        Ok(())
+    }
+    pub(crate) fn pop_temp(&mut self) -> UiuaResult {
+        let value = self
+            .temp_stack
+            .pop()
+            .ok_or_else(|| self.error("Temp stack was empty when evaluating value to pop"))?;
+        self.push(value);
+        Ok(())
+    }
     /// Take the entire stack
     pub fn take_stack(&mut self) -> Vec<Value> {
         take(&mut self.stack)
@@ -1106,6 +1125,7 @@ code:
                 .stack
                 .drain(self.stack.len() - capture_count..)
                 .collect(),
+            temp_stack: Vec::new(),
             scope: self.scope.clone(),
             higher_scopes: self.higher_scopes.last().cloned().into_iter().collect(),
             mode: self.mode,

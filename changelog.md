@@ -6,6 +6,9 @@ Uiua is not yet stable.
 - Add the [`dip` `→`](https://uiua.org/docs/dip) modifier, which temporarily pops a value
 - Deprecate `roll↷` and `unroll↶`
 
+### Website
+- Add the `n×n identity matrix` uiuism
+
 ## Logpoint 3 - 2023-09-30
 ### Language
 - Remove the `|1.1` signature restriction for [`under` `⍜`](https://uiua.org/docs/under)'s second function

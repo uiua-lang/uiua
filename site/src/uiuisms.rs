@@ -172,5 +172,7 @@ uiuisms!(
     /// Trim whitespace
     r#"▽×⍜'⊟⇌≡\↥.≠@ . "  abc xyz   ""#,
     /// Upscale a matrix
-    "▽↯⧻,/÷△.⍉▽↯⧻,30 [0_1 1_0]"
+    "▽↯⧻,/÷△.⍉▽↯⧻,30 [0_1 1_0]",
+    /// n×n identity matrix
+    "≡(=⊗).∶ ⇡⧻. ↯[⧻∶⧻]..⇡",
 );

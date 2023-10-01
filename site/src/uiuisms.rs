@@ -172,5 +172,9 @@ uiuisms!(
     /// Trim whitespace
     r#"▽×⍜'⊟⇌≡\↥.≠@ . "  abc xyz   ""#,
     /// Upscale a matrix
-    "▽↯⧻,/÷△.⍉▽↯⧻,30 [0_1 1_0]"
+    "▽↯⧻,/÷△.⍉▽↯⧻,30 [0_1 1_0]",
+    /// Dot product
+    "/+× [1 2 3] [4 ¯5 6]",
+    /// Matrix multiplication
+    "⊠(/+×) [1_2 3_4 5_6] ⍉[7_8_9 10_11_12]"
 );

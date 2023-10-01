@@ -3,16 +3,22 @@
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
+  inputs.crane = {
+    url = "github:ipetkov/crane";
+    inputs.nixpkgs.follows = "nixpkgs";
+    inputs.flake-utils.follows = "flake-utils";
+  };
 
-  outputs = { self, nixpkgs, flake-utils }: 
+  outputs = { self, nixpkgs, flake-utils, crane }: 
     flake-utils.lib.eachDefaultSystem (system:
-      let pkgs = nixpkgs.legacyPackages.${system}; in
+    let 
+      pkgs = nixpkgs.legacyPackages.${system};
+      craneLib = crane.lib.${system};
+      uiua-crate = craneLib.buildPackage {
+        src = craneLib.cleanCargoSource (craneLib.path ./.);
+      };
+    in
       {
-        packages.default = pkgs.rustPlatform.buildRustPackage {
-          pname = "uiua";
-          version = "0.0.6";
-          src = ./.;
-          cargoHash = "sha256-yoOByt66brm7YTGlD7kqqMxgsicO29vVPczhMIBjoA8=";
-        };
+        packages.default = uiua-crate;
       });
 }

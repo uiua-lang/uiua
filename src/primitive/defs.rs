@@ -1170,7 +1170,7 @@ primitive!(
     /// ex: [∋'⊂⊂'⊂⊂'⊂⊂ 1 2 3]
     ///
     /// A good example use case is when implementing the quadratic formula.
-    /// ex: Quad ← ÷∶+↷∋(×2)¯(⊟¯.√-∶ⁿ2∶×4×↶)
+    /// ex: Quad ← ÷→+∋(×2)¯(⊟¯.√+ⁿ2→(××¯4)∶)
     ///   : Quad 1 2 0
     /// The first function passed to [trident] [multiply]s `a` by `2`.
     /// The second function [negate]s `b`.

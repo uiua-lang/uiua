@@ -269,7 +269,7 @@ fn prim_class(prim: Primitive) -> &'static str {
 
     if prim == Primitive::Transpose {
         code_font!("monadic-function-button trans")
-    } else if let PrimClass::Stack = prim.class() {
+    } else if prim.class() == PrimClass::Stack && prim.modifier_args().is_none() {
         code_font!("stack-function-button")
     } else if let Some(m) = prim.modifier_args() {
         if m == 1 {

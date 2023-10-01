@@ -1,4 +1,6 @@
-- Add warnings
+- Add weave modifier
+- Make dip yellow in the editor
+- Fix comments with leading spaces
 - Rust API
 - Docs
   - Invert bits for control flow

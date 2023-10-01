@@ -458,6 +458,12 @@ fn TutorialTypes() -> impl IntoView {
         <p>"Functions are usually used as scalars, but they are still arrays. Most array operations that work on number and character arrays work on arrays of functions as well."</p>
         <p>"Functions will be discussed more in some "<A href="/docs/bindings#binding-functions">"later"</A>" "<A href="/docs/functions">"sections"</A>"."</p>
 
+        <h2 id="empty-arrays">"Empty Arrays"</h2>
+        <p>"If you create an empty array with "<code>"[]"</code>"s, it will be a rank 1 array of numbers."</p>
+        <Editor example="△[]"/>
+        <Editor example="⊂1 []"/>
+        <Editor example="⊂@a []"/> // Should fail
+
         <h2>"Type agreement"</h2>
         <p id="type-agreement">"For functions that work on the structure of arrays rather than their values, the types of the arrays must match."</p>
         <Editor example="⊂ 1_2 3"/>

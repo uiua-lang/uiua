@@ -114,8 +114,7 @@ impl Value {
     }
     pub fn type_name(&self) -> &'static str {
         match self {
-            Self::Num(_) => "number",
-            Self::Byte(_) => "byte",
+            Self::Num(_) | Self::Byte(_) => "number",
             Self::Char(_) => "character",
             Self::Func(_) => "function",
         }

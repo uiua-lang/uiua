@@ -398,7 +398,7 @@ impl ArrayValue for f64 {
 }
 
 impl ArrayValue for u8 {
-    const NAME: &'static str = "byte";
+    const NAME: &'static str = "number";
     fn get_fill(env: &Uiua) -> Option<Self> {
         env.byte_fill()
     }

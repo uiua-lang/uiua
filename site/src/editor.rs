@@ -19,7 +19,7 @@ use uiua::{
     lex::is_ident_char,
     primitive::{PrimClass, Primitive},
     run::RunMode,
-    value_to_image, value_to_wav_bytes, SysBackend, Uiua,
+    value_to_image, value_to_wav_bytes, DiagnosticKind, SysBackend, Uiua,
 };
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{Event, HtmlBrElement, HtmlDivElement, KeyboardEvent, MouseEvent, Node};
@@ -330,6 +330,14 @@ pub fn Editor<'a>(
                     }
                     OutputItem::Error(error) => {
                         view!(<div class="output-item output-error">{error}</div>).into_view()
+                    }
+                    OutputItem::Diagnostic(message, kind) => {
+                        let class = match kind {
+                            DiagnosticKind::Warning => "output-warning",
+                            DiagnosticKind::Advice => "output-advice",
+                        };
+                        let class = format!("output-item {class}");
+                        view!(<div class=class>{message}</div>).into_view()
                     }
                     OutputItem::Separator => {
                         view!(<div class="output-item"><hr/></div>).into_view()
@@ -1342,12 +1350,13 @@ fn run_code(code: &str) -> Vec<OutputItem> {
         .with_execution_limit(Duration::from_secs(10));
     let mut error = None;
     let values = match env.load_str(code) {
-        Ok(env) => env.take_stack(),
+        Ok(()) => env.take_stack(),
         Err(e) => {
             error = Some(e);
             env.take_stack()
         }
     };
+    let diagnotics = env.take_diagnostics();
     // Get stdout and stderr
     let io = env.downcast_backend::<WebBackend>().unwrap();
     let stdout = take(&mut *io.stdout.lock().unwrap());
@@ -1420,6 +1429,14 @@ fn run_code(code: &str) -> Vec<OutputItem> {
             output.push(OutputItem::String("...Additional output truncated".into()));
         }
         output.push(OutputItem::Error(error.show(false)));
+    }
+    if !diagnotics.is_empty() {
+        if !output.is_empty() {
+            output.push(OutputItem::String("".into()));
+        }
+        for diag in diagnotics {
+            output.push(OutputItem::Diagnostic(diag.show(false), diag.kind));
+        }
     }
     output
 }

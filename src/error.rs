@@ -189,38 +189,89 @@ impl From<Infallible> for UiuaError {
 
 impl UiuaError {
     pub fn show(&self, color: bool) -> String {
+        let kind = ReportKind::Error;
         match self {
             UiuaError::Parse(errors) => report(
                 errors
                     .iter()
                     .map(|error| (error.value.to_string(), error.span.clone().into())),
+                kind,
                 color,
             ),
-            UiuaError::Run(error) => report([(&error.value, error.span.clone())], color),
+            UiuaError::Run(error) => report([(&error.value, error.span.clone())], kind, color),
             UiuaError::Traced { error, trace } => {
                 let mut s = error.show(color);
                 format_trace(&mut s, trace).unwrap();
                 s
             }
-            UiuaError::Throw(message, span) => report([(&message, span.clone())], color),
-            UiuaError::Break(_, span) => report([("break outside of loop", span.clone())], color),
-            UiuaError::Timeout(span) => {
-                report([("Maximum execution time exceeded", span.clone())], color)
+            UiuaError::Throw(message, span) => report([(&message, span.clone())], kind, color),
+            UiuaError::Break(_, span) => {
+                report([("break outside of loop", span.clone())], kind, color)
             }
+            UiuaError::Timeout(span) => report(
+                [("Maximum execution time exceeded", span.clone())],
+                kind,
+                color,
+            ),
             UiuaError::Fill(error) => error.show(color),
             UiuaError::Load(..) | UiuaError::Format(..) => self.to_string(),
         }
     }
 }
 
-fn report<I, T>(errors: I, complex_output: bool) -> String
+/// A message to be displayed to the user that is not an error
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Diagnostic {
+    pub span: Span,
+    pub message: String,
+    pub kind: DiagnosticKind,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum DiagnosticKind {
+    Warning,
+    Advice,
+}
+
+impl fmt::Display for Diagnostic {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.message.fmt(f)
+    }
+}
+
+impl Diagnostic {
+    pub fn new(message: impl Into<String>, span: impl Into<Span>, kind: DiagnosticKind) -> Self {
+        Self {
+            message: message.into(),
+            span: span.into(),
+            kind,
+        }
+    }
+    pub fn show(&self, color: bool) -> String {
+        report(
+            [(&self.message, self.span.clone())],
+            match self.kind {
+                DiagnosticKind::Warning => ReportKind::Warning,
+                DiagnosticKind::Advice => ReportKind::Advice,
+            },
+            color,
+        )
+    }
+}
+
+fn report<I, T>(errors: I, kind: ReportKind, color: bool) -> String
 where
     I: IntoIterator<Item = (T, Span)>,
     T: ToString,
 {
-    let config = Config::default().with_color(complex_output);
-    let color = if complex_output {
-        Color::Red
+    let config = Config::default().with_color(color);
+    let color = if color {
+        match kind {
+            ReportKind::Error => Color::Red,
+            ReportKind::Warning => Color::Yellow,
+            ReportKind::Advice => Color::Fixed(147),
+            ReportKind::Custom(_, col) => col,
+        }
     } else {
         Color::Unset
     };
@@ -232,15 +283,11 @@ where
                 input: Source::from(&span.input),
                 files: HashMap::new(),
             });
-            let report = Report::<CodeSpan>::build(
-                ReportKind::Error,
-                span.path.clone(),
-                span.start.char_pos,
-            )
-            .with_message(message)
-            .with_label(Label::new(span.clone()).with_color(color))
-            .with_config(config)
-            .finish();
+            let report = Report::<CodeSpan>::build(kind, span.path.clone(), span.start.char_pos)
+                .with_message(message)
+                .with_label(Label::new(span.clone()).with_color(color))
+                .with_config(config)
+                .finish();
             let _ = report.write(cache, &mut buffer);
         } else {
             if !buffer.ends_with(b"\n") {

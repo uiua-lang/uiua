@@ -6,6 +6,8 @@
 - Remove the rank`∴` function
 - Remove the restriction that all functions in a non-scalar function array all have the compatible signatures
 - Whether a binding is a constant or a function is now independent of how many values are on the stack
+- Add a system for non-error diagnostics
+  - Add advice about redundant uses of [each`∵`](https://uiua.org/docs/each)
 ### Interpreter
 - Allow passing `--no-format` to `uiua watch`
 - [`&sc`](https://uiua.org/docs/&sc) now returns `0` if EOF is input

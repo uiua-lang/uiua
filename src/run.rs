@@ -1,5 +1,5 @@
 use std::{
-    collections::{hash_map::DefaultHasher, HashMap, HashSet},
+    collections::{hash_map::DefaultHasher, BTreeSet, HashMap, HashSet},
     fs,
     hash::{Hash, Hasher},
     mem::take,
@@ -20,7 +20,8 @@ use crate::{
     parse::parse,
     primitive::{Primitive, CONSTANTS},
     value::Value,
-    Handle, Ident, NativeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
+    Diagnostic, DiagnosticKind, Handle, Ident, NativeSys, SysBackend, SysOp, TraceFrame, UiuaError,
+    UiuaResult,
 };
 
 /// The Uiua runtime
@@ -50,6 +51,10 @@ pub struct Uiua {
     current_imports: Arc<Mutex<HashSet<PathBuf>>>,
     /// The stacks of imported files
     imports: Arc<Mutex<HashMap<PathBuf, Vec<Value>>>>,
+    /// Accumulated diagnostics
+    diagnostics: BTreeSet<Diagnostic>,
+    /// Print diagnostics as they are encountered
+    print_diagnostics: bool,
     /// The system backend
     pub(crate) backend: Arc<dyn SysBackend>,
 }
@@ -161,7 +166,9 @@ impl Uiua {
             current_imports: Arc::new(Mutex::new(HashSet::new())),
             imports: Arc::new(Mutex::new(HashMap::new())),
             mode: RunMode::Normal,
+            diagnostics: BTreeSet::new(),
             backend: Arc::new(NativeSys),
+            print_diagnostics: false,
             execution_limit: None,
             execution_start: 0.0,
         }
@@ -178,6 +185,10 @@ impl Uiua {
     }
     pub fn downcast_backend<T: SysBackend>(&self) -> Option<&T> {
         self.backend.any().downcast_ref()
+    }
+    pub fn print_diagnostics(mut self, print_diagnostics: bool) -> Self {
+        self.print_diagnostics = print_diagnostics;
+        self
     }
     /// Limit the execution duration
     pub fn with_execution_limit(mut self, limit: Duration) -> Self {
@@ -196,17 +207,17 @@ impl Uiua {
         self.mode
     }
     /// Load a Uiua file from a path
-    pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<&mut Self> {
+    pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult {
         let path = path.as_ref();
         let input = fs::read_to_string(path).map_err(|e| UiuaError::Load(path.into(), e.into()))?;
         self.load_impl(&input, Some(path))
     }
     /// Load a Uiua file from a string
-    pub fn load_str(&mut self, input: &str) -> UiuaResult<&mut Self> {
+    pub fn load_str(&mut self, input: &str) -> UiuaResult {
         self.load_impl(input, None)
     }
     /// Load a Uiua file from a string with a path for error reporting
-    pub fn load_str_path<P: AsRef<Path>>(&mut self, input: &str, path: P) -> UiuaResult<&mut Self> {
+    pub fn load_str_path<P: AsRef<Path>>(&mut self, input: &str, path: P) -> UiuaResult {
         self.load_impl(input, Some(path.as_ref()))
     }
     /// Run in a scoped context. Names defined in this context will be removed when the scope ends.
@@ -228,7 +239,7 @@ impl Uiua {
         self.scope = self.higher_scopes.pop().unwrap();
         Ok(self.stack.split_off(start_height.min(end_height)))
     }
-    fn load_impl(&mut self, input: &str, path: Option<&Path>) -> UiuaResult<&mut Self> {
+    fn load_impl(&mut self, input: &str, path: Option<&Path>) -> UiuaResult {
         self.execution_start = instant::now();
         let (items, errors) = parse(input, path);
         if !errors.is_empty() {
@@ -255,7 +266,7 @@ code:
         if let Some(path) = path {
             self.current_imports.lock().remove(path);
         }
-        res.map(|_| self)
+        res
     }
     fn trace_error(&self, mut error: UiuaError, frame: StackFrame) -> UiuaError {
         let mut frames = Vec::new();
@@ -417,6 +428,11 @@ code:
     fn compile_words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult<Vec<Instr>> {
         self.new_functions.push(Vec::new());
         self.words(words, call)?;
+        if self.print_diagnostics {
+            for diagnostic in self.take_diagnostics() {
+                eprintln!("{}", diagnostic.show(true));
+            }
+        }
         let instrs = self.new_functions.pop().unwrap();
         Ok(instrs)
     }
@@ -683,6 +699,28 @@ code:
         Ok(())
     }
     fn modified(&mut self, modified: Modified, call: bool) -> UiuaResult {
+        // Give advice about redundant each
+        match modified.modifier.value {
+            Primitive::Each => {
+                if let [word] = modified.operands.as_slice() {
+                    if let Word::Primitive(prim) = &word.value {
+                        if prim.class().is_pervasive() {
+                            let span = modified.modifier.span.clone().merge(word.span.clone());
+                            self.diagnostics.insert(Diagnostic::new(
+                                format!(
+                                    "Using each with a pervasive primitive like {prim} is \
+                                    redundant. Just use {prim} by itself."
+                                ),
+                                span,
+                                DiagnosticKind::Advice,
+                            ));
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+
         if call {
             self.words(modified.operands, false)?;
             let span = self.add_span(modified.modifier.span);
@@ -935,6 +973,10 @@ code:
     pub fn error(&self, message: impl ToString) -> UiuaError {
         UiuaError::Run(self.span().clone().sp(message.to_string()))
     }
+    pub fn diagnostic(&mut self, message: impl Into<String>, kind: DiagnosticKind) {
+        self.diagnostics
+            .insert(Diagnostic::new(message.into(), self.span(), kind));
+    }
     /// Pop a value from the stack
     pub fn pop(&mut self, arg: impl StackArg) -> UiuaResult<Value> {
         let res = self.stack.pop().ok_or_else(|| {
@@ -968,6 +1010,12 @@ code:
     /// Take the entire stack
     pub fn take_stack(&mut self) -> Vec<Value> {
         take(&mut self.stack)
+    }
+    pub fn diagnostics(&self) -> &BTreeSet<Diagnostic> {
+        &self.diagnostics
+    }
+    pub fn take_diagnostics(&mut self) -> BTreeSet<Diagnostic> {
+        take(&mut self.diagnostics)
     }
     pub fn clone_stack_top(&mut self, n: usize) -> Vec<Value> {
         self.stack.iter().rev().take(n).rev().cloned().collect()
@@ -1131,6 +1179,8 @@ code:
             mode: self.mode,
             current_imports: self.current_imports.clone(),
             imports: self.imports.clone(),
+            diagnostics: BTreeSet::new(),
+            print_diagnostics: self.print_diagnostics,
             backend: self.backend.clone(),
             execution_limit: self.execution_limit,
             execution_start: self.execution_start,

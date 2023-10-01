@@ -388,22 +388,21 @@ mod server {
             } else {
                 return Ok(None);
             };
-            Ok(
-                if let Ok(env) = Uiua::with_native_sys().load_str(&doc.input) {
-                    let stack = env.take_stack();
-                    let mut text = String::new();
-                    for val in stack {
-                        text.push_str(&val.show());
-                    }
-                    let range = Range {
-                        start: Position::new(0, 0),
-                        end: Position::new(u32::MAX, u32::MAX),
-                    };
-                    Some(vec![InlineValue::Text(InlineValueText { range, text })])
-                } else {
-                    None
-                },
-            )
+            let mut env = Uiua::with_native_sys();
+            Ok(if env.load_str(&doc.input).is_ok() {
+                let stack = env.take_stack();
+                let mut text = String::new();
+                for val in stack {
+                    text.push_str(&val.show());
+                }
+                let range = Range {
+                    start: Position::new(0, 0),
+                    end: Position::new(u32::MAX, u32::MAX),
+                };
+                Some(vec![InlineValue::Text(InlineValueText { range, text })])
+            } else {
+                None
+            })
         }
 
         async fn semantic_tokens_full(

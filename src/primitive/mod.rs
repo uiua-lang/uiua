@@ -689,19 +689,19 @@ impl PrimExample {
     }
     pub fn output(&self) -> &Result<Vec<String>, String> {
         self.output.get_or_init(|| {
-            Uiua::with_native_sys()
-                .load_str(&self.input)
-                .map(|env| env.take_stack().into_iter().map(|val| val.show()).collect())
-                .map_err(|e| {
-                    e.to_string()
-                        .lines()
-                        .next()
-                        .unwrap_or_default()
-                        .split_once(' ')
-                        .unwrap_or_default()
-                        .1
-                        .into()
-                })
+            let env = &mut Uiua::with_native_sys();
+            match env.load_str(&self.input) {
+                Ok(()) => Ok(env.take_stack().into_iter().map(|val| val.show()).collect()),
+                Err(e) => Err(e
+                    .to_string()
+                    .lines()
+                    .next()
+                    .unwrap_or_default()
+                    .split_once(' ')
+                    .unwrap_or_default()
+                    .1
+                    .into()),
+            }
         })
     }
 }

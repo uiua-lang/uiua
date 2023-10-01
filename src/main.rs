@@ -87,7 +87,9 @@ fn run() -> UiuaResult {
                         let mode = mode.unwrap_or(RunMode::Normal);
                         #[cfg(feature = "audio")]
                         setup_audio(audio_options);
-                        let mut rt = Uiua::with_native_sys().with_mode(mode);
+                        let mut rt = Uiua::with_native_sys()
+                            .with_mode(mode)
+                            .print_diagnostics(true);
                         rt.load_file(path)?;
                         for value in rt.take_stack() {
                             println!("{}", value.show());
@@ -103,7 +105,9 @@ fn run() -> UiuaResult {
                 } => {
                     #[cfg(feature = "audio")]
                     setup_audio(audio_options);
-                    let mut rt = Uiua::with_native_sys().with_mode(RunMode::Normal);
+                    let mut rt = Uiua::with_native_sys()
+                        .with_mode(RunMode::Normal)
+                        .print_diagnostics(true);
                     rt.load_str(&code)?;
                     for value in rt.take_stack() {
                         println!("{}", value.show());
@@ -114,6 +118,7 @@ fn run() -> UiuaResult {
                         format_file(&path, &config)?;
                         Uiua::with_native_sys()
                             .with_mode(RunMode::Test)
+                            .print_diagnostics(true)
                             .load_file(path)?;
                         println!("No failures!");
                     } else {

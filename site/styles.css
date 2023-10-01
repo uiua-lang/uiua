@@ -373,6 +373,14 @@ li {
     color: #f33;
 }
 
+.output-warning {
+    color: #fb0;
+}
+
+.output-advice {
+    color: #2af;
+}
+
 .output-image {
     border-radius: 0.5em;
     max-width: 50vw;

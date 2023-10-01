@@ -152,7 +152,7 @@ impl<'a> VirtualEnv<'a> {
                                     let (args, outputs) = match sig.args.cmp(&sig.outputs) {
                                         Ordering::Equal => (sig.args, sig.outputs),
                                         Ordering::Less => {
-                                            (sig.args, (n - 1) * (sig.outputs - sig.args) + 1)
+                                            (sig.args, n * (sig.outputs - sig.args) + sig.args)
                                         }
                                         Ordering::Greater => (
                                             (n - 1) * (sig.args - sig.outputs) + sig.args,

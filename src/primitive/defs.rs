@@ -1260,7 +1260,7 @@ primitive!(
     /// Expects a non-negative integer. This integer is how many loops will be broken out of.
     /// Loops that can be broken out of are [reduce], [fold], [scan], [each], [rows], and [repeat].
     ///
-    /// ex: /(⎋>10.+) ⇌⇡40  # Break when the sum exceeds 10
+    /// ex: /(⎋>10.+) ⇡8  # Break when the sum exceeds 10
     /// ex: ⍥(⎋>100.×2)∞ 1  # Break when the product exceeds 100
     (1(0), Break, Control, ("break", '⎋')),
     /// Call a function recursively
@@ -1273,7 +1273,7 @@ primitive!(
     /// Here, we recur until the value is not `less than``10`.
     /// ex: !(|1 ↬<10.×2) 1
     ///
-    /// [recur] prevents function signature analysis from working, so functions that contain recur must be annotated with a signature with `|`.
+    /// [recur] prevents function signature analysis from working, so functions that contain [recur] must be annotated with a signature with `|`.
     ///
     /// Here is a recursive factorial function:
     /// ex: !(|1 ×↬>2.-1.) 5

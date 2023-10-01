@@ -8,6 +8,9 @@
 - Whether a binding is a constant or a function is now independent of how many values are on the stack
 ### Interpreter
 - Allow passing `--no-format` to `uiua watch`
+- [`&sc`](https://uiua.org/docs/&sc) now returns `0` if EOF is input
+### Website
+- [`&sc`](https://uiua.org/docs/&sc) now works on the website by showing a prompt
 
 ## Logpoint 2 - 2023-09-29
 ### Language

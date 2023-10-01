@@ -8,6 +8,7 @@ use std::{
     },
 };
 
+use leptos::*;
 use uiua::{value::Value, Handle, SysBackend, Uiua, UiuaError, UiuaResult};
 
 pub struct WebBackend {
@@ -69,6 +70,11 @@ impl SysBackend for WebBackend {
     }
     fn print_str_trace(&self, s: &str) {
         self.trace.lock().unwrap().push_str(s);
+    }
+    fn scan_line_stdin(&self) -> Result<Option<String>, String> {
+        Ok(window()
+            .prompt_with_message("Enter a line of text for stdin")
+            .unwrap_or(None))
     }
     fn show_image(&self, image: image::DynamicImage) -> Result<(), String> {
         let mut bytes = Cursor::new(Vec::new());

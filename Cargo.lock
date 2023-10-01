@@ -3093,7 +3093,7 @@ dependencies = [
 
 [[package]]
 name = "uiua"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "ariadne",
  "bufreaderwriter",

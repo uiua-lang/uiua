@@ -1040,7 +1040,7 @@ primitive!(
     /// Although, [under][select] only works if the indices are unique.
     /// ex! ⍜⊏'×10 1_3_3 1_2_3_4_5
     ///
-    /// If `g` takes more than 1 argument, keep in mind that `f` will be will be called on the stack as it is when the full under expression begins.
+    /// If `g` takes more than 1 argument, keep in mind that `g` will be called on the stack as it is when the full under expression begins.
     /// This means you may have to flip the arguments to `g`.
     /// Consider this equivalence:
     /// ex: ⍜(↙2)(÷∶)  [1 2 3 4 5] 10

@@ -2,8 +2,9 @@
 
 ## Logpoint 3 - 2023-09-30
 ### Language
+- Remove the `|1.1` signature restriction for [under`⍜`]'s second function
 - Remove the rank`∴` function
-- Remove the restriction that all functions in a non-scalar function array all have the same signature
+- Remove the restriction that all functions in a non-scalar function array all have the compatible signatures
 ### Interpreter
 - Allow passing `--no-format` to `uiua watch`
 

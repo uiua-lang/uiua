@@ -1029,8 +1029,11 @@ primitive!(
     /// Although, [under][select] only works if the indices are unique.
     /// ex! ⍜⊏'×10 1_3_3 1_2_3_4_5
     ///
-    /// [under]'s second function *must* have a signature of `|1.1`.
-    /// ex! ⍜(↙2). [1 2 3]
+    /// If `g` takes more than 1 argument, keep in mind that `f` will be will be called on the stack as it is when the full under expression begins.
+    /// This means you may have to flip the arguments to `g`.
+    /// Consider this equivalence:
+    /// ex: ⍜(↙2)(÷∶)  [1 2 3 4 5] 10
+    ///   : ⍜(↙2)(÷10) [1 2 3 4 5]
     ([2], Under, OtherModifier, ("under", '⍜')),
     /// Set the fill value for a function
     ///

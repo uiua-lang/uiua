@@ -1,4 +1,4 @@
-- Remove rank function
+- Add warnings
 - Rust API
 - Docs
   - Invert bits for control flow

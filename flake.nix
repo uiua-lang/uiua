@@ -10,7 +10,7 @@
       {
         packages.default = pkgs.rustPlatform.buildRustPackage {
           pname = "uiua";
-          version = "0.0.5";
+          version = "0.0.6";
           src = ./.;
           cargoHash = "sha256-yoOByt66brm7YTGlD7kqqMxgsicO29vVPczhMIBjoA8=";
         };

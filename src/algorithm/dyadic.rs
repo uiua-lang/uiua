@@ -1035,6 +1035,13 @@ impl<T: ArrayValue> Array<T> {
         })
     }
     fn untake(self, index: &[isize], mut into: Self, env: &Uiua) -> UiuaResult<Self> {
+        if self.rank() + index.len() - 1 != into.rank() {
+            return Err(env.error(format!(
+                "Attempted to undo take, but the taken section's shape was modified from {} to {}",
+                FormatShape(&into.shape[index.len() - 1..]),
+                self.format_shape(),
+            )));
+        }
         let from = self;
         Ok(match index {
             [] => into,

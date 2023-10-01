@@ -1,5 +1,5 @@
 - Add weave modifier
-- Make dip yellow in the editor
+- Optimize keep
 - Fix comments with leading spaces
 - Rust API
 - Docs

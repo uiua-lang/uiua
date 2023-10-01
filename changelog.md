@@ -7,7 +7,7 @@ Uiua is not yet stable.
 - Deprecate `roll↷` and `unroll↶`
 
 ### Website
-- Add the `n×n identity matrix` uiuism
+- Add the `5×5 identity matrix` uiuism
 
 ## Logpoint 3 - 2023-09-30
 ### Language

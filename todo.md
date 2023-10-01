@@ -1,7 +1,9 @@
-- Fix under deshape
 - Fix comments with leading spaces
 - Under keep
 - Optimize keep
+- Implement "spread" function
+- Implement "cleave" function
+- Optimize dip by inlining?
 - Rust API
 - Docs
   - Invert bits for control flow
@@ -16,7 +18,7 @@
   - System functions
   - Thinking with arrays
 - Expand test suite
-- Optimizations
+- Harder-to-implement optimizations
   - Row windows - `≡f◫` for scalar window size should be optimized to not materialize all the windows
   - Reduce windows? - `/f◫` for scalar window size could be optimized, but is it necessary?
 - Multimedia

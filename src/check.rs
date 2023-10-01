@@ -142,6 +142,16 @@ impl<'a> VirtualEnv<'a> {
                 Repeat => {
                     let f = self.pop()?;
                     let n = self.pop()?;
+                    // Break anywhere but the end of the function prevents signature checking.
+                    if let BasicValue::Func(f) = f {
+                        for (i, instr) in f.instrs.iter().enumerate() {
+                            if let Instr::Prim(Break, _) = instr {
+                                if i != f.instrs.len() - 1 {
+                                    return Err("break not at the end of the function".into());
+                                }
+                            }
+                        }
+                    }
                     if let BasicValue::Num(n) = n {
                         // If n is a known natural number, then the function can have any signature.
                         if n.fract() == 0.0 && n >= 0.0 {

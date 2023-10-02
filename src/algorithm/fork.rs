@@ -2,7 +2,7 @@
 
 use crate::{
     function::Signature,
-    run::{ArrayArg, FunctionArg},
+    run::{ArrayArg, FunctionArg, FunctionNArg},
     Uiua, UiuaResult,
 };
 
@@ -171,5 +171,34 @@ pub fn trident(env: &mut Uiua) -> UiuaResult {
         }
     }
 
+    Ok(())
+}
+
+pub fn comb(env: &mut Uiua) -> UiuaResult {
+    let fs = env.pop("function list")?.into_func_array().map_err(|val| {
+        env.error(format!(
+            "Comb's first argument must be a list of functions, but it is {}s",
+            val.type_name()
+        ))
+    })?;
+    if fs.rank() != 1 {
+        return Err(env.error(format!(
+            "Comb's function list must be rank 1, but it is rank {}",
+            fs.rank()
+        )));
+    }
+    let mut args = Vec::new();
+    for (i, f) in fs.data.iter().enumerate() {
+        for j in 0..f.signature().args {
+            args.push(env.pop(FunctionNArg(i + 1, j + 1))?);
+        }
+    }
+    let mut args = args.into_iter().rev();
+    for f in fs.data {
+        for _ in 0..f.signature().args {
+            env.push(args.next().unwrap());
+        }
+        env.call(f)?;
+    }
     Ok(())
 }

@@ -1180,6 +1180,8 @@ primitive!(
     /// The second function [negate]s `b`.
     /// The third function calculates the discriminant.
     (3[3], Trident, OtherModifier, ("trident", '∋')),
+    /// Call a list of functions on distinct values
+    ((None), Comb, Stack, ("comb", '∻')),
     /// Call a function and catch errors
     ///
     /// If the first function errors, the second function is called with the error value.

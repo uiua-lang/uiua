@@ -1317,6 +1317,7 @@ where
 
 pub struct FunctionArg<T>(pub T);
 pub struct ArrayArg<T>(pub T);
+pub struct FunctionNArg<T>(pub T, pub T);
 
 impl<T: StackArg> StackArg for FunctionArg<T> {
     fn arg_name(self) -> String {
@@ -1330,5 +1331,14 @@ where
 {
     fn arg_name(self) -> String {
         format!("array {}", self.0.arg_name())
+    }
+}
+
+impl<T> StackArg for FunctionNArg<T>
+where
+    T: StackArg,
+{
+    fn arg_name(self) -> String {
+        format!("function {} arg {}", self.0.arg_name(), self.1.arg_name())
     }
 }

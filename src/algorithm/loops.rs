@@ -545,6 +545,16 @@ fn rows2_0(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
 }
 
 fn rowsn_1(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+    for win in args.windows(2) {
+        if win[0].row_count() != win[1].row_count() {
+            return Err(env.error(format!(
+                "The number of rows in each of 3 or more arrays must all match, \
+                but arrays with {} and {} rows were found.",
+                win[0].row_count(),
+                win[1].row_count()
+            )));
+        }
+    }
     let row_count = args[0].row_count();
     let mut arg_elems: Vec<_> = args.into_iter().map(|v| v.into_rows()).collect();
     let mut new_values = Vec::new();

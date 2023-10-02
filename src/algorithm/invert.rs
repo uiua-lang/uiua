@@ -237,11 +237,7 @@ fn under_instr_fragment(mut instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr
             [Over, Over, PushTemp, PushTemp, Keep],
             [PopTemp, Flip, PopTemp, Unkeep],
         ),
-        &(
-            [Rotate],
-            [Dup, PushTemp, Rotate],
-            [PopTemp, Flip, Neg, Rotate],
-        ),
+        &([Rotate], [Dup, PushTemp, Rotate], [PopTemp, Neg, Rotate]),
         &(
             [First],
             [Dup, PushTemp, First],

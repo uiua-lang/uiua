@@ -101,13 +101,14 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
 }
 
 fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
-    match f.signature().args {
+    let args = f.signature().args;
+    match args {
         0 | 1 => {
             let mut rows = init.into_iter().chain(xs.into_rows());
             while let Some(row) = rows.next() {
                 env.push(row);
                 if env.call_catch_break(f.clone())? {
-                    let reduced = if f.signature().args == 0 {
+                    let reduced = if args == 0 {
                         None
                     } else {
                         Some(env.pop("reduced function result")?)

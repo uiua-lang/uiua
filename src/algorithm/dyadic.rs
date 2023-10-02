@@ -480,38 +480,62 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     pub fn keep(&self, kept: Self, env: &Uiua) -> UiuaResult<Self> {
-        let amount = self.as_naturals(
+        let counts = self.as_naturals(
             env,
             "Keep amount must be a natural number \
             or list of natural numbers",
         )?;
         Ok(if self.rank() == 0 {
             match kept {
-                Value::Num(a) => a.scalar_keep(amount[0]).into(),
-                Value::Byte(a) => a.scalar_keep(amount[0]).into(),
-                Value::Char(a) => a.scalar_keep(amount[0]).into(),
-                Value::Func(a) => a.scalar_keep(amount[0]).into(),
+                Value::Num(a) => a.scalar_keep(counts[0]).into(),
+                Value::Byte(a) => a.scalar_keep(counts[0]).into(),
+                Value::Char(a) => a.scalar_keep(counts[0]).into(),
+                Value::Func(a) => a.scalar_keep(counts[0]).into(),
             }
         } else {
             match kept {
-                Value::Num(a) => a.list_keep(&amount, env)?.into(),
-                Value::Byte(a) => a.list_keep(&amount, env)?.into(),
-                Value::Char(a) => a.list_keep(&amount, env)?.into(),
-                Value::Func(a) => a.list_keep(&amount, env)?.into(),
+                Value::Num(a) => a.list_keep(&counts, env)?.into(),
+                Value::Byte(a) => a.list_keep(&counts, env)?.into(),
+                Value::Char(a) => a.list_keep(&counts, env)?.into(),
+                Value::Func(a) => a.list_keep(&counts, env)?.into(),
             }
+        })
+    }
+    pub fn unkeep(self, kept: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+        let counts = self.as_naturals(
+            env,
+            "Keep amount must be a natural number \
+            or list of natural numbers",
+        )?;
+        if self.rank() == 0 {
+            return Err(env.error("Cannot invert scalar keep"));
+        }
+        Ok(match (kept, into) {
+            (Value::Num(a), Value::Num(b)) => a.unkeep(&counts, b, env)?.into(),
+            (Value::Byte(a), Value::Byte(b)) => a.unkeep(&counts, b, env)?.into(),
+            (Value::Char(a), Value::Char(b)) => a.unkeep(&counts, b, env)?.into(),
+            (Value::Func(a), Value::Func(b)) => a.unkeep(&counts, b, env)?.into(),
+            (Value::Num(a), Value::Byte(b)) => a.unkeep(&counts, b.convert(), env)?.into(),
+            (Value::Byte(a), Value::Num(b)) => a.convert().unkeep(&counts, b, env)?.into(),
+            (a, b) => a.coerce_to_functions(
+                b,
+                env,
+                |a, b, env| Ok(a.unkeep(&counts, b, env)?.into()),
+                |a, b| format!("Cannot unkeep {a} array with {b} array"),
+            )?,
         })
     }
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn scalar_keep(mut self, amount: usize) -> Self {
+    pub fn scalar_keep(mut self, count: usize) -> Self {
         // Scalar kept
         if self.rank() == 0 {
-            self.shape.push(amount);
+            self.shape.push(count);
             self.data.modify(|data| {
                 let value = data[0].clone();
                 data.clear();
-                for _ in 0..amount {
+                for _ in 0..count {
                     data.push(value.clone());
                 }
             });
@@ -519,29 +543,29 @@ impl<T: ArrayValue> Array<T> {
             return self;
         }
         // Keep nothing
-        if amount == 0 {
+        if count == 0 {
             self.data = CowSlice::new();
             self.shape[0] = 0;
             return self;
         }
         // Keep 1 is a no-op
-        if amount == 1 {
+        if count == 1 {
             return self;
         }
         // Keep ≥2 is a repeat
-        self.shape[0] *= amount;
+        self.shape[0] *= count;
         let old_data = self.data.clone();
         self.data.modify(|data| {
-            data.reserve(data.len() * amount);
-            for _ in 1..amount {
+            data.reserve(data.len() * count);
+            for _ in 1..count {
                 data.extend_from_slice(&old_data);
             }
         });
         self.validate_shape();
         self
     }
-    pub fn list_keep(mut self, amount: &[usize], env: &Uiua) -> UiuaResult<Self> {
-        let mut amount = Cow::Borrowed(amount);
+    pub fn list_keep(mut self, counts: &[usize], env: &Uiua) -> UiuaResult<Self> {
+        let mut amount = Cow::Borrowed(counts);
         match amount.len().cmp(&self.row_count()) {
             Ordering::Equal => {}
             Ordering::Less => {
@@ -619,6 +643,33 @@ impl<T: ArrayValue> Array<T> {
         }
         self.validate_shape();
         Ok(self)
+    }
+    pub fn unkeep(self, counts: &[usize], into: Self, env: &Uiua) -> UiuaResult<Self> {
+        if counts.iter().any(|&n| n > 1) {
+            return Err(env.error("Cannot invert keep with non-boolean counts"));
+        }
+        let mut new_rows: Vec<_> = Vec::with_capacity(counts.len());
+        let mut transformed = self.into_rows();
+        for (count, into_row) in counts.iter().zip(into.into_rows()) {
+            if *count == 0 {
+                new_rows.push(into_row);
+            } else {
+                let new_row = transformed.next().ok_or_else(|| {
+                    env.error(
+                        "Kept array has fewer rows than it was created with, \
+                        so the keep cannot be inverted",
+                    )
+                })?;
+                if new_row.shape != into_row.shape {
+                    return Err(env.error(
+                        "Kept array has different shape than it was created with, \
+                        so the keep cannot be inverted",
+                    ));
+                }
+                new_rows.push(new_row);
+            }
+        }
+        Self::from_row_arrays(new_rows, env)
     }
 }
 

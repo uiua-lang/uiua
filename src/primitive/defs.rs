@@ -786,6 +786,8 @@ primitive!(
     ///
     /// [keep]'s glyph is `▽` because its main use is to filter, and `▽` kind of looks like a coffee filter.
     (2, Keep, DyadicArray, ("keep", '▽')),
+    /// End step of under keep
+    (3, Unkeep, Misc),
     /// Find the occurences of one array in another
     ///
     /// ex: ⌕ 5 [1 8 5 2 3 5 4 5 6 7]

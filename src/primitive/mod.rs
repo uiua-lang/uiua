@@ -296,12 +296,13 @@ impl Primitive {
             Primitive::Transpose => env.monadic_mut(Value::transpose)?,
             Primitive::InvTranspose => env.monadic_mut(Value::inv_transpose)?,
             Primitive::Keep => env.dyadic_ro_env(Value::keep)?,
-            Primitive::Take => env.dyadic_oo_env(Value::take)?,
-            Primitive::Constant => {
-                let val = env.pop(1)?;
-                let constant = Function::constant(val);
-                env.push(constant);
+            Primitive::Unkeep => {
+                let from = env.pop(1)?;
+                let counts = env.pop(2)?;
+                let into = env.pop(3)?;
+                env.push(from.unkeep(counts, into, env)?);
             }
+            Primitive::Take => env.dyadic_oo_env(Value::take)?,
             Primitive::Untake => {
                 let from = env.pop(1)?;
                 let index = env.pop(2)?;
@@ -344,6 +345,11 @@ impl Primitive {
             Primitive::Member => env.dyadic_rr_env(Value::member)?,
             Primitive::Find => env.dyadic_rr_env(Value::find)?,
             Primitive::IndexOf => env.dyadic_rr_env(Value::index_of)?,
+            Primitive::Constant => {
+                let val = env.pop(1)?;
+                let constant = Function::constant(val);
+                env.push(constant);
+            }
             Primitive::Call => {
                 let f = env.pop(1)?;
                 let sig = f.signature();

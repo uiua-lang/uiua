@@ -1,4 +1,3 @@
-- Under keep
 - Optimize keep
 - Implement "spread" function
 - Implement "cleave" function

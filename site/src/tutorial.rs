@@ -167,6 +167,9 @@ fn TutorialBasic() -> impl IntoView {
         </table>
         <p>"As noted in the table, negative number literals are typed with the "<code>"`"</code>" character. This is because "<code>"-"</code>" is used for subtraction."</p>
         <Editor example="+ `1 `2"/>
+        <p>"Functions whose glyphs are ASCII do "<em>"not"</em>" format from their names. For example, "<Prim prim=Trace/>":"</p>
+        <Editor example="~5"/>
+        <Editor example="trace 5"/> // Should fail
 
         <h2 id="stack-functions">"Stack Functions"</h2>
         <p>"There are a few functions that work on the stack itself. Some of these are critical and can be found scattered across all Uiua code."</p>

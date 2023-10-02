@@ -4,6 +4,10 @@ Uiua is not yet stable.
 
 # Pre-Version
 
+## 2023-10-02
+### Interpreter
+- Tell the user when the interpreter can be updated
+
 ## 2023-10-01
 - Add the [`dip` `→`](https://uiua.org/docs/dip) modifier, which temporarily pops a value
 - Deprecate `roll↷` and `unroll↶`

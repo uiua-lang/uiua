@@ -12,7 +12,7 @@ use std::{
         consts::{PI, TAU},
         INFINITY,
     },
-    fmt,
+    fmt::{self, Write},
     iter::once,
     sync::{
         atomic::{self, AtomicUsize},
@@ -549,22 +549,34 @@ impl Primitive {
                 let handle = env.pop(1)?;
                 env.wait(handle)?;
             }
-            Primitive::Trace => trace(env, false)?,
-            Primitive::InvTrace => trace(env, true)?,
+            Primitive::Trace => trace(env, false, false)?,
+            Primitive::InvTrace => trace(env, true, false)?,
+            Primitive::Dump => trace(env, false, true)?,
             Primitive::Sys(io) => io.run(env)?,
         }
         Ok(())
     }
 }
 
-fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
-    let val = env.pop(1)?;
+fn trace(env: &mut Uiua, inverse: bool, dump: bool) -> UiuaResult {
+    let (val, formatted) = if dump {
+        let vals = env.clone_stack_top(env.stack_size());
+        let formatted = vals
+            .iter()
+            .map(|val| val.show())
+            .collect::<Vec<_>>()
+            .join("\n");
+        (None, formatted)
+    } else {
+        let val = env.pop(1)?;
+        let formatted = val.show();
+        (Some(val), formatted)
+    };
     let span = if inverse {
         format!("{} {}", env.span(), Primitive::Invert)
     } else {
         env.span().to_string()
     };
-    let formatted = val.show();
     const MD_ARRAY_INIT: &str = "╭─";
     let message = if let Some(first_line) = formatted
         .lines()
@@ -574,12 +586,16 @@ fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
         let first_line = format!("{}{}", first_line.trim(), span);
         once(first_line.as_str())
             .chain(formatted.lines().skip(1))
-            .map(|line| format!("{line}\n"))
-            .collect()
+            .fold(String::new(), |mut output, line| {
+                let _ = write!(output, "{line}\n");
+                output
+            })
     } else {
         format!("  {span}\n{formatted}\n")
     };
-    env.push(val);
+    if let Some(val) = val {
+        env.push(val);
+    }
     env.backend.print_str_trace(&message);
     Ok(())
 }

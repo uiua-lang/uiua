@@ -79,6 +79,7 @@ fn run() -> UiuaResult {
                     mode,
                     #[cfg(feature = "audio")]
                     audio_options,
+                    args,
                 } => {
                     if let Some(path) = path.or_else(working_file_path) {
                         if !no_format {
@@ -89,6 +90,8 @@ fn run() -> UiuaResult {
                         setup_audio(audio_options);
                         let mut rt = Uiua::with_native_sys()
                             .with_mode(mode)
+                            .with_file_path(&path)
+                            .with_args(args)
                             .print_diagnostics(true);
                         rt.load_file(path)?;
                         for value in rt.take_stack() {
@@ -102,11 +105,13 @@ fn run() -> UiuaResult {
                     code,
                     #[cfg(feature = "audio")]
                     audio_options,
+                    args,
                 } => {
                     #[cfg(feature = "audio")]
                     setup_audio(audio_options);
                     let mut rt = Uiua::with_native_sys()
                         .with_mode(RunMode::Normal)
+                        .with_args(args)
                         .print_diagnostics(true);
                     rt.load_str(&code)?;
                     for value in rt.take_stack() {
@@ -126,8 +131,8 @@ fn run() -> UiuaResult {
                         return Ok(());
                     }
                 }
-                App::Watch { no_format } => {
-                    if let Err(e) = watch(working_file_path().as_deref(), !no_format) {
+                App::Watch { no_format, args } => {
+                    if let Err(e) = watch(working_file_path().as_deref(), !no_format, args) {
                         eprintln!("Error watching file: {e}");
                     }
                 }
@@ -136,7 +141,7 @@ fn run() -> UiuaResult {
             }
         }
         Err(e) if e.kind() == ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
-            if let Err(e) = watch(working_file_path().as_deref(), true) {
+            if let Err(e) = watch(working_file_path().as_deref(), true, Vec::new()) {
                 eprintln!("Error watching file: {e}");
             }
         }
@@ -174,7 +179,7 @@ fn working_file_path() -> Option<PathBuf> {
     }
 }
 
-fn watch(initial_path: Option<&Path>, format: bool) -> io::Result<()> {
+fn watch(initial_path: Option<&Path>, format: bool, args: Vec<String>) -> io::Result<()> {
     let (send, recv) = channel();
     let mut watcher = notify::recommended_watcher(send).unwrap();
     watcher
@@ -238,6 +243,7 @@ fn watch(initial_path: Option<&Path>, format: bool) -> io::Result<()> {
                                 #[cfg(feature = "audio")]
                                 &audio_port,
                             ])
+                            .args(&args)
                             .spawn()
                             .unwrap(),
                     );
@@ -306,6 +312,8 @@ enum App {
         #[cfg(feature = "audio")]
         #[clap(flatten)]
         audio_options: AudioOptions,
+        #[clap(trailing_var_arg = true)]
+        args: Vec<String>,
     },
     #[clap(about = "Evaluate an expression and print its output")]
     Eval {
@@ -313,6 +321,8 @@ enum App {
         #[cfg(feature = "audio")]
         #[clap(flatten)]
         audio_options: AudioOptions,
+        #[clap(trailing_var_arg = true)]
+        args: Vec<String>,
     },
     #[clap(about = "Format and test a file")]
     Test { path: Option<PathBuf> },
@@ -320,6 +330,8 @@ enum App {
     Watch {
         #[clap(long, help = "Don't format the file before running")]
         no_format: bool,
+        #[clap(trailing_var_arg = true)]
+        args: Vec<String>,
     },
     #[clap(about = "Format a uiua file or all files in the current directory")]
     Fmt { path: Option<PathBuf> },

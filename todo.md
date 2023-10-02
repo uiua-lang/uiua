@@ -3,6 +3,7 @@
 - Implement "cleave" function
 - Add channels for spawned threads
 - Optimize dip by inlining?
+- Make dyadic array functions not methods
 - Rust API
 - Docs
   - Invert bits for control flow

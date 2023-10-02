@@ -827,6 +827,9 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     pub fn take(self, from: Self, env: &Uiua) -> UiuaResult<Self> {
+        if from.rank() == 0 {
+            return Err(env.error("Cannot take from scalar"));
+        }
         let index = self.as_indices(env, "Index must be a list of integers")?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.take(&index, env)?),
@@ -840,6 +843,9 @@ impl Value {
         })
     }
     pub fn drop(self, from: Self, env: &Uiua) -> UiuaResult<Self> {
+        if from.rank() == 0 {
+            return Err(env.error("Cannot drop from scalar"));
+        }
         let index = self.as_indices(env, "Index must be a list of integers")?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.drop(&index, env)?),
@@ -1241,6 +1247,9 @@ impl<T: ArrayValue> Array<T> {
 }
 
 fn rotate<T>(by: &[isize], shape: &[usize], data: &mut [T]) {
+    if by.is_empty() || shape.is_empty() {
+        return;
+    }
     let row_count = shape[0];
     if row_count == 0 {
         return;

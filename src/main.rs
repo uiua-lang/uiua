@@ -12,7 +12,6 @@ use std::{
 };
 
 use clap::{error::ErrorKind, Parser};
-use colored::Colorize;
 use instant::Instant;
 use notify::{EventKind, RecursiveMode, Watcher};
 use once_cell::sync::Lazy;
@@ -54,7 +53,6 @@ fn run() -> UiuaResult {
         uiua::profile::run_profile();
         return Ok(());
     }
-    show_update_message();
     match App::try_parse() {
         Ok(app) => {
             let config = FormatConfig::default();
@@ -146,8 +144,14 @@ fn run() -> UiuaResult {
                         .load_file(path)?;
                     println!("No failures!");
                 }
-                App::Watch { no_format, args } => {
-                    if let Err(e) = watch(working_file_path().ok().as_deref(), !no_format, args) {
+                App::Watch {
+                    no_format,
+                    clear,
+                    args,
+                } => {
+                    if let Err(e) =
+                        watch(working_file_path().ok().as_deref(), !no_format, clear, args)
+                    {
                         eprintln!("Error watching file: {e}");
                     }
                 }
@@ -157,8 +161,8 @@ fn run() -> UiuaResult {
         }
         Err(e) if e.kind() == ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
             let res = match working_file_path() {
-                Ok(path) => watch(Some(&path), true, Vec::new()),
-                Err(NoWorkingFile::MultipleFiles) => watch(None, true, Vec::new()),
+                Ok(path) => watch(Some(&path), true, false, Vec::new()),
+                Err(NoWorkingFile::MultipleFiles) => watch(None, true, false, Vec::new()),
                 Err(nwf) => {
                     _ = e.print();
                     eprintln!("\n{nwf}");
@@ -223,7 +227,12 @@ fn working_file_path() -> Result<PathBuf, NoWorkingFile> {
     }
 }
 
-fn watch(initial_path: Option<&Path>, format: bool, args: Vec<String>) -> io::Result<()> {
+fn watch(
+    initial_path: Option<&Path>,
+    format: bool,
+    clear: bool,
+    args: Vec<String>,
+) -> io::Result<()> {
     let (send, recv) = channel();
     let mut watcher = notify::recommended_watcher(send).unwrap();
     watcher
@@ -320,6 +329,13 @@ fn watch(initial_path: Option<&Path>, format: bool, args: Vec<String>) -> io::Re
             .last()
         {
             if last_time.elapsed() > Duration::from_millis(100) {
+                if clear {
+                    if cfg!(target_os = "windows") {
+                        Command::new("cmd").args(&["/C", "cls"]).status().unwrap();
+                    } else {
+                        Command::new("clear").status().unwrap();
+                    }
+                }
                 run(&path)?;
                 last_time = Instant::now();
             }
@@ -374,6 +390,8 @@ enum App {
     Watch {
         #[clap(long, help = "Don't format the file before running")]
         no_format: bool,
+        #[clap(long, help = "Clear the terminal on file change")]
+        clear: bool,
         #[clap(trailing_var_arg = true)]
         args: Vec<String>,
     },
@@ -430,39 +448,4 @@ fn clear_watching_with(s: &str, end: &str) {
         s.repeat(term_size::dimensions().map_or(10, |(w, _)| w)),
         end,
     );
-}
-
-fn show_update_message() {
-    let Ok(output) = Command::new("cargo").args(["search", "uiua"]).output() else {
-        return;
-    };
-    let output = String::from_utf8_lossy(&output.stdout);
-    let Some(remote_version) = output.split('"').nth(1) else {
-        return;
-    };
-    fn parse_version(s: &str) -> Option<Vec<u16>> {
-        let mut nums = Vec::with_capacity(3);
-        for s in s.split('.') {
-            if let Ok(num) = s.parse() {
-                nums.push(num);
-            } else {
-                return None;
-            }
-        }
-        Some(nums)
-    }
-    let local_version = env!("CARGO_PKG_VERSION");
-    if let Some((local, remote)) = parse_version(local_version).zip(parse_version(remote_version)) {
-        if local < remote {
-            println!(
-                "{}\n",
-                format!(
-                    "Update available: {local_version} → {remote_version}\n\
-                Run `cargo install uiua` to update",
-                )
-                .bright_white()
-                .bold()
-            );
-        }
-    }
 }

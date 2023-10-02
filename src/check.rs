@@ -258,6 +258,26 @@ impl<'a> VirtualEnv<'a> {
                         self.stack.push(BasicValue::Other);
                     }
                 }
+                Comb => {
+                    let fs = self.pop()?;
+                    if let BasicValue::Arr(fs) = fs {
+                        let (args, outputs) = fs
+                            .iter()
+                            .map(|f| f.signature())
+                            .fold((0, 0), |(args, outputs), sig| {
+                                (args + sig.args, outputs + sig.outputs)
+                            });
+                        for _ in 0..args {
+                            self.pop()?;
+                        }
+                        self.set_min_height();
+                        for _ in 0..outputs {
+                            self.stack.push(BasicValue::Other);
+                        }
+                    } else {
+                        return Err("comb with unknown value".into());
+                    }
+                }
                 Level => {
                     let arg_count = match self.pop()? {
                         BasicValue::Arr(items) => items.len(),

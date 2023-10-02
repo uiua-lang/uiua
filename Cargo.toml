@@ -18,6 +18,7 @@ clap.optional = true
 clap.version = "4"
 color-backtrace.optional = true
 color-backtrace.version = "0.5.1"
+colored = "2"
 crossbeam-channel.optional = true
 crossbeam-channel.version = "0.5.8"
 ctrlc.optional = true

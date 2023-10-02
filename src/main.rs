@@ -12,6 +12,7 @@ use std::{
 };
 
 use clap::{error::ErrorKind, Parser};
+use colored::Colorize;
 use instant::Instant;
 use notify::{EventKind, RecursiveMode, Watcher};
 use once_cell::sync::Lazy;
@@ -53,6 +54,7 @@ fn run() -> UiuaResult {
         uiua::profile::run_profile();
         return Ok(());
     }
+    show_update_message();
     match App::try_parse() {
         Ok(app) => {
             let config = FormatConfig::default();
@@ -428,4 +430,39 @@ fn clear_watching_with(s: &str, end: &str) {
         s.repeat(term_size::dimensions().map_or(10, |(w, _)| w)),
         end,
     );
+}
+
+fn show_update_message() {
+    let Ok(output) = Command::new("cargo").args(["search", "uiua"]).output() else {
+        return;
+    };
+    let output = String::from_utf8_lossy(&output.stdout);
+    let Some(remote_version) = output.split('"').nth(1) else {
+        return;
+    };
+    fn parse_version(s: &str) -> Option<Vec<u16>> {
+        let mut nums = Vec::with_capacity(3);
+        for s in s.split('.') {
+            if let Ok(num) = s.parse() {
+                nums.push(num);
+            } else {
+                return None;
+            }
+        }
+        Some(nums)
+    }
+    let local_version = env!("CARGO_PKG_VERSION");
+    if let Some((local, remote)) = parse_version(local_version).zip(parse_version(remote_version)) {
+        if local < remote {
+            println!(
+                "{}\n",
+                format!(
+                    "Update available: {local_version} → {remote_version}\n\
+                Run `cargo install uiua` to update",
+                )
+                .bright_white()
+                .bold()
+            );
+        }
+    }
 }

@@ -17,7 +17,7 @@ use uiua::{
     format::{format_str, FormatConfig},
     image_to_bytes,
     lex::is_ident_char,
-    primitive::{PrimClass, Primitive},
+    primitive::Primitive,
     run::RunMode,
     value_to_image, value_to_wav_bytes, DiagnosticKind, SysBackend, Uiua,
 };
@@ -1262,10 +1262,7 @@ fn set_code_html(id: &str, code: &str) {
             .collect();
         // log!("spanned: {:?} {:?}", kind, text);
         let color_class = match kind {
-            SpanKind::Primitive(prim) => match prim.class() {
-                PrimClass::Stack => "{}",
-                _ => prim_class(prim),
-            },
+            SpanKind::Primitive(prim) => prim_class(prim),
             SpanKind::Number => "number-literal-span",
             SpanKind::String => "string-literal-span",
             SpanKind::Comment => "comment-span",

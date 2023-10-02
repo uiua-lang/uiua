@@ -115,6 +115,8 @@ sys_op! {
     /// Height comes first so that the array can be used as a shape in [reshape].
     (0, TermSize, "&ts", "terminal size"),
     /// Get the command line arguments
+    ///
+    /// The first element will always be the name of your script
     (0, Args, "&args", "arguments"),
     /// Get the value of an environment variable
     (1, Var, "&var", "environment variable"),
@@ -327,9 +329,6 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     }
     fn term_size(&self) -> Result<(usize, usize), String> {
         Err("Getting the terminal size is not supported in this environment".into())
-    }
-    fn args(&self) -> Vec<String> {
-        Vec::new()
     }
     fn file_exists(&self, path: &str) -> bool {
         false
@@ -567,9 +566,6 @@ impl SysBackend for NativeSys {
     }
     fn var(&self, name: &str) -> Option<String> {
         env::var(name).ok()
-    }
-    fn args(&self) -> Vec<String> {
-        env::args().skip(1).collect()
     }
     fn file_exists(&self, path: &str) -> bool {
         fs::metadata(path).is_ok()
@@ -926,7 +922,9 @@ impl SysOp {
                 env.push(vec![height as f64, width as f64])
             }
             SysOp::Args => {
-                let args = env.backend.args();
+                let mut args = Vec::new();
+                args.push(env.file_path().to_string_lossy().into_owned());
+                args.extend(env.args().to_owned());
                 env.push(Array::<Arc<Function>>::from_iter(args));
             }
             SysOp::Var => {

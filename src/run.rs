@@ -55,6 +55,10 @@ pub struct Uiua {
     diagnostics: BTreeSet<Diagnostic>,
     /// Print diagnostics as they are encountered
     print_diagnostics: bool,
+    /// Arguments passed from the command line
+    cli_arguments: Vec<String>,
+    /// File that was passed to the interpreter for execution
+    cli_file_path: PathBuf,
     /// The system backend
     pub(crate) backend: Arc<dyn SysBackend>,
 }
@@ -169,6 +173,8 @@ impl Uiua {
             diagnostics: BTreeSet::new(),
             backend: Arc::new(NativeSys),
             print_diagnostics: false,
+            cli_arguments: Vec::new(),
+            cli_file_path: PathBuf::new(),
             execution_limit: None,
             execution_start: 0.0,
         }
@@ -205,6 +211,24 @@ impl Uiua {
     /// Get the [`RunMode`]
     pub fn mode(&self) -> RunMode {
         self.mode
+    }
+    /// Set the command line arguments
+    pub fn with_args(mut self, args: Vec<String>) -> Self {
+        self.cli_arguments = args;
+        self
+    }
+    /// Get the command line arguments
+    pub fn args(&self) -> &[String] {
+        self.cli_arguments.as_slice()
+    }
+    /// Set the path of the file that is being executed
+    pub fn with_file_path(mut self, file_path: impl Into<PathBuf>) -> Self {
+        self.cli_file_path = file_path.into();
+        self
+    }
+    /// Get the path of the file that is being executed
+    pub fn file_path(&self) -> &Path {
+        self.cli_file_path.as_path()
     }
     /// Load a Uiua file from a path
     pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult {
@@ -1200,6 +1224,8 @@ code:
             imports: self.imports.clone(),
             diagnostics: BTreeSet::new(),
             print_diagnostics: self.print_diagnostics,
+            cli_arguments: self.cli_arguments.clone(),
+            cli_file_path: self.cli_file_path.clone(),
             backend: self.backend.clone(),
             execution_limit: self.execution_limit,
             execution_start: self.execution_start,

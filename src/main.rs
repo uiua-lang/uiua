@@ -2,7 +2,7 @@
 compile_error!("To compile the uiua interpreter binary, you must enable the `binary` feature flag");
 
 use std::{
-    env, fs,
+    env, fmt, fs,
     io::{self, stderr, Write},
     path::{Path, PathBuf},
     process::{exit, Child, Command},
@@ -58,7 +58,7 @@ fn run() -> UiuaResult {
             let config = FormatConfig::default();
             match app {
                 App::Init => {
-                    if let Some(path) = working_file_path() {
+                    if let Ok(path) = working_file_path() {
                         eprintln!("File already exists: {}", path.display());
                     } else {
                         fs::write("main.ua", "\"Hello, World!\"").unwrap();
@@ -81,24 +81,31 @@ fn run() -> UiuaResult {
                     audio_options,
                     args,
                 } => {
-                    if let Some(path) = path.or_else(working_file_path) {
-                        if !no_format {
-                            format_file(&path, &config)?;
-                        }
-                        let mode = mode.unwrap_or(RunMode::Normal);
-                        #[cfg(feature = "audio")]
-                        setup_audio(audio_options);
-                        let mut rt = Uiua::with_native_sys()
-                            .with_mode(mode)
-                            .with_file_path(&path)
-                            .with_args(args)
-                            .print_diagnostics(true);
-                        rt.load_file(path)?;
-                        for value in rt.take_stack() {
-                            println!("{}", value.show());
-                        }
+                    let path = if let Some(path) = path {
+                        path
                     } else {
-                        eprintln!("{NO_UA_FILE}");
+                        match working_file_path() {
+                            Ok(path) => path,
+                            Err(e) => {
+                                eprintln!("{}", e);
+                                return Ok(());
+                            }
+                        }
+                    };
+                    if !no_format {
+                        format_file(&path, &config)?;
+                    }
+                    let mode = mode.unwrap_or(RunMode::Normal);
+                    #[cfg(feature = "audio")]
+                    setup_audio(audio_options);
+                    let mut rt = Uiua::with_native_sys()
+                        .with_mode(mode)
+                        .with_file_path(&path)
+                        .with_args(args)
+                        .print_diagnostics(true);
+                    rt.load_file(path)?;
+                    for value in rt.take_stack() {
+                        println!("{}", value.show());
                     }
                 }
                 App::Eval {
@@ -119,20 +126,26 @@ fn run() -> UiuaResult {
                     }
                 }
                 App::Test { path } => {
-                    if let Some(path) = path.or_else(working_file_path) {
-                        format_file(&path, &config)?;
-                        Uiua::with_native_sys()
-                            .with_mode(RunMode::Test)
-                            .print_diagnostics(true)
-                            .load_file(path)?;
-                        println!("No failures!");
+                    let path = if let Some(path) = path {
+                        path
                     } else {
-                        eprintln!("{NO_UA_FILE}");
-                        return Ok(());
-                    }
+                        match working_file_path() {
+                            Ok(path) => path,
+                            Err(e) => {
+                                eprintln!("{}", e);
+                                return Ok(());
+                            }
+                        }
+                    };
+                    format_file(&path, &config)?;
+                    Uiua::with_native_sys()
+                        .with_mode(RunMode::Test)
+                        .print_diagnostics(true)
+                        .load_file(path)?;
+                    println!("No failures!");
                 }
                 App::Watch { no_format, args } => {
-                    if let Err(e) = watch(working_file_path().as_deref(), !no_format, args) {
+                    if let Err(e) = watch(working_file_path().ok().as_deref(), !no_format, args) {
                         eprintln!("Error watching file: {e}");
                     }
                 }
@@ -141,7 +154,16 @@ fn run() -> UiuaResult {
             }
         }
         Err(e) if e.kind() == ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
-            if let Err(e) = watch(working_file_path().as_deref(), true, Vec::new()) {
+            let res = match working_file_path() {
+                Ok(path) => watch(Some(&path), false, Vec::new()),
+                Err(NoWorkingFile::MultipleFiles) => watch(None, false, Vec::new()),
+                Err(nwf) => {
+                    _ = e.print();
+                    eprintln!("\n{nwf}");
+                    return Ok(());
+                }
+            };
+            if let Err(e) = res {
                 eprintln!("Error watching file: {e}");
             }
         }
@@ -150,10 +172,30 @@ fn run() -> UiuaResult {
     Ok(())
 }
 
-const NO_UA_FILE: &str =
-    "No .ua file found nearby. Initialize one in the current directory with `uiua init`";
+#[derive(Debug)]
+enum NoWorkingFile {
+    NoFile,
+    MultipleFiles,
+}
 
-fn working_file_path() -> Option<PathBuf> {
+impl fmt::Display for NoWorkingFile {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            NoWorkingFile::NoFile => {
+                "No .ua file found nearby. Initialize one in the \
+                current directory with `uiua init`"
+            }
+            NoWorkingFile::MultipleFiles => {
+                "No main.ua file found nearby, and multiple other \
+                .ua files found. Please specify which file to run \
+                with `uiua run <PATH>`"
+            }
+        }
+        .fmt(f)
+    }
+}
+
+fn working_file_path() -> Result<PathBuf, NoWorkingFile> {
     let main_in_src = PathBuf::from("src/main.ua");
     let main = if main_in_src.exists() {
         main_in_src
@@ -161,7 +203,7 @@ fn working_file_path() -> Option<PathBuf> {
         PathBuf::from("main.ua")
     };
     if main.exists() {
-        Some(main)
+        Ok(main)
     } else {
         let paths: Vec<_> = fs::read_dir(".")
             .into_iter()
@@ -171,10 +213,10 @@ fn working_file_path() -> Option<PathBuf> {
             .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "ua"))
             .map(|entry| entry.path())
             .collect();
-        if paths.len() == 1 {
-            paths.into_iter().next()
-        } else {
-            None
+        match paths.len() {
+            0 => Err(NoWorkingFile::NoFile),
+            1 => Ok(paths.into_iter().next().unwrap()),
+            _ => Err(NoWorkingFile::MultipleFiles),
         }
     }
 }

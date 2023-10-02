@@ -155,8 +155,8 @@ fn run() -> UiuaResult {
         }
         Err(e) if e.kind() == ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
             let res = match working_file_path() {
-                Ok(path) => watch(Some(&path), false, Vec::new()),
-                Err(NoWorkingFile::MultipleFiles) => watch(None, false, Vec::new()),
+                Ok(path) => watch(Some(&path), true, Vec::new()),
+                Err(NoWorkingFile::MultipleFiles) => watch(None, true, Vec::new()),
                 Err(nwf) => {
                     _ = e.print();
                     eprintln!("\n{nwf}");

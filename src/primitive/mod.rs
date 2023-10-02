@@ -549,17 +549,23 @@ impl Primitive {
                 let handle = env.pop(1)?;
                 env.wait(handle)?;
             }
-            Primitive::Trace => trace(env, false, false)?,
-            Primitive::InvTrace => trace(env, true, false)?,
-            Primitive::Dump => trace(env, false, true)?,
+            Primitive::Trace => trace(env, TraceKind::Trace)?,
+            Primitive::InvTrace => trace(env, TraceKind::InverseTrace)?,
+            Primitive::Dump => trace(env, TraceKind::Dump)?,
             Primitive::Sys(io) => io.run(env)?,
         }
         Ok(())
     }
 }
 
-fn trace(env: &mut Uiua, inverse: bool, dump: bool) -> UiuaResult {
-    let (val, formatted) = if dump {
+enum TraceKind {
+    Trace,
+    InverseTrace,
+    Dump,
+}
+
+fn trace(env: &mut Uiua, kind: TraceKind) -> UiuaResult {
+    let (val, formatted) = if let TraceKind::Dump = kind {
         let vals = env.clone_stack_top(env.stack_size());
         let formatted = vals
             .iter()
@@ -572,7 +578,7 @@ fn trace(env: &mut Uiua, inverse: bool, dump: bool) -> UiuaResult {
         let formatted = val.show();
         (Some(val), formatted)
     };
-    let span = if inverse {
+    let span = if let TraceKind::InverseTrace = kind {
         format!("{} {}", env.span(), Primitive::Invert)
     } else {
         env.span().to_string()
@@ -587,7 +593,7 @@ fn trace(env: &mut Uiua, inverse: bool, dump: bool) -> UiuaResult {
         once(first_line.as_str())
             .chain(formatted.lines().skip(1))
             .fold(String::new(), |mut output, line| {
-                let _ = write!(output, "{line}\n");
+                _ = writeln!(output, "{line}\n");
                 output
             })
     } else {

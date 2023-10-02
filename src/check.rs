@@ -278,6 +278,25 @@ impl<'a> VirtualEnv<'a> {
                         return Err("comb with unknown value".into());
                     }
                 }
+                Share => {
+                    let fs = self.pop()?;
+                    if let BasicValue::Arr(fs) = fs {
+                        let sig = if fs.is_empty() {
+                            Signature::new(0, 0)
+                        } else {
+                            fs[0].signature()
+                        };
+                        for _ in 0..sig.args {
+                            self.pop()?;
+                        }
+                        self.set_min_height();
+                        for _ in 0..sig.outputs {
+                            self.stack.push(BasicValue::Other);
+                        }
+                    } else {
+                        return Err("share with unknown value".into());
+                    }
+                }
                 Level => {
                     let arg_count = match self.pop()? {
                         BasicValue::Arr(items) => items.len(),

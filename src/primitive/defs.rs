@@ -1167,7 +1167,6 @@ primitive!(
     /// Any of the functions taking 2 arguments will be called as `f a b`, `g a c`, or `h b c` respectively.
     /// Any of the functions taking 3 argyments will be called on `a b c`.
     ///
-    ///
     /// We can see how this all works with [join].
     /// ex: [∋··· 1 2 3]
     /// ex: [∋⊂⊂⊂ 1 2 3]
@@ -1181,7 +1180,25 @@ primitive!(
     /// The third function calculates the discriminant.
     (3[3], Trident, OtherModifier, ("trident", '∋')),
     /// Call a list of functions on distinct values
-    ((None), Comb, Stack, ("comb", '∻')),
+    ///
+    /// This example calls `+` on `1 2`, `-` on `1 5`, and `×` on `3 4`.
+    /// ex: [∝ +_-_× 1 2 1 5 3 4]
+    ///
+    /// The functions do not need to have the same signature.
+    /// ex: [∝ √_+_¯ 16 2 3 6]
+    ///
+    /// [comb]'s glyph is `∝` because it kind of looks like a hair pick.
+    ((None), Comb, Stack, ("comb", '∝')),
+    /// Call a list of functions all on the same values
+    ///
+    /// ex: [⚇ +_-_× 5 8]
+    ///
+    /// The functions must all have the same signature
+    /// ex: [⚇ +_- 2 3]
+    /// ex! [⚇ +_○ 2 3]
+    ///
+    /// [share]'s glyph is `⚇` because the two dots *share* the circle.
+    ((None), Share, Stack, ("share", '⚇')),
     /// Call a function and catch errors
     ///
     /// If the first function errors, the second function is called with the error value.

@@ -210,7 +210,8 @@ impl Parser {
     }
     fn comment(&mut self) -> Option<Sp<String>> {
         let span = self.try_exact(Token::Comment)?;
-        let s = span.as_str().trim_start_matches(['#', ' ']).into();
+        let s = span.as_str();
+        let s = s.strip_prefix('#').unwrap_or(s).into();
         Some(span.sp(s))
     }
     fn try_binding(&mut self) -> Option<Binding> {

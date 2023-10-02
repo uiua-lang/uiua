@@ -599,7 +599,7 @@ fn trace(env: &mut Uiua, kind: TraceKind) -> UiuaResult {
         once(first_line.as_str())
             .chain(formatted.lines().skip(1))
             .fold(String::new(), |mut output, line| {
-                _ = writeln!(output, "{line}\n");
+                _ = writeln!(output, "{line}");
                 output
             })
     } else {

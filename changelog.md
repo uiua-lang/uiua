@@ -2,12 +2,14 @@
 
 Uiua is not yet stable.
 
-## Logpoint 4 - 2023-10-01
+# Pre-Version
+
+## 2023-10-01
 - Add the [`dip` `→`](https://uiua.org/docs/dip) modifier, which temporarily pops a value
 - Deprecate `roll↷` and `unroll↶`
 - Add [`under` `⍜`](https://uiua.org/docs/under) [`keep` `▽`](https://uiua.org/docs/keep)
 
-## Logpoint 3 - 2023-09-30
+## 2023-09-30
 ### Language
 - Remove the `|1.1` signature restriction for [`under` `⍜`](https://uiua.org/docs/under)'s second function
 - Remove the rank`∴` function
@@ -21,7 +23,7 @@ Uiua is not yet stable.
 ### Website
 - [`&sc`](https://uiua.org/docs/&sc) now works on the website by showing a prompt
 
-## Logpoint 2 - 2023-09-29
+## 2023-09-29
 ### Language
 - Make binding names case-sensitive
 - Add `^` syntax to terminate modifier parsing. There is a basic example [in the tutorial](http://uiua.org/docs/functions#terminating-modifiers).
@@ -38,7 +40,7 @@ Uiua is not yet stable.
 - Make a space character `@ ` more visible by underlining the space
 - Improve cursor movement when formatting in the editor
 
-## Logpoint 1 - 2023-09-28
+## 2023-09-28
 ### Language
 - Add this changelog
 - Add [`trace` `~`](https://uiua.org/docs/trace) function

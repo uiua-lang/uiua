@@ -8,6 +8,7 @@ Uiua is not yet stable.
 - Add the [`dip` `→`](https://uiua.org/docs/dip) modifier, which temporarily pops a value
 - Deprecate `roll↷` and `unroll↶`
 - Add [`under` `⍜`](https://uiua.org/docs/under) [`keep` `▽`](https://uiua.org/docs/keep)
+- Add [`dump`](https://uiua.org/docs/dump) function, which prints the entire stack
 
 ## 2023-09-30
 ### Language

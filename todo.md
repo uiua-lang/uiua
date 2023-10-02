@@ -1,6 +1,7 @@
 - Optimize keep
 - Implement "spread" function
 - Implement "cleave" function
+- Add channels for spawned threads
 - Optimize dip by inlining?
 - Rust API
 - Docs

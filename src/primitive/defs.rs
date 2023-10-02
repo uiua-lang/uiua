@@ -1390,4 +1390,13 @@ primitive!(
     (1, Trace, Stack, ("trace", '~')),
     /// The inverse of trace
     (1, InvTrace, Stack),
+    /// Debug print all the values currently on stack without popping them
+    ///
+    /// ex: dump 1 2 3
+    /// This is useful when you want to inspect the current ordering of the stack.
+    /// For example, let's say you are juggling around some values on the stack using [restack], you can use [dump] to inspect the stack afterwards:
+    /// ex: 0 1 2 3 4
+    ///   : ⇵ 1_4_2_4_0_3
+    ///   : dump
+    (0(0), Dump, Stack, "dump"),
 );

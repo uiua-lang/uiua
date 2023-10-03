@@ -229,11 +229,11 @@ pub fn lives(env: &mut Uiua) -> UiuaResult {
     for i in 0..arg_count {
         args.push(env.pop(ArrayArg(i + 1))?);
     }
-    for arg in args.iter().rev() {
+    for arg in args.iter().take(g.signature().args).rev() {
         env.push(arg.clone());
     }
     env.call(g)?;
-    for arg in args.into_iter().rev() {
+    for arg in args.into_iter().take(f.signature().args).rev() {
         env.push(arg);
     }
     env.call(f)?;

@@ -1048,7 +1048,6 @@ pub fn partition(env: &mut Uiua) -> UiuaResult {
     let markers = markers.as_indices(env, "Partition markers must be a list of integers")?;
     let values = env.pop(ArrayArg(2))?;
     let groups = values.partition_groups(&markers, env)?;
-    dbg!(&groups);
     collapse_groups(f, groups, "partition", env)
 }
 

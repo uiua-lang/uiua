@@ -1,6 +1,5 @@
-- Implement "spread" function
-- Implement "cleave" function
 - Use special quotes for constant strings
+- Add scoop modifier
 - Add channels for spawned threads
 - Optimize dip by inlining?
 - Make dyadic array functions not methods

@@ -917,7 +917,7 @@ primitive!(
     /// ex: ∧+ 10 1_2_3_4
     /// [fold] goes from left to right. This is important for non-commutative functions like [subtract].
     /// ex: ∧- 10 1_2_3_4
-    /// 
+    ///
     /// [break]ing out of [fold] discards the unreduced values.
     /// ex: ∧(⎋≥10.+) 1 5_6_7_8
     (2[1], Fold, AggregatingModifier, ("fold", '∧')),
@@ -1324,7 +1324,7 @@ primitive!(
     /// ex: !(|1 ×↬>2.-1.) 5
     ///
     /// Here is a recursive fibonacci function.
-    /// It uses [call] to decide whether to recur.
+    /// It uses [if] to decide whether to recur.
     /// ex: !(?·(|1 +↬2-1∶↬2-2.) <2.) 10
     (1(None), Recur, Control, ("recur", '↬')),
     /// Parse a string as a number

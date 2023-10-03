@@ -1195,13 +1195,15 @@ primitive!(
     ((None), Comb, Stack, ("comb", '∝')),
     /// Call a list of functions all on the same values
     ///
-    /// ex: [⚇ +_-_× 5 8]
+    /// ex: [❥ +_-_× 5 8]
+    /// ex: ❥ ⇌_⊝ 1_2_2_3
     ///
     /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maimum will work on the top values.
-    /// ex: [⚇ +_¯ 3 5]
+    /// ex: [❥ +_¯ 3 5]
     ///
-    /// [share]'s glyph is `⚇` because the two dots *share* the circle.
-    ((None), Share, Stack, ("share", '⚇')),
+    /// By calling many functions all on the same arrays, we can see multiple [lives] that the arrays can live. We can only do this because an array is a simple thing. Uniform, predictable, beautiful. It is only a shame we cannot call [lives] on ourselves.
+    /// [lives] replaces the deprecated [fork] and [trident]. After all, a life can have more than just 2 or 3 paths.
+    ((None), Lives, Stack, ("lives", '❥')),
     /// Call a function and catch errors
     ///
     /// If the first function errors, the second function is called with the error value.

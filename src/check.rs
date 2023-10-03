@@ -281,7 +281,7 @@ impl<'a> VirtualEnv<'a> {
                         return Err("comb with unknown value".into());
                     }
                 }
-                Share => {
+                Lives => {
                     let fs = self.pop()?;
                     if let BasicValue::Arr(fs) = fs {
                         let sig = if fs.is_empty() {

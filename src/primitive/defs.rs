@@ -1134,14 +1134,18 @@ primitive!(
     /// ex: ⍜(↻3)(⊂π) [1 2 3 4 5]
     ///   : ⍜'↻3'⊂π [1 2 3 4 5]
     ([2], Bind, OtherModifier, ("bind", '\'')),
-    /// Call a function on 2 values
+    /// Call a function on 2 sets of values
     ///
-    /// The function is called on each of the top 2 values on the stack, and the results end up in the same order.
-    /// ex: ∷⇡3 5
+    /// For monadic functions, [both] calls it's function on each of the top 2 values on the stack.
+    /// ex: ∷⇡ 3 5
     ///
     /// One good use of this is when working with [constant] data.
     /// You can use [both][call] to get 2 [constant] values out.
     /// ex: /(⊂∷!) {"a" "bc" "def"}
+    ///
+    /// For a function that takes `n` arguments, [both] calls the function on the 2 sets of `n` values on top of the stack.
+    /// ex: [∷+ 1 2 3 4]
+    /// ex: [∷(++) 1 2 3 4 5 6]
     ///
     /// [both]'s glyph is `∷` because, for a function `f`, it is equivalent to `f∶f∶`.
     (2[1], Both, OtherModifier, ("both", '∷')),

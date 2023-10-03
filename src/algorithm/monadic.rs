@@ -414,10 +414,10 @@ impl Array<u8> {
         let mut new_data = Vec::with_capacity(self.data.len() / bit_string_len);
         // Big endian
         for bits in bools.chunks_exact(bit_string_len) {
-            let mut n = 0;
+            let mut n: u128 = 0;
             for (i, b) in bits.iter().enumerate() {
                 if *b {
-                    n |= 1 << i;
+                    n |= 1u128.overflowing_shl(i as u32).0;
                 }
             }
             new_data.push(n as f64);

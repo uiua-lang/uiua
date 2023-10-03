@@ -369,6 +369,7 @@ fn watch(
 }
 
 #[derive(Parser)]
+#[clap(version)]
 enum App {
     #[clap(about = "Initialize a new main.ua file")]
     Init,

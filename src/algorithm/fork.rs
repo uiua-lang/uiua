@@ -181,7 +181,6 @@ pub fn comb(env: &mut Uiua) -> UiuaResult {
             val.type_name()
         ))
     })?;
-
     if fs.rank() != 1 {
         return Err(env.error(format!(
             "Comb's function list must be rank 1, but it is rank {}",
@@ -220,27 +219,13 @@ pub fn share(env: &mut Uiua) -> UiuaResult {
     if fs.shape() == [0] {
         return Ok(());
     }
-    if let Some([a, b]) = fs
-        .data
-        .windows(2)
-        .find(|win| win[0].signature() != win[1].signature())
-    {
-        return Err(env.error(format!(
-            "Share's function list must contain only functions with the same signature, \
-            but {} has signature {} and {} has signature {}",
-            a,
-            a.signature(),
-            b,
-            b.signature()
-        )));
-    }
-    let sig = fs.data[0].signature();
+    let arg_count = fs.data.iter().map(|f| f.signature().args).max().unwrap();
     let mut args = Vec::new();
-    for i in 0..sig.args {
+    for i in 0..arg_count {
         args.push(env.pop(i + 1)?);
     }
     for f in fs.data.into_iter().rev() {
-        for arg in args.iter().rev() {
+        for arg in args.iter().take(f.signature().args).rev() {
             env.push(arg.clone());
         }
         env.call(f)?;

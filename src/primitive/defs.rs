@@ -1193,9 +1193,8 @@ primitive!(
     ///
     /// ex: [⚇ +_-_× 5 8]
     ///
-    /// The functions must all have the same signature
-    /// ex: [⚇ +_- 2 3]
-    /// ex! [⚇ +_○ 2 3]
+    /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maimum will work on the top values.
+    /// ex: [⚇ +_¯ 3 5]
     ///
     /// [share]'s glyph is `⚇` because the two dots *share* the circle.
     ((None), Share, Stack, ("share", '⚇')),

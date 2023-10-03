@@ -284,7 +284,9 @@ impl<'a> VirtualEnv<'a> {
                         let sig = if fs.is_empty() {
                             Signature::new(0, 0)
                         } else {
-                            fs[0].signature()
+                            let args = fs.iter().map(|f| f.signature().args).max().unwrap();
+                            let outputs: usize = fs.iter().map(|f| f.signature().outputs).sum();
+                            Signature { args, outputs }
                         };
                         for _ in 0..sig.args {
                             self.pop()?;

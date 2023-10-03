@@ -261,7 +261,7 @@ primitive!(
     /// ex: ❥⇌⊝ 1_2_2_3
     /// [share] can be chained to apply more functions to the arguments. `n` functions require the chaining of `subtract``1n` [share].
     /// ex: [❥❥❥+-×÷ 5 8]
-    /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maimum will work on the top values.
+    /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maximum will work on the top values.
     /// ex: [❥+¯ 3 5]
     ///
     /// Remember that [share]ing is caring.

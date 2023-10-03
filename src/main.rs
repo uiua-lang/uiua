@@ -146,8 +146,14 @@ fn run() -> UiuaResult {
                         .load_file(path)?;
                     println!("No failures!");
                 }
-                App::Watch { no_format, args } => {
-                    if let Err(e) = watch(working_file_path().ok().as_deref(), !no_format, args) {
+                App::Watch {
+                    no_format,
+                    clear,
+                    args,
+                } => {
+                    if let Err(e) =
+                        watch(working_file_path().ok().as_deref(), !no_format, clear, args)
+                    {
                         eprintln!("Error watching file: {e}");
                     }
                 }
@@ -157,8 +163,8 @@ fn run() -> UiuaResult {
         }
         Err(e) if e.kind() == ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
             let res = match working_file_path() {
-                Ok(path) => watch(Some(&path), true, Vec::new()),
-                Err(NoWorkingFile::MultipleFiles) => watch(None, true, Vec::new()),
+                Ok(path) => watch(Some(&path), true, false, Vec::new()),
+                Err(NoWorkingFile::MultipleFiles) => watch(None, true, false, Vec::new()),
                 Err(nwf) => {
                     _ = e.print();
                     eprintln!("\n{nwf}");
@@ -223,7 +229,12 @@ fn working_file_path() -> Result<PathBuf, NoWorkingFile> {
     }
 }
 
-fn watch(initial_path: Option<&Path>, format: bool, args: Vec<String>) -> io::Result<()> {
+fn watch(
+    initial_path: Option<&Path>,
+    format: bool,
+    clear: bool,
+    args: Vec<String>,
+) -> io::Result<()> {
     let (send, recv) = channel();
     let mut watcher = notify::recommended_watcher(send).unwrap();
     watcher
@@ -320,6 +331,13 @@ fn watch(initial_path: Option<&Path>, format: bool, args: Vec<String>) -> io::Re
             .last()
         {
             if last_time.elapsed() > Duration::from_millis(100) {
+                if clear {
+                    if cfg!(target_os = "windows") {
+                        _ = Command::new("cmd").args(&["/C", "cls"]).status();
+                    } else {
+                        _ = Command::new("clear").status();
+                    }
+                }
                 run(&path)?;
                 last_time = Instant::now();
             }
@@ -374,6 +392,8 @@ enum App {
     Watch {
         #[clap(long, help = "Don't format the file before running")]
         no_format: bool,
+        #[clap(long, help = "Clear the terminal on file change")]
+        clear: bool,
         #[clap(trailing_var_arg = true)]
         args: Vec<String>,
     },

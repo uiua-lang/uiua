@@ -5,6 +5,9 @@ Uiua is not yet stable.
 # Pre-Version
 
 ## 2023-10-02
+### Language
+- [`both` `∷`](https://uiua.org/docs/both) can now be used with a function that takes any number of arguments.
+- Various bug and crash fixes
 ### Interpreter
 - Tell the user when the interpreter can be updated
 

@@ -1,7 +1,6 @@
 //! Algorithms for forking modifiers
 
 use crate::{
-    function::Signature,
     run::{ArrayArg, FunctionArg},
     Uiua, UiuaResult,
 };
@@ -26,22 +25,38 @@ pub fn restack(env: &mut Uiua) -> UiuaResult {
 
 pub fn both(env: &mut Uiua) -> UiuaResult {
     let f = env.pop(FunctionArg(1))?;
-    let a = env.pop(ArrayArg(1))?;
-    let b = env.pop(ArrayArg(2))?;
-
-    if !f.signature().is_subset_of(Signature::new(1, 1)) {
-        return Err(env.error(format!(
-            "Both's function must have a signature of {}, but {} has signature {}",
-            Signature::new(1, 1),
-            f,
-            f.signature()
-        )));
+    match f.signature().args {
+        0 => {
+            env.call(f.clone())?;
+            env.call(f)?;
+        }
+        1 => {
+            let a = env.pop(ArrayArg(1))?;
+            let b = env.pop(ArrayArg(2))?;
+            env.push(b);
+            env.call(f.clone())?;
+            env.push(a);
+            env.call(f)?;
+        }
+        n => {
+            let mut a = Vec::with_capacity(n);
+            let mut b = Vec::with_capacity(n);
+            for i in 0..n {
+                a.push(env.pop(ArrayArg(i + 1))?);
+            }
+            for i in 0..n {
+                b.push(env.pop(ArrayArg(n + i + 1))?);
+            }
+            for b in b.into_iter().rev() {
+                env.push(b);
+            }
+            env.call(f.clone())?;
+            for a in a.into_iter().rev() {
+                env.push(a);
+            }
+            env.call(f)?;
+        }
     }
-
-    env.push(b.clone());
-    env.call(f.clone())?;
-    env.push(a.clone());
-    env.call(f)?;
 
     Ok(())
 }

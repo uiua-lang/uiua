@@ -226,13 +226,7 @@ impl<'a> VirtualEnv<'a> {
                     let f = self.pop()?;
                     let args = f.signature().args * 2;
                     let outputs = f.signature().outputs * 2;
-                    for _ in 0..args {
-                        self.pop()?;
-                    }
-                    self.set_min_height();
-                    for _ in 0..outputs {
-                        self.stack.push(BasicValue::Other);
-                    }
+                    self.handle_args_outputs(args, outputs)?;
                 }
                 Fork => {
                     let f = self.pop()?;
@@ -262,36 +256,11 @@ impl<'a> VirtualEnv<'a> {
                     }
                 }
                 Lives => {
-                    let fs = self.pop()?;
-                    match fs {
-                        BasicValue::Arr(fs) => {
-                            let sig = if fs.is_empty() {
-                                Signature::new(0, 0)
-                            } else {
-                                let args = fs.iter().map(|f| f.signature().args).max().unwrap();
-                                let outputs: usize = fs.iter().map(|f| f.signature().outputs).sum();
-                                Signature { args, outputs }
-                            };
-                            for _ in 0..sig.args {
-                                self.pop()?;
-                            }
-                            self.set_min_height();
-                            for _ in 0..sig.outputs {
-                                self.stack.push(BasicValue::Other);
-                            }
-                        }
-                        BasicValue::Func(f) => {
-                            let sig = f.signature();
-                            for _ in 0..sig.args {
-                                self.pop()?;
-                            }
-                            self.set_min_height();
-                            for _ in 0..sig.outputs {
-                                self.stack.push(BasicValue::Other);
-                            }
-                        }
-                        _ => return Err("lives with unknown value".into()),
-                    }
+                    let f = self.pop()?;
+                    let g = self.pop()?;
+                    let args = f.signature().args.max(g.signature().args);
+                    let outputs = f.signature().outputs + g.signature().outputs;
+                    self.handle_args_outputs(args, outputs)?;
                 }
                 Level => {
                     let arg_count = match self.pop()? {
@@ -299,13 +268,7 @@ impl<'a> VirtualEnv<'a> {
                         _ => 1,
                     };
                     let f = self.pop()?;
-                    for _ in 0..arg_count {
-                        self.pop()?;
-                    }
-                    self.set_min_height();
-                    for _ in 0..f.signature().outputs {
-                        self.stack.push(BasicValue::Other);
-                    }
+                    self.handle_args_outputs(arg_count, f.signature().outputs)?;
                 }
                 Try => {
                     let f = self.pop()?;
@@ -318,13 +281,7 @@ impl<'a> VirtualEnv<'a> {
                         ));
                     }
                     let sig = f_sig.max_with(handler_sig);
-                    for _ in 0..sig.args {
-                        self.pop()?;
-                    }
-                    self.set_min_height();
-                    for _ in 0..sig.outputs {
-                        self.stack.push(BasicValue::Other);
-                    }
+                    self.handle_sig(sig)?;
                 }
                 Invert => {
                     if let BasicValue::Func(f) = self.pop()? {
@@ -515,15 +472,18 @@ impl<'a> VirtualEnv<'a> {
             *h = (*h).min(self.stack.len());
         }
     }
-    fn handle_sig(&mut self, sig: Signature) -> Result<(), String> {
-        for _ in 0..sig.args {
+    fn handle_args_outputs(&mut self, args: usize, outputs: usize) -> Result<(), String> {
+        for _ in 0..args {
             self.pop()?;
         }
         self.set_min_height();
-        for _ in 0..sig.outputs {
+        for _ in 0..outputs {
             self.stack.push(BasicValue::Other);
         }
         Ok(())
+    }
+    fn handle_sig(&mut self, sig: Signature) -> Result<(), String> {
+        self.handle_args_outputs(sig.args, sig.outputs)
     }
     fn handle_call(&mut self, explicit: bool) -> Result<(), String> {
         match self.pop()? {

@@ -190,32 +190,52 @@ pub fn trident(env: &mut Uiua) -> UiuaResult {
 }
 
 pub fn lives(env: &mut Uiua) -> UiuaResult {
-    let fs = env.pop("function list")?.into_func_array().map_err(|val| {
-        env.error(format!(
-            "Lives' first argument must be a list of functions, but it is {}s",
-            val.type_name()
-        ))
-    })?;
-    if fs.rank() > 1 {
-        return Err(env.error(format!(
-            "Lives' function list must be rank 1, but it is rank {}",
-            fs.rank()
-        )));
-    }
-    if fs.shape() == [0] {
-        return Ok(());
-    }
-    let arg_count = fs.data.iter().map(|f| f.signature().args).max().unwrap();
-    let mut args = Vec::new();
+    let f = env.pop(FunctionArg(1))?;
+    let g = env.pop(FunctionArg(2))?;
+    let f = f
+        .into_func_array()
+        .map_err(|val| {
+            env.error(format!(
+                "Lives' first function must be a function, but is has type {}",
+                val.type_name()
+            ))
+        })
+        .and_then(|f| {
+            f.into_scalar().map_err(|arr| {
+                env.error(format!(
+                    "Lives' first function must be a scalar, but is has rank {}",
+                    arr.rank()
+                ))
+            })
+        })?;
+    let g = g
+        .into_func_array()
+        .map_err(|val| {
+            env.error(format!(
+                "Lives' second function must be a function, but is has type {}",
+                val.type_name()
+            ))
+        })
+        .and_then(|f| {
+            f.into_scalar().map_err(|arr| {
+                env.error(format!(
+                    "Lives' second function must be a scalar, but is has rank {}",
+                    arr.rank()
+                ))
+            })
+        })?;
+    let arg_count = f.signature().args.max(g.signature().args);
+    let mut args = Vec::with_capacity(arg_count);
     for i in 0..arg_count {
-        args.push(env.pop(i + 1)?);
+        args.push(env.pop(ArrayArg(i + 1))?);
     }
-    for f in fs.data.into_iter().rev() {
-        let sig = f.signature();
-        for arg in args.iter().take(sig.args).rev() {
-            env.push(arg.clone());
-        }
-        env.call(f)?;
+    for arg in args.iter().rev() {
+        env.push(arg.clone());
     }
+    env.call(g)?;
+    for arg in args.into_iter().rev() {
+        env.push(arg);
+    }
+    env.call(f)?;
     Ok(())
 }

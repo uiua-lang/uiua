@@ -54,12 +54,12 @@ fn run() -> UiuaResult {
         uiua::profile::run_profile();
         return Ok(());
     }
-    show_update_message();
     match App::try_parse() {
         Ok(app) => {
             let config = FormatConfig::default();
             match app {
                 App::Init => {
+                    show_update_message();
                     if let Ok(path) = working_file_path() {
                         eprintln!("File already exists: {}", path.display());
                     } else {
@@ -67,6 +67,7 @@ fn run() -> UiuaResult {
                     }
                 }
                 App::Fmt { path } => {
+                    show_update_message();
                     if let Some(path) = path {
                         format_file(path, &config)?;
                     } else {
@@ -83,6 +84,9 @@ fn run() -> UiuaResult {
                     audio_options,
                     args,
                 } => {
+                    if !no_format {
+                        show_update_message();
+                    }
                     let path = if let Some(path) = path {
                         path
                     } else {
@@ -116,6 +120,7 @@ fn run() -> UiuaResult {
                     audio_options,
                     args,
                 } => {
+                    show_update_message();
                     #[cfg(feature = "audio")]
                     setup_audio(audio_options);
                     let mut rt = Uiua::with_native_sys()
@@ -128,6 +133,7 @@ fn run() -> UiuaResult {
                     }
                 }
                 App::Test { path } => {
+                    show_update_message();
                     let path = if let Some(path) = path {
                         path
                     } else {
@@ -151,6 +157,7 @@ fn run() -> UiuaResult {
                     clear,
                     args,
                 } => {
+                    show_update_message();
                     if let Err(e) =
                         watch(working_file_path().ok().as_deref(), !no_format, clear, args)
                     {
@@ -162,6 +169,7 @@ fn run() -> UiuaResult {
             }
         }
         Err(e) if e.kind() == ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
+            show_update_message();
             let res = match working_file_path() {
                 Ok(path) => watch(Some(&path), true, false, Vec::new()),
                 Err(NoWorkingFile::MultipleFiles) => watch(None, true, false, Vec::new()),

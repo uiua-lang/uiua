@@ -4,6 +4,7 @@
 - Add channels for spawned threads
 - Optimize dip by inlining?
 - Make dyadic array functions not methods
+- See what can be done about compile times
 - Rust API
 - Docs
   - Invert bits for control flow

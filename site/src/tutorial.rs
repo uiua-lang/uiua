@@ -461,12 +461,6 @@ fn TutorialTypes() -> impl IntoView {
         <p>"Functions are usually used as scalars, but they are still arrays. Most array operations that work on number and character arrays work on arrays of functions as well."</p>
         <p>"Functions will be discussed more in some "<A href="/docs/bindings#binding-functions">"later"</A>" "<A href="/docs/functions">"sections"</A>"."</p>
 
-        <h2 id="empty-arrays">"Empty Arrays"</h2>
-        <p>"If you create an empty array with "<code>"[]"</code>"s, it will be a rank 1 array of numbers."</p>
-        <Editor example="△[]"/>
-        <Editor example="⊂1 []"/>
-        <Editor example="⊂@a []"/> // Should fail
-
         <h2>"Type agreement"</h2>
         <p id="type-agreement">"For functions that work on the structure of arrays rather than their values, the types of the arrays must match."</p>
         <Editor example="⊂ 1_2 3"/>
@@ -474,6 +468,13 @@ fn TutorialTypes() -> impl IntoView {
         <Editor example="⊟ 1_2_3 \"dog\""/> // Should fail
         <p>"There is an exception for functions. Any function that pushes one value onto the stack can be put in an array with a non-function. In this case, the non-function will be turned into a function, similar to "<Prim prim=Constant/>"."</p>
         <Editor example="⊟ 5 (+1 2)"/>
+
+        <h2 id="empty-arrays">"Empty Arrays"</h2>
+        <p>"The type of an array that is constructed with no elements depends on the syntax used to construct it. It's shape is always "<code>"[0]"</code>"."</p>
+        <p>"We can use the "<Prim prim=Type/>" function to get the type of an array. "<code>"0"</code>" corresponds to numbers, "<code>"1"</code>" to characters, and "<code>"2"</code>" to functions."</p>
+        <Editor example="type []"/>
+        <Editor example="type \"\""/>
+        <Editor example="type {}"/>
     }
 }
 

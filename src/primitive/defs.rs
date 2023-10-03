@@ -220,7 +220,7 @@ primitive!(
     (2[1], Both, Stack, ("both", '∷')),
     /// Call 2 functions on 2 values
     ///
-    /// Deprecated in favor of [lives].
+    /// Deprecated in favor of [share].
     ///
     /// Each function may take 0, 1, or 2 arguments.
     /// With 0 or 1 arguments, the first function will be passed the first value.
@@ -235,7 +235,7 @@ primitive!(
     (2[2], Fork, Stack, ("fork", '⊃')),
     /// Call 3 functions on 3 values
     ///
-    /// Deprecated in favor of [lives].
+    /// Deprecated in favor of [share].
     ///
     /// [trident] is a very powerfull function when juggling 3 values.
     /// Each function may take up to 3 arguments.
@@ -259,14 +259,13 @@ primitive!(
     /// Call two functions on the same values
     ///
     /// ex: ❥⇌⊝ 1_2_2_3
-    /// [lives] can be chained to apply more functions to the arguments. `n` functions require the chaining of `subtract``1n` [lives].
+    /// [share] can be chained to apply more functions to the arguments. `n` functions require the chaining of `subtract``1n` [share].
     /// ex: [❥❥❥+-×÷ 5 8]
     /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maimum will work on the top values.
     /// ex: [❥+¯ 3 5]
     ///
-    /// By calling many functions all on the same arrays, we can see multiple [lives] that the arrays can live. We can only do this because an array is a simple thing. Uniform, predictable, beautiful. It is only a shame we cannot call [lives] on ourselves.
-    /// [lives] replaces the deprecated [fork] and [trident]. After all, a life can have more than just 2 or 3 paths, and is usually lives with more than only 1 or two others.
-    ([2], Lives, Stack, ("lives", '❥')),
+    /// Remember that [share]ing is caring.
+    ([2], Share, Stack, ("share", '❥')),
     /// Rearrange the stack
     ///
     /// [restack] is the most powerful stack manipulation function.

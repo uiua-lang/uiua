@@ -255,7 +255,7 @@ impl<'a> VirtualEnv<'a> {
                         self.stack.push(BasicValue::Other);
                     }
                 }
-                Lives => {
+                Share => {
                     let f = self.pop()?;
                     let g = self.pop()?;
                     let args = f.signature().args.max(g.signature().args);

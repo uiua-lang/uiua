@@ -602,14 +602,14 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <p><Prim prim=Dip/>" can be chained to dig deeper into the stack."</p>
         <Editor example="[→→→→→→+ 1 2 3 4 5 6 7 8]"/>
 
-        <h2 id="lives"><Prim prim=Lives/></h2>
-        <p><Prim prim=Lives/>" is a dyadic modifier that takes 2 functions and calls them both on multiple arguments. The number of arguments used is the maximum of the two functions."</p>
+        <h2 id="share"><Prim prim=Share/></h2>
+        <p><Prim prim=Share/>" is a dyadic modifier that takes 2 functions and calls them both on multiple arguments. The number of arguments used is the maximum of the two functions."</p>
         <Editor example="[❥+× 3 5]"/>
         <p>"If one of the functions take more arguments than the other, the function with fewer arguments uses the top-most values."</p>
         <Editor example="❥×⇌ [1 2 3] 10"/>
-        <p>"What's powerful about "<Prim prim=Lives/>" is that it can be chained to use as many functions as you want."</p>
+        <p>"What's powerful about "<Prim prim=Share/>" is that it can be chained to use as many functions as you want."</p>
         <Editor example="[❥❥❥+-×÷ 5 8]"/>
-        <p>"In addition, unlike "<Prim prim=Distribute/><Prim prim=Call/>", which can also be used to apply several functions to the same arguments, "<Prim prim=Lives/>" does not require that its values be in an array together."</p>
+        <p>"In addition, unlike "<Prim prim=Distribute/><Prim prim=Call/>", which can also be used to apply several functions to the same arguments, "<Prim prim=Share/>" does not require that its values be in an array together."</p>
         <Editor example="❥+-1@b"/>
         <Editor example="❥❥❥↻↙↘⊡ 2 [1 2 3 4 5]"/>
 
@@ -622,11 +622,11 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <h2 id="a-motivating-example">"A Motivating Example"</h2>
         <p>"Implementing the "<a href="https://en.wikipedia.org/wiki/Quadratic_formula">"quadratic formula"</a>" requires juggling 3 values."</p>
         <p>"There are two ways you could approach this."</p>
-        <p>"The first way is to use "<Prim prim=Lives/>" and find advantageous groupings of arguments. This is what is done in an example on the homepage."</p>
+        <p>"The first way is to use "<Prim prim=Share/>" and find advantageous groupings of arguments. This is what is done in an example on the homepage."</p>
         <Editor example=QUADRATIC/>
         <p>"The second way is to use "<Prim prim=Restack/>" to rearrange the arguments into the exact order needed to just do all the operations at once."</p>
         <Editor example="Quad ← ÷×2∶-∶⊟¯.√-∶ⁿ2∶×4×⇵[0 2 1 1 0]\nQuad 1 2 0"/>
-        <p><Prim prim=Lives/>" is the obvious winner here in terms of both clarity and concision."</p>
+        <p><Prim prim=Share/>" is the obvious winner here in terms of both clarity and concision."</p>
         <p>"In general "<Prim prim=Restack/>" should only be used when absolutely necessary."</p>
     }
 }

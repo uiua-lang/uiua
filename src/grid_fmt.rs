@@ -295,8 +295,8 @@ fn fmt_array<T: GridFmt + ArrayValue>(
             if boxed {
                 s.pop();
                 s.remove(0);
-                s.insert(0, '“');
-                s.push('„');
+                s.insert(0, '⌜');
+                s.push('⌟');
             }
             row.push(vec![s.chars().collect()]);
         } else {

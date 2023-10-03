@@ -374,6 +374,7 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example="[1 2 [7 8 9]]"/> // Should fail
         <p>"By using "<Prim prim=Constant/>", we can turn any value into a function that pushes that value onto the stack. We can then put these functions into an array like any other."</p>
         <Editor example="[□1 □2 □[7 8 9]]"/>
+        <p>"The "<code>"⟦⟧"</code>"s indicate that a list is wrapped in a constant function."</p>
         <p>"To get the values back on the stack, we can use "<Prim prim=Reduce/><Prim prim=Call/>"."</p>
         <Editor example="/![□1 □2 □[7 8 9]]"/>
         <p>"Having to write "<Prim prim=Constant glyph_only=true/>" everywhere is annoying, and so..."</p>
@@ -385,6 +386,7 @@ fn TutorialArrays() -> impl IntoView {
         <p>"This is very useful for making lists of strings."</p>
         <Editor example=r#"langs ← .["Uiua" "APL" "J" "BQN" "K" "Q"]"#/>
         <Editor example=r#"langs ← .{"Uiua" "APL" "J" "BQN" "K" "Q"}"#/>
+        <p>"The "<code>"⌜⌟"</code>"s indicate that a string is wrapped in a constant function."</p>
         <p>"Many simple functions will work on "<Prim prim=Constant/>" elements without needing to use "<Prim prim=Call/>"."</p>
         <Editor example=
 r#"langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}

@@ -8,8 +8,11 @@ Uiua is not yet stable.
 ### Language
 - Add the [`share` `❥`](https://uiua.org/docs/share) modifier, which unifies and deprecates [`fork` `⊃`](https://uiua.org/docs/fork) and [`trident` `∋`](https://uiua.org/docs/trident)
 - [`bind` `'`] no longer calls its functions immediately. This should not change any reasonable existing code.
-- Change how [`partition` `⊜`](https://uiua.org/docs/partition) and [`group` `⊕`](https://uiua.org/docs/group) work with dyadic functions to be consistent with [`reduce` `/`](https://uiua.org/docs/reduce).
+- Change how [`partition` `⊜`](https://uiua.org/docs/partition) and [`group` `⊕`](https://uiua.org/docs/group) work with dyadic functions to be consistent with [`reduce` `/`](https://uiua.org/docs/reduce)
 - Deprecate [`restack` `⇵`](https://uiua.org/docs/restack). It was never a good idea.
+- Remove the overloaded behavior of [`call` `!`](https://uiua.org/docs/call). It no longer behaves like an if-else when used with a list of functions.
+  - You can replace all existing instances of that use case with `!⊡:`
+- Add the [`if` `?`](https://uiua.org/docs/if) modifier, which calls one of two functions based on a condition
 
 ## 2023-10-02
 ### Language

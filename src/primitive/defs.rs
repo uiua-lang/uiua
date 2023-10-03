@@ -1191,16 +1191,6 @@ primitive!(
     /// The second function [negate]s `b`.
     /// The third function calculates the discriminant.
     (3[3], Trident, OtherModifier, ("trident", '∋')),
-    /// Call a list of functions on distinct values
-    ///
-    /// This example calls `+` on `1 2`, `-` on `1 5`, and `×` on `3 4`.
-    /// ex: [∝ +_-_× 1 2 1 5 3 4]
-    ///
-    /// The functions do not need to have the same signature.
-    /// ex: [∝ √_+_¯ 16 2 3 6]
-    ///
-    /// [comb]'s glyph is `∝` because it kind of looks like a hair pick.
-    ((None), Comb, Stack, ("comb", '∝')),
     /// Call a list of functions all on the same values
     ///
     /// ex: [❥ +_-_× 5 8]

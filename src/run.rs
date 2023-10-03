@@ -13,6 +13,7 @@ use instant::Duration;
 use parking_lot::Mutex;
 
 use crate::{
+    array::Array,
     ast::*,
     check::instrs_signature,
     function::*,
@@ -608,17 +609,23 @@ code:
                 let span = self.add_span(word.span.clone());
                 let instrs = self.new_functions.last_mut().unwrap();
                 if call && inner.iter().all(|instr| matches!(instr, Instr::Push(_))) {
+                    // Inline constant arrays
                     instrs.pop();
+                    let empty = inner.is_empty();
                     let values = inner.into_iter().rev().map(|instr| match instr {
                         Instr::Push(v) => *v,
                         _ => unreachable!(),
                     });
                     self.push_span(span, None);
                     let val = if arr.constant {
-                        Value::from_row_values(values.map(Function::constant), self)
+                        if empty {
+                            Array::<Arc<Function>>::default().into()
+                        } else {
+                            Value::from_row_values(values.map(Function::constant), self)?
+                        }
                     } else {
-                        Value::from_row_values(values, self)
-                    }?;
+                        Value::from_row_values(values, self)?
+                    };
                     self.pop_span();
                     self.push_instr(Instr::push(val));
                 } else {
@@ -867,7 +874,11 @@ code:
                     } else {
                         values.collect()
                     };
-                    let val = Value::from_row_values(values, self)?;
+                    let val = if values.is_empty() && constant {
+                        Array::<Arc<Function>>::default().into()
+                    } else {
+                        Value::from_row_values(values, self)?
+                    };
                     self.pop_span();
                     self.push(val);
                     Ok(())

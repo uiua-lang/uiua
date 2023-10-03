@@ -67,7 +67,6 @@ fn run() -> UiuaResult {
                     }
                 }
                 App::Fmt { path } => {
-                    show_update_message();
                     if let Some(path) = path {
                         format_file(path, &config)?;
                     } else {
@@ -79,12 +78,13 @@ fn run() -> UiuaResult {
                 App::Run {
                     path,
                     no_format,
+                    no_update,
                     mode,
                     #[cfg(feature = "audio")]
                     audio_options,
                     args,
                 } => {
-                    if !no_format {
+                    if !no_update {
                         show_update_message();
                     }
                     let path = if let Some(path) = path {
@@ -120,7 +120,6 @@ fn run() -> UiuaResult {
                     audio_options,
                     args,
                 } => {
-                    show_update_message();
                     #[cfg(feature = "audio")]
                     setup_audio(audio_options);
                     let mut rt = Uiua::with_native_sys()
@@ -133,7 +132,6 @@ fn run() -> UiuaResult {
                     }
                 }
                 App::Test { path } => {
-                    show_update_message();
                     let path = if let Some(path) = path {
                         path
                     } else {
@@ -154,10 +152,13 @@ fn run() -> UiuaResult {
                 }
                 App::Watch {
                     no_format,
+                    no_update,
                     clear,
                     args,
                 } => {
-                    show_update_message();
+                    if !no_update {
+                        show_update_message();
+                    }
                     if let Err(e) =
                         watch(working_file_path().ok().as_deref(), !no_format, clear, args)
                     {
@@ -295,6 +296,7 @@ fn watch(
                             .arg(path)
                             .args([
                                 "--no-format",
+                                "--no-update",
                                 "--mode",
                                 "all",
                                 #[cfg(feature = "audio")]
@@ -378,6 +380,8 @@ enum App {
         path: Option<PathBuf>,
         #[clap(long, help = "Don't format the file before running")]
         no_format: bool,
+        #[clap(long, help = "Don't check for updates")]
+        no_update: bool,
         #[clap(long, help = "Run the file in a specific mode")]
         mode: Option<RunMode>,
         #[cfg(feature = "audio")]
@@ -401,6 +405,8 @@ enum App {
     Watch {
         #[clap(long, help = "Don't format the file before running")]
         no_format: bool,
+        #[clap(long, help = "Don't check for updates")]
+        no_update: bool,
         #[clap(long, help = "Clear the terminal on file change")]
         clear: bool,
         #[clap(trailing_var_arg = true)]

@@ -615,6 +615,7 @@ impl Lexer {
                     self.end(Spaces, start)
                 }
                 c if c.is_whitespace() => continue,
+                '❥' => self.end(Primitive::Share, start),
                 c => {
                     if let Some(prim) = Primitive::from_unicode(c) {
                         self.end(Glyph(prim), start)

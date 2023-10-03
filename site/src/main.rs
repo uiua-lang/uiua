@@ -269,7 +269,6 @@ fn prim_class(prim: Primitive) -> &'static str {
 
     match prim {
         Primitive::Transpose => code_font!("monadic-function-button trans"),
-        Primitive::Share => code_font!("noadic-function-button"),
         prim if prim.class() == PrimClass::Stack && prim.modifier_args().is_none() => {
             code_font!("stack-function-button")
         }

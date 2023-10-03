@@ -246,7 +246,10 @@ fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
             break;
         }
     }
-    env.push(Value::from_row_values(scanned.into_iter().chain(rows), env)?);
+    env.push(Value::from_row_values(
+        scanned.into_iter().chain(rows),
+        env,
+    )?);
     Ok(())
 }
 
@@ -1163,7 +1166,6 @@ where
                 })?;
                 rows.push(env.pop(|| format!("{name}'s function result"))?);
             }
-            rows.reverse();
             let res = Value::from_row_values(rows, env)?;
             env.push(res);
         }

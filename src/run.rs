@@ -949,44 +949,35 @@ code:
     fn pop_span(&mut self) {
         self.scope.call.last_mut().unwrap().spans.pop();
     }
-    fn call_with_span(&mut self, mut f: Value, call_span: usize) -> UiuaResult {
-        let mut first_pass = true;
-        loop {
-            match f {
-                Value::Func(f) if f.shape.is_empty() => {
-                    // Call function
-                    let f = f.into_scalar().unwrap();
-                    match &f.kind {
-                        FunctionKind::Normal => {}
-                        FunctionKind::Dynamic(dfk) => {
-                            self.scope.call.push(StackFrame {
-                                function: f.clone(),
-                                call_span,
-                                spans: Vec::new(),
-                                pc: 0,
-                            });
-                            (dfk.f)(self)?;
-                            self.scope.call.pop();
-                            break Ok(());
-                        }
+    fn call_with_span(&mut self, f: Value, call_span: usize) -> UiuaResult {
+        match f {
+            Value::Func(f) if f.shape.is_empty() => {
+                // Call function
+                let f = f.into_scalar().unwrap();
+                match &f.kind {
+                    FunctionKind::Normal => {}
+                    FunctionKind::Dynamic(dfk) => {
+                        self.scope.call.push(StackFrame {
+                            function: f.clone(),
+                            call_span,
+                            spans: Vec::new(),
+                            pc: 0,
+                        });
+                        (dfk.f)(self)?;
+                        self.scope.call.pop();
+                        return Ok(());
                     }
-                    break self.exec(StackFrame {
-                        function: f,
-                        call_span,
-                        spans: Vec::new(),
-                        pc: 0,
-                    });
                 }
-                Value::Func(_) if first_pass => {
-                    // Call non-scalar function array
-                    let index = self.pop("index")?;
-                    f = index.pick(f, self)?;
-                    first_pass = false;
-                }
-                value => {
-                    self.push(value);
-                    break Ok(());
-                }
+                self.exec(StackFrame {
+                    function: f,
+                    call_span,
+                    spans: Vec::new(),
+                    pc: 0,
+                })
+            }
+            value => {
+                self.push(value);
+                Ok(())
             }
         }
     }

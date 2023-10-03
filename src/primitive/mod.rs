@@ -487,6 +487,7 @@ impl Primitive {
             Primitive::Fork => fork::fork(env)?,
             Primitive::Trident => fork::trident(env)?,
             Primitive::Lives => fork::lives(env)?,
+            Primitive::If => fork::iff(env)?,
             Primitive::Try => {
                 let f = env.pop(FunctionArg(1))?;
                 let handler = env.pop(FunctionArg(2))?;

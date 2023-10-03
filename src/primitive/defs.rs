@@ -1202,6 +1202,19 @@ primitive!(
     /// By calling many functions all on the same arrays, we can see multiple [lives] that the arrays can live. We can only do this because an array is a simple thing. Uniform, predictable, beautiful. It is only a shame we cannot call [lives] on ourselves.
     /// [lives] replaces the deprecated [fork] and [trident]. After all, a life can have more than just 2 or 3 paths, and is usually lives with more than only 1 or two others.
     ([2], Lives, OtherModifier, ("lives", '❥')),
+    /// Call one of two functions based on a condition
+    ///
+    /// If the condition is `1`, then the first function is called, otherwise the second function is called.
+    /// ex: ?+- 1 3 5
+    /// ex: ?+- 0 3 5
+    /// ex: Abs ← ?¯· <0.
+    ///   : Abs 2
+    ///   : Abs ¯5
+    ///
+    /// The two functions having different signatures is not an error, but it may require a signature to be specified.
+    /// ex: ?·+ 0 2 3
+    /// ex! (?·+ 0 2 3)
+    ([2], If, OtherModifier, ("if", '?')),
     /// Call a function and catch errors
     ///
     /// If the first function errors, the second function is called with the error value.
@@ -1264,25 +1277,15 @@ primitive!(
     (1, Wait, Misc, ("wait", '↲')),
     /// Call a function
     ///
-    /// When passing a scalar function array, the function is simply called.
+    /// When passing a scalar function, the function is simply called.
     /// ex: !(+5) 2
-    ///
-    /// The behavior when passing a non-scalar array is different.
-    /// An additional argument is expected, which is the index of the function to call.
-    /// With this, you can do if-else expressions.
-    /// ex: Abs ← !·_¯ <0. # If less than 0, negate
-    ///   : Abs 5
-    ///   : Abs ¯2
-    /// This is equivalent to [call][pick][flip]:
-    /// ex: Abs ← !⊡∶·_¯ <0.
-    ///   : Abs 5
-    ///   : Abs ¯2
-    ///
-    /// Using [call] in this way is *not* recursive. If the selected value is also a function array, it will not be called unless you used [call] again, wich will pop another index.
-    /// ex:  ![+_- ×_÷] 1   3 12 # Pick a function array
-    /// ex:  ![+_- ×_÷] 1_0 3 12 # Call the function at 1_0
-    /// ex:  ![+_- ×_÷] 1 0 3 12 # Not enough calls
-    /// ex: !![+_- ×_÷] 1 0 3 12 # 2 calls is enough
+    /// This means [call] is used to "unbox" [constant] functions.
+    /// ex: {1_2_3 4_5_6}
+    ///   : ∵!.
+    /// [call] is equivalent to [noop] for anything other than a scalar function.
+    /// ex: !5
+    /// ex: ![1 2 3]
+    /// ex: !+_-
     ///
     /// Note that you currently cannot use [call] to call a function that does not have exactly 1 output.
     /// So this is okay:
@@ -1317,7 +1320,7 @@ primitive!(
     ///
     /// Here is a recursive fibonacci function.
     /// It uses [call] to decide whether to recur.
-    /// ex: !(!(|1 +↬2-1∶↬2-2.)_· <2.) 10
+    /// ex: !(?·(|1 +↬2-1∶↬2-2.) <2.) 10
     (1(None), Recur, Control, ("recur", '↬')),
     /// Parse a string as a number
     ///

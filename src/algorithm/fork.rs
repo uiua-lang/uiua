@@ -239,3 +239,23 @@ pub fn lives(env: &mut Uiua) -> UiuaResult {
     env.call(f)?;
     Ok(())
 }
+
+pub fn iff(env: &mut Uiua) -> UiuaResult {
+    let if_true = env.pop(FunctionArg(1))?;
+    let if_false = env.pop(FunctionArg(2))?;
+    let condition = env
+        .pop(ArrayArg(1))?
+        .as_nat(env, "If's condition must be a natural number")?;
+    if condition > 1 {
+        return Err(env.error(format!(
+            "If's condition must be 0 or 1, but is {}",
+            condition
+        )));
+    }
+    if condition == 1 {
+        env.call(if_true)?;
+    } else {
+        env.call(if_false)?;
+    }
+    Ok(())
+}

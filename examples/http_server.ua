@@ -57,7 +57,7 @@ respond ← ;↰(
   &p.
 
   # Route to handler
-  !(|1 page)_(|1 home;) ≅"/".
+  ?(|1 home;)(|1 page) ≅"/".
   &p "Response:"
   &pf⧻.
   &p " bytes"

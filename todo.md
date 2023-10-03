@@ -4,8 +4,8 @@
 - See what can be done about compile times
 - Rust API
 - Investigate why the second one errors:
-  - ⍜'↘1∺(|2 ~□+!){5 6}2
-  - ⍜'↘1∺(|2 ~□+!){5}2
+  - ⍜'↘1∺(|2 □+!){5 6}2
+  - ⍜'↘1∺(|2 □+!){5}2
 - Docs
   - Invert bits for control flow
   - Control flow

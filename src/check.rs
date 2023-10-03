@@ -223,11 +223,14 @@ impl<'a> VirtualEnv<'a> {
                     }
                 }
                 Both => {
-                    let _f = self.pop()?;
-                    self.pop()?;
-                    self.pop()?;
+                    let f = self.pop()?;
+                    let args = f.signature().args * 2;
+                    let outputs = f.signature().outputs * 2;
+                    for _ in 0..args {
+                        self.pop()?;
+                    }
                     self.set_min_height();
-                    for _ in 0..2 {
+                    for _ in 0..outputs {
                         self.stack.push(BasicValue::Other);
                     }
                 }

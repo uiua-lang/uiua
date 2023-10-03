@@ -481,6 +481,28 @@ impl<'a> VirtualEnv<'a> {
                         }
                     }
                 }
+                Join => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    self.set_min_height();
+                    match (a, b) {
+                        (BasicValue::Arr(mut a), BasicValue::Arr(b)) => {
+                            a.extend(b);
+                            self.stack.push(BasicValue::Arr(a));
+                        }
+                        (BasicValue::Arr(mut a), b) => {
+                            a.push(b);
+                            self.stack.push(BasicValue::Arr(a));
+                        }
+                        (a, BasicValue::Arr(mut b)) => {
+                            b.insert(0, a);
+                            self.stack.push(BasicValue::Arr(b));
+                        }
+                        (a, b) => {
+                            self.stack.push(BasicValue::Arr(vec![a, b]));
+                        }
+                    }
+                }
                 Call => self.handle_call(true)?,
                 Recur => return Err("recur present".into()),
                 prim => {

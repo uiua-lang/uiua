@@ -470,10 +470,18 @@ impl Primitive {
                 env.with_fill(fill, |env| env.call(f))?;
             }
             Primitive::Bind => {
+                // This is only run if bind was terminated with ^ and not optimized out
                 let f = env.pop(FunctionArg(1))?;
                 let g = env.pop(FunctionArg(2))?;
-                env.call(g)?;
-                env.call(f)?;
+                match (f.into_function(), g.into_function()) {
+                    (Ok(f), Ok(g)) => env.push(Function::compose(f, g)),
+                    (Ok(f), Err(g)) => env.push(Function::compose(f, Function::constant(g).into())),
+                    (Err(f), Ok(g)) => env.push(Function::compose(Function::constant(f).into(), g)),
+                    (Err(f), Err(g)) => env.push(Function::compose(
+                        Function::constant(f).into(),
+                        Function::constant(g).into(),
+                    )),
+                }
             }
             Primitive::Both => fork::both(env)?,
             Primitive::Fork => fork::fork(env)?,

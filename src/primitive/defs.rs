@@ -1124,12 +1124,16 @@ primitive!(
     /// ex: ⍚[1 1]⊂ ↯3_3⇡9 10_11_12 # Join two rank 1 arrays
     /// ex: ⍚[1 0]⊂ ↯3_3⇡9 10_11_12 # Join rank 1 arrays with scalars
     ([2], Level, IteratingModifier, ("level", '⍚')),
-    /// Call two functions
+    /// Compose two functions
     ///
     /// This modifier mostly exists for syntactic convenience.
     /// It lets you change any function with 2 terms into a modifer call, saving a single character.
     /// ex: ≡(⇌⊢)↯3_3⇡9
     ///   : ≡'⇌⊢↯3_3⇡9
+    ///
+    /// Because even non-functions can be called like functions, [bind] can, well, *bind* a value to a function.
+    /// ex: f = '+1
+    ///   : f 4
     /// This especially nice when used with modifiers that take 2 functions, like [under], where you can save up to 2 characters!
     /// ex: ⍜(↻3)(⊂π) [1 2 3 4 5]
     ///   : ⍜'↻3'⊂π [1 2 3 4 5]

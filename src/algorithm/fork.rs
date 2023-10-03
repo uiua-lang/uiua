@@ -240,7 +240,8 @@ pub fn lives(env: &mut Uiua) -> UiuaResult {
         args.push(env.pop(i + 1)?);
     }
     for f in fs.data.into_iter().rev() {
-        for arg in args.iter().take(f.signature().args).rev() {
+        let sig = f.signature();
+        for arg in args.iter().take(sig.args).rev() {
             env.push(arg.clone());
         }
         env.call(f)?;

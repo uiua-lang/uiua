@@ -143,6 +143,12 @@ impl Signature {
     pub fn max_with(self, other: Self) -> Self {
         Self::new(self.args.max(other.args), self.outputs.max(other.outputs))
     }
+    pub fn compose(self, other: Self) -> Self {
+        Self::new(
+            self.args + other.args.saturating_sub(self.outputs),
+            self.outputs.saturating_sub(self.args) + other.outputs,
+        )
+    }
 }
 
 impl PartialEq<(usize, usize)> for Signature {
@@ -356,6 +362,47 @@ impl Function {
                 [Instr::Prim(Primitive::Flip, _), Instr::Prim(prim, _)] => Some((*prim, true)),
                 _ => None,
             },
+        }
+    }
+    pub fn compose(a: Arc<Self>, b: Arc<Self>) -> Self {
+        let id = a.id.clone().compose(b.id.clone());
+        let sig = a.signature.compose(b.signature);
+        match (a.kind.clone(), b.kind.clone()) {
+            (FunctionKind::Normal, FunctionKind::Normal) => {
+                let mut instrs = b.instrs.clone();
+                instrs.extend(a.instrs.iter().cloned());
+                Self::new(id, instrs, FunctionKind::Normal, sig)
+            }
+            (FunctionKind::Dynamic(a), FunctionKind::Normal) => {
+                let kind = FunctionKind::Dynamic(DynamicFunctionKind {
+                    f: Arc::new(move |uiua| {
+                        uiua.call(b.clone())?;
+                        (a.f)(uiua)
+                    }),
+                    id: a.id,
+                });
+                Self::new(id, Vec::new(), kind, sig)
+            }
+            (FunctionKind::Normal, FunctionKind::Dynamic(b)) => {
+                let kind = FunctionKind::Dynamic(DynamicFunctionKind {
+                    f: Arc::new(move |uiua| {
+                        (b.f)(uiua)?;
+                        uiua.call(a.clone())
+                    }),
+                    id: b.id,
+                });
+                Self::new(id, Vec::new(), kind, sig)
+            }
+            (FunctionKind::Dynamic(a), FunctionKind::Dynamic(b)) => {
+                let kind = FunctionKind::Dynamic(DynamicFunctionKind {
+                    f: Arc::new(move |uiua| {
+                        (b.f)(uiua)?;
+                        (a.f)(uiua)
+                    }),
+                    id: a.id ^ b.id,
+                });
+                Self::new(id, Vec::new(), kind, sig)
+            }
         }
     }
 }

@@ -753,7 +753,31 @@ code:
             }
             _ => {}
         }
+        // Handle deprecation
         self.handle_primitive_deprecation(modified.modifier.value, &modified.modifier.span);
+
+        // Handle bind
+        if modified.modifier.value == Primitive::Bind && modified.operands.len() == 2 {
+            self.new_functions.push(Vec::new());
+            self.words(modified.operands, true)?;
+            let instrs = self.new_functions.pop().unwrap();
+            return match instrs_signature(&instrs) {
+                Ok(sig) => {
+                    let func = Function::new(
+                        FunctionId::Anonymous(modified.modifier.span),
+                        instrs,
+                        FunctionKind::Normal,
+                        sig,
+                    );
+                    self.push_instr(Instr::push(func));
+                    Ok(())
+                }
+                Err(e) => Err(UiuaError::Run(
+                    Span::Code(modified.modifier.span.clone())
+                        .sp(format!("Cannot infer function signature in bind: {e}")),
+                )),
+            };
+        }
 
         if call {
             self.words(modified.operands, false)?;

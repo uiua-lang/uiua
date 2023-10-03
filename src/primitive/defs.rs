@@ -1200,7 +1200,7 @@ primitive!(
     /// ex: [❥+¯ 3 5]
     ///
     /// By calling many functions all on the same arrays, we can see multiple [lives] that the arrays can live. We can only do this because an array is a simple thing. Uniform, predictable, beautiful. It is only a shame we cannot call [lives] on ourselves.
-    /// [lives] replaces the deprecated [fork] and [trident]. After all, a life can have more than just 2 or 3 paths.
+    /// [lives] replaces the deprecated [fork] and [trident]. After all, a life can have more than just 2 or 3 paths, and is usually lives with more than only 1 or two others.
     ([2], Lives, OtherModifier, ("lives", '❥')),
     /// Call a function and catch errors
     ///

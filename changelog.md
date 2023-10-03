@@ -4,6 +4,11 @@ Uiua is not yet stable.
 
 # Pre-Version
 
+## 2023-10-03
+### Language
+- Add the [`lives` `❥`](https://uiua.org/docs/lives) modifier, which unifies and deprecates [`fork` `⊃`](https://uiua.org/docs/fork) and [`trident` `∋`](https://uiua.org/docs/trident)
+- [`bind` `'`] no longer calls its functions immediately. This should not change any reasonable existing code.
+
 ## 2023-10-02
 ### Language
 - [`both` `∷`](https://uiua.org/docs/both) can now be used with a function that takes any number of arguments.

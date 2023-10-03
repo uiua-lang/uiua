@@ -600,49 +600,16 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <p><Prim prim=Dip/>" can be chained to dig deeper into the stack."</p>
         <Editor example="[→→→→→→+ 1 2 3 4 5 6 7 8]"/>
 
-        <h2 id="fork"><Prim prim=Fork/></h2>
-        <p>"Let's say you wanted both the sum and the product of two numbers. One way to do this would be to use both "<Prim prim=Over/>" and "<Prim prim=Dip/>"."</p>
-        <Editor example="+→→×,, 3 5"/>
-        <p>"A better way to do this is to use the "<Prim prim=Fork/>" modifier, which calls each of two functions on a pair of arguments."</p>
-        <Editor example="⊃+× 3 5"/>
-        <p>"If you use a function that only takes 0 or 1 arguments, it will be called with only the corresponding value."</p>
-        <Editor example="⊟⊃'×4'+1 3 5"/>
-        <p>"However, with only monadic functions, it is often shorter to just use "<Prim prim=Flip/>"."</p>
-        <Editor example="⊟⊃'×4'+1 3 5\n⊟∶+1∶×4 3 5"/>
-
-        <h2 id="trident"><Prim prim=Trident/></h2>
-        <p><Prim prim=Trident/>" is similar to "<Prim prim=Fork/>", except it applies 3 functions to 3 arguments."</p>
-        <p>"If we call the functions "<code>"f"</code>", "<code>"g"</code>", and "<code>"h"</code>" and call the arguments "<code>"a"</code>", "<code>"b"</code>", and "<code>"c"</code>", then "<Prim prim=Trident/>" calls "<code>"h"</code>" then "<code>"g"</code>" then "<code>"f"</code>" each with arguments according to this table:"</p>
-        <table class="bordered-table">
-            <tr>
-                <th>"Args"</th>
-                <th><code>"f"</code></th>
-                <th><code>"g"</code></th>
-                <th><code>"h"</code></th>
-            </tr>
-            <tr>
-                <td>"1"</td>
-                <td><code>"a"</code></td>
-                <td><code>"b"</code></td>
-                <td><code>"c"</code></td>
-            </tr>
-            <tr>
-                <td>"2"</td>
-                <td><code>"a b"</code></td>
-                <td><code>"a c"</code></td>
-                <td><code>"b c"</code></td>
-            </tr>
-            <tr>
-                <td>"3"</td>
-                <td><code>"a b c"</code></td>
-                <td><code>"a b c"</code></td>
-                <td><code>"a b c"</code></td>
-            </tr>
-        </table>
-        <p>"We can see how this works with "<Prim prim=Join/></p>
-        <Editor example="[∋··· 1 2 3]"/>
-        <Editor example="[∋⊂⊂⊂ 1 2 3]"/>
-        <Editor example="[∋'⊂⊂'⊂⊂'⊂⊂ 1 2 3]"/>
+        <h2 id="lives"><Prim prim=Lives/></h2>
+        <p><Prim prim=Lives/>" is a dyadic modifier that takes 2 functions and calls them both on multiple arguments. The number of arguments used is the maximum of the two functions."</p>
+        <Editor example="[❥+× 3 5]"/>
+        <p>"If one of the functions take more arguments than the other, the function with fewer arguments uses the top-most values."</p>
+        <Editor example="❥×⇌ [1 2 3] 10"/>
+        <p>"What's powerful about "<Prim prim=Lives/>" is that it can be chained to use as many functions as you want."</p>
+        <Editor example="[❥❥❥+-×÷ 5 8]"/>
+        <p>"In addition, unlike "<Prim prim=Distribute/><Prim prim=Call/>", which can also be used to apply several functions to the same arguments, "<Prim prim=Lives/>" does not require that its values be in an array together."</p>
+        <Editor example="❥+-1@b"/>
+        <Editor example="❥❥❥↻↙↘⊡ 2 [1 2 3 4 5]"/>
 
         <h2 id="restack"><Prim prim=Restack/></h2>
         <p><Prim prim=Restack/>" is the most powerful stack-manipulation function. All other stack-manipulation functions can be implemented with "<Prim prim=Restack/>"."</p>
@@ -653,11 +620,12 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <h2 id="a-motivating-example">"A Motivating Example"</h2>
         <p>"Implementing the "<a href="https://en.wikipedia.org/wiki/Quadratic_formula">"quadratic formula"</a>" requires juggling 3 values."</p>
         <p>"There are two ways you could approach this."</p>
-        <p>"The first way is to use "<Prim prim=Trident/>" and exploit the way it orders the arguments to its functions. This is what is done in an example on the homepage."</p>
+        <p>"The first way is to use "<Prim prim=Lives/>" and find advantageous groupings of arguments. This is what is done in an example on the homepage."</p>
         <Editor example=QUADRATIC/>
         <p>"The second way is to use "<Prim prim=Restack/>" to rearrange the arguments into the exact order needed to just do all the operations at once."</p>
         <Editor example="Quad ← ÷×2∶-∶⊟¯.√-∶ⁿ2∶×4×⇵[0 2 1 1 0]\nQuad 1 2 0"/>
-        <p><Prim prim=Trident/>" is the obvious winner here in terms of both clarity and concision, but as soon as you have more than 3 arguments, "<Prim prim=Restack/>" becomes a necessity."</p>
+        <p><Prim prim=Lives/>" is the obvious winner here in terms of both clarity and concision."</p>
+        <p>"In general "<Prim prim=Restack/>" should only be used when absolutely necessary."</p>
     }
 }
 

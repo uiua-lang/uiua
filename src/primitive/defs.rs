@@ -203,6 +203,70 @@ primitive!(
     ///
     /// [dip] replaces [roll] and [unroll], which are currently deprecated.
     ([1], Dip, Stack, ("dip", '→')),
+    /// Call a function on 2 sets of values
+    ///
+    /// For monadic functions, [both] calls it's function on each of the top 2 values on the stack.
+    /// ex: ∷⇡ 3 5
+    ///
+    /// One good use of this is when working with [constant] data.
+    /// You can use [both][call] to get 2 [constant] values out.
+    /// ex: /(⊂∷!) {"a" "bc" "def"}
+    ///
+    /// For a function that takes `n` arguments, [both] calls the function on the 2 sets of `n` values on top of the stack.
+    /// ex: [∷+ 1 2 3 4]
+    /// ex: [∷(++) 1 2 3 4 5 6]
+    ///
+    /// [both]'s glyph is `∷` because, for a function `f`, it is equivalent to `f∶f∶`.
+    (2[1], Both, Stack, ("both", '∷')),
+    /// Call 2 functions on 2 values
+    ///
+    /// Deprecated in favor of [lives].
+    ///
+    /// Each function may take 0, 1, or 2 arguments.
+    /// With 0 or 1 arguments, the first function will be passed the first value.
+    /// With 0 or 1 arguments, the second function will be passed the second value.
+    /// With 2 arguments, either function will be passed both values.
+    ///
+    /// We can see how this works with [join].
+    /// ex: [⊃·· 1 2]
+    /// ex: [⊃⊂⊂ 1 2]
+    ///
+    /// ex: ⊟⊃×+ 3 5
+    (2[2], Fork, Stack, ("fork", '⊃')),
+    /// Call 3 functions on 3 values
+    ///
+    /// Deprecated in favor of [lives].
+    ///
+    /// [trident] is a very powerfull function when juggling 3 values.
+    /// Each function may take up to 3 arguments.
+    /// Let's say the the three functions are `f`, `g`, and `h`, and the three values are `a`, `b`, and `c`.
+    /// Any of the functions taking 1 argument will be called as `f a`, `g b`, or `h c` respectively.
+    /// Any of the functions taking 2 arguments will be called as `f a b`, `g a c`, or `h b c` respectively.
+    /// Any of the functions taking 3 argyments will be called on `a b c`.
+    ///
+    /// We can see how this all works with [join].
+    /// ex: [∋··· 1 2 3]
+    /// ex: [∋⊂⊂⊂ 1 2 3]
+    /// ex: [∋'⊂⊂'⊂⊂'⊂⊂ 1 2 3]
+    ///
+    /// A good example use case is when implementing the quadratic formula.
+    /// ex: Quad ← ÷→+∋(×2)¯(⊟¯.√+ⁿ2→(××¯4)∶)
+    ///   : Quad 1 2 0
+    /// The first function passed to [trident] [multiply]s `a` by `2`.
+    /// The second function [negate]s `b`.
+    /// The third function calculates the discriminant.
+    (3[3], Trident, Stack, ("trident", '∋')),
+    /// Call two functions on the same values
+    ///
+    /// ex: ❥⇌⊝ 1_2_2_3
+    /// [lives] can be chained to apply more functions to the arguments. `n` functions require the chaining of `subtract``1n` [lives].
+    /// ex: [❥❥❥+-×÷ 5 8]
+    /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maimum will work on the top values.
+    /// ex: [❥+¯ 3 5]
+    ///
+    /// By calling many functions all on the same arrays, we can see multiple [lives] that the arrays can live. We can only do this because an array is a simple thing. Uniform, predictable, beautiful. It is only a shame we cannot call [lives] on ourselves.
+    /// [lives] replaces the deprecated [fork] and [trident]. After all, a life can have more than just 2 or 3 paths, and is usually lives with more than only 1 or two others.
+    ([2], Lives, Stack, ("lives", '❥')),
     /// Rearrange the stack
     ///
     /// [restack] is the most powerful stack manipulation function.
@@ -1138,70 +1202,6 @@ primitive!(
     /// ex: ⍜(↻3)(⊂π) [1 2 3 4 5]
     ///   : ⍜'↻3'⊂π [1 2 3 4 5]
     ([2], Bind, OtherModifier, ("bind", '\'')),
-    /// Call a function on 2 sets of values
-    ///
-    /// For monadic functions, [both] calls it's function on each of the top 2 values on the stack.
-    /// ex: ∷⇡ 3 5
-    ///
-    /// One good use of this is when working with [constant] data.
-    /// You can use [both][call] to get 2 [constant] values out.
-    /// ex: /(⊂∷!) {"a" "bc" "def"}
-    ///
-    /// For a function that takes `n` arguments, [both] calls the function on the 2 sets of `n` values on top of the stack.
-    /// ex: [∷+ 1 2 3 4]
-    /// ex: [∷(++) 1 2 3 4 5 6]
-    ///
-    /// [both]'s glyph is `∷` because, for a function `f`, it is equivalent to `f∶f∶`.
-    (2[1], Both, OtherModifier, ("both", '∷')),
-    /// Call 2 functions on 2 values
-    ///
-    /// Deprecated in favor of [lives].
-    ///
-    /// Each function may take 0, 1, or 2 arguments.
-    /// With 0 or 1 arguments, the first function will be passed the first value.
-    /// With 0 or 1 arguments, the second function will be passed the second value.
-    /// With 2 arguments, either function will be passed both values.
-    ///
-    /// We can see how this works with [join].
-    /// ex: [⊃·· 1 2]
-    /// ex: [⊃⊂⊂ 1 2]
-    ///
-    /// ex: ⊟⊃×+ 3 5
-    (2[2], Fork, OtherModifier, ("fork", '⊃')),
-    /// Call 3 functions on 3 values
-    ///
-    /// Deprecated in favor of [lives].
-    ///
-    /// [trident] is a very powerfull function when juggling 3 values.
-    /// Each function may take up to 3 arguments.
-    /// Let's say the the three functions are `f`, `g`, and `h`, and the three values are `a`, `b`, and `c`.
-    /// Any of the functions taking 1 argument will be called as `f a`, `g b`, or `h c` respectively.
-    /// Any of the functions taking 2 arguments will be called as `f a b`, `g a c`, or `h b c` respectively.
-    /// Any of the functions taking 3 argyments will be called on `a b c`.
-    ///
-    /// We can see how this all works with [join].
-    /// ex: [∋··· 1 2 3]
-    /// ex: [∋⊂⊂⊂ 1 2 3]
-    /// ex: [∋'⊂⊂'⊂⊂'⊂⊂ 1 2 3]
-    ///
-    /// A good example use case is when implementing the quadratic formula.
-    /// ex: Quad ← ÷→+∋(×2)¯(⊟¯.√+ⁿ2→(××¯4)∶)
-    ///   : Quad 1 2 0
-    /// The first function passed to [trident] [multiply]s `a` by `2`.
-    /// The second function [negate]s `b`.
-    /// The third function calculates the discriminant.
-    (3[3], Trident, OtherModifier, ("trident", '∋')),
-    /// Call two functions on the same values
-    ///
-    /// ex: ❥⇌⊝ 1_2_2_3
-    /// [lives] can be chained to apply more functions to the arguments. `n` functions require the chaining of `subtract``1n` [lives].
-    /// ex: [❥❥❥+-×÷ 5 8]
-    /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maimum will work on the top values.
-    /// ex: [❥+¯ 3 5]
-    ///
-    /// By calling many functions all on the same arrays, we can see multiple [lives] that the arrays can live. We can only do this because an array is a simple thing. Uniform, predictable, beautiful. It is only a shame we cannot call [lives] on ourselves.
-    /// [lives] replaces the deprecated [fork] and [trident]. After all, a life can have more than just 2 or 3 paths, and is usually lives with more than only 1 or two others.
-    ([2], Lives, OtherModifier, ("lives", '❥')),
     /// Call one of two functions based on a condition
     ///
     /// If the condition is `1`, then the first function is called, otherwise the second function is called.

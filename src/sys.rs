@@ -477,6 +477,7 @@ struct GlobalNativeSys {
     files: DashMap<Handle, Buffered<File>>,
     tcp_listeners: DashMap<Handle, TcpListener>,
     tcp_sockets: DashMap<Handle, Buffered<TcpStream>>,
+    hostnames: DashMap<Handle, String>,
     threads: DashMap<Handle, JoinHandle<UiuaResult<Vec<Value>>>>,
     #[cfg(feature = "audio")]
     audio_stream_time: Mutex<Option<f64>>,
@@ -498,6 +499,7 @@ impl Default for GlobalNativeSys {
             files: DashMap::new(),
             tcp_listeners: DashMap::new(),
             tcp_sockets: DashMap::new(),
+            hostnames: DashMap::new(),
             threads: DashMap::new(),
             #[cfg(feature = "audio")]
             audio_stream_time: Mutex::new(None),
@@ -788,6 +790,13 @@ impl SysBackend for NativeSys {
         NATIVE_SYS
             .tcp_sockets
             .insert(handle, Buffered::new_writer(stream));
+        NATIVE_SYS.hostnames.insert(
+            handle,
+            addr.split_once(':')
+                .ok_or("No colon in address")?
+                .0
+                .to_string(),
+        );
         Ok(handle)
     }
     fn tcp_addr(&self, handle: Handle) -> Result<String, String> {
@@ -845,7 +854,8 @@ impl SysBackend for NativeSys {
     fn close(&self, handle: Handle) -> Result<(), String> {
         if NATIVE_SYS.files.remove(&handle).is_some()
             || NATIVE_SYS.tcp_listeners.remove(&handle).is_some()
-            || NATIVE_SYS.tcp_sockets.remove(&handle).is_some()
+            || (NATIVE_SYS.tcp_sockets.remove(&handle).is_some()
+                && NATIVE_SYS.hostnames.remove(&handle).is_some())
         {
             Ok(())
         } else {
@@ -904,49 +914,11 @@ impl SysBackend for NativeSys {
     }
     #[cfg(feature = "https")]
     fn https_get(&self, request: &str, handle: Handle) -> Result<String, String> {
-        let mut headers = [httparse::EMPTY_HEADER; 64];
-        let mut req = httparse::Request::new(&mut headers);
-
-        // Confirm that the request is valid
-        let status = req.parse(request.as_bytes()).map_err(|e| {
-            use httparse::Error;
-            format!(
-                "Failed to parse HTTP request: {}",
-                match e {
-                    Error::HeaderName => "Invalid byte in header name",
-                    Error::HeaderValue => "Invalid byte in Header value",
-                    Error::NewLine => "Invalid byte in newline",
-                    Error::Status => "Invalid byte in response status",
-                    Error::Token => "Invalid byte where token is required",
-                    Error::TooManyHeaders => "Too many headers! Maximum of 64",
-                    Error::Version => "Invalid byte in HTTP version",
-                }
-            )
-        })?;
-        match status {
-            httparse::Status::Partial => return Err("Incomplete (Partial) HTTP request".into()),
-            httparse::Status::Complete(_) => {}
-        };
-
-        // If Status was Complete everything should be there
-        // (but just in case we'll check)
-        let _method = req.method.ok_or("No method in HTTP request")?;
-        let _path = req.path.ok_or("No path in HTTP request")?;
-        let _version = req.version.ok_or("No version in HTTP request")?;
-
-        // host isn't *technically* required but there's no other way I know of
-        // to get the DNS, soooooo
-        let host = req
-            .headers
-            .iter()
-            .find_map(|h| {
-                if h.name.eq_ignore_ascii_case("host") {
-                    Some(h.value)
-                } else {
-                    None
-                }
-            })
-            .ok_or("No `Host` header in HTTP request")?;
+        let host = NATIVE_SYS
+            .hostnames
+            .get(&handle)
+            .ok_or_else(|| "Invalid tcp socket handle".to_string())?;
+        let request = check_http(request.to_string(), &*host)?;
 
         // https://github.com/rustls/rustls/blob/c9cfe3499681361372351a57a00ccd793837ae9c/examples/src/bin/simpleclient.rs
         static CLIENT_CONFIG: Lazy<Arc<rustls::ClientConfig>> = Lazy::new(|| {
@@ -970,8 +942,7 @@ impl SysBackend for NativeSys {
             .get_mut(&handle)
             .ok_or_else(|| "Invalid tcp socket handle".to_string())?;
 
-        let host_str = std::str::from_utf8(host).map_err(|e| e.to_string())?;
-        let server_name = rustls::ServerName::try_from(host_str).map_err(|e| e.to_string())?;
+        let server_name = rustls::ServerName::try_from(host.as_str()).map_err(|e| e.to_string())?;
         let tcp_stream = socket.get_mut();
 
         let mut conn = rustls::ClientConnection::new(CLIENT_CONFIG.clone(), server_name)
@@ -988,6 +959,90 @@ impl SysBackend for NativeSys {
 
         return Ok(s);
     }
+}
+
+#[cfg(feature = "https")]
+/// Takes an HTTP request, validates it, and fixes it (if possible) by adding
+/// the HTTP version and trailing newlines if they aren't present.
+///
+/// Also adds a host header if one isn't present.
+///
+/// ```no_run
+/// # fn check_http(a: String, b: &str) -> Result<String, String> { Ok(a) }
+/// assert_eq!(
+///     check_http("GET /".to_string(), "example.com").unwrap(),
+///     "GET / HTTP/1.0\r\nhost: example.com\r\n\r\n"
+/// )
+/// ```
+fn check_http(mut request: String, hostname: &str) -> Result<String, String> {
+    let mut headers = [httparse::EMPTY_HEADER; 64];
+    let mut req = httparse::Request::new(&mut headers);
+
+    let mut lines = request.lines().collect::<Vec<_>>();
+
+    // check to make sure theres an empty line somewhere in there. if not, add 2 empty lines
+    if !lines.iter().any(|line| line.is_empty()) {
+        lines.push("");
+        lines.push("");
+    }
+
+    // If the first line doesn't have a version, add one
+    let first = lines.get(0).ok_or("Empty HTTP request")?;
+    let last_token = first
+        .trim_end()
+        .split_ascii_whitespace()
+        .rev()
+        .next()
+        .ok_or("Empty first line")?;
+    if !last_token.starts_with("HTTP/") {
+        request = first.to_string()
+            + "HTTP/1.0\r\n"
+            + &lines.into_iter().skip(1).collect::<Vec<_>>().join("\r\n");
+    } else {
+        request = lines.join("\r\n");
+    }
+
+    // Confirm that the request is valid
+    let status = req.parse(request.as_bytes()).map_err(|e| {
+        use httparse::Error;
+        format!(
+            "Failed to parse HTTP request: {}",
+            match e {
+                Error::HeaderName => "Invalid byte in header name",
+                Error::HeaderValue => "Invalid byte in Header value",
+                Error::NewLine => "Invalid byte in newline",
+                Error::Status => "Invalid byte in response status",
+                Error::Token => "Invalid byte where token is required",
+                Error::TooManyHeaders => "Too many headers! Maximum of 64",
+                Error::Version => "Invalid byte in HTTP version",
+            }
+        )
+    })?;
+    match status {
+        httparse::Status::Partial => return Err("Incomplete (Partial) HTTP request".into()),
+        httparse::Status::Complete(_) => {}
+    };
+
+    // If Status was Complete everything should be there
+    // (but just in case we'll check)
+    let _method = req.method.ok_or("No method in HTTP request")?;
+    let _path = req.path.ok_or("No path in HTTP request")?;
+    let _version = req.version.ok_or("No version in HTTP request")?;
+
+    // add the host header
+    // it's safe the unwrap here because if the http request is valid, it must
+    // have a newline in it
+    if req
+        .headers
+        .iter()
+        .find(|h| h.name.eq_ignore_ascii_case("host"))
+        .is_none()
+    {
+        let newline = request.find('\n').unwrap();
+        request.insert_str(newline + 1, &format!("host: {hostname}\r\n"));
+    }
+
+    Ok(request)
 }
 
 impl SysOp {

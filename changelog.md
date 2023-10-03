@@ -8,6 +8,7 @@ Uiua is not yet stable.
 ### Language
 - Add the [`lives` `❥`](https://uiua.org/docs/lives) modifier, which unifies and deprecates [`fork` `⊃`](https://uiua.org/docs/fork) and [`trident` `∋`](https://uiua.org/docs/trident)
 - [`bind` `'`] no longer calls its functions immediately. This should not change any reasonable existing code.
+- Change how [`partition` `⊜`](https://uiua.org/docs/partition) and [`group` `⊕`](https://uiua.org/docs/group) work with dyadic functions to be consistent with [`reduce` `/`](https://uiua.org/docs/reduce).
 
 ## 2023-10-02
 ### Language

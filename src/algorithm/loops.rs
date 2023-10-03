@@ -1048,6 +1048,7 @@ pub fn partition(env: &mut Uiua) -> UiuaResult {
     let markers = markers.as_indices(env, "Partition markers must be a list of integers")?;
     let values = env.pop(ArrayArg(2))?;
     let groups = values.partition_groups(&markers, env)?;
+    dbg!(&groups);
     collapse_groups(f, groups, "partition", env)
 }
 
@@ -1098,10 +1099,7 @@ impl<T: ArrayValue> Array<T> {
             }
             last_marker = marker;
         }
-        Ok(groups
-            .into_iter()
-            .rev()
-            .map(Array::from_row_arrays_infallible))
+        Ok(groups.into_iter().map(Array::from_row_arrays_infallible))
     }
 }
 
@@ -1142,7 +1140,6 @@ impl<T: ArrayValue> Array<T> {
         let Some(&max_index) = indices.iter().max() else {
             return Ok(Vec::<Vec<Self>>::new()
                 .into_iter()
-                .rev()
                 .map(Array::from_row_arrays_infallible));
         };
         let mut groups: Vec<Vec<Self>> = vec![Vec::new(); max_index.max(0) as usize + 1];
@@ -1151,10 +1148,7 @@ impl<T: ArrayValue> Array<T> {
                 groups[g as usize].push(self.row(r));
             }
         }
-        Ok(groups
-            .into_iter()
-            .rev()
-            .map(Array::from_row_arrays_infallible))
+        Ok(groups.into_iter().map(Array::from_row_arrays_infallible))
     }
 }
 
@@ -1183,8 +1177,8 @@ where
                 .next()
                 .ok_or_else(|| env.error(format!("Cannot reduce empty {name} result")))?;
             for row in groups {
-                env.push(acc);
                 env.push(row);
+                env.push(acc);
                 if env.call_catch_break(f.clone())? {
                     return Ok(());
                 }

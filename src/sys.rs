@@ -270,6 +270,18 @@ sys_op! {
     (2(0), TcpSetWriteTimeout, "&tcpswt", "tcp - set write timeout"),
     /// Get the connection address of a TCP socket
     (1, TcpAddr, "&tcpaddr", "tcp - address"),
+    /// Make an HTTP request
+    ///
+    /// Takes in an 1.0 HTTP request and returns an HTTP response.
+    ///
+    /// Requires the `Host` header to be set.
+    /// Using port 443 is recommended for HTTPS.
+    ///
+    /// ex: &tcpc "example.com:443"
+    ///   : &httpsget $ GET / HTTP/1.0
+    ///   :           $ Host: example.com
+    ///   :           $ \r\n
+    (2, HttpsGet, "&httpsget", "http - Make an HTTP request"),
 }
 
 /// A handle to an IO stream
@@ -449,6 +461,9 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     }
     fn change_directory(&self, path: &str) -> Result<(), String> {
         Err("Changing directories is not supported in this environment".into())
+    }
+    fn https_get(&self, request: &str, handle: Handle) -> Result<String, String> {
+        Err("Making HTTPS requests is not supported in this environment".into())
     }
 }
 
@@ -886,6 +901,92 @@ impl SysBackend for NativeSys {
     }
     fn change_directory(&self, path: &str) -> Result<(), String> {
         env::set_current_dir(path).map_err(|e| e.to_string())
+    }
+    #[cfg(feature = "https")]
+    fn https_get(&self, request: &str, handle: Handle) -> Result<String, String> {
+        let mut headers = [httparse::EMPTY_HEADER; 64];
+        let mut req = httparse::Request::new(&mut headers);
+
+        // Confirm that the request is valid
+        let status = req.parse(request.as_bytes()).map_err(|e| {
+            use httparse::Error;
+            format!(
+                "Failed to parse HTTP request: {}",
+                match e {
+                    Error::HeaderName => "Invalid byte in header name",
+                    Error::HeaderValue => "Invalid byte in Header value",
+                    Error::NewLine => "Invalid byte in newline",
+                    Error::Status => "Invalid byte in response status",
+                    Error::Token => "Invalid byte where token is required",
+                    Error::TooManyHeaders => "Too many headers! Maximum of 64",
+                    Error::Version => "Invalid byte in HTTP version",
+                }
+            )
+        })?;
+        match status {
+            httparse::Status::Partial => return Err("Incomplete (Partial) HTTP request".into()),
+            httparse::Status::Complete(_) => {}
+        };
+
+        // If Status was Complete everything should be there
+        // (but just in case we'll check)
+        let _method = req.method.ok_or("No method in HTTP request")?;
+        let _path = req.path.ok_or("No path in HTTP request")?;
+        let _version = req.version.ok_or("No version in HTTP request")?;
+
+        // host isn't *technically* required but there's no other way I know of
+        // to get the DNS, soooooo
+        let host = req
+            .headers
+            .iter()
+            .find_map(|h| {
+                if h.name.eq_ignore_ascii_case("host") {
+                    Some(h.value)
+                } else {
+                    None
+                }
+            })
+            .ok_or("No `Host` header in HTTP request")?;
+
+        // https://github.com/rustls/rustls/blob/c9cfe3499681361372351a57a00ccd793837ae9c/examples/src/bin/simpleclient.rs
+        static CLIENT_CONFIG: Lazy<Arc<rustls::ClientConfig>> = Lazy::new(|| {
+            let mut store = rustls::RootCertStore::empty();
+            store.add_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.iter().map(|ta| {
+                rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(
+                    ta.subject,
+                    ta.spki,
+                    ta.name_constraints,
+                )
+            }));
+            let config = rustls::ClientConfig::builder()
+                .with_safe_defaults()
+                .with_root_certificates(store)
+                .with_no_client_auth();
+            return Arc::new(config);
+        });
+
+        let mut socket = NATIVE_SYS
+            .tcp_sockets
+            .get_mut(&handle)
+            .ok_or_else(|| "Invalid tcp socket handle".to_string())?;
+
+        let host_str = std::str::from_utf8(host).map_err(|e| e.to_string())?;
+        let server_name = rustls::ServerName::try_from(host_str).map_err(|e| e.to_string())?;
+        let tcp_stream = socket.get_mut();
+
+        let mut conn = rustls::ClientConnection::new(CLIENT_CONFIG.clone(), server_name)
+            .map_err(|e| e.to_string())?;
+        let mut tls = rustls::Stream::new(&mut conn, tcp_stream);
+
+        tls.write_all(request.as_bytes())
+            .map_err(|e| e.to_string())?;
+        let mut buffer = Vec::new();
+        tls.read_to_end(&mut buffer).map_err(|e| e.to_string())?;
+        let s = String::from_utf8(buffer).map_err(|e| {
+            "Error converting HTTP Response to utf-8: ".to_string() + &e.to_string()
+        })?;
+
+        return Ok(s);
     }
 }
 
@@ -1375,6 +1476,20 @@ impl SysOp {
                 env.backend
                     .tcp_set_write_timeout(handle, timeout)
                     .map_err(|e| env.error(e))?;
+            }
+            SysOp::HttpsGet => {
+                let http = env
+                    .pop(1)?
+                    .as_string(env, "HTTP request must be a string")?;
+                let handle = env
+                    .pop(2)?
+                    .as_nat(env, "Handle must be an natural number")?
+                    .into();
+                let res = env
+                    .backend
+                    .https_get(&http, handle)
+                    .map_err(|e| env.error(e))?;
+                env.push(res);
             }
             SysOp::Close => {
                 let handle = env

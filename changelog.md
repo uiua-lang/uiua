@@ -4,6 +4,9 @@ Uiua is not yet stable.
 
 # Pre-Version
 
+## 2023-10-04
+- Change [`noop` `·`](https://uiua.org/docs/noop)'s signature to be `|1.1`
+
 ## 2023-10-03
 ### Language
 - Add the [`share` `⇉`](https://uiua.org/docs/share) modifier, which unifies and deprecates [`fork` `⊃`](https://uiua.org/docs/fork) and [`trident` `∋`](https://uiua.org/docs/trident)

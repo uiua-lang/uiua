@@ -175,7 +175,10 @@ primitive!(
     /// The formatter converts an empty `()` function into `noop` if it is in a strand or a modifier.
     /// ex: /() [1 2] # Try running to format
     ///   : ()_(+1)
-    (0(0), Noop, Stack, ("noop", '·')),
+    ///
+    /// While [noop]'s signature is `|1.1`, it will not throw an error if the stack is empty.
+    /// ex: ·
+    (1, Noop, Stack, ("noop", '·')),
     /// Move the top value on the stack 2 places down
     ///
     /// Deprecated in favor of [dip].

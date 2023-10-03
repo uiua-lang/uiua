@@ -619,7 +619,7 @@ mod test {
             }
         }
         assert_eq!(Ok(sig(0, 0)), check(&[]));
-        assert_eq!(Ok(sig(0, 0)), check(&[Prim(Noop, 0)]));
+        assert_eq!(Ok(sig(1, 1)), check(&[Prim(Noop, 0)]));
 
         assert_eq!(Ok(sig(0, 1)), check(&[push(10), push(2), Prim(Pow, 0)]));
         assert_eq!(

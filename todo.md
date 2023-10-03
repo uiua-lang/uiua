@@ -1,3 +1,4 @@
+- Make distribute work with more fixed arrays
 - Add channels for spawned threads
 - Optimize dip by inlining?
 - Make dyadic array functions not methods

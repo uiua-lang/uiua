@@ -12,7 +12,7 @@ const CHORD: &str = "\
 [0 4 7 10]
 ×220 ⁿ∶2÷12
 ÷⧻∶ ≡/+ ○×τ ⊞× ÷∶⇡.&asr.";
-pub const QUADRATIC: &str = "\
+const QUADRATIC: &str = "\
 Quad ← ÷→+❥(→¯×2)(⊟¯.√+×.∶××¯4→∶)
 Quad 1 2 0";
 const STRIPES: &str = "\

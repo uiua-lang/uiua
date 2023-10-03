@@ -5,7 +5,7 @@ use leptos::*;
 use leptos_router::*;
 use uiua::{example_ua, primitive::Primitive, SysOp};
 
-use crate::{editor::*, examples::QUADRATIC, Prim, PrimCodes};
+use crate::{editor::*, Prim, PrimCodes};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
 pub enum TutorialPage {
@@ -613,21 +613,12 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <Editor example="❥+-1@b"/>
         <Editor example="❥❥❥↻↙↘⊡ 2 [1 2 3 4 5]"/>
 
-        <h2 id="restack"><Prim prim=Restack/></h2>
-        <p><Prim prim=Restack/>" is the most powerful stack-manipulation function. All other stack-manipulation functions can be implemented with "<Prim prim=Restack/>"."</p>
-        <p>"Its behavior is similar to "<Prim prim=Select/>", except instead of selecting from an array, it selects from the stack."</p>
-        <p>"It takes a single array of natural numbers and rearranges the stack accordingly."</p>
-        <Editor example="⇵[1 3 0 0] \"x\" 2 [5 6 7] (+)"/>
+        <h2 id="both"><Prim prim=Both/></h2>
+        <p><Prim prim=Both/>" is monadic modifier and a sort of compliment to "<Prim prim=Share/>". While "<Prim prim=Share/>" calls multiple functions on the same set of arguments, "<Prim prim=Both/>" calls a single function on multiple sets of arguments."</p>
+        <Editor example="∷⇌ [1 2 3] [4 5 6]"/>
+        <p>"Chaining "<Prim prim=Both/>" doubles the number of arguments each time."</p>
+        <Editor example="∷∷⇌ [1 2 3] [4 5 6] [7 8 9] [10 11 12]"/>
 
-        <h2 id="a-motivating-example">"A Motivating Example"</h2>
-        <p>"Implementing the "<a href="https://en.wikipedia.org/wiki/Quadratic_formula">"quadratic formula"</a>" requires juggling 3 values."</p>
-        <p>"There are two ways you could approach this."</p>
-        <p>"The first way is to use "<Prim prim=Share/>" and find advantageous groupings of arguments. This is what is done in an example on the homepage."</p>
-        <Editor example=QUADRATIC/>
-        <p>"The second way is to use "<Prim prim=Restack/>" to rearrange the arguments into the exact order needed to just do all the operations at once."</p>
-        <Editor example="Quad ← ÷×2∶-∶⊟¯.√-∶ⁿ2∶×4×⇵[0 2 1 1 0]\nQuad 1 2 0"/>
-        <p><Prim prim=Share/>" is the obvious winner here in terms of both clarity and concision."</p>
-        <p>"In general "<Prim prim=Restack/>" should only be used when absolutely necessary."</p>
     }
 }
 

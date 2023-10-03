@@ -333,9 +333,9 @@ fn watch(
             if last_time.elapsed() > Duration::from_millis(100) {
                 if clear {
                     if cfg!(target_os = "windows") {
-                        Command::new("cmd").args(&["/C", "cls"]).status().unwrap();
+                        _ = Command::new("cmd").args(&["/C", "cls"]).status();
                     } else {
-                        Command::new("clear").status().unwrap();
+                        _ = Command::new("clear").status();
                     }
                 }
                 run(&path)?;

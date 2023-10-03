@@ -483,11 +483,16 @@ fn show_update_message() {
     let local_version = env!("CARGO_PKG_VERSION");
     if let Some((local, remote)) = parse_version(local_version).zip(parse_version(remote_version)) {
         if local < remote {
+            let flags = if cfg!(feature = "audio") {
+                " --features audio"
+            } else {
+                ""
+            };
             println!(
                 "{}\n",
                 format!(
                     "Update available: {local_version} → {remote_version}\n\
-                Run `cargo install uiua` to update",
+                    Run `cargo install uiua {flags}` to update",
                 )
                 .bright_white()
                 .bold()

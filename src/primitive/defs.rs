@@ -907,8 +907,8 @@ primitive!(
     /// You can can reduce with arbitrary functions.
     /// ex: /(×+1) 1_2_3_4_5
     ///
-    /// [break]ing out of [reduce] appends the unreduced values to the end of the result.
-    /// ex: /(⎋1+) [3 4 8 9]
+    /// [break]ing out of [reduce] discards the unreduced values.
+    /// ex: /(⎋≥10.+) [3 4 8 9]
     (1[1], Reduce, AggregatingModifier, ("reduce", '/')),
     /// Apply a reducing function to an array with an initial value
     ///
@@ -917,6 +917,9 @@ primitive!(
     /// ex: ∧+ 10 1_2_3_4
     /// [fold] goes from left to right. This is important for non-commutative functions like [subtract].
     /// ex: ∧- 10 1_2_3_4
+    /// 
+    /// [break]ing out of [fold] discards the unreduced values.
+    /// ex: ∧(⎋≥10.+) 1 5_6_7_8
     (2[1], Fold, AggregatingModifier, ("fold", '∧')),
     /// Reduce, but keep intermediate values
     ///
@@ -924,7 +927,8 @@ primitive!(
     /// ex: \-   1_2_3_4
     /// ex: \'-∶ 1_2_3_4
     ///
-    /// [break]ing out of [scan] discards the unscanned values.
+    /// [break]ing out of [scan] appends the unscanned values without applying the function to them.
+    /// This means the length of the output is always the same as that of the input.
     /// ex: \(⎋≥10.+) [1 2 3 4 5 6 7 8]
     (1[1], Scan, AggregatingModifier, ("scan", '\\')),
     /// Apply a function to each element of an array or arrays

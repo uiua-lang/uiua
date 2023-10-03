@@ -1,9 +1,6 @@
 //! Algorithms for looping modifiers
 
-use std::{
-    iter::once,
-    ops::{Add, Div, Mul, Sub},
-};
+use std::ops::{Add, Div, Mul, Sub};
 
 use tinyvec::tiny_vec;
 
@@ -104,8 +101,8 @@ fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> Uiu
     let args = f.signature().args;
     match args {
         0 | 1 => {
-            let mut rows = init.into_iter().chain(xs.into_rows());
-            while let Some(row) = rows.next() {
+            let rows = init.into_iter().chain(xs.into_rows());
+            for row in rows {
                 env.push(row);
                 if env.call_catch_break(f.clone())? {
                     let reduced = if args == 0 {
@@ -113,7 +110,7 @@ fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> Uiu
                     } else {
                         Some(env.pop("reduced function result")?)
                     };
-                    let val = Value::from_row_values(reduced.into_iter().chain(rows), env)?;
+                    let val = Value::from_row_values(reduced, env)?;
                     env.push(val);
                     return Ok(());
                 }
@@ -124,13 +121,12 @@ fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> Uiu
             let mut acc = init
                 .or_else(|| rows.next())
                 .ok_or_else(|| env.error("Cannot reduce empty array"))?;
-            while let Some(row) = rows.next() {
+            for row in rows {
                 env.push(row);
                 env.push(acc);
                 let should_break = env.call_catch_break(f.clone())?;
                 acc = env.pop("reduced function result")?;
                 if should_break {
-                    acc = Value::from_row_values(once(acc).chain(rows), env)?;
                     break;
                 }
             }
@@ -238,7 +234,7 @@ fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     let mut acc = rows.next().unwrap();
     let mut scanned = Vec::with_capacity(row_count);
     scanned.push(acc.clone());
-    for row in rows {
+    for row in rows.by_ref() {
         let start_height = env.stack_size();
         env.push(row);
         env.push(acc.clone());
@@ -250,7 +246,7 @@ fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
             break;
         }
     }
-    env.push(Value::from_row_values(scanned, env)?);
+    env.push(Value::from_row_values(scanned.into_iter().chain(rows), env)?);
     Ok(())
 }
 

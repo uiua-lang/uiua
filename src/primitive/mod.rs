@@ -173,6 +173,7 @@ impl Primitive {
             Primitive::Fork | Primitive::Trident => {
                 Some(format!("try using share{} instead", Primitive::Share))
             }
+            Primitive::Restack => Some(String::new()),
             _ => None,
         }
     }

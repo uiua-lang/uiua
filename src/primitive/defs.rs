@@ -268,6 +268,8 @@ primitive!(
     ([2], Share, Stack, ("share", '❥')),
     /// Rearrange the stack
     ///
+    /// Deprecated because it was never a good idea.
+    ///
     /// [restack] is the most powerful stack manipulation function.
     /// It is similar to [select], except it works on the stack instead of an array.
     ///

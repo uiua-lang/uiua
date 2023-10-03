@@ -1219,7 +1219,7 @@ primitive!(
     /// The two functions having different signatures is not an error, but it may require a signature to be specified.
     /// ex: ?·+ 0 2 3
     /// ex! (?·+ 0 2 3)
-    ([2], If, OtherModifier, ("if", '?')),
+    ([2], If, Control, ("if", '?')),
     /// Call a function and catch errors
     ///
     /// If the first function errors, the second function is called with the error value.

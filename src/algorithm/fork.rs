@@ -218,16 +218,16 @@ pub fn comb(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub fn share(env: &mut Uiua) -> UiuaResult {
+pub fn lives(env: &mut Uiua) -> UiuaResult {
     let fs = env.pop("function list")?.into_func_array().map_err(|val| {
         env.error(format!(
-            "Share's first argument must be a list of functions, but it is {}s",
+            "Lives' first argument must be a list of functions, but it is {}s",
             val.type_name()
         ))
     })?;
-    if fs.rank() != 1 {
+    if fs.rank() > 1 {
         return Err(env.error(format!(
-            "Share's function list must be rank 1, but it is rank {}",
+            "Lives' function list must be rank 1, but it is rank {}",
             fs.rank()
         )));
     }

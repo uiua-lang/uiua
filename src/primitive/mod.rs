@@ -169,6 +169,9 @@ impl Primitive {
             Primitive::Roll | Primitive::Unroll => {
                 Some(format!("try using dip{} instead", Primitive::Dip))
             }
+            Primitive::Fork | Primitive::Trident => {
+                Some(format!("try using lives{} instead", Primitive::Lives))
+            }
             _ => None,
         }
     }
@@ -476,7 +479,7 @@ impl Primitive {
             Primitive::Fork => fork::fork(env)?,
             Primitive::Trident => fork::trident(env)?,
             Primitive::Comb => fork::comb(env)?,
-            Primitive::Lives => fork::share(env)?,
+            Primitive::Lives => fork::lives(env)?,
             Primitive::Try => {
                 let f = env.pop(FunctionArg(1))?;
                 let handler = env.pop(FunctionArg(2))?;

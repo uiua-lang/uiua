@@ -753,6 +753,7 @@ code:
             }
             _ => {}
         }
+        self.handle_primitive_deprecation(modified.modifier.value, &modified.modifier.span);
 
         if call {
             self.words(modified.operands, false)?;
@@ -787,7 +788,7 @@ code:
         }
         Ok(())
     }
-    fn primitive(&mut self, prim: Primitive, span: CodeSpan, call: bool) -> UiuaResult {
+    fn handle_primitive_deprecation(&mut self, prim: Primitive, span: &CodeSpan) {
         if let Some(suggestion) = prim.deprecation_suggestion() {
             let suggestion = if suggestion.is_empty() {
                 String::new()
@@ -805,6 +806,9 @@ code:
                 DiagnosticKind::Warning,
             ));
         }
+    }
+    fn primitive(&mut self, prim: Primitive, span: CodeSpan, call: bool) -> UiuaResult {
+        self.handle_primitive_deprecation(prim, &span);
         let span = self.add_span(span);
         if call || prim.as_constant().is_some() {
             self.push_instr(Instr::Prim(prim, span));

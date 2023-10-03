@@ -1151,6 +1151,8 @@ primitive!(
     (2[1], Both, OtherModifier, ("both", '∷')),
     /// Call 2 functions on 2 values
     ///
+    /// Deprecated in favor of [lives].
+    ///
     /// Each function may take 0, 1, or 2 arguments.
     /// With 0 or 1 arguments, the first function will be passed the first value.
     /// With 0 or 1 arguments, the second function will be passed the second value.
@@ -1163,6 +1165,8 @@ primitive!(
     /// ex: ⊟⊃×+ 3 5
     (2[2], Fork, OtherModifier, ("fork", '⊃')),
     /// Call 3 functions on 3 values
+    ///
+    /// Deprecated in favor of [lives].
     ///
     /// [trident] is a very powerfull function when juggling 3 values.
     /// Each function may take up to 3 arguments.

@@ -283,23 +283,34 @@ impl<'a> VirtualEnv<'a> {
                 }
                 Lives => {
                     let fs = self.pop()?;
-                    if let BasicValue::Arr(fs) = fs {
-                        let sig = if fs.is_empty() {
-                            Signature::new(0, 0)
-                        } else {
-                            let args = fs.iter().map(|f| f.signature().args).max().unwrap();
-                            let outputs: usize = fs.iter().map(|f| f.signature().outputs).sum();
-                            Signature { args, outputs }
-                        };
-                        for _ in 0..sig.args {
-                            self.pop()?;
+                    match fs {
+                        BasicValue::Arr(fs) => {
+                            let sig = if fs.is_empty() {
+                                Signature::new(0, 0)
+                            } else {
+                                let args = fs.iter().map(|f| f.signature().args).max().unwrap();
+                                let outputs: usize = fs.iter().map(|f| f.signature().outputs).sum();
+                                Signature { args, outputs }
+                            };
+                            for _ in 0..sig.args {
+                                self.pop()?;
+                            }
+                            self.set_min_height();
+                            for _ in 0..sig.outputs {
+                                self.stack.push(BasicValue::Other);
+                            }
                         }
-                        self.set_min_height();
-                        for _ in 0..sig.outputs {
-                            self.stack.push(BasicValue::Other);
+                        BasicValue::Func(f) => {
+                            let sig = f.signature();
+                            for _ in 0..sig.args {
+                                self.pop()?;
+                            }
+                            self.set_min_height();
+                            for _ in 0..sig.outputs {
+                                self.stack.push(BasicValue::Other);
+                            }
                         }
-                    } else {
-                        return Err("share with unknown value".into());
+                        _ => return Err("lives with unknown value".into()),
                     }
                 }
                 Level => {

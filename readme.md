@@ -38,3 +38,59 @@ The interpreter has a built-in language server that implements the [Language Ser
 A language client extension is available for VSCode [here](https://marketplace.visualstudio.com/items?itemName=uiua-lang.uiua-vscode).
 
 The language client requires that the interpreter is installed locally and available on your PATH.
+
+## Formatter Configuration
+
+You can configure Uiua's formatter by creating a file called `.fmt.ua` in the directory from which you run the interpreter. This configuration file is also a Uiua program.
+
+Configuration options are specified by binding values to specific names.
+
+Example with default values:
+```
+TrailingNewline ← 1
+CommentSpaceAfterHash ← 1
+MultilineIndent ← 2
+CompactMultilineMode ← "auto"
+```
+
+The following configuration options are available:
+
+### `TrailingNewline`
+Type: boolean
+
+Default: `1`
+
+Whether to add a trailing newline to a file.
+
+### `CommentSpaceAfterHash`
+Type: boolean
+
+Default: `1`
+
+Whether to insert a space after a `#` in a comment if there is not one already.
+
+### `MultilineIndent`
+Type: natural number
+
+Default: `2`
+
+The number of spaces to indent each line of a multiline expression.
+
+### `CompactMultilineMode`
+Type: one of `"always"`, `"never"`, or `"auto"`
+
+Default: `"auto"`
+
+How to format multiline expressions.
+- `"always"`: Always format multiline expressions in compact mode.
+- `"never"`: Never format multiline expressions in compact mode.
+- `"auto"`: Format multiline expressions in compact mode they do not exceed `MultilineCompactThreshold`.
+
+### `MultilineCompactThreshold`
+Type: natural number
+
+Default: `10`
+
+The maximum number of lines a multiline expression can have before it is formatted in compact mode.
+
+Only used if `CompactMultilineMode` is not `"never"`.

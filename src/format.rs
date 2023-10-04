@@ -17,17 +17,17 @@ use crate::{
     grid_fmt::GridFmt,
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
-    SysBackend,
     value::Value,
-    Uiua,
-    UiuaError, UiuaResult,
+    SysBackend, Uiua, UiuaError, UiuaResult,
 };
 
 // For now disallow any syscalls in the format config file.
 struct FormatConfigBackend;
 
 impl SysBackend for FormatConfigBackend {
-    fn any(&self) -> &dyn Any { self }
+    fn any(&self) -> &dyn Any {
+        self
+    }
 }
 
 trait ConfigValue: Sized {
@@ -71,10 +71,18 @@ impl ConfigValue for CompactMultilineMode {
 
 macro_rules! requirement {
     ($name:ident, bool) => {
-        concat!("Format config option '", stringify!($name), "' expects a boolean")
+        concat!(
+            "Format config option '",
+            stringify!($name),
+            "' expects a boolean"
+        )
     };
     ($name:ident, usize) => {
-        concat!("Format config option '", stringify!($name), "' expects a natural number")
+        concat!(
+            "Format config option '",
+            stringify!($name),
+            "' expects a natural number"
+        )
     };
     ($name:ident, CompactMultilineMode) => {
         concat!(
@@ -183,7 +191,11 @@ create_config!(
     /// The number of spaces to indent multiline arrays and functions
     (multiline_indent, usize, 2),
     /// The mode for formatting multiline arrays and functions.
-    (compact_multiline_mode, CompactMultilineMode, CompactMultilineMode::Auto),
+    (
+        compact_multiline_mode,
+        CompactMultilineMode,
+        CompactMultilineMode::Auto
+    ),
     /// The number of characters on line preceding a multiline array or function, at or before which the multiline will be compact.
     (multiline_compact_threshold, usize, 10),
 );
@@ -242,7 +254,9 @@ impl FormatConfig {
     }
 
     fn search_config_file(path: Option<&Path>) -> Option<PathBuf> {
-        let mut path = path.and_then(|p| std::fs::canonicalize(p).ok()).unwrap_or(env::current_dir().ok()?);
+        let mut path = path
+            .and_then(|p| std::fs::canonicalize(p).ok())
+            .unwrap_or(env::current_dir().ok()?);
         loop {
             let file_path = path.join(".fmt.ua");
             if file_path.exists() {

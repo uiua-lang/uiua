@@ -154,7 +154,7 @@ uiuisms!(
     /// Filter by a fixed predicate
     "▽ =0◿2 . ⇡10",
     /// Filter by a dynamic predicate
-    "▽!∶, (=0◿2) ⇡10",
+    "▽!→. (=0◿2) ⇡10",
     /// Convert a string to uppercase
     r#"-×32×≥@a,≤@z. "These are Words""#,
     /// Convert a string to lowercase

@@ -465,6 +465,7 @@ impl Lexer {
                 '→' => self.end(Primitive::Dip, start),
                 '∷' => self.end(Primitive::Both, start),
                 '·' => self.end(Primitive::Noop, start),
+                '⍛' => self.end(Primitive::Fill, start),
 
                 '(' => self.end(OpenParen, start),
                 ')' => self.end(CloseParen, start),

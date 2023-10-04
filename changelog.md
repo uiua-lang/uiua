@@ -6,6 +6,7 @@ Uiua is not yet stable.
 
 ## 2023-10-04
 - Add the [`bracket` `⊓`](https://uiua.org/docs/bracket) modifier, which calls two functions each on different arguments
+- Change [`fill` `⬚`](https://uiua.org/docs/fill)'s glyph to reflect its relationship with [`constant` `□`](https://uiua.org/docs/constant). Code using `⍛` with continue to work and will be formatted as `⬚`.
 - Change `share` `⇉` name and glyph to [`fork` `⊃`](https://uiua.org/docs/fork). Code using `⇉` with continue to work and will be formatted as `⊃`.
 - Change [`noop` `∘`](https://uiua.org/docs/noop)'s glyph to reflect its relationship with [`gap` `⋅`](https://uiua.org/docs/gap) and [`dip` `⊙`](https://uiua.org/docs/dip). Code using `·` with continue to work and will be formatted as `∘`.
 - Add the [`gap` `⋅`](https://uiua.org/docs/gap) modifier, which discards a value then calls its function. It is mainly intended to be used with [`fork` `⊃`](https://uiua.org/docs/fork).
@@ -61,7 +62,7 @@ Uiua is not yet stable.
 - Add [`&cd`](https://uiua.org/docs/&cd) function for changing the current working directory
 - Add shadowable [constants](https://uiua.org/docs/constants) like `e` and `os`
 - Change [`trident` `∋`](https://uiua.org/docs/trident) argument order to make it easier to reason about
-- Enable [`fill` `⍛`](https://uiua.org/docs/fill) for [`keep` `▽`](https://uiua.org/docs/keep) if the amount list is shorter than the kept array
+- Enable [`fill` `⬚`](https://uiua.org/docs/fill) for [`keep` `▽`](https://uiua.org/docs/keep) if the amount list is shorter than the kept array
 - Fix a bug that made numbers that were `≤` `1e-12` `⌵` format to `0`
 ### Interpreter
 - Add `uiua eval` command which evaluates a Uiua expression and prints the result

@@ -616,7 +616,7 @@ primitive!(
     /// By default, arrays with different shapes cannot be [couple]ed.
     /// ex! ⊟ [1 2 3] [4 5]
     /// Use [fill] to make their shapes match
-    /// ex: ⍛∞⊟ [1 2 3] [4 5]
+    /// ex: ⬚∞⊟ [1 2 3] [4 5]
     ///
     /// [couple] is compatible with [under].
     /// ex: ⍜⊟'×2 3 5
@@ -642,7 +642,7 @@ primitive!(
     /// By default, arrays that do not have equal [shape] suffixes cannot be joined.
     /// ex! ⊂ [1_2 3_4] [5_6_7 8_9_10]
     /// Use [fill] to make their shapes compatible.
-    /// ex: ⍛0⊂ [1_2 3_4] [5_6_7 8_9_10]
+    /// ex: ⬚0⊂ [1_2 3_4] [5_6_7 8_9_10]
     ///
     /// [join]'s glyph is `⊂` because it kind of looks like a magnet pulling its two arguments together.
     (2, Join, DyadicArray, ("join", '⊂')),
@@ -704,7 +704,7 @@ primitive!(
     /// By default, taking more than the length of the array will throw an error.
     /// ex! ↙7 [8 3 9 2 0]
     /// If you would like to fill the excess length with some fill value, use [fill].
-    /// ex: ⍛π↙7 [8 3 9 2 0]
+    /// ex: ⬚π↙7 [8 3 9 2 0]
     (2, Take, DyadicArray, ("take", '↙')),
     /// End step of under take
     (3, Untake, Misc),
@@ -760,7 +760,7 @@ primitive!(
     /// ex: ↯ 2 [1_2_3 4_5_6]
     ///
     /// The counts list can be [fill]ed if it is shorter than the kept array.
-    /// ex: ⍛3▽ [1 0 2] [8 3 9 2 0]
+    /// ex: ⬚3▽ [1 0 2] [8 3 9 2 0]
     ///
     /// [keep]'s glyph is `▽` because its main use is to filter, and `▽` kind of looks like a coffee filter.
     (2, Keep, DyadicArray, ("keep", '▽')),
@@ -800,7 +800,7 @@ primitive!(
     /// If you expect one of the searched-for rows to be missing, you can use [fill] to set a default value.
     /// ex: a ← [2 3 5 7 11 13]
     ///   : .⊗,a [1 2 3 4 5]
-    ///   : ⍛∞⊏∶a
+    ///   : ⬚∞⊏∶a
     ///
     /// [indexof] is closely related to [member].
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),
@@ -1117,44 +1117,6 @@ primitive!(
     /// ex: ⍜(↙2)(÷∶)  [1 2 3 4 5] 10
     ///   : ⍜(↙2)(÷10) [1 2 3 4 5]
     ([2], Under, OtherModifier, ("under", '⍜')),
-    /// Set the fill value for a function
-    ///
-    /// By default, some operations require that arrays' [shape]s are in some way compatible.
-    /// [fill] allows you to specify a value that will be used to extend the shape of one or both of the operands to make an operation succeed.
-    /// The first argument is the fill value, and the second argument is a function in which the fill value will be used.
-    ///
-    /// [fill] allows you to set default values for [take].
-    /// ex: ⍛0↙7 [8 3 9 2 1]
-    /// ex: ⍛π↙¯6 [1 2 3]
-    /// ex: ⍛42↙4 [1_2_3 4_5_6]
-    ///
-    /// Using [fill] with [couple] will fill both arrays until their shapes match.
-    /// ex: ⍛0⊟ 1 2_3
-    /// ex: ⍛0⊟ 1_2 3_4_5_6
-    /// ex: ⍛0⊟ 1_2_3 [4_5 6_7]
-    ///
-    /// Using [fill] with [join] will fill both arrays until the [join] makes sense.
-    /// ex: ⍛0⊂ 1 [2_3_4 5_6_7]
-    /// ex: ⍛0⊂ [1_2 3_4] 5_6_7
-    ///
-    /// Because array construction is implemented in terms of [couple] and [join], [fill] can be used when building arrays.
-    /// ex: ⍛0[1 2_3 4_5_6]
-    ///
-    /// [fill] also works with pervasive operations where the shapes don't match.
-    /// ex: ⍛0+ 1_2_3 10_9_8_7_6_5
-    ///
-    /// Many functions, like [scan] and [partition], implicitly build arrays and require compatible shapes.
-    /// [fill] can be used with them as well. In some cases, this prevents the need to use [constant].
-    /// ex: ⍛0\⊂ 1_2_3_4_5
-    /// ex: ⍛@ ⊜∘≠@ . "No □ needed!"
-    ///
-    /// [fill] will prevent [pick] and [select] from throwing an error if an index is out of bounds.
-    /// ex: ⍛∞⊏ 3_7_0 [8 3 9 2 0]
-    ///
-    /// [fill] allows the list of counts for [keep] to be shorter than the kept array.
-    /// This is especially useful when used with functions like [windows] or [find] which make an array shorter than their input.
-    /// ex: ⍛0▽≡/>◫2. [1 8 0 2 7 2 3]
-    ([2], Fill, OtherModifier, ("fill", '⍛')),
     /// Apply a function at a different array depth
     ///
     /// Expects a rank to operate on, a function, and an array.
@@ -1191,6 +1153,44 @@ primitive!(
     /// ex: ⍚[1 1]⊂ ↯3_3⇡9 10_11_12 # Join two rank 1 arrays
     /// ex: ⍚[1 0]⊂ ↯3_3⇡9 10_11_12 # Join rank 1 arrays with scalars
     ([2], Level, IteratingModifier, ("level", '⍚')),
+    /// Set the fill value for a function
+    ///
+    /// By default, some operations require that arrays' [shape]s are in some way compatible.
+    /// [fill] allows you to specify a value that will be used to extend the shape of one or both of the operands to make an operation succeed.
+    /// The first argument is the fill value, and the second argument is a function in which the fill value will be used.
+    ///
+    /// [fill] allows you to set default values for [take].
+    /// ex: ⬚0↙7 [8 3 9 2 1]
+    /// ex: ⬚π↙¯6 [1 2 3]
+    /// ex: ⬚42↙4 [1_2_3 4_5_6]
+    ///
+    /// Using [fill] with [couple] will fill both arrays until their shapes match.
+    /// ex: ⬚0⊟ 1 2_3
+    /// ex: ⬚0⊟ 1_2 3_4_5_6
+    /// ex: ⬚0⊟ 1_2_3 [4_5 6_7]
+    ///
+    /// Using [fill] with [join] will fill both arrays until the [join] makes sense.
+    /// ex: ⬚0⊂ 1 [2_3_4 5_6_7]
+    /// ex: ⬚0⊂ [1_2 3_4] 5_6_7
+    ///
+    /// Because array construction is implemented in terms of [couple] and [join], [fill] can be used when building arrays.
+    /// ex: ⬚0[1 2_3 4_5_6]
+    ///
+    /// [fill] also works with pervasive operations where the shapes don't match.
+    /// ex: ⬚0+ 1_2_3 10_9_8_7_6_5
+    ///
+    /// Many functions, like [scan] and [partition], implicitly build arrays and require compatible shapes.
+    /// [fill] can be used with them as well. In some cases, this prevents the need to use [constant].
+    /// ex: ⬚0\⊂ 1_2_3_4_5
+    /// ex: ⬚@ ⊜∘≠@ . "No □ needed!"
+    ///
+    /// [fill] will prevent [pick] and [select] from throwing an error if an index is out of bounds.
+    /// ex: ⬚∞⊏ 3_7_0 [8 3 9 2 0]
+    ///
+    /// [fill] allows the list of counts for [keep] to be shorter than the kept array.
+    /// This is especially useful when used with functions like [windows] or [find] which make an array shorter than their input.
+    /// ex: ⬚0▽≡/>◫2. [1 8 0 2 7 2 3]
+    ([2], Fill, OtherModifier, ("fill", '⬚')),
     /// Compose two functions
     ///
     /// This modifier mostly exists for syntactic convenience.

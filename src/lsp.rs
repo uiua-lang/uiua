@@ -110,7 +110,7 @@ mod server {
     use super::*;
 
     use crate::{
-        format::{format_str, FormatConfig, FormatConfigSource},
+        format::{format_str, FormatConfig/*, FormatConfigSource*/},
         lex::Loc,
         primitive::PrimDocFragment,
         Ident, Uiua,
@@ -358,17 +358,29 @@ mod server {
                 return Ok(None);
             };
 
-            let path = if params.text_document.uri.scheme() == "file" {
-                params.text_document.uri.to_file_path().ok()
-            } else {
-                None
-            };
+            // Somehow this breaks the formatting in VS Code, so I'm disabling it for now.
 
-            let config = FormatConfig::from_source(FormatConfigSource::SearchFile, path.as_deref())
-                .unwrap_or_default()
-                .with_multiline_indent(params.options.tab_size as usize);
+            // let path = if params.text_document.uri.scheme() == "file" {
+            //     params.text_document.uri.to_file_path().ok()
+            // } else {
+            //     None
+            // };
 
-            let Ok(formatted) = format_str(&doc.input, &config) else {
+            // let config = FormatConfig::from_source(FormatConfigSource::SearchFile, path.as_deref())
+            //     .unwrap_or_default()
+            //     .with_multiline_indent(params.options.tab_size as usize);
+
+            // let Ok(formatted) = format_str(&doc.input, &config) else {
+            //     return Ok(None);
+            // };
+
+            let Ok(formatted) = format_str(
+                &doc.input,
+                &FormatConfig {
+                    multiline_indent: params.options.tab_size as usize,
+                    ..Default::default()
+                },
+            ) else {
                 return Ok(None);
             };
             let range = Range::new(Position::new(0, 0), Position::new(u32::MAX, u32::MAX));

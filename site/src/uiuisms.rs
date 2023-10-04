@@ -117,6 +117,10 @@ uiuisms!(
     "/↧ [1 4 5 3 2]",
     /// Sort an array
     "⊏⌂. [1 4 5 3 2]",
+    /// Get the average of an array
+    "÷⇉⧻/+ [1 2 3]",
+    // Get the index mask of a bit array
+    "▽∶⇡⧻. [1 0 0 1]",
     /// Get n numbers between 0 and 1 inclusive
     "÷-1∶⇡. 11",
     /// Get n numbers between 0 and 1 exclusive
@@ -173,6 +177,8 @@ uiuisms!(
     r#"▽×⍜'⊟⇌≡\↥.≠@ . "  abc xyz   ""#,
     /// Upscale a matrix
     "▽↯⧻,/÷△.⍉▽↯⧻,30 [0_1 1_0]",
+    /// Get the gcd of the top 2 values on the stack.
+    ";!(|2 ↬≠0.◿,⇉↥↧) 100 10",
     /// Dot product
     "/+× [1 2 3] [4 ¯5 6]",
     /// Matrix product

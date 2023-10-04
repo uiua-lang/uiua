@@ -979,7 +979,9 @@ primitive!(
     /// ex: [∩+ 1 2 3 4]
     /// ex: [∩(++) 1 2 3 4 5 6]
     ///
-    /// [both]'s glyph is `∩` because, for a function `f`, it is equivalent to `f∶f∶`.
+    /// [both] can also be chained. Every additional [both] doubles the number of arguments taken from the stack.
+    /// ex: [∩∩(□+2) 1 @a 2_3 5]
+    /// ex: [∩∩∩± 1 ¯2 0 42 ¯5 6 7 8 99]
     (2[1], Both, Stack, ("both", '∩')),
     /// Call two functions on two distinct sets of values
     ///

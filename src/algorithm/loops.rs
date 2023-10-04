@@ -586,9 +586,66 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
     let f = env.pop(FunctionArg(1))?;
     let xs = env.pop(ArrayArg(1))?;
     let y = env.pop(ArrayArg(2))?;
+    let sig = f.signature();
+    if sig.outputs != 1 {
+        return Err(env.error(format!(
+            "Distribute's function must return 1 value, but {} returns {}",
+            f, sig.outputs
+        )));
+    }
+    match sig.args {
+        0 | 1 => Err(env.error(format!(
+            "Distribute's function must take at least 2 arguments, \
+            but {} takes {}",
+            f, sig.args
+        ))),
+        2 => distribute2(f, xs, y, env),
+        3 => {
+            let z = env.pop(ArrayArg(3))?;
+            distribute3(f, xs, y, z, env)
+        }
+        n => {
+            let mut args = Vec::with_capacity(n - 1);
+            args.push(y);
+            for i in 3..=n {
+                args.push(env.pop(ArrayArg(i))?);
+            }
+            distribute_n(f, xs, args, env)
+        }
+    }
+}
+
+fn distribute2(f: Value, xs: Value, y: Value, env: &mut Uiua) -> UiuaResult {
     let mut new_rows = Vec::with_capacity(xs.row_count());
     for x in xs.into_rows() {
         env.push(y.clone());
+        env.push(x);
+        env.call_error_on_break(f.clone(), "break is not allowed in distribute")?;
+        new_rows.push(env.pop("distribute's function result")?);
+    }
+    env.push(Value::from_row_values(new_rows, env)?);
+    Ok(())
+}
+
+fn distribute3(f: Value, xs: Value, y: Value, z: Value, env: &mut Uiua) -> UiuaResult {
+    let mut new_rows = Vec::with_capacity(xs.row_count());
+    for x in xs.into_rows() {
+        env.push(z.clone());
+        env.push(y.clone());
+        env.push(x);
+        env.call_error_on_break(f.clone(), "break is not allowed in distribute")?;
+        new_rows.push(env.pop("distribute's function result")?);
+    }
+    env.push(Value::from_row_values(new_rows, env)?);
+    Ok(())
+}
+
+fn distribute_n(f: Value, xs: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+    let mut new_rows = Vec::with_capacity(xs.row_count());
+    for x in xs.into_rows() {
+        for arg in args.iter().rev() {
+            env.push(arg.clone());
+        }
         env.push(x);
         env.call_error_on_break(f.clone(), "break is not allowed in distribute")?;
         new_rows.push(env.pop("distribute's function result")?);

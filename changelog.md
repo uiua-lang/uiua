@@ -6,6 +6,8 @@ Uiua is not yet stable.
 
 ## 2023-10-04
 - Change [`noop` `·`](https://uiua.org/docs/noop)'s signature to be `|1.1`
+- [`Distribute` `∺`](https://uiua.org/docs/distribute) now works with any number of arguments
+  - Only the first argument is distributed
 
 ## 2023-10-03
 ### Language

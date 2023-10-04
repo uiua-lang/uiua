@@ -34,6 +34,13 @@ macro_rules! create_config {
         )
     ),* $(,)?) => {
         #[derive(Debug, Clone)]
+        struct PartialFormatConfig {
+            $(
+                $name: Option<$ty>,
+            )*
+        }
+
+        #[derive(Debug, Clone)]
         pub struct FormatConfig {
             $(
                 $(#[doc = $doc])*
@@ -60,6 +67,16 @@ macro_rules! create_config {
                 Self {
                     $(
                         $name: $default,
+                    )*
+                }
+            }
+        }
+
+        impl From<PartialFormatConfig> for FormatConfig {
+            fn from(config: PartialFormatConfig) -> Self {
+                Self {
+                    $(
+                        $name: config.$name.unwrap_or($default),
                     )*
                 }
             }

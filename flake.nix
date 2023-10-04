@@ -1,6 +1,9 @@
 {
   description = "A stack-based array programming language";
 
+  # this is to allow tests to access the internet during checkPhase
+  nixConfig.sandbox = "relaxed";
+
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
   inputs.crane = {

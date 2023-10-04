@@ -14,8 +14,7 @@ Uiua is not yet stable.
 - Change [`dip` `⊙`](https://uiua.org/docs/dip)'s glyph to reflect its relationship with [`gap` `⋅`](https://uiua.org/docs/gap) and [`noop` `∘`](https://uiua.org/docs/noop). Code using `→` with continue to work and will be formatted as `⊙`.
 - Change [`both` `∩`](https://uiua.org/docs/both)'s glyph to reflect its relationship with [`fork` `⊃`](https://uiua.org/docs/fork). Code using `∷` with continue to work and will be formatted as `∩`.
 - Change [`noop` `∘`](https://uiua.org/docs/noop)'s signature to be `|1.1`
-- [`Distribute` `∺`](https://uiua.org/docs/distribute) now works with any number of arguments
-  - Only the first argument is distributed
+- [`distribute` `∺`](https://uiua.org/docs/distribute) now works with any number of arguments. Only the first argument is distributed.
 - [`fill` `⬚`](https://uiua.org/docs/fill) now works with [`reshape` `↯`](https://uiua.org/docs/reshape)
 ### Interpreter
 - Add formatter configuration options. See the [readme](https://github.com/uiua-lang/uiua#formatter-configuration) for details.

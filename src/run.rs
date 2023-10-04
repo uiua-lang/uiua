@@ -671,12 +671,15 @@ code:
                 let span = self.add_span(span);
                 self.push_instr(Instr::Call(span));
             }
-        } else if let Some(prim) =
-            Primitive::all().find(|p| p.names().is_some_and(|n| n.text == ident.as_ref()))
-        {
+        } else if let Some(prim) = Primitive::all().find(|p| {
+            p.names().is_some_and(|n| {
+                n.text == ident.as_ref() || ident.len() >= 3 && n.text.starts_with(&*ident)
+            })
+        }) {
             return Err(span
                 .sp(format!(
-                    "Unknown identifier `{ident}`, did you mean `{prim}`?"
+                    "Unknown identifier `{ident}`. Did you mean `{prim}`? \
+                    Functions with ASCII glyphs do not format."
                 ))
                 .into());
         } else {

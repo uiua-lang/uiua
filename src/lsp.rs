@@ -110,7 +110,7 @@ mod server {
     use super::*;
 
     use crate::{
-        format::{format_str, FormatConfig/*, FormatConfigSource*/},
+        format::{format_str, FormatConfig /*, FormatConfigSource*/},
         lex::Loc,
         primitive::PrimDocFragment,
         Ident, Uiua,
@@ -309,9 +309,10 @@ mod server {
                         doc.short
                             .iter()
                             .map(|frag| match frag {
-                                PrimDocFragment::Text(text) => text.clone(),
-                                PrimDocFragment::Code(code) => code.clone(),
-                                PrimDocFragment::Emphasis(text) => text.clone(),
+                                PrimDocFragment::Text(text)
+                                | PrimDocFragment::Code(text)
+                                | PrimDocFragment::Emphasis(text)
+                                | PrimDocFragment::Strong(text) => text.clone(),
                                 PrimDocFragment::Primitive { prim, named } => {
                                     let name = prim.name().unwrap();
                                     if *named {

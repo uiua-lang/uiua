@@ -159,7 +159,7 @@ primitive!(
     /// Here, we get the [length] and the `reduce``add``sum` of the list, then [divide] them.
     /// ex: ÷⧻∶/+. 1_8_2_5
     (2(2), Flip, Stack, ("flip", AsciiToken::Colon, '∶')),
-    /// Pop the top value off the stack
+    /// Discard the top stack value
     ///
     /// This is usually used to discard values that are no longer needed.
     ///
@@ -844,9 +844,10 @@ primitive!(
     /// This means the length of the output is always the same as that of the input.
     /// ex: \(⎋≥10.+) [1 2 3 4 5 6 7 8]
     (1[1], Scan, AggregatingModifier, ("scan", '\\')),
-    /// Apply a function to each element of an array or arrays
+    /// Apply a function to each element of an array or arrays.
     ///
     /// This is the element-wise version of [rows].
+    /// **This is often not what you want.** Prefer using [table] when possible.
     ///
     /// The number of arrays used depends on how many arguments the function takes.
     /// ex: ∵'⊟. 1_2_3_4
@@ -889,6 +890,7 @@ primitive!(
     /// Apply a function to each combination of elements of two arrays
     ///
     /// This is the element-wise version of [cross].
+    /// This is probably what you want instead of [each].
     ///
     /// ex: ⊞+ 1_2_3 4_5_6_7
     /// ex: ⊞⊂ 1_2 3_4
@@ -1012,7 +1014,7 @@ primitive!(
     /// ex: [⊃∘⊙·(++) 3 5 10]
     /// ex: [⊃⊙·(++) 3 5 10]
     ([1], Dip, Stack, ("dip", '⊙')),
-    /// Pop a value off the stack then call a function
+    /// Discard the top stack value then call a function
     ///
     /// ex: ∘+ 1 2 3
     /// This may seem useless when [pop] exists, but [gap] really shines when used with [fork].

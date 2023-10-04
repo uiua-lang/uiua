@@ -641,6 +641,7 @@ impl PrimDoc {
                 PrimDocFragment::Text(t) => return Cow::Borrowed(t),
                 PrimDocFragment::Code(c) => return Cow::Borrowed(c),
                 PrimDocFragment::Emphasis(e) => return Cow::Borrowed(e),
+                PrimDocFragment::Strong(s) => return Cow::Borrowed(s),
                 PrimDocFragment::Primitive { prim, named: true } => {
                     if let Some(s) = prim.name() {
                         return Cow::Owned(s.to_owned());
@@ -655,6 +656,7 @@ impl PrimDoc {
                 PrimDocFragment::Text(t) => s.push_str(t),
                 PrimDocFragment::Code(c) => s.push_str(c),
                 PrimDocFragment::Emphasis(e) => s.push_str(e),
+                PrimDocFragment::Strong(str) => s.push_str(str),
                 PrimDocFragment::Primitive { prim, named } => {
                     let mut name = String::new();
                     if *named {
@@ -786,6 +788,7 @@ pub enum PrimDocFragment {
     Text(String),
     Code(String),
     Emphasis(String),
+    Strong(String),
     Primitive { prim: Primitive, named: bool },
 }
 
@@ -796,6 +799,7 @@ fn parse_doc_line_fragments(line: &str) -> Vec<PrimDocFragment> {
         Text,
         Code,
         Emphasis,
+        Strong,
         Primitive,
     }
     impl FragKind {
@@ -804,6 +808,7 @@ fn parse_doc_line_fragments(line: &str) -> Vec<PrimDocFragment> {
                 FragKind::Text => "",
                 FragKind::Code => "`",
                 FragKind::Emphasis => "*",
+                FragKind::Strong => "**",
                 FragKind::Primitive => "[",
             }
         }
@@ -831,8 +836,17 @@ fn parse_doc_line_fragments(line: &str) -> Vec<PrimDocFragment> {
                 curr = String::new();
                 kind = FragKind::Code;
             }
+            '*' if kind == FragKind::Emphasis && curr.is_empty() => {
+                kind = FragKind::Strong;
+            }
             '*' if kind == FragKind::Emphasis => {
                 frags.push(PrimDocFragment::Emphasis(curr));
+                curr = String::new();
+                kind = FragKind::Text;
+            }
+            '*' if kind == FragKind::Strong && chars.peek() == Some(&'*') => {
+                chars.next();
+                frags.push(PrimDocFragment::Strong(curr));
                 curr = String::new();
                 kind = FragKind::Text;
             }

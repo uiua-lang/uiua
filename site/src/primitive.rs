@@ -14,6 +14,7 @@ fn doc_line_fragments_to_view(fragments: &[PrimDocFragment]) -> View {
             PrimDocFragment::Text(s) => s.into_view(),
             PrimDocFragment::Code(s) => view!( <code>{s}</code>).into_view(),
             PrimDocFragment::Emphasis(s) => view!( <em>{s}</em>).into_view(),
+            PrimDocFragment::Strong(s) => view!( <strong>{s}</strong>).into_view(),
             &PrimDocFragment::Primitive { prim, named } => {
                 view!( <Prim prim=prim glyph_only={!named}/>).into_view()
             }

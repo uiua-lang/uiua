@@ -990,12 +990,14 @@ fn check_http(mut request: String, hostname: &str) -> Result<String, String> {
     let mut req = httparse::Request::new(&mut headers);
 
     let mut lines = request.lines().collect::<Vec<_>>();
-    let trailing_newline = request.ends_with('\n');
+    let mut trailing_newline = request.ends_with('\n');
 
     // check to make sure theres an empty line somewhere in there. if not, add 2 empty lines
     if !lines.iter().any(|line| line.is_empty()) {
         lines.push("");
         lines.push("");
+        // so we dont unecessarily add another newline
+        trailing_newline = false;
     }
 
     // If the first line doesn't have a version, add one

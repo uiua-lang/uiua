@@ -36,8 +36,8 @@ Z ← ⊟/- ⁿ2 ∶×2 /×.⇌
 const LIFE: &str = "\
 life ← ↥→↧=3∶=2.-,/+/+⍚1_2↻-1⇡3_3.
 ⍛0↙10_10 ⋯×4 0_2_4_7 # init
-⍉;⍥(→'⊂∶.life)10.    # run
-↯∶≡'↯4∵'↯4∶×4△.      # upscale";
+;⍥(→'⊂∶.life)10.     # run
+▽↯⧻,∶⍉▽↯⧻,,∶4        # upscale";
 
 pub const EXAMPLES: &[&str] = &[
     UIUA, FORMAT, D3, LOGO, AVG, CHORD, QUADRATIC, STRIPES, PALINDROME, AUTOMATA, ROMAN,

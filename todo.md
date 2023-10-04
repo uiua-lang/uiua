@@ -1,3 +1,4 @@
+- Document formatter
 - Make https requests work on web?
 - Add channels for spawned threads
 - Optimize dip by inlining?

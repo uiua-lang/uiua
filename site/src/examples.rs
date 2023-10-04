@@ -24,6 +24,11 @@ const AUTOMATA: &str = "\
 rule ← /+⊞=∶ ⍘⋯⇌◫3⇌ ⊂∶0⊂0∶ ▽∶⇡⧻.⋯
 =⌊÷2∶⇡.500         # init
 ⇌[⍥(rule30.)⌊÷2⧻.] # run";
+const ROMAN: &str = r#"k ← "IVXLCDM"
+n ← [1 5 10 50 100 500 1000]
+f ← /+-⊃(↻1×)(×¬)≡/>◫2⊂∶0.⊏∶n⊗∶k
+f "LVII"
+f "MCMXCIV""#;
 const MANDELBROT: &str = "\
 Z ← ⊟/- ⁿ2 ∶×2 /×.⇌
 ⇌⍘⍉⊞⊟.×4 ÷∶-÷2,⇡. 300
@@ -35,7 +40,8 @@ life ← ↥→↧=3∶=2.-,/+/+⍚1_2↻-1⇡3_3.
 ↯∶≡'↯4∵'↯4∶×4△.      # upscale";
 
 pub const EXAMPLES: &[&str] = &[
-    UIUA, FORMAT, D3, LOGO, AVG, CHORD, QUADRATIC, STRIPES, PALINDROME, AUTOMATA, MANDELBROT, LIFE,
+    UIUA, FORMAT, D3, LOGO, AVG, CHORD, QUADRATIC, STRIPES, PALINDROME, AUTOMATA, ROMAN,
+    MANDELBROT, LIFE,
 ];
 
 #[cfg(test)]

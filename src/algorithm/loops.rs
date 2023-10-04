@@ -594,12 +594,11 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
         )));
     }
     match sig.args {
-        0 | 1 => Err(env.error(format!(
-            "Distribute's function must take at least 2 arguments, \
-            but {} takes {}",
-            f, sig.args
+        0 => Err(env.error(format!(
+            "Distribute's function must take at least 1 argument, \
+            but {f} takes 0"
         ))),
-        2 => distribute2(f, xs, y, env),
+        1 | 2 => distribute2(f, xs, y, env),
         3 => {
             let z = env.pop(ArrayArg(3))?;
             distribute3(f, xs, y, z, env)

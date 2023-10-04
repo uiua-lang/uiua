@@ -287,13 +287,13 @@ sys_op! {
     ///   : &httpsw $ GET /api HTTP/1.0
     ///   :         $ Host: example.com\r\n
     ///   :         $ <BODY>
-    /// 
+    ///
     /// There are a few things the function tries to automatically fill in
     /// if it finds they are missing from the request:
-    /// 
-    ///  - 2 trailing newlines (if there is no body)
-    ///  - The HTTP version
-    ///  - The `Host` header (if not defined)
+    ///
+    /// - 2 trailing newlines (if there is no body)
+    /// - The HTTP version
+    /// - The `Host` header (if not defined)
     (2, HttpsWrite, "&httpsw", "http - Make an HTTP request"),
 }
 
@@ -925,7 +925,7 @@ impl SysBackend for NativeSys {
             .hostnames
             .get(&handle)
             .ok_or_else(|| "Invalid tcp socket handle".to_string())?;
-        let request = check_http(request.to_string(), &*host)?;
+        let request = check_http(request.to_string(), &host)?;
 
         // https://github.com/rustls/rustls/blob/c9cfe3499681361372351a57a00ccd793837ae9c/examples/src/bin/simpleclient.rs
         static CLIENT_CONFIG: Lazy<Arc<rustls::ClientConfig>> = Lazy::new(|| {
@@ -937,11 +937,11 @@ impl SysBackend for NativeSys {
                     ta.name_constraints,
                 )
             }));
-            let config = rustls::ClientConfig::builder()
+            rustls::ClientConfig::builder()
                 .with_safe_defaults()
                 .with_root_certificates(store)
-                .with_no_client_auth();
-            return Arc::new(config);
+                .with_no_client_auth()
+                .into()
         });
 
         let mut socket = NATIVE_SYS
@@ -964,7 +964,7 @@ impl SysBackend for NativeSys {
             "Error converting HTTP Response to utf-8: ".to_string() + &e.to_string()
         })?;
 
-        return Ok(s);
+        Ok(s)
     }
 }
 
@@ -997,12 +997,11 @@ fn check_http(mut request: String, hostname: &str) -> Result<String, String> {
     }
 
     // If the first line doesn't have a version, add one
-    let first = lines.get(0).ok_or("Empty HTTP request")?;
+    let first = lines.first().ok_or("Empty HTTP request")?;
     let last_token = first
         .trim_end()
         .split_ascii_whitespace()
-        .rev()
-        .next()
+        .next_back()
         .ok_or("Empty first line")?;
     if !last_token.starts_with("HTTP/") {
         request = first.to_string()
@@ -1045,11 +1044,10 @@ fn check_http(mut request: String, hostname: &str) -> Result<String, String> {
     // add the host header
     // it's safe the unwrap here because if the http request is valid, it must
     // have a newline in it
-    if req
+    if !req
         .headers
         .iter()
-        .find(|h| h.name.eq_ignore_ascii_case("host"))
-        .is_none()
+        .any(|h| h.name.eq_ignore_ascii_case("host"))
     {
         let newline = request.find('\n').unwrap();
         request.insert_str(newline + 1, &format!("host: {hostname}\r\n"));

@@ -583,7 +583,7 @@ f(↥)"/>
         <p>"A signature declaration is "<em>"required"</em>" if the function's signature cannot be infered. The compiler can usually infer a function's signature unless you are doing something weird with higher-order functions or fiddling with function arrays, or if you are using "<Prim prim=Recur/>"sion."</p>
         <Editor example="∺(⊞^∶,)+_-⇡3"/> // Should fail
         <p>"Simply add a signature declaration to fix this."</p>
-        <Editor example="∺(|1 ⊞^∶,)+_-⇡3"/>
+        <Editor example="∺(|2 ⊞^∶,)+_-⇡3"/>
         <p>"In addition, an error is thrown if a function's signature can be inferred and the inferred signature does not match the declared signature. This can help validate that a function is correct."</p>
         <Editor example="≡(|2 ↻.) 1_2_3 ↯3_3⇡9"/> // Should fail
     }

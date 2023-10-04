@@ -49,6 +49,7 @@ parking_lot = "0.12.1"
 rand.default-features = false
 rand.features = ["small_rng"]
 rand.version = "0.8.5"
+rustls.default-features = false
 rustls.optional = true
 rustls.version = "0.21.7"
 serde.features = ["derive"]
@@ -74,10 +75,10 @@ audio = ["hodaun", "crossbeam-channel", "lockfree"]
 binary = ["ctrlc", "notify", "clap", "color-backtrace", "lsp"]
 debug = []
 default = ["binary", "terminal_image", "https"]
+https = ["httparse", "rustls", "webpki-roots"]
 lsp = ["tower-lsp", "tokio"]
 profile = ["crossbeam-channel", "serde", "serde_yaml", "indexmap"]
 terminal_image = ["viuer"]
-https = ["httparse", "rustls", "webpki-roots"]
 
 [[bin]]
 name = "uiua"

@@ -277,14 +277,13 @@ sys_op! {
     /// Requires the `Host` header to be set.
     /// Using port 443 is recommended for HTTPS.
     ///
-    /// ex: &httpsget "GET /" &tcpc "example.com:443"
+    /// ex: &httpsw "GET / " &tcpc "example.com:443"
     ///
     /// It is also possible to put in entire HTTP requests.
     ///
-    /// ex: socket ← &tcpc "example.com:443"
+    /// ex: &tcpc "example.com:443"
     ///   : &httpsw $ GET /api HTTP/1.0
-    ///   :         $ Host: example.com
-    ///   :         $ 
+    ///   :         $ Host: example.com\r\n
     ///   :         $ <BODY>
     /// 
     /// There are a few things the function tries to automatically fill in
@@ -292,7 +291,7 @@ sys_op! {
     /// 
     ///  - 2 trailing newlines (if there is no body)
     ///  - The HTTP version
-    ///  - The `Host` header is if not defined
+    ///  - The `Host` header (if not defined)
     (2, HttpsWrite, "&httpsw", "http - Make an HTTP request"),
 }
 

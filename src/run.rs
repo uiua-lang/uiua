@@ -478,10 +478,6 @@ code:
         match (instrs.as_mut_slice(), instr) {
             // Ignore noops
             (_, Instr::Prim(Noop, _)) => {}
-            // Cancel out inverses
-            ([.., Instr::Prim(a, _)], Instr::Prim(b, _)) if a.inverse() == Some(b) => {
-                instrs.pop();
-            }
             // Cosine
             ([.., Instr::Prim(Eta, _), Instr::Prim(Add, _)], Instr::Prim(Sin, span)) => {
                 instrs.pop();

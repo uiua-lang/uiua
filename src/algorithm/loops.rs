@@ -98,7 +98,14 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
 }
 
 fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
-    let args = f.signature().args;
+    let sig = f.signature();
+    if sig.outputs > 1 {
+        return Err(env.error(format!(
+            "Reduce's function must return 0 or 1 values, but {} returns {}",
+            f, sig.outputs
+        )));
+    }
+    let args = sig.args;
     match args {
         0 | 1 => {
             let rows = init.into_iter().chain(xs.into_rows());
@@ -225,6 +232,13 @@ fn fast_scan<T: ArrayValue>(mut arr: Array<T>, f: impl Fn(T, T) -> T) -> Array<T
 }
 
 fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
+    let sig = f.signature();
+    if sig.outputs != 1 {
+        return Err(env.error(format!(
+            "Scan's function must return 1 value, but {} returns {}",
+            f, sig.outputs
+        )));
+    }
     if xs.row_count() == 0 {
         env.push(xs.first_dim_zero());
         return Ok(());
@@ -775,6 +789,13 @@ fn fast_table_join_or_couple<T: ArrayValue>(a: Array<T>, b: Array<T>) -> Array<T
 }
 
 fn generic_table(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+    let sig = f.signature();
+    if sig.outputs != 1 {
+        return Err(env.error(format!(
+            "Table's function must return 1 value, but {} returns {}",
+            f, sig.outputs
+        )));
+    }
     let mut new_shape = Shape::from(xs.shape());
     new_shape.extend_from_slice(ys.shape());
     let mut items = Vec::with_capacity(xs.flat_len() * ys.flat_len());
@@ -802,6 +823,13 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
     let f = env.pop(FunctionArg(1))?;
     let xs = env.pop(ArrayArg(1))?;
     let ys = env.pop(ArrayArg(2))?;
+    let sig = f.signature();
+    if sig.outputs != 1 {
+        return Err(env.error(format!(
+            "Cross's function must return 1 value, but {} returns {}",
+            f, sig.outputs
+        )));
+    }
     let mut new_shape = tiny_vec![xs.row_count(), ys.row_count()];
     let mut items = Vec::with_capacity(xs.row_count() * ys.row_count());
     let y_rows = ys.into_rows().collect::<Vec<_>>();

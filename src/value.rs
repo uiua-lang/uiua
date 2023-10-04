@@ -287,6 +287,33 @@ impl Value {
     pub fn as_indices(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<isize>> {
         self.as_number_list(env, requirement, |f| f % 1.0 == 0.0, |f| f as isize)
     }
+    pub fn as_bool(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<bool> {
+        Ok(match self {
+            Value::Num(nums) => {
+                if nums.rank() > 0 {
+                    return Err(
+                        env.error(format!("{requirement}, but its rank is {}", nums.rank()))
+                    );
+                }
+                let num = nums.data[0];
+                if num.fract().abs() > f64::EPSILON {
+                    return Err(env.error(format!("{requirement}, but it has a fractional part")));
+                }
+                num != 0.0
+            }
+            Value::Byte(bytes) => {
+                if bytes.rank() > 0 {
+                    return Err(
+                        env.error(format!("{requirement}, but its rank is {}", bytes.rank()))
+                    );
+                }
+                bytes.data[0] != 0
+            }
+            value => {
+                return Err(env.error(format!("{requirement}, but it is {}", value.type_name())))
+            }
+        })
+    }
     pub fn as_nat(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<usize> {
         Ok(match self {
             Value::Num(nums) => {

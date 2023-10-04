@@ -1,6 +1,12 @@
 //! Functions for formatting Uiua code.
 
-use std::{collections::BTreeMap, env, fs, path::Path};
+use std::{
+    any::Any,
+    collections::BTreeMap,
+    env,
+    fs,
+    path::{Path, PathBuf},
+};
 
 use paste::paste;
 
@@ -10,8 +16,34 @@ use crate::{
     grid_fmt::GridFmt,
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
+    SysBackend,
+    value::Value,
+    Uiua,
     UiuaError, UiuaResult,
 };
+
+// For now disallow any syscalls in the format config file.
+struct FormatConfigBackend;
+
+impl SysBackend for FormatConfigBackend {
+    fn any(&self) -> &dyn Any { self }
+}
+
+trait ConfigValue: Sized {
+    fn from_value(value: &Value, env: &Uiua, requirement: &'static str) -> UiuaResult<Self>;
+}
+
+impl ConfigValue for bool {
+    fn from_value(value: &Value, env: &Uiua, requirement: &'static str) -> UiuaResult<bool> {
+        value.as_bool(env, requirement)
+    }
+}
+
+impl ConfigValue for usize {
+    fn from_value(value: &Value, env: &Uiua, requirement: &'static str) -> UiuaResult<usize> {
+        value.as_nat(env, requirement)
+    }
+}
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum CompactMultilineMode {
@@ -22,6 +54,34 @@ pub enum CompactMultilineMode {
     /// Multiline arrays and functions that start on or before `multiline_compact_threshold` will be compact, and those that start after will not be.
     #[default]
     Auto,
+}
+
+impl ConfigValue for CompactMultilineMode {
+    fn from_value(value: &Value, env: &Uiua, requirement: &'static str) -> UiuaResult<Self> {
+        let string = value.as_string(env, requirement)?;
+        match string.to_lowercase().as_str() {
+            "always" => Ok(Self::Always),
+            "never" => Ok(Self::Never),
+            "auto" => Ok(Self::Auto),
+            _ => Err(env.error(format!("{requirement}, but it is \"{string}\""))),
+        }
+    }
+}
+
+macro_rules! requirement {
+    ($name:ident, bool) => {
+        concat!("Format config option '", stringify!($name), "' expects a boolean")
+    };
+    ($name:ident, usize) => {
+        concat!("Format config option '", stringify!($name), "' expects a natural number")
+    };
+    ($name:ident, CompactMultilineMode) => {
+        concat!(
+            "Format config option '",
+            stringify!($name),
+            r#"' expects one of "always", "never", or "auto""#
+        )
+    };
 }
 
 macro_rules! create_config {
@@ -38,6 +98,35 @@ macro_rules! create_config {
             $(
                 $name: Option<$ty>,
             )*
+        }
+
+        impl PartialFormatConfig {
+            paste! {
+                fn from_file(file_path: PathBuf) -> UiuaResult<Self> {
+                    let mut env = Uiua::with_backend(FormatConfigBackend)
+                        .print_diagnostics(true);
+                    env.load_file(file_path)?;
+                    let mut bindings = env.all_bindings_in_scope();
+
+                    $(
+                        let $name = {
+                            let requirement = requirement!([<$name:camel>], $ty);
+                            let function_name = stringify!([<$name:camel>]);
+                            if let Some(binding) = bindings.remove(function_name) {
+                                Some($ty::from_value(&binding, &env, requirement)?)
+                            } else {
+                                None
+                            }
+                        };
+                    )*
+
+                    return Ok(Self {
+                        $(
+                            $name,
+                        )*
+                    });
+                }
+            }
         }
 
         #[derive(Debug, Clone)]
@@ -96,6 +185,14 @@ create_config!(
     /// The number of characters on line preceding a multiline array or function, at or before which the multiline will be compact.
     (multiline_compact_threshold, usize, 10),
 );
+
+impl FormatConfig {
+    pub fn from_file(path: PathBuf) -> UiuaResult<Self> {
+        println!("Loading format config from {}", path.display());
+        let partial = PartialFormatConfig::from_file(path);
+        partial.map(Into::into)
+    }
+}
 
 pub struct FormatOutput {
     pub output: String,

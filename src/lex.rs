@@ -460,7 +460,7 @@ impl Lexer {
                 break;
             };
             match c {
-                '❥' | '⇉' => self.end(Primitive::Share, start), // For a small amount of backwards compatibility
+                '❥' | '⇉' => self.end(Primitive::Fork, start), // For a small amount of backwards compatibility
                 '(' => self.end(OpenParen, start),
                 ')' => self.end(CloseParen, start),
                 '{' => self.end(OpenCurly, start),

@@ -986,52 +986,14 @@ primitive!(
     ///
     /// [both]'s glyph is `∷` because, for a function `f`, it is equivalent to `f∶f∶`.
     (2[1], Both, Stack, ("both", '∷')),
-    /// Call 2 functions on 2 values
-    ///
-    /// Deprecated in favor of [share].
-    ///
-    /// Each function may take 0, 1, or 2 arguments.
-    /// With 0 or 1 arguments, the first function will be passed the first value.
-    /// With 0 or 1 arguments, the second function will be passed the second value.
-    /// With 2 arguments, either function will be passed both values.
-    ///
-    /// We can see how this works with [join].
-    /// ex: [⊃·· 1 2]
-    /// ex: [⊃⊂⊂ 1 2]
-    ///
-    /// ex: ⊟⊃×+ 3 5
-    (2[2], Fork, Stack, "fork"),
-    /// Call 3 functions on 3 values
-    ///
-    /// Deprecated in favor of [share].
-    ///
-    /// [trident] is a very powerfull function when juggling 3 values.
-    /// Each function may take up to 3 arguments.
-    /// Let's say the the three functions are `f`, `g`, and `h`, and the three values are `a`, `b`, and `c`.
-    /// Any of the functions taking 1 argument will be called as `f a`, `g b`, or `h c` respectively.
-    /// Any of the functions taking 2 arguments will be called as `f a b`, `g a c`, or `h b c` respectively.
-    /// Any of the functions taking 3 argyments will be called on `a b c`.
-    ///
-    /// We can see how this all works with [join].
-    /// ex: [∋··· 1 2 3]
-    /// ex: [∋⊂⊂⊂ 1 2 3]
-    /// ex: [∋'⊂⊂'⊂⊂'⊂⊂ 1 2 3]
-    ///
-    /// A good example use case is when implementing the quadratic formula.
-    /// ex: Quad ← ÷→+∋(×2)¯(⊟¯.√+ⁿ2→(××¯4)∶)
-    ///   : Quad 1 2 0
-    /// The first function passed to [trident] [multiply]s `a` by `2`.
-    /// The second function [negate]s `b`.
-    /// The third function calculates the discriminant.
-    (3[3], Trident, Stack, ("trident", '∋')),
     /// Call two functions on the same values
     ///
     /// ex: ⊃⇌⊝ 1_2_2_3
-    /// [share] can be chained to apply more functions to the arguments. `n` functions require the chaining of `subtract``1n` [share].
+    /// [fork] can be chained to apply more functions to the arguments. `n` functions require the chaining of `subtract``1n` [fork].
     /// ex: [⊃⊃⊃+-×÷ 5 8]
     /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maximum will work on the top values.
     /// ex: [⊃+¯ 3 5]
-    ([2], Share, Stack, ("share", '⊃')),
+    ([2], Fork, Stack, ("fork", '⊃')),
     /// Call two functions on two distinct sets of values
     ///
     /// ex: ⊓⇌⊝ 1_2_3 [1 4 2 4 2]

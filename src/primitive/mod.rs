@@ -170,9 +170,6 @@ impl Primitive {
             Primitive::Roll | Primitive::Unroll => {
                 Some(format!("try using dip{} instead", Primitive::Dip))
             }
-            Primitive::Fork | Primitive::Trident => {
-                Some(format!("try using share{} instead", Primitive::Share))
-            }
             Primitive::Restack => Some(String::new()),
             _ => None,
         }
@@ -487,8 +484,6 @@ impl Primitive {
             }
             Primitive::Both => fork::both(env)?,
             Primitive::Fork => fork::fork(env)?,
-            Primitive::Trident => fork::trident(env)?,
-            Primitive::Share => fork::share(env)?,
             Primitive::Bracket => fork::bracket(env)?,
             Primitive::If => fork::iff(env)?,
             Primitive::Try => {

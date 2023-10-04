@@ -231,33 +231,6 @@ impl<'a> VirtualEnv<'a> {
                 Fork => {
                     let f = self.pop()?;
                     let g = self.pop()?;
-                    self.pop()?;
-                    self.pop()?;
-                    self.set_min_height();
-                    let f_out = f.signature().outputs.max(1);
-                    let g_out = g.signature().outputs.max(1);
-                    for _ in 0..f_out + g_out {
-                        self.stack.push(BasicValue::Other);
-                    }
-                }
-                Trident => {
-                    let f = self.pop()?;
-                    let g = self.pop()?;
-                    let h = self.pop()?;
-                    self.pop()?;
-                    self.pop()?;
-                    self.pop()?;
-                    self.set_min_height();
-                    let f_out = f.signature().outputs.max(1);
-                    let g_out = g.signature().outputs.max(1);
-                    let h_out = h.signature().outputs.max(1);
-                    for _ in 0..f_out + g_out + h_out {
-                        self.stack.push(BasicValue::Other);
-                    }
-                }
-                Share => {
-                    let f = self.pop()?;
-                    let g = self.pop()?;
                     let args = f.signature().args.max(g.signature().args);
                     let outputs = f.signature().outputs + g.signature().outputs;
                     self.handle_args_outputs(args, outputs)?;

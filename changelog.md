@@ -6,14 +6,14 @@ Uiua is not yet stable.
 
 ## 2023-10-04
 - Add the [`bracket` `⊓`](https://uiua.org/docs/bracket) modifier, which calls two functions each on different arguments
-- Change [`share` `⊃`](https://uiua.org/docs/share)'s glyph one final time
+- Change `share` `⇉` name and glyph to [`fork` `⊃`](https://uiua.org/docs/fork)
 - Change [`noop` `·`](https://uiua.org/docs/noop)'s signature to be `|1.1`
 - [`Distribute` `∺`](https://uiua.org/docs/distribute) now works with any number of arguments
   - Only the first argument is distributed
 
 ## 2023-10-03
 ### Language
-- Add the [`share` `⊃`](https://uiua.org/docs/share) modifier, which unifies and deprecates [`fork` `⊃`](https://uiua.org/docs/fork) and [`trident` `∋`](https://uiua.org/docs/trident)
+- Add the [`share` `⊃`](https://uiua.org/docs/fork) modifier, which unifies and deprecates [`fork` `⊃`](https://uiua.org/docs/fork) and [`trident` `∋`](https://uiua.org/docs/trident)
 - [`bind` `'`] no longer calls its functions immediately. This should not change any reasonable existing code.
 - Change how [`partition` `⊜`](https://uiua.org/docs/partition) and [`group` `⊕`](https://uiua.org/docs/group) work with dyadic functions to be consistent with [`reduce` `/`](https://uiua.org/docs/reduce)
 - Deprecate [`restack` `⇵`](https://uiua.org/docs/restack). It was never a good idea.

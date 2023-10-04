@@ -629,6 +629,10 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
 }
 
 fn distribute2(f: Value, xs: Value, y: Value, env: &mut Uiua) -> UiuaResult {
+    if xs.row_count() == 0 {
+        env.push(xs);
+        return Ok(());
+    }
     let mut new_rows = Vec::with_capacity(xs.row_count());
     for x in xs.into_rows() {
         env.push(y.clone());
@@ -641,6 +645,10 @@ fn distribute2(f: Value, xs: Value, y: Value, env: &mut Uiua) -> UiuaResult {
 }
 
 fn distribute3(f: Value, xs: Value, y: Value, z: Value, env: &mut Uiua) -> UiuaResult {
+    if xs.row_count() == 0 {
+        env.push(xs);
+        return Ok(());
+    }
     let mut new_rows = Vec::with_capacity(xs.row_count());
     for x in xs.into_rows() {
         env.push(z.clone());
@@ -654,6 +662,10 @@ fn distribute3(f: Value, xs: Value, y: Value, z: Value, env: &mut Uiua) -> UiuaR
 }
 
 fn distribute_n(f: Value, xs: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+    if xs.row_count() == 0 {
+        env.push(xs);
+        return Ok(());
+    }
     let mut new_rows = Vec::with_capacity(xs.row_count());
     for x in xs.into_rows() {
         for arg in args.iter().rev() {

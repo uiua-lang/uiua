@@ -1000,18 +1000,18 @@ primitive!(
     ([2], Fork, Stack, ("fork", '⊃')),
     /// Temporarily pop the top value off the stack and call a function
     ///
-    /// ex: [→+ 1 2 3]
-    /// ex: [→→+ 1 2 3 4]
+    /// ex: [⊙+ 1 2 3]
+    /// ex: [⊙⊙+ 1 2 3 4]
     /// This is especially useful when used in a [fork].
     /// In a [fork] expression, you can use [dip], [gap], and [noop] to select out values.
     /// For example, if you wanted to add 3 values but keep the all 3 on top of the stack:
-    /// ex: [⊃→→·(++) 3 5 10]
+    /// ex: [⊃⊙⊙·(++) 3 5 10]
     /// By replacing a `dip` with a `gap`, you pop the argument in that spot instead of keeping it:
-    /// ex: [⊃→→·(++) 3 5 10]
-    /// ex: [⊃→∘·(++) 3 5 10]
-    /// ex: [⊃∘→·(++) 3 5 10]
-    /// ex: [⊃→·(++) 3 5 10]
-    ([1], Dip, Stack, ("dip", '→')),
+    /// ex: [⊃⊙⊙·(++) 3 5 10]
+    /// ex: [⊃⊙∘·(++) 3 5 10]
+    /// ex: [⊃∘⊙·(++) 3 5 10]
+    /// ex: [⊃⊙·(++) 3 5 10]
+    ([1], Dip, Stack, ("dip", '⊙')),
     /// Pop a value off the stack then call a function
     ///
     /// ex: ∘+ 1 2 3
@@ -1023,9 +1023,9 @@ primitive!(
     /// ex: [⊃∘·(++) 3 5 10]
     /// ex: [⊃·(++) 3 5 10]
     /// By replacing a `gap` with a `dip`, you keep the argument in that spot instead of popping it:
-    /// ex: [⊃→∘·(++) 3 5 10]
-    /// ex: [⊃∘→·(++) 3 5 10]
-    /// ex: [⊃→→·(++) 3 5 10]
+    /// ex: [⊃⊙∘·(++) 3 5 10]
+    /// ex: [⊃∘⊙·(++) 3 5 10]
+    /// ex: [⊃⊙⊙·(++) 3 5 10]
     ([1], Gap, Stack, ("gap", '∘')),
     /// Rearrange the stack
     ///

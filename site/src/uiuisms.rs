@@ -146,7 +146,7 @@ uiuisms!(
     /// Split an array into groups of contiguous equal elements
     "⊜□. [1 1 1 2 2 1 1 4]",
     /// Find the nth fibonacci number
-    ";⍥(+,∶)→.∶1 10",
+    ";⍥(+,∶)⊙.∶1 10",
     /// Remove all instances of an element from a list
     "▽≠, 4 [1 4 2 0 5 4 3]",
     /// Remove all instances of a row from an array
@@ -154,7 +154,7 @@ uiuisms!(
     /// Filter by a fixed predicate
     "▽ =0◿2 . ⇡10",
     /// Filter by a dynamic predicate
-    "▽!→. (=0◿2) ⇡10",
+    "▽!⊙. (=0◿2) ⇡10",
     /// Convert a string to uppercase
     r#"-×32×≥@a,≤@z. "These are Words""#,
     /// Convert a string to lowercase
@@ -164,19 +164,19 @@ uiuisms!(
     /// Trim leading whitespace
     r#"▽\↥≠@ . "   ← remove these""#,
     /// Trim trailing whitespace
-    r#"▽⍜⇌\↥≠@ . "remove these →   ""#,
+    r#"▽⍜⇌\↥≠@ . "remove these ⊙   ""#,
     /// Trim matching prefix
     r#"▽¬\×∊, "thing" "thing← remove this""#,
     /// Trim matching suffix
-    r#"▽¬⍜⇌\×∊, "thing" "remove this →thing""#,
+    r#"▽¬⍜⇌\×∊, "thing" "remove this ⊙thing""#,
     /// Trim whitespace
     r#"▽×⍜'⊟⇌≡\↥.≠@ . "  abc xyz   ""#,
     /// Upscale a 2d matrix
-    "⍉▽↯⧻,→'⍉▽∶↯∶,⧻,30 [0_1 1_0]",
+    "⍉▽↯⧻,⊙'⍉▽∶↯∶,⧻,30 [0_1 1_0]",
     /// Upscale a colored image
-    "⍜⍘⍉≡(⍉▽↯⧻,→'⍉▽∶↯∶,⧻,30) [[0_0_1 0_1_0] [1_0_0 0_0_0]]",
+    "⍜⍘⍉≡(⍉▽↯⧻,⊙'⍉▽∶↯∶,⧻,30) [[0_0_1 0_1_0] [1_0_0 0_0_0]]",
     /// Dot product
     "/+× [1 2 3] [4 ¯5 6]",
     /// Matrix product
-    "⊠(/+×)→⍉ [1_2 3_4 5_6] [7_8_9 10_11_12]"
+    "⊠(/+×)⊙⍉ [1_2 3_4 5_6] [7_8_9 10_11_12]"
 );

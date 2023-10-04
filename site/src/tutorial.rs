@@ -559,7 +559,7 @@ X 5"/>
         <p>"If you need to use a literal "<code>"_"</code>", you can escape them with "<code>"\\"</code>"."</p>
         <Editor example="$\"\\__\\_\" 27"/>
         <p>"Multi-line strings are implicitly format strings."</p>
-        <Editor example="→→+,, 1 2\n&p $ Do you know what _ + _ is?\n   $ It's _!"/>
+        <Editor example="⊙⊙+,, 1 2\n&p $ Do you know what _ + _ is?\n   $ It's _!"/>
 
         <h2 id="terminating-modifiers">"Terminating Modifiers"</h2>
         <p>"Sometimes you don't want parse the function(s) following a modifier as being part of the modifier."</p>
@@ -598,9 +598,9 @@ fn TutorialAdvancedStack() -> impl IntoView {
 
         <h2 id="dip"><Prim prim=Dip/></h2>
         <p>"The "<Prim prim=Dip/>" modifier temporarily pops the top value on the stack, calls its function, then pushes the value back."</p>
-        <Editor example="[→+ 1 2 3]"/>
+        <Editor example="[⊙+ 1 2 3]"/>
         <p><Prim prim=Dip/>" can be chained to dig deeper into the stack."</p>
-        <Editor example="[→→→→→→+ 1 2 3 4 5 6 7 8]"/>
+        <Editor example="[⊙⊙⊙⊙⊙⊙+ 1 2 3 4 5 6 7 8]"/>
 
         <h2 id="fork"><Prim prim=Fork/></h2>
         <p><Prim prim=Fork/>" is a dyadic modifier that takes 2 functions and calls them both on multiple arguments. The number of arguments used is the maximum of the two functions."</p>

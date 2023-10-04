@@ -31,7 +31,7 @@ Uiua is not yet stable.
 - Tell the user when the interpreter can be updated
 
 ## 2023-10-01
-- Add the [`dip` `→`](https://uiua.org/docs/dip) modifier, which temporarily pops a value
+- Add the [`dip` `⊙`](https://uiua.org/docs/dip) modifier, which temporarily pops a value
 - Deprecate `roll↷` and `unroll↶`
 - Add [`under` `⍜`](https://uiua.org/docs/under) [`keep` `▽`](https://uiua.org/docs/keep)
 - Add [`dump`](https://uiua.org/docs/dump) function, which prints the entire stack

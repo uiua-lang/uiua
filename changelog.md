@@ -14,6 +14,7 @@ Uiua is not yet stable.
 - Change [`noop` `∘`](https://uiua.org/docs/noop)'s signature to be `|1.1`
 - [`Distribute` `∺`](https://uiua.org/docs/distribute) now works with any number of arguments
   - Only the first argument is distributed
+- Add formatter configuration options. See the [readme](https://github.com/uiua-lang/uiua#formatter-configuration) for details.
 
 ## 2023-10-03
 ### Language

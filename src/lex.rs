@@ -568,7 +568,7 @@ impl Lexer {
                 }
                 // Identifiers and unformatted glyphs
                 c if is_custom_glyph(c) => self.end(Ident, start),
-                c if is_ident_char(c) => {
+                c if is_ident_char(c) || c == '&' => {
                     let mut ident = c.to_string();
                     // Collect characters
                     while let Some(c) = self.next_char_if(is_ident_char) {
@@ -732,7 +732,7 @@ fn parse_format_fragments(s: &str) -> Vec<String> {
 }
 
 pub fn is_ident_char(c: char) -> bool {
-    c.is_alphabetic() && !"ⁿₙηπτ".contains(c) || c == '&'
+    c.is_alphabetic() && !"ⁿₙηπτ".contains(c)
 }
 
 pub fn is_custom_glyph(c: char) -> bool {

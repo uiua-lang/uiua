@@ -149,7 +149,7 @@ pub fn RightToLeft() -> impl IntoView {
         <p>"Uiua is about composing arrays. The stack makes it possible to do this without naming local variables. This is the entire reason for its presence in the language. In particular, the stack can be used to construct arbitrary combinators and data flows. It is an extremely powerful mechanism for this purpose."</p>
         <p>"You should not think of Uiua syntax like a FORTH. You should think of it like a "<em>"Lisp"</em>". Sure, there are way fewer parentheses, but the structure is the same."</p>
         <p>"Consider this Uiua expression:"</p>
-        <Editor example="≡(!∘_⇌) ◿2⇡⧻. ↯∶⇡/×.4_4"/>
+        <Editor example="≡(?∘⇌) ◿2⇡⧻. ↯∶⇡/×.4_4"/>
         <p>"The left side of the expression is "<em>"not"</em>" the end or the beginning. It is the "<em>"root"</em>". The expression is a tree with branches that converge and diverge in different ways. It is not a list of instructions."</p>
         <p>"This allows us to separate the execution model from the mental model. With a separate mental model, why does it matter which direction the code executes?"</p>
         <p>"The answer has to do with how left-to-right "<em>"natural"</em>" languages work. In English and the like, the verb in a sentence comes before the object it acts on. In addition, we often think of things in a procedural rather than a declarative way. If you think about using the "<Prim prim=Reverse/>" function on an array, you think of it as \"reversing the array\", not \"the array reversed\". It follows then that, like verbs, functions should come before their arguments."</p>

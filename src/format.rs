@@ -523,7 +523,13 @@ impl<'a> Formatter<'a> {
         if lines.is_empty() {
             return;
         }
+        let last_word_comment = lines
+            .last()
+            .unwrap()
+            .last()
+            .is_some_and(|word| matches!(word.value, Word::Comment(_)));
         if lines.len() == 1
+            && !last_word_comment
             && (lines[0].len() == 1 || !lines[0].iter().any(|word| word_is_multiline(&word.value)))
         {
             self.format_words(&lines[0], true, depth);
@@ -536,6 +542,7 @@ impl<'a> Formatter<'a> {
             curr_line.chars().count()
         };
         let compact = allow_compact
+            && !last_word_comment
             && match self.config.compact_multiline_mode {
                 CompactMultilineMode::Always => true,
                 CompactMultilineMode::Never => false,

@@ -596,34 +596,56 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <h1>"Advanced Stack Manipulation"</h1>
         <p>"Uiua does not have local variables. With only "<Prim prim=Dup/>", "<Prim prim=Flip/>", and "<Prim prim=Over/>", how do you work with more than 2 values at a time?"</p>
 
-        <h2 id="dip"><Prim prim=Dip/></h2>
-        <p>"The "<Prim prim=Dip/>" modifier temporarily pops the top value on the stack, calls its function, then pushes the value back."</p>
-        <Editor example="[⊙+ 1 2 3]"/>
-        <p><Prim prim=Dip/>" can be chained to dig deeper into the stack."</p>
-        <Editor example="[⊙⊙⊙⊙⊙⊙+ 1 2 3 4 5 6 7 8]"/>
-
         <h2 id="fork"><Prim prim=Fork/></h2>
-        <p><Prim prim=Fork/>" is a dyadic modifier that takes 2 functions and calls them both on multiple arguments. The number of arguments used is the maximum of the two functions."</p>
+        <p><Prim prim=Fork/>" is a dyadic modifier that takes 2 functions and calls them both on the same set of arguments. The number of arguments used is the maximum of the two functions."</p>
         <Editor example="[⊃+× 3 5]"/>
         <p>"If one of the functions take more arguments than the other, the function with fewer arguments uses the top-most values."</p>
         <Editor example="⊃×⇌ [1 2 3] 10"/>
         <p>"What's powerful about "<Prim prim=Fork/>" is that it can be chained to use as many functions as you want."</p>
         <Editor example="[⊃⊃⊃+-×÷ 5 8]"/>
         <p>"In addition, unlike "<Prim prim=Distribute/><Prim prim=Call/>", which can also be used to apply several functions to the same arguments, "<Prim prim=Fork/>" does not require that its values be in an array together."</p>
-        <Editor example="⊃+-1@b"/>
+        <Editor example="⊃+- 1 @b"/>
         <Editor example="⊃⊃⊃↻↙↘⊡ 2 [1 2 3 4 5]"/>
+        <p>"We'll see just how important "<Prim prim=Fork/>" is later is this section."</p>
 
         <h2 id="both"><Prim prim=Both/></h2>
-        <p><Prim prim=Both/>" is monadic modifier and a sort of compliment to "<Prim prim=Fork/>". While "<Prim prim=Fork/>" calls multiple functions on the same set of arguments, "<Prim prim=Both/>" calls a single function on multiple sets of arguments."</p>
+        <p><Prim prim=Both/>" is monadic modifier and a sort of compliment to "<Prim prim=Fork/>". While "<Prim prim=Fork/>" calls multiple functions on the same set of arguments, "<Prim prim=Both/>" calls a "<em>"single"</em>" function on "<em>"multiple"</em>" sets of arguments."</p>
         <Editor example="∩⇌ [1 2 3] [4 5 6]"/>
         <p>"Chaining "<Prim prim=Both/>" doubles the number of arguments each time."</p>
         <Editor example="∩∩⇌ [1 2 3] [4 5 6] [7 8 9] [10 11 12]"/>
 
         <h2 id="bracket"><Prim prim=Bracket/></h2>
-        <p>"To round it all off, we have "<Prim prim=Bracket/>", which is a dyadic modifier that calls each of its functions on a different set of arguments."</p>
+        <p>"To round off the trio, we have "<Prim prim=Bracket/>", which is a dyadic modifier that calls each of its functions on a different set of arguments."</p>
         <Editor example="[⊓+× 1 2 3 4]"/>
         <p><Prim prim=Bracket/>" too can be chained. Each additional function is called on arguments deeper in the stack."</p>
         <Editor example="[⊓⊓⊓+¯×. 1 2 3 4 5 6]"/>
+
+        <h2 id="dip-and-gap"><Prim prim=Dip/>" and "<Prim prim=Gap/></h2>
+        <p>"The "<Prim prim=Dip/>" modifier temporarily pops the top value on the stack, calls its function, then pushes the value back."</p>
+        <Editor example="[⊙+ 1 2 3]"/>
+        <p><Prim prim=Dip/>" can be chained to dig deeper into the stack."</p>
+        <Editor example="[⊙⊙⊙⊙⊙⊙+ 1 2 3 4 5 6 7 8]"/>
+        <p><Prim prim=Gap/>" "<em>"discards"</em>" the top value on the stack and calls its function."</p>
+        <p>"But wait, "<Prim prim=Pop/>" exists! Why would you need this?"</p>
+        <p>"The main reason for "<Prim prim=Dip/>" and "<Prim prim=Gap/>" to exist is to be chained with "<Prim prim=Noop/>" inside of "<Prim prim=Fork/>". They act as a sort of boolean selector to choose which arguments to keep and which to discard in a branch."</p>
+        <p>"For example, let's say you want to add 3 numbers but keep the second 2 on the stack:"</p>
+        <Editor example="[⊃⋅⊙∘(++)] 2 5 10"/>
+        <p>"You can read "<Prim prim=Gap glyph_only=true/><Prim prim=Dip glyph_only=true/><Prim prim=Noop glyph_only=true/>" as \"discard argument 1, keep argument 2, keep argument 3.\""</p>
+        <p>"If you only wanted to keep argument 2, you simply make the expression shorter:"</p>
+        <Editor example="[⊃⋅∘(++)] 2 5 10"/>
+        <p>"For a more useful example, let's do a complex mathematical expression. We will implement this function (shown here in mathematical notation):"</p>
+        <code class="code-block">"f(a,b,c,x) = (a+x)(bx-c)"</code>
+        <p>"We'll start with the "<code>"(a + x)"</code>" part. We can grab "<code>"a"</code>" and "<code>"x"</code>" with "<Prim prim=Dip/>" and "<Prim prim=Noop/>", and ignore "<code>"b"</code>" and "<code>"c"</code>" with "<Prim prim=Gap/>"."</p>
+        <Editor example="+⊙⋅⋅∘ 1 2 3 4"/>
+        <p>"Notice how the circles correspond to the stack arguments we want."</p>
+        <p>"Next, we'll do the "<code>"(bx-c)"</code>" part. We can grab each term with "<Prim prim=Fork/>"."</p>
+        <Editor example="-⊃(⋅⋅∘)(×⋅⊙⋅∘) 1 2 3 4"/>
+        <p>"The first pair of "<code>"()"</code>"s is not actually necessary, so let's remove them."</p>
+        <Editor example="-⊃⋅⋅∘(×⋅⊙⋅∘) 1 2 3 4"/>
+        <p>"Finally, we can combine the two parts with another "<Prim prim=Fork/>"."</p>
+        <Editor example="×⊃(+⊙⋅⋅∘)(-⊃⋅⋅∘(×⋅⊙⋅∘)) 1 2 3 4"/>
+        <p>"If you like, you can factor out the "<Prim prim=Gap/>" in the second part."</p>
+        <Editor example="×⊃(+⊙⋅⋅∘)⋅(-⊃⋅∘(×⊙⋅∘)) 1 2 3 4"/>
     }
 }
 

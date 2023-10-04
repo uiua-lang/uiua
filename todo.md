@@ -1,4 +1,5 @@
 - Fix formatting comments at the end of a line in multiline expressions
+- Negative reshape
 - Make https requests work on web?
 - Add channels for spawned threads
 - Optimize dip and gap by inlining

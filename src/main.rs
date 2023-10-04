@@ -553,7 +553,8 @@ fn show_update_message() {
                 "{}\n",
                 format!(
                     "Update available: {local_version} → {remote_version}\n\
-                    Run `cargo install uiua {flags}` to update",
+                    Run `cargo install uiua {flags}` to update\n\
+                    Changelog: https://github.com/uiua-lang/uiua/blob/main/changelog.md",
                 )
                 .bright_white()
                 .bold()

@@ -6,7 +6,9 @@ Uiua is not yet stable.
 
 ## 2023-10-04
 - Add the [`bracket` `⊓`](https://uiua.org/docs/bracket) modifier, which calls two functions each on different arguments
-- Change `share` `⇉` name and glyph to [`fork` `⊃`](https://uiua.org/docs/fork)
+- Change `share` `⇉` name and glyph to [`fork` `⊃`](https://uiua.org/docs/fork). Code using `⇉` with continue to work and will be formatted as `⊃`.
+- Change [`both` `∩`](https://uiua.org/docs/both)'s glyph to reflect its relationship with [`fork` `⊃`](https://uiua.org/docs/fork). Code using `∷` with continue to work and will be formatted as `∩`.
+- Add the [`gap` `∘`](https://uiua.org/docs/gap) modifier, which discards a value then calls its function. It is mainly intended to be used with [`fork` `⊃`](https://uiua.org/docs/fork).
 - Change [`noop` `·`](https://uiua.org/docs/noop)'s signature to be `|1.1`
 - [`Distribute` `∺`](https://uiua.org/docs/distribute) now works with any number of arguments
   - Only the first argument is distributed
@@ -23,7 +25,7 @@ Uiua is not yet stable.
 
 ## 2023-10-02
 ### Language
-- [`both` `∷`](https://uiua.org/docs/both) can now be used with a function that takes any number of arguments.
+- [`both` `∩`](https://uiua.org/docs/both) can now be used with a function that takes any number of arguments.
 - Various bug and crash fixes
 ### Interpreter
 - Tell the user when the interpreter can be updated
@@ -71,9 +73,9 @@ Uiua is not yet stable.
 - Add [`trace` `~`](https://uiua.org/docs/trace) function
   - Debug-prints the value on top of the stack without popping it
   - Shows the line and column number too
-- Add [`both` `∷`](https://uiua.org/docs/both) modifier
+- Add [`both` `∩`](https://uiua.org/docs/both) modifier
   - This can change code like `/(|2 ⊂!∶!∶) {"a" "bc" "def"}`
-  - To just `/'⊂∷! {"a" "bc" "def"}`
+  - To just `/'⊂∩! {"a" "bc" "def"}`
 - Turn the term pair syntactic construct into a modifier called [`bind` `'`](https://uiua.org/docs/bind)
 - Fix some correctness bugs related to `under` and `invert`
 - Fix a crash when trying to reverse an empty array

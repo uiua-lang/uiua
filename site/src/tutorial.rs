@@ -615,9 +615,9 @@ fn TutorialAdvancedStack() -> impl IntoView {
 
         <h2 id="both"><Prim prim=Both/></h2>
         <p><Prim prim=Both/>" is monadic modifier and a sort of compliment to "<Prim prim=Fork/>". While "<Prim prim=Fork/>" calls multiple functions on the same set of arguments, "<Prim prim=Both/>" calls a single function on multiple sets of arguments."</p>
-        <Editor example="∷⇌ [1 2 3] [4 5 6]"/>
+        <Editor example="∩⇌ [1 2 3] [4 5 6]"/>
         <p>"Chaining "<Prim prim=Both/>" doubles the number of arguments each time."</p>
-        <Editor example="∷∷⇌ [1 2 3] [4 5 6] [7 8 9] [10 11 12]"/>
+        <Editor example="∩∩⇌ [1 2 3] [4 5 6] [7 8 9] [10 11 12]"/>
 
         <h2 id="bracket"><Prim prim=Bracket/></h2>
         <p>"To round it all off, we have "<Prim prim=Bracket/>", which is a dyadic modifier that calls each of its functions on a different set of arguments."</p>

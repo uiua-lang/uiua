@@ -964,6 +964,40 @@ primitive!(
     ///
     /// [partition] is closely related to [group].
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
+    /// Call a function on two sets of values
+    ///
+    /// For monadic functions, [both] calls it's function on each of the top 2 values on the stack.
+    /// ex: ∩⇡ 3 5
+    ///
+    /// One good use of this is when working with [constant] data.
+    /// You can use [both][call] to get 2 [constant] values out.
+    /// ex: /(⊂∩!) {"a" "bc" "def"}
+    ///
+    /// For a function that takes `n` arguments, [both] calls the function on the 2 sets of `n` values on top of the stack.
+    /// ex: [∩+ 1 2 3 4]
+    /// ex: [∩(++) 1 2 3 4 5 6]
+    ///
+    /// [both]'s glyph is `∩` because, for a function `f`, it is equivalent to `f∶f∶`.
+    (2[1], Both, Stack, ("both", '∩')),
+    /// Call two functions on two distinct sets of values
+    ///
+    /// ex: ⊓⇌⊝ 1_2_3 [1 4 2 4 2]
+    /// Each function will always be called on its own set of values.
+    /// ex: ⊓+× 1 2 3 4
+    /// The functions' signatures need not be the same.
+    /// ex: ⊓+(++) 1 2 3 4 5
+    /// [bracket] can be chained to apply additional functions to arguments deeper on the stack.
+    /// ex: ⊓⊓⇌(↻1)△ 1_2_3 4_5_6 7_8_9
+    /// ex: [⊓⊓⊓+-×÷ 10 20 5 8 3 7 2 5]
+    ([2], Bracket, Stack, ("bracket", '⊓')),
+    /// Call two functions on the same values
+    ///
+    /// ex: ⊃⇌⊝ 1_2_2_3
+    /// [fork] can be chained to apply more functions to the arguments. `n` functions require the chaining of `subtract``1n` [fork].
+    /// ex: [⊃⊃⊃+-×÷ 5 8]
+    /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maximum will work on the top values.
+    /// ex: [⊃+¯ 3 5]
+    ([2], Fork, Stack, ("fork", '⊃')),
     /// Temporarily pop the top value off the stack and call a function
     ///
     /// ex: [→+ 1 2 3]
@@ -993,40 +1027,6 @@ primitive!(
     /// ex: [⊃∘→·(++) 3 5 10]
     /// ex: [⊃→→·(++) 3 5 10]
     ([1], Gap, Stack, ("gap", '∘')),
-    /// Call a function on 2 sets of values
-    ///
-    /// For monadic functions, [both] calls it's function on each of the top 2 values on the stack.
-    /// ex: ∷⇡ 3 5
-    ///
-    /// One good use of this is when working with [constant] data.
-    /// You can use [both][call] to get 2 [constant] values out.
-    /// ex: /(⊂∷!) {"a" "bc" "def"}
-    ///
-    /// For a function that takes `n` arguments, [both] calls the function on the 2 sets of `n` values on top of the stack.
-    /// ex: [∷+ 1 2 3 4]
-    /// ex: [∷(++) 1 2 3 4 5 6]
-    ///
-    /// [both]'s glyph is `∷` because, for a function `f`, it is equivalent to `f∶f∶`.
-    (2[1], Both, Stack, ("both", '∷')),
-    /// Call two functions on the same values
-    ///
-    /// ex: ⊃⇌⊝ 1_2_2_3
-    /// [fork] can be chained to apply more functions to the arguments. `n` functions require the chaining of `subtract``1n` [fork].
-    /// ex: [⊃⊃⊃+-×÷ 5 8]
-    /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maximum will work on the top values.
-    /// ex: [⊃+¯ 3 5]
-    ([2], Fork, Stack, ("fork", '⊃')),
-    /// Call two functions on two distinct sets of values
-    ///
-    /// ex: ⊓⇌⊝ 1_2_3 [1 4 2 4 2]
-    /// Each function will always be called on its own set of values.
-    /// ex: ⊓+× 1 2 3 4
-    /// The functions' signatures need not be the same.
-    /// ex: ⊓+(++) 1 2 3 4 5
-    /// [bracket] can be chained to apply additional functions to arguments deeper on the stack.
-    /// ex: ⊓⊓⇌(↻1)△ 1_2_3 4_5_6 7_8_9
-    /// ex: [⊓⊓⊓+-×÷ 10 20 5 8 3 7 2 5]
-    ([2], Bracket, Stack, ("bracket", '⊓')),
     /// Rearrange the stack
     ///
     /// Deprecated because it was never a good idea.

@@ -1,7 +1,7 @@
 - Document formatter
 - Make https requests work on web?
 - Add channels for spawned threads
-- Optimize dip by inlining?
+- Optimize dip and gap by inlining
 - Make dyadic array functions not methods
 - See what can be done about compile times
 - Rust API

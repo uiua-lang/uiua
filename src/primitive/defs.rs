@@ -170,15 +170,15 @@ primitive!(
     /// Do nothing
     ///
     /// While this may seem useless, one way to use it is to pass it to [reduce], which will put all of an array's values on the stack.
-    /// ex: /· [1 2 3]
+    /// ex: /∘ [1 2 3]
     ///
     /// The formatter converts an empty `()` function into `noop` if it is in a strand or a modifier.
     /// ex: /() [1 2] # Try running to format
     ///   : ()_(+1)
     ///
     /// While [noop]'s signature is `|1.1`, it will not throw an error if the stack is empty.
-    /// ex: ·
-    (1, Noop, Stack, ("noop", '·')),
+    /// ex: ∘
+    (1, Noop, Stack, ("noop", '∘')),
     /// Move the top value on the stack 2 places down
     ///
     /// Deprecated in favor of [dip].
@@ -924,11 +924,11 @@ primitive!(
     /// Keys `less than``0` will be omitted.
     /// The function then processes each group in order. The result depends on what the function is.
     /// If the function takes 0 or 1 arguments, then [group] behaves like [each].
-    /// ex: ⊕· [0 2 2 1 0 1] [1 2 3 4 5 6]
+    /// ex: ⊕∘ [0 2 2 1 0 1] [1 2 3 4 5 6]
     /// If the function takes 2 arguments, then [group] behaves like [reduce].
     /// ex: ⊕⊂ [0 2 2 1 0 1] [1 2 3 4 5 6]
     /// If the values returned by the function do not have the same [shape], concatenation will fail.
-    /// ex! ⊕· [0 1 0 2 1 1] [1 2 3 4 5 6]
+    /// ex! ⊕∘ [0 1 0 2 1 1] [1 2 3 4 5 6]
     /// It is common to use [constant] to encapsulate groups of different [shape]s.
     /// ex: ⊕□ [0 1 0 2 1 1] [1 2 3 4 5 6]
     ///
@@ -950,11 +950,11 @@ primitive!(
     /// Keys `less or equal``0` will be omitted.
     /// The function then processes each group in order. The result depends on what the function is.
     /// If the function takes 0 or 1 arguments, then [partition] behaves like [each].
-    /// ex: ⊜· [0 0 2 2 1 1 3 3] [1 2 3 4 5 6 7 8]
+    /// ex: ⊜∘ [0 0 2 2 1 1 3 3] [1 2 3 4 5 6 7 8]
     /// If the function takes 2 arguments, then [partition] behaves like [reduce].
     /// ex: ⊜⊂ [0 0 2 2 1 1 3 3] [1 2 3 4 5 6 7 8]
     /// If the values returned by the function do not have the same [shape], concatenation will fail.
-    /// ex! ⊜· [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
+    /// ex! ⊜∘ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     /// It is common to use [constant] to encapsulate groups of different [shape]s.
     /// ex: ⊜□ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     ///
@@ -1007,28 +1007,28 @@ primitive!(
     /// This is especially useful when used in a [fork].
     /// In a [fork] expression, you can use [dip], [gap], and [noop] to select out values.
     /// For example, if you wanted to add 3 values but keep the all 3 on top of the stack:
-    /// ex: [⊃⊙⊙·(++) 3 5 10]
+    /// ex: [⊃⊙⊙∘(++) 3 5 10]
     /// By replacing a `dip` with a `gap`, you pop the argument in that spot instead of keeping it:
-    /// ex: [⊃⊙⊙·(++) 3 5 10]
-    /// ex: [⊃⊙∘·(++) 3 5 10]
-    /// ex: [⊃∘⊙·(++) 3 5 10]
-    /// ex: [⊃⊙·(++) 3 5 10]
+    /// ex: [⊃⊙⊙∘(++) 3 5 10]
+    /// ex: [⊃⊙⋅∘(++) 3 5 10]
+    /// ex: [⊃⋅⊙∘(++) 3 5 10]
+    /// ex: [⊃⊙∘(++) 3 5 10]
     ([1], Dip, Stack, ("dip", '⊙')),
     /// Discard the top stack value then call a function
     ///
-    /// ex: ∘+ 1 2 3
+    /// ex: ⋅+ 1 2 3
     /// This may seem useless when [pop] exists, but [gap] really shines when used with [fork].
     /// In a [fork] expression, you can use [dip], [gap], and [noop] to select out values.
     /// For example, if you wanted to add 3 values but keep the last value on top of the stack:
-    /// ex: [⊃∘∘·(++) 3 5 10]
+    /// ex: [⊃⋅⋅∘(++) 3 5 10]
     /// By using fewer `gap`s, you can select a different value
-    /// ex: [⊃∘·(++) 3 5 10]
-    /// ex: [⊃·(++) 3 5 10]
+    /// ex: [⊃⋅∘(++) 3 5 10]
+    /// ex: [⊃∘(++) 3 5 10]
     /// By replacing a `gap` with a `dip`, you keep the argument in that spot instead of popping it:
-    /// ex: [⊃⊙∘·(++) 3 5 10]
-    /// ex: [⊃∘⊙·(++) 3 5 10]
-    /// ex: [⊃⊙⊙·(++) 3 5 10]
-    ([1], Gap, Stack, ("gap", '∘')),
+    /// ex: [⊃⊙⋅∘(++) 3 5 10]
+    /// ex: [⊃⋅⊙∘(++) 3 5 10]
+    /// ex: [⊃⊙⊙∘(++) 3 5 10]
+    ([1], Gap, Stack, ("gap", '⋅')),
     /// Rearrange the stack
     ///
     /// Deprecated because it was never a good idea.
@@ -1146,7 +1146,7 @@ primitive!(
     /// Many functions, like [scan] and [partition], implicitly build arrays and require compatible shapes.
     /// [fill] can be used with them as well. In some cases, this prevents the need to use [constant].
     /// ex: ⍛0\⊂ 1_2_3_4_5
-    /// ex: ⍛@ ⊜·≠@ . "No □ needed!"
+    /// ex: ⍛@ ⊜∘≠@ . "No □ needed!"
     ///
     /// [fill] will prevent [pick] and [select] from throwing an error if an index is out of bounds.
     /// ex: ⍛∞⊏ 3_7_0 [8 3 9 2 0]
@@ -1210,13 +1210,13 @@ primitive!(
     /// If the condition is `1`, then the first function is called, otherwise the second function is called.
     /// ex: ?+- 1 3 5
     /// ex: ?+- 0 3 5
-    /// ex: Abs ← ?¯· <0.
+    /// ex: Abs ← ?¯∘ <0.
     ///   : Abs 2
     ///   : Abs ¯5
     ///
     /// The two functions having different signatures is not an error, but it may require a signature to be specified.
-    /// ex: ?·+ 0 2 3
-    /// ex! (?·+ 0 2 3)
+    /// ex: ?∘+ 0 2 3
+    /// ex! (?∘+ 0 2 3)
     ([2], If, Control, ("if", '?')),
     /// Call a function and catch errors
     ///
@@ -1323,7 +1323,7 @@ primitive!(
     ///
     /// Here is a recursive fibonacci function.
     /// It uses [if] to decide whether to recur.
-    /// ex: !(?·(|1 +↬2-1∶↬2-2.) <2.) 10
+    /// ex: !(?∘(|1 +↬2-1∶↬2-2.) <2.) 10
     (1(None), Recur, Control, ("recur", '↬')),
     /// Parse a string as a number
     ///

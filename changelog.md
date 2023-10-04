@@ -7,10 +7,11 @@ Uiua is not yet stable.
 ## 2023-10-04
 - Add the [`bracket` `⊓`](https://uiua.org/docs/bracket) modifier, which calls two functions each on different arguments
 - Change `share` `⇉` name and glyph to [`fork` `⊃`](https://uiua.org/docs/fork). Code using `⇉` with continue to work and will be formatted as `⊃`.
-- Add the [`gap` `∘`](https://uiua.org/docs/gap) modifier, which discards a value then calls its function. It is mainly intended to be used with [`fork` `⊃`](https://uiua.org/docs/fork).
-- Change [`dip` `⊙`](https://uiua.org/docs/dip)'s glyph to reflect its relationship with [`gap` `∘`](https://uiua.org/docs/gap) and [`noop` `·`](https://uiua.org/docs/noop). Code using `→` with continue to work and will be formatted as `⊙`.
+- Change [`noop` `∘`](https://uiua.org/docs/noop)'s glyph to reflect its relationship with [`gap` `⋅`](https://uiua.org/docs/gap) and [`dip` `⊙`](https://uiua.org/docs/dip). Code using `·` with continue to work and will be formatted as `∘`.
+- Add the [`gap` `⋅`](https://uiua.org/docs/gap) modifier, which discards a value then calls its function. It is mainly intended to be used with [`fork` `⊃`](https://uiua.org/docs/fork).
+- Change [`dip` `⊙`](https://uiua.org/docs/dip)'s glyph to reflect its relationship with [`gap` `⋅`](https://uiua.org/docs/gap) and [`noop` `∘`](https://uiua.org/docs/noop). Code using `→` with continue to work and will be formatted as `⊙`.
 - Change [`both` `∩`](https://uiua.org/docs/both)'s glyph to reflect its relationship with [`fork` `⊃`](https://uiua.org/docs/fork). Code using `∷` with continue to work and will be formatted as `∩`.
-- Change [`noop` `·`](https://uiua.org/docs/noop)'s signature to be `|1.1`
+- Change [`noop` `∘`](https://uiua.org/docs/noop)'s signature to be `|1.1`
 - [`Distribute` `∺`](https://uiua.org/docs/distribute) now works with any number of arguments
   - Only the first argument is distributed
 

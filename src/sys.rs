@@ -277,11 +277,23 @@ sys_op! {
     /// Requires the `Host` header to be set.
     /// Using port 443 is recommended for HTTPS.
     ///
-    /// ex: &tcpc "example.com:443"
-    ///   : &httpsget $ GET / HTTP/1.0
-    ///   :           $ Host: example.com
-    ///   :           $ \r\n
-    (2, HttpsGet, "&httpsget", "http - Make an HTTP request"),
+    /// ex: &httpsget "GET /" &tcpc "example.com:443"
+    ///
+    /// It is also possible to put in entire HTTP requests.
+    ///
+    /// ex: socket ← &tcpc "example.com:443"
+    ///   : &httpsw $ GET /api HTTP/1.0
+    ///   :         $ Host: example.com
+    ///   :         $ 
+    ///   :         $ <BODY>
+    /// 
+    /// There are a few things the function tries to automatically fill in
+    /// if it finds they are missing from the request:
+    /// 
+    ///  - 2 trailing newlines (if there is no body)
+    ///  - The HTTP version
+    ///  - The `Host` header is if not defined
+    (2, HttpsWrite, "&httpsw", "http - Make an HTTP request"),
 }
 
 /// A handle to an IO stream
@@ -1532,7 +1544,7 @@ impl SysOp {
                     .tcp_set_write_timeout(handle, timeout)
                     .map_err(|e| env.error(e))?;
             }
-            SysOp::HttpsGet => {
+            SysOp::HttpsWrite => {
                 let http = env
                     .pop(1)?
                     .as_string(env, "HTTP request must be a string")?;

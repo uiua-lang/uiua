@@ -3142,6 +3142,7 @@ dependencies = [
  "notify",
  "once_cell",
  "parking_lot",
+ "paste",
  "rand",
  "serde",
  "serde_yaml",

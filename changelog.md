@@ -5,7 +5,7 @@ Uiua is not yet stable.
 # Pre-Version
 
 ## 2023-10-04
-- Add the [`allot` `⊐`](https://uiua.org/docs/allot) modifier, which calls two functions each on different arguments
+- Add the [`bracket` `⊓`](https://uiua.org/docs/bracket) modifier, which calls two functions each on different arguments
 - Change [`share` `⊃`](https://uiua.org/docs/share)'s glyph one final time
 - Change [`noop` `·`](https://uiua.org/docs/noop)'s signature to be `|1.1`
 - [`Distribute` `∺`](https://uiua.org/docs/distribute) now works with any number of arguments

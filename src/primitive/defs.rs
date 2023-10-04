@@ -1034,15 +1034,15 @@ primitive!(
     ([2], Share, Stack, ("share", '⊃')),
     /// Call two functions on two distinct sets of values
     ///
-    /// ex: ⊐⇌⊝ 1_2_3 [1 4 2 4 2]
+    /// ex: ⊓⇌⊝ 1_2_3 [1 4 2 4 2]
     /// Each function will always be called on its own set of values.
-    /// ex: ⊐+× 1 2 3 4
+    /// ex: ⊓+× 1 2 3 4
     /// The functions' signatures need not be the same.
-    /// ex: ⊐+(++) 1 2 3 4 5
-    /// [allot] can be chained to apply additional functions to arguments deeper on the stack.
-    /// ex: ⊐⊐⇌(↻1)△ 1_2_3 4_5_6 7_8_9
-    /// ex: [⊐⊐⊐+-×÷ 10 20 5 8 3 7 2 5]
-    ([2], Allot, Stack, ("allot", '⊐')),
+    /// ex: ⊓+(++) 1 2 3 4 5
+    /// [bracket] can be chained to apply additional functions to arguments deeper on the stack.
+    /// ex: ⊓⊓⇌(↻1)△ 1_2_3 4_5_6 7_8_9
+    /// ex: [⊓⊓⊓+-×÷ 10 20 5 8 3 7 2 5]
+    ([2], Bracket, Stack, ("bracket", '⊓')),
     /// Rearrange the stack
     ///
     /// Deprecated because it was never a good idea.

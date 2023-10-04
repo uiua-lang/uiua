@@ -262,7 +262,7 @@ impl<'a> VirtualEnv<'a> {
                     let outputs = f.signature().outputs + g.signature().outputs;
                     self.handle_args_outputs(args, outputs)?;
                 }
-                Allot => {
+                Bracket => {
                     let f = self.pop()?;
                     let g = self.pop()?;
                     let args = f.signature().args + g.signature().args;

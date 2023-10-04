@@ -240,7 +240,7 @@ pub fn share(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub fn allot(env: &mut Uiua) -> UiuaResult {
+pub fn bracket(env: &mut Uiua) -> UiuaResult {
     let f = env.pop(FunctionArg(1))?;
     let g = env.pop(FunctionArg(2))?;
     let f_sig = f.signature();

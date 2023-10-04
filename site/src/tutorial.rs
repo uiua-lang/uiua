@@ -619,11 +619,11 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <p>"Chaining "<Prim prim=Both/>" doubles the number of arguments each time."</p>
         <Editor example="∷∷⇌ [1 2 3] [4 5 6] [7 8 9] [10 11 12]"/>
 
-        <h2 id="allot"><Prim prim=Allot/></h2>
-        <p>"To round it all off, we have "<Prim prim=Allot/>", which is a dyadic modifier that calls each of its functions on a different set of arguments."</p>
-        <Editor example="[⊐+× 1 2 3 4]"/>
-        <p><Prim prim=Allot/>" too can be chained. Each additional function is called on arguments deeper in the stack."</p>
-        <Editor example="[⊐⊐⊐+¯×. 1 2 3 4 5 6]"/>
+        <h2 id="bracket"><Prim prim=Bracket/></h2>
+        <p>"To round it all off, we have "<Prim prim=Bracket/>", which is a dyadic modifier that calls each of its functions on a different set of arguments."</p>
+        <Editor example="[⊓+× 1 2 3 4]"/>
+        <p><Prim prim=Bracket/>" too can be chained. Each additional function is called on arguments deeper in the stack."</p>
+        <Editor example="[⊓⊓⊓+¯×. 1 2 3 4 5 6]"/>
     }
 }
 

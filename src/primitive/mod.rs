@@ -489,7 +489,7 @@ impl Primitive {
             Primitive::Fork => fork::fork(env)?,
             Primitive::Trident => fork::trident(env)?,
             Primitive::Share => fork::share(env)?,
-            Primitive::Allot => fork::allot(env)?,
+            Primitive::Bracket => fork::bracket(env)?,
             Primitive::If => fork::iff(env)?,
             Primitive::Try => {
                 let f = env.pop(FunctionArg(1))?;
@@ -752,7 +752,9 @@ impl PrimExample {
         self.should_error
     }
     pub fn should_run(&self) -> bool {
-        !["&sl", "&tcpc"].iter().any(|prim| self.input.contains(prim))
+        !["&sl", "&tcpc"]
+            .iter()
+            .any(|prim| self.input.contains(prim))
     }
     pub fn output(&self) -> &Result<Vec<String>, String> {
         self.output.get_or_init(|| {

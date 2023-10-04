@@ -171,8 +171,10 @@ uiuisms!(
     r#"▽¬⍜⇌\×∊, "thing" "remove this →thing""#,
     /// Trim whitespace
     r#"▽×⍜'⊟⇌≡\↥.≠@ . "  abc xyz   ""#,
-    /// Upscale a matrix
-    "▽↯⧻,/÷△.⍉▽↯⧻,30 [0_1 1_0]",
+    /// Upscale a 2d matrix
+    "⍉▽↯⧻,→'⍉▽∶↯∶,⧻,30 [0_1 1_0]",
+    /// Upscale a colored image
+    "⍜⍘⍉≡(⍉▽↯⧻,→'⍉▽∶↯∶,⧻,30) [[0_0_1 0_1_0] [1_0_0 0_0_0]]",
     /// Dot product
     "/+× [1 2 3] [4 ¯5 6]",
     /// Matrix product

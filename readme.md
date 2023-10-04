@@ -84,7 +84,7 @@ Default: `"auto"`
 How to format multiline expressions.
 - `"always"`: Always format multiline expressions in compact mode.
 - `"never"`: Never format multiline expressions in compact mode.
-- `"auto"`: Format multiline expressions in compact mode they do not exceed `MultilineCompactThreshold`.
+- `"auto"`: Format multiline expressions in compact mode if they do not exceed `MultilineCompactThreshold`.
 
 ### `MultilineCompactThreshold`
 Type: natural number

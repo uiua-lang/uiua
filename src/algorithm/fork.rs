@@ -240,6 +240,22 @@ pub fn share(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
+pub fn allot(env: &mut Uiua) -> UiuaResult {
+    let f = env.pop(FunctionArg(1))?;
+    let g = env.pop(FunctionArg(2))?;
+    let f_sig = f.signature();
+    let mut f_args = Vec::with_capacity(f_sig.args);
+    for i in 0..f_sig.args {
+        f_args.push(env.pop(ArrayArg(i + 1))?);
+    }
+    env.call(g)?;
+    for arg in f_args.into_iter().rev() {
+        env.push(arg);
+    }
+    env.call(f)?;
+    Ok(())
+}
+
 pub fn iff(env: &mut Uiua) -> UiuaResult {
     let if_true = env.pop(FunctionArg(1))?;
     let if_false = env.pop(FunctionArg(2))?;

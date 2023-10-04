@@ -1,3 +1,4 @@
+- Make https requests work on web?
 - Add channels for spawned threads
 - Optimize dip by inlining?
 - Make dyadic array functions not methods

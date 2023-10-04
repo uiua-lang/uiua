@@ -597,6 +597,32 @@ primitive!(
     ///   : ∵⍜!($"_ _"⧻.).
     /// This works because [call] [invert]ed is [constant]. For each element, it [call]s the constant function to get the array out, does something to it, then [constant]s the result.
     (1, Constant, MonadicArray, ("constant", '□')),
+    /// Check if two arrays are exactly the same
+    ///
+    /// ex: ≅ 1_2_3 [1 2 3]
+    /// ex: ≅ 1_2_3 [1 2]
+    (2, Match, DyadicArray, ("match", '≅')),
+    /// Combine two arrays as rows of a new array
+    ///
+    /// `first``shape` of the coupled array will *always* be `2`.
+    ///
+    /// For scalars, it is equivalent to [join].
+    /// ex: ⊟ 1 2
+    ///   : ⊂ 1 2
+    ///
+    /// For arrays, a new array is created with the first array as the first row and the second array as the second row.
+    /// ex: ⊟ [1 2 3] [4 5 6]
+    ///
+    /// By default, arrays with different shapes cannot be [couple]ed.
+    /// ex! ⊟ [1 2 3] [4 5]
+    /// Use [fill] to make their shapes match
+    /// ex: ⍛∞⊟ [1 2 3] [4 5]
+    ///
+    /// [couple] is compatible with [under].
+    /// ex: ⍜⊟'×2 3 5
+    (2, Couple, DyadicArray, ("couple", '⊟')),
+    /// Split an array into two arrays
+    (1(2), Uncouple, MonadicArray),
     /// Append two arrays end-to-end
     ///
     /// For scalars, it is equivalent to [couple].
@@ -620,46 +646,6 @@ primitive!(
     ///
     /// [join]'s glyph is `⊂` because it kind of looks like a magnet pulling its two arguments together.
     (2, Join, DyadicArray, ("join", '⊂')),
-    /// Combine two arrays as rows of a new array
-    ///
-    /// `first``shape` of the coupled array will *always* be `2`.
-    ///
-    /// For scalars, it is equivalent to [join].
-    /// ex: ⊟ 1 2
-    ///   : ⊂ 1 2
-    ///
-    /// For arrays, a new array is created with the first array as the first row and the second array as the second row.
-    /// ex: ⊟ [1 2 3] [4 5 6]
-    ///
-    /// By default, arrays with different shapes cannot be [couple]ed.
-    /// ex! ⊟ [1 2 3] [4 5]
-    /// Use [fill] to make their shapes match
-    /// ex: ⍛∞⊟ [1 2 3] [4 5]
-    ///
-    /// [couple] is compatible with [under].
-    /// ex: ⍜⊟'×2 3 5
-    (2, Couple, DyadicArray, ("couple", '⊟')),
-    /// Split an array into two arrays
-    (1(2), Uncouple, MonadicArray),
-    /// Check if two arrays are exactly the same
-    ///
-    /// ex: ≅ 1_2_3 [1 2 3]
-    /// ex: ≅ 1_2_3 [1 2]
-    (2, Match, DyadicArray, ("match", '≅')),
-    /// Index a row or elements from an array
-    ///
-    /// An index with rank `0` or `1` will pick a single row or element from an array.
-    /// ex: ⊡ 2 [8 3 9 2 0]
-    /// ex: ⊡ 1_1 .[1_2_3 4_5_6]
-    ///
-    /// If the index's rank is `2` or greater, then multiple rows or elements will be picked.
-    /// ex: ⊡ [1_2 0_1] [1_2_3 4_5_6]
-    ///
-    /// For index rank `2` or greater, it should hold that `pick``range``shape``duplicate``x` is equivalent to `x`.
-    /// ex: ⊡⇡△. [1_2_3 4_5_6]
-    (2, Pick, DyadicArray, ("pick", '⊡')),
-    /// End step of under pick
-    (3, Unpick, Misc),
     /// Select multiple rows from an array
     ///
     /// For a scalar selector, [select] is equivalent to [pick].
@@ -674,6 +660,20 @@ primitive!(
     (2, Select, DyadicArray, ("select", '⊏')),
     /// End step of under select
     (3, Unselect, Misc),
+    /// Index a row or elements from an array
+    ///
+    /// An index with rank `0` or `1` will pick a single row or element from an array.
+    /// ex: ⊡ 2 [8 3 9 2 0]
+    /// ex: ⊡ 1_1 .[1_2_3 4_5_6]
+    ///
+    /// If the index's rank is `2` or greater, then multiple rows or elements will be picked.
+    /// ex: ⊡ [1_2 0_1] [1_2_3 4_5_6]
+    ///
+    /// For index rank `2` or greater, it should hold that `pick``range``shape``duplicate``x` is equivalent to `x`.
+    /// ex: ⊡⇡△. [1_2_3 4_5_6]
+    (2, Pick, DyadicArray, ("pick", '⊡')),
+    /// End step of under pick
+    (3, Unpick, Misc),
     /// Change the shape of an array
     ///
     /// ex: ↯ 2_3 [1 2 3 4 5 6]
@@ -1000,7 +1000,7 @@ primitive!(
     /// ex: [⊃⊂⊂ 1 2]
     ///
     /// ex: ⊟⊃×+ 3 5
-    (2[2], Fork, Stack, ("fork", '⊃')),
+    (2[2], Fork, Stack, "fork"),
     /// Call 3 functions on 3 values
     ///
     /// Deprecated in favor of [share].
@@ -1026,14 +1026,23 @@ primitive!(
     (3[3], Trident, Stack, ("trident", '∋')),
     /// Call two functions on the same values
     ///
-    /// ex: ⇉⇌⊝ 1_2_2_3
+    /// ex: ⊃⇌⊝ 1_2_2_3
     /// [share] can be chained to apply more functions to the arguments. `n` functions require the chaining of `subtract``1n` [share].
-    /// ex: [⇉⇉⇉+-×÷ 5 8]
+    /// ex: [⊃⊃⊃+-×÷ 5 8]
     /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maximum will work on the top values.
-    /// ex: [⇉+¯ 3 5]
+    /// ex: [⊃+¯ 3 5]
+    ([2], Share, Stack, ("share", '⊃')),
+    /// Call two functions on two distinct sets of values
     ///
-    /// Remember that [share]ing is caring.
-    ([2], Share, Stack, ("share", '⇉')),
+    /// ex: ⊐⇌⊝ 1_2_3 [1 4 2 4 2]
+    /// Each function will always be called on its own set of values.
+    /// ex: ⊐+× 1 2 3 4
+    /// The functions' signatures need not be the same.
+    /// ex: ⊐+(++) 1 2 3 4 5
+    /// [allot] can be chained to apply additional functions to arguments deeper on the stack.
+    /// ex: ⊐⊐⇌(↻1)△ 1_2_3 4_5_6 7_8_9
+    /// ex: [⊐⊐⊐+-×÷ 10 20 5 8 3 7 2 5]
+    ([2], Allot, Stack, ("allot", '⊐')),
     /// Rearrange the stack
     ///
     /// Deprecated because it was never a good idea.

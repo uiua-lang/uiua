@@ -604,14 +604,14 @@ fn TutorialAdvancedStack() -> impl IntoView {
 
         <h2 id="share"><Prim prim=Share/></h2>
         <p><Prim prim=Share/>" is a dyadic modifier that takes 2 functions and calls them both on multiple arguments. The number of arguments used is the maximum of the two functions."</p>
-        <Editor example="[⇉+× 3 5]"/>
+        <Editor example="[⊃+× 3 5]"/>
         <p>"If one of the functions take more arguments than the other, the function with fewer arguments uses the top-most values."</p>
-        <Editor example="⇉×⇌ [1 2 3] 10"/>
+        <Editor example="⊃×⇌ [1 2 3] 10"/>
         <p>"What's powerful about "<Prim prim=Share/>" is that it can be chained to use as many functions as you want."</p>
-        <Editor example="[⇉⇉⇉+-×÷ 5 8]"/>
+        <Editor example="[⊃⊃⊃+-×÷ 5 8]"/>
         <p>"In addition, unlike "<Prim prim=Distribute/><Prim prim=Call/>", which can also be used to apply several functions to the same arguments, "<Prim prim=Share/>" does not require that its values be in an array together."</p>
-        <Editor example="⇉+-1@b"/>
-        <Editor example="⇉⇉⇉↻↙↘⊡ 2 [1 2 3 4 5]"/>
+        <Editor example="⊃+-1@b"/>
+        <Editor example="⊃⊃⊃↻↙↘⊡ 2 [1 2 3 4 5]"/>
 
         <h2 id="both"><Prim prim=Both/></h2>
         <p><Prim prim=Both/>" is monadic modifier and a sort of compliment to "<Prim prim=Share/>". While "<Prim prim=Share/>" calls multiple functions on the same set of arguments, "<Prim prim=Both/>" calls a single function on multiple sets of arguments."</p>
@@ -619,6 +619,11 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <p>"Chaining "<Prim prim=Both/>" doubles the number of arguments each time."</p>
         <Editor example="∷∷⇌ [1 2 3] [4 5 6] [7 8 9] [10 11 12]"/>
 
+        <h2 id="allot"><Prim prim=Allot/></h2>
+        <p>"To round it all off, we have "<Prim prim=Allot/>", which is a dyadic modifier that calls each of its functions on a different set of arguments."</p>
+        <Editor example="[⊐+× 1 2 3 4]"/>
+        <p><Prim prim=Allot/>" too can be chained. Each additional function is called on arguments deeper in the stack."</p>
+        <Editor example="[⊐⊐⊐+¯×. 1 2 3 4 5 6]"/>
     }
 }
 

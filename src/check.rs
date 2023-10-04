@@ -262,6 +262,13 @@ impl<'a> VirtualEnv<'a> {
                     let outputs = f.signature().outputs + g.signature().outputs;
                     self.handle_args_outputs(args, outputs)?;
                 }
+                Allot => {
+                    let f = self.pop()?;
+                    let g = self.pop()?;
+                    let args = f.signature().args + g.signature().args;
+                    let outputs = f.signature().outputs + g.signature().outputs;
+                    self.handle_args_outputs(args, outputs)?;
+                }
                 If => {
                     let if_true = self.pop()?;
                     let if_false = self.pop()?;

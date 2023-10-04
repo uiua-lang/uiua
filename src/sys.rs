@@ -272,7 +272,7 @@ sys_op! {
     (1, TcpAddr, "&tcpaddr", "tcp - address"),
     /// Make an HTTP request
     ///
-    /// Takes in an 1.0 HTTP request and returns an HTTP response.
+    /// Takes in an 1.x HTTP request and returns an HTTP response.
     ///
     /// Requires the `Host` header to be set.
     /// Using port 443 is recommended for HTTPS.

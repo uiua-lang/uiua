@@ -1190,6 +1190,10 @@ primitive!(
     /// [fill] allows the list of counts for [keep] to be shorter than the kept array.
     /// This is especially useful when used with functions like [windows] or [find] which make an array shorter than their input.
     /// ex: ⬚0▽≡/>◫2. [1 8 0 2 7 2 3]
+    ///
+    /// [fill][reshape] fills in the shape with the fill element instead of cycling the data
+    /// ex:   ↯3_5 ⇡9
+    /// ex: ⬚0↯3_5 ⇡9
     ([2], Fill, OtherModifier, ("fill", '⬚')),
     /// Compose two functions
     ///

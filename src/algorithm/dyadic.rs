@@ -433,10 +433,10 @@ impl Value {
             )?;
             let target_shape = Shape::from(&*target_shape);
             match self {
-                Value::Num(a) => a.reshape(target_shape),
-                Value::Byte(a) => a.reshape(target_shape),
-                Value::Char(a) => a.reshape(target_shape),
-                Value::Func(a) => a.reshape(target_shape),
+                Value::Num(a) => a.reshape(target_shape, env),
+                Value::Byte(a) => a.reshape(target_shape, env),
+                Value::Char(a) => a.reshape(target_shape, env),
+                Value::Func(a) => a.reshape(target_shape, env),
             }
         }
         Ok(())
@@ -458,23 +458,28 @@ impl<T: ArrayValue> Array<T> {
         });
         self.shape.insert(0, count);
     }
-    pub fn reshape(&mut self, shape: Shape) {
-        if self.data.is_empty() {
-            return;
-        }
+    pub fn reshape(&mut self, shape: Shape, env: &Uiua) {
         let target_len: usize = shape.iter().product();
         self.shape = shape;
         if self.data.len() < target_len {
-            let start = self.data.len();
-            self.data.modify(|data| {
-                data.reserve(target_len - data.len());
-                for i in 0..target_len - start {
-                    data.push(data[i % start].clone());
-                }
-            });
+            if let Some(fill) = env.fill::<T>() {
+                let start = self.data.len();
+                self.data.modify(|data| {
+                    data.extend(repeat(fill).take(target_len - start));
+                });
+            } else {
+                let start = self.data.len();
+                self.data.modify(|data| {
+                    data.reserve(target_len - data.len());
+                    for i in 0..target_len - start {
+                        data.push(data[i % start].clone());
+                    }
+                });
+            }
         } else {
             self.data.truncate(target_len);
         }
+        self.validate_shape();
     }
 }
 

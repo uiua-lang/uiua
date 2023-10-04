@@ -5,6 +5,7 @@ Uiua is not yet stable.
 # Pre-Version
 
 ## 2023-10-04
+### Language
 - Add the [`bracket` `⊓`](https://uiua.org/docs/bracket) modifier, which calls two functions each on different arguments
 - Change [`fill` `⬚`](https://uiua.org/docs/fill)'s glyph to reflect its relationship with [`constant` `□`](https://uiua.org/docs/constant). Code using `⍛` with continue to work and will be formatted as `⬚`.
 - Change `share` `⇉` name and glyph to [`fork` `⊃`](https://uiua.org/docs/fork). Code using `⇉` with continue to work and will be formatted as `⊃`.
@@ -15,6 +16,8 @@ Uiua is not yet stable.
 - Change [`noop` `∘`](https://uiua.org/docs/noop)'s signature to be `|1.1`
 - [`Distribute` `∺`](https://uiua.org/docs/distribute) now works with any number of arguments
   - Only the first argument is distributed
+- [`fill` `⬚`](https://uiua.org/docs/fill) now works with [`reshape` `↯`](https://uiua.org/docs/reshape)
+### Interpreter
 - Add formatter configuration options. See the [readme](https://github.com/uiua-lang/uiua#formatter-configuration) for details.
 
 ## 2023-10-03

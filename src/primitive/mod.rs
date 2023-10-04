@@ -265,6 +265,11 @@ impl Primitive {
             Primitive::Tau => env.push(TAU),
             Primitive::Infinity => env.push(INFINITY),
             Primitive::Noop => {}
+            Primitive::Gap => {
+                let f = env.pop(1)?;
+                let _x = env.pop(2)?;
+                env.call(f)?;
+            }
             Primitive::Not => env.monadic_env(Value::not)?,
             Primitive::Neg => env.monadic_env(Value::neg)?,
             Primitive::Abs => env.monadic_env(Value::abs)?,

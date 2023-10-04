@@ -669,7 +669,9 @@ code:
             }
         } else if let Some(prim) = Primitive::all().find(|p| {
             p.names().is_some_and(|n| {
-                n.text == ident.as_ref() || ident.len() >= 3 && n.text.starts_with(&*ident)
+                (n.ascii.is_some() || n.unicode.is_some_and(|c| c as u32 <= 127))
+                    && ident.len() >= 3
+                    && n.text.starts_with(&*ident)
             })
         }) {
             return Err(span

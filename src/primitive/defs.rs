@@ -968,9 +968,31 @@ primitive!(
     ///
     /// ex: [→+ 1 2 3]
     /// ex: [→→+ 1 2 3 4]
-    ///
-    /// [dip] replaces [roll] and [unroll], which are currently deprecated.
+    /// This is especially useful when used in a [fork].
+    /// In a [fork] expression, you can use [dip], [gap], and [noop] to select out values.
+    /// For example, if you wanted to add 3 values but keep the all 3 on top of the stack:
+    /// ex: [⊃→→·(++) 3 5 10]
+    /// By replacing a `dip` with a `gap`, you pop the argument in that spot instead of keeping it:
+    /// ex: [⊃→→·(++) 3 5 10]
+    /// ex: [⊃→∘·(++) 3 5 10]
+    /// ex: [⊃∘→·(++) 3 5 10]
+    /// ex: [⊃→·(++) 3 5 10]
     ([1], Dip, Stack, ("dip", '→')),
+    /// Pop a value off the stack then call a function
+    ///
+    /// ex: ∘+ 1 2 3
+    /// This may seem useless when [pop] exists, but [gap] really shines when used with [fork].
+    /// In a [fork] expression, you can use [dip], [gap], and [noop] to select out values.
+    /// For example, if you wanted to add 3 values but keep the last value on top of the stack:
+    /// ex: [⊃∘∘·(++) 3 5 10]
+    /// By using fewer `gap`s, you can select a different value
+    /// ex: [⊃∘·(++) 3 5 10]
+    /// ex: [⊃·(++) 3 5 10]
+    /// By replacing a `gap` with a `dip`, you keep the argument in that spot instead of popping it:
+    /// ex: [⊃→∘·(++) 3 5 10]
+    /// ex: [⊃∘→·(++) 3 5 10]
+    /// ex: [⊃→→·(++) 3 5 10]
+    ([1], Gap, Stack, ("gap", '∘')),
     /// Call a function on 2 sets of values
     ///
     /// For monadic functions, [both] calls it's function on each of the top 2 values on the stack.
@@ -1087,7 +1109,7 @@ primitive!(
     /// [under][keep] works as long as the counts list is boolean.
     /// ex: ⍜▽'×10 =0◿3.⇡10
     ///
-    /// If `g` takes more than 1 argument, keep in mind that `f` will be will be called on the stack as it is when the full under expression begins.
+    /// If `g` takes more than 1 argument, keep in mind that `f` will be called on the stack as it is when the full under expression begins.
     /// This means you may have to flip the arguments to `g`.
     /// Consider this equivalence:
     /// ex: ⍜(↙2)(÷∶)  [1 2 3 4 5] 10

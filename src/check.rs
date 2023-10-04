@@ -365,14 +365,15 @@ impl<'a> VirtualEnv<'a> {
                 Dip => {
                     let f = self.pop()?;
                     let x = self.pop()?;
-                    for _ in 0..f.signature().args {
-                        self.pop()?;
-                    }
                     self.set_min_height();
-                    for _ in 0..f.signature().outputs {
-                        self.stack.push(BasicValue::Other);
-                    }
+                    self.handle_sig(f.signature())?;
                     self.stack.push(x);
+                }
+                Gap => {
+                    let f = self.pop()?;
+                    self.pop()?;
+                    self.set_min_height();
+                    self.handle_sig(f.signature())?;
                 }
                 Restack => {
                     let ns = match self.pop()? {

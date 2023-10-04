@@ -74,11 +74,9 @@ fn run() -> UiuaResult {
                 )?;
 
                 if let Some(path) = path {
-                    format_file(path, &config)?;
+                    format_single_file(path, &config, formatter_options.stdout)?;
                 } else {
-                    for path in uiua_files() {
-                        format_file(path, &config)?;
-                    }
+                    format_multi_files(&config, formatter_options.stdout)?;
                 }
             }
             App::Run {
@@ -472,6 +470,12 @@ struct FormatterOptions {
         help = "Select the formatter configuration source (one of search-file, default, or a path to a fmt.ua file)"
     )]
     format_config_source: FormatConfigSource,
+    #[clap(
+        long = "stdout",
+        default_value_t = false,
+        help = "Print result of formatted file to stdout"
+    )]
+    stdout: bool,
 }
 
 #[cfg(feature = "audio")]
@@ -561,4 +565,24 @@ fn show_update_message() {
             );
         }
     }
+}
+
+fn format_single_file(path: PathBuf, config: &FormatConfig, stdout: bool) -> Result<(), UiuaError> {
+    let output = format_file(path, config)?.output;
+    if stdout {
+        println!("{output}");
+    }
+    Ok(())
+}
+
+fn format_multi_files(config: &FormatConfig, stdout: bool) -> Result<(), UiuaError> {
+    for path in uiua_files() {
+        let path_as_string = path.to_string_lossy().into_owned();
+        let output = format_file(path, config)?.output;
+        if stdout {
+            println!("{path_as_string}");
+            println!("{output}");
+        }
+    }
+    Ok(())
 }

@@ -1,6 +1,15 @@
 //! Functions for formatting Uiua code.
 
-use std::{collections::BTreeMap, env, fs, path::Path};
+use std::{
+    any::Any,
+    collections::BTreeMap,
+    env,
+    fmt::Display,
+    fs,
+    path::{Path, PathBuf},
+};
+
+use paste::paste;
 
 use crate::{
     ast::*,
@@ -8,43 +17,254 @@ use crate::{
     grid_fmt::GridFmt,
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
-    UiuaError, UiuaResult,
+    value::Value,
+    SysBackend, Uiua, UiuaError, UiuaResult,
 };
 
-#[derive(Debug, Clone)]
-pub struct FormatConfig {
-    /// Whether to add a trailing newline to the output.
-    ///
-    /// Default: `true`
-    pub trailing_newline: bool,
-    /// Whether to add a space after the `#` in comments.
-    ///
-    /// Default: `true`
-    pub comment_space_after_hash: bool,
-    /// The number of spaces to indent multiline arrays and functions
-    ///
-    /// Default: `2`
-    pub multiline_indent: usize,
-    /// Override multiline formatting to be always compact or always not.
-    ///
-    /// Default: `None`
-    ///
-    /// If `None`, then multiline arrays and functions that start on or before `multiline_compact_threshold` will be compact, and those that start after will not be.
-    pub compact_multiline: Option<bool>,
-    /// The number of characters on line preceding a multiline array or function, at or before which the multiline will be compact.
-    ///
-    /// Default: `10`
-    pub multiline_compact_threshold: usize,
+// For now disallow any syscalls in the format config file.
+struct FormatConfigBackend;
+
+impl SysBackend for FormatConfigBackend {
+    fn any(&self) -> &dyn Any {
+        self
+    }
 }
 
-impl Default for FormatConfig {
-    fn default() -> Self {
-        Self {
-            trailing_newline: true,
-            comment_space_after_hash: true,
-            multiline_indent: 2,
-            compact_multiline: None,
-            multiline_compact_threshold: 10,
+trait ConfigValue: Sized {
+    fn from_value(value: &Value, env: &Uiua, requirement: &'static str) -> UiuaResult<Self>;
+}
+
+impl ConfigValue for bool {
+    fn from_value(value: &Value, env: &Uiua, requirement: &'static str) -> UiuaResult<bool> {
+        value.as_bool(env, requirement)
+    }
+}
+
+impl ConfigValue for usize {
+    fn from_value(value: &Value, env: &Uiua, requirement: &'static str) -> UiuaResult<usize> {
+        value.as_nat(env, requirement)
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum CompactMultilineMode {
+    /// Multiline formatting will always be compact.
+    Always,
+    /// Multiline formatting will never be compact.
+    Never,
+    /// Multiline arrays and functions that start on or before `multiline_compact_threshold` will be compact, and those that start after will not be.
+    #[default]
+    Auto,
+}
+
+impl ConfigValue for CompactMultilineMode {
+    fn from_value(value: &Value, env: &Uiua, requirement: &'static str) -> UiuaResult<Self> {
+        let string = value.as_string(env, requirement)?;
+        match string.to_lowercase().as_str() {
+            "always" => Ok(Self::Always),
+            "never" => Ok(Self::Never),
+            "auto" => Ok(Self::Auto),
+            _ => Err(env.error(format!("{requirement}, but it is \"{string}\""))),
+        }
+    }
+}
+
+macro_rules! requirement {
+    ($name:ident, bool) => {
+        concat!(
+            "Format config option '",
+            stringify!($name),
+            "' expects a boolean"
+        )
+    };
+    ($name:ident, usize) => {
+        concat!(
+            "Format config option '",
+            stringify!($name),
+            "' expects a natural number"
+        )
+    };
+    ($name:ident, CompactMultilineMode) => {
+        concat!(
+            "Format config option '",
+            stringify!($name),
+            r#"' expects one of "always", "never", or "auto""#
+        )
+    };
+}
+
+macro_rules! create_config {
+    ($(
+        $(#[doc = $doc:literal])*
+        (
+            $name:ident,
+            $ty:ident, // this should ideally be ty, not ident, but that doesn't work with the requirement macro
+            $default:expr
+        )
+    ),* $(,)?) => {
+        #[derive(Debug, Clone)]
+        struct PartialFormatConfig {
+            $(
+                $name: Option<$ty>,
+            )*
+        }
+
+        impl PartialFormatConfig {
+            paste! {
+                fn from_file(file_path: PathBuf) -> UiuaResult<Self> {
+                    let mut env = Uiua::with_backend(FormatConfigBackend)
+                        .print_diagnostics(true);
+                    env.load_file(file_path)?;
+                    let mut bindings = env.all_bindings_in_scope();
+
+                    $(
+                        let $name = {
+                            let requirement = requirement!([<$name:camel>], $ty);
+                            let function_name = stringify!([<$name:camel>]);
+                            if let Some(binding) = bindings.remove(function_name) {
+                                Some($ty::from_value(&binding, &env, requirement)?)
+                            } else {
+                                None
+                            }
+                        };
+                    )*
+
+                    return Ok(Self {
+                        $(
+                            $name,
+                        )*
+                    });
+                }
+            }
+        }
+
+        /// Configuration for the Uiua formatter.
+        #[derive(Debug, Clone)]
+        pub struct FormatConfig {
+            $(
+                $(#[doc = $doc])*
+                #[doc = concat!("Default: `", stringify!($default), "`")]
+                pub $name: $ty,
+            )*
+        }
+
+        paste! {
+            impl FormatConfig {
+                $(
+                    pub fn [<with_ $name>](self, $name: $ty) -> Self {
+                        Self {
+                            $name,
+                            ..self
+                        }
+                    }
+                )*
+            }
+        }
+
+        impl Default for FormatConfig {
+            fn default() -> Self {
+                Self {
+                    $(
+                        $name: $default,
+                    )*
+                }
+            }
+        }
+
+        impl From<PartialFormatConfig> for FormatConfig {
+            fn from(config: PartialFormatConfig) -> Self {
+                Self {
+                    $(
+                        $name: config.$name.unwrap_or($default),
+                    )*
+                }
+            }
+        }
+    }
+}
+
+create_config!(
+    /// Whether to add a trailing newline to the output.
+    (trailing_newline, bool, true),
+    /// Whether to add a space after the `#` in comments.
+    (comment_space_after_hash, bool, true),
+    /// The number of spaces to indent multiline arrays and functions
+    (multiline_indent, usize, 2),
+    /// The mode for formatting multiline arrays and functions.
+    (
+        compact_multiline_mode,
+        CompactMultilineMode,
+        CompactMultilineMode::Auto
+    ),
+    /// The number of characters on line preceding a multiline array or function, at or before which the multiline will be compact.
+    (multiline_compact_threshold, usize, 10),
+);
+
+/// The source from which to populate the formatter configuration.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FormatConfigSource {
+    /// Recursively search for a .fmt.ua file and use it as the formatter configuration,
+    /// if none is found, use the default formatter configuration
+    SearchFile,
+    /// Use the default formatter configuration
+    Default,
+    /// Use the formatter configuration in the specified file
+    Path(PathBuf),
+}
+
+impl From<&str> for FormatConfigSource {
+    fn from(s: &str) -> Self {
+        match s {
+            "search-file" => Self::SearchFile,
+            "default" => Self::Default,
+            path => Self::Path(path.into()),
+        }
+    }
+}
+
+impl Display for FormatConfigSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FormatConfigSource::SearchFile => write!(f, "search-file"),
+            FormatConfigSource::Default => write!(f, "default"),
+            FormatConfigSource::Path(path) => write!(f, "{}", path.display()),
+        }
+    }
+}
+
+impl FormatConfig {
+    pub fn from_file(path: PathBuf) -> UiuaResult<Self> {
+        println!("Loading format config from {}", path.display());
+        let partial = PartialFormatConfig::from_file(path);
+        partial.map(Into::into)
+    }
+
+    pub fn from_source(source: FormatConfigSource, target_path: Option<&Path>) -> UiuaResult<Self> {
+        match source {
+            FormatConfigSource::SearchFile => {
+                if let Some(file_path) = Self::search_config_file(target_path) {
+                    Self::from_file(file_path)
+                } else {
+                    Ok(Self::default())
+                }
+            }
+            FormatConfigSource::Default => Ok(Self::default()),
+            FormatConfigSource::Path(file_path) => Self::from_file(file_path),
+        }
+    }
+
+    fn search_config_file(path: Option<&Path>) -> Option<PathBuf> {
+        let mut path = path
+            .and_then(|p| std::fs::canonicalize(p).ok())
+            .unwrap_or(env::current_dir().ok()?);
+        loop {
+            let file_path = path.join(".fmt.ua");
+            if file_path.exists() {
+                return Some(file_path);
+            }
+            if !path.pop() {
+                return None;
+            }
         }
     }
 }
@@ -316,10 +536,14 @@ impl<'a> Formatter<'a> {
             curr_line.chars().count()
         };
         let compact = allow_compact
-            && self.config.compact_multiline.unwrap_or_else(|| {
-                start_line_pos <= self.config.multiline_compact_threshold
-                    || curr_line.starts_with(' ')
-            })
+            && match self.config.compact_multiline_mode {
+                CompactMultilineMode::Always => true,
+                CompactMultilineMode::Never => false,
+                CompactMultilineMode::Auto => {
+                    start_line_pos <= self.config.multiline_compact_threshold
+                        || curr_line.starts_with(' ')
+                }
+            }
             && (lines.iter().flatten()).all(|word| !word_is_multiline(&word.value));
         let indent = if compact {
             start_line_pos

@@ -3227,6 +3227,7 @@ dependencies = [
  "notify",
  "once_cell",
  "parking_lot",
+ "paste",
  "rand",
  "rustls",
  "serde",

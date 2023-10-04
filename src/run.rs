@@ -1083,6 +1083,17 @@ code:
     pub fn take_stack(&mut self) -> Vec<Value> {
         take(&mut self.stack)
     }
+    /// Get the values for all bindings in the current scope
+    pub fn all_bindings_in_scope(&self) -> HashMap<Ident, Value> {
+        let mut bindings = HashMap::new();
+        let globals_lock = self.globals.lock();
+        for (name, idx) in &self.scope.names {
+            if !CONSTANTS.iter().any(|c| c.name == name.as_ref()) {
+                bindings.insert(name.clone(), globals_lock[*idx].clone());
+            }
+        }
+        bindings
+    }
     pub fn diagnostics(&self) -> &BTreeSet<Diagnostic> {
         &self.diagnostics
     }

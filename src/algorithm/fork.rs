@@ -188,3 +188,90 @@ pub fn trident(env: &mut Uiua) -> UiuaResult {
 
     Ok(())
 }
+
+pub fn share(env: &mut Uiua) -> UiuaResult {
+    let f = env.pop(FunctionArg(1))?;
+    let g = env.pop(FunctionArg(2))?;
+    let f = f
+        .into_func_array()
+        .map_err(|val| {
+            env.error(format!(
+                "Share' first function must be a function, but is has type {}",
+                val.type_name()
+            ))
+        })
+        .and_then(|f| {
+            f.into_scalar().map_err(|arr| {
+                env.error(format!(
+                    "Share' first function must be a scalar, but is has rank {}",
+                    arr.rank()
+                ))
+            })
+        })?;
+    let g = g
+        .into_func_array()
+        .map_err(|val| {
+            env.error(format!(
+                "Share' second function must be a function, but is has type {}",
+                val.type_name()
+            ))
+        })
+        .and_then(|f| {
+            f.into_scalar().map_err(|arr| {
+                env.error(format!(
+                    "Share' second function must be a scalar, but is has rank {}",
+                    arr.rank()
+                ))
+            })
+        })?;
+    let arg_count = f.signature().args.max(g.signature().args);
+    let mut args = Vec::with_capacity(arg_count);
+    for i in 0..arg_count {
+        args.push(env.pop(ArrayArg(i + 1))?);
+    }
+    for arg in args.iter().take(g.signature().args).rev() {
+        env.push(arg.clone());
+    }
+    env.call(g)?;
+    for arg in args.into_iter().take(f.signature().args).rev() {
+        env.push(arg);
+    }
+    env.call(f)?;
+    Ok(())
+}
+
+pub fn allot(env: &mut Uiua) -> UiuaResult {
+    let f = env.pop(FunctionArg(1))?;
+    let g = env.pop(FunctionArg(2))?;
+    let f_sig = f.signature();
+    let mut f_args = Vec::with_capacity(f_sig.args);
+    for i in 0..f_sig.args {
+        f_args.push(env.pop(ArrayArg(i + 1))?);
+    }
+    env.call(g)?;
+    for arg in f_args.into_iter().rev() {
+        env.push(arg);
+    }
+    env.call(f)?;
+    Ok(())
+}
+
+pub fn iff(env: &mut Uiua) -> UiuaResult {
+    let if_true = env.pop(FunctionArg(1))?;
+    let if_false = env.pop(FunctionArg(2))?;
+    let condition = env
+        .pop(ArrayArg(1))?
+        .as_nat(env, "If's condition must be a natural number")?;
+    if condition > 1 {
+        return Err(env.error(format!(
+            "If's condition must be 0 or 1, but is {}",
+            condition
+        )));
+    }
+    if condition == 1 {
+        env.call(if_true)?;
+    } else {
+        env.call(if_false)?;
+    }
+    Ok(())
+}

@@ -120,6 +120,7 @@ impl fmt::Display for Primitive {
             match self {
                 InvTranspose => write!(f, "⍘{Transpose}"),
                 InverseBits => write!(f, "⍘{Bits}"),
+                InvTrace => write!(f, "⍘{Trace}"),
                 Uncouple => write!(f, "⍘{Couple}"),
                 Untake => write!(f, "⍘{Take}"),
                 Undrop => write!(f, "⍘{Drop}"),
@@ -169,6 +170,10 @@ impl Primitive {
             Primitive::Roll | Primitive::Unroll => {
                 Some(format!("try using dip{} instead", Primitive::Dip))
             }
+            Primitive::Fork | Primitive::Trident => {
+                Some(format!("try using share{} instead", Primitive::Share))
+            }
+            Primitive::Restack => Some(String::new()),
             _ => None,
         }
     }
@@ -467,14 +472,25 @@ impl Primitive {
                 env.with_fill(fill, |env| env.call(f))?;
             }
             Primitive::Bind => {
+                // This is only run if bind was terminated with ^ and not optimized out
                 let f = env.pop(FunctionArg(1))?;
                 let g = env.pop(FunctionArg(2))?;
-                env.call(g)?;
-                env.call(f)?;
+                match (f.into_function(), g.into_function()) {
+                    (Ok(f), Ok(g)) => env.push(Function::compose(f, g)),
+                    (Ok(f), Err(g)) => env.push(Function::compose(f, Function::constant(g).into())),
+                    (Err(f), Ok(g)) => env.push(Function::compose(Function::constant(f).into(), g)),
+                    (Err(f), Err(g)) => env.push(Function::compose(
+                        Function::constant(f).into(),
+                        Function::constant(g).into(),
+                    )),
+                }
             }
             Primitive::Both => fork::both(env)?,
             Primitive::Fork => fork::fork(env)?,
             Primitive::Trident => fork::trident(env)?,
+            Primitive::Share => fork::share(env)?,
+            Primitive::Allot => fork::allot(env)?,
+            Primitive::If => fork::iff(env)?,
             Primitive::Try => {
                 let f = env.pop(FunctionArg(1))?;
                 let handler = env.pop(FunctionArg(2))?;

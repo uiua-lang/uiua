@@ -1,9 +1,6 @@
 //! Algorithms for looping modifiers
 
-use std::{
-    iter::once,
-    ops::{Add, Div, Mul, Sub},
-};
+use std::ops::{Add, Div, Mul, Sub};
 
 use tinyvec::tiny_vec;
 
@@ -101,11 +98,18 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
 }
 
 fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
-    let args = f.signature().args;
+    let sig = f.signature();
+    if sig.outputs > 1 {
+        return Err(env.error(format!(
+            "Reduce's function must return 0 or 1 values, but {} returns {}",
+            f, sig.outputs
+        )));
+    }
+    let args = sig.args;
     match args {
         0 | 1 => {
-            let mut rows = init.into_iter().chain(xs.into_rows());
-            while let Some(row) = rows.next() {
+            let rows = init.into_iter().chain(xs.into_rows());
+            for row in rows {
                 env.push(row);
                 if env.call_catch_break(f.clone())? {
                     let reduced = if args == 0 {
@@ -113,7 +117,7 @@ fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> Uiu
                     } else {
                         Some(env.pop("reduced function result")?)
                     };
-                    let val = Value::from_row_values(reduced.into_iter().chain(rows), env)?;
+                    let val = Value::from_row_values(reduced, env)?;
                     env.push(val);
                     return Ok(());
                 }
@@ -124,13 +128,12 @@ fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> Uiu
             let mut acc = init
                 .or_else(|| rows.next())
                 .ok_or_else(|| env.error("Cannot reduce empty array"))?;
-            while let Some(row) = rows.next() {
+            for row in rows {
                 env.push(row);
                 env.push(acc);
                 let should_break = env.call_catch_break(f.clone())?;
                 acc = env.pop("reduced function result")?;
                 if should_break {
-                    acc = Value::from_row_values(once(acc).chain(rows), env)?;
                     break;
                 }
             }
@@ -229,6 +232,13 @@ fn fast_scan<T: ArrayValue>(mut arr: Array<T>, f: impl Fn(T, T) -> T) -> Array<T
 }
 
 fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
+    let sig = f.signature();
+    if sig.outputs != 1 {
+        return Err(env.error(format!(
+            "Scan's function must return 1 value, but {} returns {}",
+            f, sig.outputs
+        )));
+    }
     if xs.row_count() == 0 {
         env.push(xs.first_dim_zero());
         return Ok(());
@@ -238,7 +248,7 @@ fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     let mut acc = rows.next().unwrap();
     let mut scanned = Vec::with_capacity(row_count);
     scanned.push(acc.clone());
-    for row in rows {
+    for row in rows.by_ref() {
         let start_height = env.stack_size();
         env.push(row);
         env.push(acc.clone());
@@ -250,7 +260,10 @@ fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
             break;
         }
     }
-    env.push(Value::from_row_values(scanned, env)?);
+    env.push(Value::from_row_values(
+        scanned.into_iter().chain(rows),
+        env,
+    )?);
     Ok(())
 }
 
@@ -587,9 +600,77 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
     let f = env.pop(FunctionArg(1))?;
     let xs = env.pop(ArrayArg(1))?;
     let y = env.pop(ArrayArg(2))?;
+    let sig = f.signature();
+    if sig.outputs != 1 {
+        return Err(env.error(format!(
+            "Distribute's function must return 1 value, but {} returns {}",
+            f, sig.outputs
+        )));
+    }
+    match sig.args {
+        0 => Err(env.error(format!(
+            "Distribute's function must take at least 1 argument, \
+            but {f} takes 0"
+        ))),
+        1 | 2 => distribute2(f, xs, y, env),
+        3 => {
+            let z = env.pop(ArrayArg(3))?;
+            distribute3(f, xs, y, z, env)
+        }
+        n => {
+            let mut args = Vec::with_capacity(n - 1);
+            args.push(y);
+            for i in 3..=n {
+                args.push(env.pop(ArrayArg(i))?);
+            }
+            distribute_n(f, xs, args, env)
+        }
+    }
+}
+
+fn distribute2(f: Value, xs: Value, y: Value, env: &mut Uiua) -> UiuaResult {
+    if xs.row_count() == 0 {
+        env.push(xs);
+        return Ok(());
+    }
     let mut new_rows = Vec::with_capacity(xs.row_count());
     for x in xs.into_rows() {
         env.push(y.clone());
+        env.push(x);
+        env.call_error_on_break(f.clone(), "break is not allowed in distribute")?;
+        new_rows.push(env.pop("distribute's function result")?);
+    }
+    env.push(Value::from_row_values(new_rows, env)?);
+    Ok(())
+}
+
+fn distribute3(f: Value, xs: Value, y: Value, z: Value, env: &mut Uiua) -> UiuaResult {
+    if xs.row_count() == 0 {
+        env.push(xs);
+        return Ok(());
+    }
+    let mut new_rows = Vec::with_capacity(xs.row_count());
+    for x in xs.into_rows() {
+        env.push(z.clone());
+        env.push(y.clone());
+        env.push(x);
+        env.call_error_on_break(f.clone(), "break is not allowed in distribute")?;
+        new_rows.push(env.pop("distribute's function result")?);
+    }
+    env.push(Value::from_row_values(new_rows, env)?);
+    Ok(())
+}
+
+fn distribute_n(f: Value, xs: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+    if xs.row_count() == 0 {
+        env.push(xs);
+        return Ok(());
+    }
+    let mut new_rows = Vec::with_capacity(xs.row_count());
+    for x in xs.into_rows() {
+        for arg in args.iter().rev() {
+            env.push(arg.clone());
+        }
         env.push(x);
         env.call_error_on_break(f.clone(), "break is not allowed in distribute")?;
         new_rows.push(env.pop("distribute's function result")?);
@@ -720,6 +801,13 @@ fn fast_table_join_or_couple<T: ArrayValue>(a: Array<T>, b: Array<T>) -> Array<T
 }
 
 fn generic_table(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+    let sig = f.signature();
+    if sig.outputs != 1 {
+        return Err(env.error(format!(
+            "Table's function must return 1 value, but {} returns {}",
+            f, sig.outputs
+        )));
+    }
     let mut new_shape = Shape::from(xs.shape());
     new_shape.extend_from_slice(ys.shape());
     let mut items = Vec::with_capacity(xs.flat_len() * ys.flat_len());
@@ -747,6 +835,13 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
     let f = env.pop(FunctionArg(1))?;
     let xs = env.pop(ArrayArg(1))?;
     let ys = env.pop(ArrayArg(2))?;
+    let sig = f.signature();
+    if sig.outputs != 1 {
+        return Err(env.error(format!(
+            "Cross's function must return 1 value, but {} returns {}",
+            f, sig.outputs
+        )));
+    }
     let mut new_shape = tiny_vec![xs.row_count(), ys.row_count()];
     let mut items = Vec::with_capacity(xs.row_count() * ys.row_count());
     let y_rows = ys.into_rows().collect::<Vec<_>>();
@@ -1098,10 +1193,7 @@ impl<T: ArrayValue> Array<T> {
             }
             last_marker = marker;
         }
-        Ok(groups
-            .into_iter()
-            .rev()
-            .map(Array::from_row_arrays_infallible))
+        Ok(groups.into_iter().map(Array::from_row_arrays_infallible))
     }
 }
 
@@ -1142,7 +1234,6 @@ impl<T: ArrayValue> Array<T> {
         let Some(&max_index) = indices.iter().max() else {
             return Ok(Vec::<Vec<Self>>::new()
                 .into_iter()
-                .rev()
                 .map(Array::from_row_arrays_infallible));
         };
         let mut groups: Vec<Vec<Self>> = vec![Vec::new(); max_index.max(0) as usize + 1];
@@ -1151,10 +1242,7 @@ impl<T: ArrayValue> Array<T> {
                 groups[g as usize].push(self.row(r));
             }
         }
-        Ok(groups
-            .into_iter()
-            .rev()
-            .map(Array::from_row_arrays_infallible))
+        Ok(groups.into_iter().map(Array::from_row_arrays_infallible))
     }
 }
 
@@ -1174,7 +1262,6 @@ where
                 })?;
                 rows.push(env.pop(|| format!("{name}'s function result"))?);
             }
-            rows.reverse();
             let res = Value::from_row_values(rows, env)?;
             env.push(res);
         }
@@ -1183,8 +1270,8 @@ where
                 .next()
                 .ok_or_else(|| env.error(format!("Cannot reduce empty {name} result")))?;
             for row in groups {
-                env.push(acc);
                 env.push(row);
+                env.push(acc);
                 if env.call_catch_break(f.clone())? {
                     return Ok(());
                 }

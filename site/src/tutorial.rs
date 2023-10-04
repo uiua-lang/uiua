@@ -5,7 +5,7 @@ use leptos::*;
 use leptos_router::*;
 use uiua::{example_ua, primitive::Primitive, SysOp};
 
-use crate::{editor::*, examples::QUADRATIC, Prim, PrimCodes};
+use crate::{editor::*, Prim, PrimCodes};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
 pub enum TutorialPage {
@@ -374,6 +374,7 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example="[1 2 [7 8 9]]"/> // Should fail
         <p>"By using "<Prim prim=Constant/>", we can turn any value into a function that pushes that value onto the stack. We can then put these functions into an array like any other."</p>
         <Editor example="[□1 □2 □[7 8 9]]"/>
+        <p>"The "<code>"⟦⟧"</code>"s indicate that a list is wrapped in a constant function."</p>
         <p>"To get the values back on the stack, we can use "<Prim prim=Reduce/><Prim prim=Call/>"."</p>
         <Editor example="/![□1 □2 □[7 8 9]]"/>
         <p>"Having to write "<Prim prim=Constant glyph_only=true/>" everywhere is annoying, and so..."</p>
@@ -385,6 +386,7 @@ fn TutorialArrays() -> impl IntoView {
         <p>"This is very useful for making lists of strings."</p>
         <Editor example=r#"langs ← .["Uiua" "APL" "J" "BQN" "K" "Q"]"#/>
         <Editor example=r#"langs ← .{"Uiua" "APL" "J" "BQN" "K" "Q"}"#/>
+        <p>"The "<code>"⌜⌟"</code>"s indicate that a string is wrapped in a constant function."</p>
         <p>"Many simple functions will work on "<Prim prim=Constant/>" elements without needing to use "<Prim prim=Call/>"."</p>
         <Editor example=
 r#"langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
@@ -581,7 +583,7 @@ f(↥)"/>
         <p>"A signature declaration is "<em>"required"</em>" if the function's signature cannot be infered. The compiler can usually infer a function's signature unless you are doing something weird with higher-order functions or fiddling with function arrays, or if you are using "<Prim prim=Recur/>"sion."</p>
         <Editor example="∺(⊞^∶,)+_-⇡3"/> // Should fail
         <p>"Simply add a signature declaration to fix this."</p>
-        <Editor example="∺(|1 ⊞^∶,)+_-⇡3"/>
+        <Editor example="∺(|2 ⊞^∶,)+_-⇡3"/>
         <p>"In addition, an error is thrown if a function's signature can be inferred and the inferred signature does not match the declared signature. This can help validate that a function is correct."</p>
         <Editor example="≡(|2 ↻.) 1_2_3 ↯3_3⇡9"/> // Should fail
     }
@@ -600,64 +602,28 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <p><Prim prim=Dip/>" can be chained to dig deeper into the stack."</p>
         <Editor example="[→→→→→→+ 1 2 3 4 5 6 7 8]"/>
 
-        <h2 id="fork"><Prim prim=Fork/></h2>
-        <p>"Let's say you wanted both the sum and the product of two numbers. One way to do this would be to use both "<Prim prim=Over/>" and "<Prim prim=Dip/>"."</p>
-        <Editor example="+→→×,, 3 5"/>
-        <p>"A better way to do this is to use the "<Prim prim=Fork/>" modifier, which calls each of two functions on a pair of arguments."</p>
-        <Editor example="⊃+× 3 5"/>
-        <p>"If you use a function that only takes 0 or 1 arguments, it will be called with only the corresponding value."</p>
-        <Editor example="⊟⊃'×4'+1 3 5"/>
-        <p>"However, with only monadic functions, it is often shorter to just use "<Prim prim=Flip/>"."</p>
-        <Editor example="⊟⊃'×4'+1 3 5\n⊟∶+1∶×4 3 5"/>
+        <h2 id="share"><Prim prim=Share/></h2>
+        <p><Prim prim=Share/>" is a dyadic modifier that takes 2 functions and calls them both on multiple arguments. The number of arguments used is the maximum of the two functions."</p>
+        <Editor example="[⊃+× 3 5]"/>
+        <p>"If one of the functions take more arguments than the other, the function with fewer arguments uses the top-most values."</p>
+        <Editor example="⊃×⇌ [1 2 3] 10"/>
+        <p>"What's powerful about "<Prim prim=Share/>" is that it can be chained to use as many functions as you want."</p>
+        <Editor example="[⊃⊃⊃+-×÷ 5 8]"/>
+        <p>"In addition, unlike "<Prim prim=Distribute/><Prim prim=Call/>", which can also be used to apply several functions to the same arguments, "<Prim prim=Share/>" does not require that its values be in an array together."</p>
+        <Editor example="⊃+-1@b"/>
+        <Editor example="⊃⊃⊃↻↙↘⊡ 2 [1 2 3 4 5]"/>
 
-        <h2 id="trident"><Prim prim=Trident/></h2>
-        <p><Prim prim=Trident/>" is similar to "<Prim prim=Fork/>", except it applies 3 functions to 3 arguments."</p>
-        <p>"If we call the functions "<code>"f"</code>", "<code>"g"</code>", and "<code>"h"</code>" and call the arguments "<code>"a"</code>", "<code>"b"</code>", and "<code>"c"</code>", then "<Prim prim=Trident/>" calls "<code>"h"</code>" then "<code>"g"</code>" then "<code>"f"</code>" each with arguments according to this table:"</p>
-        <table class="bordered-table">
-            <tr>
-                <th>"Args"</th>
-                <th><code>"f"</code></th>
-                <th><code>"g"</code></th>
-                <th><code>"h"</code></th>
-            </tr>
-            <tr>
-                <td>"1"</td>
-                <td><code>"a"</code></td>
-                <td><code>"b"</code></td>
-                <td><code>"c"</code></td>
-            </tr>
-            <tr>
-                <td>"2"</td>
-                <td><code>"a b"</code></td>
-                <td><code>"a c"</code></td>
-                <td><code>"b c"</code></td>
-            </tr>
-            <tr>
-                <td>"3"</td>
-                <td><code>"a b c"</code></td>
-                <td><code>"a b c"</code></td>
-                <td><code>"a b c"</code></td>
-            </tr>
-        </table>
-        <p>"We can see how this works with "<Prim prim=Join/></p>
-        <Editor example="[∋··· 1 2 3]"/>
-        <Editor example="[∋⊂⊂⊂ 1 2 3]"/>
-        <Editor example="[∋'⊂⊂'⊂⊂'⊂⊂ 1 2 3]"/>
+        <h2 id="both"><Prim prim=Both/></h2>
+        <p><Prim prim=Both/>" is monadic modifier and a sort of compliment to "<Prim prim=Share/>". While "<Prim prim=Share/>" calls multiple functions on the same set of arguments, "<Prim prim=Both/>" calls a single function on multiple sets of arguments."</p>
+        <Editor example="∷⇌ [1 2 3] [4 5 6]"/>
+        <p>"Chaining "<Prim prim=Both/>" doubles the number of arguments each time."</p>
+        <Editor example="∷∷⇌ [1 2 3] [4 5 6] [7 8 9] [10 11 12]"/>
 
-        <h2 id="restack"><Prim prim=Restack/></h2>
-        <p><Prim prim=Restack/>" is the most powerful stack-manipulation function. All other stack-manipulation functions can be implemented with "<Prim prim=Restack/>"."</p>
-        <p>"Its behavior is similar to "<Prim prim=Select/>", except instead of selecting from an array, it selects from the stack."</p>
-        <p>"It takes a single array of natural numbers and rearranges the stack accordingly."</p>
-        <Editor example="⇵[1 3 0 0] \"x\" 2 [5 6 7] (+)"/>
-
-        <h2 id="a-motivating-example">"A Motivating Example"</h2>
-        <p>"Implementing the "<a href="https://en.wikipedia.org/wiki/Quadratic_formula">"quadratic formula"</a>" requires juggling 3 values."</p>
-        <p>"There are two ways you could approach this."</p>
-        <p>"The first way is to use "<Prim prim=Trident/>" and exploit the way it orders the arguments to its functions. This is what is done in an example on the homepage."</p>
-        <Editor example=QUADRATIC/>
-        <p>"The second way is to use "<Prim prim=Restack/>" to rearrange the arguments into the exact order needed to just do all the operations at once."</p>
-        <Editor example="Quad ← ÷×2∶-∶⊟¯.√-∶ⁿ2∶×4×⇵[0 2 1 1 0]\nQuad 1 2 0"/>
-        <p><Prim prim=Trident/>" is the obvious winner here in terms of both clarity and concision, but as soon as you have more than 3 arguments, "<Prim prim=Restack/>" becomes a necessity."</p>
+        <h2 id="allot"><Prim prim=Allot/></h2>
+        <p>"To round it all off, we have "<Prim prim=Allot/>", which is a dyadic modifier that calls each of its functions on a different set of arguments."</p>
+        <Editor example="[⊐+× 1 2 3 4]"/>
+        <p><Prim prim=Allot/>" too can be chained. Each additional function is called on arguments deeper in the stack."</p>
+        <Editor example="[⊐⊐⊐+¯×. 1 2 3 4 5 6]"/>
     }
 }
 

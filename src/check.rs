@@ -104,7 +104,7 @@ impl<'a> VirtualEnv<'a> {
                 items.reverse();
                 self.stack.push(BasicValue::Arr(items));
             }
-            Instr::Call(_) => self.handle_call(false)?,
+            Instr::Call(_) => self.handle_call()?,
             Instr::Prim(prim, _) => match prim {
                 Reduce | Scan => self.handle_mod(prim, Some(2), Some(1), 1, None)?,
                 Fold => self.handle_mod(prim, Some(2), Some(1), 2, None)?,
@@ -226,13 +226,7 @@ impl<'a> VirtualEnv<'a> {
                     let f = self.pop()?;
                     let args = f.signature().args * 2;
                     let outputs = f.signature().outputs * 2;
-                    for _ in 0..args {
-                        self.pop()?;
-                    }
-                    self.set_min_height();
-                    for _ in 0..outputs {
-                        self.stack.push(BasicValue::Other);
-                    }
+                    self.handle_args_outputs(args, outputs)?;
                 }
                 Fork => {
                     let f = self.pop()?;
@@ -261,19 +255,41 @@ impl<'a> VirtualEnv<'a> {
                         self.stack.push(BasicValue::Other);
                     }
                 }
+                Share => {
+                    let f = self.pop()?;
+                    let g = self.pop()?;
+                    let args = f.signature().args.max(g.signature().args);
+                    let outputs = f.signature().outputs + g.signature().outputs;
+                    self.handle_args_outputs(args, outputs)?;
+                }
+                Allot => {
+                    let f = self.pop()?;
+                    let g = self.pop()?;
+                    let args = f.signature().args + g.signature().args;
+                    let outputs = f.signature().outputs + g.signature().outputs;
+                    self.handle_args_outputs(args, outputs)?;
+                }
+                If => {
+                    let if_true = self.pop()?;
+                    let if_false = self.pop()?;
+                    let _cond = self.pop()?;
+                    if !if_true.signature().is_compatible_with(if_false.signature()) {
+                        return Err(format!(
+                            "if's branches have incompatible signatures {} and {}",
+                            if_true.signature(),
+                            if_false.signature()
+                        ));
+                    }
+                    let sig = if_true.signature().max_with(if_false.signature());
+                    self.handle_sig(sig)?;
+                }
                 Level => {
                     let arg_count = match self.pop()? {
                         BasicValue::Arr(items) => items.len(),
                         _ => 1,
                     };
                     let f = self.pop()?;
-                    for _ in 0..arg_count {
-                        self.pop()?;
-                    }
-                    self.set_min_height();
-                    for _ in 0..f.signature().outputs {
-                        self.stack.push(BasicValue::Other);
-                    }
+                    self.handle_args_outputs(arg_count, f.signature().outputs)?;
                 }
                 Try => {
                     let f = self.pop()?;
@@ -286,13 +302,7 @@ impl<'a> VirtualEnv<'a> {
                         ));
                     }
                     let sig = f_sig.max_with(handler_sig);
-                    for _ in 0..sig.args {
-                        self.pop()?;
-                    }
-                    self.set_min_height();
-                    for _ in 0..sig.outputs {
-                        self.stack.push(BasicValue::Other);
-                    }
+                    self.handle_sig(sig)?;
                 }
                 Invert => {
                     if let BasicValue::Func(f) = self.pop()? {
@@ -429,7 +439,29 @@ impl<'a> VirtualEnv<'a> {
                         }
                     }
                 }
-                Call => self.handle_call(true)?,
+                Join => {
+                    let a = self.pop()?;
+                    let b = self.pop()?;
+                    self.set_min_height();
+                    match (a, b) {
+                        (BasicValue::Arr(mut a), BasicValue::Arr(b)) => {
+                            a.extend(b);
+                            self.stack.push(BasicValue::Arr(a));
+                        }
+                        (BasicValue::Arr(mut a), b) => {
+                            a.push(b);
+                            self.stack.push(BasicValue::Arr(a));
+                        }
+                        (a, BasicValue::Arr(mut b)) => {
+                            b.insert(0, a);
+                            self.stack.push(BasicValue::Arr(b));
+                        }
+                        (a, b) => {
+                            self.stack.push(BasicValue::Arr(vec![a, b]));
+                        }
+                    }
+                }
+                Call => self.handle_call()?,
                 Recur => return Err("recur present".into()),
                 prim => {
                     let args = prim
@@ -461,17 +493,20 @@ impl<'a> VirtualEnv<'a> {
             *h = (*h).min(self.stack.len());
         }
     }
-    fn handle_sig(&mut self, sig: Signature) -> Result<(), String> {
-        for _ in 0..sig.args {
+    fn handle_args_outputs(&mut self, args: usize, outputs: usize) -> Result<(), String> {
+        for _ in 0..args {
             self.pop()?;
         }
         self.set_min_height();
-        for _ in 0..sig.outputs {
+        for _ in 0..outputs {
             self.stack.push(BasicValue::Other);
         }
         Ok(())
     }
-    fn handle_call(&mut self, explicit: bool) -> Result<(), String> {
+    fn handle_sig(&mut self, sig: Signature) -> Result<(), String> {
+        self.handle_args_outputs(sig.args, sig.outputs)
+    }
+    fn handle_call(&mut self) -> Result<(), String> {
         match self.pop()? {
             BasicValue::Func(f) => {
                 let sig = f.signature();
@@ -480,36 +515,6 @@ impl<'a> VirtualEnv<'a> {
                 }
                 self.set_min_height();
                 for _ in 0..sig.outputs {
-                    self.stack.push(BasicValue::Other);
-                }
-            }
-            BasicValue::Arr(items) if explicit => {
-                let mut fs = Vec::new();
-                for item in items {
-                    if let BasicValue::Func(f) = item {
-                        fs.push(f);
-                    } else {
-                        return Err("call with non-function array".into());
-                    }
-                }
-                let mut max_args = 0;
-                let mut max_outputs = 0;
-                for f in &fs {
-                    let sig = f.signature();
-                    max_args = max_args.max(sig.args);
-                    max_outputs = max_outputs.max(sig.outputs);
-                }
-                for win in fs.windows(2) {
-                    if !win[0].signature().is_compatible_with(win[1].signature()) {
-                        return Err("call with incompatible functions".into());
-                    }
-                }
-                self.pop()?; // Pop the index
-                for _ in 0..max_args {
-                    self.pop()?;
-                }
-                self.set_min_height();
-                for _ in 0..max_outputs {
                     self.stack.push(BasicValue::Other);
                 }
             }
@@ -621,7 +626,7 @@ mod test {
             }
         }
         assert_eq!(Ok(sig(0, 0)), check(&[]));
-        assert_eq!(Ok(sig(0, 0)), check(&[Prim(Noop, 0)]));
+        assert_eq!(Ok(sig(1, 1)), check(&[Prim(Noop, 0)]));
 
         assert_eq!(Ok(sig(0, 1)), check(&[push(10), push(2), Prim(Pow, 0)]));
         assert_eq!(

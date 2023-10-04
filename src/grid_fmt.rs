@@ -144,7 +144,11 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         let stringy = type_name::<T>() == type_name::<char>();
         if *self.shape == [0] {
             return if stringy {
-                vec![vec!['"', '"']]
+                if boxed {
+                    vec![vec!['“', '”']]
+                } else {
+                    vec![vec!['"', '"']]
+                }
             } else {
                 vec![vec!['[', ']']]
             };
@@ -173,7 +177,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         let mut grid: Grid = Grid::new();
 
         if !just_dims {
-            fmt_array(&self.shape, &self.data, stringy, &mut metagrid);
+            fmt_array(&self.shape, &self.data, stringy, boxed, &mut metagrid);
             // Determine max row heights and column widths
             let metagrid_width = metagrid.iter().map(|row| row.len()).max().unwrap();
             let metagrid_height = metagrid.len();
@@ -211,11 +215,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             let row_count = grid.len();
             if row_count == 1 && self.rank() == 1 {
                 // Add brackets to vectors
-                if stringy {
-                    if boxed {
-                        grid[0].insert(0, '□');
-                    }
-                } else {
+                if !stringy {
                     let (left, right) = if boxed { ('⟦', '⟧') } else { ('[', ']') };
                     grid[0].insert(0, left);
                     grid[0].push(right);
@@ -274,6 +274,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
     shape: &[usize],
     data: &[T],
     stringy: bool,
+    boxed: bool,
     metagrid: &mut Metagrid,
 ) {
     if data.is_empty() {
@@ -290,7 +291,14 @@ fn fmt_array<T: GridFmt + ArrayValue>(
         if stringy {
             let mut s = String::new();
             s.extend(data.iter().map(|c| c.to_string()));
-            row.push(vec![format!("{s:?}").chars().collect()]);
+            let mut s = format!("{s:?}");
+            if boxed {
+                s.pop();
+                s.remove(0);
+                s.insert(0, '⌜');
+                s.push('⌟');
+            }
+            row.push(vec![s.chars().collect()]);
         } else {
             for (i, val) in data.iter().enumerate() {
                 let mut grid = val.fmt_grid(false);
@@ -316,7 +324,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
                 metagrid.push(vec![vec![vec![' ']]; metagrid.last().unwrap().len()]);
             }
         }
-        fmt_array(shape, cell, stringy, metagrid);
+        fmt_array(shape, cell, stringy, false, metagrid);
     }
 }
 

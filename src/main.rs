@@ -73,7 +73,6 @@ fn run() -> UiuaResult {
                     path.as_deref(),
                 )?;
 
-                show_update_message();
                 if let Some(path) = path {
                     format_file(path, &config)?;
                 } else {
@@ -86,12 +85,13 @@ fn run() -> UiuaResult {
                 path,
                 no_format,
                 formatter_options,
+                no_update,
                 mode,
                 #[cfg(feature = "audio")]
                 audio_options,
                 args,
             } => {
-                if !no_format {
+                if !no_update {
                     show_update_message();
                 }
                 let path = if let Some(path) = path {
@@ -131,7 +131,6 @@ fn run() -> UiuaResult {
                 audio_options,
                 args,
             } => {
-                show_update_message();
                 #[cfg(feature = "audio")]
                 setup_audio(audio_options);
                 let mut rt = Uiua::with_native_sys()
@@ -147,7 +146,6 @@ fn run() -> UiuaResult {
                 path,
                 formatter_options,
             } => {
-                show_update_message();
                 let path = if let Some(path) = path {
                     path
                 } else {
@@ -171,10 +169,13 @@ fn run() -> UiuaResult {
             App::Watch {
                 no_format,
                 formatter_options,
+                no_update,
                 clear,
                 args,
             } => {
-                show_update_message();
+                if !no_update {
+                    show_update_message();
+                }
                 if let Err(e) = watch(
                     working_file_path().ok().as_deref(),
                     !no_format,
@@ -328,6 +329,7 @@ fn watch(
                             .arg(path)
                             .args([
                                 "--no-format",
+                                "--no-update",
                                 "--mode",
                                 "all",
                                 #[cfg(feature = "audio")]
@@ -402,6 +404,7 @@ fn watch(
 }
 
 #[derive(Parser)]
+#[clap(version)]
 enum App {
     #[clap(about = "Initialize a new main.ua file")]
     Init,
@@ -412,6 +415,8 @@ enum App {
         no_format: bool,
         #[clap(flatten)]
         formatter_options: FormatterOptions,
+        #[clap(long, help = "Don't check for updates")]
+        no_update: bool,
         #[clap(long, help = "Run the file in a specific mode")]
         mode: Option<RunMode>,
         #[cfg(feature = "audio")]
@@ -441,6 +446,8 @@ enum App {
         no_format: bool,
         #[clap(flatten)]
         formatter_options: FormatterOptions,
+        #[clap(long, help = "Don't check for updates")]
+        no_update: bool,
         #[clap(long, help = "Clear the terminal on file change")]
         clear: bool,
         #[clap(trailing_var_arg = true)]
@@ -537,11 +544,16 @@ fn show_update_message() {
     let local_version = env!("CARGO_PKG_VERSION");
     if let Some((local, remote)) = parse_version(local_version).zip(parse_version(remote_version)) {
         if local < remote {
+            let flags = if cfg!(feature = "audio") {
+                " --features audio"
+            } else {
+                ""
+            };
             println!(
                 "{}\n",
                 format!(
                     "Update available: {local_version} → {remote_version}\n\
-                Run `cargo install uiua` to update",
+                    Run `cargo install uiua {flags}` to update",
                 )
                 .bright_white()
                 .bold()

@@ -8,7 +8,7 @@ license = "MIT"
 name = "uiua"
 readme = "readme.md"
 repository = "https://github.com/uiua-lang/uiua"
-version = "0.0.11"
+version = "0.0.14"
 
 [dependencies]
 ariadne = "0.3.0"
@@ -31,14 +31,10 @@ hodaun.features = ["output", "wav"]
 hodaun.optional = true
 hodaun.version = "0.4.1"
 hound = "3"
+httparse.optional = true
+httparse.version = "1.8.0"
 image.default-features = false
-image.features = [
-  "bmp",
-  "gif",
-  "ico",
-  "jpeg",
-  "png",
-]
+image.features = ["bmp", "gif", "ico", "jpeg", "png"]
 image.version = "0.24.5"
 indexmap.features = ["serde"]
 indexmap.optional = true
@@ -54,6 +50,9 @@ paste = "1.0.14"
 rand.default-features = false
 rand.features = ["small_rng"]
 rand.version = "0.8.5"
+rustls.default-features = false
+rustls.optional = true
+rustls.version = "0.21.7"
 serde.features = ["derive"]
 serde.optional = true
 serde.version = "1"
@@ -69,12 +68,15 @@ tower-lsp.optional = true
 tower-lsp.version = "0.19.0"
 viuer.optional = true
 viuer.version = "0.6.2"
+webpki-roots.optional = true
+webpki-roots.version = "0.25.0"
 
 [features]
 audio = ["hodaun", "crossbeam-channel", "lockfree"]
 binary = ["ctrlc", "notify", "clap", "color-backtrace", "lsp"]
 debug = []
-default = ["binary", "terminal_image"]
+default = ["binary", "terminal_image", "https"]
+https = ["httparse", "rustls", "webpki-roots"]
 lsp = ["tower-lsp", "tokio"]
 profile = ["crossbeam-channel", "serde", "serde_yaml", "indexmap"]
 terminal_image = ["viuer"]

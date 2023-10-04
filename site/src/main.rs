@@ -267,23 +267,27 @@ fn prim_class(prim: Primitive) -> &'static str {
         };
     }
 
-    if prim == Primitive::Transpose {
-        code_font!("monadic-function-button trans")
-    } else if prim.class() == PrimClass::Stack && prim.modifier_args().is_none() {
-        code_font!("stack-function-button")
-    } else if let Some(m) = prim.modifier_args() {
-        if m == 1 {
-            code_font!("modifier1-button")
-        } else {
-            code_font!("modifier2-button")
+    match prim {
+        Primitive::Transpose => code_font!("monadic-function-button trans"),
+        prim if prim.class() == PrimClass::Stack && prim.modifier_args().is_none() => {
+            code_font!("stack-function-button")
         }
-    } else {
-        match prim.args() {
-            Some(0) => code_font!("noadic-function-button"),
-            Some(1) => code_font!("monadic-function-button"),
-            Some(2) => code_font!("dyadic-function-button"),
-            Some(3) => code_font!("triadic-function-button"),
-            _ => code_font!("variadic-function-button"),
+        prim => {
+            if let Some(m) = prim.modifier_args() {
+                if m == 1 {
+                    code_font!("modifier1-button")
+                } else {
+                    code_font!("modifier2-button")
+                }
+            } else {
+                match prim.args() {
+                    Some(0) => code_font!("noadic-function-button"),
+                    Some(1) => code_font!("monadic-function-button"),
+                    Some(2) => code_font!("dyadic-function-button"),
+                    Some(3) => code_font!("triadic-function-button"),
+                    _ => code_font!("variadic-function-button"),
+                }
+            }
         }
     }
 }

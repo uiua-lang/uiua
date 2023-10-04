@@ -835,16 +835,14 @@ macro_rules! cmp_impls {
                 (Num, Num, num_num),
                 (Byte, Byte, generic, num_num),
                 (Char, Char, generic),
+                (Func, Func, generic),
                 (Num, Byte, num_byte, num_num),
                 (Byte, Num, byte_num, num_num),
                 // Type comparable
                 (Num, Char, always_less),
-                (Num, Func, always_less),
                 (Byte, Char, always_less),
-                (Byte, Func, always_less),
                 (Char, Num, always_greater),
                 (Char, Byte, always_greater),
-                (Char, Func, always_less),
             );
         )*
     };

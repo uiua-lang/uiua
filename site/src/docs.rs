@@ -400,7 +400,7 @@ impl Allowed {
                 continue;
             }
             let (header, description) = match class {
-                PrimClass::Stack => ("Stack", "Modify the stack"),
+                PrimClass::Stack => ("Stack", "Work with the stack"),
                 PrimClass::MonadicPervasive => {
                     ("Monadic Pervasive", "Operate on every element in an array")
                 }

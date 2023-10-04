@@ -671,12 +671,15 @@ code:
                 let span = self.add_span(span);
                 self.push_instr(Instr::Call(span));
             }
-        } else if let Some(prim) =
-            Primitive::all().find(|p| p.names().is_some_and(|n| n.text == ident.as_ref()))
-        {
+        } else if let Some(prim) = Primitive::all().find(|p| {
+            p.names().is_some_and(|n| {
+                n.text == ident.as_ref() || ident.len() >= 3 && n.text.starts_with(&*ident)
+            })
+        }) {
             return Err(span
                 .sp(format!(
-                    "Unknown identifier `{ident}`, did you mean `{prim}`?"
+                    "Unknown identifier `{ident}`. Did you mean `{prim}`? \
+                    Functions with ASCII glyphs do not format."
                 ))
                 .into());
         } else {
@@ -753,6 +756,31 @@ code:
             }
             _ => {}
         }
+        // Handle deprecation
+        self.handle_primitive_deprecation(modified.modifier.value, &modified.modifier.span);
+
+        // Handle bind
+        if modified.modifier.value == Primitive::Bind && modified.operands.len() == 2 {
+            self.new_functions.push(Vec::new());
+            self.words(modified.operands, true)?;
+            let instrs = self.new_functions.pop().unwrap();
+            return match instrs_signature(&instrs) {
+                Ok(sig) => {
+                    let func = Function::new(
+                        FunctionId::Anonymous(modified.modifier.span),
+                        instrs,
+                        FunctionKind::Normal,
+                        sig,
+                    );
+                    self.push_instr(Instr::push(func));
+                    Ok(())
+                }
+                Err(e) => Err(UiuaError::Run(
+                    Span::Code(modified.modifier.span.clone())
+                        .sp(format!("Cannot infer function signature in bind: {e}")),
+                )),
+            };
+        }
 
         if call {
             self.words(modified.operands, false)?;
@@ -787,7 +815,7 @@ code:
         }
         Ok(())
     }
-    fn primitive(&mut self, prim: Primitive, span: CodeSpan, call: bool) -> UiuaResult {
+    fn handle_primitive_deprecation(&mut self, prim: Primitive, span: &CodeSpan) {
         if let Some(suggestion) = prim.deprecation_suggestion() {
             let suggestion = if suggestion.is_empty() {
                 String::new()
@@ -805,6 +833,9 @@ code:
                 DiagnosticKind::Warning,
             ));
         }
+    }
+    fn primitive(&mut self, prim: Primitive, span: CodeSpan, call: bool) -> UiuaResult {
+        self.handle_primitive_deprecation(prim, &span);
         let span = self.add_span(span);
         if call || prim.as_constant().is_some() {
             self.push_instr(Instr::Prim(prim, span));
@@ -921,44 +952,35 @@ code:
     fn pop_span(&mut self) {
         self.scope.call.last_mut().unwrap().spans.pop();
     }
-    fn call_with_span(&mut self, mut f: Value, call_span: usize) -> UiuaResult {
-        let mut first_pass = true;
-        loop {
-            match f {
-                Value::Func(f) if f.shape.is_empty() => {
-                    // Call function
-                    let f = f.into_scalar().unwrap();
-                    match &f.kind {
-                        FunctionKind::Normal => {}
-                        FunctionKind::Dynamic(dfk) => {
-                            self.scope.call.push(StackFrame {
-                                function: f.clone(),
-                                call_span,
-                                spans: Vec::new(),
-                                pc: 0,
-                            });
-                            (dfk.f)(self)?;
-                            self.scope.call.pop();
-                            break Ok(());
-                        }
+    fn call_with_span(&mut self, f: Value, call_span: usize) -> UiuaResult {
+        match f {
+            Value::Func(f) if f.shape.is_empty() => {
+                // Call function
+                let f = f.into_scalar().unwrap();
+                match &f.kind {
+                    FunctionKind::Normal => {}
+                    FunctionKind::Dynamic(dfk) => {
+                        self.scope.call.push(StackFrame {
+                            function: f.clone(),
+                            call_span,
+                            spans: Vec::new(),
+                            pc: 0,
+                        });
+                        (dfk.f)(self)?;
+                        self.scope.call.pop();
+                        return Ok(());
                     }
-                    break self.exec(StackFrame {
-                        function: f,
-                        call_span,
-                        spans: Vec::new(),
-                        pc: 0,
-                    });
                 }
-                Value::Func(_) if first_pass => {
-                    // Call non-scalar function array
-                    let index = self.pop("index")?;
-                    f = index.pick(f, self)?;
-                    first_pass = false;
-                }
-                value => {
-                    self.push(value);
-                    break Ok(());
-                }
+                self.exec(StackFrame {
+                    function: f,
+                    call_span,
+                    spans: Vec::new(),
+                    pc: 0,
+                })
+            }
+            value => {
+                self.push(value);
+                Ok(())
             }
         }
     }
@@ -1339,6 +1361,7 @@ where
 
 pub struct FunctionArg<T>(pub T);
 pub struct ArrayArg<T>(pub T);
+pub struct FunctionNArg<T>(pub usize, pub T);
 
 impl<T: StackArg> StackArg for FunctionArg<T> {
     fn arg_name(self) -> String {
@@ -1352,5 +1375,14 @@ where
 {
     fn arg_name(self) -> String {
         format!("array {}", self.0.arg_name())
+    }
+}
+
+impl<T> StackArg for FunctionNArg<T>
+where
+    T: StackArg,
+{
+    fn arg_name(self) -> String {
+        format!("function {}'s {}", self.0, self.1.arg_name())
     }
 }

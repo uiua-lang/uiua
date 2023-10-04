@@ -175,7 +175,10 @@ primitive!(
     /// The formatter converts an empty `()` function into `noop` if it is in a strand or a modifier.
     /// ex: /() [1 2] # Try running to format
     ///   : ()_(+1)
-    (0(0), Noop, Stack, ("noop", '·')),
+    ///
+    /// While [noop]'s signature is `|1.1`, it will not throw an error if the stack is empty.
+    /// ex: ·
+    (1, Noop, Stack, ("noop", '·')),
     /// Move the top value on the stack 2 places down
     ///
     /// Deprecated in favor of [dip].
@@ -196,31 +199,6 @@ primitive!(
     ///
     /// See also: [roll]
     (3(3), Unroll, Stack, ("unroll", '↶')),
-    /// Temporarily pop the top value off the stack and call a function
-    ///
-    /// ex: [→+ 1 2 3]
-    /// ex: [→→+ 1 2 3 4]
-    ///
-    /// [dip] replaces [roll] and [unroll], which are currently deprecated.
-    ([1], Dip, Stack, ("dip", '→')),
-    /// Rearrange the stack
-    ///
-    /// [restack] is the most powerful stack manipulation function.
-    /// It is similar to [select], except it works on the stack instead of an array.
-    ///
-    /// [restack] takes a list of indices and rearranges those values on the stack in the given order.
-    /// ex: [⇵[1 0 2 2] 1 2 3]
-    ///
-    /// All other built-in stack manipulation functions can be implemented with [restack].
-    /// [duplicate] is `⇵``[0 0]`.
-    /// [over] is `⇵``[1 0 1]`.
-    /// [flip] is `⇵``[1 0]`.
-    /// [pop] is `⇵``[1]`.
-    /// [roll] is `⇵``[1 2 0]`.
-    /// [unroll] is `⇵``[2 0 1]`.
-    ///
-    /// While [restack] is sometimes necessary, its use is generally discouraged unless absolutely necessary, as it makes code harder to read.
-    ((None), Restack, Stack, ("restack", '⇵')),
     /// Move a value to the temp stack
     (1(0), PushTemp, Stack),
     /// Move a value from the temp stack
@@ -619,6 +597,32 @@ primitive!(
     ///   : ∵⍜!($"_ _"⧻.).
     /// This works because [call] [invert]ed is [constant]. For each element, it [call]s the constant function to get the array out, does something to it, then [constant]s the result.
     (1, Constant, MonadicArray, ("constant", '□')),
+    /// Check if two arrays are exactly the same
+    ///
+    /// ex: ≅ 1_2_3 [1 2 3]
+    /// ex: ≅ 1_2_3 [1 2]
+    (2, Match, DyadicArray, ("match", '≅')),
+    /// Combine two arrays as rows of a new array
+    ///
+    /// `first``shape` of the coupled array will *always* be `2`.
+    ///
+    /// For scalars, it is equivalent to [join].
+    /// ex: ⊟ 1 2
+    ///   : ⊂ 1 2
+    ///
+    /// For arrays, a new array is created with the first array as the first row and the second array as the second row.
+    /// ex: ⊟ [1 2 3] [4 5 6]
+    ///
+    /// By default, arrays with different shapes cannot be [couple]ed.
+    /// ex! ⊟ [1 2 3] [4 5]
+    /// Use [fill] to make their shapes match
+    /// ex: ⍛∞⊟ [1 2 3] [4 5]
+    ///
+    /// [couple] is compatible with [under].
+    /// ex: ⍜⊟'×2 3 5
+    (2, Couple, DyadicArray, ("couple", '⊟')),
+    /// Split an array into two arrays
+    (1(2), Uncouple, MonadicArray),
     /// Append two arrays end-to-end
     ///
     /// For scalars, it is equivalent to [couple].
@@ -642,46 +646,6 @@ primitive!(
     ///
     /// [join]'s glyph is `⊂` because it kind of looks like a magnet pulling its two arguments together.
     (2, Join, DyadicArray, ("join", '⊂')),
-    /// Combine two arrays as rows of a new array
-    ///
-    /// `first``shape` of the coupled array will *always* be `2`.
-    ///
-    /// For scalars, it is equivalent to [join].
-    /// ex: ⊟ 1 2
-    ///   : ⊂ 1 2
-    ///
-    /// For arrays, a new array is created with the first array as the first row and the second array as the second row.
-    /// ex: ⊟ [1 2 3] [4 5 6]
-    ///
-    /// By default, arrays with different shapes cannot be [couple]ed.
-    /// ex! ⊟ [1 2 3] [4 5]
-    /// Use [fill] to make their shapes match
-    /// ex: ⍛∞⊟ [1 2 3] [4 5]
-    ///
-    /// [couple] is compatible with [under].
-    /// ex: ⍜⊟'×2 3 5
-    (2, Couple, DyadicArray, ("couple", '⊟')),
-    /// Split an array into two arrays
-    (1(2), Uncouple, MonadicArray),
-    /// Check if two arrays are exactly the same
-    ///
-    /// ex: ≅ 1_2_3 [1 2 3]
-    /// ex: ≅ 1_2_3 [1 2]
-    (2, Match, DyadicArray, ("match", '≅')),
-    /// Index a row or elements from an array
-    ///
-    /// An index with rank `0` or `1` will pick a single row or element from an array.
-    /// ex: ⊡ 2 [8 3 9 2 0]
-    /// ex: ⊡ 1_1 .[1_2_3 4_5_6]
-    ///
-    /// If the index's rank is `2` or greater, then multiple rows or elements will be picked.
-    /// ex: ⊡ [1_2 0_1] [1_2_3 4_5_6]
-    ///
-    /// For index rank `2` or greater, it should hold that `pick``range``shape``duplicate``x` is equivalent to `x`.
-    /// ex: ⊡⇡△. [1_2_3 4_5_6]
-    (2, Pick, DyadicArray, ("pick", '⊡')),
-    /// End step of under pick
-    (3, Unpick, Misc),
     /// Select multiple rows from an array
     ///
     /// For a scalar selector, [select] is equivalent to [pick].
@@ -696,6 +660,20 @@ primitive!(
     (2, Select, DyadicArray, ("select", '⊏')),
     /// End step of under select
     (3, Unselect, Misc),
+    /// Index a row or elements from an array
+    ///
+    /// An index with rank `0` or `1` will pick a single row or element from an array.
+    /// ex: ⊡ 2 [8 3 9 2 0]
+    /// ex: ⊡ 1_1 .[1_2_3 4_5_6]
+    ///
+    /// If the index's rank is `2` or greater, then multiple rows or elements will be picked.
+    /// ex: ⊡ [1_2 0_1] [1_2_3 4_5_6]
+    ///
+    /// For index rank `2` or greater, it should hold that `pick``range``shape``duplicate``x` is equivalent to `x`.
+    /// ex: ⊡⇡△. [1_2_3 4_5_6]
+    (2, Pick, DyadicArray, ("pick", '⊡')),
+    /// End step of under pick
+    (3, Unpick, Misc),
     /// Change the shape of an array
     ///
     /// ex: ↯ 2_3 [1 2 3 4 5 6]
@@ -842,8 +820,8 @@ primitive!(
     /// You can can reduce with arbitrary functions.
     /// ex: /(×+1) 1_2_3_4_5
     ///
-    /// [break]ing out of [reduce] appends the unreduced values to the end of the result.
-    /// ex: /(⎋1+) [3 4 8 9]
+    /// [break]ing out of [reduce] discards the unreduced values.
+    /// ex: /(⎋≥10.+) [3 4 8 9]
     (1[1], Reduce, AggregatingModifier, ("reduce", '/')),
     /// Apply a reducing function to an array with an initial value
     ///
@@ -852,6 +830,9 @@ primitive!(
     /// ex: ∧+ 10 1_2_3_4
     /// [fold] goes from left to right. This is important for non-commutative functions like [subtract].
     /// ex: ∧- 10 1_2_3_4
+    ///
+    /// [break]ing out of [fold] discards the unreduced values.
+    /// ex: ∧(⎋≥10.+) 1 5_6_7_8
     (2[1], Fold, AggregatingModifier, ("fold", '∧')),
     /// Reduce, but keep intermediate values
     ///
@@ -859,7 +840,8 @@ primitive!(
     /// ex: \-   1_2_3_4
     /// ex: \'-∶ 1_2_3_4
     ///
-    /// [break]ing out of [scan] discards the unscanned values.
+    /// [break]ing out of [scan] appends the unscanned values without applying the function to them.
+    /// This means the length of the output is always the same as that of the input.
     /// ex: \(⎋≥10.+) [1 2 3 4 5 6 7 8]
     (1[1], Scan, AggregatingModifier, ("scan", '\\')),
     /// Apply a function to each element of an array or arrays
@@ -982,6 +964,105 @@ primitive!(
     ///
     /// [partition] is closely related to [group].
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
+    /// Temporarily pop the top value off the stack and call a function
+    ///
+    /// ex: [→+ 1 2 3]
+    /// ex: [→→+ 1 2 3 4]
+    ///
+    /// [dip] replaces [roll] and [unroll], which are currently deprecated.
+    ([1], Dip, Stack, ("dip", '→')),
+    /// Call a function on 2 sets of values
+    ///
+    /// For monadic functions, [both] calls it's function on each of the top 2 values on the stack.
+    /// ex: ∷⇡ 3 5
+    ///
+    /// One good use of this is when working with [constant] data.
+    /// You can use [both][call] to get 2 [constant] values out.
+    /// ex: /(⊂∷!) {"a" "bc" "def"}
+    ///
+    /// For a function that takes `n` arguments, [both] calls the function on the 2 sets of `n` values on top of the stack.
+    /// ex: [∷+ 1 2 3 4]
+    /// ex: [∷(++) 1 2 3 4 5 6]
+    ///
+    /// [both]'s glyph is `∷` because, for a function `f`, it is equivalent to `f∶f∶`.
+    (2[1], Both, Stack, ("both", '∷')),
+    /// Call 2 functions on 2 values
+    ///
+    /// Deprecated in favor of [share].
+    ///
+    /// Each function may take 0, 1, or 2 arguments.
+    /// With 0 or 1 arguments, the first function will be passed the first value.
+    /// With 0 or 1 arguments, the second function will be passed the second value.
+    /// With 2 arguments, either function will be passed both values.
+    ///
+    /// We can see how this works with [join].
+    /// ex: [⊃·· 1 2]
+    /// ex: [⊃⊂⊂ 1 2]
+    ///
+    /// ex: ⊟⊃×+ 3 5
+    (2[2], Fork, Stack, "fork"),
+    /// Call 3 functions on 3 values
+    ///
+    /// Deprecated in favor of [share].
+    ///
+    /// [trident] is a very powerfull function when juggling 3 values.
+    /// Each function may take up to 3 arguments.
+    /// Let's say the the three functions are `f`, `g`, and `h`, and the three values are `a`, `b`, and `c`.
+    /// Any of the functions taking 1 argument will be called as `f a`, `g b`, or `h c` respectively.
+    /// Any of the functions taking 2 arguments will be called as `f a b`, `g a c`, or `h b c` respectively.
+    /// Any of the functions taking 3 argyments will be called on `a b c`.
+    ///
+    /// We can see how this all works with [join].
+    /// ex: [∋··· 1 2 3]
+    /// ex: [∋⊂⊂⊂ 1 2 3]
+    /// ex: [∋'⊂⊂'⊂⊂'⊂⊂ 1 2 3]
+    ///
+    /// A good example use case is when implementing the quadratic formula.
+    /// ex: Quad ← ÷→+∋(×2)¯(⊟¯.√+ⁿ2→(××¯4)∶)
+    ///   : Quad 1 2 0
+    /// The first function passed to [trident] [multiply]s `a` by `2`.
+    /// The second function [negate]s `b`.
+    /// The third function calculates the discriminant.
+    (3[3], Trident, Stack, ("trident", '∋')),
+    /// Call two functions on the same values
+    ///
+    /// ex: ⊃⇌⊝ 1_2_2_3
+    /// [share] can be chained to apply more functions to the arguments. `n` functions require the chaining of `subtract``1n` [share].
+    /// ex: [⊃⊃⊃+-×÷ 5 8]
+    /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maximum will work on the top values.
+    /// ex: [⊃+¯ 3 5]
+    ([2], Share, Stack, ("share", '⊃')),
+    /// Call two functions on two distinct sets of values
+    ///
+    /// ex: ⊐⇌⊝ 1_2_3 [1 4 2 4 2]
+    /// Each function will always be called on its own set of values.
+    /// ex: ⊐+× 1 2 3 4
+    /// The functions' signatures need not be the same.
+    /// ex: ⊐+(++) 1 2 3 4 5
+    /// [allot] can be chained to apply additional functions to arguments deeper on the stack.
+    /// ex: ⊐⊐⇌(↻1)△ 1_2_3 4_5_6 7_8_9
+    /// ex: [⊐⊐⊐+-×÷ 10 20 5 8 3 7 2 5]
+    ([2], Allot, Stack, ("allot", '⊐')),
+    /// Rearrange the stack
+    ///
+    /// Deprecated because it was never a good idea.
+    ///
+    /// [restack] is the most powerful stack manipulation function.
+    /// It is similar to [select], except it works on the stack instead of an array.
+    ///
+    /// [restack] takes a list of indices and rearranges those values on the stack in the given order.
+    /// ex: [⇵[1 0 2 2] 1 2 3]
+    ///
+    /// All other built-in stack manipulation functions can be implemented with [restack].
+    /// [duplicate] is `⇵``[0 0]`.
+    /// [over] is `⇵``[1 0 1]`.
+    /// [flip] is `⇵``[1 0]`.
+    /// [pop] is `⇵``[1]`.
+    /// [roll] is `⇵``[1 2 0]`.
+    /// [unroll] is `⇵``[2 0 1]`.
+    ///
+    /// While [restack] is sometimes necessary, its use is generally discouraged unless absolutely necessary, as it makes code harder to read.
+    ((None), Restack, Stack, ("restack", '⇵')),
     /// Invert the behavior of a function
     ///
     /// Most functions are not invertible.
@@ -1124,66 +1205,33 @@ primitive!(
     /// ex: ⍚[1 1]⊂ ↯3_3⇡9 10_11_12 # Join two rank 1 arrays
     /// ex: ⍚[1 0]⊂ ↯3_3⇡9 10_11_12 # Join rank 1 arrays with scalars
     ([2], Level, IteratingModifier, ("level", '⍚')),
-    /// Call two functions
+    /// Compose two functions
     ///
     /// This modifier mostly exists for syntactic convenience.
     /// It lets you change any function with 2 terms into a modifer call, saving a single character.
     /// ex: ≡(⇌⊢)↯3_3⇡9
     ///   : ≡'⇌⊢↯3_3⇡9
+    ///
+    /// Because even non-functions can be called like functions, [bind] can, well, *bind* a value to a function.
+    /// ex: f = '+1
+    ///   : f 4
     /// This especially nice when used with modifiers that take 2 functions, like [under], where you can save up to 2 characters!
     /// ex: ⍜(↻3)(⊂π) [1 2 3 4 5]
     ///   : ⍜'↻3'⊂π [1 2 3 4 5]
     ([2], Bind, OtherModifier, ("bind", '\'')),
-    /// Call a function on 2 sets of values
+    /// Call one of two functions based on a condition
     ///
-    /// For monadic functions, [both] calls it's function on each of the top 2 values on the stack.
-    /// ex: ∷⇡ 3 5
+    /// If the condition is `1`, then the first function is called, otherwise the second function is called.
+    /// ex: ?+- 1 3 5
+    /// ex: ?+- 0 3 5
+    /// ex: Abs ← ?¯· <0.
+    ///   : Abs 2
+    ///   : Abs ¯5
     ///
-    /// One good use of this is when working with [constant] data.
-    /// You can use [both][call] to get 2 [constant] values out.
-    /// ex: /(⊂∷!) {"a" "bc" "def"}
-    ///
-    /// For a function that takes `n` arguments, [both] calls the function on the 2 sets of `n` values on top of the stack.
-    /// ex: [∷+ 1 2 3 4]
-    /// ex: [∷(++) 1 2 3 4 5 6]
-    ///
-    /// [both]'s glyph is `∷` because, for a function `f`, it is equivalent to `f∶f∶`.
-    (2[1], Both, OtherModifier, ("both", '∷')),
-    /// Call 2 functions on 2 values
-    ///
-    /// Each function may take 0, 1, or 2 arguments.
-    /// With 0 or 1 arguments, the first function will be passed the first value.
-    /// With 0 or 1 arguments, the second function will be passed the second value.
-    /// With 2 arguments, either function will be passed both values.
-    ///
-    /// We can see how this works with [join].
-    /// ex: [⊃·· 1 2]
-    /// ex: [⊃⊂⊂ 1 2]
-    ///
-    /// ex: ⊟⊃×+ 3 5
-    (2[2], Fork, OtherModifier, ("fork", '⊃')),
-    /// Call 3 functions on 3 values
-    ///
-    /// [trident] is a very powerfull function when juggling 3 values.
-    /// Each function may take up to 3 arguments.
-    /// Let's say the the three functions are `f`, `g`, and `h`, and the three values are `a`, `b`, and `c`.
-    /// Any of the functions taking 1 argument will be called as `f a`, `g b`, or `h c` respectively.
-    /// Any of the functions taking 2 arguments will be called as `f a b`, `g a c`, or `h b c` respectively.
-    /// Any of the functions taking 3 argyments will be called on `a b c`.
-    ///
-    ///
-    /// We can see how this all works with [join].
-    /// ex: [∋··· 1 2 3]
-    /// ex: [∋⊂⊂⊂ 1 2 3]
-    /// ex: [∋'⊂⊂'⊂⊂'⊂⊂ 1 2 3]
-    ///
-    /// A good example use case is when implementing the quadratic formula.
-    /// ex: Quad ← ÷→+∋(×2)¯(⊟¯.√+ⁿ2→(××¯4)∶)
-    ///   : Quad 1 2 0
-    /// The first function passed to [trident] [multiply]s `a` by `2`.
-    /// The second function [negate]s `b`.
-    /// The third function calculates the discriminant.
-    (3[3], Trident, OtherModifier, ("trident", '∋')),
+    /// The two functions having different signatures is not an error, but it may require a signature to be specified.
+    /// ex: ?·+ 0 2 3
+    /// ex! (?·+ 0 2 3)
+    ([2], If, Control, ("if", '?')),
     /// Call a function and catch errors
     ///
     /// If the first function errors, the second function is called with the error value.
@@ -1246,25 +1294,15 @@ primitive!(
     (1, Wait, Misc, ("wait", '↲')),
     /// Call a function
     ///
-    /// When passing a scalar function array, the function is simply called.
+    /// When passing a scalar function, the function is simply called.
     /// ex: !(+5) 2
-    ///
-    /// The behavior when passing a non-scalar array is different.
-    /// An additional argument is expected, which is the index of the function to call.
-    /// With this, you can do if-else expressions.
-    /// ex: Abs ← !·_¯ <0. # If less than 0, negate
-    ///   : Abs 5
-    ///   : Abs ¯2
-    /// This is equivalent to [call][pick][flip]:
-    /// ex: Abs ← !⊡∶·_¯ <0.
-    ///   : Abs 5
-    ///   : Abs ¯2
-    ///
-    /// Using [call] in this way is *not* recursive. If the selected value is also a function array, it will not be called unless you used [call] again, wich will pop another index.
-    /// ex:  ![+_- ×_÷] 1   3 12 # Pick a function array
-    /// ex:  ![+_- ×_÷] 1_0 3 12 # Call the function at 1_0
-    /// ex:  ![+_- ×_÷] 1 0 3 12 # Not enough calls
-    /// ex: !![+_- ×_÷] 1 0 3 12 # 2 calls is enough
+    /// This means [call] is used to "unbox" [constant] functions.
+    /// ex: {1_2_3 4_5_6}
+    ///   : ∵!.
+    /// [call] is equivalent to [noop] for anything other than a scalar function.
+    /// ex: !5
+    /// ex: ![1 2 3]
+    /// ex: !+_-
     ///
     /// Note that you currently cannot use [call] to call a function that does not have exactly 1 output.
     /// So this is okay:
@@ -1298,8 +1336,8 @@ primitive!(
     /// ex: !(|1 ×↬>2.-1.) 5
     ///
     /// Here is a recursive fibonacci function.
-    /// It uses [call] to decide whether to recur.
-    /// ex: !(!(|1 +↬2-1∶↬2-2.)_· <2.) 10
+    /// It uses [if] to decide whether to recur.
+    /// ex: !(?·(|1 +↬2-1∶↬2-2.) <2.) 10
     (1(None), Recur, Control, ("recur", '↬')),
     /// Parse a string as a number
     ///

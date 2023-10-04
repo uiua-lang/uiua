@@ -972,7 +972,6 @@ impl SysBackend for NativeSys {
     }
 }
 
-#[cfg(feature = "https")]
 /// Takes an HTTP request, validates it, and fixes it (if possible) by adding
 /// the HTTP version and trailing newlines if they aren't present.
 ///
@@ -985,11 +984,13 @@ impl SysBackend for NativeSys {
 ///     "GET / HTTP/1.0\r\nhost: example.com\r\n\r\n"
 /// )
 /// ```
+#[cfg(feature = "https")]
 fn check_http(mut request: String, hostname: &str) -> Result<String, String> {
     let mut headers = [httparse::EMPTY_HEADER; 64];
     let mut req = httparse::Request::new(&mut headers);
 
     let mut lines = request.lines().collect::<Vec<_>>();
+    let trailing_newline = request.ends_with('\n');
 
     // check to make sure theres an empty line somewhere in there. if not, add 2 empty lines
     if !lines.iter().any(|line| line.is_empty()) {
@@ -1011,6 +1012,9 @@ fn check_http(mut request: String, hostname: &str) -> Result<String, String> {
             + &lines.into_iter().skip(1).collect::<Vec<_>>().join("\r\n");
     } else {
         request = lines.join("\r\n");
+    }
+    if trailing_newline {
+        request += "\r\n";
     }
 
     // Confirm that the request is valid

@@ -4,6 +4,7 @@ use std::{
     any::Any,
     collections::BTreeMap,
     env,
+    fmt::Display,
     fs,
     path::{Path, PathBuf},
 };
@@ -129,6 +130,7 @@ macro_rules! create_config {
             }
         }
 
+        /// Configuration for the Uiua formatter.
         #[derive(Debug, Clone)]
         pub struct FormatConfig {
             $(
@@ -186,11 +188,70 @@ create_config!(
     (multiline_compact_threshold, usize, 10),
 );
 
+/// The source from which to populate the formatter configuration.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FormatConfigSource {
+    /// Recursively search for a .fmt.ua file and use it as the formatter configuration,
+    /// if none is found, use the default formatter configuration
+    SearchFile,
+    /// Use the default formatter configuration
+    Default,
+    /// Use the formatter configuration in the specified file
+    Path(PathBuf),
+}
+
+impl From<&str> for FormatConfigSource {
+    fn from(s: &str) -> Self {
+        match s {
+            "search-file" => Self::SearchFile,
+            "default" => Self::Default,
+            path => Self::Path(path.into()),
+        }
+    }
+}
+
+impl Display for FormatConfigSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FormatConfigSource::SearchFile => write!(f, "search-file"),
+            FormatConfigSource::Default => write!(f, "default"),
+            FormatConfigSource::Path(path) => write!(f, "{}", path.display()),
+        }
+    }
+}
+
 impl FormatConfig {
     pub fn from_file(path: PathBuf) -> UiuaResult<Self> {
         println!("Loading format config from {}", path.display());
         let partial = PartialFormatConfig::from_file(path);
         partial.map(Into::into)
+    }
+
+    pub fn from_source(source: FormatConfigSource, target_path: Option<&Path>) -> UiuaResult<Self> {
+        match source {
+            FormatConfigSource::SearchFile => {
+                if let Some(file_path) = Self::search_config_file(target_path) {
+                    Self::from_file(file_path)
+                } else {
+                    Ok(Self::default())
+                }
+            }
+            FormatConfigSource::Default => Ok(Self::default()),
+            FormatConfigSource::Path(file_path) => Self::from_file(file_path),
+        }
+    }
+
+    fn search_config_file(path: Option<&Path>) -> Option<PathBuf> {
+        let mut path = path.and_then(|p| std::fs::canonicalize(p).ok()).unwrap_or(env::current_dir().ok()?);
+        loop {
+            let file_path = path.join(".fmt.ua");
+            if file_path.exists() {
+                return Some(file_path);
+            }
+            if !path.pop() {
+                return None;
+            }
+        }
     }
 }
 

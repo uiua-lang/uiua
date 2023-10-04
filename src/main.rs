@@ -18,7 +18,7 @@ use notify::{EventKind, RecursiveMode, Watcher};
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use uiua::{
-    format::{format_file, FormatConfig},
+    format::{format_file, FormatConfig, FormatConfigSource},
     run::RunMode,
     Uiua, UiuaError, UiuaResult,
 };
@@ -55,124 +55,156 @@ fn run() -> UiuaResult {
         return Ok(());
     }
     match App::try_parse() {
-        Ok(app) => {
-            let config = FormatConfig::default();
-            match app {
-                App::Init => {
-                    show_update_message();
-                    if let Ok(path) = working_file_path() {
-                        eprintln!("File already exists: {}", path.display());
-                    } else {
-                        fs::write("main.ua", "\"Hello, World!\"").unwrap();
-                    }
+        Ok(app) => match app {
+            App::Init => {
+                show_update_message();
+                if let Ok(path) = working_file_path() {
+                    eprintln!("File already exists: {}", path.display());
+                } else {
+                    fs::write("main.ua", "\"Hello, World!\"").unwrap();
                 }
-                App::Fmt { path } => {
-                    show_update_message();
-                    if let Some(path) = path {
+            }
+            App::Fmt {
+                path,
+                formatter_options,
+            } => {
+                let config = FormatConfig::from_source(
+                    formatter_options.format_config_source,
+                    path.as_deref(),
+                )?;
+
+                show_update_message();
+                if let Some(path) = path {
+                    format_file(path, &config)?;
+                } else {
+                    for path in uiua_files() {
                         format_file(path, &config)?;
-                    } else {
-                        for path in uiua_files() {
-                            format_file(path, &config)?;
-                        }
                     }
                 }
-                App::Run {
-                    path,
-                    no_format,
-                    mode,
-                    #[cfg(feature = "audio")]
-                    audio_options,
-                    args,
-                } => {
-                    if !no_format {
-                        show_update_message();
-                    }
-                    let path = if let Some(path) = path {
-                        path
-                    } else {
-                        match working_file_path() {
-                            Ok(path) => path,
-                            Err(e) => {
-                                eprintln!("{}", e);
-                                return Ok(());
-                            }
-                        }
-                    };
-                    if !no_format {
-                        format_file(&path, &config)?;
-                    }
-                    let mode = mode.unwrap_or(RunMode::Normal);
-                    #[cfg(feature = "audio")]
-                    setup_audio(audio_options);
-                    let mut rt = Uiua::with_native_sys()
-                        .with_mode(mode)
-                        .with_file_path(&path)
-                        .with_args(args)
-                        .print_diagnostics(true);
-                    rt.load_file(path)?;
-                    for value in rt.take_stack() {
-                        println!("{}", value.show());
-                    }
-                }
-                App::Eval {
-                    code,
-                    #[cfg(feature = "audio")]
-                    audio_options,
-                    args,
-                } => {
+            }
+            App::Run {
+                path,
+                no_format,
+                formatter_options,
+                mode,
+                #[cfg(feature = "audio")]
+                audio_options,
+                args,
+            } => {
+                if !no_format {
                     show_update_message();
-                    #[cfg(feature = "audio")]
-                    setup_audio(audio_options);
-                    let mut rt = Uiua::with_native_sys()
-                        .with_mode(RunMode::Normal)
-                        .with_args(args)
-                        .print_diagnostics(true);
-                    rt.load_str(&code)?;
-                    for value in rt.take_stack() {
-                        println!("{}", value.show());
-                    }
                 }
-                App::Test { path } => {
-                    show_update_message();
-                    let path = if let Some(path) = path {
-                        path
-                    } else {
-                        match working_file_path() {
-                            Ok(path) => path,
-                            Err(e) => {
-                                eprintln!("{}", e);
-                                return Ok(());
-                            }
+                let path = if let Some(path) = path {
+                    path
+                } else {
+                    match working_file_path() {
+                        Ok(path) => path,
+                        Err(e) => {
+                            eprintln!("{}", e);
+                            return Ok(());
                         }
-                    };
+                    }
+                };
+                if !no_format {
+                    let config = FormatConfig::from_source(
+                        formatter_options.format_config_source,
+                        Some(&path),
+                    )?;
                     format_file(&path, &config)?;
-                    Uiua::with_native_sys()
-                        .with_mode(RunMode::Test)
-                        .print_diagnostics(true)
-                        .load_file(path)?;
-                    println!("No failures!");
                 }
-                App::Watch {
-                    no_format,
+                let mode = mode.unwrap_or(RunMode::Normal);
+                #[cfg(feature = "audio")]
+                setup_audio(audio_options);
+                let mut rt = Uiua::with_native_sys()
+                    .with_mode(mode)
+                    .with_file_path(&path)
+                    .with_args(args)
+                    .print_diagnostics(true);
+                rt.load_file(path)?;
+                for value in rt.take_stack() {
+                    println!("{}", value.show());
+                }
+            }
+            App::Eval {
+                code,
+                #[cfg(feature = "audio")]
+                audio_options,
+                args,
+            } => {
+                show_update_message();
+                #[cfg(feature = "audio")]
+                setup_audio(audio_options);
+                let mut rt = Uiua::with_native_sys()
+                    .with_mode(RunMode::Normal)
+                    .with_args(args)
+                    .print_diagnostics(true);
+                rt.load_str(&code)?;
+                for value in rt.take_stack() {
+                    println!("{}", value.show());
+                }
+            }
+            App::Test {
+                path,
+                formatter_options,
+            } => {
+                show_update_message();
+                let path = if let Some(path) = path {
+                    path
+                } else {
+                    match working_file_path() {
+                        Ok(path) => path,
+                        Err(e) => {
+                            eprintln!("{}", e);
+                            return Ok(());
+                        }
+                    }
+                };
+                let config =
+                    FormatConfig::from_source(formatter_options.format_config_source, Some(&path))?;
+                format_file(&path, &config)?;
+                Uiua::with_native_sys()
+                    .with_mode(RunMode::Test)
+                    .print_diagnostics(true)
+                    .load_file(path)?;
+                println!("No failures!");
+            }
+            App::Watch {
+                no_format,
+                formatter_options,
+                clear,
+                args,
+            } => {
+                show_update_message();
+                if let Err(e) = watch(
+                    working_file_path().ok().as_deref(),
+                    !no_format,
+                    formatter_options.format_config_source,
                     clear,
                     args,
-                } => {
-                    show_update_message();
-                    if let Err(e) =
-                        watch(working_file_path().ok().as_deref(), !no_format, clear, args)
-                    {
-                        eprintln!("Error watching file: {e}");
-                    }
+                ) {
+                    eprintln!("Error watching file: {e}");
                 }
-                #[cfg(feature = "lsp")]
-                App::Lsp => uiua::lsp::run_server(),
             }
-        }
+            #[cfg(feature = "lsp")]
+            App::Lsp => uiua::lsp::run_server(),
+        },
         Err(e) if e.kind() == ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
             show_update_message();
             let res = match working_file_path() {
-                Ok(path) => watch(Some(&path), true, false, Vec::new()),
-                Err(NoWorkingFile::MultipleFiles) => watch(None, true, false, Vec::new()),
+                Ok(path) => watch(
+                    Some(&path),
+                    true,
+                    FormatConfigSource::SearchFile,
+                    false,
+                    Vec::new(),
+                ),
+                Err(NoWorkingFile::MultipleFiles) => watch(
+                    None,
+                    true,
+                    FormatConfigSource::SearchFile,
+                    false,
+                    Vec::new(),
+                ),
                 Err(nwf) => {
                     _ = e.print();
                     eprintln!("\n{nwf}");
@@ -240,6 +272,7 @@ fn working_file_path() -> Result<PathBuf, NoWorkingFile> {
 fn watch(
     initial_path: Option<&Path>,
     format: bool,
+    format_config_source: FormatConfigSource,
     clear: bool,
     args: Vec<String>,
 ) -> io::Result<()> {
@@ -251,7 +284,7 @@ fn watch(
 
     println!("Watching for changes... (end with ctrl+C, use `uiua help` to see options)");
 
-    let config = FormatConfig::default();
+    let config = FormatConfig::from_source(format_config_source, initial_path).ok();
     #[cfg(feature = "audio")]
     let audio_time = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0f64.to_bits()));
     #[cfg(feature = "audio")]
@@ -270,8 +303,8 @@ fn watch(
         }
         const TRIES: u8 = 10;
         for i in 0..TRIES {
-            let formatted = if format {
-                format_file(path, &config).map(|f| f.output)
+            let formatted = if let (Some(config), true) = (&config, format) {
+                format_file(path, config).map(|f| f.output)
             } else {
                 fs::read_to_string(path).map_err(|e| UiuaError::Load(path.to_path_buf(), e.into()))
             };
@@ -377,6 +410,8 @@ enum App {
         path: Option<PathBuf>,
         #[clap(long, help = "Don't format the file before running")]
         no_format: bool,
+        #[clap(flatten)]
+        formatter_options: FormatterOptions,
         #[clap(long, help = "Run the file in a specific mode")]
         mode: Option<RunMode>,
         #[cfg(feature = "audio")]
@@ -395,21 +430,41 @@ enum App {
         args: Vec<String>,
     },
     #[clap(about = "Format and test a file")]
-    Test { path: Option<PathBuf> },
+    Test {
+        path: Option<PathBuf>,
+        #[clap(flatten)]
+        formatter_options: FormatterOptions,
+    },
     #[clap(about = "Run .ua files in the current directory when they change")]
     Watch {
         #[clap(long, help = "Don't format the file before running")]
         no_format: bool,
+        #[clap(flatten)]
+        formatter_options: FormatterOptions,
         #[clap(long, help = "Clear the terminal on file change")]
         clear: bool,
         #[clap(trailing_var_arg = true)]
         args: Vec<String>,
     },
     #[clap(about = "Format a uiua file or all files in the current directory")]
-    Fmt { path: Option<PathBuf> },
+    Fmt {
+        path: Option<PathBuf>,
+        #[clap(flatten)]
+        formatter_options: FormatterOptions,
+    },
     #[cfg(feature = "lsp")]
     #[clap(about = "Run the Language Server")]
     Lsp,
+}
+
+#[derive(clap::Args)]
+struct FormatterOptions {
+    #[clap(
+        long = "format-config",
+        default_value_t = FormatConfigSource::SearchFile,
+        help = "Select the formatter configuration source (one of search-file, default, or a path to a fmt.ua file)"
+    )]
+    format_config_source: FormatConfigSource,
 }
 
 #[cfg(feature = "audio")]

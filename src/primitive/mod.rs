@@ -751,6 +751,9 @@ impl PrimExample {
     pub fn should_error(&self) -> bool {
         self.should_error
     }
+    pub fn should_run(&self) -> bool {
+        !["&sl", "&tcpc"].iter().any(|prim| self.input.contains(prim))
+    }
     pub fn output(&self) -> &Result<Vec<String>, String> {
         self.output.get_or_init(|| {
             let env = &mut Uiua::with_native_sys();
@@ -888,7 +891,7 @@ mod tests {
             if let Some(doc) = prim.doc() {
                 for line in &doc.lines {
                     if let PrimDocLine::Example(ex) = line {
-                        if ex.input.contains("&sl") {
+                        if !ex.should_run() {
                             continue;
                         }
                         println!("{prim} example:\n{}", ex.input);

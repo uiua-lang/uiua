@@ -178,6 +178,8 @@ primitive!(
     ///
     /// While [identity]'s signature is `|1.1`, it will not throw an error if the stack is empty.
     /// ex: ∘
+    ///
+    /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [identity] is useful.
     (1, Identity, Stack, ("identity", '∘')),
     /// Move the top value on the stack 2 places down
     ///
@@ -1004,6 +1006,8 @@ primitive!(
     ([2], Fork, Stack, ("fork", '⊃')),
     /// Temporarily pop the top value off the stack and call a function
     ///
+    /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [dip] is useful.
+    ///
     /// ex: [⊙+ 1 2 3]
     /// ex: [⊙⊙+ 1 2 3 4]
     /// This is especially useful when used in a [fork].
@@ -1017,6 +1021,8 @@ primitive!(
     /// ex: [⊃⊙∘(++) 3 5 10]
     ([1], Dip, Stack, ("dip", '⊙')),
     /// Discard the top stack value then call a function
+    ///
+    /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [gap] is useful.
     ///
     /// ex: ⋅+ 1 2 3
     /// This may seem useless when [pop] exists, but [gap] really shines when used with [fork].

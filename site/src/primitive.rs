@@ -12,11 +12,16 @@ fn doc_line_fragments_to_view(fragments: &[PrimDocFragment]) -> View {
         .iter()
         .map(|frag| match frag {
             PrimDocFragment::Text(s) => s.into_view(),
-            PrimDocFragment::Code(s) => view!( <code>{s}</code>).into_view(),
-            PrimDocFragment::Emphasis(s) => view!( <em>{s}</em>).into_view(),
-            PrimDocFragment::Strong(s) => view!( <strong>{s}</strong>).into_view(),
+            PrimDocFragment::Code(s) => view!(<code>{s}</code>).into_view(),
+            PrimDocFragment::Emphasis(s) => view!(<em>{s}</em>).into_view(),
+            PrimDocFragment::Strong(s) => view!(<strong>{s}</strong>).into_view(),
+            PrimDocFragment::Link { text, url } => {
+                let url = url.clone();
+                let text = text.clone();
+                view!(<A href=url>{text}</A>).into_view()
+            }
             &PrimDocFragment::Primitive { prim, named } => {
-                view!( <Prim prim=prim glyph_only={!named}/>).into_view()
+                view!(<Prim prim=prim glyph_only={!named}/>).into_view()
             }
         })
         .collect::<Vec<_>>()
@@ -28,10 +33,10 @@ fn doc_lines_to_view(lines: &[PrimDocLine]) -> impl IntoView {
         .iter()
         .map(|line| match line {
             PrimDocLine::Text(frags) => {
-                view!( <p style="white-space: pre-wrap">{doc_line_fragments_to_view( frags)}</p>)
+                view!(<p style="white-space: pre-wrap">{doc_line_fragments_to_view( frags)}</p>)
                     .into_view()
             }
-            PrimDocLine::Example(ex) => view!( <Editor example={ ex.input() }/>).into_view(),
+            PrimDocLine::Example(ex) => view!(<Editor example={ ex.input() }/>).into_view(),
         })
         .collect::<Vec<_>>()
 }

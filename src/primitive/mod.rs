@@ -654,6 +654,7 @@ impl PrimDoc {
                         return Cow::Owned(s.to_owned());
                     }
                 }
+                PrimDocFragment::Link { text, .. } => return Cow::Borrowed(text),
                 PrimDocFragment::Primitive { .. } => {}
             }
         }
@@ -664,6 +665,7 @@ impl PrimDoc {
                 PrimDocFragment::Code(c) => s.push_str(c),
                 PrimDocFragment::Emphasis(e) => s.push_str(e),
                 PrimDocFragment::Strong(str) => s.push_str(str),
+                PrimDocFragment::Link { text, .. } => s.push_str(text),
                 PrimDocFragment::Primitive { prim, named } => {
                     let mut name = String::new();
                     if *named {
@@ -797,6 +799,7 @@ pub enum PrimDocFragment {
     Emphasis(String),
     Strong(String),
     Primitive { prim: Primitive, named: bool },
+    Link { text: String, url: String },
 }
 
 fn parse_doc_line_fragments(line: &str) -> Vec<PrimDocFragment> {
@@ -866,6 +869,22 @@ fn parse_doc_line_fragments(line: &str) -> Vec<PrimDocFragment> {
                 frags.push(PrimDocFragment::Text(curr));
                 curr = String::new();
                 kind = FragKind::Primitive;
+            }
+            ']' if kind == FragKind::Primitive && chars.peek() == Some(&'(') => {
+                chars.next();
+                let mut url = String::new();
+                for c in chars.by_ref() {
+                    if c == ')' {
+                        break;
+                    }
+                    url.push(c);
+                }
+                frags.push(PrimDocFragment::Link {
+                    text: curr,
+                    url: url.trim().to_owned(),
+                });
+                curr = String::new();
+                kind = FragKind::Text;
             }
             ']' if kind == FragKind::Primitive => {
                 if let Some(prim) = Primitive::from_name(&curr) {

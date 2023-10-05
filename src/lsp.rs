@@ -312,7 +312,8 @@ mod server {
                                 PrimDocFragment::Text(text)
                                 | PrimDocFragment::Code(text)
                                 | PrimDocFragment::Emphasis(text)
-                                | PrimDocFragment::Strong(text) => text.clone(),
+                                | PrimDocFragment::Strong(text)
+                                | PrimDocFragment::Link { text, .. } => text.clone(),
                                 PrimDocFragment::Primitive { prim, named } => {
                                     let name = prim.name().unwrap();
                                     if *named {

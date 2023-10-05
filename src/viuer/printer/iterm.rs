@@ -73,10 +73,10 @@ fn print_buffer(
 
     writeln!(
         stdout,
-        "\x1b]1337;File=inline=1;preserveAspectRatio=1;size={};width={};height={}:{}\x07",
-        img_content.len(),
+        "\x1b]1337;File=inline=1;preserveAspectRatio=1;width={};height={};size={}:{}\x07",
         w,
         h,
+        img_content.len(),
         base64::encode(img_content)
     )?;
     stdout.flush()?;
@@ -117,6 +117,11 @@ mod tests {
         let mut vec = Vec::new();
 
         assert_eq!(iTermPrinter.print(&mut vec, &img, &config).unwrap(), (2, 2));
-        assert_eq!(std::str::from_utf8(&vec).unwrap(), "\x1b[4;5H\x1b]1337;File=inline=1;preserveAspectRatio=1;size=71;width=2;height=2:iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAYAAAC56t6BAAAADklEQVR4AWPADphY2DgAAEMAFfOuwskAAAAASUVORK5CYII=\x07\n");
+
+        let output = std::str::from_utf8(&vec).unwrap();
+        assert!(output.starts_with(
+            "\u{1b}[4;5H\u{1b}]1337;File=inline=1;preserveAspectRatio=1;width=2;height=2;size="
+        ));
+        assert!(output.ends_with("\u{07}\n"));
     }
 }

@@ -166,7 +166,7 @@ pub fn MainPage() -> impl IntoView {
                     <Editor example="⚂ # Random number"/>
                     <Editor example="⇡8 # Range up to"/>
                     <Editor example="⇌ 1_2_3_4 # Reverse"/>
-                    <Editor example="⌕ 2 [0 2 5 1 2] # Find"/>
+                    <Editor example="⌕ 0_2 [0 2 5 0 2 1] # Find"/>
                     <p>"Unlike other array languages, Uiua does not have monadic and dyadic versions of each glyph. Every glyph does only one thing, so you don't need to parse an entire expression to know which version it is."</p>
                 </div>
                 <div>

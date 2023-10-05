@@ -207,16 +207,22 @@ impl Primitive {
         if name.chars().any(char::is_uppercase) {
             return None;
         }
-        if name.len() < 2 {
+        match name {
+            "id" => return Some(Primitive::Identity),
+            "ga" => return Some(Primitive::Gap),
+            "di" => return Some(Primitive::Dip),
+            "pi" => return Some(Primitive::Pi),
+            _ => {}
+        }
+        if name.len() < 3 {
             return None;
         }
+        if let Some(prim) = Primitive::all().find(|p| p.names().is_some_and(|n| n.text == name)) {
+            return Some(prim);
+        }
         let mut matching = Primitive::all().filter(|p| {
-            p.names().is_some_and(|n| {
-                n.is_name_formattable()
-                    && n.text.starts_with(name)
-                    && (name.len() >= 3 || n.text.len() < 3)
-                    || n.ascii.is_none() && n.unicode.is_none() && name == n.text
-            })
+            p.names()
+                .is_some_and(|n| n.is_name_formattable() && n.text.starts_with(name))
         });
         let res = matching.next()?;
         let exact_match = res.names().unwrap().text == name;
@@ -239,11 +245,9 @@ impl Primitive {
                 let end_index = indices.get(start + len).copied().unwrap_or(name.len());
                 let sub_name = &name[start_index..end_index];
                 if let Some(p) = Primitive::from_format_name(sub_name) {
-                    if len >= 2 || p == Primitive::Pi {
-                        prims.push((p, sub_name));
-                        start += len;
-                        continue 'outer;
-                    }
+                    prims.push((p, sub_name));
+                    start += len;
+                    continue 'outer;
                 }
             }
             break None;

@@ -348,7 +348,8 @@ fn site() {
                     path.to_path_buf(),
                     code.clone(),
                     std::thread::spawn(move || {
-                        uiua::Uiua::with_native_sys().load_str(&code).map(drop)
+                        let mut env = uiua::Uiua::with_native_sys();
+                        env.load_str(&code).map(|_| env)
                     }),
                 ));
             }
@@ -356,13 +357,25 @@ fn site() {
     }
     assert!(threads.len() > 50);
     for (path, code, thread) in threads {
-        if let Err(e) = thread.join().unwrap() {
-            panic!(
-                "Test failed in {}\n{}\n{}",
-                path.display(),
-                code,
-                e.show(true)
-            );
+        match thread.join().unwrap() {
+            Err(e) => {
+                panic!(
+                    "Test failed in {}\n{}\n{}",
+                    path.display(),
+                    code,
+                    e.show(true)
+                );
+            }
+            Ok(mut env) => {
+                if let Some(diag) = env.take_diagnostics().into_iter().next() {
+                    panic!(
+                        "Test failed in {}\n{}\n{}",
+                        path.display(),
+                        code,
+                        diag.show(true)
+                    );
+                }
+            }
         }
     }
 }

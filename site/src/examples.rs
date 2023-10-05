@@ -49,8 +49,11 @@ pub const EXAMPLES: &[&str] = &[
 fn test_examples() {
     use uiua::Uiua;
     for example in EXAMPLES {
-        Uiua::with_native_sys()
-            .load_str(example)
-            .unwrap_or_else(|e| panic!("Example failed:\n{example}\n{e}"));
+        let mut env = Uiua::with_native_sys();
+        if let Err(e) = env.load_str(example) {
+            panic!("Example failed:\n{example}\n{e}");
+        } else if let Some(diag) = env.take_diagnostics().into_iter().next() {
+            panic!("Example failed:\n{example}\n{diag}");
+        }
     }
 }

@@ -185,10 +185,10 @@ primitive!(
     ///
     /// Deprecated in favor of [dip].
     ///
-    /// ex: [↷ 1 2 3 4 5]
+    /// ex! [↷ 1 2 3 4 5]
     ///
     /// If you want to operate on two values, keep them on the stack, and put the result below them, you can combine [roll] and [over].
-    /// ex: ↷+,,1 2
+    /// ex! ↷+,,1 2
     ///   : $ _ + _ = _
     ///
     /// See also: [unroll]
@@ -197,7 +197,7 @@ primitive!(
     ///
     /// Deprecated in favor of [dip].
     ///
-    /// ex: [↶ 1 2 3 4 5]
+    /// ex! [↶ 1 2 3 4 5]
     ///
     /// See also: [roll]
     (3(3), Unroll, Stack, ("unroll", '↶')),
@@ -863,7 +863,7 @@ primitive!(
     /// ex: ∵⊂ 1_2 [4_5 6_7]
     ///
     /// If the function is already pervasive, then [each] is redundant.
-    /// ex: ∵+ 1_2_3 4_5_6
+    /// ex! ∵+ 1_2_3 4_5_6
     /// ex:  + 1_2_3 4_5_6
     ///
     /// [each] is equivalent to [level]`0` (or `level``[0 0 …]` for multiple arrays).
@@ -1051,7 +1051,7 @@ primitive!(
     /// It is similar to [select], except it works on the stack instead of an array.
     ///
     /// [restack] takes a list of indices and rearranges those values on the stack in the given order.
-    /// ex: [⇵[1 0 2 2] 1 2 3]
+    /// ex! [⇵[1 0 2 2] 1 2 3]
     ///
     /// All other built-in stack manipulation functions can be implemented with [restack].
     /// [duplicate] is `⇵``[0 0]`.
@@ -1441,8 +1441,8 @@ primitive!(
     /// ex: dump 1 2 3
     /// This is useful when you want to inspect the current ordering of the stack.
     /// For example, let's say you are juggling around some values on the stack using [restack], you can use [dump] to inspect the stack afterwards:
-    /// ex: 0 1 2 3 4
-    ///   : ⇵ 1_4_2_4_0_3
+    /// ex: 0 1 2
+    ///   : ,,⊙.:
     ///   : dump
     (0(0), Dump, Stack, "dump"),
 );

@@ -41,8 +41,11 @@ fn suite() {
         let entry = entry.unwrap();
         let path = entry.path();
         if path.is_file() && path.extension().is_some_and(|s| s == "ua") {
-            if let Err(e) = Uiua::with_native_sys().load_file(&path) {
+            let mut env = Uiua::with_native_sys();
+            if let Err(e) = env.load_file(&path) {
                 panic!("Test failed in {}:\n{}", path.display(), e.show(true));
+            } else if let Some(diag) = env.take_diagnostics().into_iter().next() {
+                panic!("Test failed in {}:\n{}", path.display(), diag.show(true));
             }
         }
     }

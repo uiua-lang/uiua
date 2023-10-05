@@ -69,21 +69,21 @@ tower-lsp.version = "0.19.0"
 webpki-roots.optional = true
 webpki-roots.version = "0.25.0"
 # Dependencies from viuer
-termcolor.version = "1.1"
-termcolor.optional = true
-crossterm.version = "0.27"
-crossterm.optional = true
-ansi_colours.version = "1.0"
 ansi_colours.optional = true
-base64.version = "0.21"
+ansi_colours.version = "1.0"
 base64.optional = true
-tempfile.version = "3.1"
-tempfile.optional = true
-console.version = "0.15"
+base64.version = "0.21"
 console.default-features = false
 console.optional = true
-lazy_static.version = "1.4"
+console.version = "0.15"
+crossterm.optional = true
+crossterm.version = "0.27"
 lazy_static.optional = true
+lazy_static.version = "1.4"
+tempfile.optional = true
+tempfile.version = "3.1"
+termcolor.optional = true
+termcolor.version = "1.1"
 
 [features]
 audio = ["hodaun", "crossbeam-channel", "lockfree"]

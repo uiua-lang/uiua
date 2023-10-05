@@ -13,77 +13,42 @@ version = "0.0.14"
 [dependencies]
 ariadne = "0.3.0"
 bufreaderwriter = "0.2.4"
-clap.features = ["derive"]
-clap.optional = true
-clap.version = "4"
-color-backtrace.optional = true
-color-backtrace.version = "0.5.1"
+clap = { version = "4", optional = true, features = ["derive"] }
+color-backtrace = { version = "0.5.1", optional = true }
 colored = "2"
-crossbeam-channel.optional = true
-crossbeam-channel.version = "0.5.8"
-ctrlc.optional = true
-ctrlc.version = "3"
+crossbeam-channel = { version = "0.5.8", optional = true }
+ctrlc = { version = "3", optional = true }
 dashmap = "5"
 ecow = "0.1.2"
 enum-iterator = "1.4.1"
-hodaun.default-features = false
-hodaun.features = ["output", "wav"]
-hodaun.optional = true
-hodaun.version = "0.4.1"
+hodaun = { version = "0.4.1", optional = true, features = ["output", "wav"] }
 hound = "3"
-httparse.optional = true
-httparse.version = "1.8.0"
-image.default-features = false
-image.features = ["bmp", "gif", "ico", "jpeg", "png"]
-image.version = "0.24.5"
-indexmap.features = ["serde"]
-indexmap.optional = true
-indexmap.version = "1"
+httparse = { version = "1.8.0", optional = true }
+image = { version = "0.24.5", features = ["bmp", "gif", "ico", "jpeg", "png"] }
+indexmap = { version = "1", optional = true, features = ["serde"] }
 instant = "0.1.12"
-lockfree.optional = true
-lockfree.version = "0.5.1"
-notify.optional = true
-notify.version = "5"
+lockfree = { version = "0.5.1", optional = true }
+notify = { version = "5", optional = true }
 once_cell = "1"
 parking_lot = "0.12.1"
 paste = "1.0.14"
-rand.default-features = false
-rand.features = ["small_rng"]
-rand.version = "0.8.5"
-rustls.default-features = false
-rustls.optional = true
-rustls.version = "0.21.7"
-serde.features = ["derive"]
-serde.optional = true
-serde.version = "1"
-serde_yaml.optional = true
-serde_yaml.version = "0.9.25"
+rand = { version = "0.8.5", features = ["small_rng"] }
+rustls = { version = "0.21.7", optional = true, default-features = false }
+serde = { version = "1", optional = true, features = ["derive"] }
+serde_yaml = { version = "0.9.25", optional = true }
 term_size = "1.0.0-beta1"
-tinyvec.features = ["alloc"]
-tinyvec.version = "1"
-tokio.features = ["io-std", "rt"]
-tokio.optional = true
-tokio.version = "1"
-tower-lsp.optional = true
-tower-lsp.version = "0.19.0"
-webpki-roots.optional = true
-webpki-roots.version = "0.25.0"
+tinyvec = { version = "1", features = ["alloc"] }
+tokio = { version = "1", optional = true, features = ["io-std", "rt"] }
+tower-lsp = { version = "0.19.0", optional = true }
+webpki-roots = { version = "0.25.0", optional = true }
 # Dependencies from viuer
-ansi_colours.optional = true
-ansi_colours.version = "1.0"
-base64.optional = true
-base64.version = "0.21"
-console.default-features = false
-console.optional = true
-console.version = "0.15"
-crossterm.optional = true
-crossterm.version = "0.27"
-lazy_static.optional = true
-lazy_static.version = "1.4"
-tempfile.optional = true
-tempfile.version = "3.1"
-termcolor.optional = true
-termcolor.version = "1.1"
+ansi_colours = { version = "1.0", optional = true }
+base64 = { version = "0.21", optional = true }
+console = { version = "0.15", optional = true, default-features = false }
+crossterm = { version = "0.27", optional = true }
+lazy_static = { version = "1.4", optional = true }
+tempfile = { version = "3.1", optional = true }
+termcolor = { version = "1.1", optional = true }
 
 [features]
 audio = ["hodaun", "crossbeam-channel", "lockfree"]
@@ -93,7 +58,15 @@ default = ["binary", "terminal_image", "https"]
 https = ["httparse", "rustls", "webpki-roots"]
 lsp = ["tower-lsp", "tokio"]
 profile = ["crossbeam-channel", "serde", "serde_yaml", "indexmap"]
-terminal_image = ["termcolor", "crossterm", "ansi_colours", "base64", "tempfile", "console", "lazy_static"]
+terminal_image = [
+    "termcolor",
+    "crossterm",
+    "ansi_colours",
+    "base64",
+    "tempfile",
+    "console",
+    "lazy_static",
+]
 
 [[bin]]
 name = "uiua"

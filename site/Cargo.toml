@@ -9,17 +9,17 @@ comrak = "0.18.0"
 console_error_panic_hook = "0.1.7"
 enum-iterator = "1.4.1"
 image = "0.24.5"
-instant.features = ['wasm-bindgen']
-instant.version = "0.1.12"
+instant = { version = "0.1.12", features = ['wasm-bindgen'] }
 js-sys = "0.3"
-leptos = "0.5.0-beta"
-leptos_router.features = ["csr"]
-leptos_router.version = "0.5.0-beta"
-uiua.default-features = false
-uiua.path = ".."
+leptos = "0.5.0"
+leptos_router = { version = "0.5.0", features = ["csr"] }
+uiua = { path = "..", default-features = false }
 urlencoding = "2"
 wasm-bindgen = "0.2.84"
-web-sys.features = [
+
+[dependencies.web-sys]
+version = "0.3.61"
+features = [
   "CssStyleDeclaration",
   "Storage",
   "HtmlAudioElement",
@@ -36,4 +36,3 @@ web-sys.features = [
   "ScrollLogicalPosition",
   "EventInit",
 ]
-web-sys.version = "0.3.61"

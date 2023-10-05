@@ -5,6 +5,8 @@ Uiua is not yet stable.
 ## 0.0.15 - 2023-10-05
 This version changes a lot of glyphs. If you are coming from the previous version, most of the old glyphs will be automatically formatted to the new ones. The only change you may need to make is replacing all `^`s with `|`s.
 
+You may want to read the new version of the [Advanced Stack Manipulation Tutorial](https://uiua.org/docs/advancedstack) to understand the reason for so many of these changes.
+
 ### Language
 - Add the [`bracket` `⊓`](https://uiua.org/docs/bracket) modifier, which calls two functions each on different arguments
 - Change [`fill` `⬚`](https://uiua.org/docs/fill)'s glyph to reflect its relationship with [`constant` `□`](https://uiua.org/docs/constant). Code using `⍛` with continue to work and will be formatted as `⬚`.
@@ -24,7 +26,7 @@ This version changes a lot of glyphs. If you are coming from the previous versio
 ### Website
 - Running code in the Pad editor updates the URL to prevent work from accidentally being lost
 
-# Pre-Version
+# Pre-Version Updates
 
 ## 2023-10-03
 ### Language

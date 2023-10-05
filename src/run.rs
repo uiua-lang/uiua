@@ -801,7 +801,6 @@ code:
             } else {
                 instrs.insert(0, Instr::Prim(Primitive::Pop, span));
             }
-            println!("{} instrs: {:?}", modified.modifier.value, instrs);
             return if call {
                 for instr in instrs {
                     self.push_instr(instr);

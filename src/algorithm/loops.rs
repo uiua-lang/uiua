@@ -97,6 +97,14 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
     }
 }
 
+pub fn fold(env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
+    let f = env.pop(FunctionArg(1))?;
+    let acc = env.pop(ArrayArg(1))?;
+    let xs = env.pop(ArrayArg(2))?;
+    generic_fold(f, xs, Some(acc), env)
+}
+
 fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
     if sig.outputs > 1 {
@@ -146,14 +154,6 @@ fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> Uiu
         }
     }
     Ok(())
-}
-
-pub fn fold(env: &mut Uiua) -> UiuaResult {
-    crate::profile_function!();
-    let f = env.pop(FunctionArg(1))?;
-    let acc = env.pop(ArrayArg(1))?;
-    let xs = env.pop(ArrayArg(2))?;
-    generic_fold(f, xs, Some(acc), env)
 }
 
 pub fn scan(env: &mut Uiua) -> UiuaResult {

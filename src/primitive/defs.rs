@@ -1246,9 +1246,10 @@ primitive!(
     /// If you don't care about the input values, you can simply [pop] them.
     /// ex: ⍣parse; "dog"
     /// ex: ⍣parse(0;;) "dog"
-    /// ex: ⍣parse(0;;) 5
+    /// ex: ⍣parse(0;;) "5"
     /// [gap] can often look nicer.
-    /// ex: ⍣parse⋅⋅0 5
+    /// ex: ⍣parse⋅⋅0 "dog"
+    /// ex: ⍣parse⋅⋅0 "5"
     ([2], Try, OtherModifier, ("try", '⍣')),
     /// Throw an error if a condition is not met
     ///

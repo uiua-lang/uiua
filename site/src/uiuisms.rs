@@ -184,5 +184,5 @@ uiuisms!(
     /// Matrix power (Also works with scalars)
     ";∶⍥(⊠'/+×⊙⍉,)∶⊙∶⊞=.⇡⍛1⊢△. [1_2 3_4] 4",
     /// Evaluate a polynomial with given coefficients at a scalar or square matrix
-    "/+≡×∺(;∶⍥(⊠'/+×⊙⍉,)∶⊙∶⊞=.⇡⍛1⊢△.)⊙∶⇌⇡⧻. [1 2 3 1] [1_1 2_2]"
+    "/+≡×∺(;∶⍥(⊠'/+×⊙⍉,)∶⊙∶⊞=.⇡⍛1⊢△.:)⊙∶⇌⇡⧻. [1 2 3 1] [1_1 2_2]"
 );

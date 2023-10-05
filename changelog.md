@@ -16,6 +16,8 @@ Uiua is not yet stable.
 - Change [`both` `∩`](https://uiua.org/docs/both)'s glyph to reflect its relationship with [`fork` `⊃`](https://uiua.org/docs/fork). Code using `∷` with continue to work and will be formatted as `∩`.
 - [`distribute` `∺`](https://uiua.org/docs/distribute) now works with any number of arguments. Only the first argument is distributed.
 - [`fill` `⬚`](https://uiua.org/docs/fill) now works with [`reshape` `↯`](https://uiua.org/docs/reshape)
+- Change the modifier termination character to `|` instead of `^`
+- Fuller remove old versions of `fork` and `trident`
 ### Interpreter
 - Add formatter configuration options. See the [readme](https://github.com/uiua-lang/uiua#formatter-configuration) for details.
 

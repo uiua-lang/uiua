@@ -491,14 +491,14 @@ impl<'a> Formatter<'a> {
             Word::Primitive(prim) => {
                 self.push(&word.span, &prim.to_string());
                 if prim.is_modifier() {
-                    self.output.push('^');
+                    self.output.push('|');
                 }
             }
             Word::Modified(m) => {
                 self.push(&m.modifier.span, &m.modifier.value.to_string());
                 self.format_words(&m.operands, true, depth);
                 if m.terminated {
-                    self.output.push('^');
+                    self.output.push('|');
                 }
             }
             Word::Spaces => self.push(&word.span, " "),

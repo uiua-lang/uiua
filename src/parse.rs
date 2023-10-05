@@ -393,7 +393,7 @@ impl Parser {
         self.try_spaces();
         let mut terminated = false;
         for _ in 0..margs {
-            if self.try_exact(Caret).is_some() {
+            if self.try_exact(Bar).is_some() {
                 terminated = true;
                 break;
             }

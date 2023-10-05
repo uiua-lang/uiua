@@ -299,6 +299,18 @@ pub fn Editor<'a>(
             code_text
         };
 
+        // Update URL
+        {
+            let encoded = URL_SAFE.encode(&input);
+            if let EditorSize::Pad = size {
+                window()
+                    .history()
+                    .unwrap()
+                    .push_state_with_url(&JsValue::NULL, "", Some(&format!("/pad?src={encoded}")))
+                    .unwrap();
+            }
+        }
+
         // Run code
         set_output.set(view!(<div class="running-text">"Running"</div>).into_view());
         set_timeout(

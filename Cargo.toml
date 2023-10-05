@@ -66,13 +66,24 @@ tokio.optional = true
 tokio.version = "1"
 tower-lsp.optional = true
 tower-lsp.version = "0.19.0"
-# TODO: revert back to a main release of viuer if a new version gets cut.
-viuer.optional = true
-viuer.version = "0.6.2"
-viuer.git = "https://github.com/atanunq/viuer"
-viuer.rev = "refs/pull/51/head"
 webpki-roots.optional = true
 webpki-roots.version = "0.25.0"
+# Dependencies from viuer
+termcolor.version = "1.1"
+termcolor.optional = true
+crossterm.version = "0.25"
+crossterm.optional = true
+ansi_colours.version = "1.0"
+ansi_colours.optional = true
+base64.version = "0.13"
+base64.optional = true
+tempfile.version = "3.1"
+tempfile.optional = true
+console.version = "0.15"
+console.default-features = false
+console.optional = true
+lazy_static.version = "1.4"
+lazy_static.optional = true
 
 [features]
 audio = ["hodaun", "crossbeam-channel", "lockfree"]
@@ -82,7 +93,7 @@ default = ["binary", "terminal_image", "https"]
 https = ["httparse", "rustls", "webpki-roots"]
 lsp = ["tower-lsp", "tokio"]
 profile = ["crossbeam-channel", "serde", "serde_yaml", "indexmap"]
-terminal_image = ["viuer"]
+terminal_image = ["termcolor", "crossterm", "ansi_colours", "base64", "tempfile", "console", "lazy_static"]
 
 [[bin]]
 name = "uiua"

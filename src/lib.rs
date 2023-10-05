@@ -25,6 +25,8 @@ pub mod profile;
 pub mod run;
 mod sys;
 pub mod value;
+#[cfg(feature = "terminal_image")]
+mod viuer;
 
 use std::sync::Arc;
 

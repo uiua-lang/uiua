@@ -1,4 +1,3 @@
-- Make reshape more powerful
 - Inline fork
 - Cascade modifier
 - Make https requests work on web?

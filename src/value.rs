@@ -398,9 +398,12 @@ impl Value {
         self.as_number_list(
             env,
             requirement,
-            |f| f % 1.0 == 0.0 && f >= 0.0,
+            |f| f.fract() == 0.0 && f >= 0.0,
             |f| f as usize,
         )
+    }
+    pub fn as_integers(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<isize>> {
+        self.as_number_list(env, requirement, |f| f.fract() == 0.0, |f| f as isize)
     }
     pub(crate) fn as_number_list<T>(
         &self,

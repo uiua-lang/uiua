@@ -692,6 +692,12 @@ primitive!(
     /// ex: ▽ 4 [1 2 3 4 5]
     /// ex: ▽ 2 [1_2_3 4_5_6]
     ///
+    /// The first or last dimensions of the new shape may be negative. This indicates that this is a *derived* dimension, and it will be calculated to make the total number of elements in the new shape be `less or equal` the total number of elements in the original shape.
+    /// ex: ↯5_¯1 ⇡15
+    /// ex: ↯¯1_5 ⇡15
+    /// ex: ↯2_2_¯1 ⇡15
+    /// ex: ↯¯1_2_2 ⇡15
+    ///
     /// See also: [deshape]
     (2, Reshape, DyadicArray, ("reshape", '↯')),
     /// Take the first n elements of an array

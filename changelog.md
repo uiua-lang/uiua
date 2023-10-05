@@ -2,9 +2,9 @@
 
 Uiua is not yet stable.
 
-# Pre-Version
+## 0.0.15 - 2023-10-05
+This version changes a lot of glyphs. If you are coming from the previous version, most of the old glyphs will be automatically formatted to the new ones. The only change you may need to make is replacing all `^`s with `|`s.
 
-## 2023-10-04
 ### Language
 - Add the [`bracket` `⊓`](https://uiua.org/docs/bracket) modifier, which calls two functions each on different arguments
 - Change [`fill` `⬚`](https://uiua.org/docs/fill)'s glyph to reflect its relationship with [`constant` `□`](https://uiua.org/docs/constant). Code using `⍛` with continue to work and will be formatted as `⬚`.
@@ -16,10 +16,15 @@ Uiua is not yet stable.
 - Change [`both` `∩`](https://uiua.org/docs/both)'s glyph to reflect its relationship with [`fork` `⊃`](https://uiua.org/docs/fork). Code using `∷` with continue to work and will be formatted as `∩`.
 - [`distribute` `∺`](https://uiua.org/docs/distribute) now works with any number of arguments. Only the first argument is distributed.
 - [`fill` `⬚`](https://uiua.org/docs/fill) now works with [`reshape` `↯`](https://uiua.org/docs/reshape)
+- [`reshape` `↯`](https://uiua.org/docs/reshape) now allow negative numbers to denote derived dimensions
 - Change the modifier termination character to `|` instead of `^`
-- Fuller remove old versions of `fork` and `trident`
+- Remove old versions of `fork` and `trident`
 ### Interpreter
 - Add formatter configuration options. See the [readme](https://github.com/uiua-lang/uiua#formatter-configuration) for details.
+### Website
+- Running code in the Pad editor updates the URL to prevent work from accidentally being lost
+
+# Pre-Version
 
 ## 2023-10-03
 ### Language

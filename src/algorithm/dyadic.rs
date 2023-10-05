@@ -426,18 +426,17 @@ impl Value {
                 Value::Func(a) => a.reshape_scalar(n),
             }
         } else {
-            let target_shape = shape.as_naturals(
+            let target_shape = shape.as_integers(
                 env,
                 "Shape should be a single natural number \
-                or a list of natural numbers",
+                or a list of integers",
             )?;
-            let target_shape = Shape::from(&*target_shape);
             match self {
-                Value::Num(a) => a.reshape(target_shape, env),
-                Value::Byte(a) => a.reshape(target_shape, env),
-                Value::Char(a) => a.reshape(target_shape, env),
-                Value::Func(a) => a.reshape(target_shape, env),
-            }
+                Value::Num(a) => a.reshape(&target_shape, env),
+                Value::Byte(a) => a.reshape(&target_shape, env),
+                Value::Char(a) => a.reshape(&target_shape, env),
+                Value::Func(a) => a.reshape(&target_shape, env),
+            }?
         }
         Ok(())
     }
@@ -458,7 +457,37 @@ impl<T: ArrayValue> Array<T> {
         });
         self.shape.insert(0, count);
     }
-    pub fn reshape(&mut self, shape: Shape, env: &Uiua) {
+    pub fn reshape(&mut self, dims: &[isize], env: &Uiua) -> UiuaResult {
+        let shape: Shape = if dims.iter().all(|&dim| dim >= 0) {
+            dims.iter().map(|&dim| dim as usize).collect()
+        } else if dims[0] < 0 {
+            if dims[1..].iter().any(|&dim| dim < 0) {
+                return Err(env.error("Cannot reshape array with multiple negative dimensions"));
+            }
+            let shape_non_leading_len = dims[1..].iter().product::<isize>() as usize;
+            if shape_non_leading_len == 0 {
+                return Err(env.error("Cannot reshape array with any 0 non-leading dimensions"));
+            }
+            let leading_len = (self.data.len() / shape_non_leading_len).max(1);
+            let mut shape = vec![leading_len];
+            shape.extend(dims[1..].iter().map(|&dim| dim as usize));
+            Shape::from(&*shape)
+        } else if *dims.last().unwrap() < 0 {
+            if dims.iter().rev().skip(1).any(|&dim| dim < 0) {
+                return Err(env.error("Cannot reshape array with multiple negative dimensions"));
+            }
+            let shape_non_trailing_len = dims.iter().rev().skip(1).product::<isize>() as usize;
+            if shape_non_trailing_len == 0 {
+                return Err(env.error("Cannot reshape array with any 0 non-trailing dimensions"));
+            }
+            let trailing_len = (self.data.len() / shape_non_trailing_len).max(1);
+            let mut shape: Vec<usize> = dims.iter().map(|&dim| dim as usize).collect();
+            shape.pop();
+            shape.push(trailing_len);
+            Shape::from(&*shape)
+        } else {
+            return Err(env.error("Only the first or last dimension can be negative"));
+        };
         let target_len: usize = shape.iter().product();
         self.shape = shape;
         if self.data.len() < target_len {
@@ -480,6 +509,7 @@ impl<T: ArrayValue> Array<T> {
             self.data.truncate(target_len);
         }
         self.validate_shape();
+        Ok(())
     }
 }
 

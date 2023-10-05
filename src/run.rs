@@ -405,6 +405,40 @@ code:
                 &Instr::Call(span) => self
                     .pop("called function")
                     .and_then(|f| self.call_with_span(f, span)),
+                &Instr::PushTemp { count, span } => (|| {
+                    self.push_span(span, None);
+                    for _ in 0..count {
+                        let value = self.pop("value to move to temp")?;
+                        self.temp_stack.push(value);
+                    }
+                    self.pop_span();
+                    Ok(())
+                })(),
+                &Instr::PopTemp { count, span } => (|| {
+                    self.push_span(span, None);
+                    for _ in 0..count {
+                        let value = self.temp_stack.pop().ok_or_else(|| {
+                            self.error("Temp stack was empty when evaluating value to pop")
+                        })?;
+                        self.push(value);
+                    }
+                    self.pop_span();
+                    Ok(())
+                })(),
+                &Instr::CopyTemp { count, span } => (|| {
+                    self.push_span(span, None);
+                    if self.temp_stack.len() < count {
+                        return Err(
+                            self.error("Temp stack was empty when evaluating value to copy")
+                        );
+                    }
+                    for i in 0..count {
+                        let value = self.temp_stack[self.temp_stack.len() - i - 1].clone();
+                        self.push(value);
+                    }
+                    self.pop_span();
+                    Ok(())
+                })(),
             };
             if let Err(mut err) = res {
                 // Trace errors
@@ -557,19 +591,6 @@ code:
     /// Push a value onto the stack
     pub fn push(&mut self, val: impl Into<Value>) {
         self.stack.push(val.into());
-    }
-    pub(crate) fn push_temp(&mut self) -> UiuaResult {
-        let value = self.pop("value to move to temp")?;
-        self.temp_stack.push(value);
-        Ok(())
-    }
-    pub(crate) fn pop_temp(&mut self) -> UiuaResult {
-        let value = self
-            .temp_stack
-            .pop()
-            .ok_or_else(|| self.error("Temp stack was empty when evaluating value to pop"))?;
-        self.push(value);
-        Ok(())
     }
     /// Take the entire stack
     pub fn take_stack(&mut self) -> Vec<Value> {

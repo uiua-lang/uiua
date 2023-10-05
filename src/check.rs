@@ -105,6 +105,10 @@ impl<'a> VirtualEnv<'a> {
                 self.stack.push(BasicValue::Arr(items));
             }
             Instr::Call(_) => self.handle_call()?,
+            Instr::PushTemp { count, .. } => self.handle_args_outputs(*count, 0)?,
+            Instr::PopTemp { count, .. } | Instr::CopyTemp { count, .. } => {
+                self.handle_args_outputs(0, *count)?
+            }
             Instr::Prim(prim, _) => match prim {
                 Reduce | Scan => self.handle_mod(prim, Some(2), Some(1), 1, None)?,
                 Fold => self.handle_mod(prim, Some(2), Some(1), 2, None)?,

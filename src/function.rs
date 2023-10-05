@@ -2,6 +2,7 @@ use std::{
     cmp::Ordering,
     fmt,
     hash::{Hash, Hasher},
+    mem::{discriminant, transmute},
     sync::Arc,
 };
 
@@ -11,12 +12,16 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
+#[repr(u8)]
 pub enum Instr {
-    Push(Box<Value>),
-    BeginArray,
-    EndArray { constant: bool, span: usize },
-    Prim(Primitive, usize),
-    Call(usize),
+    Push(Box<Value>) = 0,
+    BeginArray = 1,
+    EndArray { constant: bool, span: usize } = 2,
+    Prim(Primitive, usize) = 3,
+    Call(usize) = 4,
+    PushTemp { count: usize, span: usize } = 5,
+    PopTemp { count: usize, span: usize } = 6,
+    CopyTemp { count: usize, span: usize } = 7,
 }
 
 impl PartialEq for Instr {
@@ -27,6 +32,9 @@ impl PartialEq for Instr {
             (Self::EndArray { .. }, Self::EndArray { .. }) => true,
             (Self::Prim(a, s_span), Self::Prim(b, b_span)) => a == b && s_span == b_span,
             (Self::Call(a), Self::Call(b)) => a == b,
+            (Self::PushTemp { count: a, .. }, Self::PushTemp { count: b, .. }) => a == b,
+            (Self::PopTemp { count: a, .. }, Self::PopTemp { count: b, .. }) => a == b,
+            (Self::CopyTemp { count: a, .. }, Self::CopyTemp { count: b, .. }) => a == b,
             _ => false,
         }
     }
@@ -42,46 +50,29 @@ impl PartialOrd for Instr {
 
 impl Ord for Instr {
     fn cmp(&self, other: &Self) -> Ordering {
-        match (self, other) {
-            (Self::Push(a), Self::Push(b)) => a.cmp(b),
-            (Self::BeginArray, Self::BeginArray) => Ordering::Equal,
-            (Self::EndArray { .. }, Self::EndArray { .. }) => Ordering::Equal,
-            (Self::Prim(a, a_span), Self::Prim(b, b_span)) => {
-                a.cmp(b).then_with(|| a_span.cmp(b_span))
-            }
-            (Self::Call(a), Self::Call(b)) => a.cmp(b),
-            (Self::Push(_), _) => Ordering::Less,
-            (Self::BeginArray, Self::Push(_)) => Ordering::Greater,
-            (Self::BeginArray, _) => Ordering::Less,
-            (Self::EndArray { .. }, Self::Push(_) | Self::BeginArray) => Ordering::Greater,
-            (Self::EndArray { .. }, _) => Ordering::Less,
-            (Self::Prim(_, _), Self::Push(_) | Self::BeginArray | Self::EndArray { .. }) => {
-                Ordering::Greater
-            }
-            (Self::Prim(_, _), _) => Ordering::Less,
-            (Self::Call(_), _) => Ordering::Greater,
+        if self == other {
+            Ordering::Equal
+        } else {
+            let a: u8 = unsafe { transmute(discriminant(self)) };
+            let b: u8 = unsafe { transmute(discriminant(other)) };
+            a.cmp(&b)
         }
     }
 }
 
 impl Hash for Instr {
     fn hash<H: Hasher>(&self, state: &mut H) {
+        let disc: u8 = unsafe { transmute(discriminant(self)) };
+        disc.hash(state);
         match self {
-            Instr::Push(val) => {
-                0u8.hash(state);
-                val.hash(state);
-            }
+            Instr::Push(val) => val.hash(state),
             Instr::BeginArray => 1u8.hash(state),
             Instr::EndArray { .. } => 2u8.hash(state),
-            Instr::Prim(p, span) => {
-                3u8.hash(state);
-                p.hash(state);
-                span.hash(state);
-            }
-            Instr::Call(span) => {
-                4u8.hash(state);
-                span.hash(state);
-            }
+            Instr::Prim(p, _) => p.hash(state),
+            Instr::Call(_) => {}
+            Instr::PushTemp { count, .. } => count.hash(state),
+            Instr::PopTemp { count, .. } => count.hash(state),
+            Instr::CopyTemp { count, .. } => count.hash(state),
         }
     }
 }
@@ -106,6 +97,9 @@ impl fmt::Display for Instr {
             Instr::EndArray { .. } => write!(f, "["),
             Instr::Prim(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => write!(f, "!"),
+            Instr::PushTemp { count, .. } => write!(f, "push temp {}", count),
+            Instr::PopTemp { count, .. } => write!(f, "pop temp {}", count),
+            Instr::CopyTemp { count, .. } => write!(f, "copy temp {}", count),
         }
     }
 }

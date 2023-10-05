@@ -149,6 +149,26 @@ impl Uiua {
         let instrs = self.new_functions.pop().unwrap();
         Ok(instrs)
     }
+    fn compile_operand_words(
+        &mut self,
+        words: Vec<Sp<Word>>,
+    ) -> UiuaResult<(Vec<Instr>, Result<Signature, String>)> {
+        let mut instrs = self.compile_words(words, true)?;
+        let mut sig = None;
+        // Extract function instrs if possible
+        if let [Instr::Push(val)] = instrs.as_slice() {
+            if let Some(f) = val.as_function() {
+                sig = Some(f.signature());
+                instrs = f.instrs.clone();
+            }
+        }
+        let sig = if let Some(sig) = sig {
+            Ok(sig)
+        } else {
+            instrs_signature(&instrs)
+        };
+        Ok((instrs, sig))
+    }
     fn words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult {
         for word in words.into_iter().rev() {
             self.word(word, call)?;
@@ -475,17 +495,11 @@ impl Uiua {
         if matches!(modified.modifier.value, Primitive::Dip | Primitive::Gap)
             && modified.operands.len() == 1
         {
-            let mut instrs = self.compile_words(modified.operands, true)?;
-            // Extract function instrs if possible
-            if let [Instr::Push(val)] = instrs.as_slice() {
-                if let Some(f) = val.as_function() {
-                    instrs = f.instrs.clone();
-                }
-            }
+            let (mut instrs, _) = self.compile_operand_words(modified.operands)?;
             let span = self.add_span(modified.modifier.span.clone());
             if modified.modifier.value == Primitive::Dip {
-                instrs.insert(0, Instr::Prim(Primitive::PushTemp, span));
-                instrs.push(Instr::Prim(Primitive::PopTemp, span));
+                instrs.insert(0, Instr::PushTemp { count: 1, span });
+                instrs.push(Instr::PopTemp { count: 1, span });
             } else {
                 instrs.insert(0, Instr::Prim(Primitive::Pop, span));
             }

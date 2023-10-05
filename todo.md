@@ -1,5 +1,13 @@
 - Inline fork
 - Cascade modifier
+- Fix web editor text deletion bug
+  - Steps to reproduce:
+    - open new pad
+    - write four lines of random text
+    - position cursor at beginning of line 3
+    - press shift+down
+    - CTRL+X
+    - observe bug
 - Make https requests work on web?
 - Add channels for spawned threads
 - Make dyadic array functions not methods

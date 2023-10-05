@@ -205,12 +205,15 @@ fn under_instr_fragment(mut instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr
         _ => {}
     }
 
+    let push_temp = self::PushTemp;
+    let pop_temp = self::PopTemp;
+
     macro_rules! stash2 {
         ($before:expr, $after:expr) => {
             (
                 [$before],
-                [Over, Over, PushTemp, PushTemp, $before],
-                [PopTemp, PopTemp, Unroll, $after],
+                [Over.i(), Over.i(), push_temp(2).i(), $before.i()],
+                [pop_temp(2).i(), Unroll.i(), $after.i()],
             )
         };
     }
@@ -228,31 +231,39 @@ fn under_instr_fragment(mut instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr
             Val,
             (
                 [Keep],
-                [Over, Over, PushTemp, PushTemp, Keep],
-                [PopTemp, Flip, PopTemp, Unkeep],
+                [Over.i(), Over.i(), push_temp(2).i(), Keep.i()],
+                [pop_temp(1).i(), Flip.i(), pop_temp(1).i(), Unkeep.i()],
             ),
         ),
         &(
             [Keep],
-            [Over, Over, PushTemp, PushTemp, Keep],
-            [PopTemp, Flip, PopTemp, Unkeep],
+            [Over.i(), Over.i(), push_temp(2).i(), Keep.i()],
+            [pop_temp(1).i(), Flip.i(), pop_temp(1).i(), Unkeep.i()],
         ),
-        &([Rotate], [Dup, PushTemp, Rotate], [PopTemp, Neg, Rotate]),
+        &(
+            [Rotate],
+            [Dup.i(), push_temp(1).i(), Rotate.i()],
+            [pop_temp(1).i(), Neg.i(), Rotate.i()],
+        ),
         &(
             [First],
-            [Dup, PushTemp, First],
-            [PopTemp.i(), 1.i(), Drop.i(), Flip.i(), Join.i()],
+            [Dup.i(), push_temp(1).i(), First.i()],
+            [pop_temp(1).i(), 1.i(), Drop.i(), Flip.i(), Join.i()],
         ),
         &(
             [Last],
-            [Dup, PushTemp, Last],
-            [PopTemp.i(), (-1).i(), Drop.i(), Join.i()],
+            [Dup.i(), push_temp(1).i(), Last.i()],
+            [pop_temp(1).i(), (-1).i(), Drop.i(), Join.i()],
         ),
-        &([Shape], [Dup, PushTemp, Shape], [PopTemp, Flip, Reshape]),
+        &(
+            [Shape],
+            [Dup.i(), push_temp(1).i(), Shape.i()],
+            [pop_temp(1).i(), Flip.i(), Reshape.i()],
+        ),
         &(
             [Deshape],
-            [Dup, Shape, PushTemp, Deshape],
-            [PopTemp, Reshape],
+            [Dup.i(), Shape.i(), push_temp(1).i(), Deshape.i()],
+            [pop_temp(1).i(), Reshape.i()],
         ),
     ];
 
@@ -284,6 +295,39 @@ trait AsInstr: fmt::Debug {
         Self: Copy + 'static,
     {
         Box::new(*self)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PushTemp(usize);
+impl AsInstr for PushTemp {
+    fn as_instr(&self, span: usize) -> Instr {
+        Instr::PushTemp {
+            count: self.0,
+            span,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PopTemp(usize);
+impl AsInstr for PopTemp {
+    fn as_instr(&self, span: usize) -> Instr {
+        Instr::PopTemp {
+            count: self.0,
+            span,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct CopyTemp(usize);
+impl AsInstr for CopyTemp {
+    fn as_instr(&self, span: usize) -> Instr {
+        Instr::CopyTemp {
+            count: self.0,
+            span,
+        }
     }
 }
 

@@ -528,6 +528,36 @@ impl Uiua {
             };
         }
 
+        // Inline fork
+        if modified.modifier.value == Primitive::Fork && modified.operands.len() == 2 {
+            let mut operands = modified.operands.clone().into_iter();
+            let (a_instrs, a_sig) = self.compile_operand_words(vec![operands.next().unwrap()])?;
+            let (b_instrs, b_sig) = self.compile_operand_words(vec![operands.next().unwrap()])?;
+            if let Some((a_sig, b_sig)) = a_sig.ok().zip(b_sig.ok()) {
+                let span = self.add_span(modified.modifier.span.clone());
+                let count = a_sig.args.max(b_sig.args);
+                let mut instrs = vec![
+                    Instr::PushTemp { count, span },
+                    Instr::CopyTemp {
+                        count: b_sig.args,
+                        span,
+                    },
+                ];
+                instrs.extend(b_instrs);
+                instrs.push(Instr::PopTemp {
+                    count: a_sig.args,
+                    span,
+                });
+                if count - a_sig.args > 0 {
+                    instrs.push(Instr::DropTemp {
+                        count: count - a_sig.args,
+                        span,
+                    });
+                }
+                instrs.extend(a_instrs);
+            }
+        }
+
         if call {
             self.words(modified.operands, false)?;
             let span = self.add_span(modified.modifier.span);

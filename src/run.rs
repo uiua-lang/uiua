@@ -439,6 +439,17 @@ code:
                     self.pop_span();
                     Ok(())
                 })(),
+                &Instr::DropTemp { count, span } => (|| {
+                    self.push_span(span, None);
+                    if self.temp_stack.len() < count {
+                        return Err(
+                            self.error("Temp stack was empty when evaluating value to drop")
+                        );
+                    }
+                    self.temp_stack.truncate(self.temp_stack.len() - count);
+                    self.pop_span();
+                    Ok(())
+                })(),
             };
             if let Err(mut err) = res {
                 // Trace errors

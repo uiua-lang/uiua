@@ -1,5 +1,6 @@
 - Inline fork
 - Cascade modifier
+- Inline some functions with `distribute`
 - Fix web editor text deletion bug
   - Steps to reproduce:
     - open new pad
@@ -8,6 +9,12 @@
     - press shift+down
     - CTRL+X
     - observe bug
+- Fix web editor paste bug
+  - Steps to reproduce:
+    - open a new pad.
+    - copy multiline code from somewhere
+    - hit run
+    - empty lines are added after each line of code
 - Make https requests work on web?
 - Add channels for spawned threads
 - Make dyadic array functions not methods

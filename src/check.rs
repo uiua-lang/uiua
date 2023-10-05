@@ -112,7 +112,6 @@ impl<'a> VirtualEnv<'a> {
             Instr::DropTemp { .. } => {}
             Instr::Prim(prim, _) => match prim {
                 Reduce | Scan => self.handle_mod(prim, Some(2), Some(1), 1, None)?,
-                Fold => self.handle_mod(prim, Some(2), Some(1), 2, None)?,
                 Each | Rows => self.handle_variadic_mod(prim)?,
                 Distribute | Table | Cross => self.handle_mod(prim, Some(2), Some(1), 2, None)?,
                 Group | Partition => {
@@ -213,6 +212,17 @@ impl<'a> VirtualEnv<'a> {
                     } else {
                         return Err("repeat without a number".into());
                     }
+                }
+                Fold => {
+                    let f = self.pop()?;
+                    let sig = f.signature();
+                    if sig.args.saturating_sub(sig.outputs) != 1 {
+                        return Err(format!(
+                            "fold's function's signature {sig} does \
+                            not have 1 more argument than output"
+                        ));
+                    }
+                    self.handle_sig(sig)?
                 }
                 Bind => {
                     let f = self.pop()?;

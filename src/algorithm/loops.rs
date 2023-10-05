@@ -33,7 +33,7 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
             Primitive::Div => fast_reduce(nums, 1.0, flip(Div::div)),
             Primitive::Max => fast_reduce(nums, f64::NEG_INFINITY, f64::max),
             Primitive::Min => fast_reduce(nums, f64::INFINITY, f64::min),
-            _ => return generic_fold(f, Value::Num(nums), None, env),
+            _ => return generic_fold1(f, Value::Num(nums), None, env),
         }),
         (Some((prim, flipped)), Value::Byte(bytes)) => env.push(match prim {
             Primitive::Add => fast_reduce(bytes, 0.0, |a, b| a + f64::from(b)),
@@ -44,9 +44,9 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
             Primitive::Div => fast_reduce(bytes, 1.0, |a, b| f64::from(b) / a),
             Primitive::Max => fast_reduce(bytes, f64::NEG_INFINITY, |a, b| a.max(f64::from(b))),
             Primitive::Min => fast_reduce(bytes, f64::INFINITY, |a, b| a.min(f64::from(b))),
-            _ => return generic_fold(f, Value::Byte(bytes), None, env),
+            _ => return generic_fold1(f, Value::Byte(bytes), None, env),
         }),
-        (_, xs) => generic_fold(f, xs, None, env)?,
+        (_, xs) => generic_fold1(f, xs, None, env)?,
     }
     Ok(())
 }
@@ -100,12 +100,17 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
 pub fn fold(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(FunctionArg(1))?;
-    let acc = env.pop(ArrayArg(1))?;
-    let xs = env.pop(ArrayArg(2))?;
-    generic_fold(f, xs, Some(acc), env)
+    match f.signature().args {
+        0..=2 => {
+            let acc = env.pop(ArrayArg(1))?;
+            let xs = env.pop(ArrayArg(2))?;
+            generic_fold1(f, xs, Some(acc), env)
+        }
+        _ => generic_fold_n(f, env),
+    }
 }
 
-fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
+fn generic_fold1(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
     if sig.outputs > 1 {
         return Err(env.error(format!(
@@ -152,6 +157,39 @@ fn generic_fold(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> Uiu
                 "Cannot reduce a function that takes {args} arguments"
             )))
         }
+    }
+    Ok(())
+}
+
+fn generic_fold_n(f: Value, env: &mut Uiua) -> UiuaResult {
+    let sig = f.signature();
+    if sig.args.saturating_sub(sig.outputs) != 1 {
+        return Err(env.error(format!(
+            "Fold's function must take 1 more argument than it returns, \
+            but it takes {} and returns {}",
+            sig.args, sig.outputs
+        )));
+    }
+    let mut accs = Vec::with_capacity(sig.outputs);
+    for i in 0..sig.outputs {
+        accs.push(env.pop(ArrayArg(i + 1))?);
+    }
+    let xs = env.pop(ArrayArg(sig.outputs + 1))?;
+    for row in xs.into_rows() {
+        env.push(row);
+        for acc in accs.drain(..) {
+            env.push(acc);
+        }
+        let should_break = env.call_catch_break(f.clone())?;
+        for _ in 0..sig.outputs {
+            accs.push(env.pop("folded function result")?);
+        }
+        if should_break {
+            break;
+        }
+    }
+    for acc in accs.drain(..) {
+        env.push(acc);
     }
     Ok(())
 }

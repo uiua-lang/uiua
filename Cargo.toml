@@ -71,11 +71,11 @@ webpki-roots.version = "0.25.0"
 # Dependencies from viuer
 termcolor.version = "1.1"
 termcolor.optional = true
-crossterm.version = "0.25"
+crossterm.version = "0.27"
 crossterm.optional = true
 ansi_colours.version = "1.0"
 ansi_colours.optional = true
-base64.version = "0.13"
+base64.version = "0.21"
 base64.optional = true
 tempfile.version = "3.1"
 tempfile.optional = true

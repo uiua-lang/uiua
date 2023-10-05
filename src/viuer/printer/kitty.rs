@@ -1,6 +1,7 @@
 use crate::viuer::error::{ViuError, ViuResult};
 use crate::viuer::printer::{adjust_offset, find_best_fit, Printer};
 use crate::viuer::Config;
+use base64::{engine::general_purpose, Engine as _};
 use console::{Key, Term};
 use lazy_static::lazy_static;
 use std::io::Write;
@@ -79,10 +80,9 @@ fn has_local_support() -> ViuResult {
     print!(
         // t=t tells Kitty it's reading from a temp file and will delete if afterwards
         "\x1b_Gi=31,s=1,v=1,a=q,t=t;{}\x1b\\",
-        base64::encode(path.to_str().ok_or_else(|| std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "Could not convert path to &str"
-        ))?)
+        general_purpose::STANDARD.encode(path.to_str().ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::Other, "Could not convert path to &str")
+        })?)
     );
     std::io::stdout().flush()?;
 
@@ -138,7 +138,7 @@ fn print_local(
         img.height(),
         w,
         h,
-        base64::encode(path.to_str().ok_or_else(|| ViuError::Io(Error::new(
+        general_purpose::STANDARD.encode(path.to_str().ok_or_else(|| ViuError::Io(Error::new(
             ErrorKind::Other,
             "Could not convert path to &str"
         )))?)
@@ -158,7 +158,7 @@ fn print_remote(
 ) -> ViuResult<(u32, u32)> {
     let rgba = img.to_rgba8();
     let raw = rgba.as_raw();
-    let encoded = base64::encode(raw);
+    let encoded = general_purpose::STANDARD.encode(raw);
     let mut iter = encoded.chars().peekable();
 
     adjust_offset(stdout, config)?;

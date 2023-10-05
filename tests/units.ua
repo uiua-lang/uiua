@@ -97,3 +97,7 @@
 ⍤.≅ [2 1] [∶] 1 2
 ⍤.≅ [2 1 2] [,] 1 2
 ⍤.≅ [1 2 2] [⊙.] 1 2
+
+ParseOrZero ← ⍣parse⋅⋅0
+⍤.≅ 5 ParseOrZero "5"
+⍤.≅ 0 ParseOrZero "dog"

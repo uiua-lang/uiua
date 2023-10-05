@@ -4,6 +4,7 @@ Uiua is not yet stable.
 
 ## 0.0.17 - 2023-10-xx
 - Functions with ASCII glyphs now also format from their names
+- [`try` `⍣`](https://uiua.org/docs/try) now puts arguments to its first function *above* the error value when calling the error handler
 
 ## 0.0.16 - 2023-10-05
 ### Interpreter

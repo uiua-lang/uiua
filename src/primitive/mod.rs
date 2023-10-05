@@ -491,20 +491,16 @@ impl Primitive {
             Primitive::Try => {
                 let f = env.pop(FunctionArg(1))?;
                 let handler = env.pop(FunctionArg(2))?;
-                let f_args = if let Some(f) = f.as_function() {
-                    f.signature().args
-                } else {
-                    0
-                };
+                let f_args = f.signature().args;
                 let backup = env.clone_stack_top(f_args);
                 let bottom = env.stack_size().saturating_sub(f_args);
                 if let Err(e) = env.call(f) {
                     env.truncate_stack(bottom);
                     env.backend.save_error_color(&e);
+                    env.push(e.value());
                     for val in backup {
                         env.push(val);
                     }
-                    env.push(e.value());
                     env.call(handler)?;
                 }
             }

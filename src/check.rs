@@ -273,10 +273,12 @@ impl<'a> VirtualEnv<'a> {
                     let f = self.pop()?;
                     let handler = self.pop()?;
                     let f_sig = f.signature();
+                    let target_handler_sig = Signature::new(f_sig.args + 1, f_sig.outputs);
                     let handler_sig = handler.signature();
-                    if !f_sig.is_compatible_with(handler_sig) {
+                    if handler_sig != target_handler_sig {
                         return Err(format!(
-                            "try's functions have incompatible signatures {f_sig} and {handler_sig}"
+                            "try's functions have incompatible signatures {f_sig} and {handler_sig}. \
+                            The error handler should take one more argement than the function."
                         ));
                     }
                     let sig = f_sig.max_with(handler_sig);

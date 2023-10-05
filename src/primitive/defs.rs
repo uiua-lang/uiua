@@ -1234,15 +1234,21 @@ primitive!(
     ([2], If, Control, ("if", '?')),
     /// Call a function and catch errors
     ///
-    /// If the first function errors, the second function is called with the error value.
+    /// If the first function errors, the second function is called with the original arguments and the error value below.
     ///
     /// Normal runtime errors become strings.
     /// ex: ⍣(+1 2)$"Error: _"
     /// ex: ⍣(+@a @b)$"Error: _"
-    ///
     /// Errors thrown with [assert] can be any value.
     /// ex: ⍣(⍤5 1 3)(×5)
     /// ex: ⍣(⍤5 0 3)(×5)
+    /// If the first function has the signature `|n.r`, then the second function must have the signature `|(n+1).r`. The additional value is the error.
+    /// If you don't care about the input values, you can simply [pop] them.
+    /// ex: ⍣parse; "dog"
+    /// ex: ⍣parse(0;;) "dog"
+    /// ex: ⍣parse(0;;) 5
+    /// [gap] can often look nicer.
+    /// ex: ⍣parse⋅⋅0 5
     ([2], Try, OtherModifier, ("try", '⍣')),
     /// Throw an error if a condition is not met
     ///

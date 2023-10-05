@@ -43,6 +43,16 @@ pub fn Site() -> impl IntoView {
         view!("Check out "<a href="https://arraycast.com/">"The Array Cast"</a>).into_view(),
         "Isn't a stack a sort of array?".into_view(),
         view!(<a href="https://youtu.be/seVSlKazsNk">"Point-Free or Die"</a>).into_view(),
+        view! {
+            <div style="font-style: normal">
+                <a href="/docs/advancedstack#planet-notation" style="text-decoration: none">"🌍🪐"</a>" "
+                <code style="font-style: normal">
+                    <span class="modifier1-button">"⋅⋅⊙⋅⋅"</span>
+                    <span class="stack-function-button">"∘"</span>
+                </code>
+            </div>
+        }
+        .into_view(),
         "It's got um...I um...arrays".into_view(),
         view!(<p style="font-size: 0.9em">"Do you like this page Marshall? (Yes the audio is so cool -"<a href="https://github.com/mlochbaum">"ML"</a>")"</p>).into_view(),
         "Conor Dyadic Hookstra".into_view(),

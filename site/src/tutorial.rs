@@ -628,7 +628,7 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <p><Prim prim=Gap/>" "<em>"discards"</em>" the top value on the stack and calls its function."</p>
         <p>"But wait, "<Prim prim=Pop/>" exists! Why would you need this?"</p>
 
-        <h2 id="planet-notation">"🪐 Planet Notation"</h2>
+        <h2 id="planet-notation">"🌍 Planet Notation 🪐"</h2>
         <p>"The main reason for "<Prim prim=Dip/>" and "<Prim prim=Gap/>" to exist is to be chained with "<Prim prim=Identity/>", often inside of "<Prim prim=Fork/>". They act as a sort of boolean selector to choose which arguments to keep and which to discard in a branch."</p>
         <p>"This is called "<em>"planet notation"</em>" because it looks like the planets in a solar system chart."</p>
         <p>"For example, let's say you want to "<Prim prim=Mul/>" the 2nd and 4th arguments on the stack and discard the rest:"</p>

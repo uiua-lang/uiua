@@ -125,6 +125,8 @@ uiuisms!(
     "⊞=.⇡ 5",
     /// Create an X matrix
     "↥⇌.⊞=.⇡ 5",
+    /// Create a zero matrix of the same shape as another
+    "∵'≠. [1_1 2_2]",
     /// Check if an array is a palindrome
     r#"≅⇌. "racecar""#,
     /// Convert a number to a string
@@ -178,5 +180,9 @@ uiuisms!(
     /// Dot product
     "/+× [1 2 3] [4 ¯5 6]",
     /// Matrix product
-    "⊠(/+×)⊙⍉ [1_2 3_4 5_6] [7_8_9 10_11_12]"
+    "⊠(/+×)⊙⍉ [1_2 3_4 5_6] [7_8_9 10_11_12]",
+    /// Matrix power (Also works with scalars)
+    ";∶⍥(⊠'/+×⊙⍉,)∶⊙∶⊞=.⇡⍛1⊢△. [1_2 3_4] 4",
+    /// Evaluate a polynomial with given coefficients at a scalar or square matrix
+    "/+≡×∺(;∶⍥(⊠'/+×⊙⍉,)∶⊙∶⊞=.⇡⍛1⊢△.)⊙∶⇌⇡⧻. [1 2 3 1] [1_1 2_2]"
 );

@@ -217,12 +217,6 @@ dependencies = [
 
 [[package]]
 name = "base64"
-version = "0.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
-
-[[package]]
-name = "base64"
 version = "0.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ba43ea6f343b788c8764558649e08df62f86c6ef251fdaeb1ffd010a9ae50a2"
@@ -696,11 +690,11 @@ dependencies = [
 
 [[package]]
 name = "crossterm"
-version = "0.25.0"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e64e6c0fbe2c17357405f7c758c1ef960fce08bdfb2c03d88d2a18d7e09c4b67"
+checksum = "f476fe445d41c9e991fd07515a6f463074b782242ccf4a5b7b1d1012e70824df"
 dependencies = [
- "bitflags 1.3.2",
+ "bitflags 2.4.0",
  "crossterm_winapi",
  "libc",
  "mio",
@@ -1622,7 +1616,7 @@ version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "90ec5366c79892fa8232dcfa6f05d610d0fd780af155fea8c466e77da18e744f"
 dependencies = [
- "base64 0.21.4",
+ "base64",
  "cfg-if",
  "futures",
  "indexmap 2.0.2",
@@ -2152,7 +2146,7 @@ version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bdc0001cfea3db57a2e24bc0d818e9e20e554b5f97fabb9bc231dc240269ae06"
 dependencies = [
- "base64 0.21.4",
+ "base64",
  "indexmap 1.9.3",
  "line-wrap",
  "quick-xml",
@@ -2385,7 +2379,7 @@ version = "0.11.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "046cd98826c46c2ac8ddecae268eb5c2e58628688a5fc7a2643704a73faba95b"
 dependencies = [
- "base64 0.21.4",
+ "base64",
  "bytes",
  "encoding_rs",
  "futures-core",
@@ -2740,7 +2734,7 @@ checksum = "d66dc143e6b11c1eddc06d5c423cfc97062865baf299914ab64caa38182078fe"
 name = "site"
 version = "0.1.0"
 dependencies = [
- "base64 0.21.4",
+ "base64",
  "comrak",
  "console_error_panic_hook",
  "enum-iterator",
@@ -3207,12 +3201,16 @@ dependencies = [
 name = "uiua"
 version = "0.0.14"
 dependencies = [
+ "ansi_colours",
  "ariadne",
+ "base64",
  "bufreaderwriter",
  "clap",
  "color-backtrace",
  "colored",
+ "console",
  "crossbeam-channel",
+ "crossterm",
  "ctrlc",
  "dashmap",
  "ecow",
@@ -3223,6 +3221,7 @@ dependencies = [
  "image",
  "indexmap 1.9.3",
  "instant",
+ "lazy_static",
  "lockfree",
  "notify",
  "once_cell",
@@ -3232,11 +3231,12 @@ dependencies = [
  "rustls",
  "serde",
  "serde_yaml",
+ "tempfile",
  "term_size",
+ "termcolor",
  "tinyvec",
  "tokio",
  "tower-lsp",
- "viuer",
  "webpki-roots",
 ]
 
@@ -3341,22 +3341,6 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
-
-[[package]]
-name = "viuer"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b511f7e9ae27b5750f12ca50c353a1179bd4cc964a47294eb0d2cdad40cb41c0"
-dependencies = [
- "ansi_colours",
- "base64 0.13.1",
- "console",
- "crossterm",
- "image",
- "lazy_static",
- "tempfile",
- "termcolor",
-]
 
 [[package]]
 name = "walkdir"

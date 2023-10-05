@@ -320,17 +320,6 @@ impl AsInstr for PopTemp {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-struct CopyTemp(usize);
-impl AsInstr for CopyTemp {
-    fn as_instr(&self, span: usize) -> Instr {
-        Instr::CopyTemp {
-            count: self.0,
-            span,
-        }
-    }
-}
-
 impl AsInstr for i32 {
     fn as_instr(&self, _: usize) -> Instr {
         Instr::push(Value::from(*self))

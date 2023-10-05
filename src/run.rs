@@ -425,15 +425,20 @@ code:
                     self.pop_span();
                     Ok(())
                 })(),
-                &Instr::CopyTemp { count, span } => (|| {
+                &Instr::CopyTemp {
+                    offset,
+                    count,
+                    span,
+                } => (|| {
                     self.push_span(span, None);
-                    if self.temp_stack.len() < count {
+                    if self.temp_stack.len() < offset + count {
                         return Err(
                             self.error("Temp stack was empty when evaluating value to copy")
                         );
                     }
+                    let start = self.temp_stack.len() - offset;
                     for i in 0..count {
-                        let value = self.temp_stack[self.temp_stack.len() - i - 1].clone();
+                        let value = self.temp_stack[start - i - 1].clone();
                         self.push(value);
                     }
                     self.pop_span();

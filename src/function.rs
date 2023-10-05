@@ -16,13 +16,29 @@ use crate::{
 pub enum Instr {
     Push(Box<Value>) = 0,
     BeginArray = 1,
-    EndArray { constant: bool, span: usize } = 2,
+    EndArray {
+        constant: bool,
+        span: usize,
+    } = 2,
     Prim(Primitive, usize) = 3,
     Call(usize) = 4,
-    PushTemp { count: usize, span: usize } = 5,
-    PopTemp { count: usize, span: usize } = 6,
-    CopyTemp { count: usize, span: usize } = 7,
-    DropTemp { count: usize, span: usize } = 8,
+    PushTemp {
+        count: usize,
+        span: usize,
+    } = 5,
+    PopTemp {
+        count: usize,
+        span: usize,
+    } = 6,
+    CopyTemp {
+        offset: usize,
+        count: usize,
+        span: usize,
+    } = 7,
+    DropTemp {
+        count: usize,
+        span: usize,
+    } = 8,
 }
 
 impl PartialEq for Instr {
@@ -35,7 +51,18 @@ impl PartialEq for Instr {
             (Self::Call(a), Self::Call(b)) => a == b,
             (Self::PushTemp { count: a, .. }, Self::PushTemp { count: b, .. }) => a == b,
             (Self::PopTemp { count: a, .. }, Self::PopTemp { count: b, .. }) => a == b,
-            (Self::CopyTemp { count: a, .. }, Self::CopyTemp { count: b, .. }) => a == b,
+            (
+                Self::CopyTemp {
+                    offset: ao,
+                    count: ac,
+                    ..
+                },
+                Self::CopyTemp {
+                    offset: bo,
+                    count: bc,
+                    ..
+                },
+            ) => ao == bo && ac == bc,
             (Self::DropTemp { count: a, .. }, Self::DropTemp { count: b, .. }) => a == b,
             _ => false,
         }
@@ -74,7 +101,10 @@ impl Hash for Instr {
             Instr::Call(_) => {}
             Instr::PushTemp { count, .. } => count.hash(state),
             Instr::PopTemp { count, .. } => count.hash(state),
-            Instr::CopyTemp { count, .. } => count.hash(state),
+            Instr::CopyTemp { offset, count, .. } => {
+                offset.hash(state);
+                count.hash(state);
+            }
             Instr::DropTemp { count, .. } => count.hash(state),
         }
     }
@@ -102,7 +132,7 @@ impl fmt::Display for Instr {
             Instr::Call(_) => write!(f, "!"),
             Instr::PushTemp { count, .. } => write!(f, "push temp {}", count),
             Instr::PopTemp { count, .. } => write!(f, "pop temp {}", count),
-            Instr::CopyTemp { count, .. } => write!(f, "copy temp {}", count),
+            Instr::CopyTemp { offset, count, .. } => write!(f, "copy temp {}/{}", offset, count),
             Instr::DropTemp { count, .. } => write!(f, "drop temp {}", count),
         }
     }

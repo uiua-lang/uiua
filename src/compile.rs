@@ -536,25 +536,49 @@ impl Uiua {
             if let Some((a_sig, b_sig)) = a_sig.ok().zip(b_sig.ok()) {
                 let span = self.add_span(modified.modifier.span.clone());
                 let count = a_sig.args.max(b_sig.args);
-                let mut instrs = vec![
-                    Instr::PushTemp { count, span },
-                    Instr::CopyTemp {
+                let mut instrs = vec![Instr::PushTemp { count, span }];
+                if b_sig.args > 0 {
+                    instrs.push(Instr::CopyTemp {
+                        offset: count - b_sig.args,
                         count: b_sig.args,
                         span,
-                    },
-                ];
+                    });
+                }
                 instrs.extend(b_instrs);
-                instrs.push(Instr::PopTemp {
-                    count: a_sig.args,
-                    span,
-                });
                 if count - a_sig.args > 0 {
                     instrs.push(Instr::DropTemp {
                         count: count - a_sig.args,
                         span,
                     });
                 }
+                instrs.push(Instr::PopTemp {
+                    count: a_sig.args,
+                    span,
+                });
                 instrs.extend(a_instrs);
+                return if call {
+                    for instr in instrs {
+                        self.push_instr(instr);
+                    }
+                    Ok(())
+                } else {
+                    match instrs_signature(&instrs) {
+                        Ok(sig) => {
+                            let func = Function::new(
+                                FunctionId::Anonymous(modified.modifier.span),
+                                instrs,
+                                FunctionKind::Normal,
+                                sig,
+                            );
+                            self.push_instr(Instr::push(func));
+                            Ok(())
+                        }
+                        Err(e) => Err(UiuaError::Run(
+                            Span::Code(modified.modifier.span.clone())
+                                .sp(format!("Cannot infer function signature: {e}")),
+                        )),
+                    }
+                };
             }
         }
 

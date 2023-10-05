@@ -64,38 +64,6 @@ pub fn both(env: &mut Uiua) -> UiuaResult {
 pub fn fork(env: &mut Uiua) -> UiuaResult {
     let f = env.pop(FunctionArg(1))?;
     let g = env.pop(FunctionArg(2))?;
-    let f = f
-        .into_func_array()
-        .map_err(|val| {
-            env.error(format!(
-                "Fork's first function must be a function, but is has type {}",
-                val.type_name()
-            ))
-        })
-        .and_then(|f| {
-            f.into_scalar().map_err(|arr| {
-                env.error(format!(
-                    "Fork's first function must be a scalar, but is has rank {}",
-                    arr.rank()
-                ))
-            })
-        })?;
-    let g = g
-        .into_func_array()
-        .map_err(|val| {
-            env.error(format!(
-                "Fork's second function must be a function, but is has type {}",
-                val.type_name()
-            ))
-        })
-        .and_then(|f| {
-            f.into_scalar().map_err(|arr| {
-                env.error(format!(
-                    "Fork's second function must be a scalar, but is has rank {}",
-                    arr.rank()
-                ))
-            })
-        })?;
     let arg_count = f.signature().args.max(g.signature().args);
     let mut args = Vec::with_capacity(arg_count);
     for i in 0..arg_count {

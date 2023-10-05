@@ -1,5 +1,5 @@
-- Inline fork
 - Cascade modifier
+- Under both
 - Inline some functions with `distribute`
 - Fix web editor text deletion bug
   - Steps to reproduce:

@@ -682,9 +682,9 @@ impl SysBackend for NativeSys {
         } else {
             (None, None)
         };
-        viuer::print(
+        crate::viuer::print(
             &image,
-            &viuer::Config {
+            &crate::viuer::Config {
                 width,
                 height,
                 absolute_offset: false,

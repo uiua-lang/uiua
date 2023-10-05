@@ -73,12 +73,6 @@ pub struct PrimNames {
     pub unicode: Option<char>,
 }
 
-impl PrimNames {
-    pub fn is_name_formattable(&self) -> bool {
-        self.ascii.is_none() && self.unicode.is_some_and(|c| (c as u32) > 127)
-    }
-}
-
 impl From<&'static str> for PrimNames {
     fn from(text: &'static str) -> Self {
         Self {
@@ -223,10 +217,8 @@ impl Primitive {
         if name.len() < 3 {
             return None;
         }
-        let mut matching = Primitive::all().filter(|p| {
-            p.names()
-                .is_some_and(|n| n.is_name_formattable() && n.text.starts_with(name))
-        });
+        let mut matching =
+            Primitive::all().filter(|p| p.names().is_some_and(|n| n.text.starts_with(name)));
         let res = matching.next()?;
         let exact_match = res.names().unwrap().text == name;
         (exact_match || matching.next().is_none()).then_some(res)
@@ -1004,7 +996,6 @@ mod tests {
             let format_names: Vec<_> = prims
                 .clone()
                 .filter_map(|p| p.names())
-                .filter(|p| p.is_name_formattable())
                 .map(|n| n.text.to_string())
                 .map(|name| {
                     let min_len = (2..=name.len())
@@ -1023,7 +1014,7 @@ mod tests {
             let format_names = format_names.join("|");
             let mut literal_names: Vec<_> = prims
                 .filter_map(|p| p.names())
-                .filter(|p| !p.is_name_formattable() && p.ascii.is_none() && p.unicode.is_none())
+                .filter(|p| p.ascii.is_none() && p.unicode.is_none())
                 .map(|n| format!("|{}", n.text))
                 .collect();
             literal_names.sort_by_key(|s| s.len());

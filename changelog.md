@@ -2,6 +2,9 @@
 
 Uiua is not yet stable.
 
+## 0.0.17 - 2023-10-xx
+- Functions with ASCII glyphs now also format from their names
+
 ## 0.0.16 - 2023-10-05
 ### Interpreter
 - Fix a crash and a bug that could occur when creating nested arrays that pull in values.

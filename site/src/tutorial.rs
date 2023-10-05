@@ -656,6 +656,7 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <p>"It's annoying to write long lists of names like "<code>"gapdipgapgapide"</code>", so those three functions have a special rule in the parser that allows you to write them with only 2 letters."</p>
         <p>"Try it out!"</p>
         <Editor example="+gadigagaid 1 2 3 4 5"/>
+        <p>"In general, planet notation as complex as the mathematical function example above should only be used when it is necessary. For that examples like that with 4+ values, it is. However, when working with fewer values, you can get very far with just "<Prim prim=Dup/>" and "<Prim prim=Flip/>". Maybe sprinkle some "<Prim prim=Over/>"s and "<Prim prim=Dip/>"s in there too."</p>
     }
 }
 

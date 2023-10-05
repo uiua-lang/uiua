@@ -21,6 +21,7 @@ You may want to read the new version of the [Advanced Stack Manipulation Tutoria
 - [`reshape` `↯`](https://uiua.org/docs/reshape) now allow negative numbers to denote derived dimensions
 - Change the modifier termination character to `|` instead of `^`
 - Remove old versions of `fork` and `trident`
+- Add the `&httpsw` function for making HTTPS requests
 ### Interpreter
 - Add formatter configuration options. See the [readme](https://github.com/uiua-lang/uiua#formatter-configuration) for details.
 - Checking for updates is less zealous, and can be disabled with the `--no-update` flag to `uiua run` or `uiua watch`

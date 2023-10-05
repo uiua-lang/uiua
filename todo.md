@@ -1,14 +1,13 @@
-- Negative reshape
+- Make reshape more powerful
+- Inline fork
+- Cascade modifier
 - Make https requests work on web?
 - Add channels for spawned threads
 - Make dyadic array functions not methods
 - See what can be done about compile times
 - Rust API
 - Docs
-  - Invert bits for control flow
   - Control flow
-    - Invert bits
-    - Call list of functions
     - Looping modifiers
     - Try
     - Break

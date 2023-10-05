@@ -476,8 +476,6 @@ code:
         let instrs = self.new_functions.last_mut().unwrap();
         // Optimizations
         match (instrs.as_mut_slice(), instr) {
-            // Ignore noops
-            (_, Instr::Prim(Noop, _)) => {}
             // Cosine
             ([.., Instr::Prim(Eta, _), Instr::Prim(Add, _)], Instr::Prim(Sin, span)) => {
                 instrs.pop();
@@ -757,26 +755,75 @@ code:
         // Handle deprecation
         self.handle_primitive_deprecation(modified.modifier.value, &modified.modifier.span);
 
-        // Handle bind
+        // Inline bind
         if modified.modifier.value == Primitive::Bind && modified.operands.len() == 2 {
-            self.new_functions.push(Vec::new());
-            self.words(modified.operands, true)?;
-            let instrs = self.new_functions.pop().unwrap();
-            return match instrs_signature(&instrs) {
-                Ok(sig) => {
-                    let func = Function::new(
-                        FunctionId::Anonymous(modified.modifier.span),
-                        instrs,
-                        FunctionKind::Normal,
-                        sig,
-                    );
-                    self.push_instr(Instr::push(func));
-                    Ok(())
+            let instrs = self.compile_words(modified.operands, true)?;
+            return if call {
+                for instr in instrs {
+                    self.push_instr(instr);
                 }
-                Err(e) => Err(UiuaError::Run(
-                    Span::Code(modified.modifier.span.clone())
-                        .sp(format!("Cannot infer function signature in bind: {e}")),
-                )),
+                Ok(())
+            } else {
+                match instrs_signature(&instrs) {
+                    Ok(sig) => {
+                        let func = Function::new(
+                            FunctionId::Anonymous(modified.modifier.span),
+                            instrs,
+                            FunctionKind::Normal,
+                            sig,
+                        );
+                        self.push_instr(Instr::push(func));
+                        Ok(())
+                    }
+                    Err(e) => Err(UiuaError::Run(
+                        Span::Code(modified.modifier.span.clone())
+                            .sp(format!("Cannot infer function signature in bind: {e}")),
+                    )),
+                }
+            };
+        }
+
+        // Inline dip and gap
+        if matches!(modified.modifier.value, Primitive::Dip | Primitive::Gap)
+            && modified.operands.len() == 1
+        {
+            let mut instrs = self.compile_words(modified.operands, true)?;
+            // Extract function instrs if possible
+            if let [Instr::Push(val)] = instrs.as_slice() {
+                if let Some(f) = val.as_function() {
+                    instrs = f.instrs.clone();
+                }
+            }
+            let span = self.add_span(modified.modifier.span.clone());
+            if modified.modifier.value == Primitive::Dip {
+                instrs.insert(0, Instr::Prim(Primitive::PushTemp, span));
+                instrs.push(Instr::Prim(Primitive::PopTemp, span));
+            } else {
+                instrs.insert(0, Instr::Prim(Primitive::Pop, span));
+            }
+            println!("{} instrs: {:?}", modified.modifier.value, instrs);
+            return if call {
+                for instr in instrs {
+                    self.push_instr(instr);
+                }
+                Ok(())
+            } else {
+                match instrs_signature(&instrs) {
+                    Ok(sig) => {
+                        let func = Function::new(
+                            FunctionId::Anonymous(modified.modifier.span),
+                            instrs,
+                            FunctionKind::Normal,
+                            sig,
+                        );
+                        self.push_instr(Instr::push(func));
+                        Ok(())
+                    }
+                    Err(e) => Err(UiuaError::Run(
+                        Span::Code(modified.modifier.span.clone())
+                            .sp(format!("Cannot infer function: {e}")),
+                    )),
+                }
             };
         }
 

@@ -1205,7 +1205,7 @@ primitive!(
     ///   : ≡'⇌⊢↯3_3⇡9
     ///
     /// Because even non-functions can be called like functions, [bind] can, well, *bind* a value to a function.
-    /// ex: f = '+1
+    /// ex: f = '+^
     ///   : f 4
     /// This especially nice when used with modifiers that take 2 functions, like [under], where you can save up to 2 characters!
     /// ex: ⍜(↻3)(⊂π) [1 2 3 4 5]

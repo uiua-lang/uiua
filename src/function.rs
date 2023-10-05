@@ -262,9 +262,11 @@ impl Function {
         kind: FunctionKind,
         signature: Signature,
     ) -> Self {
+        let mut instrs = instrs.into();
+        instrs.retain(|instr| !matches!(instr, Instr::Prim(Primitive::Noop, _)));
         Self {
             id,
-            instrs: instrs.into(),
+            instrs,
             kind,
             signature,
         }
@@ -274,10 +276,12 @@ impl Function {
         instrs: impl Into<Vec<Instr>>,
         kind: FunctionKind,
     ) -> Result<Self, String> {
-        let instrs = instrs.into();
+        let mut instrs = instrs.into();
+        let signature = instrs_signature(&instrs)?;
+        instrs.retain(|instr| !matches!(instr, Instr::Prim(Primitive::Noop, _)));
         Ok(Self {
             id,
-            signature: instrs_signature(&instrs)?,
+            signature,
             instrs,
             kind,
         })

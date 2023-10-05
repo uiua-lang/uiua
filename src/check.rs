@@ -458,9 +458,12 @@ impl<'a> VirtualEnv<'a> {
         // println!("{instr:?} -> {}/{}", self.min_height, self.stack.len());
         Ok(())
     }
+    // Simulate popping a value. Errors if the stack is empty, which means the function is too complex.
     fn pop(&mut self) -> Result<BasicValue<'a>, String> {
         Ok(self.stack.pop().ok_or("function is too complex")?)
     }
+    /// Set the current stack height as a potential minimum.
+    /// At the end of checking, the minimum stack height is a component in calculating the signature.
     fn set_min_height(&mut self) {
         self.min_height = self.min_height.min(self.stack.len());
         if let Some(h) = self.array_stack.last_mut() {

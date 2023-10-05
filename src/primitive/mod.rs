@@ -207,6 +207,9 @@ impl Primitive {
         if name.chars().any(char::is_uppercase) {
             return None;
         }
+        if name.len() < 2 {
+            return None;
+        }
         match name {
             "id" => return Some(Primitive::Identity),
             "ga" => return Some(Primitive::Gap),
@@ -214,11 +217,11 @@ impl Primitive {
             "pi" => return Some(Primitive::Pi),
             _ => {}
         }
-        if name.len() < 3 {
-            return None;
-        }
         if let Some(prim) = Primitive::all().find(|p| p.names().is_some_and(|n| n.text == name)) {
             return Some(prim);
+        }
+        if name.len() < 3 {
+            return None;
         }
         let mut matching = Primitive::all().filter(|p| {
             p.names()

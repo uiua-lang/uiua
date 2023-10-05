@@ -2,6 +2,10 @@
 
 Uiua is not yet stable.
 
+## 0.0.16 - 2023-10-05
+### Interpreter
+- Fix a crash and a bug that could occur when creating nested arrays that pull in values.
+
 ## 0.0.15 - 2023-10-05
 This version changes a lot of glyphs. If you are coming from the previous version, most of the old glyphs will be automatically formatted to the new ones. The only change you may need to make is replacing all `^`s with `|`s.
 
@@ -76,10 +80,10 @@ You may want to read the new version of the [Advanced Stack Manipulation Tutoria
 - Add shadowable [constants](https://uiua.org/docs/constants) like `e` and `os`
 - Change [`trident` `∋`](https://uiua.org/docs/trident) argument order to make it easier to reason about
 - Enable [`fill` `⬚`](https://uiua.org/docs/fill) for [`keep` `▽`](https://uiua.org/docs/keep) if the amount list is shorter than the kept array
-- Fix a bug that made numbers that were `≤` `1e-12` `⌵` format to `0`
 ### Interpreter
 - Add `uiua eval` command which evaluates a Uiua expression and prints the result
 - Watch commands no longer try to open the file being watched
+- Fix a bug that made numbers that were `≤` `1e-12` `⌵` format to `0`
 ### Website
 - Make a space character `@ ` more visible by underlining the space
 - Improve cursor movement when formatting in the editor
@@ -94,6 +98,7 @@ You may want to read the new version of the [Advanced Stack Manipulation Tutoria
   - This can change code like `/(|2 ⊂!∶!∶) {"a" "bc" "def"}`
   - To just `/'⊂∩! {"a" "bc" "def"}`
 - Turn the term pair syntactic construct into a modifier called [`bind` `'`](https://uiua.org/docs/bind)
+### Interpreter
 - Fix some correctness bugs related to `under` and `invert`
 - Fix a crash when trying to reverse an empty array
 ### Website

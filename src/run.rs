@@ -352,6 +352,14 @@ code:
                 self.scope.call.pop();
                 continue;
             };
+            // Uncomment to debug
+            // if !self.scope.array.is_empty() {
+            //     print!("array: ");
+            //     for val in &self.scope.array {
+            //         print!("{:?} ", val);
+            //     }
+            //     println!();
+            // }
             // for val in &self.stack {
             //     print!("{:?} ", val);
             // }
@@ -535,14 +543,14 @@ code:
                 arg.arg_name()
             ))
         });
-        if let Some(bottom) = self.scope.array.last_mut() {
+        for bottom in &mut self.scope.array {
             *bottom = (*bottom).min(self.stack.len());
         }
         res
     }
     /// Simulates popping a value and imediately pushing it back
     pub(crate) fn touch_array_stack(&mut self) {
-        if let Some(bottom) = self.scope.array.last_mut() {
+        for bottom in &mut self.scope.array {
             *bottom = (*bottom).min(self.stack.len().saturating_sub(1));
         }
     }

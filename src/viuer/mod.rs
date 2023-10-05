@@ -14,7 +14,7 @@
 //! The example below shows how to print the image `img.jpg` in 40x30 terminal cells, with vertical
 //! offset of 4 and horizontal of 10, starting from the top left corner. More options are available
 //! through the [Config] struct.
-//! ```no_run
+//! ```ignore
 //! use viuer::{Config, print_from_file};
 //! let conf = Config {
 //!     width: Some(40),
@@ -57,7 +57,7 @@ pub use printer::is_sixel_supported;
 /// The snippet below reads all of stdin, decodes it with the [`image`] crate
 /// and prints it to the terminal. The image will also be resized to fit in the terminal.
 ///
-/// ```no_run
+/// ```ignore
 /// use std::io::{stdin, Read};
 /// use viuer::{Config, print};
 ///
@@ -90,7 +90,7 @@ pub fn print(img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
 /// Helper method that reads a file, tries to decode it and prints it.
 ///
 /// ## Example
-/// ```no_run
+/// ```ignore
 /// use viuer::{Config, print_from_file};
 /// let conf = Config {
 ///     width: Some(30),

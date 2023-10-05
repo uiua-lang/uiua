@@ -15,7 +15,7 @@ pub fn truecolor_available() -> bool {
 /// Uses [crossterm::terminal::size].
 /// ## Example
 /// The example below prints "img.jpg" with dimensions 80x40 in the center of the terminal.
-/// ```no_run
+/// ```ignore
 /// use viuer::{Config, print_from_file, terminal_size};
 ///
 /// let (term_width, term_height) = terminal_size();

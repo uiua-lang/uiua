@@ -271,7 +271,7 @@ impl Primitive {
             Primitive::Pi => env.push(PI),
             Primitive::Tau => env.push(TAU),
             Primitive::Infinity => env.push(INFINITY),
-            Primitive::Identity => {}
+            Primitive::Identity => env.touch_array_stack(),
             Primitive::Gap => {
                 let f = env.pop(1)?;
                 let _x = env.pop(2)?;

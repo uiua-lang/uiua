@@ -540,6 +540,12 @@ code:
         }
         res
     }
+    /// Simulates popping a value and imediately pushing it back
+    pub(crate) fn touch_array_stack(&mut self) {
+        if let Some(bottom) = self.scope.array.last_mut() {
+            *bottom = (*bottom).min(self.stack.len().saturating_sub(1));
+        }
+    }
     /// Push a value onto the stack
     pub fn push(&mut self, val: impl Into<Value>) {
         self.stack.push(val.into());

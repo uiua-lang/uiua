@@ -262,8 +262,7 @@ impl Function {
         kind: FunctionKind,
         signature: Signature,
     ) -> Self {
-        let mut instrs = instrs.into();
-        instrs.retain(|instr| !matches!(instr, Instr::Prim(Primitive::Identity, _)));
+        let instrs = instrs.into();
         Self {
             id,
             instrs,
@@ -276,9 +275,8 @@ impl Function {
         instrs: impl Into<Vec<Instr>>,
         kind: FunctionKind,
     ) -> Result<Self, String> {
-        let mut instrs = instrs.into();
+        let instrs = instrs.into();
         let signature = instrs_signature(&instrs)?;
-        instrs.retain(|instr| !matches!(instr, Instr::Prim(Primitive::Identity, _)));
         Ok(Self {
             id,
             signature,

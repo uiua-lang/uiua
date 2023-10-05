@@ -180,7 +180,7 @@ impl Primitive {
     pub fn inverse(&self) -> Option<Self> {
         use Primitive::*;
         Some(match self {
-            Noop => Noop,
+            Identity => Identity,
             Flip => Flip,
             Neg => Neg,
             Not => Not,
@@ -264,7 +264,7 @@ impl Primitive {
             Primitive::Pi => env.push(PI),
             Primitive::Tau => env.push(TAU),
             Primitive::Infinity => env.push(INFINITY),
-            Primitive::Noop => {}
+            Primitive::Identity => {}
             Primitive::Gap => {
                 let f = env.pop(1)?;
                 let _x = env.pop(2)?;

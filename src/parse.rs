@@ -364,11 +364,11 @@ impl Parser {
         }
         // Insert the first word that was parsed
         items.insert(0, word);
-        // Create noops
+        // Create identitys
         for item in &mut items {
             if let Word::Func(func) = &item.value {
                 if func.lines.is_empty() {
-                    item.value = Word::Primitive(Primitive::Noop);
+                    item.value = Word::Primitive(Primitive::Identity);
                 }
             }
         }
@@ -410,7 +410,7 @@ impl Parser {
             for arg in &mut args {
                 if let Word::Func(func) = &arg.value {
                     if func.lines.is_empty() {
-                        arg.value = Word::Primitive(Primitive::Noop);
+                        arg.value = Word::Primitive(Primitive::Identity);
                     }
                 }
             }

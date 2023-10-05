@@ -263,7 +263,7 @@ impl Function {
         signature: Signature,
     ) -> Self {
         let mut instrs = instrs.into();
-        instrs.retain(|instr| !matches!(instr, Instr::Prim(Primitive::Noop, _)));
+        instrs.retain(|instr| !matches!(instr, Instr::Prim(Primitive::Identity, _)));
         Self {
             id,
             instrs,
@@ -278,7 +278,7 @@ impl Function {
     ) -> Result<Self, String> {
         let mut instrs = instrs.into();
         let signature = instrs_signature(&instrs)?;
-        instrs.retain(|instr| !matches!(instr, Instr::Prim(Primitive::Noop, _)));
+        instrs.retain(|instr| !matches!(instr, Instr::Prim(Primitive::Identity, _)));
         Ok(Self {
             id,
             signature,

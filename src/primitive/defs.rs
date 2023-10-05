@@ -172,13 +172,13 @@ primitive!(
     /// While this may seem useless, one way to use it is to pass it to [reduce], which will put all of an array's values on the stack.
     /// ex: /∘ [1 2 3]
     ///
-    /// The formatter converts an empty `()` function into `noop` if it is in a strand or a modifier.
+    /// The formatter converts an empty `()` function into `identity` if it is in a strand or a modifier.
     /// ex: /() [1 2] # Try running to format
     ///   : ()_(+1)
     ///
-    /// While [noop]'s signature is `|1.1`, it will not throw an error if the stack is empty.
+    /// While [identity]'s signature is `|1.1`, it will not throw an error if the stack is empty.
     /// ex: ∘
-    (1, Noop, Stack, ("noop", '∘')),
+    (1, Identity, Stack, ("identity", '∘')),
     /// Move the top value on the stack 2 places down
     ///
     /// Deprecated in favor of [dip].
@@ -1007,7 +1007,7 @@ primitive!(
     /// ex: [⊙+ 1 2 3]
     /// ex: [⊙⊙+ 1 2 3 4]
     /// This is especially useful when used in a [fork].
-    /// In a [fork] expression, you can use [dip], [gap], and [noop] to select out values.
+    /// In a [fork] expression, you can use [dip], [gap], and [identity] to select out values.
     /// For example, if you wanted to add 3 values but keep the all 3 on top of the stack:
     /// ex: [⊃⊙⊙∘(++) 3 5 10]
     /// By replacing a `dip` with a `gap`, you pop the argument in that spot instead of keeping it:
@@ -1020,7 +1020,7 @@ primitive!(
     ///
     /// ex: ⋅+ 1 2 3
     /// This may seem useless when [pop] exists, but [gap] really shines when used with [fork].
-    /// In a [fork] expression, you can use [dip], [gap], and [noop] to select out values.
+    /// In a [fork] expression, you can use [dip], [gap], and [identity] to select out values.
     /// For example, if you wanted to add 3 values but keep the last value on top of the stack:
     /// ex: [⊃⋅⋅∘(++) 3 5 10]
     /// By using fewer `gap`s, you can select a different value
@@ -1291,7 +1291,7 @@ primitive!(
     /// This means [call] is used to "unbox" [constant] functions.
     /// ex: {1_2_3 4_5_6}
     ///   : ∵!.
-    /// [call] is equivalent to [noop] for anything other than a scalar function.
+    /// [call] is equivalent to [identity] for anything other than a scalar function.
     /// ex: !5
     /// ex: ![1 2 3]
     /// ex: !+_-

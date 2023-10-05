@@ -627,15 +627,15 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <Editor example="[⊙⊙⊙⊙⊙⊙+ 1 2 3 4 5 6 7 8]"/>
         <p><Prim prim=Gap/>" "<em>"discards"</em>" the top value on the stack and calls its function."</p>
         <p>"But wait, "<Prim prim=Pop/>" exists! Why would you need this?"</p>
-        <p>"The main reason for "<Prim prim=Dip/>" and "<Prim prim=Gap/>" to exist is to be chained with "<Prim prim=Noop/>" inside of "<Prim prim=Fork/>". They act as a sort of boolean selector to choose which arguments to keep and which to discard in a branch."</p>
+        <p>"The main reason for "<Prim prim=Dip/>" and "<Prim prim=Gap/>" to exist is to be chained with "<Prim prim=Identity/>" inside of "<Prim prim=Fork/>". They act as a sort of boolean selector to choose which arguments to keep and which to discard in a branch."</p>
         <p>"For example, let's say you want to add 3 numbers but keep the second 2 on the stack:"</p>
         <Editor example="[⊃⋅⊙∘(++)] 2 5 10"/>
-        <p>"You can read "<Prim prim=Gap glyph_only=true/><Prim prim=Dip glyph_only=true/><Prim prim=Noop glyph_only=true/>" as \"discard argument 1, keep argument 2, keep argument 3.\""</p>
+        <p>"You can read "<Prim prim=Gap glyph_only=true/><Prim prim=Dip glyph_only=true/><Prim prim=Identity glyph_only=true/>" as \"discard argument 1, keep argument 2, keep argument 3.\""</p>
         <p>"If you only wanted to keep argument 2, you simply make the expression shorter:"</p>
         <Editor example="[⊃⋅∘(++)] 2 5 10"/>
         <p>"For a more useful example, let's do a complex mathematical expression. We will implement this function (shown here in mathematical notation):"</p>
         <code class="code-block">"f(a,b,c,x) = (a+x)(bx-c)"</code>
-        <p>"We'll start with the "<code>"(a + x)"</code>" part. We can grab "<code>"a"</code>" and "<code>"x"</code>" with "<Prim prim=Dip/>" and "<Prim prim=Noop/>", and ignore "<code>"b"</code>" and "<code>"c"</code>" with "<Prim prim=Gap/>"."</p>
+        <p>"We'll start with the "<code>"(a + x)"</code>" part. We can grab "<code>"a"</code>" and "<code>"x"</code>" with "<Prim prim=Dip/>" and "<Prim prim=Identity/>", and ignore "<code>"b"</code>" and "<code>"c"</code>" with "<Prim prim=Gap/>"."</p>
         <Editor example="+⊙⋅⋅∘ 1 2 3 4"/>
         <p>"Notice how the circles correspond to the stack arguments we want."</p>
         <p>"Next, we'll do the "<code>"(bx-c)"</code>" part. We can grab each term with "<Prim prim=Fork/>"."</p>

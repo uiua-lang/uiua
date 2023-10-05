@@ -559,7 +559,7 @@ X 5"/>
         <p>"If you need to use a literal "<code>"_"</code>", you can escape them with "<code>"\\"</code>"."</p>
         <Editor example="$\"\\__\\_\" 27"/>
         <p>"Multi-line strings are implicitly format strings."</p>
-        <Editor example="⊙⊙+,, 1 2\n&p $ Do you know what _ + _ is?\n   $ It's _!"/>
+        <Editor example="⊃⊙∘+ 1 2\n&p $ Do you know what _ + _ is?\n   $ It's _!"/>
 
         <h2 id="terminating-modifiers">"Terminating Modifiers"</h2>
         <p>"Sometimes you don't want parse the function(s) following a modifier as being part of the modifier."</p>
@@ -627,8 +627,14 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <Editor example="[⊙⊙⊙⊙⊙⊙+ 1 2 3 4 5 6 7 8]"/>
         <p><Prim prim=Gap/>" "<em>"discards"</em>" the top value on the stack and calls its function."</p>
         <p>"But wait, "<Prim prim=Pop/>" exists! Why would you need this?"</p>
-        <p>"The main reason for "<Prim prim=Dip/>" and "<Prim prim=Gap/>" to exist is to be chained with "<Prim prim=Identity/>" inside of "<Prim prim=Fork/>". They act as a sort of boolean selector to choose which arguments to keep and which to discard in a branch."</p>
-        <p>"For example, let's say you want to add 3 numbers but keep the second 2 on the stack:"</p>
+
+        <h2 id="planet-notation">"🪐 Planet Notation"</h2>
+        <p>"The main reason for "<Prim prim=Dip/>" and "<Prim prim=Gap/>" to exist is to be chained with "<Prim prim=Identity/>", often inside of "<Prim prim=Fork/>". They act as a sort of boolean selector to choose which arguments to keep and which to discard in a branch."</p>
+        <p>"This is called "<em>"planet notation"</em>" because it looks like the planets in a solar system chart."</p>
+        <p>"For example, let's say you want to "<Prim prim=Mul/>" the 2nd and 4th arguments on the stack and discard the rest:"</p>
+        <Editor example="×⋅⊙⋅∘ 1 2 3 4"/>
+        <p>"Notice how the circles correspond to the stack arguments we want."</p>
+        <p>"Maybe you want to "<Prim prim=Add/>" 3 numbers but keep the second 2 on the stack:"</p>
         <Editor example="[⊃⋅⊙∘(++)] 2 5 10"/>
         <p>"You can read "<Prim prim=Gap glyph_only=true/><Prim prim=Dip glyph_only=true/><Prim prim=Identity glyph_only=true/>" as \"discard argument 1, keep argument 2, keep argument 3.\""</p>
         <p>"If you only wanted to keep argument 2, you simply make the expression shorter:"</p>
@@ -637,7 +643,6 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <code class="code-block">"f(a,b,c,x) = (a+x)(bx-c)"</code>
         <p>"We'll start with the "<code>"(a + x)"</code>" part. We can grab "<code>"a"</code>" and "<code>"x"</code>" with "<Prim prim=Dip/>" and "<Prim prim=Identity/>", and ignore "<code>"b"</code>" and "<code>"c"</code>" with "<Prim prim=Gap/>"."</p>
         <Editor example="+⊙⋅⋅∘ 1 2 3 4"/>
-        <p>"Notice how the circles correspond to the stack arguments we want."</p>
         <p>"Next, we'll do the "<code>"(bx-c)"</code>" part. We can grab each term with "<Prim prim=Fork/>"."</p>
         <Editor example="-⊃(⋅⋅∘)(×⋅⊙⋅∘) 1 2 3 4"/>
         <p>"The first pair of "<code>"()"</code>"s is not actually necessary, so let's remove them."</p>
@@ -646,6 +651,11 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <Editor example="×⊃(+⊙⋅⋅∘)(-⊃⋅⋅∘(×⋅⊙⋅∘)) 1 2 3 4"/>
         <p>"If you like, you can factor out the "<Prim prim=Gap/>" in the second part."</p>
         <Editor example="×⊃(+⊙⋅⋅∘)⋅(-⊃⋅∘(×⊙⋅∘)) 1 2 3 4"/>
+        <p>"And there you have it! A readable syntax juggling lots of values without any names!"</p>
+        <p>"If you "<em>"really"</em>" want it to be shorter, you can use "<Prim prim=Bind/>" instead of "<code>"()"</code>"s, but let's not."</p>
+        <p>"It's annoying to write long lists of names like "<code>"gapdipgapgapide"</code>", so those three functions have a special rule in the parser that allows you to write them with only 2 letters."</p>
+        <p>"Try it out!"</p>
+        <Editor example="+gadigagaid 1 2 3 4 5"/>
     }
 }
 

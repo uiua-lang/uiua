@@ -7,7 +7,7 @@ rgb ← [∶⍘⊟×.xy ↯△⊢xy0.5]
 u ← ↥<0.2∶>0.7.+×2 ×.∶⍘⊟xy
 c ← <∶√/+ⁿ2 xy
 ⍉⊂∶-¬u c1 +0.1 ∺↧rgb c0.95";
-const AVG: &str = "Avg ← ÷⧻∶/+.\nAvg 0_2_1_5";
+const AVG: &str = "Avg ← ÷⊃⧻/+\nAvg 0_2_1_5";
 const CHORD: &str = "\
 [0 4 7 10]
 ×220 ⁿ∶2÷12
@@ -16,7 +16,7 @@ const QUADRATIC: &str = "\
 Quad ← ÷⊙-⊃⊓'×2∘(⊟¯.√+×.∶××¯4⊙∶)
 Quad 1 2 0";
 const STRIPES: &str = "\
-∺(|2 ⊞|∶,)+_↥_- ⇡300
+∺(|2 ⊞|⊙.)+_↥_- ⇡300
 ⍉ ÷2 +1.2 ○ ÷10";
 const PALINDROME: &str = r#"$ uiua racecar wow cool!
 ⬚@ ⊜(⊂⊏∶"❌✅" ≅⇌..)≠@ ."#;

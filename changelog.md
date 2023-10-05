@@ -14,18 +14,18 @@ You may want to read the new version of the [Advanced Stack Manipulation Tutoria
 ### Language
 - Add the [`bracket` `⊓`](https://uiua.org/docs/bracket) modifier, which calls two functions each on different arguments
 - Change [`fill` `⬚`](https://uiua.org/docs/fill)'s glyph to reflect its relationship with [`constant` `□`](https://uiua.org/docs/constant). Code using `⍛` with continue to work and will be formatted as `⬚`.
-- Change `share` `⇉` name and glyph to [`fork` `⊃`](https://uiua.org/docs/fork). Code using `⇉` with continue to work and will be formatted as `⊃`.
-- Change `noop` `·` name and glyphs to [`identity` `∘`](https://uiua.org/docs/identity) to reflect its relationship with [`gap` `⋅`](https://uiua.org/docs/gap) and [`dip` `⊙`](https://uiua.org/docs/dip). Code using `·` with continue to work and will be formatted as `∘`.
+- Change `share` `⇉` name and glyph to [`fork` `⊃`](https://uiua.org/docs/fork). Code using `⇉` will continue to work and will be formatted as `⊃`.
+- Change `noop` `·` name and glyphs to [`identity` `∘`](https://uiua.org/docs/identity) to reflect its relationship with [`gap` `⋅`](https://uiua.org/docs/gap) and [`dip` `⊙`](https://uiua.org/docs/dip). Code using `·` will continue to work and will be formatted as `∘`.
 - Change [`identity` `∘`](https://uiua.org/docs/identity)'s signature from `|0.0` to `|1.1`
 - Add the [`gap` `⋅`](https://uiua.org/docs/gap) modifier, which discards a value then calls its function. It is mainly intended to be used with [`fork` `⊃`](https://uiua.org/docs/fork).
-- Change [`dip` `⊙`](https://uiua.org/docs/dip)'s glyph to reflect its relationship with [`gap` `⋅`](https://uiua.org/docs/gap) and [`identity` `∘`](https://uiua.org/docs/identity). Code using `→` with continue to work and will be formatted as `⊙`.
-- Change [`both` `∩`](https://uiua.org/docs/both)'s glyph to reflect its relationship with [`fork` `⊃`](https://uiua.org/docs/fork). Code using `∷` with continue to work and will be formatted as `∩`.
+- Change [`dip` `⊙`](https://uiua.org/docs/dip)'s glyph to reflect its relationship with [`gap` `⋅`](https://uiua.org/docs/gap) and [`identity` `∘`](https://uiua.org/docs/identity). Code using `→` will continue to work and will be formatted as `⊙`.
+- Change [`both` `∩`](https://uiua.org/docs/both)'s glyph to reflect its relationship with [`fork` `⊃`](https://uiua.org/docs/fork). Code using `∷` will continue to work and will be formatted as `∩`.
 - [`distribute` `∺`](https://uiua.org/docs/distribute) now works with any number of arguments. Only the first argument is distributed.
 - [`fill` `⬚`](https://uiua.org/docs/fill) now works with [`reshape` `↯`](https://uiua.org/docs/reshape)
 - [`reshape` `↯`](https://uiua.org/docs/reshape) now allow negative numbers to denote derived dimensions
 - Change the modifier termination character to `|` instead of `^`
 - Remove old versions of `fork` and `trident`
-- Add the `&httpsw` function for making HTTPS requests
+- Add the [`&httpsw`](https://uiua.org/docs/&httpsw) function for making HTTPS requests
 ### Interpreter
 - Add formatter configuration options. See the [readme](https://github.com/uiua-lang/uiua#formatter-configuration) for details.
 - Checking for updates is less zealous, and can be disabled with the `--no-update` flag to `uiua run` or `uiua watch`

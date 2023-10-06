@@ -538,26 +538,26 @@ primitive!(
     (1, InvTranspose, MonadicArray),
     /// Get the indices into an array if it were sorted ascending
     ///
-    /// The [rise] of an array is the list of indices that would sort the array if used with [select].
-    /// ex: ⊲6_2_7_0_¯1_5
+    /// The [rise] of an array is the list of indices that would sort the array ascending if used with [select].
+    /// ex: ⍏6_2_7_0_¯1_5
     /// Using the [rise] as a selector in [select] yields the sorted array.
-    /// ex: ⊏⊲.6_2_7_0_¯1_5
+    /// ex: ⊏⍏.6_2_7_0_¯1_5
     ///
     /// If we transform the array before [rise]ing, we can sort by a key.
-    /// Here, we sort the array by the [absolute value] of its elements.
-    /// ex: ⊏⊲⌵.6_2_7_0_¯1_5
-    (1, Rise, MonadicArray, ("rise", '⊲')),
+    /// Here, we sort the array ascending by the [absolute value] of its elements.
+    /// ex: ⊏⍏⌵.6_2_7_0_¯1_5
+    (1, Rise, MonadicArray, ("rise", '⍏')),
     /// Get the indices into an array if it were sorted descending
     ///
-    /// The [fall] of an array is the list of indices that would sort the array *backwards* if used with [select].
-    /// ex: ⊳6_2_7_0_¯1_5
-    /// Using the [fall] as a selector in [select] yields the reverse-sorted array.
-    /// ex: ⊏⊳.6_2_7_0_¯1_5
+    /// The [fall] of an array is the list of indices that would sort the array descending if used with [select].
+    /// ex: ⍖6_2_7_0_¯1_5
+    /// Using the [fall] as a selector in [select] yields the sorted array.
+    /// ex: ⊏⍖.6_2_7_0_¯1_5
     ///
     /// If we transform the array before [fall]ing, we can sort by a key.
-    /// Here, we reverse-sort the array by the [absolute value] of its elements.
-    /// ex: ⊏⊳⌵.6_2_7_0_¯1_5
-    (1, Fall, MonadicArray, ("fall", '⊳')),
+    /// Here, we sort the array descending by the [absolute value] of its elements.
+    /// ex: ⊏⍖⌵.6_2_7_0_¯1_5
+    (1, Fall, MonadicArray, ("fall", '⍖')),
     /// Assign a unique index to each unique element in an array
     ///
     /// ex: ⊛7_7_8_0_1_2_0
@@ -565,7 +565,7 @@ primitive!(
     ///
     /// When combined with [group], you can do things like counting the number of occurrences of each character in a string.
     /// ex: $ Count the characters is this string
-    ///   : ⊕($"_ _"⊢∶⧻.) ⊛.⊏⊲.
+    ///   : ⊕($"_ _"⊢∶⧻.) ⊛.⊏⍏.
     (1, Classify, MonadicArray, ("classify", '⊛')),
     /// Remove duplicate elements from an array
     ///
@@ -963,7 +963,7 @@ primitive!(
     ///
     /// When combined with [classify], you can do things like counting the number of occurrences of each character in a string.
     /// ex: $ Count the characters is this string
-    ///   : ⊕{⊢∶⧻.} ⊛.⊏⊲.
+    ///   : ⊕{⊢∶⧻.} ⊛.⊏⍏.
     ///
     /// [group] is closely related to [partition].
     (2[1], Group, AggregatingModifier, ("group", '⊕')),

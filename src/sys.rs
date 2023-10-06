@@ -1005,7 +1005,7 @@ fn check_http(mut request: String, hostname: &str) -> Result<String, String> {
         .ok_or("Empty first line")?;
     if !last_token.starts_with("HTTP/") {
         request = first.to_string()
-            + "HTTP/1.0\r\n"
+            + " HTTP/1.0\r\n"
             + &lines.into_iter().skip(1).collect::<Vec<_>>().join("\r\n");
     } else {
         request = lines.join("\r\n");

@@ -17,6 +17,7 @@
     - copy multiline code from somewhere
     - hit run
     - empty lines are added after each line of code
+- Build editor divs with leptos instead of strings
 - Make https requests work on web?
 - Add channels for spawned threads
 - Make dyadic array functions not methods

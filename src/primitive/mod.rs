@@ -116,6 +116,7 @@ impl fmt::Display for Primitive {
                 InvTranspose => write!(f, "⍘{Transpose}"),
                 InverseBits => write!(f, "⍘{Bits}"),
                 InvTrace => write!(f, "⍘{Trace}"),
+                InvConstant => write!(f, "⍘{Constant}"),
                 Uncouple => write!(f, "⍘{Couple}"),
                 Untake => write!(f, "⍘{Take}"),
                 Undrop => write!(f, "⍘{Drop}"),
@@ -189,11 +190,12 @@ impl Primitive {
             Bits => InverseBits,
             InverseBits => Bits,
             Couple => Uncouple,
-            Call => Constant,
             Roll => Unroll,
             Unroll => Roll,
             Trace => InvTrace,
             InvTrace => Trace,
+            Constant => InvConstant,
+            InvConstant => Constant,
             _ => return None,
         })
     }
@@ -357,6 +359,13 @@ impl Primitive {
                 let val = env.pop(1)?;
                 let constant = Function::constant(val);
                 env.push(constant);
+            }
+            Primitive::InvConstant => {
+                let mut val = env.pop(1)?;
+                if let Some(con) = val.as_function().and_then(|f| f.as_constant()) {
+                    val = con.clone()
+                }
+                env.push(val);
             }
             Primitive::Call => {
                 let f = env.pop(1)?;

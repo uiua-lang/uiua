@@ -4,6 +4,7 @@ Uiua is not yet stable.
 
 ## 0.0.17 - 2023-10-xx
 ### Language
+- **Breaking Change:** Some uses of [`call` `!`](https://uiua.org/docs/call) will no longer compile without declaring a stack signature. When unboxing [`constant` `□`](https://uiua.org/docs/constant) functions, you can use [`invert` `⍘`](https://uiua.org/docs/invert) [`constant` `□`](https://uiua.org/docs/constant) to get unboxing with a well-defined signature.
 - Add GIF encoding with [`&gife`](https://uiua.org/docs/&gife)
 - Add [`fall` `⍖`](https://uiua.org/docs/fall) functions, which gives the indices of the reverse-sorted array
 - Change `grade` `⌂` name and glyph to [`rise` `⍏`](https://uiua.org/docs/rise) to reflect its relationship with [`fall` `⍖`](https://uiua.org/docs/fall). Code using `⌂` will continue to work and will be formatted as `⍏`.

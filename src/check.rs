@@ -112,9 +112,27 @@ impl<'a> VirtualEnv<'a> {
             Instr::Dynamic(f) => self.handle_sig(f.signature)?,
             Instr::DropTemp { .. } => {}
             Instr::Prim(prim, _) => match prim {
-                Reduce | Scan => self.handle_mod(prim, Some(2), Some(1), 1, None)?,
+                Reduce | Scan => {
+                    let f = self.pop()?;
+                    let sig = f.signature();
+                    let outputs = match (sig.args, sig.outputs) {
+                        (0, _) => return Err(format!("{prim}'s function {f:?} has no args")),
+                        (1, 0) => 0,
+                        (1, _) => {
+                            return Err(format!("{prim}'s function {f:?} signature is {sig}"))
+                        }
+                        (2, 1) => 1,
+                        _ => return Err(format!("{prim}'s function {f:?} signature is {sig}")),
+                    };
+                    self.handle_args_outputs(1, outputs)?;
+                }
                 Each | Rows => self.handle_variadic_mod(prim)?,
-                Distribute | Table | Cross => self.handle_mod(prim, Some(2), Some(1), 2, None)?,
+                Table | Cross => self.handle_mod(prim, Some(2), Some(1), 2, None)?,
+                Distribute => {
+                    let f = self.pop()?;
+                    let sig = f.signature();
+                    self.handle_sig(sig)?
+                }
                 Group | Partition => {
                     if let BasicValue::Func(f) = self.pop()? {
                         let sig = f.signature();

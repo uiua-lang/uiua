@@ -139,8 +139,8 @@ pub fn Tour() -> impl IntoView {
         <p>"Many simple functions work on "<Prim prim=Constant/>" elements without needing to "<Prim prim=Call/>" them."</p>
         <Editor example="{1 2_3_4 5_6}\n∵⇌.\n∵⧻."/>
         <Editor example="+5 {1 2_3_4 5_6}"/>
-        <p>"For more complex operations, though, you'll need to use "<Prim prim=Call/>". Using it with "<Prim prim=Under/>" will re-"<Prim prim=Constant/>" the result."</p>
-        <Editor example="{\"dog\" \"cat\" \"fish\"}\n∵⍜!(⊂∶⇌.)."/>
+        <p>"For more complex operations, though, you'll need to use "<Prim prim=Invert/><Prim prim=Constant/>". Using it with "<Prim prim=Under/>" will re-"<Prim prim=Constant/>" the result."</p>
+        <Editor example="{\"dog\" \"cat\" \"fish\"}\n∵⍜⍘□(⊂∶⇌.)."/>
 
         <h2 id="multimedia">"Multimedia"</h2>
         <p>"Uiua can natively generate images and audio."</p>

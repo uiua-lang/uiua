@@ -127,7 +127,7 @@ fn invert_instr_fragment(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
 
 type Under = (Vec<Instr>, Vec<Instr>);
 
-fn under_instrs(instrs: &[Instr]) -> Option<Under> {
+pub(crate) fn under_instrs(instrs: &[Instr]) -> Option<Under> {
     if instrs.is_empty() {
         return Some((Vec::new(), Vec::new()));
     }

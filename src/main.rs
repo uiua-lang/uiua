@@ -350,7 +350,7 @@ fn watch(
                                 &audio_port,
                             ])
                             .args(&args)
-                            .stdin(stdin_file.map_or_else(|| Stdio::inherit(), Into::into))
+                            .stdin(stdin_file.map_or_else(Stdio::inherit, Into::into))
                             .spawn()
                             .unwrap(),
                     );

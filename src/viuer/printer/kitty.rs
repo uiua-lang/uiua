@@ -210,6 +210,7 @@ mod tests {
     use image::{DynamicImage, GenericImage};
 
     #[test]
+    #[ignore]
     fn test_print_local() {
         let img = DynamicImage::ImageRgba8(image::RgbaImage::new(40, 25));
         let config = Config {

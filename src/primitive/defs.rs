@@ -586,10 +586,10 @@ primitive!(
     /// ex: [□@a □3 □7_8_9]
     /// The more ergonomic way to make constant function arrays is to use `{}`s instead of `[]`s.
     /// ex: {@a 3 7_8_9}
-    /// Use [call] to get the values back out.
-    /// ex: !□1_2_3
-    /// [reduce][call] will unpack an array of constant functions onto the stack.
-    /// ex: /!{@a 3 7_8_9}
+    /// Use [invert][constant] to get the values back out.
+    /// ex: ⍘□ □1_2_3
+    /// [reduce][invert][constant] will unpack an array of constant functions onto the stack.
+    /// ex: /⍘□ {@a 3 7_8_9}
     ///
     /// You would not normally construct arrays like the one above.
     /// The more important use case of [constant] is for jagged or nested data.
@@ -597,17 +597,19 @@ primitive!(
     /// ex: $ Words of different lengths
     ///   : ⊜□≠@ .
     ///
-    /// Most monadic functions, like [reverse], will work on constant function elements without needing to [call] them.
+    /// Most monadic functions, like [reverse], will work on constant function elements without needing to [invert][constant] them.
     /// ex: $ Reverse these words
     ///   : ⊜□≠@ .
     ///   : ∵⇌.
     ///
-    /// For more complex operations, you can use [each][under][call].
+    /// For more complex operations, you can use [each][under][invert][constant].
     /// ex: $ Prepend the word length
     ///   : ⊜□≠@ .
-    ///   : ∵⍜!($"_ _"⧻.).
-    /// This works because [call] [invert]ed is [constant]. For each element, it [call]s the constant function to get the array out, does something to it, then [constant]s the result.
+    ///   : ∵⍜⍘□($"_ _"⧻.).
+    /// This works because `invert``invert``constant` is just `constant`. For each element, it un-[constant]s the [constant] function to get the array out, does something to it, then [constant]s the result.
     (1, Constant, MonadicArray, ("constant", '□')),
+    /// Unconstant something
+    (1, InvConstant, MonadicArray),
     /// Check if two arrays are exactly the same
     ///
     /// ex: ≅ 1_2_3 [1 2 3]
@@ -901,9 +903,6 @@ primitive!(
     /// ex: ∺⊂ 1_2_3 4
     /// ex: ∺⊂ 1_2_3 4_5_6
     ///
-    /// One nice use of this is to [call] multiple functions on a single argument.
-    /// ex: ∺!√_¯_⌊_⌈_(×4) 6.25
-    ///
     /// [distribute] is equivalent to [level]`[¯1``infinity``]`.
     /// ex:       ∺⊂ 1_2_3 4_5_6
     ///   : ⍚[¯1 ∞]⊂ 1_2_3 4_5_6
@@ -1000,8 +999,8 @@ primitive!(
     /// ex: ∩⇡ 3 5
     ///
     /// One good use of this is when working with [constant] data.
-    /// You can use [both][call] to get 2 [constant] values out.
-    /// ex: /(⊂∩!) {"a" "bc" "def"}
+    /// You can use [both][invert][constant] to get 2 [constant] values out.
+    /// ex: /(⊂∩⍘□) {"a" "bc" "def"}
     ///
     /// For a function that takes `n` arguments, [both] calls the function on the 2 sets of `n` values on top of the stack.
     /// ex: [∩+ 1 2 3 4]
@@ -1327,22 +1326,16 @@ primitive!(
     ///
     /// When passing a scalar function, the function is simply called.
     /// ex: !(+5) 2
-    /// This means [call] is used to "unbox" [constant] functions.
-    /// ex: {1_2_3 4_5_6}
-    ///   : ∵!.
-    /// [call] is equivalent to [identity] for anything other than a scalar function.
+    /// [call] is equivalent to [identity] for anything other than a function.
     /// ex: !5
     /// ex: ![1 2 3]
     /// ex: !+_-
     ///
-    /// Note that you currently cannot use [call] to call a function that does not have exactly 1 output.
-    /// So this is okay:
-    /// ex: Foo ← 1 2
-    ///   : Foo
-    /// But this is not:
-    /// ex! !(1 2)
-    /// This restriction allows the compiler to more easily reason about [call]. It may be lifted in the future.
-    (1, Call, Control, ("call", '!')),
+    /// [call] will "unbox" a [constant] function.
+    /// However, this requires a signature annotation in most contexts where it is useful, so for this purpose, [invert][constant] should be preferred.
+    /// ex! ∵! {1_2_3 4_5_6}
+    /// ex: ∵⍘□{1_2_3 4_5_6}
+    ((None), Call, Control, ("call", '!')),
     /// Break out of a loop
     ///
     /// Expects a non-negative integer. This integer is how many loops will be broken out of.

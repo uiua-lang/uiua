@@ -1,8 +1,5 @@
-- Inline under
-- Optimize keep and unkeep
-- Fix bind composed function signature
 - Inline some functions with `distribute`
-- Fix `fall` docs
+- Make `if` handle its signatures like `fork` does
 - Fix web editor text deletion bug
   - Steps to reproduce:
     - open new pad

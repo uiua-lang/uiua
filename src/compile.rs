@@ -5,6 +5,7 @@ use std::{
 };
 
 use crate::{
+    algorithm::invert::under_instrs,
     array::Array,
     ast::*,
     check::instrs_signature,
@@ -568,6 +569,40 @@ impl Uiua {
             }
         }
 
+        // Inline under
+        if modified.modifier.value == Primitive::Under && modified.operands.len() == 2 {
+            let mut operands = modified.operands.clone().into_iter();
+            let (a_instrs, _) = self.compile_operand_words(vec![operands.next().unwrap()])?;
+            let (b_instrs, _) = self.compile_operand_words(vec![operands.next().unwrap()])?;
+            if let Some((a_before, a_after)) = under_instrs(&a_instrs) {
+                let mut instrs = a_before;
+                instrs.extend(b_instrs);
+                instrs.extend(a_after);
+                return if call {
+                    for instr in instrs {
+                        self.push_instr(instr);
+                    }
+                    Ok(())
+                } else {
+                    match instrs_signature(&instrs) {
+                        Ok(sig) => {
+                            let func = Function::new(
+                                FunctionId::Anonymous(modified.modifier.span),
+                                instrs,
+                                sig,
+                            );
+                            self.push_instr(Instr::push(func));
+                            Ok(())
+                        }
+                        Err(e) => Err(UiuaError::Run(
+                            Span::Code(modified.modifier.span.clone())
+                                .sp(format!("Cannot infer function signature: {e}")),
+                        )),
+                    }
+                };
+            }
+        }
+
         if call {
             self.words(modified.operands, false)?;
             let span = self.add_span(modified.modifier.span);
@@ -618,19 +653,18 @@ impl Uiua {
     }
     fn primitive(&mut self, prim: Primitive, span: CodeSpan, call: bool) -> UiuaResult {
         self.handle_primitive_deprecation(prim, &span);
-        let span = self.add_span(span);
+        let span_i = self.add_span(span.clone());
         if call || prim.as_constant().is_some() {
-            self.push_instr(Instr::Prim(prim, span));
+            self.push_instr(Instr::Prim(prim, span_i));
         } else {
-            let instrs = [Instr::Prim(prim, span)];
+            let instrs = [Instr::Prim(prim, span_i)];
             let func = Function::new_inferred(FunctionId::Primitive(prim), instrs);
             match func {
                 Ok(func) => self.push_instr(Instr::push(func)),
                 Err(e) => {
-                    return Err(self.error(format!(
-                        "{prim} cannot be used here because it does \
-                        not have a well-defined signature: {e}"
-                    )))
+                    return Err(span
+                        .sp(format!("Cannot infer function signature: {e}"))
+                        .into())
                 }
             }
         }

@@ -609,7 +609,7 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <p>"We'll see just how important "<Prim prim=Fork/>" is later is this section."</p>
 
         <h2 id="both"><Prim prim=Both/></h2>
-        <p><Prim prim=Both/>" is monadic modifier and a sort of compliment to "<Prim prim=Fork/>". While "<Prim prim=Fork/>" calls multiple functions on the same set of arguments, "<Prim prim=Both/>" calls a "<em>"single"</em>" function on "<em>"multiple"</em>" sets of arguments."</p>
+        <p><Prim prim=Both/>" is a monadic modifier and a sort of complement to "<Prim prim=Fork/>". While "<Prim prim=Fork/>" calls multiple functions on the same set of arguments, "<Prim prim=Both/>" calls a "<em>"single"</em>" function on "<em>"multiple"</em>" sets of arguments."</p>
         <Editor example="∩⇌ [1 2 3] [4 5 6]"/>
         <p>"Chaining "<Prim prim=Both/>" doubles the number of arguments each time."</p>
         <Editor example="∩∩⇌ [1 2 3] [4 5 6] [7 8 9] [10 11 12]"/>

@@ -1,3 +1,4 @@
+- Make signature checking for pick smarter
 - Proofread tour, tutorial, and function docs
 - Make `if` handle its signatures like `fork` does
 - Inline some functions with `distribute`

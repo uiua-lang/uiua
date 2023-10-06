@@ -336,7 +336,7 @@ fn format_impl(
     path: Option<&Path>,
     config: &FormatConfig,
 ) -> UiuaResult<FormatOutput> {
-    let (items, errors) = parse(input, path);
+    let (items, errors, _) = parse(input, path);
     if errors.is_empty() {
         Ok(format_items(&items, config))
     } else {

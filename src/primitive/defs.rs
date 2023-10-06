@@ -1337,8 +1337,8 @@ primitive!(
     ///
     /// Note that you currently cannot use [call] to call a function that does not have exactly 1 output.
     /// So this is okay:
-    /// ex: foo ← 1 2
-    ///   : foo
+    /// ex: Foo ← 1 2
+    ///   : Foo
     /// But this is not:
     /// ex! !(1 2)
     /// This restriction allows the compiler to more easily reason about [call]. It may be lifted in the future.
@@ -1411,9 +1411,9 @@ primitive!(
     /// Can be used after [&i].
     ///
     /// ex: ex ← &i "example.ua"
-    ///   : square ← use "Square" ex
-    ///   : increment ← use "Increment" ex
-    ///   : square increment 5
+    ///   : Square ← use "Square" ex
+    ///   : Increment ← use "Increment" ex
+    ///   : Square Increment 5
     (2, Use, Misc, "use"),
     /// Generate a unique tag
     ///

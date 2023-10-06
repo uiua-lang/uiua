@@ -231,6 +231,7 @@ pub struct Diagnostic {
 pub enum DiagnosticKind {
     Warning,
     Advice,
+    Style,
 }
 
 impl fmt::Display for Diagnostic {
@@ -253,6 +254,7 @@ impl Diagnostic {
             match self.kind {
                 DiagnosticKind::Warning => ReportKind::Warning,
                 DiagnosticKind::Advice => ReportKind::Advice,
+                DiagnosticKind::Style => ReportKind::Custom("Style", Color::Green),
             },
             color,
         )

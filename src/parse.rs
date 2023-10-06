@@ -5,7 +5,7 @@ use crate::{
     function::{FunctionId, Signature},
     lex::{AsciiToken::*, Token::*, *},
     primitive::Primitive,
-    Ident,
+    Diagnostic, DiagnosticKind, Ident,
 };
 
 #[derive(Debug, Clone)]
@@ -86,7 +86,10 @@ impl Error for ParseError {}
 
 pub type ParseResult<T = ()> = Result<T, Sp<ParseError>>;
 
-pub fn parse(input: &str, path: Option<&Path>) -> (Vec<Item>, Vec<Sp<ParseError>>) {
+pub fn parse(
+    input: &str,
+    path: Option<&Path>,
+) -> (Vec<Item>, Vec<Sp<ParseError>>, Vec<Diagnostic>) {
     let (tokens, lex_errors) = lex(input, path);
     let errors = lex_errors
         .into_iter()
@@ -96,6 +99,7 @@ pub fn parse(input: &str, path: Option<&Path>) -> (Vec<Item>, Vec<Sp<ParseError>
         tokens,
         index: 0,
         errors,
+        diagnostics: Vec::new(),
     };
     let items = parser.items(true);
     if parser.errors.is_empty() && parser.index < parser.tokens.len() {
@@ -106,13 +110,14 @@ pub fn parse(input: &str, path: Option<&Path>) -> (Vec<Item>, Vec<Sp<ParseError>
                 .map(ParseError::Unexpected),
         );
     }
-    (items, parser.errors)
+    (items, parser.errors, parser.diagnostics)
 }
 
 struct Parser {
     tokens: Vec<Sp<crate::lex::Token>>,
     index: usize,
     errors: Vec<Sp<ParseError>>,
+    diagnostics: Vec<Diagnostic>,
 }
 
 impl Parser {
@@ -240,7 +245,14 @@ impl Parser {
     }
     fn try_ident(&mut self) -> Option<Sp<Ident>> {
         let span = self.try_exact(Token::Ident)?;
-        let s = span.as_str().into();
+        let s: Ident = span.as_str().into();
+        if s.chars().count() >= 3 && s.chars().next().unwrap().is_lowercase() {
+            self.diagnostics.push(Diagnostic::new(
+                "Binding names with 3 or more characters should be capitalized",
+                span.clone(),
+                DiagnosticKind::Style,
+            ));
+        }
         Some(span.sp(s))
     }
     fn try_signature(&mut self) -> Option<Sp<Signature>> {

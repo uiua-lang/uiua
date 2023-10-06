@@ -20,7 +20,7 @@ pub enum SpanKind {
 }
 
 pub fn spans(input: &str) -> Vec<Sp<SpanKind>> {
-    let (items, _) = parse(input, None);
+    let (items, _, _) = parse(input, None);
     items_spans(&items)
 }
 
@@ -126,7 +126,7 @@ mod server {
 
     impl LspDoc {
         fn new(input: String) -> Self {
-            let (items, _) = parse(&input, None);
+            let (items, _, _) = parse(&input, None);
             let spans = items_spans(&items);
             let bindings = bindings_info(&items);
             Self {

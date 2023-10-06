@@ -486,9 +486,10 @@ fn TutorialBindings() -> impl IntoView {
         <p>"Bindings are global names that can be given to Uiua values. They are denoted with "<code>"←"</code>", which the formatter will convert from "<code>"="</code>" when appropriate."</p>
         <Editor example="a = 3\nb ← 5\n+ a b" help={&["", "Try running to format the ="]}/>
         <p>"Valid binding names can be made up of any sequence of uppercase or lowercase alphabetic characters OR a single non-alphanumeric character that is not already used for a Uiua function."</p>
-        <Editor example="numone ← 1\nNuMtWo ← 2\n😀 ← \"happy\""/>
+        <p>"Binding names longer than 2 characters should be capitalized."</p>
+        <Editor example="NumOne ← 1\nNuMtWo ← 2\n😀 ← \"happy\""/>
         <p>"Unlike most programming languages, binding names in Uiua "<em>"cannot"</em>" contain numbers or underscores."</p>
-        <Editor example="variable_1 ← 5"/> // Should fail
+        <Editor example="Variable_1 ← 5"/> // Should fail
         <p>"Bindings are case-sensitive."</p>
         <p>"The parser can sometimes mistake all-lowercase binding names for unformatted built-in functions."</p>
         <p>"Here, the parser thinks that "<code>"part"</code>" is "<Prim prim=Partition/>"."</p>
@@ -497,7 +498,7 @@ fn TutorialBindings() -> impl IntoView {
         <Editor example="Part = 5\n*2 Part"/>
         <p>"Bindings run the code right of the "<code>"←"</code>", then pop the top value off the stack and bind it to the name on the left."</p>
         <p>"Note, though, that an empty right side is perfectly valid! This means you can bind values that were create on previous lines."</p>
-        <Editor example="×6 7\nanswer ←\n[answer]"/>
+        <Editor example="×6 7\nAnswer ←\n[Answer]"/>
 
         <h2 id="binding-functions">"Binding Functions"</h2>
         <p>"If the code on the right side of the "<code>"←"</code>" looks like a function, then instead of evaluating its right side immediately, the right side will be bound as a function."</p>
@@ -700,17 +701,17 @@ tw pf 3"#/>
         <Editor example={ &example_ua(|ex| ex.clone()) }/>
         <p>"You can import it with "<Prim prim=Sys(SysOp::Import)/>" and then "<Prim prim=Use/>" to extract the functions."</p>
         <Editor example=r#"ex ← &i "example.ua"
-square ← use "Square" ex
-double ← use "Double" ex
-increment ← use "Increment" ex
+Square ← use "Square" ex
+Double ← use "Double" ex
+Increment ← use "Increment" ex
 
-increment square double 5"#/>
+Increment Square Double 5"#/>
         <p><Prim prim=Sys(SysOp::Import)/>" only imports a given file once and caches the results. Subsequent imports of the same file (from anywhere) will not run the file's code again, but they "<em>"will"</em>" push its stack values again."</p>
         <p>"In this example, we make some code that prints a message and then generates a random number. We then write the code to a file and import it 3 times. Notice that the message is only printed once, and the same number is returned every time."</p>
         <Editor example="\
-code ← $ &p \"Loading module\"
+Code ← $ &p \"Loading module\"
        $ rand
-&fwa \"test.ua\" code
+&fwa \"test.ua\" Code
 ⍥(&i \"test.ua\")3"/>
     }
 }

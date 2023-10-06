@@ -263,7 +263,14 @@ impl Uiua {
     }
     fn load_impl(&mut self, input: &str, path: Option<&Path>) -> UiuaResult {
         self.execution_start = instant::now();
-        let (items, errors) = parse(input, path);
+        let (items, errors, diagnostics) = parse(input, path);
+        if self.print_diagnostics {
+            for diagnostic in diagnostics {
+                println!("{}", diagnostic.show(true));
+            }
+        } else {
+            self.diagnostics.extend(diagnostics);
+        }
         if !errors.is_empty() {
             return Err(errors.into());
         }

@@ -11,6 +11,7 @@ Uiua is not yet stable.
 - [`fold` `∧`](https://uiua.org/docs/fold) can now use multiple accumulators
 - Improve [`dump`](https://uiua.org/docs/dump) output
 - Functions with ASCII glyphs now also format from their names
+- Add a style diagnostic about the captialization of binding names
 ### Website
 - Add GIF output
 

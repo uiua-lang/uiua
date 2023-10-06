@@ -88,6 +88,14 @@ impl Value {
             Err(value) => Err(value),
         }
     }
+    pub fn rows(&self) -> Box<dyn ExactSizeIterator<Item = Self> + '_> {
+        match self {
+            Self::Num(array) => Box::new(array.rows().map(Value::from)),
+            Self::Byte(array) => Box::new(array.rows().map(Value::from)),
+            Self::Char(array) => Box::new(array.rows().map(Value::from)),
+            Self::Func(array) => Box::new(array.rows().map(Value::from)),
+        }
+    }
     pub fn into_rows(self) -> Box<dyn Iterator<Item = Self>> {
         match self {
             Self::Num(array) => Box::new(array.into_rows().map(Value::from)),

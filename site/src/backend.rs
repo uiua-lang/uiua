@@ -36,6 +36,7 @@ impl Default for WebBackend {
 pub enum OutputItem {
     String(String),
     Image(Vec<u8>),
+    Gif(Vec<u8>),
     Audio(Vec<u8>),
     Error(String),
     Diagnostic(String, DiagnosticKind),
@@ -86,6 +87,10 @@ impl SysBackend for WebBackend {
             .lock()
             .unwrap()
             .push(OutputItem::Image(bytes.into_inner()));
+        Ok(())
+    }
+    fn show_gif(&self, gif_bytes: Vec<u8>) -> Result<(), String> {
+        self.stdout.lock().unwrap().push(OutputItem::Gif(gif_bytes));
         Ok(())
     }
     fn file_write_all(&self, path: &str, contents: &[u8]) -> Result<(), String> {

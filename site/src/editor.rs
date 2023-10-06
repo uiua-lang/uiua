@@ -19,7 +19,7 @@ use uiua::{
     lex::is_ident_char,
     primitive::Primitive,
     run::RunMode,
-    value_to_image, value_to_wav_bytes, DiagnosticKind, SysBackend, Uiua,
+    value_to_gif_bytes, value_to_image, value_to_wav_bytes, DiagnosticKind, SysBackend, Uiua,
 };
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{Event, HtmlBrElement, HtmlDivElement, KeyboardEvent, MouseEvent, Node};
@@ -306,7 +306,11 @@ pub fn Editor<'a>(
                 window()
                     .history()
                     .unwrap()
-                    .replace_state_with_url(&JsValue::NULL, "", Some(&format!("/pad?src={encoded}")))
+                    .replace_state_with_url(
+                        &JsValue::NULL,
+                        "",
+                        Some(&format!("/pad?src={encoded}")),
+                    )
                     .unwrap();
             }
         }
@@ -328,6 +332,10 @@ pub fn Editor<'a>(
                     OutputItem::Image(bytes) => {
                         let encoded = STANDARD.encode(bytes);
                         view!(<div><img class="output-image" src={format!("data:image/png;base64,{encoded}")} /></div>).into_view()
+                    }
+                    OutputItem::Gif(bytes) => {
+                        let encoded = STANDARD.encode(bytes);
+                        view!(<div><img class="output-image" src={format!("data:image/gif;base64,{encoded}")} /></div>).into_view()
                     }
                     OutputItem::Audio(bytes) => {
                         let encoded = STANDARD.encode(bytes);
@@ -1394,6 +1402,16 @@ fn run_code(code: &str) -> Vec<OutputItem> {
                     stack.push(OutputItem::Image(bytes));
                     continue;
                 }
+            }
+        }
+        // Try to convert the value to a gif
+        if let Ok(bytes) = value_to_gif_bytes(&value, 0.1) {
+            match value.shape() {
+                &[_, h, w] | &[_, h, w, _] if h >= 25 && w >= 25 => {
+                    stack.push(OutputItem::Gif(bytes));
+                    continue;
+                }
+                _ => {}
             }
         }
         // Otherwise, just show the value

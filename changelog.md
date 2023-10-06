@@ -4,10 +4,13 @@ Uiua is not yet stable.
 
 ## 0.0.17 - 2023-10-xx
 ### Language
-- Functions with ASCII glyphs now also format from their names
+- Add GIF encoding with [`&gife`](https://uiua.org/docs/&gife)
 - [`try` `⍣`](https://uiua.org/docs/try) now puts arguments to its first function *above* the error value when calling the error handler
 - [`fold` `∧`](https://uiua.org/docs/fold) can now use multiple accumulators
 - Improve [`dump`](https://uiua.org/docs/dump) output
+- Functions with ASCII glyphs now also format from their names
+### Website
+- Add GIF output
 
 ## 0.0.16 - 2023-10-05
 ### Interpreter

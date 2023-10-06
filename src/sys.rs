@@ -1,5 +1,6 @@
 use std::{
     any::Any,
+    collections::{HashMap, HashSet},
     env,
     fs::{self, File},
     io::{stderr, stdin, stdout, BufRead, Cursor, Read, Write},
@@ -217,6 +218,18 @@ sys_op! {
     /// A length 3 last axis is an RGB image.
     /// A length 4 last axis is an RGB image with an alpha channel.
     (1(0), ImShow, "&ims", "image - show"),
+    /// Encode a gif into a byte array
+    ///
+    /// The first argument is a frame delay in seconds.
+    /// The second argument is the gif data and must be a rank 3 or 4 numeric array.
+    /// The rows of the array are the frames of the gif, and their format must conform to that of [&ime].
+    (1, GifEncode, "&gife", "gif - encode"),
+    /// Show a gif
+    ///
+    /// The first argument is a frame delay in seconds.
+    /// The second argument is the gif data and must be a rank 3 or 4 numeric array.
+    /// The rows of the array are the frames of the gif, and their format must conform to that of [&ime].
+    (1(0), GifShow, "&gifs", "gif - show"),
     /// Decode audio from a byte array
     ///
     /// Only the `wav` format is supported.
@@ -405,6 +418,9 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     }
     fn show_image(&self, image: DynamicImage) -> Result<(), String> {
         Err("Showing images not supported in this environment".into())
+    }
+    fn show_gif(&self, gif_bytes: Vec<u8>) -> Result<(), String> {
+        Err("Showing gifs not supported in this environment".into())
     }
     fn play_audio(&self, wave_bytes: Vec<u8>) -> Result<(), String> {
         Err("Playing audio not supported in this environment".into())
@@ -1396,6 +1412,18 @@ impl SysOp {
                 let image = value_to_image(&value).map_err(|e| env.error(e))?;
                 env.backend.show_image(image).map_err(|e| env.error(e))?;
             }
+            SysOp::GifEncode => {
+                let delay = env.pop(1)?.as_num(env, "Delay must be a number")?;
+                let value = env.pop(2)?;
+                let bytes = value_to_gif_bytes(&value, delay).map_err(|e| env.error(e))?;
+                env.push(Array::<u8>::from(bytes));
+            }
+            SysOp::GifShow => {
+                let delay = env.pop(1)?.as_num(env, "Delay must be a number")?;
+                let value = env.pop(2)?;
+                let bytes = value_to_gif_bytes(&value, delay).map_err(|e| env.error(e))?;
+                env.backend.show_gif(bytes).map_err(|e| env.error(e))?;
+            }
             SysOp::AudioDecode => {
                 let bytes = match env.pop(1)? {
                     Value::Byte(arr) => {
@@ -1871,4 +1899,54 @@ fn array_from_wav_bytes_impl<T: hound::Sample>(
     } else {
         Array::from_row_arrays(channels.into_iter().map(|ch| ch.into()), env)
     }
+}
+
+pub fn value_to_gif_bytes(value: &Value, frame_delay: f64) -> Result<Vec<u8>, String> {
+    if value.row_count() == 0 {
+        return Err("Cannot convert empty array into GIF".into());
+    }
+    let mut frames = Vec::with_capacity(value.row_count());
+    let mut width = 0;
+    let mut height = 0;
+    for row in value.rows() {
+        let image = value_to_image(&row)?.into_rgb8();
+        width = image.width();
+        height = image.height();
+        frames.push(image);
+    }
+    if width > u16::MAX as u32 || height > u16::MAX as u32 {
+        return Err(format!(
+            "GIF dimensions must be at most {}x{}, but the frames are {}x{}",
+            u16::MAX,
+            u16::MAX,
+            width,
+            height
+        ));
+    }
+    let mut used_colors = HashSet::new();
+    for frame in &frames {
+        for pixel in frame.pixels() {
+            used_colors.insert(pixel.0);
+        }
+    }
+    let mut palette = Vec::with_capacity(used_colors.len() * 3);
+    let mut color_map = HashMap::new();
+    for color in used_colors {
+        color_map.insert(color, palette.len() / 3);
+        palette.extend(color);
+    }
+    let mut bytes = Cursor::new(Vec::new());
+    let mut encoder = gif::Encoder::new(&mut bytes, width as u16, height as u16, &palette)
+        .map_err(|e| e.to_string())?;
+    let delay = (frame_delay.abs() * 100.0) as u16;
+    encoder
+        .set_repeat(gif::Repeat::Infinite)
+        .map_err(|e| e.to_string())?;
+    for image in frames {
+        let mut frame = gif::Frame::from_rgb(width as u16, height as u16, image.as_raw());
+        frame.delay = delay;
+        encoder.write_frame(&frame).map_err(|e| e.to_string())?;
+    }
+    drop(encoder);
+    Ok(bytes.into_inner())
 }

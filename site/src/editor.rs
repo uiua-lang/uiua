@@ -306,7 +306,11 @@ pub fn Editor<'a>(
                 window()
                     .history()
                     .unwrap()
-                    .replace_state_with_url(&JsValue::NULL, "", Some(&format!("/pad?src={encoded}")))
+                    .replace_state_with_url(
+                        &JsValue::NULL,
+                        "",
+                        Some(&format!("/pad?src={encoded}")),
+                    )
                     .unwrap();
             }
         }

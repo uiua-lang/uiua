@@ -1,4 +1,6 @@
-- Inverse power and logarithm
+- Inline under
+- Optimize keep and unkeep
+- Fix bind composed function signature
 - Inline some functions with `distribute`
 - Fix web editor text deletion bug
   - Steps to reproduce:

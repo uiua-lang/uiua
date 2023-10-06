@@ -175,8 +175,8 @@ impl Signature {
     }
     pub fn compose(self, other: Self) -> Self {
         Self::new(
-            self.args + other.args.saturating_sub(self.outputs),
-            self.outputs.saturating_sub(self.args) + other.outputs,
+            other.args + self.args.saturating_sub(other.outputs),
+            other.outputs.saturating_sub(other.args) + self.outputs,
         )
     }
 }

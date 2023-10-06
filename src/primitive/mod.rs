@@ -473,7 +473,7 @@ impl Primitive {
                 env.with_fill(fill, |env| env.call(f))?;
             }
             Primitive::Bind => {
-                // This is only run if bind was terminated with ^ and not optimized out
+                // This is only run if bind was terminated with | and not optimized out
                 let f = env.pop(FunctionArg(1))?;
                 let g = env.pop(FunctionArg(2))?;
                 match (f.into_function(), g.into_function()) {

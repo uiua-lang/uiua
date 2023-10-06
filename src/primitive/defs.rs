@@ -26,6 +26,8 @@ macro_rules! constant {
 constant!(
     /// Euler's constant
     (e, std::f64::consts::E),
+    /// IEEE 754-2008's `NaN`
+    (NaN, std::f64::NAN),
     /// A string identifying the operating system
     (os, std::env::consts::OS),
     /// A string identifying family of the operating system

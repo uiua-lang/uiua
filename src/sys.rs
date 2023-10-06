@@ -1923,19 +1923,32 @@ pub fn value_to_gif_bytes(value: &Value, frame_delay: f64) -> Result<Vec<u8>, St
             height
         ));
     }
-    let mut used_colors = HashSet::new();
+    let mut reduction = 1;
+    let mut bytes = Cursor::new(Vec::new());
+    let mut all_colors = HashSet::new();
     for frame in &frames {
         for pixel in frame.pixels() {
-            used_colors.insert(pixel.0);
+            all_colors.insert(pixel.0);
         }
     }
+    let mut used_colors = HashSet::new();
+    let used_colors = loop {
+        used_colors.clear();
+        let adder = reduction - 1;
+        for color in &all_colors {
+            used_colors.insert(color.map(|p| p.saturating_add(adder) / reduction));
+        }
+        if used_colors.len() <= 256 {
+            break used_colors;
+        }
+        reduction += 1;
+    };
     let mut palette = Vec::with_capacity(used_colors.len() * 3);
-    let mut color_map = HashMap::new();
+    let mut color_map: HashMap<[u8; 3], usize> = HashMap::new();
     for color in used_colors {
         color_map.insert(color, palette.len() / 3);
         palette.extend(color);
     }
-    let mut bytes = Cursor::new(Vec::new());
     let mut encoder = gif::Encoder::new(&mut bytes, width as u16, height as u16, &palette)
         .map_err(|e| e.to_string())?;
     let delay = (frame_delay.abs() * 100.0) as u16;

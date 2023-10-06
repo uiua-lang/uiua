@@ -101,3 +101,7 @@
 ParseOrZero ← ⍣parse⋅⋅0
 ⍤.≅ 5 ParseOrZero "5"
 ⍤.≅ 0 ParseOrZero "dog"
+
+⍤.≅ "5" $"_" 5
+⍤.≅ "1 + 2 = 3" $"_ + _ = _" ⊃⊙∘+ 1 2
+⍤.≅ ["foo5" "bar5"] ⊟⊃$"foo_"$"bar_" 5

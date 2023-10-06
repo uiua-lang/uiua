@@ -4,31 +4,22 @@ use std::{borrow::Cow, cell::RefCell, collections::HashMap, fmt};
 
 use crate::{
     check::instrs_signature,
-    function::{Function, FunctionKind, Instr},
+    function::{Function, Instr},
     primitive::Primitive,
     value::Value,
 };
 
 impl Function {
     pub fn inverse(&self) -> Option<Self> {
-        if !matches!(self.kind, FunctionKind::Normal) {
-            return None;
-        }
-        Function::new_inferred(
-            self.id.clone(),
-            invert_instrs(&self.instrs)?,
-            FunctionKind::Normal,
-        )
-        .ok()
+        Function::new_inferred(self.id.clone(), invert_instrs(&self.instrs)?).ok()
     }
     pub fn under(self) -> Option<(Self, Self)> {
         if let Some(f) = self.inverse() {
             Some((self, f))
         } else {
             let (befores, afters) = under_instrs(&self.instrs)?;
-            let before =
-                Function::new_inferred(self.id.clone(), befores, FunctionKind::Normal).ok()?;
-            let after = Function::new_inferred(self.id, afters, FunctionKind::Normal).ok()?;
+            let before = Function::new_inferred(self.id.clone(), befores).ok()?;
+            let after = Function::new_inferred(self.id, afters).ok()?;
             Some((before, after))
         }
     }

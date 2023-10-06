@@ -69,12 +69,7 @@ impl Uiua {
     fn binding(&mut self, binding: Binding) -> UiuaResult {
         let instrs = self.compile_words(binding.words, true)?;
         let make_fn = |instrs: Vec<Instr>, sig: Signature| {
-            let func = Function::new(
-                FunctionId::Named(binding.name.value.clone()),
-                instrs,
-                FunctionKind::Normal,
-                sig,
-            );
+            let func = Function::new(FunctionId::Named(binding.name.value.clone()), instrs, sig);
             Value::from(func)
         };
         let mut val = match instrs_signature(&instrs) {
@@ -111,7 +106,6 @@ impl Uiua {
                         Function::new(
                             FunctionId::Named(binding.name.value.clone()),
                             Vec::new(),
-                            FunctionKind::Normal,
                             sig,
                         )
                         .into()
@@ -206,8 +200,7 @@ impl Uiua {
                 let signature = Signature::new(frags.len() - 1, 1);
                 let f = Function::new(
                     FunctionId::Anonymous(word.span.clone()),
-                    Vec::new(),
-                    FunctionKind::Dynamic(DynamicFunctionKind {
+                    vec![Instr::Dynamic(DynamicFunction {
                         id: {
                             let mut hasher = DefaultHasher::new();
                             frags.hash(&mut hasher);
@@ -225,7 +218,8 @@ impl Uiua {
                             env.push(formatted);
                             Ok(())
                         }),
-                    }),
+                        signature,
+                    })],
                     signature,
                 );
                 self.push_instr(Instr::push(f));
@@ -238,8 +232,7 @@ impl Uiua {
                 let signature = Signature::new(lines.iter().map(|l| l.value.len() - 1).sum(), 1);
                 let f = Function::new(
                     FunctionId::Anonymous(word.span.clone()),
-                    Vec::new(),
-                    FunctionKind::Dynamic(DynamicFunctionKind {
+                    vec![Instr::Dynamic(DynamicFunction {
                         id: {
                             let mut hasher = DefaultHasher::new();
                             lines.hash(&mut hasher);
@@ -264,7 +257,8 @@ impl Uiua {
                             env.push(formatted);
                             Ok(())
                         }),
-                    }),
+                        signature,
+                    })],
                     signature,
                 );
                 self.push_instr(Instr::push(f));
@@ -340,12 +334,7 @@ impl Uiua {
                         let instrs = self.new_functions.pop().unwrap();
                         let sig =
                             instrs_signature(&instrs).unwrap_or_else(|_| Signature::new(0, 0));
-                        let func = Function::new(
-                            FunctionId::Anonymous(word.span),
-                            instrs,
-                            FunctionKind::Normal,
-                            sig,
-                        );
+                        let func = Function::new(FunctionId::Anonymous(word.span), instrs, sig);
                         self.push_instr(Instr::push(func));
                     }
                 }
@@ -434,7 +423,7 @@ impl Uiua {
             }
         }
 
-        let function = Function::new(func.id, instrs, FunctionKind::Normal, sig);
+        let function = Function::new(func.id, instrs, sig);
         self.push_instr(Instr::push(function));
         Ok(())
     }
@@ -477,7 +466,6 @@ impl Uiua {
                         let func = Function::new(
                             FunctionId::Anonymous(modified.modifier.span),
                             instrs,
-                            FunctionKind::Normal,
                             sig,
                         );
                         self.push_instr(Instr::push(func));
@@ -514,7 +502,6 @@ impl Uiua {
                         let func = Function::new(
                             FunctionId::Anonymous(modified.modifier.span),
                             instrs,
-                            FunctionKind::Normal,
                             sig,
                         );
                         self.push_instr(Instr::push(func));
@@ -567,7 +554,6 @@ impl Uiua {
                             let func = Function::new(
                                 FunctionId::Anonymous(modified.modifier.span),
                                 instrs,
-                                FunctionKind::Normal,
                                 sig,
                             );
                             self.push_instr(Instr::push(func));
@@ -597,12 +583,8 @@ impl Uiua {
             let instrs = self.new_functions.pop().unwrap();
             match instrs_signature(&instrs) {
                 Ok(sig) => {
-                    let func = Function::new(
-                        FunctionId::Anonymous(modified.modifier.span),
-                        instrs,
-                        FunctionKind::Normal,
-                        sig,
-                    );
+                    let func =
+                        Function::new(FunctionId::Anonymous(modified.modifier.span), instrs, sig);
                     self.push_instr(Instr::push(func));
                 }
                 Err(e) => {
@@ -641,8 +623,7 @@ impl Uiua {
             self.push_instr(Instr::Prim(prim, span));
         } else {
             let instrs = [Instr::Prim(prim, span)];
-            let func =
-                Function::new_inferred(FunctionId::Primitive(prim), instrs, FunctionKind::Normal);
+            let func = Function::new_inferred(FunctionId::Primitive(prim), instrs);
             match func {
                 Ok(func) => self.push_instr(Instr::push(func)),
                 Err(e) => {

@@ -84,7 +84,6 @@ impl Default for Scope {
                 function: Arc::new(Function::new(
                     FunctionId::Main,
                     Vec::new(),
-                    FunctionKind::Normal,
                     Signature::new(0, 0),
                 )),
                 call_span: 0,
@@ -330,12 +329,7 @@ code:
         Ok(())
     }
     pub(crate) fn exec_global_instrs(&mut self, instrs: Vec<Instr>) -> UiuaResult {
-        let func = Function::new(
-            FunctionId::Main,
-            instrs,
-            FunctionKind::Normal,
-            Signature::new(0, 0),
-        );
+        let func = Function::new(FunctionId::Main, instrs, Signature::new(0, 0));
         self.exec(StackFrame {
             function: Arc::new(func),
             call_span: 0,
@@ -405,6 +399,7 @@ code:
                 &Instr::Call(span) => self
                     .pop("called function")
                     .and_then(|f| self.call_with_span(f, span)),
+                Instr::Dynamic(df) => df.f.clone()(self),
                 &Instr::PushTemp { count, span } => (|| {
                     self.push_span(span, None);
                     for _ in 0..count {
@@ -489,20 +484,6 @@ code:
             Value::Func(f) if f.shape.is_empty() => {
                 // Call function
                 let f = f.into_scalar().unwrap();
-                match &f.kind {
-                    FunctionKind::Normal => {}
-                    FunctionKind::Dynamic(dfk) => {
-                        self.scope.call.push(StackFrame {
-                            function: f.clone(),
-                            call_span,
-                            spans: Vec::new(),
-                            pc: 0,
-                        });
-                        (dfk.f)(self)?;
-                        self.scope.call.pop();
-                        return Ok(());
-                    }
-                }
                 self.exec(StackFrame {
                     function: f,
                     call_span,

@@ -109,6 +109,7 @@ impl<'a> VirtualEnv<'a> {
             Instr::PopTemp { count, .. } | Instr::CopyTemp { count, .. } => {
                 self.handle_args_outputs(0, *count)?
             }
+            Instr::Dynamic(f) => self.handle_sig(f.signature)?,
             Instr::DropTemp { .. } => {}
             Instr::Prim(prim, _) => match prim {
                 Reduce | Scan => self.handle_mod(prim, Some(2), Some(1), 1, None)?,

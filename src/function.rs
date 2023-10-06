@@ -22,23 +22,24 @@ pub enum Instr {
     } = 2,
     Prim(Primitive, usize) = 3,
     Call(usize) = 4,
+    Dynamic(DynamicFunction) = 5,
     PushTemp {
         count: usize,
         span: usize,
-    } = 5,
+    } = 6,
     PopTemp {
         count: usize,
         span: usize,
-    } = 6,
+    } = 7,
     CopyTemp {
         offset: usize,
         count: usize,
         span: usize,
-    } = 7,
+    } = 8,
     DropTemp {
         count: usize,
         span: usize,
-    } = 8,
+    } = 9,
 }
 
 impl PartialEq for Instr {
@@ -99,6 +100,7 @@ impl Hash for Instr {
             Instr::EndArray { .. } => 2u8.hash(state),
             Instr::Prim(p, _) => p.hash(state),
             Instr::Call(_) => {}
+            Instr::Dynamic(f) => f.id.hash(state),
             Instr::PushTemp { count, .. } => count.hash(state),
             Instr::PopTemp { count, .. } => count.hash(state),
             Instr::CopyTemp { offset, count, .. } => {
@@ -130,6 +132,7 @@ impl fmt::Display for Instr {
             Instr::EndArray { .. } => write!(f, "["),
             Instr::Prim(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => write!(f, "!"),
+            Instr::Dynamic(df) => write!(f, "{df:?}"),
             Instr::PushTemp { count, .. } => write!(f, "push temp {}", count),
             Instr::PopTemp { count, .. } => write!(f, "pop temp {}", count),
             Instr::CopyTemp { offset, count, .. } => write!(f, "copy temp {}/{}", offset, count),
@@ -142,7 +145,6 @@ impl fmt::Display for Instr {
 pub struct Function {
     pub id: FunctionId,
     pub instrs: Vec<Instr>,
-    pub kind: FunctionKind,
     signature: Signature,
 }
 
@@ -191,39 +193,40 @@ impl fmt::Display for Signature {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum FunctionKind {
-    Normal,
-    Dynamic(DynamicFunctionKind),
-}
-
 #[derive(Clone)]
-pub struct DynamicFunctionKind {
-    pub f: Arc<dyn Fn(&mut Uiua) -> UiuaResult + Send + Sync>,
+pub struct DynamicFunction {
     pub id: u64,
+    pub f: Arc<dyn Fn(&mut Uiua) -> UiuaResult + Send + Sync>,
+    pub signature: Signature,
 }
 
-impl PartialEq for DynamicFunctionKind {
+impl fmt::Debug for DynamicFunction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "<dynamic#{:x}>", self.id)
+    }
+}
+
+impl PartialEq for DynamicFunction {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
     }
 }
 
-impl Eq for DynamicFunctionKind {}
+impl Eq for DynamicFunction {}
 
-impl PartialOrd for DynamicFunctionKind {
+impl PartialOrd for DynamicFunction {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for DynamicFunctionKind {
+impl Ord for DynamicFunction {
     fn cmp(&self, other: &Self) -> Ordering {
         self.id.cmp(&other.id)
     }
 }
 
-impl Hash for DynamicFunctionKind {
+impl Hash for DynamicFunction {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.id.hash(state);
     }
@@ -255,7 +258,6 @@ impl Hash for Function {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.id.hash(state);
         self.instrs.hash(state);
-        self.kind.hash(state);
     }
 }
 
@@ -273,9 +275,6 @@ impl fmt::Display for Function {
         if let Some((prim, _)) = self.as_primitive() {
             return write!(f, "{prim}");
         }
-        if let FunctionKind::Dynamic { .. } = self.kind {
-            return write!(f, "<dynamic>");
-        }
         write!(f, "(")?;
         write!(f, "{}", self.format_inner())?;
         write!(f, ")")?;
@@ -284,32 +283,21 @@ impl fmt::Display for Function {
 }
 
 impl Function {
-    pub fn new(
-        id: FunctionId,
-        instrs: impl Into<Vec<Instr>>,
-        kind: FunctionKind,
-        signature: Signature,
-    ) -> Self {
+    pub fn new(id: FunctionId, instrs: impl Into<Vec<Instr>>, signature: Signature) -> Self {
         let instrs = instrs.into();
         Self {
             id,
             instrs,
-            kind,
             signature,
         }
     }
-    pub fn new_inferred(
-        id: FunctionId,
-        instrs: impl Into<Vec<Instr>>,
-        kind: FunctionKind,
-    ) -> Result<Self, String> {
+    pub fn new_inferred(id: FunctionId, instrs: impl Into<Vec<Instr>>) -> Result<Self, String> {
         let instrs = instrs.into();
         let signature = instrs_signature(&instrs)?;
         Ok(Self {
             id,
             signature,
             instrs,
-            kind,
         })
     }
     pub fn into_inner(f: Arc<Self>) -> Self {
@@ -321,9 +309,6 @@ impl Function {
         }
         if let Some((prim, _)) = self.as_primitive() {
             return prim.to_string();
-        }
-        if let FunctionKind::Dynamic { .. } = self.kind {
-            return "<dynamic>".into();
         }
         let mut s = String::new();
         for (i, instr) in self.instrs.iter().rev().enumerate() {
@@ -351,7 +336,6 @@ impl Function {
         Function::new(
             FunctionId::Constant,
             [Instr::push(value.into())],
-            FunctionKind::Normal,
             Signature::new(0, 1),
         )
     }
@@ -397,43 +381,9 @@ impl Function {
     pub fn compose(a: Arc<Self>, b: Arc<Self>) -> Self {
         let id = a.id.clone().compose(b.id.clone());
         let sig = a.signature.compose(b.signature);
-        match (a.kind.clone(), b.kind.clone()) {
-            (FunctionKind::Normal, FunctionKind::Normal) => {
-                let mut instrs = b.instrs.clone();
-                instrs.extend(a.instrs.iter().cloned());
-                Self::new(id, instrs, FunctionKind::Normal, sig)
-            }
-            (FunctionKind::Dynamic(a), FunctionKind::Normal) => {
-                let kind = FunctionKind::Dynamic(DynamicFunctionKind {
-                    f: Arc::new(move |uiua| {
-                        uiua.call(b.clone())?;
-                        (a.f)(uiua)
-                    }),
-                    id: a.id,
-                });
-                Self::new(id, Vec::new(), kind, sig)
-            }
-            (FunctionKind::Normal, FunctionKind::Dynamic(b)) => {
-                let kind = FunctionKind::Dynamic(DynamicFunctionKind {
-                    f: Arc::new(move |uiua| {
-                        (b.f)(uiua)?;
-                        uiua.call(a.clone())
-                    }),
-                    id: b.id,
-                });
-                Self::new(id, Vec::new(), kind, sig)
-            }
-            (FunctionKind::Dynamic(a), FunctionKind::Dynamic(b)) => {
-                let kind = FunctionKind::Dynamic(DynamicFunctionKind {
-                    f: Arc::new(move |uiua| {
-                        (b.f)(uiua)?;
-                        (a.f)(uiua)
-                    }),
-                    id: a.id ^ b.id,
-                });
-                Self::new(id, Vec::new(), kind, sig)
-            }
-        }
+        let mut instrs = b.instrs.clone();
+        instrs.extend(a.instrs.iter().cloned());
+        Self::new(id, instrs, sig)
     }
 }
 

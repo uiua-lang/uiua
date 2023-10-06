@@ -5,7 +5,7 @@ use std::{
     env, fmt, fs,
     io::{self, stderr, Write},
     path::{Path, PathBuf},
-    process::{exit, Child, Command},
+    process::{exit, Child, Command, Stdio},
     sync::mpsc::channel,
     thread::sleep,
     time::Duration,
@@ -172,6 +172,7 @@ fn run() -> UiuaResult {
                 no_update,
                 clear,
                 args,
+                stdin_file,
             } => {
                 if !no_update {
                     show_update_message();
@@ -182,6 +183,7 @@ fn run() -> UiuaResult {
                     formatter_options.format_config_source,
                     clear,
                     args,
+                    stdin_file,
                 ) {
                     eprintln!("Error watching file: {e}");
                 }
@@ -198,6 +200,7 @@ fn run() -> UiuaResult {
                     FormatConfigSource::SearchFile,
                     false,
                     Vec::new(),
+                    None,
                 ),
                 Err(NoWorkingFile::MultipleFiles) => watch(
                     None,
@@ -205,6 +208,7 @@ fn run() -> UiuaResult {
                     FormatConfigSource::SearchFile,
                     false,
                     Vec::new(),
+                    None,
                 ),
                 Err(nwf) => {
                     _ = e.print();
@@ -276,6 +280,7 @@ fn watch(
     format_config_source: FormatConfigSource,
     clear: bool,
     args: Vec<String>,
+    stdin_file: Option<PathBuf>,
 ) -> io::Result<()> {
     let (send, recv) = channel();
     let mut watcher = notify::recommended_watcher(send).unwrap();
@@ -297,7 +302,7 @@ fn watch(
         socket.set_nonblocking(true)?;
         (socket, port)
     };
-    let run = |path: &Path| -> io::Result<()> {
+    let run = |path: &Path, stdin_file: Option<&PathBuf>| -> io::Result<()> {
         if let Some(mut child) = WATCH_CHILD.lock().take() {
             _ = child.kill();
             print_watching();
@@ -323,6 +328,9 @@ fn watch(
                             .to_string();
                     #[cfg(feature = "audio")]
                     let audio_port = audio_time_port.to_string();
+
+                    let stdin_file = stdin_file.map(fs::File::open).transpose()?;
+
                     *WATCH_CHILD.lock() = Some(
                         Command::new(env::current_exe().unwrap())
                             .arg("run")
@@ -342,6 +350,7 @@ fn watch(
                                 &audio_port,
                             ])
                             .args(&args)
+                            .stdin(stdin_file.map_or_else(|| Stdio::inherit(), Into::into))
                             .spawn()
                             .unwrap(),
                     );
@@ -360,7 +369,7 @@ fn watch(
         Ok(())
     };
     if let Some(path) = initial_path {
-        run(path)?;
+        run(path, stdin_file.as_ref())?;
     }
     let mut last_time = Instant::now();
     loop {
@@ -381,7 +390,7 @@ fn watch(
                         _ = Command::new("clear").status();
                     }
                 }
-                run(&path)?;
+                run(&path, stdin_file.as_ref())?;
                 last_time = Instant::now();
             }
         }
@@ -450,6 +459,8 @@ enum App {
         no_update: bool,
         #[clap(long, help = "Clear the terminal on file change")]
         clear: bool,
+        #[clap(long, help = "Read stdin from file")]
+        stdin_file: Option<PathBuf>,
         #[clap(trailing_var_arg = true)]
         args: Vec<String>,
     },

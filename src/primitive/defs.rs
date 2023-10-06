@@ -171,8 +171,11 @@ primitive!(
     (1(0), Pop, Stack, ("pop", ';')),
     /// Do nothing
     ///
-    /// While this may seem useless, one way to use it is to pass it to [reduce], which will put all of an array's values on the stack.
+    /// [identity] is mostly useless on its own. See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) to understand what it is for.
+    ///
+    /// One way to use it is to pass it to [reduce], which will put all of an array's values on the stack.
     /// ex: /∘ [1 2 3]
+    /// However, doing this in a function prevents the signature from being inferred.
     ///
     /// The formatter converts an empty `()` function into `identity` if it is in a strand or a modifier.
     /// ex: /() [1 2] # Try running to format
@@ -180,8 +183,6 @@ primitive!(
     ///
     /// While [identity]'s signature is `|1.1`, it will not throw an error if the stack is empty.
     /// ex: ∘
-    ///
-    /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [identity] is useful.
     (1, Identity, Stack, ("identity", '∘')),
     /// Move the top value on the stack 2 places down
     ///

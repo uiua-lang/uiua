@@ -2,6 +2,7 @@
 - Optimize keep and unkeep
 - Fix bind composed function signature
 - Inline some functions with `distribute`
+- Fix `fall` docs
 - Fix web editor text deletion bug
   - Steps to reproduce:
     - open new pad

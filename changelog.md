@@ -7,6 +7,7 @@ Uiua is not yet stable.
 - Functions with ASCII glyphs now also format from their names
 - [`try` `⍣`](https://uiua.org/docs/try) now puts arguments to its first function *above* the error value when calling the error handler
 - [`fold` `∧`](https://uiua.org/docs/fold) can now use multiple accumulators
+- Improve [`dump`](https://uiua.org/docs/dump) output
 
 ## 0.0.16 - 2023-10-05
 ### Interpreter

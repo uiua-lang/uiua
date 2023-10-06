@@ -374,7 +374,7 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example="[□1 □2 □[7 8 9]]"/>
         <p>"The "<code>"⟦⟧"</code>"s indicate that a list is "<Prim prim=Box/>"ed."</p>
         <p>"To get the values back on the stack, we can use "<Prim prim=Reduce/><Prim prim=Unbox/>"."</p>
-        <Editor example="/⍘□[□1 □2 □[7 8 9]]"/>
+        <Editor example="/⊔[□1 □2 □[7 8 9]]"/>
         <p>"Having to write "<Prim prim=Box glyph_only=true/>" everywhere is annoying, and so..."</p>
 
         <h2 id="nested-arrays">"Nested Arrays"</h2>

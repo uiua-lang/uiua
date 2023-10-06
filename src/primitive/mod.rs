@@ -27,6 +27,7 @@ use rand::prelude::*;
 use crate::{
     algorithm::{fork, loops},
     function::Function,
+    grid_fmt::GridFmt,
     lex::AsciiToken,
     run::FunctionArg,
     sys::*,
@@ -564,36 +565,19 @@ impl Primitive {
                 let handle = env.pop(1)?;
                 env.wait(handle)?;
             }
-            Primitive::Trace => trace(env, TraceKind::Trace)?,
-            Primitive::InvTrace => trace(env, TraceKind::InverseTrace)?,
-            Primitive::Dump => trace(env, TraceKind::Dump)?,
+            Primitive::Trace => trace(env, false)?,
+            Primitive::InvTrace => trace(env, true)?,
+            Primitive::Dump => dump(env),
             Primitive::Sys(io) => io.run(env)?,
         }
         Ok(())
     }
 }
 
-enum TraceKind {
-    Trace,
-    InverseTrace,
-    Dump,
-}
-
-fn trace(env: &mut Uiua, kind: TraceKind) -> UiuaResult {
-    let (val, formatted) = if let TraceKind::Dump = kind {
-        let vals = env.clone_stack_top(env.stack_size());
-        let formatted = vals
-            .iter()
-            .map(|val| val.show())
-            .collect::<Vec<_>>()
-            .join("\n");
-        (None, formatted)
-    } else {
-        let val = env.pop(1)?;
-        let formatted = val.show();
-        (Some(val), formatted)
-    };
-    let span = if let TraceKind::InverseTrace = kind {
+fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
+    let val = env.pop(1)?;
+    let formatted = val.show();
+    let span: String = if inverse {
         format!("{} {}", env.span(), Primitive::Invert)
     } else {
         env.span().to_string()
@@ -614,11 +598,41 @@ fn trace(env: &mut Uiua, kind: TraceKind) -> UiuaResult {
     } else {
         format!("  {span}\n{formatted}\n")
     };
-    if let Some(val) = val {
-        env.push(val);
-    }
+    env.push(val);
     env.backend.print_str_trace(&message);
     Ok(())
+}
+
+fn dump(env: &Uiua) {
+    let span = env.span().to_string();
+    let items = env.clone_stack_top(env.stack_size());
+    let mut item_lines: Vec<Vec<String>> = items
+        .iter()
+        .map(Value::grid_string)
+        .map(|s| s.lines().map(Into::into).collect())
+        .collect();
+    let mut max_line_len = span.chars().count() + 2;
+    for item in &mut item_lines {
+        let item_len = item.len();
+        for (j, line) in item.iter_mut().enumerate() {
+            let stick = if item_len == 1 || j == 1 {
+                "├╴"
+            } else {
+                "│ "
+            };
+            line.insert_str(0, stick);
+            max_line_len = max_line_len.max(line.chars().count());
+            line.push('\n');
+        }
+    }
+    env.backend.print_str_trace(&format!("┌╴{span}\n"));
+    for line in item_lines.iter().flatten() {
+        env.backend.print_str_trace(line);
+    }
+    env.backend.print_str_trace("└");
+    for _ in 0..max_line_len - 1 {
+        env.backend.print_str_trace("╴");
+    }
 }
 
 #[derive(Default, Debug)]

@@ -610,7 +610,7 @@ code:
     pub fn take_diagnostics(&mut self) -> BTreeSet<Diagnostic> {
         take(&mut self.diagnostics)
     }
-    pub fn clone_stack_top(&mut self, n: usize) -> Vec<Value> {
+    pub fn clone_stack_top(&self, n: usize) -> Vec<Value> {
         self.stack.iter().rev().take(n).rev().cloned().collect()
     }
     pub(crate) fn monadic_ref<V: Into<Value>>(&mut self, f: fn(&Value) -> V) -> UiuaResult {

@@ -158,6 +158,10 @@ pub fn MainPage() -> impl IntoView {
                     <h2>"Syntactic Simplicity"</h2>
                     <p>"Uiua has a simple, context-free, LL(2) grammar. Code runs from "<A href="/rtl">"right to left"</A>", top to bottom, with only "<A href="/docs/functions#modifiers">"one precedence rule"</A>". As operators are to the left of their operands, Uiua code looks a little bit like a Lisp, but with fewer parentheses."</p>
                 </div>
+                <div>
+                    <h2>"System APIs"</h2>
+                    <p>"Uiua has functions for spawning threads, interacting with the file system, communicating over network sockets, and "<A href="/docs/system">"more"</A>"."</p>
+                </div>
             </div>
             <div>
                 <div>
@@ -167,6 +171,7 @@ pub fn MainPage() -> impl IntoView {
                     <Editor example="⇡8 # Range up to"/>
                     <Editor example="⇌ 1_2_3_4 # Reverse"/>
                     <Editor example="⌕ 0_2 [0 2 5 0 2 1] # Find"/>
+                    <Editor example="⊟ 1_2_3 4_5_6 # Couple"/>
                     <p>"Unlike other array languages, Uiua does not have monadic and dyadic versions of each glyph. Every glyph does only one thing, so you don't need to parse an entire expression to know which version it is."</p>
                 </div>
                 <div>
@@ -176,17 +181,13 @@ pub fn MainPage() -> impl IntoView {
                 </div>
                 <div>
                     <h2>"Multimedia Output"</h2>
-                    <p>"Uiua has built-in facilities for generating images and audio. Just make arrays of the pixel data or audio samples!"</p>
-                    <Editor example="⍉⊠<⊞+⇡3○÷30⇡300÷30⇡100"/>
+                    <p>"Uiua has built-in facilities for generating images and audio. Just make arrays of the pixel data or audio samples. You can even make GIFs!"</p>
+                    <Editor example="⍉⊠<⊞+⇡3○∩(÷25)⇡240⇡80"/>
                     <Editor example="÷3/+○⊞×⊟×1.5.220×τ÷∶⇡.&asr"/>
                     <Editor example="xy ← ⍉⍉⊞⊟.÷∶⇡.80\n\
                         F ← ⍉⍜(×10)⁅◿1⊂⊃(+/÷)(÷3+1○×τ+)xy\n\
                         ∵F÷∶⇡.8"/>
                     <p>"The Uiua logo was made with Uiua! Check example 4 at the top of the page."</p>
-                </div>
-                <div>
-                    <h2>"System APIs"</h2>
-                    <p>"Uiua has functions for spawning threads, interacting with the file system, communicating over network sockets, and "<A href="/docs/system">"more"</A>"."</p>
                 </div>
             </div>
         </div>

@@ -471,7 +471,8 @@ struct FormatterOptions {
     )]
     format_config_source: FormatConfigSource,
     #[clap(
-        long = "stdout",
+        short = 'O',
+        long = "to-stdout",
         default_value_t = false,
         help = "Print result of formatted file to stdout"
     )]

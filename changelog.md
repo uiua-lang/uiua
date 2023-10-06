@@ -5,6 +5,8 @@ Uiua is not yet stable.
 ## 0.0.17 - 2023-10-xx
 ### Language
 - Add GIF encoding with [`&gife`](https://uiua.org/docs/&gife)
+- Add [`fall` `⊳`](https://uiua.org/docs/fall) functions, which gives the indices of the reverse-sorted array
+- Change `grade` `⌂` name and glyph to [`rise` `⊲`](https://uiua.org/docs/rise) to reflect its relationship with [`fall` `⊳`](https://uiua.org/docs/fall). Code using `⌂` will continue to work and will be formatted as `⊲`.
 - [`try` `⍣`](https://uiua.org/docs/try) now puts arguments to its first function *above* the error value when calling the error handler
 - [`fold` `∧`](https://uiua.org/docs/fold) can now use multiple accumulators
 - Improve [`dump`](https://uiua.org/docs/dump) output

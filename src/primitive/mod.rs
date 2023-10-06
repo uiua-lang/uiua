@@ -331,7 +331,8 @@ impl Primitive {
                 env.push(b);
                 env.push(a);
             }
-            Primitive::Grade => env.monadic_ref_env(|v, env| v.grade(env))?,
+            Primitive::Rise => env.monadic_ref_env(|v, env| v.rise(env))?,
+            Primitive::Fall => env.monadic_ref_env(|v, env| v.fall(env))?,
             Primitive::Pick => env.dyadic_oo_env(Value::pick)?,
             Primitive::Unpick => {
                 let from = env.pop(1)?;

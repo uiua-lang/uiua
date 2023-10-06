@@ -232,8 +232,12 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
-    pub fn grade(&self, env: &Uiua) -> UiuaResult<Self> {
-        self.generic_ref_env(Array::grade, Array::grade, Array::grade, Array::grade, env)
+    pub fn rise(&self, env: &Uiua) -> UiuaResult<Self> {
+        self.generic_ref_env(Array::rise, Array::rise, Array::rise, Array::rise, env)
+            .map(Self::from_iter)
+    }
+    pub fn fall(&self, env: &Uiua) -> UiuaResult<Self> {
+        self.generic_ref_env(Array::fall, Array::fall, Array::fall, Array::fall, env)
             .map(Self::from_iter)
     }
     pub fn classify(&self, env: &Uiua) -> UiuaResult<Self> {
@@ -257,9 +261,9 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn grade(&self, env: &Uiua) -> UiuaResult<Vec<usize>> {
+    pub fn rise(&self, env: &Uiua) -> UiuaResult<Vec<usize>> {
         if self.rank() == 0 {
-            return Err(env.error("Cannot grade a scalar"));
+            return Err(env.error("Cannot rise a scalar"));
         }
         if self.flat_len() == 0 {
             return Ok(Vec::new());
@@ -270,6 +274,24 @@ impl<T: ArrayValue> Array<T> {
                 .iter()
                 .zip(self.row_slice(b))
                 .map(|(a, b)| a.array_cmp(b))
+                .find(|x| x != &Ordering::Equal)
+                .unwrap_or(Ordering::Equal)
+        });
+        Ok(indices)
+    }
+    pub fn fall(&self, env: &Uiua) -> UiuaResult<Vec<usize>> {
+        if self.rank() == 0 {
+            return Err(env.error("Cannot fall a scalar"));
+        }
+        if self.flat_len() == 0 {
+            return Ok(Vec::new());
+        }
+        let mut indices = (0..self.row_count()).collect::<Vec<_>>();
+        indices.sort_by(|&a, &b| {
+            self.row_slice(a)
+                .iter()
+                .zip(self.row_slice(b))
+                .map(|(a, b)| a.array_cmp(b).reverse())
                 .find(|x| x != &Ordering::Equal)
                 .unwrap_or(Ordering::Equal)
         });

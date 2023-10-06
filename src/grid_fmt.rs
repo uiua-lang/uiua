@@ -70,14 +70,21 @@ impl GridFmt for f64 {
 impl GridFmt for char {
     fn fmt_grid(&self, boxed: bool) -> Grid {
         let formatted = format!("{self:?}");
-        let formatted = &formatted[1..formatted.len() - 1];
-        vec![once(if boxed {
-            Primitive::Constant.unicode().unwrap()
+        vec![if formatted.starts_with("'\\u{") {
+            boxed
+                .then(|| Primitive::Constant.unicode().unwrap())
+                .into_iter()
+                .chain(format!("+{}@\\0", *self as u32).chars())
+                .collect()
         } else {
-            '@'
-        })
-        .chain(formatted.chars())
-        .collect()]
+            once(if boxed {
+                Primitive::Constant.unicode().unwrap()
+            } else {
+                '@'
+            })
+            .chain(formatted[1..formatted.len() - 1].chars())
+            .collect()
+        }]
     }
 }
 

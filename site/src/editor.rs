@@ -355,6 +355,7 @@ pub fn Editor<'a>(
                         let class = match kind {
                             DiagnosticKind::Warning => "output-warning",
                             DiagnosticKind::Advice => "output-advice",
+                            DiagnosticKind::Style => "output-style",
                         };
                         let class = format!("output-item {class}");
                         view!(<div class=class>{message}</div>).into_view()

@@ -382,6 +382,10 @@ li {
     color: #2af;
 }
 
+.output-style {
+    color: #0a0;
+}
+
 .output-image {
     border-radius: 0.5em;
     max-width: 50vw;

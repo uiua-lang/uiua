@@ -179,9 +179,9 @@ pub fn MainPage() -> impl IntoView {
                     <p>"Uiua has built-in facilities for generating images and audio. Just make arrays of the pixel data or audio samples!"</p>
                     <Editor example="⍉⊠<⊞+⇡3○÷30⇡300÷30⇡100"/>
                     <Editor example="÷3/+○⊞×⊟×1.5.220×τ÷∶⇡.&asr"/>
-                    <Editor example="xy ← ⍉⍉⊞⊟.÷∶⇡.100\n\
-                        frame ← ⍉⍜(×10)⁅◿1⊂⊃(+/÷)(÷3+1○×τ+)xy\n\
-                        &gife ÷∶2∶ ∵frame÷∶⇡..30"/>
+                    <Editor example="xy ← ⍉⍉⊞⊟.÷∶⇡.50\n\
+                        Frame ← ⍉⍜(×10)⁅◿1⊂⊃(+/÷)(÷3+1○×τ+)xy\n\
+                        &gifs ÷∶2∶ ∵Frame÷∶⇡..30"/>
                     <p>"The Uiua logo was made with Uiua! Check example 4 at the top of the page."</p>
                 </div>
                 <div>

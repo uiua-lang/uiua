@@ -29,15 +29,17 @@ constant!(
     /// A string identifying the operating system
     (os, std::env::consts::OS),
     /// A string identifying family of the operating system
-    (family, std::env::consts::FAMILY),
+    (Family, std::env::consts::FAMILY),
     /// A string identifying the architecture of the CPU
-    (arch, std::env::consts::ARCH),
+    (Arch, std::env::consts::ARCH),
     /// The executable file extension
     (ExeExt, std::env::consts::EXE_EXTENSION),
     /// The file extension for shared libraries
     (DllExt, std::env::consts::DLL_EXTENSION),
     /// The primary path separator character
-    (sep, std::path::MAIN_SEPARATOR),
+    (Sep, std::path::MAIN_SEPARATOR),
+    /// The number of processors available
+    (NumProcs, num_cpus::get() as f64),
 );
 
 macro_rules! primitive {

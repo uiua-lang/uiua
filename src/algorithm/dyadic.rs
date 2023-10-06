@@ -650,31 +650,42 @@ impl<T: ArrayValue> Array<T> {
                 new_data.push(self.data[0].clone());
             }
             self = new_data.into();
-        } else if amount.iter().all(|&n| n <= 1) {
-            let row_len = self.row_len();
-            let mut new_row_count = self.row_count();
-            self.data.modify(|data| {
-                for (r, &n) in amount.iter().enumerate().rev() {
-                    if n == 0 {
-                        let mut iter = take(data).into_iter();
-                        *data = iter.by_ref().take(r * row_len).collect();
-                        data.extend(iter.skip(row_len));
-                        new_row_count -= 1;
+        } else {
+            let mut all_bools = true;
+            let mut true_count = 0;
+            for &n in amount.iter() {
+                match n {
+                    0 => {}
+                    1 => true_count += 1,
+                    _ => {
+                        all_bools = false;
+                        break;
                     }
                 }
-            });
-            self.shape[0] = new_row_count;
-        } else {
-            let mut new_data = Vec::new();
-            let mut new_len = 0;
-            for (row, &n) in self.rows().zip(amount.as_ref()) {
-                new_len += n;
-                for _ in 0..n {
-                    new_data.extend_from_slice(&row.data);
-                }
             }
-            self.shape[0] = new_len;
-            self.data = new_data.into();
+            let row_len = self.row_len();
+            if all_bools {
+                let new_flat_len = true_count * row_len;
+                let mut new_data = Vec::with_capacity(new_flat_len);
+                for (b, r) in amount.iter().zip(self.data.chunks_exact(row_len)) {
+                    if *b == 1 {
+                        new_data.extend_from_slice(r);
+                    }
+                }
+                self.data = new_data.into();
+                self.shape[0] = true_count;
+            } else {
+                let mut new_data = Vec::new();
+                let mut new_len = 0;
+                for (n, r) in amount.iter().zip(self.data.chunks_exact(row_len)) {
+                    new_len += *n;
+                    for _ in 0..*n {
+                        new_data.extend_from_slice(r);
+                    }
+                }
+                self.data = new_data.into();
+                self.shape[0] = new_len;
+            }
         }
         self.validate_shape();
         Ok(self)

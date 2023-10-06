@@ -834,6 +834,13 @@ primitive!(
     ///
     /// [indexof] is closely related to [member].
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),
+    /// Find a index of each row of one array in another
+    (
+        2,
+        ProgressiveIndexOf,
+        DyadicArray,
+        ("progressive indexof", '⊘')
+    ),
     /// Apply a reducing function to an array
     ///
     /// For reducing with an initial value, see [fold].

@@ -6,7 +6,8 @@ Uiua is not yet stable.
 ### Language
 - Add GIF encoding with [`&gife`](https://uiua.org/docs/&gife)
 - Rename `constant` to [`box` `□`](https://uiua.org/docs/box).
-- **Breaking Change:** Some uses of [`call` `!`](https://uiua.org/docs/call) will no longer compile without declaring a stack signature. When unboxing [`constant` `□`](https://uiua.org/docs/constant) functions, you can use [`invert` `⍘`](https://uiua.org/docs/invert) [`constant` `□`](https://uiua.org/docs/constant) to get unboxing with a well-defined signature.
+- Add [`unbox` `⊔`](https://uiua.org/docs/unbox), which unboxes a boxed array
+- **Breaking Change:** Some uses of [`call` `!`](https://uiua.org/docs/call) will no longer compile without declaring a stack signature. When unboxing [`box` `□`](https://uiua.org/docs/box) functions, you can use [`invert` `⍘`](https://uiua.org/docs/invert) [`box` `□`](https://uiua.org/docs/box) to get unboxing with a well-defined signature.
 - Add [`fall` `⍖`](https://uiua.org/docs/fall) functions, which gives the indices of the reverse-sorted array
 - Change `grade` `⌂` name and glyph to [`rise` `⍏`](https://uiua.org/docs/rise) to reflect its relationship with [`fall` `⍖`](https://uiua.org/docs/fall). Code using `⌂` will continue to work and will be formatted as `⍏`.
 - [`try` `⍣`](https://uiua.org/docs/try) now puts arguments to its first function *above* the error value when calling the error handler
@@ -28,7 +29,7 @@ You may want to read the new version of the [Advanced Stack Manipulation Tutoria
 
 ### Language
 - Add the [`bracket` `⊓`](https://uiua.org/docs/bracket) modifier, which calls two functions each on different arguments
-- Change [`fill` `⬚`](https://uiua.org/docs/fill)'s glyph to reflect its relationship with [`constant` `□`](https://uiua.org/docs/constant). Code using `⍛` with continue to work and will be formatted as `⬚`.
+- Change [`fill` `⬚`](https://uiua.org/docs/fill)'s glyph to reflect its relationship with [`box` `□`](https://uiua.org/docs/box). Code using `⍛` with continue to work and will be formatted as `⬚`.
 - Change `share` `⇉` name and glyph to [`fork` `⊃`](https://uiua.org/docs/fork). Code using `⇉` will continue to work and will be formatted as `⊃`.
 - Change `noop` `·` name and glyphs to [`identity` `∘`](https://uiua.org/docs/identity) to reflect its relationship with [`gap` `⋅`](https://uiua.org/docs/gap) and [`dip` `⊙`](https://uiua.org/docs/dip). Code using `·` will continue to work and will be formatted as `∘`.
 - Change [`identity` `∘`](https://uiua.org/docs/identity)'s signature from `|0.0` to `|1.1`

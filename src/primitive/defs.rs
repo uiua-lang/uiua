@@ -587,10 +587,10 @@ primitive!(
     /// ex: [□@a □3 □7_8_9]
     /// The more ergonomic way to make box arrays is to use `{}`s instead of `[]`s.
     /// ex: {@a 3 7_8_9}
-    /// Use [invert][box] to get the values back out.
-    /// ex: ⍘□ □1_2_3
-    /// [reduce][invert][box] will unpack an array of boxs onto the stack.
-    /// ex: /⍘□ {@a 3 7_8_9}
+    /// Use [unbox] to get the values back out.
+    /// ex: ⊔ □1_2_3
+    /// [reduce][unbox] will unpack an array of boxs onto the stack.
+    /// ex: /⊔ {@a 3 7_8_9}
     ///
     /// You would not normally construct arrays like the one above.
     /// The more important use case of [box] is for jagged or nested data.
@@ -598,19 +598,24 @@ primitive!(
     /// ex: $ Words of different lengths
     ///   : ⊜□≠@ .
     ///
-    /// Most monadic functions, like [reverse], will work on box elements without needing to [invert][box] them.
+    /// Most monadic functions, like [reverse], will work on box elements without needing to [unbox] them.
     /// ex: $ Reverse these words
     ///   : ⊜□≠@ .
     ///   : ∵⇌.
     ///
-    /// For more complex operations, you can use [each][under][invert][box].
+    /// For more complex operations, you can use [each][under][unbox].
     /// ex: $ Prepend the word length
     ///   : ⊜□≠@ .
-    ///   : ∵⍜⍘□($"_ _"⧻.).
-    /// This works because `invert``invert``box` is just `box`. For each element, it un-[box]s the [box] function to get the array out, does something to it, then [box]s the result.
+    ///   : ∵⍜⊔($"_ _"⧻.).
+    /// This works because `invert``unbox` is just `box`. For each element, it un-[box]s the [box] function to get the array out, does something to it, then [box]s the result.
     (1, Box, MonadicArray, ("box", '□')),
-    /// Unbox something
-    (1, Unbox, MonadicArray),
+    /// Take an array out of a box
+    ///
+    /// ex: ⊔□5
+    /// ex: ∵⊔{1_2_3 4_5_6}
+    ///
+    /// Boxes are created with [box].
+    (1, Unbox, MonadicArray, ("unbox", '⊔')),
     /// Check if two arrays are exactly the same
     ///
     /// ex: ≅ 1_2_3 [1 2 3]
@@ -1000,8 +1005,8 @@ primitive!(
     /// ex: ∩⇡ 3 5
     ///
     /// One good use of this is when working with [box] data.
-    /// You can use [both][invert][box] to get 2 [box] values out.
-    /// ex: /(⊂∩⍘□) {"a" "bc" "def"}
+    /// You can use [both][unbox] to get 2 [box] values out.
+    /// ex: /(⊂∩⊔) {"a" "bc" "def"}
     ///
     /// For a function that takes `n` arguments, [both] calls the function on the 2 sets of `n` values on top of the stack.
     /// ex: [∩+ 1 2 3 4]
@@ -1333,9 +1338,9 @@ primitive!(
     /// ex: !+_-
     ///
     /// [call] will "unbox" a [box] function.
-    /// However, this requires a signature annotation in most contexts where it is useful, so for this purpose, [invert][box] should be preferred.
+    /// However, this requires a signature annotation in most contexts where it is useful, so for this purpose, [unbox] should be preferred.
     /// ex! ∵! {1_2_3 4_5_6}
-    /// ex: ∵⍘□{1_2_3 4_5_6}
+    /// ex: ∵⊔{1_2_3 4_5_6}
     ((None), Call, Control, ("call", '!')),
     /// Break out of a loop
     ///

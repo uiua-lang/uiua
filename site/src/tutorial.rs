@@ -522,15 +522,17 @@ fn TutorialFunctions() -> impl IntoView {
         <Editor example="/+ 1_2_3_4"/>
         <p><Prim prim=Scan/>" is similar, but it returns all the intermediate results."</p>
         <Editor example="\\+ 1_2_3_4"/>
+        <p><Prim prim=Table/>" applies a function between all combinations of elements of two arrays. This is sometimes called the "<em>"outer product"</em>"."</p>
+        <Editor example="⊞+ [5 6 7 8] [10 20 30 40]"/>
         <p>"The main docs page has "<A href="/docs/modifier">"a list"</A>" of all of the built-in modifiers."</p>
 
         <h2 id="inline-functions">"Inline Functions"</h2>
         <p>"In addition to creating a new function with a capitalized binding name, as discussed in the "<A href="/docs/bindings">"previous section"</A>", functions in Uiua can also be created by surrounding code with "<code>"()"</code>"s."</p>
         <p>"This is usually only necessary when you need to call multiple functions within a modifier."</p>
+        <p>"For example, if you wanted to get the last element of each row of an array, you could use "<Prim prim=Rows/>"."</p>
+        <Editor example="≡(⊢⇌) .[2_5_3 0_2_1 0_0_2]"/>
         <p>"For example, if you wanted to make an array that pairs each element of an array with its reciprocal, you could use "<Prim prim=Each/>"."</p>
         <Editor example="∵(⊂÷∶1.) 1_2_4_5"/>
-        <p>"Or, if you wanted to get the last element of each row of an array, you could use "<Prim prim=Rows/>"."</p>
-        <Editor example="≡(⊢⇌) .[2_5_3 0_2_1 0_0_2]"/>
         <p>"If you want to make an inline function with exactly 2 terms, you can use the "<Prim prim=Bind/>" modifier instead of "<code>"()"</code>"s and save 1 character of space!"</p>
         <Editor example="/(-∶) 1_2_3_4_5\n/'-∶ 1_2_3_4_5"/>
         <p>"This looks nice with modifiers that take multiple functions like "<Prim prim=Under/>"."</p>
@@ -546,7 +548,7 @@ X 5"/>
 
         <h2 id="local-bindings">"A Note on Local Bindings"</h2>
         <p>"Bindings in Uiua can "<em>"only"</em>" be global. There is no way to give a name to a value within an inline function. A "<code>"←"</code>" inside "<code>"()"</code>"s is a syntax error."</p>
-        <p>"This is a deliberate design decision. It forces you to write tacit code, a.k.a. code with functions that do not mention their arguments. Uiua is designed to make write tacit code as workable as possible."</p>
+        <p>"This is a deliberate design decision. It forces you to write tacit code, a.k.a. code with functions that do not mention their arguments. Uiua is designed to make writing tacit code as workable as possible."</p>
 
         <h2 id="format-strings">"Format Strings"</h2>
         <p>"Prefixing a string with "<code>"$"</code>", creates a format string. A format string is a function that is called immediately. It takes an argument for each "<code>"_"</code>" in the string and replaces it with the stringified version."</p>

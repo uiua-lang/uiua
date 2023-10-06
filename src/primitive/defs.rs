@@ -902,6 +902,13 @@ primitive!(
     ///
     /// ex: ⊞+ 1_2_3 4_5_6_7
     /// ex: ⊞⊂ 1_2 3_4
+    ///
+    /// The first array's shape becomes the first part of the result's shape, and the second array's shape becomes the next part.
+    /// The end of the result's shape is determined by the function's result.
+    /// ex: △⊞+ 1_2 3_4_5
+    /// ex: △⊞⊂ 1_2 3_4_5
+    /// ex: △⊞+ [1_2_3 4_5_6] [7 8 9 10]
+    /// ex: △⊞⊂ [1_2_3 4_5_6] [7 8 9 10]
     (2[1], Table, IteratingModifier, ("table", '⊞')),
     /// Apply a function to each combination of rows of two arrays
     ///

@@ -370,33 +370,33 @@ fn TutorialArrays() -> impl IntoView {
         <p>"All arrays are flat and homogenous. Arrays always have a rectangular shape. Different types of data, like numbers and characters, cannot be mixed in the same array."</p>
         <p>"However, there is an escape hatch for when you really want jagged, nested, or mixed-type arrays. In Uiua, an array of heterogenous values can be simulated with an array of functions. These functions can be used similarly to J's boxes."</p>
         <Editor example="[1 2 [7 8 9]]"/> // Should fail
-        <p>"By using "<Prim prim=Constant/>", we can turn any value into a function that pushes that value onto the stack. We can then put these functions into an array like any other."</p>
+        <p>"By using "<Prim prim=Box/>", we can turn any value into a function that pushes that value onto the stack. We can then put these functions into an array like any other."</p>
         <Editor example="[□1 □2 □[7 8 9]]"/>
-        <p>"The "<code>"⟦⟧"</code>"s indicate that a list is wrapped in a constant function."</p>
-        <p>"To get the values back on the stack, we can use "<Prim prim=Reduce/><Prim prim=Invert/><Prim prim=Constant/>"."</p>
+        <p>"The "<code>"⟦⟧"</code>"s indicate that a list is "<Prim prim=Box/>"ed."</p>
+        <p>"To get the values back on the stack, we can use "<Prim prim=Reduce/><Prim prim=Invert/><Prim prim=Box/>"."</p>
         <Editor example="/⍘□[□1 □2 □[7 8 9]]"/>
-        <p>"Having to write "<Prim prim=Constant glyph_only=true/>" everywhere is annoying, and so..."</p>
+        <p>"Having to write "<Prim prim=Box glyph_only=true/>" everywhere is annoying, and so..."</p>
 
         <h2 id="nested-arrays">"Nested Arrays"</h2>
-        <p>"Uiua has a special syntax for making arrays where every item is "<Prim prim=Constant/>"."</p>
-        <p>"Using "<code>"{}"</code>"s instead of "<code>"[]"</code>"s for stack array notation will automatically "<Prim prim=Constant/>" every item."</p>
+        <p>"Uiua has a special syntax for making arrays where every item is "<Prim prim=Box/>"."</p>
+        <p>"Using "<code>"{}"</code>"s instead of "<code>"[]"</code>"s for stack array notation will automatically "<Prim prim=Box/>" every item."</p>
         <Editor example="{1 2 [7 8 9]}"/>
         <p>"This is very useful for making lists of strings."</p>
         <Editor example=r#"langs ← .["Uiua" "APL" "J" "BQN" "K" "Q"]"#/>
         <Editor example=r#"langs ← .{"Uiua" "APL" "J" "BQN" "K" "Q"}"#/>
-        <p>"The "<code>"⌜⌟"</code>"s indicate that a string is wrapped in a constant function."</p>
-        <p>"Many simple functions will work on "<Prim prim=Constant/>" elements without needing to use "<Prim prim=Call/>"."</p>
+        <p>"The "<code>"⌜⌟"</code>"s indicate that a string is "<Prim prim=Box/>"ed."</p>
+        <p>"Many simple functions will work on "<Prim prim=Box/>" elements without needing to use "<Prim prim=Call/>"."</p>
         <Editor example=
 r#"langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
 ⧻⊢langs
 +1langs"#/>
-        <p>"However, more complex functions usually need both operands to be the same type, so you must either "<Prim prim=Call/>" the constant elements or "<Prim prim=Constant/>" the normal ones."</p>
-        <p>"For example, to check if a string is in the list with "<Prim prim=Member/>", you would need to "<Prim prim=Constant/>" the string first."</p>
+        <p>"However, more complex functions usually need both operands to be the same type, so you must either "<Prim prim=Unbox/>" the boxed elements or "<Prim prim=Box/>" the normal ones."</p>
+        <p>"For example, to check if a string is in the list with "<Prim prim=Member/>", you would need to "<Prim prim=Box/>" the string first."</p>
         <Editor example=
 r#"langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
 ∊ □"APL" langs"#/>
 
-        <p>"For more about working with constant function arrays, see "<Prim prim=Constant/>"'s documentation."</p>
+        <p>"For more about working with box arrays, see "<Prim prim=Box/>"'s documentation."</p>
     }
 }
 
@@ -466,7 +466,7 @@ fn TutorialTypes() -> impl IntoView {
         <Editor example="⊂ 1_2 3"/>
         <Editor example="⊟ \"Hello\" \"World\""/>
         <Editor example="⊟ 1_2_3 \"dog\""/> // Should fail
-        <p>"There is an exception for functions. Any function that pushes one value onto the stack can be put in an array with a non-function. In this case, the non-function will be turned into a function, similar to "<Prim prim=Constant/>"."</p>
+        <p>"There is an exception for functions. Any function that pushes one value onto the stack can be put in an array with a non-function. In this case, the non-function will be turned into a function, similar to "<Prim prim=Box/>"."</p>
         <Editor example="⊟ 5 (+1 2)"/>
 
         <h2 id="empty-arrays">"Empty Arrays"</h2>

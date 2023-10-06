@@ -576,41 +576,41 @@ primitive!(
     /// ex: ⊝"Hello, World!"
     /// ex: ⊝[3_2 1_4 3_2 5_6 1_4 7_8]
     (1, Deduplicate, MonadicArray, ("deduplicate", '⊝')),
-    /// Turn an array into a constant function
+    /// Turn an array into a box
     ///
     /// This is Uiua's primary way to create nested or mixed-type arrays.
     /// Normally, arrays can only be created if their rows have the same shape and type.
     /// [fill] can help you with the shape part, but it is not always wanted, and it can't help with the type part.
     /// ex! [@a 3 7_8_9]
-    /// [constant] turns any array into a function that pushes that array onto the stack.
+    /// [box] turns any array into a function that pushes that array onto the stack. We call this type of function a *box*.
     /// These functions are just like any other, so they can be put in arrays themselves.
     /// ex: [□@a □3 □7_8_9]
-    /// The more ergonomic way to make constant function arrays is to use `{}`s instead of `[]`s.
+    /// The more ergonomic way to make box arrays is to use `{}`s instead of `[]`s.
     /// ex: {@a 3 7_8_9}
-    /// Use [invert][constant] to get the values back out.
+    /// Use [invert][box] to get the values back out.
     /// ex: ⍘□ □1_2_3
-    /// [reduce][invert][constant] will unpack an array of constant functions onto the stack.
+    /// [reduce][invert][box] will unpack an array of boxs onto the stack.
     /// ex: /⍘□ {@a 3 7_8_9}
     ///
     /// You would not normally construct arrays like the one above.
-    /// The more important use case of [constant] is for jagged or nested data.
-    /// If you want to collect unevenly-sized groups from [partition] or [group], without [fill]ing, you must use [constant].
+    /// The more important use case of [box] is for jagged or nested data.
+    /// If you want to collect unevenly-sized groups from [partition] or [group], without [fill]ing, you must use [box].
     /// ex: $ Words of different lengths
     ///   : ⊜□≠@ .
     ///
-    /// Most monadic functions, like [reverse], will work on constant function elements without needing to [invert][constant] them.
+    /// Most monadic functions, like [reverse], will work on box elements without needing to [invert][box] them.
     /// ex: $ Reverse these words
     ///   : ⊜□≠@ .
     ///   : ∵⇌.
     ///
-    /// For more complex operations, you can use [each][under][invert][constant].
+    /// For more complex operations, you can use [each][under][invert][box].
     /// ex: $ Prepend the word length
     ///   : ⊜□≠@ .
     ///   : ∵⍜⍘□($"_ _"⧻.).
-    /// This works because `invert``invert``constant` is just `constant`. For each element, it un-[constant]s the [constant] function to get the array out, does something to it, then [constant]s the result.
-    (1, Constant, MonadicArray, ("constant", '□')),
-    /// Unconstant something
-    (1, InvConstant, MonadicArray),
+    /// This works because `invert``invert``box` is just `box`. For each element, it un-[box]s the [box] function to get the array out, does something to it, then [box]s the result.
+    (1, Box, MonadicArray, ("box", '□')),
+    /// Unbox something
+    (1, Unbox, MonadicArray),
     /// Check if two arrays are exactly the same
     ///
     /// ex: ≅ 1_2_3 [1 2 3]
@@ -957,7 +957,7 @@ primitive!(
     /// ex: ⊕⊂ [0 2 2 1 0 1] [1 2 3 4 5 6]
     /// If the values returned by the function do not have the same [shape], concatenation will fail.
     /// ex! ⊕∘ [0 1 0 2 1 1] [1 2 3 4 5 6]
-    /// It is common to use [constant] to encapsulate groups of different [shape]s.
+    /// It is common to use [box] to encapsulate groups of different [shape]s.
     /// ex: ⊕□ [0 1 0 2 1 1] [1 2 3 4 5 6]
     ///
     /// If you want to get the length of each group, use [length].
@@ -983,7 +983,7 @@ primitive!(
     /// ex: ⊜⊂ [0 0 2 2 1 1 3 3] [1 2 3 4 5 6 7 8]
     /// If the values returned by the function do not have the same [shape], concatenation will fail.
     /// ex! ⊜∘ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
-    /// It is common to use [constant] to encapsulate groups of different [shape]s.
+    /// It is common to use [box] to encapsulate groups of different [shape]s.
     /// ex: ⊜□ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     ///
     /// If you want to get the length of each group, use [length].
@@ -999,8 +999,8 @@ primitive!(
     /// For monadic functions, [both] calls it's function on each of the top 2 values on the stack.
     /// ex: ∩⇡ 3 5
     ///
-    /// One good use of this is when working with [constant] data.
-    /// You can use [both][invert][constant] to get 2 [constant] values out.
+    /// One good use of this is when working with [box] data.
+    /// You can use [both][invert][box] to get 2 [box] values out.
     /// ex: /(⊂∩⍘□) {"a" "bc" "def"}
     ///
     /// For a function that takes `n` arguments, [both] calls the function on the 2 sets of `n` values on top of the stack.
@@ -1214,7 +1214,7 @@ primitive!(
     /// ex: ⬚0+ 1_2_3 10_9_8_7_6_5
     ///
     /// Many functions, like [scan] and [partition], implicitly build arrays and require compatible shapes.
-    /// [fill] can be used with them as well. In some cases, this prevents the need to use [constant].
+    /// [fill] can be used with them as well. In some cases, this prevents the need to use [box].
     /// ex: ⬚0\⊂ 1_2_3_4_5
     /// ex: ⬚@ ⊜∘≠@ . "No □ needed!"
     ///
@@ -1332,8 +1332,8 @@ primitive!(
     /// ex: ![1 2 3]
     /// ex: !+_-
     ///
-    /// [call] will "unbox" a [constant] function.
-    /// However, this requires a signature annotation in most contexts where it is useful, so for this purpose, [invert][constant] should be preferred.
+    /// [call] will "unbox" a [box] function.
+    /// However, this requires a signature annotation in most contexts where it is useful, so for this purpose, [invert][box] should be preferred.
     /// ex! ∵! {1_2_3 4_5_6}
     /// ex: ∵⍘□{1_2_3 4_5_6}
     ((None), Call, Control, ("call", '!')),

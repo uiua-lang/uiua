@@ -36,7 +36,7 @@ pub trait GridFmt {
 
 fn boxed_scalar(boxed: bool) -> impl Iterator<Item = char> {
     boxed
-        .then_some(Primitive::Constant.unicode().unwrap())
+        .then_some(Primitive::Box.unicode().unwrap())
         .into_iter()
 }
 
@@ -72,13 +72,13 @@ impl GridFmt for char {
         let formatted = format!("{self:?}");
         vec![if formatted.starts_with("'\\u{") {
             boxed
-                .then(|| Primitive::Constant.unicode().unwrap())
+                .then(|| Primitive::Box.unicode().unwrap())
                 .into_iter()
                 .chain(format!("+{}@\\0", *self as u32).chars())
                 .collect()
         } else {
             once(if boxed {
-                Primitive::Constant.unicode().unwrap()
+                Primitive::Box.unicode().unwrap()
             } else {
                 '@'
             })

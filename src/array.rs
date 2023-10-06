@@ -445,8 +445,8 @@ pub enum ArrayCmpError {
 impl fmt::Display for ArrayCmpError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::WrongType(ty) => write!(f, "constant function has wrong type: {ty}"),
-            Self::NotConstant => write!(f, "function is not constant"),
+            Self::WrongType(ty) => write!(f, "box has wrong type: {ty}"),
+            Self::NotConstant => write!(f, "function is not a box"),
         }
     }
 }

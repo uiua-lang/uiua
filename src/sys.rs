@@ -129,13 +129,13 @@ sys_op! {
     ///
     /// Standard IO will be inherited.
     ///
-    /// Expects either a string, a rank `2` character array, or a rank `1` array of [constant] strings.
+    /// Expects either a string, a rank `2` character array, or a rank `1` array of [box] strings.
     (1(0), RunInherit, "&runi", "run command inherit"),
     /// Run a command and wait for it to finish
     ///
     /// Standard IO will be captured. Stdout and stderr will each be pushed to the stack as strings.
     ///
-    /// Expects either a string, a rank `2` character array, or a rank `1` array of [constant] strings.
+    /// Expects either a string, a rank `2` character array, or a rank `1` array of [box] strings.
     (1(2), RunCapture, "&runc", "run command capture"),
     /// Change the current directory
     (1(0), ChangeDirectory, "&cd", "change directory"),
@@ -1648,15 +1648,14 @@ fn value_to_command(value: &Value, env: &Uiua) -> UiuaResult<(String, Vec<String
                         }
                         Some(val) => {
                             return Err(env.error(format!(
-                                "Function array as command must be all constant functions \
-                                returning strings, but {f} returns a {}",
-                                val.type_name()
-                            )))
+                            "Function array as command must be all boxed strings, but {f} is a {}",
+                            val.type_name()
+                        )))
                         }
                         None => {
                             return Err(env.error(format!(
-                                "Function array as command must be all constant \
-                                functions, but {f} is not constant"
+                                "Function array as command must be all boxes, \
+                                but {f} is not a box"
                             )))
                         }
                     }

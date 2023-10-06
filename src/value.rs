@@ -732,8 +732,8 @@ macro_rules! value_bin_impl {
                             None => {
                                 let b = b.coerce_as_function();
                                 bin_pervade(a, &b, env, FalliblePerasiveFn::new(|a: Arc<Function>, b: Arc<Function>, env: &Uiua| {
-                                    let a = a.as_constant().ok_or_else(|| env.error("First argument is not a constant function"))?;
-                                    let b = b.as_constant().ok_or_else(|| env.error("Second argument is not a constant function"))?;
+                                    let a = a.as_constant().ok_or_else(|| env.error("First argument is not a box"))?;
+                                    let b = b.as_constant().ok_or_else(|| env.error("Second argument is not a box"))?;
                                     Ok(Arc::new(Function::constant(Value::$name(a, b, env)?)))
                                 }))?.into()
                             }
@@ -745,8 +745,8 @@ macro_rules! value_bin_impl {
                             None => {
                                 let a = a.coerce_as_function();
                                 bin_pervade(&a, b, env, FalliblePerasiveFn::new(|a: Arc<Function>, b: Arc<Function>, env: &Uiua| {
-                                    let a = a.as_constant().ok_or_else(|| env.error("First argument is not a constant function"))?;
-                                    let b = b.as_constant().ok_or_else(|| env.error("Second argument is not a constant function"))?;
+                                    let a = a.as_constant().ok_or_else(|| env.error("First argument is not a box"))?;
+                                    let b = b.as_constant().ok_or_else(|| env.error("Second argument is not a box"))?;
                                     Ok(Arc::new(Function::constant(Value::$name(a, b, env)?)))
                                 }))?.into()
                             }

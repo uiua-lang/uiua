@@ -792,7 +792,7 @@ pub fn Editor<'a>(
         ),
         (
             "{}",
-            "constant array",
+            "box array",
             "",
             Some(('{', '}')),
             "arrays#nested-arrays",

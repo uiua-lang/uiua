@@ -132,14 +132,14 @@ pub fn Tour() -> impl IntoView {
         <Editor example="⬚π↙5 [1 2 3]"/>
         <br/>
         <p><Prim prim=Fill/>" is nice, but you don't always want to fill in the missing elements. Sometimes you need to mix values of different shapes or types in an array. To understand Uiua's solution to this problem, you must first understand its "<em>"array model"</em>"."</p>
-        <p>"Uiua's array model is similar to that of J. Arrays must be rectangular and cannot mix types. However, the "<Prim prim=Constant/>" function can turn any value into a function that pushes that value to the stack. That value can then be extracted with "<Prim prim=Call/>". This is similar to J's boxes."</p>
+        <p>"Uiua's array model is similar to that of J. Arrays must be rectangular and cannot mix types. However, the "<Prim prim=Box/>" function can turn any value into a function that pushes that value to the stack. That value can then be extracted with "<Prim prim=Call/>". This is similar to J's boxes."</p>
         <Editor example="[□1 □2_3_4 □5_6]"/>
-        <p>"Having to use "<Prim prim=Constant/>" on every value is kind of annoying, so there is a special syntax for "<Prim prim=Constant/>" arrays that uses "<code>"{}"</code>"s instead of "<code>"[]"</code>"s."</p>
+        <p>"Having to use "<Prim prim=Box/>" on every value is kind of annoying, so there is a special syntax for "<Prim prim=Box/>" arrays that uses "<code>"{}"</code>"s instead of "<code>"[]"</code>"s."</p>
         <Editor example="{1 2_3_4 5_6}"/>
-        <p>"Many simple functions work on "<Prim prim=Constant/>" elements without needing to "<Prim prim=Call/>" them."</p>
+        <p>"Many simple functions work on "<Prim prim=Box/>" elements without needing to "<Prim prim=Call/>" them."</p>
         <Editor example="{1 2_3_4 5_6}\n∵⇌.\n∵⧻."/>
         <Editor example="+5 {1 2_3_4 5_6}"/>
-        <p>"For more complex operations, though, you'll need to use "<Prim prim=Invert/><Prim prim=Constant/>". Using it with "<Prim prim=Under/>" will re-"<Prim prim=Constant/>" the result."</p>
+        <p>"For more complex operations, though, you'll need to use "<Prim prim=Invert/><Prim prim=Box/>". Using it with "<Prim prim=Under/>" will re-"<Prim prim=Box/>" the result."</p>
         <Editor example="{\"dog\" \"cat\" \"fish\"}\n∵⍜⍘□(⊂∶⇌.)."/>
 
         <h2 id="multimedia">"Multimedia"</h2>

@@ -1,5 +1,6 @@
-- Inline some functions with `distribute`
+- Proofread tour, tutorial, and function docs
 - Make `if` handle its signatures like `fork` does
+- Inline some functions with `distribute`
 - Fix web editor text deletion bug
   - Steps to reproduce:
     - open new pad
@@ -15,11 +16,11 @@
     - hit run
     - empty lines are added after each line of code
 - Build editor divs with leptos instead of strings
-- Make https requests work on web?
 - Add channels for spawned threads
 - Make dyadic array functions not methods
 - See what can be done about compile times
 - Rust API
+- Make https requests work on web?
 - Docs
   - Control flow
     - Looping modifiers

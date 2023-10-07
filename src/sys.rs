@@ -166,8 +166,14 @@ sys_op! {
     /// This will close files, tcp listeners, and tcp sockets.
     (1(0), Close, "&cl", "close handle"),
     /// Open a file and return a handle to it
+    ///
+    /// The file can be read from with [&rs], [&rb], or [&ru].
+    /// The file can be written to with [&w].
     (1, FOpen, "&fo", "file - open"),
     /// Create a file and return a handle to it
+    ///
+    /// The file can be read from with [&rs], [&rb], or [&ru].
+    /// The file can be written to with [&w].
     (1, FCreate, "&fc", "file - create"),
     /// Check if a file exists at a path
     (1, FExists, "&fe", "file - exists"),
@@ -176,14 +182,22 @@ sys_op! {
     /// Check if a path is a file
     (1, FIsFile, "&fif", "file - is file"),
     /// Read all the contents of a file into a string
+    ///
+    /// Expects a path and returns a [rank]`1` character array.
     (1, FReadAllStr, "&fras", "file - read all to string"),
     /// Read all the contents of a file into a byte array
+    ///
+    /// Expects a path and returns a [rank]`1` numeric array.
     (1, FReadAllBytes, "&frab", "file - read all to bytes"),
     /// Write the entire contents of an array to a file
+    ///
+    /// Expects a path and a [rank]`1` array or either numbers or characters.
     (2(0), FWriteAll, "&fwa", "file - write all"),
     /// Decode an image from a byte array
     ///
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, and `ico`.
+    ///
+    /// See also: [&ime]
     (1, ImDecode, "&imd", "image - decode"),
     /// Encode an image into a byte array with the specified format
     ///
@@ -200,6 +214,8 @@ sys_op! {
     /// A length 4 last axis is an RGB image with an alpha channel.
     ///
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, and `ico`.
+    ///
+    /// See also: [&ims] [&imd]
     (2, ImEncode, "&ime", "image - encode"),
     /// Show an image
     ///
@@ -217,22 +233,30 @@ sys_op! {
     /// A length 2 last axis is a grayscale image with an alpha channel.
     /// A length 3 last axis is an RGB image.
     /// A length 4 last axis is an RGB image with an alpha channel.
+    ///
+    /// See also: [&ime]
     (1(0), ImShow, "&ims", "image - show"),
     /// Encode a gif into a byte array
     ///
     /// The first argument is a frame delay in seconds.
     /// The second argument is the gif data and must be a rank 3 or 4 numeric array.
     /// The rows of the array are the frames of the gif, and their format must conform to that of [&ime].
+    ///
+    /// See also: [&gifs]
     (1, GifEncode, "&gife", "gif - encode"),
     /// Show a gif
     ///
     /// The first argument is a frame delay in seconds.
     /// The second argument is the gif data and must be a rank 3 or 4 numeric array.
     /// The rows of the array are the frames of the gif, and their format must conform to that of [&ime].
+    ///
+    /// See also: [&gife]
     (1(0), GifShow, "&gifs", "gif - show"),
     /// Decode audio from a byte array
     ///
     /// Only the `wav` format is supported.
+    ///
+    /// See also: [&ae]
     (1, AudioDecode, "&ad", "audio - decode"),
     /// Encode audio into a byte array
     ///
@@ -247,6 +271,8 @@ sys_op! {
     /// The sample rate is [&asr].
     ///
     /// Only the `wav` format is supported.
+    ///
+    /// See also: [&ap] [&ad]
     (2, AudioEncode, "&ae", "audio - encode"),
     /// Play some audio
     ///
@@ -257,6 +283,8 @@ sys_op! {
     ///
     /// The samples must be between -1 and 1.
     /// The sample rate is [&asr].
+    ///
+    /// See also: [&ae]
     (1(0), AudioPlay, "&ap", "audio - play"),
     /// Get the sample rate of the audio output backend
     ///

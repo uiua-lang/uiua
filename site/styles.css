@@ -234,6 +234,7 @@ li {
     display: flex;
     gap: 1em;
     flex-wrap: wrap;
+    align-items: baseline;
 }
 
 #links {
@@ -735,4 +736,8 @@ input[type=text] {
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.sponsor-link {
+    font-size: 0.7em;
 }

@@ -9,6 +9,8 @@ Documentation, examples, and an online interpreter can be found at [uiua.org](ht
 
 You can also check out the [Discord server](https://discord.gg/3r9nrfYhCc).
 
+You can support Uiua's development via [GitHub Sponsors](https://github.com/sponsors/uiua-lang).
+
 ## Installation
 
 You can try the language without installing anything on [the website](https://uiua.org).

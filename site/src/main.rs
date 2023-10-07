@@ -80,6 +80,7 @@ pub fn Site() -> impl IntoView {
                             <p id="subtitle">{ subtitle }</p>
                         </div>
                         <div id="nav">
+                            <p><a class="sponsor-link" href="https://github.com/sponsors/uiua-lang">"Support Uiua's development"</a></p>
                             <p><a href="/">"Home"</a></p>
                         </div>
                     </div>

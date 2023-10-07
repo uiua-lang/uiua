@@ -126,11 +126,13 @@ uiuisms!(
     /// Create an X matrix
     "↥⇌.⊞=.⇡ 5",
     /// Create a zero matrix of the same shape as another
-    "∵'≠. [1_1 2_2]",
+    "≠. [1_1 2_2]",
     /// Check if an array is a palindrome
     r#"≅⇌. "racecar""#,
     /// Convert a number to a string
     r#"$"_" 17"#,
+    /// Convert a string to a number
+    r#"parse "42""#,
     /// Convert a string to a list of code points
     r#"-@\0 "Uiua""#,
     /// Convert a list of code points to a string
@@ -152,7 +154,7 @@ uiuisms!(
     /// Remove all instances of an element from a list
     "▽≠, 4 [1 4 2 0 5 4 3]",
     /// Remove all instances of a row from an array
-    "▽∺'¬≅, 2_0 [1_4 2_0 5_3 2_0]",
+    "▽∺(¬≅), 2_0 [1_4 2_0 5_3 2_0]",
     /// Filter by a fixed predicate
     "▽ =0◿2 . ⇡10",
     /// Filter by a dynamic predicate
@@ -172,11 +174,11 @@ uiuisms!(
     /// Trim matching suffix
     r#"▽¬⍜⇌\×∊, "thing" "remove this ⊙thing""#,
     /// Trim whitespace
-    r#"▽×⍜'⊟⇌≡\↥.≠@ . "  abc xyz   ""#,
+    r#"▽×⍜(⊟⇌)≡\↥.≠@ . "  abc xyz   ""#,
     /// Upscale a 2d matrix
-    "⍉▽↯⧻,⊙'⍉▽∶↯∶,⧻,30 [0_1 1_0]",
+    "⍉▽↯⧻,⊙(⍉▽)∶↯∶,⧻,30 [0_1 1_0]",
     /// Upscale a colored image
-    "⍜⍘⍉≡(⍉▽↯⧻,⊙'⍉▽∶↯∶,⧻,30) [[0_0_1 0_1_0] [1_0_0 0_0_0]]",
+    "⍜⍘⍉≡(⍉▽↯⧻,⊙(⍉▽)∶↯∶,⧻,30) [[0_0_1 0_1_0] [1_0_0 0_0_0]]",
     /// Dot product
     "/+× [1 2 3] [4 ¯5 6]",
     /// Cross product
@@ -184,7 +186,10 @@ uiuisms!(
     /// Matrix product
     "⊠(/+×)⊙⍉ [1_2 3_4 5_6] [7_8_9 10_11_12]",
     /// Matrix power (Also works with scalars)
-    ";∶⍥(⊠'/+×⊙⍉,)∶⊙∶⊞=.⇡⍛1⊢△. [1_2 3_4] 4",
+    ";∶⍥(⊠(/+×)⊙⍉,)∶⊙∶⊞=.⇡⬚1⊢△. [1_2 3_4] 4",
     /// Evaluate a polynomial with given coefficients at a scalar or square matrix
-    "/+≡×∺(;∶⍥(⊠'/+×⊙⍉,)∶⊙∶⊞=.⇡⍛1⊢△.:)⊙∶⇌⇡⧻. [1 2 3 1] [1_1 2_2]"
+    r"/+≡×∺(
+  ⊙∶⊞=.⇡⬚1⊢△.:
+  ;∶⍥(⊠(/+×)⊙⍉,)∶
+)⊙∶⇌⇡⧻. [1 2 3 1] [1_1 2_2]",
 );

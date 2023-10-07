@@ -583,7 +583,7 @@ impl Primitive {
             }
             Primitive::Trace => trace(env, false)?,
             Primitive::InvTrace => trace(env, true)?,
-            Primitive::Dump => dump(env),
+            Primitive::Dump => dump(env)?,
             Primitive::Sys(io) => io.run(env)?,
         }
         Ok(())
@@ -619,9 +619,24 @@ fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
     Ok(())
 }
 
-fn dump(env: &Uiua) {
+fn dump(env: &mut Uiua) -> UiuaResult {
+    let f = env.pop(FunctionArg(1))?;
+    if f.signature() != (1, 1) {
+        return Err(env.error(format!(
+            "Dump's function's signature must be |1.1, but it is {}",
+            f.signature()
+        )));
+    }
     let span = env.span().to_string();
-    let items = env.clone_stack_top(env.stack_size());
+    let unprocessed = env.clone_stack_top(env.stack_size());
+    let mut items = Vec::new();
+    for item in unprocessed {
+        env.push(item);
+        match env.call(f.clone()) {
+            Ok(()) => items.push(env.pop("dump's function's processed result")?),
+            Err(e) => items.push(e.value()),
+        }
+    }
     let mut item_lines: Vec<Vec<String>> = items
         .iter()
         .map(Value::grid_string)
@@ -649,6 +664,7 @@ fn dump(env: &Uiua) {
     for _ in 0..max_line_len - 1 {
         env.backend.print_str_trace("╴");
     }
+    Ok(())
 }
 
 #[derive(Default, Debug)]

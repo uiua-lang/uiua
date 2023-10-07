@@ -7,12 +7,13 @@ Uiua is not yet stable.
 - Add GIF encoding with [`&gife`](https://uiua.org/docs/&gife)
 - Rename `constant` to [`box` `□`](https://uiua.org/docs/box).
 - Add [`unbox` `⊔`](https://uiua.org/docs/unbox), which unboxes a boxed array
-- **Breaking Change:** Some uses of [`call` `!`](https://uiua.org/docs/call) will no longer compile without declaring a stack signature. When unboxing [`box` `□`](https://uiua.org/docs/box)ed arrays, you can use [`unbox` `⊔`](https://uiua.org/docs/unbox) instead, which has a well-defined signature.
+- **Major Change:** Some uses of [`call` `!`](https://uiua.org/docs/call) will no longer compile without declaring a stack signature. When unboxing [`box` `□`](https://uiua.org/docs/box)ed arrays, you can use [`unbox` `⊔`](https://uiua.org/docs/unbox) instead, which has a well-defined signature.
 - Add [`fall` `⍖`](https://uiua.org/docs/fall) function, which gives the indices of the array if it were sorted descending
 - Change `grade` `⌂` name and glyph to [`rise` `⍏`](https://uiua.org/docs/rise) to reflect its relationship with [`fall` `⍖`](https://uiua.org/docs/fall). Code using `⌂` will continue to work and will be formatted as `⍏`.
 - [`try` `⍣`](https://uiua.org/docs/try) now puts arguments to its first function *above* the error value when calling the error handler
 - [`fold` `∧`](https://uiua.org/docs/fold) can now use multiple accumulators
 - Improve [`dump`](https://uiua.org/docs/dump) output formatting
+- [`dump`](https://uiua.org/docs/dump) is now a monadic modifier. Its function preprocesses each value before dumping it.
 - Add the [`sig`](https://uiua.org/docs/sig) function, which returns the stack signature of a value
 - Functions with ASCII glyphs now also format from their names
 - Add a style diagnostic about the captialization of binding names

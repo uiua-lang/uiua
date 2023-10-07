@@ -1478,11 +1478,25 @@ primitive!(
     (1, InvTrace, Stack),
     /// Debug print all the values currently on stack without popping them
     ///
-    /// ex: dump 1 2 3
+    /// The function is used to preprocess the values before printing.
+    /// If you just want to print the values, use [dump][identity].
+    /// ex: dump∘ 1 2 3
     /// This is useful when you want to inspect the current ordering of the stack.
-    /// For example, let's say you are juggling around some values on the stack using [restack], you can use [dump] to inspect the stack afterwards:
-    /// ex: 0 1 2
+    /// For example, if you are juggling some values on the stack, you can use [dump] to inspect the stack afterwards:
+    /// ex: 1 2 3
     ///   : ,,⊙.:
-    ///   : dump
-    (0(0), Dump, Stack, "dump"),
+    ///   : dump∘
+    ///   : +×-×+
+    /// [dump][shape] is useful if your raw array data isn't worth looking at, but the shapes are.
+    /// ex: 2_3_10 17 ↯3_4⇡12
+    ///   : dump△
+    ///   : ++
+    /// ex: ↯¯1_5 ⇡30
+    ///   : ⍉.⊃≡(⊟.)(⊞+.).
+    ///   : dump△
+    ///   : +++∩∩⧻
+    /// Error encountered within [dump]'s function are caught and dumped as strings.
+    /// ex: 1_2_3 4 5_6_7
+    ///   : dump⊢
+    (0(0)[1], Dump, Stack, "dump"),
 );

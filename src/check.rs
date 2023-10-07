@@ -73,6 +73,8 @@ impl<'a> BasicValue<'a> {
             BasicValue::Func(Cow::Borrowed(f))
         } else if let Some(n) = value.as_num_array().and_then(Array::as_scalar) {
             BasicValue::Num(*n)
+        } else if let Some(n) = value.as_byte_array().and_then(Array::as_scalar) {
+            BasicValue::Num(*n as f64)
         } else if value.rank() == 1 {
             BasicValue::Arr(match value {
                 Value::Num(n) => n.data.iter().map(|n| BasicValue::Num(*n)).collect(),

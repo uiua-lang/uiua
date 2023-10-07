@@ -387,7 +387,10 @@ impl<'a> Formatter<'a> {
             }
             Item::Binding(binding) => {
                 self.output.push_str(&binding.name.value);
-                self.output.push_str(" ← ");
+                self.output.push_str(" ←");
+                if !binding.words.is_empty() || binding.signature.is_some() {
+                    self.output.push(' ');
+                }
                 if let Some(sig) = &binding.signature {
                     self.format_signature(sig.value, true);
                 }

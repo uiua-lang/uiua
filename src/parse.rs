@@ -248,7 +248,8 @@ impl Parser {
         let s: Ident = span.as_str().into();
         if s.chars().count() >= 3 && s.chars().next().unwrap().is_lowercase() {
             self.diagnostics.push(Diagnostic::new(
-                "Binding names with 3 or more characters should be capitalized",
+                "Binding names with 3 or more characters should be capitalized \
+                to avoid collisions with future builtin functions",
                 span.clone(),
                 DiagnosticKind::Style,
             ));

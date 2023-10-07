@@ -277,6 +277,42 @@ li {
     font-size: 1.4em;
 }
 
+#settings {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.2em;
+}
+
+#settings>* {
+    display: flex;
+    gap: 0.5em;
+}
+
+input {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+input[type=number] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+#settings>*>input {
+    width: 3em;
+    border-radius: 0.5em;
+    border: none;
+}
+
+@media (prefers-color-scheme: dark) {
+    #settings>*>input {
+        background-color: #1d2c3a;
+        color: #d1daec;
+    }
+}
+
 #code-area {
     position: relative;
 }
@@ -419,14 +455,14 @@ li {
     position: absolute;
     top: 0.1em;
     right: 0.2em;
+    padding-right: 0.3em;
     font-size: min(1em, 3vw);
     align-items: center;
 }
 
 #glyphs-toggle-button {
-    margin-right: 0.3em;
     font-weight: bolder;
-    font-size: 1em;
+    font-size: 0.9em;
 }
 
 #glyphs-toggle-button:hover:after {
@@ -436,6 +472,7 @@ li {
 .editor-right-button {
     font-weight: bolder;
     opacity: 0.5;
+    padding: 0.2em 0em;
 }
 
 .editor-right-button:hover {
@@ -458,6 +495,7 @@ li {
 }
 
 #example-tracker {
+    margin-left: 0.5em;
     font-size: 0.8em;
 }
 

@@ -22,6 +22,7 @@ Uiua is not yet stable.
 - A few performance improvements, particularly to [`keep` `▽`](https://uiua.org/docs/keep), [`fork` `⊃`](https://uiua.org/docs/fork), and [`under` `⍜`](https://uiua.org/docs/under)
 ### Website
 - Add GIF output
+- Execution time limit is now 2 seconds by default but can be customized
 
 ## 0.0.16 - 2023-10-05
 ### Interpreter

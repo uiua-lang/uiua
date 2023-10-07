@@ -1512,7 +1512,14 @@ fn run_code(code: &str) -> Vec<OutputItem> {
             output.truncate(10);
             output.push(OutputItem::String("...Additional output truncated".into()));
         }
-        output.push(OutputItem::Error(error.show(false)));
+        let formatted = error.show(false);
+        let execution_limit_reached = formatted.contains("Maximum execution time exceeded");
+        output.push(OutputItem::Error(formatted));
+        if execution_limit_reached {
+            output.push(OutputItem::String(
+                "You can increase the execution time limit in the editor settings".into(),
+            ));
+        }
     }
     if !diagnotics.is_empty() {
         if !output.is_empty() {

@@ -1406,7 +1406,7 @@ fn run_code(code: &str) -> Vec<OutputItem> {
             }
         }
         // Try to convert the value to a gif
-        if let Ok(bytes) = value_to_gif_bytes(&value, 1.0 / 16.0) {
+        if let Ok(bytes) = value_to_gif_bytes(&value, 16.0) {
             match value.shape() {
                 &[_, h, w] | &[_, h, w, _] if h >= 25 && w >= 25 => {
                     stack.push(OutputItem::Gif(bytes));

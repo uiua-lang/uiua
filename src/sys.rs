@@ -238,7 +238,7 @@ sys_op! {
     (1(0), ImShow, "&ims", "image - show"),
     /// Encode a gif into a byte array
     ///
-    /// The first argument is a frame delay in seconds.
+    /// The first argument is a framerate in seconds.
     /// The second argument is the gif data and must be a rank 3 or 4 numeric array.
     /// The rows of the array are the frames of the gif, and their format must conform to that of [&ime].
     ///
@@ -246,7 +246,7 @@ sys_op! {
     (1, GifEncode, "&gife", "gif - encode"),
     /// Show a gif
     ///
-    /// The first argument is a frame delay in seconds.
+    /// The first argument is a framerate in seconds.
     /// The second argument is the gif data and must be a rank 3 or 4 numeric array.
     /// The rows of the array are the frames of the gif, and their format must conform to that of [&ime].
     ///
@@ -1926,7 +1926,7 @@ fn array_from_wav_bytes_impl<T: hound::Sample>(
     }
 }
 
-pub fn value_to_gif_bytes(value: &Value, frame_delay: f64) -> Result<Vec<u8>, String> {
+pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, String> {
     if value.row_count() == 0 {
         return Err("Cannot convert empty array into GIF".into());
     }
@@ -1976,7 +1976,8 @@ pub fn value_to_gif_bytes(value: &Value, frame_delay: f64) -> Result<Vec<u8>, St
     }
     let mut encoder = gif::Encoder::new(&mut bytes, width as u16, height as u16, &palette)
         .map_err(|e| e.to_string())?;
-    let delay = (frame_delay.abs() * 100.0) as u16;
+    const MIN_FRAME_RATE: f64 = 1.0 / 60.0;
+    let delay = ((1.0 / frame_rate.max(MIN_FRAME_RATE)).abs() * 100.0) as u16;
     encoder
         .set_repeat(gif::Repeat::Infinite)
         .map_err(|e| e.to_string())?;

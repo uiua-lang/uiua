@@ -26,6 +26,7 @@ use rand::prelude::*;
 
 use crate::{
     algorithm::{fork, loops},
+    array::Array,
     function::Function,
     grid_fmt::GridFmt,
     lex::AsciiToken,
@@ -564,6 +565,12 @@ impl Primitive {
                     Value::Char(_) => 1,
                     Value::Func(_) => 2,
                 });
+            }
+            Primitive::Sig => {
+                let val = env.pop(1)?;
+                let sig = val.signature();
+                let arr: Array<u8> = vec![sig.args as u8, sig.outputs as u8].into();
+                env.push(arr);
             }
             Primitive::Spawn => {
                 let f = env.pop("thread function")?;

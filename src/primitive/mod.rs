@@ -12,8 +12,7 @@ use std::{
         consts::{PI, TAU},
         INFINITY,
     },
-    fmt::{self, Write},
-    iter::once,
+    fmt::{self},
     sync::{
         atomic::{self, AtomicUsize},
         OnceLock,
@@ -592,30 +591,26 @@ impl Primitive {
 
 fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
     let val = env.pop(1)?;
-    let formatted = val.show();
     let span: String = if inverse {
         format!("{} {}", env.span(), Primitive::Invert)
     } else {
         env.span().to_string()
     };
-    const MD_ARRAY_INIT: &str = "╭─";
-    let message = if let Some(first_line) = formatted
-        .lines()
-        .next()
-        .filter(|line| line.starts_with(MD_ARRAY_INIT))
-    {
-        let first_line = format!("{}{}", first_line.trim(), span);
-        once(first_line.as_str())
-            .chain(formatted.lines().skip(1))
-            .fold(String::new(), |mut output, line| {
-                _ = writeln!(output, "{line}");
-                output
-            })
-    } else {
-        format!("  {span}\n{formatted}\n")
-    };
+    let max_line_len = span.chars().count() + 2;
+    let item_lines = format_trace_item_lines(
+        val.grid_string().lines().map(Into::into).collect(),
+        max_line_len,
+    );
     env.push(val);
-    env.backend.print_str_trace(&message);
+    env.backend.print_str_trace(&format!("┌╴{span}\n"));
+    for line in item_lines {
+        env.backend.print_str_trace(&line);
+    }
+    env.backend.print_str_trace("└");
+    for _ in 0..max_line_len - 1 {
+        env.backend.print_str_trace("╴");
+    }
+    env.backend.print_str_trace("\n");
     Ok(())
 }
 
@@ -637,25 +632,13 @@ fn dump(env: &mut Uiua) -> UiuaResult {
             Err(e) => items.push(e.value()),
         }
     }
-    let mut item_lines: Vec<Vec<String>> = items
+    let max_line_len = span.chars().count() + 2;
+    let item_lines: Vec<Vec<String>> = items
         .iter()
         .map(Value::grid_string)
-        .map(|s| s.lines().map(Into::into).collect())
+        .map(|s| s.lines().map(Into::into).collect::<Vec<String>>())
+        .map(|lines| format_trace_item_lines(lines, max_line_len))
         .collect();
-    let mut max_line_len = span.chars().count() + 2;
-    for item in &mut item_lines {
-        let item_len = item.len();
-        for (j, line) in item.iter_mut().enumerate() {
-            let stick = if item_len == 1 || j == 1 {
-                "├╴"
-            } else {
-                "│ "
-            };
-            line.insert_str(0, stick);
-            max_line_len = max_line_len.max(line.chars().count());
-            line.push('\n');
-        }
-    }
     env.backend.print_str_trace(&format!("┌╴{span}\n"));
     for line in item_lines.iter().flatten() {
         env.backend.print_str_trace(line);
@@ -664,7 +647,22 @@ fn dump(env: &mut Uiua) -> UiuaResult {
     for _ in 0..max_line_len - 1 {
         env.backend.print_str_trace("╴");
     }
+    env.backend.print_str_trace("\n");
     Ok(())
+}
+
+fn format_trace_item_lines(mut lines: Vec<String>, mut max_line_len: usize) -> Vec<String> {
+    for (j, line) in lines.iter_mut().enumerate() {
+        let stick = if line.len() == 1 || j == 1 {
+            "├╴"
+        } else {
+            "│ "
+        };
+        line.insert_str(0, stick);
+        max_line_len = max_line_len.max(line.chars().count());
+        line.push('\n');
+    }
+    lines
 }
 
 #[derive(Default, Debug)]

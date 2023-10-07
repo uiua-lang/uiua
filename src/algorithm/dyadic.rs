@@ -464,6 +464,14 @@ impl<T: ArrayValue> Array<T> {
                 neg_count += 1;
             }
         }
+        let derive_len = |data_len: usize, other_len: usize| {
+            (if env.fill::<T>().is_some() {
+                f32::ceil
+            } else {
+                f32::floor
+            }(data_len as f32 / other_len as f32) as usize)
+                .max(1)
+        };
         let shape: Shape = match neg_count {
             0 => dims.iter().map(|&dim| dim as usize).collect(),
             1 => {
@@ -479,7 +487,7 @@ impl<T: ArrayValue> Array<T> {
                             env.error("Cannot reshape array with any 0 non-leading dimensions")
                         );
                     }
-                    let leading_len = (self.data.len() / shape_non_leading_len).max(1);
+                    let leading_len = derive_len(self.data.len(), shape_non_leading_len);
                     let mut shape = vec![leading_len];
                     shape.extend(dims[1..].iter().map(|&dim| dim as usize));
                     Shape::from(&*shape)
@@ -496,7 +504,7 @@ impl<T: ArrayValue> Array<T> {
                             env.error("Cannot reshape array with any 0 non-trailing dimensions")
                         );
                     }
-                    let trailing_len = (self.data.len() / shape_non_trailing_len).max(1);
+                    let trailing_len = derive_len(self.data.len(), shape_non_trailing_len);
                     let mut shape: Vec<usize> = dims.iter().map(|&dim| dim as usize).collect();
                     shape.pop();
                     shape.push(trailing_len);
@@ -510,7 +518,7 @@ impl<T: ArrayValue> Array<T> {
                     if front_len == 0 || back_len == 0 {
                         return Err(env.error("Cannot reshape array with any 0 outer dimensions"));
                     }
-                    let middle_len = (self.data.len() / front_len / back_len).max(1);
+                    let middle_len = derive_len(self.data.len(), front_len * back_len);
                     let mut shape: Vec<usize> = front.iter().map(|&dim| dim as usize).collect();
                     shape.push(middle_len);
                     shape.extend(back.iter().map(|&dim| dim as usize));

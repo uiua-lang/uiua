@@ -1,8 +1,8 @@
-use std::cmp::Ordering;
+use std::{borrow::Cow, cmp::Ordering};
 
 use crate::{
     array::Array,
-    function::{Function, Instr, Signature},
+    function::{Function, FunctionId, Instr, Signature},
     primitive::Primitive,
     value::Value,
 };
@@ -40,11 +40,12 @@ struct VirtualEnv<'a> {
 
 #[derive(Debug, Clone)]
 enum BasicValue<'a> {
-    Func(&'a Function),
+    Func(Cow<'a, Function>),
     Num(f64),
     Arr(Vec<Self>),
     Other,
     Unknown,
+    DifferentSignatures,
 }
 
 impl<'a> BasicValue<'a> {
@@ -59,15 +60,17 @@ impl<'a> BasicValue<'a> {
                 args: 0,
                 outputs: 1,
             },
-            BasicValue::Other | BasicValue::Unknown => Signature {
-                args: 0,
-                outputs: 1,
-            },
+            BasicValue::Other | BasicValue::Unknown | BasicValue::DifferentSignatures => {
+                Signature {
+                    args: 0,
+                    outputs: 1,
+                }
+            }
         }
     }
     fn from_val(value: &'a Value) -> Self {
         if let Some(f) = value.as_func_array().and_then(Array::as_scalar) {
-            BasicValue::Func(f)
+            BasicValue::Func(Cow::Borrowed(f))
         } else if let Some(n) = value.as_num_array().and_then(Array::as_scalar) {
             BasicValue::Num(*n)
         } else if value.rank() == 1 {
@@ -75,7 +78,11 @@ impl<'a> BasicValue<'a> {
                 Value::Num(n) => n.data.iter().map(|n| BasicValue::Num(*n)).collect(),
                 Value::Byte(b) => b.data.iter().map(|b| BasicValue::Num(*b as f64)).collect(),
                 Value::Char(c) => c.data.iter().map(|_| BasicValue::Other).collect(),
-                Value::Func(f) => f.data.iter().map(|f| BasicValue::Func(f)).collect(),
+                Value::Func(f) => f
+                    .data
+                    .iter()
+                    .map(|f| BasicValue::Func(Cow::Borrowed(f)))
+                    .collect(),
             })
         } else {
             BasicValue::Other
@@ -118,11 +125,9 @@ impl<'a> VirtualEnv<'a> {
                     let outputs = match (sig.args, sig.outputs) {
                         (0, _) => return Err(format!("{prim}'s function {f:?} has no args")),
                         (1, 0) => 0,
-                        (1, _) => {
-                            return Err(format!("{prim}'s function {f:?} signature is {sig}"))
-                        }
+                        (1, _) => return Err(format!("{prim}'s function's signature is {sig}")),
                         (2, 1) => 1,
-                        _ => return Err(format!("{prim}'s function {f:?} signature is {sig}")),
+                        _ => return Err(format!("{prim}'s function's signature is {sig}")),
                     };
                     self.handle_args_outputs(1, outputs)?;
                 }
@@ -166,7 +171,7 @@ impl<'a> VirtualEnv<'a> {
                     let f = self.pop()?;
                     let n = self.pop()?;
                     // Break anywhere but the end of the function prevents signature checking.
-                    if let BasicValue::Func(f) = f {
+                    if let BasicValue::Func(f) = &f {
                         if instrs_contain_break_at_non_end(&f.instrs) {
                             return Err("repeat with break not at the end".into());
                         }
@@ -335,10 +340,13 @@ impl<'a> VirtualEnv<'a> {
                 Under => {
                     let f = self.pop()?;
                     let g = self.pop()?;
+                    dbg!("under", &f, &g);
                     if let BasicValue::Func(f) = f {
-                        if let Some((before, after)) = f.clone().under() {
+                        if let Some((before, after)) = f.into_owned().under() {
+                            dbg!(&before, &after);
                             let before_sig = before.signature();
                             let after_sig = after.signature();
+                            dbg!(&before_sig, g.signature(), &after_sig);
                             self.handle_sig(before_sig)?;
                             self.handle_sig(g.signature())?;
                             self.handle_sig(after_sig)?;
@@ -471,6 +479,39 @@ impl<'a> VirtualEnv<'a> {
                         }
                     }
                 }
+                Pick => {
+                    let _index = self.pop()?;
+                    let arr = self.pop()?;
+                    self.set_min_height();
+                    match arr {
+                        BasicValue::Arr(arr) if !arr.is_empty() => {
+                            let mut items = arr.iter();
+                            let mut sig = items.next().unwrap().signature();
+                            let mut function = None;
+                            for item in items {
+                                if item.signature().is_compatible_with(sig) {
+                                    sig = sig.max_with(item.signature());
+                                    if let BasicValue::Func(f) = item {
+                                        if function.is_none() {
+                                            function = Some(f);
+                                        }
+                                    }
+                                } else {
+                                    self.stack.push(BasicValue::DifferentSignatures);
+                                    return Ok(());
+                                }
+                            }
+                            let (id, instrs) = if let Some(f) = function {
+                                (f.id.clone(), f.instrs.as_slice())
+                            } else {
+                                (FunctionId::Constant, Default::default())
+                            };
+                            let f = Function::new(id, instrs, sig);
+                            self.stack.push(BasicValue::Func(Cow::Owned(f)));
+                        }
+                        _ => self.stack.push(BasicValue::Other),
+                    }
+                }
                 Call => self.handle_call()?,
                 Recur => return Err("recur present".into()),
                 prim => {
@@ -490,7 +531,6 @@ impl<'a> VirtualEnv<'a> {
                 }
             },
         }
-        self.set_min_height();
         // println!("{instr:?} -> {}/{}", self.min_height, self.stack.len());
         Ok(())
     }
@@ -521,17 +561,11 @@ impl<'a> VirtualEnv<'a> {
     }
     fn handle_call(&mut self) -> Result<(), String> {
         match self.pop()? {
-            BasicValue::Func(f) => {
-                let sig = f.signature();
-                for _ in 0..sig.args {
-                    self.pop()?;
-                }
-                self.set_min_height();
-                for _ in 0..sig.outputs {
-                    self.stack.push(BasicValue::Other);
-                }
-            }
+            BasicValue::Func(f) => self.handle_sig(f.signature())?,
             BasicValue::Unknown => return Err("call with unknown function".into()),
+            BasicValue::DifferentSignatures => {
+                return Err("call could potentially have different signatures".into())
+            }
             val => self.stack.push(val),
         }
         Ok(())

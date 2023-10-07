@@ -11,7 +11,7 @@ use crate::{
     UiuaResult,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 #[repr(u8)]
 pub enum Instr {
     Push(Box<Value>) = 0,
@@ -124,19 +124,26 @@ impl Instr {
     }
 }
 
+impl fmt::Debug for Instr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self}")
+    }
+}
+
 impl fmt::Display for Instr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Instr::Push(val) => write!(f, "{val:?}"),
             Instr::BeginArray => write!(f, "]"),
             Instr::EndArray { .. } => write!(f, "["),
+            Instr::Prim(prim @ Primitive::Over, _) => write!(f, "`{prim}`"),
             Instr::Prim(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => write!(f, "!"),
             Instr::Dynamic(df) => write!(f, "{df:?}"),
-            Instr::PushTemp { count, .. } => write!(f, "push temp {}", count),
-            Instr::PopTemp { count, .. } => write!(f, "pop temp {}", count),
-            Instr::CopyTemp { offset, count, .. } => write!(f, "copy temp {}/{}", offset, count),
-            Instr::DropTemp { count, .. } => write!(f, "drop temp {}", count),
+            Instr::PushTemp { count, .. } => write!(f, "<push temp {}>", count),
+            Instr::PopTemp { count, .. } => write!(f, "<pop temp {}>", count),
+            Instr::CopyTemp { offset, count, .. } => write!(f, "<copy temp {}/{}>", offset, count),
+            Instr::DropTemp { count, .. } => write!(f, "<drop temp {}>", count),
         }
     }
 }

@@ -37,7 +37,7 @@ pub(crate) fn invert_instrs(instrs: &[Instr]) -> Option<Vec<Instr>> {
         return inverted;
     }
 
-    // println!("invert {:?}", instrs);
+    // println!("inverting {:?}", instrs);
     let mut inverted = Vec::new();
     let mut start = instrs.len() - 1;
     let mut end = instrs.len();
@@ -156,6 +156,7 @@ pub(crate) fn under_instrs(instrs: &[Instr]) -> Option<Under> {
             end = start;
             start = 0;
         } else if start == end - 1 {
+            // println!("under of {:?} failed", instrs);
             return None;
         } else {
             start += 1;
@@ -171,10 +172,10 @@ pub(crate) fn under_instrs(instrs: &[Instr]) -> Option<Under> {
     Some(under)
 }
 
-fn under_instr_fragment(mut instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr>)> {
+fn under_instr_fragment(instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr>)> {
     use Instr::*;
     use Primitive::*;
-    if let Some(inverted) = invert_instr_fragment(instrs) {
+    if let Some(inverted) = invert_instrs(instrs) {
         return Some((Cow::Borrowed(instrs), inverted));
     }
 
@@ -196,20 +197,18 @@ fn under_instr_fragment(mut instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr
         _ => {}
     }
 
-    let push_temp = self::PushTemp;
-    let pop_temp = self::PopTemp;
-
     macro_rules! stash2 {
         ($before:expr, $after:expr) => {
             (
                 [$before],
-                [Over.i(), Over.i(), push_temp(2).i(), $before.i()],
-                [pop_temp(2).i(), Unroll.i(), $after.i()],
+                [Over.i(), Over.i(), PushTempN(2).i(), $before.i()],
+                [PopTempN(2).i(), Unroll.i(), $after.i()],
             )
         };
     }
 
     let patterns: &[&dyn UnderPattern] = &[
+        &under_temp_pattern,
         &(Val, stash2!(Take, Untake)),
         &stash2!(Take, Untake),
         &(Val, stash2!(Drop, Undrop)),
@@ -222,69 +221,82 @@ fn under_instr_fragment(mut instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr
             Val,
             (
                 [Keep],
-                [Over.i(), Over.i(), push_temp(2).i(), Keep.i()],
-                [pop_temp(1).i(), Flip.i(), pop_temp(1).i(), Unkeep.i()],
+                [Over.i(), Over.i(), PushTempN(2).i(), Keep.i()],
+                [PopTempN(1).i(), Flip.i(), PopTempN(1).i(), Unkeep.i()],
             ),
         ),
         &(
             [Keep],
-            [Over.i(), Over.i(), push_temp(2).i(), Keep.i()],
-            [pop_temp(1).i(), Flip.i(), pop_temp(1).i(), Unkeep.i()],
+            [Over.i(), Over.i(), PushTempN(2).i(), Keep.i()],
+            [PopTempN(1).i(), Flip.i(), PopTempN(1).i(), Unkeep.i()],
         ),
         &(
             [Rotate],
-            [Dup.i(), push_temp(1).i(), Rotate.i()],
-            [pop_temp(1).i(), Neg.i(), Rotate.i()],
+            [Dup.i(), PushTempN(1).i(), Rotate.i()],
+            [PopTempN(1).i(), Neg.i(), Rotate.i()],
         ),
         &(
             [First],
-            [Dup.i(), push_temp(1).i(), First.i()],
-            [pop_temp(1).i(), 1.i(), Drop.i(), Flip.i(), Join.i()],
+            [Dup.i(), PushTempN(1).i(), First.i()],
+            [PopTempN(1).i(), 1.i(), Drop.i(), Flip.i(), Join.i()],
         ),
         &(
             [Last],
-            [Dup.i(), push_temp(1).i(), Last.i()],
-            [pop_temp(1).i(), (-1).i(), Drop.i(), Join.i()],
+            [Dup.i(), PushTempN(1).i(), Last.i()],
+            [PopTempN(1).i(), (-1).i(), Drop.i(), Join.i()],
         ),
         &(
             [Shape],
-            [Dup.i(), push_temp(1).i(), Shape.i()],
-            [pop_temp(1).i(), Flip.i(), Reshape.i()],
+            [Dup.i(), PushTempN(1).i(), Shape.i()],
+            [PopTempN(1).i(), Flip.i(), Reshape.i()],
         ),
         &(
             [Deshape],
-            [Dup.i(), Shape.i(), push_temp(1).i(), Deshape.i()],
-            [pop_temp(1).i(), Reshape.i()],
+            [Dup.i(), Shape.i(), PushTempN(1).i(), Deshape.i()],
+            [PopTempN(1).i(), Reshape.i()],
         ),
         &(
             [Pow],
-            [Dup.i(), push_temp(1).i(), Pow.i()],
-            [pop_temp(1).i(), 1.i(), Div.i(), Pow.i()],
+            [Dup.i(), PushTempN(1).i(), Pow.i()],
+            [PopTempN(1).i(), 1.i(), Div.i(), Pow.i()],
         ),
         &(
             [Log],
-            [Dup.i(), push_temp(1).i(), Log.i()],
-            [pop_temp(1).i(), Pow.i()],
+            [Dup.i(), PushTempN(1).i(), Log.i()],
+            [PopTempN(1).i(), Pow.i()],
         ),
     ];
 
     let mut befores = Vec::new();
     let mut afters = Vec::new();
+    let mut instrs_sections = instrs;
     'find_pattern: loop {
         for pattern in patterns {
-            if let Some((input, (bef, aft))) = pattern.under_extract(instrs) {
-                // println!("matched under pattern: {pattern:?}");
+            if let Some((input, (bef, aft))) = pattern.under_extract(instrs_sections) {
                 befores.extend(bef);
                 afters = aft.into_iter().chain(afters).collect();
                 if input.is_empty() {
+                    // println!("under fragment {:?} to {:?} {:?}", instrs, befores, afters);
                     return Some((Cow::Owned(befores), afters));
                 }
-                instrs = input;
+                instrs_sections = input;
                 continue 'find_pattern;
             }
         }
+        if let Some(after) = invert_instrs(instrs_sections) {
+            // println!("inverse as under patter: {:?} -> {:?}", instrs, after);
+            let before = instrs_sections.to_vec();
+            befores.extend(before);
+            afters = after.into_iter().chain(afters).collect();
+            // println!("under fragment {:?} to {:?} {:?}", instrs, befores, afters);
+            return Some((Cow::Owned(befores), afters));
+        }
         break;
     }
+    // println!(
+    //     "under fragment {:?} failed with remaining {:?}",
+    //     instrs, instrs_sections
+    // );
 
     None
 }
@@ -300,8 +312,8 @@ trait AsInstr: fmt::Debug {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct PushTemp(usize);
-impl AsInstr for PushTemp {
+struct PushTempN(usize);
+impl AsInstr for PushTempN {
     fn as_instr(&self, span: usize) -> Instr {
         Instr::PushTemp {
             count: self.0,
@@ -311,8 +323,8 @@ impl AsInstr for PushTemp {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct PopTemp(usize);
-impl AsInstr for PopTemp {
+struct PopTempN(usize);
+impl AsInstr for PopTempN {
     fn as_instr(&self, span: usize) -> Instr {
         Instr::PopTemp {
             count: self.0,
@@ -343,8 +355,25 @@ trait InvertPattern {
     fn invert_extract<'a>(&self, input: &'a [Instr]) -> Option<(&'a [Instr], Vec<Instr>)>;
 }
 
-trait UnderPattern: fmt::Debug {
+trait UnderPattern {
     fn under_extract<'a>(&self, input: &'a [Instr]) -> Option<(&'a [Instr], Under)>;
+}
+
+fn under_temp_pattern(input: &[Instr]) -> Option<(&[Instr], Under)> {
+    let (input, (mut bef, mut aft)) = Val.under_extract(input)?;
+    match input.split_first()? {
+        (&Instr::PushTemp { count, span }, input) => {
+            bef.push(Instr::PushTemp { count, span });
+            aft.insert(0, Instr::PopTemp { count, span });
+            Some((input, (bef, aft)))
+        }
+        (&Instr::PopTemp { count, span }, input) => {
+            bef.push(Instr::PopTemp { count, span });
+            aft.insert(0, Instr::PushTemp { count, span });
+            Some((input, (bef, aft)))
+        }
+        _ => None,
+    }
 }
 
 impl<A: InvertPattern, B: InvertPattern> InvertPattern for (A, B) {
@@ -503,6 +532,15 @@ where
     F: Fn(&[Instr]) -> Option<(&[Instr], Vec<Instr>)>,
 {
     fn invert_extract<'a>(&self, input: &'a [Instr]) -> Option<(&'a [Instr], Vec<Instr>)> {
+        self(input)
+    }
+}
+
+impl<F> UnderPattern for F
+where
+    F: Fn(&[Instr]) -> Option<(&[Instr], Under)>,
+{
+    fn under_extract<'a>(&self, input: &'a [Instr]) -> Option<(&'a [Instr], Under)> {
         self(input)
     }
 }

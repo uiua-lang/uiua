@@ -32,7 +32,7 @@
 ;(|1 ⍜⊔∘)
 ;(|1 ⍜(↙2)⇌)
 ;(|2 ⍜↙⇌)
-# ;(|3 ⍜(↙⊙↘)⇌) # Need to make this work
+;(|3 ⍜(↙⊙↘)⇌) # Need to make this work
 
 # Call
 ;(|3 !⊡∶+_-_×_÷)

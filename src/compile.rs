@@ -487,8 +487,19 @@ impl Uiua {
             let (mut instrs, _) = self.compile_operand_words(modified.operands)?;
             let span = self.add_span(modified.modifier.span.clone());
             if modified.modifier.value == Primitive::Dip {
-                instrs.insert(0, Instr::PushTemp { count: 1, span });
-                instrs.push(Instr::PopTemp { count: 1, span });
+                instrs.insert(
+                    0,
+                    Instr::PushTemp {
+                        count: 1,
+                        span,
+                        kind: TempKind::Inline,
+                    },
+                );
+                instrs.push(Instr::PopTemp {
+                    count: 1,
+                    span,
+                    kind: TempKind::Inline,
+                });
             } else {
                 instrs.insert(0, Instr::Prim(Primitive::Pop, span));
             }
@@ -524,12 +535,17 @@ impl Uiua {
             if let Some((a_sig, b_sig)) = a_sig.ok().zip(b_sig.ok()) {
                 let span = self.add_span(modified.modifier.span.clone());
                 let count = a_sig.args.max(b_sig.args);
-                let mut instrs = vec![Instr::PushTemp { count, span }];
+                let mut instrs = vec![Instr::PushTemp {
+                    count,
+                    span,
+                    kind: TempKind::Inline,
+                }];
                 if b_sig.args > 0 {
                     instrs.push(Instr::CopyTemp {
                         offset: count - b_sig.args,
                         count: b_sig.args,
                         span,
+                        kind: TempKind::Inline,
                     });
                 }
                 instrs.extend(b_instrs);
@@ -537,11 +553,13 @@ impl Uiua {
                     instrs.push(Instr::DropTemp {
                         count: count - a_sig.args,
                         span,
+                        kind: TempKind::Inline,
                     });
                 }
                 instrs.push(Instr::PopTemp {
                     count: a_sig.args,
                     span,
+                    kind: TempKind::Inline,
                 });
                 instrs.extend(a_instrs);
                 return if call {

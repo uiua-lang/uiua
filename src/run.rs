@@ -34,8 +34,10 @@ pub struct Uiua {
     pub(crate) spans: Arc<Mutex<Vec<Span>>>,
     /// The thread's stack
     pub(crate) stack: Vec<Value>,
-    /// The thread's temp stack
-    temp_stack: Vec<Value>,
+    /// The thread's temp stack for inlining
+    inline_stack: Vec<Value>,
+    /// The thread's temp stack for unders
+    under_stack: Vec<Value>,
     /// The current scope
     pub(crate) scope: Scope,
     /// Ancestor scopes of the current one
@@ -160,7 +162,8 @@ impl Uiua {
         Uiua {
             spans: Arc::new(Mutex::new(vec![Span::Builtin])),
             stack: Vec::new(),
-            temp_stack: Vec::new(),
+            inline_stack: Vec::new(),
+            under_stack: Vec::new(),
             scope,
             higher_scopes: Vec::new(),
             globals: Arc::new(Mutex::new(globals)),
@@ -407,19 +410,27 @@ code:
                     .pop("called function")
                     .and_then(|f| self.call_with_span(f, span)),
                 Instr::Dynamic(df) => df.f.clone()(self),
-                &Instr::PushTemp { count, span } => (|| {
+                &Instr::PushTemp { count, span, kind } => (|| {
                     self.push_span(span, None);
                     for _ in 0..count {
                         let value = self.pop("value to move to temp")?;
-                        self.temp_stack.push(value);
+                        let stack = match kind {
+                            TempKind::Inline => &mut self.inline_stack,
+                            TempKind::Under => &mut self.under_stack,
+                        };
+                        stack.push(value);
                     }
                     self.pop_span();
                     Ok(())
                 })(),
-                &Instr::PopTemp { count, span } => (|| {
+                &Instr::PopTemp { count, span, kind } => (|| {
                     self.push_span(span, None);
                     for _ in 0..count {
-                        let value = self.temp_stack.pop().ok_or_else(|| {
+                        let stack = match kind {
+                            TempKind::Inline => &mut self.inline_stack,
+                            TempKind::Under => &mut self.under_stack,
+                        };
+                        let value = stack.pop().ok_or_else(|| {
                             self.error("Temp stack was empty when evaluating value to pop")
                         })?;
                         self.push(value);
@@ -431,29 +442,42 @@ code:
                     offset,
                     count,
                     span,
+                    kind,
                 } => (|| {
                     self.push_span(span, None);
-                    if self.temp_stack.len() < offset + count {
+                    let stack = match kind {
+                        TempKind::Inline => &mut self.inline_stack,
+                        TempKind::Under => &mut self.under_stack,
+                    };
+                    if stack.len() < offset + count {
                         return Err(
                             self.error("Temp stack was empty when evaluating value to copy")
                         );
                     }
-                    let start = self.temp_stack.len() - offset;
+                    let start = stack.len() - offset;
                     for i in 0..count {
-                        let value = self.temp_stack[start - i - 1].clone();
+                        let stack = match kind {
+                            TempKind::Inline => &mut self.inline_stack,
+                            TempKind::Under => &mut self.under_stack,
+                        };
+                        let value = stack[start - i - 1].clone();
                         self.push(value);
                     }
                     self.pop_span();
                     Ok(())
                 })(),
-                &Instr::DropTemp { count, span } => (|| {
+                &Instr::DropTemp { count, span, kind } => (|| {
                     self.push_span(span, None);
-                    if self.temp_stack.len() < count {
+                    let stack = match kind {
+                        TempKind::Inline => &mut self.inline_stack,
+                        TempKind::Under => &mut self.under_stack,
+                    };
+                    if stack.len() < count {
                         return Err(
                             self.error("Temp stack was empty when evaluating value to drop")
                         );
                     }
-                    self.temp_stack.truncate(self.temp_stack.len() - count);
+                    stack.truncate(stack.len() - count);
                     self.pop_span();
                     Ok(())
                 })(),
@@ -773,7 +797,8 @@ code:
                 .stack
                 .drain(self.stack.len() - capture_count..)
                 .collect(),
-            temp_stack: Vec::new(),
+            inline_stack: Vec::new(),
+            under_stack: Vec::new(),
             scope: self.scope.clone(),
             higher_scopes: self.higher_scopes.last().cloned().into_iter().collect(),
             mode: self.mode,

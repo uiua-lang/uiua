@@ -15,31 +15,41 @@ use crate::{
 #[repr(u8)]
 pub enum Instr {
     Push(Box<Value>) = 0,
-    BeginArray = 1,
+    BeginArray,
     EndArray {
         constant: bool,
         span: usize,
-    } = 2,
-    Prim(Primitive, usize) = 3,
-    Call(usize) = 4,
-    Dynamic(DynamicFunction) = 5,
+    },
+    Prim(Primitive, usize),
+    Call(usize),
+    Dynamic(DynamicFunction),
     PushTemp {
         count: usize,
         span: usize,
-    } = 6,
+        kind: TempKind,
+    },
     PopTemp {
         count: usize,
         span: usize,
-    } = 7,
+        kind: TempKind,
+    },
     CopyTemp {
         offset: usize,
         count: usize,
         span: usize,
-    } = 8,
+        kind: TempKind,
+    },
     DropTemp {
         count: usize,
         span: usize,
-    } = 9,
+        kind: TempKind,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TempKind {
+    Inline,
+    Under,
 }
 
 impl PartialEq for Instr {
@@ -149,10 +159,15 @@ impl fmt::Display for Instr {
             Instr::Prim(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => write!(f, "!"),
             Instr::Dynamic(df) => write!(f, "{df:?}"),
-            Instr::PushTemp { count, .. } => write!(f, "<push temp {}>", count),
-            Instr::PopTemp { count, .. } => write!(f, "<pop temp {}>", count),
-            Instr::CopyTemp { offset, count, .. } => write!(f, "<copy temp {}/{}>", offset, count),
-            Instr::DropTemp { count, .. } => write!(f, "<drop temp {}>", count),
+            Instr::PushTemp { count, kind, .. } => write!(f, "<push {kind:?} {count}>"),
+            Instr::PopTemp { count, kind, .. } => write!(f, "<pop {kind:?} {count}>"),
+            Instr::CopyTemp {
+                offset,
+                count,
+                kind,
+                ..
+            } => write!(f, "<copy {kind:?} {offset}/{count}>"),
+            Instr::DropTemp { count, kind, .. } => write!(f, "<drop {kind:?} {count}>"),
         }
     }
 }

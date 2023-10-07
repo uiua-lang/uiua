@@ -350,7 +350,6 @@ impl<'a> VirtualEnv<'a> {
                         } else {
                             // We could return an error here,
                             // but the "no inverse found" error is more useful.
-                            return Err("under with no inverse".into());
                         }
                     } else {
                         return Err("under with non-function".into());

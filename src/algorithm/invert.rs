@@ -4,7 +4,7 @@ use std::{cell::RefCell, collections::HashMap, fmt};
 
 use crate::{
     check::instrs_signature,
-    function::{Function, Instr},
+    function::{Function, Instr, TempKind},
     primitive::Primitive,
     value::Value,
 };
@@ -179,6 +179,7 @@ fn under_instrs_impl(instrs: &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
     }
 
     let patterns: &[&dyn UnderPattern] = &[
+        &UnderPatternFn(under_from_inverse_pattern),
         &UnderPatternFn(under_temp_pattern),
         &(Val, stash2!(Take, Untake)),
         &stash2!(Take, Untake),
@@ -245,15 +246,43 @@ fn under_instrs_impl(instrs: &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
         for pattern in patterns {
             if let Some((input, (bef, aft))) = pattern.under_extract(instrs_sections) {
                 // println!(
-                //     "matched pattern {:?} on {:?} to {:?} {:?}",
+                //     "matched pattern {:?} on {:?} to {bef:?} {aft:?}",
                 //     pattern,
                 //     &instrs_sections[..instrs_sections.len() - input.len()],
-                //     bef,
-                //     aft
                 // );
                 befores.extend(bef);
                 afters = aft.into_iter().chain(afters).collect();
                 if input.is_empty() {
+                    // Hacky solution for when there are both inline and under temps
+                    // in the afters
+                    // With this hack, both these will work:
+                    // f ← |3 ⍜(|3 ↙⊙↘)(×10)
+                    // f 2 1 [1 2 3 4 5]
+                    // f ← ⍜⊙⇌(×10)
+                    // f [1 2 3] [4 5 6]
+                    if afters.iter().any(|instr| {
+                        matches!(
+                            instr,
+                            Instr::PopTemp {
+                                kind: TempKind::Under,
+                                ..
+                            }
+                        )
+                    }) {
+                        afters.retain(|instr| {
+                            !matches!(
+                                instr,
+                                Instr::PopTemp {
+                                    kind: TempKind::Inline,
+                                    ..
+                                } | Instr::PushTemp {
+                                    kind: TempKind::Inline,
+                                    ..
+                                }
+                            )
+                        });
+                    }
+
                     // println!("under {:?} to {:?} {:?}", instrs, befores, afters);
                     return Some((befores, afters));
                 }
@@ -261,20 +290,12 @@ fn under_instrs_impl(instrs: &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
                 continue 'find_pattern;
             }
         }
-        // if let Some(after) = invert_instrs(instrs_sections) {
-        //     // println!("inverse as under patter: {:?} -> {:?}", instrs, after);
-        //     let before = instrs_sections.to_vec();
-        //     befores.extend(before);
-        //     afters = after.into_iter().chain(afters).collect();
-        //     // println!("under fragment {:?} to {:?} {:?}", instrs, befores, afters);
-        //     return Some((Cow::Owned(befores), afters));
-        // }
         break;
     }
-    // println!(
-    //     "under {:?} failed with remaining {:?}",
-    //     instrs, instrs_sections
-    // );
+    println!(
+        "under {:?} failed with remaining {:?}",
+        instrs, instrs_sections
+    );
 
     None
 }
@@ -296,6 +317,7 @@ impl AsInstr for PushTempN {
         Instr::PushTemp {
             count: self.0,
             span,
+            kind: TempKind::Under,
         }
     }
 }
@@ -307,6 +329,7 @@ impl AsInstr for PopTempN {
         Instr::PopTemp {
             count: self.0,
             span,
+            kind: TempKind::Under,
         }
     }
 }
@@ -337,20 +360,36 @@ trait UnderPattern: fmt::Debug {
     fn under_extract<'a>(&self, input: &'a [Instr]) -> Option<(&'a [Instr], Under)>;
 }
 
+fn under_from_inverse_pattern(input: &[Instr]) -> Option<(&[Instr], Under)> {
+    if input.is_empty() {
+        return None;
+    }
+    let mut end = input.len();
+    loop {
+        if let Some(inverse) = invert_instrs(&input[..end]) {
+            return Some((&input[end..], (input[..end].to_vec(), inverse)));
+        }
+        if end == 1 {
+            return None;
+        }
+        end -= 1;
+    }
+}
+
 fn under_temp_pattern(input: &[Instr]) -> Option<(&[Instr], Under)> {
     match input.split_first()? {
-        (&Instr::PushTemp { count, span }, input) => Some((
+        (&Instr::PushTemp { count, span, kind }, input) => Some((
             input,
             (
-                vec![Instr::PushTemp { count, span }],
-                vec![Instr::PopTemp { count, span }],
+                vec![Instr::PushTemp { count, span, kind }],
+                vec![Instr::PopTemp { count, span, kind }],
             ),
         )),
-        (&Instr::PopTemp { count, span }, input) => Some((
+        (&Instr::PopTemp { count, span, kind }, input) => Some((
             input,
             (
-                vec![Instr::PopTemp { count, span }],
-                vec![Instr::PushTemp { count, span }],
+                vec![Instr::PopTemp { count, span, kind }],
+                vec![Instr::PushTemp { count, span, kind }],
             ),
         )),
         _ => None,
@@ -463,11 +502,11 @@ where
             (
                 b.iter()
                     .zip(spans.iter().cycle())
-                    .map(|(p, s)| p.as_instr(*s))
+                    .map(|(p, s)| p.clone().as_instr(*s))
                     .collect(),
                 c.iter()
                     .zip(spans.iter().cycle())
-                    .map(|(p, s)| p.as_instr(*s))
+                    .map(|(p, s)| p.clone().as_instr(*s))
                     .collect(),
             ),
         ))

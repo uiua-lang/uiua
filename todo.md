@@ -1,3 +1,4 @@
+- Make the life example a gif
 - Proofread tour, tutorial, and function docs
 - Make `if` handle its signatures like `fork` does
 - Inline some functions with `distribute`

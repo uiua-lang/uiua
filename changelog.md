@@ -15,6 +15,7 @@ Uiua is not yet stable.
 - Improve [`dump`](https://uiua.org/docs/dump) output formatting
 - [`dump`](https://uiua.org/docs/dump) is now a monadic modifier. Its function preprocesses each value before dumping it.
 - Add the [`sig`](https://uiua.org/docs/sig) function, which returns the stack signature of a value
+- A negative dimensions in the shape passed to [`reshape` `↯`](https://uiua.org/docs/reshape) can now be in *any* position, not just the first or last
 - Functions with ASCII glyphs now also format from their names
 - Add a style diagnostic about the captialization of binding names
 ### Interpreter

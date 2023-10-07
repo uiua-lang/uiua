@@ -3233,16 +3233,12 @@ dependencies = [
 name = "uiua"
 version = "0.0.16"
 dependencies = [
- "ansi_colours",
  "ariadne",
- "base64",
  "bufreaderwriter",
  "clap",
  "color-backtrace",
  "colored",
- "console",
  "crossbeam-channel",
- "crossterm",
  "ctrlc",
  "dashmap",
  "ecow",
@@ -3254,7 +3250,6 @@ dependencies = [
  "image",
  "indexmap 1.9.3",
  "instant",
- "lazy_static",
  "lockfree",
  "notify",
  "num_cpus",
@@ -3265,12 +3260,11 @@ dependencies = [
  "rustls",
  "serde",
  "serde_yaml",
- "tempfile",
  "term_size",
- "termcolor",
  "tinyvec",
  "tokio",
  "tower-lsp",
+ "viuer",
  "webpki-roots",
 ]
 
@@ -3375,6 +3369,22 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
+
+[[package]]
+name = "viuer"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec2ede5c8814363f92f862892dfe71a266f6816b649ca435aed1ff5e2cf3454e"
+dependencies = [
+ "ansi_colours",
+ "base64",
+ "console",
+ "crossterm",
+ "image",
+ "lazy_static",
+ "tempfile",
+ "termcolor",
+]
 
 [[package]]
 name = "walkdir"

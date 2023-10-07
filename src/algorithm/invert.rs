@@ -463,11 +463,11 @@ where
             (
                 b.iter()
                     .zip(spans.iter().cycle())
-                    .map(|(p, s)| p.clone().as_instr(*s))
+                    .map(|(p, s)| p.as_instr(*s))
                     .collect(),
                 c.iter()
                     .zip(spans.iter().cycle())
-                    .map(|(p, s)| p.clone().as_instr(*s))
+                    .map(|(p, s)| p.as_instr(*s))
                     .collect(),
             ),
         ))

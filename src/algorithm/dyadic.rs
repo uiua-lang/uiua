@@ -1569,19 +1569,22 @@ impl<T: ArrayValue> Array<T> {
                 self.format_shape()
             )));
         }
-        for (i, (size, sh)) in size_spec.iter().zip(&self.shape).enumerate() {
-            if *size > *sh {
-                return Err(env.error(format!(
-                    "Cannot take window of size {size} along axis {i} of shape {}",
-                    self.format_shape()
-                )));
-            }
-        }
         // Determine the shape of the windows array
         let mut new_shape = Shape::with_capacity(self.shape.len() + size_spec.len());
-        new_shape.extend(self.shape.iter().zip(size_spec).map(|(a, b)| a - b + 1));
+        new_shape.extend(
+            self.shape
+                .iter()
+                .zip(size_spec)
+                .map(|(a, b)| (a + 1).saturating_sub(*b)),
+        );
         new_shape.extend_from_slice(size_spec);
         new_shape.extend_from_slice(&self.shape[size_spec.len()..]);
+        // Check if the window size is too large
+        for (size, sh) in size_spec.iter().zip(&self.shape) {
+            if *size > *sh {
+                return Ok(Self::new(new_shape, Vec::new()));
+            }
+        }
         // Make a new window shape with the same rank as the windowed array
         let mut true_size: Vec<usize> = Vec::with_capacity(self.shape.len());
         true_size.extend(size_spec);

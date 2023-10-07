@@ -1,5 +1,6 @@
 - End primitive parsing at capital letter
 - Proofread tour, tutorial, and function docs
+- Make `unbox` able to call monadic functions
 - Make `if` handle its signatures like `fork` does
 - Improve multiple end-of-line comment formatting
 - Inline some functions with `distribute`

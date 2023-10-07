@@ -410,6 +410,10 @@ li {
     margin: 0 0 0 0.2em;
 }
 
+.important-button {
+    animation: fadeAnimation 2s infinite;
+}
+
 #code-right-side {
     display: flex;
     position: absolute;

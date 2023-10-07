@@ -133,7 +133,7 @@ uiuisms!(
     r#"$"_" 17"#,
     /// Convert a string to a number
     r#"parse "42""#,
-    // Parse a string as a base 2 number (and convert it to its decimal representation)
+    // Parse a string as a base 2 number
     r#"/+×ⁿ⇌⇡⧻,⊙-∶@0 2 "110""#,
     /// Convert a string to a list of code points
     r#"-@\0 "Uiua""#,

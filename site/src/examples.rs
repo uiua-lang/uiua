@@ -34,10 +34,10 @@ Z ← ⊟/- ⁿ2 ∶×2 /×.⇌
 ⇌⍘⍉⊞⊟.×4 ÷∶-÷2,⇡. 300
 <2 √/+ ⁿ2;∶⍥(+Z ∶,)20 ↯∶0△.";
 const LIFE: &str = "\
-Life ← ↥⊙↧=3∶=2.-,/+/+⍚1_2↻-1⇡3_3.
-⬚0↙10_10 ⋯×4 0_2_4_7 # init
-;⍥(⊙'⊂∶.Life)10.     # run
-▽↯⧻,∶⍉▽↯⧻,,∶4        # upscale";
+Life ← ↥⊙↧∩=3,2-,/+/+⍚1_2↻-1⇡3_3.
+⁅×0.7∵(⚂;)↯⊟.40 0     # Init
+⇌;⍥(⊃∘⊂Life)120⊃∘(↯1) # Run
+≡(▽↯⧻,∶⍉▽↯⧻,,∶5)      # Upscale";
 
 pub const EXAMPLES: &[&str] = &[
     UIUA, FORMAT, D3, LOGO, AVG, CHORD, QUADRATIC, STRIPES, PALINDROME, AUTOMATA, ROMAN,

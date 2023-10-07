@@ -135,6 +135,8 @@ uiuisms!(
     r#"-@\0 "Uiua""#,
     /// Convert a list of code points to a string
     r#"+@\0 [85 105 117 97]"#,
+    // Parse a string as a base 2 number (and convert it to its decimal representation)
+    r#"/+×ⁿ⇌⇡⧻,⊙-∶@0 2 "110""#,
     /// Find the indices of all 1s
     "▽∶⇡⧻. [0 1 0 0 1]",
     /// Interleave two arrays

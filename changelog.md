@@ -17,6 +17,8 @@ Uiua is not yet stable.
 - Add the [`sig`](https://uiua.org/docs/sig) function, which returns the stack signature of a value
 - Functions with ASCII glyphs now also format from their names
 - Add a style diagnostic about the captialization of binding names
+### Interpreter
+- A few performance improvements, particularly to [`keep` `▽`](https://uiua.org/docs/keep), [`fork` `⊃`](https://uiua.org/docs/fork), and [`under` `⍜`](https://uiua.org/docs/under)
 ### Website
 - Add GIF output
 

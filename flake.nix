@@ -24,5 +24,13 @@
     in
       {
         packages.default = uiua-crate;
+        devShell = pkgs.mkShell {
+          inputsFrom = builtins.attrValues self.packages.${system};
+          nativeBuildInputs = [
+            pkgs.clippy
+            pkgs.rust-analyzer
+            pkgs.rustfmt
+          ];
+        };
       });
 }

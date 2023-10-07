@@ -262,7 +262,7 @@ impl Allowed {
                 p.names().is_some_and(|n| {
                     n.text.to_lowercase() == part
                         || n.ascii.is_some_and(|a| a.to_string() == part)
-                        || n.unicode.is_some_and(|u| part.chars().all(|c| c == u))
+                        || n.glyph.is_some_and(|u| part.chars().all(|c| c == u))
                 })
             })
         };
@@ -288,7 +288,7 @@ impl Allowed {
                             .is_some_and(|simple| part.contains(&simple.to_string()))
                     }))
                     .chain(
-                        all().filter(|p| p.unicode().is_some_and(|unicode| part.contains(unicode))),
+                        all().filter(|p| p.glyph().is_some_and(|unicode| part.contains(unicode))),
                     );
                 prims.extend(matches);
             }

@@ -71,7 +71,7 @@ impl PrimClass {
 pub struct PrimNames {
     pub text: &'static str,
     pub ascii: Option<AsciiToken>,
-    pub unicode: Option<char>,
+    pub glyph: Option<char>,
 }
 
 impl From<&'static str> for PrimNames {
@@ -79,32 +79,32 @@ impl From<&'static str> for PrimNames {
         Self {
             text,
             ascii: None,
-            unicode: None,
+            glyph: None,
         }
     }
 }
 impl From<(&'static str, char)> for PrimNames {
-    fn from((text, unicode): (&'static str, char)) -> Self {
+    fn from((text, glyph): (&'static str, char)) -> Self {
         Self {
             text,
             ascii: None,
-            unicode: Some(unicode),
+            glyph: Some(glyph),
         }
     }
 }
 impl From<(&'static str, AsciiToken, char)> for PrimNames {
-    fn from((text, ascii, unicode): (&'static str, AsciiToken, char)) -> Self {
+    fn from((text, ascii, glyph): (&'static str, AsciiToken, char)) -> Self {
         Self {
             text,
             ascii: Some(ascii),
-            unicode: Some(unicode),
+            glyph: Some(glyph),
         }
     }
 }
 
 impl fmt::Display for Primitive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(c) = self.unicode() {
+        if let Some(c) = self.glyph() {
             write!(f, "{}", c)
         } else if let Some(s) = self.ascii() {
             write!(f, "{}", s)
@@ -144,8 +144,8 @@ impl Primitive {
     pub fn ascii(&self) -> Option<AsciiToken> {
         self.names().and_then(|n| n.ascii)
     }
-    pub fn unicode(&self) -> Option<char> {
-        self.names().and_then(|n| n.unicode)
+    pub fn glyph(&self) -> Option<char> {
+        self.names().and_then(|n| n.glyph)
     }
     /// Find a primitive by its text name
     pub fn from_name(name: &str) -> Option<Self> {
@@ -154,8 +154,8 @@ impl Primitive {
     pub fn from_simple(s: AsciiToken) -> Option<Self> {
         Self::all().find(|p| p.ascii() == Some(s))
     }
-    pub fn from_unicode(c: char) -> Option<Self> {
-        Self::all().find(|p| p.unicode() == Some(c))
+    pub fn from_glyph(c: char) -> Option<Self> {
+        Self::all().find(|p| p.glyph() == Some(c))
     }
     pub fn is_modifier(&self) -> bool {
         self.modifier_args().is_some()
@@ -219,8 +219,11 @@ impl Primitive {
         if name.len() < 3 {
             return None;
         }
-        let mut matching =
-            Primitive::all().filter(|p| p.names().is_some_and(|n| n.text.starts_with(name)));
+        let mut matching = Primitive::all().filter(|p| {
+            p.names().is_some_and(|n| {
+                n.glyph.is_some_and(|u| u as u32 > 127) && n.text.starts_with(name)
+            })
+        });
         let res = matching.next()?;
         let exact_match = res.names().unwrap().text == name;
         (exact_match || matching.next().is_none()).then_some(res)
@@ -703,7 +706,7 @@ impl PrimDoc {
                             name = format!("{prim:?}");
                             &name
                         }));
-                    } else if let Some(c) = prim.unicode() {
+                    } else if let Some(c) = prim.glyph() {
                         s.push(c);
                     } else {
                         s.push_str(prim.name().unwrap_or_else(|| {
@@ -1019,7 +1022,7 @@ mod tests {
             let glyphs = prims
                 .clone()
                 .flat_map(|p| {
-                    p.unicode()
+                    p.glyph()
                         .into_iter()
                         .chain(p.ascii().into_iter().flat_map(|ascii| {
                             Some(ascii.to_string())
@@ -1054,7 +1057,7 @@ mod tests {
             let format_names = format_names.join("|");
             let mut literal_names: Vec<_> = prims
                 .filter_map(|p| p.names())
-                .filter(|p| p.ascii.is_none() && p.unicode.is_none())
+                .filter(|p| p.ascii.is_none() && p.glyph.is_none())
                 .map(|n| format!("|{}", n.text))
                 .collect();
             literal_names.sort_by_key(|s| s.len());

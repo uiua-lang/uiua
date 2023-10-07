@@ -723,7 +723,7 @@ pub fn Editor<'a>(
     let mut glyph_buttons: Vec<_> = Primitive::non_deprecated()
         .filter_map(|p| {
             let text = p
-                .unicode()
+                .glyph()
                 .map(Into::into)
                 .or_else(|| p.ascii().map(|s| s.to_string()))?;
             let mut title = p.name().unwrap_or_default().to_string();

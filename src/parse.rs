@@ -234,6 +234,17 @@ impl Parser {
             self.try_spaces();
             let sig = self.try_signature();
             let words = self.try_words().unwrap_or_default();
+            // Check for uncapitalized binding names
+            if ident.value.chars().count() >= 3
+                && ident.value.chars().next().unwrap().is_lowercase()
+            {
+                self.diagnostics.push(Diagnostic::new(
+                    "Binding names with 3 or more characters should be capitalized \
+                    to avoid collisions with future builtin functions",
+                    ident.span.clone(),
+                    DiagnosticKind::Style,
+                ));
+            }
             Binding {
                 name: ident,
                 words,
@@ -246,14 +257,6 @@ impl Parser {
     fn try_ident(&mut self) -> Option<Sp<Ident>> {
         let span = self.try_exact(Token::Ident)?;
         let s: Ident = span.as_str().into();
-        if s.chars().count() >= 3 && s.chars().next().unwrap().is_lowercase() {
-            self.diagnostics.push(Diagnostic::new(
-                "Binding names with 3 or more characters should be capitalized \
-                to avoid collisions with future builtin functions",
-                span.clone(),
-                DiagnosticKind::Style,
-            ));
-        }
         Some(span.sp(s))
     }
     fn try_signature(&mut self) -> Option<Sp<Signature>> {

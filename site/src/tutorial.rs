@@ -102,7 +102,7 @@ fn TutorialBasic() -> impl IntoView {
 
     let primitive_table: Vec<_> = Primitive::all()
         .filter_map(|p| {
-            if let (Some(name), Some(ascii), Some(unicode)) = (p.name(), p.ascii(), p.unicode()) {
+            if let (Some(name), Some(ascii), Some(unicode)) = (p.name(), p.ascii(), p.glyph()) {
                 if ascii.to_string() != unicode.to_string() {
                     return Some(view! {
                         <tr>
@@ -216,11 +216,10 @@ fn primitive_rows(prims: impl IntoIterator<Item = Primitive>) -> Vec<impl IntoVi
     prims
         .into_iter()
         .map(|p| {
-            let glyph = p.unicode();
             let ascii = p
                 .ascii()
                 .map(|s| s.to_string())
-                .or_else(|| glyph.filter(|c| c.is_ascii()).map(|c| c.to_string()));
+                .or_else(|| p.glyph().filter(|c| c.is_ascii()).map(|c| c.to_string()));
             view! {
                 <tr>
                     <td><Prim prim=p/></td>

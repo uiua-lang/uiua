@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 mod backend;
 mod docs;
 mod editor;
@@ -234,7 +236,7 @@ pub fn Prim(
         title.push_str(&format!("({})", ascii));
     }
     if let Some(name) = prim.name() {
-        if prim.unicode().is_some() && glyph_only {
+        if prim.glyph().is_some() && glyph_only {
             if !title.is_empty() {
                 title.push(' ');
             }

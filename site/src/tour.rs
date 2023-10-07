@@ -17,7 +17,7 @@ pub fn Tour() -> impl IntoView {
         <p>"In Uiua, functions work on a global stack of arrays."</p>
         <p>"That's enough introduction, let's see some code!"</p>
         <Editor examples={&["+", "1", "×", "2 ", "⇡", "10"]}/>
-        <p>"Uiua code runs from "<A href="../rtl">"right to left"</A>", top to bottom. Operators are put to the "<em>"left"</em>" of their arguments, rather than in between."</p>
+        <p>"Uiua code runs from "<A href="../rtl">"right to left"</A>", top to bottom. Operators are put to the "<em>"left"</em>" of their arguments, rather than in-between."</p>
         <p>"This program makes an array of all the numbers less than 10, multiplies each one by 2, then adds 1 to each."</p>
         <p>"If you want to see how that works step-by-step, try clicking the arrows beside the Run button."</p>
         <p>"Now, I can already hear you asking, "<em>"\"Wait, what is that funny arrow? How am I supposed to type the multiplication sign?\""</em></p>

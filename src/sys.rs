@@ -301,9 +301,7 @@ sys_op! {
     ///   :         $ Host: example.com\r\n
     ///   :         $ <BODY>
     ///
-    /// There are a few things the function tries to automatically fill in
-    /// if it finds they are missing from the request:
-    ///
+    /// There are a few things the function tries to automatically fill in if it finds they are missing from the request:
     /// - 2 trailing newlines (if there is no body)
     /// - The HTTP version
     /// - The `Host` header (if not defined)

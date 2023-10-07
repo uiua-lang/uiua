@@ -1003,7 +1003,7 @@ primitive!(
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
     /// Call a function on two sets of values
     ///
-    /// For monadic functions, [both] calls it's function on each of the top 2 values on the stack.
+    /// For monadic functions, [both] calls its function on each of the top 2 values on the stack.
     /// ex: ∩⇡ 3 5
     ///
     /// One good use of this is when working with [box] data.
@@ -1062,7 +1062,7 @@ primitive!(
     /// In a [fork] expression, you can use [dip], [gap], and [identity] to select out values.
     /// For example, if you wanted to add 3 values but keep the last value on top of the stack:
     /// ex: [⊃⋅⋅∘(++) 3 5 10]
-    /// By using fewer `gap`s, you can select a different value
+    /// By using fewer `gap`s, you can select a different value.
     /// ex: [⊃⋅∘(++) 3 5 10]
     /// ex: [⊃∘(++) 3 5 10]
     /// By replacing a `gap` with a `dip`, you keep the argument in that spot instead of popping it:
@@ -1232,7 +1232,7 @@ primitive!(
     /// This is especially useful when used with functions like [windows] or [find] which make an array shorter than their input.
     /// ex: ⬚0▽≡/>◫2. [1 8 0 2 7 2 3]
     ///
-    /// [fill][reshape] fills in the shape with the fill element instead of cycling the data
+    /// [fill][reshape] fills in the shape with the fill element instead of cycling the data.
     /// ex:   ↯3_5 ⇡9
     /// ex: ⬚0↯3_5 ⇡9
     ([2], Fill, OtherModifier, ("fill", '⬚')),

@@ -120,7 +120,7 @@ fn TutorialBasic() -> impl IntoView {
     view! {
         <h1>"Basic Stack Operations and Formatting"</h1>
         <h2 id="the-stack">"The Stack"</h2>
-        <p>"In Uiua, all operations operate on a global stack. Lines of code are evaluated from "<A href="/docs/rtl">"right to left"</A>", top to bottom"</p>
+        <p>"In Uiua, all operations operate on a global stack. Lines of code are evaluated from "<A href="/docs/rtl">"right to left"</A>", top to bottom."</p>
         <p>"A number simply pushes its value onto the stack."</p>
         <Editor example="5"/>
         <Editor example="1 2 3"/>
@@ -146,7 +146,7 @@ fn TutorialBasic() -> impl IntoView {
         <p>"Try formatting the lines below by clicking "<strong>"Run"</strong>"."</p>
         <Editor examples=&{["max ", "sqrt ", "10 ", "mod ", "10 ", "pow ", "2 ", "8"]}/>
         <Editor example="abs +`1 `2"/>
-        <p>"You don't have to type the whole name, just enough to disambiguate it from others"</p>
+        <p>"You don't have to type the whole name, just fills in the shape with the fill element instead o to disambiguate it from others."</p>
         <Editor example="(cei ceil ceili ceilin ceiling)"/>
         <p>"You don't even have to remove spaces between built-in function names. The formatter will figure it out!"</p>
         <Editor example="roundsqrtpi"/>
@@ -470,7 +470,7 @@ fn TutorialTypes() -> impl IntoView {
         <Editor example="⊟ 5 (+1 2)"/>
 
         <h2 id="empty-arrays">"Empty Arrays"</h2>
-        <p>"The type of an array that is constructed with no elements depends on the syntax used to construct it. It's shape is always "<code>"[0]"</code>"."</p>
+        <p>"The type of an array that is constructed with no elements depends on the syntax used to construct it. Its shape is always "<code>"[0]"</code>"."</p>
         <p>"We can use the "<Prim prim=Type/>" function to get the type of an array. "<code>"0"</code>" corresponds to numbers, "<code>"1"</code>" to characters, and "<code>"2"</code>" to functions."</p>
         <Editor example="type []"/>
         <Editor example="type \"\""/>

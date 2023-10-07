@@ -575,13 +575,9 @@ impl Uiua {
             let (a_instrs, _) = self.compile_operand_words(vec![operands.next().unwrap()])?;
             let (b_instrs, _) = self.compile_operand_words(vec![operands.next().unwrap()])?;
             if let Some((a_before, a_after)) = under_instrs(&a_instrs) {
-                println!("before: {:?}", a_instrs);
-                println!("g: {:?}", b_instrs);
-                println!("after: {:?}", a_after);
                 let mut instrs = a_before;
                 instrs.extend(b_instrs);
                 instrs.extend(a_after);
-                println!("inlined under: {:?}", instrs);
                 return if call {
                     for instr in instrs {
                         self.push_instr(instr);

@@ -1,6 +1,6 @@
 //! Algorithms for invert and under
 
-use std::{borrow::Cow, cell::RefCell, collections::HashMap, fmt};
+use std::{cell::RefCell, collections::HashMap, fmt};
 
 use crate::{
     check::instrs_signature,
@@ -138,45 +138,16 @@ pub(crate) fn under_instrs(instrs: &[Instr]) -> Option<Under> {
     if let Some(under) = UNDER_CACHE.with(|cache| cache.borrow().get(instrs).cloned()) {
         return under;
     }
-
-    let mut befores = Vec::new();
-    let mut afters = Vec::new();
-    let mut start = 0;
-    let mut end = instrs.len();
-    loop {
-        if let Some((before, mut after)) = under_instr_fragment(&instrs[start..end]) {
-            afters.append(&mut after);
-            match before {
-                Cow::Borrowed(before) => befores.extend_from_slice(before),
-                Cow::Owned(before) => befores.extend(before),
-            }
-            if start == 0 {
-                break;
-            }
-            end = start;
-            start = 0;
-        } else if start == end - 1 {
-            // println!("under of {:?} failed", instrs);
-            return None;
-        } else {
-            start += 1;
-        }
-    }
-    // println!("under {:?} to {:?} {:?}", instrs, befores, afters);
-    let under = (befores, afters);
-    UNDER_CACHE.with(|cache| {
-        cache
-            .borrow_mut()
-            .insert(instrs.to_vec(), Some(under.clone()))
-    });
-    Some(under)
+    let under = under_instrs_impl(instrs);
+    UNDER_CACHE.with(|cache| cache.borrow_mut().insert(instrs.to_vec(), under.clone()));
+    under
 }
 
-fn under_instr_fragment(instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr>)> {
+fn under_instrs_impl(instrs: &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
     use Instr::*;
     use Primitive::*;
     if let Some(inverted) = invert_instrs(instrs) {
-        return Some((Cow::Borrowed(instrs), inverted));
+        return Some((instrs.to_vec(), inverted));
     }
 
     match instrs {
@@ -192,7 +163,7 @@ fn under_instr_fragment(instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr>)> 
                 instrs.push(fi.clone());
             }
             let (before, after) = under_instrs(&instrs)?;
-            return Some((Cow::Owned(before), after));
+            return Some((before, after));
         }
         _ => {}
     }
@@ -208,7 +179,7 @@ fn under_instr_fragment(instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr>)> 
     }
 
     let patterns: &[&dyn UnderPattern] = &[
-        &under_temp_pattern,
+        &UnderPatternFn(under_temp_pattern),
         &(Val, stash2!(Take, Untake)),
         &stash2!(Take, Untake),
         &(Val, stash2!(Drop, Undrop)),
@@ -273,28 +244,35 @@ fn under_instr_fragment(instrs: &[Instr]) -> Option<(Cow<[Instr]>, Vec<Instr>)> 
     'find_pattern: loop {
         for pattern in patterns {
             if let Some((input, (bef, aft))) = pattern.under_extract(instrs_sections) {
+                // println!(
+                //     "matched pattern {:?} on {:?} to {:?} {:?}",
+                //     pattern,
+                //     &instrs_sections[..instrs_sections.len() - input.len()],
+                //     bef,
+                //     aft
+                // );
                 befores.extend(bef);
                 afters = aft.into_iter().chain(afters).collect();
                 if input.is_empty() {
-                    // println!("under fragment {:?} to {:?} {:?}", instrs, befores, afters);
-                    return Some((Cow::Owned(befores), afters));
+                    // println!("under {:?} to {:?} {:?}", instrs, befores, afters);
+                    return Some((befores, afters));
                 }
                 instrs_sections = input;
                 continue 'find_pattern;
             }
         }
-        if let Some(after) = invert_instrs(instrs_sections) {
-            // println!("inverse as under patter: {:?} -> {:?}", instrs, after);
-            let before = instrs_sections.to_vec();
-            befores.extend(before);
-            afters = after.into_iter().chain(afters).collect();
-            // println!("under fragment {:?} to {:?} {:?}", instrs, befores, afters);
-            return Some((Cow::Owned(befores), afters));
-        }
+        // if let Some(after) = invert_instrs(instrs_sections) {
+        //     // println!("inverse as under patter: {:?} -> {:?}", instrs, after);
+        //     let before = instrs_sections.to_vec();
+        //     befores.extend(before);
+        //     afters = after.into_iter().chain(afters).collect();
+        //     // println!("under fragment {:?} to {:?} {:?}", instrs, befores, afters);
+        //     return Some((Cow::Owned(befores), afters));
+        // }
         break;
     }
     // println!(
-    //     "under fragment {:?} failed with remaining {:?}",
+    //     "under {:?} failed with remaining {:?}",
     //     instrs, instrs_sections
     // );
 
@@ -355,23 +333,26 @@ trait InvertPattern {
     fn invert_extract<'a>(&self, input: &'a [Instr]) -> Option<(&'a [Instr], Vec<Instr>)>;
 }
 
-trait UnderPattern {
+trait UnderPattern: fmt::Debug {
     fn under_extract<'a>(&self, input: &'a [Instr]) -> Option<(&'a [Instr], Under)>;
 }
 
 fn under_temp_pattern(input: &[Instr]) -> Option<(&[Instr], Under)> {
-    let (input, (mut bef, mut aft)) = Val.under_extract(input)?;
     match input.split_first()? {
-        (&Instr::PushTemp { count, span }, input) => {
-            bef.push(Instr::PushTemp { count, span });
-            aft.insert(0, Instr::PopTemp { count, span });
-            Some((input, (bef, aft)))
-        }
-        (&Instr::PopTemp { count, span }, input) => {
-            bef.push(Instr::PopTemp { count, span });
-            aft.insert(0, Instr::PushTemp { count, span });
-            Some((input, (bef, aft)))
-        }
+        (&Instr::PushTemp { count, span }, input) => Some((
+            input,
+            (
+                vec![Instr::PushTemp { count, span }],
+                vec![Instr::PopTemp { count, span }],
+            ),
+        )),
+        (&Instr::PopTemp { count, span }, input) => Some((
+            input,
+            (
+                vec![Instr::PopTemp { count, span }],
+                vec![Instr::PushTemp { count, span }],
+            ),
+        )),
         _ => None,
     }
 }
@@ -419,18 +400,6 @@ impl<T: InvertPattern> InvertPattern for IgnoreMany<T> {
             input = inp;
         }
         Some((input, Vec::new()))
-    }
-}
-
-struct AnyOf<T, const N: usize>([T; N]);
-impl<T: InvertPattern, const N: usize> InvertPattern for AnyOf<T, N> {
-    fn invert_extract<'a>(&self, input: &'a [Instr]) -> Option<(&'a [Instr], Vec<Instr>)> {
-        for pattern in self.0.iter() {
-            if let Some((input, inverted)) = pattern.invert_extract(input) {
-                return Some((input, inverted));
-            }
-        }
-        None
     }
 }
 
@@ -536,12 +505,18 @@ where
     }
 }
 
-impl<F> UnderPattern for F
+struct UnderPatternFn<F>(F);
+impl<F> fmt::Debug for UnderPatternFn<F> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "UnderPatternFn")
+    }
+}
+impl<F> UnderPattern for UnderPatternFn<F>
 where
     F: Fn(&[Instr]) -> Option<(&[Instr], Under)>,
 {
     fn under_extract<'a>(&self, input: &'a [Instr]) -> Option<(&'a [Instr], Under)> {
-        self(input)
+        (self.0)(input)
     }
 }
 
@@ -597,7 +572,7 @@ impl InvertPattern for Val {
         for len in (1..input.len()).rev() {
             let chunk = &input[..len];
             if let Ok(sig) = instrs_signature(chunk) {
-                if sig.args == 0 && sig.outputs == 1 {
+                if sig.args == 0 && sig.outputs == 1 && !chunk.iter().any(Instr::is_temp) {
                     let res = chunk.to_vec();
                     return Some((&input[len..], res));
                 }

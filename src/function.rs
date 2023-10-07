@@ -122,6 +122,15 @@ impl Instr {
             _ => None,
         }
     }
+    pub fn is_temp(&self) -> bool {
+        matches!(
+            self,
+            Self::PushTemp { .. }
+                | Self::PopTemp { .. }
+                | Self::CopyTemp { .. }
+                | Self::DropTemp { .. }
+        )
+    }
 }
 
 impl fmt::Debug for Instr {

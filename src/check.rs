@@ -340,19 +340,17 @@ impl<'a> VirtualEnv<'a> {
                 Under => {
                     let f = self.pop()?;
                     let g = self.pop()?;
-                    dbg!("under", &f, &g);
                     if let BasicValue::Func(f) = f {
                         if let Some((before, after)) = f.into_owned().under() {
-                            dbg!(&before, &after);
                             let before_sig = before.signature();
                             let after_sig = after.signature();
-                            dbg!(&before_sig, g.signature(), &after_sig);
                             self.handle_sig(before_sig)?;
                             self.handle_sig(g.signature())?;
                             self.handle_sig(after_sig)?;
                         } else {
                             // We could return an error here,
                             // but the "no inverse found" error is more useful.
+                            return Err("under with no inverse".into());
                         }
                     } else {
                         return Err("under with non-function".into());

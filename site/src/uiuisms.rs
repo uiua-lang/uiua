@@ -134,7 +134,9 @@ uiuisms!(
     /// Convert a string to a number
     r#"parse "42""#,
     // Parse a string as a base 2 number
-    r#"/+×ⁿ⇌⇡⧻,⊙-∶@0 2 "110""#,
+    r#"⍘⋯⇌-@0 "110""#,
+    // Parse a string as a base 3 <= X <= 9 number
+    r#"/+×ⁿ⇌⇡⧻,⊙-∶@0 3 "210""#,
     /// Convert a string to a list of code points
     r#"-@\0 "Uiua""#,
     /// Convert a list of code points to a string

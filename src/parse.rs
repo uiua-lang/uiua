@@ -242,7 +242,7 @@ impl Parser {
                     "Binding names with 3 or more characters should be capitalized \
                     to avoid collisions with future builtin functions",
                     ident.span.clone(),
-                    DiagnosticKind::Style,
+                    DiagnosticKind::Advice,
                 ));
             }
             Binding {

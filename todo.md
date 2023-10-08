@@ -1,4 +1,3 @@
-- Make binding name capitalization advice rather than style
 - End primitive parsing at capital letter
 - Proofread function docs
 - Make `if` handle its signatures like `fork` does

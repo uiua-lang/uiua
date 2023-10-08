@@ -2,7 +2,7 @@
 
 Uiua is not yet stable.
 
-## 0.0.17 - 2023-10-xx
+## 0.0.17 - 2023-10-07
 ### Language
 - Add GIF encoding with [`&gife`](https://uiua.org/docs/&gife)
 - Rename `constant` to [`box` `□`](https://uiua.org/docs/box).
@@ -17,7 +17,7 @@ Uiua is not yet stable.
 - Add the [`sig`](https://uiua.org/docs/sig) function, which returns the stack signature of a value
 - A negative dimensions in the shape passed to [`reshape` `↯`](https://uiua.org/docs/reshape) can now be in *any* position, not just the first or last
 - Functions with ASCII glyphs now also format from their names
-- Add a style diagnostic about the captialization of binding names
+- Add a advice diagnostic about the captialization of binding names
 ### Interpreter
 - A few performance improvements, particularly to [`keep` `▽`](https://uiua.org/docs/keep), [`fork` `⊃`](https://uiua.org/docs/fork), and [`under` `⍜`](https://uiua.org/docs/under)
 ### Website

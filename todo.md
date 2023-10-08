@@ -1,5 +1,3 @@
-- Proofread function docs
-- Improve multiple end-of-line comment formatting
 - Inline some functions with `distribute`
 - Fix web editor text deletion bug
   - Steps to reproduce:

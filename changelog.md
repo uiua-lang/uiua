@@ -6,6 +6,7 @@ Uiua is not yet stable.
 ### Language
 - [`if` `?`](https://uiua.org/docs/if)'s branches can now have a different number of arguments (but not outputs)
 ### Interpreter
+- The formatter now aligns consecutive end-of-line comments
 - Fix a bug that prevent [`under` `⍜`](https://uiua.org/docs/under) multidimensional [`take` `↙`](https://uiua.org/docs/take) and [`drop` `↘`](https://uiua.org/docs/drop) from working
 
 ## 0.0.17 - 2023-10-07

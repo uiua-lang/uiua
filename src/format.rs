@@ -198,6 +198,8 @@ create_config!(
     ),
     /// The number of characters on line preceding a multiline array or function, at or before which the multiline will be compact.
     (multiline_compact_threshold, usize, 10),
+    /// Whether to align consecutive end-of-line comments
+    (align_comments, bool, true),
 );
 
 /// The source from which to populate the formatter configuration.
@@ -316,6 +318,7 @@ pub fn format_items(items: &[Item], config: &FormatConfig) -> FormatOutput {
         config,
         output: String::new(),
         glyph_map: BTreeMap::new(),
+        end_of_line_comments: Vec::new(),
     };
     formatter.format_items(items);
     let mut output = formatter.output;
@@ -364,6 +367,7 @@ struct Formatter<'a> {
     config: &'a FormatConfig,
     output: String,
     glyph_map: BTreeMap<CodeSpan, Loc>,
+    end_of_line_comments: Vec<(usize, String)>,
 }
 
 impl<'a> Formatter<'a> {
@@ -371,6 +375,44 @@ impl<'a> Formatter<'a> {
         for item in items {
             self.format_item(item);
             self.output.push('\n');
+        }
+        // Align end-of-line comments
+        if self.config.align_comments && !self.end_of_line_comments.is_empty() {
+            // Group comments by consecutive lines
+            let mut groups: Vec<(usize, Vec<(usize, String)>)> = Vec::new();
+            let mut lines: Vec<String> = self.output.lines().map(Into::into).collect();
+            for (line_number, comment) in self.end_of_line_comments.drain(..) {
+                let line = &lines[line_number - 1];
+                let line_len = line.chars().count();
+                if let Some((max, group)) = groups.last_mut() {
+                    if line_number - group.last().unwrap().0 == 1 {
+                        *max = (*max).max(line_len);
+                        group.push((line_number, comment));
+                    } else {
+                        groups.push((line_len, vec![(line_number, comment)]));
+                    }
+                } else {
+                    groups.push((line_len, vec![(line_number, comment)]));
+                }
+            }
+            println!("{:#?}", groups);
+            // Append comments to lines
+            for (max, group) in groups {
+                for (line_number, comment) in group {
+                    let line = &mut lines[line_number - 1];
+                    let spaces = max - line.chars().count();
+                    line.push_str(&" ".repeat(spaces));
+                    line.push('#');
+                    if !comment.starts_with(' ')
+                        && self.config.comment_space_after_hash
+                        && !comment.starts_with('!')
+                    {
+                        line.push(' ');
+                    }
+                    line.push_str(&comment);
+                }
+            }
+            self.output = lines.join("\n");
         }
     }
     fn format_item(&mut self, item: &Item) {
@@ -506,14 +548,27 @@ impl<'a> Formatter<'a> {
             }
             Word::Spaces => self.push(&word.span, " "),
             Word::Comment(comment) => {
-                self.output.push('#');
-                if !comment.starts_with(' ')
-                    && self.config.comment_space_after_hash
-                    && !comment.starts_with('!')
-                {
-                    self.output.push(' ');
+                let beginning_of_line = self
+                    .output
+                    .lines()
+                    .last()
+                    .unwrap_or_default()
+                    .trim()
+                    .is_empty();
+                if beginning_of_line || !self.config.align_comments {
+                    self.output.push('#');
+                    if !comment.starts_with(' ')
+                        && self.config.comment_space_after_hash
+                        && !comment.starts_with('!')
+                    {
+                        self.output.push(' ');
+                    }
+                    self.output.push_str(comment);
+                } else {
+                    let line_number = self.output.lines().count();
+                    self.end_of_line_comments
+                        .push((line_number, comment.to_string()));
                 }
-                self.output.push_str(comment);
             }
         }
     }

@@ -339,11 +339,14 @@ fn site() {
         let entry = entry.unwrap();
         let path = entry.path();
         for line in std::fs::read_to_string(&path).unwrap().lines() {
-            if let Some(code) = line
-                .trim()
-                .strip_prefix(r#"<Editor example=""#)
-                .and_then(|line| line.strip_suffix(r#""/>"#))
-            {
+            if let Some(code) = line.trim().strip_prefix(r#"<Editor example=""#) {
+                let (code, should_fail) = if let Some(code) = code.strip_suffix(r#""/>"#) {
+                    (code, false)
+                } else if let Some(code) = code.strip_suffix(r#""/> // Should fail"#) {
+                    (code, true)
+                } else {
+                    continue;
+                };
                 let code = code
                     .replace("\\\"", "\"")
                     .replace("\\\\", "\\")
@@ -356,7 +359,7 @@ fn site() {
                     code.clone(),
                     std::thread::spawn(move || {
                         let mut env = uiua::Uiua::with_native_sys();
-                        env.load_str(&code).map(|_| env)
+                        (env.load_str(&code).map(|_| env), should_fail)
                     }),
                 ));
             }
@@ -365,7 +368,7 @@ fn site() {
     assert!(threads.len() > 50);
     for (path, code, thread) in threads {
         match thread.join().unwrap() {
-            Err(e) => {
+            (Err(e), false) => {
                 panic!(
                     "Test failed in {}\n{}\n{}",
                     path.display(),
@@ -373,14 +376,20 @@ fn site() {
                     e.show(true)
                 );
             }
-            Ok(mut env) => {
+            (Err(_), true) => {}
+            (Ok(mut env), should_fail) => {
                 if let Some(diag) = env.take_diagnostics().into_iter().next() {
-                    panic!(
-                        "Test failed in {}\n{}\n{}",
-                        path.display(),
-                        code,
-                        diag.show(true)
-                    );
+                    if !should_fail {
+                        panic!(
+                            "Test failed in {}\n{}\n{}",
+                            path.display(),
+                            code,
+                            diag.show(true)
+                        );
+                    }
+                }
+                if should_fail {
+                    panic!("Test should have failed in {}\n{}", path.display(), code);
                 }
             }
         }

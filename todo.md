@@ -1,5 +1,6 @@
+- Make binding name capitalization advice rather than style
 - End primitive parsing at capital letter
-- Proofread tour, tutorial, and function docs
+- Proofread function docs
 - Make `if` handle its signatures like `fork` does
 - Improve multiple end-of-line comment formatting
 - Inline some functions with `distribute`

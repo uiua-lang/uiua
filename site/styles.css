@@ -472,7 +472,6 @@ input[type=number] {
 .editor-right-button {
     font-weight: bolder;
     opacity: 0.5;
-    padding: 0.2em 0em;
 }
 
 .editor-right-button:hover {

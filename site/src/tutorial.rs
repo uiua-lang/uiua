@@ -146,7 +146,7 @@ fn TutorialBasic() -> impl IntoView {
         <p>"Try formatting the lines below by clicking "<strong>"Run"</strong>"."</p>
         <Editor examples=&{["max ", "sqrt ", "10 ", "mod ", "10 ", "pow ", "2 ", "8"]}/>
         <Editor example="abs +`1 `2"/>
-        <p>"You don't have to type the whole name, just fills in the shape with the fill element instead o to disambiguate it from others."</p>
+        <p>"You don't have to type the whole name, just enough to to disambiguate it from others."</p>
         <Editor example="(cei ceil ceili ceilin ceiling)"/>
         <p>"You don't even have to remove spaces between built-in function names. The formatter will figure it out!"</p>
         <Editor example="roundsqrtpi"/>
@@ -167,7 +167,6 @@ fn TutorialBasic() -> impl IntoView {
         </table>
         <p>"As noted in the table, negative number literals are typed with the "<code>"`"</code>" character. This is because "<code>"-"</code>" is used for subtraction."</p>
         <Editor example="+ `1 `2"/>
-        <Editor example="trace 5"/> // Should fail
 
         <h2 id="stack-functions">"Stack Functions"</h2>
         <p>"There are a few functions that work on the stack itself. Some of these are critical and can be found scattered across all Uiua code."</p>
@@ -302,7 +301,7 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example="[1 2 3]"/>
         <Editor example="[¯5 37 42 π]"/>
         <p>"What's cool about stack notation is that it is "<em>"not"</em>" just a way to list elements. The code between the brackets runs from right to left as it normally would. When it is done, any items on the stack higher than when it started are put into the array. This gives you some cool ways to create arrays."</p>
-        <p>"Note that "<Prim prim=Dup/>" duplicates the top item on the stack."</p>
+        <p>"Remember that "<Prim prim=Dup/>" duplicates the top item on the stack."</p>
         <Editor example="[...5]"/>
         <Editor example="[×2.×2.×2.×2 .2]"/>
         <Editor example="[+1 2 +3 4]"/>
@@ -369,31 +368,33 @@ fn TutorialArrays() -> impl IntoView {
         <p>"All arrays are flat and homogenous. Arrays always have a rectangular shape. Different types of data, like numbers and characters, cannot be mixed in the same array."</p>
         <p>"However, there is an escape hatch for when you really want jagged, nested, or mixed-type arrays. In Uiua, an array of heterogenous values can be simulated with an array of functions. These functions can be used similarly to J's boxes."</p>
         <Editor example="[1 2 [7 8 9]]"/> // Should fail
-        <p>"By using "<Prim prim=Box/>", we can turn any value into a function that pushes that value onto the stack. We can then put these functions into an array like any other."</p>
+        <p>"By using "<Prim prim=Box/>", we can turn any value into a function that pushes that value onto the stack. We can then put these functions into an array together."</p>
         <Editor example="[□1 □2 □[7 8 9]]"/>
         <p>"The "<code>"⟦⟧"</code>"s indicate that a list is "<Prim prim=Box/>"ed."</p>
-        <p>"To get the values back on the stack, we can use "<Prim prim=Reduce/><Prim prim=Unbox/>"."</p>
+        <p><Prim prim=Unbox/>" extracts a "<Prim prim=Box/>"ed value."</p>
+        <Editor example="⊔ .□[1 2 3]"/>
+        <p>"To get "<Prim prim=Box/>"ed array values back on the stack, we can use "<Prim prim=Reduce/><Prim prim=Unbox/>"."</p>
         <Editor example="/⊔[□1 □2 □[7 8 9]]"/>
         <p>"Having to write "<Prim prim=Box glyph_only=true/>" everywhere is annoying, and so..."</p>
 
         <h2 id="nested-arrays">"Nested Arrays"</h2>
-        <p>"Uiua has a special syntax for making arrays where every item is "<Prim prim=Box/>"."</p>
+        <p>"Uiua has a special syntax for making arrays where every item is "<Prim prim=Box/>"ed."</p>
         <p>"Using "<code>"{}"</code>"s instead of "<code>"[]"</code>"s for stack array notation will automatically "<Prim prim=Box/>" every item."</p>
         <Editor example="{1 2 [7 8 9]}"/>
         <p>"This is very useful for making lists of strings."</p>
-        <Editor example=r#"langs ← .["Uiua" "APL" "J" "BQN" "K" "Q"]"#/>
-        <Editor example=r#"langs ← .{"Uiua" "APL" "J" "BQN" "K" "Q"}"#/>
+        <Editor example=r#"Langs ← .["Uiua" "APL" "J" "BQN" "K" "Q"]"#/>
+        <Editor example=r#"Langs ← .{"Uiua" "APL" "J" "BQN" "K" "Q"}"#/>
         <p>"The "<code>"⌜⌟"</code>"s indicate that a string is "<Prim prim=Box/>"ed."</p>
-        <p>"Many simple functions will work on "<Prim prim=Box/>" elements without needing to use "<Prim prim=Call/>"."</p>
+        <p>"Many simple functions will work on "<Prim prim=Box/>" elements without needing to use "<Prim prim=Unbox/>"."</p>
         <Editor example=
-r#"langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
-⧻⊢langs
-+1langs"#/>
+r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
+⧻⊢Langs
++1Langs"#/>
         <p>"However, more complex functions usually need both operands to be the same type, so you must either "<Prim prim=Unbox/>" the boxed elements or "<Prim prim=Box/>" the normal ones."</p>
         <p>"For example, to check if a string is in the list with "<Prim prim=Member/>", you would need to "<Prim prim=Box/>" the string first."</p>
         <Editor example=
-r#"langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
-∊ □"APL" langs"#/>
+r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
+∊ □"APL" Langs"#/>
 
         <p>"For more about working with box arrays, see "<Prim prim=Box/>"'s documentation."</p>
     }
@@ -495,7 +496,7 @@ fn TutorialBindings() -> impl IntoView {
         <Editor example="part = 5" help={&["", "Run to format and reveal why this does not work"]}/>
         <p>"To fix this issue, simply change the binding's capitalization."</p>
         <Editor example="Part = 5\n*2 Part"/>
-        <p>"Bindings run the code right of the "<code>"←"</code>", then pop the top value off the stack and bind it to the name on the left."</p>
+        <p>"Bindings run the code to the right of the "<code>"←"</code>", then pop the top value off the stack and bind it to the name on the left."</p>
         <p>"Note, though, that an empty right side is perfectly valid! This means you can bind values that were create on previous lines."</p>
         <Editor example="×6 7\nAnswer ←\n[Answer]"/>
 
@@ -531,8 +532,8 @@ fn TutorialFunctions() -> impl IntoView {
         <p>"This is usually only necessary when you need to call multiple functions within a modifier."</p>
         <p>"For example, if you wanted to get the last element of each row of an array, you could use "<Prim prim=Rows/>"."</p>
         <Editor example="≡(⊢⇌) .[2_5_3 0_2_1 0_0_2]"/>
-        <p>"For example, if you wanted to make an array that pairs each element of an array with its reciprocal, you could use "<Prim prim=Each/>"."</p>
-        <Editor example="∵(⊂÷∶1.) 1_2_4_5"/>
+        <p>"If you wanted to rotate every row of an array by a fixed amount, you could use "<Prim prim=Distribute/>"."</p>
+        <Editor example="∺↻ 2 [1_2_3 4_5_6 7_8_9]"/>
         <p>"If you want to make an inline function with exactly 2 terms, you can use the "<Prim prim=Bind/>" modifier instead of "<code>"()"</code>"s and save 1 character of space!"</p>
         <Editor example="/(-∶) 1_2_3_4_5\n/'-∶ 1_2_3_4_5"/>
         <p>"This looks nice with modifiers that take multiple functions like "<Prim prim=Under/>"."</p>
@@ -586,7 +587,7 @@ f(↥)"/>
         <Editor example="∺(|2 ⊞|∶,)+_-⇡3"/>
         <p>"In addition, an error is thrown if a function's signature can be inferred and the inferred signature does not match the declared signature. This can help validate that a function is correct."</p>
         <Editor example="≡(|2 ↻.) 1_2_3 ↯3_3⇡9"/> // Should fail
-        <p><strong>"WARNING"</strong>": If the compiler cannot derive the stack signature of a functiona dn you give it one which is "<em>"wrong"</em>" your code may break no longer compile in future versions of the language."</p>
+        <p><strong>"WARNING"</strong>": If the compiler cannot derive the stack signature of a function and you give it one which is "<em>"wrong"</em>", your code may no longer compile in future versions of the language."</p>
     }
 }
 
@@ -604,7 +605,7 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <Editor example="⊃×⇌ [1 2 3] 10"/>
         <p>"What's powerful about "<Prim prim=Fork/>" is that it can be chained to use as many functions as you want."</p>
         <Editor example="[⊃⊃⊃+-×÷ 5 8]"/>
-        <p>"In addition, unlike "<Prim prim=Distribute/><Prim prim=Call/>", which can also be used to apply several functions to the same arguments, "<Prim prim=Fork/>" does not require that its values be in an array together."</p>
+        <p><Prim prim=Fork/>" is also good because it does not require that its values be in an array together, so they can be different shapes or types."</p>
         <Editor example="⊃+- 1 @b"/>
         <Editor example="⊃⊃⊃↻↙↘⊡ 2 [1 2 3 4 5]"/>
         <p>"We'll see just how important "<Prim prim=Fork/>" is later is this section."</p>
@@ -671,7 +672,7 @@ fn TutorialModules() -> impl IntoView {
         <h2 id="scopes">"Scopes"</h2>
         <p>"Scopes are a way to create a temporary namespace for bindings that are only used in a small part of your code. Only the names that you want to escape a scope are usable outside it."</p>
         <p>"Scopes begin and end with triple hyphens "<code>"---"</code>". All names declared inside a scope are not available outside of it."</p>
-        <Editor example="---\nfoo ← 5\n---\nfoo # foo is not available here"/> // Should fail
+        <Editor example="---\nFoo ← 5\n---\nFoo # Foo is not available here"/> // Should fail
         <p>"Values pushed to the stack inside a scope remain on the stack after the scope ends."</p>
         <p>"You can bind values that were pushed to the stack inside an ended scope by using a "<code>"←"</code>" with nothing on the right side."</p>
         <Editor example="---\na ← 3\nb ← 5\n+ a b\n× a b\n---\nc ← \nd ←\nc_d"/>
@@ -688,9 +689,9 @@ PlusFive ← +5
 Twin ← ⊟.
 PlusFive_Twin
 ---
-mymodule ←
-tw ← use "Twin" mymodule
-pf ← use "PlusFive" mymodule
+Mod ←
+tw ← use "Twin" Mod
+pf ← use "PlusFive" Mod
 
 tw pf 3"#/>
 

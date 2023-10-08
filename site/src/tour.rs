@@ -1,6 +1,6 @@
 use leptos::*;
 use leptos_router::*;
-use uiua::primitive::Primitive;
+use uiua::{primitive::Primitive, SysOp};
 
 use crate::{editor::Editor, examples::LOGO, Prim};
 
@@ -71,7 +71,7 @@ pub fn Tour() -> impl IntoView {
         <p>"The rank of an array is the number of axes it has."</p>
         <p>"The "<Prim prim=Len/>" is the number of rows it has along its first axis."</p>
         <Editor example="a ← [1_2_3_4 5_6_7_8 9_10_11_12]\n△a\n⧻a\n⧻△a # rank"/>
-        <p>"If you want to type that fancy "<code>"←"</code>" so you can gives names to arrays, you can type "<code>"="</code>" after a name at the start of a line, and the formatter will convert it for you."</p>
+        <p>"If you want to type that fancy "<code>"←"</code>" so you can give names to arrays, you can type "<code>"="</code>" after a name at the start of a line, and the formatter will convert it for you."</p>
         <Editor example="x = 5\n+x x"/>
         <p><code>"←"</code>" just pops the first thing off the stack and assigns it to the name on the left, so if there is already a value on the stack, you don't actually need anything on the right."</p>
         <Editor example="×2 [2 3 4]\nx ←\nx"/>
@@ -97,7 +97,7 @@ pub fn Tour() -> impl IntoView {
         <p>"Uiua has a lot of built-in functions like these. You can explore their documentation on the "<A href="/docs#functions">"main docs page"</A>"."</p>
 
         <h2 id="functions">"Functions"</h2>
-        <p>"If you bind a name with "<code>"←"</code>", and there are not enough values on the stack for the code on the right to run, the code will be bound as a function and will not run until the name is used."</p>
+        <p>"If you bind a name with "<code>"←"</code>" and the code on the right does not have enough arguments to run, the code will be bound as a function and will not run until the name is used."</p>
         <Editor example="f ← +1\nf5"/>
         <Editor example="👋 ← ⊂\"Hello, \"\n👋\"World\""/>
 
@@ -110,7 +110,7 @@ pub fn Tour() -> impl IntoView {
         <Editor example="/+ .[1_2_3 4_5_6 7_8_9]"/>
         <p><Prim prim=Rows/>" applies a function to each row of an array."</p>
         <Editor example="x ← [1_2_3 4_5_6]\n  x\n ⇌x\n≡⇌x"/>
-        <p><Prim prim=Rows/>" also works "<em>"between"</em>" two arrays if it is given a binary function like "<Prim prim=Join/>"."</p>
+        <p><Prim prim=Rows/>" also works "<em>"between"</em>" two arrays if it is given a dyadic function like "<Prim prim=Join/>"."</p>
         <Editor example="≡⊂ [1_2 3_4] [5_6 7_8]"/>
         <p>"There are a bunch of other modifiers that are useful in different situations. You can find a "<A href="/docs/modifier">"list of them"</A>" on the main docs page."</p>
 
@@ -132,18 +132,18 @@ pub fn Tour() -> impl IntoView {
         <Editor example="⬚π↙5 [1 2 3]"/>
         <br/>
         <p><Prim prim=Fill/>" is nice, but you don't always want to fill in the missing elements. Sometimes you need to mix values of different shapes or types in an array. To understand Uiua's solution to this problem, you must first understand its "<em>"array model"</em>"."</p>
-        <p>"Uiua's array model is similar to that of J. Arrays must be rectangular and cannot mix types. However, the "<Prim prim=Box/>" function can turn any value into a function that pushes that value to the stack. That value can then be extracted with "<Prim prim=Call/>". This is similar to J's boxes."</p>
+        <p>"Uiua's array model is similar to that of J. Arrays must be rectangular and cannot mix types. However, the "<Prim prim=Box/>" function can turn any value into a function that pushes that value to the stack. That value can then be extracted with "<Prim prim=Unbox/>". This is similar to J's boxes."</p>
         <Editor example="[□1 □2_3_4 □5_6]"/>
         <p>"Having to use "<Prim prim=Box/>" on every value is kind of annoying, so there is a special syntax for "<Prim prim=Box/>" arrays that uses "<code>"{}"</code>"s instead of "<code>"[]"</code>"s."</p>
         <Editor example="{1 2_3_4 5_6}"/>
-        <p>"Many simple functions work on "<Prim prim=Box/>" elements without needing to "<Prim prim=Call/>" them."</p>
+        <p>"Many simple functions work on "<Prim prim=Box/>"ed elements without needing to "<Prim prim=Unbox/>" them."</p>
         <Editor example="{1 2_3_4 5_6}\n∵⇌.\n∵⧻."/>
         <Editor example="+5 {1 2_3_4 5_6}"/>
         <p>"For more complex operations, though, you'll need to use "<Prim prim=Unbox/>". Using it with "<Prim prim=Under/>" will re-"<Prim prim=Box/>" the result."</p>
         <Editor example="{\"dog\" \"cat\" \"fish\"}\n∵⍜⊔(⊂∶⇌.)."/>
 
         <h2 id="multimedia">"Multimedia"</h2>
-        <p>"Uiua can natively generate images and audio."</p>
+        <p>"Uiua can natively generate images, audio, and GIFs."</p>
         <p>"On this site, simply leaving an array on the stack that "<em>"looks"</em>" like image or audio data will display it."</p>
         <h3>"Images"</h3>
         <p>"Image data can either be a rank 2 array of grayscale pixel data or a rank 3 array of grayscale with alpha, RGB, or RGBA pixel data."</p>
@@ -158,6 +158,10 @@ pub fn Tour() -> impl IntoView {
 ↯4[0 2 4 7 12 9 7 4]
 ×220 ⁿ∶2÷12
 ÷2 ○×τ ♭⊞× ∶÷∶⇡⁅÷8 .&asr"/>
+        <h3>"GIFs"</h3>
+        <p>"Any array whose rows can all be turned into images can be turned into a GIF."</p>
+        <p>"On this site, arrays that look like they should be GIFs will be displayed as GIFs. You can see some on the "<A href="/">"main page"</A>"."</p>
+        <p>"GIFs can be explicitly rendered with the "<Prim prim={Sys(SysOp::GifShow)}/>" function."</p>
 
         <h2 id="next-steps">"Next Steps"</h2>
         <p>"If you want a more in-depth introduction to Uiua, you can check out the "<A href="/docs/basic">"tutorial"</A>"."</p>

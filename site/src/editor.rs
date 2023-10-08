@@ -1165,7 +1165,12 @@ fn get_font_name() -> String {
 
 fn set_font_name(name: &str) {
     set_local_var("font-name", name);
-    // Change the @font-face rule for the font-family "Code Font" in the stylesheet
+    // Remove the old style
+    let head = &document().head().unwrap();
+    if let Some(item) = head.get_elements_by_tag_name("style").item(0) {
+        head.remove_child(&item).unwrap();
+    }
+    // Add the new style
     let new_style = document()
         .create_element("style")
         .unwrap()

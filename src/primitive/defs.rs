@@ -863,7 +863,7 @@ primitive!(
     /// The accumulator is always the first argument to the function.
     /// ex: ∧⊂ [] 1_2_3_4
     /// Multiple accumulators can be used. In this case, all the accumulators are passed to the function above the rows.
-    /// ex: ∧⊃(+⋅⊙∘)(×⊙⋅∘) 0 1 [1 2 3 4 5]
+    /// ex: ∧⊃(+;)(×⊙;) 0 1 [1 2 3 4 5]
     ///
     /// [break]ing out of [fold] discards the unreduced values.
     /// ex: ∧(⎋≥10.+) 1 5_6_7_8

@@ -564,7 +564,7 @@ X 5"/>
         <Editor example="⊃⊙∘+ 1 2\n&p $ Do you know what _ + _ is?\n   $ It's _!"/>
 
         <h2 id="terminating-modifiers">"Terminating Modifiers"</h2>
-        <p>"Sometimes you don't want parse the function(s) following a modifier as being part of the modifier."</p>
+        <p>"Sometimes you don't want to parse the function(s) following a modifier as being part of the modifier."</p>
         <p>"In these cases, you can use "<code>"|"</code>" to terminate the modifier. Functions after the "<code>"|"</code>" will be considered \"outside\" of it."</p>
         <p>"This is useful when you want the function passed to your modifier to be dynamic."</p>
         <p>"Ignore the "<code>"|1"</code>" for now. It will be explained shortly."</p>

@@ -1,21 +1,27 @@
-- `under` `group` and `partition`
 - More powerful `if`
-- Inline some functions with `distribute`
-- Build editor divs with leptos instead of strings
+- `under` `group` and `partition`
 - Add channels for spawned threads
-- Make dyadic array functions not methods
-- See what can be done about compile times
+- Figure out what is going on with the editor cursor
+- Sift+delete to delete whole line
+- Build editor divs with leptos instead of strings
+- Inline some functions with `distribute`
 - Rust API
-- Make https requests work on web?
+  - Make dedicated Array conversion traits
+  - Make dedicated Value conversion traits
+  - Make dyadic array functions not methods
+  - Make most things private
+- See what can be done about compile times
+  - See how much turning off LTO does to performance vs compile time
 - Docs
+  - Thinking with arrays
   - Control flow
     - Looping modifiers
+    - If
     - Try
     - Break
     - Recur
-  - Images
+  - Images and GIFs
   - System functions
-  - Thinking with arrays
 - Expand test suite
 - Harder-to-implement optimizations
   - Row windows - `≡f◫` for scalar window size should be optimized to not materialize all the windows

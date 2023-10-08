@@ -61,7 +61,7 @@ pub fn Uiuisms() -> impl IntoView {
     view! {
         <h1>"Uiuisms"</h1>
         <p>"This is a curated list of Uiua functions for solving common problems."</p>
-        <p>"You can add more by contributing in the "<a href="https://github.com/uiua-lang/uiua">"repo"</a>" to "<a href="https://github.com/uiua-lang/uiua/blob/main/site/src/uiuisms.rs#L107">"this list"</a>"."</p>
+        <p>"You can add more by contributing in the "<a href="https://github.com/uiua-lang/uiua">"repo"</a>" to "<a href="https://github.com/uiua-lang/uiua/blob/main/site/src/uiuisms.rs#L111">"this list"</a>"."</p>
         <div class="input-div">
             <input
                 type="text"
@@ -96,8 +96,12 @@ macro_rules! uiuisms {
         #[test]
         fn uiuisms() {
             for code in [$($code),*] {
-                if let Err(e) = uiua::Uiua::with_native_sys().load_str(code) {
-                    panic!("Uiuism failed\n{code}\n{e}");
+                let mut env = uiua::Uiua::with_native_sys();
+                if let Err(e) = env.load_str(code) {
+                    panic!("Uiuism failed\n{code}\n{}", e.show(true));
+                }
+                if let Some(diag) = env.take_diagnostics().into_iter().next() {
+                    panic!("Uiuism failed\n{code}\n{}", diag.show(true));
                 }
             }
         }
@@ -168,17 +172,17 @@ uiuisms!(
     /// Trim leading whitespace
     r#"▽\↥≠@ . "   ← remove these""#,
     /// Trim trailing whitespace
-    r#"▽⍜⇌\↥≠@ . "remove these ⊙   ""#,
+    r#"▽⍜⇌\↥≠@ . "remove these →   ""#,
     /// Trim matching prefix
     r#"▽¬\×∊, "thing" "thing← remove this""#,
     /// Trim matching suffix
-    r#"▽¬⍜⇌\×∊, "thing" "remove this ⊙thing""#,
+    r#"▽¬⍜⇌\×∊, "thing" "remove this →thing""#,
     /// Trim whitespace
     r#"▽×⍜(⊟⇌)≡\↥.≠@ . "  abc xyz   ""#,
     /// Upscale a 2d matrix
-    "⍉▽↯⧻,⊙(⍉▽)∶↯∶,⧻,30 [0_1 1_0]",
+    "[0_1 1_0]\n⍉▽↯⧻,⊙(⍉▽)∶↯⊙.⧻,30",
     /// Upscale a colored image
-    "⍜⍘⍉≡(⍉▽↯⧻,⊙(⍉▽)∶↯∶,⧻,30) [[0_0_1 0_1_0] [1_0_0 0_0_0]]",
+    "[[0_0_1 0_1_0] [1_0_0 0_0_0]]\n⍜⍘⍉≡(⍉▽↯⧻,⊙(⍉▽)∶↯⊙.⧻,30)",
     /// Lerp between two values
     "+⊙'×-. 0 10 0.2",
     /// Set the value of an array at an index
@@ -188,7 +192,7 @@ uiuisms!(
     /// Cross product
     "-⊙'×⊓'↻2'↻1×⊓'↻1'↻2,, 4_5_6 1_2_3",
     /// Matrix product
-    "⊠(/+×)⊙⍉ [1_2 3_4 5_6] [7_8_9 10_11_12]",
+    "[1_2 3_4 5_6] [7_8_9 10_11_12]\n⊠(/+×)⊙⍉",
     /// Matrix power (Also works with scalars)
     ";∶⍥(⊠(/+×)⊙⍉,)∶⊙∶⊞=.⇡⬚1⊢△. [1_2 3_4] 4",
     /// Evaluate a polynomial with given coefficients at a scalar or square matrix

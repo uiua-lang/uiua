@@ -426,23 +426,32 @@ impl Uiua {
         Ok(())
     }
     fn modified(&mut self, modified: Modified, call: bool) -> UiuaResult {
-        // Give advice about redundant each
+        // Give advice about redundancy
         match modified.modifier.value {
-            Primitive::Each => {
-                if let [word] = modified.operands.as_slice() {
-                    if let Word::Primitive(prim) = &word.value {
-                        if prim.class().is_pervasive() {
-                            let span = modified.modifier.span.clone().merge(word.span.clone());
-                            self.diagnostics.insert(Diagnostic::new(
-                                format!(
-                                    "Using each with a pervasive primitive like {prim} is \
+            m @ (Primitive::Each | Primitive::Rows) => {
+                if let [Sp {
+                    value: Word::Primitive(prim),
+                    span,
+                }] = modified.operands.as_slice()
+                {
+                    if prim.class().is_pervasive() {
+                        let span = modified.modifier.span.clone().merge(span.clone());
+                        self.diagnostics.insert(Diagnostic::new(
+                            format!(
+                                "Using {m} with a pervasive primitive like {prim} is \
                                     redundant. Just use {prim} by itself."
-                                ),
-                                span,
-                                DiagnosticKind::Advice,
-                            ));
-                        }
+                            ),
+                            span,
+                            DiagnosticKind::Advice,
+                        ));
                     }
+                } else if words_look_pervasive(&modified.operands) {
+                    let span = modified.modifier.span.clone();
+                    self.diagnostics.insert(Diagnostic::new(
+                        format!("{m}'s function is pervasive, so {m} is redundant here."),
+                        span,
+                        DiagnosticKind::Advice,
+                    ));
                 }
             }
             _ => {}
@@ -685,4 +694,16 @@ impl Uiua {
         }
         Ok(())
     }
+}
+
+fn words_look_pervasive(words: &[Sp<Word>]) -> bool {
+    use Primitive::*;
+    words.iter().all(|word| match &word.value {
+        Word::Primitive(p) if p.class().is_pervasive() => true,
+        Word::Primitive(
+            Dup | Flip | Over | Pop | Dip | Gap | Identity | Fork | Both | Bracket | Under | Each,
+        ) => true,
+        Word::Func(func) if func.lines.iter().all(|line| words_look_pervasive(line)) => true,
+        _ => false,
+    })
 }

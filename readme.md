@@ -53,6 +53,7 @@ TrailingNewline ← 1
 CommentSpaceAfterHash ← 1
 MultilineIndent ← 2
 CompactMultilineMode ← "auto"
+AlignComments ← 1
 ```
 
 The following configuration options are available:
@@ -96,3 +97,10 @@ Default: `10`
 The maximum number of lines a multiline expression can have before it is formatted in compact mode.
 
 Only used if `CompactMultilineMode` is not `"never"`.
+
+### `AlignComments`
+Type: boolean
+
+Default: `1`
+
+Whether to align consecutive end-of-line comments.

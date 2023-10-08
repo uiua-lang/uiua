@@ -104,14 +104,35 @@ pub fn iff(env: &mut Uiua) -> UiuaResult {
         .as_nat(env, "If's condition must be a natural number")?;
     if condition > 1 {
         return Err(env.error(format!(
-            "If's condition must be 0 or 1, but is {}",
+            "If's condition must be 0 or 1, but it is {}",
             condition
         )));
     }
-    if condition == 1 {
-        env.call(if_true)?;
+    let if_true_sig = if_true.signature();
+    let if_false_sig = if_false.signature();
+    if if_true_sig.args == if_false_sig.args {
+        if condition == 1 {
+            env.call(if_true)?;
+        } else {
+            env.call(if_false)?;
+        }
     } else {
-        env.call(if_false)?;
+        let arg_count = if_true_sig.args.max(if_false_sig.args);
+        let mut args = Vec::with_capacity(arg_count);
+        for i in 0..arg_count {
+            args.push(env.pop(ArrayArg(i + 1))?);
+        }
+        if condition == 1 {
+            for arg in args.into_iter().take(if_true_sig.args) {
+                env.push(arg);
+            }
+            env.call(if_true)?;
+        } else {
+            for arg in args.into_iter().take(if_false_sig.args) {
+                env.push(arg);
+            }
+            env.call(if_false)?;
+        }
     }
     Ok(())
 }

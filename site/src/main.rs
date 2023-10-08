@@ -387,6 +387,7 @@ fn site() {
                             diag.show(true)
                         );
                     }
+                    continue;
                 }
                 if should_fail {
                     panic!("Test should have failed in {}\n{}", path.display(), code);

@@ -365,7 +365,7 @@ impl FromIterator<String> for Array<Arc<Function>> {
 }
 
 #[allow(unused_variables)]
-pub trait ArrayValue: Clone + Debug + Display + GridFmt + ArrayCmp {
+pub trait ArrayValue: Clone + Debug + Display + GridFmt + ArrayCmp + Send + Sync + 'static {
     const NAME: &'static str;
     fn get_fill(env: &Uiua) -> Option<Self>;
     fn array_hash<H: Hasher>(&self, hasher: &mut H);

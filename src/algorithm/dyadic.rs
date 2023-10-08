@@ -1178,113 +1178,64 @@ impl<T: ArrayValue> Array<T> {
             }
         })
     }
-    fn untake(self, index: &[isize], mut into: Self, env: &Uiua) -> UiuaResult<Self> {
-        if self.rank() + index.len() - 1 != into.rank() {
+    fn untake(self, index: &[isize], into: Self, env: &Uiua) -> UiuaResult<Self> {
+        let from = self;
+        if from.rank() != into.rank() {
             return Err(env.error(format!(
                 "Attempted to undo take, but the taken section's rank was modified from {} to {}",
-                into.rank() - (index.len() - 1),
-                self.rank()
+                into.rank(),
+                from.rank()
             )));
         }
-        let from = self;
         Ok(match index {
             [] => into,
             &[untaking] => {
                 let abs_untaking = untaking.unsigned_abs();
-                if from.rank() == into.rank() || into.rank().saturating_sub(from.rank()) == 1 {
-                    let into = into.drop(&[untaking], env)?;
-                    if untaking >= 0 {
-                        from.join(into, env)
-                    } else {
-                        into.join(from, env)
-                    }
-                    .map_err(|_| {
-                        env.error(
-                            "Attempted to undo take, but the taken section \
-                            was modified to an incompatible shape",
-                        )
-                    })?
-                } else if abs_untaking == from.row_count() {
-                    let into_row_len = into.row_len();
-                    let into_row_count = into.row_count();
-                    into.data.modify(|data| {
-                        if untaking >= 0 {
-                            for (from, into) in from
-                                .row_slices()
-                                .zip(data.make_mut().chunks_exact_mut(into_row_len))
-                            {
-                                into.clone_from_slice(from);
-                            }
-                        } else {
-                            let start = into_row_count.saturating_sub(abs_untaking);
-                            for (from, into) in from
-                                .row_slices()
-                                .zip(data.make_mut().chunks_exact_mut(into_row_len).skip(start))
-                            {
-                                into.clone_from_slice(from);
-                            }
-                        }
-                    });
-                    into
-                } else {
+                if abs_untaking != from.row_count() {
                     return Err(env.error(format!(
-                        "Attempted to undo take, but the shape of the taken section's \
-                        rows was modified from {} to {}",
-                        FormatShape(&into.shape[1..]),
-                        FormatShape(&from.shape[1..])
+                        "Attempted to undo take, but the taken section's row \
+                        count was modified from {} to {}",
+                        abs_untaking,
+                        from.row_count()
                     )));
                 }
+                let into = into.drop(&[untaking], env)?;
+                if untaking >= 0 {
+                    from.join(into, env)
+                } else {
+                    into.join(from, env)
+                }?
             }
             &[untaking, ref sub_index @ ..] => {
                 let abs_untaking = untaking.unsigned_abs();
-                if from.rank() == into.rank() {
-                    let into = into.drop(&[untaking], env)?;
-                    if untaking >= 0 {
-                        from.join(into, env)
-                    } else {
-                        into.join(from, env)
-                    }
-                    .map_err(|_| {
-                        env.error(
-                            "Attempted to undo take, but the taken section \
-                            was modified to an incompatible shape",
-                        )
-                    })?
-                } else if abs_untaking == from.row_count() {
-                    let into_row_count = into.row_count();
-                    let mut new_rows = Vec::with_capacity(into_row_count);
-                    if untaking >= 0 {
-                        for (from, into) in from.rows().zip(into.rows()) {
-                            new_rows.push(from.untake(sub_index, into, env)?);
-                        }
-                        new_rows.extend(into.rows().skip(abs_untaking));
-                    } else {
-                        let start = into_row_count.saturating_sub(abs_untaking);
-                        new_rows.extend(into.rows().take(start));
-                        for (from, into) in from.rows().zip(into.rows().skip(start)) {
-                            new_rows.push(from.untake(sub_index, into, env)?);
-                        }
-                    }
-                    Array::from_row_arrays(new_rows, env)?
-                } else {
-                    assert_ne!(
-                        0,
-                        from.rank(),
-                        "untaking multiple dimensions from a scalar \
-                        array should not be possible"
-                    );
+                if abs_untaking != from.row_count() {
                     return Err(env.error(format!(
-                        "Attempted to undo take, but the shape of the taken section's \
-                        rows was modified from {} to {}",
-                        FormatShape(&into.shape[1..]),
-                        FormatShape(&from.shape[1..])
+                        "Attempted to undo take, but the taken section's row \
+                        count was modified from {} to {}",
+                        abs_untaking,
+                        from.row_count()
                     )));
                 }
+                let into_row_count = into.row_count();
+                let mut new_rows = Vec::with_capacity(into_row_count);
+                if untaking >= 0 {
+                    for (from, into) in from.rows().zip(into.rows()) {
+                        new_rows.push(from.untake(sub_index, into, env)?);
+                    }
+                    new_rows.extend(into.rows().skip(abs_untaking));
+                } else {
+                    let start = into_row_count.saturating_sub(abs_untaking);
+                    new_rows.extend(into.rows().take(start));
+                    for (from, into) in from.rows().zip(into.rows().skip(start)) {
+                        new_rows.push(from.untake(sub_index, into, env)?);
+                    }
+                }
+                Array::from_row_arrays(new_rows, env)?
             }
         })
     }
     fn undrop(self, index: &[isize], into: Self, env: &Uiua) -> UiuaResult<Self> {
-        if self.rank() + index.len() - 1 != into.rank() {
+        if self.rank() != into.rank() {
             return Err(env.error(format!(
                 "Attempted to undo drop, but the dropped section's rank was modified from {} to {}",
                 into.rank() - (index.len() - 1),

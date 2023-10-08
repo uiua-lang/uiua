@@ -3257,6 +3257,7 @@ dependencies = [
  "parking_lot",
  "paste",
  "rand",
+ "rayon",
  "rustls",
  "serde",
  "serde_yaml",

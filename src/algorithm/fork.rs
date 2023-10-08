@@ -2,6 +2,7 @@
 
 use crate::{
     run::{ArrayArg, FunctionArg},
+    value::Value,
     Uiua, UiuaResult,
 };
 
@@ -99,40 +100,130 @@ pub fn bracket(env: &mut Uiua) -> UiuaResult {
 pub fn iff(env: &mut Uiua) -> UiuaResult {
     let if_true = env.pop(FunctionArg(1))?;
     let if_false = env.pop(FunctionArg(2))?;
-    let condition = env
-        .pop(ArrayArg(1))?
-        .as_nat(env, "If's condition must be a natural number")?;
-    if condition > 1 {
-        return Err(env.error(format!(
-            "If's condition must be 0 or 1, but it is {}",
-            condition
-        )));
-    }
-    let if_true_sig = if_true.signature();
-    let if_false_sig = if_false.signature();
-    if if_true_sig.args == if_false_sig.args {
-        if condition == 1 {
-            env.call(if_true)?;
+    let condition = env.pop(ArrayArg(1))?;
+    if let Ok(condition) = condition.as_nat(env, "") {
+        if condition > 1 {
+            return Err(env.error(format!(
+                "If's condition must be 0 or 1, but it is {}",
+                condition
+            )));
+        }
+        let if_true_sig = if_true.signature();
+        let if_false_sig = if_false.signature();
+        if if_true_sig.args == if_false_sig.args {
+            if condition == 1 {
+                env.call(if_true)?;
+            } else {
+                env.call(if_false)?;
+            }
         } else {
-            env.call(if_false)?;
+            let arg_count = if_true_sig.args.max(if_false_sig.args);
+            let mut args = Vec::with_capacity(arg_count);
+            for i in 0..arg_count {
+                args.push(env.pop(ArrayArg(i + 1))?);
+            }
+            if condition == 1 {
+                for arg in args.into_iter().take(if_true_sig.args) {
+                    env.push(arg);
+                }
+                env.call(if_true)?;
+            } else {
+                for arg in args.into_iter().take(if_false_sig.args) {
+                    env.push(arg);
+                }
+                env.call(if_false)?;
+            }
         }
     } else {
-        let arg_count = if_true_sig.args.max(if_false_sig.args);
-        let mut args = Vec::with_capacity(arg_count);
-        for i in 0..arg_count {
-            args.push(env.pop(ArrayArg(i + 1))?);
+        let condition = condition.as_naturals(
+            env,
+            "If's condition must be a natural number or list of natural numbers",
+        )?;
+        if !condition.iter().all(|&x| x <= 1) {
+            return Err(env.error(format!(
+                "If's condition must be all 0s or 1s, but it is {:?}",
+                condition
+            )));
         }
-        if condition == 1 {
-            for arg in args.into_iter().take(if_true_sig.args) {
-                env.push(arg);
+        let if_true_sig = if_true.signature();
+        let if_false_sig = if_false.signature();
+        if if_true_sig.outputs != 1 {
+            return Err(env.error(format!(
+                "If's true branch must return 1 value, but it returns {}",
+                if_true_sig.outputs
+            )));
+        }
+        if if_false_sig.outputs != 1 {
+            return Err(env.error(format!(
+                "If's false branch must return 1 value, but it returns {}",
+                if_false_sig.outputs
+            )));
+        }
+        let arg_count = if_true_sig.args.max(if_false_sig.args);
+        match arg_count {
+            1 => {
+                let xs = env.pop(ArrayArg(2))?;
+                if xs.row_count() != condition.len() {
+                    return Err(env.error(format!(
+                        "If's condition must have the same number of rows as its argument, \
+                        but it has {} rows and its argument has {} rows",
+                        condition.len(),
+                        xs.row_count()
+                    )));
+                }
+                let mut new_rows = Vec::with_capacity(condition.len());
+                for (con, x) in condition.into_iter().zip(xs.into_rows()) {
+                    env.push(x);
+                    if con == 1 {
+                        env.call(if_true.clone())?;
+                        new_rows.push(env.pop("if's true branch result")?);
+                    } else {
+                        env.call(if_false.clone())?;
+                        new_rows.push(env.pop("if's false branch result")?);
+                    }
+                }
+                env.push(Value::from_row_values(new_rows, env)?);
             }
-            env.call(if_true)?;
-        } else {
-            for arg in args.into_iter().take(if_false_sig.args) {
-                env.push(arg);
+            2 => {
+                let a = env.pop(ArrayArg(2))?;
+                let b = env.pop(ArrayArg(3))?;
+                if a.row_count() != condition.len() || b.row_count() != condition.len() {
+                    return Err(env.error(format!(
+                        "If's condition must have the same number of rows as its arguments, \
+                        but it has {} rows and its arguments have {} and {} rows",
+                        condition.len(),
+                        a.row_count(),
+                        b.row_count()
+                    )));
+                }
+                let mut new_rows = Vec::with_capacity(condition.len());
+                for (con, (a, b)) in condition.into_iter().zip(a.into_rows().zip(b.into_rows())) {
+                    if con == 1 {
+                        if if_true_sig.args == 2 {
+                            env.push(b);
+                        }
+                        env.push(a);
+                        env.call(if_true.clone())?;
+                        new_rows.push(env.pop("if's true branch result")?);
+                    } else {
+                        if if_false_sig.args == 2 {
+                            env.push(b);
+                        }
+                        env.push(a);
+                        env.call(if_false.clone())?;
+                        new_rows.push(env.pop("if's false branch result")?);
+                    }
+                }
+                env.push(Value::from_row_values(new_rows, env)?);
             }
-            env.call(if_false)?;
+            n => {
+                return Err(env.error(format!(
+                    "The maximum of iterating if's function's arguments must be 1 or 2, \
+                    but it is {n}"
+                )));
+            }
         }
     }
+
     Ok(())
 }

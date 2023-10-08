@@ -5,6 +5,7 @@ Uiua is not yet stable.
 ## 0.0.18 - 2023-10-??
 ### Language
 - [`if` `?`](https://uiua.org/docs/if)'s branches can now have a different number of arguments (but not outputs)
+- [`if` `?`](https://uiua.org/docs/if)'s condition can now be a list of conditions, and the branch will be chosen for each row in the argument(s)
 - [`under` `⍜`](https://uiua.org/docs/under) [`&n`](https://uiua.org/docs/&n) can be used to time things
 ### Interpreter
 - The formatter now aligns consecutive end-of-line comments

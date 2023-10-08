@@ -1,5 +1,3 @@
-- Flip distribute
-- More powerful `if`
 - `under` `group` and `partition`
 - Add channels for spawned threads
 - Find a new glyph for deshape

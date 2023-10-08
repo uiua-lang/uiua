@@ -1278,6 +1278,11 @@ primitive!(
     ///   : f 0 1 xs
     ///   : f 1 0 xs
     ///   : f 1 1 xs
+    ///
+    /// The condition can be a list of booleans. In this case, the maximum of the function's arguments *must* be 2.
+    /// Which function to be called is determined on a row-wise basis.
+    /// ex: ?∘¯ .=0◿2 [1 2 3 4]
+    /// ex: ?∘⋅∘ [1 0 0 1] [1 2 3 4] [π π π π]
     ([2], If, Control, ("if", '?')),
     /// Call a function and catch errors
     ///

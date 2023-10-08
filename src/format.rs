@@ -373,7 +373,6 @@ struct Formatter<'a> {
 impl<'a> Formatter<'a> {
     fn format_items(&mut self, items: &[Item]) {
         for item in items {
-            println!("{:?}", item);
             self.format_item(item);
             self.output.push('\n');
         }

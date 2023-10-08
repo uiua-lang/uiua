@@ -94,6 +94,14 @@ impl Span {
     pub fn error(&self, msg: impl Into<String>) -> UiuaError {
         self.clone().sp(msg.into()).into()
     }
+    pub fn merge(self, other: Self) -> Self {
+        match (self, other) {
+            (Span::Code(a), Span::Code(b)) => Span::Code(a.merge(b)),
+            (Span::Code(a), Span::Builtin) => Span::Code(a),
+            (Span::Builtin, Span::Code(b)) => Span::Code(b),
+            (Span::Builtin, Span::Builtin) => Span::Builtin,
+        }
+    }
 }
 
 #[derive(Clone)]

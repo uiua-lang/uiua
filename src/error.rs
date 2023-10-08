@@ -261,7 +261,7 @@ impl Diagnostic {
     }
 }
 
-fn report<I, T>(errors: I, kind: ReportKind, color: bool) -> String
+fn report<I, T>(errors: I, mut kind: ReportKind, color: bool) -> String
 where
     I: IntoIterator<Item = (T, Span)>,
     T: ToString,
@@ -275,6 +275,9 @@ where
             ReportKind::Custom(_, col) => col,
         }
     } else {
+        if let ReportKind::Custom(_, col) = &mut kind {
+            *col = Color::Unset;
+        }
         Color::Unset
     };
     let mut buffer = Vec::new();

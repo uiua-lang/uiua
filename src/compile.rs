@@ -185,6 +185,16 @@ impl Uiua {
                 instrs.pop();
                 instrs.push(Instr::Prim(Cos, span));
             }
+            ([.., Instr::Prim(Over, a)], Instr::Prim(Flip, b)) => {
+                let a = *a;
+                instrs.push(Instr::Prim(Flip, b));
+                let span = self.merge_spans(a, b);
+                self.diagnostics_mut().insert(Diagnostic::new(
+                    format!("Prefer `{Dip}{Dup}` over `{Flip}{Over}` for clarity"),
+                    span,
+                    DiagnosticKind::Style,
+                ));
+            }
             // First reverse = last
             ([.., Instr::Prim(top @ Reverse, _)], Instr::Prim(First, _)) => *top = Last,
             (_, instr) => instrs.push(instr),

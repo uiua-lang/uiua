@@ -590,7 +590,12 @@ impl Lexer {
                         ident.push(c);
                     }
                     // Try to parse as primitives
-                    if let Some(prims) = Primitive::from_format_name_multi(&ident) {
+                    let lowercase_end = ident
+                        .char_indices()
+                        .find(|(_, c)| c.is_ascii_uppercase())
+                        .map_or(ident.len(), |(i, _)| i);
+                    if let Some(prims) = Primitive::from_format_name_multi(&ident[..lowercase_end])
+                    {
                         let mut start = start;
                         for (prim, frag) in prims {
                             let end = Loc {
@@ -604,6 +609,10 @@ impl Lexer {
                                 span: self.make_span(start, end),
                             });
                             start = end;
+                        }
+                        let rest = &ident[lowercase_end..];
+                        if !rest.is_empty() {
+                            self.end(Ident, start);
                         }
                     } else {
                         // Lone ident

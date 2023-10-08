@@ -1,6 +1,6 @@
-- End primitive parsing at capital letter
-- Proofread function docs
 - Make `if` handle its signatures like `fork` does
+- Add advice diagnoatic for all pervasive functions in `each` or `rows`
+- Proofread function docs
 - Improve multiple end-of-line comment formatting
 - Inline some functions with `distribute`
 - Fix web editor text deletion bug

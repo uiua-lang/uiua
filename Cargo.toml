@@ -46,6 +46,7 @@ tower-lsp = { version = "0.19.0", optional = true }
 webpki-roots = { version = "0.25.0", optional = true }
 viuer = { version = "0.7.1", optional = true }
 num_cpus = "1.16.0"
+rayon = "1.8.0"
 
 [features]
 audio = ["hodaun", "crossbeam-channel", "lockfree"]

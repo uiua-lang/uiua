@@ -7,6 +7,7 @@ use std::{
     sync::Arc,
 };
 
+use rayon::prelude::*;
 use tinyvec::tiny_vec;
 
 use crate::{array::*, value::Value, Uiua, UiuaResult};
@@ -269,7 +270,7 @@ impl<T: ArrayValue> Array<T> {
             return Ok(Vec::new());
         }
         let mut indices = (0..self.row_count()).collect::<Vec<_>>();
-        indices.sort_by(|&a, &b| {
+        indices.par_sort_by(|&a, &b| {
             self.row_slice(a)
                 .iter()
                 .zip(self.row_slice(b))
@@ -287,11 +288,11 @@ impl<T: ArrayValue> Array<T> {
             return Ok(Vec::new());
         }
         let mut indices = (0..self.row_count()).collect::<Vec<_>>();
-        indices.sort_by(|&a, &b| {
+        indices.par_sort_by(|&a, &b| {
             self.row_slice(a)
                 .iter()
                 .zip(self.row_slice(b))
-                .map(|(a, b)| a.array_cmp(b).reverse())
+                .map(|(a, b)| b.array_cmp(a))
                 .find(|x| x != &Ordering::Equal)
                 .unwrap_or(Ordering::Equal)
         });

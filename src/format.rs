@@ -373,6 +373,7 @@ struct Formatter<'a> {
 impl<'a> Formatter<'a> {
     fn format_items(&mut self, items: &[Item]) {
         for item in items {
+            println!("{:?}", item);
             self.format_item(item);
             self.output.push('\n');
         }
@@ -549,7 +550,7 @@ impl<'a> Formatter<'a> {
             Word::Comment(comment) => {
                 let beginning_of_line = self
                     .output
-                    .lines()
+                    .split('\n')
                     .last()
                     .unwrap_or_default()
                     .trim()
@@ -564,7 +565,7 @@ impl<'a> Formatter<'a> {
                     }
                     self.output.push_str(comment);
                 } else {
-                    let line_number = self.output.lines().count();
+                    let line_number = self.output.split('\n').count();
                     self.end_of_line_comments
                         .push((line_number, comment.to_string()));
                 }

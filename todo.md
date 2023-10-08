@@ -1,4 +1,4 @@
-- Don't propogate NaN in min/max
+- Flip distribute
 - More powerful `if`
 - `under` `group` and `partition`
 - Add channels for spawned threads

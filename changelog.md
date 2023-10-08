@@ -5,6 +5,7 @@ Uiua is not yet stable.
 ## 0.0.18 - 2023-10-??
 If you are reading this on the website, then the features listed are live here.
 ### Language
+- **Major Change** [`distribute` `∺`](https://uiua.org/docs/distribute) now takes the array being distributed at its *last* argument, rather than its first
 - Add [`where` `⊚`](https://uiua.org/docs/where) function, which returns the indices of an array that have non-zero values
 - [`if` `?`](https://uiua.org/docs/if)'s branches can now have a different number of arguments (but not outputs)
 - [`if` `?`](https://uiua.org/docs/if)'s condition can now be a list of conditions, and the branch will be chosen for each row in the argument(s)

@@ -1067,7 +1067,10 @@ mod tests {
             format!(r#"[{glyphs}]|(?<![a-zA-Z])({format_names}{literal_names})(?![a-zA-Z])"#)
         }
 
-        let stack_functions = gen_group(Primitive::all().filter(|p| p.class() == PrimClass::Stack));
+        let stack_functions = gen_group(
+            Primitive::all()
+                .filter(|p| p.class() == PrimClass::Stack && p.modifier_args().is_none()),
+        );
         let noadic_functions = gen_group(Primitive::all().filter(|p| {
             p.class() != PrimClass::Stack && p.modifier_args().is_none() && p.args() == Some(0)
         }));
@@ -1077,13 +1080,10 @@ mod tests {
         let dyadic_functions = gen_group(Primitive::all().filter(|p| {
             p.class() != PrimClass::Stack && p.modifier_args().is_none() && p.args() == Some(2)
         }));
-        let monadic_modifiers = gen_group(
-            Primitive::all()
-                .filter(|p| p.class() != PrimClass::Stack && matches!(p.modifier_args(), Some(1))),
-        );
-        let dyadic_modifiers: String = gen_group(Primitive::all().filter(|p| {
-            p.class() != PrimClass::Stack && matches!(p.modifier_args(), Some(n) if n >= 2)
-        }));
+        let monadic_modifiers =
+            gen_group(Primitive::all().filter(|p| matches!(p.modifier_args(), Some(1))));
+        let dyadic_modifiers: String =
+            gen_group(Primitive::all().filter(|p| matches!(p.modifier_args(), Some(n) if n >= 2)));
 
         let text = format!(
             r##"{{

@@ -236,11 +236,23 @@ impl Parser {
             let words = self.try_words().unwrap_or_default();
             // Check for uncapitalized binding names
             if ident.value.chars().count() >= 3
-                && ident.value.chars().next().unwrap().is_lowercase()
+                && ident.value.chars().next().unwrap().is_ascii_lowercase()
             {
+                let captialized: String = ident
+                    .value
+                    .chars()
+                    .next()
+                    .map(|c| c.to_ascii_uppercase())
+                    .into_iter()
+                    .chain(ident.value.chars().skip(1))
+                    .collect();
                 self.diagnostics.push(Diagnostic::new(
-                    "Binding names with 3 or more characters should be capitalized \
-                    to avoid collisions with future builtin functions",
+                    format!(
+                        "Binding names with 3 or more characters should be TitleCase \
+                        to avoid collisions with future builtin functions.\n\
+                        Try `{}` instead of `{}`",
+                        captialized, ident.value
+                    ),
                     ident.span.clone(),
                     DiagnosticKind::Advice,
                 ));

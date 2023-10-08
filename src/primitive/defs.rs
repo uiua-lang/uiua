@@ -513,7 +513,7 @@ primitive!(
     ///
     /// See also: [reshape]
     (1, Deshape, MonadicArray, ("deshape", '♭')),
-    /// Encode an array as bits (big-endian)
+    /// Encode an array as bits (little-endian)
     ///
     /// The result will always be 1 rank higher than the input.
     /// ex: ⋯27

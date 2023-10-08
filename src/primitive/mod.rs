@@ -655,8 +655,9 @@ fn dump(env: &mut Uiua) -> UiuaResult {
 }
 
 fn format_trace_item_lines(mut lines: Vec<String>, mut max_line_len: usize) -> Vec<String> {
+    let lines_len = lines.len();
     for (j, line) in lines.iter_mut().enumerate() {
-        let stick = if line.len() == 1 || j == 1 {
+        let stick = if lines_len == 1 || j == 1 {
             "├╴"
         } else {
             "│ "

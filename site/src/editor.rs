@@ -22,7 +22,9 @@ use uiua::{
     value_to_gif_bytes, value_to_image, value_to_wav_bytes, DiagnosticKind, SysBackend, Uiua,
 };
 use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{Event, HtmlBrElement, HtmlDivElement, KeyboardEvent, MouseEvent, Node};
+use web_sys::{
+    Event, HtmlBrElement, HtmlDivElement, HtmlInputElement, KeyboardEvent, MouseEvent, Node,
+};
 
 use crate::{
     backend::{OutputItem, WebBackend},
@@ -123,14 +125,13 @@ pub fn Editor<'a>(
     let code_text = move || code_text(&code_id());
     let get_code_cursor = move || get_code_cursor_impl(&code_id());
     let (copied_link, set_copied_link) = create_signal(false);
-    let (copied_code, set_copied_code) = create_signal(false);
+    let (settings_open, set_settings_open) = create_signal(false);
 
     /// Handles setting the code in the editor, setting the cursor, and managing the history
     struct State {
         code_id: String,
         set_line_count: WriteSignal<usize>,
         set_copied_link: WriteSignal<bool>,
-        set_copied_code: WriteSignal<bool>,
         past: RefCell<Vec<Record>>,
         future: RefCell<Vec<Record>>,
         curr: RefCell<Record>,
@@ -203,7 +204,6 @@ pub fn Editor<'a>(
         }
         fn set_changed(&self) {
             self.set_copied_link.set(false);
-            self.set_copied_code.set(false);
             self.set_line_count();
         }
         fn set_line_count(&self) {
@@ -240,7 +240,6 @@ pub fn Editor<'a>(
         code_id: code_id(),
         set_line_count,
         set_copied_link,
-        set_copied_code,
         past: Default::default(),
         future: Default::default(),
         curr: {
@@ -723,7 +722,7 @@ pub fn Editor<'a>(
     let mut glyph_buttons: Vec<_> = Primitive::non_deprecated()
         .filter_map(|p| {
             let text = p
-                .unicode()
+                .glyph()
                 .map(Into::into)
                 .or_else(|| p.ascii().map(|s| s.to_string()))?;
             let mut title = p.name().unwrap_or_default().to_string();
@@ -976,18 +975,31 @@ pub fn Editor<'a>(
         }
     };
 
-    // Copy the code
-    let copy_code = move |_| {
-        let code = code_text();
-        _ = window().navigator().clipboard().unwrap().write_text(&code);
-        set_copied_code.set(true);
+    // Toggle settings
+    let toggle_settings_open = move |_| {
+        set_settings_open.update(|s| *s = !*s);
     };
-    let copy_code_title = move || {
-        if copied_code.get() {
-            "Copied!"
+    let toggle_settings_title = move || {
+        if settings_open.get() {
+            "Hide settings"
         } else {
-            "Copy this code"
+            "Show settings"
         }
+    };
+
+    // Settings
+    let settings_style = move || {
+        if settings_open.get() {
+            ""
+        } else {
+            "display:none"
+        }
+    };
+    let on_execution_limit_change = move |event: Event| {
+        let event = event.dyn_into::<web_sys::InputEvent>().unwrap();
+        let input: HtmlInputElement = event.target().unwrap().dyn_into().unwrap();
+        let limit = input.value().parse().unwrap_or(2.0);
+        set_execution_limit(limit);
     };
 
     // Render
@@ -997,6 +1009,20 @@ pub fn Editor<'a>(
                 <div style=glyph_buttons_style>
                     <div class="glyph-buttons">{glyph_buttons}</div>
                 </div>
+                <div id="settings" style=settings_style>
+                    <div>
+                        "Execution limit:"
+                        <input
+                            type="number"
+                            min="0.01"
+                            max="1000000"
+                            width="3em"
+                            title="The maximum number of seconds a program can run for"
+                            value=get_execution_limit
+                            on:input=on_execution_limit_change/>
+                        "s"
+                    </div>
+                </div>
                 <div class=editor_class>
                     <div id="code-area">
                         <div id={glyph_doc_id} class="glyph-doc" style="display: none">
@@ -1004,12 +1030,6 @@ pub fn Editor<'a>(
                             <div class="glyph-doc-ctrl-click">"Shift+click for more info (Ctrl+click for new tab)"</div>
                         </div>
                         <div id="code-right-side">
-                            <button
-                                class="editor-right-button"
-                                data-title=copy_code_title
-                                on:click=copy_code>
-                                "📋"
-                            </button>
                             <button
                                 class="editor-right-button"
                                 data-title=copy_link_title
@@ -1021,6 +1041,12 @@ pub fn Editor<'a>(
                                 class="editor-right-button"
                                 data-title=show_glyphs_title
                                 on:click=toggle_show_glyphs>{show_glyphs_text}
+                            </button>
+                            <button
+                                class="editor-right-button"
+                                data-title=toggle_settings_title
+                                on:click=toggle_settings_open>
+                                "⚙️"
                             </button>
                             <div id="example-tracker">{example_text}</div>
                         </div>
@@ -1075,6 +1101,27 @@ pub fn Editor<'a>(
             </div>
         </div>
     }
+}
+
+fn get_execution_limit() -> f64 {
+    window()
+        .local_storage()
+        .unwrap()
+        .unwrap()
+        .get_item("execution-limit")
+        .ok()
+        .flatten()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(2.0)
+}
+
+fn set_execution_limit(limit: f64) {
+    window()
+        .local_storage()
+        .unwrap()
+        .unwrap()
+        .set_item("execution-limit", &limit.to_string())
+        .unwrap();
 }
 
 fn line_col(s: &str, pos: usize) -> (usize, usize) {
@@ -1374,7 +1421,7 @@ fn run_code(code: &str) -> Vec<OutputItem> {
     // Run
     let mut env = Uiua::with_backend(io)
         .with_mode(RunMode::All)
-        .with_execution_limit(Duration::from_secs(10));
+        .with_execution_limit(Duration::from_secs_f64(get_execution_limit()));
     let mut error = None;
     let values = match env.load_str(code) {
         Ok(()) => env.take_stack(),
@@ -1465,7 +1512,14 @@ fn run_code(code: &str) -> Vec<OutputItem> {
             output.truncate(10);
             output.push(OutputItem::String("...Additional output truncated".into()));
         }
-        output.push(OutputItem::Error(error.show(false)));
+        let formatted = error.show(false);
+        let execution_limit_reached = formatted.contains("Maximum execution time exceeded");
+        output.push(OutputItem::Error(formatted));
+        if execution_limit_reached {
+            output.push(OutputItem::String(
+                "You can increase the execution time limit in the editor settings".into(),
+            ));
+        }
     }
     if !diagnotics.is_empty() {
         if !output.is_empty() {

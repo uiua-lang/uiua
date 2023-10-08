@@ -183,6 +183,10 @@ uiuisms!(
     "⍉▽↯⧻,⊙(⍉▽)∶↯∶,⧻,30 [0_1 1_0]",
     /// Upscale a colored image
     "⍜⍘⍉≡(⍉▽↯⧻,⊙(⍉▽)∶↯∶,⧻,30) [[0_0_1 0_1_0] [1_0_0 0_0_0]]",
+    /// Lerp between two values
+    "+⊙'×-. 0 10 0.2",
+    /// Set the value of an array at an index
+    "⍜⊏; 2 1_2_3_4 10",
     /// Dot product
     "/+× [1 2 3] [4 ¯5 6]",
     /// Cross product

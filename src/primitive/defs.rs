@@ -238,20 +238,20 @@ primitive!(
         MonadicPervasive,
         ("negate", AsciiToken::Backtick, '¯')
     ),
-    /// The absolute value of a number
+    /// Get the absolute value of a number
     ///
     /// ex: ⌵ ¯1
     /// ex: ⌵ 1
     ///
     /// The glyph looks like the graph of `|x|`.
     (1, Abs, MonadicPervasive, ("absolute value", '⌵')),
-    /// The square root of a number
+    /// Take the square root of a number
     ///
     /// ex: √4
     /// ex: √[1 4 9 16]
     /// ex: √¯1
     (1, Sqrt, MonadicPervasive, ("sqrt", '√')),
-    /// The sine of a number
+    /// Get the sine of a number
     ///
     /// ex: ○ 1
     ///
@@ -267,11 +267,11 @@ primitive!(
     /// You can get a tangent function by [divide]ing the [sine] by the cosine.
     /// ex: ÷○+η∶○. 0
     (1, Sin, MonadicPervasive, ("sine", '○')),
-    /// The cosine of a number
+    /// Get the cosine of a number
     (1, Cos, MonadicPervasive),
-    /// The arcsine of a number
+    /// Get the arcsine of a number
     (1, Asin, MonadicPervasive),
-    /// The arccosine of a number
+    /// Get the arccosine of a number
     (1, Acos, MonadicPervasive),
     /// Round to the nearest integer towards `¯∞`
     ///
@@ -424,7 +424,7 @@ primitive!(
     /// ex: ⁿ2 [1 2 3]
     /// ex: ⁿ [1 2 3] [4 5 6]
     (2, Pow, DyadicPervasive, ("power", 'ⁿ')),
-    /// The based logarithm of a number
+    /// Get the based logarithm of a number
     ///
     /// The first value is the base, and the second value is the power.
     /// ex: ₙ2 8
@@ -450,14 +450,14 @@ primitive!(
     /// [maximum] can be used as a logical OR.
     /// ex: ↥,,≤5∶≥8. [6 2 5 9 6 5 0 4]
     (2, Max, DyadicPervasive, ("maximum", '↥')),
-    /// The arctangent of two numbers
+    /// Take the arctangent of two numbers
     ///
     /// This takes a `y` and `x` argument and returns the angle in radians in the range `(-π, π]`.
     /// ex: ∠ 1 0
     /// ex: ∠ ¯1 0
     /// ex: ∠ √2 √2
     (2, Atan, DyadicPervasive, ("atangent", '∠')),
-    /// The number of rows in an array
+    /// Get the number of rows in an array
     ///
     /// ex: ⧻5
     /// ex: ⧻[]
@@ -468,7 +468,7 @@ primitive!(
     /// ex:  ⧻[1_2_3 4_5_6]
     ///   : ⊢△[1_2_3 4_5_6]
     (1, Len, MonadicArray, ("length", '⧻')),
-    /// The dimensions of an array
+    /// Get the dimensions of an array
     ///
     /// ex: △5
     /// ex: △[]
@@ -489,14 +489,14 @@ primitive!(
     ///   :   ⇡△[1_2_3 4_5_6]
     ///   : ⊡⇡△.[1_2_3 4_5_6]
     (1, Range, MonadicArray, ("range", '⇡')),
-    /// The first row of an array
+    /// Get the first row of an array
     ///
     /// ex: ⊢1_2_3
     /// ex: ⊢[1_2 3_4 5_6]
     /// ex! ⊢[]
     /// ex! ⊢1
     (1, First, MonadicArray, ("first", '⊢')),
-    /// The last element of an array
+    /// Get the last element of an array
     (1, Last, MonadicArray),
     /// Reverse the rows of an array
     ///
@@ -711,11 +711,14 @@ primitive!(
     /// ex: ▽ 4 [1 2 3 4 5]
     /// ex: ▽ 2 [1_2_3 4_5_6]
     ///
-    /// The first or last dimensions of the new shape may be negative. This indicates that this is a *derived* dimension, and it will be calculated to make the total number of elements in the new shape be `less or equal` the total number of elements in the original shape.
+    /// At most one of the dimensions of the new shape may be negative. This indicates that this is a *derived* dimension, and it will be calculated to make the total number of elements in the new shape be `less or equal` the total number of elements in the original shape.
     /// ex: ↯5_¯1 ⇡15
     /// ex: ↯¯1_5 ⇡15
     /// ex: ↯2_2_¯1 ⇡15
     /// ex: ↯¯1_2_2 ⇡15
+    /// ex: ↯3_¯1_5 ⇡30
+    /// If [fill] is used, the total number of elements in the new shape will always be [equal] to the total number of elements in the original shape.
+    /// ex: ⬚0↯¯1_5 ⇡12
     ///
     /// See also: [deshape]
     (2, Reshape, DyadicArray, ("reshape", '↯')),

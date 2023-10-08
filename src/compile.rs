@@ -363,19 +363,6 @@ impl Uiua {
                 let span = self.add_span(span);
                 self.push_instr(Instr::Call(span));
             }
-        } else if let Some(prim) = Primitive::all().find(|p| {
-            p.names().is_some_and(|n| {
-                (n.ascii.is_some() || n.unicode.is_some_and(|c| c as u32 <= 127))
-                    && ident.len() >= 3
-                    && n.text.starts_with(&*ident)
-            })
-        }) {
-            return Err(span
-                .sp(format!(
-                    "Unknown identifier `{ident}`. Did you mean `{prim}`? \
-                    Functions with ASCII glyphs do not format."
-                ))
-                .into());
         } else {
             return Err(span.sp(format!("Unknown identifier `{ident}`")).into());
         }

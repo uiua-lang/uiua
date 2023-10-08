@@ -624,7 +624,7 @@ impl Lexer {
                 }
                 c if c.is_whitespace() => continue,
                 c => {
-                    if let Some(prim) = Primitive::from_unicode(c) {
+                    if let Some(prim) = Primitive::from_glyph(c) {
                         self.end(Glyph(prim), start)
                     } else if !self
                         .errors
@@ -743,5 +743,5 @@ pub fn is_ident_char(c: char) -> bool {
 }
 
 pub fn is_custom_glyph(c: char) -> bool {
-    c as u32 > 127 && !is_ident_char(c) && Primitive::from_unicode(c).is_none()
+    c as u32 > 127 && !is_ident_char(c) && Primitive::from_glyph(c).is_none()
 }

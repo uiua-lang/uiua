@@ -317,12 +317,12 @@ mod server {
                                 PrimDocFragment::Primitive { prim, named } => {
                                     let name = prim.name().unwrap();
                                     if *named {
-                                        if let Some(unicode) = prim.unicode() {
+                                        if let Some(unicode) = prim.glyph() {
                                             format!("{} {}", unicode, name)
                                         } else {
                                             name.into()
                                         }
-                                    } else if let Some(unicode) = prim.unicode() {
+                                    } else if let Some(unicode) = prim.glyph() {
                                         unicode.into()
                                     } else {
                                         name.into()

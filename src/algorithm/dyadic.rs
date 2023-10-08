@@ -458,35 +458,76 @@ impl<T: ArrayValue> Array<T> {
         self.shape.insert(0, count);
     }
     pub fn reshape(&mut self, dims: &[isize], env: &Uiua) -> UiuaResult {
-        let shape: Shape = if dims.iter().all(|&dim| dim >= 0) {
-            dims.iter().map(|&dim| dim as usize).collect()
-        } else if dims[0] < 0 {
-            if dims[1..].iter().any(|&dim| dim < 0) {
-                return Err(env.error("Cannot reshape array with multiple negative dimensions"));
+        let mut neg_count = 0;
+        for dim in dims {
+            if *dim < 0 {
+                neg_count += 1;
             }
-            let shape_non_leading_len = dims[1..].iter().product::<isize>() as usize;
-            if shape_non_leading_len == 0 {
-                return Err(env.error("Cannot reshape array with any 0 non-leading dimensions"));
+        }
+        let derive_len = |data_len: usize, other_len: usize| {
+            (if env.fill::<T>().is_some() {
+                f32::ceil
+            } else {
+                f32::floor
+            }(data_len as f32 / other_len as f32) as usize)
+                .max(1)
+        };
+        let shape: Shape = match neg_count {
+            0 => dims.iter().map(|&dim| dim as usize).collect(),
+            1 => {
+                if dims[0] < 0 {
+                    if dims[1..].iter().any(|&dim| dim < 0) {
+                        return Err(
+                            env.error("Cannot reshape array with multiple negative dimensions")
+                        );
+                    }
+                    let shape_non_leading_len = dims[1..].iter().product::<isize>() as usize;
+                    if shape_non_leading_len == 0 {
+                        return Err(
+                            env.error("Cannot reshape array with any 0 non-leading dimensions")
+                        );
+                    }
+                    let leading_len = derive_len(self.data.len(), shape_non_leading_len);
+                    let mut shape = vec![leading_len];
+                    shape.extend(dims[1..].iter().map(|&dim| dim as usize));
+                    Shape::from(&*shape)
+                } else if *dims.last().unwrap() < 0 {
+                    if dims.iter().rev().skip(1).any(|&dim| dim < 0) {
+                        return Err(
+                            env.error("Cannot reshape array with multiple negative dimensions")
+                        );
+                    }
+                    let shape_non_trailing_len =
+                        dims.iter().rev().skip(1).product::<isize>() as usize;
+                    if shape_non_trailing_len == 0 {
+                        return Err(
+                            env.error("Cannot reshape array with any 0 non-trailing dimensions")
+                        );
+                    }
+                    let trailing_len = derive_len(self.data.len(), shape_non_trailing_len);
+                    let mut shape: Vec<usize> = dims.iter().map(|&dim| dim as usize).collect();
+                    shape.pop();
+                    shape.push(trailing_len);
+                    Shape::from(&*shape)
+                } else {
+                    let neg_index = dims.iter().position(|&dim| dim < 0).unwrap();
+                    let (front, back) = dims.split_at(neg_index);
+                    let back = &back[1..];
+                    let front_len = front.iter().product::<isize>() as usize;
+                    let back_len = back.iter().product::<isize>() as usize;
+                    if front_len == 0 || back_len == 0 {
+                        return Err(env.error("Cannot reshape array with any 0 outer dimensions"));
+                    }
+                    let middle_len = derive_len(self.data.len(), front_len * back_len);
+                    let mut shape: Vec<usize> = front.iter().map(|&dim| dim as usize).collect();
+                    shape.push(middle_len);
+                    shape.extend(back.iter().map(|&dim| dim as usize));
+                    Shape::from(&*shape)
+                }
             }
-            let leading_len = (self.data.len() / shape_non_leading_len).max(1);
-            let mut shape = vec![leading_len];
-            shape.extend(dims[1..].iter().map(|&dim| dim as usize));
-            Shape::from(&*shape)
-        } else if *dims.last().unwrap() < 0 {
-            if dims.iter().rev().skip(1).any(|&dim| dim < 0) {
-                return Err(env.error("Cannot reshape array with multiple negative dimensions"));
+            n => {
+                return Err(env.error(format!("Cannot reshape array with {n} negative dimensions")))
             }
-            let shape_non_trailing_len = dims.iter().rev().skip(1).product::<isize>() as usize;
-            if shape_non_trailing_len == 0 {
-                return Err(env.error("Cannot reshape array with any 0 non-trailing dimensions"));
-            }
-            let trailing_len = (self.data.len() / shape_non_trailing_len).max(1);
-            let mut shape: Vec<usize> = dims.iter().map(|&dim| dim as usize).collect();
-            shape.pop();
-            shape.push(trailing_len);
-            Shape::from(&*shape)
-        } else {
-            return Err(env.error("Only the first or last dimension can be negative"));
         };
         let target_len: usize = shape.iter().product();
         self.shape = shape;
@@ -1536,19 +1577,22 @@ impl<T: ArrayValue> Array<T> {
                 self.format_shape()
             )));
         }
-        for (i, (size, sh)) in size_spec.iter().zip(&self.shape).enumerate() {
-            if *size > *sh {
-                return Err(env.error(format!(
-                    "Cannot take window of size {size} along axis {i} of shape {}",
-                    self.format_shape()
-                )));
-            }
-        }
         // Determine the shape of the windows array
         let mut new_shape = Shape::with_capacity(self.shape.len() + size_spec.len());
-        new_shape.extend(self.shape.iter().zip(size_spec).map(|(a, b)| a - b + 1));
+        new_shape.extend(
+            self.shape
+                .iter()
+                .zip(size_spec)
+                .map(|(a, b)| (a + 1).saturating_sub(*b)),
+        );
         new_shape.extend_from_slice(size_spec);
         new_shape.extend_from_slice(&self.shape[size_spec.len()..]);
+        // Check if the window size is too large
+        for (size, sh) in size_spec.iter().zip(&self.shape) {
+            if *size > *sh {
+                return Ok(Self::new(new_shape, Vec::new()));
+            }
+        }
         // Make a new window shape with the same rank as the windowed array
         let mut true_size: Vec<usize> = Vec::with_capacity(self.shape.len());
         true_size.extend(size_spec);

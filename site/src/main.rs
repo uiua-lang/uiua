@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 mod backend;
 mod docs;
 mod editor;
@@ -157,7 +159,7 @@ pub fn MainPage() -> impl IntoView {
                 </div>
                 <div>
                     <h2>"Syntactic Simplicity"</h2>
-                    <p>"Uiua has a simple, context-free, LL(2) grammar. Code runs from "<A href="/rtl">"right to left"</A>", top to bottom, with only "<A href="/docs/functions#modifiers">"one precedence rule"</A>". As operators are to the left of their operands, Uiua code looks a little bit like a Lisp, but with fewer parentheses."</p>
+                    <p>"Uiua has a simple, context-free, LL(2) grammar. Code runs from "<A href="/rtl">"right to left"</A>", top to bottom, with only "<A href="/docs/functions#modifiers">"one precedence rule"</A>". As operators are to the left of their operands, Uiua code reads a little bit like a Lisp, but with fewer parentheses."</p>
                 </div>
                 <div>
                     <h2>"System APIs"</h2>
@@ -234,7 +236,7 @@ pub fn Prim(
         title.push_str(&format!("({})", ascii));
     }
     if let Some(name) = prim.name() {
-        if prim.unicode().is_some() && glyph_only {
+        if prim.glyph().is_some() && glyph_only {
             if !title.is_empty() {
                 title.push(' ');
             }
@@ -337,11 +339,14 @@ fn site() {
         let entry = entry.unwrap();
         let path = entry.path();
         for line in std::fs::read_to_string(&path).unwrap().lines() {
-            if let Some(code) = line
-                .trim()
-                .strip_prefix(r#"<Editor example=""#)
-                .and_then(|line| line.strip_suffix(r#""/>"#))
-            {
+            if let Some(code) = line.trim().strip_prefix(r#"<Editor example=""#) {
+                let (code, should_fail) = if let Some(code) = code.strip_suffix(r#""/>"#) {
+                    (code, false)
+                } else if let Some(code) = code.strip_suffix(r#""/> // Should fail"#) {
+                    (code, true)
+                } else {
+                    continue;
+                };
                 let code = code
                     .replace("\\\"", "\"")
                     .replace("\\\\", "\\")
@@ -354,7 +359,7 @@ fn site() {
                     code.clone(),
                     std::thread::spawn(move || {
                         let mut env = uiua::Uiua::with_native_sys();
-                        env.load_str(&code).map(|_| env)
+                        (env.load_str(&code).map(|_| env), should_fail)
                     }),
                 ));
             }
@@ -363,7 +368,7 @@ fn site() {
     assert!(threads.len() > 50);
     for (path, code, thread) in threads {
         match thread.join().unwrap() {
-            Err(e) => {
+            (Err(e), false) => {
                 panic!(
                     "Test failed in {}\n{}\n{}",
                     path.display(),
@@ -371,14 +376,20 @@ fn site() {
                     e.show(true)
                 );
             }
-            Ok(mut env) => {
+            (Err(_), true) => {}
+            (Ok(mut env), should_fail) => {
                 if let Some(diag) = env.take_diagnostics().into_iter().next() {
-                    panic!(
-                        "Test failed in {}\n{}\n{}",
-                        path.display(),
-                        code,
-                        diag.show(true)
-                    );
+                    if !should_fail {
+                        panic!(
+                            "Test failed in {}\n{}\n{}",
+                            path.display(),
+                            code,
+                            diag.show(true)
+                        );
+                    }
+                }
+                if should_fail {
+                    panic!("Test should have failed in {}\n{}", path.display(), code);
                 }
             }
         }

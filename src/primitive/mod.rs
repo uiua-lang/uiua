@@ -12,8 +12,7 @@ use std::{
         consts::{PI, TAU},
         INFINITY,
     },
-    fmt::{self, Write},
-    iter::once,
+    fmt::{self},
     sync::{
         atomic::{self, AtomicUsize},
         OnceLock,
@@ -72,7 +71,7 @@ impl PrimClass {
 pub struct PrimNames {
     pub text: &'static str,
     pub ascii: Option<AsciiToken>,
-    pub unicode: Option<char>,
+    pub glyph: Option<char>,
 }
 
 impl From<&'static str> for PrimNames {
@@ -80,32 +79,32 @@ impl From<&'static str> for PrimNames {
         Self {
             text,
             ascii: None,
-            unicode: None,
+            glyph: None,
         }
     }
 }
 impl From<(&'static str, char)> for PrimNames {
-    fn from((text, unicode): (&'static str, char)) -> Self {
+    fn from((text, glyph): (&'static str, char)) -> Self {
         Self {
             text,
             ascii: None,
-            unicode: Some(unicode),
+            glyph: Some(glyph),
         }
     }
 }
 impl From<(&'static str, AsciiToken, char)> for PrimNames {
-    fn from((text, ascii, unicode): (&'static str, AsciiToken, char)) -> Self {
+    fn from((text, ascii, glyph): (&'static str, AsciiToken, char)) -> Self {
         Self {
             text,
             ascii: Some(ascii),
-            unicode: Some(unicode),
+            glyph: Some(glyph),
         }
     }
 }
 
 impl fmt::Display for Primitive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(c) = self.unicode() {
+        if let Some(c) = self.glyph() {
             write!(f, "{}", c)
         } else if let Some(s) = self.ascii() {
             write!(f, "{}", s)
@@ -145,8 +144,8 @@ impl Primitive {
     pub fn ascii(&self) -> Option<AsciiToken> {
         self.names().and_then(|n| n.ascii)
     }
-    pub fn unicode(&self) -> Option<char> {
-        self.names().and_then(|n| n.unicode)
+    pub fn glyph(&self) -> Option<char> {
+        self.names().and_then(|n| n.glyph)
     }
     /// Find a primitive by its text name
     pub fn from_name(name: &str) -> Option<Self> {
@@ -155,8 +154,8 @@ impl Primitive {
     pub fn from_simple(s: AsciiToken) -> Option<Self> {
         Self::all().find(|p| p.ascii() == Some(s))
     }
-    pub fn from_unicode(c: char) -> Option<Self> {
-        Self::all().find(|p| p.unicode() == Some(c))
+    pub fn from_glyph(c: char) -> Option<Self> {
+        Self::all().find(|p| p.glyph() == Some(c))
     }
     pub fn is_modifier(&self) -> bool {
         self.modifier_args().is_some()
@@ -220,8 +219,11 @@ impl Primitive {
         if name.len() < 3 {
             return None;
         }
-        let mut matching =
-            Primitive::all().filter(|p| p.names().is_some_and(|n| n.text.starts_with(name)));
+        let mut matching = Primitive::all().filter(|p| {
+            p.names().is_some_and(|n| {
+                n.glyph.is_some_and(|u| u as u32 > 127) && n.text.starts_with(name)
+            })
+        });
         let res = matching.next()?;
         let exact_match = res.names().unwrap().text == name;
         (exact_match || matching.next().is_none()).then_some(res)
@@ -592,30 +594,26 @@ impl Primitive {
 
 fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
     let val = env.pop(1)?;
-    let formatted = val.show();
     let span: String = if inverse {
         format!("{} {}", env.span(), Primitive::Invert)
     } else {
         env.span().to_string()
     };
-    const MD_ARRAY_INIT: &str = "╭─";
-    let message = if let Some(first_line) = formatted
-        .lines()
-        .next()
-        .filter(|line| line.starts_with(MD_ARRAY_INIT))
-    {
-        let first_line = format!("{}{}", first_line.trim(), span);
-        once(first_line.as_str())
-            .chain(formatted.lines().skip(1))
-            .fold(String::new(), |mut output, line| {
-                _ = writeln!(output, "{line}");
-                output
-            })
-    } else {
-        format!("  {span}\n{formatted}\n")
-    };
+    let max_line_len = span.chars().count() + 2;
+    let item_lines = format_trace_item_lines(
+        val.grid_string().lines().map(Into::into).collect(),
+        max_line_len,
+    );
     env.push(val);
-    env.backend.print_str_trace(&message);
+    env.backend.print_str_trace(&format!("┌╴{span}\n"));
+    for line in item_lines {
+        env.backend.print_str_trace(&line);
+    }
+    env.backend.print_str_trace("└");
+    for _ in 0..max_line_len - 1 {
+        env.backend.print_str_trace("╴");
+    }
+    env.backend.print_str_trace("\n");
     Ok(())
 }
 
@@ -637,25 +635,13 @@ fn dump(env: &mut Uiua) -> UiuaResult {
             Err(e) => items.push(e.value()),
         }
     }
-    let mut item_lines: Vec<Vec<String>> = items
+    let max_line_len = span.chars().count() + 2;
+    let item_lines: Vec<Vec<String>> = items
         .iter()
         .map(Value::grid_string)
-        .map(|s| s.lines().map(Into::into).collect())
+        .map(|s| s.lines().map(Into::into).collect::<Vec<String>>())
+        .map(|lines| format_trace_item_lines(lines, max_line_len))
         .collect();
-    let mut max_line_len = span.chars().count() + 2;
-    for item in &mut item_lines {
-        let item_len = item.len();
-        for (j, line) in item.iter_mut().enumerate() {
-            let stick = if item_len == 1 || j == 1 {
-                "├╴"
-            } else {
-                "│ "
-            };
-            line.insert_str(0, stick);
-            max_line_len = max_line_len.max(line.chars().count());
-            line.push('\n');
-        }
-    }
     env.backend.print_str_trace(&format!("┌╴{span}\n"));
     for line in item_lines.iter().flatten() {
         env.backend.print_str_trace(line);
@@ -664,7 +650,23 @@ fn dump(env: &mut Uiua) -> UiuaResult {
     for _ in 0..max_line_len - 1 {
         env.backend.print_str_trace("╴");
     }
+    env.backend.print_str_trace("\n");
     Ok(())
+}
+
+fn format_trace_item_lines(mut lines: Vec<String>, mut max_line_len: usize) -> Vec<String> {
+    let lines_len = lines.len();
+    for (j, line) in lines.iter_mut().enumerate() {
+        let stick = if lines_len == 1 || j == 1 {
+            "├╴"
+        } else {
+            "│ "
+        };
+        line.insert_str(0, stick);
+        max_line_len = max_line_len.max(line.chars().count());
+        line.push('\n');
+    }
+    lines
 }
 
 #[derive(Default, Debug)]
@@ -705,7 +707,7 @@ impl PrimDoc {
                             name = format!("{prim:?}");
                             &name
                         }));
-                    } else if let Some(c) = prim.unicode() {
+                    } else if let Some(c) = prim.glyph() {
                         s.push(c);
                     } else {
                         s.push_str(prim.name().unwrap_or_else(|| {
@@ -1021,7 +1023,7 @@ mod tests {
             let glyphs = prims
                 .clone()
                 .flat_map(|p| {
-                    p.unicode()
+                    p.glyph()
                         .into_iter()
                         .chain(p.ascii().into_iter().flat_map(|ascii| {
                             Some(ascii.to_string())
@@ -1056,7 +1058,7 @@ mod tests {
             let format_names = format_names.join("|");
             let mut literal_names: Vec<_> = prims
                 .filter_map(|p| p.names())
-                .filter(|p| p.ascii.is_none() && p.unicode.is_none())
+                .filter(|p| p.ascii.is_none() && p.glyph.is_none())
                 .map(|n| format!("|{}", n.text))
                 .collect();
             literal_names.sort_by_key(|s| s.len());

@@ -90,12 +90,17 @@ impl PartialOrd for Instr {
 
 impl Ord for Instr {
     fn cmp(&self, other: &Self) -> Ordering {
-        if self == other {
-            Ordering::Equal
-        } else {
-            let a: u8 = unsafe { transmute(discriminant(self)) };
-            let b: u8 = unsafe { transmute(discriminant(other)) };
-            a.cmp(&b)
+        match (self, other) {
+            (Self::Push(a), Self::Push(b)) => a.cmp(b),
+            (a, b) => {
+                if a == b {
+                    Ordering::Equal
+                } else {
+                    let a: u8 = unsafe { transmute(discriminant(a)) };
+                    let b: u8 = unsafe { transmute(discriminant(b)) };
+                    a.cmp(&b)
+                }
+            }
         }
     }
 }

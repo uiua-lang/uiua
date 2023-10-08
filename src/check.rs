@@ -311,14 +311,13 @@ impl<'a> VirtualEnv<'a> {
                     let f_sig = f.signature();
                     let target_handler_sig = Signature::new(f_sig.args + 1, f_sig.outputs);
                     let handler_sig = handler.signature();
-                    if handler_sig != target_handler_sig {
+                    if !handler_sig.is_subset_of(target_handler_sig) {
                         return Err(format!(
                             "try's functions have incompatible signatures {f_sig} and {handler_sig}. \
                             The error handler should take one more argement than the function."
                         ));
                     }
-                    let sig = f_sig.max_with(handler_sig);
-                    self.handle_sig(sig)?;
+                    self.handle_sig(f_sig)?;
                 }
                 Invert => {
                     if let BasicValue::Func(f) = self.pop()? {
@@ -514,9 +513,11 @@ impl<'a> VirtualEnv<'a> {
                 Call => self.handle_call()?,
                 Recur => return Err("recur present".into()),
                 prim => {
-                    let args = prim
+                    let array_args = prim
                         .args()
                         .ok_or_else(|| format!("{prim} has indeterminate args"))?;
+                    let function_args = prim.modifier_args().unwrap_or(0);
+                    let args = array_args + function_args;
                     for _ in 0..args {
                         self.pop()?;
                     }

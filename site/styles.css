@@ -83,7 +83,9 @@ li {
 
     .code,
     .input-div,
-    input[type=text] {
+    input[type=text],
+    #settings>*>input,
+    #settings>*>select {
         color: #d1daec;
         background-color: #1d2c3a;
     }
@@ -151,7 +153,9 @@ li {
 
     .code,
     .input-div,
-    input[type=text] {
+    input[type=text],
+    #settings>*>input,
+    #settings>*>select {
         color: #344;
         background-color: #f4f6f6;
     }
@@ -300,17 +304,14 @@ input[type=number] {
     -moz-appearance: textfield;
 }
 
-#settings>*>input {
-    width: 3em;
+#settings>*>input,
+#settings>*>select {
     border-radius: 0.5em;
     border: none;
 }
 
-@media (prefers-color-scheme: dark) {
-    #settings>*>input {
-        background-color: #1d2c3a;
-        color: #d1daec;
-    }
+#settings>*>input {
+    width: 3em;
 }
 
 #code-area {

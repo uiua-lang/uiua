@@ -513,9 +513,11 @@ impl<'a> VirtualEnv<'a> {
                 Call => self.handle_call()?,
                 Recur => return Err("recur present".into()),
                 prim => {
-                    let args = prim
+                    let array_args = prim
                         .args()
                         .ok_or_else(|| format!("{prim} has indeterminate args"))?;
+                    let function_args = prim.modifier_args().unwrap_or(0);
+                    let args = array_args + function_args;
                     for _ in 0..args {
                         self.pop()?;
                     }

@@ -622,11 +622,7 @@ pub mod log {
 pub mod max {
     use super::*;
     pub fn num_num(a: f64, b: f64) -> f64 {
-        if a.is_nan() || b.is_nan() {
-            f64::NAN
-        } else {
-            a.max(b)
-        }
+        a.max(b)
     }
     pub fn byte_byte(a: u8, b: u8) -> u8 {
         a.max(b)
@@ -648,11 +644,7 @@ pub mod max {
 pub mod min {
     use super::*;
     pub fn num_num(a: f64, b: f64) -> f64 {
-        if a.is_nan() || b.is_nan() {
-            f64::NAN
-        } else {
-            a.min(b)
-        }
+        a.min(b)
     }
     pub fn byte_byte(a: u8, b: u8) -> u8 {
         a.min(b)

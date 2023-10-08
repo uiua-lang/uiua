@@ -1,3 +1,4 @@
+- `under` `group` and `partition`
 - Inline some functions with `distribute`
 - Fix web editor text deletion bug
   - Steps to reproduce:

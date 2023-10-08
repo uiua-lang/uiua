@@ -1,6 +1,9 @@
+- Don't propogate NaN in min/max
 - More powerful `if`
 - `under` `group` and `partition`
 - Add channels for spawned threads
+- Find a new glyph for deshape
+- Make sure test mode with imports/exports works properly
 - Figure out what is going on with the editor cursor
 - Sift+delete to delete whole line
 - Build editor divs with leptos instead of strings

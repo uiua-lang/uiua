@@ -395,7 +395,6 @@ impl<'a> Formatter<'a> {
                     groups.push((line_len, vec![(line_number, comment)]));
                 }
             }
-            println!("{:#?}", groups);
             // Append comments to lines
             for (max, group) in groups {
                 for (line_number, comment) in group {

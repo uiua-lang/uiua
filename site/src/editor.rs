@@ -3,6 +3,7 @@ use std::{
     iter,
     mem::{replace, take},
     rc::Rc,
+    str::FromStr,
     time::Duration,
 };
 
@@ -23,7 +24,8 @@ use uiua::{
 };
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{
-    Event, HtmlBrElement, HtmlDivElement, HtmlInputElement, KeyboardEvent, MouseEvent, Node,
+    Event, HtmlBrElement, HtmlDivElement, HtmlInputElement, HtmlSelectElement, HtmlStyleElement,
+    KeyboardEvent, MouseEvent, Node,
 };
 
 use crate::{
@@ -1001,6 +1003,12 @@ pub fn Editor<'a>(
         let limit = input.value().parse().unwrap_or(2.0);
         set_execution_limit(limit);
     };
+    let on_select_font = move |event: Event| {
+        let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
+        let name = input.value();
+        set_font_name(&name);
+    };
+    set_font_name(&get_font_name());
 
     // Render
     view! {
@@ -1021,6 +1029,14 @@ pub fn Editor<'a>(
                             value=get_execution_limit
                             on:input=on_execution_limit_change/>
                         "s"
+                    </div>
+                    <div>
+                        "Font:"
+                        <select
+                            on:change=on_select_font>
+                            <option value="DejaVuSansMono" selected={get_font_name() == "DejaVuSansMono"}>"DejaVuSansMono"</option>
+                            <option value="Uiua386" selected={get_font_name() == "Uiua386"}>"Uiua386"</option>
+                        </select>
                     </div>
                 </div>
                 <div class=editor_class>
@@ -1103,25 +1119,62 @@ pub fn Editor<'a>(
     }
 }
 
-fn get_execution_limit() -> f64 {
+fn get_local_var<T>(name: &str, default: impl FnOnce() -> T) -> T
+where
+    T: FromStr,
+    T::Err: std::fmt::Display,
+{
     window()
         .local_storage()
         .unwrap()
         .unwrap()
-        .get_item("execution-limit")
+        .get_item(name)
         .ok()
         .flatten()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(2.0)
+        .and_then(|s| {
+            s.parse()
+                .map_err(|e| logging::log!("Error parsing local var {name:?} = {s:?}: {e}"))
+                .ok()
+        })
+        .unwrap_or_else(default)
+}
+
+fn set_local_var<T>(name: &str, value: T)
+where
+    T: ToString,
+{
+    window()
+        .local_storage()
+        .unwrap()
+        .unwrap()
+        .set_item(name, &value.to_string())
+        .unwrap();
+}
+
+fn get_execution_limit() -> f64 {
+    get_local_var("execution-limit", || 2.0)
 }
 
 fn set_execution_limit(limit: f64) {
-    window()
-        .local_storage()
+    set_local_var("execution-limit", limit);
+}
+
+fn get_font_name() -> String {
+    get_local_var("font-name", || "DejaVuSansMono".into())
+}
+
+fn set_font_name(name: &str) {
+    set_local_var("font-name", name);
+    // Change the @font-face rule for the font-family "Code Font" in the stylesheet
+    let new_style = document()
+        .create_element("style")
         .unwrap()
-        .unwrap()
-        .set_item("execution-limit", &limit.to_string())
+        .dyn_into::<HtmlStyleElement>()
         .unwrap();
+    new_style.set_inner_text(&format!(
+        "@font-face {{ font-family: 'Code Font'; src: url({name}.ttf) format('truetype'); }}"
+    ));
+    document().head().unwrap().append_child(&new_style).unwrap();
 }
 
 fn line_col(s: &str, pos: usize) -> (usize, usize) {

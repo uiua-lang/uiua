@@ -748,10 +748,12 @@ impl<T: ArrayValue> Array<T> {
                     )
                 })?;
                 if new_row.shape != into_row.shape {
-                    return Err(env.error(
-                        "Kept array has different shape than it was created with, \
+                    return Err(env.error(format!(
+                        "Kept array's shape was changed from {} to {}, \
                         so the keep cannot be inverted",
-                    ));
+                        into_row.format_shape(),
+                        new_row.format_shape()
+                    )));
                 }
                 new_rows.push(new_row);
             }

@@ -2,6 +2,10 @@
 
 Uiua is not yet stable.
 
+## 0.0.18 - 2023-10-??
+### Interpreter
+- Fix a bug that prevent [`under` `⍜`](https://uiua.org/docs/under) multidimensional [`take` `↙`](https://uiua.org/docs/take) and [`drop` `↘`](https://uiua.org/docs/drop) from working
+
 ## 0.0.17 - 2023-10-07
 ### Language
 - Add GIF encoding with [`&gife`](https://uiua.org/docs/&gife)

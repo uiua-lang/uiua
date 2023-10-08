@@ -1262,9 +1262,22 @@ primitive!(
     ///   : Abs 2
     ///   : Abs ¯5
     ///
+    /// The functions having different numbers of arguments works similary to [fork]. The function that takes fewer arguments will use the arguments higher on the stack.
+    /// ex: ?+¯ 1 3 5
+    /// ex: ?+¯ 0 3 5
+    ///
     /// The two functions having different signatures is not an error, but it may require a signature to be specified.
-    /// ex: ?∘+ 0 2 3
-    /// ex! (?∘+ 0 2 3)
+    /// ex: ?∘(.+) 0 2 3
+    /// ex! (?∘(.+) 0 2 3)
+    ///
+    /// [if] can be chained to check more than one condition.
+    /// Make sure to use [pop] or [gap] to git rid of excess conditions if the number of branches is not a [power] of `2`.
+    /// ex: f ← ??+×⋅-
+    ///   : xs ← (3 5)
+    ///   : f 0 0 xs
+    ///   : f 0 1 xs
+    ///   : f 1 0 xs
+    ///   : f 1 1 xs
     ([2], If, Control, ("if", '?')),
     /// Call a function and catch errors
     ///

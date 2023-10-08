@@ -3,6 +3,8 @@
 Uiua is not yet stable.
 
 ## 0.0.18 - 2023-10-??
+### Language
+- [`if` `?`](https://uiua.org/docs/if)'s branches can now have a different number of arguments (but not outputs)
 ### Interpreter
 - Fix a bug that prevent [`under` `⍜`](https://uiua.org/docs/under) multidimensional [`take` `↙`](https://uiua.org/docs/take) and [`drop` `↘`](https://uiua.org/docs/drop) from working
 

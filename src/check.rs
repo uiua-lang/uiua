@@ -287,15 +287,18 @@ impl<'a> VirtualEnv<'a> {
                     let if_true = self.pop()?;
                     let if_false = self.pop()?;
                     let _cond = self.pop()?;
-                    if !if_true.signature().is_compatible_with(if_false.signature()) {
+                    let if_true_sig = if_true.signature();
+                    let if_false_sig = if_false.signature();
+                    if if_true_sig.outputs != if_false_sig.outputs {
                         return Err(format!(
-                            "if's branches have incompatible signatures {} and {}",
-                            if_true.signature(),
-                            if_false.signature()
+                            "if's branches with signatures {} and {} \
+                            have a different numbers of outputs",
+                            if_true_sig, if_false_sig
                         ));
                     }
-                    let sig = if_true.signature().max_with(if_false.signature());
-                    self.handle_sig(sig)?;
+                    let args = if_true_sig.args.max(if_false_sig.args);
+                    let outputs = if_true_sig.outputs;
+                    self.handle_args_outputs(args, outputs)?;
                 }
                 Level => {
                     let arg_count = match self.pop()? {

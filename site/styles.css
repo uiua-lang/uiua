@@ -342,6 +342,8 @@ input[type=number] {
     outline: none;
     border: none;
     width: 100%;
+    display: inline-block;
+    white-space: nowrap;
 }
 
 .line-numbers {

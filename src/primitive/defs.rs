@@ -564,6 +564,21 @@ primitive!(
     /// ex: ⊏⍖⌵.6_2_7_0_¯1_5
     (1, Fall, MonadicArray, ("fall", '⍖')),
     /// Get indices where array values are not equal to zero
+    ///
+    /// The most basic use is to convert a mask into a list of indices.
+    /// ex: ⊚ [1 0 0 1 0 1 1 0]
+    /// ex: ⊚.=0◿3.[1 0 2 9 3 8 3 4 6]
+    /// It also works for non-zero counts
+    /// ex: ⊚ 1_2_3
+    /// ex: ⊚ 1_4_2
+    /// [where] is equivalent to `keep``flip``range``length``duplicate`
+    /// ex:     ⊚ [0 1 0 0 2 0 1]
+    /// ex: ▽∶⇡⧻. [0 1 0 0 2 0 1]
+    ///
+    /// [invert][where] will convert the indices back into a a list of counts
+    /// ex: ⍘⊚ [0 0 0 1 1 2 2 2 2 2 3]
+    /// The indices need not be in order
+    /// ex: ⍘⊚ [0 1 2 2 0 3 2 1 2 0 2]
     (1, Where, MonadicArray, ("where", '⊚')),
     /// Inverse of where
     (1, InvWhere, MonadicArray),

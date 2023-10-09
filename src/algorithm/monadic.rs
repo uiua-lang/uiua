@@ -479,7 +479,7 @@ impl Value {
                 while indices.get(j).is_some_and(|&n| n < i) {
                     j += 1;
                 }
-                let mut count = 0;
+                let mut count: usize = 0;
                 while indices.get(j).copied() == Some(i) {
                     j += 1;
                     count += 1;
@@ -488,8 +488,8 @@ impl Value {
             }
         } else {
             let mut counts = HashMap::new();
-            for &n in &indices {
-                *counts.entry(n).or_insert(0) += 1;
+            for &i in &indices {
+                *counts.entry(i).or_insert(0) += 1;
             }
             for i in 0..size {
                 let count = counts.get(&i).copied().unwrap_or(0);

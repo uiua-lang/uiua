@@ -380,7 +380,7 @@ impl<'a> Formatter<'a> {
         if self.config.align_comments && !self.end_of_line_comments.is_empty() {
             // Group comments by consecutive lines
             let mut groups: Vec<(usize, Vec<(usize, String)>)> = Vec::new();
-            let mut lines: Vec<String> = self.output.lines().map(Into::into).collect();
+            let mut lines: Vec<String> = self.output.split('\n').map(|s| s.trim().into()).collect();
             for (line_number, comment) in self.end_of_line_comments.drain(..) {
                 let line = &lines[line_number - 1];
                 let line_len = line.chars().count();
@@ -399,7 +399,7 @@ impl<'a> Formatter<'a> {
             for (max, group) in groups {
                 for (line_number, comment) in group {
                     let line = &mut lines[line_number - 1];
-                    let spaces = max - line.chars().count();
+                    let spaces = max + 1 - line.chars().count();
                     line.push_str(&" ".repeat(spaces));
                     line.push('#');
                     if !comment.starts_with(' ')
@@ -483,7 +483,7 @@ impl<'a> Formatter<'a> {
                     0
                 } else {
                     self.output
-                        .lines()
+                        .split('\n')
                         .last()
                         .unwrap_or_default()
                         .chars()
@@ -592,7 +592,7 @@ impl<'a> Formatter<'a> {
             self.format_words(&lines[0], true, depth);
             return;
         }
-        let curr_line = self.output.lines().last().unwrap_or_default();
+        let curr_line = self.output.split('\n').last().unwrap_or_default();
         let start_line_pos = if self.output.ends_with('\n') {
             0
         } else {

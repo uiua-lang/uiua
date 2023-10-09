@@ -7,6 +7,7 @@ If you are reading this on the website, then the features listed are live here.
 ### Language
 - [`if` `?`](https://uiua.org/docs/if)'s branches can now have a different number of arguments (but not outputs)
 - [`if` `?`](https://uiua.org/docs/if)'s condition can now be a list of conditions, and the branch will be chosen for each row in the argument(s)
+- The reducing versions of [`group` `⊕`](https://uiua.org/docs/group) and [`partition` `⊜`](https://uiua.org/docs/partition) now take accumulators. Aggregating versions are unchanged.
 - [`spawn`](https://uiua.org/docs/spawn) and [`wait`](https://uiua.org/docs/wait) no longer have glyphs. Code using `↰` and `↲` will continue to work and will be formatted as `spawn` and `wait`.
 - `&n` is not longer a system function and is now called [`now`](https://uiua.org/docs/now)
 - [`under` `⍜`](https://uiua.org/docs/under) [`now`](https://uiua.org/docs/now) can be used to time things

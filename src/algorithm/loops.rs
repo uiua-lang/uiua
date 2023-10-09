@@ -1176,12 +1176,12 @@ fn multi_level_recursive(
 
 pub fn partition(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop(FunctionArg(1))?;
-    let markers = env.pop(ArrayArg(1))?;
-    let markers = markers.as_indices(env, "Partition markers must be a list of integers")?;
-    let values = env.pop(ArrayArg(2))?;
-    let groups = values.partition_groups(&markers, env)?;
-    collapse_groups(f, groups, "partition", env)
+    collapse_groups(
+        "partition",
+        Value::partition_groups,
+        "Partition indices must be a list of integers",
+        env,
+    )
 }
 
 impl Value {
@@ -1237,12 +1237,12 @@ impl<T: ArrayValue> Array<T> {
 
 pub fn group(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop(FunctionArg(1))?;
-    let indices = env.pop(ArrayArg(1))?;
-    let indices = indices.as_indices(env, "Group indices must be a list of integers")?;
-    let values = env.pop(ArrayArg(2))?;
-    let groups = values.group_groups(&indices, env)?;
-    collapse_groups(f, groups, "group", env)
+    collapse_groups(
+        "group",
+        Value::group_groups,
+        "Group indices must be a list of integers",
+        env,
+    )
 }
 
 impl Value {
@@ -1284,14 +1284,20 @@ impl<T: ArrayValue> Array<T> {
     }
 }
 
-fn collapse_groups<G>(f: Value, groups: G, name: &str, env: &mut Uiua) -> UiuaResult
-where
-    G: IntoIterator<Item = Value>,
-    G::IntoIter: ExactSizeIterator,
-{
-    let mut groups = groups.into_iter();
-    match f.signature().args {
+fn collapse_groups(
+    name: &str,
+    get_groups: impl Fn(&Value, &[isize], &Uiua) -> UiuaResult<Vec<Value>>,
+    indices_error: &'static str,
+    env: &mut Uiua,
+) -> UiuaResult {
+    let f = env.pop(FunctionArg(1))?;
+    let sig = f.signature();
+    match sig.args {
         0 | 1 => {
+            let indices = env.pop(ArrayArg(1))?;
+            let indices = indices.as_indices(env, indices_error)?;
+            let values = env.pop(ArrayArg(2))?;
+            let groups = get_groups(&values, &indices, env)?;
             let mut rows = Vec::with_capacity(groups.len());
             for group in groups {
                 env.push(group);
@@ -1304,9 +1310,11 @@ where
             env.push(res);
         }
         2 => {
-            let mut acc = groups
-                .next()
-                .ok_or_else(|| env.error(format!("Cannot reduce empty {name} result")))?;
+            let mut acc = env.pop(ArrayArg(1))?;
+            let indices = env.pop(ArrayArg(2))?;
+            let indices = indices.as_indices(env, indices_error)?;
+            let values = env.pop(ArrayArg(3))?;
+            let groups = get_groups(&values, &indices, env)?;
             for row in groups {
                 env.push(row);
                 env.push(acc);

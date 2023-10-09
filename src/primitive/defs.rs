@@ -579,6 +579,10 @@ primitive!(
     /// ex: ⍘⊚ [0 0 0 1 1 2 2 2 2 2 3]
     /// The indices need not be in order
     /// ex: ⍘⊚ [0 1 2 2 0 3 2 1 2 0 2]
+    ///
+    /// [where] on a scalar is equivalent to [where] on a singleton array of that scalar, and so creates a list of `0`s.
+    /// ex: ⊚3
+    /// ex: ⊚8
     (1, Where, MonadicArray, ("where", '⊚')),
     /// Inverse of where
     (1, InvWhere, MonadicArray),

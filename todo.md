@@ -1,4 +1,3 @@
-- Less allocation when creating values
 - `under` aggregating `group` and `partition`
 - Make sure test mode with imports/exports works properly
 - Add channels for spawned threads

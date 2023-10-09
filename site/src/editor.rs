@@ -1177,7 +1177,7 @@ fn set_font_name(name: &str) {
         .dyn_into::<HtmlStyleElement>()
         .unwrap();
     new_style.set_inner_text(&format!(
-        "@font-face {{ font-family: 'Code Font'; src: url({name}.ttf) format('truetype'); }}"
+        "@font-face {{ font-family: 'Code Font'; src: url('{name}.ttf') format('truetype'); }}"
     ));
     document().head().unwrap().append_child(&new_style).unwrap();
 }

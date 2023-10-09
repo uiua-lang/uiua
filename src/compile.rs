@@ -32,6 +32,29 @@ impl Uiua {
                 .iter()
                 .any(|w| matches!(w.value, Word::Primitive(Primitive::Sys(SysOp::Import))))
         }
+        fn words_are_export(words: &[Sp<Word>]) -> bool {
+            let [word] = words else {
+                return false;
+            };
+            match &word.value {
+                Word::Strand(items) => items
+                    .iter()
+                    .all(|word| matches!(word.value, Word::Ident(_))),
+                Word::Array(arr) => arr.lines.iter().flatten().all(|word| {
+                    if let Word::Func(func) = &word.value {
+                        func.lines.iter().flatten().all(|word| {
+                            matches!(
+                                &word.value,
+                                Word::Ident(_) | Word::Spaces | Word::Comment(_)
+                            )
+                        })
+                    } else {
+                        false
+                    }
+                }),
+                _ => false,
+            }
+        }
         match item {
             Item::Scoped { items, test } => {
                 let scope_stack = self.in_scope(true, |env| env.items(items, test))?;
@@ -43,7 +66,7 @@ impl Uiua {
                     RunMode::Test => in_test,
                     RunMode::All => true,
                 };
-                if can_run || words_have_import(&words) {
+                if can_run || words_have_import(&words) || words_are_export(&words) {
                     let instrs = self.compile_words(words, true)?;
                     self.exec_global_instrs(instrs)?;
                 }

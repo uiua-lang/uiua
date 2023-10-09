@@ -1325,32 +1325,32 @@ primitive!(
     /// In the web editor, the function is called and blocks until it returns.
     /// A handle that can be passed to [wait] is pushed to the stack. Handles are just numbers.
     /// [wait] consumes the handle and appends the thread's stack to the current stack.
-    /// ex:  ↰⇡ 10
-    ///   : ↲↰⇡ 10
-    /// ex:  ↰(+10+) 1 2
-    ///   : ↲↰(+10+) 1 2
+    /// ex:  spawn⇡ 10
+    ///   : waitspawn⇡ 10
+    /// ex:  spawn(+10+) 1 2
+    ///   : waitspawn(+10+) 1 2
     ///
     /// You can use [each] to spawn a thread for each element of an array.
-    /// ex: ∵↰(/+⇡×.) ⇡10
+    /// ex: ∵spawn(/+⇡×.) ⇡10
     ///
     /// [wait] will call [each] implicitly.
     /// ex: ↯3_3⇡9
-    ///   : ↲≡↰/+.
-    ([1], Spawn, OtherModifier, ("spawn", '↰')),
+    ///   : wait≡spawn/+.
+    ([1], Spawn, OtherModifier, "spawn"),
     /// Wait for a thread to finish and push its results to the stack
     ///
     /// The argument must be a handle returned by [spawn].
-    /// ex: ↲↰(/+⇡) 10
+    /// ex: wait spawn(/+⇡) 10
     ///
     /// If the handle has already been [wait]ed on, then an error is thrown.
-    /// ex! h ← ↰(/+⇡) 10
-    ///   : ↲h
-    ///   : ↲h
+    /// ex! h ← spawn(/+⇡) 10
+    ///   : wait h
+    ///   : wait h
     ///
     /// [wait] will call [each] implicitly.
     /// ex: ↯3_3⇡9
-    ///   : ↲≡↰/+.
-    (1, Wait, Misc, ("wait", '↲')),
+    ///   : wait≡spawn/+.
+    (1, Wait, Misc, ("wait")),
     /// Call a function
     ///
     /// When passing a scalar function, the function is simply called.

@@ -475,6 +475,8 @@ impl Lexer {
                 '·' => self.end(Primitive::Identity, start),
                 '⍛' => self.end(Primitive::Fill, start),
                 '⌂' => self.end(Primitive::Rise, start),
+                '↰' => self.end(Primitive::Spawn, start),
+                '↲' => self.end(Primitive::Wait, start),
 
                 '(' => self.end(OpenParen, start),
                 ')' => self.end(CloseParen, start),

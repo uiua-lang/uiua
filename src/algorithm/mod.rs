@@ -56,6 +56,22 @@ impl FillContext for &Uiua {
     }
 }
 
+impl FillContext for &&mut Uiua {
+    type Error = UiuaError;
+    fn error(self, msg: impl ToString) -> Self::Error {
+        (**self).error(msg)
+    }
+    fn fill<T: ArrayValue>(self) -> Option<T> {
+        T::get_fill(self)
+    }
+    fn fill_error(error: Self::Error) -> Self::Error {
+        error.fill()
+    }
+    fn is_fill_error(error: &Self::Error) -> bool {
+        error.is_fill()
+    }
+}
+
 impl FillContext for () {
     type Error = Infallible;
     fn error(self, msg: impl ToString) -> Self::Error {

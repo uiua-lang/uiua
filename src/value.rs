@@ -8,7 +8,7 @@ use std::{
 };
 
 use crate::{
-    algorithm::pervade::*,
+    algorithm::{pervade::*, FillContext},
     array::*,
     function::{Function, Signature},
     grid_fmt::GridFmt,
@@ -42,6 +42,9 @@ impl fmt::Debug for Value {
 }
 
 impl Value {
+    pub fn builder(capacity: usize) -> ValueBuilder {
+        ValueBuilder::with_capacity(capacity)
+    }
     pub fn signature(&self) -> Signature {
         if let Some(f) = self.as_func_array().and_then(Array::as_scalar) {
             f.signature()
@@ -161,6 +164,14 @@ impl Value {
             Array::flat_len,
             Array::flat_len,
         )
+    }
+    pub fn reserve_min(&mut self, min: usize) {
+        match self {
+            Self::Num(arr) => arr.data.reserve_min(min),
+            Self::Byte(arr) => arr.data.reserve_min(min),
+            Self::Char(arr) => arr.data.reserve_min(min),
+            Self::Func(arr) => arr.data.reserve_min(min),
+        }
     }
     pub(crate) fn first_dim_zero(&self) -> Self {
         match self {
@@ -944,5 +955,43 @@ impl fmt::Display for Value {
                 }
             }
         }
+    }
+}
+
+#[derive(Default)]
+pub struct ValueBuilder {
+    value: Option<Value>,
+    rows: usize,
+    capacity: usize,
+}
+
+impl ValueBuilder {
+    pub fn new() -> Self {
+        Self {
+            value: None,
+            rows: 0,
+            capacity: 0,
+        }
+    }
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            value: None,
+            rows: 0,
+            capacity,
+        }
+    }
+    pub fn add_row<C: FillContext>(&mut self, mut row: Value, ctx: C) -> Result<(), C::Error> {
+        if let Some(value) = &mut self.value {
+            value.append(row, ctx)?;
+        } else {
+            row.reserve_min(self.capacity);
+            row.shape_mut().insert(0, 1);
+            self.value = Some(row);
+        }
+        self.rows += 1;
+        Ok(())
+    }
+    pub fn finish(self) -> Value {
+        self.value.unwrap_or_default()
     }
 }

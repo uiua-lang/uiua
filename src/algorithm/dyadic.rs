@@ -129,25 +129,43 @@ impl Value {
             )?,
         })
     }
-    fn append<C: FillContext>(self, other: Self, ctx: C, action: &str) -> Result<Self, C::Error> {
-        Ok(match (self, other) {
-            (Value::Num(a), Value::Num(b)) => a.append(b, ctx, action)?.into(),
-            (Value::Byte(a), Value::Byte(b)) => op2_bytes_retry_fill::<_, C>(
-                a,
-                b,
-                |a, b| Ok(a.append(b, ctx, action)?.into()),
-                |a, b| Ok(a.append(b, ctx, action)?.into()),
-            )?,
-            (Value::Char(a), Value::Char(b)) => a.append(b, ctx, action)?.into(),
-            (Value::Byte(a), Value::Num(b)) => a.convert().append(b, ctx, action)?.into(),
-            (Value::Num(a), Value::Byte(b)) => a.append(b.convert(), ctx, action)?.into(),
-            (a, b) => a.coerce_to_functions(
-                b,
-                ctx,
-                |a, b, env| Ok(a.append(b, env, action)?.into()),
-                |a, b| format!("Cannot {action} {a} array with {b} array"),
-            )?,
-        })
+    pub(crate) fn append<C: FillContext>(&mut self, other: Self, ctx: C) -> Result<(), C::Error> {
+        match (&mut *self, other) {
+            (Value::Num(a), Value::Num(b)) => a.append(b, ctx)?,
+            (Value::Byte(a), Value::Byte(b)) => {
+                *self = op2_bytes_retry_fill::<_, C>(
+                    a.clone(),
+                    b,
+                    |mut a, b| {
+                        a.append(b, ctx)?;
+                        Ok(a.into())
+                    },
+                    |mut a, b| {
+                        a.append(b, ctx)?;
+                        Ok(a.into())
+                    },
+                )?;
+            }
+            (Value::Char(a), Value::Char(b)) => a.append(b, ctx)?,
+            (Value::Byte(a), Value::Num(b)) => {
+                let mut a = a.convert_ref();
+                a.append(b, ctx)?;
+                *self = a.into();
+            }
+            (Value::Num(a), Value::Byte(b)) => a.append(b.convert(), ctx)?,
+            (a, b) => {
+                *self = a.clone().coerce_to_functions(
+                    b,
+                    ctx,
+                    |mut a, b, env| {
+                        a.append(b, env)?;
+                        Ok(a.into())
+                    },
+                    |a, b| format!("Cannot append {a} array to {b} array"),
+                )?
+            }
+        }
+        Ok(())
     }
 }
 
@@ -190,7 +208,10 @@ impl<T: ArrayValue> Array<T> {
                 self.shape[0] += 1;
                 self
             }
-            Ordering::Greater => self.append(other, ctx, "join")?,
+            Ordering::Greater => {
+                self.append(other, ctx)?;
+                self
+            }
             Ordering::Equal => {
                 if self.rank() == 0 {
                     debug_assert_eq!(other.rank(), 0);
@@ -221,12 +242,7 @@ impl<T: ArrayValue> Array<T> {
         res.validate_shape();
         Ok(res)
     }
-    fn append<C: FillContext>(
-        mut self,
-        mut other: Self,
-        ctx: C,
-        action: &str,
-    ) -> Result<Self, C::Error> {
+    fn append<C: FillContext>(&mut self, mut other: Self, ctx: C) -> Result<(), C::Error> {
         let target_shape = if let Some(fill) = ctx.fill::<T>() {
             while self.rank() <= other.rank() {
                 self.shape.push(1);
@@ -239,16 +255,14 @@ impl<T: ArrayValue> Array<T> {
         } else {
             if self.rank() <= other.rank() || self.rank() - other.rank() > 1 {
                 return Err(C::fill_error(ctx.error(format!(
-                    "Cannot {} rank {} array with rank {} array",
-                    action,
+                    "Cannot append rank {} array with rank {} array",
                     self.rank(),
                     other.rank()
                 ))));
             }
             if &self.shape()[1..] != other.shape() {
                 return Err(C::fill_error(ctx.error(format!(
-                    "Cannot {} arrays of shapes {} and {}",
-                    action,
+                    "Cannot append arrays of shapes {} and {}",
                     self.format_shape(),
                     other.format_shape()
                 ))));
@@ -258,37 +272,61 @@ impl<T: ArrayValue> Array<T> {
         self.data.extend(other.data);
         self.shape = target_shape;
         self.shape[0] += 1;
-        Ok(self)
+        Ok(())
     }
 }
 
 impl Value {
-    pub fn couple(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
-        self.couple_impl(other, env)
+    pub fn couple(mut self, other: Self, env: &Uiua) -> UiuaResult<Self> {
+        self.couple_impl(other, env)?;
+        Ok(self)
     }
-    pub fn couple_infallible(self, other: Self) -> Self {
-        self.couple_impl(other, ()).unwrap()
+    pub fn couple_infallible(mut self, other: Self) -> Self {
+        self.couple_impl(other, ()).unwrap();
+        self
     }
-    fn couple_impl<C: FillContext>(self, other: Self, ctx: C) -> Result<Self, C::Error> {
-        Ok(match (self, other) {
-            (Value::Num(a), Value::Num(b)) => a.couple_impl(b, ctx)?.into(),
-            (Value::Byte(a), Value::Byte(b)) => op2_bytes_retry_fill::<_, C>(
-                a,
-                b,
-                |a, b| Ok(a.couple_impl(b, ctx)?.into()),
-                |a, b| Ok(a.couple_impl(b, ctx)?.into()),
-            )?,
-            (Value::Char(a), Value::Char(b)) => a.couple_impl(b, ctx)?.into(),
-            (Value::Func(a), Value::Func(b)) => a.couple_impl(b, ctx)?.into(),
-            (Value::Num(a), Value::Byte(b)) => a.couple_impl(b.convert(), ctx)?.into(),
-            (Value::Byte(a), Value::Num(b)) => a.convert().couple_impl(b, ctx)?.into(),
-            (a, b) => a.coerce_to_functions(
-                b,
-                ctx,
-                |a, b, ctx| Ok(a.couple_impl(b, ctx)?.into()),
-                |a, b| format!("Cannot couple {a} array with {b} array"),
-            )?,
-        })
+    pub(crate) fn couple_impl<C: FillContext>(
+        &mut self,
+        other: Self,
+        ctx: C,
+    ) -> Result<(), C::Error> {
+        match (&mut *self, other) {
+            (Value::Num(a), Value::Num(b)) => a.couple_impl(b, ctx)?,
+            (Value::Byte(a), Value::Byte(b)) => {
+                *self = op2_bytes_retry_fill::<_, C>(
+                    a.clone(),
+                    b,
+                    |mut a, b| {
+                        a.couple_impl(b, ctx)?;
+                        Ok(a.into())
+                    },
+                    |mut a, b| {
+                        a.couple_impl(b, ctx)?;
+                        Ok(a.into())
+                    },
+                )?
+            }
+            (Value::Char(a), Value::Char(b)) => a.couple_impl(b, ctx)?,
+            (Value::Func(a), Value::Func(b)) => a.couple_impl(b, ctx)?,
+            (Value::Num(a), Value::Byte(b)) => a.couple_impl(b.convert(), ctx)?,
+            (Value::Byte(a), Value::Num(b)) => {
+                let mut a = a.convert_ref();
+                a.couple_impl(b, ctx)?;
+                *self = a.into();
+            }
+            (a, b) => {
+                *self = a.clone().coerce_to_functions(
+                    b,
+                    ctx,
+                    |mut a, b, ctx| {
+                        a.couple_impl(b, ctx)?;
+                        Ok(a.into())
+                    },
+                    |a, b| format!("Cannot couple {a} array with {b} array"),
+                )?
+            }
+        }
+        Ok(())
     }
     pub fn uncouple(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
         match self {
@@ -301,13 +339,15 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn couple(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
-        self.couple_impl(other, env)
+    pub fn couple(mut self, other: Self, env: &Uiua) -> UiuaResult<Self> {
+        self.couple_impl(other, env)?;
+        Ok(self)
     }
-    pub fn couple_infallible(self, other: Self) -> Self {
-        self.couple_impl(other, ()).unwrap()
+    pub fn couple_infallible(mut self, other: Self) -> Self {
+        self.couple_impl(other, ()).unwrap();
+        self
     }
-    fn couple_impl<C: FillContext>(mut self, mut other: Self, ctx: C) -> Result<Self, C::Error> {
+    fn couple_impl<C: FillContext>(&mut self, mut other: Self, ctx: C) -> Result<(), C::Error> {
         crate::profile_function!();
         if self.shape != other.shape {
             if let Some(fill) = ctx.fill::<T>() {
@@ -325,7 +365,7 @@ impl<T: ArrayValue> Array<T> {
         self.data.extend(other.data);
         self.shape.insert(0, 2);
         self.validate_shape();
-        Ok(self)
+        Ok(())
     }
     pub fn uncouple(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
         if self.row_count() != 2 {
@@ -368,11 +408,11 @@ impl Value {
         let mut count = 1;
         for row in row_values {
             count += 1;
-            value = if count == 2 {
-                value.couple_impl(row, ctx)?
+            if count == 2 {
+                value.couple_impl(row, ctx)?;
             } else {
-                value.append(row, ctx, "append")?
-            };
+                value.append(row, ctx)?;
+            }
         }
         if count == 1 {
             value.shape_mut().insert(0, 1);
@@ -402,11 +442,11 @@ impl<T: ArrayValue> Array<T> {
         let mut count = 1;
         for row in row_values {
             count += 1;
-            value = if count == 2 {
-                value.couple_impl(row, ctx)?
+            if count == 2 {
+                value.couple_impl(row, ctx)?;
             } else {
-                value.append(row, ctx, "append")?
-            };
+                value.append(row, ctx)?;
+            }
         }
         if count == 1 {
             value.shape.insert(0, 1);

@@ -73,6 +73,9 @@ impl<T: Clone> CowSlice<T> {
             res
         }
     }
+    pub fn reserve_min(&mut self, min: usize) {
+        self.modify(|vec| vec.reserve(vec.capacity().max(min) - vec.len()))
+    }
 }
 
 #[test]

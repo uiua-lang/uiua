@@ -527,21 +527,20 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
 }
 
 fn rows1_1(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
-    let mut new_rows = Vec::with_capacity(xs.row_count());
+    let mut new_rows = Value::builder(xs.row_count());
     let mut old_rows = xs.into_rows();
     for row in old_rows.by_ref() {
         env.push(row);
         let broke = env.call_catch_break(f.clone())?;
-        new_rows.push(env.pop("rows' function result")?);
+        new_rows.add_row(env.pop("rows' function result")?, &env)?;
         if broke {
             for row in old_rows {
-                new_rows.push(row);
+                new_rows.add_row(row, &env)?;
             }
             break;
         }
     }
-    let res = Value::from_row_values(new_rows, env)?;
-    env.push(res);
+    env.push(new_rows.finish());
     Ok(())
 }
 
@@ -848,7 +847,7 @@ fn generic_table(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     }
     let mut new_shape = Shape::from(xs.shape());
     new_shape.extend_from_slice(ys.shape());
-    let mut items = Vec::with_capacity(xs.flat_len() * ys.flat_len());
+    let mut items = Value::builder(xs.flat_len() * ys.flat_len());
     let y_values = ys.into_flat_values().collect::<Vec<_>>();
     for x in xs.into_flat_values() {
         for y in y_values.iter().cloned() {
@@ -857,10 +856,10 @@ fn generic_table(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             env.call_error_on_break(f.clone(), "break is not allowed in table")?;
             let item = env.pop("tabled function result")?;
             item.validate_shape();
-            items.push(item);
+            items.add_row(item, &env)?;
         }
     }
-    let mut tabled = Value::from_row_values(items, env)?;
+    let mut tabled = items.finish();
     new_shape.extend_from_slice(&tabled.shape()[1..]);
     *tabled.shape_mut() = new_shape;
     tabled.validate_shape();
@@ -881,7 +880,7 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
         )));
     }
     let mut new_shape = tiny_vec![xs.row_count(), ys.row_count()];
-    let mut items = Vec::with_capacity(xs.row_count() * ys.row_count());
+    let mut items = Value::builder(xs.row_count() * ys.row_count());
     let y_rows = ys.into_rows().collect::<Vec<_>>();
     for x_row in xs.into_rows() {
         for y_row in y_rows.iter().cloned() {
@@ -890,10 +889,10 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
             env.call_error_on_break(f.clone(), "break is not allowed in cross")?;
             let item = env.pop("crossed function result")?;
             item.validate_shape();
-            items.push(item);
+            items.add_row(item, &env)?;
         }
     }
-    let mut crossed = Value::from_row_values(items, env)?;
+    let mut crossed = items.finish();
     new_shape.extend_from_slice(&crossed.shape()[1..]);
     *crossed.shape_mut() = new_shape;
     crossed.validate_shape();

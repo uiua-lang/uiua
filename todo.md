@@ -1,4 +1,3 @@
-- Accumulators for reducing group and partition
 - Less allocation when creating values
 - `under` aggregating `group` and `partition`
 - Make sure test mode with imports/exports works properly

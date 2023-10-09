@@ -713,8 +713,8 @@ impl SysBackend for NativeSys {
         let (width, height) = if let Some((w, h)) = term_size::dimensions() {
             let (tw, th) = (w as u32, h.saturating_sub(1) as u32);
             let (iw, ih) = (image.width(), image.height() / 2);
-            let scaled_to_height = (iw * th / ih, th);
-            let scaled_to_width = (tw, ih * tw / iw);
+            let scaled_to_height = (iw * th / ih.max(1), th);
+            let scaled_to_width = (tw, ih * tw / iw.max(1));
             let (w, h) = if scaled_to_height.0 <= tw {
                 scaled_to_height
             } else {

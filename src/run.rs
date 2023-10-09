@@ -511,28 +511,34 @@ code:
         self.scope.call.last_mut().unwrap().spans.pop();
     }
     fn call_with_span(&mut self, f: Value, call_span: usize) -> UiuaResult {
-        match f {
-            Value::Func(f) if f.shape.is_empty() => {
-                // Call function
-                let f = f.into_scalar().unwrap();
-                self.exec(StackFrame {
-                    function: f,
-                    call_span,
-                    spans: Vec::new(),
-                    pc: 0,
-                })
-            }
-            value => {
-                self.push(value);
-                Ok(())
-            }
+        match f.into_function() {
+            Ok(f) => self.call_function_with_span(f, call_span)?,
+            Err(val) => self.push(val),
         }
+        Ok(())
     }
-    /// Call the top of the stack as a function
+    fn call_function_with_span(
+        &mut self,
+        f: impl Into<Arc<Function>>,
+        call_span: usize,
+    ) -> UiuaResult {
+        self.exec(StackFrame {
+            function: f.into(),
+            call_span,
+            spans: Vec::new(),
+            pc: 0,
+        })
+    }
+    /// Call a function
     #[inline]
-    pub fn call(&mut self, f: impl Into<Value>) -> UiuaResult {
+    pub fn call(&mut self, f: Value) -> UiuaResult {
         let call_span = self.span_index();
-        self.call_with_span(f.into(), call_span)
+        self.call_with_span(f, call_span)
+    }
+    #[inline]
+    pub fn call_function(&mut self, f: impl Into<Arc<Function>>) -> UiuaResult {
+        let call_span = self.span_index();
+        self.call_function_with_span(f, call_span)
     }
     #[inline]
     pub fn recur(&mut self, n: usize) -> UiuaResult {
@@ -547,7 +553,7 @@ code:
             )));
         }
         let f = self.scope.call[self.scope.call.len() - n].function.clone();
-        self.call(f)
+        self.call_function(f)
     }
     pub fn call_catch_break(&mut self, f: Value) -> UiuaResult<bool> {
         match self.call(f) {

@@ -76,6 +76,7 @@ impl Value {
             _ => None,
         }
     }
+    #[inline]
     pub fn into_func_array(self) -> Result<Array<Arc<Function>>, Self> {
         match self {
             Self::Func(array) => Ok(array),
@@ -85,6 +86,7 @@ impl Value {
     pub fn as_function(&self) -> Option<&Arc<Function>> {
         self.as_func_array().and_then(Array::as_scalar)
     }
+    #[inline]
     pub fn into_function(self) -> Result<Arc<Function>, Self> {
         match self.into_func_array() {
             Ok(array) => array.into_scalar().map_err(Into::into),

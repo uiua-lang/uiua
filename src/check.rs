@@ -143,27 +143,19 @@ impl<'a> VirtualEnv<'a> {
                 Group | Partition => {
                     if let BasicValue::Func(f) = self.pop()? {
                         let sig = f.signature();
-                        if sig.outputs == 0 && sig.args != 0 {
-                            return Err(format!("{prim}'s function has no outputs"));
+                        if ![1, 2].contains(&sig.args) {
+                            return Err(format!(
+                                "{prim}'s function must take 1 or 2 arguments, \
+                                but its signature is {sig}",
+                            ));
                         }
-                        self.pop()?; // Pop the array
-                        self.set_min_height();
-                        match sig.args {
-                            0 => {}
-                            1 | 2 => {
-                                if sig.outputs != 1 {
-                                    return Err(format!(
-                                        "{prim}'s function has {} outputs, expected 1",
-                                        sig.outputs
-                                    ));
-                                }
-                            }
-                            n => {
-                                return Err(format!(
-                                    "{prim}'s function has {n} args, expected 0, 1, or 2"
-                                ))
-                            }
+                        if sig.outputs != 1 {
+                            return Err(format!(
+                                "{prim}'s function must return 1 value, \
+                                but its signature is {sig}",
+                            ));
                         }
+                        self.handle_args_outputs(2, 1)?;
                     } else {
                         return Err(format!("{prim} with non-function"));
                     }

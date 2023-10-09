@@ -827,15 +827,14 @@ pub fn Editor<'a>(
             Some(('"', '"')),
             "types#characters",
         ),
+        ("←", "binding (=)", "", None, "bindings"),
         (
-            "^",
-            "terminate modifier",
+            "|",
+            "signature / terminate modifier",
             "",
             None,
-            "functions#terminating-modifiers",
+            "functions#stack-signatures",
         ),
-        ("←", "binding (=)", "", None, "bindings"),
-        ("|", "signature", "", None, "functions#stack-signatures"),
         ("#", "comment", "comment-span", None, "basic#comments"),
     ] {
         let class = format!("glyph-button {class}");

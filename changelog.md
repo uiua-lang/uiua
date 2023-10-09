@@ -11,6 +11,7 @@ Uiua is not yet stable.
 - The formatter now aligns consecutive end-of-line comments
 - Fix a bug that prevented [`under` `⍜`](https://uiua.org/docs/under) multidimensional [`take` `↙`](https://uiua.org/docs/take) and [`drop` `↘`](https://uiua.org/docs/drop) from working
 - `NaN`s no longer propogate in [`min` `⌊`](https://uiua.org/docs/min) and [`max` `⌈`](https://uiua.org/docs/max)
+- Fix a bug in how [`fold` `∧`](https://uiua.org/docs/fold) ordered multiple accumulators
 ### Website
 - Add the Uiua386 font as an option in the editor
 

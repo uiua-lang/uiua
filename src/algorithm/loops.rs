@@ -177,7 +177,7 @@ fn generic_fold_n(f: Value, env: &mut Uiua) -> UiuaResult {
     let xs = env.pop(ArrayArg(sig.outputs + 1))?;
     for row in xs.into_rows() {
         env.push(row);
-        for acc in accs.drain(..) {
+        for acc in accs.drain(..).rev() {
             env.push(acc);
         }
         let should_break = env.call_catch_break(f.clone())?;
@@ -188,7 +188,7 @@ fn generic_fold_n(f: Value, env: &mut Uiua) -> UiuaResult {
             break;
         }
     }
-    for acc in accs.drain(..) {
+    for acc in accs.drain(..).rev() {
         env.push(acc);
     }
     Ok(())

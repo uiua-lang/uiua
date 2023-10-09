@@ -128,7 +128,12 @@ impl Value {
         }
     }
     pub fn shape(&self) -> &[usize] {
-        self.generic_ref(Array::shape, Array::shape, Array::shape, Array::shape)
+        match self {
+            Self::Num(array) => array.shape(),
+            Self::Byte(array) => array.shape(),
+            Self::Char(array) => array.shape(),
+            Self::Func(array) => array.shape(),
+        }
     }
     pub fn shape_prefixes_match(&self, other: &Self) -> bool {
         self.shape().iter().zip(other.shape()).all(|(a, b)| a == b)

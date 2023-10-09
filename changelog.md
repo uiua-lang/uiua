@@ -5,6 +5,7 @@ Uiua is not yet stable.
 ## 0.0.18 - 2023-10-??
 If you are reading this on the website, then the features listed are live here.
 ### Language
+- Add [`where` `⊚`](https://uiua.org/docs/where) function, which returns the indices of an array that have non-zero values
 - [`if` `?`](https://uiua.org/docs/if)'s branches can now have a different number of arguments (but not outputs)
 - [`if` `?`](https://uiua.org/docs/if)'s condition can now be a list of conditions, and the branch will be chosen for each row in the argument(s)
 - The reducing versions of [`group` `⊕`](https://uiua.org/docs/group) and [`partition` `⊜`](https://uiua.org/docs/partition) now take accumulators. Aggregating versions are unchanged.
@@ -16,6 +17,7 @@ If you are reading this on the website, then the features listed are live here.
 - Fix a bug that prevented [`under` `⍜`](https://uiua.org/docs/under) multidimensional [`take` `↙`](https://uiua.org/docs/take) and [`drop` `↘`](https://uiua.org/docs/drop) from working
 - `NaN`s no longer propogate in [`min` `⌊`](https://uiua.org/docs/min) and [`max` `⌈`](https://uiua.org/docs/max)
 - Fix a bug in how [`fold` `∧`](https://uiua.org/docs/fold) ordered multiple accumulators
+- Fix a bug that allowed incorrect signatures to be declared for functions
 ### Website
 - Add the Uiua386 font as an option in the editor
 

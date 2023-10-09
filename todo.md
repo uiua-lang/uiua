@@ -1,6 +1,7 @@
-- `under` `group` and `partition`
-- Add channels for spawned threads
+- Accumulators for reducing group and partition
+- `under` aggregating `group` and `partition`
 - Make sure test mode with imports/exports works properly
+- Add channels for spawned threads
 - Figure out what is going on with the editor cursor
 - Sift+delete to delete whole line
 - Build editor divs with leptos instead of strings

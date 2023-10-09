@@ -375,7 +375,7 @@ impl Primitive {
                 if !(sig.outputs == 1 || sig == (0, 0)) {
                     return Err(env.error(format!(
                         "Only functions with 1 output may be explicitly called, \
-                        but the function {f} has {} outputs",
+                        but the function has {} outputs",
                         sig.outputs
                     )));
                 }

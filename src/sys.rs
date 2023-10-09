@@ -1674,15 +1674,16 @@ fn value_to_command(value: &Value, env: &Uiua) -> UiuaResult<(String, Vec<String
                         }
                         Some(val) => {
                             return Err(env.error(format!(
-                            "Function array as command must be all boxed strings, but {f} is a {}",
-                            val.type_name()
-                        )))
+                                "Function array as command must be all boxed strings, \
+                                but at least one is a {}",
+                                val.type_name()
+                            )))
                         }
                         None => {
-                            return Err(env.error(format!(
+                            return Err(env.error(
                                 "Function array as command must be all boxes, \
-                                but {f} is not a box"
-                            )))
+                                but at least one is not a box",
+                            ))
                         }
                     }
                 }

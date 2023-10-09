@@ -144,7 +144,7 @@ impl<'a> VirtualEnv<'a> {
                     if let BasicValue::Func(f) = self.pop()? {
                         let sig = f.signature();
                         if sig.outputs == 0 && sig.args != 0 {
-                            return Err(format!("{prim}'s function {f} has no outputs"));
+                            return Err(format!("{prim}'s function has no outputs"));
                         }
                         self.pop()?; // Pop the array
                         self.set_min_height();
@@ -153,14 +153,14 @@ impl<'a> VirtualEnv<'a> {
                             1 | 2 => {
                                 if sig.outputs != 1 {
                                     return Err(format!(
-                                        "{prim}'s function {f} has {} outputs, expected 1",
+                                        "{prim}'s function has {} outputs, expected 1",
                                         sig.outputs
                                     ));
                                 }
                             }
                             n => {
                                 return Err(format!(
-                                    "{prim}'s function {f} has {n} args, expected 0, 1, or 2"
+                                    "{prim}'s function has {n} args, expected 0, 1, or 2"
                                 ))
                             }
                         }

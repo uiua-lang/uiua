@@ -3,11 +3,13 @@
 Uiua is not yet stable.
 
 ## 0.0.18 - 2023-10-??
+If you are reading this on the website, then the features listed are live here.
 ### Language
 - [`if` `?`](https://uiua.org/docs/if)'s branches can now have a different number of arguments (but not outputs)
 - [`if` `?`](https://uiua.org/docs/if)'s condition can now be a list of conditions, and the branch will be chosen for each row in the argument(s)
-- [`under` `⍜`](https://uiua.org/docs/under) [`&n`](https://uiua.org/docs/&n) can be used to time things
-- [`spawn`](https://uiua.org/docs/spawn) and [`wait`](https://uiua.org/docs/wait) no longer have glyphs
+- [`spawn`](https://uiua.org/docs/spawn) and [`wait`](https://uiua.org/docs/wait) no longer have glyphs. Code using `↰` and `↲` will continue to work and will be formatted as `spawn` and `wait`.
+- `&n` is not longer a system function and is now called [`now`](https://uiua.org/docs/now)
+- [`under` `⍜`](https://uiua.org/docs/under) [`now`](https://uiua.org/docs/now) can be used to time things
 ### Interpreter
 - The formatter now aligns consecutive end-of-line comments
 - Fix a bug that prevented [`under` `⍜`](https://uiua.org/docs/under) multidimensional [`take` `↙`](https://uiua.org/docs/take) and [`drop` `↘`](https://uiua.org/docs/drop) from working

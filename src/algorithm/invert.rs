@@ -7,7 +7,6 @@ use crate::{
     function::{Function, Instr, TempKind},
     primitive::Primitive,
     value::Value,
-    SysOp,
 };
 
 impl Function {
@@ -252,9 +251,9 @@ fn under_instrs_impl(instrs: &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
             [PopTempN(1).i(), Drop.i()],
         ),
         &(
-            [Sys(SysOp::Now)],
-            [Sys(SysOp::Now).i(), PushTempN(1).i()],
-            [PopTempN(1).i(), Sys(SysOp::Now).i(), Flip.i(), Sub.i()],
+            [Now],
+            [Now.i(), PushTempN(1).i()],
+            [PopTempN(1).i(), Now.i(), Flip.i(), Sub.i()],
         ),
     ];
 

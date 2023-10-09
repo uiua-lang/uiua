@@ -1466,6 +1466,12 @@ primitive!(
     /// ex: sig (|3 /∘)
     /// ex: sig +_-_×_÷
     (1, Sig, Misc, "sig"),
+    /// Get the current time in seconds
+    ///
+    /// ex: now
+    /// [under][now] can be used to time a function.
+    /// ex: ⍜now(5&sl1)
+    (0, Now, Misc, "now"),
     /// The number of radians in a quarter circle
     ///
     /// Equivalent to `divide``2``pi` or `divide``4``tau`

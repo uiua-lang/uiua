@@ -211,6 +211,7 @@ impl Primitive {
             "ga" => return Some(Primitive::Gap),
             "di" => return Some(Primitive::Dip),
             "pi" => return Some(Primitive::Pi),
+            "&n" => return Some(Primitive::Now),
             _ => {}
         }
         if let Some(prim) = Primitive::all().find(|p| p.names().is_some_and(|n| n.text == name)) {
@@ -583,6 +584,7 @@ impl Primitive {
                 let handle = env.pop(1)?;
                 env.wait(handle)?;
             }
+            Primitive::Now => env.push(instant::now() / 1000.0),
             Primitive::Trace => trace(env, false)?,
             Primitive::InvTrace => trace(env, true)?,
             Primitive::Dump => dump(env)?,

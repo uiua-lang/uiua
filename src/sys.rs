@@ -121,10 +121,6 @@ sys_op! {
     (0, Args, "&args", "arguments"),
     /// Get the value of an environment variable
     (1, Var, "&var", "environment variable"),
-    /// Get the current time in seconds
-    ///
-    /// ex: &n
-    (0, Now, "&n", "now"),
     /// Run a command and wait for it to finish
     ///
     /// Standard IO will be inherited.
@@ -1379,7 +1375,6 @@ impl SysOp {
                 .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
                 env.import(&input, path.as_ref())?;
             }
-            SysOp::Now => env.push(instant::now() / 1000.0),
             SysOp::ImDecode => {
                 let bytes = match env.pop(1)? {
                     Value::Byte(arr) => {

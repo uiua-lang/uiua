@@ -1,4 +1,3 @@
-- Under join
 - `under` `group` and `partition`
 - Add channels for spawned threads
 - Make sure test mode with imports/exports works properly

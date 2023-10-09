@@ -377,14 +377,6 @@ impl Primitive {
             }
             Primitive::Call => {
                 let f = env.pop(1)?;
-                let sig = f.signature();
-                if !(sig.outputs == 1 || sig == (0, 0)) {
-                    return Err(env.error(format!(
-                        "Only functions with 1 output may be explicitly called, \
-                        but the function has {} outputs",
-                        sig.outputs
-                    )));
-                }
                 env.call(f)?
             }
             Primitive::Parse => env.monadic_env(|v, env| v.parse_num(env))?,

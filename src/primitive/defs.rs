@@ -563,6 +563,10 @@ primitive!(
     /// Here, we sort the array descending by the [absolute value] of its elements.
     /// ex: ⊏⍖⌵.6_2_7_0_¯1_5
     (1, Fall, MonadicArray, ("fall", '⍖')),
+    /// Get indices where array values are not equal to zero
+    (1, Where, MonadicArray, ("where", '⊚')),
+    /// Inverse of where
+    (1, InvWhere, MonadicArray),
     /// Assign a unique index to each unique element in an array
     ///
     /// ex: ⊛7_7_8_0_1_2_0

@@ -2,7 +2,7 @@
 
 use std::{
     cmp::Ordering,
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, HashMap},
     ptr,
     sync::Arc,
 };
@@ -448,5 +448,54 @@ impl Array<u8> {
         let arr = Array::new(shape, new_data);
         arr.validate_shape();
         Ok(arr)
+    }
+}
+
+impl Value {
+    pub fn wher(&self, env: &Uiua) -> UiuaResult<Self> {
+        let counts = self.as_naturals(env, "Argument to where must be a list of 0s and 1s")?;
+        let total: usize = counts.iter().fold(0, |acc, &b| acc.saturating_add(b));
+        let mut data = Vec::with_capacity(total);
+        for (i, &b) in counts.iter().enumerate() {
+            for _ in 0..b {
+                let i = i as f64;
+                data.push(i);
+            }
+        }
+        Ok(Array::from(data).into())
+    }
+    pub fn inverse_where(&self, env: &Uiua) -> UiuaResult<Self> {
+        let indices =
+            self.as_naturals(env, "Argument to inverse where must be a list of naturals")?;
+        let is_sorted = indices
+            .iter()
+            .zip(indices.iter().skip(1))
+            .all(|(&a, &b)| a <= b);
+        let size = indices.iter().max().map(|&i| i + 1).unwrap_or(0);
+        let mut data = Vec::with_capacity(size);
+        if is_sorted {
+            let mut j = 0;
+            for i in 0..size {
+                while indices.get(j).is_some_and(|&n| n < i) {
+                    j += 1;
+                }
+                let mut count = 0;
+                while indices.get(j).copied() == Some(i) {
+                    j += 1;
+                    count += 1;
+                }
+                data.push(count as f64);
+            }
+        } else {
+            let mut counts = HashMap::new();
+            for &n in &indices {
+                *counts.entry(n).or_insert(0) += 1;
+            }
+            for i in 0..size {
+                let count = counts.get(&i).copied().unwrap_or(0);
+                data.push(count as f64);
+            }
+        }
+        Ok(Array::from(data).into())
     }
 }

@@ -99,7 +99,7 @@ impl Uiua {
         let mut val = match instrs_signature(&instrs) {
             Ok(mut sig) => {
                 if let Some(declared_sig) = &binding.signature {
-                    if declared_sig.value.is_superset_of(sig) {
+                    if declared_sig.value == sig {
                         sig = declared_sig.value;
                     } else {
                         return Err(UiuaError::Run(Span::Code(declared_sig.span.clone()).sp(
@@ -411,7 +411,7 @@ impl Uiua {
         let sig = match instrs_signature(&instrs) {
             Ok(mut sig) => {
                 if let Some(declared_sig) = &func.signature {
-                    if declared_sig.value.is_superset_of(sig) {
+                    if declared_sig.value == sig {
                         sig = declared_sig.value;
                     } else {
                         return Err(UiuaError::Run(Span::Code(declared_sig.span.clone()).sp(

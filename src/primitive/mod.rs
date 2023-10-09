@@ -116,6 +116,7 @@ impl fmt::Display for Primitive {
                 InvTranspose => write!(f, "⍘{Transpose}"),
                 InverseBits => write!(f, "⍘{Bits}"),
                 InvTrace => write!(f, "⍘{Trace}"),
+                InvWhere => write!(f, "⍘{Where}"),
                 Uncouple => write!(f, "⍘{Couple}"),
                 Untake => write!(f, "⍘{Take}"),
                 Undrop => write!(f, "⍘{Drop}"),
@@ -195,6 +196,8 @@ impl Primitive {
             InvTrace => Trace,
             Box => Unbox,
             Unbox => Box,
+            Where => InvWhere,
+            InvWhere => Where,
             _ => return None,
         })
     }
@@ -353,6 +356,8 @@ impl Primitive {
                 env.push(from.unselect(index, into, env)?);
             }
             Primitive::Windows => env.dyadic_rr_env(Value::windows)?,
+            Primitive::Where => env.monadic_ref_env(Value::wher)?,
+            Primitive::InvWhere => env.monadic_ref_env(Value::inverse_where)?,
             Primitive::Classify => env.monadic_ref_env(Value::classify)?,
             Primitive::Deduplicate => env.monadic_mut(Value::deduplicate)?,
             Primitive::Member => env.dyadic_rr_env(Value::member)?,

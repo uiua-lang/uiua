@@ -179,10 +179,10 @@ uiuisms!(
     r#"▽\↥≠@ . "   ← remove these""#,
     /// Trim trailing whitespace
     r#"▽⍜⇌\↥≠@ . "remove these →   ""#,
-    /// Trim matching prefix
-    r#"▽¬\×∊, "thing" "thing← remove this""#,
-    /// Trim matching suffix
-    r#"▽¬⍜⇌\×∊, "thing" "remove this →thing""#,
+    /// Trim prefix matching characters from a set
+    r#"▽¬\×∊, "abc" "ccab ← remove this""#,
+    /// Trim suffix matching characters from a set
+    r#"▽¬⍜⇌\×∊, "abc" "remove this → bcaa""#,
     /// Trim whitespace
     r#"▽×⍜(⊟⇌)≡\↥.≠@ . "  abc xyz   ""#,
     /// Upscale a 2d matrix

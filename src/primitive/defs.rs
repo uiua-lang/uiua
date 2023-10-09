@@ -885,7 +885,7 @@ primitive!(
     /// ex: ∧- 10 1_2_3_4
     /// The accumulator is always the first argument to the function.
     /// ex: ∧⊂ [] 1_2_3_4
-    /// Multiple accumulators can be used. In this case, all the accumulators are passed to the function above the rows.
+    /// Multiple accumulators can be used. In this case, each row of the array will always be the last argument to the function.
     /// ex: ∧⊃(+⊙;)(×;) 0 1 [1 2 3 4 5]
     ///
     /// [break]ing out of [fold] discards the unreduced values.
@@ -1296,11 +1296,12 @@ primitive!(
     /// [if] can be chained to check more than one condition.
     /// Make sure to use [pop] or [gap] to git rid of excess conditions if the number of branches is not a [power] of `2`.
     /// ex: f ← ??+×⋅-
+    ///   : f ← ?(?+×)(-;) # Equivalent
     ///   : xs ← (3 5)
-    ///   : f 0 0 xs
-    ///   : f 0 1 xs
-    ///   : f 1 0 xs
     ///   : f 1 1 xs
+    ///   : f 1 0 xs
+    ///   : f 0 1 xs
+    ///   : f 0 0 xs
     ///
     /// The condition can be a list of booleans. In this case, the maximum of the function's arguments *must* be 2.
     /// Which function to be called is determined on a row-wise basis.

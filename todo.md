@@ -1,3 +1,4 @@
+- Write type/shape checker
 - `under` aggregating `group` and `partition`
 - Add channels for spawned threads
 - Figure out what is going on with the editor cursor

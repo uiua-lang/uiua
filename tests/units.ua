@@ -132,3 +132,5 @@ ParseOrZero ← ⍣parse⋅⋅0
 ⍤.=92 -@\0 @\\
 ⍤.=97 -@\0 @a
 ⍤.=1114111 -@\0 @\_
+
+⍤. ↧⊙(≅ "hello" ⊔⊡0) ≅ "world" ⊔⊡1 . regex "([a-z]+)" "hello world"

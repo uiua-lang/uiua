@@ -1496,6 +1496,11 @@ primitive!(
     /// [under][now] can be used to time a function.
     /// ex: ⍜now(5&sl1)
     (0, Now, Misc, "now"),
+    /// Parse a regex pattern on a string
+    /// 
+    /// Returns an array of boxed string, with one string per matching group
+    /// ex: regex "([a-z]+)" "hello world"
+    (2, Regex, Misc, "regex"),
     /// The number of radians in a quarter circle
     ///
     /// Equivalent to `divide``2``pi` or `divide``4``tau`

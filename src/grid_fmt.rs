@@ -109,8 +109,14 @@ impl GridFmt for Function {
             .lines()
             .map(|s| s.chars().collect())
             .collect();
+        if grid.is_empty() {
+            grid.push(vec![]);
+        }
         if grid.len() == 1 {
             grid[0].insert(0, '(');
+            if boxed {
+                grid[0].insert(0, '□');
+            }
             grid[0].push(')');
             return grid;
         }
@@ -198,7 +204,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             }
             for col in 0..metagrid_width {
                 let max_col_width = metagrid
-                    .iter()
+                    .iter_mut()
                     .map(|row| row[col].iter().map(|cell| cell.len()).max().unwrap())
                     .max()
                     .unwrap();

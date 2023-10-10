@@ -472,6 +472,7 @@ impl<'a> Formatter<'a> {
             }
             Word::Char(c) => {
                 let formatted = match *c {
+                    '\u{1b}' => "'\\e'".to_string(),
                     char::MAX => "'\\_'".to_string(),
                     _ => format!("{c:?}"),
                 };

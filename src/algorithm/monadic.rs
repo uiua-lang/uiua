@@ -14,7 +14,7 @@ use crate::{array::*, value::Value, Uiua, UiuaResult};
 
 impl Value {
     pub fn deshape(&mut self) {
-        self.generic_mut(
+        self.generic_mut_deep(
             Array::deshape,
             Array::deshape,
             Array::deshape,
@@ -97,7 +97,7 @@ fn range(shape: &[usize], env: &Uiua) -> UiuaResult<Vec<f64>> {
 
 impl Value {
     pub fn first(self, env: &Uiua) -> UiuaResult<Self> {
-        self.generic_into(
+        self.generic_into_deep(
             |a| a.first(env).map(Into::into),
             |a| a.first(env).map(Into::into),
             |a| a.first(env).map(Into::into),
@@ -105,7 +105,7 @@ impl Value {
         )
     }
     pub fn last(self, env: &Uiua) -> UiuaResult<Self> {
-        self.generic_into(
+        self.generic_into_deep(
             |a| a.last(env).map(Into::into),
             |a| a.last(env).map(Into::into),
             |a| a.last(env).map(Into::into),
@@ -142,7 +142,7 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     pub fn reverse(&mut self) {
-        self.generic_mut(
+        self.generic_mut_deep(
             Array::reverse,
             Array::reverse,
             Array::reverse,
@@ -172,7 +172,7 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     pub fn transpose(&mut self) {
-        self.generic_mut(
+        self.generic_mut_deep(
             Array::transpose,
             Array::transpose,
             Array::transpose,
@@ -180,7 +180,7 @@ impl Value {
         )
     }
     pub fn inv_transpose(&mut self) {
-        self.generic_mut(
+        self.generic_mut_deep(
             Array::inv_transpose,
             Array::inv_transpose,
             Array::inv_transpose,
@@ -234,15 +234,15 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     pub fn rise(&self, env: &Uiua) -> UiuaResult<Self> {
-        self.generic_ref_env(Array::rise, Array::rise, Array::rise, Array::rise, env)
+        self.generic_ref_env_deep(Array::rise, Array::rise, Array::rise, Array::rise, env)
             .map(Self::from_iter)
     }
     pub fn fall(&self, env: &Uiua) -> UiuaResult<Self> {
-        self.generic_ref_env(Array::fall, Array::fall, Array::fall, Array::fall, env)
+        self.generic_ref_env_deep(Array::fall, Array::fall, Array::fall, Array::fall, env)
             .map(Self::from_iter)
     }
     pub fn classify(&self, env: &Uiua) -> UiuaResult<Self> {
-        self.generic_ref_env(
+        self.generic_ref_env_deep(
             Array::classify,
             Array::classify,
             Array::classify,
@@ -252,7 +252,7 @@ impl Value {
         .map(Self::from_iter)
     }
     pub fn deduplicate(&mut self) {
-        self.generic_mut(
+        self.generic_mut_deep(
             Array::deduplicate,
             Array::deduplicate,
             Array::deduplicate,

@@ -581,7 +581,6 @@ impl<'a> Formatter<'a> {
         allow_compact: bool,
         depth: usize,
     ) {
-        dbg!(&lines);
         if lines.is_empty() {
             return;
         }

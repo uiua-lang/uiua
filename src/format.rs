@@ -380,7 +380,11 @@ impl<'a> Formatter<'a> {
         if self.config.align_comments && !self.end_of_line_comments.is_empty() {
             // Group comments by consecutive lines
             let mut groups: Vec<(usize, Vec<(usize, String)>)> = Vec::new();
-            let mut lines: Vec<String> = self.output.split('\n').map(|s| s.trim().into()).collect();
+            let mut lines: Vec<String> = self
+                .output
+                .split('\n')
+                .map(|s| s.trim_end().into())
+                .collect();
             for (line_number, comment) in self.end_of_line_comments.drain(..) {
                 let line = &lines[line_number - 1];
                 let line_len = line.chars().count();

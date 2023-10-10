@@ -2,8 +2,7 @@
 
 Uiua is not yet stable.
 
-## 0.0.18 - 2023-10-??
-If you are reading this on the website, then the features listed are live here.
+## 0.0.18 - 2023-10-10
 ### Language
 - **Major Change** [`distribute` `∺`](https://uiua.org/docs/distribute) now takes the array being distributed as its *last* argument, rather than its first
 - Add [`where` `⊚`](https://uiua.org/docs/where) function, which returns the indices of an array that have non-zero values
@@ -19,10 +18,11 @@ If you are reading this on the website, then the features listed are live here.
   - `\uNNNN` for full Unicode sequences
 ### Interpreter
 - The formatter now aligns consecutive end-of-line comments
-- Fix a bug that prevented [`under` `⍜`](https://uiua.org/docs/under) multidimensional [`take` `↙`](https://uiua.org/docs/take) and [`drop` `↘`](https://uiua.org/docs/drop) from working
 - `NaN`s no longer propogate in [`min` `⌊`](https://uiua.org/docs/min) and [`max` `⌈`](https://uiua.org/docs/max)
+- Fix a bug that prevented [`under` `⍜`](https://uiua.org/docs/under) multidimensional [`take` `↙`](https://uiua.org/docs/take) and [`drop` `↘`](https://uiua.org/docs/drop) from working
 - Fix a bug in how [`fold` `∧`](https://uiua.org/docs/fold) ordered multiple accumulators
 - Fix a bug that allowed incorrect signatures to be declared for functions
+- Fix a bunch of other bugs and crashes
 ### Website
 - Add the Uiua386 font as an option in the editor
 

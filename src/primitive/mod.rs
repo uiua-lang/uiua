@@ -385,10 +385,20 @@ impl Primitive {
             Primitive::Deshape => env.monadic_mut(Value::deshape)?,
             Primitive::First => env.monadic_env(Value::first)?,
             Primitive::Last => env.monadic_env(Value::last)?,
-            Primitive::Len => env.monadic_ref(Value::row_count)?,
-            Primitive::Shape => {
-                env.monadic_ref(|v| v.shape().iter().copied().collect::<Value>())?
-            }
+            Primitive::Len => env.monadic_ref(|val| {
+                val.generic_ref_deep(
+                    Array::row_count,
+                    Array::row_count,
+                    Array::row_count,
+                    Array::row_count,
+                )
+            })?,
+            Primitive::Shape => env.monadic_ref(|v| {
+                v.generic_ref_shallow(Array::shape, Array::shape, Array::shape, Array::shape)
+                    .iter()
+                    .copied()
+                    .collect::<Value>()
+            })?,
             Primitive::Bits => env.monadic_ref_env(Value::bits)?,
             Primitive::InverseBits => env.monadic_ref_env(Value::inverse_bits)?,
             Primitive::Fold => loops::fold(env)?,

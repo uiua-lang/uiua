@@ -14,6 +14,9 @@ If you are reading this on the website, then the features listed are live here.
 - `&n` is not longer a system function and is now called [`now`](https://uiua.org/docs/now)
 - [`under` `⍜`](https://uiua.org/docs/under) [`now`](https://uiua.org/docs/now) can be used to time things
 - [`call` `!`](https://uiua.org/docs/call) can now call functions that return any number of values, not just one
+- Add hex character escape sequences for string and character literals.
+  - `\xNN` for short ASCII codes
+  - `\uNNNN` for full Unicode sequences
 ### Interpreter
 - The formatter now aligns consecutive end-of-line comments
 - Fix a bug that prevented [`under` `⍜`](https://uiua.org/docs/under) multidimensional [`take` `↙`](https://uiua.org/docs/take) and [`drop` `↘`](https://uiua.org/docs/drop) from working

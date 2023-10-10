@@ -48,3 +48,30 @@ fn suite() {
         }
     }
 }
+
+#[test]
+fn no_dbgs() {
+    fn recurse_dirs(dir: &std::path::Path, f: &impl Fn(&std::path::Path)) {
+        for entry in std::fs::read_dir(dir).unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            if path.is_dir() {
+                recurse_dirs(&path, f);
+            } else {
+                f(&path);
+            }
+        }
+    }
+    recurse_dirs(std::path::Path::new("."), &|path| {
+        if path.extension().is_some_and(|ext| ext == "rs") {
+            if path.canonicalize().unwrap() == std::path::Path::new(file!()).canonicalize().unwrap()
+            {
+                return;
+            }
+            let contents = std::fs::read_to_string(path).unwrap();
+            if contents.contains("dbg!") {
+                panic!("File {} contains a dbg! macro", path.display());
+            }
+        }
+    });
+}

@@ -714,6 +714,22 @@ impl Lexer {
                 '"' => '"',
                 '\'' => '\'',
                 '_' => char::MAX,
+                'x' => {
+                    let mut code = 0;
+                    for _ in 0..2 {
+                        let c = self.next_char_if(|c| c.is_ascii_hexdigit()).ok_or('x')?;
+                        code = code << 4 | c.to_digit(16).unwrap();
+                    }
+                    std::char::from_u32(code).ok_or('x')?
+                }
+                'u' => {
+                    let mut code = 0;
+                    for _ in 0..4 {
+                        let c = self.next_char_if(|c| c.is_ascii_hexdigit()).ok_or('u')?;
+                        code = code << 4 | c.to_digit(16).unwrap();
+                    }
+                    std::char::from_u32(code).ok_or('u')?
+                }
                 c => return Err(c),
             }
         } else if c == '\\' {

@@ -1516,7 +1516,7 @@ impl<T: ArrayValue> Array<T> {
         }
         let into_row_len = into.row_len();
         let into_row_count = into.row_count();
-        for (&i, row) in indices.iter().zip(self.rows()) {
+        for (&i, row) in indices.iter().zip(self.row_slices()) {
             let i = if i >= 0 {
                 let ui = i as usize;
                 if ui >= into_row_count {
@@ -1542,7 +1542,7 @@ impl<T: ArrayValue> Array<T> {
             };
             let start = i * into_row_len;
             let end = start + into_row_len;
-            for (i, x) in (start..end).zip(row.data) {
+            for (i, x) in (start..end).zip(row) {
                 into.data[i] = x.clone();
             }
         }

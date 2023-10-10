@@ -937,6 +937,20 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
         },
     )?;
     let f = env.pop(FunctionArg(2))?;
+    let f_sig = f.signature();
+    if f_sig.outputs != 1 {
+        return Err(env.error(format!(
+            "Level's function must return 1 value, but it returns {}",
+            f_sig.outputs
+        )));
+    }
+    if f_sig.args != ns.len() {
+        return Err(env.error(format!(
+            "Level's rank list has {} elements, but its function takes {} arguments",
+            ns.len(),
+            f_sig.args
+        )));
+    }
     match ns.as_slice() {
         [] => return Ok(()),
         &[n] => {

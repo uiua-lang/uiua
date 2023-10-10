@@ -133,18 +133,13 @@ impl Value {
         }
     }
     pub fn shape(&self) -> &[usize] {
-        match self {
-            Self::Num(array) => array.shape(),
-            Self::Byte(array) => array.shape(),
-            Self::Char(array) => array.shape(),
-            Self::Func(array) => array.shape(),
-        }
+        self.generic_ref_shallow(Array::shape, Array::shape, Array::shape, Array::shape)
     }
     pub fn shape_prefixes_match(&self, other: &Self) -> bool {
         self.shape().iter().zip(other.shape()).all(|(a, b)| a == b)
     }
     pub fn row_count(&self) -> usize {
-        self.generic_ref(
+        self.generic_ref_shallow(
             Array::row_count,
             Array::row_count,
             Array::row_count,
@@ -152,7 +147,7 @@ impl Value {
         )
     }
     pub fn row_len(&self) -> usize {
-        self.generic_ref(
+        self.generic_ref_shallow(
             Array::row_len,
             Array::row_len,
             Array::row_len,
@@ -160,7 +155,7 @@ impl Value {
         )
     }
     pub fn flat_len(&self) -> usize {
-        self.generic_ref(
+        self.generic_ref_shallow(
             Array::flat_len,
             Array::flat_len,
             Array::flat_len,
@@ -184,7 +179,7 @@ impl Value {
         }
     }
     pub fn format_shape(&self) -> FormatShape {
-        self.generic_ref(
+        self.generic_ref_shallow(
             Array::format_shape,
             Array::format_shape,
             Array::format_shape,
@@ -203,7 +198,7 @@ impl Value {
         }
     }
     pub(crate) fn validate_shape(&self) {
-        self.generic_ref(
+        self.generic_ref_shallow(
             Array::validate_shape,
             Array::validate_shape,
             Array::validate_shape,
@@ -211,14 +206,28 @@ impl Value {
         )
     }
     pub fn row(&self, i: usize) -> Self {
-        self.generic_ref(
+        self.generic_ref_shallow(
             |arr| arr.row(i).into(),
             |arr| arr.row(i).into(),
             |arr| arr.row(i).into(),
             |arr| arr.row(i).into(),
         )
     }
-    pub fn generic_into<T>(
+    pub fn generic_into_shallow<T>(
+        self,
+        n: impl FnOnce(Array<f64>) -> T,
+        b: impl FnOnce(Array<u8>) -> T,
+        c: impl FnOnce(Array<char>) -> T,
+        f: impl FnOnce(Array<Arc<Function>>) -> T,
+    ) -> T {
+        match self {
+            Self::Num(array) => n(array),
+            Self::Byte(array) => b(array),
+            Self::Char(array) => c(array),
+            Self::Func(array) => f(array),
+        }
+    }
+    pub fn generic_into_deep<T>(
         self,
         n: impl FnOnce(Array<f64>) -> T,
         b: impl FnOnce(Array<u8>) -> T,
@@ -230,12 +239,26 @@ impl Value {
             Self::Byte(array) => b(array),
             Self::Char(array) => c(array),
             Self::Func(array) => match array.into_constant() {
-                Ok(value) => value.generic_into(n, b, c, f),
+                Ok(value) => value.generic_into_deep(n, b, c, f),
                 Err(array) => f(array),
             },
         }
     }
-    pub fn generic_ref<'a, T: 'a>(
+    pub fn generic_ref_shallow<'a, T: 'a>(
+        &'a self,
+        n: impl FnOnce(&'a Array<f64>) -> T,
+        b: impl FnOnce(&'a Array<u8>) -> T,
+        c: impl FnOnce(&'a Array<char>) -> T,
+        f: impl FnOnce(&'a Array<Arc<Function>>) -> T,
+    ) -> T {
+        match self {
+            Self::Num(array) => n(array),
+            Self::Byte(array) => b(array),
+            Self::Char(array) => c(array),
+            Self::Func(array) => f(array),
+        }
+    }
+    pub fn generic_ref_deep<'a, T: 'a>(
         &'a self,
         n: impl FnOnce(&'a Array<f64>) -> T,
         b: impl FnOnce(&'a Array<u8>) -> T,
@@ -248,14 +271,14 @@ impl Value {
             Self::Char(array) => c(array),
             Self::Func(array) => {
                 if let Some(value) = array.as_constant() {
-                    value.generic_ref(n, b, c, f)
+                    value.generic_ref_deep(n, b, c, f)
                 } else {
                     f(array)
                 }
             }
         }
     }
-    pub fn generic_ref_env<'a, T: 'a>(
+    pub fn generic_ref_env_shallow<'a, T: 'a>(
         &'a self,
         n: impl FnOnce(&'a Array<f64>, &Uiua) -> UiuaResult<T>,
         b: impl FnOnce(&'a Array<u8>, &Uiua) -> UiuaResult<T>,
@@ -263,9 +286,33 @@ impl Value {
         f: impl FnOnce(&'a Array<Arc<Function>>, &Uiua) -> UiuaResult<T>,
         env: &Uiua,
     ) -> UiuaResult<T> {
-        self.generic_ref(|a| n(a, env), |a| b(a, env), |a| c(a, env), |a| f(a, env))
+        self.generic_ref_shallow(|a| n(a, env), |a| b(a, env), |a| c(a, env), |a| f(a, env))
     }
-    pub fn generic_mut<T>(
+    pub fn generic_ref_env_deep<'a, T: 'a>(
+        &'a self,
+        n: impl FnOnce(&'a Array<f64>, &Uiua) -> UiuaResult<T>,
+        b: impl FnOnce(&'a Array<u8>, &Uiua) -> UiuaResult<T>,
+        c: impl FnOnce(&'a Array<char>, &Uiua) -> UiuaResult<T>,
+        f: impl FnOnce(&'a Array<Arc<Function>>, &Uiua) -> UiuaResult<T>,
+        env: &Uiua,
+    ) -> UiuaResult<T> {
+        self.generic_ref_deep(|a| n(a, env), |a| b(a, env), |a| c(a, env), |a| f(a, env))
+    }
+    pub fn generic_mut_shallow<T>(
+        &mut self,
+        n: impl FnOnce(&mut Array<f64>) -> T,
+        b: impl FnOnce(&mut Array<u8>) -> T,
+        c: impl FnOnce(&mut Array<char>) -> T,
+        f: impl FnOnce(&mut Array<Arc<Function>>) -> T,
+    ) -> T {
+        match self {
+            Self::Num(array) => n(array),
+            Self::Byte(array) => b(array),
+            Self::Char(array) => c(array),
+            Self::Func(array) => f(array),
+        }
+    }
+    pub fn generic_mut_deep<T>(
         &mut self,
         n: impl FnOnce(&mut Array<f64>) -> T,
         b: impl FnOnce(&mut Array<u8>) -> T,
@@ -278,7 +325,7 @@ impl Value {
             Self::Char(array) => c(array),
             Self::Func(array) => {
                 if let Some(value) = array.as_constant_mut() {
-                    value.generic_mut(n, b, c, f)
+                    value.generic_mut_deep(n, b, c, f)
                 } else {
                     f(array)
                 }

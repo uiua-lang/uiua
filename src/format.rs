@@ -380,7 +380,11 @@ impl<'a> Formatter<'a> {
         if self.config.align_comments && !self.end_of_line_comments.is_empty() {
             // Group comments by consecutive lines
             let mut groups: Vec<(usize, Vec<(usize, String)>)> = Vec::new();
-            let mut lines: Vec<String> = self.output.split('\n').map(|s| s.trim().into()).collect();
+            let mut lines: Vec<String> = self
+                .output
+                .split('\n')
+                .map(|s| s.trim_end().into())
+                .collect();
             for (line_number, comment) in self.end_of_line_comments.drain(..) {
                 let line = &lines[line_number - 1];
                 let line_len = line.chars().count();
@@ -466,13 +470,8 @@ impl<'a> Formatter<'a> {
                     self.output.push_str(&s.replace('`', "¯"));
                 }
             }
-            Word::Char(c) => {
-                let formatted = format!("{c:?}");
-                let formatted = &formatted[1..formatted.len() - 1];
-                self.output.push('@');
-                self.output.push_str(formatted);
-            }
-            Word::String(s) => self.output.push_str(&format!("{:?}", s)),
+            Word::Char(_) => self.output.push_str(word.span.as_str()),
+            Word::String(_) => self.output.push_str(word.span.as_str()),
             Word::FormatString(_) => self.output.push_str(word.span.as_str()),
             Word::MultilineString(lines) => {
                 if lines.len() == 1 {
@@ -587,7 +586,7 @@ impl<'a> Formatter<'a> {
             .is_some_and(|word| matches!(word.value, Word::Comment(_)));
         if lines.len() == 1
             && !last_word_comment
-            && (lines[0].len() == 1 || !lines[0].iter().any(|word| word_is_multiline(&word.value)))
+            && !lines[0].iter().any(|word| word_is_multiline(&word.value))
         {
             self.format_words(&lines[0], true, depth);
             return;
@@ -672,7 +671,7 @@ fn word_is_multiline(word: &Word) -> bool {
         Word::Char(_) => false,
         Word::String(_) => false,
         Word::FormatString(_) => false,
-        Word::MultilineString(lines) => lines.len() > 1,
+        Word::MultilineString(_) => true,
         Word::Ident(_) => false,
         Word::Strand(_) => false,
         Word::Array(arr) => {

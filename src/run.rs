@@ -11,7 +11,6 @@ use std::{
 
 use instant::Duration;
 use parking_lot::Mutex;
-use regex::Regex;
 
 use crate::{
     array::Array,
@@ -63,7 +62,6 @@ pub struct Uiua {
     cli_file_path: PathBuf,
     /// The system backend
     pub(crate) backend: Arc<dyn SysBackend>,
-    regex_cache: Arc<Mutex<HashMap<String, Regex>>>,
 }
 
 #[derive(Clone)]
@@ -180,7 +178,6 @@ impl Uiua {
             cli_file_path: PathBuf::new(),
             execution_limit: None,
             execution_start: 0.0,
-            regex_cache: Arc::new(Mutex::new(HashMap::new()))
         }
     }
     /// Create a new Uiua runtime with a custom IO backend
@@ -741,17 +738,6 @@ code:
     pub(crate) fn func_fill(&self) -> Option<Arc<Function>> {
         self.scope.fills.functions.last().cloned()
     }
-    pub(crate) fn parse_regex_pattern(&self, pattern: String) -> Regex {
-        let mut binding = self.regex_cache.lock();
-        let cached_pattern = binding.get(&pattern);
-        if cached_pattern.is_none() {
-            let regex = Regex::new(&pattern).unwrap();
-            binding.insert(pattern, regex.clone());
-            regex
-        } else {
-            cached_pattern.unwrap().clone()
-        }
-    }
     /// Do something with the fill context set
     pub(crate) fn with_fill(
         &mut self,
@@ -840,7 +826,6 @@ code:
             backend: self.backend.clone(),
             execution_limit: self.execution_limit,
             execution_start: self.execution_start,
-            regex_cache: self.regex_cache.clone()
         };
         self.backend
             .spawn(env, Box::new(f))

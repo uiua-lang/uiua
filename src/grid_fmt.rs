@@ -65,24 +65,32 @@ impl GridFmt for f64 {
     }
 }
 
+pub fn format_char_inner(c: char) -> String {
+    if c == char::MAX {
+        return '_'.to_string();
+    }
+    let formatted = format!("{c:?}");
+    if formatted.starts_with("'\\u{") {
+        let n = c as u32;
+        if n < 128 {
+            format!("\\x{:02x}", n)
+        } else {
+            format!("\\u{:04x}", n)
+        }
+    } else {
+        formatted[1..formatted.len() - 1].to_string()
+    }
+}
+
 impl GridFmt for char {
     fn fmt_grid(&self, boxed: bool) -> Grid {
-        let formatted = format!("{self:?}");
-        vec![if formatted.starts_with("'\\u{") {
-            boxed
-                .then(|| Primitive::Box.glyph().unwrap())
-                .into_iter()
-                .chain(format!("+{}@\\0", *self as u32).chars())
-                .collect()
+        vec![once(if boxed {
+            Primitive::Box.glyph().unwrap()
         } else {
-            once(if boxed {
-                Primitive::Box.glyph().unwrap()
-            } else {
-                '@'
-            })
-            .chain(formatted[1..formatted.len() - 1].chars())
-            .collect()
-        }]
+            '@'
+        })
+        .chain(format_char_inner(*self).chars())
+        .collect()]
     }
 }
 
@@ -302,12 +310,13 @@ fn fmt_array<T: GridFmt + ArrayValue>(
         if stringy {
             let mut s = String::new();
             s.extend(data.iter().map(|c| c.to_string()));
-            let mut s = format!("{s:?}");
+            let mut s: String = s.chars().map(format_char_inner).collect();
             if boxed {
-                s.pop();
-                s.remove(0);
                 s.insert(0, '⌜');
                 s.push('⌟');
+            } else {
+                s.insert(0, '"');
+                s.push('"');
             }
             row.push(vec![s.chars().collect()]);
         } else {

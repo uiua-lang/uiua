@@ -598,12 +598,6 @@ code:
     pub fn span(&self) -> Span {
         self.spans.lock()[self.span_index()].clone()
     }
-    pub(crate) fn merge_spans(&self, a: usize, b: usize) -> Span {
-        let spans = self.spans.lock();
-        let a = spans[a].clone();
-        let b = spans[b].clone();
-        a.merge(b)
-    }
     /// Construct an error with the current span
     pub fn error(&self, message: impl ToString) -> UiuaError {
         UiuaError::Run(self.span().clone().sp(message.to_string()))

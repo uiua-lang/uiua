@@ -470,16 +470,8 @@ impl<'a> Formatter<'a> {
                     self.output.push_str(&s.replace('`', "¯"));
                 }
             }
-            Word::Char(c) => {
-                let formatted = match *c {
-                    char::MAX => "'\\_'".to_string(),
-                    _ => format!("{c:?}"),
-                };
-                let formatted = &formatted[1..formatted.len() - 1];
-                self.output.push('@');
-                self.output.push_str(formatted);
-            }
-            Word::String(s) => self.output.push_str(&format!("{:?}", s)),
+            Word::Char(_) => self.output.push_str(word.span.as_str()),
+            Word::String(_) => self.output.push_str(word.span.as_str()),
             Word::FormatString(_) => self.output.push_str(word.span.as_str()),
             Word::MultilineString(lines) => {
                 if lines.len() == 1 {

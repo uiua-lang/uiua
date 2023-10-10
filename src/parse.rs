@@ -314,8 +314,28 @@ impl Parser {
         Some(span.sp(Signature::new(args, outs)))
     }
     fn try_words(&mut self) -> Option<Vec<Sp<Word>>> {
-        let mut words = Vec::new();
+        let mut words: Vec<Sp<Word>> = Vec::new();
         while let Some(word) = self.try_word() {
+            if let Some(prev) = words.last() {
+                // Style diagnostics
+                use crate::primitive::Primitive::*;
+                use Word::*;
+                let span = || prev.span.clone().merge(word.span.clone());
+                match (&prev.value, &word.value) {
+                    (Primitive(Flip), Primitive(Over)) => self.diagnostics.push(Diagnostic::new(
+                        format!("Prefer `{Dip}{Dup}` over `{Flip}{Over}` for clarity"),
+                        span(),
+                        DiagnosticKind::Style,
+                    )),
+                    (Primitive(Not), Primitive(Eq)) => self.diagnostics.push(Diagnostic::new(
+                        format!("Prefer `{Ne}` over `{Not}{Eq}` for clarity"),
+                        span(),
+                        DiagnosticKind::Style,
+                    )),
+                    _ => {}
+                }
+            }
+
             words.push(word);
         }
         if words.is_empty() {

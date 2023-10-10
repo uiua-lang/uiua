@@ -453,7 +453,7 @@ impl Array<u8> {
 
 impl Value {
     pub fn wher(&self, env: &Uiua) -> UiuaResult<Self> {
-        let counts = self.as_naturals(env, "Argument to where must be a naturals")?;
+        let counts = self.as_naturals(env, "Argument to where must be a list of naturals")?;
         let total: usize = counts.iter().fold(0, |acc, &b| acc.saturating_add(b));
         let mut data = Vec::with_capacity(total);
         for (i, &b) in counts.iter().enumerate() {

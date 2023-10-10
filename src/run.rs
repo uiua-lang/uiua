@@ -410,27 +410,19 @@ code:
                     .pop("called function")
                     .and_then(|f| self.call_with_span(f, span)),
                 Instr::Dynamic(df) => df.f.clone()(self),
-                &Instr::PushTemp { count, span, kind } => (|| {
+                &Instr::PushTempUnder { count, span } => (|| {
                     self.push_span(span, None);
                     for _ in 0..count {
                         let value = self.pop("value to move to temp")?;
-                        let stack = match kind {
-                            TempKind::Inline => &mut self.inline_stack,
-                            TempKind::Under => &mut self.under_stack,
-                        };
-                        stack.push(value);
+                        self.under_stack.push(value);
                     }
                     self.pop_span();
                     Ok(())
                 })(),
-                &Instr::PopTemp { count, span, kind } => (|| {
+                &Instr::PopTempUnder { count, span } => (|| {
                     self.push_span(span, None);
                     for _ in 0..count {
-                        let stack = match kind {
-                            TempKind::Inline => &mut self.inline_stack,
-                            TempKind::Under => &mut self.under_stack,
-                        };
-                        let value = stack.pop().ok_or_else(|| {
+                        let value = self.under_stack.pop().ok_or_else(|| {
                             self.error("Temp stack was empty when evaluating value to pop")
                         })?;
                         self.push(value);
@@ -438,46 +430,53 @@ code:
                     self.pop_span();
                     Ok(())
                 })(),
-                &Instr::CopyTemp {
-                    offset,
-                    count,
-                    span,
-                    kind,
-                } => (|| {
+                &Instr::PushTempInline { count, span } => (|| {
                     self.push_span(span, None);
-                    let stack = match kind {
-                        TempKind::Inline => &mut self.inline_stack,
-                        TempKind::Under => &mut self.under_stack,
-                    };
-                    if stack.len() < offset + count {
-                        return Err(
-                            self.error("Temp stack was empty when evaluating value to copy")
-                        );
+                    for _ in 0..count {
+                        let value = self.pop("value to move to temp")?;
+                        self.inline_stack.push(value);
                     }
-                    let start = stack.len() - offset;
-                    for i in 0..count {
-                        let stack = match kind {
-                            TempKind::Inline => &mut self.inline_stack,
-                            TempKind::Under => &mut self.under_stack,
-                        };
-                        let value = stack[start - i - 1].clone();
+                    self.pop_span();
+                    Ok(())
+                })(),
+                &Instr::PopTempInline { count, span } => (|| {
+                    self.push_span(span, None);
+                    for _ in 0..count {
+                        let value = self.inline_stack.pop().ok_or_else(|| {
+                            self.error("Temp stack was empty when evaluating value to pop")
+                        })?;
                         self.push(value);
                     }
                     self.pop_span();
                     Ok(())
                 })(),
-                &Instr::DropTemp { count, span, kind } => (|| {
+                &Instr::CopyTempInline {
+                    offset,
+                    count,
+                    span,
+                } => (|| {
                     self.push_span(span, None);
-                    let stack = match kind {
-                        TempKind::Inline => &mut self.inline_stack,
-                        TempKind::Under => &mut self.under_stack,
-                    };
-                    if stack.len() < count {
+                    if self.inline_stack.len() < offset + count {
+                        return Err(
+                            self.error("Temp stack was empty when evaluating value to copy")
+                        );
+                    }
+                    let start = self.inline_stack.len() - offset;
+                    for i in 0..count {
+                        let value = self.inline_stack[start - i - 1].clone();
+                        self.push(value);
+                    }
+                    self.pop_span();
+                    Ok(())
+                })(),
+                &Instr::DropTempInline { count, span } => (|| {
+                    self.push_span(span, None);
+                    if self.inline_stack.len() < count {
                         return Err(
                             self.error("Temp stack was empty when evaluating value to drop")
                         );
                     }
-                    stack.truncate(stack.len() - count);
+                    self.inline_stack.truncate(self.inline_stack.len() - count);
                     self.pop_span();
                     Ok(())
                 })(),

@@ -126,12 +126,14 @@ impl<'a> VirtualEnv<'a> {
                 self.stack.push(BasicValue::Arr(items));
             }
             Instr::Call(_) => self.handle_call()?,
-            Instr::PushTemp { count, .. } => self.handle_args_outputs(*count, 0)?,
-            Instr::PopTemp { count, .. } | Instr::CopyTemp { count, .. } => {
-                self.handle_args_outputs(0, *count)?
+            Instr::PushTempInline { count, .. } | Instr::PushTempUnder { count, .. } => {
+                self.handle_args_outputs(*count, 0)?
             }
+            Instr::PopTempInline { count, .. }
+            | Instr::PopTempUnder { count, .. }
+            | Instr::CopyTempInline { count, .. } => self.handle_args_outputs(0, *count)?,
             Instr::Dynamic(f) => self.handle_sig(f.signature)?,
-            Instr::DropTemp { .. } => {}
+            Instr::DropTempInline { .. } => {}
             Instr::Prim(prim, _) => match prim {
                 Reduce | Scan => {
                     let sig = self.pop()?.expect_function(|| prim)?;

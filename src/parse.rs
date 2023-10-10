@@ -327,11 +327,24 @@ impl Parser {
                         span(),
                         DiagnosticKind::Style,
                     )),
-                    (Primitive(Not), Primitive(Eq)) => self.diagnostics.push(Diagnostic::new(
-                        format!("Prefer `{Ne}` over `{Not}{Eq}` for clarity"),
-                        span(),
-                        DiagnosticKind::Style,
-                    )),
+                    // Not comparisons
+                    (Primitive(Not), Primitive(prim)) => {
+                        for (a, b) in [(Eq, Ne), (Lt, Ge), (Gt, Le)] {
+                            if *prim == a {
+                                self.diagnostics.push(Diagnostic::new(
+                                    format!("Prefer `{b}` over `{Not}{prim}` for clarity"),
+                                    span(),
+                                    DiagnosticKind::Style,
+                                ));
+                            } else if *prim == b {
+                                self.diagnostics.push(Diagnostic::new(
+                                    format!("Prefer `{a}` over `{Not}{prim}` for clarity"),
+                                    span(),
+                                    DiagnosticKind::Style,
+                                ));
+                            }
+                        }
+                    }
                     _ => {}
                 }
             }

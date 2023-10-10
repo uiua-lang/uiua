@@ -471,7 +471,10 @@ impl<'a> Formatter<'a> {
                 }
             }
             Word::Char(c) => {
-                let formatted = format!("{c:?}");
+                let formatted = match *c {
+                    char::MAX => "'\\_'".to_string(),
+                    _ => format!("{c:?}"),
+                };
                 let formatted = &formatted[1..formatted.len() - 1];
                 self.output.push('@');
                 self.output.push_str(formatted);

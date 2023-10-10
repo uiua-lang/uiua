@@ -22,7 +22,6 @@ use std::{
 use enum_iterator::{all, Sequence};
 use once_cell::sync::Lazy;
 use rand::prelude::*;
-use regex::Regex;
 
 use crate::{
     algorithm::{fork, loops},
@@ -601,7 +600,7 @@ impl Primitive {
                 let pattern = env.pop(1)?.as_string(env, "Pattern must be a string")?;
                 let matching = env.pop(1)?.as_string(env, "Matching target must be a string")?;
 
-                let re = Regex::new(pattern.as_str()).unwrap();
+                let re = env.parse_regex_pattern(pattern);
                 let matches = re.find_iter(matching.as_str())
                     .map(|m| Function::constant(m.as_str()).into())
                     .reduce(|a, b| Value::join(a, b, env).unwrap()).unwrap();

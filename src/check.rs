@@ -140,6 +140,7 @@ impl<'a> VirtualEnv<'a> {
                     let outputs = match (sig.args, sig.outputs) {
                         (0, _) => return Err(format!("{prim}'s function has no args")),
                         (1, 0) => 0,
+                        (1, _) if *prim == Reduce && !self.array_stack.is_empty() => 1,
                         (1, _) => return Err(format!("{prim}'s function's signature is {sig}")),
                         (2, 1) => 1,
                         _ => return Err(format!("{prim}'s function's signature is {sig}")),

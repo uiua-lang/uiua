@@ -156,7 +156,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         if *self.shape == [0] {
             return if stringy {
                 if boxed {
-                    vec![vec!['“', '”']]
+                    vec![vec!['⌜', '⌟']]
                 } else {
                     vec![vec!['"', '"']]
                 }

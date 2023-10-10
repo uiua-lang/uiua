@@ -297,12 +297,10 @@ impl<'a> VirtualEnv<'a> {
                     self.handle_args_outputs(args, outputs)?;
                 }
                 Level => {
-                    let arg_count = match self.pop()? {
-                        BasicValue::Arr(items) => items.len(),
-                        _ => 1,
-                    };
+                    let _ranks = self.pop()?;
                     let f = self.pop()?;
-                    self.handle_args_outputs(arg_count, f.signature().outputs)?;
+                    let f_sig = f.signature();
+                    self.handle_sig(f_sig)?;
                 }
                 Try => {
                     let f = self.pop()?;

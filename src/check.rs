@@ -1,4 +1,4 @@
-use std::{borrow::Cow, cmp::Ordering};
+use std::{borrow::Cow, cmp::Ordering, fmt};
 
 use crate::{
     array::Array,
@@ -12,7 +12,7 @@ pub(crate) fn instrs_signature(instrs: &[Instr]) -> Result<Signature, String> {
     if let [Instr::Prim(prim, _)] = instrs {
         if let Some((args, outputs)) = prim.args().zip(prim.outputs()) {
             return Ok(Signature {
-                args: args as usize,
+                args: args as usize + prim.modifier_args().unwrap_or(0) as usize,
                 outputs: outputs as usize,
             });
         }
@@ -90,6 +90,18 @@ impl<'a> BasicValue<'a> {
             BasicValue::Other
         }
     }
+    fn expect_function<T: fmt::Display>(
+        &self,
+        err: impl FnOnce() -> T,
+    ) -> Result<Signature, String> {
+        match self {
+            BasicValue::Func(f) => Ok(f.signature()),
+            BasicValue::Unknown | BasicValue::Other => {
+                Err(format!("{} with unknown function", err()))
+            }
+            _ => Err(format!("{} with non-function", err())),
+        }
+    }
 }
 
 impl<'a> VirtualEnv<'a> {
@@ -122,10 +134,9 @@ impl<'a> VirtualEnv<'a> {
             Instr::DropTemp { .. } => {}
             Instr::Prim(prim, _) => match prim {
                 Reduce | Scan => {
-                    let f = self.pop()?;
-                    let sig = f.signature();
+                    let sig = self.pop()?.expect_function(|| prim)?;
                     let outputs = match (sig.args, sig.outputs) {
-                        (0, _) => return Err(format!("{prim}'s function {f:?} has no args")),
+                        (0, _) => return Err(format!("{prim}'s function has no args")),
                         (1, 0) => 0,
                         (1, _) => return Err(format!("{prim}'s function's signature is {sig}")),
                         (2, 1) => 1,
@@ -136,28 +147,23 @@ impl<'a> VirtualEnv<'a> {
                 Each | Rows => self.handle_variadic_mod(prim)?,
                 Table | Cross => self.handle_mod(prim, Some(2), Some(1), 2, None)?,
                 Distribute => {
-                    let f = self.pop()?;
-                    let sig = f.signature();
+                    let sig = self.pop()?.expect_function(|| prim)?;
                     self.handle_sig(sig)?
                 }
                 Group | Partition => {
-                    if let BasicValue::Func(f) = self.pop()? {
-                        let sig = f.signature();
-                        let (args, outputs) = match sig.args {
-                            0 => (2, 0),
-                            1 => (2, 1),
-                            2 => (3, 1),
-                            _ => {
-                                return Err(format!(
-                                    "{prim}'s function must take at most 2 arguments, \
+                    let sig = self.pop()?.expect_function(|| prim)?;
+                    let (args, outputs) = match sig.args {
+                        0 => (2, 0),
+                        1 => (2, 1),
+                        2 => (3, 1),
+                        _ => {
+                            return Err(format!(
+                                "{prim}'s function must take at most 2 arguments, \
                                     but its signature is {sig}",
-                                ))
-                            }
-                        };
-                        self.handle_args_outputs(args, outputs)?;
-                    } else {
-                        return Err(format!("{prim} with non-function"));
-                    }
+                            ))
+                        }
+                    };
+                    self.handle_args_outputs(args, outputs)?;
                 }
                 Spawn => self.handle_mod(prim, None, None, 1, Some(1))?,
                 Repeat => {
@@ -231,8 +237,7 @@ impl<'a> VirtualEnv<'a> {
                     }
                 }
                 Fold => {
-                    let f = self.pop()?;
-                    let sig = f.signature();
+                    let sig = self.pop()?.expect_function(|| prim)?;
                     if sig.args.saturating_sub(sig.outputs) != 1 {
                         return Err(format!(
                             "fold's function's signature {sig} does \
@@ -255,23 +260,23 @@ impl<'a> VirtualEnv<'a> {
                     }
                 }
                 Both => {
-                    let f = self.pop()?;
-                    let args = f.signature().args * 2;
-                    let outputs = f.signature().outputs * 2;
+                    let sig = self.pop()?.expect_function(|| prim)?;
+                    let args = sig.args * 2;
+                    let outputs = sig.outputs * 2;
                     self.handle_args_outputs(args, outputs)?;
                 }
                 Fork => {
-                    let f = self.pop()?;
-                    let g = self.pop()?;
-                    let args = f.signature().args.max(g.signature().args);
-                    let outputs = f.signature().outputs + g.signature().outputs;
+                    let f_sig = self.pop()?.expect_function(|| prim)?;
+                    let g_sig = self.pop()?.expect_function(|| prim)?;
+                    let args = f_sig.args.max(g_sig.args);
+                    let outputs = f_sig.outputs + g_sig.outputs;
                     self.handle_args_outputs(args, outputs)?;
                 }
                 Bracket => {
-                    let f = self.pop()?;
-                    let g = self.pop()?;
-                    let args = f.signature().args + g.signature().args;
-                    let outputs = f.signature().outputs + g.signature().outputs;
+                    let f_sig = self.pop()?.expect_function(|| prim)?;
+                    let g_sig = self.pop()?.expect_function(|| prim)?;
+                    let args = f_sig.args + g_sig.args;
+                    let outputs = f_sig.outputs + g_sig.outputs;
                     self.handle_args_outputs(args, outputs)?;
                 }
                 If => {

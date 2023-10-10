@@ -7,8 +7,8 @@ use std::{
 };
 
 use crate::{
-    check::instrs_signature, lex::CodeSpan, primitive::Primitive, value::Value, Ident, Uiua,
-    UiuaResult,
+    check::instrs_signature, grid_fmt::GridFmt, lex::CodeSpan, primitive::Primitive, value::Value,
+    Ident, Uiua, UiuaResult,
 };
 
 #[derive(Clone)]
@@ -311,10 +311,7 @@ impl fmt::Display for Function {
         if let Some((prim, _)) = self.as_primitive() {
             return write!(f, "{prim}");
         }
-        write!(f, "(")?;
-        write!(f, "{}", self.format_inner())?;
-        write!(f, ")")?;
-        Ok(())
+        write!(f, "{}", self.grid_string())
     }
 }
 
@@ -339,26 +336,36 @@ impl Function {
     pub fn into_inner(f: Arc<Self>) -> Self {
         Arc::try_unwrap(f).unwrap_or_else(|f| (*f).clone())
     }
-    pub(crate) fn format_inner(&self) -> String {
+    pub(crate) fn format_inner(&self) -> Vec<String> {
         if let FunctionId::Named(name) = &self.id {
-            return name.as_ref().into();
+            return vec![name.as_ref().into()];
         }
         if let Some((prim, _)) = self.as_primitive() {
-            return prim.to_string();
+            return vec![prim.to_string()];
         }
-        let mut s = String::new();
+        let mut lines = vec![String::new()];
         for (i, instr) in self.instrs.iter().rev().enumerate() {
             let instr_str = instr.to_string();
+            let s = &lines[0];
             let add_space = (s.ends_with(char::is_alphabetic)
                 && instr_str.starts_with(char::is_alphabetic))
                 || (s.ends_with(|c: char| c.is_ascii_digit())
                     && instr_str.starts_with(|c: char| c.is_ascii_digit()));
-            if i > 0 && add_space {
-                s.push(' ');
+            if lines.len() < instr_str.lines().count() {
+                lines.resize(instr_str.lines().count(), String::new());
             }
-            s.push_str(&instr_str);
+            let max_line_len = lines.iter().map(|s| s.chars().count()).max().unwrap_or(0);
+            for line in &mut lines {
+                line.extend(std::iter::repeat(' ').take(max_line_len - line.chars().count()));
+            }
+            if i > 0 && add_space {
+                lines[0].push(' ');
+            }
+            for (line, instr_line) in lines.iter_mut().zip(instr_str.lines()) {
+                line.push_str(instr_line);
+            }
         }
-        s
+        lines
     }
     /// Get how many arguments this function pops off the stack and how many it pushes.
     /// Returns `None` if either of these values are dynamic.

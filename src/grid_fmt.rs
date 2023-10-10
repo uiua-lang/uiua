@@ -114,7 +114,7 @@ impl GridFmt for Function {
         }
         let mut grid: Grid = self
             .format_inner()
-            .lines()
+            .into_iter()
             .map(|s| s.chars().collect())
             .collect();
         if grid.is_empty() {

@@ -55,6 +55,9 @@ fn no_dbgs() {
         for entry in std::fs::read_dir(dir).unwrap() {
             let entry = entry.unwrap();
             let path = entry.path();
+            if path.to_string_lossy().contains("target") {
+                continue;
+            }
             if path.is_dir() {
                 recurse_dirs(&path, f);
             } else {

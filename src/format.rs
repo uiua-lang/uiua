@@ -581,6 +581,7 @@ impl<'a> Formatter<'a> {
         allow_compact: bool,
         depth: usize,
     ) {
+        dbg!(&lines);
         if lines.is_empty() {
             return;
         }
@@ -591,7 +592,7 @@ impl<'a> Formatter<'a> {
             .is_some_and(|word| matches!(word.value, Word::Comment(_)));
         if lines.len() == 1
             && !last_word_comment
-            && (lines[0].len() == 1 || !lines[0].iter().any(|word| word_is_multiline(&word.value)))
+            && !lines[0].iter().any(|word| word_is_multiline(&word.value))
         {
             self.format_words(&lines[0], true, depth);
             return;
@@ -676,7 +677,7 @@ fn word_is_multiline(word: &Word) -> bool {
         Word::Char(_) => false,
         Word::String(_) => false,
         Word::FormatString(_) => false,
-        Word::MultilineString(lines) => lines.len() > 1,
+        Word::MultilineString(_) => true,
         Word::Ident(_) => false,
         Word::Strand(_) => false,
         Word::Array(arr) => {

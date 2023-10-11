@@ -358,7 +358,8 @@ fn site() {
                     path.to_path_buf(),
                     code.clone(),
                     std::thread::spawn(move || {
-                        let mut env = uiua::Uiua::with_native_sys();
+                        let mut env =
+                            uiua::Uiua::with_native_sys().with_mode(uiua::run::RunMode::All);
                         (env.load_str(&code).map(|_| env), should_fail)
                     }),
                 ));

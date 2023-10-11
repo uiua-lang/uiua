@@ -728,7 +728,7 @@ fn TutorialTesting() -> impl IntoView {
         <p>"Test scopes are meant to be used with "<Prim prim=Assert/>"."</p>
         <Editor example="Square ← ×.\n~~~\n⍤.=9 Square 3\n⍤.=225 Square 15\n~~~"/>
         <p><Prim prim=Assert/>" will return an error when its second argument is anything other than "<code>"1"</code>"."</p>
-        <Editor example="Square ← ×.\n~~~\n⍤.=25 Square 4\n~~~"/>
+        <Editor example="Square ← ×.\n~~~\n⍤.=25 Square 4\n~~~"/> // Should fail
         <p>"The first argument to "<Prim prim=Assert/>" is the value that will be thrown if the assertion fails. In the examples above, we have simply been "<Prim prim=Dup/>"ing the test value. We can throw a message instead."</p>
         <Editor example=r#"Square ← ×.
 ~~~

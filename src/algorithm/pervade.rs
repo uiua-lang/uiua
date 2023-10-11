@@ -10,7 +10,7 @@ use std::{
 
 use crate::{array::*, Uiua, UiuaError, UiuaResult};
 
-use super::max_shape;
+use super::{max_shape, FillContext};
 
 #[allow(clippy::len_without_is_empty)]
 pub trait Arrayish {
@@ -123,7 +123,80 @@ where
     }
 }
 
-pub fn bin_pervade<A, B, C, F>(a: &Array<A>, b: &Array<B>, env: &Uiua, f: F) -> UiuaResult<Array<C>>
+fn fill_shapes<A, B, C>(a: &mut Array<A>, b: &mut Array<B>, ctx: C) -> Result<(), C::Error>
+where
+    A: ArrayValue,
+    B: ArrayValue,
+    C: FillContext,
+{
+    if !a.shape_prefixes_match(b) {
+        // Fill in missing rows
+        match a.row_count().cmp(&b.row_count()) {
+            Ordering::Less => {
+                if let Some(fill) = ctx.fill() {
+                    let mut target_shape = a.shape().to_vec();
+                    target_shape[0] = b.row_count();
+                    a.fill_to_shape(&target_shape, fill);
+                }
+            }
+            Ordering::Greater => {
+                if let Some(fill) = ctx.fill() {
+                    let mut target_shape = b.shape().to_vec();
+                    target_shape[0] = a.row_count();
+                    b.fill_to_shape(&target_shape, fill);
+                }
+            }
+            Ordering::Equal => {}
+        }
+        // Fill in missing dimensions
+        if !a.shape_prefixes_match(b) {
+            match a.rank().cmp(&b.rank()) {
+                Ordering::Less => {
+                    if let Some(fill) = ctx.fill() {
+                        let mut target_shape = a.shape.clone();
+                        target_shape.insert(0, b.row_count());
+                        a.fill_to_shape(&target_shape, fill);
+                    }
+                }
+                Ordering::Greater => {
+                    if let Some(fill) = ctx.fill() {
+                        let mut target_shape = b.shape.clone();
+                        target_shape.insert(0, a.row_count());
+                        b.fill_to_shape(&target_shape, fill);
+                    }
+                }
+                Ordering::Equal => {
+                    let target_shape = max_shape(a.shape(), b.shape());
+                    if a.shape() != &*target_shape {
+                        if let Some(fill) = ctx.fill() {
+                            a.fill_to_shape(&target_shape, fill);
+                        }
+                    }
+                    if b.shape() != &*target_shape {
+                        if let Some(fill) = ctx.fill() {
+                            b.fill_to_shape(&target_shape, fill);
+                        }
+                    }
+                }
+            }
+            if !a.shape_prefixes_match(b) {
+                return Err(C::fill_error(ctx.error(format!(
+                    "Shapes {} and {} do not match",
+                    a.format_shape(),
+                    b.format_shape()
+                ))));
+            }
+        }
+    }
+    Ok(())
+}
+
+pub fn bin_pervade<A, B, C, F>(
+    mut a: Array<A>,
+    mut b: Array<B>,
+    env: &Uiua,
+    f: F,
+) -> UiuaResult<Array<C>>
 where
     A: ArrayValue,
     B: ArrayValue,
@@ -131,86 +204,10 @@ where
     F: PervasiveFn<A, B, Output = C> + Clone,
     F::Error: Into<UiuaError>,
 {
-    let mut a = a;
-    let mut b = b;
-    let mut reshaped_a;
-    let mut reshaped_b;
-    if !a.shape_prefixes_match(&b) {
-        // Fill in missing rows
-        match a.row_count().cmp(&b.row_count()) {
-            Ordering::Less => {
-                if let Some(fill) = A::get_fill(env) {
-                    let mut target_shape = a.shape().to_vec();
-                    target_shape[0] = b.row_count();
-                    reshaped_a = a.clone();
-                    reshaped_a.fill_to_shape(&target_shape, fill);
-                    a = &reshaped_a;
-                }
-            }
-            Ordering::Greater => {
-                if let Some(fill) = B::get_fill(env) {
-                    let mut target_shape = b.shape().to_vec();
-                    target_shape[0] = a.row_count();
-                    reshaped_b = b.clone();
-                    reshaped_b.fill_to_shape(&target_shape, fill);
-                    b = &reshaped_b;
-                }
-            }
-            Ordering::Equal => {}
-        }
-        // Fill in missing dimensions
-        if !a.shape_prefixes_match(&b) {
-            match a.rank().cmp(&b.rank()) {
-                Ordering::Less => {
-                    if let Some(fill) = A::get_fill(env) {
-                        let mut target_shape = a.shape.clone();
-                        target_shape.insert(0, b.row_count());
-                        reshaped_a = a.clone();
-                        reshaped_a.fill_to_shape(&target_shape, fill);
-                        a = &reshaped_a;
-                    }
-                }
-                Ordering::Greater => {
-                    if let Some(fill) = B::get_fill(env) {
-                        let mut target_shape = b.shape.clone();
-                        target_shape.insert(0, a.row_count());
-                        reshaped_b = b.clone();
-                        reshaped_b.fill_to_shape(&target_shape, fill);
-                        b = &reshaped_b;
-                    }
-                }
-                Ordering::Equal => {
-                    let target_shape = max_shape(a.shape(), b.shape());
-                    if a.shape() != &*target_shape {
-                        if let Some(fill) = A::get_fill(env) {
-                            reshaped_a = a.clone();
-                            reshaped_a.fill_to_shape(&target_shape, fill);
-                            a = &reshaped_a;
-                        }
-                    }
-                    if b.shape() != &*target_shape {
-                        if let Some(fill) = B::get_fill(env) {
-                            reshaped_b = b.clone();
-                            reshaped_b.fill_to_shape(&target_shape, fill);
-                            b = &reshaped_b;
-                        }
-                    }
-                }
-            }
-            if !a.shape_prefixes_match(&b) {
-                return Err(env
-                    .error(format!(
-                        "Shapes {} and {} do not match",
-                        a.format_shape(),
-                        b.format_shape()
-                    ))
-                    .fill());
-            }
-        }
-    }
+    fill_shapes(&mut a, &mut b, env)?;
     let shape = Shape::from(a.shape().max(b.shape()));
     let mut data = Vec::with_capacity(a.flat_len().max(b.flat_len()));
-    bin_pervade_recursive(a, b, &mut data, env, f).map_err(Into::into)?;
+    bin_pervade_recursive(&a, &b, &mut data, env, f).map_err(Into::into)?;
     Ok(Array::new(shape, data))
 }
 
@@ -251,6 +248,94 @@ where
         }
     }
     Ok(())
+}
+
+pub fn bin_pervade_mut<T, F>(a: &mut Array<T>, mut b: Array<T>, env: &Uiua, f: F) -> UiuaResult
+where
+    T: ArrayValue,
+    F: PervasiveFn<T, T, Output = T> + Clone,
+    UiuaError: From<F::Error>,
+{
+    fill_shapes(a, &mut b, env)?;
+    match (a.shape.as_slice(), b.shape.as_slice()) {
+        ([], []) => {
+            let a_scalar = &mut a.data[0];
+            *a_scalar = f.call((*a_scalar).clone(), b.data()[0].clone(), env)?;
+        }
+        (ash, bsh) if ash == bsh => {
+            for (a, b) in a.data.iter_mut().zip(b.data()) {
+                *a = f.call(a.clone(), b.clone(), env)?;
+            }
+        }
+        (_, []) => {
+            let b_scalar = &b.data()[0];
+            for a in &mut a.data {
+                *a = f.call(a.clone(), b_scalar.clone(), env)?;
+            }
+        }
+        ([], _) => {
+            let a_scalar = &a.data()[0];
+            for b in &mut b.data {
+                *b = f.call(a_scalar.clone(), b.clone(), env)?;
+            }
+            *a = b;
+        }
+        (ash, bsh) => {
+            let use_a = bin_pervade_recursive_mut(&mut a.data, ash, &mut b.data, bsh, env, f)?;
+            if !use_a {
+                *a = b;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn bin_pervade_recursive_mut<T, F>(
+    a_data: &mut [T],
+    a_shape: &[usize],
+    b_data: &mut [T],
+    b_shape: &[usize],
+    env: &Uiua,
+    f: F,
+) -> Result<bool, F::Error>
+where
+    T: ArrayValue,
+    F: PervasiveFn<T, T, Output = T> + Clone,
+{
+    Ok(match (a_shape, b_shape) {
+        ([], []) => {
+            let a_scalar = &mut a_data[0];
+            *a_scalar = f.call((*a_scalar).clone(), b_data[0].clone(), env)?;
+            true
+        }
+        (ash, bsh) if ash == bsh => {
+            for (a, b) in a_data.iter_mut().zip(b_data) {
+                *a = f.call(a.clone(), b.clone(), env)?;
+            }
+            true
+        }
+        (_, []) => {
+            let b_scalar = &b_data[0];
+            for a in a_data {
+                *a = f.call(a.clone(), b_scalar.clone(), env)?;
+            }
+            true
+        }
+        ([], _) => {
+            let a_scalar = &a_data[0];
+            for b in b_data {
+                *b = f.call(a_scalar.clone(), b.clone(), env)?;
+            }
+            false
+        }
+        (ash, bsh) => {
+            let mut use_a = true;
+            for (a, b) in a_data.chunks_mut(ash[0]).zip(b_data.chunks_mut(bsh[0])) {
+                use_a &= bin_pervade_recursive_mut(a, &ash[1..], b, &bsh[1..], env, f.clone())?;
+            }
+            use_a
+        }
+    })
 }
 
 pub mod not {

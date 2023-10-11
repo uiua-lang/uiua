@@ -732,8 +732,8 @@ impl From<i32> for Value {
 
 macro_rules! value_un_impl {
     ($name:ident, $(
-        $(($in_place:ident, $f:ident))?
-        $([$make_new:ident, $f2:ident])?
+        $([$in_place:ident, $f:ident])?
+        $(($make_new:ident, $f2:ident))?
     ),* $(,)?) => {
         impl Value {
             pub fn $name(self, env: &Uiua) -> UiuaResult<Self> {
@@ -769,19 +769,19 @@ macro_rules! value_un_impl {
     }
 }
 
-value_un_impl!(neg, (Num, num), [Byte, byte]);
-value_un_impl!(not, (Num, num), [Byte, byte]);
-value_un_impl!(abs, (Num, num), [Byte, byte]);
-value_un_impl!(sign, (Num, num), (Byte, byte));
-value_un_impl!(sqrt, (Num, num), [Byte, byte]);
-value_un_impl!(sin, (Num, num), [Byte, byte]);
-value_un_impl!(cos, (Num, num), [Byte, byte]);
-value_un_impl!(tan, (Num, num), [Byte, byte]);
-value_un_impl!(asin, (Num, num), [Byte, byte]);
-value_un_impl!(acos, (Num, num), [Byte, byte]);
-value_un_impl!(floor, (Num, num), (Byte, byte));
-value_un_impl!(ceil, (Num, num), (Byte, byte));
-value_un_impl!(round, (Num, num), (Byte, byte));
+value_un_impl!(neg, [Num, num], (Byte, byte));
+value_un_impl!(not, [Num, num], (Byte, byte));
+value_un_impl!(abs, [Num, num], (Byte, byte));
+value_un_impl!(sign, [Num, num], [Byte, byte]);
+value_un_impl!(sqrt, [Num, num], (Byte, byte));
+value_un_impl!(sin, [Num, num], (Byte, byte));
+value_un_impl!(cos, [Num, num], (Byte, byte));
+value_un_impl!(tan, [Num, num], (Byte, byte));
+value_un_impl!(asin, [Num, num], (Byte, byte));
+value_un_impl!(acos, [Num, num], (Byte, byte));
+value_un_impl!(floor, [Num, num], [Byte, byte]);
+value_un_impl!(ceil, [Num, num], [Byte, byte]);
+value_un_impl!(round, [Num, num], [Byte, byte]);
 
 macro_rules! val_retry {
     (Byte, $env:expr) => {
@@ -793,45 +793,56 @@ macro_rules! val_retry {
 }
 
 macro_rules! value_bin_impl {
-    ($name:ident, $(($va:ident, $vb:ident, $f:ident $(, $retry:ident)?)),* $(,)?) => {
+    ($name:ident, $(
+        $(($na:ident, $nb:ident, $f:ident $(, $retry:ident)?))*
+        $([$ip:ident, $f2:ident])*
+    ),* ) => {
         impl Value {
             #[allow(unreachable_patterns)]
-            pub fn $name(&self, other: &Self, env: &Uiua) -> UiuaResult<Self> {
+            pub fn $name(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
                 Ok(match (self, other) {
-                    $((Value::$va(a), Value::$vb(b)) => {
-                        let res = bin_pervade(a, b, env, InfalliblePervasiveFn::new($name::$f));
-                        match res {
-                            Ok(arr) => arr.into(),
-                            #[allow(unreachable_code, unused_variables)]
-                            Err(e) if e.is_fill() && (val_retry!($va, env) || val_retry!($vb, env)) => {
-                                $(return bin_pervade(&a.convert_ref(), &b.convert_ref(), env, InfalliblePervasiveFn::new($name::$retry)).map(Into::into);)?
-                                return Err(e);
+                    $($((Value::$ip(mut a), Value::$ip(b)) => {
+                        bin_pervade_mut(&mut a, b, env, InfalliblePervasiveFn::new($name::$f2))?;
+                        a.into()
+                    },)*)*
+                    $($((Value::$na(a), Value::$nb(b)) => {
+                        if val_retry!($na, env) || val_retry!($nb, env) {
+                            let res = bin_pervade(a.clone(), b.clone(), env, InfalliblePervasiveFn::new($name::$f));
+                            match res {
+                                Ok(arr) => arr.into(),
+                                #[allow(unreachable_code, unused_variables)]
+                                Err(e) if e.is_fill() => {
+                                    $(return bin_pervade(a.convert(), b.convert(), env, InfalliblePervasiveFn::new($name::$retry)).map(Into::into);)?
+                                    return Err(e);
+                                }
+                                Err(e) => return Err(e),
                             }
-                            Err(e) => return Err(e),
+                        } else {
+                            bin_pervade(a, b, env, InfalliblePervasiveFn::new($name::$f))?.into()
                         }
-                    },)*
+                    },)*)*
                     (Value::Func(a), b) => {
-                        match a.as_boxed() {
-                            Some(a) => Value::$name(a, b, env)?,
-                            None => {
-                                let b = b.coerce_as_function();
-                                bin_pervade(a, &b, env, FalliblePerasiveFn::new(|a: Arc<Function>, b: Arc<Function>, env: &Uiua| {
+                        match a.into_unboxed() {
+                            Ok(a) => Value::$name(a, b, env)?,
+                            Err(a) => {
+                                let b = b.coerce_as_function().into_owned();
+                                bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Arc<Function>, b: Arc<Function>, env: &Uiua| {
                                     let a = a.as_boxed().ok_or_else(|| env.error("First argument is not a box"))?;
                                     let b = b.as_boxed().ok_or_else(|| env.error("Second argument is not a box"))?;
-                                    Ok(Arc::new(Function::constant(Value::$name(a, b, env)?)))
+                                    Ok(Arc::new(Function::constant(Value::$name(a.clone(), b.clone(), env)?)))
                                 }))?.into()
                             }
                         }
                     },
                     (a, Value::Func(b)) => {
-                        match b.as_boxed() {
-                            Some(b) => Value::$name(a, b, env)?,
-                            None => {
-                                let a = a.coerce_as_function();
-                                bin_pervade(&a, b, env, FalliblePerasiveFn::new(|a: Arc<Function>, b: Arc<Function>, env: &Uiua| {
+                        match b.into_unboxed() {
+                            Ok(b) => Value::$name(a, b, env)?,
+                            Err(b) => {
+                                let a = a.coerce_as_function().into_owned();
+                                bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Arc<Function>, b: Arc<Function>, env: &Uiua| {
                                     let a = a.as_boxed().ok_or_else(|| env.error("First argument is not a box"))?;
                                     let b = b.as_boxed().ok_or_else(|| env.error("Second argument is not a box"))?;
-                                    Ok(Arc::new(Function::constant(Value::$name(a, b, env)?)))
+                                    Ok(Arc::new(Function::constant(Value::$name(a.clone(), b.clone(), env)?)))
                                 }))?.into()
                             }
                         }
@@ -845,7 +856,7 @@ macro_rules! value_bin_impl {
 
 value_bin_impl!(
     add,
-    (Num, Num, num_num),
+    [Num, num_num],
     (Num, Char, num_char),
     (Char, Num, char_num),
     (Byte, Byte, byte_byte, num_num),
@@ -857,7 +868,7 @@ value_bin_impl!(
 
 value_bin_impl!(
     sub,
-    (Num, Num, num_num),
+    [Num, num_num],
     (Num, Char, num_char),
     (Char, Char, char_char),
     (Byte, Byte, byte_byte, num_num),
@@ -868,35 +879,35 @@ value_bin_impl!(
 
 value_bin_impl!(
     mul,
-    (Num, Num, num_num),
+    [Num, num_num],
     (Byte, Byte, byte_byte, num_num),
     (Byte, Num, byte_num, num_num),
     (Num, Byte, num_byte, num_num),
 );
 value_bin_impl!(
     div,
-    (Num, Num, num_num),
+    [Num, num_num],
     (Byte, Byte, byte_byte, num_num),
     (Byte, Num, byte_num, num_num),
     (Num, Byte, num_byte, num_num),
 );
 value_bin_impl!(
     modulus,
-    (Num, Num, num_num),
+    [Num, num_num],
     (Byte, Byte, byte_byte, num_num),
     (Byte, Num, byte_num, num_num),
     (Num, Byte, num_byte, num_num),
 );
 value_bin_impl!(
     pow,
-    (Num, Num, num_num),
+    [Num, num_num],
     (Byte, Byte, byte_byte, num_num),
     (Byte, Num, byte_num, num_num),
     (Num, Byte, num_byte, num_num),
 );
 value_bin_impl!(
     log,
-    (Num, Num, num_num),
+    [Num, num_num],
     (Byte, Byte, byte_byte, num_num),
     (Byte, Num, byte_num, num_num),
     (Num, Byte, num_byte, num_num),
@@ -905,8 +916,8 @@ value_bin_impl!(atan2, (Num, Num, num_num));
 
 value_bin_impl!(
     min,
-    (Num, Num, num_num),
-    (Char, Char, char_char),
+    [Num, num_num],
+    [Char, char_char],
     (Byte, Byte, byte_byte, num_num),
     (Byte, Num, byte_num, num_num),
     (Num, Byte, num_byte, num_num),
@@ -914,8 +925,8 @@ value_bin_impl!(
 
 value_bin_impl!(
     max,
-    (Num, Num, num_num),
-    (Char, Char, char_char),
+    [Num, num_num],
+    [Char, char_char],
     (Byte, Byte, byte_byte, num_num),
     (Byte, Num, byte_num, num_num),
     (Num, Byte, num_byte, num_num),

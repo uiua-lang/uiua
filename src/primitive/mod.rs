@@ -149,13 +149,10 @@ impl Primitive {
     }
     pub fn format(&self, f: &mut fmt::Formatter<'_>, options: &PrimitiveFormatOptions) -> fmt::Result {
         if let (Some(c), false) = (self.glyph(), options.disable_glyphs) {
-            println!("formatting {} as glyph", c);
             write!(f, "{}", c)
         } else if let Some(s) = self.ascii() {
-            println!("formatting {} as ascii", s);
             write!(f, "{}", s)
         } else if let Some(s) = self.name() {
-            println!("formatting {} as name", s);
             write!(f, "{}", s)
         } else {
             use Primitive::*;

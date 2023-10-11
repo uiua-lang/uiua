@@ -607,7 +607,8 @@ impl Primitive {
                 let pattern = env.pop(1)?.as_string(env, "Pattern must be a string")?;
                 let matching = env.pop(1)?.as_string(env, "Matching target must be a string")?;
 
-                let re = REGEX_CACHE.with_borrow_mut(|cache| {
+                let re = REGEX_CACHE.with(|cache_ref| {
+                    let mut cache = cache_ref.borrow_mut();
                     let cached_pattern = cache.get(&pattern);
                     if cached_pattern.is_none() {
                         let regex = Regex::new(&pattern);

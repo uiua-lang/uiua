@@ -104,15 +104,14 @@ impl Uiua {
                     } else {
                         return Err(UiuaError::Run(Span::Code(declared_sig.span.clone()).sp(
                             format!(
-                                "Function signature mismatch: \
-                                 declared {} but inferred {}",
+                                "Function signature mismatch:  declared {} but inferred {}",
                                 declared_sig.value, sig
                             ),
                         )));
                     }
                 }
 
-                if sig.args == 0 {
+                if sig.args == 0 && sig.outputs > 0 {
                     self.exec_global_instrs(instrs)?;
                     if let Some(value) = self.stack.pop() {
                         match value {

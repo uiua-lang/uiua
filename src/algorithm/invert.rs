@@ -4,7 +4,7 @@ use std::{cell::RefCell, collections::HashMap, fmt};
 
 use crate::{
     check::instrs_signature,
-    function::{Function, Instr, TempKind},
+    function::{Function, Instr},
     primitive::Primitive,
     value::Value,
 };
@@ -172,8 +172,8 @@ fn under_instrs_impl(instrs: &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
         ($before:expr, $after:expr) => {
             (
                 [$before],
-                [Over.i(), Over.i(), PushTempN(2).i(), $before.i()],
-                [PopTempN(2).i(), Unroll.i(), $after.i()],
+                [Over.i(), Over.i(), PushTempUnderN(2).i(), $before.i()],
+                [PopTempUnderN(2).i(), Unroll.i(), $after.i()],
             )
         };
     }
@@ -193,67 +193,77 @@ fn under_instrs_impl(instrs: &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
             Val,
             (
                 [Keep],
-                [Over.i(), Over.i(), PushTempN(2).i(), Keep.i()],
-                [PopTempN(1).i(), Flip.i(), PopTempN(1).i(), Unkeep.i()],
+                [Over.i(), Over.i(), PushTempUnderN(2).i(), Keep.i()],
+                [
+                    PopTempUnderN(1).i(),
+                    Flip.i(),
+                    PopTempUnderN(1).i(),
+                    Unkeep.i(),
+                ],
             ),
         ),
         &(
             [Keep],
-            [Over.i(), Over.i(), PushTempN(2).i(), Keep.i()],
-            [PopTempN(1).i(), Flip.i(), PopTempN(1).i(), Unkeep.i()],
+            [Over.i(), Over.i(), PushTempUnderN(2).i(), Keep.i()],
+            [
+                PopTempUnderN(1).i(),
+                Flip.i(),
+                PopTempUnderN(1).i(),
+                Unkeep.i(),
+            ],
         ),
         &(
             [Rotate],
-            [Dup.i(), PushTempN(1).i(), Rotate.i()],
-            [PopTempN(1).i(), Neg.i(), Rotate.i()],
+            [Dup.i(), PushTempUnderN(1).i(), Rotate.i()],
+            [PopTempUnderN(1).i(), Neg.i(), Rotate.i()],
         ),
         &(
             [First],
-            [Dup.i(), PushTempN(1).i(), First.i()],
-            [PopTempN(1).i(), 1.i(), Drop.i(), Flip.i(), Join.i()],
+            [Dup.i(), PushTempUnderN(1).i(), First.i()],
+            [PopTempUnderN(1).i(), 1.i(), Drop.i(), Flip.i(), Join.i()],
         ),
         &(
             [Last],
-            [Dup.i(), PushTempN(1).i(), Last.i()],
-            [PopTempN(1).i(), (-1).i(), Drop.i(), Join.i()],
+            [Dup.i(), PushTempUnderN(1).i(), Last.i()],
+            [PopTempUnderN(1).i(), (-1).i(), Drop.i(), Join.i()],
         ),
         &(
             [Shape],
-            [Dup.i(), PushTempN(1).i(), Shape.i()],
-            [PopTempN(1).i(), Flip.i(), Reshape.i()],
+            [Dup.i(), PushTempUnderN(1).i(), Shape.i()],
+            [PopTempUnderN(1).i(), Flip.i(), Reshape.i()],
         ),
         &(
             [Deshape],
-            [Dup.i(), Shape.i(), PushTempN(1).i(), Deshape.i()],
-            [PopTempN(1).i(), Reshape.i()],
+            [Dup.i(), Shape.i(), PushTempUnderN(1).i(), Deshape.i()],
+            [PopTempUnderN(1).i(), Reshape.i()],
         ),
         &(
             [Pow],
-            [Dup.i(), PushTempN(1).i(), Pow.i()],
-            [PopTempN(1).i(), 1.i(), Div.i(), Pow.i()],
+            [Dup.i(), PushTempUnderN(1).i(), Pow.i()],
+            [PopTempUnderN(1).i(), 1.i(), Div.i(), Pow.i()],
         ),
         &(
             [Log],
-            [Dup.i(), PushTempN(1).i(), Log.i()],
-            [PopTempN(1).i(), Pow.i()],
+            [Dup.i(), PushTempUnderN(1).i(), Log.i()],
+            [PopTempUnderN(1).i(), Pow.i()],
         ),
         &(
             Val,
             (
                 [Join],
-                [Dup.i(), Len.i(), PushTempN(1).i(), Join.i()],
-                [PopTempN(1).i(), Drop.i()],
+                [Dup.i(), Len.i(), PushTempUnderN(1).i(), Join.i()],
+                [PopTempUnderN(1).i(), Drop.i()],
             ),
         ),
         &(
             [Join],
-            [Dup.i(), Len.i(), PushTempN(1).i(), Join.i()],
-            [PopTempN(1).i(), Drop.i()],
+            [Dup.i(), Len.i(), PushTempUnderN(1).i(), Join.i()],
+            [PopTempUnderN(1).i(), Drop.i()],
         ),
         &(
             [Now],
-            [Now.i(), PushTempN(1).i()],
-            [PopTempN(1).i(), Now.i(), Flip.i(), Sub.i()],
+            [Now.i(), PushTempUnderN(1).i()],
+            [PopTempUnderN(1).i(), Now.i(), Flip.i(), Sub.i()],
         ),
     ];
 
@@ -278,25 +288,14 @@ fn under_instrs_impl(instrs: &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
                     // f 2 1 [1 2 3 4 5]
                     // f ← ⍜⊙⇌(×10)
                     // f [1 2 3] [4 5 6]
-                    if afters.iter().any(|instr| {
-                        matches!(
-                            instr,
-                            Instr::PopTemp {
-                                kind: TempKind::Under,
-                                ..
-                            }
-                        )
-                    }) {
+                    if afters
+                        .iter()
+                        .any(|instr| matches!(instr, Instr::PopTempUnder { .. }))
+                    {
                         afters.retain(|instr| {
                             !matches!(
                                 instr,
-                                Instr::PopTemp {
-                                    kind: TempKind::Inline,
-                                    ..
-                                } | Instr::PushTemp {
-                                    kind: TempKind::Inline,
-                                    ..
-                                }
+                                Instr::PopTempInline { .. } | Instr::PushTempInline { .. }
                             )
                         });
                     }
@@ -329,25 +328,23 @@ trait AsInstr: fmt::Debug {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct PushTempN(usize);
-impl AsInstr for PushTempN {
+struct PushTempUnderN(usize);
+impl AsInstr for PushTempUnderN {
     fn as_instr(&self, span: usize) -> Instr {
-        Instr::PushTemp {
+        Instr::PushTempUnder {
             count: self.0,
             span,
-            kind: TempKind::Under,
         }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-struct PopTempN(usize);
-impl AsInstr for PopTempN {
+struct PopTempUnderN(usize);
+impl AsInstr for PopTempUnderN {
     fn as_instr(&self, span: usize) -> Instr {
-        Instr::PopTemp {
+        Instr::PopTempUnder {
             count: self.0,
             span,
-            kind: TempKind::Under,
         }
     }
 }
@@ -396,18 +393,18 @@ fn under_from_inverse_pattern(input: &[Instr]) -> Option<(&[Instr], Under)> {
 
 fn under_temp_pattern(input: &[Instr]) -> Option<(&[Instr], Under)> {
     match input.split_first()? {
-        (&Instr::PushTemp { count, span, kind }, input) => Some((
+        (&Instr::PushTempInline { count, span }, input) => Some((
             input,
             (
-                vec![Instr::PushTemp { count, span, kind }],
-                vec![Instr::PopTemp { count, span, kind }],
+                vec![Instr::PushTempInline { count, span }],
+                vec![Instr::PopTempInline { count, span }],
             ),
         )),
-        (&Instr::PopTemp { count, span, kind }, input) => Some((
+        (&Instr::PopTempInline { count, span }, input) => Some((
             input,
             (
-                vec![Instr::PopTemp { count, span, kind }],
-                vec![Instr::PushTemp { count, span, kind }],
+                vec![Instr::PopTempInline { count, span }],
+                vec![Instr::PushTempInline { count, span }],
             ),
         )),
         _ => None,

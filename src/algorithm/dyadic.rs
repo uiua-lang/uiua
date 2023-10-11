@@ -1516,7 +1516,7 @@ impl<T: ArrayValue> Array<T> {
         }
         let into_row_len = into.row_len();
         let into_row_count = into.row_count();
-        for (&i, row) in indices.iter().zip(self.rows()) {
+        for (&i, row) in indices.iter().zip(self.row_slices()) {
             let i = if i >= 0 {
                 let ui = i as usize;
                 if ui >= into_row_count {
@@ -1542,7 +1542,7 @@ impl<T: ArrayValue> Array<T> {
             };
             let start = i * into_row_len;
             let end = start + into_row_len;
-            for (i, x) in (start..end).zip(row.data) {
+            for (i, x) in (start..end).zip(row) {
                 into.data[i] = x.clone();
             }
         }
@@ -1779,9 +1779,10 @@ impl<T: ArrayValue> Array<T> {
                     }
                     return Ok(Array::from(result_data));
                 }
-                'elem: for elem in elems.rows() {
-                    for of in of.rows() {
-                        if elem == of {
+                'elem: for elem in elems.row_slices() {
+                    for of in of.row_slices() {
+                        if elem.len() == of.len() && elem.iter().zip(of).all(|(a, b)| a.array_eq(b))
+                        {
                             result_data.push(1);
                             continue 'elem;
                         }
@@ -1859,9 +1860,10 @@ impl<T: ArrayValue> Array<T> {
                     }
                     return Ok(Array::from(result_data));
                 }
-                'elem: for elem in searched_for.rows() {
-                    for (i, of) in searched_in.rows().enumerate() {
-                        if elem == of {
+                'elem: for elem in searched_for.row_slices() {
+                    for (i, of) in searched_in.row_slices().enumerate() {
+                        if elem.len() == of.len() && elem.iter().zip(of).all(|(a, b)| a.array_eq(b))
+                        {
                             result_data.push(i as f64);
                             continue 'elem;
                         }
@@ -1894,8 +1896,11 @@ impl<T: ArrayValue> Array<T> {
                         )
                     } else {
                         (searched_in
-                            .rows()
-                            .position(|r| r == *searched_for)
+                            .row_slices()
+                            .position(|r| {
+                                r.len() == searched_for.data.len()
+                                    && r.iter().zip(&searched_for.data).all(|(a, b)| a.array_eq(b))
+                            })
                             .unwrap_or(searched_in.row_count()) as f64)
                             .into()
                     }

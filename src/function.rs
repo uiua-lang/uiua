@@ -7,8 +7,8 @@ use std::{
 };
 
 use crate::{
-    check::instrs_signature, lex::CodeSpan, primitive::Primitive, value::Value, Ident, Uiua,
-    UiuaResult,
+    check::instrs_signature, grid_fmt::GridFmt, lex::CodeSpan, primitive::Primitive, value::Value,
+    Ident, Uiua, UiuaResult,
 };
 
 #[derive(Clone)]
@@ -17,39 +17,37 @@ pub enum Instr {
     Push(Box<Value>) = 0,
     BeginArray,
     EndArray {
-        constant: bool,
+        boxed: bool,
         span: usize,
     },
     Prim(Primitive, usize),
     Call(usize),
     Dynamic(DynamicFunction),
-    PushTemp {
+    PushTempUnder {
         count: usize,
         span: usize,
-        kind: TempKind,
     },
-    PopTemp {
+    PopTempUnder {
         count: usize,
         span: usize,
-        kind: TempKind,
     },
-    CopyTemp {
+    PushTempInline {
+        count: usize,
+        span: usize,
+    },
+    PopTempInline {
+        count: usize,
+        span: usize,
+    },
+    CopyTempInline {
         offset: usize,
         count: usize,
         span: usize,
-        kind: TempKind,
     },
-    DropTemp {
+    DropTempInline {
         count: usize,
         span: usize,
-        kind: TempKind,
     },
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TempKind {
-    Inline,
-    Under,
 }
 
 impl PartialEq for Instr {
@@ -60,21 +58,27 @@ impl PartialEq for Instr {
             (Self::EndArray { .. }, Self::EndArray { .. }) => true,
             (Self::Prim(a, s_span), Self::Prim(b, b_span)) => a == b && s_span == b_span,
             (Self::Call(a), Self::Call(b)) => a == b,
-            (Self::PushTemp { count: a, .. }, Self::PushTemp { count: b, .. }) => a == b,
-            (Self::PopTemp { count: a, .. }, Self::PopTemp { count: b, .. }) => a == b,
+            (Self::PushTempUnder { count: a, .. }, Self::PushTempUnder { count: b, .. }) => a == b,
+            (Self::PopTempUnder { count: a, .. }, Self::PopTempUnder { count: b, .. }) => a == b,
+            (Self::PushTempInline { count: a, .. }, Self::PushTempInline { count: b, .. }) => {
+                a == b
+            }
+            (Self::PopTempInline { count: a, .. }, Self::PopTempInline { count: b, .. }) => a == b,
             (
-                Self::CopyTemp {
+                Self::CopyTempInline {
                     offset: ao,
                     count: ac,
                     ..
                 },
-                Self::CopyTemp {
+                Self::CopyTempInline {
                     offset: bo,
                     count: bc,
                     ..
                 },
             ) => ao == bo && ac == bc,
-            (Self::DropTemp { count: a, .. }, Self::DropTemp { count: b, .. }) => a == b,
+            (Self::DropTempInline { count: a, .. }, Self::DropTempInline { count: b, .. }) => {
+                a == b
+            }
             _ => false,
         }
     }
@@ -116,13 +120,15 @@ impl Hash for Instr {
             Instr::Prim(p, _) => p.hash(state),
             Instr::Call(_) => {}
             Instr::Dynamic(f) => f.id.hash(state),
-            Instr::PushTemp { count, .. } => count.hash(state),
-            Instr::PopTemp { count, .. } => count.hash(state),
-            Instr::CopyTemp { offset, count, .. } => {
+            Instr::PushTempUnder { count, .. } => count.hash(state),
+            Instr::PopTempUnder { count, .. } => count.hash(state),
+            Instr::PushTempInline { count, .. } => count.hash(state),
+            Instr::PopTempInline { count, .. } => count.hash(state),
+            Instr::CopyTempInline { offset, count, .. } => {
                 offset.hash(state);
                 count.hash(state);
             }
-            Instr::DropTemp { count, .. } => count.hash(state),
+            Instr::DropTempInline { count, .. } => count.hash(state),
         }
     }
 }
@@ -140,17 +146,22 @@ impl Instr {
     pub fn is_temp(&self) -> bool {
         matches!(
             self,
-            Self::PushTemp { .. }
-                | Self::PopTemp { .. }
-                | Self::CopyTemp { .. }
-                | Self::DropTemp { .. }
+            Self::PushTempUnder { .. }
+                | Self::PopTempUnder { .. }
+                | Self::PushTempInline { .. }
+                | Self::PopTempInline { .. }
+                | Self::CopyTempInline { .. }
+                | Self::DropTempInline { .. }
         )
     }
 }
 
 impl fmt::Debug for Instr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{self}")
+        match self {
+            Instr::Push(val) => write!(f, "push {val:?}"),
+            _ => write!(f, "{self}"),
+        }
     }
 }
 
@@ -164,15 +175,14 @@ impl fmt::Display for Instr {
             Instr::Prim(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => write!(f, "!"),
             Instr::Dynamic(df) => write!(f, "{df:?}"),
-            Instr::PushTemp { count, kind, .. } => write!(f, "<push {kind:?} {count}>"),
-            Instr::PopTemp { count, kind, .. } => write!(f, "<pop {kind:?} {count}>"),
-            Instr::CopyTemp {
-                offset,
-                count,
-                kind,
-                ..
-            } => write!(f, "<copy {kind:?} {offset}/{count}>"),
-            Instr::DropTemp { count, kind, .. } => write!(f, "<drop {kind:?} {count}>"),
+            Instr::PushTempUnder { count, .. } => write!(f, "<push under {count}>"),
+            Instr::PopTempUnder { count, .. } => write!(f, "<pop under {count}>"),
+            Instr::PushTempInline { count, .. } => write!(f, "<push inline {count}>"),
+            Instr::PopTempInline { count, .. } => write!(f, "<pop inline {count}>"),
+            Instr::CopyTempInline { offset, count, .. } => {
+                write!(f, "<copy inline {offset}/{count}>")
+            }
+            Instr::DropTempInline { count, .. } => write!(f, "<drop inline {count}>"),
         }
     }
 }
@@ -311,10 +321,7 @@ impl fmt::Display for Function {
         if let Some((prim, _)) = self.as_primitive() {
             return write!(f, "{prim}");
         }
-        write!(f, "(")?;
-        write!(f, "{}", self.format_inner())?;
-        write!(f, ")")?;
-        Ok(())
+        write!(f, "{}", self.grid_string())
     }
 }
 
@@ -339,26 +346,36 @@ impl Function {
     pub fn into_inner(f: Arc<Self>) -> Self {
         Arc::try_unwrap(f).unwrap_or_else(|f| (*f).clone())
     }
-    pub(crate) fn format_inner(&self) -> String {
+    pub(crate) fn format_inner(&self) -> Vec<String> {
         if let FunctionId::Named(name) = &self.id {
-            return name.as_ref().into();
+            return vec![name.as_ref().into()];
         }
         if let Some((prim, _)) = self.as_primitive() {
-            return prim.to_string();
+            return vec![prim.to_string()];
         }
-        let mut s = String::new();
+        let mut lines = vec![String::new()];
         for (i, instr) in self.instrs.iter().rev().enumerate() {
             let instr_str = instr.to_string();
+            let s = &lines[0];
             let add_space = (s.ends_with(char::is_alphabetic)
                 && instr_str.starts_with(char::is_alphabetic))
                 || (s.ends_with(|c: char| c.is_ascii_digit())
                     && instr_str.starts_with(|c: char| c.is_ascii_digit()));
-            if i > 0 && add_space {
-                s.push(' ');
+            if lines.len() < instr_str.lines().count() {
+                lines.resize(instr_str.lines().count(), String::new());
             }
-            s.push_str(&instr_str);
+            let max_line_len = lines.iter().map(|s| s.chars().count()).max().unwrap_or(0);
+            for line in &mut lines {
+                line.extend(std::iter::repeat(' ').take(max_line_len - line.chars().count()));
+            }
+            if i > 0 && add_space {
+                lines[0].push(' ');
+            }
+            for (line, instr_line) in lines.iter_mut().zip(instr_str.lines()) {
+                line.push_str(instr_line);
+            }
         }
-        s
+        lines
     }
     /// Get how many arguments this function pops off the stack and how many it pushes.
     /// Returns `None` if either of these values are dynamic.
@@ -381,7 +398,7 @@ impl Function {
             _ => None,
         }
     }
-    pub fn into_constant(self) -> Result<Value, Self> {
+    pub fn into_unboxed(self) -> Result<Value, Self> {
         if self.is_constant() {
             if let Instr::Push(val) = self.instrs.into_iter().next().unwrap() {
                 Ok(*val)
@@ -392,13 +409,13 @@ impl Function {
             Err(self)
         }
     }
-    pub fn as_constant(&self) -> Option<&Value> {
+    pub fn as_boxed(&self) -> Option<&Value> {
         match self.instrs.as_slice() {
             [Instr::Push(val)] => Some(val),
             _ => None,
         }
     }
-    pub fn as_constant_mut(&mut self) -> Option<&mut Value> {
+    pub fn as_boxed_mut(&mut self) -> Option<&mut Value> {
         match self.instrs.as_mut_slice() {
             [Instr::Push(val)] => Some(val),
             _ => None,

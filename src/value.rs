@@ -238,7 +238,7 @@ impl Value {
             Self::Num(array) => n(array),
             Self::Byte(array) => b(array),
             Self::Char(array) => c(array),
-            Self::Func(array) => match array.into_constant() {
+            Self::Func(array) => match array.into_unboxed() {
                 Ok(value) => value.generic_into_deep(n, b, c, f),
                 Err(array) => f(array),
             },
@@ -270,7 +270,7 @@ impl Value {
             Self::Byte(array) => b(array),
             Self::Char(array) => c(array),
             Self::Func(array) => {
-                if let Some(value) = array.as_constant() {
+                if let Some(value) = array.as_boxed() {
                     value.generic_ref_deep(n, b, c, f)
                 } else {
                     f(array)
@@ -324,7 +324,7 @@ impl Value {
             Self::Byte(array) => b(array),
             Self::Char(array) => c(array),
             Self::Func(array) => {
-                if let Some(value) = array.as_constant_mut() {
+                if let Some(value) = array.as_boxed_mut() {
                     value.generic_mut_deep(n, b, c, f)
                 } else {
                     f(array)
@@ -731,17 +731,30 @@ impl From<i32> for Value {
 }
 
 macro_rules! value_un_impl {
-    ($name:ident, $(($variant:ident, $f:ident)),* $(,)?) => {
+    ($name:ident, $(
+        $(($in_place:ident, $f:ident))?
+        $([$make_new:ident, $f2:ident])?
+    ),* $(,)?) => {
         impl Value {
             pub fn $name(self, env: &Uiua) -> UiuaResult<Self> {
                 Ok(match self {
-                    $(Self::$variant(array) => {
-                        (array.shape, array.data.into_iter().map($name::$f).collect::<Vec<_>>()).into()
-                    },)*
+                    $($(Self::$in_place(mut array) => {
+                        for val in &mut array.data {
+                            *val = $name::$f(*val);
+                        }
+                        array.into()
+                    },)*)*
+                    $($(Self::$make_new(array) => {
+                        let mut new = Vec::with_capacity(array.flat_len());
+                        for val in array.data {
+                            new.push($name::$f2(val));
+                        }
+                        (array.shape, new).into()
+                    },)*)*
                     Value::Func(mut array) => {
                         let mut new_data = Vec::with_capacity(array.flat_len());
                         for f in array.data {
-                            match Function::into_inner(f).into_constant() {
+                            match Function::into_inner(f).into_unboxed() {
                                 Ok(value) => new_data.push(Arc::new(Function::constant(value.$name(env)?))),
                                 Err(_) => return Err($name::error("function", env)),
                             }
@@ -756,13 +769,19 @@ macro_rules! value_un_impl {
     }
 }
 
-macro_rules! value_un_impl_all {
-    ($($name:ident),* $(,)?) => {
-        $(value_un_impl!($name, (Num, num), (Byte, byte));)*
-    }
-}
-
-value_un_impl_all!(neg, not, abs, sign, sqrt, sin, cos, tan, asin, acos, floor, ceil, round);
+value_un_impl!(neg, (Num, num), [Byte, byte]);
+value_un_impl!(not, (Num, num), [Byte, byte]);
+value_un_impl!(abs, (Num, num), [Byte, byte]);
+value_un_impl!(sign, (Num, num), (Byte, byte));
+value_un_impl!(sqrt, (Num, num), [Byte, byte]);
+value_un_impl!(sin, (Num, num), [Byte, byte]);
+value_un_impl!(cos, (Num, num), [Byte, byte]);
+value_un_impl!(tan, (Num, num), [Byte, byte]);
+value_un_impl!(asin, (Num, num), [Byte, byte]);
+value_un_impl!(acos, (Num, num), [Byte, byte]);
+value_un_impl!(floor, (Num, num), (Byte, byte));
+value_un_impl!(ceil, (Num, num), (Byte, byte));
+value_un_impl!(round, (Num, num), (Byte, byte));
 
 macro_rules! val_retry {
     (Byte, $env:expr) => {
@@ -792,26 +811,26 @@ macro_rules! value_bin_impl {
                         }
                     },)*
                     (Value::Func(a), b) => {
-                        match a.as_constant() {
+                        match a.as_boxed() {
                             Some(a) => Value::$name(a, b, env)?,
                             None => {
                                 let b = b.coerce_as_function();
                                 bin_pervade(a, &b, env, FalliblePerasiveFn::new(|a: Arc<Function>, b: Arc<Function>, env: &Uiua| {
-                                    let a = a.as_constant().ok_or_else(|| env.error("First argument is not a box"))?;
-                                    let b = b.as_constant().ok_or_else(|| env.error("Second argument is not a box"))?;
+                                    let a = a.as_boxed().ok_or_else(|| env.error("First argument is not a box"))?;
+                                    let b = b.as_boxed().ok_or_else(|| env.error("Second argument is not a box"))?;
                                     Ok(Arc::new(Function::constant(Value::$name(a, b, env)?)))
                                 }))?.into()
                             }
                         }
                     },
                     (a, Value::Func(b)) => {
-                        match b.as_constant() {
+                        match b.as_boxed() {
                             Some(b) => Value::$name(a, b, env)?,
                             None => {
                                 let a = a.coerce_as_function();
                                 bin_pervade(&a, b, env, FalliblePerasiveFn::new(|a: Arc<Function>, b: Arc<Function>, env: &Uiua| {
-                                    let a = a.as_constant().ok_or_else(|| env.error("First argument is not a box"))?;
-                                    let b = b.as_constant().ok_or_else(|| env.error("Second argument is not a box"))?;
+                                    let a = a.as_boxed().ok_or_else(|| env.error("First argument is not a box"))?;
+                                    let b = b.as_boxed().ok_or_else(|| env.error("Second argument is not a box"))?;
                                     Ok(Arc::new(Function::constant(Value::$name(a, b, env)?)))
                                 }))?.into()
                             }
@@ -997,7 +1016,7 @@ impl fmt::Display for Value {
             Value::Byte(b) => b.fmt(f),
             Value::Char(c) => c.fmt(f),
             Value::Func(func) => {
-                if let Some(val) = func.as_constant() {
+                if let Some(val) = func.as_boxed() {
                     val.fmt(f)
                 } else {
                     func.fmt(f)

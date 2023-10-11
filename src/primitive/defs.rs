@@ -932,14 +932,14 @@ primitive!(
     /// ex: ⍚¯1/+ [1_2_3 4_5_6 7_8_9]
     /// ex:   ≡/+ [1_2_3 4_5_6 7_8_9]
     ([1], Rows, IteratingModifier, ("rows", '≡')),
-    /// Apply a function to each row of an array and a fixed value
+    /// Apply a function to a fixed value and each row of an array
     ///
-    /// ex: ∺⊂ 1_2_3 4
+    /// ex: ∺⊂ 1 2_3_4
     /// ex: ∺⊂ 1_2_3 4_5_6
     ///
-    /// [distribute] is equivalent to [level]`[¯1``infinity``]`.
+    /// [distribute] is equivalent to [level]`[``infinity``¯1]`.
     /// ex:       ∺⊂ 1_2_3 4_5_6
-    ///   : ⍚[¯1 ∞]⊂ 1_2_3 4_5_6
+    ///   : ⍚[∞ ¯1]⊂ 1_2_3 4_5_6
     (2[1], Distribute, IteratingModifier, ("distribute", '∺')),
     /// Apply a function to each combination of elements of two arrays
     ///
@@ -1211,9 +1211,9 @@ primitive!(
     ///   :        ≡⊂ a b
     ///   : ⍚[¯1 ¯1]⊂ a b
     ///
-    /// [level]`[¯1``infinity``]` is equivalent to [distribute].
+    /// [level]`[``infinity``¯1]` is equivalent to [distribute].
     /// ex:       ∺⊂ 1_2_3 4_5_6
-    ///   : ⍚[¯1 ∞]⊂ 1_2_3 4_5_6
+    ///   : ⍚[∞ ¯1]⊂ 1_2_3 4_5_6
     ///
     /// One way to think of the number(s) passed to [level] is as the rank of the array that the function will be applied to.
     /// `level``1` will always apply to rank `1` arrays, no matter how many dimensions the original array has.
@@ -1278,7 +1278,9 @@ primitive!(
     ([2], Bind, OtherModifier, ("bind", '\'')),
     /// Call one of two functions based on a condition
     ///
-    /// If the condition is `1`, then the first function is called, otherwise the second function is called.
+    /// If the condition is `1`, then the first function is called.
+    /// If the condition is `0`, then the second function is called.
+    /// Any other values are not allowed.
     /// ex: ?+- 1 3 5
     /// ex: ?+- 0 3 5
     /// ex: Abs ← ?¯∘ <0.

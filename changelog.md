@@ -2,15 +2,15 @@
 
 Uiua is not yet stable.
 
-## 0.0.18 - 2023-10-??
-If you are reading this on the website, then the features listed are live here.
+## 0.0.18 - 2023-10-10
 ### Language
+- **Major Change** [`distribute` `∺`](https://uiua.org/docs/distribute) now takes the array being distributed as its *last* argument, rather than its first
 - Add [`where` `⊚`](https://uiua.org/docs/where) function, which returns the indices of an array that have non-zero values
 - [`if` `?`](https://uiua.org/docs/if)'s branches can now have a different number of arguments (but not outputs)
 - [`if` `?`](https://uiua.org/docs/if)'s condition can now be a list of conditions, and the branch will be chosen for each row in the argument(s)
 - The reducing versions of [`group` `⊕`](https://uiua.org/docs/group) and [`partition` `⊜`](https://uiua.org/docs/partition) now take accumulators. Aggregating versions are unchanged.
 - [`spawn`](https://uiua.org/docs/spawn) and [`wait`](https://uiua.org/docs/wait) no longer have glyphs. Code using `↰` and `↲` will continue to work and will be formatted as `spawn` and `wait`.
-- `&n` is not longer a system function and is now called [`now`](https://uiua.org/docs/now)
+- `&n` is no longer a system function and is now called [`now`](https://uiua.org/docs/now)
 - [`under` `⍜`](https://uiua.org/docs/under) [`now`](https://uiua.org/docs/now) can be used to time things
 - [`call` `!`](https://uiua.org/docs/call) can now call functions that return any number of values, not just one
 - Add hex character escape sequences for string and character literals.
@@ -18,10 +18,11 @@ If you are reading this on the website, then the features listed are live here.
   - `\uNNNN` for full Unicode sequences
 ### Interpreter
 - The formatter now aligns consecutive end-of-line comments
-- Fix a bug that prevented [`under` `⍜`](https://uiua.org/docs/under) multidimensional [`take` `↙`](https://uiua.org/docs/take) and [`drop` `↘`](https://uiua.org/docs/drop) from working
 - `NaN`s no longer propogate in [`min` `⌊`](https://uiua.org/docs/min) and [`max` `⌈`](https://uiua.org/docs/max)
+- Fix a bug that prevented [`under` `⍜`](https://uiua.org/docs/under) multidimensional [`take` `↙`](https://uiua.org/docs/take) and [`drop` `↘`](https://uiua.org/docs/drop) from working
 - Fix a bug in how [`fold` `∧`](https://uiua.org/docs/fold) ordered multiple accumulators
 - Fix a bug that allowed incorrect signatures to be declared for functions
+- Fix a bunch of other bugs and crashes
 ### Website
 - Add the Uiua386 font as an option in the editor
 

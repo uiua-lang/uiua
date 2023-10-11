@@ -126,12 +126,14 @@ impl<'a> VirtualEnv<'a> {
                 self.stack.push(BasicValue::Arr(items));
             }
             Instr::Call(_) => self.handle_call()?,
-            Instr::PushTemp { count, .. } => self.handle_args_outputs(*count, 0)?,
-            Instr::PopTemp { count, .. } | Instr::CopyTemp { count, .. } => {
-                self.handle_args_outputs(0, *count)?
+            Instr::PushTempInline { count, .. } | Instr::PushTempUnder { count, .. } => {
+                self.handle_args_outputs(*count, 0)?
             }
+            Instr::PopTempInline { count, .. }
+            | Instr::PopTempUnder { count, .. }
+            | Instr::CopyTempInline { count, .. } => self.handle_args_outputs(0, *count)?,
             Instr::Dynamic(f) => self.handle_sig(f.signature)?,
-            Instr::DropTemp { .. } => {}
+            Instr::DropTempInline { .. } => {}
             Instr::Prim(prim, _) => match prim {
                 Reduce | Scan => {
                     let sig = self.pop()?.expect_function(|| prim)?;
@@ -297,12 +299,10 @@ impl<'a> VirtualEnv<'a> {
                     self.handle_args_outputs(args, outputs)?;
                 }
                 Level => {
-                    let arg_count = match self.pop()? {
-                        BasicValue::Arr(items) => items.len(),
-                        _ => 1,
-                    };
+                    let _ranks = self.pop()?;
                     let f = self.pop()?;
-                    self.handle_args_outputs(arg_count, f.signature().outputs)?;
+                    let f_sig = f.signature();
+                    self.handle_sig(f_sig)?;
                 }
                 Try => {
                     let f = self.pop()?;
@@ -691,7 +691,7 @@ mod test {
                 push(1),
                 EndArray {
                     span: 0,
-                    constant: false
+                    boxed: false
                 }
             ])
         );
@@ -704,7 +704,7 @@ mod test {
                 push(1),
                 EndArray {
                     span: 0,
-                    constant: false
+                    boxed: false
                 },
                 Prim(Add, 0)
             ])

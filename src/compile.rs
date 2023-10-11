@@ -210,6 +210,8 @@ impl Uiua {
             }
             // First reverse = last
             ([.., Instr::Prim(top @ Reverse, _)], Instr::Prim(First, _)) => *top = Last,
+            // // Coalesce inline stack ops
+            // ([.., Instr::])
             (_, instr) => instrs.push(instr),
         }
     }
@@ -311,10 +313,7 @@ impl Uiua {
                 } else {
                     // Normal case
                     instrs.extend(inner);
-                    self.push_instr(Instr::EndArray {
-                        span,
-                        constant: false,
-                    });
+                    self.push_instr(Instr::EndArray { span, boxed: false });
                 }
             }
             Word::Array(arr) => {
@@ -352,7 +351,7 @@ impl Uiua {
                     instrs.extend(inner);
                     self.push_instr(Instr::EndArray {
                         span,
-                        constant: arr.constant,
+                        boxed: arr.constant,
                     });
                     if !call {
                         let instrs = self.new_functions.pop().unwrap();
@@ -506,19 +505,8 @@ impl Uiua {
             let (mut instrs, _) = self.compile_operand_words(modified.operands)?;
             let span = self.add_span(modified.modifier.span.clone());
             if modified.modifier.value == Primitive::Dip {
-                instrs.insert(
-                    0,
-                    Instr::PushTemp {
-                        count: 1,
-                        span,
-                        kind: TempKind::Inline,
-                    },
-                );
-                instrs.push(Instr::PopTemp {
-                    count: 1,
-                    span,
-                    kind: TempKind::Inline,
-                });
+                instrs.insert(0, Instr::PushTempInline { count: 1, span });
+                instrs.push(Instr::PopTempInline { count: 1, span });
             } else {
                 instrs.insert(0, Instr::Prim(Primitive::Pop, span));
             }
@@ -554,31 +542,24 @@ impl Uiua {
             if let Some((a_sig, b_sig)) = a_sig.ok().zip(b_sig.ok()) {
                 let span = self.add_span(modified.modifier.span.clone());
                 let count = a_sig.args.max(b_sig.args);
-                let mut instrs = vec![Instr::PushTemp {
-                    count,
-                    span,
-                    kind: TempKind::Inline,
-                }];
+                let mut instrs = vec![Instr::PushTempInline { count, span }];
                 if b_sig.args > 0 {
-                    instrs.push(Instr::CopyTemp {
+                    instrs.push(Instr::CopyTempInline {
                         offset: count - b_sig.args,
                         count: b_sig.args,
                         span,
-                        kind: TempKind::Inline,
                     });
                 }
                 instrs.extend(b_instrs);
                 if count - a_sig.args > 0 {
-                    instrs.push(Instr::DropTemp {
+                    instrs.push(Instr::DropTempInline {
                         count: count - a_sig.args,
                         span,
-                        kind: TempKind::Inline,
                     });
                 }
-                instrs.push(Instr::PopTemp {
+                instrs.push(Instr::PopTempInline {
                     count: a_sig.args,
                     span,
-                    kind: TempKind::Inline,
                 });
                 instrs.extend(a_instrs);
                 return if call {

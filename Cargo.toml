@@ -8,7 +8,7 @@ license = "MIT"
 name = "uiua"
 readme = "readme.md"
 repository = "https://github.com/uiua-lang/uiua"
-version = "0.0.17"
+version = "0.0.18"
 
 [dependencies]
 ariadne = "0.3.0"

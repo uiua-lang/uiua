@@ -1,3 +1,5 @@
+- Add sig checker context
+- Improve how recursion works
 - `under` aggregating `group` and `partition`
 - Add channels for spawned threads
 - Figure out what is going on with the editor cursor

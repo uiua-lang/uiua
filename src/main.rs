@@ -84,6 +84,7 @@ fn run() -> UiuaResult {
                 no_format,
                 formatter_options,
                 no_update,
+                time_instrs,
                 mode,
                 #[cfg(feature = "audio")]
                 audio_options,
@@ -117,7 +118,8 @@ fn run() -> UiuaResult {
                     .with_mode(mode)
                     .with_file_path(&path)
                     .with_args(args)
-                    .print_diagnostics(true);
+                    .print_diagnostics(true)
+                    .time_instrs(time_instrs);
                 rt.load_file(path)?;
                 for value in rt.take_stack() {
                     println!("{}", value.show());
@@ -424,6 +426,8 @@ enum App {
         formatter_options: FormatterOptions,
         #[clap(long, help = "Don't check for updates")]
         no_update: bool,
+        #[clap(long, help = "Emit the duration of each instruction's execution")]
+        time_instrs: bool,
         #[clap(long, help = "Run the file in a specific mode")]
         mode: Option<RunMode>,
         #[cfg(feature = "audio")]

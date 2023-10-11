@@ -56,6 +56,8 @@ pub struct Uiua {
     pub(crate) diagnostics: BTreeSet<Diagnostic>,
     /// Print diagnostics as they are encountered
     pub(crate) print_diagnostics: bool,
+    /// Whether to print the time taken to execute each instruction
+    time_instrs: bool,
     /// Arguments passed from the command line
     cli_arguments: Vec<String>,
     /// File that was passed to the interpreter for execution
@@ -174,6 +176,7 @@ impl Uiua {
             diagnostics: BTreeSet::new(),
             backend: Arc::new(NativeSys),
             print_diagnostics: false,
+            time_instrs: false,
             cli_arguments: Vec::new(),
             cli_file_path: PathBuf::new(),
             execution_limit: None,
@@ -195,6 +198,10 @@ impl Uiua {
     }
     pub fn print_diagnostics(mut self, print_diagnostics: bool) -> Self {
         self.print_diagnostics = print_diagnostics;
+        self
+    }
+    pub fn time_instrs(mut self, time_instrs: bool) -> Self {
+        self.time_instrs = time_instrs;
         self
     }
     /// Limit the execution duration
@@ -350,6 +357,7 @@ code:
     fn exec(&mut self, frame: StackFrame) -> UiuaResult {
         let ret_height = self.scope.call.len();
         self.scope.call.push(frame);
+        let mut formatted_instr = String::new();
         while self.scope.call.len() > ret_height {
             let frame = self.scope.call.last().unwrap();
             let Some(instr) = frame.function.instrs.get(frame.pc) else {
@@ -369,6 +377,10 @@ code:
             // }
             // println!();
             // println!("  {:?}", instr);
+            if self.time_instrs {
+                formatted_instr = format!("{instr:?}");
+            }
+            let start_time = instant::now();
             let res = match instr {
                 Instr::Push(val) => {
                     self.stack.push(Value::clone(val));
@@ -378,7 +390,10 @@ code:
                     self.scope.array.push(self.stack.len());
                     Ok(())
                 }
-                &Instr::EndArray { span, constant } => (|| {
+                &Instr::EndArray {
+                    span,
+                    boxed: constant,
+                } => (|| {
                     let start = self.scope.array.pop().unwrap();
                     self.push_span(span, None);
                     let values = self.stack.drain(start..).rev();
@@ -410,27 +425,19 @@ code:
                     .pop("called function")
                     .and_then(|f| self.call_with_span(f, span)),
                 Instr::Dynamic(df) => df.f.clone()(self),
-                &Instr::PushTemp { count, span, kind } => (|| {
+                &Instr::PushTempUnder { count, span } => (|| {
                     self.push_span(span, None);
                     for _ in 0..count {
                         let value = self.pop("value to move to temp")?;
-                        let stack = match kind {
-                            TempKind::Inline => &mut self.inline_stack,
-                            TempKind::Under => &mut self.under_stack,
-                        };
-                        stack.push(value);
+                        self.under_stack.push(value);
                     }
                     self.pop_span();
                     Ok(())
                 })(),
-                &Instr::PopTemp { count, span, kind } => (|| {
+                &Instr::PopTempUnder { count, span } => (|| {
                     self.push_span(span, None);
                     for _ in 0..count {
-                        let stack = match kind {
-                            TempKind::Inline => &mut self.inline_stack,
-                            TempKind::Under => &mut self.under_stack,
-                        };
-                        let value = stack.pop().ok_or_else(|| {
+                        let value = self.under_stack.pop().ok_or_else(|| {
                             self.error("Temp stack was empty when evaluating value to pop")
                         })?;
                         self.push(value);
@@ -438,50 +445,67 @@ code:
                     self.pop_span();
                     Ok(())
                 })(),
-                &Instr::CopyTemp {
-                    offset,
-                    count,
-                    span,
-                    kind,
-                } => (|| {
+                &Instr::PushTempInline { count, span } => (|| {
                     self.push_span(span, None);
-                    let stack = match kind {
-                        TempKind::Inline => &mut self.inline_stack,
-                        TempKind::Under => &mut self.under_stack,
-                    };
-                    if stack.len() < offset + count {
-                        return Err(
-                            self.error("Temp stack was empty when evaluating value to copy")
-                        );
+                    for _ in 0..count {
+                        let value = self.pop("value to move to temp")?;
+                        self.inline_stack.push(value);
                     }
-                    let start = stack.len() - offset;
-                    for i in 0..count {
-                        let stack = match kind {
-                            TempKind::Inline => &mut self.inline_stack,
-                            TempKind::Under => &mut self.under_stack,
-                        };
-                        let value = stack[start - i - 1].clone();
+                    self.pop_span();
+                    Ok(())
+                })(),
+                &Instr::PopTempInline { count, span } => (|| {
+                    self.push_span(span, None);
+                    for _ in 0..count {
+                        let value = self.inline_stack.pop().ok_or_else(|| {
+                            self.error("Temp stack was empty when evaluating value to pop")
+                        })?;
                         self.push(value);
                     }
                     self.pop_span();
                     Ok(())
                 })(),
-                &Instr::DropTemp { count, span, kind } => (|| {
+                &Instr::CopyTempInline {
+                    offset,
+                    count,
+                    span,
+                } => (|| {
                     self.push_span(span, None);
-                    let stack = match kind {
-                        TempKind::Inline => &mut self.inline_stack,
-                        TempKind::Under => &mut self.under_stack,
-                    };
-                    if stack.len() < count {
+                    if self.inline_stack.len() < offset + count {
+                        return Err(
+                            self.error("Temp stack was empty when evaluating value to copy")
+                        );
+                    }
+                    let start = self.inline_stack.len() - offset;
+                    for i in 0..count {
+                        let value = self.inline_stack[start - i - 1].clone();
+                        self.push(value);
+                    }
+                    self.pop_span();
+                    Ok(())
+                })(),
+                &Instr::DropTempInline { count, span } => (|| {
+                    self.push_span(span, None);
+                    if self.inline_stack.len() < count {
                         return Err(
                             self.error("Temp stack was empty when evaluating value to drop")
                         );
                     }
-                    stack.truncate(stack.len() - count);
+                    self.inline_stack.truncate(self.inline_stack.len() - count);
                     self.pop_span();
                     Ok(())
                 })(),
             };
+            if self.time_instrs {
+                let end_time = instant::now();
+                let padding = self.scope.call.len().saturating_sub(1) * 2;
+                println!(
+                    "  ⏲{:padding$}{:.2}ms - {}",
+                    "",
+                    end_time - start_time,
+                    formatted_instr
+                );
+            }
             if let Err(mut err) = res {
                 // Trace errors
                 let frames = self
@@ -815,6 +839,7 @@ code:
             imports: self.imports.clone(),
             diagnostics: BTreeSet::new(),
             print_diagnostics: self.print_diagnostics,
+            time_instrs: self.time_instrs,
             cli_arguments: self.cli_arguments.clone(),
             cli_file_path: self.cli_file_path.clone(),
             backend: self.backend.clone(),

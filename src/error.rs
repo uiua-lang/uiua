@@ -74,7 +74,7 @@ impl fmt::Display for UiuaError {
                 format_trace(f, trace)
             }
             UiuaError::Throw(value, span) => write!(f, "{span}: {value}"),
-            UiuaError::Break(_, span) => write!(f, "{span}: break outside of loop"),
+            UiuaError::Break(_, span) => write!(f, "{span}: Break amount exceeded loop depth"),
             UiuaError::Timeout(_) => write!(f, "Maximum execution time exceeded"),
             UiuaError::Fill(error) => error.fmt(f),
         }
@@ -205,9 +205,11 @@ impl UiuaError {
                 s
             }
             UiuaError::Throw(message, span) => report([(&message, span.clone())], kind, color),
-            UiuaError::Break(_, span) => {
-                report([("break outside of loop", span.clone())], kind, color)
-            }
+            UiuaError::Break(_, span) => report(
+                [("Break amount exceeded loop depth", span.clone())],
+                kind,
+                color,
+            ),
             UiuaError::Timeout(span) => report(
                 [("Maximum execution time exceeded", span.clone())],
                 kind,

@@ -327,11 +327,24 @@ impl Parser {
                         span(),
                         DiagnosticKind::Style,
                     )),
-                    (Primitive(Not), Primitive(Eq)) => self.diagnostics.push(Diagnostic::new(
-                        format!("Prefer `{Ne}` over `{Not}{Eq}` for clarity"),
-                        span(),
-                        DiagnosticKind::Style,
-                    )),
+                    // Not comparisons
+                    (Primitive(Not), Primitive(prim)) => {
+                        for (a, b) in [(Eq, Ne), (Lt, Ge), (Gt, Le)] {
+                            if *prim == a {
+                                self.diagnostics.push(Diagnostic::new(
+                                    format!("Prefer `{b}` over `{Not}{prim}` for clarity"),
+                                    span(),
+                                    DiagnosticKind::Style,
+                                ));
+                            } else if *prim == b {
+                                self.diagnostics.push(Diagnostic::new(
+                                    format!("Prefer `{a}` over `{Not}{prim}` for clarity"),
+                                    span(),
+                                    DiagnosticKind::Style,
+                                ));
+                            }
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -415,7 +428,7 @@ impl Parser {
         // Create identitys
         for item in &mut items {
             if let Word::Func(func) = &item.value {
-                if func.lines.is_empty() {
+                if func.lines.is_empty() && func.signature.is_none() {
                     item.value = Word::Primitive(Primitive::Identity);
                 }
             }
@@ -457,7 +470,7 @@ impl Parser {
         } else {
             for arg in &mut args {
                 if let Word::Func(func) = &arg.value {
-                    if func.lines.is_empty() {
+                    if func.lines.is_empty() && func.signature.is_none() {
                         arg.value = Word::Primitive(Primitive::Identity);
                     }
                 }

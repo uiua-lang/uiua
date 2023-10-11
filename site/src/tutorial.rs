@@ -533,8 +533,8 @@ fn TutorialFunctions() -> impl IntoView {
         <p>"This is usually only necessary when you need to call multiple functions within a modifier."</p>
         <p>"For example, if you wanted to get the last element of each row of an array, you could use "<Prim prim=Rows/>"."</p>
         <Editor example="≡(⊢⇌) .[2_5_3 0_2_1 0_0_2]"/>
-        <p>"If you wanted to rotate every row of an array by a fixed amount, you could use "<Prim prim=Distribute/>"."</p>
-        <Editor example="∺↻ 2 [1_2_3 4_5_6 7_8_9]"/>
+        <p>"If you wanted to rotate every row of an array backwards by a fixed amount, you could use "<Prim prim=Distribute/>"."</p>
+        <Editor example="∺(↻¯) 2 [1_2_3 4_5_6 7_8_9]"/>
         <p>"If you want to make an inline function with exactly 2 terms, you can use the "<Prim prim=Bind/>" modifier instead of "<code>"()"</code>"s and save 1 character of space!"</p>
         <Editor example="/(-∶) 1_2_3_4_5\n/'-∶ 1_2_3_4_5"/>
         <p>"This looks nice with modifiers that take multiple functions like "<Prim prim=Under/>"."</p>
@@ -572,9 +572,9 @@ X 5"/>
         <Editor example="∵(|2.1 ⊟.×) 1_2_3 4_5_6"/>
         <p>"Stack signatures are useful for documenting functions to make sure that they are used correctly."</p>
         <p>"A signature declaration is "<em>"required"</em>" if the function's signature cannot be infered. The compiler can usually infer a function's signature unless you are doing something weird with higher-order functions or fiddling with function arrays, or if you are using "<Prim prim=Recur/>"sion."</p>
-        <Editor example="∺(⊞|⊙.)+_-⇡3"/> // Should fail
+        <Editor example="∺(⊞|⊙.:)⇡3+_-"/> // Should fail
         <p>"Simply add a signature declaration to fix this."</p>
-        <Editor example="∺(|2 ⊞|⊙.)+_-⇡3"/>
+        <Editor example="∺(|2 ⊞|⊙.:)⇡3+_-"/>
         <p>"In addition, an error is thrown if a function's signature can be inferred and the inferred signature does not match the declared signature. This can help validate that a function is correct."</p>
         <Editor example="≡(|2 ↻.) 1_2_3 ↯3_3⇡9"/> // Should fail
         <p><strong>"WARNING"</strong>": If the compiler cannot derive the stack signature of a function and you give it one which is "<em>"wrong"</em>", your code may no longer compile in future versions of the language."</p>
@@ -728,13 +728,17 @@ fn TutorialTesting() -> impl IntoView {
         <p>"Test scopes are meant to be used with "<Prim prim=Assert/>"."</p>
         <Editor example="Square ← ×.\n~~~\n⍤.=9 Square 3\n⍤.=225 Square 15\n~~~"/>
         <p><Prim prim=Assert/>" will return an error when its second argument is anything other than "<code>"1"</code>"."</p>
-        <Editor example="Square ← ×.\n~~~\n⍤.=25 Square 4\n~~~"/>
+        <Editor example="Square ← ×.\n~~~\n⍤.=25 Square 4\n~~~"/> // Should fail
         <p>"The first argument to "<Prim prim=Assert/>" is the value that will be thrown if the assertion fails. In the examples above, we have simply been "<Prim prim=Dup/>"ing the test value. We can throw a message instead."</p>
         <Editor example=r#"Square ← ×.
 ~~~
 ⍤"3² is not 9!" =9 Square 3
 ⍤"4² is not 25!" =25 Square 4
 ~~~"#/>
+        <p>"One nice pattern for writing tests is to put the expected result before the test computation and use"<Prim prim=Assert glyph_only=true/><Prim prim=Flip glyph_only=true/><Prim prim=Match glyph_only=true/><Prim prim=Over glyph_only=true/>"."</p>
+        <p>"If the result does not match the expectation, that incorrect result will be thrown."</p>
+        <Editor example="~~~\n⍤∶≅, 4 +2 2 # Passes\n~~~"/>
+        <Editor example="~~~\n⍤∶≅, [2 3 5] +1 [1 2 3]\n~~~ #  ↓↓↓↓↓↓↓"/> // Should fail
 
         <h2 id="run-modes">"Run Modes"</h2>
         <p>"Whether tests will run or not depends on how you run the code."</p>

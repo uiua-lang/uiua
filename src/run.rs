@@ -56,6 +56,8 @@ pub struct Uiua {
     pub(crate) diagnostics: BTreeSet<Diagnostic>,
     /// Print diagnostics as they are encountered
     pub(crate) print_diagnostics: bool,
+    /// Whether to print the time taken to execute each instruction
+    time_instrs: bool,
     /// Arguments passed from the command line
     cli_arguments: Vec<String>,
     /// File that was passed to the interpreter for execution
@@ -174,6 +176,7 @@ impl Uiua {
             diagnostics: BTreeSet::new(),
             backend: Arc::new(NativeSys),
             print_diagnostics: false,
+            time_instrs: false,
             cli_arguments: Vec::new(),
             cli_file_path: PathBuf::new(),
             execution_limit: None,
@@ -195,6 +198,10 @@ impl Uiua {
     }
     pub fn print_diagnostics(mut self, print_diagnostics: bool) -> Self {
         self.print_diagnostics = print_diagnostics;
+        self
+    }
+    pub fn time_instrs(mut self, time_instrs: bool) -> Self {
+        self.time_instrs = time_instrs;
         self
     }
     /// Limit the execution duration
@@ -350,6 +357,7 @@ code:
     fn exec(&mut self, frame: StackFrame) -> UiuaResult {
         let ret_height = self.scope.call.len();
         self.scope.call.push(frame);
+        let mut formatted_instr = String::new();
         while self.scope.call.len() > ret_height {
             let frame = self.scope.call.last().unwrap();
             let Some(instr) = frame.function.instrs.get(frame.pc) else {
@@ -369,6 +377,10 @@ code:
             // }
             // println!();
             // println!("  {:?}", instr);
+            if self.time_instrs {
+                formatted_instr = format!("{instr:?}");
+            }
+            let start_time = instant::now();
             let res = match instr {
                 Instr::Push(val) => {
                     self.stack.push(Value::clone(val));
@@ -484,6 +496,16 @@ code:
                     Ok(())
                 })(),
             };
+            if self.time_instrs {
+                let end_time = instant::now();
+                let padding = self.scope.call.len().saturating_sub(1) * 2;
+                println!(
+                    "  ⏲{:padding$}{:.2}ms - {}",
+                    "",
+                    end_time - start_time,
+                    formatted_instr
+                );
+            }
             if let Err(mut err) = res {
                 // Trace errors
                 let frames = self
@@ -817,6 +839,7 @@ code:
             imports: self.imports.clone(),
             diagnostics: BTreeSet::new(),
             print_diagnostics: self.print_diagnostics,
+            time_instrs: self.time_instrs,
             cli_arguments: self.cli_arguments.clone(),
             cli_file_path: self.cli_file_path.clone(),
             backend: self.backend.clone(),

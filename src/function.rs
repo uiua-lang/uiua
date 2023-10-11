@@ -158,7 +158,10 @@ impl Instr {
 
 impl fmt::Debug for Instr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{self}")
+        match self {
+            Instr::Push(val) => write!(f, "push {val:?}"),
+            _ => write!(f, "{self}"),
+        }
     }
 }
 

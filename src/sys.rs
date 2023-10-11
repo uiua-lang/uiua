@@ -1663,7 +1663,7 @@ fn value_to_command(value: &Value, env: &Uiua) -> UiuaResult<(String, Vec<String
         Value::Func(arr) => match arr.rank() {
             0 | 1 => {
                 for f in &arr.data {
-                    match f.as_constant() {
+                    match f.as_boxed() {
                         Some(Value::Char(arr)) if arr.rank() <= 1 => {
                             strings.push(arr.data.iter().collect::<String>())
                         }

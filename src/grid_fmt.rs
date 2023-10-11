@@ -105,7 +105,7 @@ impl GridFmt for Function {
         if let Some((prim, _)) = self.as_primitive() {
             return vec![prim.to_string().chars().collect()];
         }
-        if let Some(value) = self.as_constant() {
+        if let Some(value) = self.as_boxed() {
             let mut grid = value.fmt_grid(true);
             if grid.len() == 1 && boxed {
                 grid[0].insert(0, '□');

@@ -313,10 +313,7 @@ impl Uiua {
                 } else {
                     // Normal case
                     instrs.extend(inner);
-                    self.push_instr(Instr::EndArray {
-                        span,
-                        constant: false,
-                    });
+                    self.push_instr(Instr::EndArray { span, boxed: false });
                 }
             }
             Word::Array(arr) => {
@@ -354,7 +351,7 @@ impl Uiua {
                     instrs.extend(inner);
                     self.push_instr(Instr::EndArray {
                         span,
-                        constant: arr.constant,
+                        boxed: arr.constant,
                     });
                     if !call {
                         let instrs = self.new_functions.pop().unwrap();

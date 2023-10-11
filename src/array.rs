@@ -239,13 +239,13 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Array<Arc<Function>> {
-    pub fn into_constant(self) -> Result<Value, Self> {
+    pub fn into_unboxed(self) -> Result<Value, Self> {
         match self.into_scalar() {
             Ok(f) => {
                 if f.is_constant() {
                     Ok(match Arc::try_unwrap(f) {
-                        Ok(f) => f.into_constant().unwrap(),
-                        Err(f) => f.as_constant().unwrap().clone(),
+                        Ok(f) => f.into_unboxed().unwrap(),
+                        Err(f) => f.as_boxed().unwrap().clone(),
                     })
                 } else {
                     Err(f.into())
@@ -254,12 +254,12 @@ impl Array<Arc<Function>> {
             Err(a) => Err(a),
         }
     }
-    pub fn as_constant(&self) -> Option<&Value> {
-        self.as_scalar().and_then(|f| f.as_constant())
+    pub fn as_boxed(&self) -> Option<&Value> {
+        self.as_scalar().and_then(|f| f.as_boxed())
     }
-    pub fn as_constant_mut(&mut self) -> Option<&mut Value> {
+    pub fn as_boxed_mut(&mut self) -> Option<&mut Value> {
         self.as_scalar_mut()
-            .and_then(|f| Arc::make_mut(f).as_constant_mut())
+            .and_then(|f| Arc::make_mut(f).as_boxed_mut())
     }
 }
 
@@ -432,7 +432,7 @@ impl ArrayValue for Arc<Function> {
         self.hash(hasher)
     }
     fn subrank(&self) -> usize {
-        self.as_constant().map_or(0, Value::rank)
+        self.as_boxed().map_or(0, Value::rank)
     }
 }
 

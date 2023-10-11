@@ -692,7 +692,7 @@ mod test {
                 push(1),
                 EndArray {
                     span: 0,
-                    constant: false
+                    boxed: false
                 }
             ])
         );
@@ -705,7 +705,7 @@ mod test {
                 push(1),
                 EndArray {
                     span: 0,
-                    constant: false
+                    boxed: false
                 },
                 Prim(Add, 0)
             ])

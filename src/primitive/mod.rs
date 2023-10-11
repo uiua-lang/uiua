@@ -370,7 +370,7 @@ impl Primitive {
             }
             Primitive::Unbox => {
                 let mut val = env.pop(1)?;
-                if let Some(con) = val.as_function().and_then(|f| f.as_constant()) {
+                if let Some(con) = val.as_function().and_then(|f| f.as_boxed()) {
                     val = con.clone()
                 }
                 env.push(val);

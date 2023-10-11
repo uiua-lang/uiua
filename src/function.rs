@@ -17,7 +17,7 @@ pub enum Instr {
     Push(Box<Value>) = 0,
     BeginArray,
     EndArray {
-        constant: bool,
+        boxed: bool,
         span: usize,
     },
     Prim(Primitive, usize),
@@ -395,7 +395,7 @@ impl Function {
             _ => None,
         }
     }
-    pub fn into_constant(self) -> Result<Value, Self> {
+    pub fn into_unboxed(self) -> Result<Value, Self> {
         if self.is_constant() {
             if let Instr::Push(val) = self.instrs.into_iter().next().unwrap() {
                 Ok(*val)
@@ -406,13 +406,13 @@ impl Function {
             Err(self)
         }
     }
-    pub fn as_constant(&self) -> Option<&Value> {
+    pub fn as_boxed(&self) -> Option<&Value> {
         match self.instrs.as_slice() {
             [Instr::Push(val)] => Some(val),
             _ => None,
         }
     }
-    pub fn as_constant_mut(&mut self) -> Option<&mut Value> {
+    pub fn as_boxed_mut(&mut self) -> Option<&mut Value> {
         match self.instrs.as_mut_slice() {
             [Instr::Push(val)] => Some(val),
             _ => None,

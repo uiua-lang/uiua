@@ -238,7 +238,7 @@ impl Value {
             Self::Num(array) => n(array),
             Self::Byte(array) => b(array),
             Self::Char(array) => c(array),
-            Self::Func(array) => match array.into_constant() {
+            Self::Func(array) => match array.into_unboxed() {
                 Ok(value) => value.generic_into_deep(n, b, c, f),
                 Err(array) => f(array),
             },
@@ -270,7 +270,7 @@ impl Value {
             Self::Byte(array) => b(array),
             Self::Char(array) => c(array),
             Self::Func(array) => {
-                if let Some(value) = array.as_constant() {
+                if let Some(value) = array.as_boxed() {
                     value.generic_ref_deep(n, b, c, f)
                 } else {
                     f(array)
@@ -324,7 +324,7 @@ impl Value {
             Self::Byte(array) => b(array),
             Self::Char(array) => c(array),
             Self::Func(array) => {
-                if let Some(value) = array.as_constant_mut() {
+                if let Some(value) = array.as_boxed_mut() {
                     value.generic_mut_deep(n, b, c, f)
                 } else {
                     f(array)
@@ -741,7 +741,7 @@ macro_rules! value_un_impl {
                     Value::Func(mut array) => {
                         let mut new_data = Vec::with_capacity(array.flat_len());
                         for f in array.data {
-                            match Function::into_inner(f).into_constant() {
+                            match Function::into_inner(f).into_unboxed() {
                                 Ok(value) => new_data.push(Arc::new(Function::constant(value.$name(env)?))),
                                 Err(_) => return Err($name::error("function", env)),
                             }
@@ -792,26 +792,26 @@ macro_rules! value_bin_impl {
                         }
                     },)*
                     (Value::Func(a), b) => {
-                        match a.as_constant() {
+                        match a.as_boxed() {
                             Some(a) => Value::$name(a, b, env)?,
                             None => {
                                 let b = b.coerce_as_function();
                                 bin_pervade(a, &b, env, FalliblePerasiveFn::new(|a: Arc<Function>, b: Arc<Function>, env: &Uiua| {
-                                    let a = a.as_constant().ok_or_else(|| env.error("First argument is not a box"))?;
-                                    let b = b.as_constant().ok_or_else(|| env.error("Second argument is not a box"))?;
+                                    let a = a.as_boxed().ok_or_else(|| env.error("First argument is not a box"))?;
+                                    let b = b.as_boxed().ok_or_else(|| env.error("Second argument is not a box"))?;
                                     Ok(Arc::new(Function::constant(Value::$name(a, b, env)?)))
                                 }))?.into()
                             }
                         }
                     },
                     (a, Value::Func(b)) => {
-                        match b.as_constant() {
+                        match b.as_boxed() {
                             Some(b) => Value::$name(a, b, env)?,
                             None => {
                                 let a = a.coerce_as_function();
                                 bin_pervade(&a, b, env, FalliblePerasiveFn::new(|a: Arc<Function>, b: Arc<Function>, env: &Uiua| {
-                                    let a = a.as_constant().ok_or_else(|| env.error("First argument is not a box"))?;
-                                    let b = b.as_constant().ok_or_else(|| env.error("Second argument is not a box"))?;
+                                    let a = a.as_boxed().ok_or_else(|| env.error("First argument is not a box"))?;
+                                    let b = b.as_boxed().ok_or_else(|| env.error("Second argument is not a box"))?;
                                     Ok(Arc::new(Function::constant(Value::$name(a, b, env)?)))
                                 }))?.into()
                             }
@@ -997,7 +997,7 @@ impl fmt::Display for Value {
             Value::Byte(b) => b.fmt(f),
             Value::Char(c) => c.fmt(f),
             Value::Func(func) => {
-                if let Some(val) = func.as_constant() {
+                if let Some(val) = func.as_boxed() {
                     val.fmt(f)
                 } else {
                     func.fmt(f)

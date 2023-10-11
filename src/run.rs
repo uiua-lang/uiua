@@ -378,7 +378,10 @@ code:
                     self.scope.array.push(self.stack.len());
                     Ok(())
                 }
-                &Instr::EndArray { span, constant } => (|| {
+                &Instr::EndArray {
+                    span,
+                    boxed: constant,
+                } => (|| {
                     let start = self.scope.array.pop().unwrap();
                     self.push_span(span, None);
                     let values = self.stack.drain(start..).rev();

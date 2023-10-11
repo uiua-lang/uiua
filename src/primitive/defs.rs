@@ -1278,7 +1278,9 @@ primitive!(
     ([2], Bind, OtherModifier, ("bind", '\'')),
     /// Call one of two functions based on a condition
     ///
-    /// If the condition is `1`, then the first function is called, otherwise the second function is called.
+    /// If the condition is `1`, then the first function is called.
+    /// If the condition is `0`, then the second function is called.
+    /// Any other values are not allowed.
     /// ex: ?+- 1 3 5
     /// ex: ?+- 0 3 5
     /// ex: Abs ← ?¯∘ <0.

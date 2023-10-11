@@ -428,7 +428,7 @@ impl Parser {
         // Create identitys
         for item in &mut items {
             if let Word::Func(func) = &item.value {
-                if func.lines.is_empty() {
+                if func.lines.is_empty() && func.signature.is_none() {
                     item.value = Word::Primitive(Primitive::Identity);
                 }
             }
@@ -470,7 +470,7 @@ impl Parser {
         } else {
             for arg in &mut args {
                 if let Word::Func(func) = &arg.value {
-                    if func.lines.is_empty() {
+                    if func.lines.is_empty() && func.signature.is_none() {
                         arg.value = Word::Primitive(Primitive::Identity);
                     }
                 }

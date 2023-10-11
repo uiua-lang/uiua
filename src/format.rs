@@ -527,6 +527,9 @@ impl<'a> Formatter<'a> {
                 self.output.push('(');
                 if let Some(sig) = &func.signature {
                     self.format_signature(sig.value, func.lines.len() <= 1);
+                    if func.lines.is_empty() {
+                        self.output.pop();
+                    }
                 }
                 self.format_multiline_words(&func.lines, false, depth + 1);
                 self.output.push(')');

@@ -19,6 +19,7 @@ use crate::{
     parse::parse,
     value::Value,
     SysBackend, Uiua, UiuaError, UiuaResult,
+    primitive::PrimitiveFormatOptions
 };
 
 // For now disallow any syscalls in the format config file.
@@ -200,6 +201,8 @@ create_config!(
     (multiline_compact_threshold, usize, 10),
     /// Whether to align consecutive end-of-line comments
     (align_comments, bool, true),
+    /// Whether to disable glyph formatting
+    (disable_glyphs, bool, false),
 );
 
 /// The source from which to populate the formatter configuration.
@@ -540,13 +543,33 @@ impl<'a> Formatter<'a> {
                 self.output.push(')');
             }
             Word::Primitive(prim) => {
-                self.push(&word.span, &prim.to_string());
+                let formatted = &prim.to_string_with_options(
+                    PrimitiveFormatOptions {
+                        disable_glyphs: self.config.disable_glyphs
+                    }
+                );
+
+                self.push(&word.span, &formatted);
+
                 if prim.is_modifier() {
                     self.output.push('|');
                 }
+
+                let word_as_str = word.span.as_str();
+                if self.config.disable_glyphs
+                    && word_as_str != formatted
+                    && prim.glyph().map(|g| g.to_string() == word_as_str).unwrap_or(false)
+                {
+                    self.output.push(' ');
+                }
             }
             Word::Modified(m) => {
-                self.push(&m.modifier.span, &m.modifier.value.to_string());
+                let formatted = &m.modifier.value.to_string_with_options(
+                    PrimitiveFormatOptions {
+                        disable_glyphs: self.config.disable_glyphs
+                    }
+                );
+                self.push(&m.modifier.span, formatted);
                 self.format_words(&m.operands, true, depth);
                 if m.terminated {
                     self.output.push('|');

@@ -74,6 +74,18 @@ pub struct PrimNames {
     pub glyph: Option<char>,
 }
 
+pub struct PrimitiveFormatOptions {
+    pub disable_glyphs: bool
+}
+
+impl PrimitiveFormatOptions {
+    pub fn default() -> PrimitiveFormatOptions {
+        PrimitiveFormatOptions {
+            disable_glyphs: false
+        }
+    }
+}
+
 impl From<&'static str> for PrimNames {
     fn from(text: &'static str) -> Self {
         Self {
@@ -104,11 +116,46 @@ impl From<(&'static str, AsciiToken, char)> for PrimNames {
 
 impl fmt::Display for Primitive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(c) = self.glyph() {
+        self.format(f, &PrimitiveFormatOptions::default())
+    }
+}
+
+struct PrimitiveFormatter {
+    pub primitive: Primitive,
+    pub options: PrimitiveFormatOptions
+}
+
+impl fmt::Display for PrimitiveFormatter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.primitive.format(f, &self.options)
+    }
+}
+
+impl Primitive {
+    pub fn all() -> impl Iterator<Item = Self> + Clone {
+        all()
+    }
+    pub fn non_deprecated() -> impl Iterator<Item = Self> + Clone {
+        Self::all().filter(|p| !p.is_deprecated())
+    }
+    pub fn name(&self) -> Option<&'static str> {
+        self.names().map(|n| n.text)
+    }
+    pub fn ascii(&self) -> Option<AsciiToken> {
+        self.names().and_then(|n| n.ascii)
+    }
+    pub fn glyph(&self) -> Option<char> {
+        self.names().and_then(|n| n.glyph)
+    }
+    pub fn format(&self, f: &mut fmt::Formatter<'_>, options: &PrimitiveFormatOptions) -> fmt::Result {
+        if let (Some(c), false) = (self.glyph(), options.disable_glyphs) {
+            println!("formatting {} as glyph", c);
             write!(f, "{}", c)
         } else if let Some(s) = self.ascii() {
+            println!("formatting {} as ascii", s);
             write!(f, "{}", s)
         } else if let Some(s) = self.name() {
+            println!("formatting {} as name", s);
             write!(f, "{}", s)
         } else {
             use Primitive::*;
@@ -130,23 +177,8 @@ impl fmt::Display for Primitive {
             }
         }
     }
-}
-
-impl Primitive {
-    pub fn all() -> impl Iterator<Item = Self> + Clone {
-        all()
-    }
-    pub fn non_deprecated() -> impl Iterator<Item = Self> + Clone {
-        Self::all().filter(|p| !p.is_deprecated())
-    }
-    pub fn name(&self) -> Option<&'static str> {
-        self.names().map(|n| n.text)
-    }
-    pub fn ascii(&self) -> Option<AsciiToken> {
-        self.names().and_then(|n| n.ascii)
-    }
-    pub fn glyph(&self) -> Option<char> {
-        self.names().and_then(|n| n.glyph)
+    pub fn to_string_with_options(&self, options: PrimitiveFormatOptions) -> String {
+        PrimitiveFormatter { primitive: *self, options }.to_string()
     }
     /// Find a primitive by its text name
     pub fn from_name(name: &str) -> Option<Self> {

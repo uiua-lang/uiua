@@ -731,13 +731,26 @@ impl From<i32> for Value {
 }
 
 macro_rules! value_un_impl {
-    ($name:ident, $(($variant:ident, $f:ident)),* $(,)?) => {
+    ($name:ident, $(
+        $(($in_place:ident, $f:ident))?
+        $([$make_new:ident, $f2:ident])?
+    ),* $(,)?) => {
         impl Value {
             pub fn $name(self, env: &Uiua) -> UiuaResult<Self> {
                 Ok(match self {
-                    $(Self::$variant(array) => {
-                        (array.shape, array.data.into_iter().map($name::$f).collect::<Vec<_>>()).into()
-                    },)*
+                    $($(Self::$in_place(mut array) => {
+                        for val in &mut array.data {
+                            *val = $name::$f(*val);
+                        }
+                        array.into()
+                    },)*)*
+                    $($(Self::$make_new(array) => {
+                        let mut new = Vec::with_capacity(array.flat_len());
+                        for val in array.data {
+                            new.push($name::$f2(val));
+                        }
+                        (array.shape, new).into()
+                    },)*)*
                     Value::Func(mut array) => {
                         let mut new_data = Vec::with_capacity(array.flat_len());
                         for f in array.data {
@@ -756,13 +769,19 @@ macro_rules! value_un_impl {
     }
 }
 
-macro_rules! value_un_impl_all {
-    ($($name:ident),* $(,)?) => {
-        $(value_un_impl!($name, (Num, num), (Byte, byte));)*
-    }
-}
-
-value_un_impl_all!(neg, not, abs, sign, sqrt, sin, cos, tan, asin, acos, floor, ceil, round);
+value_un_impl!(neg, (Num, num), [Byte, byte]);
+value_un_impl!(not, (Num, num), [Byte, byte]);
+value_un_impl!(abs, (Num, num), [Byte, byte]);
+value_un_impl!(sign, (Num, num), (Byte, byte));
+value_un_impl!(sqrt, (Num, num), [Byte, byte]);
+value_un_impl!(sin, (Num, num), [Byte, byte]);
+value_un_impl!(cos, (Num, num), [Byte, byte]);
+value_un_impl!(tan, (Num, num), [Byte, byte]);
+value_un_impl!(asin, (Num, num), [Byte, byte]);
+value_un_impl!(acos, (Num, num), [Byte, byte]);
+value_un_impl!(floor, (Num, num), (Byte, byte));
+value_un_impl!(ceil, (Num, num), (Byte, byte));
+value_un_impl!(round, (Num, num), (Byte, byte));
 
 macro_rules! val_retry {
     (Byte, $env:expr) => {

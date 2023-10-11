@@ -87,16 +87,16 @@ Default: `"auto"`
 How to format multiline expressions.
 - `"always"`: Always format multiline expressions in compact mode.
 - `"never"`: Never format multiline expressions in compact mode.
-- `"auto"`: Format multiline expressions in compact mode if they do not exceed `MultilineCompactThreshold`.
+- `"auto"`: Format multiline expressions in compact mode if they exceed `MultilineCompactThreshold`.
 
 ### `MultilineCompactThreshold`
 Type: natural number
 
 Default: `10`
 
-The maximum number of lines a multiline expression can have before it is formatted in compact mode.
+The maximum a columns a multiline expression can start on before it stops being formatted in compact mode.
 
-Only used if `CompactMultilineMode` is not `"never"`.
+Only used if `CompactMultilineMode` is `"auto"`.
 
 ### `AlignComments`
 Type: boolean

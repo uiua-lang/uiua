@@ -504,9 +504,6 @@ impl<T: ArrayValue> Array<T> {
         self.shape.insert(0, count);
     }
     pub fn reshape(&mut self, dims: &[isize], env: &Uiua) -> UiuaResult {
-        if self.data.len() == 0 {
-            return Err(env.error("Cannot reshape empty array"));
-        }
         let mut neg_count = 0;
         for dim in dims {
             if *dim < 0 {
@@ -585,6 +582,8 @@ impl<T: ArrayValue> Array<T> {
                 self.data.modify(|data| {
                     data.extend(repeat(fill).take(target_len - start));
                 });
+            } else if self.data.is_empty() {
+                return Err(env.error("Cannot reshape empty array without a fill value"));
             } else if self.rank() == 0 {
                 self.data = cowslice![self.data[0].clone(); target_len];
             } else {

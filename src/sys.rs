@@ -16,6 +16,7 @@ use std::{
 
 use bufreaderwriter::seq::BufReaderWriterSeq;
 use dashmap::DashMap;
+use ecow::EcoVec;
 use enum_iterator::Sequence;
 use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
 use image::{DynamicImage, ImageOutputFormat};
@@ -1912,7 +1913,7 @@ fn array_from_wav_bytes_impl<T: hound::Sample>(
     env: &Uiua,
 ) -> UiuaResult<Array<f64>> {
     let channel_count = reader.spec().channels as usize;
-    let mut channels = vec![CowSlice::new(); channel_count];
+    let mut channels = vec![EcoVec::new(); channel_count];
     let mut curr_channel = 0;
     for sample in reader.samples::<T>() {
         let sample = sample.map_err(|e| env.error(e.to_string()))?;

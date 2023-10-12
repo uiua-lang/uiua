@@ -225,11 +225,17 @@ where
     F: PervasiveFn<A::Value, B::Value, Output = C> + Clone,
 {
     match (a.shape(), b.shape()) {
-        ([], []) => c.push(f.call(a.data()[0].clone(), b.data()[0].clone(), env)?),
+        ([], []) => c.modify(|c| {
+            c.push(f.call(a.data()[0].clone(), b.data()[0].clone(), env)?);
+            Ok(())
+        })?,
         (ash, bsh) if ash == bsh => {
-            for (a, b) in a.data().iter().zip(b.data()) {
-                c.push(f.call(a.clone(), b.clone(), env)?);
-            }
+            c.try_extend(
+                a.data()
+                    .iter()
+                    .zip(b.data())
+                    .map(|(a, b)| f.call(a.clone(), b.clone(), env)),
+            )?;
         }
         ([], bsh) => {
             for brow in b.rows() {

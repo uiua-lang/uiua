@@ -7,6 +7,8 @@ use std::{
     sync::Arc,
 };
 
+use ecow::EcoVec;
+
 use crate::{
     algorithm::{pervade::*, FillContext},
     array::*,
@@ -539,7 +541,7 @@ impl Value {
                         nums.format_shape()
                     )));
                 }
-                let mut result = CowSlice::with_capacity(nums.flat_len());
+                let mut result = EcoVec::with_capacity(nums.flat_len());
                 for &num in nums.data() {
                     if !test_num(num) {
                         return Err(env.error(requirement));
@@ -555,7 +557,7 @@ impl Value {
                         bytes.format_shape()
                     )));
                 }
-                let mut result = CowSlice::with_capacity(bytes.flat_len());
+                let mut result = EcoVec::with_capacity(bytes.flat_len());
                 for &byte in bytes.data() {
                     let num = byte as f64;
                     if !test_num(num) {
@@ -622,7 +624,7 @@ impl Value {
                 .iter()
                 .all(|n| n.fract() == 0.0 && *n <= u8::MAX as f64 && *n >= 0.0)
             {
-                let mut bytes = CowSlice::with_capacity(nums.flat_len());
+                let mut bytes = EcoVec::with_capacity(nums.flat_len());
                 for n in take(&mut nums.data) {
                     bytes.push(n as u8);
                 }
@@ -666,9 +668,19 @@ macro_rules! value_from {
                 Self::$variant(array)
             }
         }
+        impl From<EcoVec<$ty>> for Value {
+            fn from(vec: EcoVec<$ty>) -> Self {
+                Self::$variant(Array::from(vec))
+            }
+        }
         impl From<CowSlice<$ty>> for Value {
             fn from(vec: CowSlice<$ty>) -> Self {
                 Self::$variant(Array::from(vec))
+            }
+        }
+        impl From<(Shape, EcoVec<$ty>)> for Value {
+            fn from((shape, data): (Shape, EcoVec<$ty>)) -> Self {
+                Self::$variant(Array::new(shape, data))
             }
         }
         impl From<(Shape, CowSlice<$ty>)> for Value {
@@ -746,14 +758,14 @@ macro_rules! value_un_impl {
                         array.into()
                     },)*)*
                     $($(Self::$make_new(array) => {
-                        let mut new = CowSlice::with_capacity(array.flat_len());
+                        let mut new = EcoVec::with_capacity(array.flat_len());
                         for val in array.data {
                             new.push($name::$f2(val));
                         }
                         (array.shape, new).into()
                     },)*)*
                     Value::Func(mut array) => {
-                        let mut new_data = CowSlice::with_capacity(array.flat_len());
+                        let mut new_data = EcoVec::with_capacity(array.flat_len());
                         for f in array.data {
                             match Function::into_inner(f).into_unboxed() {
                                 Ok(value) => new_data.push(Arc::new(Function::constant(value.$name(env)?))),

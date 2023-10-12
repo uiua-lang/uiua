@@ -5,6 +5,7 @@ use std::{
     sync::Arc,
 };
 
+use ecow::EcoVec;
 use tinyvec::{tiny_vec, TinyVec};
 
 use crate::{
@@ -310,6 +311,12 @@ impl<T: ArrayValue> Hash for Array<T> {
 impl<T: ArrayValue> From<T> for Array<T> {
     fn from(data: T) -> Self {
         Self::unit(data)
+    }
+}
+
+impl<T: ArrayValue> From<EcoVec<T>> for Array<T> {
+    fn from(data: EcoVec<T>) -> Self {
+        Self::new(tiny_vec![data.len()], data)
     }
 }
 

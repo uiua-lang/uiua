@@ -2,6 +2,7 @@
 
 use std::{borrow::Cow, cmp::Ordering, iter::repeat, mem::take, sync::Arc};
 
+use ecow::EcoVec;
 use tinyvec::tiny_vec;
 
 use crate::{
@@ -732,7 +733,7 @@ impl<T: ArrayValue> Array<T> {
             if amount.len() != 1 {
                 return Err(env.error("Scalar array can only be kept with a single number"));
             }
-            let mut new_data = CowSlice::with_capacity(amount[0]);
+            let mut new_data = EcoVec::with_capacity(amount[0]);
             for _ in 0..amount[0] {
                 new_data.push(self.data[0].clone());
             }
@@ -1599,7 +1600,7 @@ impl<T: ArrayValue> Array<T> {
             true_size.extend(&self.shape[true_size.len()..]);
         }
 
-        let mut dst = CowSlice::new();
+        let mut dst = EcoVec::new();
         let mut corner = vec![0; self.shape.len()];
         let mut curr = vec![0; self.shape.len()];
         'windows: loop {
@@ -1686,7 +1687,7 @@ impl<T: ArrayValue> Array<T> {
             .map(|(a, b)| a + 1 - b)
             .collect();
 
-        let mut data = CowSlice::new();
+        let mut data = EcoVec::new();
         let mut corner = vec![0; searched.shape.len()];
         let mut curr = vec![0; searched.shape.len()];
 
@@ -1778,7 +1779,7 @@ impl<T: ArrayValue> Array<T> {
         let elems = self;
         Ok(match elems.rank().cmp(&of.rank()) {
             Ordering::Equal => {
-                let mut result_data = CowSlice::with_capacity(elems.row_count());
+                let mut result_data = EcoVec::with_capacity(elems.row_count());
                 if elems.rank() == 1 {
                     for elem in &elems.data {
                         result_data.push(of.data.iter().any(|of| elem.array_eq(of)) as u8);
@@ -1852,7 +1853,7 @@ impl<T: ArrayValue> Array<T> {
         let searched_for = self;
         Ok(match searched_for.rank().cmp(&searched_in.rank()) {
             Ordering::Equal => {
-                let mut result_data = CowSlice::with_capacity(searched_for.row_count());
+                let mut result_data = EcoVec::with_capacity(searched_for.row_count());
                 if searched_for.rank() == 1 {
                     for elem in &searched_for.data {
                         result_data.push(

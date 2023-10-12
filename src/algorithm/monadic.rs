@@ -7,6 +7,7 @@ use std::{
     sync::Arc,
 };
 
+use ecow::EcoVec;
 use rayon::prelude::*;
 use tinyvec::tiny_vec;
 
@@ -78,7 +79,7 @@ fn range(shape: &[usize], env: &Uiua) -> UiuaResult<CowSlice<f64>> {
         }
         len = new;
     }
-    let mut data: CowSlice<f64> = CowSlice::with_capacity(len);
+    let mut data: EcoVec<f64> = EcoVec::with_capacity(len);
     let mut curr = vec![0; shape.len()];
     loop {
         for d in &curr {
@@ -90,7 +91,7 @@ fn range(shape: &[usize], env: &Uiua) -> UiuaResult<CowSlice<f64>> {
             if curr[i] == shape[i] {
                 curr[i] = 0;
                 if i == 0 {
-                    return Ok(data);
+                    return Ok(data.into());
                 }
                 i -= 1;
             } else {
@@ -204,7 +205,7 @@ impl<T: ArrayValue> Array<T> {
             self.shape.rotate_left(1);
             return;
         }
-        let mut temp = CowSlice::with_capacity(self.data.len());
+        let mut temp = EcoVec::with_capacity(self.data.len());
         let row_len = self.row_len();
         let row_count = self.row_count();
         for j in 0..row_len {
@@ -212,7 +213,7 @@ impl<T: ArrayValue> Array<T> {
                 temp.push(self.data[i * row_len + j].clone());
             }
         }
-        self.data = temp;
+        self.data = temp.into();
         self.shape.rotate_left(1);
     }
     pub fn inv_transpose(&mut self) {
@@ -224,7 +225,7 @@ impl<T: ArrayValue> Array<T> {
             self.shape.rotate_right(1);
             return;
         }
-        let mut temp = CowSlice::with_capacity(self.data.len());
+        let mut temp = EcoVec::with_capacity(self.data.len());
         let col_len = *self.shape.last().unwrap();
         let col_count: usize = self.shape.iter().rev().skip(1).product();
         for j in 0..col_len {
@@ -232,7 +233,7 @@ impl<T: ArrayValue> Array<T> {
                 temp.push(self.data[i * col_len + j].clone());
             }
         }
-        self.data = temp;
+        self.data = temp.into();
         self.shape.rotate_right(1);
     }
 }
@@ -339,13 +340,11 @@ impl Value {
         Ok(match self {
             Self::Func(fs) => {
                 let mut invs = CowSlice::with_capacity(fs.row_count());
-                for f in &fs.data {
-                    invs.push(
-                        f.inverse()
-                            .ok_or_else(|| env.error("No inverse found"))?
-                            .into(),
-                    );
-                }
+                invs.try_extend(fs.data.iter().map(|f| {
+                    f.inverse()
+                        .map(Into::into)
+                        .ok_or_else(|| env.error("No inverse found"))
+                }))?;
                 Self::Func(Array::new(fs.shape.clone(), invs))
             }
             v => return Err(env.error(format!("Cannot invert {}", v.type_name()))),
@@ -354,8 +353,8 @@ impl Value {
     pub fn under(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
         Ok(match self {
             Self::Func(fs) => {
-                let mut befores = CowSlice::with_capacity(fs.row_count());
-                let mut afters = CowSlice::with_capacity(fs.row_count());
+                let mut befores = EcoVec::with_capacity(fs.row_count());
+                let mut afters = EcoVec::with_capacity(fs.row_count());
                 for f in fs.data {
                     let f = Arc::try_unwrap(f).unwrap_or_else(|f| (*f).clone());
                     let (before, after) = f.under().ok_or_else(|| env.error("No inverse found"))?;
@@ -410,7 +409,7 @@ impl Array<f64> {
             max_bits += 1;
             max >>= 1;
         }
-        let mut new_data = CowSlice::with_capacity(self.data.len() * max_bits);
+        let mut new_data = EcoVec::with_capacity(self.data.len() * max_bits);
         // Little endian
         for n in nats {
             for i in 0..max_bits {
@@ -439,7 +438,7 @@ impl Array<u8> {
         }
         let mut shape = self.shape.clone();
         let bit_string_len = shape.pop().unwrap();
-        let mut new_data = CowSlice::with_capacity(self.data.len() / bit_string_len);
+        let mut new_data = EcoVec::with_capacity(self.data.len() / bit_string_len);
         // Little endian
         for bits in bools.chunks_exact(bit_string_len) {
             let mut n: u128 = 0;
@@ -460,7 +459,7 @@ impl Value {
     pub fn wher(&self, env: &Uiua) -> UiuaResult<Self> {
         let counts = self.as_naturals(env, "Argument to where must be a list of naturals")?;
         let total: usize = counts.iter().fold(0, |acc, &b| acc.saturating_add(b));
-        let mut data = CowSlice::with_capacity(total);
+        let mut data = EcoVec::with_capacity(total);
         for (i, &b) in counts.iter().enumerate() {
             for _ in 0..b {
                 let i = i as f64;
@@ -477,7 +476,7 @@ impl Value {
             .zip(indices.iter().skip(1))
             .all(|(&a, &b)| a <= b);
         let size = indices.iter().max().map(|&i| i + 1).unwrap_or(0);
-        let mut data = CowSlice::with_capacity(size);
+        let mut data = EcoVec::with_capacity(size);
         if is_sorted {
             let mut j = 0;
             for i in 0..size {

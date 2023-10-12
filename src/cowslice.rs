@@ -42,11 +42,16 @@ impl<T: Clone> CowSlice<T> {
             end: 0,
         }
     }
-    pub fn push(&mut self, value: T) {
-        self.modify(|vec| vec.push(value))
-    }
     pub fn extend_from_slice(&mut self, other: &[T]) {
         self.modify(|vec| vec.extend_from_slice(other))
+    }
+    pub fn try_extend<E>(&mut self, iter: impl IntoIterator<Item = Result<T, E>>) -> Result<(), E> {
+        self.modify(|vec| {
+            for item in iter {
+                vec.push(item?);
+            }
+            Ok(())
+        })
     }
 }
 

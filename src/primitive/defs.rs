@@ -660,7 +660,7 @@ primitive!(
     /// By default, arrays with different shapes cannot be [couple]ed.
     /// ex! ⊟ [1 2 3] [4 5]
     /// Use [fill] to make their shapes match
-    /// ex: ⬚⊟∞ [1 2 3] [4 5]
+    /// ex: ⬚∞⊟ [1 2 3] [4 5]
     ///
     /// [couple] is compatible with [under].
     /// ex: ⍜⊟'×2 3 5
@@ -686,7 +686,7 @@ primitive!(
     /// By default, arrays that do not have equal [shape] suffixes cannot be joined.
     /// ex! ⊂ [1_2 3_4] [5_6_7 8_9_10]
     /// Use [fill] to make their shapes compatible.
-    /// ex: ⬚⊂0 [1_2 3_4] [5_6_7 8_9_10]
+    /// ex: ⬚0⊂ [1_2 3_4] [5_6_7 8_9_10]
     ///
     /// [join]'s glyph is `⊂` because it kind of looks like a magnet pulling its two arguments together.
     (2, Join, DyadicArray, ("join", '⊂')),
@@ -741,7 +741,7 @@ primitive!(
     /// ex: ↯¯1_2_2 ⇡15
     /// ex: ↯3_¯1_5 ⇡30
     /// If [fill] is used, the total number of elements in the new shape will always be [equal] to the total number of elements in the original shape.
-    /// ex: ⬚↯0 ¯1_5 ⇡12
+    /// ex: ⬚0↯¯1_5 ⇡12
     ///
     /// See also: [deshape]
     (2, Reshape, DyadicArray, ("reshape", '↯')),
@@ -757,7 +757,7 @@ primitive!(
     /// By default, taking more than the length of the array will throw an error.
     /// ex! ↙7 [8 3 9 2 0]
     /// If you would like to fill the excess length with some fill value, use [fill].
-    /// ex: ⬚↙π 7 [8 3 9 2 0]
+    /// ex: ⬚π↙7 [8 3 9 2 0]
     (2, Take, DyadicArray, ("take", '↙')),
     /// End step of under take
     (3, Untake, Misc),
@@ -813,7 +813,7 @@ primitive!(
     /// ex: ↯ 2 [1_2_3 4_5_6]
     ///
     /// The counts list can be [fill]ed if it is shorter than the kept array.
-    /// ex: ⬚▽3 [1 0 2] [8 3 9 2 0]
+    /// ex: ⬚3▽ [1 0 2] [8 3 9 2 0]
     ///
     /// [keep]'s glyph is `▽` because its main use is to filter, and `▽` kind of looks like a coffee filter.
     (2, Keep, DyadicArray, ("keep", '▽')),
@@ -853,7 +853,7 @@ primitive!(
     /// If you expect one of the searched-for rows to be missing, you can use [fill] to set a default value.
     /// ex: a ← [2 3 5 7 11 13]
     ///   : .⊗,a [1 2 3 4 5]
-    ///   : ⬚⊏∞ ∶a
+    ///   : ⬚∞⊏∶a
     ///
     /// [indexof] is closely related to [member].
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),
@@ -928,8 +928,8 @@ primitive!(
     /// ex: ≡⊂  1_2 [4_5 6_7]
     /// ex: ≡∧+ 1_2 [4_5 6_7]
     ///
-    /// [rows]`f` is equivalent to [level]`f``¯1` (or `level``f``[¯1 ¯1 …]` for multiple arrays).
-    /// ex: ⍚/+¯1 [1_2_3 4_5_6 7_8_9]
+    /// [rows] is equivalent to [level]`¯1` (or `level``[¯1 ¯1 …]` for multiple arrays).
+    /// ex: ⍚¯1/+ [1_2_3 4_5_6 7_8_9]
     /// ex:   ≡/+ [1_2_3 4_5_6 7_8_9]
     ([1], Rows, IteratingModifier, ("rows", '≡')),
     /// Apply a function to a fixed value and each row of an array
@@ -939,44 +939,8 @@ primitive!(
     ///
     /// [distribute] is equivalent to [level]`[``infinity``¯1]`.
     /// ex:       ∺⊂ 1_2_3 4_5_6
-    ///   : ⍚⊂[∞ ¯1] 1_2_3 4_5_6
+    ///   : ⍚[∞ ¯1]⊂ 1_2_3 4_5_6
     (2[1], Distribute, IteratingModifier, ("distribute", '∺')),
-    /// Apply a function at a different array depth
-    ///
-    /// Expects a function, a rank to operate on, and an array.
-    /// The rank supplied indicates the desired rank of the operand.
-    /// The array will be split into arrays of that rank, and the function will be applied to each of those arrays.
-    ///
-    /// `level``f``0` is equivalent to [each], applying `f` to each element of the array.
-    /// `level``f``¯1` is equivalent to [rows], applying `f` to each row of the array's major axis.
-    /// `level``f``1` applies `f` to each row of the array's last axis.
-    /// `level``f``infinity` calls `f` on the array without splitting it.
-    ///
-    /// One nice way to see what this means is to test it using [reverse].
-    /// For each of these examples, pay attention to the number passed to [level] and which elements change position.
-    /// ex: ↯2_2_3 ⇡12
-    /// ex: ⇌ ↯2_2_3 ⇡12 # Reverse as normal
-    /// ex: ⍚⇌0  ↯2_2_3 ⇡12 # Reverse each element (does nothing)
-    /// ex: ⍚⇌¯1 ↯2_2_3 ⇡12 # Reverse each row
-    /// ex: ⍚⇌¯2 ↯2_2_3 ⇡12 # Reverse each row of each row
-    /// ex: ⍚⇌1  ↯2_2_3 ⇡12 # Reverse each last axis row
-    ///
-    /// [level] can operate on multiple arrays at once if passed a list of ranks.
-    /// While `level``f``¯1` is equivelent to [rows]`f` called with a single array, `level``f``[¯1 ¯1]` is equivalent to [rows]`f` called with two arrays, and so on.
-    /// ex: a ← ↯3_3   ⇡9
-    ///   : b ← ↯3_3+10⇡9
-    ///   :        ≡⊂ a b
-    ///   : ⍚⊂[¯1 ¯1] a b
-    ///
-    /// [level]`[``infinity``¯1]` is equivalent to [distribute].
-    /// ex:       ∺⊂ 1_2_3 4_5_6
-    ///   : ⍚⊂[∞ ¯1] 1_2_3 4_5_6
-    ///
-    /// One way to think of the number(s) passed to [level] is as the rank of the array that the function will be applied to.
-    /// `level``1` will always apply to rank `1` arrays, no matter how many dimensions the original array has.
-    /// ex: ⍚⊂[1 1] ↯3_3⇡9 10_11_12 # Join two rank 1 arrays
-    /// ex: ⍚⊂[1 0] ↯3_3⇡9 10_11_12 # Join rank 1 arrays with scalars
-    ([1], Level, IteratingModifier, ("level", '⍚')),
     /// Apply a function to each combination of elements of two arrays
     ///
     /// This is the element-wise version of [cross].
@@ -1063,6 +1027,75 @@ primitive!(
     ///
     /// [partition] is closely related to [group].
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
+    /// Call a function on two sets of values
+    ///
+    /// For monadic functions, [both] calls its function on each of the top 2 values on the stack.
+    /// ex: ∩⇡ 3 5
+    ///
+    /// One good use of this is when working with [box] data.
+    /// You can use [both][unbox] to get 2 [box] values out.
+    /// ex: /(⊂∩⊔) {"a" "bc" "def"}
+    ///
+    /// For a function that takes `n` arguments, [both] calls the function on the 2 sets of `n` values on top of the stack.
+    /// ex: [∩+ 1 2 3 4]
+    /// ex: [∩(++) 1 2 3 4 5 6]
+    ///
+    /// [both] can also be chained. Every additional [both] doubles the number of arguments taken from the stack.
+    /// ex: [∩∩(□+2) 1 @a 2_3 5]
+    /// ex: [∩∩∩± 1 ¯2 0 42 ¯5 6 7 8 99]
+    (2[1], Both, Stack, ("both", '∩')),
+    /// Call two functions on two distinct sets of values
+    ///
+    /// ex: ⊓⇌⊝ 1_2_3 [1 4 2 4 2]
+    /// Each function will always be called on its own set of values.
+    /// ex: ⊓+× 1 2 3 4
+    /// The functions' signatures need not be the same.
+    /// ex: ⊓+(++) 1 2 3 4 5
+    /// [bracket] can be chained to apply additional functions to arguments deeper on the stack.
+    /// ex: ⊓⊓⇌(↻1)△ 1_2_3 4_5_6 7_8_9
+    /// ex: [⊓⊓⊓+-×÷ 10 20 5 8 3 7 2 5]
+    ([2], Bracket, Stack, ("bracket", '⊓')),
+    /// Call two functions on the same values
+    ///
+    /// ex: ⊃⇌⊝ 1_2_2_3
+    /// [fork] can be chained to apply more functions to the arguments. `n` functions require the chaining of `subtract``1n` [fork].
+    /// ex: [⊃⊃⊃+-×÷ 5 8]
+    /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maximum will work on the top values.
+    /// ex: [⊃+¯ 3 5]
+    ([2], Fork, Stack, ("fork", '⊃')),
+    /// Temporarily pop the top value off the stack and call a function
+    ///
+    /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [dip] is useful.
+    ///
+    /// ex: [⊙+ 1 2 3]
+    /// ex: [⊙⊙+ 1 2 3 4]
+    /// This is especially useful when used in a [fork].
+    /// In a [fork] expression, you can use [dip], [gap], and [identity] to select out values.
+    /// For example, if you wanted to add 3 values but keep the all 3 on top of the stack:
+    /// ex: [⊃⊙⊙∘(++) 3 5 10]
+    /// By replacing a `dip` with a `gap`, you pop the argument in that spot instead of keeping it:
+    /// ex: [⊃⊙⊙∘(++) 3 5 10]
+    /// ex: [⊃⊙⋅∘(++) 3 5 10]
+    /// ex: [⊃⋅⊙∘(++) 3 5 10]
+    /// ex: [⊃⊙∘(++) 3 5 10]
+    ([1], Dip, Stack, ("dip", '⊙')),
+    /// Discard the top stack value then call a function
+    ///
+    /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [gap] is useful.
+    ///
+    /// ex: ⋅+ 1 2 3
+    /// This may seem useless when [pop] exists, but [gap] really shines when used with [fork].
+    /// In a [fork] expression, you can use [dip], [gap], and [identity] to select out values.
+    /// For example, if you wanted to add 3 values but keep the last value on top of the stack:
+    /// ex: [⊃⋅⋅∘(++) 3 5 10]
+    /// By using fewer `gap`s, you can select a different value.
+    /// ex: [⊃⋅∘(++) 3 5 10]
+    /// ex: [⊃∘(++) 3 5 10]
+    /// By replacing a `gap` with a `dip`, you keep the argument in that spot instead of popping it:
+    /// ex: [⊃⊙⋅∘(++) 3 5 10]
+    /// ex: [⊃⋅⊙∘(++) 3 5 10]
+    /// ex: [⊃⊙⊙∘(++) 3 5 10]
+    ([1], Gap, Stack, ("gap", '⋅')),
     /// Rearrange the stack
     ///
     /// Deprecated because it was never a good idea.
@@ -1083,48 +1116,6 @@ primitive!(
     ///
     /// While [restack] is sometimes necessary, its use is generally discouraged unless absolutely necessary, as it makes code harder to read.
     ((None), Restack, Stack, ("restack", '⇵')),
-    /// Set the fill value for a function
-    ///
-    /// By default, some operations require that arrays' [shape]s are in some way compatible.
-    /// [fill] allows you to specify a value that will be used to extend the shape of one or both of the operands to make an operation succeed.
-    /// The first argument is a function that could fail due to incompatible shapes, and the second argument is the fill value that will be used.
-    ///
-    /// [fill] allows you to set default values for [take].
-    /// ex: ⬚↙0  7 [8 3 9 2 1]
-    /// ex: ⬚↙π ¯6 [1 2 3]
-    /// ex: ⬚↙42 4 [1_2_3 4_5_6]
-    ///
-    /// Using [fill] with [couple] will fill both arrays until their shapes match.
-    /// ex: ⬚⊟0 1 2_3
-    /// ex: ⬚⊟0 1_2 3_4_5_6
-    /// ex: ⬚⊟0 1_2_3 [4_5 6_7]
-    ///
-    /// Using [fill] with [join] will fill both arrays until the [join] makes sense.
-    /// ex: ⬚⊂0 1 [2_3_4 5_6_7]
-    /// ex: ⬚⊂0 [1_2 3_4] 5_6_7
-    ///
-    /// Because array construction is implemented in terms of [couple] and [join], [fill] can be used when building arrays.
-    /// ex: ⬚[1 2_3 4_5_6]0
-    ///
-    /// [fill] also works with pervasive operations where the shapes don't match.
-    /// ex: ⬚+0 1_2_3 10_9_8_7_6_5
-    ///
-    /// Many functions, like [scan] and [partition], implicitly build arrays and require compatible shapes.
-    /// [fill] can be used with them as well. In some cases, this prevents the need to use [box].
-    /// ex: ⬚\⊂0 1_2_3_4_5
-    /// ex: ⬚⊜∘@  ≠@ . "No □ needed!"
-    ///
-    /// [fill] will prevent [pick] and [select] from throwing an error if an index is out of bounds.
-    /// ex: ⬚⊏∞ 3_7_0 [8 3 9 2 0]
-    ///
-    /// [fill] allows the list of counts for [keep] to be shorter than the kept array.
-    /// This is especially useful when used with functions like [windows] or [find] which make an array shorter than their input.
-    /// ex: ⬚▽0 ≡/>◫2. [1 8 0 2 7 2 3]
-    ///
-    /// [fill][reshape] fills in the shape with the fill element instead of cycling the data.
-    /// ex:  ↯  3_5 ⇡9
-    ///   : ⬚↯0 3_5 ⇡9
-    ([1], Fill, OtherModifier, ("fill", '⬚')),
     /// Invert the behavior of a function
     ///
     /// Most functions are not invertible.
@@ -1148,75 +1139,6 @@ primitive!(
     /// While more inverses exists, most of them are not useful on their own.
     /// They are usually used within [under].
     ([1], Invert, OtherModifier, ("invert", '⍘')),
-    /// Discard the top stack value then call a function
-    ///
-    /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [gap] is useful.
-    ///
-    /// ex: ⋅+ 1 2 3
-    /// This may seem useless when [pop] exists, but [gap] really shines when used with [fork].
-    /// In a [fork] expression, you can use [dip], [gap], and [identity] to select out values.
-    /// For example, if you wanted to add 3 values but keep the last value on top of the stack:
-    /// ex: [⊃⋅⋅∘(++) 3 5 10]
-    /// By using fewer `gap`s, you can select a different value.
-    /// ex: [⊃⋅∘(++) 3 5 10]
-    /// ex: [⊃∘(++) 3 5 10]
-    /// By replacing a `gap` with a `dip`, you keep the argument in that spot instead of popping it:
-    /// ex: [⊃⊙⋅∘(++) 3 5 10]
-    /// ex: [⊃⋅⊙∘(++) 3 5 10]
-    /// ex: [⊃⊙⊙∘(++) 3 5 10]
-    ([1], Gap, Stack, ("gap", '⋅')),
-    /// Temporarily pop the top value off the stack and call a function
-    ///
-    /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [dip] is useful.
-    ///
-    /// ex: [⊙+ 1 2 3]
-    /// ex: [⊙⊙+ 1 2 3 4]
-    /// This is especially useful when used in a [fork].
-    /// In a [fork] expression, you can use [dip], [gap], and [identity] to select out values.
-    /// For example, if you wanted to add 3 values but keep the all 3 on top of the stack:
-    /// ex: [⊃⊙⊙∘(++) 3 5 10]
-    /// By replacing a `dip` with a `gap`, you pop the argument in that spot instead of keeping it:
-    /// ex: [⊃⊙⊙∘(++) 3 5 10]
-    /// ex: [⊃⊙⋅∘(++) 3 5 10]
-    /// ex: [⊃⋅⊙∘(++) 3 5 10]
-    /// ex: [⊃⊙∘(++) 3 5 10]
-    ([1], Dip, Stack, ("dip", '⊙')),
-    /// Call a function on two sets of values
-    ///
-    /// For monadic functions, [both] calls its function on each of the top 2 values on the stack.
-    /// ex: ∩⇡ 3 5
-    ///
-    /// One good use of this is when working with [box] data.
-    /// You can use [both][unbox] to get 2 [box] values out.
-    /// ex: /(⊂∩⊔) {"a" "bc" "def"}
-    ///
-    /// For a function that takes `n` arguments, [both] calls the function on the 2 sets of `n` values on top of the stack.
-    /// ex: [∩+ 1 2 3 4]
-    /// ex: [∩(++) 1 2 3 4 5 6]
-    ///
-    /// [both] can also be chained. Every additional [both] doubles the number of arguments taken from the stack.
-    /// ex: [∩∩(□+2) 1 @a 2_3 5]
-    /// ex: [∩∩∩± 1 ¯2 0 42 ¯5 6 7 8 99]
-    (2[1], Both, Stack, ("both", '∩')),
-    /// Call two functions on the same values
-    ///
-    /// ex: ⊃⇌⊝ 1_2_2_3
-    /// [fork] can be chained to apply more functions to the arguments. `n` functions require the chaining of `subtract``1n` [fork].
-    /// ex: [⊃⊃⊃+-×÷ 5 8]
-    /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maximum will work on the top values.
-    /// ex: [⊃+¯ 3 5]
-    ([2], Fork, Stack, ("fork", '⊃')),
-    /// Call two functions on two distinct sets of values
-    ///
-    /// ex: ⊓⇌⊝ 1_2_3 [1 4 2 4 2]
-    /// Each function will always be called on its own set of values.
-    /// ex: ⊓+× 1 2 3 4
-    /// The functions' signatures need not be the same.
-    /// ex: ⊓+(++) 1 2 3 4 5
-    /// [bracket] can be chained to apply additional functions to arguments deeper on the stack.
-    /// ex: ⊓⊓⇌(↻1)△ 1_2_3 4_5_6 7_8_9
-    /// ex: [⊓⊓⊓+-×÷ 10 20 5 8 3 7 2 5]
-    ([2], Bracket, Stack, ("bracket", '⊓')),
     /// Apply a function under another
     ///
     /// This is a more powerful version of [invert].
@@ -1262,6 +1184,84 @@ primitive!(
     /// ex: ⍜(↙2)(÷∶)  [1 2 3 4 5] 10
     ///   : ⍜(↙2)(÷10) [1 2 3 4 5]
     ([2], Under, OtherModifier, ("under", '⍜')),
+    /// Apply a function at a different array depth
+    ///
+    /// Expects a rank to operate on, a function, and an array.
+    /// The rank supplied indicates the desired rank of the operand.
+    /// The array will be split into arrays of that rank, and the function will be applied to each of those arrays.
+    ///
+    /// `level``0` is equivalent to [each], applying the function to each element of the array.
+    /// `level``¯1` is equivalent to [rows], applying the function to each row of the array's major axis.
+    /// `level``1` applies the function to each row of the array's last axis.
+    /// `level``infinity` calls the function on the array without splitting it.
+    ///
+    /// One nice way to see what this means is to test it using [reverse].
+    /// For each of these examples, pay attention to the number passed to [level] and which elements change position.
+    /// ex: ↯2_2_3 ⇡12
+    /// ex: ⇌ ↯2_2_3 ⇡12 # Reverse as normal
+    /// ex: ⍚0⇌ ↯2_2_3 ⇡12 # Reverse each element (does nothing)
+    /// ex: ⍚¯1⇌ ↯2_2_3 ⇡12 # Reverse each row
+    /// ex: ⍚¯2⇌ ↯2_2_3 ⇡12 # Reverse each row of each row
+    /// ex: ⍚1⇌ ↯2_2_3 ⇡12 # Reverse each last axis row
+    ///
+    /// [level] can operate on multiple arrays at once if passed a list of ranks.
+    /// While `level``¯1` is equivelent to [rows] called with a single array, `level``[¯1 ¯1]` is equivalent to [rows] called with two arrays, and so on.
+    /// ex: a ← ↯3_3   ⇡9
+    ///   : b ← ↯3_3+10⇡9
+    ///   :        ≡⊂ a b
+    ///   : ⍚[¯1 ¯1]⊂ a b
+    ///
+    /// [level]`[``infinity``¯1]` is equivalent to [distribute].
+    /// ex:       ∺⊂ 1_2_3 4_5_6
+    ///   : ⍚[∞ ¯1]⊂ 1_2_3 4_5_6
+    ///
+    /// One way to think of the number(s) passed to [level] is as the rank of the array that the function will be applied to.
+    /// `level``1` will always apply to rank `1` arrays, no matter how many dimensions the original array has.
+    /// ex: ⍚[1 1]⊂ ↯3_3⇡9 10_11_12 # Join two rank 1 arrays
+    /// ex: ⍚[1 0]⊂ ↯3_3⇡9 10_11_12 # Join rank 1 arrays with scalars
+    ([2], Level, IteratingModifier, ("level", '⍚')),
+    /// Set the fill value for a function
+    ///
+    /// By default, some operations require that arrays' [shape]s are in some way compatible.
+    /// [fill] allows you to specify a value that will be used to extend the shape of one or both of the operands to make an operation succeed.
+    /// The first argument is the fill value, and the second argument is a function in which the fill value will be used.
+    ///
+    /// [fill] allows you to set default values for [take].
+    /// ex: ⬚0↙7 [8 3 9 2 1]
+    /// ex: ⬚π↙¯6 [1 2 3]
+    /// ex: ⬚42↙4 [1_2_3 4_5_6]
+    ///
+    /// Using [fill] with [couple] will fill both arrays until their shapes match.
+    /// ex: ⬚0⊟ 1 2_3
+    /// ex: ⬚0⊟ 1_2 3_4_5_6
+    /// ex: ⬚0⊟ 1_2_3 [4_5 6_7]
+    ///
+    /// Using [fill] with [join] will fill both arrays until the [join] makes sense.
+    /// ex: ⬚0⊂ 1 [2_3_4 5_6_7]
+    /// ex: ⬚0⊂ [1_2 3_4] 5_6_7
+    ///
+    /// Because array construction is implemented in terms of [couple] and [join], [fill] can be used when building arrays.
+    /// ex: ⬚0[1 2_3 4_5_6]
+    ///
+    /// [fill] also works with pervasive operations where the shapes don't match.
+    /// ex: ⬚0+ 1_2_3 10_9_8_7_6_5
+    ///
+    /// Many functions, like [scan] and [partition], implicitly build arrays and require compatible shapes.
+    /// [fill] can be used with them as well. In some cases, this prevents the need to use [box].
+    /// ex: ⬚0\⊂ 1_2_3_4_5
+    /// ex: ⬚@ ⊜∘≠@ . "No □ needed!"
+    ///
+    /// [fill] will prevent [pick] and [select] from throwing an error if an index is out of bounds.
+    /// ex: ⬚∞⊏ 3_7_0 [8 3 9 2 0]
+    ///
+    /// [fill] allows the list of counts for [keep] to be shorter than the kept array.
+    /// This is especially useful when used with functions like [windows] or [find] which make an array shorter than their input.
+    /// ex: ⬚0▽≡/>◫2. [1 8 0 2 7 2 3]
+    ///
+    /// [fill][reshape] fills in the shape with the fill element instead of cycling the data.
+    /// ex:   ↯3_5 ⇡9
+    /// ex: ⬚0↯3_5 ⇡9
+    ([2], Fill, OtherModifier, ("fill", '⬚')),
     /// Compose two functions
     ///
     /// This modifier mostly exists for syntactic convenience.

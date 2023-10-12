@@ -299,8 +299,8 @@ impl<'a> VirtualEnv<'a> {
                     self.handle_args_outputs(args, outputs)?;
                 }
                 Level => {
-                    let f = self.pop()?;
                     let _ranks = self.pop()?;
+                    let f = self.pop()?;
                     let f_sig = f.signature();
                     self.handle_sig(f_sig)?;
                 }
@@ -357,8 +357,8 @@ impl<'a> VirtualEnv<'a> {
                     }
                 }
                 Fill => {
-                    let f = self.pop()?;
                     self.pop()?;
+                    let f = self.pop()?;
                     self.handle_sig(f.signature())?;
                 }
                 Dup => {

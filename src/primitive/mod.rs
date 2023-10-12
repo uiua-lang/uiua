@@ -488,8 +488,8 @@ impl Primitive {
                 env.call(f_after)?;
             }
             Primitive::Fill => {
-                let f = env.pop(FunctionArg(1))?;
-                let fill = env.pop("fill element")?;
+                let fill = env.pop(FunctionArg(1))?;
+                let f = env.pop(FunctionArg(2))?;
                 env.with_fill(fill, |env| env.call(f))?;
             }
             Primitive::Bind => {

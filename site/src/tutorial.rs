@@ -340,7 +340,7 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example="+[1 2] [3 4 5]"/> // Should fail
         <Editor example="△10_20\n      △[3_4_5 6_7_8]\n+10_20 [3_4_5 6_7_8]"/>
         <p>"If you want to do some pervasive operation on arrays whose shapes do not match, you can set a default value with "<Prim prim=Fill/>". Any places where the shapes don't match will be filled in with that value."</p>
-        <Editor example="⬚-0 [1 2] [3 4 5 6 7]"/>
+        <Editor example="⬚0- [1 2] [3 4 5 6 7]"/>
         <p><Prim prim=Fill/>" can be used in a lot of other cases. See its documentation for more."</p>
 
         <h2 id="useful-array-operations">"Useful Array Operations"</h2>

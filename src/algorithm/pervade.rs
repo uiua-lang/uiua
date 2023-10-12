@@ -312,7 +312,6 @@ where
             false
         }
         (ash, bsh) => {
-            debug_assert_eq!(ash[0], bsh[0]);
             let a_row_len = a_data.len() / ash[0];
             let b_row_len = b_data.len() / bsh[0];
             for (a, b) in a_data
@@ -321,7 +320,7 @@ where
             {
                 bin_pervade_recursive_mut(a, &ash[1..], b, &bsh[1..], f);
             }
-            ash.len() >= bsh.len()
+            ash.len() > bsh.len()
         }
     }
 }

@@ -102,6 +102,8 @@ fn invert_instr_fragment(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
         &(Val, ([Sub], [Add])),
         &(Val, IgnoreMany(Flip), ([Mul], [Div])),
         &(Val, ([Div], [Mul])),
+        &([Dup, Add], [2.i(), Div.i()]),
+        &([Dup, Mul], [Sqrt]),
         &invert_pow_pattern,
         &invert_log_pattern,
         &invert_repeat_pattern,

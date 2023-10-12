@@ -8,7 +8,7 @@ use std::{
     slice::{self, Chunks},
 };
 
-use crate::{array::*, Uiua, UiuaError, UiuaResult};
+use crate::{array::*, cowslice::CowSlice, Uiua, UiuaError, UiuaResult};
 
 use super::{max_shape, FillContext};
 
@@ -206,7 +206,7 @@ where
 {
     fill_shapes(&mut a, &mut b, env)?;
     let shape = Shape::from(a.shape().max(b.shape()));
-    let mut data = Vec::with_capacity(a.flat_len().max(b.flat_len()));
+    let mut data = CowSlice::with_capacity(a.flat_len().max(b.flat_len()));
     bin_pervade_recursive(&a, &b, &mut data, env, f).map_err(Into::into)?;
     Ok(Array::new(shape, data))
 }
@@ -214,7 +214,7 @@ where
 fn bin_pervade_recursive<A, B, C, F>(
     a: &A,
     b: &B,
-    c: &mut Vec<C>,
+    c: &mut CowSlice<C>,
     env: &Uiua,
     f: F,
 ) -> Result<(), F::Error>

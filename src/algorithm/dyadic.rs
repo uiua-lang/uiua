@@ -5,8 +5,12 @@ use std::{borrow::Cow, cmp::Ordering, iter::repeat, mem::take, sync::Arc};
 use tinyvec::tiny_vec;
 
 use crate::{
-    algorithm::max_shape, array::*, cowslice::CowSlice, function::Function, value::Value, Uiua,
-    UiuaResult,
+    algorithm::max_shape,
+    array::*,
+    cowslice::{cowslice, CowSlice},
+    function::Function,
+    value::Value,
+    Uiua, UiuaResult,
 };
 
 use super::{op2_bytes_retry_fill, op_bytes_ref_retry_fill, op_bytes_retry_fill, FillContext};
@@ -89,7 +93,7 @@ impl<T: ArrayValue> Array<T> {
             return;
         }
         let target_size = shape.iter().product();
-        let mut new_data = vec![fill_value; target_size];
+        let mut new_data = cowslice![fill_value; target_size];
         let mut curr = vec![0; shape.len()];
         for new_data_index in 0..target_size {
             data_index_to_shape_index(new_data_index, shape, &mut curr);
@@ -97,7 +101,7 @@ impl<T: ArrayValue> Array<T> {
                 new_data[new_data_index] = self.data[data_index].clone();
             }
         }
-        self.data = new_data.into();
+        self.data = new_data;
         self.shape = shape.into();
     }
 }
@@ -577,6 +581,8 @@ impl<T: ArrayValue> Array<T> {
                 self.data.modify(|data| {
                     data.extend(repeat(fill).take(target_len - start));
                 });
+            } else if self.rank() == 0 {
+                self.data = cowslice![self.data[0].clone(); target_len];
             } else {
                 let start = self.data.len();
                 self.data.modify(|data| {
@@ -726,7 +732,7 @@ impl<T: ArrayValue> Array<T> {
             if amount.len() != 1 {
                 return Err(env.error("Scalar array can only be kept with a single number"));
             }
-            let mut new_data = Vec::with_capacity(amount[0]);
+            let mut new_data = CowSlice::with_capacity(amount[0]);
             for _ in 0..amount[0] {
                 new_data.push(self.data[0].clone());
             }
@@ -747,16 +753,16 @@ impl<T: ArrayValue> Array<T> {
             let row_len = self.row_len();
             if all_bools {
                 let new_flat_len = true_count * row_len;
-                let mut new_data = Vec::with_capacity(new_flat_len);
+                let mut new_data = CowSlice::with_capacity(new_flat_len);
                 for (b, r) in amount.iter().zip(self.data.chunks_exact(row_len)) {
                     if *b == 1 {
                         new_data.extend_from_slice(r);
                     }
                 }
-                self.data = new_data.into();
+                self.data = new_data;
                 self.shape[0] = true_count;
             } else {
-                let mut new_data = Vec::new();
+                let mut new_data = CowSlice::new();
                 let mut new_len = 0;
                 for (n, r) in amount.iter().zip(self.data.chunks_exact(row_len)) {
                     new_len += *n;
@@ -764,7 +770,7 @@ impl<T: ArrayValue> Array<T> {
                         new_data.extend_from_slice(r);
                     }
                 }
-                self.data = new_data.into();
+                self.data = new_data;
                 self.shape[0] = new_len;
             }
         }
@@ -885,10 +891,10 @@ impl<T: ArrayValue> Array<T> {
         index_shape: &[usize],
         index_data: &[isize],
         env: &Uiua,
-    ) -> UiuaResult<(Shape, Vec<T>)> {
+    ) -> UiuaResult<(Shape, CowSlice<T>)> {
         let index_row_len = index_shape[1..].iter().product();
         let mut new_data =
-            Vec::with_capacity(index_shape[..index_shape.len() - 1].iter().product());
+            CowSlice::with_capacity(index_shape[..index_shape.len() - 1].iter().product());
         for index_row in index_data.chunks(index_row_len) {
             let row = self.pick_shaped(&index_shape[1..], index_row, env)?;
             new_data.extend_from_slice(&row.data);
@@ -911,7 +917,7 @@ impl<T: ArrayValue> Array<T> {
             let s = s as isize;
             if i >= s || i < -s {
                 if let Some(fill) = env.fill::<T>() {
-                    picked = vec![fill; row_len].into();
+                    picked = cowslice![fill; row_len];
                     continue;
                 }
                 return Err(env
@@ -1458,7 +1464,7 @@ impl<T: ArrayValue> Array<T> {
         }
     }
     fn select(&self, indices: &[isize], env: &Uiua) -> UiuaResult<Self> {
-        let mut selected = Vec::with_capacity(self.row_len() * indices.len());
+        let mut selected = CowSlice::with_capacity(self.row_len() * indices.len());
         let row_len = self.row_len();
         let row_count = self.row_count();
         for &i in indices {
@@ -1583,7 +1589,7 @@ impl<T: ArrayValue> Array<T> {
         // Check if the window size is too large
         for (size, sh) in size_spec.iter().zip(&self.shape) {
             if *size > *sh {
-                return Ok(Self::new(new_shape, Vec::new()));
+                return Ok(Self::new(new_shape, CowSlice::new()));
             }
         }
         // Make a new window shape with the same rank as the windowed array
@@ -1593,7 +1599,7 @@ impl<T: ArrayValue> Array<T> {
             true_size.extend(&self.shape[true_size.len()..]);
         }
 
-        let mut dst = Vec::new();
+        let mut dst = CowSlice::new();
         let mut corner = vec![0; self.shape.len()];
         let mut curr = vec![0; self.shape.len()];
         'windows: loop {
@@ -1680,7 +1686,7 @@ impl<T: ArrayValue> Array<T> {
             .map(|(a, b)| a + 1 - b)
             .collect();
 
-        let mut data = Vec::new();
+        let mut data = CowSlice::new();
         let mut corner = vec![0; searched.shape.len()];
         let mut curr = vec![0; searched.shape.len()];
 
@@ -1772,7 +1778,7 @@ impl<T: ArrayValue> Array<T> {
         let elems = self;
         Ok(match elems.rank().cmp(&of.rank()) {
             Ordering::Equal => {
-                let mut result_data = Vec::with_capacity(elems.row_count());
+                let mut result_data = CowSlice::with_capacity(elems.row_count());
                 if elems.rank() == 1 {
                     for elem in &elems.data {
                         result_data.push(of.data.iter().any(|of| elem.array_eq(of)) as u8);
@@ -1846,7 +1852,7 @@ impl<T: ArrayValue> Array<T> {
         let searched_for = self;
         Ok(match searched_for.rank().cmp(&searched_in.rank()) {
             Ordering::Equal => {
-                let mut result_data = Vec::with_capacity(searched_for.row_count());
+                let mut result_data = CowSlice::with_capacity(searched_for.row_count());
                 if searched_for.rank() == 1 {
                     for elem in &searched_for.data {
                         result_data.push(

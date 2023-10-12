@@ -10,7 +10,12 @@ use std::{
 use rayon::prelude::*;
 use tinyvec::tiny_vec;
 
-use crate::{array::*, value::Value, Uiua, UiuaResult};
+use crate::{
+    array::*,
+    cowslice::{cowslice, CowSlice},
+    value::Value,
+    Uiua, UiuaResult,
+};
 
 impl Value {
     pub fn deshape(&mut self) {
@@ -52,12 +57,12 @@ impl Value {
     }
 }
 
-fn range(shape: &[usize], env: &Uiua) -> UiuaResult<Vec<f64>> {
+fn range(shape: &[usize], env: &Uiua) -> UiuaResult<CowSlice<f64>> {
     if shape.is_empty() {
-        return Ok(vec![0.0]);
+        return Ok(cowslice![0.0]);
     }
     if shape.contains(&0) {
-        return Ok(Vec::new());
+        return Ok(CowSlice::new());
     }
     let mut len = shape.len();
     for &item in shape {
@@ -73,7 +78,7 @@ fn range(shape: &[usize], env: &Uiua) -> UiuaResult<Vec<f64>> {
         }
         len = new;
     }
-    let mut data: Vec<f64> = Vec::with_capacity(len);
+    let mut data: CowSlice<f64> = CowSlice::with_capacity(len);
     let mut curr = vec![0; shape.len()];
     loop {
         for d in &curr {
@@ -199,7 +204,7 @@ impl<T: ArrayValue> Array<T> {
             self.shape.rotate_left(1);
             return;
         }
-        let mut temp = Vec::with_capacity(self.data.len());
+        let mut temp = CowSlice::with_capacity(self.data.len());
         let row_len = self.row_len();
         let row_count = self.row_count();
         for j in 0..row_len {
@@ -207,7 +212,7 @@ impl<T: ArrayValue> Array<T> {
                 temp.push(self.data[i * row_len + j].clone());
             }
         }
-        self.data = temp.into();
+        self.data = temp;
         self.shape.rotate_left(1);
     }
     pub fn inv_transpose(&mut self) {
@@ -219,7 +224,7 @@ impl<T: ArrayValue> Array<T> {
             self.shape.rotate_right(1);
             return;
         }
-        let mut temp = Vec::with_capacity(self.data.len());
+        let mut temp = CowSlice::with_capacity(self.data.len());
         let col_len = *self.shape.last().unwrap();
         let col_count: usize = self.shape.iter().rev().skip(1).product();
         for j in 0..col_len {
@@ -227,7 +232,7 @@ impl<T: ArrayValue> Array<T> {
                 temp.push(self.data[i * col_len + j].clone());
             }
         }
-        self.data = temp.into();
+        self.data = temp;
         self.shape.rotate_right(1);
     }
 }
@@ -315,7 +320,7 @@ impl<T: ArrayValue> Array<T> {
         if self.rank() == 0 {
             return;
         }
-        let mut deduped = Vec::new();
+        let mut deduped = CowSlice::new();
         let mut seen = BTreeSet::new();
         let mut new_len = 0;
         for row in self.rows() {
@@ -324,7 +329,7 @@ impl<T: ArrayValue> Array<T> {
                 new_len += 1;
             }
         }
-        self.data = deduped.into();
+        self.data = deduped;
         self.shape[0] = new_len;
     }
 }
@@ -333,7 +338,7 @@ impl Value {
     pub fn invert(&self, env: &Uiua) -> UiuaResult<Self> {
         Ok(match self {
             Self::Func(fs) => {
-                let mut invs = Vec::with_capacity(fs.row_count());
+                let mut invs = CowSlice::with_capacity(fs.row_count());
                 for f in &fs.data {
                     invs.push(
                         f.inverse()
@@ -349,8 +354,8 @@ impl Value {
     pub fn under(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
         Ok(match self {
             Self::Func(fs) => {
-                let mut befores = Vec::with_capacity(fs.row_count());
-                let mut afters = Vec::with_capacity(fs.row_count());
+                let mut befores = CowSlice::with_capacity(fs.row_count());
+                let mut afters = CowSlice::with_capacity(fs.row_count());
                 for f in fs.data {
                     let f = Arc::try_unwrap(f).unwrap_or_else(|f| (*f).clone());
                     let (before, after) = f.under().ok_or_else(|| env.error("No inverse found"))?;
@@ -398,14 +403,14 @@ impl Array<f64> {
         } else {
             let mut shape = self.shape.clone();
             shape.push(0);
-            return Ok(Array::new(shape, Vec::new()));
+            return Ok(Array::new(shape, CowSlice::new()));
         };
         let mut max_bits = 0;
         while max != 0 {
             max_bits += 1;
             max >>= 1;
         }
-        let mut new_data = Vec::with_capacity(self.data.len() * max_bits);
+        let mut new_data = CowSlice::with_capacity(self.data.len() * max_bits);
         // Little endian
         for n in nats {
             for i in 0..max_bits {
@@ -434,7 +439,7 @@ impl Array<u8> {
         }
         let mut shape = self.shape.clone();
         let bit_string_len = shape.pop().unwrap();
-        let mut new_data = Vec::with_capacity(self.data.len() / bit_string_len);
+        let mut new_data = CowSlice::with_capacity(self.data.len() / bit_string_len);
         // Little endian
         for bits in bools.chunks_exact(bit_string_len) {
             let mut n: u128 = 0;
@@ -455,7 +460,7 @@ impl Value {
     pub fn wher(&self, env: &Uiua) -> UiuaResult<Self> {
         let counts = self.as_naturals(env, "Argument to where must be a list of naturals")?;
         let total: usize = counts.iter().fold(0, |acc, &b| acc.saturating_add(b));
-        let mut data = Vec::with_capacity(total);
+        let mut data = CowSlice::with_capacity(total);
         for (i, &b) in counts.iter().enumerate() {
             for _ in 0..b {
                 let i = i as f64;
@@ -472,7 +477,7 @@ impl Value {
             .zip(indices.iter().skip(1))
             .all(|(&a, &b)| a <= b);
         let size = indices.iter().max().map(|&i| i + 1).unwrap_or(0);
-        let mut data = Vec::with_capacity(size);
+        let mut data = CowSlice::with_capacity(size);
         if is_sorted {
             let mut j = 0;
             for i in 0..size {

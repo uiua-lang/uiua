@@ -313,21 +313,21 @@ impl<T: ArrayValue> From<T> for Array<T> {
     }
 }
 
-impl<T: ArrayValue> From<Vec<T>> for Array<T> {
-    fn from(data: Vec<T>) -> Self {
-        Self::new(tiny_vec![data.len()], data)
-    }
-}
-
 impl<T: ArrayValue> From<CowSlice<T>> for Array<T> {
     fn from(data: CowSlice<T>) -> Self {
         Self::new(tiny_vec![data.len()], data)
     }
 }
 
+impl<'a, T: ArrayValue> From<&'a [T]> for Array<T> {
+    fn from(data: &'a [T]) -> Self {
+        Self::new(tiny_vec![data.len()], data)
+    }
+}
+
 impl<T: ArrayValue> FromIterator<T> for Array<T> {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        Self::from(iter.into_iter().collect::<Vec<T>>())
+        Self::from(iter.into_iter().collect::<CowSlice<T>>())
     }
 }
 
@@ -348,7 +348,7 @@ impl From<Vec<bool>> for Array<u8> {
 
 impl From<bool> for Array<u8> {
     fn from(data: bool) -> Self {
-        Self::new(tiny_vec![], vec![u8::from(data)])
+        Self::new(tiny_vec![], cowslice![u8::from(data)])
     }
 }
 

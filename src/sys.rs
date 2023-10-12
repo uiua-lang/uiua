@@ -24,8 +24,13 @@ use parking_lot::Mutex;
 use tinyvec::tiny_vec;
 
 use crate::{
-    array::Array, cowslice::CowSlice, function::Function, grid_fmt::GridFmt, primitive::PrimDoc,
-    value::Value, Uiua, UiuaError, UiuaResult,
+    array::Array,
+    cowslice::{cowslice, CowSlice},
+    function::Function,
+    grid_fmt::GridFmt,
+    primitive::PrimDoc,
+    value::Value,
+    Uiua, UiuaError, UiuaResult,
 };
 
 pub fn example_ua<T>(f: impl FnOnce(&mut String) -> T) -> T {
@@ -1128,7 +1133,7 @@ impl SysOp {
             }
             SysOp::TermSize => {
                 let (width, height) = env.backend.term_size().map_err(|e| env.error(e))?;
-                env.push(vec![height as f64, width as f64])
+                env.push(cowslice![height as f64, width as f64])
             }
             SysOp::Args => {
                 let mut args = Vec::new();
@@ -1190,7 +1195,7 @@ impl SysOp {
                         .map_err(|e| env.error(e))?,
                     _ => env.backend.read(handle, count).map_err(|e| env.error(e))?,
                 };
-                env.push(bytes);
+                env.push(Array::from(bytes.as_slice()));
             }
             SysOp::ReadUntil => {
                 let delim = env.pop(1)?;
@@ -1228,7 +1233,7 @@ impl SysOp {
                             let s = String::from_utf8_lossy(&buffer).into_owned();
                             env.push(s);
                         } else {
-                            env.push(buffer);
+                            env.push(Array::from(buffer.as_slice()));
                         }
                     }
                     _ => match delim {
@@ -1238,7 +1243,7 @@ impl SysOp {
                                 .backend
                                 .read_until(handle, &delim)
                                 .map_err(|e| env.error(e))?;
-                            env.push(bytes);
+                            env.push(Array::from(bytes.as_slice()));
                         }
                         Value::Byte(arr) => {
                             let delim: Vec<u8> = arr.data.into();
@@ -1246,7 +1251,7 @@ impl SysOp {
                                 .backend
                                 .read_until(handle, &delim)
                                 .map_err(|e| env.error(e))?;
-                            env.push(bytes);
+                            env.push(Array::from(bytes.as_slice()));
                         }
                         Value::Char(arr) => {
                             let delim: Vec<u8> = arr.data.iter().collect::<String>().into();
@@ -1426,7 +1431,7 @@ impl SysOp {
                 };
                 let bytes =
                     value_to_image_bytes(&value, output_format).map_err(|e| env.error(e))?;
-                env.push(Array::<u8>::from(bytes));
+                env.push(Array::<u8>::from(bytes.as_slice()));
             }
             SysOp::ImShow => {
                 let value = env.pop(1)?;
@@ -1437,7 +1442,7 @@ impl SysOp {
                 let delay = env.pop(1)?.as_num(env, "Delay must be a number")?;
                 let value = env.pop(2)?;
                 let bytes = value_to_gif_bytes(&value, delay).map_err(|e| env.error(e))?;
-                env.push(Array::<u8>::from(bytes));
+                env.push(Array::<u8>::from(bytes.as_slice()));
             }
             SysOp::GifShow => {
                 let delay = env.pop(1)?.as_num(env, "Delay must be a number")?;
@@ -1480,7 +1485,7 @@ impl SysOp {
                         .map_err(|e| env.error(e))?,
                     format => return Err(env.error(format!("Invalid audio format: {}", format))),
                 };
-                env.push(Array::<u8>::from(bytes));
+                env.push(Array::<u8>::from(bytes.as_slice()));
             }
             SysOp::AudioPlay => {
                 let value = env.pop(1)?;
@@ -1499,7 +1504,7 @@ impl SysOp {
                     .map_err(|_| env.error("Audio stream must be a function"))?;
                 let mut stream_env = env.clone();
                 if let Err(e) = env.backend.stream_audio(Box::new(move |time_array| {
-                    let time_array = Array::<f64>::from(time_array);
+                    let time_array = Array::<f64>::from(time_array.as_slice());
                     stream_env.push(time_array);
                     stream_env.call_function(f.clone())?;
                     let samples = &stream_env.pop(1)?;
@@ -1907,7 +1912,7 @@ fn array_from_wav_bytes_impl<T: hound::Sample>(
     env: &Uiua,
 ) -> UiuaResult<Array<f64>> {
     let channel_count = reader.spec().channels as usize;
-    let mut channels = vec![Vec::new(); channel_count];
+    let mut channels = vec![CowSlice::new(); channel_count];
     let mut curr_channel = 0;
     for sample in reader.samples::<T>() {
         let sample = sample.map_err(|e| env.error(e.to_string()))?;

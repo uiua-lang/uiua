@@ -10,6 +10,7 @@ use std::{
 use crate::{
     algorithm::{pervade::*, FillContext},
     array::*,
+    cowslice::CowSlice,
     function::{Function, Signature},
     grid_fmt::GridFmt,
     primitive::Primitive,
@@ -538,7 +539,7 @@ impl Value {
                         nums.format_shape()
                     )));
                 }
-                let mut result = Vec::with_capacity(nums.flat_len());
+                let mut result = CowSlice::with_capacity(nums.flat_len());
                 for &num in nums.data() {
                     if !test_num(num) {
                         return Err(env.error(requirement));
@@ -554,7 +555,7 @@ impl Value {
                         bytes.format_shape()
                     )));
                 }
-                let mut result = Vec::with_capacity(bytes.flat_len());
+                let mut result = CowSlice::with_capacity(bytes.flat_len());
                 for &byte in bytes.data() {
                     let num = byte as f64;
                     if !test_num(num) {
@@ -621,7 +622,7 @@ impl Value {
                 .iter()
                 .all(|n| n.fract() == 0.0 && *n <= u8::MAX as f64 && *n >= 0.0)
             {
-                let mut bytes = Vec::with_capacity(nums.flat_len());
+                let mut bytes = CowSlice::with_capacity(nums.flat_len());
                 for n in take(&mut nums.data) {
                     bytes.push(n as u8);
                 }
@@ -665,13 +666,13 @@ macro_rules! value_from {
                 Self::$variant(array)
             }
         }
-        impl From<Vec<$ty>> for Value {
-            fn from(vec: Vec<$ty>) -> Self {
+        impl From<CowSlice<$ty>> for Value {
+            fn from(vec: CowSlice<$ty>) -> Self {
                 Self::$variant(Array::from(vec))
             }
         }
-        impl From<(Shape, Vec<$ty>)> for Value {
-            fn from((shape, data): (Shape, Vec<$ty>)) -> Self {
+        impl From<(Shape, CowSlice<$ty>)> for Value {
+            fn from((shape, data): (Shape, CowSlice<$ty>)) -> Self {
                 Self::$variant(Array::new(shape, data))
             }
         }
@@ -745,14 +746,14 @@ macro_rules! value_un_impl {
                         array.into()
                     },)*)*
                     $($(Self::$make_new(array) => {
-                        let mut new = Vec::with_capacity(array.flat_len());
+                        let mut new = CowSlice::with_capacity(array.flat_len());
                         for val in array.data {
                             new.push($name::$f2(val));
                         }
                         (array.shape, new).into()
                     },)*)*
                     Value::Func(mut array) => {
-                        let mut new_data = Vec::with_capacity(array.flat_len());
+                        let mut new_data = CowSlice::with_capacity(array.flat_len());
                         for f in array.data {
                             match Function::into_inner(f).into_unboxed() {
                                 Ok(value) => new_data.push(Arc::new(Function::constant(value.$name(env)?))),

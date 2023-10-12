@@ -7,7 +7,7 @@ use tinyvec::tiny_vec;
 use crate::{
     algorithm::pervade::bin_pervade_generic,
     array::{Array, ArrayValue, FormatShape, Shape},
-    cowslice::cowslice,
+    cowslice::{cowslice, CowSlice},
     primitive::Primitive,
     run::{ArrayArg, FunctionArg},
     value::Value,
@@ -59,13 +59,13 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
     match arr.shape.len() {
         0 => Array::new(
             tiny_vec![],
-            vec![arr.data.into_iter().next().unwrap().into()],
+            cowslice![arr.data.into_iter().next().unwrap().into()],
         ),
         1 => {
             let mut vals = arr.data.into_iter();
             Array::new(
                 tiny_vec![],
-                vec![if let Some(acc) = vals.next() {
+                cowslice![if let Some(acc) = vals.next() {
                     vals.fold(acc.into(), f)
                 } else {
                     identity
@@ -80,7 +80,7 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
                 let data = cowslice![identity; row_len];
                 return Array::new(arr.shape, data);
             }
-            let mut new_data: Vec<R> = arr.data[..row_len]
+            let mut new_data: CowSlice<R> = arr.data[..row_len]
                 .iter()
                 .cloned()
                 .map(Into::into)
@@ -255,7 +255,7 @@ fn fast_scan<T: ArrayValue>(mut arr: Array<T>, f: impl Fn(T, T) -> T) -> Array<T
                 return arr;
             }
             let shape = arr.shape.clone();
-            let mut new_data = Vec::with_capacity(arr.data.len());
+            let mut new_data = CowSlice::with_capacity(arr.data.len());
             let mut rows = arr.into_rows();
             new_data.extend(rows.next().unwrap().data);
             for row in rows {
@@ -804,7 +804,7 @@ fn fast_table<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
     b: Array<B>,
     f: impl Fn(A, B) -> C,
 ) -> Array<C> {
-    let mut new_data = Vec::with_capacity(a.data.len() * b.data.len());
+    let mut new_data = CowSlice::with_capacity(a.data.len() * b.data.len());
     for x in a.data {
         for y in b.data.iter().cloned() {
             new_data.push(f(x.clone(), y));
@@ -816,7 +816,7 @@ fn fast_table<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
 }
 
 fn fast_table_join_or_couple<T: ArrayValue>(a: Array<T>, b: Array<T>) -> Array<T> {
-    let mut new_data = Vec::with_capacity(a.data.len() * b.data.len() * 2);
+    let mut new_data = CowSlice::with_capacity(a.data.len() * b.data.len() * 2);
     for x in a.data {
         for y in b.data.iter().cloned() {
             new_data.push(x.clone());

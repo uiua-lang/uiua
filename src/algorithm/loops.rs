@@ -52,26 +52,19 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
-    mut arr: Array<T>,
-    identity: R,
-    f: impl Fn(R, T) -> R,
-) -> Array<R> {
+pub fn fast_reduce<T, R>(mut arr: Array<T>, identity: R, f: impl Fn(R, T) -> R) -> Array<R>
+where
+    T: ArrayValue + Into<R> + Copy,
+    R: ArrayValue + Copy,
+{
     match arr.shape.len() {
         0 => Array::new(
             tiny_vec![],
             cowslice![arr.data.into_iter().next().unwrap().into()],
         ),
         1 => {
-            let mut vals = arr.data.into_iter();
-            Array::new(
-                tiny_vec![],
-                cowslice![if let Some(acc) = vals.next() {
-                    vals.fold(acc.into(), f)
-                } else {
-                    identity
-                }],
-            )
+            let folded = arr.data.iter().copied().fold(identity, f);
+            Array::new(tiny_vec![], cowslice![folded])
         }
         _ => {
             let row_len = arr.row_len();
@@ -83,13 +76,14 @@ pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
             }
             let mut new_data: CowSlice<R> = arr.data[..row_len]
                 .iter()
-                .cloned()
+                .copied()
                 .map(Into::into)
                 .collect();
+            let new_slice = new_data.as_mut_slice();
             for i in 1..row_count {
                 let start = i * row_len;
-                for j in 0..row_len {
-                    new_data[j] = f(new_data[j].clone(), arr.data[start + j].clone());
+                for (new, old) in new_slice.iter_mut().zip(&arr.data[start..start + row_len]) {
+                    *new = f(*new, *old);
                 }
             }
             arr.shape.remove(0);
@@ -236,17 +230,20 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
     }
 }
 
-fn fast_scan<T: ArrayValue>(mut arr: Array<T>, f: impl Fn(T, T) -> T) -> Array<T> {
+fn fast_scan<T>(mut arr: Array<T>, f: impl Fn(T, T) -> T) -> Array<T>
+where
+    T: ArrayValue + Copy,
+{
     match arr.shape.len() {
         0 => unreachable!("fast_scan called on unit array, should have been guarded against"),
         1 => {
             if arr.row_count() == 0 {
                 return arr;
             }
-            let mut acc = arr.data[0].clone();
-            for val in arr.data.iter_mut().skip(1) {
-                acc = f(acc, val.clone());
-                *val = acc.clone();
+            let mut acc = arr.data[0];
+            for val in arr.data.as_mut_slice().iter_mut().skip(1) {
+                acc = f(acc, *val);
+                *val = acc;
             }
             arr
         }
@@ -262,7 +259,7 @@ fn fast_scan<T: ArrayValue>(mut arr: Array<T>, f: impl Fn(T, T) -> T) -> Array<T
             for row in rows {
                 let start = new_data.len() - row_len;
                 for (i, r) in row.data.into_iter().enumerate() {
-                    new_data.push(f(new_data[start + i].clone(), r));
+                    new_data.push(f(new_data[start + i], r));
                 }
             }
             Array::new(shape, new_data)

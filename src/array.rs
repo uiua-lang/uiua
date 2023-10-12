@@ -133,7 +133,7 @@ impl<T: ArrayValue> Array<T> {
     }
     pub fn as_scalar_mut(&mut self) -> Option<&mut T> {
         if self.shape.is_empty() {
-            Some(&mut self.data[0])
+            Some(&mut self.data.as_mut_slice()[0])
         } else {
             None
         }
@@ -224,8 +224,7 @@ impl<T: ArrayValue> Array<T> {
         };
         let mut data = self.data.into_iter().rev();
         (0..row_count).map(move |_| {
-            let mut row: CowSlice<_> = data.by_ref().take(row_len).collect();
-            row.reverse();
+            let row: CowSlice<_> = data.by_ref().take(row_len).rev().collect();
             Array::new(row_shape.clone(), row)
         })
     }

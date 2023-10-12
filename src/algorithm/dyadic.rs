@@ -95,11 +95,12 @@ impl<T: ArrayValue> Array<T> {
         }
         let target_size = shape.iter().product();
         let mut new_data = cowslice![fill_value; target_size];
+        let new_slice = new_data.as_mut_slice();
         let mut curr = vec![0; shape.len()];
         for new_data_index in 0..target_size {
             data_index_to_shape_index(new_data_index, shape, &mut curr);
             if let Some(data_index) = shape_index_to_data_index(&curr, &self.shape) {
-                new_data[new_data_index] = self.data[data_index].clone();
+                new_slice[new_data_index] = self.data[data_index].clone();
             }
         }
         self.data = new_data;
@@ -1328,7 +1329,7 @@ impl<T: ArrayValue> Array<T> {
                 by.len()
             )));
         }
-        rotate(by, &self.shape, &mut self.data);
+        rotate(by, &self.shape, self.data.as_mut_slice());
         Ok(())
     }
 }
@@ -1523,6 +1524,7 @@ impl<T: ArrayValue> Array<T> {
         }
         let into_row_len = into.row_len();
         let into_row_count = into.row_count();
+        let into_data = into.data.as_mut_slice();
         for (&i, row) in indices.iter().zip(self.row_slices()) {
             let i = if i >= 0 {
                 let ui = i as usize;
@@ -1550,7 +1552,7 @@ impl<T: ArrayValue> Array<T> {
             let start = i * into_row_len;
             let end = start + into_row_len;
             for (i, x) in (start..end).zip(row) {
-                into.data[i] = x.clone();
+                into_data[i] = x.clone();
             }
         }
         Ok(into)

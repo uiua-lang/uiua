@@ -164,11 +164,12 @@ impl<T: ArrayValue> Array<T> {
         }
         let row_count = self.row_count();
         let row_len = self.row_len();
+        let data = self.data.as_mut_slice();
         for i in 0..row_count / 2 {
             let left = i * row_len;
             let right = (row_count - i - 1) * row_len;
-            let left = &mut self.data[left] as *mut T;
-            let right = &mut self.data[right] as *mut T;
+            let left = &mut data[left] as *mut T;
+            let right = &mut data[right] as *mut T;
             unsafe {
                 ptr::swap_nonoverlapping(left, right, row_len);
             }

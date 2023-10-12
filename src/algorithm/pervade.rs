@@ -266,8 +266,8 @@ where
     T: ArrayValue + Copy,
 {
     fill_shapes(a, &mut b, env)?;
-    let a_data: &mut [T] = &mut a.data;
-    let b_data: &mut [T] = &mut b.data;
+    let a_data = a.data.as_mut_slice();
+    let b_data = b.data.as_mut_slice();
     let ash = a.shape.as_slice();
     let bsh = b.shape.as_slice();
     if ash == bsh {

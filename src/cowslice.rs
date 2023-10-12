@@ -4,7 +4,7 @@ use std::{
     fmt,
     hash::{Hash, Hasher},
     iter::{Skip, Take},
-    ops::{Bound, Deref, DerefMut, RangeBounds},
+    ops::{Bound, Deref, RangeBounds},
 };
 
 macro_rules! cowslice {
@@ -52,6 +52,19 @@ impl<T: Clone> CowSlice<T> {
             }
             Ok(())
         })
+    }
+    pub fn as_slice(&self) -> &[T] {
+        self
+    }
+    pub fn as_mut_slice(&mut self) -> &mut [T] {
+        if !self.data.is_unique() {
+            let mut new_data = EcoVec::with_capacity(self.len());
+            new_data.extend_from_slice(&*self);
+            self.data = new_data;
+            self.start = 0;
+            self.end = self.data.len() as u32;
+        }
+        self.data.make_mut()
     }
 }
 
@@ -138,27 +151,14 @@ impl<T> Deref for CowSlice<T> {
     }
 }
 
-impl<T: Clone> DerefMut for CowSlice<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        if !self.data.is_unique() {
-            let mut new_data = EcoVec::with_capacity(self.len());
-            new_data.extend_from_slice(&*self);
-            self.data = new_data;
-            self.start = 0;
-            self.end = self.data.len() as u32;
-        }
-        self.data.make_mut()
-    }
-}
-
 #[test]
 fn cow_slice_deref_mut() {
     let mut slice = CowSlice::from([1, 2, 3, 4]);
-    slice[1] = 7;
+    slice.as_mut_slice()[1] = 7;
     assert_eq!(slice, [1, 7, 3, 4]);
 
     let mut sub = slice.slice(1..=2);
-    sub[1] = 5;
+    sub.as_mut_slice()[1] = 5;
     assert_eq!(slice, [1, 7, 3, 4]);
     assert_eq!(sub, [7, 5]);
 }
@@ -268,7 +268,6 @@ impl<T: Hash> Hash for CowSlice<T> {
 impl<T: Clone> IntoIterator for CowSlice<T> {
     type Item = T;
     type IntoIter = Take<Skip<<EcoVec<T> as IntoIterator>::IntoIter>>;
-    #[allow(clippy::unnecessary_to_owned)]
     fn into_iter(self) -> Self::IntoIter {
         self.data
             .into_iter()
@@ -289,7 +288,7 @@ impl<'a, T: Clone> IntoIterator for &'a mut CowSlice<T> {
     type Item = &'a mut T;
     type IntoIter = <&'a mut [T] as IntoIterator>::IntoIter;
     fn into_iter(self) -> Self::IntoIter {
-        self.iter_mut()
+        self.as_mut_slice().iter_mut()
     }
 }
 

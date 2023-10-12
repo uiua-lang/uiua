@@ -52,18 +52,18 @@ Home ← |0 Page "/index.html"
 
 Respond ← ;spawn(
   # Extract path from request
-  !⊡1 ⊜□≠@ . &ru "\r\n\r\n".
+  ⊔⊡1 ⊜□≠@ . &ru "\r\n\r\n".
   &p "Request:"
   &p.
 
   # Route to handler
-  ?(Home;)Page ≅"/".
+  ?(Home;)(Page) ≅"/".
   &p "Response:"
   &pf⧻.
   &p " bytes"
 
   # Send response
-  ;;⊃(|2 0 &cl;)(|2 0 &w)
+  ⊃⋅&cl&w
 )
 
 ⍥(⍣Respond⋅&p &tcpa Listener)∞

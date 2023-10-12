@@ -575,7 +575,6 @@ impl<T: ArrayValue> Array<T> {
             }
         };
         let target_len: usize = shape.iter().product();
-        self.shape = shape;
         if self.data.len() < target_len {
             if let Some(fill) = env.fill::<T>() {
                 let start = self.data.len();
@@ -596,6 +595,7 @@ impl<T: ArrayValue> Array<T> {
         } else {
             self.data.truncate(target_len);
         }
+        self.shape = shape;
         self.validate_shape();
         Ok(())
     }

@@ -5,7 +5,7 @@ use std::{
     convert::Infallible,
     fmt::Display,
     marker::PhantomData,
-    slice::{self, Chunks},
+    slice::{self, ChunksExact},
 };
 
 use crate::{array::*, cowslice::CowSlice, Uiua, UiuaError, UiuaResult};
@@ -26,8 +26,8 @@ pub trait Arrayish {
     fn row_len(&self) -> usize {
         self.shape().iter().skip(1).product()
     }
-    fn rows(&self) -> Chunks<Self::Value> {
-        self.data().chunks(self.row_len().max(1))
+    fn rows(&self) -> ChunksExact<Self::Value> {
+        self.data().chunks_exact(self.row_len().max(1))
     }
     fn shape_prefixes_match(&self, other: &impl Arrayish) -> bool {
         self.shape().iter().zip(other.shape()).all(|(a, b)| a == b)
@@ -263,38 +263,21 @@ pub fn bin_pervade_mut<T>(
     f: impl Fn(T, T) -> T + Copy,
 ) -> UiuaResult
 where
-    T: ArrayValue,
+    T: ArrayValue + Copy,
 {
     fill_shapes(a, &mut b, env)?;
-    match (a.shape.as_slice(), b.shape.as_slice()) {
-        ([], []) => {
-            let a_scalar = &mut a.data[0];
-
-            *a_scalar = f((*a_scalar).clone(), b.data()[0].clone());
+    let a_data: &mut [T] = &mut a.data;
+    let b_data: &mut [T] = &mut b.data;
+    let ash = a.shape.as_slice();
+    let bsh = b.shape.as_slice();
+    if ash == bsh {
+        for (a, b) in a_data.iter_mut().zip(b_data) {
+            *a = f(*a, *b);
         }
-        (ash, bsh) if ash == bsh => {
-            for (a, b) in a.data.iter_mut().zip(b.data()) {
-                *a = f(a.clone(), b.clone());
-            }
-        }
-        (_, []) => {
-            let b_scalar = &b.data()[0];
-            for a in &mut a.data {
-                *a = f(a.clone(), b_scalar.clone());
-            }
-        }
-        ([], _) => {
-            let a_scalar = &a.data()[0];
-            for b in &mut b.data {
-                *b = f(a_scalar.clone(), b.clone());
-            }
+    } else {
+        let use_a = bin_pervade_recursive_mut(a_data, ash, b_data, bsh, f);
+        if !use_a {
             *a = b;
-        }
-        (ash, bsh) => {
-            let use_a = bin_pervade_recursive_mut(&mut a.data, ash, &mut b.data, bsh, f);
-            if !use_a {
-                *a = b;
-            }
         }
     }
     Ok(())
@@ -308,31 +291,23 @@ fn bin_pervade_recursive_mut<T>(
     f: impl Fn(T, T) -> T + Copy,
 ) -> bool
 where
-    T: ArrayValue,
+    T: ArrayValue + Copy,
 {
     match (a_shape, b_shape) {
         ([], []) => {
-            let a_scalar = &mut a_data[0];
-            *a_scalar = f((*a_scalar).clone(), b_data[0].clone());
-            true
-        }
-        (ash, bsh) if ash == bsh => {
-            for (a, b) in a_data.iter_mut().zip(b_data) {
-                *a = f(a.clone(), b.clone());
-            }
-            true
+            panic!("should never call `bin_pervade_recursive_mut` with scalars")
         }
         (_, []) => {
-            let b_scalar = &b_data[0];
+            let b_scalar = b_data[0];
             for a in a_data {
-                *a = f(a.clone(), b_scalar.clone());
+                *a = f(*a, b_scalar);
             }
             true
         }
         ([], _) => {
-            let a_scalar = &a_data[0];
+            let a_scalar = a_data[0];
             for b in b_data {
-                *b = f(a_scalar.clone(), b.clone());
+                *b = f(a_scalar, *b);
             }
             false
         }
@@ -341,8 +316,8 @@ where
             let a_row_len = a_data.len() / ash[0];
             let b_row_len = b_data.len() / bsh[0];
             for (a, b) in a_data
-                .chunks_mut(a_row_len)
-                .zip(b_data.chunks_mut(b_row_len))
+                .chunks_exact_mut(a_row_len)
+                .zip(b_data.chunks_exact_mut(b_row_len))
             {
                 bin_pervade_recursive_mut(a, &ash[1..], b, &bsh[1..], f);
             }

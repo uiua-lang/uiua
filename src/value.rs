@@ -808,15 +808,32 @@ macro_rules! val_retry {
 macro_rules! value_bin_impl {
     ($name:ident, $(
         $(($na:ident, $nb:ident, $f:ident $(, $retry:ident)?))*
-        $([$ip:ident, $f2:ident])*
+        $([$ip:ident, $f2:ident $(, $retry2:ident)?])*
     ),* ) => {
         impl Value {
             #[allow(unreachable_patterns)]
             pub fn $name(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
                 Ok(match (self, other) {
                     $($((Value::$ip(mut a), Value::$ip(b)) => {
-                        bin_pervade_mut(&mut a, b, env, $name::$f2)?;
-                        a.into()
+                        if val_retry!($ip, env) {
+                            let mut a_clone = a.clone();
+                            if let Err(e) = bin_pervade_mut(&mut a_clone, b.clone(), env, $name::$f2) {
+                                if e.is_fill() {
+                                    $(
+                                        let mut a = a.convert();
+                                        let b = b.convert();
+                                        bin_pervade_mut(&mut a, b, env, $name::$retry2)?;
+                                        return Ok(a.into());
+                                    )*
+                                }
+                                return Err(e);
+                            } else {
+                                a_clone.into()
+                            }
+                        } else {
+                            bin_pervade_mut(&mut a, b, env, $name::$f2)?;
+                            a.into()
+                        }
                     },)*)*
                     $($((Value::$na(a), Value::$nb(b)) => {
                         if val_retry!($na, env) || val_retry!($nb, env) {
@@ -931,7 +948,7 @@ value_bin_impl!(
     min,
     [Num, num_num],
     [Char, char_char],
-    (Byte, Byte, byte_byte, num_num),
+    [Byte, byte_byte, num_num],
     (Byte, Num, byte_num, num_num),
     (Num, Byte, num_byte, num_num),
 );
@@ -940,7 +957,7 @@ value_bin_impl!(
     max,
     [Num, num_num],
     [Char, char_char],
-    (Byte, Byte, byte_byte, num_num),
+    [Byte, byte_byte, num_num],
     (Byte, Num, byte_num, num_num),
     (Num, Byte, num_byte, num_num),
 );

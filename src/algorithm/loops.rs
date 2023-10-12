@@ -922,11 +922,10 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
 
 pub fn level(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let get_ns = env.pop(FunctionArg(1))?;
-    env.call_error_on_break(get_ns, "break is not allowed in level")?;
-    let ns = env.pop("level's rank list")?.as_number_list(
+    let f = env.pop(FunctionArg(1))?;
+    let ns = env.pop("ranks")?.as_number_list(
         env,
-        "Elements of rank list must be integers or infinity",
+        "Elements of level's rank list must be integers or infinity",
         |n| n.fract() == 0.0 || n == f64::INFINITY,
         |n| {
             if n == f64::INFINITY {
@@ -936,7 +935,6 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
             }
         },
     )?;
-    let f = env.pop(FunctionArg(2))?;
     let f_sig = f.signature();
     if f_sig.outputs != 1 {
         return Err(env.error(format!(

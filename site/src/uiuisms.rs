@@ -154,7 +154,7 @@ uiuisms!(
     /// Split an array by a delimiter
     r#"⊜□≠, @, "split,this,up""#,
     /// Split an array by a delimiter with fill elements
-    r#"⬚@ ⊜∘≠, @, "split,this,up""#,
+    r#"⬚⊜∘@ ≠, @, "split,this,up""#,
     /// Split an array into groups of contiguous equal elements
     "⊜□. [1 1 1 2 2 1 1 4]",
     /// Find the nth fibonacci number
@@ -200,10 +200,10 @@ uiuisms!(
     /// Matrix product
     "[1_2 3_4 5_6] [7_8_9 10_11_12]\n⊠(/+×)⊙⍉",
     /// Matrix power (Also works with scalars)
-    ";∶⍥(⊠(/+×)⊙⍉,)∶⊙∶⊞=.⇡⬚1⊢△. [1_2 3_4] 4",
+    ";∶⍥(⊠(/+×)⊙⍉,)∶⊙∶⊞=.⇡⬚⊢1△. [1_2 3_4] 4",
     //  /// Evaluate a polynomial with given coefficients at a scalar or square matrix
     //     r"/+×∺(  Note: Not sure how to fix this with new distribute order
-    //   ⊙∶⊞=.⇡⬚1⊢△.:
+    //   ⊙∶⊞=.⇡⬚⊢1△.:
     //   ;∶⍥(⊠(/+×)⊙⍉,)∶
     // )⊙∶⇌⇡⧻. [1 2 3 1] [1_1 2_2]",
 );

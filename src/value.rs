@@ -802,7 +802,7 @@ macro_rules! value_bin_impl {
             pub fn $name(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
                 Ok(match (self, other) {
                     $($((Value::$ip(mut a), Value::$ip(b)) => {
-                        bin_pervade_mut(&mut a, b, env, InfalliblePervasiveFn::new($name::$f2))?;
+                        bin_pervade_mut(&mut a, b, env, $name::$f2)?;
                         a.into()
                     },)*)*
                     $($((Value::$na(a), Value::$nb(b)) => {

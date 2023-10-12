@@ -8,7 +8,7 @@ use tinyvec::tiny_vec;
 use crate::{
     algorithm::pervade::bin_pervade_generic,
     array::{Array, ArrayValue, FormatShape, Shape},
-    cowslice::{cowslice, CowSlice},
+    cowslice::cowslice,
     primitive::Primitive,
     run::{ArrayArg, FunctionArg},
     value::Value,
@@ -37,14 +37,14 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
             _ => return generic_fold1(f, Value::Num(nums), None, env),
         }),
         (Some((prim, flipped)), Value::Byte(bytes)) => env.push(match prim {
-            Primitive::Add => fast_reduce(bytes, 0.0, |a, b| a + f64::from(b)),
-            Primitive::Sub if flipped => fast_reduce(bytes, 0.0, |a, b| a - f64::from(b)),
-            Primitive::Sub => fast_reduce(bytes, 0.0, |a, b| f64::from(b) - a),
-            Primitive::Mul => fast_reduce(bytes, 1.0, |a, b| a * f64::from(b)),
-            Primitive::Div if flipped => fast_reduce(bytes, 1.0, |a, b| a / f64::from(b)),
-            Primitive::Div => fast_reduce(bytes, 1.0, |a, b| f64::from(b) / a),
-            Primitive::Max => fast_reduce(bytes, f64::NEG_INFINITY, |a, b| a.max(f64::from(b))),
-            Primitive::Min => fast_reduce(bytes, f64::INFINITY, |a, b| a.min(f64::from(b))),
+            Primitive::Add => fast_reduce(bytes.convert(), 0.0, |a, b| a + b),
+            Primitive::Sub if flipped => fast_reduce(bytes.convert(), 0.0, |a, b| a - b),
+            Primitive::Sub => fast_reduce(bytes.convert(), 0.0, |a, b| b - a),
+            Primitive::Mul => fast_reduce(bytes.convert(), 1.0, |a, b| a * b),
+            Primitive::Div if flipped => fast_reduce(bytes.convert(), 1.0, |a, b| a / b),
+            Primitive::Div => fast_reduce(bytes.convert(), 1.0, |a, b| b / a),
+            Primitive::Max => fast_reduce(bytes.convert(), f64::NEG_INFINITY, |a, b| a.max(b)),
+            Primitive::Min => fast_reduce(bytes.convert(), f64::INFINITY, |a, b| a.min(b)),
             _ => return generic_fold1(f, Value::Byte(bytes), None, env),
         }),
         (_, xs) => generic_fold1(f, xs, None, env)?,
@@ -52,16 +52,12 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub fn fast_reduce<T, R>(mut arr: Array<T>, identity: R, f: impl Fn(R, T) -> R) -> Array<R>
+pub fn fast_reduce<T>(mut arr: Array<T>, identity: T, f: impl Fn(T, T) -> T) -> Array<T>
 where
-    T: ArrayValue + Into<R> + Copy,
-    R: ArrayValue + Copy,
+    T: ArrayValue + Copy,
 {
     match arr.shape.len() {
-        0 => Array::new(
-            tiny_vec![],
-            cowslice![arr.data.into_iter().next().unwrap().into()],
-        ),
+        0 => Array::new(tiny_vec![], cowslice![arr.data.into_iter().next().unwrap()]),
         1 => {
             let folded = arr.data.iter().copied().fold(identity, f);
             Array::new(tiny_vec![], cowslice![folded])
@@ -74,20 +70,17 @@ where
                 let data = cowslice![identity; row_len];
                 return Array::new(arr.shape, data);
             }
-            let mut new_data: CowSlice<R> = arr.data[..row_len]
-                .iter()
-                .copied()
-                .map(Into::into)
-                .collect();
-            let new_slice = new_data.as_mut_slice();
-            for i in 1..row_count {
-                let start = i * row_len;
-                for (new, old) in new_slice.iter_mut().zip(&arr.data[start..start + row_len]) {
-                    *new = f(*new, *old);
+            let sliced = arr.data.as_mut_slice();
+            let (acc, rest) = sliced.split_at_mut(row_len);
+            rest.chunks_exact(row_len).fold(acc, |acc, row| {
+                for (a, b) in acc.iter_mut().zip(row) {
+                    *a = f(*a, *b);
                 }
-            }
+                acc
+            });
+            arr.data.truncate(row_len);
             arr.shape.remove(0);
-            Array::new(arr.shape, new_data)
+            arr
         }
     }
 }

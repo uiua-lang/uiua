@@ -12,25 +12,25 @@
 # ```
 
 # Bind TCP listener
-listener ← &tcpl "0.0.0.0:8080"
+Listener ← &tcpl "0.0.0.0:8080"
 &p $ Server started
 
 # Mime types
-getext ← !⊢⇌ ⊜□ ≠@. .
+GetExt ← |1 ⊔⊢⇌ ⊜□ ≠@. .
 ⍘⊟⍉[{"js" "text/javascript"}
     {"html" "text/html"}
     {"wasm" "application/wasm"}]
-extmimeExt ← 
-extmimeMime ← 
-extmime ← !⊏∶⊂extmimeMime □⊂"text/"∶ ⊗∶extmimeExt□.
+ExtMimeExt ←
+ExtMimeMime ←
+ExtMime ← |1 ⊔⊏∶⊂ExtMimeMime □⊂"text/"∶ ⊗∶ExtMimeExt□.
 
 # Convert string to bytes
-bytes ← -@\0
+Bytes ← -@\0
 
 # Make response: status mime bytes
-response ← (|3 
-  ∋∘∘(⧻.)
-  ⊂ bytes $ HTTP/1.1 _
+Response ← (|3
+  ⊙⊙(⧻.)
+  ⊂ Bytes $ HTTP/1.1 _
           $ Content-Type: _
           $ Content-Length: _
           $ 
@@ -38,26 +38,26 @@ response ← (|3
 )
 
 # Handlers
-notfound ← response "404 Not Found" "text/plain" bytes"Not Found"
-servererror ← response "500 Internal Server Error" "text/plain"
-handlepageloaderror ← (
+NotFound ← Response "404 Not Found" "text/plain" Bytes"Not Found"
+ServerError ← Response "500 Internal Server Error" "text/plain"
+HandlePageLoadError ← ⋅⋅⋅(
   /↥⌕"The system cannot find the file specified".
-  !servererror_(notfound;)
+  ?ServerError(NotFound;)
 )
-page ← ⍣(
-  extmime getext ∶&frab.
-  response "200 OK"
-)handlepageloaderror ⊂"docs"
-home ← page "/index.html"
+Page ← |1 ⍣(
+  ExtMime GetExt ∶&frab.
+  Response "200 OK"
+)HandlePageLoadError ⊂"docs"
+Home ← |0 Page "/index.html"
 
-respond ← ;↰(
+Respond ← ;spawn(
   # Extract path from request
   !⊡1 ⊜□≠@ . &ru "\r\n\r\n".
   &p "Request:"
   &p.
 
   # Route to handler
-  ?(|1 home;)(|1 page) ≅"/".
+  ?(Home;)Page ≅"/".
   &p "Response:"
   &pf⧻.
   &p " bytes"
@@ -66,4 +66,4 @@ respond ← ;↰(
   ;;⊃(|2 0 &cl;)(|2 0 &w)
 )
 
-⍥(⍣respond(&p) &tcpa listener)∞
+⍥(⍣Respond⋅&p &tcpa Listener)∞

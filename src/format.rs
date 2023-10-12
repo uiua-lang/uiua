@@ -241,6 +241,10 @@ impl FormatConfig {
         partial.map(Into::into)
     }
 
+    pub fn find() -> UiuaResult<Self> {
+        Self::from_source(FormatConfigSource::SearchFile, None)
+    }
+
     pub fn from_source(source: FormatConfigSource, target_path: Option<&Path>) -> UiuaResult<Self> {
         match source {
             FormatConfigSource::SearchFile => {

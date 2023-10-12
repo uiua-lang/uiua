@@ -4,7 +4,7 @@ use crate::{
     ast::{Item, Word},
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
-    primitive::Primitive,
+    primitive::{PrimClass, Primitive},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -110,7 +110,7 @@ mod server {
     use super::*;
 
     use crate::{
-        format::{format_str, FormatConfig /*, FormatConfigSource*/},
+        format::{format_str, FormatConfig},
         lex::Loc,
         primitive::PrimDocFragment,
         Ident, Uiua,
@@ -118,6 +118,7 @@ mod server {
 
     pub struct LspDoc {
         pub input: String,
+        pub items: Vec<Item>,
         pub spans: Vec<Sp<SpanKind>>,
         pub bindings: BindingsInfo,
     }
@@ -131,6 +132,7 @@ mod server {
             let bindings = bindings_info(&items);
             Self {
                 input,
+                items,
                 spans,
                 bindings,
             }
@@ -220,9 +222,37 @@ mod server {
         docs: DashMap<Url, LspDoc>,
     }
 
+    const STACK_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("stack-function");
+    const NOADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("noadic-function");
+    const MONADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("monadic-function");
+    const DYADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("dyadic-function");
+    const MONADIC_MODIFIER_STT: SemanticTokenType = SemanticTokenType::new("monadic-modifier");
+    const DYADIC_MODIFIER_STT: SemanticTokenType = SemanticTokenType::new("dyadic-modifier");
+
+    const SEMANTIC_TOKEN_TYPES: [SemanticTokenType; 9] = [
+        SemanticTokenType::STRING,
+        SemanticTokenType::NUMBER,
+        SemanticTokenType::COMMENT,
+        STACK_FUNCTION_STT,
+        NOADIC_FUNCTION_STT,
+        MONADIC_FUNCTION_STT,
+        DYADIC_FUNCTION_STT,
+        MONADIC_MODIFIER_STT,
+        DYADIC_MODIFIER_STT,
+    ];
+
     #[tower_lsp::async_trait]
     impl LanguageServer for Backend {
         async fn initialize(&self, _params: InitializeParams) -> Result<InitializeResult> {
+            self.client
+                .log_message(MessageType::INFO, "Initializing Uiua language server")
+                .await;
+            self.client
+                .log_message(
+                    MessageType::INFO,
+                    format!("Client capabilities: {:#?}", _params.capabilities),
+                )
+                .await;
             Ok(InitializeResult {
                 capabilities: ServerCapabilities {
                     text_document_sync: Some(TextDocumentSyncCapability::Kind(
@@ -235,11 +265,7 @@ mod server {
                             SemanticTokensOptions {
                                 work_done_progress_options: WorkDoneProgressOptions::default(),
                                 legend: SemanticTokensLegend {
-                                    token_types: vec![
-                                        SemanticTokenType::STRING,
-                                        SemanticTokenType::NUMBER,
-                                        SemanticTokenType::COMMENT,
-                                    ],
+                                    token_types: SEMANTIC_TOKEN_TYPES.to_vec(),
                                     token_modifiers: vec![],
                                 },
                                 range: Some(true),
@@ -360,29 +386,8 @@ mod server {
                 return Ok(None);
             };
 
-            // Somehow this breaks the formatting in VS Code, so I'm disabling it for now.
-
-            // let path = if params.text_document.uri.scheme() == "file" {
-            //     params.text_document.uri.to_file_path().ok()
-            // } else {
-            //     None
-            // };
-
-            // let config = FormatConfig::from_source(FormatConfigSource::SearchFile, path.as_deref())
-            //     .unwrap_or_default()
-            //     .with_multiline_indent(params.options.tab_size as usize);
-
-            // let Ok(formatted) = format_str(&doc.input, &config) else {
-            //     return Ok(None);
-            // };
-
-            let Ok(formatted) = format_str(
-                &doc.input,
-                &FormatConfig {
-                    multiline_indent: params.options.tab_size as usize,
-                    ..Default::default()
-                },
-            ) else {
+            let Ok(formatted) = format_str(&doc.input, &FormatConfig::find().unwrap_or_default())
+            else {
                 return Ok(None);
             };
             let range = Range::new(Position::new(0, 0), Position::new(u32::MAX, u32::MAX));
@@ -444,11 +449,26 @@ mod server {
             let mut prev_char = 0;
             for sp in &doc.spans {
                 let token_type = match sp.value {
-                    SpanKind::String => 0,
-                    SpanKind::Number => 1,
-                    SpanKind::Comment => 2,
+                    SpanKind::String => SemanticTokenType::STRING,
+                    SpanKind::Number => SemanticTokenType::NUMBER,
+                    SpanKind::Comment => SemanticTokenType::COMMENT,
+                    SpanKind::Primitive(p) => match p.class() {
+                        PrimClass::Stack if p.modifier_args().is_none() => STACK_FUNCTION_STT,
+                        PrimClass::MonadicPervasive | PrimClass::MonadicArray => {
+                            MONADIC_FUNCTION_STT
+                        }
+                        PrimClass::DyadicPervasive | PrimClass::DyadicArray => DYADIC_FUNCTION_STT,
+                        _ if p.modifier_args() == Some(1) => MONADIC_MODIFIER_STT,
+                        _ if p.modifier_args() == Some(2) => DYADIC_MODIFIER_STT,
+                        _ if p.args() == Some(0) => NOADIC_FUNCTION_STT,
+                        _ => continue,
+                    },
                     _ => continue,
                 };
+                let token_type = SEMANTIC_TOKEN_TYPES
+                    .iter()
+                    .position(|t| t == &token_type)
+                    .unwrap() as u32;
                 let span = &sp.span;
                 let start = uiua_loc_to_lsp(span.start);
                 let delta_start = if start.character > prev_char {

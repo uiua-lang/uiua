@@ -1,5 +1,3 @@
-- |0.0 bindings should be functions
-- Make `fill` and `level` monadic
 - Add sig checker context
 - Improve how recursion works
 - `under` aggregating `group` and `partition`

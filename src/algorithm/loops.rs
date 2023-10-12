@@ -57,10 +57,14 @@ where
     T: ArrayValue + Copy,
 {
     match arr.shape.len() {
-        0 => Array::new(tiny_vec![], cowslice![arr.data.into_iter().next().unwrap()]),
+        0 => arr,
         1 => {
-            let folded = arr.data.iter().copied().fold(identity, f);
-            Array::new(tiny_vec![], cowslice![folded])
+            let data = arr.data.as_mut_slice();
+            let folded = data.iter().copied().fold(identity, f);
+            data[0] = folded;
+            arr.data.truncate(1);
+            arr.shape = Shape::default();
+            arr
         }
         _ => {
             let row_len = arr.row_len();

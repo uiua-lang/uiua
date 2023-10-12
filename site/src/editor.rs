@@ -608,14 +608,17 @@ pub fn Editor<'a>(
             "\"" => {
                 let (start, end) = get_code_cursor().unwrap();
                 let code = code_text();
-                if start > 0 && start == end && code.chars().nth(start as usize) == Some('"') {
-                    if code.chars().nth(start as usize - 1) == Some('"') {
-                        state().set_cursor((start + 1, start + 1));
-                    } else {
-                        replace_code("\"");
-                    }
-                } else {
+                if start != end
+                    || code
+                        .chars()
+                        .nth(start as usize)
+                        .map_or(true, |c| c.is_whitespace())
+                {
                     surround_code('"', '"');
+                } else if start == end && code_text().chars().nth(start as usize) == Some('"') {
+                    state().set_cursor((start + 1, start + 1));
+                } else {
+                    replace_code(key);
                 }
             }
             // Handle open delimiters
@@ -628,7 +631,17 @@ pub fn Editor<'a>(
                     "{" => ('{', '}'),
                     _ => unreachable!(),
                 };
-                surround_code(open, close);
+                let (start, end) = get_code_cursor().unwrap();
+                if start != end
+                    || code_text()
+                        .chars()
+                        .nth(start as usize)
+                        .map_or(true, |c| c.is_whitespace())
+                {
+                    surround_code(open, close);
+                } else {
+                    replace_code(key);
+                }
             }
             // Handle close delimiters
             ")" | "]" | "}" => {

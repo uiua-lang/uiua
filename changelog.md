@@ -10,6 +10,7 @@ Uiua is not yet stable.
 - Many functions, primarily the pervasive functions, will allocate less temporary memory (usually none at all) when possible to improve performance
 ### Website
 - The editor's font size can now be changed
+- Improve brackets/quotes behavior in the editor
 
 ## 0.0.18 - 2023-10-10
 ### Language

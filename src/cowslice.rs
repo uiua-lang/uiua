@@ -28,7 +28,7 @@ pub struct CowSlice<T> {
     end: u32,
 }
 
-impl<T: Clone> CowSlice<T> {
+impl<T> CowSlice<T> {
     pub fn new() -> Self {
         Self::default()
     }
@@ -42,6 +42,22 @@ impl<T: Clone> CowSlice<T> {
             end: 0,
         }
     }
+    pub fn as_slice(&self) -> &[T] {
+        &self.data[self.start as usize..self.end as usize]
+    }
+}
+
+impl<T: Clone> CowSlice<T> {
+    pub fn as_mut_slice(&mut self) -> &mut [T] {
+        if !self.data.is_unique() {
+            let mut new_data = EcoVec::with_capacity(self.len());
+            new_data.extend_from_slice(&*self);
+            self.data = new_data;
+            self.start = 0;
+            self.end = self.data.len() as u32;
+        }
+        &mut self.data.make_mut()[self.start as usize..self.end as usize]
+    }
     pub fn extend_from_slice(&mut self, other: &[T]) {
         self.modify(|vec| vec.extend_from_slice(other))
     }
@@ -53,22 +69,6 @@ impl<T: Clone> CowSlice<T> {
             Ok(())
         })
     }
-    pub fn as_slice(&self) -> &[T] {
-        self
-    }
-    pub fn as_mut_slice(&mut self) -> &mut [T] {
-        if !self.data.is_unique() {
-            let mut new_data = EcoVec::with_capacity(self.len());
-            new_data.extend_from_slice(&*self);
-            self.data = new_data;
-            self.start = 0;
-            self.end = self.data.len() as u32;
-        }
-        self.data.make_mut()
-    }
-}
-
-impl<T: Clone> CowSlice<T> {
     #[track_caller]
     pub fn slice<R>(&self, range: R) -> Self
     where
@@ -147,7 +147,7 @@ impl<T: Clone> Clone for CowSlice<T> {
 impl<T> Deref for CowSlice<T> {
     type Target = [T];
     fn deref(&self) -> &Self::Target {
-        &self.data[self.start as usize..self.end as usize]
+        self.as_slice()
     }
 }
 

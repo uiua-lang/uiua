@@ -126,7 +126,7 @@ pub fn Tour() -> impl IntoView {
         <h2 id="fill-and-nested-arrays"><Prim prim=Fill/>" and Nested Arrays"</h2>
         <p>"Here is an array that cannot be constructed normally because its rows have different "<Prim prim=Len/>"s."</p>
         <Editor example="[1 2_3_4 5_6]"/> // Should fail
-        <p>"One way to make this array work is to use the "<Prim prim=Fill/>" modifier. You give it a fill value and a function or array that would fail with mismatched shapes, and it will fill in the missing values with the fill value."</p>
+        <p>"One way to make this array work is to use the "<Prim prim=Fill/>" modifier. You give it a function or array that would fail with mismatched shapes, as well as a fill value, and it will fill in the missing values with the fill value."</p>
         <Editor example="⬚[1 2_3_4 5_6] 0"/>
         <p><Prim prim=Fill/>" works with lots of functions. Another one is "<Prim prim=Take/>" when the amount you are taking is more than the length of the array."</p>
         <Editor example="⬚↙π 5 [1 2 3]"/>

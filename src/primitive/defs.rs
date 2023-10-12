@@ -1087,7 +1087,7 @@ primitive!(
     ///
     /// By default, some operations require that arrays' [shape]s are in some way compatible.
     /// [fill] allows you to specify a value that will be used to extend the shape of one or both of the operands to make an operation succeed.
-    /// The first argument is the fill value, and the second argument is a function in which the fill value will be used.
+    /// The first argument is a function that could fail due to incompatible shapes, and the second argument is the fill value that will be used.
     ///
     /// [fill] allows you to set default values for [take].
     /// ex: ⬚↙0  7 [8 3 9 2 1]
@@ -1122,8 +1122,8 @@ primitive!(
     /// ex: ⬚▽0 ≡/>◫2. [1 8 0 2 7 2 3]
     ///
     /// [fill][reshape] fills in the shape with the fill element instead of cycling the data.
-    /// ex:     ↯3_5 ⇡9
-    /// ex: ⬚↯0 3_5 ⇡9
+    /// ex:  ↯  3_5 ⇡9
+    ///   : ⬚↯0 3_5 ⇡9
     ([1], Fill, OtherModifier, ("fill", '⬚')),
     /// Invert the behavior of a function
     ///

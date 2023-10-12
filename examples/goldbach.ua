@@ -1,8 +1,8 @@
 # Calculate the primes that add up to the first n even numbers
 
-primes ← ▽¬∊∶♭⊞×...+2⇡
-goldbach ← ∵(|1
-  ▽∶⊃∘(/+=⊞+.)primes..
+Primes ← ▽¬∊∶♭⊞×...+2⇡
+Goldbach ← ∵(|1
+  ▽∶⊃∘(/+=⊞+.)Primes..
   ⊂∶⊟⊢∶⊢⇌.
 )×2+2⇡
-goldbach 10
+Goldbach 10

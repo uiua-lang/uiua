@@ -504,6 +504,9 @@ impl<T: ArrayValue> Array<T> {
         self.shape.insert(0, count);
     }
     pub fn reshape(&mut self, dims: &[isize], env: &Uiua) -> UiuaResult {
+        if self.data.len() == 0 {
+            return Err(env.error("Cannot reshape empty array"));
+        }
         let mut neg_count = 0;
         for dim in dims {
             if *dim < 0 {

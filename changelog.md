@@ -2,6 +2,13 @@
 
 Uiua is not yet stable.
 
+## 0.0.19 - 2023-10-??
+### Language
+- **Major Change** The [`level` `⍚`](https://uiua.org/docs/level) modifier is now monadic instead of dyadic; its rank argument is now passed as a normal array, after the function argument
+- **Major Change** The [`fill` `⬚`](https://uiua.org/docs/fill) modifier is now monadic instead of dyadic; its fill value argument is now passed as a normal array, after the function argument
+### Interpreter
+- Many functions, primarily the pervasive functions, will allocate less temporary memory (usually none at all) when possible
+
 ## 0.0.18 - 2023-10-10
 ### Language
 - **Major Change** [`distribute` `∺`](https://uiua.org/docs/distribute) now takes the array being distributed as its *last* argument, rather than its first

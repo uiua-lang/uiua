@@ -111,7 +111,7 @@ impl Uiua {
                     }
                 }
 
-                if sig.args == 0 && sig.outputs > 0 {
+                if sig.args == 0 && (sig.outputs > 0 || instrs.is_empty()) {
                     self.exec_global_instrs(instrs)?;
                     if let Some(value) = self.stack.pop() {
                         match value {

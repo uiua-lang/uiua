@@ -1007,7 +1007,13 @@ pub fn Editor<'a>(
         let name = input.value();
         set_font_name(&name);
     };
+    let on_select_font_size = move |event: Event| {
+        let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
+        let size = input.value();
+        set_font_size(&size);
+    };
     set_font_name(&get_font_name());
+    set_font_size(&get_font_size());
 
     // Render
     view! {
@@ -1028,6 +1034,17 @@ pub fn Editor<'a>(
                             value=get_execution_limit
                             on:input=on_execution_limit_change/>
                         "s"
+                    </div>
+                    <div>
+                        "Font size:"
+                        <select
+                            on:change=on_select_font_size>
+                            <option value="0.6em" selected={get_font_size() == "0.6em"}>"Scalar"</option>
+                            <option value="0.8em" selected={get_font_size() == "0.8em"}>"Small"</option>
+                            <option value="1em" selected={get_font_size() == "1em"}>"Normal"</option>
+                            <option value="1.2em" selected={get_font_size() == "1.2em"}>"Big"</option>
+                            <option value="1.4em" selected={get_font_size() == "1.4em"}>"Rank 3"</option>
+                        </select>
                     </div>
                     <div>
                         "Font:"
@@ -1065,7 +1082,7 @@ pub fn Editor<'a>(
                             </button>
                             <div id="example-tracker">{example_text}</div>
                         </div>
-                        <div class="code">
+                        <div class="code sized-code">
                             <div class="line-numbers">
                                 { line_numbers }
                             </div>
@@ -1083,7 +1100,7 @@ pub fn Editor<'a>(
                         </div>
                     </div>
                     <div class="output-frame">
-                        <div class="output">
+                        <div class="output sized-code">
                             { move || output.get() }
                         </div>
                         <div id="code-buttons">
@@ -1164,6 +1181,21 @@ fn get_font_name() -> String {
 
 fn set_font_name(name: &str) {
     set_local_var("font-name", name);
+    update_style();
+}
+
+fn get_font_size() -> String {
+    get_local_var("font-size", || "1em".into())
+}
+
+fn set_font_size(size: &str) {
+    set_local_var("font-size", size);
+    update_style();
+}
+
+fn update_style() {
+    let font_name = get_font_name();
+    let font_size = get_font_size();
     // Remove the old style
     let head = &document().head().unwrap();
     if let Some(item) = head.get_elements_by_tag_name("style").item(0) {
@@ -1176,7 +1208,8 @@ fn set_font_name(name: &str) {
         .dyn_into::<HtmlStyleElement>()
         .unwrap();
     new_style.set_inner_text(&format!(
-        "@font-face {{ font-family: 'Code Font'; src: url('{name}.ttf') format('truetype'); }}"
+        "@font-face {{ font-family: 'Code Font'; src: url('{font_name}.ttf') format('truetype'); }}\n\
+        .sized-code {{ font-size: {font_size}; }} }}"
     ));
     document().head().unwrap().append_child(&new_style).unwrap();
 }

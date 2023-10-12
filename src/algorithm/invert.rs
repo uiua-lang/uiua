@@ -248,19 +248,6 @@ fn under_instrs_impl(instrs: &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
             [PopTempUnderN(1).i(), Pow.i()],
         ),
         &(
-            Val,
-            (
-                [Join],
-                [Dup.i(), Len.i(), PushTempUnderN(1).i(), Join.i()],
-                [PopTempUnderN(1).i(), Drop.i()],
-            ),
-        ),
-        &(
-            [Join],
-            [Dup.i(), Len.i(), PushTempUnderN(1).i(), Join.i()],
-            [PopTempUnderN(1).i(), Drop.i()],
-        ),
-        &(
             [Now],
             [Now.i(), PushTempUnderN(1).i()],
             [PopTempUnderN(1).i(), Now.i(), Flip.i(), Sub.i()],

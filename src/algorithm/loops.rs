@@ -61,13 +61,21 @@ where
         1 => {
             let data = arr.data.as_mut_slice();
             let folded = data.iter().copied().fold(identity, f);
-            data[0] = folded;
-            arr.data.truncate(1);
+            if data.is_empty() {
+                arr.data.extend(Some(folded));
+            } else {
+                data[0] = folded;
+                arr.data.truncate(1);
+            }
             arr.shape = Shape::default();
             arr
         }
         _ => {
             let row_len = arr.row_len();
+            if row_len == 0 {
+                arr.shape.remove(0);
+                return Array::new(arr.shape, EcoVec::new());
+            }
             let row_count = arr.row_count();
             if row_count == 0 {
                 arr.shape.remove(0);

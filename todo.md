@@ -1,4 +1,3 @@
-- Build editor divs with leptos instead of strings
 - Improve how recursion works
 - `under` aggregating `group` and `partition`
 - Add channels for spawned threads

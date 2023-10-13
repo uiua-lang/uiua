@@ -465,6 +465,23 @@ impl Parser {
                 break;
             }
         }
+
+        // Style diagnostic for bind
+        if let Primitive::Bind = modifier.value {
+            for arg in &args {
+                if let Word::Modified(m) = &arg.value {
+                    if let Primitive::Bind = m.modifier.value {
+                        let span = modifier.span.clone().merge(m.modifier.span.clone());
+                        self.diagnostics.push(Diagnostic::new(
+                            format!("Do not chain `bind {}`", Primitive::Bind),
+                            span,
+                            DiagnosticKind::Style,
+                        ));
+                    }
+                }
+            }
+        }
+
         Some(if args.is_empty() {
             modifier.map(Word::Primitive)
         } else {

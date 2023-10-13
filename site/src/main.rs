@@ -78,7 +78,7 @@ pub fn Site() -> impl IntoView {
                 <div id="top" class="top">
                     <div id="header">
                         <div id="header-left">
-                            <h1><A href="/"><img src="/uiua-logo.png" style="height: 1em" alt="Uiua logo" /></A>" Uiua"</h1>
+                            <h1><A id="header-uiua" href="/"><img src="/uiua-logo.png" style="height: 1em" alt="Uiua logo" />" Uiua"</A></h1>
                             <p id="subtitle">{ subtitle }</p>
                         </div>
                         <div id="nav">

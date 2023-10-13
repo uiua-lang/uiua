@@ -71,8 +71,13 @@ li {
 }
 
 @media (prefers-color-scheme: dark) {
-    body {
+
+    body,
+    #header-uiua {
         color: #d1daec;
+    }
+
+    body {
         background-color: #141a1f;
     }
 
@@ -141,8 +146,13 @@ li {
 }
 
 @media (prefers-color-scheme: light) {
-    body {
+
+    body,
+    #header-uiua {
         color: #344;
+    }
+
+    body {
         background-color: #c6e7ec;
     }
 
@@ -225,6 +235,10 @@ li {
 #header-left {
     display: flex;
     align-items: baseline;
+}
+
+#header-uiua {
+    text-decoration: none;
 }
 
 #subtitle {

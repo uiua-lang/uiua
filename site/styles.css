@@ -602,19 +602,19 @@ input[type=number] {
     color: #ed5e6a;
 }
 
-.monadic-function-button {
+.monadic-function {
     color: #95d16a;
 }
 
-.dyadic-function-button {
+.dyadic-function {
     color: #54b0fc;
 }
 
-.modifier1-button {
+.monadic-modifier {
     color: #f0c36f;
 }
 
-.modifier2-button {
+.dyadic-modifier {
     color: #cc6be9;
 }
 

@@ -1,4 +1,3 @@
-- Under with g sig awareness
 - Improve how recursion works
 - `under` aggregating `group` and `partition`
 - Add channels for spawned threads
@@ -33,3 +32,4 @@
 - System APIs
   - FFI
   - UDP Sockets
+- Discord bot

@@ -6,6 +6,8 @@ Uiua is not yet stable.
 ### Interpreter
 - Many functions, primarily the pervasive functions, will allocate less temporary memory (usually none at all) when possible to improve performance
 - Many bug and crash fixes
+- Add more semantic token types to the language server
+- Stop using deprecated MarkedString in the language server
 ### Website
 - The editor's font size can now be changed
 - Improve brackets/quotes behavior in the editor

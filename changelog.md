@@ -18,6 +18,7 @@ Uiua is not yet stable.
 - The editor's font size can now be changed
 - Improve brackets/quotes behavior in the editor
 - HTML is now properly escaped in the editor
+- Formatting can now put the cursor to the left of the current token (toggleable in the settings)
 
 ## 0.0.18 - 2023-10-10
 ### Language

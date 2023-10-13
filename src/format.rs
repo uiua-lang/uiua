@@ -277,32 +277,39 @@ impl FormatConfig {
 
 pub struct FormatOutput {
     pub output: String,
-    pub glyph_map: BTreeMap<CodeSpan, Loc>,
+    pub glyph_map: BTreeMap<CodeSpan, (Loc, Loc)>,
 }
 
 impl FormatOutput {
-    pub fn map_char_pos(&self, pos: usize) -> usize {
+    pub fn map_char_pos(&self, pos: usize) -> (usize, usize) {
         let mut pairs = self.glyph_map.iter();
-        let Some((mut a_span, mut a_loc)) = pairs.next() else {
-            return pos;
+        let Some((mut a_span, (mut a_start, mut a_end))) = pairs.next() else {
+            return (pos, pos);
         };
         if pos <= a_span.start.char_pos {
-            return pos;
+            return (pos, pos);
         }
         if (a_span.start.char_pos + 1..=a_span.end.char_pos).contains(&pos) {
-            return a_loc.char_pos;
+            return (a_start.char_pos, a_end.char_pos);
         }
-        for (b_span, b_loc) in pairs {
+        for (b_span, (b_start, b_end)) in pairs {
             if (a_span.end.char_pos + 1..=b_span.start.char_pos).contains(&pos) {
-                return a_loc.char_pos + (pos - a_span.end.char_pos);
+                return (
+                    a_start.char_pos + (pos - a_span.end.char_pos),
+                    a_end.char_pos + (pos - a_span.end.char_pos),
+                );
             }
             if (b_span.start.char_pos + 1..=b_span.end.char_pos).contains(&pos) {
-                return b_loc.char_pos;
+                return (b_start.char_pos, b_end.char_pos);
             }
             a_span = b_span;
-            a_loc = b_loc;
+            a_start = *b_start;
+            a_end = *b_end;
         }
-        a_loc.char_pos + (pos - a_span.end.char_pos)
+        (
+            a_start.char_pos + (pos - a_span.end.char_pos),
+            a_end.char_pos + (pos - a_span.end.char_pos),
+        )
     }
 }
 
@@ -370,7 +377,7 @@ pub fn format_file<P: AsRef<Path>>(path: P, config: &FormatConfig) -> UiuaResult
 struct Formatter<'a> {
     config: &'a FormatConfig,
     output: String,
-    glyph_map: BTreeMap<CodeSpan, Loc>,
+    glyph_map: BTreeMap<CodeSpan, (Loc, Loc)>,
     end_of_line_comments: Vec<(usize, String)>,
 }
 
@@ -639,10 +646,11 @@ impl<'a> Formatter<'a> {
         }
     }
     fn push(&mut self, span: &CodeSpan, formatted: &str) {
+        let start = end_loc(&self.output);
         self.output.push_str(formatted);
         if span.as_str() != formatted {
-            let loc = end_loc(&self.output);
-            self.glyph_map.insert(span.clone(), loc);
+            let end = end_loc(&self.output);
+            self.glyph_map.insert(span.clone(), (start, end));
         }
     }
 }

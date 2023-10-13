@@ -284,8 +284,13 @@ pub fn Editor<'a>(
                 },
             ) {
                 let cursor = if let Some((start, end)) = get_code_cursor() {
-                    let new_start = formatted.map_char_pos(start as usize);
-                    let new_end = formatted.map_char_pos(end as usize);
+                    let (new_start_start, new_start_end) = formatted.map_char_pos(start as usize);
+                    let (new_end_start, new_end_end) = formatted.map_char_pos(end as usize);
+                    let (new_start, new_end) = if get_right_to_left() {
+                        (new_start_start, new_end_start)
+                    } else {
+                        (new_start_end, new_end_end)
+                    };
                     Cursor::Set(new_start as u32, new_end as u32)
                 } else {
                     cursor
@@ -1016,6 +1021,9 @@ pub fn Editor<'a>(
         let limit = input.value().parse().unwrap_or(2.0);
         set_execution_limit(limit);
     };
+    let toggle_right_to_left = move |_| {
+        set_right_to_left(!get_right_to_left());
+    };
     let on_select_font = move |event: Event| {
         let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
         let name = input.value();
@@ -1037,17 +1045,23 @@ pub fn Editor<'a>(
                     <div class="glyph-buttons">{glyph_buttons}</div>
                 </div>
                 <div id="settings" style=settings_style>
-                    <div>
+                    <div title="The maximum number of seconds a program can run for">
                         "Execution limit:"
                         <input
                             type="number"
                             min="0.01"
                             max="1000000"
                             width="3em"
-                            title="The maximum number of seconds a program can run for"
                             value=get_execution_limit
                             on:input=on_execution_limit_change/>
                         "s"
+                    </div>
+                    <div title="Place the cursor on the left of the current token when formatting">
+                        "Format left:"
+                        <input
+                            type="checkbox"
+                            checked=get_right_to_left
+                            on:change=toggle_right_to_left/>
                     </div>
                     <div>
                         "Font size:"
@@ -1184,15 +1198,20 @@ where
 fn get_execution_limit() -> f64 {
     get_local_var("execution-limit", || 2.0)
 }
-
 fn set_execution_limit(limit: f64) {
     set_local_var("execution-limit", limit);
+}
+
+fn get_right_to_left() -> bool {
+    get_local_var("right-to-left", || false)
+}
+fn set_right_to_left(rtl: bool) {
+    set_local_var("right-to-left", rtl);
 }
 
 fn get_font_name() -> String {
     get_local_var("font-name", || "DejaVuSansMono".into())
 }
-
 fn set_font_name(name: &str) {
     set_local_var("font-name", name);
     update_style();
@@ -1201,7 +1220,6 @@ fn set_font_name(name: &str) {
 fn get_font_size() -> String {
     get_local_var("font-size", || "1em".into())
 }
-
 fn set_font_size(size: &str) {
     set_local_var("font-size", size);
     update_style();

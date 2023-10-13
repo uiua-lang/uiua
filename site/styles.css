@@ -299,18 +299,13 @@ li {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
     padding: 0.2em;
 }
 
 #settings>* {
-    display: flex;
-    gap: 0.5em;
-}
-
-input {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
+    display: inline-block;
+    white-space: nowrap;
 }
 
 input[type=number] {
@@ -322,9 +317,10 @@ input[type=number] {
 #settings>*>select {
     border-radius: 0.5em;
     border: none;
+    margin-left: 0.5em;
 }
 
-#settings>*>input {
+#settings>*>input[type=number] {
     width: 3em;
 }
 

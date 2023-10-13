@@ -146,8 +146,24 @@ impl<'a> VirtualEnv<'a> {
                     };
                     self.handle_args_outputs(1, outputs)?;
                 }
-                Each | Rows => self.handle_variadic_mod(prim)?,
-                Table | Cross => self.handle_mod(prim, Some(2), Some(1), 2, None)?,
+                Each | Rows => {
+                    let sig = self.pop()?.expect_function(|| prim)?;
+                    if sig.outputs != 1 {
+                        return Err(format!(
+                            "{prim}'s function must have 1 output, but its signature is {sig}"
+                        ));
+                    }
+                    self.handle_sig(sig)?
+                }
+                Table | Cross => {
+                    let sig = self.pop()?.expect_function(|| prim)?;
+                    if sig != (2, 1) {
+                        return Err(format!(
+                            "{prim}'s function's signature must be |2.1, but it is {sig}"
+                        ));
+                    }
+                    self.handle_args_outputs(2, 1)?;
+                }
                 Distribute => {
                     let sig = self.pop()?.expect_function(|| prim)?;
                     self.handle_sig(sig)?
@@ -167,7 +183,10 @@ impl<'a> VirtualEnv<'a> {
                     };
                     self.handle_args_outputs(args, outputs)?;
                 }
-                Spawn => self.handle_mod(prim, None, None, 1, Some(1))?,
+                Spawn => {
+                    let sig = self.pop()?.expect_function(|| prim)?;
+                    self.handle_args_outputs(sig.args, 1)?;
+                }
                 Repeat => {
                     let f = self.pop()?;
                     let n = self.pop()?;
@@ -182,27 +201,22 @@ impl<'a> VirtualEnv<'a> {
                         if n.fract() == 0.0 && n >= 0.0 {
                             let n = n as usize;
                             if n > 0 {
-                                if let BasicValue::Func(f) = f {
-                                    let sig = f.signature();
-                                    let (args, outputs) = match sig.args.cmp(&sig.outputs) {
-                                        Ordering::Equal => (sig.args, sig.outputs),
-                                        Ordering::Less => {
-                                            (sig.args, n * (sig.outputs - sig.args) + sig.args)
-                                        }
-                                        Ordering::Greater => (
-                                            (n - 1) * (sig.args - sig.outputs) + sig.args,
-                                            sig.outputs,
-                                        ),
-                                    };
-                                    for _ in 0..args {
-                                        self.pop()?;
+                                let sig = f.signature();
+                                let (args, outputs) = match sig.args.cmp(&sig.outputs) {
+                                    Ordering::Equal => (sig.args, sig.outputs),
+                                    Ordering::Less => {
+                                        (sig.args, n * (sig.outputs - sig.args) + sig.args)
                                     }
-                                    self.set_min_height();
-                                    for _ in 0..outputs {
-                                        self.stack.push(BasicValue::Other);
+                                    Ordering::Greater => {
+                                        ((n - 1) * (sig.args - sig.outputs) + sig.args, sig.outputs)
                                     }
-                                } else {
-                                    self.handle_mod(prim, Some(0), Some(1), n, None)?
+                                };
+                                for _ in 0..args {
+                                    self.pop()?;
+                                }
+                                self.set_min_height();
+                                for _ in 0..outputs {
+                                    self.stack.push(BasicValue::Other);
                                 }
                             }
                         } else {
@@ -513,61 +527,6 @@ impl<'a> VirtualEnv<'a> {
             val => self.stack.push(val),
         }
         Ok(())
-    }
-    fn handle_mod(
-        &mut self,
-        prim: &Primitive,
-        f_args: Option<usize>,
-        f_outputs: Option<usize>,
-        m_args: usize,
-        m_outputs: Option<usize>,
-    ) -> Result<(), String> {
-        if let BasicValue::Func(f) = self.pop()? {
-            let sig = f.signature();
-            if let Some(f_args) = f_args {
-                if sig.args != f_args {
-                    return Err(format!(
-                        "{prim}'s function {f:?} has {} args, expected {}",
-                        sig.args, f_args
-                    ));
-                }
-            }
-            if let Some(f_outputs) = f_outputs {
-                if sig.outputs != f_outputs {
-                    return Err(format!(
-                        "{prim}'s function {f:?} has {} outputs, expected {}",
-                        sig.outputs, f_outputs
-                    ));
-                }
-            }
-            for _ in 0..m_args {
-                self.pop()?;
-            }
-            self.set_min_height();
-            let outputs = m_outputs.unwrap_or(f_outputs.unwrap_or(sig.outputs));
-            for _ in 0..outputs {
-                self.stack.push(BasicValue::Other);
-            }
-            Ok(())
-        } else {
-            Err(format!("{prim} without function"))
-        }
-    }
-    fn handle_variadic_mod(&mut self, prim: &Primitive) -> Result<(), String> {
-        if let BasicValue::Func(f) = self.pop()? {
-            let sig = f.signature();
-            if sig.outputs != 1 {
-                return Err(format!("{prim}'s function {f:?} did not return 1 value",));
-            }
-            for _ in 0..sig.args {
-                self.pop()?;
-            }
-            self.set_min_height();
-            self.stack.push(BasicValue::Other);
-            Ok(())
-        } else {
-            Err(format!("{prim} without function"))
-        }
     }
 }
 

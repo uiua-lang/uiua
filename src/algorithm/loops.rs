@@ -274,10 +274,9 @@ where
 
 fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
-    if sig.outputs != 1 {
+    if sig != (2, 1) {
         return Err(env.error(format!(
-            "Scan's function must return 1 value, but {} returns {}",
-            f, sig.outputs
+            "Scan's function's signature must be |2.1, but it is {sig}"
         )));
     }
     if xs.row_count() == 0 {
@@ -834,10 +833,9 @@ fn fast_table_join_or_couple<T: ArrayValue>(a: Array<T>, b: Array<T>) -> Array<T
 
 fn generic_table(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
-    if sig.outputs != 1 {
+    if sig != (2, 1) {
         return Err(env.error(format!(
-            "Table's function must return 1 value, but {} returns {}",
-            f, sig.outputs
+            "Table's function's signature must be |2.1, but it is {sig}"
         )));
     }
     let mut new_shape = Shape::from(xs.shape());
@@ -868,10 +866,9 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
     let xs = env.pop(ArrayArg(1))?;
     let ys = env.pop(ArrayArg(2))?;
     let sig = f.signature();
-    if sig.outputs != 1 {
+    if sig != (2, 1) {
         return Err(env.error(format!(
-            "Cross's function must return 1 value, but {} returns {}",
-            f, sig.outputs
+            "Cross's function's signature must be |2.1, but it is {sig}"
         )));
     }
     let mut new_shape = tiny_vec![xs.row_count(), ys.row_count()];

@@ -342,7 +342,7 @@ impl<'a> VirtualEnv<'a> {
                     let g = self.pop()?;
                     self.set_min_height();
                     if let BasicValue::Func(f) = f {
-                        if let Some((before, after)) = f.into_owned().under() {
+                        if let Some((before, after)) = f.into_owned().under(g.signature()) {
                             let before_sig = before.signature();
                             let after_sig = after.signature();
                             self.handle_sig(before_sig)?;

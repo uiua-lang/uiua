@@ -589,34 +589,36 @@ impl Uiua {
         // Inline under
         if modified.modifier.value == Primitive::Under && modified.operands.len() == 2 {
             let mut operands = modified.operands.clone().into_iter();
-            let (a_instrs, _) = self.compile_operand_words(vec![operands.next().unwrap()])?;
-            let (b_instrs, _) = self.compile_operand_words(vec![operands.next().unwrap()])?;
-            if let Some((a_before, a_after)) = under_instrs(&a_instrs) {
-                let mut instrs = a_before;
-                instrs.extend(b_instrs);
-                instrs.extend(a_after);
-                return if call {
-                    for instr in instrs {
-                        self.push_instr(instr);
-                    }
-                    Ok(())
-                } else {
-                    match instrs_signature(&instrs) {
-                        Ok(sig) => {
-                            let func = Function::new(
-                                FunctionId::Anonymous(modified.modifier.span),
-                                instrs,
-                                sig,
-                            );
-                            self.push_instr(Instr::push(func));
-                            Ok(())
+            let (f_instrs, _) = self.compile_operand_words(vec![operands.next().unwrap()])?;
+            let (g_instrs, g_sig) = self.compile_operand_words(vec![operands.next().unwrap()])?;
+            if let Ok(g_sig) = g_sig {
+                if let Some((f_before, f_after)) = under_instrs(&f_instrs, g_sig) {
+                    let mut instrs = f_before;
+                    instrs.extend(g_instrs);
+                    instrs.extend(f_after);
+                    return if call {
+                        for instr in instrs {
+                            self.push_instr(instr);
                         }
-                        Err(e) => Err(UiuaError::Run(
-                            Span::Code(modified.modifier.span.clone())
-                                .sp(format!("Cannot infer function signature: {e}")),
-                        )),
-                    }
-                };
+                        Ok(())
+                    } else {
+                        match instrs_signature(&instrs) {
+                            Ok(sig) => {
+                                let func = Function::new(
+                                    FunctionId::Anonymous(modified.modifier.span),
+                                    instrs,
+                                    sig,
+                                );
+                                self.push_instr(Instr::push(func));
+                                Ok(())
+                            }
+                            Err(e) => Err(UiuaError::Run(
+                                Span::Code(modified.modifier.span.clone())
+                                    .sp(format!("Cannot infer function signature: {e}")),
+                            )),
+                        }
+                    };
+                }
             }
         }
 

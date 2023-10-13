@@ -3,6 +3,8 @@
 Uiua is not yet stable.
 
 ## 0.0.19 - 2023-10-??
+### Language
+- Add under both
 ### Interpreter
 - Many functions, primarily the pervasive functions, will allocate less temporary memory (usually none at all) when possible to improve performance
 - Many bug and crash fixes

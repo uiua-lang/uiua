@@ -14,6 +14,7 @@ use tinyvec::tiny_vec;
 use crate::{
     array::*,
     cowslice::{cowslice, CowSlice},
+    function::Signature,
     value::Value,
     Uiua, UiuaResult,
 };
@@ -351,14 +352,16 @@ impl Value {
             v => return Err(env.error(format!("Cannot invert {}", v.type_name()))),
         })
     }
-    pub fn under(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+    pub fn under(self, g_sig: Signature, env: &Uiua) -> UiuaResult<(Self, Self)> {
         Ok(match self {
             Self::Func(fs) => {
                 let mut befores = EcoVec::with_capacity(fs.row_count());
                 let mut afters = EcoVec::with_capacity(fs.row_count());
                 for f in fs.data {
                     let f = Arc::try_unwrap(f).unwrap_or_else(|f| (*f).clone());
-                    let (before, after) = f.under().ok_or_else(|| env.error("No inverse found"))?;
+                    let (before, after) = f
+                        .under(g_sig)
+                        .ok_or_else(|| env.error("No inverse found"))?;
                     befores.push(before.into());
                     afters.push(after.into());
                 }

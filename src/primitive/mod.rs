@@ -482,7 +482,7 @@ impl Primitive {
             Primitive::Under => {
                 let f = env.pop(FunctionArg(1))?;
                 let g = env.pop(FunctionArg(2))?;
-                let (f_before, f_after) = f.under(env)?;
+                let (f_before, f_after) = f.under(g.signature(), env)?;
                 env.call(f_before)?;
                 env.call(g)?;
                 env.call(f_after)?;

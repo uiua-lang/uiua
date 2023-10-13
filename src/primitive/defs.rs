@@ -898,7 +898,7 @@ primitive!(
     ///
     /// [break]ing out of [fold] discards the unreduced values.
     /// ex: ∧(⎋≥10.+) 1 5_6_7_8
-    (2[1], Fold, AggregatingModifier, ("fold", '∧')),
+    ([1], Fold, AggregatingModifier, ("fold", '∧')),
     /// Reduce, but keep intermediate values
     ///
     /// ex: \+   1_2_3_4

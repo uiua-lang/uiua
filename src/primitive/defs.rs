@@ -1159,7 +1159,7 @@ primitive!(
     /// Any function that can be [invert]ed can be used with [under].
     /// Some functions that can't be [invert]ed can still be used with [under].
     ///
-    /// Here, we negate 5, subtract 2, then negate again.
+    /// Here, we [negate] 5, [subtract] 2, then [negate] again.
     /// ex: ⍜¯(-2) 5
     /// You can use [under] with [round] to round to a specific number of decimal places.
     /// ex: ⍜'×1e3⁅ π
@@ -1191,6 +1191,12 @@ primitive!(
     /// Consider this equivalence:
     /// ex: ⍜(↙2)(÷∶)  [1 2 3 4 5] 10
     ///   : ⍜(↙2)(÷10) [1 2 3 4 5]
+    ///
+    /// [under][both] works, and whether [both] is applied when undoing depends on the signature of `g`.
+    /// For example, this hypotenuse function does not use [both] when undoing because its `g` (`add`) returns a single value.
+    /// ex: ⍜∩(×.)+ 3 4
+    /// However, this function whose `g` returns *2* values *does* use [both] when undoing, in this case re-[box]ing the outputs.
+    /// ex: ⍜∩⊔(⊂⊢,) □[1 2 3] □[4 5 6 7 8]
     ([2], Under, OtherModifier, ("under", '⍜')),
     /// Apply a function at a different array depth
     ///

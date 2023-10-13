@@ -427,8 +427,8 @@ fn under_both_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Un
     };
     let func = func.as_function()?;
     let (befores, afters) = under_instrs(&func.instrs, g_sig)?;
-    let (befores, afters) = match g_sig.outputs {
-        1 => {
+    let (befores, afters) = match (g_sig.args, g_sig.outputs) {
+        (2, 1) => {
             let before_func = Function::new(func.id.clone(), befores, func.signature());
             let befores = vec![
                 Instr::push(before_func),
@@ -436,7 +436,7 @@ fn under_both_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Un
             ];
             (befores, afters)
         }
-        2 => {
+        (2, 2) => {
             let before_func = Function::new(func.id.clone(), befores, func.signature());
             let after_func = Function::new(func.id.clone(), afters, func.signature());
             let befores = vec![

@@ -4,7 +4,7 @@ use crate::{
     ast::{Item, Word},
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
-    primitive::{PrimClass, Primitive},
+    primitive::Primitive,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -112,7 +112,7 @@ mod server {
     use crate::{
         format::{format_str, FormatConfig},
         lex::Loc,
-        primitive::PrimDocFragment,
+        primitive::{PrimClass, PrimDocFragment},
         Ident, Uiua,
     };
 

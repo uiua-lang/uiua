@@ -123,12 +123,12 @@ pub fn iff(env: &mut Uiua) -> UiuaResult {
                 args.push(env.pop(ArrayArg(i + 1))?);
             }
             if condition == 1 {
-                for arg in args.into_iter().take(if_true_sig.args) {
+                for arg in args.into_iter().take(if_true_sig.args).rev() {
                     env.push(arg);
                 }
                 env.call(if_true)?;
             } else {
-                for arg in args.into_iter().take(if_false_sig.args) {
+                for arg in args.into_iter().take(if_false_sig.args).rev() {
                     env.push(arg);
                 }
                 env.call(if_false)?;

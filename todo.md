@@ -1,4 +1,4 @@
-- Add sig checker context
+- Under with g sig awareness
 - Improve how recursion works
 - `under` aggregating `group` and `partition`
 - Add channels for spawned threads

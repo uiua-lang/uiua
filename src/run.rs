@@ -380,6 +380,7 @@ code:
             // }
             // println!();
             // println!("  {:?}", instr);
+
             if self.time_instrs {
                 formatted_instr = format!("{instr:?}");
                 self.last_time = instant::now();

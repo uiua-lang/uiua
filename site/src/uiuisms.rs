@@ -155,6 +155,8 @@ uiuisms!(
     r#"⊜□≠, @, "split,this,up""#,
     /// Split an array by a delimiter with fill elements
     r#"⬚@ ⊜∘≠, @, "split,this,up""#,
+    /// Split an array by a delimiter keeping empty segments
+    r#"⊕□⍜▽¯∶\+.=, @, "split,this,,up""#,
     /// Split an array into groups of contiguous equal elements
     "⊜□. [1 1 1 2 2 1 1 4]",
     /// Find the nth fibonacci number

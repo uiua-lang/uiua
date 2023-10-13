@@ -875,6 +875,14 @@ primitive!(
     ///
     /// [break]ing out of [reduce] discards the unreduced values.
     /// ex: /(⎋≥10.+) [3 4 8 9]
+    ///
+    /// Some functions have default values if the array is empty.
+    /// Functions without default values will throw an error if the array is empty.
+    /// ex: /+ []
+    /// ex: /× []
+    /// ex: /↥ []
+    /// ex: /↧ []
+    /// ex: /∠ []
     (1[1], Reduce, AggregatingModifier, ("reduce", '/')),
     /// Apply a reducing function to an array with an initial value
     ///

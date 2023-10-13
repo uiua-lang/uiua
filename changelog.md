@@ -5,6 +5,7 @@ Uiua is not yet stable.
 ## 0.0.19 - 2023-10-??
 ### Interpreter
 - Many functions, primarily the pervasive functions, will allocate less temporary memory (usually none at all) when possible to improve performance
+- Many bug and crash fixes
 ### Website
 - The editor's font size can now be changed
 - Improve brackets/quotes behavior in the editor

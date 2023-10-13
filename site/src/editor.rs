@@ -1221,7 +1221,7 @@ fn update_style() {
         .dyn_into::<HtmlStyleElement>()
         .unwrap();
     new_style.set_inner_text(&format!(
-        "@font-face {{ font-family: 'Code Font'; src: url('{font_name}.ttf') format('truetype'); }}\n\
+        "@font-face {{ font-family: 'Code Font'; src: url('/{font_name}.ttf') format('truetype'); }}\n\
         .sized-code {{ font-size: {font_size}; }} }}"
     ));
     document().head().unwrap().append_child(&new_style).unwrap();

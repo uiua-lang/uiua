@@ -186,26 +186,6 @@ primitive!(
     /// While [identity]'s signature is `|1.1`, it will not throw an error if the stack is empty.
     /// ex: ∘
     (1, Identity, Stack, ("identity", '∘')),
-    /// Move the top value on the stack 2 places down
-    ///
-    /// Deprecated in favor of [dip].
-    ///
-    /// ex! [↷ 1 2 3 4 5]
-    ///
-    /// If you want to operate on two values, keep them on the stack, and put the result below them, you can combine [roll] and [over].
-    /// ex! ↷+,,1 2
-    ///   : $ _ + _ = _
-    ///
-    /// See also: [unroll]
-    (3(3), Roll, Stack, ("roll", '↷')),
-    /// Move the third value on the stack to the top
-    ///
-    /// Deprecated in favor of [dip].
-    ///
-    /// ex! [↶ 1 2 3 4 5]
-    ///
-    /// See also: [roll]
-    (3(3), Unroll, Stack, ("unroll", '↶')),
     // Pervasive monadic ops
     /// Logical not
     ///
@@ -1035,26 +1015,6 @@ primitive!(
     ///
     /// [partition] is closely related to [group].
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
-    /// Rearrange the stack
-    ///
-    /// Deprecated because it was never a good idea.
-    ///
-    /// [restack] is the most powerful stack manipulation function.
-    /// It is similar to [select], except it works on the stack instead of an array.
-    ///
-    /// [restack] takes a list of indices and rearranges those values on the stack in the given order.
-    /// ex! [⇵[1 0 2 2] 1 2 3]
-    ///
-    /// All other built-in stack manipulation functions can be implemented with [restack].
-    /// [duplicate] is `⇵``[0 0]`.
-    /// [over] is `⇵``[1 0 1]`.
-    /// [flip] is `⇵``[1 0]`.
-    /// [pop] is `⇵``[1]`.
-    /// [roll] is `⇵``[1 2 0]`.
-    /// [unroll] is `⇵``[2 0 1]`.
-    ///
-    /// While [restack] is sometimes necessary, its use is generally discouraged unless absolutely necessary, as it makes code harder to read.
-    ((None), Restack, Stack, ("restack", '⇵')),
     /// Invert the behavior of a function
     ///
     /// Most functions are not invertible.

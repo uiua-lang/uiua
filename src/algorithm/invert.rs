@@ -188,7 +188,7 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
             (
                 [$before],
                 [Over.i(), Over.i(), PushTempUnderN(2).i(), $before.i()],
-                [PopTempUnderN(2).i(), Unroll.i(), $after.i()],
+                [PopTempUnderN(2).i(), $after.i()],
             )
         };
     }

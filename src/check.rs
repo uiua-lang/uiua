@@ -386,24 +386,6 @@ impl<'a> VirtualEnv<'a> {
                     self.stack.push(a);
                     self.stack.push(b);
                 }
-                Roll => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
-                    let c = self.pop()?;
-                    self.set_min_height();
-                    self.stack.push(a);
-                    self.stack.push(c);
-                    self.stack.push(b);
-                }
-                Unroll => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
-                    let c = self.pop()?;
-                    self.set_min_height();
-                    self.stack.push(b);
-                    self.stack.push(a);
-                    self.stack.push(c);
-                }
                 Dip => {
                     let f = self.pop()?;
                     let x = self.pop()?;
@@ -416,44 +398,6 @@ impl<'a> VirtualEnv<'a> {
                     self.pop()?;
                     self.set_min_height();
                     self.handle_sig(f.signature())?;
-                }
-                Restack => {
-                    let ns = match self.pop()? {
-                        BasicValue::Arr(items) => {
-                            let mut ns = Vec::with_capacity(items.len());
-                            for item in items {
-                                if let BasicValue::Num(n) = item {
-                                    ns.push(n);
-                                } else {
-                                    return Err("restack with an unknown index".into());
-                                }
-                            }
-                            ns
-                        }
-                        BasicValue::Num(n) => vec![n],
-                        _ => return Err("restack without an array".into()),
-                    };
-                    if ns.is_empty() {
-                        self.set_min_height();
-                    } else {
-                        let mut indices = Vec::with_capacity(ns.len());
-                        for n in ns {
-                            if n.fract() == 0.0 && n >= 0.0 {
-                                indices.push(n as usize);
-                            } else {
-                                return Err("restack with a non-natural index".into());
-                            }
-                        }
-                        let max_index = *indices.iter().max().unwrap();
-                        let mut values = Vec::with_capacity(max_index + 1);
-                        for _ in 0..=max_index {
-                            values.push(self.pop()?);
-                        }
-                        self.set_min_height();
-                        for index in indices.into_iter().rev() {
-                            self.stack.push(values[index].clone());
-                        }
-                    }
                 }
                 Join => {
                     let a = self.pop()?;

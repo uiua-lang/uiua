@@ -163,13 +163,8 @@ impl Primitive {
         self.modifier_args().is_some()
     }
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
-        match self {
-            Primitive::Roll | Primitive::Unroll => {
-                Some(format!("try using dip{} instead", Primitive::Dip))
-            }
-            Primitive::Restack => Some(String::new()),
-            _ => None,
-        }
+        // Nothing deprecated at the moment
+        None
     }
     pub fn is_deprecated(&self) -> bool {
         self.deprecation_suggestion().is_some()
@@ -191,8 +186,6 @@ impl Primitive {
             Bits => InverseBits,
             InverseBits => Bits,
             Couple => Uncouple,
-            Roll => Unroll,
-            Unroll => Roll,
             Trace => InvTrace,
             InvTrace => Trace,
             Box => Unbox,
@@ -320,16 +313,16 @@ impl Primitive {
             }
             Primitive::Take => env.dyadic_oo_env(Value::take)?,
             Primitive::Untake => {
-                let from = env.pop(1)?;
-                let index = env.pop(2)?;
-                let into = env.pop(3)?;
+                let index = env.pop(1)?;
+                let into = env.pop(2)?;
+                let from = env.pop(3)?;
                 env.push(from.untake(index, into, env)?);
             }
             Primitive::Drop => env.dyadic_oo_env(Value::drop)?,
             Primitive::Undrop => {
-                let from = env.pop(1)?;
-                let index = env.pop(2)?;
-                let into = env.pop(3)?;
+                let index = env.pop(1)?;
+                let into = env.pop(2)?;
+                let from = env.pop(3)?;
                 env.push(from.undrop(index, into, env)?);
             }
             Primitive::Rotate => env.dyadic_ro_env(Value::rotate)?,
@@ -344,16 +337,16 @@ impl Primitive {
             Primitive::Fall => env.monadic_ref_env(|v, env| v.fall(env))?,
             Primitive::Pick => env.dyadic_oo_env(Value::pick)?,
             Primitive::Unpick => {
-                let from = env.pop(1)?;
-                let index = env.pop(2)?;
-                let into = env.pop(3)?;
+                let index = env.pop(1)?;
+                let into = env.pop(2)?;
+                let from = env.pop(3)?;
                 env.push(from.unpick(index, into, env)?);
             }
             Primitive::Select => env.dyadic_rr_env(Value::select)?,
             Primitive::Unselect => {
-                let from = env.pop(1)?;
-                let index = env.pop(2)?;
-                let into = env.pop(3)?;
+                let index = env.pop(1)?;
+                let into = env.pop(2)?;
+                let from = env.pop(3)?;
                 env.push(from.unselect(index, into, env)?);
             }
             Primitive::Windows => env.dyadic_rr_env(Value::windows)?,
@@ -451,29 +444,12 @@ impl Primitive {
             Primitive::Pop => {
                 env.pop(1)?;
             }
-            Primitive::Roll => {
-                let a = env.pop(1)?;
-                let b = env.pop(2)?;
-                let c = env.pop(3)?;
-                env.push(a);
-                env.push(c);
-                env.push(b);
-            }
-            Primitive::Unroll => {
-                let a = env.pop(1)?;
-                let b = env.pop(2)?;
-                let c = env.pop(3)?;
-                env.push(b);
-                env.push(a);
-                env.push(c);
-            }
             Primitive::Dip => {
                 let f = env.pop(FunctionArg(1))?;
                 let x = env.pop(1)?;
                 env.call(f)?;
                 env.push(x);
             }
-            Primitive::Restack => fork::restack(env)?,
             Primitive::Invert => {
                 let f = env.pop(FunctionArg(1))?;
                 let inv_f = f.invert(env)?;

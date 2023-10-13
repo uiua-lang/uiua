@@ -7,9 +7,11 @@ Uiua is not yet stable.
 - Add [`under` `⍜`](https://uiua.org/docs/under) [`both` `∩`](https://uiua.org/docs/both)
 - Remove `restack ⇵` for good
 - Remove `roll ↷` and `unroll ↶` for good
+- `@\s` can now be used in addition to `@ ` to get a space character
 ### Interpreter
 - Many performance improvements and memory usage reductions
 - Many bug and crash fixes
+- Add some additional style diagnostics
 - Add more semantic token types to the language server
 - Stop using deprecated MarkedString in the language server
 ### Website

@@ -329,46 +329,57 @@ mod server {
                 }
             }
             Ok(Some(if let Some((prim, range)) = prim_range {
-                let mut contents = vec![MarkedString::String(prim.name().unwrap().into())];
+                let mut value: String = prim.name().unwrap().into();
                 if let Some(doc) = prim.doc() {
-                    contents.push(MarkedString::String(
-                        doc.short
-                            .iter()
-                            .map(|frag| match frag {
-                                PrimDocFragment::Text(text)
-                                | PrimDocFragment::Code(text)
-                                | PrimDocFragment::Emphasis(text)
-                                | PrimDocFragment::Strong(text)
-                                | PrimDocFragment::Link { text, .. } => text.clone(),
-                                PrimDocFragment::Primitive { prim, named } => {
-                                    let name = prim.name().unwrap();
-                                    if *named {
-                                        if let Some(unicode) = prim.glyph() {
-                                            format!("{} {}", unicode, name)
-                                        } else {
-                                            name.into()
-                                        }
-                                    } else if let Some(unicode) = prim.glyph() {
-                                        unicode.into()
+                    value.push('\n');
+                    for frag in doc.short.iter() {
+                        match frag {
+                            PrimDocFragment::Text(text) => value.push_str(text),
+                            PrimDocFragment::Code(text) => value.push_str(&format!("`{}`", text)),
+                            PrimDocFragment::Emphasis(text) => {
+                                value.push_str(&format!("*{}*", text))
+                            }
+                            PrimDocFragment::Strong(text) => {
+                                value.push_str(&format!("**{}**", text))
+                            }
+                            PrimDocFragment::Link { text, url } => {
+                                value.push_str(&format!("[{}]({})", text, url))
+                            }
+                            PrimDocFragment::Primitive { prim, named } => {
+                                let name = prim.name().unwrap();
+                                value.push_str(&if *named {
+                                    if let Some(unicode) = prim.glyph() {
+                                        format!("`{unicode} {name}`")
                                     } else {
-                                        name.into()
+                                        format!("`{name}`")
                                     }
-                                }
-                            })
-                            .collect(),
-                    ))
+                                } else if let Some(unicode) = prim.glyph() {
+                                    format!("`{unicode}`")
+                                } else {
+                                    format!("`{name}`")
+                                })
+                            }
+                        }
+                    }
                 }
                 Hover {
-                    contents: HoverContents::Array(contents),
+                    contents: HoverContents::Markup(MarkupContent {
+                        kind: MarkupKind::Markdown,
+                        value,
+                    }),
                     range: Some(range),
                 }
             } else if let Some((ident, binding, range)) = binding_range {
-                let mut contents = vec![MarkedString::String(ident.value.as_ref().into())];
+                let mut value: String = ident.value.as_ref().into();
                 if let Some(comment) = &binding.comment {
-                    contents.push(MarkedString::String(comment.clone()))
+                    value.push('\n');
+                    value.push_str(comment);
                 }
                 Hover {
-                    contents: HoverContents::Array(contents),
+                    contents: HoverContents::Markup(MarkupContent {
+                        kind: MarkupKind::Markdown,
+                        value,
+                    }),
                     range: Some(range),
                 }
             } else {

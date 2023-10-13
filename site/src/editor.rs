@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     cell::{Cell, RefCell},
     iter,
     mem::{replace, take},
@@ -1399,7 +1400,7 @@ fn set_code_html(id: &str, code: &str) {
             if chars[*curr] == '\n' {
                 if !unspanned.is_empty() {
                     // log!("unspanned: {:?}", unspanned);
-                    html.push_str(&unspanned);
+                    html.push_str(&escape_html(&unspanned));
                     unspanned.clear();
                 }
                 // log!("newline");
@@ -1417,7 +1418,7 @@ fn set_code_html(id: &str, code: &str) {
         }
         if !unspanned.is_empty() {
             // log!("unspanned: {:?}", unspanned);
-            html.push_str(&unspanned);
+            html.push_str(&escape_html(&unspanned));
         }
         html.push_str("</span>");
     };
@@ -1459,13 +1460,15 @@ fn set_code_html(id: &str, code: &str) {
                         format!(
                             r#"<span 
                             class="code-span code-hover {color_class}" 
-                            data-title={title:?}>{text}</span>"#
+                            data-title={title:?}>{}</span>"#,
+                            escape_html(&text)
                         )
                     } else {
                         format!(
                             r#"<span 
                             class="code-span code-hover {color_class}" 
-                            data-title={name:?}>{text}</span>"#
+                            data-title={name:?}>{}</span>"#,
+                            escape_html(&text)
                         )
                     }
                 }
@@ -1487,11 +1490,15 @@ fn set_code_html(id: &str, code: &str) {
                         format!(
                             r#"<span
                                 class="code-span code-hover {color_class}" 
-                                data-title={title}>{text}</span>"#
+                                data-title={title}>{}</span>"#,
+                            escape_html(&text)
                         )
                     }
                 }
-                _ => format!(r#"<span class="code-span {color_class}">{text}</span>"#),
+                _ => format!(
+                    r#"<span class="code-span {color_class}">{}</span>"#,
+                    escape_html(&text)
+                ),
             });
         }
 
@@ -1516,6 +1523,25 @@ fn set_code_html(id: &str, code: &str) {
     // log!("html: {}", html);
 
     elem.set_inner_html(&html);
+}
+
+fn escape_html(s: &str) -> Cow<str> {
+    if s.contains(['&', '<', '>', '"', '\''].as_ref()) {
+        let mut escaped = String::with_capacity(s.len());
+        for c in s.chars() {
+            match c {
+                '&' => escaped.push_str("&amp;"),
+                '<' => escaped.push_str("&lt;"),
+                '>' => escaped.push_str("&gt;"),
+                '"' => escaped.push_str("&quot;"),
+                '\'' => escaped.push_str("&#x27;"),
+                _ => escaped.push(c),
+            }
+        }
+        Cow::Owned(escaped)
+    } else {
+        Cow::Borrowed(s)
+    }
 }
 
 /// Run code and return the output

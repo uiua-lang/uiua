@@ -15,6 +15,7 @@ Uiua is not yet stable.
 ### Website
 - The editor's font size can now be changed
 - Improve brackets/quotes behavior in the editor
+- HTML is now properly escaped in the editor
 
 ## 0.0.18 - 2023-10-10
 ### Language

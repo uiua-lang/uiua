@@ -882,7 +882,7 @@ primitive!(
     /// ex: /× []
     /// ex: /↥ []
     /// ex: /↧ []
-    /// ex: /∠ []
+    /// ex! /∠ []
     (1[1], Reduce, AggregatingModifier, ("reduce", '/')),
     /// Apply a reducing function to an array with an initial value
     ///

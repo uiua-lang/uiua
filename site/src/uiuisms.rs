@@ -196,7 +196,7 @@ uiuisms!(
     /// Set the value of an array at an index
     "⍜⊏; 2 1_2_3_4 10",
     /// Arithmetic mean
-    "÷ ⧻ ∶ /+ . [85 105 117 97]",
+    "÷⧻∶/+. [85 105 117 97]",
     /// Dot product
     "/+× [1 2 3] [4 ¯5 6]",
     /// Cross product

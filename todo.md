@@ -1,4 +1,3 @@
-- Check all modifier signatures (signature checks and runtime checks)
 - Improve how recursion works
 - `under` aggregating `group` and `partition`
 - Add channels for spawned threads

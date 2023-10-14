@@ -2,7 +2,7 @@
 
 Uiua is not yet stable.
 
-## 0.0.19 - 2023-10-??
+## 0.0.19 - 2023-10-13
 ### Language
 - Add [`under` `⍜`](https://uiua.org/docs/under) [`both` `∩`](https://uiua.org/docs/both)
 - Remove `restack ⇵` for good

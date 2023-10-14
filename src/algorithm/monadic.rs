@@ -3,6 +3,7 @@
 use std::{
     cmp::Ordering,
     collections::{BTreeMap, BTreeSet, HashMap},
+    iter::repeat,
     ptr,
     sync::Arc,
 };
@@ -18,6 +19,8 @@ use crate::{
     value::Value,
     Uiua, UiuaResult,
 };
+
+use super::FillContext;
 
 impl Value {
     pub fn deshape(&mut self) {
@@ -124,26 +127,44 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     pub fn first(mut self, env: &Uiua) -> UiuaResult<Self> {
         match &*self.shape {
-            [] => return Err(env.error("Cannot take first of a scalar")),
-            [0] => return Err(env.error("Cannot take first of an empty array")),
-            _ => {}
+            [] => Err(env.error("Cannot take first of a scalar")),
+            [0, rest @ ..] => {
+                if let Some(fill) = env.fill() {
+                    self.data.extend(repeat(fill).take(self.row_len()));
+                    self.shape = rest.into();
+                    Ok(self)
+                } else {
+                    Err(env.error("Cannot take first of an empty array").fill())
+                }
+            }
+            _ => {
+                let row_len = self.row_len();
+                self.shape.remove(0);
+                self.data.truncate(row_len);
+                Ok(self)
+            }
         }
-        let row_len = self.row_len();
-        self.shape.remove(0);
-        self.data.truncate(row_len);
-        Ok(self)
     }
     pub fn last(mut self, env: &Uiua) -> UiuaResult<Self> {
         match &*self.shape {
-            [] => return Err(env.error("Cannot take last of a scalar")),
-            [0] => return Err(env.error("Cannot take last of an empty array")),
-            _ => {}
+            [] => Err(env.error("Cannot take last of a scalar")),
+            [0, rest @ ..] => {
+                if let Some(fill) = env.fill() {
+                    self.data.extend(repeat(fill).take(self.row_len()));
+                    self.shape = rest.into();
+                    Ok(self)
+                } else {
+                    Err(env.error("Cannot take last of an empty array").fill())
+                }
+            }
+            _ => {
+                let row_len = self.row_len();
+                self.shape.remove(0);
+                let prefix_len = self.data.len() - row_len;
+                self.data = self.data.into_iter().skip(prefix_len).collect();
+                Ok(self)
+            }
         }
-        let row_len = self.row_len();
-        self.shape.remove(0);
-        let prefix_len = self.data.len() - row_len;
-        self.data = self.data.into_iter().skip(prefix_len).collect();
-        Ok(self)
     }
 }
 

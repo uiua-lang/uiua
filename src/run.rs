@@ -887,7 +887,11 @@ code:
                 };
                 rows.push(row);
             }
-            self.push(Value::from_row_values(rows, self)?);
+            let mut val = Value::from_row_values(rows, self)?;
+            let mut shape = handles.shape;
+            shape.extend_from_slice(&val.shape()[1..]);
+            *val.shape_mut() = shape;
+            self.push(val);
         }
         Ok(())
     }

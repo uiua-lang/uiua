@@ -3,7 +3,11 @@
 Uiua is not yet stable.
 
 ## 0.0.20 - 2023-10-??
+### Language
 - The presence of [`break` `⎋`](https://uiua.org/docs/break) in a [`repeat` `⍥`](https://uiua.org/docs/repeat) always requires a stack signature
+- Make [`if` `?`](https://uiua.org/docs/if) signature checking more permissive
+### Website
+- Add a page listing common [stack idioms](https://uiua.org/docs/stack-idioms)
 
 ## 0.0.19 - 2023-10-13
 ### Language

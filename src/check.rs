@@ -192,8 +192,8 @@ impl<'a> VirtualEnv<'a> {
                     let n = self.pop()?;
                     // Break anywhere but the end of the function prevents signature checking.
                     if let BasicValue::Func(f) = &f {
-                        if instrs_contain_break_at_non_end(&f.instrs) {
-                            return Err("repeat with break not at the end".into());
+                        if instrs_contain_break(&f.instrs) {
+                            return Err("break present".into());
                         }
                     }
                     if let BasicValue::Num(n) = n {
@@ -530,18 +530,14 @@ impl<'a> VirtualEnv<'a> {
     }
 }
 
-fn instrs_contain_break_at_non_end(instrs: &[Instr]) -> bool {
-    for (i, instr) in instrs.iter().enumerate() {
+fn instrs_contain_break(instrs: &[Instr]) -> bool {
+    for instr in instrs.iter() {
         match instr {
-            Instr::Prim(Primitive::Break, _) => {
-                if i != instrs.len() - 1 {
-                    return true;
-                }
-            }
+            Instr::Prim(Primitive::Break, _) => return true,
             Instr::Push(val) => {
                 if let Some(f) = val.as_func_array() {
                     for f in &f.data {
-                        if instrs_contain_break_at_non_end(&f.instrs) {
+                        if instrs_contain_break(&f.instrs) {
                             return true;
                         }
                     }

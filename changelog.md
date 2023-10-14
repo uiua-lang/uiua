@@ -2,6 +2,9 @@
 
 Uiua is not yet stable.
 
+## 0.0.20 - 2023-10-??
+- The presence of [`break` `⎋`](https://uiua.org/docs/break) in a [`repeat` `⍥`](https://uiua.org/docs/repeat) always requires a stack signature
+
 ## 0.0.19 - 2023-10-13
 ### Language
 - Add [`under` `⍜`](https://uiua.org/docs/under) [`both` `∩`](https://uiua.org/docs/both)

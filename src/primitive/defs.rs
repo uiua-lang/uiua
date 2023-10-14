@@ -1087,8 +1087,14 @@ primitive!(
     /// [both] can also be chained. Every additional [both] doubles the number of arguments taken from the stack.
     /// ex: [∩∩(□+2) 1 @a 2_3 5]
     /// ex: [∩∩∩± 1 ¯2 0 42 ¯5 6 7 8 99]
+    ///
+    /// If you have 3 values on the stack, `a`, `b`, and `c`, but you want to call the same function on `a c` and `b c`, you can combine [both] with [dip] and [over].
+    /// ex: ∩+⊙,2 5 10
     (2[1], Both, Stack, ("both", '∩')),
     /// Call two functions on the same values
+    ///
+    /// [fork] is one of the most important functions for working with the stack.
+    /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding as to why.
     ///
     /// ex: ⊃⇌⊝ 1_2_2_3
     /// [fork] can be chained to apply more functions to the arguments. `n` functions require the chaining of `subtract``1n` [fork].
@@ -1347,7 +1353,7 @@ primitive!(
     ///   : wait h
     ///   : wait h
     ///
-    /// [wait] will call [each] implicitly.
+    /// [wait] is pervasive and will call [each] implicitly.
     /// ex: ↯3_3⇡9
     ///   : wait≡spawn/+.
     (1, Wait, Misc, ("wait")),

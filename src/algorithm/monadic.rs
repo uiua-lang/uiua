@@ -437,6 +437,14 @@ impl Array<u8> {
             }
             bools.push(b != 0);
         }
+        if bools.is_empty() {
+            if self.shape.is_empty() {
+                return Ok(Array::from(0.0));
+            }
+            let mut shape = self.shape.clone();
+            shape[0] = 0;
+            return Ok(Array::new(shape, CowSlice::new()));
+        }
         if self.rank() == 0 {
             return Ok(Array::from(bools[0] as u8 as f64));
         }

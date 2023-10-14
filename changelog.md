@@ -3,6 +3,9 @@
 Uiua is not yet stable.
 
 ## 0.0.20 - 2023-10-??
+This version is not available via `cargo install uiua` yet.
+
+If you are reading this on the website, then it is live here.
 ### Language
 - The presence of [`break` `⎋`](https://uiua.org/docs/break) in a [`repeat` `⍥`](https://uiua.org/docs/repeat) always requires a stack signature
 - Make [`if` `?`](https://uiua.org/docs/if) signature checking more permissive

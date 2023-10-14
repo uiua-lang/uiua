@@ -92,7 +92,7 @@ pub fn iff(env: &mut Uiua) -> UiuaResult {
         }
         let if_true_sig = if_true.signature();
         let if_false_sig = if_false.signature();
-        if if_true_sig.args == if_false_sig.args {
+        if if_true_sig.args == if_false_sig.args || if_true_sig.is_compatible_with(if_false_sig) {
             if condition == 1 {
                 env.call(if_true)?;
             } else {

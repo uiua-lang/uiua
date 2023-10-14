@@ -1261,13 +1261,13 @@ primitive!(
     ///   : Abs 2
     ///   : Abs ¯5
     ///
-    /// The functions having different numbers of arguments works similary to [fork]. The function that takes fewer arguments will use the arguments higher on the stack.
+    /// If the functions have different but compatible signatures - that is, the difference between their arguments and outputs is the same - then [if] will still have a well-defined signature.
+    /// ex: f ← ?∘(.+)
+    ///   : f 0 2 3
+    ///   : f 1 2 3
+    /// If functions have incompatible signatures but the same number of outputs, then [if] works similarly to [fork]. The function that takes fewer arguments will use the arguments higher on the stack.
     /// ex: ?+¯ 1 3 5
     /// ex: ?+¯ 0 3 5
-    ///
-    /// The two functions having different signatures is not an error, but it may require a signature to be specified.
-    /// ex: ?∘(.+) 0 2 3
-    /// ex! (?∘(.+) 0 2 3)
     ///
     /// [if] can be chained to check more than one condition.
     /// Make sure to use [pop] or [gap] to git rid of excess conditions if the number of branches is not a [power] of `2`.

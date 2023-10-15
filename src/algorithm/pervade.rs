@@ -266,18 +266,42 @@ where
     T: ArrayValue + Copy,
 {
     fill_shapes(a, &mut b, env)?;
-    let a_data = a.data.as_mut_slice();
-    let b_data = b.data.as_mut_slice();
     let ash = a.shape.as_slice();
     let bsh = b.shape.as_slice();
+    // Try to avoid copying when possible
     if ash == bsh {
-        for (a, b) in a_data.iter_mut().zip(b_data) {
-            *a = f(*a, *b);
+        if b.data.is_unique() {
+            let a_data = a.data.as_slice();
+            let b_data = b.data.as_mut_slice();
+            for (a, b) in a_data.iter().zip(b_data) {
+                *b = f(*a, *b);
+            }
+            *a = b;
+        } else {
+            let a_data = a.data.as_mut_slice();
+            let b_data = b.data.as_slice();
+            for (a, b) in a_data.iter_mut().zip(b_data) {
+                *a = f(*a, *b);
+            }
         }
     } else {
-        let use_a = bin_pervade_recursive_mut(a_data, ash, b_data, bsh, f);
-        if !use_a {
-            *a = b;
+        match ash.len().cmp(&bsh.len()) {
+            Ordering::Greater => {
+                let a_data = a.data.as_mut_slice();
+                let b_data = b.data.as_slice();
+                bin_pervade_recursive_mut_left(a_data, ash, b_data, bsh, f);
+            }
+            Ordering::Less => {
+                let a_data = a.data.as_slice();
+                let b_data = b.data.as_mut_slice();
+                bin_pervade_recursive_mut_right(a_data, ash, b_data, bsh, f);
+                *a = b;
+            }
+            Ordering::Equal => {
+                let a_data = a.data.as_mut_slice();
+                let b_data = b.data.as_mut_slice();
+                bin_pervade_recursive_mut(a_data, ash, b_data, bsh, f);
+            }
         }
     }
     Ok(())
@@ -321,6 +345,70 @@ where
                 bin_pervade_recursive_mut(a, &ash[1..], b, &bsh[1..], f);
             }
             ash.len() > bsh.len()
+        }
+    }
+}
+
+fn bin_pervade_recursive_mut_left<T>(
+    a_data: &mut [T],
+    a_shape: &[usize],
+    b_data: &[T],
+    b_shape: &[usize],
+    f: impl Fn(T, T) -> T + Copy,
+) where
+    T: ArrayValue + Copy,
+{
+    match (a_shape, b_shape) {
+        ([], _) => {
+            panic!("should never call `bin_pervade_recursive_mut_left` with scalar left")
+        }
+        (_, []) => {
+            let b_scalar = b_data[0];
+            for a in a_data {
+                *a = f(*a, b_scalar);
+            }
+        }
+        (ash, bsh) => {
+            let a_row_len = a_data.len() / ash[0];
+            let b_row_len = b_data.len() / bsh[0];
+            for (a, b) in a_data
+                .chunks_exact_mut(a_row_len)
+                .zip(b_data.chunks_exact(b_row_len))
+            {
+                bin_pervade_recursive_mut_left(a, &ash[1..], b, &bsh[1..], f);
+            }
+        }
+    }
+}
+
+fn bin_pervade_recursive_mut_right<T>(
+    a_data: &[T],
+    a_shape: &[usize],
+    b_data: &mut [T],
+    b_shape: &[usize],
+    f: impl Fn(T, T) -> T + Copy,
+) where
+    T: ArrayValue + Copy,
+{
+    match (a_shape, b_shape) {
+        (_, []) => {
+            panic!("should never call `bin_pervade_recursive_mut_right` with scalar right")
+        }
+        ([], _) => {
+            let a_scalar = a_data[0];
+            for b in b_data {
+                *b = f(a_scalar, *b);
+            }
+        }
+        (ash, bsh) => {
+            let a_row_len = a_data.len() / ash[0];
+            let b_row_len = b_data.len() / bsh[0];
+            for (a, b) in a_data
+                .chunks_exact(a_row_len)
+                .zip(b_data.chunks_exact_mut(b_row_len))
+            {
+                bin_pervade_recursive_mut_right(a, &ash[1..], b, &bsh[1..], f);
+            }
         }
     }
 }

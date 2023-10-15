@@ -45,6 +45,10 @@ impl<T> CowSlice<T> {
     pub fn as_slice(&self) -> &[T] {
         &self.data[self.start as usize..self.end as usize]
     }
+    #[inline]
+    pub fn is_unique(&mut self) -> bool {
+        self.data.is_unique()
+    }
 }
 
 impl<T: Clone> CowSlice<T> {

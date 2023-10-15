@@ -4,10 +4,12 @@
 
 mod defs;
 pub use defs::*;
+use ecow::EcoVec;
 
 use std::{
     borrow::Cow,
     cell::RefCell,
+    collections::HashMap,
     f64::{
         consts::{PI, TAU},
         INFINITY,
@@ -15,10 +17,8 @@ use std::{
     fmt::{self},
     sync::{
         atomic::{self, AtomicUsize},
-        OnceLock,
-        Arc
+        Arc, OnceLock,
     },
-    collections::HashMap,
 };
 
 use enum_iterator::{all, Sequence};
@@ -38,10 +38,6 @@ use crate::{
     value::*,
     Uiua, UiuaError, UiuaResult,
 };
-
-thread_local! {
-    pub static REGEX_CACHE: RefCell<HashMap<String, Regex>> = RefCell::new(HashMap::new());
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Sequence)]
 pub enum PrimClass {
@@ -366,7 +362,7 @@ impl Primitive {
             Primitive::IndexOf => env.dyadic_rr_env(Value::index_of)?,
             Primitive::Box => {
                 let val = env.pop(1)?;
-                let constant = Function::constant(val);
+                let constant = Function::boxed(val);
                 env.push(constant);
             }
             Primitive::Unbox => {
@@ -481,11 +477,11 @@ impl Primitive {
                 let g = env.pop(FunctionArg(2))?;
                 match (f.into_function(), g.into_function()) {
                     (Ok(f), Ok(g)) => env.push(Function::compose(f, g)),
-                    (Ok(f), Err(g)) => env.push(Function::compose(f, Function::constant(g).into())),
-                    (Err(f), Ok(g)) => env.push(Function::compose(Function::constant(f).into(), g)),
+                    (Ok(f), Err(g)) => env.push(Function::compose(f, Function::boxed(g).into())),
+                    (Err(f), Ok(g)) => env.push(Function::compose(Function::boxed(f).into(), g)),
                     (Err(f), Err(g)) => env.push(Function::compose(
-                        Function::constant(f).into(),
-                        Function::constant(g).into(),
+                        Function::boxed(f).into(),
+                        Function::boxed(g).into(),
                     )),
                 }
             }
@@ -581,35 +577,29 @@ impl Primitive {
             Primitive::Dump => dump(env)?,
             Primitive::Sys(io) => io.run(env)?,
             Primitive::Regex => {
+                thread_local! {
+                    pub static REGEX_CACHE: RefCell<HashMap<String, Regex>> = RefCell::new(HashMap::new());
+                }
                 let pattern = env.pop(1)?.as_string(env, "Pattern must be a string")?;
-                let matching = env.pop(1)?.as_string(env, "Matching target must be a string")?;
-
-                let re = REGEX_CACHE.with(|cache_ref| {
-                    let mut cache = cache_ref.borrow_mut();
-                    let cached_pattern = cache.get(&pattern);
-                    if cached_pattern.is_none() {
-                        let regex = Regex::new(&pattern);
-                        if regex.is_ok() {
-                            cache.insert(pattern.clone(), regex.clone().unwrap());
-                        }
+                let matching = env
+                    .pop(1)?
+                    .as_string(env, "Matching target must be a string")?;
+                REGEX_CACHE.with(|cache| -> UiuaResult {
+                    let mut cache = cache.borrow_mut();
+                    let regex = if let Some(regex) = cache.get(&pattern) {
                         regex
                     } else {
-                        Ok(cached_pattern.unwrap().clone())
-                    }
-                });
-
-                if re.is_ok() {
-                    let matches = re.unwrap().find_iter(matching.as_str())
-                        .map(|m| Function::constant(m.as_str()).into())
-                        .reduce(|a, b| Value::join(a, b, env).unwrap());
-
-                    env.push(matches.unwrap_or(Array::<Arc<Function>>::default().into()));
-                } else {
-                    return Err(env.error(format!(
-                        "Invalid pattern: {}",
-                        pattern
-                    )))
-                }
+                        let regex = Regex::new(&pattern)
+                            .map_err(|e| env.error(format!("Invalid pattern: {}", e)))?;
+                        cache.entry(pattern.clone()).or_insert(regex.clone())
+                    };
+                    let matches: EcoVec<Arc<Function>> = regex
+                        .find_iter(&matching)
+                        .map(|m| Function::boxed(m.as_str()).into())
+                        .collect();
+                    env.push(matches);
+                    Ok(())
+                })?
             }
         }
         Ok(())

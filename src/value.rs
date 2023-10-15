@@ -634,23 +634,17 @@ impl Value {
     }
     pub fn coerce_to_function(self) -> Array<Arc<Function>> {
         match self {
-            Value::Num(arr) => arr.convert_with(|n| Arc::new(Function::constant(n))),
-            Value::Byte(arr) => arr.convert_with(|n| Arc::new(Function::constant(n))),
-            Value::Char(arr) => arr.convert_with(|n| Arc::new(Function::constant(n))),
+            Value::Num(arr) => arr.convert_with(|n| Arc::new(Function::boxed(n))),
+            Value::Byte(arr) => arr.convert_with(|n| Arc::new(Function::boxed(n))),
+            Value::Char(arr) => arr.convert_with(|n| Arc::new(Function::boxed(n))),
             Value::Func(arr) => arr,
         }
     }
     pub fn coerce_as_function(&self) -> Cow<Array<Arc<Function>>> {
         match self {
-            Value::Num(arr) => {
-                Cow::Owned(arr.convert_ref_with(|n| Arc::new(Function::constant(n))))
-            }
-            Value::Byte(arr) => {
-                Cow::Owned(arr.convert_ref_with(|n| Arc::new(Function::constant(n))))
-            }
-            Value::Char(arr) => {
-                Cow::Owned(arr.convert_ref_with(|n| Arc::new(Function::constant(n))))
-            }
+            Value::Num(arr) => Cow::Owned(arr.convert_ref_with(|n| Arc::new(Function::boxed(n)))),
+            Value::Byte(arr) => Cow::Owned(arr.convert_ref_with(|n| Arc::new(Function::boxed(n)))),
+            Value::Char(arr) => Cow::Owned(arr.convert_ref_with(|n| Arc::new(Function::boxed(n)))),
             Value::Func(arr) => Cow::Borrowed(arr),
         }
     }
@@ -768,7 +762,7 @@ macro_rules! value_un_impl {
                         let mut new_data = EcoVec::with_capacity(array.flat_len());
                         for f in array.data {
                             match Function::into_inner(f).into_unboxed() {
-                                Ok(value) => new_data.push(Arc::new(Function::constant(value.$name(env)?))),
+                                Ok(value) => new_data.push(Arc::new(Function::boxed(value.$name(env)?))),
                                 Err(_) => return Err($name::error("function", env)),
                             }
                         }
@@ -859,7 +853,7 @@ macro_rules! value_bin_impl {
                                 bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Arc<Function>, b: Arc<Function>, env: &Uiua| {
                                     let a = a.as_boxed().ok_or_else(|| env.error("First argument is not a box"))?;
                                     let b = b.as_boxed().ok_or_else(|| env.error("Second argument is not a box"))?;
-                                    Ok(Arc::new(Function::constant(Value::$name(a.clone(), b.clone(), env)?)))
+                                    Ok(Arc::new(Function::boxed(Value::$name(a.clone(), b.clone(), env)?)))
                                 }))?.into()
                             }
                         }
@@ -872,7 +866,7 @@ macro_rules! value_bin_impl {
                                 bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Arc<Function>, b: Arc<Function>, env: &Uiua| {
                                     let a = a.as_boxed().ok_or_else(|| env.error("First argument is not a box"))?;
                                     let b = b.as_boxed().ok_or_else(|| env.error("Second argument is not a box"))?;
-                                    Ok(Arc::new(Function::constant(Value::$name(a.clone(), b.clone(), env)?)))
+                                    Ok(Arc::new(Function::boxed(Value::$name(a.clone(), b.clone(), env)?)))
                                 }))?.into()
                             }
                         }

@@ -391,7 +391,7 @@ impl Function {
     pub fn is_constant(&self) -> bool {
         matches!(&*self.instrs, [Instr::Push(_)])
     }
-    pub fn constant(value: impl Into<Value>) -> Self {
+    pub fn boxed(value: impl Into<Value>) -> Self {
         Function::new(
             FunctionId::Constant,
             [Instr::push(value.into())],

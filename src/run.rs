@@ -409,7 +409,7 @@ code:
                     let values = self.stack.drain(start..).rev();
                     let values: Vec<Value> = if constant {
                         values
-                            .map(Function::constant)
+                            .map(Function::boxed)
                             .map(Arc::new)
                             .map(Value::from)
                             .collect()

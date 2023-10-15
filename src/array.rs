@@ -363,7 +363,7 @@ impl FromIterator<String> for Array<Arc<Function>> {
         Array::from(
             iter.into_iter()
                 .map(Array::from)
-                .map(Function::constant)
+                .map(Function::boxed)
                 .map(Arc::new)
                 .collect::<CowSlice<_>>(),
         )

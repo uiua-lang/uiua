@@ -339,7 +339,7 @@ impl Uiua {
                         if empty {
                             Array::<Arc<Function>>::default().into()
                         } else {
-                            Value::from_row_values(values.map(Function::constant), self)?
+                            Value::from_row_values(values.map(Function::boxed), self)?
                         }
                     } else {
                         Value::from_row_values(values, self)?

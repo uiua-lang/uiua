@@ -195,6 +195,10 @@ uiuisms!(
     "+⊙'×-. 0 10 0.2",
     /// Set the value of an array at an index
     "⍜⊏; 2 1_2_3_4 10",
+    /// Create a matrix of random 0s or 1s
+    "⁅⊞⋅⋅⚂.⊚ 5",
+    /// Create a matrix of random numbers
+    "⌊×⊞⋅⋅⚂.⊚ 5 10",
     /// Arithmetic mean
     "÷⧻∶/+. [85 105 117 97]",
     /// Dot product

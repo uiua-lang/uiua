@@ -2,6 +2,7 @@
 
 use std::ops::{Add, Div, Mul, Sub};
 
+use ecow::EcoVec;
 use tinyvec::tiny_vec;
 
 use crate::{
@@ -36,14 +37,14 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
             _ => return generic_fold1(f, Value::Num(nums), None, env),
         }),
         (Some((prim, flipped)), Value::Byte(bytes)) => env.push(match prim {
-            Primitive::Add => fast_reduce(bytes, 0.0, |a, b| a + f64::from(b)),
-            Primitive::Sub if flipped => fast_reduce(bytes, 0.0, |a, b| a - f64::from(b)),
-            Primitive::Sub => fast_reduce(bytes, 0.0, |a, b| f64::from(b) - a),
-            Primitive::Mul => fast_reduce(bytes, 1.0, |a, b| a * f64::from(b)),
-            Primitive::Div if flipped => fast_reduce(bytes, 1.0, |a, b| a / f64::from(b)),
-            Primitive::Div => fast_reduce(bytes, 1.0, |a, b| f64::from(b) / a),
-            Primitive::Max => fast_reduce(bytes, f64::NEG_INFINITY, |a, b| a.max(f64::from(b))),
-            Primitive::Min => fast_reduce(bytes, f64::INFINITY, |a, b| a.min(f64::from(b))),
+            Primitive::Add => fast_reduce(bytes.convert(), 0.0, |a, b| a + b),
+            Primitive::Sub if flipped => fast_reduce(bytes.convert(), 0.0, |a, b| a - b),
+            Primitive::Sub => fast_reduce(bytes.convert(), 0.0, |a, b| b - a),
+            Primitive::Mul => fast_reduce(bytes.convert(), 1.0, |a, b| a * b),
+            Primitive::Div if flipped => fast_reduce(bytes.convert(), 1.0, |a, b| a / b),
+            Primitive::Div => fast_reduce(bytes.convert(), 1.0, |a, b| b / a),
+            Primitive::Max => fast_reduce(bytes.convert(), f64::NEG_INFINITY, |a, b| a.max(b)),
+            Primitive::Min => fast_reduce(bytes.convert(), f64::INFINITY, |a, b| a.min(b)),
             _ => return generic_fold1(f, Value::Byte(bytes), None, env),
         }),
         (_, xs) => generic_fold1(f, xs, None, env)?,
@@ -51,48 +52,47 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub fn fast_reduce<T: ArrayValue + Into<R>, R: ArrayValue>(
-    mut arr: Array<T>,
-    identity: R,
-    f: impl Fn(R, T) -> R,
-) -> Array<R> {
+pub fn fast_reduce<T>(mut arr: Array<T>, identity: T, f: impl Fn(T, T) -> T) -> Array<T>
+where
+    T: ArrayValue + Copy,
+{
     match arr.shape.len() {
-        0 => Array::new(
-            tiny_vec![],
-            vec![arr.data.into_iter().next().unwrap().into()],
-        ),
+        0 => arr,
         1 => {
-            let mut vals = arr.data.into_iter();
-            Array::new(
-                tiny_vec![],
-                vec![if let Some(acc) = vals.next() {
-                    vals.fold(acc.into(), f)
-                } else {
-                    identity
-                }],
-            )
+            let data = arr.data.as_mut_slice();
+            let folded = data.iter().copied().fold(identity, f);
+            if data.is_empty() {
+                arr.data.extend(Some(folded));
+            } else {
+                data[0] = folded;
+                arr.data.truncate(1);
+            }
+            arr.shape = Shape::default();
+            arr
         }
         _ => {
             let row_len = arr.row_len();
+            if row_len == 0 {
+                arr.shape.remove(0);
+                return Array::new(arr.shape, EcoVec::new());
+            }
             let row_count = arr.row_count();
             if row_count == 0 {
                 arr.shape.remove(0);
                 let data = cowslice![identity; row_len];
                 return Array::new(arr.shape, data);
             }
-            let mut new_data: Vec<R> = arr.data[..row_len]
-                .iter()
-                .cloned()
-                .map(Into::into)
-                .collect();
-            for i in 1..row_count {
-                let start = i * row_len;
-                for j in 0..row_len {
-                    new_data[j] = f(new_data[j].clone(), arr.data[start + j].clone());
+            let sliced = arr.data.as_mut_slice();
+            let (acc, rest) = sliced.split_at_mut(row_len);
+            rest.chunks_exact(row_len).fold(acc, |acc, row| {
+                for (a, b) in acc.iter_mut().zip(row) {
+                    *a = f(*a, *b);
                 }
-            }
+                acc
+            });
+            arr.data.truncate(row_len);
             arr.shape.remove(0);
-            Array::new(arr.shape, new_data)
+            arr
         }
     }
 }
@@ -235,17 +235,20 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
     }
 }
 
-fn fast_scan<T: ArrayValue>(mut arr: Array<T>, f: impl Fn(T, T) -> T) -> Array<T> {
+fn fast_scan<T>(mut arr: Array<T>, f: impl Fn(T, T) -> T) -> Array<T>
+where
+    T: ArrayValue + Copy,
+{
     match arr.shape.len() {
         0 => unreachable!("fast_scan called on unit array, should have been guarded against"),
         1 => {
             if arr.row_count() == 0 {
                 return arr;
             }
-            let mut acc = arr.data[0].clone();
-            for val in arr.data.iter_mut().skip(1) {
-                acc = f(acc, val.clone());
-                *val = acc.clone();
+            let mut acc = arr.data[0];
+            for val in arr.data.as_mut_slice().iter_mut().skip(1) {
+                acc = f(acc, *val);
+                *val = acc;
             }
             arr
         }
@@ -255,13 +258,13 @@ fn fast_scan<T: ArrayValue>(mut arr: Array<T>, f: impl Fn(T, T) -> T) -> Array<T
                 return arr;
             }
             let shape = arr.shape.clone();
-            let mut new_data = Vec::with_capacity(arr.data.len());
+            let mut new_data = EcoVec::with_capacity(arr.data.len());
             let mut rows = arr.into_rows();
             new_data.extend(rows.next().unwrap().data);
             for row in rows {
                 let start = new_data.len() - row_len;
                 for (i, r) in row.data.into_iter().enumerate() {
-                    new_data.push(f(new_data[start + i].clone(), r));
+                    new_data.push(f(new_data[start + i], r));
                 }
             }
             Array::new(shape, new_data)
@@ -271,10 +274,9 @@ fn fast_scan<T: ArrayValue>(mut arr: Array<T>, f: impl Fn(T, T) -> T) -> Array<T
 
 fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
-    if sig.outputs != 1 {
+    if sig != (2, 1) {
         return Err(env.error(format!(
-            "Scan's function must return 1 value, but {} returns {}",
-            f, sig.outputs
+            "Scan's function's signature must be |2.1, but it is {sig}"
         )));
     }
     if xs.row_count() == 0 {
@@ -804,7 +806,7 @@ fn fast_table<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
     b: Array<B>,
     f: impl Fn(A, B) -> C,
 ) -> Array<C> {
-    let mut new_data = Vec::with_capacity(a.data.len() * b.data.len());
+    let mut new_data = EcoVec::with_capacity(a.data.len() * b.data.len());
     for x in a.data {
         for y in b.data.iter().cloned() {
             new_data.push(f(x.clone(), y));
@@ -816,7 +818,7 @@ fn fast_table<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
 }
 
 fn fast_table_join_or_couple<T: ArrayValue>(a: Array<T>, b: Array<T>) -> Array<T> {
-    let mut new_data = Vec::with_capacity(a.data.len() * b.data.len() * 2);
+    let mut new_data = EcoVec::with_capacity(a.data.len() * b.data.len() * 2);
     for x in a.data {
         for y in b.data.iter().cloned() {
             new_data.push(x.clone());
@@ -831,10 +833,9 @@ fn fast_table_join_or_couple<T: ArrayValue>(a: Array<T>, b: Array<T>) -> Array<T
 
 fn generic_table(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
-    if sig.outputs != 1 {
+    if sig != (2, 1) {
         return Err(env.error(format!(
-            "Table's function must return 1 value, but {} returns {}",
-            f, sig.outputs
+            "Table's function's signature must be |2.1, but it is {sig}"
         )));
     }
     let mut new_shape = Shape::from(xs.shape());
@@ -865,10 +866,9 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
     let xs = env.pop(ArrayArg(1))?;
     let ys = env.pop(ArrayArg(2))?;
     let sig = f.signature();
-    if sig.outputs != 1 {
+    if sig != (2, 1) {
         return Err(env.error(format!(
-            "Cross's function must return 1 value, but {} returns {}",
-            f, sig.outputs
+            "Cross's function's signature must be |2.1, but it is {sig}"
         )));
     }
     let mut new_shape = tiny_vec![xs.row_count(), ys.row_count()];

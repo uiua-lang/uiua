@@ -3,6 +3,7 @@ use comrak::{
     *,
 };
 use leptos::*;
+use leptos_router::*;
 use uiua::{
     primitive::{Primitive, CONSTANTS},
     SysOp,
@@ -23,7 +24,7 @@ pub fn Design() -> impl IntoView {
         <p>"When I first started developing Uiua, it was neither stack-based nor array-oriented. What it "<em>"did"</em>" focus a lot on was "<em>"combinators"</em>". I had this whole heirarchy of language-level operators that let you construct arbitrarily complex combinators relatively succinctly."</p>
         <p>"I discovered what a lot of others have discovered when delving deep into tacit code: it's really hard to read and write and reason about."</p>
         <p>"Eventually, I moved to a stack-based model and discovered that you can write almost any 1 or 2 argument combinator with just "<Prim prim=Dup/>", "<Prim prim=Over/>", and "<Prim prim=Flip/>"."</p>
-        <p>"Of course, I also made the discovery that juggling 3 or more values on the stack also imposes a high cognitive load on the developer. This is especially true if you try to "<em>"rotate"</em>" the stack like you can with "<Prim prim=Roll/>" and "<Prim prim=Unroll/>", which are currently deprecated. "<Prim prim=Dip/>" replaced the rolling functions as it is more general and easier to reason about."</p>
+        <p>"Of course, I also made the discovery that juggling 3 or more values on the stack also imposes a high cognitive load on the developer. This is especially true if you try to "<em>"rotate"</em>" the stack like you coule with the now-removed functions"<code>"roll"</code>" and "<code>"unroll"</code>". "<Prim prim=Dip/>" replaced the rolling functions as it is more general and easier to reason about, end eventually grew into "<A href="/docs/advancedstack#planet-notation">"Planet Notation"</A>"."</p>
         <br/>
         <h3>"Expressions"</h3>
         <p>"Long tacit expressions in most array languages can get very unwieldy. Because binary operations are infix, you have to parse the tree structure in your head before you can start determining the order of operations."</p>
@@ -104,6 +105,25 @@ pub fn Technical() -> impl IntoView {
         <p>"The Uiua website is written using the "<a href="https://leptos.dev/">Leptos</a>" framework and hosted on GitHub pages."</p>
         <p>"Leptos compiles to webassembly, which allows the entire Uiua interpreter to be compiled and used by the site's editor."</p>
         <p>"The online editor is implemented as a "<code>"contenteditable"</code>" div with lots of custom behaviors."</p>
+    }
+}
+
+#[component]
+pub fn StackIdioms() -> impl IntoView {
+    view! {
+        <h1>"Common Stack Idioms"</h1>
+        <p>"This page contains some common stack idioms that you may find useful."</p>
+        <p>"They are presented as rearrangements of numbers which are then grouped into an array so that you can see the result."</p>
+        <Editor example="[. 1]"/>
+        <Editor example="[∶ 1 2]"/>
+        <Editor example="[, 1 2]"/>
+        <Editor example="[; 1 2]"/>
+        <Editor example="[,, 1 2]"/>
+        <Editor example="[,∶ 1 2]"/>
+        <Editor example="[⊙. 1 2]"/>
+        <Editor example="[⊙; 1 2]"/>
+        <Editor example="[⊙∶ 1 2 3]"/>
+        <Editor example="[⊙, 1 2 3]"/>
     }
 }
 

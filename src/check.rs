@@ -146,8 +146,24 @@ impl<'a> VirtualEnv<'a> {
                     };
                     self.handle_args_outputs(1, outputs)?;
                 }
-                Each | Rows => self.handle_variadic_mod(prim)?,
-                Table | Cross => self.handle_mod(prim, Some(2), Some(1), 2, None)?,
+                Each | Rows => {
+                    let sig = self.pop()?.expect_function(|| prim)?;
+                    if sig.outputs != 1 {
+                        return Err(format!(
+                            "{prim}'s function must have 1 output, but its signature is {sig}"
+                        ));
+                    }
+                    self.handle_sig(sig)?
+                }
+                Table | Cross => {
+                    let sig = self.pop()?.expect_function(|| prim)?;
+                    if sig != (2, 1) {
+                        return Err(format!(
+                            "{prim}'s function's signature must be |2.1, but it is {sig}"
+                        ));
+                    }
+                    self.handle_args_outputs(2, 1)?;
+                }
                 Distribute => {
                     let sig = self.pop()?.expect_function(|| prim)?;
                     self.handle_sig(sig)?
@@ -167,14 +183,17 @@ impl<'a> VirtualEnv<'a> {
                     };
                     self.handle_args_outputs(args, outputs)?;
                 }
-                Spawn => self.handle_mod(prim, None, None, 1, Some(1))?,
+                Spawn => {
+                    let sig = self.pop()?.expect_function(|| prim)?;
+                    self.handle_args_outputs(sig.args, 1)?;
+                }
                 Repeat => {
                     let f = self.pop()?;
                     let n = self.pop()?;
                     // Break anywhere but the end of the function prevents signature checking.
                     if let BasicValue::Func(f) = &f {
-                        if instrs_contain_break_at_non_end(&f.instrs) {
-                            return Err("repeat with break not at the end".into());
+                        if instrs_contain_break(&f.instrs) {
+                            return Err("break present".into());
                         }
                     }
                     if let BasicValue::Num(n) = n {
@@ -182,27 +201,22 @@ impl<'a> VirtualEnv<'a> {
                         if n.fract() == 0.0 && n >= 0.0 {
                             let n = n as usize;
                             if n > 0 {
-                                if let BasicValue::Func(f) = f {
-                                    let sig = f.signature();
-                                    let (args, outputs) = match sig.args.cmp(&sig.outputs) {
-                                        Ordering::Equal => (sig.args, sig.outputs),
-                                        Ordering::Less => {
-                                            (sig.args, n * (sig.outputs - sig.args) + sig.args)
-                                        }
-                                        Ordering::Greater => (
-                                            (n - 1) * (sig.args - sig.outputs) + sig.args,
-                                            sig.outputs,
-                                        ),
-                                    };
-                                    for _ in 0..args {
-                                        self.pop()?;
+                                let sig = f.signature();
+                                let (args, outputs) = match sig.args.cmp(&sig.outputs) {
+                                    Ordering::Equal => (sig.args, sig.outputs),
+                                    Ordering::Less => {
+                                        (sig.args, n * (sig.outputs - sig.args) + sig.args)
                                     }
-                                    self.set_min_height();
-                                    for _ in 0..outputs {
-                                        self.stack.push(BasicValue::Other);
+                                    Ordering::Greater => {
+                                        ((n - 1) * (sig.args - sig.outputs) + sig.args, sig.outputs)
                                     }
-                                } else {
-                                    self.handle_mod(prim, Some(0), Some(1), n, None)?
+                                };
+                                for _ in 0..args {
+                                    self.pop()?;
+                                }
+                                self.set_min_height();
+                                for _ in 0..outputs {
+                                    self.stack.push(BasicValue::Other);
                                 }
                             }
                         } else {
@@ -287,16 +301,21 @@ impl<'a> VirtualEnv<'a> {
                     let _cond = self.pop()?;
                     let if_true_sig = if_true.signature();
                     let if_false_sig = if_false.signature();
-                    if if_true_sig.outputs != if_false_sig.outputs {
+                    if if_true_sig.outputs == if_false_sig.outputs {
+                        let args = if_true_sig.args.max(if_false_sig.args);
+                        let outputs = if_true_sig.outputs;
+                        self.handle_args_outputs(args, outputs)?;
+                    } else if if_true_sig.is_compatible_with(if_false_sig) {
+                        let sig = if_true_sig.max_with(if_false_sig);
+                        self.handle_sig(sig)?;
+                    } else {
                         return Err(format!(
                             "if's branches with signatures {} and {} \
-                            have a different numbers of outputs",
+                            have a different numbers of outputs and \
+                            are not compatible",
                             if_true_sig, if_false_sig
                         ));
                     }
-                    let args = if_true_sig.args.max(if_false_sig.args);
-                    let outputs = if_true_sig.outputs;
-                    self.handle_args_outputs(args, outputs)?;
                 }
                 Level => {
                     let _ranks = self.pop()?;
@@ -342,7 +361,7 @@ impl<'a> VirtualEnv<'a> {
                     let g = self.pop()?;
                     self.set_min_height();
                     if let BasicValue::Func(f) = f {
-                        if let Some((before, after)) = f.into_owned().under() {
+                        if let Some((before, after)) = f.into_owned().under(g.signature()) {
                             let before_sig = before.signature();
                             let after_sig = after.signature();
                             self.handle_sig(before_sig)?;
@@ -386,24 +405,6 @@ impl<'a> VirtualEnv<'a> {
                     self.stack.push(a);
                     self.stack.push(b);
                 }
-                Roll => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
-                    let c = self.pop()?;
-                    self.set_min_height();
-                    self.stack.push(a);
-                    self.stack.push(c);
-                    self.stack.push(b);
-                }
-                Unroll => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
-                    let c = self.pop()?;
-                    self.set_min_height();
-                    self.stack.push(b);
-                    self.stack.push(a);
-                    self.stack.push(c);
-                }
                 Dip => {
                     let f = self.pop()?;
                     let x = self.pop()?;
@@ -416,44 +417,6 @@ impl<'a> VirtualEnv<'a> {
                     self.pop()?;
                     self.set_min_height();
                     self.handle_sig(f.signature())?;
-                }
-                Restack => {
-                    let ns = match self.pop()? {
-                        BasicValue::Arr(items) => {
-                            let mut ns = Vec::with_capacity(items.len());
-                            for item in items {
-                                if let BasicValue::Num(n) = item {
-                                    ns.push(n);
-                                } else {
-                                    return Err("restack with an unknown index".into());
-                                }
-                            }
-                            ns
-                        }
-                        BasicValue::Num(n) => vec![n],
-                        _ => return Err("restack without an array".into()),
-                    };
-                    if ns.is_empty() {
-                        self.set_min_height();
-                    } else {
-                        let mut indices = Vec::with_capacity(ns.len());
-                        for n in ns {
-                            if n.fract() == 0.0 && n >= 0.0 {
-                                indices.push(n as usize);
-                            } else {
-                                return Err("restack with a non-natural index".into());
-                            }
-                        }
-                        let max_index = *indices.iter().max().unwrap();
-                        let mut values = Vec::with_capacity(max_index + 1);
-                        for _ in 0..=max_index {
-                            values.push(self.pop()?);
-                        }
-                        self.set_min_height();
-                        for index in indices.into_iter().rev() {
-                            self.stack.push(values[index].clone());
-                        }
-                    }
                 }
                 Join => {
                     let a = self.pop()?;
@@ -570,75 +533,16 @@ impl<'a> VirtualEnv<'a> {
         }
         Ok(())
     }
-    fn handle_mod(
-        &mut self,
-        prim: &Primitive,
-        f_args: Option<usize>,
-        f_outputs: Option<usize>,
-        m_args: usize,
-        m_outputs: Option<usize>,
-    ) -> Result<(), String> {
-        if let BasicValue::Func(f) = self.pop()? {
-            let sig = f.signature();
-            if let Some(f_args) = f_args {
-                if sig.args != f_args {
-                    return Err(format!(
-                        "{prim}'s function {f:?} has {} args, expected {}",
-                        sig.args, f_args
-                    ));
-                }
-            }
-            if let Some(f_outputs) = f_outputs {
-                if sig.outputs != f_outputs {
-                    return Err(format!(
-                        "{prim}'s function {f:?} has {} outputs, expected {}",
-                        sig.outputs, f_outputs
-                    ));
-                }
-            }
-            for _ in 0..m_args {
-                self.pop()?;
-            }
-            self.set_min_height();
-            let outputs = m_outputs.unwrap_or(f_outputs.unwrap_or(sig.outputs));
-            for _ in 0..outputs {
-                self.stack.push(BasicValue::Other);
-            }
-            Ok(())
-        } else {
-            Err(format!("{prim} without function"))
-        }
-    }
-    fn handle_variadic_mod(&mut self, prim: &Primitive) -> Result<(), String> {
-        if let BasicValue::Func(f) = self.pop()? {
-            let sig = f.signature();
-            if sig.outputs != 1 {
-                return Err(format!("{prim}'s function {f:?} did not return 1 value",));
-            }
-            for _ in 0..sig.args {
-                self.pop()?;
-            }
-            self.set_min_height();
-            self.stack.push(BasicValue::Other);
-            Ok(())
-        } else {
-            Err(format!("{prim} without function"))
-        }
-    }
 }
 
-fn instrs_contain_break_at_non_end(instrs: &[Instr]) -> bool {
-    for (i, instr) in instrs.iter().enumerate() {
+fn instrs_contain_break(instrs: &[Instr]) -> bool {
+    for instr in instrs.iter() {
         match instr {
-            Instr::Prim(Primitive::Break, _) => {
-                if i != instrs.len() - 1 {
-                    return true;
-                }
-            }
+            Instr::Prim(Primitive::Break, _) => return true,
             Instr::Push(val) => {
                 if let Some(f) = val.as_func_array() {
                     for f in &f.data {
-                        if instrs_contain_break_at_non_end(&f.instrs) {
+                        if instrs_contain_break(&f.instrs) {
                             return true;
                         }
                     }

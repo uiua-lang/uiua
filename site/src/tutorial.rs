@@ -280,6 +280,12 @@ fn TutorialMath() -> impl IntoView {
         <p>"This is not special syntax. All the numbers are pushed to the stack, then the operators work on them."</p>
         <p>"Remember that you can type the names of operators and then run to format them."</p>
         <Editor example="# Click Run to format!\nmax sqrt2 mod10 abs`31" help={&["", "⇡Click⇡"]}/>
+
+        <h2 id="adicity">"Adicity"</h2>
+        <p>"Some programming languages use the terms \"unary\" and \"binary\" to refer to functions that take one or two arguments respectively. While these are the Latin terms, many array languages, including Uiua, prefer to use the Greek terms \"monadic\" and \"dyadic\"."</p>
+        <p>"As you read Uiua's documentation, you will see these terms used to describe functions (and modifiers)."</p>
+        <p>"For example, "<Prim prim=Sqrt/>" is a monadic function, and "<Prim prim=Add/>" is a dyadic function."</p>
+        <p>"On this site, monadic functions are in "<span class="monadic-function">"green"</span>" and dyadic functions are in "<span class="dyadic-function">"blue"</span>"."</p>
     }
 }
 
@@ -430,6 +436,7 @@ fn TutorialTypes() -> impl IntoView {
         <Editor example="[@u @i @u @a]"/>
         <p>"Characters like newline or null need to be escaped with "<code>"\\"</code>", but a space does not."</p>
         <Editor example="[@\\r @\\0 @ ]"/>
+        <p>"If you don't like the significant whitespace of "<code>"@ "</code>", "<code>"@\\s"</code>" is also space."</p>
         <p>"String literals, delimited by "<code>"\""</code>"s, create rank 1 character arrays."</p>
         <Editor example="△.\"Hello, World!\""/>
         <p>"You can make strings span multiple lines with a "<code>"$"</code>" followed by a space on each line."</p>
@@ -518,7 +525,7 @@ fn TutorialFunctions() -> impl IntoView {
         <h1>"Modifiers and Functions"</h1>
 
         <h2 id="modifiers">"Modifiers"</h2>
-        <p>"Modifiers are functions that take other functions. If you immediately follow a modifier with its function arguments, the functions will be called inside the modifier rather than outside."</p>
+        <p>"Modifiers are functions that take other functions as arguments. If you immediately follow a modifier with its function arguments, the functions will be called inside the modifier rather than outside."</p>
         <p>"For example, "<Prim prim=Reduce/>" applies a function \"between\" all rows of an array."</p>
         <p><PrimCodes prims={[Reduce, Add]}/>" is therefore the sum of all the rows of an array."</p>
         <Editor example="/+ 1_2_3_4"/>
@@ -526,6 +533,8 @@ fn TutorialFunctions() -> impl IntoView {
         <Editor example="\\+ 1_2_3_4"/>
         <p><Prim prim=Table/>" applies a function between all combinations of elements of two arrays. This is sometimes called the "<em>"outer product"</em>"."</p>
         <Editor example="⊞+ [5 6 7 8] [10 20 30 40]"/>
+        <p>"In the same way that \"monadic\" and \"dyadic\" functions refer to functions that take one or two arguments respectively, \"monadic\" and \"dyadic\" "<em>"modifiers"</em>" refer to modifiers that take one or two "<em>"functions"</em>" respectively."</p>
+        <p>"On this site, monadic modifiers are in "<span class="monadic-modifier">"yellow"</span>" and dyadic modifiers are in "<span class="dyadic-modifier">"purple"</span>"."</p>
         <p>"The main docs page has "<A href="/docs/modifier">"a list"</A>" of all of the built-in modifiers."</p>
 
         <h2 id="inline-functions">"Inline Functions"</h2>

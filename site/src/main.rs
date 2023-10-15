@@ -49,7 +49,7 @@ pub fn Site() -> impl IntoView {
             <div style="font-style: normal">
                 <a href="/docs/advancedstack#planet-notation" style="text-decoration: none">"🌍🪐"</a>" "
                 <code style="font-style: normal">
-                    <span class="modifier1-button">"⋅⋅⊙⋅⋅"</span>
+                    <span class="monadic-modifier">"⋅⋅⊙⋅⋅"</span>
                     <span class="stack-function-button">"∘"</span>
                 </code>
             </div>
@@ -78,7 +78,7 @@ pub fn Site() -> impl IntoView {
                 <div id="top" class="top">
                     <div id="header">
                         <div id="header-left">
-                            <h1><A href="/"><img src="/uiua-logo.png" style="height: 1em" alt="Uiua logo" /></A>" Uiua"</h1>
+                            <h1><A id="header-uiua" href="/"><img src="/uiua-logo.png" style="height: 1em" alt="Uiua logo" />" Uiua"</A></h1>
                             <p id="subtitle">{ subtitle }</p>
                         </div>
                         <div id="nav">
@@ -285,22 +285,22 @@ fn prim_class(prim: Primitive) -> &'static str {
     }
 
     match prim {
-        Primitive::Transpose => code_font!("monadic-function-button trans"),
+        Primitive::Transpose => code_font!("monadic-function trans"),
         prim if prim.class() == PrimClass::Stack && prim.modifier_args().is_none() => {
             code_font!("stack-function-button")
         }
         prim => {
             if let Some(m) = prim.modifier_args() {
                 if m == 1 {
-                    code_font!("modifier1-button")
+                    code_font!("monadic-modifier")
                 } else {
-                    code_font!("modifier2-button")
+                    code_font!("dyadic-modifier")
                 }
             } else {
                 match prim.args() {
                     Some(0) => code_font!("noadic-function-button"),
-                    Some(1) => code_font!("monadic-function-button"),
-                    Some(2) => code_font!("dyadic-function-button"),
+                    Some(1) => code_font!("monadic-function"),
+                    Some(2) => code_font!("dyadic-function"),
                     Some(3) => code_font!("triadic-function-button"),
                     _ => code_font!("variadic-function-button"),
                 }

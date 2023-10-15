@@ -110,14 +110,15 @@ mod server {
     use super::*;
 
     use crate::{
-        format::{format_str, FormatConfig /*, FormatConfigSource*/},
+        format::{format_str, FormatConfig},
         lex::Loc,
-        primitive::PrimDocFragment,
+        primitive::{PrimClass, PrimDocFragment},
         Ident, Uiua,
     };
 
     pub struct LspDoc {
         pub input: String,
+        pub items: Vec<Item>,
         pub spans: Vec<Sp<SpanKind>>,
         pub bindings: BindingsInfo,
     }
@@ -131,6 +132,7 @@ mod server {
             let bindings = bindings_info(&items);
             Self {
                 input,
+                items,
                 spans,
                 bindings,
             }
@@ -220,9 +222,37 @@ mod server {
         docs: DashMap<Url, LspDoc>,
     }
 
+    const STACK_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("stack-function");
+    const NOADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("noadic-function");
+    const MONADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("monadic-function");
+    const DYADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("dyadic-function");
+    const MONADIC_MODIFIER_STT: SemanticTokenType = SemanticTokenType::new("monadic-modifier");
+    const DYADIC_MODIFIER_STT: SemanticTokenType = SemanticTokenType::new("dyadic-modifier");
+
+    const SEMANTIC_TOKEN_TYPES: [SemanticTokenType; 9] = [
+        SemanticTokenType::STRING,
+        SemanticTokenType::NUMBER,
+        SemanticTokenType::COMMENT,
+        STACK_FUNCTION_STT,
+        NOADIC_FUNCTION_STT,
+        MONADIC_FUNCTION_STT,
+        DYADIC_FUNCTION_STT,
+        MONADIC_MODIFIER_STT,
+        DYADIC_MODIFIER_STT,
+    ];
+
     #[tower_lsp::async_trait]
     impl LanguageServer for Backend {
         async fn initialize(&self, _params: InitializeParams) -> Result<InitializeResult> {
+            self.client
+                .log_message(MessageType::INFO, "Initializing Uiua language server")
+                .await;
+            self.client
+                .log_message(
+                    MessageType::INFO,
+                    format!("Client capabilities: {:#?}", _params.capabilities),
+                )
+                .await;
             Ok(InitializeResult {
                 capabilities: ServerCapabilities {
                     text_document_sync: Some(TextDocumentSyncCapability::Kind(
@@ -235,11 +265,7 @@ mod server {
                             SemanticTokensOptions {
                                 work_done_progress_options: WorkDoneProgressOptions::default(),
                                 legend: SemanticTokensLegend {
-                                    token_types: vec![
-                                        SemanticTokenType::STRING,
-                                        SemanticTokenType::NUMBER,
-                                        SemanticTokenType::COMMENT,
-                                    ],
+                                    token_types: SEMANTIC_TOKEN_TYPES.to_vec(),
                                     token_modifiers: vec![],
                                 },
                                 range: Some(true),
@@ -303,46 +329,57 @@ mod server {
                 }
             }
             Ok(Some(if let Some((prim, range)) = prim_range {
-                let mut contents = vec![MarkedString::String(prim.name().unwrap().into())];
+                let mut value: String = prim.name().unwrap().into();
                 if let Some(doc) = prim.doc() {
-                    contents.push(MarkedString::String(
-                        doc.short
-                            .iter()
-                            .map(|frag| match frag {
-                                PrimDocFragment::Text(text)
-                                | PrimDocFragment::Code(text)
-                                | PrimDocFragment::Emphasis(text)
-                                | PrimDocFragment::Strong(text)
-                                | PrimDocFragment::Link { text, .. } => text.clone(),
-                                PrimDocFragment::Primitive { prim, named } => {
-                                    let name = prim.name().unwrap();
-                                    if *named {
-                                        if let Some(unicode) = prim.glyph() {
-                                            format!("{} {}", unicode, name)
-                                        } else {
-                                            name.into()
-                                        }
-                                    } else if let Some(unicode) = prim.glyph() {
-                                        unicode.into()
+                    value.push('\n');
+                    for frag in doc.short.iter() {
+                        match frag {
+                            PrimDocFragment::Text(text) => value.push_str(text),
+                            PrimDocFragment::Code(text) => value.push_str(&format!("`{}`", text)),
+                            PrimDocFragment::Emphasis(text) => {
+                                value.push_str(&format!("*{}*", text))
+                            }
+                            PrimDocFragment::Strong(text) => {
+                                value.push_str(&format!("**{}**", text))
+                            }
+                            PrimDocFragment::Link { text, url } => {
+                                value.push_str(&format!("[{}]({})", text, url))
+                            }
+                            PrimDocFragment::Primitive { prim, named } => {
+                                let name = prim.name().unwrap();
+                                value.push_str(&if *named {
+                                    if let Some(unicode) = prim.glyph() {
+                                        format!("`{unicode} {name}`")
                                     } else {
-                                        name.into()
+                                        format!("`{name}`")
                                     }
-                                }
-                            })
-                            .collect(),
-                    ))
+                                } else if let Some(unicode) = prim.glyph() {
+                                    format!("`{unicode}`")
+                                } else {
+                                    format!("`{name}`")
+                                })
+                            }
+                        }
+                    }
                 }
                 Hover {
-                    contents: HoverContents::Array(contents),
+                    contents: HoverContents::Markup(MarkupContent {
+                        kind: MarkupKind::Markdown,
+                        value,
+                    }),
                     range: Some(range),
                 }
             } else if let Some((ident, binding, range)) = binding_range {
-                let mut contents = vec![MarkedString::String(ident.value.as_ref().into())];
+                let mut value: String = ident.value.as_ref().into();
                 if let Some(comment) = &binding.comment {
-                    contents.push(MarkedString::String(comment.clone()))
+                    value.push('\n');
+                    value.push_str(comment);
                 }
                 Hover {
-                    contents: HoverContents::Array(contents),
+                    contents: HoverContents::Markup(MarkupContent {
+                        kind: MarkupKind::Markdown,
+                        value,
+                    }),
                     range: Some(range),
                 }
             } else {
@@ -360,29 +397,8 @@ mod server {
                 return Ok(None);
             };
 
-            // Somehow this breaks the formatting in VS Code, so I'm disabling it for now.
-
-            // let path = if params.text_document.uri.scheme() == "file" {
-            //     params.text_document.uri.to_file_path().ok()
-            // } else {
-            //     None
-            // };
-
-            // let config = FormatConfig::from_source(FormatConfigSource::SearchFile, path.as_deref())
-            //     .unwrap_or_default()
-            //     .with_multiline_indent(params.options.tab_size as usize);
-
-            // let Ok(formatted) = format_str(&doc.input, &config) else {
-            //     return Ok(None);
-            // };
-
-            let Ok(formatted) = format_str(
-                &doc.input,
-                &FormatConfig {
-                    multiline_indent: params.options.tab_size as usize,
-                    ..Default::default()
-                },
-            ) else {
+            let Ok(formatted) = format_str(&doc.input, &FormatConfig::find().unwrap_or_default())
+            else {
                 return Ok(None);
             };
             let range = Range::new(Position::new(0, 0), Position::new(u32::MAX, u32::MAX));
@@ -444,11 +460,26 @@ mod server {
             let mut prev_char = 0;
             for sp in &doc.spans {
                 let token_type = match sp.value {
-                    SpanKind::String => 0,
-                    SpanKind::Number => 1,
-                    SpanKind::Comment => 2,
+                    SpanKind::String => SemanticTokenType::STRING,
+                    SpanKind::Number => SemanticTokenType::NUMBER,
+                    SpanKind::Comment => SemanticTokenType::COMMENT,
+                    SpanKind::Primitive(p) => match p.class() {
+                        PrimClass::Stack if p.modifier_args().is_none() => STACK_FUNCTION_STT,
+                        PrimClass::MonadicPervasive | PrimClass::MonadicArray => {
+                            MONADIC_FUNCTION_STT
+                        }
+                        PrimClass::DyadicPervasive | PrimClass::DyadicArray => DYADIC_FUNCTION_STT,
+                        _ if p.modifier_args() == Some(1) => MONADIC_MODIFIER_STT,
+                        _ if p.modifier_args() == Some(2) => DYADIC_MODIFIER_STT,
+                        _ if p.args() == Some(0) => NOADIC_FUNCTION_STT,
+                        _ => continue,
+                    },
                     _ => continue,
                 };
+                let token_type = SEMANTIC_TOKEN_TYPES
+                    .iter()
+                    .position(|t| t == &token_type)
+                    .unwrap() as u32;
                 let span = &sp.span;
                 let start = uiua_loc_to_lsp(span.start);
                 let delta_start = if start.character > prev_char {

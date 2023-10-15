@@ -1,10 +1,8 @@
-- Add sig checker context
 - Improve how recursion works
 - `under` aggregating `group` and `partition`
 - Add channels for spawned threads
 - Figure out what is going on with the editor cursor
 - Sift+delete to delete whole line
-- Build editor divs with leptos instead of strings
 - Inline some functions with `distribute`
 - Rust API
   - Make dedicated Array conversion traits
@@ -33,3 +31,4 @@
 - System APIs
   - FFI
   - UDP Sockets
+- Discord bot

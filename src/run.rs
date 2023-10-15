@@ -58,6 +58,8 @@ pub struct Uiua {
     pub(crate) print_diagnostics: bool,
     /// Whether to print the time taken to execute each instruction
     time_instrs: bool,
+    /// The time at which the last instruction was executed
+    last_time: f64,
     /// Arguments passed from the command line
     cli_arguments: Vec<String>,
     /// File that was passed to the interpreter for execution
@@ -177,6 +179,7 @@ impl Uiua {
             backend: Arc::new(NativeSys),
             print_diagnostics: false,
             time_instrs: false,
+            last_time: 0.0,
             cli_arguments: Vec::new(),
             cli_file_path: PathBuf::new(),
             execution_limit: None,
@@ -377,11 +380,18 @@ code:
             // }
             // println!();
             // println!("  {:?}", instr);
+
             if self.time_instrs {
                 formatted_instr = format!("{instr:?}");
+                self.last_time = instant::now();
             }
-            let start_time = instant::now();
             let res = match instr {
+                &Instr::Prim(prim, span) => {
+                    self.push_span(span, Some(prim));
+                    let res = prim.run(self);
+                    self.pop_span();
+                    res
+                }
                 Instr::Push(val) => {
                     self.stack.push(Value::clone(val));
                     Ok(())
@@ -413,12 +423,6 @@ code:
                     };
                     self.pop_span();
                     self.push(val);
-                    Ok(())
-                })(),
-                &Instr::Prim(prim, span) => (|| {
-                    self.push_span(span, Some(prim));
-                    prim.run(self)?;
-                    self.pop_span();
                     Ok(())
                 })(),
                 &Instr::Call(span) => self
@@ -502,9 +506,10 @@ code:
                 println!(
                     "  ⏲{:padding$}{:.2}ms - {}",
                     "",
-                    end_time - start_time,
+                    end_time - self.last_time,
                     formatted_instr
                 );
+                self.last_time = instant::now();
             }
             if let Err(mut err) = res {
                 // Trace errors
@@ -840,6 +845,7 @@ code:
             diagnostics: BTreeSet::new(),
             print_diagnostics: self.print_diagnostics,
             time_instrs: self.time_instrs,
+            last_time: self.last_time,
             cli_arguments: self.cli_arguments.clone(),
             cli_file_path: self.cli_file_path.clone(),
             backend: self.backend.clone(),
@@ -881,7 +887,11 @@ code:
                 };
                 rows.push(row);
             }
-            self.push(Value::from_row_values(rows, self)?);
+            let mut val = Value::from_row_values(rows, self)?;
+            let mut shape = handles.shape;
+            shape.extend_from_slice(&val.shape()[1..]);
+            *val.shape_mut() = shape;
+            self.push(val);
         }
         Ok(())
     }

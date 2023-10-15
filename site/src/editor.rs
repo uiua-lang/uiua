@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     cell::{Cell, RefCell},
     iter,
     mem::{replace, take},
@@ -13,7 +14,7 @@ use base64::engine::{
 };
 use image::ImageOutputFormat;
 use leptos::{ev::keydown, *};
-use leptos_router::{use_navigate, NavigateOptions};
+use leptos_router::{use_navigate, BrowserIntegration, History, LocationChange, NavigateOptions};
 use uiua::{
     format::{format_str, FormatConfig},
     image_to_bytes,
@@ -283,8 +284,13 @@ pub fn Editor<'a>(
                 },
             ) {
                 let cursor = if let Some((start, end)) = get_code_cursor() {
-                    let new_start = formatted.map_char_pos(start as usize);
-                    let new_end = formatted.map_char_pos(end as usize);
+                    let (new_start_start, new_start_end) = formatted.map_char_pos(start as usize);
+                    let (new_end_start, new_end_end) = formatted.map_char_pos(end as usize);
+                    let (new_start, new_end) = if get_right_to_left() {
+                        (new_start_start, new_end_start)
+                    } else {
+                        (new_start_end, new_end_end)
+                    };
                     Cursor::Set(new_start as u32, new_end as u32)
                 } else {
                     cursor
@@ -304,15 +310,12 @@ pub fn Editor<'a>(
         {
             let encoded = URL_SAFE.encode(&input);
             if let EditorSize::Pad = size {
-                window()
-                    .history()
-                    .unwrap()
-                    .replace_state_with_url(
-                        &JsValue::NULL,
-                        "",
-                        Some(&format!("/pad?src={encoded}")),
-                    )
-                    .unwrap();
+                BrowserIntegration {}.navigate(&LocationChange {
+                    value: format!("/pad?src={encoded}"),
+                    scroll: false,
+                    replace: true,
+                    ..Default::default()
+                });
             }
         }
 
@@ -608,14 +611,17 @@ pub fn Editor<'a>(
             "\"" => {
                 let (start, end) = get_code_cursor().unwrap();
                 let code = code_text();
-                if start > 0 && start == end && code.chars().nth(start as usize) == Some('"') {
-                    if code.chars().nth(start as usize - 1) == Some('"') {
-                        state().set_cursor((start + 1, start + 1));
-                    } else {
-                        replace_code("\"");
-                    }
-                } else {
+                if start != end
+                    || code
+                        .chars()
+                        .nth(start as usize)
+                        .map_or(true, |c| c.is_whitespace())
+                {
                     surround_code('"', '"');
+                } else if start == end && code_text().chars().nth(start as usize) == Some('"') {
+                    state().set_cursor((start + 1, start + 1));
+                } else {
+                    replace_code(key);
                 }
             }
             // Handle open delimiters
@@ -628,7 +634,17 @@ pub fn Editor<'a>(
                     "{" => ('{', '}'),
                     _ => unreachable!(),
                 };
-                surround_code(open, close);
+                let (start, end) = get_code_cursor().unwrap();
+                if start != end
+                    || code_text()
+                        .chars()
+                        .nth(start as usize)
+                        .map_or(true, |c| c.is_whitespace())
+                {
+                    surround_code(open, close);
+                } else {
+                    replace_code(key);
+                }
             }
             // Handle close delimiters
             ")" | "]" | "}" => {
@@ -1002,12 +1018,21 @@ pub fn Editor<'a>(
         let limit = input.value().parse().unwrap_or(2.0);
         set_execution_limit(limit);
     };
+    let toggle_right_to_left = move |_| {
+        set_right_to_left(!get_right_to_left());
+    };
     let on_select_font = move |event: Event| {
         let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
         let name = input.value();
         set_font_name(&name);
     };
+    let on_select_font_size = move |event: Event| {
+        let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
+        let size = input.value();
+        set_font_size(&size);
+    };
     set_font_name(&get_font_name());
+    set_font_size(&get_font_size());
 
     // Render
     view! {
@@ -1017,17 +1042,34 @@ pub fn Editor<'a>(
                     <div class="glyph-buttons">{glyph_buttons}</div>
                 </div>
                 <div id="settings" style=settings_style>
-                    <div>
+                    <div title="The maximum number of seconds a program can run for">
                         "Execution limit:"
                         <input
                             type="number"
                             min="0.01"
                             max="1000000"
                             width="3em"
-                            title="The maximum number of seconds a program can run for"
                             value=get_execution_limit
                             on:input=on_execution_limit_change/>
                         "s"
+                    </div>
+                    <div title="Place the cursor on the left of the current token when formatting">
+                        "Format left:"
+                        <input
+                            type="checkbox"
+                            checked=get_right_to_left
+                            on:change=toggle_right_to_left/>
+                    </div>
+                    <div>
+                        "Font size:"
+                        <select
+                            on:change=on_select_font_size>
+                            <option value="0.6em" selected={get_font_size() == "0.6em"}>"Scalar"</option>
+                            <option value="0.8em" selected={get_font_size() == "0.8em"}>"Small"</option>
+                            <option value="1em" selected={get_font_size() == "1em"}>"Normal"</option>
+                            <option value="1.2em" selected={get_font_size() == "1.2em"}>"Big"</option>
+                            <option value="1.4em" selected={get_font_size() == "1.4em"}>"Rank 3"</option>
+                        </select>
                     </div>
                     <div>
                         "Font:"
@@ -1065,7 +1107,7 @@ pub fn Editor<'a>(
                             </button>
                             <div id="example-tracker">{example_text}</div>
                         </div>
-                        <div class="code">
+                        <div class="code sized-code">
                             <div class="line-numbers">
                                 { line_numbers }
                             </div>
@@ -1083,7 +1125,7 @@ pub fn Editor<'a>(
                         </div>
                     </div>
                     <div class="output-frame">
-                        <div class="output">
+                        <div class="output sized-code">
                             { move || output.get() }
                         </div>
                         <div id="code-buttons">
@@ -1153,17 +1195,36 @@ where
 fn get_execution_limit() -> f64 {
     get_local_var("execution-limit", || 2.0)
 }
-
 fn set_execution_limit(limit: f64) {
     set_local_var("execution-limit", limit);
+}
+
+fn get_right_to_left() -> bool {
+    get_local_var("right-to-left", || false)
+}
+fn set_right_to_left(rtl: bool) {
+    set_local_var("right-to-left", rtl);
 }
 
 fn get_font_name() -> String {
     get_local_var("font-name", || "DejaVuSansMono".into())
 }
-
 fn set_font_name(name: &str) {
     set_local_var("font-name", name);
+    update_style();
+}
+
+fn get_font_size() -> String {
+    get_local_var("font-size", || "1em".into())
+}
+fn set_font_size(size: &str) {
+    set_local_var("font-size", size);
+    update_style();
+}
+
+fn update_style() {
+    let font_name = get_font_name();
+    let font_size = get_font_size();
     // Remove the old style
     let head = &document().head().unwrap();
     if let Some(item) = head.get_elements_by_tag_name("style").item(0) {
@@ -1176,7 +1237,8 @@ fn set_font_name(name: &str) {
         .dyn_into::<HtmlStyleElement>()
         .unwrap();
     new_style.set_inner_text(&format!(
-        "@font-face {{ font-family: 'Code Font'; src: url('{name}.ttf') format('truetype'); }}"
+        "@font-face {{ font-family: 'Code Font'; src: url('/{font_name}.ttf') format('truetype'); }}\n\
+        .sized-code {{ font-size: {font_size}; }} }}"
     ));
     document().head().unwrap().append_child(&new_style).unwrap();
 }
@@ -1353,7 +1415,7 @@ fn set_code_html(id: &str, code: &str) {
             if chars[*curr] == '\n' {
                 if !unspanned.is_empty() {
                     // log!("unspanned: {:?}", unspanned);
-                    html.push_str(&unspanned);
+                    html.push_str(&escape_html(&unspanned));
                     unspanned.clear();
                 }
                 // log!("newline");
@@ -1371,7 +1433,7 @@ fn set_code_html(id: &str, code: &str) {
         }
         if !unspanned.is_empty() {
             // log!("unspanned: {:?}", unspanned);
-            html.push_str(&unspanned);
+            html.push_str(&escape_html(&unspanned));
         }
         html.push_str("</span>");
     };
@@ -1413,13 +1475,15 @@ fn set_code_html(id: &str, code: &str) {
                         format!(
                             r#"<span 
                             class="code-span code-hover {color_class}" 
-                            data-title={title:?}>{text}</span>"#
+                            data-title={title:?}>{}</span>"#,
+                            escape_html(&text)
                         )
                     } else {
                         format!(
                             r#"<span 
                             class="code-span code-hover {color_class}" 
-                            data-title={name:?}>{text}</span>"#
+                            data-title={name:?}>{}</span>"#,
+                            escape_html(&text)
                         )
                     }
                 }
@@ -1441,11 +1505,15 @@ fn set_code_html(id: &str, code: &str) {
                         format!(
                             r#"<span
                                 class="code-span code-hover {color_class}" 
-                                data-title={title}>{text}</span>"#
+                                data-title={title}>{}</span>"#,
+                            escape_html(&text)
                         )
                     }
                 }
-                _ => format!(r#"<span class="code-span {color_class}">{text}</span>"#),
+                _ => format!(
+                    r#"<span class="code-span {color_class}">{}</span>"#,
+                    escape_html(&text)
+                ),
             });
         }
 
@@ -1470,6 +1538,25 @@ fn set_code_html(id: &str, code: &str) {
     // log!("html: {}", html);
 
     elem.set_inner_html(&html);
+}
+
+fn escape_html(s: &str) -> Cow<str> {
+    if s.contains(['&', '<', '>', '"', '\''].as_ref()) {
+        let mut escaped = String::with_capacity(s.len());
+        for c in s.chars() {
+            match c {
+                '&' => escaped.push_str("&amp;"),
+                '<' => escaped.push_str("&lt;"),
+                '>' => escaped.push_str("&gt;"),
+                '"' => escaped.push_str("&quot;"),
+                '\'' => escaped.push_str("&#x27;"),
+                _ => escaped.push(c),
+            }
+        }
+        Cow::Owned(escaped)
+    } else {
+        Cow::Borrowed(s)
+    }
 }
 
 /// Run code and return the output

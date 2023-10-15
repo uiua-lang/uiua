@@ -32,6 +32,7 @@ pub enum DocsPage {
     Changelog,
     RightToLeft,
     Constants,
+    StackIdioms,
 }
 
 impl IntoParam for DocsPage {
@@ -52,6 +53,7 @@ impl IntoParam for DocsPage {
                 "changelog" => Some(Self::Changelog),
                 "rtl" => Some(Self::RightToLeft),
                 "constants" => Some(Self::Constants),
+                "stack-idioms" => Some(Self::StackIdioms),
                 value => Some(Self::Search(value.into())),
             })
             .ok_or_else(|| ParamsError::MissingParam(name.to_string()))
@@ -83,6 +85,7 @@ pub fn Docs() -> impl IntoView {
             DocsPage::Changelog => Changelog().into_view(),
             DocsPage::RightToLeft => RightToLeft().into_view(),
             DocsPage::Constants => Constants().into_view(),
+            DocsPage::StackIdioms => StackIdioms().into_view(),
         };
 
         view! {
@@ -204,11 +207,12 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         <ul>
             <li><A href="/docs/install">"Installation"</A>" - how to install and use Uiua's interpreter"</li>
             <li><A href="/docs/changelog">"Changelog"</A>" - what's new in each version"</li>
+            <li><A href="/docs/constants">"Constants"</A>" - list shadowable constants"</li>
+            <li><A href="/docs/stack-idioms">"Stack Idioms"</A>" - common ways of manipulating the stack"</li>
+            <li><A href="/docs/audio">"Audio"</A>" - how to generate and play audio"</li>
             <li><A href="/docs/design">"Design"</A>" - reasons for some of Uiua's design decisions"</li>
             <li><A href="/docs/rtl">"Right-to-Left"</A>" - the answer to the most-asked question about Uiua's design gets its own page"</li>
             <li><A href="/docs/technical">"Technical Details"</A>" - notes on the implementation of the Uiua interpreter and this website"</li>
-            <li><A href="/docs/constants">"Constants"</A>" - list shadowable constants"</li>
-            <li><A href="/docs/audio">"Audio"</A>" - how to generate and play audio"</li>
         </ul>
         <h2 id="uiuisms">"Uiuisms"</h2>
         <p><A href="/docs/isms">"Uiuisms"</A>" is a curated list of Uiua functions for solving common problems."</p>

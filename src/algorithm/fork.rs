@@ -6,24 +6,6 @@ use crate::{
     Uiua, UiuaResult,
 };
 
-pub fn restack(env: &mut Uiua) -> UiuaResult {
-    let indices = env
-        .pop(1)?
-        .as_naturals(env, "Restack indices must be a list of natural numbers")?;
-    if indices.is_empty() {
-        return Ok(());
-    }
-    let max_index = *indices.iter().max().unwrap();
-    let mut values = Vec::with_capacity(max_index + 1);
-    for i in 0..=max_index {
-        values.push(env.pop(i + 2)?);
-    }
-    for index in indices.into_iter().rev() {
-        env.push(values[index].clone());
-    }
-    Ok(())
-}
-
 pub fn both(env: &mut Uiua) -> UiuaResult {
     let f = env.pop(FunctionArg(1))?;
     match f.signature().args {
@@ -110,7 +92,7 @@ pub fn iff(env: &mut Uiua) -> UiuaResult {
         }
         let if_true_sig = if_true.signature();
         let if_false_sig = if_false.signature();
-        if if_true_sig.args == if_false_sig.args {
+        if if_true_sig.args == if_false_sig.args || if_true_sig.is_compatible_with(if_false_sig) {
             if condition == 1 {
                 env.call(if_true)?;
             } else {
@@ -123,12 +105,12 @@ pub fn iff(env: &mut Uiua) -> UiuaResult {
                 args.push(env.pop(ArrayArg(i + 1))?);
             }
             if condition == 1 {
-                for arg in args.into_iter().take(if_true_sig.args) {
+                for arg in args.into_iter().take(if_true_sig.args).rev() {
                     env.push(arg);
                 }
                 env.call(if_true)?;
             } else {
-                for arg in args.into_iter().take(if_false_sig.args) {
+                for arg in args.into_iter().take(if_false_sig.args).rev() {
                     env.push(arg);
                 }
                 env.call(if_false)?;

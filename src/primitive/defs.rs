@@ -186,26 +186,6 @@ primitive!(
     /// While [identity]'s signature is `|1.1`, it will not throw an error if the stack is empty.
     /// ex: ∘
     (1, Identity, Stack, ("identity", '∘')),
-    /// Move the top value on the stack 2 places down
-    ///
-    /// Deprecated in favor of [dip].
-    ///
-    /// ex! [↷ 1 2 3 4 5]
-    ///
-    /// If you want to operate on two values, keep them on the stack, and put the result below them, you can combine [roll] and [over].
-    /// ex! ↷+,,1 2
-    ///   : $ _ + _ = _
-    ///
-    /// See also: [unroll]
-    (3(3), Roll, Stack, ("roll", '↷')),
-    /// Move the third value on the stack to the top
-    ///
-    /// Deprecated in favor of [dip].
-    ///
-    /// ex! [↶ 1 2 3 4 5]
-    ///
-    /// See also: [roll]
-    (3(3), Unroll, Stack, ("unroll", '↶')),
     // Pervasive monadic ops
     /// Logical not
     ///
@@ -875,6 +855,14 @@ primitive!(
     ///
     /// [break]ing out of [reduce] discards the unreduced values.
     /// ex: /(⎋≥10.+) [3 4 8 9]
+    ///
+    /// Some functions have default values if the array is empty.
+    /// Functions without default values will throw an error if the array is empty.
+    /// ex: /+ []
+    /// ex: /× []
+    /// ex: /↥ []
+    /// ex: /↧ []
+    /// ex! /∠ []
     (1[1], Reduce, AggregatingModifier, ("reduce", '/')),
     /// Apply a reducing function to an array with an initial value
     ///
@@ -890,7 +878,7 @@ primitive!(
     ///
     /// [break]ing out of [fold] discards the unreduced values.
     /// ex: ∧(⎋≥10.+) 1 5_6_7_8
-    (2[1], Fold, AggregatingModifier, ("fold", '∧')),
+    ([1], Fold, AggregatingModifier, ("fold", '∧')),
     /// Reduce, but keep intermediate values
     ///
     /// ex: \+   1_2_3_4
@@ -1027,95 +1015,6 @@ primitive!(
     ///
     /// [partition] is closely related to [group].
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
-    /// Call a function on two sets of values
-    ///
-    /// For monadic functions, [both] calls its function on each of the top 2 values on the stack.
-    /// ex: ∩⇡ 3 5
-    ///
-    /// One good use of this is when working with [box] data.
-    /// You can use [both][unbox] to get 2 [box] values out.
-    /// ex: /(⊂∩⊔) {"a" "bc" "def"}
-    ///
-    /// For a function that takes `n` arguments, [both] calls the function on the 2 sets of `n` values on top of the stack.
-    /// ex: [∩+ 1 2 3 4]
-    /// ex: [∩(++) 1 2 3 4 5 6]
-    ///
-    /// [both] can also be chained. Every additional [both] doubles the number of arguments taken from the stack.
-    /// ex: [∩∩(□+2) 1 @a 2_3 5]
-    /// ex: [∩∩∩± 1 ¯2 0 42 ¯5 6 7 8 99]
-    (2[1], Both, Stack, ("both", '∩')),
-    /// Call two functions on two distinct sets of values
-    ///
-    /// ex: ⊓⇌⊝ 1_2_3 [1 4 2 4 2]
-    /// Each function will always be called on its own set of values.
-    /// ex: ⊓+× 1 2 3 4
-    /// The functions' signatures need not be the same.
-    /// ex: ⊓+(++) 1 2 3 4 5
-    /// [bracket] can be chained to apply additional functions to arguments deeper on the stack.
-    /// ex: ⊓⊓⇌(↻1)△ 1_2_3 4_5_6 7_8_9
-    /// ex: [⊓⊓⊓+-×÷ 10 20 5 8 3 7 2 5]
-    ([2], Bracket, Stack, ("bracket", '⊓')),
-    /// Call two functions on the same values
-    ///
-    /// ex: ⊃⇌⊝ 1_2_2_3
-    /// [fork] can be chained to apply more functions to the arguments. `n` functions require the chaining of `subtract``1n` [fork].
-    /// ex: [⊃⊃⊃+-×÷ 5 8]
-    /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maximum will work on the top values.
-    /// ex: [⊃+¯ 3 5]
-    ([2], Fork, Stack, ("fork", '⊃')),
-    /// Temporarily pop the top value off the stack and call a function
-    ///
-    /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [dip] is useful.
-    ///
-    /// ex: [⊙+ 1 2 3]
-    /// ex: [⊙⊙+ 1 2 3 4]
-    /// This is especially useful when used in a [fork].
-    /// In a [fork] expression, you can use [dip], [gap], and [identity] to select out values.
-    /// For example, if you wanted to add 3 values but keep the all 3 on top of the stack:
-    /// ex: [⊃⊙⊙∘(++) 3 5 10]
-    /// By replacing a `dip` with a `gap`, you pop the argument in that spot instead of keeping it:
-    /// ex: [⊃⊙⊙∘(++) 3 5 10]
-    /// ex: [⊃⊙⋅∘(++) 3 5 10]
-    /// ex: [⊃⋅⊙∘(++) 3 5 10]
-    /// ex: [⊃⊙∘(++) 3 5 10]
-    ([1], Dip, Stack, ("dip", '⊙')),
-    /// Discard the top stack value then call a function
-    ///
-    /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [gap] is useful.
-    ///
-    /// ex: ⋅+ 1 2 3
-    /// This may seem useless when [pop] exists, but [gap] really shines when used with [fork].
-    /// In a [fork] expression, you can use [dip], [gap], and [identity] to select out values.
-    /// For example, if you wanted to add 3 values but keep the last value on top of the stack:
-    /// ex: [⊃⋅⋅∘(++) 3 5 10]
-    /// By using fewer `gap`s, you can select a different value.
-    /// ex: [⊃⋅∘(++) 3 5 10]
-    /// ex: [⊃∘(++) 3 5 10]
-    /// By replacing a `gap` with a `dip`, you keep the argument in that spot instead of popping it:
-    /// ex: [⊃⊙⋅∘(++) 3 5 10]
-    /// ex: [⊃⋅⊙∘(++) 3 5 10]
-    /// ex: [⊃⊙⊙∘(++) 3 5 10]
-    ([1], Gap, Stack, ("gap", '⋅')),
-    /// Rearrange the stack
-    ///
-    /// Deprecated because it was never a good idea.
-    ///
-    /// [restack] is the most powerful stack manipulation function.
-    /// It is similar to [select], except it works on the stack instead of an array.
-    ///
-    /// [restack] takes a list of indices and rearranges those values on the stack in the given order.
-    /// ex! [⇵[1 0 2 2] 1 2 3]
-    ///
-    /// All other built-in stack manipulation functions can be implemented with [restack].
-    /// [duplicate] is `⇵``[0 0]`.
-    /// [over] is `⇵``[1 0 1]`.
-    /// [flip] is `⇵``[1 0]`.
-    /// [pop] is `⇵``[1]`.
-    /// [roll] is `⇵``[1 2 0]`.
-    /// [unroll] is `⇵``[2 0 1]`.
-    ///
-    /// While [restack] is sometimes necessary, its use is generally discouraged unless absolutely necessary, as it makes code harder to read.
-    ((None), Restack, Stack, ("restack", '⇵')),
     /// Invert the behavior of a function
     ///
     /// Most functions are not invertible.
@@ -1139,6 +1038,81 @@ primitive!(
     /// While more inverses exists, most of them are not useful on their own.
     /// They are usually used within [under].
     ([1], Invert, OtherModifier, ("invert", '⍘')),
+    /// Discard the top stack value then call a function
+    ///
+    /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [gap] is useful.
+    ///
+    /// ex: ⋅+ 1 2 3
+    /// This may seem useless when [pop] exists, but [gap] really shines when used with [fork].
+    /// In a [fork] expression, you can use [dip], [gap], and [identity] to select out values.
+    /// For example, if you wanted to add 3 values but keep the last value on top of the stack:
+    /// ex: [⊃⋅⋅∘(++) 3 5 10]
+    /// By using fewer `gap`s, you can select a different value.
+    /// ex: [⊃⋅∘(++) 3 5 10]
+    /// ex: [⊃∘(++) 3 5 10]
+    /// By replacing a `gap` with a `dip`, you keep the argument in that spot instead of popping it:
+    /// ex: [⊃⊙⋅∘(++) 3 5 10]
+    /// ex: [⊃⋅⊙∘(++) 3 5 10]
+    /// ex: [⊃⊙⊙∘(++) 3 5 10]
+    ([1], Gap, Stack, ("gap", '⋅')),
+    /// Temporarily pop the top value off the stack and call a function
+    ///
+    /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [dip] is useful.
+    ///
+    /// ex: [⊙+ 1 2 3]
+    /// ex: [⊙⊙+ 1 2 3 4]
+    /// This is especially useful when used in a [fork].
+    /// In a [fork] expression, you can use [dip], [gap], and [identity] to select out values.
+    /// For example, if you wanted to add 3 values but keep the all 3 on top of the stack:
+    /// ex: [⊃⊙⊙∘(++) 3 5 10]
+    /// By replacing a `dip` with a `gap`, you pop the argument in that spot instead of keeping it:
+    /// ex: [⊃⊙⊙∘(++) 3 5 10]
+    /// ex: [⊃⊙⋅∘(++) 3 5 10]
+    /// ex: [⊃⋅⊙∘(++) 3 5 10]
+    /// ex: [⊃⊙∘(++) 3 5 10]
+    ([1], Dip, Stack, ("dip", '⊙')),
+    /// Call a function on two sets of values
+    ///
+    /// For monadic functions, [both] calls its function on each of the top 2 values on the stack.
+    /// ex: ∩⇡ 3 5
+    ///
+    /// One good use of this is when working with [box] data.
+    /// You can use [both][unbox] to get 2 [box] values out.
+    /// ex: /(⊂∩⊔) {"a" "bc" "def"}
+    ///
+    /// For a function that takes `n` arguments, [both] calls the function on the 2 sets of `n` values on top of the stack.
+    /// ex: [∩+ 1 2 3 4]
+    /// ex: [∩(++) 1 2 3 4 5 6]
+    ///
+    /// [both] can also be chained. Every additional [both] doubles the number of arguments taken from the stack.
+    /// ex: [∩∩(□+2) 1 @a 2_3 5]
+    /// ex: [∩∩∩± 1 ¯2 0 42 ¯5 6 7 8 99]
+    ///
+    /// If you have 3 values on the stack, `a`, `b`, and `c`, but you want to call the same function on `a c` and `b c`, you can combine [both] with [dip] and [over].
+    /// ex: ∩+⊙,2 5 10
+    (2[1], Both, Stack, ("both", '∩')),
+    /// Call two functions on the same values
+    ///
+    /// [fork] is one of the most important functions for working with the stack.
+    /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding as to why.
+    ///
+    /// ex: ⊃⇌⊝ 1_2_2_3
+    /// [fork] can be chained to apply more functions to the arguments. `n` functions require the chaining of `subtract``1n` [fork].
+    /// ex: [⊃⊃⊃+-×÷ 5 8]
+    /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maximum will work on the top values.
+    /// ex: [⊃+¯ 3 5]
+    ([2], Fork, Stack, ("fork", '⊃')),
+    /// Call two functions on two distinct sets of values
+    ///
+    /// ex: ⊓⇌⊝ 1_2_3 [1 4 2 4 2]
+    /// Each function will always be called on its own set of values.
+    /// ex: ⊓+× 1 2 3 4
+    /// The functions' signatures need not be the same.
+    /// ex: ⊓+(++) 1 2 3 4 5
+    /// [bracket] can be chained to apply additional functions to arguments deeper on the stack.
+    /// ex: ⊓⊓⇌(↻1)△ 1_2_3 4_5_6 7_8_9
+    /// ex: [⊓⊓⊓+-×÷ 10 20 5 8 3 7 2 5]
+    ([2], Bracket, Stack, ("bracket", '⊓')),
     /// Apply a function under another
     ///
     /// This is a more powerful version of [invert].
@@ -1151,7 +1125,7 @@ primitive!(
     /// Any function that can be [invert]ed can be used with [under].
     /// Some functions that can't be [invert]ed can still be used with [under].
     ///
-    /// Here, we negate 5, subtract 2, then negate again.
+    /// Here, we [negate] 5, [subtract] 2, then [negate] again.
     /// ex: ⍜¯(-2) 5
     /// You can use [under] with [round] to round to a specific number of decimal places.
     /// ex: ⍜'×1e3⁅ π
@@ -1183,6 +1157,12 @@ primitive!(
     /// Consider this equivalence:
     /// ex: ⍜(↙2)(÷∶)  [1 2 3 4 5] 10
     ///   : ⍜(↙2)(÷10) [1 2 3 4 5]
+    ///
+    /// [under][both] works, and whether [both] is applied when undoing depends on the signature of `g`.
+    /// For example, this hypotenuse function does not use [both] when undoing because its `g` (`add`) returns a single value.
+    /// ex: ⍜∩(×.)+ 3 4
+    /// However, this function whose `g` returns *2* values *does* use [both] when undoing, in this case re-[box]ing the outputs.
+    /// ex: ⍜∩⊔(⊂⊢,) □[1 2 3] □[4 5 6 7 8]
     ([2], Under, OtherModifier, ("under", '⍜')),
     /// Apply a function at a different array depth
     ///
@@ -1287,13 +1267,13 @@ primitive!(
     ///   : Abs 2
     ///   : Abs ¯5
     ///
-    /// The functions having different numbers of arguments works similary to [fork]. The function that takes fewer arguments will use the arguments higher on the stack.
+    /// If the functions have different but compatible signatures - that is, the difference between their arguments and outputs is the same - then [if] will still have a well-defined signature.
+    /// ex: f ← ?∘(.+)
+    ///   : f 0 2 3
+    ///   : f 1 2 3
+    /// If functions have incompatible signatures but the same number of outputs, then [if] works similarly to [fork]. The function that takes fewer arguments will use the arguments higher on the stack.
     /// ex: ?+¯ 1 3 5
     /// ex: ?+¯ 0 3 5
-    ///
-    /// The two functions having different signatures is not an error, but it may require a signature to be specified.
-    /// ex: ?∘(.+) 0 2 3
-    /// ex! (?∘(.+) 0 2 3)
     ///
     /// [if] can be chained to check more than one condition.
     /// Make sure to use [pop] or [gap] to git rid of excess conditions if the number of branches is not a [power] of `2`.
@@ -1373,7 +1353,7 @@ primitive!(
     ///   : wait h
     ///   : wait h
     ///
-    /// [wait] will call [each] implicitly.
+    /// [wait] is pervasive and will call [each] implicitly.
     /// ex: ↯3_3⇡9
     ///   : wait≡spawn/+.
     (1, Wait, Misc, ("wait")),

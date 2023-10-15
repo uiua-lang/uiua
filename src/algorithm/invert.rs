@@ -4,7 +4,7 @@ use std::{cell::RefCell, collections::HashMap, fmt};
 
 use crate::{
     check::instrs_signature,
-    function::{Function, Instr},
+    function::{Function, Instr, Signature},
     primitive::Primitive,
     value::Value,
 };
@@ -13,11 +13,11 @@ impl Function {
     pub fn inverse(&self) -> Option<Self> {
         Function::new_inferred(self.id.clone(), invert_instrs(&self.instrs)?).ok()
     }
-    pub fn under(self) -> Option<(Self, Self)> {
+    pub fn under(self, g_sig: Signature) -> Option<(Self, Self)> {
         if let Some(f) = self.inverse() {
             Some((self, f))
         } else {
-            let (befores, afters) = under_instrs(&self.instrs)?;
+            let (befores, afters) = under_instrs(&self.instrs, g_sig)?;
             let before = Function::new_inferred(self.id.clone(), befores).ok()?;
             let after = Function::new_inferred(self.id, afters).ok()?;
             Some((before, after))
@@ -102,6 +102,8 @@ fn invert_instr_fragment(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
         &(Val, ([Sub], [Add])),
         &(Val, IgnoreMany(Flip), ([Mul], [Div])),
         &(Val, ([Div], [Mul])),
+        &([Dup, Add], [2.i(), Div.i()]),
+        &([Dup, Mul], [Sqrt]),
         &invert_pow_pattern,
         &invert_log_pattern,
         &invert_repeat_pattern,
@@ -127,23 +129,36 @@ fn invert_instr_fragment(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
 
 type Under = (Vec<Instr>, Vec<Instr>);
 
-pub(crate) fn under_instrs(instrs: &[Instr]) -> Option<Under> {
+pub(crate) fn under_instrs(instrs: &[Instr], g_sig: Signature) -> Option<Under> {
     if instrs.is_empty() {
         return Some((Vec::new(), Vec::new()));
     }
 
+    type UnderCache = HashMap<Vec<Instr>, HashMap<Signature, Option<Under>>>;
     thread_local! {
-        static UNDER_CACHE: RefCell<HashMap<Vec<Instr>, Option<Under>>> = RefCell::new(HashMap::new());
+        static UNDER_CACHE: RefCell<UnderCache> = RefCell::new(HashMap::new());
     }
-    if let Some(under) = UNDER_CACHE.with(|cache| cache.borrow().get(instrs).cloned()) {
+    if let Some(under) = UNDER_CACHE.with(|cache| {
+        cache
+            .borrow()
+            .get(instrs)
+            .and_then(|map| map.get(&g_sig))
+            .cloned()
+    }) {
         return under;
     }
-    let under = under_instrs_impl(instrs);
-    UNDER_CACHE.with(|cache| cache.borrow_mut().insert(instrs.to_vec(), under.clone()));
+    let under = under_instrs_impl(instrs, g_sig);
+    UNDER_CACHE.with(|cache| {
+        cache
+            .borrow_mut()
+            .entry(instrs.to_vec())
+            .or_default()
+            .insert(g_sig, under.clone())
+    });
     under
 }
 
-fn under_instrs_impl(instrs: &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
+fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, Vec<Instr>)> {
     use Instr::*;
     use Primitive::*;
     if let Some(inverted) = invert_instrs(instrs) {
@@ -162,7 +177,7 @@ fn under_instrs_impl(instrs: &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
             } else {
                 instrs.push(fi.clone());
             }
-            let (before, after) = under_instrs(&instrs)?;
+            let (before, after) = under_instrs(&instrs, g_sig)?;
             return Some((before, after));
         }
         _ => {}
@@ -173,12 +188,13 @@ fn under_instrs_impl(instrs: &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
             (
                 [$before],
                 [Over.i(), Over.i(), PushTempUnderN(2).i(), $before.i()],
-                [PopTempUnderN(2).i(), Unroll.i(), $after.i()],
+                [PopTempUnderN(2).i(), $after.i()],
             )
         };
     }
 
     let patterns: &[&dyn UnderPattern] = &[
+        &UnderPatternFn(under_both_pattern), // It is important that this is first
         &UnderPatternFn(under_from_inverse_pattern),
         &UnderPatternFn(under_temp_pattern),
         &(Val, stash2!(Take, Untake)),
@@ -248,19 +264,6 @@ fn under_instrs_impl(instrs: &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
             [PopTempUnderN(1).i(), Pow.i()],
         ),
         &(
-            Val,
-            (
-                [Join],
-                [Dup.i(), Len.i(), PushTempUnderN(1).i(), Join.i()],
-                [PopTempUnderN(1).i(), Drop.i()],
-            ),
-        ),
-        &(
-            [Join],
-            [Dup.i(), Len.i(), PushTempUnderN(1).i(), Join.i()],
-            [PopTempUnderN(1).i(), Drop.i()],
-        ),
-        &(
             [Now],
             [Now.i(), PushTempUnderN(1).i()],
             [PopTempUnderN(1).i(), Now.i(), Flip.i(), Sub.i()],
@@ -272,7 +275,7 @@ fn under_instrs_impl(instrs: &[Instr]) -> Option<(Vec<Instr>, Vec<Instr>)> {
     let mut instrs_sections = instrs;
     'find_pattern: loop {
         for pattern in patterns {
-            if let Some((input, (bef, aft))) = pattern.under_extract(instrs_sections) {
+            if let Some((input, (bef, aft))) = pattern.under_extract(instrs_sections, g_sig) {
                 // println!(
                 //     "matched pattern {:?} on {:?} to {bef:?} {aft:?}",
                 //     pattern,
@@ -372,10 +375,14 @@ trait InvertPattern {
 }
 
 trait UnderPattern: fmt::Debug {
-    fn under_extract<'a>(&self, input: &'a [Instr]) -> Option<(&'a [Instr], Under)>;
+    fn under_extract<'a>(
+        &self,
+        input: &'a [Instr],
+        g_sig: Signature,
+    ) -> Option<(&'a [Instr], Under)>;
 }
 
-fn under_from_inverse_pattern(input: &[Instr]) -> Option<(&[Instr], Under)> {
+fn under_from_inverse_pattern(input: &[Instr], _: Signature) -> Option<(&[Instr], Under)> {
     if input.is_empty() {
         return None;
     }
@@ -391,7 +398,7 @@ fn under_from_inverse_pattern(input: &[Instr]) -> Option<(&[Instr], Under)> {
     }
 }
 
-fn under_temp_pattern(input: &[Instr]) -> Option<(&[Instr], Under)> {
+fn under_temp_pattern(input: &[Instr], _: Signature) -> Option<(&[Instr], Under)> {
     match input.split_first()? {
         (&Instr::PushTempInline { count, span }, input) => Some((
             input,
@@ -411,6 +418,39 @@ fn under_temp_pattern(input: &[Instr]) -> Option<(&[Instr], Under)> {
     }
 }
 
+fn under_both_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Under)> {
+    let [input @ .., Instr::Prim(Primitive::Both, span)] = input else {
+        return None;
+    };
+    let (Instr::Push(func), input) = input.split_last()? else {
+        return None;
+    };
+    let func = func.as_function()?;
+    let (befores, afters) = under_instrs(&func.instrs, g_sig)?;
+    let (befores, afters) = match (g_sig.args, g_sig.outputs) {
+        (2, 1) => {
+            let before_func = Function::new(func.id.clone(), befores, func.signature());
+            let befores = vec![
+                Instr::push(before_func),
+                Instr::Prim(Primitive::Both, *span),
+            ];
+            (befores, afters)
+        }
+        (2, 2) => {
+            let before_func = Function::new(func.id.clone(), befores, func.signature());
+            let after_func = Function::new(func.id.clone(), afters, func.signature());
+            let befores = vec![
+                Instr::push(before_func),
+                Instr::Prim(Primitive::Both, *span),
+            ];
+            let afters = vec![Instr::push(after_func), Instr::Prim(Primitive::Both, *span)];
+            (befores, afters)
+        }
+        _ => return None,
+    };
+    Some((input, (befores, afters)))
+}
+
 impl<A: InvertPattern, B: InvertPattern> InvertPattern for (A, B) {
     fn invert_extract<'a>(&self, mut input: &'a [Instr]) -> Option<(&'a [Instr], Vec<Instr>)> {
         let (a, b) = self;
@@ -423,10 +463,14 @@ impl<A: InvertPattern, B: InvertPattern> InvertPattern for (A, B) {
 }
 
 impl<A: UnderPattern, B: UnderPattern> UnderPattern for (A, B) {
-    fn under_extract<'a>(&self, input: &'a [Instr]) -> Option<(&'a [Instr], Under)> {
+    fn under_extract<'a>(
+        &self,
+        input: &'a [Instr],
+        g_sig: Signature,
+    ) -> Option<(&'a [Instr], Under)> {
         let (a, b) = self;
-        let (input, (mut a_before, a_after)) = a.under_extract(input)?;
-        let (input, (b_before, mut b_after)) = b.under_extract(input)?;
+        let (input, (mut a_before, a_after)) = a.under_extract(input, g_sig)?;
+        let (input, (b_before, mut b_after)) = b.under_extract(input, g_sig)?;
         a_before.extend(b_before);
         b_after.extend(a_after);
         Some((input, (a_before, b_after)))
@@ -500,7 +544,7 @@ where
     A: AsInstr,
     B: AsInstr,
 {
-    fn under_extract<'a>(&self, input: &'a [Instr]) -> Option<(&'a [Instr], Under)> {
+    fn under_extract<'a>(&self, input: &'a [Instr], _: Signature) -> Option<(&'a [Instr], Under)> {
         let (a, b, c) = *self;
         if a.len() > input.len() {
             return None;
@@ -544,9 +588,13 @@ where
     T: AsInstr,
     U: AsInstr,
 {
-    fn under_extract<'a>(&self, input: &'a [Instr]) -> Option<(&'a [Instr], Under)> {
+    fn under_extract<'a>(
+        &self,
+        input: &'a [Instr],
+        g_sig: Signature,
+    ) -> Option<(&'a [Instr], Under)> {
         let (a, b, c) = self;
-        (a.as_ref(), b.as_ref(), c.as_ref()).under_extract(input)
+        (a.as_ref(), b.as_ref(), c.as_ref()).under_extract(input, g_sig)
     }
 }
 
@@ -567,10 +615,14 @@ impl<F> fmt::Debug for UnderPatternFn<F> {
 }
 impl<F> UnderPattern for UnderPatternFn<F>
 where
-    F: Fn(&[Instr]) -> Option<(&[Instr], Under)>,
+    F: Fn(&[Instr], Signature) -> Option<(&[Instr], Under)>,
 {
-    fn under_extract<'a>(&self, input: &'a [Instr]) -> Option<(&'a [Instr], Under)> {
-        (self.0)(input)
+    fn under_extract<'a>(
+        &self,
+        input: &'a [Instr],
+        g_sig: Signature,
+    ) -> Option<(&'a [Instr], Under)> {
+        (self.0)(input, g_sig)
     }
 }
 
@@ -661,7 +713,7 @@ impl InvertPattern for Val {
     }
 }
 impl UnderPattern for Val {
-    fn under_extract<'a>(&self, input: &'a [Instr]) -> Option<(&'a [Instr], Under)> {
+    fn under_extract<'a>(&self, input: &'a [Instr], _: Signature) -> Option<(&'a [Instr], Under)> {
         if let Some((input, inverted)) = self.invert_extract(input) {
             Some((input, (inverted, Vec::new())))
         } else {

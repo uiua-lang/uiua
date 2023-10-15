@@ -5,6 +5,7 @@ use std::{
     sync::Arc,
 };
 
+use ecow::EcoVec;
 use tinyvec::{tiny_vec, TinyVec};
 
 use crate::{
@@ -132,7 +133,7 @@ impl<T: ArrayValue> Array<T> {
     }
     pub fn as_scalar_mut(&mut self) -> Option<&mut T> {
         if self.shape.is_empty() {
-            Some(&mut self.data[0])
+            Some(&mut self.data.as_mut_slice()[0])
         } else {
             None
         }
@@ -223,8 +224,7 @@ impl<T: ArrayValue> Array<T> {
         };
         let mut data = self.data.into_iter().rev();
         (0..row_count).map(move |_| {
-            let mut row: CowSlice<_> = data.by_ref().take(row_len).collect();
-            row.reverse();
+            let row: CowSlice<_> = data.by_ref().take(row_len).rev().collect();
             Array::new(row_shape.clone(), row)
         })
     }
@@ -313,8 +313,8 @@ impl<T: ArrayValue> From<T> for Array<T> {
     }
 }
 
-impl<T: ArrayValue> From<Vec<T>> for Array<T> {
-    fn from(data: Vec<T>) -> Self {
+impl<T: ArrayValue> From<EcoVec<T>> for Array<T> {
+    fn from(data: EcoVec<T>) -> Self {
         Self::new(tiny_vec![data.len()], data)
     }
 }
@@ -325,9 +325,15 @@ impl<T: ArrayValue> From<CowSlice<T>> for Array<T> {
     }
 }
 
+impl<'a, T: ArrayValue> From<&'a [T]> for Array<T> {
+    fn from(data: &'a [T]) -> Self {
+        Self::new(tiny_vec![data.len()], data)
+    }
+}
+
 impl<T: ArrayValue> FromIterator<T> for Array<T> {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        Self::from(iter.into_iter().collect::<Vec<T>>())
+        Self::from(iter.into_iter().collect::<CowSlice<T>>())
     }
 }
 
@@ -348,7 +354,7 @@ impl From<Vec<bool>> for Array<u8> {
 
 impl From<bool> for Array<u8> {
     fn from(data: bool) -> Self {
-        Self::new(tiny_vec![], vec![u8::from(data)])
+        Self::new(tiny_vec![], cowslice![u8::from(data)])
     }
 }
 

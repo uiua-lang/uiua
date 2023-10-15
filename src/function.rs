@@ -159,7 +159,13 @@ impl Instr {
 impl fmt::Debug for Instr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Instr::Push(val) => write!(f, "push {val:?}"),
+            Instr::Push(val) => {
+                if val.flat_len() < 50 && val.shape().len() <= 1 {
+                    write!(f, "push {val:?}")
+                } else {
+                    write!(f, "push {} array", val.format_shape())
+                }
+            }
             _ => write!(f, "{self}"),
         }
     }
@@ -222,7 +228,7 @@ impl Signature {
     pub fn compose(self, other: Self) -> Self {
         Self::new(
             other.args + self.args.saturating_sub(other.outputs),
-            other.outputs.saturating_sub(other.args) + self.outputs,
+            self.outputs + other.outputs.saturating_sub(self.args),
         )
     }
 }

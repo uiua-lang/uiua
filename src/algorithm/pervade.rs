@@ -5,12 +5,12 @@ use std::{
     convert::Infallible,
     fmt::Display,
     marker::PhantomData,
-    slice::{self, Chunks},
+    slice::{self, ChunksExact},
 };
 
-use crate::{array::*, Uiua, UiuaError, UiuaResult};
+use crate::{array::*, cowslice::CowSlice, Uiua, UiuaError, UiuaResult};
 
-use super::max_shape;
+use super::{max_shape, FillContext};
 
 #[allow(clippy::len_without_is_empty)]
 pub trait Arrayish {
@@ -26,8 +26,8 @@ pub trait Arrayish {
     fn row_len(&self) -> usize {
         self.shape().iter().skip(1).product()
     }
-    fn rows(&self) -> Chunks<Self::Value> {
-        self.data().chunks(self.row_len().max(1))
+    fn rows(&self) -> ChunksExact<Self::Value> {
+        self.data().chunks_exact(self.row_len().max(1))
     }
     fn shape_prefixes_match(&self, other: &impl Arrayish) -> bool {
         self.shape().iter().zip(other.shape()).all(|(a, b)| a == b)
@@ -123,7 +123,80 @@ where
     }
 }
 
-pub fn bin_pervade<A, B, C, F>(a: &Array<A>, b: &Array<B>, env: &Uiua, f: F) -> UiuaResult<Array<C>>
+fn fill_shapes<A, B, C>(a: &mut Array<A>, b: &mut Array<B>, ctx: C) -> Result<(), C::Error>
+where
+    A: ArrayValue,
+    B: ArrayValue,
+    C: FillContext,
+{
+    if !a.shape_prefixes_match(b) {
+        // Fill in missing rows
+        match a.row_count().cmp(&b.row_count()) {
+            Ordering::Less => {
+                if let Some(fill) = ctx.fill() {
+                    let mut target_shape = a.shape().to_vec();
+                    target_shape[0] = b.row_count();
+                    a.fill_to_shape(&target_shape, fill);
+                }
+            }
+            Ordering::Greater => {
+                if let Some(fill) = ctx.fill() {
+                    let mut target_shape = b.shape().to_vec();
+                    target_shape[0] = a.row_count();
+                    b.fill_to_shape(&target_shape, fill);
+                }
+            }
+            Ordering::Equal => {}
+        }
+        // Fill in missing dimensions
+        if !a.shape_prefixes_match(b) {
+            match a.rank().cmp(&b.rank()) {
+                Ordering::Less => {
+                    if let Some(fill) = ctx.fill() {
+                        let mut target_shape = a.shape.clone();
+                        target_shape.insert(0, b.row_count());
+                        a.fill_to_shape(&target_shape, fill);
+                    }
+                }
+                Ordering::Greater => {
+                    if let Some(fill) = ctx.fill() {
+                        let mut target_shape = b.shape.clone();
+                        target_shape.insert(0, a.row_count());
+                        b.fill_to_shape(&target_shape, fill);
+                    }
+                }
+                Ordering::Equal => {
+                    let target_shape = max_shape(a.shape(), b.shape());
+                    if a.shape() != &*target_shape {
+                        if let Some(fill) = ctx.fill() {
+                            a.fill_to_shape(&target_shape, fill);
+                        }
+                    }
+                    if b.shape() != &*target_shape {
+                        if let Some(fill) = ctx.fill() {
+                            b.fill_to_shape(&target_shape, fill);
+                        }
+                    }
+                }
+            }
+            if !a.shape_prefixes_match(b) {
+                return Err(C::fill_error(ctx.error(format!(
+                    "Shapes {} and {} do not match",
+                    a.format_shape(),
+                    b.format_shape()
+                ))));
+            }
+        }
+    }
+    Ok(())
+}
+
+pub fn bin_pervade<A, B, C, F>(
+    mut a: Array<A>,
+    mut b: Array<B>,
+    env: &Uiua,
+    f: F,
+) -> UiuaResult<Array<C>>
 where
     A: ArrayValue,
     B: ArrayValue,
@@ -131,93 +204,17 @@ where
     F: PervasiveFn<A, B, Output = C> + Clone,
     F::Error: Into<UiuaError>,
 {
-    let mut a = a;
-    let mut b = b;
-    let mut reshaped_a;
-    let mut reshaped_b;
-    if !a.shape_prefixes_match(&b) {
-        // Fill in missing rows
-        match a.row_count().cmp(&b.row_count()) {
-            Ordering::Less => {
-                if let Some(fill) = A::get_fill(env) {
-                    let mut target_shape = a.shape().to_vec();
-                    target_shape[0] = b.row_count();
-                    reshaped_a = a.clone();
-                    reshaped_a.fill_to_shape(&target_shape, fill);
-                    a = &reshaped_a;
-                }
-            }
-            Ordering::Greater => {
-                if let Some(fill) = B::get_fill(env) {
-                    let mut target_shape = b.shape().to_vec();
-                    target_shape[0] = a.row_count();
-                    reshaped_b = b.clone();
-                    reshaped_b.fill_to_shape(&target_shape, fill);
-                    b = &reshaped_b;
-                }
-            }
-            Ordering::Equal => {}
-        }
-        // Fill in missing dimensions
-        if !a.shape_prefixes_match(&b) {
-            match a.rank().cmp(&b.rank()) {
-                Ordering::Less => {
-                    if let Some(fill) = A::get_fill(env) {
-                        let mut target_shape = a.shape.clone();
-                        target_shape.insert(0, b.row_count());
-                        reshaped_a = a.clone();
-                        reshaped_a.fill_to_shape(&target_shape, fill);
-                        a = &reshaped_a;
-                    }
-                }
-                Ordering::Greater => {
-                    if let Some(fill) = B::get_fill(env) {
-                        let mut target_shape = b.shape.clone();
-                        target_shape.insert(0, a.row_count());
-                        reshaped_b = b.clone();
-                        reshaped_b.fill_to_shape(&target_shape, fill);
-                        b = &reshaped_b;
-                    }
-                }
-                Ordering::Equal => {
-                    let target_shape = max_shape(a.shape(), b.shape());
-                    if a.shape() != &*target_shape {
-                        if let Some(fill) = A::get_fill(env) {
-                            reshaped_a = a.clone();
-                            reshaped_a.fill_to_shape(&target_shape, fill);
-                            a = &reshaped_a;
-                        }
-                    }
-                    if b.shape() != &*target_shape {
-                        if let Some(fill) = B::get_fill(env) {
-                            reshaped_b = b.clone();
-                            reshaped_b.fill_to_shape(&target_shape, fill);
-                            b = &reshaped_b;
-                        }
-                    }
-                }
-            }
-            if !a.shape_prefixes_match(&b) {
-                return Err(env
-                    .error(format!(
-                        "Shapes {} and {} do not match",
-                        a.format_shape(),
-                        b.format_shape()
-                    ))
-                    .fill());
-            }
-        }
-    }
+    fill_shapes(&mut a, &mut b, env)?;
     let shape = Shape::from(a.shape().max(b.shape()));
-    let mut data = Vec::with_capacity(a.flat_len().max(b.flat_len()));
-    bin_pervade_recursive(a, b, &mut data, env, f).map_err(Into::into)?;
+    let mut data = CowSlice::with_capacity(a.flat_len().max(b.flat_len()));
+    bin_pervade_recursive(&a, &b, &mut data, env, f).map_err(Into::into)?;
     Ok(Array::new(shape, data))
 }
 
 fn bin_pervade_recursive<A, B, C, F>(
     a: &A,
     b: &B,
-    c: &mut Vec<C>,
+    c: &mut CowSlice<C>,
     env: &Uiua,
     f: F,
 ) -> Result<(), F::Error>
@@ -228,11 +225,17 @@ where
     F: PervasiveFn<A::Value, B::Value, Output = C> + Clone,
 {
     match (a.shape(), b.shape()) {
-        ([], []) => c.push(f.call(a.data()[0].clone(), b.data()[0].clone(), env)?),
+        ([], []) => c.modify(|c| {
+            c.push(f.call(a.data()[0].clone(), b.data()[0].clone(), env)?);
+            Ok(())
+        })?,
         (ash, bsh) if ash == bsh => {
-            for (a, b) in a.data().iter().zip(b.data()) {
-                c.push(f.call(a.clone(), b.clone(), env)?);
-            }
+            c.try_extend(
+                a.data()
+                    .iter()
+                    .zip(b.data())
+                    .map(|(a, b)| f.call(a.clone(), b.clone(), env)),
+            )?;
         }
         ([], bsh) => {
             for brow in b.rows() {
@@ -251,6 +254,75 @@ where
         }
     }
     Ok(())
+}
+
+pub fn bin_pervade_mut<T>(
+    a: &mut Array<T>,
+    mut b: Array<T>,
+    env: &Uiua,
+    f: impl Fn(T, T) -> T + Copy,
+) -> UiuaResult
+where
+    T: ArrayValue + Copy,
+{
+    fill_shapes(a, &mut b, env)?;
+    let a_data = a.data.as_mut_slice();
+    let b_data = b.data.as_mut_slice();
+    let ash = a.shape.as_slice();
+    let bsh = b.shape.as_slice();
+    if ash == bsh {
+        for (a, b) in a_data.iter_mut().zip(b_data) {
+            *a = f(*a, *b);
+        }
+    } else {
+        let use_a = bin_pervade_recursive_mut(a_data, ash, b_data, bsh, f);
+        if !use_a {
+            *a = b;
+        }
+    }
+    Ok(())
+}
+
+fn bin_pervade_recursive_mut<T>(
+    a_data: &mut [T],
+    a_shape: &[usize],
+    b_data: &mut [T],
+    b_shape: &[usize],
+    f: impl Fn(T, T) -> T + Copy,
+) -> bool
+where
+    T: ArrayValue + Copy,
+{
+    match (a_shape, b_shape) {
+        ([], []) => {
+            panic!("should never call `bin_pervade_recursive_mut` with scalars")
+        }
+        (_, []) => {
+            let b_scalar = b_data[0];
+            for a in a_data {
+                *a = f(*a, b_scalar);
+            }
+            true
+        }
+        ([], _) => {
+            let a_scalar = a_data[0];
+            for b in b_data {
+                *b = f(a_scalar, *b);
+            }
+            false
+        }
+        (ash, bsh) => {
+            let a_row_len = a_data.len() / ash[0];
+            let b_row_len = b_data.len() / bsh[0];
+            for (a, b) in a_data
+                .chunks_exact_mut(a_row_len)
+                .zip(b_data.chunks_exact_mut(b_row_len))
+            {
+                bin_pervade_recursive_mut(a, &ash[1..], b, &bsh[1..], f);
+            }
+            ash.len() > bsh.len()
+        }
+    }
 }
 
 pub mod not {

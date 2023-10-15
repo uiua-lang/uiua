@@ -155,6 +155,8 @@ uiuisms!(
     r#"⊜□≠, @, "split,this,up""#,
     /// Split an array by a delimiter with fill elements
     r#"⬚@ ⊜∘≠, @, "split,this,up""#,
+    /// Split an array by a delimiter keeping empty segments
+    r#"⊕□⍜▽¯∶\+.=, @, "split,this,,up""#,
     /// Split an array into groups of contiguous equal elements
     "⊜□. [1 1 1 2 2 1 1 4]",
     /// Find the nth fibonacci number
@@ -193,6 +195,8 @@ uiuisms!(
     "+⊙'×-. 0 10 0.2",
     /// Set the value of an array at an index
     "⍜⊏; 2 1_2_3_4 10",
+    /// Arithmetic mean
+    "÷⧻∶/+. [85 105 117 97]",
     /// Dot product
     "/+× [1 2 3] [4 ¯5 6]",
     /// Cross product

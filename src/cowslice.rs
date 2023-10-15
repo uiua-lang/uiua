@@ -4,16 +4,19 @@ use std::{
     fmt,
     hash::{Hash, Hasher},
     iter::{Skip, Take},
-    ops::{Bound, Deref, DerefMut, RangeBounds},
+    ops::{Bound, Deref, RangeBounds},
 };
 
 macro_rules! cowslice {
     ($($item:expr),* $(,)?) => {
         $crate::cowslice::CowSlice::from([$($item),*])
     };
-    ($item:expr; $len:expr) => {
-        $crate::cowslice::CowSlice::from(vec![$item; $len])
-    }
+    ($item:expr; $len:expr) => {{
+        let len = $len;
+        let mut cs = $crate::cowslice::CowSlice::with_capacity(len);
+        cs.extend(std::iter::repeat($item).take(len));
+        cs
+    }}
 }
 
 pub(crate) use cowslice;
@@ -32,9 +35,40 @@ impl<T> CowSlice<T> {
     pub fn truncate(&mut self, len: usize) {
         self.end = (self.start + len as u32).min(self.end);
     }
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            data: EcoVec::with_capacity(capacity),
+            start: 0,
+            end: 0,
+        }
+    }
+    pub fn as_slice(&self) -> &[T] {
+        &self.data[self.start as usize..self.end as usize]
+    }
 }
 
 impl<T: Clone> CowSlice<T> {
+    pub fn as_mut_slice(&mut self) -> &mut [T] {
+        if !self.data.is_unique() {
+            let mut new_data = EcoVec::with_capacity(self.len());
+            new_data.extend_from_slice(&*self);
+            self.data = new_data;
+            self.start = 0;
+            self.end = self.data.len() as u32;
+        }
+        &mut self.data.make_mut()[self.start as usize..self.end as usize]
+    }
+    pub fn extend_from_slice(&mut self, other: &[T]) {
+        self.modify(|vec| vec.extend_from_slice(other))
+    }
+    pub fn try_extend<E>(&mut self, iter: impl IntoIterator<Item = Result<T, E>>) -> Result<(), E> {
+        self.modify(|vec| {
+            for item in iter {
+                vec.push(item?);
+            }
+            Ok(())
+        })
+    }
     #[track_caller]
     pub fn slice<R>(&self, range: R) -> Self
     where
@@ -113,39 +147,20 @@ impl<T: Clone> Clone for CowSlice<T> {
 impl<T> Deref for CowSlice<T> {
     type Target = [T];
     fn deref(&self) -> &Self::Target {
-        &self.data[self.start as usize..self.end as usize]
-    }
-}
-
-impl<T: Clone> DerefMut for CowSlice<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        if !self.data.is_unique() {
-            *self = self.to_vec().into();
-        }
-        self.data.make_mut()
+        self.as_slice()
     }
 }
 
 #[test]
 fn cow_slice_deref_mut() {
     let mut slice = CowSlice::from([1, 2, 3, 4]);
-    slice[1] = 7;
+    slice.as_mut_slice()[1] = 7;
     assert_eq!(slice, [1, 7, 3, 4]);
 
     let mut sub = slice.slice(1..=2);
-    sub[1] = 5;
+    sub.as_mut_slice()[1] = 5;
     assert_eq!(slice, [1, 7, 3, 4]);
     assert_eq!(sub, [7, 5]);
-}
-
-impl<T: Clone> From<Vec<T>> for CowSlice<T> {
-    fn from(vec: Vec<T>) -> Self {
-        Self {
-            start: 0,
-            end: vec.len() as u32,
-            data: vec.into(),
-        }
-    }
 }
 
 impl<T: Clone> From<CowSlice<T>> for Vec<T> {
@@ -253,7 +268,6 @@ impl<T: Hash> Hash for CowSlice<T> {
 impl<T: Clone> IntoIterator for CowSlice<T> {
     type Item = T;
     type IntoIter = Take<Skip<<EcoVec<T> as IntoIterator>::IntoIter>>;
-    #[allow(clippy::unnecessary_to_owned)]
     fn into_iter(self) -> Self::IntoIter {
         self.data
             .into_iter()
@@ -274,13 +288,15 @@ impl<'a, T: Clone> IntoIterator for &'a mut CowSlice<T> {
     type Item = &'a mut T;
     type IntoIter = <&'a mut [T] as IntoIterator>::IntoIter;
     fn into_iter(self) -> Self::IntoIter {
-        self.iter_mut()
+        self.as_mut_slice().iter_mut()
     }
 }
 
 impl<T: Clone> FromIterator<T> for CowSlice<T> {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        Self::from(iter.into_iter().collect::<Vec<_>>())
+        let mut data = EcoVec::new();
+        data.extend(iter);
+        data.into()
     }
 }
 

@@ -71,8 +71,13 @@ li {
 }
 
 @media (prefers-color-scheme: dark) {
-    body {
+
+    body,
+    #header-uiua {
         color: #d1daec;
+    }
+
+    body {
         background-color: #141a1f;
     }
 
@@ -141,8 +146,13 @@ li {
 }
 
 @media (prefers-color-scheme: light) {
-    body {
+
+    body,
+    #header-uiua {
         color: #344;
+    }
+
+    body {
         background-color: #c6e7ec;
     }
 
@@ -227,6 +237,10 @@ li {
     align-items: baseline;
 }
 
+#header-uiua {
+    text-decoration: none;
+}
+
 #subtitle {
     margin-left: 1.5em;
     font-size: 1em;
@@ -285,18 +299,13 @@ li {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
     padding: 0.2em;
 }
 
 #settings>* {
-    display: flex;
-    gap: 0.5em;
-}
-
-input {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
+    display: inline-block;
+    white-space: nowrap;
 }
 
 input[type=number] {
@@ -308,9 +317,10 @@ input[type=number] {
 #settings>*>select {
     border-radius: 0.5em;
     border: none;
+    margin-left: 0.5em;
 }
 
-#settings>*>input {
+#settings>*>input[type=number] {
     width: 3em;
 }
 
@@ -602,19 +612,19 @@ input[type=number] {
     color: #ed5e6a;
 }
 
-.monadic-function-button {
+.monadic-function {
     color: #95d16a;
 }
 
-.dyadic-function-button {
+.dyadic-function {
     color: #54b0fc;
 }
 
-.modifier1-button {
+.monadic-modifier {
     color: #f0c36f;
 }
 
-.modifier2-button {
+.dyadic-modifier {
     color: #cc6be9;
 }
 

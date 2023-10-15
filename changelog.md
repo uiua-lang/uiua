@@ -2,6 +2,35 @@
 
 Uiua is not yet stable.
 
+## 0.0.20 - 2023-10-??
+This version is not available via `cargo install uiua` yet.
+
+If you are reading this on the website, then it is live here.
+### Language
+- The presence of [`break` `⎋`](https://uiua.org/docs/break) in a [`repeat` `⍥`](https://uiua.org/docs/repeat) always requires a stack signature
+- Make [`if` `?`](https://uiua.org/docs/if) signature checking more permissive
+- [`fill` `⬚`](https://uiua.org/docs/fill) can now be used with [`first` `⊢`](https://uiua.org/docs/first)
+### Website
+- Add a page listing common [stack idioms](https://uiua.org/docs/stack-idioms)
+
+## 0.0.19 - 2023-10-13
+### Language
+- Add [`under` `⍜`](https://uiua.org/docs/under) [`both` `∩`](https://uiua.org/docs/both)
+- Remove `restack ⇵` for good
+- Remove `roll ↷` and `unroll ↶` for good
+- `@\s` can now be used in addition to `@ ` to get a space character
+### Interpreter
+- Many performance improvements and memory usage reductions
+- Many bug and crash fixes
+- Add some additional style diagnostics
+- Add more semantic token types to the language server
+- Stop using deprecated MarkedString in the language server
+### Website
+- The editor's font size can now be changed
+- Improve brackets/quotes behavior in the editor
+- HTML is now properly escaped in the editor
+- Formatting can now put the cursor to the left of the current token (toggleable in the settings)
+
 ## 0.0.18 - 2023-10-10
 ### Language
 - **Major Change** [`distribute` `∺`](https://uiua.org/docs/distribute) now takes the array being distributed as its *last* argument, rather than its first

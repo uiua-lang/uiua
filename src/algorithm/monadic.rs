@@ -3,14 +3,24 @@
 use std::{
     cmp::Ordering,
     collections::{BTreeMap, BTreeSet, HashMap},
+    iter::repeat,
     ptr,
     sync::Arc,
 };
 
+use ecow::EcoVec;
 use rayon::prelude::*;
 use tinyvec::tiny_vec;
 
-use crate::{array::*, value::Value, Uiua, UiuaResult};
+use crate::{
+    array::*,
+    cowslice::{cowslice, CowSlice},
+    function::Signature,
+    value::Value,
+    Uiua, UiuaResult,
+};
+
+use super::FillContext;
 
 impl Value {
     pub fn deshape(&mut self) {
@@ -52,12 +62,12 @@ impl Value {
     }
 }
 
-fn range(shape: &[usize], env: &Uiua) -> UiuaResult<Vec<f64>> {
+fn range(shape: &[usize], env: &Uiua) -> UiuaResult<CowSlice<f64>> {
     if shape.is_empty() {
-        return Ok(vec![0.0]);
+        return Ok(cowslice![0.0]);
     }
     if shape.contains(&0) {
-        return Ok(Vec::new());
+        return Ok(CowSlice::new());
     }
     let mut len = shape.len();
     for &item in shape {
@@ -73,7 +83,7 @@ fn range(shape: &[usize], env: &Uiua) -> UiuaResult<Vec<f64>> {
         }
         len = new;
     }
-    let mut data: Vec<f64> = Vec::with_capacity(len);
+    let mut data: EcoVec<f64> = EcoVec::with_capacity(len);
     let mut curr = vec![0; shape.len()];
     loop {
         for d in &curr {
@@ -85,7 +95,7 @@ fn range(shape: &[usize], env: &Uiua) -> UiuaResult<Vec<f64>> {
             if curr[i] == shape[i] {
                 curr[i] = 0;
                 if i == 0 {
-                    return Ok(data);
+                    return Ok(data.into());
                 }
                 i -= 1;
             } else {
@@ -117,26 +127,44 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     pub fn first(mut self, env: &Uiua) -> UiuaResult<Self> {
         match &*self.shape {
-            [] => return Err(env.error("Cannot take first of a scalar")),
-            [0] => return Err(env.error("Cannot take first of an empty array")),
-            _ => {}
+            [] => Err(env.error("Cannot take first of a scalar")),
+            [0, rest @ ..] => {
+                if let Some(fill) = env.fill() {
+                    self.data.extend(repeat(fill).take(self.row_len()));
+                    self.shape = rest.into();
+                    Ok(self)
+                } else {
+                    Err(env.error("Cannot take first of an empty array").fill())
+                }
+            }
+            _ => {
+                let row_len = self.row_len();
+                self.shape.remove(0);
+                self.data.truncate(row_len);
+                Ok(self)
+            }
         }
-        let row_len = self.row_len();
-        self.shape.remove(0);
-        self.data.truncate(row_len);
-        Ok(self)
     }
     pub fn last(mut self, env: &Uiua) -> UiuaResult<Self> {
         match &*self.shape {
-            [] => return Err(env.error("Cannot take last of a scalar")),
-            [0] => return Err(env.error("Cannot take last of an empty array")),
-            _ => {}
+            [] => Err(env.error("Cannot take last of a scalar")),
+            [0, rest @ ..] => {
+                if let Some(fill) = env.fill() {
+                    self.data.extend(repeat(fill).take(self.row_len()));
+                    self.shape = rest.into();
+                    Ok(self)
+                } else {
+                    Err(env.error("Cannot take last of an empty array").fill())
+                }
+            }
+            _ => {
+                let row_len = self.row_len();
+                self.shape.remove(0);
+                let prefix_len = self.data.len() - row_len;
+                self.data = self.data.into_iter().skip(prefix_len).collect();
+                Ok(self)
+            }
         }
-        let row_len = self.row_len();
-        self.shape.remove(0);
-        let prefix_len = self.data.len() - row_len;
-        self.data = self.data.into_iter().skip(prefix_len).collect();
-        Ok(self)
     }
 }
 
@@ -158,11 +186,12 @@ impl<T: ArrayValue> Array<T> {
         }
         let row_count = self.row_count();
         let row_len = self.row_len();
+        let data = self.data.as_mut_slice();
         for i in 0..row_count / 2 {
             let left = i * row_len;
             let right = (row_count - i - 1) * row_len;
-            let left = &mut self.data[left] as *mut T;
-            let right = &mut self.data[right] as *mut T;
+            let left = &mut data[left] as *mut T;
+            let right = &mut data[right] as *mut T;
             unsafe {
                 ptr::swap_nonoverlapping(left, right, row_len);
             }
@@ -199,7 +228,7 @@ impl<T: ArrayValue> Array<T> {
             self.shape.rotate_left(1);
             return;
         }
-        let mut temp = Vec::with_capacity(self.data.len());
+        let mut temp = EcoVec::with_capacity(self.data.len());
         let row_len = self.row_len();
         let row_count = self.row_count();
         for j in 0..row_len {
@@ -219,7 +248,7 @@ impl<T: ArrayValue> Array<T> {
             self.shape.rotate_right(1);
             return;
         }
-        let mut temp = Vec::with_capacity(self.data.len());
+        let mut temp = EcoVec::with_capacity(self.data.len());
         let col_len = *self.shape.last().unwrap();
         let col_count: usize = self.shape.iter().rev().skip(1).product();
         for j in 0..col_len {
@@ -315,7 +344,7 @@ impl<T: ArrayValue> Array<T> {
         if self.rank() == 0 {
             return;
         }
-        let mut deduped = Vec::new();
+        let mut deduped = CowSlice::new();
         let mut seen = BTreeSet::new();
         let mut new_len = 0;
         for row in self.rows() {
@@ -324,7 +353,7 @@ impl<T: ArrayValue> Array<T> {
                 new_len += 1;
             }
         }
-        self.data = deduped.into();
+        self.data = deduped;
         self.shape[0] = new_len;
     }
 }
@@ -333,27 +362,27 @@ impl Value {
     pub fn invert(&self, env: &Uiua) -> UiuaResult<Self> {
         Ok(match self {
             Self::Func(fs) => {
-                let mut invs = Vec::with_capacity(fs.row_count());
-                for f in &fs.data {
-                    invs.push(
-                        f.inverse()
-                            .ok_or_else(|| env.error("No inverse found"))?
-                            .into(),
-                    );
-                }
+                let mut invs = CowSlice::with_capacity(fs.row_count());
+                invs.try_extend(fs.data.iter().map(|f| {
+                    f.inverse()
+                        .map(Into::into)
+                        .ok_or_else(|| env.error("No inverse found"))
+                }))?;
                 Self::Func(Array::new(fs.shape.clone(), invs))
             }
             v => return Err(env.error(format!("Cannot invert {}", v.type_name()))),
         })
     }
-    pub fn under(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+    pub fn under(self, g_sig: Signature, env: &Uiua) -> UiuaResult<(Self, Self)> {
         Ok(match self {
             Self::Func(fs) => {
-                let mut befores = Vec::with_capacity(fs.row_count());
-                let mut afters = Vec::with_capacity(fs.row_count());
+                let mut befores = EcoVec::with_capacity(fs.row_count());
+                let mut afters = EcoVec::with_capacity(fs.row_count());
                 for f in fs.data {
                     let f = Arc::try_unwrap(f).unwrap_or_else(|f| (*f).clone());
-                    let (before, after) = f.under().ok_or_else(|| env.error("No inverse found"))?;
+                    let (before, after) = f
+                        .under(g_sig)
+                        .ok_or_else(|| env.error("No inverse found"))?;
                     befores.push(before.into());
                     afters.push(after.into());
                 }
@@ -398,14 +427,14 @@ impl Array<f64> {
         } else {
             let mut shape = self.shape.clone();
             shape.push(0);
-            return Ok(Array::new(shape, Vec::new()));
+            return Ok(Array::new(shape, CowSlice::new()));
         };
         let mut max_bits = 0;
         while max != 0 {
             max_bits += 1;
             max >>= 1;
         }
-        let mut new_data = Vec::with_capacity(self.data.len() * max_bits);
+        let mut new_data = EcoVec::with_capacity(self.data.len() * max_bits);
         // Little endian
         for n in nats {
             for i in 0..max_bits {
@@ -429,12 +458,20 @@ impl Array<u8> {
             }
             bools.push(b != 0);
         }
+        if bools.is_empty() {
+            if self.shape.is_empty() {
+                return Ok(Array::from(0.0));
+            }
+            let mut shape = self.shape.clone();
+            shape[0] = 0;
+            return Ok(Array::new(shape, CowSlice::new()));
+        }
         if self.rank() == 0 {
             return Ok(Array::from(bools[0] as u8 as f64));
         }
         let mut shape = self.shape.clone();
         let bit_string_len = shape.pop().unwrap();
-        let mut new_data = Vec::with_capacity(self.data.len() / bit_string_len);
+        let mut new_data = EcoVec::with_capacity(self.data.len() / bit_string_len);
         // Little endian
         for bits in bools.chunks_exact(bit_string_len) {
             let mut n: u128 = 0;
@@ -455,7 +492,7 @@ impl Value {
     pub fn wher(&self, env: &Uiua) -> UiuaResult<Self> {
         let counts = self.as_naturals(env, "Argument to where must be a list of naturals")?;
         let total: usize = counts.iter().fold(0, |acc, &b| acc.saturating_add(b));
-        let mut data = Vec::with_capacity(total);
+        let mut data = EcoVec::with_capacity(total);
         for (i, &b) in counts.iter().enumerate() {
             for _ in 0..b {
                 let i = i as f64;
@@ -472,7 +509,7 @@ impl Value {
             .zip(indices.iter().skip(1))
             .all(|(&a, &b)| a <= b);
         let size = indices.iter().max().map(|&i| i + 1).unwrap_or(0);
-        let mut data = Vec::with_capacity(size);
+        let mut data = EcoVec::with_capacity(size);
         if is_sorted {
             let mut j = 0;
             for i in 0..size {

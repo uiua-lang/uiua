@@ -15,7 +15,7 @@ use crate::{
     ast::*,
     function::Signature,
     grid_fmt::GridFmt,
-    lex::{CodeSpan, Loc, Sp},
+    lex::{is_ident_char, CodeSpan, Loc, Sp},
     parse::parse,
     value::Value,
     SysBackend, Uiua, UiuaError, UiuaResult,
@@ -509,7 +509,12 @@ impl<'a> Formatter<'a> {
                     self.output.push_str(line.span.as_str());
                 }
             }
-            Word::Ident(ident) => self.output.push_str(ident),
+            Word::Ident(ident) => {
+                if self.output.chars().next_back().is_some_and(is_ident_char) {
+                    self.output.push(' ');
+                }
+                self.output.push_str(ident)
+            }
             Word::Strand(items) => {
                 for (i, item) in items.iter().enumerate() {
                     if i > 0 {

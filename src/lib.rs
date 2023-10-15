@@ -25,11 +25,12 @@ pub mod primitive;
 pub mod profile;
 pub mod run;
 mod sys;
+mod sys_native;
 pub mod value;
 
 use std::sync::Arc;
 
-pub use {error::*, run::Uiua, sys::*};
+pub use {error::*, run::Uiua, sys::*, sys_native::*};
 
 pub type Ident = Arc<str>;
 

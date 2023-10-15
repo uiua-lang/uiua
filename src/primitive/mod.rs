@@ -195,6 +195,8 @@ impl Primitive {
             Unbox => Box,
             Where => InvWhere,
             InvWhere => Where,
+            Utf => InvUtf,
+            InvUtf => Utf,
             _ => return None,
         })
     }
@@ -376,7 +378,9 @@ impl Primitive {
                 let f = env.pop(1)?;
                 env.call(f)?
             }
-            Primitive::Parse => env.monadic_env(|v, env| v.parse_num(env))?,
+            Primitive::Parse => env.monadic_ref_env(Value::parse_num)?,
+            Primitive::Utf => env.monadic_ref_env(Value::utf8)?,
+            Primitive::InvUtf => env.monadic_ref_env(Value::inv_utf8)?,
             Primitive::Range => env.monadic_ref_env(Value::range)?,
             Primitive::Reverse => env.monadic_mut(Value::reverse)?,
             Primitive::Deshape => env.monadic_mut(Value::deshape)?,

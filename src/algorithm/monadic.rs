@@ -536,3 +536,15 @@ impl Value {
         Ok(Array::from(data).into())
     }
 }
+
+impl Value {
+    pub fn utf8(&self, env: &Uiua) -> UiuaResult<Self> {
+        let s = self.as_string(env, "Argument to utf must be a string")?;
+        Ok(Array::<u8>::from_iter(s.into_bytes()).into())
+    }
+    pub fn inv_utf8(&self, env: &Uiua) -> UiuaResult<Self> {
+        let bytes = self.as_bytes(env, "Argument to inverse utf must be a list of bytes")?;
+        let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
+        Ok(s.into())
+    }
+}

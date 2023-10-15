@@ -1443,6 +1443,20 @@ primitive!(
     /// Escaped regex characters must be double-escaped.
     /// ex: regex "\\d+" "123"
     (2, Regex, Misc, "regex"),
+    /// Convert a string to UTF-8 bytes
+    ///
+    /// ex: utf "hello!"
+    /// ex: utf "❤️"
+    /// You can use [invert] to convert UTF-8 bytes back to a string.
+    /// ex: ⍘utf [226 156 168 32 119 111 119 33]
+    ///
+    /// [utf] is different from just [add]ing or [subtracting] `@\0`.
+    /// Character math can only convert to and from UTF-32.
+    /// ex: -@\0 "👩🏽‍👩🏻‍👦🏻‍👧🏽"
+    /// ex: utf "👩🏽‍👩🏻‍👦🏻‍👧🏽"
+    (1, Utf, Misc, "utf"),
+    /// Convert UTF-8 bytes to a string
+    (1, InvUtf, Misc),
     /// Extract a named function from a module
     ///
     /// Can be used after [&i].

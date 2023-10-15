@@ -8,6 +8,7 @@ This version is not available via `cargo install uiua` yet.
 If you are reading this on the website, then it is live here.
 ### Language
 - Add [`regex`](https://uiua.org/docs/regex) function for matching regular expressions
+- Add [`utf`](https://uiua.org/docs/utf) function for UTF-8 encoding and decoding
 - Add [`&invk`](https://uiua.org/docs/&invk) system function for invoking a path to be opened with the system's default program
 - [`fill` `⬚`](https://uiua.org/docs/fill) can now be used with [`first` `⊢`](https://uiua.org/docs/first)
 - Most functions that expect strings as arguments will now dig arbitrarily deep into boxes

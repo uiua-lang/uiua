@@ -104,7 +104,7 @@ impl Value {
             Self::Func(array) => Box::new(array.rows().map(Value::from)),
         }
     }
-    pub fn into_rows(self) -> Box<dyn Iterator<Item = Self>> {
+    pub fn into_rows(self) -> Box<dyn ExactSizeIterator<Item = Self>> {
         match self {
             Self::Num(array) => Box::new(array.into_rows().map(Value::from)),
             Self::Byte(array) => Box::new(array.into_rows().map(Value::from)),
@@ -164,14 +164,6 @@ impl Value {
             Array::flat_len,
             Array::flat_len,
         )
-    }
-    pub fn reserve_min(&mut self, min: usize) {
-        match self {
-            Self::Num(arr) => arr.data.reserve_min(min),
-            Self::Byte(arr) => arr.data.reserve_min(min),
-            Self::Char(arr) => arr.data.reserve_min(min),
-            Self::Func(arr) => arr.data.reserve_min(min),
-        }
     }
     pub(crate) fn first_dim_zero(&self) -> Self {
         match self {
@@ -333,6 +325,15 @@ impl Value {
                     f(array)
                 }
             }
+        }
+    }
+    /// Ensure that the capacity is at least `min`
+    pub(crate) fn reserve_min(&mut self, min: usize) {
+        match self {
+            Self::Num(arr) => arr.data.reserve_min(min),
+            Self::Byte(arr) => arr.data.reserve_min(min),
+            Self::Char(arr) => arr.data.reserve_min(min),
+            Self::Func(arr) => arr.data.reserve_min(min),
         }
     }
     /// Get the pretty-printed string representation of the value

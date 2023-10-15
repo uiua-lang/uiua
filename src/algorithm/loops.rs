@@ -312,10 +312,13 @@ fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
             break;
         }
     }
-    env.push(Value::from_row_values(
-        scanned.into_iter().chain(rows),
-        env,
-    )?);
+    let val = if rows.len() == 0 {
+        Value::from_row_values(scanned, env)?
+    } else {
+        let rows: Vec<Value> = scanned.into_iter().chain(rows).collect();
+        Value::from_row_values(rows, env)?
+    };
+    env.push(val);
     Ok(())
 }
 

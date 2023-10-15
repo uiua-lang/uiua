@@ -198,7 +198,7 @@ impl<T: ArrayValue> Array<T> {
             data: self.data.iter().cloned().map(f).collect(),
         }
     }
-    pub fn into_rows(self) -> impl Iterator<Item = Self> {
+    pub fn into_rows(self) -> impl ExactSizeIterator<Item = Self> {
         let row_len = self.row_len();
         let mut row_shape = self.shape.clone();
         let row_count = if row_shape.is_empty() {

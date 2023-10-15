@@ -117,8 +117,11 @@ impl<T: Clone> CowSlice<T> {
             res
         }
     }
+    /// Ensure that the capacity is at least `min`
     pub fn reserve_min(&mut self, min: usize) {
-        self.modify(|vec| vec.reserve(vec.capacity().max(min) - vec.len()))
+        if self.data.capacity() < min {
+            self.modify(|vec| vec.reserve(vec.capacity().max(min) - vec.len()))
+        }
     }
 }
 

@@ -393,6 +393,7 @@ impl Value {
     where
         V: IntoIterator,
         V::Item: Into<Value>,
+        V::IntoIter: ExactSizeIterator,
     {
         Self::from_row_values_impl(values.into_iter().map(Into::into), env)
     }
@@ -400,14 +401,18 @@ impl Value {
     where
         V: IntoIterator,
         V::Item: Into<Value>,
+        V::IntoIter: ExactSizeIterator,
     {
         Self::from_row_values_impl(values.into_iter().map(Into::into), ()).unwrap()
     }
-    fn from_row_values_impl<C: FillContext>(
-        values: impl IntoIterator<Item = Value>,
-        ctx: C,
-    ) -> Result<Self, C::Error> {
+    fn from_row_values_impl<V, C>(values: V, ctx: C) -> Result<Self, C::Error>
+    where
+        V: IntoIterator<Item = Value>,
+        V::IntoIter: ExactSizeIterator,
+        C: FillContext,
+    {
         let mut row_values = values.into_iter();
+        let total_rows = row_values.len();
         let Some(mut value) = row_values.next() else {
             return Ok(Value::default());
         };
@@ -415,6 +420,8 @@ impl Value {
         for row in row_values {
             count += 1;
             if count == 2 {
+                let total_elements = total_rows * value.shape().iter().product::<usize>();
+                value.reserve_min(total_elements);
                 value.couple_impl(row, ctx)?;
             } else {
                 value.append(row, ctx)?;

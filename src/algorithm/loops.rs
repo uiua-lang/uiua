@@ -25,6 +25,18 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
     let xs = env.pop(ArrayArg(1))?;
 
     match (f.as_flipped_primitive(), xs) {
+        (Some((Primitive::Join, false)), mut xs) => {
+            if xs.rank() < 2 {
+                env.push(xs);
+                return Ok(());
+            }
+            let shape = xs.shape();
+            let mut new_shape = Shape::with_capacity(xs.rank() - 1);
+            new_shape.push(shape[0] * shape[1]);
+            new_shape.extend_from_slice(&shape[2..]);
+            *xs.shape_mut() = new_shape;
+            env.push(xs);
+        }
         (Some((prim, flipped)), Value::Num(nums)) => env.push(match prim {
             Primitive::Add => fast_reduce(nums, 0.0, Add::add),
             Primitive::Sub if flipped => fast_reduce(nums, 0.0, Sub::sub),

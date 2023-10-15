@@ -7,9 +7,11 @@ This version is not available via `cargo install uiua` yet.
 
 If you are reading this on the website, then it is live here.
 ### Language
-- The presence of [`break` `⎋`](https://uiua.org/docs/break) in a [`repeat` `⍥`](https://uiua.org/docs/repeat) always requires a stack signature
-- Make [`if` `?`](https://uiua.org/docs/if) signature checking more permissive
+- Add [`regex`](https://uiua.org/docs/regex) function for matching regular expressions
 - [`fill` `⬚`](https://uiua.org/docs/fill) can now be used with [`first` `⊢`](https://uiua.org/docs/first)
+- Most functions that expect strings as arguments will now dig arbitrarily deep into boxes
+- Make [`if` `?`](https://uiua.org/docs/if) signature checking more permissive
+- The presence of [`break` `⎋`](https://uiua.org/docs/break) in a [`repeat` `⍥`](https://uiua.org/docs/repeat) always requires a stack signature
 ### Website
 - Add a page listing common [stack idioms](https://uiua.org/docs/stack-idioms)
 

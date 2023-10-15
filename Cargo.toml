@@ -48,16 +48,17 @@ viuer = { version = "0.7.1", optional = true }
 num_cpus = "1.16.0"
 rayon = "1.8.0"
 regex = "1.10.0"
-open = "5"
+open = { version = "5", optional = true }
 
 [features]
 audio = ["hodaun", "crossbeam-channel", "lockfree"]
 binary = ["ctrlc", "notify", "clap", "color-backtrace", "lsp"]
 debug = []
-default = ["binary", "terminal_image", "https"]
+default = ["binary", "terminal_image", "https", "invoke"]
 https = ["httparse", "rustls", "webpki-roots"]
 lsp = ["tower-lsp", "tokio"]
 profile = ["crossbeam-channel", "serde", "serde_yaml", "indexmap"]
+invoke = ["open"]
 terminal_image = ["viuer"]
 
 [[bin]]

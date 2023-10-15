@@ -5,10 +5,7 @@ use std::{
     io::{stderr, stdin, stdout, BufRead, Read, Write},
     net::*,
     process::Command,
-    sync::{
-        atomic::{self, AtomicU64},
-        Arc,
-    },
+    sync::atomic::{self, AtomicU64},
     thread::{sleep, spawn, JoinHandle},
     time::Duration,
 };
@@ -16,7 +13,6 @@ use std::{
 use crate::{value::Value, Handle, SysBackend, Uiua, UiuaError, UiuaResult};
 use bufreaderwriter::seq::BufReaderWriterSeq;
 use dashmap::DashMap;
-use image::DynamicImage;
 use once_cell::sync::Lazy;
 
 #[derive(Default)]
@@ -34,7 +30,7 @@ struct GlobalNativeSys {
     #[cfg(feature = "audio")]
     audio_stream_time: parking_lot::Mutex<Option<f64>>,
     #[cfg(feature = "audio")]
-    audio_time_socket: parking_lot::Mutex<Option<Arc<std::net::UdpSocket>>>,
+    audio_time_socket: parking_lot::Mutex<Option<std::sync::Arc<std::net::UdpSocket>>>,
     colored_errors: DashMap<String, String>,
 }
 
@@ -99,7 +95,7 @@ pub fn set_audio_stream_time(time: f64) {
 pub fn set_audio_stream_time_port(port: u16) -> std::io::Result<()> {
     let socket = std::net::UdpSocket::bind(("127.0.0.1", 0))?;
     socket.connect(("127.0.0.1", port))?;
-    *NATIVE_SYS.audio_time_socket.lock() = Some(Arc::new(socket));
+    *NATIVE_SYS.audio_time_socket.lock() = Some(std::sync::Arc::new(socket));
     Ok(())
 }
 
@@ -209,7 +205,7 @@ impl SysBackend for NativeSys {
         Ok(())
     }
     #[cfg(feature = "terminal_image")]
-    fn show_image(&self, image: DynamicImage) -> Result<(), String> {
+    fn show_image(&self, image: image::DynamicImage) -> Result<(), String> {
         let (width, height) = if let Some((w, h)) = term_size::dimensions() {
             let (tw, th) = (w as u32, h.saturating_sub(1) as u32);
             let (iw, ih) = (image.width(), image.height() / 2);
@@ -411,6 +407,7 @@ impl SysBackend for NativeSys {
             Err("Invalid stream handle".to_string())
         }
     }
+    #[cfg(feature = "invoke")]
     fn invoke(&self, path: &str) -> Result<(), String> {
         open::that(path).map_err(|e| e.to_string())
     }
@@ -473,7 +470,7 @@ impl SysBackend for NativeSys {
         let request = check_http(request.to_string(), &host)?;
 
         // https://github.com/rustls/rustls/blob/c9cfe3499681361372351a57a00ccd793837ae9c/examples/src/bin/simpleclient.rs
-        static CLIENT_CONFIG: Lazy<Arc<rustls::ClientConfig>> = Lazy::new(|| {
+        static CLIENT_CONFIG: Lazy<std::sync::Arc<rustls::ClientConfig>> = Lazy::new(|| {
             let mut store = rustls::RootCertStore::empty();
             store.add_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.iter().map(|ta| {
                 rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(

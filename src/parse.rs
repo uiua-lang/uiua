@@ -318,34 +318,35 @@ impl Parser {
         while let Some(word) = self.try_word() {
             if let Some(prev) = words.last() {
                 // Style diagnostics
-                use crate::primitive::Primitive::*;
-                use Word::*;
+                use Primitive::*;
                 let span = || prev.span.clone().merge(word.span.clone());
-                match (&prev.value, &word.value) {
-                    (Primitive(Flip), Primitive(Over)) => self.diagnostics.push(Diagnostic::new(
-                        format!("Prefer `{Dip}{Dup}` over `{Flip}{Over}` for clarity"),
-                        span(),
-                        DiagnosticKind::Style,
-                    )),
-                    // Not comparisons
-                    (Primitive(Not), Primitive(prim)) => {
-                        for (a, b) in [(Eq, Ne), (Lt, Ge), (Gt, Le)] {
-                            if *prim == a {
-                                self.diagnostics.push(Diagnostic::new(
-                                    format!("Prefer `{b}` over `{Not}{prim}` for clarity"),
-                                    span(),
-                                    DiagnosticKind::Style,
-                                ));
-                            } else if *prim == b {
-                                self.diagnostics.push(Diagnostic::new(
-                                    format!("Prefer `{a}` over `{Not}{prim}` for clarity"),
-                                    span(),
-                                    DiagnosticKind::Style,
-                                ));
+                if let (Word::Primitive(a), Word::Primitive(b)) = (&prev.value, &word.value) {
+                    match (a, b) {
+                        (Flip, Over) => self.diagnostics.push(Diagnostic::new(
+                            format!("Prefer `{Dip}{Dup}` over `{Flip}{Over}` for clarity"),
+                            span(),
+                            DiagnosticKind::Style,
+                        )),
+                        // Not comparisons
+                        (Not, prim) => {
+                            for (a, b) in [(Eq, Ne), (Lt, Ge), (Gt, Le)] {
+                                if *prim == a {
+                                    self.diagnostics.push(Diagnostic::new(
+                                        format!("Prefer `{b}` over `{Not}{prim}` for clarity"),
+                                        span(),
+                                        DiagnosticKind::Style,
+                                    ));
+                                } else if *prim == b {
+                                    self.diagnostics.push(Diagnostic::new(
+                                        format!("Prefer `{a}` over `{Not}{prim}` for clarity"),
+                                        span(),
+                                        DiagnosticKind::Style,
+                                    ));
+                                }
                             }
                         }
+                        _ => {}
                     }
-                    _ => {}
                 }
             }
 

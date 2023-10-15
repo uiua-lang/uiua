@@ -1,5 +1,6 @@
-- Improve how recursion works
+- Optimize row deshape
 - `under` aggregating `group` and `partition`
+- Improve how recursion works
 - Add channels for spawned threads
 - Figure out what is going on with the editor cursor
 - Sift+delete to delete whole line

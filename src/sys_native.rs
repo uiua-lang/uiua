@@ -411,6 +411,9 @@ impl SysBackend for NativeSys {
             Err("Invalid stream handle".to_string())
         }
     }
+    fn invoke(&self, path: &str) -> Result<(), String> {
+        open::that(path).map_err(|e| e.to_string())
+    }
     fn spawn(
         &self,
         mut env: Uiua,

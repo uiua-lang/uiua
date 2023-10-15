@@ -153,6 +153,8 @@ sys_op! {
     ///   : Square ← use "Square" ex
     ///   : Square Double 5
     (1, Import, "&i", "import"),
+    /// Invoke a path with the system's default program
+    (1(1), Invoke, "&invk", "invoke"),
     /// Close a stream by its handle
     ///
     /// This will close files, tcp listeners, and tcp sockets.
@@ -481,6 +483,9 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn close(&self, handle: Handle) -> Result<(), String> {
         Ok(())
     }
+    fn invoke(&self, path: &str) -> Result<(), String> {
+        Err("Invoking paths is not supported in this environment".into())
+    }
     fn spawn(
         &self,
         env: Uiua,
@@ -791,6 +796,10 @@ impl SysOp {
                 )
                 .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
                 env.import(&input, path.as_ref())?;
+            }
+            SysOp::Invoke => {
+                let path = env.pop(1)?.as_string(env, "Invoke path must be a string")?;
+                env.backend.invoke(&path).map_err(|e| env.error(e))?;
             }
             SysOp::ImDecode => {
                 let bytes = match env.pop(1)? {

@@ -16,12 +16,15 @@ use std::{
     sync::{
         atomic::{self, AtomicUsize},
         OnceLock,
+        Arc
     },
+    collections::HashMap,
 };
 
 use enum_iterator::{all, Sequence};
 use once_cell::sync::Lazy;
 use rand::prelude::*;
+use regex::Regex;
 
 use crate::{
     algorithm::{fork, loops},
@@ -35,6 +38,10 @@ use crate::{
     value::*,
     Uiua, UiuaError, UiuaResult,
 };
+
+thread_local! {
+    pub static REGEX_CACHE: RefCell<HashMap<String, Regex>> = RefCell::new(HashMap::new());
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Sequence)]
 pub enum PrimClass {
@@ -573,6 +580,37 @@ impl Primitive {
             Primitive::InvTrace => trace(env, true)?,
             Primitive::Dump => dump(env)?,
             Primitive::Sys(io) => io.run(env)?,
+            Primitive::Regex => {
+                let pattern = env.pop(1)?.as_string(env, "Pattern must be a string")?;
+                let matching = env.pop(1)?.as_string(env, "Matching target must be a string")?;
+
+                let re = REGEX_CACHE.with(|cache_ref| {
+                    let mut cache = cache_ref.borrow_mut();
+                    let cached_pattern = cache.get(&pattern);
+                    if cached_pattern.is_none() {
+                        let regex = Regex::new(&pattern);
+                        if regex.is_ok() {
+                            cache.insert(pattern.clone(), regex.clone().unwrap());
+                        }
+                        regex
+                    } else {
+                        Ok(cached_pattern.unwrap().clone())
+                    }
+                });
+
+                if re.is_ok() {
+                    let matches = re.unwrap().find_iter(matching.as_str())
+                        .map(|m| Function::constant(m.as_str()).into())
+                        .reduce(|a, b| Value::join(a, b, env).unwrap());
+
+                    env.push(matches.unwrap_or(Array::<Arc<Function>>::default().into()));
+                } else {
+                    return Err(env.error(format!(
+                        "Invalid pattern: {}",
+                        pattern
+                    )))
+                }
+            }
         }
         Ok(())
     }

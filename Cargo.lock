@@ -3252,6 +3252,7 @@ dependencies = [
  "paste",
  "rand",
  "rayon",
+ "regex",
  "rustls",
  "serde",
  "serde_yaml",

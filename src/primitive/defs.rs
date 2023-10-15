@@ -1386,7 +1386,7 @@ primitive!(
     /// `recur``1` calls current function.
     /// `recur``2` calls the function that called the current function, and so on.
     ///
-    /// **This is often not what you want.** This glyph is slow and has a maximum stack depth. Prefer using [repeat] when possible.
+    /// **This is often not what you want.** [recur] is slow and can easily overflow the stack if you are not careful or if your input is too large. Prefer using [repeat] when possible.
     ///
     /// Here, we recur until the value is not `less than``10`.
     /// ex: !(|1 ↬<10.×2) 1

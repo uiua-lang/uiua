@@ -14,7 +14,7 @@ use base64::engine::{
 };
 use image::ImageOutputFormat;
 use leptos::{ev::keydown, *};
-use leptos_router::{use_navigate, NavigateOptions};
+use leptos_router::{use_navigate, BrowserIntegration, History, LocationChange, NavigateOptions};
 use uiua::{
     format::{format_str, FormatConfig},
     image_to_bytes,
@@ -310,15 +310,12 @@ pub fn Editor<'a>(
         {
             let encoded = URL_SAFE.encode(&input);
             if let EditorSize::Pad = size {
-                window()
-                    .history()
-                    .unwrap()
-                    .replace_state_with_url(
-                        &JsValue::NULL,
-                        "",
-                        Some(&format!("/pad?src={encoded}")),
-                    )
-                    .unwrap();
+                BrowserIntegration {}.navigate(&LocationChange {
+                    value: format!("/pad?src={encoded}"),
+                    scroll: false,
+                    replace: true,
+                    ..Default::default()
+                });
             }
         }
 

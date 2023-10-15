@@ -1398,12 +1398,6 @@ primitive!(
     /// It uses [if] to decide whether to recur.
     /// ex: !(?∘(|1 +↬2-1∶↬2-2.) <2.) 10
     (1(None), Recur, Control, ("recur", '↬')),
-    /// Parse a string as a number
-    ///
-    /// ex: parse "17"
-    /// ex: parse "3.1415926535897932"
-    /// ex! parse "dog"
-    (1, Parse, Misc, "parse"),
     /// Generate a random number between 0 and 1
     ///
     /// If you need a seeded random number, use [gen].
@@ -1434,6 +1428,19 @@ primitive!(
     /// ex: deal⚂ [1 2 3 4 5]
     /// ex: deal⚂ [1_2 3_4 5_6 7_8]
     (2, Deal, Misc, "deal"),
+    /// Parse a string as a number
+    ///
+    /// ex: parse "17"
+    /// ex: parse "3.1415926535897932"
+    /// ex! parse "dog"
+    (1, Parse, Misc, "parse"),
+    /// Parse a regex pattern
+    ///
+    /// Returns an list of [box]ed strings, with one string per matching group
+    /// ex: regex "([a-z]+)" "hello world"
+    /// Escaped regex characters must be double-escaped.
+    /// ex: regex "\\d+" "123"
+    (2, Regex, Misc, "regex"),
     /// Extract a named function from a module
     ///
     /// Can be used after [&i].
@@ -1478,11 +1485,6 @@ primitive!(
     /// [under][now] can be used to time a function.
     /// ex: ⍜now(5&sl1)
     (0, Now, Misc, "now"),
-    /// Parse a regex pattern on a string
-    /// 
-    /// Returns an array of boxed string, with one string per matching group
-    /// ex: regex "([a-z]+)" "hello world"
-    (2, Regex, Misc, "regex"),
     /// The number of radians in a quarter circle
     ///
     /// Equivalent to `divide``2``pi` or `divide``4``tau`

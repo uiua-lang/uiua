@@ -576,17 +576,26 @@ impl Value {
         })
     }
     pub fn as_string(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<String> {
-        if let Value::Char(chars) = self {
-            if chars.rank() > 1 {
-                return Err(env.error(format!("{requirement}, but its rank is {}", chars.rank())));
+        match self {
+            Value::Char(chars) => {
+                if chars.rank() > 1 {
+                    return Err(
+                        env.error(format!("{requirement}, but its rank is {}", chars.rank()))
+                    );
+                }
+                return Ok(chars.data().iter().collect());
             }
-            Ok(chars.data().iter().collect())
-        } else {
-            Err(env.error(format!(
-                "{requirement}, but its type is {}",
-                self.type_name()
-            )))
+            Value::Func(f) => {
+                if let Some(val) = f.as_boxed() {
+                    return val.as_string(env, requirement);
+                }
+            }
+            _ => {}
         }
+        Err(env.error(format!(
+            "{requirement}, but its type is {}",
+            self.type_name()
+        )))
     }
     pub fn into_bytes(self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<u8>> {
         Ok(match self {

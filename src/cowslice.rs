@@ -5,6 +5,7 @@ use std::{
     hash::{Hash, Hasher},
     iter::{Skip, Take},
     ops::{Bound, Deref, RangeBounds},
+    ptr,
 };
 
 macro_rules! cowslice {
@@ -48,6 +49,11 @@ impl<T> CowSlice<T> {
     #[inline]
     pub fn is_unique(&mut self) -> bool {
         self.data.is_unique()
+    }
+    pub fn is_copy_of(&self, other: &Self) -> bool {
+        ptr::eq(self.data.as_ptr(), other.data.as_ptr())
+            && self.start == other.start
+            && self.end == other.end
     }
 }
 

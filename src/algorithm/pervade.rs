@@ -270,7 +270,13 @@ where
     let bsh = b.shape.as_slice();
     // Try to avoid copying when possible
     if ash == bsh {
-        if b.data.is_unique() {
+        if a.data.is_copy_of(&b.data) {
+            drop(b);
+            let a_data = a.data.as_mut_slice();
+            for a in a_data {
+                *a = f(*a, *a);
+            }
+        } else if b.data.is_unique() {
             let a_data = a.data.as_slice();
             let b_data = b.data.as_mut_slice();
             for (a, b) in a_data.iter().zip(b_data) {

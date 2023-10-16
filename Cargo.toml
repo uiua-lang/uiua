@@ -14,7 +14,7 @@ version = "0.0.19"
 ariadne = "0.3.0"
 bufreaderwriter = "0.2.4"
 clap = { version = "4", optional = true, features = ["derive"] }
-color-backtrace = { version = "0.5.1", optional = true }
+color-backtrace = { version = "0.6.0", optional = true }
 colored = "2"
 crossbeam-channel = { version = "0.5.8", optional = true }
 ctrlc = { version = "3", optional = true }

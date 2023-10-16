@@ -678,7 +678,7 @@ primitive!(
     /// For a rank `1` selector, [select] will pick multiple items from an array.
     /// ex: ⊏ 4_2 [8 3 9 2 0]
     /// ex: ⊏ 0_2_1_1 [1_2_3 4_5_6 7_8_9]
-    /// If the selector's rank is `greater than``1`, then earch row of the selector will be selected separately.
+    /// If the selector's rank is `greater than``1`, then each row of the selector will be selected separately.
     /// ex: ⊏ [0_1 1_2 2_3] [2 3 5 7]
     /// ex: ⊏ [0_1 1_2 2_0] [1_2_3 4_5_6 7_8_9]
     (2, Select, DyadicArray, ("select", '⊏')),

@@ -605,6 +605,9 @@ macro_rules! cmp_impl {
             pub fn generic<T: Ord>(a: T, b: T) -> u8 {
                 (b.cmp(&a) $eq $ordering).into()
             }
+            pub fn same_type<T: ArrayCmp + From<u8>>(a: T, b: T) -> T {
+               ((b.array_cmp(&a) $eq $ordering) as u8).into()
+            }
             pub fn error<T: Display>(a: T, b: T, _env: &Uiua) -> UiuaError {
                 unreachable!("Comparisons cannot fail, failed to compare {a} and {b}")
             }

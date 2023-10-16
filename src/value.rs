@@ -954,7 +954,7 @@ value_bin_impl!(
     (Byte, Num, byte_num, num_num),
     (Num, Byte, num_byte, num_num),
 );
-value_bin_impl!(atan2, (Num, Num, num_num));
+value_bin_impl!(atan2, [Num, num_num]);
 
 value_bin_impl!(
     min,
@@ -980,8 +980,8 @@ macro_rules! cmp_impls {
             value_bin_impl!(
                 $name,
                 // Value comparable
-                (Num, Num, num_num),
-                (Byte, Byte, generic, num_num),
+                [Num, same_type],
+                (Byte, Byte, same_type, num_num),
                 (Char, Char, generic),
                 (Func, Func, generic),
                 (Num, Byte, num_byte, num_num),

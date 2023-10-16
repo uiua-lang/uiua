@@ -2,10 +2,7 @@
 
 Uiua is not yet stable.
 
-## 0.0.20 - 2023-10-??
-This version is not available via `cargo install uiua` yet.
-
-If you are reading this on the website, then it is live here.
+## 0.0.20 - 2023-10-16
 ### Language
 - Add [`regex`](https://uiua.org/docs/regex) function for matching regular expressions
 - Add [`utf`](https://uiua.org/docs/utf) function for UTF-8 encoding and decoding

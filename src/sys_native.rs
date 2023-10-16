@@ -435,25 +435,26 @@ impl SysBackend for NativeSys {
             Err(e) => Err(Err(format!("Thread panicked: {:?}", e))),
         }
     }
-    fn run_command_inherit(&self, command: &str, args: &[&str]) -> Result<(), String> {
-        Command::new(command)
+    fn run_command_inherit(&self, command: &str, args: &[&str]) -> Result<i32, String> {
+        let status = Command::new(command)
             .args(args)
             .spawn()
             .map_err(|e| e.to_string())?
             .wait()
             .map_err(|e| e.to_string())?;
-        Ok(())
+        Ok(status.code().unwrap_or(0))
     }
     fn run_command_capture(
         &self,
         command: &str,
         args: &[&str],
-    ) -> Result<(String, String), String> {
+    ) -> Result<(i32, String, String), String> {
         let output = Command::new(command)
             .args(args)
             .output()
             .map_err(|e| e.to_string())?;
         Ok((
+            output.status.code().unwrap_or(0),
             String::from_utf8_lossy(&output.stdout).into(),
             String::from_utf8_lossy(&output.stderr).into(),
         ))

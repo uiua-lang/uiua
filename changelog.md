@@ -14,6 +14,7 @@ If you are reading this on the website, then it is live here.
 - Most functions that expect strings as arguments will now dig arbitrarily deep into boxes
 - Make [`if` `?`](https://uiua.org/docs/if) signature checking more permissive
 - The presence of [`break` `⎋`](https://uiua.org/docs/break) in a [`repeat` `⍥`](https://uiua.org/docs/repeat) always requires a stack signature
+- The [`&runi`](https://uiua.org/docs/&runi) and [`&runc`](https://uiua.org/docs/&runc) functions now return exit codes
 ### Interpreter
 - Bugfixes and performance improvements
 ### Website

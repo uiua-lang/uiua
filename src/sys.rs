@@ -119,16 +119,16 @@ sys_op! {
     (1, Var, "&var", "environment variable"),
     /// Run a command and wait for it to finish
     ///
-    /// Standard IO will be inherited.
+    /// Standard IO will be inherited. Returns the exit code of the command.
     ///
     /// Expects either a string, a rank `2` character array, or a rank `1` array of [box] strings.
-    (1(0), RunInherit, "&runi", "run command inherit"),
+    (1(1), RunInherit, "&runi", "run command inherit"),
     /// Run a command and wait for it to finish
     ///
-    /// Standard IO will be captured. Stdout and stderr will each be pushed to the stack as strings.
+    /// Standard IO will be captured. The exit code, stdout, and stderr will each be pushed to the stack.
     ///
     /// Expects either a string, a rank `2` character array, or a rank `1` array of [box] strings.
-    (1(2), RunCapture, "&runc", "run command capture"),
+    (1(3), RunCapture, "&runc", "run command capture"),
     /// Change the current directory
     (1(0), ChangeDirectory, "&cd", "change directory"),
     /// Sleep for n seconds
@@ -498,14 +498,14 @@ pub trait SysBackend: Any + Send + Sync + 'static {
             "Joining threads is not supported in this environment".into()
         ))
     }
-    fn run_command_inherit(&self, command: &str, args: &[&str]) -> Result<(), String> {
+    fn run_command_inherit(&self, command: &str, args: &[&str]) -> Result<i32, String> {
         Err("Running commands is not supported in this environment".into())
     }
     fn run_command_capture(
         &self,
         command: &str,
         args: &[&str],
-    ) -> Result<(String, String), String> {
+    ) -> Result<(i32, String, String), String> {
         Err("Running commands is not supported in this environment".into())
     }
     fn change_directory(&self, path: &str) -> Result<(), String> {
@@ -1044,19 +1044,22 @@ impl SysOp {
             SysOp::RunInherit => {
                 let (command, args) = value_to_command(&env.pop(1)?, env)?;
                 let args: Vec<_> = args.iter().map(|s| s.as_str()).collect();
-                env.backend
+                let code = env
+                    .backend
                     .run_command_inherit(&command, &args)
                     .map_err(|e| env.error(e))?;
+                env.push(code);
             }
             SysOp::RunCapture => {
                 let (command, args) = value_to_command(&env.pop(1)?, env)?;
                 let args: Vec<_> = args.iter().map(|s| s.as_str()).collect();
-                let (stdout, stderr) = env
+                let (code, stdout, stderr) = env
                     .backend
                     .run_command_capture(&command, &args)
                     .map_err(|e| env.error(e))?;
-                env.push(stdout);
                 env.push(stderr);
+                env.push(stdout);
+                env.push(code);
             }
             SysOp::ChangeDirectory => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;

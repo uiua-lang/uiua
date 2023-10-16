@@ -121,10 +121,10 @@ uiuisms!(
     "/↧ [1 4 5 3 2]",
     /// Sort an array
     "⊏⍏. [1 4 5 3 2]",
-    /// Get n numbers between 0 and 1 inclusive
-    "÷ -1∶ ⇡. 11",
     /// Get n numbers between 0 and 1 exclusive
     "÷∶ ⇡. 10",
+    /// Get n numbers between 0 and 1 inclusive
+    "÷ -1∶ ⇡. 11",
     /// Create an identity matrix
     "⊞=. ⇡ 5",
     /// Create an X matrix
@@ -137,14 +137,14 @@ uiuisms!(
     r#"$"_" 17"#,
     /// Convert a string to a number
     r#"parse "42""#,
-    /// Parse a string as a base 2 number
-    r#"⍘⋯ ⇌ - @0 "110""#,
-    /// Parse a string as a base 3 <= X <= 9 number
-    r#"/+ ×ⁿ ⇌⇡⧻, ⊙- ∶ @0 3 "210""#,
     /// Convert a string to a list of code points
     r#"- @\0 "Uiua""#,
     /// Convert a list of code points to a string
     r#"+ @\0 [85 105 117 97]"#,
+    /// Parse a string as a base 2 number
+    r#"⍘⋯ ⇌ - @0 "110""#,
+    /// Parse a string as a base 3 <= X <= 9 number
+    r#"/+ ×ⁿ ⇌⇡⧻, ⊙- ∶ @0 3 "210""#,
     /// Find the indices of all 1s
     "▽∶ ⇡⧻. [0 1 0 0 1]",
     /// Interleave two arrays
@@ -174,9 +174,9 @@ uiuisms!(
     /// Convert a string to uppercase
     r#"- ×32 × ≥@a, ≤@z. "These are Words""#,
     /// Convert a string to lowercase
-    r#"+ ×32 × ≥@A, ≤@Z. "These are Words""#,
+    r#"+ ×32 × ⊃'≥@A'≤@Z . "These are Words""#,
     /// Check if a string is in a list of strings
-    r#"∊ □"uiua" {"apl" "bqn" "uiua"}"#,
+    r#"∊ □ "uiua" {"apl" "bqn" "uiua"}"#,
     /// Trim leading whitespace
     r#"▽\↥ ≠@ . "   ← remove these""#,
     /// Trim trailing whitespace

@@ -1060,9 +1060,13 @@ mod tests {
                 .filter_map(|p| p.names())
                 .map(|n| n.text.to_string())
                 .map(|name| {
-                    let min_len = (2..=name.len())
-                        .find(|&n| Primitive::from_format_name(&name[..n]).is_some())
-                        .unwrap();
+                    let min_len = if name.starts_with('&') {
+                        name.len()
+                    } else {
+                        (2..=name.len())
+                            .find(|&n| Primitive::from_format_name(&name[..n]).is_some())
+                            .unwrap()
+                    };
                     let mut start: String = name.chars().take(min_len).collect();
                     let mut end = String::new();
                     for c in name.chars().skip(min_len) {

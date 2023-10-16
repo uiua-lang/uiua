@@ -1,11 +1,9 @@
 //! Algorithms for reducing modifiers
 
-use std::ops::{Add, Div, Mul, Sub};
-
 use ecow::EcoVec;
 
 use crate::{
-    algorithm::loops::flip,
+    algorithm::{loops::flip, pervade::*},
     array::{Array, ArrayValue, Shape},
     cowslice::cowslice,
     primitive::Primitive,
@@ -33,25 +31,25 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
             env.push(xs);
         }
         (Some((prim, flipped)), Value::Num(nums)) => env.push(match prim {
-            Primitive::Add => fast_reduce(nums, 0.0, Add::add),
-            Primitive::Sub if flipped => fast_reduce(nums, 0.0, Sub::sub),
-            Primitive::Sub => fast_reduce(nums, 0.0, flip(Sub::sub)),
-            Primitive::Mul => fast_reduce(nums, 1.0, Mul::mul),
-            Primitive::Div if flipped => fast_reduce(nums, 1.0, Div::div),
-            Primitive::Div => fast_reduce(nums, 1.0, flip(Div::div)),
-            Primitive::Max => fast_reduce(nums, f64::NEG_INFINITY, f64::max),
-            Primitive::Min => fast_reduce(nums, f64::INFINITY, f64::min),
+            Primitive::Add => fast_reduce(nums, 0.0, add::num_num),
+            Primitive::Sub if flipped => fast_reduce(nums, 0.0, flip(sub::num_num)),
+            Primitive::Sub => fast_reduce(nums, 0.0, sub::num_num),
+            Primitive::Mul => fast_reduce(nums, 1.0, mul::num_num),
+            Primitive::Div if flipped => fast_reduce(nums, 1.0, flip(div::num_num)),
+            Primitive::Div => fast_reduce(nums, 1.0, div::num_num),
+            Primitive::Max => fast_reduce(nums, f64::NEG_INFINITY, max::num_num),
+            Primitive::Min => fast_reduce(nums, f64::INFINITY, min::num_num),
             _ => return generic_fold1(f, Value::Num(nums), None, env),
         }),
         (Some((prim, flipped)), Value::Byte(bytes)) => env.push(match prim {
-            Primitive::Add => fast_reduce(bytes.convert(), 0.0, |a, b| a + b),
-            Primitive::Sub if flipped => fast_reduce(bytes.convert(), 0.0, |a, b| a - b),
-            Primitive::Sub => fast_reduce(bytes.convert(), 0.0, |a, b| b - a),
-            Primitive::Mul => fast_reduce(bytes.convert(), 1.0, |a, b| a * b),
-            Primitive::Div if flipped => fast_reduce(bytes.convert(), 1.0, |a, b| a / b),
-            Primitive::Div => fast_reduce(bytes.convert(), 1.0, |a, b| b / a),
-            Primitive::Max => fast_reduce(bytes.convert(), f64::NEG_INFINITY, |a, b| a.max(b)),
-            Primitive::Min => fast_reduce(bytes.convert(), f64::INFINITY, |a, b| a.min(b)),
+            Primitive::Add => fast_reduce(bytes.convert(), 0.0, add::num_num),
+            Primitive::Sub if flipped => fast_reduce(bytes.convert(), 0.0, flip(sub::num_num)),
+            Primitive::Sub => fast_reduce(bytes.convert(), 0.0, sub::num_num),
+            Primitive::Mul => fast_reduce(bytes.convert(), 1.0, mul::num_num),
+            Primitive::Div if flipped => fast_reduce(bytes.convert(), 1.0, flip(div::num_num)),
+            Primitive::Div => fast_reduce(bytes.convert(), 1.0, div::num_num),
+            Primitive::Max => fast_reduce(bytes.convert(), f64::NEG_INFINITY, max::num_num),
+            Primitive::Min => fast_reduce(bytes.convert(), f64::INFINITY, min::num_num),
             _ => return generic_fold1(f, Value::Byte(bytes), None, env),
         }),
         (_, xs) => generic_fold1(f, xs, None, env)?,
@@ -67,12 +65,12 @@ where
         0 => arr,
         1 => {
             let data = arr.data.as_mut_slice();
-            let folded = data.iter().copied().fold(identity, f);
-            if data.is_empty() {
-                arr.data.extend(Some(folded));
-            } else {
-                data[0] = folded;
+            let reduced = data.iter().copied().reduce(f);
+            if let Some(reduced) = reduced {
+                data[0] = reduced;
                 arr.data.truncate(1);
+            } else {
+                arr.data.extend(Some(identity));
             }
             arr.shape = Shape::default();
             arr
@@ -211,14 +209,14 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
     match (f.as_flipped_primitive(), xs) {
         (Some((prim, flipped)), Value::Num(nums)) => {
             let arr = match prim {
-                Primitive::Add => fast_scan(nums, Add::add),
-                Primitive::Sub if flipped => fast_scan(nums, Sub::sub),
-                Primitive::Sub => fast_scan(nums, flip(Sub::sub)),
-                Primitive::Mul => fast_scan(nums, Mul::mul),
-                Primitive::Div if flipped => fast_scan(nums, Div::div),
-                Primitive::Div => fast_scan(nums, flip(Div::div)),
-                Primitive::Max => fast_scan(nums, f64::max),
-                Primitive::Min => fast_scan(nums, f64::min),
+                Primitive::Add => fast_scan(nums, add::num_num),
+                Primitive::Sub if flipped => fast_scan(nums, flip(sub::num_num)),
+                Primitive::Sub => fast_scan(nums, sub::num_num),
+                Primitive::Mul => fast_scan(nums, mul::num_num),
+                Primitive::Div if flipped => fast_scan(nums, flip(div::num_num)),
+                Primitive::Div => fast_scan(nums, div::num_num),
+                Primitive::Max => fast_scan(nums, max::num_num),
+                Primitive::Min => fast_scan(nums, min::num_num),
                 _ => return generic_scan(f, Value::Num(nums), env),
             };
             env.push(arr);
@@ -226,12 +224,16 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
         }
         (Some((prim, flipped)), Value::Byte(bytes)) => {
             match prim {
-                Primitive::Add => env.push(fast_scan::<f64>(bytes.convert(), Add::add)),
-                Primitive::Sub if flipped => env.push(fast_scan::<f64>(bytes.convert(), Sub::sub)),
-                Primitive::Sub => env.push(fast_scan::<f64>(bytes.convert(), flip(Sub::sub))),
-                Primitive::Mul => env.push(fast_scan::<f64>(bytes.convert(), Mul::mul)),
-                Primitive::Div if flipped => env.push(fast_scan::<f64>(bytes.convert(), Div::div)),
-                Primitive::Div => env.push(fast_scan::<f64>(bytes.convert(), flip(Div::div))),
+                Primitive::Add => env.push(fast_scan::<f64>(bytes.convert(), add::num_num)),
+                Primitive::Sub if flipped => {
+                    env.push(fast_scan::<f64>(bytes.convert(), flip(sub::num_num)))
+                }
+                Primitive::Sub => env.push(fast_scan::<f64>(bytes.convert(), sub::num_num)),
+                Primitive::Mul => env.push(fast_scan::<f64>(bytes.convert(), mul::num_num)),
+                Primitive::Div if flipped => {
+                    env.push(fast_scan::<f64>(bytes.convert(), flip(div::num_num)))
+                }
+                Primitive::Div => env.push(fast_scan::<f64>(bytes.convert(), div::num_num)),
                 Primitive::Max => env.push(fast_scan(bytes, u8::max)),
                 Primitive::Min => env.push(fast_scan(bytes, u8::min)),
                 _ => return generic_scan(f, Value::Byte(bytes), env),

@@ -1,11 +1,10 @@
 //! Algorithms for tabling modifiers
 
-use std::ops::{Add, Div, Mul, Sub};
-
 use ecow::EcoVec;
 use tinyvec::tiny_vec;
 
 use crate::{
+    algorithm::pervade::*,
     array::{Array, ArrayValue, Shape},
     primitive::Primitive,
     run::{ArrayArg, FunctionArg},
@@ -14,10 +13,6 @@ use crate::{
 };
 
 use super::loops::flip;
-
-fn bin_bool<T: ArrayValue>(f: impl Fn(T, T) -> bool + Copy) -> impl Fn(T, T) -> u8 {
-    move |x, y| f(x, y) as u8
-}
 
 pub fn table(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
@@ -43,29 +38,27 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
             }
         }
         (Some((prim, flipped)), Value::Byte(xs), Value::Byte(ys)) => match prim {
-            Primitive::Eq => env.push(fast_table(xs, ys, bin_bool(|x, y| x == y))),
-            Primitive::Ne => env.push(fast_table(xs, ys, bin_bool(|x, y| x != y))),
-            Primitive::Lt if flipped => env.push(fast_table(xs, ys, bin_bool(|x, y| x < y))),
-            Primitive::Lt => env.push(fast_table(xs, ys, bin_bool(|x, y| y < x))),
-            Primitive::Gt if flipped => env.push(fast_table(xs, ys, bin_bool(|x, y| x > y))),
-            Primitive::Gt => env.push(fast_table(xs, ys, bin_bool(|x, y| y > x))),
-            Primitive::Le if flipped => env.push(fast_table(xs, ys, bin_bool(|x, y| x <= y))),
-            Primitive::Le => env.push(fast_table(xs, ys, bin_bool(|x, y| y <= x))),
-            Primitive::Ge if flipped => env.push(fast_table(xs, ys, bin_bool(|x, y| x >= y))),
-            Primitive::Ge => env.push(fast_table(xs, ys, bin_bool(|x, y| y >= x))),
-            Primitive::Add => env.push(fast_table(xs, ys, |a, b| f64::from(a) + f64::from(b))),
-            Primitive::Sub if flipped => {
-                env.push(fast_table(xs, ys, |a, b| f64::from(a) - f64::from(b)))
+            Primitive::Eq => env.push(fast_table(xs, ys, is_eq::generic)),
+            Primitive::Ne => env.push(fast_table(xs, ys, is_ne::generic)),
+            Primitive::Lt if flipped => env.push(fast_table(xs, ys, flip(is_lt::generic))),
+            Primitive::Lt => env.push(fast_table(xs, ys, is_lt::generic)),
+            Primitive::Gt if flipped => env.push(fast_table(xs, ys, flip(is_gt::generic))),
+            Primitive::Gt => env.push(fast_table(xs, ys, is_gt::generic)),
+            Primitive::Le if flipped => env.push(fast_table(xs, ys, flip(is_le::generic))),
+            Primitive::Le => env.push(fast_table(xs, ys, is_le::generic)),
+            Primitive::Ge if flipped => env.push(fast_table(xs, ys, flip(is_ge::generic))),
+            Primitive::Ge => env.push(fast_table(xs, ys, is_ge::generic)),
+            Primitive::Add => env.push(fast_table(xs, ys, add::byte_byte)),
+            Primitive::Sub if flipped => env.push(fast_table(xs, ys, flip(sub::byte_byte))),
+            Primitive::Sub => env.push(fast_table(xs, ys, sub::byte_byte)),
+            Primitive::Mul => env.push(fast_table(xs, ys, mul::byte_byte)),
+            Primitive::Div if flipped => env.push(fast_table(xs, ys, flip(div::byte_byte))),
+            Primitive::Div => env.push(fast_table(xs, ys, flip(div::byte_byte))),
+            Primitive::Min => env.push(fast_table(xs, ys, min::byte_byte)),
+            Primitive::Max => env.push(fast_table(xs, ys, max::byte_byte)),
+            Primitive::Join | Primitive::Couple => {
+                env.push(fast_table_join_or_couple(xs, ys, flipped))
             }
-            Primitive::Sub => env.push(fast_table(xs, ys, |a, b| f64::from(b) - f64::from(a))),
-            Primitive::Mul => env.push(fast_table(xs, ys, |a, b| f64::from(a) * f64::from(b))),
-            Primitive::Div if flipped => {
-                env.push(fast_table(xs, ys, |a, b| f64::from(a) / f64::from(b)))
-            }
-            Primitive::Div => env.push(fast_table(xs, ys, |a, b| f64::from(b) / f64::from(a))),
-            Primitive::Min => env.push(fast_table(xs, ys, u8::min)),
-            Primitive::Max => env.push(fast_table(xs, ys, u8::max)),
-            Primitive::Join | Primitive::Couple => env.push(fast_table_join_or_couple(xs, ys)),
             _ => generic_table(f, Value::Byte(xs), Value::Byte(ys), env)?,
         },
         (_, xs, ys) => generic_table(f, xs, ys, env)?,
@@ -82,25 +75,25 @@ fn table_nums(
     env: &mut Uiua,
 ) -> Result<(), (Array<f64>, Array<f64>)> {
     match prim {
-        Primitive::Eq => env.push(fast_table(xs, ys, bin_bool(|x, y| x == y))),
-        Primitive::Ne => env.push(fast_table(xs, ys, bin_bool(|x, y| x != y))),
-        Primitive::Lt if flipped => env.push(fast_table(xs, ys, bin_bool(|x, y| x < y))),
-        Primitive::Lt => env.push(fast_table(xs, ys, bin_bool(|x, y| y < x))),
-        Primitive::Gt if flipped => env.push(fast_table(xs, ys, bin_bool(|x, y| x > y))),
-        Primitive::Gt => env.push(fast_table(xs, ys, bin_bool(|x, y| y > x))),
-        Primitive::Le if flipped => env.push(fast_table(xs, ys, bin_bool(|x, y| x <= y))),
-        Primitive::Le => env.push(fast_table(xs, ys, bin_bool(|x, y| y <= x))),
-        Primitive::Ge if flipped => env.push(fast_table(xs, ys, bin_bool(|x, y| x >= y))),
-        Primitive::Ge => env.push(fast_table(xs, ys, bin_bool(|x, y| y >= x))),
-        Primitive::Add => env.push(fast_table(xs, ys, Add::add)),
-        Primitive::Sub if flipped => env.push(fast_table(xs, ys, Sub::sub)),
-        Primitive::Sub => env.push(fast_table(xs, ys, flip(Sub::sub))),
-        Primitive::Mul => env.push(fast_table(xs, ys, Mul::mul)),
-        Primitive::Div if flipped => env.push(fast_table(xs, ys, Div::div)),
-        Primitive::Div => env.push(fast_table(xs, ys, flip(Div::div))),
-        Primitive::Min => env.push(fast_table(xs, ys, f64::min)),
-        Primitive::Max => env.push(fast_table(xs, ys, f64::max)),
-        Primitive::Join | Primitive::Couple => env.push(fast_table_join_or_couple(xs, ys)),
+        Primitive::Eq => env.push(fast_table(xs, ys, is_eq::num_num)),
+        Primitive::Ne => env.push(fast_table(xs, ys, is_ne::num_num)),
+        Primitive::Lt if flipped => env.push(fast_table(xs, ys, flip(is_lt::num_num))),
+        Primitive::Lt => env.push(fast_table(xs, ys, is_lt::num_num)),
+        Primitive::Gt if flipped => env.push(fast_table(xs, ys, flip(is_gt::num_num))),
+        Primitive::Gt => env.push(fast_table(xs, ys, is_gt::num_num)),
+        Primitive::Le if flipped => env.push(fast_table(xs, ys, flip(is_le::num_num))),
+        Primitive::Le => env.push(fast_table(xs, ys, is_le::num_num)),
+        Primitive::Ge if flipped => env.push(fast_table(xs, ys, flip(is_ge::num_num))),
+        Primitive::Ge => env.push(fast_table(xs, ys, is_ge::num_num)),
+        Primitive::Add => env.push(fast_table(xs, ys, add::num_num)),
+        Primitive::Sub if flipped => env.push(fast_table(xs, ys, flip(sub::num_num))),
+        Primitive::Sub => env.push(fast_table(xs, ys, sub::num_num)),
+        Primitive::Mul => env.push(fast_table(xs, ys, mul::num_num)),
+        Primitive::Div if flipped => env.push(fast_table(xs, ys, flip(div::num_num))),
+        Primitive::Div => env.push(fast_table(xs, ys, flip(div::num_num))),
+        Primitive::Min => env.push(fast_table(xs, ys, min::num_num)),
+        Primitive::Max => env.push(fast_table(xs, ys, max::num_num)),
+        Primitive::Join | Primitive::Couple => env.push(fast_table_join_or_couple(xs, ys, flipped)),
         _ => return Err((xs, ys)),
     }
     Ok(())
@@ -122,12 +115,21 @@ fn fast_table<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
     Array::new(new_shape, new_data)
 }
 
-fn fast_table_join_or_couple<T: ArrayValue>(a: Array<T>, b: Array<T>) -> Array<T> {
+fn fast_table_join_or_couple<T: ArrayValue>(a: Array<T>, b: Array<T>, flipped: bool) -> Array<T> {
     let mut new_data = EcoVec::with_capacity(a.data.len() * b.data.len() * 2);
-    for x in a.data {
-        for y in b.data.iter().cloned() {
-            new_data.push(x.clone());
-            new_data.push(y);
+    if flipped {
+        for x in a.data {
+            for y in b.data.iter().cloned() {
+                new_data.push(y);
+                new_data.push(x.clone());
+            }
+        }
+    } else {
+        for x in a.data {
+            for y in b.data.iter().cloned() {
+                new_data.push(x.clone());
+                new_data.push(y);
+            }
         }
     }
     let mut new_shape = a.shape;

@@ -2,7 +2,7 @@ use std::{borrow::Cow, cmp::Ordering, fmt};
 
 use crate::{
     array::Array,
-    function::{Function, FunctionId, Instr, Signature},
+    function::{Function, Instr, Signature},
     primitive::Primitive,
     value::Value,
 };
@@ -45,7 +45,6 @@ enum BasicValue<'a> {
     Arr(Vec<Self>),
     Other,
     Unknown,
-    DifferentSignatures,
 }
 
 impl<'a> BasicValue<'a> {
@@ -60,12 +59,10 @@ impl<'a> BasicValue<'a> {
                 args: 0,
                 outputs: 1,
             },
-            BasicValue::Other | BasicValue::Unknown | BasicValue::DifferentSignatures => {
-                Signature {
-                    args: 0,
-                    outputs: 1,
-                }
-            }
+            BasicValue::Other | BasicValue::Unknown => Signature {
+                args: 0,
+                outputs: 1,
+            },
         }
     }
     fn from_val(value: &'a Value) -> Self {
@@ -440,39 +437,6 @@ impl<'a> VirtualEnv<'a> {
                         }
                     }
                 }
-                Pick => {
-                    let _index = self.pop()?;
-                    let arr = self.pop()?;
-                    self.set_min_height();
-                    match arr {
-                        BasicValue::Arr(arr) if !arr.is_empty() => {
-                            let mut items = arr.iter();
-                            let mut sig = items.next().unwrap().signature();
-                            let mut function = None;
-                            for item in items {
-                                if item.signature().is_compatible_with(sig) {
-                                    sig = sig.max_with(item.signature());
-                                    if let BasicValue::Func(f) = item {
-                                        if function.is_none() {
-                                            function = Some(f);
-                                        }
-                                    }
-                                } else {
-                                    self.stack.push(BasicValue::DifferentSignatures);
-                                    return Ok(());
-                                }
-                            }
-                            let (id, instrs) = if let Some(f) = function {
-                                (f.id.clone(), f.instrs.as_slice())
-                            } else {
-                                (FunctionId::Constant, Default::default())
-                            };
-                            let f = Function::new(id, instrs, sig);
-                            self.stack.push(BasicValue::Func(Cow::Owned(f)));
-                        }
-                        _ => self.stack.push(BasicValue::Other),
-                    }
-                }
                 Call => self.handle_call()?,
                 Recur => return Err("recur present".into()),
                 prim => {
@@ -525,9 +489,8 @@ impl<'a> VirtualEnv<'a> {
     fn handle_call(&mut self) -> Result<(), String> {
         match self.pop()? {
             BasicValue::Func(f) => self.handle_sig(f.signature())?,
-            BasicValue::Unknown => return Err("call with unknown function".into()),
-            BasicValue::DifferentSignatures => {
-                return Err("call could potentially have different signatures".into())
+            BasicValue::Unknown | BasicValue::Other => {
+                return Err("call with unknown function".into())
             }
             val => self.stack.push(val),
         }

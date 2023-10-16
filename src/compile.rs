@@ -268,7 +268,7 @@ impl Uiua {
                             let mut i = 0;
                             for (j, line) in lines.iter().enumerate() {
                                 if j > 0 {
-                                    formatted.push_str("\r\n");
+                                    formatted.push('\n');
                                 }
                                 for (k, frag) in line.value.iter().enumerate() {
                                     if k > 0 {

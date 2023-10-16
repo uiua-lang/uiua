@@ -122,13 +122,13 @@ uiuisms!(
     /// Sort an array
     "⊏⍏. [1 4 5 3 2]",
     /// Get n numbers between 0 and 1 inclusive
-    "÷-1∶⇡. 11",
+    "÷ -1∶ ⇡. 11",
     /// Get n numbers between 0 and 1 exclusive
-    "÷∶⇡. 10",
+    "÷∶ ⇡. 10",
     /// Create an identity matrix
-    "⊞=.⇡ 5",
+    "⊞=. ⇡ 5",
     /// Create an X matrix
-    "↥⇌.⊞=.⇡ 5",
+    "↥ ⇌. ⊞=. ⇡ 5",
     /// Create a zero matrix of the same shape as another
     "≠. [1_1 2_2]",
     /// Check if an array is a palindrome
@@ -138,77 +138,77 @@ uiuisms!(
     /// Convert a string to a number
     r#"parse "42""#,
     /// Parse a string as a base 2 number
-    r#"⍘⋯⇌-@0 "110""#,
+    r#"⍘⋯ ⇌ - @0 "110""#,
     /// Parse a string as a base 3 <= X <= 9 number
-    r#"/+×ⁿ⇌⇡⧻,⊙-∶@0 3 "210""#,
+    r#"/+ ×ⁿ ⇌⇡⧻, ⊙- ∶ @0 3 "210""#,
     /// Convert a string to a list of code points
-    r#"-@\0 "Uiua""#,
+    r#"- @\0 "Uiua""#,
     /// Convert a list of code points to a string
-    r#"+@\0 [85 105 117 97]"#,
+    r#"+ @\0 [85 105 117 97]"#,
     /// Find the indices of all 1s
-    "▽∶⇡⧻. [0 1 0 0 1]",
+    "▽∶ ⇡⧻. [0 1 0 0 1]",
     /// Interleave two arrays
-    "♭⍉⊟ [1 2 3 4] [5 6 7 8]",
+    "♭⍉ ⊟ [1 2 3 4] [5 6 7 8]",
     /// Intersperse an item between the rows of an array
-    "↘1♭∺⊂ π [1 2 3 4]",
+    "↘1 ♭ ∺⊂ π [1 2 3 4]",
     /// Split an array by a delimiter
-    r#"⊜□≠, @, "split,this,up""#,
+    r#"⊜□ ≠, @, "split,this,up""#,
     /// Split an array by a delimiter with fill elements
-    r#"⬚@ ⊜∘≠, @, "split,this,up""#,
+    r#"⬚@ ⊜∘ ≠, @, "split,this,up""#,
     /// Split an array by a delimiter keeping empty segments
-    r#"⊕□⍜▽¯∶\+.=, @, "split,this,,up""#,
+    r#"⊕□ ⍜▽¯∶ \+. =, @, "split,this,,up""#,
     /// Split an array into groups of contiguous equal elements
     "⊜□. [1 1 1 2 2 1 1 4]",
     /// Find the nth fibonacci number
-    ";⍥(+,∶)⊙.∶1 10",
+    ";⍥(+,∶) ⊙.∶1 10",
     /// Remove all instances of an element from a list
     "▽≠, 4 [1 4 2 0 5 4 3]",
     /// Remove all instances of a row from an array
-    "▽∺(¬≅)⊙. 2_0 [1_4 2_0 5_3 2_0]",
+    "▽∺(¬≅) ⊙. 2_0 [1_4 2_0 5_3 2_0]",
     /// Filter by a fixed predicate
     "▽ =0◿2 . ⇡10",
     /// Filter by a dynamic predicate
     "▽!⊙. (=0◿2) ⇡10",
     /// Find the most common row in an array
-    r#"⊏⊢⍖⍘⊚⊛∶⊝. "Hello World!""#,
+    r#"⊏⊢ ⍖ ⍘⊚ ⊛∶⊝. "Hello World!""#,
     /// Convert a string to uppercase
-    r#"-×32×≥@a,≤@z. "These are Words""#,
+    r#"- ×32 × ≥@a, ≤@z. "These are Words""#,
     /// Convert a string to lowercase
-    r#"+×32×≥@A,≤@Z. "These are Words""#,
+    r#"+ ×32 × ≥@A, ≤@Z. "These are Words""#,
     /// Check if a string is in a list of strings
-    r#"∊□ "uiua" {"apl" "bqn" "uiua"}"#,
+    r#"∊ □"uiua" {"apl" "bqn" "uiua"}"#,
     /// Trim leading whitespace
-    r#"▽\↥≠@ . "   ← remove these""#,
+    r#"▽\↥ ≠@ . "   ← remove these""#,
     /// Trim trailing whitespace
-    r#"▽⍜⇌\↥≠@ . "remove these →   ""#,
+    r#"▽⍜⇌ \↥ ≠@ . "remove these →   ""#,
     /// Trim prefix matching characters from a set
-    r#"▽¬\×∊, "abc" "ccab ← remove this""#,
+    r#"▽¬ \× ∊, "abc" "ccab ← remove this""#,
     /// Trim suffix matching characters from a set
-    r#"▽¬⍜⇌\×∊, "abc" "remove this → bcaa""#,
+    r#"▽¬ ⍜⇌\× ∊, "abc" "remove this → bcaa""#,
     /// Trim whitespace
-    r#"▽×⍜(⊟⇌)≡\↥.≠@ . "  abc xyz   ""#,
+    r#"▽× ⍜(⊟⇌)≡\↥. ≠@ . "  abc xyz   ""#,
     /// Upscale a 2d matrix
-    "[0_1 1_0]\n⍉▽↯⧻,⊙(⍉▽)∶↯⊙.⧻,30",
+    "[0_1 1_0]\n⍉ ▽↯⧻, ⊙(⍉▽)∶ ↯⊙. ⧻,30",
     /// Upscale a colored image
-    "[[0_0_1 0_1_0] [1_0_0 0_0_0]]\n⍜⍘⍉≡(⍉▽↯⧻,⊙(⍉▽)∶↯⊙.⧻,30)",
+    "[[0_0_1 0_1_0] [1_0_0 0_0_0]]\n⍜⍘⍉ ≡(⍉ ▽↯⧻, ⊙(⍉▽)∶ ↯⊙. ⧻,30)",
     /// Lerp between two values
-    "+⊙'×-. 0 10 0.2",
+    "+ ⊙'×- . 0 10 0.2",
     /// Set the value of an array at an index
     "⍜⊏; 2 1_2_3_4 10",
     /// Create a matrix of random 0s or 1s
-    "⁅⊞⋅⋅⚂.⊚ 5",
+    "⁅ ⊞⋅⋅⚂. ⊚ 5",
     /// Create a matrix of random numbers
-    "⌊×⊞⋅⋅⚂.⊚ 5 10",
+    "⌊× ⊞⋅⋅⚂. ⊚ 5 10",
     /// Arithmetic mean
-    "÷⧻∶/+. [85 105 117 97]",
+    "÷ ⧻∶ /+ . [85 105 117 97]",
     /// Dot product
-    "/+× [1 2 3] [4 ¯5 6]",
+    "/+ × [1 2 3] [4 ¯5 6]",
     /// Cross product
-    "-⊙'×⊓'↻2'↻1×⊓'↻1'↻2,, 4_5_6 1_2_3",
+    "4_5_6 1_2_3\n-⊙'×⊓'↻2'↻1 × ⊓'↻1'↻2 ,,",
     /// Matrix product
-    "[1_2 3_4 5_6] [7_8_9 10_11_12]\n⊠(/+×)⊙⍉",
+    "[1_2 3_4 5_6] [7_8_9 10_11_12]\n⊠(/+×) ⊙⍉",
     /// Matrix power (Also works with scalars)
-    ";∶⍥(⊠(/+×)⊙⍉,)∶⊙∶⊞=.⇡⬚1⊢△. [1_2 3_4] 4",
+    "[1_2 3_4] 4\n;∶ ⍥(⊠(/+×) ⊙⍉,)∶ ⊙∶ ⊞=. ⇡⬚1 ⊢△.",
     //  /// Evaluate a polynomial with given coefficients at a scalar or square matrix
     //     r"/+×∺(  Note: Not sure how to fix this with new distribute order
     //   ⊙∶⊞=.⇡⬚1⊢△.:

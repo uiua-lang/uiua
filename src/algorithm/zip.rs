@@ -1,7 +1,7 @@
 //! Algorithms for zipping modifiers
 
 use crate::{
-    algorithm::pervade::bin_pervade_generic,
+    algorithm::{loops::rank_to_depth, pervade::bin_pervade_generic},
     array::{FormatShape, Shape},
     run::{ArrayArg, FunctionArg},
     value::Value,
@@ -415,18 +415,7 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let get_ns = env.pop(FunctionArg(1))?;
     env.call_error_on_break(get_ns, "break is not allowed in level")?;
-    let ns = env.pop("level's rank list")?.as_number_list(
-        env,
-        "Elements of rank list must be integers or infinity",
-        |n| n.fract() == 0.0 || n == f64::INFINITY,
-        |n| {
-            if n == f64::INFINITY {
-                None
-            } else {
-                Some(n as isize)
-            }
-        },
-    )?;
+    let ns = env.pop("level's rank list")?.as_rank_list(env, "")?;
     let f = env.pop(FunctionArg(2))?;
     let f_sig = f.signature();
     if f_sig.outputs != 1 {
@@ -450,21 +439,16 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
                 env.push(xs);
                 return Ok(());
             }
-            let rank = match n {
+            match n {
                 Some(0) => return each1_1(f, xs, env),
                 Some(-1) => return rows1_1(f, xs, env),
                 None => {
                     env.push(xs);
                     return env.call(f);
                 }
-                Some(n) => n,
-            };
-            let rank = if rank < 0 {
-                (xs.rank() as isize + rank).max(0) as usize
-            } else {
-                (rank as usize).min(xs.rank())
-            };
-            let n = xs.rank() - rank;
+                Some(_) => {}
+            }
+            let n = rank_to_depth(n, xs.rank());
             let res = monadic_level_recursive(f, xs, n, env)?;
             env.push(res);
         }
@@ -486,20 +470,8 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
                 }
                 _ => {}
             }
-            let xn = xn.unwrap_or(xs.rank() as isize);
-            let yn = yn.unwrap_or(ys.rank() as isize);
-            let xn = if xn < 0 {
-                (xs.rank() as isize + xn).max(0) as usize
-            } else {
-                (xn as usize).min(xs.rank())
-            };
-            let yn = if yn < 0 {
-                (ys.rank() as isize + yn).max(0) as usize
-            } else {
-                (yn as usize).min(ys.rank())
-            };
-            let xn = xs.rank() - xn;
-            let yn = ys.rank() - yn;
+            let xn = rank_to_depth(xn, xs.rank());
+            let yn = rank_to_depth(yn, ys.rank());
             let res = dyadic_level_recursive(f, xs, ys, xn, yn, env)?;
             env.push(res);
         }
@@ -511,14 +483,7 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
             }
             let mut ns: Vec<usize> = Vec::with_capacity(is.len());
             for (i, arg) in args.iter().enumerate() {
-                let rank = is[i].unwrap_or(arg.rank() as isize);
-                let rank = if rank < 0 {
-                    (arg.rank() as isize + rank).max(0) as usize
-                } else {
-                    (rank as usize).min(arg.rank())
-                };
-                let n = arg.rank() - rank;
-                ns.push(n);
+                ns.push(rank_to_depth(is[i], arg.rank()));
             }
             let res = multi_level_recursive(f, args, &ns, env)?;
             env.push(res);

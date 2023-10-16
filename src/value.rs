@@ -490,6 +490,27 @@ impl Value {
     pub fn as_integers(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<isize>> {
         self.as_number_list(env, requirement, |f| f.fract() == 0.0, |f| f as isize)
     }
+    pub fn as_rank_list(
+        &self,
+        env: &Uiua,
+        mut requirement: &'static str,
+    ) -> UiuaResult<Vec<Option<isize>>> {
+        if requirement.is_empty() {
+            requirement = "Elements of rank list must be integers or infinity";
+        }
+        self.as_number_list(
+            env,
+            requirement,
+            |n| n.fract() == 0.0 || n == f64::INFINITY,
+            |n| {
+                if n == f64::INFINITY {
+                    None
+                } else {
+                    Some(n as isize)
+                }
+            },
+        )
+    }
     pub(crate) fn as_number_list<T>(
         &self,
         env: &Uiua,

@@ -7,6 +7,16 @@ use crate::{
     Uiua, UiuaResult,
 };
 
+pub(crate) fn rank_to_depth(declared_rank: Option<isize>, array_rank: usize) -> usize {
+    let declared_rank = declared_rank.unwrap_or(array_rank as isize);
+    array_rank
+        - if declared_rank < 0 {
+            (array_rank as isize + declared_rank).max(0) as usize
+        } else {
+            (declared_rank as usize).min(array_rank)
+        }
+}
+
 pub fn flip<A, B, C>(f: impl Fn(A, B) -> C) -> impl Fn(B, A) -> C {
     move |b, a| f(a, b)
 }

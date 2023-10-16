@@ -13,6 +13,9 @@ pub(crate) mod invert;
 pub mod loops;
 mod monadic;
 pub mod pervade;
+pub mod reduce;
+pub mod table;
+pub mod zip;
 
 fn max_shape(a: &[usize], b: &[usize]) -> Shape {
     let shape_len = a.len().max(b.len());

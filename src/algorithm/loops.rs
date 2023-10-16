@@ -725,6 +725,82 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
+pub fn tribute(env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
+    let f = env.pop(FunctionArg(1))?;
+    let sig = f.signature();
+    if sig.outputs != 1 {
+        return Err(env.error(format!(
+            "Tribute's function must return 1 value, but it returns {}",
+            sig.outputs
+        )));
+    }
+    match sig.args {
+        n @ (0 | 1) => {
+            return Err(env.error(format!(
+                "Tribute's function must take at least 2 arguments, \
+                but it takes {n}"
+            )))
+        }
+        2 => {
+            let xs = env.pop(ArrayArg(1))?;
+            let a = env.pop(ArrayArg(2))?;
+            if xs.row_count() == 0 {
+                env.push(xs);
+                return Ok(());
+            }
+            let mut new_rows = Vec::with_capacity(xs.row_count());
+            for x in xs.into_rows() {
+                env.push(a.clone());
+                env.push(x);
+                env.call_error_on_break(f.clone(), "break is not allowed in tribute")?;
+                new_rows.push(env.pop("tribute's function result")?);
+            }
+            env.push(Value::from_row_values(new_rows, env)?);
+        }
+        3 => {
+            let xs = env.pop(ArrayArg(1))?;
+            let a = env.pop(ArrayArg(2))?;
+            let b = env.pop(ArrayArg(3))?;
+            if xs.row_count() == 0 {
+                env.push(xs);
+                return Ok(());
+            }
+            let mut new_rows = Vec::with_capacity(xs.row_count());
+            for x in xs.into_rows() {
+                env.push(b.clone());
+                env.push(a.clone());
+                env.push(x);
+                env.call_error_on_break(f.clone(), "break is not allowed in tribute")?;
+                new_rows.push(env.pop("tribute's function result")?);
+            }
+            env.push(Value::from_row_values(new_rows, env)?);
+        }
+        n => {
+            let mut args = Vec::with_capacity(n - 1);
+            let xs = env.pop(ArrayArg(1))?;
+            for i in 0..n - 1 {
+                args.push(env.pop(ArrayArg(i + 2))?);
+            }
+            if xs.row_count() == 0 {
+                env.push(xs);
+                return Ok(());
+            }
+            let mut new_rows = Vec::with_capacity(xs.row_count());
+            for x in xs.into_rows() {
+                for arg in args.iter().rev() {
+                    env.push(arg.clone());
+                }
+                env.push(x);
+                env.call_error_on_break(f.clone(), "break is not allowed in tribute")?;
+                new_rows.push(env.pop("tribute's function result")?);
+            }
+            env.push(Value::from_row_values(new_rows, env)?);
+        }
+    }
+    Ok(())
+}
+
 fn bin_bool<T: ArrayValue>(f: impl Fn(T, T) -> bool + Copy) -> impl Fn(T, T) -> u8 {
     move |x, y| f(x, y) as u8
 }

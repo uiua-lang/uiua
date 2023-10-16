@@ -1,4 +1,3 @@
-- Optimize row deshape
 - `under` aggregating `group` and `partition`
 - Improve how recursion works
 - Add channels for spawned threads

@@ -929,6 +929,10 @@ primitive!(
     /// ex:       ∺⊂ 1_2_3 4_5_6
     ///   : ⍚[∞ ¯1]⊂ 1_2_3 4_5_6
     (2[1], Distribute, IteratingModifier, ("distribute", '∺')),
+    /// Apply a function to each row of an array and a fixed value
+    ///
+    /// This is a reversed version of [distribute].
+    (2[1], Tribute, IteratingModifier, ("tribute", '≑')),
     /// Apply a function to each combination of elements of two arrays
     ///
     /// This is the element-wise version of [cross].

@@ -407,6 +407,7 @@ impl Primitive {
             Primitive::Each => loops::each(env)?,
             Primitive::Rows => loops::rows(env)?,
             Primitive::Distribute => loops::distribute(env)?,
+            Primitive::Tribute => loops::tribute(env)?,
             Primitive::Table => loops::table(env)?,
             Primitive::Cross => loops::cross(env)?,
             Primitive::Scan => loops::scan(env)?,

@@ -412,6 +412,7 @@ impl Primitive {
             Primitive::Cross => table::cross(env)?,
             Primitive::Repeat => loops::repeat(env)?,
             Primitive::Level => zip::level(env)?,
+            Primitive::Combinate => table::combinate(env)?,
             Primitive::Group => loops::group(env)?,
             Primitive::Partition => loops::partition(env)?,
             Primitive::Reshape => {

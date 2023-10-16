@@ -4,7 +4,7 @@ use ecow::EcoVec;
 use tinyvec::tiny_vec;
 
 use crate::{
-    algorithm::pervade::*,
+    algorithm::{loops::rank_to_depth, pervade::*},
     array::{Array, ArrayValue, Shape},
     primitive::Primitive,
     run::{ArrayArg, FunctionArg},
@@ -197,4 +197,93 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
     crossed.validate_shape();
     env.push(crossed);
     Ok(())
+}
+
+pub fn combinate(env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
+    let get_ns = env.pop(FunctionArg(1))?;
+    env.call_error_on_break(get_ns, "break is not allowed in level")?;
+    let ns = env.pop("combinate's rank list")?.as_rank_list(env, "")?;
+    if ns.len() < 2 {
+        return Err(env.error(format!(
+            "Combinate's rank list must have at least 2 elements, but it has {}",
+            ns.len()
+        )));
+    }
+    let f = env.pop(FunctionArg(2))?;
+    let f_sig = f.signature();
+    if f_sig.outputs != 1 {
+        return Err(env.error(format!(
+            "Combinate's function must return 1 value, but it returns {}",
+            f_sig.outputs
+        )));
+    }
+    if f_sig.args != ns.len() {
+        return Err(env.error(format!(
+            "Combinate's rank list has {} elements, but its function takes {} arguments",
+            ns.len(),
+            f_sig.args
+        )));
+    }
+    let mut args = Vec::with_capacity(ns.len());
+    for i in 0..ns.len() {
+        let arg = env.pop(ArrayArg(i + 1))?;
+        args.push(arg);
+    }
+    let ns: Vec<usize> = ns
+        .into_iter()
+        .zip(&args)
+        .map(|(n, arg)| rank_to_depth(n, arg.rank()))
+        .collect();
+    let res = multi_combinate_recursive(f, args, &ns, env)?;
+    env.push(res);
+    Ok(())
+}
+
+fn multi_combinate_recursive(
+    f: Value,
+    args: Vec<Value>,
+    ns: &[usize],
+    env: &mut Uiua,
+) -> UiuaResult<Value> {
+    if ns.iter().all(|&n| n == 0) {
+        for arg in args.into_iter().rev() {
+            env.push(arg);
+        }
+        env.call_error_on_break(f, "break is not allowed in combinate")?;
+        Ok(env.pop("combinate's function result")?)
+    } else {
+        let mut iterations = 1;
+        let mut new_shape = Shape::new();
+        for (n, xs) in ns.iter().zip(&args) {
+            if *n > 0 {
+                iterations *= xs.row_count();
+                new_shape.push(xs.row_count());
+            }
+        }
+        let mut combinated = Value::builder(iterations);
+        let mut dec_ns = Vec::with_capacity(ns.len());
+        for n in ns {
+            dec_ns.push(n.saturating_sub(1));
+        }
+        let mut iter_args = args.clone();
+        for mut i in 0..iterations {
+            for (j, (arg, n)) in args.iter().zip(ns).enumerate().rev() {
+                iter_args[j] = if *n == 0 {
+                    arg.clone()
+                } else {
+                    let row = arg.row(i % arg.row_count());
+                    i /= arg.row_count();
+                    row
+                };
+            }
+            let item = multi_combinate_recursive(f.clone(), iter_args.clone(), &dec_ns, env)?;
+            combinated.add_row(item, &env)?;
+        }
+        let mut value = combinated.finish();
+        new_shape.extend_from_slice(&value.shape()[1..]);
+        *value.shape_mut() = new_shape;
+        value.validate_shape();
+        Ok(value)
+    }
 }

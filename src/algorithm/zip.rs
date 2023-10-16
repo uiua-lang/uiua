@@ -590,7 +590,7 @@ fn multi_level_recursive(
         for arg in args.into_iter().rev() {
             env.push(arg);
         }
-        env.call(f)?;
+        env.call_error_on_break(f, "break is not allowed in level")?;
         Ok(env.pop("level's function result")?)
     } else {
         let (&n_with_max_row_count, arg_with_max_row_count) = ns

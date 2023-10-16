@@ -19,7 +19,7 @@ colored = "2"
 crossbeam-channel = { version = "0.5.8", optional = true }
 ctrlc = { version = "3", optional = true }
 dashmap = "5"
-ecow = "0.1.2"
+ecow = "0.2.0"
 enum-iterator = "1.4.1"
 gif = "0.12.0"
 hodaun = { version = "0.4.1", optional = true, features = ["output", "wav"] }

@@ -395,7 +395,7 @@ impl Primitive {
                 )
             })?,
             Primitive::Shape => env.monadic_ref(|v| {
-                v.generic_ref_shallow(Array::shape, Array::shape, Array::shape, Array::shape)
+                v.generic_ref_deep(Array::shape, Array::shape, Array::shape, Array::shape)
                     .iter()
                     .copied()
                     .collect::<Value>()

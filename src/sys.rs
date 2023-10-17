@@ -127,6 +127,8 @@ sys_op! {
     ///
     /// Standard IO will be captured. The exit code, stdout, and stderr will each be pushed to the stack.
     ///
+    /// On the web, stdout is the return value of the expression 
+    /// 
     /// Expects either a string, a rank `2` character array, or a rank `1` array of [box] strings.
     (1(3), RunCapture, "&runc", "run command capture"),
     /// Change the current directory

@@ -10,6 +10,12 @@ use std::{
 
 use leptos::*;
 use uiua::{value::Value, DiagnosticKind, Handle, SysBackend, Uiua, UiuaError, UiuaResult};
+use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen]
+extern "C" {
+    fn run_js(f: &str) -> js_sys::Array;
+}
 
 pub struct WebBackend {
     pub stdout: Mutex<Vec<OutputItem>>,
@@ -137,5 +143,41 @@ impl SysBackend for WebBackend {
             Some(Err(err)) => Err(Ok(err)),
             None => Err(Err("Invalid thread handle".into())),
         }
+    }
+    fn run_command_inherit(&self, command: &str, args: &[&str]) -> Result<i32, String> {
+        let code: String = if args.len() > 0 {
+            format!("{}({})", command, args.join(","))
+        } else {
+            command.to_owned()
+        };
+        let result = run_js(&code);
+        let status = result.get(0).as_f64().unwrap_or(0.0) as i32;
+        let _output = result.get(1).as_string().unwrap_or("".into());  // Discard output
+        let errors = result.get(2).as_string();
+        if let Some(error) = errors {
+            return Err(error);
+        }
+
+        Ok(status)
+    }
+    fn run_command_capture(
+        &self,
+        command: &str,
+        args: &[&str],
+    ) -> Result<(i32, String, String), String> {
+        let code: String = if args.len() > 0 {
+            format!("{}({})", command, args.join(","))
+        } else {
+            command.to_owned()
+        };
+        let result = run_js(&code);
+        let status = result.get(0).as_f64().unwrap_or(0.0) as i32;
+        let output = result.get(1).as_string().unwrap_or("".into());
+        let errors = result.get(2).as_string();
+        if let Some(error) = errors {
+            return Err(format!("Javascript error: {}", error));
+        }
+
+        Ok((status, output, "".into()))
     }
 }

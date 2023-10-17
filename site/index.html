@@ -34,6 +34,17 @@
       }
     }(window.location))
   </script>
+  <script>
+    // This is for calling javascript with &runi
+    function run_js(f, args) {
+      try {
+        output = eval(f)
+        return [0, '' + output, null]
+      } catch (e) {
+        return [1, null, e.message]
+      }
+    }
+  </script>
   <!-- End Single Page Apps for GitHub Pages -->
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />

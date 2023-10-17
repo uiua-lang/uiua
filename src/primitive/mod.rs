@@ -257,17 +257,25 @@ impl Primitive {
         }
     }
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
+        macro_rules! constant {
+            ($name:ident, $value:expr) => {{
+                thread_local! {
+                    static $name: Value = $value.into();
+                }
+                env.push($name.with(Value::clone));
+            }};
+        }
         match self {
-            Primitive::Eta => env.push(PI / 2.0),
-            Primitive::Pi => env.push(PI),
-            Primitive::Tau => env.push(TAU),
-            Primitive::Infinity => env.push(INFINITY),
-            Primitive::Alpha => env.push(eco_vec![-1.0, INFINITY]),
-            Primitive::Beta => env.push(eco_vec![-1.0, INFINITY, INFINITY]),
-            Primitive::Gamma => env.push(eco_vec![-1.0, -1.0, INFINITY]),
-            Primitive::Omega => env.push(eco_vec![INFINITY, -1.0]),
-            Primitive::Psi => env.push(eco_vec![INFINITY, INFINITY, -1.0]),
-            Primitive::Chi => env.push(eco_vec![INFINITY, -1.0, -1.0]),
+            Primitive::Eta => constant!(ETA, PI / 2.0),
+            Primitive::Pi => constant!(PI_, PI),
+            Primitive::Tau => constant!(TAU_, TAU),
+            Primitive::Infinity => constant!(INF, INFINITY),
+            Primitive::Alpha => constant!(ALPHA, eco_vec![-1.0, INFINITY]),
+            Primitive::Beta => constant!(BETA, eco_vec![-1.0, INFINITY, INFINITY]),
+            Primitive::Gamma => constant!(GAMMA, eco_vec![-1.0, -1.0, INFINITY]),
+            Primitive::Omega => constant!(OMEGA, eco_vec![INFINITY, -1.0]),
+            Primitive::Psi => constant!(PSI, eco_vec![INFINITY, INFINITY, -1.0]),
+            Primitive::Chi => constant!(CHI, eco_vec![INFINITY, -1.0, -1.0]),
             Primitive::Identity => env.touch_array_stack(),
             Primitive::Gap => {
                 let f = env.pop(1)?;

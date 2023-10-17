@@ -1,5 +1,7 @@
 //! Algorithms for tabling modifiers
 
+use std::mem::take;
+
 use ecow::EcoVec;
 use tinyvec::tiny_vec;
 
@@ -235,55 +237,37 @@ pub fn combinate(env: &mut Uiua) -> UiuaResult {
         .zip(&args)
         .map(|(n, arg)| rank_to_depth(n, arg.rank()))
         .collect();
-    let res = multi_combinate_recursive(f, args, &ns, env)?;
+    let res = multi_combinate_recursive(f, &mut args, &ns, 0, env)?;
     env.push(res);
     Ok(())
 }
 
 fn multi_combinate_recursive(
     f: Value,
-    args: Vec<Value>,
+    args: &mut [Value],
     ns: &[usize],
+    curr: usize,
     env: &mut Uiua,
 ) -> UiuaResult<Value> {
     if ns.iter().all(|&n| n == 0) {
-        for arg in args.into_iter().rev() {
-            env.push(arg);
+        for arg in args.iter().rev() {
+            env.push(arg.clone());
         }
         env.call_error_on_break(f, "break is not allowed in combinate")?;
         Ok(env.pop("combinate's function result")?)
+    } else if ns[curr] == 0 {
+        multi_combinate_recursive(f, args, ns, curr + 1, env)
     } else {
-        let mut iterations = 1;
-        let mut new_shape = Shape::new();
-        for (n, xs) in ns.iter().zip(&args) {
-            if *n > 0 {
-                iterations *= xs.row_count();
-                new_shape.push(xs.row_count());
-            }
+        let curr_arg = take(&mut args[curr]);
+        let mut res = Value::builder(curr_arg.row_count());
+        let mut dec_ns = ns.to_vec();
+        dec_ns[curr] -= 1;
+        for row in curr_arg.rows() {
+            args[curr] = row;
+            let item = multi_combinate_recursive(f.clone(), args, &dec_ns, curr, env)?;
+            res.add_row(item, &env)?;
         }
-        let mut combinated = Value::builder(iterations);
-        let mut dec_ns = Vec::with_capacity(ns.len());
-        for n in ns {
-            dec_ns.push(n.saturating_sub(1));
-        }
-        let mut iter_args = args.clone();
-        for mut i in 0..iterations {
-            for (j, (arg, n)) in args.iter().zip(ns).enumerate().rev() {
-                iter_args[j] = if *n == 0 {
-                    arg.clone()
-                } else {
-                    let row = arg.row(i % arg.row_count());
-                    i /= arg.row_count();
-                    row
-                };
-            }
-            let item = multi_combinate_recursive(f.clone(), iter_args.clone(), &dec_ns, env)?;
-            combinated.add_row(item, &env)?;
-        }
-        let mut value = combinated.finish();
-        new_shape.extend_from_slice(&value.shape()[1..]);
-        *value.shape_mut() = new_shape;
-        value.validate_shape();
-        Ok(value)
+        args[curr] = curr_arg;
+        Ok(res.finish())
     }
 }

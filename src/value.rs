@@ -655,6 +655,48 @@ impl Value {
             }
         })
     }
+    pub fn unbox(&mut self) {
+        if let Value::Func(arr) = self {
+            *self = match take(arr).into_unboxed() {
+                Ok(value) => value.into_unboxed(),
+                Err(arr) => Value::Func(arr),
+            };
+        }
+    }
+    pub fn box_if_not(&mut self) {
+        match self {
+            Value::Num(arr) => *self = Value::Func(Arc::new(Function::boxed(take(arr))).into()),
+            Value::Byte(arr) => *self = Value::Func(Arc::new(Function::boxed(take(arr))).into()),
+            Value::Char(arr) => *self = Value::Func(Arc::new(Function::boxed(take(arr))).into()),
+            Value::Func(arr) if arr.as_boxed().is_none() => {
+                *self = Value::Func(Arc::new(Function::boxed(take(arr))).into())
+            }
+            Value::Func(_) => {}
+        }
+    }
+    pub fn boxed_if_not(self) -> Arc<Function> {
+        match self {
+            Value::Num(arr) => Arc::new(Function::boxed(arr)),
+            Value::Byte(arr) => Arc::new(Function::boxed(arr)),
+            Value::Char(arr) => Arc::new(Function::boxed(arr)),
+            Value::Func(arr) => {
+                if arr.as_boxed().is_some() {
+                    arr.data.into_iter().next().unwrap()
+                } else {
+                    Arc::new(Function::boxed(arr))
+                }
+            }
+        }
+    }
+    pub fn into_unboxed(self) -> Self {
+        match self {
+            Self::Func(arr) => match arr.into_unboxed() {
+                Ok(value) => value.into_unboxed(),
+                Err(arr) => Self::Func(arr),
+            },
+            value => value,
+        }
+    }
     /// Turn a number array into a byte array if no information is lost.
     pub fn compress(&mut self) {
         if let Value::Num(nums) = self {

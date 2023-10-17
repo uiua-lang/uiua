@@ -115,7 +115,42 @@ impl Value {
     pub fn join_infallible(self, other: Self) -> Self {
         self.join_impl(other, ()).unwrap()
     }
-    fn join_impl<C: FillContext>(self, other: Self, ctx: C) -> Result<Self, C::Error> {
+    fn join_impl<C: FillContext>(mut self, mut other: Self, ctx: C) -> Result<Self, C::Error> {
+        if ctx.pierce_boxes() {
+            self.unbox();
+            other.unbox();
+            if let Ok(val) = self.clone().join_impl_impl(other.clone(), ctx) {
+                Ok(val)
+            } else {
+                match self.rank().cmp(&other.rank()) {
+                    Ordering::Greater => {
+                        self = self
+                            .into_rows()
+                            .map(Value::boxed_if_not)
+                            .collect::<Array<_>>()
+                            .into();
+                        other.box_if_not();
+                    }
+                    Ordering::Less => {
+                        self.box_if_not();
+                        other = other
+                            .into_rows()
+                            .map(Value::boxed_if_not)
+                            .collect::<Array<_>>()
+                            .into();
+                    }
+                    Ordering::Equal => {
+                        self.box_if_not();
+                        other.box_if_not();
+                    }
+                }
+                self.join_impl_impl(other, ctx)
+            }
+        } else {
+            self.join_impl_impl(other, ctx)
+        }
+    }
+    fn join_impl_impl<C: FillContext>(self, other: Self, ctx: C) -> Result<Self, C::Error> {
         Ok(match (self, other) {
             (Value::Num(a), Value::Num(b)) => a.join_impl(b, ctx)?.into(),
             (Value::Byte(a), Value::Byte(b)) => op2_bytes_retry_fill::<_, C>(
@@ -135,7 +170,30 @@ impl Value {
             )?,
         })
     }
-    pub(crate) fn append<C: FillContext>(&mut self, other: Self, ctx: C) -> Result<(), C::Error> {
+    pub(crate) fn append<C: FillContext>(
+        &mut self,
+        mut other: Self,
+        ctx: C,
+    ) -> Result<(), C::Error> {
+        if ctx.pierce_boxes() {
+            self.unbox();
+            other.unbox();
+            if self.append_impl(other.clone(), ctx).is_err() {
+                *self = take(self)
+                    .into_rows()
+                    .map(Value::boxed_if_not)
+                    .collect::<Array<_>>()
+                    .into();
+                other.box_if_not();
+                self.append_impl(other, ctx)
+            } else {
+                Ok(())
+            }
+        } else {
+            self.append_impl(other, ctx)
+        }
+    }
+    fn append_impl<C: FillContext>(&mut self, other: Self, ctx: C) -> Result<(), C::Error> {
         match (&mut *self, other) {
             (Value::Num(a), Value::Num(b)) => a.append(b, ctx)?,
             (Value::Byte(a), Value::Byte(b)) => {
@@ -293,9 +351,24 @@ impl Value {
     }
     pub(crate) fn couple_impl<C: FillContext>(
         &mut self,
-        other: Self,
+        mut other: Self,
         ctx: C,
     ) -> Result<(), C::Error> {
+        if ctx.pierce_boxes() {
+            self.unbox();
+            other.unbox();
+            if self.couple_impl_impl(other.clone(), ctx).is_err() {
+                self.box_if_not();
+                other.box_if_not();
+                self.couple_impl_impl(other, ctx)
+            } else {
+                Ok(())
+            }
+        } else {
+            self.couple_impl_impl(other, ctx)
+        }
+    }
+    fn couple_impl_impl<C: FillContext>(&mut self, other: Self, ctx: C) -> Result<(), C::Error> {
         match (&mut *self, other) {
             (Value::Num(a), Value::Num(b)) => a.couple_impl(b, ctx)?,
             (Value::Byte(a), Value::Byte(b)) => {

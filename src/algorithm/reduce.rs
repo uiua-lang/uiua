@@ -21,7 +21,7 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
     let xs = env.pop(ArrayArg(1))?;
 
     match (f.as_flipped_primitive(), xs) {
-        (Some((Primitive::Join, false)), mut xs) => {
+        (Some((Primitive::Join, false)), mut xs) if !env.pierce_boxes() => {
             if xs.rank() < 2 {
                 env.push(xs);
                 return Ok(());

@@ -1015,6 +1015,8 @@ primitive!(
     ///
     /// [partition] is closely related to [group].
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
+    /// Apply a function with implicit unboxing
+    ([1], Pierce, OtherModifier, ("pierce", '⍆')),
     /// Invert the behavior of a function
     ///
     /// Most functions are not invertible.

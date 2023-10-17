@@ -38,6 +38,7 @@ fn max_shape(a: &[usize], b: &[usize]) -> Shape {
 pub trait FillContext: Copy {
     type Error;
     fn error(self, msg: impl ToString) -> Self::Error;
+    fn pierce_boxes(self) -> bool;
     fn fill<T: ArrayValue>(self) -> Option<T>;
     fn fill_error(error: Self::Error) -> Self::Error;
     fn is_fill_error(error: &Self::Error) -> bool;
@@ -47,6 +48,9 @@ impl FillContext for &Uiua {
     type Error = UiuaError;
     fn error(self, msg: impl ToString) -> Self::Error {
         self.error(msg)
+    }
+    fn pierce_boxes(self) -> bool {
+        self.pierce_boxes()
     }
     fn fill<T: ArrayValue>(self) -> Option<T> {
         T::get_fill(self)
@@ -64,6 +68,9 @@ impl FillContext for &&mut Uiua {
     fn error(self, msg: impl ToString) -> Self::Error {
         (**self).error(msg)
     }
+    fn pierce_boxes(self) -> bool {
+        (**self).pierce_boxes()
+    }
     fn fill<T: ArrayValue>(self) -> Option<T> {
         T::get_fill(self)
     }
@@ -79,6 +86,9 @@ impl FillContext for () {
     type Error = Infallible;
     fn error(self, msg: impl ToString) -> Self::Error {
         panic!("{}", msg.to_string())
+    }
+    fn pierce_boxes(self) -> bool {
+        false
     }
     fn fill<T: ArrayValue>(self) -> Option<T> {
         None

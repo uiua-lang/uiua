@@ -472,6 +472,10 @@ impl Primitive {
                 env.call(g)?;
                 env.call(f_after)?;
             }
+            Primitive::Pierce => {
+                let f = env.pop(FunctionArg(1))?;
+                env.with_pierce(|env| env.call(f))?;
+            }
             Primitive::Fill => {
                 let fill = env.pop(FunctionArg(1))?;
                 let f = env.pop(FunctionArg(2))?;

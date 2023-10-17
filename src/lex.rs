@@ -479,8 +479,9 @@ impl Lexer {
                 '↲' => self.end(Primitive::Wait, start),
                 '⍚' => self.end(Primitive::Level, start),
                 '∺' => {
+                    let begin = self.loc;
                     self.end(Primitive::Level, start);
-                    self.loc = start;
+                    self.loc = begin;
                     self.end(Primitive::Omega, start);
                 }
 

@@ -1200,6 +1200,8 @@ primitive!(
     /// ex: ⍚[1 1]⊂ ↯3_3⇡9 10_11_12 # Join two rank 1 arrays
     /// ex: ⍚[1 0]⊂ ↯3_3⇡9 10_11_12 # Join rank 1 arrays with scalars
     ([2], Level, IteratingModifier, ("level", '⍚')),
+    /// Apply a function to reduce at different array depths
+    ([2], Collapse, AggregatingModifier, "collapse"),
     /// Apply a function to combinations at array depths
     ([2], Combinate, IteratingModifier, ("combinate", '◳')),
     /// Set the fill value for a function

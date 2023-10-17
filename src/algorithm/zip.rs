@@ -416,6 +416,9 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
     let get_ns = env.pop(FunctionArg(1))?;
     env.call_error_on_break(get_ns, "break is not allowed in level")?;
     let ns = env.pop("level's rank list")?.as_rank_list(env, "")?;
+    if ns == [None, Some(-1)] {
+        return distribute(env);
+    }
     let f = env.pop(FunctionArg(2))?;
     let f_sig = f.signature();
     if f_sig.outputs != 1 {

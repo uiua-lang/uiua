@@ -148,7 +148,7 @@ pub fn Tour() -> impl IntoView {
         <h3>"Images"</h3>
         <p>"Image data can either be a rank 2 array of grayscale pixel data or a rank 3 array of grayscale with alpha, RGB, or RGBA pixel data."</p>
         <p>"This minimal example uses three different functions on x/y coordinates to generate RGB values and make a pretty gradient."</p>
-        <Editor example="⍉∺(|2 ⊞|⊙.:)÷∶⇡.100 +_-_×"/>
+        <Editor example="⍉≑α(|2 ⊞|⊙.)+_-_× ÷∶⇡.100"/>
         <p>"The Uiua logo is made with Uiua itself!"</p>
         <Editor example=LOGO/>
         <h3>"Audio"</h3>

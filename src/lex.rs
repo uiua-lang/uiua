@@ -478,6 +478,11 @@ impl Lexer {
                 '↰' => self.end(Primitive::Spawn, start),
                 '↲' => self.end(Primitive::Wait, start),
                 '⍚' => self.end(Primitive::Level, start),
+                '∺' => {
+                    self.end(Primitive::Level, start);
+                    self.loc = start;
+                    self.end(Primitive::Omega, start);
+                }
 
                 '(' => self.end(OpenParen, start),
                 ')' => self.end(CloseParen, start),

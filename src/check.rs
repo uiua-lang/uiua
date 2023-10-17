@@ -1,4 +1,4 @@
-use std::{borrow::Cow, cmp::Ordering, fmt};
+use std::{borrow::Cow, cmp::Ordering, f64::INFINITY, fmt};
 
 use crate::{
     array::Array,
@@ -101,6 +101,15 @@ impl<'a> BasicValue<'a> {
     }
 }
 
+impl FromIterator<f64> for BasicValue<'_> {
+    fn from_iter<T>(iter: T) -> Self
+    where
+        T: IntoIterator<Item = f64>,
+    {
+        BasicValue::Arr(iter.into_iter().map(BasicValue::Num).collect())
+    }
+}
+
 impl<'a> VirtualEnv<'a> {
     pub fn instrs(&mut self, instrs: &'a [Instr]) -> Result<(), String> {
         for instr in instrs {
@@ -132,6 +141,20 @@ impl<'a> VirtualEnv<'a> {
             Instr::Dynamic(f) => self.handle_sig(f.signature)?,
             Instr::DropTempInline { .. } => {}
             Instr::Prim(prim, _) => match prim {
+                Alpha => self.stack.push(BasicValue::from_iter([-1.0, INFINITY])),
+                Beta => self
+                    .stack
+                    .push(BasicValue::from_iter([-1.0, INFINITY, INFINITY])),
+                Gamma => self
+                    .stack
+                    .push(BasicValue::from_iter([-1.0, -1.0, INFINITY])),
+                Omega => self.stack.push(BasicValue::from_iter([INFINITY, -1.0])),
+                Psi => self
+                    .stack
+                    .push(BasicValue::from_iter([INFINITY, INFINITY, -1.0])),
+                Chi => self
+                    .stack
+                    .push(BasicValue::from_iter([INFINITY, -1.0, -1.0])),
                 Reduce | Scan => {
                     let sig = self.pop()?.expect_function(|| prim)?;
                     let outputs = match (sig.args, sig.outputs) {
@@ -160,10 +183,6 @@ impl<'a> VirtualEnv<'a> {
                         ));
                     }
                     self.handle_args_outputs(2, 1)?;
-                }
-                Distribute => {
-                    let sig = self.pop()?.expect_function(|| prim)?;
-                    self.handle_sig(sig)?
                 }
                 Group | Partition => {
                     let sig = self.pop()?.expect_function(|| prim)?;

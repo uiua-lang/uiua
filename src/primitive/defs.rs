@@ -920,15 +920,6 @@ primitive!(
     /// ex: ≑¯1/+ [1_2_3 4_5_6 7_8_9]
     /// ex:   ≡/+ [1_2_3 4_5_6 7_8_9]
     ([1], Rows, IteratingModifier, ("rows", '≡')),
-    /// Apply a function to a fixed value and each row of an array
-    ///
-    /// ex: ∺⊂ 1 2_3_4
-    /// ex: ∺⊂ 1_2_3 4_5_6
-    ///
-    /// [distribute] is equivalent to [level]`[``infinity``¯1]`.
-    /// ex:       ∺⊂ 1_2_3 4_5_6
-    ///   : ≑[∞ ¯1]⊂ 1_2_3 4_5_6
-    (2[1], Distribute, IteratingModifier, ("distribute", '∺')),
     /// Apply a function to each combination of elements of two arrays
     ///
     /// This is the element-wise version of [cross].
@@ -1192,10 +1183,6 @@ primitive!(
     ///   : b ← ↯3_3+10⇡9
     ///   :        ≡⊂ a b
     ///   : ≑[¯1 ¯1]⊂ a b
-    ///
-    /// [level]`[``infinity``¯1]` is equivalent to [distribute].
-    /// ex:       ∺⊂ 1_2_3 4_5_6
-    ///   : ≑[∞ ¯1]⊂ 1_2_3 4_5_6
     ///
     /// One way to think of the number(s) passed to [level] is as the rank of the array that the function will be applied to.
     /// `level``1` will always apply to rank `1` arrays, no matter how many dimensions the original array has.

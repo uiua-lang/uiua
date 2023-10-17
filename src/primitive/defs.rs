@@ -917,7 +917,7 @@ primitive!(
     /// ex: ≡∧+ 1_2 [4_5 6_7]
     ///
     /// [rows] is equivalent to [level]`¯1` (or `level``[¯1 ¯1 …]` for multiple arrays).
-    /// ex: ≓¯1/+ [1_2_3 4_5_6 7_8_9]
+    /// ex: ≑¯1/+ [1_2_3 4_5_6 7_8_9]
     /// ex:   ≡/+ [1_2_3 4_5_6 7_8_9]
     ([1], Rows, IteratingModifier, ("rows", '≡')),
     /// Apply a function to a fixed value and each row of an array
@@ -927,7 +927,7 @@ primitive!(
     ///
     /// [distribute] is equivalent to [level]`[``infinity``¯1]`.
     /// ex:       ∺⊂ 1_2_3 4_5_6
-    ///   : ≓[∞ ¯1]⊂ 1_2_3 4_5_6
+    ///   : ≑[∞ ¯1]⊂ 1_2_3 4_5_6
     (2[1], Distribute, IteratingModifier, ("distribute", '∺')),
     /// Apply a function to each combination of elements of two arrays
     ///
@@ -1181,27 +1181,27 @@ primitive!(
     /// For each of these examples, pay attention to the number passed to [level] and which elements change position.
     /// ex: ↯2_2_3 ⇡12
     /// ex: ⇌ ↯2_2_3 ⇡12 # Reverse as normal
-    /// ex: ≓0⇌ ↯2_2_3 ⇡12 # Reverse each element (does nothing)
-    /// ex: ≓¯1⇌ ↯2_2_3 ⇡12 # Reverse each row
-    /// ex: ≓¯2⇌ ↯2_2_3 ⇡12 # Reverse each row of each row
-    /// ex: ≓1⇌ ↯2_2_3 ⇡12 # Reverse each last axis row
+    /// ex: ≑0⇌ ↯2_2_3 ⇡12 # Reverse each element (does nothing)
+    /// ex: ≑¯1⇌ ↯2_2_3 ⇡12 # Reverse each row
+    /// ex: ≑¯2⇌ ↯2_2_3 ⇡12 # Reverse each row of each row
+    /// ex: ≑1⇌ ↯2_2_3 ⇡12 # Reverse each last axis row
     ///
     /// [level] can operate on multiple arrays at once if passed a list of ranks.
     /// While `level``¯1` is equivelent to [rows] called with a single array, `level``[¯1 ¯1]` is equivalent to [rows] called with two arrays, and so on.
     /// ex: a ← ↯3_3   ⇡9
     ///   : b ← ↯3_3+10⇡9
     ///   :        ≡⊂ a b
-    ///   : ≓[¯1 ¯1]⊂ a b
+    ///   : ≑[¯1 ¯1]⊂ a b
     ///
     /// [level]`[``infinity``¯1]` is equivalent to [distribute].
     /// ex:       ∺⊂ 1_2_3 4_5_6
-    ///   : ≓[∞ ¯1]⊂ 1_2_3 4_5_6
+    ///   : ≑[∞ ¯1]⊂ 1_2_3 4_5_6
     ///
     /// One way to think of the number(s) passed to [level] is as the rank of the array that the function will be applied to.
     /// `level``1` will always apply to rank `1` arrays, no matter how many dimensions the original array has.
-    /// ex: ≓[1 1]⊂ ↯3_3⇡9 10_11_12 # Join two rank 1 arrays
-    /// ex: ≓[1 0]⊂ ↯3_3⇡9 10_11_12 # Join rank 1 arrays with scalars
-    ([2], Level, IteratingModifier, ("level", '≓')),
+    /// ex: ≑[1 1]⊂ ↯3_3⇡9 10_11_12 # Join two rank 1 arrays
+    /// ex: ≑[1 0]⊂ ↯3_3⇡9 10_11_12 # Join rank 1 arrays with scalars
+    ([2], Level, IteratingModifier, ("level", '≑')),
     /// Apply a function to reduce at different array depths
     ([2], Collapse, AggregatingModifier, ("collapse", '⌿')),
     /// Apply a function to combinations at array depths
@@ -1517,6 +1517,18 @@ primitive!(
     /// Equivalent to `multiply``2``eta` or `divide``2``tau`
     /// ex: [×2η π ÷2τ]
     (0, Pi, Constant, ("pi", 'π')),
+    /// A list of `¯1_∞`
+    (0, Alpha, Constant, ("alpha", 'α')),
+    /// A list of `¯1_∞_∞`
+    (0, Beta, Constant, ("beta", 'β')),
+    /// A list of `¯1_¯1_∞`
+    (0, Gamma, Constant, ("gamma", 'γ')),
+    /// A list of `∞_¯1`
+    (0, Omega, Constant, ("omega", 'ω')),
+    /// A list of `∞_∞_¯1`
+    (0, Psi, Constant, ("psi", 'ψ')),
+    /// A list of `∞_¯1_¯1`
+    (0, Chi, Constant, ("chi", 'χ')),
     /// The ratio of a circle's circumference to its radius
     ///
     /// Equivalent to `multiply``4``eta` or `multiply``2``pi`

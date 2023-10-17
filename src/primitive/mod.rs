@@ -4,7 +4,7 @@
 
 mod defs;
 pub use defs::*;
-use ecow::EcoVec;
+use ecow::{eco_vec, EcoVec};
 
 use std::{
     borrow::Cow,
@@ -256,21 +256,18 @@ impl Primitive {
             break None;
         }
     }
-    pub fn as_constant(&self) -> Option<f64> {
-        Some(match self {
-            Primitive::Pi => PI,
-            Primitive::Tau => TAU,
-            Primitive::Eta => PI / 2.0,
-            Primitive::Infinity => INFINITY,
-            _ => return None,
-        })
-    }
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
             Primitive::Eta => env.push(PI / 2.0),
             Primitive::Pi => env.push(PI),
             Primitive::Tau => env.push(TAU),
             Primitive::Infinity => env.push(INFINITY),
+            Primitive::Alpha => env.push(eco_vec![-1.0, INFINITY]),
+            Primitive::Beta => env.push(eco_vec![-1.0, INFINITY, INFINITY]),
+            Primitive::Gamma => env.push(eco_vec![-1.0, -1.0, INFINITY]),
+            Primitive::Omega => env.push(eco_vec![INFINITY, -1.0]),
+            Primitive::Psi => env.push(eco_vec![INFINITY, INFINITY, -1.0]),
+            Primitive::Chi => env.push(eco_vec![INFINITY, -1.0, -1.0]),
             Primitive::Identity => env.touch_array_stack(),
             Primitive::Gap => {
                 let f = env.pop(1)?;

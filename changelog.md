@@ -5,7 +5,7 @@ Uiua is not yet stable.
 ## 0.0.21 - 2023-10-??
 ### Language
 - Add the [`pierce` `⍆`](https://uiua.org/docs/pierce) modifier, which calls its function and implicitly boxes/unboxes values
-- Change [`level` `≓`](https://uiua.org/docs/level)'s glyph to reflect its relationship with [`each` `∵`](https://uiua.org/docs/each), [`rows` `≡`](https://uiua.org/docs/rows), and [`distribute` `∺`](https://uiua.org/docs/distribute). Code using `⍚` will continue to work and will be formatted as `≓`.
+- Change [`level` `≑`](https://uiua.org/docs/level)'s glyph to reflect its relationship with [`each` `∵`](https://uiua.org/docs/each), [`rows` `≡`](https://uiua.org/docs/rows), and [`distribute` `∺`](https://uiua.org/docs/distribute). Code using `⍚` will continue to work and will be formatted as `≑`.
 
 ## 0.0.20 - 2023-10-16
 ### Language

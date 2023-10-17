@@ -11,7 +11,7 @@ use crate::{
     check::instrs_signature,
     function::*,
     lex::{CodeSpan, Sp, Span},
-    primitive::Primitive,
+    primitive::{PrimClass, Primitive},
     run::RunMode,
     value::Value,
     Diagnostic, DiagnosticKind, Ident, SysOp, UiuaError, UiuaResult,
@@ -673,7 +673,7 @@ impl Uiua {
     fn primitive(&mut self, prim: Primitive, span: CodeSpan, call: bool) -> UiuaResult {
         self.handle_primitive_deprecation(prim, &span);
         let span_i = self.add_span(span.clone());
-        if call || prim.as_constant().is_some() {
+        if call || prim.class() == PrimClass::Constant {
             self.push_instr(Instr::Prim(prim, span_i));
         } else {
             let instrs = [Instr::Prim(prim, span_i)];

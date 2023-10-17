@@ -328,14 +328,6 @@ pub fn collapse(env: &mut Uiua) -> UiuaResult {
     env.call(get_ns)?;
     let ns = env.pop("collapse's rank list")?.as_rank_list(env, "")?;
     let f = env.pop(FunctionArg(2))?;
-    let f_sig = f.signature();
-    if f_sig.args != ns.len() {
-        return Err(env.error(format!(
-            "Collapse's rank list has {} elements, but its function takes {} arguments",
-            ns.len(),
-            f_sig.args
-        )));
-    }
     let mut args = Vec::with_capacity(ns.len());
     for i in 0..ns.len() {
         let arg = env.pop(ArrayArg(i + 1))?;
@@ -355,32 +347,27 @@ pub fn collapse(env: &mut Uiua) -> UiuaResult {
 
 fn collapse_recursive(
     f: Value,
-    args: Vec<Value>,
+    mut args: Vec<Value>,
     ns: &[usize],
     env: &mut Uiua,
 ) -> UiuaResult<Vec<Value>> {
+    // Determine accumulator and iterator counts
     let mut acc_count = 0;
-    let mut iter_count = 0;
+    let mut array_count = 0;
     for &n in ns {
         match n {
             0 => acc_count += 1,
-            1 => iter_count += 1,
+            1 => array_count += 1,
             _ => {}
         }
     }
-    if acc_count + iter_count == ns.len() {
+    if acc_count + array_count == ns.len() {
         // Base case
-        if acc_count != f.signature().outputs {
-            return Err(env.error(format!(
-                "Collapse's function returns {} values, \
-                but its rank list and arguments suggest {} \
-                accumulators",
-                f.signature().outputs,
-                acc_count
-            )));
+        if array_count == 0 {
+            return Ok(args);
         }
         let mut accs = Vec::with_capacity(acc_count);
-        let mut arrays = Vec::with_capacity(iter_count);
+        let mut arrays = Vec::with_capacity(array_count);
         for (n, arg) in ns.iter().zip(args) {
             if *n == 0 {
                 accs.push(arg);
@@ -403,27 +390,107 @@ fn collapse_recursive(
         }
         let row_count = arrays[0].row_count();
         let mut array_iters: Vec<_> = arrays.into_iter().map(|array| array.into_rows()).collect();
-        for _ in 0..row_count {
-            let mut accs_iter = accs.drain(..).rev();
-            for (i, n) in ns.iter().enumerate().rev() {
-                match n {
-                    0 => env.push(accs_iter.next().unwrap()),
-                    1 => env.push(array_iters[i].next().unwrap()),
-                    _ => unreachable!(),
+        if acc_count == f.signature().outputs {
+            // Accumulate only accs
+            for _ in 0..row_count {
+                let mut accs_iter = accs.drain(..).rev();
+                let mut arr_i = array_count;
+                for n in ns.iter().rev() {
+                    match n {
+                        0 => env.push(accs_iter.next().unwrap()),
+                        1 => {
+                            arr_i -= 1;
+                            env.push(array_iters[arr_i].next().unwrap())
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+                env.call(f.clone())?;
+                drop(accs_iter);
+                for _ in 0..acc_count {
+                    accs.push(env.pop("collapsed function result")?);
                 }
             }
-            env.call(f.clone())?;
-            drop(accs_iter);
-            for _ in 0..acc_count {
-                accs.push(env.pop("collapsed function result")?);
+            Ok(accs)
+        } else if f.signature() == (array_count * 2 + acc_count, array_count) {
+            // Accumulate only arrays
+            if row_count == 0 {
+                return Err(env.error("Cannot collapse empty array(s)"));
+            }
+            let mut true_accs = Vec::with_capacity(array_count);
+            for iter in &mut array_iters {
+                true_accs.push(iter.next().unwrap());
+            }
+            for _ in 0..row_count - 1 {
+                let mut acc_i = acc_count;
+                let mut arr_i = array_count;
+                for n in ns.iter().rev() {
+                    match n {
+                        0 => {
+                            acc_i -= 1;
+                            env.push(accs[acc_i].clone())
+                        }
+                        1 => {
+                            arr_i -= 1;
+                            env.push(array_iters[arr_i].next().unwrap());
+                            env.push(true_accs.pop().unwrap());
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+                env.call(f.clone())?;
+                for _ in 0..array_count {
+                    true_accs.push(env.pop("collapsed function result")?);
+                }
+            }
+            Ok(true_accs)
+        } else {
+            Err(env.error(format!(
+                "Collapse's function returns {} value(s), \
+                but its rank list and arguments suggest {} \
+                accumulator(s)",
+                f.signature().outputs,
+                acc_count
+            )))
+        }
+    } else {
+        // Recursive case
+        let mut row_count = 0;
+        for (i, (arg, ni)) in args.iter().zip(ns).enumerate() {
+            if *ni == 0 {
+                continue;
+            }
+            for (arg2, nj) in args.iter().zip(ns).skip(i + 1) {
+                if *nj == 0 {
+                    continue;
+                }
+                if arg.row_count() != arg2.row_count() {
+                    return Err(env.error(format!(
+                        "Cannot collapse arrays with shapes {} and {}",
+                        arg.format_shape(),
+                        arg2.format_shape()
+                    )));
+                }
+            }
+            row_count = arg.row_count();
+        }
+        let dec_ns: Vec<usize> = ns.iter().map(|n| n.saturating_sub(1)).collect();
+        let mut row_iters = Vec::with_capacity(array_count);
+        for (i, n) in ns.iter().enumerate().rev() {
+            if *n != 0 {
+                row_iters.push(args.remove(i).into_rows());
             }
         }
-        let mut res = Vec::with_capacity(acc_count);
-        for _ in 0..acc_count {
-            res.push(env.pop("collapsed function result")?);
+        for _ in 0..row_count {
+            let mut iter_i = 0;
+            for (i, n) in ns.iter().enumerate() {
+                if *n != 0 {
+                    args.insert(i, row_iters[iter_i].next().unwrap());
+                    iter_i += 1;
+                }
+            }
+            args = collapse_recursive(f.clone(), args, &dec_ns, env)?;
         }
-        Ok(res)
-    } else {
-        todo!()
+        Ok(args)
     }
 }

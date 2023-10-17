@@ -620,10 +620,7 @@ fn multi_level_recursive(
         };
         let mut rows = Vec::with_capacity(row_count);
         let mut row_args = args.clone();
-        let mut dec_ns = ns.to_vec();
-        for n in dec_ns.iter_mut() {
-            *n = n.saturating_sub(1);
-        }
+        let dec_ns: Vec<usize> = ns.iter().map(|n| n.saturating_sub(1)).collect();
         for i in 0..row_count {
             for (j, (arg, n)) in args.iter().zip(ns).enumerate() {
                 row_args[j] = if *n == 0 { arg.clone() } else { arg.row(i) };

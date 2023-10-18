@@ -646,14 +646,14 @@ input[type=number] {
 
 .trans {
     background-image: linear-gradient(180deg,
-            #5BCEFA 29%,
-            #F5A9B8 29%,
-            #F5A9B8 43%,
-            #FFFFFF 43%,
-            #FFFFFF 57%,
-            #F5A9B8 57%,
-            #F5A9B8 71%,
-            #5BCEFA 71%);
+            #5BCEFA 36%,
+            #F5A9B8 36%,
+            #F5A9B8 47%,
+            #FFFFFF 47%,
+            #FFFFFF 58%,
+            #F5A9B8 58%,
+            #F5A9B8 69%,
+            #5BCEFA 69%);
     background-size: 100%;
     background-clip: text;
     -webkit-background-clip: text;

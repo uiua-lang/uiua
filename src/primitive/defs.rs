@@ -1193,14 +1193,44 @@ primitive!(
     /// Apply a function to combinations at array depths
     ([2], Combinate, IteratingModifier, ("combinate", '◳')),
     /// `join` `infinity` to a list
+    ///
+    /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) to understand what this is for.
+    ///
+    /// ex: ⋄5
+    ///
+    /// *Rocks line the shores of the ocean, their immovable forms jutting from the surface.*
     (1, Rock, Misc, ("rock", '⋄')),
     /// `join` `¯1` to a list
+    ///
+    /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) to understand what this is for.
+    ///
+    /// ex: ~5
+    ///
+    /// *The light of the sun reflects reflects off the rippling surface of the ocean.*
     (1, Surface, Misc, ("surface", '~')),
     /// `join` `2` to a list
+    ///
+    /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) to understand what this is for.
+    ///
+    /// ex: ≊5
+    ///
+    /// *In the deep ocean live many wonderous creatures.*
     (1, Deep, Misc, ("deep", '≊')),
     /// `join` `1` to a list
+    ///
+    /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) to understand what this is for.
+    ///
+    /// ex: ≃5
+    ///
+    /// *In the abyss, where no light reaches, life is restricted to simpler forms.*
     (1, Abyss, Misc, ("abyss", '≃')),
     /// `join` `0` to a list
+    ///
+    /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) to understand what this is for.
+    ///
+    /// ex: ∸5
+    ///
+    /// *At the seabed, countless small scavengers feed on the detritus of the ocean above.*
     (1, Seabed, Misc, ("seabed", '∸')),
     /// Set the fill value for a function
     ///

@@ -1,6 +1,14 @@
 //! Algorithms for dyadic array operations
 
-use std::{borrow::Cow, cmp::Ordering, iter::repeat, mem::take, sync::Arc};
+use std::{
+    borrow::Cow,
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+    hash::{Hash, Hasher},
+    iter::repeat,
+    mem::take,
+    sync::Arc,
+};
 
 use ecow::EcoVec;
 use tinyvec::tiny_vec;
@@ -1761,6 +1769,24 @@ impl<T: ArrayValue> Array<T> {
     }
 }
 
+struct ArrayCmpSlice<'a, T>(&'a [T]);
+
+impl<'a, T: ArrayValue> PartialEq for ArrayCmpSlice<'a, T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.len() == other.0.len() && self.0.iter().zip(other.0).all(|(a, b)| a.array_eq(b))
+    }
+}
+
+impl<'a, T: ArrayValue> Eq for ArrayCmpSlice<'a, T> {}
+
+impl<'a, T: ArrayValue> Hash for ArrayCmpSlice<'a, T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        for elem in self.0 {
+            elem.array_hash(state);
+        }
+    }
+}
+
 impl Value {
     pub fn member(&self, of: &Self, env: &Uiua) -> UiuaResult<Self> {
         Ok(match (self, of) {
@@ -1768,8 +1794,8 @@ impl Value {
             (Value::Byte(a), Value::Byte(b)) => a.member(b, env)?.into(),
             (Value::Char(a), Value::Char(b)) => a.member(b, env)?.into(),
             (Value::Func(a), Value::Func(b)) => a.member(b, env)?.into(),
-            (Value::Num(a), Value::Byte(b)) => a.member(b, env)?.into(),
-            (Value::Byte(a), Value::Num(b)) => a.member(b, env)?.into(),
+            (Value::Num(a), Value::Byte(b)) => a.member(&b.convert_ref(), env)?.into(),
+            (Value::Byte(a), Value::Num(b)) => a.convert_ref().member(b, env)?.into(),
             (a, b) => {
                 return Err(env.error(format!(
                     "Cannot look for members of {} array in {} array",
@@ -1782,30 +1808,17 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn member<U>(&self, of: &Array<U>, env: &Uiua) -> UiuaResult<Array<u8>>
-    where
-        T: ArrayCmp<U>,
-        U: ArrayValue,
-    {
+    pub fn member(&self, of: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
         let elems = self;
         Ok(match elems.rank().cmp(&of.rank()) {
             Ordering::Equal => {
                 let mut result_data = EcoVec::with_capacity(elems.row_count());
-                if elems.rank() == 1 {
-                    for elem in &elems.data {
-                        result_data.push(of.data.iter().any(|of| elem.array_eq(of)) as u8);
-                    }
-                    return Ok(Array::from(result_data));
+                let mut members = HashSet::with_capacity(of.row_count());
+                for of in of.row_slices() {
+                    members.insert(ArrayCmpSlice(of));
                 }
-                'elem: for elem in elems.row_slices() {
-                    for of in of.row_slices() {
-                        if elem.len() == of.len() && elem.iter().zip(of).all(|(a, b)| a.array_eq(b))
-                        {
-                            result_data.push(1);
-                            continue 'elem;
-                        }
-                    }
-                    result_data.push(0);
+                for elem in elems.row_slices() {
+                    result_data.push(members.contains(&ArrayCmpSlice(elem)) as u8);
                 }
                 let shape: Shape = self.shape.iter().cloned().take(1).collect();
                 let res = Array::new(shape, result_data);
@@ -1865,28 +1878,17 @@ impl<T: ArrayValue> Array<T> {
         Ok(match searched_for.rank().cmp(&searched_in.rank()) {
             Ordering::Equal => {
                 let mut result_data = EcoVec::with_capacity(searched_for.row_count());
-                if searched_for.rank() == 1 {
-                    for elem in &searched_for.data {
-                        result_data.push(
-                            searched_in
-                                .data
-                                .iter()
-                                .position(|of| elem.array_eq(of))
-                                .unwrap_or(searched_in.row_count())
-                                as f64,
-                        );
-                    }
-                    return Ok(Array::from(result_data));
+                let mut members = HashMap::with_capacity(searched_in.row_count());
+                for (i, of) in searched_in.row_slices().enumerate() {
+                    members.entry(ArrayCmpSlice(of)).or_insert(i);
                 }
-                'elem: for elem in searched_for.row_slices() {
-                    for (i, of) in searched_in.row_slices().enumerate() {
-                        if elem.len() == of.len() && elem.iter().zip(of).all(|(a, b)| a.array_eq(b))
-                        {
-                            result_data.push(i as f64);
-                            continue 'elem;
-                        }
-                    }
-                    result_data.push(searched_in.row_count() as f64);
+                for elem in searched_for.row_slices() {
+                    result_data.push(
+                        members
+                            .get(&ArrayCmpSlice(elem))
+                            .map(|i| *i as f64)
+                            .unwrap_or(searched_in.row_count() as f64),
+                    );
                 }
                 let shape: Shape = self.shape.iter().cloned().take(1).collect();
                 let res = Array::new(shape, result_data);

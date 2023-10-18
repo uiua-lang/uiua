@@ -782,7 +782,7 @@ fn parse_format_fragments(s: &str) -> Vec<String> {
 }
 
 pub fn is_ident_char(c: char) -> bool {
-    c.is_alphabetic() && !"ⁿₙ".contains(c) && !('≻'..='≺').contains(&c)
+    c.is_alphabetic() && !"ⁿₙπτη".contains(c)
 }
 
 pub fn is_custom_glyph(c: char) -> bool {

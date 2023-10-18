@@ -142,17 +142,17 @@ impl<'a> VirtualEnv<'a> {
             Instr::DropTempInline { .. } => {}
             Instr::Prim(prim, _) => match prim {
                 Right => self.stack.push(BasicValue::from_iter([-1.0, INFINITY])),
-                Beta => self
+                Starboard => self
                     .stack
                     .push(BasicValue::from_iter([-1.0, INFINITY, INFINITY])),
-                Gamma => self
+                East => self
                     .stack
                     .push(BasicValue::from_iter([-1.0, -1.0, INFINITY])),
                 Left => self.stack.push(BasicValue::from_iter([INFINITY, -1.0])),
-                Psi => self
+                Port => self
                     .stack
                     .push(BasicValue::from_iter([INFINITY, INFINITY, -1.0])),
-                Chi => self
+                West => self
                     .stack
                     .push(BasicValue::from_iter([INFINITY, -1.0, -1.0])),
                 Reduce | Scan => {

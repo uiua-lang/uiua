@@ -1504,18 +1504,18 @@ primitive!(
     /// Equivalent to `multiply``2``eta` or `divide``2``tau`
     /// ex: [×2η π ÷2τ]
     (0, Pi, Constant, ("pi", 'π')),
-    /// A list of `¯1_∞`
-    (0, Right, Constant, ("right", '≻')),
-    /// A list of `¯1_∞_∞`
-    (0, Beta, Constant, ("beta", 'β')),
-    /// A list of `¯1_¯1_∞`
-    (0, Gamma, Constant, ("gamma", 'γ')),
     /// A list of `∞_¯1`
     (0, Left, Constant, ("left", '≺')),
     /// A list of `∞_∞_¯1`
-    (0, Psi, Constant, ("psi", 'ψ')),
+    (0, Port, Constant, ("port", '≾')),
     /// A list of `∞_¯1_¯1`
-    (0, Chi, Constant, ("chi", 'χ')),
+    (0, West, Constant, ("west", '≼')),
+    /// A list of `¯1_∞`
+    (0, Right, Constant, ("right", '≻')),
+    /// A list of `¯1_∞_∞`
+    (0, Starboard, Constant, ("starboard", '≿')),
+    /// A list of `¯1_¯1_∞`
+    (0, East, Constant, ("east", '≽')),
     /// The ratio of a circle's circumference to its radius
     ///
     /// Equivalent to `multiply``4``eta` or `multiply``2``pi`

@@ -271,11 +271,11 @@ impl Primitive {
             Primitive::Tau => constant!(TAU_, TAU),
             Primitive::Infinity => constant!(INF, INFINITY),
             Primitive::Right => constant!(ALPHA, eco_vec![-1.0, INFINITY]),
-            Primitive::Beta => constant!(BETA, eco_vec![-1.0, INFINITY, INFINITY]),
-            Primitive::Gamma => constant!(GAMMA, eco_vec![-1.0, -1.0, INFINITY]),
+            Primitive::Starboard => constant!(BETA, eco_vec![-1.0, INFINITY, INFINITY]),
+            Primitive::East => constant!(GAMMA, eco_vec![-1.0, -1.0, INFINITY]),
             Primitive::Left => constant!(OMEGA, eco_vec![INFINITY, -1.0]),
-            Primitive::Psi => constant!(PSI, eco_vec![INFINITY, INFINITY, -1.0]),
-            Primitive::Chi => constant!(CHI, eco_vec![INFINITY, -1.0, -1.0]),
+            Primitive::Port => constant!(PSI, eco_vec![INFINITY, INFINITY, -1.0]),
+            Primitive::West => constant!(CHI, eco_vec![INFINITY, -1.0, -1.0]),
             Primitive::Identity => env.touch_array_stack(),
             Primitive::Gap => {
                 let f = env.pop(1)?;

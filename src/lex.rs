@@ -482,7 +482,7 @@ impl Lexer {
                     let begin = self.loc;
                     self.end(Primitive::Level, start);
                     self.loc = begin;
-                    self.end(Primitive::Water, start);
+                    self.end(Primitive::Surface, start);
                     self.loc = begin;
                     self.end(Primitive::Rock, start);
                 }

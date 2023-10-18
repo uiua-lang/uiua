@@ -1187,7 +1187,13 @@ primitive!(
     /// `join` `infinity` to a list
     (1, Rock, Misc, ("rock", '⋄')),
     /// `join` `¯1` to a list
-    (1, Water, Misc, ("water", '~')),
+    (1, Surface, Misc, ("surf", '~')),
+    /// `join` `2` to a list
+    (1, Deep, Misc, ("deep", '≊')),
+    /// `join` `1` to a list
+    (1, Abyss, Misc, ("abyss", '≃')),
+    /// `join` `0` to a list
+    (1, Seabed, Misc, ("seabed", '∸')),
     /// Set the fill value for a function
     ///
     /// By default, some operations require that arrays' [shape]s are in some way compatible.
@@ -1386,7 +1392,7 @@ primitive!(
     ///
     /// Here is a recursive fibonacci function.
     /// It uses [if] to decide whether to recur.
-    /// ex: !(?∘(|1 +↬2-1∶↬2-2.) <2.) 10
+    /// ex: !(?∘(|1 +↬2-1∶↬2-2.) <2.) 8
     (1(None), Recur, Control, ("recur", '↬')),
     /// Generate a random number between 0 and 1
     ///

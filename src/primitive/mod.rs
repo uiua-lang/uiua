@@ -136,6 +136,27 @@ impl fmt::Display for Primitive {
     }
 }
 
+macro_rules! constant {
+    ($name:ident, $value:expr) => {
+        fn $name() -> Value {
+            thread_local! {
+                #[allow(non_upper_case_globals)]
+                static $name: Value = $value.into();
+            }
+            $name.with(Value::clone)
+        }
+    };
+}
+
+constant!(eta, PI / 2.0);
+constant!(pi, PI);
+constant!(tau, TAU);
+constant!(inf, INFINITY);
+constant!(neg1, -1.0);
+constant!(two, 2.0);
+constant!(one, 1.0);
+constant!(zero, 0.0);
+
 impl Primitive {
     pub fn all() -> impl Iterator<Item = Self> + Clone {
         all()
@@ -166,7 +187,14 @@ impl Primitive {
         self.modifier_args().is_some()
     }
     pub fn is_ocean(&self) -> bool {
-        matches!(self, Primitive::Rock | Primitive::Water)
+        matches!(
+            self,
+            Primitive::Rock
+                | Primitive::Surface
+                | Primitive::Deep
+                | Primitive::Abyss
+                | Primitive::Seabed
+        )
     }
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
         // Nothing deprecated at the moment
@@ -260,21 +288,6 @@ impl Primitive {
         }
     }
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
-        macro_rules! constant {
-            ($name:ident, $value:expr) => {
-                fn $name() -> Value {
-                    thread_local! {
-                        #[allow(non_upper_case_globals)]
-                        static $name: Value = $value.into();
-                    }
-                    $name.with(Value::clone)
-                }
-            };
-        }
-        constant!(eta, PI / 2.0);
-        constant!(pi, PI);
-        constant!(tau, TAU);
-        constant!(inf, INFINITY);
         match self {
             Primitive::Eta => env.push(eta()),
             Primitive::Pi => env.push(pi()),
@@ -471,9 +484,20 @@ impl Primitive {
                 env.push(inf());
                 Primitive::Join.run(env)?;
             }
-            Primitive::Water => {
-                constant!(neg1, -1.0);
+            Primitive::Surface => {
                 env.push(neg1());
+                Primitive::Join.run(env)?;
+            }
+            Primitive::Deep => {
+                env.push(two());
+                Primitive::Join.run(env)?;
+            }
+            Primitive::Abyss => {
+                env.push(one());
+                Primitive::Join.run(env)?;
+            }
+            Primitive::Seabed => {
+                env.push(zero());
                 Primitive::Join.run(env)?;
             }
             Primitive::Invert => {

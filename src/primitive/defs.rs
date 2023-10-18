@@ -733,6 +733,10 @@ primitive!(
     /// ex: ↙ ¯3 [8 3 9 2 0]
     /// ex: ↙ 2 ↯3_3⇡9
     /// ex: ↙ ¯2 ↯3_3⇡9
+    /// The amount to take can also be a list to take along multiple axes.
+    /// ex: .↯3_4⇡12
+    ///   : ↘2_3   .
+    ///   : ↘¯2_¯2 :
     ///
     /// By default, taking more than the length of the array will throw an error.
     /// ex! ↙7 [8 3 9 2 0]
@@ -749,6 +753,10 @@ primitive!(
     /// ex: ↘ ¯3 [8 3 9 2 0]
     /// ex: ↘ 2 ↯3_3⇡9
     /// ex: ↘ ¯2 ↯3_3⇡9
+    /// The amount to drop can also be a list to drop along multiple axes.
+    /// ex: .↯3_4⇡12
+    ///   : ↘1_2   .
+    ///   : ↘¯2_¯1 :
     ///
     /// Dropping more than the length of the array will leave an empty array.
     /// ex: ↘ 7 [8 3 9 2 0]

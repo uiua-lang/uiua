@@ -42,7 +42,7 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
             Primitive::Div => fast_reduce(nums, 1.0, div::num_num),
             Primitive::Max => fast_reduce(nums, f64::NEG_INFINITY, max::num_num),
             Primitive::Min => fast_reduce(nums, f64::INFINITY, min::num_num),
-            _ => return generic_fold1(f, Value::Num(nums), None, env),
+            _ => return generic_fold_right_1(f, Value::Num(nums), None, env),
         }),
         (Some((prim, flipped)), Value::Byte(bytes)) => env.push(match prim {
             Primitive::Add => fast_reduce(bytes.convert(), 0.0, add::num_num),
@@ -53,9 +53,9 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
             Primitive::Div => fast_reduce(bytes.convert(), 1.0, div::num_num),
             Primitive::Max => fast_reduce(bytes.convert(), f64::NEG_INFINITY, max::num_num),
             Primitive::Min => fast_reduce(bytes.convert(), f64::INFINITY, min::num_num),
-            _ => return generic_fold1(f, Value::Byte(bytes), None, env),
+            _ => return generic_fold_right_1(f, Value::Byte(bytes), None, env),
         }),
-        (_, xs) => generic_fold1(f, xs, None, env)?,
+        (_, xs) => generic_fold_right_1(f, xs, None, env)?,
     }
     Ok(())
 }
@@ -105,20 +105,20 @@ where
     }
 }
 
-pub fn fold(env: &mut Uiua) -> UiuaResult {
+pub fn fold_right_n_1(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(FunctionArg(1))?;
     match f.signature().args {
         0..=2 => {
             let acc = env.pop(ArrayArg(1))?;
             let xs = env.pop(ArrayArg(2))?;
-            generic_fold1(f, xs, Some(acc), env)
+            generic_fold_right_1(f, xs, Some(acc), env)
         }
-        _ => generic_fold_n(f, env),
+        _ => generic_fold_n_1(f, env),
     }
 }
 
-fn generic_fold1(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
+fn generic_fold_right_1(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
     if sig.outputs > 1 {
         return Err(env.error(format!(
@@ -169,7 +169,7 @@ fn generic_fold1(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> Ui
     Ok(())
 }
 
-fn generic_fold_n(f: Value, env: &mut Uiua) -> UiuaResult {
+fn generic_fold_n_1(f: Value, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
     if sig.args.saturating_sub(sig.outputs) != 1 {
         return Err(env.error(format!(
@@ -322,11 +322,16 @@ fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub fn collapse(env: &mut Uiua) -> UiuaResult {
+pub fn fold(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let get_ns = env.pop(FunctionArg(1))?;
     env.call(get_ns)?;
-    let ns = env.pop("collapse's rank list")?.as_rank_list(env, "")?;
+    let ns = env.pop("fold's rank list")?.as_rank_list(env, "")?;
+    if let Some((end, init)) = ns.split_last() {
+        if end.is_some_and(|n| n == -1) && !init.is_empty() && init.iter().all(Option::is_none) {
+            return fold_right_n_1(env);
+        }
+    }
     let f = env.pop(FunctionArg(2))?;
     let mut args = Vec::with_capacity(ns.len());
     for i in 0..ns.len() {
@@ -338,14 +343,14 @@ pub fn collapse(env: &mut Uiua) -> UiuaResult {
         .zip(&args)
         .map(|(n, arg)| rank_to_depth(n, arg.rank()))
         .collect();
-    let res = collapse_recursive(f, args, &ns, env)?;
+    let res = fold_recursive(f, args, &ns, env)?;
     for val in res {
         env.push(val);
     }
     Ok(())
 }
 
-fn collapse_recursive(
+fn fold_recursive(
     f: Value,
     mut args: Vec<Value>,
     ns: &[usize],
@@ -383,7 +388,7 @@ fn collapse_recursive(
             .find(|w| w[0].row_count() != w[1].row_count())
         {
             return Err(env.error(format!(
-                "Cannot collapse arrays with shapes {} and {}",
+                "Cannot fold arrays with shapes {} and {}",
                 w[0].format_shape(),
                 w[1].format_shape()
             )));
@@ -408,14 +413,14 @@ fn collapse_recursive(
                 env.call(f.clone())?;
                 drop(accs_iter);
                 for _ in 0..acc_count {
-                    accs.push(env.pop("collapsed function result")?);
+                    accs.push(env.pop("folded function result")?);
                 }
             }
             Ok(accs)
         } else if f.signature() == (array_count * 2 + acc_count, array_count) {
             // Accumulate only arrays
             if row_count == 0 {
-                return Err(env.error("Cannot collapse empty array(s)"));
+                return Err(env.error("Cannot fold empty array(s)"));
             }
             let mut true_accs = Vec::with_capacity(array_count);
             for iter in &mut array_iters {
@@ -440,13 +445,13 @@ fn collapse_recursive(
                 }
                 env.call(f.clone())?;
                 for _ in 0..array_count {
-                    true_accs.push(env.pop("collapsed function result")?);
+                    true_accs.push(env.pop("folded function result")?);
                 }
             }
             Ok(true_accs)
         } else {
             Err(env.error(format!(
-                "Collapse's function returns {} value(s), \
+                "Fold's function returns {} value(s), \
                 but its rank list and arguments suggest {} \
                 accumulator(s)",
                 f.signature().outputs,
@@ -466,7 +471,7 @@ fn collapse_recursive(
                 }
                 if arg.row_count() != arg2.row_count() {
                     return Err(env.error(format!(
-                        "Cannot collapse arrays with shapes {} and {}",
+                        "Cannot fold arrays with shapes {} and {}",
                         arg.format_shape(),
                         arg2.format_shape()
                     )));
@@ -489,7 +494,7 @@ fn collapse_recursive(
                     iter_i += 1;
                 }
             }
-            args = collapse_recursive(f.clone(), args, &dec_ns, env)?;
+            args = fold_recursive(f.clone(), args, &dec_ns, env)?;
         }
         Ok(args)
     }

@@ -864,21 +864,6 @@ primitive!(
     /// ex: /↧ []
     /// ex! /∠ []
     (1[1], Reduce, AggregatingModifier, ("reduce", '/')),
-    /// Apply a reducing function to an array with an initial value
-    ///
-    /// For reducing without an initial value, see [reduce].
-    ///
-    /// ex: ∧+ 10 1_2_3_4
-    /// [fold] goes from left to right. This is important for non-commutative functions like [subtract].
-    /// ex: ∧- 10 1_2_3_4
-    /// The accumulator is always the first argument to the function.
-    /// ex: ∧⊂ [] 1_2_3_4
-    /// Multiple accumulators can be used. In this case, each row of the array will always be the last argument to the function.
-    /// ex: ∧⊃(+⊙;)(×;) 0 1 [1 2 3 4 5]
-    ///
-    /// [break]ing out of [fold] discards the unreduced values.
-    /// ex: ∧(⎋≥10.+) 1 5_6_7_8
-    ([1], Fold, AggregatingModifier, ("fold", '∧')),
     /// Reduce, but keep intermediate values
     ///
     /// ex: \+   1_2_3_4
@@ -913,8 +898,8 @@ primitive!(
     /// ex: ≡/+ [1_2_3 4_5_6 7_8_9]  # Sum the elements of each row
     ///
     /// The number of arrays used depends on how many arguments the function takes.
-    /// ex: ≡⊂  1_2 [4_5 6_7]
-    /// ex: ≡∧+ 1_2 [4_5 6_7]
+    /// ex: ≡⊂   1_2 [4_5 6_7]
+    /// ex: ≡∧≺+ 1_2 [4_5 6_7]
     ///
     /// [rows] is equivalent to [level]`¯1` (or `level``[¯1 ¯1 …]` for multiple arrays).
     /// ex: ≑¯1/+ [1_2_3 4_5_6 7_8_9]
@@ -1190,7 +1175,11 @@ primitive!(
     /// ex: ≑[1 0]⊂ ↯3_3⇡9 10_11_12 # Join rank 1 arrays with scalars
     ([2], Level, IteratingModifier, ("level", '≑')),
     /// Apply a function to reduce at different array depths
-    ([2], Collapse, AggregatingModifier, ("collapse", '⌿')),
+    ///
+    /// Expect a rank to operate on, a function, and an array.
+    /// The rank supplied indicates the desired rank of the operand.
+    /// The array will be split into arrays of that rank, and the function will be applied between pairs of those arrays.
+    ([2], Fold, AggregatingModifier, ("fold", '∧')),
     /// Apply a function to combinations at array depths
     ([2], Combinate, IteratingModifier, ("combinate", '◳')),
     /// Set the fill value for a function
@@ -1504,18 +1493,6 @@ primitive!(
     /// Equivalent to `multiply``2``eta` or `divide``2``tau`
     /// ex: [×2η π ÷2τ]
     (0, Pi, Constant, ("pi", 'π')),
-    /// A list of `∞_¯1`
-    (0, Left, Constant, ("left", '≺')),
-    /// A list of `∞_∞_¯1`
-    (0, Port, Constant, ("port", '≾')),
-    /// A list of `∞_¯1_¯1`
-    (0, West, Constant, ("west", '≼')),
-    /// A list of `¯1_∞`
-    (0, Right, Constant, ("right", '≻')),
-    /// A list of `¯1_∞_∞`
-    (0, Starboard, Constant, ("starboard", '≿')),
-    /// A list of `¯1_¯1_∞`
-    (0, East, Constant, ("east", '≽')),
     /// The ratio of a circle's circumference to its radius
     ///
     /// Equivalent to `multiply``4``eta` or `multiply``2``pi`
@@ -1523,6 +1500,18 @@ primitive!(
     (0, Tau, Constant, ("tau", 'τ')),
     /// The biggest number
     (0, Infinity, Constant, ("infinity", '∞')),
+    /// A list of `infinity``_``¯1`
+    (0, Left, Constant, ("left", '≺')),
+    /// A list of `infinity``_``infinity``_``¯1`
+    (0, Port, Constant, ("port", '≾')),
+    /// A list of `infinity``_``¯1``_``¯1`
+    (0, West, Constant, ("west", '≼')),
+    /// A list of `¯1``_``¯1``_``infinity`
+    (0, East, Constant, ("east", '≽')),
+    /// A list of `¯1``_``infinity``_``infinity`
+    (0, Starboard, Constant, ("starboard", '≿')),
+    /// A list of `¯1``_``infinity`
+    (0, Right, Constant, ("right", '≻')),
     /// Debug print the top value on the stack without popping it
     ///
     /// ex: ~[1 2 3]

@@ -268,16 +268,6 @@ impl<'a> VirtualEnv<'a> {
                         return Err("repeat without a number".into());
                     }
                 }
-                Fold => {
-                    let sig = self.pop()?.expect_function(|| prim)?;
-                    if sig.args.saturating_sub(sig.outputs) != 1 {
-                        return Err(format!(
-                            "fold's function's signature {sig} does \
-                            not have 1 more argument than output"
-                        ));
-                    }
-                    self.handle_sig(sig)?
-                }
                 Bind => {
                     let f = self.pop()?;
                     let g = self.pop()?;
@@ -335,9 +325,13 @@ impl<'a> VirtualEnv<'a> {
                 }
                 Level => {
                     let _ranks = self.pop()?;
-                    let f = self.pop()?;
-                    let f_sig = f.signature();
-                    self.handle_sig(f_sig)?;
+                    let sig = self.pop()?.expect_function(|| prim)?;
+                    self.handle_sig(sig)?;
+                }
+                Fold => {
+                    let _ranks = self.pop()?;
+                    let sig = self.pop()?.expect_function(|| prim)?;
+                    self.handle_sig(sig)?
                 }
                 Try => {
                     let f = self.pop()?;

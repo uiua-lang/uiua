@@ -141,14 +141,14 @@ impl<'a> VirtualEnv<'a> {
             Instr::Dynamic(f) => self.handle_sig(f.signature)?,
             Instr::DropTempInline { .. } => {}
             Instr::Prim(prim, _) => match prim {
-                Alpha => self.stack.push(BasicValue::from_iter([-1.0, INFINITY])),
+                Right => self.stack.push(BasicValue::from_iter([-1.0, INFINITY])),
                 Beta => self
                     .stack
                     .push(BasicValue::from_iter([-1.0, INFINITY, INFINITY])),
                 Gamma => self
                     .stack
                     .push(BasicValue::from_iter([-1.0, -1.0, INFINITY])),
-                Omega => self.stack.push(BasicValue::from_iter([INFINITY, -1.0])),
+                Left => self.stack.push(BasicValue::from_iter([INFINITY, -1.0])),
                 Psi => self
                     .stack
                     .push(BasicValue::from_iter([INFINITY, INFINITY, -1.0])),

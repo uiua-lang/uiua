@@ -1505,13 +1505,13 @@ primitive!(
     /// ex: [×2η π ÷2τ]
     (0, Pi, Constant, ("pi", 'π')),
     /// A list of `¯1_∞`
-    (0, Alpha, Constant, ("alpha", 'α')),
+    (0, Right, Constant, ("right", '≻')),
     /// A list of `¯1_∞_∞`
     (0, Beta, Constant, ("beta", 'β')),
     /// A list of `¯1_¯1_∞`
     (0, Gamma, Constant, ("gamma", 'γ')),
     /// A list of `∞_¯1`
-    (0, Omega, Constant, ("omega", 'ω')),
+    (0, Left, Constant, ("left", '≺')),
     /// A list of `∞_∞_¯1`
     (0, Psi, Constant, ("psi", 'ψ')),
     /// A list of `∞_¯1_¯1`

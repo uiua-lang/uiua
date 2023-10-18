@@ -6,8 +6,8 @@ Uiua is not yet stable.
 ### Language
 - Add the [`pierce` `⍆`](https://uiua.org/docs/pierce) modifier, which calls its function and implicitly boxes/unboxes values
 - Change [`level` `≑`](https://uiua.org/docs/level)'s glyph to reflect its relationship with [`each` `∵`](https://uiua.org/docs/each), [`rows` `≡`](https://uiua.org/docs/rows), and [`distribute` `∺`](https://uiua.org/docs/distribute). Code using `⍚` will continue to work and will be formatted as `≑`.
-- Add [`alpha` `α`](https://uiua.org/docs/alpha), [`beta` `β`](https://uiua.org/docs/beta), [`gamma` `γ`](https://uiua.org/docs/gamma), [`omega` `ω`](https://uiua.org/docs/omega), [`psi` `ψ`](https://uiua.org/docs/psi), [`chi` `χ`](https://uiua.org/docs/chi), which define common rank lists to be used with [`level` `≑`](https://uiua.org/docs/level) and the new rank-generic modifiers
-- Remove `distribute`. Code using `∺` will continue to work and will be formatted as `≑ω`.
+- Add [`right` `≻`](https://uiua.org/docs/right), [`beta` `β`](https://uiua.org/docs/beta), [`gamma` `γ`](https://uiua.org/docs/gamma), [`left` `≺`](https://uiua.org/docs/left), [`psi` `ψ`](https://uiua.org/docs/psi), [`chi` `χ`](https://uiua.org/docs/chi), which define common rank lists to be used with [`level` `≑`](https://uiua.org/docs/level) and the new rank-generic modifiers
+- Remove `distribute`. Code using `∺` will continue to work and will be formatted as `≑≺`.
 
 ## 0.0.20 - 2023-10-16
 ### Language

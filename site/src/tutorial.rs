@@ -542,8 +542,8 @@ fn TutorialFunctions() -> impl IntoView {
         <p>"This is usually only necessary when you need to call multiple functions within a modifier."</p>
         <p>"For example, if you wanted to get the last element of each row of an array, you could use "<Prim prim=Rows/>"."</p>
         <Editor example="≡(⊢⇌) .[2_5_3 0_2_1 0_0_2]"/>
-        <p>"If you wanted to rotate every row of an array backwards by a fixed amount, you could use "<Prim prim=Level/><Prim prim=Omega/>" (using "<Prim prim=Level/>" will be discussed more in the "<A href="/docs/advancedarray">"Advanced Array Manipulation tutorial"</A>")."</p>
-        <Editor example="≑ω(↻¯) 2 [1_2_3 4_5_6 7_8_9]"/>
+        <p>"If you wanted to rotate every row of an array backwards by a fixed amount, you could use "<Prim prim=Level/><Prim prim=Left/>" (using "<Prim prim=Level/>" will be discussed more in the "<A href="/docs/advancedarray">"Advanced Array Manipulation tutorial"</A>")."</p>
+        <Editor example="≑≺(↻¯) 2 [1_2_3 4_5_6 7_8_9]"/>
         <p>"If you want to make an inline function with exactly 2 terms, you can use the "<Prim prim=Bind/>" modifier instead of "<code>"()"</code>"s and save 1 character of space!"</p>
         <Editor example="/(-∶) 1_2_3_4_5\n/'-∶ 1_2_3_4_5"/>
         <p>"This looks nice with modifiers that take multiple functions like "<Prim prim=Under/>"."</p>
@@ -581,9 +581,9 @@ X 5"/>
         <Editor example="∵(|2.1 ⊟.×) 1_2_3 4_5_6"/>
         <p>"Stack signatures are useful for documenting functions to make sure that they are used correctly."</p>
         <p>"A signature declaration is "<em>"required"</em>" if the function's signature cannot be infered. The compiler can usually infer a function's signature unless you are doing something weird with higher-order functions or fiddling with function arrays, or if you are using "<Prim prim=Recur/>"sion."</p>
-        <Editor example="≑α(⊞|⊙.)+_- ⇡3"/> // Should fail
+        <Editor example="≑≻(⊞|⊙.)+_- ⇡3"/> // Should fail
         <p>"Simply add a signature declaration to fix this."</p>
-        <Editor example="≑α(|2 ⊞|⊙.)+_- ⇡3"/>
+        <Editor example="≑≻(|2 ⊞|⊙.)+_- ⇡3"/>
         <p>"In addition, an error is thrown if a function's signature can be inferred and the inferred signature does not match the declared signature. This can help validate that a function is correct."</p>
         <Editor example="≡(|2 ↻.) 1_2_3 ↯3_3⇡9"/> // Should fail
         <p><strong>"WARNING"</strong>": If the compiler cannot derive the stack signature of a function and you give it one which is "<em>"wrong"</em>", your code may no longer compile in future versions of the language."</p>

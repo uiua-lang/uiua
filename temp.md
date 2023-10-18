@@ -10,10 +10,10 @@ Recall that for `level`, the rank list `[0 0 … 0]` is equivalent to `each`, `[
 Here is a table of the proposed constants:
 | glyph | name    | rank specifier list |
 | ----- | ------- | ------------------- |
-| `α`   | `alpha` | `¯1_∞`              |
+| `≻`   | `alpha` | `¯1_∞`              |
 | `β`   | `beta`  | `¯1_∞_∞`            |
 | `γ`   | `gama`  | `¯1_¯1_∞`           |
-| `ω`   | `omega` | `∞_¯1`              |
+| `≺`   | `omega` | `∞_¯1`              |
 | `ψ`   | `psi`   | `∞_∞_¯1`            |
 | `χ`   | `chi`   | `∞_¯1_¯1`           |
 
@@ -28,9 +28,9 @@ This code using `distribute`
 ```
 becomes this code using `level` `omega`
 ```
-≑ω↻ 2 ↯3_4⇡12
+≑≺↻ 2 ↯3_4⇡12
 ```
-The rank list `∞_¯1` is called `ω` because the array being iterated over is the *last* one.
+The rank list `∞_¯1` is called `≺` because the array being iterated over is the *last* one.
 
 This code, which is annoying because the aguments to `distribute` have to be `flip`ped twice
 ```
@@ -38,9 +38,9 @@ This code, which is annoying because the aguments to `distribute` have to be `fl
 ```
 becomes
 ```
-≑α⊂ ↯3_3⇡9 5
+≑≻⊂ ↯3_3⇡9 5
 ```
-The rank list `¯1_∞` is called `α` because the array being iterated over is the *first* one.
+The rank list `¯1_∞` is called `≻` because the array being iterated over is the *first* one.
 
 The `length` `3` rank list constants let you iterate over 2 arrays while keeping 1 fixed, or vice-versa.
 
@@ -59,7 +59,7 @@ output:
 
 By having the rank list constants be made of `¯1`s and `∞`s, we can easily specify rank `0` for elements, `1` for lists, `2` for matrices, etc, by just `add`ing to the list.
 
-The new functionality for `fold` would make it encapsulate both behaviors you may be familiar with from functional languages, often called `foldl` (`∧ω`) and `foldr` (`∧α`). It would also allow multiple arities.
+The new functionality for `fold` would make it encapsulate both behaviors you may be familiar with from functional languages, often called `foldl` (`∧≺`) and `foldr` (`∧≻`). It would also allow multiple arities.
 
 To be clear, this change would:
 

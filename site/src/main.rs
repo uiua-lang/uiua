@@ -39,7 +39,7 @@ pub fn Site() -> impl IntoView {
         "An array-oriented tacit programming language".into_view(),
         "A programming language for point-free enjoyers".into_view(),
         "A programming language for variable dislikers".into_view(),
-        view!("What if APL had no "<code>"ω"</code>"?").into_view(),
+        view!("What if APL had no "<code>"≺"</code>"?").into_view(),
         view!("What if BQN had no "<code>"𝕩"</code>"?").into_view(),
         view!("What if LISP had fewer "<code>"()"</code>"s?").into_view(),
         view!("Check out "<a href="https://arraycast.com/">"The Array Cast"</a>).into_view(),

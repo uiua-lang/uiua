@@ -482,7 +482,7 @@ impl Lexer {
                     let begin = self.loc;
                     self.end(Primitive::Level, start);
                     self.loc = begin;
-                    self.end(Primitive::Omega, start);
+                    self.end(Primitive::Left, start);
                 }
 
                 '(' => self.end(OpenParen, start),
@@ -782,7 +782,7 @@ fn parse_format_fragments(s: &str) -> Vec<String> {
 }
 
 pub fn is_ident_char(c: char) -> bool {
-    c.is_alphabetic() && !"ⁿₙ".contains(c) && !('α'..='ω').contains(&c)
+    c.is_alphabetic() && !"ⁿₙ".contains(c) && !('≻'..='≺').contains(&c)
 }
 
 pub fn is_custom_glyph(c: char) -> bool {

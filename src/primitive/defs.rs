@@ -898,8 +898,8 @@ primitive!(
     /// ex: ≡/+ [1_2_3 4_5_6 7_8_9]  # Sum the elements of each row
     ///
     /// The number of arrays used depends on how many arguments the function takes.
-    /// ex: ≡⊂   1_2 [4_5 6_7]
-    /// ex: ≡∧≺+ 1_2 [4_5 6_7]
+    /// ex: ≡⊂    1_2 [4_5 6_7]
+    /// ex: ≡∧⋄~+ 1_2 [4_5 6_7]
     ///
     /// [rows] is equivalent to [level]`¯1` (or `level``[¯1 ¯1 …]` for multiple arrays).
     /// ex: ≑¯1/+ [1_2_3 4_5_6 7_8_9]

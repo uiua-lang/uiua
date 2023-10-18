@@ -11,6 +11,7 @@ Uiua is not yet stable.
 - Change [`level` `≑`](https://uiua.org/docs/level)'s glyph to reflect its relationship with [`each` `∵`](https://uiua.org/docs/each), [`rows` `≡`](https://uiua.org/docs/rows), and [`distribute` `∺`](https://uiua.org/docs/distribute). Code using `⍚` will continue to work and will be formatted as `≑`.
 - Add [`rock` `⋄`](https://uiua.org/docs/rock), [`surface` `~`](https://uiua.org/docs/surface), [`deep` `≊`](https://uiua.org/docs/deep), [`abyss` `≃`](https://uiua.org/docs/abyss), and [`seabed` `∸`](https://uiua.org/docs/seabed), which build rank lists to be used with [`level` `≑`](https://uiua.org/docs/level) and the new rank-generic modifiers
 - Change [`trace` `⸮`](https://uiua.org/docs/trace)'s glyph to let [`water` `~`](https://uiua.org/docs/water) use `~`.
+- Change [`match` `≍`](https://uiua.org/docs/match)'s glyph to avoid confusion with the new ocean functions' glyphs. Code using `≅` will continue to work and will be formatted as `≍`.
 - Remove `distribute`. Code using `∺` will continue to work and will be formatted as `≑~⋄`.
 
 ## 0.0.20 - 2023-10-16

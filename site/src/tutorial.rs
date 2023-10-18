@@ -746,8 +746,8 @@ fn TutorialTesting() -> impl IntoView {
 ~~~"#/>
         <p>"One nice pattern for writing tests is to put the expected result before the test computation and use"<Prim prim=Assert glyph_only=true/><Prim prim=Flip glyph_only=true/><Prim prim=Match glyph_only=true/><Prim prim=Over glyph_only=true/>"."</p>
         <p>"If the result does not match the expectation, that incorrect result will be thrown."</p>
-        <Editor example="~~~\n⍤∶≅, 4 +2 2 # Passes\n~~~"/>
-        <Editor example="~~~\n⍤∶≅, [2 3 5] +1 [1 2 3]\n~~~ #  ↓↓↓↓↓↓↓"/> // Should fail
+        <Editor example="~~~\n⍤∶≍, 4 +2 2 # Passes\n~~~"/>
+        <Editor example="~~~\n⍤∶≍, [2 3 5] +1 [1 2 3]\n~~~ #  ↓↓↓↓↓↓↓"/> // Should fail
 
         <h2 id="run-modes">"Run Modes"</h2>
         <p>"Whether tests will run or not depends on how you run the code."</p>

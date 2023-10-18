@@ -132,7 +132,7 @@ uiuisms!(
     /// Create a zero matrix of the same shape as another
     "≠. [1_1 2_2]",
     /// Check if an array is a palindrome
-    r#"≅⇌. "racecar""#,
+    r#"≍⇌. "racecar""#,
     /// Convert a number to a string
     r#"$"_" 17"#,
     /// Convert a string to a number
@@ -164,7 +164,7 @@ uiuisms!(
     /// Remove all instances of an element from a list
     "▽≠, 4 [1 4 2 0 5 4 3]",
     /// Remove all instances of a row from an array
-    "▽≑⋄~(¬≅)⊙. 2_0 [1_4 2_0 5_3 2_0]",
+    "▽≑⋄~(¬≍)⊙. 2_0 [1_4 2_0 5_3 2_0]",
     /// Filter by a fixed predicate
     "▽ =0◿2 . ⇡10",
     /// Filter by a dynamic predicate

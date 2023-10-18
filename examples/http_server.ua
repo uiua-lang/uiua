@@ -57,7 +57,7 @@ Respond ← ;spawn(
   &p.
 
   # Route to handler
-  ?(Home;)(Page) ≅"/".
+  ?(Home;)(Page) ≍"/".
   &p "Response:"
   &pf⧻.
   &p " bytes"

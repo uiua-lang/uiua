@@ -486,6 +486,7 @@ impl Lexer {
                     self.loc = begin;
                     self.end(Primitive::Rock, start);
                 }
+                '≅' => self.end(Primitive::Match, start),
 
                 '(' => self.end(OpenParen, start),
                 ')' => self.end(CloseParen, start),

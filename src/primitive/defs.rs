@@ -137,8 +137,8 @@ primitive!(
     /// This is a very common pattern.
     ///
     /// [duplicate] can be used to make a monadic left-hook, such as in this palindrome checker:
-    /// ex: ≅⇌. "friend"
-    /// ex: ≅⇌. "racecar"
+    /// ex: ≍⇌. "friend"
+    /// ex: ≍⇌. "racecar"
     /// Another commonly hooked function is [keep].
     /// ex: ▽=0◿3. [1 4 2 3 9 1 0 6 2 6 3]
     (1(2), Dup, Stack, ("duplicate", '.')),
@@ -623,9 +623,9 @@ primitive!(
     (1, Unbox, MonadicArray, ("unbox", '⊔')),
     /// Check if two arrays are exactly the same
     ///
-    /// ex: ≅ 1_2_3 [1 2 3]
-    /// ex: ≅ 1_2_3 [1 2]
-    (2, Match, DyadicArray, ("match", '≅')),
+    /// ex: ≍ 1_2_3 [1 2 3]
+    /// ex: ≍ 1_2_3 [1 2]
+    (2, Match, DyadicArray, ("match", '≍')),
     /// Combine two arrays as rows of a new array
     ///
     /// `first``shape` of the coupled array will *always* be `2`.
@@ -1474,8 +1474,8 @@ primitive!(
     /// ex: type 5
     /// ex: type "hello"
     /// ex: type (+)
-    /// ex: ∵type  {10 "dog" (≅⇌.)}
-    ///   : ∵(|1 type!) {10 "dog" (≅⇌.)}
+    /// ex: ∵type  {10 "dog" (≍⇌.)}
+    ///   : ∵(|1 type!) {10 "dog" (≍⇌.)}
     (1, Type, Misc, "type"),
     /// Get the stack signature of a value
     ///

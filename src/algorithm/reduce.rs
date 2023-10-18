@@ -9,6 +9,7 @@ use crate::{
     },
     array::{Array, ArrayValue, Shape},
     cowslice::cowslice,
+    function::Signature,
     primitive::Primitive,
     run::{ArrayArg, FunctionArg},
     value::Value,
@@ -105,19 +106,6 @@ where
     }
 }
 
-pub fn fold_right_n_1(env: &mut Uiua) -> UiuaResult {
-    crate::profile_function!();
-    let f = env.pop(FunctionArg(1))?;
-    match f.signature().args {
-        0..=2 => {
-            let acc = env.pop(ArrayArg(1))?;
-            let xs = env.pop(ArrayArg(2))?;
-            generic_fold_right_1(f, xs, Some(acc), env)
-        }
-        _ => generic_fold_n_1(f, env),
-    }
-}
-
 fn generic_fold_right_1(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
     if sig.outputs > 1 {
@@ -165,39 +153,6 @@ fn generic_fold_right_1(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua
                 "Cannot reduce a function that takes {args} arguments"
             )))
         }
-    }
-    Ok(())
-}
-
-fn generic_fold_n_1(f: Value, env: &mut Uiua) -> UiuaResult {
-    let sig = f.signature();
-    if sig.args.saturating_sub(sig.outputs) != 1 {
-        return Err(env.error(format!(
-            "Fold's function must take 1 more argument than it returns, \
-            but it takes {} and returns {}",
-            sig.args, sig.outputs
-        )));
-    }
-    let mut accs = Vec::with_capacity(sig.outputs);
-    for i in 0..sig.outputs {
-        accs.push(env.pop(ArrayArg(i + 1))?);
-    }
-    let xs = env.pop(ArrayArg(sig.outputs + 1))?;
-    for row in xs.into_rows() {
-        env.push(row);
-        for acc in accs.drain(..).rev() {
-            env.push(acc);
-        }
-        let should_break = env.call_catch_break(f.clone())?;
-        for _ in 0..sig.outputs {
-            accs.push(env.pop("folded function result")?);
-        }
-        if should_break {
-            break;
-        }
-    }
-    for acc in accs.drain(..).rev() {
-        env.push(acc);
     }
     Ok(())
 }
@@ -327,11 +282,6 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
     let get_ns = env.pop(FunctionArg(1))?;
     env.call(get_ns)?;
     let ns = env.pop("fold's rank list")?.as_rank_list(env, "")?;
-    if let Some((end, init)) = ns.split_last() {
-        if end.is_some_and(|n| n == -1) && !init.is_empty() && init.iter().all(Option::is_none) {
-            return fold_right_n_1(env);
-        }
-    }
     let f = env.pop(FunctionArg(2))?;
     let mut args = Vec::with_capacity(ns.len());
     for i in 0..ns.len() {
@@ -416,6 +366,7 @@ fn fold_recursive(
                     accs.push(env.pop("folded function result")?);
                 }
             }
+            accs.reverse();
             Ok(accs)
         } else if f.signature() == (array_count * 2 + acc_count, array_count) {
             // Accumulate only arrays
@@ -451,11 +402,12 @@ fn fold_recursive(
             Ok(true_accs)
         } else {
             Err(env.error(format!(
-                "Fold's function returns {} value(s), \
-                but its rank list and arguments suggest {} \
-                accumulator(s)",
-                f.signature().outputs,
-                acc_count
+                "Fold's function's signature is {}. \n  \
+                If this is an accumulating fold, its rank list suggest {} accumulator(s). \n  \
+                If this is a reducing fold, its rank list suggests a signature of {}.",
+                f.signature(),
+                acc_count,
+                Signature::new(array_count * 2 + acc_count, array_count)
             )))
         }
     } else {

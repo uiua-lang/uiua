@@ -8,6 +8,7 @@ Within a each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
 - **Rank/Arity-generic reduction and tabling modifiers**
+  - Separate `fold` into a `collapse` function
 - `under` aggregating `group` and `partition`
 - Add channels for spawned threads
 - Sift+delete to delete whole linestribute`

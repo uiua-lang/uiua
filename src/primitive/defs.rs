@@ -1184,9 +1184,29 @@ primitive!(
     ([2], Level, IteratingModifier, ("level", '≑')),
     /// Apply a function to aggregate at different array depths
     ///
-    /// Expect a rank to operate on, a function, and an array.
-    /// The rank supplied indicates the desired rank of the operand.
-    /// The array will be split into arrays of that rank, and the function will be applied between pairs of those arrays.
+    /// Expect a list of ranks to operate on, a function, and some arrays.
+    /// The ranks supplied indicate the desired ranks of the arguments to the function.
+    /// The arrays will be split into arrays of those ranks, and the function will be applied to tuples of those arrays.
+    /// The function must take as many arguments as there are ranks.
+    ///
+    /// A simple example is summing with an initial value.
+    /// Here, we specify rank `0` for the first array. `10` is rank `0`, so it is used as an accumulator.
+    /// We specify rank `0` for the second array. `[1 2 3]` is rank `1`, so it's elements will be iterated over.
+    /// ex: ∧0_0+ 10 [1 2 3]
+    /// Let's use three array arguments. The first is a matrix. The second is a list where each element will be used to [rotate] the corresponding row in the matrix. The third is an accumulator to which each [rotate]d row will be [add]ed.
+    /// ex: ∧1_0_0(+↻∶) ↯3_4⇡12 [1 2 3] 10
+    ///
+    /// Negative ranks indicate that many ranks *less* than the associated array's rank.
+    /// [infinity] ranks indicate exactly the associated array's rank.
+    /// To [fold] all the top-level rows an array, use rank `¯1`.
+    /// ex: ∧∞_¯1(⊂⊙⍉) [π π π] ↯2_3_4⇡24
+    ///
+    /// [fold] is good when you need to keep track of values that change in some way.
+    /// For example, if you had a list of accelerations at different time steps and you wanted to find the final velocity and position of some object, you would simply mark the position and velocity vectors as accumulators.
+    /// ex: [0_1 1_1 1_0 ¯1_¯1]
+    ///   : ∧∞_∞_1(+⊙(.+)) 0_0 0_0
+    /// However, for this particular example, it is probably better to use [scan].
+    /// ex: /+∶⊢⇌.\+[0_1 1_1 1_0 ¯1_¯1]
     ([2], Fold, AggregatingModifier, ("fold", '∧')),
     /// Apply a function to reduce at different array depths
     ([2], Collapse, AggregatingModifier, ("collapse", '⌿')),

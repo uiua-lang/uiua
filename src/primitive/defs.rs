@@ -1174,8 +1174,8 @@ primitive!(
     /// While `level``¯1` is equivelent to [rows] called with a single array, `level``[¯1 ¯1]` is equivalent to [rows] called with two arrays, and so on.
     /// ex: a ← ↯3_3   ⇡9
     ///   : b ← ↯3_3+10⇡9
-    ///   :        ≡⊂ a b
-    ///   : ≑[¯1 ¯1]⊂ a b
+    ///   :      ≡⊂ a b
+    ///   : ≑¯1_¯1⊂ a b
     ///
     /// One way to think of the number(s) passed to [level] is as the rank of the array that the function will be applied to.
     /// `level``1` will always apply to rank `1` arrays, no matter how many dimensions the original array has.

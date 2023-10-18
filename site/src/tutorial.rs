@@ -16,6 +16,7 @@ pub enum TutorialPage {
     Bindings,
     Functions,
     AdvancedStack,
+    AdvancedArray,
     Modules,
     Testing,
 }
@@ -33,6 +34,7 @@ impl TutorialPage {
             Self::Bindings => "Bindings",
             Self::Functions => "Modifiers and Functions",
             Self::AdvancedStack => "Advanced Stack Manipulation",
+            Self::AdvancedArray => "Advanced Array Manipulation",
             Self::Modules => "Modules",
             Self::Testing => "Testing",
         }
@@ -49,6 +51,7 @@ pub fn Tutorial(page: TutorialPage) -> impl IntoView {
         TutorialPage::Bindings => TutorialBindings().into_view(),
         TutorialPage::Functions => TutorialFunctions().into_view(),
         TutorialPage::AdvancedStack => TutorialAdvancedStack().into_view(),
+        TutorialPage::AdvancedArray => TutorialAdvancedArray().into_view(),
         TutorialPage::Modules => TutorialModules().into_view(),
         TutorialPage::Testing => TutorialTesting().into_view(),
     };
@@ -668,6 +671,16 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <p>"Try it out!"</p>
         <Editor example="+gadigagaid 1 2 3 4 5"/>
         <p>"In general, planet notation as complex as the mathematical function example above should only be used when it is necessary. For that examples like that with 4+ values, it is. However, when working with fewer values, you can get very far with just "<Prim prim=Dup/>" and "<Prim prim=Flip/>". Maybe sprinkle some "<Prim prim=Over/>"s and "<Prim prim=Dip/>"s in there too."</p>
+    }
+}
+
+#[component]
+fn TutorialAdvancedArray() -> impl IntoView {
+    use Primitive::*;
+    view! {
+        <h1>"Advanced Array Manipulation"</h1>
+        <p>"Sometime the operation you need to perform on an array is more complicated than something like "<Prim prim=Reduce/>", "<Prim prim=Rows/>", or "<Prim prim=Table/>" allows."</p>
+
     }
 }
 

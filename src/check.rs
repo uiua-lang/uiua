@@ -235,10 +235,7 @@ impl<'a> VirtualEnv<'a> {
                             let creating_array =
                                 sig.args < sig.outputs && !self.array_stack.is_empty();
                             if creating_array {
-                                for _ in 0..sig.args {
-                                    self.pop()?;
-                                }
-                                self.set_min_height();
+                                self.handle_sig(sig)?;
                             } else {
                                 return Err(format!(
                                     "repeat with no number and a function with signature {sig}"

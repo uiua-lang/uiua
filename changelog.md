@@ -9,7 +9,7 @@ Uiua is not yet stable.
 - Add the [`collapse` `⌿`](https://uiua.org/docs/collapse) modifier, which is a rank-generic version of [`reduce` `/`](https://uiua.org/docs/reduce)
 - [`fold` `∧`](https://uiua.org/docs/fold) is now rank-generic and requires a rank list
 - Change [`level` `≑`](https://uiua.org/docs/level)'s glyph to reflect its relationship with [`each` `∵`](https://uiua.org/docs/each), [`rows` `≡`](https://uiua.org/docs/rows), and [`distribute` `∺`](https://uiua.org/docs/distribute). Code using `⍚` will continue to work and will be formatted as `≑`.
-- Add [`water` `~`](https://uiua.org/docs/water) and [`rock` `⋄`](https://uiua.org/docs/rock), which build rank lists to be used with [`level` `≑`](https://uiua.org/docs/level) and the new rank-generic modifiers
+- Add [`rock` `⋄`](https://uiua.org/docs/rock), [`surface` `~`](https://uiua.org/docs/surface), [`deep` `≊`](https://uiua.org/docs/deep), [`abyss` `≃`](https://uiua.org/docs/abyss), and [`seabed` `∸`](https://uiua.org/docs/seabed), which build rank lists to be used with [`level` `≑`](https://uiua.org/docs/level) and the new rank-generic modifiers
 - Change [`trace` `⸮`](https://uiua.org/docs/trace)'s glyph to let [`water` `~`](https://uiua.org/docs/water) use `~`.
 - Remove `distribute`. Code using `∺` will continue to work and will be formatted as `≑~⋄`.
 

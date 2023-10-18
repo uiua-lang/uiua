@@ -1187,7 +1187,7 @@ primitive!(
     /// `join` `infinity` to a list
     (1, Rock, Misc, ("rock", '⋄')),
     /// `join` `¯1` to a list
-    (1, Surface, Misc, ("surf", '~')),
+    (1, Surface, Misc, ("surface", '~')),
     /// `join` `2` to a list
     (1, Deep, Misc, ("deep", '≊')),
     /// `join` `1` to a list

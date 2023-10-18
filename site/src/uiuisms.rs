@@ -121,10 +121,10 @@ uiuisms!(
     "/↧ [1 4 5 3 2]",
     /// Sort an array
     "⊏⍏. [1 4 5 3 2]",
-    /// Get n numbers between 0 and 1 inclusive
-    "÷-1∶⇡. 11",
     /// Get n numbers between 0 and 1 exclusive
     "÷∶⇡. 10",
+    /// Get n numbers between 0 and 1 inclusive
+    "÷-1∶⇡. 11",
     /// Create an identity matrix
     "⊞=.⇡ 5",
     /// Create an X matrix
@@ -137,14 +137,14 @@ uiuisms!(
     r#"$"_" 17"#,
     /// Convert a string to a number
     r#"parse "42""#,
-    /// Parse a string as a base 2 number
-    r#"⍘⋯⇌-@0 "110""#,
-    /// Parse a string as a base 3 <= X <= 9 number
-    r#"/+×ⁿ⇌⇡⧻,⊙-∶@0 3 "210""#,
     /// Convert a string to a list of code points
     r#"-@\0 "Uiua""#,
     /// Convert a list of code points to a string
     r#"+@\0 [85 105 117 97]"#,
+    /// Parse a string as a base 2 number
+    r#"⍘⋯⇌-@0 "110""#,
+    /// Parse a string as a base 3 <= X <= 9 number
+    r#"/+×ⁿ⇌⇡⧻,⊙-∶@0 3 "210""#,
     /// Find the indices of all 1s
     "▽∶⇡⧻. [0 1 0 0 1]",
     /// Interleave two arrays
@@ -204,11 +204,11 @@ uiuisms!(
     /// Dot product
     "/+× [1 2 3] [4 ¯5 6]",
     /// Cross product
-    "-⊙'×⊓'↻2'↻1×⊓'↻1'↻2,, 4_5_6 1_2_3",
+    "4_5_6 1_2_3\n-⊙'×⊓'↻2'↻1×⊓'↻1'↻2,,",
     /// Matrix product
     "[1_2 3_4 5_6] [7_8_9 10_11_12]\n⊠(/+×)⊙⍉",
     /// Matrix power (Also works with scalars)
-    ";∶⍥(⊠(/+×)⊙⍉,)∶⊙∶⊞=.⇡⬚1⊢△. [1_2 3_4] 4",
+    "[1_2 3_4] 4\n;∶⍥(⊠(/+×)⊙⍉,)∶⊙∶⊞=.⇡⬚1⊢△.",
     //  /// Evaluate a polynomial with given coefficients at a scalar or square matrix
     //     r"/+×∺(  Note: Not sure how to fix this with new distribute order
     //   ⊙∶⊞=.⇡⬚1⊢△.:

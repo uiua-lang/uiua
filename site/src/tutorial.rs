@@ -681,6 +681,23 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <h1>"Advanced Array Manipulation"</h1>
         <p>"Sometime the operation you need to perform on an array is more complicated than something like "<Prim prim=Reduce/>", "<Prim prim=Rows/>", or "<Prim prim=Table/>" allows."</p>
 
+        <h2 id="rank-lists">"Rank Lists"</h2>
+        <p>"Uiua has 4 special modifiers that allow you to specify the ranks of arrays that you want to operate on."</p>
+        <p>"Specified ranks are passed as a single number or a list of numbers."</p>
+        <p>"Ranks can be specified as any integer, or "<Prim prim=Infinity/>"."</p>
+        <br/>
+        <p>"To see how this works, we can use "<Prim prim=Box/>" with the most basic rank-generic modifier, "<Prim prim=Level/>"."</p>
+        <p>"In the examples below, pay attention to which parts of the array end up in boxes"</p>
+        <Editor example="≑0□ ↯2_3_4⇡24"/>
+        <Editor example="≑1□ ↯2_3_4⇡24"/>
+        <Editor example="≑2□ ↯2_3_4⇡24"/>
+        <Editor example="≑3□ ↯2_3_4⇡24"/>
+        <Editor example="≑∞□ ↯2_3_4⇡24"/>
+        <Editor example="≑¯1□ ↯2_3_4⇡24"/>
+        <Editor example="≑¯2□ ↯2_3_4⇡24"/>
+        <Editor example="≑¯3□ ↯2_3_4⇡24"/>
+        <p>"As you can see, non-negative ranks refer to the rank of the argument that will be passed to the modifier's function while negative ranks refer to that many ranks "<em>"less"</em>" than the rank of the argument array."</p>
+        <p><Prim prim=Infinity/>" refers to the exact rank of the argument array."</p>
     }
 }
 

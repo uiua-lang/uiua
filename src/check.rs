@@ -99,30 +99,6 @@ impl<'a> BasicValue<'a> {
             _ => Err(format!("{} with non-function", err())),
         }
     }
-    fn expect_ranks<T: fmt::Display>(
-        &self,
-        err: impl Fn() -> T + Copy,
-    ) -> Result<Vec<Option<isize>>, String> {
-        Ok(match self {
-            BasicValue::Num(n) => {
-                if n.fract() == 0.0 {
-                    vec![Some(*n as isize)]
-                } else if *n == INFINITY {
-                    vec![None]
-                } else {
-                    return Err("fold with non-integer rank".into());
-                }
-            }
-            BasicValue::Arr(vals) => {
-                let mut ranks = Vec::new();
-                for val in vals {
-                    ranks.extend(val.expect_ranks(err)?);
-                }
-                ranks
-            }
-            _ => return Err(format!("{} with unknown ranks", err())),
-        })
-    }
 }
 
 impl FromIterator<f64> for BasicValue<'_> {
@@ -347,31 +323,15 @@ impl<'a> VirtualEnv<'a> {
                         ));
                     }
                 }
-                Level => {
+                Level | Fold | Combinate => {
                     let _ranks = self.pop()?;
                     let sig = self.pop()?.expect_function(|| prim)?;
                     self.handle_sig(sig)?;
                 }
-                Fold => {
-                    let ranks = self.pop()?.expect_ranks(|| prim)?;
-                    let f = self.pop()?;
-                    let sig = f.signature();
-                    let fixed_count = ranks.iter().filter(|r| r.is_none()).count();
-                    let iter_count = ranks.len() - fixed_count;
-                    if sig.outputs == fixed_count {
-                        self.handle_sig(sig)?;
-                    } else if sig == (iter_count * 2 + fixed_count, iter_count) {
-                        self.handle_args_outputs(ranks.len(), iter_count)?;
-                    } else {
-                        return Err(format!(
-                            "fold's function's signature is {}. \n  \
-                            If this is an accumulating fold, its rank list suggest {} accumulator(s). \n  \
-                            If this is a reducing fold, its rank list suggests a signature of {}.",
-                            sig,
-                            fixed_count,
-                            Signature::new(iter_count * 2 + fixed_count, iter_count)
-                        ));
-                    }
+                Collapse => {
+                    let _ranks = self.pop()?;
+                    let sig = self.pop()?.expect_function(|| prim)?;
+                    self.handle_args_outputs(sig.args / 2, sig.outputs)?;
                 }
                 Try => {
                     let f = self.pop()?;

@@ -1174,12 +1174,14 @@ primitive!(
     /// ex: ≑[1 1]⊂ ↯3_3⇡9 10_11_12 # Join two rank 1 arrays
     /// ex: ≑[1 0]⊂ ↯3_3⇡9 10_11_12 # Join rank 1 arrays with scalars
     ([2], Level, IteratingModifier, ("level", '≑')),
-    /// Apply a function to reduce at different array depths
+    /// Apply a function to aggregate at different array depths
     ///
     /// Expect a rank to operate on, a function, and an array.
     /// The rank supplied indicates the desired rank of the operand.
     /// The array will be split into arrays of that rank, and the function will be applied between pairs of those arrays.
     ([2], Fold, AggregatingModifier, ("fold", '∧')),
+    /// Apply a function to reduce at different array depths
+    ([2], Collapse, AggregatingModifier, ("collapse", '⌿')),
     /// Apply a function to combinations at array depths
     ([2], Combinate, IteratingModifier, ("combinate", '◳')),
     /// Set the fill value for a function

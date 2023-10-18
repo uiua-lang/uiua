@@ -345,71 +345,37 @@ fn fold_recursive(
         }
         let row_count = arrays[0].row_count();
         let mut array_iters: Vec<_> = arrays.into_iter().map(|array| array.into_rows()).collect();
-        if acc_count == f.signature().outputs {
-            // Accumulate only accs
-            for _ in 0..row_count {
-                let mut accs_iter = accs.drain(..).rev();
-                let mut arr_i = array_count;
-                for n in ns.iter().rev() {
-                    match n {
-                        0 => env.push(accs_iter.next().unwrap()),
-                        1 => {
-                            arr_i -= 1;
-                            env.push(array_iters[arr_i].next().unwrap())
-                        }
-                        _ => unreachable!(),
-                    }
-                }
-                env.call(f.clone())?;
-                drop(accs_iter);
-                for _ in 0..acc_count {
-                    accs.push(env.pop("folded function result")?);
-                }
-            }
-            accs.reverse();
-            Ok(accs)
-        } else if f.signature() == (array_count * 2 + acc_count, array_count) {
-            // Accumulate only arrays
-            if row_count == 0 {
-                return Err(env.error("Cannot fold empty array(s)"));
-            }
-            let mut true_accs = Vec::with_capacity(array_count);
-            for iter in &mut array_iters {
-                true_accs.push(iter.next().unwrap());
-            }
-            for _ in 0..row_count - 1 {
-                let mut acc_i = acc_count;
-                let mut arr_i = array_count;
-                for n in ns.iter().rev() {
-                    match n {
-                        0 => {
-                            acc_i -= 1;
-                            env.push(accs[acc_i].clone())
-                        }
-                        1 => {
-                            arr_i -= 1;
-                            env.push(array_iters[arr_i].next().unwrap());
-                            env.push(true_accs.pop().unwrap());
-                        }
-                        _ => unreachable!(),
-                    }
-                }
-                env.call(f.clone())?;
-                for _ in 0..array_count {
-                    true_accs.push(env.pop("folded function result")?);
-                }
-            }
-            Ok(true_accs)
-        } else {
-            Err(env.error(format!(
-                "Fold's function's signature is {}. \n  \
-                If this is an accumulating fold, its rank list suggest {} accumulator(s). \n  \
-                If this is a reducing fold, its rank list suggests a signature of {}.",
+        let expected_sig = Signature::new(array_count + acc_count, acc_count);
+        if expected_sig != f.signature() {
+            return Err(env.error(format!(
+                "Fold's function's signature is {}, but its rank \
+                lists suggests a signature of {}",
                 f.signature(),
-                acc_count,
-                Signature::new(array_count * 2 + acc_count, array_count)
-            )))
+                expected_sig
+            )));
         }
+        // Accumulate only accs
+        for _ in 0..row_count {
+            let mut accs_iter = accs.drain(..).rev();
+            let mut arr_i = array_count;
+            for n in ns.iter().rev() {
+                match n {
+                    0 => env.push(accs_iter.next().unwrap()),
+                    1 => {
+                        arr_i -= 1;
+                        env.push(array_iters[arr_i].next().unwrap())
+                    }
+                    _ => unreachable!(),
+                }
+            }
+            env.call(f.clone())?;
+            drop(accs_iter);
+            for _ in 0..acc_count {
+                accs.push(env.pop("folded function result")?);
+            }
+        }
+        accs.reverse();
+        Ok(accs)
     } else {
         // Recursive case
         let mut row_count = 0;
@@ -449,5 +415,156 @@ fn fold_recursive(
             args = fold_recursive(f.clone(), args, &dec_ns, env)?;
         }
         Ok(args)
+    }
+}
+
+pub fn collapse(env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
+    let get_ns = env.pop(FunctionArg(1))?;
+    env.call(get_ns)?;
+    let ns = env.pop("collapse's rank list")?.as_rank_list(env, "")?;
+    let f = env.pop(FunctionArg(2))?;
+    let mut args = Vec::with_capacity(ns.len());
+    for i in 0..ns.len() {
+        let arg = env.pop(ArrayArg(i + 1))?;
+        args.push(arg);
+    }
+    let ns: Vec<usize> = ns
+        .into_iter()
+        .zip(&args)
+        .map(|(n, arg)| rank_to_depth(n, arg.rank()))
+        .collect();
+    let res = collapse_recursive(f, &mut args, &ns, env)?;
+    for val in res {
+        env.push(val);
+    }
+    Ok(())
+}
+
+fn collapse_recursive(
+    f: Value,
+    args: &mut Vec<Value>,
+    ns: &[usize],
+    env: &mut Uiua,
+) -> UiuaResult<Vec<Value>> {
+    // Determine fixed and iterator counts
+    let mut fixed_count = 0;
+    let mut array_count = 0;
+    for &n in ns {
+        match n {
+            0 => fixed_count += 1,
+            1 => array_count += 1,
+            _ => {}
+        }
+    }
+    let mut fixeds = Vec::with_capacity(fixed_count);
+    let mut arrays = Vec::with_capacity(array_count);
+    for (n, arg) in ns.iter().zip(args.drain(..)) {
+        if *n == 0 {
+            fixeds.push(arg);
+        } else {
+            arrays.push(arg);
+        }
+    }
+    if fixed_count + array_count == ns.len() {
+        // Base case
+        if arrays.is_empty() {
+            return Ok(Vec::new());
+        }
+        if let Some(w) = arrays
+            .windows(2)
+            .find(|w| w[0].row_count() != w[1].row_count())
+        {
+            return Err(env.error(format!(
+                "Cannot collapse arrays with shapes {} and {}",
+                w[0].format_shape(),
+                w[1].format_shape()
+            )));
+        }
+        let row_count = arrays[0].row_count();
+        let mut array_iters: Vec<_> = arrays.into_iter().map(|array| array.into_rows()).collect();
+        if f.signature() != (array_count * 2 + fixed_count, array_count) {
+            return Err(env.error(format!(
+                "Collapse's function's signature is {}, but its rank list suggests a signature of {}.",
+                f.signature(),
+                Signature::new(array_count * 2 + fixed_count, array_count)
+            )));
+        }
+        // Accumulate only arrays
+        if row_count == 0 {
+            return Err(env.error("Cannot collapse empty array(s)"));
+        }
+        let mut accs = Vec::with_capacity(array_count);
+        for iter in &mut array_iters {
+            accs.push(iter.next().unwrap());
+        }
+        for _ in 0..row_count - 1 {
+            let mut fixed_i = fixed_count;
+            let mut arr_i = array_count;
+            for n in ns.iter().rev() {
+                match n {
+                    0 => {
+                        fixed_i -= 1;
+                        env.push(fixeds[fixed_i].clone())
+                    }
+                    1 => {
+                        arr_i -= 1;
+                        env.push(array_iters[arr_i].next().unwrap());
+                        env.push(accs.pop().unwrap());
+                    }
+                    _ => unreachable!(),
+                }
+            }
+            env.call(f.clone())?;
+            for _ in 0..array_count {
+                accs.push(env.pop("collapsed function result")?);
+            }
+        }
+        Ok(accs)
+    } else {
+        // Recursive case
+        let mut row_count = 0;
+        for (i, a) in arrays.iter().enumerate() {
+            for b in arrays.iter().skip(i + 1) {
+                if a.row_count() != b.row_count() {
+                    return Err(env.error(format!(
+                        "Cannot collapse arrays with shapes {} and {}",
+                        a.format_shape(),
+                        b.format_shape()
+                    )));
+                }
+            }
+            row_count = a.row_count();
+        }
+        if row_count == 0 {
+            return Err(env.error("Cannot collapse empty array(s)"));
+        }
+        let dec_ns: Vec<usize> = ns.iter().map(|n| n.saturating_sub(1)).collect();
+        let mut row_iters: Vec<_> = arrays.into_iter().map(Value::into_rows).collect();
+        for i in 0..row_count {
+            let mut iter_i = 0;
+            let mut fixed_i = 0;
+            for n in ns {
+                if *n == 0 {
+                    args.push(fixeds[fixed_i].clone());
+                    fixed_i += 1;
+                } else {
+                    args.push(row_iters[iter_i].next().unwrap());
+                    iter_i += 1;
+                }
+            }
+            let args = collapse_recursive(f.clone(), args, &dec_ns, env)?;
+            for arg in args.into_iter().rev() {
+                env.push(arg);
+            }
+            if i > 0 {
+                env.call(f.clone())?;
+            }
+        }
+        let mut res = Vec::with_capacity(array_count);
+        for _ in 0..array_count {
+            res.push(env.pop("collapsed function result")?);
+        }
+        Ok(res)
     }
 }

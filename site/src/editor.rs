@@ -1652,9 +1652,10 @@ fn run_code(code: &str) -> Vec<OutputItem> {
         if !output.is_empty() {
             output.push(OutputItem::String("".into()));
         }
-        if output.len() > 10 {
-            output.truncate(10);
-            output.push(OutputItem::String("...Additional output truncated".into()));
+        const MAX_OUTPUT_BEFORE_ERROR: usize = 60;
+        if output.len() >= MAX_OUTPUT_BEFORE_ERROR {
+            output = output.split_off(output.len() - MAX_OUTPUT_BEFORE_ERROR);
+            output[0] = OutputItem::String("Previous output truncated...".into());
         }
         let formatted = error.show(false);
         let execution_limit_reached = formatted.contains("Maximum execution time exceeded");

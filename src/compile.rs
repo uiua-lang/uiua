@@ -141,10 +141,9 @@ impl Uiua {
                 if let Some(sig) = binding.signature {
                     make_fn(instrs, sig.value)
                 } else {
-                    return Err(UiuaError::Run(
-                        Span::Code(binding.name.span.clone())
-                            .sp(format!("Cannot infer function signature: {e}")),
-                    ));
+                    return Err(UiuaError::Run(Span::Code(binding.name.span.clone()).sp(
+                        format!("Cannot infer function signature: {e}. A signature can be declared after the `←`."),
+                    )));
                 }
             }
         };
@@ -416,10 +415,9 @@ impl Uiua {
                 if let Some(declared_sig) = &func.signature {
                     declared_sig.value
                 } else {
-                    return Err(UiuaError::Run(
-                        Span::Code(span.clone())
-                            .sp(format!("Cannot infer function signature: {e}")),
-                    ));
+                    return Err(UiuaError::Run(Span::Code(span.clone()).sp(format!(
+                        "Cannot infer function signature: {e}. A signature can be declared after the opening `(`."
+                    ))));
                 }
             }
         };

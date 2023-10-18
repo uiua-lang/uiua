@@ -1,4 +1,4 @@
-use std::{error::Error, fmt, path::Path};
+use std::{error::Error, fmt, iter::once, path::Path};
 
 use crate::{
     ast::*,
@@ -506,7 +506,23 @@ impl Parser {
     }
     fn try_term(&mut self) -> Option<Sp<Word>> {
         Some(if let Some(prim) = self.try_prim() {
-            prim.map(Word::Primitive)
+            if prim.value.is_ocean() {
+                let mut ocean_parts = Vec::new();
+                while let Some(part) = self.try_ocean() {
+                    ocean_parts.push(part);
+                }
+                if ocean_parts.is_empty() {
+                    prim.map(Word::Primitive)
+                } else {
+                    let span = prim
+                        .span
+                        .clone()
+                        .merge(ocean_parts.last().unwrap().span.clone());
+                    span.sp(Word::Ocean(once(prim).chain(ocean_parts).collect()))
+                }
+            } else {
+                prim.map(Word::Primitive)
+            }
         } else if let Some(ident) = self.try_ident() {
             ident.map(Word::Ident)
         } else if let Some(sn) = self.try_num() {
@@ -567,6 +583,17 @@ impl Parser {
     }
     fn try_prim(&mut self) -> Option<Sp<Primitive>> {
         for prim in Primitive::all() {
+            let op_span = self
+                .try_exact(prim)
+                .or_else(|| prim.ascii().and_then(|simple| self.try_exact(simple)));
+            if let Some(span) = op_span {
+                return Some(span.sp(prim));
+            }
+        }
+        None
+    }
+    fn try_ocean(&mut self) -> Option<Sp<Primitive>> {
+        for prim in Primitive::all().filter(Primitive::is_ocean) {
             let op_span = self
                 .try_exact(prim)
                 .or_else(|| prim.ascii().and_then(|simple| self.try_exact(simple)));

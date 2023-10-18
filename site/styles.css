@@ -613,18 +613,18 @@ input[type=number] {
 }
 
 @media (prefers-color-scheme: dark) {
-    .stack-function-button {
+    .stack-function {
         color: #d1daec;
     }
 }
 
 @media (prefers-color-scheme: light) {
-    .stack-function-button {
+    .stack-function {
         color: #344;
     }
 }
 
-.noadic-function-button {
+.noadic-function {
     color: #ed5e6a;
 }
 
@@ -642,6 +642,10 @@ input[type=number] {
 
 .dyadic-modifier {
     color: #cc6be9;
+}
+
+.ocean-function {
+    color: #03d7d9;
 }
 
 .trans {

@@ -6,7 +6,8 @@ Uiua is not yet stable.
 ### Language
 - Add the [`pierce` `⍆`](https://uiua.org/docs/pierce) modifier, which calls its function and implicitly boxes/unboxes values
 - Change [`level` `≑`](https://uiua.org/docs/level)'s glyph to reflect its relationship with [`each` `∵`](https://uiua.org/docs/each), [`rows` `≡`](https://uiua.org/docs/rows), and [`distribute` `∺`](https://uiua.org/docs/distribute). Code using `⍚` will continue to work and will be formatted as `≑`.
-- Add [`left` `≺`](https://uiua.org/docs/left), [`port` `≾`](https://uiua.org/docs/port), [`west` `≼`](https://uiua.org/docs/west), [`right` `≻`](https://uiua.org/docs/right), [`starboard` `≿`](https://uiua.org/docs/starboard), and [`east` `≽`](https://uiua.org/docs/east), which define common rank lists to be used with [`level` `≑`](https://uiua.org/docs/level) and the new rank-generic modifiers
+- Add [`water` `~`](https://uiua.org/docs/water) and [`rock` `⋄`](https://uiua.org/docs/rock), which build rank lists to be used with [`level` `≑`](https://uiua.org/docs/level) and the new rank-generic modifiers
+- Change [`trace` `⸮`](https://uiua.org/docs/trace)'s glyph to let [`water` `~`](https://uiua.org/docs/water) use `~`.
 - Remove `distribute`. Code using `∺` will continue to work and will be formatted as `≑≺`.
 
 ## 0.0.20 - 2023-10-16

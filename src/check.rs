@@ -1,4 +1,4 @@
-use std::{borrow::Cow, cmp::Ordering, f64::INFINITY, fmt};
+use std::{borrow::Cow, cmp::Ordering, fmt};
 
 use crate::{
     array::Array,
@@ -141,20 +141,6 @@ impl<'a> VirtualEnv<'a> {
             Instr::Dynamic(f) => self.handle_sig(f.signature)?,
             Instr::DropTempInline { .. } => {}
             Instr::Prim(prim, _) => match prim {
-                Right => self.stack.push(BasicValue::from_iter([-1.0, INFINITY])),
-                Starboard => self
-                    .stack
-                    .push(BasicValue::from_iter([-1.0, INFINITY, INFINITY])),
-                East => self
-                    .stack
-                    .push(BasicValue::from_iter([-1.0, -1.0, INFINITY])),
-                Left => self.stack.push(BasicValue::from_iter([INFINITY, -1.0])),
-                Port => self
-                    .stack
-                    .push(BasicValue::from_iter([INFINITY, INFINITY, -1.0])),
-                West => self
-                    .stack
-                    .push(BasicValue::from_iter([INFINITY, -1.0, -1.0])),
                 Reduce | Scan => {
                     let sig = self.pop()?.expect_function(|| prim)?;
                     let outputs = match (sig.args, sig.outputs) {

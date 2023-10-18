@@ -6,7 +6,10 @@ use ecow::EcoVec;
 use tinyvec::tiny_vec;
 
 use crate::{
-    algorithm::{loops::rank_to_depth, pervade::*},
+    algorithm::{
+        loops::{rank_list, rank_to_depth},
+        pervade::*,
+    },
     array::{Array, ArrayValue, Shape},
     primitive::Primitive,
     run::{ArrayArg, FunctionArg},
@@ -203,9 +206,7 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
 
 pub fn combinate(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let get_ns = env.pop(FunctionArg(1))?;
-    env.call_error_on_break(get_ns, "break is not allowed in level")?;
-    let ns = env.pop("combinate's rank list")?.as_rank_list(env, "")?;
+    let ns = rank_list("Combinate", env)?;
     if ns.len() < 2 {
         return Err(env.error(format!(
             "Combinate's rank list must have at least 2 elements, but it has {}",

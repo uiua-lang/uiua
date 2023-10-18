@@ -4,7 +4,7 @@
 
 mod defs;
 pub use defs::*;
-use ecow::{eco_vec, EcoVec};
+use ecow::EcoVec;
 
 use std::{
     borrow::Cow,
@@ -165,6 +165,9 @@ impl Primitive {
     pub fn is_modifier(&self) -> bool {
         self.modifier_args().is_some()
     }
+    pub fn is_ocean(&self) -> bool {
+        matches!(self, Primitive::Rock | Primitive::Water)
+    }
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
         // Nothing deprecated at the moment
         None
@@ -213,7 +216,7 @@ impl Primitive {
             "ga" => return Some(Primitive::Gap),
             "di" => return Some(Primitive::Dip),
             "pi" => return Some(Primitive::Pi),
-            "&n" => return Some(Primitive::Now),
+            "ro" => return Some(Primitive::Rock),
             _ => {}
         }
         if let Some(prim) = Primitive::all().find(|p| p.names().is_some_and(|n| n.text == name)) {
@@ -258,30 +261,26 @@ impl Primitive {
     }
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         macro_rules! constant {
-            ($name:ident, $value:expr) => {{
-                thread_local! {
-                    static $name: Value = $value.into();
+            ($name:ident, $value:expr) => {
+                fn $name() -> Value {
+                    thread_local! {
+                        #[allow(non_upper_case_globals)]
+                        static $name: Value = $value.into();
+                    }
+                    $name.with(Value::clone)
                 }
-                env.push($name.with(Value::clone));
-            }};
+            };
         }
+        constant!(eta, PI / 2.0);
+        constant!(pi, PI);
+        constant!(tau, TAU);
+        constant!(inf, INFINITY);
         match self {
-            Primitive::Eta => constant!(ETA, PI / 2.0),
-            Primitive::Pi => constant!(PI_, PI),
-            Primitive::Tau => constant!(TAU_, TAU),
-            Primitive::Infinity => constant!(INF, INFINITY),
-            Primitive::Right => constant!(ALPHA, eco_vec![-1.0, INFINITY]),
-            Primitive::Starboard => constant!(BETA, eco_vec![-1.0, INFINITY, INFINITY]),
-            Primitive::East => constant!(GAMMA, eco_vec![-1.0, -1.0, INFINITY]),
-            Primitive::Left => constant!(OMEGA, eco_vec![INFINITY, -1.0]),
-            Primitive::Port => constant!(PSI, eco_vec![INFINITY, INFINITY, -1.0]),
-            Primitive::West => constant!(CHI, eco_vec![INFINITY, -1.0, -1.0]),
+            Primitive::Eta => env.push(eta()),
+            Primitive::Pi => env.push(pi()),
+            Primitive::Tau => env.push(tau()),
+            Primitive::Infinity => env.push(inf()),
             Primitive::Identity => env.touch_array_stack(),
-            Primitive::Gap => {
-                let f = env.pop(1)?;
-                let _x = env.pop(2)?;
-                env.call(f)?;
-            }
             Primitive::Not => env.monadic_env(Value::not)?,
             Primitive::Neg => env.monadic_env(Value::neg)?,
             Primitive::Abs => env.monadic_env(Value::abs)?,
@@ -462,6 +461,20 @@ impl Primitive {
                 let x = env.pop(1)?;
                 env.call(f)?;
                 env.push(x);
+            }
+            Primitive::Gap => {
+                let f = env.pop(1)?;
+                let _x = env.pop(2)?;
+                env.call(f)?;
+            }
+            Primitive::Rock => {
+                env.push(inf());
+                Primitive::Join.run(env)?;
+            }
+            Primitive::Water => {
+                constant!(neg1, -1.0);
+                env.push(neg1());
+                Primitive::Join.run(env)?;
             }
             Primitive::Invert => {
                 let f = env.pop(FunctionArg(1))?;

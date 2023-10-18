@@ -21,6 +21,29 @@ pub fn flip<A, B, C>(f: impl Fn(A, B) -> C) -> impl Fn(B, A) -> C {
     move |b, a| f(a, b)
 }
 
+pub(crate) fn rank_list(name: &str, env: &mut Uiua) -> UiuaResult<Vec<Option<isize>>> {
+    let ns = env.pop("rank list")?;
+    let sig = ns.signature();
+    if sig.outputs != 1 {
+        return Err(env.error(format!(
+            "{name}'s rank list function must return 1 value, \
+            but its signature is {sig}"
+        )));
+    }
+    match sig.args {
+        0 => {}
+        1 => env.push(Array::<f64>::default()),
+        _ => {
+            return Err(env.error(format!(
+                "{name}'s rank list function must take 0 or 1 arguments, \
+                but its signature is {sig}"
+            )))
+        }
+    }
+    env.call(ns)?;
+    env.pop("rank list")?.as_rank_list(env, "")
+}
+
 pub fn repeat(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop(FunctionArg(1))?;

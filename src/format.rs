@@ -550,6 +550,11 @@ impl<'a> Formatter<'a> {
                 self.format_multiline_words(&func.lines, false, depth + 1);
                 self.output.push(')');
             }
+            Word::Ocean(prims) => {
+                for prim in prims {
+                    self.push(&prim.span, &prim.value.to_string());
+                }
+            }
             Word::Primitive(prim) => {
                 self.push(&word.span, &prim.to_string());
                 if prim.is_modifier() {
@@ -705,6 +710,7 @@ fn word_is_multiline(word: &Word) -> bool {
                 || (func.lines.iter())
                     .any(|words| words.iter().any(|word| word_is_multiline(&word.value)))
         }
+        Word::Ocean(_) => false,
         Word::Primitive(_) => false,
         Word::Modified(m) => m.operands.iter().any(|word| word_is_multiline(&word.value)),
         Word::Comment(_) => false,

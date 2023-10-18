@@ -50,7 +50,7 @@ pub fn Site() -> impl IntoView {
                 <a href="/docs/advancedstack#planet-notation" style="text-decoration: none">"🌍🪐"</a>" "
                 <code style="font-style: normal">
                     <span class="monadic-modifier">"⋅⋅⊙⋅⋅"</span>
-                    <span class="stack-function-button">"∘"</span>
+                    <span class="stack-function">"∘"</span>
                 </code>
             </div>
         }
@@ -286,8 +286,9 @@ fn prim_class(prim: Primitive) -> &'static str {
 
     match prim {
         Primitive::Transpose => code_font!("monadic-function trans"),
+        prim if prim.is_ocean() => code_font!("ocean-function"),
         prim if prim.class() == PrimClass::Stack && prim.modifier_args().is_none() => {
-            code_font!("stack-function-button")
+            code_font!("stack-function")
         }
         prim => {
             if let Some(m) = prim.modifier_args() {
@@ -298,11 +299,11 @@ fn prim_class(prim: Primitive) -> &'static str {
                 }
             } else {
                 match prim.args() {
-                    Some(0) => code_font!("noadic-function-button"),
+                    Some(0) => code_font!("noadic-function"),
                     Some(1) => code_font!("monadic-function"),
                     Some(2) => code_font!("dyadic-function"),
-                    Some(3) => code_font!("triadic-function-button"),
-                    _ => code_font!("variadic-function-button"),
+                    Some(3) => code_font!("triadic-function"),
+                    _ => code_font!("variadic-function"),
                 }
             }
         }

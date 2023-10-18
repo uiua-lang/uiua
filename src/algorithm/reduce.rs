@@ -4,7 +4,7 @@ use ecow::EcoVec;
 
 use crate::{
     algorithm::{
-        loops::{flip, rank_to_depth},
+        loops::{flip, rank_list, rank_to_depth},
         pervade::*,
     },
     array::{Array, ArrayValue, Shape},
@@ -279,9 +279,7 @@ fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
 
 pub fn fold(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let get_ns = env.pop(FunctionArg(1))?;
-    env.call(get_ns)?;
-    let ns = env.pop("fold's rank list")?.as_rank_list(env, "")?;
+    let ns = rank_list("Fold", env)?;
     let f = env.pop(FunctionArg(2))?;
     let mut args = Vec::with_capacity(ns.len());
     for i in 0..ns.len() {
@@ -420,9 +418,7 @@ fn fold_recursive(
 
 pub fn collapse(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let get_ns = env.pop(FunctionArg(1))?;
-    env.call(get_ns)?;
-    let ns = env.pop("collapse's rank list")?.as_rank_list(env, "")?;
+    let ns = rank_list("Collapse", env)?;
     let f = env.pop(FunctionArg(2))?;
     let mut args = Vec::with_capacity(ns.len());
     for i in 0..ns.len() {

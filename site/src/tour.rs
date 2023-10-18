@@ -45,7 +45,7 @@ pub fn Tour() -> impl IntoView {
         <p>"By the way, since "<code>"-"</code>" is for "<Prim prim=Sub/>", use "<code>"`"</code>" for negative numbers. The formatter will turn in into a nice "<code>"¯"</code>"."</p>
         <Editor example="`10"/>
         <p>"You can inspect the top value on the stack at any point with "<Prim prim=Trace/>"."</p>
-        <Editor example="+1~×2~×.-3 5"/>
+        <Editor example="+1⸮×2⸮×.-3 5"/>
 
         <h2 id="arrays">"Arrays"</h2>
         <p>"So far, we have only talked about the stack part of Uiua. Now, let's talk about the most important part: Arrays!"</p>
@@ -148,7 +148,7 @@ pub fn Tour() -> impl IntoView {
         <h3>"Images"</h3>
         <p>"Image data can either be a rank 2 array of grayscale pixel data or a rank 3 array of grayscale with alpha, RGB, or RGBA pixel data."</p>
         <p>"This minimal example uses three different functions on x/y coordinates to generate RGB values and make a pretty gradient."</p>
-        <Editor example="⍉≑≻(|2 ⊞|⊙.)+_-_× ÷∶⇡.100"/>
+        <Editor example="⍉≑~⋄(|2 ⊞|⊙.)+_-_× ÷∶⇡.100"/>
         <p>"The Uiua logo is made with Uiua itself!"</p>
         <Editor example=LOGO/>
         <h3>"Audio"</h3>

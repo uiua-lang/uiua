@@ -85,6 +85,11 @@ fn words_spans(words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
                 }
                 spans.extend(func.lines.iter().flat_map(|w| words_spans(w)));
             }
+            Word::Ocean(prims) => {
+                for prim in prims {
+                    spans.push(prim.span.clone().sp(SpanKind::Primitive(prim.value)));
+                }
+            }
             Word::Primitive(prim) => spans.push(word.span.clone().sp(SpanKind::Primitive(*prim))),
             Word::Modified(m) => {
                 spans.push(m.modifier.clone().map(SpanKind::Primitive));

@@ -1184,6 +1184,10 @@ primitive!(
     ([2], Collapse, AggregatingModifier, ("collapse", '⌿')),
     /// Apply a function to combinations at array depths
     ([2], Combinate, IteratingModifier, ("combinate", '◳')),
+    /// `join` `infinity` to a list
+    (1, Rock, Misc, ("rock", '⋄')),
+    /// `join` `¯1` to a list
+    (1, Water, Misc, ("water", '~')),
     /// Set the fill value for a function
     ///
     /// By default, some operations require that arrays' [shape]s are in some way compatible.
@@ -1502,21 +1506,9 @@ primitive!(
     (0, Tau, Constant, ("tau", 'τ')),
     /// The biggest number
     (0, Infinity, Constant, ("infinity", '∞')),
-    /// A list of `infinity``_``¯1`
-    (0, Left, Constant, ("left", '≺')),
-    /// A list of `infinity``_``infinity``_``¯1`
-    (0, Port, Constant, ("port", '≾')),
-    /// A list of `infinity``_``¯1``_``¯1`
-    (0, West, Constant, ("west", '≼')),
-    /// A list of `¯1``_``¯1``_``infinity`
-    (0, East, Constant, ("east", '≽')),
-    /// A list of `¯1``_``infinity``_``infinity`
-    (0, Starboard, Constant, ("starboard", '≿')),
-    /// A list of `¯1``_``infinity`
-    (0, Right, Constant, ("right", '≻')),
     /// Debug print the top value on the stack without popping it
     ///
-    /// ex: ~[1 2 3]
+    /// ex: ⸮[1 2 3]
     /// This is useful when you want to inspect an intermediate value.
     /// For example, let's say you are trying to find all the numbers in some range:
     /// ex: [1 5 2 9 11 0 7 12 8 3]
@@ -1524,8 +1516,8 @@ primitive!(
     /// `greater or equal` and `less or equal` each create a partial mask.
     /// To see them, use [trace].
     /// ex: [1 5 2 9 11 0 7 12 8 3]
-    ///   : ▽×~≥5∶~≤10..
-    (1, Trace, Stack, ("trace", '~')),
+    ///   : ▽×⸮≥5∶⸮≤10..
+    (1, Trace, Stack, ("trace", '⸮')),
     /// The inverse of trace
     (1, InvTrace, Stack),
     /// Debug print all the values currently on stack without popping them

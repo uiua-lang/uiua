@@ -46,6 +46,8 @@ pub fn PrimDocs(prim: Primitive) -> impl IntoView {
     let mut sig = String::new();
     if prim.class() == PrimClass::Constant {
         sig.push_str("Constant");
+    } else if prim.is_ocean() {
+        sig.push_str("Ocean function")
     } else if let Some(margs) = prim.modifier_args() {
         match margs {
             1 => sig.push_str("Monadic"),

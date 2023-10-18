@@ -1,7 +1,10 @@
 //! Algorithms for zipping modifiers
 
 use crate::{
-    algorithm::{loops::rank_to_depth, pervade::bin_pervade_generic},
+    algorithm::{
+        loops::{rank_list, rank_to_depth},
+        pervade::bin_pervade_generic,
+    },
     array::{FormatShape, Shape},
     run::{ArrayArg, FunctionArg},
     value::Value,
@@ -413,9 +416,7 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
 
 pub fn level(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let get_ns = env.pop(FunctionArg(1))?;
-    env.call_error_on_break(get_ns, "break is not allowed in level")?;
-    let ns = env.pop("level's rank list")?.as_rank_list(env, "")?;
+    let ns = rank_list("Level", env)?;
     if let Some((end, init)) = ns.split_last() {
         if end.is_some_and(|n| n == -1) && !init.is_empty() && init.iter().all(Option::is_none) {
             return distribute(env);

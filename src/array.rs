@@ -236,6 +236,9 @@ impl<T: ArrayValue> Array<T> {
         shape[0] = 0;
         Array::new(shape, CowSlice::new())
     }
+    pub fn show(&self) -> String {
+        self.grid_string()
+    }
 }
 
 impl Array<Arc<Function>> {

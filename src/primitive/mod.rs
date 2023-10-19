@@ -186,15 +186,19 @@ impl Primitive {
     pub fn is_modifier(&self) -> bool {
         self.modifier_args().is_some()
     }
+    pub fn ocean_constant(&self) -> Option<f64> {
+        use Primitive::*;
+        match self {
+            Rock => Some(INFINITY),
+            Surface => Some(-1.0),
+            Deep => Some(2.0),
+            Abyss => Some(1.0),
+            Seabed => Some(0.0),
+            _ => None,
+        }
+    }
     pub fn is_ocean(&self) -> bool {
-        matches!(
-            self,
-            Primitive::Rock
-                | Primitive::Surface
-                | Primitive::Deep
-                | Primitive::Abyss
-                | Primitive::Seabed
-        )
+        self.ocean_constant().is_some()
     }
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
         // Nothing deprecated at the moment

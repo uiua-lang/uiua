@@ -683,8 +683,51 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <Editor example="≑¯1□ ↯2_3_4⇡24"/>
         <Editor example="≑¯2□ ↯2_3_4⇡24"/>
         <Editor example="≑¯3□ ↯2_3_4⇡24"/>
-        <p>"As you can see, non-negative ranks refer to the rank of the argument that will be passed to the modifier's function while negative ranks refer to that many ranks "<em>"less"</em>" than the rank of the argument array."</p>
+        <p>"As you can see, non-negative ranks refer to the rank of the argument that will be passed to the modifier's function, while negative ranks refer to that many ranks "<em>"less"</em>" than the rank of the argument array."</p>
         <p><Prim prim=Infinity/>" refers to the exact rank of the argument array."</p>
+
+        <h2 id="level"><Prim prim=Level/></h2>
+        <p><Prim prim=Level/>" iterates over all arrays of ranks specified in its rank list."</p>
+        <Editor example="≑1_2⊂ ,, ↯2_3 π ↯2_2_3⇡12"/>
+        <p>"This is useful when you want to reference a fixed value while iterating over each row of an array."</p>
+        <Editor example="≑∞_¯1↻ 2 ↯3_4⇡12"/>
+
+        <h2 id="ocean-notation">"🌊 Ocean Notation 🪸"</h2>
+        <p>"It can sometimes be verbose to specify rank lists, and having numbers in code whose meaning is not immediately obvious can be confusing."</p>
+        <p>"For this reason, there exists a special set of functions that constructs rank lists. We call these functions "<em>"ocean functions"</em>", and their use is called "<em>"ocean notation"</em>"."</p>
+        <p>"Each ocean function "<Prim prim=Join/>"s a value to a list. They are as follows:"</p>
+        <table>
+        <tr><th>"Function"</th><th>"Rank Item"</th></tr>
+        {
+            Primitive::all()
+                .filter_map(|p| p.ocean_constant().map(|c| (p, c)))
+                .map(|(prim, c)| {
+                    view! {
+                        <tr>
+                            <td><Prim prim=prim/></td>
+                            <td><code>{uiua::array::Array::from(c).show()}</code></td>
+                        </tr>
+                    }
+                })
+                .collect::<Vec<_>>()
+        }
+        </table>
+        <p>"The example above with "<Prim prim=Level/>" can be rewritten using "<Prim prim=Rock/>" and "<Prim prim=Surface/>"."</p>
+        <Editor example="≑⋄~↻ 2 ↯3_4⇡12"/>
+        <p>"If you wanted to factor in the rows of another array, you could simply add another "<Prim prim=Surface/>"."</p>
+        <Editor example="≑⋄~~(↻⊙⊂) 2 ↯3_4⇡12 ↯3_2⇡6"/>
+
+        <h2 id="fold"><Prim prim=Fold/></h2>
+        <p><Prim prim=Fold/>" uses fixed rank values as accumulators. Its function's outputs set the new value of the accumulator for the next iteration."</p>
+        <p>"A basic use is to reduce with a default value."</p>
+        <Editor example="∧⋄~+ 10 [1 2 3]"/>
+        <Editor example="∧⋄~+ 10 []"/>
+
+        <h2 id="collapse"><Prim prim=Collapse/></h2>
+        <p><Prim prim=Collapse/>" is closer to "<Prim prim=Reduce/>" than "<Prim prim=Fold/>" is."</p>
+        <p>"It allows you to reduce with some additional fixed value(s) or reduce multiple arrays at once."</p>
+        <Editor example="⌿~~∩+ [1 2 3][4 5 6]"/>
+        <Editor example="⌿~~⋄(⊂⊂) [1 2 3][4 5 6] 7"/>
     }
 }
 

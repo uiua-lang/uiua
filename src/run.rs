@@ -435,7 +435,7 @@ code:
                 &Instr::PushTempUnder { count, span } => (|| {
                     self.push_span(span, None);
                     for _ in 0..count {
-                        let value = self.pop("value to move to temp")?;
+                        let value = self.pop("value to save")?;
                         self.under_stack.push(value);
                     }
                     self.pop_span();
@@ -445,7 +445,7 @@ code:
                     self.push_span(span, None);
                     for _ in 0..count {
                         let value = self.under_stack.pop().ok_or_else(|| {
-                            self.error("Temp stack was empty when evaluating value to pop")
+                            self.error("Stack was empty when getting saved value")
                         })?;
                         self.push(value);
                     }
@@ -455,7 +455,7 @@ code:
                 &Instr::PushTempInline { count, span } => (|| {
                     self.push_span(span, None);
                     for _ in 0..count {
-                        let value = self.pop("value to move to temp")?;
+                        let value = self.pop("value to save")?;
                         self.inline_stack.push(value);
                     }
                     self.pop_span();
@@ -465,7 +465,7 @@ code:
                     self.push_span(span, None);
                     for _ in 0..count {
                         let value = self.inline_stack.pop().ok_or_else(|| {
-                            self.error("Temp stack was empty when evaluating value to pop")
+                            self.error("Stack was empty when getting saved value")
                         })?;
                         self.push(value);
                     }
@@ -479,9 +479,7 @@ code:
                 } => (|| {
                     self.push_span(span, None);
                     if self.inline_stack.len() < offset + count {
-                        return Err(
-                            self.error("Temp stack was empty when evaluating value to copy")
-                        );
+                        return Err(self.error("Stack was empty when copying saved value"));
                     }
                     let start = self.inline_stack.len() - offset;
                     for i in 0..count {
@@ -494,9 +492,7 @@ code:
                 &Instr::DropTempInline { count, span } => (|| {
                     self.push_span(span, None);
                     if self.inline_stack.len() < count {
-                        return Err(
-                            self.error("Temp stack was empty when evaluating value to drop")
-                        );
+                        return Err(self.error("Stack was empty when dropping saved value"));
                     }
                     self.inline_stack.truncate(self.inline_stack.len() - count);
                     self.pop_span();

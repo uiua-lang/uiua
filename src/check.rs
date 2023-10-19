@@ -323,8 +323,8 @@ impl<'a> VirtualEnv<'a> {
                     }
                 }
                 Fill => {
-                    let _fill = self.pop_func()?;
                     let f = self.pop_func()?;
+                    let _fill = self.pop()?;
                     self.handle_sig(f.signature())?;
                 }
                 Pierce => {

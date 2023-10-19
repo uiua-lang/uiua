@@ -522,10 +522,8 @@ impl Primitive {
                 env.with_pierce(|env| env.call(f))?;
             }
             Primitive::Fill => {
-                let fill = env.pop_function()?;
-                env.call(fill)?;
-                let fill = env.pop("fill value")?;
                 let f = env.pop_function()?;
+                let fill = env.pop("fill value")?;
                 env.with_fill(fill, |env| env.call(f))?;
             }
             Primitive::Bind => {

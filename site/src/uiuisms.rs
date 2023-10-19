@@ -155,7 +155,7 @@ uiuisms!(
     /// Split an array by a delimiter
     r#"⊜□≠, @, "split,this,up""#,
     /// Split an array by a delimiter with fill elements
-    r#"⬚@ ⊜∘≠, @, "split,this,up""#,
+    r#"⬚⊜∘@ ≠, @, "split,this,up""#,
     /// Split an array by a delimiter keeping empty segments
     r#"⊕□⍜▽¯∶\+.=, @, "split,this,,up""#,
     /// Split an array into groups of contiguous equal elements
@@ -207,10 +207,10 @@ uiuisms!(
     /// Matrix product
     "[1_2 3_4 5_6] [7_8_9 10_11_12]\n⊠(/+×)⊙⍉",
     /// Matrix power (Also works with scalars)
-    "[1_2 3_4] 4\n;∶⍥(⊠(/+×)⊙⍉,)∶⊙∶⊞=.⇡⬚1⊢△.",
+    "[1_2 3_4] 4\n;∶⍥(⊠(/+×)⊙⍉,)∶⊙∶⊞=.⇡⬚⊢1△.",
     //  /// Evaluate a polynomial with given coefficients at a scalar or square matrix
     //     r"/+×≑⋄~(  Note: Not sure how to fix this with new distribute order
-    //   ⊙∶⊞=.⇡⬚1⊢△.:
+    //   ⊙∶⊞=.⇡⬚⊢1△.:
     //   ;∶⍥(⊠(/+×)⊙⍉,)∶
     // )⊙∶⇌⇡⧻. [1 2 3 1] [1_1 2_2]",
 );

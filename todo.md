@@ -7,8 +7,6 @@ Within a each section, items are ordered (roughly) by decreasing priority.
 - Expand test suite
 
 ## Features
-- **Make functions second class**
-  - Make `fill`, `level` and co monadic
 - Add inline signatures
 - `under` aggregating `group` and `partition`
 - Add channels for spawned threads

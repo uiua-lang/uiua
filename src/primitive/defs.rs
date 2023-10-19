@@ -1403,20 +1403,6 @@ primitive!(
     /// ex: ↯3_3⇡9
     ///   : wait≡spawn/+.
     (1, Wait, Misc, ("wait")),
-    /// Call a function
-    ///
-    /// When passing a scalar function, the function is simply called.
-    /// ex: !(+5) 2
-    /// [call] is equivalent to [identity] for anything other than a function.
-    /// ex: !5
-    /// ex: ![1 2 3]
-    /// ex: !+_-
-    ///
-    /// [call] will "unbox" a [box] function.
-    /// However, this requires a signature annotation in most contexts where it is useful, so for this purpose, [unbox] should be preferred.
-    /// ex! ∵! {1_2_3 4_5_6}
-    /// ex: ∵⊔{1_2_3 4_5_6}
-    ((None), Call, Control, ("call", '!')),
     /// Break out of a loop
     ///
     /// Expects a non-negative integer. This integer is how many loops will be broken out of.

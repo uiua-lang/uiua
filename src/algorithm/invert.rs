@@ -83,7 +83,7 @@ fn invert_instr_fragment(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
     }
 
     let patterns: &[&dyn InvertPattern] = &[
-        &(Val, ([Invert], [Primitive::Call])),
+        &(function, ([Invert], <[Primitive; 0]>::default())),
         &(Val, ([Rotate], [Neg, Rotate])),
         &(Val, IgnoreMany(Flip), ([Add], [Sub])),
         &(Val, ([Sub], [Add])),
@@ -593,6 +593,14 @@ where
         g_sig: Signature,
     ) -> Option<(&'a [Instr], Under)> {
         (self.0)(input, g_sig)
+    }
+}
+
+fn function(input: &[Instr]) -> Option<(&[Instr], Vec<Instr>)> {
+    if let (instr @ Instr::PushFunc(_), input) = input.split_first()? {
+        Some((input, vec![instr.clone()]))
+    } else {
+        None
     }
 }
 

@@ -396,10 +396,6 @@ impl Primitive {
                 };
                 env.push(val);
             }
-            Primitive::Call => {
-                let f = env.pop_function()?;
-                env.call(f)?
-            }
             Primitive::Parse => env.monadic_ref_env(Value::parse_num)?,
             Primitive::Utf => env.monadic_ref_env(Value::utf8)?,
             Primitive::InvUtf => env.monadic_ref_env(Value::inv_utf8)?,

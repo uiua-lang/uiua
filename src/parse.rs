@@ -570,10 +570,14 @@ impl Parser {
             }))
         } else if let Some(spaces) = self.try_spaces() {
             spaces
-        } else if let Some(func) = self.try_func() {
-            self.errors
-                .push(func.span.clone().sp(ParseError::FunctionNotAllowed));
-            func
+        } else if let Some(func) = self.try_func_inner() {
+            if func.value.lines.is_empty() {
+                func.span.sp(Word::Primitive(Primitive::Identity))
+            } else {
+                self.errors
+                    .push(func.span.clone().sp(ParseError::FunctionNotAllowed));
+                func.map(Word::Func)
+            }
         } else {
             return None;
         })
@@ -615,17 +619,20 @@ impl Parser {
         None
     }
     fn try_func(&mut self) -> Option<Sp<Word>> {
+        self.try_func_inner().map(|sp| sp.map(Word::Func))
+    }
+    fn try_func_inner(&mut self) -> Option<Sp<Func>> {
         Some(if let Some(start) = self.try_exact(OpenParen) {
             while self.try_exact(Newline).is_some() || self.try_spaces().is_some() {}
             let signature = self.try_signature();
             let body = self.multiline_words();
             let end = self.expect_close(CloseParen);
             let span = start.merge(end);
-            span.clone().sp(Word::Func(Func {
+            span.clone().sp(Func {
                 id: FunctionId::Anonymous(span),
                 signature,
                 lines: body,
-            }))
+            })
         } else {
             return None;
         })

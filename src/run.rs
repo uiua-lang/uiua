@@ -413,19 +413,16 @@ code:
                     self.scope.array.push(self.stack.len());
                     Ok(())
                 }
-                &Instr::EndArray {
-                    span,
-                    boxed: constant,
-                } => (|| {
+                &Instr::EndArray { span, boxed } => (|| {
                     let start = self.scope.array.pop().unwrap();
                     self.push_span(span, None);
                     let values = self.stack.drain(start..).rev();
-                    let values: Vec<Value> = if constant {
-                        values.map(Value::from).collect()
+                    let values: Vec<Value> = if boxed {
+                        values.map(Boxed).map(Value::from).collect()
                     } else {
                         values.collect()
                     };
-                    let val = if values.is_empty() && constant {
+                    let val = if values.is_empty() && boxed {
                         Array::<Boxed>::default().into()
                     } else {
                         Value::from_row_values(values, self)?
@@ -561,21 +558,6 @@ code:
     pub fn call(&mut self, f: impl Into<Arc<Function>>) -> UiuaResult {
         let call_span = self.span_index();
         self.call_with_span(f, call_span)
-    }
-    #[inline]
-    pub fn recur(&mut self, n: usize) -> UiuaResult {
-        if n == 0 {
-            return Ok(());
-        }
-        if n > self.scope.call.len() {
-            return Err(self.error(format!(
-                "Cannot recur {} levels up, only {} levels down",
-                n,
-                self.scope.call.len()
-            )));
-        }
-        let f = self.scope.call[self.scope.call.len() - n].function.clone();
-        self.call(f)
     }
     pub fn call_catch_break(&mut self, f: impl Into<Arc<Function>>) -> UiuaResult<bool> {
         match self.call(f) {

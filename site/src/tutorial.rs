@@ -150,7 +150,7 @@ fn TutorialBasic() -> impl IntoView {
         <Editor examples=&{["max ", "sqrt ", "10 ", "mod ", "10 ", "pow ", "2 ", "8"]}/>
         <Editor example="abs +`1 `2"/>
         <p>"You don't have to type the whole name, just enough to to disambiguate it from others."</p>
-        <Editor example="(cei ceil ceili ceilin ceiling)"/>
+        <Editor example="cei 1.5\nceil 1.5\nceili 1.5\nceilin 1.5\nceiling"/>
         <p>"You don't even have to remove spaces between built-in function names. The formatter will figure it out!"</p>
         <Editor example="roundsqrtpi"/>
         <p>"On this site, you can also click the ↧ symbol on any editor to show a pallete of all the Uiua glyphs. You can then click on any glyph to insert it into the editor."</p>
@@ -304,7 +304,6 @@ fn TutorialArrays() -> impl IntoView {
         <p><strong>"Strand notation"</strong>" uses underscores to connect elements."</p>
         <Editor example="1_2_3"/>
         <Editor example="\"Hello\"_\"World\""/>
-        <Editor example="+_-_×_÷"/>
         <p>"Strand notation is good when you want to create short and/or simple arrays. For longer or more complex arrays, you can use stack notation."</p>
         <p><strong>"Stack notation"</strong>" uses brackets to group elements."</p>
         <Editor example="[1 2 3]"/>
@@ -375,9 +374,9 @@ fn TutorialArrays() -> impl IntoView {
         <h2 id="array-model">"The Array Model"</h2>
         <p>"For curious array afficionados, Uiua uses an array model resembling "<a href="https://aplwiki.com/wiki/Box">"J's Boxed array model"</a>"."</p>
         <p>"All arrays are flat and homogenous. Arrays always have a rectangular shape. Different types of data, like numbers and characters, cannot be mixed in the same array."</p>
-        <p>"However, there is an escape hatch for when you really want jagged, nested, or mixed-type arrays. In Uiua, an array of heterogenous values can be simulated with an array of functions. These functions can be used similarly to J's boxes."</p>
+        <p>"However, there is an escape hatch for when you really want jagged, nested, or mixed-type arrays. In Uiua, an array of heterogenous values can be simulated with an array of "<em>"boxes"</em>"."</p>
         <Editor example="[1 2 [7 8 9]]"/> // Should fail
-        <p>"By using "<Prim prim=Box/>", we can turn any value into a function that pushes that value onto the stack. We can then put these functions into an array together."</p>
+        <p>"By using "<Prim prim=Box/>", we can turn any value into a box that contains that value. We can then put these boxes into an array together."</p>
         <Editor example="[□1 □2 □[7 8 9]]"/>
         <p>"The "<code>"⟦⟧"</code>"s indicate that a list is "<Prim prim=Box/>"ed."</p>
         <p><Prim prim=Unbox/>" extracts a "<Prim prim=Box/>"ed value."</p>
@@ -467,9 +466,13 @@ fn TutorialTypes() -> impl IntoView {
         <Editor example="-@a @z"/>
         <Editor example="+@a @b"/> // Should fail
 
-        <h2 id="functions">"Functions"</h2>
-        <p>"Functions are usually used as scalars, but they are still arrays. Most array operations that work on number and character arrays work on arrays of functions as well."</p>
-        <p>"Functions will be discussed more in some "<A href="/docs/bindings#binding-functions">"later"</A>" "<A href="/docs/functions">"sections"</A>"."</p>
+        <h2 id="boxes">"Boxes"</h2>
+        <p>"Boxes are containers that can wrap an array of any type or shape. Multiple boxes can be put in the same array, no matter their contents."</p>
+        <p>"Boxes can be created either by using the "<Prim prim=Box/>" function or with boxing array notation between "<code>"{}"</code>"s."</p>
+        <Editor example="□5"/>
+        <Editor example="□[1 2 3]"/>
+        <Editor example="□\"Hello!\""/>
+        <Editor example="{\"cat\" 5}"/>
 
         <h2>"Type agreement"</h2>
         <p id="type-agreement">"For functions that work on the structure of arrays rather than their values, the types of the arrays must match."</p>
@@ -477,7 +480,7 @@ fn TutorialTypes() -> impl IntoView {
         <Editor example="⊟ \"Hello\" \"World\""/>
         <Editor example="⊟ 1_2_3 \"dog\""/> // Should fail
         <p>"There is an exception for functions. Any function that pushes one value onto the stack can be put in an array with a non-function. In this case, the non-function will be turned into a function, similar to "<Prim prim=Box/>"."</p>
-        <Editor example="⊟ 5 (+1 2)"/>
+        <Editor example="⊟ 5 □[1 2 3]"/>
 
         <h2 id="empty-arrays">"Empty Arrays"</h2>
         <p>"The type of an array that is constructed with no elements depends on the syntax used to construct it. Its shape is always "<code>"[0]"</code>"."</p>
@@ -583,7 +586,7 @@ X 5"/>
         <Editor example="TimesThree ← |1   ×3\nTimesThree 7"/>
         <Editor example="∵(|2.1 ⊟.×) 1_2_3 4_5_6"/>
         <p>"Stack signatures are useful for documenting functions to make sure that they are used correctly."</p>
-        <p>"A signature declaration is "<em>"required"</em>" if the function's signature cannot be infered. The compiler can usually infer a function's signature unless you are doing something weird, or if you are using "<Prim prim=Recur/>"sion or "<Prim prim=Break/>"."</p>
+        <p>"A signature declaration is "<em>"required"</em>" if the function's signature cannot be infered. The compiler can usually infer a function's signature unless you are doing something weird or using "<Prim prim=Break/>"."</p>
         <p>"In addition, an error is thrown if a function's signature can be inferred and the inferred signature does not match the declared signature. This can help validate that a function is correct."</p>
         <Editor example="≡(|2 ↻.) 1_2_3 ↯3_3⇡9"/> // Should fail
         <p><strong>"WARNING"</strong>": If the compiler cannot derive the stack signature of a function and you give it one which is "<em>"wrong"</em>", your code may no longer compile in future versions of the language."</p>

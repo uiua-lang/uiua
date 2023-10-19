@@ -883,8 +883,7 @@ macro_rules! value_bin_impl {
                         }
                     },)*)*
                     (Value::Box(a), b) => {
-                        dbg!("a");
-                        match dbg!(a.into_unboxed()) {
+                        match a.into_unboxed() {
                             Ok(a) => Value::$name(a, b, env)?,
                             Err(a) => {
                                 let b = b.coerce_as_boxes().into_owned();

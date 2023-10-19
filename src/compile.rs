@@ -111,12 +111,11 @@ impl Uiua {
                         )));
                     }
                 }
-
-                if sig.args == 0 && (sig.outputs > 0 || instrs.is_empty()) {
+                if let [Instr::PushFunc(f)] = instrs.as_slice() {
+                    self.bind_function(name, f.clone());
+                } else if sig.args == 0 && (sig.outputs > 0 || instrs.is_empty()) {
                     self.exec_global_instrs(instrs)?;
-                    if let Some(f) = self.function_stack.pop() {
-                        self.bind_function(name, f);
-                    } else if let Some(value) = self.stack.pop() {
+                    if let Some(value) = self.stack.pop() {
                         self.bind_value(name, value);
                     } else {
                         let func = Function::new(FunctionId::Named(name.clone()), Vec::new(), sig);

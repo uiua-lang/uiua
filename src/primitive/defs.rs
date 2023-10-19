@@ -179,9 +179,8 @@ primitive!(
     /// ex: /∘ [1 2 3]
     /// However, doing this in a function prevents the signature from being inferred.
     ///
-    /// The formatter converts an empty `()` function into `identity` if it is in a strand or a modifier.
+    /// The formatter converts an empty `()` function into `identity`.
     /// ex: /() [1 2] # Try running to format
-    ///   : ()_(+1)
     ///
     /// While [identity]'s signature is `|1.1`, it will not throw an error if the stack is empty.
     /// ex: ∘
@@ -1411,27 +1410,6 @@ primitive!(
     /// ex: /(⎋>10.+) ⇡8  # Break when the sum exceeds 10
     /// ex: ⍥(⎋>100.×2)∞ 1  # Break when the product exceeds 100
     (1(0), Break, Control, ("break", '⎋')),
-    /// Call a function recursively
-    ///
-    /// Expects a natural number. This number is how many levels up the recured function is.
-    /// `recur``0` does nothing.
-    /// `recur``1` calls current function.
-    /// `recur``2` calls the function that called the current function, and so on.
-    ///
-    /// **This is often not what you want.** [recur] is slow and can easily overflow the stack if you are not careful or if your input is too large. Prefer using [repeat] when possible.
-    ///
-    /// Here, we recur until the value is not `less than``10`.
-    /// ex: !(|1 ↬<10.×2) 1
-    ///
-    /// [recur] prevents function signature analysis from working, so functions that contain [recur] must be annotated with a signature with `|`.
-    ///
-    /// Here is a recursive factorial function:
-    /// ex: !(|1 ×↬>2.-1.) 5
-    ///
-    /// Here is a recursive fibonacci function.
-    /// It uses [if] to decide whether to recur.
-    /// ex: !(?∘(|1 +↬2-1∶↬2-2.) <2.) 8
-    (1(None), Recur, Control, ("recur", '↬')),
     /// Generate a random number between 0 and 1
     ///
     /// If you need a seeded random number, use [gen].

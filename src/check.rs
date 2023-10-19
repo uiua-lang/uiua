@@ -407,7 +407,6 @@ impl<'a> VirtualEnv<'a> {
                         }
                     }
                 }
-                Recur => return Err("recur present".into()),
                 prim => {
                     let array_args = prim
                         .args()

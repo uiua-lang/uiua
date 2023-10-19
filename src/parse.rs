@@ -240,8 +240,9 @@ impl Parser {
             self.try_spaces();
             let sig = self.try_signature();
             let words = self
-                .try_words()
-                .or_else(|| self.try_func().map(|word| vec![word]))
+                .try_func()
+                .map(|word| vec![word])
+                .or_else(|| self.try_words())
                 .unwrap_or_default();
             // Check for uncapitalized binding names
             if ident.value.chars().count() >= 3

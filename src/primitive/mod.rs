@@ -29,8 +29,7 @@ use regex::Regex;
 use crate::{
     algorithm::{fork, loops, reduce, table, zip},
     array::Array,
-    cowslice::cowslice,
-    grid_fmt::GridFmt,
+    boxed::Boxed,
     lex::AsciiToken,
     sys::*,
     value::*,
@@ -197,6 +196,16 @@ impl Primitive {
     }
     pub fn is_ocean(&self) -> bool {
         self.ocean_constant().is_some()
+    }
+    pub fn constant(&self) -> Option<f64> {
+        use Primitive::*;
+        match self {
+            Eta => Some(PI / 2.0),
+            Pi => Some(PI),
+            Tau => Some(TAU),
+            Infinity => Some(INFINITY),
+            _ => None,
+        }
     }
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
         // Nothing deprecated at the moment
@@ -383,13 +392,12 @@ impl Primitive {
             Primitive::IndexOf => env.dyadic_rr_env(Value::index_of)?,
             Primitive::Box => {
                 let val = env.pop(1)?;
-                let boxed = Array::from(val);
-                env.push(boxed);
+                env.push(Boxed(val));
             }
             Primitive::Unbox => {
                 let val = match env.pop(1)? {
                     Value::Box(boxed) => match boxed.into_scalar() {
-                        Ok(scalar) => scalar,
+                        Ok(scalar) => scalar.0,
                         Err(boxed) => Value::Box(boxed),
                     },
                     val => val,
@@ -595,12 +603,6 @@ impl Primitive {
                     Value::Box(_) => 2,
                 });
             }
-            Primitive::Sig => {
-                let val = env.pop(1)?;
-                let sig = val.signature();
-                let arr: Array<u8> = cowslice![sig.args as u8, sig.outputs as u8].into();
-                env.push(arr);
-            }
             Primitive::Spawn => {
                 let f = env.pop_function()?;
                 let handle = env.spawn(f.signature().args, |env| env.call(f))?;
@@ -632,9 +634,9 @@ impl Primitive {
                             .map_err(|e| env.error(format!("Invalid pattern: {}", e)))?;
                         cache.entry(pattern.clone()).or_insert(regex.clone())
                     };
-                    let matches: EcoVec<Value> = regex
+                    let matches: EcoVec<Boxed> = regex
                         .find_iter(&matching)
-                        .map(|m| Value::from(m.as_str()))
+                        .map(|m| Boxed(Value::from(m.as_str())))
                         .collect();
                     env.push(matches);
                     Ok(())
@@ -653,10 +655,8 @@ fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
         env.span().to_string()
     };
     let max_line_len = span.chars().count() + 2;
-    let item_lines = format_trace_item_lines(
-        val.grid_string().lines().map(Into::into).collect(),
-        max_line_len,
-    );
+    let item_lines =
+        format_trace_item_lines(val.show().lines().map(Into::into).collect(), max_line_len);
     env.push(val);
     env.backend.print_str_trace(&format!("┌╴{span}\n"));
     for line in item_lines {
@@ -691,7 +691,7 @@ fn dump(env: &mut Uiua) -> UiuaResult {
     let max_line_len = span.chars().count() + 2;
     let item_lines: Vec<Vec<String>> = items
         .iter()
-        .map(Value::grid_string)
+        .map(Value::show)
         .map(|s| s.lines().map(Into::into).collect::<Vec<String>>())
         .map(|lines| format_trace_item_lines(lines, max_line_len))
         .collect();

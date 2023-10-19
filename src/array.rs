@@ -8,6 +8,7 @@ use ecow::EcoVec;
 use tinyvec::{tiny_vec, TinyVec};
 
 use crate::{
+    boxed::Boxed,
     cowslice::{cowslice, CowSlice},
     grid_fmt::GridFmt,
     value::Value,
@@ -239,13 +240,10 @@ impl<T: ArrayValue> Array<T> {
     }
 }
 
-impl Array<Value> {
+impl Array<Boxed> {
     pub fn into_unboxed(self) -> Result<Value, Self> {
         match self.into_scalar() {
-            Ok(v) => match v {
-                Value::Box(b) => b.into_unboxed(),
-                val => Ok(val),
-            },
+            Ok(v) => Ok(v.0),
             Err(a) => Err(a),
         }
     }
@@ -346,9 +344,14 @@ impl From<bool> for Array<u8> {
     }
 }
 
-impl FromIterator<String> for Array<Value> {
+impl FromIterator<String> for Array<Boxed> {
     fn from_iter<I: IntoIterator<Item = String>>(iter: I) -> Self {
-        Array::from(iter.into_iter().map(Value::from).collect::<CowSlice<_>>())
+        Array::from(
+            iter.into_iter()
+                .map(Value::from)
+                .map(Boxed)
+                .collect::<CowSlice<_>>(),
+        )
     }
 }
 
@@ -411,7 +414,7 @@ impl ArrayValue for char {
     }
 }
 
-impl ArrayValue for Value {
+impl ArrayValue for Boxed {
     const NAME: &'static str = "box";
     fn get_fill(env: &Uiua) -> Option<Self> {
         env.box_fill()
@@ -462,7 +465,7 @@ impl ArrayCmp for char {
     }
 }
 
-impl ArrayCmp for Value {
+impl ArrayCmp for Boxed {
     fn array_cmp(&self, other: &Self) -> Ordering {
         self.cmp(other)
     }

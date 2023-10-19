@@ -1515,18 +1515,6 @@ primitive!(
     /// ex: ∵type  {10 "dog" (≍⇌.)}
     ///   : ∵(|1 type!) {10 "dog" (≍⇌.)}
     (1, Type, Misc, "type"),
-    /// Get the stack signature of a value
-    ///
-    /// Returns a [shape]`[2]` array of the form `[arguments outputs]`.
-    /// ex: sig 5
-    /// ex: sig 1_2_3
-    /// ex: sig (+)
-    /// ex: sig (×10)
-    /// ex: sig (.++)
-    /// ex: sig (/+)
-    /// ex: sig (|3 /∘)
-    /// ex: sig +_-_×_÷
-    (1, Sig, Misc, "sig"),
     /// Get the current time in seconds
     ///
     /// ex: now

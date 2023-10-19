@@ -61,7 +61,7 @@ pub fn Uiuisms() -> impl IntoView {
     view! {
         <h1>"Uiuisms"</h1>
         <p>"This is a curated list of Uiua functions for solving common problems."</p>
-        <p>"You can add more by contributing in the "<a href="https://github.com/uiua-lang/uiua">"repo"</a>" to "<a href="https://github.com/uiua-lang/uiua/blob/main/site/src/uiuisms.rs#L111">"this list"</a>"."</p>
+        <p>"You can add more by contributing in the "<a href="https://github.com/uiua-lang/uiua">"repo"</a>" to "<a href="https://github.com/uiua-lang/uiua/blob/main/site/src/uiuisms.rs#L112">"this list"</a>"."</p>
         <div class="input-div">
             <input
                 type="text"
@@ -96,6 +96,7 @@ macro_rules! uiuisms {
         #[test]
         fn uiuisms() {
             for code in [$($code),*] {
+                println!("Testing Uiuism:\n{code}");
                 let mut env = uiua::Uiua::with_native_sys();
                 if let Err(e) = env.load_str(code) {
                     panic!("Uiuism failed\n{code}\n{}", e.show(true));
@@ -167,8 +168,6 @@ uiuisms!(
     "▽≑⋄~(¬≍)⊙. 2_0 [1_4 2_0 5_3 2_0]",
     /// Filter by a fixed predicate
     "▽ =0◿2 . ⇡10",
-    /// Filter by a dynamic predicate
-    "▽!⊙. (=0◿2) ⇡10",
     /// Find the most common row in an array
     r#"⊏⊢⍖⍘⊚⊛∶⊝. "Hello World!""#,
     /// Convert a string to uppercase

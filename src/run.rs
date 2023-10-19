@@ -14,6 +14,7 @@ use parking_lot::Mutex;
 
 use crate::{
     array::Array,
+    boxed::Boxed,
     function::*,
     lex::Span,
     parse::parse,
@@ -117,7 +118,7 @@ impl Default for Scope {
 struct Fills {
     nums: Vec<f64>,
     chars: Vec<char>,
-    boxes: Vec<Value>,
+    boxes: Vec<Boxed>,
 }
 
 #[derive(Clone)]
@@ -425,7 +426,7 @@ code:
                         values.collect()
                     };
                     let val = if values.is_empty() && constant {
-                        Array::<Value>::default().into()
+                        Array::<Boxed>::default().into()
                     } else {
                         Value::from_row_values(values, self)?
                     };
@@ -762,7 +763,7 @@ code:
     pub(crate) fn char_fill(&self) -> Option<char> {
         self.scope.fills.chars.last().copied()
     }
-    pub(crate) fn box_fill(&self) -> Option<Value> {
+    pub(crate) fn box_fill(&self) -> Option<Boxed> {
         self.scope.fills.boxes.last().cloned()
     }
     /// Do something with the fill context set

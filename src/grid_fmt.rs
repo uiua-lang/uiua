@@ -12,6 +12,7 @@ use std::{
 
 use crate::{
     array::{Array, ArrayValue},
+    boxed::Boxed,
     primitive::Primitive,
     value::Value,
 };
@@ -92,9 +93,9 @@ impl GridFmt for char {
     }
 }
 
-impl GridFmt for Value {
+impl GridFmt for Boxed {
     fn fmt_grid(&self, boxed: bool) -> Grid {
-        let mut grid = match self {
+        let mut grid = match self.as_value() {
             Value::Num(array) => array.fmt_grid(true),
             Value::Byte(array) => array.fmt_grid(true),
             Value::Char(array) => array.fmt_grid(true),

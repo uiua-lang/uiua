@@ -15,6 +15,7 @@ use tinyvec::tiny_vec;
 use crate::{
     algorithm::max_shape,
     array::*,
+    boxed::Boxed,
     cowslice::{cowslice, CowSlice},
     value::Value,
     Uiua, UiuaResult,
@@ -27,13 +28,13 @@ impl Value {
         self,
         other: Self,
         ctx: C,
-        on_success: impl FnOnce(Array<Value>, Array<Value>, C) -> Result<T, C::Error>,
+        on_success: impl FnOnce(Array<Boxed>, Array<Boxed>, C) -> Result<T, C::Error>,
         on_error: impl FnOnce(&str, &str) -> E,
     ) -> Result<T, C::Error> {
         match (self, other) {
             (Value::Box(a), Value::Box(b)) => on_success(a, b, ctx),
-            (Value::Box(a), b) => on_success(a, b.coerce_to_box(), ctx),
-            (a, Value::Box(b)) => on_success(a.coerce_to_box(), b, ctx),
+            (Value::Box(a), b) => on_success(a, b.coerce_to_boxes(), ctx),
+            (a, Value::Box(b)) => on_success(a.coerce_to_boxes(), b, ctx),
             (a, b) => Err(ctx.error(on_error(a.type_name(), b.type_name()))),
         }
     }
@@ -130,12 +131,12 @@ impl Value {
             } else {
                 match self.rank().cmp(&other.rank()) {
                     Ordering::Greater => {
-                        self = self.into_rows().collect::<Array<_>>().into();
+                        self = self.into_rows().map(Boxed).collect::<Array<_>>().into();
                         other.box_if_not();
                     }
                     Ordering::Less => {
                         self.box_if_not();
-                        other = other.into_rows().collect::<Array<_>>().into();
+                        other = other.into_rows().map(Boxed).collect::<Array<_>>().into();
                     }
                     Ordering::Equal => {
                         self.box_if_not();
@@ -177,7 +178,11 @@ impl Value {
             self.unbox();
             other.unbox();
             if self.append_impl(other.clone(), ctx).is_err() {
-                *self = take(self).into_rows().collect::<Array<_>>().into();
+                *self = take(self)
+                    .into_rows()
+                    .map(Boxed)
+                    .collect::<Array<_>>()
+                    .into();
                 other.box_if_not();
                 self.append_impl(other, ctx)
             } else {
@@ -910,8 +915,8 @@ impl Value {
             }
             value => {
                 return Err(env.error(format!(
-                    "Index must be an array of integers, not {}s",
-                    value.type_name()
+                    "Index must be an array of integers, not {}",
+                    value.type_name_plural()
                 )))
             }
         })
@@ -1456,8 +1461,8 @@ impl Value {
             }
             v => {
                 return Err(env.error(format!(
-                    "Indices must be an array of integers, but it is {}s",
-                    v.type_name()
+                    "Indices must be an array of integers, but it is {}",
+                    v.type_name_plural()
                 )))
             }
         }

@@ -10,6 +10,7 @@ The current API should be considered deeply unstable.
 mod algorithm;
 pub mod array;
 pub mod ast;
+pub mod boxed;
 mod check;
 mod compile;
 mod cowslice;

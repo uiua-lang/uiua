@@ -16,8 +16,8 @@ use tinyvec::tiny_vec;
 
 use crate::{
     array::Array,
+    boxed::Boxed,
     cowslice::{cowslice, CowSlice},
-    grid_fmt::GridFmt,
     primitive::PrimDoc,
     value::Value,
     Uiua, UiuaError, UiuaResult,
@@ -519,7 +519,7 @@ impl SysOp {
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
             SysOp::Show => {
-                let s = env.pop(1)?.grid_string();
+                let s = env.pop(1)?.show();
                 env.backend.print_str_stdout(&s).map_err(|e| env.error(e))?;
                 env.backend
                     .print_str_stdout("\n")
@@ -555,7 +555,7 @@ impl SysOp {
                 let mut args = Vec::new();
                 args.push(env.file_path().to_string_lossy().into_owned());
                 args.extend(env.args().to_owned());
-                env.push(Array::<Value>::from_iter(args));
+                env.push(Array::<Boxed>::from_iter(args));
             }
             SysOp::Var => {
                 let key = env
@@ -772,7 +772,7 @@ impl SysOp {
             SysOp::FListDir => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let paths = env.backend.list_dir(&path).map_err(|e| env.error(e))?;
-                env.push(Array::<Value>::from_iter(paths));
+                env.push(Array::<Boxed>::from_iter(paths));
             }
             SysOp::FIsFile => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
@@ -1087,8 +1087,8 @@ fn value_to_command(value: &Value, env: &Uiua) -> UiuaResult<(String, Vec<String
         },
         Value::Box(arr) => match arr.rank() {
             0 | 1 => {
-                for val in &arr.data {
-                    match val {
+                for bx in &arr.data {
+                    match bx.as_value() {
                         Value::Char(arr) if arr.rank() <= 1 => {
                             strings.push(arr.data.iter().collect::<String>())
                         }
@@ -1111,8 +1111,8 @@ fn value_to_command(value: &Value, env: &Uiua) -> UiuaResult<(String, Vec<String
         },
         Value::Num(_) | Value::Byte(_) => {
             return Err(env.error(format!(
-                "Command must be a string or function array, but it is {}s",
-                value.type_name()
+                "Command must be a string or function array, but it is {}",
+                value.type_name_plural()
             )))
         }
     }

@@ -11,8 +11,8 @@ use ecow::EcoVec;
 use crate::{
     algorithm::{pervade::*, FillContext},
     array::*,
+    boxed::Boxed,
     cowslice::CowSlice,
-    function::Signature,
     grid_fmt::GridFmt,
     Uiua, UiuaResult,
 };
@@ -22,7 +22,7 @@ pub enum Value {
     Num(Array<f64>),
     Byte(Array<u8>),
     Char(Array<char>),
-    Box(Array<Value>),
+    Box(Array<Boxed>),
 }
 
 impl Default for Value {
@@ -46,13 +46,6 @@ impl Value {
     pub fn builder(capacity: usize) -> ValueBuilder {
         ValueBuilder::with_capacity(capacity)
     }
-    pub fn signature(&self) -> Signature {
-        if let Some(f) = self.as_box_array().and_then(Array::as_scalar) {
-            f.signature()
-        } else {
-            Signature::new(0, 1)
-        }
-    }
     pub fn as_num_array(&self) -> Option<&Array<f64>> {
         match self {
             Self::Num(array) => Some(array),
@@ -71,28 +64,21 @@ impl Value {
             _ => None,
         }
     }
-    pub fn as_box_array(&self) -> Option<&Array<Value>> {
+    pub fn as_box_array(&self) -> Option<&Array<Boxed>> {
         match self {
             Self::Box(array) => Some(array),
             _ => None,
         }
     }
     #[inline]
-    pub fn into_func_array(self) -> Result<Array<Value>, Self> {
+    pub fn into_func_array(self) -> Result<Array<Boxed>, Self> {
         match self {
             Self::Box(array) => Ok(array),
             _ => Err(self),
         }
     }
-    pub fn as_box(&self) -> Option<&Value> {
+    pub fn as_box(&self) -> Option<&Boxed> {
         self.as_box_array().and_then(Array::as_scalar)
-    }
-    #[inline]
-    pub fn into_function(self) -> Result<Value, Self> {
-        match self.into_func_array() {
-            Ok(array) => array.into_scalar().map_err(Into::into),
-            Err(value) => Err(value),
-        }
     }
     pub fn rows(&self) -> Box<dyn ExactSizeIterator<Item = Self> + '_> {
         match self {
@@ -130,7 +116,14 @@ impl Value {
         match self {
             Self::Num(_) | Self::Byte(_) => "number",
             Self::Char(_) => "character",
-            Self::Box(_) => "function",
+            Self::Box(_) => "box",
+        }
+    }
+    pub fn type_name_plural(&self) -> &'static str {
+        match self {
+            Self::Num(_) | Self::Byte(_) => "numbers",
+            Self::Char(_) => "characters",
+            Self::Box(_) => "boxes",
         }
     }
     pub fn shape(&self) -> &[usize] {
@@ -211,7 +204,7 @@ impl Value {
         n: impl FnOnce(Array<f64>) -> T,
         b: impl FnOnce(Array<u8>) -> T,
         c: impl FnOnce(Array<char>) -> T,
-        f: impl FnOnce(Array<Value>) -> T,
+        f: impl FnOnce(Array<Boxed>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
@@ -225,7 +218,7 @@ impl Value {
         n: impl FnOnce(Array<f64>) -> T,
         b: impl FnOnce(Array<u8>) -> T,
         c: impl FnOnce(Array<char>) -> T,
-        f: impl FnOnce(Array<Value>) -> T,
+        f: impl FnOnce(Array<Boxed>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
@@ -242,7 +235,7 @@ impl Value {
         n: impl FnOnce(&'a Array<f64>) -> T,
         b: impl FnOnce(&'a Array<u8>) -> T,
         c: impl FnOnce(&'a Array<char>) -> T,
-        f: impl FnOnce(&'a Array<Value>) -> T,
+        f: impl FnOnce(&'a Array<Boxed>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
@@ -256,15 +249,15 @@ impl Value {
         n: impl FnOnce(&'a Array<f64>) -> T,
         b: impl FnOnce(&'a Array<u8>) -> T,
         c: impl FnOnce(&'a Array<char>) -> T,
-        f: impl FnOnce(&'a Array<Value>) -> T,
+        f: impl FnOnce(&'a Array<Boxed>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
             Self::Byte(array) => b(array),
             Self::Char(array) => c(array),
             Self::Box(array) => {
-                if let Some(value) = array.as_scalar() {
-                    value.generic_ref_deep(n, b, c, f)
+                if let Some(bx) = array.as_scalar() {
+                    bx.as_value().generic_ref_deep(n, b, c, f)
                 } else {
                     f(array)
                 }
@@ -276,7 +269,7 @@ impl Value {
         n: impl FnOnce(&'a Array<f64>, &Uiua) -> UiuaResult<T>,
         b: impl FnOnce(&'a Array<u8>, &Uiua) -> UiuaResult<T>,
         c: impl FnOnce(&'a Array<char>, &Uiua) -> UiuaResult<T>,
-        f: impl FnOnce(&'a Array<Value>, &Uiua) -> UiuaResult<T>,
+        f: impl FnOnce(&'a Array<Boxed>, &Uiua) -> UiuaResult<T>,
         env: &Uiua,
     ) -> UiuaResult<T> {
         self.generic_ref_shallow(|a| n(a, env), |a| b(a, env), |a| c(a, env), |a| f(a, env))
@@ -286,7 +279,7 @@ impl Value {
         n: impl FnOnce(&'a Array<f64>, &Uiua) -> UiuaResult<T>,
         b: impl FnOnce(&'a Array<u8>, &Uiua) -> UiuaResult<T>,
         c: impl FnOnce(&'a Array<char>, &Uiua) -> UiuaResult<T>,
-        f: impl FnOnce(&'a Array<Value>, &Uiua) -> UiuaResult<T>,
+        f: impl FnOnce(&'a Array<Boxed>, &Uiua) -> UiuaResult<T>,
         env: &Uiua,
     ) -> UiuaResult<T> {
         self.generic_ref_deep(|a| n(a, env), |a| b(a, env), |a| c(a, env), |a| f(a, env))
@@ -296,7 +289,7 @@ impl Value {
         n: impl FnOnce(&mut Array<f64>) -> T,
         b: impl FnOnce(&mut Array<u8>) -> T,
         c: impl FnOnce(&mut Array<char>) -> T,
-        f: impl FnOnce(&mut Array<Value>) -> T,
+        f: impl FnOnce(&mut Array<Boxed>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
@@ -310,15 +303,15 @@ impl Value {
         n: impl FnOnce(&mut Array<f64>) -> T,
         b: impl FnOnce(&mut Array<u8>) -> T,
         c: impl FnOnce(&mut Array<char>) -> T,
-        f: impl FnOnce(&mut Array<Value>) -> T,
+        f: impl FnOnce(&mut Array<Boxed>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
             Self::Byte(array) => b(array),
             Self::Char(array) => c(array),
             Self::Box(array) => {
-                if let Some(value) = array.as_scalar_mut() {
-                    value.generic_mut_deep(n, b, c, f)
+                if let Some(bx) = array.as_scalar_mut() {
+                    bx.as_value_mut().generic_mut_deep(n, b, c, f)
                 } else {
                     f(array)
                 }
@@ -533,7 +526,10 @@ impl Value {
                 result
             }
             value => {
-                return Err(env.error(format!("{requirement}, but it is {}s", value.type_name())))
+                return Err(env.error(format!(
+                    "{requirement}, but it is {}",
+                    value.type_name_plural()
+                )))
             }
         })
     }
@@ -597,9 +593,9 @@ impl Value {
                 }
                 return Ok(chars.data().iter().collect());
             }
-            Value::Box(vals) => {
-                if let Some(val) = vals.as_scalar() {
-                    return val.as_string(env, requirement);
+            Value::Box(boxes) => {
+                if let Some(bx) = boxes.as_scalar() {
+                    return bx.as_value().as_string(env, requirement);
                 }
             }
             _ => {}
@@ -648,13 +644,13 @@ impl Value {
     pub fn box_if_not(&mut self) {
         match &mut *self {
             Value::Box(_) => {}
-            val => *self = Value::Box(Array::from(take(val))),
+            val => *self = Value::Box(Array::from(Boxed(take(val)))),
         }
     }
     pub fn boxed_if_not(self) -> Value {
         match self {
             Value::Box(_) => self,
-            val => Value::Box(Array::from(val)),
+            val => Value::Box(Array::from(Boxed(val))),
         }
     }
     pub fn into_unboxed(self) -> Self {
@@ -682,44 +678,31 @@ impl Value {
             }
         }
     }
-    pub fn coerce_to_box(self) -> Array<Value> {
+    pub fn coerce_to_boxes(self) -> Array<Boxed> {
         match self {
-            Value::Num(arr) => arr.convert_with(Value::from),
-            Value::Byte(arr) => arr.convert_with(Value::from),
-            Value::Char(arr) => arr.convert_with(Value::from),
+            Value::Num(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
+            Value::Byte(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
+            Value::Char(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
             Value::Box(arr) => arr,
         }
     }
-    pub fn coerce_as_box(&self) -> Cow<Array<Value>> {
+    pub fn coerce_as_boxes(&self) -> Cow<Array<Boxed>> {
         match self {
-            Value::Num(arr) => Cow::Owned(arr.convert_ref_with(Value::from)),
-            Value::Byte(arr) => Cow::Owned(arr.convert_ref_with(Value::from)),
-            Value::Char(arr) => Cow::Owned(arr.convert_ref_with(Value::from)),
+            Value::Num(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
+            Value::Byte(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
+            Value::Char(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
             Value::Box(arr) => Cow::Borrowed(arr),
         }
     }
 }
 
-impl From<f64> for Value {
-    fn from(item: f64) -> Self {
-        Self::Num(Array::from(item))
-    }
-}
-
-impl From<u8> for Value {
-    fn from(item: u8) -> Self {
-        Self::Byte(Array::from(item))
-    }
-}
-
-impl From<char> for Value {
-    fn from(item: char) -> Self {
-        Self::Char(Array::from(item))
-    }
-}
-
 macro_rules! value_from {
     ($ty:ty, $variant:ident) => {
+        impl From<$ty> for Value {
+            fn from(item: $ty) -> Self {
+                Self::$variant(Array::from(item))
+            }
+        }
         impl From<Array<$ty>> for Value {
             fn from(array: Array<$ty>) -> Self {
                 Self::$variant(array)
@@ -756,7 +739,7 @@ macro_rules! value_from {
 value_from!(f64, Num);
 value_from!(u8, Byte);
 value_from!(char, Char);
-value_from!(Value, Box);
+value_from!(Boxed, Box);
 
 impl FromIterator<usize> for Value {
     fn from_iter<I: IntoIterator<Item = usize>>(iter: I) -> Self {
@@ -817,8 +800,8 @@ macro_rules! value_un_impl {
                     },)*)*
                     Value::Box(mut array) => {
                         let mut new_data = EcoVec::with_capacity(array.flat_len());
-                        for val in array.data {
-                            new_data.push(val.into_unboxed().$name(env)?);
+                        for b in array.data {
+                            new_data.push(Boxed(b.0.$name(env)?));
                         }
                         array.data = new_data.into();
                         array.into()
@@ -900,14 +883,13 @@ macro_rules! value_bin_impl {
                         }
                     },)*)*
                     (Value::Box(a), b) => {
-                        match a.into_unboxed() {
+                        dbg!("a");
+                        match dbg!(a.into_unboxed()) {
                             Ok(a) => Value::$name(a, b, env)?,
                             Err(a) => {
-                                let b = b.coerce_as_box().into_owned();
-                                bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Value, b: Value, env: &Uiua| {
-                                    let a = a.as_box().ok_or_else(|| env.error("First argument is not a box"))?;
-                                    let b = b.as_box().ok_or_else(|| env.error("Second argument is not a box"))?;
-                                    Value::$name(a.clone(), b.clone(), env)
+                                let b = b.coerce_as_boxes().into_owned();
+                                bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
+                                    Ok(Boxed(Value::$name(a.0, b.0, env)?))
                                 }))?.into()
                             }
                         }
@@ -916,11 +898,9 @@ macro_rules! value_bin_impl {
                         match b.into_unboxed() {
                             Ok(b) => Value::$name(a, b, env)?,
                             Err(b) => {
-                                let a = a.coerce_as_box().into_owned();
-                                bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Value, b: Value, env: &Uiua| {
-                                    let a = a.as_box().ok_or_else(|| env.error("First argument is not a box"))?;
-                                    let b = b.as_box().ok_or_else(|| env.error("Second argument is not a box"))?;
-                                    Value::$name(a.clone(), b.clone(), env)
+                                let a = a.coerce_as_boxes().into_owned();
+                                bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
+                                    Ok(Boxed(Value::$name(a.0, b.0, env)?))
                                 }))?.into()
                             }
                         }

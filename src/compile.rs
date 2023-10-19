@@ -8,10 +8,11 @@ use crate::{
     algorithm::invert::under_instrs,
     array::Array,
     ast::*,
+    boxed::Boxed,
     check::instrs_signature,
     function::*,
     lex::{CodeSpan, Sp, Span},
-    primitive::{PrimClass, Primitive},
+    primitive::Primitive,
     run::RunMode,
     value::Value,
     Diagnostic, DiagnosticKind, Ident, SysOp, UiuaError, UiuaResult,
@@ -370,9 +371,12 @@ impl Uiua {
                     self.push_span(span, None);
                     let val = if arr.constant {
                         if empty {
-                            Array::<Value>::default().into()
+                            Array::<Boxed>::default().into()
                         } else {
-                            Value::from_row_values(values.map(|v| Value::Box(v.into())), self)?
+                            Value::from_row_values(
+                                values.map(|v| Value::Box(Boxed(v).into())),
+                                self,
+                            )?
                         }
                     } else {
                         Value::from_row_values(values, self)?
@@ -737,7 +741,7 @@ impl Uiua {
     fn primitive(&mut self, prim: Primitive, span: CodeSpan, call: bool) -> UiuaResult {
         self.handle_primitive_deprecation(prim, &span);
         let span_i = self.add_span(span.clone());
-        if call || prim.class() == PrimClass::Constant {
+        if call {
             self.push_instr(Instr::Prim(prim, span_i));
         } else {
             let instrs = [Instr::Prim(prim, span_i)];

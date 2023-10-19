@@ -1,19 +1,22 @@
 //! Algorithms for zipping modifiers
 
+use std::sync::Arc;
+
 use crate::{
     algorithm::{
         loops::{rank_list, rank_to_depth},
         pervade::bin_pervade_generic,
     },
     array::{FormatShape, Shape},
-    run::{ArrayArg, FunctionArg},
+    function::Function,
+    run::ArrayArg,
     value::Value,
     Uiua, UiuaResult,
 };
 
 pub fn each(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop(FunctionArg(1))?;
+    let f = env.pop_function()?;
     let sig = f.signature();
     let output = match sig.outputs {
         0 => false,
@@ -58,7 +61,7 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
     }
 }
 
-fn each1_1(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
+fn each1_1(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
     let mut new_values = Vec::with_capacity(xs.flat_len());
     let mut new_shape = Shape::from(xs.shape());
     let mut old_values = xs.into_flat_values();
@@ -80,7 +83,7 @@ fn each1_1(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn each1_0(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
+fn each1_0(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
     let values = xs.into_flat_values();
     for val in values {
         env.push(val);
@@ -91,7 +94,7 @@ fn each1_0(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn each2_1(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+fn each2_1(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     let xs_shape = xs.shape().to_vec();
     let ys_shape = ys.shape().to_vec();
     let xs_values: Vec<_> = xs.into_flat_values().collect();
@@ -116,7 +119,7 @@ fn each2_1(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn each2_0(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+fn each2_0(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     let xs_shape = xs.shape().to_vec();
     let ys_shape = ys.shape().to_vec();
     let xs_values: Vec<_> = xs.into_flat_values().collect();
@@ -137,7 +140,7 @@ fn each2_0(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn eachn_1(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+fn eachn_1(f: Arc<Function>, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     for win in args.windows(2) {
         if win[0].shape() != win[1].shape() {
             return Err(env.error(format!(
@@ -163,7 +166,7 @@ fn eachn_1(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn eachn_0(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+fn eachn_0(f: Arc<Function>, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     for win in args.windows(2) {
         if win[0].shape() != win[1].shape() {
             return Err(env.error(format!(
@@ -187,7 +190,7 @@ fn eachn_0(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
 
 pub fn rows(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop(FunctionArg(1))?;
+    let f = env.pop_function()?;
     let sig = f.signature();
     let output = match sig.outputs {
         0 => false,
@@ -232,7 +235,7 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
     }
 }
 
-fn rows1_1(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
+fn rows1_1(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
     let mut new_rows = Value::builder(xs.row_count());
     let mut old_rows = xs.into_rows();
     for row in old_rows.by_ref() {
@@ -250,7 +253,7 @@ fn rows1_1(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn rows1_0(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
+fn rows1_0(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
     for row in xs.into_rows() {
         env.push(row);
         let broke = env.call_catch_break(f.clone())?;
@@ -261,7 +264,7 @@ fn rows1_0(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn rows2_1(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+fn rows2_1(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     if xs.row_count() != ys.row_count() {
         return Err(env.error(format!(
             "Cannot rows arrays with different number of rows {} and {}",
@@ -282,7 +285,7 @@ fn rows2_1(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn rows2_0(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+fn rows2_0(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     if xs.row_count() != ys.row_count() {
         return Err(env.error(format!(
             "Cannot rows arrays with different number of rows {} and {}",
@@ -300,7 +303,7 @@ fn rows2_0(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn rowsn_1(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+fn rowsn_1(f: Arc<Function>, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     for win in args.windows(2) {
         if win[0].row_count() != win[1].row_count() {
             return Err(env.error(format!(
@@ -326,7 +329,7 @@ fn rowsn_1(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn rowsn_0(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+fn rowsn_0(f: Arc<Function>, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     let row_count = args[0].row_count();
     let mut arg_elems: Vec<_> = args.into_iter().map(|v| v.into_rows()).collect();
     for _ in 0..row_count {
@@ -340,7 +343,7 @@ fn rowsn_0(f: Value, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
 
 pub fn distribute(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop(FunctionArg(1))?;
+    let f = env.pop_function()?;
     let sig = f.signature();
     if sig.outputs != 1 {
         return Err(env.error(format!(
@@ -422,7 +425,7 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
             return distribute(env);
         }
     }
-    let f = env.pop(FunctionArg(2))?;
+    let f = env.pop_function()?;
     let f_sig = f.signature();
     if f_sig.outputs != 1 {
         return Err(env.error(format!(
@@ -498,7 +501,12 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn monadic_level_recursive(f: Value, value: Value, n: usize, env: &mut Uiua) -> UiuaResult<Value> {
+fn monadic_level_recursive(
+    f: Arc<Function>,
+    value: Value,
+    n: usize,
+    env: &mut Uiua,
+) -> UiuaResult<Value> {
     if n == 0 {
         env.push(value);
         env.call(f)?;
@@ -513,7 +521,7 @@ fn monadic_level_recursive(f: Value, value: Value, n: usize, env: &mut Uiua) -> 
 }
 
 fn dyadic_level_recursive(
-    f: Value,
+    f: Arc<Function>,
     xs: Value,
     ys: Value,
     xn: usize,
@@ -587,7 +595,7 @@ fn dyadic_level_recursive(
 }
 
 fn multi_level_recursive(
-    f: Value,
+    f: Arc<Function>,
     args: Vec<Value>,
     ns: &[usize],
     env: &mut Uiua,

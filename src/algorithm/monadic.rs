@@ -5,7 +5,6 @@ use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     iter::repeat,
     ptr,
-    sync::Arc,
 };
 
 use ecow::EcoVec;
@@ -15,7 +14,6 @@ use tinyvec::tiny_vec;
 use crate::{
     array::*,
     cowslice::{cowslice, CowSlice},
-    function::Signature,
     value::Value,
     Uiua, UiuaResult,
 };
@@ -355,44 +353,6 @@ impl<T: ArrayValue> Array<T> {
         }
         self.data = deduped;
         self.shape[0] = new_len;
-    }
-}
-
-impl Value {
-    pub fn invert(&self, env: &Uiua) -> UiuaResult<Self> {
-        Ok(match self {
-            Self::Box(fs) => {
-                let mut invs = CowSlice::with_capacity(fs.row_count());
-                invs.try_extend(fs.data.iter().map(|f| {
-                    f.inverse()
-                        .map(Into::into)
-                        .ok_or_else(|| env.error("No inverse found"))
-                }))?;
-                Self::Box(Array::new(fs.shape.clone(), invs))
-            }
-            v => return Err(env.error(format!("Cannot invert {}", v.type_name()))),
-        })
-    }
-    pub fn under(self, g_sig: Signature, env: &Uiua) -> UiuaResult<(Self, Self)> {
-        Ok(match self {
-            Self::Box(fs) => {
-                let mut befores = EcoVec::with_capacity(fs.row_count());
-                let mut afters = EcoVec::with_capacity(fs.row_count());
-                for f in fs.data {
-                    let f = Arc::try_unwrap(f).unwrap_or_else(|f| (*f).clone());
-                    let (before, after) = f
-                        .under(g_sig)
-                        .ok_or_else(|| env.error("No inverse found"))?;
-                    befores.push(before.into());
-                    afters.push(after.into());
-                }
-                (
-                    Self::Box(Array::new(fs.shape.clone(), befores)),
-                    Self::Box(Array::new(fs.shape.clone(), afters)),
-                )
-            }
-            v => return Err(env.error(format!("Cannot invert {}", v.type_name()))),
-        })
     }
 }
 

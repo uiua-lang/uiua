@@ -4,7 +4,6 @@ use std::{
     fmt,
     hash::{Hash, Hasher},
     mem::take,
-    sync::Arc,
 };
 
 use ecow::EcoVec;
@@ -13,9 +12,8 @@ use crate::{
     algorithm::{pervade::*, FillContext},
     array::*,
     cowslice::CowSlice,
-    function::{Function, Signature},
+    function::Signature,
     grid_fmt::GridFmt,
-    primitive::Primitive,
     Uiua, UiuaResult,
 };
 
@@ -24,7 +22,7 @@ pub enum Value {
     Num(Array<f64>),
     Byte(Array<u8>),
     Char(Array<char>),
-    Box(Array<Arc<Function>>),
+    Box(Array<Value>),
 }
 
 impl Default for Value {
@@ -49,7 +47,7 @@ impl Value {
         ValueBuilder::with_capacity(capacity)
     }
     pub fn signature(&self) -> Signature {
-        if let Some(f) = self.as_func_array().and_then(Array::as_scalar) {
+        if let Some(f) = self.as_box_array().and_then(Array::as_scalar) {
             f.signature()
         } else {
             Signature::new(0, 1)
@@ -73,24 +71,24 @@ impl Value {
             _ => None,
         }
     }
-    pub fn as_func_array(&self) -> Option<&Array<Arc<Function>>> {
+    pub fn as_box_array(&self) -> Option<&Array<Value>> {
         match self {
             Self::Box(array) => Some(array),
             _ => None,
         }
     }
     #[inline]
-    pub fn into_func_array(self) -> Result<Array<Arc<Function>>, Self> {
+    pub fn into_func_array(self) -> Result<Array<Value>, Self> {
         match self {
             Self::Box(array) => Ok(array),
             _ => Err(self),
         }
     }
-    pub fn as_function(&self) -> Option<&Arc<Function>> {
-        self.as_func_array().and_then(Array::as_scalar)
+    pub fn as_box(&self) -> Option<&Value> {
+        self.as_box_array().and_then(Array::as_scalar)
     }
     #[inline]
-    pub fn into_function(self) -> Result<Arc<Function>, Self> {
+    pub fn into_function(self) -> Result<Value, Self> {
         match self.into_func_array() {
             Ok(array) => array.into_scalar().map_err(Into::into),
             Err(value) => Err(value),
@@ -213,7 +211,7 @@ impl Value {
         n: impl FnOnce(Array<f64>) -> T,
         b: impl FnOnce(Array<u8>) -> T,
         c: impl FnOnce(Array<char>) -> T,
-        f: impl FnOnce(Array<Arc<Function>>) -> T,
+        f: impl FnOnce(Array<Value>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
@@ -227,7 +225,7 @@ impl Value {
         n: impl FnOnce(Array<f64>) -> T,
         b: impl FnOnce(Array<u8>) -> T,
         c: impl FnOnce(Array<char>) -> T,
-        f: impl FnOnce(Array<Arc<Function>>) -> T,
+        f: impl FnOnce(Array<Value>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
@@ -244,7 +242,7 @@ impl Value {
         n: impl FnOnce(&'a Array<f64>) -> T,
         b: impl FnOnce(&'a Array<u8>) -> T,
         c: impl FnOnce(&'a Array<char>) -> T,
-        f: impl FnOnce(&'a Array<Arc<Function>>) -> T,
+        f: impl FnOnce(&'a Array<Value>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
@@ -258,14 +256,14 @@ impl Value {
         n: impl FnOnce(&'a Array<f64>) -> T,
         b: impl FnOnce(&'a Array<u8>) -> T,
         c: impl FnOnce(&'a Array<char>) -> T,
-        f: impl FnOnce(&'a Array<Arc<Function>>) -> T,
+        f: impl FnOnce(&'a Array<Value>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
             Self::Byte(array) => b(array),
             Self::Char(array) => c(array),
             Self::Box(array) => {
-                if let Some(value) = array.as_boxed() {
+                if let Some(value) = array.as_scalar() {
                     value.generic_ref_deep(n, b, c, f)
                 } else {
                     f(array)
@@ -278,7 +276,7 @@ impl Value {
         n: impl FnOnce(&'a Array<f64>, &Uiua) -> UiuaResult<T>,
         b: impl FnOnce(&'a Array<u8>, &Uiua) -> UiuaResult<T>,
         c: impl FnOnce(&'a Array<char>, &Uiua) -> UiuaResult<T>,
-        f: impl FnOnce(&'a Array<Arc<Function>>, &Uiua) -> UiuaResult<T>,
+        f: impl FnOnce(&'a Array<Value>, &Uiua) -> UiuaResult<T>,
         env: &Uiua,
     ) -> UiuaResult<T> {
         self.generic_ref_shallow(|a| n(a, env), |a| b(a, env), |a| c(a, env), |a| f(a, env))
@@ -288,7 +286,7 @@ impl Value {
         n: impl FnOnce(&'a Array<f64>, &Uiua) -> UiuaResult<T>,
         b: impl FnOnce(&'a Array<u8>, &Uiua) -> UiuaResult<T>,
         c: impl FnOnce(&'a Array<char>, &Uiua) -> UiuaResult<T>,
-        f: impl FnOnce(&'a Array<Arc<Function>>, &Uiua) -> UiuaResult<T>,
+        f: impl FnOnce(&'a Array<Value>, &Uiua) -> UiuaResult<T>,
         env: &Uiua,
     ) -> UiuaResult<T> {
         self.generic_ref_deep(|a| n(a, env), |a| b(a, env), |a| c(a, env), |a| f(a, env))
@@ -298,7 +296,7 @@ impl Value {
         n: impl FnOnce(&mut Array<f64>) -> T,
         b: impl FnOnce(&mut Array<u8>) -> T,
         c: impl FnOnce(&mut Array<char>) -> T,
-        f: impl FnOnce(&mut Array<Arc<Function>>) -> T,
+        f: impl FnOnce(&mut Array<Value>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
@@ -312,14 +310,14 @@ impl Value {
         n: impl FnOnce(&mut Array<f64>) -> T,
         b: impl FnOnce(&mut Array<u8>) -> T,
         c: impl FnOnce(&mut Array<char>) -> T,
-        f: impl FnOnce(&mut Array<Arc<Function>>) -> T,
+        f: impl FnOnce(&mut Array<Value>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
             Self::Byte(array) => b(array),
             Self::Char(array) => c(array),
             Self::Box(array) => {
-                if let Some(value) = array.as_boxed_mut() {
+                if let Some(value) = array.as_scalar_mut() {
                     value.generic_mut_deep(n, b, c, f)
                 } else {
                     f(array)
@@ -344,22 +342,6 @@ impl Value {
             Self::Char(array) => array.grid_string(),
             Self::Box(array) => array.grid_string(),
         }
-    }
-    pub fn as_primitive(&self) -> Option<(Primitive, usize)> {
-        if let Value::Box(fs) = self {
-            if fs.rank() == 0 {
-                return fs.data[0].as_primitive();
-            }
-        }
-        None
-    }
-    pub(crate) fn as_flipped_primitive(&self) -> Option<(Primitive, bool)> {
-        if let Value::Box(fs) = self {
-            if fs.rank() == 0 {
-                return fs.data[0].as_flipped_primitive();
-            }
-        }
-        None
     }
     pub fn as_indices(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<isize>> {
         self.as_number_list(env, requirement, |f| f % 1.0 == 0.0, |f| f as isize)
@@ -615,8 +597,8 @@ impl Value {
                 }
                 return Ok(chars.data().iter().collect());
             }
-            Value::Box(f) => {
-                if let Some(val) = f.as_boxed() {
+            Value::Box(vals) => {
+                if let Some(val) = vals.as_scalar() {
                     return val.as_string(env, requirement);
                 }
             }
@@ -664,28 +646,15 @@ impl Value {
         }
     }
     pub fn box_if_not(&mut self) {
-        match self {
-            Value::Num(arr) => *self = Value::Box(Arc::new(Function::boxed(take(arr))).into()),
-            Value::Byte(arr) => *self = Value::Box(Arc::new(Function::boxed(take(arr))).into()),
-            Value::Char(arr) => *self = Value::Box(Arc::new(Function::boxed(take(arr))).into()),
-            Value::Box(arr) if arr.as_boxed().is_none() => {
-                *self = Value::Box(Arc::new(Function::boxed(take(arr))).into())
-            }
+        match &mut *self {
             Value::Box(_) => {}
+            val => *self = Value::Box(Array::from(take(val))),
         }
     }
-    pub fn boxed_if_not(self) -> Arc<Function> {
+    pub fn boxed_if_not(self) -> Value {
         match self {
-            Value::Num(arr) => Arc::new(Function::boxed(arr)),
-            Value::Byte(arr) => Arc::new(Function::boxed(arr)),
-            Value::Char(arr) => Arc::new(Function::boxed(arr)),
-            Value::Box(arr) => {
-                if arr.as_boxed().is_some() {
-                    arr.data.into_iter().next().unwrap()
-                } else {
-                    Arc::new(Function::boxed(arr))
-                }
-            }
+            Value::Box(_) => self,
+            val => Value::Box(Array::from(val)),
         }
     }
     pub fn into_unboxed(self) -> Self {
@@ -713,31 +682,44 @@ impl Value {
             }
         }
     }
-    pub fn coerce_to_function(self) -> Array<Arc<Function>> {
+    pub fn coerce_to_box(self) -> Array<Value> {
         match self {
-            Value::Num(arr) => arr.convert_with(|n| Arc::new(Function::boxed(n))),
-            Value::Byte(arr) => arr.convert_with(|n| Arc::new(Function::boxed(n))),
-            Value::Char(arr) => arr.convert_with(|n| Arc::new(Function::boxed(n))),
+            Value::Num(arr) => arr.convert_with(Value::from),
+            Value::Byte(arr) => arr.convert_with(Value::from),
+            Value::Char(arr) => arr.convert_with(Value::from),
             Value::Box(arr) => arr,
         }
     }
-    pub fn coerce_as_function(&self) -> Cow<Array<Arc<Function>>> {
+    pub fn coerce_as_box(&self) -> Cow<Array<Value>> {
         match self {
-            Value::Num(arr) => Cow::Owned(arr.convert_ref_with(|n| Arc::new(Function::boxed(n)))),
-            Value::Byte(arr) => Cow::Owned(arr.convert_ref_with(|n| Arc::new(Function::boxed(n)))),
-            Value::Char(arr) => Cow::Owned(arr.convert_ref_with(|n| Arc::new(Function::boxed(n)))),
+            Value::Num(arr) => Cow::Owned(arr.convert_ref_with(Value::from)),
+            Value::Byte(arr) => Cow::Owned(arr.convert_ref_with(Value::from)),
+            Value::Char(arr) => Cow::Owned(arr.convert_ref_with(Value::from)),
             Value::Box(arr) => Cow::Borrowed(arr),
         }
     }
 }
 
+impl From<f64> for Value {
+    fn from(item: f64) -> Self {
+        Self::Num(Array::from(item))
+    }
+}
+
+impl From<u8> for Value {
+    fn from(item: u8) -> Self {
+        Self::Byte(Array::from(item))
+    }
+}
+
+impl From<char> for Value {
+    fn from(item: char) -> Self {
+        Self::Char(Array::from(item))
+    }
+}
+
 macro_rules! value_from {
     ($ty:ty, $variant:ident) => {
-        impl From<$ty> for Value {
-            fn from(item: $ty) -> Self {
-                Self::$variant(Array::from(item))
-            }
-        }
         impl From<Array<$ty>> for Value {
             fn from(array: Array<$ty>) -> Self {
                 Self::$variant(array)
@@ -774,7 +756,7 @@ macro_rules! value_from {
 value_from!(f64, Num);
 value_from!(u8, Byte);
 value_from!(char, Char);
-value_from!(Arc<Function>, Box);
+value_from!(Value, Box);
 
 impl FromIterator<usize> for Value {
     fn from_iter<I: IntoIterator<Item = usize>>(iter: I) -> Self {
@@ -803,12 +785,6 @@ impl From<String> for Value {
 impl<'a> From<&'a str> for Value {
     fn from(s: &'a str) -> Self {
         s.chars().collect()
-    }
-}
-
-impl From<Function> for Value {
-    fn from(f: Function) -> Self {
-        Arc::new(f).into()
     }
 }
 
@@ -841,11 +817,8 @@ macro_rules! value_un_impl {
                     },)*)*
                     Value::Box(mut array) => {
                         let mut new_data = EcoVec::with_capacity(array.flat_len());
-                        for f in array.data {
-                            match Function::into_inner(f).into_unboxed() {
-                                Ok(value) => new_data.push(Arc::new(Function::boxed(value.$name(env)?))),
-                                Err(_) => return Err($name::error("function", env)),
-                            }
+                        for val in array.data {
+                            new_data.push(val.into_unboxed().$name(env)?);
                         }
                         array.data = new_data.into();
                         array.into()
@@ -930,11 +903,11 @@ macro_rules! value_bin_impl {
                         match a.into_unboxed() {
                             Ok(a) => Value::$name(a, b, env)?,
                             Err(a) => {
-                                let b = b.coerce_as_function().into_owned();
-                                bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Arc<Function>, b: Arc<Function>, env: &Uiua| {
-                                    let a = a.as_boxed().ok_or_else(|| env.error("First argument is not a box"))?;
-                                    let b = b.as_boxed().ok_or_else(|| env.error("Second argument is not a box"))?;
-                                    Ok(Arc::new(Function::boxed(Value::$name(a.clone(), b.clone(), env)?)))
+                                let b = b.coerce_as_box().into_owned();
+                                bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Value, b: Value, env: &Uiua| {
+                                    let a = a.as_box().ok_or_else(|| env.error("First argument is not a box"))?;
+                                    let b = b.as_box().ok_or_else(|| env.error("Second argument is not a box"))?;
+                                    Value::$name(a.clone(), b.clone(), env)
                                 }))?.into()
                             }
                         }
@@ -943,11 +916,11 @@ macro_rules! value_bin_impl {
                         match b.into_unboxed() {
                             Ok(b) => Value::$name(a, b, env)?,
                             Err(b) => {
-                                let a = a.coerce_as_function().into_owned();
-                                bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Arc<Function>, b: Arc<Function>, env: &Uiua| {
-                                    let a = a.as_boxed().ok_or_else(|| env.error("First argument is not a box"))?;
-                                    let b = b.as_boxed().ok_or_else(|| env.error("Second argument is not a box"))?;
-                                    Ok(Arc::new(Function::boxed(Value::$name(a.clone(), b.clone(), env)?)))
+                                let a = a.coerce_as_box().into_owned();
+                                bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Value, b: Value, env: &Uiua| {
+                                    let a = a.as_box().ok_or_else(|| env.error("First argument is not a box"))?;
+                                    let b = b.as_box().ok_or_else(|| env.error("Second argument is not a box"))?;
+                                    Value::$name(a.clone(), b.clone(), env)
                                 }))?.into()
                             }
                         }
@@ -1131,13 +1104,7 @@ impl fmt::Display for Value {
             Value::Num(n) => n.fmt(f),
             Value::Byte(b) => b.fmt(f),
             Value::Char(c) => c.fmt(f),
-            Value::Box(func) => {
-                if let Some(val) = func.as_boxed() {
-                    val.fmt(f)
-                } else {
-                    func.fmt(f)
-                }
-            }
+            Value::Box(v) => v.fmt(f),
         }
     }
 }

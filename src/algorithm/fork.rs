@@ -1,13 +1,9 @@
 //! Algorithms for forking modifiers
 
-use crate::{
-    run::{ArrayArg, FunctionArg},
-    value::Value,
-    Uiua, UiuaResult,
-};
+use crate::{run::ArrayArg, value::Value, Uiua, UiuaResult};
 
 pub fn both(env: &mut Uiua) -> UiuaResult {
-    let f = env.pop(FunctionArg(1))?;
+    let f = env.pop_function()?;
     match f.signature().args {
         0 => {
             env.call(f.clone())?;
@@ -45,8 +41,8 @@ pub fn both(env: &mut Uiua) -> UiuaResult {
 }
 
 pub fn fork(env: &mut Uiua) -> UiuaResult {
-    let f = env.pop(FunctionArg(1))?;
-    let g = env.pop(FunctionArg(2))?;
+    let f = env.pop_function()?;
+    let g = env.pop_function()?;
     let arg_count = f.signature().args.max(g.signature().args);
     let mut args = Vec::with_capacity(arg_count);
     for i in 0..arg_count {
@@ -64,8 +60,8 @@ pub fn fork(env: &mut Uiua) -> UiuaResult {
 }
 
 pub fn bracket(env: &mut Uiua) -> UiuaResult {
-    let f = env.pop(FunctionArg(1))?;
-    let g = env.pop(FunctionArg(2))?;
+    let f = env.pop_function()?;
+    let g = env.pop_function()?;
     let f_sig = f.signature();
     let mut f_args = Vec::with_capacity(f_sig.args);
     for i in 0..f_sig.args {
@@ -80,8 +76,8 @@ pub fn bracket(env: &mut Uiua) -> UiuaResult {
 }
 
 pub fn iff(env: &mut Uiua) -> UiuaResult {
-    let if_true = env.pop(FunctionArg(1))?;
-    let if_false = env.pop(FunctionArg(2))?;
+    let if_true = env.pop_function()?;
+    let if_false = env.pop_function()?;
     let condition = env.pop(ArrayArg(1))?;
     if let Ok(condition) = condition.as_nat(env, "") {
         if condition > 1 {

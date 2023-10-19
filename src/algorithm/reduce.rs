@@ -1,5 +1,7 @@
 //! Algorithms for reducing modifiers
 
+use std::sync::Arc;
+
 use ecow::EcoVec;
 
 use crate::{
@@ -9,16 +11,16 @@ use crate::{
     },
     array::{Array, ArrayValue, Shape},
     cowslice::cowslice,
-    function::Signature,
+    function::{Function, Signature},
     primitive::Primitive,
-    run::{ArrayArg, FunctionArg},
+    run::ArrayArg,
     value::Value,
     Uiua, UiuaResult,
 };
 
 pub fn reduce(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop(FunctionArg(1))?;
+    let f = env.pop_function()?;
     let xs = env.pop(ArrayArg(1))?;
 
     match (f.as_flipped_primitive(), xs) {
@@ -106,7 +108,12 @@ where
     }
 }
 
-fn generic_fold_right_1(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
+fn generic_fold_right_1(
+    f: Arc<Function>,
+    xs: Value,
+    init: Option<Value>,
+    env: &mut Uiua,
+) -> UiuaResult {
     let sig = f.signature();
     if sig.outputs > 1 {
         return Err(env.error(format!(
@@ -159,7 +166,7 @@ fn generic_fold_right_1(f: Value, xs: Value, init: Option<Value>, env: &mut Uiua
 
 pub fn scan(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop(FunctionArg(1))?;
+    let f = env.pop_function()?;
     let xs = env.pop(ArrayArg(1))?;
     if xs.rank() == 0 {
         return Err(env.error("Cannot scan rank 0 array"));
@@ -239,7 +246,7 @@ where
     }
 }
 
-fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
+fn generic_scan(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
     if sig != (2, 1) {
         return Err(env.error(format!(
@@ -280,7 +287,7 @@ fn generic_scan(f: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
 pub fn fold(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let ns = rank_list("Fold", env)?;
-    let f = env.pop(FunctionArg(2))?;
+    let f = env.pop_function()?;
     let mut args = Vec::with_capacity(ns.len());
     for i in 0..ns.len() {
         let arg = env.pop(ArrayArg(i + 1))?;
@@ -299,7 +306,7 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
 }
 
 fn fold_recursive(
-    f: Value,
+    f: Arc<Function>,
     mut args: Vec<Value>,
     ns: &[usize],
     env: &mut Uiua,

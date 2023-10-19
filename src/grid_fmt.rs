@@ -8,12 +8,10 @@ use std::{
     },
     iter::once,
     mem::take,
-    sync::Arc,
 };
 
 use crate::{
     array::{Array, ArrayValue},
-    function::Function,
     primitive::Primitive,
     value::Value,
 };
@@ -91,56 +89,6 @@ impl GridFmt for char {
         })
         .chain(format_char_inner(*self).chars())
         .collect()]
-    }
-}
-
-impl GridFmt for Arc<Function> {
-    fn fmt_grid(&self, boxed: bool) -> Grid {
-        Function::fmt_grid(self, boxed)
-    }
-}
-
-impl GridFmt for Function {
-    fn fmt_grid(&self, boxed: bool) -> Grid {
-        if let Some((prim, _)) = self.as_primitive() {
-            return vec![prim.to_string().chars().collect()];
-        }
-        if let Some(value) = self.as_boxed() {
-            let mut grid = value.fmt_grid(true);
-            if grid.len() == 1 && boxed {
-                grid[0].insert(0, '□');
-            }
-            return grid;
-        }
-        let mut grid: Grid = self
-            .format_inner()
-            .into_iter()
-            .map(|s| s.chars().collect())
-            .collect();
-        if grid.is_empty() {
-            grid.push(vec![]);
-        }
-        if grid.len() == 1 {
-            grid[0].insert(0, '(');
-            if boxed {
-                grid[0].insert(0, '□');
-            }
-            grid[0].push(')');
-            return grid;
-        }
-        let row_count = grid.len();
-        for (i, row) in grid.iter_mut().enumerate() {
-            let (start, end) = if i == 0 {
-                ('⎛', '⎞')
-            } else if i == row_count - 1 {
-                ('⎝', '⎠')
-            } else {
-                ('⎜', '⎟')
-            };
-            row.insert(0, start);
-            row.push(end);
-        }
-        grid
     }
 }
 

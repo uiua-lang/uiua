@@ -7,7 +7,6 @@ use std::{
     hash::{Hash, Hasher},
     iter::repeat,
     mem::take,
-    sync::Arc,
 };
 
 use ecow::EcoVec;
@@ -17,7 +16,6 @@ use crate::{
     algorithm::max_shape,
     array::*,
     cowslice::{cowslice, CowSlice},
-    function::Function,
     value::Value,
     Uiua, UiuaResult,
 };
@@ -29,13 +27,13 @@ impl Value {
         self,
         other: Self,
         ctx: C,
-        on_success: impl FnOnce(Array<Arc<Function>>, Array<Arc<Function>>, C) -> Result<T, C::Error>,
+        on_success: impl FnOnce(Array<Value>, Array<Value>, C) -> Result<T, C::Error>,
         on_error: impl FnOnce(&str, &str) -> E,
     ) -> Result<T, C::Error> {
         match (self, other) {
             (Value::Box(a), Value::Box(b)) => on_success(a, b, ctx),
-            (Value::Box(a), b) => on_success(a, b.coerce_to_function(), ctx),
-            (a, Value::Box(b)) => on_success(a.coerce_to_function(), b, ctx),
+            (Value::Box(a), b) => on_success(a, b.coerce_to_box(), ctx),
+            (a, Value::Box(b)) => on_success(a.coerce_to_box(), b, ctx),
             (a, b) => Err(ctx.error(on_error(a.type_name(), b.type_name()))),
         }
     }

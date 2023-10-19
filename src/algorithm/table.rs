@@ -1,6 +1,6 @@
 //! Algorithms for tabling modifiers
 
-use std::mem::take;
+use std::{mem::take, sync::Arc};
 
 use ecow::EcoVec;
 use tinyvec::tiny_vec;
@@ -11,8 +11,9 @@ use crate::{
         pervade::*,
     },
     array::{Array, ArrayValue, Shape},
+    function::Function,
     primitive::Primitive,
-    run::{ArrayArg, FunctionArg},
+    run::ArrayArg,
     value::Value,
     Uiua, UiuaResult,
 };
@@ -21,7 +22,7 @@ use super::loops::flip;
 
 pub fn table(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop(FunctionArg(1))?;
+    let f = env.pop_function()?;
     let xs = env.pop(ArrayArg(1))?;
     let ys = env.pop(ArrayArg(2))?;
     match (f.as_flipped_primitive(), xs, ys) {
@@ -143,7 +144,7 @@ fn fast_table_join_or_couple<T: ArrayValue>(a: Array<T>, b: Array<T>, flipped: b
     Array::new(new_shape, new_data)
 }
 
-fn generic_table(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+fn generic_table(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
     if sig != (2, 1) {
         return Err(env.error(format!(
@@ -174,7 +175,7 @@ fn generic_table(f: Value, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
 
 pub fn cross(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop(FunctionArg(1))?;
+    let f = env.pop_function()?;
     let xs = env.pop(ArrayArg(1))?;
     let ys = env.pop(ArrayArg(2))?;
     let sig = f.signature();
@@ -213,7 +214,7 @@ pub fn combinate(env: &mut Uiua) -> UiuaResult {
             ns.len()
         )));
     }
-    let f = env.pop(FunctionArg(2))?;
+    let f = env.pop_function()?;
     let f_sig = f.signature();
     if f_sig.outputs != 1 {
         return Err(env.error(format!(
@@ -244,7 +245,7 @@ pub fn combinate(env: &mut Uiua) -> UiuaResult {
 }
 
 fn multi_combinate_recursive(
-    f: Value,
+    f: Arc<Function>,
     args: &mut [Value],
     ns: &[usize],
     curr: usize,

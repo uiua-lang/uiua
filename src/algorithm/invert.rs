@@ -13,13 +13,13 @@ impl Function {
     pub fn inverse(&self) -> Option<Self> {
         Function::new_inferred(self.id.clone(), invert_instrs(&self.instrs)?).ok()
     }
-    pub fn under(self, g_sig: Signature) -> Option<(Self, Self)> {
+    pub fn under(&self, g_sig: Signature) -> Option<(Self, Self)> {
         if let Some(f) = self.inverse() {
-            Some((self, f))
+            Some((self.clone(), f))
         } else {
             let (befores, afters) = under_instrs(&self.instrs, g_sig)?;
             let before = Function::new_inferred(self.id.clone(), befores).ok()?;
-            let after = Function::new_inferred(self.id, afters).ok()?;
+            let after = Function::new_inferred(self.id.clone(), afters).ok()?;
             Some((before, after))
         }
     }
@@ -74,23 +74,10 @@ fn invert_instr_fragment(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
                 prim => vec![Instr::Prim(prim.inverse()?, *span)],
             })
         }
-        [Push(val)] => {
+        [PushFunc(val)] => {
             if let Some((prim, span)) = val.as_primitive() {
                 return Some(vec![Instr::Prim(prim.inverse()?, span)]);
             }
-        }
-        [gi @ Push(g), fi @ Push(f), Prim(Bind, _)] => {
-            let mut instrs = if let Some(g) = g.as_function() {
-                g.instrs.clone()
-            } else {
-                vec![gi.clone()]
-            };
-            if let Some(f) = f.as_function() {
-                instrs.extend(f.instrs.iter().cloned());
-            } else {
-                instrs.push(fi.clone());
-            }
-            return invert_instrs(&instrs);
         }
         _ => {}
     }
@@ -159,28 +146,9 @@ pub(crate) fn under_instrs(instrs: &[Instr], g_sig: Signature) -> Option<Under> 
 }
 
 fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, Vec<Instr>)> {
-    use Instr::*;
     use Primitive::*;
     if let Some(inverted) = invert_instrs(instrs) {
         return Some((instrs.to_vec(), inverted));
-    }
-
-    match instrs {
-        [gi @ Push(g), fi @ Push(f), Prim(Bind, _)] => {
-            let mut instrs = if let Some(g) = g.as_function() {
-                g.instrs.clone()
-            } else {
-                vec![gi.clone()]
-            };
-            if let Some(f) = f.as_function() {
-                instrs.extend(f.instrs.iter().cloned());
-            } else {
-                instrs.push(fi.clone());
-            }
-            let (before, after) = under_instrs(&instrs, g_sig)?;
-            return Some((before, after));
-        }
-        _ => {}
     }
 
     macro_rules! stash2 {
@@ -422,16 +390,15 @@ fn under_both_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Un
     let [input @ .., Instr::Prim(Primitive::Both, span)] = input else {
         return None;
     };
-    let (Instr::Push(func), input) = input.split_last()? else {
+    let (Instr::PushFunc(func), input) = input.split_last()? else {
         return None;
     };
-    let func = func.as_function()?;
     let (befores, afters) = under_instrs(&func.instrs, g_sig)?;
     let (befores, afters) = match (g_sig.args, g_sig.outputs) {
         (2, 1) => {
             let before_func = Function::new(func.id.clone(), befores, func.signature());
             let befores = vec![
-                Instr::push(before_func),
+                Instr::push_func(before_func),
                 Instr::Prim(Primitive::Both, *span),
             ];
             (befores, afters)
@@ -440,10 +407,13 @@ fn under_both_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Un
             let before_func = Function::new(func.id.clone(), befores, func.signature());
             let after_func = Function::new(func.id.clone(), afters, func.signature());
             let befores = vec![
-                Instr::push(before_func),
+                Instr::push_func(before_func),
                 Instr::Prim(Primitive::Both, *span),
             ];
-            let afters = vec![Instr::push(after_func), Instr::Prim(Primitive::Both, *span)];
+            let afters = vec![
+                Instr::push_func(after_func),
+                Instr::Prim(Primitive::Both, *span),
+            ];
             (befores, afters)
         }
         _ => return None,

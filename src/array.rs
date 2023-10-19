@@ -2,7 +2,6 @@ use std::{
     cmp::Ordering,
     fmt::{self, Debug, Display},
     hash::{Hash, Hasher},
-    sync::Arc,
 };
 
 use ecow::EcoVec;
@@ -10,7 +9,6 @@ use tinyvec::{tiny_vec, TinyVec};
 
 use crate::{
     cowslice::{cowslice, CowSlice},
-    function::Function,
     grid_fmt::GridFmt,
     value::Value,
     Uiua,
@@ -241,28 +239,15 @@ impl<T: ArrayValue> Array<T> {
     }
 }
 
-impl Array<Arc<Function>> {
+impl Array<Value> {
     pub fn into_unboxed(self) -> Result<Value, Self> {
         match self.into_scalar() {
-            Ok(f) => {
-                if f.is_constant() {
-                    Ok(match Arc::try_unwrap(f) {
-                        Ok(f) => f.into_unboxed().unwrap(),
-                        Err(f) => f.as_boxed().unwrap().clone(),
-                    })
-                } else {
-                    Err(f.into())
-                }
-            }
+            Ok(v) => match v {
+                Value::Box(b) => b.into_unboxed(),
+                val => Ok(val),
+            },
             Err(a) => Err(a),
         }
-    }
-    pub fn as_boxed(&self) -> Option<&Value> {
-        self.as_scalar().and_then(|f| f.as_boxed())
-    }
-    pub fn as_boxed_mut(&mut self) -> Option<&mut Value> {
-        self.as_scalar_mut()
-            .and_then(|f| Arc::make_mut(f).as_boxed_mut())
     }
 }
 
@@ -361,15 +346,9 @@ impl From<bool> for Array<u8> {
     }
 }
 
-impl FromIterator<String> for Array<Arc<Function>> {
+impl FromIterator<String> for Array<Value> {
     fn from_iter<I: IntoIterator<Item = String>>(iter: I) -> Self {
-        Array::from(
-            iter.into_iter()
-                .map(Array::from)
-                .map(Function::boxed)
-                .map(Arc::new)
-                .collect::<CowSlice<_>>(),
-        )
+        Array::from(iter.into_iter().map(Value::from).collect::<CowSlice<_>>())
     }
 }
 
@@ -432,16 +411,13 @@ impl ArrayValue for char {
     }
 }
 
-impl ArrayValue for Arc<Function> {
-    const NAME: &'static str = "function";
+impl ArrayValue for Value {
+    const NAME: &'static str = "box";
     fn get_fill(env: &Uiua) -> Option<Self> {
-        env.func_fill()
+        env.box_fill()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         self.hash(hasher)
-    }
-    fn subrank(&self) -> usize {
-        self.as_boxed().map_or(0, Value::rank)
     }
 }
 
@@ -486,7 +462,7 @@ impl ArrayCmp for char {
     }
 }
 
-impl ArrayCmp for Arc<Function> {
+impl ArrayCmp for Value {
     fn array_cmp(&self, other: &Self) -> Ordering {
         self.cmp(other)
     }

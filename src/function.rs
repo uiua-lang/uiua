@@ -7,8 +7,8 @@ use std::{
 };
 
 use crate::{
-    check::instrs_signature, grid_fmt::GridFmt, lex::CodeSpan, primitive::Primitive, value::Value,
-    Ident, Uiua, UiuaResult,
+    check::instrs_signature, lex::CodeSpan, primitive::Primitive, value::Value, Ident, Uiua,
+    UiuaResult,
 };
 
 #[derive(Clone)]
@@ -22,7 +22,7 @@ pub enum Instr {
     },
     Prim(Primitive, usize),
     Call(usize),
-    PushFunction(Arc<Function>),
+    PushFunc(Arc<Function>),
     Dynamic(DynamicFunction),
     PushTempUnder {
         count: usize,
@@ -120,7 +120,7 @@ impl Hash for Instr {
             Instr::EndArray { .. } => 2u8.hash(state),
             Instr::Prim(p, _) => p.hash(state),
             Instr::Call(_) => {}
-            Instr::PushFunction(f) => f.id.hash(state),
+            Instr::PushFunc(f) => f.id.hash(state),
             Instr::Dynamic(f) => f.id.hash(state),
             Instr::PushTempUnder { count, .. } => count.hash(state),
             Instr::PopTempUnder { count, .. } => count.hash(state),
@@ -138,6 +138,9 @@ impl Hash for Instr {
 impl Instr {
     pub fn push(val: impl Into<Value>) -> Self {
         Self::Push(Box::new(val.into()))
+    }
+    pub fn push_func(f: impl Into<Arc<Function>>) -> Self {
+        Self::PushFunc(f.into())
     }
     pub fn as_push(&self) -> Option<&Value> {
         match self {
@@ -182,7 +185,7 @@ impl fmt::Display for Instr {
             Instr::Prim(prim @ Primitive::Over, _) => write!(f, "`{prim}`"),
             Instr::Prim(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => write!(f, "!"),
-            Instr::PushFunction(func) => write!(f, "{func}"),
+            Instr::PushFunc(func) => write!(f, "{func}"),
             Instr::Dynamic(df) => write!(f, "{df:?}"),
             Instr::PushTempUnder { count, .. } => write!(f, "<push under {count}>"),
             Instr::PopTempUnder { count, .. } => write!(f, "<pop under {count}>"),
@@ -227,12 +230,6 @@ impl Signature {
     }
     pub fn max_with(self, other: Self) -> Self {
         Self::new(self.args.max(other.args), self.outputs.max(other.outputs))
-    }
-    pub fn compose(self, other: Self) -> Self {
-        Self::new(
-            other.args + self.args.saturating_sub(other.outputs),
-            self.outputs + other.outputs.saturating_sub(self.args),
-        )
     }
 }
 
@@ -330,7 +327,7 @@ impl fmt::Display for Function {
         if let Some((prim, _)) = self.as_primitive() {
             return write!(f, "{prim}");
         }
-        write!(f, "{}", self.grid_string())
+        write!(f, "<function>")
     }
 }
 
@@ -355,78 +352,14 @@ impl Function {
     pub fn into_inner(f: Arc<Self>) -> Self {
         Arc::try_unwrap(f).unwrap_or_else(|f| (*f).clone())
     }
-    pub(crate) fn format_inner(&self) -> Vec<String> {
-        if let FunctionId::Named(name) = &self.id {
-            return vec![name.as_ref().into()];
-        }
-        if let Some((prim, _)) = self.as_primitive() {
-            return vec![prim.to_string()];
-        }
-        let mut lines = vec![String::new()];
-        for (i, instr) in self.instrs.iter().rev().enumerate() {
-            let instr_str = instr.to_string();
-            let s = &lines[0];
-            let add_space = (s.ends_with(char::is_alphabetic)
-                && instr_str.starts_with(char::is_alphabetic))
-                || (s.ends_with(|c: char| c.is_ascii_digit())
-                    && instr_str.starts_with(|c: char| c.is_ascii_digit()));
-            if lines.len() < instr_str.lines().count() {
-                lines.resize(instr_str.lines().count(), String::new());
-            }
-            let max_line_len = lines.iter().map(|s| s.chars().count()).max().unwrap_or(0);
-            for line in &mut lines {
-                line.extend(std::iter::repeat(' ').take(max_line_len - line.chars().count()));
-            }
-            if i > 0 && add_space {
-                lines[0].push(' ');
-            }
-            for (line, instr_line) in lines.iter_mut().zip(instr_str.lines()) {
-                line.push_str(instr_line);
-            }
-        }
-        lines
-    }
     /// Get how many arguments this function pops off the stack and how many it pushes.
     /// Returns `None` if either of these values are dynamic.
     pub fn signature(&self) -> Signature {
         self.signature
     }
-    pub fn is_constant(&self) -> bool {
-        matches!(&*self.instrs, [Instr::Push(_)])
-    }
-    pub fn boxed(value: impl Into<Value>) -> Self {
-        Function::new(
-            FunctionId::Constant,
-            [Instr::push(value.into())],
-            Signature::new(0, 1),
-        )
-    }
     pub fn as_primitive(&self) -> Option<(Primitive, usize)> {
         match self.instrs.as_slice() {
             [Instr::Prim(prim, span)] => Some((*prim, *span)),
-            _ => None,
-        }
-    }
-    pub fn into_unboxed(self) -> Result<Value, Self> {
-        if self.is_constant() {
-            if let Instr::Push(val) = self.instrs.into_iter().next().unwrap() {
-                Ok(*val)
-            } else {
-                unreachable!();
-            }
-        } else {
-            Err(self)
-        }
-    }
-    pub fn as_boxed(&self) -> Option<&Value> {
-        match self.instrs.as_slice() {
-            [Instr::Push(val)] => Some(val),
-            _ => None,
-        }
-    }
-    pub fn as_boxed_mut(&mut self) -> Option<&mut Value> {
-        match self.instrs.as_mut_slice() {
-            [Instr::Push(val)] => Some(val),
             _ => None,
         }
     }
@@ -440,12 +373,12 @@ impl Function {
             },
         }
     }
-    pub fn compose(a: Arc<Self>, b: Arc<Self>) -> Self {
-        let id = a.id.clone().compose(b.id.clone());
-        let sig = a.signature.compose(b.signature);
-        let mut instrs = b.instrs.clone();
-        instrs.extend(a.instrs.iter().cloned());
-        Self::new(id, instrs, sig)
+    pub fn invert(&self, env: &Uiua) -> UiuaResult<Self> {
+        self.inverse().ok_or_else(|| env.error("No inverse found"))
+    }
+    pub fn undered(&self, g_sig: Signature, env: &Uiua) -> UiuaResult<(Self, Self)> {
+        self.under(g_sig)
+            .ok_or_else(|| env.error("No inverse found"))
     }
 }
 
@@ -456,27 +389,6 @@ pub enum FunctionId {
     Primitive(Primitive),
     Constant,
     Main,
-    Composed(Vec<Self>),
-}
-
-impl FunctionId {
-    pub fn compose(self, other: Self) -> Self {
-        match (self, other) {
-            (FunctionId::Composed(mut a), FunctionId::Composed(b)) => {
-                a.extend(b);
-                FunctionId::Composed(a)
-            }
-            (FunctionId::Composed(mut a), b) => {
-                a.push(b);
-                FunctionId::Composed(a)
-            }
-            (a, FunctionId::Composed(mut b)) => {
-                b.insert(0, a);
-                FunctionId::Composed(b)
-            }
-            (a, b) => FunctionId::Composed(vec![a, b]),
-        }
-    }
 }
 
 impl PartialEq<&str> for FunctionId {
@@ -508,7 +420,6 @@ impl fmt::Display for FunctionId {
             FunctionId::Primitive(prim) => write!(f, "{prim}"),
             FunctionId::Constant => write!(f, "constant"),
             FunctionId::Main => write!(f, "main"),
-            FunctionId::Composed(ids) => write!(f, "{ids:?}"),
         }
     }
 }

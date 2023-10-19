@@ -2,7 +2,7 @@ use std::{
     any::Any,
     collections::{HashMap, HashSet},
     io::{stderr, stdin, Cursor, Read, Write},
-    sync::{Arc, OnceLock},
+    sync::OnceLock,
     time::Duration,
 };
 
@@ -17,7 +17,6 @@ use tinyvec::tiny_vec;
 use crate::{
     array::Array,
     cowslice::{cowslice, CowSlice},
-    function::Function,
     grid_fmt::GridFmt,
     primitive::PrimDoc,
     value::Value,
@@ -556,7 +555,7 @@ impl SysOp {
                 let mut args = Vec::new();
                 args.push(env.file_path().to_string_lossy().into_owned());
                 args.extend(env.args().to_owned());
-                env.push(Array::<Arc<Function>>::from_iter(args));
+                env.push(Array::<Value>::from_iter(args));
             }
             SysOp::Var => {
                 let key = env
@@ -773,7 +772,7 @@ impl SysOp {
             SysOp::FListDir => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let paths = env.backend.list_dir(&path).map_err(|e| env.error(e))?;
-                env.push(Array::<Arc<Function>>::from_iter(paths));
+                env.push(Array::<Value>::from_iter(paths));
             }
             SysOp::FIsFile => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
@@ -919,15 +918,12 @@ impl SysOp {
                 env.push(f64::from(sample_rate));
             }
             SysOp::AudioStream => {
-                let f = env
-                    .pop(1)?
-                    .into_function()
-                    .map_err(|_| env.error("Audio stream must be a function"))?;
+                let f = env.pop_function()?;
                 let mut stream_env = env.clone();
                 if let Err(e) = env.backend.stream_audio(Box::new(move |time_array| {
                     let time_array = Array::<f64>::from(time_array.as_slice());
                     stream_env.push(time_array);
-                    stream_env.call_function(f.clone())?;
+                    stream_env.call(f.clone())?;
                     let samples = &stream_env.pop(1)?;
                     let samples = samples.as_num_array().ok_or_else(|| {
                         stream_env.error("Audio stream function must return a numeric array")
@@ -1091,23 +1087,17 @@ fn value_to_command(value: &Value, env: &Uiua) -> UiuaResult<(String, Vec<String
         },
         Value::Box(arr) => match arr.rank() {
             0 | 1 => {
-                for f in &arr.data {
-                    match f.as_boxed() {
-                        Some(Value::Char(arr)) if arr.rank() <= 1 => {
+                for val in &arr.data {
+                    match val {
+                        Value::Char(arr) if arr.rank() <= 1 => {
                             strings.push(arr.data.iter().collect::<String>())
                         }
-                        Some(val) => {
+                        val => {
                             return Err(env.error(format!(
                                 "Function array as command must be all boxed strings, \
                                 but at least one is a {}",
                                 val.type_name()
                             )))
-                        }
-                        None => {
-                            return Err(env.error(
-                                "Function array as command must be all boxes, \
-                                but at least one is not a box",
-                            ))
                         }
                     }
                 }

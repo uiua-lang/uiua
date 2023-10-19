@@ -91,12 +91,12 @@ impl Uiua {
         idx
     }
     fn binding(&mut self, binding: Binding) -> UiuaResult {
+        let name = binding.name.value;
         let instrs = self.compile_words(binding.words, true)?;
         let make_fn = |instrs: Vec<Instr>, sig: Signature| {
-            let func = Function::new(FunctionId::Named(binding.name.value.clone()), instrs, sig);
-            Value::from(func)
+            Function::new(FunctionId::Named(name.clone()), instrs, sig)
         };
-        let mut val = match instrs_signature(&instrs) {
+        match instrs_signature(&instrs) {
             Ok(mut sig) => {
                 if let Some(declared_sig) = &binding.signature {
                     if declared_sig.value == sig {
@@ -113,46 +113,44 @@ impl Uiua {
 
                 if sig.args == 0 && (sig.outputs > 0 || instrs.is_empty()) {
                     self.exec_global_instrs(instrs)?;
-                    if let Some(value) = self.stack.pop() {
-                        match value {
-                            Value::Box(fs) => match fs.into_scalar() {
-                                Ok(mut f) => {
-                                    Arc::make_mut(&mut f).id =
-                                        FunctionId::Named(binding.name.value.clone());
-                                    f.into()
-                                }
-                                Err(fs) => fs.into(),
-                            },
-                            val => val,
-                        }
+                    if let Some(f) = self.function_stack.pop() {
+                        self.bind_function(name, f);
+                    } else if let Some(value) = self.stack.pop() {
+                        self.bind_value(name, value);
                     } else {
-                        Function::new(
-                            FunctionId::Named(binding.name.value.clone()),
-                            Vec::new(),
-                            sig,
-                        )
-                        .into()
+                        let func = Function::new(FunctionId::Named(name.clone()), Vec::new(), sig);
+                        self.bind_function(name, func.into())
                     }
                 } else {
-                    make_fn(instrs, sig)
+                    let func = make_fn(instrs, sig);
+                    self.bind_function(name, func.into());
                 }
             }
             Err(e) => {
                 if let Some(sig) = binding.signature {
-                    make_fn(instrs, sig.value)
+                    let func = make_fn(instrs, sig.value);
+                    self.bind_function(name, func.into())
                 } else {
                     return Err(UiuaError::Run(Span::Code(binding.name.span.clone()).sp(
                         format!("Cannot infer function signature: {e}. A signature can be declared after the `←`."),
                     )));
                 }
             }
-        };
-        val.compress();
-        let mut globals = self.globals.lock();
-        let idx = globals.len();
-        globals.push(val);
-        self.scope.names.insert(binding.name.value, idx);
+        }
         Ok(())
+    }
+    fn bind_value(&mut self, name: Arc<str>, mut value: Value) {
+        value.compress();
+        let mut globals = self.global_vals.lock();
+        let idx = globals.len();
+        globals.push(value);
+        self.scope.val_names.insert(name, idx);
+    }
+    fn bind_function(&mut self, name: Arc<str>, function: Arc<Function>) {
+        let mut globals = self.global_funcs.lock();
+        let idx = globals.len();
+        globals.push(function);
+        self.scope.func_names.insert(name, idx);
     }
     fn compile_words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult<Vec<Instr>> {
         self.new_functions.push(Vec::new());
@@ -172,11 +170,9 @@ impl Uiua {
         let mut instrs = self.compile_words(words, true)?;
         let mut sig = None;
         // Extract function instrs if possible
-        if let [Instr::Push(val)] = instrs.as_slice() {
-            if let Some(f) = val.as_function() {
-                sig = Some(f.signature());
-                instrs = f.instrs.clone();
-            }
+        if let [Instr::PushFunc(f)] = instrs.as_slice() {
+            sig = Some(f.signature());
+            instrs = f.instrs.clone();
         }
         let sig = if let Some(sig) = sig {
             Ok(sig)
@@ -246,7 +242,7 @@ impl Uiua {
                     })],
                     signature,
                 );
-                self.push_instr(Instr::push(f));
+                self.push_instr(Instr::push_func(f));
                 if call {
                     let span = self.add_span(word.span);
                     self.push_instr(Instr::Call(span));
@@ -285,7 +281,7 @@ impl Uiua {
                     })],
                     signature,
                 );
-                self.push_instr(Instr::push(f));
+                self.push_instr(Instr::push_func(f));
                 if call {
                     let span = self.add_span(word.span);
                     self.push_instr(Instr::Call(span));
@@ -336,9 +332,9 @@ impl Uiua {
                     self.push_span(span, None);
                     let val = if arr.constant {
                         if empty {
-                            Array::<Arc<Function>>::default().into()
+                            Array::<Value>::default().into()
                         } else {
-                            Value::from_row_values(values.map(Function::boxed), self)?
+                            Value::from_row_values(values.map(Value::from), self)?
                         }
                     } else {
                         Value::from_row_values(values, self)?
@@ -356,7 +352,7 @@ impl Uiua {
                         let sig =
                             instrs_signature(&instrs).unwrap_or_else(|_| Signature::new(0, 0));
                         let func = Function::new(FunctionId::Anonymous(word.span), instrs, sig);
-                        self.push_instr(Instr::push(func));
+                        self.push_instr(Instr::push_func(func));
                     }
                 }
             }
@@ -369,15 +365,15 @@ impl Uiua {
         Ok(())
     }
     fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool) -> UiuaResult {
-        if let Some(idx) = self.scope.names.get(&ident).or_else(|| {
+        if let Some(idx) = self.scope.val_names.get(&ident).or_else(|| {
             self.higher_scopes
                 .last()
                 .filter(|_| self.scope.local)?
-                .names
+                .val_names
                 .get(&ident)
         }) {
             // Name exists in scope
-            let value = self.globals.lock()[*idx].clone();
+            let value = self.global_vals.lock()[*idx].clone();
             let should_call = matches!(&value, Value::Box(f) if f.shape.is_empty());
             self.push_instr(Instr::push(value));
             if should_call && call {
@@ -407,7 +403,7 @@ impl Uiua {
             }
             let instrs = self.new_functions.pop().unwrap();
             let function = Function::new(FunctionId::Anonymous(span), instrs, Signature::new(1, 1));
-            self.push_instr(Instr::push(function));
+            self.push_instr(Instr::push_func(function));
         }
         Ok(())
     }
@@ -447,14 +443,14 @@ impl Uiua {
 
         // De-nest function calls
         if let [Instr::Push(val), Instr::Call(_)] = instrs.as_slice() {
-            if let Some(f) = val.as_function() {
+            if let Some(f) = val.as_box() {
                 self.push_instr(Instr::push(f.clone()));
                 return Ok(());
             }
         }
 
         let function = Function::new(func.id, instrs, sig);
-        self.push_instr(Instr::push(function));
+        self.push_instr(Instr::push_func(function));
         Ok(())
     }
     fn modified(&mut self, modified: Modified, call: bool) -> UiuaResult {
@@ -507,7 +503,7 @@ impl Uiua {
                             instrs,
                             sig,
                         );
-                        self.push_instr(Instr::push(func));
+                        self.push_instr(Instr::push_func(func));
                         Ok(())
                     }
                     Err(e) => Err(UiuaError::Run(
@@ -543,7 +539,7 @@ impl Uiua {
                             instrs,
                             sig,
                         );
-                        self.push_instr(Instr::push(func));
+                        self.push_instr(Instr::push_func(func));
                         Ok(())
                     }
                     Err(e) => Err(UiuaError::Run(
@@ -595,7 +591,7 @@ impl Uiua {
                                 instrs,
                                 sig,
                             );
-                            self.push_instr(Instr::push(func));
+                            self.push_instr(Instr::push_func(func));
                             Ok(())
                         }
                         Err(e) => Err(UiuaError::Run(
@@ -630,7 +626,7 @@ impl Uiua {
                                     instrs,
                                     sig,
                                 );
-                                self.push_instr(Instr::push(func));
+                                self.push_instr(Instr::push_func(func));
                                 Ok(())
                             }
                             Err(e) => Err(UiuaError::Run(
@@ -660,7 +656,7 @@ impl Uiua {
                 Ok(sig) => {
                     let func =
                         Function::new(FunctionId::Anonymous(modified.modifier.span), instrs, sig);
-                    self.push_instr(Instr::push(func));
+                    self.push_instr(Instr::push_func(func));
                 }
                 Err(e) => {
                     return Err(UiuaError::Run(
@@ -700,7 +696,7 @@ impl Uiua {
             let instrs = [Instr::Prim(prim, span_i)];
             let func = Function::new_inferred(FunctionId::Primitive(prim), instrs);
             match func {
-                Ok(func) => self.push_instr(Instr::push(func)),
+                Ok(func) => self.push_instr(Instr::push_func(func)),
                 Err(e) => {
                     return Err(span
                         .sp(format!("Cannot infer function signature: {e}"))

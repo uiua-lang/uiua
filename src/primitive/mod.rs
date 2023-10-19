@@ -17,7 +17,7 @@ use std::{
     fmt::{self},
     sync::{
         atomic::{self, AtomicUsize},
-        Arc, OnceLock,
+        OnceLock,
     },
 };
 
@@ -30,10 +30,8 @@ use crate::{
     algorithm::{fork, loops, reduce, table, zip},
     array::Array,
     cowslice::cowslice,
-    function::Function,
     grid_fmt::GridFmt,
     lex::AsciiToken,
-    run::FunctionArg,
     sys::*,
     value::*,
     Uiua, UiuaError, UiuaResult,
@@ -385,18 +383,21 @@ impl Primitive {
             Primitive::IndexOf => env.dyadic_rr_env(Value::index_of)?,
             Primitive::Box => {
                 let val = env.pop(1)?;
-                let constant = Function::boxed(val);
-                env.push(constant);
+                let boxed = Array::from(val);
+                env.push(boxed);
             }
             Primitive::Unbox => {
-                let mut val = env.pop(1)?;
-                if let Some(con) = val.as_function().and_then(|f| f.as_boxed()) {
-                    val = con.clone()
-                }
+                let val = match env.pop(1)? {
+                    Value::Box(boxed) => match boxed.into_scalar() {
+                        Ok(scalar) => scalar,
+                        Err(boxed) => Value::Box(boxed),
+                    },
+                    val => val,
+                };
                 env.push(val);
             }
             Primitive::Call => {
-                let f = env.pop(1)?;
+                let f = env.pop_function()?;
                 env.call(f)?
             }
             Primitive::Parse => env.monadic_ref_env(Value::parse_num)?,
@@ -473,13 +474,13 @@ impl Primitive {
                 env.pop(1)?;
             }
             Primitive::Dip => {
-                let f = env.pop(FunctionArg(1))?;
+                let f = env.pop_function()?;
                 let x = env.pop(1)?;
                 env.call(f)?;
                 env.push(x);
             }
             Primitive::Gap => {
-                let f = env.pop(1)?;
+                let f = env.pop_function()?;
                 let _x = env.pop(2)?;
                 env.call(f)?;
             }
@@ -504,48 +505,42 @@ impl Primitive {
                 Primitive::Join.run(env)?;
             }
             Primitive::Invert => {
-                let f = env.pop(FunctionArg(1))?;
+                let f = env.pop_function()?;
                 let inv_f = f.invert(env)?;
                 env.call(inv_f)?;
             }
             Primitive::Under => {
-                let f = env.pop(FunctionArg(1))?;
-                let g = env.pop(FunctionArg(2))?;
-                let (f_before, f_after) = f.under(g.signature(), env)?;
+                let f = env.pop_function()?;
+                let g = env.pop_function()?;
+                let (f_before, f_after) = f.undered(g.signature(), env)?;
                 env.call(f_before)?;
                 env.call(g)?;
                 env.call(f_after)?;
             }
             Primitive::Pierce => {
-                let f = env.pop(FunctionArg(1))?;
+                let f = env.pop_function()?;
                 env.with_pierce(|env| env.call(f))?;
             }
             Primitive::Fill => {
-                let fill = env.pop(FunctionArg(1))?;
-                let f = env.pop(FunctionArg(2))?;
+                let fill = env.pop_function()?;
+                env.call(fill)?;
+                let fill = env.pop("fill value")?;
+                let f = env.pop_function()?;
                 env.with_fill(fill, |env| env.call(f))?;
             }
             Primitive::Bind => {
-                // This is only run if bind was terminated with | and not optimized out
-                let f = env.pop(FunctionArg(1))?;
-                let g = env.pop(FunctionArg(2))?;
-                match (f.into_function(), g.into_function()) {
-                    (Ok(f), Ok(g)) => env.push(Function::compose(f, g)),
-                    (Ok(f), Err(g)) => env.push(Function::compose(f, Function::boxed(g).into())),
-                    (Err(f), Ok(g)) => env.push(Function::compose(Function::boxed(f).into(), g)),
-                    (Err(f), Err(g)) => env.push(Function::compose(
-                        Function::boxed(f).into(),
-                        Function::boxed(g).into(),
-                    )),
-                }
+                return Err(env.error(
+                    "Bind should have been inlined. \
+                    This is an interpreter bug.",
+                ))
             }
             Primitive::Both => fork::both(env)?,
             Primitive::Fork => fork::fork(env)?,
             Primitive::Bracket => fork::bracket(env)?,
             Primitive::If => fork::iff(env)?,
             Primitive::Try => {
-                let f = env.pop(FunctionArg(1))?;
-                let handler = env.pop(FunctionArg(2))?;
+                let f = env.pop_function()?;
+                let handler = env.pop_function()?;
                 let f_args = f.signature().args;
                 let backup = env.clone_stack_top(f_args);
                 let bottom = env.stack_size().saturating_sub(f_args);
@@ -589,13 +584,7 @@ impl Primitive {
                 env.push(Value::from_row_values_infallible(rows));
             }
             Primitive::Use => {
-                let name = env.pop(1)?.as_string(env, "Use name must be a string")?;
-                let lib = env.pop(2)?;
-                let f = lib
-                    .as_func_array()
-                    .and_then(|fs| fs.data.iter().find(|f| f.id == name.as_str()))
-                    .ok_or_else(|| env.error(format!("No function found for {name:?}")))?;
-                env.push(f.clone());
+                todo!("rework use");
             }
             Primitive::Tag => {
                 static NEXT_TAG: AtomicUsize = AtomicUsize::new(0);
@@ -617,7 +606,7 @@ impl Primitive {
                 env.push(arr);
             }
             Primitive::Spawn => {
-                let f = env.pop("thread function")?;
+                let f = env.pop_function()?;
                 let handle = env.spawn(f.signature().args, |env| env.call(f))?;
                 env.push(handle);
             }
@@ -647,9 +636,9 @@ impl Primitive {
                             .map_err(|e| env.error(format!("Invalid pattern: {}", e)))?;
                         cache.entry(pattern.clone()).or_insert(regex.clone())
                     };
-                    let matches: EcoVec<Arc<Function>> = regex
+                    let matches: EcoVec<Value> = regex
                         .find_iter(&matching)
-                        .map(|m| Function::boxed(m.as_str()).into())
+                        .map(|m| Value::from(m.as_str()))
                         .collect();
                     env.push(matches);
                     Ok(())
@@ -686,7 +675,7 @@ fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
 }
 
 fn dump(env: &mut Uiua) -> UiuaResult {
-    let f = env.pop(FunctionArg(1))?;
+    let f = env.pop_function()?;
     if f.signature() != (1, 1) {
         return Err(env.error(format!(
             "Dump's function's signature must be |1.1, but it is {}",

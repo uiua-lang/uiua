@@ -2,7 +2,7 @@
 
 use crate::{
     array::{Array, ArrayValue},
-    run::{ArrayArg, FunctionArg},
+    run::ArrayArg,
     value::Value,
     Uiua, UiuaResult,
 };
@@ -22,7 +22,7 @@ pub fn flip<A, B, C>(f: impl Fn(A, B) -> C) -> impl Fn(B, A) -> C {
 }
 
 pub(crate) fn rank_list(name: &str, env: &mut Uiua) -> UiuaResult<Vec<Option<isize>>> {
-    let ns = env.pop("rank list")?;
+    let ns = env.pop_function()?;
     let sig = ns.signature();
     if sig.outputs != 1 {
         return Err(env.error(format!(
@@ -46,13 +46,13 @@ pub(crate) fn rank_list(name: &str, env: &mut Uiua) -> UiuaResult<Vec<Option<isi
 
 pub fn repeat(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop(FunctionArg(1))?;
+    let f = env.pop_function()?;
     let n = env
         .pop(2)?
         .as_num(env, "Repetitions must be a single integer or infinity")?;
 
     if n.is_infinite() {
-        let f = if n < 0.0 { f.invert(env)? } else { f };
+        let f = if n < 0.0 { f.invert(env)?.into() } else { f };
         loop {
             if env.call_catch_break(f.clone())? {
                 break;
@@ -62,7 +62,7 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
         if n.fract().abs() > f64::EPSILON {
             return Err(env.error("Repetitions must be a single integer or infinity"));
         };
-        let f = if n < 0.0 { f.invert(env)? } else { f };
+        let f = if n < 0.0 { f.invert(env)?.into() } else { f };
         for _ in 0..n.abs() as usize {
             if env.call_catch_break(f.clone())? {
                 return Ok(());
@@ -188,7 +188,7 @@ fn collapse_groups(
     indices_error: &'static str,
     env: &mut Uiua,
 ) -> UiuaResult {
-    let f = env.pop(FunctionArg(1))?;
+    let f = env.pop_function()?;
     let sig = f.signature();
     match sig.args {
         0 | 1 => {

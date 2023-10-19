@@ -1,4 +1,4 @@
-use std::{borrow::Cow, cmp::Ordering, fmt};
+use std::{borrow::Cow, cmp::Ordering};
 
 use crate::{
     array::Array,
@@ -75,11 +75,7 @@ impl BasicValue {
                 Value::Num(n) => n.data.iter().map(|n| BasicValue::Num(*n)).collect(),
                 Value::Byte(b) => b.data.iter().map(|b| BasicValue::Num(*b as f64)).collect(),
                 Value::Char(c) => c.data.iter().map(|_| BasicValue::Other).collect(),
-                Value::Box(f) => f
-                    .data
-                    .iter()
-                    .map(|f| BasicValue::Func(Cow::Borrowed(f)))
-                    .collect(),
+                Value::Box(b) => b.data.iter().map(|_| BasicValue::Other).collect(),
             })
         } else {
             BasicValue::Other
@@ -117,14 +113,17 @@ impl<'a> VirtualEnv<'a> {
                 items.reverse();
                 self.stack.push(BasicValue::Arr(items));
             }
-            Instr::Call(_) => self.handle_sig(self.pop_func()?.signature())?,
+            Instr::Call(_) => {
+                let sig = self.pop_func()?.signature();
+                self.handle_sig(sig)?
+            }
             Instr::PushTempInline { count, .. } | Instr::PushTempUnder { count, .. } => {
                 self.handle_args_outputs(*count, 0)?
             }
             Instr::PopTempInline { count, .. }
             | Instr::PopTempUnder { count, .. }
             | Instr::CopyTempInline { count, .. } => self.handle_args_outputs(0, *count)?,
-            Instr::PushFunction(f) => self.function_stack.push(Cow::Borrowed(f)),
+            Instr::PushFunc(f) => self.function_stack.push(Cow::Borrowed(f)),
             Instr::Dynamic(f) => self.handle_sig(f.signature)?,
             Instr::DropTempInline { .. } => {}
             Instr::Prim(prim, _) => match prim {
@@ -467,13 +466,9 @@ fn instrs_contain_break(instrs: &[Instr]) -> bool {
     for instr in instrs.iter() {
         match instr {
             Instr::Prim(Primitive::Break, _) => return true,
-            Instr::Push(val) => {
-                if let Some(f) = val.as_func_array() {
-                    for f in &f.data {
-                        if instrs_contain_break(&f.instrs) {
-                            return true;
-                        }
-                    }
+            Instr::PushFunc(f) => {
+                if instrs_contain_break(&f.instrs) {
+                    return true;
                 }
             }
             _ => (),

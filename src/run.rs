@@ -29,7 +29,9 @@ pub struct Uiua {
     /// Functions which are under construction
     pub(crate) new_functions: Vec<Vec<Instr>>,
     /// Global values
-    pub(crate) globals: Arc<Mutex<Vec<Value>>>,
+    pub(crate) global_vals: Arc<Mutex<Vec<Value>>>,
+    /// Global functions
+    pub(crate) global_funcs: Arc<Mutex<Vec<Arc<Function>>>>,
     /// Indexable spans
     pub(crate) spans: Arc<Mutex<Vec<Span>>>,
     /// The thread's stack
@@ -76,8 +78,10 @@ pub struct Scope {
     pub array: Vec<usize>,
     /// The call stack
     call: Vec<StackFrame>,
-    /// Map local names to global indices
-    pub names: HashMap<Ident, usize>,
+    /// Map local names to global value indices
+    pub val_names: HashMap<Ident, usize>,
+    /// Map local names to global function indices
+    pub func_names: HashMap<Ident, usize>,
     /// Whether this scope is local
     pub local: bool,
     /// The current fill values
@@ -100,7 +104,8 @@ impl Default for Scope {
                 pc: 0,
                 spans: Vec::new(),
             }],
-            names: HashMap::new(),
+            val_names: HashMap::new(),
+            func_names: HashMap::new(),
             local: false,
             fills: Fills::default(),
             pierce_depth: 0,
@@ -112,7 +117,7 @@ impl Default for Scope {
 struct Fills {
     nums: Vec<f64>,
     chars: Vec<char>,
-    functions: Vec<Arc<Function>>,
+    boxes: Vec<Value>,
 }
 
 #[derive(Clone)]
@@ -165,7 +170,7 @@ impl Uiua {
         let mut scope = Scope::default();
         let mut globals = Vec::new();
         for def in &*CONSTANTS {
-            scope.names.insert(def.name.into(), globals.len());
+            scope.val_names.insert(def.name.into(), globals.len());
             globals.push(def.value.clone());
         }
         Uiua {
@@ -176,7 +181,8 @@ impl Uiua {
             under_stack: Vec::new(),
             scope,
             higher_scopes: Vec::new(),
-            globals: Arc::new(Mutex::new(globals)),
+            global_vals: Arc::new(Mutex::new(globals)),
+            global_funcs: Arc::new(Mutex::new(Vec::new())),
             new_functions: Vec::new(),
             current_imports: Arc::new(Mutex::new(HashSet::new())),
             imports: Arc::new(Mutex::new(HashMap::new())),
@@ -414,16 +420,12 @@ code:
                     self.push_span(span, None);
                     let values = self.stack.drain(start..).rev();
                     let values: Vec<Value> = if constant {
-                        values
-                            .map(Function::boxed)
-                            .map(Arc::new)
-                            .map(Value::from)
-                            .collect()
+                        values.map(Value::from).collect()
                     } else {
                         values.collect()
                     };
                     let val = if values.is_empty() && constant {
-                        Array::<Arc<Function>>::default().into()
+                        Array::<Value>::default().into()
                     } else {
                         Value::from_row_values(values, self)?
                     };
@@ -432,8 +434,12 @@ code:
                     Ok(())
                 })(),
                 &Instr::Call(span) => self
-                    .pop("called function")
+                    .pop_function()
                     .and_then(|f| self.call_with_span(f, span)),
+                Instr::PushFunc(f) => {
+                    self.function_stack.push(f.clone());
+                    Ok(())
+                }
                 Instr::Dynamic(df) => df.f.clone()(self),
                 &Instr::PushTempUnder { count, span } => (|| {
                     self.push_span(span, None);
@@ -541,18 +547,7 @@ code:
     pub(crate) fn pop_span(&mut self) {
         self.scope.call.last_mut().unwrap().spans.pop();
     }
-    fn call_with_span(&mut self, f: Value, call_span: usize) -> UiuaResult {
-        match f.into_function() {
-            Ok(f) => self.call_function_with_span(f, call_span)?,
-            Err(val) => self.push(val),
-        }
-        Ok(())
-    }
-    fn call_function_with_span(
-        &mut self,
-        f: impl Into<Arc<Function>>,
-        call_span: usize,
-    ) -> UiuaResult {
+    fn call_with_span(&mut self, f: impl Into<Arc<Function>>, call_span: usize) -> UiuaResult {
         self.exec(StackFrame {
             function: f.into(),
             call_span,
@@ -562,14 +557,9 @@ code:
     }
     /// Call a function
     #[inline]
-    pub fn call(&mut self, f: Value) -> UiuaResult {
+    pub fn call(&mut self, f: impl Into<Arc<Function>>) -> UiuaResult {
         let call_span = self.span_index();
         self.call_with_span(f, call_span)
-    }
-    #[inline]
-    pub fn call_function(&mut self, f: impl Into<Arc<Function>>) -> UiuaResult {
-        let call_span = self.span_index();
-        self.call_function_with_span(f, call_span)
     }
     #[inline]
     pub fn recur(&mut self, n: usize) -> UiuaResult {
@@ -584,9 +574,9 @@ code:
             )));
         }
         let f = self.scope.call[self.scope.call.len() - n].function.clone();
-        self.call_function(f)
+        self.call(f)
     }
-    pub fn call_catch_break(&mut self, f: Value) -> UiuaResult<bool> {
+    pub fn call_catch_break(&mut self, f: impl Into<Arc<Function>>) -> UiuaResult<bool> {
         match self.call(f) {
             Ok(_) => Ok(false),
             Err(e) => match e.break_data() {
@@ -596,12 +586,16 @@ code:
             },
         }
     }
-    pub fn call_error_on_break(&mut self, f: Value, message: &str) -> UiuaResult {
+    pub fn call_error_on_break(
+        &mut self,
+        f: impl Into<Arc<Function>>,
+        message: &str,
+    ) -> UiuaResult {
         self.call_error_on_break_with(f, || message.into())
     }
     pub fn call_error_on_break_with(
         &mut self,
-        f: Value,
+        f: impl Into<Arc<Function>>,
         message: impl FnOnce() -> String,
     ) -> UiuaResult {
         match self.call(f) {
@@ -672,8 +666,8 @@ code:
     /// Get the values for all bindings in the current scope
     pub fn all_bindings_in_scope(&self) -> HashMap<Ident, Value> {
         let mut bindings = HashMap::new();
-        let globals_lock = self.globals.lock();
-        for (name, idx) in &self.scope.names {
+        let globals_lock = self.global_vals.lock();
+        for (name, idx) in &self.scope.val_names {
             if !CONSTANTS.iter().any(|c| c.name == name.as_ref()) {
                 bindings.insert(name.clone(), globals_lock[*idx].clone());
             }
@@ -768,8 +762,8 @@ code:
     pub(crate) fn char_fill(&self) -> Option<char> {
         self.scope.fills.chars.last().copied()
     }
-    pub(crate) fn func_fill(&self) -> Option<Arc<Function>> {
-        self.scope.fills.functions.last().cloned()
+    pub(crate) fn box_fill(&self) -> Option<Value> {
+        self.scope.fills.boxes.last().cloned()
     }
     /// Do something with the fill context set
     pub(crate) fn with_fill(
@@ -799,7 +793,7 @@ code:
             }
             Value::Box(f) => {
                 if let Some(f) = f.as_scalar() {
-                    self.scope.fills.functions.push(f.clone());
+                    self.scope.fills.boxes.push(f.clone());
                     set = true;
                 }
             }
@@ -819,7 +813,7 @@ code:
                 self.scope.fills.chars.pop();
             }
             Value::Box(_) => {
-                self.scope.fills.functions.pop();
+                self.scope.fills.boxes.pop();
             }
         }
         res
@@ -851,7 +845,8 @@ code:
         }
         let env = Uiua {
             new_functions: Vec::new(),
-            globals: self.globals.clone(),
+            global_vals: self.global_vals.clone(),
+            global_funcs: self.global_funcs.clone(),
             spans: self.spans.clone(),
             stack: self
                 .stack
@@ -964,15 +959,8 @@ where
     }
 }
 
-pub struct FunctionArg<T>(pub T);
 pub struct ArrayArg<T>(pub T);
 pub struct FunctionNArg<T>(pub usize, pub T);
-
-impl<T: StackArg> StackArg for FunctionArg<T> {
-    fn arg_name(self) -> String {
-        format!("function {}", self.0.arg_name())
-    }
-}
 
 impl<T> StackArg for ArrayArg<T>
 where
@@ -980,14 +968,5 @@ where
 {
     fn arg_name(self) -> String {
         format!("array {}", self.0.arg_name())
-    }
-}
-
-impl<T> StackArg for FunctionNArg<T>
-where
-    T: StackArg,
-{
-    fn arg_name(self) -> String {
-        format!("function {}'s {}", self.0, self.1.arg_name())
     }
 }

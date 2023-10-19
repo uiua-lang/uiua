@@ -372,11 +372,20 @@ impl Uiua {
                 .val_names
                 .get(&ident)
         }) {
-            // Name exists in scope
+            // Value exists in scope
             let value = self.global_vals.lock()[*idx].clone();
-            let should_call = matches!(&value, Value::Box(f) if f.shape.is_empty());
             self.push_instr(Instr::push(value));
-            if should_call && call {
+        } else if let Some(idx) = self.scope.func_names.get(&ident).or_else(|| {
+            self.higher_scopes
+                .last()
+                .filter(|_| self.scope.local)?
+                .func_names
+                .get(&ident)
+        }) {
+            // Function exists in scope
+            let f = self.global_funcs.lock()[*idx].clone();
+            self.push_instr(Instr::push_func(f));
+            if call {
                 let span = self.add_span(span);
                 self.push_instr(Instr::Call(span));
             }

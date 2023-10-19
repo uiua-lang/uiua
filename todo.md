@@ -7,7 +7,11 @@ Within a each section, items are ordered (roughly) by decreasing priority.
 - Expand test suite
 
 ## Features
-- **Rank/Arity-generic reduction and tabling modifiers**
+- **Make functions second class**
+  - Add a function stack
+  - Convert function array type to just boxes
+  - Remove `call` and `recur`
+  - Update all documentation
 - `under` aggregating `group` and `partition`
 - Add channels for spawned threads
 - Sift+delete to delete whole linestribute`
@@ -22,9 +26,6 @@ Within a each section, items are ordered (roughly) by decreasing priority.
 - System APIs
   - FFI
   - UDP Sockets
-
-## Design
-- Improve how recursion works
 
 ## Optimizations
 - Inline some functions with `distribute`

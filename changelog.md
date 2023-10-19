@@ -6,7 +6,6 @@ Uiua is not yet stable.
 ### Language
 - Add the [`pierce` `⍆`](https://uiua.org/docs/pierce) modifier, which calls its function and implicitly boxes/unboxes values
 - Add the [`combinate` `◳`](https://uiua.org/docs/combinate) modifier, which is a rank-generic version of [`table` `⊞`](https://uiua.org/docs/table)
-- Add the [`collapse` `⌿`](https://uiua.org/docs/collapse) modifier, which is a rank-generic version of [`reduce` `/`](https://uiua.org/docs/reduce)
 - [`fold` `∧`](https://uiua.org/docs/fold) is now rank-generic and requires a rank list
 - Change [`level` `≑`](https://uiua.org/docs/level)'s glyph to reflect its relationship with [`each` `∵`](https://uiua.org/docs/each), [`rows` `≡`](https://uiua.org/docs/rows), and [`distribute` `∺`](https://uiua.org/docs/distribute). Code using `⍚` will continue to work and will be formatted as `≑`.
 - Add [`rock` `⋄`](https://uiua.org/docs/rock), [`surface` `~`](https://uiua.org/docs/surface), [`deep` `≊`](https://uiua.org/docs/deep), [`abyss` `≃`](https://uiua.org/docs/abyss), and [`seabed` `∸`](https://uiua.org/docs/seabed), which build rank lists to be used with [`level` `≑`](https://uiua.org/docs/level) and the new rank-generic modifiers

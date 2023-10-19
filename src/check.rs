@@ -311,11 +311,6 @@ impl<'a> VirtualEnv<'a> {
                     let sig = self.pop()?.expect_function(|| prim)?;
                     self.handle_sig(sig)?;
                 }
-                Collapse => {
-                    let _ranks = self.pop()?;
-                    let sig = self.pop()?.expect_function(|| prim)?;
-                    self.handle_args_outputs(sig.args / 2, sig.outputs)?;
-                }
                 Try => {
                     let f = self.pop()?;
                     let handler = self.pop()?;

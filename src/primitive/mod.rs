@@ -426,7 +426,6 @@ impl Primitive {
             Primitive::Reduce => reduce::reduce(env)?,
             Primitive::Scan => reduce::scan(env)?,
             Primitive::Fold => reduce::fold(env)?,
-            Primitive::Collapse => reduce::collapse(env)?,
             Primitive::Each => zip::each(env)?,
             Primitive::Rows => zip::rows(env)?,
             Primitive::Level => zip::level(env)?,

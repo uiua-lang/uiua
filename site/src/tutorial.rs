@@ -716,18 +716,38 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <Editor example="≑⋄~↻ 2 ↯3_4⇡12"/>
         <p>"If you wanted to factor in the rows of another array, you could simply add another "<Prim prim=Surface/>"."</p>
         <Editor example="≑⋄~~(↻⊙⊂) 2 ↯3_4⇡12 ↯3_2⇡6"/>
+        <p>"Ocean functions are syntactically special. While they are not modifiers, adjacent ocean functions are parsed as a single unit so they do not have to be surrounded with "<code>"()"</code>"s. They are otherwise normal function."</p>
+        <p>"Ocean functions work to specify rank lists because if a rank-generic modifier's first argument is a monadic function, it will push an empty list for the function to work on. Ocean functions are monadic, so a chain of ocean functions form a monadic function."</p>
+
+        <h2 id="combinate"><Prim prim=Combinate/></h2>
+        <p><Prim prim=Combinate/>" is a rank-generic version of "<Prim prim=Table/>" and "<Prim prim=Cross/>". It functions similarly to "<Prim prim=Level/>", except instead of calling its function on every tuple of matching rows, it calls it on every "<em>"combination"</em>" of rows."</p>
+        <Editor example="◳⋄~~(▽⊙⊂) 3 [1 2 3] [4 5 6]"/>
+        <Editor example="◳∸≃(+×10) ,, ↯2_2⇡4 ↯2_4⇡8"/>
 
         <h2 id="fold"><Prim prim=Fold/></h2>
         <p><Prim prim=Fold/>" uses fixed rank values as accumulators. Its function's outputs set the new value of the accumulator for the next iteration."</p>
         <p>"A basic use is to reduce with a default value."</p>
         <Editor example="∧⋄~+ 10 [1 2 3]"/>
         <Editor example="∧⋄~+ 10 []"/>
+        <p>"Here is an example that implements a simple stack instruction set. The initially empty stack is marked as an accumulator with "<Prim prim=Rock/>"."</p>
+        <p><code>"0"</code>" duplicates the top stack value, "<code>"1"</code>" pushes a 1, "<code>"2"</code>" adds the top 2 stack values, and "<code>"3"</code>" subtracts the top 2 stack values."</p>
+        <Editor example="\
+Add ← ⊂/+⊃↙↘2
+Sub ← ⊂/-⊃↙↘2
+f ← ??Sub(Add)?(⊂1)(⊂⊢.) ∶⍘⊟⬚0↙2⋯∶
+∧⋄~f [] [1 0 2 0 2 0 2 1 3]"/>
 
-        <h2 id="collapse"><Prim prim=Collapse/></h2>
-        <p><Prim prim=Collapse/>" is closer to "<Prim prim=Reduce/>" than "<Prim prim=Fold/>" is."</p>
-        <p>"It allows you to reduce with some additional fixed value(s) or reduce multiple arrays at once."</p>
-        <Editor example="⌿~~∩+ [1 2 3][4 5 6]"/>
-        <Editor example="⌿~~⋄(⊂⊂) [1 2 3][4 5 6] 7"/>
+        <br/>
+        <hr/>
+        <p>"This is the end of the tutorial that pertains to writing "<em>"programs"</em>"."</p>
+        <p>"If you want to use Uiua to write "<em>"software"</em>", then read on for the sections on modules and testing."</p>
+        <p>"If you don't care about that stuff and want to learn more about the language, you can check out:"</p>
+        <ul>
+            <li><A href="/docs#functions">"The list of all functions"</A></li>
+            <li><A href="/docs#other-docs">"Other language topics"</A></li>
+            <li>"The online "<A href="/pad">"pad"</A>" for writing longer code"</li>
+            <li><A href="/docs/isms">"Uiuisms"</A>", a currated list of common operations"</li>
+        </ul>
     }
 }
 

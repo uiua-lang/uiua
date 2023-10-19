@@ -1208,8 +1208,6 @@ primitive!(
     /// However, for this particular example, it is probably better to use [scan].
     /// ex: /+∶⊢⇌.\+[0_1 1_1 1_0 ¯1_¯1]
     ([2], Fold, AggregatingModifier, ("fold", '∧')),
-    /// Apply a function to reduce at different array depths
-    ([2], Collapse, AggregatingModifier, ("collapse", '⌿')),
     /// Apply a function to combinations at array depths
     ([2], Combinate, IteratingModifier, ("combinate", '◳')),
     /// `join` `infinity` to a list

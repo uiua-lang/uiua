@@ -1467,15 +1467,6 @@ primitive!(
     (1, Utf, Misc, "utf"),
     /// Convert UTF-8 bytes to a string
     (1, InvUtf, Misc),
-    /// Extract a named function from a module
-    ///
-    /// Can be used after [&i].
-    ///
-    /// ex: ex ← &i "example.ua"
-    ///   : Square ← use "Square" ex
-    ///   : Increment ← use "Increment" ex
-    ///   : Square Increment 5
-    (2, Use, Misc, "use"),
     /// Generate a unique tag
     ///
     /// Tags are just numbers and are unique across multiple threads, but not across multiple runs.

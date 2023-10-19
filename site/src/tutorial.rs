@@ -761,53 +761,28 @@ fn TutorialModules() -> impl IntoView {
     use Primitive::*;
     view! {
         <h1>"Modules"</h1>
-        <p>"Modules are a way to organize your code in Uiua."</p>
+        <p>"Modules are a way to organize your code in Uiua. Any Uiua file can be a used as a module."</p>
 
-        <h2 id="scopes">"Scopes"</h2>
-        <p>"Scopes are a way to create a temporary namespace for bindings that are only used in a small part of your code. Only the names that you want to escape a scope are usable outside it."</p>
-        <p>"Scopes begin and end with triple hyphens "<code>"---"</code>". All names declared inside a scope are not available outside of it."</p>
-        <Editor example="---\nFoo ← 5\n---\nFoo # Foo is not available here"/> // Should fail
-        <p>"Values pushed to the stack inside a scope remain on the stack after the scope ends."</p>
-        <p>"You can bind values that were pushed to the stack inside an ended scope by using a "<code>"←"</code>" with nothing on the right side."</p>
-        <Editor example="---\na ← 3\nb ← 5\n+ a b\n× a b\n---\nc ← \nd ←\nc_d"/>
-        <p>"Note that scopes can only be created at the top level of a file (but between other top-level items), and they cannot be nested."</p>
-
-        <h2 id="modules-and-use">"Modules and "<Prim prim=Use/></h2>
-        <p><Prim prim=Use/>" is a very special function that extracts a function from a "<em>module</em>"."</p>
-        <p>"A module is an array of "<em>"named"</em>" functions."</p>
-        <p>"The only way to name a function is to bind it. Named functions can be put into arrays by stranding or surrounding the names with "<code>"()"</code>"."</p>
-        <p><Prim prim=Use/>" takes the name of the function as a string and the module and returns the function."</p>
-        <p>"This allows you to export functions by name from a scope."</p>
-        <Editor example=r#"---
-PlusFive ← +5
-Twin ← ⊟.
-PlusFive_Twin
----
-Mod ←
-tw ← use "Twin" Mod
-pf ← use "PlusFive" Mod
-
-tw pf 3"#/>
-
-        <h2 id="import">"Importing with "<Prim prim=Sys(SysOp::Import)/></h2>
-        <p>"Finally, we reach the point of all of this. You can import other files as scopes with "<Prim prim=Sys(SysOp::Import)/>"."</p>
-        <p>"System functions like "<Prim prim=Sys(SysOp::Import)/>" are prefixed with "<code>"&"</code>" so that the names of your own functions don't collide with them."</p>
-        <p>"The website's editor has an example file that you can import called "<code>"example.ua"</code>". Its contents is:"</p>
-        <Editor example={ &example_ua(|ex| ex.clone()) }/>
-        <p>"You can import it with "<Prim prim=Sys(SysOp::Import)/>" and then "<Prim prim=Use/>" to extract the functions."</p>
-        <Editor example=r#"ex ← &i "example.ua"
-Square ← use "Square" ex
-Double ← use "Double" ex
-Increment ← use "Increment" ex
-
-Increment Square Double 5"#/>
-        <p><Prim prim=Sys(SysOp::Import)/>" only imports a given file once and caches the results. Subsequent imports of the same file (from anywhere) will not run the file's code again, but they "<em>"will"</em>" push its stack values again."</p>
-        <p>"In this example, we make some code that prints a message and then generates a random number. We then write the code to a file and import it 3 times. Notice that the message is only printed once, and the same number is returned every time."</p>
+        <h2 id="import"><Prim prim=Sys(SysOp::Import)/></h2>
+        <p>"The "<Prim prim=Sys(SysOp::Import)/>" function allows you to import items from modules. It expects a file path and a binding name from that file, both as strings."</p>
+        <p>"There is no file system here on the website, but there is a test module that can always be imported as "<code>"example.ua"</code>". It's contents is:"</p>
+        <Editor example={&example_ua(|ex| ex.clone())}/>
+        <p>"The "<code>"Increment"</code>" function defined in the example module can be imported with "<Prim prim=Sys(SysOp::Import)/>" then immediately bound so that it can be used locally."</p>
+        <Editor example="Inc ← &i \"example.ua\" \"Increment\"\nInc 5"/>
+        <p>"Lets import and use them all."</p>
         <Editor example="\
-Code ← $ &p \"Loading module\"
-       $ rand
-&fwa \"test.ua\" Code
-⍥(&i \"test.ua\")3"/>
+Inc ← &i \"example.ua\" \"Increment\"
+Dub ← &i \"example.ua\" \"Double\"
+Sqr ← &i \"example.ua\" \"Square\"
+Inc Sqr Dub 5"/>
+        <p>"This is a little verbose, so we can make a function that imports a given item."</p>
+        <Editor example="\
+ex ← &i \"example.ua\"
+Inc ← ex \"Increment\"
+Dub ← ex \"Double\"
+Sqr ← ex \"Square\"
+Inc Sqr Dub 5"/>
+
     }
 }
 

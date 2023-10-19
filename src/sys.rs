@@ -142,13 +142,13 @@ sys_op! {
     (2, ReadUntil, "&ru", "read until"),
     /// Write an array to a stream
     (2(0), Write, "&w", "write"),
-    /// Run the code from a file in a scope
+    /// Import an item from a file
     ///
     /// If the file has already been imported, its code will not be run again, but the values it originally pushed onto the stack will be pushed again.
     /// Functions can be extracted from the imported modules with [use].
     /// ex: ex ← &i "example.ua"
-    ///   : Double ← use "Double" ex
-    ///   : Square ← use "Square" ex
+    ///   : Double ← ex "Double"
+    ///   : Square ← ex "Square"
     ///   : Square Double 5
     (2, Import, "&i", "import"),
     /// Invoke a path with the system's default program

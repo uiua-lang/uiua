@@ -434,6 +434,7 @@ impl Primitive {
             Primitive::Each => zip::each(env)?,
             Primitive::Rows => zip::rows(env)?,
             Primitive::Distribute => zip::distribute(env)?,
+            Primitive::Tribute => zip::tribute(env)?,
             Primitive::Level => zip::level(env)?,
             Primitive::Table => table::table(env)?,
             Primitive::Cross => table::cross(env)?,

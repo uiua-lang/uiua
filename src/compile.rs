@@ -115,7 +115,7 @@ impl Uiua {
                     self.exec_global_instrs(instrs)?;
                     if let Some(value) = self.stack.pop() {
                         match value {
-                            Value::Func(fs) => match fs.into_scalar() {
+                            Value::Box(fs) => match fs.into_scalar() {
                                 Ok(mut f) => {
                                     Arc::make_mut(&mut f).id =
                                         FunctionId::Named(binding.name.value.clone());
@@ -378,7 +378,7 @@ impl Uiua {
         }) {
             // Name exists in scope
             let value = self.globals.lock()[*idx].clone();
-            let should_call = matches!(&value, Value::Func(f) if f.shape.is_empty());
+            let should_call = matches!(&value, Value::Box(f) if f.shape.is_empty());
             self.push_instr(Instr::push(value));
             if should_call && call {
                 let span = self.add_span(span);

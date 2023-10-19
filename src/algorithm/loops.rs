@@ -97,7 +97,7 @@ impl Value {
                 .partition_groups(markers, env)?
                 .map(Into::into)
                 .collect(),
-            Value::Func(arr) => arr
+            Value::Box(arr) => arr
                 .partition_groups(markers, env)?
                 .map(Into::into)
                 .collect(),
@@ -149,7 +149,7 @@ impl Value {
             Value::Num(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
             Value::Byte(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
             Value::Char(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
-            Value::Func(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
+            Value::Box(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
         })
     }
 }

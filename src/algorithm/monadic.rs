@@ -361,21 +361,21 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     pub fn invert(&self, env: &Uiua) -> UiuaResult<Self> {
         Ok(match self {
-            Self::Func(fs) => {
+            Self::Box(fs) => {
                 let mut invs = CowSlice::with_capacity(fs.row_count());
                 invs.try_extend(fs.data.iter().map(|f| {
                     f.inverse()
                         .map(Into::into)
                         .ok_or_else(|| env.error("No inverse found"))
                 }))?;
-                Self::Func(Array::new(fs.shape.clone(), invs))
+                Self::Box(Array::new(fs.shape.clone(), invs))
             }
             v => return Err(env.error(format!("Cannot invert {}", v.type_name()))),
         })
     }
     pub fn under(self, g_sig: Signature, env: &Uiua) -> UiuaResult<(Self, Self)> {
         Ok(match self {
-            Self::Func(fs) => {
+            Self::Box(fs) => {
                 let mut befores = EcoVec::with_capacity(fs.row_count());
                 let mut afters = EcoVec::with_capacity(fs.row_count());
                 for f in fs.data {
@@ -387,8 +387,8 @@ impl Value {
                     afters.push(after.into());
                 }
                 (
-                    Self::Func(Array::new(fs.shape.clone(), befores)),
-                    Self::Func(Array::new(fs.shape.clone(), afters)),
+                    Self::Box(Array::new(fs.shape.clone(), befores)),
+                    Self::Box(Array::new(fs.shape.clone(), afters)),
                 )
             }
             v => return Err(env.error(format!("Cannot invert {}", v.type_name()))),

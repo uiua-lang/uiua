@@ -33,9 +33,9 @@ impl Value {
         on_error: impl FnOnce(&str, &str) -> E,
     ) -> Result<T, C::Error> {
         match (self, other) {
-            (Value::Func(a), Value::Func(b)) => on_success(a, b, ctx),
-            (Value::Func(a), b) => on_success(a, b.coerce_to_function(), ctx),
-            (a, Value::Func(b)) => on_success(a.coerce_to_function(), b, ctx),
+            (Value::Box(a), Value::Box(b)) => on_success(a, b, ctx),
+            (Value::Box(a), b) => on_success(a, b.coerce_to_function(), ctx),
+            (a, Value::Box(b)) => on_success(a.coerce_to_function(), b, ctx),
             (a, b) => Err(ctx.error(on_error(a.type_name(), b.type_name()))),
         }
     }
@@ -394,7 +394,7 @@ impl Value {
                 )?
             }
             (Value::Char(a), Value::Char(b)) => a.couple_impl(b, ctx)?,
-            (Value::Func(a), Value::Func(b)) => a.couple_impl(b, ctx)?,
+            (Value::Box(a), Value::Box(b)) => a.couple_impl(b, ctx)?,
             (Value::Num(a), Value::Byte(b)) => a.couple_impl(b.convert(), ctx)?,
             (Value::Byte(a), Value::Num(b)) => {
                 let mut a = a.convert_ref();
@@ -420,7 +420,7 @@ impl Value {
             Value::Num(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
             Value::Byte(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
             Value::Char(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
-            Value::Func(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
+            Value::Box(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
         }
     }
 }
@@ -557,7 +557,7 @@ impl Value {
                 Value::Num(a) => a.reshape_scalar(n),
                 Value::Byte(a) => a.reshape_scalar(n),
                 Value::Char(a) => a.reshape_scalar(n),
-                Value::Func(a) => a.reshape_scalar(n),
+                Value::Box(a) => a.reshape_scalar(n),
             }
         } else {
             let target_shape = shape.as_integers(
@@ -569,7 +569,7 @@ impl Value {
                 Value::Num(a) => a.reshape(&target_shape, env),
                 Value::Byte(a) => a.reshape(&target_shape, env),
                 Value::Char(a) => a.reshape(&target_shape, env),
-                Value::Func(a) => a.reshape(&target_shape, env),
+                Value::Box(a) => a.reshape(&target_shape, env),
             }?
         }
         Ok(())
@@ -704,14 +704,14 @@ impl Value {
                 Value::Num(a) => a.scalar_keep(counts[0]).into(),
                 Value::Byte(a) => a.scalar_keep(counts[0]).into(),
                 Value::Char(a) => a.scalar_keep(counts[0]).into(),
-                Value::Func(a) => a.scalar_keep(counts[0]).into(),
+                Value::Box(a) => a.scalar_keep(counts[0]).into(),
             }
         } else {
             match kept {
                 Value::Num(a) => a.list_keep(&counts, env)?.into(),
                 Value::Byte(a) => a.list_keep(&counts, env)?.into(),
                 Value::Char(a) => a.list_keep(&counts, env)?.into(),
-                Value::Func(a) => a.list_keep(&counts, env)?.into(),
+                Value::Box(a) => a.list_keep(&counts, env)?.into(),
             }
         })
     }
@@ -728,7 +728,7 @@ impl Value {
             (Value::Num(a), Value::Num(b)) => a.unkeep(&counts, b, env)?.into(),
             (Value::Byte(a), Value::Byte(b)) => a.unkeep(&counts, b, env)?.into(),
             (Value::Char(a), Value::Char(b)) => a.unkeep(&counts, b, env)?.into(),
-            (Value::Func(a), Value::Func(b)) => a.unkeep(&counts, b, env)?.into(),
+            (Value::Box(a), Value::Box(b)) => a.unkeep(&counts, b, env)?.into(),
             (Value::Num(a), Value::Byte(b)) => a.unkeep(&counts, b.convert(), env)?.into(),
             (Value::Byte(a), Value::Num(b)) => a.convert().unkeep(&counts, b, env)?.into(),
             (a, b) => a.coerce_to_functions(
@@ -940,7 +940,7 @@ impl Value {
                 |a| Ok(a.pick_shaped(&index_shape, &index_data, env)?.into()),
             )?,
             Value::Char(a) => Value::Char(a.pick_shaped(&index_shape, &index_data, env)?),
-            Value::Func(a) => Value::Func(a.pick_shaped(&index_shape, &index_data, env)?),
+            Value::Box(a) => Value::Box(a.pick_shaped(&index_shape, &index_data, env)?),
         })
     }
     pub fn unpick(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
@@ -949,7 +949,7 @@ impl Value {
             (Value::Num(a), Value::Num(b)) => a.unpick_impl(&index, b, env)?.into(),
             (Value::Byte(a), Value::Byte(b)) => a.unpick_impl(&index, b, env)?.into(),
             (Value::Char(a), Value::Char(b)) => a.unpick_impl(&index, b, env)?.into(),
-            (Value::Func(a), Value::Func(b)) => a.unpick_impl(&index, b, env)?.into(),
+            (Value::Box(a), Value::Box(b)) => a.unpick_impl(&index, b, env)?.into(),
             (Value::Num(a), Value::Byte(b)) => a.unpick_impl(&index, b.convert(), env)?.into(),
             (Value::Byte(a), Value::Num(b)) => a.convert().unpick_impl(&index, b, env)?.into(),
             (a, b) => a
@@ -1066,7 +1066,7 @@ impl Value {
                 |a| Ok(a.take(&index, env)?.into()),
             )?,
             Value::Char(a) => Value::Char(a.take(&index, env)?),
-            Value::Func(a) => Value::Func(a.take(&index, env)?),
+            Value::Box(a) => Value::Box(a.take(&index, env)?),
         })
     }
     pub fn drop(self, from: Self, env: &Uiua) -> UiuaResult<Self> {
@@ -1078,7 +1078,7 @@ impl Value {
             Value::Num(a) => Value::Num(a.drop(&index, env)?),
             Value::Byte(a) => Value::Byte(a.drop(&index, env)?),
             Value::Char(a) => Value::Char(a.drop(&index, env)?),
-            Value::Func(a) => Value::Func(a.drop(&index, env)?),
+            Value::Box(a) => Value::Box(a.drop(&index, env)?),
         })
     }
     pub(crate) fn untake(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
@@ -1087,7 +1087,7 @@ impl Value {
             (Value::Num(a), Value::Num(b)) => Value::Num(a.untake(&index, b, env)?),
             (Value::Byte(a), Value::Byte(b)) => Value::Byte(a.untake(&index, b, env)?),
             (Value::Char(a), Value::Char(b)) => Value::Char(a.untake(&index, b, env)?),
-            (Value::Func(a), Value::Func(b)) => Value::Func(a.untake(&index, b, env)?),
+            (Value::Box(a), Value::Box(b)) => Value::Box(a.untake(&index, b, env)?),
             (Value::Num(a), Value::Byte(b)) => Value::Num(a.untake(&index, b.convert(), env)?),
             (Value::Byte(a), Value::Num(b)) => Value::Num(a.convert().untake(&index, b, env)?),
             (a, b) => {
@@ -1105,7 +1105,7 @@ impl Value {
             (Value::Num(a), Value::Num(b)) => Value::Num(a.undrop(&index, b, env)?),
             (Value::Byte(a), Value::Byte(b)) => Value::Byte(a.undrop(&index, b, env)?),
             (Value::Char(a), Value::Char(b)) => Value::Char(a.undrop(&index, b, env)?),
-            (Value::Func(a), Value::Func(b)) => Value::Func(a.undrop(&index, b, env)?),
+            (Value::Box(a), Value::Box(b)) => Value::Box(a.undrop(&index, b, env)?),
             (Value::Num(a), Value::Byte(b)) => Value::Num(a.undrop(&index, b.convert(), env)?),
             (Value::Byte(a), Value::Num(b)) => Value::Num(a.convert().undrop(&index, b, env)?),
             (a, b) => {
@@ -1404,7 +1404,7 @@ impl Value {
             Value::Num(a) => a.rotate(&by, env)?,
             Value::Byte(a) => a.rotate(&by, env)?,
             Value::Char(a) => a.rotate(&by, env)?,
-            Value::Func(a) => a.rotate(&by, env)?,
+            Value::Box(a) => a.rotate(&by, env)?,
         }
         Ok(rotated)
     }
@@ -1487,7 +1487,7 @@ impl Value {
                 |a| Ok(a.select_impl(indices_shape, &indices, env)?.into()),
             )?,
             Value::Char(a) => a.select_impl(indices_shape, &indices, env)?.into(),
-            Value::Func(a) => a.select_impl(indices_shape, &indices, env)?.into(),
+            Value::Box(a) => a.select_impl(indices_shape, &indices, env)?.into(),
         })
     }
     pub fn unselect(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
@@ -1501,7 +1501,7 @@ impl Value {
             (Value::Num(a), Value::Num(b)) => a.unselect_impl(ind_shape, &ind, b, env)?.into(),
             (Value::Byte(a), Value::Byte(b)) => a.unselect_impl(ind_shape, &ind, b, env)?.into(),
             (Value::Char(a), Value::Char(b)) => a.unselect_impl(ind_shape, &ind, b, env)?.into(),
-            (Value::Func(a), Value::Func(b)) => a.unselect_impl(ind_shape, &ind, b, env)?.into(),
+            (Value::Box(a), Value::Box(b)) => a.unselect_impl(ind_shape, &ind, b, env)?.into(),
             (Value::Num(a), Value::Byte(b)) => {
                 a.unselect_impl(ind_shape, &ind, b.convert(), env)?.into()
             }
@@ -1656,7 +1656,7 @@ impl Value {
             Value::Num(a) => a.windows(&size_spec, env)?.into(),
             Value::Byte(a) => a.windows(&size_spec, env)?.into(),
             Value::Char(a) => a.windows(&size_spec, env)?.into(),
-            Value::Func(a) => a.windows(&size_spec, env)?.into(),
+            Value::Box(a) => a.windows(&size_spec, env)?.into(),
         })
     }
 }
@@ -1741,7 +1741,7 @@ impl Value {
             (Value::Num(a), Value::Num(b)) => a.find(b, env)?.into(),
             (Value::Byte(a), Value::Byte(b)) => a.find(b, env)?.into(),
             (Value::Char(a), Value::Char(b)) => a.find(b, env)?.into(),
-            (Value::Func(a), Value::Func(b)) => a.find(b, env)?.into(),
+            (Value::Box(a), Value::Box(b)) => a.find(b, env)?.into(),
             (Value::Num(a), Value::Byte(b)) => a.find(&b.clone().convert(), env)?.into(),
             (Value::Byte(a), Value::Num(b)) => a.clone().convert().find(b, env)?.into(),
             (a, b) => {
@@ -1866,7 +1866,7 @@ impl Value {
             (Value::Num(a), Value::Num(b)) => a.member(b, env)?.into(),
             (Value::Byte(a), Value::Byte(b)) => a.member(b, env)?.into(),
             (Value::Char(a), Value::Char(b)) => a.member(b, env)?.into(),
-            (Value::Func(a), Value::Func(b)) => a.member(b, env)?.into(),
+            (Value::Box(a), Value::Box(b)) => a.member(b, env)?.into(),
             (Value::Num(a), Value::Byte(b)) => a.member(&b.convert_ref(), env)?.into(),
             (Value::Byte(a), Value::Num(b)) => a.convert_ref().member(b, env)?.into(),
             (a, b) => {
@@ -1931,7 +1931,7 @@ impl Value {
             (Value::Num(a), Value::Num(b)) => a.index_of(b, env)?.into(),
             (Value::Byte(a), Value::Byte(b)) => a.index_of(b, env)?.into(),
             (Value::Char(a), Value::Char(b)) => a.index_of(b, env)?.into(),
-            (Value::Func(a), Value::Func(b)) => a.index_of(b, env)?.into(),
+            (Value::Box(a), Value::Box(b)) => a.index_of(b, env)?.into(),
             (Value::Num(a), Value::Byte(b)) => a.index_of(&b.clone().convert(), env)?.into(),
             (Value::Byte(a), Value::Num(b)) => a.clone().convert().index_of(b, env)?.into(),
             (a, b) => {

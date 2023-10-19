@@ -693,7 +693,7 @@ impl SysOp {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
                     Value::Byte(arr) => arr.data.into(),
                     Value::Char(arr) => arr.data.iter().collect::<String>().into(),
-                    Value::Func(_) => return Err(env.error("Cannot write function array to file")),
+                    Value::Box(_) => return Err(env.error("Cannot write function array to file")),
                 };
                 match handle {
                     Handle::STDOUT => env
@@ -750,7 +750,7 @@ impl SysOp {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
                     Value::Byte(arr) => arr.data.into(),
                     Value::Char(arr) => arr.data.iter().collect::<String>().into(),
-                    Value::Func(_) => return Err(env.error("Cannot write function array to file")),
+                    Value::Box(_) => return Err(env.error("Cannot write function array to file")),
                 };
                 env.backend
                     .file_write_all(&path, &bytes)
@@ -1089,7 +1089,7 @@ fn value_to_command(value: &Value, env: &Uiua) -> UiuaResult<(String, Vec<String
                 )))
             }
         },
-        Value::Func(arr) => match arr.rank() {
+        Value::Box(arr) => match arr.rank() {
             0 | 1 => {
                 for f in &arr.data {
                     match f.as_boxed() {

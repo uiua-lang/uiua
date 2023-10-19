@@ -34,6 +34,8 @@ pub struct Uiua {
     pub(crate) spans: Arc<Mutex<Vec<Span>>>,
     /// The thread's stack
     pub(crate) stack: Vec<Value>,
+    /// The thread's function stack
+    pub(crate) function_stack: Vec<Arc<Function>>,
     /// The thread's temp stack for inlining
     inline_stack: Vec<Value>,
     /// The thread's temp stack for unders
@@ -169,6 +171,7 @@ impl Uiua {
         Uiua {
             spans: Arc::new(Mutex::new(vec![Span::Builtin])),
             stack: Vec::new(),
+            function_stack: Vec::new(),
             inline_stack: Vec::new(),
             under_stack: Vec::new(),
             scope,
@@ -658,6 +661,14 @@ code:
     pub fn take_stack(&mut self) -> Vec<Value> {
         take(&mut self.stack)
     }
+    pub fn pop_function(&mut self) -> UiuaResult<Arc<Function>> {
+        self.function_stack.pop().ok_or_else(|| {
+            self.error(
+                "Function stack was empty when popping. \
+                This is a bug in the interpreter.",
+            )
+        })
+    }
     /// Get the values for all bindings in the current scope
     pub fn all_bindings_in_scope(&self) -> HashMap<Ident, Value> {
         let mut bindings = HashMap::new();
@@ -786,7 +797,7 @@ code:
                     set = true;
                 }
             }
-            Value::Func(f) => {
+            Value::Box(f) => {
                 if let Some(f) = f.as_scalar() {
                     self.scope.fills.functions.push(f.clone());
                     set = true;
@@ -807,7 +818,7 @@ code:
             Value::Char(_) => {
                 self.scope.fills.chars.pop();
             }
-            Value::Func(_) => {
+            Value::Box(_) => {
                 self.scope.fills.functions.pop();
             }
         }
@@ -846,6 +857,7 @@ code:
                 .stack
                 .drain(self.stack.len() - capture_count..)
                 .collect(),
+            function_stack: Vec::new(),
             inline_stack: Vec::new(),
             under_stack: Vec::new(),
             scope: self.scope.clone(),

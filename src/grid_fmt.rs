@@ -150,7 +150,7 @@ impl GridFmt for Value {
             Value::Num(array) => array.fmt_grid(boxed),
             Value::Byte(array) => array.fmt_grid(boxed),
             Value::Char(array) => array.fmt_grid(boxed),
-            Value::Func(array) => array.fmt_grid(boxed),
+            Value::Box(array) => array.fmt_grid(boxed),
         }
     }
 }

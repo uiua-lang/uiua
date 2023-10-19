@@ -24,7 +24,7 @@ pub enum Value {
     Num(Array<f64>),
     Byte(Array<u8>),
     Char(Array<char>),
-    Func(Array<Arc<Function>>),
+    Box(Array<Arc<Function>>),
 }
 
 impl Default for Value {
@@ -39,7 +39,7 @@ impl fmt::Debug for Value {
             Self::Num(array) => array.fmt(f),
             Self::Byte(array) => array.fmt(f),
             Self::Char(array) => array.fmt(f),
-            Self::Func(array) => array.fmt(f),
+            Self::Box(array) => array.fmt(f),
         }
     }
 }
@@ -75,14 +75,14 @@ impl Value {
     }
     pub fn as_func_array(&self) -> Option<&Array<Arc<Function>>> {
         match self {
-            Self::Func(array) => Some(array),
+            Self::Box(array) => Some(array),
             _ => None,
         }
     }
     #[inline]
     pub fn into_func_array(self) -> Result<Array<Arc<Function>>, Self> {
         match self {
-            Self::Func(array) => Ok(array),
+            Self::Box(array) => Ok(array),
             _ => Err(self),
         }
     }
@@ -101,7 +101,7 @@ impl Value {
             Self::Num(array) => Box::new(array.rows().map(Value::from)),
             Self::Byte(array) => Box::new(array.rows().map(Value::from)),
             Self::Char(array) => Box::new(array.rows().map(Value::from)),
-            Self::Func(array) => Box::new(array.rows().map(Value::from)),
+            Self::Box(array) => Box::new(array.rows().map(Value::from)),
         }
     }
     pub fn into_rows(self) -> Box<dyn ExactSizeIterator<Item = Self>> {
@@ -109,7 +109,7 @@ impl Value {
             Self::Num(array) => Box::new(array.into_rows().map(Value::from)),
             Self::Byte(array) => Box::new(array.into_rows().map(Value::from)),
             Self::Char(array) => Box::new(array.into_rows().map(Value::from)),
-            Self::Func(array) => Box::new(array.into_rows().map(Value::from)),
+            Self::Box(array) => Box::new(array.into_rows().map(Value::from)),
         }
     }
     pub fn into_rows_rev(self) -> Box<dyn Iterator<Item = Self>> {
@@ -117,7 +117,7 @@ impl Value {
             Self::Num(array) => Box::new(array.into_rows_rev().map(Value::from)),
             Self::Byte(array) => Box::new(array.into_rows_rev().map(Value::from)),
             Self::Char(array) => Box::new(array.into_rows_rev().map(Value::from)),
-            Self::Func(array) => Box::new(array.into_rows_rev().map(Value::from)),
+            Self::Box(array) => Box::new(array.into_rows_rev().map(Value::from)),
         }
     }
     pub fn into_flat_values(self) -> Box<dyn Iterator<Item = Self>> {
@@ -125,14 +125,14 @@ impl Value {
             Self::Num(array) => Box::new(array.data.into_iter().map(Value::from)),
             Self::Byte(array) => Box::new(array.data.into_iter().map(Value::from)),
             Self::Char(array) => Box::new(array.data.into_iter().map(Value::from)),
-            Self::Func(array) => Box::new(array.data.into_iter().map(Value::from)),
+            Self::Box(array) => Box::new(array.data.into_iter().map(Value::from)),
         }
     }
     pub fn type_name(&self) -> &'static str {
         match self {
             Self::Num(_) | Self::Byte(_) => "number",
             Self::Char(_) => "character",
-            Self::Func(_) => "function",
+            Self::Box(_) => "function",
         }
     }
     pub fn shape(&self) -> &[usize] {
@@ -170,7 +170,7 @@ impl Value {
             Self::Num(array) => array.first_dim_zero().into(),
             Self::Byte(array) => array.first_dim_zero().into(),
             Self::Char(array) => array.first_dim_zero().into(),
-            Self::Func(array) => array.first_dim_zero().into(),
+            Self::Box(array) => array.first_dim_zero().into(),
         }
     }
     pub fn format_shape(&self) -> FormatShape {
@@ -189,7 +189,7 @@ impl Value {
             Self::Num(array) => &mut array.shape,
             Self::Byte(array) => &mut array.shape,
             Self::Char(array) => &mut array.shape,
-            Self::Func(array) => &mut array.shape,
+            Self::Box(array) => &mut array.shape,
         }
     }
     pub(crate) fn validate_shape(&self) {
@@ -219,7 +219,7 @@ impl Value {
             Self::Num(array) => n(array),
             Self::Byte(array) => b(array),
             Self::Char(array) => c(array),
-            Self::Func(array) => f(array),
+            Self::Box(array) => f(array),
         }
     }
     pub fn generic_into_deep<T>(
@@ -233,7 +233,7 @@ impl Value {
             Self::Num(array) => n(array),
             Self::Byte(array) => b(array),
             Self::Char(array) => c(array),
-            Self::Func(array) => match array.into_unboxed() {
+            Self::Box(array) => match array.into_unboxed() {
                 Ok(value) => value.generic_into_deep(n, b, c, f),
                 Err(array) => f(array),
             },
@@ -250,7 +250,7 @@ impl Value {
             Self::Num(array) => n(array),
             Self::Byte(array) => b(array),
             Self::Char(array) => c(array),
-            Self::Func(array) => f(array),
+            Self::Box(array) => f(array),
         }
     }
     pub fn generic_ref_deep<'a, T: 'a>(
@@ -264,7 +264,7 @@ impl Value {
             Self::Num(array) => n(array),
             Self::Byte(array) => b(array),
             Self::Char(array) => c(array),
-            Self::Func(array) => {
+            Self::Box(array) => {
                 if let Some(value) = array.as_boxed() {
                     value.generic_ref_deep(n, b, c, f)
                 } else {
@@ -304,7 +304,7 @@ impl Value {
             Self::Num(array) => n(array),
             Self::Byte(array) => b(array),
             Self::Char(array) => c(array),
-            Self::Func(array) => f(array),
+            Self::Box(array) => f(array),
         }
     }
     pub fn generic_mut_deep<T>(
@@ -318,7 +318,7 @@ impl Value {
             Self::Num(array) => n(array),
             Self::Byte(array) => b(array),
             Self::Char(array) => c(array),
-            Self::Func(array) => {
+            Self::Box(array) => {
                 if let Some(value) = array.as_boxed_mut() {
                     value.generic_mut_deep(n, b, c, f)
                 } else {
@@ -333,7 +333,7 @@ impl Value {
             Self::Num(arr) => arr.data.reserve_min(min),
             Self::Byte(arr) => arr.data.reserve_min(min),
             Self::Char(arr) => arr.data.reserve_min(min),
-            Self::Func(arr) => arr.data.reserve_min(min),
+            Self::Box(arr) => arr.data.reserve_min(min),
         }
     }
     /// Get the pretty-printed string representation of the value
@@ -342,11 +342,11 @@ impl Value {
             Self::Num(array) => array.grid_string(),
             Self::Byte(array) => array.grid_string(),
             Self::Char(array) => array.grid_string(),
-            Self::Func(array) => array.grid_string(),
+            Self::Box(array) => array.grid_string(),
         }
     }
     pub fn as_primitive(&self) -> Option<(Primitive, usize)> {
-        if let Value::Func(fs) = self {
+        if let Value::Box(fs) = self {
             if fs.rank() == 0 {
                 return fs.data[0].as_primitive();
             }
@@ -354,7 +354,7 @@ impl Value {
         None
     }
     pub(crate) fn as_flipped_primitive(&self) -> Option<(Primitive, bool)> {
-        if let Value::Func(fs) = self {
+        if let Value::Box(fs) = self {
             if fs.rank() == 0 {
                 return fs.data[0].as_flipped_primitive();
             }
@@ -615,7 +615,7 @@ impl Value {
                 }
                 return Ok(chars.data().iter().collect());
             }
-            Value::Func(f) => {
+            Value::Box(f) => {
                 if let Some(val) = f.as_boxed() {
                     return val.as_string(env, requirement);
                 }
@@ -656,22 +656,22 @@ impl Value {
         })
     }
     pub fn unbox(&mut self) {
-        if let Value::Func(arr) = self {
+        if let Value::Box(arr) = self {
             *self = match take(arr).into_unboxed() {
                 Ok(value) => value.into_unboxed(),
-                Err(arr) => Value::Func(arr),
+                Err(arr) => Value::Box(arr),
             };
         }
     }
     pub fn box_if_not(&mut self) {
         match self {
-            Value::Num(arr) => *self = Value::Func(Arc::new(Function::boxed(take(arr))).into()),
-            Value::Byte(arr) => *self = Value::Func(Arc::new(Function::boxed(take(arr))).into()),
-            Value::Char(arr) => *self = Value::Func(Arc::new(Function::boxed(take(arr))).into()),
-            Value::Func(arr) if arr.as_boxed().is_none() => {
-                *self = Value::Func(Arc::new(Function::boxed(take(arr))).into())
+            Value::Num(arr) => *self = Value::Box(Arc::new(Function::boxed(take(arr))).into()),
+            Value::Byte(arr) => *self = Value::Box(Arc::new(Function::boxed(take(arr))).into()),
+            Value::Char(arr) => *self = Value::Box(Arc::new(Function::boxed(take(arr))).into()),
+            Value::Box(arr) if arr.as_boxed().is_none() => {
+                *self = Value::Box(Arc::new(Function::boxed(take(arr))).into())
             }
-            Value::Func(_) => {}
+            Value::Box(_) => {}
         }
     }
     pub fn boxed_if_not(self) -> Arc<Function> {
@@ -679,7 +679,7 @@ impl Value {
             Value::Num(arr) => Arc::new(Function::boxed(arr)),
             Value::Byte(arr) => Arc::new(Function::boxed(arr)),
             Value::Char(arr) => Arc::new(Function::boxed(arr)),
-            Value::Func(arr) => {
+            Value::Box(arr) => {
                 if arr.as_boxed().is_some() {
                     arr.data.into_iter().next().unwrap()
                 } else {
@@ -690,9 +690,9 @@ impl Value {
     }
     pub fn into_unboxed(self) -> Self {
         match self {
-            Self::Func(arr) => match arr.into_unboxed() {
+            Self::Box(arr) => match arr.into_unboxed() {
                 Ok(value) => value.into_unboxed(),
-                Err(arr) => Self::Func(arr),
+                Err(arr) => Self::Box(arr),
             },
             value => value,
         }
@@ -718,7 +718,7 @@ impl Value {
             Value::Num(arr) => arr.convert_with(|n| Arc::new(Function::boxed(n))),
             Value::Byte(arr) => arr.convert_with(|n| Arc::new(Function::boxed(n))),
             Value::Char(arr) => arr.convert_with(|n| Arc::new(Function::boxed(n))),
-            Value::Func(arr) => arr,
+            Value::Box(arr) => arr,
         }
     }
     pub fn coerce_as_function(&self) -> Cow<Array<Arc<Function>>> {
@@ -726,7 +726,7 @@ impl Value {
             Value::Num(arr) => Cow::Owned(arr.convert_ref_with(|n| Arc::new(Function::boxed(n)))),
             Value::Byte(arr) => Cow::Owned(arr.convert_ref_with(|n| Arc::new(Function::boxed(n)))),
             Value::Char(arr) => Cow::Owned(arr.convert_ref_with(|n| Arc::new(Function::boxed(n)))),
-            Value::Func(arr) => Cow::Borrowed(arr),
+            Value::Box(arr) => Cow::Borrowed(arr),
         }
     }
 }
@@ -774,7 +774,7 @@ macro_rules! value_from {
 value_from!(f64, Num);
 value_from!(u8, Byte);
 value_from!(char, Char);
-value_from!(Arc<Function>, Func);
+value_from!(Arc<Function>, Box);
 
 impl FromIterator<usize> for Value {
     fn from_iter<I: IntoIterator<Item = usize>>(iter: I) -> Self {
@@ -839,7 +839,7 @@ macro_rules! value_un_impl {
                         }
                         (array.shape, new).into()
                     },)*)*
-                    Value::Func(mut array) => {
+                    Value::Box(mut array) => {
                         let mut new_data = EcoVec::with_capacity(array.flat_len());
                         for f in array.data {
                             match Function::into_inner(f).into_unboxed() {
@@ -926,7 +926,7 @@ macro_rules! value_bin_impl {
                             bin_pervade(a, b, env, InfalliblePervasiveFn::new($name::$f))?.into()
                         }
                     },)*)*
-                    (Value::Func(a), b) => {
+                    (Value::Box(a), b) => {
                         match a.into_unboxed() {
                             Ok(a) => Value::$name(a, b, env)?,
                             Err(a) => {
@@ -939,7 +939,7 @@ macro_rules! value_bin_impl {
                             }
                         }
                     },
-                    (a, Value::Func(b)) => {
+                    (a, Value::Box(b)) => {
                         match b.into_unboxed() {
                             Ok(b) => Value::$name(a, b, env)?,
                             Err(b) => {
@@ -1046,7 +1046,7 @@ macro_rules! cmp_impls {
                 [Num, same_type],
                 (Byte, Byte, same_type, num_num),
                 (Char, Char, generic),
-                (Func, Func, generic),
+                (Box, Box, generic),
                 (Num, Byte, num_byte, num_num),
                 (Byte, Num, byte_num, num_num),
                 // Type comparable
@@ -1067,7 +1067,7 @@ impl PartialEq for Value {
             (Value::Num(a), Value::Num(b)) => a == b,
             (Value::Byte(a), Value::Byte(b)) => a == b,
             (Value::Char(a), Value::Char(b)) => a == b,
-            (Value::Func(a), Value::Func(b)) => a == b,
+            (Value::Box(a), Value::Box(b)) => a == b,
             (Value::Num(a), Value::Byte(b)) => a == b,
             (Value::Byte(a), Value::Num(b)) => a == b,
             _ => false,
@@ -1089,7 +1089,7 @@ impl Ord for Value {
             (Value::Num(a), Value::Num(b)) => a.cmp(b),
             (Value::Byte(a), Value::Byte(b)) => a.cmp(b),
             (Value::Char(a), Value::Char(b)) => a.cmp(b),
-            (Value::Func(a), Value::Func(b)) => a.cmp(b),
+            (Value::Box(a), Value::Box(b)) => a.cmp(b),
             (Value::Num(a), Value::Byte(b)) => a.partial_cmp(b).unwrap(),
             (Value::Byte(a), Value::Num(b)) => a.partial_cmp(b).unwrap(),
             (Value::Num(_), _) => Ordering::Less,
@@ -1117,7 +1117,7 @@ impl Hash for Value {
                 2u8.hash(state);
                 arr.hash(state);
             }
-            Value::Func(arr) => {
+            Value::Box(arr) => {
                 3u8.hash(state);
                 arr.hash(state);
             }
@@ -1131,7 +1131,7 @@ impl fmt::Display for Value {
             Value::Num(n) => n.fmt(f),
             Value::Byte(b) => b.fmt(f),
             Value::Char(c) => c.fmt(f),
-            Value::Func(func) => {
+            Value::Box(func) => {
                 if let Some(val) = func.as_boxed() {
                     val.fmt(f)
                 } else {

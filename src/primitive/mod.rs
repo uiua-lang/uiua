@@ -607,7 +607,7 @@ impl Primitive {
                 env.push(match val {
                     Value::Num(_) | Value::Byte(_) => 0,
                     Value::Char(_) => 1,
-                    Value::Func(_) => 2,
+                    Value::Box(_) => 2,
                 });
             }
             Primitive::Sig => {

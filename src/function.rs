@@ -22,6 +22,7 @@ pub enum Instr {
     },
     Prim(Primitive, usize),
     Call(usize),
+    PushFunction(Arc<Function>),
     Dynamic(DynamicFunction),
     PushTempUnder {
         count: usize,
@@ -119,6 +120,7 @@ impl Hash for Instr {
             Instr::EndArray { .. } => 2u8.hash(state),
             Instr::Prim(p, _) => p.hash(state),
             Instr::Call(_) => {}
+            Instr::PushFunction(f) => f.id.hash(state),
             Instr::Dynamic(f) => f.id.hash(state),
             Instr::PushTempUnder { count, .. } => count.hash(state),
             Instr::PopTempUnder { count, .. } => count.hash(state),
@@ -180,6 +182,7 @@ impl fmt::Display for Instr {
             Instr::Prim(prim @ Primitive::Over, _) => write!(f, "`{prim}`"),
             Instr::Prim(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => write!(f, "!"),
+            Instr::PushFunction(func) => write!(f, "{func}"),
             Instr::Dynamic(df) => write!(f, "{df:?}"),
             Instr::PushTempUnder { count, .. } => write!(f, "<push under {count}>"),
             Instr::PopTempUnder { count, .. } => write!(f, "<pop under {count}>"),

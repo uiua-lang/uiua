@@ -21,6 +21,7 @@ pub(crate) fn instrs_signature(instrs: &[Instr]) -> Result<Signature, String> {
     const START_HEIGHT: usize = 16;
     let mut env = VirtualEnv {
         stack: vec![BasicValue::Unknown; START_HEIGHT],
+        function_stack: Vec::new(),
         array_stack: Vec::new(),
         min_height: START_HEIGHT,
     };
@@ -33,24 +34,23 @@ pub(crate) fn instrs_signature(instrs: &[Instr]) -> Result<Signature, String> {
 
 /// An environment that emulates the runtime but only keeps track of the stack.
 struct VirtualEnv<'a> {
-    stack: Vec<BasicValue<'a>>,
+    stack: Vec<BasicValue>,
+    function_stack: Vec<Cow<'a, Function>>,
     array_stack: Vec<usize>,
     min_height: usize,
 }
 
 #[derive(Debug, Clone)]
-enum BasicValue<'a> {
-    Func(Cow<'a, Function>),
+enum BasicValue {
     Num(f64),
     Arr(Vec<Self>),
     Other,
     Unknown,
 }
 
-impl<'a> BasicValue<'a> {
+impl BasicValue {
     fn signature(&self) -> Signature {
         match self {
-            BasicValue::Func(f) => f.signature(),
             BasicValue::Num(_) => Signature {
                 args: 0,
                 outputs: 1,
@@ -65,10 +65,8 @@ impl<'a> BasicValue<'a> {
             },
         }
     }
-    fn from_val(value: &'a Value) -> Self {
-        if let Some(f) = value.as_func_array().and_then(Array::as_scalar) {
-            BasicValue::Func(Cow::Borrowed(f))
-        } else if let Some(n) = value.as_num_array().and_then(Array::as_scalar) {
+    fn from_val(value: &Value) -> Self {
+        if let Some(n) = value.as_num_array().and_then(Array::as_scalar) {
             BasicValue::Num(*n)
         } else if let Some(n) = value.as_byte_array().and_then(Array::as_scalar) {
             BasicValue::Num(*n as f64)
@@ -77,7 +75,7 @@ impl<'a> BasicValue<'a> {
                 Value::Num(n) => n.data.iter().map(|n| BasicValue::Num(*n)).collect(),
                 Value::Byte(b) => b.data.iter().map(|b| BasicValue::Num(*b as f64)).collect(),
                 Value::Char(c) => c.data.iter().map(|_| BasicValue::Other).collect(),
-                Value::Func(f) => f
+                Value::Box(f) => f
                     .data
                     .iter()
                     .map(|f| BasicValue::Func(Cow::Borrowed(f)))
@@ -87,21 +85,9 @@ impl<'a> BasicValue<'a> {
             BasicValue::Other
         }
     }
-    fn expect_function<T: fmt::Display>(
-        &self,
-        err: impl FnOnce() -> T,
-    ) -> Result<Signature, String> {
-        match self {
-            BasicValue::Func(f) => Ok(f.signature()),
-            BasicValue::Unknown | BasicValue::Other => {
-                Err(format!("{} with unknown function", err()))
-            }
-            _ => Err(format!("{} with non-function", err())),
-        }
-    }
 }
 
-impl FromIterator<f64> for BasicValue<'_> {
+impl FromIterator<f64> for BasicValue {
     fn from_iter<T>(iter: T) -> Self
     where
         T: IntoIterator<Item = f64>,
@@ -131,18 +117,19 @@ impl<'a> VirtualEnv<'a> {
                 items.reverse();
                 self.stack.push(BasicValue::Arr(items));
             }
-            Instr::Call(_) => self.handle_call()?,
+            Instr::Call(_) => self.handle_sig(self.pop_func()?.signature())?,
             Instr::PushTempInline { count, .. } | Instr::PushTempUnder { count, .. } => {
                 self.handle_args_outputs(*count, 0)?
             }
             Instr::PopTempInline { count, .. }
             | Instr::PopTempUnder { count, .. }
             | Instr::CopyTempInline { count, .. } => self.handle_args_outputs(0, *count)?,
+            Instr::PushFunction(f) => self.function_stack.push(Cow::Borrowed(f)),
             Instr::Dynamic(f) => self.handle_sig(f.signature)?,
             Instr::DropTempInline { .. } => {}
             Instr::Prim(prim, _) => match prim {
                 Reduce | Scan => {
-                    let sig = self.pop()?.expect_function(|| prim)?;
+                    let sig = self.pop_func()?.signature();
                     let outputs = match (sig.args, sig.outputs) {
                         (0, _) => return Err(format!("{prim}'s function has no args")),
                         (1, 0) => 0,
@@ -153,7 +140,7 @@ impl<'a> VirtualEnv<'a> {
                     self.handle_args_outputs(1, outputs)?;
                 }
                 Each | Rows => {
-                    let sig = self.pop()?.expect_function(|| prim)?;
+                    let sig = self.pop_func()?.signature();
                     if sig.outputs != 1 {
                         return Err(format!(
                             "{prim}'s function must have 1 output, but its signature is {sig}"
@@ -162,7 +149,7 @@ impl<'a> VirtualEnv<'a> {
                     self.handle_sig(sig)?
                 }
                 Table | Cross => {
-                    let sig = self.pop()?.expect_function(|| prim)?;
+                    let sig = self.pop_func()?.signature();
                     if sig != (2, 1) {
                         return Err(format!(
                             "{prim}'s function's signature must be |2.1, but it is {sig}"
@@ -171,7 +158,7 @@ impl<'a> VirtualEnv<'a> {
                     self.handle_args_outputs(2, 1)?;
                 }
                 Group | Partition => {
-                    let sig = self.pop()?.expect_function(|| prim)?;
+                    let sig = self.pop_func()?.signature();
                     let (args, outputs) = match sig.args {
                         0 => (2, 0),
                         1 => (2, 1),
@@ -186,17 +173,15 @@ impl<'a> VirtualEnv<'a> {
                     self.handle_args_outputs(args, outputs)?;
                 }
                 Spawn => {
-                    let sig = self.pop()?.expect_function(|| prim)?;
+                    let sig = self.pop_func()?.signature();
                     self.handle_args_outputs(sig.args, 1)?;
                 }
                 Repeat => {
-                    let f = self.pop()?;
+                    let f = self.pop_func()?;
                     let n = self.pop()?;
                     // Break anywhere but the end of the function prevents signature checking.
-                    if let BasicValue::Func(f) = &f {
-                        if instrs_contain_break(&f.instrs) {
-                            return Err("break present".into());
-                        }
+                    if instrs_contain_break(&f.instrs) {
+                        return Err("break present".into());
                     }
                     if let BasicValue::Num(n) = n {
                         // If n is a known natural number, then the function can have any signature.
@@ -224,7 +209,7 @@ impl<'a> VirtualEnv<'a> {
                         } else {
                             return Err("repeat without a natural number".into());
                         }
-                    } else if let BasicValue::Func(f) = f {
+                    } else {
                         // If n is unknown, then the function must be compatible with |1.1
                         let sig = f.signature();
                         if f.signature().is_compatible_with(Signature::new(1, 1)) {
@@ -247,13 +232,11 @@ impl<'a> VirtualEnv<'a> {
                                 ));
                             };
                         }
-                    } else {
-                        return Err("repeat without a number".into());
                     }
                 }
                 Bind => {
-                    let f = self.pop()?;
-                    let g = self.pop()?;
+                    let f = self.pop_func()?;
+                    let g = self.pop_func()?;
                     for val in [g, f] {
                         for _ in 0..val.signature().args {
                             self.pop()?;
@@ -265,21 +248,21 @@ impl<'a> VirtualEnv<'a> {
                     }
                 }
                 Both => {
-                    let sig = self.pop()?.expect_function(|| prim)?;
+                    let sig = self.pop_func()?.signature();
                     let args = sig.args * 2;
                     let outputs = sig.outputs * 2;
                     self.handle_args_outputs(args, outputs)?;
                 }
                 Fork => {
-                    let f_sig = self.pop()?.expect_function(|| prim)?;
-                    let g_sig = self.pop()?.expect_function(|| prim)?;
+                    let f_sig = self.pop_func()?.signature();
+                    let g_sig = self.pop_func()?.signature();
                     let args = f_sig.args.max(g_sig.args);
                     let outputs = f_sig.outputs + g_sig.outputs;
                     self.handle_args_outputs(args, outputs)?;
                 }
                 Bracket => {
-                    let f_sig = self.pop()?.expect_function(|| prim)?;
-                    let g_sig = self.pop()?.expect_function(|| prim)?;
+                    let f_sig = self.pop_func()?.signature();
+                    let g_sig = self.pop_func()?.signature();
                     let args = f_sig.args + g_sig.args;
                     let outputs = f_sig.outputs + g_sig.outputs;
                     self.handle_args_outputs(args, outputs)?;
@@ -308,12 +291,12 @@ impl<'a> VirtualEnv<'a> {
                 }
                 Level | Fold | Combinate => {
                     let _ranks = self.pop()?;
-                    let sig = self.pop()?.expect_function(|| prim)?;
+                    let sig = self.pop_func()?.signature();
                     self.handle_sig(sig)?;
                 }
                 Try => {
-                    let f = self.pop()?;
-                    let handler = self.pop()?;
+                    let f = self.pop_func()?;
+                    let handler = self.pop_func()?;
                     let f_sig = f.signature();
                     let target_handler_sig = Signature::new(f_sig.args + 1, f_sig.outputs);
                     let handler_sig = handler.signature();
@@ -326,50 +309,43 @@ impl<'a> VirtualEnv<'a> {
                     self.handle_sig(f_sig)?;
                 }
                 Invert => {
-                    if let BasicValue::Func(f) = self.pop()? {
-                        if let Some(inverted) = f.inverse() {
-                            let sig = inverted.signature();
-                            for _ in 0..sig.args {
-                                self.pop()?;
-                            }
-                            self.set_min_height();
-                            for _ in 0..sig.outputs {
-                                self.stack.push(BasicValue::Other);
-                            }
-                        } else {
-                            // We could return an error here,
-                            // but the "no inverse found" error is more useful.
+                    let f = self.pop_func()?;
+                    if let Some(inverted) = f.inverse() {
+                        let sig = inverted.signature();
+                        for _ in 0..sig.args {
+                            self.pop()?;
+                        }
+                        self.set_min_height();
+                        for _ in 0..sig.outputs {
+                            self.stack.push(BasicValue::Other);
                         }
                     } else {
-                        return Err("invert with non-function".into());
+                        // We could return an error here,
+                        // but the "no inverse found" error is more useful.
                     }
                 }
                 Under => {
-                    let f = self.pop()?;
-                    let g = self.pop()?;
+                    let f = self.pop_func()?;
+                    let g = self.pop_func()?;
                     self.set_min_height();
-                    if let BasicValue::Func(f) = f {
-                        if let Some((before, after)) = f.into_owned().under(g.signature()) {
-                            let before_sig = before.signature();
-                            let after_sig = after.signature();
-                            self.handle_sig(before_sig)?;
-                            self.handle_sig(g.signature())?;
-                            self.handle_sig(after_sig)?;
-                        } else {
-                            // We could return an error here,
-                            // but the "no inverse found" error is more useful.
-                        }
+                    if let Some((before, after)) = f.into_owned().under(g.signature()) {
+                        let before_sig = before.signature();
+                        let after_sig = after.signature();
+                        self.handle_sig(before_sig)?;
+                        self.handle_sig(g.signature())?;
+                        self.handle_sig(after_sig)?;
                     } else {
-                        return Err("under with non-function".into());
+                        // We could return an error here,
+                        // but the "no inverse found" error is more useful.
                     }
                 }
                 Fill => {
                     let _fill = self.pop()?;
-                    let f = self.pop()?;
+                    let f = self.pop_func()?;
                     self.handle_sig(f.signature())?;
                 }
                 Pierce => {
-                    let f = self.pop()?;
+                    let f = self.pop_func()?;
                     self.handle_sig(f.signature())?;
                 }
                 Dup => {
@@ -398,14 +374,14 @@ impl<'a> VirtualEnv<'a> {
                     self.stack.push(b);
                 }
                 Dip => {
-                    let f = self.pop()?;
+                    let f = self.pop_func()?;
                     let x = self.pop()?;
                     self.set_min_height();
                     self.handle_sig(f.signature())?;
                     self.stack.push(x);
                 }
                 Gap => {
-                    let f = self.pop()?;
+                    let f = self.pop_func()?;
                     self.pop()?;
                     self.set_min_height();
                     self.handle_sig(f.signature())?;
@@ -432,7 +408,6 @@ impl<'a> VirtualEnv<'a> {
                         }
                     }
                 }
-                Call => self.handle_call()?,
                 Recur => return Err("recur present".into()),
                 prim => {
                     let array_args = prim
@@ -457,8 +432,13 @@ impl<'a> VirtualEnv<'a> {
         Ok(())
     }
     // Simulate popping a value. Errors if the stack is empty, which means the function is too complex.
-    fn pop(&mut self) -> Result<BasicValue<'a>, String> {
+    fn pop(&mut self) -> Result<BasicValue, String> {
         Ok(self.stack.pop().ok_or("function is too complex")?)
+    }
+    fn pop_func(&mut self) -> Result<Cow<'a, Function>, String> {
+        self.function_stack
+            .pop()
+            .ok_or_else(|| "expected function. This is an interpreter bug".into())
     }
     /// Set the current stack height as a potential minimum.
     /// At the end of checking, the minimum stack height is a component in calculating the signature.
@@ -480,16 +460,6 @@ impl<'a> VirtualEnv<'a> {
     }
     fn handle_sig(&mut self, sig: Signature) -> Result<(), String> {
         self.handle_args_outputs(sig.args, sig.outputs)
-    }
-    fn handle_call(&mut self) -> Result<(), String> {
-        match self.pop()? {
-            BasicValue::Func(f) => self.handle_sig(f.signature())?,
-            BasicValue::Unknown | BasicValue::Other => {
-                return Err("call with unknown function".into())
-            }
-            val => self.stack.push(val),
-        }
-        Ok(())
     }
 }
 

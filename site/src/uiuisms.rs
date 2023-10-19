@@ -214,4 +214,8 @@ uiuisms!(
     //   ⊙∶⊞=.⇡⬚1⊢△.:
     //   ;∶⍥(⊠(/+×)⊙⍉,)∶
     // )⊙∶⇌⇡⧻. [1 2 3 1] [1_1 2_2]",
+    /// Add a leading axis of length 1 to an array
+    "△. [∘] [1_2_3 4_5_6]",
+    /// Repeat a function and collect intermediate results into an array
+    "[⍥(×2.)] 10 1",
 );

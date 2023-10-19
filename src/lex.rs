@@ -474,14 +474,6 @@ impl Lexer {
                 '↰' => self.end(Primitive::Spawn, start),
                 '↲' => self.end(Primitive::Wait, start),
                 '⍚' => self.end(Primitive::Level, start),
-                '∺' => {
-                    let begin = self.loc;
-                    self.end(Primitive::Level, start);
-                    self.loc = begin;
-                    self.end(Primitive::Surface, start);
-                    self.loc = begin;
-                    self.end(Primitive::Rock, start);
-                }
                 '≅' => self.end(Primitive::Match, start),
 
                 '(' => self.end(OpenParen, start),

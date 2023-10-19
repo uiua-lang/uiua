@@ -347,14 +347,14 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
     if sig.outputs != 1 {
         return Err(env.error(format!(
-            "Level's function must return 1 value, but it returns {}",
+            "Distribute's function must return 1 value, but it returns {}",
             sig.outputs
         )));
     }
     match sig.args {
         n @ (0 | 1) => {
             return Err(env.error(format!(
-                "Level's function must take at least 2 arguments, \
+                "Distribute's function must take at least 2 arguments, \
                 but it takes {n}"
             )))
         }
@@ -369,8 +369,8 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
             for x in xs.into_rows() {
                 env.push(x);
                 env.push(a.clone());
-                env.call_error_on_break(f.clone(), "break is not allowed in level")?;
-                new_rows.push(env.pop("level's function result")?);
+                env.call_error_on_break(f.clone(), "break is not allowed in distribute")?;
+                new_rows.push(env.pop("distribute's function result")?);
             }
             env.push(Value::from_row_values(new_rows, env)?);
         }
@@ -387,8 +387,8 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
                 env.push(x);
                 env.push(b.clone());
                 env.push(a.clone());
-                env.call_error_on_break(f.clone(), "break is not allowed in level")?;
-                new_rows.push(env.pop("level's function result")?);
+                env.call_error_on_break(f.clone(), "break is not allowed in distribute")?;
+                new_rows.push(env.pop("distribute's function result")?);
             }
             env.push(Value::from_row_values(new_rows, env)?);
         }

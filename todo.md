@@ -7,7 +7,6 @@ Within a each section, items are ordered (roughly) by decreasing priority.
 - Expand test suite
 
 ## Features
-- Add inline signatures
 - `under` aggregating `group` and `partition`
 - Add channels for spawned threads
 - Sift+delete to delete whole linestribute`

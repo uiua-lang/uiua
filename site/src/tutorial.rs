@@ -548,8 +548,8 @@ fn TutorialFunctions() -> impl IntoView {
         <p>"This is usually only necessary when you need to call multiple functions within a modifier."</p>
         <p>"For example, if you wanted to get the last element of each row of an array, you could use "<Prim prim=Rows/>"."</p>
         <Editor example="≡(⊢⇌) .[2_5_3 0_2_1 0_0_2]"/>
-        <p>"If you wanted to rotate every row of an array backwards by a fixed amount, you could use "<Prim prim=Level/><Prim prim=Surface/><Prim prim=Rock/>" (using "<Prim prim=Level/>" will be discussed more in the "<A href="/docs/advancedarray">"Advanced Array Manipulation tutorial"</A>")."</p>
-        <Editor example="≑~⋄(↻¯) 2 [1_2_3 4_5_6 7_8_9]"/>
+        <p>"If you wanted to rotate every row of an array backwards by a fixed amount, you could use "<Prim prim=Distribute/>"."</p>
+        <Editor example="∺(↻¯) 2 [1_2_3 4_5_6 7_8_9]"/>
         <p>"If you want to make an inline function with exactly 2 terms, you can use the "<Prim prim=Bind/>" modifier instead of "<code>"()"</code>"s and save 1 character of space!"</p>
         <Editor example="/(-∶) 1_2_3_4_5\n/'-∶ 1_2_3_4_5"/>
         <p>"This looks nice with modifiers that take multiple functions like "<Prim prim=Under/>"."</p>

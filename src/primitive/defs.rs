@@ -84,6 +84,7 @@ macro_rules! primitive {
             pub fn modifier_args(&self) -> Option<u8> {
                 match self {
                     $($($(Primitive::$variant => Some($mod_args),)?)?)*
+                    Primitive::Sys(op) => op.modifier_args(),
                     _ => None
                 }
             }

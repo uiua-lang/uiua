@@ -40,7 +40,7 @@ macro_rules! sys_op {
     ($(
         $(#[doc = $doc:literal])*
         (
-            $args:literal$(($outputs:expr))?,
+            $args:literal$(($outputs:expr))?$([$mod_args:expr])?,
             $variant:ident, $name:literal, $long_name:literal
         )
     ),* $(,)?) => {
@@ -66,6 +66,14 @@ macro_rules! sys_op {
             pub fn args(&self) -> u8 {
                 match self {
                     $(SysOp::$variant => $args,)*
+                }
+            }
+            pub fn modifier_args(&self) -> Option<u8> {
+                match self {
+                    $($(
+                        SysOp::$variant => Some($mod_args),
+                    )?)*
+                    _ => None
                 }
             }
             #[allow(unreachable_patterns)]
@@ -290,7 +298,7 @@ sys_op! {
     ///
     /// Expects a function that takes a list of sample times and returns a list of samples.
     /// The function will be called repeatedly to generate the audio.
-    (1(0), AudioStream, "&ast", "audio - stream"),
+    (0(0)[1], AudioStream, "&ast", "audio - stream"),
     /// Create a TCP listener and bind it to an address
     (1, TcpListen, "&tcpl", "tcp - listen"),
     /// Accept a connection with a TCP listener

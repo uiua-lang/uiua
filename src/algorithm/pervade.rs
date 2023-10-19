@@ -623,7 +623,6 @@ cmp_impl!(is_gt == Ordering::Greater);
 cmp_impl!(is_ge != Ordering::Less);
 
 pub mod add {
-
     use super::*;
     pub fn num_num(a: f64, b: f64) -> f64 {
         b + a

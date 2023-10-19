@@ -453,13 +453,18 @@ impl Parser {
         };
         let mut args = Vec::new();
         self.try_spaces();
+        let mut arg_count = 0;
         for _ in 0..margs {
             args.extend(self.try_spaces());
             if let Some(arg) = self.try_strand() {
                 args.push(arg);
+                arg_count += 1;
             } else {
                 break;
             }
+        }
+        if arg_count != margs {
+            self.errors.push(self.expected([Expectation::Term]));
         }
 
         // Style diagnostic for bind

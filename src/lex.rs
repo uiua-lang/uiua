@@ -649,12 +649,7 @@ impl Lexer {
                 c => {
                     if let Some(prim) = Primitive::from_glyph(c) {
                         self.end(Glyph(prim), start)
-                    } else if !self
-                        .errors
-                        .iter()
-                        .last()
-                        .map_or(true, |e| matches!(e.value, LexError::UnexpectedChar(_)))
-                    {
+                    } else {
                         self.errors
                             .push(self.end_span(start).sp(LexError::UnexpectedChar(c)));
                     }

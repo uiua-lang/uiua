@@ -688,12 +688,14 @@ fn TutorialAdvancedArray() -> impl IntoView {
 
         <h2 id="level"><Prim prim=Level/></h2>
         <p><Prim prim=Level/>" iterates over all arrays of ranks specified in its rank list."</p>
+        <p>"Here, we join all rank 1 arrays from the first arguments with all rank 2 arrays from the second."</p>
         <Editor example="≑1_2⊂ ,, ↯2_3 π ↯2_2_3⇡12"/>
         <p>"This is useful when you want to reference a fixed value while iterating over each row of an array."</p>
+        <p>"Here, we fix "<code>"2"</code>" as something that will not be iterated over by specifying its rank as "<Prim prim=Infinity/>"."</p>
         <Editor example="≑∞_¯1↻ 2 ↯3_4⇡12"/>
 
         <h2 id="ocean-notation">"🌊 Ocean Notation 🪸"</h2>
-        <p>"It can sometimes be verbose to specify rank lists, and having numbers in code whose meaning is not immediately obvious can be confusing."</p>
+        <p>"It can sometimes be verbose to specify rank lists, and having numbers that refer to ranks in code next to numbers that refer to, well, "<em>"numbers"</em>", can be confusing."</p>
         <p>"For this reason, there exists a special set of functions that constructs rank lists. We call these functions "<em>"ocean functions"</em>", and their use is called "<em>"ocean notation"</em>"."</p>
         <p>"Each ocean function "<Prim prim=Join/>"s a value to a list. They are as follows:"</p>
         <table>
@@ -726,7 +728,7 @@ fn TutorialAdvancedArray() -> impl IntoView {
 
         <h2 id="fold"><Prim prim=Fold/></h2>
         <p><Prim prim=Fold/>" uses fixed rank values as accumulators. Its function's outputs set the new value of the accumulator for the next iteration."</p>
-        <p>"A basic use is to reduce with a default value."</p>
+        <p>"One basic use is to reduce with a default value."</p>
         <Editor example="∧⋄~+ 10 [1 2 3]"/>
         <Editor example="∧⋄~+ 10 []"/>
         <p>"Here is an example that implements a simple stack instruction set. The initially empty stack is marked as an accumulator with "<Prim prim=Rock/>"."</p>

@@ -28,7 +28,7 @@ fn items_spans(items: &[Item]) -> Vec<Sp<SpanKind>> {
     let mut spans = Vec::new();
     for item in items {
         match item {
-            Item::Scoped { items, .. } => spans.extend(items_spans(items)),
+            Item::TestScope(items) => spans.extend(items_spans(items)),
             Item::Words(words) => spans.extend(words_spans(words)),
             Item::Binding(binding) => {
                 if let Some(sig) = &binding.signature {
@@ -155,7 +155,7 @@ mod server {
         let mut last_comment: Option<String> = None;
         for item in items {
             match item {
-                Item::Scoped { items, .. } => scope_bindings.push(bindings_info(items)),
+                Item::TestScope(items) => scope_bindings.push(bindings_info(items)),
                 Item::Words(words) => {
                     if let [Sp {
                         value: Word::Comment(comment),

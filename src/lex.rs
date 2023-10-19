@@ -344,7 +344,6 @@ pub enum AsciiToken {
     GreaterEqual,
     Backtick,
     TripleMinus,
-    TripleTilde,
 }
 
 impl fmt::Display for AsciiToken {
@@ -368,7 +367,6 @@ impl fmt::Display for AsciiToken {
             AsciiToken::GreaterEqual => write!(f, ">="),
             AsciiToken::Backtick => write!(f, "`"),
             AsciiToken::TripleMinus => write!(f, "---"),
-            AsciiToken::TripleTilde => write!(f, "~~~"),
         }
     }
 }
@@ -458,8 +456,6 @@ impl Lexer {
         let start = self.loc;
         if self.next_chars_exact("---") {
             self.end(TripleMinus, start);
-        } else if self.next_chars_exact("~~~") {
-            self.end(TripleTilde, start);
         }
         // Main loop
         loop {
@@ -643,8 +639,6 @@ impl Lexer {
                     let start = self.loc;
                     if self.next_chars_exact("---") {
                         self.end(TripleMinus, start);
-                    } else if self.next_chars_exact("~~~") {
-                        self.end(TripleTilde, start);
                     }
                 }
                 ' ' | '\t' => {

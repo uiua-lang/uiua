@@ -208,13 +208,7 @@ impl Parser {
             if self.try_exact(TripleMinus).is_none() {
                 self.errors.push(self.expected([TripleMinus]));
             }
-            Item::Scoped { items, test: false }
-        } else if parse_scopes && self.try_exact(TripleTilde).is_some() {
-            let items = self.items(false);
-            if self.try_exact(TripleTilde).is_none() {
-                self.errors.push(self.expected([TripleTilde]));
-            }
-            Item::Scoped { items, test: true }
+            Item::TestScope(items)
         } else {
             return None;
         })

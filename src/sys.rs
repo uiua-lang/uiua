@@ -29,8 +29,7 @@ pub fn example_ua<T>(f: impl FnOnce(&mut String) -> T) -> T {
             "\
 Square ← ×.
 Double ← +.
-Increment ← +1
-Square_Double_Increment"
+Increment ← +1"
                 .into(),
         )
     });
@@ -151,7 +150,7 @@ sys_op! {
     ///   : Double ← use "Double" ex
     ///   : Square ← use "Square" ex
     ///   : Square Double 5
-    (1, Import, "&i", "import"),
+    (2, Import, "&i", "import"),
     /// Invoke a path with the system's default program
     (1(1), Invoke, "&invk", "invoke"),
     /// Close a stream by its handle
@@ -781,6 +780,7 @@ impl SysOp {
             }
             SysOp::Import => {
                 let path = env.pop(1)?.as_string(env, "Import path must be a string")?;
+                let item = env.pop(2)?.as_string(env, "Item name must be a string")?;
                 let input = String::from_utf8(
                     env.backend
                         .file_read_all(&path)
@@ -794,7 +794,7 @@ impl SysOp {
                         .map_err(|e| env.error(e))?,
                 )
                 .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
-                env.import(&input, path.as_ref())?;
+                env.import(&input, path.as_ref(), &item)?;
             }
             SysOp::Invoke => {
                 let path = env.pop(1)?.as_string(env, "Invoke path must be a string")?;

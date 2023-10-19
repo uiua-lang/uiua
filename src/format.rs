@@ -115,8 +115,7 @@ macro_rules! create_config {
                     let mut env = Uiua::with_backend(FormatConfigBackend)
                         .print_diagnostics(true);
                     env.load_file(file_path)?;
-                    let mut bindings = env.all_bindings_in_scope();
-
+                    let mut bindings = env.all_values_is_scope();
                     $(
                         let $name = {
                             let requirement = requirement!([<$name:camel>], $ty);
@@ -431,12 +430,11 @@ impl<'a> Formatter<'a> {
     }
     fn format_item(&mut self, item: &Item) {
         match item {
-            Item::Scoped { items, test } => {
-                let delim = if *test { "~~~" } else { "---" };
-                self.output.push_str(delim);
+            Item::TestScope(items) => {
+                self.output.push_str("---");
                 self.output.push('\n');
                 self.format_items(items);
-                self.output.push_str(delim);
+                self.output.push_str("---");
             }
             Item::Words(w) => {
                 self.format_words(w, true, 0);

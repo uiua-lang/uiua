@@ -9,7 +9,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub enum Item {
-    Scoped { items: Vec<Item>, test: bool },
+    TestScope(Vec<Item>),
     Words(Vec<Sp<Word>>),
     Binding(Binding),
     ExtraNewlines(CodeSpan),

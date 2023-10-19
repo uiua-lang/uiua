@@ -13,7 +13,7 @@ use crate::{
     function::*,
     lex::{CodeSpan, Sp, Span},
     primitive::Primitive,
-    run::RunMode,
+    run::{Global, RunMode},
     value::Value,
     Diagnostic, DiagnosticKind, Ident, SysOp, UiuaError, UiuaResult,
 };
@@ -57,9 +57,8 @@ impl Uiua {
             }
         }
         match item {
-            Item::Scoped { items, test } => {
-                let scope_stack = self.in_scope(true, |env| env.items(items, test))?;
-                self.stack.extend(scope_stack);
+            Item::TestScope(items) => {
+                self.in_scope(|env| env.items(items, true))?;
             }
             Item::Words(words) => {
                 let can_run = match self.mode {
@@ -115,7 +114,9 @@ impl Uiua {
                     self.bind_function(name, f.clone());
                 } else if sig.args == 0 && (sig.outputs > 0 || instrs.is_empty()) {
                     self.exec_global_instrs(instrs)?;
-                    if let Some(value) = self.stack.pop() {
+                    if let Some(f) = self.function_stack.pop() {
+                        self.bind_function(name, f);
+                    } else if let Some(value) = self.stack.pop() {
                         self.bind_value(name, value);
                     } else {
                         let func = Function::new(FunctionId::Named(name.clone()), Vec::new(), sig);
@@ -141,16 +142,16 @@ impl Uiua {
     }
     fn bind_value(&mut self, name: Arc<str>, mut value: Value) {
         value.compress();
-        let mut globals = self.global_vals.lock();
+        let mut globals = self.globals.lock();
         let idx = globals.len();
-        globals.push(value);
-        self.scope.val_names.insert(name, idx);
+        globals.push(Global::Val(value));
+        self.scope.names.insert(name, idx);
     }
     fn bind_function(&mut self, name: Arc<str>, function: Arc<Function>) {
-        let mut globals = self.global_funcs.lock();
+        let mut globals = self.globals.lock();
         let idx = globals.len();
-        globals.push(function);
-        self.scope.func_names.insert(name, idx);
+        globals.push(Global::Func(function));
+        self.scope.names.insert(name, idx);
     }
     fn compile_words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult<Vec<Instr>> {
         self.new_functions.push(Vec::new());
@@ -406,29 +407,23 @@ impl Uiua {
         Ok(())
     }
     fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool) -> UiuaResult {
-        if let Some(idx) = self.scope.val_names.get(&ident).or_else(|| {
-            self.higher_scopes
-                .last()
-                .filter(|_| self.scope.local)?
-                .val_names
-                .get(&ident)
-        }) {
-            // Value exists in scope
-            let value = self.global_vals.lock()[*idx].clone();
-            self.push_instr(Instr::push(value));
-        } else if let Some(idx) = self.scope.func_names.get(&ident).or_else(|| {
-            self.higher_scopes
-                .last()
-                .filter(|_| self.scope.local)?
-                .func_names
-                .get(&ident)
-        }) {
-            // Function exists in scope
-            let f = self.global_funcs.lock()[*idx].clone();
-            self.push_instr(Instr::push_func(f));
-            if call {
-                let span = self.add_span(span);
-                self.push_instr(Instr::Call(span));
+        if let Some(idx) = self
+            .scope
+            .names
+            .get(&ident)
+            .or_else(|| self.higher_scopes.last()?.names.get(&ident))
+        {
+            // Name exists in scope
+            let global = self.globals.lock()[*idx].clone();
+            match global {
+                Global::Val(val) => self.push_instr(Instr::push(val)),
+                Global::Func(f) => {
+                    self.push_instr(Instr::push_func(f));
+                    if call {
+                        let span = self.add_span(span);
+                        self.push_instr(Instr::Call(span));
+                    }
+                }
             }
         } else {
             return Err(span.sp(format!("Unknown identifier `{ident}`")).into());

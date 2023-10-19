@@ -2,7 +2,7 @@ use std::{
     collections::{BTreeSet, HashMap, HashSet},
     fs,
     hash::Hash,
-    mem::take,
+    mem::{replace, take},
     panic::{catch_unwind, AssertUnwindSafe},
     path::{Path, PathBuf},
     str::FromStr,
@@ -30,9 +30,7 @@ pub struct Uiua {
     /// Functions which are under construction
     pub(crate) new_functions: Vec<Vec<Instr>>,
     /// Global values
-    pub(crate) global_vals: Arc<Mutex<Vec<Value>>>,
-    /// Global functions
-    pub(crate) global_funcs: Arc<Mutex<Vec<Arc<Function>>>>,
+    pub(crate) globals: Arc<Mutex<Vec<Global>>>,
     /// Indexable spans
     pub(crate) spans: Arc<Mutex<Vec<Span>>>,
     /// The thread's stack
@@ -56,7 +54,7 @@ pub struct Uiua {
     /// The paths of files currently being imported (used to detect import cycles)
     current_imports: Arc<Mutex<HashSet<PathBuf>>>,
     /// The stacks of imported files
-    imports: Arc<Mutex<HashMap<PathBuf, Vec<Value>>>>,
+    imports: Arc<Mutex<HashMap<PathBuf, HashMap<Ident, usize>>>>,
     /// Accumulated diagnostics
     pub(crate) diagnostics: BTreeSet<Diagnostic>,
     /// Print diagnostics as they are encountered
@@ -74,17 +72,19 @@ pub struct Uiua {
 }
 
 #[derive(Clone)]
+pub(crate) enum Global {
+    Val(Value),
+    Func(Arc<Function>),
+}
+
+#[derive(Clone)]
 pub struct Scope {
     /// The stack height at the start of each array currently being built
     pub array: Vec<usize>,
     /// The call stack
     call: Vec<StackFrame>,
-    /// Map local names to global value indices
-    pub val_names: HashMap<Ident, usize>,
-    /// Map local names to global function indices
-    pub func_names: HashMap<Ident, usize>,
-    /// Whether this scope is local
-    pub local: bool,
+    /// Map local names to global indices
+    pub names: HashMap<Ident, usize>,
     /// The current fill values
     fills: Fills,
     /// The current clear state
@@ -105,9 +105,7 @@ impl Default for Scope {
                 pc: 0,
                 spans: Vec::new(),
             }],
-            val_names: HashMap::new(),
-            func_names: HashMap::new(),
-            local: false,
+            names: HashMap::new(),
             fills: Fills::default(),
             pierce_depth: 0,
         }
@@ -171,8 +169,8 @@ impl Uiua {
         let mut scope = Scope::default();
         let mut globals = Vec::new();
         for def in &*CONSTANTS {
-            scope.val_names.insert(def.name.into(), globals.len());
-            globals.push(def.value.clone());
+            scope.names.insert(def.name.into(), globals.len());
+            globals.push(Global::Val(def.value.clone()));
         }
         Uiua {
             spans: Arc::new(Mutex::new(vec![Span::Builtin])),
@@ -182,8 +180,7 @@ impl Uiua {
             under_stack: Vec::new(),
             scope,
             higher_scopes: Vec::new(),
-            global_vals: Arc::new(Mutex::new(globals)),
-            global_funcs: Arc::new(Mutex::new(Vec::new())),
+            globals: Arc::new(Mutex::new(globals)),
             new_functions: Vec::new(),
             current_imports: Arc::new(Mutex::new(HashSet::new())),
             imports: Arc::new(Mutex::new(HashMap::new())),
@@ -276,16 +273,20 @@ impl Uiua {
     /// All other runtime state other than the stack, will also be restored.
     pub fn in_scope<T>(
         &mut self,
-        local: bool,
         f: impl FnOnce(&mut Self) -> UiuaResult<T>,
-    ) -> UiuaResult<Vec<Value>> {
+    ) -> UiuaResult<HashMap<Ident, usize>> {
         self.higher_scopes.push(take(&mut self.scope));
-        self.scope.local = local;
         let start_height = self.stack.len();
         f(self)?;
-        let end_height = self.stack.len();
-        self.scope = self.higher_scopes.pop().unwrap();
-        Ok(self.stack.split_off(start_height.min(end_height)))
+        let scope = replace(&mut self.scope, self.higher_scopes.pop().unwrap());
+        let mut names = HashMap::new();
+        for (name, idx) in scope.names {
+            if idx >= CONSTANTS.len() {
+                names.insert(name, idx);
+            }
+        }
+        self.stack.truncate(start_height);
+        Ok(names)
     }
     fn load_impl(&mut self, input: &str, path: Option<&Path>) -> UiuaResult {
         self.execution_start = instant::now();
@@ -347,7 +348,7 @@ code:
             }
         }
     }
-    pub(crate) fn import(&mut self, input: &str, path: &Path) -> UiuaResult {
+    pub(crate) fn import(&mut self, input: &str, path: &Path, item: &str) -> UiuaResult {
         if self.current_imports.lock().contains(path) {
             return Err(self.error(format!(
                 "Cycle detected importing {}",
@@ -355,10 +356,20 @@ code:
             )));
         }
         if !self.imports.lock().contains_key(path) {
-            let import = self.in_scope(false, |env| env.load_str_path(input, path).map(drop))?;
+            let import = self.in_scope(|env| env.load_str_path(input, path).map(drop))?;
             self.imports.lock().insert(path.into(), import);
         }
-        self.stack.extend(self.imports.lock()[path].iter().cloned());
+        let imports_gaurd = self.imports.lock();
+        let imports = &imports_gaurd[path];
+        let idx = imports.get(item).ok_or_else(|| {
+            self.error(format!("Item `{}` not found in {}", item, path.display()))
+        })?;
+        let global = self.globals.lock()[*idx].clone();
+        drop(imports_gaurd);
+        match global {
+            Global::Val(val) => self.push(val),
+            Global::Func(f) => self.function_stack.push(f),
+        }
         Ok(())
     }
     pub(crate) fn exec_global_instrs(&mut self, instrs: Vec<Instr>) -> UiuaResult {
@@ -647,12 +658,14 @@ code:
         })
     }
     /// Get the values for all bindings in the current scope
-    pub fn all_bindings_in_scope(&self) -> HashMap<Ident, Value> {
+    pub fn all_values_is_scope(&self) -> HashMap<Ident, Value> {
         let mut bindings = HashMap::new();
-        let globals_lock = self.global_vals.lock();
-        for (name, idx) in &self.scope.val_names {
+        let globals = self.globals.lock();
+        for (name, idx) in &self.scope.names {
             if !CONSTANTS.iter().any(|c| c.name == name.as_ref()) {
-                bindings.insert(name.clone(), globals_lock[*idx].clone());
+                if let Global::Val(val) = &globals[*idx] {
+                    bindings.insert(name.clone(), val.clone());
+                }
             }
         }
         bindings
@@ -828,8 +841,7 @@ code:
         }
         let env = Uiua {
             new_functions: Vec::new(),
-            global_vals: self.global_vals.clone(),
-            global_funcs: self.global_funcs.clone(),
+            globals: self.globals.clone(),
             spans: self.spans.clone(),
             stack: self
                 .stack

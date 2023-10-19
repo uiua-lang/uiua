@@ -564,9 +564,6 @@ impl<'a> Formatter<'a> {
             Word::Modified(m) => {
                 self.push(&m.modifier.span, &m.modifier.value.to_string());
                 self.format_words(&m.operands, true, depth);
-                if m.terminated {
-                    self.output.push('|');
-                }
             }
             Word::Spaces => self.push(&word.span, " "),
             Word::Comment(comment) => {

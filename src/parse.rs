@@ -453,12 +453,7 @@ impl Parser {
         };
         let mut args = Vec::new();
         self.try_spaces();
-        let mut terminated = false;
         for _ in 0..margs {
-            if self.try_exact(Bar).is_some() {
-                terminated = true;
-                break;
-            }
             args.extend(self.try_spaces());
             if let Some(arg) = self.try_strand() {
                 args.push(arg);
@@ -500,7 +495,6 @@ impl Parser {
             span.sp(Word::Modified(Box::new(Modified {
                 modifier,
                 operands: args,
-                terminated,
             })))
         })
     }

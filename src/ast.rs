@@ -121,7 +121,6 @@ impl fmt::Debug for Func {
 pub struct Modified {
     pub modifier: Sp<Primitive>,
     pub operands: Vec<Sp<Word>>,
-    pub terminated: bool,
 }
 
 impl fmt::Debug for Modified {
@@ -129,9 +128,6 @@ impl fmt::Debug for Modified {
         write!(f, "{:?}", self.modifier.value)?;
         for word in &self.operands {
             write!(f, "({:?})", word.value)?;
-        }
-        if self.terminated {
-            write!(f, "|")?;
         }
         Ok(())
     }

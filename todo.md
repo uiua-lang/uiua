@@ -8,10 +8,8 @@ Within a each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
 - **Make functions second class**
-  - Add a function stack
-  - Convert function array type to just boxes
-  - Remove `call` and `recur`
-  - Update all documentation
+  - Make `fill`, `level` and co monadic
+- Add inline signatures
 - `under` aggregating `group` and `partition`
 - Add channels for spawned threads
 - Sift+delete to delete whole linestribute`

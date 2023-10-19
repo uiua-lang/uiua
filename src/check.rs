@@ -49,22 +49,6 @@ enum BasicValue {
 }
 
 impl BasicValue {
-    fn signature(&self) -> Signature {
-        match self {
-            BasicValue::Num(_) => Signature {
-                args: 0,
-                outputs: 1,
-            },
-            BasicValue::Arr(_) => Signature {
-                args: 0,
-                outputs: 1,
-            },
-            BasicValue::Other | BasicValue::Unknown => Signature {
-                args: 0,
-                outputs: 1,
-            },
-        }
-    }
     fn from_val(value: &Value) -> Self {
         if let Some(n) = value.as_num_array().and_then(Array::as_scalar) {
             BasicValue::Num(*n)
@@ -267,8 +251,8 @@ impl<'a> VirtualEnv<'a> {
                     self.handle_args_outputs(args, outputs)?;
                 }
                 If => {
-                    let if_true = self.pop()?;
-                    let if_false = self.pop()?;
+                    let if_true = self.pop_func()?;
+                    let if_false = self.pop_func()?;
                     let _cond = self.pop()?;
                     let if_true_sig = if_true.signature();
                     let if_false_sig = if_false.signature();
@@ -289,7 +273,7 @@ impl<'a> VirtualEnv<'a> {
                     }
                 }
                 Level | Fold | Combinate => {
-                    let _ranks = self.pop()?;
+                    let _ranks = self.pop_func()?;
                     let sig = self.pop_func()?.signature();
                     self.handle_sig(sig)?;
                 }
@@ -339,7 +323,7 @@ impl<'a> VirtualEnv<'a> {
                     }
                 }
                 Fill => {
-                    let _fill = self.pop()?;
+                    let _fill = self.pop_func()?;
                     let f = self.pop_func()?;
                     self.handle_sig(f.signature())?;
                 }

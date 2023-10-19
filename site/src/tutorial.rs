@@ -150,7 +150,7 @@ fn TutorialBasic() -> impl IntoView {
         <Editor examples=&{["max ", "sqrt ", "10 ", "mod ", "10 ", "pow ", "2 ", "8"]}/>
         <Editor example="abs +`1 `2"/>
         <p>"You don't have to type the whole name, just enough to to disambiguate it from others."</p>
-        <Editor example="cei 1.5\nceil 1.5\nceili 1.5\nceilin 1.5\nceiling"/>
+        <Editor example="cei 1.5\nceil 1.5\nceili 1.5\nceilin 1.5\nceiling 1.5"/>
         <p>"You don't even have to remove spaces between built-in function names. The formatter will figure it out!"</p>
         <Editor example="roundsqrtpi"/>
         <p>"On this site, you can also click the ↧ symbol on any editor to show a pallete of all the Uiua glyphs. You can then click on any glyph to insert it into the editor."</p>
@@ -202,7 +202,7 @@ fn TutorialBasic() -> impl IntoView {
         <p><Prim prim=Trace/>" prints the top item on the stack without popping it."</p>
         <p>"It also attaches line and column numbers."</p>
         <p>"This is useful for debugging by inpecting the stack."</p>
-        <Editor example="+1 ⸮ ×4 ⸮ ×. -3 5"/>
+        <Editor example="+1 ⸮ ×4 trace ×. -3 5"/>
     }
 }
 

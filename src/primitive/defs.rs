@@ -586,8 +586,7 @@ primitive!(
     /// Normally, arrays can only be created if their rows have the same shape and type.
     /// [fill] can help you with the shape part, but it is not always wanted, and it can't help with the type part.
     /// ex! [@a 3 7_8_9]
-    /// [box] turns any array into a function that pushes that array onto the stack. We call this type of function a *box*.
-    /// These functions are just like any other, so they can be put in arrays themselves.
+    /// [box] creates a box element that contains the array. All boxes, no matter the type of shape of their contents, are considered the same type and can be put into arrays together.
     /// ex: [□@a □3 □7_8_9]
     /// The more ergonomic way to make box arrays is to use `{}`s instead of `[]`s.
     /// ex: {@a 3 7_8_9}

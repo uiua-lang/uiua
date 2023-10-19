@@ -132,7 +132,7 @@ pub fn Tour() -> impl IntoView {
         <Editor example="⬚π↙5 [1 2 3]"/>
         <br/>
         <p><Prim prim=Fill/>" is nice, but you don't always want to fill in the missing elements. Sometimes you need to mix values of different shapes or types in an array. To understand Uiua's solution to this problem, you must first understand its "<em>"array model"</em>"."</p>
-        <p>"Uiua's array model is similar to that of J. Arrays must be rectangular and cannot mix types. However, the "<Prim prim=Box/>" function can turn any value into a function that pushes that value to the stack. That value can then be extracted with "<Prim prim=Unbox/>". This is similar to J's boxes."</p>
+        <p>"Uiua's array model is similar to that of J. Arrays must be rectangular and cannot mix types. However, the "<Prim prim=Box/>" function can turn any into a "<em>"box"</em>" element that can be put in an array with other boxes. That value can then be extracted with "<Prim prim=Unbox/>". This is similar to J's boxes."</p>
         <Editor example="[□1 □2_3_4 □5_6]"/>
         <p>"Having to use "<Prim prim=Box/>" on every value is kind of annoying, so there is a special syntax for "<Prim prim=Box/>" arrays that uses "<code>"{}"</code>"s instead of "<code>"[]"</code>"s."</p>
         <Editor example="{1 2_3_4 5_6}"/>

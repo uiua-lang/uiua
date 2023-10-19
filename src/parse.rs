@@ -17,6 +17,7 @@ pub enum ParseError {
     InvalidArgCount(String),
     InvalidOutCount(String),
     AmpersandBindingName,
+    FunctionNotAllowed,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -78,6 +79,11 @@ impl fmt::Display for ParseError {
             ParseError::InvalidArgCount(n) => write!(f, "Invalid argument count `{n}`"),
             ParseError::InvalidOutCount(n) => write!(f, "Invalid output count `{n}`"),
             ParseError::AmpersandBindingName => write!(f, "Binding names may not contain `&`"),
+            ParseError::FunctionNotAllowed => write!(
+                f,
+                "Inline functions are only allowed in modifiers \
+                or as the only item in a binding"
+            ),
         }
     }
 }
@@ -233,7 +239,10 @@ impl Parser {
             }
             self.try_spaces();
             let sig = self.try_signature();
-            let words = self.try_words().unwrap_or_default();
+            let words = self
+                .try_words()
+                .or_else(|| self.try_func().map(|word| vec![word]))
+                .unwrap_or_default();
             // Check for uncapitalized binding names
             if ident.value.chars().count() >= 3
                 && ident.value.chars().next().unwrap().is_ascii_lowercase()
@@ -456,7 +465,7 @@ impl Parser {
         let mut arg_count = 0;
         for _ in 0..margs {
             args.extend(self.try_spaces());
-            if let Some(arg) = self.try_strand() {
+            if let Some(arg) = self.try_func().or_else(|| self.try_strand()) {
                 args.push(arg);
                 arg_count += 1;
             } else {
@@ -542,8 +551,6 @@ impl Parser {
             }
             let span = start.merge(end);
             span.sp(Word::MultilineString(lines))
-        } else if let Some(expr) = self.try_func() {
-            expr
         } else if let Some(start) = self.try_exact(OpenBracket) {
             let items = self.multiline_words();
             let end = self.expect_close(CloseBracket);
@@ -562,6 +569,10 @@ impl Parser {
             }))
         } else if let Some(spaces) = self.try_spaces() {
             spaces
+        } else if let Some(func) = self.try_func() {
+            self.errors
+                .push(func.span.clone().sp(ParseError::FunctionNotAllowed));
+            func
         } else {
             return None;
         })

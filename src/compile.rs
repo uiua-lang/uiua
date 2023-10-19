@@ -212,10 +212,38 @@ impl Uiua {
     fn word(&mut self, word: Sp<Word>, call: bool) -> UiuaResult {
         match word.value {
             Word::Number(_, n) => {
-                self.push_instr(Instr::push(n));
+                if call {
+                    self.push_instr(Instr::push(n));
+                } else {
+                    self.push_instr(Instr::push_func(Function::new(
+                        FunctionId::Anonymous(word.span.clone()),
+                        vec![Instr::push(n)],
+                        Signature::new(0, 1),
+                    )));
+                }
             }
-            Word::Char(c) => self.push_instr(Instr::push(c)),
-            Word::String(s) => self.push_instr(Instr::push(s)),
+            Word::Char(c) => {
+                if call {
+                    self.push_instr(Instr::push(c));
+                } else {
+                    self.push_instr(Instr::push_func(Function::new(
+                        FunctionId::Anonymous(word.span.clone()),
+                        vec![Instr::push(c)],
+                        Signature::new(0, 1),
+                    )));
+                }
+            }
+            Word::String(s) => {
+                if call {
+                    self.push_instr(Instr::push(s));
+                } else {
+                    self.push_instr(Instr::push_func(Function::new(
+                        FunctionId::Anonymous(word.span.clone()),
+                        vec![Instr::push(s)],
+                        Signature::new(0, 1),
+                    )));
+                }
+            }
             Word::FormatString(frags) => {
                 let signature = Signature::new(frags.len() - 1, 1);
                 let f = Function::new(
@@ -289,11 +317,14 @@ impl Uiua {
             }
             Word::Ident(ident) => self.ident(ident, word.span, call)?,
             Word::Strand(items) => {
+                if !call {
+                    self.new_functions.push(Vec::new());
+                }
                 self.push_instr(Instr::BeginArray);
-                let inner = self.compile_words(items, false)?;
-                let span = self.add_span(word.span);
+                let inner = self.compile_words(items, true)?;
+                let span = self.add_span(word.span.clone());
                 let instrs = self.new_functions.last_mut().unwrap();
-                if inner.iter().all(|instr| matches!(instr, Instr::Push(_))) {
+                if call && inner.iter().all(|instr| matches!(instr, Instr::Push(_))) {
                     // Inline constant arrays
                     instrs.pop();
                     let values = inner.into_iter().rev().map(|instr| match instr {
@@ -308,6 +339,13 @@ impl Uiua {
                     // Normal case
                     instrs.extend(inner);
                     self.push_instr(Instr::EndArray { span, boxed: false });
+                    if !call {
+                        let instrs = self.new_functions.pop().unwrap();
+                        let sig =
+                            instrs_signature(&instrs).unwrap_or_else(|_| Signature::new(0, 0));
+                        let func = Function::new(FunctionId::Anonymous(word.span), instrs, sig);
+                        self.push_instr(Instr::push_func(func));
+                    }
                 }
             }
             Word::Array(arr) => {
@@ -334,7 +372,7 @@ impl Uiua {
                         if empty {
                             Array::<Value>::default().into()
                         } else {
-                            Value::from_row_values(values.map(Value::from), self)?
+                            Value::from_row_values(values.map(|v| Value::Box(v.into())), self)?
                         }
                     } else {
                         Value::from_row_values(values, self)?

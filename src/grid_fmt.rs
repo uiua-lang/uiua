@@ -94,12 +94,18 @@ impl GridFmt for char {
 
 impl GridFmt for Value {
     fn fmt_grid(&self, boxed: bool) -> Grid {
-        match self {
-            Value::Num(array) => array.fmt_grid(boxed),
-            Value::Byte(array) => array.fmt_grid(boxed),
-            Value::Char(array) => array.fmt_grid(boxed),
-            Value::Box(array) => array.fmt_grid(boxed),
+        let mut grid = match self {
+            Value::Num(array) => array.fmt_grid(true),
+            Value::Byte(array) => array.fmt_grid(true),
+            Value::Char(array) => array.fmt_grid(true),
+            Value::Box(array) => array.fmt_grid(true),
+        };
+        if boxed && grid.len() == 1 {
+            grid = vec![boxed_scalar(true)
+                .chain(grid.into_iter().flatten())
+                .collect()];
         }
+        grid
     }
 }
 

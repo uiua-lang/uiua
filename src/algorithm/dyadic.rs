@@ -130,20 +130,12 @@ impl Value {
             } else {
                 match self.rank().cmp(&other.rank()) {
                     Ordering::Greater => {
-                        self = self
-                            .into_rows()
-                            .map(Value::boxed_if_not)
-                            .collect::<Array<_>>()
-                            .into();
+                        self = self.into_rows().collect::<Array<_>>().into();
                         other.box_if_not();
                     }
                     Ordering::Less => {
                         self.box_if_not();
-                        other = other
-                            .into_rows()
-                            .map(Value::boxed_if_not)
-                            .collect::<Array<_>>()
-                            .into();
+                        other = other.into_rows().collect::<Array<_>>().into();
                     }
                     Ordering::Equal => {
                         self.box_if_not();
@@ -185,11 +177,7 @@ impl Value {
             self.unbox();
             other.unbox();
             if self.append_impl(other.clone(), ctx).is_err() {
-                *self = take(self)
-                    .into_rows()
-                    .map(Value::boxed_if_not)
-                    .collect::<Array<_>>()
-                    .into();
+                *self = take(self).into_rows().collect::<Array<_>>().into();
                 other.box_if_not();
                 self.append_impl(other, ctx)
             } else {

@@ -4,6 +4,16 @@ Uiua is not yet stable.
 
 ## 0.0.21 - 2023-10-??
 ### Language
+- **Massive Change** - Functions are no longer first-class values. This has many implications:
+  - Functions can no longer be put in arrays or manipulated as stack values
+  - Inline functions can now only appear as modifier arguments or bindings
+  - `call !` has been removed, as they is nothing on the stack to call
+  - `---` scopes are now test scopes. `~~~` scopes have been removed.
+  - Modules have been reworked. [`&i`](https://uiua.org/docs/&i) now handles both loading a module from a file and importing items from that module.
+  - Remove `use`, as it is no longer necessary
+  - Boxes still work as normal, but are now their own type distinct from functions
+  - Remove `sig`, as everything that can be on the stack now has the same signature
+  - [`fill` `⬚`](https://uiua.org/docs/fill) is now monadic and the fill value comes *after* the function
 - Add the [`pierce` `⍆`](https://uiua.org/docs/pierce) modifier, which calls its function and implicitly boxes/unboxes values
 - Add the [`combinate` `◳`](https://uiua.org/docs/combinate) modifier, which is a rank-generic version of [`table` `⊞`](https://uiua.org/docs/table)
 - [`fold` `∧`](https://uiua.org/docs/fold) is now rank-generic and requires a rank list

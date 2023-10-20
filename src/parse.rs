@@ -282,13 +282,13 @@ impl Parser {
                 ));
             }
             // Validate modifier args
-            let modifier_arg_count = ident_modifier_args(&ident.value);
-            if modifier_arg_count != self.placeholder_count {
+            let ident_marg_count = ident_modifier_args(&ident.value);
+            if ident_marg_count != self.placeholder_count {
                 self.errors
                     .push(ident.span.clone().sp(ParseError::WrongModifierArgCount(
                         ident.value.clone(),
+                        ident_marg_count,
                         self.placeholder_count,
-                        modifier_arg_count,
                     )));
             }
 

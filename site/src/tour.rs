@@ -1,4 +1,5 @@
 use leptos::*;
+use leptos_meta::*;
 use leptos_router::*;
 use uiua::{primitive::Primitive, SysOp};
 
@@ -8,6 +9,7 @@ use crate::{editor::Editor, examples::LOGO, Prim};
 pub fn Tour() -> impl IntoView {
     use Primitive::*;
     view! {
+        <Title text="Language Tour - Uiua Docs"/>
         <h1>"Uiua Language Tour"</h1>
 
         <h2 id="the-union-of-two-paradigms">"The Union of Two Paradigms"</h2>

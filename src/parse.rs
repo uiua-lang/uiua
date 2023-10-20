@@ -427,6 +427,7 @@ impl Parser {
         self.comment()
             .map(|c| c.map(Word::Comment))
             .or_else(|| self.try_strand())
+            .or_else(|| self.try_placeholder())
     }
     fn try_strand(&mut self) -> Option<Sp<Word>> {
         let word = self.try_modified()?;

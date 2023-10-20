@@ -766,10 +766,10 @@ fn TutorialCustomModifiers() -> impl IntoView {
         <p>"But what if you want to define functions that use other functions?"</p>
 
         <h2 id="placeholders-and-bangs">"Placeholders and "<code>"!"</code>"s"</h2>
-        <p>"When using a modifier, you can provide it with a "<code>"^"</code>" instead of a function. This is called a "<em>"placeholder"</em>"."</p>
+        <p>"Anywhere you can put a built-in or inline function, you can also put a "<code>"^"</code>". This is called a "<em>"placeholder"</em>"."</p>
         <p>"Any named function with "<code>"^"</code>"s in it becomes a modifier."</p>
         <p>"However, there is one additional requirement: custom modifiers must have names that end in as many "<code>"!"</code>"s as the number of functions they take."</p>
-        <p>"Lets look at a simple example using "<Prim prim=Reduce/>". It reduces its function over the numbers up to the given range."</p>
+        <p>"Lets look at a simple example using "<Prim prim=Reduce/>". It reduces a function over the numbers up to the given range."</p>
         <Editor example="\
 ReduceRange! ← |1 /^+1⇡
 ReduceRange!+5

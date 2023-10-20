@@ -431,6 +431,10 @@ impl Uiua {
             Word::Modified(m) => self.modified(*m, call)?,
             Word::Placeholder => {
                 self.push_instr(Instr::GetTempFunction(self.placeholder_count));
+                if call {
+                    let span = self.add_span(word.span);
+                    self.push_instr(Instr::Call(span));
+                }
                 self.placeholder_count += 1;
             }
             Word::Spaces | Word::Comment(_) => {}

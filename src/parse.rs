@@ -102,16 +102,6 @@ impl Error for ParseError {}
 
 pub type ParseResult<T = ()> = Result<T, Sp<ParseError>>;
 
-pub(crate) fn ident_modifier_args(ident: &Ident) -> u8 {
-    let mut count: u8 = 0;
-    let mut prefix = ident.as_ref();
-    while let Some(pre) = prefix.strip_suffix('!') {
-        prefix = pre;
-        count = count.saturating_add(1);
-    }
-    count
-}
-
 pub fn parse(
     input: &str,
     path: Option<&Path>,
@@ -126,7 +116,6 @@ pub fn parse(
         index: 0,
         errors,
         diagnostics: Vec::new(),
-        placeholder_count: 0,
     };
     let items = parser.items(true);
     if parser.errors.is_empty() && parser.index < parser.tokens.len() {
@@ -145,7 +134,6 @@ struct Parser {
     index: usize,
     errors: Vec<Sp<ParseError>>,
     diagnostics: Vec<Diagnostic>,
-    placeholder_count: u8,
 }
 
 impl Parser {
@@ -285,12 +273,13 @@ impl Parser {
             }
             // Validate modifier args
             let ident_marg_count = ident_modifier_args(&ident.value);
-            if ident_marg_count != self.placeholder_count {
+            let placeholder_count = count_placeholders(&words) as u8;
+            if ident_marg_count != placeholder_count {
                 self.errors
                     .push(ident.span.clone().sp(ParseError::WrongModifierArgCount(
                         ident.value.clone(),
                         ident_marg_count,
-                        self.placeholder_count,
+                        placeholder_count,
                     )));
             }
 
@@ -560,7 +549,6 @@ impl Parser {
     }
     fn try_placeholder(&mut self) -> Option<Sp<Word>> {
         let span = self.try_exact(Caret)?;
-        self.placeholder_count += 1;
         Some(span.sp(Word::Placeholder))
     }
     fn try_term(&mut self) -> Option<Sp<Word>> {
@@ -699,4 +687,37 @@ impl Parser {
             self.prev_span()
         }
     }
+}
+
+pub(crate) fn ident_modifier_args(ident: &Ident) -> u8 {
+    let mut count: u8 = 0;
+    let mut prefix = ident.as_ref();
+    while let Some(pre) = prefix.strip_suffix('!') {
+        prefix = pre;
+        count = count.saturating_add(1);
+    }
+    count
+}
+
+pub(crate) fn count_placeholders(words: &[Sp<Word>]) -> usize {
+    let mut count = 0;
+    for word in words {
+        match &word.value {
+            Word::Placeholder => count += 1,
+            Word::Strand(items) => count += count_placeholders(items),
+            Word::Array(arr) => {
+                for line in &arr.lines {
+                    count += count_placeholders(line);
+                }
+            }
+            Word::Func(func) => {
+                for line in &func.lines {
+                    count += count_placeholders(line);
+                }
+            }
+            Word::Modified(m) => count += count_placeholders(&m.operands),
+            _ => {}
+        }
+    }
+    count
 }

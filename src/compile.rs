@@ -12,6 +12,7 @@ use crate::{
     check::instrs_signature,
     function::*,
     lex::{CodeSpan, Sp, Span},
+    parse::count_placeholders,
     primitive::Primitive,
     run::{Global, RunMode},
     value::Value,
@@ -73,12 +74,12 @@ impl Uiua {
                         .span
                         .clone()
                         .merge(words.last().unwrap().span.clone());
-                    let (instrs, placeholder_count) = self.compile_words(words, true)?;
-                    if placeholder_count > 0 {
+                    if count_placeholders(&words) > 0 {
                         return Err(span
                             .sp("Cannot use placeholder outside of function".into())
                             .into());
                     }
+                    let instrs = self.compile_words(words, true)?;
                     self.exec_global_instrs(instrs)?;
                 }
             }
@@ -103,14 +104,19 @@ impl Uiua {
     }
     fn binding(&mut self, binding: Binding) -> UiuaResult {
         let name = binding.name.value;
-        let (mut instrs, placeholder_count) = self.compile_words(binding.words, true)?;
         let make_fn = |instrs: Vec<Instr>, sig: Signature| {
             Function::new(FunctionId::Named(name.clone()), instrs, sig)
         };
+        let placeholder_count = count_placeholders(&binding.words);
+        // Compile the body
+        let mut instrs = self.compile_words(binding.words, true)?;
+        // Handle placeholders
         if placeholder_count > 0 {
+            increment_placeholders(&mut instrs);
             instrs.insert(0, Instr::PushTempFunctions(placeholder_count));
             instrs.push(Instr::PopTempFunctions(placeholder_count));
         }
+        // Resolve signature
         match instrs_signature(&instrs) {
             Ok(mut sig) => {
                 if let Some(declared_sig) = &binding.signature {
@@ -168,12 +174,7 @@ impl Uiua {
         globals.push(Global::Func(function));
         self.scope.names.insert(name, idx);
     }
-    fn compile_words(
-        &mut self,
-        words: Vec<Sp<Word>>,
-        call: bool,
-    ) -> UiuaResult<(Vec<Instr>, usize)> {
-        let initial_placeholder_count = self.placeholder_count;
+    fn compile_words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult<Vec<Instr>> {
         self.new_functions.push(Vec::new());
         self.words(words, call)?;
         if self.print_diagnostics {
@@ -181,16 +182,13 @@ impl Uiua {
                 eprintln!("{}", diagnostic.show(true));
             }
         }
-        let instrs = self.new_functions.pop().unwrap();
-        let placeholder_count = self.placeholder_count - initial_placeholder_count;
-        self.placeholder_count = initial_placeholder_count;
-        Ok((instrs, placeholder_count))
+        Ok(self.new_functions.pop().unwrap())
     }
     fn compile_operand_words(
         &mut self,
         words: Vec<Sp<Word>>,
     ) -> UiuaResult<(Vec<Instr>, Result<Signature, String>)> {
-        let (mut instrs, _) = self.compile_words(words, true)?;
+        let mut instrs = self.compile_words(words, true)?;
         let mut sig = None;
         // Extract function instrs if possible
         if let [Instr::PushFunc(f)] = instrs.as_slice() {
@@ -347,7 +345,7 @@ impl Uiua {
                     self.new_functions.push(Vec::new());
                 }
                 self.push_instr(Instr::BeginArray);
-                let (inner, _) = self.compile_words(items, true)?;
+                let inner = self.compile_words(items, true)?;
                 let span = self.add_span(word.span.clone());
                 let instrs = self.new_functions.last_mut().unwrap();
                 if call && inner.iter().all(|instr| matches!(instr, Instr::Push(_))) {
@@ -381,9 +379,7 @@ impl Uiua {
                 self.push_instr(Instr::BeginArray);
                 let mut inner = Vec::new();
                 for lines in arr.lines.into_iter().rev() {
-                    let (instrs, phc) = self.compile_words(lines, true)?;
-                    inner.extend(instrs);
-                    self.placeholder_count += phc;
+                    inner.extend(self.compile_words(lines, true)?);
                 }
                 let span = self.add_span(word.span.clone());
                 let instrs = self.new_functions.last_mut().unwrap();
@@ -430,12 +426,11 @@ impl Uiua {
             Word::Primitive(p) => self.primitive(p, word.span, call)?,
             Word::Modified(m) => self.modified(*m, call)?,
             Word::Placeholder => {
-                self.push_instr(Instr::GetTempFunction(self.placeholder_count));
+                self.push_instr(Instr::GetTempFunction(0));
                 if call {
                     let span = self.add_span(word.span);
                     self.push_instr(Instr::Call(span));
                 }
-                self.placeholder_count += 1;
             }
             Word::Spaces | Word::Comment(_) => {}
         }
@@ -490,9 +485,7 @@ impl Uiua {
     fn func(&mut self, func: Func, span: CodeSpan) -> UiuaResult {
         let mut instrs = Vec::new();
         for line in func.lines {
-            let (ins, phc) = self.compile_words(line, true)?;
-            instrs.extend(ins);
-            self.placeholder_count += phc;
+            instrs.extend(self.compile_words(line, true)?);
         }
 
         // Validate signature
@@ -572,8 +565,7 @@ impl Uiua {
 
             // Inline bind
             if prim == Primitive::Bind && modified.operands.len() == 2 {
-                let (instrs, phc) = self.compile_words(modified.operands, true)?;
-                self.placeholder_count += phc;
+                let instrs = self.compile_words(modified.operands, true)?;
                 return if call {
                     self.extend_instrs(instrs);
                     Ok(())
@@ -801,4 +793,14 @@ fn words_look_pervasive(words: &[Sp<Word>]) -> bool {
         Word::Func(func) if func.lines.iter().all(|line| words_look_pervasive(line)) => true,
         _ => false,
     })
+}
+
+fn increment_placeholders(instrs: &mut [Instr]) {
+    let mut curr = 0;
+    for instr in instrs {
+        if let Instr::GetTempFunction(i) = instr {
+            *i = curr;
+            curr += 1;
+        }
+    }
 }

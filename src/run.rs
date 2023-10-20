@@ -29,8 +29,6 @@ use crate::{
 pub struct Uiua {
     /// Functions which are under construction
     pub(crate) new_functions: Vec<Vec<Instr>>,
-    /// The number of placeholders in the current function
-    pub(crate) placeholder_count: usize,
     /// Global values
     pub(crate) globals: Arc<Mutex<Vec<Global>>>,
     /// Indexable spans
@@ -187,7 +185,6 @@ impl Uiua {
             higher_scopes: Vec::new(),
             globals: Arc::new(Mutex::new(globals)),
             new_functions: Vec::new(),
-            placeholder_count: 0,
             current_imports: Arc::new(Mutex::new(HashSet::new())),
             imports: Arc::new(Mutex::new(HashMap::new())),
             mode: RunMode::Normal,
@@ -897,7 +894,6 @@ code:
         }
         let env = Uiua {
             new_functions: Vec::new(),
-            placeholder_count: 0,
             globals: self.globals.clone(),
             spans: self.spans.clone(),
             stack: self

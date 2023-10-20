@@ -676,6 +676,7 @@ fn TutorialAdvancedStack() -> impl IntoView {
 fn TutorialAdvancedArray() -> impl IntoView {
     use Primitive::*;
     view! {
+        <Title text="Advanced Array Manipulation - Uiua Docs"/>
         <h1>"Advanced Array Manipulation"</h1>
         <p>"Sometime the operation you need to perform on an array is more complicated than something like "<Prim prim=Reduce/>", "<Prim prim=Rows/>", or "<Prim prim=Table/>" allows."</p>
 

@@ -1025,6 +1025,12 @@ pub fn Editor<'a>(
         let size = input.value();
         set_font_size(&size);
     };
+    let on_select_top_at_top = move |event: Event| {
+        let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
+        let orientation = input.value() == "true";
+        set_top_at_top(orientation);
+        run(false, false);
+    };
     set_font_name(&get_font_name());
     set_font_size(&get_font_size());
 
@@ -1053,6 +1059,14 @@ pub fn Editor<'a>(
                             type="checkbox"
                             checked=get_right_to_left
                             on:change=toggle_right_to_left/>
+                    </div>
+                    <div>
+                        "Stack:"
+                        <select
+                            on:change=on_select_top_at_top>
+                            <option value="false" selected=get_top_at_top()>"Top at bottom"</option>
+                            <option value="true" selected=get_top_at_top()>"Top at top"</option>
+                        </select>
                     </div>
                     <div>
                         "Font size:"
@@ -1198,6 +1212,13 @@ fn get_right_to_left() -> bool {
 }
 fn set_right_to_left(rtl: bool) {
     set_local_var("right-to-left", rtl);
+}
+
+fn get_top_at_top() -> bool {
+    get_local_var("top-at-top", || false)
+}
+fn set_top_at_top(top_at_top: bool) {
+    set_local_var("top-at-top", top_at_top);
 }
 
 fn get_font_name() -> String {
@@ -1561,13 +1582,16 @@ fn run_code(code: &str) -> Vec<OutputItem> {
         .with_mode(RunMode::All)
         .with_execution_limit(Duration::from_secs_f64(get_execution_limit()));
     let mut error = None;
-    let values = match env.load_str(code) {
+    let mut values = match env.load_str(code) {
         Ok(()) => env.take_stack(),
         Err(e) => {
             error = Some(e);
             env.take_stack()
         }
     };
+    if get_top_at_top() {
+        values.reverse();
+    }
     let diagnotics = env.take_diagnostics();
     // Get stdout and stderr
     let io = env.downcast_backend::<WebBackend>().unwrap();

@@ -394,6 +394,9 @@ impl<'a> VirtualEnv<'a> {
                         }
                     }
                 }
+                Dump => {
+                    self.pop_func()?;
+                }
                 prim => {
                     let array_args = prim
                         .args()

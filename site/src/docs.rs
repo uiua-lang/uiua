@@ -3,6 +3,7 @@ use std::{collections::HashSet, iter::once};
 use enum_iterator::all;
 use instant::Duration;
 use leptos::*;
+use leptos_meta::*;
 use leptos_router::*;
 use uiua::primitive::{PrimClass, Primitive};
 use wasm_bindgen::JsCast;
@@ -112,6 +113,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         .map(|s| s.into_owned())
         .unwrap_or_default();
     let (results, set_result) = create_signal(None);
+    let (current_prim, set_current_prim) = create_signal(None);
     let (clear_button, set_clear_button) = create_signal(None);
     let (old_allowed, set_old_allowed) = create_signal(Allowed::all());
     let update_search = move |text: &str, update_location: bool| {
@@ -156,24 +158,32 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             return;
         }
         set_old_allowed.set(allowed.clone());
-        set_result.set(Some(
-            if allowed.classes.is_empty() && allowed.prims.is_empty() {
-                // No Results
-                view!( <p>"No results"</p>).into_view()
-            } else if allowed.prims.len() == 1
-                && [PrimClass::all().count(), 1].contains(&allowed.classes.len())
-            {
-                // Only one result
-                let prim = allowed.prims.into_iter().next().unwrap();
-                scroll_to_docs_functions(
-                    ScrollIntoViewOptions::new().behavior(ScrollBehavior::Instant),
-                );
-                view!( <PrimDocs prim=prim/>).into_view()
-            } else {
-                // Multiple results
-                allowed.table().into_view()
-            },
-        ));
+        if allowed.classes.is_empty() && allowed.prims.is_empty() {
+            // No Results
+            set_result.set(Some(view!( <p>"No results"</p>).into_view()));
+            set_current_prim.set(None);
+        } else if allowed.prims.len() == 1
+            && [PrimClass::all().count(), 1].contains(&allowed.classes.len())
+        {
+            // Only one result
+            let prim = allowed.prims.into_iter().next().unwrap();
+            scroll_to_docs_functions(
+                ScrollIntoViewOptions::new().behavior(ScrollBehavior::Instant),
+            );
+            set_result.set(Some(view!( <PrimDocs prim=prim/>).into_view()));
+            set_current_prim.set(Some(prim));
+        } else {
+            // Multiple results
+            set_result.set(Some(allowed.table().into_view()));
+            set_current_prim.set(None);
+        }
+    };
+    let update_title = move || {
+        current_prim
+            .get()
+            .and_then(|prim| prim.name())
+            .map(|name| format!("{name} - Uiua Docs"))
+            .unwrap_or_else(|| "Uiua Docs".to_owned())
     };
 
     set_timeout(
@@ -189,6 +199,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
     };
 
     view! {
+        <Title text=update_title/>
         <h1>"Documentation"</h1>
 
         <h2>"Language Tour"</h2>
@@ -232,7 +243,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             </div>
             <A href="/docs/all-functions">"Scrollable List"</A>
         </div>
-        { move|| results.get() }
+        { move || results.get() }
         <div style="height: 85vh;"></div>
     }
 }

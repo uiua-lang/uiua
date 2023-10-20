@@ -477,24 +477,23 @@ impl Parser {
         Some(span.sp(Word::Strand(items)))
     }
     fn try_modified(&mut self) -> Option<Sp<Word>> {
-        let (modifier, margs, mod_span) = if let Some((prim, margs)) = Primitive::all()
-            .filter_map(|prim| prim.modifier_args().map(|margs| (prim, margs)))
-            .find_map(|(prim, margs)| {
+        let (modifier, mod_span) = if let Some(prim) = Primitive::all()
+            .filter(|prim| prim.is_modifier())
+            .find_map(|prim| {
                 self.try_exact(prim)
                     .or_else(|| prim.ascii().and_then(|simple| self.try_exact(simple)))
-                    .map(|span| (span.sp(prim), margs))
+                    .map(|span| span.sp(prim))
             }) {
-            (Modifier::Primitive(prim.value), margs, prim.span)
+            (Modifier::Primitive(prim.value), prim.span)
         } else if let Some(ident) = self.try_modifier_ident() {
-            let margs = ident_modifier_args(&ident.value);
-            (Modifier::Ident(ident.value), margs, ident.span)
+            (Modifier::Ident(ident.value), ident.span)
         } else {
             return self.try_term();
         };
         let mut args = Vec::new();
         self.try_spaces();
         let mut arg_count = 0;
-        for _ in 0..margs {
+        for _ in 0..modifier.args() {
             args.extend(self.try_spaces());
             if let Some(arg) = self
                 .try_func()
@@ -507,7 +506,7 @@ impl Parser {
                 break;
             }
         }
-        if arg_count != margs {
+        if arg_count != modifier.args() {
             self.errors.push(self.expected([Expectation::Term]));
         }
 
@@ -519,6 +518,16 @@ impl Parser {
                         let span = mod_span.clone().merge(m.modifier.span.clone());
                         self.diagnostics.push(Diagnostic::new(
                             format!("Do not chain `bind {}`", Primitive::Bind),
+                            span,
+                            DiagnosticKind::Style,
+                        ));
+                    } else if m.modifier.value.args() > 1 {
+                        let span = mod_span.clone().merge(m.modifier.span.clone());
+                        self.diagnostics.push(Diagnostic::new(
+                            format!(
+                                "Do not use non-monadic modifiers inside `bind {}`",
+                                Primitive::Bind
+                            ),
                             span,
                             DiagnosticKind::Style,
                         ));

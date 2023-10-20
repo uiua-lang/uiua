@@ -3,6 +3,7 @@ use std::fmt;
 use crate::{
     function::{FunctionId, Signature},
     lex::{CodeSpan, Sp},
+    parse::ident_modifier_args,
     primitive::Primitive,
     Ident,
 };
@@ -125,6 +126,16 @@ pub struct Modified {
     pub operands: Vec<Sp<Word>>,
 }
 
+impl fmt::Debug for Modified {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.modifier.value)?;
+        for word in &self.operands {
+            write!(f, "({:?})", word.value)?;
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 pub enum Modifier {
     Primitive(Primitive),
@@ -140,12 +151,11 @@ impl fmt::Debug for Modifier {
     }
 }
 
-impl fmt::Debug for Modified {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.modifier.value)?;
-        for word in &self.operands {
-            write!(f, "({:?})", word.value)?;
+impl Modifier {
+    pub fn args(&self) -> u8 {
+        match self {
+            Modifier::Primitive(prim) => prim.modifier_args().unwrap_or(0),
+            Modifier::Ident(ident) => ident_modifier_args(ident),
         }
-        Ok(())
     }
 }

@@ -359,7 +359,7 @@ fn fold_recursive(
                 expected_sig
             )));
         }
-        // Accumulate only accs
+
         for _ in 0..row_count {
             let mut accs_iter = accs.drain(..).rev();
             let mut arr_i = array_count;
@@ -373,10 +373,13 @@ fn fold_recursive(
                     _ => unreachable!(),
                 }
             }
-            env.call(f.clone())?;
+            let broke = env.call_catch_break(f.clone())?;
             drop(accs_iter);
             for _ in 0..acc_count {
                 accs.push(env.pop("folded function result")?);
+            }
+            if broke {
+                break;
             }
         }
         accs.reverse();

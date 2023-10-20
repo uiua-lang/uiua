@@ -843,6 +843,7 @@ pub fn Editor<'a>(
             Some(('"', '"')),
             "types#characters",
         ),
+        ("^", "placeholder", "", None, "custommodifiers"),
         ("←", "binding (=)", "", None, "bindings"),
         ("|", "signature", "", None, "functions#stack-signatures"),
         ("#", "comment", "comment-span", None, "basic#comments"),

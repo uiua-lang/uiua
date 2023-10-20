@@ -86,10 +86,12 @@ impl fmt::Display for ParseError {
                 or as the only item in a binding"
             ),
             ParseError::WrongModifierArgCount(name, expected, found) => {
+                let trimmed = name.trim_end_matches('!');
+                let this = format!("{}{}", trimmed, "!".repeat(*found as usize));
                 write!(
                     f,
                     "The name {name} implies {expected} modifier arguments, \
-                    but the binding body references {found}"
+                    but the binding body references {found}. Try `{this}`."
                 )
             }
         }

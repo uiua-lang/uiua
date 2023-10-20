@@ -153,7 +153,7 @@ uiuisms!(
     /// Interleave two arrays
     "♭⍉⊟ [1 2 3 4] [5 6 7 8]",
     /// Intersperse an item between the rows of an array
-    "↘1♭≑⋄~⊂ π [1 2 3 4]",
+    "↘1♭∺⊂ π [1 2 3 4]",
     /// Split an array at an index
     "⊃↙↘ 3 [1 2 3 4 5]",
     /// Split an array by a delimiter
@@ -171,7 +171,7 @@ uiuisms!(
     /// Remove all instances of an element from a list
     "▽≠, 4 [1 4 2 0 5 4 3]",
     /// Remove all instances of a row from an array
-    "▽≑⋄~(¬≍)⊙. 2_0 [1_4 2_0 5_3 2_0]",
+    "▽∺(¬≍)⊙. 2_0 [1_4 2_0 5_3 2_0]",
     /// Filter by a fixed predicate
     "▽ =0◿2 . ⇡10",
     /// Find the most common row in an array
@@ -215,7 +215,7 @@ uiuisms!(
     /// Matrix power (Also works with scalars)
     "[1_2 3_4] 4\n;∶⍥(⊠(/+×)⊙⍉,)∶⊙∶⊞=.⇡⬚⊢1△.",
     //  /// Evaluate a polynomial with given coefficients at a scalar or square matrix
-    //     r"/+×≑⋄~(  Note: Not sure how to fix this with new distribute order
+    //     r"/+×∺(  Note: Not sure how to fix this with new distribute order
     //   ⊙∶⊞=.⇡⬚⊢1△.:
     //   ;∶⍥(⊠(/+×)⊙⍉,)∶
     // )⊙∶⇌⇡⧻. [1 2 3 1] [1_1 2_2]",

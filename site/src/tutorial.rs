@@ -18,6 +18,7 @@ pub enum TutorialPage {
     Functions,
     AdvancedStack,
     AdvancedArray,
+    CustomModifiers,
     Modules,
     Testing,
 }
@@ -36,6 +37,7 @@ impl TutorialPage {
             Self::Functions => "Modifiers and Functions",
             Self::AdvancedStack => "Advanced Stack Manipulation",
             Self::AdvancedArray => "Advanced Array Manipulation",
+            Self::CustomModifiers => "Custom Modifiers",
             Self::Modules => "Modules",
             Self::Testing => "Testing",
         }
@@ -53,6 +55,7 @@ pub fn Tutorial(page: TutorialPage) -> impl IntoView {
         TutorialPage::Functions => TutorialFunctions().into_view(),
         TutorialPage::AdvancedStack => TutorialAdvancedStack().into_view(),
         TutorialPage::AdvancedArray => TutorialAdvancedArray().into_view(),
+        TutorialPage::CustomModifiers => TutorialCustomModifiers().into_view(),
         TutorialPage::Modules => TutorialModules().into_view(),
         TutorialPage::Testing => TutorialTesting().into_view(),
     };
@@ -750,7 +753,39 @@ Add ← ⊂/+⊃↙↘2
 Sub ← ⊂/-⊃↙↘2
 f ← ??Sub(Add)?(⊂1)(⊂⊢.) ∶⍘⊟⬚↙0 2⋯∶
 ∧⋄~f [] [1 0 2 0 2 0 2 1 3]"/>
+    }
+}
 
+#[component]
+fn TutorialCustomModifiers() -> impl IntoView {
+    use Primitive::*;
+    view! {
+        <Title text="Custom Modifiers - Uiua Docs"/>
+        <h1>"Custom Modifiers"</h1>
+        <p>"Defining your own functions that work on arrays is pretty easy. Just a name, a "<code>"←"</code>" and you're done."</p>
+        <p>"But what if you want to define functions that use other functions?"</p>
+
+        <h2 id="placeholders-and-bangs">"Placeholders and "<code>"!"</code>"s"</h2>
+        <p>"When using a modifier, you can provide it with a "<code>"^"</code>" instead of a function. This is called a "<em>"placeholder"</em>"."</p>
+        <p>"Any named function with "<code>"^"</code>"s in it becomes a modifier."</p>
+        <p>"However, there is one additional requirement: custom modifiers must have names that end in as many "<code>"!"</code>"s as the number of functions they take."</p>
+        <p>"Lets look at a simple example using "<Prim prim=Reduce/>". It reduces its function over the numbers up to the given range."</p>
+        <Editor example="\
+ReduceRange! ← |1 /^+1⇡
+ReduceRange!+5
+ReduceRange!×4"/>
+        <p>"Custom modifiers "<em>"must"</em>" have stack signatures declared."</p>
+        <p>"A custom modifier can take as many functions as you want."</p>
+        <Editor example="\
+F!!! ← |2 ⊂/^⊃^^
+F!!!+×⊂ [1 2 3][4 5 6]"/>
+        <p>"Each "<code>"^"</code>" refers to a different function. If you want to use that function more than once in the modifier, you'll have to get creative."</p>
+        <p>"Here, we reduce with the same function multiple times by using "<Prim prim=Repeat/>"."</p>
+        <Editor example="\
+ReduceAll! ← |1 ⍥(|1 /^)⧻△.
+ReduceAll!+[1_2_3 4_5_6]"/>
+
+        <br/>
         <br/>
         <hr/>
         <p>"This is the end of the tutorial that pertains to writing "<em>"programs"</em>"."</p>

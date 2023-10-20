@@ -276,7 +276,20 @@ impl<'a> VirtualEnv<'a> {
                     }
                 }
                 Level | Fold | Combinate => {
-                    let _ranks = self.pop_func()?;
+                    let ranks = self.pop_func()?;
+                    let ranks_sig = ranks.signature();
+                    if ranks_sig.outputs != 1 {
+                        return Err(format!(
+                            "{prim}'s rank list function must have 1 output, \
+                            but its signature is {ranks_sig}"
+                        ));
+                    }
+                    if ranks_sig.args > 1 {
+                        return Err(format!(
+                            "{prim}'s rank list function must have 0 or 1 arguments, \
+                            but its signature is {ranks_sig}"
+                        ));
+                    }
                     let sig = self.pop_func()?.signature();
                     self.handle_sig(sig)?;
                 }

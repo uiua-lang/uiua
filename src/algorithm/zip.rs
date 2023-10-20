@@ -29,7 +29,7 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
         }
     };
     match sig.args {
-        0 => Ok(()),
+        0 => Err(env.error("Each's function must take at least 1 argument")),
         1 => {
             let xs = env.pop(ArrayArg(1))?;
             if output {
@@ -203,7 +203,7 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
         }
     };
     match sig.args {
-        0 => Ok(()),
+        0 => Err(env.error("Rows' function must take at least 1 argument")),
         1 => {
             let xs = env.pop(ArrayArg(1))?;
             if output {

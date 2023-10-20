@@ -3,6 +3,7 @@ use comrak::{
     *,
 };
 use leptos::*;
+use leptos_meta::*;
 use leptos_router::*;
 use uiua::{
     primitive::{Primitive, CONSTANTS},
@@ -15,6 +16,7 @@ use crate::{editor::Editor, Const, Prim};
 pub fn Design() -> impl IntoView {
     use Primitive::*;
     view! {
+        <Title text="Design - Uiua Docs"/>
         <h1 id="design">"Design"</h1>
         <p>"This page explains the reasons for some of Uiua's design decisions."</p>
         <p>"It serves as a "<a href="https://news.knowledia.com/US/en/articles/more-software-projects-need-defenses-of-design-85ea9e23ffd85f5fde5a2d3d42001393cbce169a">"defense of design"</a>"."</p>
@@ -88,6 +90,7 @@ pub fn Design() -> impl IntoView {
 #[component]
 pub fn Technical() -> impl IntoView {
     view! {
+        <Title text="Technical Details - Uiua Docs"/>
         <h1>"Technical Details"</h1>
 
         <h2>"The Interpreter"</h2>
@@ -111,6 +114,7 @@ pub fn Technical() -> impl IntoView {
 #[component]
 pub fn StackIdioms() -> impl IntoView {
     view! {
+        <Title text="Stack Idioms - Uiua Docs"/>
         <h1>"Common Stack Idioms"</h1>
         <p>"This page contains some common stack idioms that you may find useful."</p>
         <p>"They are presented as rearrangements of numbers which are then grouped into an array so that you can see the result."</p>
@@ -130,6 +134,7 @@ pub fn StackIdioms() -> impl IntoView {
 #[component]
 pub fn Install() -> impl IntoView {
     view! {
+        <Title text="Installation - Uiua Docs"/>
         <h2>"Installing Uiua"</h2>
         <p>"The native Uiua interpreter can be installed via Cargo."</p>
         <p>"This requires a "<a href="https://www.rust-lang.org/tools/install">"Rust"</a>" installation."</p>
@@ -161,6 +166,7 @@ pub fn Install() -> impl IntoView {
 pub fn RightToLeft() -> impl IntoView {
     use Primitive::*;
     view! {
+        <Title text="Right-to-Left - Uiua Docs"/>
         <h2>"Right-to-Left"</h2>
         <p>"One of the most asked questions about Uiua is \"Why does code execute right-to-left?\" It's a valid question. Every other stack-oriented language I know goes left-to-right."</p>
         <p>"The simple answer is that while Uiua is stack-"<em>"based"</em>", it is not stack-"<em>"oriented"</em>"."</p>
@@ -187,6 +193,7 @@ pub fn RightToLeft() -> impl IntoView {
 pub fn Audio() -> impl IntoView {
     use Primitive::*;
     view! {
+        <Title text="Audio Output - Uiua Docs"/>
         <h1>"Audio Output"</h1>
         <p>"Uiua has a built-in support for audio output."</p>
 
@@ -229,6 +236,7 @@ s ← ○×τ⊞×f ÷∶⇡.&asr
 pub fn Constants() -> impl IntoView {
     use Primitive::*;
     view! {
+        <Title text="Constants - Uiua Docs"/>
         <h1>"Constants"</h1>
         <p>"These constants are available in every scope. However, unlike formattable constants like "<Prim prim=Pi/>", these constants can be shadowed within a scope."</p>
         <Editor example="e\ne ← 5\ne"/>
@@ -249,7 +257,10 @@ pub fn Changelog() -> impl IntoView {
         include_str!("../../changelog.md"),
         &ComrakOptions::default(),
     );
-    node_view(root)
+    view! {
+        <Title text="Changelog - Uiua Docs"/>
+        { node_view(root) }
+    }
 }
 
 fn node_view<'a>(node: &'a AstNode<'a>) -> View {

@@ -1,4 +1,5 @@
 use leptos::*;
+use leptos_meta::*;
 use leptos_router::*;
 use uiua::primitive::{PrimClass, PrimDocFragment, PrimDocLine, Primitive};
 
@@ -108,6 +109,7 @@ pub fn PrimDocs(prim: Primitive) -> impl IntoView {
 #[component]
 pub fn AllFunctions() -> impl IntoView {
     view! {
+        <Title text="All Functions - Uiua Docs"/>
         <h1>"All Functions"</h1>
         <p>"This is a list of every built-in function in Uiua, provided for your scrolling pleasure."</p>
         <p>"For a searchable list, see the "<A href="/docs#functions">"main docs page"</A>"."</p>

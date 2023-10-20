@@ -1,5 +1,6 @@
 use base64::engine::{general_purpose::URL_SAFE, Engine};
 use leptos::*;
+use leptos_meta::*;
 use leptos_router::*;
 
 use crate::editor::*;
@@ -13,6 +14,7 @@ pub fn Pad() -> impl IntoView {
         src = String::from_utf8_lossy(&decoded).to_string();
     }
     view! {
+        <Title text="Pad - Uiua"/>
         <Editor size=EditorSize::Pad example={ &src }/>
     }
 }

@@ -12,6 +12,7 @@ mod tutorial;
 mod uiuisms;
 
 use leptos::*;
+use leptos_meta::*;
 use leptos_router::*;
 use uiua::primitive::{ConstantDef, PrimClass, Primitive};
 use wasm_bindgen::JsCast;
@@ -33,6 +34,8 @@ pub fn main() {
 
 #[component]
 pub fn Site() -> impl IntoView {
+    provide_meta_context();
+
     // Choose a subtitle
     let subtitles = [
         "A stack-based array programming language".into_view(),
@@ -117,6 +120,7 @@ pub fn MainPage() -> impl IntoView {
     };
 
     view! {
+        <Title text="Uiua"/>
         <div id="links">
             <p><A href="/install">"Installation"</A></p>
             <p><A href="/docs">"Documentation"</A></p>

@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use enum_iterator::{all, Sequence};
 use leptos::*;
+use leptos_meta::*;
 use leptos_router::*;
 use uiua::{example_ua, primitive::Primitive, SysOp};
 
@@ -121,6 +122,7 @@ fn TutorialBasic() -> impl IntoView {
         .collect();
 
     view! {
+        <Title text="Basic Stack Operations and Formatting - Uiua Docs"/>
         <h1>"Basic Stack Operations and Formatting"</h1>
         <h2 id="the-stack">"The Stack"</h2>
         <p>"In Uiua, all operations operate on a global stack. Lines of code are evaluated from "<A href="/docs/rtl">"right to left"</A>", top to bottom."</p>
@@ -244,6 +246,7 @@ fn TutorialMath() -> impl IntoView {
     ]);
 
     view! {
+        <Title text="Math and Comparison - Uiua Docs"/>
         <h1>"Math and Comparison"</h1>
         <p>"Uiua supports all the basic math operations as well as comparison, min/max, and rounding."</p>
         <div id="ascii-glyphs" style="display: flex; justify-content: space-evenly;">
@@ -296,6 +299,7 @@ fn TutorialMath() -> impl IntoView {
 fn TutorialArrays() -> impl IntoView {
     use Primitive::*;
     view! {
+        <Title text="Arrays - Uiua Docs"/>
         <h1>"Arrays"</h1>
         <p>"Uiua is, first and foremost, an array language. The only composite data type is the multimensional array. Arrays have a lot of nice properties, and the language's built-in functions are designed to make it easy to work with them. If you've only ever programmed in non-array languages, then this will be a completely foreign paradigm. In most array languages, most data structures and control flow are replaced with operations on arrays."</p>
 
@@ -412,6 +416,7 @@ r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
 fn TutorialTypes() -> impl IntoView {
     use Primitive::*;
     view! {
+        <Title text="Types - Uiua Docs"/>
         <h1>"Types"</h1>
         <p>"Every value in Uiua is an array. However, different arrays on the stack can have different "<em>"types"</em>" of items. Every element of an array is always the same type. Unlike some other array programming languages, Uiua arrays cannot have elements of different types."</p>
         <p>"There are only three types of arrays:"</p>
@@ -495,6 +500,7 @@ fn TutorialTypes() -> impl IntoView {
 fn TutorialBindings() -> impl IntoView {
     use Primitive::*;
     view! {
+        <Title text="Bindings - Uiua Docs"/>
         <h1>"Bindings"</h1>
         <p>"Bindings are global names that can be given to Uiua values. They are denoted with "<code>"←"</code>", which the formatter will convert from "<code>"="</code>" when appropriate."</p>
         <Editor example="a = 3\nb ← 5\n+ a b" help={&["", "Try running to format the ="]}/>
@@ -528,6 +534,7 @@ fn TutorialBindings() -> impl IntoView {
 fn TutorialFunctions() -> impl IntoView {
     use Primitive::*;
     view! {
+        <Title text="Modifiers and Functions - Uiua Docs"/>
         <h1>"Modifiers and Functions"</h1>
 
         <h2 id="modifiers">"Modifiers"</h2>
@@ -597,6 +604,7 @@ X 5"/>
 fn TutorialAdvancedStack() -> impl IntoView {
     use Primitive::*;
     view! {
+        <Title text="Advanced Stack Manipulation - Uiua Docs"/>
         <h1>"Advanced Stack Manipulation"</h1>
         <p>"Uiua does not have local variables. With only "<Prim prim=Dup/>", "<Prim prim=Flip/>", and "<Prim prim=Over/>", how do you work with more than 2 values at a time?"</p>
 
@@ -760,6 +768,7 @@ f ← ??Sub(Add)?(⊂1)(⊂⊢.) ∶⍘⊟⬚↙0 2⋯∶
 fn TutorialModules() -> impl IntoView {
     use Primitive::*;
     view! {
+        <Title text="Modules - Uiua Docs"/>
         <h1>"Modules"</h1>
         <p>"Modules are a way to organize your code in Uiua. Any Uiua file can be a used as a module."</p>
 
@@ -790,6 +799,7 @@ Inc Sqr Dub 5"/>
 fn TutorialTesting() -> impl IntoView {
     use Primitive::*;
     view! {
+        <Title text="Testing - Uiua Docs"/>
         <h1>"Testing"</h1>
         <h2 id="test-scopes">"Test Scopes"</h2>
         <p>"Test scopes are regions of code that are delimited with "<code>"---"</code>"s at the top level of a file. They are meant to be used with "<Prim prim=Assert/>"."</p>

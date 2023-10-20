@@ -1,6 +1,7 @@
 #![allow(clippy::needless_raw_string_hashes)]
 
 use leptos::*;
+use leptos_meta::*;
 use leptos_router::*;
 use wasm_bindgen::JsCast;
 use web_sys::{Event, HtmlInputElement};
@@ -59,6 +60,7 @@ pub fn Uiuisms() -> impl IntoView {
         update_search(&elem.value());
     };
     view! {
+        <Title text="Uiuisms - Uiua Docs"/>
         <h1>"Uiuisms"</h1>
         <p>"This is a curated list of Uiua functions for solving common problems."</p>
         <p>"You can add more by contributing in the "<a href="https://github.com/uiua-lang/uiua">"repo"</a>" to "<a href="https://github.com/uiua-lang/uiua/blob/main/site/src/uiuisms.rs#L112">"this list"</a>"."</p>
@@ -215,4 +217,8 @@ uiuisms!(
     //   ⊙∶⊞=.⇡⬚⊢1△.:
     //   ;∶⍥(⊠(/+×)⊙⍉,)∶
     // )⊙∶⇌⇡⧻. [1 2 3 1] [1_1 2_2]",
+    /// Add a leading axis of length 1 to an array
+    "△. [∘] [1_2_3 4_5_6]",
+    /// Repeat a function and collect intermediate results into an array
+    "[⍥(×2.)] 10 1",
 );

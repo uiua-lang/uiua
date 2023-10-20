@@ -508,7 +508,7 @@ impl Primitive {
             }
             Primitive::Invert => {
                 let f = env.pop_function()?;
-                let inv_f = f.invert(env)?;
+                let inv_f = f.invert("", env)?;
                 env.call(inv_f)?;
             }
             Primitive::Under => {

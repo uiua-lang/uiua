@@ -51,8 +51,13 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
         .pop(2)?
         .as_num(env, "Repetitions must be a single integer or infinity")?;
 
+    const INVERSE_CONTEXT: &str = "; repeat with a negative number repeats the inverse";
     if n.is_infinite() {
-        let f = if n < 0.0 { f.invert(env)?.into() } else { f };
+        let f = if n < 0.0 {
+            f.invert(INVERSE_CONTEXT, env)?.into()
+        } else {
+            f
+        };
         loop {
             if env.call_catch_break(f.clone())? {
                 break;
@@ -62,7 +67,11 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
         if n.fract().abs() > f64::EPSILON {
             return Err(env.error("Repetitions must be a single integer or infinity"));
         };
-        let f = if n < 0.0 { f.invert(env)?.into() } else { f };
+        let f = if n < 0.0 {
+            f.invert(INVERSE_CONTEXT, env)?.into()
+        } else {
+            f
+        };
         for _ in 0..n.abs() as usize {
             if env.call_catch_break(f.clone())? {
                 return Ok(());

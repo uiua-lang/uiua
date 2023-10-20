@@ -382,8 +382,9 @@ impl Function {
             },
         }
     }
-    pub fn invert(&self, env: &Uiua) -> UiuaResult<Self> {
-        self.inverse().ok_or_else(|| env.error("No inverse found"))
+    pub fn invert(&self, context: &str, env: &Uiua) -> UiuaResult<Self> {
+        self.inverse()
+            .ok_or_else(|| env.error(format!("No inverse found{context}")))
     }
     pub fn undered(&self, g_sig: Signature, env: &Uiua) -> UiuaResult<(Self, Self)> {
         self.under(g_sig)

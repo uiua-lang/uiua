@@ -261,7 +261,7 @@ impl Parser {
                 .or_else(|| self.try_words())
                 .unwrap_or_default();
             // Check for uncapitalized binding names
-            if ident.value.chars().count() >= 3
+            if ident.value.trim_end_matches('!').chars().count() >= 3
                 && ident.value.chars().next().unwrap().is_ascii_lowercase()
             {
                 let captialized: String = ident

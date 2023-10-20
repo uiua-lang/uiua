@@ -1,7 +1,7 @@
 use std::slice;
 
 use crate::{
-    ast::{Item, Word},
+    ast::{Item, Modifier, Word},
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
     primitive::Primitive,
@@ -17,6 +17,7 @@ pub enum SpanKind {
     Ident,
     Signature,
     Whitespace,
+    Placeholder,
 }
 
 pub fn spans(input: &str) -> Vec<Sp<SpanKind>> {
@@ -92,11 +93,15 @@ fn words_spans(words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
             }
             Word::Primitive(prim) => spans.push(word.span.clone().sp(SpanKind::Primitive(*prim))),
             Word::Modified(m) => {
-                spans.push(m.modifier.clone().map(SpanKind::Primitive));
+                spans.push(m.modifier.clone().map(|m| match m {
+                    Modifier::Primitive(p) => SpanKind::Primitive(p),
+                    Modifier::Ident(_) => SpanKind::Ident,
+                }));
                 spans.extend(words_spans(&m.operands));
             }
             Word::Spaces => spans.push(word.span.clone().sp(SpanKind::Whitespace)),
             Word::Comment(_) => spans.push(word.span.clone().sp(SpanKind::Comment)),
+            Word::Placeholder => spans.push(word.span.clone().sp(SpanKind::Placeholder)),
         }
     }
     spans

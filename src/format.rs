@@ -560,9 +560,16 @@ impl<'a> Formatter<'a> {
                 }
             }
             Word::Modified(m) => {
-                self.push(&m.modifier.span, &m.modifier.value.to_string());
+                self.push(
+                    &m.modifier.span,
+                    &match &m.modifier.value {
+                        Modifier::Primitive(prim) => prim.to_string(),
+                        Modifier::Ident(ident) => ident.to_string(),
+                    },
+                );
                 self.format_words(&m.operands, true, depth);
             }
+            Word::Placeholder => self.push(&word.span, "^"),
             Word::Spaces => self.push(&word.span, " "),
             Word::Comment(comment) => {
                 let beginning_of_line = self
@@ -708,6 +715,7 @@ fn word_is_multiline(word: &Word) -> bool {
         Word::Ocean(_) => false,
         Word::Primitive(_) => false,
         Word::Modified(m) => m.operands.iter().any(|word| word_is_multiline(&word.value)),
+        Word::Placeholder => false,
         Word::Comment(_) => false,
         Word::Spaces => false,
     }

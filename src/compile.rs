@@ -67,7 +67,18 @@ impl Uiua {
                     RunMode::All => true,
                 };
                 if can_run || words_have_import(&words) || words_are_export(&words) {
-                    let instrs = self.compile_words(words, true)?;
+                    let span = words
+                        .first()
+                        .unwrap()
+                        .span
+                        .clone()
+                        .merge(words.last().unwrap().span.clone());
+                    let (instrs, placeholder_count) = self.compile_words(words, true)?;
+                    if placeholder_count > 0 {
+                        return Err(span
+                            .sp("Cannot use placeholder outside of function".into())
+                            .into());
+                    }
                     self.exec_global_instrs(instrs)?;
                 }
             }
@@ -92,10 +103,14 @@ impl Uiua {
     }
     fn binding(&mut self, binding: Binding) -> UiuaResult {
         let name = binding.name.value;
-        let instrs = self.compile_words(binding.words, true)?;
+        let (mut instrs, placeholder_count) = self.compile_words(binding.words, true)?;
         let make_fn = |instrs: Vec<Instr>, sig: Signature| {
             Function::new(FunctionId::Named(name.clone()), instrs, sig)
         };
+        if placeholder_count > 0 {
+            instrs.insert(0, Instr::PushTempFunctions(placeholder_count));
+            instrs.push(Instr::PopTempFunctions(placeholder_count));
+        }
         match instrs_signature(&instrs) {
             Ok(mut sig) => {
                 if let Some(declared_sig) = &binding.signature {
@@ -153,7 +168,12 @@ impl Uiua {
         globals.push(Global::Func(function));
         self.scope.names.insert(name, idx);
     }
-    fn compile_words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult<Vec<Instr>> {
+    fn compile_words(
+        &mut self,
+        words: Vec<Sp<Word>>,
+        call: bool,
+    ) -> UiuaResult<(Vec<Instr>, usize)> {
+        let initial_placeholder_count = self.placeholder_count;
         self.new_functions.push(Vec::new());
         self.words(words, call)?;
         if self.print_diagnostics {
@@ -162,13 +182,15 @@ impl Uiua {
             }
         }
         let instrs = self.new_functions.pop().unwrap();
-        Ok(instrs)
+        let placeholder_count = self.placeholder_count - initial_placeholder_count;
+        self.placeholder_count = initial_placeholder_count;
+        Ok((instrs, placeholder_count))
     }
     fn compile_operand_words(
         &mut self,
         words: Vec<Sp<Word>>,
     ) -> UiuaResult<(Vec<Instr>, Result<Signature, String>)> {
-        let mut instrs = self.compile_words(words, true)?;
+        let (mut instrs, _) = self.compile_words(words, true)?;
         let mut sig = None;
         // Extract function instrs if possible
         if let [Instr::PushFunc(f)] = instrs.as_slice() {
@@ -209,6 +231,9 @@ impl Uiua {
             // ([.., Instr::])
             (_, instr) => instrs.push(instr),
         }
+    }
+    fn extend_instrs(&mut self, instrs: impl IntoIterator<Item = Instr>) {
+        self.new_functions.last_mut().unwrap().extend(instrs);
     }
     fn word(&mut self, word: Sp<Word>, call: bool) -> UiuaResult {
         match word.value {
@@ -322,7 +347,7 @@ impl Uiua {
                     self.new_functions.push(Vec::new());
                 }
                 self.push_instr(Instr::BeginArray);
-                let inner = self.compile_words(items, true)?;
+                let (inner, _) = self.compile_words(items, true)?;
                 let span = self.add_span(word.span.clone());
                 let instrs = self.new_functions.last_mut().unwrap();
                 if call && inner.iter().all(|instr| matches!(instr, Instr::Push(_))) {
@@ -356,7 +381,9 @@ impl Uiua {
                 self.push_instr(Instr::BeginArray);
                 let mut inner = Vec::new();
                 for lines in arr.lines.into_iter().rev() {
-                    inner.extend(self.compile_words(lines, true)?);
+                    let (instrs, phc) = self.compile_words(lines, true)?;
+                    inner.extend(instrs);
+                    self.placeholder_count += phc;
                 }
                 let span = self.add_span(word.span.clone());
                 let instrs = self.new_functions.last_mut().unwrap();
@@ -402,6 +429,10 @@ impl Uiua {
             Word::Ocean(prims) => self.ocean(prims, call)?,
             Word::Primitive(p) => self.primitive(p, word.span, call)?,
             Word::Modified(m) => self.modified(*m, call)?,
+            Word::Placeholder => {
+                self.push_instr(Instr::GetTempFunction(self.placeholder_count));
+                self.placeholder_count += 1;
+            }
             Word::Spaces | Word::Comment(_) => {}
         }
         Ok(())
@@ -455,7 +486,9 @@ impl Uiua {
     fn func(&mut self, func: Func, span: CodeSpan) -> UiuaResult {
         let mut instrs = Vec::new();
         for line in func.lines {
-            instrs.extend(self.compile_words(line, true)?);
+            let (ins, phc) = self.compile_words(line, true)?;
+            instrs.extend(ins);
+            self.placeholder_count += phc;
         }
 
         // Validate signature
@@ -499,134 +532,46 @@ impl Uiua {
         Ok(())
     }
     fn modified(&mut self, modified: Modified, call: bool) -> UiuaResult {
-        // Give advice about redundancy
-        match modified.modifier.value {
-            m @ (Primitive::Each | Primitive::Rows) => {
-                if let [Sp {
-                    value: Word::Primitive(prim),
-                    span,
-                }] = modified.operands.as_slice()
-                {
-                    if prim.class().is_pervasive() {
-                        let span = modified.modifier.span.clone().merge(span.clone());
-                        self.diagnostics.insert(Diagnostic::new(
-                            format!(
-                                "Using {m} with a pervasive primitive like {prim} is \
+        if let Modifier::Primitive(prim) = modified.modifier.value {
+            // Give advice about redundancy
+            match prim {
+                m @ (Primitive::Each | Primitive::Rows) => {
+                    if let [Sp {
+                        value: Word::Primitive(prim),
+                        span,
+                    }] = modified.operands.as_slice()
+                    {
+                        if prim.class().is_pervasive() {
+                            let span = modified.modifier.span.clone().merge(span.clone());
+                            self.diagnostics.insert(Diagnostic::new(
+                                format!(
+                                    "Using {m} with a pervasive primitive like {prim} is \
                                     redundant. Just use {prim} by itself."
-                            ),
+                                ),
+                                span,
+                                DiagnosticKind::Advice,
+                            ));
+                        }
+                    } else if words_look_pervasive(&modified.operands) {
+                        let span = modified.modifier.span.clone();
+                        self.diagnostics.insert(Diagnostic::new(
+                            format!("{m}'s function is pervasive, so {m} is redundant here."),
                             span,
                             DiagnosticKind::Advice,
                         ));
                     }
-                } else if words_look_pervasive(&modified.operands) {
-                    let span = modified.modifier.span.clone();
-                    self.diagnostics.insert(Diagnostic::new(
-                        format!("{m}'s function is pervasive, so {m} is redundant here."),
-                        span,
-                        DiagnosticKind::Advice,
-                    ));
                 }
+                _ => {}
             }
-            _ => {}
-        }
-        // Handle deprecation
-        self.handle_primitive_deprecation(modified.modifier.value, &modified.modifier.span);
+            // Handle deprecation
+            self.handle_primitive_deprecation(prim, &modified.modifier.span);
 
-        // Inline bind
-        if modified.modifier.value == Primitive::Bind && modified.operands.len() == 2 {
-            let instrs = self.compile_words(modified.operands, true)?;
-            return if call {
-                for instr in instrs {
-                    self.push_instr(instr);
-                }
-                Ok(())
-            } else {
-                match instrs_signature(&instrs) {
-                    Ok(sig) => {
-                        let func = Function::new(
-                            FunctionId::Anonymous(modified.modifier.span),
-                            instrs,
-                            sig,
-                        );
-                        self.push_instr(Instr::push_func(func));
-                        Ok(())
-                    }
-                    Err(e) => Err(UiuaError::Run(
-                        Span::Code(modified.modifier.span.clone())
-                            .sp(format!("Cannot infer function signature in bind: {e}")),
-                    )),
-                }
-            };
-        }
-
-        // Inline dip and gap
-        if matches!(modified.modifier.value, Primitive::Dip | Primitive::Gap)
-            && modified.operands.len() == 1
-        {
-            let (mut instrs, _) = self.compile_operand_words(modified.operands)?;
-            let span = self.add_span(modified.modifier.span.clone());
-            if modified.modifier.value == Primitive::Dip {
-                instrs.insert(0, Instr::PushTempInline { count: 1, span });
-                instrs.push(Instr::PopTempInline { count: 1, span });
-            } else {
-                instrs.insert(0, Instr::Prim(Primitive::Pop, span));
-            }
-            return if call {
-                for instr in instrs {
-                    self.push_instr(instr);
-                }
-                Ok(())
-            } else {
-                match instrs_signature(&instrs) {
-                    Ok(sig) => {
-                        let func = Function::new(
-                            FunctionId::Anonymous(modified.modifier.span),
-                            instrs,
-                            sig,
-                        );
-                        self.push_instr(Instr::push_func(func));
-                        Ok(())
-                    }
-                    Err(e) => Err(UiuaError::Run(
-                        Span::Code(modified.modifier.span.clone())
-                            .sp(format!("Cannot infer function: {e}")),
-                    )),
-                }
-            };
-        }
-
-        // Inline fork
-        if modified.modifier.value == Primitive::Fork && modified.operands.len() == 2 {
-            let mut operands = modified.operands.clone().into_iter();
-            let (a_instrs, a_sig) = self.compile_operand_words(vec![operands.next().unwrap()])?;
-            let (b_instrs, b_sig) = self.compile_operand_words(vec![operands.next().unwrap()])?;
-            if let Some((a_sig, b_sig)) = a_sig.ok().zip(b_sig.ok()) {
-                let span = self.add_span(modified.modifier.span.clone());
-                let count = a_sig.args.max(b_sig.args);
-                let mut instrs = vec![Instr::PushTempInline { count, span }];
-                if b_sig.args > 0 {
-                    instrs.push(Instr::CopyTempInline {
-                        offset: count - b_sig.args,
-                        count: b_sig.args,
-                        span,
-                    });
-                }
-                instrs.extend(b_instrs);
-                if count - a_sig.args > 0 {
-                    instrs.push(Instr::DropTempInline {
-                        count: count - a_sig.args,
-                        span,
-                    });
-                }
-                instrs.push(Instr::PopTempInline {
-                    count: a_sig.args,
-                    span,
-                });
-                instrs.extend(a_instrs);
+            // Inline bind
+            if prim == Primitive::Bind && modified.operands.len() == 2 {
+                let (instrs, phc) = self.compile_words(modified.operands, true)?;
+                self.placeholder_count += phc;
                 return if call {
-                    for instr in instrs {
-                        self.push_instr(instr);
-                    }
+                    self.extend_instrs(instrs);
                     Ok(())
                 } else {
                     match instrs_signature(&instrs) {
@@ -641,27 +586,76 @@ impl Uiua {
                         }
                         Err(e) => Err(UiuaError::Run(
                             Span::Code(modified.modifier.span.clone())
-                                .sp(format!("Cannot infer function signature: {e}")),
+                                .sp(format!("Cannot infer function signature in bind: {e}")),
                         )),
                     }
                 };
             }
-        }
 
-        // Inline under
-        if modified.modifier.value == Primitive::Under && modified.operands.len() == 2 {
-            let mut operands = modified.operands.clone().into_iter();
-            let (f_instrs, _) = self.compile_operand_words(vec![operands.next().unwrap()])?;
-            let (g_instrs, g_sig) = self.compile_operand_words(vec![operands.next().unwrap()])?;
-            if let Ok(g_sig) = g_sig {
-                if let Some((f_before, f_after)) = under_instrs(&f_instrs, g_sig) {
-                    let mut instrs = f_before;
-                    instrs.extend(g_instrs);
-                    instrs.extend(f_after);
-                    return if call {
-                        for instr in instrs {
-                            self.push_instr(instr);
+            // Inline dip and gap
+            if matches!(prim, Primitive::Dip | Primitive::Gap) && modified.operands.len() == 1 {
+                let (mut instrs, _) = self.compile_operand_words(modified.operands)?;
+                let span = self.add_span(modified.modifier.span.clone());
+                if prim == Primitive::Dip {
+                    instrs.insert(0, Instr::PushTempInline { count: 1, span });
+                    instrs.push(Instr::PopTempInline { count: 1, span });
+                } else {
+                    instrs.insert(0, Instr::Prim(Primitive::Pop, span));
+                }
+                return if call {
+                    self.extend_instrs(instrs);
+                    Ok(())
+                } else {
+                    match instrs_signature(&instrs) {
+                        Ok(sig) => {
+                            let func = Function::new(
+                                FunctionId::Anonymous(modified.modifier.span),
+                                instrs,
+                                sig,
+                            );
+                            self.push_instr(Instr::push_func(func));
+                            Ok(())
                         }
+                        Err(e) => Err(UiuaError::Run(
+                            Span::Code(modified.modifier.span.clone())
+                                .sp(format!("Cannot infer function: {e}")),
+                        )),
+                    }
+                };
+            }
+
+            // Inline fork
+            if prim == Primitive::Fork && modified.operands.len() == 2 {
+                let mut operands = modified.operands.clone().into_iter();
+                let (a_instrs, a_sig) =
+                    self.compile_operand_words(vec![operands.next().unwrap()])?;
+                let (b_instrs, b_sig) =
+                    self.compile_operand_words(vec![operands.next().unwrap()])?;
+                if let Some((a_sig, b_sig)) = a_sig.ok().zip(b_sig.ok()) {
+                    let span = self.add_span(modified.modifier.span.clone());
+                    let count = a_sig.args.max(b_sig.args);
+                    let mut instrs = vec![Instr::PushTempInline { count, span }];
+                    if b_sig.args > 0 {
+                        instrs.push(Instr::CopyTempInline {
+                            offset: count - b_sig.args,
+                            count: b_sig.args,
+                            span,
+                        });
+                    }
+                    instrs.extend(b_instrs);
+                    if count - a_sig.args > 0 {
+                        instrs.push(Instr::DropTempInline {
+                            count: count - a_sig.args,
+                            span,
+                        });
+                    }
+                    instrs.push(Instr::PopTempInline {
+                        count: a_sig.args,
+                        span,
+                    });
+                    instrs.extend(a_instrs);
+                    return if call {
+                        self.extend_instrs(instrs);
                         Ok(())
                     } else {
                         match instrs_signature(&instrs) {
@@ -682,20 +676,60 @@ impl Uiua {
                     };
                 }
             }
+
+            // Inline under
+            if prim == Primitive::Under && modified.operands.len() == 2 {
+                let mut operands = modified.operands.clone().into_iter();
+                let (f_instrs, _) = self.compile_operand_words(vec![operands.next().unwrap()])?;
+                let (g_instrs, g_sig) =
+                    self.compile_operand_words(vec![operands.next().unwrap()])?;
+                if let Ok(g_sig) = g_sig {
+                    if let Some((f_before, f_after)) = under_instrs(&f_instrs, g_sig) {
+                        let mut instrs = f_before;
+                        instrs.extend(g_instrs);
+                        instrs.extend(f_after);
+                        return if call {
+                            self.extend_instrs(instrs);
+                            Ok(())
+                        } else {
+                            match instrs_signature(&instrs) {
+                                Ok(sig) => {
+                                    let func = Function::new(
+                                        FunctionId::Anonymous(modified.modifier.span),
+                                        instrs,
+                                        sig,
+                                    );
+                                    self.push_instr(Instr::push_func(func));
+                                    Ok(())
+                                }
+                                Err(e) => Err(UiuaError::Run(
+                                    Span::Code(modified.modifier.span.clone())
+                                        .sp(format!("Cannot infer function signature: {e}")),
+                                )),
+                            }
+                        };
+                    }
+                }
+            }
         }
 
         if call {
             self.words(modified.operands, false)?;
-            let span = self.add_span(modified.modifier.span);
-            self.push_instr(Instr::Prim(modified.modifier.value, span));
+            match modified.modifier.value {
+                Modifier::Primitive(prim) => self.primitive(prim, modified.modifier.span, true)?,
+                Modifier::Ident(ident) => self.ident(ident, modified.modifier.span, true)?,
+            }
         } else {
             self.new_functions.push(Vec::new());
             self.words(modified.operands, false)?;
-            self.primitive(
-                modified.modifier.value,
-                modified.modifier.span.clone(),
-                true,
-            )?;
+            match modified.modifier.value {
+                Modifier::Primitive(prim) => {
+                    self.primitive(prim, modified.modifier.span.clone(), true)?
+                }
+                Modifier::Ident(ident) => {
+                    self.ident(ident, modified.modifier.span.clone(), true)?
+                }
+            }
             let instrs = self.new_functions.pop().unwrap();
             match instrs_signature(&instrs) {
                 Ok(sig) => {

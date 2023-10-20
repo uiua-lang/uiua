@@ -36,6 +36,7 @@ pub enum Word {
     Ocean(Vec<Sp<Primitive>>),
     Primitive(Primitive),
     Modified(Box<Modified>),
+    Placeholder,
     Comment(String),
     Spaces,
 }
@@ -75,6 +76,7 @@ impl fmt::Debug for Word {
             Word::Modified(modified) => modified.fmt(f),
             Word::Spaces => write!(f, "' '"),
             Word::Comment(comment) => write!(f, "# {comment}"),
+            Word::Placeholder => write!(f, "^"),
         }
     }
 }
@@ -119,8 +121,23 @@ impl fmt::Debug for Func {
 
 #[derive(Clone)]
 pub struct Modified {
-    pub modifier: Sp<Primitive>,
+    pub modifier: Sp<Modifier>,
     pub operands: Vec<Sp<Word>>,
+}
+
+#[derive(Clone, PartialEq, Eq)]
+pub enum Modifier {
+    Primitive(Primitive),
+    Ident(Ident),
+}
+
+impl fmt::Debug for Modifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Modifier::Primitive(prim) => prim.fmt(f),
+            Modifier::Ident(ident) => write!(f, "binding({ident})"),
+        }
+    }
 }
 
 impl fmt::Debug for Modified {

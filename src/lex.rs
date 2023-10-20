@@ -589,6 +589,9 @@ impl Lexer {
                     while let Some(c) = self.next_char_if(is_ident_char) {
                         ident.push(c);
                     }
+                    while self.next_char_exact('!') {
+                        ident.push('!');
+                    }
                     // Try to parse as primitives
                     let lowercase_end = ident
                         .char_indices()

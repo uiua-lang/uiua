@@ -29,6 +29,8 @@ use crate::{
 pub struct Uiua {
     /// Functions which are under construction
     pub(crate) new_functions: Vec<Vec<Instr>>,
+    /// The number of placeholders in the current function
+    pub(crate) placeholder_count: usize,
     /// Global values
     pub(crate) globals: Arc<Mutex<Vec<Global>>>,
     /// Indexable spans
@@ -41,6 +43,8 @@ pub struct Uiua {
     inline_stack: Vec<Value>,
     /// The thread's temp stack for unders
     under_stack: Vec<Value>,
+    /// The thread's temp stack for functions
+    temp_function_stack: Vec<Arc<Function>>,
     /// The current scope
     pub(crate) scope: Scope,
     /// Ancestor scopes of the current one
@@ -178,10 +182,12 @@ impl Uiua {
             function_stack: Vec::new(),
             inline_stack: Vec::new(),
             under_stack: Vec::new(),
+            temp_function_stack: Vec::new(),
             scope,
             higher_scopes: Vec::new(),
             globals: Arc::new(Mutex::new(globals)),
             new_functions: Vec::new(),
+            placeholder_count: 0,
             current_imports: Arc::new(Mutex::new(HashSet::new())),
             imports: Arc::new(Mutex::new(HashMap::new())),
             mode: RunMode::Normal,
@@ -399,6 +405,9 @@ code:
             //     }
             //     println!();
             // }
+            // if !self.function_stack.is_empty() {
+            //     print!("{} functions", self.function_stack.len());
+            // }
             // for val in &self.stack {
             //     print!("{:?} ", val);
             // }
@@ -449,6 +458,31 @@ code:
                     self.function_stack.push(f.clone());
                     Ok(())
                 }
+                &Instr::PushTempFunctions(n) => (|| {
+                    for _ in 0..n {
+                        let f = self.pop_function()?;
+                        self.temp_function_stack.push(f);
+                    }
+                    Ok(())
+                })(),
+                &Instr::PopTempFunctions(n) => {
+                    self.temp_function_stack
+                        .truncate(self.temp_function_stack.len() - n);
+                    Ok(())
+                }
+                &Instr::GetTempFunction(i) => (|| {
+                    let f = self
+                        .temp_function_stack
+                        .get(self.temp_function_stack.len() - 1 - i)
+                        .ok_or_else(|| {
+                            self.error(
+                                "Error getting placeholder function. \
+                            This is a bug in the interpreter.",
+                            )
+                        })?;
+                    self.function_stack.push(f.clone());
+                    Ok(())
+                })(),
                 Instr::Dynamic(df) => df.f.clone()(self),
                 &Instr::PushTempUnder { count, span } => (|| {
                     self.push_span(span, None);
@@ -841,6 +875,7 @@ code:
         }
         let env = Uiua {
             new_functions: Vec::new(),
+            placeholder_count: 0,
             globals: self.globals.clone(),
             spans: self.spans.clone(),
             stack: self
@@ -850,6 +885,7 @@ code:
             function_stack: Vec::new(),
             inline_stack: Vec::new(),
             under_stack: Vec::new(),
+            temp_function_stack: Vec::new(),
             scope: self.scope.clone(),
             higher_scopes: self.higher_scopes.last().cloned().into_iter().collect(),
             mode: self.mode,

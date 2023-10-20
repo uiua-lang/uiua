@@ -18,6 +18,7 @@ pub enum ParseError {
     InvalidOutCount(String),
     AmpersandBindingName,
     FunctionNotAllowed,
+    WrongModifierArgCount(Ident, u8, u8),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -84,6 +85,13 @@ impl fmt::Display for ParseError {
                 "Inline functions are only allowed in modifiers \
                 or as the only item in a binding"
             ),
+            ParseError::WrongModifierArgCount(name, expected, found) => {
+                write!(
+                    f,
+                    "The name {name} implies {expected} modifier arguments, \
+                    but the binding body references {found}"
+                )
+            }
         }
     }
 }
@@ -91,6 +99,16 @@ impl fmt::Display for ParseError {
 impl Error for ParseError {}
 
 pub type ParseResult<T = ()> = Result<T, Sp<ParseError>>;
+
+pub(crate) fn ident_modifier_args(ident: &Ident) -> u8 {
+    let mut count: u8 = 0;
+    let mut prefix = ident.as_ref();
+    while let Some(pre) = prefix.strip_suffix('!') {
+        prefix = pre;
+        count = count.saturating_add(1);
+    }
+    count
+}
 
 pub fn parse(
     input: &str,
@@ -106,6 +124,7 @@ pub fn parse(
         index: 0,
         errors,
         diagnostics: Vec::new(),
+        placeholder_count: 0,
     };
     let items = parser.items(true);
     if parser.errors.is_empty() && parser.index < parser.tokens.len() {
@@ -124,6 +143,7 @@ struct Parser {
     index: usize,
     errors: Vec<Sp<ParseError>>,
     diagnostics: Vec<Diagnostic>,
+    placeholder_count: u8,
 }
 
 impl Parser {
@@ -261,6 +281,17 @@ impl Parser {
                     DiagnosticKind::Advice,
                 ));
             }
+            // Validate modifier args
+            let modifier_arg_count = ident_modifier_args(&ident.value);
+            if modifier_arg_count != self.placeholder_count {
+                self.errors
+                    .push(ident.span.clone().sp(ParseError::WrongModifierArgCount(
+                        ident.value.clone(),
+                        self.placeholder_count,
+                        modifier_arg_count,
+                    )));
+            }
+
             Binding {
                 name: ident,
                 words,
@@ -274,6 +305,15 @@ impl Parser {
         let span = self.try_exact(Token::Ident)?;
         let s: Ident = span.as_str().into();
         Some(span.sp(s))
+    }
+    fn try_modifier_ident(&mut self) -> Option<Sp<Ident>> {
+        let start = self.index;
+        let ident = self.try_ident()?;
+        if ident_modifier_args(&ident.value) == 0 {
+            self.index = start;
+            return None;
+        }
+        Some(ident)
     }
     fn try_signature(&mut self) -> Option<Sp<Signature>> {
         let start = self.try_exact(Bar)?;
@@ -445,14 +485,18 @@ impl Parser {
         Some(span.sp(Word::Strand(items)))
     }
     fn try_modified(&mut self) -> Option<Sp<Word>> {
-        let Some((modifier, margs)) = Primitive::all()
+        let (modifier, margs, mod_span) = if let Some((prim, margs)) = Primitive::all()
             .filter_map(|prim| prim.modifier_args().map(|margs| (prim, margs)))
             .find_map(|(prim, margs)| {
                 self.try_exact(prim)
                     .or_else(|| prim.ascii().and_then(|simple| self.try_exact(simple)))
                     .map(|span| (span.sp(prim), margs))
-            })
-        else {
+            }) {
+            (Modifier::Primitive(prim.value), margs, prim.span)
+        } else if let Some(ident) = self.try_modifier_ident() {
+            let margs = ident_modifier_args(&ident.value);
+            (Modifier::Ident(ident.value), margs, ident.span)
+        } else {
             return self.try_term();
         };
         let mut args = Vec::new();
@@ -460,7 +504,11 @@ impl Parser {
         let mut arg_count = 0;
         for _ in 0..margs {
             args.extend(self.try_spaces());
-            if let Some(arg) = self.try_func().or_else(|| self.try_strand()) {
+            if let Some(arg) = self
+                .try_func()
+                .or_else(|| self.try_strand())
+                .or_else(|| self.try_placeholder())
+            {
                 args.push(arg);
                 arg_count += 1;
             } else {
@@ -472,11 +520,11 @@ impl Parser {
         }
 
         // Style diagnostic for bind
-        if let Primitive::Bind = modifier.value {
+        if let Modifier::Primitive(Primitive::Bind) = modifier {
             for arg in &args {
                 if let Word::Modified(m) = &arg.value {
-                    if let Primitive::Bind = m.modifier.value {
-                        let span = modifier.span.clone().merge(m.modifier.span.clone());
+                    if let Modifier::Primitive(Primitive::Bind) = m.modifier.value {
+                        let span = mod_span.clone().merge(m.modifier.span.clone());
                         self.diagnostics.push(Diagnostic::new(
                             format!("Do not chain `bind {}`", Primitive::Bind),
                             span,
@@ -488,7 +536,10 @@ impl Parser {
         }
 
         Some(if args.is_empty() {
-            modifier.map(Word::Primitive)
+            mod_span.sp(match modifier {
+                Modifier::Primitive(prim) => Word::Primitive(prim),
+                Modifier::Ident(ident) => Word::Ident(ident),
+            })
         } else {
             for arg in &mut args {
                 if let Word::Func(func) = &arg.value {
@@ -497,15 +548,17 @@ impl Parser {
                     }
                 }
             }
-            let span = modifier
-                .span
-                .clone()
-                .merge(args.last().unwrap().span.clone());
+            let span = mod_span.clone().merge(args.last().unwrap().span.clone());
             span.sp(Word::Modified(Box::new(Modified {
-                modifier,
+                modifier: mod_span.sp(modifier),
                 operands: args,
             })))
         })
+    }
+    fn try_placeholder(&mut self) -> Option<Sp<Word>> {
+        let span = self.try_exact(Caret)?;
+        self.placeholder_count += 1;
+        Some(span.sp(Word::Placeholder))
     }
     fn try_term(&mut self) -> Option<Sp<Word>> {
         Some(if let Some(prim) = self.try_prim() {

@@ -139,6 +139,7 @@ fn TutorialBasic() -> impl IntoView {
         <Editor examples={&["+ ", "1 ", "× ", "2 ", "3"]} help={&["", "Try the arrows to see how the stack changes with each operation."]}/>
         <p>"In the editor, items that end up on the "<em>"top"</em>" of the stack are shown at the "<em>"bottom"</em>" of the output. This is so that consecutive lines of code show their outputs in the correct order."</p>
         <Editor example="5\n+1 2\n\"Hello, World!\"\n+1 @a"/>
+        <p>"This orientation can be changed in the editor's settings. Click the ⚙️ icon in the top right corner of the editor to see them."</p>
         <p>"Operations can span multiple lines. Every line uses the same stack!"</p>
         <Editor examples={&["1 2 ", "+ ", "5 ", "×"]} progress_lines=true/>
 

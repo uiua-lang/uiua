@@ -9,7 +9,7 @@ Within a each section, items are ordered (roughly) by decreasing priority.
 ## Features
 - `under` aggregating `group` and `partition`
 - Add channels for spawned threads
-- Sift+delete to delete whole linestribute`
+- Sift+delete to delete whole lines
 - Rust API
   - Make dedicated Array conversion traits
   - Make dedicated Value conversion traits

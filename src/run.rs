@@ -20,7 +20,7 @@ use crate::{
     parse::parse,
     primitive::{Primitive, CONSTANTS},
     value::Value,
-    Diagnostic, DiagnosticKind, Handle, Ident, NativeSys, SysBackend, TraceFrame, UiuaError,
+    Diagnostic, DiagnosticKind, Handle, Ident, NativeSys, SysBackend, SysOp, TraceFrame, UiuaError,
     UiuaResult,
 };
 
@@ -385,16 +385,18 @@ code:
             call_span: 0,
             spans: Vec::new(),
             pc: 0,
-        })
+        })?;
+        Ok(())
     }
-    fn exec(&mut self, frame: StackFrame) -> UiuaResult {
+    fn exec(&mut self, frame: StackFrame) -> UiuaResult<Arc<Function>> {
         let ret_height = self.scope.call.len();
         self.scope.call.push(frame);
         let mut formatted_instr = String::new();
+        let mut res = None;
         while self.scope.call.len() > ret_height {
             let frame = self.scope.call.last().unwrap();
             let Some(instr) = frame.function.instrs.get(frame.pc) else {
-                self.scope.call.pop();
+                res = self.scope.call.pop();
                 continue;
             };
             // Uncomment to debug
@@ -582,7 +584,7 @@ code:
                 }
             }
         }
-        Ok(())
+        Ok(res.unwrap().function)
     }
     pub(crate) fn push_span(&mut self, span: usize, prim: Option<Primitive>) {
         self.scope.call.last_mut().unwrap().spans.push((span, prim));
@@ -591,12 +593,32 @@ code:
         self.scope.call.last_mut().unwrap().spans.pop();
     }
     fn call_with_span(&mut self, f: impl Into<Arc<Function>>, call_span: usize) -> UiuaResult {
-        self.exec(StackFrame {
-            function: f.into(),
+        let function = f.into();
+        let sig = function.signature();
+        let start_height = self.stack.len();
+        let function = self.exec(StackFrame {
+            function,
             call_span,
             spans: Vec::new(),
             pc: 0,
-        })
+        })?;
+        let height_diff = self.stack.len() as isize - start_height as isize;
+        let sig_diff = sig.outputs as isize - sig.args as isize;
+        if height_diff != sig_diff
+            && !function
+                .instrs
+                .iter()
+                .any(|instr| matches!(instr, Instr::Prim(Primitive::Sys(SysOp::Import), _)))
+        {
+            return Err(self.spans.lock()[call_span]
+                .clone()
+                .sp(format!(
+                    "Function modified the stack by {height_diff} values, but its \
+                    signature of {sig} implies a change of {sig_diff}"
+                ))
+                .into());
+        }
+        Ok(())
     }
     /// Call a function
     #[inline]

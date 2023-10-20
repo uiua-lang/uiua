@@ -21,6 +21,7 @@ Uiua is not yet stable.
 - Add [`rock` `⋄`](https://uiua.org/docs/rock), [`surface` `~`](https://uiua.org/docs/surface), [`deep` `≊`](https://uiua.org/docs/deep), [`abyss` `≃`](https://uiua.org/docs/abyss), and [`seabed` `∸`](https://uiua.org/docs/seabed), which build rank lists to be used with [`level` `≑`](https://uiua.org/docs/level) and the new rank-generic modifiers
 - Change [`trace` `⸮`](https://uiua.org/docs/trace)'s glyph to let [`water` `~`](https://uiua.org/docs/water) use `~`.
 - Change [`match` `≍`](https://uiua.org/docs/match)'s glyph to avoid confusion with the new ocean functions' glyphs. Code using `≅` will continue to work and will be formatted as `≍`.
+- Stack signatures found to be incorrect at runtime produce an error
 
 ## 0.0.20 - 2023-10-16
 ### Language

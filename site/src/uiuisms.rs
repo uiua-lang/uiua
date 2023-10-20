@@ -154,6 +154,8 @@ uiuisms!(
     "♭⍉⊟ [1 2 3 4] [5 6 7 8]",
     /// Intersperse an item between the rows of an array
     "↘1♭≑⋄~⊂ π [1 2 3 4]",
+    /// Split an array at an index
+    "⊃↙↘ 3 [1 2 3 4 5]",
     /// Split an array by a delimiter
     r#"⊜□≠, @, "split,this,up""#,
     /// Split an array by a delimiter with fill elements

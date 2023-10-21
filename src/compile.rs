@@ -185,10 +185,7 @@ impl Uiua {
         Ok(())
     }
     fn validate_binding_name(&self, name: &Ident, instrs: &[Instr], span: &CodeSpan) -> UiuaResult {
-        let temp_function_count = instrs
-            .iter()
-            .filter(|instr| matches!(instr, Instr::GetTempFunction(_)))
-            .count();
+        let temp_function_count = count_temp_functions(instrs);
         let name_marg_count = ident_modifier_args(name) as usize;
         if temp_function_count != name_marg_count {
             let trimmed = name.trim_end_matches('!');
@@ -862,4 +859,19 @@ fn increment_placeholders(instrs: &mut [Instr]) {
             curr += 1;
         }
     }
+}
+
+fn count_temp_functions(instrs: &[Instr]) -> usize {
+    let mut count = instrs
+        .iter()
+        .filter(|instr| matches!(instr, Instr::GetTempFunction(_)))
+        .count();
+    if count == 0 {
+        for instr in instrs {
+            if let Instr::PushFunc(f) = instr {
+                count += count_temp_functions(&f.instrs);
+            }
+        }
+    }
+    count
 }

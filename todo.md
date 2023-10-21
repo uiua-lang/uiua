@@ -1,12 +1,8 @@
 # Uiua Todo
 Within a each section, items are ordered (roughly) by decreasing priority.
 
-## Bugs
-- Figure out what is going on with the editor cursor
-  - Problems are mostly on Firefox, especially on mobile
-- Expand test suite
-
 ## Features
+- Make fill dyadic again
 - `under` aggregating `group` and `partition`
 - Add channels for spawned threads
 - Sift+delete to delete whole lines
@@ -19,24 +15,22 @@ Within a each section, items are ordered (roughly) by decreasing priority.
   - Sound input
   - Webcam input
 - System APIs
+  - Get single char from stdin
+  - Delete/trash files/directories
   - FFI
   - UDP Sockets
 
+## Bugs
+- Figure out what is going on with the editor cursor
+  - Problems are mostly on Firefox, especially on mobile
+- Expand test suite
+
 ## Optimizations
-- Inline some functions with `distribute`
+- Inline some functions with `distribute` and `tribute`
 - Row windows - `≡f◫` for scalar window size should be optimized to not materialize all the windows
 - Reduce windows? - `/f◫` for scalar window size could be optimized, but is it necessary?
-- See what can be done about compile times
-  - See how much turning off LTO does to performance vs compile time
 
 ## Documentation
-- Thinking with arrays
-- Control flow
-  - Looping modifiers
-  - If
-  - Try
-  - Break
-  - Recur
 - Images and GIFs
 - System functions
 

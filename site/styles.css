@@ -815,3 +815,7 @@ input[type=text] {
 .pls-no-block {
     font-size: 0.7em;
 }
+
+a.clean {
+    text-decoration: none;
+}

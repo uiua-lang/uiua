@@ -884,7 +884,7 @@ primitive!(
     /// Apply a function to each element of an array or arrays.
     ///
     /// This is the element-wise version of [rows].
-    /// **This is often not what you want.** Prefer using [table] when possible.
+    /// **This is often not what you want.** Prefer using pervasive functions or [table] when possible.
     ///
     /// The number of arrays used depends on how many arguments the function takes.
     /// ex: ∵'⊟. 1_2_3_4
@@ -1311,50 +1311,44 @@ primitive!(
     ([2], Combinate, IteratingModifier, ("combinate", '◳')),
     /// `join` `infinity` to an array
     ///
-    /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) to understand what this is for.
-    ///
+    /// See the [Ocean Notation tutorial](/docs/advancedarray#ocean-notation) to understand what this is for.
     /// ex: ⋄5
     /// ex: ⋄[1_2_3 4_5_6]
-    ///
     /// *Rocks line the shores of the ocean, their immovable forms jutting from the surface.*
     (1, Rock, Ocean, ("rock", '⋄')),
     /// `join` `¯1` to an array
     ///
-    /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) to understand what this is for.
-    ///
+    /// See the [Ocean Notation tutorial](/docs/advancedarray#ocean-notation) to understand what this is for.
     /// ex: ~5
     /// ex: ~[1_2_3 4_5_6]
-    ///
+    /// ex: ≑~/+[[1_2 3_4] [5_6 7_8]]
     /// *The light of the sun reflects reflects off the rippling surface of the ocean.*
     (1, Surface, Ocean, ("surface", '~')),
     /// `join` `2` to an array
     ///
-    /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) to understand what this is for.
-    ///
+    /// See the [Ocean Notation tutorial](/docs/advancedarray#ocean-notation) to understand what this is for.
     /// ex: ≊5
     /// ex: ≊[1_2_3 4_5_6]
-    ///
+    /// ex: ≑≊/+[[1_2 3_4] [5_6 7_8]]
     /// *In the deep ocean live many wonderous creatures.*
     (1, Deep, Ocean, ("deep", '≊')),
     /// `join` `1` to an array
     ///
-    /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) to understand what this is for.
-    ///
+    /// See the [Ocean Notation tutorial](/docs/advancedarray#ocean-notation) to understand what this is for.
     /// ex: ≃5
     /// ex: ≃[1_2_3 4_5_6]
-    ///
+    /// ex: ≑≃/+[[1_2 3_4] [5_6 7_8]]
     /// *In the abyss, where no light reaches, life is restricted to simpler forms.*
     (1, Abyss, Ocean, ("abyss", '≃')),
     /// `join` `0` to an array
     ///
-    /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) to understand what this is for.
-    ///
+    /// See the [Ocean Notation tutorial](/docs/advancedarray#ocean-notation) to understand what this is for.
     /// ex: ∸5
     /// ex: ∸[1_2_3 4_5_6]
-    ///
+    /// ex: ≑∸≃⊂.[1_2_3 4_5_6]
     /// *At the seabed, countless small scavengers feed on the detritus of the ocean above.*
     (1, Seabed, Ocean, ("seabed", '∸')),
-    /// Compose two functions
+    /// Syntactically bind two functions
     ///
     /// This modifier mostly exists for syntactic convenience.
     /// It lets you change any function with 2 terms into a modifer call, saving a single character.
@@ -1363,6 +1357,8 @@ primitive!(
     /// This especially nice when used with modifiers that take 2 functions, like [under], where you can save up to 2 characters!
     /// ex: ⍜(↻3)(⊂π) [1 2 3 4 5]
     ///   : ⍜'↻3'⊂π [1 2 3 4 5]
+    /// Don't chain [bind].
+    /// ex! ≡''⊂⇌. ↯2_3⇡6
     ([2], Bind, OtherModifier, ("bind", '\'')),
     /// Call one of two functions based on a condition
     ///

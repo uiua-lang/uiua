@@ -417,31 +417,40 @@ impl Allowed {
                 continue;
             }
             let (header, description) = match class {
-                PrimClass::Stack => ("Stack", "Work with the stack"),
-                PrimClass::Constant => ("Constants", "Push a constant value onto the stack"),
-                PrimClass::MonadicPervasive => {
-                    ("Monadic Pervasive", "Operate on every element in an array")
-                }
+                PrimClass::Stack => ("Stack".into_view(), "Work with the stack"),
+                PrimClass::Constant => (
+                    "Constants".into_view(),
+                    "Push a constant value onto the stack",
+                ),
+                PrimClass::MonadicPervasive => (
+                    "Monadic Pervasive".into_view(),
+                    "Operate on every element in an array",
+                ),
                 PrimClass::DyadicPervasive => (
-                    "Dyadic Pervasive",
+                    "Dyadic Pervasive".into_view(),
                     "Operate on every pair of elements in two arrays",
                 ),
-                PrimClass::MonadicArray => ("Monadic Array", "Operate on a single array"),
-                PrimClass::DyadicArray => ("Dyadic Array", "Operate on two arrays"),
+                PrimClass::MonadicArray => {
+                    ("Monadic Array".into_view(), "Operate on a single array")
+                }
+                PrimClass::DyadicArray => ("Dyadic Array".into_view(), "Operate on two arrays"),
                 PrimClass::IteratingModifier => (
-                    "Iterating Modifiers",
+                    "Iterating Modifiers".into_view(),
                     "Iterate and apply a function to an array or arrays",
                 ),
                 PrimClass::AggregatingModifier => (
-                    "Aggregating Modifiers",
+                    "Aggregating Modifiers".into_view(),
                     "Apply a function to aggregate an array",
                 ),
-                PrimClass::OtherModifier => ("Other Modifiers", ""),
-                PrimClass::Control => ("Control", "Control the flow of execution"),
-                PrimClass::Planet => ("🌎 Planet 🪐", "Advanced stack manipulation"),
-                PrimClass::Ocean => ("🌊 Ocean 🪸", "Create rank lists"),
-                PrimClass::Misc => ("Miscellaneous", ""),
-                PrimClass::Sys => ("System", "Interact with the system"),
+                PrimClass::OtherModifier => ("Other Modifiers".into_view(), ""),
+                PrimClass::Control => ("Control".into_view(), "Control the flow of execution"),
+                PrimClass::Planet => (
+                    view!(<a class="clean" href="/docs/advancedstack#planet-notation">"🌎 Planet 🪐"</a>).into_view(),
+                    "Advanced stack manipulation",
+                ),
+                PrimClass::Ocean => (view!(<a class="clean" href="/docs/advancedarray#ocean-notation">"🌊 Ocean 🪸"</a>).into_view(), "Create rank lists"),
+                PrimClass::Misc => ("Miscellaneous".into_view(), ""),
+                PrimClass::Sys => ("System".into_view(), "Interact with the system"),
             };
             table_cells.push(view! {
                 <td id=id style="vertical-align: top;"><div>

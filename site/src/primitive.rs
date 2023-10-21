@@ -19,7 +19,7 @@ fn doc_line_fragments_to_view(fragments: &[PrimDocFragment]) -> View {
             PrimDocFragment::Link { text, url } => {
                 let url = url.clone();
                 let text = text.clone();
-                view!(<A href=url>{text}</A>).into_view()
+                view!(<a href=url>{text}</a>).into_view()
             }
             &PrimDocFragment::Primitive { prim, named } => {
                 view!(<Prim prim=prim glyph_only={!named}/>).into_view()

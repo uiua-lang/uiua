@@ -7,13 +7,15 @@ Uiua is not yet stable.
 - **Massive Change** - Functions are no longer first-class values. This has many implications:
   - Functions can no longer be put in arrays or manipulated as stack values
   - Inline functions can now only appear as modifier arguments or bindings
-  - `call !` has been removed, as they is nothing on the stack to call
+  - `call !` has been removed, as there is nothing on the stack to call
   - `---` scopes are now test scopes. `~~~` scopes have been removed.
   - Modules have been reworked. [`&i`](https://uiua.org/docs/&i) now handles both loading a module from a file and importing items from that module.
   - Remove `use`, as it is no longer necessary
   - Boxes still work as normal, but are now their own type distinct from functions
   - Remove `sig`, as everything that can be on the stack now has the same signature
   - [`fill` `⬚`](https://uiua.org/docs/fill) is now monadic and the fill value comes *after* the function
+- Add new syntax for defining [custom modifiers](https://uiua.org/docs/custommodifiers)
+- Add new syntax for [calling a function from a list of functions](https://uiua.org/docs/controlflow#switch)
 - Add the [`pierce` `⍆`](https://uiua.org/docs/pierce) modifier, which calls its function and implicitly boxes/unboxes values
 - Add the [`combinate` `◳`](https://uiua.org/docs/combinate) modifier, which is a rank-generic version of [`table` `⊞`](https://uiua.org/docs/table)
 - [`fold` `∧`](https://uiua.org/docs/fold) is now rank-generic and requires a rank list
@@ -22,6 +24,12 @@ Uiua is not yet stable.
 - Change [`trace` `⸮`](https://uiua.org/docs/trace)'s glyph to let [`water` `~`](https://uiua.org/docs/water) use `~`.
 - Change [`match` `≍`](https://uiua.org/docs/match)'s glyph to avoid confusion with the new ocean functions' glyphs. Code using `≅` will continue to work and will be formatted as `≍`.
 - Stack signatures found to be incorrect at runtime produce an error
+### Website
+- Add 3 new tutorials
+  - [Control Flow](https://uiua.org/docs/controlflow)
+  - [Advanced Stack Manipulation](https://uiua.org/docs/advancedstack)
+  - [Custom Modifiers](https://uiua.org/docs/custommodifiers)
+- The orientation of stack values in the output can be flipped in the settings
 
 ## 0.0.20 - 2023-10-16
 ### Language

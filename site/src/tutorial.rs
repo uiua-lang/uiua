@@ -324,6 +324,10 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example="[...5]"/>
         <Editor example="[×2.×2.×2.×2 .2]"/>
         <Editor example="[+1 2 +3 4]"/>
+        <p>"Any functions inside the brackets will \"pull in\" their arguments from outside if there are not enough inside."</p>
+        <Editor example="[+] 1 9"/>
+        <Editor example="[...] 7"/>
+        <Editor example="[+×2] 20 2"/>
         <p>"You can also use stack notation to make multidimensional arrays."</p>
         <Editor example="[1_2_3 4_5_6]"/>
         <Editor example="[...[1 2 3]]"/>
@@ -350,13 +354,23 @@ fn TutorialArrays() -> impl IntoView {
         <p><strong>"Rank"</strong>" is the number of dimensions of the array. It is equivalent to the "<Prim prim=Len/>" of the "<Prim prim=Shape/>"."</p>
         <Editor example=" △[1_2_3 4_5_6]\n ⧻[1_2_3 4_5_6]\n⧻△[1_2_3 4_5_6]"/>
 
+        <h2 id="output">"Pretty Array Output"</h2>
+        <p>"The online editor and native interpreter both pretty-print any values that remain on the stack when a program is finished. (This can be invoked manually using the "<Prim prim=Sys(SysOp::Show)/>" function.)"</p>
+        <p>"To understand how the pretty-printed output corresponds to the actual array, we can used "<Prim prim=Reshape/>"to create a multidimensional array. "<Prim prim=Reshape/>" uses its first argument as a new shape for its second argument."</p>
+        <p>"Here, we turn a flat "<Prim prim=Range/>" array into a 3-dimensional array with the shape "<code>"[2 3 4]"</code>"."</p>
+        <Editor example="↯2_3_4 ⇡24"/>
+        <p>"Notice there are "<code>"2"</code>" big cells, each with "<code>"3"</code>" rows of "<code>"4"</code>" elements."</p>
+        <p>"This expands to any number of dimensions. The more dimensions, the more space between the cells representing earlier axes."</p>
+        <Editor example="↯2_3_2_5 ⇡60"/>
+
         <h2 id="pervasion">"Pervasion"</h2>
         <p>"Most operations that apply to scalars are what is called "<em>"pervasive"</em>" when it comes to arrays. This means that the operation automatically applies to every item in the array."</p>
         <Editor example="+1 1_2_3"/>
         <Editor example="√[4 9 16]"/>
         <Editor example="+1_2_3 4_5_6"/>
-        <p>"When doing a pervasive operation on two arrays, their shape "<em>"prefixes"</em>" must match."</p>
+        <p>"When doing a pervasive operation on two arrays, the shape of one array must be the "<em>"prefix"</em>" of the shape of the other."</p>
         <Editor example="+[1 2] [3 4 5]"/> // Should fail
+        <p>"Notice here that the shape of the first array is a prefix of the shape of the second array."</p>
         <Editor example="△10_20\n      △[3_4_5 6_7_8]\n+10_20 [3_4_5 6_7_8]"/>
         <p>"If you want to do some pervasive operation on arrays whose shapes do not match, you can set a default value with "<Prim prim=Fill/>". Any places where the shapes don't match will be filled in with that value."</p>
         <Editor example="⬚0- [1 2] [3 4 5 6 7]"/>
@@ -381,6 +395,12 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example="↯3_3 .⇡9"/>
         <p><Prim prim=Take/>" and "<Prim prim=Drop/>" isolate part of an array."</p>
         <Editor example="↙3 [1 2 3 4 5]\n↘3 [1 2 3 4 5]"/>
+        <p><Prim prim=Pick/>" indexes an array. Longer indices index deeper into the array."</p>
+        <Editor example="⊡2 [3 8 4 1]"/>
+        <Editor example="⊡1_1 [1_2_3 4_5_6]"/>
+        <p><Prim prim=Select/>" uses a list of indices to select rows of an array."</p>
+        <Editor example="⊏[3 5 0 1 7 8 9 5 1 2 5 3 10] \"their sinks\""/>
+        <Editor example="⊏ [0 2 1 1 2] ↯3_3⇡9"/>
 
         <h2 id="array-model">"The Array Model"</h2>
         <p>"For curious array afficionados, Uiua uses an array model resembling "<a href="https://aplwiki.com/wiki/Box">"J's Boxed array model"</a>"."</p>

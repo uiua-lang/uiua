@@ -368,8 +368,10 @@ impl<'a> VirtualEnv<'a> {
                     }
                 }
                 Fill => {
+                    let fill = self.pop_func()?;
+                    self.handle_sig(fill.signature())?;
+                    let _fill_value = self.pop()?;
                     let f = self.pop_func()?;
-                    let _fill = self.pop()?;
                     self.handle_sig(f.signature())?;
                 }
                 Tip => {

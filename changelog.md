@@ -13,7 +13,6 @@ Uiua is not yet stable.
   - Remove `use`, as it is no longer necessary
   - Boxes still work as normal, but are now their own type distinct from functions
   - Remove `sig`, as everything that can be on the stack now has the same signature
-  - [`fill` `⬚`](https://uiua.org/docs/fill) is now monadic and the fill value comes *after* the function
 - Add new syntax for defining [custom modifiers](https://uiua.org/docs/custommodifiers)
 - Add new syntax for [calling a function from a list of functions](https://uiua.org/docs/controlflow#switch)
 - Add the [`tip` `⊐`](https://uiua.org/docs/tip) modifier, which calls its function and implicitly boxes/unboxes values

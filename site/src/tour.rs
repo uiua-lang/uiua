@@ -129,9 +129,9 @@ pub fn Tour() -> impl IntoView {
         <p>"Here is an array that cannot be constructed normally because its rows have different "<Prim prim=Len/>"s."</p>
         <Editor example="[1 2_3_4 5_6]"/> // Should fail
         <p>"One way to make this array work is to use the "<Prim prim=Fill/>" modifier. You give it a fill value and a function or array that would fail with mismatched shapes, and it will fill in the missing values with the fill value."</p>
-        <Editor example="⬚[1 2_3_4 5_6]0"/>
+        <Editor example="⬚0[1 2_3_4 5_6]"/>
         <p><Prim prim=Fill/>" works with lots of functions. Another one is "<Prim prim=Take/>" when the amount you are taking is more than the length of the array."</p>
-        <Editor example="⬚↙π 5 [1 2 3]"/>
+        <Editor example="⬚π↙ 5 [1 2 3]"/>
         <br/>
         <p><Prim prim=Fill/>" is nice, but you don't always want to fill in the missing elements. Sometimes you need to mix values of different shapes or types in an array. To understand Uiua's solution to this problem, you must first understand its "<em>"array model"</em>"."</p>
         <p>"Uiua's array model is similar to that of J. Arrays must be rectangular and cannot mix types. However, the "<Prim prim=Box/>" function can turn any into a "<em>"box"</em>" element that can be put in an array with other boxes. That value can then be extracted with "<Prim prim=Unbox/>". This is similar to J's boxes."</p>

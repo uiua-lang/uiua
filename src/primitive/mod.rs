@@ -522,9 +522,11 @@ impl Primitive {
                 env.with_tip(|env| env.call(f))?;
             }
             Primitive::Fill => {
+                let fill = env.pop_function()?;
                 let f = env.pop_function()?;
-                let fill = env.pop("fill value")?;
-                env.with_fill(fill, |env| env.call(f))?;
+                env.call(fill)?;
+                let fill_value = env.pop("fill value")?;
+                env.with_fill(fill_value, |env| env.call(f))?;
             }
             Primitive::Bind => {
                 return Err(env.error(

@@ -12,7 +12,7 @@ use crate::{
     check::instrs_signature,
     function::*,
     lex::{CodeSpan, Sp, Span},
-    parse::count_placeholders,
+    parse::{count_placeholders, ident_modifier_args},
     primitive::Primitive,
     run::{Global, RunMode},
     value::Value,
@@ -104,6 +104,7 @@ impl Uiua {
     }
     fn binding(&mut self, binding: Binding) -> UiuaResult {
         let name = binding.name.value;
+        let span = &binding.name.span;
         let make_fn = |instrs: Vec<Instr>, sig: Signature| {
             Function::new(FunctionId::Named(name.clone()), instrs, sig)
         };
@@ -132,26 +133,26 @@ impl Uiua {
                     }
                 }
                 if let [Instr::PushFunc(f)] = instrs.as_slice() {
-                    self.bind_function(name, f.clone());
+                    self.bind_function(name, f.clone(), span)?;
                 } else if sig.args == 0 && (sig.outputs > 0 || instrs.is_empty()) {
                     self.exec_global_instrs(instrs)?;
                     if let Some(f) = self.function_stack.pop() {
-                        self.bind_function(name, f);
+                        self.bind_function(name, f, span)?;
                     } else if let Some(value) = self.stack.pop() {
-                        self.bind_value(name, value);
+                        self.bind_value(name, value, span)?;
                     } else {
                         let func = Function::new(FunctionId::Named(name.clone()), Vec::new(), sig);
-                        self.bind_function(name, func.into())
+                        self.bind_function(name, func.into(), span)?;
                     }
                 } else {
                     let func = make_fn(instrs, sig);
-                    self.bind_function(name, func.into());
+                    self.bind_function(name, func.into(), span)?;
                 }
             }
             Err(e) => {
                 if let Some(sig) = binding.signature {
                     let func = make_fn(instrs, sig.value);
-                    self.bind_function(name, func.into())
+                    self.bind_function(name, func.into(), span)?;
                 } else {
                     return Err(UiuaError::Run(Span::Code(binding.name.span.clone()).sp(
                         format!("Cannot infer function signature: {e}. A signature can be declared after the `←`."),
@@ -161,18 +162,46 @@ impl Uiua {
         }
         Ok(())
     }
-    fn bind_value(&mut self, name: Arc<str>, mut value: Value) {
+    fn bind_value(&mut self, name: Ident, mut value: Value, span: &CodeSpan) -> UiuaResult {
+        self.validate_binding_name(&name, &[], span)?;
         value.compress();
         let mut globals = self.globals.lock();
         let idx = globals.len();
         globals.push(Global::Val(value));
         self.scope.names.insert(name, idx);
+        Ok(())
     }
-    fn bind_function(&mut self, name: Arc<str>, function: Arc<Function>) {
+    fn bind_function(
+        &mut self,
+        name: Ident,
+        function: Arc<Function>,
+        span: &CodeSpan,
+    ) -> UiuaResult {
+        self.validate_binding_name(&name, &function.instrs, span)?;
         let mut globals = self.globals.lock();
         let idx = globals.len();
         globals.push(Global::Func(function));
         self.scope.names.insert(name, idx);
+        Ok(())
+    }
+    fn validate_binding_name(&self, name: &Ident, instrs: &[Instr], span: &CodeSpan) -> UiuaResult {
+        let temp_function_count = instrs
+            .iter()
+            .filter(|instr| matches!(instr, Instr::GetTempFunction(_)))
+            .count();
+        let name_marg_count = ident_modifier_args(name) as usize;
+        if temp_function_count != name_marg_count {
+            let trimmed = name.trim_end_matches('!');
+            let this = format!("{}{}", trimmed, "!".repeat(temp_function_count));
+            return Err(span
+                .clone()
+                .sp(format!(
+                    "The name {name} implies {name_marg_count} modifier arguments, \
+                    but the binding body references {temp_function_count}. Try `{this}`."
+                ))
+                .into());
+        }
+        Ok(())
     }
     fn compile_words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult<Vec<Instr>> {
         self.new_functions.push(Vec::new());

@@ -18,7 +18,6 @@ pub enum ParseError {
     InvalidOutCount(String),
     AmpersandBindingName,
     FunctionNotAllowed,
-    WrongModifierArgCount(Ident, u8, u8),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -85,15 +84,6 @@ impl fmt::Display for ParseError {
                 "Inline functions are only allowed in modifiers \
                 or as the only item in a binding"
             ),
-            ParseError::WrongModifierArgCount(name, expected, found) => {
-                let trimmed = name.trim_end_matches('!');
-                let this = format!("{}{}", trimmed, "!".repeat(*found as usize));
-                write!(
-                    f,
-                    "The name {name} implies {expected} modifier arguments, \
-                    but the binding body references {found}. Try `{this}`."
-                )
-            }
         }
     }
 }
@@ -284,18 +274,6 @@ impl Parser {
                     DiagnosticKind::Advice,
                 ));
             }
-            // Validate modifier args
-            let ident_marg_count = ident_modifier_args(&ident.value);
-            let placeholder_count = count_placeholders(&words) as u8;
-            if ident_marg_count != placeholder_count {
-                self.errors
-                    .push(ident.span.clone().sp(ParseError::WrongModifierArgCount(
-                        ident.value.clone(),
-                        ident_marg_count,
-                        placeholder_count,
-                    )));
-            }
-
             Binding {
                 name: ident,
                 words,

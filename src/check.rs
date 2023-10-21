@@ -535,10 +535,10 @@ mod test {
         assert_eq!(Ok(sig(0, 0)), check(&[]));
         assert_eq!(Ok(sig(1, 1)), check(&[Prim(Identity, 0)]));
 
-        assert_eq!(Ok(sig(0, 1)), check(&[push(10), push(2), Prim(Pow, 0)]));
+        assert_eq!(Ok(sig(0, 1)), check(&[push(10), push(2), Prim(Exp, 0)]));
         assert_eq!(
             Ok(sig(1, 1)),
-            check(&[push(10), push(2), Prim(Pow, 0), Prim(Add, 0)])
+            check(&[push(10), push(2), Prim(Exp, 0), Prim(Add, 0)])
         );
         assert_eq!(Ok(sig(1, 1)), check(&[push(1), Prim(Add, 0)]));
 

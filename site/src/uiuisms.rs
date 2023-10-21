@@ -147,7 +147,7 @@ uiuisms!(
     /// Parse a string as a base 2 number
     r#"⍘⋯⇌-@0 "110""#,
     /// Parse a string as a base 3 <= X <= 9 number
-    r#"/+×ⁿ⇌⇡⧻,⊙-∶@0 3 "210""#,
+    r#"/+×ⁿ:⇌⇡⧻,⊙-∶@0 3 "210""#,
     /// Find the indices of all 1s
     "▽∶⇡⧻. [0 1 0 0 1]",
     /// Interleave two arrays

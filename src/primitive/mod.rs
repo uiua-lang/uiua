@@ -326,7 +326,7 @@ impl Primitive {
             Primitive::Mul => env.dyadic_oo_env(Value::mul)?,
             Primitive::Div => env.dyadic_oo_env(Value::div)?,
             Primitive::Mod => env.dyadic_oo_env(Value::modulus)?,
-            Primitive::Pow => env.dyadic_oo_env(Value::pow)?,
+            Primitive::Exp => env.dyadic_oo_env(Value::exp)?,
             Primitive::Log => env.dyadic_oo_env(Value::log)?,
             Primitive::Min => env.dyadic_oo_env(Value::min)?,
             Primitive::Max => env.dyadic_oo_env(Value::max)?,

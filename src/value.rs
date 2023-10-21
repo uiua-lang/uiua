@@ -956,7 +956,7 @@ value_bin_impl!(
     (Num, Byte, num_byte, num_num),
 );
 value_bin_impl!(
-    pow,
+    exp,
     [Num, num_num],
     (Byte, Byte, byte_byte, num_num),
     (Byte, Num, byte_num, num_num),

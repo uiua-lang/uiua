@@ -21,6 +21,8 @@ Uiua is not yet stable.
 - Add the [`tribute` `≐`](https://uiua.org/docs/tribute) modifier, which is a flipped version of [`distribute` `∺`](https://uiua.org/docs/distribute)
 - Change [`level` `≑`](https://uiua.org/docs/level)'s glyph to reflect its relationship with [`each` `∵`](https://uiua.org/docs/each), [`rows` `≡`](https://uiua.org/docs/rows), [`distribute` `∺`](https://uiua.org/docs/distribute), and [`tribute` `≐`](https://uiua.org/docs/tribute). Code using `⍚` will continue to work and will be formatted as `≑`.
 - Add [`rock` `⋄`](https://uiua.org/docs/rock), [`surface` `~`](https://uiua.org/docs/surface), [`deep` `≊`](https://uiua.org/docs/deep), [`abyss` `≃`](https://uiua.org/docs/abyss), and [`seabed` `∸`](https://uiua.org/docs/seabed), which build rank lists to be used with [`level` `≑`](https://uiua.org/docs/level) and the new rank-generic modifiers
+- Flip `power`'s argument order and rename it to [`exponent` `ⁿ`](https://uiua.org/docs/exponent)
+  - [`exponent` `ⁿ`](https://uiua.org/docs/exponent) and [`logarithm` `ₙ`](https://uiua.org/docs/logarithm) are now inverses
 - Change [`trace` `⸮`](https://uiua.org/docs/trace)'s glyph to let [`surface` `~`](https://uiua.org/docs/surface) use `~`.
 - Change [`match` `≍`](https://uiua.org/docs/match)'s glyph to avoid confusion with the new ocean functions' glyphs. Code using `≅` will continue to work and will be formatted as `≍`.
 - Stack signatures found to be incorrect at runtime produce an error

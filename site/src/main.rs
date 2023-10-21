@@ -289,6 +289,7 @@ fn prim_class(prim: Primitive) -> &'static str {
     }
 
     match prim {
+        Primitive::Identity => code_font!("stack-function"),
         Primitive::Transpose => code_font!("monadic-function trans"),
         prim if prim.is_ocean() => code_font!("ocean-function"),
         prim if prim.class() == PrimClass::Stack && prim.modifier_args().is_none() => {

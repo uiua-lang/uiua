@@ -185,7 +185,7 @@ primitive!(
     ///
     /// While [identity]'s signature is `|1.1`, it will not throw an error if the stack is empty.
     /// ex: ∘
-    (1, Identity, Stack, ("identity", '∘')),
+    (1, Identity, Planet, ("identity", '∘')),
     // Pervasive monadic ops
     /// Logical not
     ///
@@ -1107,7 +1107,7 @@ primitive!(
     /// ex: [⊃⊙⋅∘(++) 3 5 10]
     /// ex: [⊃⋅⊙∘(++) 3 5 10]
     /// ex: [⊃⊙⊙∘(++) 3 5 10]
-    ([1], Gap, Stack, ("gap", '⋅')),
+    ([1], Gap, Planet, ("gap", '⋅')),
     /// Temporarily pop the top value off the stack and call a function
     ///
     /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [dip] is useful.
@@ -1123,7 +1123,7 @@ primitive!(
     /// ex: [⊃⊙⋅∘(++) 3 5 10]
     /// ex: [⊃⋅⊙∘(++) 3 5 10]
     /// ex: [⊃⊙∘(++) 3 5 10]
-    ([1], Dip, Stack, ("dip", '⊙')),
+    ([1], Dip, Planet, ("dip", '⊙')),
     /// Call a function on two sets of values
     ///
     /// For monadic functions, [both] calls its function on each of the top 2 values on the stack.
@@ -1154,7 +1154,7 @@ primitive!(
     /// ex: [⊃⊃⊃+-×÷ 5 8]
     /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maximum will work on the top values.
     /// ex: [⊃+¯ 3 5]
-    ([2], Fork, Stack, ("fork", '⊃')),
+    ([2], Fork, Planet, ("fork", '⊃')),
     /// Call two functions on two distinct sets of values
     ///
     /// ex: ⊓⇌⊝ 1_2_3 [1 4 2 4 2]
@@ -1165,7 +1165,7 @@ primitive!(
     /// [bracket] can be chained to apply additional functions to arguments deeper on the stack.
     /// ex: ⊓⊓⇌(↻1)△ 1_2_3 4_5_6 7_8_9
     /// ex: [⊓⊓⊓+-×÷ 10 20 5 8 3 7 2 5]
-    ([2], Bracket, Stack, ("bracket", '⊓')),
+    ([2], Bracket, Planet, ("bracket", '⊓')),
     /// Apply a function under another
     ///
     /// This is a more powerful version of [invert].
@@ -1223,6 +1223,8 @@ primitive!(
     /// The rank supplied indicates the desired rank of the operand.
     /// The array will be split into arrays of that rank, and the function will be applied to each of those arrays.
     ///
+    /// Ranks may be specified using [Ocean Notation](/docs/advancedarray#ocean-notation), but this page uses numbers and lists only.
+    ///
     /// `level``0` is equivalent to [each], applying the function to each element of the array.
     /// `level``¯1` is equivalent to [rows], applying the function to each row of the array's major axis.
     /// `level``1` applies the function to each row of the array's last axis.
@@ -1248,6 +1250,11 @@ primitive!(
     /// `level``1` will always apply to rank `1` arrays, no matter how many dimensions the original array has.
     /// ex: ≑[1 1]⊂ ↯3_3⇡9 10_11_12 # Join two rank 1 arrays
     /// ex: ≑[1 0]⊂ ↯3_3⇡9 10_11_12 # Join rank 1 arrays with scalars
+    ///
+    /// [each] is equivalent to `level``0` or `level``[0 0 …]`.
+    /// [rows] is equivalent to `level``¯1` or `level``[¯1 ¯1 …]`.
+    /// [distribute] is equivalent to `level``[``infinity``¯1]` or `level``[``infinity``…``infinity``¯1]`.
+    /// [tribute] is equivalent to `level``[¯1``infinity``]` or `level``[¯1``infinity``…``infinity``]`.
     ([2], Level, IteratingModifier, ("level", '≑')),
     /// Apply a function to aggregate at different array depths
     ///
@@ -1255,6 +1262,8 @@ primitive!(
     /// The ranks supplied indicate the desired ranks of the arguments to the function.
     /// The arrays will be split into arrays of those ranks, and the function will be applied to tuples of those arrays.
     /// The function must take as many arguments as there are ranks.
+    ///
+    /// Ranks may be specified using [Ocean Notation](/docs/advancedarray#ocean-notation), but this page uses number lists only.
     ///
     /// A simple example is summing with an initial value.
     /// Here, we specify rank `0` for the first array. `10` is rank `0`, so it is used as an accumulator.
@@ -1276,6 +1285,16 @@ primitive!(
     /// ex: /+∶⊢⇌.\+[0_1 1_1 1_0 ¯1_¯1]
     ([2], Fold, AggregatingModifier, ("fold", '∧')),
     /// Apply a function to combinations at array depths
+    ///
+    /// Expect a list of ranks to operate on, a function, and some arrays.
+    /// The ranks supplied indicate the desired ranks of the arguments to the function.
+    /// The arrays will be split into arrays of those ranks, and the function will be applied to combinations of those arrays.
+    /// The function must take as many arguments as there are ranks.
+    ///
+    /// Ranks may be specified using [Ocean Notation](/docs/advancedarray#ocean-notation), but this page uses number lists only.
+    ///
+    /// [table] is equivalent to `combinate``[0 0]`.
+    /// [cross] is equivalent to `combinate``[¯1 ¯1]`.
     ([2], Combinate, IteratingModifier, ("combinate", '◳')),
     /// `join` `infinity` to a list
     ///
@@ -1284,7 +1303,7 @@ primitive!(
     /// ex: ⋄5
     ///
     /// *Rocks line the shores of the ocean, their immovable forms jutting from the surface.*
-    (1, Rock, Misc, ("rock", '⋄')),
+    (1, Rock, Ocean, ("rock", '⋄')),
     /// `join` `¯1` to a list
     ///
     /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) to understand what this is for.
@@ -1292,7 +1311,7 @@ primitive!(
     /// ex: ~5
     ///
     /// *The light of the sun reflects reflects off the rippling surface of the ocean.*
-    (1, Surface, Misc, ("surface", '~')),
+    (1, Surface, Ocean, ("surface", '~')),
     /// `join` `2` to a list
     ///
     /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) to understand what this is for.
@@ -1300,7 +1319,7 @@ primitive!(
     /// ex: ≊5
     ///
     /// *In the deep ocean live many wonderous creatures.*
-    (1, Deep, Misc, ("deep", '≊')),
+    (1, Deep, Ocean, ("deep", '≊')),
     /// `join` `1` to a list
     ///
     /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) to understand what this is for.
@@ -1308,7 +1327,7 @@ primitive!(
     /// ex: ≃5
     ///
     /// *In the abyss, where no light reaches, life is restricted to simpler forms.*
-    (1, Abyss, Misc, ("abyss", '≃')),
+    (1, Abyss, Ocean, ("abyss", '≃')),
     /// `join` `0` to a list
     ///
     /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) to understand what this is for.
@@ -1316,7 +1335,7 @@ primitive!(
     /// ex: ∸5
     ///
     /// *At the seabed, countless small scavengers feed on the detritus of the ocean above.*
-    (1, Seabed, Misc, ("seabed", '∸')),
+    (1, Seabed, Ocean, ("seabed", '∸')),
     /// Compose two functions
     ///
     /// This modifier mostly exists for syntactic convenience.
@@ -1379,7 +1398,7 @@ primitive!(
     /// [gap] can often look nicer.
     /// ex: ⍣parse⋅⋅0 "dog"
     /// ex: ⍣parse⋅⋅0 "5"
-    ([2], Try, OtherModifier, ("try", '⍣')),
+    ([2], Try, Control, ("try", '⍣')),
     /// Throw an error if a condition is not met
     ///
     /// Expects a message and a test value.

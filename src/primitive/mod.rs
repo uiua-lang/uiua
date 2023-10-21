@@ -48,6 +48,8 @@ pub enum PrimClass {
     AggregatingModifier,
     OtherModifier,
     Control,
+    Planet,
+    Ocean,
     Misc,
     Sys,
 }
@@ -1119,13 +1121,16 @@ mod tests {
 
         let stack_functions = gen_group(
             Primitive::all()
-                .filter(|p| p.class() == PrimClass::Stack && p.modifier_args().is_none()),
+                .filter(|p| p.class() == PrimClass::Stack && p.modifier_args().is_none())
+                .chain(Some(Primitive::Identity)),
         );
         let noadic_functions = gen_group(Primitive::all().filter(|p| {
             p.class() != PrimClass::Stack && p.modifier_args().is_none() && p.args() == Some(0)
         }));
         let monadic_functions = gen_group(Primitive::all().filter(|p| {
-            p.class() != PrimClass::Stack && p.modifier_args().is_none() && p.args() == Some(1)
+            ![PrimClass::Stack, PrimClass::Planet].contains(&p.class())
+                && p.modifier_args().is_none()
+                && p.args() == Some(1)
         }));
         let dyadic_functions = gen_group(Primitive::all().filter(|p| {
             p.class() != PrimClass::Stack && p.modifier_args().is_none() && p.args() == Some(2)

@@ -383,6 +383,7 @@ impl Allowed {
             }
             let id = match class {
                 PrimClass::Stack => "stack-functions",
+                PrimClass::Constant => "constant-functions",
                 PrimClass::MonadicPervasive => "monadic-pervasive-functions",
                 PrimClass::DyadicPervasive => "dyadic-pervasive-functions",
                 PrimClass::MonadicArray => "monadic-array-functions",
@@ -391,8 +392,9 @@ impl Allowed {
                 PrimClass::IteratingModifier => "iterating-modifiers",
                 PrimClass::OtherModifier => "other-modifiers",
                 PrimClass::Control => "control-functions",
+                PrimClass::Planet => "planet-modifiers",
+                PrimClass::Ocean => "ocean-functions",
                 PrimClass::Misc => "misc-functions",
-                PrimClass::Constant => "constant-functions",
                 PrimClass::Sys => "system-functions",
             };
             let of_class: Vec<_> = Primitive::all()
@@ -416,6 +418,7 @@ impl Allowed {
             }
             let (header, description) = match class {
                 PrimClass::Stack => ("Stack", "Work with the stack"),
+                PrimClass::Constant => ("Constants", "Push a constant value onto the stack"),
                 PrimClass::MonadicPervasive => {
                     ("Monadic Pervasive", "Operate on every element in an array")
                 }
@@ -435,8 +438,9 @@ impl Allowed {
                 ),
                 PrimClass::OtherModifier => ("Other Modifiers", ""),
                 PrimClass::Control => ("Control", "Control the flow of execution"),
+                PrimClass::Planet => ("🌎 Planet 🪐", "Advanced stack manipulation"),
+                PrimClass::Ocean => ("🌊 Ocean 🪸", "Create rank lists"),
                 PrimClass::Misc => ("Miscellaneous", ""),
-                PrimClass::Constant => ("Constants", "Push a constant value onto the stack"),
                 PrimClass::Sys => ("System", "Interact with the system"),
             };
             table_cells.push(view! {

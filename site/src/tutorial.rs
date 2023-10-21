@@ -16,6 +16,7 @@ pub enum TutorialPage {
     Types,
     Bindings,
     Functions,
+    ControlFlow,
     AdvancedStack,
     AdvancedArray,
     CustomModifiers,
@@ -35,6 +36,7 @@ impl TutorialPage {
             Self::Types => "Types",
             Self::Bindings => "Bindings",
             Self::Functions => "Modifiers and Functions",
+            Self::ControlFlow => "Control Flow",
             Self::AdvancedStack => "Advanced Stack Manipulation",
             Self::AdvancedArray => "Advanced Array Manipulation",
             Self::CustomModifiers => "Custom Modifiers",
@@ -53,6 +55,7 @@ pub fn Tutorial(page: TutorialPage) -> impl IntoView {
         TutorialPage::Types => TutorialTypes().into_view(),
         TutorialPage::Bindings => TutorialBindings().into_view(),
         TutorialPage::Functions => TutorialFunctions().into_view(),
+        TutorialPage::ControlFlow => TutorialControlFlow().into_view(),
         TutorialPage::AdvancedStack => TutorialAdvancedStack().into_view(),
         TutorialPage::AdvancedArray => TutorialAdvancedArray().into_view(),
         TutorialPage::CustomModifiers => TutorialCustomModifiers().into_view(),
@@ -601,6 +604,73 @@ X 5"/>
         <p>"In addition, an error is thrown if a function's signature can be inferred and the inferred signature does not match the declared signature. This can help validate that a function is correct."</p>
         <Editor example="≡(|2 ↻.) 1_2_3 ↯3_3⇡9"/> // Should fail
         <p><strong>"WARNING"</strong>": If the compiler cannot derive the stack signature of a function and you give it one which is "<em>"wrong"</em>", your code may no longer compile in future versions of the language."</p>
+    }
+}
+
+#[component]
+fn TutorialControlFlow() -> impl IntoView {
+    use Primitive::*;
+    view! {
+        <Title text="Control Flow - Uiua Docs"/>
+        <h1>"Control Flow"</h1>
+        <p>"Uiua, and array languages in generall, require much less control flow than other programming languages. Most operations that would be loops in other languages are simply operations on arrays. Because boolean operations, return numbers, a lot of checks that would be done with "<code>"if"</code>" statements in other languages become mathematical or indexing operations in array languages."</p>
+        <p>"For example, if you wanted to split an array of numbers into an array of odds and an array of evens, you might do it like this in a language like Python:"</p>
+        <code class="code-block">"\
+def splitArray(array):
+    even = []
+    odd = []
+    for i in array:
+        if i % 2 == 0:
+            even.append(i)
+        else:
+            odd.append(i)
+    return even, odd
+
+splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
+        <p>"In Uiua, it is much simpler, and there are no "<code>"if"</code>"s or "<code>"for"</code>"s to be found:"</p>
+        <Editor example="f ← ∩▽¬,,=0◿2.\nf [1 2 3 7 2 4 5]"/>
+        <p>"That being said, not every problem lends itself to array operations. Uiua has a few methods for handling such cases."</p>
+
+        <h2 id="repeat">"Looping with "<Prim prim=Repeat/></h2>
+        <p>"The "<Prim prim=Repeat/>" modifier takes a function and a number and calls the function that many times."</p>
+        <Editor example="⍥(×2)10 5"/>
+        <Editor example="⍥/+2 ↯3_3⇡9"/>
+        <Editor example="⁅[⍥⚂5]"/>
+        <p>"You can loop forever by using "<Prim prim=Infinity/>". You can break out of an infinite (or finite) loop with "<Prim prim=Break/>"."</p>
+        <Editor example="⍥(⎋>1000.×2)∞ 1"/>
+        <p>"This requires a signature declaration if done in a function."</p>
+        <Editor example="f ← |1 ⍥(⎋>1000.×2)∞\nf 5"/>
+        <p><Prim prim=Repeat/>"'s glyph is a combination of a circle, representing a loop, and the 𝄇 symbol from musical notation."</p>
+
+        <h2 id="try">"Catching errors with "<Prim prim=Try/></h2>
+        <p>"The "<Prim prim=Try/>" modifier takes two functions. If the first function throws an error, the second function is called with the same arguments plus an error message."</p>
+        <p>"We can see how this works by using it with "<Prim prim=Parse/>"."</p>
+        <p>"If the parsing fails, we "<Prim prim=Box/>" "<Prim prim=Both/>" the argument and the error message and put them in an array."</p>
+        <Editor example="f ← ⍣parse[∩□]\nf \"5\"\nf \"dog\""/>
+        <p>"If we don't care about an error and just want to supply a default value, we can use "<Prim prim=Gap/>" to discard the argument and error message. "<Prim prim=Gap/>" is similar to "<Prim prim=Pop/>", except it is a modifier instead of function."</p>
+        <Editor example="f ← ⍣parse⋅⋅0\nf \"5\"\nf \"dog\""/>
+
+        <h2 id="switch">"Switch Functions"</h2>
+        <p>"Switch functions are inline functions that choose a branch based on an index. Like normal inline functions, they are surrounded by "<code>"()"</code>"s. Branches are separated by "<code>"|"</code>"s."</p>
+        <p>"Unlike normal inline functions, switch functions can appear anywhere in code and are called immediately."</p>
+        <Editor example="(3|5) 0"/>
+        <Editor example="(3|5) 1"/>
+        <p>"Switch functions can have as many branches as you want, and they can also be nested."</p>
+        <Editor example="≡((×10|+1|(∘|¯)=2.) ◿3.) [2 9 4 0 8 3]"/>
+
+        <h2 id="if"><Prim prim=If/></h2>
+        <p>"The "<Prim prim=If/>" modifier is similar to a switch function, but it only has two branches. The true branch is the first function and the false branch is the second"</p>
+        <Editor example="f ← ?+×\nf 0 3 5\nf 1 3 5"/>
+        <p>"This may seem useless when switch functions exist, and for scalar conditions, apart from being slightly shorter, is is. However, "<Prim prim=If/>"'s condition can be a list."</p>
+        <Editor example="?+- [1 0 1] [2 2 2] [4 4 4]"/>
+        <p>"While "<Prim prim=If/>" can be chained, it is usually preferable to use a switch function instead."</p>
+
+        <h2 id="assert"><Prim prim=Assert/></h2>
+        <p>"The "<Prim prim=Assert/>" function takes any value and a condition. If the condition is anything but "<code>"1"</code>", the value is thrown as an error that can be caught with "<Prim prim=Try/>"."</p>
+        <Editor example="f ← ⍣(¯⍤10≤10.);\nf 5\nf 12"/>
+        <p>"If the "<Prim prim=Assert/>"ed value is never caught, it becomes an error."</p>
+        <Editor example="f ← ¯⍤\"too big!\"≤10.\nf 5\nf 12"/> // Should fail
+        <p>"Using "<Prim prim=Assert/>" for this purpose will be covered more in the "<A href="/docs/testing">"section on testing"</A>"."</p>
     }
 }
 

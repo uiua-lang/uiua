@@ -87,8 +87,10 @@ fn invert_instr_fragment(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
         &(Val, ([Rotate], [Neg, Rotate])),
         &(Val, IgnoreMany(Flip), ([Add], [Sub])),
         &(Val, ([Sub], [Add])),
+        &(Val, ([Flip, Sub], [Flip, Sub])),
         &(Val, IgnoreMany(Flip), ([Mul], [Div])),
         &(Val, ([Div], [Mul])),
+        &(Val, ([Flip, Div], [Flip, Div])),
         &([Dup, Add], [2.i(), Div.i()]),
         &([Dup, Mul], [Sqrt]),
         &invert_pow_pattern,
@@ -162,8 +164,15 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
         (Flip, $before:expr, $after:expr) => {
             (
                 [Flip, $before],
-                [Flip.i(), Dup.i(), PushTempUnderN(1).i(), $before.i()],
-                [PopTempUnderN(1).i(), Flip.i(), $after.i()],
+                [Dup.i(), PushTempUnderN(1).i(), Flip.i(), $before.i()],
+                [PopTempUnderN(1).i(), $after.i()],
+            )
+        };
+        (Flip, $before:expr) => {
+            (
+                [Flip, $before],
+                [Dup.i(), PushTempUnderN(1).i(), Flip.i(), $before.i()],
+                [PopTempUnderN(1).i(), Flip.i(), $before.i()],
             )
         };
         ($before:expr, $after:expr) => {
@@ -178,9 +187,9 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
     let patterns: &[&dyn UnderPattern] = &[
         &UnderPatternFn(under_both_pattern),
         &bin!(Flip, Add, Sub),
-        &bin!(Flip, Sub, Add),
         &bin!(Flip, Mul, Div),
-        &bin!(Flip, Div, Mul),
+        &bin!(Flip, Sub),
+        &bin!(Flip, Div),
         &bin!(Add, Sub),
         &bin!(Sub, Add),
         &bin!(Mul, Div),

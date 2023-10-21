@@ -234,22 +234,33 @@ impl Parser {
     fn try_binding(&mut self) -> Option<Binding> {
         let start = self.index;
         Some(if let Some(ident) = self.try_ident() {
+            // Check for invalid binding names
             if ident.value.contains('&') {
                 self.errors
                     .push(self.prev_span().sp(ParseError::AmpersandBindingName));
             }
+            // Left arrow
             self.try_spaces();
             if self.try_exact(Equal).is_none() && self.try_exact(LeftArrow).is_none() {
                 self.index = start;
                 return None;
             }
             self.try_spaces();
+            // Signature
             let sig = self.try_signature();
-            let words = self
-                .try_func()
-                .map(|word| vec![word])
-                .or_else(|| self.try_words())
-                .unwrap_or_default();
+            // Words
+            let words = self.try_words().unwrap_or_default();
+            match words.as_slice() {
+                [Sp {
+                    value: Word::Func(func),
+                    ..
+                }] => {
+                    for line in &func.lines {
+                        self.validate_words(line, false);
+                    }
+                }
+                words => self.validate_words(words, false),
+            }
             // Check for uncapitalized binding names
             if ident.value.trim_end_matches('!').chars().count() >= 3
                 && ident.value.chars().next().unwrap().is_ascii_lowercase()
@@ -464,14 +475,6 @@ impl Parser {
         }
         // Insert the first word that was parsed
         items.insert(0, word);
-        // Create identitys
-        for item in &mut items {
-            if let Word::Func(func) = &item.value {
-                if func.lines.is_empty() && func.signature.is_none() {
-                    item.value = Word::Primitive(Primitive::Identity);
-                }
-            }
-        }
         let span = items[0]
             .span
             .clone()
@@ -619,18 +622,13 @@ impl Parser {
             }))
         } else if let Some(spaces) = self.try_spaces() {
             spaces
-        } else if let Some(word) = self.try_func() {
-            match &word.value {
-                Word::Func(func) if func.lines.is_empty() => {
-                    word.span.sp(Word::Primitive(Primitive::Identity))
-                }
-                Word::Switch(_) => word,
-                _ => {
-                    self.errors
-                        .push(word.span.clone().sp(ParseError::FunctionNotAllowed));
-                    word
+        } else if let Some(mut word) = self.try_func() {
+            if let Word::Func(func) = &word.value {
+                if func.lines.is_empty() && func.signature.is_none() {
+                    word.value = Word::Primitive(Primitive::Identity);
                 }
             }
+            word
         } else {
             return None;
         })
@@ -737,6 +735,36 @@ impl Parser {
             self.errors
                 .push(self.expected([Expectation::Term, Expectation::Simple(ascii)]));
             self.prev_span()
+        }
+    }
+    fn validate_words(&mut self, words: &[Sp<Word>], allow_func: bool) {
+        for word in words {
+            match &word.value {
+                Word::Strand(items) => self.validate_words(items, false),
+                Word::Array(arr) => {
+                    for line in &arr.lines {
+                        self.validate_words(line, false);
+                    }
+                }
+                Word::Func(func) => {
+                    if !allow_func {
+                        self.errors
+                            .push(word.span.clone().sp(ParseError::FunctionNotAllowed));
+                    }
+                    for line in &func.lines {
+                        self.validate_words(line, false);
+                    }
+                }
+                Word::Switch(sw) => {
+                    for branch in &sw.branches {
+                        for line in &branch.value.lines {
+                            self.validate_words(line, false);
+                        }
+                    }
+                }
+                Word::Modified(m) => self.validate_words(&m.operands, true),
+                _ => {}
+            }
         }
     }
 }

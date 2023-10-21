@@ -154,7 +154,7 @@ impl<'a> VirtualEnv<'a> {
                     };
                     self.handle_args_outputs(1, outputs)?;
                 }
-                Each | Rows => {
+                Each | Rows | Distribute | Tribute => {
                     let sig = self.pop_func()?.signature();
                     if sig.outputs != 1 {
                         return Err(format!(

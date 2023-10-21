@@ -554,13 +554,13 @@ impl<'a> Formatter<'a> {
                     if i > 0 {
                         self.output.push('|');
                     }
-                    if let Some(sig) = &branch.signature {
-                        self.format_signature(sig.value, branch.lines.len() <= 1);
-                        if branch.lines.is_empty() {
+                    if let Some(sig) = &branch.value.signature {
+                        self.format_signature(sig.value, branch.value.lines.len() <= 1);
+                        if branch.value.lines.is_empty() {
                             self.output.pop();
                         }
                     }
-                    self.format_multiline_words(&branch.lines, false, depth + 1);
+                    self.format_multiline_words(&branch.value.lines, false, depth + 1);
                 }
                 self.output.push(')');
             }
@@ -729,8 +729,8 @@ fn word_is_multiline(word: &Word) -> bool {
                     .any(|words| words.iter().any(|word| word_is_multiline(&word.value)))
         }
         Word::Switch(sw) => sw.branches.iter().any(|br| {
-            br.lines.len() > 1
-                || (br.lines.iter())
+            br.value.lines.len() > 1
+                || (br.value.lines.iter())
                     .any(|words| words.iter().any(|word| word_is_multiline(&word.value)))
         }),
         Word::Ocean(_) => false,

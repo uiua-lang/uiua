@@ -124,7 +124,7 @@ impl fmt::Debug for Func {
 
 #[derive(Debug, Clone)]
 pub struct Switch {
-    pub branches: Vec<Func>,
+    pub branches: Vec<Sp<Func>>,
 }
 
 #[derive(Clone)]

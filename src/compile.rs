@@ -422,7 +422,7 @@ impl Uiua {
                 }
             }
             Word::Func(func) => self.func(func, word.span)?,
-            Word::Switch(sw) => self.switch(sw)?,
+            Word::Switch(sw) => self.switch(sw, word.span, call)?,
             Word::Ocean(prims) => self.ocean(prims, call)?,
             Word::Primitive(p) => self.primitive(p, word.span, call)?,
             Word::Modified(m) => self.modified(*m, call)?,
@@ -510,9 +510,9 @@ impl Uiua {
                 if let Some(declared_sig) = &func.signature {
                     declared_sig.value
                 } else {
-                    return Err(UiuaError::Run(Span::Code(span.clone()).sp(format!(
+                    return Err(span.sp(format!(
                         "Cannot infer function signature: {e}. A signature can be declared after the opening `(`."
-                    ))));
+                    )).into());
                 }
             }
         };
@@ -529,7 +529,32 @@ impl Uiua {
         self.push_instr(Instr::push_func(function));
         Ok(())
     }
-    fn switch(&mut self, sw: Switch) -> UiuaResult {
+    fn switch(&mut self, sw: Switch, span: CodeSpan, call: bool) -> UiuaResult {
+        let count = sw.branches.len();
+        if !call {
+            self.new_functions.push(Vec::new());
+        }
+        for branch in sw.branches {
+            self.func(branch.value, branch.span)?;
+        }
+        let span_idx = self.add_span(span.clone());
+        self.push_instr(Instr::Switch {
+            count,
+            span: span_idx,
+        });
+        if !call {
+            let instrs = self.new_functions.pop().unwrap();
+            let sig = match instrs_signature(&instrs) {
+                Ok(sig) => sig,
+                Err(e) => {
+                    return Err(span.sp(format!(
+                        "Cannot infer function signature: {e}. A signature can be declared after the opening `(`."
+                    )).into());
+                }
+            };
+            let function = Function::new(FunctionId::Anonymous(span), instrs, sig);
+            self.push_instr(Instr::push_func(function));
+        }
         Ok(())
     }
     fn modified(&mut self, modified: Modified, call: bool) -> UiuaResult {

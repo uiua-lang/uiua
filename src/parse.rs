@@ -136,6 +136,8 @@ struct Parser {
     diagnostics: Vec<Diagnostic>,
 }
 
+type FunctionContents = (Option<Sp<Signature>>, Vec<Vec<Sp<Word>>>, Option<CodeSpan>);
+
 impl Parser {
     fn next_token_map<'a, T: 'a>(
         &'a mut self,
@@ -622,6 +624,7 @@ impl Parser {
                 Word::Func(func) if func.lines.is_empty() => {
                     word.span.sp(Word::Primitive(Primitive::Identity))
                 }
+                Word::Switch(_) => word,
                 _ => {
                     self.errors
                         .push(word.span.clone().sp(ParseError::FunctionNotAllowed));
@@ -675,12 +678,12 @@ impl Parser {
             while let Some(start) = self.try_exact(Bar) {
                 let (signature, lines, span) = self.func_contents();
                 let span = span.unwrap_or(start);
-                let id = FunctionId::Anonymous(span);
-                branches.push(Func {
+                let id = FunctionId::Anonymous(span.clone());
+                branches.push(span.sp(Func {
                     id,
                     signature,
                     lines,
-                })
+                }))
             }
             let end = self.expect_close(CloseParen);
             let (signature, lines, first_span) = first;
@@ -694,12 +697,12 @@ impl Parser {
                 }))
             } else {
                 let span = first_span.unwrap_or(start);
-                let id = FunctionId::Anonymous(span);
-                let first = Func {
+                let id = FunctionId::Anonymous(span.clone());
+                let first = span.sp(Func {
                     id,
                     signature,
                     lines,
-                };
+                });
                 branches.insert(0, first);
                 outer_span.sp(Word::Switch(Switch { branches }))
             }
@@ -707,7 +710,7 @@ impl Parser {
             return None;
         })
     }
-    fn func_contents(&mut self) -> (Option<Sp<Signature>>, Vec<Vec<Sp<Word>>>, Option<CodeSpan>) {
+    fn func_contents(&mut self) -> FunctionContents {
         while self.try_exact(Newline).is_some() || self.try_spaces().is_some() {}
         let signature = self.try_signature();
         let lines = self.multiline_words();

@@ -111,13 +111,13 @@ impl<'a> VirtualEnv<'a> {
             | Instr::PopTempUnder { count, .. }
             | Instr::CopyTempInline { count, .. } => self.handle_args_outputs(0, *count)?,
             Instr::PushFunc(f) => self.function_stack.push(Cow::Borrowed(f)),
-            &Instr::Switch(n) => {
-                let mut funcs = Vec::with_capacity(n);
-                for _ in 0..n {
+            &Instr::Switch { count, .. } => {
+                let mut funcs = Vec::with_capacity(count);
+                for _ in 0..count {
                     funcs.push(self.pop_func()?);
                 }
                 match self.pop()? {
-                    BasicValue::Num(i) if i >= 0.0 && i.fract() == 0.0 && (i as usize) < n => {
+                    BasicValue::Num(i) if i >= 0.0 && i.fract() == 0.0 && (i as usize) < count => {
                         let i = i as usize;
                         self.handle_sig(funcs[i].signature())?
                     }
@@ -132,6 +132,11 @@ impl<'a> VirtualEnv<'a> {
                                 win[1].signature()
                             ));
                         }
+                        let sig = funcs
+                            .iter()
+                            .map(|f| f.signature())
+                            .fold(Signature::new(0, 0), |a, b| a.max_with(b));
+                        self.handle_sig(sig)?
                     }
                 }
             }

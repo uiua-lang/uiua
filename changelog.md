@@ -19,9 +19,10 @@ Uiua is not yet stable.
 - Add the [`pierce` `⍆`](https://uiua.org/docs/pierce) modifier, which calls its function and implicitly boxes/unboxes values
 - Add the [`combinate` `◳`](https://uiua.org/docs/combinate) modifier, which is a rank-generic version of [`table` `⊞`](https://uiua.org/docs/table)
 - [`fold` `∧`](https://uiua.org/docs/fold) is now rank-generic and requires a rank list
-- Change [`level` `≑`](https://uiua.org/docs/level)'s glyph to reflect its relationship with [`each` `∵`](https://uiua.org/docs/each), [`rows` `≡`](https://uiua.org/docs/rows), and [`distribute` `∺`](https://uiua.org/docs/distribute). Code using `⍚` will continue to work and will be formatted as `≑`.
+- Add the [`tribute` `≐`](https://uiua.org/docs/tribute) modifier, which is a flipped version of [`distribute` `∺`](https://uiua.org/docs/distribute)
+- Change [`level` `≑`](https://uiua.org/docs/level)'s glyph to reflect its relationship with [`each` `∵`](https://uiua.org/docs/each), [`rows` `≡`](https://uiua.org/docs/rows), [`distribute` `∺`](https://uiua.org/docs/distribute), and [`tribute` `≐`](https://uiua.org/docs/tribute). Code using `⍚` will continue to work and will be formatted as `≑`.
 - Add [`rock` `⋄`](https://uiua.org/docs/rock), [`surface` `~`](https://uiua.org/docs/surface), [`deep` `≊`](https://uiua.org/docs/deep), [`abyss` `≃`](https://uiua.org/docs/abyss), and [`seabed` `∸`](https://uiua.org/docs/seabed), which build rank lists to be used with [`level` `≑`](https://uiua.org/docs/level) and the new rank-generic modifiers
-- Change [`trace` `⸮`](https://uiua.org/docs/trace)'s glyph to let [`water` `~`](https://uiua.org/docs/water) use `~`.
+- Change [`trace` `⸮`](https://uiua.org/docs/trace)'s glyph to let [`surface` `~`](https://uiua.org/docs/surface) use `~`.
 - Change [`match` `≍`](https://uiua.org/docs/match)'s glyph to avoid confusion with the new ocean functions' glyphs. Code using `≅` will continue to work and will be formatted as `≍`.
 - Stack signatures found to be incorrect at runtime produce an error
 ### Website

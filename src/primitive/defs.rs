@@ -1303,6 +1303,9 @@ primitive!(
     ///
     /// Ranks may be specified using [Ocean Notation](/docs/advancedarray#ocean-notation), but this page uses number lists only.
     ///
+    /// ex: ◳0_1(+×10) ,, ↯2_2⇡4 ↯2_4⇡8
+    /// ex: ◳∞_¯1_¯1(▽⊙⊂) 3 [1 2 3] [4 5 6]
+    ///
     /// [table] is equivalent to `combinate``[0 0]`.
     /// [cross] is equivalent to `combinate``[¯1 ¯1]`.
     ([2], Combinate, IteratingModifier, ("combinate", '◳')),

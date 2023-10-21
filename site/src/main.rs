@@ -34,6 +34,7 @@ pub fn main() {
 
 #[component]
 pub fn Site() -> impl IntoView {
+    use Primitive::*;
     provide_meta_context();
 
     // Choose a subtitle
@@ -42,12 +43,12 @@ pub fn Site() -> impl IntoView {
         "An array-oriented tacit programming language".into_view(),
         "A programming language for point-free enjoyers".into_view(),
         "A programming language for variable dislikers".into_view(),
-        view!("What if APL had no "<code>"≺"</code>"?").into_view(),
+        view!("What if APL had no "<code>"ω"</code>"?").into_view(),
         view!("What if BQN had no "<code>"𝕩"</code>"?").into_view(),
         view!("What if LISP had fewer "<code>"()"</code>"s?").into_view(),
         view!("Check out "<a href="https://arraycast.com/">"The Array Cast"</a>).into_view(),
-        "Isn't a stack a sort of array?".into_view(),
         view!(<a href="https://youtu.be/seVSlKazsNk">"Point-Free or Die"</a>).into_view(),
+        view!("Use "<Prim prim=Parse/>" to parse strings into numbers").into_view(),
         view! {
             <div style="font-style: normal">
                 <a href="/docs/advancedstack#planet-notation" style="text-decoration: none">"🌍🪐"</a>" "
@@ -58,9 +59,30 @@ pub fn Site() -> impl IntoView {
             </div>
         }
         .into_view(),
+        view!(<Prim prim=Each/>" is pretty mid").into_view(),
+        view! {
+            <div style="font-style: normal">
+                <a href="/docs/advancedarray#ocean-notation" style="text-decoration: none">"🌊🪸"</a>" "
+                <code style="font-style: normal">
+                    <span class="ocean-function">"⋄~~"</span>
+                </code>
+            </div>
+        }
+        .into_view(),
+        view!("Please use "<Prim prim=Table/>". I am begging you.").into_view(),
         "It's got um...I um...arrays".into_view(),
-        view!(<p style="font-size: 0.9em">"Do you like this page Marshall? (Yes the audio is so cool -"<a href="https://github.com/mlochbaum">"ML"</a>")"</p>).into_view(),
-        "Conor Dyadic Hookstra".into_view(),
+        view! { 
+            <div>
+                <div style="display: flex; gap: 0.5em;">
+                    <div style="font-style: normal"><Prim prim=Try glyph_only=true/><Prim prim=Assert glyph_only=true/></div>
+                    " Dad! Can we go play outside?"
+                </div>
+                <div style="display: flex; gap: 0.5em;">
+                    <div style="font-style: normal"><Prim prim=Repeat glyph_only=true/></div>
+                    " Finish your code challenges first!"
+                </div>
+            </div>
+        }.into_view(),
     ];
     let local_storage = window().local_storage().unwrap().unwrap();
     let mut visits: usize = local_storage
@@ -260,15 +282,15 @@ pub fn Prim(
     }
     if title.is_empty() {
         view! {
-            <A href=href class="prim-code-a">
+            <a href=href class="prim-code-a">
                 <code><span class=span_class>{ symbol }</span>{name}</code>
-            </A>
+            </a>
         }
     } else {
         view! {
-            <A href=href class="prim-code-a">
+            <a href=href class="prim-code-a">
                 <code class="prim-code" data-title=title><span class=span_class>{ symbol }</span>{name}</code>
-            </A>
+            </a>
         }
     }
 }

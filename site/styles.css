@@ -250,7 +250,7 @@ li {
 
 #header-left {
     display: flex;
-    align-items: baseline;
+    align-items: last baseline;
 }
 
 #header-uiua {

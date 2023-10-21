@@ -27,8 +27,8 @@ impl Value {
     fn coerce_to_functions<T, C: FillContext, E: ToString>(
         self,
         other: Self,
-        ctx: C,
-        on_success: impl FnOnce(Array<Boxed>, Array<Boxed>, C) -> Result<T, C::Error>,
+        ctx: &C,
+        on_success: impl FnOnce(Array<Boxed>, Array<Boxed>, &C) -> Result<T, C::Error>,
         on_error: impl FnOnce(&str, &str) -> E,
     ) -> Result<T, C::Error> {
         match (self, other) {
@@ -120,9 +120,9 @@ impl Value {
         self.join_impl(other, env)
     }
     pub fn join_infallible(self, other: Self) -> Self {
-        self.join_impl(other, ()).unwrap()
+        self.join_impl(other, &()).unwrap()
     }
-    fn join_impl<C: FillContext>(mut self, mut other: Self, ctx: C) -> Result<Self, C::Error> {
+    fn join_impl<C: FillContext>(mut self, mut other: Self, ctx: &C) -> Result<Self, C::Error> {
         if ctx.tip_boxes() {
             self.tip();
             other.tip();
@@ -149,7 +149,7 @@ impl Value {
             self.join_impl_impl(other, ctx)
         }
     }
-    fn join_impl_impl<C: FillContext>(self, other: Self, ctx: C) -> Result<Self, C::Error> {
+    fn join_impl_impl<C: FillContext>(self, other: Self, ctx: &C) -> Result<Self, C::Error> {
         Ok(match (self, other) {
             (Value::Num(a), Value::Num(b)) => a.join_impl(b, ctx)?.into(),
             (Value::Byte(a), Value::Byte(b)) => op2_bytes_retry_fill::<_, C>(
@@ -172,7 +172,7 @@ impl Value {
     pub(crate) fn append<C: FillContext>(
         &mut self,
         mut other: Self,
-        ctx: C,
+        ctx: &C,
     ) -> Result<(), C::Error> {
         if ctx.tip_boxes() {
             self.tip();
@@ -192,7 +192,7 @@ impl Value {
             self.append_impl(other, ctx)
         }
     }
-    fn append_impl<C: FillContext>(&mut self, other: Self, ctx: C) -> Result<(), C::Error> {
+    fn append_impl<C: FillContext>(&mut self, other: Self, ctx: &C) -> Result<(), C::Error> {
         match (&mut *self, other) {
             (Value::Num(a), Value::Num(b)) => a.append(b, ctx)?,
             (Value::Byte(a), Value::Byte(b)) => {
@@ -237,9 +237,9 @@ impl<T: ArrayValue> Array<T> {
         self.join_impl(other, env)
     }
     pub fn join_infallible(self, other: Self) -> Self {
-        self.join_impl(other, ()).unwrap()
+        self.join_impl(other, &()).unwrap()
     }
-    fn join_impl<C: FillContext>(mut self, mut other: Self, ctx: C) -> Result<Self, C::Error> {
+    fn join_impl<C: FillContext>(mut self, mut other: Self, ctx: &C) -> Result<Self, C::Error> {
         crate::profile_function!();
         let res = match self.rank().cmp(&other.rank()) {
             Ordering::Less => {
@@ -305,7 +305,7 @@ impl<T: ArrayValue> Array<T> {
         res.validate_shape();
         Ok(res)
     }
-    fn append<C: FillContext>(&mut self, mut other: Self, ctx: C) -> Result<(), C::Error> {
+    fn append<C: FillContext>(&mut self, mut other: Self, ctx: &C) -> Result<(), C::Error> {
         let target_shape = if let Some(fill) = ctx.fill::<T>() {
             while self.rank() <= other.rank() {
                 self.shape.push(1);
@@ -345,13 +345,13 @@ impl Value {
         Ok(self)
     }
     pub fn couple_infallible(mut self, other: Self) -> Self {
-        self.couple_impl(other, ()).unwrap();
+        self.couple_impl(other, &()).unwrap();
         self
     }
     pub(crate) fn couple_impl<C: FillContext>(
         &mut self,
         mut other: Self,
-        ctx: C,
+        ctx: &C,
     ) -> Result<(), C::Error> {
         if ctx.tip_boxes() {
             self.tip();
@@ -367,7 +367,7 @@ impl Value {
             self.couple_impl_impl(other, ctx)
         }
     }
-    fn couple_impl_impl<C: FillContext>(&mut self, other: Self, ctx: C) -> Result<(), C::Error> {
+    fn couple_impl_impl<C: FillContext>(&mut self, other: Self, ctx: &C) -> Result<(), C::Error> {
         match (&mut *self, other) {
             (Value::Num(a), Value::Num(b)) => a.couple_impl(b, ctx)?,
             (Value::Byte(a), Value::Byte(b)) => {
@@ -422,10 +422,10 @@ impl<T: ArrayValue> Array<T> {
         Ok(self)
     }
     pub fn couple_infallible(mut self, other: Self) -> Self {
-        self.couple_impl(other, ()).unwrap();
+        self.couple_impl(other, &()).unwrap();
         self
     }
-    fn couple_impl<C: FillContext>(&mut self, mut other: Self, ctx: C) -> Result<(), C::Error> {
+    fn couple_impl<C: FillContext>(&mut self, mut other: Self, ctx: &C) -> Result<(), C::Error> {
         crate::profile_function!();
         if self.shape != other.shape {
             if let Some(fill) = ctx.fill::<T>() {
@@ -475,9 +475,9 @@ impl Value {
         V::Item: Into<Value>,
         V::IntoIter: ExactSizeIterator,
     {
-        Self::from_row_values_impl(values.into_iter().map(Into::into), ()).unwrap()
+        Self::from_row_values_impl(values.into_iter().map(Into::into), &()).unwrap()
     }
-    fn from_row_values_impl<V, C>(values: V, ctx: C) -> Result<Self, C::Error>
+    fn from_row_values_impl<V, C>(values: V, ctx: &C) -> Result<Self, C::Error>
     where
         V: IntoIterator<Item = Value>,
         V::IntoIter: ExactSizeIterator,
@@ -513,12 +513,12 @@ impl<T: ArrayValue> Array<T> {
     }
     #[track_caller]
     pub fn from_row_arrays_infallible(values: impl IntoIterator<Item = Self>) -> Self {
-        Self::from_row_arrays_impl(values, ()).unwrap()
+        Self::from_row_arrays_impl(values, &()).unwrap()
     }
     #[track_caller]
     fn from_row_arrays_impl<C: FillContext>(
         values: impl IntoIterator<Item = Self>,
-        ctx: C,
+        ctx: &C,
     ) -> Result<Self, C::Error> {
         let mut row_values = values.into_iter();
         let Some(mut value) = row_values.next() else {

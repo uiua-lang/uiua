@@ -10,7 +10,7 @@ use std::{
 
 use crate::{array::*, cowslice::CowSlice, Uiua, UiuaError, UiuaResult};
 
-use super::{fill_array_shapes, FillContext};
+use super::fill_array_shapes;
 
 #[allow(clippy::len_without_is_empty)]
 pub trait Arrayish {

@@ -36,43 +36,24 @@ fn max_shape(a: &[usize], b: &[usize]) -> Shape {
     new_shape
 }
 
-pub trait FillContext: Copy {
+pub trait FillContext {
     type Error;
-    fn error(self, msg: impl ToString) -> Self::Error;
-    fn tip_boxes(self) -> bool;
-    fn fill<T: ArrayValue>(self) -> Option<T>;
+    fn error(&self, msg: impl ToString) -> Self::Error;
+    fn tip_boxes(&self) -> bool;
+    fn fill<T: ArrayValue>(&self) -> Option<T>;
     fn fill_error(error: Self::Error) -> Self::Error;
     fn is_fill_error(error: &Self::Error) -> bool;
 }
 
-impl FillContext for &Uiua {
+impl FillContext for Uiua {
     type Error = UiuaError;
-    fn error(self, msg: impl ToString) -> Self::Error {
+    fn error(&self, msg: impl ToString) -> Self::Error {
         self.error(msg)
     }
-    fn tip_boxes(self) -> bool {
+    fn tip_boxes(&self) -> bool {
         self.tip_boxes()
     }
-    fn fill<T: ArrayValue>(self) -> Option<T> {
-        T::get_fill(self)
-    }
-    fn fill_error(error: Self::Error) -> Self::Error {
-        error.fill()
-    }
-    fn is_fill_error(error: &Self::Error) -> bool {
-        error.is_fill()
-    }
-}
-
-impl FillContext for &&mut Uiua {
-    type Error = UiuaError;
-    fn error(self, msg: impl ToString) -> Self::Error {
-        (**self).error(msg)
-    }
-    fn tip_boxes(self) -> bool {
-        (**self).tip_boxes()
-    }
-    fn fill<T: ArrayValue>(self) -> Option<T> {
+    fn fill<T: ArrayValue>(&self) -> Option<T> {
         T::get_fill(self)
     }
     fn fill_error(error: Self::Error) -> Self::Error {
@@ -85,13 +66,13 @@ impl FillContext for &&mut Uiua {
 
 impl FillContext for () {
     type Error = Infallible;
-    fn error(self, msg: impl ToString) -> Self::Error {
+    fn error(&self, msg: impl ToString) -> Self::Error {
         panic!("{}", msg.to_string())
     }
-    fn tip_boxes(self) -> bool {
+    fn tip_boxes(&self) -> bool {
         false
     }
-    fn fill<T: ArrayValue>(self) -> Option<T> {
+    fn fill<T: ArrayValue>(&self) -> Option<T> {
         None
     }
     fn fill_error(error: Self::Error) -> Self::Error {
@@ -106,7 +87,7 @@ pub(crate) fn shape_prefixes_match(a: &[usize], b: &[usize]) -> bool {
     a.iter().zip(b.iter()).all(|(a, b)| a == b)
 }
 
-pub(crate) fn fill_value_shapes<C>(a: &mut Value, b: &mut Value, ctx: C) -> Result<(), C::Error>
+pub(crate) fn fill_value_shapes<C>(a: &mut Value, b: &mut Value, ctx: &C) -> Result<(), C::Error>
 where
     C: FillContext,
 {
@@ -133,7 +114,7 @@ where
 pub(crate) fn fill_array_shapes<A, B, C>(
     a: &mut Array<A>,
     b: &mut Array<B>,
-    ctx: C,
+    ctx: &C,
 ) -> Result<(), C::Error>
 where
     A: ArrayValue,

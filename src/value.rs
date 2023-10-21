@@ -1110,7 +1110,7 @@ impl ValueBuilder {
             capacity,
         }
     }
-    pub fn add_row<C: FillContext>(&mut self, mut row: Value, ctx: C) -> Result<(), C::Error> {
+    pub fn add_row<C: FillContext>(&mut self, mut row: Value, ctx: &C) -> Result<(), C::Error> {
         if let Some(value) = &mut self.value {
             value.append(row, ctx)?;
         } else {

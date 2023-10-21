@@ -97,7 +97,7 @@ fn each1_0(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
 }
 
 fn each2_1(f: Arc<Function>, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult {
-    fill_value_shapes(&mut xs, &mut ys, &env)?;
+    fill_value_shapes(&mut xs, &mut ys, env)?;
     let xs_shape = xs.shape().to_vec();
     let ys_shape = ys.shape().to_vec();
     let xs_values: Vec<_> = xs.into_flat_values().collect();
@@ -123,7 +123,7 @@ fn each2_1(f: Arc<Function>, mut xs: Value, mut ys: Value, env: &mut Uiua) -> Ui
 }
 
 fn each2_0(f: Arc<Function>, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult {
-    fill_value_shapes(&mut xs, &mut ys, &env)?;
+    fill_value_shapes(&mut xs, &mut ys, env)?;
     let xs_shape = xs.shape().to_vec();
     let ys_shape = ys.shape().to_vec();
     let xs_values: Vec<_> = xs.into_flat_values().collect();
@@ -245,10 +245,10 @@ fn rows1_1(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
     for row in old_rows.by_ref() {
         env.push(row);
         let broke = env.call_catch_break(f.clone())?;
-        new_rows.add_row(env.pop("rows' function result")?, &env)?;
+        new_rows.add_row(env.pop("rows' function result")?, env)?;
         if broke {
             for row in old_rows {
-                new_rows.add_row(row, &env)?;
+                new_rows.add_row(row, env)?;
             }
             break;
         }
@@ -269,7 +269,7 @@ fn rows1_0(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
 }
 
 fn rows2_1(f: Arc<Function>, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult {
-    fill_value_shapes(&mut xs, &mut ys, &env)?;
+    fill_value_shapes(&mut xs, &mut ys, env)?;
     if xs.row_count() != ys.row_count() {
         return Err(env.error(format!(
             "Cannot rows arrays with different number of rows {} and {}",
@@ -291,7 +291,7 @@ fn rows2_1(f: Arc<Function>, mut xs: Value, mut ys: Value, env: &mut Uiua) -> Ui
 }
 
 fn rows2_0(f: Arc<Function>, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult {
-    fill_value_shapes(&mut xs, &mut ys, &env)?;
+    fill_value_shapes(&mut xs, &mut ys, env)?;
     if xs.row_count() != ys.row_count() {
         return Err(env.error(format!(
             "Cannot rows arrays with different number of rows {} and {}",

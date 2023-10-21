@@ -3,6 +3,7 @@ Within a each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
 - Make fill dyadic again
+- Under dyadic math
 - `under` aggregating `group` and `partition`
 - Add channels for spawned threads
 - Sift+delete to delete whole lines

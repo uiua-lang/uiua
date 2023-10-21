@@ -10,7 +10,7 @@ use std::{
 
 use crate::{array::*, cowslice::CowSlice, Uiua, UiuaError, UiuaResult};
 
-use super::{max_shape, FillContext};
+use super::{fill_array_shapes, FillContext};
 
 #[allow(clippy::len_without_is_empty)]
 pub trait Arrayish {
@@ -28,9 +28,6 @@ pub trait Arrayish {
     }
     fn rows(&self) -> ChunksExact<Self::Value> {
         self.data().chunks_exact(self.row_len().max(1))
-    }
-    fn shape_prefixes_match(&self, other: &impl Arrayish) -> bool {
-        self.shape().iter().zip(other.shape()).all(|(a, b)| a == b)
     }
 }
 
@@ -123,74 +120,6 @@ where
     }
 }
 
-fn fill_shapes<A, B, C>(a: &mut Array<A>, b: &mut Array<B>, ctx: C) -> Result<(), C::Error>
-where
-    A: ArrayValue,
-    B: ArrayValue,
-    C: FillContext,
-{
-    if !a.shape_prefixes_match(b) {
-        // Fill in missing rows
-        match a.row_count().cmp(&b.row_count()) {
-            Ordering::Less => {
-                if let Some(fill) = ctx.fill() {
-                    let mut target_shape = a.shape().to_vec();
-                    target_shape[0] = b.row_count();
-                    a.fill_to_shape(&target_shape, fill);
-                }
-            }
-            Ordering::Greater => {
-                if let Some(fill) = ctx.fill() {
-                    let mut target_shape = b.shape().to_vec();
-                    target_shape[0] = a.row_count();
-                    b.fill_to_shape(&target_shape, fill);
-                }
-            }
-            Ordering::Equal => {}
-        }
-        // Fill in missing dimensions
-        if !a.shape_prefixes_match(b) {
-            match a.rank().cmp(&b.rank()) {
-                Ordering::Less => {
-                    if let Some(fill) = ctx.fill() {
-                        let mut target_shape = a.shape.clone();
-                        target_shape.insert(0, b.row_count());
-                        a.fill_to_shape(&target_shape, fill);
-                    }
-                }
-                Ordering::Greater => {
-                    if let Some(fill) = ctx.fill() {
-                        let mut target_shape = b.shape.clone();
-                        target_shape.insert(0, a.row_count());
-                        b.fill_to_shape(&target_shape, fill);
-                    }
-                }
-                Ordering::Equal => {
-                    let target_shape = max_shape(a.shape(), b.shape());
-                    if a.shape() != &*target_shape {
-                        if let Some(fill) = ctx.fill() {
-                            a.fill_to_shape(&target_shape, fill);
-                        }
-                    }
-                    if b.shape() != &*target_shape {
-                        if let Some(fill) = ctx.fill() {
-                            b.fill_to_shape(&target_shape, fill);
-                        }
-                    }
-                }
-            }
-            if !a.shape_prefixes_match(b) {
-                return Err(C::fill_error(ctx.error(format!(
-                    "Shapes {} and {} do not match",
-                    a.format_shape(),
-                    b.format_shape()
-                ))));
-            }
-        }
-    }
-    Ok(())
-}
-
 pub fn bin_pervade<A, B, C, F>(
     mut a: Array<A>,
     mut b: Array<B>,
@@ -204,7 +133,7 @@ where
     F: PervasiveFn<A, B, Output = C> + Clone,
     F::Error: Into<UiuaError>,
 {
-    fill_shapes(&mut a, &mut b, env)?;
+    fill_array_shapes(&mut a, &mut b, env)?;
     let shape = Shape::from(a.shape().max(b.shape()));
     let mut data = CowSlice::with_capacity(a.flat_len().max(b.flat_len()));
     bin_pervade_recursive(&a, &b, &mut data, env, f).map_err(Into::into)?;
@@ -265,7 +194,7 @@ pub fn bin_pervade_mut<T>(
 where
     T: ArrayValue + Copy,
 {
-    fill_shapes(a, &mut b, env)?;
+    fill_array_shapes(a, &mut b, env)?;
     let ash = a.shape.as_slice();
     let bsh = b.shape.as_slice();
     // Try to avoid copying when possible

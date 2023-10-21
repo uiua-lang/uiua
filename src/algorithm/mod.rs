@@ -1,9 +1,10 @@
 //! Algorithms for performing operations on arrays
 
-use std::convert::Infallible;
+use std::{cmp::Ordering, convert::Infallible};
 
 use crate::{
     array::{Array, ArrayValue, Shape},
+    value::Value,
     Uiua, UiuaError, UiuaResult,
 };
 
@@ -99,6 +100,106 @@ impl FillContext for () {
     fn is_fill_error(error: &Self::Error) -> bool {
         match *error {}
     }
+}
+
+pub(crate) fn shape_prefixes_match(a: &[usize], b: &[usize]) -> bool {
+    a.iter().zip(b.iter()).all(|(a, b)| a == b)
+}
+
+pub(crate) fn fill_value_shapes<C>(a: &mut Value, b: &mut Value, ctx: C) -> Result<(), C::Error>
+where
+    C: FillContext,
+{
+    match (a, b) {
+        (Value::Num(a), Value::Num(b)) => fill_array_shapes(a, b, ctx),
+        (Value::Num(a), Value::Byte(b)) => fill_array_shapes(a, b, ctx),
+        (Value::Num(a), Value::Char(b)) => fill_array_shapes(a, b, ctx),
+        (Value::Num(a), Value::Box(b)) => fill_array_shapes(a, b, ctx),
+        (Value::Byte(a), Value::Num(b)) => fill_array_shapes(a, b, ctx),
+        (Value::Byte(a), Value::Byte(b)) => fill_array_shapes(a, b, ctx),
+        (Value::Byte(a), Value::Char(b)) => fill_array_shapes(a, b, ctx),
+        (Value::Byte(a), Value::Box(b)) => fill_array_shapes(a, b, ctx),
+        (Value::Char(a), Value::Num(b)) => fill_array_shapes(a, b, ctx),
+        (Value::Char(a), Value::Byte(b)) => fill_array_shapes(a, b, ctx),
+        (Value::Char(a), Value::Char(b)) => fill_array_shapes(a, b, ctx),
+        (Value::Char(a), Value::Box(b)) => fill_array_shapes(a, b, ctx),
+        (Value::Box(a), Value::Num(b)) => fill_array_shapes(a, b, ctx),
+        (Value::Box(a), Value::Byte(b)) => fill_array_shapes(a, b, ctx),
+        (Value::Box(a), Value::Char(b)) => fill_array_shapes(a, b, ctx),
+        (Value::Box(a), Value::Box(b)) => fill_array_shapes(a, b, ctx),
+    }
+}
+
+pub(crate) fn fill_array_shapes<A, B, C>(
+    a: &mut Array<A>,
+    b: &mut Array<B>,
+    ctx: C,
+) -> Result<(), C::Error>
+where
+    A: ArrayValue,
+    B: ArrayValue,
+    C: FillContext,
+{
+    if !shape_prefixes_match(&a.shape, &b.shape) {
+        // Fill in missing rows
+        match a.row_count().cmp(&b.row_count()) {
+            Ordering::Less => {
+                if let Some(fill) = ctx.fill() {
+                    let mut target_shape = a.shape().to_vec();
+                    target_shape[0] = b.row_count();
+                    a.fill_to_shape(&target_shape, fill);
+                }
+            }
+            Ordering::Greater => {
+                if let Some(fill) = ctx.fill() {
+                    let mut target_shape = b.shape().to_vec();
+                    target_shape[0] = a.row_count();
+                    b.fill_to_shape(&target_shape, fill);
+                }
+            }
+            Ordering::Equal => {}
+        }
+        // Fill in missing dimensions
+        if !shape_prefixes_match(&a.shape, &b.shape) {
+            match a.rank().cmp(&b.rank()) {
+                Ordering::Less => {
+                    if let Some(fill) = ctx.fill() {
+                        let mut target_shape = a.shape.clone();
+                        target_shape.insert(0, b.row_count());
+                        a.fill_to_shape(&target_shape, fill);
+                    }
+                }
+                Ordering::Greater => {
+                    if let Some(fill) = ctx.fill() {
+                        let mut target_shape = b.shape.clone();
+                        target_shape.insert(0, a.row_count());
+                        b.fill_to_shape(&target_shape, fill);
+                    }
+                }
+                Ordering::Equal => {
+                    let target_shape = max_shape(a.shape(), b.shape());
+                    if a.shape() != &*target_shape {
+                        if let Some(fill) = ctx.fill() {
+                            a.fill_to_shape(&target_shape, fill);
+                        }
+                    }
+                    if b.shape() != &*target_shape {
+                        if let Some(fill) = ctx.fill() {
+                            b.fill_to_shape(&target_shape, fill);
+                        }
+                    }
+                }
+            }
+            if !shape_prefixes_match(&a.shape, &b.shape) {
+                return Err(C::fill_error(ctx.error(format!(
+                    "Shapes {} and {} do not match",
+                    a.format_shape(),
+                    b.format_shape()
+                ))));
+            }
+        }
+    }
+    Ok(())
 }
 
 /// If a function fails on a byte array because no fill byte is defined,

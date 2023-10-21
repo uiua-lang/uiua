@@ -14,6 +14,8 @@ use crate::{
     Uiua, UiuaResult,
 };
 
+use super::fill_value_shapes;
+
 pub fn each(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
@@ -94,7 +96,8 @@ fn each1_0(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn each2_1(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+fn each2_1(f: Arc<Function>, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult {
+    fill_value_shapes(&mut xs, &mut ys, &env)?;
     let xs_shape = xs.shape().to_vec();
     let ys_shape = ys.shape().to_vec();
     let xs_values: Vec<_> = xs.into_flat_values().collect();
@@ -119,7 +122,8 @@ fn each2_1(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult
     Ok(())
 }
 
-fn each2_0(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+fn each2_0(f: Arc<Function>, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult {
+    fill_value_shapes(&mut xs, &mut ys, &env)?;
     let xs_shape = xs.shape().to_vec();
     let ys_shape = ys.shape().to_vec();
     let xs_values: Vec<_> = xs.into_flat_values().collect();
@@ -264,7 +268,8 @@ fn rows1_0(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn rows2_1(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+fn rows2_1(f: Arc<Function>, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult {
+    fill_value_shapes(&mut xs, &mut ys, &env)?;
     if xs.row_count() != ys.row_count() {
         return Err(env.error(format!(
             "Cannot rows arrays with different number of rows {} and {}",
@@ -285,7 +290,8 @@ fn rows2_1(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult
     Ok(())
 }
 
-fn rows2_0(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+fn rows2_0(f: Arc<Function>, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult {
+    fill_value_shapes(&mut xs, &mut ys, &env)?;
     if xs.row_count() != ys.row_count() {
         return Err(env.error(format!(
             "Cannot rows arrays with different number of rows {} and {}",

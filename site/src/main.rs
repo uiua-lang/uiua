@@ -48,7 +48,6 @@ pub fn Site() -> impl IntoView {
         view!("What if LISP had fewer "<code>"()"</code>"s?").into_view(),
         view!("Check out "<a href="https://arraycast.com/">"The Array Cast"</a>).into_view(),
         view!(<a href="https://youtu.be/seVSlKazsNk">"Point-Free or Die"</a>).into_view(),
-        view!("Use "<Prim prim=Parse/>" to parse strings into numbers").into_view(),
         view! {
             <div style="font-style: normal">
                 <a href="/docs/advancedstack#planet-notation" style="text-decoration: none">"🌍🪐"</a>" "
@@ -59,7 +58,6 @@ pub fn Site() -> impl IntoView {
             </div>
         }
         .into_view(),
-        view!(<Prim prim=Each/>" is pretty mid").into_view(),
         view! {
             <div style="font-style: normal">
                 <a href="/docs/advancedarray#ocean-notation" style="text-decoration: none">"🌊🪸"</a>" "
@@ -69,9 +67,8 @@ pub fn Site() -> impl IntoView {
             </div>
         }
         .into_view(),
-        view!("Please use "<Prim prim=Table/>". I am begging you.").into_view(),
         "It's got um...I um...arrays".into_view(),
-        view! { 
+        view! {
             <div>
                 <div style="display: flex; gap: 0.5em;">
                     <div style="font-style: normal"><Prim prim=Try glyph_only=true/><Prim prim=Assert glyph_only=true/></div>
@@ -185,7 +182,7 @@ pub fn MainPage() -> impl IntoView {
                 </div>
                 <div>
                     <h2>"Syntactic Simplicity"</h2>
-                    <p>"Uiua has a simple, minimal-context, grammar. Code runs from "<A href="/rtl">"right to left"</A>", top to bottom, with only "<A href="/docs/functions#modifiers">"one precedence rule"</A>". As operators are to the left of their operands, Uiua code reads a little bit like a Lisp, but with fewer parentheses."</p>
+                    <p>"Uiua has a simple, context-free, LL(2) grammar. Code runs from "<A href="/rtl">"right to left"</A>", top to bottom, with only "<A href="/docs/functions#modifiers">"one precedence rule"</A>". As operators are to the left of their operands, Uiua code reads a little bit like a Lisp, but with fewer parentheses."</p>
                 </div>
                 <div>
                     <h2>"System APIs"</h2>

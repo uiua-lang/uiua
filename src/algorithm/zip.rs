@@ -96,8 +96,7 @@ fn each1_0(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn each2_1(f: Arc<Function>, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult {
-    fill_value_shapes(&mut xs, &mut ys, env)?;
+fn each2_1(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     let xs_shape = xs.shape().to_vec();
     let ys_shape = ys.shape().to_vec();
     let xs_values: Vec<_> = xs.into_flat_values().collect();
@@ -122,8 +121,7 @@ fn each2_1(f: Arc<Function>, mut xs: Value, mut ys: Value, env: &mut Uiua) -> Ui
     Ok(())
 }
 
-fn each2_0(f: Arc<Function>, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult {
-    fill_value_shapes(&mut xs, &mut ys, env)?;
+fn each2_0(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     let xs_shape = xs.shape().to_vec();
     let ys_shape = ys.shape().to_vec();
     let xs_values: Vec<_> = xs.into_flat_values().collect();

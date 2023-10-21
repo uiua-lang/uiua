@@ -47,7 +47,7 @@ pub fn Tour() -> impl IntoView {
         <p>"By the way, since "<code>"-"</code>" is for "<Prim prim=Sub/>", use "<code>"`"</code>" for negative numbers. The formatter will turn in into a nice "<code>"¯"</code>"."</p>
         <Editor example="`10"/>
         <p>"You can inspect the top value on the stack at any point with "<Prim prim=Trace/>"."</p>
-        <Editor example="+1⸮×2⸮×.-3 5"/>
+        <Editor example="+1⸮×2trac×.-3 5"/>
 
         <h2 id="arrays">"Arrays"</h2>
         <p>"So far, we have only talked about the stack part of Uiua. Now, let's talk about the most important part: Arrays!"</p>
@@ -126,7 +126,7 @@ pub fn Tour() -> impl IntoView {
         <Editor example="≡'⊢⇌ .[1_2_3 4_5_6 7_8_9]"/>
 
         <h2 id="fill-and-nested-arrays"><Prim prim=Fill/>" and Nested Arrays"</h2>
-        <p>"Here is an array that cannot be constructed normally because its rows have different "<Prim prim=Len/>"s."</p>
+        <p>"Here is an array that cannot be constructed normally because its rows have different "<Prim prim=Shape/>"s."</p>
         <Editor example="[1 2_3_4 5_6]"/> // Should fail
         <p>"One way to make this array work is to use the "<Prim prim=Fill/>" modifier. You give it a fill value and a function or array that would fail with mismatched shapes, and it will fill in the missing values with the fill value."</p>
         <Editor example="⬚0[1 2_3_4 5_6]"/>
@@ -134,7 +134,7 @@ pub fn Tour() -> impl IntoView {
         <Editor example="⬚π↙ 5 [1 2 3]"/>
         <br/>
         <p><Prim prim=Fill/>" is nice, but you don't always want to fill in the missing elements. Sometimes you need to mix values of different shapes or types in an array. To understand Uiua's solution to this problem, you must first understand its "<em>"array model"</em>"."</p>
-        <p>"Uiua's array model is similar to that of J. Arrays must be rectangular and cannot mix types. However, the "<Prim prim=Box/>" function can turn any into a "<em>"box"</em>" element that can be put in an array with other boxes. That value can then be extracted with "<Prim prim=Unbox/>". This is similar to J's boxes."</p>
+        <p>"Uiua has what is called a "<em>"flat"</em>" array model. Arrays must be rectangular and cannot mix types. However, the "<Prim prim=Box/>" function can turn any array into a "<em>"box"</em>" element that can be put in an array with other boxes. That value can then be extracted with "<Prim prim=Unbox/>"."</p>
         <Editor example="[□1 □2_3_4 □5_6]"/>
         <p>"Having to use "<Prim prim=Box/>" on every value is kind of annoying, so there is a special syntax for "<Prim prim=Box/>" arrays that uses "<code>"{}"</code>"s instead of "<code>"[]"</code>"s."</p>
         <Editor example="{1 2_3_4 5_6}"/>

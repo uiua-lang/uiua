@@ -1024,52 +1024,6 @@ primitive!(
     ///
     /// [partition] is closely related to [group].
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
-    /// Set the fill value for a function
-    ///
-    /// By default, some operations require that arrays' [shape]s are in some way compatible.
-    /// [fill] allows you to specify a value that will be used to extend the shape of one or both of the operands to make an operation succeed.
-    /// The function is modified to take a fill value which will be used to fill in shapes.
-    ///
-    /// [fill] allows you to set default values for [take].
-    /// ex: ⬚0↙ 7 [8 3 9 2 1]
-    /// ex: ⬚π↙ ¯6 [1 2 3]
-    /// ex: ⬚42↙ 4 [1_2_3 4_5_6]
-    ///
-    /// Using [fill] with [couple] will fill both arrays until their shapes match.
-    /// ex: ⬚0⊟ 1 2_3
-    /// ex: ⬚0⊟ 1_2 3_4_5_6
-    /// ex: ⬚0⊟ 1_2_3 [4_5 6_7]
-    ///
-    /// Using [fill] with [join] will fill both arrays until the [join] makes sense.
-    /// ex: ⬚0⊂ 1 [2_3_4 5_6_7]
-    /// ex: ⬚0⊂ [1_2 3_4] 5_6_7
-    ///
-    /// Because array construction is implemented in terms of [couple] and [join], [fill] can be used when building arrays.
-    /// ex: ⬚0[1 2_3 4_5_6]
-    ///
-    /// [fill] also works with pervasive operations where the shapes don't match.
-    /// ex: ⬚0+ 1_2_3 10_9_8_7_6_5
-    ///
-    /// Many functions, like [scan] and [partition], implicitly build arrays and require compatible shapes.
-    /// [fill] can be used with them as well. In some cases, this prevents the need to use [box].
-    /// ex: ⬚0\⊂ 1_2_3_4_5
-    /// ex: ⬚@ ⊜∘≠@ . "No □ needed!"
-    ///
-    /// [fill] will prevent [pick] and [select] from throwing an error if an index is out of bounds.
-    /// ex: ⬚∞⊏ 3_7_0 [8 3 9 2 0]
-    ///
-    /// [fill] allows the list of counts for [keep] to be shorter than the kept array.
-    /// This is especially useful when used with functions like [windows] or [find] which make an array shorter than their input.
-    /// ex: ⬚0▽ ≡/>◫2. [1 8 0 2 7 2 3]
-    ///
-    /// [fill][reshape] fills in the shape with the fill element instead of cycling the data.
-    /// ex:   ↯ 3_5 ⇡9
-    ///   : ⬚0↯ 3_5 ⇡9
-    ///
-    /// To [fill] with a value that is on the stack, use [identity].
-    /// ex: F = ⬚∘+
-    ///   : F 100 [1 2 3 4] [5 6]
-    ([2], Fill, OtherModifier, ("fill", '⬚')),
     /// Apply a function with implicit (un)boxing
     ///
     /// When working with [box]ed data, [tip] will automatically [unbox] the data for functions like [join].
@@ -1231,6 +1185,52 @@ primitive!(
     /// However, this function whose `g` returns *2* values *does* use [both] when undoing, in this case re-[box]ing the outputs.
     /// ex: ⍜∩⊔(⊂⊢,) □[1 2 3] □[4 5 6 7 8]
     ([2], Under, OtherModifier, ("under", '⍜')),
+    /// Set the fill value for a function
+    ///
+    /// By default, some operations require that arrays' [shape]s are in some way compatible.
+    /// [fill] allows you to specify a value that will be used to extend the shape of one or both of the operands to make an operation succeed.
+    /// The function is modified to take a fill value which will be used to fill in shapes.
+    ///
+    /// [fill] allows you to set default values for [take].
+    /// ex: ⬚0↙ 7 [8 3 9 2 1]
+    /// ex: ⬚π↙ ¯6 [1 2 3]
+    /// ex: ⬚42↙ 4 [1_2_3 4_5_6]
+    ///
+    /// Using [fill] with [couple] will fill both arrays until their shapes match.
+    /// ex: ⬚0⊟ 1 2_3
+    /// ex: ⬚0⊟ 1_2 3_4_5_6
+    /// ex: ⬚0⊟ 1_2_3 [4_5 6_7]
+    ///
+    /// Using [fill] with [join] will fill both arrays until the [join] makes sense.
+    /// ex: ⬚0⊂ 1 [2_3_4 5_6_7]
+    /// ex: ⬚0⊂ [1_2 3_4] 5_6_7
+    ///
+    /// Because array construction is implemented in terms of [couple] and [join], [fill] can be used when building arrays.
+    /// ex: ⬚0[1 2_3 4_5_6]
+    ///
+    /// [fill] also works with pervasive operations where the shapes don't match.
+    /// ex: ⬚0+ 1_2_3 10_9_8_7_6_5
+    ///
+    /// Many functions, like [scan] and [partition], implicitly build arrays and require compatible shapes.
+    /// [fill] can be used with them as well. In some cases, this prevents the need to use [box].
+    /// ex: ⬚0\⊂ 1_2_3_4_5
+    /// ex: ⬚@ ⊜∘≠@ . "No □ needed!"
+    ///
+    /// [fill] will prevent [pick] and [select] from throwing an error if an index is out of bounds.
+    /// ex: ⬚∞⊏ 3_7_0 [8 3 9 2 0]
+    ///
+    /// [fill] allows the list of counts for [keep] to be shorter than the kept array.
+    /// This is especially useful when used with functions like [windows] or [find] which make an array shorter than their input.
+    /// ex: ⬚0▽ ≡/>◫2. [1 8 0 2 7 2 3]
+    ///
+    /// [fill][reshape] fills in the shape with the fill element instead of cycling the data.
+    /// ex:   ↯ 3_5 ⇡9
+    ///   : ⬚0↯ 3_5 ⇡9
+    ///
+    /// To [fill] with a value that is on the stack, use [identity].
+    /// ex: F = ⬚∘+
+    ///   : F 100 [1 2 3 4] [5 6]
+    ([2], Fill, OtherModifier, ("fill", '⬚')),
     /// Apply a function at a different array depth
     ///
     /// Expects a rank to operate on, a function, and an array.

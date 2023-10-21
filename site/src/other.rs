@@ -216,10 +216,10 @@ pub fn Audio() -> impl IntoView {
         <p>"My favorite way to make multiple notes is to "<Prim prim=Table/>" different frequencies with the time array."</p>
         <p>"Then, if you want a chord, you can use "<Prim prim=Reduce glyph_only=true/><Prim prim=Add glyph_only=true/>" to add them together."</p>
         <p>"If you want sequence instead, you can use "<Prim prim=Reduce glyph_only=true/><Prim prim=Join glyph_only=true/>"."</p>
-        <p>"You can calculate freqencies "<code>"f"</code>" that are a certain number of half-steps "<code>"n"</code>" from another with the formula "<code>"f×2^(n/12)"</code>" which can be written in Uiua as"<code><Prim prim=Mul glyph_only=true/>"f"<Prim prim=Exp glyph_only=true/>"2"<Prim prim=Div glyph_only=true/>"12 n"</code>"."</p>
+        <p>"You can calculate freqencies "<code>"f"</code>" that are a certain number of half-steps "<code>"n"</code>" from another with the formula "<code>"f×2^(n/12)"</code>" which can be written in Uiua as"<code><Prim prim=Mul glyph_only=true/>"f"<Prim prim=Pow glyph_only=true/><Prim prim=Flip glyph_only=true/>"2"<Prim prim=Div glyph_only=true/>"12 n"</code>"."</p>
         <p>"In this example, we make both a chord and a sequence from the same notes. We use "<Prim prim=Sin glyph_only=true/><Prim prim=Mul glyph_only=true/><Prim prim=Tau glyph_only=true/>" to make a sine wave instead of a saw wave."</p>
         <Editor example="\
-f ← ×220ⁿ2÷12 [0 4 7]
+f ← ×220ⁿ∶2÷12 [0 4 7]
 s ← ○×τ⊞×f ÷∶⇡.&asr
 ÷⧻f/+s
 ÷⧻f/⊂s"/>

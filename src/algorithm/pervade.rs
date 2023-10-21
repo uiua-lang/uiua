@@ -678,22 +678,22 @@ pub mod atan2 {
     }
 }
 
-pub mod exp {
+pub mod pow {
     use super::*;
     pub fn num_num(a: f64, b: f64) -> f64 {
-        a.powf(b)
+        b.powf(a)
     }
     pub fn byte_byte(a: u8, b: u8) -> f64 {
-        f64::from(a).powf(f64::from(b))
+        f64::from(b).powf(f64::from(a))
     }
     pub fn byte_num(a: u8, b: f64) -> f64 {
-        f64::from(a).powf(b)
+        b.powf(f64::from(a))
     }
     pub fn num_byte(a: f64, b: u8) -> f64 {
-        a.powf(f64::from(b))
+        f64::from(b).powf(a)
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot exponentiate {a} with {b}"))
+        env.error(format!("Cannot get the power of {a} to {b}"))
     }
 }
 

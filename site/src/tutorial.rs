@@ -156,7 +156,7 @@ fn TutorialBasic() -> impl IntoView {
         <Editor example="# Click Run to format!\n%6 *3 8" help={&["", "⇡Click⇡"]}/>
         <p>"Most built-in functions have names you can type rather than symbols. Formatting works on these too. "<em><strong>"This is the primary way of entering Uiua's glyphs."</strong></em></p>
         <p>"Try formatting the lines below by clicking "<strong>"Run"</strong>"."</p>
-        <Editor examples=&{["max ", "sqrt ", "10 ", "mod ", "10 ", "exp ", "8 ", "2"]}/>
+        <Editor examples=&{["max ", "sqrt ", "10 ", "mod ", "10 ", "pow ", "2 ", "8"]}/>
         <Editor example="abs +`1 `2"/>
         <p>"You don't have to type the whole name, just enough to to disambiguate it from others."</p>
         <Editor example="cei 1.5\nceil 1.5\nceili 1.5\nceilin 1.5\nceiling 1.5"/>
@@ -246,7 +246,7 @@ fn primitive_rows(prims: impl IntoIterator<Item = Primitive>) -> Vec<impl IntoVi
 fn TutorialMath() -> impl IntoView {
     use Primitive::*;
     let math_table = primitive_rows([
-        Add, Sub, Mul, Div, Mod, Exp, Log, Neg, Abs, Ceil, Floor, Round, Sqrt, Sign,
+        Add, Sub, Mul, Div, Mod, Pow, Log, Neg, Abs, Ceil, Floor, Round, Sqrt, Sign,
     ]);
     let comp_table = primitive_rows([
         Eq, Ne, Lt, Gt, Le, Ge, Min, Max, Floor, Ceil, Round, Sin, Atan,

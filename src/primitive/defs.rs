@@ -398,11 +398,12 @@ primitive!(
     (2, Mod, DyadicPervasive, ("modulus", '◿')),
     /// Raise a value to a power
     ///
-    /// The first value is raised to the power of the second.
-    /// ex: ⁿ3 2
-    /// ex: ⁿ2 [1 2 3 4]
+    /// The second value is raised to the power of the first.
+    /// This is so you can think of `ⁿ``x` as a single unit.
+    /// ex: ⁿ2 3
+    /// ex: ⁿ2 [1 2 3]
     /// ex: ⁿ [1 2 3] [4 5 6]
-    (2, Exp, DyadicPervasive, ("exponent", 'ⁿ')),
+    (2, Pow, DyadicPervasive, ("power", 'ⁿ')),
     /// Get the based logarithm of a number
     ///
     /// The first value is the base, and the second value is the power.

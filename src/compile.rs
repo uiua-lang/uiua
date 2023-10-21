@@ -862,15 +862,14 @@ fn increment_placeholders(instrs: &mut [Instr]) {
 }
 
 fn count_temp_functions(instrs: &[Instr]) -> usize {
-    let mut count = instrs
-        .iter()
-        .filter(|instr| matches!(instr, Instr::GetTempFunction(_)))
-        .count();
-    if count == 0 {
-        for instr in instrs {
-            if let Instr::PushFunc(f) = instr {
+    let mut count = 0;
+    for instr in instrs {
+        match instr {
+            Instr::GetTempFunction(_) => count += 1,
+            Instr::PushFunc(f) if matches!(f.id, FunctionId::Anonymous(_)) => {
                 count += count_temp_functions(&f.instrs);
             }
+            _ => (),
         }
     }
     count

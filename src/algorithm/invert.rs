@@ -147,9 +147,6 @@ pub(crate) fn under_instrs(instrs: &[Instr], g_sig: Signature) -> Option<Under> 
 
 fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, Vec<Instr>)> {
     use Primitive::*;
-    if let Some(inverted) = invert_instrs(instrs) {
-        return Some((instrs.to_vec(), inverted));
-    }
 
     macro_rules! stash2 {
         ($before:expr, $after:expr) => {
@@ -161,8 +158,34 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
         };
     }
 
+    macro_rules! bin {
+        (Flip, $before:expr, $after:expr) => {
+            (
+                [Flip, $before],
+                [Flip.i(), Dup.i(), PushTempUnderN(1).i(), $before.i()],
+                [PopTempUnderN(1).i(), Flip.i(), $after.i()],
+            )
+        };
+        ($before:expr, $after:expr) => {
+            (
+                [$before],
+                [Dup.i(), PushTempUnderN(1).i(), $before.i()],
+                [PopTempUnderN(1).i(), $after.i()],
+            )
+        };
+    }
+
     let patterns: &[&dyn UnderPattern] = &[
-        &UnderPatternFn(under_both_pattern), // It is important that this is first
+        &UnderPatternFn(under_both_pattern),
+        &bin!(Flip, Add, Sub),
+        &bin!(Flip, Sub, Add),
+        &bin!(Flip, Mul, Div),
+        &bin!(Flip, Div, Mul),
+        &bin!(Add, Sub),
+        &bin!(Sub, Add),
+        &bin!(Mul, Div),
+        &bin!(Div, Mul),
+        // It is important that this comes after the things above
         &UnderPatternFn(under_from_inverse_pattern),
         &UnderPatternFn(under_temp_pattern),
         &(Val, stash2!(Take, Untake)),
@@ -259,6 +282,7 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
                     // f 2 1 [1 2 3 4 5]
                     // f ← ⍜⊙⇌(×10)
                     // f [1 2 3] [4 5 6]
+                    // This can likely be fixes with the newer g_sig checking
                     if afters
                         .iter()
                         .any(|instr| matches!(instr, Instr::PopTempUnder { .. }))
@@ -280,6 +304,10 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
         }
         break;
     }
+    if let Some(inverted) = invert_instrs(instrs) {
+        return Some((instrs.to_vec(), inverted));
+    }
+
     // println!(
     //     "under {:?} failed with remaining {:?}",
     //     instrs, instrs_sections

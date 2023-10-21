@@ -24,6 +24,7 @@ Uiua is not yet stable.
 - Change [`trace` `⸮`](https://uiua.org/docs/trace)'s glyph to let [`surface` `~`](https://uiua.org/docs/surface) use `~`.
 - Change [`match` `≍`](https://uiua.org/docs/match)'s glyph to avoid confusion with the new ocean functions' glyphs. Code using `≅` will continue to work and will be formatted as `≍`.
 - Stack signatures found to be incorrect at runtime produce an error
+- Dyadic math operations now work with [`under` `⍜`](https://uiua.org/docs/under) even if both arguments are outside [`under` `⍜`](https://uiua.org/docs/under)'s function
 ### Website
 - Add 3 new tutorials
   - [Control Flow](https://uiua.org/docs/controlflow)

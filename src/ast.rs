@@ -34,6 +34,7 @@ pub enum Word {
     Strand(Vec<Sp<Word>>),
     Array(Arr),
     Func(Func),
+    Switch(Switch),
     Ocean(Vec<Sp<Primitive>>),
     Primitive(Primitive),
     Modified(Box<Modified>),
@@ -72,6 +73,7 @@ impl fmt::Debug for Word {
             Word::Array(arr) => arr.fmt(f),
             Word::Strand(items) => write!(f, "strand({items:?})"),
             Word::Func(func) => func.fmt(f),
+            Word::Switch(sw) => sw.fmt(f),
             Word::Ocean(prims) => write!(f, "ocean({prims:?})"),
             Word::Primitive(prim) => prim.fmt(f),
             Word::Modified(modified) => modified.fmt(f),
@@ -118,6 +120,11 @@ impl fmt::Debug for Func {
         }
         d.finish()
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct Switch {
+    pub branches: Vec<Func>,
 }
 
 #[derive(Clone)]

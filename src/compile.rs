@@ -422,6 +422,7 @@ impl Uiua {
                 }
             }
             Word::Func(func) => self.func(func, word.span)?,
+            Word::Switch(sw) => self.switch(sw)?,
             Word::Ocean(prims) => self.ocean(prims, call)?,
             Word::Primitive(p) => self.primitive(p, word.span, call)?,
             Word::Modified(m) => self.modified(*m, call)?,
@@ -526,6 +527,9 @@ impl Uiua {
 
         let function = Function::new(func.id, instrs, sig);
         self.push_instr(Instr::push_func(function));
+        Ok(())
+    }
+    fn switch(&mut self, sw: Switch) -> UiuaResult {
         Ok(())
     }
     fn modified(&mut self, modified: Modified, call: bool) -> UiuaResult {

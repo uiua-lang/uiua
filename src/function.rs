@@ -23,6 +23,7 @@ pub enum Instr {
     Prim(Primitive, usize),
     Call(usize),
     PushFunc(Arc<Function>),
+    Switch(usize),
     PushTempFunctions(usize),
     PopTempFunctions(usize),
     GetTempFunction(usize),
@@ -124,6 +125,7 @@ impl Hash for Instr {
             Instr::Prim(p, _) => p.hash(state),
             Instr::Call(_) => {}
             Instr::PushFunc(f) => f.id.hash(state),
+            Instr::Switch(n) => n.hash(state),
             Instr::PushTempFunctions(count) => count.hash(state),
             Instr::PopTempFunctions(count) => count.hash(state),
             Instr::GetTempFunction(offset) => offset.hash(state),
@@ -192,6 +194,7 @@ impl fmt::Display for Instr {
             Instr::Prim(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => write!(f, "call"),
             Instr::PushFunc(func) => write!(f, "{func}"),
+            Instr::Switch(n) => write!(f, "<switch {n}>"),
             Instr::PushTempFunctions(count) => write!(f, "<push {count} functions>"),
             Instr::PopTempFunctions(count) => write!(f, "<pop {count} functions>"),
             Instr::GetTempFunction(offset) => write!(f, "<get function at {offset}>"),

@@ -111,6 +111,30 @@ impl<'a> VirtualEnv<'a> {
             | Instr::PopTempUnder { count, .. }
             | Instr::CopyTempInline { count, .. } => self.handle_args_outputs(0, *count)?,
             Instr::PushFunc(f) => self.function_stack.push(Cow::Borrowed(f)),
+            &Instr::Switch(n) => {
+                let mut funcs = Vec::with_capacity(n);
+                for _ in 0..n {
+                    funcs.push(self.pop_func()?);
+                }
+                match self.pop()? {
+                    BasicValue::Num(i) if i >= 0.0 && i.fract() == 0.0 && (i as usize) < n => {
+                        let i = i as usize;
+                        self.handle_sig(funcs[i].signature())?
+                    }
+                    _ => {
+                        if let Some(win) = funcs
+                            .windows(2)
+                            .find(|win| !win[0].signature().is_compatible_with(win[1].signature()))
+                        {
+                            return Err(format!(
+                                "switch's functions have incompatible signatures {} and {}",
+                                win[0].signature(),
+                                win[1].signature()
+                            ));
+                        }
+                    }
+                }
+            }
             Instr::Dynamic(f) => self.handle_sig(f.signature)?,
             Instr::DropTempInline { .. } => {}
             Instr::Prim(prim, _) => match prim {

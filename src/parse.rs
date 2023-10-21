@@ -617,13 +617,16 @@ impl Parser {
             }))
         } else if let Some(spaces) = self.try_spaces() {
             spaces
-        } else if let Some(func) = self.try_func_inner() {
-            if func.value.lines.is_empty() {
-                func.span.sp(Word::Primitive(Primitive::Identity))
-            } else {
-                self.errors
-                    .push(func.span.clone().sp(ParseError::FunctionNotAllowed));
-                func.map(Word::Func)
+        } else if let Some(word) = self.try_func() {
+            match &word.value {
+                Word::Func(func) if func.lines.is_empty() => {
+                    word.span.sp(Word::Primitive(Primitive::Identity))
+                }
+                _ => {
+                    self.errors
+                        .push(word.span.clone().sp(ParseError::FunctionNotAllowed));
+                    word
+                }
             }
         } else {
             return None;
@@ -666,23 +669,60 @@ impl Parser {
         None
     }
     fn try_func(&mut self) -> Option<Sp<Word>> {
-        self.try_func_inner().map(|sp| sp.map(Word::Func))
-    }
-    fn try_func_inner(&mut self) -> Option<Sp<Func>> {
         Some(if let Some(start) = self.try_exact(OpenParen) {
-            while self.try_exact(Newline).is_some() || self.try_spaces().is_some() {}
-            let signature = self.try_signature();
-            let body = self.multiline_words();
+            let first = self.func_contents();
+            let mut branches = Vec::new();
+            while let Some(start) = self.try_exact(Bar) {
+                let (signature, lines, span) = self.func_contents();
+                let span = span.unwrap_or(start);
+                let id = FunctionId::Anonymous(span);
+                branches.push(Func {
+                    id,
+                    signature,
+                    lines,
+                })
+            }
             let end = self.expect_close(CloseParen);
-            let span = start.merge(end);
-            span.clone().sp(Func {
-                id: FunctionId::Anonymous(span),
-                signature,
-                lines: body,
-            })
+            let (signature, lines, first_span) = first;
+            let outer_span = start.clone().merge(end);
+            if branches.is_empty() {
+                let id = FunctionId::Anonymous(outer_span.clone());
+                outer_span.sp(Word::Func(Func {
+                    id,
+                    signature,
+                    lines,
+                }))
+            } else {
+                let span = first_span.unwrap_or(start);
+                let id = FunctionId::Anonymous(span);
+                let first = Func {
+                    id,
+                    signature,
+                    lines,
+                };
+                branches.insert(0, first);
+                outer_span.sp(Word::Switch(Switch { branches }))
+            }
         } else {
             return None;
         })
+    }
+    fn func_contents(&mut self) -> (Option<Sp<Signature>>, Vec<Vec<Sp<Word>>>, Option<CodeSpan>) {
+        while self.try_exact(Newline).is_some() || self.try_spaces().is_some() {}
+        let signature = self.try_signature();
+        let lines = self.multiline_words();
+        let start = signature
+            .as_ref()
+            .map(|sig| sig.span.clone())
+            .or_else(|| lines.iter().flatten().next().map(|word| word.span.clone()));
+        let end = lines
+            .iter()
+            .flatten()
+            .last()
+            .map(|word| word.span.clone())
+            .or_else(|| signature.as_ref().map(|sig| sig.span.clone()));
+        let span = start.zip(end).map(|(start, end)| start.merge(end));
+        (signature, lines, span)
     }
     fn try_spaces(&mut self) -> Option<Sp<Word>> {
         self.try_exact(Spaces).map(|span| span.sp(Word::Spaces))

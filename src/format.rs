@@ -548,6 +548,22 @@ impl<'a> Formatter<'a> {
                 self.format_multiline_words(&func.lines, false, depth + 1);
                 self.output.push(')');
             }
+            Word::Switch(sw) => {
+                self.output.push('(');
+                for (i, branch) in sw.branches.iter().enumerate() {
+                    if i > 0 {
+                        self.output.push('|');
+                    }
+                    if let Some(sig) = &branch.signature {
+                        self.format_signature(sig.value, branch.lines.len() <= 1);
+                        if branch.lines.is_empty() {
+                            self.output.pop();
+                        }
+                    }
+                    self.format_multiline_words(&branch.lines, false, depth + 1);
+                }
+                self.output.push(')');
+            }
             Word::Ocean(prims) => {
                 for prim in prims {
                     self.push(&prim.span, &prim.value.to_string());
@@ -712,6 +728,11 @@ fn word_is_multiline(word: &Word) -> bool {
                 || (func.lines.iter())
                     .any(|words| words.iter().any(|word| word_is_multiline(&word.value)))
         }
+        Word::Switch(sw) => sw.branches.iter().any(|br| {
+            br.lines.len() > 1
+                || (br.lines.iter())
+                    .any(|words| words.iter().any(|word| word_is_multiline(&word.value)))
+        }),
         Word::Ocean(_) => false,
         Word::Primitive(_) => false,
         Word::Modified(m) => m.operands.iter().any(|word| word_is_multiline(&word.value)),

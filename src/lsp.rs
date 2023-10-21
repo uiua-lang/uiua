@@ -86,6 +86,14 @@ fn words_spans(words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
                 }
                 spans.extend(func.lines.iter().flat_map(|w| words_spans(w)));
             }
+            Word::Switch(sw) => {
+                for branch in &sw.branches {
+                    if let Some(sig) = &branch.signature {
+                        spans.push(sig.span.clone().sp(SpanKind::Signature));
+                    }
+                    spans.extend(branch.lines.iter().flat_map(|w| words_spans(w)));
+                }
+            }
             Word::Ocean(prims) => {
                 for prim in prims {
                     spans.push(prim.span.clone().sp(SpanKind::Primitive(prim.value)));

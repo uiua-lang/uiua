@@ -457,6 +457,28 @@ code:
                     self.function_stack.push(f.clone());
                     Ok(())
                 }
+                &Instr::Switch(n) => (|| {
+                    let i = self
+                        .pop("switch index")?
+                        .as_nat(self, "Switch index mut be a natural number")?;
+                    if i >= n {
+                        return Err(self.error(format!(
+                            "Switch index {i} is out of bounds for switch of size {n}"
+                        )));
+                    }
+                    let f = self
+                        .function_stack
+                        .drain(self.function_stack.len() - n..)
+                        .nth(i);
+                    if let Some(f) = f {
+                        self.call(f)
+                    } else {
+                        Err(self.error(format!(
+                            "Function stack was empty when getting switch function. \
+                                This is a bug in the interpreter."
+                        )))
+                    }
+                })(),
                 &Instr::PushTempFunctions(n) => (|| {
                     for _ in 0..n {
                         let f = self.pop_function()?;

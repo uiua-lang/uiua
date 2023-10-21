@@ -752,10 +752,10 @@ fn TutorialAdvancedArray() -> impl IntoView {
     view! {
         <Title text="Advanced Array Manipulation - Uiua Docs"/>
         <h1>"Advanced Array Manipulation"</h1>
-        <p>"Sometime the operation you need to perform on an array is more complicated than something like "<Prim prim=Reduce/>", "<Prim prim=Rows/>", or "<Prim prim=Table/>" allows."</p>
+        <p>"Sometimes the operation you need to perform on an array is more complicated than modifiers like "<Prim prim=Reduce/>", "<Prim prim=Rows/>", or "<Prim prim=Table/>" allow."</p>
 
         <h2 id="rank-lists">"Rank Lists"</h2>
-        <p>"Uiua has 4 special modifiers that allow you to specify the ranks of arrays that you want to operate on."</p>
+        <p>"Uiua has 3 special modifiers that allow you to specify the ranks of arrays that you want to operate on."</p>
         <p>"Specified ranks are passed as a single number or a list of numbers."</p>
         <p>"Ranks can be specified as any integer, or "<Prim prim=Infinity/>"."</p>
         <br/>
@@ -777,8 +777,9 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <p>"Here, we join all rank 1 arrays from the first arguments with all rank 2 arrays from the second."</p>
         <Editor example="≑1_2⊂ ,, ↯2_3 π ↯2_2_3⇡12"/>
         <p>"This is useful when you want to reference a fixed value while iterating over each row of an array."</p>
-        <p>"Here, we fix "<code>"2"</code>" and "<code>"0_3_1"</code>" as things that will not be iterated over by specifying their ranks as "<Prim prim=Infinity/>"."</p>
-        <Editor example="≑∞_∞_¯1(↻⊙⊏) 2 0_3_1 ↯3_4⇡12"/>
+        <p>"Here, we fix "<code>"2"</code>" as something that will not be iterated over by specifying its rank as "<Prim prim=Infinity/>"."</p>
+        <Editor example="≑∞_¯1↻ 2 ↯3_4⇡12"/>
+        <p><Prim prim=Level glyph_only=true/><Prim prim=Infinity glyph_only=true/><code>"_¯1"</code>" is actually equivalent to "<Prim prim=Distribute/>", but not all rank lists have equivalent modifiers."</p>
 
         <h2 id="ocean-notation">"🌊 Ocean Notation 🪸"</h2>
         <p>"It can sometimes be verbose to specify rank lists, and having numbers that refer to ranks in code next to numbers that refer to, well, "<em>"numbers"</em>", can be confusing."</p>
@@ -801,10 +802,10 @@ fn TutorialAdvancedArray() -> impl IntoView {
         }
         </table>
         <p>"The example above with "<Prim prim=Level/>" can be rewritten using "<Prim prim=Rock/>" and "<Prim prim=Surface/>"."</p>
-        <Editor example="≑⋄⋄~(↻⊙⊏) 2 0_3_1 ↯3_4⇡12"/>
-        <p>"If you wanted to factor in the rows of another array, you could simply add another "<Prim prim=Surface/>"."</p>
-        <Editor example="≑⋄⋄~~(↻⊙'⊏⊙'⊂∶) 2 0_3_1 ↯3_4⇡12 ↯3_2⇡6"/>
-        <p>"Ocean functions are syntactically special. While they are not modifiers, adjacent ocean functions are parsed as a single unit so they do not have to be surrounded with "<code>"()"</code>"s. They are otherwise normal function."</p>
+        <Editor example="≑⋄~↻ 2 ↯3_4⇡12"/>
+        <p>"If you wanted to factor in the rows of another array, you could simply add another "<Prim prim=Surface/>". Unlike the previous example, this cannot be written using "<Prim prim=Distribute/>"."</p>
+        <Editor example="≑⋄~~(↻⊙⊂) 2 ↯3_4⇡12 ↯3_2⇡6"/>
+        <p>"Ocean functions are syntactically special. While they are not modifiers, adjacent ocean functions are parsed as a single unit so they do not have to be surrounded with "<code>"()"</code>"s. They are otherwise normal functions."</p>
         <p>"Ocean functions work to specify rank lists because if a rank-generic modifier's first argument is a monadic function, it will push an empty list for the function to work on. Ocean functions are monadic, so a chain of ocean functions form a monadic function."</p>
 
         <h2 id="combinate"><Prim prim=Combinate/></h2>
@@ -813,7 +814,7 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <Editor example="◳∸≃(+×10) ,, ↯2_2⇡4 ↯2_4⇡8"/>
 
         <h2 id="fold"><Prim prim=Fold/></h2>
-        <p><Prim prim=Fold/>" uses fixed rank values as accumulators. Its function's outputs set the new value of the accumulator for the next iteration."</p>
+        <p><Prim prim=Fold/>" uses fixed-rank values as accumulators. Its function's outputs set the new value of the accumulator(s) for the next iteration."</p>
         <p>"One basic use is to reduce with a default value."</p>
         <Editor example="∧⋄~+ 10 [1 2 3]"/>
         <Editor example="∧⋄~+ 10 []"/>
@@ -833,7 +834,7 @@ fn TutorialCustomModifiers() -> impl IntoView {
     view! {
         <Title text="Custom Modifiers - Uiua Docs"/>
         <h1>"Custom Modifiers"</h1>
-        <p>"Defining your own functions that work on arrays is pretty easy. Just a name, a "<code>"←"</code>" and you're done."</p>
+        <p>"Defining your own functions that work on arrays is pretty easy. Just a name, a "<code>"←"</code>", and you're done."</p>
         <p>"But what if you want to define functions that use other functions?"</p>
 
         <h2 id="placeholders-and-bangs">"Placeholders and "<code>"!"</code>"s"</h2>

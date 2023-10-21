@@ -1296,43 +1296,48 @@ primitive!(
     /// [table] is equivalent to `combinate``[0 0]`.
     /// [cross] is equivalent to `combinate``[¯1 ¯1]`.
     ([2], Combinate, IteratingModifier, ("combinate", '◳')),
-    /// `join` `infinity` to a list
+    /// `join` `infinity` to an array
     ///
     /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) to understand what this is for.
     ///
     /// ex: ⋄5
+    /// ex: ⋄[1_2_3 4_5_6]
     ///
     /// *Rocks line the shores of the ocean, their immovable forms jutting from the surface.*
     (1, Rock, Ocean, ("rock", '⋄')),
-    /// `join` `¯1` to a list
+    /// `join` `¯1` to an array
     ///
     /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) to understand what this is for.
     ///
     /// ex: ~5
+    /// ex: ~[1_2_3 4_5_6]
     ///
     /// *The light of the sun reflects reflects off the rippling surface of the ocean.*
     (1, Surface, Ocean, ("surface", '~')),
-    /// `join` `2` to a list
+    /// `join` `2` to an array
     ///
     /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) to understand what this is for.
     ///
     /// ex: ≊5
+    /// ex: ≊[1_2_3 4_5_6]
     ///
     /// *In the deep ocean live many wonderous creatures.*
     (1, Deep, Ocean, ("deep", '≊')),
-    /// `join` `1` to a list
+    /// `join` `1` to an array
     ///
     /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) to understand what this is for.
     ///
     /// ex: ≃5
+    /// ex: ≃[1_2_3 4_5_6]
     ///
     /// *In the abyss, where no light reaches, life is restricted to simpler forms.*
     (1, Abyss, Ocean, ("abyss", '≃')),
-    /// `join` `0` to a list
+    /// `join` `0` to an array
     ///
     /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) to understand what this is for.
     ///
     /// ex: ∸5
+    /// ex: ∸[1_2_3 4_5_6]
     ///
     /// *At the seabed, countless small scavengers feed on the detritus of the ocean above.*
     (1, Seabed, Ocean, ("seabed", '∸')),

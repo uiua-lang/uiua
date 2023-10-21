@@ -151,10 +151,6 @@ constant!(eta, PI / 2.0);
 constant!(pi, PI);
 constant!(tau, TAU);
 constant!(inf, INFINITY);
-constant!(neg1, -1.0);
-constant!(two, 2.0);
-constant!(one, 1.0);
-constant!(zero, 0.0);
 
 impl Primitive {
     pub fn all() -> impl Iterator<Item = Self> + Clone {
@@ -489,24 +485,24 @@ impl Primitive {
                 env.call(f)?;
             }
             Primitive::Rock => {
-                env.push(inf());
-                Primitive::Join.run(env)?;
+                let x = env.pop(1)?;
+                env.push(x.ocean(INFINITY, env)?);
             }
             Primitive::Surface => {
-                env.push(neg1());
-                Primitive::Join.run(env)?;
+                let x = env.pop(1)?;
+                env.push(x.ocean(-1.0, env)?);
             }
             Primitive::Deep => {
-                env.push(two());
-                Primitive::Join.run(env)?;
+                let x = env.pop(1)?;
+                env.push(x.ocean(2.0, env)?);
             }
             Primitive::Abyss => {
-                env.push(one());
-                Primitive::Join.run(env)?;
+                let x = env.pop(1)?;
+                env.push(x.ocean(1.0, env)?);
             }
             Primitive::Seabed => {
-                env.push(zero());
-                Primitive::Join.run(env)?;
+                let x = env.pop(1)?;
+                env.push(x.ocean(0.0, env)?);
             }
             Primitive::Invert => {
                 let f = env.pop_function()?;

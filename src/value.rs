@@ -633,33 +633,33 @@ impl Value {
             }
         })
     }
-    pub fn unbox(&mut self) {
+    pub fn tip(&mut self) {
         if let Value::Box(arr) = self {
             *self = match take(arr).into_unboxed() {
-                Ok(value) => value.into_unboxed(),
+                Ok(value) => value.tipped(),
                 Err(arr) => Value::Box(arr),
             };
         }
     }
-    pub fn box_if_not(&mut self) {
-        match &mut *self {
-            Value::Box(_) => {}
-            val => *self = Value::Box(Array::from(Boxed(take(val)))),
-        }
-    }
-    pub fn boxed_if_not(self) -> Value {
-        match self {
-            Value::Box(_) => self,
-            val => Value::Box(Array::from(Boxed(val))),
-        }
-    }
-    pub fn into_unboxed(self) -> Self {
+    pub fn tipped(self) -> Self {
         match self {
             Self::Box(arr) => match arr.into_unboxed() {
-                Ok(value) => value.into_unboxed(),
+                Ok(value) => value.tipped(),
                 Err(arr) => Self::Box(arr),
             },
             value => value,
+        }
+    }
+    pub fn box_if_not(&mut self) {
+        match &mut *self {
+            Value::Box(arr) if arr.rank() == 0 => {}
+            val => *self = Value::Box(Array::from(Boxed(take(val)))),
+        }
+    }
+    pub fn boxed_if_not(self) -> Boxed {
+        match self {
+            Value::Box(arr) if arr.rank() == 0 => arr.data.into_iter().next().unwrap(),
+            val => Boxed(val),
         }
     }
     /// Turn a number array into a byte array if no information is lost.

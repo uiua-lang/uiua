@@ -16,7 +16,7 @@ Uiua is not yet stable.
   - [`fill` `⬚`](https://uiua.org/docs/fill) is now monadic and the fill value comes *after* the function
 - Add new syntax for defining [custom modifiers](https://uiua.org/docs/custommodifiers)
 - Add new syntax for [calling a function from a list of functions](https://uiua.org/docs/controlflow#switch)
-- Add the [`pierce` `⍆`](https://uiua.org/docs/pierce) modifier, which calls its function and implicitly boxes/unboxes values
+- Add the [`tip` `⊐`](https://uiua.org/docs/tip) modifier, which calls its function and implicitly boxes/unboxes values
 - Add the [`combinate` `◳`](https://uiua.org/docs/combinate) modifier, which is a rank-generic version of [`table` `⊞`](https://uiua.org/docs/table)
 - [`fold` `∧`](https://uiua.org/docs/fold) is now rank-generic and requires a rank list
 - Add the [`tribute` `≐`](https://uiua.org/docs/tribute) modifier, which is a flipped version of [`distribute` `∺`](https://uiua.org/docs/distribute)

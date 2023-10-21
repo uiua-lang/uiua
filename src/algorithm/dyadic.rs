@@ -123,9 +123,9 @@ impl Value {
         self.join_impl(other, ()).unwrap()
     }
     fn join_impl<C: FillContext>(mut self, mut other: Self, ctx: C) -> Result<Self, C::Error> {
-        if ctx.pierce_boxes() {
-            self.unbox();
-            other.unbox();
+        if ctx.tip_boxes() {
+            self.tip();
+            other.tip();
             if let Ok(val) = self.clone().join_impl_impl(other.clone(), ctx) {
                 Ok(val)
             } else {
@@ -174,13 +174,13 @@ impl Value {
         mut other: Self,
         ctx: C,
     ) -> Result<(), C::Error> {
-        if ctx.pierce_boxes() {
-            self.unbox();
-            other.unbox();
+        if ctx.tip_boxes() {
+            self.tip();
+            other.tip();
             if self.append_impl(other.clone(), ctx).is_err() {
                 *self = take(self)
                     .into_rows()
-                    .map(Boxed)
+                    .map(|row| row.boxed_if_not())
                     .collect::<Array<_>>()
                     .into();
                 other.box_if_not();
@@ -353,9 +353,9 @@ impl Value {
         mut other: Self,
         ctx: C,
     ) -> Result<(), C::Error> {
-        if ctx.pierce_boxes() {
-            self.unbox();
-            other.unbox();
+        if ctx.tip_boxes() {
+            self.tip();
+            other.tip();
             if self.couple_impl_impl(other.clone(), ctx).is_err() {
                 self.box_if_not();
                 other.box_if_not();

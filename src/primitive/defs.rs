@@ -963,13 +963,13 @@ primitive!(
     ///
     /// ex: ⍥(+2)5 0
     /// ex: ⍥(⊂2)5 []
-    ///
     /// One interesting use of `repeat` is to collect some number of stack values into an array.
     /// ex: ⍥⊂3 [] 1 2 3
-    ///
     /// Repeating [infinity] times will create an infinite loop.
     /// You can use [break] to break out of the loop.
     /// ex: ⍥(⎋>1000. ×2)∞ 1
+    /// [repeat]ing a negative number of times will repeat the [invert]ed function.
+    /// ex: ⍥√¯3 2
     ///
     /// [repeat]'s glyph is a combination of a circle, representing a loop, and the 𝄇 symbol from musical notation.
     (1[1], Repeat, IteratingModifier, ("repeat", '⍥')),
@@ -1066,8 +1066,22 @@ primitive!(
     /// ex:  ↯  3_5 ⇡9
     /// ex: ⬚↯0 3_5 ⇡9
     ([1], Fill, OtherModifier, ("fill", '⬚')),
-    /// Apply a function with implicit unboxing
-    ([1], Pierce, OtherModifier, ("pierce", '⍆')),
+    /// Apply a function with implicit (un)boxing
+    ///
+    /// When working with [box]ed data, [tip] will automatically [unbox] the data for functions like [join].
+    /// ex:  /⊂ {"a" "bc" "def"}
+    /// ex: ⊐/⊂ {"a" "bc" "def"}
+    ///
+    /// If combining arrays would fail because of a shape mismatch, [tip] will automatically [box] the arrays.
+    /// ex!  ∵⇡ ⇡5
+    /// ex: ⊐∵⇡ ⇡5
+    /// ex: ⊐⊟ 5 "hello"
+    ///
+    /// [tip] is overridden by [fill], regardless of order.
+    /// ex: ⬚(⊐∵⇡)0 ⇡5
+    ///
+    /// [tip]'s glyph is `⊐` because it looks like a box tipped over.
+    ([1], Tip, OtherModifier, ("tip", '⊐')),
     /// Invert the behavior of a function
     ///
     /// Most functions are not invertible.
@@ -1128,10 +1142,6 @@ primitive!(
     ///
     /// For monadic functions, [both] calls its function on each of the top 2 values on the stack.
     /// ex: ∩⇡ 3 5
-    ///
-    /// One good use of this is when working with [box] data.
-    /// You can use [both][unbox] to get 2 [box] values out.
-    /// ex: /(⊂∩⊔) {"a" "bc" "def"}
     ///
     /// For a function that takes `n` arguments, [both] calls the function on the 2 sets of `n` values on top of the stack.
     /// ex: [∩+ 1 2 3 4]

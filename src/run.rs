@@ -90,7 +90,7 @@ pub struct Scope {
     /// The current fill values
     fills: Fills,
     /// The current clear state
-    pierce_depth: usize,
+    tip_depth: usize,
 }
 
 impl Default for Scope {
@@ -109,7 +109,7 @@ impl Default for Scope {
             }],
             names: HashMap::new(),
             fills: Fills::default(),
-            pierce_depth: 0,
+            tip_depth: 0,
         }
     }
 }
@@ -894,17 +894,14 @@ code:
         }
         res
     }
-    pub(crate) fn with_pierce(
-        &mut self,
-        in_ctx: impl FnOnce(&mut Self) -> UiuaResult,
-    ) -> UiuaResult {
-        self.scope.pierce_depth += 1;
+    pub(crate) fn with_tip(&mut self, in_ctx: impl FnOnce(&mut Self) -> UiuaResult) -> UiuaResult {
+        self.scope.tip_depth += 1;
         let res = in_ctx(self);
-        self.scope.pierce_depth -= 1;
+        self.scope.tip_depth -= 1;
         res
     }
-    pub(crate) fn pierce_boxes(&self) -> bool {
-        self.scope.pierce_depth > 0
+    pub(crate) fn tip_boxes(&self) -> bool {
+        self.scope.tip_depth > 0
     }
     /// Spawn a thread
     pub(crate) fn spawn(

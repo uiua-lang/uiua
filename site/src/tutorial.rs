@@ -822,7 +822,7 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <Editor example="\
 Add ← ⊂/+⊃↙↘2
 Sub ← ⊂/-⊃↙↘2
-f ← ??Sub(Add)?(⊂1)(⊂⊢.) ∶⍘⊟⬚↙0 2⋯∶
+f ← (⊂⊢.|⊂1|Add|Sub)∶
 ∧⋄~f [] [1 0 2 0 2 0 2 1 3]"/>
     }
 }

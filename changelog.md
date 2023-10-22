@@ -2,7 +2,7 @@
 
 Uiua is not yet stable.
 
-## 0.0.21 - 2023-10-??
+## 0.0.21 - 2023-10-21
 ### Language
 - **Massive Change** - Functions are no longer first-class values. This has many implications:
   - Functions can no longer be put in arrays or manipulated as stack values

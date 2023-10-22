@@ -243,7 +243,7 @@ sys_op! {
     /// The rows of the array are the frames of the gif, and their format must conform to that of [&ime].
     ///
     /// See also: [&gifs]
-    (1, GifEncode, "&gife", "gif - encode"),
+    (2, GifEncode, "&gife", "gif - encode"),
     /// Show a gif
     ///
     /// The first argument is a framerate in seconds.
@@ -251,7 +251,7 @@ sys_op! {
     /// The rows of the array are the frames of the gif, and their format must conform to that of [&ime].
     ///
     /// See also: [&gife]
-    (1(0), GifShow, "&gifs", "gif - show"),
+    (2(0), GifShow, "&gifs", "gif - show"),
     /// Decode audio from a byte array
     ///
     /// Only the `wav` format is supported.

@@ -13,8 +13,6 @@ use crate::{
     Uiua, UiuaResult,
 };
 
-use super::fill_value_shapes;
-
 pub fn each(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
@@ -265,8 +263,7 @@ fn rows1_0(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn rows2_1(f: Arc<Function>, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult {
-    fill_value_shapes(&mut xs, &mut ys, env)?;
+fn rows2_1(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     if xs.row_count() != ys.row_count() {
         return Err(env.error(format!(
             "Cannot rows arrays with different number of rows {} and {}",
@@ -287,8 +284,7 @@ fn rows2_1(f: Arc<Function>, mut xs: Value, mut ys: Value, env: &mut Uiua) -> Ui
     Ok(())
 }
 
-fn rows2_0(f: Arc<Function>, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult {
-    fill_value_shapes(&mut xs, &mut ys, env)?;
+fn rows2_0(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     if xs.row_count() != ys.row_count() {
         return Err(env.error(format!(
             "Cannot rows arrays with different number of rows {} and {}",

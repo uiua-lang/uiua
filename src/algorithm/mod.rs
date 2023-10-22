@@ -87,6 +87,7 @@ pub(crate) fn shape_prefixes_match(a: &[usize], b: &[usize]) -> bool {
     a.iter().zip(b.iter()).all(|(a, b)| a == b)
 }
 
+#[allow(dead_code)]
 pub(crate) fn fill_value_shapes<C>(a: &mut Value, b: &mut Value, ctx: &C) -> Result<(), C::Error>
 where
     C: FillContext,

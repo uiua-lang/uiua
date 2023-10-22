@@ -237,7 +237,7 @@ impl Parser {
             }
             self.try_spaces();
             // Signature
-            let sig = self.try_signature();
+            let sig = self.try_signature(Bar);
             // Words
             let words = self.try_words().unwrap_or_default();
             match words.as_slice() {
@@ -297,10 +297,17 @@ impl Parser {
         }
         Some(ident)
     }
-    fn try_signature(&mut self) -> Option<Sp<Signature>> {
-        let start = self.try_exact(Bar)?;
+    fn try_signature(&mut self, initial_token: AsciiToken) -> Option<Sp<Signature>> {
+        let start = self.try_exact(initial_token)?;
         self.try_spaces();
-        let (args, outs) = if let Some(sn) = self.try_num() {
+        let (args, outs) = self.sig_inner();
+        let end = self.prev_span();
+        self.try_spaces();
+        let span = start.merge(end);
+        Some(span.sp(Signature::new(args, outs)))
+    }
+    fn sig_inner(&mut self) -> (usize, usize) {
+        if let Some(sn) = self.try_num() {
             if let Some((a, o)) = sn.value.0.split_once('.') {
                 let a = match a.parse() {
                     Ok(a) => a,
@@ -333,11 +340,7 @@ impl Parser {
         } else {
             self.errors.push(self.expected([Expectation::ArgOutCount]));
             (1usize, 1usize)
-        };
-        let end = self.prev_span();
-        self.try_spaces();
-        let span = start.merge(end);
-        Some(span.sp(Signature::new(args, outs)))
+        }
     }
     fn try_words(&mut self) -> Option<Vec<Sp<Word>>> {
         let mut words: Vec<Sp<Word>> = Vec::new();
@@ -540,8 +543,8 @@ impl Parser {
         })
     }
     fn try_placeholder(&mut self) -> Option<Sp<Word>> {
-        let span = self.try_exact(Caret)?;
-        Some(span.sp(Word::Placeholder))
+        let sig = self.try_signature(Caret)?;
+        Some(sig.map(Word::Placeholder))
     }
     fn try_term(&mut self) -> Option<Sp<Word>> {
         Some(if let Some(prim) = self.try_prim() {
@@ -688,7 +691,7 @@ impl Parser {
     }
     fn func_contents(&mut self) -> FunctionContents {
         while self.try_exact(Newline).is_some() || self.try_spaces().is_some() {}
-        let signature = self.try_signature();
+        let signature = self.try_signature(Bar);
         let lines = self.multiline_words();
         let start = signature
             .as_ref()
@@ -761,7 +764,7 @@ pub(crate) fn count_placeholders(words: &[Sp<Word>]) -> usize {
     let mut count = 0;
     for word in words {
         match &word.value {
-            Word::Placeholder => count += 1,
+            Word::Placeholder(_) => count += 1,
             Word::Strand(items) => count += count_placeholders(items),
             Word::Array(arr) => {
                 for line in &arr.lines {

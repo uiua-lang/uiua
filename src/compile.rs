@@ -452,10 +452,14 @@ impl Uiua {
             Word::Ocean(prims) => self.ocean(prims, call)?,
             Word::Primitive(p) => self.primitive(p, word.span, call)?,
             Word::Modified(m) => self.modified(*m, call)?,
-            Word::Placeholder => {
-                self.push_instr(Instr::GetTempFunction(0));
+            Word::Placeholder(sig) => {
+                let span = self.add_span(word.span);
+                self.push_instr(Instr::GetTempFunction {
+                    offset: 0,
+                    sig,
+                    span,
+                });
                 if call {
-                    let span = self.add_span(word.span);
                     self.push_instr(Instr::Call(span));
                 }
             }
@@ -854,8 +858,8 @@ fn words_look_pervasive(words: &[Sp<Word>]) -> bool {
 fn increment_placeholders(instrs: &mut [Instr]) {
     let mut curr = 0;
     for instr in instrs {
-        if let Instr::GetTempFunction(i) = instr {
-            *i = curr;
+        if let Instr::GetTempFunction { offset, .. } = instr {
+            *offset = curr;
             curr += 1;
         }
     }
@@ -865,7 +869,7 @@ fn count_temp_functions(instrs: &[Instr]) -> usize {
     let mut count = 0;
     for instr in instrs {
         match instr {
-            Instr::GetTempFunction(_) => count += 1,
+            Instr::GetTempFunction { .. } => count += 1,
             Instr::PushFunc(f) if matches!(f.id, FunctionId::Anonymous(_)) => {
                 count += count_temp_functions(&f.instrs);
             }

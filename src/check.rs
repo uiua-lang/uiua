@@ -2,7 +2,7 @@ use std::{borrow::Cow, cmp::Ordering};
 
 use crate::{
     array::Array,
-    function::{Function, Instr, Signature},
+    function::{Function, FunctionId, Instr, Signature},
     primitive::Primitive,
     value::Value,
 };
@@ -105,7 +105,13 @@ impl<'a> VirtualEnv<'a> {
                 self.handle_args_outputs(*count, 0)?
             }
             Instr::PushTempFunctions(_) | Instr::PopTempFunctions(_) => {}
-            Instr::GetTempFunction(_) => return Err("custom modifier".into()),
+            Instr::GetTempFunction { sig, .. } => {
+                self.function_stack.push(Cow::Owned(Function::new(
+                    FunctionId::Temp,
+                    Vec::new(),
+                    *sig,
+                )));
+            }
             Instr::PopTempInline { count, .. }
             | Instr::PopTempUnder { count, .. }
             | Instr::CopyTempInline { count, .. } => self.handle_args_outputs(0, *count)?,

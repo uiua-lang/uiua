@@ -704,7 +704,7 @@ fn TutorialControlFlow() -> impl IntoView {
     view! {
         <Title text="Control Flow - Uiua Docs"/>
         <h1>"Control Flow"</h1>
-        <p>"Uiua, and array languages in generall, require much less control flow than other programming languages. Most operations that would be loops in other languages are simply operations on arrays. Because boolean operations return numbers, a lot of checks that would be done with "<code>"if"</code>" statements in other languages become mathematical or indexing operations in array languages."</p>
+        <p>"Uiua, and array languages in general, require much less control flow than other programming languages. Most operations that would be loops in other languages are simply operations on arrays. Because boolean operations return numbers, a lot of checks that would be done with "<code>"if"</code>" statements in other languages become mathematical or indexing operations in array languages."</p>
         <p>"For example, if you wanted to split an array of numbers into an array of odds and an array of evens, you might do it like this in a language like Python:"</p>
         <code class="code-block">"\
 def splitArray(array):
@@ -862,23 +862,27 @@ fn TutorialCustomModifiers() -> impl IntoView {
         <p>"But what if you want to define functions that use other functions?"</p>
 
         <h2 id="placeholders-and-bangs">"Placeholders and "<code>"!"</code>"s"</h2>
-        <p>"Anywhere you can put a built-in or inline function, you can also put a "<code>"^"</code>". This is called a "<em>"placeholder"</em>"."</p>
+        <p>"Anywhere you can put a built-in or inline function, you can also put a "<code>"^"</code>". This is called a "<em>"placeholder"</em>". The "<code>"^"</code>" must be followed by a signature declaration, where the "<code>"^"</code>" replaces the "<code>"|"</code>"."</p>
         <p>"Any named function with "<code>"^"</code>"s in it becomes a modifier."</p>
         <p>"However, there is one additional requirement: custom modifiers must have names that end in as many "<code>"!"</code>"s as the number of functions they take."</p>
         <p>"Lets look at a simple example using "<Prim prim=Reduce/>". It reduces a function over the numbers up to the given range."</p>
         <Editor example="\
-ReduceRange! ← |1 /^+1⇡
+ReduceRange! ← /^2+1⇡
 ReduceRange!+5
 ReduceRange!×4"/>
-        <p>"Custom modifiers "<em>"must"</em>" have stack signatures declared."</p>
+        <p>"Here is another simple example which calls a function on a reversed version of each row of an array."</p>
+        <Editor example="\
+OnRev! ← ≡⍜⇌^1
+OnRev!(↘1) ↯3_4⇡12
+OnRev!(⊂π) ↯3_4⇡12"/>
         <p>"A custom modifier can take as many functions as you want."</p>
         <Editor example="\
-F!!! ← |2 ⊂/^⊃^^
+F!!! ← ⊂/^2⊃^2^2
 F!!!+×⊂ [1 2 3][4 5 6]"/>
         <p>"Each "<code>"^"</code>" refers to a different function. If you want to use that function more than once in the modifier, you'll have to get creative."</p>
         <p>"Here, we reduce with the same function multiple times by using "<Prim prim=Repeat/>"."</p>
         <Editor example="\
-ReduceAll! ← |1 ⍥(|1 /^)⧻△.
+ReduceAll! ← ⍥/^2⧻△.
 ReduceAll!+[1_2_3 4_5_6]"/>
 
         <br/>

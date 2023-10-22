@@ -109,7 +109,7 @@ fn words_spans(words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
             }
             Word::Spaces => spans.push(word.span.clone().sp(SpanKind::Whitespace)),
             Word::Comment(_) => spans.push(word.span.clone().sp(SpanKind::Comment)),
-            Word::Placeholder => spans.push(word.span.clone().sp(SpanKind::Placeholder)),
+            Word::Placeholder(_) => spans.push(word.span.clone().sp(SpanKind::Placeholder)),
         }
     }
     spans

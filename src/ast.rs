@@ -38,7 +38,7 @@ pub enum Word {
     Ocean(Vec<Sp<Primitive>>),
     Primitive(Primitive),
     Modified(Box<Modified>),
-    Placeholder,
+    Placeholder(Signature),
     Comment(String),
     Spaces,
 }
@@ -79,7 +79,7 @@ impl fmt::Debug for Word {
             Word::Modified(modified) => modified.fmt(f),
             Word::Spaces => write!(f, "' '"),
             Word::Comment(comment) => write!(f, "# {comment}"),
-            Word::Placeholder => write!(f, "^"),
+            Word::Placeholder(sig) => write!(f, "^{}.{}", sig.args, sig.outputs),
         }
     }
 }

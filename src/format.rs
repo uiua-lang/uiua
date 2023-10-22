@@ -446,15 +446,15 @@ impl<'a> Formatter<'a> {
                     self.output.push(' ');
                 }
                 if let Some(sig) = &binding.signature {
-                    self.format_signature(sig.value, true);
+                    self.format_signature('|', sig.value, true);
                 }
                 self.format_words(&binding.words, true, 0);
             }
             Item::ExtraNewlines(_) => {}
         }
     }
-    fn format_signature(&mut self, sig: Signature, trailing_space: bool) {
-        self.output.push('|');
+    fn format_signature(&mut self, init_char: char, sig: Signature, trailing_space: bool) {
+        self.output.push(init_char);
         self.output.push_str(&sig.args.to_string());
         if sig.outputs != 1 {
             self.output.push('.');
@@ -540,7 +540,7 @@ impl<'a> Formatter<'a> {
             Word::Func(func) => {
                 self.output.push('(');
                 if let Some(sig) = &func.signature {
-                    self.format_signature(sig.value, func.lines.len() <= 1);
+                    self.format_signature('|', sig.value, func.lines.len() <= 1);
                     if func.lines.is_empty() {
                         self.output.pop();
                     }
@@ -555,7 +555,7 @@ impl<'a> Formatter<'a> {
                         self.output.push('|');
                     }
                     if let Some(sig) = &branch.value.signature {
-                        self.format_signature(sig.value, branch.value.lines.len() <= 1);
+                        self.format_signature('|', sig.value, branch.value.lines.len() <= 1);
                         if branch.value.lines.is_empty() {
                             self.output.pop();
                         }
@@ -585,7 +585,7 @@ impl<'a> Formatter<'a> {
                 );
                 self.format_words(&m.operands, true, depth);
             }
-            Word::Placeholder => self.push(&word.span, "^"),
+            Word::Placeholder(sig) => self.format_signature('^', *sig, false),
             Word::Spaces => self.push(&word.span, " "),
             Word::Comment(comment) => {
                 let beginning_of_line = self
@@ -736,7 +736,7 @@ fn word_is_multiline(word: &Word) -> bool {
         Word::Ocean(_) => false,
         Word::Primitive(_) => false,
         Word::Modified(m) => m.operands.iter().any(|word| word_is_multiline(&word.value)),
-        Word::Placeholder => false,
+        Word::Placeholder(_) => false,
         Word::Comment(_) => false,
         Word::Spaces => false,
     }

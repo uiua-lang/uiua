@@ -29,7 +29,11 @@ pub enum Instr {
     },
     PushTempFunctions(usize),
     PopTempFunctions(usize),
-    GetTempFunction(usize),
+    GetTempFunction {
+        offset: usize,
+        sig: Signature,
+        span: usize,
+    },
     Dynamic(DynamicFunction),
     PushTempUnder {
         count: usize,
@@ -131,7 +135,7 @@ impl Hash for Instr {
             Instr::Switch { count, .. } => count.hash(state),
             Instr::PushTempFunctions(count) => count.hash(state),
             Instr::PopTempFunctions(count) => count.hash(state),
-            Instr::GetTempFunction(offset) => offset.hash(state),
+            Instr::GetTempFunction { offset, .. } => offset.hash(state),
             Instr::Dynamic(f) => f.id.hash(state),
             Instr::PushTempUnder { count, .. } => count.hash(state),
             Instr::PopTempUnder { count, .. } => count.hash(state),
@@ -200,7 +204,7 @@ impl fmt::Display for Instr {
             Instr::Switch { count, .. } => write!(f, "<switch {count}>"),
             Instr::PushTempFunctions(count) => write!(f, "<push {count} functions>"),
             Instr::PopTempFunctions(count) => write!(f, "<pop {count} functions>"),
-            Instr::GetTempFunction(offset) => write!(f, "<get function at {offset}>"),
+            Instr::GetTempFunction { offset, .. } => write!(f, "<get function at {offset}>"),
             Instr::Dynamic(df) => write!(f, "{df:?}"),
             Instr::PushTempUnder { count, .. } => write!(f, "<push under {count}>"),
             Instr::PopTempUnder { count, .. } => write!(f, "<pop under {count}>"),
@@ -405,6 +409,7 @@ pub enum FunctionId {
     Primitive(Primitive),
     Constant,
     Main,
+    Temp,
 }
 
 impl PartialEq<&str> for FunctionId {
@@ -436,6 +441,7 @@ impl fmt::Display for FunctionId {
             FunctionId::Primitive(prim) => write!(f, "{prim}"),
             FunctionId::Constant => write!(f, "constant"),
             FunctionId::Main => write!(f, "main"),
+            FunctionId::Temp => write!(f, "temp"),
         }
     }
 }

@@ -2,6 +2,10 @@
 
 Uiua is not yet stable.
 
+## 0.0.22 - 2023-10-21
+### Language
+- Custom modifier placeholders (`^`) must now be immediately followed by a signature. This reduces the number of signatures that have to be declared everywhere else.
+
 ## 0.0.21 - 2023-10-21
 ### Language
 - **Massive Change** - Functions are no longer first-class values. This has many implications:

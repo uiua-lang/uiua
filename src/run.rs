@@ -496,19 +496,31 @@ code:
                         .truncate(self.temp_function_stack.len() - n);
                     Ok(())
                 }
-                &Instr::GetTempFunction(i) => (|| {
-                    let f = self
-                        .temp_function_stack
-                        .get(self.temp_function_stack.len() - 1 - i)
-                        .ok_or_else(|| {
-                            self.error(
-                                "Error getting placeholder function. \
-                            This is a bug in the interpreter.",
-                            )
-                        })?;
-                    self.function_stack.push(f.clone());
-                    Ok(())
-                })(),
+                &Instr::GetTempFunction { offset, sig, span } => {
+                    self.push_span(span, None);
+                    let res = (|| {
+                        let f = self
+                            .temp_function_stack
+                            .get(self.temp_function_stack.len() - 1 - offset)
+                            .ok_or_else(|| {
+                                self.error(
+                                    "Error getting placeholder function. \
+                                This is a bug in the interpreter.",
+                                )
+                            })?;
+                        let f_sig = f.signature();
+                        if f_sig != sig {
+                            return Err(self.error(format!(
+                                "Function signature {f_sig} does not match \
+                            placeholder signature {sig}"
+                            )));
+                        }
+                        self.function_stack.push(f.clone());
+                        Ok(())
+                    })();
+                    self.pop_span();
+                    res
+                }
                 Instr::Dynamic(df) => df.f.clone()(self),
                 &Instr::PushTempUnder { count, span } => (|| {
                     self.push_span(span, None);

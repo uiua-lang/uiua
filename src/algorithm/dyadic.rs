@@ -935,6 +935,9 @@ impl Value {
         })
     }
     pub fn unpick(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+        if index.rank() >= 2 {
+            return Err(env.error("Under multidimensional pick is not yet implemented 😞"));
+        }
         let index = index.as_indices(env, "Index must be an array of integers")?;
         Ok(match (self, into) {
             (Value::Num(a), Value::Num(b)) => a.unpick_impl(&index, b, env)?.into(),

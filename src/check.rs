@@ -331,7 +331,7 @@ impl<'a> VirtualEnv<'a> {
                     if !handler_sig.is_subset_of(target_handler_sig) {
                         return Err(format!(
                             "try's functions have incompatible signatures {f_sig} and {handler_sig}. \
-                            The error handler should take one more argement than the function."
+                            The error handler should take one more argument than the function."
                         ));
                     }
                     self.handle_sig(f_sig)?;

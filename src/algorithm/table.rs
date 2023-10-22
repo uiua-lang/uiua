@@ -13,7 +13,6 @@ use crate::{
     array::{Array, ArrayValue, Shape},
     function::Function,
     primitive::Primitive,
-    run::ArrayArg,
     value::Value,
     Uiua, UiuaResult,
 };
@@ -23,8 +22,8 @@ use super::loops::flip;
 pub fn table(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
-    let xs = env.pop(ArrayArg(1))?;
-    let ys = env.pop(ArrayArg(2))?;
+    let xs = env.pop(1)?;
+    let ys = env.pop(2)?;
     match (f.as_flipped_primitive(), xs, ys) {
         (Some((prim, flipped)), Value::Num(xs), Value::Num(ys)) => {
             if let Err((xs, ys)) = table_nums(prim, flipped, xs, ys, env) {
@@ -176,8 +175,8 @@ fn generic_table(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> Uiua
 pub fn cross(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
-    let xs = env.pop(ArrayArg(1))?;
-    let ys = env.pop(ArrayArg(2))?;
+    let xs = env.pop(1)?;
+    let ys = env.pop(2)?;
     let sig = f.signature();
     if sig != (2, 1) {
         return Err(env.error(format!(
@@ -231,7 +230,7 @@ pub fn combinate(env: &mut Uiua) -> UiuaResult {
     }
     let mut args = Vec::with_capacity(ns.len());
     for i in 0..ns.len() {
-        let arg = env.pop(ArrayArg(i + 1))?;
+        let arg = env.pop(i + 1)?;
         args.push(arg);
     }
     let ns: Vec<usize> = ns

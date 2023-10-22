@@ -9,7 +9,6 @@ use crate::{
     },
     array::{FormatShape, Shape},
     function::Function,
-    run::ArrayArg,
     value::Value,
     Uiua, UiuaResult,
 };
@@ -33,7 +32,7 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
     match sig.args {
         0 => Err(env.error("Each's function must take at least 1 argument")),
         1 => {
-            let xs = env.pop(ArrayArg(1))?;
+            let xs = env.pop(1)?;
             if output {
                 each1_1(f, xs, env)
             } else {
@@ -41,8 +40,8 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
             }
         }
         2 => {
-            let xs = env.pop(ArrayArg(1))?;
-            let ys = env.pop(ArrayArg(2))?;
+            let xs = env.pop(1)?;
+            let ys = env.pop(2)?;
             if output {
                 each2_1(f, xs, ys, env)
             } else {
@@ -52,7 +51,7 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
         n => {
             let mut args = Vec::with_capacity(n);
             for i in 0..n {
-                args.push(env.pop(ArrayArg(i + 1))?);
+                args.push(env.pop(i + 1)?);
             }
             if output {
                 eachn_1(f, args, env)
@@ -207,7 +206,7 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
     match sig.args {
         0 => Err(env.error("Rows' function must take at least 1 argument")),
         1 => {
-            let xs = env.pop(ArrayArg(1))?;
+            let xs = env.pop(1)?;
             if output {
                 rows1_1(f, xs, env)
             } else {
@@ -215,8 +214,8 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
             }
         }
         2 => {
-            let xs = env.pop(ArrayArg(1))?;
-            let ys = env.pop(ArrayArg(2))?;
+            let xs = env.pop(1)?;
+            let ys = env.pop(2)?;
             if output {
                 rows2_1(f, xs, ys, env)
             } else {
@@ -226,7 +225,7 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
         n => {
             let mut args = Vec::with_capacity(n);
             for i in 0..n {
-                args.push(env.pop(ArrayArg(i + 1))?);
+                args.push(env.pop(i + 1)?);
             }
             if output {
                 rowsn_1(f, args, env)
@@ -363,8 +362,8 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
             )))
         }
         2 => {
-            let a = env.pop(ArrayArg(1))?;
-            let xs = env.pop(ArrayArg(2))?;
+            let a = env.pop(1)?;
+            let xs = env.pop(2)?;
             if xs.row_count() == 0 {
                 env.push(xs);
                 return Ok(());
@@ -379,9 +378,9 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
             env.push(Value::from_row_values(new_rows, env)?);
         }
         3 => {
-            let a = env.pop(ArrayArg(1))?;
-            let b = env.pop(ArrayArg(2))?;
-            let xs = env.pop(ArrayArg(3))?;
+            let a = env.pop(1)?;
+            let b = env.pop(2)?;
+            let xs = env.pop(3)?;
             if xs.row_count() == 0 {
                 env.push(xs);
                 return Ok(());
@@ -399,9 +398,9 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
         n => {
             let mut args = Vec::with_capacity(n - 1);
             for i in 0..n - 1 {
-                args.push(env.pop(ArrayArg(i + 1))?);
+                args.push(env.pop(i + 1)?);
             }
-            let xs = env.pop(ArrayArg(n))?;
+            let xs = env.pop(n)?;
             if xs.row_count() == 0 {
                 env.push(xs);
                 return Ok(());
@@ -439,8 +438,8 @@ pub fn tribute(env: &mut Uiua) -> UiuaResult {
             )))
         }
         2 => {
-            let xs = env.pop(ArrayArg(1))?;
-            let a = env.pop(ArrayArg(2))?;
+            let xs = env.pop(1)?;
+            let a = env.pop(2)?;
             if xs.row_count() == 0 {
                 env.push(xs);
                 return Ok(());
@@ -455,9 +454,9 @@ pub fn tribute(env: &mut Uiua) -> UiuaResult {
             env.push(Value::from_row_values(new_rows, env)?);
         }
         3 => {
-            let xs = env.pop(ArrayArg(1))?;
-            let a = env.pop(ArrayArg(2))?;
-            let b = env.pop(ArrayArg(3))?;
+            let xs = env.pop(1)?;
+            let a = env.pop(2)?;
+            let b = env.pop(3)?;
             if xs.row_count() == 0 {
                 env.push(xs);
                 return Ok(());
@@ -474,9 +473,9 @@ pub fn tribute(env: &mut Uiua) -> UiuaResult {
         }
         n => {
             let mut args = Vec::with_capacity(n - 1);
-            let xs = env.pop(ArrayArg(1))?;
+            let xs = env.pop(1)?;
             for i in 0..n - 1 {
-                args.push(env.pop(ArrayArg(i + 2))?);
+                args.push(env.pop(i + 2)?);
             }
             if xs.row_count() == 0 {
                 env.push(xs);
@@ -523,7 +522,7 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
     match ns.as_slice() {
         [] => return Ok(()),
         &[n] => {
-            let xs = env.pop(ArrayArg(1))?;
+            let xs = env.pop(1)?;
             if xs.rank() == 0 {
                 env.push(xs);
                 return Ok(());
@@ -542,8 +541,8 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
             env.push(res);
         }
         &[xn, yn] => {
-            let xs = env.pop(ArrayArg(1))?;
-            let ys = env.pop(ArrayArg(2))?;
+            let xs = env.pop(1)?;
+            let ys = env.pop(2)?;
             if xs.rank() == 0 && ys.rank() == 0 {
                 env.push(xs);
                 env.push(ys);
@@ -567,7 +566,7 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
         is => {
             let mut args = Vec::with_capacity(is.len());
             for i in 0..is.len() {
-                let arg = env.pop(ArrayArg(i + 1))?;
+                let arg = env.pop(i + 1)?;
                 args.push(arg);
             }
             let mut ns: Vec<usize> = Vec::with_capacity(is.len());

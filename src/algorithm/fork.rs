@@ -1,6 +1,6 @@
 //! Algorithms for forking modifiers
 
-use crate::{run::ArrayArg, value::Value, Uiua, UiuaResult};
+use crate::{value::Value, Uiua, UiuaResult};
 
 pub fn both(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
@@ -10,8 +10,8 @@ pub fn both(env: &mut Uiua) -> UiuaResult {
             env.call(f)?;
         }
         1 => {
-            let a = env.pop(ArrayArg(1))?;
-            let b = env.pop(ArrayArg(2))?;
+            let a = env.pop(1)?;
+            let b = env.pop(2)?;
             env.push(b);
             env.call(f.clone())?;
             env.push(a);
@@ -21,10 +21,10 @@ pub fn both(env: &mut Uiua) -> UiuaResult {
             let mut a = Vec::with_capacity(n);
             let mut b = Vec::with_capacity(n);
             for i in 0..n {
-                a.push(env.pop(ArrayArg(i + 1))?);
+                a.push(env.pop(i + 1)?);
             }
             for i in 0..n {
-                b.push(env.pop(ArrayArg(n + i + 1))?);
+                b.push(env.pop(n + i + 1)?);
             }
             for b in b.into_iter().rev() {
                 env.push(b);
@@ -46,7 +46,7 @@ pub fn fork(env: &mut Uiua) -> UiuaResult {
     let arg_count = f.signature().args.max(g.signature().args);
     let mut args = Vec::with_capacity(arg_count);
     for i in 0..arg_count {
-        args.push(env.pop(ArrayArg(i + 1))?);
+        args.push(env.pop(i + 1)?);
     }
     for arg in args.iter().take(g.signature().args).rev() {
         env.push(arg.clone());
@@ -65,7 +65,7 @@ pub fn bracket(env: &mut Uiua) -> UiuaResult {
     let f_sig = f.signature();
     let mut f_args = Vec::with_capacity(f_sig.args);
     for i in 0..f_sig.args {
-        f_args.push(env.pop(ArrayArg(i + 1))?);
+        f_args.push(env.pop(i + 1)?);
     }
     env.call(g)?;
     for arg in f_args.into_iter().rev() {
@@ -78,7 +78,7 @@ pub fn bracket(env: &mut Uiua) -> UiuaResult {
 pub fn iff(env: &mut Uiua) -> UiuaResult {
     let if_true = env.pop_function()?;
     let if_false = env.pop_function()?;
-    let condition = env.pop(ArrayArg(1))?;
+    let condition = env.pop(1)?;
     if let Ok(condition) = condition.as_nat(env, "") {
         if condition > 1 {
             return Err(env.error(format!(
@@ -98,7 +98,7 @@ pub fn iff(env: &mut Uiua) -> UiuaResult {
             let arg_count = if_true_sig.args.max(if_false_sig.args);
             let mut args = Vec::with_capacity(arg_count);
             for i in 0..arg_count {
-                args.push(env.pop(ArrayArg(i + 1))?);
+                args.push(env.pop(i + 1)?);
             }
             if condition == 1 {
                 for arg in args.into_iter().take(if_true_sig.args).rev() {
@@ -140,7 +140,7 @@ pub fn iff(env: &mut Uiua) -> UiuaResult {
         let arg_count = if_true_sig.args.max(if_false_sig.args);
         match arg_count {
             1 => {
-                let xs = env.pop(ArrayArg(2))?;
+                let xs = env.pop(2)?;
                 if xs.row_count() != condition.len() {
                     return Err(env.error(format!(
                         "If's condition must have the same number of rows as its argument, \
@@ -163,8 +163,8 @@ pub fn iff(env: &mut Uiua) -> UiuaResult {
                 env.push(Value::from_row_values(new_rows, env)?);
             }
             2 => {
-                let a = env.pop(ArrayArg(2))?;
-                let b = env.pop(ArrayArg(3))?;
+                let a = env.pop(2)?;
+                let b = env.pop(3)?;
                 if a.row_count() != condition.len() || b.row_count() != condition.len() {
                     return Err(env.error(format!(
                         "If's condition must have the same number of rows as its arguments, \

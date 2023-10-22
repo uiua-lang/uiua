@@ -13,7 +13,6 @@ use crate::{
     cowslice::cowslice,
     function::{Function, Signature},
     primitive::Primitive,
-    run::ArrayArg,
     value::Value,
     Uiua, UiuaResult,
 };
@@ -21,7 +20,7 @@ use crate::{
 pub fn reduce(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
-    let xs = env.pop(ArrayArg(1))?;
+    let xs = env.pop(1)?;
 
     match (f.as_flipped_primitive(), xs) {
         (Some((Primitive::Join, false)), mut xs) if !env.pack_boxes() => {
@@ -167,7 +166,7 @@ fn generic_fold_right_1(
 pub fn scan(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
-    let xs = env.pop(ArrayArg(1))?;
+    let xs = env.pop(1)?;
     if xs.rank() == 0 {
         return Err(env.error("Cannot scan rank 0 array"));
     }
@@ -290,7 +289,7 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let mut args = Vec::with_capacity(ns.len());
     for i in 0..ns.len() {
-        let arg = env.pop(ArrayArg(i + 1))?;
+        let arg = env.pop(i + 1)?;
         args.push(arg);
     }
     let ns: Vec<usize> = ns

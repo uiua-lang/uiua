@@ -988,7 +988,7 @@ code:
     }
 }
 
-/// A trait for types that can be used as argument specifiers for [`Uiua::pop`] and [`Uiua::antipop`]
+/// A trait for types that can be used as argument specifiers for [`Uiua::pop`]
 ///
 /// If the stack is empty, the error message will be "Stack was empty when evaluating {arg_name}"
 pub trait StackArg {
@@ -1029,17 +1029,5 @@ where
 {
     fn arg_name(self) -> String {
         self().arg_name()
-    }
-}
-
-pub struct ArrayArg<T>(pub T);
-pub struct FunctionNArg<T>(pub usize, pub T);
-
-impl<T> StackArg for ArrayArg<T>
-where
-    T: StackArg,
-{
-    fn arg_name(self) -> String {
-        format!("array {}", self.0.arg_name())
     }
 }

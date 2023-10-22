@@ -2,7 +2,6 @@
 
 use crate::{
     array::{Array, ArrayValue},
-    run::ArrayArg,
     value::Value,
     Uiua, UiuaResult,
 };
@@ -201,9 +200,9 @@ fn collapse_groups(
     let sig = f.signature();
     match sig.args {
         0 | 1 => {
-            let indices = env.pop(ArrayArg(1))?;
+            let indices = env.pop(1)?;
             let indices = indices.as_indices(env, indices_error)?;
-            let values = env.pop(ArrayArg(2))?;
+            let values = env.pop(2)?;
             let groups = get_groups(&values, &indices, env)?;
             let mut rows = Vec::with_capacity(groups.len());
             for group in groups {
@@ -217,10 +216,10 @@ fn collapse_groups(
             env.push(res);
         }
         2 => {
-            let mut acc = env.pop(ArrayArg(1))?;
-            let indices = env.pop(ArrayArg(2))?;
+            let mut acc = env.pop(1)?;
+            let indices = env.pop(2)?;
             let indices = indices.as_indices(env, indices_error)?;
-            let values = env.pop(ArrayArg(3))?;
+            let values = env.pop(3)?;
             let groups = get_groups(&values, &indices, env)?;
             for row in groups {
                 env.push(row);

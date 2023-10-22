@@ -104,9 +104,8 @@ impl<'a> VirtualEnv<'a> {
             Instr::PushTempInline { count, .. } | Instr::PushTempUnder { count, .. } => {
                 self.handle_args_outputs(*count, 0)?
             }
-            Instr::PushTempFunctions(_)
-            | Instr::PopTempFunctions(_)
-            | Instr::GetTempFunction(_) => return Err("custom modifier".into()),
+            Instr::PushTempFunctions(_) | Instr::PopTempFunctions(_) => {}
+            Instr::GetTempFunction(_) => return Err("custom modifier".into()),
             Instr::PopTempInline { count, .. }
             | Instr::PopTempUnder { count, .. }
             | Instr::CopyTempInline { count, .. } => self.handle_args_outputs(0, *count)?,

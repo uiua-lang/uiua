@@ -152,8 +152,10 @@ sys_op! {
     (2(0), Write, "&w", "write"),
     /// Import an item from a file
     ///
-    /// If the file has already been imported, its code will not be run again, but the values it originally pushed onto the stack will be pushed again.
-    /// Functions can be extracted from the imported modules with [use].
+    /// The first argument is the path to the file. The second is the name of the item to import.
+    /// ex: Dub ← &i "example.ua" "Double"
+    ///   : Dub 5
+    /// To import multiple items, you can make a function that imports from a specific path.
     /// ex: ex ← &i "example.ua"
     ///   : Double ← ex "Double"
     ///   : Square ← ex "Square"

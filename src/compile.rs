@@ -134,7 +134,10 @@ impl Uiua {
                 }
                 if let [Instr::PushFunc(f)] = instrs.as_slice() {
                     self.bind_function(name, f.clone(), span)?;
-                } else if sig.args == 0 && (sig.outputs > 0 || instrs.is_empty()) {
+                } else if sig.args == 0
+                    && (sig.outputs > 0 || instrs.is_empty())
+                    && placeholder_count == 0
+                {
                     self.exec_global_instrs(instrs)?;
                     if let Some(f) = self.function_stack.pop() {
                         self.bind_function(name, f, span)?;

@@ -704,12 +704,18 @@ code:
     }
     /// Pop a value from the stack
     pub fn pop(&mut self, arg: impl StackArg) -> UiuaResult<Value> {
-        let res = self.stack.pop().ok_or_else(|| {
-            self.error(format!(
+        let res = match self.stack.pop() {
+            Some(mut val) => {
+                if self.pack_boxes() {
+                    val.unpack();
+                }
+                Ok(val)
+            }
+            None => Err(self.error(format!(
                 "Stack was empty when evaluating {}",
                 arg.arg_name()
-            ))
-        });
+            ))),
+        };
         for bottom in &mut self.scope.array {
             *bottom = (*bottom).min(self.stack.len());
         }

@@ -8,8 +8,8 @@ Uiua is not yet stable.
   - Functions can no longer be put in arrays or manipulated as stack values
   - Inline functions can now only appear as modifier arguments or bindings
   - `call !` has been removed, as there is nothing on the stack to call
-  - `---` scopes are now test scopes. `~~~` scopes have been removed.
   - Modules have been reworked. [`&i`](https://uiua.org/docs/&i) now handles both loading a module from a file and importing items from that module.
+  - `---` scopes are now test scopes. `~~~` scopes have been removed.
   - Remove `use`, as it is no longer necessary
   - Boxes still work as normal, but are now their own type distinct from functions
   - Remove `sig`, as everything that can be on the stack now has the same signature
@@ -25,6 +25,7 @@ Uiua is not yet stable.
 - Change [`match` `≍`](https://uiua.org/docs/match)'s glyph to avoid confusion with the new ocean functions' glyphs. Code using `≅` will continue to work and will be formatted as `≍`.
 - Stack signatures found to be incorrect at runtime produce an error
 - Dyadic math operations now work with [`under` `⍜`](https://uiua.org/docs/under) even if both arguments are outside [`under` `⍜`](https://uiua.org/docs/under)'s function
+- Some mathematical functions that previously did not work with [`invert` `⍘`](https://uiua.org/docs/invert) and [`under` `⍜`](https://uiua.org/docs/under) when accompanied by [`flip` `∶`](https://uiua.org/docs/flip) now do
 ### Website
 - Add 3 new tutorials
   - [Control Flow](https://uiua.org/docs/controlflow)

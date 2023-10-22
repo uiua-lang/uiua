@@ -1044,11 +1044,7 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
-    pub fn take(mut self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
-        if env.pack_boxes() {
-            self.unpack();
-            from.unpack();
-        }
+    pub fn take(self, from: Self, env: &Uiua) -> UiuaResult<Self> {
         if from.rank() == 0 {
             return Err(env.error("Cannot take from scalar"));
         }
@@ -1064,11 +1060,7 @@ impl Value {
             Value::Box(a) => Value::Box(a.take(&index, env)?),
         })
     }
-    pub fn drop(mut self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
-        if env.pack_boxes() {
-            self.unpack();
-            from.unpack();
-        }
+    pub fn drop(self, from: Self, env: &Uiua) -> UiuaResult<Self> {
         if from.rank() == 0 {
             return Err(env.error("Cannot drop from scalar"));
         }

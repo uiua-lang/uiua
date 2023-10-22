@@ -29,7 +29,7 @@ Uiua is not yet stable.
 ### Website
 - Add 3 new tutorials
   - [Control Flow](https://uiua.org/docs/controlflow)
-  - [Advanced Stack Manipulation](https://uiua.org/docs/advancedstack)
+  - [Advanced Array Manipulation](https://uiua.org/docs/advancedarray)
   - [Custom Modifiers](https://uiua.org/docs/custommodifiers)
 - The orientation of stack values in the output can be flipped in the settings
 

@@ -589,8 +589,15 @@ impl Lexer {
                     while let Some(c) = self.next_char_if(is_ident_char) {
                         ident.push(c);
                     }
+                    let mut exclam_count = 0;
                     while self.next_char_exact('!') {
                         ident.push('!');
+                        exclam_count += 1;
+                    }
+                    let ambiguous_ne =
+                        exclam_count == 1 && self.input_chars.get(self.loc.char_pos) == Some(&'=');
+                    if ambiguous_ne {
+                        ident.pop();
                     }
                     // Try to parse as primitives
                     let lowercase_end = ident
@@ -599,6 +606,10 @@ impl Lexer {
                         .map_or(ident.len(), |(i, _)| i);
                     if let Some(prims) = Primitive::from_format_name_multi(&ident[..lowercase_end])
                     {
+                        if ambiguous_ne {
+                            self.loc.char_pos -= 1;
+                            self.loc.byte_pos -= 1;
+                        }
                         let mut start = start;
                         for (prim, frag) in prims {
                             let end = Loc {

@@ -90,7 +90,7 @@ pub struct Scope {
     /// The current fill values
     fills: Fills,
     /// The current clear state
-    tip_depth: usize,
+    pack_depth: usize,
 }
 
 impl Default for Scope {
@@ -109,7 +109,7 @@ impl Default for Scope {
             }],
             names: HashMap::new(),
             fills: Fills::default(),
-            tip_depth: 0,
+            pack_depth: 0,
         }
     }
 }
@@ -894,14 +894,14 @@ code:
         }
         res
     }
-    pub(crate) fn with_tip(&mut self, in_ctx: impl FnOnce(&mut Self) -> UiuaResult) -> UiuaResult {
-        self.scope.tip_depth += 1;
+    pub(crate) fn with_pack(&mut self, in_ctx: impl FnOnce(&mut Self) -> UiuaResult) -> UiuaResult {
+        self.scope.pack_depth += 1;
         let res = in_ctx(self);
-        self.scope.tip_depth -= 1;
+        self.scope.pack_depth -= 1;
         res
     }
-    pub(crate) fn tip_boxes(&self) -> bool {
-        self.scope.tip_depth > 0
+    pub(crate) fn pack_boxes(&self) -> bool {
+        self.scope.pack_depth > 0
     }
     /// Spawn a thread
     pub(crate) fn spawn(

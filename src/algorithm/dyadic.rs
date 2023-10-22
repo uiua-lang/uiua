@@ -123,9 +123,9 @@ impl Value {
         self.join_impl(other, &()).unwrap()
     }
     fn join_impl<C: FillContext>(mut self, mut other: Self, ctx: &C) -> Result<Self, C::Error> {
-        if ctx.tip_boxes() {
-            self.tip();
-            other.tip();
+        if ctx.pack_boxes() {
+            self.unpack();
+            other.unpack();
             if let Ok(val) = self.clone().join_impl_impl(other.clone(), ctx) {
                 Ok(val)
             } else {
@@ -174,9 +174,9 @@ impl Value {
         mut other: Self,
         ctx: &C,
     ) -> Result<(), C::Error> {
-        if ctx.tip_boxes() {
-            self.tip();
-            other.tip();
+        if ctx.pack_boxes() {
+            self.unpack();
+            other.unpack();
             if self.append_impl(other.clone(), ctx).is_err() {
                 *self = take(self)
                     .into_rows()
@@ -353,9 +353,9 @@ impl Value {
         mut other: Self,
         ctx: &C,
     ) -> Result<(), C::Error> {
-        if ctx.tip_boxes() {
-            self.tip();
-            other.tip();
+        if ctx.pack_boxes() {
+            self.unpack();
+            other.unpack();
             if self.couple_impl_impl(other.clone(), ctx).is_err() {
                 self.box_if_not();
                 other.box_if_not();
@@ -1044,7 +1044,11 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
-    pub fn take(self, from: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn take(mut self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
+        if env.pack_boxes() {
+            self.unpack();
+            from.unpack();
+        }
         if from.rank() == 0 {
             return Err(env.error("Cannot take from scalar"));
         }
@@ -1060,7 +1064,11 @@ impl Value {
             Value::Box(a) => Value::Box(a.take(&index, env)?),
         })
     }
-    pub fn drop(self, from: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn drop(mut self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
+        if env.pack_boxes() {
+            self.unpack();
+            from.unpack();
+        }
         if from.rank() == 0 {
             return Err(env.error("Cannot drop from scalar"));
         }

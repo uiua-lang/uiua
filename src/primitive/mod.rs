@@ -517,9 +517,9 @@ impl Primitive {
                 env.call(g)?;
                 env.call(f_after)?;
             }
-            Primitive::Tip => {
+            Primitive::Pack => {
                 let f = env.pop_function()?;
-                env.with_tip(|env| env.call(f))?;
+                env.with_pack(|env| env.call(f))?;
             }
             Primitive::Fill => {
                 let fill = env.pop_function()?;

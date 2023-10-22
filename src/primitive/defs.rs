@@ -607,11 +607,16 @@ primitive!(
     ///   : ⊜□≠@ .
     ///   : ∵⇌.
     ///
-    /// For more complex operations, you can use [each][under][unbox].
-    /// ex: $ Prepend the word length
-    ///   : ⊜□≠@ .
-    ///   : ∵⍜⊔($"_ _"⧻.).
-    /// This works because `invert``unbox` is just `box`. For each element, it un-[box]s the [box] function to get the array out, does something to it, then [box]s the result.
+    /// For more complex operations, you can use [under][unbox] or [pack].
+    /// ex: Parts ← .⊜□≠@ . $ Prepend the word length
+    ///   : F ← ($"_ _"⧻.)
+    ///   : ∵⍜⊔F Parts
+    ///   : ⊐∵F Parts.
+    /// [under][unbox] works because `invert``unbox` is just `box`. For each element, it un-[box]s the [box] function to get the array out, does something to it, then [box]s the result.
+    /// The difference between [under][unbox] and [pack] is that [pack] will only [box] the results if it is necessary.
+    /// ex: A ← .{1_2_3 4_5 [7]}
+    ///   : ∵⍜⊔(⬚0↙3) A
+    ///   : ⊐∵(⬚0↙3) A
     (1, Box, MonadicArray, ("box", '□')),
     /// Take an array out of a box
     ///
@@ -1026,20 +1031,24 @@ primitive!(
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
     /// Apply a function with implicit (un)boxing
     ///
-    /// When working with [box]ed data, [tip] will automatically [unbox] the data for functions like [join].
+    /// When working with [box]ed data, [pack] will automatically [unbox] the data for functions like [join].
     /// ex:  /⊂ {"a" "bc" "def"}
     /// ex: ⊐/⊂ {"a" "bc" "def"}
     ///
-    /// If combining arrays would fail because of a shape mismatch, [tip] will automatically [box] the arrays.
-    /// ex!  ∵⇡ ⇡5
-    /// ex: ⊐∵⇡ ⇡5
+    /// If combining arrays would fail because of a shape mismatch, [pack] will automatically [box] the arrays.
+    /// ex!  \⊂⇡5
+    /// ex: ⊐\⊂⇡5
     /// ex: ⊐⊟ 5 "hello"
     ///
-    /// [tip] is overridden by [fill], regardless of order.
-    /// ex: ⬚0(⊐∵⇡) ⇡5
+    /// While `{}`s will always [box] their contents, [pack] will only [box] if necessary.
+    /// ex:  {1 2_3}
+    ///   : ⊐[1 2_3]
+    /// ex:  {1 2 3}
+    ///   : ⊐[1 2 3]
     ///
-    /// [tip]'s glyph is `⊐` because it looks like a box tipped over.
-    ([1], Tip, OtherModifier, ("tip", '⊐')),
+    /// [pack] is overridden by [fill], regardless of order.
+    /// ex: ⬚0⊐∵⇡ ⇡5
+    ([1], Pack, OtherModifier, ("pack", '⊐')),
     /// Invert the behavior of a function
     ///
     /// Most functions are not invertible.

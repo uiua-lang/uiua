@@ -633,18 +633,18 @@ impl Value {
             }
         })
     }
-    pub fn tip(&mut self) {
+    pub fn unpack(&mut self) {
         if let Value::Box(arr) = self {
             *self = match take(arr).into_unboxed() {
-                Ok(value) => value.tipped(),
+                Ok(value) => value.unpacked(),
                 Err(arr) => Value::Box(arr),
             };
         }
     }
-    pub fn tipped(self) -> Self {
+    pub fn unpacked(self) -> Self {
         match self {
             Self::Box(arr) => match arr.into_unboxed() {
-                Ok(value) => value.tipped(),
+                Ok(value) => value.unpacked(),
                 Err(arr) => Self::Box(arr),
             },
             value => value,

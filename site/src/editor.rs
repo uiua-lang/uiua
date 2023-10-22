@@ -393,6 +393,7 @@ pub fn Editor<'a>(
 
     // Remove a code range
     let remove_code = move |start: u32, end: u32| {
+        logging::log!("start: {start}, end: {end}");
         if start == end {
             return;
         }
@@ -489,6 +490,7 @@ pub fn Editor<'a>(
             }
             "Backspace" => {
                 let (start, end) = get_code_cursor().unwrap();
+                logging::log!("backspace start: {start}, end: {end}");
                 if start == end {
                     if start > 0 {
                         let mut removal_count = 1;
@@ -1322,7 +1324,6 @@ fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
         if i > 0 {
             curr += 1;
         }
-        // This is the case when you click on an empty line
         if children_of(&div_node).count() == 1
             && div_node
                 .first_child()
@@ -1330,33 +1331,70 @@ fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
                 .dyn_into::<HtmlBrElement>()
                 .is_ok()
         {
+            // This is the case when you click on an empty line
             if div_node.contains(Some(&anchor_node)) {
                 start = curr + anchor_offset;
             }
             if div_node.contains(Some(&focus_node)) {
                 end = curr + focus_offset;
             }
-            continue;
-        }
-        // This is the normal case
-        for span_node in children_of(&div_node) {
-            if span_node.contains(Some(&anchor_node)) {
-                start = curr + anchor_offset;
+        } else {
+            // This is the normal case
+            for span_node in children_of(&div_node) {
+                let text_content = span_node.text_content().unwrap();
+                // logging::log!("text_content: {:?}", text_content);
+                let len = text_content.chars().count() as u32;
+                if span_node.contains(Some(&anchor_node)) {
+                    let anchor_char_offset =
+                        utf16_offset_to_char_offset(&text_content, anchor_offset);
+                    start = curr + anchor_char_offset;
+                    // logging::log!(
+                    //     "start change: curr: {}, offset: {}",
+                    //     curr,
+                    //     anchor_char_offset
+                    // );
+                    // logging::log!("start -> {:?}", start);
+                }
+                if span_node.contains(Some(&focus_node)) {
+                    let focus_char_offset =
+                        utf16_offset_to_char_offset(&text_content, focus_offset);
+                    end = curr + focus_char_offset;
+                    // logging::log!("end change: curr: {}, offset: {}", curr, focus_char_offset);
+                    // logging::log!("end -> {:?}", end);
+                }
+                // Increment curr by the length of the text in the node
+                // logging::log!("len {} -> {}", curr, curr + len);
+                curr += len;
             }
-            if span_node.contains(Some(&focus_node)) {
-                end = curr + focus_offset;
-            }
-            // Increment curr by the length of the text in the node
-            let len = span_node.text_content().unwrap().chars().count() as u32;
-            curr += len;
         }
     }
-    // log!("get_code_cursor -> {:?}, {:?}", start, end);
+    // logging::log!("get_code_cursor -> {:?}, {:?}", start, end);
     Some((start, end))
 }
 
+fn utf16_offset_to_char_offset(s: &str, utf16_offset: u32) -> u32 {
+    let mut char_offset = 0;
+    let mut utf16_index = 0;
+    for c in s.chars() {
+        if utf16_index == utf16_offset {
+            break;
+        }
+        utf16_index += c.len_utf16() as u32;
+        char_offset += 1;
+    }
+    char_offset
+}
+
+fn char_offset_to_utf16_offset(s: &str, char_offset: u32) -> u32 {
+    let mut utf16_offset = 0;
+    for c in s.chars().take(char_offset as usize) {
+        utf16_offset += c.len_utf16() as u32;
+    }
+    utf16_offset
+}
+
 fn set_code_cursor(id: &str, start: u32, end: u32) {
-    // log!("set_code_cursor({}, {})", start, end);
+    // logging::log!("set_code_cursor({}, {})", start, end);
 
     let elem = element::<HtmlDivElement>(id);
     let find_pos = |mut pos: u32| {
@@ -1391,9 +1429,15 @@ fn set_code_cursor(id: &str, start: u32, end: u32) {
     let (start_node, mut start_len) = find_pos(start);
     let (end_node, mut end_len) = find_pos(end);
     if let Some((start_node, end_node)) = start_node.zip(end_node) {
-        // log!("ended on: {:?}", text_content);
-        start_len = start_len.min(start_node.text_content().unwrap().chars().count() as u32);
-        end_len = end_len.min(end_node.text_content().unwrap().chars().count() as u32);
+        let start_text = &start_node.text_content().unwrap();
+        let end_text = &end_node.text_content().unwrap();
+        // logging::log!("start: {start_len} of {start_text:?}");
+        start_len = char_offset_to_utf16_offset(
+            start_text,
+            start_len.min(start_text.chars().count() as u32),
+        );
+        end_len =
+            char_offset_to_utf16_offset(end_text, end_len.min(end_text.chars().count() as u32));
         let range = document().create_range().unwrap();
         range.set_start(&start_node, start_len).unwrap();
         range.set_end(&end_node, end_len).unwrap();
@@ -1536,7 +1580,7 @@ fn set_code_html(id: &str, code: &str) {
         end = span.end.char_pos;
     }
 
-    push_unspanned(&mut html, code.len(), &mut end);
+    push_unspanned(&mut html, code.chars().count(), &mut end);
 
     html.push_str("</div>");
 

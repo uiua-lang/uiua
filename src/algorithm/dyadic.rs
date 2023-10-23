@@ -898,11 +898,11 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
-    pub(crate) fn into_shaped_indices(self, env: &Uiua) -> UiuaResult<(Shape, Vec<isize>)> {
+    pub(crate) fn as_shaped_indices(&self, env: &Uiua) -> UiuaResult<(&[usize], Vec<isize>)> {
         Ok(match self {
             Value::Num(arr) => {
                 let mut index_data = Vec::with_capacity(arr.flat_len());
-                for n in arr.data {
+                for &n in &arr.data {
                     if n.fract() != 0.0 {
                         return Err(env.error(format!(
                             "Index must be an array of integers, but {n} is not an integer"
@@ -910,14 +910,14 @@ impl Value {
                     }
                     index_data.push(n as isize);
                 }
-                (arr.shape, index_data)
+                (&arr.shape, index_data)
             }
             Value::Byte(arr) => {
                 let mut index_data = Vec::with_capacity(arr.flat_len());
-                for n in arr.data {
+                for &n in &arr.data {
                     index_data.push(n as isize);
                 }
-                (arr.shape, index_data)
+                (&arr.shape, index_data)
             }
             value => {
                 return Err(env.error(format!(
@@ -928,35 +928,53 @@ impl Value {
         })
     }
     pub fn pick(self, from: Self, env: &Uiua) -> UiuaResult<Self> {
-        let (index_shape, index_data) = self.into_shaped_indices(env)?;
+        let (index_shape, index_data) = self.as_shaped_indices(env)?;
         Ok(match from {
-            Value::Num(a) => Value::Num(a.pick_shaped(&index_shape, &index_data, env)?),
+            Value::Num(a) => Value::Num(a.pick(index_shape, &index_data, env)?),
             Value::Byte(a) => op_bytes_retry_fill(
                 a,
-                |a| Ok(a.pick_shaped(&index_shape, &index_data, env)?.into()),
-                |a| Ok(a.pick_shaped(&index_shape, &index_data, env)?.into()),
+                |a| Ok(a.pick(index_shape, &index_data, env)?.into()),
+                |a| Ok(a.pick(index_shape, &index_data, env)?.into()),
             )?,
-            Value::Char(a) => Value::Char(a.pick_shaped(&index_shape, &index_data, env)?),
-            Value::Box(a) => Value::Box(a.pick_shaped(&index_shape, &index_data, env)?),
+            Value::Char(a) => Value::Char(a.pick(index_shape, &index_data, env)?),
+            Value::Box(a) => Value::Box(a.pick(index_shape, &index_data, env)?),
         })
     }
     pub fn unpick(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        if index.rank() >= 2 {
-            return Err(env.error("Under multidimensional pick is not yet implemented 😞"));
+        let (index_shape, index_data) = index.as_shaped_indices(env)?;
+        if index_shape.len() > 1 {
+            let last_axis_len = *index_shape.last().unwrap();
+            if last_axis_len == 0 {
+                if index_shape[..index_shape.len() - 1].iter().any(|&n| n > 1) {
+                    return Err(env.error("Cannot undo pick with duplicate indices"));
+                }
+            } else {
+                let mut sorted_indices = Vec::with_capacity(index_data.len() / last_axis_len);
+                for index in index_data.chunks(last_axis_len) {
+                    sorted_indices.push(index);
+                }
+                sorted_indices.sort_unstable();
+                if sorted_indices.windows(2).any(|w| w[0] == w[1]) {
+                    return Err(env.error("Cannot undo pick with duplicate indices"));
+                }
+            }
         }
-        let index = index.as_indices(env, "Index must be an array of integers")?;
         Ok(match (self, into) {
-            (Value::Num(a), Value::Num(b)) => a.unpick_impl(&index, b, env)?.into(),
-            (Value::Byte(a), Value::Byte(b)) => a.unpick_impl(&index, b, env)?.into(),
-            (Value::Char(a), Value::Char(b)) => a.unpick_impl(&index, b, env)?.into(),
-            (Value::Box(a), Value::Box(b)) => a.unpick_impl(&index, b, env)?.into(),
-            (Value::Num(a), Value::Byte(b)) => a.unpick_impl(&index, b.convert(), env)?.into(),
-            (Value::Byte(a), Value::Num(b)) => a.convert().unpick_impl(&index, b, env)?.into(),
+            (Value::Num(a), Value::Num(b)) => a.unpick(index_shape, &index_data, b, env)?.into(),
+            (Value::Byte(a), Value::Byte(b)) => a.unpick(index_shape, &index_data, b, env)?.into(),
+            (Value::Char(a), Value::Char(b)) => a.unpick(index_shape, &index_data, b, env)?.into(),
+            (Value::Box(a), Value::Box(b)) => a.unpick(index_shape, &index_data, b, env)?.into(),
+            (Value::Num(a), Value::Byte(b)) => {
+                a.unpick(index_shape, &index_data, b.convert(), env)?.into()
+            }
+            (Value::Byte(a), Value::Num(b)) => {
+                a.convert().unpick(index_shape, &index_data, b, env)?.into()
+            }
             (a, b) => a
                 .coerce_to_functions(
                     b,
                     env,
-                    |a, b, env| a.unpick_impl(&index, b, env),
+                    |a, b, env| a.unpick(index_shape, &index_data, b, env),
                     |a, b| format!("Cannot unpick {a} array from {b} array"),
                 )?
                 .into(),
@@ -965,37 +983,38 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    fn pick_shaped(
+    fn pick(&self, index_shape: &[usize], index_data: &[isize], env: &Uiua) -> UiuaResult<Self> {
+        if index_shape.len() <= 1 {
+            self.pick_single(index_data, env)
+        } else {
+            self.pick_multi(index_shape, index_data, env)
+        }
+    }
+    fn pick_multi(
         &self,
         index_shape: &[usize],
         index_data: &[isize],
         env: &Uiua,
     ) -> UiuaResult<Self> {
-        if index_shape.len() <= 1 {
-            self.pick(index_data, env)
-        } else {
-            let (shape, data) = self.pick_shaped_impl(index_shape, index_data, env)?;
-            Ok(Array::new(shape, data))
-        }
-    }
-    fn pick_shaped_impl(
-        &self,
-        index_shape: &[usize],
-        index_data: &[isize],
-        env: &Uiua,
-    ) -> UiuaResult<(Shape, CowSlice<T>)> {
         let index_row_len = index_shape[1..].iter().product();
         let mut new_data =
             CowSlice::with_capacity(index_shape[..index_shape.len() - 1].iter().product());
-        for index_row in index_data.chunks(index_row_len) {
-            let row = self.pick_shaped(&index_shape[1..], index_row, env)?;
-            new_data.extend_from_slice(&row.data);
+        if index_row_len == 0 {
+            let row = self.pick(&index_shape[1..], index_data, env)?;
+            for _ in 0..index_shape[0] {
+                new_data.extend_from_slice(&row.data);
+            }
+        } else {
+            for index_row in index_data.chunks(index_row_len) {
+                let row = self.pick(&index_shape[1..], index_row, env)?;
+                new_data.extend_from_slice(&row.data);
+            }
         }
         let mut new_shape = Shape::from(&index_shape[0..index_shape.len() - 1]);
         new_shape.extend_from_slice(&self.shape[*index_shape.last().unwrap()..]);
-        Ok((new_shape, new_data))
+        Ok(Array::new(new_shape, new_data))
     }
-    pub fn pick(&self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
+    fn pick_single(&self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
         if index.len() > self.rank() {
             return Err(env.error(format!(
                 "Cannot pick from rank {} array with index of length {}",
@@ -1027,28 +1046,76 @@ impl<T: ArrayValue> Array<T> {
         let shape = Shape::from(&self.shape[index.len()..]);
         Ok(Array::new(shape, picked))
     }
-    fn unpick_impl(self, index: &[isize], mut from: Self, env: &Uiua) -> UiuaResult<Self> {
-        let expected_shape = &from.shape()[index.len()..];
+    fn unpick(
+        self,
+        index_shape: &[usize],
+        index_data: &[isize],
+        into: Self,
+        env: &Uiua,
+    ) -> UiuaResult<Self> {
+        if index_shape.len() <= 1 {
+            self.unpick_single(index_data, into, env)
+        } else {
+            self.unpick_multi(index_shape, index_data, into, env)
+        }
+    }
+    fn unpick_multi(
+        self,
+        index_shape: &[usize],
+        index_data: &[isize],
+        mut into: Self,
+        env: &Uiua,
+    ) -> UiuaResult<Self> {
+        let expected_shape: Shape = index_shape[..index_shape.len() - 1]
+            .iter()
+            .chain(&into.shape[index_shape[index_shape.len() - 1]..])
+            .copied()
+            .collect();
         if self.shape != expected_shape {
-            return Err(
-                env.error("Attempted to undo pick, but the shape of the selected array changed")
-            );
+            return Err(env.error(format!(
+                "Attempted to undo pick, but the shape of the selected \
+                array changed from {} to {}",
+                FormatShape(&expected_shape),
+                self.format_shape()
+            )));
+        }
+        let index_row_len: usize = index_shape[1..].iter().product();
+        if index_row_len == 0 {
+            for from in self.into_rows() {
+                into = from.unpick(&index_shape[1..], index_data, into, env)?;
+            }
+        } else {
+            for (index_row, from) in index_data.chunks(index_row_len).zip(self.into_rows()) {
+                into = from.unpick(&index_shape[1..], index_row, into, env)?;
+            }
+        }
+        Ok(into)
+    }
+    fn unpick_single(self, index: &[isize], mut into: Self, env: &Uiua) -> UiuaResult<Self> {
+        let expected_shape = &into.shape()[index.len()..];
+        if self.shape != expected_shape {
+            return Err(env.error(format!(
+                "Attempted to undo pick, but the shape of the selected \
+                array changed from {} to {}",
+                FormatShape(expected_shape),
+                self.format_shape()
+            )));
         }
         let mut start = 0;
-        for (i, (&ind, &f)) in index.iter().zip(from.shape()).enumerate() {
+        for (i, (&ind, &f)) in index.iter().zip(into.shape()).enumerate() {
             let ind = if ind >= 0 {
                 ind as usize
             } else {
                 (f as isize + ind) as usize
             };
-            start += ind * from.shape[i + 1..].iter().product::<usize>();
+            start += ind * into.shape[i + 1..].iter().product::<usize>();
         }
-        from.data.modify(|data| {
+        into.data.modify(|data| {
             for (f, i) in data.make_mut().iter_mut().skip(start).zip(self.data) {
                 *f = i;
             }
         });
-        Ok(from)
+        Ok(into)
     }
 }
 
@@ -1450,48 +1517,21 @@ fn rotate<T>(by: &[isize], shape: &[usize], data: &mut [T]) {
 }
 
 impl Value {
-    fn as_index_array<'a>(&'a self, env: &Uiua) -> UiuaResult<(&'a [usize], Vec<isize>)> {
-        let mut indices = Vec::with_capacity(self.flat_len());
-        match self {
-            Value::Num(arr) => {
-                for &i in arr.data.iter() {
-                    if i.fract() != 0.0 {
-                        return Err(
-                            env.error(format!("Indices must be integers, but {} is not", i))
-                        );
-                    }
-                    indices.push(i as isize);
-                }
-            }
-            Value::Byte(arr) => {
-                for &i in arr.data.iter() {
-                    indices.push(i as isize);
-                }
-            }
-            v => {
-                return Err(env.error(format!(
-                    "Indices must be an array of integers, but it is {}",
-                    v.type_name_plural()
-                )))
-            }
-        }
-        Ok((self.shape(), indices))
-    }
     pub fn select(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
-        let (indices_shape, indices) = self.as_index_array(env)?;
+        let (indices_shape, indices_data) = self.as_shaped_indices(env)?;
         Ok(match from {
-            Value::Num(a) => a.select_impl(indices_shape, &indices, env)?.into(),
+            Value::Num(a) => a.select_impl(indices_shape, &indices_data, env)?.into(),
             Value::Byte(a) => op_bytes_ref_retry_fill(
                 a,
-                |a| Ok(a.select_impl(indices_shape, &indices, env)?.into()),
-                |a| Ok(a.select_impl(indices_shape, &indices, env)?.into()),
+                |a| Ok(a.select_impl(indices_shape, &indices_data, env)?.into()),
+                |a| Ok(a.select_impl(indices_shape, &indices_data, env)?.into()),
             )?,
-            Value::Char(a) => a.select_impl(indices_shape, &indices, env)?.into(),
-            Value::Box(a) => a.select_impl(indices_shape, &indices, env)?.into(),
+            Value::Char(a) => a.select_impl(indices_shape, &indices_data, env)?.into(),
+            Value::Box(a) => a.select_impl(indices_shape, &indices_data, env)?.into(),
         })
     }
     pub fn unselect(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        let (ind_shape, ind) = index.as_index_array(env)?;
+        let (ind_shape, ind) = index.as_shaped_indices(env)?;
         let mut sorted_indices = ind.clone();
         sorted_indices.sort();
         if sorted_indices.windows(2).any(|win| win[0] == win[1]) {

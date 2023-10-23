@@ -1746,6 +1746,12 @@ fn report_view(report: &Report) -> impl IntoView {
     for frag in &report.fragments {
         frags.push(match frag {
             ReportFragment::Plain(s) => view!(<span class="output-report">{s}</span>).into_view(),
+            ReportFragment::Faint(s) => {
+                view!(<span class="output-report output-faint">{s}</span>).into_view()
+            }
+            ReportFragment::Fainter(s) => {
+                view!(<span class="output-report output-fainter">{s}</span>).into_view()
+            }
             ReportFragment::Colored(s) => view!(<span class=class>{s}</span>).into_view(),
             ReportFragment::Newline => view!(<br/>).into_view(),
         });

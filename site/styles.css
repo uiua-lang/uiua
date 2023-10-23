@@ -443,7 +443,7 @@ input[type=number] {
 }
 
 .output-error {
-    color: #f33;
+    color: #f44;
 }
 
 .output-warning {
@@ -456,6 +456,14 @@ input[type=number] {
 
 .output-style {
     color: #0a0;
+}
+
+.output-faint {
+    opacity: 0.75;
+}
+
+.output-fainter {
+    opacity: 0.55;
 }
 
 .output-image {

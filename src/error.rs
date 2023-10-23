@@ -245,6 +245,8 @@ impl ReportKind {
 pub enum ReportFragment {
     Plain(String),
     Colored(String),
+    Faint(String),
+    Fainter(String),
     Newline,
 }
 
@@ -297,11 +299,11 @@ impl Report {
             }
             if let Span::Code(span) = span {
                 fragments.push(ReportFragment::Newline);
-                fragments.push(ReportFragment::Plain("  at ".into()));
+                fragments.push(ReportFragment::Fainter("  at ".into()));
                 if let Some(path) = &span.path {
-                    fragments.push(ReportFragment::Plain(format!("{}:", path.display())));
+                    fragments.push(ReportFragment::Fainter(format!("{}:", path.display())));
                 }
-                fragments.push(ReportFragment::Plain(format!(
+                fragments.push(ReportFragment::Fainter(format!(
                     "{}:{}",
                     span.start.line, span.start.col
                 )));
@@ -322,9 +324,9 @@ impl Report {
                     .take(end_char_pos - start_char_pos)
                     .collect();
                 let post_color: String = line.chars().skip(end_char_pos).collect();
-                fragments.push(ReportFragment::Plain(pre_color));
+                fragments.push(ReportFragment::Faint(pre_color));
                 fragments.push(ReportFragment::Colored(color));
-                fragments.push(ReportFragment::Plain(post_color));
+                fragments.push(ReportFragment::Faint(post_color));
                 fragments.push(ReportFragment::Newline);
                 fragments.push(ReportFragment::Plain(
                     " ".repeat(line_prefix.chars().count()),
@@ -347,7 +349,9 @@ impl fmt::Display for Report {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for frag in &self.fragments {
             match frag {
-                ReportFragment::Plain(s) => write!(f, "{s}")?,
+                ReportFragment::Plain(s)
+                | ReportFragment::Faint(s)
+                | ReportFragment::Fainter(s) => write!(f, "{s}")?,
                 ReportFragment::Colored(s) => {
                     if self.color {
                         let s = s.color(match self.kind {

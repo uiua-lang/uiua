@@ -1482,7 +1482,7 @@ primitive!(
     /// ex: /(⎋>10.+) ⇡8  # Break when the sum exceeds 10
     /// ex: ⍥(⎋>100.×2)∞ 1  # Break when the product exceeds 100
     (1(0), Break, Control, ("break", '⎋')),
-    /// Generate a random number between 0 and 1
+    /// Generate a random number in the range `[0, 1)`
     ///
     /// If you need a seeded random number, use [gen].
     ///

@@ -3,6 +3,7 @@
 Uiua is not yet stable.
 
 ## 0.0.23 - 2023-10-??
+If you are reading this on the website, then these changes are live here.
 ### Language
 - Implement [`under` `⍜`](https://uiua.org/docs/under) multi-index [`pick` `⊡`](https://uiua.org/docs/pick)
 ### Interpreter

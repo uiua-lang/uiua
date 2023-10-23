@@ -93,8 +93,8 @@ fn invert_instr_fragment(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
         &(Val, ([Flip, Div], [Flip, Div])),
         &([Dup, Add], [2.i(), Div.i()]),
         &([Dup, Mul], [Sqrt]),
-        &invert_pow_pattern,
-        &invert_log_pattern,
+        &(Val, ([Pow], [1.i(), Flip.i(), Div.i(), Pow.i()])),
+        &(Val, ([Log], [Flip, Pow])),
     ];
 
     let mut inverted = Vec::new();
@@ -193,6 +193,33 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
         &bin!(Sub, Add),
         &bin!(Mul, Div),
         &bin!(Div, Mul),
+        &(
+            [Flip, Pow],
+            [Dup.i(), PushTempUnderN(1).i(), Flip.i(), Pow.i()],
+            [PopTempUnderN(1).i(), Log.i()],
+        ),
+        &(
+            [Pow],
+            [Dup.i(), PushTempUnderN(1).i(), Pow.i()],
+            [PopTempUnderN(1).i(), 1.i(), Flip.i(), Div.i(), Pow.i()],
+        ),
+        &(
+            [Flip, Log],
+            [Dup.i(), PushTempUnderN(1).i(), Flip.i(), Log.i()],
+            [
+                1.i(),
+                Flip.i(),
+                Div.i(),
+                PopTempUnderN(1).i(),
+                Flip.i(),
+                Pow.i(),
+            ],
+        ),
+        &(
+            [Log],
+            [Dup.i(), PushTempUnderN(1).i(), Log.i()],
+            [PopTempUnderN(1).i(), Flip.i(), Pow.i()],
+        ),
         // It is important that this comes after the things above
         &UnderPatternFn(under_from_inverse_pattern),
         &UnderPatternFn(under_temp_pattern),
@@ -251,16 +278,6 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
             [Deshape],
             [Dup.i(), Shape.i(), PushTempUnderN(1).i(), Deshape.i()],
             [PopTempUnderN(1).i(), Reshape.i()],
-        ),
-        &(
-            [Pow],
-            [Dup.i(), PushTempUnderN(1).i(), Pow.i()],
-            [PopTempUnderN(1).i(), 1.i(), Div.i(), Pow.i()],
-        ),
-        &(
-            [Log],
-            [Dup.i(), PushTempUnderN(1).i(), Log.i()],
-            [PopTempUnderN(1).i(), Pow.i()],
         ),
         &(
             [Now],
@@ -635,33 +652,6 @@ where
 fn function(input: &[Instr]) -> Option<(&[Instr], Vec<Instr>)> {
     if let (instr @ Instr::PushFunc(_), input) = input.split_first()? {
         Some((input, vec![instr.clone()]))
-    } else {
-        None
-    }
-}
-
-fn invert_pow_pattern(input: &[Instr]) -> Option<(&[Instr], Vec<Instr>)> {
-    let (input, mut val) = Val.invert_extract(input)?;
-    if let (Instr::Prim(Primitive::Pow, span), input) = input.split_first()? {
-        val.insert(0, Instr::push(1.0));
-        val.extend([
-            Instr::Prim(Primitive::Div, *span),
-            Instr::Prim(Primitive::Pow, *span),
-        ]);
-        Some((input, val))
-    } else {
-        None
-    }
-}
-
-fn invert_log_pattern(input: &[Instr]) -> Option<(&[Instr], Vec<Instr>)> {
-    let (input, mut val) = Val.invert_extract(input)?;
-    if let (Instr::Prim(Primitive::Log, span), input) = input.split_first()? {
-        val.extend([
-            Instr::Prim(Primitive::Flip, *span),
-            Instr::Prim(Primitive::Pow, *span),
-        ]);
-        Some((input, val))
     } else {
         None
     }

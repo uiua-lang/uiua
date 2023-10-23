@@ -837,9 +837,11 @@ impl<T: ArrayValue> Array<T> {
             if all_bools {
                 let new_flat_len = true_count * row_len;
                 let mut new_data = CowSlice::with_capacity(new_flat_len);
-                for (b, r) in amount.iter().zip(self.data.chunks_exact(row_len)) {
-                    if *b == 1 {
-                        new_data.extend_from_slice(r);
+                if row_len > 0 {
+                    for (b, r) in amount.iter().zip(self.data.chunks_exact(row_len)) {
+                        if *b == 1 {
+                            new_data.extend_from_slice(r);
+                        }
                     }
                 }
                 self.data = new_data;
@@ -847,11 +849,15 @@ impl<T: ArrayValue> Array<T> {
             } else {
                 let mut new_data = CowSlice::new();
                 let mut new_len = 0;
-                for (n, r) in amount.iter().zip(self.data.chunks_exact(row_len)) {
-                    new_len += *n;
-                    for _ in 0..*n {
-                        new_data.extend_from_slice(r);
+                if row_len > 0 {
+                    for (n, r) in amount.iter().zip(self.data.chunks_exact(row_len)) {
+                        new_len += *n;
+                        for _ in 0..*n {
+                            new_data.extend_from_slice(r);
+                        }
                     }
+                } else {
+                    new_len = amount.iter().sum();
                 }
                 self.data = new_data;
                 self.shape[0] = new_len;
@@ -1523,6 +1529,14 @@ impl<T: ArrayValue> Array<T> {
         if indices_shape.len() > 1 {
             let row_count = indices_shape[0];
             let row_len = indices_shape[1..].iter().product();
+            if row_len == 0 {
+                let shape: Shape = indices_shape
+                    .iter()
+                    .chain(self.shape.iter().skip(1))
+                    .copied()
+                    .collect();
+                return Ok(Array::new(shape, CowSlice::new()));
+            }
             let mut rows = Vec::with_capacity(row_count);
             for indices_row in indices.chunks_exact(row_len) {
                 rows.push(self.select_impl(&indices_shape[1..], indices_row, env)?);

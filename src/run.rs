@@ -32,7 +32,7 @@ pub struct Uiua {
     /// Global values
     pub(crate) globals: Arc<Mutex<Vec<Global>>>,
     /// Indexable spans
-    pub(crate) spans: Arc<Mutex<Vec<Span>>>,
+    spans: Arc<Mutex<Vec<Span>>>,
     /// The thread's stack
     pub(crate) stack: Vec<Value>,
     /// The thread's function stack
@@ -704,15 +704,32 @@ code:
     }
     /// Get the span of the current function call
     pub fn span(&self) -> Span {
-        self.spans.lock()[self.span_index()].clone()
+        self.get_span(self.span_index())
+    }
+    pub fn get_span(&self, span: usize) -> Span {
+        self.spans.lock()[span].clone()
+    }
+    pub fn add_span(&mut self, span: impl Into<Span>) -> usize {
+        let mut spans = self.spans.lock();
+        let idx = spans.len();
+        spans.push(span.into());
+        idx
     }
     /// Construct an error with the current span
     pub fn error(&self, message: impl ToString) -> UiuaError {
         UiuaError::Run(self.span().clone().sp(message.to_string()))
     }
     pub fn diagnostic(&mut self, message: impl Into<String>, kind: DiagnosticKind) {
+        self.diagnostic_with_span(message, kind, self.span());
+    }
+    pub fn diagnostic_with_span(
+        &mut self,
+        message: impl Into<String>,
+        kind: DiagnosticKind,
+        span: impl Into<Span>,
+    ) {
         self.diagnostics
-            .insert(Diagnostic::new(message.into(), self.span(), kind));
+            .insert(Diagnostic::new(message.into(), span, kind));
     }
     /// Pop a value from the stack
     pub fn pop(&mut self, arg: impl StackArg) -> UiuaResult<Value> {

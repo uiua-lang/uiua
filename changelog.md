@@ -2,6 +2,16 @@
 
 Uiua is not yet stable.
 
+## 0.0.23 - 2023-10-??
+### Language
+- Implement [`under` `⍜`](https://uiua.org/docs/under) multi-index [`pick` `⊡`](https://uiua.org/docs/pick)
+### Interpreter
+- The interpreter now formats its own error and non-error diagnostic messages instead of delegating to a library
+- Fix a bunch of bugs and crashes
+### Website
+- Error and diagnostic messages a no-longer all one color
+- The pad editor now inserts a trailing newline on format
+
 ## 0.0.22 - 2023-10-21
 ### Language
 - Custom modifier placeholders (`^`) must now be immediately followed by a signature. This reduces the number of signatures that have to be declared everywhere else.

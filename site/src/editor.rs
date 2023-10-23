@@ -1634,15 +1634,18 @@ fn run_code(code: &str) -> Vec<OutputItem> {
     let mut stack = Vec::new();
     for value in values {
         // Try to convert the value to audio
-        if value.shape().last().is_some_and(|&n| n >= 1000) {
+        if value.shape().last().is_some_and(|&n| n >= 44100 / 4) {
             if let Ok(bytes) = value_to_wav_bytes(&value, io.audio_sample_rate()) {
                 stack.push(OutputItem::Audio(bytes));
                 continue;
             }
         }
         // Try to convert the value to an image
+        const MIN_AUTO_IMAGE_DIM: usize = 30;
         if let Ok(image) = value_to_image(&value) {
-            if image.width() > 25 && image.height() > 25 {
+            if image.width() >= MIN_AUTO_IMAGE_DIM as u32
+                && image.height() >= MIN_AUTO_IMAGE_DIM as u32
+            {
                 if let Ok(bytes) = image_to_bytes(&image, ImageOutputFormat::Png) {
                     stack.push(OutputItem::Image(bytes));
                     continue;
@@ -1652,7 +1655,9 @@ fn run_code(code: &str) -> Vec<OutputItem> {
         // Try to convert the value to a gif
         if let Ok(bytes) = value_to_gif_bytes(&value, 16.0) {
             match value.shape() {
-                &[_, h, w] | &[_, h, w, _] if h >= 25 && w >= 25 => {
+                &[_, h, w] | &[_, h, w, _]
+                    if h >= MIN_AUTO_IMAGE_DIM && w >= MIN_AUTO_IMAGE_DIM =>
+                {
                     stack.push(OutputItem::Gif(bytes));
                     continue;
                 }

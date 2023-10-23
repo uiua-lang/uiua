@@ -95,7 +95,6 @@ fn invert_instr_fragment(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
         &([Dup, Mul], [Sqrt]),
         &invert_pow_pattern,
         &invert_log_pattern,
-        &invert_repeat_pattern,
     ];
 
     let mut inverted = Vec::new();
@@ -663,21 +662,6 @@ fn invert_log_pattern(input: &[Instr]) -> Option<(&[Instr], Vec<Instr>)> {
             Instr::Prim(Primitive::Pow, *span),
         ]);
         Some((input, val))
-    } else {
-        None
-    }
-}
-
-fn invert_repeat_pattern(input: &[Instr]) -> Option<(&[Instr], Vec<Instr>)> {
-    let (input, mut instrs) = Val.invert_extract(input)?;
-    if input.len() < 2 {
-        return None;
-    }
-    if let ([Instr::Push(f), Instr::Prim(Primitive::Repeat, span)], input) = input.split_at(2) {
-        instrs.push(Instr::Prim(Primitive::Neg, *span));
-        instrs.push(Instr::Push(f.clone()));
-        instrs.push(Instr::Prim(Primitive::Repeat, *span));
-        Some((input, instrs))
     } else {
         None
     }

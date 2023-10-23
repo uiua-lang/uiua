@@ -626,7 +626,7 @@ impl Uiua {
             self.handle_primitive_deprecation(prim, &modified.modifier.span);
 
             // Inline bind
-            if prim == Primitive::Bind && modified.operands.len() == 2 {
+            if prim == Primitive::Bind {
                 let instrs = self.compile_words(modified.operands, true)?;
                 return if call {
                     self.extend_instrs(instrs);
@@ -651,7 +651,7 @@ impl Uiua {
             }
 
             // Inline dip and gap
-            if matches!(prim, Primitive::Dip | Primitive::Gap) && modified.operands.len() == 1 {
+            if matches!(prim, Primitive::Dip | Primitive::Gap) {
                 let (mut instrs, _) = self.compile_operand_words(modified.operands)?;
                 let span = self.add_span(modified.modifier.span.clone());
                 if prim == Primitive::Dip {
@@ -683,7 +683,7 @@ impl Uiua {
             }
 
             // Inline fork
-            if prim == Primitive::Fork && modified.operands.len() == 2 {
+            if prim == Primitive::Fork {
                 let mut operands = modified.operands.clone().into_iter();
                 let (a_instrs, a_sig) =
                     self.compile_operand_words(vec![operands.next().unwrap()])?;
@@ -736,7 +736,7 @@ impl Uiua {
             }
 
             // Inline under
-            if prim == Primitive::Under && modified.operands.len() == 2 {
+            if prim == Primitive::Under {
                 let mut operands = modified.operands.clone().into_iter();
                 let (f_instrs, _) = self.compile_operand_words(vec![operands.next().unwrap()])?;
                 let (g_instrs, g_sig) =

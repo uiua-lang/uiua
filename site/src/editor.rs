@@ -34,7 +34,7 @@ use crate::{
     element, prim_class, Prim,
 };
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum EditorSize {
     #[default]
     Small,
@@ -279,7 +279,7 @@ pub fn Editor<'a>(
             if let Ok(formatted) = format_str(
                 &code_text,
                 &FormatConfig {
-                    trailing_newline: false,
+                    trailing_newline: size == EditorSize::Pad,
                     ..Default::default()
                 },
             ) {

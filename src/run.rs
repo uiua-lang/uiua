@@ -296,7 +296,7 @@ impl Uiua {
         let (items, errors, diagnostics) = parse(input, path);
         if self.print_diagnostics {
             for diagnostic in diagnostics {
-                println!("{}", diagnostic.show(true));
+                println!("{}", diagnostic.report());
             }
         } else {
             self.diagnostics.extend(diagnostics);

@@ -202,7 +202,7 @@ impl Uiua {
         self.words(words, call)?;
         if self.print_diagnostics {
             for diagnostic in self.take_diagnostics() {
-                eprintln!("{}", diagnostic.show(true));
+                eprintln!("{}", diagnostic.report());
             }
         }
         Ok(self.new_functions.pop().unwrap())

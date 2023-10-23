@@ -21,7 +21,8 @@ use uiua::{
     lex::is_ident_char,
     primitive::Primitive,
     run::RunMode,
-    value_to_gif_bytes, value_to_image, value_to_wav_bytes, DiagnosticKind, SysBackend, Uiua,
+    value_to_gif_bytes, value_to_image, value_to_wav_bytes, DiagnosticKind, Report, ReportFragment,
+    ReportKind, SysBackend, Uiua,
 };
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{
@@ -352,18 +353,7 @@ pub fn Editor<'a>(
                                 .into_view()
                         }
                     }
-                    OutputItem::Error(error) => {
-                        view!(<div class="output-item output-error">{error}</div>).into_view()
-                    }
-                    OutputItem::Diagnostic(message, kind) => {
-                        let class = match kind {
-                            DiagnosticKind::Warning => "output-warning",
-                            DiagnosticKind::Advice => "output-advice",
-                            DiagnosticKind::Style => "output-style",
-                        };
-                        let class = format!("output-item {class}");
-                        view!(<div class=class>{message}</div>).into_view()
-                    }
+                    OutputItem::Report(report) => report_view(&report).into_view(),
                     OutputItem::Separator => {
                         view!(<div class="output-item"><hr/></div>).into_view()
                     }
@@ -1720,9 +1710,9 @@ fn run_code(code: &str) -> Vec<OutputItem> {
             output = output.split_off(output.len() - MAX_OUTPUT_BEFORE_ERROR);
             output[0] = OutputItem::String("Previous output truncated...".into());
         }
-        let formatted = error.show(false);
-        let execution_limit_reached = formatted.contains("Maximum execution time exceeded");
-        output.push(OutputItem::Error(formatted));
+        let report = error.report();
+        let execution_limit_reached = report.fragments.iter().any(|frag| matches!(frag, ReportFragment::Plain(s) if s.contains("Maximum execution time exceeded")));
+        output.push(OutputItem::Report(report));
         if execution_limit_reached {
             output.push(OutputItem::String(
                 "You can increase the execution time limit in the editor settings".into(),
@@ -1734,8 +1724,28 @@ fn run_code(code: &str) -> Vec<OutputItem> {
             output.push(OutputItem::String("".into()));
         }
         for diag in diagnotics {
-            output.push(OutputItem::Diagnostic(diag.show(false), diag.kind));
+            output.push(OutputItem::Report(diag.report()));
         }
     }
     output
+}
+
+fn report_view(report: &Report) -> impl IntoView {
+    let class = match report.kind {
+        ReportKind::Error => "output-report output-error",
+        ReportKind::Diagnostic(DiagnosticKind::Warning) => "output-report output-warning",
+        ReportKind::Diagnostic(DiagnosticKind::Advice) => "output-report output-advice",
+        ReportKind::Diagnostic(DiagnosticKind::Style) => "output-report output-style",
+    };
+    let mut frags = Vec::new();
+    for frag in &report.fragments {
+        frags.push(match frag {
+            ReportFragment::Plain(s) => view!(<span class="output-report">{s}</span>).into_view(),
+            ReportFragment::Colored(s) => view!(<span class=class>{s}</span>).into_view(),
+            ReportFragment::Newline => view!(<br/>).into_view(),
+        });
+    }
+    view! {
+        <div style="font-family: inherit">{frags}</div>
+    }
 }

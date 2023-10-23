@@ -42,7 +42,7 @@ fn main() {
     });
 
     if let Err(e) = run() {
-        println!("{}", e.show(true));
+        println!("{}", e.report());
         exit(1);
     }
 }
@@ -359,7 +359,7 @@ fn watch(
                 Err(UiuaError::Format(..)) => sleep(Duration::from_millis((i as u64 + 1) * 10)),
                 Err(e) => {
                     clear_watching();
-                    println!("{}", e.show(true));
+                    println!("{}", e.report());
                     print_watching();
                     return Ok(());
                 }

@@ -1032,11 +1032,11 @@ mod tests {
                         let mut env = Uiua::with_native_sys();
                         if let Err(e) = env.load_str(&ex.input) {
                             if !ex.should_error {
-                                panic!("\nExample failed:\n{}\n{}", ex.input, e.show(true));
+                                panic!("\nExample failed:\n{}\n{}", ex.input, e.report());
                             }
                         } else if let Some(diag) = env.take_diagnostics().into_iter().next() {
                             if !ex.should_error {
-                                panic!("\nExample failed:\n{}\n{}", ex.input, diag.show(true));
+                                panic!("\nExample failed:\n{}\n{}", ex.input, diag.report());
                             }
                         } else if ex.should_error {
                             panic!("Example should have failed: {}", ex.input);

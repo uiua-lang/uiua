@@ -433,8 +433,13 @@ input[type=number] {
     word-break: break-word;
 }
 
-.output-item {
+.output-item,
+.output-report {
     font-family: inherit;
+}
+
+.output-report {
+    font-size: 0.9em;
 }
 
 .output-error {

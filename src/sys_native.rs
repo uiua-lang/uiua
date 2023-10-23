@@ -124,7 +124,7 @@ impl SysBackend for NativeSys {
     fn save_error_color(&self, error: &UiuaError) {
         NATIVE_SYS
             .colored_errors
-            .insert(error.message(), error.show(true));
+            .insert(error.message(), error.report().to_string());
     }
     fn term_size(&self) -> Result<(usize, usize), String> {
         let (w, h) = term_size::dimensions().ok_or("Failed to get terminal size")?;

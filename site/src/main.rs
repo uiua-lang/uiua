@@ -399,7 +399,7 @@ fn site() {
                     "Test failed in {}\n{}\n{}",
                     path.display(),
                     code,
-                    e.show(true)
+                    e.report()
                 );
             }
             (Err(_), true) => {}
@@ -410,7 +410,7 @@ fn site() {
                             "Test failed in {}\n{}\n{}",
                             path.display(),
                             code,
-                            diag.show(true)
+                            diag.report()
                         );
                     }
                     continue;

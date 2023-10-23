@@ -9,7 +9,7 @@ use std::{
 };
 
 use leptos::*;
-use uiua::{value::Value, DiagnosticKind, Handle, SysBackend, Uiua, UiuaError, UiuaResult};
+use uiua::{value::Value, Handle, Report, SysBackend, Uiua, UiuaError, UiuaResult};
 
 pub struct WebBackend {
     pub stdout: Mutex<Vec<OutputItem>>,
@@ -38,8 +38,7 @@ pub enum OutputItem {
     Image(Vec<u8>),
     Gif(Vec<u8>),
     Audio(Vec<u8>),
-    Error(String),
-    Diagnostic(String, DiagnosticKind),
+    Report(Report),
     Separator,
 }
 

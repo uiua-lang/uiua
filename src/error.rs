@@ -1,18 +1,8 @@
-use std::{
-    collections::HashMap,
-    convert::Infallible,
-    error::Error,
-    fmt, fs, io,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
-
-use ariadne::{Color, Config, Label, Report, ReportKind, Source};
+use std::{convert::Infallible, error::Error, fmt, io, iter::repeat, path::PathBuf, sync::Arc};
 
 use crate::{
-    example_ua,
     function::FunctionId,
-    lex::{CodeSpan, Sp, Span},
+    lex::{Sp, Span},
     parse::ParseError,
     value::Value,
 };
@@ -189,30 +179,35 @@ impl From<Infallible> for UiuaError {
 
 impl UiuaError {
     pub fn show(&self, color: bool) -> String {
-        let kind = ReportKind::Error;
         match self {
             UiuaError::Parse(errors) => report(
                 errors
                     .iter()
                     .map(|error| (error.value.to_string(), error.span.clone().into())),
-                kind,
+                ReportKind::Error,
                 color,
             ),
-            UiuaError::Run(error) => report([(&error.value, error.span.clone())], kind, color),
+            UiuaError::Run(error) => report(
+                [(&error.value, error.span.clone())],
+                ReportKind::Error,
+                color,
+            ),
             UiuaError::Traced { error, trace } => {
                 let mut s = error.show(color);
                 format_trace(&mut s, trace).unwrap();
                 s
             }
-            UiuaError::Throw(message, span) => report([(&message, span.clone())], kind, color),
+            UiuaError::Throw(message, span) => {
+                report([(&message, span.clone())], ReportKind::Error, color)
+            }
             UiuaError::Break(_, span) => report(
                 [("Break amount exceeded loop depth", span.clone())],
-                kind,
+                ReportKind::Error,
                 color,
             ),
             UiuaError::Timeout(span) => report(
                 [("Maximum execution time exceeded", span.clone())],
-                kind,
+                ReportKind::Error,
                 color,
             ),
             UiuaError::Fill(error) => error.show(color),
@@ -253,117 +248,85 @@ impl Diagnostic {
     pub fn show(&self, color: bool) -> String {
         report(
             [(&self.message, self.span.clone())],
-            match self.kind {
-                DiagnosticKind::Warning => ReportKind::Warning,
-                DiagnosticKind::Advice => ReportKind::Advice,
-                DiagnosticKind::Style => ReportKind::Custom("Style", Color::Green),
-            },
+            ReportKind::Diagnostic(self.kind),
             color,
         )
     }
 }
 
-fn report<I, T>(errors: I, mut kind: ReportKind, color: bool) -> String
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReportKind {
+    Error,
+    Diagnostic(DiagnosticKind),
+}
+
+fn report<I, T>(errors: I, kind: ReportKind, color: bool) -> String
 where
     I: IntoIterator<Item = (T, Span)>,
-    T: ToString,
+    T: fmt::Display,
 {
-    let config = Config::default().with_color(color);
-    let color = if color {
-        match kind {
-            ReportKind::Error => Color::Red,
-            ReportKind::Warning => Color::Yellow,
-            ReportKind::Advice => Color::Fixed(147),
-            ReportKind::Custom(_, col) => col,
-        }
-    } else {
-        if let ReportKind::Custom(_, col) = &mut kind {
-            *col = Color::Unset;
-        }
-        Color::Unset
-    };
-    let mut buffer = Vec::new();
-    let mut chache = None;
-    for (message, span) in errors {
-        if let Span::Code(span) = span {
-            let cache = chache.get_or_insert_with(|| Cache {
-                input: Source::from(&span.input),
-                files: HashMap::new(),
-            });
-            let report = Report::<CodeSpan>::build(kind, span.path.clone(), span.start.char_pos)
-                .with_message(message)
-                .with_label(Label::new(span.clone()).with_color(color))
-                .with_config(config)
-                .finish();
-            let _ = report.write(cache, &mut buffer);
+    use colored::*;
+    let color = |s: &str| {
+        if color {
+            let color = match kind {
+                ReportKind::Error => Color::Red,
+                ReportKind::Diagnostic(DiagnosticKind::Warning) => Color::Yellow,
+                ReportKind::Diagnostic(DiagnosticKind::Advice) => Color::TrueColor {
+                    r: 40,
+                    g: 150,
+                    b: 255,
+                },
+                ReportKind::Diagnostic(DiagnosticKind::Style) => Color::Green,
+            };
+            s.color(color)
         } else {
-            if !buffer.ends_with(b"\n") {
-                buffer.push(b'\n');
-            }
-            buffer.extend(message.to_string().into_bytes());
+            s.into()
         }
-    }
-    let s = String::from_utf8_lossy(&buffer);
-    let s = s.trim();
-    s.lines()
-        .filter(|line| {
-            ![
-                "│",
-                "\u{1b}[38;5;246m│\u{1b}[0m",
-                "\u{1b}[38;5;240m  │\u{1b}[0m",
-            ]
-            .contains(&line.trim())
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
-}
-
-type SourceId = Option<Arc<Path>>;
-
-impl ariadne::Span for CodeSpan {
-    type SourceId = SourceId;
-    fn source(&self) -> &Self::SourceId {
-        &self.path
-    }
-    fn start(&self) -> usize {
-        self.start.char_pos
-    }
-    fn end(&self) -> usize {
-        self.end.char_pos
-    }
-}
-
-struct Cache {
-    input: Source,
-    files: HashMap<SourceId, Source>,
-}
-
-impl ariadne::Cache<SourceId> for Cache {
-    fn fetch(&mut self, id: &SourceId) -> Result<&Source, Box<dyn fmt::Debug + '_>> {
-        match id {
-            Some(path) => {
-                if !self.files.contains_key(id) {
-                    let text = fs::read_to_string(path)
-                        .or_else(|e| {
-                            if path.to_string_lossy() == "example.ua" {
-                                Ok(example_ua(|ex| ex.clone()))
-                            } else {
-                                Err(e)
-                            }
-                        })
-                        .map_err(|e| Box::new(e) as Box<dyn fmt::Debug>)?;
-                    let source = Source::from(text);
-                    self.files.insert(id.clone(), source);
+    };
+    let mut report = String::new();
+    for (message, span) in errors {
+        let kind_str = match kind {
+            ReportKind::Error => "Error",
+            ReportKind::Diagnostic(DiagnosticKind::Warning) => "Warning",
+            ReportKind::Diagnostic(DiagnosticKind::Advice) => "Advice",
+            ReportKind::Diagnostic(DiagnosticKind::Style) => "Style",
+        };
+        report.push_str(&format!("{}: {}", color(kind_str), message));
+        if let Span::Code(span) = span {
+            report.push('\n');
+            report.push_str("  at ");
+            if let Some(path) = &span.path {
+                report.push_str(&path.display().to_string());
+                report.push(':');
+            }
+            report.push_str(&format!("{}:{}", span.start.line, span.start.col));
+            report.push('\n');
+            let line_prefix = format!("{} | ", span.start.line);
+            report.push_str(&line_prefix);
+            let line = span.input.lines().nth(span.start.line - 1).unwrap_or("");
+            let start_char_pos = span.start.col - 1;
+            let end_char_pos = if span.start.line == span.end.line {
+                span.end.char_pos
+            } else {
+                line.chars().count()
+            };
+            for (i, c) in line.chars().enumerate() {
+                if i >= start_char_pos && i < end_char_pos {
+                    report.push_str(&color(&c.to_string()).to_string());
+                } else {
+                    report.push(c);
                 }
-                Ok(&self.files[id])
             }
-            None => Ok(&self.input),
+            report.push('\n');
+            report.extend(repeat(' ').take(line_prefix.chars().count()));
+            for i in 0..line.chars().count() {
+                if i >= start_char_pos && i < end_char_pos {
+                    report.push_str(&color("─").to_string());
+                } else {
+                    report.push(' ');
+                }
+            }
         }
     }
-    fn display<'a>(&self, id: &'a SourceId) -> Option<Box<dyn fmt::Display + 'a>> {
-        Some(match id {
-            Some(path) => Box::new(path.display()),
-            None => Box::<String>::default(),
-        })
-    }
+    report
 }

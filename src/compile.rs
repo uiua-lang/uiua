@@ -96,12 +96,6 @@ impl Uiua {
         }
         Ok(())
     }
-    fn add_span(&mut self, span: impl Into<Span>) -> usize {
-        let mut spans = self.spans.lock();
-        let idx = spans.len();
-        spans.push(span.into());
-        idx
-    }
     fn binding(&mut self, binding: Binding) -> UiuaResult {
         let name = binding.name.value;
         let span = &binding.name.span;
@@ -652,7 +646,22 @@ impl Uiua {
 
             // Inline dip and gap
             if matches!(prim, Primitive::Dip | Primitive::Gap) {
-                let (mut instrs, _) = self.compile_operand_words(modified.operands)?;
+                let (mut instrs, sig) = self.compile_operand_words(modified.operands)?;
+                // Dip () . diagnostic
+                if prim == Primitive::Dip && sig.is_ok_and(|sig| sig == (1, 1)) {
+                    if let Some(Instr::Prim(Primitive::Dup, dup_span)) =
+                        self.new_functions.last().and_then(|instrs| instrs.last())
+                    {
+                        let span = Span::Code(modified.modifier.span.clone())
+                            .merge(self.get_span(*dup_span));
+                        self.diagnostic_with_span(
+                            "Prefer `⊃∘(…)` over `⊙(…).` for clarity",
+                            DiagnosticKind::Style,
+                            span,
+                        );
+                    }
+                }
+
                 let span = self.add_span(modified.modifier.span.clone());
                 if prim == Primitive::Dip {
                     instrs.insert(0, Instr::PushTempInline { count: 1, span });

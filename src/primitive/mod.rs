@@ -857,14 +857,9 @@ impl PrimExample {
         self.should_error
     }
     pub fn should_run(&self) -> bool {
-        ![
-            "&sl",
-            "&tcpc",
-            #[cfg(not(feature = "audio"))]
-            "&ast",
-        ]
-        .iter()
-        .any(|prim| self.input.contains(prim))
+        !["&sl", "&tcpc", "&ast"]
+            .iter()
+            .any(|prim| self.input.contains(prim))
     }
     pub fn output(&self) -> &Result<Vec<String>, String> {
         self.output.get_or_init(|| {

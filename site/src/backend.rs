@@ -11,6 +11,8 @@ use std::{
 use leptos::*;
 use uiua::{value::Value, Handle, Report, SysBackend, Uiua, UiuaError, UiuaResult};
 
+use crate::editor::get_ast_time;
+
 pub struct WebBackend {
     pub stdout: Mutex<Vec<OutputItem>>,
     pub stderr: Mutex<String>,
@@ -120,7 +122,8 @@ impl SysBackend for WebBackend {
         const SAMPLE_RATE: u32 = 44100;
         const SAMPLES_PER_FRAME: usize = 10000;
         let mut times = Vec::with_capacity(SAMPLES_PER_FRAME);
-        while t <= 30.0 {
+        let ast_time = get_ast_time();
+        while t <= ast_time {
             times.clear();
             for _ in 0..SAMPLES_PER_FRAME {
                 times.push(t);

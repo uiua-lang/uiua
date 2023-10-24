@@ -312,6 +312,7 @@ li {
 }
 
 #settings {
+    font-size: 0.82em;
     display: flex;
     justify-content: space-between;
     align-items: center;

@@ -22,7 +22,7 @@ use uiua::{
     primitive::Primitive,
     run::RunMode,
     value_to_gif_bytes, value_to_image, value_to_wav_bytes, DiagnosticKind, Report, ReportFragment,
-    ReportKind, SysBackend, Uiua,
+    ReportKind, SysBackend, SysOp, Uiua,
 };
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{
@@ -1006,6 +1006,12 @@ pub fn Editor<'a>(
         let limit = input.value().parse().unwrap_or(2.0);
         set_execution_limit(limit);
     };
+    let on_ast_time_change = move |event: Event| {
+        let event = event.dyn_into::<web_sys::InputEvent>().unwrap();
+        let input: HtmlInputElement = event.target().unwrap().dyn_into().unwrap();
+        let time = input.value().parse().unwrap_or(10.0);
+        set_ast_time(time);
+    };
     let toggle_right_to_left = move |_| {
         set_right_to_left(!get_right_to_left());
     };
@@ -1037,7 +1043,7 @@ pub fn Editor<'a>(
                 </div>
                 <div id="settings" style=settings_style>
                     <div title="The maximum number of seconds a program can run for">
-                        "Execution limit:"
+                        "Exec limit:"
                         <input
                             type="number"
                             min="0.01"
@@ -1045,6 +1051,17 @@ pub fn Editor<'a>(
                             width="3em"
                             value=get_execution_limit
                             on:input=on_execution_limit_change/>
+                        "s"
+                    </div>
+                    <div title="The maximum number of seconds of audio &ast will generate">
+                        <Prim prim=Primitive::Sys(SysOp::AudioStream) />" time:"
+                        <input
+                            type="number"
+                            min="1"
+                            max="600"
+                            width="3em"
+                            value=get_ast_time
+                            on:input=on_ast_time_change/>
                         "s"
                     </div>
                     <div title="Place the cursor on the left of the current token when formatting">
@@ -1077,7 +1094,7 @@ pub fn Editor<'a>(
                         "Font:"
                         <select
                             on:change=on_select_font>
-                            <option value="DejaVuSansMono" selected={get_font_name() == "DejaVuSansMono"}>"DejaVuSansMono"</option>
+                            <option value="DejaVuSansMono" selected={get_font_name() == "DejaVuSansMono"}>"DejaVu"</option>
                             <option value="Uiua386" selected={get_font_name() == "Uiua386"}>"Uiua386"</option>
                         </select>
                     </div>
@@ -1208,6 +1225,13 @@ fn get_execution_limit() -> f64 {
 }
 fn set_execution_limit(limit: f64) {
     set_local_var("execution-limit", limit);
+}
+
+pub fn get_ast_time() -> f64 {
+    get_local_var("&ast-time", || 30.0)
+}
+fn set_ast_time(time: f64) {
+    set_local_var("&ast-time", time);
 }
 
 fn get_right_to_left() -> bool {

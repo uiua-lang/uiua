@@ -7,6 +7,7 @@ If you are reading this on the website, then these changes are live here.
 ### Language
 - Implement [`under` `⍜`](https://uiua.org/docs/under) multi-index [`pick` `⊡`](https://uiua.org/docs/pick)
 - Implement [`under` `⍜`](https://uiua.org/docs/under) [`partition` `⊜`](https://uiua.org/docs/partition)
+- Implement [`under` `⍜`](https://uiua.org/docs/under) [`group` `⊕`](https://uiua.org/docs/group)
 ### Interpreter
 - The interpreter now formats its own error and non-error diagnostic messages instead of delegating to a library
 - Fix a bunch of bugs and crashes

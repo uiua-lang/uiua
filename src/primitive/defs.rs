@@ -1645,6 +1645,7 @@ impl_primitive!(
     (3, Undrop),
     (3, Unkeep),
     (3[1], Unpartition),
+    (3[1], Ungroup),
     (1, InvUtf),
     (1, InvTrace),
 );

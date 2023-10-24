@@ -148,6 +148,46 @@ pub fn unpartition(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
+pub fn ungroup(env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
+    let f = env.pop_function()?;
+    let sig = f.signature();
+    if sig != (1, 1) {
+        return Err(env.error(format!(
+            "Cannot undo group with on function with signature {sig}"
+        )));
+    }
+    let indices = env
+        .pop(1)?
+        .as_indices(env, "Group indices must be a list of integers")?;
+    let original = env.pop(2)?;
+    let grouped = env.pop(3)?;
+
+    // Untransform rows
+    let mut ungrouped_rows: Vec<Box<dyn ExactSizeIterator<Item = Value>>> =
+        Vec::with_capacity(grouped.row_count());
+    for mut row in grouped.into_rows() {
+        env.push(row);
+        env.call_error_on_break(f.clone(), "break is not allowed in ungroup")?;
+        row = env.pop("ungrouped row")?;
+        ungrouped_rows.push(row.into_rows());
+    }
+
+    // Ungroup
+    let mut ungrouped = Vec::with_capacity(indices.len() * original.row_len());
+    for (i, index) in indices.into_iter().enumerate() {
+        if index >= 0 {
+            ungrouped.push(ungrouped_rows[index as usize].next().ok_or_else(|| {
+                env.error("A group's length was modified between grouping and ungrouping")
+            })?);
+        } else {
+            ungrouped.push(original.row(i));
+        }
+    }
+    env.push(Value::from_row_values(ungrouped, env)?);
+    Ok(())
+}
+
 impl Value {
     pub fn partition_groups(&self, markers: &[isize], env: &Uiua) -> UiuaResult<Vec<Self>> {
         Ok(match self {

@@ -229,6 +229,7 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
     let patterns: &[&dyn UnderPattern] = &[
         &UnderPatternFn(under_both_pattern),
         &UnderPatternFn(under_partition_pattern),
+        &UnderPatternFn(under_group_pattern),
         &bin!(Flip, Add, Sub),
         &bin!(Flip, Mul, Div),
         &bin!(Flip, Sub),
@@ -553,6 +554,27 @@ fn under_partition_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr
         Instr::PopTempUnder { count: 2, span },
         Instr::PushFunc(f_after.into()),
         Instr::ImplPrim(ImplPrimitive::Unpartition, span),
+    ];
+    Some((input, (befores, afters)))
+}
+
+fn under_group_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Under)> {
+    let &[Instr::PushFunc(ref f), Instr::Prim(Primitive::Group, span), ref input @ ..] = input
+    else {
+        return None;
+    };
+    let (f_before, f_after) = f.under(g_sig)?;
+    let befores = vec![
+        Instr::Prim(Primitive::Over, span),
+        Instr::Prim(Primitive::Over, span),
+        Instr::PushTempUnder { count: 2, span },
+        Instr::PushFunc(f_before.into()),
+        Instr::Prim(Primitive::Group, span),
+    ];
+    let afters = vec![
+        Instr::PopTempUnder { count: 2, span },
+        Instr::PushFunc(f_after.into()),
+        Instr::ImplPrim(ImplPrimitive::Ungroup, span),
     ];
     Some((input, (befores, afters)))
 }

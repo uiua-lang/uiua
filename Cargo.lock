@@ -2852,6 +2852,7 @@ dependencies = [
  "comrak",
  "console_error_panic_hook",
  "enum-iterator",
+ "hound",
  "image",
  "instant",
  "js-sys",

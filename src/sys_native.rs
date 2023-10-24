@@ -284,7 +284,7 @@ impl SysBackend for NativeSys {
                         eprintln!("Failed to send audio time: {e}");
                     }
                 }
-                match (self.f)(times) {
+                match (self.f)(&times) {
                     Ok(samples) => {
                         self.samples = samples.into_iter();
                         self.next(sample_rate)

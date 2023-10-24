@@ -300,6 +300,19 @@ sys_op! {
     ///
     /// Expects a function that takes a list of sample times and returns a list of samples.
     /// The function will be called repeatedly to generate the audio.
+    /// ex: Sp ← 1.5
+    ///   : Bass ← (
+    ///   :   ±○×π×÷Sp110. # Square wave
+    ///   :   ×2+1⌊◿2.∶    # Modulation frequency
+    ///   :   ×0.2○×π××∶   # Apply modulation
+    ///   : )
+    ///   : Kick ← ○×τ×40√√◿1
+    ///   : Noise ← [⍥⚂10000]
+    ///   : Hit ← ×↯∶Noise △.×<0.6∶>0.5.÷2◿2
+    ///   : Hat ← ×0.3×↯∶Noise △.<0.1÷0.25◿0.25
+    ///   : &ast(÷3/+[⊃⊃⊃Hat(Kick)Hit(Bass)]×Sp)
+    /// On the web, this will simply use the function to generate a fixed amount of audio.
+    /// How long the audio is can be configure in the editor settings.
     (0(0)[1], AudioStream, "&ast", "audio - stream"),
     /// Create a TCP listener and bind it to an address
     (1, TcpListen, "&tcpl", "tcp - listen"),
@@ -365,7 +378,7 @@ impl From<Handle> for Value {
     }
 }
 
-pub type AudioStreamFn = Box<dyn FnMut(Vec<f64>) -> UiuaResult<Vec<[f64; 2]>> + Send>;
+pub type AudioStreamFn = Box<dyn FnMut(&[f64]) -> UiuaResult<Vec<[f64; 2]>> + Send>;
 
 #[allow(unused_variables)]
 pub trait SysBackend: Any + Send + Sync + 'static {
@@ -931,7 +944,7 @@ impl SysOp {
                 let f = env.pop_function()?;
                 let mut stream_env = env.clone();
                 if let Err(e) = env.backend.stream_audio(Box::new(move |time_array| {
-                    let time_array = Array::<f64>::from(time_array.as_slice());
+                    let time_array = Array::<f64>::from(time_array);
                     stream_env.push(time_array);
                     stream_env.call(f.clone())?;
                     let samples = &stream_env.pop(1)?;
@@ -1300,6 +1313,35 @@ fn value_to_wav_bytes_impl<T: hound::Sample + Copy>(
         for channel in &channels {
             writer
                 .write_sample(channel[i])
+                .map_err(|e| format!("Failed to write audio: {e}"))?;
+        }
+    }
+    writer
+        .finalize()
+        .map_err(|e| format!("Failed to finalize audio: {e}"))?;
+    Ok(bytes.into_inner())
+}
+
+#[doc(hidden)]
+pub fn stereo_to_wave_bytes<T: hound::Sample + Copy>(
+    samples: &[[f64; 2]],
+    convert_samples: impl Fn(f64) -> T + Copy,
+    bits_per_sample: u16,
+    sample_format: SampleFormat,
+    sample_rate: u32,
+) -> Result<Vec<u8>, String> {
+    let spec = WavSpec {
+        channels: 2,
+        sample_rate,
+        bits_per_sample,
+        sample_format,
+    };
+    let mut bytes = Cursor::new(Vec::new());
+    let mut writer = WavWriter::new(&mut bytes, spec).map_err(|e| e.to_string())?;
+    for frame in samples {
+        for sample in frame {
+            writer
+                .write_sample(convert_samples(*sample))
                 .map_err(|e| format!("Failed to write audio: {e}"))?;
         }
     }

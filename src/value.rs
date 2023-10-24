@@ -1080,10 +1080,11 @@ impl Hash for Value {
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Value::Num(n) => n.fmt(f),
-            Value::Byte(b) => b.fmt(f),
-            Value::Char(c) => c.fmt(f),
-            Value::Box(v) => v.fmt(f),
+            Value::Num(n) => n.grid_string().fmt(f),
+            Value::Byte(b) => b.grid_string().fmt(f),
+            Value::Box(v) => v.grid_string().fmt(f),
+            Value::Char(c) if c.rank() < 2 => c.fmt(f),
+            Value::Char(c) => c.grid_string().fmt(f),
         }
     }
 }

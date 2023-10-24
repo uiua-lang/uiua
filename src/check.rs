@@ -447,11 +447,12 @@ impl<'a> VirtualEnv<'a> {
                     self.pop_func()?;
                 }
                 prim => {
-                    let array_args = prim
+                    let args = prim
                         .args()
                         .ok_or_else(|| format!("{prim} has indeterminate args"))?;
-                    let function_args = prim.modifier_args().unwrap_or(0);
-                    let args = array_args + function_args;
+                    for _ in 0..prim.modifier_args().unwrap_or(0) {
+                        self.pop_func()?;
+                    }
                     for _ in 0..args {
                         self.pop()?;
                     }

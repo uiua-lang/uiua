@@ -200,7 +200,7 @@ impl fmt::Display for Instr {
             Instr::Prim(prim @ Primitive::Over, _) => write!(f, "`{prim}`"),
             Instr::Prim(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => write!(f, "call"),
-            Instr::PushFunc(func) => write!(f, "{func}"),
+            Instr::PushFunc(func) => write!(f, "push({func})"),
             Instr::Switch { count, .. } => write!(f, "<switch {count}>"),
             Instr::PushTempFunctions(count) => write!(f, "<push {count} functions>"),
             Instr::PopTempFunctions(count) => write!(f, "<pop {count} functions>"),

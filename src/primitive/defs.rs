@@ -1029,6 +1029,8 @@ primitive!(
     ///
     /// [partition] is closely related to [group].
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
+    /// End step of under partition
+    (3[1], Unpartition, AggregatingModifier),
     /// Apply a function with implicit (un)boxing
     ///
     /// When working with [box]ed data, [pack] will automatically [unbox] the data for functions like [join].

@@ -90,6 +90,64 @@ pub fn partition(env: &mut Uiua) -> UiuaResult {
     )
 }
 
+pub fn unpartition(env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
+    let f = env.pop_function()?;
+    let sig = f.signature();
+    if sig != (1, 1) {
+        return Err(env.error(format!(
+            "Cannot undo partition with on function with signature {sig}"
+        )));
+    }
+    let markers = env
+        .pop(1)?
+        .as_indices(env, "Partition markers must be a list of integers")?;
+    let original = env.pop(2)?;
+    let partitioned = env.pop(3)?;
+
+    // Count partition markers
+    let mut marker_partitions: Vec<(isize, usize)> = Vec::new();
+    let mut markers = markers.into_iter();
+    if let Some(mut prev) = markers.next() {
+        marker_partitions.push((prev, 1));
+        for marker in markers {
+            if marker == prev {
+                marker_partitions.last_mut().unwrap().1 += 1;
+            } else {
+                marker_partitions.push((marker, 1));
+            }
+            prev = marker;
+        }
+    }
+    let positive_partitions = marker_partitions.iter().filter(|(m, _)| *m > 0).count();
+    if positive_partitions != partitioned.row_count() {
+        return Err(env.error(format!(
+            "Cannot undo partition because the paritioned array \
+            originally had {} rows, but now it has {}",
+            positive_partitions,
+            partitioned.row_count()
+        )));
+    }
+
+    // Unpartition
+    let mut partitioned_rows = partitioned.into_rows();
+    let mut unpartitioned = Vec::with_capacity(marker_partitions.len() * original.row_len());
+    let mut original_offset = 0;
+    for (marker, part_len) in marker_partitions {
+        if marker > 0 {
+            env.push(partitioned_rows.next().unwrap());
+            env.call_error_on_break(f.clone(), "break is not allowed in unpartition")?;
+            unpartitioned.extend(env.pop("unpartitioned row")?.into_rows());
+        } else {
+            unpartitioned
+                .extend((original_offset..original_offset + part_len).map(|i| original.row(i)));
+        }
+        original_offset += part_len;
+    }
+    env.push(Value::from_row_values(unpartitioned, env)?);
+    Ok(())
+}
+
 impl Value {
     pub fn partition_groups(&self, markers: &[isize], env: &Uiua) -> UiuaResult<Vec<Self>> {
         Ok(match self {

@@ -6,12 +6,14 @@ Uiua is not yet stable.
 If you are reading this on the website, then these changes are live here.
 ### Language
 - Implement [`under` `⍜`](https://uiua.org/docs/under) multi-index [`pick` `⊡`](https://uiua.org/docs/pick)
+- Implement [`under` `⍜`](https://uiua.org/docs/under) [`partition` `⊜`](https://uiua.org/docs/partition)
 ### Interpreter
 - The interpreter now formats its own error and non-error diagnostic messages instead of delegating to a library
 - Fix a bunch of bugs and crashes
 ### Website
 - Error and diagnostic messages a no-longer all one color
 - The pad editor now inserts a trailing newline on format
+- Increase thresholds for arrays becoming images or audio
 
 ## 0.0.22 - 2023-10-21
 ### Language

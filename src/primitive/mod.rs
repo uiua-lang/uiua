@@ -125,6 +125,7 @@ impl fmt::Display for Primitive {
                 Undrop => write!(f, "⍘{Drop}"),
                 Unselect => write!(f, "⍘{Select}"),
                 Unpick => write!(f, "⍘{Pick}"),
+                Unpartition => write!(f, "⍘{Partition}"),
                 Cos => write!(f, "{Sin}{Add}{Eta}"),
                 Asin => write!(f, "{Invert}{Sin}"),
                 Acos => write!(f, "{Invert}{Cos}"),
@@ -440,6 +441,7 @@ impl Primitive {
             Primitive::Repeat => loops::repeat(env)?,
             Primitive::Group => loops::group(env)?,
             Primitive::Partition => loops::partition(env)?,
+            Primitive::Unpartition => loops::unpartition(env)?,
             Primitive::Reshape => {
                 let shape = env.pop(1)?;
                 let mut array = env.pop(2)?;

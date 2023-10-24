@@ -7,8 +7,10 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
     sync::Arc,
+    thread::{self, JoinHandle},
 };
 
+use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use instant::Duration;
 use parking_lot::Mutex;
 
@@ -20,7 +22,7 @@ use crate::{
     parse::parse,
     primitive::{Primitive, CONSTANTS},
     value::Value,
-    Diagnostic, DiagnosticKind, Handle, Ident, NativeSys, SysBackend, SysOp, TraceFrame, UiuaError,
+    Diagnostic, DiagnosticKind, Ident, NativeSys, SysBackend, SysOp, TraceFrame, UiuaError,
     UiuaResult,
 };
 
@@ -71,6 +73,8 @@ pub struct Uiua {
     cli_file_path: PathBuf,
     /// The system backend
     pub(crate) backend: Arc<dyn SysBackend>,
+    /// The thread interface
+    thread: ThisThread,
 }
 
 #[derive(Clone)]
@@ -131,6 +135,35 @@ struct StackFrame {
     pc: usize,
     /// Additional spans for error reporting
     spans: Vec<(usize, Option<Primitive>)>,
+}
+
+#[derive(Debug, Clone)]
+struct Channel {
+    pub send: Sender<Value>,
+    pub recv: Receiver<Value>,
+}
+
+#[derive(Debug, Clone)]
+struct ThisThread {
+    pub parent: Option<Channel>,
+    pub children: HashMap<usize, Thread>,
+    pub next_child_id: usize,
+}
+
+impl Default for ThisThread {
+    fn default() -> Self {
+        Self {
+            parent: Default::default(),
+            children: Default::default(),
+            next_child_id: 1,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct Thread {
+    pub handle: Arc<JoinHandle<UiuaResult<Vec<Value>>>>,
+    pub channel: Channel,
 }
 
 impl Default for Uiua {
@@ -197,6 +230,7 @@ impl Uiua {
             cli_file_path: PathBuf::new(),
             execution_limit: None,
             execution_start: 0.0,
+            thread: ThisThread::default(),
         }
     }
     /// Create a new Uiua runtime with a custom IO backend
@@ -949,15 +983,24 @@ code:
         &mut self,
         capture_count: usize,
         f: impl FnOnce(&mut Self) -> UiuaResult + Send + 'static,
-    ) -> UiuaResult<Value> {
+    ) -> UiuaResult {
         if self.stack.len() < capture_count {
             return Err(self.error(format!(
-                "Excepted at least {} value(s) on the stack, but there are {}",
+                "Expected at least {} value(s) on the stack, but there are {}",
                 capture_count,
                 self.stack.len()
             )))?;
         }
-        let env = Uiua {
+        let (this_send, child_recv) = crossbeam_channel::unbounded();
+        let (child_send, this_recv) = crossbeam_channel::unbounded();
+        let thread = ThisThread {
+            parent: Some(Channel {
+                send: child_send,
+                recv: child_recv,
+            }),
+            ..ThisThread::default()
+        };
+        let mut env = Uiua {
             new_functions: Vec::new(),
             globals: self.globals.clone(),
             spans: self.spans.clone(),
@@ -983,35 +1026,56 @@ code:
             backend: self.backend.clone(),
             execution_limit: self.execution_limit,
             execution_start: self.execution_start,
+            thread,
         };
-        self.backend
-            .spawn(env, Box::new(f))
-            .map(Value::from)
-            .map_err(|e| self.error(e))
+        let handle = thread::spawn(move || {
+            f(&mut env)?;
+            Ok(env.take_stack())
+        });
+        let id = self.thread.next_child_id;
+        self.thread.next_child_id += 1;
+        self.thread.children.insert(
+            id,
+            Thread {
+                handle: handle.into(),
+                channel: Channel {
+                    send: this_send,
+                    recv: this_recv,
+                },
+            },
+        );
+        self.push(id);
+        Ok(())
     }
     /// Wait for a thread to finish
-    pub(crate) fn wait(&mut self, handle: Value) -> UiuaResult {
-        let handles = handle.as_number_array(
-            self,
-            "Handle must be an array of natural numbers",
-            |_| true,
-            |n| n.fract() == 0.0 && n >= 0.0,
-            |n| Handle(n as u64),
-        )?;
-        if handles.shape.is_empty() {
-            let handle = handles.data.into_iter().next().unwrap();
-            let thread_stack = self
-                .backend
-                .wait(handle)
-                .map_err(|e| e.unwrap_or_else(|e| self.error(e)))?;
+    pub(crate) fn wait(&mut self, id: Value) -> UiuaResult {
+        let ids = id.as_natural_array(self, "Thread id must be an array of natural numbers")?;
+        if ids.shape.is_empty() {
+            let handle = ids.data.into_iter().next().unwrap();
+            let thread_stack = Arc::into_inner(
+                self.thread
+                    .children
+                    .remove(&handle)
+                    .ok_or_else(|| self.error("Invalid thread id"))?
+                    .handle,
+            )
+            .ok_or_else(|| self.error("Cannot wait on thread spawned in cloned environment"))?
+            .join()
+            .unwrap()?;
             self.stack.extend(thread_stack);
         } else {
             let mut rows = Vec::new();
-            for handle in handles.data {
-                let thread_stack = self
-                    .backend
-                    .wait(handle)
-                    .map_err(|e| e.unwrap_or_else(|e| self.error(e)))?;
+            for handle in ids.data {
+                let thread_stack = Arc::into_inner(
+                    self.thread
+                        .children
+                        .remove(&handle)
+                        .ok_or_else(|| self.error("Invalid thread id"))?
+                        .handle,
+                )
+                .ok_or_else(|| self.error("Cannot wait on thread spawned in cloned environment"))?
+                .join()
+                .unwrap()?;
                 let row = if thread_stack.len() == 1 {
                     thread_stack.into_iter().next().unwrap()
                 } else {
@@ -1020,12 +1084,65 @@ code:
                 rows.push(row);
             }
             let mut val = Value::from_row_values(rows, self)?;
-            let mut shape = handles.shape;
+            let mut shape = ids.shape;
             shape.extend_from_slice(&val.shape()[1..]);
             *val.shape_mut() = shape;
             self.push(val);
         }
         Ok(())
+    }
+    pub(crate) fn send(&self, id: Value, value: Value) -> UiuaResult {
+        let ids = id.as_natural_array(self, "Thread id must be an array of natural numbers")?;
+        for id in ids.data {
+            self.channel(id)?
+                .send
+                .send(value.clone())
+                .map_err(|_| self.error("Thread channel closed"))?;
+        }
+        Ok(())
+    }
+    pub(crate) fn recv(&mut self, id: Value) -> UiuaResult {
+        let ids = id.as_natural_array(self, "Thread id must be an array of natural numbers")?;
+        let mut values = Vec::with_capacity(ids.data.len());
+        for id in ids.data {
+            values.push(
+                self.channel(id)?
+                    .recv
+                    .recv()
+                    .map_err(|_| self.error("Thread channel closed"))?,
+            );
+        }
+        let mut val = Value::from_row_values(values, self)?;
+        let mut shape = ids.shape;
+        shape.extend_from_slice(&val.shape()[1..]);
+        *val.shape_mut() = shape;
+        self.push(val);
+        Ok(())
+    }
+    pub(crate) fn try_recv(&mut self, id: Value) -> UiuaResult {
+        let id = id.as_nat(self, "Thread id must be a natural number")?;
+        let value = match self.channel(id)?.recv.try_recv() {
+            Ok(value) => value,
+            Err(TryRecvError::Empty) => return Err(self.error("No value available")),
+            Err(_) => return Err(self.error("Thread channel closed")),
+        };
+        self.push(value);
+        Ok(())
+    }
+    fn channel(&self, id: usize) -> UiuaResult<&Channel> {
+        Ok(if id == 0 {
+            self.thread
+                .parent
+                .as_ref()
+                .ok_or_else(|| self.error("Thread has no parent"))?
+        } else {
+            &self
+                .thread
+                .children
+                .get(&id)
+                .ok_or_else(|| self.error("Invalid thread id"))?
+                .channel
+        })
     }
 }
 

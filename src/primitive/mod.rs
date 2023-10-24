@@ -529,12 +529,24 @@ impl Primitive {
             }
             Primitive::Spawn => {
                 let f = env.pop_function()?;
-                let handle = env.spawn(f.signature().args, |env| env.call(f))?;
-                env.push(handle);
+                env.spawn(f.signature().args, |env| env.call(f))?;
             }
             Primitive::Wait => {
-                let handle = env.pop(1)?;
-                env.wait(handle)?;
+                let id = env.pop(1)?;
+                env.wait(id)?;
+            }
+            Primitive::Send => {
+                let val = env.pop(1)?;
+                let id = env.pop(2)?;
+                env.send(id, val)?;
+            }
+            Primitive::Recv => {
+                let id = env.pop(1)?;
+                env.recv(id)?;
+            }
+            Primitive::TryRecv => {
+                let id = env.pop(1)?;
+                env.try_recv(id)?;
             }
             Primitive::Now => env.push(instant::now() / 1000.0),
             Primitive::Trace => trace(env, false)?,

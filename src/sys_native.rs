@@ -6,11 +6,11 @@ use std::{
     net::*,
     process::Command,
     sync::atomic::{self, AtomicU64},
-    thread::{sleep, spawn, JoinHandle},
+    thread::sleep,
     time::Duration,
 };
 
-use crate::{value::Value, Handle, SysBackend, Uiua, UiuaError, UiuaResult};
+use crate::{Handle, SysBackend, UiuaError};
 use bufreaderwriter::seq::BufReaderWriterSeq;
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
@@ -26,7 +26,6 @@ struct GlobalNativeSys {
     tcp_listeners: DashMap<Handle, TcpListener>,
     tcp_sockets: DashMap<Handle, Buffered<TcpStream>>,
     hostnames: DashMap<Handle, String>,
-    threads: DashMap<Handle, JoinHandle<UiuaResult<Vec<Value>>>>,
     #[cfg(feature = "audio")]
     audio_stream_time: parking_lot::Mutex<Option<f64>>,
     #[cfg(feature = "audio")]
@@ -48,7 +47,6 @@ impl Default for GlobalNativeSys {
             tcp_listeners: DashMap::new(),
             tcp_sockets: DashMap::new(),
             hostnames: DashMap::new(),
-            threads: DashMap::new(),
             #[cfg(feature = "audio")]
             audio_stream_time: parking_lot::Mutex::new(None),
             #[cfg(feature = "audio")]
@@ -410,30 +408,6 @@ impl SysBackend for NativeSys {
     #[cfg(feature = "invoke")]
     fn invoke(&self, path: &str) -> Result<(), String> {
         open::that(path).map_err(|e| e.to_string())
-    }
-    fn spawn(
-        &self,
-        mut env: Uiua,
-        f: Box<dyn FnOnce(&mut Uiua) -> UiuaResult + Send>,
-    ) -> Result<Handle, String> {
-        let thread = spawn(move || {
-            f(&mut env)?;
-            Ok(env.take_stack())
-        });
-        let handle = NATIVE_SYS.new_handle();
-        NATIVE_SYS.threads.insert(handle, thread);
-        Ok(handle)
-    }
-    fn wait(&self, handle: Handle) -> Result<Vec<Value>, Result<UiuaError, String>> {
-        let (_, thread) = NATIVE_SYS
-            .threads
-            .remove(&handle)
-            .ok_or_else(|| Err("Invalid thread handle".to_string()))?;
-        match thread.join() {
-            Ok(Ok(stack)) => Ok(stack),
-            Ok(Err(e)) => Err(Ok(e)),
-            Err(e) => Err(Err(format!("Thread panicked: {:?}", e))),
-        }
     }
     fn run_command_inherit(&self, command: &str, args: &[&str]) -> Result<i32, String> {
         let status = Command::new(command)

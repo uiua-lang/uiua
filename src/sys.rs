@@ -516,17 +516,11 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn invoke(&self, path: &str) -> Result<(), String> {
         Err("Invoking paths is not supported in this environment".into())
     }
-    fn spawn(
-        &self,
-        env: Uiua,
-        f: Box<dyn FnOnce(&mut Uiua) -> UiuaResult + Send>,
-    ) -> Result<Handle, String> {
-        Err("Spawning threads is not supported in this environment".into())
+    fn send(&self, handle: Handle, value: Value) -> Result<(), String> {
+        Err("Sending values to threads is not supported in this environment".into())
     }
-    fn wait(&self, handle: Handle) -> Result<Vec<Value>, Result<UiuaError, String>> {
-        Err(Err(
-            "Joining threads is not supported in this environment".into()
-        ))
+    fn recv(&self, handle: Handle) -> Result<Value, String> {
+        Err("Receiving values from threads is not supported in this environment".into())
     }
     fn run_command_inherit(&self, command: &str, args: &[&str]) -> Result<i32, String> {
         Err("Running commands is not supported in this environment".into())

@@ -533,6 +533,19 @@ impl Value {
             }
         })
     }
+    pub(crate) fn as_natural_array(
+        &self,
+        env: &Uiua,
+        requirement: &'static str,
+    ) -> UiuaResult<Array<usize>> {
+        self.as_number_array(
+            env,
+            requirement,
+            |_| true,
+            |n| n.fract() == 0.0 && n >= 0.0,
+            |n| n as usize,
+        )
+    }
     pub(crate) fn as_number_array<T: Clone>(
         &self,
         env: &Uiua,

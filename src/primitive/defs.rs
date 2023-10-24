@@ -1433,15 +1433,15 @@ primitive!(
     /// Expects a function.
     /// In the native interpreter, the function is called in a new OS thread.
     /// In the web editor, the function is called and blocks until it returns.
-    /// A handle that can be passed to [wait] is pushed to the stack. Handles are just numbers.
-    /// [wait] consumes the handle and appends the thread's stack to the current stack.
+    /// A thread id that can be passed to [wait] is pushed to the stack. Handles are just numbers.
+    /// [wait] consumes the thread id and appends the thread's stack to the current stack.
     /// ex:  spawn⇡ 10
     ///   : waitspawn⇡ 10
     /// ex:  spawn(+10+) 1 2
     ///   : waitspawn(+10+) 1 2
     ///
-    /// You can use [each] to spawn a thread for each element of an array.
-    /// ex: ∵spawn(/+⇡×.) ⇡10
+    /// You can use [rows] to spawn a thread for each row of an array.
+    /// ex: ≡spawn(/+⇡×.) ⇡10
     ///
     /// [wait] will call [each] implicitly.
     /// ex: ↯3_3⇡9
@@ -1449,10 +1449,10 @@ primitive!(
     ([1], Spawn, OtherModifier, "spawn"),
     /// Wait for a thread to finish and push its results to the stack
     ///
-    /// The argument must be a handle returned by [spawn].
+    /// The argument must be a thread id returned by [spawn].
     /// ex: wait spawn(/+⇡) 10
     ///
-    /// If the handle has already been [wait]ed on, then an error is thrown.
+    /// If the thread id has already been [wait]ed on, then an error is thrown.
     /// ex! h ← spawn(/+⇡) 10
     ///   : wait h
     ///   : wait h
@@ -1460,7 +1460,31 @@ primitive!(
     /// [wait] is pervasive and will call [each] implicitly.
     /// ex: ↯3_3⇡9
     ///   : wait≡spawn/+.
-    (1, Wait, Misc, ("wait")),
+    (1, Wait, Misc, "wait"),
+    /// Send a value to a thread
+    ///
+    /// Expects a value to send and a thread id returned by [spawn].
+    /// The thread id `0` corresponds to the parent thread.
+    /// The sent-to thread can receive the value with [recv] or [tryrecv].
+    (2(0), Send, Misc, "send"),
+    /// Receive a value from a thread
+    ///
+    /// Expects a thread id returned by [spawn].
+    /// The thread id `0` corresponds to the parent thread.
+    /// The sending thread can send a value with [send].
+    ///
+    /// Unlike [tryrecv], [recv] blocks until a value is received.
+    (1, Recv, Misc, "recv"),
+    /// Try to receive a value from a thread
+    ///
+    /// Expects a thread id returned by [spawn].
+    /// The thread id `0` corresponds to the parent thread.
+    /// The sending thread can send a value with [send].
+    ///
+    /// Unlike [recv], [tryrecv] does not block.
+    /// If no value is available, then an error is thrown.
+    /// The error can be caught with [try].
+    (1, TryRecv, Misc, "tryrecv"),
     /// Break out of a loop
     ///
     /// Expects a non-negative integer. This integer is how many loops will be broken out of.

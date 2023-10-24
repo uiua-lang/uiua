@@ -15,7 +15,7 @@ bufreaderwriter = "0.2.4"
 clap = { version = "4", optional = true, features = ["derive"] }
 color-backtrace = { version = "0.6.1", optional = true }
 colored = "2"
-crossbeam-channel = { version = "0.5.8", optional = true }
+crossbeam-channel = "0.5.8"
 ctrlc = { version = "3", optional = true }
 dashmap = "5"
 ecow = "0.2.0"
@@ -51,13 +51,13 @@ regex = "1.10.2"
 unicode-segmentation = "1.10"
 
 [features]
-audio = ["hodaun", "crossbeam-channel", "lockfree"]
+audio = ["hodaun", "lockfree"]
 binary = ["ctrlc", "notify", "clap", "color-backtrace", "lsp"]
 debug = []
 default = ["binary", "terminal_image", "https", "invoke"]
 https = ["httparse", "rustls", "webpki-roots"]
 lsp = ["tower-lsp", "tokio"]
-profile = ["crossbeam-channel", "serde", "serde_yaml", "indexmap"]
+profile = ["serde", "serde_yaml", "indexmap"]
 invoke = ["open"]
 terminal_image = ["viuer"]
 

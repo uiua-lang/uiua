@@ -28,6 +28,8 @@ constant!(
     (e, std::f64::consts::E),
     /// IEEE 754-2008's `NaN`
     (NaN, std::f64::NAN),
+    /// The maximum integer that can be represented exactly
+    (MaxInt, 2f64.powi(53)),
     /// A string identifying the operating system
     (os, std::env::consts::OS),
     /// A string identifying family of the operating system

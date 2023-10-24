@@ -2,7 +2,7 @@
 Within a each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- `under` aggregating `group` and `partition`
+- `under` aggregating `group`
 - Add channels for spawned threads
 - Sift+delete to delete whole lines
 - Rust API
@@ -34,5 +34,4 @@ Within a each section, items are ordered (roughly) by decreasing priority.
 - System functions
 
 ## Tooling
-- Improve REPL
 - Discord bot

@@ -10,6 +10,7 @@ If you are reading this on the website, then these changes are live here.
 ### Interpreter
 - The interpreter now formats its own error and non-error diagnostic messages instead of delegating to a library
 - Fix a bunch of bugs and crashes
+- Add REPL
 ### Website
 - Error and diagnostic messages a no-longer all one color
 - The pad editor now inserts a trailing newline on format

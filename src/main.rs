@@ -12,13 +12,15 @@ use std::{
 };
 
 use clap::{error::ErrorKind, Parser};
-use colored::Colorize;
+use colored::*;
 use instant::Instant;
 use notify::{EventKind, RecursiveMode, Watcher};
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
+    lsp::{spans, SpanKind},
+    primitive::PrimClass,
     run::RunMode,
     Uiua, UiuaError, UiuaResult,
 };
@@ -201,44 +203,11 @@ fn run() -> UiuaResult {
 
                 #[cfg(feature = "audio")]
                 setup_audio(audio_options);
-                let mut rt = Uiua::with_native_sys()
+                let rt = Uiua::with_native_sys()
                     .with_mode(RunMode::Normal)
                     .with_args(args)
                     .print_diagnostics(true);
-
-                let repl = |rt: &mut Uiua| -> Result<(), UiuaError> {
-                    print!("» ");
-                    let _ = io::stdout().flush();
-
-                    let mut code = String::new();
-                    io::stdin()
-                        .read_line(&mut code)
-                        .expect("Failed to read from Stdin"); // TODO: this could be handled differently
-
-                    if formatter_options.stdout {
-                        let formatted = format_str(&code, &config)?.output;
-                        if code != formatted {
-                            print!("↪ {}", formatted);
-                            code = formatted;
-                        }
-                    }
-
-                    rt.load_str(&code)?;
-                    for value in rt.take_stack() {
-                        println!("∴ {}", value.show());
-                    }
-                    Ok(())
-                };
-
-                println!("Press ^C to exit.\n");
-                loop {
-                    if let Err(msg) = repl(&mut rt) {
-                        // FIXME: for some reasons parsing errors are printed twice, e.g.
-                        //        type $ in REPL to see the "1:1: Expected '"'" message appearing twice.
-                        eprintln!("⚠ {}", msg);
-                    }
-                    println!();
-                }
+                repl(rt, config);
             }
         },
         Err(e) if e.kind() == ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
@@ -661,4 +630,71 @@ fn format_multi_files(config: &FormatConfig, stdout: bool) -> Result<(), UiuaErr
         }
     }
     Ok(())
+}
+
+fn repl(mut rt: Uiua, config: FormatConfig) {
+    let repl = |rt: &mut Uiua| -> Result<(), UiuaError> {
+        print!("{} ", "»".bright_white().bold());
+        _ = io::stdout().flush();
+
+        let mut code = String::new();
+        io::stdin()
+            .read_line(&mut code)
+            .expect("Failed to read from Stdin"); // TODO: this could be handled differently
+
+        let formatted = format_str(&code, &config)?.output;
+        code = formatted;
+        print!("↪ ");
+        for span in spans(&code) {
+            let (r, g, b) = match span.value {
+                SpanKind::Primitive(prim) => match prim.class() {
+                    PrimClass::Stack => (209, 218, 236),
+                    PrimClass::Ocean => (3, 215, 217),
+                    PrimClass::Constant => (237, 94, 36),
+                    _ => {
+                        if let Some(margs) = prim.modifier_args() {
+                            if margs == 1 {
+                                (240, 195, 111)
+                            } else {
+                                (204, 107, 233)
+                            }
+                        } else {
+                            match prim.args() {
+                                Some(0) => (237, 94, 106),
+                                Some(1) => (149, 209, 106),
+                                Some(2) => (84, 176, 252),
+                                _ => (255, 255, 255),
+                            }
+                        }
+                    }
+                },
+                SpanKind::String => (32, 249, 252),
+                SpanKind::Number => (255, 136, 68),
+                SpanKind::Comment => (127, 127, 127),
+                SpanKind::Strand => (200, 200, 200),
+                SpanKind::Ident
+                | SpanKind::Signature
+                | SpanKind::Whitespace
+                | SpanKind::Placeholder => (255, 255, 255),
+            };
+            print!("{}", span.span.as_str().truecolor(r, g, b));
+        }
+        println!();
+
+        rt.load_str(&code)?;
+        for value in rt.take_stack() {
+            let pretty = &value.show();
+            for line in pretty.lines() {
+                println!("  {line}");
+            }
+        }
+        Ok(())
+    };
+
+    println!("Uiua {} (end with ctrl+C)\n", env!("CARGO_PKG_VERSION"));
+    loop {
+        if let Err(e) = repl(&mut rt) {
+            eprintln!("{}", e.report());
+        }
+    }
 }

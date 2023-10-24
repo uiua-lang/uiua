@@ -7,11 +7,13 @@ use std::{
     sync::Arc,
 };
 
+use unicode_segmentation::UnicodeSegmentation;
+
 use crate::{primitive::Primitive, UiuaError};
 
 pub fn lex(input: &str, file: Option<&Path>) -> (Vec<Sp<Token>>, Vec<Sp<LexError>>) {
     Lexer {
-        input_chars: input.chars().collect(),
+        input_segments: input.graphemes(true).collect(),
         loc: Loc {
             char_pos: 0,
             byte_pos: 0,
@@ -28,9 +30,9 @@ pub fn lex(input: &str, file: Option<&Path>) -> (Vec<Sp<Token>>, Vec<Sp<LexError
 
 #[derive(Debug, Clone)]
 pub enum LexError {
-    UnexpectedChar(char),
+    UnexpectedChar(String),
     ExpectedCharacter(Option<char>),
-    InvalidEscape(char),
+    InvalidEscape(String),
     ExpectedNumber,
 }
 
@@ -306,7 +308,7 @@ pub enum Token {
     Comment,
     Ident,
     Number,
-    Char(char),
+    Char(String),
     Str(String),
     FormatStr(Vec<String>),
     MultilineString(Vec<String>),
@@ -318,9 +320,9 @@ pub enum Token {
 }
 
 impl Token {
-    pub fn as_char(&self) -> Option<char> {
+    pub fn as_char(&self) -> Option<String> {
         match self {
-            Token::Char(char) => Some(*char),
+            Token::Char(char) => Some(char.clone()),
             _ => None,
         }
     }
@@ -409,8 +411,8 @@ impl From<Primitive> for Token {
     }
 }
 
-struct Lexer {
-    input_chars: Vec<char>,
+struct Lexer<'a> {
+    input_segments: Vec<&'a str>,
     loc: Loc,
     file: Option<Arc<Path>>,
     input: Arc<str>,
@@ -418,39 +420,44 @@ struct Lexer {
     errors: Vec<Sp<LexError>>,
 }
 
-impl Lexer {
-    fn peek_char(&self) -> Option<char> {
-        self.input_chars.get(self.loc.char_pos).copied()
+impl<'a> Lexer<'a> {
+    fn peek_char(&self) -> Option<&'a str> {
+        self.input_segments.get(self.loc.char_pos).copied()
     }
-    fn update_loc(&mut self, c: char) {
-        match c {
-            '\n' => {
-                self.loc.line += 1;
-                self.loc.col = 1;
+    fn update_loc(&mut self, c: &'a str) {
+        for c in c.chars() {
+            match c {
+                '\n' => {
+                    self.loc.line += 1;
+                    self.loc.col = 1;
+                }
+                '\r' => {}
+                _ => self.loc.col += 1,
             }
-            '\r' => {}
-            _ => self.loc.col += 1,
         }
         self.loc.char_pos += 1;
-        self.loc.byte_pos += c.len_utf8();
+        self.loc.byte_pos += c.len();
     }
-    fn next_char_if(&mut self, f: impl Fn(char) -> bool) -> Option<char> {
-        let c = *self.input_chars.get(self.loc.char_pos)?;
+    fn next_char_if(&mut self, f: impl Fn(&str) -> bool) -> Option<&'a str> {
+        let c = *self.input_segments.get(self.loc.char_pos)?;
         if !f(c) {
             return None;
         }
         self.update_loc(c);
         Some(c)
     }
-    fn next_char_exact(&mut self, c: char) -> bool {
+    fn next_char_if_all(&mut self, f: impl Fn(char) -> bool + Copy) -> Option<&'a str> {
+        self.next_char_if(|c| c.chars().all(f))
+    }
+    fn next_char_exact(&mut self, c: &str) -> bool {
         self.next_char_if(|c2| c2 == c).is_some()
     }
-    fn next_char(&mut self) -> Option<char> {
+    fn next_char(&mut self) -> Option<&'a str> {
         self.next_char_if(|_| true)
     }
-    fn next_chars_exact(&mut self, s: &str) -> bool {
+    fn next_chars_exact<'b>(&mut self, s: impl IntoIterator<Item = &'b str>) -> bool {
         let start = self.loc;
-        for c in s.chars() {
+        for c in s {
             if !self.next_char_exact(c) {
                 self.loc = start;
                 return false;
@@ -480,7 +487,7 @@ impl Lexer {
         use {self::AsciiToken::*, Token::*};
         // Initial scope delimiters
         let start = self.loc;
-        if self.next_chars_exact("---") {
+        if self.next_chars_exact(["-", "-", "-"]) {
             self.end(TripleMinus, start);
         }
         // Main loop
@@ -491,50 +498,54 @@ impl Lexer {
             };
             match c {
                 // Backwards compatibility
-                '❥' | '⇉' => self.end(Primitive::Fork, start),
-                '→' => self.end(Primitive::Dip, start),
-                '∷' => self.end(Primitive::Both, start),
-                '·' => self.end(Primitive::Identity, start),
-                '⍛' => self.end(Primitive::Fill, start),
-                '⌂' => self.end(Primitive::Rise, start),
-                '↰' => self.end(Primitive::Spawn, start),
-                '↲' => self.end(Primitive::Wait, start),
-                '⍚' => self.end(Primitive::Level, start),
-                '≅' => self.end(Primitive::Match, start),
+                "❥" | "⇉" => self.end(Primitive::Fork, start),
+                "→" => self.end(Primitive::Dip, start),
+                "∷" => self.end(Primitive::Both, start),
+                "·" => self.end(Primitive::Identity, start),
+                "⍛" => self.end(Primitive::Fill, start),
+                "⌂" => self.end(Primitive::Rise, start),
+                "↰" => self.end(Primitive::Spawn, start),
+                "↲" => self.end(Primitive::Wait, start),
+                "⍚" => self.end(Primitive::Level, start),
+                "≅" => self.end(Primitive::Match, start),
 
-                '(' => self.end(OpenParen, start),
-                ')' => self.end(CloseParen, start),
-                '{' => self.end(OpenCurly, start),
-                '}' => self.end(CloseCurly, start),
-                '[' => self.end(OpenBracket, start),
-                ']' => self.end(CloseBracket, start),
-                '_' => self.end(Underscore, start),
-                '|' => self.end(Bar, start),
-                ':' => self.end(Colon, start),
-                '`' => {
-                    if self.number('-') {
+                "(" => self.end(OpenParen, start),
+                ")" => self.end(CloseParen, start),
+                "{" => self.end(OpenCurly, start),
+                "}" => self.end(CloseCurly, start),
+                "[" => self.end(OpenBracket, start),
+                "]" => self.end(CloseBracket, start),
+                "_" => self.end(Underscore, start),
+                "|" => self.end(Bar, start),
+                ":" => self.end(Colon, start),
+                "`" => {
+                    if self.number("-") {
                         self.end(Number, start)
                     } else {
                         self.end(Backtick, start)
                     }
                 }
-                '¯' if self.peek_char().filter(char::is_ascii_digit).is_some() => {
-                    self.number('-');
+                "¯" if self
+                    .peek_char()
+                    .filter(|c| c.chars().all(|c| c.is_ascii_digit()))
+                    .is_some() =>
+                {
+                    self.number("-");
                     self.end(Number, start)
                 }
-                '*' => self.end(Star, start),
-                '%' => self.end(Percent, start),
-                '^' => self.end(Caret, start),
-                '=' => self.end(Equal, start),
-                '<' if self.next_char_exact('=') => self.end(LessEqual, start),
-                '>' if self.next_char_exact('=') => self.end(GreaterEqual, start),
-                '!' if self.next_char_exact('=') => self.end(BangEqual, start),
-                '←' => self.end(LeftArrow, start),
+                "*" => self.end(Star, start),
+                "%" => self.end(Percent, start),
+                "^" => self.end(Caret, start),
+                "=" => self.end(Equal, start),
+                "<" if self.next_char_exact("=") => self.end(LessEqual, start),
+                ">" if self.next_char_exact("=") => self.end(GreaterEqual, start),
+                "!" if self.next_char_exact("=") => self.end(BangEqual, start),
+                "←" => self.end(LeftArrow, start),
                 // Comments
-                '#' => {
+                "#" => {
                     let mut comment = String::new();
-                    while let Some(c) = self.next_char_if(|c| c != '\n') {
-                        comment.push(c);
+                    while let Some(c) = self.next_char_if(|c| !c.ends_with('\n')) {
+                        comment.push_str(c);
                     }
                     if comment.starts_with(' ') {
                         comment.remove(0);
@@ -542,7 +553,7 @@ impl Lexer {
                     self.end(Comment, start)
                 }
                 // Characters
-                '@' => {
+                "@" => {
                     let mut escaped = false;
                     let char = match self.character(&mut escaped, None) {
                         Ok(Some(c)) => c,
@@ -553,16 +564,16 @@ impl Lexer {
                         }
                         Err(e) => {
                             self.errors
-                                .push(self.end_span(start).sp(LexError::InvalidEscape(e)));
+                                .push(self.end_span(start).sp(LexError::InvalidEscape(e.into())));
                             continue;
                         }
                     };
                     self.end(Char(char), start)
                 }
                 // Strings
-                '"' | '$' => {
-                    let format = c == '$';
-                    if format && self.next_char_exact(' ') {
+                "\"" | "$" => {
+                    let format = c == "$";
+                    if format && self.next_char_exact(" ") {
                         // Multiline strings
                         let mut start = start;
                         loop {
@@ -570,14 +581,16 @@ impl Lexer {
                             let string = parse_format_fragments(&inner);
                             self.end(MultilineString(string), start);
                             let checkpoint = self.loc;
-                            while self.next_char_exact('\r') {}
-                            if self.next_char_exact('\n') {
+                            while self.next_char_exact("\r") {}
+                            if self.next_char_if(|c| c.ends_with('\n')).is_some() {
                                 while self
-                                    .next_char_if(|c| c.is_whitespace() && c != '\n')
+                                    .next_char_if(|c| {
+                                        c.chars().all(char::is_whitespace) && !c.ends_with('\n')
+                                    })
                                     .is_some()
                                 {}
                                 start = self.loc;
-                                if self.next_chars_exact("$ ") {
+                                if self.next_chars_exact(["$", " "]) {
                                     continue;
                                 }
                             }
@@ -587,7 +600,7 @@ impl Lexer {
                         continue;
                     }
                     let mut errored = false;
-                    if format && !self.next_char_exact('"') {
+                    if format && !self.next_char_exact("\"") {
                         self.errors.push(
                             self.end_span(start)
                                 .sp(LexError::ExpectedCharacter(Some('"'))),
@@ -596,7 +609,7 @@ impl Lexer {
                     }
                     // Single-line strings
                     let inner = self.parse_string_contents(start, Some('"'));
-                    if !self.next_char_exact('"') && !errored {
+                    if !self.next_char_exact("\"") && !errored {
                         self.errors.push(
                             self.end_span(start)
                                 .sp(LexError::ExpectedCharacter(Some('"'))),
@@ -611,19 +624,19 @@ impl Lexer {
                 }
                 // Identifiers and unformatted glyphs
                 c if is_custom_glyph(c) => self.end(Ident, start),
-                c if is_ident_char(c) || c == '&' => {
+                c if c.chars().all(is_ident_char) || c == "&" => {
                     let mut ident = c.to_string();
                     // Collect characters
-                    while let Some(c) = self.next_char_if(is_ident_char) {
-                        ident.push(c);
+                    while let Some(c) = self.next_char_if_all(is_ident_char) {
+                        ident.push_str(c);
                     }
                     let mut exclam_count = 0;
-                    while self.next_char_exact('!') {
+                    while self.next_char_exact("!") {
                         ident.push('!');
                         exclam_count += 1;
                     }
-                    let ambiguous_ne =
-                        exclam_count == 1 && self.input_chars.get(self.loc.char_pos) == Some(&'=');
+                    let ambiguous_ne = exclam_count == 1
+                        && self.input_segments.get(self.loc.char_pos) == Some(&"=");
                     if ambiguous_ne {
                         ident.pop();
                     }
@@ -662,50 +675,59 @@ impl Lexer {
                     }
                 }
                 // Numbers
-                c if c.is_ascii_digit() => {
+                c if c.chars().all(|c| c.is_ascii_digit()) => {
                     self.number(c);
                     self.end(Number, start)
                 }
                 // Newlines
-                '\n' => {
+                "\n" | "\r\n" => {
                     self.end(Newline, start);
                     // Scope delimiters
                     let start = self.loc;
-                    if self.next_chars_exact("---") {
+                    if self.next_chars_exact(["-", "-", "-"]) {
                         self.end(TripleMinus, start);
                     }
                 }
-                ' ' | '\t' => {
-                    while self.next_char_exact(' ') || self.next_char_exact('\t') {}
+                " " | "\t" => {
+                    while self.next_char_exact(" ") || self.next_char_exact("\t") {}
                     self.end(Spaces, start)
                 }
-                c if c.is_whitespace() => continue,
+                c if c.chars().all(|c| c.is_whitespace()) => continue,
                 c => {
-                    if let Some(prim) = Primitive::from_glyph(c) {
-                        self.end(Glyph(prim), start)
-                    } else {
-                        self.errors
-                            .push(self.end_span(start).sp(LexError::UnexpectedChar(c)));
+                    if c.chars().count() == 1 {
+                        let c = c.chars().next().unwrap();
+                        if let Some(prim) = Primitive::from_glyph(c) {
+                            self.end(Glyph(prim), start);
+                            continue;
+                        }
                     }
+                    self.errors
+                        .push(self.end_span(start).sp(LexError::UnexpectedChar(c.into())));
                 }
             };
         }
         (self.tokens, self.errors)
     }
-    fn number(&mut self, init: char) -> bool {
+    fn number(&mut self, init: &str) -> bool {
         // Whole part
         let mut got_digit = false;
-        while self.next_char_if(|c| c.is_ascii_digit()).is_some() {
+        while self
+            .next_char_if(|c| c.chars().all(|c| c.is_ascii_digit()))
+            .is_some()
+        {
             got_digit = true;
         }
-        if !init.is_ascii_digit() && !got_digit {
+        if !init.chars().all(|c| c.is_ascii_digit()) && !got_digit {
             return false;
         }
         // Fractional part
         let before_dot = self.loc;
-        if self.next_char_exact('.') {
+        if self.next_char_exact(".") {
             let mut has_decimal = false;
-            while self.next_char_if(|c| c.is_ascii_digit()).is_some() {
+            while self
+                .next_char_if(|c| c.chars().all(|c| c.is_ascii_digit()))
+                .is_some()
+            {
                 has_decimal = true;
             }
             if !has_decimal {
@@ -714,10 +736,13 @@ impl Lexer {
         }
         // Exponent
         let loc_before_e = self.loc;
-        if self.next_char_if(|c| c == 'e' || c == 'E').is_some() {
-            self.next_char_if(|c| c == '-' || c == '`' || c == '¯');
+        if self.next_char_if(|c| c == "e" || c == "E").is_some() {
+            self.next_char_if(|c| c == "-" || c == "`" || c == "¯");
             let mut got_digit = false;
-            while self.next_char_if(|c| c.is_ascii_digit()).is_some() {
+            while self
+                .next_char_if(|c| c.chars().all(|c| c.is_ascii_digit()))
+                .is_some()
+            {
                 got_digit = true;
             }
             if !got_digit {
@@ -730,47 +755,51 @@ impl Lexer {
         &mut self,
         escaped: &mut bool,
         escape_char: Option<char>,
-    ) -> Result<Option<char>, char> {
+    ) -> Result<Option<String>, &'a str> {
         let Some(c) =
-            self.next_char_if(|c| !"\r\n".contains(c) && (Some(c) != escape_char || *escaped))
+            self.next_char_if_all(|c| !"\r\n".contains(c) && (Some(c) != escape_char || *escaped))
         else {
             return Ok(None);
         };
         Ok(Some(if *escaped {
             *escaped = false;
             match c {
-                'n' => '\n',
-                'r' => '\r',
-                't' => '\t',
-                '0' => '\0',
-                's' => ' ',
-                '\\' => '\\',
-                '"' => '"',
-                '\'' => '\'',
-                '_' => char::MAX,
-                'x' => {
+                "n" => '\n'.to_string(),
+                "r" => '\r'.to_string(),
+                "t" => '\t'.to_string(),
+                "0" => '\0'.to_string(),
+                "s" => ' '.to_string(),
+                "\\" => '\\'.to_string(),
+                "\"" => '"'.to_string(),
+                "'" => '\''.to_string(),
+                "_" => char::MAX.to_string(),
+                "x" => {
                     let mut code = 0;
                     for _ in 0..2 {
-                        let c = self.next_char_if(|c| c.is_ascii_hexdigit()).ok_or('x')?;
-                        code = code << 4 | c.to_digit(16).unwrap();
+                        let c = self
+                            .next_char_if_all(|c| c.is_ascii_hexdigit())
+                            .ok_or("x")?;
+                        code = code << 4 | c.chars().next().unwrap().to_digit(16).unwrap();
                     }
-                    std::char::from_u32(code).ok_or('x')?
+                    std::char::from_u32(code).ok_or("x")?.into()
                 }
-                'u' => {
+                "u" => {
                     let mut code = 0;
                     for _ in 0..4 {
-                        let c = self.next_char_if(|c| c.is_ascii_hexdigit()).ok_or('u')?;
-                        code = code << 4 | c.to_digit(16).unwrap();
+                        let c = self
+                            .next_char_if_all(|c| c.is_ascii_hexdigit())
+                            .ok_or("u")?;
+                        code = code << 4 | c.chars().next().unwrap().to_digit(16).unwrap();
                     }
-                    std::char::from_u32(code).ok_or('u')?
+                    std::char::from_u32(code).ok_or("u")?.into()
                 }
                 c => return Err(c),
             }
-        } else if c == '\\' {
+        } else if c == "\\" {
             *escaped = true;
             return self.character(escaped, escape_char);
         } else {
-            c
+            c.into()
         }))
     }
     fn parse_string_contents(&mut self, start: Loc, escape_char: Option<char>) -> String {
@@ -778,11 +807,11 @@ impl Lexer {
         let mut escaped = false;
         loop {
             match self.character(&mut escaped, escape_char) {
-                Ok(Some(c)) => string.push(c),
+                Ok(Some(c)) => string.push_str(&c),
                 Ok(None) => break,
                 Err(e) => {
                     self.errors
-                        .push(self.end_span(start).sp(LexError::InvalidEscape(e)));
+                        .push(self.end_span(start).sp(LexError::InvalidEscape(e.into())));
                 }
             }
         }
@@ -811,6 +840,15 @@ pub fn is_ident_char(c: char) -> bool {
     c.is_alphabetic() && !"ⁿₙπτη".contains(c)
 }
 
-pub fn is_custom_glyph(c: char) -> bool {
-    c as u32 > 127 && !is_ident_char(c) && Primitive::from_glyph(c).is_none()
+pub fn is_custom_glyph(c: &str) -> bool {
+    match c.chars().count() {
+        0 => false,
+        1 => {
+            let c = c.chars().next().unwrap();
+            c as u32 > 127 && !is_ident_char(c) && Primitive::from_glyph(c).is_none()
+        }
+        _ => c
+            .chars()
+            .all(|c| c as u32 > 127 && !is_ident_char(c) && Primitive::from_glyph(c).is_none()),
+    }
 }

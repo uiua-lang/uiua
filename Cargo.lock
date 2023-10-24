@@ -3364,6 +3364,7 @@ dependencies = [
  "tinyvec",
  "tokio",
  "tower-lsp",
+ "unicode-segmentation",
  "viuer",
  "webpki-roots",
 ]

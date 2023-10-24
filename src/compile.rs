@@ -273,12 +273,17 @@ impl Uiua {
                 }
             }
             Word::Char(c) => {
+                let val: Value = if c.chars().count() == 1 {
+                    c.chars().next().unwrap().into()
+                } else {
+                    c.into()
+                };
                 if call {
-                    self.push_instr(Instr::push(c));
+                    self.push_instr(Instr::push(val));
                 } else {
                     self.push_instr(Instr::push_func(Function::new(
                         FunctionId::Anonymous(word.span.clone()),
-                        vec![Instr::push(c)],
+                        vec![Instr::push(val)],
                         Signature::new(0, 1),
                     )));
                 }

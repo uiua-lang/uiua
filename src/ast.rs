@@ -27,7 +27,7 @@ pub struct Binding {
 #[derive(Clone)]
 pub enum Word {
     Number(String, f64),
-    Char(char),
+    Char(String),
     String(String),
     FormatString(Vec<String>),
     MultilineString(Vec<Sp<Vec<String>>>),

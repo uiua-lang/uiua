@@ -30,6 +30,7 @@ instant = "0.1.12"
 lockfree = { version = "0.5.1", optional = true }
 notify = { version = "6", optional = true }
 once_cell = "1"
+open = { version = "5", optional = true }
 parking_lot = "0.12.1"
 paste = "1.0.14"
 rand = { version = "0.8.5", features = ["small_rng"] }
@@ -47,7 +48,7 @@ viuer = { version = "0.7.1", optional = true }
 num_cpus = "1.16.0"
 rayon = "1.8.0"
 regex = "1.10.2"
-open = { version = "5", optional = true }
+unicode-segmentation = "1.10"
 
 [features]
 audio = ["hodaun", "crossbeam-channel", "lockfree"]

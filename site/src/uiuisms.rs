@@ -205,7 +205,7 @@ uiuisms!(
     /// Create a matrix of random numbers
     "⌊×⊞⋅⋅⚂.⊚ 5 10",
     /// Arithmetic mean
-    "÷⧻∶/+. [85 105 117 97]",
+    "÷⊃⧻/+ [85 105 117 97]",
     /// Dot product
     "/+× [1 2 3] [4 ¯5 6]",
     /// Cross product

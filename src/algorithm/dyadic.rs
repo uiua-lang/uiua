@@ -4,7 +4,6 @@ use std::{
     borrow::Cow,
     cmp::Ordering,
     collections::{HashMap, HashSet},
-    hash::{Hash, Hasher},
     iter::repeat,
     mem::take,
 };
@@ -21,7 +20,9 @@ use crate::{
     Uiua, UiuaResult,
 };
 
-use super::{op2_bytes_retry_fill, op_bytes_ref_retry_fill, op_bytes_retry_fill, FillContext};
+use super::{
+    op2_bytes_retry_fill, op_bytes_ref_retry_fill, op_bytes_retry_fill, ArrayCmpSlice, FillContext,
+};
 
 impl Value {
     fn coerce_to_functions<T, C: FillContext, E: ToString>(
@@ -1886,24 +1887,6 @@ impl<T: ArrayValue> Array<T> {
             let arr = Array::new(output_shape, data);
             arr.validate_shape();
             break Ok(arr);
-        }
-    }
-}
-
-struct ArrayCmpSlice<'a, T>(&'a [T]);
-
-impl<'a, T: ArrayValue> PartialEq for ArrayCmpSlice<'a, T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.len() == other.0.len() && self.0.iter().zip(other.0).all(|(a, b)| a.array_eq(b))
-    }
-}
-
-impl<'a, T: ArrayValue> Eq for ArrayCmpSlice<'a, T> {}
-
-impl<'a, T: ArrayValue> Hash for ArrayCmpSlice<'a, T> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        for elem in self.0 {
-            elem.array_hash(state);
         }
     }
 }

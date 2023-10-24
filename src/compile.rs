@@ -236,6 +236,7 @@ impl Uiua {
     /// Also performs some optimizations if the instruction and the previous
     /// instruction form some known pattern
     fn push_instr(&mut self, instr: Instr) {
+        use ImplPrimitive::*;
         use Primitive::*;
         let instrs = self.new_functions.last_mut().unwrap();
         // Optimizations
@@ -244,12 +245,34 @@ impl Uiua {
             ([.., Instr::Prim(Eta, _), Instr::Prim(Add, _)], Instr::Prim(Sin, span)) => {
                 instrs.pop();
                 instrs.pop();
-                instrs.push(Instr::ImplPrim(ImplPrimitive::Cos, span));
+                instrs.push(Instr::ImplPrim(Cos, span));
             }
-            // First reverse = last
+            // First Rise = MinIndex
+            ([.., Instr::Prim(Rise, _)], Instr::Prim(First, span))
+            | ([.., Instr::Prim(Fall, _)], Instr::ImplPrim(Last, span)) => {
+                instrs.pop();
+                instrs.push(Instr::ImplPrim(MinIndex, span))
+            }
+            ([.., Instr::Prim(Fall, _), Instr::Prim(Reverse, _)], Instr::Prim(First, span)) => {
+                instrs.pop();
+                instrs.pop();
+                instrs.push(Instr::ImplPrim(MinIndex, span))
+            }
+            // First Fall = MaxIndex
+            ([.., Instr::Prim(Fall, _)], Instr::Prim(First, span))
+            | ([.., Instr::Prim(Rise, _)], Instr::ImplPrim(Last, span)) => {
+                instrs.pop();
+                instrs.push(Instr::ImplPrim(MaxIndex, span))
+            }
+            ([.., Instr::Prim(Rise, _), Instr::Prim(Reverse, _)], Instr::Prim(First, span)) => {
+                instrs.pop();
+                instrs.pop();
+                instrs.push(Instr::ImplPrim(MaxIndex, span))
+            }
+            // First Reverse = last
             ([.., Instr::Prim(Reverse, _)], Instr::Prim(First, span)) => {
                 instrs.pop();
-                instrs.push(Instr::ImplPrim(ImplPrimitive::Last, span))
+                instrs.push(Instr::ImplPrim(Last, span))
             }
             // // Coalesce inline stack ops
             // ([.., Instr::])

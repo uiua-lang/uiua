@@ -520,6 +520,8 @@ primitive!(
     /// If we transform the array before [rise]ing, we can sort by a key.
     /// Here, we sort the array ascending by the [absolute value] of its elements.
     /// ex: ⊏⍏⌵.6_2_7_0_¯1_5
+    ///
+    /// [first][rise] and [first][reverse][rise] are optimized in the interpreter to be O(n).
     (1, Rise, MonadicArray, ("rise", '⍏')),
     /// Get the indices into an array if it were sorted descending
     ///
@@ -531,6 +533,8 @@ primitive!(
     /// If we transform the array before [fall]ing, we can sort by a key.
     /// Here, we sort the array descending by the [absolute value] of its elements.
     /// ex: ⊏⍖⌵.6_2_7_0_¯1_5
+    ///
+    /// [first][fall] and [first][reverse][fall] are optimized in the interpreter to be O(n).
     (1, Fall, MonadicArray, ("fall", '⍖')),
     /// Get indices where array values are not equal to zero
     ///
@@ -1656,6 +1660,8 @@ impl_primitive!(
     (3, Unkeep),
     (3[1], Unpartition),
     (3[1], Ungroup),
+    (1, MinIndex),
+    (1, MaxIndex),
     (1, InvUtf),
     (1, InvTrace),
 );

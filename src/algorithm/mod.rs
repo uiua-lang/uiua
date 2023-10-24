@@ -1,6 +1,10 @@
 //! Algorithms for performing operations on arrays
 
-use std::{cmp::Ordering, convert::Infallible};
+use std::{
+    cmp::Ordering,
+    convert::Infallible,
+    hash::{Hash, Hasher},
+};
 
 use crate::{
     array::{Array, ArrayValue, Shape},
@@ -238,6 +242,41 @@ fn op2_bytes_retry_fill<T, C: FillContext>(
             } else {
                 Err(err)
             }
+        }
+    }
+}
+
+struct ArrayCmpSlice<'a, T>(&'a [T]);
+
+impl<'a, T: ArrayValue> PartialEq for ArrayCmpSlice<'a, T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.len() == other.0.len() && self.0.iter().zip(other.0).all(|(a, b)| a.array_eq(b))
+    }
+}
+
+impl<'a, T: ArrayValue> Eq for ArrayCmpSlice<'a, T> {}
+
+impl<'a, T: ArrayValue> PartialOrd for ArrayCmpSlice<'a, T> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<'a, T: ArrayValue> Ord for ArrayCmpSlice<'a, T> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0
+            .iter()
+            .zip(other.0)
+            .map(|(a, b)| a.array_cmp(b))
+            .find(|&o| o != Ordering::Equal)
+            .unwrap_or(Ordering::Equal)
+    }
+}
+
+impl<'a, T: ArrayValue> Hash for ArrayCmpSlice<'a, T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        for elem in self.0 {
+            elem.array_hash(state);
         }
     }
 }

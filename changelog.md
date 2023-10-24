@@ -12,6 +12,7 @@ If you are reading this on the website, then these changes are live here.
 - The interpreter now formats its own error and non-error diagnostic messages instead of delegating to a library
 - Fix a bunch of bugs and crashes
 - Add REPL
+- Optimize ([`⊢`](https://uiua.org/docs/first) [`⍏`](https://uiua.org/docs/rise)), ([`⊢`](https://uiua.org/docs/first) [`⇌`](https://uiua.org/docs/reverse) [`⍏`](https://uiua.org/docs/rise)), ([`⊢`](https://uiua.org/docs/first) [`⍖`](https://uiua.org/docs/fall)), and ([`⊢`](https://uiua.org/docs/first) [`⇌`](https://uiua.org/docs/reverse) [`⍖`](https://uiua.org/docs/fall)) to be O(n)
 ### Website
 - [`&ast`](https://uiua.org/docs/&ast) now works on the website by generating a fixed amount of audio
   - How long the generated audio is can be configured in the editor settings

@@ -628,6 +628,8 @@ impl ImplPrimitive {
             ImplPrimitive::InvWhere => env.monadic_ref_env(Value::inverse_where)?,
             ImplPrimitive::InvUtf => env.monadic_ref_env(Value::inv_utf8)?,
             ImplPrimitive::Last => env.monadic_env(Value::last)?,
+            ImplPrimitive::MinIndex => env.monadic_ref_env(Value::min_index)?,
+            ImplPrimitive::MaxIndex => env.monadic_ref_env(Value::max_index)?,
             ImplPrimitive::InverseBits => env.monadic_ref_env(Value::inverse_bits)?,
             ImplPrimitive::Unpartition => loops::unpartition(env)?,
             ImplPrimitive::Ungroup => loops::ungroup(env)?,

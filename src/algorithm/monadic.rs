@@ -18,7 +18,7 @@ use crate::{
     Uiua, UiuaResult,
 };
 
-use super::FillContext;
+use super::{ArrayCmpSlice, FillContext};
 
 impl Value {
     pub fn deshape(&mut self) {
@@ -545,5 +545,63 @@ impl<T: ArrayValue> Array<T> {
             self.data.as_mut_slice().rotate_right(row_len);
             self.shape[0] += 1;
         }
+    }
+}
+
+impl Value {
+    pub fn min_index(&self, env: &Uiua) -> UiuaResult<Self> {
+        self.generic_ref_env_deep(
+            Array::min_index,
+            Array::min_index,
+            Array::min_index,
+            Array::min_index,
+            env,
+        )
+        .map(Into::into)
+    }
+    pub fn max_index(&self, env: &Uiua) -> UiuaResult<Self> {
+        self.generic_ref_env_deep(
+            Array::max_index,
+            Array::max_index,
+            Array::max_index,
+            Array::max_index,
+            env,
+        )
+        .map(Into::into)
+    }
+}
+
+impl<T: ArrayValue> Array<T> {
+    pub fn min_index(&self, env: &Uiua) -> UiuaResult<usize> {
+        if self.rank() == 0 {
+            return Err(env.error("Cannot get min index of a scalar"));
+        }
+        if self.row_count() == 0 {
+            return Err(env.error("Cannot get min index of an empty array"));
+        }
+        let index = self
+            .row_slices()
+            .map(ArrayCmpSlice)
+            .enumerate()
+            .min_by(|(_, a), (_, b)| a.cmp(b))
+            .unwrap()
+            .0;
+        Ok(index)
+    }
+    pub fn max_index(&self, env: &Uiua) -> UiuaResult<usize> {
+        if self.rank() == 0 {
+            return Err(env.error("Cannot get max index of a scalar"));
+        }
+        if self.row_count() == 0 {
+            return Err(env.error("Cannot get max index of an empty array"));
+        }
+        let index = self
+            .row_slices()
+            .map(ArrayCmpSlice)
+            .enumerate()
+            .max_by(|(_, a), (_, b)| a.cmp(b))
+            .unwrap()
+            .0;
+        Ok(index)
     }
 }

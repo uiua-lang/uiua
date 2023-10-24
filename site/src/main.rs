@@ -5,12 +5,12 @@ mod docs;
 mod editor;
 mod examples;
 mod other;
-mod pad;
 mod primitive;
 mod tour;
 mod tutorial;
 mod uiuisms;
 
+use base64::engine::{general_purpose::URL_SAFE, Engine};
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
@@ -18,7 +18,7 @@ use uiua::primitive::{ConstantDef, PrimClass, Primitive};
 use wasm_bindgen::JsCast;
 use web_sys::HtmlAudioElement;
 
-use crate::{docs::*, editor::*, other::*, pad::*, tour::*, uiuisms::*};
+use crate::{docs::*, editor::*, other::*, tour::*, uiuisms::*};
 
 pub fn main() {
     console_error_panic_hook::set_once();
@@ -354,6 +354,20 @@ fn element<T: JsCast>(id: &str) -> T {
         elem
     } else {
         panic!("#{id} not found")
+    }
+}
+
+#[component]
+pub fn Pad() -> impl IntoView {
+    let mut src = use_query_map()
+        .with_untracked(|params| params.get("src").cloned())
+        .unwrap_or_default();
+    if let Ok(decoded) = URL_SAFE.decode(src.as_bytes()) {
+        src = String::from_utf8_lossy(&decoded).to_string();
+    }
+    view! {
+        <Title text="Pad - Uiua"/>
+        <Editor size=EditorSize::Pad example={ &src }/>
     }
 }
 

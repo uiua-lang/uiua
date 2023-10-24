@@ -51,7 +51,7 @@ pub enum PrimClass {
     Planet,
     Ocean,
     Misc,
-    Sys,
+    Sys(SysOpClass),
 }
 
 impl PrimClass {

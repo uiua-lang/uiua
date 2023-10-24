@@ -7,7 +7,7 @@ use std::{
 };
 
 use ecow::EcoVec;
-use enum_iterator::Sequence;
+use enum_iterator::{all, Sequence};
 use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
 use image::{DynamicImage, ImageOutputFormat};
 use once_cell::sync::Lazy;
@@ -42,7 +42,7 @@ macro_rules! sys_op {
         $(#[doc = $doc:literal])*
         (
             $args:literal$(($outputs:expr))?$([$mod_args:expr])?,
-            $variant:ident, $name:literal, $long_name:literal
+            $variant:ident, $class:ident, $name:literal, $long_name:literal
         )
     ),* $(,)?) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
@@ -96,63 +96,88 @@ macro_rules! sys_op {
                     },)*
                 }
             }
+            pub fn class(&self) -> SysOpClass {
+                match self {
+                    $(SysOp::$variant => SysOpClass::$class),*
+                }
+            }
         }
     };
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
+pub enum SysOpClass {
+    Filesystem,
+    StdIO,
+    Env,
+    Stream,
+    Command,
+    Audio,
+    Images,
+    Gifs,
+    Tcp,
+    Misc,
+}
+
+impl SysOpClass {
+    pub fn all() -> impl Iterator<Item = Self> {
+        all()
+    }
+}
+
 sys_op! {
     /// Print a nicely formatted representation of a value to stdout
-    (1(0), Show, "&s", "show"),
+    (1(0), Show, StdIO, "&s", "show"),
     /// Print a value to stdout
-    (1(0), Prin, "&pf", "print and flush"),
+    (1(0), Prin, StdIO, "&pf", "print and flush"),
     /// Print a value to stdout followed by a newline
-    (1(0), Print, "&p", "print with newline"),
+    (1(0), Print, StdIO, "&p", "print with newline"),
     /// Read a line from stdin
     ///
     /// The normal output is a string.
     /// If EOF is reached, the number `0` is returned instead.
     /// Programs that wish to properly handle EOF should check for this.
-    (0, ScanLine, "&sc", "scan line"),
+    (0, ScanLine, StdIO, "&sc", "scan line"),
     /// Get the size of the terminal
     ///
     /// The result is a 2-element array of the height and width of the terminal.
     /// Height comes first so that the array can be used as a shape in [reshape].
-    (0, TermSize, "&ts", "terminal size"),
+    (0, TermSize, Env, "&ts", "terminal size"),
     /// Get the command line arguments
     ///
     /// The first element will always be the name of your script
-    (0, Args, "&args", "arguments"),
+    (0, Args, Env, "&args", "arguments"),
     /// Get the value of an environment variable
-    (1, Var, "&var", "environment variable"),
+    (1, Var, Env, "&var", "environment variable"),
     /// Run a command and wait for it to finish
     ///
     /// Standard IO will be inherited. Returns the exit code of the command.
     ///
     /// Expects either a string, a rank `2` character array, or a rank `1` array of [box] strings.
-    (1(1), RunInherit, "&runi", "run command inherit"),
+    (1(1), RunInherit, Command, "&runi", "run command inherit"),
     /// Run a command and wait for it to finish
     ///
     /// Standard IO will be captured. The exit code, stdout, and stderr will each be pushed to the stack.
     ///
     /// Expects either a string, a rank `2` character array, or a rank `1` array of [box] strings.
-    (1(3), RunCapture, "&runc", "run command capture"),
+    (1(3), RunCapture, Command, "&runc", "run command capture"),
     /// Change the current directory
-    (1(0), ChangeDirectory, "&cd", "change directory"),
+    (1(0), ChangeDirectory, Filesystem, "&cd", "change directory"),
     /// Sleep for n seconds
     ///
     /// On the web, this example will hang for 1 second.
     /// ex: ⚂ &sl 1
-    (1(0), Sleep, "&sl", "sleep"),
+    (1(0), Sleep, Misc, "&sl", "sleep"),
     /// Read at most n bytes from a stream
-    (2, ReadStr, "&rs", "read to string"),
+    (2, ReadStr, Stream, "&rs", "read to string"),
     /// Read at most n bytes from a stream
-    (2, ReadBytes, "&rb", "read to bytes"),
+    (2, ReadBytes, Stream, "&rb", "read to bytes"),
     /// Read from a stream until a delimiter is reached
-    (2, ReadUntil, "&ru", "read until"),
+    (2, ReadUntil, Stream, "&ru", "read until"),
     /// Write an array to a stream
     ///
     /// If the stream is a file, the file may not be written to until it is closed with [&cl].
-    (2(0), Write, "&w", "write"),
+    (2(0), Write, Stream, "&w", "write"),
     /// Import an item from a file
     ///
     /// The first argument is the path to the file. The second is the name of the item to import.
@@ -163,59 +188,59 @@ sys_op! {
     ///   : Double ← ex "Double"
     ///   : Square ← ex "Square"
     ///   : Square Double 5
-    (2, Import, "&i", "import"),
+    (2, Import, Filesystem, "&i", "import"),
     /// Invoke a path with the system's default program
-    (1(1), Invoke, "&invk", "invoke"),
+    (1(1), Invoke, Command, "&invk", "invoke"),
     /// Close a stream by its handle
     ///
     /// This will close files, tcp listeners, and tcp sockets.
-    (1(0), Close, "&cl", "close handle"),
+    (1(0), Close, Stream, "&cl", "close handle"),
     /// Open a file and return a handle to it
     ///
     /// The file can be read from with [&rs], [&rb], or [&ru].
     /// The file can be written to with [&w].
-    (1, FOpen, "&fo", "file - open"),
+    (1, FOpen, Filesystem, "&fo", "file - open"),
     /// Create a file and return a handle to it
     ///
     /// The file can be read from with [&rs], [&rb], or [&ru].
     /// The file can be written to with [&w].
     /// The file may not be written to until it is closed with [&cl].
-    (1, FCreate, "&fc", "file - create"),
+    (1, FCreate, Filesystem, "&fc", "file - create"),
     /// Delete a file or directory
     ///
     /// Deletes the file or directory at the given path.
     /// Be careful with this function, as deleted files and directories cannot be recovered!
     /// For a safer alternative, see [&ftr].
-    (1(0), FDelete, "&fd", "file - delete"),
+    (1(0), FDelete, Filesystem, "&fd", "file - delete"),
     /// Move a file or directory to the trash
     ///
     /// Moves the file or directory at the given path to the trash.
     /// This is a safer alternative to [&fd].
-    (1(0), FTrash, "&ftr", "file - trash"),
+    (1(0), FTrash, Filesystem, "&ftr", "file - trash"),
     /// Check if a file exists at a path
-    (1, FExists, "&fe", "file - exists"),
+    (1, FExists, Filesystem, "&fe", "file - exists"),
     /// List the contents of a directory
-    (1, FListDir, "&fld", "file - list directory"),
+    (1, FListDir, Filesystem, "&fld", "file - list directory"),
     /// Check if a path is a file
-    (1, FIsFile, "&fif", "file - is file"),
+    (1, FIsFile, Filesystem, "&fif", "file - is file"),
     /// Read all the contents of a file into a string
     ///
     /// Expects a path and returns a [rank]`1` character array.
-    (1, FReadAllStr, "&fras", "file - read all to string"),
+    (1, FReadAllStr, Filesystem, "&fras", "file - read all to string"),
     /// Read all the contents of a file into a byte array
     ///
     /// Expects a path and returns a [rank]`1` numeric array.
-    (1, FReadAllBytes, "&frab", "file - read all to bytes"),
+    (1, FReadAllBytes, Filesystem, "&frab", "file - read all to bytes"),
     /// Write the entire contents of an array to a file
     ///
     /// Expects a path and a [rank]`1` array or either numbers or characters.
-    (2(0), FWriteAll, "&fwa", "file - write all"),
+    (2(0), FWriteAll, Filesystem, "&fwa", "file - write all"),
     /// Decode an image from a byte array
     ///
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, and `ico`.
     ///
     /// See also: [&ime]
-    (1, ImDecode, "&imd", "image - decode"),
+    (1, ImDecode, Images, "&imd", "image - decode"),
     /// Encode an image into a byte array with the specified format
     ///
     /// The first argument is the format, and the second is the image.
@@ -233,7 +258,7 @@ sys_op! {
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, and `ico`.
     ///
     /// See also: [&ims] [&imd]
-    (2, ImEncode, "&ime", "image - encode"),
+    (2, ImEncode, Images, "&ime", "image - encode"),
     /// Show an image
     ///
     /// How the image is shown depends on the system backend.
@@ -252,7 +277,7 @@ sys_op! {
     /// A length 4 last axis is an RGB image with an alpha channel.
     ///
     /// See also: [&ime]
-    (1(0), ImShow, "&ims", "image - show"),
+    (1(0), ImShow, Images, "&ims", "image - show"),
     /// Encode a gif into a byte array
     ///
     /// The first argument is a framerate in seconds.
@@ -260,7 +285,7 @@ sys_op! {
     /// The rows of the array are the frames of the gif, and their format must conform to that of [&ime].
     ///
     /// See also: [&gifs]
-    (2, GifEncode, "&gife", "gif - encode"),
+    (2, GifEncode, Gifs, "&gife", "gif - encode"),
     /// Show a gif
     ///
     /// The first argument is a framerate in seconds.
@@ -268,13 +293,13 @@ sys_op! {
     /// The rows of the array are the frames of the gif, and their format must conform to that of [&ime].
     ///
     /// See also: [&gife]
-    (2(0), GifShow, "&gifs", "gif - show"),
+    (2(0), GifShow, Gifs, "&gifs", "gif - show"),
     /// Decode audio from a byte array
     ///
     /// Only the `wav` format is supported.
     ///
     /// See also: [&ae]
-    (1, AudioDecode, "&ad", "audio - decode"),
+    (1, AudioDecode, Audio, "&ad", "audio - decode"),
     /// Encode audio into a byte array
     ///
     /// The first argument is the format, and the second is the audio samples.
@@ -290,7 +315,7 @@ sys_op! {
     /// Only the `wav` format is supported.
     ///
     /// See also: [&ap] [&ad]
-    (2, AudioEncode, "&ae", "audio - encode"),
+    (2, AudioEncode, Audio, "&ae", "audio - encode"),
     /// Play some audio
     ///
     /// The audio must be a rank 1 or 2 numeric array.
@@ -302,7 +327,7 @@ sys_op! {
     /// The sample rate is [&asr].
     ///
     /// See also: [&ae]
-    (1(0), AudioPlay, "&ap", "audio - play"),
+    (1(0), AudioPlay, Audio, "&ap", "audio - play"),
     /// Get the sample rate of the audio output backend
     ///
     /// ex: &asr
@@ -310,7 +335,7 @@ sys_op! {
     /// ex: ÷∶⇡×, 4 &asr
     /// Pass that to a periodic function, and you get a nice tone!
     /// ex: ÷4○×τ×220 ÷∶⇡×, 4 &asr
-    (0, AudioSampleRate, "&asr", "audio - sample rate"),
+    (0, AudioSampleRate, Audio, "&asr", "audio - sample rate"),
     /// Synthesize and stream audio
     ///
     /// Expects a function that takes a list of sample times and returns a list of samples.
@@ -329,25 +354,25 @@ sys_op! {
     ///   : &ast(÷3/+[⊃⊃⊃Hat(Kick)Hit(Bass)]×Sp)
     /// On the web, this will simply use the function to generate a fixed amount of audio.
     /// How long the audio is can be configure in the editor settings.
-    (0(0)[1], AudioStream, "&ast", "audio - stream"),
+    (0(0)[1], AudioStream, Audio, "&ast", "audio - stream"),
     /// Create a TCP listener and bind it to an address
-    (1, TcpListen, "&tcpl", "tcp - listen"),
+    (1, TcpListen, Tcp, "&tcpl", "tcp - listen"),
     /// Accept a connection with a TCP listener
     ///
     /// Returns a stream handle
-    (1, TcpAccept, "&tcpa", "tcp - accept"),
+    (1, TcpAccept, Tcp, "&tcpa", "tcp - accept"),
     /// Create a TCP socket and connect it to an address
     ///
     /// Returns a stream handle
-    (1, TcpConnect, "&tcpc", "tcp - connect"),
+    (1, TcpConnect, Tcp, "&tcpc", "tcp - connect"),
     /// Set a TCP socket to non-blocking mode
-    (1, TcpSetNonBlocking, "&tcpsnb", "tcp - set non-blocking"),
+    (1, TcpSetNonBlocking, Tcp, "&tcpsnb", "tcp - set non-blocking"),
     /// Set the read timeout of a TCP socket in seconds
-    (2(0), TcpSetReadTimeout, "&tcpsrt", "tcp - set read timeout"),
+    (2(0), TcpSetReadTimeout, Tcp, "&tcpsrt", "tcp - set read timeout"),
     /// Set the write timeout of a TCP socket in seconds
-    (2(0), TcpSetWriteTimeout, "&tcpswt", "tcp - set write timeout"),
+    (2(0), TcpSetWriteTimeout, Tcp, "&tcpswt", "tcp - set write timeout"),
     /// Get the connection address of a TCP socket
-    (1, TcpAddr, "&tcpaddr", "tcp - address"),
+    (1, TcpAddr, Tcp, "&tcpaddr", "tcp - address"),
     /// Make an HTTP request
     ///
     /// Takes in an 1.x HTTP request and returns an HTTP response.
@@ -368,7 +393,7 @@ sys_op! {
     /// - 2 trailing newlines (if there is no body)
     /// - The HTTP version
     /// - The `Host` header (if not defined)
-    (2, HttpsWrite, "&httpsw", "http - Make an HTTP request"),
+    (2, HttpsWrite, Tcp, "&httpsw", "http - Make an HTTP request"),
 }
 
 /// A handle to an IO stream

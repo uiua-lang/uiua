@@ -5,7 +5,10 @@ use instant::Duration;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use uiua::primitive::{PrimClass, Primitive};
+use uiua::{
+    primitive::{PrimClass, Primitive},
+    SysOpClass,
+};
 use wasm_bindgen::JsCast;
 use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoViewOptions};
 
@@ -303,6 +306,17 @@ impl Allowed {
             }
         }
         let mut classes: HashSet<PrimClass> = PrimClass::all().collect();
+        let system_classes: Vec<PrimClass> = SysOpClass::all().map(PrimClass::Sys).collect();
+        let mut function_classes: Vec<PrimClass> = system_classes.clone();
+        function_classes.extend([
+            PrimClass::Stack,
+            PrimClass::Control,
+            PrimClass::MonadicPervasive,
+            PrimClass::DyadicPervasive,
+            PrimClass::MonadicArray,
+            PrimClass::DyadicArray,
+            PrimClass::Misc,
+        ]);
         'parts: for part in &parts {
             for (pattern, pat_classes) in [
                 ("stack", [PrimClass::Stack].as_slice()),
@@ -333,20 +347,8 @@ impl Allowed {
                 ("control", &[PrimClass::Control]),
                 ("misc", &[PrimClass::Misc]),
                 ("constant", &[PrimClass::Constant]),
-                ("system", &[PrimClass::Sys]),
-                (
-                    "function",
-                    &[
-                        PrimClass::Stack,
-                        PrimClass::Control,
-                        PrimClass::MonadicPervasive,
-                        PrimClass::DyadicPervasive,
-                        PrimClass::MonadicArray,
-                        PrimClass::DyadicArray,
-                        PrimClass::Misc,
-                        PrimClass::Sys,
-                    ],
-                ),
+                ("system", &system_classes),
+                ("function", &function_classes),
             ] {
                 if pattern.split_whitespace().any(|pat| pat.starts_with(part)) {
                     classes.retain(|class| pat_classes.contains(class));
@@ -389,7 +391,7 @@ impl Allowed {
                 PrimClass::Planet => "planet-modifiers",
                 PrimClass::Ocean => "ocean-functions",
                 PrimClass::Misc => "misc-functions",
-                PrimClass::Sys => "system-functions",
+                PrimClass::Sys(_) => "system-functions",
             };
             let of_class: Vec<_> = Primitive::all()
                 .filter(|p| self.prims.contains(p) && p.class() == class)
@@ -444,7 +446,20 @@ impl Allowed {
                 ),
                 PrimClass::Ocean => (view!(<a class="clean" href="/docs/advancedarray#ocean-notation">"🌊 Ocean 🪸"</a>).into_view(), "Create rank lists"),
                 PrimClass::Misc => ("Miscellaneous".into_view(), ""),
-                PrimClass::Sys => ("System".into_view(), "Interact with the system"),
+                PrimClass::Sys(class) => {
+                    match class {
+                        SysOpClass::Filesystem => ("System - Filesystem".into_view(), "Work with files and directories"),
+                        SysOpClass::StdIO => ("System - Sandard I/O".into_view(), "Read and write standard input and output"),
+                        SysOpClass::Env => ("System - Environment".into_view(), "Query the environment"),
+                        SysOpClass::Stream => ("System - Streams".into_view(), "Read from and write to streams"),
+                        SysOpClass::Command => ("System - Commands".into_view(), "Execute commands"),
+                        SysOpClass::Audio => ("System - Audio".into_view(), "Work with audio"),
+                        SysOpClass::Images => ("System - Images".into_view(), "Work with static images"),
+                        SysOpClass::Gifs => ("System - GIFs".into_view(), "Work with animated GIFs"),
+                        SysOpClass::Tcp => ("System - TCP".into_view(), "Work with TCP sockets"),
+                        SysOpClass::Misc => ("System - Misc".into_view(), ""),
+                    }
+                }
             };
             table_cells.push(view! {
                 <td id=id style="vertical-align: top;"><div>

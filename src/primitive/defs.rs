@@ -79,7 +79,7 @@ macro_rules! primitive {
             pub fn class(&self) -> PrimClass {
                 match self {
                     $(Primitive::$variant => PrimClass::$class,)*
-                    Primitive::Sys(_) => PrimClass::Sys,
+                    Primitive::Sys(op) => PrimClass::Sys(op.class()),
                 }
             }
             pub fn modifier_args(&self) -> Option<u8> {

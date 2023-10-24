@@ -104,8 +104,8 @@ pub fn Site() -> impl IntoView {
                             <p id="subtitle">{ subtitle }</p>
                         </div>
                         <div id="nav">
-                            <p><a class="pls-no-block" href="https://github.com/sponsors/uiua-lang">"Support Uiua's development"</a></p>
-                            <p><a href="/">"Home"</a></p>
+                            <a class="pls-no-block" href="https://github.com/sponsors/uiua-lang">"Support Uiua's development"</a>
+                            <a href="/">"Home"</a>
                         </div>
                     </div>
                     <Routes>
@@ -141,12 +141,16 @@ pub fn MainPage() -> impl IntoView {
     view! {
         <Title text="Uiua"/>
         <div id="links">
-            <p><A href="/install">"Installation"</A></p>
-            <p><A href="/docs">"Documentation"</A></p>
-            <p><A href="/tour">"Language Tour"</A></p>
-            <p><A href="/pad">"Pad"</A></p>
-            <p><a href="https://discord.gg/3r9nrfYhCc">"Discord"</a></p>
-            <p><a href="https://github.com/uiua-lang/uiua">"GitHub"</a></p>
+            <div>
+                <A href="/install">"Installation"</A>
+                <A href="/docs">"Documentation"</A>
+                <A href="/tour">"Language Tour"</A>
+            </div>
+            <div>
+                <A href="/pad">"Pad"</A>
+                <a href="https://discord.gg/3r9nrfYhCc">"Discord"</a>
+                <a href="https://github.com/uiua-lang/uiua">"GitHub"</a>
+            </div>
         </div>
         <Editor
             examples=examples::EXAMPLES
@@ -208,11 +212,19 @@ pub fn MainPage() -> impl IntoView {
                 <div>
                     <h2>"Multimedia Output"</h2>
                     <p>"Uiua has built-in facilities for generating images and audio. Just make arrays of the pixel data or audio samples. You can even make GIFs!"</p>
-                    <Editor example="⍉⊠<⊞+⇡3○∩(÷25)⇡240⇡80"/>
-                    <Editor example="÷3/+○⊞×⊟×1.5.220×τ÷∶⇡.&asr"/>
-                    <Editor example="xy ← ⍉⍉⊞⊟.÷∶⇡.100\n\
-                        F ← ⍉◿1⊂⊃(+/÷)(÷3+1○×τ+)xy\n\
-                        ∵F÷∶⇡.10"/>
+                    {
+                        if cfg!(debug_assertions) {
+                            None
+                        } else {
+                            Some(view!{
+                                <Editor example="⍉⊠<⊞+⇡3○∩(÷25)⇡240⇡80"/>
+                                <Editor example="÷3/+○⊞×⊟×1.5.220×τ÷∶⇡.&asr"/>
+                                <Editor example="xy ← ⍉⍉⊞⊟.÷∶⇡.100\n\
+                                    F ← ⍉◿1⊂⊃(+/÷)(÷3+1○×τ+)xy\n\
+                                    ∵F÷∶⇡.10"/>
+                            })
+                        }
+                    }
                     <p>"The Uiua logo was made with Uiua! Check example 4 at the top of the page."</p>
                 </div>
             </div>

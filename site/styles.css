@@ -244,17 +244,22 @@ li {
 #header {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: last baseline;
+    flex-wrap: wrap;
     gap: 1em;
+    margin-bottom: 1em;
 }
+
 
 #header-left {
     display: flex;
     align-items: last baseline;
+    margin: -1em 0;
 }
 
 #header-uiua {
     text-decoration: none;
+    white-space: nowrap;
 }
 
 #subtitle {
@@ -267,17 +272,26 @@ li {
 #nav {
     display: flex;
     gap: 1em;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: baseline;
 }
 
 #links {
-    margin-top: -1em;
     font-size: 1.2em;
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     flex-wrap: wrap;
     gap: 1em;
+    margin-bottom: 1em;
+    align-content: flex-start;
+}
+
+#links>* {
+    display: flex;
+    gap: 1em;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-content: flex-start;
 }
 
 .features {

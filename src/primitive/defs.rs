@@ -684,6 +684,13 @@ primitive!(
     /// If the index's rank is `2` or greater, then multiple rows or elements will be picked.
     /// ex: ⊡ [1_2 0_1] [1_2_3 4_5_6]
     ///
+    /// [under][pick] can be used to modify the value at an index.
+    /// ex: ⍜⊡(×10) 2 [8 3 9 2 0]
+    /// This works with multiple and/or deeper indices.
+    /// ex: ⍜⊡(×10) [2_1 0_2] +1↯3_4⇡12
+    /// To simply set a value, you can use [under][pick][pop].
+    /// ex: ⍜⊡; 2 [8 3 9 2 0] 42
+    ///
     /// For index rank `2` or greater, it should hold that `pick``range``shape``duplicate``x` is equivalent to `x`.
     /// ex: ⊡⇡△. [1_2_3 4_5_6]
     (2, Pick, DyadicArray, ("pick", '⊡')),
@@ -692,7 +699,7 @@ primitive!(
     /// ex: ↯ 2_3 [1 2 3 4 5 6]
     /// Shapes that have fewer elements than the original array will truncate it.
     /// ex: ↯ 2_2 [1_2_3 4_5_6]
-    /// Shapes that have more elements than the original array will repeat elements.
+    /// Shapes that have more elements than the original array will cycle elements.
     /// ex: ↯ [5] 2
     /// ex: ↯ 3_7 1_2_3_4
     ///
@@ -703,6 +710,10 @@ primitive!(
     /// ex: ▽ 4 [1 2 3 4 5]
     /// ex: ▽ 2 [1_2_3 4_5_6]
     ///
+    /// [fill][reshape] fills in the shape with the fill element instead of cycling the data.
+    /// ex:   ↯ 3_5 ⇡9
+    ///   : ⬚0↯ 3_5 ⇡9
+    ///
     /// At most one of the dimensions of the new shape may be negative. This indicates that this is a *derived* dimension, and it will be calculated to make the total number of elements in the new shape be `less or equal` the total number of elements in the original shape.
     /// ex: ↯5_¯1 ⇡15
     /// ex: ↯¯1_5 ⇡15
@@ -711,6 +722,8 @@ primitive!(
     /// ex: ↯3_¯1_5 ⇡30
     /// If [fill] is used, the total number of elements in the new shape will always be [equal] to the total number of elements in the original shape.
     /// ex: ⬚0↯ ¯1_5 ⇡12
+    /// You can use [surface] to [join] `¯1` to the front of a shape.
+    /// ex: ↯~5 ⇡15
     ///
     /// See also: [deshape]
     (2, Reshape, DyadicArray, ("reshape", '↯')),
@@ -1593,6 +1606,12 @@ primitive!(
     /// ex: [×4η ×2π τ]
     (0, Tau, Constant, ("tau", 'τ')),
     /// The biggest number
+    ///
+    /// ex: ∞
+    /// ex: +1 ∞
+    /// ex: -1 ∞
+    /// ex: ↧5 ∞
+    /// ex: ↥5 ∞
     (0, Infinity, Constant, ("infinity", '∞')),
     /// Debug print the top value on the stack without popping it
     ///

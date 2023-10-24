@@ -43,6 +43,12 @@ pub enum Word {
     Spaces,
 }
 
+impl Word {
+    pub fn is_code(&self) -> bool {
+        !matches!(self, Word::Comment(_) | Word::Spaces)
+    }
+}
+
 impl fmt::Debug for Word {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

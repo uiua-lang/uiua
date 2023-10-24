@@ -690,7 +690,11 @@ impl Uiua {
                     };
                 }
                 Primitive::Fork => {
-                    let mut operands = modified.operands.clone().into_iter();
+                    let mut operands = modified
+                        .operands
+                        .clone()
+                        .into_iter()
+                        .filter(|word| word.value.is_code());
                     let (a_instrs, a_sig) =
                         self.compile_operand_words(vec![operands.next().unwrap()])?;
                     let (b_instrs, b_sig) =
@@ -741,7 +745,11 @@ impl Uiua {
                     }
                 }
                 Primitive::Under => {
-                    let mut operands = modified.operands.clone().into_iter();
+                    let mut operands = modified
+                        .operands
+                        .clone()
+                        .into_iter()
+                        .filter(|word| word.value.is_code());
                     let (f_instrs, _) =
                         self.compile_operand_words(vec![operands.next().unwrap()])?;
                     let (g_instrs, g_sig) =

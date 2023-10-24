@@ -405,7 +405,7 @@ code:
             //     println!();
             // }
             // if !self.function_stack.is_empty() {
-            //     print!("{} functions", self.function_stack.len());
+            //     println!("{} function(s)", self.function_stack.len());
             // }
             // for val in &self.stack {
             //     print!("{:?} ", val);

@@ -83,7 +83,7 @@ fn invert_instr_fragment(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
     }
 
     let patterns: &[&dyn InvertPattern] = &[
-        &(function, ([Invert], <[Primitive; 0]>::default())),
+        &invert_invert_pattern,
         &(Val, ([Rotate], [Neg, Rotate])),
         &(Val, IgnoreMany(Flip), ([Add], [Sub])),
         &(Val, ([Sub], [Add])),
@@ -392,6 +392,14 @@ impl AsInstr for Box<dyn AsInstr> {
     }
 }
 
+#[derive(Debug)]
+struct Call;
+impl AsInstr for Call {
+    fn as_instr(&self, span: usize) -> Instr {
+        Instr::Call(span)
+    }
+}
+
 trait InvertPattern {
     fn invert_extract<'a>(&self, input: &'a [Instr]) -> Option<(&'a [Instr], Vec<Instr>)>;
 }
@@ -402,6 +410,13 @@ trait UnderPattern: fmt::Debug {
         input: &'a [Instr],
         g_sig: Signature,
     ) -> Option<(&'a [Instr], Under)>;
+}
+
+fn invert_invert_pattern(input: &[Instr]) -> Option<(&[Instr], Vec<Instr>)> {
+    let [Instr::PushFunc(func), Instr::Prim(Primitive::Invert, _), input @ ..] = input else {
+        return None;
+    };
+    Some((input, func.instrs.clone()))
 }
 
 fn under_from_inverse_pattern(input: &[Instr], _: Signature) -> Option<(&[Instr], Under)> {
@@ -441,10 +456,7 @@ fn under_temp_pattern(input: &[Instr], _: Signature) -> Option<(&[Instr], Under)
 }
 
 fn under_both_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Under)> {
-    let [input @ .., Instr::Prim(Primitive::Both, span)] = input else {
-        return None;
-    };
-    let (Instr::PushFunc(func), input) = input.split_last()? else {
+    let [Instr::PushFunc(func), Instr::Prim(Primitive::Both, span), input @ ..] = input else {
         return None;
     };
     let (befores, afters) = under_instrs(&func.instrs, g_sig)?;
@@ -668,14 +680,6 @@ where
         g_sig: Signature,
     ) -> Option<(&'a [Instr], Under)> {
         (self.0)(input, g_sig)
-    }
-}
-
-fn function(input: &[Instr]) -> Option<(&[Instr], Vec<Instr>)> {
-    if let (instr @ Instr::PushFunc(_), input) = input.split_first()? {
-        Some((input, vec![instr.clone()]))
-    } else {
-        None
     }
 }
 

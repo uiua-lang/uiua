@@ -18,6 +18,7 @@ use crate::{
     array::Array,
     boxed::Boxed,
     cowslice::{cowslice, CowSlice},
+    function::Signature,
     primitive::PrimDoc,
     value::Value,
     Uiua, UiuaError, UiuaResult,
@@ -950,6 +951,13 @@ impl SysOp {
             }
             SysOp::AudioStream => {
                 let f = env.pop_function()?;
+                if f.signature() != (1, 1) {
+                    return Err(env.error(format!(
+                        "&ast's function's signature must be {}, but it is {}",
+                        Signature::new(1, 1),
+                        f.signature()
+                    )));
+                }
                 let mut stream_env = env.clone();
                 if let Err(e) = env.backend.stream_audio(Box::new(move |time_array| {
                     let time_array = Array::<f64>::from(time_array);

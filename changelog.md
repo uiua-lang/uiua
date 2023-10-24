@@ -9,6 +9,7 @@ If you are reading this on the website, then these changes are live here.
 - Implement [`under` `⍜`](https://uiua.org/docs/under) [`partition` `⊜`](https://uiua.org/docs/partition)
 - Implement [`under` `⍜`](https://uiua.org/docs/under) [`group` `⊕`](https://uiua.org/docs/group)
 - Add [`send`](https://uiua.org/docs/send), [`recv`](https://uiua.org/docs/recv), and [`tryrecv`](https://uiua.org/docs/tryrecv) functions for sending values between threads
+- Add [`&fd`](https://uiua.org/docs/&fd) and [`&ftr`](https://uiua.org/docs/&ftr) system functions for deleting/trashing files and directories
 ### Interpreter
 - The interpreter now formats its own error and non-error diagnostic messages instead of delegating to a library
 - Fix a bunch of bugs and crashes

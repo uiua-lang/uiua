@@ -181,6 +181,17 @@ sys_op! {
     /// The file can be written to with [&w].
     /// The file may not be written to until it is closed with [&cl].
     (1, FCreate, "&fc", "file - create"),
+    /// Delete a file or directory
+    ///
+    /// Deletes the file or directory at the given path.
+    /// Be careful with this function, as deleted files and directories cannot be recovered!
+    /// For a safer alternative, see [&ftr].
+    (1(0), FDelete, "&fd", "file - delete"),
+    /// Move a file or directory to the trash
+    ///
+    /// Moves the file or directory at the given path to the trash.
+    /// This is a safer alternative to [&fd].
+    (1(0), FTrash, "&ftr", "file - trash"),
     /// Check if a file exists at a path
     (1, FExists, "&fe", "file - exists"),
     /// List the contents of a directory
@@ -425,6 +436,12 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn is_file(&self, path: &str) -> Result<bool, String> {
         Err("This IO operation is not supported in this environment".into())
     }
+    fn delete(&self, path: &str) -> Result<(), String> {
+        Err("This IO operation is not supported in this environment".into())
+    }
+    fn trash(&self, path: &str) -> Result<(), String> {
+        Err("This IO operation is not supported in this environment".into())
+    }
     fn read(&self, handle: Handle, count: usize) -> Result<Vec<u8>, String> {
         Err("This IO operation is not supported in this environment".into())
     }
@@ -598,6 +615,14 @@ impl SysOp {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let handle = env.backend.create_file(&path).map_err(|e| env.error(e))?;
                 env.push(handle.0 as f64);
+            }
+            SysOp::FDelete => {
+                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                env.backend.delete(&path).map_err(|e| env.error(e))?;
+            }
+            SysOp::FTrash => {
+                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                env.backend.trash(&path).map_err(|e| env.error(e))?;
             }
             SysOp::ReadStr => {
                 let count = env.pop(1)?.as_nat(env, "Count must be an integer")?;

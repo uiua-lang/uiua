@@ -49,12 +49,13 @@ num_cpus = "1.16.0"
 rayon = "1.8.0"
 regex = "1.10.2"
 unicode-segmentation = "1.10"
+trash = { version = "3.1.2", optional = true }
 
 [features]
 audio = ["hodaun", "lockfree"]
 binary = ["ctrlc", "notify", "clap", "color-backtrace", "lsp"]
 debug = []
-default = ["binary", "terminal_image", "https", "invoke"]
+default = ["binary", "terminal_image", "https", "invoke", "trash"]
 https = ["httparse", "rustls", "webpki-roots"]
 lsp = ["tower-lsp", "tokio"]
 profile = ["serde", "serde_yaml", "indexmap"]

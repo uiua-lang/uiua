@@ -4,6 +4,7 @@ use std::{
     fs::{self, File},
     io::{stderr, stdin, stdout, BufRead, Read, Write},
     net::*,
+    path::Path,
     process::Command,
     sync::atomic::{self, AtomicU64},
     thread::sleep,
@@ -158,6 +159,18 @@ impl SysBackend for NativeSys {
         let file = File::create(path).map_err(|e| e.to_string())?;
         NATIVE_SYS.files.insert(handle, Buffered::new_writer(file));
         Ok(handle)
+    }
+    fn delete(&self, path: &str) -> Result<(), String> {
+        let path = Path::new(path);
+        if path.is_dir() {
+            fs::remove_dir_all(path).map_err(|e| e.to_string())
+        } else {
+            fs::remove_file(path).map_err(|e| e.to_string())
+        }
+    }
+    #[cfg(feature = "trash")]
+    fn trash(&self, path: &str) -> Result<(), String> {
+        trash::delete(path).map_err(|e| e.to_string())
     }
     fn read(&self, handle: Handle, len: usize) -> Result<Vec<u8>, String> {
         Ok(match NATIVE_SYS.get_stream(handle)? {

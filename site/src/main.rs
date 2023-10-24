@@ -257,26 +257,21 @@ pub fn Prim(
 ) -> impl IntoView {
     let span_class = prim_class(prim);
     let symbol = prim.to_string();
-    let name = if let Some(name) = prim.name().filter(|name| !glyph_only && symbol != *name) {
-        format!(" {}", name)
+    let name = if !glyph_only && symbol != prim.name() {
+        format!(" {}", prim.name())
     } else {
         "".to_string()
     };
-    let href = prim
-        .name()
-        .map(|name| format!("/docs/{name}"))
-        .unwrap_or_default();
+    let href = format!("/docs/{}", prim.name());
     let mut title = String::new();
     if let Some(ascii) = prim.ascii() {
         title.push_str(&format!("({})", ascii));
     }
-    if let Some(name) = prim.name() {
-        if prim.glyph().is_some() && glyph_only {
-            if !title.is_empty() {
-                title.push(' ');
-            }
-            title.push_str(name);
+    if prim.glyph().is_some() && glyph_only {
+        if !title.is_empty() {
+            title.push(' ');
         }
+        title.push_str(prim.name());
     }
     if let Primitive::Sys(op) = prim {
         title.push_str(op.long_name());

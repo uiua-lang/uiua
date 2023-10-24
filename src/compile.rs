@@ -13,7 +13,7 @@ use crate::{
     function::*,
     lex::{CodeSpan, Sp, Span},
     parse::{count_placeholders, ident_modifier_args},
-    primitive::Primitive,
+    primitive::{ImplPrimitive, Primitive},
     run::{Global, RunMode},
     value::Value,
     Diagnostic, DiagnosticKind, Ident, SysOp, UiuaError, UiuaResult,
@@ -244,10 +244,13 @@ impl Uiua {
             ([.., Instr::Prim(Eta, _), Instr::Prim(Add, _)], Instr::Prim(Sin, span)) => {
                 instrs.pop();
                 instrs.pop();
-                instrs.push(Instr::Prim(Cos, span));
+                instrs.push(Instr::ImplPrim(ImplPrimitive::Cos, span));
             }
             // First reverse = last
-            ([.., Instr::Prim(top @ Reverse, _)], Instr::Prim(First, _)) => *top = Last,
+            ([.., Instr::Prim(Reverse, _)], Instr::Prim(First, span)) => {
+                instrs.pop();
+                instrs.push(Instr::ImplPrim(ImplPrimitive::Last, span))
+            }
             // // Coalesce inline stack ops
             // ([.., Instr::])
             (_, instr) => instrs.push(instr),
@@ -830,7 +833,7 @@ impl Uiua {
             self.diagnostics.insert(Diagnostic::new(
                 format!(
                     "Warning: {}{} is deprecated and will be removed in a future version{}",
-                    prim.name().unwrap_or_default(),
+                    prim.name(),
                     prim,
                     suggestion
                 ),

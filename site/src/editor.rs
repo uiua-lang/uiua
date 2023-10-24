@@ -65,7 +65,7 @@ pub fn Editor<'a>(
     #[prop(optional)] progress_lines: bool,
     #[prop(optional)] no_run: bool,
 ) -> impl IntoView {
-    let no_run = no_run || example.contains("&sl");
+    let no_run = no_run || ["&sl", "&httpsw"].iter().any(|name| example.contains(name));
     let id = ID.with(|id| {
         let i = id.get();
         id.set(i + 1);
@@ -734,7 +734,7 @@ pub fn Editor<'a>(
             .glyph()
             .map(Into::into)
             .or_else(|| prim.ascii().map(|s| s.to_string()))?;
-        let mut title = prim.name().unwrap_or_default().to_string();
+        let mut title = prim.name().to_string();
         if let Some(ascii) = prim.ascii() {
             title = format!("({}) {}", ascii, title);
         }
@@ -743,15 +743,12 @@ pub fn Editor<'a>(
             if !on_mac && event.ctrl_key() || on_mac && event.meta_key() {
                 // Open the docs page
                 window()
-                    .open_with_url_and_target(
-                        &format!("/docs/{}", prim.name().unwrap_or_default()),
-                        "_blank",
-                    )
+                    .open_with_url_and_target(&format!("/docs/{}", prim.name()), "_blank")
                     .unwrap();
             } else if event.shift_key() {
                 // Redirect to the docs page
                 use_navigate()(
-                    &format!("/docs/{}", prim.name().unwrap_or_default()),
+                    &format!("/docs/{}", prim.name()),
                     NavigateOptions::default(),
                 );
             } else {
@@ -1550,7 +1547,7 @@ fn set_code_html(id: &str, code: &str) {
         } else {
             html.push_str(&match kind {
                 SpanKind::Primitive(prim) => {
-                    let name = prim.name().unwrap_or_default();
+                    let name = prim.name();
                     if let Some(doc) = prim.doc() {
                         let mut title = format!("{}: {}", name, doc.short_text());
                         if let Some(ascii) = prim.ascii() {

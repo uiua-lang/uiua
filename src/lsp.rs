@@ -347,9 +347,7 @@ mod server {
                 if sp.span.contains_line_col(line, col) {
                     match sp.value {
                         SpanKind::Primitive(prim) => {
-                            if prim.name().is_some() {
-                                prim_range = Some((prim, uiua_span_to_lsp(&sp.span)));
-                            }
+                            prim_range = Some((prim, uiua_span_to_lsp(&sp.span)));
                         }
                         _ => {}
                     }
@@ -362,7 +360,7 @@ mod server {
                 }
             }
             Ok(Some(if let Some((prim, range)) = prim_range {
-                let mut value: String = prim.name().unwrap().into();
+                let mut value: String = prim.name().into();
                 if let Some(doc) = prim.doc() {
                     value.push('\n');
                     for frag in doc.short.iter() {
@@ -379,7 +377,7 @@ mod server {
                                 value.push_str(&format!("[{}]({})", text, url))
                             }
                             PrimDocFragment::Primitive { prim, named } => {
-                                let name = prim.name().unwrap();
+                                let name = prim.name();
                                 value.push_str(&if *named {
                                     if let Some(unicode) = prim.glyph() {
                                         format!("`{unicode} {name}`")

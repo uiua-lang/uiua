@@ -111,27 +111,32 @@ impl fmt::Display for Primitive {
             write!(f, "{}", c)
         } else if let Some(s) = self.ascii() {
             write!(f, "{}", s)
-        } else if let Some(s) = self.name() {
-            write!(f, "{}", s)
         } else {
-            use Primitive::*;
-            match self {
-                InvTranspose => write!(f, "⍘{Transpose}"),
-                InverseBits => write!(f, "⍘{Bits}"),
-                InvTrace => write!(f, "⍘{Trace}"),
-                InvWhere => write!(f, "⍘{Where}"),
-                Uncouple => write!(f, "⍘{Couple}"),
-                Untake => write!(f, "⍘{Take}"),
-                Undrop => write!(f, "⍘{Drop}"),
-                Unselect => write!(f, "⍘{Select}"),
-                Unpick => write!(f, "⍘{Pick}"),
-                Unpartition => write!(f, "⍘{Partition}"),
-                Cos => write!(f, "{Sin}{Add}{Eta}"),
-                Asin => write!(f, "{Invert}{Sin}"),
-                Acos => write!(f, "{Invert}{Cos}"),
-                Last => write!(f, "{First}{Reverse}"),
-                _ => write!(f, "{self:?}"),
-            }
+            write!(f, "{}", self.name())
+        }
+    }
+}
+
+impl fmt::Display for ImplPrimitive {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use ImplPrimitive::*;
+        use Primitive::*;
+        match self {
+            InvTranspose => write!(f, "⍘{Transpose}"),
+            InverseBits => write!(f, "⍘{Bits}"),
+            InvTrace => write!(f, "⍘{Trace}"),
+            InvWhere => write!(f, "⍘{Where}"),
+            Uncouple => write!(f, "⍘{Couple}"),
+            Untake => write!(f, "⍘{Take}"),
+            Undrop => write!(f, "⍘{Drop}"),
+            Unselect => write!(f, "⍘{Select}"),
+            Unpick => write!(f, "⍘{Pick}"),
+            Unpartition => write!(f, "⍘{Partition}"),
+            Cos => write!(f, "{Sin}{Add}{Eta}"),
+            Asin => write!(f, "{Invert}{Sin}"),
+            Acos => write!(f, "{Invert}{Cos}"),
+            Last => write!(f, "{First}{Reverse}"),
+            _ => write!(f, "{self:?}"),
         }
     }
 }
@@ -160,18 +165,18 @@ impl Primitive {
     pub fn non_deprecated() -> impl Iterator<Item = Self> + Clone {
         Self::all().filter(|p| !p.is_deprecated())
     }
-    pub fn name(&self) -> Option<&'static str> {
-        self.names().map(|n| n.text)
+    pub fn name(&self) -> &'static str {
+        self.names().text
     }
     pub fn ascii(&self) -> Option<AsciiToken> {
-        self.names().and_then(|n| n.ascii)
+        self.names().ascii
     }
     pub fn glyph(&self) -> Option<char> {
-        self.names().and_then(|n| n.glyph)
+        self.names().glyph
     }
     /// Find a primitive by its text name
     pub fn from_name(name: &str) -> Option<Self> {
-        Self::all().find(|p| p.names().is_some_and(|n| n.text.eq_ignore_ascii_case(name)))
+        Self::all().find(|p| p.name().eq_ignore_ascii_case(name))
     }
     pub fn from_simple(s: AsciiToken) -> Option<Self> {
         Self::all().find(|p| p.ascii() == Some(s))
@@ -213,34 +218,6 @@ impl Primitive {
     pub fn is_deprecated(&self) -> bool {
         self.deprecation_suggestion().is_some()
     }
-    pub fn inverse(&self) -> Option<Self> {
-        use Primitive::*;
-        Some(match self {
-            Identity => Identity,
-            Flip => Flip,
-            Neg => Neg,
-            Not => Not,
-            Sin => Asin,
-            Cos => Acos,
-            Asin => Sin,
-            Acos => Cos,
-            Reverse => Reverse,
-            Transpose => InvTranspose,
-            InvTranspose => Transpose,
-            Bits => InverseBits,
-            InverseBits => Bits,
-            Couple => Uncouple,
-            Trace => InvTrace,
-            InvTrace => Trace,
-            Box => Unbox,
-            Unbox => Box,
-            Where => InvWhere,
-            InvWhere => Where,
-            Utf => InvUtf,
-            InvUtf => Utf,
-            _ => return None,
-        })
-    }
     /// Try to parse a primitive from a name prefix
     pub fn from_format_name(name: &str) -> Option<Self> {
         if name.chars().any(char::is_uppercase) {
@@ -257,19 +234,16 @@ impl Primitive {
             "ro" => return Some(Primitive::Rock),
             _ => {}
         }
-        if let Some(prim) = Primitive::all().find(|p| p.names().is_some_and(|n| n.text == name)) {
+        if let Some(prim) = Primitive::all().find(|p| p.name() == name) {
             return Some(prim);
         }
         if name.len() < 3 {
             return None;
         }
-        let mut matching = Primitive::all().filter(|p| {
-            p.names().is_some_and(|n| {
-                n.glyph.is_some_and(|u| u as u32 > 127) && n.text.starts_with(name)
-            })
-        });
+        let mut matching = Primitive::all()
+            .filter(|p| p.glyph().is_some_and(|u| u as u32 > 127) && p.name().starts_with(name));
         let res = matching.next()?;
-        let exact_match = res.names().unwrap().text == name;
+        let exact_match = res.name() == name;
         (exact_match || matching.next().is_none()).then_some(res)
     }
     /// Try to parse multiple primitives from the concatenation of their name prefixes
@@ -310,9 +284,6 @@ impl Primitive {
             Primitive::Sign => env.monadic_env(Value::sign)?,
             Primitive::Sqrt => env.monadic_env(Value::sqrt)?,
             Primitive::Sin => env.monadic_env(Value::sin)?,
-            Primitive::Cos => env.monadic_env(Value::cos)?,
-            Primitive::Asin => env.monadic_env(Value::asin)?,
-            Primitive::Acos => env.monadic_env(Value::acos)?,
             Primitive::Floor => env.monadic_env(Value::floor)?,
             Primitive::Ceil => env.monadic_env(Value::ceil)?,
             Primitive::Round => env.monadic_env(Value::round)?,
@@ -335,55 +306,17 @@ impl Primitive {
             Primitive::Match => env.dyadic_rr(|a, b| a == b)?,
             Primitive::Join => env.dyadic_oo_env(Value::join)?,
             Primitive::Transpose => env.monadic_mut(Value::transpose)?,
-            Primitive::InvTranspose => env.monadic_mut(Value::inv_transpose)?,
             Primitive::Keep => env.dyadic_ro_env(Value::keep)?,
-            Primitive::Unkeep => {
-                let from = env.pop(1)?;
-                let counts = env.pop(2)?;
-                let into = env.pop(3)?;
-                env.push(from.unkeep(counts, into, env)?);
-            }
             Primitive::Take => env.dyadic_oo_env(Value::take)?,
-            Primitive::Untake => {
-                let index = env.pop(1)?;
-                let into = env.pop(2)?;
-                let from = env.pop(3)?;
-                env.push(from.untake(index, into, env)?);
-            }
             Primitive::Drop => env.dyadic_oo_env(Value::drop)?,
-            Primitive::Undrop => {
-                let index = env.pop(1)?;
-                let into = env.pop(2)?;
-                let from = env.pop(3)?;
-                env.push(from.undrop(index, into, env)?);
-            }
             Primitive::Rotate => env.dyadic_ro_env(Value::rotate)?,
             Primitive::Couple => env.dyadic_oo_env(Value::couple)?,
-            Primitive::Uncouple => {
-                let coupled = env.pop(1)?;
-                let (a, b) = coupled.uncouple(env)?;
-                env.push(b);
-                env.push(a);
-            }
             Primitive::Rise => env.monadic_ref_env(|v, env| v.rise(env))?,
             Primitive::Fall => env.monadic_ref_env(|v, env| v.fall(env))?,
             Primitive::Pick => env.dyadic_oo_env(Value::pick)?,
-            Primitive::Unpick => {
-                let index = env.pop(1)?;
-                let into = env.pop(2)?;
-                let from = env.pop(3)?;
-                env.push(from.unpick(index, into, env)?);
-            }
             Primitive::Select => env.dyadic_rr_env(Value::select)?,
-            Primitive::Unselect => {
-                let index = env.pop(1)?;
-                let into = env.pop(2)?;
-                let from = env.pop(3)?;
-                env.push(from.unselect(index, into, env)?);
-            }
             Primitive::Windows => env.dyadic_rr_env(Value::windows)?,
             Primitive::Where => env.monadic_ref_env(Value::wher)?,
-            Primitive::InvWhere => env.monadic_ref_env(Value::inverse_where)?,
             Primitive::Classify => env.monadic_ref_env(Value::classify)?,
             Primitive::Deduplicate => env.monadic_mut(Value::deduplicate)?,
             Primitive::Member => env.dyadic_rr_env(Value::member)?,
@@ -405,12 +338,10 @@ impl Primitive {
             }
             Primitive::Parse => env.monadic_ref_env(Value::parse_num)?,
             Primitive::Utf => env.monadic_ref_env(Value::utf8)?,
-            Primitive::InvUtf => env.monadic_ref_env(Value::inv_utf8)?,
             Primitive::Range => env.monadic_ref_env(Value::range)?,
             Primitive::Reverse => env.monadic_mut(Value::reverse)?,
             Primitive::Deshape => env.monadic_mut(Value::deshape)?,
             Primitive::First => env.monadic_env(Value::first)?,
-            Primitive::Last => env.monadic_env(Value::last)?,
             Primitive::Len => env.monadic_ref(|val| {
                 val.generic_ref_deep(
                     Array::row_count,
@@ -426,7 +357,6 @@ impl Primitive {
                     .collect::<Value>()
             })?,
             Primitive::Bits => env.monadic_ref_env(Value::bits)?,
-            Primitive::InverseBits => env.monadic_ref_env(Value::inverse_bits)?,
             Primitive::Reduce => reduce::reduce(env)?,
             Primitive::Scan => reduce::scan(env)?,
             Primitive::Fold => reduce::fold(env)?,
@@ -441,7 +371,6 @@ impl Primitive {
             Primitive::Repeat => loops::repeat(env)?,
             Primitive::Group => loops::group(env)?,
             Primitive::Partition => loops::partition(env)?,
-            Primitive::Unpartition => loops::unpartition(env)?,
             Primitive::Reshape => {
                 let shape = env.pop(1)?;
                 let mut array = env.pop(2)?;
@@ -609,7 +538,6 @@ impl Primitive {
             }
             Primitive::Now => env.push(instant::now() / 1000.0),
             Primitive::Trace => trace(env, false)?,
-            Primitive::InvTrace => trace(env, true)?,
             Primitive::Dump => dump(env)?,
             Primitive::Sys(io) => io.run(env)?,
             Primitive::Regex => {
@@ -649,6 +577,60 @@ impl Primitive {
                     Ok(())
                 })?
             }
+        }
+        Ok(())
+    }
+}
+
+impl ImplPrimitive {
+    pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
+        match self {
+            ImplPrimitive::Cos => env.monadic_env(Value::cos)?,
+            ImplPrimitive::Asin => env.monadic_env(Value::asin)?,
+            ImplPrimitive::Acos => env.monadic_env(Value::acos)?,
+            ImplPrimitive::InvTranspose => env.monadic_mut(Value::inv_transpose)?,
+            ImplPrimitive::Unkeep => {
+                let from = env.pop(1)?;
+                let counts = env.pop(2)?;
+                let into = env.pop(3)?;
+                env.push(from.unkeep(counts, into, env)?);
+            }
+            ImplPrimitive::Untake => {
+                let index = env.pop(1)?;
+                let into = env.pop(2)?;
+                let from = env.pop(3)?;
+                env.push(from.untake(index, into, env)?);
+            }
+            ImplPrimitive::Undrop => {
+                let index = env.pop(1)?;
+                let into = env.pop(2)?;
+                let from = env.pop(3)?;
+                env.push(from.undrop(index, into, env)?);
+            }
+            ImplPrimitive::Uncouple => {
+                let coupled = env.pop(1)?;
+                let (a, b) = coupled.uncouple(env)?;
+                env.push(b);
+                env.push(a);
+            }
+            ImplPrimitive::Unpick => {
+                let index = env.pop(1)?;
+                let into = env.pop(2)?;
+                let from = env.pop(3)?;
+                env.push(from.unpick(index, into, env)?);
+            }
+            ImplPrimitive::Unselect => {
+                let index = env.pop(1)?;
+                let into = env.pop(2)?;
+                let from = env.pop(3)?;
+                env.push(from.unselect(index, into, env)?);
+            }
+            ImplPrimitive::InvWhere => env.monadic_ref_env(Value::inverse_where)?,
+            ImplPrimitive::InvUtf => env.monadic_ref_env(Value::inv_utf8)?,
+            ImplPrimitive::Last => env.monadic_env(Value::last)?,
+            ImplPrimitive::InverseBits => env.monadic_ref_env(Value::inverse_bits)?,
+            ImplPrimitive::Unpartition => loops::unpartition(env)?,
+            ImplPrimitive::InvTrace => trace(env, true)?,
         }
         Ok(())
     }
@@ -744,9 +726,7 @@ impl PrimDoc {
                 PrimDocFragment::Emphasis(e) => return Cow::Borrowed(e),
                 PrimDocFragment::Strong(s) => return Cow::Borrowed(s),
                 PrimDocFragment::Primitive { prim, named: true } => {
-                    if let Some(s) = prim.name() {
-                        return Cow::Owned(s.to_owned());
-                    }
+                    return Cow::Borrowed(prim.name());
                 }
                 PrimDocFragment::Link { text, .. } => return Cow::Borrowed(text),
                 PrimDocFragment::Primitive { .. } => {}
@@ -761,19 +741,12 @@ impl PrimDoc {
                 PrimDocFragment::Strong(str) => s.push_str(str),
                 PrimDocFragment::Link { text, .. } => s.push_str(text),
                 PrimDocFragment::Primitive { prim, named } => {
-                    let mut name = String::new();
                     if *named {
-                        s.push_str(prim.name().unwrap_or_else(|| {
-                            name = format!("{prim:?}");
-                            &name
-                        }));
+                        s.push_str(prim.name());
                     } else if let Some(c) = prim.glyph() {
                         s.push(c);
                     } else {
-                        s.push_str(prim.name().unwrap_or_else(|| {
-                            name = format!("{prim:?}");
-                            &name
-                        }));
+                        s.push_str(prim.name());
                     }
                 }
             }
@@ -1014,9 +987,7 @@ mod tests {
                 if a >= b {
                     continue;
                 }
-                if let Some((an, bn)) = a.name().zip(b.name()) {
-                    assert_ne!(an, bn, "{:?} and {:?} have the same name", a, b)
-                }
+                assert_ne!(a.name(), b.name(), "{a:?} and {b:?} have the same name",)
             }
         }
     }
@@ -1099,7 +1070,7 @@ mod tests {
                 .replace('^', "\\\\^");
             let format_names: Vec<_> = prims
                 .clone()
-                .filter_map(|p| p.names())
+                .map(|p| p.names())
                 .map(|n| n.text.to_string())
                 .map(|name| {
                     let min_len = if name.starts_with('&') {
@@ -1121,7 +1092,7 @@ mod tests {
                 .collect();
             let format_names = format_names.join("|");
             let mut literal_names: Vec<_> = prims
-                .filter_map(|p| p.names())
+                .map(|p| p.names())
                 .filter(|p| p.ascii.is_none() && p.glyph.is_none())
                 .map(|n| format!("|{}", n.text))
                 .collect();

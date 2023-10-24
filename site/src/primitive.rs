@@ -114,7 +114,7 @@ pub fn AllFunctions() -> impl IntoView {
         <p>"This is a list of every built-in function in Uiua, provided for your scrolling pleasure."</p>
         <p>"For a searchable list, see the "<A href="/docs#functions">"main docs page"</A>"."</p>
         {
-            Primitive::all().filter(|p| p.names().is_some()).map(|p| {
+            Primitive::all().map(|p| {
                 view! {
                     <br/>
                     <hr/>

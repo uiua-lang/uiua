@@ -51,11 +51,10 @@ macro_rules! primitive {
         (
             $(
                 $($args:literal)?
-                $(($delta:expr))?
+                $(($outputs:expr))?
                 $([$mod_args:expr])?
             ,)?
-            $variant:ident, $class:ident
-            $(,$names:expr)?
+            $variant:ident, $class:ident, $names:expr
         )
     ),* $(,)?) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
@@ -69,10 +68,10 @@ macro_rules! primitive {
 
         impl Primitive {
             #[allow(path_statements)]
-            pub fn names(&self) -> Option<PrimNames> {
+            pub fn names(&self) -> PrimNames {
                 match self {
-                    $(Primitive::$variant => { None::<PrimNames> $(; Some($names.into()))* },)*
-                    Primitive::Sys(op) => Some(op.name().into())
+                    $(Primitive::$variant => $names.into(),)*
+                    Primitive::Sys(op) => op.name().into()
                 }
             }
             pub fn class(&self) -> PrimClass {
@@ -97,7 +96,7 @@ macro_rules! primitive {
             }
             pub fn outputs(&self) -> Option<u8> {
                 match self {
-                    $($($(Primitive::$variant => $delta.into(),)?)?)*
+                    $($($(Primitive::$variant => $outputs.into(),)?)?)*
                     Primitive::Sys(op) => Some(op.outputs()),
                     _ => Some(1)
                 }
@@ -247,12 +246,6 @@ primitive!(
     /// You can get a tangent function by [divide]ing the [sine] by the cosine.
     /// ex: ÷○+η∶○. 0
     (1, Sin, MonadicPervasive, ("sine", '○')),
-    /// Get the cosine of a number
-    (1, Cos, MonadicPervasive),
-    /// Get the arcsine of a number
-    (1, Asin, MonadicPervasive),
-    /// Get the arccosine of a number
-    (1, Acos, MonadicPervasive),
     /// Round to the nearest integer towards `¯∞`
     ///
     /// ex: ⌊1.5
@@ -476,8 +469,6 @@ primitive!(
     /// ex! ⊢[]
     /// ex! ⊢1
     (1, First, MonadicArray, ("first", '⊢')),
-    /// Get the last element of an array
-    (1, Last, MonadicArray),
     /// Reverse the rows of an array
     ///
     /// ex: ⇌1_2_3_9
@@ -507,8 +498,6 @@ primitive!(
     ///   :     [1 0 0]
     ///   :     [1 1 0]]
     (1, Bits, MonadicArray, ("bits", '⋯')),
-    /// Inverse of Bits
-    (1, InverseBits, MonadicArray),
     /// Rotate the shape of an array
     ///
     /// ex: ⍉.[1_2 3_4 5_6]
@@ -519,8 +508,6 @@ primitive!(
     ///   : ↻1△ .
     ///   : △⍉  ∶
     (1, Transpose, MonadicArray, ("transpose", '⍉')),
-    /// Inverse of Transpose
-    (1, InvTranspose, MonadicArray),
     /// Get the indices into an array if it were sorted ascending
     ///
     /// The [rise] of an array is the list of indices that would sort the array ascending if used with [select].
@@ -564,8 +551,6 @@ primitive!(
     /// ex: ⊚3
     /// ex: ⊚8
     (1, Where, MonadicArray, ("where", '⊚')),
-    /// Inverse of where
-    (1, InvWhere, MonadicArray),
     /// Assign a unique index to each unique element in an array
     ///
     /// ex: ⊛7_7_8_0_1_2_0
@@ -649,8 +634,6 @@ primitive!(
     /// [couple] is compatible with [under].
     /// ex: ⍜⊟'×2 3 5
     (2, Couple, DyadicArray, ("couple", '⊟')),
-    /// Split an array into two arrays
-    (1(2), Uncouple, MonadicArray),
     /// Append two arrays end-to-end
     ///
     /// For scalars, it is equivalent to [couple].
@@ -686,8 +669,6 @@ primitive!(
     /// ex: ⊏ [0_1 1_2 2_3] [2 3 5 7]
     /// ex: ⊏ [0_1 1_2 2_0] [1_2_3 4_5_6 7_8_9]
     (2, Select, DyadicArray, ("select", '⊏')),
-    /// End step of under select
-    (3, Unselect, Misc),
     /// Index a row or elements from an array
     ///
     /// An index with rank `0` or `1` will pick a single row or element from an array.
@@ -700,8 +681,6 @@ primitive!(
     /// For index rank `2` or greater, it should hold that `pick``range``shape``duplicate``x` is equivalent to `x`.
     /// ex: ⊡⇡△. [1_2_3 4_5_6]
     (2, Pick, DyadicArray, ("pick", '⊡')),
-    /// End step of under pick
-    (3, Unpick, Misc),
     /// Change the shape of an array
     ///
     /// ex: ↯ 2_3 [1 2 3 4 5 6]
@@ -747,8 +726,6 @@ primitive!(
     /// If you would like to fill the excess length with some fill value, use [fill].
     /// ex: ⬚π↙ 7 [8 3 9 2 0]
     (2, Take, DyadicArray, ("take", '↙')),
-    /// End step of under take
-    (3, Untake, Misc),
     /// Drop the first n elements of an array
     ///
     /// This is the opposite of [take].
@@ -768,8 +745,6 @@ primitive!(
     /// ex: ↘ 5 ↯3_3⇡9
     /// ex: ↘ ¯5 ↯3_3⇡9
     (2, Drop, DyadicArray, ("drop", '↘')),
-    /// End step of under drop
-    (3, Undrop, Misc),
     /// Rotate the elements of an array by n
     ///
     /// ex: ↻1 ⇡5
@@ -809,8 +784,6 @@ primitive!(
     ///
     /// [keep]'s glyph is `▽` because its main use is to filter, and `▽` kind of looks like a coffee filter.
     (2, Keep, DyadicArray, ("keep", '▽')),
-    /// End step of under keep
-    (3, Unkeep, Misc),
     /// Find the occurences of one array in another
     ///
     /// ex: ⌕ 5 [1 8 5 2 3 5 4 5 6 7]
@@ -1029,8 +1002,6 @@ primitive!(
     ///
     /// [partition] is closely related to [group].
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
-    /// End step of under partition
-    (3[1], Unpartition, AggregatingModifier),
     /// Apply a function with implicit (un)boxing
     ///
     /// When working with [box]ed data, [pack] will automatically [unbox] the data for functions like [join].
@@ -1545,8 +1516,6 @@ primitive!(
     /// ex: -@\0 "👩🏽‍👩🏻‍👦🏻‍👧🏽"
     /// ex: utf "👩🏽‍👩🏻‍👦🏻‍👧🏽"
     (1, Utf, Misc, "utf"),
-    /// Convert UTF-8 bytes to a string
-    (1, InvUtf, Misc),
     /// Generate a unique tag
     ///
     /// Tags are just numbers and are unique across multiple threads, but not across multiple runs.
@@ -1599,8 +1568,6 @@ primitive!(
     /// ex: [1 5 2 9 11 0 7 12 8 3]
     ///   : ▽×⸮≥5∶⸮≤10..
     (1, Trace, Stack, ("trace", '⸮')),
-    /// The inverse of trace
-    (1, InvTrace, Stack),
     /// Debug print all the values currently on stack without popping them
     ///
     /// The function is used to preprocess the values before printing.
@@ -1624,4 +1591,60 @@ primitive!(
     /// ex: 1_2_3 4 5_6_7
     ///   : dump⊢
     (0(0)[1], Dump, Stack, "dump"),
+);
+
+macro_rules! impl_primitive {
+    ($(
+        (
+            $args:literal
+            $(($outputs:expr))?
+            $([$margs:expr])?,
+            $variant:ident
+        )
+    ),* $(,)?) => {
+        /// Primitives that exist as an implementation detail
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
+        pub enum ImplPrimitive {
+            $($variant,)*
+        }
+
+        impl ImplPrimitive {
+            pub fn args(&self) -> u8 {
+                match self {
+                    $(ImplPrimitive::$variant => $args,)*
+                }
+            }
+            pub fn outputs(&self) -> u8 {
+                match self {
+                    $($(ImplPrimitive::$variant => $outputs,)?)*
+                    _ => 1
+                }
+            }
+            pub fn modifier_args(&self) -> Option<u8> {
+                match self {
+                    $($(ImplPrimitive::$variant => Some($margs),)?)*
+                    _ => None
+                }
+            }
+        }
+    };
+}
+
+impl_primitive!(
+    (1, Cos),
+    (1, Asin),
+    (1, Acos),
+    (1, Last),
+    (1, InverseBits),
+    (1, InvTranspose),
+    (1, InvWhere),
+    (1(2), Uncouple),
+    (3, Unselect),
+    (3, Unpick),
+    (3, Untake),
+    (3, Undrop),
+    (3, Unkeep),
+    (3[1], Unpartition),
+    (1, InvUtf),
+    (1, InvTrace),
 );

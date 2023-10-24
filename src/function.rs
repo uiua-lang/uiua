@@ -7,8 +7,11 @@ use std::{
 };
 
 use crate::{
-    check::instrs_signature, lex::CodeSpan, primitive::Primitive, value::Value, Ident, Uiua,
-    UiuaResult,
+    check::instrs_signature,
+    lex::CodeSpan,
+    primitive::{ImplPrimitive, Primitive},
+    value::Value,
+    Ident, Uiua, UiuaResult,
 };
 
 #[derive(Clone)]
@@ -21,6 +24,7 @@ pub enum Instr {
         span: usize,
     },
     Prim(Primitive, usize),
+    ImplPrim(ImplPrimitive, usize),
     Call(usize),
     PushFunc(Arc<Function>),
     Switch {
@@ -127,9 +131,10 @@ impl Hash for Instr {
         disc.hash(state);
         match self {
             Instr::Push(val) => val.hash(state),
-            Instr::BeginArray => 1u8.hash(state),
-            Instr::EndArray { .. } => 2u8.hash(state),
+            Instr::BeginArray => {}
+            Instr::EndArray { .. } => {}
             Instr::Prim(p, _) => p.hash(state),
+            Instr::ImplPrim(p, _) => p.hash(state),
             Instr::Call(_) => {}
             Instr::PushFunc(f) => f.id.hash(state),
             Instr::Switch { count, .. } => count.hash(state),
@@ -199,6 +204,7 @@ impl fmt::Display for Instr {
             Instr::EndArray { .. } => write!(f, "["),
             Instr::Prim(prim @ Primitive::Over, _) => write!(f, "`{prim}`"),
             Instr::Prim(prim, _) => write!(f, "{prim}"),
+            Instr::ImplPrim(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => write!(f, "call"),
             Instr::PushFunc(func) => write!(f, "push({func})"),
             Instr::Switch { count, .. } => write!(f, "<switch {count}>"),
@@ -379,6 +385,12 @@ impl Function {
     pub fn as_primitive(&self) -> Option<(Primitive, usize)> {
         match self.instrs.as_slice() {
             [Instr::Prim(prim, span)] => Some((*prim, *span)),
+            _ => None,
+        }
+    }
+    pub fn as_impl_primitive(&self) -> Option<(ImplPrimitive, usize)> {
+        match self.instrs.as_slice() {
+            [Instr::ImplPrim(prim, span)] => Some((*prim, *span)),
             _ => None,
         }
     }

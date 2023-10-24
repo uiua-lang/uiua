@@ -181,8 +181,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
     let update_title = move || {
         current_prim
             .get()
-            .and_then(|prim| prim.name())
-            .map(|name| format!("{name} - Uiua Docs"))
+            .map(|p| format!("{} - Uiua Docs", p.name()))
             .unwrap_or_else(|| "Uiua Docs".to_owned())
     };
 
@@ -274,11 +273,9 @@ impl Allowed {
         let all = Primitive::all;
         let prim_matching_part_exactly = |part: &str| -> Option<Primitive> {
             all().find(|p| {
-                p.names().is_some_and(|n| {
-                    n.text.to_lowercase() == part
-                        || n.ascii.is_some_and(|a| a.to_string() == part)
-                        || n.glyph.is_some_and(|u| part.chars().all(|c| c == u))
-                })
+                p.name().to_lowercase() == part
+                    || p.ascii().is_some_and(|a| a.to_string() == part)
+                    || p.glyph().is_some_and(|u| part.chars().all(|c| c == u))
             })
         };
         if let Some(prim) = prim_matching_part_exactly(&search) {
@@ -294,10 +291,7 @@ impl Allowed {
                     continue;
                 }
                 let matches = all()
-                    .filter(|p| {
-                        p.name()
-                            .is_some_and(|name| name.to_lowercase().starts_with(part))
-                    })
+                    .filter(|p| p.name().to_lowercase().starts_with(part))
                     .chain(all().filter(|p| {
                         p.ascii()
                             .is_some_and(|simple| part.contains(&simple.to_string()))
@@ -398,7 +392,7 @@ impl Allowed {
                 PrimClass::Sys => "system-functions",
             };
             let of_class: Vec<_> = Primitive::all()
-                .filter(|p| self.prims.contains(p) && p.class() == class && p.name().is_some())
+                .filter(|p| self.prims.contains(p) && p.class() == class)
                 .map(|p| {
                     if let Primitive::Sys(sysop) = p {
                         view!(<div style="display: flex; align-items: center;">

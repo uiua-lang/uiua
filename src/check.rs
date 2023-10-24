@@ -465,6 +465,20 @@ impl<'a> VirtualEnv<'a> {
                     }
                 }
             },
+            Instr::ImplPrim(prim, _) => {
+                let args = prim.args();
+                for _ in 0..prim.modifier_args().unwrap_or(0) {
+                    self.pop_func()?;
+                }
+                for _ in 0..args {
+                    self.pop()?;
+                }
+                self.set_min_height();
+                let outputs = prim.outputs();
+                for _ in 0..outputs {
+                    self.stack.push(BasicValue::Other);
+                }
+            }
         }
         // println!("{instr:?} -> {}/{}", self.min_height, self.stack.len());
         Ok(())

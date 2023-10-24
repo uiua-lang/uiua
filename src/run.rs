@@ -424,6 +424,12 @@ code:
                     self.pop_span();
                     res
                 }
+                &Instr::ImplPrim(prim, span) => {
+                    self.push_span(span, None);
+                    let res = prim.run(self);
+                    self.pop_span();
+                    res
+                }
                 Instr::Push(val) => {
                     self.stack.push(Value::clone(val));
                     Ok(())

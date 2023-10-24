@@ -5,7 +5,7 @@ use std::{cell::RefCell, collections::HashMap, fmt};
 use crate::{
     check::instrs_signature,
     function::{Function, Instr, Signature},
-    primitive::Primitive,
+    primitive::{ImplPrimitive, Primitive},
     value::Value,
 };
 
@@ -64,6 +64,44 @@ pub(crate) fn invert_instrs(instrs: &[Instr]) -> Option<Vec<Instr>> {
     Some(inverted)
 }
 
+fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
+    use ImplPrimitive::*;
+    use Primitive::*;
+    Some(match prim {
+        Identity => Instr::Prim(Identity, span),
+        Flip => Instr::Prim(Flip, span),
+        Neg => Instr::Prim(Neg, span),
+        Not => Instr::Prim(Not, span),
+        Sin => Instr::ImplPrim(Asin, span),
+        Reverse => Instr::Prim(Reverse, span),
+        Transpose => Instr::ImplPrim(InvTranspose, span),
+        Bits => Instr::ImplPrim(InverseBits, span),
+        Couple => Instr::ImplPrim(Uncouple, span),
+        Trace => Instr::ImplPrim(InvTrace, span),
+        Box => Instr::Prim(Unbox, span),
+        Unbox => Instr::Prim(Box, span),
+        Where => Instr::ImplPrim(InvWhere, span),
+        Utf => Instr::ImplPrim(InvUtf, span),
+        _ => return None,
+    })
+}
+
+fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
+    use ImplPrimitive::*;
+    use Primitive::*;
+    Some(match prim {
+        Cos => Instr::ImplPrim(Acos, span),
+        Asin => Instr::Prim(Sin, span),
+        Acos => Instr::ImplPrim(Cos, span),
+        InvTranspose => Instr::Prim(Transpose, span),
+        InverseBits => Instr::Prim(Bits, span),
+        InvTrace => Instr::Prim(Trace, span),
+        InvWhere => Instr::Prim(Where, span),
+        InvUtf => Instr::Prim(Utf, span),
+        _ => return None,
+    })
+}
+
 fn invert_instr_fragment(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
     use Instr::*;
     use Primitive::*;
@@ -71,12 +109,16 @@ fn invert_instr_fragment(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
         [Prim(prim, span)] => {
             return Some(match prim {
                 Primitive::Sqrt => vec![Instr::push(2.0), Instr::Prim(Primitive::Pow, *span)],
-                prim => vec![Instr::Prim(prim.inverse()?, *span)],
+                prim => vec![prim_inverse(*prim, *span)?],
             })
         }
+        [ImplPrim(prim, span)] => return impl_prim_inverse(*prim, *span).map(|instr| vec![instr]),
         [PushFunc(val)] => {
             if let Some((prim, span)) = val.as_primitive() {
-                return Some(vec![Instr::Prim(prim.inverse()?, span)]);
+                return Some(vec![prim_inverse(prim, span)?]);
+            }
+            if let Some((prim, span)) = val.as_impl_primitive() {
+                return Some(vec![impl_prim_inverse(prim, span)?]);
             }
         }
         _ => {}
@@ -147,6 +189,7 @@ pub(crate) fn under_instrs(instrs: &[Instr], g_sig: Signature) -> Option<Under> 
 }
 
 fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, Vec<Instr>)> {
+    use ImplPrimitive::*;
     use Primitive::*;
 
     macro_rules! stash2 {
@@ -386,6 +429,12 @@ impl AsInstr for Primitive {
     }
 }
 
+impl AsInstr for ImplPrimitive {
+    fn as_instr(&self, span: usize) -> Instr {
+        Instr::ImplPrim(*self, span)
+    }
+}
+
 impl AsInstr for Box<dyn AsInstr> {
     fn as_instr(&self, span: usize) -> Instr {
         self.as_ref().as_instr(span)
@@ -503,7 +552,7 @@ fn under_partition_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr
     let afters = vec![
         Instr::PopTempUnder { count: 2, span },
         Instr::PushFunc(f_after.into()),
-        Instr::Prim(Primitive::Unpartition, span),
+        Instr::ImplPrim(ImplPrimitive::Unpartition, span),
     ];
     Some((input, (befores, afters)))
 }
@@ -629,6 +678,39 @@ where
     }
 }
 
+impl<A, B> UnderPattern for (&[ImplPrimitive], &[A], &[B])
+where
+    A: AsInstr,
+    B: AsInstr,
+{
+    fn under_extract<'a>(&self, input: &'a [Instr], _: Signature) -> Option<(&'a [Instr], Under)> {
+        let (a, b, c) = *self;
+        if a.len() > input.len() {
+            return None;
+        }
+        let mut spans = Vec::new();
+        for (instr, prim) in input.iter().zip(a.iter()) {
+            match instr {
+                Instr::ImplPrim(instr_prim, span) if instr_prim == prim => spans.push(*span),
+                _ => return None,
+            }
+        }
+        Some((
+            &input[a.len()..],
+            (
+                b.iter()
+                    .zip(spans.iter().cycle())
+                    .map(|(p, s)| p.as_instr(*s))
+                    .collect(),
+                c.iter()
+                    .zip(spans.iter().cycle())
+                    .map(|(p, s)| p.as_instr(*s))
+                    .collect(),
+            ),
+        ))
+    }
+}
+
 impl<T, const A: usize, const B: usize> InvertPattern for ([Primitive; A], [T; B])
 where
     T: AsInstr,
@@ -641,6 +723,22 @@ where
 
 impl<T, U, const A: usize, const B: usize, const C: usize> UnderPattern
     for ([Primitive; A], [T; B], [U; C])
+where
+    T: AsInstr,
+    U: AsInstr,
+{
+    fn under_extract<'a>(
+        &self,
+        input: &'a [Instr],
+        g_sig: Signature,
+    ) -> Option<(&'a [Instr], Under)> {
+        let (a, b, c) = self;
+        (a.as_ref(), b.as_ref(), c.as_ref()).under_extract(input, g_sig)
+    }
+}
+
+impl<T, U, const A: usize, const B: usize, const C: usize> UnderPattern
+    for ([ImplPrimitive; A], [T; B], [U; C])
 where
     T: AsInstr,
     U: AsInstr,

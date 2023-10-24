@@ -112,11 +112,11 @@ fn TutorialBasic() -> impl IntoView {
 
     let primitive_table: Vec<_> = Primitive::all()
         .filter_map(|p| {
-            if let (Some(name), Some(ascii), Some(unicode)) = (p.name(), p.ascii(), p.glyph()) {
+            if let (Some(ascii), Some(unicode)) = (p.ascii(), p.glyph()) {
                 if ascii.to_string() != unicode.to_string() {
                     return Some(view! {
                         <tr>
-                            <td><code>{ name }</code></td>
+                            <td><code>{ p.name() }</code></td>
                             <td><code>{ ascii.to_string() }</code></td>
                             <td><Prim prim=p glyph_only=true/></td>
                         </tr>

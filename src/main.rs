@@ -18,7 +18,7 @@ use notify::{EventKind, RecursiveMode, Watcher};
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use uiua::{
-    format::{format_file, FormatConfig, FormatConfigSource},
+    format::{format_file, format_str, FormatConfig, FormatConfigSource},
     run::RunMode,
     Uiua, UiuaError, UiuaResult,
 };
@@ -190,6 +190,56 @@ fn run() -> UiuaResult {
             }
             #[cfg(feature = "lsp")]
             App::Lsp => uiua::lsp::run_server(),
+            App::Repl {
+                formatter_options,
+                #[cfg(feature = "audio")]
+                audio_options,
+                args,
+            } => {
+                let config =
+                    FormatConfig::from_source(formatter_options.format_config_source, None)?;
+
+                #[cfg(feature = "audio")]
+                setup_audio(audio_options);
+                let mut rt = Uiua::with_native_sys()
+                    .with_mode(RunMode::Normal)
+                    .with_args(args)
+                    .print_diagnostics(true);
+
+                let repl = |rt: &mut Uiua| -> Result<(), UiuaError> {
+                    print!("» ");
+                    let _ = io::stdout().flush();
+
+                    let mut code = String::new();
+                    io::stdin()
+                        .read_line(&mut code)
+                        .expect("Failed to read from Stdin"); // TODO: this could be handled differently
+
+                    if formatter_options.stdout {
+                        let formatted = format_str(&code, &config)?.output;
+                        if code != formatted {
+                            print!("↪ {}", formatted);
+                            code = formatted;
+                        }
+                    }
+
+                    rt.load_str(&code)?;
+                    for value in rt.take_stack() {
+                        println!("∴ {}", value.show());
+                    }
+                    Ok(())
+                };
+
+                println!("Press ^C to exit.\n");
+                loop {
+                    if let Err(msg) = repl(&mut rt) {
+                        // FIXME: for some reasons parsing errors are printed twice, e.g.
+                        //        type $ in REPL to see the "1:1: Expected '"'" message appearing twice.
+                        eprintln!("⚠ {}", msg);
+                    }
+                    println!();
+                }
+            }
         },
         Err(e) if e.kind() == ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
             show_update_message();
@@ -475,6 +525,16 @@ enum App {
     #[cfg(feature = "lsp")]
     #[clap(about = "Run the Language Server")]
     Lsp,
+    #[clap(about = "Run very simple REPL")]
+    Repl {
+        #[clap(flatten)]
+        formatter_options: FormatterOptions,
+        #[cfg(feature = "audio")]
+        #[clap(flatten)]
+        audio_options: AudioOptions,
+        #[clap(trailing_var_arg = true)]
+        args: Vec<String>,
+    },
 }
 
 #[derive(clap::Args)]

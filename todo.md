@@ -34,5 +34,5 @@ Within a each section, items are ordered (roughly) by decreasing priority.
 - System functions
 
 ## Tooling
-- REPL
+- Improve REPL
 - Discord bot

@@ -321,8 +321,12 @@ sys_op! {
     /// Create a TCP listener and bind it to an address
     (1, TcpListen, "&tcpl", "tcp - listen"),
     /// Accept a connection with a TCP listener
+    ///
+    /// Returns a stream handle
     (1, TcpAccept, "&tcpa", "tcp - accept"),
     /// Create a TCP socket and connect it to an address
+    ///
+    /// Returns a stream handle
     (1, TcpConnect, "&tcpc", "tcp - connect"),
     /// Set a TCP socket to non-blocking mode
     (1, TcpSetNonBlocking, "&tcpsnb", "tcp - set non-blocking"),

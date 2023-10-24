@@ -2,7 +2,6 @@
 Within a each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- `under` aggregating `group`
 - Add channels for spawned threads
 - Sift+delete to delete whole lines
 - Rust API

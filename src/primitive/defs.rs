@@ -977,6 +977,11 @@ primitive!(
     /// ex: $ Count the characters is this string
     ///   : ⊕{⊢∶⧻.} ⊛.⊏⍏.
     ///
+    /// [under][group] works if [group]'s function is [under]able.
+    /// ex: ⍜⊕□≡⇌ ≠@ . $ These are some words
+    /// The length of each group must not change.
+    /// ex! ⍜⊕□⇌ ≠@ . $ These are some words
+    ///
     /// [group] is closely related to [partition].
     (2[1], Group, AggregatingModifier, ("group", '⊕')),
     /// Group elements of an array into buckets by sequential keys
@@ -1001,6 +1006,9 @@ primitive!(
     ///
     /// This can be used to split an array by a delimiter.
     /// ex: ⊜□ ≠@ . $ Hey there friendo
+    ///
+    /// [under][partition] works if [partition]'s function is [under]able.
+    /// ex: ⍜⊜□⇌ ≠@ . $ These are some words
     ///
     /// [partition] is closely related to [group].
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),

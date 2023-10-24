@@ -2,8 +2,6 @@
 Within a each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- Add channels for spawned threads
-- Sift+delete to delete whole lines
 - Rust API
   - Make dedicated Array conversion traits
   - Make dedicated Value conversion traits

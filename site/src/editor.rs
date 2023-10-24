@@ -511,6 +511,30 @@ pub fn Editor<'a>(
                     remove_code(start, end);
                 }
             }
+            "Delete" if event.shift_key() => {
+                // Delete lines between cursor start and end
+                let code = code_text();
+                let (start, end) = get_code_cursor().unwrap();
+                let (start, end) = (start.min(end), start.max(end));
+                let (start_line, _) = line_col(&code, start as usize);
+                let (end_line, _) = line_col(&code, end as usize);
+                let new_code: String = code
+                    .lines()
+                    .enumerate()
+                    .filter_map(|(i, line)| {
+                        if i < start_line - 1 || i >= end_line {
+                            if i == 0 || start_line == 1 && i == end_line {
+                                Some(line.into())
+                            } else {
+                                Some(format!("\n{}", line))
+                            }
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                state().set_code(&new_code, Cursor::Set(start, start));
+            }
             "Delete" => {
                 let (start, end) = get_code_cursor().unwrap();
                 if start == end {
@@ -1100,10 +1124,10 @@ pub fn Editor<'a>(
                     </div>
                     <button
                         class="info-button"
-                        data-title="\
-ctrl Enter   - Run + Format
-ctrl /       - Toggle line comment
- alt Up/Down - Swap lines"
+                        data-title=" ctrl Enter   - Run + Format
+ ctrl /       - Toggle line comment
+  alt Up/Down - Swap lines
+shift Delete  - Delete lines"
                         disabled>
                         "🛈"
                     </button>

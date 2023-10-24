@@ -12,6 +12,8 @@ If you are reading this on the website, then these changes are live here.
 - Fix a bunch of bugs and crashes
 - Add REPL
 ### Website
+- [`&ast`](https://uiua.org/docs/&ast) now works on the website by generating a fixed amount of audio
+  - How long the generated audio is can be configured in the editor settings
 - Error and diagnostic messages a no-longer all one color
 - The pad editor now inserts a trailing newline on format
 - Increase thresholds for arrays becoming images or audio

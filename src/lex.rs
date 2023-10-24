@@ -560,15 +560,17 @@ impl Lexer {
                         }
                         continue;
                     }
+                    let mut errored = false;
                     if format && !self.next_char_exact('"') {
                         self.errors.push(
                             self.end_span(start)
                                 .sp(LexError::ExpectedCharacter(Some('"'))),
                         );
+                        errored = true;
                     }
                     // Single-line strings
                     let inner = self.parse_string_contents(start, Some('"'));
-                    if !self.next_char_exact('"') {
+                    if !self.next_char_exact('"') && !errored {
                         self.errors.push(
                             self.end_span(start)
                                 .sp(LexError::ExpectedCharacter(Some('"'))),

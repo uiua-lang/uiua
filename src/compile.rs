@@ -869,6 +869,10 @@ fn words_look_pervasive(words: &[Sp<Word>]) -> bool {
         ) => true,
         Word::Func(func) if func.lines.iter().all(|line| words_look_pervasive(line)) => true,
         Word::Number(..) | Word::Char(..) => true,
+        Word::Modified(m) if m.modifier.value == Modifier::Primitive(Primitive::Bind) => {
+            words_look_pervasive(&m.operands)
+        }
+        Word::Modified(m) if m.modifier.value == Modifier::Primitive(Primitive::Each) => true,
         _ => false,
     })
 }

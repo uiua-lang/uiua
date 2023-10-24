@@ -149,6 +149,8 @@ sys_op! {
     /// Read from a stream until a delimiter is reached
     (2, ReadUntil, "&ru", "read until"),
     /// Write an array to a stream
+    ///
+    /// If the stream is a file, the file may not be written to until it is closed with [&cl].
     (2(0), Write, "&w", "write"),
     /// Import an item from a file
     ///
@@ -176,6 +178,7 @@ sys_op! {
     ///
     /// The file can be read from with [&rs], [&rb], or [&ru].
     /// The file can be written to with [&w].
+    /// The file may not be written to until it is closed with [&cl].
     (1, FCreate, "&fc", "file - create"),
     /// Check if a file exists at a path
     (1, FExists, "&fe", "file - exists"),
@@ -302,9 +305,10 @@ sys_op! {
     /// The function will be called repeatedly to generate the audio.
     /// ex: Sp ← 1.5
     ///   : Bass ← (
-    ///   :   ±○×π×÷Sp110. # Square wave
-    ///   :   ×2+1⌊◿2.∶    # Modulation frequency
-    ///   :   ×0.2○×π××∶   # Apply modulation
+    ///   :   +110×20⌊÷4◿8. # Choose note
+    ///   :   ±○×π×÷Sp,     # Square wave
+    ///   :   ×2+1⌊◿2.∶     # Modulation frequency
+    ///   :   ×0.2○×π××∶    # Apply modulation
     ///   : )
     ///   : Kick ← ○×τ×40√√◿1
     ///   : Noise ← [⍥⚂10000]

@@ -729,64 +729,65 @@ pub fn Editor<'a>(
 
     // Glyph buttons
     // These are the buttons that appear above the editor and allow the user to insert glyphs
-    let mut glyph_buttons: Vec<_> = Primitive::non_deprecated()
-        .filter_map(|p| {
-            let text = p
-                .glyph()
-                .map(Into::into)
-                .or_else(|| p.ascii().map(|s| s.to_string()))?;
-            let mut title = p.name().unwrap_or_default().to_string();
-            if let Some(ascii) = p.ascii() {
-                title = format!("({}) {}", ascii, title);
+    let make_glyph_button = |prim: Primitive| {
+        let text = prim
+            .glyph()
+            .map(Into::into)
+            .or_else(|| prim.ascii().map(|s| s.to_string()))?;
+        let mut title = prim.name().unwrap_or_default().to_string();
+        if let Some(ascii) = prim.ascii() {
+            title = format!("({}) {}", ascii, title);
+        }
+        // Navigate to the docs page on ctrl/shift+click
+        let onclick = move |event: MouseEvent| {
+            if !on_mac && event.ctrl_key() || on_mac && event.meta_key() {
+                // Open the docs page
+                window()
+                    .open_with_url_and_target(
+                        &format!("/docs/{}", prim.name().unwrap_or_default()),
+                        "_blank",
+                    )
+                    .unwrap();
+            } else if event.shift_key() {
+                // Redirect to the docs page
+                use_navigate()(
+                    &format!("/docs/{}", prim.name().unwrap_or_default()),
+                    NavigateOptions::default(),
+                );
+            } else {
+                replace_code(&prim.to_string());
             }
-            // Navigate to the docs page on ctrl/shift+click
-            let onclick = move |event: MouseEvent| {
-                if !on_mac && event.ctrl_key() || on_mac && event.meta_key() {
-                    // Open the docs page
-                    window()
-                        .open_with_url_and_target(
-                            &format!("/docs/{}", p.name().unwrap_or_default()),
-                            "_blank",
-                        )
-                        .unwrap();
-                } else if event.shift_key() {
-                    // Redirect to the docs page
-                    use_navigate()(
-                        &format!("/docs/{}", p.name().unwrap_or_default()),
-                        NavigateOptions::default(),
-                    );
-                } else {
-                    replace_code(&p.to_string());
-                }
-            };
-            // Show the glyph doc on mouseover
-            let onmouseover = move |_| {
-                if let Some(doc) = p.doc() {
-                    set_glyph_doc.set(
-                        view! {
-                            <Prim prim=p/>
-                            <br/>
-                            { doc.short_text().into_owned() }
-                        }
-                        .into_view(),
-                    );
-                    _ = glyph_doc_element().style().remove_property("display");
-                }
-            };
-            Some(
-                view! {
-                    <button
-                        class="glyph-button glyph-title"
-                        data-title=title
-                        on:click=onclick
-                        on:mouseover=onmouseover
-                        on:mouseleave=onmouseleave>
-                        <div class={prim_class(p)}>{ text }</div>
-                    </button>
-                }
-                .into_view(),
-            )
-        })
+        };
+        // Show the glyph doc on mouseover
+        let onmouseover = move |_| {
+            if let Some(doc) = prim.doc() {
+                set_glyph_doc.set(
+                    view! {
+                        <Prim prim=prim/>
+                        <br/>
+                        { doc.short_text().into_owned() }
+                    }
+                    .into_view(),
+                );
+                _ = glyph_doc_element().style().remove_property("display");
+            }
+        };
+        Some(
+            view! {
+                <button
+                    class="glyph-button glyph-title"
+                    data-title=title
+                    on:click=onclick
+                    on:mouseover=onmouseover
+                    on:mouseleave=onmouseleave>
+                    <div class={prim_class(prim)}>{ text }</div>
+                </button>
+            }
+            .into_view(),
+        )
+    };
+    let mut glyph_buttons: Vec<_> = Primitive::non_deprecated()
+        .filter_map(make_glyph_button)
         .collect();
 
     // Additional code buttons

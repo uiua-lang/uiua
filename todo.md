@@ -8,11 +8,14 @@ Within a each section, items are ordered (roughly) by decreasing priority.
   - Make dyadic array functions not methods
   - Make most things private
 - Multimedia
+  - GIF decode
   - Sound input
   - Webcam input
+  - Canvas
+    - Windowing
+    - Input handling
 - System APIs
-  - Get single char from stdin
-  - Delete/trash files/directories
+  - Terminal raw mode
   - FFI
   - UDP Sockets
 

@@ -1435,10 +1435,10 @@ primitive!(
     /// In the web editor, the function is called and blocks until it returns.
     /// A thread id that can be passed to [wait] is pushed to the stack. Handles are just numbers.
     /// [wait] consumes the thread id and appends the thread's stack to the current stack.
-    /// ex:  spawn⇡ 10
-    ///   : waitspawn⇡ 10
-    /// ex:  spawn(+10+) 1 2
-    ///   : waitspawn(+10+) 1 2
+    /// ex:      spawn⇡ 10
+    ///   : wait spawn⇡ 10
+    /// ex:      spawn(+10+) 1 2
+    ///   : wait spawn(+10+) 1 2
     ///
     /// You can use [rows] to spawn a thread for each row of an array.
     /// ex: ≡spawn(/+⇡×.) ⇡10

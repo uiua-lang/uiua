@@ -65,7 +65,10 @@ pub fn Editor<'a>(
     #[prop(optional)] progress_lines: bool,
     #[prop(optional)] no_run: bool,
 ) -> impl IntoView {
-    let no_run = no_run || ["&sl", "&httpsw"].iter().any(|name| example.contains(name));
+    let no_run = no_run
+        || ["&sl", "&httpsw", "send", "recv"]
+            .iter()
+            .any(|name| example.contains(name));
     let id = ID.with(|id| {
         let i = id.get();
         id.set(i + 1);

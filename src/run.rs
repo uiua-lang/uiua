@@ -7,7 +7,6 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
     sync::Arc,
-    thread::{self, JoinHandle},
 };
 
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
@@ -162,7 +161,10 @@ impl Default for ThisThread {
 
 #[derive(Debug, Clone)]
 struct Thread {
-    pub handle: Arc<JoinHandle<UiuaResult<Vec<Value>>>>,
+    #[cfg(not(target_arch = "wasm32"))]
+    pub handle: Arc<std::thread::JoinHandle<UiuaResult<Vec<Value>>>>,
+    #[cfg(target_arch = "wasm32")]
+    pub result: UiuaResult<Vec<Value>>,
     pub channel: Channel,
 }
 
@@ -1028,16 +1030,25 @@ code:
             execution_start: self.execution_start,
             thread,
         };
-        let handle = thread::spawn(move || {
-            f(&mut env)?;
-            Ok(env.take_stack())
-        });
+        #[cfg(not(target_arch = "wasm32"))]
+        let handle = std::thread::Builder::new()
+            .spawn(move || {
+                f(&mut env)?;
+                Ok(env.take_stack())
+            })
+            .map_err(|e| self.error(format!("Error spawning thread: {e}")))?;
+        #[cfg(target_arch = "wasm32")]
+        let result = f(&mut env).map(|_| env.take_stack());
+
         let id = self.thread.next_child_id;
         self.thread.next_child_id += 1;
         self.thread.children.insert(
             id,
             Thread {
+                #[cfg(not(target_arch = "wasm32"))]
                 handle: handle.into(),
+                #[cfg(target_arch = "wasm32")]
+                result,
                 channel: Channel {
                     send: this_send,
                     recv: this_recv,
@@ -1052,6 +1063,7 @@ code:
         let ids = id.as_natural_array(self, "Thread id must be an array of natural numbers")?;
         if ids.shape.is_empty() {
             let handle = ids.data.into_iter().next().unwrap();
+            #[cfg(not(target_arch = "wasm32"))]
             let thread_stack = Arc::into_inner(
                 self.thread
                     .children
@@ -1062,10 +1074,18 @@ code:
             .ok_or_else(|| self.error("Cannot wait on thread spawned in cloned environment"))?
             .join()
             .unwrap()?;
+            #[cfg(target_arch = "wasm32")]
+            let thread_stack = self
+                .thread
+                .children
+                .remove(&handle)
+                .ok_or_else(|| self.error("Invalid thread id"))?
+                .result?;
             self.stack.extend(thread_stack);
         } else {
             let mut rows = Vec::new();
             for handle in ids.data {
+                #[cfg(not(target_arch = "wasm32"))]
                 let thread_stack = Arc::into_inner(
                     self.thread
                         .children
@@ -1076,6 +1096,13 @@ code:
                 .ok_or_else(|| self.error("Cannot wait on thread spawned in cloned environment"))?
                 .join()
                 .unwrap()?;
+                #[cfg(target_arch = "wasm32")]
+                let thread_stack = self
+                    .thread
+                    .children
+                    .remove(&handle)
+                    .ok_or_else(|| self.error("Invalid thread id"))?
+                    .result?;
                 let row = if thread_stack.len() == 1 {
                     thread_stack.into_iter().next().unwrap()
                 } else {

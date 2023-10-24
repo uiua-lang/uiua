@@ -223,21 +223,30 @@ impl Parser {
     }
     fn try_binding(&mut self) -> Option<Binding> {
         let start = self.index;
-        Some(if let Some(ident) = self.try_ident() {
+        Some(if let Some(name) = self.try_ident() {
             // Check for invalid binding names
-            if ident.value.contains('&') {
+            if name.value.contains('&') {
                 self.errors
                     .push(self.prev_span().sp(ParseError::AmpersandBindingName));
             }
             // Left arrow
-            self.try_spaces();
-            if self.try_exact(Equal).is_none() && self.try_exact(LeftArrow).is_none() {
+            let mut arrow_span = self.try_spaces().map(|w| w.span);
+            if let Some(span) = self.try_exact(Equal).or_else(|| self.try_exact(LeftArrow)) {
+                arrow_span = Some(if let Some(arrow_span) = arrow_span {
+                    arrow_span.merge(span)
+                } else {
+                    span
+                });
+            } else {
                 self.index = start;
                 return None;
             }
-            self.try_spaces();
+            let mut arrow_span = arrow_span.unwrap();
+            if let Some(span) = self.try_spaces().map(|w| w.span) {
+                arrow_span = arrow_span.merge(span);
+            }
             // Signature
-            let sig = self.try_signature(Bar);
+            let signature = self.try_signature(Bar);
             // Words
             let words = self.try_words().unwrap_or_default();
             match words.as_slice() {
@@ -252,32 +261,33 @@ impl Parser {
                 words => self.validate_words(words, false),
             }
             // Check for uncapitalized binding names
-            if ident.value.trim_end_matches('!').chars().count() >= 3
-                && ident.value.chars().next().unwrap().is_ascii_lowercase()
+            if name.value.trim_end_matches('!').chars().count() >= 3
+                && name.value.chars().next().unwrap().is_ascii_lowercase()
             {
-                let captialized: String = ident
+                let captialized: String = name
                     .value
                     .chars()
                     .next()
                     .map(|c| c.to_ascii_uppercase())
                     .into_iter()
-                    .chain(ident.value.chars().skip(1))
+                    .chain(name.value.chars().skip(1))
                     .collect();
                 self.diagnostics.push(Diagnostic::new(
                     format!(
                         "Binding names with 3 or more characters should be TitleCase \
                         to avoid collisions with future builtin functions.\n\
                         Try `{}` instead of `{}`",
-                        captialized, ident.value
+                        captialized, name.value
                     ),
-                    ident.span.clone(),
+                    name.span.clone(),
                     DiagnosticKind::Advice,
                 ));
             }
             Binding {
-                name: ident,
+                name,
+                arrow_span,
                 words,
-                signature: sig,
+                signature,
             }
         } else {
             return None;
@@ -656,7 +666,11 @@ impl Parser {
             let mut branches = Vec::new();
             while let Some(start) = self.try_exact(Bar) {
                 let (signature, lines, span) = self.func_contents();
-                let span = span.unwrap_or(start);
+                let span = if let Some(span) = span {
+                    start.merge(span)
+                } else {
+                    start
+                };
                 let id = FunctionId::Anonymous(span.clone());
                 branches.push(span.sp(Func {
                     id,

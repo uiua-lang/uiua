@@ -176,6 +176,32 @@ impl CodeSpan {
                 && (self.end.line > line || col <= self.end.col)
         }
     }
+    pub fn just_start(&self) -> Self {
+        let start = self.start;
+        let mut end = self.start;
+        end.char_pos += 1;
+        end.byte_pos += self.as_str().chars().next().map_or(0, char::len_utf8);
+        end.col += 1;
+        CodeSpan {
+            start,
+            end,
+            ..self.clone()
+        }
+    }
+    pub fn just_end(&self) -> Self {
+        let end = self.end;
+        let mut start = self.end;
+        start.char_pos = start.char_pos.saturating_sub(1);
+        start.byte_pos = start
+            .byte_pos
+            .saturating_sub(self.as_str().chars().next_back().map_or(0, char::len_utf8));
+        start.col = start.col.saturating_sub(1);
+        CodeSpan {
+            start,
+            end,
+            ..self.clone()
+        }
+    }
 }
 
 impl PartialEq for CodeSpan {

@@ -19,6 +19,7 @@ pub enum Item {
 #[derive(Debug, Clone)]
 pub struct Binding {
     pub name: Sp<Ident>,
+    pub arrow_span: CodeSpan,
     pub signature: Option<Sp<Signature>>,
     pub words: Vec<Sp<Word>>,
 }

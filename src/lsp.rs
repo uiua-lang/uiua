@@ -18,6 +18,7 @@ pub enum SpanKind {
     Signature,
     Whitespace,
     Placeholder,
+    Delimiter,
 }
 
 pub fn spans(input: &str) -> Vec<Sp<SpanKind>> {
@@ -32,6 +33,8 @@ fn items_spans(items: &[Item]) -> Vec<Sp<SpanKind>> {
             Item::TestScope(items) => spans.extend(items_spans(items)),
             Item::Words(words) => spans.extend(words_spans(words)),
             Item::Binding(binding) => {
+                spans.push(binding.name.span.clone().sp(SpanKind::Ident));
+                spans.push(binding.arrow_span.clone().sp(SpanKind::Delimiter));
                 if let Some(sig) = &binding.signature {
                     spans.push(sig.span.clone().sp(SpanKind::Signature));
                 }
@@ -79,20 +82,32 @@ fn words_spans(words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
                     spans.extend(item_spans);
                 }
             }
-            Word::Array(arr) => spans.extend(arr.lines.iter().flat_map(|w| words_spans(w))),
+            Word::Array(arr) => {
+                spans.push(word.span.just_start().sp(SpanKind::Delimiter));
+                spans.extend(arr.lines.iter().flat_map(|w| words_spans(w)));
+                spans.push(word.span.just_end().sp(SpanKind::Delimiter));
+            }
             Word::Func(func) => {
+                spans.push(word.span.just_start().sp(SpanKind::Delimiter));
                 if let Some(sig) = &func.signature {
                     spans.push(sig.span.clone().sp(SpanKind::Signature));
                 }
                 spans.extend(func.lines.iter().flat_map(|w| words_spans(w)));
+                spans.push(word.span.just_end().sp(SpanKind::Delimiter));
             }
             Word::Switch(sw) => {
+                spans.push(word.span.just_start().sp(SpanKind::Delimiter));
                 for branch in &sw.branches {
+                    let start_span = branch.span.just_start();
+                    if start_span.as_str() == "|" {
+                        spans.push(start_span.sp(SpanKind::Delimiter));
+                    }
                     if let Some(sig) = &branch.value.signature {
                         spans.push(sig.span.clone().sp(SpanKind::Signature));
                     }
                     spans.extend(branch.value.lines.iter().flat_map(|w| words_spans(w)));
                 }
+                spans.push(word.span.just_end().sp(SpanKind::Delimiter));
             }
             Word::Ocean(prims) => {
                 for prim in prims {

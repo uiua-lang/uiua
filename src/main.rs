@@ -675,7 +675,8 @@ fn repl(mut rt: Uiua, config: FormatConfig) {
                 SpanKind::Ident
                 | SpanKind::Signature
                 | SpanKind::Whitespace
-                | SpanKind::Placeholder => (255, 255, 255),
+                | SpanKind::Placeholder
+                | SpanKind::Delimiter => (255, 255, 255),
             };
             print!("{}", span.span.as_str().truecolor(r, g, b));
         }

@@ -520,19 +520,30 @@ input[type=number] {
     opacity: 1;
 }
 
+.info-button:hover::after,
 .editor-right-button:hover::after {
     content: attr(data-title);
     position: absolute;
     font-family: "Code Font", monospace;
     font-size: 1em;
     left: calc(-8em - 50%);
-    top: calc(50% - 0.6em);
+    bottom: 1.5em;
     color: #eee;
-    background-color: #000b;
     padding: 0.2em;
     border-radius: 0.2em;
-    width: 8em;
     pointer-events: none;
+}
+
+.editor-right-button:hover::after {
+    background-color: #000b;
+    width: 8em;
+}
+
+.info-button:hover::after {
+    background-color: #000d;
+    width: 21em;
+    white-space: pre-wrap;
+    text-align: left;
 }
 
 #example-tracker {

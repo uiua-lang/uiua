@@ -1081,6 +1081,15 @@ pub fn Editor<'a>(
                             <option value="Uiua386" selected={get_font_name() == "Uiua386"}>"Uiua386"</option>
                         </select>
                     </div>
+                    <button
+                        class="info-button"
+                        data-title="\
+ctrl Enter   - Run + Format
+ctrl /       - Toggle line comment
+ alt Up/Down - Swap lines"
+                        disabled>
+                        "🛈"
+                    </button>
                 </div>
                 <div class=editor_class>
                     <div id="code-area">

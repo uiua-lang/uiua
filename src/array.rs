@@ -80,6 +80,10 @@ fn validate_shape<T>(shape: &[usize], data: &[T]) {
 
 impl<T> Array<T> {
     #[track_caller]
+    /// Create an array from a shape and data
+    ///
+    /// # Panics
+    /// Panics in debug mode if the shape does not match the data length
     pub fn new(shape: impl Into<Shape>, data: impl Into<CowSlice<T>>) -> Self {
         let shape = shape.into();
         let data = data.into();
@@ -95,27 +99,35 @@ impl<T> Array<T> {
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn unit(data: T) -> Self {
+    /// Create a scalar array
+    pub fn scalar(data: T) -> Self {
         Self::new(Shape::new(), cowslice![data])
     }
+    /// Get the number of rows in the array
     pub fn row_count(&self) -> usize {
         self.shape.first().copied().unwrap_or(1)
     }
-    pub fn flat_len(&self) -> usize {
+    /// Get the number of elements in the array
+    pub fn element_count(&self) -> usize {
         self.data.len()
     }
+    /// Get the number of elements in a row
     pub fn row_len(&self) -> usize {
         self.shape.iter().skip(1).product()
     }
+    /// Get the rank of the array
     pub fn rank(&self) -> usize {
         self.shape.len()
     }
+    /// Get the shape of the array
     pub fn shape(&self) -> &[usize] {
         &self.shape
     }
+    /// Get a formattable shape of the array
     pub fn format_shape(&self) -> FormatShape<'_> {
         FormatShape(self.shape())
     }
+    /// Attempt to convert the array into a scalar
     pub fn into_scalar(self) -> Result<T, Self> {
         if self.shape.is_empty() {
             Ok(self.data.into_iter().next().unwrap())
@@ -123,6 +135,7 @@ impl<T: ArrayValue> Array<T> {
             Err(self)
         }
     }
+    /// Attempt to get a reference to the scalar value
     pub fn as_scalar(&self) -> Option<&T> {
         if self.shape.is_empty() {
             Some(&self.data[0])
@@ -130,6 +143,7 @@ impl<T: ArrayValue> Array<T> {
             None
         }
     }
+    /// Attempt to get a mutable reference to the scalar value
     pub fn as_scalar_mut(&mut self) -> Option<&mut T> {
         if self.shape.is_empty() {
             Some(&mut self.data.as_mut_slice()[0])
@@ -137,17 +151,21 @@ impl<T: ArrayValue> Array<T> {
             None
         }
     }
+    /// Get an iterator over the row arrays of the array
     pub fn rows(&self) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator + '_ {
         (0..self.row_count()).map(|row| self.row(row))
     }
+    /// Get an iterator over the row slices of the array
     pub fn row_slices(&self) -> impl ExactSizeIterator<Item = &[T]> + DoubleEndedIterator {
         (0..self.row_count()).map(move |row| self.row_slice(row))
     }
+    /// Get a slice of a row
     #[track_caller]
     pub fn row_slice(&self, row: usize) -> &[T] {
         let row_len = self.row_len();
         &self.data[row * row_len..(row + 1) * row_len]
     }
+    /// Get a row array
     #[track_caller]
     pub fn row(&self, row: usize) -> Self {
         if self.rank() == 0 {
@@ -162,6 +180,7 @@ impl<T: ArrayValue> Array<T> {
         let end = start + row_len;
         Self::new(&self.shape[1..], self.data.slice(start..end))
     }
+    /// Convert the elements of the array
     pub fn convert<U>(self) -> Array<U>
     where
         T: Into<U>,
@@ -169,12 +188,14 @@ impl<T: ArrayValue> Array<T> {
     {
         self.convert_with(Into::into)
     }
+    /// Convert the elements of the array with a function
     pub fn convert_with<U: Clone>(self, f: impl FnMut(T) -> U) -> Array<U> {
         Array {
             shape: self.shape,
             data: self.data.into_iter().map(f).collect(),
         }
     }
+    /// Convert the elements of the array with a fallible function
     pub fn try_convert_with<U: Clone, E>(
         self,
         f: impl FnMut(T) -> Result<U, E>,
@@ -184,6 +205,7 @@ impl<T: ArrayValue> Array<T> {
             data: self.data.into_iter().map(f).collect::<Result<_, _>>()?,
         })
     }
+    /// Convert the elements of the array without consuming it
     pub fn convert_ref<U>(&self) -> Array<U>
     where
         T: Into<U>,
@@ -191,12 +213,14 @@ impl<T: ArrayValue> Array<T> {
     {
         self.convert_ref_with(Into::into)
     }
+    /// Convert the elements of the array with a function without consuming it
     pub fn convert_ref_with<U: Clone>(&self, f: impl FnMut(T) -> U) -> Array<U> {
         Array {
             shape: self.shape.clone(),
             data: self.data.iter().cloned().map(f).collect(),
         }
     }
+    /// Consume the array and get an iterator over its rows
     pub fn into_rows(self) -> impl ExactSizeIterator<Item = Self> {
         let row_len = self.row_len();
         let mut row_shape = self.shape.clone();
@@ -213,6 +237,7 @@ impl<T: ArrayValue> Array<T> {
             )
         })
     }
+    /// Consume the array and get a reverse iterator over its rows
     pub fn into_rows_rev(self) -> impl Iterator<Item = Self> {
         let row_len = self.row_len();
         let mut row_shape = self.shape.clone();
@@ -235,12 +260,16 @@ impl<T: ArrayValue> Array<T> {
         shape[0] = 0;
         Array::new(shape, CowSlice::new())
     }
+    /// Get a pretty-printed string representing the array
+    ///
+    /// This is what is printed by the `&s` function
     pub fn show(&self) -> String {
         self.grid_string()
     }
 }
 
 impl Array<Boxed> {
+    /// Attempt to unbox a scalar box array
     pub fn into_unboxed(self) -> Result<Value, Self> {
         match self.into_scalar() {
             Ok(v) => Ok(v.0),
@@ -295,7 +324,7 @@ impl<T: ArrayValue> Hash for Array<T> {
 
 impl<T: ArrayValue> From<T> for Array<T> {
     fn from(data: T) -> Self {
-        Self::unit(data)
+        Self::scalar(data)
     }
 }
 
@@ -341,6 +370,15 @@ impl From<Vec<bool>> for Array<u8> {
 impl From<bool> for Array<u8> {
     fn from(data: bool) -> Self {
         Self::new(tiny_vec![], cowslice![u8::from(data)])
+    }
+}
+
+impl From<Vec<usize>> for Array<f64> {
+    fn from(data: Vec<usize>) -> Self {
+        Self::new(
+            tiny_vec![data.len()],
+            data.into_iter().map(|u| u as f64).collect::<CowSlice<_>>(),
+        )
     }
 }
 

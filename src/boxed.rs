@@ -5,6 +5,7 @@ use std::{
 
 use crate::value::Value;
 
+/// The element type for box arrays
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Boxed(pub Value);
 

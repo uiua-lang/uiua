@@ -9,22 +9,35 @@ use crate::{
     value::Value,
 };
 
+/// An error produced when running a Uiua program
 #[derive(Debug, Clone)]
 pub enum UiuaError {
+    /// An error occurred while loading a file
     Load(PathBuf, Arc<io::Error>),
+    /// An error occurred while formatting a file
     Format(PathBuf, Arc<io::Error>),
+    /// An error occurred while parsing a file
     Parse(Vec<Sp<ParseError>>),
+    /// An error occurred while compiling or executing a program
     Run(Sp<String, Span>),
+    /// An error with a trace attached
     Traced {
+        /// The error itself
         error: Box<Self>,
+        /// The stack trace
         trace: Vec<TraceFrame>,
     },
+    /// An error thrown by `assert`
     Throw(Box<Value>, Span),
+    /// Control flow for `break`
     Break(usize, Span),
+    /// Maximum execution time exceeded
     Timeout(Span),
+    /// A wrapper marking this error as being fill-related
     Fill(Box<Self>),
 }
 
+/// Uiua's result type
 pub type UiuaResult<T = ()> = Result<T, UiuaError>;
 
 impl From<Sp<String, Span>> for UiuaError {
@@ -39,9 +52,12 @@ impl From<Sp<String>> for UiuaError {
     }
 }
 
+/// A frame in a trace
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TraceFrame {
+    /// The function that was called
     pub id: FunctionId,
+    /// The span of the call
     pub span: Span,
 }
 
@@ -77,12 +93,14 @@ impl fmt::Display for UiuaError {
 }
 
 impl UiuaError {
+    /// Get the message of the error
     pub fn message(&self) -> String {
         match self {
             UiuaError::Traced { error, .. } => error.message(),
             error => error.to_string(),
         }
     }
+    /// Get the value of the error if it was thrown by `assert`
     pub fn value(self) -> Value {
         match self {
             UiuaError::Throw(value, _) => *value,
@@ -90,7 +108,7 @@ impl UiuaError {
             error => error.message().into(),
         }
     }
-    pub fn break_data(self) -> Result<(usize, Span), Self> {
+    pub(crate) fn break_data(self) -> Result<(usize, Span), Self> {
         match self {
             UiuaError::Traced { error, trace } => {
                 error.break_data().map_err(|error| UiuaError::Traced {
@@ -163,6 +181,7 @@ impl From<Infallible> for UiuaError {
 }
 
 impl UiuaError {
+    /// Get a rich-text report for the error
     pub fn report(&self) -> Report {
         let kind = ReportKind::Error;
         match self {
@@ -190,15 +209,22 @@ impl UiuaError {
 /// A message to be displayed to the user that is not an error
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Diagnostic {
+    /// The span of the message
     pub span: Span,
+    /// The message itself
     pub message: String,
+    /// What kind of diagnostic this is
     pub kind: DiagnosticKind,
 }
 
+/// Kinds of non-error diagnostics
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum DiagnosticKind {
+    /// Something that really needs to be fixed
     Warning,
+    /// Something that should be fixed for performance reasons
     Advice,
+    /// Bad code style
     Style,
 }
 
@@ -209,6 +235,7 @@ impl fmt::Display for Diagnostic {
 }
 
 impl Diagnostic {
+    /// Create a new diagnostic
     pub fn new(message: impl Into<String>, span: impl Into<Span>, kind: DiagnosticKind) -> Self {
         Self {
             message: message.into(),
@@ -216,6 +243,7 @@ impl Diagnostic {
             kind,
         }
     }
+    /// Get a rich-text report for the diagnostic
     pub fn report(&self) -> Report {
         Report::new_multi(
             ReportKind::Diagnostic(self.kind),
@@ -224,13 +252,17 @@ impl Diagnostic {
     }
 }
 
+/// Kinds of reports
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReportKind {
+    /// An error
     Error,
+    /// A diagnostic
     Diagnostic(DiagnosticKind),
 }
 
 impl ReportKind {
+    /// Get the string that prefixes the formatted report
     pub fn str(&self) -> &'static str {
         match self {
             ReportKind::Error => "Error",
@@ -241,27 +273,43 @@ impl ReportKind {
     }
 }
 
+/// A text fragment of a report
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ReportFragment {
+    /// Just plain text
     Plain(String),
+    /// Text colored according to the report kind
     Colored(String),
+    /// Faint text
     Faint(String),
+    /// Even fainter text
     Fainter(String),
+    /// A newline
     Newline,
 }
 
+/// A rich-text error/diagnostic report
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Report {
+    /// What kind of report this is
     pub kind: ReportKind,
+    /// The rich-text fragments of the report
     pub fragments: Vec<ReportFragment>,
+    /// Whether to color the report with ANSI escape codes when converting it to a string
+    ///
+    /// Defaults to `true`
     pub color: bool,
 }
 
 impl Report {
+    /// Change whether to color the report with ANSI escape codes when converting it to a string
+    ///
+    /// Defaults to `true`
     pub fn color(mut self, color: bool) -> Self {
         self.color = color;
         self
     }
+    /// Add a trace to the report
     pub fn trace(mut self, trace: &[TraceFrame]) -> Self {
         for line in format_trace(trace) {
             self.fragments.push(ReportFragment::Newline);
@@ -269,6 +317,7 @@ impl Report {
         }
         self
     }
+    /// Create a new report
     pub fn new(kind: ReportKind, message: impl Into<String>) -> Self {
         let fragments = vec![
             ReportFragment::Colored(kind.str().into()),
@@ -281,6 +330,7 @@ impl Report {
             color: true,
         }
     }
+    /// Create a new report with multiple messages
     pub fn new_multi<I, T>(kind: ReportKind, errors: I) -> Self
     where
         I: IntoIterator<Item = (T, Span)>,

@@ -21,6 +21,7 @@ use crate::{
 use super::{ArrayCmpSlice, FillContext};
 
 impl Value {
+    /// Make the value 1-dimensional
     pub fn deshape(&mut self) {
         self.generic_mut_deep(
             Array::deshape,
@@ -29,6 +30,7 @@ impl Value {
             Array::deshape,
         )
     }
+    /// Attempt to parse the value into a number
     pub fn parse_num(&self, env: &Uiua) -> UiuaResult<Self> {
         Ok(self
             .as_string(env, "Parsed array must be a string")?
@@ -39,12 +41,14 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
+    /// Make the array 1-dimensional
     pub fn deshape(&mut self) {
-        self.shape = tiny_vec![self.flat_len()];
+        self.shape = tiny_vec![self.element_count()];
     }
 }
 
 impl Value {
+    /// Create a `range` array
     pub fn range(&self, env: &Uiua) -> UiuaResult<Self> {
         let shape = &self.as_naturals(
             env,
@@ -104,6 +108,7 @@ fn range(shape: &[usize], env: &Uiua) -> UiuaResult<CowSlice<f64>> {
 }
 
 impl Value {
+    /// Get the first row of the value
     pub fn first(self, env: &Uiua) -> UiuaResult<Self> {
         self.generic_into_deep(
             |a| a.first(env).map(Into::into),
@@ -112,6 +117,7 @@ impl Value {
             |a| a.first(env).map(Into::into),
         )
     }
+    /// Get the last row of the value
     pub fn last(self, env: &Uiua) -> UiuaResult<Self> {
         self.generic_into_deep(
             |a| a.last(env).map(Into::into),
@@ -123,6 +129,7 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
+    /// Get the first row of the array
     pub fn first(mut self, env: &Uiua) -> UiuaResult<Self> {
         match &*self.shape {
             [] => Err(env.error("Cannot take first of a scalar")),
@@ -143,6 +150,7 @@ impl<T: ArrayValue> Array<T> {
             }
         }
     }
+    /// Get the last row of the array
     pub fn last(mut self, env: &Uiua) -> UiuaResult<Self> {
         match &*self.shape {
             [] => Err(env.error("Cannot take last of a scalar")),
@@ -167,6 +175,7 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
+    /// Reverse the rows of the value
     pub fn reverse(&mut self) {
         self.generic_mut_deep(
             Array::reverse,
@@ -178,8 +187,9 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
+    /// Reverse the rows of the array
     pub fn reverse(&mut self) {
-        if self.shape.is_empty() || self.flat_len() == 0 {
+        if self.shape.is_empty() || self.element_count() == 0 {
             return;
         }
         let row_count = self.row_count();
@@ -198,6 +208,7 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
+    /// Transpose the value
     pub fn transpose(&mut self) {
         self.generic_mut_deep(
             Array::transpose,
@@ -206,6 +217,7 @@ impl Value {
             Array::transpose,
         )
     }
+    /// Inverse transpose the value
     pub fn inv_transpose(&mut self) {
         self.generic_mut_deep(
             Array::inv_transpose,
@@ -217,6 +229,7 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
+    /// Transpose the array
     pub fn transpose(&mut self) {
         crate::profile_function!();
         if self.shape.len() < 2 {
@@ -237,6 +250,7 @@ impl<T: ArrayValue> Array<T> {
         self.data = temp.into();
         self.shape.rotate_left(1);
     }
+    /// Inverse transpose the array
     pub fn inv_transpose(&mut self) {
         crate::profile_function!();
         if self.shape.len() < 2 {
@@ -260,14 +274,15 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
-    pub fn rise(&self, env: &Uiua) -> UiuaResult<Self> {
+    /// Get the `rise` of the value
+    pub fn rise(&self, env: &Uiua) -> UiuaResult<Vec<usize>> {
         self.generic_ref_env_deep(Array::rise, Array::rise, Array::rise, Array::rise, env)
-            .map(Self::from_iter)
     }
-    pub fn fall(&self, env: &Uiua) -> UiuaResult<Self> {
+    /// Get the `fall` of the value
+    pub fn fall(&self, env: &Uiua) -> UiuaResult<Vec<usize>> {
         self.generic_ref_env_deep(Array::fall, Array::fall, Array::fall, Array::fall, env)
-            .map(Self::from_iter)
     }
+    /// `classify` the rows of the value
     pub fn classify(&self, env: &Uiua) -> UiuaResult<Self> {
         self.generic_ref_env_deep(
             Array::classify,
@@ -278,6 +293,7 @@ impl Value {
         )
         .map(Self::from_iter)
     }
+    /// `deduplicate` the rows of the value
     pub fn deduplicate(&mut self) {
         self.generic_mut_deep(
             Array::deduplicate,
@@ -289,11 +305,12 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
+    /// Get the `rise` of the array
     pub fn rise(&self, env: &Uiua) -> UiuaResult<Vec<usize>> {
         if self.rank() == 0 {
             return Err(env.error("Cannot rise a scalar"));
         }
-        if self.flat_len() == 0 {
+        if self.element_count() == 0 {
             return Ok(Vec::new());
         }
         let mut indices = (0..self.row_count()).collect::<Vec<_>>();
@@ -307,11 +324,12 @@ impl<T: ArrayValue> Array<T> {
         });
         Ok(indices)
     }
+    /// Get the `fall` of the array
     pub fn fall(&self, env: &Uiua) -> UiuaResult<Vec<usize>> {
         if self.rank() == 0 {
             return Err(env.error("Cannot fall a scalar"));
         }
-        if self.flat_len() == 0 {
+        if self.element_count() == 0 {
             return Ok(Vec::new());
         }
         let mut indices = (0..self.row_count()).collect::<Vec<_>>();
@@ -325,6 +343,7 @@ impl<T: ArrayValue> Array<T> {
         });
         Ok(indices)
     }
+    /// `classify` the rows of the array
     pub fn classify(&self, env: &Uiua) -> UiuaResult<Vec<usize>> {
         if self.rank() == 0 {
             return Err(env.error("Cannot classify a rank-0 array"));
@@ -338,6 +357,7 @@ impl<T: ArrayValue> Array<T> {
         }
         Ok(classified)
     }
+    /// `deduplicate` the rows of the array
     pub fn deduplicate(&mut self) {
         if self.rank() == 0 {
             return;
@@ -357,6 +377,7 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
+    /// Encode the `bits` of the value
     pub fn bits(&self, env: &Uiua) -> UiuaResult<Array<u8>> {
         match self {
             Value::Byte(n) => n.convert_ref().bits(env),
@@ -364,6 +385,7 @@ impl Value {
             _ => Err(env.error("Argument to bits must be an array of natural numbers")),
         }
     }
+    /// Decode the `bits` of the value
     pub fn inverse_bits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         match self {
             Value::Byte(n) => n.inverse_bits(env),
@@ -374,6 +396,7 @@ impl Value {
 }
 
 impl Array<f64> {
+    /// Encode the `bits` of the array
     pub fn bits(&self, env: &Uiua) -> UiuaResult<Array<u8>> {
         let mut nats = Vec::new();
         for &n in &self.data {
@@ -410,6 +433,7 @@ impl Array<f64> {
 }
 
 impl Array<u8> {
+    /// Decode the `bits` of the array
     pub fn inverse_bits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         let mut bools = Vec::with_capacity(self.data.len());
         for &b in &self.data {
@@ -449,7 +473,8 @@ impl Array<u8> {
 }
 
 impl Value {
-    pub fn wher(&self, env: &Uiua) -> UiuaResult<Self> {
+    /// Get the indices `where` the value is nonzero
+    pub fn wher(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         let counts = self.as_naturals(env, "Argument to where must be a list of naturals")?;
         let total: usize = counts.iter().fold(0, |acc, &b| acc.saturating_add(b));
         let mut data = EcoVec::with_capacity(total);
@@ -459,9 +484,10 @@ impl Value {
                 data.push(i);
             }
         }
-        Ok(Array::from(data).into())
+        Ok(Array::from(data))
     }
-    pub fn first_where(&self, env: &Uiua) -> UiuaResult<Self> {
+    /// Get the `first` index `where` the value is nonzero
+    pub fn first_where(&self, env: &Uiua) -> UiuaResult<f64> {
         if self.rank() > 1 {
             return Err(env.error(format!(
                 "Argument to where must be a list of naturals, but it is rank {}",
@@ -475,21 +501,19 @@ impl Value {
                         return Err(env.error("Argument to where must be a list of naturals"));
                     }
                     if *n != 0.0 {
-                        return Ok((i as f64).into());
+                        return Ok(i as f64);
                     }
                 }
                 env.fill::<f64>()
-                    .map(Into::into)
                     .ok_or_else(|| env.error("Cannot take first of an empty array"))
             }
             Value::Byte(bytes) => {
                 for (i, n) in bytes.data.iter().enumerate() {
                     if *n != 0 {
-                        return Ok((i as f64).into());
+                        return Ok(i as f64);
                     }
                 }
                 env.fill::<f64>()
-                    .map(Into::into)
                     .ok_or_else(|| env.error("Cannot take first of an empty array"))
             }
             value => Err(env.error(format!(
@@ -498,6 +522,7 @@ impl Value {
             ))),
         }
     }
+    /// `invert` `where`
     pub fn inverse_where(&self, env: &Uiua) -> UiuaResult<Self> {
         let indices =
             self.as_naturals(env, "Argument to inverse where must be a list of naturals")?;
@@ -535,10 +560,12 @@ impl Value {
 }
 
 impl Value {
+    /// Convert a string value to a list of UTF-8 bytes
     pub fn utf8(&self, env: &Uiua) -> UiuaResult<Self> {
         let s = self.as_string(env, "Argument to utf must be a string")?;
         Ok(Array::<u8>::from_iter(s.into_bytes()).into())
     }
+    /// Convert a list of UTF-8 bytes to a string value
     pub fn inv_utf8(&self, env: &Uiua) -> UiuaResult<Self> {
         let bytes = self.as_bytes(env, "Argument to inverse utf must be a list of bytes")?;
         let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
@@ -547,6 +574,7 @@ impl Value {
 }
 
 impl Value {
+    /// Join an ocean value
     pub fn ocean(mut self, val: f64, env: &Uiua) -> UiuaResult<Self> {
         match &mut self {
             Value::Num(n) => n.ocean(val),
@@ -571,6 +599,7 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
+    /// Join an ocean value
     pub fn ocean(&mut self, value: T) {
         if self.rank() == 0 {
             self.data.extend(once(value));
@@ -586,7 +615,7 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
-    pub fn first_min_index(&self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn first_min_index(&self, env: &Uiua) -> UiuaResult<Self> {
         self.generic_ref_env_deep(
             Array::first_min_index,
             Array::first_min_index,
@@ -596,7 +625,7 @@ impl Value {
         )
         .map(Into::into)
     }
-    pub fn first_max_index(&self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn first_max_index(&self, env: &Uiua) -> UiuaResult<Self> {
         self.generic_ref_env_deep(
             Array::first_max_index,
             Array::first_max_index,
@@ -606,7 +635,7 @@ impl Value {
         )
         .map(Into::into)
     }
-    pub fn last_min_index(&self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn last_min_index(&self, env: &Uiua) -> UiuaResult<Self> {
         self.generic_ref_env_deep(
             Array::last_min_index,
             Array::last_min_index,
@@ -616,7 +645,7 @@ impl Value {
         )
         .map(Into::into)
     }
-    pub fn last_max_index(&self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn last_max_index(&self, env: &Uiua) -> UiuaResult<Self> {
         self.generic_ref_env_deep(
             Array::last_max_index,
             Array::last_max_index,
@@ -629,7 +658,7 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn first_min_index(&self, env: &Uiua) -> UiuaResult<f64> {
+    pub(crate) fn first_min_index(&self, env: &Uiua) -> UiuaResult<f64> {
         if self.rank() == 0 {
             return Err(env.error("Cannot get min index of a scalar"));
         }
@@ -647,7 +676,7 @@ impl<T: ArrayValue> Array<T> {
             .0;
         Ok(index as f64)
     }
-    pub fn first_max_index(&self, env: &Uiua) -> UiuaResult<f64> {
+    pub(crate) fn first_max_index(&self, env: &Uiua) -> UiuaResult<f64> {
         if self.rank() == 0 {
             return Err(env.error("Cannot get max index of a scalar"));
         }
@@ -665,7 +694,7 @@ impl<T: ArrayValue> Array<T> {
             .0;
         Ok(index as f64)
     }
-    pub fn last_min_index(&self, env: &Uiua) -> UiuaResult<f64> {
+    pub(crate) fn last_min_index(&self, env: &Uiua) -> UiuaResult<f64> {
         if self.rank() == 0 {
             return Err(env.error("Cannot get min index of a scalar"));
         }
@@ -683,7 +712,7 @@ impl<T: ArrayValue> Array<T> {
             .0;
         Ok(index as f64)
     }
-    pub fn last_max_index(&self, env: &Uiua) -> UiuaResult<f64> {
+    pub(crate) fn last_max_index(&self, env: &Uiua) -> UiuaResult<f64> {
         if self.rank() == 0 {
             return Err(env.error("Cannot get max index of a scalar"));
         }

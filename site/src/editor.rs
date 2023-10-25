@@ -17,9 +17,9 @@ use leptos::{ev::keydown, *};
 use leptos_router::{use_navigate, BrowserIntegration, History, LocationChange, NavigateOptions};
 use uiua::{
     format::{format_str, FormatConfig},
-    image_to_bytes, is_ident_char, value_to_gif_bytes, value_to_image, value_to_wav_bytes,
-    DiagnosticKind, Primitive, Report, ReportFragment, ReportKind, RunMode, SysBackend, SysOp,
-    Uiua,
+    image_to_bytes, is_ident_char, spans, value_to_gif_bytes, value_to_image, value_to_wav_bytes,
+    DiagnosticKind, Primitive, Report, ReportFragment, ReportKind, RunMode, SpanKind, SysBackend,
+    SysOp, Uiua,
 };
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{
@@ -1495,8 +1495,6 @@ fn set_code_cursor(id: &str, start: u32, end: u32) {
 }
 
 fn set_code_html(id: &str, code: &str) {
-    use uiua::lsp::*;
-
     // log!("set_code_html({:?})", code);
 
     let elem = element::<HtmlDivElement>(id);

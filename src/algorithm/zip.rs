@@ -61,9 +61,9 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
 }
 
 fn each1_1(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
-    let mut new_values = Vec::with_capacity(xs.flat_len());
+    let mut new_values = Vec::with_capacity(xs.element_count());
     let mut new_shape = Shape::from(xs.shape());
-    let mut old_values = xs.into_flat_values();
+    let mut old_values = xs.into_elements();
     for val in old_values.by_ref() {
         env.push(val);
         let broke = env.call_catch_break(f.clone())?;
@@ -83,7 +83,7 @@ fn each1_1(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
 }
 
 fn each1_0(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
-    let values = xs.into_flat_values();
+    let values = xs.into_elements();
     for val in values {
         env.push(val);
         if env.call_catch_break(f.clone())? {
@@ -96,8 +96,8 @@ fn each1_0(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
 fn each2_1(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     let xs_shape = xs.shape().to_vec();
     let ys_shape = ys.shape().to_vec();
-    let xs_values: Vec<_> = xs.into_flat_values().collect();
-    let ys_values: Vec<_> = ys.into_flat_values().collect();
+    let xs_values: Vec<_> = xs.into_elements().collect();
+    let ys_values: Vec<_> = ys.into_elements().collect();
     let (mut shape, values) = bin_pervade_generic(
         &xs_shape,
         xs_values,
@@ -121,8 +121,8 @@ fn each2_1(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult
 fn each2_0(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     let xs_shape = xs.shape().to_vec();
     let ys_shape = ys.shape().to_vec();
-    let xs_values: Vec<_> = xs.into_flat_values().collect();
-    let ys_values: Vec<_> = ys.into_flat_values().collect();
+    let xs_values: Vec<_> = xs.into_elements().collect();
+    let ys_values: Vec<_> = ys.into_elements().collect();
     bin_pervade_generic(
         &xs_shape,
         xs_values,
@@ -150,8 +150,8 @@ fn eachn_1(f: Arc<Function>, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
             )));
         }
     }
-    let elem_count = args[0].flat_len();
-    let mut arg_elems: Vec<_> = args.into_iter().map(|v| v.into_flat_values()).collect();
+    let elem_count = args[0].element_count();
+    let mut arg_elems: Vec<_> = args.into_iter().map(|v| v.into_elements()).collect();
     let mut new_values = Vec::new();
     for _ in 0..elem_count {
         for arg in arg_elems.iter_mut().rev() {
@@ -176,8 +176,8 @@ fn eachn_0(f: Arc<Function>, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
             )));
         }
     }
-    let elem_count = args[0].flat_len();
-    let mut arg_elems: Vec<_> = args.into_iter().map(|v| v.into_flat_values()).collect();
+    let elem_count = args[0].element_count();
+    let mut arg_elems: Vec<_> = args.into_iter().map(|v| v.into_elements()).collect();
     for _ in 0..elem_count {
         for arg in arg_elems.iter_mut().rev() {
             env.push(arg.next().unwrap());

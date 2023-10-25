@@ -36,7 +36,9 @@ use crate::{
     Uiua, UiuaError, UiuaResult,
 };
 
+/// Categories of primitives
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Sequence)]
+#[allow(missing_docs)]
 pub enum PrimClass {
     Stack,
     Constant,
@@ -55,15 +57,18 @@ pub enum PrimClass {
 }
 
 impl PrimClass {
+    /// Get an iterator over all primitive classes
     pub fn all() -> impl Iterator<Item = Self> {
         all()
     }
+    /// Check if this class is pervasive
     pub fn is_pervasive(&self) -> bool {
         matches!(
             self,
             PrimClass::MonadicPervasive | PrimClass::DyadicPervasive
         )
     }
+    /// Get an iterator over all primitives in this class
     pub fn primitives(self) -> impl Iterator<Item = Primitive> {
         Primitive::all().filter(move |prim| prim.class() == self)
     }
@@ -72,8 +77,11 @@ impl PrimClass {
 /// The names of a primitive
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PrimNames {
+    /// The text name
     pub text: &'static str,
+    /// An ASCII token that formats to the primitive
     pub ascii: Option<AsciiToken>,
+    /// The primitive's glyph
     pub glyph: Option<char>,
 }
 
@@ -159,18 +167,25 @@ constant!(tau, TAU);
 constant!(inf, INFINITY);
 
 impl Primitive {
+    /// Get an iterator over all primitives
     pub fn all() -> impl Iterator<Item = Self> + Clone {
         all()
     }
+    /// Get an iterator over all non-deprecated primitives
     pub fn non_deprecated() -> impl Iterator<Item = Self> + Clone {
         Self::all().filter(|p| !p.is_deprecated())
     }
+    /// Get the primitive's name
+    ///
+    /// This is the name that is used for formatting
     pub fn name(&self) -> &'static str {
         self.names().text
     }
+    /// Get the ASCII token that formats to the primitive
     pub fn ascii(&self) -> Option<AsciiToken> {
         self.names().ascii
     }
+    /// Get the primitive's glyph
     pub fn glyph(&self) -> Option<char> {
         self.names().glyph
     }
@@ -178,15 +193,19 @@ impl Primitive {
     pub fn from_name(name: &str) -> Option<Self> {
         Self::all().find(|p| p.name().eq_ignore_ascii_case(name))
     }
-    pub fn from_simple(s: AsciiToken) -> Option<Self> {
+    /// Find a primitive by its ASCII token
+    pub fn from_ascii(s: AsciiToken) -> Option<Self> {
         Self::all().find(|p| p.ascii() == Some(s))
     }
+    /// Find a primitive by its glyph
     pub fn from_glyph(c: char) -> Option<Self> {
         Self::all().find(|p| p.glyph() == Some(c))
     }
+    /// Check if this primitive is a modifier
     pub fn is_modifier(&self) -> bool {
         self.modifier_args().is_some()
     }
+    /// Get the value joined by an ocean function
     pub fn ocean_constant(&self) -> Option<f64> {
         use Primitive::*;
         match self {
@@ -198,9 +217,11 @@ impl Primitive {
             _ => None,
         }
     }
+    /// Check if this primitive is an ocean function
     pub fn is_ocean(&self) -> bool {
         self.ocean_constant().is_some()
     }
+    /// Get the a constant's value
     pub fn constant(&self) -> Option<f64> {
         use Primitive::*;
         match self {
@@ -215,6 +236,7 @@ impl Primitive {
         // Nothing deprecated at the moment
         None
     }
+    /// Check if this primitive is deprecated
     pub fn is_deprecated(&self) -> bool {
         self.deprecation_suggestion().is_some()
     }
@@ -271,7 +293,8 @@ impl Primitive {
             break None;
         }
     }
-    pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
+    /// Execute the primitive
+    pub fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
             Primitive::Eta => env.push(eta()),
             Primitive::Pi => env.push(pi()),
@@ -311,8 +334,8 @@ impl Primitive {
             Primitive::Drop => env.dyadic_oo_env(Value::drop)?,
             Primitive::Rotate => env.dyadic_ro_env(Value::rotate)?,
             Primitive::Couple => env.dyadic_oo_env(Value::couple)?,
-            Primitive::Rise => env.monadic_ref_env(|v, env| v.rise(env))?,
-            Primitive::Fall => env.monadic_ref_env(|v, env| v.fall(env))?,
+            Primitive::Rise => env.monadic_ref_env(|v, env| v.rise(env).map(Array::from))?,
+            Primitive::Fall => env.monadic_ref_env(|v, env| v.fall(env).map(Array::from))?,
             Primitive::Pick => env.dyadic_oo_env(Value::pick)?,
             Primitive::Select => env.dyadic_rr_env(Value::select)?,
             Primitive::Windows => env.dyadic_rr_env(Value::windows)?,
@@ -378,7 +401,9 @@ impl Primitive {
                 env.push(array);
             }
             Primitive::Break => {
-                let n = env.pop(1)?.as_nat(env, "Break expects a natural number")?;
+                let n = env
+                    .pop(1)?
+                    .as_natural(env, "Break expects a natural number")?;
                 if n > 0 {
                     return Err(UiuaError::Break(n - 1, env.span().clone()));
                 }
@@ -488,7 +513,7 @@ impl Primitive {
             Primitive::Assert => {
                 let msg = env.pop(1)?;
                 let cond = env.pop(2)?;
-                if !cond.as_nat(env, "").is_ok_and(|n| n == 1) {
+                if !cond.as_natural(env, "").is_ok_and(|n| n == 1) {
                     return Err(UiuaError::Throw(msg.into(), env.span().clone()));
                 }
             }
@@ -501,14 +526,17 @@ impl Primitive {
             Primitive::Gen => {
                 let seed = env.pop(1)?;
                 let mut rng =
-                    SmallRng::seed_from_u64(seed.as_num(env, "Gen expects a number")?.to_bits());
+                    SmallRng::seed_from_u64(seed.as_number(env, "Gen expects a number")?.to_bits());
                 let val: f64 = rng.gen();
                 let next_seed = f64::from_bits(rng.gen::<u64>());
                 env.push(val);
                 env.push(next_seed);
             }
             Primitive::Deal => {
-                let seed = env.pop(1)?.as_num(env, "Deal expects a number")?.to_bits();
+                let seed = env
+                    .pop(1)?
+                    .as_number(env, "Deal expects a number")?
+                    .to_bits();
                 let arr = env.pop(2)?;
                 let mut rows: Vec<Value> = arr.into_rows().collect();
                 rows.shuffle(&mut SmallRng::seed_from_u64(seed));
@@ -730,13 +758,17 @@ fn format_trace_item_lines(mut lines: Vec<String>, mut max_line_len: usize) -> V
     lines
 }
 
+/// Documentation for a primitive
 #[derive(Default, Debug)]
 pub struct PrimDoc {
+    /// The short description
     pub short: Vec<PrimDocFragment>,
+    /// The full documentation
     pub lines: Vec<PrimDocLine>,
 }
 
 impl PrimDoc {
+    /// Get the primitive's short description
     pub fn short_text(&self) -> Cow<str> {
         if self.short.len() == 1 {
             match &self.short[0] {
@@ -772,7 +804,7 @@ impl PrimDoc {
         }
         Cow::Owned(s)
     }
-    pub fn from_lines(s: &str) -> Self {
+    pub(crate) fn from_lines(s: &str) -> Self {
         let mut short = Vec::new();
         let mut lines = Vec::new();
         for line in s.lines() {
@@ -834,6 +866,7 @@ impl PrimDoc {
     }
 }
 
+/// An primitive code example
 #[derive(Debug)]
 pub struct PrimExample {
     input: String,
@@ -842,17 +875,21 @@ pub struct PrimExample {
 }
 
 impl PrimExample {
+    /// Get the example's source code
     pub fn input(&self) -> &str {
         &self.input
     }
+    /// Check whether the example should error
     pub fn should_error(&self) -> bool {
         self.should_error
     }
+    /// Check whether the example should run automatically in certain contexts
     pub fn should_run(&self) -> bool {
         !["&sl", "&tcpc", "&ast"]
             .iter()
             .any(|prim| self.input.contains(prim))
     }
+    /// Get the example's output
     pub fn output(&self) -> &Result<Vec<String>, String> {
         self.output.get_or_init(|| {
             let env = &mut Uiua::with_native_sys();
@@ -872,12 +909,17 @@ impl PrimExample {
     }
 }
 
+/// A line in a primitive's documentation
 #[derive(Debug)]
 pub enum PrimDocLine {
+    /// Just text
     Text(Vec<PrimDocFragment>),
+    /// An example
     Example(PrimExample),
 }
 
+/// A pseudo-markdown fragment for primitive documentation
+#[allow(missing_docs)]
 #[derive(Debug, Clone)]
 pub enum PrimDocFragment {
     Text(String),

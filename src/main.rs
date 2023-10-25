@@ -19,8 +19,7 @@ use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
-    lsp::{spans, SpanKind},
-    PrimClass, RunMode, Uiua, UiuaError, UiuaResult,
+    spans, PrimClass, RunMode, SpanKind, Uiua, UiuaError, UiuaResult,
 };
 
 fn main() {
@@ -189,7 +188,7 @@ fn run() -> UiuaResult {
                 }
             }
             #[cfg(feature = "lsp")]
-            App::Lsp => uiua::lsp::run_server(),
+            App::Lsp => uiua::run_language_server(),
             App::Repl {
                 formatter_options,
                 #[cfg(feature = "audio")]

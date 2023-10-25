@@ -5,7 +5,7 @@ use comrak::{
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use uiua::{Primitive, SysOp, CONSTANTS};
+use uiua::{constants, Primitive, SysOp};
 
 use crate::{editor::Editor, Const, Prim};
 
@@ -240,7 +240,7 @@ pub fn Constants() -> impl IntoView {
         <br/>
         <div>
         {
-            CONSTANTS.iter().map(|con| view!(<p><Const con=con/>" - "{ con.doc }</p>)).collect::<Vec<_>>()
+            constants().iter().map(|con| view!(<p><Const con=con/>" - "{ con.doc }</p>)).collect::<Vec<_>>()
         }
         </div>
     }

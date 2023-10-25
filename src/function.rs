@@ -185,7 +185,7 @@ impl fmt::Debug for Instr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Instr::Push(val) => {
-                if val.flat_len() < 50 && val.shape().len() <= 1 {
+                if val.element_count() < 50 && val.shape().len() <= 1 {
                     write!(f, "push {val:?}")
                 } else {
                     write!(f, "push {} array", val.format_shape())

@@ -2,16 +2,24 @@
 
 use super::*;
 
+/// The definition of a shadowable constant
 pub struct ConstantDef {
+    /// The constant's name
     pub name: &'static str,
+    /// The constant's value
     pub value: Value,
+    /// The constant's documentation
     pub doc: &'static str,
+}
+
+/// Get the list of all shadowable constant
+pub fn constants() -> &'static [ConstantDef] {
+    &*CONSTANTS
 }
 
 macro_rules! constant {
     ($(#[doc = $doc:literal] ($name:ident, $value:expr)),* $(,)?) => {
-        /// Named constants that can be redefined
-        pub static CONSTANTS: Lazy<[ConstantDef; 0 $(+ { _ = stringify!($name) ; 1})*]> = Lazy::new(|| {
+        static CONSTANTS: Lazy<[ConstantDef; 0 $(+ { _ = stringify!($name) ; 1})*]> = Lazy::new(|| {
             [$(
                 ConstantDef {
                     name: stringify!($name),
@@ -59,16 +67,19 @@ macro_rules! primitive {
             $variant:ident, $class:ident, $names:expr
         )
     ),* $(,)?) => {
+        /// A built-in function
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
         pub enum Primitive {
             $(
                 #[doc = $doc_rust]
                 $variant,
             )*
+            /// System function
             Sys(SysOp)
         }
 
         impl Primitive {
+            /// Get the primitive's names
             #[allow(path_statements)]
             pub fn names(&self) -> PrimNames {
                 match self {
@@ -76,12 +87,14 @@ macro_rules! primitive {
                     Primitive::Sys(op) => op.name().into()
                 }
             }
+            /// Get the primitive's class
             pub fn class(&self) -> PrimClass {
                 match self {
                     $(Primitive::$variant => PrimClass::$class,)*
                     Primitive::Sys(op) => PrimClass::Sys(op.class()),
                 }
             }
+            /// Get the number of function arguments the primitive takes
             pub fn modifier_args(&self) -> Option<u8> {
                 match self {
                     $($($(Primitive::$variant => Some($mod_args),)?)?)*
@@ -89,6 +102,7 @@ macro_rules! primitive {
                     _ => None
                 }
             }
+            /// Get the number of arguments the primitive takes
             pub fn args(&self) -> Option<u8> {
                 match self {
                     $($($(Primitive::$variant => Some($args),)?)?)*
@@ -96,6 +110,7 @@ macro_rules! primitive {
                     _ => None
                 }
             }
+            /// Get the number of outputs the primitive produces
             pub fn outputs(&self) -> Option<u8> {
                 match self {
                     $($($(Primitive::$variant => $outputs.into(),)?)?)*
@@ -103,6 +118,7 @@ macro_rules! primitive {
                     _ => Some(1)
                 }
             }
+            /// Get the primitive's documentation
             pub fn doc(&self) -> Option<&'static PrimDoc> {
                 match self {
                     $(Primitive::$variant => {
@@ -1662,6 +1678,7 @@ macro_rules! impl_primitive {
         )
     ),* $(,)?) => {
         /// Primitives that exist as an implementation detail
+        #[doc(hidden)]
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
         pub enum ImplPrimitive {
             $($variant,)*

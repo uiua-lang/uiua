@@ -151,9 +151,9 @@ fn generic_table(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> Uiua
     }
     let mut new_shape = Shape::from(xs.shape());
     new_shape.extend_from_slice(ys.shape());
-    let mut items = Value::builder(xs.flat_len() * ys.flat_len());
-    let y_values = ys.into_flat_values().collect::<Vec<_>>();
-    for x in xs.into_flat_values() {
+    let mut items = Value::builder(xs.element_count() * ys.element_count());
+    let y_values = ys.into_elements().collect::<Vec<_>>();
+    for x in xs.into_elements() {
         for y in y_values.iter().cloned() {
             env.push(y);
             env.push(x.clone());

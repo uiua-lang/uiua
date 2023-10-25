@@ -17,11 +17,18 @@ use crate::{
     Uiua, UiuaResult,
 };
 
+/// A generic array value
+///
+/// This enum is used to represent all possible array types.
 #[derive(Clone)]
 pub enum Value {
+    /// Common number array
     Num(Array<f64>),
+    /// Byte array used for some boolean operations and for I/O
     Byte(Array<u8>),
+    /// Common character array
     Char(Array<char>),
+    /// Common box array
     Box(Array<Boxed>),
 }
 
@@ -43,43 +50,42 @@ impl fmt::Debug for Value {
 }
 
 impl Value {
-    pub fn builder(capacity: usize) -> ValueBuilder {
+    pub(crate) fn builder(capacity: usize) -> ValueBuilder {
         ValueBuilder::with_capacity(capacity)
     }
+    /// Get a reference to a possible number array
     pub fn as_num_array(&self) -> Option<&Array<f64>> {
         match self {
             Self::Num(array) => Some(array),
             _ => None,
         }
     }
+    /// Get a reference to a possible byte array
     pub fn as_byte_array(&self) -> Option<&Array<u8>> {
         match self {
             Self::Byte(array) => Some(array),
             _ => None,
         }
     }
+    /// Get a reference to a possible character array
     pub fn as_char_array(&self) -> Option<&Array<char>> {
         match self {
             Self::Char(array) => Some(array),
             _ => None,
         }
     }
+    /// Get a reference to a possible box array
     pub fn as_box_array(&self) -> Option<&Array<Boxed>> {
         match self {
             Self::Box(array) => Some(array),
             _ => None,
         }
     }
-    #[inline]
-    pub fn into_func_array(self) -> Result<Array<Boxed>, Self> {
-        match self {
-            Self::Box(array) => Ok(array),
-            _ => Err(self),
-        }
-    }
+    /// Get a reference to a possible scalar box
     pub fn as_box(&self) -> Option<&Boxed> {
         self.as_box_array().and_then(Array::as_scalar)
     }
+    /// Get an iterator over the rows of the value
     pub fn rows(&self) -> Box<dyn ExactSizeIterator<Item = Self> + '_> {
         match self {
             Self::Num(array) => Box::new(array.rows().map(Value::from)),
@@ -88,6 +94,7 @@ impl Value {
             Self::Box(array) => Box::new(array.rows().map(Value::from)),
         }
     }
+    /// Consume the value and get an iterator over its rows
     pub fn into_rows(self) -> Box<dyn ExactSizeIterator<Item = Self>> {
         match self {
             Self::Num(array) => Box::new(array.into_rows().map(Value::from)),
@@ -96,6 +103,7 @@ impl Value {
             Self::Box(array) => Box::new(array.into_rows().map(Value::from)),
         }
     }
+    /// Consume the value and get a reverse iterator over its rows
     pub fn into_rows_rev(self) -> Box<dyn Iterator<Item = Self>> {
         match self {
             Self::Num(array) => Box::new(array.into_rows_rev().map(Value::from)),
@@ -104,7 +112,8 @@ impl Value {
             Self::Box(array) => Box::new(array.into_rows_rev().map(Value::from)),
         }
     }
-    pub fn into_flat_values(self) -> Box<dyn Iterator<Item = Self>> {
+    /// Cosume the value and get an iterator over its elements
+    pub fn into_elements(self) -> Box<dyn Iterator<Item = Self>> {
         match self {
             Self::Num(array) => Box::new(array.data.into_iter().map(Value::from)),
             Self::Byte(array) => Box::new(array.data.into_iter().map(Value::from)),
@@ -112,6 +121,7 @@ impl Value {
             Self::Box(array) => Box::new(array.data.into_iter().map(Value::from)),
         }
     }
+    /// Get the value's type name
     pub fn type_name(&self) -> &'static str {
         match self {
             Self::Num(_) | Self::Byte(_) => "number",
@@ -119,6 +129,7 @@ impl Value {
             Self::Box(_) => "box",
         }
     }
+    /// Get a plural form of the value's type name
     pub fn type_name_plural(&self) -> &'static str {
         match self {
             Self::Num(_) | Self::Byte(_) => "numbers",
@@ -126,12 +137,11 @@ impl Value {
             Self::Box(_) => "boxes",
         }
     }
+    /// Get the shape of the value
     pub fn shape(&self) -> &[usize] {
         self.generic_ref_shallow(Array::shape, Array::shape, Array::shape, Array::shape)
     }
-    pub fn shape_prefixes_match(&self, other: &Self) -> bool {
-        self.shape().iter().zip(other.shape()).all(|(a, b)| a == b)
-    }
+    /// Get the number of rows
     pub fn row_count(&self) -> usize {
         self.generic_ref_shallow(
             Array::row_count,
@@ -140,6 +150,7 @@ impl Value {
             Array::row_count,
         )
     }
+    /// Get the number of element in each row
     pub fn row_len(&self) -> usize {
         self.generic_ref_shallow(
             Array::row_len,
@@ -148,12 +159,13 @@ impl Value {
             Array::row_len,
         )
     }
-    pub fn flat_len(&self) -> usize {
+    /// Get the number of elements
+    pub fn element_count(&self) -> usize {
         self.generic_ref_shallow(
-            Array::flat_len,
-            Array::flat_len,
-            Array::flat_len,
-            Array::flat_len,
+            Array::element_count,
+            Array::element_count,
+            Array::element_count,
+            Array::element_count,
         )
     }
     pub(crate) fn first_dim_zero(&self) -> Self {
@@ -164,6 +176,7 @@ impl Value {
             Self::Box(array) => array.first_dim_zero().into(),
         }
     }
+    /// Get a formattable representation of the shape
     pub fn format_shape(&self) -> FormatShape {
         self.generic_ref_shallow(
             Array::format_shape,
@@ -172,9 +185,11 @@ impl Value {
             Array::format_shape,
         )
     }
+    /// Get the rank
     pub fn rank(&self) -> usize {
         self.shape().len()
     }
+    /// Get a mutable reference to the shape
     pub fn shape_mut(&mut self) -> &mut Shape {
         match self {
             Self::Num(array) => &mut array.shape,
@@ -191,6 +206,7 @@ impl Value {
             Array::validate_shape,
         )
     }
+    /// Get the row at the given index
     pub fn row(&self, i: usize) -> Self {
         self.generic_ref_shallow(
             |arr| arr.row(i).into(),
@@ -199,21 +215,7 @@ impl Value {
             |arr| arr.row(i).into(),
         )
     }
-    pub fn generic_into_shallow<T>(
-        self,
-        n: impl FnOnce(Array<f64>) -> T,
-        b: impl FnOnce(Array<u8>) -> T,
-        c: impl FnOnce(Array<char>) -> T,
-        f: impl FnOnce(Array<Boxed>) -> T,
-    ) -> T {
-        match self {
-            Self::Num(array) => n(array),
-            Self::Byte(array) => b(array),
-            Self::Char(array) => c(array),
-            Self::Box(array) => f(array),
-        }
-    }
-    pub fn generic_into_deep<T>(
+    pub(crate) fn generic_into_deep<T>(
         self,
         n: impl FnOnce(Array<f64>) -> T,
         b: impl FnOnce(Array<u8>) -> T,
@@ -230,7 +232,7 @@ impl Value {
             },
         }
     }
-    pub fn generic_ref_shallow<'a, T: 'a>(
+    pub(crate) fn generic_ref_shallow<'a, T: 'a>(
         &'a self,
         n: impl FnOnce(&'a Array<f64>) -> T,
         b: impl FnOnce(&'a Array<u8>) -> T,
@@ -244,7 +246,7 @@ impl Value {
             Self::Box(array) => f(array),
         }
     }
-    pub fn generic_ref_deep<'a, T: 'a>(
+    pub(crate) fn generic_ref_deep<'a, T: 'a>(
         &'a self,
         n: impl FnOnce(&'a Array<f64>) -> T,
         b: impl FnOnce(&'a Array<u8>) -> T,
@@ -264,17 +266,7 @@ impl Value {
             }
         }
     }
-    pub fn generic_ref_env_shallow<'a, T: 'a>(
-        &'a self,
-        n: impl FnOnce(&'a Array<f64>, &Uiua) -> UiuaResult<T>,
-        b: impl FnOnce(&'a Array<u8>, &Uiua) -> UiuaResult<T>,
-        c: impl FnOnce(&'a Array<char>, &Uiua) -> UiuaResult<T>,
-        f: impl FnOnce(&'a Array<Boxed>, &Uiua) -> UiuaResult<T>,
-        env: &Uiua,
-    ) -> UiuaResult<T> {
-        self.generic_ref_shallow(|a| n(a, env), |a| b(a, env), |a| c(a, env), |a| f(a, env))
-    }
-    pub fn generic_ref_env_deep<'a, T: 'a>(
+    pub(crate) fn generic_ref_env_deep<'a, T: 'a>(
         &'a self,
         n: impl FnOnce(&'a Array<f64>, &Uiua) -> UiuaResult<T>,
         b: impl FnOnce(&'a Array<u8>, &Uiua) -> UiuaResult<T>,
@@ -284,21 +276,7 @@ impl Value {
     ) -> UiuaResult<T> {
         self.generic_ref_deep(|a| n(a, env), |a| b(a, env), |a| c(a, env), |a| f(a, env))
     }
-    pub fn generic_mut_shallow<T>(
-        &mut self,
-        n: impl FnOnce(&mut Array<f64>) -> T,
-        b: impl FnOnce(&mut Array<u8>) -> T,
-        c: impl FnOnce(&mut Array<char>) -> T,
-        f: impl FnOnce(&mut Array<Boxed>) -> T,
-    ) -> T {
-        match self {
-            Self::Num(array) => n(array),
-            Self::Byte(array) => b(array),
-            Self::Char(array) => c(array),
-            Self::Box(array) => f(array),
-        }
-    }
-    pub fn generic_mut_deep<T>(
+    pub(crate) fn generic_mut_deep<T>(
         &mut self,
         n: impl FnOnce(&mut Array<f64>) -> T,
         b: impl FnOnce(&mut Array<u8>) -> T,
@@ -336,9 +314,15 @@ impl Value {
             Self::Box(array) => array.grid_string(),
         }
     }
-    pub fn as_indices(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<isize>> {
-        self.as_number_list(env, requirement, |f| f % 1.0 == 0.0, |f| f as isize)
+    /// Attempt to convert the array to a list of integers
+    ///
+    /// The `requirement` parameter is used in error messages.
+    pub fn as_integers(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<isize>> {
+        self.as_number_list(env, requirement, |f| f.fract() == 0.0, |f| f as isize)
     }
+    /// Attempt to convert the array to a single boolean
+    ///
+    /// The `requirement` parameter is used in error messages.
     pub fn as_bool(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<bool> {
         Ok(match self {
             Value::Num(nums) => {
@@ -366,7 +350,10 @@ impl Value {
             }
         })
     }
-    pub fn as_nat(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<usize> {
+    /// Attempt to convert the array to a single natural number
+    ///
+    /// The `requirement` parameter is used in error messages.
+    pub fn as_natural(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<usize> {
         Ok(match self {
             Value::Num(nums) => {
                 if nums.rank() > 0 {
@@ -396,7 +383,10 @@ impl Value {
             }
         })
     }
-    pub fn as_int(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<isize> {
+    /// Attempt to convert the array to a single integer
+    ///
+    /// The `requirement` parameter is used in error messages.
+    pub fn as_integer(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<isize> {
         Ok(match self {
             Value::Num(nums) => {
                 if nums.rank() > 0 {
@@ -423,7 +413,10 @@ impl Value {
             }
         })
     }
-    pub fn as_num(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<f64> {
+    /// Attempt to convert the array to a single number
+    ///
+    /// The `requirement` parameter is used in error messages.
+    pub fn as_number(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<f64> {
         Ok(match self {
             Value::Num(nums) => {
                 if nums.rank() > 0 {
@@ -446,6 +439,9 @@ impl Value {
             }
         })
     }
+    /// Attempt to convert the array to a list of natural numbers
+    ///
+    /// The `requirement` parameter is used in error messages.
     pub fn as_naturals(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<usize>> {
         self.as_number_list(
             env,
@@ -454,6 +450,9 @@ impl Value {
             |f| f as usize,
         )
     }
+    /// Attempt to convert the array to a list of bytes
+    ///
+    /// The `requirement` parameter is used in error messages.
     pub fn as_bytes(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<u8>> {
         self.as_number_list(
             env,
@@ -462,9 +461,11 @@ impl Value {
             |f| f as u8,
         )
     }
-    pub fn as_integers(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<isize>> {
-        self.as_number_list(env, requirement, |f| f.fract() == 0.0, |f| f as isize)
-    }
+    /// Attempt to convert the array to a list of integers or infinity
+    ///
+    /// `None` represents infinity.
+    ///
+    /// The `requirement` parameter is used in error messages.
     pub fn as_rank_list(
         &self,
         env: &Uiua,
@@ -562,7 +563,7 @@ impl Value {
                         nums.format_shape()
                     )));
                 }
-                let mut result = EcoVec::with_capacity(nums.flat_len());
+                let mut result = EcoVec::with_capacity(nums.element_count());
                 for &num in nums.data() {
                     if !test_num(num) {
                         return Err(env.error(requirement));
@@ -578,7 +579,7 @@ impl Value {
                         bytes.format_shape()
                     )));
                 }
-                let mut result = EcoVec::with_capacity(bytes.flat_len());
+                let mut result = EcoVec::with_capacity(bytes.element_count());
                 for &byte in bytes.data() {
                     let num = byte as f64;
                     if !test_num(num) {
@@ -596,6 +597,9 @@ impl Value {
             }
         })
     }
+    /// Attempt to convert the array to a string
+    ///
+    /// The `requirement` parameter is used in error messages.
     pub fn as_string(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<String> {
         match self {
             Value::Char(chars) => {
@@ -618,6 +622,9 @@ impl Value {
             self.type_name()
         )))
     }
+    /// Attempt to convert the array to a list of bytes
+    ///
+    /// The `requirement` parameter is used in error messages.
     pub fn into_bytes(self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<u8>> {
         Ok(match self {
             Value::Byte(a) => {
@@ -646,6 +653,7 @@ impl Value {
             }
         })
     }
+    /// Remove all top-level layers of boxing
     pub fn unpack(&mut self) {
         if let Value::Box(arr) = self {
             *self = match take(arr).into_unboxed() {
@@ -654,6 +662,7 @@ impl Value {
             };
         }
     }
+    /// Remove all top-level layers of boxing
     pub fn unpacked(self) -> Self {
         match self {
             Self::Box(arr) => match arr.into_unboxed() {
@@ -663,12 +672,14 @@ impl Value {
             value => value,
         }
     }
+    /// Turn the value into a scalar box if it is not one already
     pub fn box_if_not(&mut self) {
         match &mut *self {
             Value::Box(arr) if arr.rank() == 0 => {}
             val => *self = Value::Box(Array::from(Boxed(take(val)))),
         }
     }
+    /// Turn the value into a scalar box if it is not one already
     pub fn boxed_if_not(self) -> Boxed {
         match self {
             Value::Box(arr) if arr.rank() == 0 => arr.data.into_iter().next().unwrap(),
@@ -683,7 +694,7 @@ impl Value {
                 .iter()
                 .all(|n| n.fract() == 0.0 && *n <= u8::MAX as f64 && *n >= 0.0)
             {
-                let mut bytes = EcoVec::with_capacity(nums.flat_len());
+                let mut bytes = EcoVec::with_capacity(nums.element_count());
                 for n in take(&mut nums.data) {
                     bytes.push(n as u8);
                 }
@@ -691,6 +702,7 @@ impl Value {
             }
         }
     }
+    /// Convert to a box array by boxing every element
     pub fn coerce_to_boxes(self) -> Array<Boxed> {
         match self {
             Value::Num(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
@@ -699,6 +711,7 @@ impl Value {
             Value::Box(arr) => arr,
         }
     }
+    /// Convert to a box array by boxing every element
     pub fn coerce_as_boxes(&self) -> Cow<Array<Boxed>> {
         match self {
             Value::Num(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
@@ -796,7 +809,7 @@ macro_rules! value_un_impl {
         $(($make_new:ident, $f2:ident))?
     ),* $(,)?) => {
         impl Value {
-            pub fn $name(self, env: &Uiua) -> UiuaResult<Self> {
+            pub(crate) fn $name(self, env: &Uiua) -> UiuaResult<Self> {
                 Ok(match self {
                     $($(Self::$in_place(mut array) => {
                         for val in &mut array.data {
@@ -833,7 +846,6 @@ value_un_impl!(sign, [Num, num], [Byte, byte]);
 value_un_impl!(sqrt, [Num, num], (Byte, byte));
 value_un_impl!(sin, [Num, num], (Byte, byte));
 value_un_impl!(cos, [Num, num], (Byte, byte));
-value_un_impl!(tan, [Num, num], (Byte, byte));
 value_un_impl!(asin, [Num, num], (Byte, byte));
 value_un_impl!(acos, [Num, num], (Byte, byte));
 value_un_impl!(floor, [Num, num], [Byte, byte]);
@@ -1103,20 +1115,13 @@ impl fmt::Display for Value {
 }
 
 #[derive(Default)]
-pub struct ValueBuilder {
+pub(crate) struct ValueBuilder {
     value: Option<Value>,
     rows: usize,
     capacity: usize,
 }
 
 impl ValueBuilder {
-    pub fn new() -> Self {
-        Self {
-            value: None,
-            rows: 0,
-            capacity: 0,
-        }
-    }
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             value: None,

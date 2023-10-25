@@ -135,7 +135,7 @@ where
 {
     fill_array_shapes(&mut a, &mut b, env)?;
     let shape = Shape::from(a.shape().max(b.shape()));
-    let mut data = CowSlice::with_capacity(a.flat_len().max(b.flat_len()));
+    let mut data = CowSlice::with_capacity(a.element_count().max(b.element_count()));
     bin_pervade_recursive(&a, &b, &mut data, env, f).map_err(Into::into)?;
     Ok(Array::new(shape, data))
 }
@@ -437,18 +437,6 @@ pub mod cos {
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the cosine of {a}"))
-    }
-}
-pub mod tan {
-    use super::*;
-    pub fn num(a: f64) -> f64 {
-        a.tan()
-    }
-    pub fn byte(a: u8) -> f64 {
-        f64::from(a).tan()
-    }
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the tangent of {a}"))
     }
 }
 pub mod asin {

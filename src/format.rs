@@ -42,10 +42,11 @@ impl ConfigValue for bool {
 
 impl ConfigValue for usize {
     fn from_value(value: &Value, env: &Uiua, requirement: &'static str) -> UiuaResult<usize> {
-        value.as_nat(env, requirement)
+        value.as_natural(env, requirement)
     }
 }
 
+/// Ways of choosing whether multiline arrays and functions are formatted compactly or not
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum CompactMultilineMode {
     /// Multiline formatting will always be compact.
@@ -150,6 +151,7 @@ macro_rules! create_config {
         paste! {
             impl FormatConfig {
                 $(
+                    #[allow(missing_docs)]
                     pub fn [<with_ $name>](self, $name: $ty) -> Self {
                         Self {
                             $name,
@@ -234,16 +236,17 @@ impl Display for FormatConfigSource {
 }
 
 impl FormatConfig {
+    /// Load the formatter configuration from the specified file
     pub fn from_file(path: PathBuf) -> UiuaResult<Self> {
         println!("Loading format config from {}", path.display());
         let partial = PartialFormatConfig::from_file(path);
         partial.map(Into::into)
     }
-
+    /// Find the formatter configuration relative to the current directory
     pub fn find() -> UiuaResult<Self> {
         Self::from_source(FormatConfigSource::SearchFile, None)
     }
-
+    /// Find the formatter configuration with the specified source
     pub fn from_source(source: FormatConfigSource, target_path: Option<&Path>) -> UiuaResult<Self> {
         match source {
             FormatConfigSource::SearchFile => {
@@ -274,12 +277,16 @@ impl FormatConfig {
     }
 }
 
+/// Formatter output
 pub struct FormatOutput {
+    /// The formatted code
     pub output: String,
+    /// A map from the original code spans to the formatted code spans
     pub glyph_map: BTreeMap<CodeSpan, (Loc, Loc)>,
 }
 
 impl FormatOutput {
+    /// Map a cursor position in unfomatted code to glyph start/end positions in formatted code
     pub fn map_char_pos(&self, pos: usize) -> (usize, usize) {
         let mut pairs = self.glyph_map.iter();
         let Some((mut a_span, (mut a_start, mut a_end))) = pairs.next() else {
@@ -312,6 +319,9 @@ impl FormatOutput {
     }
 }
 
+/// Format Uiua code
+///
+/// The path is used for error reporting
 pub fn format<P: AsRef<Path>>(
     input: &str,
     path: P,
@@ -319,11 +329,13 @@ pub fn format<P: AsRef<Path>>(
 ) -> UiuaResult<FormatOutput> {
     format_impl(input, Some(path.as_ref()), config)
 }
+
+/// Format Uiua code without a path
 pub fn format_str(input: &str, config: &FormatConfig) -> UiuaResult<FormatOutput> {
     format_impl(input, None, config)
 }
 
-pub fn format_items(items: &[Item], config: &FormatConfig) -> FormatOutput {
+pub(crate) fn format_items(items: &[Item], config: &FormatConfig) -> FormatOutput {
     let mut formatter = Formatter {
         config,
         output: String::new(),
@@ -357,6 +369,9 @@ fn format_impl(
     }
 }
 
+/// Format Uiua code in a file at the given path
+///
+/// This modifies the file
 pub fn format_file<P: AsRef<Path>>(path: P, config: &FormatConfig) -> UiuaResult<FormatOutput> {
     let path = path.as_ref();
     let input =

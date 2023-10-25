@@ -24,6 +24,7 @@ use crate::{
     Uiua, UiuaError, UiuaResult,
 };
 
+/// Access the built-in "example.ua" file
 pub fn example_ua<T>(f: impl FnOnce(&mut String) -> T) -> T {
     static EXAMPLE_UA: Lazy<Mutex<String>> = Lazy::new(|| {
         Mutex::new(
@@ -39,36 +40,46 @@ Increment ← +1"
 
 macro_rules! sys_op {
     ($(
+        #[doc = $doc_rust:literal]
         $(#[doc = $doc:literal])*
         (
             $args:literal$(($outputs:expr))?$([$mod_args:expr])?,
             $variant:ident, $class:ident, $name:literal, $long_name:literal
         )
     ),* $(,)?) => {
+        /// A system function
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
         pub enum SysOp {
-            $($variant),*
+            $(
+                #[doc = $doc_rust]
+                $variant
+            ),*
         }
 
         impl SysOp {
+            /// All system functions
             pub const ALL: [Self; 0 $(+ {stringify!($variant); 1})*] = [
                 $(Self::$variant,)*
             ];
+            /// Get the system function's short name
             pub fn name(&self) -> &'static str {
                 match self {
                     $(Self::$variant => $name),*
                 }
             }
+            /// Get the system function's long name
             pub fn long_name(&self) -> &'static str {
                 match self {
                     $(Self::$variant => $long_name),*
                 }
             }
+            /// Get the number of arguments the system function expects
             pub fn args(&self) -> u8 {
                 match self {
                     $(SysOp::$variant => $args,)*
                 }
             }
+            /// Get the number of function arguments the system function expects if it is a modifier
             pub fn modifier_args(&self) -> Option<u8> {
                 match self {
                     $($(
@@ -77,13 +88,14 @@ macro_rules! sys_op {
                     _ => None
                 }
             }
-            #[allow(unreachable_patterns)]
+            /// Get the number of outputs the system function returns
             pub fn outputs(&self) -> u8 {
                 match self {
                     $($(SysOp::$variant => $outputs.into(),)?)*
                     _ => 1
                 }
             }
+            /// Get the documentation for the system function
             pub fn doc(&self) -> Option<&'static PrimDoc> {
                 match self {
                     $(SysOp::$variant => {
@@ -96,6 +108,7 @@ macro_rules! sys_op {
                     },)*
                 }
             }
+            /// Get the system function's class
             pub fn class(&self) -> SysOpClass {
                 match self {
                     $(SysOp::$variant => SysOpClass::$class),*
@@ -105,7 +118,9 @@ macro_rules! sys_op {
     };
 }
 
+/// Categories of system functions
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
+#[allow(missing_docs)]
 pub enum SysOpClass {
     Filesystem,
     StdIO,
@@ -120,6 +135,7 @@ pub enum SysOpClass {
 }
 
 impl SysOpClass {
+    /// All system function classes
     pub fn all() -> impl Iterator<Item = Self> {
         all()
     }
@@ -424,6 +440,7 @@ impl Handle {
     const STDIN: Self = Self(0);
     const STDOUT: Self = Self(1);
     const STDERR: Self = Self(2);
+    /// The first handle that can be used by the user
     pub const FIRST_UNRESERVED: Self = Self(3);
 }
 
@@ -439,19 +456,25 @@ impl From<Handle> for Value {
     }
 }
 
+/// The function type passed to `&ast``
 pub type AudioStreamFn = Box<dyn FnMut(&[f64]) -> UiuaResult<Vec<[f64; 2]>> + Send>;
 
+/// Trait for defining a system backend
 #[allow(unused_variables)]
 pub trait SysBackend: Any + Send + Sync + 'static {
+    /// Cast the backend to `&dyn Any`
     fn any(&self) -> &dyn Any;
     /// Save a color-formatted version of an error message for later printing
     fn save_error_color(&self, error: &UiuaError) {}
+    /// Print a string (without a newline) to stdout
     fn print_str_stdout(&self, s: &str) -> Result<(), String> {
         Err("Printing to stdout is not supported in this environment".into())
     }
+    /// Print a string (without a newline) to stderr
     fn print_str_stderr(&self, s: &str) -> Result<(), String> {
         Err("Printing to stderr is not supported in this environment".into())
     }
+    /// Print a string that was create by `trace`
     fn print_str_trace(&self, s: &str) {
         eprint!("{s}");
         _ = stderr().flush();
@@ -462,33 +485,43 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn scan_line_stdin(&self) -> Result<Option<String>, String> {
         Err("Reading from stdin is not supported in this environment".into())
     }
+    /// Set the terminal to raw mode
     fn set_raw_mode(&self, raw_mode: bool) -> Result<(), String> {
         Err("Setting raw mode is not supported in this environment".into())
     }
+    /// Get an environment variable
     fn var(&self, name: &str) -> Option<String> {
         None
     }
+    /// Get the size of the terminal
     fn term_size(&self) -> Result<(usize, usize), String> {
         Err("Getting the terminal size is not supported in this environment".into())
     }
+    /// Check if a file exists
     fn file_exists(&self, path: &str) -> bool {
         false
     }
+    /// List the contents of a directory
     fn list_dir(&self, path: &str) -> Result<Vec<String>, String> {
         Err("This IO operation is not supported in this environment".into())
     }
+    /// Check if a path is a file
     fn is_file(&self, path: &str) -> Result<bool, String> {
         Err("This IO operation is not supported in this environment".into())
     }
+    /// Delete a file or directory
     fn delete(&self, path: &str) -> Result<(), String> {
         Err("This IO operation is not supported in this environment".into())
     }
+    /// Move a file or directory to the trash
     fn trash(&self, path: &str) -> Result<(), String> {
         Err("This IO operation is not supported in this environment".into())
     }
+    /// Read at most `count` bytes from a stream
     fn read(&self, handle: Handle, count: usize) -> Result<Vec<u8>, String> {
         Err("This IO operation is not supported in this environment".into())
     }
+    /// Read from a stream until a delimiter is reached
     fn read_until(&self, handle: Handle, delim: &[u8]) -> Result<Vec<u8>, String> {
         let mut buffer = Vec::new();
         loop {
@@ -503,60 +536,77 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         }
         Ok(buffer)
     }
+    /// Write bytes to a stream
     fn write(&self, handle: Handle, contents: &[u8]) -> Result<(), String> {
         Err("This IO operation is not supported in this environment".into())
     }
+    /// Create a file
     fn create_file(&self, path: &str) -> Result<Handle, String> {
         Err("This IO operation is not supported in this environment".into())
     }
+    /// Open a file
     fn open_file(&self, path: &str) -> Result<Handle, String> {
         Err("This IO operation is not supported in this environment".into())
     }
+    /// Read all bytes from a file
     fn file_read_all(&self, path: &str) -> Result<Vec<u8>, String> {
         let handle = self.open_file(path)?;
         let bytes = self.read(handle, usize::MAX)?;
         self.close(handle)?;
         Ok(bytes)
     }
+    /// Write all bytes to a file
     fn file_write_all(&self, path: &str, contents: &[u8]) -> Result<(), String> {
         let handle = self.create_file(path)?;
         self.write(handle, contents)?;
         self.close(handle)?;
         Ok(())
     }
+    /// Sleep the current thread for `seconds` seconds
     fn sleep(&self, seconds: f64) -> Result<(), String> {
         Err("Sleeping is not supported in this environment".into())
     }
+    /// Show an image
     fn show_image(&self, image: DynamicImage) -> Result<(), String> {
         Err("Showing images not supported in this environment".into())
     }
+    /// Show a GIF
     fn show_gif(&self, gif_bytes: Vec<u8>) -> Result<(), String> {
         Err("Showing gifs not supported in this environment".into())
     }
+    /// Play audio from WAV bytes
     fn play_audio(&self, wave_bytes: Vec<u8>) -> Result<(), String> {
         Err("Playing audio not supported in this environment".into())
     }
+    /// Get the audio sample rate
     fn audio_sample_rate(&self) -> u32 {
         44100
     }
+    /// Stream audio
     fn stream_audio(&self, f: AudioStreamFn) -> Result<(), String> {
         Err("Streaming audio not supported in this environment".into())
     }
+    /// Create a TCP listener and bind it to an address
     fn tcp_listen(&self, addr: &str) -> Result<Handle, String> {
         Err("TCP listeners are not supported in this environment".into())
     }
+    /// Accept a connection with a TCP listener
     fn tcp_accept(&self, handle: Handle) -> Result<Handle, String> {
         Err("TCP listeners are not supported in this environment".into())
     }
+    /// Create a TCP socket and connect it to an address
     fn tcp_connect(&self, addr: &str) -> Result<Handle, String> {
         Err("TCP sockets are not supported in this environment".into())
     }
+    /// Get the connection address of a TCP socket
     fn tcp_addr(&self, handle: Handle) -> Result<String, String> {
         Err("TCP sockets are not supported in this environment".into())
     }
+    /// Set a TCP socket to non-blocking mode
     fn tcp_set_non_blocking(&self, handle: Handle, non_blocking: bool) -> Result<(), String> {
         Err("TCP sockets are not supported in this environment".into())
     }
+    /// Set the read timeout of a TCP socket
     fn tcp_set_read_timeout(
         &self,
         handle: Handle,
@@ -564,6 +614,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     ) -> Result<(), String> {
         Err("TCP sockets are not supported in this environment".into())
     }
+    /// Set the write timeout of a TCP socket
     fn tcp_set_write_timeout(
         &self,
         handle: Handle,
@@ -571,15 +622,19 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     ) -> Result<(), String> {
         Err("TCP sockets are not supported in this environment".into())
     }
+    /// Close a stream
     fn close(&self, handle: Handle) -> Result<(), String> {
         Ok(())
     }
+    /// Invoke a path with the system's default program
     fn invoke(&self, path: &str) -> Result<(), String> {
         Err("Invoking paths is not supported in this environment".into())
     }
+    /// Run a command, inheriting standard IO
     fn run_command_inherit(&self, command: &str, args: &[&str]) -> Result<i32, String> {
         Err("Running commands is not supported in this environment".into())
     }
+    /// Run a command, capturing standard IO
     fn run_command_capture(
         &self,
         command: &str,
@@ -587,9 +642,11 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     ) -> Result<(i32, String, String), String> {
         Err("Running commands is not supported in this environment".into())
     }
+    /// Change the current directory
     fn change_directory(&self, path: &str) -> Result<(), String> {
         Err("Changing directories is not supported in this environment".into())
     }
+    /// Make an HTTPS request on a TCP socket
     fn https_get(&self, request: &str, handle: Handle) -> Result<String, String> {
         Err("Making HTTPS requests is not supported in this environment".into())
     }
@@ -669,10 +726,10 @@ impl SysOp {
                 env.backend.trash(&path).map_err(|e| env.error(e))?;
             }
             SysOp::ReadStr => {
-                let count = env.pop(1)?.as_nat(env, "Count must be an integer")?;
+                let count = env.pop(1)?.as_natural(env, "Count must be an integer")?;
                 let handle = env
                     .pop(2)?
-                    .as_nat(env, "Handle must be an natural number")?
+                    .as_natural(env, "Handle must be an natural number")?
                     .into();
                 let bytes = match handle {
                     Handle::STDOUT => return Err(env.error("Cannot read from stdout")),
@@ -689,10 +746,10 @@ impl SysOp {
                 env.push(s);
             }
             SysOp::ReadBytes => {
-                let count = env.pop(1)?.as_nat(env, "Count must be an integer")?;
+                let count = env.pop(1)?.as_natural(env, "Count must be an integer")?;
                 let handle = env
                     .pop(2)?
-                    .as_nat(env, "Handle must be an natural number")?
+                    .as_natural(env, "Handle must be an natural number")?
                     .into();
                 let bytes = match handle {
                     Handle::STDOUT => return Err(env.error("Cannot read from stdout")),
@@ -711,7 +768,7 @@ impl SysOp {
                 let delim = env.pop(1)?;
                 let handle = env
                     .pop(2)?
-                    .as_nat(env, "Handle must be an natural number")?
+                    .as_natural(env, "Handle must be an natural number")?
                     .into();
                 if delim.rank() > 1 {
                     return Err(env.error("Delimiter must be a rank 0 or 1 string or byte array"));
@@ -780,7 +837,7 @@ impl SysOp {
                 let data = env.pop(1)?;
                 let handle = env
                     .pop(2)?
-                    .as_nat(env, "Handle must be an natural number")?
+                    .as_natural(env, "Handle must be an natural number")?
                     .into();
                 let bytes: Vec<u8> = match data {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
@@ -962,13 +1019,13 @@ impl SysOp {
                 env.push(frame_rate);
             }
             SysOp::GifEncode => {
-                let delay = env.pop(1)?.as_num(env, "Delay must be a number")?;
+                let delay = env.pop(1)?.as_number(env, "Delay must be a number")?;
                 let value = env.pop(2)?;
                 let bytes = value_to_gif_bytes(&value, delay).map_err(|e| env.error(e))?;
                 env.push(Array::<u8>::from(bytes.as_slice()));
             }
             SysOp::GifShow => {
-                let delay = env.pop(1)?.as_num(env, "Delay must be a number")?;
+                let delay = env.pop(1)?.as_number(env, "Delay must be a number")?;
                 let value = env.pop(2)?;
                 let bytes = value_to_gif_bytes(&value, delay).map_err(|e| env.error(e))?;
                 env.backend.show_gif(bytes).map_err(|e| env.error(e))?;
@@ -1057,7 +1114,7 @@ impl SysOp {
             SysOp::Sleep => {
                 let seconds = env
                     .pop(1)?
-                    .as_num(env, "Sleep time must be a number")?
+                    .as_number(env, "Sleep time must be a number")?
                     .max(0.0);
                 env.backend.sleep(seconds).map_err(|e| env.error(e))?;
             }
@@ -1069,7 +1126,7 @@ impl SysOp {
             SysOp::TcpAccept => {
                 let handle = env
                     .pop(1)?
-                    .as_nat(env, "Handle must be an natural number")?
+                    .as_natural(env, "Handle must be an natural number")?
                     .into();
                 let new_handle = env.backend.tcp_accept(handle).map_err(|e| env.error(e))?;
                 env.push(new_handle);
@@ -1082,7 +1139,7 @@ impl SysOp {
             SysOp::TcpAddr => {
                 let handle = env
                     .pop(1)?
-                    .as_nat(env, "Handle must be an natural number")?
+                    .as_natural(env, "Handle must be an natural number")?
                     .into();
                 let addr = env.backend.tcp_addr(handle).map_err(|e| env.error(e))?;
                 env.push(addr);
@@ -1090,14 +1147,17 @@ impl SysOp {
             SysOp::TcpSetNonBlocking => {
                 let handle = env
                     .pop(1)?
-                    .as_nat(env, "Handle must be an natural number")?
+                    .as_natural(env, "Handle must be an natural number")?
                     .into();
                 env.backend
                     .tcp_set_non_blocking(handle, true)
                     .map_err(|e| env.error(e))?;
             }
             SysOp::TcpSetReadTimeout => {
-                let timeout = env.pop(1)?.as_num(env, "Timeout must be a number")?.abs();
+                let timeout = env
+                    .pop(1)?
+                    .as_number(env, "Timeout must be a number")?
+                    .abs();
                 let timeout = if timeout.is_infinite() {
                     None
                 } else {
@@ -1105,14 +1165,17 @@ impl SysOp {
                 };
                 let handle = env
                     .pop(2)?
-                    .as_nat(env, "Handle must be an natural number")?
+                    .as_natural(env, "Handle must be an natural number")?
                     .into();
                 env.backend
                     .tcp_set_read_timeout(handle, timeout)
                     .map_err(|e| env.error(e))?;
             }
             SysOp::TcpSetWriteTimeout => {
-                let timeout = env.pop(1)?.as_num(env, "Timeout must be a number")?.abs();
+                let timeout = env
+                    .pop(1)?
+                    .as_number(env, "Timeout must be a number")?
+                    .abs();
                 let timeout = if timeout.is_infinite() {
                     None
                 } else {
@@ -1120,7 +1183,7 @@ impl SysOp {
                 };
                 let handle = env
                     .pop(2)?
-                    .as_nat(env, "Handle must be an natural number")?
+                    .as_natural(env, "Handle must be an natural number")?
                     .into();
                 env.backend
                     .tcp_set_write_timeout(handle, timeout)
@@ -1132,7 +1195,7 @@ impl SysOp {
                     .as_string(env, "HTTP request must be a string")?;
                 let handle = env
                     .pop(2)?
-                    .as_nat(env, "Handle must be an natural number")?
+                    .as_natural(env, "Handle must be an natural number")?
                     .into();
                 let res = env
                     .backend
@@ -1143,7 +1206,7 @@ impl SysOp {
             SysOp::Close => {
                 let handle = env
                     .pop(1)?
-                    .as_nat(env, "Handle must be an natural number")?
+                    .as_natural(env, "Handle must be an natural number")?
                     .into();
                 env.backend.close(handle).map_err(|e| env.error(e))?;
             }
@@ -1233,10 +1296,12 @@ fn value_to_command(value: &Value, env: &Uiua) -> UiuaResult<(String, Vec<String
     Ok((command, strings))
 }
 
+#[doc(hidden)]
 pub fn value_to_image_bytes(value: &Value, format: ImageOutputFormat) -> Result<Vec<u8>, String> {
     image_to_bytes(&value_to_image(value)?, format)
 }
 
+#[doc(hidden)]
 pub fn image_to_bytes(image: &DynamicImage, format: ImageOutputFormat) -> Result<Vec<u8>, String> {
     let mut bytes = Cursor::new(Vec::new());
     image
@@ -1245,6 +1310,7 @@ pub fn image_to_bytes(image: &DynamicImage, format: ImageOutputFormat) -> Result
     Ok(bytes.into_inner())
 }
 
+#[doc(hidden)]
 pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
     if ![2, 3].contains(&value.rank()) {
         return Err(format!(
@@ -1289,6 +1355,7 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
     })
 }
 
+#[doc(hidden)]
 pub fn value_to_sample(audio: &Value) -> Result<Vec<[f32; 2]>, String> {
     let unrolled: Vec<f32> = match audio {
         Value::Num(nums) => nums.data.iter().map(|&f| f as f32).collect(),
@@ -1328,6 +1395,7 @@ pub fn value_to_sample(audio: &Value) -> Result<Vec<[f32; 2]>, String> {
     Ok(sterio)
 }
 
+#[doc(hidden)]
 pub fn value_to_audio_channels(audio: &Value) -> Result<Vec<Vec<f64>>, String> {
     let interleaved: Vec<f64> = match audio {
         Value::Num(nums) => nums.data.iter().copied().collect(),
@@ -1362,6 +1430,7 @@ pub fn value_to_audio_channels(audio: &Value) -> Result<Vec<Vec<f64>>, String> {
     Ok(channels)
 }
 
+#[doc(hidden)]
 pub fn value_to_wav_bytes(audio: &Value, sample_rate: u32) -> Result<Vec<u8>, String> {
     #[cfg(not(feature = "audio"))]
     {
@@ -1484,6 +1553,7 @@ fn array_from_wav_bytes_impl<T: hound::Sample>(
     }
 }
 
+#[doc(hidden)]
 pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, String> {
     if value.row_count() == 0 {
         return Err("Cannot convert empty array into GIF".into());
@@ -1549,6 +1619,7 @@ pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, Str
     Ok(bytes.into_inner())
 }
 
+#[doc(hidden)]
 pub fn gif_bytes_to_value(bytes: &[u8]) -> Result<(f64, Value), gif::DecodingError> {
     let mut decoder = gif::DecodeOptions::new();
     decoder.set_color_output(gif::ColorOutput::RGBA);

@@ -17,6 +17,7 @@ use bufreaderwriter::seq::BufReaderWriterSeq;
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
 
+/// The defualt native system backend
 #[derive(Default)]
 pub struct NativeSys;
 
@@ -87,11 +88,13 @@ impl GlobalNativeSys {
 static NATIVE_SYS: Lazy<GlobalNativeSys> = Lazy::new(Default::default);
 
 #[cfg(feature = "audio")]
+#[doc(hidden)]
 pub fn set_audio_stream_time(time: f64) {
     *NATIVE_SYS.audio_stream_time.lock() = Some(time);
 }
 
 #[cfg(feature = "audio")]
+#[doc(hidden)]
 pub fn set_audio_stream_time_port(port: u16) -> std::io::Result<()> {
     let socket = std::net::UdpSocket::bind(("127.0.0.1", 0))?;
     socket.connect(("127.0.0.1", port))?;

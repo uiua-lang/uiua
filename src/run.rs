@@ -14,15 +14,9 @@ use instant::Duration;
 use parking_lot::Mutex;
 
 use crate::{
-    array::Array,
-    boxed::Boxed,
-    function::*,
-    lex::Span,
-    parse::parse,
-    primitive::{Primitive, CONSTANTS},
-    value::Value,
-    Diagnostic, DiagnosticKind, Ident, NativeSys, SysBackend, SysOp, TraceFrame, UiuaError,
-    UiuaResult,
+    array::Array, boxed::Boxed, constants, function::*, lex::Span, parse::parse,
+    primitive::Primitive, value::Value, Diagnostic, DiagnosticKind, Ident, NativeSys, SysBackend,
+    SysOp, TraceFrame, UiuaError, UiuaResult,
 };
 
 /// The Uiua runtime
@@ -83,7 +77,7 @@ pub(crate) enum Global {
 }
 
 #[derive(Clone)]
-pub struct Scope {
+pub(crate) struct Scope {
     /// The stack height at the start of each array currently being built
     pub array: Vec<usize>,
     /// The call stack
@@ -205,7 +199,7 @@ impl Uiua {
     pub fn with_native_sys() -> Self {
         let mut scope = Scope::default();
         let mut globals = Vec::new();
-        for def in &*CONSTANTS {
+        for def in constants() {
             scope.names.insert(def.name.into(), globals.len());
             globals.push(Global::Val(def.value.clone()));
         }
@@ -242,16 +236,20 @@ impl Uiua {
             ..Default::default()
         }
     }
+    /// Get a reference to the system backend
     pub fn backend(&self) -> &dyn SysBackend {
         &*self.backend
     }
+    /// Attempt to downcast the system backend to a concrete type
     pub fn downcast_backend<T: SysBackend>(&self) -> Option<&T> {
         self.backend.any().downcast_ref()
     }
+    /// Set whether to consume print diagnostics as they are encountered
     pub fn print_diagnostics(mut self, print_diagnostics: bool) -> Self {
         self.print_diagnostics = print_diagnostics;
         self
     }
+    /// Set whether to emit the time taken to execute each instruction
     pub fn time_instrs(mut self, time_instrs: bool) -> Self {
         self.time_instrs = time_instrs;
         self
@@ -320,7 +318,7 @@ impl Uiua {
         let scope = replace(&mut self.scope, self.higher_scopes.pop().unwrap());
         let mut names = HashMap::new();
         for (name, idx) in scope.names {
-            if idx >= CONSTANTS.len() {
+            if idx >= constants().len() {
                 names.insert(name, idx);
             }
         }
@@ -501,7 +499,7 @@ code:
                     let res = (|| {
                         let i = self
                             .pop("switch index")?
-                            .as_nat(self, "Switch index mut be a natural number")?;
+                            .as_natural(self, "Switch index mut be a natural number")?;
                         if i >= count {
                             return Err(self.error(format!(
                                 "Switch index {i} is out of bounds for switch of size {count}"
@@ -694,6 +692,7 @@ code:
         let call_span = self.span_index();
         self.call_with_span(f, call_span)
     }
+    /// Call a function and catch a `break`
     pub fn call_catch_break(&mut self, f: impl Into<Arc<Function>>) -> UiuaResult<bool> {
         match self.call(f) {
             Ok(_) => Ok(false),
@@ -704,6 +703,7 @@ code:
             },
         }
     }
+    /// Call a function and throw an error if it `break`s
     pub fn call_error_on_break(
         &mut self,
         f: impl Into<Arc<Function>>,
@@ -711,6 +711,7 @@ code:
     ) -> UiuaResult {
         self.call_error_on_break_with(f, || message.into())
     }
+    /// Call a function and throw an error if it `break`s
     pub fn call_error_on_break_with(
         &mut self,
         f: impl Into<Arc<Function>>,
@@ -738,9 +739,11 @@ code:
     pub fn span(&self) -> Span {
         self.get_span(self.span_index())
     }
+    /// Get a span by its index
     pub fn get_span(&self, span: usize) -> Span {
         self.spans.lock()[span].clone()
     }
+    /// Register a span
     pub fn add_span(&mut self, span: impl Into<Span>) -> usize {
         let mut spans = self.spans.lock();
         let idx = spans.len();
@@ -751,9 +754,11 @@ code:
     pub fn error(&self, message: impl ToString) -> UiuaError {
         UiuaError::Run(self.span().clone().sp(message.to_string()))
     }
+    /// Construct and add a diagnostic with the current span
     pub fn diagnostic(&mut self, message: impl Into<String>, kind: DiagnosticKind) {
         self.diagnostic_with_span(message, kind, self.span());
     }
+    /// Construct and add a diagnostic with a custom span
     pub fn diagnostic_with_span(
         &mut self,
         message: impl Into<String>,
@@ -800,6 +805,7 @@ code:
     pub fn take_stack(&mut self) -> Vec<Value> {
         take(&mut self.stack)
     }
+    /// Pop a function from the function stack
     pub fn pop_function(&mut self) -> UiuaResult<Arc<Function>> {
         self.function_stack.pop().ok_or_else(|| {
             self.error(
@@ -813,7 +819,7 @@ code:
         let mut bindings = HashMap::new();
         let globals = self.globals.lock();
         for (name, idx) in &self.scope.names {
-            if !CONSTANTS.iter().any(|c| c.name == name.as_ref()) {
+            if !constants().iter().any(|c| c.name == name.as_ref()) {
                 if let Global::Val(val) = &globals[*idx] {
                     bindings.insert(name.clone(), val.clone());
                 }
@@ -821,15 +827,21 @@ code:
         }
         bindings
     }
+    /// Get all diagnostics
     pub fn diagnostics(&self) -> &BTreeSet<Diagnostic> {
         &self.diagnostics
     }
+    /// Get all diagnostics mutably
     pub fn diagnostics_mut(&mut self) -> &mut BTreeSet<Diagnostic> {
         &mut self.diagnostics
     }
+    /// Take all diagnostics
+    ///
+    /// These are only available if `print_diagnostics` is `false`
     pub fn take_diagnostics(&mut self) -> BTreeSet<Diagnostic> {
         take(&mut self.diagnostics)
     }
+    /// Clone `n` values from the top of the stack
     pub fn clone_stack_top(&self, n: usize) -> Vec<Value> {
         self.stack.iter().rev().take(n).rev().cloned().collect()
     }
@@ -1141,7 +1153,7 @@ code:
         Ok(())
     }
     pub(crate) fn try_recv(&mut self, id: Value) -> UiuaResult {
-        let id = id.as_nat(self, "Thread id must be a natural number")?;
+        let id = id.as_natural(self, "Thread id must be a natural number")?;
         let value = match self.channel(id)?.recv.try_recv() {
             Ok(value) => value,
             Err(TryRecvError::Empty) => return Err(self.error("No value available")),
@@ -1171,6 +1183,7 @@ code:
 ///
 /// If the stack is empty, the error message will be "Stack was empty when evaluating {arg_name}"
 pub trait StackArg {
+    /// Get the name of the argument
     fn arg_name(self) -> String;
 }
 

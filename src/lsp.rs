@@ -7,6 +7,8 @@ use crate::{
     Primitive,
 };
 
+/// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
+#[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SpanKind {
     Primitive(Primitive),
@@ -21,6 +23,7 @@ pub enum SpanKind {
     Delimiter,
 }
 
+/// Get spans and their kinds from Uiua code
 pub fn spans(input: &str) -> Vec<Sp<SpanKind>> {
     let (items, _, _) = parse(input, None);
     items_spans(&items)
@@ -140,7 +143,7 @@ fn words_spans(words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
 }
 
 #[cfg(feature = "lsp")]
-pub use server::run_server;
+pub use server::run_language_server;
 
 #[cfg(feature = "lsp")]
 mod server {
@@ -241,7 +244,8 @@ mod server {
         scope_bindings.into_iter().flatten().collect()
     }
 
-    pub fn run_server() {
+    #[doc(hidden)]
+    pub fn run_language_server() {
         tokio::runtime::Builder::new_current_thread()
             .build()
             .unwrap()

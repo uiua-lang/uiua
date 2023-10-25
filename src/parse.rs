@@ -89,6 +89,7 @@ impl fmt::Display for ParseError {
 
 impl Error for ParseError {}
 
+/// Parse Uiua code into an AST
 pub fn parse(
     input: &str,
     path: Option<&Path>,

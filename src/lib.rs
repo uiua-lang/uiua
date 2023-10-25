@@ -6,6 +6,7 @@ The current API should be considered deeply unstable.
 */
 
 #![allow(clippy::single_match, clippy::needless_range_loop)]
+#![warn(missing_docs)]
 
 mod algorithm;
 mod array;
@@ -19,7 +20,7 @@ pub mod format;
 mod function;
 mod grid_fmt;
 mod lex;
-pub mod lsp;
+mod lsp;
 mod parse;
 mod primitive;
 #[doc(hidden)]
@@ -35,6 +36,7 @@ pub use {
     array::Array,
     error::*,
     lex::is_ident_char,
+    lsp::*,
     lsp::{spans, SpanKind},
     parse::parse,
     primitive::*,
@@ -44,6 +46,7 @@ pub use {
     value::Value,
 };
 
+/// A Uiua identifier
 pub type Ident = Arc<str>;
 
 #[test]

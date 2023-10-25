@@ -94,6 +94,7 @@ fn shape_index_to_data_index_test() {
 }
 
 impl<T: ArrayValue> Array<T> {
+    /// Fill the array with the given value so it matches the given shape
     pub fn fill_to_shape(&mut self, shape: &[usize], fill_value: T) {
         while self.rank() < shape.len() {
             self.shape.insert(0, 1);
@@ -117,9 +118,14 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
+    /// `join` the array with another
     pub fn join(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
         self.join_impl(other, env)
     }
+    /// `join` the array with another
+    ///
+    /// # Panics
+    /// Panics if the arrays have incompatible shapes
     pub fn join_infallible(self, other: Self) -> Self {
         self.join_impl(other, &()).unwrap()
     }
@@ -234,9 +240,14 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
+    /// `join` the array with another
     pub fn join(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
         self.join_impl(other, env)
     }
+    /// `join` the array with another
+    ///
+    /// # Panics
+    /// Panics if the arrays have incompatible shapes
     pub fn join_infallible(self, other: Self) -> Self {
         self.join_impl(other, &()).unwrap()
     }
@@ -341,10 +352,15 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
+    /// `couple` the value with another
     pub fn couple(mut self, other: Self, env: &Uiua) -> UiuaResult<Self> {
         self.couple_impl(other, env)?;
         Ok(self)
     }
+    /// `couple` the value with another
+    ///
+    /// # Panics
+    /// Panics if the values have incompatible shapes
     pub fn couple_infallible(mut self, other: Self) -> Self {
         self.couple_impl(other, &()).unwrap();
         self
@@ -407,6 +423,7 @@ impl Value {
         }
         Ok(())
     }
+    /// Uncouple the value into two values
     pub fn uncouple(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
         match self {
             Value::Num(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
@@ -418,10 +435,15 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
+    /// `couple` the array with another
     pub fn couple(mut self, other: Self, env: &Uiua) -> UiuaResult<Self> {
         self.couple_impl(other, env)?;
         Ok(self)
     }
+    /// `couple` the array with another
+    ///
+    /// # Panics
+    /// Panics if the arrays have incompatible shapes
     pub fn couple_infallible(mut self, other: Self) -> Self {
         self.couple_impl(other, &()).unwrap();
         self
@@ -446,6 +468,7 @@ impl<T: ArrayValue> Array<T> {
         self.validate_shape();
         Ok(())
     }
+    /// Uncouple the array into two arrays
     pub fn uncouple(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
         if self.row_count() != 2 {
             return Err(env.error(format!(
@@ -462,6 +485,7 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
+    /// Create a value from row values
     pub fn from_row_values<V>(values: V, env: &Uiua) -> UiuaResult<Self>
     where
         V: IntoIterator,
@@ -470,6 +494,10 @@ impl Value {
     {
         Self::from_row_values_impl(values.into_iter().map(Into::into), env)
     }
+    /// Create a value from row values
+    ///
+    /// # Panics
+    /// Panics if the row values have incompatible shapes
     pub fn from_row_values_infallible<V>(values: V) -> Self
     where
         V: IntoIterator,
@@ -509,10 +537,15 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     #[track_caller]
+    /// Create an array from row arrays
     pub fn from_row_arrays(values: impl IntoIterator<Item = Self>, env: &Uiua) -> UiuaResult<Self> {
         Self::from_row_arrays_impl(values, env)
     }
     #[track_caller]
+    /// Create an array from row arrays
+    ///
+    /// # Panics
+    /// Panics if the row arrays have incompatible shapes
     pub fn from_row_arrays_infallible(values: impl IntoIterator<Item = Self>) -> Self {
         Self::from_row_arrays_impl(values, &()).unwrap()
     }
@@ -543,8 +576,9 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
+    /// `reshape` this value with another
     pub fn reshape(&mut self, shape: &Self, env: &Uiua) -> UiuaResult {
-        if let Ok(n) = shape.as_nat(env, "") {
+        if let Ok(n) = shape.as_natural(env, "") {
             match self {
                 Value::Num(a) => a.reshape_scalar(n),
                 Value::Byte(a) => a.reshape_scalar(n),
@@ -569,6 +603,7 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
+    /// `reshape` this array by replicating it as the rows of a new array
     pub fn reshape_scalar(&mut self, count: usize) {
         self.data.modify(|data| {
             if count == 0 {
@@ -583,6 +618,7 @@ impl<T: ArrayValue> Array<T> {
         });
         self.shape.insert(0, count);
     }
+    /// `reshape` the array
     pub fn reshape(&mut self, dims: &[isize], env: &Uiua) -> UiuaResult {
         let mut neg_count = 0;
         for dim in dims {
@@ -685,6 +721,7 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
+    /// Use this value as counts to `keep` another
     pub fn keep(&self, kept: Self, env: &Uiua) -> UiuaResult<Self> {
         let counts = self.as_naturals(
             env,
@@ -707,7 +744,7 @@ impl Value {
             }
         })
     }
-    pub fn unkeep(self, kept: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn unkeep(self, kept: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         let counts = self.as_naturals(
             env,
             "Keep amount must be a natural number \
@@ -734,6 +771,7 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
+    /// `keep` this array by replicating it as the rows of a new array
     pub fn scalar_keep(mut self, count: usize) -> Self {
         // Scalar kept
         if self.rank() == 0 {
@@ -770,6 +808,7 @@ impl<T: ArrayValue> Array<T> {
         self.validate_shape();
         self
     }
+    /// `keep` this array with some counts
     pub fn list_keep(mut self, counts: &[usize], env: &Uiua) -> UiuaResult<Self> {
         let mut amount = Cow::Borrowed(counts);
         match amount.len().cmp(&self.row_count()) {
@@ -867,7 +906,7 @@ impl<T: ArrayValue> Array<T> {
         self.validate_shape();
         Ok(self)
     }
-    pub fn unkeep(self, counts: &[usize], into: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn unkeep(self, counts: &[usize], into: Self, env: &Uiua) -> UiuaResult<Self> {
         if counts.iter().any(|&n| n > 1) {
             return Err(env.error("Cannot invert keep with non-boolean counts"));
         }
@@ -902,7 +941,7 @@ impl Value {
     pub(crate) fn as_shaped_indices(&self, env: &Uiua) -> UiuaResult<(&[usize], Vec<isize>)> {
         Ok(match self {
             Value::Num(arr) => {
-                let mut index_data = Vec::with_capacity(arr.flat_len());
+                let mut index_data = Vec::with_capacity(arr.element_count());
                 for &n in &arr.data {
                     if n.fract() != 0.0 {
                         return Err(env.error(format!(
@@ -914,7 +953,7 @@ impl Value {
                 (&arr.shape, index_data)
             }
             Value::Byte(arr) => {
-                let mut index_data = Vec::with_capacity(arr.flat_len());
+                let mut index_data = Vec::with_capacity(arr.element_count());
                 for &n in &arr.data {
                     index_data.push(n as isize);
                 }
@@ -928,6 +967,7 @@ impl Value {
             }
         })
     }
+    /// Use this array as an index to pick from another
     pub fn pick(self, from: Self, env: &Uiua) -> UiuaResult<Self> {
         let (index_shape, index_data) = self.as_shaped_indices(env)?;
         Ok(match from {
@@ -941,7 +981,7 @@ impl Value {
             Value::Box(a) => Value::Box(a.pick(index_shape, &index_data, env)?),
         })
     }
-    pub fn unpick(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn unpick(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         let (index_shape, index_data) = index.as_shaped_indices(env)?;
         if index_shape.len() > 1 {
             let last_axis_len = *index_shape.last().unwrap();
@@ -1121,11 +1161,12 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
+    /// Use this value to `take` from another
     pub fn take(self, from: Self, env: &Uiua) -> UiuaResult<Self> {
         if from.rank() == 0 {
             return Err(env.error("Cannot take from scalar"));
         }
-        let index = self.as_indices(env, "Index must be a list of integers")?;
+        let index = self.as_integers(env, "Index must be a list of integers")?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.take(&index, env)?),
             Value::Byte(a) => op_bytes_retry_fill(
@@ -1137,11 +1178,12 @@ impl Value {
             Value::Box(a) => Value::Box(a.take(&index, env)?),
         })
     }
+    /// Use this value to `drop` from another
     pub fn drop(self, from: Self, env: &Uiua) -> UiuaResult<Self> {
         if from.rank() == 0 {
             return Err(env.error("Cannot drop from scalar"));
         }
-        let index = self.as_indices(env, "Index must be a list of integers")?;
+        let index = self.as_integers(env, "Index must be a list of integers")?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.drop(&index, env)?),
             Value::Byte(a) => Value::Byte(a.drop(&index, env)?),
@@ -1150,7 +1192,7 @@ impl Value {
         })
     }
     pub(crate) fn untake(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        let index = index.as_indices(env, "Index must be a list of integers")?;
+        let index = index.as_integers(env, "Index must be a list of integers")?;
         Ok(match (self, into) {
             (Value::Num(a), Value::Num(b)) => Value::Num(a.untake(&index, b, env)?),
             (Value::Byte(a), Value::Byte(b)) => Value::Byte(a.untake(&index, b, env)?),
@@ -1168,7 +1210,7 @@ impl Value {
         })
     }
     pub(crate) fn undrop(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        let index = index.as_indices(env, "Index must be a list of integers")?;
+        let index = index.as_integers(env, "Index must be a list of integers")?;
         Ok(match (self, into) {
             (Value::Num(a), Value::Num(b)) => Value::Num(a.undrop(&index, b, env)?),
             (Value::Byte(a), Value::Byte(b)) => Value::Byte(a.undrop(&index, b, env)?),
@@ -1188,6 +1230,7 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
+    /// `take` from this array
     pub fn take(mut self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
         Ok(match index {
             [] => self,
@@ -1334,6 +1377,7 @@ impl<T: ArrayValue> Array<T> {
             }
         })
     }
+    /// `drop` from this array
     pub fn drop(mut self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
         Ok(match index {
             [] => self,
@@ -1466,8 +1510,9 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
+    /// Use this value to `rotate` another
     pub fn rotate(&self, mut rotated: Self, env: &Uiua) -> UiuaResult<Self> {
-        let by = self.as_indices(env, "Rotation amount must be a list of integers")?;
+        let by = self.as_integers(env, "Rotation amount must be a list of integers")?;
         match &mut rotated {
             Value::Num(a) => a.rotate(&by, env)?,
             Value::Byte(a) => a.rotate(&by, env)?,
@@ -1479,6 +1524,7 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
+    /// `rotate` this array by the given amount
     pub fn rotate(&mut self, by: &[isize], env: &Uiua) -> UiuaResult {
         if by.len() > self.rank() {
             return Err(env.error(format!(
@@ -1518,6 +1564,7 @@ fn rotate<T>(by: &[isize], shape: &[usize], data: &mut [T]) {
 }
 
 impl Value {
+    /// Use this value to `select` from another
     pub fn select(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
         let (indices_shape, indices_data) = self.as_shaped_indices(env)?;
         Ok(match from {
@@ -1531,7 +1578,7 @@ impl Value {
             Value::Box(a) => a.select_impl(indices_shape, &indices_data, env)?.into(),
         })
     }
-    pub fn unselect(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn unselect(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         let (ind_shape, ind) = index.as_shaped_indices(env)?;
         let mut sorted_indices = ind.clone();
         sorted_indices.sort();
@@ -1699,6 +1746,7 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
+    /// Use this array to `windows` another
     pub fn windows(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
         let size_spec = self.as_naturals(env, "Window size must be a list of natural numbers")?;
         Ok(match from {
@@ -1711,6 +1759,7 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
+    /// Get the `windows` of this array
     pub fn windows(&self, size_spec: &[usize], env: &Uiua) -> UiuaResult<Self> {
         if size_spec.len() > self.shape.len() {
             return Err(env.error(format!(
@@ -1785,6 +1834,7 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
+    /// Try to `find` this value in another
     pub fn find(&self, searched: &Self, env: &Uiua) -> UiuaResult<Self> {
         Ok(match (self, searched) {
             (Value::Num(a), Value::Num(b)) => a.find(b, env)?.into(),
@@ -1805,6 +1855,7 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
+    /// Try to `find` this array in another
     pub fn find(&self, searched: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
         if self.rank() > searched.rank() || self.row_count() > searched.row_count() {
             return Err(env.error(format!(
@@ -1892,6 +1943,7 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
+    /// Check which rows of this value are `member`s of another
     pub fn member(&self, of: &Self, env: &Uiua) -> UiuaResult<Self> {
         Ok(match (self, of) {
             (Value::Num(a), Value::Num(b)) => a.member(b, env)?.into(),
@@ -1912,6 +1964,7 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
+    /// Check which rows of this array are `member`s of another
     pub fn member(&self, of: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
         let elems = self;
         Ok(match elems.rank().cmp(&of.rank()) {
@@ -1957,6 +2010,7 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
+    /// Get the `indexof` the rows of this value in another
     pub fn index_of(&self, searched_in: &Value, env: &Uiua) -> UiuaResult<Value> {
         Ok(match (self, searched_in) {
             (Value::Num(a), Value::Num(b)) => a.index_of(b, env)?.into(),
@@ -1977,7 +2031,8 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    fn index_of(&self, searched_in: &Array<T>, env: &Uiua) -> UiuaResult<Array<f64>> {
+    /// Get the `indexof` the rows of this array in another
+    pub fn index_of(&self, searched_in: &Array<T>, env: &Uiua) -> UiuaResult<Array<f64>> {
         let searched_for = self;
         Ok(match searched_for.rank().cmp(&searched_in.rank()) {
             Ordering::Equal => {

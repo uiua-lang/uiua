@@ -556,6 +556,10 @@ fn uiua_files() -> Vec<PathBuf> {
 
 const WATCHING: &str = "watching for changes...";
 fn print_watching() {
+    #[cfg(feature = "raw_mode")]
+    {
+        _ = crossterm::terminal::disable_raw_mode();
+    }
     eprint!("{}", WATCHING);
     stderr().flush().unwrap();
 }

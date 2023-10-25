@@ -143,6 +143,11 @@ sys_op! {
     /// The result is a 2-element array of the height and width of the terminal.
     /// Height comes first so that the array can be used as a shape in [reshape].
     (0, TermSize, Env, "&ts", "terminal size"),
+    /// Set the terminal to raw mode
+    ///
+    /// Expects a boolean.
+    /// If enabled, the terminal will not echo characters or wait for a newline.
+    (1(0), RawMode, Env, "&raw", "set raw mode"),
     /// Get the command line arguments
     ///
     /// The first element will always be the name of your script
@@ -446,6 +451,9 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn scan_line_stdin(&self) -> Result<Option<String>, String> {
         Err("Reading from stdin is not supported in this environment".into())
     }
+    fn set_raw_mode(&self, raw_mode: bool) -> Result<(), String> {
+        Err("Setting raw mode is not supported in this environment".into())
+    }
     fn var(&self, name: &str) -> Option<String> {
         None
     }
@@ -558,12 +566,6 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn invoke(&self, path: &str) -> Result<(), String> {
         Err("Invoking paths is not supported in this environment".into())
     }
-    fn send(&self, handle: Handle, value: Value) -> Result<(), String> {
-        Err("Sending values to threads is not supported in this environment".into())
-    }
-    fn recv(&self, handle: Handle) -> Result<Value, String> {
-        Err("Receiving values from threads is not supported in this environment".into())
-    }
     fn run_command_inherit(&self, command: &str, args: &[&str]) -> Result<i32, String> {
         Err("Running commands is not supported in this environment".into())
     }
@@ -617,6 +619,12 @@ impl SysOp {
             SysOp::TermSize => {
                 let (width, height) = env.backend.term_size().map_err(|e| env.error(e))?;
                 env.push(cowslice![height as f64, width as f64])
+            }
+            SysOp::RawMode => {
+                let raw_mode = env.pop(1)?.as_bool(env, "Raw mode must be a boolean")?;
+                env.backend
+                    .set_raw_mode(raw_mode)
+                    .map_err(|e| env.error(e))?;
             }
             SysOp::Args => {
                 let mut args = Vec::new();

@@ -2,10 +2,11 @@ use std::{
     any::Any,
     env,
     fs::{self, File},
-    io::{stderr, stdin, stdout, BufRead, Read, Write},
+    io::{stderr, stdin, stdout, Read, Write},
     net::*,
     path::Path,
     process::Command,
+    slice,
     sync::atomic::{self, AtomicU64},
     thread::sleep,
     time::Duration,
@@ -113,12 +114,18 @@ impl SysBackend for NativeSys {
         stderr.flush().map_err(|e| e.to_string())
     }
     fn scan_line_stdin(&self) -> Result<Option<String>, String> {
-        stdin()
-            .lock()
-            .lines()
-            .next()
-            .transpose()
-            .map_err(|e| e.to_string())
+        let mut buffer = Vec::new();
+        let mut b = 0u8;
+        loop {
+            stdin()
+                .read_exact(slice::from_mut(&mut b))
+                .map_err(|e| e.to_string())?;
+            match b {
+                b'\r' | 3 => break,
+                b => buffer.push(b),
+            }
+        }
+        Ok(Some(String::from_utf8(buffer).map_err(|e| e.to_string())?))
     }
     fn save_error_color(&self, error: &UiuaError) {
         NATIVE_SYS
@@ -128,6 +135,15 @@ impl SysBackend for NativeSys {
     fn term_size(&self) -> Result<(usize, usize), String> {
         let (w, h) = term_size::dimensions().ok_or("Failed to get terminal size")?;
         Ok((w, h.saturating_sub(1)))
+    }
+    #[cfg(feature = "raw_mode")]
+    fn set_raw_mode(&self, raw_mode: bool) -> Result<(), String> {
+        if raw_mode {
+            crossterm::terminal::enable_raw_mode()
+        } else {
+            crossterm::terminal::disable_raw_mode()
+        }
+        .map_err(|e| e.to_string())
     }
     fn var(&self, name: &str) -> Option<String> {
         env::var(name).ok()

@@ -2,8 +2,9 @@
 
 Uiua is not yet stable.
 
-## 0.0.23 - 2023-10-??
-If you are reading this on the website, then these changes are live here.
+<!-- If you are reading this on the website, then these changes are live here. -->
+
+## 0.0.23 - 2023-10-25
 ### Language
 - Implement [`under` `⍜`](https://uiua.org/docs/under) multi-index [`pick` `⊡`](https://uiua.org/docs/pick)
 - Implement [`under` `⍜`](https://uiua.org/docs/under) [`partition` `⊜`](https://uiua.org/docs/partition)
@@ -14,18 +15,19 @@ If you are reading this on the website, then these changes are live here.
 - Add the [`&raw`](https://uiua.org/docs/&raw) system function for setting the terminal to raw mode
 - Add the [`&gifd`](https://uiua.org/docs/&gifd) system function for decoding GIFs
 ### Interpreter
-- The interpreter now formats its own error and non-error diagnostic messages instead of delegating to a library
+- The interpreter now formats its own diagnostic messages instead of delegating to a library
 - Fix a bunch of bugs and crashes
-- Add REPL
-- Optimize ([`⊢`](https://uiua.org/docs/first) [`⍏`](https://uiua.org/docs/rise)), ([`⊢`](https://uiua.org/docs/first) [`⇌`](https://uiua.org/docs/reverse) [`⍏`](https://uiua.org/docs/rise)), ([`⊢`](https://uiua.org/docs/first) [`⍖`](https://uiua.org/docs/fall)), and ([`⊢`](https://uiua.org/docs/first) [`⇌`](https://uiua.org/docs/reverse) [`⍖`](https://uiua.org/docs/fall)) to be O(n)
+- Add `uiua repl` command
+- Optimize ([`⊢`](https://uiua.org/docs/first)[`⍏`](https://uiua.org/docs/rise)), ([`⊢`](https://uiua.org/docs/first)[`⇌`](https://uiua.org/docs/reverse)[`⍏`](https://uiua.org/docs/rise)), ([`⊢`](https://uiua.org/docs/first)[`⍖`](https://uiua.org/docs/fall)), and ([`⊢`](https://uiua.org/docs/first)[`⇌`](https://uiua.org/docs/reverse)[`⍖`](https://uiua.org/docs/fall)) to be O(n) instead of O(nlogn)
+- Optimize ([`⊢`](https://uiua.org/docs/first)[`⊚`](https://uiua.org/docs/where)) to not materialize the indices array
 ### Website
 - [`&ast`](https://uiua.org/docs/&ast) now works on the website by generating a fixed amount of audio
   - How long the generated audio is can be configured in the editor settings
-- Error and diagnostic messages a no-longer all one color
+- Error and diagnostic messages are no-longer all one color
 - The pad editor now inserts a trailing newline on format
-- Increase thresholds for arrays becoming images or audio
+- Increase thresholds for arrays automatically becoming images or audio
 - Split up system functions into more categories on the main docs page
-- The bell character now plays a sound if printed with [`&p`](https://uiua.org/docs/&p) or [`&pf`](https://uiua.org/docs/&pf)
+- The bell character `@\b` now plays a sound if printed with [`&p`](https://uiua.org/docs/&p) or [`&pf`](https://uiua.org/docs/&pf)
 ### Community
 - The [GitHub Discussions](https://github.com/uiua-lang/uiua/discussions) are now open!
 

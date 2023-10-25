@@ -85,7 +85,10 @@ fn words_spans(words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
             Word::Array(arr) => {
                 spans.push(word.span.just_start().sp(SpanKind::Delimiter));
                 spans.extend(arr.lines.iter().flat_map(|w| words_spans(w)));
-                spans.push(word.span.just_end().sp(SpanKind::Delimiter));
+                let end = word.span.just_end();
+                if end.as_str() == "]" {
+                    spans.push(end.sp(SpanKind::Delimiter));
+                }
             }
             Word::Func(func) => {
                 spans.push(word.span.just_start().sp(SpanKind::Delimiter));
@@ -93,7 +96,10 @@ fn words_spans(words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
                     spans.push(sig.span.clone().sp(SpanKind::Signature));
                 }
                 spans.extend(func.lines.iter().flat_map(|w| words_spans(w)));
-                spans.push(word.span.just_end().sp(SpanKind::Delimiter));
+                let end = word.span.just_end();
+                if end.as_str() == ")" || end.as_str() == "}" {
+                    spans.push(end.sp(SpanKind::Delimiter));
+                }
             }
             Word::Switch(sw) => {
                 spans.push(word.span.just_start().sp(SpanKind::Delimiter));
@@ -107,7 +113,10 @@ fn words_spans(words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
                     }
                     spans.extend(branch.value.lines.iter().flat_map(|w| words_spans(w)));
                 }
-                spans.push(word.span.just_end().sp(SpanKind::Delimiter));
+                let end = word.span.just_end();
+                if end.as_str() == ")" {
+                    spans.push(end.sp(SpanKind::Delimiter));
+                }
             }
             Word::Ocean(prims) => {
                 for prim in prims {

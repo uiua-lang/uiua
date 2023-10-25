@@ -386,7 +386,7 @@ pub fn Editor<'a>(
 
     // Remove a code range
     let remove_code = move |start: u32, end: u32| {
-        logging::log!("start: {start}, end: {end}");
+        // logging::log!("start: {start}, end: {end}");
         if start == end {
             return;
         }
@@ -483,7 +483,7 @@ pub fn Editor<'a>(
             }
             "Backspace" => {
                 let (start, end) = get_code_cursor().unwrap();
-                logging::log!("backspace start: {start}, end: {end}");
+                // logging::log!("backspace start: {start}, end: {end}");
                 if start == end {
                     if start > 0 {
                         let mut removal_count = 1;
@@ -1547,6 +1547,7 @@ fn set_code_html(id: &str, code: &str) {
     };
 
     let mut end = 0;
+    // logging::log!("{:#?}", spans(code));
     for span in spans(code) {
         let kind = span.value;
         let span = span.span;
@@ -1555,7 +1556,7 @@ fn set_code_html(id: &str, code: &str) {
         let text: String = chars[span.start.char_pos..span.end.char_pos]
             .iter()
             .collect();
-        // log!("spanned: {:?} {:?}", kind, text);
+        // logging::log!("spanned: {:?} {:?}", kind, text);
         let color_class = match kind {
             SpanKind::Primitive(prim) => prim_class(prim),
             SpanKind::Number => "number-literal-span",

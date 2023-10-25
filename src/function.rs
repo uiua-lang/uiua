@@ -14,23 +14,35 @@ use crate::{
     Ident, Uiua, UiuaResult,
 };
 
+/// A Uiua bytecode instruction
 #[derive(Clone)]
 #[repr(u8)]
+#[allow(missing_docs)]
 pub enum Instr {
+    /// Push a value onto the stack
     Push(Box<Value>) = 0,
+    /// Begin an array
     BeginArray,
+    /// End an array
     EndArray {
         boxed: bool,
         span: usize,
     },
+    /// Execute a primitive
     Prim(Primitive, usize),
+    /// Execute an implementation primitive
     ImplPrim(ImplPrimitive, usize),
+    /// Call a function
     Call(usize),
+    /// Push a function onto the function stack
     PushFunc(Arc<Function>),
+    /// Execute a switch function
     Switch {
         count: usize,
         span: usize,
     },
+    /// Call a dynamic function
+    Dynamic(DynamicFunction),
     PushTempFunctions(usize),
     PopTempFunctions(usize),
     GetTempFunction {
@@ -38,7 +50,6 @@ pub enum Instr {
         sig: Signature,
         span: usize,
     },
-    Dynamic(DynamicFunction),
     PushTempUnder {
         count: usize,
         span: usize,
@@ -156,19 +167,15 @@ impl Hash for Instr {
 }
 
 impl Instr {
+    /// Create a new push instruction
     pub fn push(val: impl Into<Value>) -> Self {
         Self::Push(Box::new(val.into()))
     }
+    /// Create a new push function instruction
     pub fn push_func(f: impl Into<Arc<Function>>) -> Self {
         Self::PushFunc(f.into())
     }
-    pub fn as_push(&self) -> Option<&Value> {
-        match self {
-            Instr::Push(val) => Some(val),
-            _ => None,
-        }
-    }
-    pub fn is_temp(&self) -> bool {
+    pub(crate) fn is_temp(&self) -> bool {
         matches!(
             self,
             Self::PushTempUnder { .. }
@@ -224,35 +231,43 @@ impl fmt::Display for Instr {
     }
 }
 
+/// A Uiua function
 #[derive(Clone)]
 pub struct Function {
+    /// The function's id
     pub id: FunctionId,
+    /// The function's instructions
     pub instrs: Vec<Instr>,
     signature: Signature,
 }
 
+/// A function stack signature
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Signature {
+    /// The number of arguments the function pops off the stack
     pub args: usize,
+    /// The number of values the function pushes onto the stack
     pub outputs: usize,
 }
 
 impl Signature {
+    /// Create a new signature with the given number of arguments and outputs
     pub const fn new(args: usize, outputs: usize) -> Self {
         Self { args, outputs }
     }
-    /// Check if this signature changes the stack size by the same amount as another signature.
+    /// Check if this signature changes the stack size by the same amount as another signature
     pub fn is_compatible_with(self, other: Self) -> bool {
         self.args as isize - self.outputs as isize == other.args as isize - other.outputs as isize
     }
-    /// Check if this [`Signature::is_compatible_with`] another signature and has at least as many arguments.
+    /// Check if this [`Signature::is_compatible_with`] another signature and has at least as many arguments
     pub fn is_superset_of(self, other: Self) -> bool {
         self.is_compatible_with(other) && self.args >= other.args
     }
-    /// Check if this [`Signature::is_compatible_with`] another signature and has at most as many arguments.
+    /// Check if this [`Signature::is_compatible_with`] another signature and has at most as many arguments
     pub fn is_subset_of(self, other: Self) -> bool {
         self.is_compatible_with(other) && self.args <= other.args
     }
+    /// Get the signature that has the maximum of the arguments and outputs of this signature and another
     pub fn max_with(self, other: Self) -> Self {
         Self::new(self.args.max(other.args), self.outputs.max(other.outputs))
     }
@@ -270,10 +285,14 @@ impl fmt::Display for Signature {
     }
 }
 
+/// A function that executes Rust code
 #[derive(Clone)]
 pub struct DynamicFunction {
+    /// An id used for hashing and equality
     pub id: u64,
+    /// The function
     pub f: Arc<dyn Fn(&mut Uiua) -> UiuaResult + Send + Sync>,
+    /// The function's signature
     pub signature: Signature,
 }
 
@@ -357,6 +376,7 @@ impl fmt::Display for Function {
 }
 
 impl Function {
+    /// Create a new function
     pub fn new(id: FunctionId, instrs: impl Into<Vec<Instr>>, signature: Signature) -> Self {
         let instrs = instrs.into();
         Self {
@@ -365,6 +385,7 @@ impl Function {
             signature,
         }
     }
+    /// Create a new function and infer its signature
     pub fn new_inferred(id: FunctionId, instrs: impl Into<Vec<Instr>>) -> Result<Self, String> {
         let instrs = instrs.into();
         let signature = instrs_signature(&instrs)?;
@@ -374,21 +395,19 @@ impl Function {
             instrs,
         })
     }
-    pub fn into_inner(f: Arc<Self>) -> Self {
-        Arc::try_unwrap(f).unwrap_or_else(|f| (*f).clone())
-    }
     /// Get how many arguments this function pops off the stack and how many it pushes.
     /// Returns `None` if either of these values are dynamic.
     pub fn signature(&self) -> Signature {
         self.signature
     }
+    /// Try to get a lone primitive from this function
     pub fn as_primitive(&self) -> Option<(Primitive, usize)> {
         match self.instrs.as_slice() {
             [Instr::Prim(prim, span)] => Some((*prim, *span)),
             _ => None,
         }
     }
-    pub fn as_impl_primitive(&self) -> Option<(ImplPrimitive, usize)> {
+    pub(crate) fn as_impl_primitive(&self) -> Option<(ImplPrimitive, usize)> {
         match self.instrs.as_slice() {
             [Instr::ImplPrim(prim, span)] => Some((*prim, *span)),
             _ => None,
@@ -404,24 +423,32 @@ impl Function {
             },
         }
     }
+    /// `invert` this function
     pub fn invert(&self, context: &str, env: &Uiua) -> UiuaResult<Self> {
         self.inverse()
             .ok_or_else(|| env.error(format!("No inverse found{context}")))
     }
+    /// `under` this function
     pub fn undered(&self, g_sig: Signature, env: &Uiua) -> UiuaResult<(Self, Self)> {
         self.under(g_sig)
             .ok_or_else(|| env.error("No inverse found"))
     }
 }
 
+/// A Uiua function id
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum FunctionId {
+    /// A named function
     Named(Ident),
+    /// An anonymous function
     Anonymous(CodeSpan),
+    /// Just a primitive
     Primitive(Primitive),
-    Constant,
+    /// The top-level function
     Main,
-    Temp,
+    #[doc(hidden)]
+    /// Implementation detail
+    Impl,
 }
 
 impl PartialEq<&str> for FunctionId {
@@ -451,9 +478,8 @@ impl fmt::Display for FunctionId {
             FunctionId::Named(name) => write!(f, "`{name}`"),
             FunctionId::Anonymous(span) => write!(f, "fn from {span}"),
             FunctionId::Primitive(prim) => write!(f, "{prim}"),
-            FunctionId::Constant => write!(f, "constant"),
             FunctionId::Main => write!(f, "main"),
-            FunctionId::Temp => write!(f, "temp"),
+            FunctionId::Impl => write!(f, "impl"),
         }
     }
 }

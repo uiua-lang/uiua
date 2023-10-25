@@ -323,7 +323,10 @@ impl Value {
     /// Attempt to convert the array to a single boolean
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_bool(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<bool> {
+    pub fn as_bool(&self, env: &Uiua, mut requirement: &'static str) -> UiuaResult<bool> {
+        if requirement.is_empty() {
+            requirement = "Expected value to be boolean"
+        }
         Ok(match self {
             Value::Num(nums) => {
                 if nums.rank() > 0 {
@@ -353,7 +356,10 @@ impl Value {
     /// Attempt to convert the array to a single natural number
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_natural(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<usize> {
+    pub fn as_natural(&self, env: &Uiua, mut requirement: &'static str) -> UiuaResult<usize> {
+        if requirement.is_empty() {
+            requirement = "Expected value to be a natural number";
+        }
         Ok(match self {
             Value::Num(nums) => {
                 if nums.rank() > 0 {
@@ -386,7 +392,10 @@ impl Value {
     /// Attempt to convert the array to a single integer
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_integer(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<isize> {
+    pub fn as_integer(&self, env: &Uiua, mut requirement: &'static str) -> UiuaResult<isize> {
+        if requirement.is_empty() {
+            requirement = "Expected value to be an integer";
+        }
         Ok(match self {
             Value::Num(nums) => {
                 if nums.rank() > 0 {
@@ -416,7 +425,10 @@ impl Value {
     /// Attempt to convert the array to a single number
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_number(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<f64> {
+    pub fn as_number(&self, env: &Uiua, mut requirement: &'static str) -> UiuaResult<f64> {
+        if requirement.is_empty() {
+            requirement = "Expected value to be a number";
+        }
         Ok(match self {
             Value::Num(nums) => {
                 if nums.rank() > 0 {
@@ -600,7 +612,10 @@ impl Value {
     /// Attempt to convert the array to a string
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_string(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<String> {
+    pub fn as_string(&self, env: &Uiua, mut requirement: &'static str) -> UiuaResult<String> {
+        if requirement.is_empty() {
+            requirement = "Expected value to be a string";
+        }
         match self {
             Value::Char(chars) => {
                 if chars.rank() > 1 {
@@ -625,7 +640,10 @@ impl Value {
     /// Attempt to convert the array to a list of bytes
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn into_bytes(self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<u8>> {
+    pub fn into_bytes(self, env: &Uiua, mut requirement: &'static str) -> UiuaResult<Vec<u8>> {
+        if requirement.is_empty() {
+            requirement = "Expected value to be a list of bytes";
+        }
         Ok(match self {
             Value::Byte(a) => {
                 if a.rank() != 1 {

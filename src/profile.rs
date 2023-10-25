@@ -1,4 +1,5 @@
 #[macro_export]
+#[doc(hidden)]
 macro_rules! profile_function {
     () => {
         #[cfg(feature = "profile")]
@@ -9,6 +10,7 @@ macro_rules! profile_function {
 }
 
 #[macro_export]
+#[doc(hidden)]
 macro_rules! profile_scope {
     ($label:expr) => {
         #[cfg(feature = "profile")]

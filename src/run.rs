@@ -1187,6 +1187,12 @@ pub trait StackArg {
     fn arg_name(self) -> String;
 }
 
+impl StackArg for () {
+    fn arg_name(self) -> String {
+        "value".to_string()
+    }
+}
+
 impl StackArg for usize {
     fn arg_name(self) -> String {
         format!("argument {self}")

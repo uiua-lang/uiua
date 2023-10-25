@@ -143,6 +143,7 @@ fn words_spans(words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
 }
 
 #[cfg(feature = "lsp")]
+#[doc(hidden)]
 pub use server::run_language_server;
 
 #[cfg(feature = "lsp")]

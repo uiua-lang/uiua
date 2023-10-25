@@ -456,7 +456,7 @@ impl From<Handle> for Value {
     }
 }
 
-/// The function type passed to `&ast``
+/// The function type passed to `&ast`
 pub type AudioStreamFn = Box<dyn FnMut(&[f64]) -> UiuaResult<Vec<[f64; 2]>> + Send>;
 
 /// Trait for defining a system backend

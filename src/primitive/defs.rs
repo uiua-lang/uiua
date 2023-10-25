@@ -12,7 +12,7 @@ pub struct ConstantDef {
     pub doc: &'static str,
 }
 
-/// Get the list of all shadowable constant
+/// Get the list of all shadowable constants
 pub fn constants() -> &'static [ConstantDef] {
     &*CONSTANTS
 }

@@ -10,11 +10,17 @@ use crate::value::Value;
 pub struct Boxed(pub Value);
 
 impl Boxed {
+    /// Get the inner value
     pub fn as_value(&self) -> &Value {
         &self.0
     }
+    /// Get the inner value mutably
     pub fn as_value_mut(&mut self) -> &mut Value {
         &mut self.0
+    }
+    /// Unwrap the inner value
+    pub fn into_inner(self) -> Value {
+        self.0
     }
 }
 

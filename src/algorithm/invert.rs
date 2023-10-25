@@ -11,9 +11,13 @@ use crate::{
 };
 
 impl Function {
+    /// Get the function's inverse
     pub fn inverse(&self) -> Option<Self> {
         Function::new_inferred(self.id.clone(), invert_instrs(&self.instrs)?).ok()
     }
+    /// Get the function's before and after functions for `under`
+    ///
+    /// `g_sig` should be the signature of `under`'s second function
     pub fn under(&self, g_sig: Signature) -> Option<(Self, Self)> {
         if let Some(f) = self.inverse() {
             Some((self.clone(), f))

@@ -2,11 +2,6 @@
 Within a each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- Rust API
-  - Make dedicated Array conversion traits
-  - Make dedicated Value conversion traits
-  - Make dyadic array functions not methods
-  - Make most things private
 - Multimedia
   - Sound input
   - Webcam input
@@ -14,7 +9,6 @@ Within a each section, items are ordered (roughly) by decreasing priority.
     - Windowing
     - Input handling
 - System APIs
-  - Terminal raw mode
   - FFI
   - UDP Sockets
 

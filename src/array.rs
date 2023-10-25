@@ -22,6 +22,7 @@ pub struct Array<T> {
     pub(crate) data: CowSlice<T>,
 }
 
+/// Uiua's array shape type
 pub type Shape = TinyVec<[usize; 3]>;
 
 impl<T: ArrayValue> Default for Array<T> {
@@ -393,19 +394,22 @@ impl FromIterator<String> for Array<Boxed> {
     }
 }
 
+/// A trait for types that can be used as array elements
 #[allow(unused_variables)]
 pub trait ArrayValue: Clone + Debug + Display + GridFmt + ArrayCmp + Send + Sync + 'static {
+    /// The type name
     const NAME: &'static str;
+    /// Get the fill value from the environment
     fn get_fill(env: &Uiua) -> Option<Self>;
+    /// Hash the value
     fn array_hash<H: Hasher>(&self, hasher: &mut H);
+    /// Delimiters for formatting
     fn format_delims() -> (&'static str, &'static str) {
         ("[", "]")
     }
+    /// Separator for formatting
     fn format_sep() -> &'static str {
         " "
-    }
-    fn subrank(&self) -> usize {
-        0
     }
 }
 
@@ -462,8 +466,11 @@ impl ArrayValue for Boxed {
     }
 }
 
+/// Trait for comparing array elements
 pub trait ArrayCmp<U = Self> {
+    /// Compare two elements
     fn array_cmp(&self, other: &U) -> Ordering;
+    /// Check if two elements are equal
     fn array_eq(&self, other: &U) -> bool {
         self.array_cmp(other) == Ordering::Equal
     }
@@ -506,6 +513,7 @@ impl ArrayCmp<u8> for f64 {
     }
 }
 
+/// A formattable shape
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct FormatShape<'a>(pub &'a [usize]);
 

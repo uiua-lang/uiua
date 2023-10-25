@@ -1,4 +1,4 @@
-//! Functions for formatting Uiua code.
+//! The Uiua formatter
 
 use std::{
     any::Any,

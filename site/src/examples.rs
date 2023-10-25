@@ -1,5 +1,5 @@
 const UIUA: &str = "\"Um, I um...arrays\"\n⊜⊢≥@A.";
-const FORMAT: &str = "# Click Run to format!\nkeepnotmem:deshtab*...+2rang50";
+const FORMAT: &str = "# Click Run to format!\nkeepnotmem:deshtab*...drop2rang50";
 const D3: &str = "↯∶⇡/×.2_3_4";
 pub const LOGO: &str = "\
 xy ← ⍘⍉⊞⊟. ÷÷2∶ -÷2,⇡.200
@@ -13,7 +13,7 @@ const CHORD: &str = "\
 ×220 ⁿ∶2÷12
 ÷⧻∶ ≡/+ ○×τ ⊞× ÷∶⇡.&asr.";
 const QUADRATIC: &str = "\
-Quad ← ÷⊙-⊃⊓'×2∘(⊟¯.√+×.∶××¯4⊙∶)
+Quad ← ÷⊙-⊃(×2⊙∘)(⊟¯.√+×.∶××¯4⊙∶)
 Quad 1 2 0";
 const STRIPES: &str = "\
 [⊃⊃⊞+⊞↥⊞-].⇡300

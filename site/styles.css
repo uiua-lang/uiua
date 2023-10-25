@@ -294,6 +294,16 @@ li {
     align-content: flex-start;
 }
 
+.main-text {
+    font-size: 130%;
+    text-align: center;
+}
+
+.wee-wuh-span {
+    font-size: 70%;
+    opacity: 0.8;
+}
+
 .features {
     display: flex;
     flex-wrap: wrap;

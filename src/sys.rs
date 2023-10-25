@@ -15,7 +15,7 @@ use parking_lot::Mutex;
 use tinyvec::tiny_vec;
 
 use crate::{
-    array::Array,
+    array::{Array, Shape},
     boxed::Boxed,
     cowslice::{cowslice, CowSlice},
     function::Signature,
@@ -286,13 +286,19 @@ sys_op! {
     ///
     /// See also: [&ime]
     (1(0), ImShow, Images, "&ims", "image - show"),
+    /// Decode a gif from a byte array
+    ///
+    /// Returns a framerate in seconds and a rank 4 array of RGBA frames.
+    ///
+    /// See also: [&gife]
+    (1(2), GifDecode, Gifs, "&gifd", "gif - decode"),
     /// Encode a gif into a byte array
     ///
     /// The first argument is a framerate in seconds.
     /// The second argument is the gif data and must be a rank 3 or 4 numeric array.
     /// The rows of the array are the frames of the gif, and their format must conform to that of [&ime].
     ///
-    /// See also: [&gifs]
+    /// See also: [&gifs] [&gifd]
     (2, GifEncode, Gifs, "&gife", "gif - encode"),
     /// Show a gif
     ///
@@ -947,6 +953,14 @@ impl SysOp {
                 let image = value_to_image(&value).map_err(|e| env.error(e))?;
                 env.backend.show_image(image).map_err(|e| env.error(e))?;
             }
+            SysOp::GifDecode => {
+                let bytes = env
+                    .pop(1)?
+                    .as_bytes(env, "Gif bytes must be a byte array")?;
+                let (frame_rate, value) = gif_bytes_to_value(&bytes).map_err(|e| env.error(e))?;
+                env.push(value);
+                env.push(frame_rate);
+            }
             SysOp::GifEncode => {
                 let delay = env.pop(1)?.as_num(env, "Delay must be a number")?;
                 let value = env.pop(2)?;
@@ -1233,7 +1247,11 @@ pub fn image_to_bytes(image: &DynamicImage, format: ImageOutputFormat) -> Result
 
 pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
     if ![2, 3].contains(&value.rank()) {
-        return Err("Image must be a rank 2 or 3 numeric array".into());
+        return Err(format!(
+            "Image must be a rank 2 or 3 numeric array, but it is a rank-{} {} array",
+            value.rank(),
+            value.type_name()
+        ));
     }
     let bytes = match value {
         Value::Num(nums) => nums
@@ -1474,7 +1492,7 @@ pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, Str
     let mut width = 0;
     let mut height = 0;
     for row in value.rows() {
-        let image = value_to_image(&row)?.into_rgb8();
+        let image = value_to_image(&row)?.into_rgba8();
         width = image.width();
         height = image.height();
         frames.push(image);
@@ -1510,9 +1528,9 @@ pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, Str
         break used_colors;
     };
     let mut palette = Vec::with_capacity(used_colors.len() * 3);
-    let mut color_map: HashMap<[u8; 3], usize> = HashMap::new();
+    let mut color_map: HashMap<[u8; 4], usize> = HashMap::new();
     for color in used_colors {
-        color_map.insert(color, palette.len() / 3);
+        color_map.insert(color, palette.len() / 4);
         palette.extend(color);
     }
     let mut encoder = gif::Encoder::new(&mut bytes, width as u16, height as u16, &palette)
@@ -1523,10 +1541,34 @@ pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, Str
         .set_repeat(gif::Repeat::Infinite)
         .map_err(|e| e.to_string())?;
     for image in frames {
-        let mut frame = gif::Frame::from_rgb(width as u16, height as u16, image.as_raw());
+        let mut frame = gif::Frame::from_rgba(width as u16, height as u16, &mut image.into_raw());
         frame.delay = delay;
         encoder.write_frame(&frame).map_err(|e| e.to_string())?;
     }
     drop(encoder);
     Ok(bytes.into_inner())
+}
+
+pub fn gif_bytes_to_value(bytes: &[u8]) -> Result<(f64, Value), gif::DecodingError> {
+    let mut decoder = gif::DecodeOptions::new();
+    decoder.set_color_output(gif::ColorOutput::RGBA);
+    let mut decoder = decoder.read_info(bytes)?;
+    let first_frame = decoder.read_next_frame()?.unwrap();
+    let width = first_frame.width;
+    let height = first_frame.height;
+    let mut data: CowSlice<f64> = CowSlice::new();
+    let mut frame_count = 1;
+    let mut delay_sum = first_frame.delay as f64 / 100.0;
+    data.extend(first_frame.buffer.iter().map(|&b| b as f64 / 255.0));
+    while let Some(frame) = decoder.read_next_frame()? {
+        data.extend(frame.buffer.iter().map(|&b| b as f64 / 255.0));
+        frame_count += 1;
+        delay_sum += frame.delay as f64 / 100.0;
+    }
+    let avg_delay = delay_sum / frame_count as f64;
+    let frame_rate = 1.0 / avg_delay;
+    let shape = Shape::from_iter([frame_count, height as usize, width as usize, 4]);
+    let mut num = Value::Num(Array::new(shape, data));
+    num.compress();
+    Ok((frame_rate, num))
 }

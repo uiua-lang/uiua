@@ -8,7 +8,6 @@ Within a each section, items are ordered (roughly) by decreasing priority.
   - Make dyadic array functions not methods
   - Make most things private
 - Multimedia
-  - GIF decode
   - Sound input
   - Webcam input
   - Canvas

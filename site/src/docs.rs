@@ -446,7 +446,7 @@ impl Allowed {
                 PrimClass::Sys(class) => {
                     match class {
                         SysOpClass::Filesystem => ("System - Filesystem".into_view(), "Work with files and directories"),
-                        SysOpClass::StdIO => ("System - Sandard I/O".into_view(), "Read and write standard input and output"),
+                        SysOpClass::StdIO => ("System - Standard I/O".into_view(), "Read and write standard input and output"),
                         SysOpClass::Env => ("System - Environment".into_view(), "Query the environment"),
                         SysOpClass::Stream => ("System - Streams".into_view(), "Read from and write to streams"),
                         SysOpClass::Command => ("System - Commands".into_view(), "Execute commands"),

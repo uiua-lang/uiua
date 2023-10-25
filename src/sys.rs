@@ -219,11 +219,11 @@ sys_op! {
     /// Deletes the file or directory at the given path.
     /// Be careful with this function, as deleted files and directories cannot be recovered!
     /// For a safer alternative, see [&ftr].
-    (1(0), FDelete, Filesystem, "&fd", "file - delete"),
+    (1(0), FDelete, Filesystem, "&fde", "file - delete"),
     /// Move a file or directory to the trash
     ///
     /// Moves the file or directory at the given path to the trash.
-    /// This is a safer alternative to [&fd].
+    /// This is a safer alternative to [&fde].
     (1(0), FTrash, Filesystem, "&ftr", "file - trash"),
     /// Check if a file exists at a path
     (1, FExists, Filesystem, "&fe", "file - exists"),

@@ -107,7 +107,7 @@ impl<'a> VirtualEnv<'a> {
             Instr::PushTempFunctions(_) | Instr::PopTempFunctions(_) => {}
             Instr::GetTempFunction { sig, .. } => {
                 self.function_stack.push(Cow::Owned(Function::new(
-                    FunctionId::Impl,
+                    FunctionId::Unnamed,
                     Vec::new(),
                     *sig,
                 )));

@@ -48,7 +48,7 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let n = env
         .pop(2)?
-        .as_number(env, "Repetitions must be a single integer or infinity")?;
+        .as_num(env, "Repetitions must be a single integer or infinity")?;
 
     const INVERSE_CONTEXT: &str = "; repeat with a negative number repeats the inverse";
     if n.is_infinite() {
@@ -101,7 +101,7 @@ pub fn unpartition(env: &mut Uiua) -> UiuaResult {
     }
     let markers = env
         .pop(1)?
-        .as_integers(env, "Partition markers must be a list of integers")?;
+        .as_ints(env, "Partition markers must be a list of integers")?;
     let original = env.pop(2)?;
     let partitioned = env.pop(3)?;
 
@@ -159,7 +159,7 @@ pub fn ungroup(env: &mut Uiua) -> UiuaResult {
     }
     let indices = env
         .pop(1)?
-        .as_integers(env, "Group indices must be a list of integers")?;
+        .as_ints(env, "Group indices must be a list of integers")?;
     let original = env.pop(2)?;
     let grouped = env.pop(3)?;
 
@@ -299,7 +299,7 @@ fn collapse_groups(
     match sig.args {
         0 | 1 => {
             let indices = env.pop(1)?;
-            let indices = indices.as_integers(env, indices_error)?;
+            let indices = indices.as_ints(env, indices_error)?;
             let values = env.pop(2)?;
             let groups = get_groups(&values, &indices, env)?;
             let mut rows = Vec::with_capacity(groups.len());
@@ -316,7 +316,7 @@ fn collapse_groups(
         2 => {
             let mut acc = env.pop(1)?;
             let indices = env.pop(2)?;
-            let indices = indices.as_integers(env, indices_error)?;
+            let indices = indices.as_ints(env, indices_error)?;
             let values = env.pop(3)?;
             let groups = get_groups(&values, &indices, env)?;
             for row in groups {

@@ -279,6 +279,12 @@ impl PartialEq<(usize, usize)> for Signature {
     }
 }
 
+impl From<(usize, usize)> for Signature {
+    fn from((args, outputs): (usize, usize)) -> Self {
+        Self::new(args, outputs)
+    }
+}
+
 impl fmt::Display for Signature {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "|{}.{}", self.args, self.outputs)
@@ -448,7 +454,7 @@ pub enum FunctionId {
     Main,
     #[doc(hidden)]
     /// Implementation detail
-    Impl,
+    Unnamed,
 }
 
 impl PartialEq<&str> for FunctionId {
@@ -479,7 +485,7 @@ impl fmt::Display for FunctionId {
             FunctionId::Anonymous(span) => write!(f, "fn from {span}"),
             FunctionId::Primitive(prim) => write!(f, "{prim}"),
             FunctionId::Main => write!(f, "main"),
-            FunctionId::Impl => write!(f, "impl"),
+            FunctionId::Unnamed => write!(f, "unnamed"),
         }
     }
 }

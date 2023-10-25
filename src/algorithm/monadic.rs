@@ -50,7 +50,7 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// Create a `range` array
     pub fn range(&self, env: &Uiua) -> UiuaResult<Self> {
-        let shape = &self.as_naturals(
+        let shape = &self.as_nats(
             env,
             "Range max should be a single natural number \
             or a list of natural numbers",
@@ -475,7 +475,7 @@ impl Array<u8> {
 impl Value {
     /// Get the indices `where` the value is nonzero
     pub fn wher(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
-        let counts = self.as_naturals(env, "Argument to where must be a list of naturals")?;
+        let counts = self.as_nats(env, "Argument to where must be a list of naturals")?;
         let total: usize = counts.iter().fold(0, |acc, &b| acc.saturating_add(b));
         let mut data = EcoVec::with_capacity(total);
         for (i, &b) in counts.iter().enumerate() {
@@ -524,8 +524,7 @@ impl Value {
     }
     /// `invert` `where`
     pub fn inverse_where(&self, env: &Uiua) -> UiuaResult<Self> {
-        let indices =
-            self.as_naturals(env, "Argument to inverse where must be a list of naturals")?;
+        let indices = self.as_nats(env, "Argument to inverse where must be a list of naturals")?;
         let is_sorted = indices
             .iter()
             .zip(indices.iter().skip(1))

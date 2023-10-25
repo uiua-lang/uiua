@@ -143,29 +143,29 @@ impl Uiua {
                     }
                 }
                 if let [Instr::PushFunc(f)] = instrs.as_slice() {
-                    self.bind_function(name, f.clone(), span)?;
+                    self.compile_bind_function(name, f.clone(), span.clone().into())?;
                 } else if sig.args == 0
                     && (sig.outputs > 0 || instrs.is_empty())
                     && placeholder_count == 0
                 {
                     self.exec_global_instrs(instrs)?;
                     if let Some(f) = self.function_stack.pop() {
-                        self.bind_function(name, f, span)?;
+                        self.compile_bind_function(name, f, span.clone().into())?;
                     } else if let Some(value) = self.stack.pop() {
-                        self.bind_value(name, value, span)?;
+                        self.compile_bind_value(name, value, span.clone().into())?;
                     } else {
                         let func = make_fn(Vec::new(), sig, self);
-                        self.bind_function(name, func.into(), span)?;
+                        self.compile_bind_function(name, func.into(), span.clone().into())?;
                     }
                 } else {
                     let func = make_fn(instrs, sig, self);
-                    self.bind_function(name, func.into(), span)?;
+                    self.compile_bind_function(name, func.into(), span.clone().into())?;
                 }
             }
             Err(e) => {
                 if let Some(sig) = binding.signature {
                     let func = make_fn(instrs, sig.value, self);
-                    self.bind_function(name, func.into(), span)?;
+                    self.compile_bind_function(name, func.into(), span.clone().into())?;
                 } else {
                     return Err(UiuaError::Run(Span::Code(binding.name.span.clone()).sp(
                         format!("Cannot infer function signature: {e}. A signature can be declared after the `←`."),
@@ -175,7 +175,12 @@ impl Uiua {
         }
         Ok(())
     }
-    fn bind_value(&mut self, name: Ident, mut value: Value, span: &CodeSpan) -> UiuaResult {
+    pub(crate) fn compile_bind_value(
+        &mut self,
+        name: Ident,
+        mut value: Value,
+        span: Span,
+    ) -> UiuaResult {
         self.validate_binding_name(&name, &[], span)?;
         value.compress();
         let mut globals = self.globals.lock();
@@ -184,11 +189,11 @@ impl Uiua {
         self.scope.names.insert(name, idx);
         Ok(())
     }
-    fn bind_function(
+    pub(crate) fn compile_bind_function(
         &mut self,
         name: Ident,
         function: Arc<Function>,
-        span: &CodeSpan,
+        span: Span,
     ) -> UiuaResult {
         self.validate_binding_name(&name, &function.instrs, span)?;
         let mut globals = self.globals.lock();
@@ -197,7 +202,7 @@ impl Uiua {
         self.scope.names.insert(name, idx);
         Ok(())
     }
-    fn validate_binding_name(&self, name: &Ident, instrs: &[Instr], span: &CodeSpan) -> UiuaResult {
+    fn validate_binding_name(&self, name: &Ident, instrs: &[Instr], span: Span) -> UiuaResult {
         let temp_function_count = count_temp_functions(instrs);
         let name_marg_count = ident_modifier_args(name) as usize;
         if temp_function_count != name_marg_count {

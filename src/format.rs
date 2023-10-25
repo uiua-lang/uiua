@@ -42,7 +42,7 @@ impl ConfigValue for bool {
 
 impl ConfigValue for usize {
     fn from_value(value: &Value, env: &Uiua, requirement: &'static str) -> UiuaResult<usize> {
-        value.as_natural(env, requirement)
+        value.as_nat(env, requirement)
     }
 }
 

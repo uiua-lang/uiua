@@ -16,7 +16,7 @@ use uiua::*;
 let mut uiua = Uiua::with_native_sys();
 uiua.load_str("+ 1 2").unwrap();
 ```
-You can push values onto the stack with [`Uiua::push`]. When you're done, you can get the results with [`Uiua::pop`] or [`Uiua::take_stack`].
+You can push values onto the stack with [`Uiua::push`]. When you're done, you can get the results with [`Uiua::pop`], [`Uiua::take_stack`], or one of numerous pop+conversion convenience functions.
 ```rust
 use uiua::*;
 
@@ -24,8 +24,34 @@ let mut uiua = Uiua::with_native_sys();
 uiua.push(1);
 uiua.push(2);
 uiua.load_str("+").unwrap();
-let res = uiua.pop(()).unwrap().as_integer(&uiua, "").unwrap();
+let res = uiua.pop_int().unwrap();
 assert_eq!(res, 3);
+```
+You can create and bind Rust functions with [`Uiua::create_function`], [`Uiua::bind_function`], and [`Uiua::create_bind_function`]
+```rust
+use uiua::*;
+
+let mut uiua = Uiua::with_native_sys();
+
+uiua.create_bind_function("MyAdd", (2, 1), |uiua| {
+    let a = uiua.pop_num()?;
+    let b = uiua.pop_num()?;
+    uiua.push(a + b);
+    Ok(())
+}).unwrap();
+
+uiua.load_str("MyAdd 2 3").unwrap();
+let res = uiua.pop_num().unwrap();
+assert_eq!(res, 5.0);
+```
+You can format Uiua code with the [`mod@format`] module.
+```rust
+use uiua::format::*;
+
+let input = "resh3_4rang12";
+let config = FormatConfig::default().with_trailing_newline(false);
+let formatted = format_str(input, &config).unwrap().output;
+assert_eq!(formatted, "↯3_4⇡12");
 */
 
 #![allow(clippy::single_match, clippy::needless_range_loop)]

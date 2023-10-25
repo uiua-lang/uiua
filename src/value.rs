@@ -317,7 +317,7 @@ impl Value {
     /// Attempt to convert the array to a list of integers
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_integers(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<isize>> {
+    pub fn as_ints(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<isize>> {
         self.as_number_list(env, requirement, |f| f.fract() == 0.0, |f| f as isize)
     }
     /// Attempt to convert the array to a single boolean
@@ -356,7 +356,7 @@ impl Value {
     /// Attempt to convert the array to a single natural number
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_natural(&self, env: &Uiua, mut requirement: &'static str) -> UiuaResult<usize> {
+    pub fn as_nat(&self, env: &Uiua, mut requirement: &'static str) -> UiuaResult<usize> {
         if requirement.is_empty() {
             requirement = "Expected value to be a natural number";
         }
@@ -392,7 +392,7 @@ impl Value {
     /// Attempt to convert the array to a single integer
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_integer(&self, env: &Uiua, mut requirement: &'static str) -> UiuaResult<isize> {
+    pub fn as_int(&self, env: &Uiua, mut requirement: &'static str) -> UiuaResult<isize> {
         if requirement.is_empty() {
             requirement = "Expected value to be an integer";
         }
@@ -425,7 +425,7 @@ impl Value {
     /// Attempt to convert the array to a single number
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_number(&self, env: &Uiua, mut requirement: &'static str) -> UiuaResult<f64> {
+    pub fn as_num(&self, env: &Uiua, mut requirement: &'static str) -> UiuaResult<f64> {
         if requirement.is_empty() {
             requirement = "Expected value to be a number";
         }
@@ -451,10 +451,16 @@ impl Value {
             }
         })
     }
+    /// Attempt to convert the array to a list of numbers
+    ///
+    /// The `requirement` parameter is used in error messages.
+    pub fn as_nums(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<f64>> {
+        self.as_number_list(env, requirement, |_| true, |f| f)
+    }
     /// Attempt to convert the array to a list of natural numbers
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_naturals(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<usize>> {
+    pub fn as_nats(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<usize>> {
         self.as_number_list(
             env,
             requirement,

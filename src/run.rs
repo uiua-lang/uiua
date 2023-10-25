@@ -12,6 +12,7 @@ use std::{
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use instant::Duration;
 use parking_lot::Mutex;
+use rand::prelude::*;
 
 use crate::{
     array::Array, boxed::Boxed, constants, function::*, lex::Span, parse::parse,
@@ -499,7 +500,7 @@ code:
                     let res = (|| {
                         let i = self
                             .pop("switch index")?
-                            .as_natural(self, "Switch index mut be a natural number")?;
+                            .as_nat(self, "Switch index mut be a natural number")?;
                         if i >= count {
                             return Err(self.error(format!(
                                 "Switch index {i} is out of bounds for switch of size {count}"
@@ -787,6 +788,45 @@ code:
         }
         res
     }
+    /// Pop a value and try to convert it
+    pub fn pop_convert<T>(
+        &mut self,
+        f: impl FnOnce(&Value, &Uiua, &'static str) -> UiuaResult<T>,
+    ) -> UiuaResult<T> {
+        f(&self.pop(())?, self, "")
+    }
+    /// Attempt to pop a value and convert it to a boolean
+    pub fn pop_bool(&mut self) -> UiuaResult<bool> {
+        self.pop_convert(Value::as_bool)
+    }
+    /// Attempt to pop a value and convert it to an integer
+    pub fn pop_int(&mut self) -> UiuaResult<isize> {
+        self.pop_convert(Value::as_int)
+    }
+    /// Attempt to pop a value and convert it to a natural number
+    pub fn pop_nat(&mut self) -> UiuaResult<usize> {
+        self.pop_convert(Value::as_nat)
+    }
+    /// Attempt to pop a value and convert it to a number
+    pub fn pop_num(&mut self) -> UiuaResult<f64> {
+        self.pop_convert(Value::as_num)
+    }
+    /// Attempt to pop a value and convert it to a list of natural numbers
+    pub fn pop_nats(&mut self) -> UiuaResult<Vec<usize>> {
+        self.pop_convert(Value::as_nats)
+    }
+    /// Attempt to pop a value and convert it to a list of integers
+    pub fn pop_ints(&mut self) -> UiuaResult<Vec<isize>> {
+        self.pop_convert(Value::as_ints)
+    }
+    /// Attempt to pop a value and convert it to a list of numbers
+    pub fn pop_nums(&mut self) -> UiuaResult<Vec<f64>> {
+        self.pop_convert(Value::as_nums)
+    }
+    /// Attempt to pop a value and convert it to a string
+    pub fn pop_string(&mut self) -> UiuaResult<String> {
+        self.pop_convert(Value::as_string)
+    }
     /// Simulates popping a value and imediately pushing it back
     pub(crate) fn touch_array_stack(&mut self) {
         for bottom in &mut self.scope.array {
@@ -800,6 +840,47 @@ code:
     /// Push a function onto the function stack
     pub fn push_func(&mut self, f: impl Into<Arc<Function>>) {
         self.function_stack.push(f.into());
+    }
+    /// Create a function
+    pub fn create_function(
+        &mut self,
+        signature: impl Into<Signature>,
+        f: impl Fn(&mut Uiua) -> UiuaResult + Send + Sync + 'static,
+    ) -> Function {
+        let signature = signature.into();
+        Function::new(
+            FunctionId::Unnamed,
+            vec![Instr::Dynamic(DynamicFunction {
+                id: SmallRng::seed_from_u64(instant::now().to_bits()).gen(),
+                f: Arc::new(f),
+                signature,
+            })],
+            signature,
+        )
+    }
+    /// Bind a function in the current scope
+    ///
+    /// # Errors
+    /// Returns an error in the binding name is not valid
+    pub fn bind_function(
+        &mut self,
+        name: impl Into<Arc<str>>,
+        function: impl Into<Arc<Function>>,
+    ) -> UiuaResult {
+        self.compile_bind_function(name.into(), function.into(), Span::Builtin)
+    }
+    /// Create and bind a function in the current scope
+    ///
+    /// # Errors
+    /// Returns an error in the binding name is not valid
+    pub fn create_bind_function(
+        &mut self,
+        name: impl Into<Arc<str>>,
+        signature: impl Into<Signature>,
+        f: impl Fn(&mut Uiua) -> UiuaResult + Send + Sync + 'static,
+    ) -> UiuaResult {
+        let function = self.create_function(signature, f);
+        self.bind_function(name, function)
     }
     /// Take the entire stack
     pub fn take_stack(&mut self) -> Vec<Value> {
@@ -1153,7 +1234,7 @@ code:
         Ok(())
     }
     pub(crate) fn try_recv(&mut self, id: Value) -> UiuaResult {
-        let id = id.as_natural(self, "Thread id must be a natural number")?;
+        let id = id.as_nat(self, "Thread id must be a natural number")?;
         let value = match self.channel(id)?.recv.try_recv() {
             Ok(value) => value,
             Err(TryRecvError::Empty) => return Err(self.error("No value available")),

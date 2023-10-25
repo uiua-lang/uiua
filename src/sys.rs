@@ -24,7 +24,7 @@ use crate::{
     Uiua, UiuaError, UiuaResult,
 };
 
-/// Access the built-in "example.ua" file
+/// Access the built-in `example.ua` file
 pub fn example_ua<T>(f: impl FnOnce(&mut String) -> T) -> T {
     static EXAMPLE_UA: Lazy<Mutex<String>> = Lazy::new(|| {
         Mutex::new(
@@ -726,10 +726,10 @@ impl SysOp {
                 env.backend.trash(&path).map_err(|e| env.error(e))?;
             }
             SysOp::ReadStr => {
-                let count = env.pop(1)?.as_natural(env, "Count must be an integer")?;
+                let count = env.pop(1)?.as_nat(env, "Count must be an integer")?;
                 let handle = env
                     .pop(2)?
-                    .as_natural(env, "Handle must be an natural number")?
+                    .as_nat(env, "Handle must be an natural number")?
                     .into();
                 let bytes = match handle {
                     Handle::STDOUT => return Err(env.error("Cannot read from stdout")),
@@ -746,10 +746,10 @@ impl SysOp {
                 env.push(s);
             }
             SysOp::ReadBytes => {
-                let count = env.pop(1)?.as_natural(env, "Count must be an integer")?;
+                let count = env.pop(1)?.as_nat(env, "Count must be an integer")?;
                 let handle = env
                     .pop(2)?
-                    .as_natural(env, "Handle must be an natural number")?
+                    .as_nat(env, "Handle must be an natural number")?
                     .into();
                 let bytes = match handle {
                     Handle::STDOUT => return Err(env.error("Cannot read from stdout")),
@@ -768,7 +768,7 @@ impl SysOp {
                 let delim = env.pop(1)?;
                 let handle = env
                     .pop(2)?
-                    .as_natural(env, "Handle must be an natural number")?
+                    .as_nat(env, "Handle must be an natural number")?
                     .into();
                 if delim.rank() > 1 {
                     return Err(env.error("Delimiter must be a rank 0 or 1 string or byte array"));
@@ -837,7 +837,7 @@ impl SysOp {
                 let data = env.pop(1)?;
                 let handle = env
                     .pop(2)?
-                    .as_natural(env, "Handle must be an natural number")?
+                    .as_nat(env, "Handle must be an natural number")?
                     .into();
                 let bytes: Vec<u8> = match data {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
@@ -1019,13 +1019,13 @@ impl SysOp {
                 env.push(frame_rate);
             }
             SysOp::GifEncode => {
-                let delay = env.pop(1)?.as_number(env, "Delay must be a number")?;
+                let delay = env.pop(1)?.as_num(env, "Delay must be a number")?;
                 let value = env.pop(2)?;
                 let bytes = value_to_gif_bytes(&value, delay).map_err(|e| env.error(e))?;
                 env.push(Array::<u8>::from(bytes.as_slice()));
             }
             SysOp::GifShow => {
-                let delay = env.pop(1)?.as_number(env, "Delay must be a number")?;
+                let delay = env.pop(1)?.as_num(env, "Delay must be a number")?;
                 let value = env.pop(2)?;
                 let bytes = value_to_gif_bytes(&value, delay).map_err(|e| env.error(e))?;
                 env.backend.show_gif(bytes).map_err(|e| env.error(e))?;
@@ -1114,7 +1114,7 @@ impl SysOp {
             SysOp::Sleep => {
                 let seconds = env
                     .pop(1)?
-                    .as_number(env, "Sleep time must be a number")?
+                    .as_num(env, "Sleep time must be a number")?
                     .max(0.0);
                 env.backend.sleep(seconds).map_err(|e| env.error(e))?;
             }
@@ -1126,7 +1126,7 @@ impl SysOp {
             SysOp::TcpAccept => {
                 let handle = env
                     .pop(1)?
-                    .as_natural(env, "Handle must be an natural number")?
+                    .as_nat(env, "Handle must be an natural number")?
                     .into();
                 let new_handle = env.backend.tcp_accept(handle).map_err(|e| env.error(e))?;
                 env.push(new_handle);
@@ -1139,7 +1139,7 @@ impl SysOp {
             SysOp::TcpAddr => {
                 let handle = env
                     .pop(1)?
-                    .as_natural(env, "Handle must be an natural number")?
+                    .as_nat(env, "Handle must be an natural number")?
                     .into();
                 let addr = env.backend.tcp_addr(handle).map_err(|e| env.error(e))?;
                 env.push(addr);
@@ -1147,17 +1147,14 @@ impl SysOp {
             SysOp::TcpSetNonBlocking => {
                 let handle = env
                     .pop(1)?
-                    .as_natural(env, "Handle must be an natural number")?
+                    .as_nat(env, "Handle must be an natural number")?
                     .into();
                 env.backend
                     .tcp_set_non_blocking(handle, true)
                     .map_err(|e| env.error(e))?;
             }
             SysOp::TcpSetReadTimeout => {
-                let timeout = env
-                    .pop(1)?
-                    .as_number(env, "Timeout must be a number")?
-                    .abs();
+                let timeout = env.pop(1)?.as_num(env, "Timeout must be a number")?.abs();
                 let timeout = if timeout.is_infinite() {
                     None
                 } else {
@@ -1165,17 +1162,14 @@ impl SysOp {
                 };
                 let handle = env
                     .pop(2)?
-                    .as_natural(env, "Handle must be an natural number")?
+                    .as_nat(env, "Handle must be an natural number")?
                     .into();
                 env.backend
                     .tcp_set_read_timeout(handle, timeout)
                     .map_err(|e| env.error(e))?;
             }
             SysOp::TcpSetWriteTimeout => {
-                let timeout = env
-                    .pop(1)?
-                    .as_number(env, "Timeout must be a number")?
-                    .abs();
+                let timeout = env.pop(1)?.as_num(env, "Timeout must be a number")?.abs();
                 let timeout = if timeout.is_infinite() {
                     None
                 } else {
@@ -1183,7 +1177,7 @@ impl SysOp {
                 };
                 let handle = env
                     .pop(2)?
-                    .as_natural(env, "Handle must be an natural number")?
+                    .as_nat(env, "Handle must be an natural number")?
                     .into();
                 env.backend
                     .tcp_set_write_timeout(handle, timeout)
@@ -1195,7 +1189,7 @@ impl SysOp {
                     .as_string(env, "HTTP request must be a string")?;
                 let handle = env
                     .pop(2)?
-                    .as_natural(env, "Handle must be an natural number")?
+                    .as_nat(env, "Handle must be an natural number")?
                     .into();
                 let res = env
                     .backend
@@ -1206,7 +1200,7 @@ impl SysOp {
             SysOp::Close => {
                 let handle = env
                     .pop(1)?
-                    .as_natural(env, "Handle must be an natural number")?
+                    .as_nat(env, "Handle must be an natural number")?
                     .into();
                 env.backend.close(handle).map_err(|e| env.error(e))?;
             }

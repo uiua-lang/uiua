@@ -578,7 +578,7 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// `reshape` this value with another
     pub fn reshape(&mut self, shape: &Self, env: &Uiua) -> UiuaResult {
-        if let Ok(n) = shape.as_natural(env, "") {
+        if let Ok(n) = shape.as_nat(env, "") {
             match self {
                 Value::Num(a) => a.reshape_scalar(n),
                 Value::Byte(a) => a.reshape_scalar(n),
@@ -586,7 +586,7 @@ impl Value {
                 Value::Box(a) => a.reshape_scalar(n),
             }
         } else {
-            let target_shape = shape.as_integers(
+            let target_shape = shape.as_ints(
                 env,
                 "Shape should be a single natural number \
                 or a list of integers",
@@ -723,7 +723,7 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// Use this value as counts to `keep` another
     pub fn keep(&self, kept: Self, env: &Uiua) -> UiuaResult<Self> {
-        let counts = self.as_naturals(
+        let counts = self.as_nats(
             env,
             "Keep amount must be a natural number \
             or list of natural numbers",
@@ -745,7 +745,7 @@ impl Value {
         })
     }
     pub(crate) fn unkeep(self, kept: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        let counts = self.as_naturals(
+        let counts = self.as_nats(
             env,
             "Keep amount must be a natural number \
             or list of natural numbers",
@@ -1166,7 +1166,7 @@ impl Value {
         if from.rank() == 0 {
             return Err(env.error("Cannot take from scalar"));
         }
-        let index = self.as_integers(env, "Index must be a list of integers")?;
+        let index = self.as_ints(env, "Index must be a list of integers")?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.take(&index, env)?),
             Value::Byte(a) => op_bytes_retry_fill(
@@ -1183,7 +1183,7 @@ impl Value {
         if from.rank() == 0 {
             return Err(env.error("Cannot drop from scalar"));
         }
-        let index = self.as_integers(env, "Index must be a list of integers")?;
+        let index = self.as_ints(env, "Index must be a list of integers")?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.drop(&index, env)?),
             Value::Byte(a) => Value::Byte(a.drop(&index, env)?),
@@ -1192,7 +1192,7 @@ impl Value {
         })
     }
     pub(crate) fn untake(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        let index = index.as_integers(env, "Index must be a list of integers")?;
+        let index = index.as_ints(env, "Index must be a list of integers")?;
         Ok(match (self, into) {
             (Value::Num(a), Value::Num(b)) => Value::Num(a.untake(&index, b, env)?),
             (Value::Byte(a), Value::Byte(b)) => Value::Byte(a.untake(&index, b, env)?),
@@ -1210,7 +1210,7 @@ impl Value {
         })
     }
     pub(crate) fn undrop(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        let index = index.as_integers(env, "Index must be a list of integers")?;
+        let index = index.as_ints(env, "Index must be a list of integers")?;
         Ok(match (self, into) {
             (Value::Num(a), Value::Num(b)) => Value::Num(a.undrop(&index, b, env)?),
             (Value::Byte(a), Value::Byte(b)) => Value::Byte(a.undrop(&index, b, env)?),
@@ -1512,7 +1512,7 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// Use this value to `rotate` another
     pub fn rotate(&self, mut rotated: Self, env: &Uiua) -> UiuaResult<Self> {
-        let by = self.as_integers(env, "Rotation amount must be a list of integers")?;
+        let by = self.as_ints(env, "Rotation amount must be a list of integers")?;
         match &mut rotated {
             Value::Num(a) => a.rotate(&by, env)?,
             Value::Byte(a) => a.rotate(&by, env)?,
@@ -1748,7 +1748,7 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// Use this array to `windows` another
     pub fn windows(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
-        let size_spec = self.as_naturals(env, "Window size must be a list of natural numbers")?;
+        let size_spec = self.as_nats(env, "Window size must be a list of natural numbers")?;
         Ok(match from {
             Value::Num(a) => a.windows(&size_spec, env)?.into(),
             Value::Byte(a) => a.windows(&size_spec, env)?.into(),

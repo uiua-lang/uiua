@@ -401,9 +401,7 @@ impl Primitive {
                 env.push(array);
             }
             Primitive::Break => {
-                let n = env
-                    .pop(1)?
-                    .as_natural(env, "Break expects a natural number")?;
+                let n = env.pop(1)?.as_nat(env, "Break expects a natural number")?;
                 if n > 0 {
                     return Err(UiuaError::Break(n - 1, env.span().clone()));
                 }
@@ -513,7 +511,7 @@ impl Primitive {
             Primitive::Assert => {
                 let msg = env.pop(1)?;
                 let cond = env.pop(2)?;
-                if !cond.as_natural(env, "").is_ok_and(|n| n == 1) {
+                if !cond.as_nat(env, "").is_ok_and(|n| n == 1) {
                     return Err(UiuaError::Throw(msg.into(), env.span().clone()));
                 }
             }
@@ -526,17 +524,14 @@ impl Primitive {
             Primitive::Gen => {
                 let seed = env.pop(1)?;
                 let mut rng =
-                    SmallRng::seed_from_u64(seed.as_number(env, "Gen expects a number")?.to_bits());
+                    SmallRng::seed_from_u64(seed.as_num(env, "Gen expects a number")?.to_bits());
                 let val: f64 = rng.gen();
                 let next_seed = f64::from_bits(rng.gen::<u64>());
                 env.push(val);
                 env.push(next_seed);
             }
             Primitive::Deal => {
-                let seed = env
-                    .pop(1)?
-                    .as_number(env, "Deal expects a number")?
-                    .to_bits();
+                let seed = env.pop(1)?.as_num(env, "Deal expects a number")?.to_bits();
                 let arr = env.pop(2)?;
                 let mut rows: Vec<Value> = arr.into_rows().collect();
                 rows.shuffle(&mut SmallRng::seed_from_u64(seed));

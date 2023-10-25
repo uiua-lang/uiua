@@ -79,7 +79,7 @@ pub fn iff(env: &mut Uiua) -> UiuaResult {
     let if_true = env.pop_function()?;
     let if_false = env.pop_function()?;
     let condition = env.pop(1)?;
-    if let Ok(condition) = condition.as_natural(env, "") {
+    if let Ok(condition) = condition.as_nat(env, "") {
         if condition > 1 {
             return Err(env.error(format!(
                 "If's condition must be 0 or 1, but it is {}",
@@ -113,7 +113,7 @@ pub fn iff(env: &mut Uiua) -> UiuaResult {
             }
         }
     } else {
-        let condition = condition.as_naturals(
+        let condition = condition.as_nats(
             env,
             "If's condition must be a natural number or list of natural numbers",
         )?;

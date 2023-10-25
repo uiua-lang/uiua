@@ -769,6 +769,7 @@ impl<'a> Lexer<'a> {
                 "t" => '\t'.to_string(),
                 "0" => '\0'.to_string(),
                 "s" => ' '.to_string(),
+                "b" => '\x07'.to_string(),
                 "\\" => '\\'.to_string(),
                 "\"" => '"'.to_string(),
                 "'" => '\''.to_string(),

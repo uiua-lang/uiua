@@ -544,11 +544,15 @@ fn TutorialBindings() -> impl IntoView {
         <Editor example="×6 7\nAnswer ←\n[Answer]"/>
 
         <h2 id="binding-functions">"Binding Functions"</h2>
-        <p>"If the code on the right side of the "<code>"←"</code>" looks like a function, then instead of evaluating its right side immediately, the right side will be bound as a function."</p>
+        <p>"If the code on the right side of the "<code>"←"</code>" requires more than 0 values to be on the stack, then instead of evaluating its right side immediately, the right side will be bound as a function."</p>
         <p>"This is how you make named functions in Uiua."</p>
         <Editor example="f ← +1\nf 5"/>
         <Editor example="Cube ← ××..\nCube 6"/>
         <Editor example="👋 ← ⊂\"Hello, \"\n👋 \"World!\""/>
+        <p>"If the code on the right side takes 0 arguments but you still want it to be a function, it must be surrounded by "<code>"()"</code>"s."</p>
+        <p>"Notice how the first example here gives the same value every time, while the second one does not."</p>
+        <Editor example="f ← ⚂\nf f f"/>
+        <Editor example="f ← (⚂)\nf f f"/>
         <p>"The "<A href="/docs/functions">"next section"</A>" discusses functions in more detail."</p>
     }
 }

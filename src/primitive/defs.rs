@@ -1690,10 +1690,9 @@ macro_rules! impl_primitive {
 }
 
 impl_primitive!(
-    (1, Cos),
+    // Inverses
     (1, Asin),
     (1, Acos),
-    (1, Last),
     (1, InverseBits),
     (1, InvTranspose),
     (1, InvWhere),
@@ -1705,10 +1704,14 @@ impl_primitive!(
     (3, Unkeep),
     (3[1], Unpartition),
     (3[1], Ungroup),
+    (1, InvUtf),
+    (1, InvTrace),
+    // Optimizations
+    (1, Cos),
+    (1, Last),
     (1, FirstMinIndex),
     (1, FirstMaxIndex),
     (1, LastMinIndex),
     (1, LastMaxIndex),
-    (1, InvUtf),
-    (1, InvTrace),
+    (1, FirstWhere),
 );

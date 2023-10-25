@@ -461,6 +461,43 @@ impl Value {
         }
         Ok(Array::from(data).into())
     }
+    pub fn first_where(&self, env: &Uiua) -> UiuaResult<Self> {
+        if self.rank() > 1 {
+            return Err(env.error(format!(
+                "Argument to where must be a list of naturals, but it is rank {}",
+                self.rank()
+            )));
+        }
+        match self {
+            Value::Num(nums) => {
+                for (i, n) in nums.data.iter().enumerate() {
+                    if n.fract() != 0.0 || *n < 0.0 {
+                        return Err(env.error("Argument to where must be a list of naturals"));
+                    }
+                    if *n != 0.0 {
+                        return Ok((i as f64).into());
+                    }
+                }
+                env.fill::<f64>()
+                    .map(Into::into)
+                    .ok_or_else(|| env.error("Cannot take first of an empty array"))
+            }
+            Value::Byte(bytes) => {
+                for (i, n) in bytes.data.iter().enumerate() {
+                    if *n != 0 {
+                        return Ok((i as f64).into());
+                    }
+                }
+                env.fill::<f64>()
+                    .map(Into::into)
+                    .ok_or_else(|| env.error("Cannot take first of an empty array"))
+            }
+            value => Err(env.error(format!(
+                "Argument to where must be a list of naturals, but it is {}",
+                value.type_name_plural()
+            ))),
+        }
+    }
     pub fn inverse_where(&self, env: &Uiua) -> UiuaResult<Self> {
         let indices =
             self.as_naturals(env, "Argument to inverse where must be a list of naturals")?;
@@ -592,12 +629,14 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn first_min_index(&self, env: &Uiua) -> UiuaResult<usize> {
+    pub fn first_min_index(&self, env: &Uiua) -> UiuaResult<f64> {
         if self.rank() == 0 {
             return Err(env.error("Cannot get min index of a scalar"));
         }
         if self.row_count() == 0 {
-            return Err(env.error("Cannot get min index of an empty array"));
+            return env
+                .fill::<f64>()
+                .ok_or_else(|| env.error("Cannot get min index of an empty array"));
         }
         let index = self
             .row_slices()
@@ -606,14 +645,16 @@ impl<T: ArrayValue> Array<T> {
             .min_by(|(_, a), (_, b)| a.cmp(b))
             .unwrap()
             .0;
-        Ok(index)
+        Ok(index as f64)
     }
-    pub fn first_max_index(&self, env: &Uiua) -> UiuaResult<usize> {
+    pub fn first_max_index(&self, env: &Uiua) -> UiuaResult<f64> {
         if self.rank() == 0 {
             return Err(env.error("Cannot get max index of a scalar"));
         }
         if self.row_count() == 0 {
-            return Err(env.error("Cannot get max index of an empty array"));
+            return env
+                .fill::<f64>()
+                .ok_or_else(|| env.error("Cannot get max index of an empty array"));
         }
         let index = self
             .row_slices()
@@ -622,14 +663,16 @@ impl<T: ArrayValue> Array<T> {
             .min_by(|(_, a), (_, b)| a.cmp(b).reverse())
             .unwrap()
             .0;
-        Ok(index)
+        Ok(index as f64)
     }
-    pub fn last_min_index(&self, env: &Uiua) -> UiuaResult<usize> {
+    pub fn last_min_index(&self, env: &Uiua) -> UiuaResult<f64> {
         if self.rank() == 0 {
             return Err(env.error("Cannot get min index of a scalar"));
         }
         if self.row_count() == 0 {
-            return Err(env.error("Cannot get min index of an empty array"));
+            return env
+                .fill::<f64>()
+                .ok_or_else(|| env.error("Cannot get min index of an empty array"));
         }
         let index = self
             .row_slices()
@@ -638,14 +681,16 @@ impl<T: ArrayValue> Array<T> {
             .max_by(|(_, a), (_, b)| a.cmp(b).reverse())
             .unwrap()
             .0;
-        Ok(index)
+        Ok(index as f64)
     }
-    pub fn last_max_index(&self, env: &Uiua) -> UiuaResult<usize> {
+    pub fn last_max_index(&self, env: &Uiua) -> UiuaResult<f64> {
         if self.rank() == 0 {
             return Err(env.error("Cannot get max index of a scalar"));
         }
         if self.row_count() == 0 {
-            return Err(env.error("Cannot get max index of an empty array"));
+            return env
+                .fill::<f64>()
+                .ok_or_else(|| env.error("Cannot get max index of an empty array"));
         }
         let index = self
             .row_slices()
@@ -654,6 +699,6 @@ impl<T: ArrayValue> Array<T> {
             .max_by(|(_, a), (_, b)| a.cmp(b))
             .unwrap()
             .0;
-        Ok(index)
+        Ok(index as f64)
     }
 }

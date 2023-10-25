@@ -597,7 +597,6 @@ impl Primitive {
 impl ImplPrimitive {
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
-            ImplPrimitive::Cos => env.monadic_env(Value::cos)?,
             ImplPrimitive::Asin => env.monadic_env(Value::asin)?,
             ImplPrimitive::Acos => env.monadic_env(Value::acos)?,
             ImplPrimitive::InvTranspose => env.monadic_mut(Value::inv_transpose)?,
@@ -639,15 +638,18 @@ impl ImplPrimitive {
             }
             ImplPrimitive::InvWhere => env.monadic_ref_env(Value::inverse_where)?,
             ImplPrimitive::InvUtf => env.monadic_ref_env(Value::inv_utf8)?,
+            ImplPrimitive::InverseBits => env.monadic_ref_env(Value::inverse_bits)?,
+            ImplPrimitive::Unpartition => loops::unpartition(env)?,
+            ImplPrimitive::Ungroup => loops::ungroup(env)?,
+            ImplPrimitive::InvTrace => trace(env, true)?,
+            // Optimizations
+            ImplPrimitive::Cos => env.monadic_env(Value::cos)?,
             ImplPrimitive::Last => env.monadic_env(Value::last)?,
             ImplPrimitive::FirstMinIndex => env.monadic_ref_env(Value::first_min_index)?,
             ImplPrimitive::FirstMaxIndex => env.monadic_ref_env(Value::first_max_index)?,
             ImplPrimitive::LastMinIndex => env.monadic_ref_env(Value::last_min_index)?,
             ImplPrimitive::LastMaxIndex => env.monadic_ref_env(Value::last_max_index)?,
-            ImplPrimitive::InverseBits => env.monadic_ref_env(Value::inverse_bits)?,
-            ImplPrimitive::Unpartition => loops::unpartition(env)?,
-            ImplPrimitive::Ungroup => loops::ungroup(env)?,
-            ImplPrimitive::InvTrace => trace(env, true)?,
+            ImplPrimitive::FirstWhere => env.monadic_ref_env(Value::first_where)?,
         }
         Ok(())
     }

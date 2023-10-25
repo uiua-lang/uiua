@@ -25,6 +25,8 @@ If you are reading this on the website, then these changes are live here.
 - Increase thresholds for arrays becoming images or audio
 - Split up system functions into more categories on the main docs page
 - The bell character now plays a sound if printed with [`&p`](https://uiua.org/docs/&p) or [`&pf`](https://uiua.org/docs/&pf)
+### Community
+- The [GitHub Discussions](https://github.com/uiua-lang/uiua/discussions) are now open!
 
 ## 0.0.22 - 2023-10-21
 ### Language

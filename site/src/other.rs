@@ -23,15 +23,15 @@ pub fn Design() -> impl IntoView {
 
         <h2 id="stack-basing">"Stack Basing"</h2>
         <h3>"Combinators"</h3>
-        <p>"When I first started developing Uiua, it was neither stack-based nor array-oriented. What it "<em>"did"</em>" focus a lot on was "<em>"combinators"</em>". I had this whole heirarchy of language-level operators that let you construct arbitrarily complex combinators relatively succinctly."</p>
+        <p>"When I first started developing Uiua, it was neither stack-based nor array-oriented. What it "<em>"did"</em>" focus a lot on was "<em>"combinators"</em>". I had this whole hierarchy of language-level operators that let you construct arbitrarily complex combinators relatively succinctly."</p>
         <p>"I discovered what a lot of others have discovered when delving deep into tacit code: it's really hard to read and write and reason about."</p>
         <p>"Eventually, I moved to a stack-based model and discovered that you can write almost any 1 or 2 argument combinator with just "<Prim prim=Dup/>", "<Prim prim=Over/>", and "<Prim prim=Flip/>"."</p>
-        <p>"Of course, I also made the discovery that juggling 3 or more values on the stack also imposes a high cognitive load on the developer. This is especially true if you try to "<em>"rotate"</em>" the stack like you coule with the now-removed functions"<code>"roll"</code>" and "<code>"unroll"</code>". "<Prim prim=Dip/>" replaced the rolling functions as it is more general and easier to reason about, end eventually grew into "<A href="/docs/advancedstack#planet-notation">"Planet Notation"</A>"."</p>
+        <p>"Of course, I also made the discovery that juggling 3 or more values on the stack also imposes a high cognitive load on the developer. This is especially true if you try to "<em>"rotate"</em>" the stack like you could with the now-removed functions"<code>"roll"</code>" and "<code>"unroll"</code>". "<Prim prim=Dip/>" replaced the rolling functions as it is more general and easier to reason about, end eventually grew into "<A href="/docs/advancedstack#planet-notation">"Planet Notation"</A>"."</p>
         <br/>
         <h3>"Expressions"</h3>
         <p>"Long tacit expressions in most array languages can get very unwieldy. Because binary operations are infix, you have to parse the tree structure in your head before you can start determining the order of operations."</p>
         <p>"For example, in BQN, you can trim matches from the beginning of a string with "<a style="text-decoration: none;" href="https://mlochbaum.github.io/bqncrate/?q=Remove%20cells%20that%20appear%20in%20x%20from%20beginning%20of%20y#"><code>"x(∧`∘∊˜¬⊸/⊢)y"</code></a>". "</p>
-        <p>"In contrast, here is there equivalent in Uiua, implemented the same way:"</p>
+        <p>"In contrast, here is their equivalent in Uiua, implemented the same way:"</p>
         <Editor example="Trim ← ▽¬\\×∊,"/>
         <p>
             "You'll notice that stack basing simplifies the expression in a few ways:"
@@ -41,11 +41,11 @@ pub fn Design() -> impl IntoView {
                 <li>"The expression does not require "<code>"()"</code>"s. In fact, no Uiua expression requires explicit grouping. "<code>"()"</code>" is used to make inline functions instead."</li>
             </ul>
         </p>
-        <p>"I think this clarity makes writing long tacit expression much more workable."</p>
+        <p>"I think this clarity makes writing long tacit expressions much more workable."</p>
 
         <h2 id="array-model">"The Array Model"</h2>
         <p>"Uiua's array model went through a lot of iterations during development. At first, it used a flat, vector-based model ala K and Q. Then, I switched to BQN's Based array model. That was really complicated to implement primitives for, so I tried something else."</p>
-        <p>"I switched to a flat array model with \"fill elements\". While arrays could not be nested, operations which would create nested arrays in other languages would instead create jagged arrays with special fill elements at the end of some rows. While this worked, the code was scattered everywhere with checks for fill elements, because they had to propogate through everything. It also had the unfortunate effect of making byte arrays take up 2 bytes of space, since a bit had to be used to indicate whether the byte was a fill element or not. Also, a lot of operations, such as "<Prim prim=Transpose/>", don't really make a lot of sense with jagged arrays."</p>
+        <p>"I switched to a flat array model with \"fill elements\". While arrays could not be nested, operations which would create nested arrays in other languages would instead create jagged arrays with special fill elements at the end of some rows. While this worked, the code was scattered everywhere with checks for fill elements, because they had to propagate through everything. It also had the unfortunate effect of making byte arrays take up 2 bytes of space, since a bit had to be used to indicate whether the byte was a fill element or not. Also, a lot of operations, such as "<Prim prim=Transpose/>", don't really make a lot of sense with jagged arrays."</p>
         <p>"Finally, I switched to the current model, which resembles J's Boxed array model. While you can do something resembling J's "<code>"box <"</code>" using "<Prim prim=Box/>" (and "<code>"open >"</code>" with "<Prim prim=Unbox/>"), I designed functions like "<Prim prim=Partition/>" and "<Prim prim=Group/>" to allow selecting uniformly-shaped rows from a non-uniform list in an effort to minimize interaction with jagged data."</p>
         <p>"The fact that the stack is always available also makes putting non-uniform data in arrays less necessary."</p>
 
@@ -77,7 +77,7 @@ pub fn Design() -> impl IntoView {
         <h2 id="inspiration">"Inspiration"</h2>
         <h3>"BQN"</h3>
         <p>"The main language that inspired Uiua is "<a href="https://mlochbaum.github.io/BQN/">BQN</a>". While I had heard about APL before, BQN was my first real exposure to the power of the array paradigm. I think the language is an astounding feat of engineering. Marshall is both a genius and a great communicator."</p>
-        <p>"However, as you can read above, a lot of Uiua's design decisions are responses to things I "<em>"didn't"</em>" like about BQN. There were a bunch of little pain-points that I though I could improve on."</p>
+        <p>"However, as you can read above, a lot of Uiua's design decisions are responses to things I "<em>"didn't"</em>" like about BQN. There were a bunch of little pain-points that I thought I could improve on."</p>
         <p>"A lot of the behavior of Uiua's built-in functions (and the choice of which built-ins to include) is inspired by BQN's primitives. Just a few examples are "<Prim prim=Transpose/>", "<Prim prim=Classify/>", "<Prim prim=Group/>", and "<Prim prim=Take/>"."</p>
         <p>"Another thing that was largely inspired by BQN is this website! BQN's site is excellent. I really like the way it is organized and the way it presents the language. I particularly liked the built-in editor, so I made my own version for Uiua that has syntax highlighting and history, which I reuse in all the tutorials and examples."</p>
         <br/>
@@ -96,7 +96,7 @@ pub fn Technical() -> impl IntoView {
         <h2>"The Interpreter"</h2>
         <p>"The Uiua interpreter is written in Rust."</p>
         <p>"An entire file is first parsed into an abstract syntax tree. Then, each line is, one after the other, compiled to a simple bytecode and executed."</p>
-        <p>"Built-in functions are implemented in Rust so they can be as fast as possible. User defined functions are passed around as chunks of bytecode."</p>
+        <p>"Built-in functions are implemented in Rust so they can be as fast as possible. User-defined functions are passed around as chunks of bytecode."</p>
 
         <h2>"Arrays"</h2>
         <p>"Values on the stack are implemented as Rust "<code>"enum"</code>"s, where each variant contains a different array type."</p>
@@ -173,7 +173,7 @@ pub fn RightToLeft() -> impl IntoView {
         <p>"The misunderstanding is largely my own fault. The initial version of the website said \"stack-oriented\" everywhere and made references to FORTH. I have since rectified this."</p>
         <p>"When you write Uiua code the stack should just be a tool, a convention. It's how you pass values around. "<strong>"The stack should not guide how you think about solving problems in Uiua."</strong></p>
         <p>"Uiua is about composing arrays. The stack makes it possible to do this without naming local variables. This is the entire reason for its presence in the language. In particular, the stack can be used to construct arbitrary combinators and data flows. It is an extremely powerful mechanism for this purpose."</p>
-        <p>"You should not think of Uiua syntax like a FORTH. You should think of it like a any of the numereous other languages that put functions before their arguments. This groups include languages of vastly different kinds, like C, Haskell, and Lisp."</p>
+        <p>"You should not think of Uiua syntax like a FORTH. You should think of it like any of the numerous other languages that put functions before their arguments. This group includes languages of vastly different kinds, like C, Haskell, and Lisp."</p>
         <p>"The left side of an expression is "<em>"not"</em>" the end or the beginning. It is the "<em>"root"</em>". The expression is a tree with branches that converge and diverge in different ways. It is not a list of instructions."</p>
         <p>"This allows us to separate the execution model from the mental model. With a separate mental model, why does it matter which direction the code executes? Why can't the root be on the right?"</p>
         <p>"Of course, "<em>"now"</em>" the decision is arbitrary. I'm used to languages that put the root on the left, so that is what I chose."</p>
@@ -199,7 +199,7 @@ pub fn Audio() -> impl IntoView {
 
         <h2 id="basic-synthesis">"Basic Synthesis"</h2>
         <p>"In the online editor, you need only make an array that looks like audio samples."</p>
-        <p>"Audio samples must be eiter a rank 1 where each element is a sample or a rank 2 array where each row is a channel."</p>
+        <p>"Audio samples must be either a rank 1 where each element is a sample or a rank 2 array where each row is a channel."</p>
         <p>"The samples must be between "<code>"-1"</code>" and "<code>"1"</code>". We use the "<Prim prim=Sys(SysOp::AudioSampleRate)/>" system function to get the sample rate of the audio output."</p>
         <p>"For a minimal example, here is a simple 1 second sawtooth wave:"</p>
         <Editor examples={&["%2", "◿1×220", "÷∶⇡.&asr"]}/>
@@ -207,7 +207,7 @@ pub fn Audio() -> impl IntoView {
         <p>"Then, we multiply the time by 220, the frequency of an A3 note, and take the "<Prim prim=Mod/>"1 of that. This gives us a nice pure sawtooth wave."</p>
         <p>"Finally, the wave is a little loud on its own, so we "<Prim prim=Div/>" it by 2."</p>
         <br/>
-        <p>"For longer time arrays, "<Prim prim=Mul/>" the number of sample by the number of seconds you want before calling "<Prim prim=Range/>" but after "<Prim prim=Dup/>"."</p>
+        <p>"For longer time arrays, "<Prim prim=Mul/>" the number of samples by the number of seconds you want before calling "<Prim prim=Range/>" but after "<Prim prim=Dup/>"."</p>
         <Editor example="%2◿1×220÷∶⇡ ×3 .&asr"/>
         <p>"If you "<Prim prim=Mul/>" by a non-integer, you may need to use "<Prim prim=Round/>" to prevent an error."</p>
         <Editor example="%2◿1×220÷∶⇡ ⁅×0.5 .&asr"/>
@@ -227,7 +227,7 @@ s ← ○×τ⊞×f ÷∶⇡.&asr
         <h2 id="native-audio">"Native Audio"</h2>
         <p>"If running code in the native Uiua interpreter, arrays will not be automatically turned into audio."</p>
         <p>"Instead, you must use the "<Prim prim=Sys(SysOp::AudioPlay)/>" system function to play it."</p>
-        <p><Prim prim=Sys(SysOp::AudioPlay)/>" should fine on the website as well, but it is not necessary."</p>
+        <p><Prim prim=Sys(SysOp::AudioPlay)/>" should work fine on the website as well, but it is not necessary."</p>
         <Editor example="&ap÷2×¬◿1×4∶±○×τ×55.÷∶⇡×2. &asr"/>
     }
 }

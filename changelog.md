@@ -2,7 +2,11 @@
 
 Uiua is not yet stable.
 
-<!-- If you are reading this on the website, then these changes are live here. -->
+
+## 0.0.24 - 2023-10-??
+If you are reading this on the website, then these changes are live here.
+### Crate
+- The [Uiua Rust crate](https://crates.io/crates/uiua) is now [fully documented](https://docs.rs/uiua) and has a decent API
 
 ## 0.0.23 - 2023-10-25
 ### Language

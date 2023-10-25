@@ -1705,8 +1705,10 @@ impl_primitive!(
     (3, Unkeep),
     (3[1], Unpartition),
     (3[1], Ungroup),
-    (1, MinIndex),
-    (1, MaxIndex),
+    (1, FirstMinIndex),
+    (1, FirstMaxIndex),
+    (1, LastMinIndex),
+    (1, LastMaxIndex),
     (1, InvUtf),
     (1, InvTrace),
 );

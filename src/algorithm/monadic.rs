@@ -549,22 +549,42 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
-    pub fn min_index(&self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn first_min_index(&self, env: &Uiua) -> UiuaResult<Self> {
         self.generic_ref_env_deep(
-            Array::min_index,
-            Array::min_index,
-            Array::min_index,
-            Array::min_index,
+            Array::first_min_index,
+            Array::first_min_index,
+            Array::first_min_index,
+            Array::first_min_index,
             env,
         )
         .map(Into::into)
     }
-    pub fn max_index(&self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn first_max_index(&self, env: &Uiua) -> UiuaResult<Self> {
         self.generic_ref_env_deep(
-            Array::max_index,
-            Array::max_index,
-            Array::max_index,
-            Array::max_index,
+            Array::first_max_index,
+            Array::first_max_index,
+            Array::first_max_index,
+            Array::first_max_index,
+            env,
+        )
+        .map(Into::into)
+    }
+    pub fn last_min_index(&self, env: &Uiua) -> UiuaResult<Self> {
+        self.generic_ref_env_deep(
+            Array::last_min_index,
+            Array::last_min_index,
+            Array::last_min_index,
+            Array::last_min_index,
+            env,
+        )
+        .map(Into::into)
+    }
+    pub fn last_max_index(&self, env: &Uiua) -> UiuaResult<Self> {
+        self.generic_ref_env_deep(
+            Array::last_max_index,
+            Array::last_max_index,
+            Array::last_max_index,
+            Array::last_max_index,
             env,
         )
         .map(Into::into)
@@ -572,7 +592,7 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    pub fn min_index(&self, env: &Uiua) -> UiuaResult<usize> {
+    pub fn first_min_index(&self, env: &Uiua) -> UiuaResult<usize> {
         if self.rank() == 0 {
             return Err(env.error("Cannot get min index of a scalar"));
         }
@@ -588,7 +608,39 @@ impl<T: ArrayValue> Array<T> {
             .0;
         Ok(index)
     }
-    pub fn max_index(&self, env: &Uiua) -> UiuaResult<usize> {
+    pub fn first_max_index(&self, env: &Uiua) -> UiuaResult<usize> {
+        if self.rank() == 0 {
+            return Err(env.error("Cannot get max index of a scalar"));
+        }
+        if self.row_count() == 0 {
+            return Err(env.error("Cannot get max index of an empty array"));
+        }
+        let index = self
+            .row_slices()
+            .map(ArrayCmpSlice)
+            .enumerate()
+            .min_by(|(_, a), (_, b)| a.cmp(b).reverse())
+            .unwrap()
+            .0;
+        Ok(index)
+    }
+    pub fn last_min_index(&self, env: &Uiua) -> UiuaResult<usize> {
+        if self.rank() == 0 {
+            return Err(env.error("Cannot get min index of a scalar"));
+        }
+        if self.row_count() == 0 {
+            return Err(env.error("Cannot get min index of an empty array"));
+        }
+        let index = self
+            .row_slices()
+            .map(ArrayCmpSlice)
+            .enumerate()
+            .max_by(|(_, a), (_, b)| a.cmp(b).reverse())
+            .unwrap()
+            .0;
+        Ok(index)
+    }
+    pub fn last_max_index(&self, env: &Uiua) -> UiuaResult<usize> {
         if self.rank() == 0 {
             return Err(env.error("Cannot get max index of a scalar"));
         }

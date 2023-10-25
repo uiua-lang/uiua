@@ -247,27 +247,27 @@ impl Uiua {
                 instrs.pop();
                 instrs.push(Instr::ImplPrim(Cos, span));
             }
-            // First Rise = MinIndex
-            ([.., Instr::Prim(Rise, _)], Instr::Prim(First, span))
-            | ([.., Instr::Prim(Fall, _)], Instr::ImplPrim(Last, span)) => {
+            // First Rise = FirstMinIndex
+            ([.., Instr::Prim(Rise, _)], Instr::Prim(First, span)) => {
                 instrs.pop();
-                instrs.push(Instr::ImplPrim(MinIndex, span))
+                instrs.push(Instr::ImplPrim(FirstMinIndex, span))
             }
+            // First Reverse Fall = LastMinIndex
             ([.., Instr::Prim(Fall, _), Instr::Prim(Reverse, _)], Instr::Prim(First, span)) => {
                 instrs.pop();
                 instrs.pop();
-                instrs.push(Instr::ImplPrim(MinIndex, span))
+                instrs.push(Instr::ImplPrim(LastMinIndex, span))
             }
-            // First Fall = MaxIndex
-            ([.., Instr::Prim(Fall, _)], Instr::Prim(First, span))
-            | ([.., Instr::Prim(Rise, _)], Instr::ImplPrim(Last, span)) => {
+            // First Fall = FirstMaxIndex
+            ([.., Instr::Prim(Fall, _)], Instr::Prim(First, span)) => {
                 instrs.pop();
-                instrs.push(Instr::ImplPrim(MaxIndex, span))
+                instrs.push(Instr::ImplPrim(FirstMaxIndex, span))
             }
+            // First Reverse Rise = LastMaxIndex
             ([.., Instr::Prim(Rise, _), Instr::Prim(Reverse, _)], Instr::Prim(First, span)) => {
                 instrs.pop();
                 instrs.pop();
-                instrs.push(Instr::ImplPrim(MaxIndex, span))
+                instrs.push(Instr::ImplPrim(LastMaxIndex, span))
             }
             // First Reverse = last
             ([.., Instr::Prim(Reverse, _)], Instr::Prim(First, span)) => {

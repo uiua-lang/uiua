@@ -3,7 +3,7 @@ use std::{any::Any, collections::HashMap, io::Cursor, sync::Mutex};
 use leptos::*;
 use uiua::{Report, SysBackend, UiuaError};
 
-use crate::editor::get_ast_time;
+use crate::{editor::get_ast_time, weewuh};
 
 pub struct WebBackend {
     pub stdout: Mutex<Vec<OutputItem>>,
@@ -37,6 +37,9 @@ impl SysBackend for WebBackend {
         self
     }
     fn print_str_stdout(&self, s: &str) -> Result<(), String> {
+        if s.contains('\u{07}') {
+            weewuh();
+        }
         let mut stdout = self.stdout.lock().unwrap();
         let mut lines = s.lines();
         let Some(first) = lines.next() else {

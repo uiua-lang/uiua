@@ -505,7 +505,14 @@ impl Uiua {
             // Name exists in scope
             let global = self.globals.lock()[*idx].clone();
             match global {
-                Global::Val(val) => self.push_instr(Instr::push(val)),
+                Global::Val(val) if call => self.push_instr(Instr::push(val)),
+                Global::Val(val) => {
+                    self.push_instr(Instr::push_func(Function::new(
+                        FunctionId::Anonymous(span),
+                        vec![Instr::push(val)],
+                        Signature::new(0, 1),
+                    )));
+                }
                 Global::Func(f) => {
                     self.push_instr(Instr::push_func(f));
                     if call {

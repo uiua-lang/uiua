@@ -19,6 +19,7 @@
          buildInputs = nixpkgs.lib.optionals pkgs.stdenv.isDarwin [
            pkgs.iconv
            pkgs.darwin.apple_sdk.frameworks.CoreServices
+           pkgs.darwin.apple_sdk.frameworks.Foundation
         ];
       };
     in

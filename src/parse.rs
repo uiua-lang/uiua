@@ -4,8 +4,7 @@ use crate::{
     ast::*,
     function::{FunctionId, Signature},
     lex::{AsciiToken::*, Token::*, *},
-    primitive::Primitive,
-    Diagnostic, DiagnosticKind, Ident,
+    Diagnostic, DiagnosticKind, Ident, Primitive,
 };
 
 #[derive(Debug, Clone)]
@@ -89,8 +88,6 @@ impl fmt::Display for ParseError {
 }
 
 impl Error for ParseError {}
-
-pub type ParseResult<T = ()> = Result<T, Sp<ParseError>>;
 
 pub fn parse(
     input: &str,

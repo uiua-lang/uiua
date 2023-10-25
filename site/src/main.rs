@@ -14,7 +14,7 @@ use base64::engine::{general_purpose::URL_SAFE, Engine};
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use uiua::primitive::{ConstantDef, PrimClass, Primitive};
+use uiua::{ConstantDef, PrimClass, Primitive};
 use wasm_bindgen::JsCast;
 use web_sys::HtmlAudioElement;
 
@@ -404,8 +404,7 @@ fn site() {
                     path.to_path_buf(),
                     code.clone(),
                     std::thread::spawn(move || {
-                        let mut env =
-                            uiua::Uiua::with_native_sys().with_mode(uiua::run::RunMode::All);
+                        let mut env = uiua::Uiua::with_native_sys().with_mode(uiua::RunMode::All);
                         (env.load_str(&code).map(|_| env), should_fail)
                     }),
                 ));

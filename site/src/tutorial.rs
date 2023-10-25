@@ -4,7 +4,7 @@ use enum_iterator::{all, Sequence};
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use uiua::{example_ua, primitive::Primitive, SysOp};
+use uiua::{example_ua, Primitive, SysOp};
 
 use crate::{editor::*, Prim, PrimCodes};
 
@@ -822,7 +822,7 @@ fn TutorialAdvancedArray() -> impl IntoView {
                     view! {
                         <tr>
                             <td><Prim prim=prim/></td>
-                            <td><code>{uiua::array::Array::from(c).show()}</code></td>
+                            <td><code>{uiua::Array::from(c).show()}</code></td>
                         </tr>
                     }
                 })

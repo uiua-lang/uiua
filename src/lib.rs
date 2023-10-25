@@ -8,30 +8,41 @@ The current API should be considered deeply unstable.
 #![allow(clippy::single_match, clippy::needless_range_loop)]
 
 mod algorithm;
-pub mod array;
-pub mod ast;
-pub mod boxed;
+mod array;
+mod ast;
+mod boxed;
 mod check;
 mod compile;
 mod cowslice;
 mod error;
 pub mod format;
-pub mod function;
+mod function;
 mod grid_fmt;
-pub mod lex;
+mod lex;
 pub mod lsp;
-pub mod parse;
-pub mod primitive;
+mod parse;
+mod primitive;
 #[doc(hidden)]
 pub mod profile;
-pub mod run;
+mod run;
 mod sys;
 mod sys_native;
-pub mod value;
+mod value;
 
 use std::sync::Arc;
 
-pub use {error::*, run::Uiua, sys::*, sys_native::*};
+pub use {
+    array::Array,
+    error::*,
+    lex::is_ident_char,
+    lsp::{spans, SpanKind},
+    parse::parse,
+    primitive::*,
+    run::*,
+    sys::*,
+    sys_native::*,
+    value::Value,
+};
 
 pub type Ident = Arc<str>;
 

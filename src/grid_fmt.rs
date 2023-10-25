@@ -13,8 +13,8 @@ use std::{
 use crate::{
     array::{Array, ArrayValue},
     boxed::Boxed,
-    primitive::Primitive,
     value::Value,
+    Primitive,
 };
 
 type Grid<T = char> = Vec<Vec<T>>;

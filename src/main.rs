@@ -20,9 +20,7 @@ use parking_lot::Mutex;
 use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
     lsp::{spans, SpanKind},
-    primitive::PrimClass,
-    run::RunMode,
-    Uiua, UiuaError, UiuaResult,
+    PrimClass, RunMode, Uiua, UiuaError, UiuaResult,
 };
 
 fn main() {

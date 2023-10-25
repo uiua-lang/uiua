@@ -12,9 +12,8 @@ use crate::{
     array::{Array, ArrayValue, Shape},
     cowslice::cowslice,
     function::{Function, Signature},
-    primitive::Primitive,
     value::Value,
-    Uiua, UiuaResult,
+    Primitive, Uiua, UiuaResult,
 };
 
 pub fn reduce(env: &mut Uiua) -> UiuaResult {

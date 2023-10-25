@@ -424,21 +424,6 @@ impl ArrayValue for Boxed {
     }
 }
 
-#[derive(Debug)]
-pub enum ArrayCmpError {
-    WrongType(&'static str),
-    NotConstant,
-}
-
-impl fmt::Display for ArrayCmpError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::WrongType(ty) => write!(f, "box has wrong type: {ty}"),
-            Self::NotConstant => write!(f, "function is not a box"),
-        }
-    }
-}
-
 pub trait ArrayCmp<U = Self> {
     fn array_cmp(&self, other: &U) -> Ordering;
     fn array_eq(&self, other: &U) -> bool {

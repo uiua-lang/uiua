@@ -3,8 +3,8 @@ use std::{borrow::Cow, cmp::Ordering};
 use crate::{
     array::Array,
     function::{Function, FunctionId, Instr, Signature},
-    primitive::Primitive,
     value::Value,
+    Primitive,
 };
 
 /// Count the number of arguments and the stack Δ of a function.

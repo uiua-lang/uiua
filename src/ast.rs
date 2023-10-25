@@ -4,8 +4,7 @@ use crate::{
     function::{FunctionId, Signature},
     lex::{CodeSpan, Sp},
     parse::ident_modifier_args,
-    primitive::Primitive,
-    Ident,
+    Ident, Primitive,
 };
 
 #[derive(Debug, Clone)]

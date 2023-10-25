@@ -1,7 +1,7 @@
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use uiua::primitive::{PrimClass, PrimDocFragment, PrimDocLine, Primitive};
+use uiua::{PrimClass, PrimDocFragment, PrimDocLine, Primitive};
 
 use crate::{editor::Editor, Prim};
 

@@ -4,7 +4,7 @@ use crate::{
     ast::{Item, Modifier, Word},
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
-    primitive::Primitive,
+    Primitive,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

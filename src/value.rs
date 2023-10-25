@@ -855,8 +855,8 @@ macro_rules! value_bin_impl {
         $([$ip:ident, $f2:ident $(, $retry2:ident)?])*
     ),* ) => {
         impl Value {
-            #[allow(unreachable_patterns)]
-            pub fn $name(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
+            #[allow(unreachable_patterns, clippy::wrong_self_convention)]
+            pub(crate) fn $name(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
                 Ok(match (self, other) {
                     $($((Value::$ip(mut a), Value::$ip(b)) => {
                         if val_retry!($ip, env) {

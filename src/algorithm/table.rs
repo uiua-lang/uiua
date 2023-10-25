@@ -12,9 +12,8 @@ use crate::{
     },
     array::{Array, ArrayValue, Shape},
     function::Function,
-    primitive::Primitive,
     value::Value,
-    Uiua, UiuaResult,
+    Primitive, Uiua, UiuaResult,
 };
 
 use super::loops::flip;

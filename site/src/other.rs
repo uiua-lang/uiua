@@ -5,10 +5,7 @@ use comrak::{
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use uiua::{
-    primitive::{Primitive, CONSTANTS},
-    SysOp,
-};
+use uiua::{Primitive, SysOp, CONSTANTS};
 
 use crate::{editor::Editor, Const, Prim};
 
@@ -304,7 +301,7 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
         NodeValue::Strikethrough => view!(<del>{children}</del>).into_view(),
         NodeValue::LineBreak => view!(<br/>).into_view(),
         NodeValue::CodeBlock(block) => {
-            if uiua::parse::parse(&block.literal, None).1.is_empty() {
+            if uiua::parse(&block.literal, None).1.is_empty() {
                 view!(<Editor example={&block.literal}/>).into_view()
             } else {
                 view!(<code class="code-block">{&block.literal}</code>).into_view()

@@ -9,7 +9,7 @@ use std::{
 
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{primitive::Primitive, UiuaError};
+use crate::{Primitive, UiuaError};
 
 pub fn lex(input: &str, file: Option<&Path>) -> (Vec<Sp<Token>>, Vec<Sp<LexError>>) {
     Lexer {
@@ -49,8 +49,6 @@ impl fmt::Display for LexError {
 }
 
 impl Error for LexError {}
-
-pub type LexResult<T = ()> = Result<T, Sp<LexError>>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Loc {

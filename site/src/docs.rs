@@ -5,10 +5,7 @@ use instant::Duration;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use uiua::{
-    primitive::{PrimClass, Primitive},
-    SysOpClass,
-};
+use uiua::{PrimClass, Primitive, SysOpClass};
 use wasm_bindgen::JsCast;
 use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoViewOptions};
 

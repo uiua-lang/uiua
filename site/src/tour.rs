@@ -1,7 +1,7 @@
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use uiua::{primitive::Primitive, SysOp};
+use uiua::{Primitive, SysOp};
 
 use crate::{editor::Editor, examples::LOGO, Prim};
 

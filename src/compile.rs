@@ -99,9 +99,25 @@ impl Uiua {
     fn binding(&mut self, binding: Binding) -> UiuaResult {
         let name = binding.name.value;
         let span = &binding.name.span;
-        let make_fn = |instrs: Vec<Instr>, sig: Signature| {
+
+        let make_fn = |instrs: Vec<Instr>, sig: Signature, env: &mut Self| {
+            // Diagnostic for function that doesn't consume its arguments
+            if let Some((Instr::Prim(Primitive::Dup, span), rest)) = instrs.split_first() {
+                if let Ok(rest_sig) = instrs_signature(rest) {
+                    if rest_sig.args == sig.args && rest_sig.outputs + 1 == sig.outputs {
+                        env.diagnostic_with_span(
+                            "Functions should consume their arguments. \
+                            Try removing this duplicate.",
+                            DiagnosticKind::Style,
+                            env.get_span(*span),
+                        );
+                        env.flush_diagnostics();
+                    }
+                }
+            }
             Function::new(FunctionId::Named(name.clone()), instrs, sig)
         };
+
         let placeholder_count = count_placeholders(&binding.words);
         // Compile the body
         let mut instrs = self.compile_words(binding.words, true)?;
@@ -138,17 +154,17 @@ impl Uiua {
                     } else if let Some(value) = self.stack.pop() {
                         self.bind_value(name, value, span)?;
                     } else {
-                        let func = Function::new(FunctionId::Named(name.clone()), Vec::new(), sig);
+                        let func = make_fn(Vec::new(), sig, self);
                         self.bind_function(name, func.into(), span)?;
                     }
                 } else {
-                    let func = make_fn(instrs, sig);
+                    let func = make_fn(instrs, sig, self);
                     self.bind_function(name, func.into(), span)?;
                 }
             }
             Err(e) => {
                 if let Some(sig) = binding.signature {
-                    let func = make_fn(instrs, sig.value);
+                    let func = make_fn(instrs, sig.value, self);
                     self.bind_function(name, func.into(), span)?;
                 } else {
                     return Err(UiuaError::Run(Span::Code(binding.name.span.clone()).sp(
@@ -200,12 +216,15 @@ impl Uiua {
     fn compile_words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult<Vec<Instr>> {
         self.new_functions.push(Vec::new());
         self.words(words, call)?;
+        self.flush_diagnostics();
+        Ok(self.new_functions.pop().unwrap())
+    }
+    fn flush_diagnostics(&mut self) {
         if self.print_diagnostics {
             for diagnostic in self.take_diagnostics() {
                 eprintln!("{}", diagnostic.report());
             }
         }
-        Ok(self.new_functions.pop().unwrap())
     }
     fn compile_operand_words(
         &mut self,

@@ -422,15 +422,12 @@ code:
         Ok(())
     }
     fn exec(&mut self, frame: StackFrame) -> UiuaResult<Arc<Function>> {
-        let ret_height = self.scope.call.len();
         self.scope.call.push(frame);
         let mut formatted_instr = String::new();
-        let mut res = None;
-        while self.scope.call.len() > ret_height {
+        Ok(loop {
             let frame = self.scope.call.last().unwrap();
             let Some(instr) = frame.function.instrs.get(frame.pc) else {
-                res = self.scope.call.pop();
-                continue;
+                break self.scope.call.pop().unwrap().function;
             };
             // Uncomment to debug
             // if !self.scope.array.is_empty() {
@@ -642,16 +639,10 @@ code:
                 );
                 self.last_time = instant::now();
             }
-            if let Err(mut err) = res {
+            if let Err(err) = res {
                 // Trace errors
-                let frames = self
-                    .scope
-                    .call
-                    .split_off(ret_height.min(self.scope.call.len()));
-                for frame in frames {
-                    err = self.trace_error(err, frame);
-                }
-                return Err(err);
+                let frame = self.scope.call.pop().unwrap();
+                return Err(self.trace_error(err, frame));
             } else {
                 // Go to next instruction
                 self.scope.call.last_mut().unwrap().pc += 1;
@@ -661,8 +652,7 @@ code:
                     }
                 }
             }
-        }
-        Ok(res.unwrap().function)
+        })
     }
     pub(crate) fn push_span(&mut self, span: usize, prim: Option<Primitive>) {
         self.scope.call.last_mut().unwrap().spans.push((span, prim));

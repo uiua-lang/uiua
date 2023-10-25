@@ -7,6 +7,7 @@ use crate::{
     function::{Function, Instr, Signature},
     primitive::{ImplPrimitive, Primitive},
     value::Value,
+    SysOp,
 };
 
 impl Function {
@@ -328,6 +329,26 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
             [Now],
             [Now.i(), PushTempUnderN(1).i()],
             [PopTempUnderN(1).i(), Now.i(), Flip.i(), Sub.i()],
+        ),
+        &(
+            [Sys(SysOp::FOpen)],
+            [Sys(SysOp::FOpen).i(), Dup.i(), PushTempUnderN(1).i()],
+            [PopTempUnderN(1).i(), Sys(SysOp::Close).i()],
+        ),
+        &(
+            [Sys(SysOp::FCreate)],
+            [Sys(SysOp::FCreate).i(), Dup.i(), PushTempUnderN(1).i()],
+            [PopTempUnderN(1).i(), Sys(SysOp::Close).i()],
+        ),
+        &(
+            [Sys(SysOp::TcpConnect)],
+            [Sys(SysOp::TcpConnect).i(), Dup.i(), PushTempUnderN(1).i()],
+            [PopTempUnderN(1).i(), Sys(SysOp::Close).i()],
+        ),
+        &(
+            [Sys(SysOp::TcpAccept)],
+            [Sys(SysOp::TcpAccept).i(), Dup.i(), PushTempUnderN(1).i()],
+            [PopTempUnderN(1).i(), Sys(SysOp::Close).i()],
         ),
     ];
 

@@ -11,6 +11,7 @@ If you are reading this on the website, then these changes are live here.
 - Add [`send`](https://uiua.org/docs/send), [`recv`](https://uiua.org/docs/recv), and [`tryrecv`](https://uiua.org/docs/tryrecv) functions for sending values between threads
 - Add [`&fd`](https://uiua.org/docs/&fd) and [`&ftr`](https://uiua.org/docs/&ftr) system functions for deleting/trashing files and directories
 - Add the [`&raw`](https://uiua.org/docs/&raw) system function for setting the terminal to raw mode
+- [`under` `⍜`](https://uiua.org/docs/under) with system functions that return stream handles calls [`&cl`](https://uiua.org/docs/&cl) as an inverse
 ### Interpreter
 - The interpreter now formats its own error and non-error diagnostic messages instead of delegating to a library
 - Fix a bunch of bugs and crashes

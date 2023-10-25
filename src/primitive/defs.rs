@@ -1193,6 +1193,8 @@ primitive!(
     /// ex: ⍜∩(×.)+ 3 4
     /// However, this function whose `g` returns *2* values *does* use [both] when undoing, in this case re-[box]ing the outputs.
     /// ex: ⍜∩⊔(⊂⊢,) □[1 2 3] □[4 5 6 7 8]
+    ///
+    /// [under] works with [&fo], [&fc], [&tcpa], and [&tcpc]. It calls [&cl] when `g` is done.
     ([2], Under, OtherModifier, ("under", '⍜')),
     /// Set the fill value for a function
     ///

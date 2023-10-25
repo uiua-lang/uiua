@@ -204,12 +204,15 @@ sys_op! {
     ///
     /// The file can be read from with [&rs], [&rb], or [&ru].
     /// The file can be written to with [&w].
+    /// The file may not be written to until it is closed with [&cl].
+    /// [under][&fo] calls [&cl] automatically.
     (1, FOpen, Filesystem, "&fo", "file - open"),
     /// Create a file and return a handle to it
     ///
     /// The file can be read from with [&rs], [&rb], or [&ru].
     /// The file can be written to with [&w].
     /// The file may not be written to until it is closed with [&cl].
+    /// [under][&fc] calls [&cl] automatically.
     (1, FCreate, Filesystem, "&fc", "file - create"),
     /// Delete a file or directory
     ///
@@ -365,10 +368,12 @@ sys_op! {
     /// Accept a connection with a TCP listener
     ///
     /// Returns a stream handle
+    /// [under][&tcpl] calls [&cl] automatically.
     (1, TcpAccept, Tcp, "&tcpa", "tcp - accept"),
     /// Create a TCP socket and connect it to an address
     ///
     /// Returns a stream handle
+    /// [under][&tcpc] calls [&cl] automatically.
     (1, TcpConnect, Tcp, "&tcpc", "tcp - connect"),
     /// Set a TCP socket to non-blocking mode
     (1, TcpSetNonBlocking, Tcp, "&tcpsnb", "tcp - set non-blocking"),

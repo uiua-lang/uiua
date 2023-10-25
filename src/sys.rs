@@ -163,6 +163,9 @@ sys_op! {
     ///
     /// Expects a boolean.
     /// If enabled, the terminal will not echo characters or wait for a newline.
+    ///
+    /// [&sc] will still work, but it will not return until the user presses enter.
+    /// To get individual characters, use [&rs] or [&rb] with a count of `1` and a handle of `0`, which is stdin.
     (1(0), RawMode, Env, "&raw", "set raw mode"),
     /// Get the command line arguments
     ///
@@ -190,14 +193,25 @@ sys_op! {
     /// ex: ⚂ &sl 1
     (1(0), Sleep, Misc, "&sl", "sleep"),
     /// Read at most n bytes from a stream
+    ///
+    /// Expects a count and a stream handle.
+    /// The stream handle `0` is stdin.
     (2, ReadStr, Stream, "&rs", "read to string"),
     /// Read at most n bytes from a stream
+    ///
+    /// Expects a count and a stream handle.
+    /// The stream handle `0` is stdin.
     (2, ReadBytes, Stream, "&rb", "read to bytes"),
     /// Read from a stream until a delimiter is reached
+    ///
+    /// Expects a delimiter and a stream handle.
+    /// The stream handle `0` is stdin.
     (2, ReadUntil, Stream, "&ru", "read until"),
     /// Write an array to a stream
     ///
     /// If the stream is a file, the file may not be written to until it is closed with [&cl].
+    /// The stream handle `1` is stdout.
+    /// The stream handle `2` is stderr.
     (2(0), Write, Stream, "&w", "write"),
     /// Import an item from a file
     ///

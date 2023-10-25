@@ -15,23 +15,23 @@ You can support Uiua's development via [GitHub Sponsors](https://github.com/spon
 
 You can try the language without installing anything on [the website](https://uiua.org).
 
-If you want to install the interpreter locally, you will need to install it via Cargo.
+If you want to install the interpreter locally there are 2 options:
+- If you are on Windows, you can simply download the [latest release](https://github.com/uiua-lang/uiua/releases).
+- If you are not on Windows, you will need to install via Cargo.
 This requires [Rust](https://www.rust-lang.org/tools/install) to be installed.
 
-You can install with:
-```
-cargo install uiua
-```
-
-To enable audio output, enable the `audio` feature:
-```
-cargo install uiua --features audio
-```
-
-If you want audio on Linux, you may need to install some dependencies first:
-```
-apt install libasound2-dev libudev-dev pkg-config
-```
+  You can install with:
+  ```
+  cargo install uiua
+  ```
+  To enable audio output, enable the `audio` feature:
+  ```
+  cargo install uiua --features audio
+  ```
+  If you want audio on Linux, you may need to install some dependencies first:
+  ```
+  apt install libasound2-dev libudev-dev pkg-config
+  ```
 
 ## Language Server
 

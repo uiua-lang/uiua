@@ -360,18 +360,7 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
         2 => {
             let a = env.pop(1)?;
             let xs = env.pop(2)?;
-            if xs.row_count() == 0 {
-                env.push(xs);
-                return Ok(());
-            }
-            let mut new_rows = Vec::with_capacity(xs.row_count());
-            for x in xs.into_rows() {
-                env.push(x);
-                env.push(a.clone());
-                env.call_error_on_break(f.clone(), "break is not allowed in distribute")?;
-                new_rows.push(env.pop("distribute's function result")?);
-            }
-            env.push(Value::from_row_values(new_rows, env)?);
+            distribute2(f, a, xs, env)?;
         }
         3 => {
             let a = env.pop(1)?;
@@ -416,6 +405,22 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
+fn distribute2(f: Arc<Function>, a: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
+    if xs.row_count() == 0 {
+        env.push(xs);
+        return Ok(());
+    }
+    let mut new_rows = Vec::with_capacity(xs.row_count());
+    for x in xs.into_rows() {
+        env.push(x);
+        env.push(a.clone());
+        env.call_error_on_break(f.clone(), "break is not allowed in distribute")?;
+        new_rows.push(env.pop("distribute's function result")?);
+    }
+    env.push(Value::from_row_values(new_rows, env)?);
+    Ok(())
+}
+
 pub fn tribute(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
@@ -436,18 +441,7 @@ pub fn tribute(env: &mut Uiua) -> UiuaResult {
         2 => {
             let xs = env.pop(1)?;
             let a = env.pop(2)?;
-            if xs.row_count() == 0 {
-                env.push(xs);
-                return Ok(());
-            }
-            let mut new_rows = Vec::with_capacity(xs.row_count());
-            for x in xs.into_rows() {
-                env.push(a.clone());
-                env.push(x);
-                env.call_error_on_break(f.clone(), "break is not allowed in tribute")?;
-                new_rows.push(env.pop("tribute's function result")?);
-            }
-            env.push(Value::from_row_values(new_rows, env)?);
+            tribute2(f, xs, a, env)?;
         }
         3 => {
             let xs = env.pop(1)?;
@@ -489,6 +483,22 @@ pub fn tribute(env: &mut Uiua) -> UiuaResult {
             env.push(Value::from_row_values(new_rows, env)?);
         }
     }
+    Ok(())
+}
+
+fn tribute2(f: Arc<Function>, xs: Value, a: Value, env: &mut Uiua) -> UiuaResult {
+    if xs.row_count() == 0 {
+        env.push(xs);
+        return Ok(());
+    }
+    let mut new_rows = Vec::with_capacity(xs.row_count());
+    for x in xs.into_rows() {
+        env.push(a.clone());
+        env.push(x);
+        env.call_error_on_break(f.clone(), "break is not allowed in tribute")?;
+        new_rows.push(env.pop("tribute's function result")?);
+    }
+    env.push(Value::from_row_values(new_rows, env)?);
     Ok(())
 }
 
@@ -547,6 +557,8 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
             match (xn, yn) {
                 (Some(0), Some(0)) => return each2_1(f, xs, ys, env),
                 (Some(-1), Some(-1)) => return rows2_1(f, xs, ys, env),
+                (None, Some(-1)) => return distribute2(f, xs, ys, env),
+                (Some(-1), None) => return tribute2(f, xs, ys, env),
                 (None, None) => {
                     env.push(ys);
                     env.push(xs);

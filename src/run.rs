@@ -802,6 +802,10 @@ code:
     pub fn push(&mut self, val: impl Into<Value>) {
         self.stack.push(val.into());
     }
+    /// Push a function onto the function stack
+    pub fn push_func(&mut self, f: impl Into<Arc<Function>>) {
+        self.function_stack.push(f.into());
+    }
     /// Take the entire stack
     pub fn take_stack(&mut self) -> Vec<Value> {
         take(&mut self.stack)

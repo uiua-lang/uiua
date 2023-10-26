@@ -889,7 +889,7 @@ impl PrimExample {
         self.output.get_or_init(|| {
             let env = &mut Uiua::with_native_sys();
             match env.load_str(&self.input) {
-                Ok(()) => Ok(env.take_stack().into_iter().map(|val| val.show()).collect()),
+                Ok(_) => Ok(env.take_stack().into_iter().map(|val| val.show()).collect()),
                 Err(e) => Err(e
                     .to_string()
                     .lines()

@@ -331,6 +331,24 @@ fn TutorialMath() -> impl IntoView {
         <p>"As you read Uiua's documentation, you will see these terms used to describe functions (and modifiers)."</p>
         <p>"For example, "<Prim prim=Sqrt/>" is a monadic function, and "<Prim prim=Add/>" is a dyadic function."</p>
         <p>"On this site, monadic functions are in "<span class="monadic-function">"green"</span>" and dyadic functions are in "<span class="dyadic-function">"blue"</span>"."</p>
+
+        <h2 id="challenges">"Challenges"</h2>
+
+        <Challenge
+            number=1
+            prompt="for arguments A, B, and C, computes (A + B) × C"
+            example="1 2 3"
+            answer="×+"
+            tests={&["2 2 2", "5 7 2", "3 ¯1 ¯1"]}
+            hidden="6 7 8"/>
+
+        <Challenge
+            number=2
+            prompt="calculates the hypotenuse of a right triangle with sides A and B (√(A² + B²))"
+            example="3 4"
+            answer="∩"
+            tests={&["4 5", "5 12"]}
+            hidden="5 3"/>
     }
 }
 

@@ -12,6 +12,10 @@ const CHORD: &str = "\
 [0 4 7 10]
 ×220 ⁿ∶2÷12
 ÷⧻∶ ≡/+ ○×τ ⊞× ÷∶⇡.&asr.";
+const SPIRAL: &str = "\
+⇌×τ÷⊃∘⇡20
+⍉.↯∶×20-1×2÷∶⇡..300
+∺(<0.2⌵-⊃∠(-π◿τ+⍜∩(×.)+))";
 const QUADRATIC: &str = "\
 Quad ← ÷⊙-⊃⊙(×2)(⊟¯.√+×.⊙(××¯4))∶
 Quad 1 2 0";
@@ -40,7 +44,7 @@ Life ← ↥⊙↧∩=3,2-,/+/+≑≃≊↻-1⇡3_3.
 ≡(▽↯⧻,∶⍉▽↯⧻,,∶5)      # Upscale";
 
 pub const EXAMPLES: &[&str] = &[
-    UIUA, FORMAT, D3, LOGO, AVG, CHORD, QUADRATIC, STRIPES, PALINDROME, AUTOMATA, ROMAN,
+    UIUA, FORMAT, D3, LOGO, AVG, CHORD, SPIRAL, QUADRATIC, STRIPES, PALINDROME, AUTOMATA, ROMAN,
     MANDELBROT, LIFE,
 ];
 

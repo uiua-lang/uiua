@@ -28,6 +28,9 @@ impl SysBackend for FormatConfigBackend {
     fn any(&self) -> &dyn Any {
         self
     }
+    fn any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
 }
 
 trait ConfigValue: Sized {

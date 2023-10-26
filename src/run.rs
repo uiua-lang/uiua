@@ -241,9 +241,20 @@ impl Uiua {
     pub fn backend(&self) -> &dyn SysBackend {
         &*self.backend
     }
-    /// Attempt to downcast the system backend to a concrete type
+    /// Attempt to downcast the system backend to a concrete reference type
     pub fn downcast_backend<T: SysBackend>(&self) -> Option<&T> {
         self.backend.any().downcast_ref()
+    }
+    /// Attempt to downcast the system backend to a concrete mutable type
+    pub fn downcast_backend_mut<T: SysBackend>(&mut self) -> Option<&mut T> {
+        Arc::get_mut(&mut self.backend).and_then(|b| b.any_mut().downcast_mut())
+    }
+    /// Take the system backend
+    pub fn take_backend<T: SysBackend>(&mut self) -> Option<T>
+    where
+        T: Default,
+    {
+        self.downcast_backend_mut::<T>().map(take)
     }
     /// Set whether to consume print diagnostics as they are encountered
     pub fn print_diagnostics(mut self, print_diagnostics: bool) -> Self {

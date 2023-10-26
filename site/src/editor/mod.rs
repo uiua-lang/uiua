@@ -20,8 +20,8 @@ use web_sys::{
 
 use crate::{backend::OutputItem, element, prim_class, Prim};
 
-pub use utils::get_ast_time;
 use utils::*;
+pub use utils::{get_ast_time, Challenge};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum EditorSize {
@@ -52,6 +52,7 @@ pub fn Editor<'a>(
     #[prop(optional)] mode: EditorMode,
     #[prop(optional)] progress_lines: bool,
     #[prop(optional)] no_run: bool,
+    #[prop(optional)] challenge: Option<ChallengeDef>,
 ) -> impl IntoView {
     let no_run = no_run
         || ["&sl", "&httpsw", "send", "recv"]
@@ -96,6 +97,8 @@ pub fn Editor<'a>(
     };
     let code_max_lines = if let EditorSize::Pad = size {
         10
+    } else if let Some(chal) = &challenge {
+        chal.answer.lines().count()
     } else {
         examples.iter().map(|e| e.lines().count()).max().unwrap()
     };
@@ -129,6 +132,7 @@ pub fn Editor<'a>(
         set_copied_link,
         past: Default::default(),
         future: Default::default(),
+        challenge,
         curr: {
             let code = initial_code.get_untracked().unwrap();
             let len = code.chars().count() as u32;
@@ -207,7 +211,7 @@ pub fn Editor<'a>(
         set_output.set(view!(<div class="running-text">"Running"</div>).into_view());
         set_timeout(
             move || {
-                let output = run_code(&input);
+                let output = state().run_code(&input);
                 let mut allow_autoplay = !matches!(size, EditorSize::Small);
                 let render_output_item = |item| match item {
                     OutputItem::String(s) => {
@@ -216,6 +220,9 @@ pub fn Editor<'a>(
                         } else {
                             view!(<div class="output-item">{s}</div>).into_view()
                         }
+                    }
+                    OutputItem::Faint(s) => {
+                        view!(<div class="output-item output-fainter">{s}</div>).into_view()
                     }
                     OutputItem::Image(bytes) => {
                         let encoded = STANDARD.encode(bytes);

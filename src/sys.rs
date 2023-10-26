@@ -478,6 +478,8 @@ pub type AudioStreamFn = Box<dyn FnMut(&[f64]) -> UiuaResult<Vec<[f64; 2]>> + Se
 pub trait SysBackend: Any + Send + Sync + 'static {
     /// Cast the backend to `&dyn Any`
     fn any(&self) -> &dyn Any;
+    /// Cast the backend to `&mut dyn Any`
+    fn any_mut(&mut self) -> &mut dyn Any;
     /// Save a color-formatted version of an error message for later printing
     fn save_error_color(&self, error: &UiuaError) {}
     /// Print a string (without a newline) to stdout

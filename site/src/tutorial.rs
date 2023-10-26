@@ -214,6 +214,36 @@ fn TutorialBasic() -> impl IntoView {
         <p>"It also attaches line and column numbers."</p>
         <p>"This is useful for debugging by inspecting the stack."</p>
         <Editor example="+1 ⸮ ×4 trace ×. -3 5"/>
+
+        <h2 id="challenges">"Challenges"</h2>
+        <p>"At the end of each section of this tutorial, there will be a few challenges to test your understanding."</p>
+        <p>"The code you write will be run on multiple inputs and tested for correctness."</p>
+        <p>"Remember that you can click the "<code>"↧"</code>" on the right side of the editor to see a list of all the glyphs."</p>
+        <br/>
+
+        <Challenge
+            number=1
+            prompt="adds 3 numbers"
+            example="1 2 3"
+            answer="++"
+            tests={&["0 10 1", "10 ¯1 5", "0 5 1"]}
+            hidden="6 7 8"/>
+
+        <Challenge
+            number=2
+            prompt="divides the second number by the first but keeps the inputs on the stack"
+            example="5 10"
+            answer="÷,,"
+            tests={&["6 24", "2 100", "17 51"]}
+            hidden="8 32"/>
+
+        <Challenge
+            number=3
+            prompt="subtracts the second number from the first then squares the result"
+            example="10 1"
+            answer="×.-∶"
+            tests={&["5 3", "9 2", "5 6"]}
+            hidden="6 7"/>
     }
 }
 

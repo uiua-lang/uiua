@@ -1,6 +1,6 @@
 use std::{
     borrow::Cow,
-    cell::RefCell,
+    cell::{Cell, RefCell},
     iter,
     mem::{replace, take},
     str::FromStr,
@@ -12,13 +12,14 @@ use leptos::*;
 
 use uiua::{
     image_to_bytes, spans, value_to_gif_bytes, value_to_image, value_to_wav_bytes, DiagnosticKind,
-    Report, ReportFragment, ReportKind, RunMode, SpanKind, SysBackend, Uiua,
+    Report, ReportFragment, ReportKind, RunMode, SpanKind, SysBackend, Uiua, UiuaResult, Value,
 };
 use wasm_bindgen::JsCast;
 use web_sys::{HtmlBrElement, HtmlDivElement, HtmlStyleElement, Node};
 
 use crate::{
     backend::{OutputItem, WebBackend},
+    editor::Editor,
     element, prim_class,
 };
 
@@ -30,6 +31,7 @@ pub struct State {
     pub past: RefCell<Vec<Record>>,
     pub future: RefCell<Vec<Record>>,
     pub curr: RefCell<Record>,
+    pub challenge: Option<ChallengeDef>,
 }
 
 /// A record of a code change
@@ -591,27 +593,86 @@ fn escape_html(s: &str) -> Cow<str> {
     }
 }
 
-/// Run code and return the output
-pub fn run_code(code: &str) -> Vec<OutputItem> {
-    let io = WebBackend::default();
-    // Run
-    let mut env = Uiua::with_backend(io)
+fn init_rt() -> Uiua {
+    Uiua::with_backend(WebBackend::default())
         .with_mode(RunMode::All)
-        .with_execution_limit(Duration::from_secs_f64(get_execution_limit()));
+        .with_execution_limit(Duration::from_secs_f64(get_execution_limit()))
+}
+
+fn just_values(code: &str) -> UiuaResult<Vec<Value>> {
+    let mut rt = init_rt();
+    rt.load_str(code)?;
+    Ok(rt.take_stack())
+}
+
+impl State {
+    /// Run code and return the output
+    pub fn run_code(&self, code: &str) -> Vec<OutputItem> {
+        if let Some(chal) = &self.challenge {
+            let mut example = run_code_single(&format!("{}\n{}", chal.example, chal.answer));
+            example.insert(0, OutputItem::Faint(format!("Example: {}", chal.example)));
+            let mut output_sections = vec![example];
+            let mut correct = true;
+            for test in &chal.tests {
+                let answer = || just_values(&format!("{}\n{}", test, chal.answer));
+                let user_input = format!("{}\n{}", test, code);
+                let user_output = || just_values(&user_input);
+                correct = correct
+                    && match (answer(), user_output()) {
+                        (Ok(answer), Ok(users)) => answer == users,
+                        (Err(answer), Err(users)) => answer.to_string() == users.to_string(),
+                        _ => false,
+                    };
+                let mut output = run_code_single(&user_input);
+                output.insert(0, OutputItem::Faint(format!("Input: {test}")));
+                output_sections.push(output);
+            }
+            let hidden_answer = || just_values(&format!("{}\n{}", chal.hidden, chal.answer));
+            let hidden_user_output = || just_values(&format!("{}\n{}", chal.hidden, code));
+            correct = correct
+                && match (hidden_answer(), hidden_user_output()) {
+                    (Ok(answer), Ok(users)) => answer == users,
+                    (Err(answer), Err(users)) => answer.to_string() == users.to_string(),
+                    _ => false,
+                };
+            let mut output = if chal.did_init_run.get() {
+                vec![OutputItem::String(if correct {
+                    "✅ Correct!".into()
+                } else {
+                    "❌ Incorrect".into()
+                })]
+            } else {
+                Vec::new()
+            };
+            chal.did_init_run.set(true);
+            for section in output_sections {
+                output.push(OutputItem::Separator);
+                output.extend(section);
+            }
+            output
+        } else {
+            run_code_single(code)
+        }
+    }
+}
+
+fn run_code_single(code: &str) -> Vec<OutputItem> {
+    // Run
+    let mut rt = init_rt();
     let mut error = None;
-    let mut values = match env.load_str(code) {
-        Ok(()) => env.take_stack(),
+    let mut values = match rt.load_str(code) {
+        Ok(()) => rt.take_stack(),
         Err(e) => {
             error = Some(e);
-            env.take_stack()
+            rt.take_stack()
         }
     };
     if get_top_at_top() {
         values.reverse();
     }
-    let diagnotics = env.take_diagnostics();
+    let diagnotics = rt.take_diagnostics();
+    let io = rt.downcast_backend::<WebBackend>().unwrap();
     // Get stdout and stderr
-    let io = env.downcast_backend::<WebBackend>().unwrap();
     let stdout = take(&mut *io.stdout.lock().unwrap());
     let mut stack = Vec::new();
     for value in values {
@@ -740,5 +801,43 @@ pub fn report_view(report: &Report) -> impl IntoView {
     }
     view! {
         <div style="font-family: inherit">{frags}</div>
+    }
+}
+
+pub struct ChallengeDef {
+    pub example: String,
+    pub answer: String,
+    pub tests: Vec<String>,
+    pub hidden: String,
+    did_init_run: Cell<bool>,
+}
+
+#[component]
+pub fn Challenge<'a>(
+    number: u8,
+    prompt: &'a str,
+    example: &'a str,
+    answer: &'a str,
+    tests: &'a [&'a str],
+    hidden: &'a str,
+) -> impl IntoView {
+    let def = ChallengeDef {
+        example: example.into(),
+        answer: answer.into(),
+        tests: tests.iter().copied().map(Into::into).collect(),
+        hidden: hidden.into(),
+        did_init_run: Cell::new(false),
+    };
+    let (main_part, rest) = if let Some((a, b)) = prompt.split_once('.') {
+        (a.to_string(), b.to_string())
+    } else {
+        (prompt.to_string(), String::new())
+    };
+    view! {
+        <div class="challenge">
+            <h3>"Challenge "{number}</h3>
+            <p>"Write a program that "<strong>{main_part}</strong>"."{rest}</p>
+            <Editor challenge=def/>
+        </div>
     }
 }

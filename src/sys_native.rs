@@ -106,6 +106,9 @@ impl SysBackend for NativeSys {
     fn any(&self) -> &dyn Any {
         self
     }
+    fn any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
     fn print_str_stdout(&self, s: &str) -> Result<(), String> {
         let mut stdout = stdout().lock();
         stdout.write_all(s.as_bytes()).map_err(|e| e.to_string())?;

@@ -29,11 +29,15 @@ pub enum OutputItem {
     Gif(Vec<u8>),
     Audio(Vec<u8>),
     Report(Report),
+    Faint(String),
     Separator,
 }
 
 impl SysBackend for WebBackend {
     fn any(&self) -> &dyn Any {
+        self
+    }
+    fn any_mut(&mut self) -> &mut dyn Any {
         self
     }
     fn print_str_stdout(&self, s: &str) -> Result<(), String> {

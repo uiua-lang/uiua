@@ -380,37 +380,51 @@ pub fn Pad() -> impl IntoView {
 
 #[test]
 fn site() {
-    let mut threads = Vec::new();
-    for entry in std::fs::read_dir("src").unwrap() {
-        let entry = entry.unwrap();
-        let path = entry.path();
-        for line in std::fs::read_to_string(&path).unwrap().lines() {
-            if let Some(code) = line.trim().strip_prefix(r#"<Editor example=""#) {
-                let (code, should_fail) = if let Some(code) = code.strip_suffix(r#""/>"#) {
-                    (code, false)
-                } else if let Some(code) = code.strip_suffix(r#""/> // Should fail"#) {
-                    (code, true)
-                } else {
-                    continue;
-                };
-                let code = code
-                    .replace("\\\"", "\"")
-                    .replace("\\\\", "\\")
-                    .replace("\\n", "\n");
-                if code.contains(uiua::SysOp::AudioPlay.name()) {
-                    continue;
+    type Test = (
+        std::path::PathBuf,
+        String,
+        std::thread::JoinHandle<(uiua::UiuaResult<uiua::Uiua>, bool)>,
+    );
+    fn recurse_dir(path: &std::path::Path, threads: &mut Vec<Test>) -> std::io::Result<()> {
+        for entry in std::fs::read_dir(path)? {
+            let entry = entry?;
+            let path = entry.path();
+            if entry.file_type()?.is_file() {
+                for line in std::fs::read_to_string(&path)?.lines() {
+                    if let Some(code) = line.trim().strip_prefix(r#"<Editor example=""#) {
+                        let (code, should_fail) = if let Some(code) = code.strip_suffix(r#""/>"#) {
+                            (code, false)
+                        } else if let Some(code) = code.strip_suffix(r#""/> // Should fail"#) {
+                            (code, true)
+                        } else {
+                            continue;
+                        };
+                        let code = code
+                            .replace("\\\"", "\"")
+                            .replace("\\\\", "\\")
+                            .replace("\\n", "\n");
+                        if code.contains(uiua::SysOp::AudioPlay.name()) {
+                            continue;
+                        }
+                        threads.push((
+                            path.to_path_buf(),
+                            code.clone(),
+                            std::thread::spawn(move || {
+                                let mut env =
+                                    uiua::Uiua::with_native_sys().with_mode(uiua::RunMode::All);
+                                (env.load_str(&code).map(|_| env), should_fail)
+                            }),
+                        ));
+                    }
                 }
-                threads.push((
-                    path.to_path_buf(),
-                    code.clone(),
-                    std::thread::spawn(move || {
-                        let mut env = uiua::Uiua::with_native_sys().with_mode(uiua::RunMode::All);
-                        (env.load_str(&code).map(|_| env), should_fail)
-                    }),
-                ));
+            } else if entry.file_type()?.is_dir() {
+                recurse_dir(&path, threads)?;
             }
         }
+        Ok(())
     }
+    let mut threads = Vec::new();
+    recurse_dir("src".as_ref(), &mut threads).unwrap();
     assert!(threads.len() > 50);
     for (path, code, thread) in threads {
         match thread.join().unwrap() {

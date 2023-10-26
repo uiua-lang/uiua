@@ -1570,7 +1570,7 @@ pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, Str
     let mut width = 0;
     let mut height = 0;
     for row in value.rows() {
-        let image = value_to_image(&row)?.into_rgba8();
+        let image = value_to_image(&row)?.into_rgb8();
         width = image.width();
         height = image.height();
         frames.push(image);
@@ -1606,9 +1606,9 @@ pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, Str
         break used_colors;
     };
     let mut palette = Vec::with_capacity(used_colors.len() * 3);
-    let mut color_map: HashMap<[u8; 4], usize> = HashMap::new();
+    let mut color_map: HashMap<[u8; 3], usize> = HashMap::new();
     for color in used_colors {
-        color_map.insert(color, palette.len() / 4);
+        color_map.insert(color, palette.len() / 3);
         palette.extend(color);
     }
     let mut encoder = gif::Encoder::new(&mut bytes, width as u16, height as u16, &palette)
@@ -1619,7 +1619,7 @@ pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, Str
         .set_repeat(gif::Repeat::Infinite)
         .map_err(|e| e.to_string())?;
     for image in frames {
-        let mut frame = gif::Frame::from_rgba(width as u16, height as u16, &mut image.into_raw());
+        let mut frame = gif::Frame::from_rgb(width as u16, height as u16, image.as_raw());
         frame.delay = delay;
         encoder.write_frame(&frame).map_err(|e| e.to_string())?;
     }

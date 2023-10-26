@@ -481,6 +481,57 @@ r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
 ∊ □"APL" Langs"#/>
 
         <p>"For more about working with box arrays, see "<Prim prim=Box/>"'s documentation."</p>
+
+        <h2 id="challenges">"Challenges"</h2>
+
+        <Challenge
+            number=1
+            prompt="adds an array to its reverse"
+            example="1_2_5"
+            answer="+⇌."
+            tests={&["3_1_7", "↯2_4⇡8", "5"]}
+            hidden="0_1_2_6"/>
+
+        <Challenge
+            number=2
+            prompt="creates an array with the given shape and numbers from 0 to the number of elements minus 1"
+            example="3_4"
+            answer="↯:⇡/×."
+            tests={&["2_2_7", "[10]", "2_1_3"]}
+            hidden="1_1_1_1_1"/>
+
+        <Challenge
+            number=3
+            prompt="add a 1-row leading axis to an array"
+            example="[1 2 3]"
+            answer="[∘]"
+            tests={&["1_3_1_5", "5", "↯2_3⇡6"]}
+            hidden="1_1_1_1_1"/>
+
+        <Challenge
+            number=4
+            prompt="appends the first row of the first argument to the second argument"
+            example="[1 2 3] 4_5_6"
+            answer="⊂⊢"
+            tests={&["3_3 2_2", "[1_2_3 4_5_6] +10↯3_3⇡9", "[2 4 3] [9 9 9 9 9 1]"]}
+            hidden="↯2_3_4⇡24 ↯3_4⇡12"/>
+
+        <Challenge
+            number=5
+            prompt="splits an array into its first row and the rest of its rows"
+            example="1_2_3_4"
+            answer="⊢∶↘1."
+            tests={&["[27 9 3 1]", "↯4_3⇡12"]}
+            hidden="[5]"/>
+
+
+        <Challenge
+            number=6
+            prompt="boxes two strings and puts them in an array"
+            example="\"Hello\" \"World\""
+            answer="{⊙∘}"
+            tests={&["\"ui\" \"ua\"", "\"dog\" \"cat\""]}
+            hidden="\"a\" \"b\""/>
     }
 }
 

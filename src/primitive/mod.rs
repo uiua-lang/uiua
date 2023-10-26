@@ -574,6 +574,7 @@ impl Primitive {
             Primitive::Now => env.push(instant::now() / 1000.0),
             Primitive::Trace => trace(env, false)?,
             Primitive::Dump => dump(env)?,
+            Primitive::Breakpoint => return Err(UiuaError::Breakpoint(env.span().clone())),
             Primitive::Sys(io) => io.run(env)?,
             Primitive::Regex => {
                 thread_local! {

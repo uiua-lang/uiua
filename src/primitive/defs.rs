@@ -1642,7 +1642,7 @@ primitive!(
     /// To see them, use [trace].
     /// ex: [1 5 2 9 11 0 7 12 8 3]
     ///   : ▽×⸮≥5∶⸮≤10..
-    (1, Trace, Stack, ("trace", '⸮')),
+    (1, Trace, Misc, ("trace", '⸮')),
     /// Debug print all the values currently on stack without popping them
     ///
     /// The function is used to preprocess the values before printing.
@@ -1665,7 +1665,9 @@ primitive!(
     /// Error encountered within [dump]'s function are caught and dumped as strings.
     /// ex: 1_2_3 4 5_6_7
     ///   : dump⊢
-    (0(0)[1], Dump, Stack, "dump"),
+    (0(0)[1], Dump, Misc, "dump"),
+    /// Set a breakpoint
+    (0(0), Breakpoint, Misc, "br"),
 );
 
 macro_rules! impl_primitive {

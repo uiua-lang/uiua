@@ -54,7 +54,9 @@ impl Uiua {
         match item {
             Item::TestScope(items) => {
                 self.in_scope(|env| {
-                    env.items.extend(items.into_iter().map(|item| (item, true)));
+                    env.scope
+                        .items
+                        .extend(items.into_iter().map(|item| (item, true)));
                     env.resume()
                 })?;
             }

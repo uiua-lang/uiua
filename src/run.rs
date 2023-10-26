@@ -69,11 +69,9 @@ pub struct Uiua {
     pub(crate) backend: Arc<dyn SysBackend>,
     /// The thread interface
     thread: ThisThread,
-    /// The items waitining to be compiled (and whether they are in test scopes)
-    pub(crate) items: VecDeque<(Item, bool)>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub(crate) enum Global {
     Val(Value),
     Func(Arc<Function>),
@@ -91,6 +89,8 @@ pub(crate) struct Scope {
     fills: Fills,
     /// The current clear state
     pack_depth: usize,
+    /// The items waitining to be compiled (and whether they are in test scopes)
+    pub(crate) items: VecDeque<(Item, bool)>,
 }
 
 impl Default for Scope {
@@ -110,6 +110,7 @@ impl Default for Scope {
             names: HashMap::new(),
             fills: Fills::default(),
             pack_depth: 0,
+            items: VecDeque::new(),
         }
     }
 }
@@ -230,7 +231,6 @@ impl Uiua {
             execution_limit: None,
             execution_start: 0.0,
             thread: ThisThread::default(),
-            items: VecDeque::new(),
         }
     }
     /// Create a new Uiua runtime with a custom IO backend
@@ -294,63 +294,99 @@ impl Uiua {
     }
     /// Load a Uiua file from a path
     pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult {
-        if self.load_file_break(path.as_ref())? {
-            while self.resume()? {}
+        if self.load_file_break(path.as_ref())?.is_some() {
+            while self.resume()?.is_some() {}
         }
         Ok(())
     }
-    /// Load a Uiua file from a path
-    pub fn load_file_break<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<bool> {
+    /// Load a Uiua file from a path andle handle breakpoints
+    ///
+    /// If a breakpoint is encountered, the span of the breakpoint is returned.
+    /// Use `Uiua::resume` to continue execution.
+    pub fn load_file_break<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<Option<Span>> {
         let path = path.as_ref();
         let input = fs::read_to_string(path).map_err(|e| UiuaError::Load(path.into(), e.into()))?;
         self.load_impl(&input, Some(path))
     }
-    /// Load a Uiua file from a string
-    pub fn load_str(&mut self, input: &str) -> UiuaResult {
-        if self.load_str_break(input)? {
-            while self.resume()? {}
+    /// Load a Uiua file from a path andle handle breakpoints with a function
+    pub fn load_file_break_with<P, F>(&mut self, path: P, mut f: F) -> UiuaResult
+    where
+        P: AsRef<Path>,
+        F: FnMut(Span, &[Value]),
+    {
+        if let Some(span) = self.load_file_break(path)? {
+            f(span, &self.stack);
+            while let Some(span) = self.resume()? {
+                f(span, &self.stack);
+            }
         }
         Ok(())
     }
     /// Load a Uiua file from a string
-    pub fn load_str_break(&mut self, input: &str) -> UiuaResult<bool> {
+    pub fn load_str(&mut self, input: &str) -> UiuaResult {
+        if self.load_str_break(input)?.is_some() {
+            while self.resume()?.is_some() {}
+        }
+        Ok(())
+    }
+    /// Load a Uiua file from a string and handle breakpoints
+    ///
+    /// If a breakpoint is encountered, the span of the breakpoint is returned.
+    /// Use `Uiua::resume` to continue execution.
+    pub fn load_str_break(&mut self, input: &str) -> UiuaResult<Option<Span>> {
         self.load_impl(input, None)
+    }
+    /// Load a Uiua file from a string and handle breakpoints with a function
+    pub fn load_str_break_with<F>(&mut self, input: &str, mut f: F) -> UiuaResult
+    where
+        F: FnMut(Span, &[Value]),
+    {
+        if let Some(span) = self.load_str_break(input)? {
+            f(span, &self.stack);
+            while let Some(span) = self.resume()? {
+                f(span, &self.stack);
+            }
+        }
+        Ok(())
     }
     /// Load a Uiua file from a string with a path for error reporting
     pub fn load_str_path<P: AsRef<Path>>(&mut self, input: &str, path: P) -> UiuaResult {
-        if self.load_str_path_break(input, path.as_ref())? {
-            while self.resume()? {}
+        if self.load_str_path_break(input, path.as_ref())?.is_some() {
+            while self.resume()?.is_some() {}
         }
         Ok(())
     }
-    /// Load a Uiua file from a string with a path for error reporting
+    /// Load a Uiua file from a string with a path for error reporting and handle breakpoints
+    ///
+    /// If a breakpoint is encountered, the span of the breakpoint is returned.
+    /// Use `Uiua::resume` to continue execution.
     pub fn load_str_path_break<P: AsRef<Path>>(
         &mut self,
         input: &str,
         path: P,
-    ) -> UiuaResult<bool> {
+    ) -> UiuaResult<Option<Span>> {
         self.load_impl(input, Some(path.as_ref()))
     }
     /// Resume execution
-    pub fn resume(&mut self) -> UiuaResult<bool> {
+    pub fn resume(&mut self) -> UiuaResult<Option<Span>> {
         if self.scope.call.is_empty() {
-            return Ok(false);
+            return Ok(None);
         }
-        if dbg!(self.scope.call.len()) > 1 {
+        if self.scope.call.len() > 1 {
             match self.exec_inner() {
                 Ok(()) => {}
-                Err(UiuaError::Breakpoint) => return Ok(true),
+                Err(UiuaError::Breakpoint(span)) => return Ok(Some(span)),
                 Err(err) => return Err(err),
             }
         }
-        while let Some((item, in_test)) = self.items.pop_front() {
+        while let Some((item, in_test)) = self.scope.items.pop_front() {
             match self.item(item, in_test) {
                 Ok(()) => {}
-                Err(UiuaError::Breakpoint) => return Ok(true),
+                Err(UiuaError::Breakpoint(span)) => return Ok(Some(span)),
                 Err(err) => return Err(err),
             }
         }
-        Ok(false)
+        Ok(None)
     }
     /// Run in a scoped context. Names defined in this context will be removed when the scope ends.
     ///
@@ -375,7 +411,7 @@ impl Uiua {
         self.stack.truncate(start_height);
         Ok(names)
     }
-    fn load_impl(&mut self, input: &str, path: Option<&Path>) -> UiuaResult<bool> {
+    fn load_impl(&mut self, input: &str, path: Option<&Path>) -> UiuaResult<Option<Span>> {
         self.execution_start = instant::now();
         let (items, errors, diagnostics) = parse(input, path);
         if self.print_diagnostics {
@@ -391,7 +427,8 @@ impl Uiua {
         if let Some(path) = path {
             self.current_imports.lock().insert(path.into());
         }
-        self.items
+        self.scope
+            .items
             .extend(items.into_iter().map(|item| (item, false)));
         let res = match catch_unwind(AssertUnwindSafe(|| self.resume())) {
             Ok(res) => res,
@@ -704,9 +741,9 @@ code:
                         }
                     }
                 }
-                Err(UiuaError::Breakpoint) => {
+                Err(e @ UiuaError::Breakpoint(_)) => {
                     self.scope.call.last_mut().unwrap().pc += 1;
-                    return Err(UiuaError::Breakpoint);
+                    return Err(e);
                 }
                 Err(err) => {
                     // Trace errors
@@ -950,6 +987,16 @@ code:
     pub fn take_stack(&mut self) -> Vec<Value> {
         take(&mut self.stack)
     }
+    /// Get a reference to the stack
+    ///
+    /// Note: Do *not* use this to get values from the stack for custom functions.
+    /// The array tracking stack will not be updated correctly.
+    /// Use `pop` and co instead.
+    ///
+    /// This is mainly for debugging.
+    pub fn stack(&self) -> &[Value] {
+        &self.stack
+    }
     /// Pop a function from the function stack
     pub fn pop_function(&mut self) -> UiuaResult<Arc<Function>> {
         self.function_stack.pop().ok_or_else(|| {
@@ -1180,7 +1227,6 @@ code:
             execution_limit: self.execution_limit,
             execution_start: self.execution_start,
             thread,
-            items: VecDeque::new(),
         };
         #[cfg(not(target_arch = "wasm32"))]
         let handle = std::thread::Builder::new()

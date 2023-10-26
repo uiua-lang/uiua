@@ -1,5 +1,19 @@
-const UIUA: &str = "\"Um, I um...arrays\"\n⊜⊢≥@A.";
-const FORMAT: &str = "# Click Run to format!\nkeepnotmem:deshtab*...drop2rang50";
+const AVG: &str = "\
+1_5_8_2
+/+. # Sum
+⧻∶  # Length
+÷   # Divide";
+const PRIMES: &str = "\
+# Click Run to format!
++1drop1range40 # Range 2 to 40
+...            # Make 3 copies
+deshapetable*  # List of products
+keepnotmember∶ # Keep not in list";
+const FIZZBUZZ: &str = "\
+.+1⇡15    # Range 1 to 15
+∩(=0◿)3,5 # Check divisibility
+⍘⋯⍉⊟      # Encode conditions
+⊐≡(∘|⋅\"Fizz\"|⋅\"Buzz\"|⋅\"FizzBuzz\")";
 const D3: &str = "↯∶⇡/×.2_3_4";
 pub const LOGO: &str = "\
 xy ← ⍘⍉⊞⊟. ÷÷2∶ -÷2,⇡.200
@@ -7,7 +21,6 @@ Rgb ← [∶⍘⊟×.xy ↯△⊢xy0.5]
 u ← ↥<0.2∶>0.7.+×2 ×.∶⍘⊟xy
 c ← <∶√/+ⁿ2 xy
 ⍉⊂∶-¬u c1 +0.1 ∺↧c0.95Rgb";
-const AVG: &str = "Avg ← ÷⊃⧻/+\nAvg 0_2_1_5";
 const CHORD: &str = "\
 [0 4 7 10]
 ×220 ⁿ∶2÷12
@@ -44,8 +57,8 @@ Life ← ↥⊙↧∩=3,2-,/+/+≑≃≊↻-1⇡3_3.
 ≡(▽↯⧻,∶⍉▽↯⧻,,∶5)      # Upscale";
 
 pub const EXAMPLES: &[&str] = &[
-    UIUA, FORMAT, D3, LOGO, AVG, CHORD, SPIRAL, QUADRATIC, STRIPES, PALINDROME, AUTOMATA, ROMAN,
-    MANDELBROT, LIFE,
+    AVG, PRIMES, FIZZBUZZ, D3, LOGO, CHORD, SPIRAL, QUADRATIC, STRIPES, PALINDROME, AUTOMATA,
+    ROMAN, MANDELBROT, LIFE,
 ];
 
 #[cfg(test)]

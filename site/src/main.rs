@@ -225,7 +225,7 @@ pub fn MainPage() -> impl IntoView {
                             })
                         }
                     }
-                    <p>"The Uiua logo was made with Uiua! Check example 4 at the top of the page."</p>
+                    <p>"The Uiua logo was made with Uiua! Check example 5 at the top of the page."</p>
                 </div>
             </div>
         </div>

@@ -106,9 +106,9 @@ fn words_spans(words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
             }
             Word::Switch(sw) => {
                 spans.push(word.span.just_start().sp(SpanKind::Delimiter));
-                for branch in &sw.branches {
+                for (i, branch) in sw.branches.iter().enumerate() {
                     let start_span = branch.span.just_start();
-                    if start_span.as_str() == "|" {
+                    if i > 0 && start_span.as_str() == "|" {
                         spans.push(start_span.sp(SpanKind::Delimiter));
                     }
                     if let Some(sig) = &branch.value.signature {

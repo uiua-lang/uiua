@@ -1,5 +1,5 @@
 const AVG: &str = "\
-1_5_8_2
+[1 5 8 2]
 /+. # Sum
 ⧻∶  # Length
 ÷   # Divide";
@@ -13,7 +13,7 @@ const FIZZBUZZ: &str = "\
 .+1⇡15    # Range 1 to 15
 ∩(=0◿)3,5 # Check divisibility
 ⍘⋯⍉⊟      # Encode conditions
-⊐≡(∘|⋅\"Fizz\"|⋅\"Buzz\"|⋅\"FizzBuzz\")";
+≡'&p(∘|⋅\"Fizz\"|⋅\"Buzz\"|⋅\"FizzBuzz\")";
 const D3: &str = "↯∶⇡/×.2_3_4";
 pub const LOGO: &str = "\
 xy ← ⍘⍉⊞⊟. ÷÷2∶ -÷2,⇡.200

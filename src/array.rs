@@ -222,36 +222,8 @@ impl<T: ArrayValue> Array<T> {
         }
     }
     /// Consume the array and get an iterator over its rows
-    pub fn into_rows(self) -> impl ExactSizeIterator<Item = Self> {
-        let row_len = self.row_len();
-        let mut row_shape = self.shape.clone();
-        let row_count = if row_shape.is_empty() {
-            1
-        } else {
-            row_shape.remove(0)
-        };
-        let mut data = self.data.into_iter();
-        (0..row_count).map(move |_| {
-            Array::new(
-                row_shape.clone(),
-                data.by_ref().take(row_len).collect::<CowSlice<_>>(),
-            )
-        })
-    }
-    /// Consume the array and get a reverse iterator over its rows
-    pub fn into_rows_rev(self) -> impl Iterator<Item = Self> {
-        let row_len = self.row_len();
-        let mut row_shape = self.shape.clone();
-        let row_count = if row_shape.is_empty() {
-            1
-        } else {
-            row_shape.remove(0)
-        };
-        let mut data = self.data.into_iter().rev();
-        (0..row_count).map(move |_| {
-            let row: CowSlice<_> = data.by_ref().take(row_len).rev().collect();
-            Array::new(row_shape.clone(), row)
-        })
+    pub fn into_rows(self) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator {
+        (0..self.row_count()).map(move |i| self.row(i))
     }
     pub(crate) fn first_dim_zero(&self) -> Self {
         if self.rank() == 0 {

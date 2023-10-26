@@ -49,6 +49,10 @@ impl fmt::Debug for Value {
     }
 }
 
+/// A combination of [`ExactSizeIterator`] and [`DoubleEndedIterator`]
+pub trait ExactDoubleIterator: ExactSizeIterator + DoubleEndedIterator {}
+impl<T: ExactSizeIterator + DoubleEndedIterator> ExactDoubleIterator for T {}
+
 impl Value {
     pub(crate) fn builder(capacity: usize) -> ValueBuilder {
         ValueBuilder::with_capacity(capacity)
@@ -95,21 +99,12 @@ impl Value {
         }
     }
     /// Consume the value and get an iterator over its rows
-    pub fn into_rows(self) -> Box<dyn ExactSizeIterator<Item = Self>> {
+    pub fn into_rows(self) -> Box<dyn ExactDoubleIterator<Item = Self>> {
         match self {
             Self::Num(array) => Box::new(array.into_rows().map(Value::from)),
             Self::Byte(array) => Box::new(array.into_rows().map(Value::from)),
             Self::Char(array) => Box::new(array.into_rows().map(Value::from)),
             Self::Box(array) => Box::new(array.into_rows().map(Value::from)),
-        }
-    }
-    /// Consume the value and get a reverse iterator over its rows
-    pub fn into_rows_rev(self) -> Box<dyn Iterator<Item = Self>> {
-        match self {
-            Self::Num(array) => Box::new(array.into_rows_rev().map(Value::from)),
-            Self::Byte(array) => Box::new(array.into_rows_rev().map(Value::from)),
-            Self::Char(array) => Box::new(array.into_rows_rev().map(Value::from)),
-            Self::Box(array) => Box::new(array.into_rows_rev().map(Value::from)),
         }
     }
     /// Cosume the value and get an iterator over its elements

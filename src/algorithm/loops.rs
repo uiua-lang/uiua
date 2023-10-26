@@ -3,7 +3,7 @@
 use crate::{
     array::{Array, ArrayValue},
     value::Value,
-    Uiua, UiuaResult,
+    ExactDoubleIterator, Uiua, UiuaResult,
 };
 
 pub(crate) fn rank_to_depth(declared_rank: Option<isize>, array_rank: usize) -> usize {
@@ -99,11 +99,17 @@ pub fn unpartition(env: &mut Uiua) -> UiuaResult {
             "Cannot undo partition with on function with signature {sig}"
         )));
     }
+    let partitioned = env.pop(1)?;
+    let mut untransformed = Vec::with_capacity(partitioned.row_count());
+    for row in partitioned.into_rows().rev() {
+        env.push(row);
+        env.call_error_on_break(f.clone(), "break is not allowed in unpartition")?;
+        untransformed.push(env.pop("unpartitioned row")?);
+    }
+    let original = env.pop_temp_under()?;
     let markers = env
-        .pop(1)?
+        .pop_temp_under()?
         .as_ints(env, "Partition markers must be a list of integers")?;
-    let original = env.pop(2)?;
-    let partitioned = env.pop(3)?;
 
     // Count partition markers
     let mut marker_partitions: Vec<(isize, usize)> = Vec::new();
@@ -120,24 +126,22 @@ pub fn unpartition(env: &mut Uiua) -> UiuaResult {
         }
     }
     let positive_partitions = marker_partitions.iter().filter(|(m, _)| *m > 0).count();
-    if positive_partitions != partitioned.row_count() {
+    if positive_partitions != untransformed.len() {
         return Err(env.error(format!(
             "Cannot undo partition because the paritioned array \
             originally had {} rows, but now it has {}",
             positive_partitions,
-            partitioned.row_count()
+            untransformed.len()
         )));
     }
 
     // Unpartition
-    let mut partitioned_rows = partitioned.into_rows();
+    let mut untransformed_rows = untransformed.into_iter();
     let mut unpartitioned = Vec::with_capacity(marker_partitions.len() * original.row_len());
     let mut original_offset = 0;
     for (marker, part_len) in marker_partitions {
         if marker > 0 {
-            env.push(partitioned_rows.next().unwrap());
-            env.call_error_on_break(f.clone(), "break is not allowed in unpartition")?;
-            unpartitioned.extend(env.pop("unpartitioned row")?.into_rows());
+            unpartitioned.extend(untransformed_rows.next().unwrap().into_rows());
         } else {
             unpartitioned
                 .extend((original_offset..original_offset + part_len).map(|i| original.row(i)));
@@ -164,7 +168,7 @@ pub fn ungroup(env: &mut Uiua) -> UiuaResult {
     let grouped = env.pop(3)?;
 
     // Untransform rows
-    let mut ungrouped_rows: Vec<Box<dyn ExactSizeIterator<Item = Value>>> =
+    let mut ungrouped_rows: Vec<Box<dyn ExactDoubleIterator<Item = Value>>> =
         Vec::with_capacity(grouped.row_count());
     for mut row in grouped.into_rows() {
         env.push(row);

@@ -439,6 +439,13 @@ code:
             // if !self.function_stack.is_empty() {
             //     println!("{} function(s)", self.function_stack.len());
             // }
+            // if !self.under_stack.is_empty() {
+            //     print!("under: ");
+            //     for val in &self.under_stack {
+            //         print!("{:?} ", val);
+            //     }
+            //     println!();
+            // }
             // for val in &self.stack {
             //     print!("{:?} ", val);
             // }
@@ -891,6 +898,14 @@ code:
         self.function_stack.pop().ok_or_else(|| {
             self.error(
                 "Function stack was empty when popping. \
+                This is a bug in the interpreter.",
+            )
+        })
+    }
+    pub(crate) fn pop_temp_under(&mut self) -> UiuaResult<Value> {
+        self.under_stack.pop().ok_or_else(|| {
+            self.error(
+                "Under stack was empty when popping. \
                 This is a bug in the interpreter.",
             )
         })

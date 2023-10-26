@@ -576,7 +576,6 @@ fn under_partition_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr
         Instr::Prim(Primitive::Partition, span),
     ];
     let afters = vec![
-        Instr::PopTempUnder { count: 2, span },
         Instr::PushFunc(f_after.into()),
         Instr::ImplPrim(ImplPrimitive::Unpartition, span),
     ];

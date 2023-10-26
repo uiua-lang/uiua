@@ -130,6 +130,7 @@ pub fn Editor<'a>(
     let get_code_cursor = move || get_code_cursor_impl(&code_id());
     let (copied_link, set_copied_link) = create_signal(false);
     let (settings_open, set_settings_open) = create_signal(false);
+    let (run_button_text, set_run_button_text) = create_signal("Run");
 
     /// Handles setting the code in the editor, setting the cursor, and managing the history
     struct State {
@@ -139,6 +140,7 @@ pub fn Editor<'a>(
         past: RefCell<Vec<Record>>,
         future: RefCell<Vec<Record>>,
         curr: RefCell<Record>,
+        rt: RefCell<RunState>,
     }
 
     /// A record of a code change
@@ -256,9 +258,18 @@ pub fn Editor<'a>(
             }
         }
         .into(),
+        rt: Default::default(),
     });
     let (state, _) = create_signal(state);
     let state = move || state.get();
+
+    // Stop running
+    let (stop_style, set_stop_style) = create_signal("display: none;");
+    let stop = move || {
+        state().rt.take();
+        set_run_button_text.set("Run");
+        set_stop_style.set("display: none;");
+    };
 
     // Run the code
     let run = move |format: bool, set_cursor: bool| {
@@ -324,7 +335,14 @@ pub fn Editor<'a>(
         set_output.set(view!(<div class="running-text">"Running"</div>).into_view());
         set_timeout(
             move || {
-                let output = run_code(&input);
+                let output = state().rt.borrow_mut().run_code(&input);
+                if state().rt.borrow_mut().can_resume {
+                    set_stop_style.set("");
+                    set_run_button_text.set("Continue");
+                } else {
+                    set_stop_style.set("display: none;");
+                    set_run_button_text.set("Run");
+                }
                 let mut allow_autoplay = !matches!(size, EditorSize::Small);
                 let render_output_item = |item| match item {
                     OutputItem::String(s) => {
@@ -357,6 +375,12 @@ pub fn Editor<'a>(
                     OutputItem::Separator => {
                         view!(<div class="output-item"><hr/></div>).into_view()
                     }
+                    OutputItem::Breakpoint(span) => view! {
+                        <div class="output-item">
+                            <Prim prim=Primitive::Breakpoint/>" at "{span.to_string()}
+                        </div>
+                    }
+                    .into_view(),
                 };
                 let items: Vec<_> = output.into_iter().map(render_output_item).collect();
                 set_output.set(items.into_view());
@@ -1181,7 +1205,8 @@ shift Delete  - Delete lines
                             { move || output.get() }
                         </div>
                         <div id="code-buttons">
-                            <button class="code-button" on:click=move |_| run(true, false)>{ "Run" }</button>
+                            <button class="code-button" on:click=move |_| run(true, false)>{ move || run_button_text.get() }</button>
+                            <button class="code-button" on:click=move |_| stop() style=move || stop_style.get()>"Stop"</button>
                             <button
                                 id="prev-example"
                                 class="code-button"
@@ -1673,130 +1698,158 @@ fn escape_html(s: &str) -> Cow<str> {
     }
 }
 
-/// Run code and return the output
-fn run_code(code: &str) -> Vec<OutputItem> {
-    let io = WebBackend::default();
-    // Run
-    let mut env = Uiua::with_backend(io)
-        .with_mode(RunMode::All)
-        .with_execution_limit(Duration::from_secs_f64(get_execution_limit()));
-    let mut error = None;
-    let mut values = match env.load_str(code) {
-        Ok(()) => env.take_stack(),
-        Err(e) => {
-            error = Some(e);
-            env.take_stack()
-        }
-    };
-    if get_top_at_top() {
-        values.reverse();
-    }
-    let diagnotics = env.take_diagnostics();
-    // Get stdout and stderr
-    let io = env.downcast_backend::<WebBackend>().unwrap();
-    let stdout = take(&mut *io.stdout.lock().unwrap());
-    let mut stack = Vec::new();
-    for value in values {
-        // Try to convert the value to audio
-        if value.shape().last().is_some_and(|&n| n >= 44100 / 4) {
-            if let Ok(bytes) = value_to_wav_bytes(&value, io.audio_sample_rate()) {
-                stack.push(OutputItem::Audio(bytes));
-                continue;
-            }
-        }
-        // Try to convert the value to an image
-        const MIN_AUTO_IMAGE_DIM: usize = 30;
-        if let Ok(image) = value_to_image(&value) {
-            if image.width() >= MIN_AUTO_IMAGE_DIM as u32
-                && image.height() >= MIN_AUTO_IMAGE_DIM as u32
-            {
-                if let Ok(bytes) = image_to_bytes(&image, ImageOutputFormat::Png) {
-                    stack.push(OutputItem::Image(bytes));
-                    continue;
-                }
-            }
-        }
-        // Try to convert the value to a gif
-        if let Ok(bytes) = value_to_gif_bytes(&value, 16.0) {
-            match value.shape() {
-                &[_, h, w] | &[_, h, w, _]
-                    if h >= MIN_AUTO_IMAGE_DIM && w >= MIN_AUTO_IMAGE_DIM =>
-                {
-                    stack.push(OutputItem::Gif(bytes));
-                    continue;
-                }
-                _ => {}
-            }
-        }
-        // Otherwise, just show the value
-        for line in value.show().lines() {
-            stack.push(OutputItem::String(line.to_string()));
-        }
-    }
-    let stderr = take(&mut *io.stderr.lock().unwrap());
-    let trace = take(&mut *io.trace.lock().unwrap());
+struct RunState {
+    rt: Uiua,
+    can_resume: bool,
+}
 
-    // Construct output
-    let label = ((!stack.is_empty()) as u8)
-        + ((!stdout.is_empty()) as u8)
-        + ((!stderr.is_empty()) as u8)
-        + ((!trace.is_empty()) as u8)
-        >= 2;
-    let mut output = Vec::new();
-    if !trace.is_empty() {
-        output.extend(trace.lines().map(|line| OutputItem::String(line.into())));
-    }
-    if !stdout.is_empty() {
-        if !output.is_empty() {
-            output.push(OutputItem::String("".into()));
-        }
-        if label {
-            output.push(OutputItem::String("stdout:".to_string()));
-        }
-        output.extend(stdout);
-    }
-    if !stderr.is_empty() {
-        if !output.is_empty() {
-            output.push(OutputItem::String("".into()));
-        }
-        if label {
-            output.push(OutputItem::String("stderr:".to_string()));
-        }
-        output.extend(stderr.lines().map(|line| OutputItem::String(line.into())));
-    }
-    if !stack.is_empty() {
-        if label {
-            output.push(OutputItem::Separator);
-        }
-        output.extend(stack);
-    }
-    if let Some(error) = error {
-        if !output.is_empty() {
-            output.push(OutputItem::String("".into()));
-        }
-        const MAX_OUTPUT_BEFORE_ERROR: usize = 60;
-        if output.len() >= MAX_OUTPUT_BEFORE_ERROR {
-            output = output.split_off(output.len() - MAX_OUTPUT_BEFORE_ERROR);
-            output[0] = OutputItem::String("Previous output truncated...".into());
-        }
-        let report = error.report();
-        let execution_limit_reached = report.fragments.iter().any(|frag| matches!(frag, ReportFragment::Plain(s) if s.contains("Maximum execution time exceeded")));
-        output.push(OutputItem::Report(report));
-        if execution_limit_reached {
-            output.push(OutputItem::String(
-                "You can increase the execution time limit in the editor settings".into(),
-            ));
+impl Default for RunState {
+    fn default() -> Self {
+        Self {
+            rt: Uiua::with_backend(WebBackend::default())
+                .with_mode(RunMode::All)
+                .with_execution_limit(Duration::from_secs_f64(get_execution_limit())),
+            can_resume: false,
         }
     }
-    if !diagnotics.is_empty() {
-        if !output.is_empty() {
-            output.push(OutputItem::String("".into()));
+}
+
+impl RunState {
+    pub fn run_code(&mut self, code: &str) -> Vec<OutputItem> {
+        // Run
+        let mut error = None;
+        let res = if self.can_resume {
+            self.rt.resume()
+        } else {
+            self.rt.load_str_break(code)
+        };
+        let mut output = Vec::new();
+        let mut values = match res {
+            Ok(Some(span)) => {
+                output.push(OutputItem::Breakpoint(span));
+                output.push(OutputItem::Separator);
+                self.can_resume = true;
+                self.rt.stack().to_vec()
+            }
+            Ok(None) => {
+                self.can_resume = false;
+                self.rt.take_stack()
+            }
+            Err(e) => {
+                self.can_resume = false;
+                error = Some(e);
+                self.rt.take_stack()
+            }
+        };
+        if get_top_at_top() {
+            values.reverse();
         }
-        for diag in diagnotics {
-            output.push(OutputItem::Report(diag.report()));
+        let diagnotics = self.rt.take_diagnostics();
+        // Get stdout and stderr
+        let io = self.rt.downcast_backend::<WebBackend>().unwrap();
+        let stdout = take(&mut *io.stdout.lock().unwrap());
+        let mut stack = Vec::new();
+        for value in values {
+            // Try to convert the value to audio
+            if value.shape().last().is_some_and(|&n| n >= 44100 / 4) {
+                if let Ok(bytes) = value_to_wav_bytes(&value, io.audio_sample_rate()) {
+                    stack.push(OutputItem::Audio(bytes));
+                    continue;
+                }
+            }
+            // Try to convert the value to an image
+            const MIN_AUTO_IMAGE_DIM: usize = 30;
+            if let Ok(image) = value_to_image(&value) {
+                if image.width() >= MIN_AUTO_IMAGE_DIM as u32
+                    && image.height() >= MIN_AUTO_IMAGE_DIM as u32
+                {
+                    if let Ok(bytes) = image_to_bytes(&image, ImageOutputFormat::Png) {
+                        stack.push(OutputItem::Image(bytes));
+                        continue;
+                    }
+                }
+            }
+            // Try to convert the value to a gif
+            if let Ok(bytes) = value_to_gif_bytes(&value, 16.0) {
+                match value.shape() {
+                    &[_, h, w] | &[_, h, w, _]
+                        if h >= MIN_AUTO_IMAGE_DIM && w >= MIN_AUTO_IMAGE_DIM =>
+                    {
+                        stack.push(OutputItem::Gif(bytes));
+                        continue;
+                    }
+                    _ => {}
+                }
+            }
+            // Otherwise, just show the value
+            for line in value.show().lines() {
+                stack.push(OutputItem::String(line.to_string()));
+            }
         }
+        let stderr = take(&mut *io.stderr.lock().unwrap());
+        let trace = take(&mut *io.trace.lock().unwrap());
+
+        // Construct output
+        let label = ((!stack.is_empty()) as u8)
+            + ((!stdout.is_empty()) as u8)
+            + ((!stderr.is_empty()) as u8)
+            + ((!trace.is_empty()) as u8)
+            >= 2;
+        if !trace.is_empty() {
+            output.extend(trace.lines().map(|line| OutputItem::String(line.into())));
+        }
+        if !stdout.is_empty() {
+            if !output.is_empty() {
+                output.push(OutputItem::String("".into()));
+            }
+            if label {
+                output.push(OutputItem::String("stdout:".to_string()));
+            }
+            output.extend(stdout);
+        }
+        if !stderr.is_empty() {
+            if !output.is_empty() {
+                output.push(OutputItem::String("".into()));
+            }
+            if label {
+                output.push(OutputItem::String("stderr:".to_string()));
+            }
+            output.extend(stderr.lines().map(|line| OutputItem::String(line.into())));
+        }
+        if !stack.is_empty() {
+            if label {
+                output.push(OutputItem::Separator);
+            }
+            output.extend(stack);
+        }
+        if let Some(error) = error {
+            if !output.is_empty() {
+                output.push(OutputItem::String("".into()));
+            }
+            const MAX_OUTPUT_BEFORE_ERROR: usize = 60;
+            if output.len() >= MAX_OUTPUT_BEFORE_ERROR {
+                output = output.split_off(output.len() - MAX_OUTPUT_BEFORE_ERROR);
+                output[0] = OutputItem::String("Previous output truncated...".into());
+            }
+            let report = error.report();
+            let execution_limit_reached = report.fragments.iter().any(|frag| matches!(frag, ReportFragment::Plain(s) if s.contains("Maximum execution time exceeded")));
+            output.push(OutputItem::Report(report));
+            if execution_limit_reached {
+                output.push(OutputItem::String(
+                    "You can increase the execution time limit in the editor settings".into(),
+                ));
+            }
+        }
+        if !diagnotics.is_empty() {
+            if !output.is_empty() {
+                output.push(OutputItem::String("".into()));
+            }
+            for diag in diagnotics {
+                output.push(OutputItem::Report(diag.report()));
+            }
+        }
+        output
     }
-    output
 }
 
 fn report_view(report: &Report) -> impl IntoView {

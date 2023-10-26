@@ -372,6 +372,7 @@ impl Uiua {
         if self.scope.call.is_empty() {
             return Ok(None);
         }
+        self.execution_start = instant::now();
         if self.scope.call.len() > 1 {
             match self.exec_inner() {
                 Ok(()) => {}

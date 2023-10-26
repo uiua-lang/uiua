@@ -86,7 +86,7 @@ pub use {
     boxed::*,
     error::*,
     function::*,
-    lex::is_ident_char,
+    lex::*,
     lsp::*,
     lsp::{spans, SpanKind},
     parse::parse,

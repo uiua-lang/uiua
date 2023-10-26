@@ -9,9 +9,9 @@ use std::{
 
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{Primitive, UiuaError};
+use crate::Primitive;
 
-pub fn lex(input: &str, file: Option<&Path>) -> (Vec<Sp<Token>>, Vec<Sp<LexError>>) {
+pub(crate) fn lex(input: &str, file: Option<&Path>) -> (Vec<Sp<Token>>, Vec<Sp<LexError>>) {
     Lexer {
         input_segments: input.graphemes(true).collect(),
         loc: Loc {
@@ -28,7 +28,9 @@ pub fn lex(input: &str, file: Option<&Path>) -> (Vec<Sp<Token>>, Vec<Sp<LexError
     .run()
 }
 
+/// An error encountered while lexing
 #[derive(Debug, Clone)]
+#[allow(missing_docs)]
 pub enum LexError {
     UnexpectedChar(String),
     ExpectedCharacter(Option<char>),
@@ -50,11 +52,16 @@ impl fmt::Display for LexError {
 
 impl Error for LexError {}
 
+/// A location in a source file
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Loc {
+    /// The character position
     pub char_pos: usize,
+    /// The byte position
     pub byte_pos: usize,
+    /// The line number
     pub line: usize,
+    /// The column number
     pub col: usize,
 }
 
@@ -75,9 +82,12 @@ impl Default for Loc {
     }
 }
 
+/// A span either in a source file or built in
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Span {
+    /// A span in a source file
     Code(CodeSpan),
+    /// A span built in to the compiler
     Builtin,
 }
 
@@ -88,12 +98,11 @@ impl From<CodeSpan> for Span {
 }
 
 impl Span {
+    /// Use the span to wrap a value
     pub fn sp<T>(self, value: T) -> Sp<T, Self> {
         Sp { value, span: self }
     }
-    pub fn error(&self, msg: impl Into<String>) -> UiuaError {
-        self.clone().sp(msg.into()).into()
-    }
+    /// Merge two spans
     pub fn merge(self, other: Self) -> Self {
         match (self, other) {
             (Span::Code(a), Span::Code(b)) => Span::Code(a.merge(b)),
@@ -104,11 +113,16 @@ impl Span {
     }
 }
 
+/// A span in a source file
 #[derive(Clone)]
 pub struct CodeSpan {
+    /// The start of the span
     pub start: Loc,
+    /// The end of the span
     pub end: Loc,
+    /// The path of the file
     pub path: Option<Arc<Path>>,
+    /// The input string
     pub input: Arc<str>,
 }
 
@@ -157,6 +171,7 @@ impl CodeSpan {
     pub(crate) const fn sp<T>(self, value: T) -> Sp<T> {
         Sp { value, span: self }
     }
+    /// Merge two spans
     pub fn merge(self, end: Self) -> Self {
         CodeSpan {
             start: self.start.min(end.start),
@@ -164,9 +179,11 @@ impl CodeSpan {
             ..self
         }
     }
+    /// Get the string that this span refers to
     pub fn as_str(&self) -> &str {
         &self.input[self.start.byte_pos..self.end.byte_pos]
     }
+    /// Check if this span contains a line and column
     pub fn contains_line_col(&self, line: usize, col: usize) -> bool {
         if self.start.line == self.end.line {
             self.start.line == line && (self.start.col..=self.end.col).contains(&col)
@@ -176,6 +193,7 @@ impl CodeSpan {
                 && (self.end.line > line || col <= self.end.col)
         }
     }
+    /// Get just the span of the first character
     pub fn just_start(&self) -> Self {
         let start = self.start;
         let mut end = self.start;
@@ -188,6 +206,7 @@ impl CodeSpan {
             ..self.clone()
         }
     }
+    /// Get just the span of the last character
     pub fn just_end(&self) -> Self {
         let end = self.end;
         let mut start = self.end;
@@ -235,43 +254,19 @@ impl Hash for CodeSpan {
     }
 }
 
+/// A value with a span
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[allow(missing_docs)]
 pub struct Sp<T, S = CodeSpan> {
     pub value: T,
     pub span: S,
 }
 
 impl<T> Sp<T> {
+    /// Map the value
     pub fn map<U, F: FnOnce(T) -> U>(self, f: F) -> Sp<U> {
         Sp {
             value: f(self.value),
-            span: self.span,
-        }
-    }
-    pub fn map_into<U>(self) -> Sp<U>
-    where
-        T: Into<U>,
-    {
-        self.map(Into::into)
-    }
-    pub fn as_ref(&self) -> Sp<&T> {
-        Sp {
-            value: &self.value,
-            span: self.span.clone(),
-        }
-    }
-    pub fn filter_map<U>(self, f: impl FnOnce(T) -> Option<U>) -> Option<Sp<U>> {
-        f(self.value).map(|value| Sp {
-            value,
-            span: self.span,
-        })
-    }
-}
-
-impl<T: Clone> Sp<&T> {
-    pub fn cloned(self) -> Sp<T> {
-        Sp {
-            value: self.value.clone(),
             span: self.span,
         }
     }
@@ -301,7 +296,9 @@ impl<T> From<Sp<T>> for Sp<T, Span> {
     }
 }
 
+/// A lexical token
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(missing_docs)]
 pub enum Token {
     Comment,
     Ident,
@@ -318,39 +315,35 @@ pub enum Token {
 }
 
 impl Token {
-    pub fn as_char(&self) -> Option<String> {
+    pub(crate) fn as_char(&self) -> Option<String> {
         match self {
             Token::Char(char) => Some(char.clone()),
             _ => None,
         }
     }
-    pub fn as_string(&self) -> Option<&str> {
+    pub(crate) fn as_string(&self) -> Option<&str> {
         match self {
             Token::Str(string) => Some(string),
             _ => None,
         }
     }
-    pub fn as_format_string(&self) -> Option<Vec<String>> {
+    pub(crate) fn as_format_string(&self) -> Option<Vec<String>> {
         match self {
             Token::FormatStr(frags) => Some(frags.clone()),
             _ => None,
         }
     }
-    pub fn as_multiline_string(&self) -> Option<Vec<String>> {
+    pub(crate) fn as_multiline_string(&self) -> Option<Vec<String>> {
         match self {
             Token::MultilineString(parts) => Some(parts.clone()),
             _ => None,
         }
     }
-    pub fn as_glyph(&self) -> Option<Primitive> {
-        match self {
-            Token::Glyph(glyph) => Some(*glyph),
-            _ => None,
-        }
-    }
 }
 
+/// ASCII lexical tokens
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[allow(missing_docs)]
 pub enum AsciiToken {
     OpenParen,
     CloseParen,
@@ -840,7 +833,7 @@ pub fn is_ident_char(c: char) -> bool {
     c.is_alphabetic() && !"ⁿₙπτη".contains(c)
 }
 
-pub fn is_custom_glyph(c: &str) -> bool {
+pub(crate) fn is_custom_glyph(c: &str) -> bool {
     match c.chars().count() {
         0 => false,
         1 => {

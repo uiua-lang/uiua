@@ -1,7 +1,7 @@
 use std::{any::Any, collections::HashMap, io::Cursor, sync::Mutex};
 
 use leptos::*;
-use uiua::{Report, SysBackend, UiuaError};
+use uiua::{Report, Span, SysBackend, UiuaError};
 
 use crate::{editor::get_ast_time, weewuh};
 
@@ -29,6 +29,7 @@ pub enum OutputItem {
     Gif(Vec<u8>),
     Audio(Vec<u8>),
     Report(Report),
+    Breakpoint(Span),
     Separator,
 }
 

@@ -574,7 +574,6 @@ impl Primitive {
             Primitive::Now => env.push(instant::now() / 1000.0),
             Primitive::Trace => trace(env, false)?,
             Primitive::Dump => dump(env)?,
-            Primitive::Breakpoint => return Err(UiuaError::Breakpoint(env.span().clone())),
             Primitive::Sys(io) => io.run(env)?,
             Primitive::Regex => {
                 thread_local! {
@@ -890,7 +889,7 @@ impl PrimExample {
         self.output.get_or_init(|| {
             let env = &mut Uiua::with_native_sys();
             match env.load_str(&self.input) {
-                Ok(_) => Ok(env.take_stack().into_iter().map(|val| val.show()).collect()),
+                Ok(()) => Ok(env.take_stack().into_iter().map(|val| val.show()).collect()),
                 Err(e) => Err(e
                     .to_string()
                     .lines()

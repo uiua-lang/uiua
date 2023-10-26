@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeSet, HashMap, HashSet, VecDeque},
+    collections::{BTreeSet, HashMap, HashSet},
     fs,
     hash::Hash,
     mem::{replace, take},
@@ -15,7 +15,7 @@ use parking_lot::Mutex;
 use rand::prelude::*;
 
 use crate::{
-    array::Array, ast::Item, boxed::Boxed, constants, function::*, lex::Span, parse::parse,
+    array::Array, boxed::Boxed, constants, function::*, lex::Span, parse::parse,
     primitive::Primitive, value::Value, Diagnostic, DiagnosticKind, Ident, NativeSys, SysBackend,
     SysOp, TraceFrame, UiuaError, UiuaResult,
 };
@@ -71,7 +71,7 @@ pub struct Uiua {
     thread: ThisThread,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub(crate) enum Global {
     Val(Value),
     Func(Arc<Function>),
@@ -89,8 +89,6 @@ pub(crate) struct Scope {
     fills: Fills,
     /// The current clear state
     pack_depth: usize,
-    /// The items waitining to be compiled (and whether they are in test scopes)
-    pub(crate) items: VecDeque<(Item, bool)>,
 }
 
 impl Default for Scope {
@@ -110,7 +108,6 @@ impl Default for Scope {
             names: HashMap::new(),
             fills: Fills::default(),
             pack_depth: 0,
-            items: VecDeque::new(),
         }
     }
 }
@@ -294,100 +291,17 @@ impl Uiua {
     }
     /// Load a Uiua file from a path
     pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult {
-        if self.load_file_break(path.as_ref())?.is_some() {
-            while self.resume()?.is_some() {}
-        }
-        Ok(())
-    }
-    /// Load a Uiua file from a path andle handle breakpoints
-    ///
-    /// If a breakpoint is encountered, the span of the breakpoint is returned.
-    /// Use `Uiua::resume` to continue execution.
-    pub fn load_file_break<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<Option<Span>> {
         let path = path.as_ref();
         let input = fs::read_to_string(path).map_err(|e| UiuaError::Load(path.into(), e.into()))?;
         self.load_impl(&input, Some(path))
     }
-    /// Load a Uiua file from a path andle handle breakpoints with a function
-    pub fn load_file_break_with<P, F>(&mut self, path: P, mut f: F) -> UiuaResult
-    where
-        P: AsRef<Path>,
-        F: FnMut(Span, &[Value]),
-    {
-        if let Some(span) = self.load_file_break(path)? {
-            f(span, &self.stack);
-            while let Some(span) = self.resume()? {
-                f(span, &self.stack);
-            }
-        }
-        Ok(())
-    }
     /// Load a Uiua file from a string
     pub fn load_str(&mut self, input: &str) -> UiuaResult {
-        if self.load_str_break(input)?.is_some() {
-            while self.resume()?.is_some() {}
-        }
-        Ok(())
-    }
-    /// Load a Uiua file from a string and handle breakpoints
-    ///
-    /// If a breakpoint is encountered, the span of the breakpoint is returned.
-    /// Use `Uiua::resume` to continue execution.
-    pub fn load_str_break(&mut self, input: &str) -> UiuaResult<Option<Span>> {
         self.load_impl(input, None)
-    }
-    /// Load a Uiua file from a string and handle breakpoints with a function
-    pub fn load_str_break_with<F>(&mut self, input: &str, mut f: F) -> UiuaResult
-    where
-        F: FnMut(Span, &[Value]),
-    {
-        if let Some(span) = self.load_str_break(input)? {
-            f(span, &self.stack);
-            while let Some(span) = self.resume()? {
-                f(span, &self.stack);
-            }
-        }
-        Ok(())
     }
     /// Load a Uiua file from a string with a path for error reporting
     pub fn load_str_path<P: AsRef<Path>>(&mut self, input: &str, path: P) -> UiuaResult {
-        if self.load_str_path_break(input, path.as_ref())?.is_some() {
-            while self.resume()?.is_some() {}
-        }
-        Ok(())
-    }
-    /// Load a Uiua file from a string with a path for error reporting and handle breakpoints
-    ///
-    /// If a breakpoint is encountered, the span of the breakpoint is returned.
-    /// Use `Uiua::resume` to continue execution.
-    pub fn load_str_path_break<P: AsRef<Path>>(
-        &mut self,
-        input: &str,
-        path: P,
-    ) -> UiuaResult<Option<Span>> {
         self.load_impl(input, Some(path.as_ref()))
-    }
-    /// Resume execution
-    pub fn resume(&mut self) -> UiuaResult<Option<Span>> {
-        if self.scope.call.is_empty() {
-            return Ok(None);
-        }
-        self.execution_start = instant::now();
-        if self.scope.call.len() > 1 {
-            match self.exec_inner() {
-                Ok(()) => {}
-                Err(UiuaError::Breakpoint(span)) => return Ok(Some(span)),
-                Err(err) => return Err(err),
-            }
-        }
-        while let Some((item, in_test)) = self.scope.items.pop_front() {
-            match self.item(item, in_test) {
-                Ok(()) => {}
-                Err(UiuaError::Breakpoint(span)) => return Ok(Some(span)),
-                Err(err) => return Err(err),
-            }
-        }
-        Ok(None)
     }
     /// Run in a scoped context. Names defined in this context will be removed when the scope ends.
     ///
@@ -412,7 +326,7 @@ impl Uiua {
         self.stack.truncate(start_height);
         Ok(names)
     }
-    fn load_impl(&mut self, input: &str, path: Option<&Path>) -> UiuaResult<Option<Span>> {
+    fn load_impl(&mut self, input: &str, path: Option<&Path>) -> UiuaResult {
         self.execution_start = instant::now();
         let (items, errors, diagnostics) = parse(input, path);
         if self.print_diagnostics {
@@ -428,10 +342,7 @@ impl Uiua {
         if let Some(path) = path {
             self.current_imports.lock().insert(path.into());
         }
-        self.scope
-            .items
-            .extend(items.into_iter().map(|item| (item, false)));
-        let res = match catch_unwind(AssertUnwindSafe(|| self.resume())) {
+        let res = match catch_unwind(AssertUnwindSafe(|| self.items(items, false))) {
             Ok(res) => res,
             Err(_) => Err(self.error(format!(
                 "\
@@ -509,18 +420,13 @@ code:
         })?;
         Ok(())
     }
-    fn exec(&mut self, frame: StackFrame) -> UiuaResult {
+    fn exec(&mut self, frame: StackFrame) -> UiuaResult<Arc<Function>> {
         self.scope.call.push(frame);
-        self.exec_inner()?;
-        self.scope.call.pop().unwrap();
-        Ok(())
-    }
-    fn exec_inner(&mut self) -> UiuaResult {
         let mut formatted_instr = String::new();
-        loop {
+        Ok(loop {
             let frame = self.scope.call.last().unwrap();
             let Some(instr) = frame.function.instrs.get(frame.pc) else {
-                break;
+                break self.scope.call.pop().unwrap().function;
             };
             // Uncomment to debug
             // if !self.scope.array.is_empty() {
@@ -732,28 +638,20 @@ code:
                 );
                 self.last_time = instant::now();
             }
-            match res {
-                Ok(()) => {
-                    // Go to next instruction
-                    self.scope.call.last_mut().unwrap().pc += 1;
-                    if let Some(limit) = self.execution_limit {
-                        if instant::now() - self.execution_start > limit {
-                            return Err(UiuaError::Timeout(self.span()));
-                        }
+            if let Err(err) = res {
+                // Trace errors
+                let frame = self.scope.call.pop().unwrap();
+                return Err(self.trace_error(err, frame));
+            } else {
+                // Go to next instruction
+                self.scope.call.last_mut().unwrap().pc += 1;
+                if let Some(limit) = self.execution_limit {
+                    if instant::now() - self.execution_start > limit {
+                        return Err(UiuaError::Timeout(self.span()));
                     }
                 }
-                Err(e @ UiuaError::Breakpoint(_)) => {
-                    self.scope.call.last_mut().unwrap().pc += 1;
-                    return Err(e);
-                }
-                Err(err) => {
-                    // Trace errors
-                    let frame = self.scope.call.pop().unwrap();
-                    return Err(self.trace_error(err, frame));
-                }
             }
-        }
-        Ok(())
+        })
     }
     pub(crate) fn push_span(&mut self, span: usize, prim: Option<Primitive>) {
         self.scope.call.last_mut().unwrap().spans.push((span, prim));
@@ -765,8 +663,8 @@ code:
         let function = f.into();
         let sig = function.signature();
         let start_height = self.stack.len();
-        self.exec(StackFrame {
-            function: function.clone(),
+        let function = self.exec(StackFrame {
+            function,
             call_span,
             spans: Vec::new(),
             pc: 0,
@@ -987,16 +885,6 @@ code:
     /// Take the entire stack
     pub fn take_stack(&mut self) -> Vec<Value> {
         take(&mut self.stack)
-    }
-    /// Get a reference to the stack
-    ///
-    /// Note: Do *not* use this to get values from the stack for custom functions.
-    /// The array tracking stack will not be updated correctly.
-    /// Use `pop` and co instead.
-    ///
-    /// This is mainly for debugging.
-    pub fn stack(&self) -> &[Value] {
-        &self.stack
     }
     /// Pop a function from the function stack
     pub fn pop_function(&mut self) -> UiuaResult<Arc<Function>> {

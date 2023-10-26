@@ -119,21 +119,9 @@ fn run() -> UiuaResult {
                     .with_args(args)
                     .print_diagnostics(true)
                     .time_instrs(time_instrs);
-                let mut broke = false;
-                rt.load_file_break_with(path, |span, stack| {
-                    println!("\nbr at {span} (press enter to continue)");
-                    for value in stack {
-                        println!("{}", value.show());
-                    }
-                    io::stdin().lines().next().unwrap().unwrap();
-                    broke = true;
-                })?;
-                let stack = rt.take_stack();
-                if !stack.is_empty() {
-                    println!("---");
-                    for value in stack {
-                        println!("{}", value.show());
-                    }
+                rt.load_file(path)?;
+                for value in rt.take_stack() {
+                    println!("{}", value.show());
                 }
             }
             App::Eval {

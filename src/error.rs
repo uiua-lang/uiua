@@ -31,8 +31,6 @@ pub enum UiuaError {
     Throw(Box<Value>, Span),
     /// Control flow for `break`
     Break(usize, Span),
-    /// Control flor for breakpoints
-    Breakpoint(Span),
     /// Maximum execution time exceeded
     Timeout(Span),
     /// A wrapper marking this error as being fill-related
@@ -88,9 +86,6 @@ impl fmt::Display for UiuaError {
             }
             UiuaError::Throw(value, span) => write!(f, "{span}: {value}"),
             UiuaError::Break(_, span) => write!(f, "{span}: Break amount exceeded loop depth"),
-            UiuaError::Breakpoint(_) => {
-                write!(f, "Uncaught breakpoint. This is a bug in the interpreter")
-            }
             UiuaError::Timeout(_) => write!(f, "Maximum execution time exceeded"),
             UiuaError::Fill(error) => error.fmt(f),
         }
@@ -206,9 +201,7 @@ impl UiuaError {
                 Report::new_multi(kind, [("Maximum execution time exceeded", span.clone())])
             }
             UiuaError::Fill(error) => error.report(),
-            UiuaError::Load(..) | UiuaError::Format(..) | UiuaError::Breakpoint(_) => {
-                Report::new(kind, self.to_string())
-            }
+            UiuaError::Load(..) | UiuaError::Format(..) => Report::new(kind, self.to_string()),
         }
     }
 }

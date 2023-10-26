@@ -22,7 +22,13 @@ use crate::{
 use crate::Uiua;
 
 impl Uiua {
-    pub(crate) fn item(&mut self, item: Item, in_test: bool) -> UiuaResult {
+    pub(crate) fn items(&mut self, items: Vec<Item>, in_test: bool) -> UiuaResult {
+        for item in items {
+            self.item(item, in_test)?;
+        }
+        Ok(())
+    }
+    fn item(&mut self, item: Item, in_test: bool) -> UiuaResult {
         fn words_have_import(words: &[Sp<Word>]) -> bool {
             words
                 .iter()
@@ -53,12 +59,7 @@ impl Uiua {
         }
         match item {
             Item::TestScope(items) => {
-                self.in_scope(|env| {
-                    env.scope
-                        .items
-                        .extend(items.into_iter().map(|item| (item, true)));
-                    env.resume()
-                })?;
+                self.in_scope(|env| env.items(items, true))?;
             }
             Item::Words(words) => {
                 let can_run = match self.mode {

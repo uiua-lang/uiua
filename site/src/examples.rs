@@ -9,11 +9,10 @@ const PRIMES: &str = "\
 ...            # Make 3 copies
 deshapetable*  # List of products
 keepnotmember∶ # Keep not in list";
-const FIZZBUZZ: &str = "\
-.+1⇡15    # Range 1 to 15
-∩(=0◿)3,5 # Check divisibility
-⍘⋯⍉⊟      # Encode conditions
-≡'&p(∘|⋅\"Fizz\"|⋅\"Buzz\"|⋅\"FizzBuzz\")";
+const UIUA: &str = "\
+\"Unabashedly I utilize arrays\"
+≠@ . # Mask of non-spaces
+⊜⊢   # All first letters";
 const D3: &str = "↯∶⇡/×.2_3_4";
 pub const LOGO: &str = "\
 xy ← ⍘⍉⊞⊟. ÷÷2∶ -÷2,⇡.200
@@ -57,8 +56,8 @@ Life ← ↥⊙↧∩=3,2-,/+/+≑≃≊↻-1⇡3_3.
 ≡(▽↯⧻,∶⍉▽↯⧻,,∶5)      # Upscale";
 
 pub const EXAMPLES: &[&str] = &[
-    AVG, PRIMES, FIZZBUZZ, D3, LOGO, CHORD, SPIRAL, QUADRATIC, STRIPES, PALINDROME, AUTOMATA,
-    ROMAN, MANDELBROT, LIFE,
+    AVG, PRIMES, UIUA, D3, LOGO, CHORD, SPIRAL, QUADRATIC, STRIPES, PALINDROME, AUTOMATA, ROMAN,
+    MANDELBROT, LIFE,
 ];
 
 #[cfg(test)]

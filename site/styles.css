@@ -722,10 +722,10 @@ input[type=number] {
 }
 
 .space-character {
-    border-width: 1px;
-    border-radius: 0.2em;
+    border-width: 2px;
+    border-radius: 0.3em;
     border-style: dashed;
-    margin: 0.1em;
+    margin: 0 -2px;
 }
 
 @media (prefers-color-scheme: dark) {

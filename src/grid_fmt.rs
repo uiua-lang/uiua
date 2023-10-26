@@ -116,6 +116,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             return self.data[0].fmt_grid(boxed);
         }
         let stringy = type_name::<T>() == type_name::<char>();
+        let boxy = type_name::<T>() == type_name::<Boxed>();
         if *self.shape == [0] {
             return if stringy {
                 if boxed {
@@ -124,7 +125,12 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     vec![vec!['"', '"']]
                 }
             } else {
-                vec![vec!['[', ']']]
+                let (left, right) = if boxed { ('⟦', '⟧') } else { ('[', ']') };
+                if boxy {
+                    vec![vec![left, '□', right]]
+                } else {
+                    vec![vec![left, right]]
+                }
             };
         }
         // Fill the metagrid

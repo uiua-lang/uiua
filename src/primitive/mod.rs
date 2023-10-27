@@ -249,9 +249,6 @@ impl Primitive {
             return None;
         }
         match name {
-            "id" => return Some(Primitive::Identity),
-            "ga" => return Some(Primitive::Gap),
-            "di" => return Some(Primitive::Dip),
             "pi" => return Some(Primitive::Pi),
             "ro" => return Some(Primitive::Rock),
             _ => {}
@@ -286,6 +283,22 @@ impl Primitive {
                 let sub_name = &name[start_index..end_index];
                 if let Some(p) = Primitive::from_format_name(sub_name) {
                     prims.push((p, sub_name));
+                    start += len;
+                    continue 'outer;
+                } else if sub_name
+                    .strip_suffix('i')
+                    .unwrap_or(sub_name)
+                    .chars()
+                    .all(|c| "gd".contains(c))
+                {
+                    for (i, c) in sub_name.char_indices() {
+                        match c {
+                            'g' => prims.push((Primitive::Gap, &sub_name[i..i + 1])),
+                            'd' => prims.push((Primitive::Dip, &sub_name[i..i + 1])),
+                            'i' => prims.push((Primitive::Identity, &sub_name[i..i + 1])),
+                            _ => unreachable!(),
+                        }
+                    }
                     start += len;
                     continue 'outer;
                 }

@@ -491,11 +491,17 @@ impl<'a> Formatter<'a> {
         match &word.value {
             Word::Number(s, n) => {
                 let grid_str = n.grid_string();
-                if grid_str.len() < s.len() {
-                    self.output.push_str(&grid_str);
+                let formatted = if grid_str.len() < s.len() {
+                    grid_str
                 } else {
-                    self.output.push_str(&s.replace('`', "¯"));
+                    s.replace('`', "¯")
+                };
+                if formatted.starts_with(|c: char| c.is_ascii_digit())
+                    && self.output.ends_with(|c: char| c.is_ascii_digit())
+                {
+                    self.output.push(' ');
                 }
+                self.push(&word.span, &formatted);
             }
             Word::Char(_) => self.output.push_str(word.span.as_str()),
             Word::String(_) => self.output.push_str(word.span.as_str()),

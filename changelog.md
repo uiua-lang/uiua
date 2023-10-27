@@ -4,6 +4,8 @@ Uiua is not yet stable.
 
 ## 0.0.24 - 2023-10-??
 If you are reading this on the website, then these changes are live here.
+### Language
+- Add 2-letter spellings of [`deep` `≊`](https://uiua.org/docs/deep), [`abyss` `≃`](https://uiua.org/docs/abyss), and [`seabed` `∸`](https://uiua.org/docs/seabed) to make them consistent with [`rock` `⋄`](https://uiua.org/docs/rock).
 ### Interpreter
 - Fix a bunch of bugs
 ### Website

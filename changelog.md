@@ -5,6 +5,8 @@ Uiua is not yet stable.
 
 ## 0.0.24 - 2023-10-??
 If you are reading this on the website, then these changes are live here.
+### Website
+- Add challenges to the end of tutorial sections
 ### Crate
 - The [Uiua Rust crate](https://crates.io/crates/uiua) is now [fully documented](https://docs.rs/uiua) and has a decent API
 

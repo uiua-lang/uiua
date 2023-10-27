@@ -709,7 +709,7 @@ impl Uiua {
                         }
                     };
                 }
-                Primitive::Dip | Primitive::Gap => {
+                Primitive::Dip | Primitive::Gap | Primitive::Oust => {
                     let (mut instrs, sig) = self.compile_operand_words(modified.operands)?;
                     // Dip () . diagnostic
                     if prim == Primitive::Dip && sig.is_ok_and(|sig| sig == (1, 1)) {
@@ -727,11 +727,22 @@ impl Uiua {
                     }
 
                     let span = self.add_span(modified.modifier.span.clone());
-                    if prim == Primitive::Dip {
-                        instrs.insert(0, Instr::PushTempInline { count: 1, span });
-                        instrs.push(Instr::PopTempInline { count: 1, span });
-                    } else {
-                        instrs.insert(0, Instr::Prim(Primitive::Pop, span));
+                    match prim {
+                        Primitive::Dip => {
+                            instrs.insert(0, Instr::PushTempInline { count: 1, span });
+                            instrs.push(Instr::PopTempInline { count: 1, span });
+                        }
+                        Primitive::Gap => instrs.insert(0, Instr::Prim(Primitive::Pop, span)),
+                        Primitive::Oust => {
+                            let mut init = vec![
+                                Instr::PushTempInline { count: 1, span },
+                                Instr::Prim(Primitive::Pop, span),
+                                Instr::PopTempInline { count: 1, span },
+                            ];
+                            init.extend(instrs);
+                            instrs = init;
+                        }
+                        _ => unreachable!(),
                     }
                     return if call {
                         self.extend_instrs(instrs);

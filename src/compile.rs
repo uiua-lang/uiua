@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    algorithm::invert::under_instrs,
+    algorithm::invert::{invert_instrs, under_instrs},
     array::Array,
     ast::*,
     boxed::Boxed,
@@ -793,6 +793,36 @@ impl Uiua {
                                     let func = Function::new(
                                         FunctionId::Anonymous(modified.modifier.span),
                                         instrs,
+                                        sig,
+                                    );
+                                    self.push_instr(Instr::push_func(func));
+                                    Ok(())
+                                }
+                                Err(e) => Err(UiuaError::Run(
+                                    Span::Code(modified.modifier.span.clone())
+                                        .sp(format!("Cannot infer function signature: {e}")),
+                                )),
+                            }
+                        };
+                    }
+                }
+                Primitive::Invert => {
+                    let mut operands = modified
+                        .operands
+                        .clone()
+                        .into_iter()
+                        .filter(|word| word.value.is_code());
+                    let (instrs, _) = self.compile_operand_words(vec![operands.next().unwrap()])?;
+                    if let Some(inverted) = invert_instrs(&instrs) {
+                        return if call {
+                            self.extend_instrs(inverted);
+                            Ok(())
+                        } else {
+                            match instrs_signature(&inverted) {
+                                Ok(sig) => {
+                                    let func = Function::new(
+                                        FunctionId::Anonymous(modified.modifier.span),
+                                        inverted,
                                         sig,
                                     );
                                     self.push_instr(Instr::push_func(func));

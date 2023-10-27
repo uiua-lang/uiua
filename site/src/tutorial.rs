@@ -216,7 +216,7 @@ fn TutorialBasic() -> impl IntoView {
         <Editor example="+1 ⸮ ×4 trace ×. -3 5"/>
 
         <h2 id="challenges">"Challenges"</h2>
-        <p>"At the end of each section of this tutorial, there will be a few challenges to test your understanding."</p>
+        <p>"At the end of most sections of this tutorial, there will be a few challenges to test your understanding."</p>
         <p>"The code you write will be run on multiple inputs and tested for correctness."</p>
         <p>"Remember that you can click the "<code>"↧"</code>" on the right side of the editor to see a list of all the glyphs."</p>
         <br/>
@@ -671,9 +671,6 @@ fn TutorialBindings() -> impl IntoView {
         <Editor example="f ← ⚂\nf f f"/>
         <Editor example="f ← (⚂)\nf f f"/>
         <p>"The "<A href="/docs/functions">"next section"</A>" discusses functions in more detail."</p>
-
-        <h2 id="challenges">"Challenges"</h2>
-        <p>"There are no challenges for this section!"</p>
     }
 }
 
@@ -951,6 +948,24 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <p>"If the "<Prim prim=Assert/>"ed value is never caught, it becomes an error."</p>
         <Editor example="f ← ¯⍤\"too big!\"≤10.\nf 5\nf 12"/> // Should fail
         <p>"Using "<Prim prim=Assert/>" for this purpose will be covered more in the "<A href="/docs/testing">"section on testing"</A>"."</p>
+
+        <h2 id="challenges">"Challenges"</h2>
+
+        <Challenge
+            number=1
+            prompt="pushes \"small\" if a number is less than 10, \"medium\" if it is less than 100, and \"large\" otherwise"
+            example="17"
+            answer=r#"("small"|"medium"|"large")⊢⊚<[10 100 ∞]"#
+            tests={&["3", "50", "2357"]}
+            hidden="10"/>
+
+        <Challenge
+            number=2
+            prompt="multiplies and array by its reverse until any element is greater than 1000, at most 10 times"
+            example="[1.5 8 2]"
+            answer="⍥(⎋>1000/↥.×⇌.)10"
+            tests={&["[1 2 3]", "[¯6 5 1]"]}
+            hidden="7"/>
     }
 }
 
@@ -1033,6 +1048,16 @@ Add ← ⊂/+⊃↙↘2
 Sub ← ⊂/-⊃↙↘2
 f ← (⊂⊢.|⊂1|Add|Sub)∶
 ∧⋄~f [] [1 0 2 0 2 0 2 1 3]"/>
+
+        <h2 id="challenges">"Challenges"</h2>
+
+        <Challenge
+            number=1
+            prompt="rotates the rank 2 arrays in the second argument by the rank 1 arrays in the first"
+            example="1_2 ↯3_4⇡12"
+            answer="≑≃≊↻"
+            tests={&["[0_2 2_1 1_1] ⊞×⊞×..+1⇡3"]}
+            hidden="1 [1 2 3]"/>
     }
 }
 
@@ -1068,6 +1093,19 @@ F!!!+×⊂ [1 2 3][4 5 6]"/>
         <Editor example="\
 ReduceAll! ← ⍥/^2⧻△.
 ReduceAll!+[1_2_3 4_5_6]"/>
+
+        <h2 id="challenges">"Challenges"</h2>
+
+        <Challenge
+            number=1
+            prompt="creates a custom modifier called f! which calls its function on each row of an array, reverses each row, and reverses the whole array"
+            example="f!(⊂.) ↯3_4⇡12"
+            answer="f! ← ⇌≡(⇌^1)"
+            default="f! ← ^1"
+            flip=true
+            tests={&["f!(↯3) [1_2_3 4_5_6]", "f!(⊟.) 1_2 3_4"]}
+            hidden="5"/>
+
 
         <br/>
         <br/>

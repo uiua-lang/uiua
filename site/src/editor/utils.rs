@@ -605,17 +605,26 @@ fn just_values(code: &str) -> UiuaResult<Vec<Value>> {
     Ok(rt.take_stack())
 }
 
+fn challenge_code(input: &str, test: &str, flip: bool) -> String {
+    if flip {
+        format!("{input}\n{test}")
+    } else {
+        format!("{test}\n{input}")
+    }
+}
+
 impl State {
     /// Run code and return the output
     pub fn run_code(&self, code: &str) -> Vec<OutputItem> {
         if let Some(chal) = &self.challenge {
-            let mut example = run_code_single(&format!("{}\n{}", chal.example, chal.answer));
+            let mut example =
+                run_code_single(&challenge_code(&chal.answer, &chal.example, chal.flip));
             example.insert(0, OutputItem::Faint(format!("Example: {}", chal.example)));
             let mut output_sections = vec![example];
             let mut correct = true;
             for test in &chal.tests {
-                let answer = || just_values(&format!("{}\n{}", test, chal.answer));
-                let user_input = format!("{}\n{}", test, code);
+                let answer = || just_values(&challenge_code(&chal.answer, test, chal.flip));
+                let user_input = challenge_code(code, test, chal.flip);
                 let user_output = || just_values(&user_input);
                 correct = correct
                     && match (answer(), user_output()) {
@@ -627,8 +636,9 @@ impl State {
                 output.insert(0, OutputItem::Faint(format!("Input: {test}")));
                 output_sections.push(output);
             }
-            let hidden_answer = || just_values(&format!("{}\n{}", chal.hidden, chal.answer));
-            let hidden_user_output = || just_values(&format!("{}\n{}", chal.hidden, code));
+            let hidden_answer =
+                || just_values(&challenge_code(&chal.answer, &chal.hidden, chal.flip));
+            let hidden_user_output = || just_values(&challenge_code(code, &chal.hidden, chal.flip));
             correct = correct
                 && match (hidden_answer(), hidden_user_output()) {
                     (Ok(answer), Ok(users)) => answer == users,
@@ -809,6 +819,7 @@ pub struct ChallengeDef {
     pub answer: String,
     pub tests: Vec<String>,
     pub hidden: String,
+    flip: bool,
     did_init_run: Cell<bool>,
 }
 
@@ -820,12 +831,15 @@ pub fn Challenge<'a>(
     answer: &'a str,
     tests: &'a [&'a str],
     hidden: &'a str,
+    #[prop(optional)] default: &'a str,
+    #[prop(optional)] flip: bool,
 ) -> impl IntoView {
     let def = ChallengeDef {
         example: example.into(),
         answer: answer.into(),
         tests: tests.iter().copied().map(Into::into).collect(),
         hidden: hidden.into(),
+        flip,
         did_init_run: Cell::new(false),
     };
     let (main_part, rest) = if let Some((a, b)) = prompt.split_once('.') {
@@ -837,7 +851,7 @@ pub fn Challenge<'a>(
         <div class="challenge">
             <h3>"Challenge "{number}</h3>
             <p>"Write a program that "<strong>{main_part}</strong>"."{rest}</p>
-            <Editor challenge=def/>
+            <Editor challenge=def example=default/>
         </div>
     }
 }

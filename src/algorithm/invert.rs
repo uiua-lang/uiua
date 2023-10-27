@@ -596,7 +596,6 @@ fn under_group_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], U
         Instr::Prim(Primitive::Group, span),
     ];
     let afters = vec![
-        Instr::PopTempUnder { count: 2, span },
         Instr::PushFunc(f_after.into()),
         Instr::ImplPrim(ImplPrimitive::Ungroup, span),
     ];

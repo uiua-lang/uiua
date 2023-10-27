@@ -2,9 +2,10 @@
 
 Uiua is not yet stable.
 
-
 ## 0.0.24 - 2023-10-??
 If you are reading this on the website, then these changes are live here.
+### Interpreter
+- Fix a bunch of bugs
 ### Website
 - Add challenges to the end of tutorial sections
 ### Crate

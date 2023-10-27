@@ -100,6 +100,7 @@ pub fn unpartition(env: &mut Uiua) -> UiuaResult {
         )));
     }
     let partitioned = env.pop(1)?;
+    // Untransform rows
     let mut untransformed = Vec::with_capacity(partitioned.row_count());
     for row in partitioned.into_rows().rev() {
         env.push(row);
@@ -161,21 +162,22 @@ pub fn ungroup(env: &mut Uiua) -> UiuaResult {
             "Cannot undo group with on function with signature {sig}"
         )));
     }
-    let indices = env
-        .pop(1)?
-        .as_ints(env, "Group indices must be a list of integers")?;
-    let original = env.pop(2)?;
-    let grouped = env.pop(3)?;
+    let grouped = env.pop(1)?;
 
     // Untransform rows
     let mut ungrouped_rows: Vec<Box<dyn ExactDoubleIterator<Item = Value>>> =
         Vec::with_capacity(grouped.row_count());
-    for mut row in grouped.into_rows() {
+    for mut row in grouped.into_rows().rev() {
         env.push(row);
         env.call_error_on_break(f.clone(), "break is not allowed in ungroup")?;
         row = env.pop("ungrouped row")?;
         ungrouped_rows.push(row.into_rows());
     }
+    ungrouped_rows.reverse();
+    let original = env.pop_temp_under()?;
+    let indices = env
+        .pop_temp_under()?
+        .as_ints(env, "Group indices must be a list of integers")?;
 
     // Ungroup
     let mut ungrouped = Vec::with_capacity(indices.len() * original.row_len());

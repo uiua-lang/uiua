@@ -31,7 +31,7 @@ pub fn lex(input: &str, file: Option<&Path>) -> (Vec<Sp<Token>>, Vec<Sp<LexError
 #[derive(Debug, Clone)]
 pub enum LexError {
     UnexpectedChar(String),
-    ExpectedCharacter(Option<char>),
+    ExpectedCharacter(Vec<char>),
     InvalidEscape(String),
     ExpectedNumber,
 }
@@ -40,8 +40,16 @@ impl fmt::Display for LexError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             LexError::UnexpectedChar(c) => write!(f, "Unexpected char {c:?}"),
-            LexError::ExpectedCharacter(Some(c)) => write!(f, "Expected {c:?}"),
-            LexError::ExpectedCharacter(None) => write!(f, "Expected character"),
+            LexError::ExpectedCharacter(chars) if chars.is_empty() => {
+                write!(f, "Expected character")
+            }
+            LexError::ExpectedCharacter(chars) if chars.len() == 1 => {
+                write!(f, "Expected {:?}", chars[0])
+            }
+            LexError::ExpectedCharacter(chars) if chars.len() == 2 => {
+                write!(f, "Expected {:?} or {:?}", chars[0], chars[1])
+            }
+            LexError::ExpectedCharacter(chars) => write!(f, "Expected one of {:?}", chars),
             LexError::InvalidEscape(c) => write!(f, "Invalid escape character {c:?}"),
             LexError::ExpectedNumber => write!(f, "Expected number"),
         }
@@ -557,7 +565,7 @@ impl<'a> Lexer<'a> {
                         Ok(Some(c)) => c,
                         Ok(None) => {
                             self.errors
-                                .push(self.end_span(start).sp(LexError::ExpectedCharacter(None)));
+                                .push(self.end_span(start).sp(LexError::ExpectedCharacter(vec![])));
                             continue;
                         }
                         Err(e) => {
@@ -571,7 +579,10 @@ impl<'a> Lexer<'a> {
                 // Strings
                 "\"" | "$" => {
                     let format = c == "$";
-                    if format && self.next_char_exact(" ") {
+                    if format
+                        && (self.next_char_exact(" ")
+                            || self.peek_char().map_or(true, |c| "\r\n".contains(c)))
+                    {
                         // Multiline strings
                         let mut start = start;
                         loop {
@@ -588,7 +599,7 @@ impl<'a> Lexer<'a> {
                                     .is_some()
                                 {}
                                 start = self.loc;
-                                if self.next_chars_exact(["$", " "]) {
+                                if self.next_chars_exact(["$", " "]) || self.next_char_exact("$") {
                                     continue;
                                 }
                             }
@@ -601,7 +612,7 @@ impl<'a> Lexer<'a> {
                     if format && !self.next_char_exact("\"") {
                         self.errors.push(
                             self.end_span(start)
-                                .sp(LexError::ExpectedCharacter(Some('"'))),
+                                .sp(LexError::ExpectedCharacter(vec!['"', ' '])),
                         );
                         errored = true;
                     }
@@ -610,7 +621,7 @@ impl<'a> Lexer<'a> {
                     if !self.next_char_exact("\"") && !errored {
                         self.errors.push(
                             self.end_span(start)
-                                .sp(LexError::ExpectedCharacter(Some('"'))),
+                                .sp(LexError::ExpectedCharacter(vec!['"'])),
                         );
                     }
                     if format {

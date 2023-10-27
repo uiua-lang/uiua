@@ -379,7 +379,10 @@ impl Uiua {
                 }
             }
             Word::MultilineString(lines) => {
-                let signature = Signature::new(lines.iter().map(|l| l.value.len() - 1).sum(), 1);
+                let signature = Signature::new(
+                    lines.iter().map(|l| l.value.len().saturating_sub(1)).sum(),
+                    1,
+                );
                 let f = Function::new(
                     FunctionId::Anonymous(word.span.clone()),
                     vec![Instr::Dynamic(DynamicFunction {

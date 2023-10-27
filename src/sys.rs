@@ -99,7 +99,7 @@ macro_rules! sys_op {
             pub fn doc(&self) -> Option<&'static PrimDoc> {
                 match self {
                     $(SysOp::$variant => {
-                        let doc_str = concat!($($doc, "\n"),*);
+                        let doc_str = concat!($doc_rust, $($doc, "\n"),*);
                         static DOC: OnceLock<PrimDoc> = OnceLock::new();
                         if doc_str.is_empty() {
                             return None;

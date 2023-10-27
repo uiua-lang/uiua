@@ -616,6 +616,24 @@ fn TutorialTypes() -> impl IntoView {
         <Editor example="type []"/>
         <Editor example="type \"\""/>
         <Editor example="type {}"/>
+
+        <h2 id="challenges">"Challenges"</h2>
+
+        <Challenge
+            number=1
+            prompt="capitalizes an all-lowercase string"
+            example="\"hello\""
+            answer="-32"
+            tests={&["\"uiua\"", "\"gato\"", "\"tacit\""]}
+            hidden="\"wowza\""/>
+
+        <Challenge
+            number=2
+            prompt="increments the first character of a string"
+            example="\"`rray\""
+            answer="⍜⊢(+1)"
+            tests={&["\"Xou're\"", "\"coing\"", "\"freat!\""]}
+            hidden="\"abc\""/>
     }
 }
 
@@ -653,6 +671,9 @@ fn TutorialBindings() -> impl IntoView {
         <Editor example="f ← ⚂\nf f f"/>
         <Editor example="f ← (⚂)\nf f f"/>
         <p>"The "<A href="/docs/functions">"next section"</A>" discusses functions in more detail."</p>
+
+        <h2 id="challenges">"Challenges"</h2>
+        <p>"There are no challenges for this section!"</p>
     }
 }
 
@@ -726,6 +747,32 @@ X 5"/>
         <Editor example="≡(|2 ↻.) 1_2_3 ↯3_3⇡9"/> // Should fail
         <p>"If the compiler cannot derive the stack signature of a function and you give it one which is "<em>"wrong"</em>", the function will throw an error at runtime."</p>
         <Editor example="f = |1.2 /∘\nf [1 2 3]"/> // Should fail
+
+        <h2 id="challenges">"Challenges"</h2>
+
+        <Challenge
+            number=1
+            prompt="calculates the product of the first n positive integers"
+            example="5"
+            answer="/×+1⇡"
+            tests={&["10", "0", "6"]}
+            hidden="3"/>
+
+        <Challenge
+            number=2
+            prompt="adds the each column of a matrix to the next"
+            example="[1_2_3 4_5_6]"
+            answer="≡/+"
+            tests={&["[6_9_1_2 3_0_0_1 2_3_4_5]", "[2_2_2_2_5]"]}
+            hidden="↯2_3_4_5⇡120"/>
+
+        <Challenge
+            number=3
+            prompt="wraps a string in brackets"
+            example="\"Hello, World!\""
+            answer="$\"[_]\""
+            tests={&["\"Uiua\"", "\"🙃\""]}
+            hidden="\"tomorrow\""/>
     }
 }
 
@@ -798,6 +845,40 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <p>"Try it out!"</p>
         <Editor example="+gadigagaid 1 2 3 4 5"/>
         <p>"In general, planet notation as complex as the mathematical function example above should only be used when it is necessary. For examples like that with 4+ values, it is. However, when working with fewer values, you can get very far with just "<Prim prim=Dup/>" and "<Prim prim=Flip/>". Maybe sprinkle some "<Prim prim=Over/>"s and "<Prim prim=Dip/>"s in there too."</p>
+
+        <h2 id="challenges">"Challenges"</h2>
+
+        <Challenge
+            number=1
+            prompt="moves the 4th value on the stack to the top"
+            example="1 2 3 4 5"
+            answer="⊃⋅⋅⋅∘⊙⊙∘"
+            tests={&["@x [1 2 3] □5 27"]}
+            hidden="3 3 3 4"/>
+
+        <Challenge
+            number=2
+            prompt="adds the second argument to the third and divides by the first"
+            example="2 3 5"
+            answer="÷⊙+"
+            tests={&["1 2 3", "5 10 15"]}
+            hidden="2 3 4"/>
+
+        <Challenge
+            number=3
+            prompt="find both the sum and product of three arguments"
+            example="4 5 6"
+            answer="⊃(++)(××)"
+            tests={&["10 10 10", "1_2 3_4 5"]}
+            hidden="[1 2 3] 4 [5 6 7]"/>
+
+        <Challenge
+            number=4
+            prompt="for numbers A, B, C, and D calculates (A+C)×(B+D)"
+            example="1 2 3 4"
+            answer="×⊃(+⊙⋅∘)(+⋅⊙⋅∘)"
+            tests={&["10 ¯3 1 0", "3 ¯7 2 2"]}
+            hidden="1_2 3_4 5_6 7"/>
     }
 }
 

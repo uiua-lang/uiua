@@ -69,7 +69,9 @@ pub fn format_char_inner(c: char) -> String {
         return '_'.to_string();
     }
     let formatted = format!("{c:?}");
-    if formatted.starts_with("'\\u{") {
+    if c == '\'' {
+        "'".to_string()
+    } else if formatted.starts_with("'\\u{") {
         let n = c as u32;
         if n < 128 {
             format!("\\x{:02x}", n)

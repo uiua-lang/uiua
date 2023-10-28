@@ -58,6 +58,7 @@ CommentSpaceAfterHash ← 1
 MultilineIndent ← 2
 CompactMultilineMode ← "auto"
 AlignComments ← 1
+IndentItemImports ← 1
 ```
 
 The following configuration options are available:
@@ -108,3 +109,11 @@ Type: boolean
 Default: `1`
 
 Whether to align consecutive end-of-line comments.
+
+### `IndentItemImports`
+Type: boolean
+
+Default: `1`
+
+Whether to indent item imports.
+Respects `MultilineIndent`.

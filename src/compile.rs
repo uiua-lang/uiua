@@ -436,9 +436,7 @@ impl Uiua {
                         Instr::Push(v) => *v,
                         _ => unreachable!(),
                     });
-                    self.push_span(span, None);
-                    let val = Value::from_row_values(values, self)?;
-                    self.pop_span();
+                    let val = self.with_span(span, |env| Value::from_row_values(values, env))?;
                     self.push_instr(Instr::push(val));
                 } else {
                     // Normal case
@@ -472,20 +470,20 @@ impl Uiua {
                         Instr::Push(v) => *v,
                         _ => unreachable!(),
                     });
-                    self.push_span(span, None);
-                    let val = if arr.constant {
-                        if empty {
-                            Array::<Boxed>::default().into()
+                    let val = self.with_span(span, |env| {
+                        if arr.constant {
+                            if empty {
+                                Ok(Array::<Boxed>::default().into())
+                            } else {
+                                Value::from_row_values(
+                                    values.map(|v| Value::Box(Boxed(v).into())),
+                                    env,
+                                )
+                            }
                         } else {
-                            Value::from_row_values(
-                                values.map(|v| Value::Box(Boxed(v).into())),
-                                self,
-                            )?
+                            Value::from_row_values(values, env)
                         }
-                    } else {
-                        Value::from_row_values(values, self)?
-                    };
-                    self.pop_span();
+                    })?;
                     self.push_instr(Instr::push(val));
                 } else {
                     instrs.extend(inner);

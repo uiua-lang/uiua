@@ -7,7 +7,7 @@ If you are reading this on the website, then these changes are live here.
 ### Language
 - Add 2-letter spellings of [`deep` `≊`](https://uiua.org/docs/deep), [`abyss` `≃`](https://uiua.org/docs/abyss), and [`seabed` `∸`](https://uiua.org/docs/seabed) to make them consistent with [`rock` `⋄`](https://uiua.org/docs/rock).
 ### Interpreter
-- Fix a bunch of bugs
+- Fix a bunch of bugs and crashes
 ### Website
 - Add challenges to the end of tutorial sections
 ### Crate

@@ -264,7 +264,7 @@ impl Primitive {
             return None;
         }
         let mut matching = Primitive::all()
-            .filter(|p| p.glyph().is_some_and(|u| u as u32 > 127) && p.name().starts_with(name));
+            .filter(|p| p.glyph().is_some_and(|u| !u.is_ascii()) && p.name().starts_with(name));
         let res = matching.next()?;
         let exact_match = res.name() == name;
         (exact_match || matching.next().is_none()).then_some(res)
@@ -1106,12 +1106,44 @@ mod tests {
 
     #[test]
     fn primitive_from_name() {
-        assert_eq!(Primitive::from_format_name("rev"), Some(Primitive::Reverse));
-        assert_eq!(Primitive::from_format_name("re"), None);
-        assert_eq!(
-            Primitive::from_format_name("resh"),
-            Some(Primitive::Reshape)
-        );
+        for prim in Primitive::all() {
+            assert_eq!(Primitive::from_name(prim.name()), Some(prim));
+        }
+        for test in [
+            Primitive::from_format_name as fn(&str) -> Option<Primitive>,
+            |name| {
+                Primitive::from_format_name_multi(name)
+                    .unwrap()
+                    .first()
+                    .map(|(prim, _)| *prim)
+            },
+        ] {
+            for prim in Primitive::all() {
+                let char_test = match prim.glyph() {
+                    None => prim.name().len(),
+                    Some(c) if c.is_ascii() => continue,
+                    Some(_) => 4,
+                };
+                let short: String = prim.name().chars().take(char_test).collect();
+                assert_eq!(test(&short), Some(prim));
+            }
+            for prim in Primitive::all() {
+                if matches!(
+                    prim,
+                    Primitive::Range | Primitive::Rand | Primitive::Transpose | Primitive::Trace
+                ) {
+                    continue;
+                }
+                let char_test = match prim.glyph() {
+                    None => prim.name().len(),
+                    Some(c) if c.is_ascii() || prim.ascii().is_some() => continue,
+                    Some(_) => 3,
+                };
+                let short: String = prim.name().chars().take(char_test).collect();
+                assert_eq!(test(&short), Some(prim));
+            }
+        }
+        assert_eq!(Primitive::from_format_name("id"), Some(Primitive::Identity));
     }
 
     #[test]

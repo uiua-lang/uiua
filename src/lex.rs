@@ -856,10 +856,10 @@ pub fn is_custom_glyph(c: &str) -> bool {
         0 => false,
         1 => {
             let c = c.chars().next().unwrap();
-            c as u32 > 127 && !is_ident_char(c) && Primitive::from_glyph(c).is_none()
+            !c.is_ascii() && !is_ident_char(c) && Primitive::from_glyph(c).is_none()
         }
         _ => c
             .chars()
-            .all(|c| c as u32 > 127 && !is_ident_char(c) && Primitive::from_glyph(c).is_none()),
+            .all(|c| !c.is_ascii() && !is_ident_char(c) && Primitive::from_glyph(c).is_none()),
     }
 }

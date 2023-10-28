@@ -186,9 +186,9 @@ uiuisms!(
     r#"▽\↥≠@ . "   ← remove these""#,
     /// Trim trailing whitespace
     r#"▽⍜⇌\↥≠@ . "remove these →   ""#,
-    /// Trim prefix matching characters from a set
+    /// Trim prefix-matching characters from a set
     r#"▽¬\×∊, "abc" "ccab ← remove this""#,
-    /// Trim suffix matching characters from a set
+    /// Trim suffix-matching characters from a set
     r#"▽¬⍜⇌\×∊, "abc" "remove this → bcaa""#,
     /// Trim whitespace
     r#"▽×⍜(⊟⇌)≡\↥.≠@ . "  abc xyz   ""#,
@@ -215,7 +215,7 @@ uiuisms!(
     /// Matrix power (Also works with scalars)
     "[1_2 3_4] 4\n;∶⍥(⊠(/+×)⊙⍉,)∶⊙∶⊞=.⇡⬚1⊢△.",
     //  /// Evaluate a polynomial with given coefficients at a scalar or square matrix
-    //     r"/+×∺(  Note: Not sure how to fix this with new distribute order
+    //     r"/+×∺(  Note: Not sure how to fix this with the new distribute order
     //   ⊙∶⊞=.⇡⬚1⊢△.:
     //   ;∶⍥(⊠(/+×)⊙⍉,)∶
     // )⊙∶⇌⇡⧻. [1 2 3 1] [1_1 2_2]",

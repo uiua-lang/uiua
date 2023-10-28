@@ -99,7 +99,7 @@ macro_rules! sys_op {
             pub fn doc(&self) -> Option<&'static PrimDoc> {
                 match self {
                     $(SysOp::$variant => {
-                        let doc_str = concat!($($doc, "\n"),*);
+                        let doc_str = concat!($doc_rust, $($doc, "\n"),*);
                         static DOC: OnceLock<PrimDoc> = OnceLock::new();
                         if doc_str.is_empty() {
                             return None;
@@ -278,7 +278,7 @@ sys_op! {
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, and `ico`.
     ///
     /// See also: [&ime]
-    (1, ImDecode, Images, "&imd", "image - decode"),
+    (2, ImDecode, Images, "&imd", "image - decode"),
     /// Encode an image into a byte array with the specified format
     ///
     /// The first argument is the format, and the second is the image.

@@ -247,16 +247,16 @@ impl Parser {
             let signature = self.try_signature(Bar);
             // Words
             let words = self.try_words().unwrap_or_default();
-            match words.as_slice() {
-                [Sp {
-                    value: Word::Func(func),
-                    ..
-                }] => {
-                    for line in &func.lines {
-                        self.validate_words(line, false);
-                    }
+            // Validate words
+            if let (1, Some(Word::Func(func))) = (
+                words.iter().filter(|w| w.value.is_code()).count(),
+                &words.iter().find(|w| w.value.is_code()).map(|w| &w.value),
+            ) {
+                for line in &func.lines {
+                    self.validate_words(line, false);
                 }
-                words => self.validate_words(words, false),
+            } else {
+                self.validate_words(&words, false)
             }
             // Check for uncapitalized binding names
             if name.value.trim_end_matches('!').chars().count() >= 3
@@ -504,30 +504,73 @@ impl Parser {
             self.errors.push(self.expected([Expectation::Term]));
         }
 
-        // Style diagnostic for bind
-        if let Modifier::Primitive(Primitive::Bind) = modifier {
-            for arg in &args {
-                if let Word::Modified(m) = &arg.value {
-                    if let Modifier::Primitive(Primitive::Bind) = m.modifier.value {
-                        let span = mod_span.clone().merge(m.modifier.span.clone());
-                        self.diagnostics.push(Diagnostic::new(
-                            format!("Do not chain `bind {}`", Primitive::Bind),
-                            span,
-                            DiagnosticKind::Style,
-                        ));
-                    } else if m.modifier.value.args() > 1 {
-                        let span = mod_span.clone().merge(m.modifier.span.clone());
-                        self.diagnostics.push(Diagnostic::new(
-                            format!(
-                                "Do not use non-monadic modifiers inside `bind {}`",
-                                Primitive::Bind
-                            ),
-                            span,
-                            DiagnosticKind::Style,
-                        ));
+        // Style diagnostics
+        match modifier {
+            Modifier::Primitive(Primitive::Bind) => {
+                for arg in &args {
+                    if let Word::Modified(m) = &arg.value {
+                        if let Modifier::Primitive(Primitive::Bind) = m.modifier.value {
+                            let span = mod_span.clone().merge(m.modifier.span.clone());
+                            self.diagnostics.push(Diagnostic::new(
+                                format!("Do not chain `bind {}`", Primitive::Bind),
+                                span,
+                                DiagnosticKind::Style,
+                            ));
+                        } else if m.modifier.value.args() > 1 {
+                            let span = mod_span.clone().merge(m.modifier.span.clone());
+                            self.diagnostics.push(Diagnostic::new(
+                                format!(
+                                    "Do not use non-monadic modifiers inside `bind {}`",
+                                    Primitive::Bind
+                                ),
+                                span,
+                                DiagnosticKind::Style,
+                            ));
+                        }
                     }
                 }
             }
+            Modifier::Primitive(Primitive::Reach) => {
+                for arg in &args {
+                    if let Word::Modified(m) = &arg.value {
+                        match &m.modifier.value {
+                            Modifier::Primitive(Primitive::Dip) => {
+                                let span = mod_span.clone().merge(m.modifier.span.clone());
+                                self.diagnostics.push(Diagnostic::new(
+                                    format!(
+                                        "`{reach}{dip}` is either unclear or not what you want. \
+                                    If you want the same behavior, prefer `{dip}{gap}` \
+                                    for clarity. If you mean to call a function on the \
+                                    first and third arguments, use `{reach}f`.",
+                                        reach = Primitive::Reach,
+                                        dip = Primitive::Dip,
+                                        gap = Primitive::Gap,
+                                    ),
+                                    span,
+                                    DiagnosticKind::Style,
+                                ));
+                            }
+                            Modifier::Primitive(Primitive::Gap) => {
+                                let span = mod_span.clone().merge(m.modifier.span.clone());
+                                self.diagnostics.push(Diagnostic::new(
+                                    format!(
+                                        "`{reach}{gap}` is either unclear or not what you want. \
+                                    If you want the same behavior, prefer `{gap}{gap}` \
+                                    for clarity. If you mean to call a function on the \
+                                    first and fourth arguments, use `{reach}{reach}f`.",
+                                        reach = Primitive::Reach,
+                                        gap = Primitive::Gap,
+                                    ),
+                                    span,
+                                    DiagnosticKind::Style,
+                                ));
+                            }
+                            _ => (),
+                        }
+                    }
+                }
+            }
+            _ => {}
         }
 
         Some(if args.is_empty() {

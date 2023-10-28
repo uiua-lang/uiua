@@ -421,6 +421,14 @@ impl<'a> VirtualEnv<'a> {
                     self.set_min_height();
                     self.handle_sig(f.signature())?;
                 }
+                Reach => {
+                    let f = self.pop_func()?;
+                    let x = self.pop()?;
+                    self.pop()?;
+                    self.set_min_height();
+                    self.stack.push(x);
+                    self.handle_sig(f.signature())?;
+                }
                 Join => {
                     let a = self.pop()?;
                     let b = self.pop()?;

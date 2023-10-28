@@ -379,7 +379,10 @@ impl Uiua {
                 }
             }
             Word::MultilineString(lines) => {
-                let signature = Signature::new(lines.iter().map(|l| l.value.len() - 1).sum(), 1);
+                let signature = Signature::new(
+                    lines.iter().map(|l| l.value.len().saturating_sub(1)).sum(),
+                    1,
+                );
                 let f = Function::new(
                     FunctionId::Anonymous(word.span.clone()),
                     vec![Instr::Dynamic(DynamicFunction {
@@ -433,9 +436,7 @@ impl Uiua {
                         Instr::Push(v) => *v,
                         _ => unreachable!(),
                     });
-                    self.push_span(span, None);
-                    let val = Value::from_row_values(values, self)?;
-                    self.pop_span();
+                    let val = self.with_span(span, |env| Value::from_row_values(values, env))?;
                     self.push_instr(Instr::push(val));
                 } else {
                     // Normal case
@@ -469,20 +470,20 @@ impl Uiua {
                         Instr::Push(v) => *v,
                         _ => unreachable!(),
                     });
-                    self.push_span(span, None);
-                    let val = if arr.constant {
-                        if empty {
-                            Array::<Boxed>::default().into()
+                    let val = self.with_span(span, |env| {
+                        if arr.constant {
+                            if empty {
+                                Ok(Array::<Boxed>::default().into())
+                            } else {
+                                Value::from_row_values(
+                                    values.map(|v| Value::Box(Boxed(v).into())),
+                                    env,
+                                )
+                            }
                         } else {
-                            Value::from_row_values(
-                                values.map(|v| Value::Box(Boxed(v).into())),
-                                self,
-                            )?
+                            Value::from_row_values(values, env)
                         }
-                    } else {
-                        Value::from_row_values(values, self)?
-                    };
-                    self.pop_span();
+                    })?;
                     self.push_instr(Instr::push(val));
                 } else {
                     instrs.extend(inner);
@@ -660,8 +661,10 @@ impl Uiua {
                             let span = modified.modifier.span.clone().merge(span.clone());
                             self.diagnostics.insert(Diagnostic::new(
                                 format!(
-                                    "Using {m} with a pervasive primitive like {prim} is \
-                                    redundant. Just use {prim} by itself."
+                                    "Using {m}{mname} with a pervasive primitive like {prim}{pname} is \
+                                    redundant. Just use {prim}{pname} by itself.",
+                                    mname = m.name(),
+                                    pname = prim.name(),
                                 ),
                                 span,
                                 DiagnosticKind::Advice,
@@ -670,7 +673,11 @@ impl Uiua {
                     } else if words_look_pervasive(&modified.operands) {
                         let span = modified.modifier.span.clone();
                         self.diagnostics.insert(Diagnostic::new(
-                            format!("{m}'s function is pervasive, so {m} is redundant here."),
+                            format!(
+                                "{m}{name}'s function is pervasive, \
+                                so {m}{name} is redundant here.",
+                                name = m.name()
+                            ),
                             span,
                             DiagnosticKind::Advice,
                         ));
@@ -706,7 +713,7 @@ impl Uiua {
                         }
                     };
                 }
-                Primitive::Dip | Primitive::Gap => {
+                Primitive::Dip | Primitive::Gap | Primitive::Reach => {
                     let (mut instrs, sig) = self.compile_operand_words(modified.operands)?;
                     // Dip () . diagnostic
                     if prim == Primitive::Dip && sig.is_ok_and(|sig| sig == (1, 1)) {
@@ -724,11 +731,22 @@ impl Uiua {
                     }
 
                     let span = self.add_span(modified.modifier.span.clone());
-                    if prim == Primitive::Dip {
-                        instrs.insert(0, Instr::PushTempInline { count: 1, span });
-                        instrs.push(Instr::PopTempInline { count: 1, span });
-                    } else {
-                        instrs.insert(0, Instr::Prim(Primitive::Pop, span));
+                    match prim {
+                        Primitive::Dip => {
+                            instrs.insert(0, Instr::PushTempInline { count: 1, span });
+                            instrs.push(Instr::PopTempInline { count: 1, span });
+                        }
+                        Primitive::Gap => instrs.insert(0, Instr::Prim(Primitive::Pop, span)),
+                        Primitive::Reach => {
+                            let mut init = vec![
+                                Instr::PushTempInline { count: 1, span },
+                                Instr::Prim(Primitive::Pop, span),
+                                Instr::PopTempInline { count: 1, span },
+                            ];
+                            init.extend(instrs);
+                            instrs = init;
+                        }
+                        _ => unreachable!(),
                     }
                     return if call {
                         self.extend_instrs(instrs);

@@ -90,8 +90,8 @@ pub fn PrimDocs(prim: Primitive) -> impl IntoView {
     };
     let body = prim.doc().map(|doc| {
         view! {
-            <p style="white-space: pre-wrap">{doc_line_fragments_to_view( &doc.short)}</p>
-            { doc_lines_to_view( &doc.lines) }
+            <p style="white-space: pre-wrap">{doc_line_fragments_to_view(&doc.short)}</p>
+            { doc_lines_to_view(&doc.lines) }
         }
     });
 

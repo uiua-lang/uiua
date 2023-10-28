@@ -133,7 +133,8 @@ pub fn Install() -> impl IntoView {
     view! {
         <Title text="Installation - Uiua Docs"/>
         <h2>"Installing Uiua"</h2>
-        <p>"The native Uiua interpreter can be installed via Cargo."</p>
+        <p>"If you are on Windows, then the newest version of the Uiua interpreter can be downloaded from the "<a href="https://github.com/uiua-lang/uiua/releases">"releases"</a>" page."</p>
+        <p>"Otherwise, the native Uiua interpreter can be installed via Cargo."</p>
         <p>"This requires a "<a href="https://www.rust-lang.org/tools/install">"Rust"</a>" installation."</p>
         <p>"Once you have that, run the following command:"</p>
         <code class="code-block">"cargo install uiua"</code>
@@ -141,6 +142,8 @@ pub fn Install() -> impl IntoView {
         <code class="code-block">"cargo install uiua --features audio"</code>
         <p>"If you want audio on Linux, you may need to install some dependencies first:"</p>
         <code class="code-block">"apt install libasound2-dev libudev-dev pkg-config"</code>
+        <p>"If you want the most recent development version of Uiua, you can install from the git repository."</p>
+        <code class="code-block">"cargo install --git https://github.com/uiua-lang/uiua uiua"</code>
 
         <h2>"Basic Usage"</h2>
         <p>"Running just "<code>"uiua"</code>" will display the help message if there are no "<code>".ua"</code>" files in the directory."</p>
@@ -159,6 +162,7 @@ pub fn Install() -> impl IntoView {
         <p>"It requires Uiua to be installed and in your "<code>"PATH"</code>"."</p>
     }
 }
+
 #[component]
 pub fn RightToLeft() -> impl IntoView {
     use Primitive::*;

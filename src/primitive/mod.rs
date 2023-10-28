@@ -251,6 +251,9 @@ impl Primitive {
         match name {
             "pi" => return Some(Primitive::Pi),
             "ro" => return Some(Primitive::Rock),
+            "de" => return Some(Primitive::Deep),
+            "ab" => return Some(Primitive::Abyss),
+            "se" => return Some(Primitive::Seabed),
             _ => {}
         }
         if let Some(prim) = Primitive::all().find(|p| p.name() == name) {
@@ -441,14 +444,24 @@ impl Primitive {
                 env.pop(1)?;
             }
             Primitive::Dip => {
+                // Dip is inlined, so this should never actually run
                 let f = env.pop_function()?;
                 let x = env.pop(1)?;
                 env.call(f)?;
                 env.push(x);
             }
             Primitive::Gap => {
+                // Gap is inlined, so this should never actually run
                 let f = env.pop_function()?;
                 let _x = env.pop(2)?;
+                env.call(f)?;
+            }
+            Primitive::Reach => {
+                // Reach is inlined, so this should never actually run
+                let f = env.pop_function()?;
+                let x = env.pop(1)?;
+                let _y = env.pop(2)?;
+                env.push(x);
                 env.call(f)?;
             }
             Primitive::Rock => {

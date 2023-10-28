@@ -6,11 +6,17 @@ Uiua is not yet stable.
 If you are reading this on the website, then these changes are live here.
 ### Language
 - Add 2-letter spellings of [`deep` `≊`](https://uiua.org/docs/deep), [`abyss` `≃`](https://uiua.org/docs/abyss), and [`seabed` `∸`](https://uiua.org/docs/seabed) to make them consistent with [`rock` `⋄`](https://uiua.org/docs/rock).
+- Add the [`reach` `⟜`](https://uiua.org/docs/reach) modifier, which removes the second value from the stack and calls its function.
+- Change how short spellings of [`dip` `⊙`](https://uiua.org/docs/dip), [`gap` `⋅`](https://uiua.org/docs/gap), and [`identity` `∘`](https://uiua.org/docs/identity) work
+  - Instead of allowing them to be spelled with 2 characters, they can now be spelled with 1 character as long as there are at least 2 in the sequence. 
+  - If present, `'i'` may only come last. 
+  - [`reach` `⟜`](https://uiua.org/docs/reach) is included.
 ### Interpreter
 - Fix a bunch of bugs and crashes
 ### Website
 - Add challenges to the end of tutorial sections
 - Make the introductory examples on the main page less esoteric
+- Update the [Advanced Stack Manipulation Tutorial](https://uiua.org/docs/advancedstack) to include [`reach` `⟜`](https://uiua.org/docs/reach)
 ### Crate
 - The [Uiua Rust crate](https://crates.io/crates/uiua) is now [fully documented](https://docs.rs/uiua) and has a decent API
 

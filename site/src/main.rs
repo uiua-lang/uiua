@@ -181,7 +181,7 @@ pub fn MainPage() -> impl IntoView {
                     <Editor example=r#"⬚@ ⊜∘≠@ ."Oh boy, neat!""#/>
                     <p><Prim prim=Select/>" for re-sequencing array items:"</p>
                     <Editor example=r#"⊏ 2_1_3_0_4 "loco!""#/>
-                    <p><Prim prim=Under/>" for modifiying only part of an array (among other things):"</p>
+                    <p><Prim prim=Under/>" for modifying only part of an array (among other things):"</p>
                     <Editor example="⍜'↙2'×10 1_2_3_4_5"/>
                 </div>
                 <div>

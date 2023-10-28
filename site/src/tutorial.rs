@@ -852,10 +852,10 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <p>"The intuition to have about "<Prim prim=Oust/>" is that its function is a sort of stand-in for "<Prim prim=Identity/>" in normal planet notation (as long as "<Prim prim=Oust/>" itself is not preceded by a "<Prim prim=Dip/>")."</p>
         <p>"Consider this equivalence:"</p>
         <Editor example="+⊙⋅∘ 1 2 3\n⟜+   1 2 3"/>
-        <p>"It's annoying to write long lists of names like "<code>"gapdipgapgapide"</code>" or "<code>"gapoustgap"</code>", so those three functions have a special rule in the parser that allows you to write them with only 2 letters."</p>
+        <p>"It's annoying to write long lists of names like "<code>"gapdipgapgapide"</code>" or "<code>"gapgapoust"</code>", so those three functions have a special rule in the parser that allows you to write them with only 2 letters."</p>
         <p>"Try it out!"</p>
         <Editor example="+gadigagaid 1 2 3 4 5"/>
-        <Editor example="gaouga+ 1 2 3 4 5"/>
+        <Editor example="gagaou+ 1 2 3 4 5"/>
         <p>"In general, planet notation as complex as the mathematical function example above should only be used when it is necessary. For examples like that with 4+ values, it is. However, when working with fewer values, you can get very far with just "<Prim prim=Dup/>" and "<Prim prim=Flip/>". Maybe sprinkle some "<Prim prim=Over/>"s and "<Prim prim=Dip/>"s in there too."</p>
 
         <h2 id="challenges">"Challenges"</h2>

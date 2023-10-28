@@ -219,9 +219,9 @@ sys_op! {
     /// ex: Dub ← &i "example.ua" "Double"
     ///   : Dub 5
     /// To import multiple items, you can make a function that imports from a specific path.
-    /// ex: ex ← &i "example.ua"
-    ///   : Double ← ex "Double"
-    ///   : Square ← ex "Square"
+    /// ex: Ex ← &i "example.ua"
+    ///   : Double ← Ex "Double"
+    ///   : Square ← Ex "Square"
     ///   : Square Double 5
     (2, Import, Filesystem, "&i", "import"),
     /// Invoke a path with the system's default program

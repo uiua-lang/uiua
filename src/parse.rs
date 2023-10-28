@@ -259,7 +259,7 @@ impl Parser {
                 self.validate_words(&words, false)
             }
             // Check for uncapitalized binding names
-            if name.value.trim_end_matches('!').chars().count() >= 3
+            if name.value.trim_end_matches('!').chars().count() >= 2
                 && name.value.chars().next().unwrap().is_ascii_lowercase()
             {
                 let captialized: String = name
@@ -272,7 +272,7 @@ impl Parser {
                     .collect();
                 self.diagnostics.push(Diagnostic::new(
                     format!(
-                        "Binding names with 3 or more characters should be TitleCase \
+                        "Binding names with 2 or more characters should be TitleCase \
                         to avoid collisions with future builtin functions.\n\
                         Try `{}` instead of `{}`",
                         captialized, name.value

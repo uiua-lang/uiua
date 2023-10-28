@@ -19,10 +19,10 @@ const PRIMES: &str = "\
 deshapetable*  # List of products
 keepnotmember∶ # Keep not in list";
 pub const LOGO: &str = "\
-xy ← ⍘⍉⊞⊟. ÷÷2∶ -÷2,⇡.200
-Rgb ← [∶⍘⊟×.xy ↯△⊢xy0.5]
-u ← ↥<0.2∶>0.7.+×2 ×.∶⍘⊟xy
-c ← <∶√/+ⁿ2 xy
+Xy ← ⍘⍉⊞⊟. ÷÷2∶ -÷2,⇡.200
+Rgb ← [∶⍘⊟×.Xy ↯△⊢Xy0.5]
+u ← ↥<0.2∶>0.7.+×2 ×.∶⍘⊟Xy
+c ← <∶√/+ⁿ2 Xy
 ⍉⊂∶-¬u c1 +0.1 ∺↧c0.95Rgb";
 const CHORD: &str = "\
 [0 4 7 10]       # Notes

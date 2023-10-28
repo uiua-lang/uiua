@@ -1426,11 +1426,11 @@ primitive!(
     /// Make sure to use [pop] or [gap] to git rid of excess conditions if the number of branches is not a [power] of `2`.
     /// ex: f ← ??+×⋅-
     ///   : f ← ?(?+×)(-;) # Equivalent
-    ///   : xs ← (3 5)
-    ///   : f 1 1 xs
-    ///   : f 1 0 xs
-    ///   : f 0 1 xs
-    ///   : f 0 0 xs
+    ///   : Xs ← (3 5)
+    ///   : f 1 1 Xs
+    ///   : f 1 0 Xs
+    ///   : f 0 1 Xs
+    ///   : f 0 0 Xs
     ///
     /// The condition can be a list of booleans. In this case, the maximum of the function's arguments *must* be 2.
     /// Which function to be called is determined on a row-wise basis.

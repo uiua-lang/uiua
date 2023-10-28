@@ -127,7 +127,8 @@ impl SysBackend for NativeSys {
                 .read_exact(slice::from_mut(&mut b))
                 .map_err(|e| e.to_string())?;
             match b {
-                b'\r' | b'\n' | 3 => break,
+                b'\r' => continue,
+                b'\n' | 3 => break,
                 b => buffer.push(b),
             }
         }

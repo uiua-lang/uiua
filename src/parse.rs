@@ -533,21 +533,39 @@ impl Parser {
             Modifier::Primitive(Primitive::Oust) => {
                 for arg in &args {
                     if let Word::Modified(m) = &arg.value {
-                        if let Modifier::Primitive(Primitive::Dip) = &m.modifier.value {
-                            let span = mod_span.clone().merge(m.modifier.span.clone());
-                            self.diagnostics.push(Diagnostic::new(
-                                format!(
-                                    "`{oust}{dip}` is either unclear or not what you want. \
+                        match &m.modifier.value {
+                            Modifier::Primitive(Primitive::Dip) => {
+                                let span = mod_span.clone().merge(m.modifier.span.clone());
+                                self.diagnostics.push(Diagnostic::new(
+                                    format!(
+                                        "`{oust}{dip}` is either unclear or not what you want. \
                                     If you want the same behavior, prefer `{dip}{gap}` \
                                     for clarity. If you mean to call a function on the \
                                     first and third arguments, use `{oust}f`.",
-                                    oust = Primitive::Oust,
-                                    dip = Primitive::Dip,
-                                    gap = Primitive::Gap,
-                                ),
-                                span,
-                                DiagnosticKind::Style,
-                            ));
+                                        oust = Primitive::Oust,
+                                        dip = Primitive::Dip,
+                                        gap = Primitive::Gap,
+                                    ),
+                                    span,
+                                    DiagnosticKind::Style,
+                                ));
+                            }
+                            Modifier::Primitive(Primitive::Gap) => {
+                                let span = mod_span.clone().merge(m.modifier.span.clone());
+                                self.diagnostics.push(Diagnostic::new(
+                                    format!(
+                                        "`{oust}{gap}` is either unclear or not what you want. \
+                                    If you want the same behavior, prefer `{gap}{gap}` \
+                                    for clarity. If you mean to call a function on the \
+                                    first and fourth arguments, use `{oust}{oust}f`.",
+                                        oust = Primitive::Oust,
+                                        gap = Primitive::Gap,
+                                    ),
+                                    span,
+                                    DiagnosticKind::Style,
+                                ));
+                            }
+                            _ => (),
                         }
                     }
                 }

@@ -130,8 +130,16 @@ impl Uiua {
         // Resolve signature
         match instrs_signature(&instrs) {
             Ok(mut sig) => {
+                // Validate signature
                 if let Some(declared_sig) = &binding.signature {
-                    if declared_sig.value == sig {
+                    let sig_to_check = if let [Instr::PushFunc(f)] = instrs.as_slice() {
+                        // If this is a function wrapped in parens, check the signature of the
+                        // function rather than the signature of the binding's words
+                        f.signature()
+                    } else {
+                        sig
+                    };
+                    if declared_sig.value == sig_to_check {
                         sig = declared_sig.value;
                     } else {
                         return Err(UiuaError::Run(Span::Code(declared_sig.span.clone()).sp(
@@ -143,27 +151,34 @@ impl Uiua {
                     }
                 }
                 if let [Instr::PushFunc(f)] = instrs.as_slice() {
+                    // Binding is a single inline function
                     self.compile_bind_function(name, f.clone(), span.clone().into())?;
                 } else if sig.args == 0
                     && (sig.outputs > 0 || instrs.is_empty())
                     && placeholder_count == 0
                 {
+                    // Binding's instrs must be run
                     self.exec_global_instrs(instrs)?;
                     if let Some(f) = self.function_stack.pop() {
+                        // Binding is an imported function
                         self.compile_bind_function(name, f, span.clone().into())?;
                     } else if let Some(value) = self.stack.pop() {
+                        // Binding is a constant
                         self.compile_bind_value(name, value, span.clone().into())?;
                     } else {
+                        // Binding is an empty function
                         let func = make_fn(Vec::new(), sig, self);
                         self.compile_bind_function(name, func.into(), span.clone().into())?;
                     }
                 } else {
+                    // Binding is a normal function
                     let func = make_fn(instrs, sig, self);
                     self.compile_bind_function(name, func.into(), span.clone().into())?;
                 }
             }
             Err(e) => {
                 if let Some(sig) = binding.signature {
+                    // Binding is a normal function
                     let func = make_fn(instrs, sig.value, self);
                     self.compile_bind_function(name, func.into(), span.clone().into())?;
                 } else {

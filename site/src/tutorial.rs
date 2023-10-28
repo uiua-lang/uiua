@@ -1164,11 +1164,12 @@ Sqr ← &i \"example.ua\" \"Square\"
 Inc Sqr Dub 5"/>
         <p>"This is a little verbose, so we can make a function that imports a given item."</p>
         <Editor example="\
-ex ← &i \"example.ua\"
-Inc ← ex \"Increment\"
-Dub ← ex \"Double\"
-Sqr ← ex \"Square\"
+Ex ← &i \"example.ua\"
+Inc ← Ex \"Increment\"
+Dub ← Ex \"Double\"
+Sqr ← Ex \"Square\"
 Inc Sqr Dub 5"/>
+        <p>"When you write code like this that imports several items, the formatter will automatically indent each item. Try it out!"</p>
 
     }
 }

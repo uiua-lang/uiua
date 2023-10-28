@@ -18,7 +18,7 @@ use crate::{
     lex::{is_ident_char, CodeSpan, Loc, Sp},
     parse::parse,
     value::Value,
-    SysBackend, Uiua, UiuaError, UiuaResult,
+    Ident, Primitive, SysBackend, SysOp, Uiua, UiuaError, UiuaResult,
 };
 
 // For now disallow any syscalls in the format config file.
@@ -204,6 +204,8 @@ create_config!(
     (multiline_compact_threshold, usize, 10),
     /// Whether to align consecutive end-of-line comments
     (align_comments, bool, true),
+    /// Whether to indent item imports
+    (indent_item_imports, bool, true),
 );
 
 /// The source from which to populate the formatter configuration.
@@ -344,6 +346,7 @@ pub(crate) fn format_items(items: &[Item], config: &FormatConfig) -> FormatOutpu
         output: String::new(),
         glyph_map: BTreeMap::new(),
         end_of_line_comments: Vec::new(),
+        prev_import_function: None,
     };
     formatter.format_items(items);
     let mut output = formatter.output;
@@ -396,6 +399,7 @@ struct Formatter<'a> {
     output: String,
     glyph_map: BTreeMap<CodeSpan, (Loc, Loc)>,
     end_of_line_comments: Vec<(usize, String)>,
+    prev_import_function: Option<Ident>,
 }
 
 impl<'a> Formatter<'a> {
@@ -449,15 +453,33 @@ impl<'a> Formatter<'a> {
     fn format_item(&mut self, item: &Item) {
         match item {
             Item::TestScope(items) => {
+                self.prev_import_function = None;
                 self.output.push_str("---");
                 self.output.push('\n');
                 self.format_items(items);
                 self.output.push_str("---");
             }
             Item::Words(w) => {
+                self.prev_import_function = None;
                 self.format_words(w, true, 0);
             }
             Item::Binding(binding) => {
+                match binding.words.first().map(|w| &w.value) {
+                    Some(Word::Primitive(Primitive::Sys(SysOp::Import))) => {
+                        self.prev_import_function = Some(binding.name.value.clone());
+                    }
+                    Some(Word::Ident(ident)) => {
+                        if (self.prev_import_function.as_ref()).is_some_and(|prev| prev == ident) {
+                            for _ in 0..self.config.multiline_indent {
+                                self.output.push(' ');
+                            }
+                        } else {
+                            self.prev_import_function = None;
+                        }
+                    }
+                    _ => self.prev_import_function = None,
+                }
+
                 self.output.push_str(&binding.name.value);
                 self.output.push_str(" ←");
                 if !binding.words.is_empty() || binding.signature.is_some() {
@@ -468,7 +490,9 @@ impl<'a> Formatter<'a> {
                 }
                 self.format_words(&binding.words, true, 0);
             }
-            Item::ExtraNewlines(_) => {}
+            Item::ExtraNewlines(_) => {
+                self.prev_import_function = None;
+            }
         }
     }
     fn format_signature(&mut self, init_char: char, sig: Signature, trailing_space: bool) {

@@ -279,22 +279,22 @@ impl Primitive {
         let mut start = 0;
         'outer: loop {
             if start == indices.len() {
-                break Some(dbg!(prims));
+                break Some(prims);
             }
             let start_index = indices[start];
             for len in (2..=indices.len() - start).rev() {
                 let end_index = indices.get(start + len).copied().unwrap_or(name.len());
                 let sub_name = &name[start_index..end_index];
                 if let Some(p) = Primitive::from_format_name(sub_name) {
+                    // Normal primitive matching
                     prims.push((p, sub_name));
                     start += len;
                     continue 'outer;
-                } else if sub_name
-                    .strip_suffix('i')
-                    .unwrap_or(sub_name)
-                    .chars()
-                    .all(|c| "gdr".contains(c))
+                } else if !(sub_name.contains("rd") || sub_name.contains("rg"))
+                    && (sub_name.strip_suffix('i').unwrap_or(sub_name).chars())
+                        .all(|c| "gdr".contains(c))
                 {
+                    // 1-letter planet notation
                     for (i, c) in sub_name.char_indices() {
                         match c {
                             'g' => prims.push((Primitive::Gap, &sub_name[i..i + 1])),

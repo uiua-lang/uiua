@@ -251,7 +251,7 @@ impl Primitive {
         match name {
             "id" => return Some(Primitive::Identity),
             "ga" => return Some(Primitive::Gap),
-            "ou" => return Some(Primitive::Oust),
+            "re" => return Some(Primitive::Reach),
             "di" => return Some(Primitive::Dip),
             "pi" => return Some(Primitive::Pi),
             "ro" => return Some(Primitive::Rock),
@@ -444,8 +444,8 @@ impl Primitive {
                 let _x = env.pop(2)?;
                 env.call(f)?;
             }
-            Primitive::Oust => {
-                // Oust is inlined, so this should never actually run
+            Primitive::Reach => {
+                // Reach is inlined, so this should never actually run
                 let f = env.pop_function()?;
                 let x = env.pop(1)?;
                 let _y = env.pop(2)?;

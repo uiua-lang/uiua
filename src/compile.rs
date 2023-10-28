@@ -713,7 +713,7 @@ impl Uiua {
                         }
                     };
                 }
-                Primitive::Dip | Primitive::Gap | Primitive::Oust => {
+                Primitive::Dip | Primitive::Gap | Primitive::Reach => {
                     let (mut instrs, sig) = self.compile_operand_words(modified.operands)?;
                     // Dip () . diagnostic
                     if prim == Primitive::Dip && sig.is_ok_and(|sig| sig == (1, 1)) {
@@ -737,7 +737,7 @@ impl Uiua {
                             instrs.push(Instr::PopTempInline { count: 1, span });
                         }
                         Primitive::Gap => instrs.insert(0, Instr::Prim(Primitive::Pop, span)),
-                        Primitive::Oust => {
+                        Primitive::Reach => {
                             let mut init = vec![
                                 Instr::PushTempInline { count: 1, span },
                                 Instr::Prim(Primitive::Pop, span),

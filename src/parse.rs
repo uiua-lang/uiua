@@ -530,7 +530,7 @@ impl Parser {
                     }
                 }
             }
-            Modifier::Primitive(Primitive::Oust) => {
+            Modifier::Primitive(Primitive::Reach) => {
                 for arg in &args {
                     if let Word::Modified(m) = &arg.value {
                         match &m.modifier.value {
@@ -538,11 +538,11 @@ impl Parser {
                                 let span = mod_span.clone().merge(m.modifier.span.clone());
                                 self.diagnostics.push(Diagnostic::new(
                                     format!(
-                                        "`{oust}{dip}` is either unclear or not what you want. \
+                                        "`{reach}{dip}` is either unclear or not what you want. \
                                     If you want the same behavior, prefer `{dip}{gap}` \
                                     for clarity. If you mean to call a function on the \
-                                    first and third arguments, use `{oust}f`.",
-                                        oust = Primitive::Oust,
+                                    first and third arguments, use `{reach}f`.",
+                                        reach = Primitive::Reach,
                                         dip = Primitive::Dip,
                                         gap = Primitive::Gap,
                                     ),
@@ -554,11 +554,11 @@ impl Parser {
                                 let span = mod_span.clone().merge(m.modifier.span.clone());
                                 self.diagnostics.push(Diagnostic::new(
                                     format!(
-                                        "`{oust}{gap}` is either unclear or not what you want. \
+                                        "`{reach}{gap}` is either unclear or not what you want. \
                                     If you want the same behavior, prefer `{gap}{gap}` \
                                     for clarity. If you mean to call a function on the \
-                                    first and fourth arguments, use `{oust}{oust}f`.",
-                                        oust = Primitive::Oust,
+                                    first and fourth arguments, use `{reach}{reach}f`.",
+                                        reach = Primitive::Reach,
                                         gap = Primitive::Gap,
                                     ),
                                     span,

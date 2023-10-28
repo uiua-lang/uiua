@@ -421,7 +421,7 @@ impl<'a> VirtualEnv<'a> {
                     self.set_min_height();
                     self.handle_sig(f.signature())?;
                 }
-                Oust => {
+                Reach => {
                     let f = self.pop_func()?;
                     let x = self.pop()?;
                     self.pop()?;

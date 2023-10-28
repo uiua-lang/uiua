@@ -10,6 +10,7 @@ If you are reading this on the website, then these changes are live here.
 - Fix a bunch of bugs and crashes
 ### Website
 - Add challenges to the end of tutorial sections
+- Make the introductory examples on the main page less esoteric
 ### Crate
 - The [Uiua Rust crate](https://crates.io/crates/uiua) is now [fully documented](https://docs.rs/uiua) and has a decent API
 

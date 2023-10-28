@@ -1107,16 +1107,16 @@ primitive!(
     ([1], Gap, Planet, ("gap", '⋅')),
     /// Pop the second stack value then call a function
     ///
-    /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [oust] is useful.
+    /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [reach] is useful.
     ///
     /// ex: ⟜+ 1 2 3
     /// ex: ⟜⟜+ 1 3 5 7
     /// This is especially useful when used in a [fork].
-    /// If you have three values on the stack `a`, `b`, and `c`, and you want to call to call one function on `a` and `b` and once function on `b` and `c`, you can use [oust].
+    /// If you have three values on the stack `a`, `b`, and `c`, and you want to call to call one function on `a` and `b` and once function on `b` and `c`, you can use [reach].
     /// ex: [⊃+⟜+ 1 3 5]
     /// If you wanted the arguments pairs to be `a` `c` and `b` `c`, you can add a [gap].
     /// ex: [⊃⟜+⋅+ 1 3 5]
-    ([1], Oust, Planet, ("oust", '⟜')),
+    ([1], Reach, Planet, ("reach", '⟜')),
     /// Temporarily pop the top value off the stack and call a function
     ///
     /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [dip] is useful.

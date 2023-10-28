@@ -30,45 +30,6 @@ impl Function {
     }
 }
 
-pub(crate) fn invert_instrs(instrs: &[Instr]) -> Option<Vec<Instr>> {
-    if instrs.is_empty() {
-        return Some(Vec::new());
-    }
-
-    thread_local! {
-        static INVERT_CACHE: RefCell<HashMap<Vec<Instr>, Option<Vec<Instr>>>> = RefCell::new(HashMap::new());
-    }
-    if let Some(inverted) = INVERT_CACHE.with(|cache| cache.borrow().get(instrs).cloned()) {
-        return inverted;
-    }
-
-    // println!("inverting {:?}", instrs);
-    let mut inverted = Vec::new();
-    let mut start = instrs.len() - 1;
-    let mut end = instrs.len();
-    loop {
-        if let Some(mut inverted_fragment) = invert_instr_fragment(&instrs[start..end]) {
-            inverted.append(&mut inverted_fragment);
-            if start == 0 {
-                break;
-            }
-            end = start;
-            start = end - 1;
-        } else if start == 0 {
-            return None;
-        } else {
-            start -= 1;
-        }
-    }
-    // println!("inverted {:?} to {:?}", instrs, inverted);
-    INVERT_CACHE.with(|cache| {
-        cache
-            .borrow_mut()
-            .insert(instrs.to_vec(), Some(inverted.clone()))
-    });
-    Some(inverted)
-}
-
 fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
     use ImplPrimitive::*;
     use Primitive::*;
@@ -107,17 +68,36 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
     })
 }
 
-fn invert_instr_fragment(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
+pub(crate) fn invert_instrs(instrs: &[Instr]) -> Option<Vec<Instr>> {
+    if instrs.is_empty() {
+        return Some(Vec::new());
+    }
+
+    thread_local! {
+        static INVERT_CACHE: RefCell<HashMap<Vec<Instr>, Option<Vec<Instr>>>> = RefCell::new(HashMap::new());
+    }
+    if let Some(inverted) = INVERT_CACHE.with(|cache| cache.borrow().get(instrs).cloned()) {
+        return inverted;
+    }
+    let inverted = invert_instr_impl(instrs);
+    INVERT_CACHE.with(|cache| cache.borrow_mut().insert(instrs.to_vec(), inverted.clone()));
+    inverted
+}
+
+fn invert_instr_impl(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
     use Instr::*;
     use Primitive::*;
     match instrs {
         [Prim(prim, span)] => {
-            return Some(match prim {
-                Primitive::Sqrt => vec![Instr::push(2.0), Instr::Prim(Primitive::Pow, *span)],
-                prim => vec![prim_inverse(*prim, *span)?],
-            })
+            if let Some(inv) = prim_inverse(*prim, *span) {
+                return Some(vec![inv]);
+            }
         }
-        [ImplPrim(prim, span)] => return impl_prim_inverse(*prim, *span).map(|instr| vec![instr]),
+        [ImplPrim(prim, span)] => {
+            if let Some(inv) = impl_prim_inverse(*prim, *span).map(|instr| vec![instr]) {
+                return Some(inv);
+            }
+        }
         [PushFunc(val)] => {
             if let Some((prim, span)) = val.as_primitive() {
                 return Some(vec![prim_inverse(prim, span)?]);
@@ -132,6 +112,8 @@ fn invert_instr_fragment(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
     let patterns: &[&dyn InvertPattern] = &[
         &invert_invert_pattern,
         &(Val, ([Rotate], [Neg, Rotate])),
+        &([Rotate], [Neg, Rotate]),
+        &([Sqrt], [2.i(), Pow.i()]),
         &(Val, IgnoreMany(Flip), ([Add], [Sub])),
         &(Val, ([Sub], [Add])),
         &(Val, ([Flip, Sub], [Flip, Sub])),
@@ -270,9 +252,6 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
             [Dup.i(), PushTempUnderN(1).i(), Log.i()],
             [PopTempUnderN(1).i(), Flip.i(), Pow.i()],
         ),
-        // It is important that this comes after the things above
-        &UnderPatternFn(under_from_inverse_pattern),
-        &UnderPatternFn(under_temp_pattern),
         &(Val, stash2!(Take, Untake)),
         &stash2!(Take, Untake),
         &(Val, stash2!(Drop, Undrop)),
@@ -354,6 +333,8 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
             [Sys(SysOp::TcpAccept).i(), Dup.i(), PushTempUnderN(1).i()],
             [PopTempUnderN(1).i(), Sys(SysOp::Close).i()],
         ),
+        &UnderPatternFn(under_from_inverse_pattern),
+        &UnderPatternFn(under_temp_pattern),
     ];
 
     let mut befores = Vec::new();
@@ -603,13 +584,12 @@ fn under_group_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], U
 }
 
 impl<A: InvertPattern, B: InvertPattern> InvertPattern for (A, B) {
-    fn invert_extract<'a>(&self, mut input: &'a [Instr]) -> Option<(&'a [Instr], Vec<Instr>)> {
+    fn invert_extract<'a>(&self, input: &'a [Instr]) -> Option<(&'a [Instr], Vec<Instr>)> {
         let (a, b) = self;
-        let (inp, mut a) = a.invert_extract(input)?;
-        input = inp;
-        let (inp, b) = b.invert_extract(input)?;
+        let (input, mut a) = a.invert_extract(input)?;
+        let (input, b) = b.invert_extract(input)?;
         a.extend(b);
-        Some((inp, a))
+        Some((input, a))
     }
 }
 

@@ -249,6 +249,7 @@ impl Primitive {
             return None;
         }
         match name {
+            "id" => return Some(Primitive::Identity),
             "pi" => return Some(Primitive::Pi),
             "ro" => return Some(Primitive::Rock),
             "de" => return Some(Primitive::Deep),
@@ -278,10 +279,10 @@ impl Primitive {
         let mut start = 0;
         'outer: loop {
             if start == indices.len() {
-                break Some(prims);
+                break Some(dbg!(prims));
             }
+            let start_index = indices[start];
             for len in (2..=indices.len() - start).rev() {
-                let start_index = indices[start];
                 let end_index = indices.get(start + len).copied().unwrap_or(name.len());
                 let sub_name = &name[start_index..end_index];
                 if let Some(p) = Primitive::from_format_name(sub_name) {
@@ -292,12 +293,13 @@ impl Primitive {
                     .strip_suffix('i')
                     .unwrap_or(sub_name)
                     .chars()
-                    .all(|c| "gd".contains(c))
+                    .all(|c| "gdr".contains(c))
                 {
                     for (i, c) in sub_name.char_indices() {
                         match c {
                             'g' => prims.push((Primitive::Gap, &sub_name[i..i + 1])),
                             'd' => prims.push((Primitive::Dip, &sub_name[i..i + 1])),
+                            'r' => prims.push((Primitive::Reach, &sub_name[i..i + 1])),
                             'i' => prims.push((Primitive::Identity, &sub_name[i..i + 1])),
                             _ => unreachable!(),
                         }

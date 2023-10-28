@@ -847,10 +847,10 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <p>"If you really dislike characters, the expression can also be written with "<Prim prim=Reach/>" and "<Prim prim=Gap/>" and not use "<Prim prim=Dip/>" at all."</p>
         <Editor example="×⊃⟜⟜+⋅(-⊃⋅∘⟜×) 1 2 3 4"/>
         <p>"It's much shorter, but you can decide for yourself which variation is more readable."</p>
-        <p>"The intuition to have about "<Prim prim=Reach/>" is that its function is a sort of stand-in for "<Prim prim=Identity/>" in normal planet notation (as long as "<Prim prim=Reach/>" itself is not preceded by a "<Prim prim=Dip/>")."</p>
+        <p>"The intuition to have about "<Prim prim=Reach/>" is that its function is a sort of stand-in for "<Prim prim=Identity/>" in normal planet notation."</p>
         <p>"Consider this equivalence:"</p>
         <Editor example="+⊙⋅∘ 1 2 3\n⟜+   1 2 3"/>
-        <p>"It's annoying to write long lists of names like "<code>"gapdipgapgapide"</code>" or "<code>"gaprearea"</code>", so those four functions have a special rule in the parser that allows you to write them with only 1 letter as long as there are at least 2 characters in the sequence. Also, 'i' for "<Prim prim=Identity/>" only works if it is that last character."</p>
+        <p>"It's annoying to write long lists of names like "<code>"gapdipgapgapide"</code>" or "<code>"gaprearea"</code>", so those four functions have a special rule in the parser that allows you to write them with only 1 character as long as there are at least 2 characters in the sequence. Also, 'i' for "<Prim prim=Identity/>" only works if it is the last character."</p>
         <p>"Try it out!"</p>
         <Editor example="+gdggi 1 2 3 4 5"/>
         <Editor example="grr+ 1 2 3 4 5"/>
@@ -861,7 +861,7 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <Challenge
             number=1
             prompt="moves the 4th value on the stack to the top"
-            example="1 2 3 4 5"
+            example="1 2 3 4"
             answer="⊃⋅⋅⋅∘⊙⊙∘"
             tests={&["@x [1 2 3] □5 27"]}
             hidden="3 3 3 4"/>
@@ -876,7 +876,7 @@ fn TutorialAdvancedStack() -> impl IntoView {
 
         <Challenge
             number=3
-            prompt="find both the sum and product of three arguments"
+            prompt="finds both the sum and product of three arguments"
             example="4 5 6"
             answer="⊃(++)(××)"
             tests={&["10 10 10", "1_2 3_4 5"]}

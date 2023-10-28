@@ -654,7 +654,7 @@ fn TutorialBindings() -> impl IntoView {
         <p>"The parser can sometimes mistake all-lowercase binding names for unformatted built-in functions."</p>
         <p>"Here, the parser thinks that "<code>"part"</code>" is "<Prim prim=Partition/>"."</p>
         <Editor example="part = 5" help={&["", "Run to format and reveal why this does not work"]}/>
-        <p>"Binding names with 2 or more characters should be "<A href="https://en.wikipedia.org/wiki/Camel_case">"CamelCase"</A>" to avoid this issue."</p>
+        <p>"Binding names with 2 or more characters should be "<A href="https://en.wikipedia.org/wiki/Camel_case">"PascalCase (also known as upper CamelCase)"</A>" to avoid this issue."</p>
         <Editor example="Part = 5\n*2 Part"/>
         <p>"Bindings run the code to the right of the "<code>"←"</code>", then pop the top value off the stack and bind it to the name on the left."</p>
         <p>"Note, though, that an empty right side is perfectly valid! This means you can bind values that were created on previous lines."</p>

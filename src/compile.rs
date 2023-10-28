@@ -663,8 +663,10 @@ impl Uiua {
                             let span = modified.modifier.span.clone().merge(span.clone());
                             self.diagnostics.insert(Diagnostic::new(
                                 format!(
-                                    "Using {m} with a pervasive primitive like {prim} is \
-                                    redundant. Just use {prim} by itself."
+                                    "Using {m}{mname} with a pervasive primitive like {prim}{pname} is \
+                                    redundant. Just use {prim}{pname} by itself.",
+                                    mname = m.name(),
+                                    pname = prim.name(),
                                 ),
                                 span,
                                 DiagnosticKind::Advice,
@@ -673,7 +675,11 @@ impl Uiua {
                     } else if words_look_pervasive(&modified.operands) {
                         let span = modified.modifier.span.clone();
                         self.diagnostics.insert(Diagnostic::new(
-                            format!("{m}'s function is pervasive, so {m} is redundant here."),
+                            format!(
+                                "{m}{name}'s function is pervasive, \
+                                so {m}{name} is redundant here.",
+                                name = m.name()
+                            ),
                             span,
                             DiagnosticKind::Advice,
                         ));

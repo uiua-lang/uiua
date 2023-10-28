@@ -504,30 +504,55 @@ impl Parser {
             self.errors.push(self.expected([Expectation::Term]));
         }
 
-        // Style diagnostic for bind
-        if let Modifier::Primitive(Primitive::Bind) = modifier {
-            for arg in &args {
-                if let Word::Modified(m) = &arg.value {
-                    if let Modifier::Primitive(Primitive::Bind) = m.modifier.value {
-                        let span = mod_span.clone().merge(m.modifier.span.clone());
-                        self.diagnostics.push(Diagnostic::new(
-                            format!("Do not chain `bind {}`", Primitive::Bind),
-                            span,
-                            DiagnosticKind::Style,
-                        ));
-                    } else if m.modifier.value.args() > 1 {
-                        let span = mod_span.clone().merge(m.modifier.span.clone());
-                        self.diagnostics.push(Diagnostic::new(
-                            format!(
-                                "Do not use non-monadic modifiers inside `bind {}`",
-                                Primitive::Bind
-                            ),
-                            span,
-                            DiagnosticKind::Style,
-                        ));
+        // Style diagnostics
+        match modifier {
+            Modifier::Primitive(Primitive::Bind) => {
+                for arg in &args {
+                    if let Word::Modified(m) = &arg.value {
+                        if let Modifier::Primitive(Primitive::Bind) = m.modifier.value {
+                            let span = mod_span.clone().merge(m.modifier.span.clone());
+                            self.diagnostics.push(Diagnostic::new(
+                                format!("Do not chain `bind {}`", Primitive::Bind),
+                                span,
+                                DiagnosticKind::Style,
+                            ));
+                        } else if m.modifier.value.args() > 1 {
+                            let span = mod_span.clone().merge(m.modifier.span.clone());
+                            self.diagnostics.push(Diagnostic::new(
+                                format!(
+                                    "Do not use non-monadic modifiers inside `bind {}`",
+                                    Primitive::Bind
+                                ),
+                                span,
+                                DiagnosticKind::Style,
+                            ));
+                        }
                     }
                 }
             }
+            Modifier::Primitive(Primitive::Oust) => {
+                for arg in &args {
+                    if let Word::Modified(m) = &arg.value {
+                        if let Modifier::Primitive(Primitive::Dip) = &m.modifier.value {
+                            let span = mod_span.clone().merge(m.modifier.span.clone());
+                            self.diagnostics.push(Diagnostic::new(
+                                format!(
+                                    "`{oust}{dip}` is either unclear or not what you want. \
+                                    If you want the same behavior, prefer `{dip}{gap}` \
+                                    for clarity. If you mean to call a function on the \
+                                    first and third arguments, use `{oust}f`.",
+                                    oust = Primitive::Oust,
+                                    dip = Primitive::Dip,
+                                    gap = Primitive::Gap,
+                                ),
+                                span,
+                                DiagnosticKind::Style,
+                            ));
+                        }
+                    }
+                }
+            }
+            _ => {}
         }
 
         Some(if args.is_empty() {

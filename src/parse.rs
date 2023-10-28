@@ -247,16 +247,16 @@ impl Parser {
             let signature = self.try_signature(Bar);
             // Words
             let words = self.try_words().unwrap_or_default();
-            match words.as_slice() {
-                [Sp {
-                    value: Word::Func(func),
-                    ..
-                }] => {
-                    for line in &func.lines {
-                        self.validate_words(line, false);
-                    }
+            // Validate words
+            if let (1, Some(Word::Func(func))) = (
+                words.iter().filter(|w| w.value.is_code()).count(),
+                &words.iter().find(|w| w.value.is_code()).map(|w| &w.value),
+            ) {
+                for line in &func.lines {
+                    self.validate_words(line, false);
                 }
-                words => self.validate_words(words, false),
+            } else {
+                self.validate_words(&words, false)
             }
             // Check for uncapitalized binding names
             if name.value.trim_end_matches('!').chars().count() >= 3

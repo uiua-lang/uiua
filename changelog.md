@@ -2,15 +2,16 @@
 
 Uiua is not yet stable.
 
-## 0.0.24 - 2023-10-??
-If you are reading this on the website, then these changes are live here.
+<!-- If you are reading this on the website, then these changes are live here. -->
+
+## 0.0.24 - 2023-10-24
 ### Language
-- Add 2-letter spellings of [`deep` `≊`](https://uiua.org/docs/deep), [`abyss` `≃`](https://uiua.org/docs/abyss), and [`seabed` `∸`](https://uiua.org/docs/seabed) to make them consistent with [`rock` `⋄`](https://uiua.org/docs/rock).
 - Add the [`reach` `⟜`](https://uiua.org/docs/reach) modifier, which removes the second value from the stack and calls its function.
 - Change how short spellings of [`dip` `⊙`](https://uiua.org/docs/dip), [`gap` `⋅`](https://uiua.org/docs/gap), and [`identity` `∘`](https://uiua.org/docs/identity) work
   - Instead of allowing them to be spelled with 2 characters, they can now be spelled with 1 character as long as there are at least 2 in the sequence. 
   - If present, `'i'` may only come last. 
   - [`reach` `⟜`](https://uiua.org/docs/reach) is included.
+- Add 2-letter spellings of [`deep` `≊`](https://uiua.org/docs/deep), [`abyss` `≃`](https://uiua.org/docs/abyss), and [`seabed` `∸`](https://uiua.org/docs/seabed) to make them consistent with [`rock` `⋄`](https://uiua.org/docs/rock).
 ### Interpreter
 - Fix a bunch of bugs and crashes
 - The formatter now indents bindings that start with a bound function that starts with [`&i`](https://uiua.org/docs/&i)

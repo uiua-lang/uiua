@@ -250,6 +250,8 @@ impl Primitive {
         }
         match name {
             "id" => return Some(Primitive::Identity),
+            "ga" => return Some(Primitive::Gap),
+            "re" => return Some(Primitive::Reach),
             "pi" => return Some(Primitive::Pi),
             "ro" => return Some(Primitive::Rock),
             "de" => return Some(Primitive::Deep),

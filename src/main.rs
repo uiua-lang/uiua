@@ -56,7 +56,6 @@ fn run() -> UiuaResult {
     match App::try_parse() {
         Ok(app) => match app {
             App::Init => {
-                show_update_message();
                 if let Ok(path) = working_file_path() {
                     eprintln!("File already exists: {}", path.display());
                 } else {
@@ -82,16 +81,12 @@ fn run() -> UiuaResult {
                 path,
                 no_format,
                 formatter_options,
-                no_update,
                 time_instrs,
                 mode,
                 #[cfg(feature = "audio")]
                 audio_options,
                 args,
             } => {
-                if !no_update {
-                    show_update_message();
-                }
                 let path = if let Some(path) = path {
                     path
                 } else {
@@ -168,14 +163,10 @@ fn run() -> UiuaResult {
             App::Watch {
                 no_format,
                 formatter_options,
-                no_update,
                 clear,
                 args,
                 stdin_file,
             } => {
-                if !no_update {
-                    show_update_message();
-                }
                 if let Err(e) = watch(
                     working_file_path().ok().as_deref(),
                     !no_format,
@@ -206,9 +197,9 @@ fn run() -> UiuaResult {
                     .print_diagnostics(true);
                 repl(rt, config);
             }
+            App::CheckUpdate => show_update_message(),
         },
         Err(e) if e.kind() == ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
-            show_update_message();
             let res = match working_file_path() {
                 Ok(path) => watch(
                     Some(&path),
@@ -440,8 +431,6 @@ enum App {
         no_format: bool,
         #[clap(flatten)]
         formatter_options: FormatterOptions,
-        #[clap(long, help = "Don't check for updates")]
-        no_update: bool,
         #[clap(long, help = "Emit the duration of each instruction's execution")]
         time_instrs: bool,
         #[clap(long, help = "Run the file in a specific mode")]
@@ -473,8 +462,6 @@ enum App {
         no_format: bool,
         #[clap(flatten)]
         formatter_options: FormatterOptions,
-        #[clap(long, help = "Don't check for updates")]
-        no_update: bool,
         #[clap(long, help = "Clear the terminal on file change")]
         clear: bool,
         #[clap(long, help = "Read stdin from file")]
@@ -501,6 +488,8 @@ enum App {
         #[clap(trailing_var_arg = true)]
         args: Vec<String>,
     },
+    #[clap(name = "update?", about = "Check for updates")]
+    CheckUpdate,
 }
 
 #[derive(clap::Args)]
@@ -573,8 +562,12 @@ fn clear_watching_with(s: &str, end: &str) {
 }
 
 fn show_update_message() {
-    let Ok(output) = Command::new("cargo").args(["search", "uiua"]).output() else {
-        return;
+    let output = match Command::new("cargo").args(["search", "uiua"]).output() {
+        Ok(output) => output,
+        Err(e) => {
+            eprintln!("Failed to run `cargo search uiua`: {e}");
+            return;
+        }
     };
     let output = String::from_utf8_lossy(&output.stdout);
     let Some(remote_version) = output.split('"').nth(1) else {
@@ -609,6 +602,8 @@ fn show_update_message() {
                 .bright_white()
                 .bold()
             );
+        } else {
+            println!("Your version of Uiua ({}) is the latest!", local_version);
         }
     }
 }

@@ -14,6 +14,7 @@ If you are reading this on the website, then these changes are live here.
 ### Interpreter
 - Fix a bunch of bugs and crashes
 - The formatter now indents bindings that start with a bound function that starts with [`&i`](https://uiua.org/docs/&i)
+- The native interpreter no longer automatically checks for updates. You can still check manually with `uiua update?`.
 ### Website
 - Add challenges to the end of tutorial sections
 - Make the introductory examples on the main page less esoteric

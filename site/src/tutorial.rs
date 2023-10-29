@@ -502,7 +502,7 @@ r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
 
         <Challenge
             number=3
-            prompt="add a 1-row leading axis to an array"
+            prompt="adds a 1-row leading axis to an array"
             example="[1 2 3]"
             answer="[∘]"
             tests={&["1_3_1_5", "5", "↯2_3⇡6"]}

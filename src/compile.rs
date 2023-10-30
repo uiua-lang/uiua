@@ -34,29 +34,6 @@ impl Uiua {
                 .iter()
                 .any(|w| matches!(w.value, Word::Primitive(Primitive::Sys(SysOp::Import))))
         }
-        fn words_are_export(words: &[Sp<Word>]) -> bool {
-            let [word] = words else {
-                return false;
-            };
-            match &word.value {
-                Word::Strand(items) => items
-                    .iter()
-                    .all(|word| matches!(word.value, Word::Ident(_))),
-                Word::Array(arr) => arr.lines.iter().flatten().all(|word| {
-                    if let Word::Func(func) = &word.value {
-                        func.lines.iter().flatten().all(|word| {
-                            matches!(
-                                &word.value,
-                                Word::Ident(_) | Word::Spaces | Word::Comment(_)
-                            )
-                        })
-                    } else {
-                        false
-                    }
-                }),
-                _ => false,
-            }
-        }
         match item {
             Item::TestScope(items) => {
                 self.in_scope(|env| env.items(items, true))?;
@@ -67,7 +44,7 @@ impl Uiua {
                     RunMode::Test => in_test,
                     RunMode::All => true,
                 };
-                if can_run || words_have_import(&words) || words_are_export(&words) {
+                if can_run || words_have_import(&words) {
                     let span = words
                         .first()
                         .unwrap()

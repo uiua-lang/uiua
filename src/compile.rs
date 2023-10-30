@@ -990,7 +990,7 @@ fn words_look_pervasive(words: &[Sp<Word>]) -> bool {
     words.iter().all(|word| match &word.value {
         Word::Primitive(p) if p.class().is_pervasive() => true,
         Word::Primitive(
-            Dup | Flip | Over | Pop | Dip | Gap | Identity | Fork | Both | Bracket | Under | Each,
+            Dup | Flip | Over | Dip | Identity | Fork | Both | Bracket | Under | Each,
         ) => true,
         Word::Func(func) if func.lines.iter().all(|line| words_look_pervasive(line)) => true,
         Word::Number(..) | Word::Char(..) => true,

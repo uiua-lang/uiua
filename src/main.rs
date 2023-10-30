@@ -344,7 +344,6 @@ fn watch(
                             .arg(path)
                             .args([
                                 "--no-format",
-                                "--no-update",
                                 "--mode",
                                 "all",
                                 #[cfg(feature = "audio")]

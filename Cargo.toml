@@ -38,7 +38,7 @@ rustls = { version = "0.21.7", optional = true, default-features = false, featur
     "tls12",
 ] }
 serde = { version = "1", optional = true, features = ["derive"] }
-serde_yaml = { version = "0.9.25", optional = true }
+serde_yaml = { version = "0.9.27", optional = true }
 term_size = "1.0.0-beta1"
 tinyvec = { version = "1", features = ["alloc"] }
 tokio = { version = "1", optional = true, features = ["io-std", "rt"] }

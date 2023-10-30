@@ -313,13 +313,45 @@ impl Uiua {
                 instrs.pop();
                 instrs.push(Instr::ImplPrim(Last, span))
             }
+            // Combine push temps
+            (
+                [.., Instr::PushTemp {
+                    stack: a_stack,
+                    count: a_count,
+                    ..
+                }],
+                Instr::PushTemp {
+                    stack: b_stack,
+                    count: b_count,
+                    ..
+                },
+            ) if *a_stack == b_stack => {
+                *a_count += b_count;
+            }
+            // Combine pop temps
+            (
+                [.., Instr::PopTemp {
+                    stack: a_stack,
+                    count: a_count,
+                    ..
+                }],
+                Instr::PopTemp {
+                    stack: b_stack,
+                    count: b_count,
+                    ..
+                },
+            ) if *a_stack == b_stack => {
+                *a_count += b_count;
+            }
             // // Coalesce inline stack ops
             // ([.., Instr::])
             (_, instr) => instrs.push(instr),
         }
     }
     fn extend_instrs(&mut self, instrs: impl IntoIterator<Item = Instr>) {
-        self.new_functions.last_mut().unwrap().extend(instrs);
+        for instr in instrs {
+            self.push_instr(instr);
+        }
     }
     fn word(&mut self, word: Sp<Word>, call: bool) -> UiuaResult {
         match word.value {

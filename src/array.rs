@@ -97,13 +97,6 @@ impl<T> Array<T> {
     pub(crate) fn validate_shape(&self) {
         validate_shape(&self.shape, &self.data);
     }
-}
-
-impl<T: ArrayValue> Array<T> {
-    /// Create a scalar array
-    pub fn scalar(data: T) -> Self {
-        Self::new(Shape::new(), cowslice![data])
-    }
     /// Get the number of rows in the array
     pub fn row_count(&self) -> usize {
         self.shape.first().copied().unwrap_or(1)
@@ -127,6 +120,13 @@ impl<T: ArrayValue> Array<T> {
     /// Get a formattable shape of the array
     pub fn format_shape(&self) -> FormatShape<'_> {
         FormatShape(self.shape())
+    }
+}
+
+impl<T: ArrayValue> Array<T> {
+    /// Create a scalar array
+    pub fn scalar(data: T) -> Self {
+        Self::new(Shape::new(), cowslice![data])
     }
     /// Attempt to convert the array into a scalar
     pub fn into_scalar(self) -> Result<T, Self> {

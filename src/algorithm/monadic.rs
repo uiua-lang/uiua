@@ -475,51 +475,110 @@ impl Array<u8> {
 impl Value {
     /// Get the indices `where` the value is nonzero
     pub fn wher(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
-        let counts = self.as_nats(env, "Argument to where must be a list of naturals")?;
-        let total: usize = counts.iter().fold(0, |acc, &b| acc.saturating_add(b));
-        let mut data = EcoVec::with_capacity(total);
-        for (i, &b) in counts.iter().enumerate() {
-            for _ in 0..b {
-                let i = i as f64;
-                data.push(i);
+        Ok(if self.rank() <= 1 {
+            let counts = self.as_nats(env, "Argument to where must be an array of naturals")?;
+            let total: usize = counts.iter().fold(0, |acc, &b| acc.saturating_add(b));
+            let mut data = EcoVec::with_capacity(total);
+            for (i, &b) in counts.iter().enumerate() {
+                for _ in 0..b {
+                    let i = i as f64;
+                    data.push(i);
+                }
             }
-        }
-        Ok(Array::from(data))
+            Array::from(data)
+        } else {
+            let counts =
+                self.as_natural_array(env, "Argument to where must be an array of naturals")?;
+            let total: usize = counts.data.iter().fold(0, |acc, &b| acc.saturating_add(b));
+            let mut data = EcoVec::with_capacity(total);
+            for (i, &b) in counts.data.iter().enumerate() {
+                for _ in 0..b {
+                    let mut i = i;
+                    let start = data.len();
+                    for &d in counts.shape.iter().rev() {
+                        data.insert(start, (i % d) as f64);
+                        i /= d;
+                    }
+                }
+            }
+            let shape = Shape::from([total, counts.rank()].as_ref());
+            Array::new(shape, data)
+        })
     }
     /// Get the `first` index `where` the value is nonzero
-    pub fn first_where(&self, env: &Uiua) -> UiuaResult<f64> {
-        if self.rank() > 1 {
-            return Err(env.error(format!(
-                "Argument to where must be a list of naturals, but it is rank {}",
-                self.rank()
-            )));
-        }
-        match self {
-            Value::Num(nums) => {
-                for (i, n) in nums.data.iter().enumerate() {
-                    if n.fract() != 0.0 || *n < 0.0 {
-                        return Err(env.error("Argument to where must be a list of naturals"));
+    pub fn first_where(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
+        if self.rank() <= 1 {
+            match self {
+                Value::Num(nums) => {
+                    for (i, n) in nums.data.iter().enumerate() {
+                        if n.fract() != 0.0 || *n < 0.0 {
+                            return Err(env.error("Argument to where must be an array of naturals"));
+                        }
+                        if *n != 0.0 {
+                            return Ok(Array::scalar(i as f64));
+                        }
                     }
-                    if *n != 0.0 {
-                        return Ok(i as f64);
-                    }
+                    env.fill::<f64>()
+                        .map(Array::scalar)
+                        .ok_or_else(|| env.error("Cannot take first of an empty array"))
                 }
-                env.fill::<f64>()
-                    .ok_or_else(|| env.error("Cannot take first of an empty array"))
-            }
-            Value::Byte(bytes) => {
-                for (i, n) in bytes.data.iter().enumerate() {
-                    if *n != 0 {
-                        return Ok(i as f64);
+                Value::Byte(bytes) => {
+                    for (i, n) in bytes.data.iter().enumerate() {
+                        if *n != 0 {
+                            return Ok(Array::scalar(i as f64));
+                        }
                     }
+                    env.fill::<f64>()
+                        .map(Array::scalar)
+                        .ok_or_else(|| env.error("Cannot take first of an empty array"))
                 }
-                env.fill::<f64>()
-                    .ok_or_else(|| env.error("Cannot take first of an empty array"))
+                value => Err(env.error(format!(
+                    "Argument to where must be an array of naturals, but it is {}",
+                    value.type_name_plural()
+                ))),
             }
-            value => Err(env.error(format!(
-                "Argument to where must be a list of naturals, but it is {}",
-                value.type_name_plural()
-            ))),
+        } else {
+            match self {
+                Value::Num(nums) => {
+                    for (i, n) in nums.data.iter().enumerate() {
+                        if n.fract() != 0.0 || *n < 0.0 {
+                            return Err(env.error("Argument to where must be an array of naturals"));
+                        }
+                        if *n != 0.0 {
+                            let mut i = i;
+                            let mut res = Vec::with_capacity(nums.rank());
+                            for &d in nums.shape.iter().rev() {
+                                res.insert(0, (i % d) as f64);
+                                i /= d;
+                            }
+                            return Ok(Array::from_iter(res));
+                        }
+                    }
+                    env.fill::<f64>()
+                        .map(Array::scalar)
+                        .ok_or_else(|| env.error("Cannot take first of an empty array"))
+                }
+                Value::Byte(bytes) => {
+                    for (i, n) in bytes.data.iter().enumerate() {
+                        if *n != 0 {
+                            let mut i = i;
+                            let mut res = Vec::with_capacity(bytes.rank());
+                            for &d in bytes.shape.iter().rev() {
+                                res.insert(0, (i % d) as f64);
+                                i /= d;
+                            }
+                            return Ok(Array::from_iter(res));
+                        }
+                    }
+                    env.fill::<f64>()
+                        .map(Array::scalar)
+                        .ok_or_else(|| env.error("Cannot take first of an empty array"))
+                }
+                value => Err(env.error(format!(
+                    "Argument to where must be an array of naturals, but it is {}",
+                    value.type_name_plural()
+                ))),
+            }
         }
     }
     /// `invert` `where`

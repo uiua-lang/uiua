@@ -255,6 +255,9 @@ impl<T: ArrayValue> Array<T> {
         crate::profile_function!();
         let res = match self.rank().cmp(&other.rank()) {
             Ordering::Less => {
+                if self.shape() == [0] {
+                    return Ok(other);
+                }
                 let target_shape = if let Some(fill) = ctx.fill::<T>() {
                     let target_shape = max_shape(&self.shape, &other.shape);
                     let row_shape = &target_shape[1..];
@@ -284,6 +287,9 @@ impl<T: ArrayValue> Array<T> {
                 self
             }
             Ordering::Greater => {
+                if other.shape() == [0] {
+                    return Ok(self);
+                }
                 self.append(other, ctx)?;
                 self
             }

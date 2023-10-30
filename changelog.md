@@ -2,11 +2,11 @@
 
 Uiua is not yet stable.
 
-<!-- If you are reading this on the website, then these changes are live here. -->
-
 ## 0.0.26 - 2023-11-??
+If you are reading this on the website, then these changes are live here.
 ### Language
 - Add multi-dimensional [`where` `⊚`](https://uiua.org/docs/where)
+- [`join` `⊂`](https://uiua.org/docs/join) to an empty list now always works regardless of rank of the other array
 
 ## 0.0.25 - 2023-10-29
 ### Interpreter

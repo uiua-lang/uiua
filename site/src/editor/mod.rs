@@ -1011,7 +1011,7 @@ pub fn Editor<'a>(
                     </div>
                     <button
                         class="info-button"
-                        data-title="\ shift Enter   - Run + Format
+                        data-title=" shift Enter   - Run + Format
 ctrl/⌘ /       - Toggle line comment
    alt Up/Down - Swap lines
  shift Delete  - Delete lines

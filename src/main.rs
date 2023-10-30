@@ -487,7 +487,7 @@ enum App {
         #[clap(trailing_var_arg = true)]
         args: Vec<String>,
     },
-    #[clap(name = "update?", about = "Check for updates")]
+    #[clap(about = "Check for updates")]
     CheckUpdate,
 }
 

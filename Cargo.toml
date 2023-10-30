@@ -8,7 +8,7 @@ license = "MIT"
 name = "uiua"
 readme = "readme.md"
 repository = "https://github.com/uiua-lang/uiua"
-version = "0.0.24"
+version = "0.0.25"
 
 [dependencies]
 bufreaderwriter = "0.2.4"

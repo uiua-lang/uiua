@@ -4,7 +4,7 @@ Uiua is not yet stable.
 
 <!-- If you are reading this on the website, then these changes are live here. -->
 
-## 0.0.25 - 2023-10-29
+## 0.0.25 - 2023-10-28
 ### Interpreter
 - Fix a bug with watch mode
 

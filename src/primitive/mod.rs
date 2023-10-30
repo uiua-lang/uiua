@@ -1188,14 +1188,13 @@ mod tests {
                 .replace('^', "\\\\^");
             let format_names: Vec<_> = prims
                 .clone()
-                .map(|p| p.names())
-                .map(|n| n.text.to_string())
-                .map(|name| {
+                .map(|p| {
+                    let name = p.name();
                     let min_len = if name.starts_with('&') {
                         name.len()
                     } else {
                         (2..=name.len())
-                            .find(|&n| Primitive::from_format_name(&name[..n]).is_some())
+                            .find(|&n| Primitive::from_format_name(&name[..n]) == Some(p))
                             .unwrap()
                     };
                     let mut start: String = name.chars().take(min_len).collect();

@@ -431,6 +431,8 @@ fn TutorialArrays() -> impl IntoView {
         <h2 id="useful-array-operations">"Useful Array Operations"</h2>
         <p>"You don't need to memorize all of these right now. This is just a brief introduction to some of the array operations so that you won't be surprised when you see them later."</p>
         <p>"If you ever see a glyph that you don't recognize in an example, you can mouse over it in the editor to learn its name. You can also click the names of functions in the site text to see their documentation."</p>
+        <p><Prim prim=Couple/>" turns two arrays into rows of a new array."</p>
+        <Editor example="⊟ 1_2_3 [4 5 6]"/>
         <p><Prim prim=First/>" gets the first row of an array."</p>
         <Editor example="⊢ [4 7 1]"/>
         <Editor example="⊢ [1_2 3_4 5_6]"/>
@@ -496,11 +498,11 @@ r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
 
         <Challenge
             number=2
-            prompt="creates an array with the given shape and numbers from 0 to the number of elements minus 1"
-            example="3_4"
-            answer="↯:⇡/×."
-            tests={&["2_2_7", "[10]", "2_1_3"]}
-            hidden="1_1_1_1_1"/>
+            prompt="creates a matrix of 0's with as many columns as the first argument and as many rows as the second argument"
+            example="3 4"
+            answer="↯:0⊟"
+            tests={&["2 7", "3 3", "1 8"]}
+            hidden="1 1"/>
 
         <Challenge
             number=3
@@ -525,7 +527,6 @@ r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
             answer="⊢∶↘1."
             tests={&["[27 9 3 1]", "↯4_3⇡12"]}
             hidden="[5]"/>
-
 
         <Challenge
             number=6

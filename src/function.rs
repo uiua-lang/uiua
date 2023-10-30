@@ -6,6 +6,8 @@ use std::{
     sync::Arc,
 };
 
+use enum_iterator::Sequence;
+
 use crate::{
     check::instrs_signature,
     lex::CodeSpan,
@@ -50,31 +52,45 @@ pub enum Instr {
         sig: Signature,
         span: usize,
     },
-    PushTempUnder {
+    PushTemp {
+        stack: TempStack,
         count: usize,
         span: usize,
     },
-    PopTempUnder {
+    PopTemp {
+        stack: TempStack,
         count: usize,
         span: usize,
     },
-    PushTempInline {
-        count: usize,
-        span: usize,
-    },
-    PopTempInline {
-        count: usize,
-        span: usize,
-    },
-    CopyTempInline {
+    CopyTemp {
+        stack: TempStack,
         offset: usize,
         count: usize,
         span: usize,
     },
-    DropTempInline {
+    DropTemp {
+        stack: TempStack,
         count: usize,
         span: usize,
     },
+}
+
+/// A type of temporary stacks
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
+pub enum TempStack {
+    /// A stack used to hold values need to undo a function
+    Under,
+    /// A stack used when inlining some functions
+    Inline,
+}
+
+impl fmt::Display for TempStack {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Under => write!(f, "under"),
+            Self::Inline => write!(f, "inline"),
+        }
+    }
 }
 
 impl PartialEq for Instr {
@@ -85,27 +101,21 @@ impl PartialEq for Instr {
             (Self::EndArray { .. }, Self::EndArray { .. }) => true,
             (Self::Prim(a, s_span), Self::Prim(b, b_span)) => a == b && s_span == b_span,
             (Self::Call(a), Self::Call(b)) => a == b,
-            (Self::PushTempUnder { count: a, .. }, Self::PushTempUnder { count: b, .. }) => a == b,
-            (Self::PopTempUnder { count: a, .. }, Self::PopTempUnder { count: b, .. }) => a == b,
-            (Self::PushTempInline { count: a, .. }, Self::PushTempInline { count: b, .. }) => {
-                a == b
-            }
-            (Self::PopTempInline { count: a, .. }, Self::PopTempInline { count: b, .. }) => a == b,
+            (Self::PushTemp { count: a, .. }, Self::PushTemp { count: b, .. }) => a == b,
+            (Self::PopTemp { count: a, .. }, Self::PopTemp { count: b, .. }) => a == b,
             (
-                Self::CopyTempInline {
+                Self::CopyTemp {
                     offset: ao,
                     count: ac,
                     ..
                 },
-                Self::CopyTempInline {
+                Self::CopyTemp {
                     offset: bo,
                     count: bc,
                     ..
                 },
             ) => ao == bo && ac == bc,
-            (Self::DropTempInline { count: a, .. }, Self::DropTempInline { count: b, .. }) => {
-                a == b
-            }
+            (Self::DropTemp { count: a, .. }, Self::DropTemp { count: b, .. }) => a == b,
             _ => false,
         }
     }
@@ -153,15 +163,13 @@ impl Hash for Instr {
             Instr::PopTempFunctions(count) => count.hash(state),
             Instr::GetTempFunction { offset, .. } => offset.hash(state),
             Instr::Dynamic(f) => f.id.hash(state),
-            Instr::PushTempUnder { count, .. } => count.hash(state),
-            Instr::PopTempUnder { count, .. } => count.hash(state),
-            Instr::PushTempInline { count, .. } => count.hash(state),
-            Instr::PopTempInline { count, .. } => count.hash(state),
-            Instr::CopyTempInline { offset, count, .. } => {
+            Instr::PushTemp { count, .. } => count.hash(state),
+            Instr::PopTemp { count, .. } => count.hash(state),
+            Instr::CopyTemp { offset, count, .. } => {
                 offset.hash(state);
                 count.hash(state);
             }
-            Instr::DropTempInline { count, .. } => count.hash(state),
+            Instr::DropTemp { count, .. } => count.hash(state),
         }
     }
 }
@@ -178,12 +186,10 @@ impl Instr {
     pub(crate) fn is_temp(&self) -> bool {
         matches!(
             self,
-            Self::PushTempUnder { .. }
-                | Self::PopTempUnder { .. }
-                | Self::PushTempInline { .. }
-                | Self::PopTempInline { .. }
-                | Self::CopyTempInline { .. }
-                | Self::DropTempInline { .. }
+            Self::PushTemp { .. }
+                | Self::PopTemp { .. }
+                | Self::CopyTemp { .. }
+                | Self::DropTemp { .. }
         )
     }
 }
@@ -219,14 +225,17 @@ impl fmt::Display for Instr {
             Instr::PopTempFunctions(count) => write!(f, "<pop {count} functions>"),
             Instr::GetTempFunction { offset, .. } => write!(f, "<get function at {offset}>"),
             Instr::Dynamic(df) => write!(f, "{df:?}"),
-            Instr::PushTempUnder { count, .. } => write!(f, "<push under {count}>"),
-            Instr::PopTempUnder { count, .. } => write!(f, "<pop under {count}>"),
-            Instr::PushTempInline { count, .. } => write!(f, "<push inline {count}>"),
-            Instr::PopTempInline { count, .. } => write!(f, "<pop inline {count}>"),
-            Instr::CopyTempInline { offset, count, .. } => {
-                write!(f, "<copy inline {offset}/{count}>")
+            Instr::PushTemp { stack, count, .. } => write!(f, "<push {stack} {count}>"),
+            Instr::PopTemp { stack, count, .. } => write!(f, "<pop {stack} {count}>"),
+            Instr::CopyTemp {
+                stack,
+                offset,
+                count,
+                ..
+            } => {
+                write!(f, "<copy {stack} {offset}/{count}>")
             }
-            Instr::DropTempInline { count, .. } => write!(f, "<drop inline {count}>"),
+            Instr::DropTemp { stack, count, .. } => write!(f, "<drop {stack} {count}>"),
         }
     }
 }

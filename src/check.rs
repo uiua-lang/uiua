@@ -101,9 +101,7 @@ impl<'a> VirtualEnv<'a> {
                 let sig = self.pop_func()?.signature();
                 self.handle_sig(sig)?
             }
-            Instr::PushTempInline { count, .. } | Instr::PushTempUnder { count, .. } => {
-                self.handle_args_outputs(*count, 0)?
-            }
+            Instr::PushTemp { count, .. } => self.handle_args_outputs(*count, 0)?,
             Instr::PushTempFunctions(_) | Instr::PopTempFunctions(_) => {}
             Instr::GetTempFunction { sig, .. } => {
                 self.function_stack.push(Cow::Owned(Function::new(
@@ -112,9 +110,9 @@ impl<'a> VirtualEnv<'a> {
                     *sig,
                 )));
             }
-            Instr::PopTempInline { count, .. }
-            | Instr::PopTempUnder { count, .. }
-            | Instr::CopyTempInline { count, .. } => self.handle_args_outputs(0, *count)?,
+            Instr::PopTemp { count, .. } | Instr::CopyTemp { count, .. } => {
+                self.handle_args_outputs(0, *count)?
+            }
             Instr::PushFunc(f) => self.function_stack.push(Cow::Borrowed(f)),
             &Instr::Switch { count, .. } => {
                 let mut funcs = Vec::with_capacity(count);
@@ -146,7 +144,7 @@ impl<'a> VirtualEnv<'a> {
                 }
             }
             Instr::Dynamic(f) => self.handle_sig(f.signature)?,
-            Instr::DropTempInline { .. } => {}
+            Instr::DropTemp { .. } => {}
             Instr::Prim(prim, _) => match prim {
                 Reduce | Scan => {
                     let sig = self.pop_func()?.signature();

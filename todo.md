@@ -19,7 +19,6 @@ Within a each section, items are ordered (roughly) by decreasing priority.
 - Expand test suite
 
 ## Optimizations
-- Combine some temp stack instructions
 - Inline some functions with `distribute` and `tribute`
 - Row windows - `≡f◫` for scalar window size should be optimized to not materialize all the windows
 - Reduce windows? - `/f◫` for scalar window size could be optimized, but is it necessary?

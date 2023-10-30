@@ -748,15 +748,34 @@ impl Uiua {
                     let span = self.add_span(modified.modifier.span.clone());
                     match prim {
                         Primitive::Dip => {
-                            instrs.insert(0, Instr::PushTempInline { count: 1, span });
-                            instrs.push(Instr::PopTempInline { count: 1, span });
+                            instrs.insert(
+                                0,
+                                Instr::PushTemp {
+                                    stack: TempStack::Inline,
+                                    count: 1,
+                                    span,
+                                },
+                            );
+                            instrs.push(Instr::PopTemp {
+                                stack: TempStack::Inline,
+                                count: 1,
+                                span,
+                            });
                         }
                         Primitive::Gap => instrs.insert(0, Instr::Prim(Primitive::Pop, span)),
                         Primitive::Reach => {
                             let mut init = vec![
-                                Instr::PushTempInline { count: 1, span },
+                                Instr::PushTemp {
+                                    stack: TempStack::Inline,
+                                    count: 1,
+                                    span,
+                                },
                                 Instr::Prim(Primitive::Pop, span),
-                                Instr::PopTempInline { count: 1, span },
+                                Instr::PopTemp {
+                                    stack: TempStack::Inline,
+                                    count: 1,
+                                    span,
+                                },
                             ];
                             init.extend(instrs);
                             instrs = init;
@@ -797,9 +816,14 @@ impl Uiua {
                     if let Some((a_sig, b_sig)) = a_sig.ok().zip(b_sig.ok()) {
                         let span = self.add_span(modified.modifier.span.clone());
                         let count = a_sig.args.max(b_sig.args);
-                        let mut instrs = vec![Instr::PushTempInline { count, span }];
+                        let mut instrs = vec![Instr::PushTemp {
+                            stack: TempStack::Inline,
+                            count,
+                            span,
+                        }];
                         if b_sig.args > 0 {
-                            instrs.push(Instr::CopyTempInline {
+                            instrs.push(Instr::CopyTemp {
+                                stack: TempStack::Inline,
                                 offset: count - b_sig.args,
                                 count: b_sig.args,
                                 span,
@@ -807,12 +831,14 @@ impl Uiua {
                         }
                         instrs.extend(b_instrs);
                         if count - a_sig.args > 0 {
-                            instrs.push(Instr::DropTempInline {
+                            instrs.push(Instr::DropTemp {
+                                stack: TempStack::Inline,
                                 count: count - a_sig.args,
                                 span,
                             });
                         }
-                        instrs.push(Instr::PopTempInline {
+                        instrs.push(Instr::PopTemp {
+                            stack: TempStack::Inline,
                             count: a_sig.args,
                             span,
                         });

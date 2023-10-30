@@ -7,7 +7,7 @@ use crate::{
     function::{Function, Instr, Signature},
     primitive::{ImplPrimitive, Primitive},
     value::Value,
-    SysOp,
+    SysOp, TempStack,
 };
 
 impl Function {
@@ -183,8 +183,8 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
         ($before:expr, $after:expr) => {
             (
                 [$before],
-                [Over.i(), Over.i(), PushTempUnderN(2).i(), $before.i()],
-                [PopTempUnderN(2).i(), $after.i()],
+                [Over.i(), Over.i(), PushTempN(2).i(), $before.i()],
+                [PopTempN(2).i(), $after.i()],
             )
         };
     }
@@ -193,22 +193,22 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
         (Flip, $before:expr, $after:expr) => {
             (
                 [Flip, $before],
-                [Dup.i(), PushTempUnderN(1).i(), Flip.i(), $before.i()],
-                [PopTempUnderN(1).i(), $after.i()],
+                [Dup.i(), PushTempN(1).i(), Flip.i(), $before.i()],
+                [PopTempN(1).i(), $after.i()],
             )
         };
         (Flip, $before:expr) => {
             (
                 [Flip, $before],
-                [Dup.i(), PushTempUnderN(1).i(), Flip.i(), $before.i()],
-                [PopTempUnderN(1).i(), Flip.i(), $before.i()],
+                [Dup.i(), PushTempN(1).i(), Flip.i(), $before.i()],
+                [PopTempN(1).i(), Flip.i(), $before.i()],
             )
         };
         ($before:expr, $after:expr) => {
             (
                 [$before],
-                [Dup.i(), PushTempUnderN(1).i(), $before.i()],
-                [PopTempUnderN(1).i(), $after.i()],
+                [Dup.i(), PushTempN(1).i(), $before.i()],
+                [PopTempN(1).i(), $after.i()],
             )
         };
     }
@@ -229,30 +229,23 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
         &bin!(Div, Mul),
         &(
             [Flip, Pow],
-            [Dup.i(), PushTempUnderN(1).i(), Flip.i(), Pow.i()],
-            [PopTempUnderN(1).i(), Log.i()],
+            [Dup.i(), PushTempN(1).i(), Flip.i(), Pow.i()],
+            [PopTempN(1).i(), Log.i()],
         ),
         &(
             [Pow],
-            [Dup.i(), PushTempUnderN(1).i(), Pow.i()],
-            [PopTempUnderN(1).i(), 1.i(), Flip.i(), Div.i(), Pow.i()],
+            [Dup.i(), PushTempN(1).i(), Pow.i()],
+            [PopTempN(1).i(), 1.i(), Flip.i(), Div.i(), Pow.i()],
         ),
         &(
             [Flip, Log],
-            [Dup.i(), PushTempUnderN(1).i(), Flip.i(), Log.i()],
-            [
-                1.i(),
-                Flip.i(),
-                Div.i(),
-                PopTempUnderN(1).i(),
-                Flip.i(),
-                Pow.i(),
-            ],
+            [Dup.i(), PushTempN(1).i(), Flip.i(), Log.i()],
+            [1.i(), Flip.i(), Div.i(), PopTempN(1).i(), Flip.i(), Pow.i()],
         ),
         &(
             [Log],
-            [Dup.i(), PushTempUnderN(1).i(), Log.i()],
-            [PopTempUnderN(1).i(), Flip.i(), Pow.i()],
+            [Dup.i(), PushTempN(1).i(), Log.i()],
+            [PopTempN(1).i(), Flip.i(), Pow.i()],
         ),
         &(Val, stash2!(Take, Untake)),
         &stash2!(Take, Untake),
@@ -266,74 +259,64 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
             Val,
             (
                 [Keep],
-                [Over.i(), Over.i(), PushTempUnderN(2).i(), Keep.i()],
-                [
-                    PopTempUnderN(1).i(),
-                    Flip.i(),
-                    PopTempUnderN(1).i(),
-                    Unkeep.i(),
-                ],
+                [Over.i(), Over.i(), PushTempN(2).i(), Keep.i()],
+                [PopTempN(1).i(), Flip.i(), PopTempN(1).i(), Unkeep.i()],
             ),
         ),
         &(
             [Keep],
-            [Over.i(), Over.i(), PushTempUnderN(2).i(), Keep.i()],
-            [
-                PopTempUnderN(1).i(),
-                Flip.i(),
-                PopTempUnderN(1).i(),
-                Unkeep.i(),
-            ],
+            [Over.i(), Over.i(), PushTempN(2).i(), Keep.i()],
+            [PopTempN(1).i(), Flip.i(), PopTempN(1).i(), Unkeep.i()],
         ),
         &(
             [Rotate],
-            [Dup.i(), PushTempUnderN(1).i(), Rotate.i()],
-            [PopTempUnderN(1).i(), Neg.i(), Rotate.i()],
+            [Dup.i(), PushTempN(1).i(), Rotate.i()],
+            [PopTempN(1).i(), Neg.i(), Rotate.i()],
         ),
         &(
             [First],
-            [Dup.i(), PushTempUnderN(1).i(), First.i()],
-            [PopTempUnderN(1).i(), 1.i(), Drop.i(), Flip.i(), Join.i()],
+            [Dup.i(), PushTempN(1).i(), First.i()],
+            [PopTempN(1).i(), 1.i(), Drop.i(), Flip.i(), Join.i()],
         ),
         &(
             [Last],
-            [Dup.i(), PushTempUnderN(1).i(), Last.i()],
-            [PopTempUnderN(1).i(), (-1).i(), Drop.i(), Join.i()],
+            [Dup.i(), PushTempN(1).i(), Last.i()],
+            [PopTempN(1).i(), (-1).i(), Drop.i(), Join.i()],
         ),
         &(
             [Shape],
-            [Dup.i(), PushTempUnderN(1).i(), Shape.i()],
-            [PopTempUnderN(1).i(), Flip.i(), Reshape.i()],
+            [Dup.i(), PushTempN(1).i(), Shape.i()],
+            [PopTempN(1).i(), Flip.i(), Reshape.i()],
         ),
         &(
             [Deshape],
-            [Dup.i(), Shape.i(), PushTempUnderN(1).i(), Deshape.i()],
-            [PopTempUnderN(1).i(), Reshape.i()],
+            [Dup.i(), Shape.i(), PushTempN(1).i(), Deshape.i()],
+            [PopTempN(1).i(), Reshape.i()],
         ),
         &(
             [Now],
-            [Now.i(), PushTempUnderN(1).i()],
-            [PopTempUnderN(1).i(), Now.i(), Flip.i(), Sub.i()],
+            [Now.i(), PushTempN(1).i()],
+            [PopTempN(1).i(), Now.i(), Flip.i(), Sub.i()],
         ),
         &(
             [Sys(SysOp::FOpen)],
-            [Sys(SysOp::FOpen).i(), Dup.i(), PushTempUnderN(1).i()],
-            [PopTempUnderN(1).i(), Sys(SysOp::Close).i()],
+            [Sys(SysOp::FOpen).i(), Dup.i(), PushTempN(1).i()],
+            [PopTempN(1).i(), Sys(SysOp::Close).i()],
         ),
         &(
             [Sys(SysOp::FCreate)],
-            [Sys(SysOp::FCreate).i(), Dup.i(), PushTempUnderN(1).i()],
-            [PopTempUnderN(1).i(), Sys(SysOp::Close).i()],
+            [Sys(SysOp::FCreate).i(), Dup.i(), PushTempN(1).i()],
+            [PopTempN(1).i(), Sys(SysOp::Close).i()],
         ),
         &(
             [Sys(SysOp::TcpConnect)],
-            [Sys(SysOp::TcpConnect).i(), Dup.i(), PushTempUnderN(1).i()],
-            [PopTempUnderN(1).i(), Sys(SysOp::Close).i()],
+            [Sys(SysOp::TcpConnect).i(), Dup.i(), PushTempN(1).i()],
+            [PopTempN(1).i(), Sys(SysOp::Close).i()],
         ),
         &(
             [Sys(SysOp::TcpAccept)],
-            [Sys(SysOp::TcpAccept).i(), Dup.i(), PushTempUnderN(1).i()],
-            [PopTempUnderN(1).i(), Sys(SysOp::Close).i()],
+            [Sys(SysOp::TcpAccept).i(), Dup.i(), PushTempN(1).i()],
+            [PopTempN(1).i(), Sys(SysOp::Close).i()],
         ),
         &UnderPatternFn(under_from_inverse_pattern),
         &UnderPatternFn(under_temp_pattern),
@@ -361,14 +344,19 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
                     // f ← ⍜⊙⇌(×10)
                     // f [1 2 3] [4 5 6]
                     // This can likely be fixes with the newer g_sig checking
-                    if afters
-                        .iter()
-                        .any(|instr| matches!(instr, Instr::PopTempUnder { .. }))
-                    {
+                    if afters.iter().any(|instr| {
+                        matches!(
+                            instr,
+                            Instr::PopTemp {
+                                stack: TempStack::Under,
+                                ..
+                            }
+                        )
+                    }) {
                         afters.retain(|instr| {
                             !matches!(
                                 instr,
-                                Instr::PopTempInline { .. } | Instr::PushTempInline { .. }
+                                Instr::PopTemp { stack, .. } | Instr::PushTemp { stack, .. } if stack == &TempStack::Inline
                             )
                         });
                     }
@@ -405,10 +393,11 @@ trait AsInstr: fmt::Debug {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct PushTempUnderN(usize);
-impl AsInstr for PushTempUnderN {
+struct PushTempN(usize);
+impl AsInstr for PushTempN {
     fn as_instr(&self, span: usize) -> Instr {
-        Instr::PushTempUnder {
+        Instr::PushTemp {
+            stack: TempStack::Under,
             count: self.0,
             span,
         }
@@ -416,10 +405,11 @@ impl AsInstr for PushTempUnderN {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct PopTempUnderN(usize);
-impl AsInstr for PopTempUnderN {
+struct PopTempN(usize);
+impl AsInstr for PopTempN {
     fn as_instr(&self, span: usize) -> Instr {
-        Instr::PopTempUnder {
+        Instr::PopTemp {
+            stack: TempStack::Under,
             count: self.0,
             span,
         }
@@ -495,18 +485,48 @@ fn under_from_inverse_pattern(input: &[Instr], _: Signature) -> Option<(&[Instr]
 
 fn under_temp_pattern(input: &[Instr], _: Signature) -> Option<(&[Instr], Under)> {
     match input.split_first()? {
-        (&Instr::PushTempInline { count, span }, input) => Some((
+        (
+            &Instr::PushTemp {
+                stack: TempStack::Inline,
+                count,
+                span,
+            },
+            input,
+        ) => Some((
             input,
             (
-                vec![Instr::PushTempInline { count, span }],
-                vec![Instr::PopTempInline { count, span }],
+                vec![Instr::PushTemp {
+                    stack: TempStack::Inline,
+                    count,
+                    span,
+                }],
+                vec![Instr::PopTemp {
+                    stack: TempStack::Inline,
+                    count,
+                    span,
+                }],
             ),
         )),
-        (&Instr::PopTempInline { count, span }, input) => Some((
+        (
+            &Instr::PopTemp {
+                stack: TempStack::Inline,
+                count,
+                span,
+            },
+            input,
+        ) => Some((
             input,
             (
-                vec![Instr::PopTempInline { count, span }],
-                vec![Instr::PushTempInline { count, span }],
+                vec![Instr::PopTemp {
+                    stack: TempStack::Inline,
+                    count,
+                    span,
+                }],
+                vec![Instr::PushTemp {
+                    stack: TempStack::Inline,
+                    count,
+                    span,
+                }],
             ),
         )),
         _ => None,
@@ -588,7 +608,11 @@ fn under_partition_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr
     let befores = vec![
         Instr::Prim(Primitive::Over, span),
         Instr::Prim(Primitive::Over, span),
-        Instr::PushTempUnder { count: 2, span },
+        Instr::PushTemp {
+            stack: TempStack::Under,
+            count: 2,
+            span,
+        },
         Instr::PushFunc(f_before.into()),
         Instr::Prim(Primitive::Partition, span),
     ];
@@ -608,7 +632,11 @@ fn under_group_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], U
     let befores = vec![
         Instr::Prim(Primitive::Over, span),
         Instr::Prim(Primitive::Over, span),
-        Instr::PushTempUnder { count: 2, span },
+        Instr::PushTemp {
+            stack: TempStack::Under,
+            count: 2,
+            span,
+        },
         Instr::PushFunc(f_before.into()),
         Instr::Prim(Primitive::Group, span),
     ];

@@ -10,6 +10,7 @@ use std::{
 };
 
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
+use enum_iterator::Sequence;
 use instant::Duration;
 use parking_lot::Mutex;
 use rand::prelude::*;
@@ -34,9 +35,7 @@ pub struct Uiua {
     /// The thread's function stack
     pub(crate) function_stack: Vec<Arc<Function>>,
     /// The thread's temp stack for inlining
-    inline_stack: Vec<Value>,
-    /// The thread's temp stack for unders
-    under_stack: Vec<Value>,
+    temp_stacks: [Vec<Value>; TempStack::CARDINALITY],
     /// The thread's temp stack for functions
     temp_function_stack: Vec<Arc<Function>>,
     /// The current scope
@@ -208,8 +207,7 @@ impl Uiua {
             spans: Arc::new(Mutex::new(vec![Span::Builtin])),
             stack: Vec::new(),
             function_stack: Vec::new(),
-            inline_stack: Vec::new(),
-            under_stack: Vec::new(),
+            temp_stacks: [Vec::new(), Vec::new()],
             temp_function_stack: Vec::new(),
             scope,
             higher_scopes: Vec::new(),
@@ -468,156 +466,139 @@ code:
                 formatted_instr = format!("{instr:?}");
                 self.last_time = instant::now();
             }
-            let res =
-                match instr {
-                    &Instr::Prim(prim, span) => {
-                        self.with_prim_span(span, Some(prim), |env| prim.run(env))
+            let res = match instr {
+                &Instr::Prim(prim, span) => {
+                    self.with_prim_span(span, Some(prim), |env| prim.run(env))
+                }
+                &Instr::ImplPrim(prim, span) => self.with_span(span, |env| prim.run(env)),
+                Instr::Push(val) => {
+                    self.stack.push(Value::clone(val));
+                    Ok(())
+                }
+                Instr::BeginArray => {
+                    self.scope.array.push(self.stack.len());
+                    Ok(())
+                }
+                &Instr::EndArray { span, boxed } => self.with_span(span, |env| {
+                    let start = env.scope.array.pop().unwrap();
+                    let values = env.stack.drain(start..).rev();
+                    let values: Vec<Value> = if boxed {
+                        values.map(Boxed).map(Value::from).collect()
+                    } else {
+                        values.collect()
+                    };
+                    let val = if values.is_empty() && boxed {
+                        Array::<Boxed>::default().into()
+                    } else {
+                        Value::from_row_values(values, env)?
+                    };
+                    env.push(val);
+                    Ok(())
+                }),
+                &Instr::Call(span) => self
+                    .pop_function()
+                    .and_then(|f| self.call_with_span(f, span)),
+                Instr::PushFunc(f) => {
+                    self.function_stack.push(f.clone());
+                    Ok(())
+                }
+                &Instr::Switch { count, span } => self.with_span(span, |env| {
+                    let i = env
+                        .pop("switch index")?
+                        .as_nat(env, "Switch index mut be a natural number")?;
+                    if i >= count {
+                        return Err(env.error(format!(
+                            "Switch index {i} is out of bounds for switch of size {count}"
+                        )));
                     }
-                    &Instr::ImplPrim(prim, span) => self.with_span(span, |env| prim.run(env)),
-                    Instr::Push(val) => {
-                        self.stack.push(Value::clone(val));
-                        Ok(())
-                    }
-                    Instr::BeginArray => {
-                        self.scope.array.push(self.stack.len());
-                        Ok(())
-                    }
-                    &Instr::EndArray { span, boxed } => self.with_span(span, |env| {
-                        let start = env.scope.array.pop().unwrap();
-                        let values = env.stack.drain(start..).rev();
-                        let values: Vec<Value> = if boxed {
-                            values.map(Boxed).map(Value::from).collect()
-                        } else {
-                            values.collect()
-                        };
-                        let val = if values.is_empty() && boxed {
-                            Array::<Boxed>::default().into()
-                        } else {
-                            Value::from_row_values(values, env)?
-                        };
-                        env.push(val);
-                        Ok(())
-                    }),
-                    &Instr::Call(span) => self
-                        .pop_function()
-                        .and_then(|f| self.call_with_span(f, span)),
-                    Instr::PushFunc(f) => {
-                        self.function_stack.push(f.clone());
-                        Ok(())
-                    }
-                    &Instr::Switch { count, span } => self.with_span(span, |env| {
-                        let i = env
-                            .pop("switch index")?
-                            .as_nat(env, "Switch index mut be a natural number")?;
-                        if i >= count {
-                            return Err(env.error(format!(
-                                "Switch index {i} is out of bounds for switch of size {count}"
-                            )));
-                        }
-                        let f = env
-                            .function_stack
-                            .drain(env.function_stack.len() - count..)
-                            .nth(i);
-                        if let Some(f) = f {
-                            env.call(f)
-                        } else {
-                            Err(env.error(
-                                "Function stack was empty when getting switch function. \
+                    let f = env
+                        .function_stack
+                        .drain(env.function_stack.len() - count..)
+                        .nth(i);
+                    if let Some(f) = f {
+                        env.call(f)
+                    } else {
+                        Err(env.error(
+                            "Function stack was empty when getting switch function. \
                             This is a bug in the interpreter.",
-                            ))
-                        }
-                    }),
-                    &Instr::PushTempFunctions(n) => (|| {
-                        for _ in 0..n {
-                            let f = self.pop_function()?;
-                            self.temp_function_stack.push(f);
-                        }
-                        Ok(())
-                    })(),
-                    &Instr::PopTempFunctions(n) => {
-                        self.temp_function_stack
-                            .truncate(self.temp_function_stack.len() - n);
-                        Ok(())
+                        ))
                     }
-                    &Instr::GetTempFunction { offset, sig, span } => self.with_span(span, |env| {
-                        let f = env
-                            .temp_function_stack
-                            .get(env.temp_function_stack.len() - 1 - offset)
-                            .ok_or_else(|| {
-                                env.error(
-                                    "Error getting placeholder function. \
+                }),
+                &Instr::PushTempFunctions(n) => (|| {
+                    for _ in 0..n {
+                        let f = self.pop_function()?;
+                        self.temp_function_stack.push(f);
+                    }
+                    Ok(())
+                })(),
+                &Instr::PopTempFunctions(n) => {
+                    self.temp_function_stack
+                        .truncate(self.temp_function_stack.len() - n);
+                    Ok(())
+                }
+                &Instr::GetTempFunction { offset, sig, span } => self.with_span(span, |env| {
+                    let f = env
+                        .temp_function_stack
+                        .get(env.temp_function_stack.len() - 1 - offset)
+                        .ok_or_else(|| {
+                            env.error(
+                                "Error getting placeholder function. \
                                 This is a bug in the interpreter.",
-                                )
-                            })?;
-                        let f_sig = f.signature();
-                        if f_sig != sig {
-                            return Err(env.error(format!(
-                                "Function signature {f_sig} does not match \
+                            )
+                        })?;
+                    let f_sig = f.signature();
+                    if f_sig != sig {
+                        return Err(env.error(format!(
+                            "Function signature {f_sig} does not match \
                             placeholder signature {sig}"
-                            )));
-                        }
-                        env.function_stack.push(f.clone());
-                        Ok(())
-                    }),
-                    Instr::Dynamic(df) => df.f.clone()(self),
-                    &Instr::PushTempUnder { count, span } => self.with_span(span, |env| {
-                        for _ in 0..count {
-                            let value = env.pop("value to save")?;
-                            env.under_stack.push(value);
-                        }
-                        Ok(())
-                    }),
-                    &Instr::PopTempUnder { count, span } => self.with_span(span, |env| {
-                        for _ in 0..count {
-                            let value = env.under_stack.pop().ok_or_else(|| {
-                                env.error("Stack was empty when getting saved value")
-                            })?;
-                            env.push(value);
-                        }
+                        )));
+                    }
+                    env.function_stack.push(f.clone());
+                    Ok(())
+                }),
+                Instr::Dynamic(df) => df.f.clone()(self),
+                &Instr::PushTemp { stack, count, span } => self.with_span(span, |env| {
+                    for _ in 0..count {
+                        let value = env.pop("value to save")?;
+                        env.temp_stacks[stack as usize].push(value);
+                    }
+                    Ok(())
+                }),
+                &Instr::PopTemp { stack, count, span } => self.with_span(span, |env| {
+                    for _ in 0..count {
+                        let value = env.temp_stacks[stack as usize]
+                            .pop()
+                            .ok_or_else(|| env.error("Stack was empty when getting saved value"))?;
+                        env.push(value);
+                    }
 
-                        Ok(())
-                    }),
-                    &Instr::PushTempInline { count, span } => self.with_span(span, |env| {
-                        for _ in 0..count {
-                            let value = env.pop("value to save")?;
-                            env.inline_stack.push(value);
-                        }
-
-                        Ok(())
-                    }),
-                    &Instr::PopTempInline { count, span } => self.with_span(span, |env| {
-                        for _ in 0..count {
-                            let value = env.inline_stack.pop().ok_or_else(|| {
-                                env.error("Stack was empty when getting saved value")
-                            })?;
-                            env.push(value);
-                        }
-
-                        Ok(())
-                    }),
-                    &Instr::CopyTempInline {
-                        offset,
-                        count,
-                        span,
-                    } => self.with_span(span, |env| {
-                        if env.inline_stack.len() < offset + count {
-                            return Err(env.error("Stack was empty when copying saved value"));
-                        }
-                        let start = env.inline_stack.len() - offset;
-                        for i in 0..count {
-                            let value = env.inline_stack[start - i - 1].clone();
-                            env.push(value);
-                        }
-                        Ok(())
-                    }),
-                    &Instr::DropTempInline { count, span } => self.with_span(span, |env| {
-                        if env.inline_stack.len() < count {
-                            return Err(env.error("Stack was empty when dropping saved value"));
-                        }
-                        env.inline_stack.truncate(env.inline_stack.len() - count);
-                        Ok(())
-                    }),
-                };
+                    Ok(())
+                }),
+                &Instr::CopyTemp {
+                    stack,
+                    offset,
+                    count,
+                    span,
+                } => self.with_span(span, |env| {
+                    if env.temp_stacks[stack as usize].len() < offset + count {
+                        return Err(env.error("Stack was empty when copying saved value"));
+                    }
+                    let start = env.temp_stacks[stack as usize].len() - offset;
+                    for i in 0..count {
+                        let value = env.temp_stacks[stack as usize][start - i - 1].clone();
+                        env.push(value);
+                    }
+                    Ok(())
+                }),
+                &Instr::DropTemp { stack, count, span } => self.with_span(span, |env| {
+                    let stack = &mut env.temp_stacks[stack as usize];
+                    if stack.len() < count {
+                        return Err(env.error("Stack was empty when dropping saved value"));
+                    }
+                    stack.truncate(stack.len() - count);
+                    Ok(())
+                }),
+            };
             if self.time_instrs {
                 let end_time = instant::now();
                 let padding = self.scope.call.len().saturating_sub(1) * 2;
@@ -895,12 +876,14 @@ code:
         })
     }
     pub(crate) fn pop_temp_under(&mut self) -> UiuaResult<Value> {
-        self.under_stack.pop().ok_or_else(|| {
-            self.error(
-                "Under stack was empty when popping. \
+        self.temp_stacks[TempStack::Under as usize]
+            .pop()
+            .ok_or_else(|| {
+                self.error(
+                    "Under stack was empty when popping. \
                 This is a bug in the interpreter.",
-            )
-        })
+                )
+            })
     }
     /// Get the values for all bindings in the current scope
     pub fn all_values_is_scope(&self) -> HashMap<Ident, Value> {
@@ -1105,8 +1088,7 @@ code:
                 .drain(self.stack.len() - capture_count..)
                 .collect(),
             function_stack: Vec::new(),
-            inline_stack: Vec::new(),
-            under_stack: Vec::new(),
+            temp_stacks: [Vec::new(), Vec::new()],
             temp_function_stack: Vec::new(),
             scope: self.scope.clone(),
             higher_scopes: self.higher_scopes.last().cloned().into_iter().collect(),

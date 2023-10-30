@@ -121,6 +121,16 @@ impl<T> Array<T> {
     pub fn format_shape(&self) -> FormatShape<'_> {
         FormatShape(self.shape())
     }
+    /// Get an iterator over the row slices of the array
+    pub fn row_slices(&self) -> impl ExactSizeIterator<Item = &[T]> + DoubleEndedIterator {
+        (0..self.row_count()).map(move |row| self.row_slice(row))
+    }
+    /// Get a slice of a row
+    #[track_caller]
+    pub fn row_slice(&self, row: usize) -> &[T] {
+        let row_len = self.row_len();
+        &self.data[row * row_len..(row + 1) * row_len]
+    }
 }
 
 impl<T: ArrayValue> Array<T> {
@@ -155,16 +165,6 @@ impl<T: ArrayValue> Array<T> {
     /// Get an iterator over the row arrays of the array
     pub fn rows(&self) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator + '_ {
         (0..self.row_count()).map(|row| self.row(row))
-    }
-    /// Get an iterator over the row slices of the array
-    pub fn row_slices(&self) -> impl ExactSizeIterator<Item = &[T]> + DoubleEndedIterator {
-        (0..self.row_count()).map(move |row| self.row_slice(row))
-    }
-    /// Get a slice of a row
-    #[track_caller]
-    pub fn row_slice(&self, row: usize) -> &[T] {
-        let row_len = self.row_len();
-        &self.data[row * row_len..(row + 1) * row_len]
     }
     /// Get a row array
     #[track_caller]

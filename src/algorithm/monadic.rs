@@ -583,37 +583,75 @@ impl Value {
     }
     /// `invert` `where`
     pub fn inverse_where(&self, env: &Uiua) -> UiuaResult<Self> {
-        let indices = self.as_nats(env, "Argument to inverse where must be a list of naturals")?;
-        let is_sorted = indices
-            .iter()
-            .zip(indices.iter().skip(1))
-            .all(|(&a, &b)| a <= b);
-        let size = indices.iter().max().map(|&i| i + 1).unwrap_or(0);
-        let mut data = EcoVec::with_capacity(size);
-        if is_sorted {
-            let mut j = 0;
-            for i in 0..size {
-                while indices.get(j).is_some_and(|&n| n < i) {
-                    j += 1;
+        Ok(match self.shape() {
+            [] | [_] => {
+                let indices =
+                    self.as_nats(env, "Argument to inverse where must be a list of naturals")?;
+                let is_sorted = indices
+                    .iter()
+                    .zip(indices.iter().skip(1))
+                    .all(|(&a, &b)| a <= b);
+                let size = indices.iter().max().map(|&i| i + 1).unwrap_or(0);
+                let mut data = EcoVec::with_capacity(size);
+                if is_sorted {
+                    let mut j = 0;
+                    data.extend((0..size).map(|i| {
+                        while indices.get(j).is_some_and(|&n| n < i) {
+                            j += 1;
+                        }
+                        let mut count: usize = 0;
+                        while indices.get(j).copied() == Some(i) {
+                            j += 1;
+                            count += 1;
+                        }
+                        count as f64
+                    }));
+                } else {
+                    let mut counts = HashMap::new();
+                    for &i in &indices {
+                        *counts.entry(i).or_insert(0) += 1;
+                    }
+                    data.extend((0..size).map(|i| counts.get(&i).copied().unwrap_or(0) as f64));
                 }
-                let mut count: usize = 0;
-                while indices.get(j).copied() == Some(i) {
-                    j += 1;
-                    count += 1;
+                Array::from(data).into()
+            }
+            [_, trailing] => {
+                let indices = self.as_natural_array(
+                    env,
+                    "Argument to inverse where must be an array of naturals",
+                )?;
+                let mut counts: HashMap<&[usize], usize> = HashMap::new();
+                for row in indices.row_slices() {
+                    *counts.entry(row).or_default() += 1;
                 }
-                data.push(count as f64);
+                let mut init = Shape::with_capacity(*trailing);
+                for _ in 0..*trailing {
+                    init.push(0);
+                }
+                let shape = counts.keys().fold(init, |mut acc, row| {
+                    for (a, r) in acc.iter_mut().zip(row.iter()) {
+                        *a = (*a).max(*r + 1);
+                    }
+                    acc
+                });
+                let data_len: usize = shape.iter().product();
+                let mut data = EcoVec::from_iter(repeat(0.0).take(data_len));
+                let data_slice = data.make_mut();
+                for (key, count) in counts {
+                    let mut i = 0;
+                    let mut row_len = 1;
+                    for (d, &n) in shape.iter().zip(key).rev() {
+                        i += n * row_len;
+                        row_len *= d;
+                    }
+                    data_slice[i] = count as f64;
+                }
+                Array::new(shape, data).into()
             }
-        } else {
-            let mut counts = HashMap::new();
-            for &i in &indices {
-                *counts.entry(i).or_insert(0) += 1;
+            shape => {
+                return Err(env.error(format!("Cannot invert where of rank-{} array", shape.len())))
             }
-            for i in 0..size {
-                let count = counts.get(&i).copied().unwrap_or(0);
-                data.push(count as f64);
-            }
-        }
-        Ok(Array::from(data).into())
+        })
     }
 }
 

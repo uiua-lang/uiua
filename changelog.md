@@ -4,11 +4,15 @@ Uiua is not yet stable.
 
 <!-- If you are reading this on the website, then these changes are live here. -->
 
-## 0.0.25 - 2023-10-28
+## 0.0.26 - 2023-11-??
+### Language
+- Add multi-dimensional [`where` `⊚`](https://uiua.org/docs/where)
+
+## 0.0.25 - 2023-10-29
 ### Interpreter
 - Fix a bug with watch mode
 
-## 0.0.24 - 2023-10-28
+## 0.0.24 - 2023-10-29
 ### Language
 - Add the [`reach` `⟜`](https://uiua.org/docs/reach) modifier, which removes the second value from the stack and calls its function.
 - Change how short spellings of [`dip` `⊙`](https://uiua.org/docs/dip), [`gap` `⋅`](https://uiua.org/docs/gap), and [`identity` `∘`](https://uiua.org/docs/identity) work

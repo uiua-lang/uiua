@@ -134,7 +134,7 @@ impl fmt::Display for ImplPrimitive {
             InverseBits => write!(f, "⍘{Bits}"),
             InvTrace => write!(f, "⍘{Trace}"),
             InvWhere => write!(f, "⍘{Where}"),
-            Uncouple => write!(f, "⍘{Couple}"),
+            InvCouple => write!(f, "⍘{Couple}"),
             Untake => write!(f, "⍘{Take}"),
             Undrop => write!(f, "⍘{Drop}"),
             Unselect => write!(f, "⍘{Select}"),
@@ -671,7 +671,7 @@ impl ImplPrimitive {
                 let from = env.pop(3)?;
                 env.push(from.undrop(index, into, env)?);
             }
-            ImplPrimitive::Uncouple => {
+            ImplPrimitive::InvCouple => {
                 let coupled = env.pop(1)?;
                 let (a, b) = coupled.uncouple(env)?;
                 env.push(b);

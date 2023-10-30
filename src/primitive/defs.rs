@@ -1113,9 +1113,9 @@ primitive!(
     /// ex: ⟜⟜+ 1 3 5 7
     /// This is especially useful when used in a [fork].
     /// If you have three values on the stack `a`, `b`, and `c`, and you want to call one function on `a` and `b` and another function on `a` and `c`, you can use [reach].
-    /// ex: [⊃+⟜+ 1 3 5]
+    /// ex: [⊃+⟜× 2 3 5]
     /// If you wanted the argument pairs to be `a` `c` and `b` `c`, you can add a [gap].
-    /// ex: [⊃⟜+⋅+ 1 3 5]
+    /// ex: [⊃⟜+⋅× 2 3 5]
     ([1], Reach, Planet, ("reach", '⟜')),
     /// Temporarily pop the top value off the stack and call a function
     ///
@@ -1725,7 +1725,10 @@ impl_primitive!(
     (1, InverseBits),
     (1, InvTranspose),
     (1, InvWhere),
-    (1(2), Uncouple),
+    (1(2), InvCouple),
+    (1, InvUtf),
+    (1, InvTrace),
+    // Unders
     (3, Unselect),
     (3, Unpick),
     (3, Untake),
@@ -1733,8 +1736,6 @@ impl_primitive!(
     (3, Unkeep),
     (3[1], Unpartition),
     (3[1], Ungroup),
-    (1, InvUtf),
-    (1, InvTrace),
     // Optimizations
     (1, Cos),
     (1, Last),

@@ -42,7 +42,7 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
         Reverse => Instr::Prim(Reverse, span),
         Transpose => Instr::ImplPrim(InvTranspose, span),
         Bits => Instr::ImplPrim(InverseBits, span),
-        Couple => Instr::ImplPrim(Uncouple, span),
+        Couple => Instr::ImplPrim(InvCouple, span),
         Trace => Instr::ImplPrim(InvTrace, span),
         Box => Instr::Prim(Unbox, span),
         Unbox => Instr::Prim(Box, span),
@@ -215,6 +215,8 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
 
     let patterns: &[&dyn UnderPattern] = &[
         &UnderPatternFn(under_both_pattern),
+        &UnderPatternFn(under_rows_pattern),
+        &UnderPatternFn(under_each_pattern),
         &UnderPatternFn(under_partition_pattern),
         &UnderPatternFn(under_group_pattern),
         &bin!(Flip, Add, Sub),
@@ -540,6 +542,40 @@ fn under_both_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Un
         }
         _ => return None,
     };
+    Some((input, (befores, afters)))
+}
+
+fn under_each_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Under)> {
+    let &[Instr::PushFunc(ref f), Instr::Prim(Primitive::Each, span), ref input @ ..] = input
+    else {
+        return None;
+    };
+    let (f_before, f_after) = f.under(g_sig)?;
+    let befores = vec![
+        Instr::PushFunc(f_before.into()),
+        Instr::Prim(Primitive::Each, span),
+    ];
+    let afters = vec![
+        Instr::PushFunc(f_after.into()),
+        Instr::Prim(Primitive::Each, span),
+    ];
+    Some((input, (befores, afters)))
+}
+
+fn under_rows_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Under)> {
+    let &[Instr::PushFunc(ref f), Instr::Prim(Primitive::Rows, span), ref input @ ..] = input
+    else {
+        return None;
+    };
+    let (f_before, f_after) = f.under(g_sig)?;
+    let befores = vec![
+        Instr::PushFunc(f_before.into()),
+        Instr::Prim(Primitive::Rows, span),
+    ];
+    let afters = vec![
+        Instr::PushFunc(f_after.into()),
+        Instr::Prim(Primitive::Rows, span),
+    ];
     Some((input, (befores, afters)))
 }
 

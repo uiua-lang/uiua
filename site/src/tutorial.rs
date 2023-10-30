@@ -399,8 +399,9 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example="△5"/>
         <Editor example="△[[1 2 3] [4 5 6]]"/>
         <Editor example="△[...[1 2 3]]"/>
+        <p>"The first element of the shape is the number of "<em>"rows"</em>" of the array. "<em>"Rows"</em>" does not refer just to the rows of a matrix or table. It is the groups of elements along the leading axis of the array. For lists this is just the individual elements. For matrices it is the rows as you might traditionally think of them. But arrays with a higher number of dimensions have rows as well. For example, in an array with 3 dimensions, each row is a matrix."</p>
         <p>"From shape we can derive two closely-related properties called "<strong>"length"</strong>" and "<strong>"rank"</strong>"."</p>
-        <p><Prim prim=Len/>" is the number of "<em>"rows"</em>" of the array. This is the number of elements for a 1D array and the number of rows for a 2D array. Length is always equal to the first number in the shape (or 1 if the shape is empty)."</p>
+        <p><Prim prim=Len/>" is the number of rows in the array. Length is always equal to the first number in the shape (or 1 if the shape is empty)."</p>
         <p><strong>"Rank"</strong>" is the number of dimensions of the array. It is equivalent to the "<Prim prim=Len/>" of the "<Prim prim=Shape/>"."</p>
         <Editor example=" △[1_2_3 4_5_6]\n ⧻[1_2_3 4_5_6]\n⧻△[1_2_3 4_5_6]"/>
 
@@ -425,6 +426,7 @@ fn TutorialArrays() -> impl IntoView {
         <p>"If you want to do some pervasive operation on arrays whose shapes do not match, you can set a default value with "<Prim prim=Fill/>". Any places where the shapes don't match will be filled in with that value."</p>
         <Editor example="⬚10+ [1 2] [3 4 5 6 7]"/>
         <p><Prim prim=Fill/>" can be used in a lot of other cases. See its documentation for more."</p>
+        <p>"Pervasive operations are optimized in the interpreter to be very fast. You should prefer to use them whenever possible."</p>
 
         <h2 id="useful-array-operations">"Useful Array Operations"</h2>
         <p>"You don't need to memorize all of these right now. This is just a brief introduction to some of the array operations so that you won't be surprised when you see them later."</p>

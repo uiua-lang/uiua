@@ -588,7 +588,10 @@ impl<'a> Formatter<'a> {
             Word::Func(func) => {
                 self.output.push('(');
                 if let Some(sig) = &func.signature {
-                    self.format_signature('|', sig.value, func.lines.len() <= 1);
+                    let trailing_space = func.lines.len() <= 1
+                        && !(func.lines.iter().flatten())
+                            .any(|word| word_is_multiline(&word.value));
+                    self.format_signature('|', sig.value, trailing_space);
                     if func.lines.is_empty() {
                         self.output.pop();
                     }

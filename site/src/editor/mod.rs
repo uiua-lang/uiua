@@ -1012,12 +1012,12 @@ pub fn Editor<'a>(
                     <button
                         class="info-button"
                         data-title="\
-shift Enter   - Run + Format
- ctrl /       - Toggle line comment
-  alt Up/Down - Swap lines
-shift Delete  - Delete lines
- ctrl Z       - Undo
- ctrl Y       - Redo"
+   shift Enter   - Run + Format
+ctrl/cmd /       - Toggle line comment
+     alt Up/Down - Swap lines
+   shift Delete  - Delete lines
+ctrl/cmd Z       - Undo
+ctrl/cmd Y       - Redo"
                         disabled>
                         "🛈"
                     </button>
@@ -1026,7 +1026,7 @@ shift Delete  - Delete lines
                     <div id="code-area">
                         <div id={glyph_doc_id} class="glyph-doc" style="display: none">
                             { move || glyph_doc.get() }
-                            <div class="glyph-doc-ctrl-click">"Shift+click for more info (Ctrl+click for new tab)"</div>
+                            <div class="glyph-doc-ctrl-click">"Shift+click for more info (Ctrl/Cmd+click for new tab)"</div>
                         </div>
                         <div id="code-right-side">
                             <button

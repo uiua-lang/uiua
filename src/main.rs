@@ -17,6 +17,7 @@ use instant::Instant;
 use notify::{EventKind, RecursiveMode, Watcher};
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
+use rustyline::{error::ReadlineError, DefaultEditor};
 use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
     spans, PrimClass, RunMode, SpanKind, Uiua, UiuaError, UiuaResult,
@@ -186,8 +187,10 @@ fn run() -> UiuaResult {
                 audio_options,
                 args,
             } => {
-                let config =
-                    FormatConfig::from_source(formatter_options.format_config_source, None)?;
+                let config = FormatConfig {
+                    trailing_newline: false,
+                    ..FormatConfig::from_source(formatter_options.format_config_source, None)?
+                };
 
                 #[cfg(feature = "audio")]
                 setup_audio(audio_options);
@@ -628,17 +631,21 @@ fn format_multi_files(config: &FormatConfig, stdout: bool) -> Result<(), UiuaErr
 }
 
 fn repl(mut rt: Uiua, config: FormatConfig) {
-    let repl = |rt: &mut Uiua| -> Result<(), UiuaError> {
-        print!("{} ", "»".bright_white().bold());
-        _ = io::stdout().flush();
-
-        let mut code = String::new();
-        io::stdin()
-            .read_line(&mut code)
-            .expect("Failed to read from Stdin"); // TODO: this could be handled differently
+    let mut line_reader = DefaultEditor::new().expect("Failed to read from Stdin");
+    let mut repl = |rt: &mut Uiua| -> Result<bool, UiuaError> {
+        let mut code = match line_reader.readline("» ") {
+            Ok(code) => code,
+            Err(ReadlineError::Eof | ReadlineError::Interrupted) => return Ok(false),
+            Err(_) => panic!("Failed to read from Stdin"),
+        };
+        if code.is_empty() {
+            return Ok(true);
+        }
 
         let formatted = format_str(&code, &config)?.output;
         code = formatted;
+        _ = line_reader.add_history_entry(&code);
+
         print!("↪ ");
         for span in spans(&code) {
             let (r, g, b) = match span.value {
@@ -684,13 +691,17 @@ fn repl(mut rt: Uiua, config: FormatConfig) {
                 println!("  {line}");
             }
         }
-        Ok(())
+        Ok(true)
     };
 
     println!("Uiua {} (end with ctrl+C)\n", env!("CARGO_PKG_VERSION"));
     loop {
-        if let Err(e) = repl(&mut rt) {
-            eprintln!("{}", e.report());
+        match repl(&mut rt) {
+            Ok(true) => {}
+            Ok(false) => break,
+            Err(e) => {
+                eprintln!("{}", e.report());
+            }
         }
     }
 }

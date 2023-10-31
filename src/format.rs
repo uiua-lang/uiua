@@ -620,12 +620,7 @@ impl<'a> Formatter<'a> {
                     self.push(&prim.span, &prim.value.to_string());
                 }
             }
-            Word::Primitive(prim) => {
-                self.push(&word.span, &prim.to_string());
-                if prim.is_modifier() {
-                    self.output.push('|');
-                }
-            }
+            Word::Primitive(prim) => self.push(&word.span, &prim.to_string()),
             Word::Modified(m) => {
                 self.push(
                     &m.modifier.span,

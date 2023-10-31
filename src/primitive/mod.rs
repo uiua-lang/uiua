@@ -221,6 +221,10 @@ impl Primitive {
     pub fn is_ocean(&self) -> bool {
         self.ocean_constant().is_some()
     }
+    /// Check if this primitive is a constant
+    pub fn is_constant(&self) -> bool {
+        self.constant().is_some()
+    }
     /// Get the a constant's value
     pub fn constant(&self) -> Option<f64> {
         use Primitive::*;

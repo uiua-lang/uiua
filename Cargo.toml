@@ -51,10 +51,11 @@ regex = "1.10.2"
 unicode-segmentation = "1.10"
 trash = { version = "3.1.2", optional = true }
 crossterm = { version = "0.27.0", optional = true, default-features = false }
+rustyline = { version = "12.0.0", optional = true }
 
 [features]
 audio = ["hodaun", "lockfree"]
-binary = ["ctrlc", "notify", "clap", "color-backtrace", "lsp"]
+binary = ["ctrlc", "notify", "clap", "color-backtrace", "lsp", "rustyline"]
 bytes = []
 debug = []
 raw_mode = ["crossterm"]

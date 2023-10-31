@@ -427,17 +427,15 @@ impl Parser {
         }
         // Collect items
         let mut items = Vec::new();
-        let mut singleton = false;
         while self.try_exact(Underscore).is_some() {
-            let item = match self.try_modified() {
+            let item = match self.try_term() {
                 Some(mut item) => {
                     if let Word::Spaces = item.value {
                         if items.is_empty() {
-                            singleton = true;
                             break;
                         }
                         self.errors.push(self.expected([Expectation::Term]));
-                        item = match self.try_modified() {
+                        item = match self.try_term() {
                             Some(item) => item,
                             None => {
                                 self.errors.push(self.expected([Expectation::Term]));
@@ -447,10 +445,6 @@ impl Parser {
                     }
                     item
                 }
-                None if items.is_empty() => {
-                    singleton = true;
-                    break;
-                }
                 None => {
                     self.errors.push(self.expected([Expectation::Term]));
                     break;
@@ -459,7 +453,7 @@ impl Parser {
             items.push(item);
         }
         // If there is only one item and no underscores, return it
-        if items.is_empty() && !singleton {
+        if items.is_empty() {
             return Some(word);
         }
         // Insert the first word that was parsed

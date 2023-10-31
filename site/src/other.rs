@@ -138,9 +138,11 @@ pub fn Install() -> impl IntoView {
         <p>"This requires a "<a href="https://www.rust-lang.org/tools/install">"Rust"</a>" installation."</p>
         <p>"Once you have that, run the following command:"</p>
         <code class="code-block">"cargo install uiua"</code>
-        <p>"If you want to enable audio output, enable the "<code>"audio"</code>" feature:"</p>
-        <code class="code-block">"cargo install uiua --features audio"</code>
-        <p>"If you want audio on Linux, you may need to install some dependencies first:"</p>
+        <p>"The following optional features are available (enabled by passing "<code>"--features <feature>"</code>"):"</p>
+        <ul>
+            <li><code>"bytes"</code>" - Enables byte arrays, which behave identically to numeric arrays but take up less space."</li>
+            <li><code>"audio"</code>" - Enables audio system functions."</li>
+        </ul>
         <code class="code-block">"apt install libasound2-dev libudev-dev pkg-config"</code>
         <p>"If you want the most recent development version of Uiua, you can install from the git repository."</p>
         <code class="code-block">"cargo install --git https://github.com/uiua-lang/uiua uiua"</code>

@@ -629,23 +629,20 @@ fn format_multi_files(config: &FormatConfig, stdout: bool) -> Result<(), UiuaErr
 }
 
 fn repl(mut rt: Uiua, config: FormatConfig) {
-    let prompt = format!("{} ", "»".bright_white().bold());
-    let line_reader = &mut DefaultEditor::new().expect("Failed to read from Stdin");
-
-    let mut repl = |rt: &mut Uiua| -> Result<(), UiuaError> {
-        let mut code = match line_reader.readline(&prompt) {
+    let mut line_reader = DefaultEditor::new().expect("Failed to read from Stdin");
+    let mut repl = |rt: &mut Uiua| -> Result<bool, UiuaError> {
+        let mut code = match line_reader.readline("» ") {
             Ok(code) => code,
-            Err(ReadlineError::Eof) => return Ok(()),
-            Err(ReadlineError::Interrupted) => std::process::exit(1),
+            Err(ReadlineError::Eof | ReadlineError::Interrupted) => return Ok(false),
             Err(_) => panic!("Failed to read from Stdin"),
         };
         if code.is_empty() {
-            return Ok(());
+            return Ok(true);
         }
 
         let formatted = format_str(&code, &config)?.output;
         code = formatted;
-        let _ = line_reader.add_history_entry(&code[0..&code.len() - 1]);
+        _ = line_reader.add_history_entry(&code);
 
         print!("↪ ");
         for span in spans(&code) {
@@ -692,13 +689,17 @@ fn repl(mut rt: Uiua, config: FormatConfig) {
                 println!("  {line}");
             }
         }
-        Ok(())
+        Ok(true)
     };
 
     println!("Uiua {} (end with ctrl+C)\n", env!("CARGO_PKG_VERSION"));
     loop {
-        if let Err(e) = repl(&mut rt) {
-            eprintln!("{}", e.report());
+        match repl(&mut rt) {
+            Ok(true) => {}
+            Ok(false) => break,
+            Err(e) => {
+                eprintln!("{}", e.report());
+            }
         }
     }
 }

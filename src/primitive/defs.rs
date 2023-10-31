@@ -1399,18 +1399,6 @@ primitive!(
     /// ex: ≑∸≃⊂.[1_2_3 4_5_6]
     /// *At the seabed, countless small scavengers feed on the detritus of the ocean above.*
     (1, Seabed, Ocean, ("seabed", '∸')),
-    /// Syntactically bind two functions
-    ///
-    /// This modifier mostly exists for syntactic convenience.
-    /// It lets you change any function with 2 terms into a modifer call, saving a single character.
-    /// ex: ≡(⇌⊢)↯3_3⇡9
-    ///   : ≡'⇌⊢↯3_3⇡9
-    /// This especially nice when used with modifiers that take 2 functions, like [under], where you can save up to 2 characters!
-    /// ex: ⍜(↻3)(⊂π) [1 2 3 4 5]
-    ///   : ⍜'↻3'⊂π [1 2 3 4 5]
-    /// Don't chain [bind].
-    /// ex! ≡''⊂⇌. ↯2_3⇡6
-    ([2], Bind, OtherModifier, ("bind", '\'')),
     /// Call one of two functions based on a condition
     ///
     /// If the condition is `1`, then the first function is called.

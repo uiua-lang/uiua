@@ -258,19 +258,6 @@ impl<'a> VirtualEnv<'a> {
                     let sig = f.signature();
                     self.handle_args_outputs(sig.args, sig.args)?;
                 }
-                Bind => {
-                    let f = self.pop_func()?;
-                    let g = self.pop_func()?;
-                    for val in [g, f] {
-                        for _ in 0..val.signature().args {
-                            self.pop()?;
-                        }
-                        self.set_min_height();
-                        for _ in 0..val.signature().outputs {
-                            self.stack.push(BasicValue::Other);
-                        }
-                    }
-                }
                 Both => {
                     let sig = self.pop_func()?.signature();
                     let args = sig.args * 2;

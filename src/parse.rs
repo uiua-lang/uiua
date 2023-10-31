@@ -493,6 +493,7 @@ impl Parser {
                 .try_func()
                 .or_else(|| self.try_strand())
                 .or_else(|| self.try_placeholder())
+                .or_else(|| self.try_bind())
             {
                 args.push(arg);
                 arg_count += 1;
@@ -506,30 +507,6 @@ impl Parser {
 
         // Style diagnostics
         match modifier {
-            Modifier::Primitive(Primitive::Bind) => {
-                for arg in &args {
-                    if let Word::Modified(m) = &arg.value {
-                        if let Modifier::Primitive(Primitive::Bind) = m.modifier.value {
-                            let span = mod_span.clone().merge(m.modifier.span.clone());
-                            self.diagnostics.push(Diagnostic::new(
-                                format!("Do not chain `bind {}`", Primitive::Bind),
-                                span,
-                                DiagnosticKind::Style,
-                            ));
-                        } else if m.modifier.value.args() > 1 {
-                            let span = mod_span.clone().merge(m.modifier.span.clone());
-                            self.diagnostics.push(Diagnostic::new(
-                                format!(
-                                    "Do not use non-monadic modifiers inside `bind {}`",
-                                    Primitive::Bind
-                                ),
-                                span,
-                                DiagnosticKind::Style,
-                            ));
-                        }
-                    }
-                }
-            }
             Modifier::Primitive(Primitive::Reach) => {
                 for arg in &args {
                     if let Word::Modified(m) = &arg.value {
@@ -661,6 +638,8 @@ impl Parser {
                 }
             }
             word
+        } else if let Some(word) = self.try_bind() {
+            word
         } else {
             return None;
         })
@@ -760,6 +739,24 @@ impl Parser {
             .or_else(|| signature.as_ref().map(|sig| sig.span.clone()));
         let span = start.zip(end).map(|(start, end)| start.merge(end));
         (signature, lines, span)
+    }
+    fn try_bind(&mut self) -> Option<Sp<Word>> {
+        let start = self.try_exact(Quote)?;
+        let mut operands = Vec::new();
+        operands.extend(self.try_spaces());
+        operands.extend(self.try_strand());
+        operands.extend(self.try_spaces());
+        operands.extend(self.try_strand());
+        let end = operands
+            .last()
+            .map(|w| w.span.clone())
+            .unwrap_or(start.clone());
+        let span = start.merge(end);
+        Some(span.clone().sp(Word::Func(Func {
+            id: FunctionId::Anonymous(span),
+            signature: None,
+            lines: vec![operands],
+        })))
     }
     fn try_spaces(&mut self) -> Option<Sp<Word>> {
         self.try_exact(Spaces).map(|span| span.sp(Word::Spaces))

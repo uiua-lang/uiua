@@ -704,13 +704,6 @@ fn TutorialFunctions() -> impl IntoView {
         <Editor example="≡(⊢⇌) .[2_5_3 0_2_1 0_0_2]"/>
         <p>"If you wanted to rotate every row of an array backwards by a fixed amount, you could use "<Prim prim=Distribute/>"."</p>
         <Editor example="∺(↻¯) 2 [1_2_3 4_5_6 7_8_9]"/>
-        <p>"If you want to make an inline function with exactly 2 terms, you can use the "<Prim prim=Bind/>" modifier instead of "<code>"()"</code>"s and save 1 character of space!"</p>
-        <Editor example="/(-∶) 1_2_3_4_5\n/'-∶ 1_2_3_4_5"/>
-        <p>"This looks nice with modifiers that take multiple functions like "<Prim prim=Under/>"."</p>
-        <Editor example="⍜'↙3⇌ [1 2 3 4 5]"/>
-        <Editor example="⍜'↻3'⊂π 1_2_3_4_5"/>
-        <p>"Don't overdo it with "<Prim prim=Bind/>"! It can make your code hard to read."</p>
-        <Editor example="≡'⊂'+1 ⇌.↯2_3⇡6"/> // Should fail
         <p>"Inline functions may span multiple lines. Unlike multiline stack notation arrays, which run bottom-to-top, multiline inline functions run top-to-bottom as other code does."</p>
         <Editor example="\
 X ← (

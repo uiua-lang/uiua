@@ -277,11 +277,12 @@ impl Primitive {
         if indices.len() < 2 {
             return None;
         }
+        // Forward parsing
         let mut prims = Vec::new();
         let mut start = 0;
         'outer: loop {
             if start == indices.len() {
-                break Some(prims);
+                return Some(prims);
             }
             let start_index = indices[start];
             for len in (2..=indices.len() - start).rev() {
@@ -310,8 +311,28 @@ impl Primitive {
                     continue 'outer;
                 }
             }
-            break None;
+            break;
         }
+        // Backward parsing
+        prims.clear();
+        let mut end = indices.len();
+        'outer: loop {
+            if end == 0 {
+                return Some(prims);
+            }
+            let end_index = indices[end - 1];
+            for len in (2..=end).rev() {
+                let start_index = indices.get(end - len).copied().unwrap_or(0);
+                let sub_name = &name[start_index..=end_index];
+                if let Some(p) = Primitive::from_format_name(sub_name) {
+                    prims.push((p, sub_name));
+                    end -= len;
+                    continue 'outer;
+                }
+            }
+            break;
+        }
+        None
     }
     /// Execute the primitive
     pub fn run(&self, env: &mut Uiua) -> UiuaResult {

@@ -348,10 +348,13 @@ impl Value {
                     );
                 }
                 let num = nums.data[0];
-                if num.fract() != 0.0 {
-                    return Err(env.error(format!("{requirement}, but it has a fractional part")));
+                if num == 0.0 {
+                    false
+                } else if num == 1.0 {
+                    true
+                } else {
+                    return Err(env.error(format!("{requirement}, but it is {num}")));
                 }
-                num != 0.0
             }
             #[cfg(feature = "bytes")]
             Value::Byte(bytes) => {

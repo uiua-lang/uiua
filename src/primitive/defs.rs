@@ -988,10 +988,10 @@ primitive!(
     ([1], Repeat, IteratingModifier, ("repeat", '⍥')),
     /// Repeat a function until its output changes (or stops changing)
     ///
-    /// If the function takes more arguments than it returns outputs then it is run repeatedly until the output changes.
+    /// If the function takes one more argument than it returns outputs then it is run repeatedly until the output is `0`.
     /// This can be used like a `do while` loop.
     /// ex: ⍢(<1000.×2) 1
-    /// If the function takes the same number of arguments as it returns outputs, then the loop ends when all the outputs are the *same* as the inputs.
+    /// If the function takes the same number of arguments as it returns outputs, then the loop ends when all the outputs are the same as the inputs.
     /// ex: ⍢(⊝⊂∶◿7×2⊢⇌.) [8]
     ([1], Fixed, IteratingModifier, ("fixed", '⍢')),
     /// Group elements of an array into buckets by index

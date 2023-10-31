@@ -92,61 +92,46 @@ pub fn fixed(env: &mut Uiua) -> UiuaResult {
             but its signature is {sig}"
         )));
     }
-    let mut args = Vec::with_capacity(sig.args);
-    for i in 0..sig.args {
-        args.push(env.pop(i + 1)?);
-    }
-    if sig.args == sig.outputs {
-        let mut identity = hash(&args);
-        loop {
+    match sig.outputs - sig.args {
+        0 => {
+            let mut args = Vec::with_capacity(sig.args);
+            for i in 0..sig.args {
+                args.push(env.pop(i + 1)?);
+            }
+            let mut identity = hash(&args);
+            loop {
+                for arg in args.drain(..).rev() {
+                    env.push(arg);
+                }
+                env.call_error_on_break(f.clone(), "break is not allowed in fixed")?;
+                for _ in 0..sig.args {
+                    args.push(env.pop("fixed's function result")?);
+                }
+                let new_identity = hash(&args);
+                if new_identity == identity {
+                    break;
+                }
+                identity = new_identity;
+            }
             for arg in args.drain(..).rev() {
                 env.push(arg);
             }
+        }
+        1 => loop {
             env.call_error_on_break(f.clone(), "break is not allowed in fixed")?;
-            for _ in 0..sig.args {
-                args.push(env.pop("fixed's function result")?);
-            }
-            let new_identity = hash(&args);
-            if new_identity == identity {
+            let should_continue = env
+                .pop("fixed's continue condition")?
+                .as_bool(env, "Fixed's continue condition must be a boolean")?;
+            if !should_continue {
                 break;
             }
-            identity = new_identity;
+        },
+        _ => {
+            return Err(env.error(format!(
+                "Fixed's function may return at most 1 more value than it takes arguments, \
+                but its signature is {sig}"
+            )))
         }
-    } else {
-        let excess_count = sig.outputs - sig.args;
-        let mut excess = Vec::with_capacity(excess_count);
-        for arg in args.drain(..).rev() {
-            env.push(arg);
-        }
-        env.call_error_on_break(f.clone(), "break is not allowed in fixed")?;
-        for _ in 0..excess_count {
-            excess.push(env.pop("fixed's function result")?);
-        }
-        for _ in 0..sig.args {
-            args.push(env.pop("fixed's function result")?);
-        }
-        let mut identity = hash(&excess);
-        loop {
-            for arg in args.drain(..).rev() {
-                env.push(arg);
-            }
-            env.call_error_on_break(f.clone(), "break is not allowed in fixed")?;
-            excess.clear();
-            for _ in 0..excess_count {
-                excess.push(env.pop("fixed's function result")?);
-            }
-            for _ in 0..sig.args {
-                args.push(env.pop("fixed's function result")?);
-            }
-            let new_identity = hash(&excess);
-            if new_identity != identity {
-                break;
-            }
-            identity = new_identity;
-        }
-    }
-    for arg in args.drain(..).rev() {
-        env.push(arg);
     }
     Ok(())
 }

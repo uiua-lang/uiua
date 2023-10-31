@@ -985,7 +985,14 @@ primitive!(
     /// ex: ⍥√¯3 2
     ///
     /// [repeat]'s glyph is a combination of a circle, representing a loop, and the 𝄇 symbol from musical notation.
-    (1[1], Repeat, IteratingModifier, ("repeat", '⍥')),
+    ([1], Repeat, IteratingModifier, ("repeat", '⍥')),
+    /// Repeat a function until its output stops changing
+    ///
+    /// If the function takes more arguments than it returns outputs, then only the outputs that are in excess of the arguments are compared.
+    /// ex: ⍢(↧1000×2) 1
+    /// If the function takes the same number of arguments as it returns outputs, then [fix] breaks when all the outputs are the same as the inputs.
+    /// ex: ⍢(⊝⊂∶◿7×2⊢⇌.) [8]
+    ([1], Fixed, IteratingModifier, ("fixed", '⍢')),
     /// Group elements of an array into buckets by index
     ///
     /// Takes a function and two arrays.

@@ -1,5 +1,7 @@
 //! Algorithms for looping modifiers
 
+use std::hash::{Hash, Hasher};
+
 use crate::{
     array::{Array, ArrayValue},
     value::Value,
@@ -78,6 +80,82 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
         }
     }
     Ok(())
+}
+
+pub fn fixed(env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
+    let f = env.pop_function()?;
+    let sig = f.signature();
+    if sig.args > sig.outputs {
+        return Err(env.error(format!(
+            "Fixed's function must return at least as many values as it takes arguments, \
+            but its signature is {sig}"
+        )));
+    }
+    let mut args = Vec::with_capacity(sig.args);
+    for i in 0..sig.args {
+        args.push(env.pop(i + 1)?);
+    }
+    if sig.args == sig.outputs {
+        let mut identity = hash(&args);
+        loop {
+            for arg in args.drain(..).rev() {
+                env.push(arg);
+            }
+            env.call_error_on_break(f.clone(), "break is not allowed in fixed")?;
+            for _ in 0..sig.args {
+                args.push(env.pop("fixed's function result")?);
+            }
+            let new_identity = hash(&args);
+            if new_identity == identity {
+                break;
+            }
+            identity = new_identity;
+        }
+    } else {
+        let excess_count = sig.outputs - sig.args;
+        let mut excess = Vec::with_capacity(excess_count);
+        for arg in args.drain(..).rev() {
+            env.push(arg);
+        }
+        env.call_error_on_break(f.clone(), "break is not allowed in fixed")?;
+        for _ in 0..excess_count {
+            excess.push(env.pop("fixed's function result")?);
+        }
+        for _ in 0..sig.args {
+            args.push(env.pop("fixed's function result")?);
+        }
+        let mut identity = hash(&excess);
+        loop {
+            for arg in args.drain(..).rev() {
+                env.push(arg);
+            }
+            env.call_error_on_break(f.clone(), "break is not allowed in fixed")?;
+            excess.clear();
+            for _ in 0..excess_count {
+                excess.push(env.pop("fixed's function result")?);
+            }
+            for _ in 0..sig.args {
+                args.push(env.pop("fixed's function result")?);
+            }
+            let new_identity = hash(&excess);
+            if new_identity == identity {
+                break;
+            }
+            identity = new_identity;
+        }
+    }
+    for arg in args.drain(..).rev() {
+        env.push(arg);
+    }
+    Ok(())
+}
+
+fn hash<T: Hash>(val: T) -> u64 {
+    use std::collections::hash_map::DefaultHasher;
+    let mut hasher = DefaultHasher::new();
+    val.hash(&mut hasher);
+    hasher.finish()
 }
 
 pub fn partition(env: &mut Uiua) -> UiuaResult {

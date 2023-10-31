@@ -433,6 +433,7 @@ impl Primitive {
             Primitive::Cross => table::cross(env)?,
             Primitive::Combinate => table::combinate(env)?,
             Primitive::Repeat => loops::repeat(env)?,
+            Primitive::Fixed => loops::fixed(env)?,
             Primitive::Group => loops::group(env)?,
             Primitive::Partition => loops::partition(env)?,
             Primitive::Reshape => {

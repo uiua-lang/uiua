@@ -253,6 +253,11 @@ impl<'a> VirtualEnv<'a> {
                         }
                     }
                 }
+                Fixed => {
+                    let f = self.pop_func()?;
+                    let sig = f.signature();
+                    self.handle_args_outputs(sig.args, sig.args)?;
+                }
                 Bind => {
                     let f = self.pop_func()?;
                     let g = self.pop_func()?;

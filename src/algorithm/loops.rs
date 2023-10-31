@@ -201,6 +201,7 @@ impl Value {
                 .partition_groups(markers, env)?
                 .map(Into::into)
                 .collect(),
+            #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr
                 .partition_groups(markers, env)?
                 .map(Into::into)
@@ -259,6 +260,7 @@ impl Value {
     fn group_groups(&self, indices: &[isize], env: &Uiua) -> UiuaResult<Vec<Self>> {
         Ok(match self {
             Value::Num(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
+            #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
             Value::Char(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
             Value::Box(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),

@@ -25,6 +25,7 @@ pub enum Value {
     /// Common number array
     Num(Array<f64>),
     /// Byte array used for some boolean operations and for I/O
+    #[cfg(feature = "bytes")]
     Byte(Array<u8>),
     /// Common character array
     Char(Array<char>),
@@ -42,6 +43,7 @@ impl fmt::Debug for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Num(array) => array.fmt(f),
+            #[cfg(feature = "bytes")]
             Self::Byte(array) => array.fmt(f),
             Self::Char(array) => array.fmt(f),
             Self::Box(array) => array.fmt(f),
@@ -67,6 +69,7 @@ impl Value {
     /// Get a reference to a possible byte array
     pub fn as_byte_array(&self) -> Option<&Array<u8>> {
         match self {
+            #[cfg(feature = "bytes")]
             Self::Byte(array) => Some(array),
             _ => None,
         }
@@ -93,6 +96,7 @@ impl Value {
     pub fn rows(&self) -> Box<dyn ExactSizeIterator<Item = Self> + '_> {
         match self {
             Self::Num(array) => Box::new(array.rows().map(Value::from)),
+            #[cfg(feature = "bytes")]
             Self::Byte(array) => Box::new(array.rows().map(Value::from)),
             Self::Char(array) => Box::new(array.rows().map(Value::from)),
             Self::Box(array) => Box::new(array.rows().map(Value::from)),
@@ -102,6 +106,7 @@ impl Value {
     pub fn into_rows(self) -> Box<dyn ExactDoubleIterator<Item = Self>> {
         match self {
             Self::Num(array) => Box::new(array.into_rows().map(Value::from)),
+            #[cfg(feature = "bytes")]
             Self::Byte(array) => Box::new(array.into_rows().map(Value::from)),
             Self::Char(array) => Box::new(array.into_rows().map(Value::from)),
             Self::Box(array) => Box::new(array.into_rows().map(Value::from)),
@@ -111,6 +116,7 @@ impl Value {
     pub fn into_elements(self) -> Box<dyn Iterator<Item = Self>> {
         match self {
             Self::Num(array) => Box::new(array.data.into_iter().map(Value::from)),
+            #[cfg(feature = "bytes")]
             Self::Byte(array) => Box::new(array.data.into_iter().map(Value::from)),
             Self::Char(array) => Box::new(array.data.into_iter().map(Value::from)),
             Self::Box(array) => Box::new(array.data.into_iter().map(Value::from)),
@@ -119,7 +125,9 @@ impl Value {
     /// Get the value's type name
     pub fn type_name(&self) -> &'static str {
         match self {
-            Self::Num(_) | Self::Byte(_) => "number",
+            Self::Num(_) => "number",
+            #[cfg(feature = "bytes")]
+            Self::Byte(_) => "number",
             Self::Char(_) => "character",
             Self::Box(_) => "box",
         }
@@ -127,7 +135,9 @@ impl Value {
     /// Get a plural form of the value's type name
     pub fn type_name_plural(&self) -> &'static str {
         match self {
-            Self::Num(_) | Self::Byte(_) => "numbers",
+            Self::Num(_) => "numbers",
+            #[cfg(feature = "bytes")]
+            Self::Byte(_) => "number",
             Self::Char(_) => "characters",
             Self::Box(_) => "boxes",
         }
@@ -166,6 +176,7 @@ impl Value {
     pub(crate) fn first_dim_zero(&self) -> Self {
         match self {
             Self::Num(array) => array.first_dim_zero().into(),
+            #[cfg(feature = "bytes")]
             Self::Byte(array) => array.first_dim_zero().into(),
             Self::Char(array) => array.first_dim_zero().into(),
             Self::Box(array) => array.first_dim_zero().into(),
@@ -188,6 +199,7 @@ impl Value {
     pub fn shape_mut(&mut self) -> &mut Shape {
         match self {
             Self::Num(array) => &mut array.shape,
+            #[cfg(feature = "bytes")]
             Self::Byte(array) => &mut array.shape,
             Self::Char(array) => &mut array.shape,
             Self::Box(array) => &mut array.shape,
@@ -213,16 +225,17 @@ impl Value {
     pub(crate) fn generic_into_deep<T>(
         self,
         n: impl FnOnce(Array<f64>) -> T,
-        b: impl FnOnce(Array<u8>) -> T,
+        _b: impl FnOnce(Array<u8>) -> T,
         c: impl FnOnce(Array<char>) -> T,
         f: impl FnOnce(Array<Boxed>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
-            Self::Byte(array) => b(array),
+            #[cfg(feature = "bytes")]
+            Self::Byte(array) => _b(array),
             Self::Char(array) => c(array),
             Self::Box(array) => match array.into_unboxed() {
-                Ok(value) => value.generic_into_deep(n, b, c, f),
+                Ok(value) => value.generic_into_deep(n, _b, c, f),
                 Err(array) => f(array),
             },
         }
@@ -230,13 +243,14 @@ impl Value {
     pub(crate) fn generic_ref_shallow<'a, T: 'a>(
         &'a self,
         n: impl FnOnce(&'a Array<f64>) -> T,
-        b: impl FnOnce(&'a Array<u8>) -> T,
+        _b: impl FnOnce(&'a Array<u8>) -> T,
         c: impl FnOnce(&'a Array<char>) -> T,
         f: impl FnOnce(&'a Array<Boxed>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
-            Self::Byte(array) => b(array),
+            #[cfg(feature = "bytes")]
+            Self::Byte(array) => _b(array),
             Self::Char(array) => c(array),
             Self::Box(array) => f(array),
         }
@@ -244,17 +258,18 @@ impl Value {
     pub(crate) fn generic_ref_deep<'a, T: 'a>(
         &'a self,
         n: impl FnOnce(&'a Array<f64>) -> T,
-        b: impl FnOnce(&'a Array<u8>) -> T,
+        _b: impl FnOnce(&'a Array<u8>) -> T,
         c: impl FnOnce(&'a Array<char>) -> T,
         f: impl FnOnce(&'a Array<Boxed>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
-            Self::Byte(array) => b(array),
+            #[cfg(feature = "bytes")]
+            Self::Byte(array) => _b(array),
             Self::Char(array) => c(array),
             Self::Box(array) => {
                 if let Some(bx) = array.as_scalar() {
-                    bx.as_value().generic_ref_deep(n, b, c, f)
+                    bx.as_value().generic_ref_deep(n, _b, c, f)
                 } else {
                     f(array)
                 }
@@ -274,17 +289,18 @@ impl Value {
     pub(crate) fn generic_mut_deep<T>(
         &mut self,
         n: impl FnOnce(&mut Array<f64>) -> T,
-        b: impl FnOnce(&mut Array<u8>) -> T,
+        _b: impl FnOnce(&mut Array<u8>) -> T,
         c: impl FnOnce(&mut Array<char>) -> T,
         f: impl FnOnce(&mut Array<Boxed>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
-            Self::Byte(array) => b(array),
+            #[cfg(feature = "bytes")]
+            Self::Byte(array) => _b(array),
             Self::Char(array) => c(array),
             Self::Box(array) => {
                 if let Some(bx) = array.as_scalar_mut() {
-                    bx.as_value_mut().generic_mut_deep(n, b, c, f)
+                    bx.as_value_mut().generic_mut_deep(n, _b, c, f)
                 } else {
                     f(array)
                 }
@@ -295,6 +311,7 @@ impl Value {
     pub(crate) fn reserve_min(&mut self, min: usize) {
         match self {
             Self::Num(arr) => arr.data.reserve_min(min),
+            #[cfg(feature = "bytes")]
             Self::Byte(arr) => arr.data.reserve_min(min),
             Self::Char(arr) => arr.data.reserve_min(min),
             Self::Box(arr) => arr.data.reserve_min(min),
@@ -304,6 +321,7 @@ impl Value {
     pub fn show(&self) -> String {
         match self {
             Self::Num(array) => array.grid_string(),
+            #[cfg(feature = "bytes")]
             Self::Byte(array) => array.grid_string(),
             Self::Char(array) => array.grid_string(),
             Self::Box(array) => array.grid_string(),
@@ -335,6 +353,7 @@ impl Value {
                 }
                 num != 0.0
             }
+            #[cfg(feature = "bytes")]
             Value::Byte(bytes) => {
                 if bytes.rank() > 0 {
                     return Err(
@@ -371,6 +390,7 @@ impl Value {
                 }
                 num as usize
             }
+            #[cfg(feature = "bytes")]
             Value::Byte(bytes) => {
                 if bytes.rank() > 0 {
                     return Err(
@@ -404,6 +424,7 @@ impl Value {
                 }
                 num as isize
             }
+            #[cfg(feature = "bytes")]
             Value::Byte(bytes) => {
                 if bytes.rank() > 0 {
                     return Err(
@@ -433,6 +454,7 @@ impl Value {
                 }
                 nums.data[0]
             }
+            #[cfg(feature = "bytes")]
             Value::Byte(bytes) => {
                 if bytes.rank() > 0 {
                     return Err(
@@ -523,6 +545,7 @@ impl Value {
                 }
                 result
             }
+            #[cfg(feature = "bytes")]
             Value::Byte(bytes) => {
                 if bytes.rank() > 1 {
                     return Err(
@@ -585,6 +608,7 @@ impl Value {
                 }
                 Array::new(self.shape(), result)
             }
+            #[cfg(feature = "bytes")]
             Value::Byte(bytes) => {
                 if !test_shape(self.shape()) {
                     return Err(env.error(format!(
@@ -626,6 +650,7 @@ impl Value {
                 }
                 return Ok(chars.data().iter().collect());
             }
+            #[cfg(feature = "bytes")]
             Value::Box(boxes) => {
                 if let Some(bx) = boxes.as_scalar() {
                     return bx.as_value().as_string(env, requirement);
@@ -646,6 +671,7 @@ impl Value {
             requirement = "Expected value to be a list of bytes";
         }
         Ok(match self {
+            #[cfg(feature = "bytes")]
             Value::Byte(a) => {
                 if a.rank() != 1 {
                     return Err(env.error(format!("{requirement}, but its rank is {}", a.rank())));
@@ -707,6 +733,7 @@ impl Value {
     }
     /// Turn a number array into a byte array if no information is lost.
     pub fn compress(&mut self) {
+        #[cfg(feature = "bytes")]
         if let Value::Num(nums) = self {
             if nums
                 .data
@@ -725,6 +752,7 @@ impl Value {
     pub fn coerce_to_boxes(self) -> Array<Boxed> {
         match self {
             Value::Num(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
+            #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
             Value::Char(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
             Value::Box(arr) => arr,
@@ -734,6 +762,7 @@ impl Value {
     pub fn coerce_as_boxes(&self) -> Cow<Array<Boxed>> {
         match self {
             Value::Num(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
+            #[cfg(feature = "bytes")]
             Value::Byte(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
             Value::Char(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
             Value::Box(arr) => Cow::Borrowed(arr),
@@ -782,9 +811,29 @@ macro_rules! value_from {
 }
 
 value_from!(f64, Num);
+#[cfg(feature = "bytes")]
 value_from!(u8, Byte);
 value_from!(char, Char);
 value_from!(Boxed, Box);
+
+#[cfg(not(feature = "bytes"))]
+impl From<u8> for Value {
+    fn from(u: u8) -> Self {
+        Value::from(u as f64)
+    }
+}
+#[cfg(not(feature = "bytes"))]
+impl From<Array<u8>> for Value {
+    fn from(array: Array<u8>) -> Self {
+        array.convert_with(|b| b as f64).into()
+    }
+}
+#[cfg(not(feature = "bytes"))]
+impl FromIterator<u8> for Value {
+    fn from_iter<I: IntoIterator<Item = u8>>(iter: I) -> Self {
+        iter.into_iter().map(|b| b as f64).collect()
+    }
+}
 
 impl FromIterator<usize> for Value {
     fn from_iter<I: IntoIterator<Item = usize>>(iter: I) -> Self {
@@ -824,19 +873,19 @@ impl From<i32> for Value {
 
 macro_rules! value_un_impl {
     ($name:ident, $(
-        $([$in_place:ident, $f:ident])?
-        $(($make_new:ident, $f2:ident))?
+        $([$(#[$attr1:meta])* $in_place:ident, $f:ident])?
+        $(($(#[$attr2:meta])* $make_new:ident, $f2:ident))?
     ),* $(,)?) => {
         impl Value {
             pub(crate) fn $name(self, env: &Uiua) -> UiuaResult<Self> {
                 Ok(match self {
-                    $($(Self::$in_place(mut array) => {
+                    $($($(#[$attr1])* Self::$in_place(mut array) => {
                         for val in &mut array.data {
                             *val = $name::$f(*val);
                         }
                         array.into()
                     },)*)*
-                    $($(Self::$make_new(array) => {
+                    $($($(#[$attr2])* Self::$make_new(array) => {
                         let mut new = EcoVec::with_capacity(array.flat_len());
                         for val in array.data {
                             new.push($name::$f2(val));
@@ -858,18 +907,114 @@ macro_rules! value_un_impl {
     }
 }
 
-value_un_impl!(neg, [Num, num], (Byte, byte));
-value_un_impl!(not, [Num, num], (Byte, byte));
-value_un_impl!(abs, [Num, num], (Byte, byte));
-value_un_impl!(sign, [Num, num], [Byte, byte]);
-value_un_impl!(sqrt, [Num, num], (Byte, byte));
-value_un_impl!(sin, [Num, num], (Byte, byte));
-value_un_impl!(cos, [Num, num], (Byte, byte));
-value_un_impl!(asin, [Num, num], (Byte, byte));
-value_un_impl!(acos, [Num, num], (Byte, byte));
-value_un_impl!(floor, [Num, num], [Byte, byte]);
-value_un_impl!(ceil, [Num, num], [Byte, byte]);
-value_un_impl!(round, [Num, num], [Byte, byte]);
+value_un_impl!(
+    neg,
+    [Num, num],
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        byte
+    )
+);
+value_un_impl!(
+    not,
+    [Num, num],
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        byte
+    )
+);
+value_un_impl!(
+    abs,
+    [Num, num],
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        byte
+    )
+);
+value_un_impl!(
+    sign,
+    [Num, num],
+    [
+        #[cfg(feature = "bytes")]
+        Byte,
+        byte
+    ]
+);
+value_un_impl!(
+    sqrt,
+    [Num, num],
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        byte
+    )
+);
+value_un_impl!(
+    sin,
+    [Num, num],
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        byte
+    )
+);
+value_un_impl!(
+    cos,
+    [Num, num],
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        byte
+    )
+);
+value_un_impl!(
+    asin,
+    [Num, num],
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        byte
+    )
+);
+value_un_impl!(
+    acos,
+    [Num, num],
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        byte
+    )
+);
+value_un_impl!(
+    floor,
+    [Num, num],
+    [
+        #[cfg(feature = "bytes")]
+        Byte,
+        byte
+    ]
+);
+value_un_impl!(
+    ceil,
+    [Num, num],
+    [
+        #[cfg(feature = "bytes")]
+        Byte,
+        byte
+    ]
+);
+value_un_impl!(
+    round,
+    [Num, num],
+    [
+        #[cfg(feature = "bytes")]
+        Byte,
+        byte
+    ]
+);
 
 macro_rules! val_retry {
     (Byte, $env:expr) => {
@@ -882,14 +1027,14 @@ macro_rules! val_retry {
 
 macro_rules! value_bin_impl {
     ($name:ident, $(
-        $(($na:ident, $nb:ident, $f:ident $(, $retry:ident)?))*
-        $([$ip:ident, $f2:ident $(, $retry2:ident)?])*
+        $(($(#[$attr1:meta])* $na:ident, $nb:ident, $f:ident $(, $retry:ident)?))*
+        $([$(#[$attr2:meta])* $ip:ident, $f2:ident $(, $retry2:ident)?])*
     ),* ) => {
         impl Value {
             #[allow(unreachable_patterns, clippy::wrong_self_convention)]
             pub(crate) fn $name(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
                 Ok(match (self, other) {
-                    $($((Value::$ip(mut a), Value::$ip(b)) => {
+                    $($($(#[$attr2])* (Value::$ip(mut a), Value::$ip(b)) => {
                         if val_retry!($ip, env) {
                             let mut a_clone = a.clone();
                             if let Err(e) = bin_pervade_mut(&mut a_clone, b.clone(), env, $name::$f2) {
@@ -910,7 +1055,7 @@ macro_rules! value_bin_impl {
                             a.into()
                         }
                     },)*)*
-                    $($((Value::$na(a), Value::$nb(b)) => {
+                    $($($(#[$attr1])* (Value::$na(a), Value::$nb(b)) => {
                         if val_retry!($na, env) || val_retry!($nb, env) {
                             let res = bin_pervade(a.clone(), b.clone(), env, InfalliblePervasiveFn::new($name::$f));
                             match res {
@@ -960,11 +1105,39 @@ value_bin_impl!(
     [Num, num_num],
     (Num, Char, num_char),
     (Char, Num, char_num),
-    (Byte, Byte, byte_byte, num_num),
-    (Byte, Char, byte_char),
-    (Char, Byte, char_byte),
-    (Byte, Num, byte_num, num_num),
-    (Num, Byte, num_byte, num_num),
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        Byte,
+        byte_byte,
+        num_num
+    ),
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        Char,
+        byte_char
+    ),
+    (
+        #[cfg(feature = "bytes")]
+        Char,
+        Byte,
+        char_byte
+    ),
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        Num,
+        byte_num,
+        num_num
+    ),
+    (
+        #[cfg(feature = "bytes")]
+        Num,
+        Byte,
+        num_byte,
+        num_num
+    ),
 );
 
 value_bin_impl!(
@@ -972,46 +1145,159 @@ value_bin_impl!(
     [Num, num_num],
     (Num, Char, num_char),
     (Char, Char, char_char),
-    (Byte, Byte, byte_byte, num_num),
-    (Byte, Char, byte_char),
-    (Byte, Num, byte_num, num_num),
-    (Num, Byte, num_byte, num_num),
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        Byte,
+        byte_byte,
+        num_num
+    ),
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        Char,
+        byte_char
+    ),
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        Num,
+        byte_num,
+        num_num
+    ),
+    (
+        #[cfg(feature = "bytes")]
+        Num,
+        Byte,
+        num_byte,
+        num_num
+    ),
 );
 
 value_bin_impl!(
     mul,
     [Num, num_num],
-    (Byte, Byte, byte_byte, num_num),
-    (Byte, Num, byte_num, num_num),
-    (Num, Byte, num_byte, num_num),
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        Byte,
+        byte_byte,
+        num_num
+    ),
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        Num,
+        byte_num,
+        num_num
+    ),
+    (
+        #[cfg(feature = "bytes")]
+        Num,
+        Byte,
+        num_byte,
+        num_num
+    ),
 );
 value_bin_impl!(
     div,
     [Num, num_num],
-    (Byte, Byte, byte_byte, num_num),
-    (Byte, Num, byte_num, num_num),
-    (Num, Byte, num_byte, num_num),
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        Byte,
+        byte_byte,
+        num_num
+    ),
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        Num,
+        byte_num,
+        num_num
+    ),
+    (
+        #[cfg(feature = "bytes")]
+        Num,
+        Byte,
+        num_byte,
+        num_num
+    ),
 );
 value_bin_impl!(
     modulus,
     [Num, num_num],
-    (Byte, Byte, byte_byte, num_num),
-    (Byte, Num, byte_num, num_num),
-    (Num, Byte, num_byte, num_num),
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        Byte,
+        byte_byte,
+        num_num
+    ),
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        Num,
+        byte_num,
+        num_num
+    ),
+    (
+        #[cfg(feature = "bytes")]
+        Num,
+        Byte,
+        num_byte,
+        num_num
+    ),
 );
 value_bin_impl!(
     pow,
     [Num, num_num],
-    (Byte, Byte, byte_byte, num_num),
-    (Byte, Num, byte_num, num_num),
-    (Num, Byte, num_byte, num_num),
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        Byte,
+        byte_byte,
+        num_num
+    ),
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        Num,
+        byte_num,
+        num_num
+    ),
+    (
+        #[cfg(feature = "bytes")]
+        Num,
+        Byte,
+        num_byte,
+        num_num
+    ),
 );
 value_bin_impl!(
     log,
     [Num, num_num],
-    (Byte, Byte, byte_byte, num_num),
-    (Byte, Num, byte_num, num_num),
-    (Num, Byte, num_byte, num_num),
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        Byte,
+        byte_byte,
+        num_num
+    ),
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        Num,
+        byte_num,
+        num_num
+    ),
+    (
+        #[cfg(feature = "bytes")]
+        Num,
+        Byte,
+        num_byte,
+        num_num
+    ),
 );
 value_bin_impl!(atan2, [Num, num_num]);
 
@@ -1019,18 +1305,52 @@ value_bin_impl!(
     min,
     [Num, num_num],
     [Char, char_char],
-    [Byte, byte_byte, num_num],
-    (Byte, Num, byte_num, num_num),
-    (Num, Byte, num_byte, num_num),
+    [
+        #[cfg(feature = "bytes")]
+        Byte,
+        byte_byte,
+        num_num
+    ],
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        Num,
+        byte_num,
+        num_num
+    ),
+    (
+        #[cfg(feature = "bytes")]
+        Num,
+        Byte,
+        num_byte,
+        num_num
+    ),
 );
 
 value_bin_impl!(
     max,
     [Num, num_num],
     [Char, char_char],
-    [Byte, byte_byte, num_num],
-    (Byte, Num, byte_num, num_num),
-    (Num, Byte, num_byte, num_num),
+    [
+        #[cfg(feature = "bytes")]
+        Byte,
+        byte_byte,
+        num_num
+    ],
+    (
+        #[cfg(feature = "bytes")]
+        Byte,
+        Num,
+        byte_num,
+        num_num
+    ),
+    (
+        #[cfg(feature = "bytes")]
+        Num,
+        Byte,
+        num_byte,
+        num_num
+    ),
 );
 
 macro_rules! cmp_impls {
@@ -1040,16 +1360,16 @@ macro_rules! cmp_impls {
                 $name,
                 // Value comparable
                 [Num, same_type],
-                (Byte, Byte, same_type, num_num),
+                (#[cfg(feature = "bytes")] Byte, Byte, same_type, num_num),
                 (Char, Char, generic),
                 (Box, Box, generic),
-                (Num, Byte, num_byte, num_num),
-                (Byte, Num, byte_num, num_num),
+                (#[cfg(feature = "bytes")] Num, Byte, num_byte, num_num),
+                (#[cfg(feature = "bytes")] Byte, Num, byte_num, num_num),
                 // Type comparable
                 (Num, Char, always_less),
-                (Byte, Char, always_less),
+                (#[cfg(feature = "bytes")] Byte, Char, always_less),
                 (Char, Num, always_greater),
-                (Char, Byte, always_greater),
+                (#[cfg(feature = "bytes")] Char, Byte, always_greater),
             );
         )*
     };
@@ -1061,10 +1381,13 @@ impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Value::Num(a), Value::Num(b)) => a == b,
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Byte(b)) => a == b,
             (Value::Char(a), Value::Char(b)) => a == b,
             (Value::Box(a), Value::Box(b)) => a == b,
+            #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => a == b,
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => a == b,
             _ => false,
         }
@@ -1083,14 +1406,19 @@ impl Ord for Value {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
             (Value::Num(a), Value::Num(b)) => a.cmp(b),
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Byte(b)) => a.cmp(b),
             (Value::Char(a), Value::Char(b)) => a.cmp(b),
             (Value::Box(a), Value::Box(b)) => a.cmp(b),
+            #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => a.partial_cmp(b).unwrap(),
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => a.partial_cmp(b).unwrap(),
             (Value::Num(_), _) => Ordering::Less,
             (_, Value::Num(_)) => Ordering::Greater,
+            #[cfg(feature = "bytes")]
             (Value::Byte(_), _) => Ordering::Less,
+            #[cfg(feature = "bytes")]
             (_, Value::Byte(_)) => Ordering::Greater,
             (Value::Char(_), _) => Ordering::Less,
             (_, Value::Char(_)) => Ordering::Greater,
@@ -1105,6 +1433,7 @@ impl Hash for Value {
                 0u8.hash(state);
                 arr.hash(state);
             }
+            #[cfg(feature = "bytes")]
             Value::Byte(arr) => {
                 1u8.hash(state);
                 arr.hash(state);
@@ -1125,6 +1454,7 @@ impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Value::Num(n) => n.grid_string().fmt(f),
+            #[cfg(feature = "bytes")]
             Value::Byte(b) => b.grid_string().fmt(f),
             Value::Box(v) => v.grid_string().fmt(f),
             Value::Char(c) if c.rank() < 2 => c.fmt(f),

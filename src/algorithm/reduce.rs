@@ -45,6 +45,7 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
             Primitive::Min => fast_reduce(nums, f64::INFINITY, min::num_num),
             _ => return generic_fold_right_1(f, Value::Num(nums), None, env),
         }),
+        #[cfg(feature = "bytes")]
         (Some((prim, flipped)), Value::Byte(bytes)) => env.push(match prim {
             Primitive::Add => fast_reduce(bytes.convert(), 0.0, add::num_num),
             Primitive::Sub if flipped => fast_reduce(bytes.convert(), 0.0, flip(sub::num_num)),
@@ -185,6 +186,7 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
             env.push(arr);
             Ok(())
         }
+        #[cfg(feature = "bytes")]
         (Some((prim, flipped)), Value::Byte(bytes)) => {
             match prim {
                 Primitive::Add => env.push(fast_scan::<f64>(bytes.convert(), add::num_num)),

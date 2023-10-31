@@ -20,9 +20,9 @@ use crate::{
     Uiua, UiuaResult,
 };
 
-use super::{
-    op2_bytes_retry_fill, op_bytes_ref_retry_fill, op_bytes_retry_fill, ArrayCmpSlice, FillContext,
-};
+#[cfg(feature = "bytes")]
+use super::{op2_bytes_retry_fill, op_bytes_ref_retry_fill, op_bytes_retry_fill};
+use super::{ArrayCmpSlice, FillContext};
 
 impl Value {
     fn coerce_to_functions<T, C: FillContext, E: ToString>(
@@ -159,6 +159,7 @@ impl Value {
     fn join_impl_impl<C: FillContext>(self, other: Self, ctx: &C) -> Result<Self, C::Error> {
         Ok(match (self, other) {
             (Value::Num(a), Value::Num(b)) => a.join_impl(b, ctx)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Byte(b)) => op2_bytes_retry_fill::<_, C>(
                 a,
                 b,
@@ -166,7 +167,9 @@ impl Value {
                 |a, b| Ok(a.join_impl(b, ctx)?.into()),
             )?,
             (Value::Char(a), Value::Char(b)) => a.join_impl(b, ctx)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => a.convert().join_impl(b, ctx)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => a.join_impl(b.convert(), ctx)?.into(),
             (a, b) => a.coerce_to_functions(
                 b,
@@ -202,6 +205,7 @@ impl Value {
     fn append_impl<C: FillContext>(&mut self, other: Self, ctx: &C) -> Result<(), C::Error> {
         match (&mut *self, other) {
             (Value::Num(a), Value::Num(b)) => a.append(b, ctx)?,
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Byte(b)) => {
                 *self = op2_bytes_retry_fill::<_, C>(
                     a.clone(),
@@ -217,11 +221,13 @@ impl Value {
                 )?;
             }
             (Value::Char(a), Value::Char(b)) => a.append(b, ctx)?,
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => {
                 let mut a = a.convert_ref();
                 a.append(b, ctx)?;
                 *self = a.into();
             }
+            #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => a.append(b.convert(), ctx)?,
             (a, b) => {
                 *self = a.clone().coerce_to_functions(
@@ -393,6 +399,7 @@ impl Value {
     fn couple_impl_impl<C: FillContext>(&mut self, other: Self, ctx: &C) -> Result<(), C::Error> {
         match (&mut *self, other) {
             (Value::Num(a), Value::Num(b)) => a.couple_impl(b, ctx)?,
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Byte(b)) => {
                 *self = op2_bytes_retry_fill::<_, C>(
                     a.clone(),
@@ -409,7 +416,9 @@ impl Value {
             }
             (Value::Char(a), Value::Char(b)) => a.couple_impl(b, ctx)?,
             (Value::Box(a), Value::Box(b)) => a.couple_impl(b, ctx)?,
+            #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => a.couple_impl(b.convert(), ctx)?,
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => {
                 let mut a = a.convert_ref();
                 a.couple_impl(b, ctx)?;
@@ -433,6 +442,7 @@ impl Value {
     pub fn uncouple(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
         match self {
             Value::Num(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
+            #[cfg(feature = "bytes")]
             Value::Byte(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
             Value::Char(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
             Value::Box(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
@@ -587,6 +597,7 @@ impl Value {
         if let Ok(n) = shape.as_nat(env, "") {
             match self {
                 Value::Num(a) => a.reshape_scalar(n),
+                #[cfg(feature = "bytes")]
                 Value::Byte(a) => a.reshape_scalar(n),
                 Value::Char(a) => a.reshape_scalar(n),
                 Value::Box(a) => a.reshape_scalar(n),
@@ -599,6 +610,7 @@ impl Value {
             )?;
             match self {
                 Value::Num(a) => a.reshape(&target_shape, env),
+                #[cfg(feature = "bytes")]
                 Value::Byte(a) => a.reshape(&target_shape, env),
                 Value::Char(a) => a.reshape(&target_shape, env),
                 Value::Box(a) => a.reshape(&target_shape, env),
@@ -737,6 +749,7 @@ impl Value {
         Ok(if self.rank() == 0 {
             match kept {
                 Value::Num(a) => a.scalar_keep(counts[0]).into(),
+                #[cfg(feature = "bytes")]
                 Value::Byte(a) => a.scalar_keep(counts[0]).into(),
                 Value::Char(a) => a.scalar_keep(counts[0]).into(),
                 Value::Box(a) => a.scalar_keep(counts[0]).into(),
@@ -744,6 +757,7 @@ impl Value {
         } else {
             match kept {
                 Value::Num(a) => a.list_keep(&counts, env)?.into(),
+                #[cfg(feature = "bytes")]
                 Value::Byte(a) => a.list_keep(&counts, env)?.into(),
                 Value::Char(a) => a.list_keep(&counts, env)?.into(),
                 Value::Box(a) => a.list_keep(&counts, env)?.into(),
@@ -761,10 +775,13 @@ impl Value {
         }
         Ok(match (kept, into) {
             (Value::Num(a), Value::Num(b)) => a.unkeep(&counts, b, env)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Byte(b)) => a.unkeep(&counts, b, env)?.into(),
             (Value::Char(a), Value::Char(b)) => a.unkeep(&counts, b, env)?.into(),
             (Value::Box(a), Value::Box(b)) => a.unkeep(&counts, b, env)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => a.unkeep(&counts, b.convert(), env)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => a.convert().unkeep(&counts, b, env)?.into(),
             (a, b) => a.coerce_to_functions(
                 b,
@@ -958,6 +975,7 @@ impl Value {
                 }
                 (&arr.shape, index_data)
             }
+            #[cfg(feature = "bytes")]
             Value::Byte(arr) => {
                 let mut index_data = Vec::with_capacity(arr.element_count());
                 for &n in &arr.data {
@@ -978,6 +996,7 @@ impl Value {
         let (index_shape, index_data) = self.as_shaped_indices(env)?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.pick(index_shape, &index_data, env)?),
+            #[cfg(feature = "bytes")]
             Value::Byte(a) => op_bytes_retry_fill(
                 a,
                 |a| Ok(a.pick(index_shape, &index_data, env)?.into()),
@@ -1008,12 +1027,15 @@ impl Value {
         }
         Ok(match (self, into) {
             (Value::Num(a), Value::Num(b)) => a.unpick(index_shape, &index_data, b, env)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Byte(b)) => a.unpick(index_shape, &index_data, b, env)?.into(),
             (Value::Char(a), Value::Char(b)) => a.unpick(index_shape, &index_data, b, env)?.into(),
             (Value::Box(a), Value::Box(b)) => a.unpick(index_shape, &index_data, b, env)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => {
                 a.unpick(index_shape, &index_data, b.convert(), env)?.into()
             }
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => {
                 a.convert().unpick(index_shape, &index_data, b, env)?.into()
             }
@@ -1175,6 +1197,7 @@ impl Value {
         let index = self.as_ints(env, "Index must be a list of integers")?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.take(&index, env)?),
+            #[cfg(feature = "bytes")]
             Value::Byte(a) => op_bytes_retry_fill(
                 a,
                 |a| Ok(a.take(&index, env)?.into()),
@@ -1192,6 +1215,7 @@ impl Value {
         let index = self.as_ints(env, "Index must be a list of integers")?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.drop(&index, env)?),
+            #[cfg(feature = "bytes")]
             Value::Byte(a) => Value::Byte(a.drop(&index, env)?),
             Value::Char(a) => Value::Char(a.drop(&index, env)?),
             Value::Box(a) => Value::Box(a.drop(&index, env)?),
@@ -1201,10 +1225,13 @@ impl Value {
         let index = index.as_ints(env, "Index must be a list of integers")?;
         Ok(match (self, into) {
             (Value::Num(a), Value::Num(b)) => Value::Num(a.untake(&index, b, env)?),
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Byte(b)) => Value::Byte(a.untake(&index, b, env)?),
             (Value::Char(a), Value::Char(b)) => Value::Char(a.untake(&index, b, env)?),
             (Value::Box(a), Value::Box(b)) => Value::Box(a.untake(&index, b, env)?),
+            #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => Value::Num(a.untake(&index, b.convert(), env)?),
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => Value::Num(a.convert().untake(&index, b, env)?),
             (a, b) => {
                 return Err(env.error(format!(
@@ -1219,10 +1246,13 @@ impl Value {
         let index = index.as_ints(env, "Index must be a list of integers")?;
         Ok(match (self, into) {
             (Value::Num(a), Value::Num(b)) => Value::Num(a.undrop(&index, b, env)?),
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Byte(b)) => Value::Byte(a.undrop(&index, b, env)?),
             (Value::Char(a), Value::Char(b)) => Value::Char(a.undrop(&index, b, env)?),
             (Value::Box(a), Value::Box(b)) => Value::Box(a.undrop(&index, b, env)?),
+            #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => Value::Num(a.undrop(&index, b.convert(), env)?),
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => Value::Num(a.convert().undrop(&index, b, env)?),
             (a, b) => {
                 return Err(env.error(format!(
@@ -1521,6 +1551,7 @@ impl Value {
         let by = self.as_ints(env, "Rotation amount must be a list of integers")?;
         match &mut rotated {
             Value::Num(a) => a.rotate(&by, env)?,
+            #[cfg(feature = "bytes")]
             Value::Byte(a) => a.rotate(&by, env)?,
             Value::Char(a) => a.rotate(&by, env)?,
             Value::Box(a) => a.rotate(&by, env)?,
@@ -1575,6 +1606,7 @@ impl Value {
         let (indices_shape, indices_data) = self.as_shaped_indices(env)?;
         Ok(match from {
             Value::Num(a) => a.select_impl(indices_shape, &indices_data, env)?.into(),
+            #[cfg(feature = "bytes")]
             Value::Byte(a) => op_bytes_ref_retry_fill(
                 a,
                 |a| Ok(a.select_impl(indices_shape, &indices_data, env)?.into()),
@@ -1593,12 +1625,15 @@ impl Value {
         }
         Ok(match (self, into) {
             (Value::Num(a), Value::Num(b)) => a.unselect_impl(ind_shape, &ind, b, env)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Byte(b)) => a.unselect_impl(ind_shape, &ind, b, env)?.into(),
             (Value::Char(a), Value::Char(b)) => a.unselect_impl(ind_shape, &ind, b, env)?.into(),
             (Value::Box(a), Value::Box(b)) => a.unselect_impl(ind_shape, &ind, b, env)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => {
                 a.unselect_impl(ind_shape, &ind, b.convert(), env)?.into()
             }
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => {
                 a.convert().unselect_impl(ind_shape, &ind, b, env)?.into()
             }
@@ -1757,6 +1792,7 @@ impl Value {
         let size_spec = self.as_nats(env, "Window size must be a list of natural numbers")?;
         Ok(match from {
             Value::Num(a) => a.windows(&size_spec, env)?.into(),
+            #[cfg(feature = "bytes")]
             Value::Byte(a) => a.windows(&size_spec, env)?.into(),
             Value::Char(a) => a.windows(&size_spec, env)?.into(),
             Value::Box(a) => a.windows(&size_spec, env)?.into(),
@@ -1844,10 +1880,13 @@ impl Value {
     pub fn find(&self, searched: &Self, env: &Uiua) -> UiuaResult<Self> {
         Ok(match (self, searched) {
             (Value::Num(a), Value::Num(b)) => a.find(b, env)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Byte(b)) => a.find(b, env)?.into(),
             (Value::Char(a), Value::Char(b)) => a.find(b, env)?.into(),
             (Value::Box(a), Value::Box(b)) => a.find(b, env)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => a.find(&b.clone().convert(), env)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => a.clone().convert().find(b, env)?.into(),
             (a, b) => {
                 return Err(env.error(format!(
@@ -1953,10 +1992,13 @@ impl Value {
     pub fn member(&self, of: &Self, env: &Uiua) -> UiuaResult<Self> {
         Ok(match (self, of) {
             (Value::Num(a), Value::Num(b)) => a.member(b, env)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Byte(b)) => a.member(b, env)?.into(),
             (Value::Char(a), Value::Char(b)) => a.member(b, env)?.into(),
             (Value::Box(a), Value::Box(b)) => a.member(b, env)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => a.member(&b.convert_ref(), env)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => a.convert_ref().member(b, env)?.into(),
             (a, b) => {
                 return Err(env.error(format!(
@@ -2020,10 +2062,13 @@ impl Value {
     pub fn index_of(&self, searched_in: &Value, env: &Uiua) -> UiuaResult<Value> {
         Ok(match (self, searched_in) {
             (Value::Num(a), Value::Num(b)) => a.index_of(b, env)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Byte(b)) => a.index_of(b, env)?.into(),
             (Value::Char(a), Value::Char(b)) => a.index_of(b, env)?.into(),
             (Value::Box(a), Value::Box(b)) => a.index_of(b, env)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => a.index_of(&b.clone().convert(), env)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => a.clone().convert().index_of(b, env)?.into(),
             (a, b) => {
                 return Err(env.error(format!(

@@ -380,6 +380,7 @@ impl Value {
     /// Encode the `bits` of the value
     pub fn bits(&self, env: &Uiua) -> UiuaResult<Array<u8>> {
         match self {
+            #[cfg(feature = "bytes")]
             Value::Byte(n) => n.convert_ref().bits(env),
             Value::Num(n) => n.bits(env),
             _ => Err(env.error("Argument to bits must be an array of natural numbers")),
@@ -388,6 +389,7 @@ impl Value {
     /// Decode the `bits` of the value
     pub fn inverse_bits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         match self {
+            #[cfg(feature = "bytes")]
             Value::Byte(n) => n.inverse_bits(env),
             Value::Num(n) => n.convert_ref_with(|n| n as u8).inverse_bits(env),
             _ => Err(env.error("Argument to inverse_bits must be an array of naturals")),
@@ -522,6 +524,7 @@ impl Value {
                         .map(Array::scalar)
                         .ok_or_else(|| env.error("Cannot take first of an empty array"))
                 }
+                #[cfg(feature = "bytes")]
                 Value::Byte(bytes) => {
                     for (i, n) in bytes.data.iter().enumerate() {
                         if *n != 0 {
@@ -558,6 +561,7 @@ impl Value {
                         .map(Array::scalar)
                         .ok_or_else(|| env.error("Cannot take first of an empty array"))
                 }
+                #[cfg(feature = "bytes")]
                 Value::Byte(bytes) => {
                     for (i, n) in bytes.data.iter().enumerate() {
                         if *n != 0 {
@@ -674,6 +678,7 @@ impl Value {
     pub fn ocean(mut self, val: f64, env: &Uiua) -> UiuaResult<Self> {
         match &mut self {
             Value::Num(n) => n.ocean(val),
+            #[cfg(feature = "bytes")]
             Value::Byte(b) => {
                 if val.fract() == 0.0 && (0.0..=255.0).contains(&val) {
                     b.ocean(val as u8);

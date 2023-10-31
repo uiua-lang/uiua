@@ -6,10 +6,12 @@ use std::{
     hash::{Hash, Hasher},
 };
 
+#[cfg(feature = "bytes")]
+use crate::UiuaResult;
 use crate::{
     array::{Array, ArrayValue, Shape},
     value::Value,
-    Uiua, UiuaError, UiuaResult,
+    Uiua, UiuaError,
 };
 
 mod dyadic;
@@ -98,18 +100,25 @@ where
 {
     match (a, b) {
         (Value::Num(a), Value::Num(b)) => fill_array_shapes(a, b, ctx),
+        #[cfg(feature = "bytes")]
         (Value::Num(a), Value::Byte(b)) => fill_array_shapes(a, b, ctx),
         (Value::Num(a), Value::Char(b)) => fill_array_shapes(a, b, ctx),
         (Value::Num(a), Value::Box(b)) => fill_array_shapes(a, b, ctx),
+        #[cfg(feature = "bytes")]
         (Value::Byte(a), Value::Num(b)) => fill_array_shapes(a, b, ctx),
+        #[cfg(feature = "bytes")]
         (Value::Byte(a), Value::Byte(b)) => fill_array_shapes(a, b, ctx),
+        #[cfg(feature = "bytes")]
         (Value::Byte(a), Value::Char(b)) => fill_array_shapes(a, b, ctx),
+        #[cfg(feature = "bytes")]
         (Value::Byte(a), Value::Box(b)) => fill_array_shapes(a, b, ctx),
         (Value::Char(a), Value::Num(b)) => fill_array_shapes(a, b, ctx),
+        #[cfg(feature = "bytes")]
         (Value::Char(a), Value::Byte(b)) => fill_array_shapes(a, b, ctx),
         (Value::Char(a), Value::Char(b)) => fill_array_shapes(a, b, ctx),
         (Value::Char(a), Value::Box(b)) => fill_array_shapes(a, b, ctx),
         (Value::Box(a), Value::Num(b)) => fill_array_shapes(a, b, ctx),
+        #[cfg(feature = "bytes")]
         (Value::Box(a), Value::Byte(b)) => fill_array_shapes(a, b, ctx),
         (Value::Box(a), Value::Char(b)) => fill_array_shapes(a, b, ctx),
         (Value::Box(a), Value::Box(b)) => fill_array_shapes(a, b, ctx),
@@ -190,6 +199,7 @@ where
 
 /// If a function fails on a byte array because no fill byte is defined,
 /// convert the byte array to a number array and try again.
+#[cfg(feature = "bytes")]
 fn op_bytes_retry_fill<T>(
     bytes: Array<u8>,
     on_bytes: impl FnOnce(Array<u8>) -> UiuaResult<T>,
@@ -209,6 +219,7 @@ fn op_bytes_retry_fill<T>(
 
 /// If a function fails on a byte array because no fill byte is defined,
 /// convert the byte array to a number array and try again.
+#[cfg(feature = "bytes")]
 fn op_bytes_ref_retry_fill<T>(
     bytes: &Array<u8>,
     on_bytes: impl FnOnce(&Array<u8>) -> UiuaResult<T>,
@@ -228,6 +239,7 @@ fn op_bytes_ref_retry_fill<T>(
 
 /// If a function fails on 2 byte arrays because no fill byte is defined,
 /// convert the byte arrays to number arrays and try again.
+#[cfg(feature = "bytes")]
 fn op2_bytes_retry_fill<T, C: FillContext>(
     a: Array<u8>,
     b: Array<u8>,

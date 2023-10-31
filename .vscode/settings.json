@@ -3,9 +3,11 @@
         "RUSTFLAGS": "--cfg=web_sys_unstable_apis"
     },
     "rust-analyzer.cargo.features": [
-        "audio"
+        "audio",
+        "bytes"
     ],
     "rust-analyzer.check.features": [
-        "audio"
+        "audio",
+        "bytes"
     ]
 }

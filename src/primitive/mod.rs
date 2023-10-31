@@ -575,7 +575,9 @@ impl Primitive {
             Primitive::Type => {
                 let val = env.pop(1)?;
                 env.push(match val {
-                    Value::Num(_) | Value::Byte(_) => 0,
+                    Value::Num(_) => 0,
+                    #[cfg(feature = "bytes")]
+                    Value::Byte(_) => 0,
                     Value::Char(_) => 1,
                     Value::Box(_) => 2,
                 });

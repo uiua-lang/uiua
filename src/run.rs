@@ -1009,6 +1009,7 @@ code:
                     set = true;
                 }
             }
+            #[cfg(feature = "bytes")]
             Value::Byte(b) => {
                 if let Some(&b) = b.as_scalar() {
                     self.scope.fills.nums.push(b as f64);
@@ -1036,7 +1037,11 @@ code:
         }
         let res = in_ctx(self);
         match fill {
-            Value::Num(_) | Value::Byte(_) => {
+            Value::Num(_) => {
+                self.scope.fills.nums.pop();
+            }
+            #[cfg(feature = "bytes")]
+            Value::Byte(_) => {
                 self.scope.fills.nums.pop();
             }
             Value::Char(_) => {

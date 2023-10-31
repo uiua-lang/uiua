@@ -14,7 +14,7 @@ You can run code with [`Uiua::load_str`] or [`Uiua::load_file`].
 use uiua::*;
 
 let mut uiua = Uiua::with_native_sys();
-uiua.load_str("+ 1 2").unwrap();
+uiua.load_str("&p + 1 2").unwrap();
 ```
 You can push values onto the stack with [`Uiua::push`]. When you're done, you can get the results with [`Uiua::pop`], [`Uiua::take_stack`], or one of numerous pop+conversion convenience functions.
 ```rust
@@ -52,6 +52,13 @@ let input = "resh3_4rang12";
 let config = FormatConfig::default().with_trailing_newline(false);
 let formatted = format_str(input, &config).unwrap().output;
 assert_eq!(formatted, "↯3_4⇡12");
+```
+
+# Features
+
+The `uiua` crate has the following feature flags:
+- `bytes`: Enables a byte array type. This type is semantically equivalent to a numeric array, but takes up less space. It is returned by certain file and network functions, as well as some comparison functions.
+- `audio`: Enables audio features in the [`NativeSys`] backend.
 */
 
 #![allow(clippy::single_match, clippy::needless_range_loop)]

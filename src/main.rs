@@ -187,8 +187,10 @@ fn run() -> UiuaResult {
                 audio_options,
                 args,
             } => {
-                let config =
-                    FormatConfig::from_source(formatter_options.format_config_source, None)?;
+                let config = FormatConfig {
+                    trailing_newline: false,
+                    ..FormatConfig::from_source(formatter_options.format_config_source, None)?
+                };
 
                 #[cfg(feature = "audio")]
                 setup_audio(audio_options);

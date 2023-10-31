@@ -451,6 +451,28 @@ impl Uiua {
                 }
                 self.push_instr(Instr::BeginArray);
                 let inner = self.compile_words(items, true)?;
+                let mut instrs = inner.iter();
+                while let Some(instr) = instrs.next() {
+                    match instr {
+                        Instr::Push(_) => {}
+                        Instr::Prim(p, _)
+                            if p.args() == Some(0)
+                                && p.outputs() == Some(1)
+                                && p.modifier_args().is_none() => {}
+                        Instr::BeginArray => {
+                            while (instrs.next())
+                                .is_some_and(|instr| !matches!(instr, Instr::EndArray { .. }))
+                            {
+                            }
+                        }
+                        _ => {
+                            return Err(word
+                                .span
+                                .sp("Strand cannot contain functions".into())
+                                .into())
+                        }
+                    }
+                }
                 let span = self.add_span(word.span.clone());
                 let instrs = self.new_functions.last_mut().unwrap();
                 if call && inner.iter().all(|instr| matches!(instr, Instr::Push(_))) {

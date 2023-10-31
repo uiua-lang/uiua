@@ -449,9 +449,9 @@ code:
             // if !self.function_stack.is_empty() {
             //     println!("{} function(s)", self.function_stack.len());
             // }
-            // if !self.under_stack.is_empty() {
+            // if !self.temp_stacks[TempStack::Under as usize].is_empty() {
             //     print!("under: ");
-            //     for val in &self.under_stack {
+            //     for val in &self.temp_stacks[TempStack::Under as usize] {
             //         print!("{:?} ", val);
             //     }
             //     println!();

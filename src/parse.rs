@@ -720,22 +720,22 @@ impl Parser {
                 }))
             }
             let end = self.expect_close(CloseParen);
-            let (signature, lines, first_span) = first;
+            let (first_sig, first_lines, first_span) = first;
             let outer_span = start.clone().merge(end);
             if branches.is_empty() {
                 let id = FunctionId::Anonymous(outer_span.clone());
                 outer_span.sp(Word::Func(Func {
                     id,
-                    signature,
-                    lines,
+                    signature: first_sig,
+                    lines: first_lines,
                 }))
             } else {
-                let span = first_span.unwrap_or(start);
-                let id = FunctionId::Anonymous(span.clone());
-                let first = span.sp(Func {
-                    id,
-                    signature,
-                    lines,
+                let first_span = first_span.unwrap_or(start);
+                let first_id = FunctionId::Anonymous(first_span.clone());
+                let first = first_span.sp(Func {
+                    id: first_id,
+                    signature: first_sig,
+                    lines: first_lines,
                 });
                 branches.insert(0, first);
                 outer_span.sp(Word::Switch(Switch { branches }))
@@ -832,6 +832,13 @@ pub(crate) fn count_placeholders(words: &[Sp<Word>]) -> usize {
                 }
             }
             Word::Modified(m) => count += count_placeholders(&m.operands),
+            Word::Switch(sw) => {
+                for branch in &sw.branches {
+                    for line in &branch.value.lines {
+                        count += count_placeholders(line);
+                    }
+                }
+            }
             _ => {}
         }
     }

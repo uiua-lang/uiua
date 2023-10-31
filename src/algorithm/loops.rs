@@ -139,7 +139,7 @@ pub fn fixed(env: &mut Uiua) -> UiuaResult {
                 args.push(env.pop("fixed's function result")?);
             }
             let new_identity = hash(&excess);
-            if new_identity == identity {
+            if new_identity != identity {
                 break;
             }
             identity = new_identity;

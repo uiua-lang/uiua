@@ -65,6 +65,17 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
             }
             _ => generic_table(f, Value::Byte(xs), Value::Byte(ys), env)?,
         },
+        (Some((Primitive::Join | Primitive::Couple, flipped)), Value::Box(xs), ys) => {
+            env.push(fast_table_join_or_couple(xs, ys.coerce_to_boxes(), flipped))
+        }
+        (Some((Primitive::Join | Primitive::Couple, flipped)), xs, Value::Box(ys)) => {
+            env.push(fast_table_join_or_couple(xs.coerce_to_boxes(), ys, flipped))
+        }
+        (
+            Some((Primitive::Join | Primitive::Couple, flipped)),
+            Value::Char(xs),
+            Value::Char(ys),
+        ) => env.push(fast_table_join_or_couple(xs, ys, flipped)),
         (_, xs, ys) => generic_table(f, xs, ys, env)?,
     }
     Ok(())

@@ -17,6 +17,7 @@ use instant::Instant;
 use notify::{EventKind, RecursiveMode, Watcher};
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
+use rustyline::{error::ReadlineError, DefaultEditor};
 use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
     spans, PrimClass, RunMode, SpanKind, Uiua, UiuaError, UiuaResult,
@@ -628,17 +629,24 @@ fn format_multi_files(config: &FormatConfig, stdout: bool) -> Result<(), UiuaErr
 }
 
 fn repl(mut rt: Uiua, config: FormatConfig) {
-    let repl = |rt: &mut Uiua| -> Result<(), UiuaError> {
-        print!("{} ", "»".bright_white().bold());
-        _ = io::stdout().flush();
+    let prompt = format!("{} ", "»".bright_white().bold());
+    let line_reader = &mut DefaultEditor::new().expect("Failed to read from Stdin");
 
-        let mut code = String::new();
-        io::stdin()
-            .read_line(&mut code)
-            .expect("Failed to read from Stdin"); // TODO: this could be handled differently
+    let mut repl = |rt: &mut Uiua| -> Result<(), UiuaError> {
+        let mut code = match line_reader.readline(&prompt) {
+            Ok(code) => code,
+            Err(ReadlineError::Eof) => return Ok(()),
+            Err(ReadlineError::Interrupted) => std::process::exit(1),
+            Err(_) => panic!("Failed to read from Stdin"),
+        };
+        if code.is_empty() {
+            return Ok(());
+        }
 
         let formatted = format_str(&code, &config)?.output;
         code = formatted;
+        let _ = line_reader.add_history_entry(&code[0..&code.len() - 1]);
+
         print!("↪ ");
         for span in spans(&code) {
             let (r, g, b) = match span.value {

@@ -330,7 +330,7 @@ impl Value {
                     );
                 }
                 let num = nums.data[0];
-                if num.fract().abs() > f64::EPSILON {
+                if num.fract() != 0.0 {
                     return Err(env.error(format!("{requirement}, but it has a fractional part")));
                 }
                 num != 0.0
@@ -366,7 +366,7 @@ impl Value {
                 if num < 0.0 {
                     return Err(env.error(format!("{requirement}, but it is negative")));
                 }
-                if num.fract().abs() > f64::EPSILON {
+                if num.fract() != 0.0 {
                     return Err(env.error(format!("{requirement}, but it has a fractional part")));
                 }
                 num as usize
@@ -399,7 +399,7 @@ impl Value {
                     );
                 }
                 let num = nums.data[0];
-                if num.fract().abs() > f64::EPSILON {
+                if num.fract() != 0.0 {
                     return Err(env.error(format!("{requirement}, but it has a fractional part")));
                 }
                 num as isize

@@ -181,6 +181,8 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
     match (f.as_flipped_primitive(), xs) {
         (Some((prim, flipped)), Value::Num(nums)) => {
             let arr = match prim {
+                Primitive::Eq => fast_scan(nums, |a, b| is_eq::num_num(a, b) as f64),
+                Primitive::Ne => fast_scan(nums, |a, b| is_ne::num_num(a, b) as f64),
                 Primitive::Add => fast_scan(nums, add::num_num),
                 Primitive::Sub if flipped => fast_scan(nums, flip(sub::num_num)),
                 Primitive::Sub => fast_scan(nums, sub::num_num),
@@ -201,6 +203,8 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
         #[cfg(feature = "bytes")]
         (Some((prim, flipped)), Value::Byte(bytes)) => {
             match prim {
+                Primitive::Eq => env.push(fast_scan(bytes, is_eq::generic)),
+                Primitive::Ne => env.push(fast_scan(bytes, is_ne::generic)),
                 Primitive::Add => env.push(fast_scan::<f64>(bytes.convert(), add::num_num)),
                 Primitive::Sub if flipped => {
                     env.push(fast_scan::<f64>(bytes.convert(), flip(sub::num_num)))

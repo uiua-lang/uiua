@@ -274,13 +274,14 @@ pub fn Optimizations() -> impl IntoView {
             <tr>
                 <th/>
                 <th><PrimCodes prims=[Add, Sub, Mul, Div, Mod, Atan, Min, Max]/></th>
-                <th><PrimCodes prims=[Eq, Ne, Lt, Le, Gt, Ge]/></th>
+                <th><PrimCodes prims=[Eq, Ne]/></th>
+                <th><PrimCodes prims=[Lt, Le, Gt, Ge]/></th>
                 <th><Prim prim=Join glyph_only=true/></th>
                 <th><Prim prim=Couple glyph_only=true/></th>
             </tr>
-            <tr><th><Prim prim=Table/></th> <td>"✔"</td> <td>"✔"</td> <td>"✔"</td> <td>"✔"</td></tr>
-            <tr><th><Prim prim=Reduce/></th> <td>"✔"</td> <td></td> <td>"✔"</td> <td></td></tr>
-            <tr><th><Prim prim=Scan/></th> <td>"✔"</td> <td></td> <td></td> <td></td></tr>
+            <tr><th><Prim prim=Table/></th> <td>"✔"</td> <td>"✔"</td> <td>"✔"</td> <td>"✔"</td> <td>"✔"</td></tr>
+            <tr><th><Prim prim=Reduce/></th> <td>"✔"</td> <td></td>  <td></td> <td>"✔"</td> <td></td></tr>
+            <tr><th><Prim prim=Scan/></th> <td>"✔"</td>  <td>"✔"</td> <td></td> <td></td> <td></td></tr>
         </table>
 
         <h2>"Complexity"</h2>

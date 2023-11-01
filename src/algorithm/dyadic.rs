@@ -1790,6 +1790,9 @@ impl Value {
     /// Use this array to `windows` another
     pub fn windows(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
         let size_spec = self.as_nats(env, "Window size must be a list of natural numbers")?;
+        if size_spec.iter().any(|&s| s == 0) {
+            return Err(env.error("Window size cannot be zero"));
+        }
         Ok(match from {
             Value::Num(a) => a.windows(&size_spec, env)?.into(),
             #[cfg(feature = "bytes")]

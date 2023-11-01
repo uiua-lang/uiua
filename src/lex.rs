@@ -378,6 +378,7 @@ pub enum AsciiToken {
     GreaterEqual,
     Backtick,
     TripleMinus,
+    Quote,
 }
 
 impl fmt::Display for AsciiToken {
@@ -401,6 +402,7 @@ impl fmt::Display for AsciiToken {
             AsciiToken::GreaterEqual => write!(f, ">="),
             AsciiToken::Backtick => write!(f, "`"),
             AsciiToken::TripleMinus => write!(f, "---"),
+            AsciiToken::Quote => write!(f, "'"),
         }
     }
 }
@@ -514,6 +516,7 @@ impl<'a> Lexer<'a> {
                 "↲" => self.end(Primitive::Wait, start),
                 "⍚" => self.end(Primitive::Level, start),
                 "≅" => self.end(Primitive::Match, start),
+                "'" => self.end(Quote, start),
 
                 "(" => self.end(OpenParen, start),
                 ")" => self.end(CloseParen, start),

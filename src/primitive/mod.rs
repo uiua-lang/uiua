@@ -237,8 +237,14 @@ impl Primitive {
         }
     }
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
-        // Nothing deprecated at the moment
-        None
+        match self {
+            Primitive::Break => Some(format!(
+                "try using {}{} instead",
+                Primitive::Do,
+                Primitive::Do.name()
+            )),
+            _ => None,
+        }
     }
     /// Check if this primitive is deprecated
     pub fn is_deprecated(&self) -> bool {
@@ -437,6 +443,7 @@ impl Primitive {
             Primitive::Cross => table::cross(env)?,
             Primitive::Combinate => table::combinate(env)?,
             Primitive::Repeat => loops::repeat(env)?,
+            Primitive::Do => loops::do_(env)?,
             Primitive::Group => loops::group(env)?,
             Primitive::Partition => loops::partition(env)?,
             Primitive::Reshape => {
@@ -536,12 +543,6 @@ impl Primitive {
                 env.call(fill)?;
                 let fill_value = env.pop("fill value")?;
                 env.with_fill(fill_value, |env| env.call(f))?;
-            }
-            Primitive::Bind => {
-                return Err(env.error(
-                    "Bind should have been inlined. \
-                    This is an interpreter bug.",
-                ))
             }
             Primitive::Both => fork::both(env)?,
             Primitive::Fork => fork::fork(env)?,

@@ -736,29 +736,6 @@ impl Uiua {
 
             // Inlining
             match prim {
-                Primitive::Bind => {
-                    let instrs = self.compile_words(modified.operands, true)?;
-                    return if call {
-                        self.extend_instrs(instrs);
-                        Ok(())
-                    } else {
-                        match instrs_signature(&instrs) {
-                            Ok(sig) => {
-                                let func = Function::new(
-                                    FunctionId::Anonymous(modified.modifier.span),
-                                    instrs,
-                                    sig,
-                                );
-                                self.push_instr(Instr::push_func(func));
-                                Ok(())
-                            }
-                            Err(e) => Err(UiuaError::Run(
-                                Span::Code(modified.modifier.span.clone())
-                                    .sp(format!("Cannot infer function signature in bind: {e}")),
-                            )),
-                        }
-                    };
-                }
                 Primitive::Dip | Primitive::Gap | Primitive::Reach => {
                     let (mut instrs, sig) = self.compile_operand_words(modified.operands)?;
                     // Dip () . diagnostic
@@ -1051,9 +1028,6 @@ fn words_look_pervasive(words: &[Sp<Word>]) -> bool {
         ) => true,
         Word::Func(func) if func.lines.iter().all(|line| words_look_pervasive(line)) => true,
         Word::Number(..) | Word::Char(..) => true,
-        Word::Modified(m) if m.modifier.value == Modifier::Primitive(Primitive::Bind) => {
-            words_look_pervasive(&m.operands)
-        }
         Word::Modified(m) if m.modifier.value == Modifier::Primitive(Primitive::Each) => true,
         _ => false,
     })

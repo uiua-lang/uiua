@@ -873,9 +873,6 @@ primitive!(
     /// You can can reduce with arbitrary functions.
     /// ex: /(×+1) 1_2_3_4_5
     ///
-    /// [break]ing out of [reduce] discards the unreduced values.
-    /// ex: /(⎋≥10.+) [3 4 8 9]
-    ///
     /// Some functions have default values if the array is empty.
     /// Functions without default values will throw an error if the array is empty.
     /// ex: /+ []
@@ -889,10 +886,6 @@ primitive!(
     /// ex: \+   1_2_3_4
     /// ex: \-   1_2_3_4
     /// ex: \'-∶ 1_2_3_4
-    ///
-    /// [break]ing out of [scan] appends the unscanned values without applying the function to them.
-    /// This means the length of the output is always the same as that of the input.
-    /// ex: \(⎋≥10.+) [1 2 3 4 5 6 7 8]
     (1[1], Scan, AggregatingModifier, ("scan", '\\')),
     /// Apply a function to each element of an array or arrays.
     ///
@@ -978,14 +971,13 @@ primitive!(
     /// ex: ⍥(⊂2)5 []
     /// One interesting use of `repeat` is to collect some number of stack values into an array.
     /// ex: ⍥⊂3 [] 1 2 3
-    /// Repeating [infinity] times will create an infinite loop.
-    /// You can use [break] to break out of the loop.
-    /// ex: ⍥(⎋>1000. ×2)∞ 1
     /// [repeat]ing a negative number of times will repeat the [invert]ed function.
     /// ex: ⍥√¯3 2
+    /// Repeating [infinity] times will create an infinite loop that can only be terminated by ending the program.
+    /// If you want an infinite loop that ends when some condition is met, use [do].
     ///
     /// [repeat]'s glyph is a combination of a circle, representing a loop, and the 𝄇 symbol from musical notation.
-    (1[1], Repeat, IteratingModifier, ("repeat", '⍥')),
+    ([1], Repeat, IteratingModifier, ("repeat", '⍥')),
     /// Group elements of an array into buckets by index
     ///
     /// Takes a function and two arrays.
@@ -1224,6 +1216,26 @@ primitive!(
     ///
     /// [under] works with [&fo], [&fc], [&tcpa], and [&tcpc]. It calls [&cl] when `g` is done.
     ([2], Under, OtherModifier, ("under", '⍜')),
+    /// Repeat a function while a condition holds
+    ///
+    /// The first function is the loop function, and it is run as long as the condition is true.
+    /// The second function is the condition. It's top return value must be a boolean.
+    /// ex: ⍢(×2)(<1000) 1
+    /// Return values from the condition function that are under the condition itself will be passed to the loop function.
+    /// Here is an example that evaluates a [Collatz sequence](https://en.wikipedia.org/wiki/Collatz_conjecture).
+    /// The next number in the sequence is calculated in the condition function but [join]ed to the sequence in the loop function.
+    /// ex: C ← (+1×3|÷2)=0◿2.
+    ///   : ;⍢⊂(¬∊,,C⊢.) [7]
+    /// If the condition function consumes its only arguments to evaluate the condition, then those arguments will be implicitely copied.
+    /// Consider this equivalence:
+    /// ex: ⍢(×3)(<100)  1
+    ///   : ⍢(×3)(<100.) 1
+    /// The net stack change of the two functions, minus the condition, must be 0.
+    /// ex! ⍢(×2.)(<1000) 1
+    /// This means that unlike [repeat], [do] cannot be wrapped in `[]`s to collect items into an array.
+    /// Instead, [join] the items to an initial list.
+    /// ex: ;⍢(⊃(×2)⊂)(<100) 1 []
+    ([2], Do, IteratingModifier, ("do", '⍢')),
     /// Set the fill value for a function
     ///
     /// By default, some operations require that arrays' [shape]s are in some way compatible.
@@ -1391,18 +1403,6 @@ primitive!(
     /// ex: ≑∸≃⊂.[1_2_3 4_5_6]
     /// *At the seabed, countless small scavengers feed on the detritus of the ocean above.*
     (1, Seabed, Ocean, ("seabed", '∸')),
-    /// Syntactically bind two functions
-    ///
-    /// This modifier mostly exists for syntactic convenience.
-    /// It lets you change any function with 2 terms into a modifer call, saving a single character.
-    /// ex: ≡(⇌⊢)↯3_3⇡9
-    ///   : ≡'⇌⊢↯3_3⇡9
-    /// This especially nice when used with modifiers that take 2 functions, like [under], where you can save up to 2 characters!
-    /// ex: ⍜(↻3)(⊂π) [1 2 3 4 5]
-    ///   : ⍜'↻3'⊂π [1 2 3 4 5]
-    /// Don't chain [bind].
-    /// ex! ≡''⊂⇌. ↯2_3⇡6
-    ([2], Bind, OtherModifier, ("bind", '\'')),
     /// Call one of two functions based on a condition
     ///
     /// If the condition is `1`, then the first function is called.
@@ -1530,11 +1530,14 @@ primitive!(
     (1, TryRecv, Misc, "tryrecv"),
     /// Break out of a loop
     ///
+    /// [break] is deprectated and will be removed in a future version.
+    /// Use [do] instead.
+    ///
     /// Expects a non-negative integer. This integer is how many loops will be broken out of.
     /// Loops that can be broken out of are [reduce], [fold], [scan], [each], [rows], and [repeat].
     ///
-    /// ex: /(⎋>10.+) ⇡8  # Break when the sum exceeds 10
-    /// ex: ⍥(⎋>100.×2)∞ 1  # Break when the product exceeds 100
+    /// ex! /(⎋>10.+) ⇡8  # Break when the sum exceeds 10
+    /// ex! ⍥(⎋>100.×2)∞ 1  # Break when the product exceeds 100
     (1(0), Break, Control, ("break", '⎋')),
     /// Generate a random number in the range `[0, 1)`
     ///

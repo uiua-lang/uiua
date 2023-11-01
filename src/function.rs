@@ -280,6 +280,12 @@ impl Signature {
     pub fn max_with(self, other: Self) -> Self {
         Self::new(self.args.max(other.args), self.outputs.max(other.outputs))
     }
+    /// Compose signatures as if a function with signature `other` was called before a function with signature `self`
+    pub fn compose(self, other: Self) -> Self {
+        let args = other.args + self.args.saturating_sub(other.outputs);
+        let outputs = self.outputs + other.outputs.saturating_sub(self.args);
+        Self::new(args, outputs)
+    }
 }
 
 impl PartialEq<(usize, usize)> for Signature {

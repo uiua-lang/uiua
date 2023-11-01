@@ -3,7 +3,7 @@
 use crate::{
     array::{Array, ArrayValue},
     value::Value,
-    ExactDoubleIterator, Uiua, UiuaResult,
+    ExactDoubleIterator, Signature, Uiua, UiuaResult,
 };
 
 pub(crate) fn rank_to_depth(declared_rank: Option<isize>, array_rank: usize) -> usize {
@@ -76,6 +76,44 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
                 return Ok(());
             }
         }
+    }
+    Ok(())
+}
+
+pub fn do_(env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
+    let f = env.pop_function()?;
+    let g = env.pop_function()?;
+    let f_sig = f.signature();
+    let g_sig = g.signature();
+    if g_sig.outputs < 1 {
+        return Err(env.error(format!(
+            "Do's condition function must return at least 1 value, \
+            but its signature is {g_sig}"
+        )));
+    }
+    let copy_count = g_sig.args.saturating_sub(g_sig.outputs - 1);
+    let g_sub_sig = Signature::new(g_sig.args, g_sig.outputs + copy_count - 1);
+    let comp_sig = f_sig.compose(g_sub_sig);
+    if comp_sig.args != comp_sig.outputs {
+        return Err(env.error(format!(
+            "Do's functions must have a net stack change of 0, \
+            but the composed signature of {f_sig} and {g_sig}, \
+            minus the condition, is {comp_sig}"
+        )));
+    }
+    loop {
+        for value in env.clone_stack_top(copy_count).into_iter().rev() {
+            env.push(value);
+        }
+        env.call(g.clone())?;
+        let cond = env
+            .pop("do condition")?
+            .as_bool(env, "Do condition must be a boolean")?;
+        if !cond {
+            break;
+        }
+        env.call(f.clone())?;
     }
     Ok(())
 }

@@ -9,6 +9,8 @@ If you are reading this on the website, then these changes are live here.
 - [`join` `⊂`](https://uiua.org/docs/join) to an empty list now always works regardless of rank of the other array
 - [`each` `∵`](https://uiua.org/docs/each) and [`rows` `≡`](https://uiua.org/docs/rows) now work with [`under` `⍜`](https://uiua.org/docs/under)
 - Parsing multiple formattable functions from words is now smarter
+### Interpreter
+- Add the `uiua stand` command, which creates a standalone executable
 
 ## 0.0.25 - 2023-10-29
 ### Interpreter

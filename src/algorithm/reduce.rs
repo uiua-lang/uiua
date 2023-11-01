@@ -41,6 +41,10 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
             Primitive::Mul => fast_reduce(nums, 1.0, mul::num_num),
             Primitive::Div if flipped => fast_reduce(nums, 1.0, flip(div::num_num)),
             Primitive::Div => fast_reduce(nums, 1.0, div::num_num),
+            Primitive::Mod if flipped => fast_reduce(nums, 1.0, flip(modulus::num_num)),
+            Primitive::Mod => fast_reduce(nums, 1.0, modulus::num_num),
+            Primitive::Atan if flipped => fast_reduce(nums, 1.0, flip(atan2::num_num)),
+            Primitive::Atan => fast_reduce(nums, 1.0, atan2::num_num),
             Primitive::Max => fast_reduce(nums, f64::NEG_INFINITY, max::num_num),
             Primitive::Min => fast_reduce(nums, f64::INFINITY, min::num_num),
             _ => return generic_fold_right_1(f, Value::Num(nums), None, env),
@@ -53,6 +57,10 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
             Primitive::Mul => fast_reduce(bytes.convert(), 1.0, mul::num_num),
             Primitive::Div if flipped => fast_reduce(bytes.convert(), 1.0, flip(div::num_num)),
             Primitive::Div => fast_reduce(bytes.convert(), 1.0, div::num_num),
+            Primitive::Mod if flipped => fast_reduce(bytes.convert(), 1.0, flip(modulus::num_num)),
+            Primitive::Mod => fast_reduce(bytes.convert(), 1.0, modulus::num_num),
+            Primitive::Atan if flipped => fast_reduce(bytes.convert(), 1.0, flip(atan2::num_num)),
+            Primitive::Atan => fast_reduce(bytes.convert(), 1.0, atan2::num_num),
             Primitive::Max => fast_reduce(bytes.convert(), f64::NEG_INFINITY, max::num_num),
             Primitive::Min => fast_reduce(bytes.convert(), f64::INFINITY, min::num_num),
             _ => return generic_fold_right_1(f, Value::Byte(bytes), None, env),
@@ -179,6 +187,10 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
                 Primitive::Mul => fast_scan(nums, mul::num_num),
                 Primitive::Div if flipped => fast_scan(nums, flip(div::num_num)),
                 Primitive::Div => fast_scan(nums, div::num_num),
+                Primitive::Mod if flipped => fast_scan(nums, flip(modulus::num_num)),
+                Primitive::Mod => fast_scan(nums, modulus::num_num),
+                Primitive::Atan if flipped => fast_scan(nums, flip(atan2::num_num)),
+                Primitive::Atan => fast_scan(nums, atan2::num_num),
                 Primitive::Max => fast_scan(nums, max::num_num),
                 Primitive::Min => fast_scan(nums, min::num_num),
                 _ => return generic_scan(f, Value::Num(nums), env),
@@ -199,6 +211,14 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
                     env.push(fast_scan::<f64>(bytes.convert(), flip(div::num_num)))
                 }
                 Primitive::Div => env.push(fast_scan::<f64>(bytes.convert(), div::num_num)),
+                Primitive::Mod if flipped => {
+                    env.push(fast_scan::<f64>(bytes.convert(), flip(modulus::num_num)))
+                }
+                Primitive::Mod => env.push(fast_scan::<f64>(bytes.convert(), modulus::num_num)),
+                Primitive::Atan if flipped => {
+                    env.push(fast_scan::<f64>(bytes.convert(), flip(atan2::num_num)))
+                }
+                Primitive::Atan => env.push(fast_scan::<f64>(bytes.convert(), atan2::num_num)),
                 Primitive::Max => env.push(fast_scan(bytes, u8::max)),
                 Primitive::Min => env.push(fast_scan(bytes, u8::min)),
                 _ => return generic_scan(f, Value::Byte(bytes), env),

@@ -273,7 +273,7 @@ pub fn Optimizations() -> impl IntoView {
         <table class="bordered-table cell-centered-table">
             <tr>
                 <th/>
-                <th><PrimCodes prims=[Add, Sub, Mul, Div, Min, Max]/></th>
+                <th><PrimCodes prims=[Add, Sub, Mul, Div, Mod, Atan, Min, Max]/></th>
                 <th><PrimCodes prims=[Eq, Ne, Lt, Le, Gt, Ge]/></th>
                 <th><Prim prim=Join glyph_only=true/></th>
                 <th><Prim prim=Couple glyph_only=true/></th>

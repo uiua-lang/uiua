@@ -82,6 +82,9 @@ mod primitive;
 #[doc(hidden)]
 pub mod profile;
 mod run;
+#[cfg(feature = "stand")]
+#[doc(hidden)]
+pub mod stand;
 mod sys;
 mod sys_native;
 mod value;

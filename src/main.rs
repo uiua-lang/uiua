@@ -201,8 +201,48 @@ fn run() -> UiuaResult {
                 repl(rt, config);
             }
             App::CheckUpdate => show_update_message(),
+            #[cfg(feature = "stand")]
+            App::Stand { main, name } => {
+                let main = main.unwrap_or_else(|| "main.ua".into());
+                if !main.exists() {
+                    eprintln!("{} does not exist", main.display());
+                    exit(1);
+                }
+                match uiua::stand::build_exe(&main) {
+                    Ok(bytes) => {
+                        let name = name
+                            .or_else(|| {
+                                env::current_dir().ok().and_then(|p| {
+                                    p.file_stem().map(|p| p.to_string_lossy().into_owned())
+                                })
+                            })
+                            .unwrap_or_else(|| "program".into());
+                        let path = PathBuf::from(name).with_extension(env::consts::EXE_EXTENSION);
+                        if let Err(e) = fs::write(path, bytes) {
+                            eprintln!("Failed to write executable: {e}");
+                            exit(1);
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to build executable: {e}");
+                        exit(1);
+                    }
+                }
+            }
         },
         Err(e) if e.kind() == ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
+            #[cfg(feature = "stand")]
+            if let Some(code) = uiua::stand::STAND_FILES.main_code() {
+                let mut rt = Uiua::with_native_sys()
+                    .with_mode(RunMode::Normal)
+                    .with_args(env::args().skip(1).collect())
+                    .print_diagnostics(true);
+                rt.load_str(code)?;
+                for value in rt.take_stack() {
+                    println!("{}", value.show());
+                }
+                return Ok(());
+            }
             let res = match working_file_path() {
                 Ok(path) => watch(
                     Some(&path),
@@ -492,6 +532,14 @@ enum App {
     },
     #[clap(about = "Check for updates")]
     CheckUpdate,
+    #[cfg(feature = "stand")]
+    #[clap(about = "Create a standalone executable")]
+    Stand {
+        #[clap(help = "The main file of the program")]
+        main: Option<PathBuf>,
+        #[clap(short = 'o', long, help = "The name of the output executable")]
+        name: Option<String>,
+    },
 }
 
 #[derive(clap::Args)]

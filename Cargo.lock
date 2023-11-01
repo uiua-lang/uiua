@@ -3553,6 +3553,7 @@ dependencies = [
  "rustls",
  "rustyline",
  "serde",
+ "serde_json",
  "serde_yaml",
  "term_size",
  "tinyvec",

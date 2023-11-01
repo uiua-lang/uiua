@@ -39,6 +39,7 @@ rustls = { version = "0.21.7", optional = true, default-features = false, featur
 ] }
 serde = { version = "1", optional = true, features = ["derive"] }
 serde_yaml = { version = "0.9.27", optional = true }
+serde_json = { version = "1", optional = true }
 term_size = "1.0.0-beta1"
 tinyvec = { version = "1", features = ["alloc"] }
 tokio = { version = "1", optional = true, features = ["io-std", "rt"] }
@@ -55,7 +56,15 @@ rustyline = { version = "12.0.0", optional = true }
 
 [features]
 audio = ["hodaun", "lockfree"]
-binary = ["ctrlc", "notify", "clap", "color-backtrace", "lsp", "rustyline"]
+binary = [
+    "ctrlc",
+    "notify",
+    "clap",
+    "color-backtrace",
+    "lsp",
+    "rustyline",
+    "stand",
+]
 bytes = []
 debug = []
 raw_mode = ["crossterm"]
@@ -63,6 +72,7 @@ default = ["binary", "terminal_image", "https", "invoke", "trash", "raw_mode"]
 https = ["httparse", "rustls", "webpki-roots"]
 lsp = ["tower-lsp", "tokio"]
 profile = ["serde", "serde_yaml", "indexmap"]
+stand = ["serde", "serde_json"]
 invoke = ["open"]
 terminal_image = ["viuer"]
 

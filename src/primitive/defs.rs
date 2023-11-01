@@ -986,14 +986,6 @@ primitive!(
     ///
     /// [repeat]'s glyph is a combination of a circle, representing a loop, and the 𝄇 symbol from musical notation.
     ([1], Repeat, IteratingModifier, ("repeat", '⍥')),
-    /// Repeat a function until its output changes (or stops changing)
-    ///
-    /// If the function takes one more argument than it returns outputs then it is run repeatedly until the output is `0`.
-    /// This can be used like a `do while` loop.
-    /// ex: ⍢(<1000.×2) 1
-    /// If the function takes the same number of arguments as it returns outputs, then the loop ends when all the outputs are the same as the inputs.
-    /// ex: ⍢(⊝⊂∶◿7×2⊢⇌.) [8]
-    ([1], Fixed, IteratingModifier, ("fixed", '⍢')),
     /// Group elements of an array into buckets by index
     ///
     /// Takes a function and two arrays.
@@ -1232,6 +1224,26 @@ primitive!(
     ///
     /// [under] works with [&fo], [&fc], [&tcpa], and [&tcpc]. It calls [&cl] when `g` is done.
     ([2], Under, OtherModifier, ("under", '⍜')),
+    /// Repeat a function while a condition holds
+    ///
+    /// The first function is the loop function, and it is run as long as the condition is true.
+    /// The second function is the condition. It's top return value must be a boolean.
+    /// ex: ⍢(×2)(<1000) 1
+    /// Return values from the condition function that are under the condition itself will be passed to the loop function.
+    /// Here is an example that evaluates a [Collatz sequence](https://en.wikipedia.org/wiki/Collatz_conjecture).
+    /// The next number in the sequence is calculated in the condition function but [join]ed to the sequence in the loop function.
+    /// ex: C ← (+1×3|÷2)=0◿2.
+    ///   : ;⍢⊂(¬∊,,C⊢.) [7]
+    /// If the condition function consumes its only arguments to evaluate the condition, then those arguments will be implicitely copied.
+    /// Consider this equivalence:
+    /// ex: ⍢(×3)(<100)  1
+    ///   : ⍢(×3)(<100.) 1
+    /// The net stack change of the two functions, minus the condition, must be 0.
+    /// ex! ⍢(×2.)(<1000) 1
+    /// This means that unlike [repeat], [do] cannot be wrapped in `[]`s to collect items into an array.
+    /// Instead, [join] the items to an initial list.
+    /// ex: ;⍢(⊃(×2)⊂)(<100) 1 []
+    ([2], Do, IteratingModifier, ("do", '⍢')),
     /// Set the fill value for a function
     ///
     /// By default, some operations require that arrays' [shape]s are in some way compatible.

@@ -1,11 +1,9 @@
 //! Algorithms for looping modifiers
 
-use std::hash::{Hash, Hasher};
-
 use crate::{
     array::{Array, ArrayValue},
     value::Value,
-    ExactDoubleIterator, Uiua, UiuaResult,
+    ExactDoubleIterator, Signature, Uiua, UiuaResult,
 };
 
 pub(crate) fn rank_to_depth(declared_rank: Option<isize>, array_rank: usize) -> usize {
@@ -82,65 +80,42 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub fn fixed(env: &mut Uiua) -> UiuaResult {
+pub fn do_(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
-    let sig = f.signature();
-    if sig.args > sig.outputs {
+    let g = env.pop_function()?;
+    let f_sig = f.signature();
+    let g_sig = g.signature();
+    if g_sig.outputs < 1 {
         return Err(env.error(format!(
-            "Fixed's function must return at least as many values as it takes arguments, \
-            but its signature is {sig}"
+            "Do's condition function must return at least 1 value, \
+            but its signature is {g_sig}"
         )));
     }
-    match sig.outputs - sig.args {
-        0 => {
-            let mut args = Vec::with_capacity(sig.args);
-            for i in 0..sig.args {
-                args.push(env.pop(i + 1)?);
-            }
-            let mut identity = hash(&args);
-            loop {
-                for arg in args.drain(..).rev() {
-                    env.push(arg);
-                }
-                env.call_error_on_break(f.clone(), "break is not allowed in fixed")?;
-                for _ in 0..sig.args {
-                    args.push(env.pop("fixed's function result")?);
-                }
-                let new_identity = hash(&args);
-                if new_identity == identity {
-                    break;
-                }
-                identity = new_identity;
-            }
-            for arg in args.drain(..).rev() {
-                env.push(arg);
-            }
+    let copy_count = g_sig.args.saturating_sub(g_sig.outputs - 1);
+    let g_sub_sig = Signature::new(g_sig.args, g_sig.outputs + copy_count - 1);
+    let comp_sig = f_sig.compose(g_sub_sig);
+    if comp_sig.args != comp_sig.outputs {
+        return Err(env.error(format!(
+            "Do's functions must have a net stack change of 0, \
+            but the composed signature of {f_sig} and {g_sig}, \
+            minus the condition, is {comp_sig}"
+        )));
+    }
+    loop {
+        for value in env.clone_stack_top(copy_count).into_iter().rev() {
+            env.push(value);
         }
-        1 => loop {
-            env.call_error_on_break(f.clone(), "break is not allowed in fixed")?;
-            let should_continue = env
-                .pop("fixed's continue condition")?
-                .as_bool(env, "Fixed's continue condition must be a boolean")?;
-            if !should_continue {
-                break;
-            }
-        },
-        _ => {
-            return Err(env.error(format!(
-                "Fixed's function may return at most 1 more value than it takes arguments, \
-                but its signature is {sig}"
-            )))
+        env.call(g.clone())?;
+        let cond = env
+            .pop("do condition")?
+            .as_bool(env, "Do condition must be a boolean")?;
+        if !cond {
+            break;
         }
+        env.call(f.clone())?;
     }
     Ok(())
-}
-
-fn hash<T: Hash>(val: T) -> u64 {
-    use std::collections::hash_map::DefaultHasher;
-    let mut hasher = DefaultHasher::new();
-    val.hash(&mut hasher);
-    hasher.finish()
 }
 
 pub fn partition(env: &mut Uiua) -> UiuaResult {

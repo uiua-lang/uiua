@@ -82,6 +82,10 @@ tr:nth-child(even) {
     border-radius: 0.5em;
 }
 
+.cell-centered-table>tr>td {
+    text-align: center;
+}
+
 li {
     margin: 0.3em 0;
 }

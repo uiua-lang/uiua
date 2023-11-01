@@ -7,7 +7,7 @@ use leptos_meta::*;
 use leptos_router::*;
 use uiua::{constants, Primitive, SysOp};
 
-use crate::{editor::Editor, Const, Prim};
+use crate::{editor::Editor, Const, Prim, PrimCodes};
 
 #[component]
 pub fn Design() -> impl IntoView {
@@ -249,6 +249,54 @@ pub fn Constants() -> impl IntoView {
             constants().iter().map(|con| view!(<p><Const con=con/>" - "{ con.doc }</p>)).collect::<Vec<_>>()
         }
         </div>
+    }
+}
+
+#[component]
+pub fn Optimizations() -> impl IntoView {
+    use Primitive::*;
+    view! {
+        <Title text="Optimizations - Uiua Docs"/>
+        <h1>"Optimizations"</h1>
+        <p>"The Uiua interpreter contains a number of optimizations that you can take advantage of to improve the performance of your code."</p>
+
+        <h2>"Pervasive Functions"</h2>
+        <p>"All pervasive functions run on arrays in hot loops that should have performance comparable to an implementation in a languages like C or Rust. This includes all mathematical and comparison functions."</p>
+        <p>"The interpreter does its best to re-use allocated memory when possible instead of copying. Arrays are reference-counted, so an array's memory is only copied when it is modified "<em>"and"</em>" a duplicate exists somewhere. "<Prim prim=Dup/>" and "<Prim prim=Over/>" do not copy actual array memory. They only copy pointers and increment reference counts."</p>
+        <p>"In this example, only the last line results in a copy:"</p>
+        <Editor no_run=true example="+1 ⇡10\n×. ⇡10\n×+1⇡10⇡10\n+1.⇡10"/>
+        <p>"Using pervasive functions whenever possible, on the largest arrays possible, is the best way to get good performance out of Uiua."</p>
+
+        <h2>"Iterating Modifiers"</h2>
+        <p>"The modifiers "<Prim prim=Reduce/>", "<Prim prim=Scan/>", and "<Prim prim=Table/>" have special-case optimizations when used with certain functions. These optimizations eliminate all interpreter overhead while the loops are running, and are therefore very fast."</p>
+        <p>"This table shows which combinations are optimized:"</p>
+        <table class="bordered-table cell-centered-table">
+            <tr>
+                <th/>
+                <th><PrimCodes prims=[Add, Sub, Mul, Div, Min, Max]/></th>
+                <th><PrimCodes prims=[Eq, Ne, Lt, Le, Gt, Ge]/></th>
+                <th><Prim prim=Join glyph_only=true/></th>
+                <th><Prim prim=Couple glyph_only=true/></th>
+            </tr>
+            <tr><th><Prim prim=Table/></th> <td>"✔"</td> <td>"✔"</td> <td>"✔"</td> <td>"✔"</td></tr>
+            <tr><th><Prim prim=Reduce/></th> <td>"✔"</td> <td></td> <td>"✔"</td> <td></td></tr>
+            <tr><th><Prim prim=Scan/></th> <td>"✔"</td> <td></td> <td></td> <td></td></tr>
+        </table>
+
+        <h2>"Complexity"</h2>
+        <p>"Some combinations of functions are special-cased in the interpreter to run in less time complexity or in fewer operations than is implied by each function individually."</p>
+        <p>"This table shows how various combinations of functions are optimized:"</p>
+        <table class="bordered-table cell-centered-table">
+            <tr><th>"Functions"</th><th>"Naive Implementation"</th><th>"Optimized Implementation"</th></tr>
+            <tr><th><PrimCodes prims=[First, Reverse]/></th><td>"O(n)"</td><td>"O(1)"</td></tr>
+            <tr><th><PrimCodes prims=[First, Rise]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
+            <tr><th><PrimCodes prims=[First, Reverse, Rise]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
+            <tr><th><PrimCodes prims=[First, Fall]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
+            <tr><th><PrimCodes prims=[First, Reverse, Fall]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
+            <tr><th><PrimCodes prims=[Sin, Add, Eta]/></th><td>"Add and Sine"</td><td>"Cosine"</td></tr>
+            <tr><th><PrimCodes prims=[First, Where]/></th><td>"O(n)"</td><td>"O(where the first non-zero is)"</td></tr>
+            <tr><th><PrimCodes prims=[Dip, Dip, Dip]/>"…"</th><td><Prim prim=Dip/>" n times"</td><td>"Single "<Prim prim=Dip/>" of n values"</td></tr>
+        </table>
     }
 }
 

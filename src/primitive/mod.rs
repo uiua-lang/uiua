@@ -237,8 +237,14 @@ impl Primitive {
         }
     }
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
-        // Nothing deprecated at the moment
-        None
+        match self {
+            Primitive::Break => Some(format!(
+                "try using {}{} instead",
+                Primitive::Do,
+                Primitive::Do.name()
+            )),
+            _ => None,
+        }
     }
     /// Check if this primitive is deprecated
     pub fn is_deprecated(&self) -> bool {

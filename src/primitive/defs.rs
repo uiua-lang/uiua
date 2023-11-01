@@ -873,9 +873,6 @@ primitive!(
     /// You can can reduce with arbitrary functions.
     /// ex: /(×+1) 1_2_3_4_5
     ///
-    /// [break]ing out of [reduce] discards the unreduced values.
-    /// ex: /(⎋≥10.+) [3 4 8 9]
-    ///
     /// Some functions have default values if the array is empty.
     /// Functions without default values will throw an error if the array is empty.
     /// ex: /+ []
@@ -889,10 +886,6 @@ primitive!(
     /// ex: \+   1_2_3_4
     /// ex: \-   1_2_3_4
     /// ex: \'-∶ 1_2_3_4
-    ///
-    /// [break]ing out of [scan] appends the unscanned values without applying the function to them.
-    /// This means the length of the output is always the same as that of the input.
-    /// ex: \(⎋≥10.+) [1 2 3 4 5 6 7 8]
     (1[1], Scan, AggregatingModifier, ("scan", '\\')),
     /// Apply a function to each element of an array or arrays.
     ///
@@ -978,11 +971,10 @@ primitive!(
     /// ex: ⍥(⊂2)5 []
     /// One interesting use of `repeat` is to collect some number of stack values into an array.
     /// ex: ⍥⊂3 [] 1 2 3
-    /// Repeating [infinity] times will create an infinite loop.
-    /// You can use [break] to break out of the loop.
-    /// ex: ⍥(⎋>1000. ×2)∞ 1
     /// [repeat]ing a negative number of times will repeat the [invert]ed function.
     /// ex: ⍥√¯3 2
+    /// Repeating [infinity] times will create an infinite loop that can only be terminated by ending the program.
+    /// If you want an infinite loop that ends when some condition is met, use [do].
     ///
     /// [repeat]'s glyph is a combination of a circle, representing a loop, and the 𝄇 symbol from musical notation.
     ([1], Repeat, IteratingModifier, ("repeat", '⍥')),
@@ -1538,11 +1530,14 @@ primitive!(
     (1, TryRecv, Misc, "tryrecv"),
     /// Break out of a loop
     ///
+    /// [break] is deprectated and will be removed in a future version.
+    /// Use [do] instead.
+    ///
     /// Expects a non-negative integer. This integer is how many loops will be broken out of.
     /// Loops that can be broken out of are [reduce], [fold], [scan], [each], [rows], and [repeat].
     ///
-    /// ex: /(⎋>10.+) ⇡8  # Break when the sum exceeds 10
-    /// ex: ⍥(⎋>100.×2)∞ 1  # Break when the product exceeds 100
+    /// ex! /(⎋>10.+) ⇡8  # Break when the sum exceeds 10
+    /// ex! ⍥(⎋>100.×2)∞ 1  # Break when the product exceeds 100
     (1(0), Break, Control, ("break", '⎋')),
     /// Generate a random number in the range `[0, 1)`
     ///

@@ -735,7 +735,7 @@ X 5"/>
         <Editor example="TimesThree ← |1   ×3\nTimesThree 7"/>
         <Editor example="∵(|2.1 ⊟.×) 1_2_3 4_5_6"/>
         <p>"Stack signatures are useful for documenting functions to make sure that they are used correctly."</p>
-        <p>"A signature declaration is "<em>"required"</em>" if the function's signature cannot be inferred. The compiler can usually infer a function's signature unless you are making a "<A href="/docs/custommodifiers">"custom modifier"</A>", using "<Prim prim=Break/>", or doing something else it cannot reason about."</p>
+        <p>"A signature declaration is "<em>"required"</em>" if the function's signature cannot be inferred. The compiler can usually infer a function's signature unless you are doing something weird that it cannot reason about."</p>
         <p>"In addition, an error is thrown if a function's signature can be inferred and the inferred signature does not match the declared signature. This can help validate that a function is correct."</p>
         <Editor example="≡(|2 ↻.) 1_2_3 ↯3_3⇡9"/> // Should fail
         <p>"If the compiler cannot derive the stack signature of a function and you give it one which is "<em>"wrong"</em>", the function will throw an error at runtime."</p>
@@ -912,16 +912,16 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <Editor example="f ← ∩▽¬,,=0◿2.\nf [1 2 3 7 2 4 5]"/>
         <p>"That being said, not every problem lends itself to array operations. Uiua has a few methods for handling such cases."</p>
 
-        <h2 id="repeat">"Looping with "<Prim prim=Repeat/></h2>
+        <h2 id="repeat-do">"Looping with "<Prim prim=Repeat/>" and "<Prim prim=Do/></h2>
         <p>"The "<Prim prim=Repeat/>" modifier takes a function and a number and calls the function that many times."</p>
         <Editor example="⍥(×2)10 5"/>
-        <Editor example="⍥/+2 ↯3_3⇡9"/>
         <Editor example="⁅[⍥⚂5]"/>
-        <p>"You can loop forever by using "<Prim prim=Infinity/>". You can break out of an infinite (or finite) loop with "<Prim prim=Break/>"."</p>
-        <Editor example="⍥(⎋>1000.×2)∞ 1"/>
-        <p>"This requires a signature declaration if done in a function."</p>
-        <Editor example="f ← |1 ⍥(⎋>1000.×2)∞\nf 5"/>
+        <Editor example="⍥/+2 ↯3_3⇡9"/>
         <p><Prim prim=Repeat/>"'s glyph is a combination of a circle, representing a loop, and the 𝄇 symbol from musical notation."</p>
+        <p>"The "<Prim prim=Do/>" modifier takes a loop function and a condition function. It repeatedly calls the loop function as long as the condition function returns "<code>"1"</code>"."</p>
+        <Editor example="⍢(×2)(<1000) 1"/>
+        <Editor example=";⍢(⊃(×2)⊂)(<100) 1 []"/>
+        <p>"While "<Prim prim=Do/>" is very powerful, it should only be used when necessary."</p>
 
         <h2 id="try">"Catching errors with "<Prim prim=Try/></h2>
         <p>"The "<Prim prim=Try/>" modifier takes two functions. If the first function throws an error, the second function is called with the same arguments plus an error message."</p>
@@ -972,7 +972,7 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
             number=2
             prompt="multiplies an array by its reverse until any element is greater than 1000, at most 10 times"
             example="[1.5 8 2]"
-            answer="⍥(⎋>1000/↥.×⇌.)10"
+            answer="⍢(×⇌.)(≤1000/↥)"
             tests={&["[1 2 3]", "[¯6 5 1]"]}
             hidden="7"/>
     }

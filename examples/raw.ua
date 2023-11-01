@@ -3,9 +3,10 @@
 Dirs ← [0_1 0_¯1 ¯1_0 1_0 0_0]
 Keys ← "wsad"
 Size ← ⊟.⊢&ts
-;;⍥(
+;;⍢(
+  ⊏∶Dirs⬚4⊢⊚=Keys # Select input dir
+  ↧-1Size↥⊚2+     # Move
+)(
   &ims⇌⍉⍜⊡(+1)∶↯Size0. # Render
-  ⎋=@\x03.⊢&rs1 0      # Get input
-  ⊏∶Dirs⬚4⊢⊚=Keys      # Select input dir
-  ↧-1Size↥⊚2+          # Move
-)∞ [0 0]
+  ≠@\x03.⊢&rs1 0       # Get input
+) [0 0]

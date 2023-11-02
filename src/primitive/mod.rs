@@ -135,6 +135,8 @@ impl fmt::Display for ImplPrimitive {
             InvTrace => write!(f, "⍘{Trace}"),
             InvWhere => write!(f, "⍘{Where}"),
             InvCouple => write!(f, "⍘{Couple}"),
+            InvAtan => write!(f, "⍘{Atan}"),
+            InvComplex => write!(f, "⍘{Complex}"),
             Untake => write!(f, "⍘{Take}"),
             Undrop => write!(f, "⍘{Drop}"),
             Unselect => write!(f, "⍘{Select}"),
@@ -726,6 +728,13 @@ impl ImplPrimitive {
             ImplPrimitive::Unpartition => loops::unpartition(env)?,
             ImplPrimitive::Ungroup => loops::ungroup(env)?,
             ImplPrimitive::InvTrace => trace(env, true)?,
+            ImplPrimitive::InvAtan => {
+                let x = env.pop(1)?;
+                let sin = x.clone().sin(env)?;
+                let cos = x.cos(env)?;
+                env.push(cos);
+                env.push(sin);
+            }
             ImplPrimitive::InvComplex => {
                 let x = env.pop(1)?;
                 let im = x.clone().complex_im(env)?;

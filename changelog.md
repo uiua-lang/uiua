@@ -13,6 +13,7 @@ If you are reading this on the website, then these changes are live here.
 - [`each` `∵`](https://uiua.org/docs/each) and [`rows` `≡`](https://uiua.org/docs/rows) now work with [`under` `⍜`](https://uiua.org/docs/under)
 - All [ocean functions](https://uiua.org/docs/ocean) now work with [`under` `⍜`](https://uiua.org/docs/under)
 - Allow multiple values to be returned from [`each` `∵`](https://uiua.org/docs/each), [`rows` `≡`](https://uiua.org/docs/rows), [`distribute` `∺`](https://uiua.org/docs/distribute), [`tribute` `≐`](https://uiua.org/docs/tribute), [`table` `⊞`](https://uiua.org/docs/table), and [`cross` `⊠`](https://uiua.org/docs/cross)
+- [`invert` `⍘`](https://uiua.org/docs/invert) [`atangent` `∠`](https://uiua.org/docs/atangent) now produces the sine and cosine of an angle
 - Add fraction literals with `/`
 - Parsing multiple formattable functions from words is now smarter
 - Remove `bind '`. It made code hard to read. It will continue to parse, but will be formatted as `(…)`

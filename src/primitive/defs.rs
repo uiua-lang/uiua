@@ -1765,6 +1765,7 @@ impl_primitive!(
     (1(2), InvCouple),
     (1, InvUtf),
     (1, InvTrace),
+    (1(2), InvAtan),
     (1(2), InvComplex),
     // Unders
     (3, Unselect),

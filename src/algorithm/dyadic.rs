@@ -166,11 +166,21 @@ impl Value {
                 |a, b| Ok(a.join_impl(b, ctx)?.into()),
                 |a, b| Ok(a.join_impl(b, ctx)?.into()),
             )?,
+            #[cfg(feature = "complex")]
+            (Value::Complex(a), Value::Complex(b)) => a.join_impl(b, ctx)?.into(),
             (Value::Char(a), Value::Char(b)) => a.join_impl(b, ctx)?.into(),
             #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => a.convert().join_impl(b, ctx)?.into(),
             #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => a.join_impl(b.convert(), ctx)?.into(),
+            #[cfg(feature = "complex")]
+            (Value::Complex(a), Value::Num(b)) => a.join_impl(b.convert(), ctx)?.into(),
+            #[cfg(feature = "complex")]
+            (Value::Num(a), Value::Complex(b)) => a.convert().join_impl(b, ctx)?.into(),
+            #[cfg(all(feature = "complex", feature = "bytes"))]
+            (Value::Complex(a), Value::Byte(b)) => a.join_impl(b.convert(), ctx)?.into(),
+            #[cfg(all(feature = "complex", feature = "bytes"))]
+            (Value::Byte(a), Value::Complex(b)) => a.convert().join_impl(b, ctx)?.into(),
             (a, b) => a.coerce_to_functions(
                 b,
                 ctx,
@@ -220,6 +230,8 @@ impl Value {
                     },
                 )?;
             }
+            #[cfg(feature = "complex")]
+            (Value::Complex(a), Value::Complex(b)) => a.append(b, ctx)?,
             (Value::Char(a), Value::Char(b)) => a.append(b, ctx)?,
             #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => {
@@ -229,6 +241,22 @@ impl Value {
             }
             #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => a.append(b.convert(), ctx)?,
+            #[cfg(feature = "complex")]
+            (Value::Complex(a), Value::Num(b)) => a.append(b.convert(), ctx)?,
+            #[cfg(feature = "complex")]
+            (Value::Num(a), Value::Complex(b)) => {
+                let mut a = a.convert_ref();
+                a.append(b, ctx)?;
+                *self = a.into();
+            }
+            #[cfg(all(feature = "complex", feature = "bytes"))]
+            (Value::Complex(a), Value::Byte(b)) => a.append(b.convert(), ctx)?,
+            #[cfg(all(feature = "complex", feature = "bytes"))]
+            (Value::Byte(a), Value::Complex(b)) => {
+                let mut a = a.convert_ref();
+                a.append(b, ctx)?;
+                *self = a.into();
+            }
             (a, b) => {
                 *self = a.clone().coerce_to_functions(
                     b,
@@ -414,12 +442,30 @@ impl Value {
                     },
                 )?
             }
+            #[cfg(feature = "complex")]
+            (Value::Complex(a), Value::Complex(b)) => a.couple_impl(b, ctx)?,
             (Value::Char(a), Value::Char(b)) => a.couple_impl(b, ctx)?,
             (Value::Box(a), Value::Box(b)) => a.couple_impl(b, ctx)?,
             #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => a.couple_impl(b.convert(), ctx)?,
             #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => {
+                let mut a = a.convert_ref();
+                a.couple_impl(b, ctx)?;
+                *self = a.into();
+            }
+            #[cfg(feature = "complex")]
+            (Value::Complex(a), Value::Num(b)) => a.couple_impl(b.convert(), ctx)?,
+            #[cfg(feature = "complex")]
+            (Value::Num(a), Value::Complex(b)) => {
+                let mut a = a.convert_ref();
+                a.couple_impl(b, ctx)?;
+                *self = a.into();
+            }
+            #[cfg(all(feature = "complex", feature = "bytes"))]
+            (Value::Complex(a), Value::Byte(b)) => a.couple_impl(b.convert(), ctx)?,
+            #[cfg(all(feature = "complex", feature = "bytes"))]
+            (Value::Byte(a), Value::Complex(b)) => {
                 let mut a = a.convert_ref();
                 a.couple_impl(b, ctx)?;
                 *self = a.into();

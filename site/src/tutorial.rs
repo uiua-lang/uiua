@@ -545,9 +545,10 @@ fn TutorialTypes() -> impl IntoView {
         <Title text="Types - Uiua Docs"/>
         <h1>"Types"</h1>
         <p>"Every value in Uiua is an array. However, different arrays on the stack can have different "<em>"types"</em>" of items. Every element of an array is always the same type. Unlike some other array programming languages, Uiua arrays cannot have elements of different types."</p>
-        <p>"There are only three types of arrays:"</p>
+        <p>"There are up to four types of arrays:"</p>
         <ul>
             <li><strong>"Number"</strong></li>
+            <li><strong>"Complex"</strong>" (optional)"</li>
             <li><strong>"Character"</strong></li>
             <li><strong>"Box"</strong></li>
         </ul>
@@ -561,6 +562,19 @@ fn TutorialTypes() -> impl IntoView {
         <Editor example="⊡ 2 [4 7 9 1 0]"/>
         <Editor example="⊡ 3.1 [4 7 9 1 0]"/> // Should fail
         <p>"If you want to convert a number to a whole number, you can use "<Prim prim=Floor/>", "<Prim prim=Ceil/>", or "<Prim prim=Round/>"."</p>
+
+        <h2 id="complex-numbers">"Complex Numbers"</h2>
+        <p>"Complex numbers are optional. They are available on this site and are enabled by default in the native interpreter."</p>
+        <p>"Imaginary numbers can be created by suffixing a number with "<code>"i"</code>"."</p>
+        <Editor example="[1i 2i 3i]"/>
+        <p>"While the imaginary part alone is a complex number, complex numbers with both a real and imaginary part can be created by simply "<Prim prim=Add/>"ing them together."</p>
+        <Editor example="+3i5"/>
+        <Editor example="+[1i 2 3i] [4 5i 6]"/>
+        <p>"While complex numbers support all the same math operations as normal numbers, they are a distinc type and cannot be used in place of normal numbers."</p>
+        <p>"You can convert a complex number to a normal number with "<Prim prim=Abs/>"."</p>
+        <Editor example="⌵+3i4"/>
+        <p><Prim prim=Sqrt/>" only returns a complex number if it is called on a complex number. Beware of floating-point errors."</p>
+        <Editor example="√   ¯4\n√+0i¯4"/>
 
         <h2 id="characters">"Characters"</h2>
         <p>"Characters are represented as 32-bit Unicode codepoints."</p>

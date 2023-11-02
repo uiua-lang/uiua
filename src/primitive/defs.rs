@@ -459,6 +459,12 @@ primitive!(
     /// The first argument is the imaginary part, and the second argument is the real part.
     /// ex: ℂ 3 5
     /// ex: ℂ [0 1 2] [3 4 5]
+    /// [complex] is equivalent to `add``multiply``i`.
+    /// You can use [absolute value] to get the magnitude of the complex number.
+    /// ex: ⌵ ℂ3 4
+    /// You can use [invert][complex] to get the imaginary and real parts back out.
+    /// ex: [⍘ℂ] i
+    /// ex: [⍘ℂ] ×. ℂ3 4
     (2, Complex, DyadicPervasive, ("complex", 'ℂ')),
     /// Get the number of rows in an array
     ///
@@ -572,7 +578,7 @@ primitive!(
     /// It also works for non-zero counts
     /// ex: ⊚ 1_2_3
     /// ex: ⊚ 1_4_2
-    /// [where] is equivalent to `keep``flip``range``length``duplicate`
+    /// [where] on a list is equivalent to `keep``flip``range``length``duplicate`
     /// ex:     ⊚ [0 1 0 0 2 0 1]
     /// ex: ▽∶⇡⧻. [0 1 0 0 2 0 1]
     ///
@@ -580,6 +586,11 @@ primitive!(
     /// ex: ⍘⊚ [0 0 0 1 1 2 2 2 2 2 3]
     /// The indices need not be in order
     /// ex: ⍘⊚ [0 1 2 2 0 3 2 1 2 0 2]
+    ///
+    /// [where] can be used on multidimensional arrays, and the result will always be rank-2
+    /// ex: ⊚.[1_0_0 0_1_1 0_2_0]
+    /// The inverse works as well
+    /// ex: ⍘⊚[3_4 2_1 0_3]
     ///
     /// [where] on a scalar is equivalent to [where] on a singleton array of that scalar, and so creates a list of `0`s.
     /// ex: ⊚3

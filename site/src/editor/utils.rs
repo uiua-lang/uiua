@@ -541,18 +541,21 @@ fn set_code_html(id: &str, code: &str) {
                         )
                     }
                 }
-                SpanKind::Ident if ["i", "e"].contains(&text.as_str()) => {
-                    format!(
-                        r#"<span class="code-span noadic-function">{}</span>"#,
-                        escape_html(&text)
-                    )
-                }
+                SpanKind::Ident if text == "i" => r#"<span 
+                            class="code-span code-hover noadic-function" 
+                            data-title="i: The imaginary unit">i</span>"#
+                    .into(),
+                SpanKind::Ident if text == "e" => r#"<span 
+                            class="code-span code-hover noadic-function" 
+                            data-title="e: Euler's constant">e</span>"#
+                    .into(),
                 SpanKind::String => {
                     if text == "@ " {
                         format!(
                             r#"<span
                                 class="code-span code-hover {color_class}" 
-                                data-title="space character">@</span><span
+                                data-title="space character">@</span>
+                               <span
                                 class="code-span code-hover {color_class} space-character" 
                                 data-title="space character"> </span>"#
                         )

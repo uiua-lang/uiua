@@ -350,6 +350,8 @@ impl Allowed {
                 ("constant", &[PrimClass::Constant]),
                 ("system", &system_classes),
                 ("function", &function_classes),
+                ("planet", &[PrimClass::Planet]),
+                ("ocean", &[PrimClass::Ocean]),
             ] {
                 if pattern.split_whitespace().any(|pat| pat.starts_with(part)) {
                     classes.retain(|class| pat_classes.contains(class));

@@ -590,8 +590,8 @@ impl Parser {
             }
         } else if let Some(ident) = self.try_ident() {
             ident.map(Word::Ident)
-        } else if let Some(sni) = self.try_num() {
-            sni.map(|(s, n, i)| Word::Number(s, n, i))
+        } else if let Some(sn) = self.try_num() {
+            sn.map(|(s, n)| Word::Number(s, n))
         } else if let Some(c) = self.next_token_map(Token::as_char) {
             c.map(Into::into).map(Word::Char)
         } else if let Some(s) = self.next_token_map(Token::as_string) {
@@ -639,17 +639,10 @@ impl Parser {
             return None;
         })
     }
-    fn try_num(&mut self) -> Option<Sp<(String, f64, bool)>> {
+    fn try_num(&mut self) -> Option<Sp<(String, f64)>> {
         let span = self.try_exact(Token::Number)?;
         let s = span.as_str().to_string();
         let parseable = s.replace(['`', '¯'], "-");
-        let mut imaginary = false;
-        let parseable = if let Some(parseable) = parseable.strip_suffix('i') {
-            imaginary = true;
-            parseable
-        } else {
-            &parseable
-        };
         let n: f64 = match parseable.parse() {
             Ok(n) => n,
             Err(_) => {
@@ -658,7 +651,7 @@ impl Parser {
                 0.0
             }
         };
-        Some(span.sp((s, n, imaginary)))
+        Some(span.sp((s, n)))
     }
     fn try_prim(&mut self) -> Option<Sp<Primitive>> {
         for prim in Primitive::all() {

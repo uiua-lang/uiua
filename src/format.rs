@@ -18,7 +18,7 @@ use crate::{
     lex::{is_ident_char, CodeSpan, Loc, Sp},
     parse::parse,
     value::Value,
-    Complex, Ident, Primitive, SysBackend, SysOp, Uiua, UiuaError, UiuaResult,
+    Ident, Primitive, SysBackend, SysOp, Uiua, UiuaError, UiuaResult,
 };
 
 // For now disallow any syscalls in the format config file.
@@ -513,12 +513,8 @@ impl<'a> Formatter<'a> {
     }
     fn format_word(&mut self, word: &Sp<Word>, depth: usize) {
         match &word.value {
-            Word::Number(s, n, c) => {
-                let grid_str = if *c {
-                    Complex::new(0.0, *n).grid_string()
-                } else {
-                    n.grid_string()
-                };
+            Word::Number(s, n) => {
+                let grid_str = n.grid_string();
                 let formatted = if grid_str.len() < s.trim_end_matches('i').len() {
                     grid_str
                 } else {

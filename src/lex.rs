@@ -734,7 +734,8 @@ impl<'a> Lexer<'a> {
         }
         // Fractional part
         let before_dot = self.loc;
-        if self.next_char_exact(".") || self.next_char_exact("/") {
+        let mut fractional = false;
+        if self.next_char_exact(".") {
             let mut has_decimal = false;
             while self
                 .next_char_if(|c| c.chars().all(|c| c.is_ascii_digit()))
@@ -745,10 +746,23 @@ impl<'a> Lexer<'a> {
             if !has_decimal {
                 self.loc = before_dot;
             }
+        } else if self.next_char_exact("/") {
+            let mut has_fraction = false;
+            while self
+                .next_char_if(|c| c.chars().all(|c| c.is_ascii_digit()))
+                .is_some()
+            {
+                has_fraction = true;
+            }
+            if has_fraction {
+                fractional = true;
+            } else {
+                self.loc = before_dot;
+            }
         }
         // Exponent
         let loc_before_e = self.loc;
-        if self.next_char_if(|c| c == "e" || c == "E").is_some() {
+        if !fractional && self.next_char_if(|c| c == "e" || c == "E").is_some() {
             self.next_char_if(|c| c == "-" || c == "`" || c == "¯");
             let mut got_digit = false;
             while self

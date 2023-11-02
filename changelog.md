@@ -11,6 +11,7 @@ If you are reading this on the website, then these changes are live here.
 - Add multi-dimensional [`where` `⊚`](https://uiua.org/docs/where)
 - [`join` `⊂`](https://uiua.org/docs/join) to an empty list now always works regardless of rank of the other array
 - [`each` `∵`](https://uiua.org/docs/each) and [`rows` `≡`](https://uiua.org/docs/rows) now work with [`under` `⍜`](https://uiua.org/docs/under)
+- All ocean function now work with [`under` `⍜`](https://uiua.org/docs/under)
 - Add fraction literals with `/`
 - Parsing multiple formattable functions from words is now smarter
 - Remove `bind '`. It made code hard to read. It will continue to parse, but will be formatted as `(…)`

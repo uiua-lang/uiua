@@ -59,6 +59,19 @@ pub fn Site() -> impl IntoView {
         }
         .into_view(),
         view! {
+            <div>
+                <div style="display: flex; gap: 0.5em;">
+                    <div style="font-style: normal"><PrimCodes prims=[Try, Assert]/></div>
+                    " Dad! Can we go play outside?"
+                </div>
+                <div style="display: flex; gap: 0.5em;">
+                    <div style="font-style: normal"><Prim prim=Repeat glyph_only=true/></div>
+                    " Finish your code challenges first!"
+                </div>
+            </div>
+        }
+        .into_view(),
+        view! {
             <div style="font-style: normal">
                 <a href="/docs/advancedarray#ocean-notation" style="text-decoration: none">"🌊🪸"</a>" "
                 <code style="font-style: normal">
@@ -69,17 +82,20 @@ pub fn Site() -> impl IntoView {
         .into_view(),
         "It's got um...I um...arrays".into_view(),
         view! {
-            <div>
-                <div style="display: flex; gap: 0.5em;">
-                    <div style="font-style: normal"><Prim prim=Try glyph_only=true/><Prim prim=Assert glyph_only=true/></div>
-                    " Dad! Can we go play outside?"
+            <div style="font-size: 0.9em;">
+                <div style="display: flex; gap: 0.5em; flex-wrap: wrap">
+                    <div style="font-style: normal"><PrimCodes prims=[Repeat, Do]/></div>
+                    " Hey honey, the kids are asleep."
+                    " What do you say we go"
                 </div>
-                <div style="display: flex; gap: 0.5em;">
-                    <div style="font-style: normal"><Prim prim=Repeat glyph_only=true/></div>
-                    " Finish your code challenges first!"
+                <div style="display: flex; gap: 0.5em; flex-wrap: wrap">
+                    " to the bedroom and "
+                    <div class="spoiler">"make the language Turing-complete"</div>
+                    "?"
                 </div>
             </div>
-        }.into_view(),
+        }
+        .into_view(),
     ];
     let local_storage = window().local_storage().unwrap().unwrap();
     let mut visits: usize = local_storage
@@ -97,7 +113,7 @@ pub fn Site() -> impl IntoView {
     view! {
         <Router>
             <main>
-                <div id="top" class="top">
+                <div id="top">
                     <div id="header">
                         <div id="header-left">
                             <h1><A id="header-uiua" href="/"><img src="/uiua-logo.png" style="height: 1em" alt="Uiua logo" />" Uiua"</A></h1>

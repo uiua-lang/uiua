@@ -93,11 +93,13 @@ li {
 @media (prefers-color-scheme: dark) {
 
     body,
-    #header-uiua {
+    #header-uiua,
+    .spoiler:hover {
         color: #d1daec;
     }
 
-    body {
+    body,
+    .spoiler:hover {
         background-color: #141a1f;
     }
 
@@ -168,11 +170,13 @@ li {
 @media (prefers-color-scheme: light) {
 
     body,
-    #header-uiua {
+    #header-uiua,
+    .spoiler:hover {
         color: #344;
     }
 
-    body {
+    body,
+    .spoiler:hover {
         background-color: #c6e7ec;
     }
 
@@ -271,6 +275,12 @@ li {
     font-size: 1em;
     font-weight: bold;
     font-style: italic;
+}
+
+.spoiler {
+    color: #0000;
+    background-color: #0008;
+    border-radius: 0.5em;
 }
 
 #nav {

@@ -264,20 +264,19 @@ primitive!(
     /// ex: √4
     /// ex: √[1 4 9 16]
     /// ex: √¯1
+    /// You can only take the square root of a negative number if it is complex.
+    /// ex: √  ¯4
+    ///   : √ℂ0¯4
     (1, Sqrt, MonadicPervasive, ("sqrt", '√')),
     /// Get the sine of a number
     ///
     /// ex: ○ 1
-    ///
     /// You can get a cosine function by [add]ing [eta].
     /// ex: ○+η 1
-    ///
     /// You can get an arcsine function with [invert].
     /// ex: ⍘○ 1
-    ///
     /// You can get an arccosine function by [invert]ing the cosine.
     /// ex: ⍘(○+η) 1
-    ///
     /// You can get a tangent function by [divide]ing the [sine] by the cosine.
     /// ex: ÷○+η∶○. 0
     (1, Sin, MonadicPervasive, ("sine", '○')),

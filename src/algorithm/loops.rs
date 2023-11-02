@@ -29,15 +29,8 @@ pub(crate) fn rank_list(name: &str, env: &mut Uiua) -> UiuaResult<Vec<Option<isi
             but its signature is {sig}"
         )));
     }
-    match sig.args {
-        0 => {}
-        1 => env.push(Array::<f64>::default()),
-        _ => {
-            return Err(env.error(format!(
-                "{name}'s rank list function must take 0 or 1 arguments, \
-                but its signature is {sig}"
-            )))
-        }
+    if sig.args > 0 {
+        env.push(Array::<f64>::default())
     }
     env.call(ns)?;
     env.pop("rank list")?.as_rank_list(env, "")

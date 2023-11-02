@@ -729,9 +729,31 @@ input[type=number] {
     -moz-text-fill-color: transparent;
 }
 
+.bi {
+    background-image: linear-gradient(180deg,
+            #D60270 48%,
+            #9B4F96 48%,
+            #9B4F96 65%,
+            #0038A8 65%);
+    background-size: 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -moz-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    -moz-text-fill-color: transparent;
+}
+
 @media (prefers-color-scheme: light) {
-    .trans {
+
+    .trans,
+    .bi {
         -webkit-text-stroke: 0.2px #000;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    .bi {
+        -webkit-text-stroke: 0.2px #fff;
     }
 }
 

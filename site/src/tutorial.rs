@@ -572,7 +572,7 @@ fn TutorialTypes() -> impl IntoView {
         <p>"You can convert a complex number to a normal number with "<Prim prim=Abs/>"."</p>
         <Editor example="⌵ ℂ3 4"/>
         <p><Prim prim=Sqrt/>" only returns a complex number if it is called on a complex number. Beware of floating-point errors."</p>
-        <Editor example="√   ¯4\n√+ℂ0¯4"/>
+        <Editor example="√  ¯4\n√ℂ0¯4"/>
 
         <h2 id="characters">"Characters"</h2>
         <p>"Characters are represented as 32-bit Unicode codepoints."</p>

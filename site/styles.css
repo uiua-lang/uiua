@@ -730,30 +730,38 @@ input[type=number] {
 }
 
 .bi {
-    background-image: linear-gradient(180deg,
-            #D60270 48%,
-            #9B4F96 48%,
-            #9B4F96 65%,
-            #0038A8 65%);
     background-size: 100%;
     background-clip: text;
     -webkit-background-clip: text;
     -moz-background-clip: text;
     -webkit-text-fill-color: transparent;
     -moz-text-fill-color: transparent;
+    paint-order: b;
 }
 
 @media (prefers-color-scheme: light) {
 
-    .trans,
-    .bi {
+    .trans {
         -webkit-text-stroke: 0.2px #000;
+    }
+
+    .bi {
+        background-image: linear-gradient(180deg,
+                #e36370 48%,
+                #c68983 48%,
+                #c68983 65%,
+                #787e8c 65%);
     }
 }
 
 @media (prefers-color-scheme: dark) {
     .bi {
-        -webkit-text-stroke: 0.2px #fff;
+        -webkit-text-stroke: 0.2px #f0c36f;
+        background-image: linear-gradient(180deg,
+                #dd3270 48%,
+                #b06c8c 48%,
+                #b06c8c 65%,
+                #3c5b9a 65%);
     }
 }
 

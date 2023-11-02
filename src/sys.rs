@@ -861,8 +861,12 @@ impl SysOp {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
                     #[cfg(feature = "bytes")]
                     Value::Byte(arr) => arr.data.into(),
+                    #[cfg(feature = "complex")]
+                    Value::Complex(_) => {
+                        return Err(env.error("Cannot write complex array to file"))
+                    }
                     Value::Char(arr) => arr.data.iter().collect::<String>().into(),
-                    Value::Box(_) => return Err(env.error("Cannot write function array to file")),
+                    Value::Box(_) => return Err(env.error("Cannot write box array to file")),
                 };
                 match handle {
                     Handle::STDOUT => env
@@ -919,8 +923,12 @@ impl SysOp {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
                     #[cfg(feature = "bytes")]
                     Value::Byte(arr) => arr.data.into(),
+                    #[cfg(feature = "complex")]
+                    Value::Complex(_) => {
+                        return Err(env.error("Cannot write complex array to file"))
+                    }
                     Value::Char(arr) => arr.data.iter().collect::<String>().into(),
-                    Value::Box(_) => return Err(env.error("Cannot write function array to file")),
+                    Value::Box(_) => return Err(env.error("Cannot write box array to file")),
                 };
                 env.backend
                     .file_write_all(&path, &bytes)
@@ -1300,14 +1308,21 @@ fn value_to_command(value: &Value, env: &Uiua) -> UiuaResult<(String, Vec<String
         },
         Value::Num(_) => {
             return Err(env.error(format!(
-                "Command must be a string or function array, but it is {}",
+                "Command must be a string or box array, but it is {}",
                 value.type_name_plural()
             )))
         }
         #[cfg(feature = "bytes")]
         Value::Byte(_) => {
             return Err(env.error(format!(
-                "Command must be a string or function array, but it is {}",
+                "Command must be a string or box array, but it is {}",
+                value.type_name_plural()
+            )))
+        }
+        #[cfg(feature = "complex")]
+        Value::Complex(_) => {
+            return Err(env.error(format!(
+                "Command must be a string or box array, but it is {}",
                 value.type_name_plural()
             )))
         }

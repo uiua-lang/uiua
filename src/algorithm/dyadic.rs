@@ -166,11 +166,21 @@ impl Value {
                 |a, b| Ok(a.join_impl(b, ctx)?.into()),
                 |a, b| Ok(a.join_impl(b, ctx)?.into()),
             )?,
+            #[cfg(feature = "complex")]
+            (Value::Complex(a), Value::Complex(b)) => a.join_impl(b, ctx)?.into(),
             (Value::Char(a), Value::Char(b)) => a.join_impl(b, ctx)?.into(),
             #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => a.convert().join_impl(b, ctx)?.into(),
             #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => a.join_impl(b.convert(), ctx)?.into(),
+            #[cfg(feature = "complex")]
+            (Value::Complex(a), Value::Num(b)) => a.join_impl(b.convert(), ctx)?.into(),
+            #[cfg(feature = "complex")]
+            (Value::Num(a), Value::Complex(b)) => a.convert().join_impl(b, ctx)?.into(),
+            #[cfg(all(feature = "complex", feature = "bytes"))]
+            (Value::Complex(a), Value::Byte(b)) => a.join_impl(b.convert(), ctx)?.into(),
+            #[cfg(all(feature = "complex", feature = "bytes"))]
+            (Value::Byte(a), Value::Complex(b)) => a.convert().join_impl(b, ctx)?.into(),
             (a, b) => a.coerce_to_functions(
                 b,
                 ctx,
@@ -220,6 +230,8 @@ impl Value {
                     },
                 )?;
             }
+            #[cfg(feature = "complex")]
+            (Value::Complex(a), Value::Complex(b)) => a.append(b, ctx)?,
             (Value::Char(a), Value::Char(b)) => a.append(b, ctx)?,
             #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => {
@@ -229,6 +241,22 @@ impl Value {
             }
             #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => a.append(b.convert(), ctx)?,
+            #[cfg(feature = "complex")]
+            (Value::Complex(a), Value::Num(b)) => a.append(b.convert(), ctx)?,
+            #[cfg(feature = "complex")]
+            (Value::Num(a), Value::Complex(b)) => {
+                let mut a = a.convert_ref();
+                a.append(b, ctx)?;
+                *self = a.into();
+            }
+            #[cfg(all(feature = "complex", feature = "bytes"))]
+            (Value::Complex(a), Value::Byte(b)) => a.append(b.convert(), ctx)?,
+            #[cfg(all(feature = "complex", feature = "bytes"))]
+            (Value::Byte(a), Value::Complex(b)) => {
+                let mut a = a.convert_ref();
+                a.append(b, ctx)?;
+                *self = a.into();
+            }
             (a, b) => {
                 *self = a.clone().coerce_to_functions(
                     b,
@@ -414,12 +442,30 @@ impl Value {
                     },
                 )?
             }
+            #[cfg(feature = "complex")]
+            (Value::Complex(a), Value::Complex(b)) => a.couple_impl(b, ctx)?,
             (Value::Char(a), Value::Char(b)) => a.couple_impl(b, ctx)?,
             (Value::Box(a), Value::Box(b)) => a.couple_impl(b, ctx)?,
             #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => a.couple_impl(b.convert(), ctx)?,
             #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => {
+                let mut a = a.convert_ref();
+                a.couple_impl(b, ctx)?;
+                *self = a.into();
+            }
+            #[cfg(feature = "complex")]
+            (Value::Complex(a), Value::Num(b)) => a.couple_impl(b.convert(), ctx)?,
+            #[cfg(feature = "complex")]
+            (Value::Num(a), Value::Complex(b)) => {
+                let mut a = a.convert_ref();
+                a.couple_impl(b, ctx)?;
+                *self = a.into();
+            }
+            #[cfg(all(feature = "complex", feature = "bytes"))]
+            (Value::Complex(a), Value::Byte(b)) => a.couple_impl(b.convert(), ctx)?,
+            #[cfg(all(feature = "complex", feature = "bytes"))]
+            (Value::Byte(a), Value::Complex(b)) => {
                 let mut a = a.convert_ref();
                 a.couple_impl(b, ctx)?;
                 *self = a.into();
@@ -444,6 +490,8 @@ impl Value {
             Value::Num(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
             #[cfg(feature = "bytes")]
             Value::Byte(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
+            #[cfg(feature = "complex")]
+            Value::Complex(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
             Value::Char(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
             Value::Box(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
         }
@@ -599,6 +647,8 @@ impl Value {
                 Value::Num(a) => a.reshape_scalar(n),
                 #[cfg(feature = "bytes")]
                 Value::Byte(a) => a.reshape_scalar(n),
+                #[cfg(feature = "complex")]
+                Value::Complex(a) => a.reshape_scalar(n),
                 Value::Char(a) => a.reshape_scalar(n),
                 Value::Box(a) => a.reshape_scalar(n),
             }
@@ -612,6 +662,8 @@ impl Value {
                 Value::Num(a) => a.reshape(&target_shape, env),
                 #[cfg(feature = "bytes")]
                 Value::Byte(a) => a.reshape(&target_shape, env),
+                #[cfg(feature = "complex")]
+                Value::Complex(a) => a.reshape(&target_shape, env),
                 Value::Char(a) => a.reshape(&target_shape, env),
                 Value::Box(a) => a.reshape(&target_shape, env),
             }?
@@ -751,6 +803,8 @@ impl Value {
                 Value::Num(a) => a.scalar_keep(counts[0]).into(),
                 #[cfg(feature = "bytes")]
                 Value::Byte(a) => a.scalar_keep(counts[0]).into(),
+                #[cfg(feature = "complex")]
+                Value::Complex(a) => a.scalar_keep(counts[0]).into(),
                 Value::Char(a) => a.scalar_keep(counts[0]).into(),
                 Value::Box(a) => a.scalar_keep(counts[0]).into(),
             }
@@ -759,6 +813,8 @@ impl Value {
                 Value::Num(a) => a.list_keep(&counts, env)?.into(),
                 #[cfg(feature = "bytes")]
                 Value::Byte(a) => a.list_keep(&counts, env)?.into(),
+                #[cfg(feature = "complex")]
+                Value::Complex(a) => a.list_keep(&counts, env)?.into(),
                 Value::Char(a) => a.list_keep(&counts, env)?.into(),
                 Value::Box(a) => a.list_keep(&counts, env)?.into(),
             }
@@ -1002,6 +1058,8 @@ impl Value {
                 |a| Ok(a.pick(index_shape, &index_data, env)?.into()),
                 |a| Ok(a.pick(index_shape, &index_data, env)?.into()),
             )?,
+            #[cfg(feature = "complex")]
+            Value::Complex(a) => Value::Complex(a.pick(index_shape, &index_data, env)?),
             Value::Char(a) => Value::Char(a.pick(index_shape, &index_data, env)?),
             Value::Box(a) => Value::Box(a.pick(index_shape, &index_data, env)?),
         })
@@ -1025,29 +1083,21 @@ impl Value {
                 }
             }
         }
-        Ok(match (self, into) {
-            (Value::Num(a), Value::Num(b)) => a.unpick(index_shape, &index_data, b, env)?.into(),
-            #[cfg(feature = "bytes")]
-            (Value::Byte(a), Value::Byte(b)) => a.unpick(index_shape, &index_data, b, env)?.into(),
-            (Value::Char(a), Value::Char(b)) => a.unpick(index_shape, &index_data, b, env)?.into(),
-            (Value::Box(a), Value::Box(b)) => a.unpick(index_shape, &index_data, b, env)?.into(),
-            #[cfg(feature = "bytes")]
-            (Value::Num(a), Value::Byte(b)) => {
-                a.unpick(index_shape, &index_data, b.convert(), env)?.into()
-            }
-            #[cfg(feature = "bytes")]
-            (Value::Byte(a), Value::Num(b)) => {
-                a.convert().unpick(index_shape, &index_data, b, env)?.into()
-            }
-            (a, b) => a
-                .coerce_to_functions(
-                    b,
-                    env,
-                    |a, b, env| a.unpick(index_shape, &index_data, b, env),
-                    |a, b| format!("Cannot unpick {a} array from {b} array"),
-                )?
-                .into(),
-        })
+        self.generic_bin_into(
+            into,
+            |a, b| a.unpick(index_shape, &index_data, b, env).map(Into::into),
+            |a, b| a.unpick(index_shape, &index_data, b, env).map(Into::into),
+            |a, b| a.unpick(index_shape, &index_data, b, env).map(Into::into),
+            |a, b| a.unpick(index_shape, &index_data, b, env).map(Into::into),
+            |a, b| a.unpick(index_shape, &index_data, b, env).map(Into::into),
+            |a, b| {
+                env.error(format!(
+                    "Cannot unpick {} array from {} array",
+                    a.type_name(),
+                    b.type_name()
+                ))
+            },
+        )
     }
 }
 
@@ -1203,6 +1253,8 @@ impl Value {
                 |a| Ok(a.take(&index, env)?.into()),
                 |a| Ok(a.take(&index, env)?.into()),
             )?,
+            #[cfg(feature = "complex")]
+            Value::Complex(a) => Value::Complex(a.take(&index, env)?),
             Value::Char(a) => Value::Char(a.take(&index, env)?),
             Value::Box(a) => Value::Box(a.take(&index, env)?),
         })
@@ -1217,51 +1269,47 @@ impl Value {
             Value::Num(a) => Value::Num(a.drop(&index, env)?),
             #[cfg(feature = "bytes")]
             Value::Byte(a) => Value::Byte(a.drop(&index, env)?),
+            #[cfg(feature = "complex")]
+            Value::Complex(a) => Value::Complex(a.drop(&index, env)?),
             Value::Char(a) => Value::Char(a.drop(&index, env)?),
             Value::Box(a) => Value::Box(a.drop(&index, env)?),
         })
     }
     pub(crate) fn untake(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         let index = index.as_ints(env, "Index must be a list of integers")?;
-        Ok(match (self, into) {
-            (Value::Num(a), Value::Num(b)) => Value::Num(a.untake(&index, b, env)?),
-            #[cfg(feature = "bytes")]
-            (Value::Byte(a), Value::Byte(b)) => Value::Byte(a.untake(&index, b, env)?),
-            (Value::Char(a), Value::Char(b)) => Value::Char(a.untake(&index, b, env)?),
-            (Value::Box(a), Value::Box(b)) => Value::Box(a.untake(&index, b, env)?),
-            #[cfg(feature = "bytes")]
-            (Value::Num(a), Value::Byte(b)) => Value::Num(a.untake(&index, b.convert(), env)?),
-            #[cfg(feature = "bytes")]
-            (Value::Byte(a), Value::Num(b)) => Value::Num(a.convert().untake(&index, b, env)?),
-            (a, b) => {
-                return Err(env.error(format!(
+        self.generic_bin_into(
+            into,
+            |a, b| a.untake(&index, b, env).map(Into::into),
+            |a, b| a.untake(&index, b, env).map(Into::into),
+            |a, b| a.untake(&index, b, env).map(Into::into),
+            |a, b| a.untake(&index, b, env).map(Into::into),
+            |a, b| a.untake(&index, b, env).map(Into::into),
+            |a, b| {
+                env.error(format!(
                     "Cannot untake {} into {}",
                     a.type_name(),
                     b.type_name()
-                )))
-            }
-        })
+                ))
+            },
+        )
     }
     pub(crate) fn undrop(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         let index = index.as_ints(env, "Index must be a list of integers")?;
-        Ok(match (self, into) {
-            (Value::Num(a), Value::Num(b)) => Value::Num(a.undrop(&index, b, env)?),
-            #[cfg(feature = "bytes")]
-            (Value::Byte(a), Value::Byte(b)) => Value::Byte(a.undrop(&index, b, env)?),
-            (Value::Char(a), Value::Char(b)) => Value::Char(a.undrop(&index, b, env)?),
-            (Value::Box(a), Value::Box(b)) => Value::Box(a.undrop(&index, b, env)?),
-            #[cfg(feature = "bytes")]
-            (Value::Num(a), Value::Byte(b)) => Value::Num(a.undrop(&index, b.convert(), env)?),
-            #[cfg(feature = "bytes")]
-            (Value::Byte(a), Value::Num(b)) => Value::Num(a.convert().undrop(&index, b, env)?),
-            (a, b) => {
-                return Err(env.error(format!(
+        self.generic_bin_into(
+            into,
+            |a, b| a.undrop(&index, b, env).map(Into::into),
+            |a, b| a.undrop(&index, b, env).map(Into::into),
+            |a, b| a.undrop(&index, b, env).map(Into::into),
+            |a, b| a.undrop(&index, b, env).map(Into::into),
+            |a, b| a.undrop(&index, b, env).map(Into::into),
+            |a, b| {
+                env.error(format!(
                     "Cannot undrop {} into {}",
                     a.type_name(),
                     b.type_name()
-                )))
-            }
-        })
+                ))
+            },
+        )
     }
 }
 
@@ -1553,6 +1601,8 @@ impl Value {
             Value::Num(a) => a.rotate(&by, env)?,
             #[cfg(feature = "bytes")]
             Value::Byte(a) => a.rotate(&by, env)?,
+            #[cfg(feature = "complex")]
+            Value::Complex(a) => a.rotate(&by, env)?,
             Value::Char(a) => a.rotate(&by, env)?,
             Value::Box(a) => a.rotate(&by, env)?,
         }
@@ -1612,6 +1662,8 @@ impl Value {
                 |a| Ok(a.select_impl(indices_shape, &indices_data, env)?.into()),
                 |a| Ok(a.select_impl(indices_shape, &indices_data, env)?.into()),
             )?,
+            #[cfg(feature = "complex")]
+            Value::Complex(a) => a.select_impl(indices_shape, &indices_data, env)?.into(),
             Value::Char(a) => a.select_impl(indices_shape, &indices_data, env)?.into(),
             Value::Box(a) => a.select_impl(indices_shape, &indices_data, env)?.into(),
         })
@@ -1623,28 +1675,21 @@ impl Value {
         if sorted_indices.windows(2).any(|win| win[0] == win[1]) {
             return Err(env.error("Cannot undo selection with duplicate indices"));
         }
-        Ok(match (self, into) {
-            (Value::Num(a), Value::Num(b)) => a.unselect_impl(ind_shape, &ind, b, env)?.into(),
-            #[cfg(feature = "bytes")]
-            (Value::Byte(a), Value::Byte(b)) => a.unselect_impl(ind_shape, &ind, b, env)?.into(),
-            (Value::Char(a), Value::Char(b)) => a.unselect_impl(ind_shape, &ind, b, env)?.into(),
-            (Value::Box(a), Value::Box(b)) => a.unselect_impl(ind_shape, &ind, b, env)?.into(),
-            #[cfg(feature = "bytes")]
-            (Value::Num(a), Value::Byte(b)) => {
-                a.unselect_impl(ind_shape, &ind, b.convert(), env)?.into()
-            }
-            #[cfg(feature = "bytes")]
-            (Value::Byte(a), Value::Num(b)) => {
-                a.convert().unselect_impl(ind_shape, &ind, b, env)?.into()
-            }
-            (a, b) => {
-                return Err(env.error(format!(
+        self.generic_bin_into(
+            into,
+            |a, b| a.unselect_impl(ind_shape, &ind, b, env).map(Into::into),
+            |a, b| a.unselect_impl(ind_shape, &ind, b, env).map(Into::into),
+            |a, b| a.unselect_impl(ind_shape, &ind, b, env).map(Into::into),
+            |a, b| a.unselect_impl(ind_shape, &ind, b, env).map(Into::into),
+            |a, b| a.unselect_impl(ind_shape, &ind, b, env).map(Into::into),
+            |a, b| {
+                env.error(format!(
                     "Cannot untake {} into {}",
                     a.type_name(),
                     b.type_name()
-                )))
-            }
-        })
+                ))
+            },
+        )
     }
 }
 
@@ -1797,6 +1842,8 @@ impl Value {
             Value::Num(a) => a.windows(&size_spec, env)?.into(),
             #[cfg(feature = "bytes")]
             Value::Byte(a) => a.windows(&size_spec, env)?.into(),
+            #[cfg(feature = "complex")]
+            Value::Complex(a) => a.windows(&size_spec, env)?.into(),
             Value::Char(a) => a.windows(&size_spec, env)?.into(),
             Value::Box(a) => a.windows(&size_spec, env)?.into(),
         })

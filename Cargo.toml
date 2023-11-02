@@ -55,7 +55,15 @@ crossterm = { version = "0.27.0", optional = true, default-features = false }
 rustyline = { version = "12.0.0", optional = true }
 
 [features]
-audio = ["hodaun", "lockfree"]
+default = ["no_complex", "complex"]
+no_complex = [
+    "binary",
+    "terminal_image",
+    "https",
+    "invoke",
+    "trash",
+    "raw_mode",
+]
 binary = [
     "ctrlc",
     "notify",
@@ -65,10 +73,11 @@ binary = [
     "rustyline",
     "stand",
 ]
+audio = ["hodaun", "lockfree"]
 bytes = []
+complex = []
 debug = []
 raw_mode = ["crossterm"]
-default = ["binary", "terminal_image", "https", "invoke", "trash", "raw_mode"]
 https = ["httparse", "rustls", "webpki-roots"]
 lsp = ["tower-lsp", "tokio"]
 profile = ["serde", "serde_yaml", "indexmap"]

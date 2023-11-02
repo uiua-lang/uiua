@@ -545,9 +545,10 @@ fn TutorialTypes() -> impl IntoView {
         <Title text="Types - Uiua Docs"/>
         <h1>"Types"</h1>
         <p>"Every value in Uiua is an array. However, different arrays on the stack can have different "<em>"types"</em>" of items. Every element of an array is always the same type. Unlike some other array programming languages, Uiua arrays cannot have elements of different types."</p>
-        <p>"There are only three types of arrays:"</p>
+        <p>"There are up to four types of arrays:"</p>
         <ul>
             <li><strong>"Number"</strong></li>
+            <li><strong>"Complex"</strong>" (optional)"</li>
             <li><strong>"Character"</strong></li>
             <li><strong>"Box"</strong></li>
         </ul>
@@ -561,6 +562,17 @@ fn TutorialTypes() -> impl IntoView {
         <Editor example="⊡ 2 [4 7 9 1 0]"/>
         <Editor example="⊡ 3.1 [4 7 9 1 0]"/> // Should fail
         <p>"If you want to convert a number to a whole number, you can use "<Prim prim=Floor/>", "<Prim prim=Ceil/>", or "<Prim prim=Round/>"."</p>
+
+        <h2 id="complex-numbers">"Complex Numbers"</h2>
+        <p>"Complex numbers are optional. They are available on this site and are enabled by default in the native interpreter."</p>
+        <p>"Complex numbers can be created with the "<Prim prim=Complex/>" function."</p>
+        <Editor example="ℂ 3 5"/>
+        <Editor example="ℂ [1 2 3] [4 5 6]"/>
+        <p>"While complex numbers support all the same math operations as normal numbers, they are a distinc type and cannot be used in place of normal numbers."</p>
+        <p>"You can convert a complex number to a normal number with "<Prim prim=Abs/>"."</p>
+        <Editor example="⌵ ℂ3 4"/>
+        <p><Prim prim=Sqrt/>" only returns a complex number if it is called on a complex number. Beware of floating-point errors."</p>
+        <Editor example="√   ¯4\n√+C0¯4"/>
 
         <h2 id="characters">"Characters"</h2>
         <p>"Characters are represented as 32-bit Unicode codepoints."</p>

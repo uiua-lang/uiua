@@ -18,9 +18,10 @@ pub fn constants() -> &'static [ConstantDef] {
 }
 
 macro_rules! constant {
-    ($(#[doc = $doc:literal] ($name:ident, $value:expr)),* $(,)?) => {
+    ($(#[doc = $doc:literal] $(#[$attr:meta])* ($name:ident, $value:expr)),* $(,)?) => {
         static CONSTANTS: Lazy<[ConstantDef; 0 $(+ { _ = stringify!($name) ; 1})*]> = Lazy::new(|| {
             [$(
+                $(#[$attr])*
                 ConstantDef {
                     name: stringify!($name),
                     value: $value.into(),
@@ -34,12 +35,15 @@ macro_rules! constant {
 constant!(
     /// Euler's constant
     (e, std::f64::consts::E),
+    /// The imaginary unit
+    #[cfg(feature = "complex")]
+    (i, crate::Complex::I),
     /// IEEE 754-2008's `NaN`
     (NaN, std::f64::NAN),
     /// The maximum integer that can be represented exactly
     (MaxInt, 2f64.powi(53)),
     /// A string identifying the operating system
-    (os, std::env::consts::OS),
+    (Os, std::env::consts::OS),
     /// A string identifying family of the operating system
     (Family, std::env::consts::FAMILY),
     /// A string identifying the architecture of the CPU
@@ -239,6 +243,8 @@ primitive!(
     ///
     /// ex: ⌵ ¯1
     /// ex: ⌵ 1
+    /// [absolute value] converts complex numbers to their magnitude.
+    /// ex: ⌵ +3i4
     ///
     /// The glyph looks like the graph of `|x|`.
     (1, Abs, MonadicPervasive, ("absolute value", '⌵')),
@@ -448,6 +454,12 @@ primitive!(
     /// ex: ∠ ¯1 0
     /// ex: ∠ √2 √2
     (2, Atan, DyadicPervasive, ("atangent", '∠')),
+    /// Make a complex number
+    ///
+    /// The first argument is the imaginary part, and the second argument is the real part.
+    /// ex: ℂ 3 5
+    /// ex: ℂ [0 1 2] [3 4 5]
+    (2, Complex, DyadicPervasive, ("complex", 'ℂ')),
     /// Get the number of rows in an array
     ///
     /// ex: ⧻5
@@ -1732,6 +1744,7 @@ impl_primitive!(
     (1(2), InvCouple),
     (1, InvUtf),
     (1, InvTrace),
+    (1(2), InvComplex),
     // Unders
     (3, Unselect),
     (3, Unpick),

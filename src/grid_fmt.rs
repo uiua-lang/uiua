@@ -14,7 +14,7 @@ use crate::{
     array::{Array, ArrayValue},
     boxed::Boxed,
     value::Value,
-    Primitive,
+    Complex, Primitive,
 };
 
 type Grid<T = char> = Vec<Vec<T>>;
@@ -64,6 +64,25 @@ impl GridFmt for f64 {
     }
 }
 
+impl GridFmt for Complex {
+    fn fmt_grid(&self, boxed: bool) -> Grid {
+        if self.im == 0.0 {
+            self.re.fmt_grid(boxed)
+        } else if self.re == 0.0 {
+            let mut grid = self.im.fmt_grid(boxed);
+            grid[0].push('i');
+            grid
+        } else {
+            let mut re = self.re.fmt_grid(boxed);
+            let im = self.im.fmt_grid(false);
+            re[0].push('_');
+            re[0].extend(im[0].iter().copied());
+            re[0].push('i');
+            re
+        }
+    }
+}
+
 pub fn format_char_inner(c: char) -> String {
     if c == char::MAX {
         return '_'.to_string();
@@ -101,6 +120,8 @@ impl GridFmt for Boxed {
             Value::Num(array) => array.fmt_grid(true),
             #[cfg(feature = "bytes")]
             Value::Byte(array) => array.fmt_grid(true),
+            #[cfg(feature = "complex")]
+            Value::Complex(array) => array.fmt_grid(true),
             Value::Char(array) => array.fmt_grid(true),
             Value::Box(array) => array.fmt_grid(true),
         };

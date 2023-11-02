@@ -39,6 +39,7 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
         Neg => Instr::Prim(Neg, span),
         Not => Instr::Prim(Not, span),
         Sin => Instr::ImplPrim(Asin, span),
+        Complex => Instr::ImplPrim(InvComplex, span),
         Reverse => Instr::Prim(Reverse, span),
         Transpose => Instr::ImplPrim(InvTranspose, span),
         Bits => Instr::ImplPrim(InverseBits, span),
@@ -64,6 +65,7 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
         InvTrace => Instr::Prim(Trace, span),
         InvWhere => Instr::Prim(Where, span),
         InvUtf => Instr::Prim(Utf, span),
+        InvComplex => Instr::Prim(Complex, span),
         _ => return None,
     })
 }

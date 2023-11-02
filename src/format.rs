@@ -515,7 +515,7 @@ impl<'a> Formatter<'a> {
         match &word.value {
             Word::Number(s, n) => {
                 let grid_str = n.grid_string();
-                let formatted = if grid_str.len() < s.len() {
+                let formatted = if grid_str.len() < s.trim_end_matches('i').len() {
                     grid_str
                 } else {
                     s.replace('`', "¯")
@@ -756,7 +756,7 @@ fn trim_spaces(words: &[Sp<Word>], trim_end: bool) -> &[Sp<Word>] {
 
 fn word_is_multiline(word: &Word) -> bool {
     match word {
-        Word::Number(_, _) => false,
+        Word::Number(..) => false,
         Word::Char(_) => false,
         Word::String(_) => false,
         Word::FormatString(_) => false,

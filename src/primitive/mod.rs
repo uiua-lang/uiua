@@ -377,6 +377,7 @@ impl Primitive {
             Primitive::Min => env.dyadic_oo_env(Value::min)?,
             Primitive::Max => env.dyadic_oo_env(Value::max)?,
             Primitive::Atan => env.dyadic_oo_env(Value::atan2)?,
+            Primitive::Complex => env.dyadic_oo_env(Value::complex)?,
             Primitive::Match => env.dyadic_rr(|a, b| a == b)?,
             Primitive::Join => env.dyadic_oo_env(Value::join)?,
             Primitive::Transpose => env.monadic_mut(Value::transpose)?,
@@ -422,13 +423,20 @@ impl Primitive {
                     Array::row_count,
                     Array::row_count,
                     Array::row_count,
+                    Array::row_count,
                 )
             })?,
             Primitive::Shape => env.monadic_ref(|v| {
-                v.generic_ref_deep(Array::shape, Array::shape, Array::shape, Array::shape)
-                    .iter()
-                    .copied()
-                    .collect::<Value>()
+                v.generic_ref_deep(
+                    Array::shape,
+                    Array::shape,
+                    Array::shape,
+                    Array::shape,
+                    Array::shape,
+                )
+                .iter()
+                .copied()
+                .collect::<Value>()
             })?,
             Primitive::Bits => env.monadic_ref_env(Value::bits)?,
             Primitive::Reduce => reduce::reduce(env)?,
@@ -600,13 +608,7 @@ impl Primitive {
             }
             Primitive::Type => {
                 let val = env.pop(1)?;
-                env.push(match val {
-                    Value::Num(_) => 0,
-                    #[cfg(feature = "bytes")]
-                    Value::Byte(_) => 0,
-                    Value::Char(_) => 1,
-                    Value::Box(_) => 2,
-                });
+                env.push(val.type_id());
             }
             Primitive::Spawn => {
                 let f = env.pop_function()?;
@@ -723,6 +725,13 @@ impl ImplPrimitive {
             ImplPrimitive::Unpartition => loops::unpartition(env)?,
             ImplPrimitive::Ungroup => loops::ungroup(env)?,
             ImplPrimitive::InvTrace => trace(env, true)?,
+            ImplPrimitive::InvComplex => {
+                let x = env.pop(1)?;
+                let im = x.clone().complex_im(env)?;
+                let re = x.complex_re(env)?;
+                env.push(re);
+                env.push(im);
+            }
             // Optimizations
             ImplPrimitive::Cos => env.monadic_env(Value::cos)?,
             ImplPrimitive::Last => env.monadic_env(Value::last)?,

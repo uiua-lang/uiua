@@ -10,7 +10,6 @@ use std::{
 use crate::UiuaResult;
 use crate::{
     array::{Array, ArrayValue, Shape},
-    value::Value,
     Uiua, UiuaError,
 };
 
@@ -91,38 +90,6 @@ impl FillContext for () {
 
 pub(crate) fn shape_prefixes_match(a: &[usize], b: &[usize]) -> bool {
     a.iter().zip(b.iter()).all(|(a, b)| a == b)
-}
-
-#[allow(dead_code)]
-pub(crate) fn fill_value_shapes<C>(a: &mut Value, b: &mut Value, ctx: &C) -> Result<(), C::Error>
-where
-    C: FillContext,
-{
-    match (a, b) {
-        (Value::Num(a), Value::Num(b)) => fill_array_shapes(a, b, ctx),
-        #[cfg(feature = "bytes")]
-        (Value::Num(a), Value::Byte(b)) => fill_array_shapes(a, b, ctx),
-        (Value::Num(a), Value::Char(b)) => fill_array_shapes(a, b, ctx),
-        (Value::Num(a), Value::Box(b)) => fill_array_shapes(a, b, ctx),
-        #[cfg(feature = "bytes")]
-        (Value::Byte(a), Value::Num(b)) => fill_array_shapes(a, b, ctx),
-        #[cfg(feature = "bytes")]
-        (Value::Byte(a), Value::Byte(b)) => fill_array_shapes(a, b, ctx),
-        #[cfg(feature = "bytes")]
-        (Value::Byte(a), Value::Char(b)) => fill_array_shapes(a, b, ctx),
-        #[cfg(feature = "bytes")]
-        (Value::Byte(a), Value::Box(b)) => fill_array_shapes(a, b, ctx),
-        (Value::Char(a), Value::Num(b)) => fill_array_shapes(a, b, ctx),
-        #[cfg(feature = "bytes")]
-        (Value::Char(a), Value::Byte(b)) => fill_array_shapes(a, b, ctx),
-        (Value::Char(a), Value::Char(b)) => fill_array_shapes(a, b, ctx),
-        (Value::Char(a), Value::Box(b)) => fill_array_shapes(a, b, ctx),
-        (Value::Box(a), Value::Num(b)) => fill_array_shapes(a, b, ctx),
-        #[cfg(feature = "bytes")]
-        (Value::Box(a), Value::Byte(b)) => fill_array_shapes(a, b, ctx),
-        (Value::Box(a), Value::Char(b)) => fill_array_shapes(a, b, ctx),
-        (Value::Box(a), Value::Box(b)) => fill_array_shapes(a, b, ctx),
-    }
 }
 
 pub(crate) fn fill_array_shapes<A, B, C>(

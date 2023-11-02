@@ -114,6 +114,8 @@ impl Default for Scope {
 #[derive(Default, Clone)]
 struct Fills {
     nums: Vec<f64>,
+    #[cfg(feature = "complex")]
+    complexes: Vec<crate::Complex>,
     chars: Vec<char>,
     boxes: Vec<Boxed>,
 }
@@ -995,6 +997,10 @@ code:
     pub(crate) fn box_fill(&self) -> Option<Boxed> {
         self.scope.fills.boxes.last().cloned()
     }
+    #[cfg(feature = "complex")]
+    pub(crate) fn complex_fill(&self) -> Option<crate::Complex> {
+        self.scope.fills.complexes.last().copied()
+    }
     /// Do something with the fill context set
     pub(crate) fn with_fill(
         &mut self,
@@ -1013,6 +1019,13 @@ code:
             Value::Byte(b) => {
                 if let Some(&b) = b.as_scalar() {
                     self.scope.fills.nums.push(b as f64);
+                    set = true;
+                }
+            }
+            #[cfg(feature = "complex")]
+            Value::Complex(c) => {
+                if let Some(&c) = c.as_scalar() {
+                    self.scope.fills.complexes.push(c);
                     set = true;
                 }
             }
@@ -1043,6 +1056,10 @@ code:
             #[cfg(feature = "bytes")]
             Value::Byte(_) => {
                 self.scope.fills.nums.pop();
+            }
+            #[cfg(feature = "complex")]
+            Value::Complex(_) => {
+                self.scope.fills.complexes.pop();
             }
             Value::Char(_) => {
                 self.scope.fills.chars.pop();

@@ -2,6 +2,7 @@
 Within a each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
+- Multi-output modifiers
 - Multimedia
   - Sound input
   - Webcam input
@@ -15,10 +16,10 @@ Within a each section, items are ordered (roughly) by decreasing priority.
 ## Bugs
 - Figure out what is going on with the editor cursor
   - Problems are mostly on Firefox, especially on mobile
+  - Try looks for cursor in entire editor
 - Expand test suite
 
 ## Optimizations
-- Inline some functions with `distribute` and `tribute`
 - Row windows - `≡f◫` for scalar window size should be optimized to not materialize all the windows
 - Reduce windows? - `/f◫` for scalar window size could be optimized, but is it necessary?
 

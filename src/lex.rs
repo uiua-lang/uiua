@@ -851,7 +851,7 @@ fn parse_format_fragments(s: &str) -> Vec<String> {
 
 /// Whether a character can be part of a Uiua identifier
 pub fn is_ident_char(c: char) -> bool {
-    c.is_alphabetic() && !"ⁿₙπτη".contains(c)
+    c.is_alphabetic() && !"ⁿₙπτηℂ".contains(c)
 }
 
 pub fn is_custom_glyph(c: &str) -> bool {

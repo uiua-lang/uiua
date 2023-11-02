@@ -1228,6 +1228,19 @@ value_bin_math_impl!(atan2);
 value_bin_math_impl!(min, [Char, char_char]);
 value_bin_math_impl!(max, [Char, char_char]);
 
+value_bin_impl!(
+    complex,
+    ("complex", Num, Num, num_num),
+    ("bytes", "complex", Byte, Byte, byte_byte, num_num),
+    ("bytes", "complex", Byte, Num, byte_num, num_num),
+    ("bytes", "complex", Num, Byte, num_byte, num_num),
+    ["complex", Complex, com_x],
+    ("complex", Complex, Num, com_x),
+    ("complex", Num, Complex, x_com),
+    ("byte", "complex", Complex, Byte, com_x, com_x),
+    ("byte", "complex", Byte, Complex, x_com, com_x),
+);
+
 macro_rules! cmp_impls {
     ($($name:ident),*) => {
         $(

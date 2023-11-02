@@ -782,6 +782,41 @@ bin_op_mod!(
     b.log(a),
     "Cannot get the log base {b} of {a}"
 );
+pub mod complex {
+    use super::*;
+    #[cfg(feature = "complex")]
+    pub fn num_num(a: f64, b: f64) -> Complex {
+        Complex::new(b, a)
+    }
+    #[cfg(feature = "bytes")]
+    pub fn byte_byte(a: u8, b: u8) -> Complex {
+        Complex::new(b.into(), a.into())
+    }
+    #[cfg(feature = "bytes")]
+    pub fn byte_num(a: u8, b: f64) -> Complex {
+        Complex::new(b, a.into())
+    }
+    #[cfg(feature = "bytes")]
+    pub fn num_byte(a: f64, b: u8) -> Complex {
+        Complex::new(a, b.into())
+    }
+    #[cfg(feature = "complex")]
+    pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
+        b.into() * Complex::I + a
+    }
+    #[cfg(feature = "complex")]
+    pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
+        b * Complex::I + a.into()
+    }
+    #[cfg(feature = "complex")]
+    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
+        env.error(format!("Cannot get the form a complex number with {b} as the real part and {a} as the imaginary part"))
+    }
+    #[cfg(not(feature = "complex"))]
+    pub fn error<T: Display>(_a: T, _b: T, env: &Uiua) -> UiuaError {
+        env.error("Complex numbers are not available in this environment")
+    }
+}
 
 pub mod max {
     use super::*;

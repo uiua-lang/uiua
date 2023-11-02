@@ -454,6 +454,12 @@ primitive!(
     /// ex: ∠ ¯1 0
     /// ex: ∠ √2 √2
     (2, Atan, DyadicPervasive, ("atangent", '∠')),
+    /// Make a complex number
+    ///
+    /// The first argument is the imaginary part, and the second argument is the real part.
+    /// ex: ℂ 3 5
+    /// ex: ℂ [0 1 2] [3 4 5]
+    (2, Complex, DyadicPervasive, ("complex", 'ℂ')),
     /// Get the number of rows in an array
     ///
     /// ex: ⧻5

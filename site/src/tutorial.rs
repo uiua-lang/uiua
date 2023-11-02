@@ -565,16 +565,14 @@ fn TutorialTypes() -> impl IntoView {
 
         <h2 id="complex-numbers">"Complex Numbers"</h2>
         <p>"Complex numbers are optional. They are available on this site and are enabled by default in the native interpreter."</p>
-        <p>"Imaginary numbers can be created by suffixing a number with "<code>"i"</code>"."</p>
-        <Editor example="[1i 2i 3i]"/>
-        <p>"While the imaginary part alone is a complex number, complex numbers with both a real and imaginary part can be created by simply "<Prim prim=Add/>"ing them together."</p>
-        <Editor example="+3i5"/>
-        <Editor example="+[1i 2 3i] [4 5i 6]"/>
+        <p>"Complex numbers can be created with the "<Prim prim=Complex/>" function."</p>
+        <Editor example="ℂ 3 5"/>
+        <Editor example="ℂ [1 2 3] [4 5 6]"/>
         <p>"While complex numbers support all the same math operations as normal numbers, they are a distinc type and cannot be used in place of normal numbers."</p>
         <p>"You can convert a complex number to a normal number with "<Prim prim=Abs/>"."</p>
-        <Editor example="⌵+3i4"/>
+        <Editor example="⌵ ℂ3 4"/>
         <p><Prim prim=Sqrt/>" only returns a complex number if it is called on a complex number. Beware of floating-point errors."</p>
-        <Editor example="√   ¯4\n√+0i¯4"/>
+        <Editor example="√   ¯4\n√+C0¯4"/>
 
         <h2 id="characters">"Characters"</h2>
         <p>"Characters are represented as 32-bit Unicode codepoints."</p>

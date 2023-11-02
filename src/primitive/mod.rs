@@ -377,6 +377,7 @@ impl Primitive {
             Primitive::Min => env.dyadic_oo_env(Value::min)?,
             Primitive::Max => env.dyadic_oo_env(Value::max)?,
             Primitive::Atan => env.dyadic_oo_env(Value::atan2)?,
+            Primitive::Complex => env.dyadic_oo_env(Value::complex)?,
             Primitive::Match => env.dyadic_rr(|a, b| a == b)?,
             Primitive::Join => env.dyadic_oo_env(Value::join)?,
             Primitive::Transpose => env.monadic_mut(Value::transpose)?,

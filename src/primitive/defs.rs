@@ -879,7 +879,8 @@ primitive!(
     /// ex: /× []
     /// ex: /↥ []
     /// ex: /↧ []
-    /// ex! /∠ []
+    /// ex: /∠ []
+    /// ex! /⊡ []
     (1[1], Reduce, AggregatingModifier, ("reduce", '/')),
     /// Reduce, but keep intermediate values
     ///

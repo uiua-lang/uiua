@@ -59,6 +59,15 @@ impl Value {
     pub(crate) fn builder(capacity: usize) -> ValueBuilder {
         ValueBuilder::with_capacity(capacity)
     }
+    pub(crate) fn type_id(&self) -> u8 {
+        match self {
+            Self::Num(_) => 0,
+            #[cfg(feature = "bytes")]
+            Self::Byte(_) => 0,
+            Self::Char(_) => 2,
+            Self::Box(_) => 3,
+        }
+    }
     /// Get a reference to a possible number array
     pub fn as_num_array(&self) -> Option<&Array<f64>> {
         match self {
@@ -1007,83 +1016,40 @@ macro_rules! value_bin_impl {
     };
 }
 
-value_bin_impl!(
+macro_rules! value_bin_math_impl {
+    ($name:ident $(,$($tt:tt)*)?) => {
+        value_bin_impl!(
+            $name,
+            [Num, num_num],
+            ("bytes", Byte, Byte, byte_byte, num_num),
+            ("bytes", Byte, Num, byte_num, num_num),
+            ("bytes", Num, Byte, num_byte, num_num),
+            $($($tt)*)?
+        );
+    };
+}
+
+value_bin_math_impl!(
     add,
-    [Num, num_num],
     (Num, Char, num_char),
     (Char, Num, char_num),
-    ("bytes", Byte, Byte, byte_byte, num_num),
     ("bytes", Byte, Char, byte_char),
     ("bytes", Char, Byte, char_byte),
-    ("bytes", Byte, Num, byte_num, num_num),
-    ("bytes", Num, Byte, num_byte, num_num),
 );
-
-value_bin_impl!(
+value_bin_math_impl!(
     sub,
-    [Num, num_num],
     (Num, Char, num_char),
     (Char, Char, char_char),
-    ("bytes", Byte, Byte, byte_byte, num_num),
     ("bytes", Byte, Char, byte_char),
-    ("bytes", Byte, Num, byte_num, num_num),
-    ("bytes", Num, Byte, num_byte, num_num),
 );
-
-value_bin_impl!(
-    mul,
-    [Num, num_num],
-    ("bytes", Byte, Byte, byte_byte, num_num),
-    ("bytes", Byte, Num, byte_num, num_num),
-    ("bytes", Num, Byte, num_byte, num_num),
-);
-value_bin_impl!(
-    div,
-    [Num, num_num],
-    ("bytes", Byte, Byte, byte_byte, num_num),
-    ("bytes", Byte, Num, byte_num, num_num),
-    ("bytes", Num, Byte, num_byte, num_num),
-);
-value_bin_impl!(
-    modulus,
-    [Num, num_num],
-    ("bytes", Byte, Byte, byte_byte, num_num),
-    ("bytes", Byte, Num, byte_num, num_num),
-    ("bytes", Num, Byte, num_byte, num_num),
-);
-value_bin_impl!(
-    pow,
-    [Num, num_num],
-    ("bytes", Byte, Byte, byte_byte, num_num),
-    ("bytes", Byte, Num, byte_num, num_num),
-    ("bytes", Num, Byte, num_byte, num_num),
-);
-value_bin_impl!(
-    log,
-    [Num, num_num],
-    ("bytes", Byte, Byte, byte_byte, num_num),
-    ("bytes", Byte, Num, byte_num, num_num),
-    ("bytes", Num, Byte, num_byte, num_num),
-);
-value_bin_impl!(atan2, [Num, num_num]);
-
-value_bin_impl!(
-    min,
-    [Num, num_num],
-    [Char, char_char],
-    ["bytes", Byte, byte_byte, num_num],
-    ("bytes", Byte, Num, byte_num, num_num),
-    ("bytes", Num, Byte, num_byte, num_num),
-);
-
-value_bin_impl!(
-    max,
-    [Num, num_num],
-    [Char, char_char],
-    ["bytes", Byte, byte_byte, num_num],
-    ("bytes", Byte, Num, byte_num, num_num),
-    ("bytes", Num, Byte, num_byte, num_num),
-);
+value_bin_math_impl!(mul);
+value_bin_math_impl!(div);
+value_bin_math_impl!(modulus);
+value_bin_math_impl!(pow);
+value_bin_math_impl!(log);
+value_bin_math_impl!(atan2);
+value_bin_math_impl!(min, [Char, char_char]);
+value_bin_math_impl!(max, [Char, char_char]);
 
 macro_rules! cmp_impls {
     ($($name:ident),*) => {
@@ -1136,6 +1102,10 @@ impl PartialOrd for Value {
 
 impl Ord for Value {
     fn cmp(&self, other: &Self) -> Ordering {
+        let type_order = self.type_id().cmp(&other.type_id());
+        if type_order != Ordering::Equal {
+            return type_order;
+        }
         match (self, other) {
             (Value::Num(a), Value::Num(b)) => a.cmp(b),
             #[cfg(feature = "bytes")]

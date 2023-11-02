@@ -202,6 +202,7 @@ impl Parser {
         Some(if let Some(binding) = self.try_binding() {
             Item::Binding(binding)
         } else if let Some(words) = self.try_words() {
+            self.validate_words(&words, false);
             Item::Words(words)
         } else if parse_scopes && self.try_exact(TripleMinus).is_some() {
             let items = self.items(false);

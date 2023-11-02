@@ -555,7 +555,7 @@ fn TutorialTypes() -> impl IntoView {
 
         <h2 id="numbers">"Numbers"</h2>
         <p>"Numbers are decimal numbers with floating precision. They use a 64-bit floating-point representation."</p>
-        <Editor example="[5 0 3.2 ¯1.1 π ∞]"/>
+        <Editor example="[5 6e3 0 3.2 3/4 ¯1.1 π ∞]"/>
         <p>"Most math operations can only be applied to numbers."</p>
         <p>"Even though numbers can have a fractional part, many built-in functions require whole numbers. These functions will return an error if given a non-whole number."</p>
         <p>"One such example is "<Prim prim=Pick/>"."</p>

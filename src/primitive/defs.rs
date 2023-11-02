@@ -19,7 +19,18 @@ pub fn constants() -> &'static [ConstantDef] {
 
 macro_rules! constant {
     ($(#[doc = $doc:literal] $(#[$attr:meta])* ($name:ident, $value:expr)),* $(,)?) => {
-        static CONSTANTS: Lazy<[ConstantDef; 0 $(+ { _ = stringify!($name) ; 1})*]> = Lazy::new(|| {
+        const COUNT: usize = {
+            let mut count = 0;
+            $(
+                $(#[$attr])*
+                {
+                    _ = stringify!($name);
+                    count += 1;
+                }
+            )*
+            count
+        };
+        static CONSTANTS: Lazy<[ConstantDef; COUNT]> = Lazy::new(|| {
             [$(
                 $(#[$attr])*
                 ConstantDef {

@@ -16,7 +16,7 @@ use crate::{
     Primitive, Uiua, UiuaResult,
 };
 
-use super::loops::flip;
+use super::{loops::flip, multi_output};
 
 pub fn table(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
@@ -174,30 +174,37 @@ fn fast_table_join_or_couple<T: ArrayValue>(a: Array<T>, b: Array<T>, flipped: b
 
 fn generic_table(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
-    if sig != (2, 1) {
+    if sig.args != 2 {
         return Err(env.error(format!(
-            "Table's function's signature must be |2.1, but it is {sig}"
+            "Table's function must take 2 arguments, but its signature is {sig}",
         )));
     }
     let mut new_shape = Shape::from(xs.shape());
     new_shape.extend_from_slice(ys.shape());
-    let mut items = Value::builder(xs.element_count() * ys.element_count());
+    let outputs = sig.outputs;
+    let mut items = multi_output(
+        outputs,
+        Value::builder(xs.element_count() * ys.element_count()),
+    );
     let y_values = ys.into_elements().collect::<Vec<_>>();
     for x in xs.into_elements() {
         for y in y_values.iter().cloned() {
             env.push(y);
             env.push(x.clone());
             env.call_error_on_break(f.clone(), "break is not allowed in table")?;
-            let item = env.pop("tabled function result")?;
-            item.validate_shape();
-            items.add_row(item, env)?;
+            for i in 0..outputs {
+                items[i].add_row(env.pop("tabled function result")?, env)?;
+            }
         }
     }
-    let mut tabled = items.finish();
-    new_shape.extend_from_slice(&tabled.shape()[1..]);
-    *tabled.shape_mut() = new_shape;
-    tabled.validate_shape();
-    env.push(tabled);
+    for items in items.into_iter().rev() {
+        let mut tabled = items.finish();
+        let mut new_shape = new_shape.clone();
+        new_shape.extend_from_slice(&tabled.shape()[1..]);
+        *tabled.shape_mut() = new_shape;
+        tabled.validate_shape();
+        env.push(tabled);
+    }
     Ok(())
 }
 
@@ -207,29 +214,33 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
     let xs = env.pop(1)?;
     let ys = env.pop(2)?;
     let sig = f.signature();
-    if sig != (2, 1) {
+    if sig.args != 2 {
         return Err(env.error(format!(
-            "Cross's function's signature must be |2.1, but it is {sig}"
+            "Cross's function must take 2 arguments, but its signature is {sig}",
         )));
     }
-    let mut new_shape = tiny_vec![xs.row_count(), ys.row_count()];
-    let mut items = Value::builder(xs.row_count() * ys.row_count());
+    let new_shape = tiny_vec![xs.row_count(), ys.row_count()];
+    let outputs = sig.outputs;
+    let mut items = multi_output(outputs, Value::builder(xs.row_count() * ys.row_count()));
     let y_rows = ys.into_rows().collect::<Vec<_>>();
     for x_row in xs.into_rows() {
         for y_row in y_rows.iter().cloned() {
             env.push(y_row);
             env.push(x_row.clone());
             env.call_error_on_break(f.clone(), "break is not allowed in cross")?;
-            let item = env.pop("crossed function result")?;
-            item.validate_shape();
-            items.add_row(item, env)?;
+            for i in 0..outputs {
+                items[i].add_row(env.pop("crossed function result")?, env)?;
+            }
         }
     }
-    let mut crossed = items.finish();
-    new_shape.extend_from_slice(&crossed.shape()[1..]);
-    *crossed.shape_mut() = new_shape;
-    crossed.validate_shape();
-    env.push(crossed);
+    for items in items.into_iter().rev() {
+        let mut crossed = items.finish();
+        let mut new_shape = new_shape.clone();
+        new_shape.extend_from_slice(&crossed.shape()[1..]);
+        *crossed.shape_mut() = new_shape;
+        crossed.validate_shape();
+        env.push(crossed);
+    }
     Ok(())
 }
 

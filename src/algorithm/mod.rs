@@ -6,6 +6,8 @@ use std::{
     hash::{Hash, Hasher},
 };
 
+use tinyvec::TinyVec;
+
 #[cfg(feature = "bytes")]
 use crate::UiuaResult;
 use crate::{
@@ -22,6 +24,19 @@ pub mod pervade;
 pub mod reduce;
 pub mod table;
 pub mod zip;
+
+type MultiOutput<T> = TinyVec<[T; 1]>;
+fn multi_output<T: Clone + Default>(n: usize, val: T) -> MultiOutput<T> {
+    let mut vec = TinyVec::with_capacity(n);
+    if n == 0 {
+        return vec;
+    }
+    for _ in 0..n - 1 {
+        vec.push(val.clone());
+    }
+    vec.push(val);
+    vec
+}
 
 fn max_shape(a: &[usize], b: &[usize]) -> Shape {
     let shape_len = a.len().max(b.len());

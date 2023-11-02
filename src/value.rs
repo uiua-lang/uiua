@@ -1373,7 +1373,7 @@ impl fmt::Display for Value {
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub(crate) struct ValueBuilder {
     value: Option<Value>,
     rows: usize,

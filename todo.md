@@ -3,6 +3,8 @@ Within a each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
 - Multi-output modifiers
+- Output colors
+- Auto pad examples
 - Multimedia
   - Sound input
   - Webcam input

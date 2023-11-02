@@ -25,7 +25,7 @@ pub struct Binding {
 
 #[derive(Clone)]
 pub enum Word {
-    Number(String, f64),
+    Number(String, f64, bool),
     Char(String),
     String(String),
     FormatString(Vec<String>),
@@ -52,7 +52,7 @@ impl Word {
 impl fmt::Debug for Word {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Word::Number(s, _) => write!(f, "{s:?}"),
+            Word::Number(s, ..) => write!(f, "{s:?}"),
             Word::Char(char) => write!(f, "{char:?}"),
             Word::String(string) => write!(f, "{string:?}"),
             Word::FormatString(parts) => {

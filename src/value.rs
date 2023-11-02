@@ -945,6 +945,20 @@ impl FromIterator<u8> for Value {
     }
 }
 
+#[cfg(not(feature = "complex"))]
+impl From<Complex> for Value {
+    fn from(c: Complex) -> Self {
+        Self::from(c.abs())
+    }
+}
+
+#[cfg(not(feature = "complex"))]
+impl From<Array<Complex>> for Value {
+    fn from(array: Array<Complex>) -> Self {
+        array.convert_with(|c| c.abs()).into()
+    }
+}
+
 impl FromIterator<usize> for Value {
     fn from_iter<I: IntoIterator<Item = usize>>(iter: I) -> Self {
         iter.into_iter().map(|i| i as f64).collect()

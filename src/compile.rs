@@ -332,13 +332,26 @@ impl Uiua {
     }
     fn word(&mut self, word: Sp<Word>, call: bool) -> UiuaResult {
         match word.value {
-            Word::Number(_, n) => {
+            Word::Number(_, n, i) => {
+                let value = if i {
+                    #[cfg(feature = "complex")]
+                    {
+                        Value::from(crate::Complex::new(0.0, n))
+                    }
+                    #[cfg(not(feature = "complex"))]
+                    return Err(word
+                        .span
+                        .sp("Complex numbers not supported in this environment".into())
+                        .into());
+                } else {
+                    Value::from(n)
+                };
                 if call {
-                    self.push_instr(Instr::push(n));
+                    self.push_instr(Instr::push(value));
                 } else {
                     self.push_instr(Instr::push_func(Function::new(
                         FunctionId::Anonymous(word.span.clone()),
-                        vec![Instr::push(n)],
+                        vec![Instr::push(value)],
                         Signature::new(0, 1),
                     )));
                 }

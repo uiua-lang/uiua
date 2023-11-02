@@ -529,6 +529,7 @@ impl<'a> Lexer<'a> {
                 ":" => self.end(Colon, start),
                 "`" => {
                     if self.number("-") {
+                        self.next_char_exact("i");
                         self.end(Number, start)
                     } else {
                         self.end(Backtick, start)
@@ -540,6 +541,7 @@ impl<'a> Lexer<'a> {
                     .is_some() =>
                 {
                     self.number("-");
+                    self.next_char_exact("i");
                     self.end(Number, start)
                 }
                 "*" => self.end(Star, start),
@@ -689,6 +691,7 @@ impl<'a> Lexer<'a> {
                 // Numbers
                 c if c.chars().all(|c| c.is_ascii_digit()) => {
                     self.number(c);
+                    self.next_char_exact("i");
                     self.end(Number, start)
                 }
                 // Newlines

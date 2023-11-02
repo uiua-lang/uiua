@@ -440,8 +440,13 @@ impl ArrayValue for Boxed {
 
 impl ArrayValue for Complex {
     const NAME: &'static str = "complex";
-    fn get_fill(env: &Uiua) -> Option<Self> {
-        env.complex_fill()
+    fn get_fill(_env: &Uiua) -> Option<Self> {
+        #[cfg(feature = "complex")]
+        {
+            _env.complex_fill()
+        }
+        #[cfg(not(feature = "complex"))]
+        None
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         for n in [self.re, self.im] {

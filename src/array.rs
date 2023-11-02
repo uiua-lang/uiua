@@ -12,7 +12,7 @@ use crate::{
     cowslice::{cowslice, CowSlice},
     grid_fmt::GridFmt,
     value::Value,
-    Uiua,
+    Complex, Uiua,
 };
 
 /// Uiua's array type
@@ -438,6 +438,18 @@ impl ArrayValue for Boxed {
     }
 }
 
+impl ArrayValue for Complex {
+    const NAME: &'static str = "complex";
+    fn get_fill(env: &Uiua) -> Option<Self> {
+        env.complex_fill()
+    }
+    fn array_hash<H: Hasher>(&self, hasher: &mut H) {
+        for n in [self.re, self.im] {
+            n.array_hash(hasher);
+        }
+    }
+}
+
 /// Trait for comparing array elements
 pub trait ArrayCmp<U = Self> {
     /// Compare two elements
@@ -458,6 +470,14 @@ impl ArrayCmp for f64 {
 impl ArrayCmp for u8 {
     fn array_cmp(&self, other: &Self) -> Ordering {
         self.cmp(other)
+    }
+}
+
+impl ArrayCmp for Complex {
+    fn array_cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other)
+            .unwrap_or_else(|| self.re.is_nan().cmp(&other.re.is_nan()))
+            .then_with(|| self.im.is_nan().cmp(&other.im.is_nan()))
     }
 }
 

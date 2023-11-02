@@ -70,6 +70,7 @@ mod ast;
 mod boxed;
 mod check;
 mod compile;
+mod complex;
 mod cowslice;
 mod error;
 pub mod format;
@@ -94,6 +95,7 @@ use std::sync::Arc;
 pub use {
     array::*,
     boxed::*,
+    complex::*,
     error::*,
     function::*,
     lex::is_ident_char,

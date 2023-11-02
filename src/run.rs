@@ -17,8 +17,8 @@ use rand::prelude::*;
 
 use crate::{
     array::Array, boxed::Boxed, constants, function::*, lex::Span, parse::parse,
-    primitive::Primitive, value::Value, Diagnostic, DiagnosticKind, Ident, NativeSys, SysBackend,
-    SysOp, TraceFrame, UiuaError, UiuaResult,
+    primitive::Primitive, value::Value, Complex, Diagnostic, DiagnosticKind, Ident, NativeSys,
+    SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
 };
 
 /// The Uiua runtime
@@ -114,6 +114,7 @@ impl Default for Scope {
 #[derive(Default, Clone)]
 struct Fills {
     nums: Vec<f64>,
+    complexes: Vec<Complex>,
     chars: Vec<char>,
     boxes: Vec<Boxed>,
 }
@@ -994,6 +995,9 @@ code:
     }
     pub(crate) fn box_fill(&self) -> Option<Boxed> {
         self.scope.fills.boxes.last().cloned()
+    }
+    pub(crate) fn complex_fill(&self) -> Option<Complex> {
+        self.scope.fills.complexes.last().copied()
     }
     /// Do something with the fill context set
     pub(crate) fn with_fill(

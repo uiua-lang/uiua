@@ -642,13 +642,20 @@ impl Parser {
     fn try_num(&mut self) -> Option<Sp<(String, f64)>> {
         let span = self.try_exact(Token::Number)?;
         let s = span.as_str().to_string();
-        let parseable = s.replace(['`', '¯'], "-");
-        let n: f64 = match parseable.parse() {
-            Ok(n) => n,
-            Err(_) => {
-                self.errors
-                    .push(self.prev_span().sp(ParseError::InvalidNumber(s.clone())));
-                0.0
+        fn parse(s: &str) -> Option<f64> {
+            let parseable = s.replace(['`', '¯'], "-");
+            parseable.parse().ok()
+        }
+        let n: f64 = match parse(&s) {
+            Some(n) => n,
+            None => {
+                if let Some((n, d)) = s.split_once('/').and_then(|(n, d)| parse(n).zip(parse(d))) {
+                    n / d
+                } else {
+                    self.errors
+                        .push(self.prev_span().sp(ParseError::InvalidNumber(s.clone())));
+                    0.0
+                }
             }
         };
         Some(span.sp((s, n)))

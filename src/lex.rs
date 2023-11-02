@@ -734,7 +734,7 @@ impl<'a> Lexer<'a> {
         }
         // Fractional part
         let before_dot = self.loc;
-        if self.next_char_exact(".") {
+        if self.next_char_exact(".") || self.next_char_exact("/") {
             let mut has_decimal = false;
             while self
                 .next_char_if(|c| c.chars().all(|c| c.is_ascii_digit()))

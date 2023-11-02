@@ -1169,7 +1169,12 @@ mod tests {
             for prim in Primitive::all() {
                 if matches!(
                     prim,
-                    Primitive::Range | Primitive::Rand | Primitive::Transpose | Primitive::Trace
+                    Primitive::Range
+                        | Primitive::Rand
+                        | Primitive::Transpose
+                        | Primitive::Trace
+                        | Primitive::Complex
+                        | Primitive::Combinate
                 ) {
                     continue;
                 }
@@ -1381,7 +1386,7 @@ mod tests {
         }},
 		"numbers": {{
 			"name": "constant.numeric.uiua",
-			"match": "\\d+(\\.\\d+(e[+-]?\\d+)?)?"
+			"match": "[`¯]?\\d+([./]\\d+(e[+-]?\\d+)?)?"
 		}},
 		"strand": {{
 			"name": "comment.line",

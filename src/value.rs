@@ -876,19 +876,19 @@ impl From<i32> for Value {
 
 macro_rules! value_un_impl {
     ($name:ident, $(
-        $([$(#[$attr1:meta])* $in_place:ident, $f:ident])?
-        $(($(#[$attr2:meta])* $make_new:ident, $f2:ident))?
+        $([$($feature1:literal,)* $in_place:ident, $f:ident])?
+        $(($($feature2:literal,)* $make_new:ident, $f2:ident))?
     ),* $(,)?) => {
         impl Value {
             pub(crate) fn $name(self, env: &Uiua) -> UiuaResult<Self> {
                 Ok(match self {
-                    $($($(#[$attr1])* Self::$in_place(mut array) => {
+                    $($($(#[cfg(feature = $feature1)])* Self::$in_place(mut array) => {
                         for val in &mut array.data {
                             *val = $name::$f(*val);
                         }
                         array.into()
                     },)*)*
-                    $($($(#[$attr2])* Self::$make_new(array) => {
+                    $($($(#[cfg(feature = $feature2)])* Self::$make_new(array) => {
                         let mut new = EcoVec::with_capacity(array.flat_len());
                         for val in array.data {
                             new.push($name::$f2(val));
@@ -910,114 +910,18 @@ macro_rules! value_un_impl {
     }
 }
 
-value_un_impl!(
-    neg,
-    [Num, num],
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        byte
-    )
-);
-value_un_impl!(
-    not,
-    [Num, num],
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        byte
-    )
-);
-value_un_impl!(
-    abs,
-    [Num, num],
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        byte
-    )
-);
-value_un_impl!(
-    sign,
-    [Num, num],
-    [
-        #[cfg(feature = "bytes")]
-        Byte,
-        byte
-    ]
-);
-value_un_impl!(
-    sqrt,
-    [Num, num],
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        byte
-    )
-);
-value_un_impl!(
-    sin,
-    [Num, num],
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        byte
-    )
-);
-value_un_impl!(
-    cos,
-    [Num, num],
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        byte
-    )
-);
-value_un_impl!(
-    asin,
-    [Num, num],
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        byte
-    )
-);
-value_un_impl!(
-    acos,
-    [Num, num],
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        byte
-    )
-);
-value_un_impl!(
-    floor,
-    [Num, num],
-    [
-        #[cfg(feature = "bytes")]
-        Byte,
-        byte
-    ]
-);
-value_un_impl!(
-    ceil,
-    [Num, num],
-    [
-        #[cfg(feature = "bytes")]
-        Byte,
-        byte
-    ]
-);
-value_un_impl!(
-    round,
-    [Num, num],
-    [
-        #[cfg(feature = "bytes")]
-        Byte,
-        byte
-    ]
-);
+value_un_impl!(neg, [Num, num], ("bytes", Byte, byte));
+value_un_impl!(not, [Num, num], ("bytes", Byte, byte));
+value_un_impl!(abs, [Num, num], ("bytes", Byte, byte));
+value_un_impl!(sign, [Num, num], ["bytes", Byte, byte]);
+value_un_impl!(sqrt, [Num, num], ("bytes", Byte, byte));
+value_un_impl!(sin, [Num, num], ("bytes", Byte, byte));
+value_un_impl!(cos, [Num, num], ("bytes", Byte, byte));
+value_un_impl!(asin, [Num, num], ("bytes", Byte, byte));
+value_un_impl!(acos, [Num, num], ("bytes", Byte, byte));
+value_un_impl!(floor, [Num, num], ["bytes", Byte, byte]);
+value_un_impl!(ceil, [Num, num], ["bytes", Byte, byte]);
+value_un_impl!(round, [Num, num], ["bytes", Byte, byte]);
 
 macro_rules! val_retry {
     (Byte, $env:expr) => {
@@ -1030,14 +934,14 @@ macro_rules! val_retry {
 
 macro_rules! value_bin_impl {
     ($name:ident, $(
-        $(($(#[$attr1:meta])* $na:ident, $nb:ident, $f:ident $(, $retry:ident)?))*
-        $([$(#[$attr2:meta])* $ip:ident, $f2:ident $(, $retry2:ident)?])*
+        $(($($feature1:literal,)* $na:ident, $nb:ident, $f:ident $(, $retry:ident)?))*
+        $([$($feature2:literal,)* $ip:ident, $f2:ident $(, $retry2:ident)?])*
     ),* ) => {
         impl Value {
             #[allow(unreachable_patterns, clippy::wrong_self_convention)]
             pub(crate) fn $name(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
                 Ok(match (self, other) {
-                    $($($(#[$attr2])* (Value::$ip(mut a), Value::$ip(b)) => {
+                    $($($(#[cfg(feature = $feature2)])* (Value::$ip(mut a), Value::$ip(b)) => {
                         if val_retry!($ip, env) {
                             let mut a_clone = a.clone();
                             if let Err(e) = bin_pervade_mut(&mut a_clone, b.clone(), env, $name::$f2) {
@@ -1058,7 +962,7 @@ macro_rules! value_bin_impl {
                             a.into()
                         }
                     },)*)*
-                    $($($(#[$attr1])* (Value::$na(a), Value::$nb(b)) => {
+                    $($($(#[cfg(feature = $feature1)])* (Value::$na(a), Value::$nb(b)) => {
                         if val_retry!($na, env) || val_retry!($nb, env) {
                             let res = bin_pervade(a.clone(), b.clone(), env, InfalliblePervasiveFn::new($name::$f));
                             match res {
@@ -1108,39 +1012,11 @@ value_bin_impl!(
     [Num, num_num],
     (Num, Char, num_char),
     (Char, Num, char_num),
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        Byte,
-        byte_byte,
-        num_num
-    ),
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        Char,
-        byte_char
-    ),
-    (
-        #[cfg(feature = "bytes")]
-        Char,
-        Byte,
-        char_byte
-    ),
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        Num,
-        byte_num,
-        num_num
-    ),
-    (
-        #[cfg(feature = "bytes")]
-        Num,
-        Byte,
-        num_byte,
-        num_num
-    ),
+    ("bytes", Byte, Byte, byte_byte, num_num),
+    ("bytes", Byte, Char, byte_char),
+    ("bytes", Char, Byte, char_byte),
+    ("bytes", Byte, Num, byte_num, num_num),
+    ("bytes", Num, Byte, num_byte, num_num),
 );
 
 value_bin_impl!(
@@ -1148,159 +1024,46 @@ value_bin_impl!(
     [Num, num_num],
     (Num, Char, num_char),
     (Char, Char, char_char),
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        Byte,
-        byte_byte,
-        num_num
-    ),
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        Char,
-        byte_char
-    ),
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        Num,
-        byte_num,
-        num_num
-    ),
-    (
-        #[cfg(feature = "bytes")]
-        Num,
-        Byte,
-        num_byte,
-        num_num
-    ),
+    ("bytes", Byte, Byte, byte_byte, num_num),
+    ("bytes", Byte, Char, byte_char),
+    ("bytes", Byte, Num, byte_num, num_num),
+    ("bytes", Num, Byte, num_byte, num_num),
 );
 
 value_bin_impl!(
     mul,
     [Num, num_num],
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        Byte,
-        byte_byte,
-        num_num
-    ),
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        Num,
-        byte_num,
-        num_num
-    ),
-    (
-        #[cfg(feature = "bytes")]
-        Num,
-        Byte,
-        num_byte,
-        num_num
-    ),
+    ("bytes", Byte, Byte, byte_byte, num_num),
+    ("bytes", Byte, Num, byte_num, num_num),
+    ("bytes", Num, Byte, num_byte, num_num),
 );
 value_bin_impl!(
     div,
     [Num, num_num],
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        Byte,
-        byte_byte,
-        num_num
-    ),
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        Num,
-        byte_num,
-        num_num
-    ),
-    (
-        #[cfg(feature = "bytes")]
-        Num,
-        Byte,
-        num_byte,
-        num_num
-    ),
+    ("bytes", Byte, Byte, byte_byte, num_num),
+    ("bytes", Byte, Num, byte_num, num_num),
+    ("bytes", Num, Byte, num_byte, num_num),
 );
 value_bin_impl!(
     modulus,
     [Num, num_num],
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        Byte,
-        byte_byte,
-        num_num
-    ),
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        Num,
-        byte_num,
-        num_num
-    ),
-    (
-        #[cfg(feature = "bytes")]
-        Num,
-        Byte,
-        num_byte,
-        num_num
-    ),
+    ("bytes", Byte, Byte, byte_byte, num_num),
+    ("bytes", Byte, Num, byte_num, num_num),
+    ("bytes", Num, Byte, num_byte, num_num),
 );
 value_bin_impl!(
     pow,
     [Num, num_num],
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        Byte,
-        byte_byte,
-        num_num
-    ),
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        Num,
-        byte_num,
-        num_num
-    ),
-    (
-        #[cfg(feature = "bytes")]
-        Num,
-        Byte,
-        num_byte,
-        num_num
-    ),
+    ("bytes", Byte, Byte, byte_byte, num_num),
+    ("bytes", Byte, Num, byte_num, num_num),
+    ("bytes", Num, Byte, num_byte, num_num),
 );
 value_bin_impl!(
     log,
     [Num, num_num],
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        Byte,
-        byte_byte,
-        num_num
-    ),
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        Num,
-        byte_num,
-        num_num
-    ),
-    (
-        #[cfg(feature = "bytes")]
-        Num,
-        Byte,
-        num_byte,
-        num_num
-    ),
+    ("bytes", Byte, Byte, byte_byte, num_num),
+    ("bytes", Byte, Num, byte_num, num_num),
+    ("bytes", Num, Byte, num_byte, num_num),
 );
 value_bin_impl!(atan2, [Num, num_num]);
 
@@ -1308,52 +1071,18 @@ value_bin_impl!(
     min,
     [Num, num_num],
     [Char, char_char],
-    [
-        #[cfg(feature = "bytes")]
-        Byte,
-        byte_byte,
-        num_num
-    ],
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        Num,
-        byte_num,
-        num_num
-    ),
-    (
-        #[cfg(feature = "bytes")]
-        Num,
-        Byte,
-        num_byte,
-        num_num
-    ),
+    ["bytes", Byte, byte_byte, num_num],
+    ("bytes", Byte, Num, byte_num, num_num),
+    ("bytes", Num, Byte, num_byte, num_num),
 );
 
 value_bin_impl!(
     max,
     [Num, num_num],
     [Char, char_char],
-    [
-        #[cfg(feature = "bytes")]
-        Byte,
-        byte_byte,
-        num_num
-    ],
-    (
-        #[cfg(feature = "bytes")]
-        Byte,
-        Num,
-        byte_num,
-        num_num
-    ),
-    (
-        #[cfg(feature = "bytes")]
-        Num,
-        Byte,
-        num_byte,
-        num_num
-    ),
+    ["bytes", Byte, byte_byte, num_num],
+    ("bytes", Byte, Num, byte_num, num_num),
+    ("bytes", Num, Byte, num_byte, num_num),
 );
 
 macro_rules! cmp_impls {
@@ -1363,16 +1092,16 @@ macro_rules! cmp_impls {
                 $name,
                 // Value comparable
                 [Num, same_type],
-                (#[cfg(feature = "bytes")] Byte, Byte, same_type, num_num),
+                ("bytes", Byte, Byte, same_type, num_num),
                 (Char, Char, generic),
                 (Box, Box, generic),
-                (#[cfg(feature = "bytes")] Num, Byte, num_byte, num_num),
-                (#[cfg(feature = "bytes")] Byte, Num, byte_num, num_num),
+                ("bytes", Num, Byte, num_byte, num_num),
+                ("bytes", Byte, Num, byte_num, num_num),
                 // Type comparable
                 (Num, Char, always_less),
-                (#[cfg(feature = "bytes")] Byte, Char, always_less),
+                ("bytes", Byte, Char, always_less),
                 (Char, Num, always_greater),
-                (#[cfg(feature = "bytes")] Char, Byte, always_greater),
+                ("bytes", Char, Byte, always_greater),
             );
         )*
     };

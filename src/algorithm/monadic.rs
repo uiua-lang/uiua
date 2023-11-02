@@ -28,6 +28,7 @@ impl Value {
             Array::deshape,
             Array::deshape,
             Array::deshape,
+            Array::deshape,
         )
     }
     /// Attempt to parse the value into a number
@@ -115,11 +116,13 @@ impl Value {
             |a| a.first(env).map(Into::into),
             |a| a.first(env).map(Into::into),
             |a| a.first(env).map(Into::into),
+            |a| a.first(env).map(Into::into),
         )
     }
     /// Get the last row of the value
     pub fn last(self, env: &Uiua) -> UiuaResult<Self> {
         self.generic_into_deep(
+            |a| a.last(env).map(Into::into),
             |a| a.last(env).map(Into::into),
             |a| a.last(env).map(Into::into),
             |a| a.last(env).map(Into::into),
@@ -182,6 +185,7 @@ impl Value {
             Array::reverse,
             Array::reverse,
             Array::reverse,
+            Array::reverse,
         )
     }
 }
@@ -215,11 +219,13 @@ impl Value {
             Array::transpose,
             Array::transpose,
             Array::transpose,
+            Array::transpose,
         )
     }
     /// Inverse transpose the value
     pub fn inv_transpose(&mut self) {
         self.generic_mut_deep(
+            Array::inv_transpose,
             Array::inv_transpose,
             Array::inv_transpose,
             Array::inv_transpose,
@@ -276,15 +282,30 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// Get the `rise` of the value
     pub fn rise(&self, env: &Uiua) -> UiuaResult<Vec<usize>> {
-        self.generic_ref_env_deep(Array::rise, Array::rise, Array::rise, Array::rise, env)
+        self.generic_ref_env_deep(
+            Array::rise,
+            Array::rise,
+            Array::rise,
+            Array::rise,
+            Array::rise,
+            env,
+        )
     }
     /// Get the `fall` of the value
     pub fn fall(&self, env: &Uiua) -> UiuaResult<Vec<usize>> {
-        self.generic_ref_env_deep(Array::fall, Array::fall, Array::fall, Array::fall, env)
+        self.generic_ref_env_deep(
+            Array::fall,
+            Array::fall,
+            Array::fall,
+            Array::fall,
+            Array::fall,
+            env,
+        )
     }
     /// `classify` the rows of the value
     pub fn classify(&self, env: &Uiua) -> UiuaResult<Self> {
         self.generic_ref_env_deep(
+            Array::classify,
             Array::classify,
             Array::classify,
             Array::classify,
@@ -296,6 +317,7 @@ impl Value {
     /// `deduplicate` the rows of the value
     pub fn deduplicate(&mut self) {
         self.generic_mut_deep(
+            Array::deduplicate,
             Array::deduplicate,
             Array::deduplicate,
             Array::deduplicate,
@@ -722,12 +744,14 @@ impl Value {
             Array::first_min_index,
             Array::first_min_index,
             Array::first_min_index,
+            Array::first_min_index,
             env,
         )
         .map(Into::into)
     }
     pub(crate) fn first_max_index(&self, env: &Uiua) -> UiuaResult<Self> {
         self.generic_ref_env_deep(
+            Array::first_max_index,
             Array::first_max_index,
             Array::first_max_index,
             Array::first_max_index,
@@ -742,12 +766,14 @@ impl Value {
             Array::last_min_index,
             Array::last_min_index,
             Array::last_min_index,
+            Array::last_min_index,
             env,
         )
         .map(Into::into)
     }
     pub(crate) fn last_max_index(&self, env: &Uiua) -> UiuaResult<Self> {
         self.generic_ref_env_deep(
+            Array::last_max_index,
             Array::last_max_index,
             Array::last_max_index,
             Array::last_max_index,

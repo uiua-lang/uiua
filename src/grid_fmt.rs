@@ -10,13 +10,11 @@ use std::{
     mem::take,
 };
 
-#[cfg(feature = "complex")]
-use crate::Complex;
 use crate::{
     array::{Array, ArrayValue},
     boxed::Boxed,
     value::Value,
-    Primitive,
+    Complex, Primitive,
 };
 
 type Grid<T = char> = Vec<Vec<T>>;
@@ -123,6 +121,8 @@ impl GridFmt for Boxed {
             Value::Num(array) => array.fmt_grid(true),
             #[cfg(feature = "bytes")]
             Value::Byte(array) => array.fmt_grid(true),
+            #[cfg(feature = "complex")]
+            Value::Complex(array) => array.fmt_grid(true),
             Value::Char(array) => array.fmt_grid(true),
             Value::Box(array) => array.fmt_grid(true),
         };

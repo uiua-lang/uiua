@@ -15,12 +15,10 @@ use instant::Duration;
 use parking_lot::Mutex;
 use rand::prelude::*;
 
-#[cfg(feature = "complex")]
-use crate::Complex;
 use crate::{
     array::Array, boxed::Boxed, constants, function::*, lex::Span, parse::parse,
-    primitive::Primitive, value::Value, Diagnostic, DiagnosticKind, Ident, NativeSys, SysBackend,
-    SysOp, TraceFrame, UiuaError, UiuaResult,
+    primitive::Primitive, value::Value, Complex, Diagnostic, DiagnosticKind, Ident, NativeSys,
+    SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
 };
 
 /// The Uiua runtime
@@ -1024,6 +1022,13 @@ code:
                     set = true;
                 }
             }
+            #[cfg(feature = "complex")]
+            Value::Complex(c) => {
+                if let Some(&c) = c.as_scalar() {
+                    self.scope.fills.complexes.push(c);
+                    set = true;
+                }
+            }
             Value::Char(c) => {
                 if let Some(&c) = c.as_scalar() {
                     self.scope.fills.chars.push(c);
@@ -1051,6 +1056,10 @@ code:
             #[cfg(feature = "bytes")]
             Value::Byte(_) => {
                 self.scope.fills.nums.pop();
+            }
+            #[cfg(feature = "complex")]
+            Value::Complex(_) => {
+                self.scope.fills.complexes.pop();
             }
             Value::Char(_) => {
                 self.scope.fills.chars.pop();

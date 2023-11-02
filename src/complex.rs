@@ -67,6 +67,12 @@ impl From<f64> for Complex {
     }
 }
 
+impl From<u8> for Complex {
+    fn from(value: u8) -> Self {
+        f64::from(value).into()
+    }
+}
+
 impl fmt::Display for Complex {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.im == 0.0 {

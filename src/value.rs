@@ -14,7 +14,7 @@ use crate::{
     boxed::Boxed,
     cowslice::CowSlice,
     grid_fmt::GridFmt,
-    Uiua, UiuaResult,
+    Complex, Uiua, UiuaResult,
 };
 
 /// A generic array value
@@ -27,6 +27,9 @@ pub enum Value {
     /// Byte array used for some boolean operations and for I/O
     #[cfg(feature = "bytes")]
     Byte(Array<u8>),
+    /// Complex number array
+    #[cfg(feature = "complex")]
+    Complex(Array<Complex>),
     /// Common character array
     Char(Array<char>),
     /// Common box array
@@ -45,6 +48,8 @@ impl fmt::Debug for Value {
             Self::Num(array) => array.fmt(f),
             #[cfg(feature = "bytes")]
             Self::Byte(array) => array.fmt(f),
+            #[cfg(feature = "complex")]
+            Self::Complex(array) => array.fmt(f),
             Self::Char(array) => array.fmt(f),
             Self::Box(array) => array.fmt(f),
         }
@@ -64,8 +69,10 @@ impl Value {
             Self::Num(_) => 0,
             #[cfg(feature = "bytes")]
             Self::Byte(_) => 0,
-            Self::Char(_) => 2,
-            Self::Box(_) => 3,
+            Self::Char(_) => 1,
+            Self::Box(_) => 2,
+            #[cfg(feature = "complex")]
+            Self::Complex(_) => 3,
         }
     }
     /// Get a reference to a possible number array
@@ -107,6 +114,8 @@ impl Value {
             Self::Num(array) => Box::new(array.rows().map(Value::from)),
             #[cfg(feature = "bytes")]
             Self::Byte(array) => Box::new(array.rows().map(Value::from)),
+            #[cfg(feature = "complex")]
+            Self::Complex(array) => Box::new(array.rows().map(Value::from)),
             Self::Char(array) => Box::new(array.rows().map(Value::from)),
             Self::Box(array) => Box::new(array.rows().map(Value::from)),
         }
@@ -117,6 +126,8 @@ impl Value {
             Self::Num(array) => Box::new(array.into_rows().map(Value::from)),
             #[cfg(feature = "bytes")]
             Self::Byte(array) => Box::new(array.into_rows().map(Value::from)),
+            #[cfg(feature = "complex")]
+            Self::Complex(array) => Box::new(array.into_rows().map(Value::from)),
             Self::Char(array) => Box::new(array.into_rows().map(Value::from)),
             Self::Box(array) => Box::new(array.into_rows().map(Value::from)),
         }
@@ -127,6 +138,8 @@ impl Value {
             Self::Num(array) => Box::new(array.data.into_iter().map(Value::from)),
             #[cfg(feature = "bytes")]
             Self::Byte(array) => Box::new(array.data.into_iter().map(Value::from)),
+            #[cfg(feature = "complex")]
+            Self::Complex(array) => Box::new(array.data.into_iter().map(Value::from)),
             Self::Char(array) => Box::new(array.data.into_iter().map(Value::from)),
             Self::Box(array) => Box::new(array.data.into_iter().map(Value::from)),
         }
@@ -137,6 +150,8 @@ impl Value {
             Self::Num(_) => "number",
             #[cfg(feature = "bytes")]
             Self::Byte(_) => "number",
+            #[cfg(feature = "complex")]
+            Self::Complex(_) => "complex",
             Self::Char(_) => "character",
             Self::Box(_) => "box",
         }
@@ -147,17 +162,26 @@ impl Value {
             Self::Num(_) => "numbers",
             #[cfg(feature = "bytes")]
             Self::Byte(_) => "number",
+            #[cfg(feature = "complex")]
+            Self::Complex(_) => "complexes",
             Self::Char(_) => "characters",
             Self::Box(_) => "boxes",
         }
     }
     /// Get the shape of the value
     pub fn shape(&self) -> &[usize] {
-        self.generic_ref_shallow(Array::shape, Array::shape, Array::shape, Array::shape)
+        self.generic_ref_shallow(
+            Array::shape,
+            Array::shape,
+            Array::shape,
+            Array::shape,
+            Array::shape,
+        )
     }
     /// Get the number of rows
     pub fn row_count(&self) -> usize {
         self.generic_ref_shallow(
+            Array::row_count,
             Array::row_count,
             Array::row_count,
             Array::row_count,
@@ -171,11 +195,13 @@ impl Value {
             Array::row_len,
             Array::row_len,
             Array::row_len,
+            Array::row_len,
         )
     }
     /// Get the number of elements
     pub fn element_count(&self) -> usize {
         self.generic_ref_shallow(
+            Array::element_count,
             Array::element_count,
             Array::element_count,
             Array::element_count,
@@ -187,6 +213,8 @@ impl Value {
             Self::Num(array) => array.first_dim_zero().into(),
             #[cfg(feature = "bytes")]
             Self::Byte(array) => array.first_dim_zero().into(),
+            #[cfg(feature = "complex")]
+            Self::Complex(array) => array.first_dim_zero().into(),
             Self::Char(array) => array.first_dim_zero().into(),
             Self::Box(array) => array.first_dim_zero().into(),
         }
@@ -194,6 +222,7 @@ impl Value {
     /// Get a formattable representation of the shape
     pub fn format_shape(&self) -> FormatShape {
         self.generic_ref_shallow(
+            Array::format_shape,
             Array::format_shape,
             Array::format_shape,
             Array::format_shape,
@@ -210,12 +239,15 @@ impl Value {
             Self::Num(array) => &mut array.shape,
             #[cfg(feature = "bytes")]
             Self::Byte(array) => &mut array.shape,
+            #[cfg(feature = "complex")]
+            Self::Complex(array) => &mut array.shape,
             Self::Char(array) => &mut array.shape,
             Self::Box(array) => &mut array.shape,
         }
     }
     pub(crate) fn validate_shape(&self) {
         self.generic_ref_shallow(
+            Array::validate_shape,
             Array::validate_shape,
             Array::validate_shape,
             Array::validate_shape,
@@ -229,22 +261,26 @@ impl Value {
             |arr| arr.row(i).into(),
             |arr| arr.row(i).into(),
             |arr| arr.row(i).into(),
+            |arr| arr.row(i).into(),
         )
     }
     pub(crate) fn generic_into_deep<T>(
         self,
         n: impl FnOnce(Array<f64>) -> T,
         _b: impl FnOnce(Array<u8>) -> T,
-        c: impl FnOnce(Array<char>) -> T,
+        _co: impl FnOnce(Array<Complex>) -> T,
+        ch: impl FnOnce(Array<char>) -> T,
         f: impl FnOnce(Array<Boxed>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
             #[cfg(feature = "bytes")]
             Self::Byte(array) => _b(array),
-            Self::Char(array) => c(array),
+            #[cfg(feature = "complex")]
+            Self::Complex(array) => _co(array),
+            Self::Char(array) => ch(array),
             Self::Box(array) => match array.into_unboxed() {
-                Ok(value) => value.generic_into_deep(n, _b, c, f),
+                Ok(value) => value.generic_into_deep(n, _b, _co, ch, f),
                 Err(array) => f(array),
             },
         }
@@ -253,14 +289,17 @@ impl Value {
         &'a self,
         n: impl FnOnce(&'a Array<f64>) -> T,
         _b: impl FnOnce(&'a Array<u8>) -> T,
-        c: impl FnOnce(&'a Array<char>) -> T,
+        _co: impl FnOnce(&'a Array<Complex>) -> T,
+        ch: impl FnOnce(&'a Array<char>) -> T,
         f: impl FnOnce(&'a Array<Boxed>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
             #[cfg(feature = "bytes")]
             Self::Byte(array) => _b(array),
-            Self::Char(array) => c(array),
+            #[cfg(feature = "complex")]
+            Self::Complex(array) => _co(array),
+            Self::Char(array) => ch(array),
             Self::Box(array) => f(array),
         }
     }
@@ -268,17 +307,20 @@ impl Value {
         &'a self,
         n: impl FnOnce(&'a Array<f64>) -> T,
         _b: impl FnOnce(&'a Array<u8>) -> T,
-        c: impl FnOnce(&'a Array<char>) -> T,
+        _co: impl FnOnce(&'a Array<Complex>) -> T,
+        ch: impl FnOnce(&'a Array<char>) -> T,
         f: impl FnOnce(&'a Array<Boxed>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
             #[cfg(feature = "bytes")]
             Self::Byte(array) => _b(array),
-            Self::Char(array) => c(array),
+            #[cfg(feature = "complex")]
+            Self::Complex(array) => _co(array),
+            Self::Char(array) => ch(array),
             Self::Box(array) => {
                 if let Some(bx) = array.as_scalar() {
-                    bx.as_value().generic_ref_deep(n, _b, c, f)
+                    bx.as_value().generic_ref_deep(n, _b, _co, ch, f)
                 } else {
                     f(array)
                 }
@@ -289,31 +331,77 @@ impl Value {
         &'a self,
         n: impl FnOnce(&'a Array<f64>, &Uiua) -> UiuaResult<T>,
         b: impl FnOnce(&'a Array<u8>, &Uiua) -> UiuaResult<T>,
-        c: impl FnOnce(&'a Array<char>, &Uiua) -> UiuaResult<T>,
+        co: impl FnOnce(&'a Array<Complex>, &Uiua) -> UiuaResult<T>,
+        ch: impl FnOnce(&'a Array<char>, &Uiua) -> UiuaResult<T>,
         f: impl FnOnce(&'a Array<Boxed>, &Uiua) -> UiuaResult<T>,
         env: &Uiua,
     ) -> UiuaResult<T> {
-        self.generic_ref_deep(|a| n(a, env), |a| b(a, env), |a| c(a, env), |a| f(a, env))
+        self.generic_ref_deep(
+            |a| n(a, env),
+            |a| b(a, env),
+            |a| co(a, env),
+            |a| ch(a, env),
+            |a| f(a, env),
+        )
     }
     pub(crate) fn generic_mut_deep<T>(
         &mut self,
         n: impl FnOnce(&mut Array<f64>) -> T,
         _b: impl FnOnce(&mut Array<u8>) -> T,
-        c: impl FnOnce(&mut Array<char>) -> T,
+        _co: impl FnOnce(&mut Array<Complex>) -> T,
+        ch: impl FnOnce(&mut Array<char>) -> T,
         f: impl FnOnce(&mut Array<Boxed>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
             #[cfg(feature = "bytes")]
             Self::Byte(array) => _b(array),
-            Self::Char(array) => c(array),
+            #[cfg(feature = "complex")]
+            Self::Complex(array) => _co(array),
+            Self::Char(array) => ch(array),
             Self::Box(array) => {
                 if let Some(bx) = array.as_scalar_mut() {
-                    bx.as_value_mut().generic_mut_deep(n, _b, c, f)
+                    bx.as_value_mut().generic_mut_deep(n, _b, _co, ch, f)
                 } else {
                     f(array)
                 }
             }
+        }
+    }
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn generic_bin_into<T, E>(
+        self,
+        other: Self,
+        n: impl FnOnce(Array<f64>, Array<f64>) -> Result<T, E>,
+        _b: impl FnOnce(Array<u8>, Array<u8>) -> Result<T, E>,
+        _co: impl FnOnce(Array<Complex>, Array<Complex>) -> Result<T, E>,
+        ch: impl FnOnce(Array<char>, Array<char>) -> Result<T, E>,
+        f: impl FnOnce(Array<Boxed>, Array<Boxed>) -> Result<T, E>,
+        err: impl FnOnce(Self, Self) -> E,
+    ) -> Result<T, E> {
+        match (self, other) {
+            (Self::Num(a), Self::Num(b)) => n(a, b),
+            #[cfg(feature = "bytes")]
+            (Self::Byte(a), Self::Byte(b)) => _b(a, b),
+            #[cfg(feature = "bytes")]
+            (Self::Byte(a), Self::Num(b)) => n(a.convert(), b),
+            #[cfg(feature = "bytes")]
+            (Self::Num(a), Self::Byte(b)) => n(a, b.convert()),
+            #[cfg(feature = "complex")]
+            (Self::Complex(a), Self::Complex(b)) => _co(a, b),
+            #[cfg(feature = "complex")]
+            (Self::Complex(a), Self::Num(b)) => _co(a, b.convert()),
+            #[cfg(feature = "complex")]
+            (Self::Num(a), Self::Complex(b)) => _co(a.convert(), b),
+            #[cfg(all(feature = "complex", feature = "bytes"))]
+            (Self::Complex(a), Self::Byte(b)) => _co(a, b.convert()),
+            #[cfg(all(feature = "complex", feature = "bytes"))]
+            (Self::Byte(a), Self::Complex(b)) => _co(a.convert(), b),
+            (Self::Char(a), Self::Char(b)) => ch(a, b),
+            (Self::Box(a), Self::Box(b)) => f(a, b),
+            (Self::Box(a), b) => f(a, b.coerce_to_boxes()),
+            (a, Self::Box(b)) => f(a.coerce_to_boxes(), b),
+            (a, b) => Err(err(a, b)),
         }
     }
     /// Ensure that the capacity is at least `min`
@@ -322,6 +410,8 @@ impl Value {
             Self::Num(arr) => arr.data.reserve_min(min),
             #[cfg(feature = "bytes")]
             Self::Byte(arr) => arr.data.reserve_min(min),
+            #[cfg(feature = "complex")]
+            Self::Complex(arr) => arr.data.reserve_min(min),
             Self::Char(arr) => arr.data.reserve_min(min),
             Self::Box(arr) => arr.data.reserve_min(min),
         }
@@ -332,6 +422,8 @@ impl Value {
             Self::Num(array) => array.grid_string(),
             #[cfg(feature = "bytes")]
             Self::Byte(array) => array.grid_string(),
+            #[cfg(feature = "complex")]
+            Self::Complex(array) => array.grid_string(),
             Self::Char(array) => array.grid_string(),
             Self::Box(array) => array.grid_string(),
         }
@@ -766,6 +858,8 @@ impl Value {
             Value::Num(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
             #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
+            #[cfg(feature = "complex")]
+            Value::Complex(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
             Value::Char(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
             Value::Box(arr) => arr,
         }
@@ -776,6 +870,8 @@ impl Value {
             Value::Num(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
             #[cfg(feature = "bytes")]
             Value::Byte(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
+            #[cfg(feature = "complex")]
+            Value::Complex(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
             Value::Char(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
             Value::Box(arr) => Cow::Borrowed(arr),
         }
@@ -827,6 +923,8 @@ value_from!(f64, Num);
 value_from!(u8, Byte);
 value_from!(char, Char);
 value_from!(Boxed, Box);
+#[cfg(feature = "complex")]
+value_from!(Complex, Complex);
 
 #[cfg(not(feature = "bytes"))]
 impl From<u8> for Value {
@@ -1110,6 +1208,8 @@ impl Ord for Value {
             (Value::Num(a), Value::Num(b)) => a.cmp(b),
             #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Byte(b)) => a.cmp(b),
+            #[cfg(feature = "complex")]
+            (Value::Complex(a), Value::Complex(b)) => a.cmp(b),
             (Value::Char(a), Value::Char(b)) => a.cmp(b),
             (Value::Box(a), Value::Box(b)) => a.cmp(b),
             #[cfg(feature = "bytes")]
@@ -1122,6 +1222,10 @@ impl Ord for Value {
             (Value::Byte(_), _) => Ordering::Less,
             #[cfg(feature = "bytes")]
             (_, Value::Byte(_)) => Ordering::Greater,
+            #[cfg(feature = "complex")]
+            (Value::Complex(_), _) => Ordering::Less,
+            #[cfg(feature = "complex")]
+            (_, Value::Complex(_)) => Ordering::Greater,
             (Value::Char(_), _) => Ordering::Less,
             (_, Value::Char(_)) => Ordering::Greater,
         }
@@ -1130,24 +1234,15 @@ impl Ord for Value {
 
 impl Hash for Value {
     fn hash<H: Hasher>(&self, state: &mut H) {
+        self.type_id().hash(state);
         match self {
-            Value::Num(arr) => {
-                0u8.hash(state);
-                arr.hash(state);
-            }
+            Value::Num(arr) => arr.hash(state),
             #[cfg(feature = "bytes")]
-            Value::Byte(arr) => {
-                1u8.hash(state);
-                arr.hash(state);
-            }
-            Value::Char(arr) => {
-                2u8.hash(state);
-                arr.hash(state);
-            }
-            Value::Box(arr) => {
-                3u8.hash(state);
-                arr.hash(state);
-            }
+            Value::Byte(arr) => arr.hash(state),
+            #[cfg(feature = "complex")]
+            Value::Complex(arr) => arr.hash(state),
+            Value::Char(arr) => arr.hash(state),
+            Value::Box(arr) => arr.hash(state),
         }
     }
 }
@@ -1158,6 +1253,8 @@ impl fmt::Display for Value {
             Value::Num(n) => n.grid_string().fmt(f),
             #[cfg(feature = "bytes")]
             Value::Byte(b) => b.grid_string().fmt(f),
+            #[cfg(feature = "complex")]
+            Value::Complex(c) => c.grid_string().fmt(f),
             Value::Box(v) => v.grid_string().fmt(f),
             Value::Char(c) if c.rank() < 2 => c.fmt(f),
             Value::Char(c) => c.grid_string().fmt(f),

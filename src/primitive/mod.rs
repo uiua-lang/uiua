@@ -422,13 +422,20 @@ impl Primitive {
                     Array::row_count,
                     Array::row_count,
                     Array::row_count,
+                    Array::row_count,
                 )
             })?,
             Primitive::Shape => env.monadic_ref(|v| {
-                v.generic_ref_deep(Array::shape, Array::shape, Array::shape, Array::shape)
-                    .iter()
-                    .copied()
-                    .collect::<Value>()
+                v.generic_ref_deep(
+                    Array::shape,
+                    Array::shape,
+                    Array::shape,
+                    Array::shape,
+                    Array::shape,
+                )
+                .iter()
+                .copied()
+                .collect::<Value>()
             })?,
             Primitive::Bits => env.monadic_ref_env(Value::bits)?,
             Primitive::Reduce => reduce::reduce(env)?,
@@ -600,13 +607,7 @@ impl Primitive {
             }
             Primitive::Type => {
                 let val = env.pop(1)?;
-                env.push(match val {
-                    Value::Num(_) => 0,
-                    #[cfg(feature = "bytes")]
-                    Value::Byte(_) => 0,
-                    Value::Char(_) => 1,
-                    Value::Box(_) => 2,
-                });
+                env.push(val.type_id());
             }
             Primitive::Spawn => {
                 let f = env.pop_function()?;

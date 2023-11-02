@@ -18,9 +18,10 @@ pub fn constants() -> &'static [ConstantDef] {
 }
 
 macro_rules! constant {
-    ($(#[doc = $doc:literal] ($name:ident, $value:expr)),* $(,)?) => {
+    ($(#[doc = $doc:literal] $(#[$attr:meta])* ($name:ident, $value:expr)),* $(,)?) => {
         static CONSTANTS: Lazy<[ConstantDef; 0 $(+ { _ = stringify!($name) ; 1})*]> = Lazy::new(|| {
             [$(
+                $(#[$attr])*
                 ConstantDef {
                     name: stringify!($name),
                     value: $value.into(),
@@ -34,12 +35,15 @@ macro_rules! constant {
 constant!(
     /// Euler's constant
     (e, std::f64::consts::E),
+    /// The imaginary unit
+    #[cfg(feature = "complex")]
+    (i, crate::Complex::I),
     /// IEEE 754-2008's `NaN`
     (NaN, std::f64::NAN),
     /// The maximum integer that can be represented exactly
     (MaxInt, 2f64.powi(53)),
     /// A string identifying the operating system
-    (os, std::env::consts::OS),
+    (Os, std::env::consts::OS),
     /// A string identifying family of the operating system
     (Family, std::env::consts::FAMILY),
     /// A string identifying the architecture of the CPU

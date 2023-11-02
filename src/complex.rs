@@ -14,6 +14,8 @@ impl Complex {
     pub const ZERO: Self = Self { re: 0.0, im: 0.0 };
     /// The complex number 1 + 0i
     pub const ONE: Self = Self { re: 1.0, im: 0.0 };
+    /// The complex number 0 + 1i
+    pub const I: Self = Self { re: 0.0, im: 1.0 };
     /// Create a new complex number
     pub fn new(re: f64, im: f64) -> Self {
         Self { re, im }

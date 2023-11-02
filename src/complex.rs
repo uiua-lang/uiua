@@ -100,19 +100,31 @@ impl Complex {
         r * Self::new(theta.cos(), theta.sin())
     }
     /// Raise a complex number to a power
-    pub fn powf(self, rhs: impl Into<Self>) -> Self {
-        let rhs = rhs.into();
+    pub fn powf(self, exp: impl Into<Self>) -> Self {
+        let exp = exp.into();
+        if exp.re == 0.0 && exp.im == 0.0 {
+            return Self::ONE;
+        }
+        (exp * self.ln()).exp()
+    }
+    /// Calculate the exponential of a complex number
+    pub fn exp(self) -> Self {
+        Self::from_polar(E.powf(self.re), self.im)
+    }
+    /// Calculate the natural logarithm of a complex number
+    pub fn ln(self) -> Self {
         let (r, theta) = self.to_polar();
-        Self::from_polar(E.powf(rhs.re * r.ln()), rhs.im * theta)
+        Self::new(r.ln(), theta)
     }
     /// Calculate the logarithm of a complex number
     pub fn log(self, base: impl Into<Self>) -> Self {
         let base = base.into();
-        Self::new(self.abs().ln(), self.arg()).div(Self::new(base.abs().ln(), base.arg()))
+        Self::new(self.abs().ln(), self.arg()) / (Self::new(base.abs().ln(), base.arg()))
     }
     /// Calculate the square root of a complex number
     pub fn sqrt(self) -> Self {
-        Self::from_polar(self.abs().sqrt(), self.arg() / 2.0)
+        let (r, theta) = self.to_polar();
+        Self::from_polar(r.sqrt(), theta / 2.0)
     }
     /// Calculate the sine of a complex number
     pub fn sin(self) -> Self {

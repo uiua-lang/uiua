@@ -541,6 +541,12 @@ fn set_code_html(id: &str, code: &str) {
                         )
                     }
                 }
+                SpanKind::Ident if ["i", "e"].contains(&text.as_str()) => {
+                    format!(
+                        r#"<span class="code-span noadic-function">{}</span>"#,
+                        escape_html(&text)
+                    )
+                }
                 SpanKind::String => {
                     if text == "@ " {
                         format!(

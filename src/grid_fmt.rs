@@ -10,11 +10,13 @@ use std::{
     mem::take,
 };
 
+#[cfg(feature = "complex")]
+use crate::Complex;
 use crate::{
     array::{Array, ArrayValue},
     boxed::Boxed,
     value::Value,
-    Complex, Primitive,
+    Primitive,
 };
 
 type Grid<T = char> = Vec<Vec<T>>;
@@ -64,6 +66,7 @@ impl GridFmt for f64 {
     }
 }
 
+#[cfg(feature = "complex")]
 impl GridFmt for Complex {
     fn fmt_grid(&self, boxed: bool) -> Grid {
         if self.im == 0.0 {

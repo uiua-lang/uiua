@@ -15,10 +15,12 @@ use instant::Duration;
 use parking_lot::Mutex;
 use rand::prelude::*;
 
+#[cfg(feature = "complex")]
+use crate::Complex;
 use crate::{
     array::Array, boxed::Boxed, constants, function::*, lex::Span, parse::parse,
-    primitive::Primitive, value::Value, Complex, Diagnostic, DiagnosticKind, Ident, NativeSys,
-    SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
+    primitive::Primitive, value::Value, Diagnostic, DiagnosticKind, Ident, NativeSys, SysBackend,
+    SysOp, TraceFrame, UiuaError, UiuaResult,
 };
 
 /// The Uiua runtime
@@ -114,6 +116,7 @@ impl Default for Scope {
 #[derive(Default, Clone)]
 struct Fills {
     nums: Vec<f64>,
+    #[cfg(feature = "complex")]
     complexes: Vec<Complex>,
     chars: Vec<char>,
     boxes: Vec<Boxed>,
@@ -996,6 +999,7 @@ code:
     pub(crate) fn box_fill(&self) -> Option<Boxed> {
         self.scope.fills.boxes.last().cloned()
     }
+    #[cfg(feature = "complex")]
     pub(crate) fn complex_fill(&self) -> Option<Complex> {
         self.scope.fills.complexes.last().copied()
     }

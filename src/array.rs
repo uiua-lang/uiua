@@ -7,12 +7,14 @@ use std::{
 use ecow::EcoVec;
 use tinyvec::{tiny_vec, TinyVec};
 
+#[cfg(feature = "complex")]
+use crate::Complex;
 use crate::{
     boxed::Boxed,
     cowslice::{cowslice, CowSlice},
     grid_fmt::GridFmt,
     value::Value,
-    Complex, Uiua,
+    Uiua,
 };
 
 /// Uiua's array type
@@ -438,6 +440,7 @@ impl ArrayValue for Boxed {
     }
 }
 
+#[cfg(feature = "complex")]
 impl ArrayValue for Complex {
     const NAME: &'static str = "complex";
     fn get_fill(env: &Uiua) -> Option<Self> {
@@ -473,6 +476,7 @@ impl ArrayCmp for u8 {
     }
 }
 
+#[cfg(feature = "complex")]
 impl ArrayCmp for Complex {
     fn array_cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other)

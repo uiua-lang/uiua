@@ -70,6 +70,7 @@ mod ast;
 mod boxed;
 mod check;
 mod compile;
+#[cfg(feature = "complex")]
 mod complex;
 mod cowslice;
 mod error;
@@ -92,10 +93,11 @@ mod value;
 
 use std::sync::Arc;
 
+#[cfg(feature = "complex")]
+pub use complex::*;
 pub use {
     array::*,
     boxed::*,
-    complex::*,
     error::*,
     function::*,
     lex::is_ident_char,

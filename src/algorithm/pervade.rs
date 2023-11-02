@@ -8,6 +8,8 @@ use std::{
     slice::{self, ChunksExact},
 };
 
+#[cfg(feature = "complex")]
+use crate::Complex;
 use crate::{array::*, cowslice::CowSlice, Uiua, UiuaError, UiuaResult};
 
 use super::fill_array_shapes;
@@ -357,8 +359,12 @@ pub mod not {
     pub fn byte(a: u8) -> f64 {
         num(a.into())
     }
+    #[cfg(feature = "complex")]
+    pub fn com(a: Complex) -> Complex {
+        1.0 - a
+    }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot negate {a}"))
+        env.error(format!("Cannot not {a}"))
     }
 }
 
@@ -370,6 +376,10 @@ pub mod neg {
     #[cfg(feature = "bytes")]
     pub fn byte(a: u8) -> f64 {
         -f64::from(a)
+    }
+    #[cfg(feature = "complex")]
+    pub fn com(a: Complex) -> Complex {
+        -a
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot negate {a}"))
@@ -383,6 +393,10 @@ pub mod abs {
     #[cfg(feature = "bytes")]
     pub fn byte(a: u8) -> u8 {
         a
+    }
+    #[cfg(feature = "complex")]
+    pub fn com(a: Complex) -> f64 {
+        a.abs()
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot take the absolute value of {a}"))
@@ -403,6 +417,10 @@ pub mod sign {
     pub fn byte(a: u8) -> u8 {
         (a > 0) as u8
     }
+    #[cfg(feature = "complex")]
+    pub fn com(a: Complex) -> Complex {
+        a.signum()
+    }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the sign of {a}"))
     }
@@ -415,6 +433,10 @@ pub mod sqrt {
     #[cfg(feature = "bytes")]
     pub fn byte(a: u8) -> f64 {
         f64::from(a).sqrt()
+    }
+    #[cfg(feature = "complex")]
+    pub fn com(a: Complex) -> Complex {
+        a.sqrt()
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot take the square root of {a}"))
@@ -429,6 +451,10 @@ pub mod sin {
     pub fn byte(a: u8) -> f64 {
         f64::from(a).sin()
     }
+    #[cfg(feature = "complex")]
+    pub fn com(a: Complex) -> Complex {
+        a.sin()
+    }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the sine of {a}"))
     }
@@ -441,6 +467,10 @@ pub mod cos {
     #[cfg(feature = "bytes")]
     pub fn byte(a: u8) -> f64 {
         f64::from(a).cos()
+    }
+    #[cfg(feature = "complex")]
+    pub fn com(a: Complex) -> Complex {
+        a.cos()
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the cosine of {a}"))
@@ -455,6 +485,10 @@ pub mod asin {
     pub fn byte(a: u8) -> f64 {
         f64::from(a).asin()
     }
+    #[cfg(feature = "complex")]
+    pub fn com(a: Complex) -> Complex {
+        a.asin()
+    }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the arcsine of {a}"))
     }
@@ -467,6 +501,10 @@ pub mod acos {
     #[cfg(feature = "bytes")]
     pub fn byte(a: u8) -> f64 {
         f64::from(a).acos()
+    }
+    #[cfg(feature = "complex")]
+    pub fn com(a: Complex) -> Complex {
+        a.acos()
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the arccosine of {a}"))
@@ -481,6 +519,10 @@ pub mod floor {
     pub fn byte(a: u8) -> u8 {
         a
     }
+    #[cfg(feature = "complex")]
+    pub fn com(a: Complex) -> Complex {
+        a.floor()
+    }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the floor of {a}"))
     }
@@ -494,6 +536,10 @@ pub mod ceil {
     pub fn byte(a: u8) -> u8 {
         a
     }
+    #[cfg(feature = "complex")]
+    pub fn com(a: Complex) -> Complex {
+        a.ceil()
+    }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the ceiling of {a}"))
     }
@@ -506,6 +552,10 @@ pub mod round {
     #[cfg(feature = "bytes")]
     pub fn byte(a: u8) -> u8 {
         a
+    }
+    #[cfg(feature = "complex")]
+    pub fn com(a: Complex) -> Complex {
+        a.round()
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the rounded value of {a}"))
@@ -524,6 +574,14 @@ macro_rules! cmp_impl {
             }
             pub fn num_num(a: f64, b: f64) -> u8 {
                 (b.array_cmp(&a) $eq $ordering) as u8
+            }
+            #[cfg(feature = "complex")]
+            pub fn com_x(a: Complex, b: impl Into<Complex>) -> u8 {
+                (b.into().array_cmp(&a) $eq $ordering) as u8
+            }
+            #[cfg(feature = "complex")]
+            pub fn x_com(a: impl Into<Complex>, b: Complex) -> u8 {
+                (b.array_cmp(&a.into()) $eq $ordering) as u8
             }
             #[cfg(feature = "bytes")]
             pub fn byte_num(a: u8, b: f64) -> u8 {
@@ -570,6 +628,14 @@ pub mod add {
     pub fn num_byte(a: f64, b: u8) -> f64 {
         a + f64::from(b)
     }
+    #[cfg(feature = "complex")]
+    pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
+        b.into() + a
+    }
+    #[cfg(feature = "complex")]
+    pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
+        b + a.into()
+    }
     pub fn num_char(a: f64, b: char) -> char {
         char::from_u32((b as i64 + a as i64) as u32).unwrap_or('\0')
     }
@@ -606,6 +672,14 @@ pub mod sub {
     pub fn num_byte(a: f64, b: u8) -> f64 {
         f64::from(b) - a
     }
+    #[cfg(feature = "complex")]
+    pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
+        b.into() - a
+    }
+    #[cfg(feature = "complex")]
+    pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
+        b - a.into()
+    }
     pub fn num_char(a: f64, b: char) -> char {
         char::from_u32(((b as i64) - (a as i64)) as u32).unwrap_or('\0')
     }
@@ -621,138 +695,93 @@ pub mod sub {
     }
 }
 
-pub mod mul {
-    use super::*;
-    pub fn num_num(a: f64, b: f64) -> f64 {
-        b * a
-    }
-    #[cfg(feature = "bytes")]
-    pub fn byte_byte(a: u8, b: u8) -> f64 {
-        f64::from(b) * f64::from(a)
-    }
-    #[cfg(feature = "bytes")]
-    pub fn byte_num(a: u8, b: f64) -> f64 {
-        b * f64::from(a)
-    }
-    #[cfg(feature = "bytes")]
-    pub fn num_byte(a: f64, b: u8) -> f64 {
-        f64::from(b) * a
-    }
-    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot multiply {a} and {b}"))
-    }
+macro_rules! bin_op_mod {
+    ($name:ident, $a:ident, $b:ident, $byte_convert:expr, $byte_ret:ty, $f:expr, $err:literal) => {
+        pub mod $name {
+            use super::*;
+            pub fn num_num($a: f64, $b: f64) -> f64 {
+                $f
+            }
+            #[cfg(feature = "bytes")]
+            pub fn byte_byte($a: u8, $b: u8) -> f64 {
+                let $a = $byte_convert($a);
+                let $b = $byte_convert($b);
+                $f
+            }
+            #[cfg(feature = "bytes")]
+            pub fn byte_num($a: u8, $b: f64) -> f64 {
+                let $a = $byte_convert($a);
+                $f
+            }
+            #[cfg(feature = "bytes")]
+            pub fn num_byte($a: f64, $b: u8) -> f64 {
+                let $b = $byte_convert($b);
+                $f
+            }
+            #[cfg(feature = "complex")]
+            pub fn com_x($a: Complex, $b: impl Into<Complex>) -> Complex {
+                let $b = $b.into();
+                $f
+            }
+            #[cfg(feature = "complex")]
+            pub fn x_com($a: impl Into<Complex>, $b: Complex) -> Complex {
+                let $a = $a.into();
+                $f
+            }
+            pub fn error<T: Display>($a: T, $b: T, env: &Uiua) -> UiuaError {
+                env.error(format!($err))
+            }
+        }
+    };
 }
 
-pub mod div {
-    use super::*;
-    pub fn num_num(a: f64, b: f64) -> f64 {
-        b / a
-    }
-    #[cfg(feature = "bytes")]
-    pub fn byte_byte(a: u8, b: u8) -> f64 {
-        f64::from(b) / f64::from(a)
-    }
-    #[cfg(feature = "bytes")]
-    pub fn byte_num(a: u8, b: f64) -> f64 {
-        b / f64::from(a)
-    }
-    #[cfg(feature = "bytes")]
-    pub fn num_byte(a: f64, b: u8) -> f64 {
-        f64::from(b) / a
-    }
-    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot divide {a} by {b}"))
-    }
-}
+bin_op_mod!(
+    mul,
+    a,
+    b,
+    f64::from,
+    f64,
+    b * a,
+    "Cannot multiply {a} and {b}"
+);
 
-pub mod modulus {
-    use super::*;
-    pub fn num_num(a: f64, b: f64) -> f64 {
-        (b % a + a) % a
-    }
-    #[cfg(feature = "bytes")]
-    pub fn byte_byte(a: u8, b: u8) -> f64 {
-        f64::from(b) % f64::from(a)
-    }
-    #[cfg(feature = "bytes")]
-    pub fn byte_num(a: u8, b: f64) -> f64 {
-        let a = f64::from(a);
-        (b % a + a) % a
-    }
-    #[cfg(feature = "bytes")]
-    pub fn num_byte(a: f64, b: u8) -> f64 {
-        (f64::from(b) % a + a) % a
-    }
-    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot take the modulus of {a} by {b}"))
-    }
-}
-
-pub mod atan2 {
-    use super::*;
-    pub fn num_num(a: f64, b: f64) -> f64 {
-        a.atan2(b)
-    }
-    #[cfg(feature = "bytes")]
-    pub fn byte_byte(a: u8, b: u8) -> f64 {
-        f64::from(a).atan2(f64::from(b))
-    }
-    #[cfg(feature = "bytes")]
-    pub fn byte_num(a: u8, b: f64) -> f64 {
-        f64::from(a).atan2(b)
-    }
-    #[cfg(feature = "bytes")]
-    pub fn num_byte(a: f64, b: u8) -> f64 {
-        a.atan2(f64::from(b))
-    }
-    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the atan2 of {a} and {b}"))
-    }
-}
-
-pub mod pow {
-    use super::*;
-    pub fn num_num(a: f64, b: f64) -> f64 {
-        b.powf(a)
-    }
-    #[cfg(feature = "bytes")]
-    pub fn byte_byte(a: u8, b: u8) -> f64 {
-        f64::from(b).powf(f64::from(a))
-    }
-    #[cfg(feature = "bytes")]
-    pub fn byte_num(a: u8, b: f64) -> f64 {
-        b.powf(f64::from(a))
-    }
-    #[cfg(feature = "bytes")]
-    pub fn num_byte(a: f64, b: u8) -> f64 {
-        f64::from(b).powf(a)
-    }
-    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the power of {a} to {b}"))
-    }
-}
-
-pub mod log {
-    use super::*;
-    pub fn num_num(a: f64, b: f64) -> f64 {
-        b.log(a)
-    }
-    #[cfg(feature = "bytes")]
-    pub fn byte_byte(a: u8, b: u8) -> f64 {
-        f64::from(b).log(f64::from(a))
-    }
-    #[cfg(feature = "bytes")]
-    pub fn byte_num(a: u8, b: f64) -> f64 {
-        b.log(f64::from(a))
-    }
-    #[cfg(feature = "bytes")]
-    pub fn num_byte(a: f64, b: u8) -> f64 {
-        f64::from(b).log(a)
-    }
-    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the log base {b} of {a}"))
-    }
-}
+bin_op_mod!(div, a, b, f64::from, f64, b / a, "Cannot divide {b} by {a}");
+bin_op_mod!(
+    modulus,
+    a,
+    b,
+    f64::from,
+    f64,
+    (b % a + a) % a,
+    "Cannot take the modulus of {a} by {b}"
+);
+bin_op_mod!(
+    atan2,
+    a,
+    b,
+    f64::from,
+    f64,
+    a.atan2(b),
+    "Cannot get the atan2 of {a} and {b}"
+);
+bin_op_mod!(
+    pow,
+    a,
+    b,
+    f64::from,
+    f64,
+    b.powf(a),
+    "Cannot get the power of {a} to {b}"
+);
+bin_op_mod!(
+    log,
+    a,
+    b,
+    f64::from,
+    f64,
+    b.log(a),
+    "Cannot get the log base {b} of {a}"
+);
 
 pub mod max {
     use super::*;
@@ -773,6 +802,14 @@ pub mod max {
     #[cfg(feature = "bytes")]
     pub fn byte_num(a: u8, b: f64) -> f64 {
         num_num(a.into(), b)
+    }
+    #[cfg(feature = "complex")]
+    pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
+        a.max(b.into())
+    }
+    #[cfg(feature = "complex")]
+    pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
+        a.into().max(b)
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the max of {a} and {b}"))
@@ -798,6 +835,14 @@ pub mod min {
     #[cfg(feature = "bytes")]
     pub fn byte_num(a: u8, b: f64) -> f64 {
         num_num(a.into(), b)
+    }
+    #[cfg(feature = "complex")]
+    pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
+        a.min(b.into())
+    }
+    #[cfg(feature = "complex")]
+    pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
+        a.into().min(b)
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the min of {a} and {b}"))

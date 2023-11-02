@@ -519,7 +519,7 @@ impl<'a> Formatter<'a> {
                 } else {
                     n.grid_string()
                 };
-                let formatted = if grid_str.len() < s.len() {
+                let formatted = if grid_str.len() < s.trim_end_matches('i').len() {
                     grid_str
                 } else {
                     s.replace('`', "¯")

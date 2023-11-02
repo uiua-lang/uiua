@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, fmt, ops::*};
+use std::{cmp::Ordering, f64::consts::E, fmt, ops::*};
 
 /// Uiua's complex number type
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -10,6 +10,10 @@ pub struct Complex {
 }
 
 impl Complex {
+    /// The complex number 0 + 0i
+    pub const ZERO: Self = Self { re: 0.0, im: 0.0 };
+    /// The complex number 1 + 0i
+    pub const ONE: Self = Self { re: 1.0, im: 0.0 };
     /// Create a new complex number
     pub fn new(re: f64, im: f64) -> Self {
         Self { re, im }
@@ -56,8 +60,83 @@ impl Complex {
         self.re.hypot(self.im)
     }
     /// Get the arctangent of a complex number
-    pub fn atan2(self, rhs: impl Into<Self>) -> f64 {
-        self.abs().atan2(rhs.into().abs())
+    pub fn atan2(self, rhs: impl Into<Self>) -> Complex {
+        let rhs = rhs.into();
+        let denom = self.re * self.re + self.im * self.im;
+        Self::new(
+            (self.re * rhs.re + self.im * rhs.im) / denom,
+            (self.im * rhs.re - self.re * rhs.im) / denom,
+        )
+    }
+    /// Get the sign of a complex number
+    pub fn signum(self) -> Self {
+        Self::new(
+            if self.re.is_nan() {
+                f64::NAN
+            } else if self.re == 0.0 {
+                0.0
+            } else {
+                self.re.signum()
+            },
+            if self.im.is_nan() {
+                f64::NAN
+            } else if self.im == 0.0 {
+                0.0
+            } else {
+                self.im.signum()
+            },
+        )
+    }
+    /// Calculate the principal value of the complex number
+    pub fn arg(self) -> f64 {
+        self.im.atan2(self.re)
+    }
+    /// Convert a complex number to polar coordinates
+    pub fn to_polar(self) -> (f64, f64) {
+        (self.abs(), self.arg())
+    }
+    /// Convert polar coordinates to a complex number
+    pub fn from_polar(r: f64, theta: f64) -> Self {
+        r * Self::new(theta.cos(), theta.sin())
+    }
+    /// Raise a complex number to a power
+    pub fn powf(self, rhs: impl Into<Self>) -> Self {
+        let rhs = rhs.into();
+        let (r, theta) = self.to_polar();
+        Self::from_polar(E.powf(rhs.re * r.ln()), rhs.im * theta)
+    }
+    /// Calculate the logarithm of a complex number
+    pub fn log(self, base: impl Into<Self>) -> Self {
+        let base = base.into();
+        Self::new(self.abs().ln(), self.arg()).div(Self::new(base.abs().ln(), base.arg()))
+    }
+    /// Calculate the square root of a complex number
+    pub fn sqrt(self) -> Self {
+        Self::from_polar(self.abs().sqrt(), self.arg() / 2.0)
+    }
+    /// Calculate the sine of a complex number
+    pub fn sin(self) -> Self {
+        Self::new(
+            self.re.sin() * self.im.cosh(),
+            self.re.cos() * self.im.sinh(),
+        )
+    }
+    /// Calculate the cosine of a complex number
+    pub fn cos(self) -> Self {
+        Self::new(
+            self.re.cos() * self.im.cosh(),
+            -self.re.sin() * self.im.sinh(),
+        )
+    }
+    /// Calculate the arc sine of a complex number
+    pub fn asin(self) -> Self {
+        let z = Self::new(-self.im, self.re);
+        (Self::ONE - (Self::ONE - self * self).sqrt()).log(z) / z
+    }
+    /// Calculate the arc cosine of a complex number
+    pub fn acos(self) -> Self {
+        let z = Self::new(-self.im, self.re);
+        (z - (self - Self::ONE) * (self + Self::ONE).sqrt()).log(z) / z
     }
 }
 
@@ -78,7 +157,7 @@ impl fmt::Display for Complex {
         if self.im == 0.0 {
             self.re.fmt(f)
         } else {
-            write!(f, "{}+{}i", self.re, self.im)
+            write!(f, "{}r{}i", self.re, self.im)
         }
     }
 }

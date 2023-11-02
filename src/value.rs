@@ -1031,18 +1031,78 @@ macro_rules! value_un_impl {
     }
 }
 
-value_un_impl!(neg, [Num, num], ("bytes", Byte, byte));
-value_un_impl!(not, [Num, num], ("bytes", Byte, byte));
-value_un_impl!(abs, [Num, num], ("bytes", Byte, byte));
-value_un_impl!(sign, [Num, num], ["bytes", Byte, byte]);
-value_un_impl!(sqrt, [Num, num], ("bytes", Byte, byte));
-value_un_impl!(sin, [Num, num], ("bytes", Byte, byte));
-value_un_impl!(cos, [Num, num], ("bytes", Byte, byte));
-value_un_impl!(asin, [Num, num], ("bytes", Byte, byte));
-value_un_impl!(acos, [Num, num], ("bytes", Byte, byte));
-value_un_impl!(floor, [Num, num], ["bytes", Byte, byte]);
-value_un_impl!(ceil, [Num, num], ["bytes", Byte, byte]);
-value_un_impl!(round, [Num, num], ["bytes", Byte, byte]);
+value_un_impl!(
+    neg,
+    [Num, num],
+    ("bytes", Byte, byte),
+    ["complex", Complex, com]
+);
+value_un_impl!(
+    not,
+    [Num, num],
+    ("bytes", Byte, byte),
+    ["complex", Complex, com]
+);
+value_un_impl!(
+    abs,
+    [Num, num],
+    ("bytes", Byte, byte),
+    ("complex", Complex, com)
+);
+value_un_impl!(
+    sign,
+    [Num, num],
+    ["bytes", Byte, byte],
+    ["complex", Complex, com]
+);
+value_un_impl!(
+    sqrt,
+    [Num, num],
+    ("bytes", Byte, byte),
+    ["complex", Complex, com]
+);
+value_un_impl!(
+    sin,
+    [Num, num],
+    ("bytes", Byte, byte),
+    ["complex", Complex, com]
+);
+value_un_impl!(
+    cos,
+    [Num, num],
+    ("bytes", Byte, byte),
+    ["complex", Complex, com]
+);
+value_un_impl!(
+    asin,
+    [Num, num],
+    ("bytes", Byte, byte),
+    ["complex", Complex, com]
+);
+value_un_impl!(
+    acos,
+    [Num, num],
+    ("bytes", Byte, byte),
+    ["complex", Complex, com]
+);
+value_un_impl!(
+    floor,
+    [Num, num],
+    ["bytes", Byte, byte],
+    ["complex", Complex, com]
+);
+value_un_impl!(
+    ceil,
+    [Num, num],
+    ["bytes", Byte, byte],
+    ["complex", Complex, com]
+);
+value_un_impl!(
+    round,
+    [Num, num],
+    ["bytes", Byte, byte],
+    ["complex", Complex, com]
+);
 
 macro_rules! val_retry {
     (Byte, $env:expr) => {
@@ -1136,6 +1196,11 @@ macro_rules! value_bin_math_impl {
             ("bytes", Byte, Byte, byte_byte, num_num),
             ("bytes", Byte, Num, byte_num, num_num),
             ("bytes", Num, Byte, num_byte, num_num),
+            ["complex", Complex, com_x],
+            ("complex", Complex, Num, com_x),
+            ("complex", Num, Complex, x_com),
+            ("byte", "complex", Complex, Byte, com_x, com_x),
+            ("byte", "complex", Byte, Complex, x_com, com_x),
             $($($tt)*)?
         );
     };
@@ -1170,11 +1235,16 @@ macro_rules! cmp_impls {
                 $name,
                 // Value comparable
                 [Num, same_type],
+                ["complex", Complex, same_type],
                 ("bytes", Byte, Byte, same_type, num_num),
                 (Char, Char, generic),
                 (Box, Box, generic),
                 ("bytes", Num, Byte, num_byte, num_num),
                 ("bytes", Byte, Num, byte_num, num_num),
+                ("complex", Complex, Num, com_x),
+                ("complex", Num, Complex, x_com),
+                ("byte", "complex", Complex, Byte, com_x),
+                ("byte", "complex", Byte, Complex, x_com),
                 // Type comparable
                 (Num, Char, always_less),
                 ("bytes", Byte, Char, always_less),

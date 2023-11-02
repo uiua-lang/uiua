@@ -30,6 +30,7 @@ pub enum OutputItem {
     Audio(Vec<u8>),
     Report(Report),
     Faint(String),
+    Classed(&'static str, String),
     Separator,
 }
 

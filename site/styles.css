@@ -779,6 +779,59 @@ input[type=number] {
     color: #888;
 }
 
+@media (prefers-color-scheme: dark) {
+    .output-a {
+        color: #eff;
+    }
+
+    .output-b {
+        color: #eef;
+    }
+
+    .output-c {
+        color: #fef;
+    }
+
+    .output-d {
+        color: #fee;
+    }
+
+    .output-e {
+        color: #ffe;
+    }
+
+    .output-f {
+        color: #efe;
+    }
+}
+
+@media (prefers-color-scheme: light) {
+
+    .output-a {
+        color: #114;
+    }
+
+    .output-b {
+        color: #414;
+    }
+
+    .output-c {
+        color: #411;
+    }
+
+    .output-d {
+        color: #441;
+    }
+
+    .output-e {
+        color: #141;
+    }
+
+    .output-f {
+        color: #144;
+    }
+}
+
 #editor-help {
     margin: 0.4em 0 0 0;
     font-size: 1em;

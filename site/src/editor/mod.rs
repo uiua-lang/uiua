@@ -221,6 +221,10 @@ pub fn Editor<'a>(
                             view!(<div class="output-item">{s}</div>).into_view()
                         }
                     }
+                    OutputItem::Classed(class, s) => {
+                        let class = format!("output-item {class}");
+                        view!(<div class=class>{s}</div>).into_view()
+                    }
                     OutputItem::Faint(s) => {
                         view!(<div class="output-item output-fainter">{s}</div>).into_view()
                     }

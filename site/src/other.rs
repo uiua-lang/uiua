@@ -161,7 +161,7 @@ pub fn Install() -> impl IntoView {
 
         <h2>"Editor Support"</h2>
         <p>"An official "<a href="https://marketplace.visualstudio.com/items?itemName=uiua-lang.uiua-vscode">"Uiua language extension for VSCode"</a>" is available."</p>
-        <p>"For Neovim, Apeiros-46B maintains "<a href="https://github.com/Apeiros-46B/nvim/blob/main/after/ftplugin/uiua.lua">"syntax"</a>" and "<a href="https://github.com/Apeiros-46B/nvim/blob/main/after/ftplugin/uiua.lua">"LSP"</a>" scripts."</p>
+        <p>"For Neovim, Apeiros-46B maintains "<a href="https://github.com/Apeiros-46B/nvim/blob/main/after/syntax/uiua.vim">"syntax"</a>" and "<a href="https://github.com/Apeiros-46B/nvim/blob/main/after/ftplugin/uiua.lua">"LSP"</a>" scripts."</p>
         <p>"These require Uiua to be installed and in your "<code>"PATH"</code>"."</p>
     }
 }

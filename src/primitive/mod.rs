@@ -328,6 +328,7 @@ impl Primitive {
         let mut end = indices.len();
         'outer: loop {
             if end == 0 {
+                prims.reverse();
                 return Some(prims);
             }
             let end_index = indices[end - 1];

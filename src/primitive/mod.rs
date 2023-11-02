@@ -725,6 +725,13 @@ impl ImplPrimitive {
             ImplPrimitive::Unpartition => loops::unpartition(env)?,
             ImplPrimitive::Ungroup => loops::ungroup(env)?,
             ImplPrimitive::InvTrace => trace(env, true)?,
+            ImplPrimitive::InvComplex => {
+                let x = env.pop(1)?;
+                let im = x.clone().complex_im(env)?;
+                let re = x.complex_re(env)?;
+                env.push(re);
+                env.push(im);
+            }
             // Optimizations
             ImplPrimitive::Cos => env.monadic_env(Value::cos)?,
             ImplPrimitive::Last => env.monadic_env(Value::last)?,

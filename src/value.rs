@@ -1024,6 +1024,7 @@ macro_rules! value_un_impl {
                         array.data = new_data.into();
                         array.into()
                     }
+                    #[allow(unreachable_patterns)]
                     val => return Err($name::error(val.type_name(), env))
                 })
             }
@@ -1102,6 +1103,19 @@ value_un_impl!(
     [Num, num],
     ["bytes", Byte, byte],
     ["complex", Complex, com]
+);
+value_un_impl!(
+    complex_re,
+    [Num, generic],
+    ["bytes", Byte, generic],
+    ("complex", Complex, com),
+    [Char, generic]
+);
+value_un_impl!(
+    complex_im,
+    [Num, num],
+    ["bytes", Byte, byte],
+    ("complex", Complex, com)
 );
 
 macro_rules! val_retry {

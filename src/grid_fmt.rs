@@ -75,7 +75,7 @@ impl GridFmt for Complex {
         } else {
             let mut re = self.re.fmt_grid(boxed);
             let im = self.im.fmt_grid(false);
-            re[0].push('r');
+            re[0].push('_');
             re[0].extend(im[0].iter().copied());
             re[0].push('i');
             re

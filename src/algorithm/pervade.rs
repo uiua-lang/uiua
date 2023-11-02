@@ -562,6 +562,37 @@ pub mod round {
     }
 }
 
+pub mod complex_re {
+    use super::*;
+    #[cfg(feature = "complex")]
+    pub fn com(a: Complex) -> f64 {
+        a.re
+    }
+    pub fn generic<T>(a: T) -> T {
+        a
+    }
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
+        env.error(format!("Cannot get the real part of {a}"))
+    }
+}
+pub mod complex_im {
+    use super::*;
+    #[cfg(feature = "complex")]
+    pub fn com(a: Complex) -> f64 {
+        a.im
+    }
+    pub fn num(_a: f64) -> f64 {
+        0.0
+    }
+    #[cfg(feature = "bytes")]
+    pub fn byte(_a: u8) -> u8 {
+        0
+    }
+    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
+        env.error(format!("Cannot get the imaginary part of {a}"))
+    }
+}
+
 macro_rules! cmp_impl {
     ($name:ident $eq:tt $ordering:expr) => {
         pub mod $name {

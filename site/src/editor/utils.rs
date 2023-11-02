@@ -288,6 +288,8 @@ pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
     let mut start = anchor_offset;
     let mut end = focus_offset;
     let mut curr = 0;
+    let mut found_start = false;
+    let mut found_end = false;
     for (i, div_node) in children_of(&parent).enumerate() {
         if i > 0 {
             curr += 1;
@@ -302,9 +304,11 @@ pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
             // This is the case when you click on an empty line
             if div_node.contains(Some(&anchor_node)) {
                 start = curr + anchor_offset;
+                found_start = true;
             }
             if div_node.contains(Some(&focus_node)) {
                 end = curr + focus_offset;
+                found_end = true;
             }
         } else {
             // This is the normal case
@@ -316,6 +320,7 @@ pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
                     let anchor_char_offset =
                         utf16_offset_to_char_offset(&text_content, anchor_offset);
                     start = curr + anchor_char_offset;
+                    found_start = true;
                     // logging::log!(
                     //     "start change: curr: {}, offset: {}",
                     //     curr,
@@ -327,6 +332,7 @@ pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
                     let focus_char_offset =
                         utf16_offset_to_char_offset(&text_content, focus_offset);
                     end = curr + focus_char_offset;
+                    found_end = true;
                     // logging::log!("end change: curr: {}, offset: {}", curr, focus_char_offset);
                     // logging::log!("end -> {:?}", end);
                 }
@@ -334,6 +340,27 @@ pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
                 // logging::log!("len {} -> {}", curr, curr + len);
                 curr += len;
             }
+        }
+    }
+    // This case occurs when double clicking a line in Firefox
+    if !found_start || !found_end {
+        let text_content = parent.inner_text();
+        let start_offset = text_content
+            .lines()
+            .take(start as usize)
+            .map(|s| s.chars().count() + 1)
+            .sum::<usize>();
+        let end_offset = text_content
+            .lines()
+            .take(end as usize)
+            .map(|s| s.chars().count() + 1)
+            .sum::<usize>()
+            - 1;
+        if !found_start {
+            start = utf16_offset_to_char_offset(&text_content, start_offset as u32);
+        }
+        if !found_end {
+            end = utf16_offset_to_char_offset(&text_content, end_offset as u32);
         }
     }
     // logging::log!("get_code_cursor -> {:?}, {:?}", start, end);

@@ -18,7 +18,6 @@ Within a each section, items are ordered (roughly) by decreasing priority.
 ## Bugs
 - Figure out what is going on with the editor cursor
   - Problems are mostly on Firefox, especially on mobile
-  - Try looks for cursor in entire editor
 - Expand test suite
 
 ## Optimizations

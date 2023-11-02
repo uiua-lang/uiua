@@ -20,7 +20,7 @@ use parking_lot::Mutex;
 use rustyline::{error::ReadlineError, DefaultEditor};
 use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
-    spans, PrimClass, RunMode, SpanKind, Uiua, UiuaError, UiuaResult,
+    spans, PrimClass, RunMode, SpanKind, Uiua, UiuaError, UiuaResult, Value,
 };
 
 fn main() {
@@ -116,9 +116,7 @@ fn run() -> UiuaResult {
                     .print_diagnostics(true)
                     .time_instrs(time_instrs);
                 rt.load_file(path)?;
-                for value in rt.take_stack() {
-                    println!("{}", value.show());
-                }
+                print_stack(&rt.take_stack());
             }
             App::Eval {
                 code,
@@ -133,9 +131,7 @@ fn run() -> UiuaResult {
                     .with_args(args)
                     .print_diagnostics(true);
                 rt.load_str(&code)?;
-                for value in rt.take_stack() {
-                    println!("{}", value.show());
-                }
+                print_stack(&rt.take_stack());
             }
             App::Test {
                 path,
@@ -238,9 +234,7 @@ fn run() -> UiuaResult {
                     .with_args(env::args().skip(1).collect())
                     .print_diagnostics(true);
                 rt.load_str(code)?;
-                for value in rt.take_stack() {
-                    println!("{}", value.show());
-                }
+                print_stack(&rt.take_stack());
                 return Ok(());
             }
             let res = match working_file_path() {
@@ -678,6 +672,23 @@ fn format_multi_files(config: &FormatConfig, stdout: bool) -> Result<(), UiuaErr
     Ok(())
 }
 
+fn print_stack(stack: &[Value]) {
+    for (i, value) in stack.iter().enumerate() {
+        const W: u8 = 255;
+        const B: u8 = 210;
+        let (r, g, b) = match (i + 3) % 6 {
+            0 => (W, B, B),
+            1 => (W, W, B),
+            2 => (B, W, B),
+            3 => (B, W, W),
+            4 => (B, B, W),
+            5 => (W, B, W),
+            _ => unreachable!(),
+        };
+        println!("{}", value.show().truecolor(r, g, b));
+    }
+}
+
 fn repl(mut rt: Uiua, config: FormatConfig) {
     let mut line_reader = DefaultEditor::new().expect("Failed to read from Stdin");
     let mut repl = |rt: &mut Uiua| -> Result<bool, UiuaError> {
@@ -733,12 +744,7 @@ fn repl(mut rt: Uiua, config: FormatConfig) {
         println!();
 
         rt.load_str(&code)?;
-        for value in rt.take_stack() {
-            let pretty = &value.show();
-            for line in pretty.lines() {
-                println!("  {line}");
-            }
-        }
+        print_stack(&rt.take_stack());
         Ok(true)
     };
 

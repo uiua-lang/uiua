@@ -18,24 +18,17 @@ use web_sys::{
     Event, HtmlDivElement, HtmlInputElement, HtmlSelectElement, KeyboardEvent, MouseEvent,
 };
 
-use crate::{backend::OutputItem, element, prim_class, Prim};
+use crate::{backend::OutputItem, element, examples::EXAMPLES, prim_class, Prim};
 
 use utils::*;
 pub use utils::{get_ast_time, Challenge};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum EditorSize {
-    #[default]
-    Small,
-    Medium,
-    Pad,
-}
-
-#[derive(Default)]
 pub enum EditorMode {
     #[default]
-    Progressive,
-    Multiple,
+    Example,
+    Front,
+    Pad,
 }
 
 thread_local! {
@@ -46,11 +39,8 @@ thread_local! {
 #[component]
 pub fn Editor<'a>(
     #[prop(optional)] example: &'a str,
-    #[prop(optional)] examples: &'a [&'a str],
-    #[prop(optional)] size: EditorSize,
-    #[prop(optional)] help: &'a [&'a str],
     #[prop(optional)] mode: EditorMode,
-    #[prop(optional)] progress_lines: bool,
+    #[prop(optional)] help: &'a [&'a str],
     #[prop(optional)] no_run: bool,
     #[prop(optional)] challenge: Option<ChallengeDef>,
 ) -> impl IntoView {
@@ -65,37 +55,12 @@ pub fn Editor<'a>(
     });
     let help: Vec<String> = help.iter().map(|s| s.to_string()).collect();
     // Initialize all the examples
-    let examples = Some(example)
-        .filter(|ex| !ex.is_empty() || examples.is_empty())
-        .into_iter()
-        .chain(examples.iter().copied());
-    let examples: Vec<String> = match mode {
-        EditorMode::Progressive => {
-            let mut examples: Vec<_> = if progress_lines {
-                examples
-                    .scan(String::new(), |acc, s| {
-                        if !acc.is_empty() {
-                            acc.push('\n');
-                        }
-                        acc.push_str(s);
-                        Some(acc.clone())
-                    })
-                    .collect()
-            } else {
-                examples
-                    .rev()
-                    .scan(String::new(), |acc, s| {
-                        acc.insert_str(0, s);
-                        Some(acc.clone())
-                    })
-                    .collect()
-            };
-            examples.rotate_right(1);
-            examples
-        }
-        EditorMode::Multiple => examples.map(Into::into).collect(),
+    let examples = match mode {
+        EditorMode::Example => progressive_strings(example),
+        EditorMode::Front => EXAMPLES.iter().map(ToString::to_string).collect(),
+        EditorMode::Pad => vec![example.into()],
     };
-    let code_max_lines = if let EditorSize::Pad = size {
+    let code_max_lines = if let EditorMode::Pad = mode {
         10
     } else if let Some(chal) = &challenge {
         chal.answer.lines().count()
@@ -167,7 +132,7 @@ pub fn Editor<'a>(
             if let Ok(formatted) = format_str(
                 &code_text,
                 &FormatConfig {
-                    trailing_newline: size == EditorSize::Pad,
+                    trailing_newline: mode == EditorMode::Pad,
                     ..Default::default()
                 },
             ) {
@@ -197,7 +162,7 @@ pub fn Editor<'a>(
         // Update URL
         {
             let encoded = URL_SAFE.encode(&input);
-            if let EditorSize::Pad = size {
+            if let EditorMode::Pad = mode {
                 BrowserIntegration {}.navigate(&LocationChange {
                     value: format!("/pad?src={encoded}"),
                     scroll: false,
@@ -212,7 +177,7 @@ pub fn Editor<'a>(
         set_timeout(
             move || {
                 let output = state().run_code(&input);
-                let mut allow_autoplay = !matches!(size, EditorSize::Small);
+                let mut allow_autoplay = !matches!(mode, EditorMode::Example);
                 let render_output_item = |item| match item {
                     OutputItem::String(s) => {
                         if s.is_empty() {
@@ -796,9 +761,9 @@ pub fn Editor<'a>(
     }
 
     // Select a class for the editor and code area
-    let editor_class = match size {
-        EditorSize::Small => "small-editor",
-        EditorSize::Medium | EditorSize::Pad => "medium-editor",
+    let editor_class = match mode {
+        EditorMode::Example => "small-editor",
+        EditorMode::Front | EditorMode::Pad => "medium-editor",
     };
 
     // Hide the example arrows if there is only one example
@@ -809,9 +774,9 @@ pub fn Editor<'a>(
     };
 
     // Show or hide the glyph buttons
-    let (show_glyphs, set_show_glyphs) = create_signal(match size {
-        EditorSize::Small => false,
-        EditorSize::Medium | EditorSize::Pad => true,
+    let (show_glyphs, set_show_glyphs) = create_signal(match mode {
+        EditorMode::Example => false,
+        EditorMode::Front | EditorMode::Pad => true,
     });
 
     // Glyphs toggle button
@@ -878,7 +843,7 @@ pub fn Editor<'a>(
         let encoded = URL_SAFE.encode(code_text());
         let url = format!("https://uiua.org/pad?src={encoded}");
         _ = window().navigator().clipboard().unwrap().write_text(&url);
-        if let EditorSize::Pad = size {
+        if let EditorMode::Pad = mode {
             window()
                 .history()
                 .unwrap()
@@ -1094,7 +1059,7 @@ ctrl/⌘ Y       - Redo"
             </div>
             <div id="editor-help">
             {
-                if let EditorSize::Pad = size {
+                if let EditorMode::Pad = mode {
                     Some("Note: Uiua is not yet stable")
                 } else {
                     None

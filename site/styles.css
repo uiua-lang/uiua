@@ -736,32 +736,31 @@ input[type=number] {
     -moz-background-clip: text;
     -webkit-text-fill-color: transparent;
     -moz-text-fill-color: transparent;
-    paint-order: b;
 }
 
 @media (prefers-color-scheme: light) {
 
     .trans {
-        -webkit-text-stroke: 0.2px #000;
+        -webkit-text-stroke: 0.01em #000;
     }
 
     .bi {
         background-image: linear-gradient(180deg,
-                #e36370 48%,
-                #c68983 48%,
-                #c68983 65%,
-                #787e8c 65%);
+                #D60270 48%,
+                #9B4F96 48%,
+                #9B4F96 65%,
+                #0038A8 65%);
     }
 }
 
 @media (prefers-color-scheme: dark) {
     .bi {
-        -webkit-text-stroke: 0.2px #f0c36f;
+        -webkit-text-stroke: 0.01em #fff8;
         background-image: linear-gradient(180deg,
-                #dd3270 48%,
-                #b06c8c 48%,
-                #b06c8c 65%,
-                #3c5b9a 65%);
+                #D60270 48%,
+                #9B4F96 48%,
+                #9B4F96 65%,
+                #0038A8 65%);
     }
 }
 

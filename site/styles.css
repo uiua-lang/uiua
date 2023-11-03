@@ -659,16 +659,33 @@ input[type=number] {
     font-size: 0.75em;
     border-radius: 0.5em;
     max-width: 80%;
-    color: #eee;
-    background-color: #000c;
     white-space: pre-wrap;
     font-family: "Code Font", monospace;
     z-index: 1;
 }
 
+@media (prefers-color-scheme: dark) {
+    .glyph-doc {
+        background-color: #000c;
+    }
+
+    .glyph-doc-ctrl-click {
+        color: #aaa;
+    }
+}
+
+@media (prefers-color-scheme: light) {
+    .glyph-doc {
+        background-color: #fffd;
+    }
+
+    .glyph-doc-ctrl-click {
+        color: #777;
+    }
+}
+
 .glyph-doc-ctrl-click {
     font-size: 0.7em;
-    color: #aaa;
 }
 
 .code-font {

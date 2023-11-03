@@ -420,7 +420,10 @@ fn site() {
                             .replace("\\\"", "\"")
                             .replace("\\\\", "\\")
                             .replace("\\n", "\n");
-                        if code.contains(uiua::SysOp::AudioPlay.name()) {
+                        if [uiua::SysOp::AudioPlay, uiua::SysOp::GifShow]
+                            .iter()
+                            .any(|p| code.contains(p.name()))
+                        {
                             continue;
                         }
                         threads.push((

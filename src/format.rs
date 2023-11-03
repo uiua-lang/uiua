@@ -456,7 +456,7 @@ impl<'a> Formatter<'a> {
                 self.prev_import_function = None;
                 self.output.push_str("---");
                 self.output.push('\n');
-                self.format_items(items);
+                self.format_items(&items.value);
                 self.output.push_str("---");
             }
             Item::Words(w) => {

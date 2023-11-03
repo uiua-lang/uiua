@@ -36,7 +36,7 @@ impl Uiua {
         }
         match item {
             Item::TestScope(items) => {
-                self.in_scope(|env| env.items(items, true))?;
+                self.in_scope(|env| env.items(items.value, true))?;
             }
             Item::Words(words) => {
                 let can_run = match self.mode {

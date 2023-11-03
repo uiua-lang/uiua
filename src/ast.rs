@@ -9,10 +9,25 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub enum Item {
-    TestScope(Vec<Item>),
+    TestScope(Sp<Vec<Item>>),
     Words(Vec<Sp<Word>>),
     Binding(Binding),
     ExtraNewlines(CodeSpan),
+}
+
+impl Item {
+    pub fn span(&self) -> CodeSpan {
+        match self {
+            Item::TestScope(items) => items.span.clone(),
+            Item::Words(words) => {
+                let first = words.first().expect("empty words").span.clone();
+                let last = words.last().expect("empty words").span.clone();
+                first.merge(last)
+            }
+            Item::Binding(binding) => binding.span(),
+            Item::ExtraNewlines(span) => span.clone(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -21,6 +36,16 @@ pub struct Binding {
     pub arrow_span: CodeSpan,
     pub signature: Option<Sp<Signature>>,
     pub words: Vec<Sp<Word>>,
+}
+
+impl Binding {
+    pub fn span(&self) -> CodeSpan {
+        (self.name.span.clone()).merge(if let Some(last_word) = self.words.last() {
+            last_word.span.clone()
+        } else {
+            self.arrow_span.clone()
+        })
+    }
 }
 
 #[derive(Clone)]

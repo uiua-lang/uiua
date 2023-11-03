@@ -204,12 +204,15 @@ impl Parser {
         } else if let Some(words) = self.try_words() {
             self.validate_words(&words, false);
             Item::Words(words)
-        } else if parse_scopes && self.try_exact(TripleMinus).is_some() {
+        } else if let (true, Some(start)) = (parse_scopes, self.try_exact(TripleMinus)) {
             let items = self.items(false);
-            if self.try_exact(TripleMinus).is_none() {
+            let span = if let Some(end) = self.try_exact(TripleMinus) {
+                start.merge(end)
+            } else {
                 self.errors.push(self.expected([TripleMinus]));
-            }
-            Item::TestScope(items)
+                start
+            };
+            Item::TestScope(span.sp(items))
         } else {
             return None;
         })

@@ -204,7 +204,8 @@ impl Parser {
         } else if let Some(words) = self.try_words() {
             self.validate_words(&words, false);
             Item::Words(words)
-        } else if let (true, Some(start)) = (parse_scopes, self.try_exact(TripleMinus)) {
+        } else if parse_scopes {
+            let start = self.try_exact(TripleMinus)?;
             let items = self.items(false);
             let span = if let Some(end) = self.try_exact(TripleMinus) {
                 start.merge(end)

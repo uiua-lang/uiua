@@ -23,7 +23,6 @@ Within a each section, items are ordered (roughly) by decreasing priority.
 - Reduce windows? - `/f◫` for scalar window size could be optimized, but is it necessary?
 
 ## Documentation
-- Images and GIFs
 - System functions
 
 ## Tooling

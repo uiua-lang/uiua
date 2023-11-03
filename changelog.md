@@ -2,8 +2,8 @@
 
 Uiua is not yet stable.
 
-## 0.0.26 - 2023-11-??
-If you are reading this on the website, then these changes are live here.
+<!-- If you are reading this on the website, then these changes are live here. -->
+## 0.1.0 - 2023-11-03
 ### Language
 - Add complex numbers, which can be created with the [`complex` `ℂ`](https://uiua.org/docs/complex) function
 - Add the [`do` `⍢`](https://uiua.org/docs/do) modifier, which repeatedly calls a function as long as a condition holds

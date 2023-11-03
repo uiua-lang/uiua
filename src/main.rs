@@ -673,9 +673,13 @@ fn format_multi_files(config: &FormatConfig, stdout: bool) -> Result<(), UiuaErr
 }
 
 fn print_stack(stack: &[Value]) {
+    if stack.len() == 1 {
+        println!("{}", stack[0].show());
+        return;
+    }
     for (i, value) in stack.iter().enumerate() {
         const W: u8 = 255;
-        const B: u8 = 210;
+        const B: u8 = 200;
         let (r, g, b) = match (i + 3) % 6 {
             0 => (W, B, B),
             1 => (W, W, B),

@@ -721,6 +721,7 @@ fn run_code_single(code: &str) -> Vec<OutputItem> {
     // Get stdout and stderr
     let stdout = take(&mut *io.stdout.lock().unwrap());
     let mut stack = Vec::new();
+    let value_count = values.len();
     for (i, value) in values.into_iter().enumerate() {
         // Try to convert the value to audio
         if value.shape().last().is_some_and(|&n| n >= 44100 / 4) {
@@ -754,14 +755,18 @@ fn run_code_single(code: &str) -> Vec<OutputItem> {
             }
         }
         // Otherwise, just show the value
-        let class = match i % 6 {
-            0 => "output-a",
-            1 => "output-b",
-            2 => "output-c",
-            3 => "output-d",
-            4 => "output-e",
-            5 => "output-f",
-            _ => unreachable!(),
+        let class = if value_count == 1 {
+            ""
+        } else {
+            match i % 6 {
+                0 => "output-a",
+                1 => "output-b",
+                2 => "output-c",
+                3 => "output-d",
+                4 => "output-e",
+                5 => "output-f",
+                _ => unreachable!(),
+            }
         };
         for line in value.show().lines() {
             stack.push(OutputItem::Classed(class, line.to_string()));

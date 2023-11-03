@@ -811,54 +811,54 @@ input[type=number] {
 
 @media (prefers-color-scheme: dark) {
     .output-a {
-        color: #eff;
+        color: #cff;
     }
 
     .output-b {
-        color: #eef;
+        color: #ccf;
     }
 
     .output-c {
-        color: #fef;
+        color: #fcf;
     }
 
     .output-d {
-        color: #fee;
+        color: #fcc;
     }
 
     .output-e {
-        color: #ffe;
+        color: #ffc;
     }
 
     .output-f {
-        color: #efe;
+        color: #cfc;
     }
 }
 
 @media (prefers-color-scheme: light) {
 
     .output-a {
-        color: #114;
+        color: #225;
     }
 
     .output-b {
-        color: #414;
+        color: #525;
     }
 
     .output-c {
-        color: #411;
+        color: #522;
     }
 
     .output-d {
-        color: #441;
+        color: #552;
     }
 
     .output-e {
-        color: #141;
+        color: #252;
     }
 
     .output-f {
-        color: #144;
+        color: #255;
     }
 }
 

@@ -61,7 +61,7 @@ pub fn Site() -> impl IntoView {
         view! {
             <div>
                 <div style="display: flex; gap: 0.5em;">
-                    <div style="font-style: normal"><PrimCodes prims=[Try, Assert]/></div>
+                    <div style="font-style: normal"><Prims prims=[Try, Assert]/></div>
                     " Dad! Can we go play outside?"
                 </div>
                 <div style="display: flex; gap: 0.5em;">
@@ -84,7 +84,7 @@ pub fn Site() -> impl IntoView {
         view! {
             <div style="font-size: 0.9em;">
                 <div style="display: flex; gap: 0.5em; flex-wrap: wrap">
-                    <div style="font-style: normal"><PrimCodes prims=[Repeat, Do]/></div>
+                    <div style="font-style: normal"><Prims prims=[Repeat, Do]/></div>
                     " Hey honey, the kids are asleep."
                     " What do you say we go"
                 </div>
@@ -316,7 +316,7 @@ pub fn Prim(
 }
 
 #[component]
-pub fn PrimCodes<const N: usize>(prims: [Primitive; N]) -> impl IntoView {
+pub fn Prims<const N: usize>(prims: [Primitive; N]) -> impl IntoView {
     prims
         .into_iter()
         .map(|prim| view!(<Prim prim=prim glyph_only=true/>))

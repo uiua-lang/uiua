@@ -7,7 +7,7 @@ use leptos_meta::*;
 use leptos_router::*;
 use uiua::{constants, Primitive, SysOp};
 
-use crate::{editor::Editor, Const, Prim, PrimCodes};
+use crate::{editor::Editor, Const, Prim, Prims};
 
 #[component]
 pub fn Design() -> impl IntoView {
@@ -274,11 +274,11 @@ pub fn Optimizations() -> impl IntoView {
         <table class="bordered-table cell-centered-table">
             <tr>
                 <th/>
-                <th><PrimCodes prims=[Add, Sub, Mul, Div, Mod, Atan, Min, Max]/></th>
-                <th><PrimCodes prims=[Eq, Ne]/></th>
-                <th><PrimCodes prims=[Lt, Le, Gt, Ge]/></th>
+                <th><Prims prims=[Add, Sub, Mul, Div, Mod, Atan, Min, Max]/></th>
+                <th><Prims prims=[Eq, Ne]/></th>
+                <th><Prims prims=[Lt, Le, Gt, Ge]/></th>
                 <th><Prim prim=Join glyph_only=true/></th>
-                <th><Prim prim=Couple glyph_only=true/></th>
+                <th><Prims prims=[Couple, Complex]/></th>
             </tr>
             <tr><th><Prim prim=Table/></th> <td>"✔"</td> <td>"✔"</td> <td>"✔"</td> <td>"✔"</td> <td>"✔"</td></tr>
             <tr><th><Prim prim=Reduce/></th> <td>"✔"</td> <td></td>  <td></td> <td>"✔"</td> <td></td></tr>
@@ -290,14 +290,14 @@ pub fn Optimizations() -> impl IntoView {
         <p>"This table shows how various combinations of functions are optimized:"</p>
         <table class="bordered-table cell-centered-table">
             <tr><th>"Functions"</th><th>"Naive Implementation"</th><th>"Optimized Implementation"</th></tr>
-            <tr><th><PrimCodes prims=[First, Reverse]/></th><td>"O(n)"</td><td>"O(1)"</td></tr>
-            <tr><th><PrimCodes prims=[First, Rise]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
-            <tr><th><PrimCodes prims=[First, Reverse, Rise]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
-            <tr><th><PrimCodes prims=[First, Fall]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
-            <tr><th><PrimCodes prims=[First, Reverse, Fall]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
-            <tr><th><PrimCodes prims=[Sin, Add, Eta]/></th><td>"Add and Sine"</td><td>"Cosine"</td></tr>
-            <tr><th><PrimCodes prims=[First, Where]/></th><td>"O(n)"</td><td>"O(where the first non-zero is)"</td></tr>
-            <tr><th><PrimCodes prims=[Dip, Dip, Dip]/>"…"</th><td><Prim prim=Dip/>" n times"</td><td>"Single "<Prim prim=Dip/>" of n values"</td></tr>
+            <tr><th><Prims prims=[First, Reverse]/></th><td>"O(n)"</td><td>"O(1)"</td></tr>
+            <tr><th><Prims prims=[First, Rise]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
+            <tr><th><Prims prims=[First, Reverse, Rise]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
+            <tr><th><Prims prims=[First, Fall]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
+            <tr><th><Prims prims=[First, Reverse, Fall]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
+            <tr><th><Prims prims=[Sin, Add, Eta]/></th><td>"Add and Sine"</td><td>"Cosine"</td></tr>
+            <tr><th><Prims prims=[First, Where]/></th><td>"O(n)"</td><td>"O(where the first non-zero is)"</td></tr>
+            <tr><th><Prims prims=[Dip, Dip, Dip]/>"…"</th><td><Prim prim=Dip/>" n times"</td><td>"Single "<Prim prim=Dip/>" of n values"</td></tr>
         </table>
     }
 }

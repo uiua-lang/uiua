@@ -6,7 +6,7 @@ use leptos_meta::*;
 use leptos_router::*;
 use uiua::{example_ua, Primitive, SysOp};
 
-use crate::{editor::*, Prim, PrimCodes};
+use crate::{editor::*, Prim, Prims};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
 pub enum TutorialPage {
@@ -699,7 +699,7 @@ fn TutorialFunctions() -> impl IntoView {
         <h2 id="modifiers">"Modifiers"</h2>
         <p>"Modifiers are functions that take other functions as arguments. If you immediately follow a modifier with its function arguments, the functions will be called inside the modifier rather than outside."</p>
         <p>"For example, "<Prim prim=Reduce/>" applies a function \"between\" all rows of an array."</p>
-        <p><PrimCodes prims={[Reduce, Add]}/>" is therefore the sum of all the rows of an array."</p>
+        <p><Prims prims={[Reduce, Add]}/>" is therefore the sum of all the rows of an array."</p>
         <Editor example="/+ 1_2_3_4"/>
         <p><Prim prim=Scan/>" is similar, but it returns all the intermediate results."</p>
         <Editor example="\\+ 1_2_3_4"/>

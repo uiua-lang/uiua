@@ -1,3 +1,5 @@
+//! Uiua's abstract syntax tree
+
 use std::fmt;
 
 use crate::{
@@ -7,15 +9,21 @@ use crate::{
     Ident, Primitive,
 };
 
+/// A top-level item
 #[derive(Debug, Clone)]
 pub enum Item {
-    TestScope(Sp<Vec<Item>>),
+    /// Just some code
     Words(Vec<Sp<Word>>),
+    /// A binding
     Binding(Binding),
+    /// A test scope
+    TestScope(Sp<Vec<Item>>),
+    /// Extra newlines between items
     ExtraNewlines(CodeSpan),
 }
 
 impl Item {
+    /// Get the span of this item
     pub fn span(&self) -> CodeSpan {
         match self {
             Item::TestScope(items) => items.span.clone(),
@@ -30,15 +38,21 @@ impl Item {
     }
 }
 
+/// A binding
 #[derive(Debug, Clone)]
 pub struct Binding {
+    /// The name of the binding
     pub name: Sp<Ident>,
+    /// The span of the arrow
     pub arrow_span: CodeSpan,
+    /// The signature
     pub signature: Option<Sp<Signature>>,
+    /// The code
     pub words: Vec<Sp<Word>>,
 }
 
 impl Binding {
+    /// Get the span of this binding
     pub fn span(&self) -> CodeSpan {
         (self.name.span.clone()).merge(if let Some(last_word) = self.words.last() {
             last_word.span.clone()
@@ -48,7 +62,9 @@ impl Binding {
     }
 }
 
+/// A word
 #[derive(Clone)]
+#[allow(missing_docs)]
 pub enum Word {
     Number(String, f64),
     Char(String),
@@ -69,6 +85,7 @@ pub enum Word {
 }
 
 impl Word {
+    /// Whether this word is code
     pub fn is_code(&self) -> bool {
         !matches!(self, Word::Comment(_) | Word::Spaces)
     }
@@ -115,9 +132,12 @@ impl fmt::Debug for Word {
     }
 }
 
+/// A stack array notation term
 #[derive(Clone)]
 pub struct Arr {
+    /// The words in the array
     pub lines: Vec<Vec<Sp<Word>>>,
+    /// Whether this is a constant-item function
     pub constant: bool,
 }
 
@@ -133,10 +153,14 @@ impl fmt::Debug for Arr {
     }
 }
 
+/// An inline function
 #[derive(Clone)]
 pub struct Func {
+    /// The function's id
     pub id: FunctionId,
+    /// The function's signature
     pub signature: Option<Sp<Signature>>,
+    /// The function's code
     pub lines: Vec<Vec<Sp<Word>>>,
 }
 
@@ -153,14 +177,19 @@ impl fmt::Debug for Func {
     }
 }
 
+/// A switch function
 #[derive(Debug, Clone)]
 pub struct Switch {
+    /// The branches of the switch
     pub branches: Vec<Sp<Func>>,
 }
 
+/// A modifier with operands
 #[derive(Clone)]
 pub struct Modified {
+    /// The modifier itself
     pub modifier: Sp<Modifier>,
+    /// The operands
     pub operands: Vec<Sp<Word>>,
 }
 
@@ -174,9 +203,12 @@ impl fmt::Debug for Modified {
     }
 }
 
+/// A modifier
 #[derive(Clone, PartialEq, Eq)]
 pub enum Modifier {
+    /// A primitive modifier
     Primitive(Primitive),
+    /// A user-defined modifier
     Ident(Ident),
 }
 
@@ -190,6 +222,7 @@ impl fmt::Debug for Modifier {
 }
 
 impl Modifier {
+    /// Get the number of arguments this modifier takes
     pub fn args(&self) -> u8 {
         match self {
             Modifier::Primitive(prim) => prim.modifier_args().unwrap_or(0),

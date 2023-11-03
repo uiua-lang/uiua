@@ -7,7 +7,9 @@ use crate::{
     Diagnostic, DiagnosticKind, Ident, Primitive,
 };
 
+/// An error that occurred while parsing
 #[derive(Debug, Clone)]
+#[allow(missing_docs)]
 pub enum ParseError {
     Lex(LexError),
     Expected(Vec<Expectation>, Option<Box<Sp<Token>>>),

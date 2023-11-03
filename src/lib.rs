@@ -66,7 +66,7 @@ The `uiua` crate has the following feature flags:
 
 mod algorithm;
 mod array;
-mod ast;
+pub mod ast;
 mod boxed;
 mod check;
 mod compile;
@@ -92,11 +92,7 @@ mod value;
 
 use std::sync::Arc;
 
-#[cfg(feature = "complex")]
-pub use complex::*;
-#[cfg(not(feature = "complex"))]
-use complex::*;
-pub use {
+pub use self::{
     array::*,
     boxed::*,
     error::*,
@@ -104,13 +100,17 @@ pub use {
     lex::is_ident_char,
     lsp::*,
     lsp::{spans, SpanKind},
-    parse::parse,
+    parse::{parse, ParseError},
     primitive::*,
     run::*,
     sys::*,
     sys_native::*,
     value::*,
 };
+#[cfg(feature = "complex")]
+pub use complex::*;
+#[cfg(not(feature = "complex"))]
+use complex::*;
 
 /// A Uiua identifier
 pub type Ident = Arc<str>;

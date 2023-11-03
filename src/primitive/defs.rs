@@ -1260,7 +1260,7 @@ primitive!(
     /// The next number in the sequence is calculated in the condition function but [join]ed to the sequence in the loop function.
     /// ex: C ← (+1×3|÷2)=0◿2.
     ///   : ;⍢⊂(¬∊,,C⊢.) [7]
-    /// If the condition function consumes its only arguments to evaluate the condition, then those arguments will be implicitely copied.
+    /// If the condition function consumes its only arguments to evaluate the condition, then those arguments will be implicitly copied.
     /// Consider this equivalence:
     /// ex: ⍢(×3)(<100)  1
     ///   : ⍢(×3)(<100.) 1

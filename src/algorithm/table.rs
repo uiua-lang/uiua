@@ -73,6 +73,8 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
                 ys.convert(),
                 flip(atan2::num_num),
             )),
+            Primitive::Complex if flipped => env.push(fast_table(xs, ys, flip(complex::byte_byte))),
+            Primitive::Complex => env.push(fast_table(xs, ys, flip(complex::byte_byte))),
             Primitive::Min => env.push(fast_table(xs, ys, min::byte_byte)),
             Primitive::Max => env.push(fast_table(xs, ys, max::byte_byte)),
             Primitive::Join | Primitive::Couple => {
@@ -125,6 +127,8 @@ fn table_nums(
         Primitive::Mod => env.push(fast_table(xs, ys, flip(modulus::num_num))),
         Primitive::Atan if flipped => env.push(fast_table(xs, ys, flip(atan2::num_num))),
         Primitive::Atan => env.push(fast_table(xs, ys, flip(atan2::num_num))),
+        Primitive::Complex if flipped => env.push(fast_table(xs, ys, flip(complex::num_num))),
+        Primitive::Complex => env.push(fast_table(xs, ys, complex::num_num)),
         Primitive::Min => env.push(fast_table(xs, ys, min::num_num)),
         Primitive::Max => env.push(fast_table(xs, ys, max::num_num)),
         Primitive::Join | Primitive::Couple => env.push(fast_table_join_or_couple(xs, ys, flipped)),

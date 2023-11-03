@@ -151,7 +151,9 @@ macro_rules! table_math {
                 Primitive::Mod => env.push(fast_table(xs, ys, flip(modulus::$f))),
                 Primitive::Atan if flipped => env.push(fast_table(xs, ys, flip(atan2::$f))),
                 Primitive::Atan => env.push(fast_table(xs, ys, flip(atan2::$f))),
+                #[cfg(feature = "complex")]
                 Primitive::Complex if flipped => env.push(fast_table(xs, ys, flip(complex::$f))),
+                #[cfg(feature = "complex")]
                 Primitive::Complex => env.push(fast_table(xs, ys, complex::$f)),
                 Primitive::Min => env.push(fast_table(xs, ys, min::$f)),
                 Primitive::Max => env.push(fast_table(xs, ys, max::$f)),

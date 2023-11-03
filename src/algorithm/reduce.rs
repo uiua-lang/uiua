@@ -39,6 +39,7 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
                 return generic_fold_right_1(f, Value::Num(nums), None, env);
             }
         }
+        #[cfg(feature = "complex")]
         (Some((prim, flipped)), Value::Complex(nums)) => {
             if let Err(nums) = reduce_coms(prim, flipped, nums, env) {
                 return generic_fold_right_1(f, Value::Complex(nums), None, env);

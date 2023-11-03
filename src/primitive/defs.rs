@@ -1212,7 +1212,7 @@ primitive!(
     /// Here, we [negate] 5, [subtract] 2, then [negate] again.
     /// ex: ⍜¯(-2) 5
     /// You can use [under] with [round] to round to a specific number of decimal places.
-    /// ex: ⍜(×1e3⁅) π
+    /// ex: ⍜(×1e3)⁅ π
     ///
     /// The above examples involve an *arithmetic* under. That is, [invert]`f` is well-definined independent of [under]'s concept of "undoing".
     /// The remaining examples below involve `f`s which cannot be normally [invert]ed, but which are valid as functions to use with [under].

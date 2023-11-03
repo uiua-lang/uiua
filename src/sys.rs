@@ -2,6 +2,7 @@ use std::{
     any::Any,
     collections::{HashMap, HashSet},
     io::{stderr, stdin, Cursor, Read, Write},
+    path::Path,
     sync::OnceLock,
     time::Duration,
 };
@@ -557,22 +558,22 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         Err("This IO operation is not supported in this environment".into())
     }
     /// Create a file
-    fn create_file(&self, path: &str) -> Result<Handle, String> {
+    fn create_file(&self, path: &Path) -> Result<Handle, String> {
         Err("This IO operation is not supported in this environment".into())
     }
     /// Open a file
-    fn open_file(&self, path: &str) -> Result<Handle, String> {
+    fn open_file(&self, path: &Path) -> Result<Handle, String> {
         Err("This IO operation is not supported in this environment".into())
     }
     /// Read all bytes from a file
-    fn file_read_all(&self, path: &str) -> Result<Vec<u8>, String> {
+    fn file_read_all(&self, path: &Path) -> Result<Vec<u8>, String> {
         let handle = self.open_file(path)?;
         let bytes = self.read(handle, usize::MAX)?;
         self.close(handle)?;
         Ok(bytes)
     }
     /// Write all bytes to a file
-    fn file_write_all(&self, path: &str, contents: &[u8]) -> Result<(), String> {
+    fn file_write_all(&self, path: &Path, contents: &[u8]) -> Result<(), String> {
         let handle = self.create_file(path)?;
         self.write(handle, contents)?;
         self.close(handle)?;
@@ -725,12 +726,18 @@ impl SysOp {
             }
             SysOp::FOpen => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let handle = env.backend.open_file(&path).map_err(|e| env.error(e))?;
+                let handle = env
+                    .backend
+                    .open_file(path.as_ref())
+                    .map_err(|e| env.error(e))?;
                 env.push(handle);
             }
             SysOp::FCreate => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let handle = env.backend.create_file(&path).map_err(|e| env.error(e))?;
+                let handle = env
+                    .backend
+                    .create_file(path.as_ref())
+                    .map_err(|e| env.error(e))?;
                 env.push(handle.0 as f64);
             }
             SysOp::FDelete => {
@@ -888,7 +895,7 @@ impl SysOp {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let bytes = env
                     .backend
-                    .file_read_all(&path)
+                    .file_read_all(path.as_ref())
                     .or_else(|e| {
                         if path == "example.ua" {
                             Ok(example_ua(|ex| ex.as_bytes().to_vec()))
@@ -904,7 +911,7 @@ impl SysOp {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let bytes = env
                     .backend
-                    .file_read_all(&path)
+                    .file_read_all(path.as_ref())
                     .or_else(|e| {
                         if path == "example.ua" {
                             Ok(example_ua(|ex| ex.as_bytes().to_vec()))
@@ -931,7 +938,7 @@ impl SysOp {
                     Value::Box(_) => return Err(env.error("Cannot write box array to file")),
                 };
                 env.backend
-                    .file_write_all(&path, &bytes)
+                    .file_write_all(path.as_ref(), &bytes)
                     .or_else(|e| {
                         if path == "example.ua" {
                             let new_ex = String::from_utf8(bytes).map_err(|e| e.to_string())?;
@@ -961,9 +968,10 @@ impl SysOp {
             SysOp::Import => {
                 let path = env.pop(1)?.as_string(env, "Import path must be a string")?;
                 let item = env.pop(2)?.as_string(env, "Item name must be a string")?;
+                let resolved_path = env.resolve_import_path(path.as_ref());
                 let input = String::from_utf8(
                     env.backend
-                        .file_read_all(&path)
+                        .file_read_all(&resolved_path)
                         .or_else(|e| {
                             if path == "example.ua" {
                                 Ok(example_ua(|ex| ex.as_bytes().to_vec()))
@@ -974,7 +982,7 @@ impl SysOp {
                         .map_err(|e| env.error(e))?,
                 )
                 .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
-                env.import(&input, path.as_ref(), &item)?;
+                env.import(&input, resolved_path.as_ref(), &item)?;
             }
             SysOp::Invoke => {
                 let path = env.pop(1)?.as_string(env, "Invoke path must be a string")?;

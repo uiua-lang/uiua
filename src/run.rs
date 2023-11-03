@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeSet, HashMap, HashSet},
+    collections::{BTreeSet, HashMap},
     fs,
     hash::Hash,
     mem::{replace, take},
@@ -49,8 +49,8 @@ pub struct Uiua {
     /// The time at which execution started
     execution_start: f64,
     /// The paths of files currently being imported (used to detect import cycles)
-    current_imports: Arc<Mutex<HashSet<PathBuf>>>,
-    /// The stacks of imported files
+    current_imports: Arc<Mutex<Vec<PathBuf>>>,
+    /// The bindings of imported files
     imports: Arc<Mutex<HashMap<PathBuf, HashMap<Ident, usize>>>>,
     /// Accumulated diagnostics
     pub(crate) diagnostics: BTreeSet<Diagnostic>,
@@ -79,7 +79,7 @@ pub(crate) enum Global {
 #[derive(Clone)]
 pub(crate) struct Scope {
     /// The stack height at the start of each array currently being built
-    pub array: Vec<usize>,
+    array: Vec<usize>,
     /// The call stack
     call: Vec<StackFrame>,
     /// Map local names to global indices
@@ -215,7 +215,7 @@ impl Uiua {
             higher_scopes: Vec::new(),
             globals: Arc::new(Mutex::new(globals)),
             new_functions: Vec::new(),
-            current_imports: Arc::new(Mutex::new(HashSet::new())),
+            current_imports: Arc::new(Mutex::new(Vec::new())),
             imports: Arc::new(Mutex::new(HashMap::new())),
             mode: RunMode::Normal,
             diagnostics: BTreeSet::new(),
@@ -352,7 +352,7 @@ impl Uiua {
             return Err(errors.into());
         }
         if let Some(path) = path {
-            self.current_imports.lock().insert(path.into());
+            self.current_imports.lock().push(path.into());
         }
         let res = match catch_unwind(AssertUnwindSafe(|| self.items(items, false))) {
             Ok(res) => res,
@@ -369,8 +369,8 @@ code:
                 input
             ))),
         };
-        if let Some(path) = path {
-            self.current_imports.lock().remove(path);
+        if path.is_some() {
+            self.current_imports.lock().pop();
         }
         res
     }
@@ -399,7 +399,7 @@ code:
         }
     }
     pub(crate) fn import(&mut self, input: &str, path: &Path, item: &str) -> UiuaResult {
-        if self.current_imports.lock().contains(path) {
+        if self.current_imports.lock().iter().any(|p| p == path) {
             return Err(self.error(format!(
                 "Cycle detected importing {}",
                 path.to_string_lossy()
@@ -421,6 +421,21 @@ code:
             Global::Func(f) => self.function_stack.push(f),
         }
         Ok(())
+    }
+    /// Resolve a declared import path relative to the path of the file that is being executed
+    pub(crate) fn resolve_import_path(&self, path: &Path) -> PathBuf {
+        let target =
+            if let Some(parent) = self.current_imports.lock().last().and_then(|p| p.parent()) {
+                parent.join(path)
+            } else {
+                path.to_path_buf()
+            };
+        let base = Path::new(".");
+        if let (Ok(canon_target), Ok(canon_base)) = (target.canonicalize(), base.canonicalize()) {
+            pathdiff::diff_paths(canon_target, canon_base).unwrap_or(target)
+        } else {
+            pathdiff::diff_paths(&target, base).unwrap_or(target)
+        }
     }
     pub(crate) fn exec_global_instrs(&mut self, instrs: Vec<Instr>) -> UiuaResult {
         let func = Function::new(FunctionId::Main, instrs, Signature::new(0, 0));

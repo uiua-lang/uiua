@@ -1,4 +1,10 @@
-use std::{any::Any, collections::HashMap, io::Cursor, sync::Mutex};
+use std::{
+    any::Any,
+    collections::HashMap,
+    io::Cursor,
+    path::{Path, PathBuf},
+    sync::Mutex,
+};
 
 use leptos::*;
 use uiua::{Report, SysBackend, UiuaError};
@@ -9,7 +15,7 @@ pub struct WebBackend {
     pub stdout: Mutex<Vec<OutputItem>>,
     pub stderr: Mutex<String>,
     pub trace: Mutex<String>,
-    pub files: Mutex<HashMap<String, Vec<u8>>>,
+    pub files: Mutex<HashMap<PathBuf, Vec<u8>>>,
 }
 
 impl Default for WebBackend {
@@ -90,20 +96,20 @@ impl SysBackend for WebBackend {
         self.stdout.lock().unwrap().push(OutputItem::Gif(gif_bytes));
         Ok(())
     }
-    fn file_write_all(&self, path: &str, contents: &[u8]) -> Result<(), String> {
+    fn file_write_all(&self, path: &Path, contents: &[u8]) -> Result<(), String> {
         self.files
             .lock()
             .unwrap()
-            .insert(path.to_string(), contents.to_vec());
+            .insert(path.into(), contents.to_vec());
         Ok(())
     }
-    fn file_read_all(&self, path: &str) -> Result<Vec<u8>, String> {
+    fn file_read_all(&self, path: &Path) -> Result<Vec<u8>, String> {
         self.files
             .lock()
             .unwrap()
             .get(path)
             .cloned()
-            .ok_or_else(|| format!("File not found: {path}"))
+            .ok_or_else(|| format!("File not found: {}", path.display()))
     }
     fn play_audio(&self, wav_bytes: Vec<u8>) -> Result<(), String> {
         self.stdout

@@ -14,6 +14,7 @@ If you are reading this on the website, then these changes are live here.
 - All [ocean functions](https://uiua.org/docs/ocean) now work with [`under` `⍜`](https://uiua.org/docs/under)
 - Allow multiple values to be returned from [`each` `∵`](https://uiua.org/docs/each), [`rows` `≡`](https://uiua.org/docs/rows), [`distribute` `∺`](https://uiua.org/docs/distribute), [`tribute` `≐`](https://uiua.org/docs/tribute), [`table` `⊞`](https://uiua.org/docs/table), and [`cross` `⊠`](https://uiua.org/docs/cross)
 - [`invert` `⍘`](https://uiua.org/docs/invert) [`atangent` `∠`](https://uiua.org/docs/atangent) now produces the sine and cosine of an angle
+- [`&i`](https://uiua.org/docs/&i) now treats paths as relative to the file calling it rather than the current working directory
 - Rank list functions for the rank-generic modifiers can now take any number of arguments. For any number of aguments greater that 0, an empty numeric list will be pushed before the function is called.
 - Add fraction literals with `/`
 - Parsing multiple formattable functions from words is now smarter

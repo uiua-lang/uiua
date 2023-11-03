@@ -3547,6 +3547,7 @@ dependencies = [
  "open",
  "parking_lot",
  "paste",
+ "pathdiff",
  "rand",
  "rayon",
  "regex",

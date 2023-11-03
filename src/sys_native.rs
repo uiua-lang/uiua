@@ -177,13 +177,13 @@ impl SysBackend for NativeSys {
         }
         Ok(paths)
     }
-    fn open_file(&self, path: &str) -> Result<Handle, String> {
+    fn open_file(&self, path: &Path) -> Result<Handle, String> {
         let handle = NATIVE_SYS.new_handle();
         let file = File::open(path).map_err(|e| e.to_string())?;
         NATIVE_SYS.files.insert(handle, Buffered::new_reader(file));
         Ok(handle)
     }
-    fn file_read_all(&self, path: &str) -> Result<Vec<u8>, String> {
+    fn file_read_all(&self, path: &Path) -> Result<Vec<u8>, String> {
         let res = (|| {
             let handle = self.open_file(path)?;
             let bytes = self.read(handle, usize::MAX)?;
@@ -201,7 +201,7 @@ impl SysBackend for NativeSys {
             }
         }
     }
-    fn create_file(&self, path: &str) -> Result<Handle, String> {
+    fn create_file(&self, path: &Path) -> Result<Handle, String> {
         let handle = NATIVE_SYS.new_handle();
         let file = File::create(path).map_err(|e| e.to_string())?;
         NATIVE_SYS.files.insert(handle, Buffered::new_writer(file));

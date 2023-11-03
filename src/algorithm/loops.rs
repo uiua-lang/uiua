@@ -133,7 +133,7 @@ pub fn unpartition(env: &mut Uiua) -> UiuaResult {
     let partitioned = env.pop(1)?;
     // Untransform rows
     let mut untransformed = Vec::with_capacity(partitioned.row_count());
-    for row in partitioned.into_rows().rev() {
+    for row in partitioned.into_rows() {
         env.push(row);
         env.call_error_on_break(f.clone(), "break is not allowed in unpartition")?;
         untransformed.push(env.pop("unpartitioned row")?);

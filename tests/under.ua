@@ -39,3 +39,6 @@
 
 ⍤∶≍, [1 2 3 4] ⍜(↻1)∘ [1 2 3 4]
 ⍤∶≍, [1 2 3 4] ⍜↻∘ 1 [1 2 3 4]
+
+⍤∶≍, "World! Hello" ⍜⊜□⇌ ≠@ . "Hello World!"
+⍤∶≍, "sdrow emo sera esehT" ⍜⊕□≡⇌ ≠@ . $ These are some words

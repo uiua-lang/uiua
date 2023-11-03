@@ -34,21 +34,16 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
             *xs.shape_mut() = new_shape;
             env.push(xs);
         }
-        (Some((prim, flipped)), Value::Num(nums)) => env.push(match prim {
-            Primitive::Add => fast_reduce(nums, 0.0, add::num_num),
-            Primitive::Sub if flipped => fast_reduce(nums, 0.0, flip(sub::num_num)),
-            Primitive::Sub => fast_reduce(nums, 0.0, sub::num_num),
-            Primitive::Mul => fast_reduce(nums, 1.0, mul::num_num),
-            Primitive::Div if flipped => fast_reduce(nums, 1.0, flip(div::num_num)),
-            Primitive::Div => fast_reduce(nums, 1.0, div::num_num),
-            Primitive::Mod if flipped => fast_reduce(nums, 1.0, flip(modulus::num_num)),
-            Primitive::Mod => fast_reduce(nums, 1.0, modulus::num_num),
-            Primitive::Atan if flipped => fast_reduce(nums, 0.0, flip(atan2::num_num)),
-            Primitive::Atan => fast_reduce(nums, 0.0, atan2::num_num),
-            Primitive::Max => fast_reduce(nums, f64::NEG_INFINITY, max::num_num),
-            Primitive::Min => fast_reduce(nums, f64::INFINITY, min::num_num),
-            _ => return generic_fold_right_1(f, Value::Num(nums), None, env),
-        }),
+        (Some((prim, flipped)), Value::Num(nums)) => {
+            if let Err(nums) = reduce_nums(prim, flipped, nums, env) {
+                return generic_fold_right_1(f, Value::Num(nums), None, env);
+            }
+        }
+        (Some((prim, flipped)), Value::Complex(nums)) => {
+            if let Err(nums) = reduce_coms(prim, flipped, nums, env) {
+                return generic_fold_right_1(f, Value::Complex(nums), None, env);
+            }
+        }
         #[cfg(feature = "bytes")]
         (Some((prim, flipped)), Value::Byte(bytes)) => env.push(match prim {
             Primitive::Add => fast_reduce(bytes.convert(), 0.0, add::num_num),
@@ -69,6 +64,42 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
     }
     Ok(())
 }
+
+macro_rules! reduce_math {
+    ($fname:ident, $ty:ty, $f:ident) => {
+        #[allow(clippy::result_large_err)]
+        fn $fname(
+            prim: Primitive,
+            flipped: bool,
+            xs: Array<$ty>,
+            env: &mut Uiua,
+        ) -> Result<(), Array<$ty>>
+        where
+            $ty: From<f64>,
+        {
+            env.push(match prim {
+                Primitive::Add => fast_reduce(xs, 0.0.into(), add::$f),
+                Primitive::Sub if flipped => fast_reduce(xs, 0.0.into(), flip(sub::$f)),
+                Primitive::Sub => fast_reduce(xs, 0.0.into(), sub::$f),
+                Primitive::Mul => fast_reduce(xs, 1.0.into(), mul::$f),
+                Primitive::Div if flipped => fast_reduce(xs, 1.0.into(), flip(div::$f)),
+                Primitive::Div => fast_reduce(xs, 1.0.into(), div::$f),
+                Primitive::Mod if flipped => fast_reduce(xs, 1.0.into(), flip(modulus::$f)),
+                Primitive::Mod => fast_reduce(xs, 1.0.into(), modulus::$f),
+                Primitive::Atan if flipped => fast_reduce(xs, 0.0.into(), flip(atan2::$f)),
+                Primitive::Atan => fast_reduce(xs, 0.0.into(), atan2::$f),
+                Primitive::Max => fast_reduce(xs, f64::NEG_INFINITY.into(), max::$f),
+                Primitive::Min => fast_reduce(xs, f64::INFINITY.into(), min::$f),
+                _ => return Err(xs),
+            });
+            Ok(())
+        }
+    };
+}
+
+reduce_math!(reduce_nums, f64, num_num);
+#[cfg(feature = "complex")]
+reduce_math!(reduce_coms, crate::Complex, com_x);
 
 pub fn fast_reduce<T>(mut arr: Array<T>, identity: T, f: impl Fn(T, T) -> T) -> Array<T>
 where

@@ -30,20 +30,6 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
             }
         }
         #[cfg(feature = "bytes")]
-        (Some((prim, flipped)), Value::Num(xs), Value::Byte(ys)) => {
-            let ys = ys.convert();
-            if let Err((xs, ys)) = table_nums(prim, flipped, xs, ys, env) {
-                return generic_table(f, Value::Num(xs), Value::Num(ys), env);
-            }
-        }
-        #[cfg(feature = "bytes")]
-        (Some((prim, flipped)), Value::Byte(xs), Value::Num(ys)) => {
-            let xs = xs.convert();
-            if let Err((xs, ys)) = table_nums(prim, flipped, xs, ys, env) {
-                return generic_table(f, Value::Num(xs), Value::Num(ys), env);
-            }
-        }
-        #[cfg(feature = "bytes")]
         (Some((prim, flipped)), Value::Byte(xs), Value::Byte(ys)) => match prim {
             Primitive::Eq => env.push(fast_table(xs, ys, is_eq::generic)),
             Primitive::Ne => env.push(fast_table(xs, ys, is_ne::generic)),
@@ -82,12 +68,48 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
             }
             _ => generic_table(f, Value::Byte(xs), Value::Byte(ys), env)?,
         },
+        #[cfg(feature = "complex")]
+        (Some((prim, flipped)), Value::Complex(xs), Value::Complex(ys)) => {
+            if let Err((xs, ys)) = table_coms(prim, flipped, xs, ys, env) {
+                return generic_table(f, Value::Complex(xs), Value::Complex(ys), env);
+            }
+        }
+        #[cfg(feature = "bytes")]
+        (Some((prim, flipped)), Value::Num(xs), Value::Byte(ys)) => {
+            let ys = ys.convert();
+            if let Err((xs, ys)) = table_nums(prim, flipped, xs, ys, env) {
+                return generic_table(f, Value::Num(xs), Value::Num(ys), env);
+            }
+        }
+        #[cfg(feature = "bytes")]
+        (Some((prim, flipped)), Value::Byte(xs), Value::Num(ys)) => {
+            let xs = xs.convert();
+            if let Err((xs, ys)) = table_nums(prim, flipped, xs, ys, env) {
+                return generic_table(f, Value::Num(xs), Value::Num(ys), env);
+            }
+        }
+        #[cfg(feature = "complex")]
+        (Some((prim, flipped)), Value::Num(xs), Value::Complex(ys)) => {
+            let xs = xs.convert();
+            if let Err((xs, ys)) = table_coms(prim, flipped, xs, ys, env) {
+                return generic_table(f, Value::Complex(xs), Value::Complex(ys), env);
+            }
+        }
+        #[cfg(feature = "complex")]
+        (Some((prim, flipped)), Value::Complex(xs), Value::Num(ys)) => {
+            let ys = ys.convert();
+            if let Err((xs, ys)) = table_coms(prim, flipped, xs, ys, env) {
+                return generic_table(f, Value::Complex(xs), Value::Complex(ys), env);
+            }
+        }
+        // Boxes
         (Some((Primitive::Join | Primitive::Couple, flipped)), Value::Box(xs), ys) => {
             env.push(fast_table_join_or_couple(xs, ys.coerce_to_boxes(), flipped))
         }
         (Some((Primitive::Join | Primitive::Couple, flipped)), xs, Value::Box(ys)) => {
             env.push(fast_table_join_or_couple(xs.coerce_to_boxes(), ys, flipped))
         }
+        // Chars
         (
             Some((Primitive::Join | Primitive::Couple, flipped)),
             Value::Char(xs),
@@ -98,44 +120,54 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-#[allow(clippy::result_large_err)]
-fn table_nums(
-    prim: Primitive,
-    flipped: bool,
-    xs: Array<f64>,
-    ys: Array<f64>,
-    env: &mut Uiua,
-) -> Result<(), (Array<f64>, Array<f64>)> {
-    match prim {
-        Primitive::Eq => env.push(fast_table(xs, ys, is_eq::num_num)),
-        Primitive::Ne => env.push(fast_table(xs, ys, is_ne::num_num)),
-        Primitive::Lt if flipped => env.push(fast_table(xs, ys, flip(is_lt::num_num))),
-        Primitive::Lt => env.push(fast_table(xs, ys, is_lt::num_num)),
-        Primitive::Gt if flipped => env.push(fast_table(xs, ys, flip(is_gt::num_num))),
-        Primitive::Gt => env.push(fast_table(xs, ys, is_gt::num_num)),
-        Primitive::Le if flipped => env.push(fast_table(xs, ys, flip(is_le::num_num))),
-        Primitive::Le => env.push(fast_table(xs, ys, is_le::num_num)),
-        Primitive::Ge if flipped => env.push(fast_table(xs, ys, flip(is_ge::num_num))),
-        Primitive::Ge => env.push(fast_table(xs, ys, is_ge::num_num)),
-        Primitive::Add => env.push(fast_table(xs, ys, add::num_num)),
-        Primitive::Sub if flipped => env.push(fast_table(xs, ys, flip(sub::num_num))),
-        Primitive::Sub => env.push(fast_table(xs, ys, sub::num_num)),
-        Primitive::Mul => env.push(fast_table(xs, ys, mul::num_num)),
-        Primitive::Div if flipped => env.push(fast_table(xs, ys, flip(div::num_num))),
-        Primitive::Div => env.push(fast_table(xs, ys, flip(div::num_num))),
-        Primitive::Mod if flipped => env.push(fast_table(xs, ys, flip(modulus::num_num))),
-        Primitive::Mod => env.push(fast_table(xs, ys, flip(modulus::num_num))),
-        Primitive::Atan if flipped => env.push(fast_table(xs, ys, flip(atan2::num_num))),
-        Primitive::Atan => env.push(fast_table(xs, ys, flip(atan2::num_num))),
-        Primitive::Complex if flipped => env.push(fast_table(xs, ys, flip(complex::num_num))),
-        Primitive::Complex => env.push(fast_table(xs, ys, complex::num_num)),
-        Primitive::Min => env.push(fast_table(xs, ys, min::num_num)),
-        Primitive::Max => env.push(fast_table(xs, ys, max::num_num)),
-        Primitive::Join | Primitive::Couple => env.push(fast_table_join_or_couple(xs, ys, flipped)),
-        _ => return Err((xs, ys)),
-    }
-    Ok(())
+macro_rules! table_math {
+    ($fname:ident, $ty:ty, $f:ident) => {
+        #[allow(clippy::result_large_err)]
+        fn $fname(
+            prim: Primitive,
+            flipped: bool,
+            xs: Array<$ty>,
+            ys: Array<$ty>,
+            env: &mut Uiua,
+        ) -> Result<(), (Array<$ty>, Array<$ty>)> {
+            match prim {
+                Primitive::Eq => env.push(fast_table(xs, ys, is_eq::$f)),
+                Primitive::Ne => env.push(fast_table(xs, ys, is_ne::$f)),
+                Primitive::Lt if flipped => env.push(fast_table(xs, ys, flip(is_lt::$f))),
+                Primitive::Lt => env.push(fast_table(xs, ys, is_lt::$f)),
+                Primitive::Gt if flipped => env.push(fast_table(xs, ys, flip(is_gt::$f))),
+                Primitive::Gt => env.push(fast_table(xs, ys, is_gt::$f)),
+                Primitive::Le if flipped => env.push(fast_table(xs, ys, flip(is_le::$f))),
+                Primitive::Le => env.push(fast_table(xs, ys, is_le::$f)),
+                Primitive::Ge if flipped => env.push(fast_table(xs, ys, flip(is_ge::$f))),
+                Primitive::Ge => env.push(fast_table(xs, ys, is_ge::$f)),
+                Primitive::Add => env.push(fast_table(xs, ys, add::$f)),
+                Primitive::Sub if flipped => env.push(fast_table(xs, ys, flip(sub::$f))),
+                Primitive::Sub => env.push(fast_table(xs, ys, sub::$f)),
+                Primitive::Mul => env.push(fast_table(xs, ys, mul::$f)),
+                Primitive::Div if flipped => env.push(fast_table(xs, ys, flip(div::$f))),
+                Primitive::Div => env.push(fast_table(xs, ys, flip(div::$f))),
+                Primitive::Mod if flipped => env.push(fast_table(xs, ys, flip(modulus::$f))),
+                Primitive::Mod => env.push(fast_table(xs, ys, flip(modulus::$f))),
+                Primitive::Atan if flipped => env.push(fast_table(xs, ys, flip(atan2::$f))),
+                Primitive::Atan => env.push(fast_table(xs, ys, flip(atan2::$f))),
+                Primitive::Complex if flipped => env.push(fast_table(xs, ys, flip(complex::$f))),
+                Primitive::Complex => env.push(fast_table(xs, ys, complex::$f)),
+                Primitive::Min => env.push(fast_table(xs, ys, min::$f)),
+                Primitive::Max => env.push(fast_table(xs, ys, max::$f)),
+                Primitive::Join | Primitive::Couple => {
+                    env.push(fast_table_join_or_couple(xs, ys, flipped))
+                }
+                _ => return Err((xs, ys)),
+            }
+            Ok(())
+        }
+    };
 }
+
+table_math!(table_nums, f64, num_num);
+#[cfg(feature = "complex")]
+table_math!(table_coms, crate::Complex, com_x);
 
 fn fast_table<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
     a: Array<A>,

@@ -687,7 +687,7 @@ primitive!(
     /// ex: ⬚∞⊟ [1 2 3] [4 5]
     ///
     /// [couple] is compatible with [under].
-    /// ex: ⍜⊟'×2 3 5
+    /// ex: ⍜⊟(×2) 3 5
     (2, Couple, DyadicArray, ("couple", '⊟')),
     /// Append two arrays end-to-end
     ///
@@ -919,7 +919,7 @@ primitive!(
     ///
     /// ex: \+   1_2_3_4
     /// ex: \-   1_2_3_4
-    /// ex: \'-∶ 1_2_3_4
+    /// ex: \(-∶) 1_2_3_4
     (1[1], Scan, AggregatingModifier, ("scan", '\\')),
     /// Apply a function to each element of an array or arrays.
     ///
@@ -927,7 +927,7 @@ primitive!(
     /// **This is often not what you want.** Prefer using pervasive functions or [table] when possible.
     ///
     /// The number of arrays used depends on how many arguments the function takes.
-    /// ex: ∵'⊟. 1_2_3_4
+    /// ex: ∵(⊟.) 1_2_3_4
     /// ex: ∵⊂ 1_2_3 4_5_6
     /// ex: ∵⊂ 1_2 [4_5 6_7]
     ///
@@ -1212,7 +1212,7 @@ primitive!(
     /// Here, we [negate] 5, [subtract] 2, then [negate] again.
     /// ex: ⍜¯(-2) 5
     /// You can use [under] with [round] to round to a specific number of decimal places.
-    /// ex: ⍜'×1e3⁅ π
+    /// ex: ⍜(×1e3⁅) π
     ///
     /// The above examples involve an *arithmetic* under. That is, [invert]`f` is well-definined independent of [under]'s concept of "undoing".
     /// The remaining examples below involve `f`s which cannot be normally [invert]ed, but which are valid as functions to use with [under].
@@ -1220,21 +1220,21 @@ primitive!(
     /// [under][deshape] will [reshape] the array after `g` finishes.
     /// ex: ⍜♭⇌ .↯3_4⇡12
     /// If you want to insert a value somewhere in the middle of an array, you can use [under], [rotate], and [join].
-    /// ex: ⍜'↻3'⊂π 1_2_3_4_5
+    /// ex: ⍜(↻3)(⊂π) 1_2_3_4_5
     /// You can use [under][first] to apply a function to the first row of an array.
-    /// ex: ⍜⊢'×10 1_2_3_4_5
+    /// ex: ⍜⊢(×10) 1_2_3_4_5
     /// If you need to work on more of the array's rows, can use [under] with [take] or [drop].
-    /// ex: ⍜'↙3'×10 1_2_3_4_5
-    /// ex: ⍜'↘3'×10 1_2_3_4_5
+    /// ex: ⍜(↙3)(×10) 1_2_3_4_5
+    /// ex: ⍜(↘3)(×10) 1_2_3_4_5
     /// You can chain [under]-compatible functions.
-    /// ex: ⍜(↙2↘1)'×10 1_2_3_4_5
+    /// ex: ⍜(↙2↘1)(×10) 1_2_3_4_5
     /// [pick] and [select] also work.
-    /// ex: ⍜⊡'×10 2_1 ↯3_3⇡9
-    /// ex: ⍜⊏'×10 1_3 1_2_3_4_5
+    /// ex: ⍜⊡(×10) 2_1 ↯3_3⇡9
+    /// ex: ⍜⊏(×10) 1_3 1_2_3_4_5
     /// Although, [under][select] only works if the indices are unique.
-    /// ex! ⍜⊏'×10 1_3_3 1_2_3_4_5
+    /// ex! ⍜⊏(×10) 1_3_3 1_2_3_4_5
     /// [under][keep] works as long as the counts list is boolean.
-    /// ex: ⍜▽'×10 =0◿3.⇡10
+    /// ex: ⍜▽(×10) =0◿3.⇡10
     ///
     /// If `g` takes more than 1 argument, keep in mind that `f` will be called on the stack as it is when the full under expression begins.
     /// This means you may have to flip the arguments to `g`.

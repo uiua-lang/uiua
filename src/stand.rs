@@ -7,6 +7,8 @@ use std::{
 use once_cell::sync::Lazy;
 use serde::*;
 
+const STAND_DATA_SIGNATURE: &[u8] = b"Uiua standalone";
+
 #[derive(Serialize, Deserialize)]
 pub struct StandFiles {
     pub main: PathBuf,
@@ -41,22 +43,35 @@ pub fn build_exe(root: &Path) -> io::Result<Vec<u8>> {
         }
         Ok(())
     }
+    // Create a map of all files
     collect(root.into(), &mut files)?;
     let files = StandFiles {
         main: root.to_owned(),
         files,
     };
+    // Serialize the files
     let files_bytes = serde_json::to_vec(&files)?;
+    // Append the files to the current exe
     let mut bytes = fs::read(env::current_exe()?)?;
     bytes.extend_from_slice(&files_bytes);
+    // Append the length of the serialized files and a signature
     bytes.extend((files_bytes.len() as u64).to_le_bytes());
+    bytes.extend(STAND_DATA_SIGNATURE);
     Ok(bytes)
 }
 
 fn load_files() -> io::Result<StandFiles> {
-    let mut bytes = fs::read(env::current_exe()?)?;
-    let files_len = u64::from_le_bytes(bytes.split_off(bytes.len() - 8).try_into().unwrap());
+    // Read the current exe
+    let bytes = fs::read(env::current_exe()?)?;
+    // Check if it is a standalone exe
+    let Some(bytes) = bytes.strip_suffix(STAND_DATA_SIGNATURE) else {
+        return Ok(StandFiles::default());
+    };
+    // Get the length of the serialized files
+    let (bytes, len_bytes) = bytes.split_at(bytes.len() - 8);
+    let files_len = u64::from_le_bytes(len_bytes.try_into().unwrap());
     let start = bytes.len() - files_len as usize;
+    // Deserialize the files
     let files: StandFiles = serde_json::from_slice(&bytes[start..])?;
     Ok(files)
 }

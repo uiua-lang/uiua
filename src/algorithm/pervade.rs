@@ -795,15 +795,41 @@ bin_op_mod!(
     a.atan2(b),
     "Cannot get the atan2 of {a} and {b}"
 );
-bin_op_mod!(
-    pow,
-    a,
-    b,
-    f64::from,
-    f64,
-    b.powf(a),
-    "Cannot get the power of {a} to {b}"
-);
+pub mod pow {
+    use super::*;
+    pub fn num_num(a: f64, b: f64) -> f64 {
+        b.powf(a)
+    }
+    #[cfg(feature = "bytes")]
+    pub fn byte_byte(a: u8, b: u8) -> f64 {
+        let a = (f64::from)(a);
+        let b = (f64::from)(b);
+        b.powf(a)
+    }
+    #[cfg(feature = "bytes")]
+    pub fn byte_num(a: u8, b: f64) -> f64 {
+        let a = (f64::from)(a);
+        b.powf(a)
+    }
+    #[cfg(feature = "bytes")]
+    pub fn num_byte(a: f64, b: u8) -> f64 {
+        let b = (f64::from)(b);
+        b.powf(a)
+    }
+    #[cfg(feature = "complex")]
+    pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
+        let b = b.into();
+        b.powc(a)
+    }
+    #[cfg(feature = "complex")]
+    pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
+        let a = a.into();
+        b.powc(a)
+    }
+    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
+        env.error(format!("Cannot get the power of {a} to {b}"))
+    }
+}
 bin_op_mod!(
     log,
     a,

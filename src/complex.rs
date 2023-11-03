@@ -101,13 +101,30 @@ impl Complex {
     pub fn from_polar(r: f64, theta: f64) -> Self {
         r * Self::new(theta.cos(), theta.sin())
     }
-    /// Raise a complex number to a power
-    pub fn powf(self, exp: impl Into<Self>) -> Self {
-        let exp = exp.into();
-        if exp.re == 0.0 && exp.im == 0.0 {
+    /// Raise a complex number to a complex power
+    pub fn powc(self, power: impl Into<Self>) -> Self {
+        let power = power.into();
+        if power.im == 0.0 {
+            if self.im == 0.0 {
+                return Self::new(self.re.powf(power.re), 0.0);
+            }
+            if power.re == 0.0 {
+                return Self::ONE;
+            }
+        }
+        let (r, theta) = self.to_polar();
+        ((r.ln() + Self::I * theta) * power).exp()
+    }
+    /// Raise a complex number to a real power
+    pub fn powf(self, power: f64) -> Self {
+        if power == 0.0 {
             return Self::ONE;
         }
-        (exp * self.ln()).exp()
+        if power.fract() == 0.0 {
+            return Self::new(self.re.powf(power), self.im.powf(power));
+        }
+        let (r, theta) = self.to_polar();
+        Self::from_polar(r.powf(power), theta * power)
     }
     /// Calculate the exponential of a complex number
     pub fn exp(self) -> Self {

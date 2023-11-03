@@ -162,21 +162,11 @@ impl<'a> VirtualEnv<'a> {
                 }
                 Each | Rows | Distribute | Tribute => {
                     let sig = self.pop_func()?.signature();
-                    if sig.outputs != 1 {
-                        return Err(format!(
-                            "{prim}'s function must have 1 output, but its signature is {sig}"
-                        ));
-                    }
                     self.handle_sig(sig)?
                 }
                 Table | Cross => {
                     let sig = self.pop_func()?.signature();
-                    if sig != (2, 1) {
-                        return Err(format!(
-                            "{prim}'s function's signature must be |2.1, but it is {sig}"
-                        ));
-                    }
-                    self.handle_args_outputs(2, 1)?;
+                    self.handle_sig(sig)?;
                 }
                 Group | Partition => {
                     let sig = self.pop_func()?.signature();

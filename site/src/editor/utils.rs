@@ -744,8 +744,8 @@ fn run_code_single(code: &str) -> Vec<OutputItem> {
         // Try to convert the value to a gif
         if let Ok(bytes) = value_to_gif_bytes(&value, 16.0) {
             match value.shape() {
-                &[_, h, w] | &[_, h, w, _]
-                    if h >= MIN_AUTO_IMAGE_DIM && w >= MIN_AUTO_IMAGE_DIM =>
+                &[f, h, w] | &[f, h, w, _]
+                    if h >= MIN_AUTO_IMAGE_DIM && w >= MIN_AUTO_IMAGE_DIM && f >= 5 =>
                 {
                     stack.push(OutputItem::Gif(bytes));
                     continue;

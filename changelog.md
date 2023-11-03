@@ -23,6 +23,7 @@ If you are reading this on the website, then these changes are live here.
 - Add the `uiua stand` command, which creates a standalone executable
 ### Website
 - Add [Optimizations](https://uiua.org/docs/optimizations) page
+- Add [Images and GIFs](https://uiua.org/docs/images) tutorial
 
 ## 0.0.25 - 2023-10-29
 ### Interpreter

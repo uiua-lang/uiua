@@ -28,6 +28,7 @@ pub enum DocsPage {
     Technical,
     Install,
     Audio,
+    ImagesAndGifs,
     AllFunctions,
     Uiuisms,
     Changelog,
@@ -50,6 +51,7 @@ impl IntoParam for DocsPage {
                 "technical" => Some(Self::Technical),
                 "install" => Some(Self::Install),
                 "audio" => Some(Self::Audio),
+                "images" => Some(Self::ImagesAndGifs),
                 "all-functions" => Some(Self::AllFunctions),
                 "isms" => Some(Self::Uiuisms),
                 "changelog" => Some(Self::Changelog),
@@ -83,6 +85,7 @@ pub fn Docs() -> impl IntoView {
             DocsPage::Technical => Technical().into_view(),
             DocsPage::Install => Install().into_view(),
             DocsPage::Audio => Audio().into_view(),
+            DocsPage::ImagesAndGifs => ImagesAndGifs().into_view(),
             DocsPage::AllFunctions => AllFunctions().into_view(),
             DocsPage::Uiuisms => Uiuisms().into_view(),
             DocsPage::Changelog => Changelog().into_view(),
@@ -220,9 +223,10 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         <ul>
             <li><A href="/docs/install">"Installation"</A>" - how to install and use Uiua's interpreter"</li>
             <li><A href="/docs/changelog">"Changelog"</A>" - what's new in each version"</li>
-            <li><A href="/docs/constants">"Constants"</A>" - list shadowable constants"</li>
+            <li><A href="/docs/constants">"Constants"</A>" - a list of the shadowable constants"</li>
             <li><A href="/docs/stack-idioms">"Stack Idioms"</A>" - common ways of manipulating the stack"</li>
             <li><A href="/docs/audio">"Audio"</A>" - how to generate and play audio"</li>
+            <li><A href="/docs/images">"Images and GIFs"</A>" - how to generate images and GIFs"</li>
             <li><A href="/docs/design">"Design"</A>" - reasons for some of Uiua's design decisions"</li>
             <li><A href="/docs/rtl">"Right-to-Left"</A>" - the answer to the most-asked question about Uiua's design gets its own page"</li>
             <li><A href="/docs/technical">"Technical Details"</A>" - notes on the implementation of the Uiua interpreter and this website"</li>
@@ -352,6 +356,16 @@ impl Allowed {
                 ("function", &function_classes),
                 ("planet", &[PrimClass::Planet]),
                 ("ocean", &[PrimClass::Ocean]),
+                ("images", &[PrimClass::Sys(SysOpClass::Images)]),
+                ("gifs", &[PrimClass::Sys(SysOpClass::Gifs)]),
+                ("audio", &[PrimClass::Sys(SysOpClass::Audio)]),
+                ("tcp", &[PrimClass::Sys(SysOpClass::Tcp)]),
+                ("env", &[PrimClass::Sys(SysOpClass::Env)]),
+                ("command", &[PrimClass::Sys(SysOpClass::Command)]),
+                ("filesystem", &[PrimClass::Sys(SysOpClass::Filesystem)]),
+                ("stream", &[PrimClass::Sys(SysOpClass::Stream)]),
+                ("stdio", &[PrimClass::Sys(SysOpClass::StdIO)]),
+                ("misc", &[PrimClass::Sys(SysOpClass::Misc)]),
             ] {
                 if pattern.split_whitespace().any(|pat| pat.starts_with(part)) {
                     classes.retain(|class| pat_classes.contains(class));

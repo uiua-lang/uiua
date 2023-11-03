@@ -740,6 +740,7 @@ input[type=number] {
 
 @media (prefers-color-scheme: light) {
 
+    .bi,
     .trans {
         -webkit-text-stroke: 0.01em #000;
     }

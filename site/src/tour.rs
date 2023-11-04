@@ -18,7 +18,7 @@ pub fn Tour() -> impl IntoView {
         <p>"A "<b>"stack-based"</b>" language is one where all operations manipulate a global stack of values. Functions pop values off the top of the stack, perform their calculation, then push the results back onto the stack."</p>
         <p>"In Uiua, functions work on a global stack of arrays."</p>
         <p>"That's enough introduction, let's see some code!"</p>
-        <Editor examples={&["+", "1", "×", "2 ", "⇡", "10"]}/>
+        <Editor example="+ 1 × 2  ⇡ 10"/>
         <p>"Uiua code runs from "<A href="../rtl">"right to left"</A>", top to bottom. Operators are put to the "<em>"left"</em>" of their arguments, rather than in-between."</p>
         <p>"This program makes an array of all the numbers less than 10, multiplies each one by 2, then adds 1 to each."</p>
         <p>"If you want to see how that works step-by-step, try clicking the arrows beside the Run button."</p>
@@ -36,9 +36,9 @@ pub fn Tour() -> impl IntoView {
         <p>"A number in Uiua code pushes its value to the stack. On the website's editor, the values on "<em>"top"</em>" of the stack are displayed at the "<em>"bottom"</em>". This is so that sequential lines of code show their result in the correct order."</p>
         <Editor example="10 11\n@c\n+1 2\n\"Hello, World!\"\n# By the way, comments start with #"/>
         <p>"If you like, you can put values on the stack first, then operate on them."</p>
-        <Editor examples={&["×", "+", "+ ", "1 ", "2 ", "3 ", "4"]}/>
+        <Editor example="× + +  1  2  3  4"/>
         <p><Prim prim=Dup/>" duplicates the top value on the stack."</p>
-        <Editor examples={&["×", ".", "3"]}/>
+        <Editor example="× . 3"/>
         <p><Prim prim=Dup/>" is often used in the examples on this site to show both the input and output of a function."</p>
         <Editor example="√.225"/>
         <p>"For math functions where the order matters, like "<Prim prim=Sub/>" and "<Prim prim=Div/>", what would normally be the second argument is instead the first. This is so you can think of fragments like "<Prim prim=Sub glyph_only=true/><code>"2"</code>" as a single unit."</p>

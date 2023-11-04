@@ -169,9 +169,7 @@ pub fn MainPage() -> impl IntoView {
             </div>
         </div>
         <Editor
-            examples=examples::EXAMPLES
-            size=EditorSize::Medium
-            mode=EditorMode::Multiple
+            mode=EditorMode::Front
             help={&[
                 "Type a glyph's name, then run to format the names into glyphs.",
                 "You can run with ctrl/shift + enter.",
@@ -391,7 +389,7 @@ pub fn Pad() -> impl IntoView {
     }
     view! {
         <Title text="Pad - Uiua"/>
-        <Editor size=EditorSize::Pad example={ &src }/>
+        <Editor mode=EditorMode::Pad example={ &src }/>
     }
 }
 

@@ -11,8 +11,9 @@ use image::ImageOutputFormat;
 use leptos::*;
 
 use uiua::{
-    image_to_bytes, spans, value_to_gif_bytes, value_to_image, value_to_wav_bytes, DiagnosticKind,
-    Report, ReportFragment, ReportKind, RunMode, SpanKind, SysBackend, Uiua, UiuaResult, Value,
+    ast::Item, image_to_bytes, spans, value_to_gif_bytes, value_to_image, value_to_wav_bytes,
+    DiagnosticKind, Report, ReportFragment, ReportKind, RunMode, SpanKind, SysBackend, Uiua,
+    UiuaResult, Value,
 };
 use wasm_bindgen::JsCast;
 use web_sys::{HtmlBrElement, HtmlDivElement, HtmlStyleElement, Node};
@@ -903,4 +904,48 @@ pub fn Challenge<'a>(
             <Editor challenge=def example=default/>
         </div>
     }
+}
+
+pub fn progressive_strings(input: &str) -> Vec<String> {
+    let (items, errors, _) = uiua::parse(input, None);
+    if !errors.is_empty() {
+        return vec![input.into()];
+    }
+    let mut lines: Vec<Vec<String>> = Vec::new();
+    for item in items {
+        match item {
+            Item::Words(words) => {
+                let mut line: Vec<String> = Vec::new();
+                for word in words {
+                    if word.value.is_code() {
+                        line.push(word.span.as_str().into());
+                    } else if let Some(last) = line.last_mut() {
+                        last.push_str(word.span.as_str());
+                    } else {
+                        line.push(word.span.as_str().into());
+                    }
+                }
+                lines.push(line);
+            }
+            Item::Binding(binding) => lines.push(vec![binding.span().as_str().into()]),
+            Item::TestScope(items) => lines.push(vec![items.span.as_str().into()]),
+            Item::ExtraNewlines(span) => lines.push(vec![span.as_str().into()]),
+        }
+    }
+    let mut strings = Vec::new();
+    let mut curr_total = String::new();
+    for line in lines {
+        let mut curr_line = String::new();
+        for frag in line.into_iter().rev() {
+            curr_line.insert_str(0, &frag);
+            strings.push(format!("{curr_total}{curr_line}"));
+        }
+        curr_total.push_str(&curr_line);
+        curr_total.push('\n');
+    }
+    if strings.is_empty() {
+        strings.push("".into());
+    }
+    strings.rotate_right(1);
+    strings
 }

@@ -56,11 +56,15 @@ impl Value {
             "Range max should be a single natural number \
             or a list of natural numbers",
         )?;
+        if self.rank() == 0 {
+            return Ok((0..shape[0]).collect());
+        }
+        if shape.is_empty() {
+            return Ok(Array::<f64>::new(Shape::from_iter([0, 0]), CowSlice::new()).into());
+        }
         let mut shape = Shape::from(shape.as_slice());
         let data = range(&shape, env)?;
-        if shape.len() > 1 {
-            shape.push(shape.len());
-        }
+        shape.push(shape.len());
         Ok(Array::new(shape, data).into())
     }
 }

@@ -2,11 +2,10 @@
 Within a each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- under join
-- fix singleton range
 - fill rotate
 - fill find
 - non-truncating find
+- under join
 - Multimedia
   - Sound input
   - Webcam input

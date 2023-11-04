@@ -959,7 +959,7 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <h2 id="if"><Prim prim=If/></h2>
         <p>"The "<Prim prim=If/>" modifier is similar to a switch function, but it only has two branches. The true branch is the first function and the false branch is the second"</p>
         <Editor example="f ← ?+×\nf 0 3 5\nf 1 3 5"/>
-        <p>"This may seem useless when switch functions exist, and for scalar conditions, apart from being slightly shorter, is is. However, "<Prim prim=If/>"'s condition can be a list."</p>
+        <p>"This may seem useless when switch functions exist, and for scalar conditions, apart from being slightly shorter, it is. However, "<Prim prim=If/>"'s condition can be a list."</p>
         <Editor example="?+- [1 0 1] [2 2 2] [4 4 4]"/>
         <p>"While "<Prim prim=If/>" can be chained, it is usually preferable to use a switch function instead."</p>
 

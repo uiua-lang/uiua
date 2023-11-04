@@ -947,5 +947,6 @@ pub fn progressive_strings(input: &str) -> Vec<String> {
         strings.push("".into());
     }
     strings.rotate_right(1);
+    strings[0] = input.into();
     strings
 }

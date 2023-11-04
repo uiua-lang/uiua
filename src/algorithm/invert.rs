@@ -68,6 +68,7 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
         InvUtf => Instr::Prim(Utf, span),
         InvAtan => Instr::Prim(Atan, span),
         InvComplex => Instr::Prim(Complex, span),
+        InvCouple => Instr::Prim(Couple, span),
         _ => return None,
     })
 }

@@ -77,7 +77,9 @@ impl Uiua {
         let name = binding.name.value;
         let span = &binding.name.span;
 
-        let make_fn = |instrs: Vec<Instr>, sig: Signature, env: &mut Self| {
+        let placeholder_count = count_placeholders(&binding.words);
+
+        let make_fn = |mut instrs: Vec<Instr>, sig: Signature, env: &mut Self| {
             // Diagnostic for function that doesn't consume its arguments
             if let Some((Instr::Prim(Primitive::Dup, span), rest)) = instrs.split_first() {
                 if let Ok(rest_sig) = instrs_signature(rest) {
@@ -92,18 +94,17 @@ impl Uiua {
                     }
                 }
             }
+
+            // Handle placeholders
+            if placeholder_count > 0 {
+                increment_placeholders(&mut instrs);
+                instrs.insert(0, Instr::PushTempFunctions(placeholder_count));
+                instrs.push(Instr::PopTempFunctions(placeholder_count));
+            }
             Function::new(FunctionId::Named(name.clone()), instrs, sig)
         };
-
-        let placeholder_count = count_placeholders(&binding.words);
         // Compile the body
-        let mut instrs = self.compile_words(binding.words, true)?;
-        // Handle placeholders
-        if placeholder_count > 0 {
-            increment_placeholders(&mut instrs);
-            instrs.insert(0, Instr::PushTempFunctions(placeholder_count));
-            instrs.push(Instr::PopTempFunctions(placeholder_count));
-        }
+        let instrs = self.compile_words(binding.words, true)?;
         // Resolve signature
         match instrs_signature(&instrs) {
             Ok(mut sig) => {
@@ -129,7 +130,8 @@ impl Uiua {
                 }
                 if let [Instr::PushFunc(f)] = instrs.as_slice() {
                     // Binding is a single inline function
-                    self.compile_bind_function(name, f.clone(), span.clone().into())?;
+                    let func = make_fn(f.instrs.clone(), f.signature(), self);
+                    self.compile_bind_function(name, func.into(), span.clone().into())?;
                 } else if sig.args == 0
                     && (sig.outputs > 0 || instrs.is_empty())
                     && placeholder_count == 0

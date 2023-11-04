@@ -8,6 +8,7 @@ If you are reading this on the website, then these changes are live here.
 ### Language
 - [`under` `⍜`](https://uiua.org/docs/under) with [`take` `↙`](https://uiua.org/docs/take) and [`drop` `↘`](https://uiua.org/docs/drop) is now less strict about shape/rank changes
 - [`range` `⇡`](https://uiua.org/docs/range) now returns a rank-2 array if called on a list of 0 or 1 values
+- [`fill` `⬚`](https://uiua.org/docs/fill) now works with [`rotate` `↻`](https://uiua.org/docs/rotate) to give non-wrapping behavior
 
 ## 0.1.0 - 2023-11-03
 ### Language

@@ -1602,6 +1602,12 @@ impl Value {
     /// Use this value to `rotate` another
     pub fn rotate(&self, mut rotated: Self, env: &Uiua) -> UiuaResult<Self> {
         let by = self.as_ints(env, "Rotation amount must be a list of integers")?;
+        #[cfg(feature = "bytes")]
+        if env.fill::<f64>().is_some() {
+            if let Value::Byte(bytes) = &rotated {
+                rotated = bytes.convert_ref::<f64>().into();
+            }
+        }
         match &mut rotated {
             Value::Num(a) => a.rotate(&by, env)?,
             #[cfg(feature = "bytes")]
@@ -1625,7 +1631,11 @@ impl<T: ArrayValue> Array<T> {
                 by.len()
             )));
         }
-        rotate(by, &self.shape, self.data.as_mut_slice());
+        let data = self.data.as_mut_slice();
+        rotate(by, &self.shape, data);
+        if let Some(fill) = env.fill::<T>() {
+            fill_shift(by, &self.shape, data, fill);
+        }
         Ok(())
     }
 }
@@ -1652,6 +1662,40 @@ fn rotate<T>(by: &[isize], shape: &[usize], data: &mut [T]) {
     }
     for cell in data.chunks_mut(row_len) {
         rotate(index, shape, cell);
+    }
+}
+
+fn fill_shift<T: Clone>(by: &[isize], shape: &[usize], data: &mut [T], fill: T) {
+    if by.is_empty() || shape.is_empty() {
+        return;
+    }
+    let row_count = shape[0];
+    if row_count == 0 {
+        return;
+    }
+    let offset = by[0];
+    if offset == 0 {
+        return;
+    }
+    let row_len: usize = shape[1..].iter().product();
+    let abs_offset = offset.unsigned_abs() * row_len;
+    let data_len = data.len();
+    if offset > 0 {
+        for val in &mut data[data_len.saturating_sub(abs_offset)..] {
+            *val = fill.clone();
+        }
+    } else {
+        for val in &mut data[..abs_offset] {
+            *val = fill.clone();
+        }
+    }
+    let index = &by[1..];
+    let shape = &shape[1..];
+    if index.is_empty() || shape.is_empty() {
+        return;
+    }
+    for cell in data.chunks_mut(row_len) {
+        fill_shift(index, shape, cell, fill.clone());
     }
 }
 

@@ -822,6 +822,11 @@ primitive!(
     ///
     /// Multi-dimensional rotations are supported.
     /// ex: ↻1_2 .↯4_5⇡20
+    ///
+    /// [fill][rotate] fills in array elements instead of wrapping them.
+    /// ex: ⬚0↻ 2 [1 2 3 4 5]
+    ///   :   ↻ 2 [1 2 3 4 5]
+    /// ex: ⬚0↻ 1_2 .↯4_5⇡20
     (2, Rotate, DyadicArray, ("rotate", '↻')),
     /// The n-wise windows of an array
     ///
@@ -1311,6 +1316,10 @@ primitive!(
     /// [fill][reshape] fills in the shape with the fill element instead of cycling the data.
     /// ex:   ↯ 3_5 ⇡9
     ///   : ⬚0↯ 3_5 ⇡9
+    ///
+    /// [fill][rotate] fills in array elements instead of wrapping them.
+    /// ex: ⬚0↻ 2 [1 2 3 4 5]
+    ///   :   ↻ 2 [1 2 3 4 5]
     ///
     /// To [fill] with a value that is on the stack, use [identity].
     /// ex: F = ⬚∘+

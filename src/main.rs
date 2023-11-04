@@ -81,6 +81,7 @@ fn run() -> UiuaResult {
             App::Run {
                 path,
                 no_format,
+                no_color,
                 formatter_options,
                 time_instrs,
                 mode,
@@ -116,10 +117,11 @@ fn run() -> UiuaResult {
                     .print_diagnostics(true)
                     .time_instrs(time_instrs);
                 rt.load_file(path)?;
-                print_stack(&rt.take_stack());
+                print_stack(&rt.take_stack(), !no_color);
             }
             App::Eval {
                 code,
+                no_color,
                 #[cfg(feature = "audio")]
                 audio_options,
                 args,
@@ -131,7 +133,7 @@ fn run() -> UiuaResult {
                     .with_args(args)
                     .print_diagnostics(true);
                 rt.load_str(&code)?;
-                print_stack(&rt.take_stack());
+                print_stack(&rt.take_stack(), !no_color);
             }
             App::Test {
                 path,
@@ -159,6 +161,7 @@ fn run() -> UiuaResult {
             }
             App::Watch {
                 no_format,
+                no_color,
                 formatter_options,
                 clear,
                 args,
@@ -167,6 +170,7 @@ fn run() -> UiuaResult {
                 if let Err(e) = watch(
                     working_file_path().ok().as_deref(),
                     !no_format,
+                    !no_color,
                     formatter_options.format_config_source,
                     clear,
                     args,
@@ -194,7 +198,7 @@ fn run() -> UiuaResult {
                     .with_mode(RunMode::Normal)
                     .with_args(args)
                     .print_diagnostics(true);
-                repl(rt, config);
+                repl(rt, true, config);
             }
             App::CheckUpdate => show_update_message(),
             #[cfg(feature = "stand")]
@@ -234,12 +238,13 @@ fn run() -> UiuaResult {
                     .with_args(env::args().skip(1).collect())
                     .print_diagnostics(true);
                 rt.load_str(code)?;
-                print_stack(&rt.take_stack());
+                print_stack(&rt.take_stack(), true);
                 return Ok(());
             }
             let res = match working_file_path() {
                 Ok(path) => watch(
                     Some(&path),
+                    true,
                     true,
                     FormatConfigSource::SearchFile,
                     false,
@@ -248,6 +253,7 @@ fn run() -> UiuaResult {
                 ),
                 Err(NoWorkingFile::MultipleFiles) => watch(
                     None,
+                    true,
                     true,
                     FormatConfigSource::SearchFile,
                     false,
@@ -321,6 +327,7 @@ fn working_file_path() -> Result<PathBuf, NoWorkingFile> {
 fn watch(
     initial_path: Option<&Path>,
     format: bool,
+    color: bool,
     format_config_source: FormatConfigSource,
     clear: bool,
     args: Vec<String>,
@@ -379,6 +386,7 @@ fn watch(
                         Command::new(env::current_exe().unwrap())
                             .arg("run")
                             .arg(path)
+                            .args((!color).then_some("--no-color"))
                             .args([
                                 "--no-format",
                                 "--mode",
@@ -465,6 +473,8 @@ enum App {
         path: Option<PathBuf>,
         #[clap(long, help = "Don't format the file before running")]
         no_format: bool,
+        #[clap(long, help = "Don't colorize stack output")]
+        no_color: bool,
         #[clap(flatten)]
         formatter_options: FormatterOptions,
         #[clap(long, help = "Emit the duration of each instruction's execution")]
@@ -480,6 +490,8 @@ enum App {
     #[clap(about = "Evaluate an expression and print its output")]
     Eval {
         code: String,
+        #[clap(long, help = "Don't colorize stack output")]
+        no_color: bool,
         #[cfg(feature = "audio")]
         #[clap(flatten)]
         audio_options: AudioOptions,
@@ -496,6 +508,8 @@ enum App {
     Watch {
         #[clap(long, help = "Don't format the file before running")]
         no_format: bool,
+        #[clap(long, help = "Don't colorize stack output")]
+        no_color: bool,
         #[clap(flatten)]
         formatter_options: FormatterOptions,
         #[clap(long, help = "Clear the terminal on file change")]
@@ -672,9 +686,11 @@ fn format_multi_files(config: &FormatConfig, stdout: bool) -> Result<(), UiuaErr
     Ok(())
 }
 
-fn print_stack(stack: &[Value]) {
-    if stack.len() == 1 {
-        println!("{}", stack[0].show());
+fn print_stack(stack: &[Value], color: bool) {
+    if stack.len() == 1 || !color {
+        for value in stack {
+            println!("{}", value.show());
+        }
         return;
     }
     for (i, value) in stack.iter().enumerate() {
@@ -693,7 +709,7 @@ fn print_stack(stack: &[Value]) {
     }
 }
 
-fn repl(mut rt: Uiua, config: FormatConfig) {
+fn repl(mut rt: Uiua, color: bool, config: FormatConfig) {
     let mut line_reader = DefaultEditor::new().expect("Failed to read from Stdin");
     let mut repl = |rt: &mut Uiua| -> Result<bool, UiuaError> {
         let mut code = match line_reader.readline("» ") {
@@ -748,7 +764,7 @@ fn repl(mut rt: Uiua, config: FormatConfig) {
         println!();
 
         rt.load_str(&code)?;
-        print_stack(&rt.take_stack());
+        print_stack(&rt.take_stack(), color);
         Ok(true)
     };
 

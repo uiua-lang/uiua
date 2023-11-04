@@ -1529,10 +1529,10 @@ impl<T: ArrayValue> Array<T> {
         match from.rank().cmp(&into.rank()) {
             Ordering::Less => {
                 if from.shape[..] != into.shape[1..] {
-                    return Err(env.error(
+                    return Err(env.error(format!(
                         "Attempted to undo {name}, but the {past} section's rank was \
                         modified to be incompatible",
-                    ));
+                    )));
                 }
             }
             Ordering::Equal => {}

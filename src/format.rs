@@ -382,6 +382,7 @@ pub fn format_file<P: AsRef<Path>>(path: P, config: &FormatConfig) -> UiuaResult
     let path = path.as_ref();
     let input =
         fs::read_to_string(path).map_err(|e| UiuaError::Load(path.to_path_buf(), e.into()))?;
+    dbg!(crate::spans(&input));
     let formatted = format(&input, path, config)?;
     if formatted.output == input {
         return Ok(formatted);

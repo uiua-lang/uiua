@@ -88,9 +88,11 @@ fn words_spans(words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
             Word::Array(arr) => {
                 spans.push(word.span.just_start().sp(SpanKind::Delimiter));
                 spans.extend(arr.lines.iter().flat_map(|w| words_spans(w)));
-                let end = word.span.just_end();
-                if arr.closed && end.as_str() == "]" || end.as_str() == "}" {
-                    spans.push(end.sp(SpanKind::Delimiter));
+                if arr.closed {
+                    let end = word.span.just_end();
+                    if end.as_str() == "]" || end.as_str() == "}" {
+                        spans.push(end.sp(SpanKind::Delimiter));
+                    }
                 }
             }
             Word::Func(func) => {

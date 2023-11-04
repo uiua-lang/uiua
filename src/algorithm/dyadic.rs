@@ -1674,19 +1674,18 @@ fn fill_shift<T: Clone>(by: &[isize], shape: &[usize], data: &mut [T], fill: T) 
         return;
     }
     let offset = by[0];
-    if offset == 0 {
-        return;
-    }
     let row_len: usize = shape[1..].iter().product();
-    let abs_offset = offset.unsigned_abs() * row_len;
-    let data_len = data.len();
-    if offset > 0 {
-        for val in &mut data[data_len.saturating_sub(abs_offset)..] {
-            *val = fill.clone();
-        }
-    } else {
-        for val in &mut data[..abs_offset] {
-            *val = fill.clone();
+    if offset != 0 {
+        let abs_offset = offset.unsigned_abs() * row_len;
+        let data_len = data.len();
+        if offset > 0 {
+            for val in &mut data[data_len.saturating_sub(abs_offset)..] {
+                *val = fill.clone();
+            }
+        } else {
+            for val in &mut data[..abs_offset] {
+                *val = fill.clone();
+            }
         }
     }
     let index = &by[1..];

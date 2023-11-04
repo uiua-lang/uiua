@@ -9,6 +9,7 @@ If you are reading this on the website, then these changes are live here.
 - [`under` `⍜`](https://uiua.org/docs/under) with [`take` `↙`](https://uiua.org/docs/take) and [`drop` `↘`](https://uiua.org/docs/drop) is now less strict about shape/rank changes
 - [`range` `⇡`](https://uiua.org/docs/range) called on a list of 0 or 1 values is now more consistent
 - [`fill` `⬚`](https://uiua.org/docs/fill) now works with [`rotate` `↻`](https://uiua.org/docs/rotate) to give non-wrapping behavior
+- The output of [`find` `⌕`](https://uiua.org/docs/find) is now the same shape as the array being searched
 
 ## 0.1.0 - 2023-11-03
 ### Language

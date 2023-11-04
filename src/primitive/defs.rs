@@ -859,9 +859,12 @@ primitive!(
     (2, Keep, DyadicArray, ("keep", '▽')),
     /// Find the occurences of one array in another
     ///
+    /// A `1` marker will be placed the the start of each occurence of the first array in the second array.
     /// ex: ⌕ 5 [1 8 5 2 3 5 4 5 6 7]
     /// ex: ⌕ "ab" "abracadabra"
+    /// If the searched-in array is multidimensional, the `1` marker will be placed in the minimum index "top left" corner.
     /// ex: ⌕ 1_2 . ↯4_4⇡3
+    /// ex: ⌕ [1_2 2_0] . ↯4_4⇡3
     (2, Find, DyadicArray, ("find", '⌕')),
     /// Check if each row of one array exists in another
     ///

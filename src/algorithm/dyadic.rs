@@ -2014,14 +2014,6 @@ impl<T: ArrayValue> Array<T> {
             searched_for_shape.insert(0, 1);
         }
 
-        // Determine the ouput shape
-        let output_shape: Shape = searched
-            .shape
-            .iter()
-            .zip(&searched_for_shape)
-            .map(|(a, b)| a + 1 - b)
-            .collect();
-
         let mut data = EcoVec::new();
         let mut corner = vec![0; searched.shape.len()];
         let mut curr = vec![0; searched.shape.len()];
@@ -2078,7 +2070,15 @@ impl<T: ArrayValue> Array<T> {
                     continue 'windows;
                 }
             }
-            let arr = Array::new(output_shape, data);
+
+            let temp_output_shape: Shape = searched
+                .shape
+                .iter()
+                .zip(&searched_for_shape)
+                .map(|(a, b)| a + 1 - b)
+                .collect();
+            let mut arr = Array::new(temp_output_shape, data);
+            arr.fill_to_shape(&searched.shape[..searched_for_shape.len()], 0);
             arr.validate_shape();
             break Ok(arr);
         }

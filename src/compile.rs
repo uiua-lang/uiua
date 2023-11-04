@@ -123,7 +123,7 @@ impl Uiua {
                         return Err(UiuaError::Run(Span::Code(declared_sig.span.clone()).sp(
                             format!(
                                 "Function signature mismatch:  declared {} but inferred {}",
-                                declared_sig.value, sig
+                                declared_sig.value, sig_to_check
                             ),
                         )));
                     }

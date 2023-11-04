@@ -907,46 +907,45 @@ pub fn Challenge<'a>(
 }
 
 pub fn progressive_strings(input: &str) -> Vec<String> {
-    let mut strings = vec![input.into()];
     let (items, errors, _) = uiua::parse(input, None);
     if !errors.is_empty() {
-        return strings;
+        return vec![input.into()];
     }
-    strings.extend(items_progressive_strings(items));
-    strings
-}
-
-fn items_progressive_strings(items: Vec<Item>) -> Vec<String> {
-    let mut strings = Vec::new();
-    let mut curr = String::new();
+    let mut lines: Vec<Vec<String>> = Vec::new();
     for item in items {
         match item {
             Item::Words(words) => {
+                let mut line: Vec<String> = Vec::new();
                 for word in words {
                     if word.value.is_code() {
-                        strings.push(take(&mut curr));
-                        (strings.last_mut().unwrap()).push_str(word.span.as_str());
+                        line.push(word.span.as_str().into());
+                    } else if let Some(last) = line.last_mut() {
+                        last.push_str(word.span.as_str());
                     } else {
-                        curr.push_str(word.span.as_str());
+                        line.push(word.span.as_str().into());
                     }
                 }
+                lines.push(line);
             }
-            Item::Binding(binding) => {
-                strings.push(take(&mut curr));
-                (strings.last_mut().unwrap()).push_str(binding.span().as_str());
-            }
-            Item::TestScope(items) => {
-                strings.push(take(&mut curr));
-                (strings.last_mut().unwrap()).push_str(items.span.as_str());
-            }
-            Item::ExtraNewlines(span) => {
-                strings.push(take(&mut curr));
-                (strings.last_mut().unwrap()).push_str(span.as_str());
-            }
+            Item::Binding(binding) => lines.push(vec![binding.span().as_str().into()]),
+            Item::TestScope(items) => lines.push(vec![items.span.as_str().into()]),
+            Item::ExtraNewlines(span) => lines.push(vec![span.as_str().into()]),
         }
     }
-    if !curr.is_empty() {
-        strings.push(curr);
+    let mut strings = Vec::new();
+    let mut curr_total = String::new();
+    for line in lines {
+        let mut curr_line = String::new();
+        for frag in line.into_iter().rev() {
+            curr_line.insert_str(0, &frag);
+            strings.push(format!("{curr_total}{curr_line}"));
+        }
+        curr_total.push_str(&curr_line);
+        curr_total.push('\n');
     }
+    if strings.is_empty() {
+        strings.push("".into());
+    }
+    strings.rotate_right(1);
     strings
 }

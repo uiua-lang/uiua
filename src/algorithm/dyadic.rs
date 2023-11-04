@@ -1515,26 +1515,38 @@ impl<T: ArrayValue> Array<T> {
         })
     }
     fn untake(self, index: &[isize], into: Self, env: &Uiua) -> UiuaResult<Self> {
+        self.untake_impl("take", "taken", index, into, env)
+    }
+    fn untake_impl(
+        self,
+        name: &str,
+        past: &str,
+        index: &[isize],
+        into: Self,
+        env: &Uiua,
+    ) -> UiuaResult<Self> {
         let from = self;
-        if from.rank() != into.rank() {
-            return Err(env.error(format!(
-                "Attempted to undo take, but the taken section's rank was modified from {} to {}",
-                into.rank(),
-                from.rank()
-            )));
+        match from.rank().cmp(&into.rank()) {
+            Ordering::Less => {
+                if from.shape[..] != into.shape[1..] {
+                    return Err(env.error(
+                        "Attempted to undo {name}, but the {past} section's rank was \
+                        modified to be incompatible",
+                    ));
+                }
+            }
+            Ordering::Equal => {}
+            Ordering::Greater => {
+                return Err(env.error(format!(
+                    "Attempted to undo {name}, but the {past} section's rank was modified from {} to {}",
+                    into.rank(),
+                    from.rank()
+                )));
+            }
         }
         Ok(match index {
             [] => into,
             &[untaking] => {
-                let abs_untaking = untaking.unsigned_abs();
-                if abs_untaking != from.row_count() {
-                    return Err(env.error(format!(
-                        "Attempted to undo take, but the taken section's row \
-                        count was modified from {} to {}",
-                        abs_untaking,
-                        from.row_count()
-                    )));
-                }
                 let into = into.drop(&[untaking], env)?;
                 if untaking >= 0 {
                     from.join(into, env)
@@ -1546,7 +1558,7 @@ impl<T: ArrayValue> Array<T> {
                 let abs_untaking = untaking.unsigned_abs();
                 if abs_untaking != from.row_count() {
                     return Err(env.error(format!(
-                        "Attempted to undo take, but the taken section's row \
+                        "Attempted to undo {name}, but the {past} section's row \
                         count was modified from {} to {}",
                         abs_untaking,
                         from.row_count()
@@ -1556,14 +1568,14 @@ impl<T: ArrayValue> Array<T> {
                 let mut new_rows = Vec::with_capacity(into_row_count);
                 if untaking >= 0 {
                     for (from, into) in from.rows().zip(into.rows()) {
-                        new_rows.push(from.untake(sub_index, into, env)?);
+                        new_rows.push(from.untake_impl(name, past, sub_index, into, env)?);
                     }
                     new_rows.extend(into.rows().skip(abs_untaking));
                 } else {
                     let start = into_row_count.saturating_sub(abs_untaking);
                     new_rows.extend(into.rows().take(start));
                     for (from, into) in from.rows().zip(into.rows().skip(start)) {
-                        new_rows.push(from.untake(sub_index, into, env)?);
+                        new_rows.push(from.untake_impl(name, past, sub_index, into, env)?);
                     }
                 }
                 Array::from_row_arrays(new_rows, env)?
@@ -1571,13 +1583,6 @@ impl<T: ArrayValue> Array<T> {
         })
     }
     fn undrop(self, index: &[isize], into: Self, env: &Uiua) -> UiuaResult<Self> {
-        if self.rank() != into.rank() {
-            return Err(env.error(format!(
-                "Attempted to undo drop, but the dropped section's rank was modified from {} to {}",
-                into.rank() - (index.len() - 1),
-                self.rank()
-            )));
-        }
         let index: Vec<isize> = index
             .iter()
             .zip(&into.shape)
@@ -1589,7 +1594,7 @@ impl<T: ArrayValue> Array<T> {
                 }
             })
             .collect();
-        self.untake(&index, into, env)
+        self.untake_impl("drop", "dropped", &index, into, env)
     }
 }
 

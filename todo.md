@@ -3,8 +3,9 @@ Within a each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
 - under join
+- fix singleton range
+- fill rotate
 - fill find
-- less strict under take/drop
 - non-truncating find
 - Multimedia
   - Sound input

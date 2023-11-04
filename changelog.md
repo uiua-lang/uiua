@@ -2,7 +2,11 @@
 
 Uiua is not yet stable.
 
-<!-- If you are reading this on the website, then these changes are live here. -->
+## 0.2.0 - 2023-11-??
+If you are reading this on the website, then these changes are live here.
+### Language
+- [`under` `⍜`](https://uiua.org/docs/under) [`take` `↙`](https://uiua.org/docs/take) and [`drop` `↘`](https://uiua.org/docs/drop) are now less strict about shape/rank changes
+
 ## 0.1.0 - 2023-11-03
 ### Language
 - Add complex numbers, which can be created with the [`complex` `ℂ`](https://uiua.org/docs/complex) function

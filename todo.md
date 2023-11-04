@@ -2,7 +2,10 @@
 Within a each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- Auto pad examples
+- under join
+- fill find
+- less strict under take/drop
+- non-truncating find
 - Multimedia
   - Sound input
   - Webcam input

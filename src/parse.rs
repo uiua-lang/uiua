@@ -617,18 +617,20 @@ impl Parser {
         } else if let Some(start) = self.try_exact(OpenBracket) {
             let items = self.multiline_words();
             let end = self.expect_close(CloseBracket);
-            let span = start.merge(end);
+            let span = start.merge(end.span);
             span.sp(Word::Array(Arr {
                 lines: items,
                 constant: false,
+                closed: end.value,
             }))
         } else if let Some(start) = self.try_exact(OpenCurly) {
             let items = self.multiline_words();
             let end = self.expect_close(CloseCurly);
-            let span = start.merge(end);
+            let span = start.merge(end.span);
             span.sp(Word::Array(Arr {
                 lines: items,
                 constant: true,
+                closed: end.value,
             }))
         } else if let Some(spaces) = self.try_spaces() {
             spaces
@@ -704,17 +706,19 @@ impl Parser {
                     id,
                     signature,
                     lines,
+                    closed: true,
                 }))
             }
             let end = self.expect_close(CloseParen);
             let (first_sig, first_lines, first_span) = first;
-            let outer_span = start.clone().merge(end);
+            let outer_span = start.clone().merge(end.span);
             if branches.is_empty() {
                 let id = FunctionId::Anonymous(outer_span.clone());
                 outer_span.sp(Word::Func(Func {
                     id,
                     signature: first_sig,
                     lines: first_lines,
+                    closed: end.value,
                 }))
             } else {
                 let first_span = first_span.unwrap_or(start);
@@ -723,9 +727,13 @@ impl Parser {
                     id: first_id,
                     signature: first_sig,
                     lines: first_lines,
+                    closed: true,
                 });
                 branches.insert(0, first);
-                outer_span.sp(Word::Switch(Switch { branches }))
+                outer_span.sp(Word::Switch(Switch {
+                    branches,
+                    closed: end.value,
+                }))
             }
         } else {
             return None;
@@ -764,18 +772,19 @@ impl Parser {
             id: FunctionId::Anonymous(span),
             signature: None,
             lines: vec![operands],
+            closed: true,
         })))
     }
     fn try_spaces(&mut self) -> Option<Sp<Word>> {
         self.try_exact(Spaces).map(|span| span.sp(Word::Spaces))
     }
-    fn expect_close(&mut self, ascii: AsciiToken) -> CodeSpan {
+    fn expect_close(&mut self, ascii: AsciiToken) -> Sp<bool> {
         if let Some(span) = self.try_exact(ascii) {
-            span
+            span.sp(true)
         } else {
             self.errors
                 .push(self.expected([Expectation::Term, Expectation::Simple(ascii)]));
-            self.prev_span()
+            self.prev_span().sp(false)
         }
     }
     fn validate_words(&mut self, words: &[Sp<Word>], allow_func: bool) {

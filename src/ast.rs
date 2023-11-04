@@ -139,6 +139,8 @@ pub struct Arr {
     pub lines: Vec<Vec<Sp<Word>>>,
     /// Whether this is a constant-item function
     pub constant: bool,
+    /// Whether a closing bracket was found
+    pub closed: bool,
 }
 
 impl fmt::Debug for Arr {
@@ -162,6 +164,8 @@ pub struct Func {
     pub signature: Option<Sp<Signature>>,
     /// The function's code
     pub lines: Vec<Vec<Sp<Word>>>,
+    /// Whether a closing parenthesis was found
+    pub closed: bool,
 }
 
 impl fmt::Debug for Func {
@@ -182,6 +186,8 @@ impl fmt::Debug for Func {
 pub struct Switch {
     /// The branches of the switch
     pub branches: Vec<Sp<Func>>,
+    /// Whether a closing parenthesis was found
+    pub closed: bool,
 }
 
 /// A modifier with operands

@@ -786,8 +786,8 @@ primitive!(
     /// ex: ↙ ¯2 ↯3_3⇡9
     /// The amount to take can also be a list to take along multiple axes.
     /// ex: .↯3_4⇡12
-    ///   : ↘2_3   .
-    ///   : ↘¯2_¯2 :
+    ///   : ↙2_3   .
+    ///   : ↙¯2_¯2 :
     ///
     /// By default, taking more than the length of the array will throw an error.
     /// ex! ↙7 [8 3 9 2 0]

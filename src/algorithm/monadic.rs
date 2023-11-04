@@ -60,7 +60,7 @@ impl Value {
             return Ok((0..shape[0]).collect());
         }
         if shape.is_empty() {
-            return Ok(Array::<f64>::new(Shape::from_iter([0, 0]), CowSlice::new()).into());
+            return Ok(Array::<f64>::new(Shape::from_iter([0]), CowSlice::new()).into());
         }
         let mut shape = Shape::from(shape.as_slice());
         let data = range(&shape, env)?;

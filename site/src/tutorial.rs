@@ -144,7 +144,7 @@ fn TutorialBasic() -> impl IntoView {
         <Editor example="5\n+1 2\n\"Hello, World!\"\n+1 @a"/>
         <p>"This orientation can be changed in the editor's settings. Click the ⚙️ icon in the top right corner of the editor to see them."</p>
         <p>"Operations can span multiple lines. Every line uses the same stack!"</p>
-        <Editor example="1 2 + 5 ×"/>
+        <Editor example="1 2\n+\n5\n×"/>
 
         <h2 id="comments">"Comments"</h2>
         <p>"Comments are denoted with "<code>"#"</code>" and run to the end of the line."</p>

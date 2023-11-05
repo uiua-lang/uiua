@@ -54,6 +54,16 @@ fn run() -> UiuaResult {
         uiua::profile::run_profile();
         return Ok(());
     }
+    #[cfg(feature = "stand")]
+    if let Some(code) = uiua::stand::STAND_FILES.main_code() {
+        let mut rt = Uiua::with_native_sys()
+            .with_mode(RunMode::Normal)
+            .with_args(env::args().skip(1).collect())
+            .print_diagnostics(true);
+        rt.load_str(code)?;
+        print_stack(&rt.take_stack(), true);
+        return Ok(());
+    }
     match App::try_parse() {
         Ok(app) => match app {
             App::Init => {
@@ -243,16 +253,6 @@ fn run() -> UiuaResult {
             }
         },
         Err(e) if e.kind() == ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
-            #[cfg(feature = "stand")]
-            if let Some(code) = uiua::stand::STAND_FILES.main_code() {
-                let mut rt = Uiua::with_native_sys()
-                    .with_mode(RunMode::Normal)
-                    .with_args(env::args().skip(1).collect())
-                    .print_diagnostics(true);
-                rt.load_str(code)?;
-                print_stack(&rt.take_stack(), true);
-                return Ok(());
-            }
             let res = match working_file_path() {
                 Ok(path) => watch(
                     Some(&path),

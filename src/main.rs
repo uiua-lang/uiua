@@ -218,8 +218,20 @@ fn run() -> UiuaResult {
                             })
                             .unwrap_or_else(|| "program".into());
                         let path = PathBuf::from(name).with_extension(env::consts::EXE_EXTENSION);
-                        if let Err(e) = fs::write(path, bytes) {
+                        #[allow(clippy::needless_borrow)]
+                        if let Err(e) = fs::write(&path, bytes) {
                             eprintln!("Failed to write executable: {e}");
+                            exit(1);
+                        }
+                        // Set executable permissions on Unix
+                        #[cfg(unix)]
+                        if let Err(e) = (|| {
+                            use std::os::unix::fs::PermissionsExt;
+                            let mut perms = fs::metadata(&path)?.permissions();
+                            perms.set_mode(0o755);
+                            fs::set_permissions(&path, perms)
+                        })() {
+                            eprintln!("Failed to set executable permissions: {e}");
                             exit(1);
                         }
                     }

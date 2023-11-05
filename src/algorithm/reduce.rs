@@ -417,7 +417,7 @@ fn fold_recursive(
         }
 
         for _ in 0..row_count {
-            let mut accs_iter = accs.drain(..).rev();
+            let mut accs_iter = accs.drain(..);
             let mut arr_i = array_count;
             for n in ns.iter().rev() {
                 match n {
@@ -434,15 +434,16 @@ fn fold_recursive(
             for _ in 0..acc_count {
                 accs.push(env.pop("folded function result")?);
             }
+            accs.reverse();
             if broke {
                 break;
             }
         }
-        accs.reverse();
         Ok(accs)
     } else {
         // Recursive case
         let mut row_count = 0;
+        // Check shape agreement
         for (i, (arg, ni)) in args.iter().zip(ns).enumerate() {
             if *ni == 0 {
                 continue;
@@ -461,13 +462,16 @@ fn fold_recursive(
             }
             row_count = arg.row_count();
         }
+        // Decrement ns
         let dec_ns: Vec<usize> = ns.iter().map(|n| n.saturating_sub(1)).collect();
+        // Collect row iterators
         let mut row_iters = Vec::with_capacity(array_count);
         for (i, n) in ns.iter().enumerate().rev() {
             if *n != 0 {
                 row_iters.push(args.remove(i).into_rows());
             }
         }
+        // Recurse
         for _ in 0..row_count {
             let mut iter_i = 0;
             for (i, n) in ns.iter().enumerate() {

@@ -724,7 +724,7 @@ impl ImplPrimitive {
             }
             ImplPrimitive::InvWhere => env.monadic_ref_env(Value::inverse_where)?,
             ImplPrimitive::InvUtf => env.monadic_ref_env(Value::inv_utf8)?,
-            ImplPrimitive::InverseBits => env.monadic_ref_env(Value::inverse_bits)?,
+            ImplPrimitive::InverseBits => env.monadic_ref_env(Value::inv_bits)?,
             ImplPrimitive::Unpartition => loops::unpartition(env)?,
             ImplPrimitive::Ungroup => loops::ungroup(env)?,
             ImplPrimitive::InvTrace => trace(env, true)?,

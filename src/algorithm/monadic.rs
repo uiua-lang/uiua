@@ -413,7 +413,7 @@ impl Value {
         }
     }
     /// Decode the `bits` of the value
-    pub fn inverse_bits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
+    pub fn inv_bits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         match self {
             #[cfg(feature = "bytes")]
             Value::Byte(n) => n.inverse_bits(env),
@@ -446,7 +446,7 @@ impl Array<f64> {
             max >>= 1;
         }
         let mut new_data = EcoVec::with_capacity(self.data.len() * max_bits);
-        // Little endian
+        // Big endian
         for n in nats {
             for i in 0..max_bits {
                 new_data.push(u8::from(n & (1 << i) != 0));
@@ -475,8 +475,8 @@ impl Array<u8> {
                 return Ok(Array::from(0.0));
             }
             let mut shape = self.shape.clone();
-            shape[0] = 0;
-            return Ok(Array::new(shape, CowSlice::new()));
+            shape.pop();
+            return Ok(Array::new(shape, cowslice!(0.0)));
         }
         if self.rank() == 0 {
             return Ok(Array::from(bools[0] as u8 as f64));
@@ -484,7 +484,7 @@ impl Array<u8> {
         let mut shape = self.shape.clone();
         let bit_string_len = shape.pop().unwrap();
         let mut new_data = EcoVec::with_capacity(self.data.len() / bit_string_len);
-        // Little endian
+        // Big endian
         for bits in bools.chunks_exact(bit_string_len) {
             let mut n: u128 = 0;
             for (i, b) in bits.iter().enumerate() {

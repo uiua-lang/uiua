@@ -1,7 +1,7 @@
-use std::{cmp::Ordering, f64::consts::E, fmt, ops::*};
+use std::{f64::consts::E, fmt, ops::*};
 
 /// Uiua's complex number type
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Default)]
 pub struct Complex {
     /// The real part
     pub re: f64,
@@ -352,13 +352,5 @@ impl Neg for Complex {
             re: -self.re,
             im: -self.im,
         }
-    }
-}
-
-impl PartialOrd for Complex {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.re
-            .partial_cmp(&other.re)
-            .or_else(|| self.im.partial_cmp(&other.im))
     }
 }

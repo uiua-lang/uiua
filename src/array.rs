@@ -480,9 +480,9 @@ impl ArrayCmp for u8 {
 
 impl ArrayCmp for Complex {
     fn array_cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other)
-            .unwrap_or_else(|| self.re.is_nan().cmp(&other.re.is_nan()))
-            .then_with(|| self.im.is_nan().cmp(&other.im.is_nan()))
+        self.partial_cmp(other).unwrap_or_else(|| {
+            (self.re.is_nan(), self.im.is_nan()).cmp(&(other.re.is_nan(), other.im.is_nan()))
+        })
     }
 }
 

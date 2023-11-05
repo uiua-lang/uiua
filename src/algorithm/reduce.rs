@@ -355,7 +355,7 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
         .map(|(n, arg)| rank_to_depth(n, arg.rank()))
         .collect();
     let res = fold_recursive(f, args, &ns, env)?;
-    for val in res {
+    for val in res.into_iter().rev() {
         env.push(val);
     }
     Ok(())
@@ -417,7 +417,7 @@ fn fold_recursive(
         }
 
         for _ in 0..row_count {
-            let mut accs_iter = accs.drain(..);
+            let mut accs_iter = accs.drain(..).rev();
             let mut arr_i = array_count;
             for n in ns.iter().rev() {
                 match n {
@@ -434,7 +434,6 @@ fn fold_recursive(
             for _ in 0..acc_count {
                 accs.push(env.pop("folded function result")?);
             }
-            accs.reverse();
             if broke {
                 break;
             }
@@ -471,6 +470,7 @@ fn fold_recursive(
                 row_iters.push(args.remove(i).into_rows());
             }
         }
+        row_iters.reverse();
         // Recurse
         for _ in 0..row_count {
             let mut iter_i = 0;

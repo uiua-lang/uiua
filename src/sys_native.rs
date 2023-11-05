@@ -457,9 +457,9 @@ impl SysBackend for NativeSys {
     fn close(&self, handle: Handle) -> Result<(), String> {
         if NATIVE_SYS.files.remove(&handle).is_some()
             || NATIVE_SYS.tcp_listeners.remove(&handle).is_some()
-            || (NATIVE_SYS.tcp_sockets.remove(&handle).is_some()
-                && NATIVE_SYS.hostnames.remove(&handle).is_some())
+            || NATIVE_SYS.tcp_sockets.remove(&handle).is_some()
         {
+            NATIVE_SYS.hostnames.remove(&handle);
             Ok(())
         } else {
             Err("Invalid stream handle".to_string())

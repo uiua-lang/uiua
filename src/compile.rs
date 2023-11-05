@@ -97,7 +97,7 @@ impl Uiua {
 
             // Handle placeholders
             if placeholder_count > 0 {
-                increment_placeholders(&mut instrs);
+                increment_placeholders(&mut instrs, &mut 0);
                 instrs.insert(0, Instr::PushTempFunctions(placeholder_count));
                 instrs.push(Instr::PopTempFunctions(placeholder_count));
             }
@@ -1035,12 +1035,17 @@ fn words_look_pervasive(words: &[Sp<Word>]) -> bool {
     })
 }
 
-fn increment_placeholders(instrs: &mut [Instr]) {
-    let mut curr = 0;
+fn increment_placeholders(instrs: &mut [Instr], curr: &mut usize) {
     for instr in instrs {
-        if let Instr::GetTempFunction { offset, .. } = instr {
-            *offset = curr;
-            curr += 1;
+        match instr {
+            Instr::GetTempFunction { offset, .. } => {
+                *offset = *curr;
+                *curr += 1;
+            }
+            Instr::PushFunc(f) => {
+                increment_placeholders(&mut Arc::make_mut(f).instrs, curr);
+            }
+            _ => (),
         }
     }
 }

@@ -495,9 +495,7 @@ impl Array<u8> {
             }
             new_data.push(n as f64);
         }
-        let arr = Array::new(shape, new_data);
-        arr.validate_shape();
-        Ok(arr)
+        Ok(Array::new(shape, new_data))
     }
 }
 

@@ -96,7 +96,7 @@ pub fn do_(env: &mut Uiua) -> UiuaResult {
         )));
     }
     loop {
-        for value in env.clone_stack_top(copy_count).into_iter().rev() {
+        for value in env.clone_stack_top(copy_count) {
             env.push(value);
         }
         env.call(g.clone())?;

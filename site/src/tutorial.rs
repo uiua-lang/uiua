@@ -590,6 +590,9 @@ fn TutorialTypes() -> impl IntoView {
         <Editor example="&p $ Hello, \n   $ World!"/>
         <p>"This style of string is also useful when your string contains a lot of quotes that you don't want to escape."</p>
         <Editor example="$ An then she was like, \"No way!\"\n$ And I was like, \"Way...\""/>
+        <p>"Characters in character or string literals can also be specified with 2 or 4 hex digits by using escape codes "<code>"\\x"</code>" and "<code>"\\u"</code>" respectively."</p>
+        <Editor example="\"\\x41\\x42\\x43\""/>
+        <Editor example="@\\u2665"/>
         <br/>
 
         <h2 id="character-arithmetic">"Character Arithmetic"</h2>

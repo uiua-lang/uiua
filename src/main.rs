@@ -735,8 +735,8 @@ fn repl(mut rt: Uiua, color: bool, config: FormatConfig) {
 
         match format_str(&code, &config) {
             Ok(formatted) => {
-                _ = line_reader.add_history_entry(&code);
                 code = formatted.output;
+                _ = line_reader.add_history_entry(&code);
             }
             Err(e) => {
                 _ = line_reader.add_history_entry(&code);

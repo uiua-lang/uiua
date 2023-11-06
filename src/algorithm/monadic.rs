@@ -664,7 +664,8 @@ impl Value {
                     acc
                 });
                 let data_len: usize = shape.iter().product();
-                let mut data = EcoVec::from_iter(repeat(0.0).take(data_len));
+                let mut data = EcoVec::with_capacity(data_len);
+                data.extend(repeat(0.0).take(data_len));
                 let data_slice = data.make_mut();
                 for (key, count) in counts {
                     let mut i = 0;

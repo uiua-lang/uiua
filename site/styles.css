@@ -628,6 +628,7 @@ input[type=number] {
 .prim-code-a {
     text-decoration: none;
     white-space: nowrap;
+    font-weight: regular;
 }
 
 .prim-code:hover::after {

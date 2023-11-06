@@ -733,9 +733,16 @@ fn repl(mut rt: Uiua, color: bool, config: FormatConfig) {
             return Ok(true);
         }
 
-        let formatted = format_str(&code, &config)?.output;
-        code = formatted;
-        _ = line_reader.add_history_entry(&code);
+        match format_str(&code, &config) {
+            Ok(formatted) => {
+                _ = line_reader.add_history_entry(&code);
+                code = formatted.output;
+            }
+            Err(e) => {
+                _ = line_reader.add_history_entry(&code);
+                return Err(e);
+            }
+        }
 
         print!("↪ ");
         for span in spans(&code) {

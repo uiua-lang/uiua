@@ -476,7 +476,8 @@ impl Array<u8> {
             }
             let mut shape = self.shape.clone();
             shape.pop();
-            return Ok(Array::new(shape, cowslice!(0.0)));
+            let count: usize = shape.iter().product();
+            return Ok(Array::new(shape, cowslice![0.0; count]));
         }
         if self.rank() == 0 {
             return Ok(Array::from(bools[0] as u8 as f64));

@@ -158,6 +158,7 @@ pub fn Install() -> impl IntoView {
 
         <h2>"Font"</h2>
         <p>"The Uiua glyphs were chosen to be compatible specifically with "<a href="https://dejavu-fonts.github.io/Download.html">"DejaVu Sans Mono"</a>". It is recommended that you install this font to get the best experience with Uiua."</p>
+        <p>"The excellent "<a href="https://github.com/uiua-lang/uiua/raw/main/site/Uiua386.ttf">"Uiua386"</a>" font (inspired by APL386) is also available. Thanks to Gifti for making it!"</p>
 
         <h2>"Editor Support"</h2>
         <p>"An official "<a href="https://marketplace.visualstudio.com/items?itemName=uiua-lang.uiua-vscode">"Uiua language extension for VSCode"</a>" is available."</p>

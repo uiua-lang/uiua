@@ -2000,12 +2000,28 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     /// Try to `find` this array in another
     pub fn find(&self, searched: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
+        let mut searched = searched;
+        let mut local_searched: Self;
         if self.rank() > searched.rank() || self.row_count() > searched.row_count() {
-            return Err(env.error(format!(
-                "Cannot search for array of shape {} in array of shape {}",
-                self.format_shape(),
-                searched.format_shape()
-            )));
+            let mut filled = false;
+            if self.row_count() > searched.row_count() {
+                // Fill
+                if let Some(fill) = env.fill() {
+                    let mut target_shape = searched.shape.clone();
+                    target_shape[0] = self.row_count();
+                    local_searched = searched.clone();
+                    local_searched.fill_to_shape(&target_shape, fill);
+                    searched = &local_searched;
+                    filled = true;
+                }
+            }
+            if !filled {
+                return Err(env.error(format!(
+                    "Cannot search for array of shape {} in array of shape {}",
+                    self.format_shape(),
+                    searched.format_shape()
+                )));
+            }
         }
 
         // Pad the shape of the searched-for array

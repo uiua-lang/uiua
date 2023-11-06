@@ -1438,9 +1438,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.0.2"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8adf3ddd720272c6ea8bf59463c04e0f93d0bbf7c5439b691bca2987e0270897"
+checksum = "d530e1a18b1cb4c484e6e34556a0d948706958449fca0cab753d649f2bce3d1f"
 dependencies = [
  "equivalent",
  "hashbrown 0.14.2",
@@ -1705,7 +1705,7 @@ dependencies = [
  "futures",
  "getrandom",
  "html-escape",
- "indexmap 2.0.2",
+ "indexmap 2.1.0",
  "itertools 0.10.5",
  "js-sys",
  "leptos_reactive",
@@ -1731,7 +1731,7 @@ checksum = "a6902fabee84955a85a6cdebf8ddfbfb134091087b172e32ebb26e571d4640ca"
 dependencies = [
  "anyhow",
  "camino",
- "indexmap 2.0.2",
+ "indexmap 2.1.0",
  "parking_lot",
  "proc-macro2",
  "quote",
@@ -1771,7 +1771,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b64d2b4bd0ab25a4897179ee603f2fa8178da6c9f97ef3efd4fa46580fd7efc1"
 dependencies = [
  "cfg-if",
- "indexmap 2.0.2",
+ "indexmap 2.1.0",
  "leptos",
  "tracing",
  "wasm-bindgen",
@@ -1787,7 +1787,7 @@ dependencies = [
  "base64",
  "cfg-if",
  "futures",
- "indexmap 2.0.2",
+ "indexmap 2.1.0",
  "js-sys",
  "paste",
  "pin-project",
@@ -2930,7 +2930,7 @@ version = "0.9.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3cc7a1570e38322cfe4154732e5110f887ea57e22b76f4bfd32b5bdd3368666c"
 dependencies = [
- "indexmap 2.0.2",
+ "indexmap 2.1.0",
  "itoa",
  "ryu",
  "serde",
@@ -3375,7 +3375,7 @@ version = "0.19.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1b5bb770da30e5cbfde35a2d7b9b8a2c4b8ef89548a7a6aeab5c9a576e3e7421"
 dependencies = [
- "indexmap 2.0.2",
+ "indexmap 2.1.0",
  "toml_datetime",
  "winnow",
 ]
@@ -3538,7 +3538,7 @@ dependencies = [
  "hound",
  "httparse",
  "image",
- "indexmap 2.0.2",
+ "indexmap 2.1.0",
  "instant",
  "lockfree",
  "notify",

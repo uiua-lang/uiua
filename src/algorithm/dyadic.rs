@@ -1930,9 +1930,11 @@ impl<T: ArrayValue> Array<T> {
             true_size.extend(&self.shape[true_size.len()..]);
         }
 
-        let mut dst = EcoVec::new();
+        let mut dst = EcoVec::from_elem(self.data[0].clone(), new_shape.iter().product());
+        let dst_slice = dst.make_mut();
         let mut corner = vec![0; self.shape.len()];
         let mut curr = vec![0; self.shape.len()];
+        let mut k = 0;
         'windows: loop {
             // Reset curr
             for i in curr.iter_mut() {
@@ -1947,7 +1949,8 @@ impl<T: ArrayValue> Array<T> {
                     src_index += (*c + *i) * stride;
                     stride *= s;
                 }
-                dst.push(self.data[src_index].clone());
+                dst_slice[k] = self.data[src_index].clone();
+                k += 1;
                 // Go to the next item
                 for i in (0..curr.len()).rev() {
                     if curr[i] == true_size[i] - 1 {
@@ -2030,9 +2033,19 @@ impl<T: ArrayValue> Array<T> {
             searched_for_shape.insert(0, 1);
         }
 
-        let mut data = EcoVec::new();
+        // Calculate the pre-padded output shape
+        let temp_output_shape: Shape = searched
+            .shape
+            .iter()
+            .zip(&searched_for_shape)
+            .map(|(a, b)| a + 1 - b)
+            .collect();
+
+        let mut data = EcoVec::from_elem(0, temp_output_shape.iter().product());
+        let data_slice = data.make_mut();
         let mut corner = vec![0; searched.shape.len()];
         let mut curr = vec![0; searched.shape.len()];
+        let mut k = 0;
 
         'windows: loop {
             // Reset curr
@@ -2062,7 +2075,8 @@ impl<T: ArrayValue> Array<T> {
                     false
                 };
                 if !same {
-                    data.push(0);
+                    data_slice[k] = 0;
+                    k += 1;
                     break;
                 }
                 // Go to the next item
@@ -2074,7 +2088,8 @@ impl<T: ArrayValue> Array<T> {
                         continue 'items;
                     }
                 }
-                data.push(1);
+                data_slice[k] = 1;
+                k += 1;
                 break;
             }
             // Go to the next corner
@@ -2086,13 +2101,6 @@ impl<T: ArrayValue> Array<T> {
                     continue 'windows;
                 }
             }
-
-            let temp_output_shape: Shape = searched
-                .shape
-                .iter()
-                .zip(&searched_for_shape)
-                .map(|(a, b)| a + 1 - b)
-                .collect();
             let mut arr = Array::new(temp_output_shape, data);
             arr.fill_to_shape(&searched.shape[..searched_for_shape.len()], 0);
             arr.validate_shape();

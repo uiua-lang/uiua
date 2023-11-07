@@ -232,7 +232,18 @@ impl Parser {
             // Check for invalid binding names
             if name.value.contains('&') {
                 self.errors
-                    .push(self.prev_span().sp(ParseError::AmpersandBindingName));
+                    .push(name.span.clone().sp(ParseError::AmpersandBindingName));
+            }
+            // Bad name advice
+            if ["\u{200b}", "\u{200c}", "\u{200d}"]
+                .iter()
+                .any(|bad_name| &*name.value == *bad_name)
+            {
+                self.diagnostics.push(Diagnostic::new(
+                    "Maybe don't",
+                    name.span.clone(),
+                    DiagnosticKind::Advice,
+                ));
             }
             // Left arrow
             let mut arrow_span = self.try_spaces().map(|w| w.span);

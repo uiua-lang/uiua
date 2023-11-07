@@ -1291,6 +1291,8 @@ impl PartialEq for Value {
             #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Byte(b)) => a == b,
             (Value::Char(a), Value::Char(b)) => a == b,
+            #[cfg(feature = "complex")]
+            (Value::Complex(a), Value::Complex(b)) => a == b,
             (Value::Box(a), Value::Box(b)) => a == b,
             #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => a == b,

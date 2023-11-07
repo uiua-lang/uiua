@@ -172,6 +172,8 @@ uiuisms!(
     "▽≠, 4 [1 4 2 0 5 4 3]",
     /// Remove first instance of an element from an array
     "⍜↻(↘1)⊗⊙. 4 [1 4 2 0 5 4 3]",
+    /// Remove the nth element from an array
+    "⍜↻(↘1) 4 [1 4 2 0 5 4 3]",
     /// Remove all instances of a row from an array
     "▽∺(¬≍)⊙. 2_0 [1_4 2_0 5_3 2_0]",
     /// Filter by a fixed predicate

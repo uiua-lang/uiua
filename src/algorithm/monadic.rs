@@ -457,11 +457,13 @@ impl Array<f64> {
             max_bits += 1;
             max >>= 1;
         }
-        let mut new_data = EcoVec::with_capacity(self.data.len() * max_bits);
+        let mut new_data = EcoVec::from_elem(0, self.data.len() * max_bits);
+        let new_data_slice = new_data.make_mut();
         // Big endian
-        for n in nats {
-            for i in 0..max_bits {
-                new_data.push(u8::from(n & (1 << i) != 0));
+        for (i, n) in nats.into_iter().enumerate() {
+            for j in 0..max_bits {
+                let index = i * max_bits + j;
+                new_data_slice[index] = u8::from(n & (1 << j) != 0);
             }
         }
         let mut shape = self.shape.clone();
@@ -496,16 +498,17 @@ impl Array<u8> {
         }
         let mut shape = self.shape.clone();
         let bit_string_len = shape.pop().unwrap();
-        let mut new_data = EcoVec::with_capacity(self.data.len() / bit_string_len);
+        let mut new_data = EcoVec::from_elem(0.0, self.data.len() / bit_string_len);
+        let new_data_slice = new_data.make_mut();
         // Big endian
-        for bits in bools.chunks_exact(bit_string_len) {
+        for (i, bits) in bools.chunks_exact(bit_string_len).enumerate() {
             let mut n: u128 = 0;
-            for (i, b) in bits.iter().enumerate() {
+            for (j, b) in bits.iter().enumerate() {
                 if *b {
-                    n |= 1u128.overflowing_shl(i as u32).0;
+                    n |= 1u128.overflowing_shl(j as u32).0;
                 }
             }
-            new_data.push(n as f64);
+            new_data_slice[i] = n as f64;
         }
         Ok(Array::new(shape, new_data))
     }

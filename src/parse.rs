@@ -229,22 +229,6 @@ impl Parser {
     fn try_binding(&mut self) -> Option<Binding> {
         let start = self.index;
         Some(if let Some(name) = self.try_ident() {
-            // Check for invalid binding names
-            if name.value.contains('&') {
-                self.errors
-                    .push(name.span.clone().sp(ParseError::AmpersandBindingName));
-            }
-            // Bad name advice
-            if ["\u{200b}", "\u{200c}", "\u{200d}"]
-                .iter()
-                .any(|bad_name| &*name.value == *bad_name)
-            {
-                self.diagnostics.push(Diagnostic::new(
-                    "Maybe don't",
-                    name.span.clone(),
-                    DiagnosticKind::Advice,
-                ));
-            }
             // Left arrow
             let mut arrow_span = self.try_spaces().map(|w| w.span);
             if let Some(span) = self.try_exact(Equal).or_else(|| self.try_exact(LeftArrow)) {
@@ -260,6 +244,22 @@ impl Parser {
             let mut arrow_span = arrow_span.unwrap();
             if let Some(span) = self.try_spaces().map(|w| w.span) {
                 arrow_span = arrow_span.merge(span);
+            }
+            // Check for invalid binding names
+            if name.value.contains('&') {
+                self.errors
+                    .push(name.span.clone().sp(ParseError::AmpersandBindingName));
+            }
+            // Bad name advice
+            if ["\u{200b}", "\u{200c}", "\u{200d}"]
+                .iter()
+                .any(|bad_name| &*name.value == *bad_name)
+            {
+                self.diagnostics.push(Diagnostic::new(
+                    "Maybe don't",
+                    name.span.clone(),
+                    DiagnosticKind::Advice,
+                ));
             }
             // Signature
             let signature = self.try_signature(Bar);

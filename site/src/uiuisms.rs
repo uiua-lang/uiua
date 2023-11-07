@@ -140,9 +140,9 @@ uiuisms!(
     r#"$"_" 17"#,
     /// Convert a string to a number
     r#"parse "42""#,
-    /// Convert a string to a list of code points
+    /// Convert a string to an array of code points
     r#"-@\0 "Uiua""#,
-    /// Convert a list of code points to a string
+    /// Convert an aray of code points to a string
     r#"+@\0 [85 105 117 97]"#,
     /// Parse a string as a base 2 number
     r#"⍘⋯⇌-@0 "110""#,
@@ -164,11 +164,11 @@ uiuisms!(
     r#"⊕□⍜▽¯∶\+.=, @, "split,this,,up""#,
     /// Split an array into groups of contiguous equal elements
     "⊜□. [1 1 1 2 2 1 1 4]",
-    /// Join a list of boxed strings
+    /// Join an array of boxed strings
     r#"⊐/⊂ {"a" "bc" "def"}"#,
     /// Find the nth fibonacci number
     ";⍥(+,∶)⊙.∶1 10",
-    /// Remove all instances of an element from a list
+    /// Remove all instances of an element from an array
     "▽≠, 4 [1 4 2 0 5 4 3]",
     /// Remove all instances of a row from an array
     "▽∺(¬≍)⊙. 2_0 [1_4 2_0 5_3 2_0]",
@@ -180,7 +180,7 @@ uiuisms!(
     r#"-×32×≥@a,≤@z. "These are Words""#,
     /// Convert a string to lowercase
     r#"+×32×≥@A,≤@Z. "These are Words""#,
-    /// Check if a string is in a list of strings
+    /// Check if a string is in an array of strings
     r#"∊□ "uiua" {"apl" "bqn" "uiua"}"#,
     /// Trim leading whitespace
     r#"▽\↥≠@ . "   ← remove these""#,

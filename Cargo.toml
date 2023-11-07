@@ -101,5 +101,8 @@ name = "uiua"
 [workspace]
 members = ["site"]
 
+[profile.dev]
+incremental = true
+
 [profile.release]
 lto = true

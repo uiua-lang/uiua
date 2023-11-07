@@ -1,13 +1,13 @@
-use comrak::{
-    nodes::{AstNode, ListType, NodeValue},
-    *,
-};
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 use uiua::{constants, Primitive, SysOp};
 
-use crate::{editor::Editor, Const, Prim, Prims};
+use crate::{
+    editor::Editor,
+    markdown::{markdown, Markdown},
+    Const, Prim, Prims,
+};
 
 #[component]
 pub fn Design() -> impl IntoView {
@@ -348,73 +348,8 @@ pub fn Optimizations() -> impl IntoView {
 
 #[component]
 pub fn Changelog() -> impl IntoView {
-    let arena = Arena::new();
-    let root = parse_document(
-        &arena,
-        include_str!("../../changelog.md"),
-        &ComrakOptions::default(),
-    );
     view! {
         <Title text="Changelog - Uiua Docs"/>
-        { node_view(root) }
-    }
-}
-
-fn node_view<'a>(node: &'a AstNode<'a>) -> View {
-    let children: Vec<_> = node.children().map(node_view).collect();
-    match &node.data.borrow().value {
-        NodeValue::Text(text) => text.into_view(),
-        NodeValue::Heading(heading) => {
-            let id = leaf_text(node).map(|s| s.to_lowercase().replace(' ', "-"));
-            match heading.level {
-                0 | 1 => view!(<h1 id=id>{children}</h1>).into_view(),
-                2 => view!(<h2 id=id>{children}</h2>).into_view(),
-                3 => view!(<h3 id=id>{children}</h3>).into_view(),
-                4 => view!(<h4 id=id>{children}</h4>).into_view(),
-                5 => view!(<h5 id=id>{children}</h5>).into_view(),
-                _ => view!(<h6 id=id>{children}</h6>).into_view(),
-            }
-        }
-        NodeValue::List(list) => match list.list_type {
-            ListType::Bullet => view!(<ul>{children}</ul>).into_view(),
-            ListType::Ordered => view!(<ol>{children}</ol>).into_view(),
-        },
-        NodeValue::Item(_) => view!(<li>{children}</li>).into_view(),
-        NodeValue::Paragraph => view!(<p>{children}</p>).into_view(),
-        NodeValue::Code(code) => {
-            if let Some(prim) = Primitive::from_name(&code.literal) {
-                view!(<Prim prim=prim glyph_only=true/>).into_view()
-            } else {
-                view!(<code>{&code.literal}</code>).into_view()
-            }
-        }
-        NodeValue::Link(link) => {
-            let text = leaf_text(node).unwrap_or_default();
-            if let Some(prim) = Primitive::from_name(&text) {
-                view!(<Prim prim=prim/>).into_view()
-            } else {
-                view!(<a href={&link.url} title={&link.title}>{text}</a>).into_view()
-            }
-        }
-        NodeValue::Emph => view!(<em>{children}</em>).into_view(),
-        NodeValue::Strong => view!(<strong>{children}</strong>).into_view(),
-        NodeValue::Strikethrough => view!(<del>{children}</del>).into_view(),
-        NodeValue::LineBreak => view!(<br/>).into_view(),
-        NodeValue::CodeBlock(block) => {
-            if uiua::parse(&block.literal, None).1.is_empty() {
-                view!(<Editor example={&block.literal}/>).into_view()
-            } else {
-                view!(<code class="code-block">{&block.literal}</code>).into_view()
-            }
-        }
-        _ => children.into_view(),
-    }
-}
-
-fn leaf_text<'a>(node: &'a AstNode<'a>) -> Option<String> {
-    match &node.data.borrow().value {
-        NodeValue::Text(text) => Some(text.into()),
-        NodeValue::Code(code) => Some(code.literal.clone()),
-        _ => node.first_child().and_then(leaf_text),
+        { markdown(include_str!("../../changelog.md")) }
     }
 }

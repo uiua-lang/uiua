@@ -4,6 +4,7 @@ mod backend;
 mod docs;
 mod editor;
 mod examples;
+mod markdown;
 mod other;
 mod primitive;
 mod tour;

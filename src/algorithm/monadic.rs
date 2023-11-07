@@ -249,15 +249,21 @@ impl<T: ArrayValue> Array<T> {
             self.shape.rotate_left(1);
             return;
         }
-        let mut temp = EcoVec::with_capacity(self.data.len());
+        let mut temp_data = self.data.clone();
+        let temp = temp_data.as_mut_slice();
         let row_len = self.row_len();
         let row_count = self.row_count();
-        for j in 0..row_len {
-            for i in 0..row_count {
-                temp.push(self.data[i * row_len + j].clone());
+        let op = |(j, chunk): (usize, &mut [T])| {
+            for (i, item) in chunk.iter_mut().enumerate() {
+                *item = self.data[i * row_len + j].clone();
             }
+        };
+        if row_count > 500 {
+            temp.par_chunks_mut(row_count).enumerate().for_each(op);
+        } else {
+            temp.chunks_mut(row_count).enumerate().for_each(op);
         }
-        self.data = temp.into();
+        self.data = temp_data;
         self.shape.rotate_left(1);
     }
     /// Inverse transpose the array
@@ -270,15 +276,21 @@ impl<T: ArrayValue> Array<T> {
             self.shape.rotate_right(1);
             return;
         }
-        let mut temp = EcoVec::with_capacity(self.data.len());
+        let mut temp_data = self.data.clone();
+        let temp = temp_data.as_mut_slice();
         let col_len = *self.shape.last().unwrap();
         let col_count: usize = self.shape.iter().rev().skip(1).product();
-        for j in 0..col_len {
-            for i in 0..col_count {
-                temp.push(self.data[i * col_len + j].clone());
+        let op = |(j, chunk): (usize, &mut [T])| {
+            for (i, item) in chunk.iter_mut().enumerate() {
+                *item = self.data[i * col_len + j].clone();
             }
+        };
+        if col_count > 500 {
+            temp.par_chunks_mut(col_count).enumerate().for_each(op);
+        } else {
+            temp.chunks_mut(col_count).enumerate().for_each(op);
         }
-        self.data = temp.into();
+        self.data = temp_data;
         self.shape.rotate_right(1);
     }
 }

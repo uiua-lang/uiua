@@ -42,3 +42,6 @@
 
 ⍤∶≍, "World! Hello" ⍜⊜□⇌ ≠@ . "Hello World!"
 ⍤∶≍, "sdrow emo sera esehT" ⍜⊕□≡⇌ ≠@ . $ These are some words
+
+⍤∶≍, ⍜⍉∘. ↯3_3⇡9
+⍤∶≍, ⍜⍉∘. ↯2_3_4_5⇡120

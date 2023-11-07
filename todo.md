@@ -1,5 +1,5 @@
 # Uiua Todo
-Within a each section, items are ordered (roughly) by decreasing priority.
+Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
 - Multimedia

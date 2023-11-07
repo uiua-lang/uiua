@@ -143,12 +143,12 @@ where
     match a_depth.cmp(&b_depth) {
         Ordering::Equal => {}
         Ordering::Less => {
-            for b_dim in b.shape[..b_depth].iter().rev() {
+            for b_dim in b.shape[..b_depth - a_depth].iter().rev() {
                 a.reshape_scalar(*b_dim);
             }
         }
         Ordering::Greater => {
-            for a_dim in a.shape[..a_depth].iter().rev() {
+            for a_dim in a.shape[..a_depth - b_depth].iter().rev() {
                 b.reshape_scalar(*a_dim);
             }
         }
@@ -224,12 +224,12 @@ where
     match a_depth.cmp(&b_depth) {
         Ordering::Equal => {}
         Ordering::Less => {
-            for b_dim in b.shape[..b_depth].iter().rev() {
+            for b_dim in b.shape[..b_depth - a_depth].iter().rev() {
                 a.reshape_scalar(*b_dim);
             }
         }
         Ordering::Greater => {
-            for a_dim in a.shape[..a_depth].iter().rev() {
+            for a_dim in a.shape[..a_depth - b_depth].iter().rev() {
                 b.reshape_scalar(*a_dim);
             }
         }

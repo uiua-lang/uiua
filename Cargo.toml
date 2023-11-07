@@ -11,79 +11,88 @@ repository = "https://github.com/uiua-lang/uiua"
 version = "0.1.0"
 
 [dependencies]
+# Core dependencies
 bufreaderwriter = "0.2.4"
-clap = { version = "4", optional = true, features = ["derive"] }
-color-backtrace = { version = "0.6.1", optional = true }
 colored = "2"
 crossbeam-channel = "0.5.8"
-ctrlc = { version = "3", optional = true }
 dashmap = "5"
 ecow = "0.2.0"
 enum-iterator = "1.4.1"
 gif = "0.12.0"
-hodaun = { version = "0.4.1", optional = true, features = ["output", "wav"] }
 hound = "3"
-httparse = { version = "1.8.0", optional = true }
-image = { version = "0.24.5", features = ["bmp", "gif", "ico", "jpeg", "png"] }
-indexmap = { version = "2", optional = true, features = ["serde"] }
+image = {version = "0.24.5", features = ["bmp", "gif", "ico", "jpeg", "png"]}
 instant = "0.1.12"
-lockfree = { version = "0.5.1", optional = true }
-notify = { version = "6", optional = true }
+num_cpus = "1.16.0"
 once_cell = "1"
-open = { version = "5", optional = true }
 parking_lot = "0.12.1"
 paste = "1.0.14"
-rand = { version = "0.8.5", features = ["small_rng"] }
-rustls = { version = "0.21.7", optional = true, default-features = false, features = [
-    "tls12",
-] }
-serde = { version = "1", optional = true, features = ["derive"] }
-serde_yaml = { version = "0.9.27", optional = true }
-serde_json = { version = "1", optional = true }
-term_size = "1.0.0-beta1"
-tinyvec = { version = "1", features = ["alloc"] }
-tokio = { version = "1", optional = true, features = ["io-std", "rt"] }
-tower-lsp = { version = "0.20.0", optional = true }
-webpki-roots = { version = "0.25.0", optional = true }
-viuer = { version = "0.7.1", optional = true }
-num_cpus = "1.16.0"
+pathdiff = "0.2.1"
+rand = {version = "0.8.5", features = ["small_rng"]}
 rayon = "1.8.0"
 regex = "1.10.2"
+term_size = "1.0.0-beta1"
+tinyvec = {version = "1", features = ["alloc"]}
 unicode-segmentation = "1.10"
-trash = { version = "3.1.2", optional = true }
-crossterm = { version = "0.27.0", optional = true, default-features = false }
-rustyline = { version = "12.0.0", optional = true }
-pathdiff = "0.2.1"
+
+# Native dependencies
+crossterm = {version = "0.27.0", optional = true, default-features = false}
+httparse = {version = "1.8.0", optional = true}
+open = {version = "5", optional = true}
+rustls = {version = "0.21.7", optional = true, default-features = false, features = [
+  "tls12",
+]}
+trash = {version = "3.1.2", optional = true}
+viuer = {version = "0.7.1", optional = true}
+webpki-roots = {version = "0.25.0", optional = true}
+
+# Native audio dependencies
+hodaun = {version = "0.4.1", optional = true, features = ["output", "wav"]}
+lockfree = {version = "0.5.1", optional = true}
+
+# Binary dependencies
+clap = {version = "4", optional = true, features = ["derive"]}
+color-backtrace = {version = "0.6.1", optional = true}
+ctrlc = {version = "3", optional = true}
+notify = {version = "6", optional = true}
+rustyline = {version = "12.0.0", optional = true}
+serde = {version = "1", optional = true, features = ["derive"]}
+serde_json = {version = "1", optional = true}
+tokio = {version = "1", optional = true, features = ["io-std", "rt"]}
+tower-lsp = {version = "0.20.0", optional = true}
+
+# Profiling dependencies
+indexmap = {version = "2", optional = true, features = ["serde"]}
+serde_yaml = {version = "0.9.27", optional = true}
 
 [features]
-default = ["no_complex", "complex"]
-no_complex = [
-    "binary",
-    "terminal_image",
-    "https",
-    "invoke",
-    "trash",
-    "raw_mode",
-]
-binary = [
-    "ctrlc",
-    "notify",
-    "clap",
-    "color-backtrace",
-    "lsp",
-    "rustyline",
-    "stand",
-]
 audio = ["hodaun", "lockfree"]
+binary = [
+  "ctrlc",
+  "notify",
+  "clap",
+  "color-backtrace",
+  "lsp",
+  "rustyline",
+  "stand",
+]
 bytes = []
 complex = []
 debug = []
-raw_mode = ["crossterm"]
+default = ["no_complex", "complex"]
 https = ["httparse", "rustls", "webpki-roots"]
-lsp = ["tower-lsp", "tokio"]
-profile = ["serde", "serde_yaml", "indexmap"]
-stand = ["serde", "serde_json"]
 invoke = ["open"]
+lsp = ["tower-lsp", "tokio"]
+no_complex = [
+  "binary",
+  "terminal_image",
+  "https",
+  "invoke",
+  "trash",
+  "raw_mode",
+]
+profile = ["serde", "serde_yaml", "indexmap"]
+raw_mode = ["crossterm"]
+stand = ["serde", "serde_json"]
 terminal_image = ["viuer"]
 
 [[bin]]

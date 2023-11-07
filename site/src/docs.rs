@@ -11,6 +11,7 @@ use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoView
 
 use crate::{
     element,
+    markdown::Markdown,
     other::*,
     primitive::*,
     tour::Tour,
@@ -36,6 +37,7 @@ pub enum DocsPage {
     Constants,
     StackIdioms,
     Optimizations,
+    Test,
 }
 
 impl IntoParam for DocsPage {
@@ -59,6 +61,7 @@ impl IntoParam for DocsPage {
                 "constants" => Some(Self::Constants),
                 "stack-idioms" => Some(Self::StackIdioms),
                 "optimizations" => Some(Self::Optimizations),
+                "test" => Some(Self::Test),
                 value => Some(Self::Search(value.into())),
             })
             .ok_or_else(|| ParamsError::MissingParam(name.to_string()))
@@ -93,6 +96,7 @@ pub fn Docs() -> impl IntoView {
             DocsPage::Constants => Constants().into_view(),
             DocsPage::StackIdioms => StackIdioms().into_view(),
             DocsPage::Optimizations => Optimizations().into_view(),
+            DocsPage::Test => view! {<Markdown src="/md/test.md"/>}.into_view(),
         };
 
         view! {

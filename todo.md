@@ -2,6 +2,7 @@
 Within a each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
+- level on scalar
 - under join
 - Multimedia
   - Sound input

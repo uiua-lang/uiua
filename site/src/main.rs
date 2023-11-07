@@ -1,6 +1,7 @@
 #![allow(non_snake_case)]
 
 mod backend;
+mod blog;
 mod docs;
 mod editor;
 mod examples;
@@ -19,7 +20,7 @@ use uiua::{ConstantDef, PrimClass, Primitive};
 use wasm_bindgen::JsCast;
 use web_sys::HtmlAudioElement;
 
-use crate::{docs::*, editor::*, other::*, tour::*, uiuisms::*};
+use crate::{blog::*, docs::*, editor::*, other::*, tour::*, uiuisms::*};
 
 pub fn main() {
     console_error_panic_hook::set_once();
@@ -134,6 +135,7 @@ pub fn Site() -> impl IntoView {
                         <Route path="tour" view=Tour/>
                         <Route path="isms" view=Uiuisms/>
                         <Route path="rtl" view=RightToLeft/>
+                        <Route path="blog/:page?" view=Blog/>
                         <Route path="*" view=NotFound/>
                     </Routes>
                 </div>

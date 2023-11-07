@@ -8,12 +8,17 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, RequestMode, Response};
 
-use crate::{editor::Editor, Prim};
+use crate::{editor::Editor, NotFound, Prim};
 
 #[component]
 #[allow(unused_braces)]
-pub fn Markdown<'a>(src: &'a str) -> impl IntoView {
-    let src = src.to_owned();
+pub fn Markdown<S: Into<String>>(src: S) -> impl IntoView {
+    view!(<Fetch src={src.into()} f=markdown/>)
+}
+
+#[component]
+pub fn Fetch<S: Into<String>, F: Fn(&str) -> View + 'static>(src: S, f: F) -> impl IntoView {
+    let src = src.into();
     let (src, _) = create_signal(src);
     let once = create_resource(
         || (),
@@ -21,7 +26,8 @@ pub fn Markdown<'a>(src: &'a str) -> impl IntoView {
     );
     view! {{
         move || match once.get() {
-            Some(text) => markdown(&text),
+            Some(text) if text.is_empty() || text.starts_with("<!DOCTYPE html>") => view!(<NotFound/>).into_view(),
+            Some(text) => f(&text),
             None => view! {<h3 class="running-text">"Loading..."</h3>}.into_view(),
         }
     }}
@@ -42,14 +48,29 @@ async fn fetch(src: &str) -> Result<String, JsValue> {
 
 pub fn markdown(text: &str) -> View {
     let arena = Arena::new();
-    let root = parse_document(&arena, text, &ComrakOptions::default());
+    let text = text
+        .replace("```", "<code block delim>")
+        .replace("``", "` `")
+        .replace("<code block delim>", "```");
+    let root = parse_document(&arena, &text, &ComrakOptions::default());
     node_view(root)
 }
 
 fn node_view<'a>(node: &'a AstNode<'a>) -> View {
+    logging::log!("{:?}", node.data.borrow().value);
     let children: Vec<_> = node.children().map(node_view).collect();
     match &node.data.borrow().value {
-        NodeValue::Text(text) => text.into_view(),
+        NodeValue::Text(text) => {
+            if let Some(text) = text
+                .strip_prefix('[')
+                .and_then(|text| text.strip_suffix(']'))
+            {
+                if let Some(prim) = Primitive::from_name(text) {
+                    return view!(<Prim prim=prim/>).into_view();
+                }
+            }
+            text.into_view()
+        }
         NodeValue::Heading(heading) => {
             let id = leaf_text(node).map(|s| s.to_lowercase().replace(' ', "-"));
             match heading.level {
@@ -88,7 +109,7 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
         NodeValue::LineBreak => view!(<br/>).into_view(),
         NodeValue::CodeBlock(block) => {
             if uiua::parse(&block.literal, None).1.is_empty() {
-                view!(<Editor example={&block.literal}/>).into_view()
+                view!(<Editor example={block.literal.trim_end()}/>).into_view()
             } else {
                 view!(<code class="code-block">{&block.literal}</code>).into_view()
             }

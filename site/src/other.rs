@@ -3,11 +3,7 @@ use leptos_meta::*;
 use leptos_router::*;
 use uiua::{constants, Primitive, SysOp};
 
-use crate::{
-    editor::Editor,
-    markdown::{markdown, Markdown},
-    Const, Prim, Prims,
-};
+use crate::{editor::Editor, markdown::markdown, Const, Prim, Prims};
 
 #[component]
 pub fn Design() -> impl IntoView {

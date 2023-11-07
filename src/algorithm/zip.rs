@@ -424,6 +424,11 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
             return distribute(env);
         }
     }
+    if let Some((start, rest)) = ns.split_last() {
+        if start.is_some_and(|n| n == -1) && !rest.is_empty() && rest.iter().all(Option::is_none) {
+            return tribute(env);
+        }
+    }
     let f = env.pop_function()?;
     let f_sig = f.signature();
     if f_sig.outputs != 1 {
@@ -443,10 +448,6 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
         [] => return Ok(()),
         &[n] => {
             let xs = env.pop(1)?;
-            if xs.rank() == 0 {
-                env.push(xs);
-                return Ok(());
-            }
             match n {
                 Some(0) => return each1(f, xs, env),
                 Some(-1) => return rows1(f, xs, env),
@@ -463,11 +464,6 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
         &[xn, yn] => {
             let xs = env.pop(1)?;
             let ys = env.pop(2)?;
-            if xs.rank() == 0 && ys.rank() == 0 {
-                env.push(xs);
-                env.push(ys);
-                return Ok(());
-            }
             match (xn, yn) {
                 (Some(0), Some(0)) => return each2(f, xs, ys, env),
                 (Some(-1), Some(-1)) => return rows2(f, xs, ys, env),

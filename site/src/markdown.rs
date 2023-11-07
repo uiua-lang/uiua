@@ -57,7 +57,6 @@ pub fn markdown(text: &str) -> View {
 }
 
 fn node_view<'a>(node: &'a AstNode<'a>) -> View {
-    logging::log!("{:?}", node.data.borrow().value);
     let children: Vec<_> = node.children().map(node_view).collect();
     match &node.data.borrow().value {
         NodeValue::Text(text) => {

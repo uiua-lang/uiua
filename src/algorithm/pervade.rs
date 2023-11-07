@@ -125,6 +125,8 @@ where
 pub fn bin_pervade<A, B, C, F>(
     mut a: Array<A>,
     mut b: Array<B>,
+    mut a_depth: usize,
+    mut b_depth: usize,
     env: &Uiua,
     f: F,
 ) -> UiuaResult<Array<C>>
@@ -135,7 +137,25 @@ where
     F: PervasiveFn<A, B, Output = C> + Clone,
     F::Error: Into<UiuaError>,
 {
+    // Account for depths
+    a_depth = a_depth.min(a.rank());
+    b_depth = b_depth.min(b.rank());
+    match a_depth.cmp(&b_depth) {
+        Ordering::Equal => {}
+        Ordering::Less => {
+            for b_dim in b.shape[..b_depth].iter().rev() {
+                a.reshape_scalar(*b_dim);
+            }
+        }
+        Ordering::Greater => {
+            for a_dim in a.shape[..a_depth].iter().rev() {
+                b.reshape_scalar(*a_dim);
+            }
+        }
+    }
+    // Fill
     fill_array_shapes(&mut a, &mut b, env)?;
+    // Pervade
     let shape = Shape::from(a.shape().max(b.shape()));
     let mut data = CowSlice::with_capacity(a.element_count().max(b.element_count()));
     bin_pervade_recursive(&a, &b, &mut data, env, f).map_err(Into::into)?;
@@ -190,13 +210,33 @@ where
 pub fn bin_pervade_mut<T>(
     a: &mut Array<T>,
     mut b: Array<T>,
+    mut a_depth: usize,
+    mut b_depth: usize,
     env: &Uiua,
     f: impl Fn(T, T) -> T + Copy,
 ) -> UiuaResult
 where
     T: ArrayValue + Copy,
 {
+    // Account for depths
+    a_depth = a_depth.min(a.rank());
+    b_depth = b_depth.min(b.rank());
+    match a_depth.cmp(&b_depth) {
+        Ordering::Equal => {}
+        Ordering::Less => {
+            for b_dim in b.shape[..b_depth].iter().rev() {
+                a.reshape_scalar(*b_dim);
+            }
+        }
+        Ordering::Greater => {
+            for a_dim in a.shape[..a_depth].iter().rev() {
+                b.reshape_scalar(*a_dim);
+            }
+        }
+    }
+    // Fill
     fill_array_shapes(a, &mut b, env)?;
+    // Pervade
     let ash = a.shape.as_slice();
     let bsh = b.shape.as_slice();
     // Try to avoid copying when possible
@@ -250,9 +290,8 @@ fn bin_pervade_recursive_mut<T>(
     b_data: &mut [T],
     b_shape: &[usize],
     f: impl Fn(T, T) -> T + Copy,
-) -> bool
-where
-    T: ArrayValue + Copy,
+) where
+    T: Copy,
 {
     match (a_shape, b_shape) {
         ([], []) => {
@@ -263,14 +302,12 @@ where
             for a in a_data {
                 *a = f(*a, b_scalar);
             }
-            true
         }
         ([], _) => {
             let a_scalar = a_data[0];
             for b in b_data {
                 *b = f(a_scalar, *b);
             }
-            false
         }
         (ash, bsh) => {
             let a_row_len = a_data.len() / ash[0];
@@ -281,7 +318,6 @@ where
             {
                 bin_pervade_recursive_mut(a, &ash[1..], b, &bsh[1..], f);
             }
-            ash.len() > bsh.len()
         }
     }
 }
@@ -293,7 +329,7 @@ fn bin_pervade_recursive_mut_left<T>(
     b_shape: &[usize],
     f: impl Fn(T, T) -> T + Copy,
 ) where
-    T: ArrayValue + Copy,
+    T: Copy,
 {
     match (a_shape, b_shape) {
         ([], _) => {
@@ -325,7 +361,7 @@ fn bin_pervade_recursive_mut_right<T>(
     b_shape: &[usize],
     f: impl Fn(T, T) -> T + Copy,
 ) where
-    T: ArrayValue + Copy,
+    T: Copy,
 {
     match (a_shape, b_shape) {
         (_, []) => {

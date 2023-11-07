@@ -975,6 +975,15 @@ code:
         self.push(f(a, b, self)?);
         Ok(())
     }
+    pub(crate) fn dyadic_oo_00_env<V: Into<Value>>(
+        &mut self,
+        f: fn(Value, Value, usize, usize, &Self) -> UiuaResult<V>,
+    ) -> UiuaResult {
+        let a = self.pop(1)?;
+        let b = self.pop(2)?;
+        self.push(f(a, b, 0, 0, self)?);
+        Ok(())
+    }
     pub(crate) fn dyadic_rr_env<V: Into<Value>>(
         &mut self,
         f: fn(&Value, &Value, &Self) -> UiuaResult<V>,

@@ -10,7 +10,7 @@ use crate::{
     array::{FormatShape, Shape},
     function::Function,
     value::Value,
-    Uiua, UiuaResult,
+    Instr, Primitive, Uiua, UiuaResult,
 };
 
 use super::{multi_output, MultiOutput};
@@ -226,6 +226,35 @@ fn rowsn(f: Arc<Function>, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
+type ValueBinFn = fn(Value, Value, usize, usize, &Uiua) -> UiuaResult<Value>;
+
+fn instrs_bin_pervasive(instrs: &[Instr]) -> Option<ValueBinFn> {
+    if let [Instr::Prim(prim, _)] = instrs {
+        use Primitive::*;
+        return Some(match prim {
+            Add => Value::add,
+            Sub => Value::sub,
+            Mul => Value::mul,
+            Div => Value::div,
+            Pow => Value::pow,
+            Mod => Value::modulus,
+            Log => Value::log,
+            Eq => Value::is_eq,
+            Ne => Value::is_ne,
+            Lt => Value::is_lt,
+            Gt => Value::is_gt,
+            Le => Value::is_le,
+            Ge => Value::is_ge,
+            Complex => Value::complex,
+            Max => Value::max,
+            Min => Value::min,
+            Atan => Value::atan2,
+            _ => return None,
+        });
+    }
+    None
+}
+
 pub fn distribute(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
@@ -299,24 +328,28 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
 }
 
 fn distribute2(f: Arc<Function>, a: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
-    let outputs = f.signature().outputs;
-    if xs.row_count() == 0 {
-        for _ in 0..outputs {
-            env.push(xs.clone());
+    if let Some(f) = instrs_bin_pervasive(&f.instrs) {
+        env.push(f(a, xs, 0, 1, env)?);
+    } else {
+        let outputs = f.signature().outputs;
+        if xs.row_count() == 0 {
+            for _ in 0..outputs {
+                env.push(xs.clone());
+            }
+            return Ok(());
         }
-        return Ok(());
-    }
-    let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
-    for x in xs.into_rows() {
-        env.push(x);
-        env.push(a.clone());
-        env.call_error_on_break(f.clone(), "break is not allowed in distribute")?;
-        for i in 0..outputs {
-            new_rows[i].push(env.pop("distribute's function result")?);
+        let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
+        for x in xs.into_rows() {
+            env.push(x);
+            env.push(a.clone());
+            env.call_error_on_break(f.clone(), "break is not allowed in distribute")?;
+            for i in 0..outputs {
+                new_rows[i].push(env.pop("distribute's function result")?);
+            }
         }
-    }
-    for new_rows in new_rows.into_iter().rev() {
-        env.push(Value::from_row_values(new_rows, env)?);
+        for new_rows in new_rows.into_iter().rev() {
+            env.push(Value::from_row_values(new_rows, env)?);
+        }
     }
     Ok(())
 }
@@ -394,24 +427,28 @@ pub fn tribute(env: &mut Uiua) -> UiuaResult {
 }
 
 fn tribute2(f: Arc<Function>, xs: Value, a: Value, env: &mut Uiua) -> UiuaResult {
-    let outputs = f.signature().outputs;
-    if xs.row_count() == 0 {
-        for _ in 0..outputs {
-            env.push(xs.clone());
+    if let Some(f) = instrs_bin_pervasive(&f.instrs) {
+        env.push(f(xs, a, 1, 0, env)?);
+    } else {
+        let outputs = f.signature().outputs;
+        if xs.row_count() == 0 {
+            for _ in 0..outputs {
+                env.push(xs.clone());
+            }
+            return Ok(());
         }
-        return Ok(());
-    }
-    let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
-    for x in xs.into_rows() {
-        env.push(a.clone());
-        env.push(x);
-        env.call_error_on_break(f.clone(), "break is not allowed in tribute")?;
-        for i in 0..outputs {
-            new_rows[i].push(env.pop("tribute's function result")?);
+        let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
+        for x in xs.into_rows() {
+            env.push(a.clone());
+            env.push(x);
+            env.call_error_on_break(f.clone(), "break is not allowed in tribute")?;
+            for i in 0..outputs {
+                new_rows[i].push(env.pop("tribute's function result")?);
+            }
         }
-    }
-    for new_rows in new_rows.into_iter().rev() {
-        env.push(Value::from_row_values(new_rows, env)?);
+        for new_rows in new_rows.into_iter().rev() {
+            env.push(Value::from_row_values(new_rows, env)?);
+        }
     }
     Ok(())
 }

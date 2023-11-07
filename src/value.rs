@@ -1134,12 +1134,12 @@ macro_rules! value_bin_impl {
     ),* ) => {
         impl Value {
             #[allow(unreachable_patterns, clippy::wrong_self_convention)]
-            pub(crate) fn $name(self, other: Self, env: &Uiua) -> UiuaResult<Self> {
+            pub(crate) fn $name(self, other: Self, a_depth: usize, b_depth: usize, env: &Uiua) -> UiuaResult<Self> {
                 Ok(match (self, other) {
                     $($($(#[cfg(feature = $feature2)])* (Value::$ip(mut a), Value::$ip(b)) => {
                         if val_retry!($ip, env) {
                             let mut a_clone = a.clone();
-                            if let Err(e) = bin_pervade_mut(&mut a_clone, b.clone(), env, $name::$f2) {
+                            if let Err(e) = bin_pervade_mut(&mut a_clone, b.clone(), a_depth, b_depth, env, $name::$f2) {
                                 if e.is_fill() {
                                     $(
                                         let mut a = a.convert();
@@ -1153,44 +1153,44 @@ macro_rules! value_bin_impl {
                                 a_clone.into()
                             }
                         } else {
-                            bin_pervade_mut(&mut a, b, env, $name::$f2)?;
+                            bin_pervade_mut(&mut a, b, a_depth, b_depth, env, $name::$f2)?;
                             a.into()
                         }
                     },)*)*
                     $($($(#[cfg(feature = $feature1)])* (Value::$na(a), Value::$nb(b)) => {
                         if val_retry!($na, env) || val_retry!($nb, env) {
-                            let res = bin_pervade(a.clone(), b.clone(), env, InfalliblePervasiveFn::new($name::$f));
+                            let res = bin_pervade(a.clone(), b.clone(), a_depth, b_depth, env, InfalliblePervasiveFn::new($name::$f));
                             match res {
                                 Ok(arr) => arr.into(),
                                 #[allow(unreachable_code, unused_variables)]
                                 Err(e) if e.is_fill() => {
-                                    $(return bin_pervade(a.convert(), b.convert(), env, InfalliblePervasiveFn::new($name::$retry)).map(Into::into);)?
+                                    $(return bin_pervade(a.convert(), b.convert(), a_depth, b_depth, env, InfalliblePervasiveFn::new($name::$retry)).map(Into::into);)?
                                     return Err(e);
                                 }
                                 Err(e) => return Err(e),
                             }
                         } else {
-                            bin_pervade(a, b, env, InfalliblePervasiveFn::new($name::$f))?.into()
+                            bin_pervade(a, b, a_depth, b_depth, env, InfalliblePervasiveFn::new($name::$f))?.into()
                         }
                     },)*)*
                     (Value::Box(a), b) => {
                         match a.into_unboxed() {
-                            Ok(a) => Value::$name(a, b, env)?,
+                            Ok(a) => Value::$name(a, b, a_depth, b_depth, env)?,
                             Err(a) => {
                                 let b = b.coerce_as_boxes().into_owned();
-                                bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
-                                    Ok(Boxed(Value::$name(a.0, b.0, env)?))
+                                bin_pervade(a, b, a_depth, b_depth, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
+                                    Ok(Boxed(Value::$name(a.0, b.0, a_depth, b_depth, env)?))
                                 }))?.into()
                             }
                         }
                     },
                     (a, Value::Box(b)) => {
                         match b.into_unboxed() {
-                            Ok(b) => Value::$name(a, b, env)?,
+                            Ok(b) => Value::$name(a, b, a_depth, b_depth, env)?,
                             Err(b) => {
                                 let a = a.coerce_as_boxes().into_owned();
-                                bin_pervade(a, b, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
-                                    Ok(Boxed(Value::$name(a.0, b.0, env)?))
+                                bin_pervade(a, b, a_depth, b_depth, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
+                                    Ok(Boxed(Value::$name(a.0, b.0, a_depth, b_depth, env)?))
                                 }))?.into()
                             }
                         }

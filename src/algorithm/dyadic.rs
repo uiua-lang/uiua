@@ -680,7 +680,7 @@ impl<T: ArrayValue> Array<T> {
                 data.clear();
                 return;
             }
-            data.reserve(count * data.len());
+            data.reserve((count - 1) * data.len());
             let row = data.clone();
             for _ in 1..count {
                 data.extend_from_slice(&row);

@@ -46,9 +46,9 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
             Primitive::Sub => env.push(fast_table(xs, ys, sub::byte_byte)),
             Primitive::Mul => env.push(fast_table(xs, ys, mul::byte_byte)),
             Primitive::Div if flipped => env.push(fast_table(xs, ys, flip(div::byte_byte))),
-            Primitive::Div => env.push(fast_table(xs, ys, flip(div::byte_byte))),
+            Primitive::Div => env.push(fast_table(xs, ys, div::byte_byte)),
             Primitive::Mod if flipped => env.push(fast_table(xs, ys, flip(modulus::byte_byte))),
-            Primitive::Mod => env.push(fast_table(xs, ys, flip(modulus::byte_byte))),
+            Primitive::Mod => env.push(fast_table(xs, ys, modulus::byte_byte)),
             Primitive::Atan if flipped => env.push(fast_table::<f64, f64, _>(
                 xs.convert(),
                 ys.convert(),
@@ -57,10 +57,10 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
             Primitive::Atan => env.push(fast_table::<f64, f64, _>(
                 xs.convert(),
                 ys.convert(),
-                flip(atan2::num_num),
+                atan2::num_num,
             )),
             Primitive::Complex if flipped => env.push(fast_table(xs, ys, flip(complex::byte_byte))),
-            Primitive::Complex => env.push(fast_table(xs, ys, flip(complex::byte_byte))),
+            Primitive::Complex => env.push(fast_table(xs, ys, complex::byte_byte)),
             Primitive::Min => env.push(fast_table(xs, ys, min::byte_byte)),
             Primitive::Max => env.push(fast_table(xs, ys, max::byte_byte)),
             Primitive::Join | Primitive::Couple => {
@@ -146,11 +146,11 @@ macro_rules! table_math {
                 Primitive::Sub => env.push(fast_table(xs, ys, sub::$f)),
                 Primitive::Mul => env.push(fast_table(xs, ys, mul::$f)),
                 Primitive::Div if flipped => env.push(fast_table(xs, ys, flip(div::$f))),
-                Primitive::Div => env.push(fast_table(xs, ys, flip(div::$f))),
+                Primitive::Div => env.push(fast_table(xs, ys, div::$f)),
                 Primitive::Mod if flipped => env.push(fast_table(xs, ys, flip(modulus::$f))),
-                Primitive::Mod => env.push(fast_table(xs, ys, flip(modulus::$f))),
+                Primitive::Mod => env.push(fast_table(xs, ys, modulus::$f)),
                 Primitive::Atan if flipped => env.push(fast_table(xs, ys, flip(atan2::$f))),
-                Primitive::Atan => env.push(fast_table(xs, ys, flip(atan2::$f))),
+                Primitive::Atan => env.push(fast_table(xs, ys, atan2::$f)),
                 #[cfg(feature = "complex")]
                 Primitive::Complex if flipped => env.push(fast_table(xs, ys, flip(complex::$f))),
                 #[cfg(feature = "complex")]

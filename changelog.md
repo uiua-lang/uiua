@@ -17,6 +17,8 @@ If you are reading this on the website, then these changes are live here.
   - [`transpose` `⍉`](https://uiua.org/docs/transpose) is now much faster
   - [`distribute` `∺`](https://uiua.org/docs/distribute), [`tribute` `≐`](https://uiua.org/docs/tribute), and [`level` `≑`](https://uiua.org/docs/level) are now much faster if their function is a pervasive built-in
   - Some other functions are also a bit faster
+### Website
+- Hold shift when copying a link to copy a Markdown link
 
 ## 0.1.0 - 2023-11-03
 ### Language

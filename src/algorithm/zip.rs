@@ -515,11 +515,12 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
             }
             let xn = rank_to_depth(xn, xs.rank());
             let yn = rank_to_depth(yn, ys.rank());
-            let res = if let Some(f) = instrs_bin_pervasive(&f.instrs) {
-                f(xs, ys, xn, yn, env)?
-            } else {
-                dyadic_level_recursive(f, xs, ys, xn, yn, env)?
-            };
+            // let res = if let Some(f) = instrs_bin_pervasive(&f.instrs) {
+            //     f(xs, ys, xn, yn, env)?
+            // } else {
+            //     dyadic_level_recursive(f, xs, ys, xn, yn, env)?
+            // };
+            let res = dyadic_level_recursive(f, xs, ys, xn, yn, env)?;
             env.push(res);
         }
         is => {

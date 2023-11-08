@@ -274,6 +274,10 @@ pub fn Editor<'a>(
     // Update the code when the textarea is changed
     let code_input = move |event: Event| {
         let event = event.dyn_into::<web_sys::InputEvent>().unwrap();
+        // to prevent double input of yet to be composed input events
+        if event.is_composing() {
+            return;
+        }
         let parent = code_element();
         let child: HtmlDivElement = event.target().unwrap().dyn_into().unwrap();
         if !parent.contains(Some(&child)) {

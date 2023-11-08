@@ -2,10 +2,7 @@ mod utils;
 
 use std::{cell::Cell, rc::Rc, time::Duration};
 
-use base64::engine::{
-    general_purpose::{STANDARD, URL_SAFE},
-    Engine,
-};
+use base64::engine::{general_purpose::STANDARD, Engine};
 
 use leptos::{ev::keydown, *};
 use leptos_router::{use_navigate, BrowserIntegration, History, LocationChange, NavigateOptions};
@@ -161,7 +158,7 @@ pub fn Editor<'a>(
 
         // Update URL
         {
-            let encoded = URL_SAFE.encode(&input);
+            let encoded = url_encode_code(&input);
             if let EditorMode::Pad = mode {
                 BrowserIntegration {}.navigate(&LocationChange {
                     value: format!("/pad?src={encoded}"),
@@ -844,7 +841,7 @@ pub fn Editor<'a>(
 
     // Copy a link to the code
     let copy_link = move |event: MouseEvent| {
-        let encoded = URL_SAFE.encode(code_text());
+        let encoded = url_encode_code(&code_text());
         let url = format!("https://uiua.org/pad?src={encoded}");
         let to_copy = if event.shift_key() {
             let text =

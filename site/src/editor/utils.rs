@@ -7,6 +7,7 @@ use std::{
     time::Duration,
 };
 
+use base64::engine::{general_purpose::URL_SAFE, Engine};
 use image::ImageOutputFormat;
 use leptos::*;
 
@@ -949,4 +950,12 @@ pub fn progressive_strings(input: &str) -> Vec<String> {
     strings.rotate_right(1);
     strings[0] = input.into();
     strings
+}
+
+pub fn url_encode_code(code: &str) -> String {
+    format!(
+        "{}__{}",
+        uiua::VERSION.replace('.', "_"),
+        URL_SAFE.encode(code)
+    )
 }

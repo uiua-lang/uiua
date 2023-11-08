@@ -112,6 +112,9 @@ pub use complex::*;
 #[cfg(not(feature = "complex"))]
 use complex::*;
 
+/// The Uiua version
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 /// A Uiua identifier
 pub type Ident = Arc<str>;
 

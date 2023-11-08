@@ -839,10 +839,32 @@ pub fn Editor<'a>(
     };
 
     // Copy a link to the code
-    let copy_link = move |_| {
+    let copy_link = move |event: MouseEvent| {
         let encoded = URL_SAFE.encode(code_text());
         let url = format!("https://uiua.org/pad?src={encoded}");
-        _ = window().navigator().clipboard().unwrap().write_text(&url);
+        let to_copy = if event.shift_key() {
+            let text =
+                if let Some((start, end)) = get_code_cursor().filter(|(start, end)| start != end) {
+                    let st = start.min(end);
+                    let en = start.max(end);
+                    let code: String = code_text()
+                        .chars()
+                        .skip(st as usize)
+                        .take((en - st) as usize)
+                        .collect();
+                    format!("`{code}`")
+                } else {
+                    "text".into()
+                };
+            format!("[{text}]({url})")
+        } else {
+            url
+        };
+        _ = window()
+            .navigator()
+            .clipboard()
+            .unwrap()
+            .write_text(&to_copy);
         if let EditorMode::Pad = mode {
             window()
                 .history()
@@ -856,7 +878,7 @@ pub fn Editor<'a>(
         if copied_link.get() {
             "Copied!"
         } else {
-            "Copy a link to this code"
+            "Copy a link to this code (hold shift for markdown)"
         }
     };
 

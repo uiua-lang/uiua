@@ -783,7 +783,7 @@ impl Parser {
             id: FunctionId::Anonymous(span),
             signature: None,
             lines: vec![operands],
-            closed: true,
+            closed: false,
         })))
     }
     fn try_spaces(&mut self) -> Option<Sp<Word>> {

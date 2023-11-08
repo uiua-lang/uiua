@@ -522,7 +522,7 @@ code:
                 &Instr::Switch { count, span } => self.with_span(span, |env| {
                     let i = env
                         .pop("switch index")?
-                        .as_nat(env, "Switch index mut be a natural number")?;
+                        .as_nat(env, "Switch index must be a natural number")?;
                     if i >= count {
                         return Err(env.error(format!(
                             "Switch index {i} is out of bounds for switch of size {count}"

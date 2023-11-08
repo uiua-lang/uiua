@@ -1785,8 +1785,8 @@ impl_primitive!(
     (3, Untake),
     (3, Undrop),
     (3, Unkeep),
-    (3[1], Unpartition),
-    (3[1], Ungroup),
+    (1[1], Unpartition),
+    (1[1], Ungroup),
     // Optimizations
     (1, Cos),
     (1, Last),

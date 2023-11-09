@@ -50,6 +50,7 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
         Unbox => Instr::Prim(Box, span),
         Where => Instr::ImplPrim(InvWhere, span),
         Utf => Instr::ImplPrim(InvUtf, span),
+        Parse => Instr::ImplPrim(InvParse, span),
         _ => return None,
     })
 }
@@ -69,6 +70,7 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
         InvAtan => Instr::Prim(Atan, span),
         InvComplex => Instr::Prim(Complex, span),
         InvCouple => Instr::Prim(Couple, span),
+        InvParse => Instr::Prim(Parse, span),
         _ => return None,
     })
 }

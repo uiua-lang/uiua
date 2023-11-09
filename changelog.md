@@ -10,6 +10,7 @@ If you are reading this on the website, then these changes are live here.
 - [`range` `⇡`](https://uiua.org/docs/range) called on a list of 0 or 1 values is now more consistent
 - [`fill` `⬚`](https://uiua.org/docs/fill) now works with [`rotate` `↻`](https://uiua.org/docs/rotate) to give non-wrapping behavior
 - [`fill` `⬚`](https://uiua.org/docs/fill) now works with [`find` `⌕`](https://uiua.org/docs/find) if the searched-for array is longer than the array being searched
+- [`parse`](https://uiua.org/docs/parse) now works with [`invert` `⍘`](https://uiua.org/docs/invert) and [`under` `⍜`](https://uiua.org/docs/under)
 - The output of [`find` `⌕`](https://uiua.org/docs/find) is now the same shape as the array being searched
 ### Interpreter
 - Fix a bunch of bugs

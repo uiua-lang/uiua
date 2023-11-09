@@ -755,6 +755,7 @@ impl ImplPrimitive {
             ImplPrimitive::LastMinIndex => env.monadic_ref_env(Value::last_min_index)?,
             ImplPrimitive::LastMaxIndex => env.monadic_ref_env(Value::last_max_index)?,
             ImplPrimitive::FirstWhere => env.monadic_ref_env(Value::first_where)?,
+            ImplPrimitive::InvParse => env.monadic_ref(ToString::to_string)?,
         }
         Ok(())
     }

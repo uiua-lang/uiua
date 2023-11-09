@@ -1779,6 +1779,7 @@ impl_primitive!(
     (1, InvTrace),
     (1(2), InvAtan),
     (1(2), InvComplex),
+    (1, InvParse),
     // Unders
     (3, Unselect),
     (3, Unpick),

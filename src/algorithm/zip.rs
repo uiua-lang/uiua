@@ -495,8 +495,7 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
                 Some(_) => {}
             }
             let n = rank_to_depth(n, xs.rank());
-            let res = monadic_level_recursive(f, xs, n, env)?;
-            env.push(res);
+            monadic_level(f, xs, n, env)?;
         }
         &[xn, yn] => {
             let xs = env.pop(1)?;
@@ -540,23 +539,27 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn monadic_level_recursive(
-    f: Arc<Function>,
-    value: Value,
-    n: usize,
-    env: &mut Uiua,
-) -> UiuaResult<Value> {
+fn monadic_level(f: Arc<Function>, value: Value, mut n: usize, env: &mut Uiua) -> UiuaResult {
     if n == 0 {
         env.push(value);
         env.call(f)?;
-        Ok(env.pop("level's function result")?)
     } else {
-        let mut rows = Vec::with_capacity(value.row_count());
-        for row in value.into_rows() {
-            rows.push(monadic_level_recursive(f.clone(), row, n - 1, env)?);
+        n = n.min(value.rank());
+        let row_shape = Shape::from(&value.shape()[n..]);
+        let mut new_shape = Shape::from(&value.shape()[..n]);
+        let mut new_rows = Value::builder(new_shape.iter().product());
+        for value in value.row_shaped_slices(row_shape) {
+            env.push(value);
+            env.call_error_on_break(f.clone(), "break is not allowed in level")?;
+            let row = env.pop("level's function result")?;
+            new_rows.add_row(row, env)?;
         }
-        Value::from_row_values(rows, env)
+        let mut new_value = new_rows.finish();
+        new_shape.extend_from_slice(&new_value.shape()[1..]);
+        *new_value.shape_mut() = new_shape;
+        env.push(new_value);
     }
+    Ok(())
 }
 
 fn dyadic_level_recursive(

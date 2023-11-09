@@ -120,6 +120,21 @@ impl Value {
             Self::Box(array) => Box::new(array.rows().map(Value::from)),
         }
     }
+    /// Get an iterator over the rows of the value that have the given shape
+    pub fn row_shaped_slices(
+        &self,
+        row_shape: Shape,
+    ) -> Box<dyn ExactSizeIterator<Item = Self> + '_> {
+        match self {
+            Self::Num(array) => Box::new(array.row_shaped_slices(row_shape).map(Value::from)),
+            #[cfg(feature = "bytes")]
+            Self::Byte(array) => Box::new(array.row_shaped_slices(row_shape).map(Value::from)),
+            #[cfg(feature = "complex")]
+            Self::Complex(array) => Box::new(array.row_shaped_slices(row_shape).map(Value::from)),
+            Self::Char(array) => Box::new(array.row_shaped_slices(row_shape).map(Value::from)),
+            Self::Box(array) => Box::new(array.row_shaped_slices(row_shape).map(Value::from)),
+        }
+    }
     /// Consume the value and get an iterator over its rows
     pub fn into_rows(self) -> Box<dyn ExactDoubleIterator<Item = Self>> {
         match self {

@@ -166,6 +166,19 @@ impl<T: ArrayValue> Array<T> {
     pub fn rows(&self) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator + '_ {
         (0..self.row_count()).map(|row| self.row(row))
     }
+    /// Get an iterator over the row arrays of the array that have the given shape
+    pub fn row_shaped_slices(
+        &self,
+        row_shape: Shape,
+    ) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator + '_ {
+        let row_len: usize = row_shape.iter().product();
+        let row_count = self.element_count() / row_len;
+        (0..row_count).map(move |i| {
+            let start = i * row_len;
+            let end = start + row_len;
+            Self::new(row_shape.clone(), self.data.slice(start..end))
+        })
+    }
     /// Get a row array
     #[track_caller]
     pub fn row(&self, row: usize) -> Self {

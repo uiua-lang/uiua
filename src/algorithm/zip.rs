@@ -519,8 +519,7 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
             // } else {
             //     dyadic_level_recursive(f, xs, ys, xn, yn, env)?
             // };
-            let res = dyadic_level_recursive(f, xs, ys, xn, yn, env)?;
-            env.push(res);
+            dyadic_level(f, xs, ys, xn, yn, env)?;
         }
         is => {
             let mut args = Vec::with_capacity(is.len());
@@ -557,19 +556,20 @@ fn monadic_level(f: Arc<Function>, value: Value, mut n: usize, env: &mut Uiua) -
         let mut new_value = new_rows.finish();
         new_shape.extend_from_slice(&new_value.shape()[1..]);
         *new_value.shape_mut() = new_shape;
+        new_value.validate_shape();
         env.push(new_value);
     }
     Ok(())
 }
 
-fn dyadic_level_recursive(
+fn dyadic_level(
     f: Arc<Function>,
     xs: Value,
     ys: Value,
-    xn: usize,
-    yn: usize,
+    mut xn: usize,
+    mut yn: usize,
     env: &mut Uiua,
-) -> UiuaResult<Value> {
+) -> UiuaResult {
     let xs_prefix = &xs.shape()[..xn];
     let ys_prefix = &ys.shape()[..yn];
     if !xs_prefix.iter().zip(ys_prefix).all(|(a, b)| a == b) {
@@ -584,56 +584,51 @@ fn dyadic_level_recursive(
             FormatShape(ys_prefix)
         )));
     }
-    Ok(match (xn, yn) {
-        (0, 0) => {
-            env.push(ys);
-            env.push(xs);
-            env.call(f)?;
-            env.pop("level's function result")?
+    xn = xn.min(xs.rank());
+    yn = yn.min(ys.rank());
+    let xs_row_shape = Shape::from(&xs.shape()[xn..]);
+    let ys_row_shape = Shape::from(&ys.shape()[yn..]);
+    let mut new_rows = Value::builder(1);
+    if xn == yn {
+        for (x, y) in xs
+            .row_shaped_slices(xs_row_shape)
+            .zip(ys.row_shaped_slices(ys_row_shape))
+        {
+            env.push(y);
+            env.push(x);
+            env.call_error_on_break(f.clone(), "break is not allowed in level")?;
+            let row = env.pop("level's function result")?;
+            new_rows.add_row(row, env)?;
         }
-        (0, yn) => {
-            let mut new_rows = Vec::with_capacity(ys.row_count());
-            for y in ys.into_rows() {
-                new_rows.push(dyadic_level_recursive(
-                    f.clone(),
-                    xs.clone(),
-                    y,
-                    xn,
-                    yn - 1,
-                    env,
-                )?);
+        let mut new_value = new_rows.finish();
+        let mut new_shape = Shape::from_iter(if xs.shape().len() > ys.shape().len() {
+            xs.shape()[..xn].iter().copied()
+        } else {
+            ys.shape()[..yn].iter().copied()
+        });
+        new_shape.extend_from_slice(&new_value.shape()[1..]);
+        *new_value.shape_mut() = new_shape;
+        new_value.validate_shape();
+        env.push(new_value);
+    } else {
+        for x in xs.row_shaped_slices(xs_row_shape) {
+            for y in ys.row_shaped_slices(ys_row_shape.clone()) {
+                env.push(y);
+                env.push(x.clone());
+                env.call_error_on_break(f.clone(), "break is not allowed in level")?;
+                let row = env.pop("level's function result")?;
+                new_rows.add_row(row, env)?;
             }
-            Value::from_row_values(new_rows, env)?
         }
-        (xn, 0) => {
-            let mut new_rows = Vec::with_capacity(xs.row_count());
-            for x in xs.into_rows() {
-                new_rows.push(dyadic_level_recursive(
-                    f.clone(),
-                    x,
-                    ys.clone(),
-                    xn - 1,
-                    yn,
-                    env,
-                )?);
-            }
-            Value::from_row_values(new_rows, env)?
-        }
-        (xn, yn) => {
-            let mut new_rows = Vec::with_capacity(xs.row_count());
-            for (x, y) in xs.into_rows().zip(ys.into_rows()) {
-                new_rows.push(dyadic_level_recursive(
-                    f.clone(),
-                    x,
-                    y,
-                    xn - 1,
-                    yn - 1,
-                    env,
-                )?);
-            }
-            Value::from_row_values(new_rows, env)?
-        }
-    })
+        let mut new_value = new_rows.finish();
+        let mut new_shape =
+            Shape::from_iter(xs.shape()[..xn].iter().chain(&ys.shape()[..yn]).copied());
+        new_shape.extend_from_slice(&new_value.shape()[1..]);
+        *new_value.shape_mut() = new_shape;
+        new_value.validate_shape();
+        env.push(new_value);
+    }
+    Ok(())
 }
 
 fn multi_level_recursive(

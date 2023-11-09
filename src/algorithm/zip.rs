@@ -570,6 +570,8 @@ fn dyadic_level(
     mut yn: usize,
     env: &mut Uiua,
 ) -> UiuaResult {
+    xn = xn.min(xs.rank());
+    yn = yn.min(ys.rank());
     let xs_prefix = &xs.shape()[..xn];
     let ys_prefix = &ys.shape()[..yn];
     if !xs_prefix.iter().zip(ys_prefix).all(|(a, b)| a == b) {
@@ -584,11 +586,9 @@ fn dyadic_level(
             FormatShape(ys_prefix)
         )));
     }
-    xn = xn.min(xs.rank());
-    yn = yn.min(ys.rank());
     let xs_row_shape = Shape::from(&xs.shape()[xn..]);
     let ys_row_shape = Shape::from(&ys.shape()[yn..]);
-    let mut new_rows = Value::builder(1);
+    let mut new_rows = Vec::new();
     if xn == yn {
         for (x, y) in xs
             .row_shaped_slices(xs_row_shape)
@@ -598,9 +598,9 @@ fn dyadic_level(
             env.push(x);
             env.call_error_on_break(f.clone(), "break is not allowed in level")?;
             let row = env.pop("level's function result")?;
-            new_rows.add_row(row, env)?;
+            new_rows.push(row);
         }
-        let mut new_value = new_rows.finish();
+        let mut new_value = Value::from_row_values(new_rows, env)?;
         let mut new_shape = Shape::from_iter(if xs.shape().len() > ys.shape().len() {
             xs.shape()[..xn].iter().copied()
         } else {
@@ -617,10 +617,10 @@ fn dyadic_level(
                 env.push(x.clone());
                 env.call_error_on_break(f.clone(), "break is not allowed in level")?;
                 let row = env.pop("level's function result")?;
-                new_rows.add_row(row, env)?;
+                new_rows.push(row);
             }
         }
-        let mut new_value = new_rows.finish();
+        let mut new_value = Value::from_row_values(new_rows, env)?;
         let mut new_shape =
             Shape::from_iter(xs.shape()[..xn].iter().chain(&ys.shape()[..yn]).copied());
         new_shape.extend_from_slice(&new_value.shape()[1..]);

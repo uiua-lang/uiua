@@ -491,20 +491,20 @@ impl Primitive {
                 env.pop(1)?;
             }
             Primitive::Dip => {
-                // Dip is inlined, so this should never actually run
+                // This should only run if Dip is not inlined
                 let f = env.pop_function()?;
                 let x = env.pop(1)?;
                 env.call(f)?;
                 env.push(x);
             }
             Primitive::Gap => {
-                // Gap is inlined, so this should never actually run
+                // This should only run if Gap is not inlined
                 let f = env.pop_function()?;
                 let _x = env.pop(2)?;
                 env.call(f)?;
             }
             Primitive::Reach => {
-                // Reach is inlined, so this should never actually run
+                // This should only run if Reach is not inlined
                 let f = env.pop_function()?;
                 let x = env.pop(1)?;
                 let _y = env.pop(2)?;
@@ -532,11 +532,13 @@ impl Primitive {
                 env.push(x.ocean(0.0, env)?);
             }
             Primitive::Invert => {
+                // This should only run if Invert is not inlined
                 let f = env.pop_function()?;
                 let inv_f = f.invert("", env)?;
                 env.call(inv_f)?;
             }
             Primitive::Under => {
+                // This should only run if Under is not inlined
                 let f = env.pop_function()?;
                 let g = env.pop_function()?;
                 let (f_before, f_after) = f.undered(g.signature(), env)?;
@@ -556,7 +558,10 @@ impl Primitive {
                 env.with_fill(fill_value, |env| env.call(f))?;
             }
             Primitive::Both => fork::both(env)?,
-            Primitive::Fork => fork::fork(env)?,
+            Primitive::Fork => {
+                // This should only run if Fork is not inlined
+                fork::fork(env)?
+            }
             Primitive::Bracket => fork::bracket(env)?,
             Primitive::If => fork::iff(env)?,
             Primitive::Try => {

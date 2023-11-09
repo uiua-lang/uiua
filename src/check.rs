@@ -402,21 +402,18 @@ impl<'a> VirtualEnv<'a> {
                 Dip => {
                     let f = self.pop_func()?;
                     let x = self.pop()?;
-                    self.set_min_height();
                     self.handle_sig(f.signature())?;
                     self.stack.push(x);
                 }
                 Gap => {
                     let f = self.pop_func()?;
                     self.pop()?;
-                    self.set_min_height();
                     self.handle_sig(f.signature())?;
                 }
                 Reach => {
                     let f = self.pop_func()?;
                     let x = self.pop()?;
                     self.pop()?;
-                    self.set_min_height();
                     self.stack.push(x);
                     self.handle_sig(f.signature())?;
                 }

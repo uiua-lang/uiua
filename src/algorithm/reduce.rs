@@ -410,7 +410,7 @@ fn fold_recursive(
         if expected_sig != f.signature() {
             return Err(env.error(format!(
                 "Fold's function's signature is {}, but its rank \
-                lists suggests a signature of {}",
+                list suggests a signature of {}",
                 f.signature(),
                 expected_sig
             )));

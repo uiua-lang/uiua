@@ -64,38 +64,44 @@ fn each1(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
 }
 
 fn each2(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
-    let outputs = f.signature().outputs;
-    let xs_shape = xs.shape().to_vec();
-    let ys_shape = ys.shape().to_vec();
-    let xs_values: Vec<_> = xs.into_elements().collect();
-    let ys_values: Vec<_> = ys.into_elements().collect();
-    let (new_shape, new_values) = bin_pervade_generic(
-        &xs_shape,
-        xs_values,
-        &ys_shape,
-        ys_values,
-        env,
-        |x, y, env| {
-            env.push(y);
-            env.push(x);
-            env.call_error_on_break(f.clone(), "break is not allowed in multi-argument each")?;
-            (0..outputs)
-                .map(|_| env.pop("each's function result"))
-                .collect::<Result<MultiOutput<_>, _>>()
-        },
-    )?;
-    let mut transposed = multi_output(outputs, Vec::with_capacity(new_values.len()));
-    for values in new_values {
-        for (i, value) in values.into_iter().enumerate() {
-            transposed[i].push(value);
+    if let Some((f, ..)) = instrs_bin_fast_fn(&f.instrs) {
+        let xrank = xs.rank();
+        let yrank = ys.rank();
+        env.push(f(xs, ys, xrank, yrank, env)?);
+    } else {
+        let outputs = f.signature().outputs;
+        let xs_shape = xs.shape().to_vec();
+        let ys_shape = ys.shape().to_vec();
+        let xs_values: Vec<_> = xs.into_elements().collect();
+        let ys_values: Vec<_> = ys.into_elements().collect();
+        let (new_shape, new_values) = bin_pervade_generic(
+            &xs_shape,
+            xs_values,
+            &ys_shape,
+            ys_values,
+            env,
+            |x, y, env| {
+                env.push(y);
+                env.push(x);
+                env.call_error_on_break(f.clone(), "break is not allowed in multi-argument each")?;
+                (0..outputs)
+                    .map(|_| env.pop("each's function result"))
+                    .collect::<Result<MultiOutput<_>, _>>()
+            },
+        )?;
+        let mut transposed = multi_output(outputs, Vec::with_capacity(new_values.len()));
+        for values in new_values {
+            for (i, value) in values.into_iter().enumerate() {
+                transposed[i].push(value);
+            }
         }
-    }
-    for new_values in transposed {
-        let mut new_shape = new_shape.clone();
-        let mut eached = Value::from_row_values(new_values, env)?;
-        new_shape.extend_from_slice(&eached.shape()[1..]);
-        *eached.shape_mut() = new_shape;
-        env.push(eached);
+        for new_values in transposed {
+            let mut new_shape = new_shape.clone();
+            let mut eached = Value::from_row_values(new_values, env)?;
+            new_shape.extend_from_slice(&eached.shape()[1..]);
+            *eached.shape_mut() = new_shape;
+            env.push(eached);
+        }
     }
     Ok(())
 }
@@ -177,20 +183,24 @@ fn rows2(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             ys.row_count()
         )));
     }
-    let outputs = f.signature().outputs;
-    let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
-    let x_rows = xs.into_rows();
-    let y_rows = ys.into_rows();
-    for (x, y) in x_rows.into_iter().zip(y_rows) {
-        env.push(y);
-        env.push(x);
-        env.call_error_on_break(f.clone(), "break is not allowed in multi-argument rows")?;
-        for i in 0..outputs {
-            new_rows[i].push(env.pop("rows's function result")?);
+    if let Some((f, a, b)) = instrs_bin_fast_fn(&f.instrs) {
+        env.push(f(xs, ys, a + 1, b + 1, env)?);
+    } else {
+        let outputs = f.signature().outputs;
+        let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
+        let x_rows = xs.into_rows();
+        let y_rows = ys.into_rows();
+        for (x, y) in x_rows.into_iter().zip(y_rows) {
+            env.push(y);
+            env.push(x);
+            env.call_error_on_break(f.clone(), "break is not allowed in multi-argument rows")?;
+            for i in 0..outputs {
+                new_rows[i].push(env.pop("rows's function result")?);
+            }
         }
-    }
-    for new_rows in new_rows.into_iter().rev() {
-        env.push(Value::from_row_values(new_rows, env)?);
+        for new_rows in new_rows.into_iter().rev() {
+            env.push(Value::from_row_values(new_rows, env)?);
+        }
     }
     Ok(())
 }
@@ -228,29 +238,50 @@ fn rowsn(f: Arc<Function>, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
 
 type ValueBinFn = fn(Value, Value, usize, usize, &Uiua) -> UiuaResult<Value>;
 
-fn instrs_bin_pervasive(instrs: &[Instr]) -> Option<ValueBinFn> {
-    if let [Instr::Prim(prim, _)] = instrs {
-        use Primitive::*;
-        return Some(match prim {
-            Add => Value::add,
-            Sub => Value::sub,
-            Mul => Value::mul,
-            Div => Value::div,
-            Pow => Value::pow,
-            Mod => Value::modulus,
-            Log => Value::log,
-            Eq => Value::is_eq,
-            Ne => Value::is_ne,
-            Lt => Value::is_lt,
-            Gt => Value::is_gt,
-            Le => Value::is_le,
-            Ge => Value::is_ge,
-            Complex => Value::complex,
-            Max => Value::max,
-            Min => Value::min,
-            Atan => Value::atan2,
-            _ => return None,
-        });
+fn prim_bin_fast_fn(prim: Primitive) -> Option<ValueBinFn> {
+    use Primitive::*;
+    Some(match prim {
+        Add => Value::add,
+        Sub => Value::sub,
+        Mul => Value::mul,
+        Div => Value::div,
+        Pow => Value::pow,
+        Mod => Value::modulus,
+        Log => Value::log,
+        Eq => Value::is_eq,
+        Ne => Value::is_ne,
+        Lt => Value::is_lt,
+        Gt => Value::is_gt,
+        Le => Value::is_le,
+        Ge => Value::is_ge,
+        Complex => Value::complex,
+        Max => Value::max,
+        Min => Value::min,
+        Atan => Value::atan2,
+        _ => return None,
+    })
+}
+
+fn instrs_bin_fast_fn(instrs: &[Instr]) -> Option<(ValueBinFn, usize, usize)> {
+    use Primitive::*;
+    match instrs {
+        [Instr::Prim(prim, _)] => {
+            let f = prim_bin_fast_fn(*prim)?;
+            return Some((f, 0, 0));
+        }
+        [Instr::PushFunc(f), Instr::Prim(Rows, _)] => {
+            let (f, a, b) = instrs_bin_fast_fn(&f.instrs)?;
+            return Some((f, a + 1, b + 1));
+        }
+        [Instr::PushFunc(f), Instr::Prim(Distribute, _)] => {
+            let (f, a, b) = instrs_bin_fast_fn(&f.instrs)?;
+            return Some((f, a, b + 1));
+        }
+        [Instr::PushFunc(f), Instr::Prim(Tribute, _)] => {
+            let (f, a, b) = instrs_bin_fast_fn(&f.instrs)?;
+            return Some((f, a + 1, b));
+        }
+        _ => (),
     }
     None
 }
@@ -328,8 +359,8 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
 }
 
 fn distribute2(f: Arc<Function>, a: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
-    if let Some(f) = instrs_bin_pervasive(&f.instrs) {
-        env.push(f(a, xs, 0, 1, env)?);
+    if let Some((f, xd, yd)) = instrs_bin_fast_fn(&f.instrs) {
+        env.push(f(a, xs, xd, yd + 1, env)?);
     } else {
         let outputs = f.signature().outputs;
         if xs.row_count() == 0 {
@@ -427,8 +458,8 @@ pub fn tribute(env: &mut Uiua) -> UiuaResult {
 }
 
 fn tribute2(f: Arc<Function>, xs: Value, a: Value, env: &mut Uiua) -> UiuaResult {
-    if let Some(f) = instrs_bin_pervasive(&f.instrs) {
-        env.push(f(xs, a, 1, 0, env)?);
+    if let Some((f, xd, yd)) = instrs_bin_fast_fn(&f.instrs) {
+        env.push(f(xs, a, xd + 1, yd, env)?);
     } else {
         let outputs = f.signature().outputs;
         if xs.row_count() == 0 {

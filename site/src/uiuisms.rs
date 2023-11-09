@@ -149,7 +149,7 @@ uiuisms!(
     /// Parse a string as a base 3 <= X <= 9 number
     r#"/+×ⁿ⇌⇡⧻,⊙-∶@0 3 "210""#,
     /// Find the indices of all 1s
-    "▽∶⇡⧻. [0 1 0 0 1]",
+    "⊚ [0 1 0 0 1]",
     /// Interleave two arrays
     "♭⍉⊟ [1 2 3 4] [5 6 7 8]",
     /// Intersperse an item between the rows of an array
@@ -224,7 +224,7 @@ uiuisms!(
     //   ;∶⍥(⊠(/+×)⊙⍉,)∶
     // )⊙∶⇌⇡⧻. [1 2 3 1] [1_1 2_2]",
     /// Add a leading axis of length 1 to an array
-    "△. [∘] [1_2_3 4_5_6]",
+    "△. ↯1 [1_2_3 4_5_6]",
     /// Repeat a function and collect intermediate results into an array
     "[⍥(×2.)] 10 1",
 );

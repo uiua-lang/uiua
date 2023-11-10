@@ -588,41 +588,41 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
         [] => return Ok(()),
         &[n] => {
             let xs = env.pop(1)?;
+            let n = rank_to_depth(n, xs.rank());
             match n {
-                Some(0) => return each1(f, xs, env),
-                Some(-1) => return rows1(f, xs, env),
-                None => {
+                0 => {
                     env.push(xs);
                     return env.call(f);
                 }
-                Some(_) => {}
+                1 => return rows1(f, xs, env),
+                n if n == xs.rank() => return each1(f, xs, env),
+                _ => {}
             }
-            let n = rank_to_depth(n, xs.rank());
             monadic_level(f, xs, n, env)?;
         }
         &[xn, yn] => {
             let xs = env.pop(1)?;
             let ys = env.pop(2)?;
+            let xn = rank_to_depth(xn, xs.rank());
+            let yn = rank_to_depth(yn, ys.rank());
             match (xn, yn) {
-                (Some(0), Some(0)) => return each2(f, xs, ys, env),
-                (Some(-1), Some(-1)) => return rows2(f, xs, ys, env),
-                (None, Some(-1)) => return distribute2(f, xs, ys, env),
-                (Some(-1), None) => return tribute2(f, xs, ys, env),
-                (None, None) => {
+                (0, 0) => {
                     env.push(ys);
                     env.push(xs);
                     return env.call(f);
                 }
+                (1, 1) => return rows2(f, xs, ys, env),
+                (0, 1) => return distribute2(f, xs, ys, env),
+                (1, 0) => return tribute2(f, xs, ys, env),
+                (a, b) if a == xs.rank() && b == ys.rank() => return each2(f, xs, ys, env),
                 _ => {}
             }
-            let xn = rank_to_depth(xn, xs.rank());
-            let yn = rank_to_depth(yn, ys.rank());
-            // let res = if let Some(f) = instrs_bin_pervasive(&f.instrs) {
-            //     f(xs, ys, xn, yn, env)?
-            // } else {
-            //     dyadic_level_recursive(f, xs, ys, xn, yn, env)?
-            // };
-            dyadic_level(f, xs, ys, xn, yn, env)?;
+            if let Some((f, a, b)) = instrs_bin_fast_fn(&f.instrs) {
+                let value = f(xs, ys, xn + a, yn + b, env)?;
+                env.push(value);
+            } else {
+                dyadic_level(f, xs, ys, xn, yn, env)?;
+            }
         }
         is => {
             let mut args = Vec::with_capacity(is.len());

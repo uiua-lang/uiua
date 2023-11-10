@@ -42,7 +42,7 @@ impl Value {
 }
 
 impl<T: Clone> Array<T> {
-    pub(crate) fn depth_slices<U, C: FillContext>(
+    pub(crate) fn depth_slices<U: Clone, C: FillContext>(
         &mut self,
         other: &Array<U>,
         mut a_depth: usize,
@@ -51,7 +51,8 @@ impl<T: Clone> Array<T> {
         f: impl Fn(&[usize], &mut [T], &[usize], &[U], &C) -> Result<(), C::Error>,
     ) -> Result<(), C::Error> {
         let a = self;
-        let b = other;
+        let mut b = other;
+        let mut local_b;
         a_depth = a_depth.min(a.rank());
         b_depth = b_depth.min(b.rank());
         let a_prefix = &a.shape[..a_depth];
@@ -65,6 +66,23 @@ impl<T: Clone> Array<T> {
                 FormatShape(a_prefix),
                 FormatShape(b_prefix)
             )));
+        }
+        match a_depth.cmp(&b_depth) {
+            Ordering::Equal => {}
+            Ordering::Less => {
+                for b_dim in b.shape[..b_depth - a_depth].iter().rev() {
+                    a.reshape_scalar(*b_dim);
+                    a_depth += 1;
+                }
+            }
+            Ordering::Greater => {
+                for a_dim in a.shape[..a_depth - b_depth].iter().rev() {
+                    local_b = b.clone();
+                    local_b.reshape_scalar(*a_dim);
+                    b = &local_b;
+                    b_depth += 1;
+                }
+            }
         }
         let a_row_shape = &a.shape[a_depth..];
         let b_row_shape = &b.shape[b_depth..];
@@ -723,7 +741,7 @@ impl Value {
     }
 }
 
-impl<T: ArrayValue> Array<T> {
+impl<T: Clone> Array<T> {
     /// `reshape` this array by replicating it as the rows of a new array
     pub fn reshape_scalar(&mut self, count: usize) {
         self.data.modify(|data| {
@@ -739,6 +757,9 @@ impl<T: ArrayValue> Array<T> {
         });
         self.shape.insert(0, count);
     }
+}
+
+impl<T: ArrayValue> Array<T> {
     /// `reshape` the array
     pub fn reshape(&mut self, dims: &[isize], env: &Uiua) -> UiuaResult {
         let mut neg_count = 0;

@@ -41,6 +41,57 @@ impl Value {
     }
 }
 
+impl<T: Clone> Array<T> {
+    pub(crate) fn depth_slices<U, C: FillContext>(
+        &mut self,
+        other: &Array<U>,
+        mut a_depth: usize,
+        mut b_depth: usize,
+        ctx: &C,
+        f: impl Fn(&[usize], &mut [T], &[usize], &[U], &C) -> Result<(), C::Error>,
+    ) -> Result<(), C::Error> {
+        let a = self;
+        let b = other;
+        a_depth = a_depth.min(a.rank());
+        b_depth = b_depth.min(b.rank());
+        let a_prefix = &a.shape[..a_depth];
+        let b_prefix = &b.shape[..b_depth];
+        if !a_prefix.iter().zip(b_prefix).all(|(a, b)| a == b) {
+            return Err(ctx.error(format!(
+                "Cannot combine arrays with shapes {} and {} \
+                because shape prefixes {} and {} are not compatible",
+                a.format_shape(),
+                b.format_shape(),
+                FormatShape(a_prefix),
+                FormatShape(b_prefix)
+            )));
+        }
+        let a_row_shape = &a.shape[a_depth..];
+        let b_row_shape = &b.shape[b_depth..];
+        if a_depth == b_depth {
+            for (a, b) in a
+                .data
+                .as_mut_slice()
+                .chunks_exact_mut(a_row_shape.iter().product())
+                .zip(b.data.as_slice().chunks_exact(b_row_shape.iter().product()))
+            {
+                f(a_row_shape, a, b_row_shape, b, ctx)?;
+            }
+        } else {
+            for a in a
+                .data
+                .as_mut_slice()
+                .chunks_exact_mut(a_row_shape.iter().product())
+            {
+                for b in b.data.as_slice().chunks_exact(b_row_shape.iter().product()) {
+                    f(a_row_shape, a, b_row_shape, b, ctx)?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 fn data_index_to_shape_index(mut index: usize, shape: &[usize], out: &mut [usize]) -> bool {
     debug_assert_eq!(shape.len(), out.len());
     if index >= shape.iter().product() {
@@ -1619,6 +1670,31 @@ impl Value {
         }
         Ok(rotated)
     }
+    pub(crate) fn rotate_depth(
+        &self,
+        mut rotated: Self,
+        a_depth: usize,
+        b_depth: usize,
+        env: &Uiua,
+    ) -> UiuaResult<Self> {
+        let by = self.as_integer_array(env, "Rotation amount must be an array of integers")?;
+        #[cfg(feature = "bytes")]
+        if env.fill::<f64>().is_some() {
+            if let Value::Byte(bytes) = &rotated {
+                rotated = bytes.convert_ref::<f64>().into();
+            }
+        }
+        match &mut rotated {
+            Value::Num(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
+            #[cfg(feature = "bytes")]
+            Value::Byte(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
+            #[cfg(feature = "complex")]
+            Value::Complex(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
+            Value::Char(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
+            Value::Box(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
+        }
+        Ok(rotated)
+    }
 }
 
 impl<T: ArrayValue> Array<T> {
@@ -1637,6 +1713,21 @@ impl<T: ArrayValue> Array<T> {
             fill_shift(by, &self.shape, data, fill);
         }
         Ok(())
+    }
+    pub(crate) fn rotate_depth(
+        &mut self,
+        by: Array<isize>,
+        depth: usize,
+        by_depth: usize,
+        env: &Uiua,
+    ) -> UiuaResult {
+        self.depth_slices(&by, depth, by_depth, env, |ash, a, bsh, b, env| {
+            if bsh.len() > 1 {
+                return Err(env.error(format!("Cannot rotate by rank {} array", bsh.len())));
+            }
+            rotate(b, ash, a);
+            Ok(())
+        })
     }
 }
 

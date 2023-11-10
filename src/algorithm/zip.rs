@@ -92,6 +92,7 @@ fn prim_bin_fast_fn(prim: Primitive) -> Option<ValueBinFn> {
         Max => Value::max,
         Min => Value::min,
         Atan => Value::atan2,
+        Rotate => |a, b, ad, bd, env| a.rotate_depth(b, ad, bd, env),
         _ => return None,
     })
 }

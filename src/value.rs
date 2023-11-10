@@ -689,6 +689,19 @@ impl Value {
             }
         })
     }
+    pub(crate) fn as_integer_array(
+        &self,
+        env: &Uiua,
+        requirement: &'static str,
+    ) -> UiuaResult<Array<isize>> {
+        self.as_number_array(
+            env,
+            requirement,
+            |_| true,
+            |n| n.fract() == 0.0,
+            |n| n as isize,
+        )
+    }
     pub(crate) fn as_natural_array(
         &self,
         env: &Uiua,

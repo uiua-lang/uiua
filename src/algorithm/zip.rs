@@ -16,7 +16,7 @@ use crate::{
 use super::{multi_output, MultiOutput};
 
 type ValueUnFn = fn(Value, usize, &Uiua) -> UiuaResult<Value>;
-type ValueBinFn = fn(Value, Value, usize, usize, &Uiua) -> UiuaResult<Value>;
+type ValueBinFn = Box<dyn Fn(Value, Value, usize, usize, &Uiua) -> UiuaResult<Value>>;
 
 fn prim_un_fast_fn(prim: Primitive) -> Option<ValueUnFn> {
     use Primitive::*;
@@ -73,31 +73,33 @@ fn instrs_un_fast_fn(instrs: &[Instr]) -> Option<(ValueUnFn, usize)> {
 }
 
 fn prim_bin_fast_fn(prim: Primitive) -> Option<ValueBinFn> {
+    use std::boxed::Box;
     use Primitive::*;
     Some(match prim {
-        Add => Value::add,
-        Sub => Value::sub,
-        Mul => Value::mul,
-        Div => Value::div,
-        Pow => Value::pow,
-        Mod => Value::modulus,
-        Log => Value::log,
-        Eq => Value::is_eq,
-        Ne => Value::is_ne,
-        Lt => Value::is_lt,
-        Gt => Value::is_gt,
-        Le => Value::is_le,
-        Ge => Value::is_ge,
-        Complex => Value::complex,
-        Max => Value::max,
-        Min => Value::min,
-        Atan => Value::atan2,
-        Rotate => |a, b, ad, bd, env| a.rotate_depth(b, ad, bd, env),
+        Add => Box::new(Value::add),
+        Sub => Box::new(Value::sub),
+        Mul => Box::new(Value::mul),
+        Div => Box::new(Value::div),
+        Pow => Box::new(Value::pow),
+        Mod => Box::new(Value::modulus),
+        Log => Box::new(Value::log),
+        Eq => Box::new(Value::is_eq),
+        Ne => Box::new(Value::is_ne),
+        Lt => Box::new(Value::is_lt),
+        Gt => Box::new(Value::is_gt),
+        Le => Box::new(Value::is_le),
+        Ge => Box::new(Value::is_ge),
+        Complex => Box::new(Value::complex),
+        Max => Box::new(Value::max),
+        Min => Box::new(Value::min),
+        Atan => Box::new(Value::atan2),
+        Rotate => Box::new(|a, b, ad, bd, env| a.rotate_depth(b, ad, bd, env)),
         _ => return None,
     })
 }
 
 fn instrs_bin_fast_fn(instrs: &[Instr]) -> Option<(ValueBinFn, usize, usize)> {
+    use std::boxed::Box;
     use Primitive::*;
     match instrs {
         [Instr::Prim(prim, _)] => {
@@ -115,6 +117,11 @@ fn instrs_bin_fast_fn(instrs: &[Instr]) -> Option<(ValueBinFn, usize, usize)> {
         [Instr::PushFunc(f), Instr::Prim(Tribute, _)] => {
             let (f, a, b) = instrs_bin_fast_fn(&f.instrs)?;
             return Some((f, a + 1, b));
+        }
+        [Instr::Prim(Flip, _), rest @ ..] => {
+            let (f, a, b) = instrs_bin_fast_fn(rest)?;
+            let f = Box::new(move |a, b, ad, bd, env: &Uiua| f(b, a, bd, ad, env));
+            return Some((f, a, b));
         }
         _ => (),
     }

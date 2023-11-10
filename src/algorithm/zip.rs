@@ -563,16 +563,6 @@ fn tribute2(f: Arc<Function>, xs: Value, a: Value, env: &mut Uiua) -> UiuaResult
 pub fn level(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let ns = rank_list("Level", env)?;
-    if let Some((end, init)) = ns.split_last() {
-        if end.is_some_and(|n| n == -1) && !init.is_empty() && init.iter().all(Option::is_none) {
-            return distribute(env);
-        }
-    }
-    if let Some((start, rest)) = ns.split_last() {
-        if start.is_some_and(|n| n == -1) && !rest.is_empty() && rest.iter().all(Option::is_none) {
-            return tribute(env);
-        }
-    }
     let f = env.pop_function()?;
     let f_sig = f.signature();
     if f_sig.outputs != 1 {

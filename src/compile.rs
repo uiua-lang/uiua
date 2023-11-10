@@ -481,7 +481,7 @@ impl Uiua {
                     // Inline constant arrays
                     instrs.pop();
                     let values = inner.into_iter().rev().map(|instr| match instr {
-                        Instr::Push(v) => *v,
+                        Instr::Push(v) => v,
                         _ => unreachable!(),
                     });
                     let val = self.with_span(span, |env| Value::from_row_values(values, env))?;
@@ -515,7 +515,7 @@ impl Uiua {
                     instrs.pop();
                     let empty = inner.is_empty();
                     let values = inner.into_iter().rev().map(|instr| match instr {
-                        Instr::Push(v) => *v,
+                        Instr::Push(v) => v,
                         _ => unreachable!(),
                     });
                     let val = self.with_span(span, |env| {

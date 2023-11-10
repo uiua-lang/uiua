@@ -537,7 +537,7 @@ mod test {
     where
         T: Into<Value>,
     {
-        Push(val.into().into())
+        Push(val.into())
     }
     #[test]
     fn instrs_signature() {

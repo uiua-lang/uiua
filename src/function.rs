@@ -22,7 +22,7 @@ use crate::{
 #[allow(missing_docs)]
 pub enum Instr {
     /// Push a value onto the stack
-    Push(Box<Value>) = 0,
+    Push(Value) = 0,
     /// Begin an array
     BeginArray,
     /// End an array
@@ -177,7 +177,7 @@ impl Hash for Instr {
 impl Instr {
     /// Create a new push instruction
     pub fn push(val: impl Into<Value>) -> Self {
-        Self::Push(Box::new(val.into()))
+        Self::Push(val.into())
     }
     /// Create a new push function instruction
     pub fn push_func(f: impl Into<Arc<Function>>) -> Self {

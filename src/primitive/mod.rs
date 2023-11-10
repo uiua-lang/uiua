@@ -285,10 +285,11 @@ impl Primitive {
     }
     /// Try to parse multiple primitives from the concatenation of their name prefixes
     pub fn from_format_name_multi(name: &str) -> Option<Vec<(Self, &str)>> {
-        let indices: Vec<usize> = name.char_indices().map(|(i, _)| i).collect();
+        let mut indices: Vec<usize> = name.char_indices().map(|(i, _)| i).collect();
         if indices.len() < 2 {
             return None;
         }
+        indices.push(name.len());
         // Forward parsing
         let mut prims = Vec::new();
         let mut start = 0;
@@ -336,7 +337,7 @@ impl Primitive {
             let end_index = indices[end - 1];
             for len in (2..=end).rev() {
                 let start_index = indices.get(end - len).copied().unwrap_or(0);
-                let sub_name = &name[start_index..=end_index];
+                let sub_name = &name[start_index..end_index];
                 if let Some(p) = Primitive::from_format_name(sub_name) {
                     prims.push((p, sub_name));
                     end -= len;

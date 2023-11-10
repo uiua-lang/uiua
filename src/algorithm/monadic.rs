@@ -33,7 +33,17 @@ impl Value {
             #[cfg(feature = "complex")]
             Value::Complex(c) => c.deshape_depth(depth),
             Value::Char(c) => c.deshape_depth(depth),
-            Value::Box(b) => b.deshape_depth(depth),
+            Value::Box(b) => {
+                if let Some(bx) = b.as_scalar_mut() {
+                    bx.as_value_mut().deshape_depth(depth);
+                } else if depth > 0 && b.rank() <= 1 {
+                    for b in b.data.as_mut_slice() {
+                        b.as_value_mut().deshape_depth(depth - 1);
+                    }
+                } else {
+                    b.deshape_depth(depth);
+                }
+            }
         }
     }
     /// Attempt to parse the value into a number
@@ -194,32 +204,58 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// Reverse the rows of the value
     pub fn reverse(&mut self) {
-        self.generic_mut_deep(
-            Array::reverse,
-            Array::reverse,
-            Array::reverse,
-            Array::reverse,
-            Array::reverse,
-        )
+        self.reverse_depth(0);
+    }
+    pub(crate) fn reverse_depth(&mut self, depth: usize) {
+        match self {
+            Value::Num(n) => n.reverse_depth(depth),
+            #[cfg(feature = "bytes")]
+            Value::Byte(b) => b.reverse_depth(depth),
+            #[cfg(feature = "complex")]
+            Value::Complex(c) => c.reverse_depth(depth),
+            Value::Char(c) => c.reverse_depth(depth),
+            Value::Box(b) => {
+                if let Some(bx) = b.as_scalar_mut() {
+                    bx.as_value_mut().reverse_depth(depth);
+                } else if depth > 0 && b.rank() <= 1 {
+                    for b in b.data.as_mut_slice() {
+                        b.as_value_mut().reverse_depth(depth - 1);
+                    }
+                } else {
+                    b.reverse_depth(depth);
+                }
+            }
+        }
     }
 }
 
 impl<T: ArrayValue> Array<T> {
     /// Reverse the rows of the array
     pub fn reverse(&mut self) {
-        if self.shape.is_empty() || self.element_count() == 0 {
+        self.reverse_depth(0);
+    }
+    pub(crate) fn reverse_depth(&mut self, mut depth: usize) {
+        depth = depth.min(self.rank());
+        let row_shape = &self.shape[depth..];
+        if row_shape.is_empty() {
             return;
         }
-        let row_count = self.row_count();
-        let row_len = self.row_len();
+        let chunk_size = row_shape.iter().product();
+        if chunk_size == 0 {
+            return;
+        }
         let data = self.data.as_mut_slice();
-        for i in 0..row_count / 2 {
-            let left = i * row_len;
-            let right = (row_count - i - 1) * row_len;
-            let left = &mut data[left] as *mut T;
-            let right = &mut data[right] as *mut T;
-            unsafe {
-                ptr::swap_nonoverlapping(left, right, row_len);
+        let chunk_row_count = self.shape[depth];
+        let chunk_row_len = chunk_size / chunk_row_count;
+        for data in data.chunks_exact_mut(chunk_size) {
+            for i in 0..chunk_row_count / 2 {
+                let left = i * chunk_row_len;
+                let right = (chunk_row_count - i - 1) * chunk_row_len;
+                let left = &mut data[left] as *mut T;
+                let right = &mut data[right] as *mut T;
+                unsafe {
+                    ptr::swap_nonoverlapping(left, right, chunk_row_len);
+                }
             }
         }
     }
@@ -247,6 +283,10 @@ impl Value {
             Value::Box(b) => {
                 if let Some(bx) = b.as_scalar_mut() {
                     bx.as_value_mut().transpose_depth(depth);
+                } else if depth > 0 && b.rank() <= 1 {
+                    for b in b.data.as_mut_slice() {
+                        b.as_value_mut().transpose_depth(depth - 1);
+                    }
                 } else {
                     b.transpose_depth(depth);
                 }
@@ -274,6 +314,10 @@ impl Value {
             Value::Box(b) => {
                 if let Some(bx) = b.as_scalar_mut() {
                     bx.as_value_mut().inv_transpose_depth(depth);
+                } else if depth > 0 && b.rank() <= 1 {
+                    for b in b.data.as_mut_slice() {
+                        b.as_value_mut().inv_transpose_depth(depth - 1);
+                    }
                 } else {
                     b.inv_transpose_depth(depth);
                 }

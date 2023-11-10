@@ -37,6 +37,10 @@ fn prim_un_fast_fn(prim: Primitive) -> Option<ValueUnFn> {
             Value::transpose_depth(&mut v, d);
             Ok(v)
         },
+        Reverse => |mut v, d, _| {
+            Value::reverse_depth(&mut v, d);
+            Ok(v)
+        },
         _ => return None,
     })
 }

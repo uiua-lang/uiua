@@ -15,6 +15,88 @@ use crate::{
 
 use super::{multi_output, MultiOutput};
 
+type ValueUnFn = fn(Value, usize, &Uiua) -> UiuaResult<Value>;
+type ValueBinFn = fn(Value, Value, usize, usize, &Uiua) -> UiuaResult<Value>;
+
+fn prim_un_fast_fn(prim: Primitive) -> Option<ValueUnFn> {
+    use Primitive::*;
+    Some(match prim {
+        Not => |v, _, env| Value::not(v, env),
+        Sign => |v, _, env| Value::sign(v, env),
+        Neg => |v, _, env| Value::neg(v, env),
+        Abs => |v, _, env| Value::abs(v, env),
+        Sqrt => |v, _, env| Value::sqrt(v, env),
+        Floor => |v, _, env| Value::floor(v, env),
+        Ceil => |v, _, env| Value::ceil(v, env),
+        Round => |v, _, env| Value::round(v, env),
+        _ => return None,
+    })
+}
+
+fn instrs_un_fast_fn(instrs: &[Instr]) -> Option<(ValueUnFn, usize)> {
+    use Primitive::*;
+    match instrs {
+        [Instr::Prim(prim, _)] => {
+            let f = prim_un_fast_fn(*prim)?;
+            return Some((f, 0));
+        }
+        [Instr::PushFunc(f), Instr::Prim(Rows, _)] => {
+            let (f, d) = instrs_un_fast_fn(&f.instrs)?;
+            return Some((f, d + 1));
+        }
+        _ => (),
+    }
+    None
+}
+
+fn prim_bin_fast_fn(prim: Primitive) -> Option<ValueBinFn> {
+    use Primitive::*;
+    Some(match prim {
+        Add => Value::add,
+        Sub => Value::sub,
+        Mul => Value::mul,
+        Div => Value::div,
+        Pow => Value::pow,
+        Mod => Value::modulus,
+        Log => Value::log,
+        Eq => Value::is_eq,
+        Ne => Value::is_ne,
+        Lt => Value::is_lt,
+        Gt => Value::is_gt,
+        Le => Value::is_le,
+        Ge => Value::is_ge,
+        Complex => Value::complex,
+        Max => Value::max,
+        Min => Value::min,
+        Atan => Value::atan2,
+        _ => return None,
+    })
+}
+
+fn instrs_bin_fast_fn(instrs: &[Instr]) -> Option<(ValueBinFn, usize, usize)> {
+    use Primitive::*;
+    match instrs {
+        [Instr::Prim(prim, _)] => {
+            let f = prim_bin_fast_fn(*prim)?;
+            return Some((f, 0, 0));
+        }
+        [Instr::PushFunc(f), Instr::Prim(Rows, _)] => {
+            let (f, a, b) = instrs_bin_fast_fn(&f.instrs)?;
+            return Some((f, a + 1, b + 1));
+        }
+        [Instr::PushFunc(f), Instr::Prim(Distribute, _)] => {
+            let (f, a, b) = instrs_bin_fast_fn(&f.instrs)?;
+            return Some((f, a, b + 1));
+        }
+        [Instr::PushFunc(f), Instr::Prim(Tribute, _)] => {
+            let (f, a, b) = instrs_bin_fast_fn(&f.instrs)?;
+            return Some((f, a + 1, b));
+        }
+        _ => (),
+    }
+    None
+}
+
 pub fn each(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
@@ -34,31 +116,36 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
 }
 
 fn each1(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
-    let outputs = f.signature().outputs;
-    let mut new_values = multi_output(outputs, Vec::with_capacity(xs.element_count()));
-    let new_shape = Shape::from(xs.shape());
-    let mut old_values = xs.into_elements();
-    for val in old_values.by_ref() {
-        env.push(val);
-        let broke = env.call_catch_break(f.clone())?;
-        for i in 0..outputs {
-            new_values[i].push(env.pop("each's function result")?);
-        }
-        if broke {
-            for row in old_values {
-                for i in 0..outputs {
-                    new_values[i].push(row.clone());
-                }
+    if let Some((f, ..)) = instrs_un_fast_fn(&f.instrs) {
+        let rank = xs.rank();
+        env.push(f(xs, rank, env)?);
+    } else {
+        let outputs = f.signature().outputs;
+        let mut new_values = multi_output(outputs, Vec::with_capacity(xs.element_count()));
+        let new_shape = Shape::from(xs.shape());
+        let mut old_values = xs.into_elements();
+        for val in old_values.by_ref() {
+            env.push(val);
+            let broke = env.call_catch_break(f.clone())?;
+            for i in 0..outputs {
+                new_values[i].push(env.pop("each's function result")?);
             }
-            break;
+            if broke {
+                for row in old_values {
+                    for i in 0..outputs {
+                        new_values[i].push(row.clone());
+                    }
+                }
+                break;
+            }
         }
-    }
-    for new_values in new_values.into_iter().rev() {
-        let mut new_shape = new_shape.clone();
-        let mut eached = Value::from_row_values(new_values, env)?;
-        new_shape.extend_from_slice(&eached.shape()[1..]);
-        *eached.shape_mut() = new_shape;
-        env.push(eached);
+        for new_values in new_values.into_iter().rev() {
+            let mut new_shape = new_shape.clone();
+            let mut eached = Value::from_row_values(new_values, env)?;
+            new_shape.extend_from_slice(&eached.shape()[1..]);
+            *eached.shape_mut() = new_shape;
+            env.push(eached);
+        }
     }
     Ok(())
 }
@@ -151,26 +238,30 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
 }
 
 fn rows1(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
-    let outputs = f.signature().outputs;
-    let mut new_rows = multi_output(outputs, Value::builder(xs.row_count()));
-    let mut old_rows = xs.into_rows();
-    for row in old_rows.by_ref() {
-        env.push(row);
-        let broke = env.call_catch_break(f.clone())?;
-        for i in 0..outputs {
-            new_rows[i].add_row(env.pop("rows' function result")?, env)?;
-        }
-        if broke {
-            for row in old_rows {
-                for i in 0..outputs {
-                    new_rows[i].add_row(row.clone(), env)?;
-                }
+    if let Some((f, d)) = instrs_un_fast_fn(&f.instrs) {
+        env.push(f(xs, d + 1, env)?);
+    } else {
+        let outputs = f.signature().outputs;
+        let mut new_rows = multi_output(outputs, Value::builder(xs.row_count()));
+        let mut old_rows = xs.into_rows();
+        for row in old_rows.by_ref() {
+            env.push(row);
+            let broke = env.call_catch_break(f.clone())?;
+            for i in 0..outputs {
+                new_rows[i].add_row(env.pop("rows' function result")?, env)?;
             }
-            break;
+            if broke {
+                for row in old_rows {
+                    for i in 0..outputs {
+                        new_rows[i].add_row(row.clone(), env)?;
+                    }
+                }
+                break;
+            }
         }
-    }
-    for new_rows in new_rows.into_iter().rev() {
-        env.push(new_rows.finish());
+        for new_rows in new_rows.into_iter().rev() {
+            env.push(new_rows.finish());
+        }
     }
     Ok(())
 }
@@ -234,56 +325,6 @@ fn rowsn(f: Arc<Function>, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         env.push(eached);
     }
     Ok(())
-}
-
-type ValueBinFn = fn(Value, Value, usize, usize, &Uiua) -> UiuaResult<Value>;
-
-fn prim_bin_fast_fn(prim: Primitive) -> Option<ValueBinFn> {
-    use Primitive::*;
-    Some(match prim {
-        Add => Value::add,
-        Sub => Value::sub,
-        Mul => Value::mul,
-        Div => Value::div,
-        Pow => Value::pow,
-        Mod => Value::modulus,
-        Log => Value::log,
-        Eq => Value::is_eq,
-        Ne => Value::is_ne,
-        Lt => Value::is_lt,
-        Gt => Value::is_gt,
-        Le => Value::is_le,
-        Ge => Value::is_ge,
-        Complex => Value::complex,
-        Max => Value::max,
-        Min => Value::min,
-        Atan => Value::atan2,
-        _ => return None,
-    })
-}
-
-fn instrs_bin_fast_fn(instrs: &[Instr]) -> Option<(ValueBinFn, usize, usize)> {
-    use Primitive::*;
-    match instrs {
-        [Instr::Prim(prim, _)] => {
-            let f = prim_bin_fast_fn(*prim)?;
-            return Some((f, 0, 0));
-        }
-        [Instr::PushFunc(f), Instr::Prim(Rows, _)] => {
-            let (f, a, b) = instrs_bin_fast_fn(&f.instrs)?;
-            return Some((f, a + 1, b + 1));
-        }
-        [Instr::PushFunc(f), Instr::Prim(Distribute, _)] => {
-            let (f, a, b) = instrs_bin_fast_fn(&f.instrs)?;
-            return Some((f, a, b + 1));
-        }
-        [Instr::PushFunc(f), Instr::Prim(Tribute, _)] => {
-            let (f, a, b) = instrs_bin_fast_fn(&f.instrs)?;
-            return Some((f, a + 1, b));
-        }
-        _ => (),
-    }
-    None
 }
 
 pub fn distribute(env: &mut Uiua) -> UiuaResult {

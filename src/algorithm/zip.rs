@@ -10,7 +10,7 @@ use crate::{
     array::{FormatShape, Shape},
     function::Function,
     value::Value,
-    Instr, Primitive, Uiua, UiuaResult,
+    ImplPrimitive, Instr, Primitive, Uiua, UiuaResult,
 };
 
 use super::{multi_output, MultiOutput};
@@ -29,6 +29,25 @@ fn prim_un_fast_fn(prim: Primitive) -> Option<ValueUnFn> {
         Floor => |v, _, env| Value::floor(v, env),
         Ceil => |v, _, env| Value::ceil(v, env),
         Round => |v, _, env| Value::round(v, env),
+        Deshape => |mut v, d, _| {
+            Value::deshape_depth(&mut v, d);
+            Ok(v)
+        },
+        Transpose => |mut v, d, _| {
+            Value::transpose_depth(&mut v, d);
+            Ok(v)
+        },
+        _ => return None,
+    })
+}
+
+fn impl_prim_un_fast_fn(prim: ImplPrimitive) -> Option<ValueUnFn> {
+    use ImplPrimitive::*;
+    Some(match prim {
+        InvTranspose => |mut v, d, _| {
+            Value::inv_transpose_depth(&mut v, d);
+            Ok(v)
+        },
         _ => return None,
     })
 }
@@ -38,6 +57,10 @@ fn instrs_un_fast_fn(instrs: &[Instr]) -> Option<(ValueUnFn, usize)> {
     match instrs {
         [Instr::Prim(prim, _)] => {
             let f = prim_un_fast_fn(*prim)?;
+            return Some((f, 0));
+        }
+        [Instr::ImplPrim(prim, _)] => {
+            let f = impl_prim_un_fast_fn(*prim)?;
             return Some((f, 0));
         }
         [Instr::PushFunc(f), Instr::Prim(Rows, _)] => {

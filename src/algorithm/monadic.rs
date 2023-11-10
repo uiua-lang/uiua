@@ -23,13 +23,18 @@ use super::{ArrayCmpSlice, FillContext};
 impl Value {
     /// Make the value 1-dimensional
     pub fn deshape(&mut self) {
-        self.generic_mut_deep(
-            Array::deshape,
-            Array::deshape,
-            Array::deshape,
-            Array::deshape,
-            Array::deshape,
-        )
+        self.deshape_depth(0);
+    }
+    pub(crate) fn deshape_depth(&mut self, depth: usize) {
+        match self {
+            Value::Num(n) => n.deshape_depth(depth),
+            #[cfg(feature = "bytes")]
+            Value::Byte(b) => b.deshape_depth(depth),
+            #[cfg(feature = "complex")]
+            Value::Complex(c) => c.deshape_depth(depth),
+            Value::Char(c) => c.deshape_depth(depth),
+            Value::Box(b) => b.deshape_depth(depth),
+        }
     }
     /// Attempt to parse the value into a number
     pub fn parse_num(&self, env: &Uiua) -> UiuaResult<Self> {
@@ -45,6 +50,11 @@ impl<T: ArrayValue> Array<T> {
     /// Make the array 1-dimensional
     pub fn deshape(&mut self) {
         self.shape = tiny_vec![self.element_count()];
+    }
+    pub(crate) fn deshape_depth(&mut self, mut depth: usize) {
+        depth = depth.min(self.rank());
+        let deshaped = self.shape.split_off(depth).into_iter().product();
+        self.shape.push(deshaped);
     }
 }
 
@@ -226,6 +236,23 @@ impl Value {
             Array::transpose,
         )
     }
+    pub(crate) fn transpose_depth(&mut self, depth: usize) {
+        match self {
+            Value::Num(n) => n.transpose_depth(depth),
+            #[cfg(feature = "bytes")]
+            Value::Byte(b) => b.transpose_depth(depth),
+            #[cfg(feature = "complex")]
+            Value::Complex(c) => c.transpose_depth(depth),
+            Value::Char(c) => c.transpose_depth(depth),
+            Value::Box(b) => {
+                if let Some(bx) = b.as_scalar_mut() {
+                    bx.as_value_mut().transpose_depth(depth);
+                } else {
+                    b.transpose_depth(depth);
+                }
+            }
+        }
+    }
     /// Inverse transpose the value
     pub fn inv_transpose(&mut self) {
         self.generic_mut_deep(
@@ -236,62 +263,91 @@ impl Value {
             Array::inv_transpose,
         )
     }
+    pub(crate) fn inv_transpose_depth(&mut self, depth: usize) {
+        match self {
+            Value::Num(n) => n.inv_transpose_depth(depth),
+            #[cfg(feature = "bytes")]
+            Value::Byte(b) => b.inv_transpose_depth(depth),
+            #[cfg(feature = "complex")]
+            Value::Complex(c) => c.inv_transpose_depth(depth),
+            Value::Char(c) => c.inv_transpose_depth(depth),
+            Value::Box(b) => {
+                if let Some(bx) = b.as_scalar_mut() {
+                    bx.as_value_mut().inv_transpose_depth(depth);
+                } else {
+                    b.inv_transpose_depth(depth);
+                }
+            }
+        }
+    }
 }
 
 impl<T: ArrayValue> Array<T> {
     /// Transpose the array
     pub fn transpose(&mut self) {
+        self.transpose_depth(0);
+    }
+    pub(crate) fn transpose_depth(&mut self, mut depth: usize) {
         crate::profile_function!();
-        if self.shape.len() < 2 {
+        depth = depth.min(self.rank());
+        if self.rank() - depth < 2 {
             return;
         }
-        if self.shape[0] == 0 {
-            self.shape.rotate_left(1);
+        if self.shape[depth] == 0 {
+            self.shape[depth..].rotate_left(1);
             return;
         }
-        let mut temp_data = self.data.clone();
-        let temp = temp_data.as_mut_slice();
-        let row_len = self.row_len();
-        let row_count = self.row_count();
-        let op = |(j, chunk): (usize, &mut [T])| {
-            for (i, item) in chunk.iter_mut().enumerate() {
-                *item = self.data[i * row_len + j].clone();
+        let data_slice = self.data.as_mut_slice();
+        for data in data_slice.chunks_exact_mut(self.shape[depth..].iter().product()) {
+            let mut temp = data.to_vec();
+            let row_count = self.shape[depth];
+            let row_len = data.len() / row_count;
+            let op = |(j, chunk): (usize, &mut [T])| {
+                for (i, item) in chunk.iter_mut().enumerate() {
+                    *item = data[i * row_len + j].clone();
+                }
+            };
+            if row_count > 500 {
+                temp.par_chunks_mut(row_count).enumerate().for_each(op);
+            } else {
+                temp.chunks_mut(row_count).enumerate().for_each(op);
             }
-        };
-        if row_count > 500 {
-            temp.par_chunks_mut(row_count).enumerate().for_each(op);
-        } else {
-            temp.chunks_mut(row_count).enumerate().for_each(op);
+            data.clone_from_slice(&temp);
         }
-        self.data = temp_data;
-        self.shape.rotate_left(1);
+        self.shape[depth..].rotate_left(1);
     }
     /// Inverse transpose the array
     pub fn inv_transpose(&mut self) {
+        self.inv_transpose_depth(0);
+    }
+    pub(crate) fn inv_transpose_depth(&mut self, mut depth: usize) {
         crate::profile_function!();
-        if self.shape.len() < 2 {
+        depth = depth.min(self.rank());
+        if self.rank() - depth < 2 {
             return;
         }
-        if self.shape[0] == 0 {
-            self.shape.rotate_right(1);
+        if self.shape[depth] == 0 {
+            self.shape[depth..].rotate_right(1);
             return;
         }
-        let mut temp_data = self.data.clone();
-        let temp = temp_data.as_mut_slice();
-        let col_len = *self.shape.last().unwrap();
-        let col_count: usize = self.shape.iter().rev().skip(1).product();
-        let op = |(j, chunk): (usize, &mut [T])| {
-            for (i, item) in chunk.iter_mut().enumerate() {
-                *item = self.data[i * col_len + j].clone();
+        let data_slice = self.data.as_mut_slice();
+        for data in data_slice.chunks_exact_mut(self.shape[depth..].iter().product()) {
+            let mut temp = data.to_vec();
+            let col_count: usize = self.shape[depth..].iter().rev().skip(1).product();
+            let col_len = *self.shape.last().unwrap();
+            let op = |(j, chunk): (usize, &mut [T])| {
+                for (i, item) in chunk.iter_mut().enumerate() {
+                    *item = data[i * col_len + j].clone();
+                }
+            };
+            if col_count > 500 {
+                temp.par_chunks_mut(col_count).enumerate().for_each(op);
+            } else {
+                temp.chunks_mut(col_count).enumerate().for_each(op);
             }
-        };
-        if col_count > 500 {
-            temp.par_chunks_mut(col_count).enumerate().for_each(op);
-        } else {
-            temp.chunks_mut(col_count).enumerate().for_each(op);
+            data.clone_from_slice(&temp);
         }
-        self.data = temp_data;
-        self.shape.rotate_right(1);
+        self.shape[depth..].rotate_right(1);
     }
 }
 

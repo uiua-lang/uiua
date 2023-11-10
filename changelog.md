@@ -2,8 +2,12 @@
 
 Uiua is not yet stable.
 
-<!-- This version is not yet released.
-If you are reading this on the website, then these changes are live here. -->
+## 0.3.0 - 2023-11-??
+This version is not yet released.
+If you are reading this on the website, then these changes are live here.
+### Interpreter
+- Lots of bug and crash fixes
+- Lots of performance improvements
 
 ## 0.2.0 - 2023-11-09
 ### Language

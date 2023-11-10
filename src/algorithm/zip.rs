@@ -634,7 +634,9 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
 }
 
 fn monadic_level(f: Arc<Function>, value: Value, mut n: usize, env: &mut Uiua) -> UiuaResult {
-    if n == 0 {
+    if let Some((f, d)) = instrs_un_fast_fn(&f.instrs) {
+        env.push(f(value, d + n, env)?);
+    } else if n == 0 {
         env.push(value);
         env.call(f)?;
     } else {

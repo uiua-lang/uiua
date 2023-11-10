@@ -15,43 +15,50 @@ use crate::{
 
 use super::{multi_output, MultiOutput};
 
-type ValueUnFn = fn(Value, usize, &Uiua) -> UiuaResult<Value>;
-type ValueBinFn = Box<dyn Fn(Value, Value, usize, usize, &Uiua) -> UiuaResult<Value>>;
+type ValueUnFn = Box<dyn Fn(Value, usize, &mut Uiua) -> UiuaResult<Value>>;
+type ValueBinFn = Box<dyn Fn(Value, Value, usize, usize, &mut Uiua) -> UiuaResult<Value>>;
 
-fn prim_un_fast_fn(prim: Primitive) -> Option<ValueUnFn> {
+fn spanned_un_fn(
+    span: usize,
+    f: impl Fn(Value, usize, &Uiua) -> UiuaResult<Value> + 'static,
+) -> ValueUnFn {
+    Box::new(move |v, d, env| env.with_span(span, |env| f(v, d, env)))
+}
+
+fn prim_un_fast_fn(prim: Primitive, span: usize) -> Option<ValueUnFn> {
     use Primitive::*;
     Some(match prim {
-        Not => |v, _, env| Value::not(v, env),
-        Sign => |v, _, env| Value::sign(v, env),
-        Neg => |v, _, env| Value::neg(v, env),
-        Abs => |v, _, env| Value::abs(v, env),
-        Sqrt => |v, _, env| Value::sqrt(v, env),
-        Floor => |v, _, env| Value::floor(v, env),
-        Ceil => |v, _, env| Value::ceil(v, env),
-        Round => |v, _, env| Value::round(v, env),
-        Deshape => |mut v, d, _| {
+        Not => spanned_un_fn(span, |v, _, env| Value::not(v, env)),
+        Sign => spanned_un_fn(span, |v, _, env| Value::sign(v, env)),
+        Neg => spanned_un_fn(span, |v, _, env| Value::neg(v, env)),
+        Abs => spanned_un_fn(span, |v, _, env| Value::abs(v, env)),
+        Sqrt => spanned_un_fn(span, |v, _, env| Value::sqrt(v, env)),
+        Floor => spanned_un_fn(span, |v, _, env| Value::floor(v, env)),
+        Ceil => spanned_un_fn(span, |v, _, env| Value::ceil(v, env)),
+        Round => spanned_un_fn(span, |v, _, env| Value::round(v, env)),
+        Deshape => spanned_un_fn(span, |mut v, d, _| {
             Value::deshape_depth(&mut v, d);
             Ok(v)
-        },
-        Transpose => |mut v, d, _| {
+        }),
+        Transpose => spanned_un_fn(span, |mut v, d, _| {
             Value::transpose_depth(&mut v, d);
             Ok(v)
-        },
-        Reverse => |mut v, d, _| {
+        }),
+        Reverse => spanned_un_fn(span, |mut v, d, _| {
             Value::reverse_depth(&mut v, d);
             Ok(v)
-        },
+        }),
         _ => return None,
     })
 }
 
-fn impl_prim_un_fast_fn(prim: ImplPrimitive) -> Option<ValueUnFn> {
+fn impl_prim_un_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueUnFn> {
     use ImplPrimitive::*;
     Some(match prim {
-        InvTranspose => |mut v, d, _| {
+        InvTranspose => spanned_un_fn(span, |mut v, d, _| {
             Value::inv_transpose_depth(&mut v, d);
             Ok(v)
-        },
+        }),
         _ => return None,
     })
 }
@@ -59,12 +66,12 @@ fn impl_prim_un_fast_fn(prim: ImplPrimitive) -> Option<ValueUnFn> {
 fn instrs_un_fast_fn(instrs: &[Instr]) -> Option<(ValueUnFn, usize)> {
     use Primitive::*;
     match instrs {
-        [Instr::Prim(prim, _)] => {
-            let f = prim_un_fast_fn(*prim)?;
+        &[Instr::Prim(prim, span)] => {
+            let f = prim_un_fast_fn(prim, span)?;
             return Some((f, 0));
         }
-        [Instr::ImplPrim(prim, _)] => {
-            let f = impl_prim_un_fast_fn(*prim)?;
+        &[Instr::ImplPrim(prim, span)] => {
+            let f = impl_prim_un_fast_fn(prim, span)?;
             return Some((f, 0));
         }
         [Instr::PushFunc(f), Instr::Prim(Rows, _)] => {
@@ -76,28 +83,34 @@ fn instrs_un_fast_fn(instrs: &[Instr]) -> Option<(ValueUnFn, usize)> {
     None
 }
 
-fn prim_bin_fast_fn(prim: Primitive) -> Option<ValueBinFn> {
-    use std::boxed::Box;
+fn spanned_bin_fn(
+    span: usize,
+    f: impl Fn(Value, Value, usize, usize, &Uiua) -> UiuaResult<Value> + 'static,
+) -> ValueBinFn {
+    Box::new(move |a, b, ad, bd, env| env.with_span(span, |env| f(a, b, ad, bd, env)))
+}
+
+fn prim_bin_fast_fn(prim: Primitive, span: usize) -> Option<ValueBinFn> {
     use Primitive::*;
     Some(match prim {
-        Add => Box::new(Value::add),
-        Sub => Box::new(Value::sub),
-        Mul => Box::new(Value::mul),
-        Div => Box::new(Value::div),
-        Pow => Box::new(Value::pow),
-        Mod => Box::new(Value::modulus),
-        Log => Box::new(Value::log),
-        Eq => Box::new(Value::is_eq),
-        Ne => Box::new(Value::is_ne),
-        Lt => Box::new(Value::is_lt),
-        Gt => Box::new(Value::is_gt),
-        Le => Box::new(Value::is_le),
-        Ge => Box::new(Value::is_ge),
-        Complex => Box::new(Value::complex),
-        Max => Box::new(Value::max),
-        Min => Box::new(Value::min),
-        Atan => Box::new(Value::atan2),
-        Rotate => Box::new(|a, b, ad, bd, env| a.rotate_depth(b, ad, bd, env)),
+        Add => spanned_bin_fn(span, Value::add),
+        Sub => spanned_bin_fn(span, Value::sub),
+        Mul => spanned_bin_fn(span, Value::mul),
+        Div => spanned_bin_fn(span, Value::div),
+        Pow => spanned_bin_fn(span, Value::pow),
+        Mod => spanned_bin_fn(span, Value::modulus),
+        Log => spanned_bin_fn(span, Value::log),
+        Eq => spanned_bin_fn(span, Value::is_eq),
+        Ne => spanned_bin_fn(span, Value::is_ne),
+        Lt => spanned_bin_fn(span, Value::is_lt),
+        Gt => spanned_bin_fn(span, Value::is_gt),
+        Le => spanned_bin_fn(span, Value::is_le),
+        Ge => spanned_bin_fn(span, Value::is_ge),
+        Complex => spanned_bin_fn(span, Value::complex),
+        Max => spanned_bin_fn(span, Value::max),
+        Min => spanned_bin_fn(span, Value::min),
+        Atan => spanned_bin_fn(span, Value::atan2),
+        Rotate => spanned_bin_fn(span, |a, b, ad, bd, env| a.rotate_depth(b, ad, bd, env)),
         _ => return None,
     })
 }
@@ -106,8 +119,8 @@ fn instrs_bin_fast_fn(instrs: &[Instr]) -> Option<(ValueBinFn, usize, usize)> {
     use std::boxed::Box;
     use Primitive::*;
     match instrs {
-        [Instr::Prim(prim, _)] => {
-            let f = prim_bin_fast_fn(*prim)?;
+        &[Instr::Prim(prim, span)] => {
+            let f = prim_bin_fast_fn(prim, span)?;
             return Some((f, 0, 0));
         }
         [Instr::PushFunc(f), Instr::Prim(Rows, _)] => {
@@ -124,7 +137,7 @@ fn instrs_bin_fast_fn(instrs: &[Instr]) -> Option<(ValueBinFn, usize, usize)> {
         }
         [Instr::Prim(Flip, _), rest @ ..] => {
             let (f, a, b) = instrs_bin_fast_fn(rest)?;
-            let f = Box::new(move |a, b, ad, bd, env: &Uiua| f(b, a, bd, ad, env));
+            let f = Box::new(move |a, b, ad, bd, env: &mut Uiua| f(b, a, bd, ad, env));
             return Some((f, a, b));
         }
         _ => (),
@@ -153,7 +166,8 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
 fn each1(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
     if let Some((f, ..)) = instrs_un_fast_fn(&f.instrs) {
         let rank = xs.rank();
-        env.push(f(xs, rank, env)?);
+        let val = f(xs, rank, env)?;
+        env.push(val);
     } else {
         let outputs = f.signature().outputs;
         let mut new_values = multi_output(outputs, Vec::with_capacity(xs.element_count()));
@@ -189,7 +203,8 @@ fn each2(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     if let Some((f, ..)) = instrs_bin_fast_fn(&f.instrs) {
         let xrank = xs.rank();
         let yrank = ys.rank();
-        env.push(f(xs, ys, xrank, yrank, env)?);
+        let val = f(xs, ys, xrank, yrank, env)?;
+        env.push(val);
     } else {
         let outputs = f.signature().outputs;
         let xs_shape = xs.shape().to_vec();
@@ -274,7 +289,8 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
 
 fn rows1(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
     if let Some((f, d)) = instrs_un_fast_fn(&f.instrs) {
-        env.push(f(xs, d + 1, env)?);
+        let val = f(xs, d + 1, env)?;
+        env.push(val);
     } else {
         let outputs = f.signature().outputs;
         let mut new_rows = multi_output(outputs, Value::builder(xs.row_count()));
@@ -310,7 +326,8 @@ fn rows2(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
         )));
     }
     if let Some((f, a, b)) = instrs_bin_fast_fn(&f.instrs) {
-        env.push(f(xs, ys, a + 1, b + 1, env)?);
+        let val = f(xs, ys, a + 1, b + 1, env)?;
+        env.push(val);
     } else {
         let outputs = f.signature().outputs;
         let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
@@ -436,7 +453,8 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
 
 fn distribute2(f: Arc<Function>, a: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     if let Some((f, xd, yd)) = instrs_bin_fast_fn(&f.instrs) {
-        env.push(f(a, xs, xd, yd + 1, env)?);
+        let val = f(a, xs, xd, yd + 1, env)?;
+        env.push(val);
     } else {
         let outputs = f.signature().outputs;
         if xs.row_count() == 0 {
@@ -535,7 +553,8 @@ pub fn tribute(env: &mut Uiua) -> UiuaResult {
 
 fn tribute2(f: Arc<Function>, xs: Value, a: Value, env: &mut Uiua) -> UiuaResult {
     if let Some((f, xd, yd)) = instrs_bin_fast_fn(&f.instrs) {
-        env.push(f(xs, a, xd + 1, yd, env)?);
+        let val = f(xs, a, xd + 1, yd, env)?;
+        env.push(val);
     } else {
         let outputs = f.signature().outputs;
         if xs.row_count() == 0 {
@@ -637,7 +656,8 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
 
 fn monadic_level(f: Arc<Function>, value: Value, mut n: usize, env: &mut Uiua) -> UiuaResult {
     if let Some((f, d)) = instrs_un_fast_fn(&f.instrs) {
-        env.push(f(value, d + n, env)?);
+        let val = f(value, d + n, env)?;
+        env.push(val);
     } else if n == 0 {
         env.push(value);
         env.call(f)?;

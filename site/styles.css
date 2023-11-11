@@ -32,6 +32,10 @@ html {
     font-size: 110%;
 }
 
+body {
+    margin: 0;
+}
+
 p {
     line-height: 1.5em;
 }

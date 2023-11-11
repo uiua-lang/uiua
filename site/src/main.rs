@@ -12,15 +12,13 @@ mod tour;
 mod tutorial;
 mod uiuisms;
 
-use std::time::Duration;
-
 use base64::engine::{general_purpose::URL_SAFE, Engine};
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 use uiua::{ConstantDef, PrimClass, Primitive};
 use wasm_bindgen::JsCast;
-use web_sys::{HtmlAudioElement, HtmlDivElement};
+use web_sys::HtmlAudioElement;
 
 use crate::{blog::*, docs::*, editor::*, other::*, tour::*, uiuisms::*};
 
@@ -116,37 +114,41 @@ pub fn Site() -> impl IntoView {
 
     view! {
         <Router>
-            <main>
-                <div id="top">
-                    <div id="header">
-                        <div id="header-left">
-                            <h1><A id="header-uiua" href="/"><img src="/uiua-logo.png" style="height: 1em" alt="Uiua logo" />" Uiua"</A></h1>
-                            <p id="subtitle">{ subtitle }</p>
-                        </div>
-                        <div id="nav">
-                            <a class="pls-no-block" href="https://github.com/sponsors/uiua-lang">"Support Uiua's development"</a>
-                            <a href="/">"Home"</a>
-                        </div>
-                    </div>
-                    <Routes>
+                <Routes>
+                    <Route path="embedpad" view=EmbedPad/>
+                    <Route path="embed" view=Embed/>
+                    <Route path="*" view=move || view! {
+                        <main>
+                            <div id="top">
+                                <div id="header">
+                                    <div id="header-left">
+                                        <h1><A id="header-uiua" href="/"><img src="/uiua-logo.png" style="height: 1em" alt="Uiua logo" />" Uiua"</A></h1>
+                                        <p id="subtitle">{ subtitle.clone() }</p>
+                                    </div>
+                                    <div id="nav">
+                                        <a class="pls-no-block" href="https://github.com/sponsors/uiua-lang">"Support Uiua's development"</a>
+                                        <a href="/">"Home"</a>
+                                    </div>
+                                </div>
+                                <Outlet/>
+                            </div>
+                        </main>
+                    }>
                         <Route path="" view=MainPage/>
                         <Route path="docs/:page?" view=Docs/>
                         <Route path="isms/:search?" view=Uiuisms/>
                         <Route path="pad" view=Pad/>
-                        <Route path="embedpad" view=EmbedPad/>
-                        <Route path="embed" view=Embed/>
                         <Route path="install" view=Install/>
                         <Route path="tour" view=Tour/>
                         <Route path="isms" view=Uiuisms/>
                         <Route path="rtl" view=RightToLeft/>
                         <Route path="blog/:page?" view=Blog/>
                         <Route path="*" view=NotFound/>
-                    </Routes>
-                </div>
+                    </Route>
+                </Routes>
                 <br/>
                 <br/>
                 <br/>
-            </main>
         </Router>
     }
 }
@@ -398,7 +400,6 @@ pub fn Pad() -> impl IntoView {
 
 #[component]
 pub fn EmbedPad() -> impl IntoView {
-    set_timeout(remove_outer, Duration::ZERO);
     let src = pad_src();
     view! {
         <Editor mode=EditorMode::Pad example={ &src }/>
@@ -407,19 +408,9 @@ pub fn EmbedPad() -> impl IntoView {
 
 #[component]
 pub fn Embed() -> impl IntoView {
-    set_timeout(remove_outer, Duration::ZERO);
     let src = pad_src();
     view! {
         <Editor mode=EditorMode::Example example={ &src }/>
-    }
-}
-
-fn remove_outer() {
-    if let Some(elem) = get_element::<HtmlDivElement>("header") {
-        elem.remove();
-    }
-    if let Some(elem) = get_element::<HtmlDivElement>("top") {
-        elem.set_id("");
     }
 }
 

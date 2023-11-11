@@ -25,6 +25,7 @@ If you are reading this on the website, then these changes are live here.
   - Some other functions are also a bit faster
 ### Website
 - Hold shift when copying a link to copy a Markdown link
+- Add embeddable editor. Replace the `pad` in pad links with `embed` or `embedpad`.
 
 ## 0.1.0 - 2023-11-03
 ### Language

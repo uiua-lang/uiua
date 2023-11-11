@@ -12,13 +12,15 @@ mod tour;
 mod tutorial;
 mod uiuisms;
 
+use std::time::Duration;
+
 use base64::engine::{general_purpose::URL_SAFE, Engine};
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 use uiua::{ConstantDef, PrimClass, Primitive};
 use wasm_bindgen::JsCast;
-use web_sys::HtmlAudioElement;
+use web_sys::{HtmlAudioElement, HtmlDivElement};
 
 use crate::{blog::*, docs::*, editor::*, other::*, tour::*, uiuisms::*};
 
@@ -131,6 +133,8 @@ pub fn Site() -> impl IntoView {
                         <Route path="docs/:page?" view=Docs/>
                         <Route path="isms/:search?" view=Uiuisms/>
                         <Route path="pad" view=Pad/>
+                        <Route path="embedpad" view=EmbedPad/>
+                        <Route path="embed" view=Embed/>
                         <Route path="install" view=Install/>
                         <Route path="tour" view=Tour/>
                         <Route path="isms" view=Uiuisms/>
@@ -385,6 +389,46 @@ fn element<T: JsCast>(id: &str) -> T {
 
 #[component]
 pub fn Pad() -> impl IntoView {
+    let src = pad_src();
+    view! {
+        <Title text="Pad - Uiua"/>
+        <Editor mode=EditorMode::Pad example={ &src }/>
+    }
+}
+
+#[component]
+pub fn EmbedPad() -> impl IntoView {
+    set_timeout(
+        || {
+            if let Some(elem) = get_element::<HtmlDivElement>("header") {
+                elem.remove();
+            }
+        },
+        Duration::ZERO,
+    );
+    let src = pad_src();
+    view! {
+        <Editor mode=EditorMode::Pad example={ &src }/>
+    }
+}
+
+#[component]
+pub fn Embed() -> impl IntoView {
+    set_timeout(
+        || {
+            if let Some(elem) = get_element::<HtmlDivElement>("header") {
+                elem.remove();
+            }
+        },
+        Duration::ZERO,
+    );
+    let src = pad_src();
+    view! {
+        <Editor mode=EditorMode::Example example={ &src }/>
+    }
+}
+
+fn pad_src() -> String {
     let mut src = use_query_map()
         .with_untracked(|params| params.get("src").cloned())
         .unwrap_or_default();
@@ -397,10 +441,7 @@ pub fn Pad() -> impl IntoView {
             }
         }
     }
-    view! {
-        <Title text="Pad - Uiua"/>
-        <Editor mode=EditorMode::Pad example={ &src }/>
-    }
+    src
 }
 
 #[test]

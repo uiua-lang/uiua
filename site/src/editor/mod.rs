@@ -1008,7 +1008,9 @@ ctrl/⌘ /       - Toggle line comment
    alt Up/Down - Swap lines
  shift Delete  - Delete lines
 ctrl/⌘ Z       - Undo
-ctrl/⌘ Y       - Redo"
+ctrl/⌘ Y       - Redo
+replace \"pad\" in links with \"embed\"
+or \"embedpad\" to embed the editor"
                         disabled>
                         "🛈"
                     </button>

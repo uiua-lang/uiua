@@ -398,14 +398,7 @@ pub fn Pad() -> impl IntoView {
 
 #[component]
 pub fn EmbedPad() -> impl IntoView {
-    set_timeout(
-        || {
-            if let Some(elem) = get_element::<HtmlDivElement>("header") {
-                elem.remove();
-            }
-        },
-        Duration::ZERO,
-    );
+    set_timeout(remove_outer, Duration::ZERO);
     let src = pad_src();
     view! {
         <Editor mode=EditorMode::Pad example={ &src }/>
@@ -414,17 +407,19 @@ pub fn EmbedPad() -> impl IntoView {
 
 #[component]
 pub fn Embed() -> impl IntoView {
-    set_timeout(
-        || {
-            if let Some(elem) = get_element::<HtmlDivElement>("header") {
-                elem.remove();
-            }
-        },
-        Duration::ZERO,
-    );
+    set_timeout(remove_outer, Duration::ZERO);
     let src = pad_src();
     view! {
         <Editor mode=EditorMode::Example example={ &src }/>
+    }
+}
+
+fn remove_outer() {
+    if let Some(elem) = get_element::<HtmlDivElement>("header") {
+        elem.remove();
+    }
+    if let Some(elem) = get_element::<HtmlDivElement>("top") {
+        elem.set_id("");
     }
 }
 

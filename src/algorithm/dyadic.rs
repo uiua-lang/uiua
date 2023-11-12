@@ -1948,7 +1948,9 @@ impl<T: ArrayValue> Array<T> {
         Ok(arr)
     }
     fn unselect(&self, indices: &[isize], mut into: Self, env: &Uiua) -> UiuaResult<Self> {
-        if self.row_count() != indices.len() {
+        let shape_is_valid = self.row_count() == indices.len()
+            || indices.len() == 1 && &into.shape()[1..] == self.shape();
+        if !shape_is_valid {
             return Err(env.error(
                 "Attempted to undo selection, but \
                 the shape of the selected array changed",

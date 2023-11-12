@@ -3,7 +3,8 @@
 use std::{
     borrow::Cow,
     cmp::Ordering,
-    collections::{HashMap, HashSet},
+    collections::{hash_map::DefaultHasher, HashMap, HashSet},
+    hash::{Hash, Hasher},
     iter::repeat,
     mem::take,
 };
@@ -2294,7 +2295,7 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
-    /// Get the `indexof` the rows of this value in another
+    /// Get the `index of` the rows of this value in another
     pub fn index_of(&self, searched_in: &Value, env: &Uiua) -> UiuaResult<Value> {
         Ok(match (self, searched_in) {
             (Value::Num(a), Value::Num(b)) => a.index_of(b, env)?.into(),
@@ -2315,10 +2316,35 @@ impl Value {
             }
         })
     }
+    /// Get the `progressive index of` the rows of this value in another
+    pub fn progressive_index_of(&self, searched_in: &Value, env: &Uiua) -> UiuaResult<Value> {
+        Ok(match (self, searched_in) {
+            (Value::Num(a), Value::Num(b)) => a.progressive_index_of(b, env)?.into(),
+            #[cfg(feature = "bytes")]
+            (Value::Byte(a), Value::Byte(b)) => a.progressive_index_of(b, env)?.into(),
+            (Value::Char(a), Value::Char(b)) => a.progressive_index_of(b, env)?.into(),
+            (Value::Box(a), Value::Box(b)) => a.progressive_index_of(b, env)?.into(),
+            #[cfg(feature = "bytes")]
+            (Value::Num(a), Value::Byte(b)) => {
+                a.progressive_index_of(&b.clone().convert(), env)?.into()
+            }
+            #[cfg(feature = "bytes")]
+            (Value::Byte(a), Value::Num(b)) => {
+                a.clone().convert().progressive_index_of(b, env)?.into()
+            }
+            (a, b) => {
+                return Err(env.error(format!(
+                    "Cannot look for indices of {} in {}",
+                    a.type_name(),
+                    b.type_name(),
+                )))
+            }
+        })
+    }
 }
 
 impl<T: ArrayValue> Array<T> {
-    /// Get the `indexof` the rows of this array in another
+    /// Get the `index of` the rows of this array in another
     pub fn index_of(&self, searched_in: &Array<T>, env: &Uiua) -> UiuaResult<Array<f64>> {
         let searched_for = self;
         Ok(match searched_for.rank().cmp(&searched_in.rank()) {
@@ -2374,6 +2400,84 @@ impl<T: ArrayValue> Array<T> {
                     let mut rows = Vec::with_capacity(searched_in.row_count());
                     for of in searched_in.rows() {
                         rows.push(searched_for.index_of(&of, env)?);
+                    }
+                    Array::from_row_arrays(rows, env)?
+                }
+            }
+        })
+    }
+    /// Get the `progressive index of` the rows of this array in another
+    fn progressive_index_of(&self, searched_in: &Array<T>, env: &Uiua) -> UiuaResult<Array<f64>> {
+        let searched_for = self;
+        Ok(match searched_for.rank().cmp(&searched_in.rank()) {
+            Ordering::Equal => {
+                let mut used = HashSet::new();
+                let mut result_data = EcoVec::with_capacity(searched_for.row_count());
+                if searched_for.rank() == 1 {
+                    for elem in &searched_for.data {
+                        let mut hasher = DefaultHasher::new();
+                        elem.array_hash(&mut hasher);
+                        let hash = hasher.finish();
+                        result_data.push(
+                            searched_in
+                                .data
+                                .iter()
+                                .enumerate()
+                                .find(|&(i, of)| elem.array_eq(of) && used.insert((hash, i)))
+                                .map(|(i, _)| i)
+                                .unwrap_or(searched_in.row_count())
+                                as f64,
+                        );
+                    }
+                    return Ok(Array::from(result_data));
+                }
+                'elem: for elem in searched_for.rows() {
+                    for (i, of) in searched_in.rows().enumerate() {
+                        let mut hasher = DefaultHasher::new();
+                        elem.hash(&mut hasher);
+                        let hash = hasher.finish();
+                        if elem == of && used.insert((hash, i)) {
+                            result_data.push(i as f64);
+                            continue 'elem;
+                        }
+                    }
+                    result_data.push(searched_in.row_count() as f64);
+                }
+                let shape: Shape = self.shape.iter().cloned().take(1).collect();
+                let res = Array::new(shape, result_data);
+                res.validate_shape();
+                res
+            }
+            Ordering::Greater => {
+                let mut rows = Vec::with_capacity(searched_for.row_count());
+                for elem in searched_for.rows() {
+                    rows.push(elem.progressive_index_of(searched_in, env)?);
+                }
+                Array::from_row_arrays(rows, env)?
+            }
+            Ordering::Less => {
+                if searched_in.rank() - searched_for.rank() == 1 {
+                    if searched_for.rank() == 0 {
+                        let searched_for = &searched_for.data[0];
+                        Array::from(
+                            searched_in
+                                .data
+                                .iter()
+                                .position(|of| searched_for.array_eq(of))
+                                .unwrap_or(searched_in.row_count())
+                                as f64,
+                        )
+                    } else {
+                        (searched_in
+                            .rows()
+                            .position(|r| r == *searched_for)
+                            .unwrap_or(searched_in.row_count()) as f64)
+                            .into()
+                    }
+                } else {
+                    let mut rows = Vec::with_capacity(searched_in.row_count());
+                    for of in searched_in.rows() {
+                        rows.push(searched_for.progressive_index_of(&of, env)?);
                     }
                     Array::from_row_arrays(rows, env)?
                 }

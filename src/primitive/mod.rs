@@ -401,6 +401,7 @@ impl Primitive {
             Primitive::Member => env.dyadic_rr_env(Value::member)?,
             Primitive::Find => env.dyadic_rr_env(Value::find)?,
             Primitive::IndexOf => env.dyadic_rr_env(Value::index_of)?,
+            Primitive::ProgressiveIndexOf => env.dyadic_rr_env(Value::progressive_index_of)?,
             Primitive::Box => {
                 let val = env.pop(1)?;
                 env.push(Boxed(val));

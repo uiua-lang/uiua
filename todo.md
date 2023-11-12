@@ -2,9 +2,6 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- Under sign
-- Under abs
-- Pack neg reshape
 - Multimedia
   - Sound input
   - Webcam input

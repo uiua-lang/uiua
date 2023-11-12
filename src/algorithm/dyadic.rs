@@ -2094,24 +2094,21 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// Try to `find` this value in another
     pub fn find(&self, searched: &Self, env: &Uiua) -> UiuaResult<Self> {
-        Ok(match (self, searched) {
-            (Value::Num(a), Value::Num(b)) => a.find(b, env)?.into(),
-            #[cfg(feature = "bytes")]
-            (Value::Byte(a), Value::Byte(b)) => a.find(b, env)?.into(),
-            (Value::Char(a), Value::Char(b)) => a.find(b, env)?.into(),
-            (Value::Box(a), Value::Box(b)) => a.find(b, env)?.into(),
-            #[cfg(feature = "bytes")]
-            (Value::Num(a), Value::Byte(b)) => a.find(&b.clone().convert(), env)?.into(),
-            #[cfg(feature = "bytes")]
-            (Value::Byte(a), Value::Num(b)) => a.clone().convert().find(b, env)?.into(),
-            (a, b) => {
-                return Err(env.error(format!(
+        self.generic_bin_ref(
+            searched,
+            |a, b| a.find(b, env).map(Into::into),
+            |a, b| a.find(b, env).map(Into::into),
+            |a, b| a.find(b, env).map(Into::into),
+            |a, b| a.find(b, env).map(Into::into),
+            |a, b| a.find(b, env).map(Into::into),
+            |a, b| {
+                env.error(format!(
                     "Cannot find {} in {} array",
                     a.type_name(),
-                    b.type_name(),
-                )))
-            }
-        })
+                    b.type_name()
+                ))
+            },
+        )
     }
 }
 
@@ -2227,24 +2224,21 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// Check which rows of this value are `member`s of another
     pub fn member(&self, of: &Self, env: &Uiua) -> UiuaResult<Self> {
-        Ok(match (self, of) {
-            (Value::Num(a), Value::Num(b)) => a.member(b, env)?.into(),
-            #[cfg(feature = "bytes")]
-            (Value::Byte(a), Value::Byte(b)) => a.member(b, env)?.into(),
-            (Value::Char(a), Value::Char(b)) => a.member(b, env)?.into(),
-            (Value::Box(a), Value::Box(b)) => a.member(b, env)?.into(),
-            #[cfg(feature = "bytes")]
-            (Value::Num(a), Value::Byte(b)) => a.member(&b.convert_ref(), env)?.into(),
-            #[cfg(feature = "bytes")]
-            (Value::Byte(a), Value::Num(b)) => a.convert_ref().member(b, env)?.into(),
-            (a, b) => {
-                return Err(env.error(format!(
+        self.generic_bin_ref(
+            of,
+            |a, b| a.member(b, env).map(Into::into),
+            |a, b| a.member(b, env).map(Into::into),
+            |a, b| a.member(b, env).map(Into::into),
+            |a, b| a.member(b, env).map(Into::into),
+            |a, b| a.member(b, env).map(Into::into),
+            |a, b| {
+                env.error(format!(
                     "Cannot look for members of {} array in {} array",
                     a.type_name(),
                     b.type_name(),
-                )))
-            }
-        })
+                ))
+            },
+        )
     }
 }
 
@@ -2297,49 +2291,39 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// Get the `index of` the rows of this value in another
     pub fn index_of(&self, searched_in: &Value, env: &Uiua) -> UiuaResult<Value> {
-        Ok(match (self, searched_in) {
-            (Value::Num(a), Value::Num(b)) => a.index_of(b, env)?.into(),
-            #[cfg(feature = "bytes")]
-            (Value::Byte(a), Value::Byte(b)) => a.index_of(b, env)?.into(),
-            (Value::Char(a), Value::Char(b)) => a.index_of(b, env)?.into(),
-            (Value::Box(a), Value::Box(b)) => a.index_of(b, env)?.into(),
-            #[cfg(feature = "bytes")]
-            (Value::Num(a), Value::Byte(b)) => a.index_of(&b.clone().convert(), env)?.into(),
-            #[cfg(feature = "bytes")]
-            (Value::Byte(a), Value::Num(b)) => a.clone().convert().index_of(b, env)?.into(),
-            (a, b) => {
-                return Err(env.error(format!(
-                    "Cannot look for indices of {} in {}",
+        self.generic_bin_ref(
+            searched_in,
+            |a, b| a.index_of(b, env).map(Into::into),
+            |a, b| a.index_of(b, env).map(Into::into),
+            |a, b| a.index_of(b, env).map(Into::into),
+            |a, b| a.index_of(b, env).map(Into::into),
+            |a, b| a.index_of(b, env).map(Into::into),
+            |a, b| {
+                env.error(format!(
+                    "Cannot look for indices of {} array in {} array",
                     a.type_name(),
                     b.type_name(),
-                )))
-            }
-        })
+                ))
+            },
+        )
     }
     /// Get the `progressive index of` the rows of this value in another
     pub fn progressive_index_of(&self, searched_in: &Value, env: &Uiua) -> UiuaResult<Value> {
-        Ok(match (self, searched_in) {
-            (Value::Num(a), Value::Num(b)) => a.progressive_index_of(b, env)?.into(),
-            #[cfg(feature = "bytes")]
-            (Value::Byte(a), Value::Byte(b)) => a.progressive_index_of(b, env)?.into(),
-            (Value::Char(a), Value::Char(b)) => a.progressive_index_of(b, env)?.into(),
-            (Value::Box(a), Value::Box(b)) => a.progressive_index_of(b, env)?.into(),
-            #[cfg(feature = "bytes")]
-            (Value::Num(a), Value::Byte(b)) => {
-                a.progressive_index_of(&b.clone().convert(), env)?.into()
-            }
-            #[cfg(feature = "bytes")]
-            (Value::Byte(a), Value::Num(b)) => {
-                a.clone().convert().progressive_index_of(b, env)?.into()
-            }
-            (a, b) => {
-                return Err(env.error(format!(
-                    "Cannot look for indices of {} in {}",
+        self.generic_bin_ref(
+            searched_in,
+            |a, b| a.progressive_index_of(b, env).map(Into::into),
+            |a, b| a.progressive_index_of(b, env).map(Into::into),
+            |a, b| a.progressive_index_of(b, env).map(Into::into),
+            |a, b| a.progressive_index_of(b, env).map(Into::into),
+            |a, b| a.progressive_index_of(b, env).map(Into::into),
+            |a, b| {
+                env.error(format!(
+                    "Cannot look for indices of {} array in {} array",
                     a.type_name(),
                     b.type_name(),
-                )))
-            }
-        })
+                ))
+            },
+        )
     }
 }
 

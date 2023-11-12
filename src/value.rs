@@ -419,6 +419,42 @@ impl Value {
             (a, b) => Err(err(a, b)),
         }
     }
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn generic_bin_ref<T, E>(
+        &self,
+        other: &Self,
+        n: impl FnOnce(&Array<f64>, &Array<f64>) -> Result<T, E>,
+        _b: impl FnOnce(&Array<u8>, &Array<u8>) -> Result<T, E>,
+        _co: impl FnOnce(&Array<Complex>, &Array<Complex>) -> Result<T, E>,
+        ch: impl FnOnce(&Array<char>, &Array<char>) -> Result<T, E>,
+        f: impl FnOnce(&Array<Boxed>, &Array<Boxed>) -> Result<T, E>,
+        err: impl FnOnce(&Self, &Self) -> E,
+    ) -> Result<T, E> {
+        match (self, other) {
+            (Self::Num(a), Self::Num(b)) => n(a, b),
+            #[cfg(feature = "bytes")]
+            (Self::Byte(a), Self::Byte(b)) => _b(a, b),
+            #[cfg(feature = "bytes")]
+            (Self::Byte(a), Self::Num(b)) => n(&a.convert_ref(), b),
+            #[cfg(feature = "bytes")]
+            (Self::Num(a), Self::Byte(b)) => n(a, &b.convert_ref()),
+            #[cfg(feature = "complex")]
+            (Self::Complex(a), Self::Complex(b)) => _co(a, b),
+            #[cfg(feature = "complex")]
+            (Self::Complex(a), Self::Num(b)) => _co(a, &b.convert_ref()),
+            #[cfg(feature = "complex")]
+            (Self::Num(a), Self::Complex(b)) => _co(&a.convert_ref(), b),
+            #[cfg(all(feature = "complex", feature = "bytes"))]
+            (Self::Complex(a), Self::Byte(b)) => _co(a, &b.convert_ref()),
+            #[cfg(all(feature = "complex", feature = "bytes"))]
+            (Self::Byte(a), Self::Complex(b)) => _co(&a.convert_ref(), b),
+            (Self::Char(a), Self::Char(b)) => ch(a, b),
+            (Self::Box(a), Self::Box(b)) => f(a, b),
+            (Self::Box(a), b) => f(a, &b.coerce_as_boxes()),
+            (a, Self::Box(b)) => f(&a.coerce_as_boxes(), b),
+            (a, b) => Err(err(a, b)),
+        }
+    }
     /// Ensure that the capacity is at least `min`
     pub(crate) fn reserve_min(&mut self, min: usize) {
         match self {

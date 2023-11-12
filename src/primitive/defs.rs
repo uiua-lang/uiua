@@ -898,25 +898,25 @@ primitive!(
     ///
     /// [indexof] is closely related to [member].
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),
-    /// Find sequential indices of each row of one array in another
-    ///
-    /// Unlike [indexof], [progressive indexof] will return the sequential indices of each row of the first array in the second array; the same index will not be used twice.
-    /// When a searched-for row runs out of indices in the searched-in array, the length of the searched-in array is returned.
-    /// Note here where the results are the same and where they are different:
-    /// ex: ⊗ [1 1 2 2 3 3 4 4] [2 2 1 4 1 2 3 4]
-    ///   : ⊘ [1 1 2 2 3 3 4 4] [2 2 1 4 1 2 3 4]
-    ///
-    /// One use of this is to find the first occurence of each row.
-    /// ex: > ⊃⊘⋅⧻ ⊃∘⊝ . [1 4 3 3 2 1 3 5 2 1]
-    ///
-    /// The [progressive indexof] an array in itself is the [range][length] of the array.
-    /// ex: ⊘. [1 4 3 3 2 1 3 5 2 1]
-    (
-        2,
-        ProgressiveIndexOf,
-        DyadicArray,
-        ("progressive indexof", '⊘')
-    ),
+    // /// Find sequential indices of each row of one array in another
+    // ///
+    // /// Unlike [indexof], [progressive indexof] will return the sequential indices of each row of the first array in the second array; the same index will not be used twice.
+    // /// When a searched-for row runs out of indices in the searched-in array, the length of the searched-in array is returned.
+    // /// Note here where the results are the same and where they are different:
+    // /// ex: ⊗ [1 1 2 2 3 3 4 4] [2 2 1 4 1 2 3 4]
+    // ///   : ⊘ [1 1 2 2 3 3 4 4] [2 2 1 4 1 2 3 4]
+    // ///
+    // /// One use of this is to find the first occurence of each row.
+    // /// ex: > ⊃⊘⋅⧻ ⊃∘⊝ . [1 4 3 3 2 1 3 5 2 1]
+    // ///
+    // /// The [progressive indexof] an array in itself is the [range][length] of the array.
+    // /// ex: ⊘. [1 4 3 3 2 1 3 5 2 1]
+    // (
+    //     2,
+    //     ProgressiveIndexOf,
+    //     DyadicArray,
+    //     ("progressive indexof", '⊘')
+    // ),
     /// Apply a reducing function to an array
     ///
     /// For reducing with an initial value, see [fold].

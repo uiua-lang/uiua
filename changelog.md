@@ -5,6 +5,8 @@ Uiua is not yet stable.
 ## 0.3.0 - 2023-11-??
 This version is not yet released.
 If you are reading this on the website, then these changes are live here.
+### Language
+- [`under` `⍜`](https://uiua.org/docs/under) now works with [`absolut value` `⌵`](https://uiua.org/docs/absolute)
 ### Interpreter
 - Lots of bug and crash fixes
 - Lots of performance improvements

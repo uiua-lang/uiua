@@ -281,6 +281,11 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
             [PopTempN(1).i(), Neg.i(), Rotate.i()],
         ),
         &(
+            [Abs],
+            [Dup.i(), Sign.i(), PushTempN(1).i(), Abs.i()],
+            [PopTempN(1).i(), Mul.i()],
+        ),
+        &(
             [First],
             [Dup.i(), PushTempN(1).i(), First.i()],
             [PopTempN(1).i(), 1.i(), Drop.i(), Flip.i(), Join.i()],

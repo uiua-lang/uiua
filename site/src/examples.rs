@@ -44,7 +44,7 @@ const STRIPES: &str = "\
 const PALINDROME: &str = r#"$ uiua racecar wow cool!
 ⬚@ ⊜(⊂⊏∶"❌✅" ≍⇌..)≠@ ."#;
 const AUTOMATA: &str = "\
-Rule ← /+⊞=∶ ⍘⋯⇌◫3⇌ ⇌∸⇌∸∶ ▽∶⇡⧻.⋯
+Rule ← /+⊞=∶ ⍘⋯⇌◫3⇌ ⇌∸⇌∸∶ ⊚⋯
 =⌊÷2∶⇡.500         # Init
 ⇌[⍥(Rule30.)⌊÷2⧻.] # Run";
 const ROMAN: &str = r#"k ← "IVXLCDM"

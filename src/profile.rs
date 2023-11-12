@@ -46,7 +46,7 @@ pub(crate) mod enabled {
         (
             "AUTOMATA",
             "\
-Rule ← /+⊞=∶ ⍘⋯⇌◫3⇌ ⇌∸⇌∸∶ ▽∶⇡⧻.⋯
+Rule ← /+⊞=∶ ⍘⋯⇌◫3⇌ ⇌∸⇌∸∶ ⊚⋯
 =⌊÷2∶⇡.500         # Init
 ⇌[⍥(Rule30.)⌊÷2⧻.] # Run",
         ),

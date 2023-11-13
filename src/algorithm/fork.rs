@@ -101,7 +101,7 @@ pub fn switch(count: usize, sig: Signature, env: &mut Uiua) -> UiuaResult {
         else {
             return Err(env.error(
                 "Function stack was empty when getting switch function. \
-            This is a bug in the interpreter.",
+                This is a bug in the interpreter.",
             ));
         };
         // Discard unused arguments

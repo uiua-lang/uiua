@@ -118,22 +118,31 @@ fn prim_bin_fast_fn(prim: Primitive, span: usize) -> Option<ValueBinFn> {
 fn instrs_bin_fast_fn(instrs: &[Instr]) -> Option<(ValueBinFn, usize, usize)> {
     use std::boxed::Box;
     use Primitive::*;
+
+    fn nest_bin_fast<F>(
+        (f, ad1, bd1): (F, usize, usize),
+        ad2: usize,
+        bd2: usize,
+    ) -> Option<(F, usize, usize)> {
+        if (ad1 as isize - ad2 as isize).signum() != (bd1 as isize - bd2 as isize).signum() {
+            return None;
+        }
+        Some((f, ad1 + ad2, bd1 + bd2))
+    }
+
     match instrs {
         &[Instr::Prim(prim, span)] => {
             let f = prim_bin_fast_fn(prim, span)?;
             return Some((f, 0, 0));
         }
         [Instr::PushFunc(f), Instr::Prim(Rows, _)] => {
-            let (f, a, b) = instrs_bin_fast_fn(&f.instrs)?;
-            return Some((f, a + 1, b + 1));
+            return nest_bin_fast(instrs_bin_fast_fn(&f.instrs)?, 1, 1)
         }
         [Instr::PushFunc(f), Instr::Prim(Distribute, _)] => {
-            let (f, a, b) = instrs_bin_fast_fn(&f.instrs)?;
-            return Some((f, a, b + 1));
+            return nest_bin_fast(instrs_bin_fast_fn(&f.instrs)?, 0, 1)
         }
         [Instr::PushFunc(f), Instr::Prim(Tribute, _)] => {
-            let (f, a, b) = instrs_bin_fast_fn(&f.instrs)?;
-            return Some((f, a + 1, b));
+            return nest_bin_fast(instrs_bin_fast_fn(&f.instrs)?, 1, 0)
         }
         [Instr::Prim(Flip, _), rest @ ..] => {
             let (f, a, b) = instrs_bin_fast_fn(rest)?;

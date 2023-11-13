@@ -953,7 +953,7 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <Editor example="(3|5) 1"/>
         <p>"Switch functions can have as many branches as you want, and they can also be nested."</p>
         <Editor example="≡((×10|+1|(∘|¯)=2.) ◿3.) [2 9 4 0 8 3]"/>
-        <p>"Each branch can have a signature specified. For the overall switch function to have a valid signature, all branches must change the height of the stack by the same amount."</p>
+        <p>"Each branch can have a signature specified. For the overall switch function to have a valid signature, all branches must either change the height of the stack by the same amount "<em>"or"</em>"return the same number of outputs."</p>
         <Editor example="f ← (|2 ×||3.2 ⊃(++)×)\n[f 0 2 3 4]\n[f 1 2 3 4]"/>
         <p>"Signatures in switch functions are a bit messy, so try to avoid them when possible."</p>
         <p>"Because a second "<code>"|"</code>" immediately after another indicates a signature, branches that do nothing must contain "<Prim prim=Identity/>"."</p>

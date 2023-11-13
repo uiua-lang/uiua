@@ -519,7 +519,7 @@ code:
                     self.function_stack.push(f.clone());
                     Ok(())
                 }
-                &Instr::Switch { count, span } => self.with_span(span, |env| {
+                &Instr::Switch { count, sig, span } => self.with_span(span, |env| {
                     let i = env
                         .pop("switch index")?
                         .as_nat(env, "Switch index must be a natural number")?;
@@ -533,6 +533,11 @@ code:
                         .drain(env.function_stack.len() - count..)
                         .nth(i);
                     if let Some(f) = f {
+                        let discard_start = env.stack.len().saturating_sub(sig.args);
+                        let discard_end = discard_start + sig.args
+                            - f.signature().args
+                            - (sig.outputs - f.signature().outputs);
+                        env.stack.drain(discard_start..discard_end);
                         env.call(f)
                     } else {
                         Err(env.error(

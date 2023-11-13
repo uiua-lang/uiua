@@ -622,6 +622,11 @@ impl Uiua {
         Ok(())
     }
     fn func(&mut self, func: Func, span: CodeSpan) -> UiuaResult {
+        let function = self.compile_func(func, span)?;
+        self.push_instr(Instr::push_func(function));
+        Ok(())
+    }
+    fn compile_func(&mut self, func: Func, span: CodeSpan) -> UiuaResult<Function> {
         let mut instrs = Vec::new();
         for line in func.lines {
             instrs.extend(self.compile_words(line, true)?);
@@ -655,29 +660,40 @@ impl Uiua {
             }
         };
 
-        // De-nest function calls
-        if let [Instr::Push(val), Instr::Call(_)] = instrs.as_slice() {
-            if let Some(f) = val.as_box() {
-                self.push_instr(Instr::push(f.clone()));
-                return Ok(());
-            }
-        }
-
-        let function = Function::new(func.id, instrs, sig);
-        self.push_instr(Instr::push_func(function));
-        Ok(())
+        Ok(Function::new(func.id, instrs, sig))
     }
     fn switch(&mut self, sw: Switch, span: CodeSpan, call: bool) -> UiuaResult {
         let count = sw.branches.len();
         if !call {
             self.new_functions.push(Vec::new());
         }
-        for branch in sw.branches {
-            self.func(branch.value, branch.span)?;
+        let mut branches = sw.branches.into_iter();
+        let first_branch = branches.next().expect("switch cannot have no branches");
+        let f = self.compile_func(first_branch.value, first_branch.span)?;
+        let mut sig = f.signature();
+        self.push_instr(Instr::push_func(f));
+        for branch in branches {
+            let f = self.compile_func(branch.value, branch.span.clone())?;
+            let f_sig = f.signature();
+            if f_sig.is_compatible_with(sig) {
+                sig = sig.max_with(f_sig);
+            } else if f_sig.outputs == sig.outputs {
+                sig.args = sig.args.max(f_sig.args)
+            } else {
+                return Err(branch
+                    .span
+                    .sp(format!(
+                        "Switch branch's signature {f_sig} is \
+                        incompatible with previous branches {sig}",
+                    ))
+                    .into());
+            }
+            self.push_instr(Instr::push_func(f));
         }
         let span_idx = self.add_span(span.clone());
         self.push_instr(Instr::Switch {
             count,
+            sig,
             span: span_idx,
         });
         if !call {

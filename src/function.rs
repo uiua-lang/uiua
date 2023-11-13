@@ -41,6 +41,7 @@ pub enum Instr {
     /// Execute a switch function
     Switch {
         count: usize,
+        sig: Signature,
         span: usize,
     },
     /// Call a dynamic function
@@ -158,7 +159,10 @@ impl Hash for Instr {
             Instr::ImplPrim(p, _) => p.hash(state),
             Instr::Call(_) => {}
             Instr::PushFunc(f) => f.id.hash(state),
-            Instr::Switch { count, .. } => count.hash(state),
+            Instr::Switch { count, sig, .. } => {
+                count.hash(state);
+                sig.hash(state);
+            }
             Instr::PushTempFunctions(count) => count.hash(state),
             Instr::PopTempFunctions(count) => count.hash(state),
             Instr::GetTempFunction { offset, .. } => offset.hash(state),

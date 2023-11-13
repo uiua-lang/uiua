@@ -1114,6 +1114,14 @@ primitive!(
     ///   : ⊐[1 2_3]
     /// ex:  {1 2 3}
     ///   : ⊐[1 2 3]
+    /// Because [pack] only [box]es if necessary, it is often best to use [rows] instead or [each] to iterate over results.
+    /// This can avoid potential inconsistencies with [pack]ed arrays.
+    /// ex: A ← ⊐∵⇡ +1⇡4 # Pack boxes
+    ///   : B ← ⊐∵⇡ ↯4 4 # Pack doesn't box
+    ///   : ⊐∵/+ A # ✓ Each element is a boxed list of numbers
+    ///   : ⊐≡/+ A # ✓ Each row is a boxed list of numbers
+    ///   : ⊐∵/+ B # X Each element is a number!
+    ///   : ⊐≡/+ B # ✓ Each row is a list of numbers
     ///
     /// [pack] is overridden by [fill], regardless of order.
     /// ex: ⬚0⊐∵⇡ ⇡5

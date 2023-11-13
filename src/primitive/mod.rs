@@ -565,7 +565,6 @@ impl Primitive {
                 fork::fork(env)?
             }
             Primitive::Bracket => fork::bracket(env)?,
-            Primitive::If => fork::iff(env)?,
             Primitive::Try => {
                 let f = env.pop_function()?;
                 let handler = env.pop_function()?;

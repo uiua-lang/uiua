@@ -102,6 +102,20 @@ impl<T: Clone> CowSlice<T> {
             end,
         }
     }
+    pub fn into_slices(
+        self,
+        size: usize,
+    ) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator {
+        assert!(self.len() % size == 0);
+        (0..self.len() / size).map(move |i| {
+            let start = self.start + (i * size) as u32;
+            Self {
+                data: self.data.clone(),
+                start,
+                end: start + size as u32,
+            }
+        })
+    }
     pub fn modify<F, R>(&mut self, f: F) -> R
     where
         F: FnOnce(&mut EcoVec<T>) -> R,

@@ -16,7 +16,7 @@ use parking_lot::Mutex;
 use rand::prelude::*;
 
 use crate::{
-    array::Array, boxed::Boxed, constants, function::*, lex::Span, parse::parse,
+    algorithm::fork, array::Array, boxed::Boxed, constants, function::*, lex::Span, parse::parse,
     primitive::Primitive, value::Value, Diagnostic, DiagnosticKind, Ident, NativeSys, SysBackend,
     SysOp, TraceFrame, UiuaError, UiuaResult,
 };
@@ -519,33 +519,9 @@ code:
                     self.function_stack.push(f.clone());
                     Ok(())
                 }
-                &Instr::Switch { count, sig, span } => self.with_span(span, |env| {
-                    let i = env
-                        .pop("switch index")?
-                        .as_nat(env, "Switch index must be a natural number")?;
-                    if i >= count {
-                        return Err(env.error(format!(
-                            "Switch index {i} is out of bounds for switch of size {count}"
-                        )));
-                    }
-                    let f = env
-                        .function_stack
-                        .drain(env.function_stack.len() - count..)
-                        .nth(i);
-                    if let Some(f) = f {
-                        let discard_start = env.stack.len().saturating_sub(sig.args);
-                        let discard_end = discard_start + sig.args
-                            - f.signature().args
-                            - (sig.outputs - f.signature().outputs);
-                        env.stack.drain(discard_start..discard_end);
-                        env.call(f)
-                    } else {
-                        Err(env.error(
-                            "Function stack was empty when getting switch function. \
-                            This is a bug in the interpreter.",
-                        ))
-                    }
-                }),
+                &Instr::Switch { count, sig, span } => {
+                    self.with_span(span, |env| fork::switch(count, sig, env))
+                }
                 &Instr::PushTempFunctions(n) => (|| {
                     for _ in 0..n {
                         let f = self.pop_function()?;

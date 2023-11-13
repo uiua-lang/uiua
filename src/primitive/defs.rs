@@ -1476,40 +1476,6 @@ primitive!(
     /// ex: ≑∸≃⊂.[1_2_3 4_5_6]
     /// *At the seabed, countless small scavengers feed on the detritus of the ocean above.*
     (1, Seabed, Ocean, ("seabed", '∸')),
-    /// Call one of two functions based on a condition
-    ///
-    /// If the condition is `1`, then the first function is called.
-    /// If the condition is `0`, then the second function is called.
-    /// Any other values are not allowed.
-    /// ex: ?+- 1 3 5
-    /// ex: ?+- 0 3 5
-    /// ex: Abs ← ?¯∘ <0.
-    ///   : Abs 2
-    ///   : Abs ¯5
-    ///
-    /// If the functions have different but compatible signatures - that is, the difference between their arguments and outputs is the same - then [if] will still have a well-defined signature.
-    /// ex: f ← ?∘(.+)
-    ///   : f 0 2 3
-    ///   : f 1 2 3
-    /// If functions have incompatible signatures but the same number of outputs, then [if] works similarly to [fork]. The function that takes fewer arguments will use the arguments higher on the stack.
-    /// ex: ?+¯ 1 3 5
-    /// ex: ?+¯ 0 3 5
-    ///
-    /// [if] can be chained to check more than one condition.
-    /// Make sure to use [pop] or [gap] to git rid of excess conditions if the number of branches is not a [power] of `2`.
-    /// ex: f ← ??+×⋅-
-    ///   : f ← ?(?+×)(-;) # Equivalent
-    ///   : Xs ← (3 5)
-    ///   : f 1 1 Xs
-    ///   : f 1 0 Xs
-    ///   : f 0 1 Xs
-    ///   : f 0 0 Xs
-    ///
-    /// The condition can be a list of booleans. In this case, the maximum of the function's arguments *must* be 2.
-    /// Which function to be called is determined on a row-wise basis.
-    /// ex: ?∘¯ .=0◿2 [1 2 3 4]
-    /// ex: ?∘⋅∘ [1 0 0 1] [1 2 3 4] [π π π π]
-    ([2], If, Control, ("if", '?')),
     /// Call a function and catch errors
     ///
     /// If the first function errors, the second function is called with the original arguments and the error value below.

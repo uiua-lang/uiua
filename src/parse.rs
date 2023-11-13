@@ -652,6 +652,8 @@ impl Parser {
                 }
             }
             word
+        } else if let Some(switch) = self.try_if() {
+            switch
         } else if let Some(word) = self.try_bind() {
             word
         } else {
@@ -785,6 +787,37 @@ impl Parser {
             lines: vec![operands],
             closed: false,
         })))
+    }
+    fn try_if(&mut self) -> Option<Sp<Word>> {
+        let start = self.try_exact(QuestionMark)?;
+        let mut operands = Vec::new();
+        operands.extend(self.try_spaces());
+        operands.extend(self.try_strand());
+        operands.extend(self.try_spaces());
+        operands.extend(self.try_strand());
+        let end = operands
+            .last()
+            .map(|w| w.span.clone())
+            .unwrap_or(start.clone());
+        let span = start.merge(end);
+        Some(
+            span.clone().sp(Word::Switch(Switch {
+                branches: (operands.into_iter().filter(|w| w.value.is_code()).rev())
+                    .map(|w| {
+                        w.span.clone().sp(Func {
+                            id: match w.value {
+                                Word::Primitive(prim) => FunctionId::Primitive(prim),
+                                _ => FunctionId::Anonymous(w.span.clone()),
+                            },
+                            lines: vec![vec![w]],
+                            signature: None,
+                            closed: false,
+                        })
+                    })
+                    .collect(),
+                closed: false,
+            })),
+        )
     }
     fn try_spaces(&mut self) -> Option<Sp<Word>> {
         self.try_exact(Spaces).map(|span| span.sp(Word::Spaces))

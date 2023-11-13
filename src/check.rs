@@ -255,28 +255,6 @@ impl<'a> VirtualEnv<'a> {
                     let outputs = f_sig.outputs + g_sig.outputs;
                     self.handle_args_outputs(args, outputs)?;
                 }
-                If => {
-                    let if_true = self.pop_func()?;
-                    let if_false = self.pop_func()?;
-                    let _cond = self.pop()?;
-                    let if_true_sig = if_true.signature();
-                    let if_false_sig = if_false.signature();
-                    if if_true_sig.outputs == if_false_sig.outputs {
-                        let args = if_true_sig.args.max(if_false_sig.args);
-                        let outputs = if_true_sig.outputs;
-                        self.handle_args_outputs(args, outputs)?;
-                    } else if if_true_sig.is_compatible_with(if_false_sig) {
-                        let sig = if_true_sig.max_with(if_false_sig);
-                        self.handle_sig(sig)?;
-                    } else {
-                        return Err(format!(
-                            "if's branches with signatures {} and {} \
-                            have a different numbers of outputs and \
-                            are not compatible",
-                            if_true_sig, if_false_sig
-                        ));
-                    }
-                }
                 Level | Fold | Combinate => {
                     let ranks = self.pop_func()?;
                     let ranks_sig = ranks.signature();

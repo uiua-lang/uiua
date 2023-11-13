@@ -200,8 +200,8 @@ uiuisms!(
     "[0_1 1_0]\n⍉▽↯⧻,⊙(⍉▽)∶↯⊙.⧻,30",
     /// Upscale a colored image
     "[[0_0_1 0_1_0] [1_0_0 0_0_0]]\n⍜⍘⍉≡(⍉▽↯⧻,⊙(⍉▽)∶↯⊙.⧻,30)",
-    /// Lerp between two values
-    "+⊙'×-. 0 10 0.2",
+    /// Linearly interpolate between two values
+    "+⊃∘(×-) 0 10 0.2",
     /// Set the value of an array at an index
     "⍜⊏; 2 1_2_3_4 10",
     /// Create a matrix of random 0s or 1s

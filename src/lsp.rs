@@ -26,7 +26,7 @@ pub enum SpanKind {
 /// Get spans and their kinds from Uiua code
 pub fn spans(input: &str) -> Vec<Sp<SpanKind>> {
     let (items, _, _) = parse(input, None);
-    dbg!(items_spans(&items))
+    items_spans(&items)
 }
 
 fn items_spans(items: &[Item]) -> Vec<Sp<SpanKind>> {
@@ -109,7 +109,7 @@ fn words_spans(words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
                 }
             }
             Word::Switch(sw) => {
-                if dbg!(word.span.as_str()).starts_with('?') {
+                if word.span.as_str().starts_with('?') {
                     spans.push(word.span.clone().sp(SpanKind::Delimiter));
                     continue;
                 }

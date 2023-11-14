@@ -801,12 +801,13 @@ impl Parser {
             .unwrap_or(start.clone());
         let span = start.merge(end);
         Some(
-            span.clone().sp(Word::Switch(Switch {
+            span.sp(Word::Switch(Switch {
                 branches: (operands.into_iter().filter(|w| w.value.is_code()).rev())
                     .map(|w| {
                         w.span.clone().sp(Func {
                             id: match w.value {
                                 Word::Primitive(prim) => FunctionId::Primitive(prim),
+                                Word::Func(func) => return w.span.clone().sp(func),
                                 _ => FunctionId::Anonymous(w.span.clone()),
                             },
                             lines: vec![vec![w]],

@@ -310,6 +310,9 @@ fn bin_pervade_recursive_mut<T>(
             }
         }
         (ash, bsh) => {
+            if ash[0] == 0 || bsh[0] == 0 {
+                return;
+            }
             let a_row_len = a_data.len() / ash[0];
             let b_row_len = b_data.len() / bsh[0];
             for (a, b) in a_data
@@ -342,6 +345,9 @@ fn bin_pervade_recursive_mut_left<T>(
             }
         }
         (ash, bsh) => {
+            if ash[0] == 0 || bsh[0] == 0 {
+                return;
+            }
             let a_row_len = a_data.len() / ash[0];
             let b_row_len = b_data.len() / bsh[0];
             for (a, b) in a_data
@@ -374,6 +380,9 @@ fn bin_pervade_recursive_mut_right<T>(
             }
         }
         (ash, bsh) => {
+            if ash[0] == 0 || bsh[0] == 0 {
+                return;
+            }
             let a_row_len = a_data.len() / ash[0];
             let b_row_len = b_data.len() / bsh[0];
             for (a, b) in a_data

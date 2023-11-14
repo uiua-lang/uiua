@@ -215,7 +215,7 @@ uiuisms!(
     /// Cross product
     "4_5_6 1_2_3\n↻1-∩(×↻1)⊃⊙∘∶",
     /// Matrix product
-    "[1_2 3_4 5_6] [7_8_9 10_11_12]\n⊠(/+×)⊙⍉",
+    "[7_8_9 10_11_12] [1_2 3_4 5_6]\n⊠(/+×)⍉",
     /// Matrix power (Also works with scalars)
     "[1_2 3_4] 4\n;∶⍥(⊠(/+×)⊙⍉,)∶⊙∶⊞=.⇡⬚1⊢△.",
     //  /// Evaluate a polynomial with given coefficients at a scalar or square matrix

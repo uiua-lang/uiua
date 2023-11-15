@@ -56,16 +56,16 @@ impl<T: Clone> Array<T> {
         let mut local_b;
         a_depth = a_depth.min(a.rank());
         b_depth = b_depth.min(b.rank());
-        let a_prefix = &a.shape[..a_depth];
-        let b_prefix = &b.shape[..b_depth];
-        if !a_prefix.iter().zip(b_prefix).all(|(a, b)| a == b) {
+        let a_suffix = &a.shape[a_depth.saturating_sub(1)..];
+        let b_suffix = &b.shape[b_depth.saturating_sub(1)..];
+        if a_depth == b_depth && !a_suffix.iter().zip(b_suffix).all(|(a, b)| a == b) {
             return Err(ctx.error(format!(
                 "Cannot combine arrays with shapes {} and {} \
-                because shape prefixes {} and {} are not compatible",
+                because shape suffixes {} and {} are not compatible",
                 a.format_shape(),
                 b.format_shape(),
-                FormatShape(a_prefix),
-                FormatShape(b_prefix)
+                FormatShape(a_suffix),
+                FormatShape(b_suffix)
             )));
         }
         match a_depth.cmp(&b_depth) {

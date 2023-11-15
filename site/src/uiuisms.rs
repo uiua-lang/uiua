@@ -213,16 +213,11 @@ uiuisms!(
     /// Dot product
     "/+× [1 2 3] [4 ¯5 6]",
     /// Cross product
-    "4_5_6 1_2_3\n↻1-∩(×↻1)⊃⊙∘∶",
+    "1_2_3 4_5_6\n↻1-∩(×↻1)⊃∶⊙∘",
     /// Matrix product
-    "[7_8_9 10_11_12] [1_2 3_4 5_6]\n⊠(/+×)⍉",
+    "[7_8_9 10_11_12] [1_2 3_4 5_6]\n⍜⍉⊠(/+×)",
     /// Matrix power (Also works with scalars)
-    "[1_2 3_4] 4\n;∶⍥(⊠(/+×)⊙⍉,)∶⊙∶⊞=.⇡⬚1⊢△.",
-    //  /// Evaluate a polynomial with given coefficients at a scalar or square matrix
-    //     r"/+×∺(  Note: Not sure how to fix this with the new distribute order
-    //   ⊙∶⊞=.⇡⬚1⊢△.:
-    //   ;∶⍥(⊠(/+×)⊙⍉,)∶
-    // )⊙∶⇌⇡⧻. [1 2 3 1] [1_1 2_2]",
+    "4 [1_2 3_4]\n⊙;⍥(⊠(/+×)⊙⍉,)∶⊞=.⇡⬚1⊢△,",
     /// Add a leading axis of length 1 to an array
     "△. ↯1 [1_2_3 4_5_6]",
     /// Repeat a function and collect intermediate results into an array

@@ -90,7 +90,8 @@ fn spanned_bin_fn(
     Box::new(move |a, b, ad, bd, env| env.with_span(span, |env| f(a, b, ad, bd, env)))
 }
 
-fn prim_bin_fast_fn(prim: Primitive, span: usize) -> Option<ValueBinFn> {
+fn prim_bin_fast_fn(prim: Primitive, span: usize, combinate: bool) -> Option<ValueBinFn> {
+    use std::boxed::Box;
     use Primitive::*;
     Some(match prim {
         Add => spanned_bin_fn(span, Value::add),
@@ -110,12 +111,17 @@ fn prim_bin_fast_fn(prim: Primitive, span: usize) -> Option<ValueBinFn> {
         Max => spanned_bin_fn(span, Value::max),
         Min => spanned_bin_fn(span, Value::min),
         Atan => spanned_bin_fn(span, Value::atan2),
-        Rotate => spanned_bin_fn(span, |a, b, ad, bd, env| a.rotate_depth(b, ad, bd, env)),
+        Rotate => Box::new(move |a, b, ad, bd, env| {
+            env.with_span(span, |env| a.rotate_depth(b, ad, bd, combinate, env))
+        }),
         _ => return None,
     })
 }
 
-fn instrs_bin_fast_fn(instrs: &[Instr]) -> Option<(ValueBinFn, usize, usize)> {
+pub(crate) fn instrs_bin_fast_fn(
+    instrs: &[Instr],
+    combinate: bool,
+) -> Option<(ValueBinFn, usize, usize)> {
     use std::boxed::Box;
     use Primitive::*;
 
@@ -132,20 +138,20 @@ fn instrs_bin_fast_fn(instrs: &[Instr]) -> Option<(ValueBinFn, usize, usize)> {
 
     match instrs {
         &[Instr::Prim(prim, span)] => {
-            let f = prim_bin_fast_fn(prim, span)?;
+            let f = prim_bin_fast_fn(prim, span, combinate)?;
             return Some((f, 0, 0));
         }
-        [Instr::PushFunc(f), Instr::Prim(Rows, _)] => {
-            return nest_bin_fast(instrs_bin_fast_fn(&f.instrs)?, 1, 1)
+        [Instr::PushFunc(f), Instr::Prim(Rows, _)] if !combinate => {
+            return nest_bin_fast(instrs_bin_fast_fn(&f.instrs, combinate)?, 1, 1)
         }
-        [Instr::PushFunc(f), Instr::Prim(Distribute, _)] => {
-            return nest_bin_fast(instrs_bin_fast_fn(&f.instrs)?, 0, 1)
+        [Instr::PushFunc(f), Instr::Prim(Distribute, _)] if !combinate => {
+            return nest_bin_fast(instrs_bin_fast_fn(&f.instrs, combinate)?, 0, 1)
         }
-        [Instr::PushFunc(f), Instr::Prim(Tribute, _)] => {
-            return nest_bin_fast(instrs_bin_fast_fn(&f.instrs)?, 1, 0)
+        [Instr::PushFunc(f), Instr::Prim(Tribute, _)] if !combinate => {
+            return nest_bin_fast(instrs_bin_fast_fn(&f.instrs, combinate)?, 1, 0)
         }
         [Instr::Prim(Flip, _), rest @ ..] => {
-            let (f, a, b) = instrs_bin_fast_fn(rest)?;
+            let (f, a, b) = instrs_bin_fast_fn(rest, combinate)?;
             let f = Box::new(move |a, b, ad, bd, env: &mut Uiua| f(b, a, bd, ad, env));
             return Some((f, a, b));
         }
@@ -220,7 +226,7 @@ fn each2(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             FormatShape(&ys.shape()[..min_rank])
         )));
     }
-    if let Some((f, ..)) = instrs_bin_fast_fn(&f.instrs) {
+    if let Some((f, ..)) = instrs_bin_fast_fn(&f.instrs, false) {
         let xrank = xs.rank();
         let yrank = ys.rank();
         let val = f(xs, ys, xrank, yrank, env)?;
@@ -345,7 +351,7 @@ fn rows2(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             ys.row_count()
         )));
     }
-    if let Some((f, a, b)) = instrs_bin_fast_fn(&f.instrs) {
+    if let Some((f, a, b)) = instrs_bin_fast_fn(&f.instrs, false) {
         let val = f(xs, ys, a + 1, b + 1, env)?;
         env.push(val);
     } else {
@@ -472,7 +478,7 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
 }
 
 fn distribute2(f: Arc<Function>, a: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
-    if let Some((f, xd, yd)) = instrs_bin_fast_fn(&f.instrs) {
+    if let Some((f, xd, yd)) = instrs_bin_fast_fn(&f.instrs, false) {
         let val = f(a, xs, xd, yd + 1, env)?;
         env.push(val);
     } else {
@@ -572,7 +578,7 @@ pub fn tribute(env: &mut Uiua) -> UiuaResult {
 }
 
 fn tribute2(f: Arc<Function>, xs: Value, a: Value, env: &mut Uiua) -> UiuaResult {
-    if let Some((f, xd, yd)) = instrs_bin_fast_fn(&f.instrs) {
+    if let Some((f, xd, yd)) = instrs_bin_fast_fn(&f.instrs, false) {
         let val = f(xs, a, xd + 1, yd, env)?;
         env.push(val);
     } else {
@@ -650,7 +656,7 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
                 (a, b) if a == xs.rank() && b == ys.rank() => return each2(f, xs, ys, env),
                 _ => {}
             }
-            if let Some((f, a, b)) = instrs_bin_fast_fn(&f.instrs) {
+            if let Some((f, a, b)) = instrs_bin_fast_fn(&f.instrs, false) {
                 let value = f(xs, ys, xn + a, yn + b, env)?;
                 env.push(value);
             } else {
@@ -711,62 +717,44 @@ fn dyadic_level(
 ) -> UiuaResult {
     xn = xn.min(xs.rank());
     yn = yn.min(ys.rank());
-    let xs_prefix = &xs.shape()[..xn];
-    let ys_prefix = &ys.shape()[..yn];
-    if !xs_prefix.iter().zip(ys_prefix).all(|(a, b)| a == b) {
+    // Validate shapes
+    let xs_suffix = &xs.shape()[xn.saturating_sub(1)..];
+    let ys_suffix = &ys.shape()[yn.saturating_sub(1)..];
+    if !xs_suffix.iter().zip(ys_suffix).all(|(a, b)| a == b) {
         return Err(env.error(format!(
-            "Cannot level with ranks {} and {} arrays with shapes {} and {} \
-            because shape prefixes {} and {} are not compatible",
-            xs.rank() - xn,
-            ys.rank() - yn,
+            "Cannot level arrays with shapes {} and {} \
+            because shape prefixes {} and {} are different",
             xs.format_shape(),
             ys.format_shape(),
-            FormatShape(xs_prefix),
-            FormatShape(ys_prefix)
+            FormatShape(xs_suffix),
+            FormatShape(ys_suffix)
         )));
     }
+    // Collect rows
     let xs_row_shape = Shape::from(&xs.shape()[xn..]);
     let ys_row_shape = Shape::from(&ys.shape()[yn..]);
     let mut new_rows = Vec::new();
-    if xn == yn {
-        for (x, y) in xs
-            .row_shaped_slices(xs_row_shape)
-            .zip(ys.row_shaped_slices(ys_row_shape))
-        {
-            env.push(y);
-            env.push(x);
-            env.call_error_on_break(f.clone(), "break is not allowed in level")?;
-            let row = env.pop("level's function result")?;
-            new_rows.push(row);
-        }
-        let mut new_value = Value::from_row_values(new_rows, env)?;
-        let mut new_shape = Shape::from_iter(if xs.shape().len() > ys.shape().len() {
-            xs.shape()[..xn].iter().copied()
-        } else {
-            ys.shape()[..yn].iter().copied()
-        });
-        new_shape.extend_from_slice(&new_value.shape()[1..]);
-        *new_value.shape_mut() = new_shape;
-        new_value.validate_shape();
-        env.push(new_value);
-    } else {
-        for x in xs.row_shaped_slices(xs_row_shape) {
-            for y in ys.row_shaped_slices(ys_row_shape.clone()) {
-                env.push(y);
-                env.push(x.clone());
-                env.call_error_on_break(f.clone(), "break is not allowed in level")?;
-                let row = env.pop("level's function result")?;
-                new_rows.push(row);
-            }
-        }
-        let mut new_value = Value::from_row_values(new_rows, env)?;
-        let mut new_shape =
-            Shape::from_iter(xs.shape()[..xn].iter().chain(&ys.shape()[..yn]).copied());
-        new_shape.extend_from_slice(&new_value.shape()[1..]);
-        *new_value.shape_mut() = new_shape;
-        new_value.validate_shape();
-        env.push(new_value);
+    for (x, y) in xs
+        .row_shaped_slices(xs_row_shape)
+        .zip(ys.row_shaped_slices(ys_row_shape))
+    {
+        env.push(y);
+        env.push(x);
+        env.call_error_on_break(f.clone(), "break is not allowed in level")?;
+        let row = env.pop("level's function result")?;
+        new_rows.push(row);
     }
+    // Finalize result
+    let mut new_value = Value::from_row_values(new_rows, env)?;
+    let mut new_shape = Shape::from_iter(if xs.shape().len() > ys.shape().len() {
+        xs.shape()[..xn].iter().copied()
+    } else {
+        ys.shape()[..yn].iter().copied()
+    });
+    new_shape.extend_from_slice(&new_value.shape()[1..]);
+    *new_value.shape_mut() = new_shape;
+    new_value.validate_shape();
+    env.push(new_value);
     Ok(())
 }
 

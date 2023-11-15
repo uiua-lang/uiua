@@ -48,6 +48,7 @@ impl<T: Clone> Array<T> {
         other: &Array<U>,
         mut a_depth: usize,
         mut b_depth: usize,
+        combinate: bool,
         ctx: &C,
         f: impl Fn(&[usize], &mut [T], &[usize], &[U], &C) -> Result<(), C::Error>,
     ) -> Result<(), C::Error> {
@@ -58,7 +59,7 @@ impl<T: Clone> Array<T> {
         b_depth = b_depth.min(b.rank());
         let a_suffix = &a.shape[a_depth.saturating_sub(1)..];
         let b_suffix = &b.shape[b_depth.saturating_sub(1)..];
-        if a_depth == b_depth && !a_suffix.iter().zip(b_suffix).all(|(a, b)| a == b) {
+        if !combinate && !a_suffix.iter().zip(b_suffix).all(|(a, b)| a == b) {
             return Err(ctx.error(format!(
                 "Cannot combine arrays with shapes {} and {} \
                 because shape suffixes {} and {} are not compatible",
@@ -87,24 +88,18 @@ impl<T: Clone> Array<T> {
         }
         let a_row_shape = &a.shape[a_depth..];
         let b_row_shape = &b.shape[b_depth..];
-        if a_depth == b_depth {
-            for (a, b) in a
-                .data
-                .as_mut_slice()
+        if combinate {
+            for a in (a.data.as_mut_slice()).chunks_exact_mut(a_row_shape.iter().product()) {
+                for b in b.data.as_slice().chunks_exact(b_row_shape.iter().product()) {
+                    f(a_row_shape, a, b_row_shape, b, ctx)?;
+                }
+            }
+        } else {
+            for (a, b) in (a.data.as_mut_slice())
                 .chunks_exact_mut(a_row_shape.iter().product())
                 .zip(b.data.as_slice().chunks_exact(b_row_shape.iter().product()))
             {
                 f(a_row_shape, a, b_row_shape, b, ctx)?;
-            }
-        } else {
-            for a in a
-                .data
-                .as_mut_slice()
-                .chunks_exact_mut(a_row_shape.iter().product())
-            {
-                for b in b.data.as_slice().chunks_exact(b_row_shape.iter().product()) {
-                    f(a_row_shape, a, b_row_shape, b, ctx)?;
-                }
             }
         }
         Ok(())
@@ -1697,6 +1692,7 @@ impl Value {
         mut rotated: Self,
         a_depth: usize,
         b_depth: usize,
+        combinate: bool,
         env: &Uiua,
     ) -> UiuaResult<Self> {
         let by = self.as_integer_array(env, "Rotation amount must be an array of integers")?;
@@ -1707,13 +1703,13 @@ impl Value {
             }
         }
         match &mut rotated {
-            Value::Num(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
+            Value::Num(a) => a.rotate_depth(by, b_depth, a_depth, combinate, env)?,
             #[cfg(feature = "bytes")]
-            Value::Byte(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
+            Value::Byte(a) => a.rotate_depth(by, b_depth, a_depth, combinate, env)?,
             #[cfg(feature = "complex")]
-            Value::Complex(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
-            Value::Char(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
-            Value::Box(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
+            Value::Complex(a) => a.rotate_depth(by, b_depth, a_depth, combinate, env)?,
+            Value::Char(a) => a.rotate_depth(by, b_depth, a_depth, combinate, env)?,
+            Value::Box(a) => a.rotate_depth(by, b_depth, a_depth, combinate, env)?,
         }
         Ok(rotated)
     }
@@ -1741,15 +1737,23 @@ impl<T: ArrayValue> Array<T> {
         by: Array<isize>,
         depth: usize,
         by_depth: usize,
+        combinate: bool,
         env: &Uiua,
     ) -> UiuaResult {
-        self.depth_slices(&by, depth, by_depth, env, |ash, a, bsh, b, env| {
-            if bsh.len() > 1 {
-                return Err(env.error(format!("Cannot rotate by rank {} array", bsh.len())));
-            }
-            rotate(b, ash, a);
-            Ok(())
-        })
+        self.depth_slices(
+            &by,
+            depth,
+            by_depth,
+            combinate,
+            env,
+            |ash, a, bsh, b, env| {
+                if bsh.len() > 1 {
+                    return Err(env.error(format!("Cannot rotate by rank {} array", bsh.len())));
+                }
+                rotate(b, ash, a);
+                Ok(())
+            },
+        )
     }
 }
 

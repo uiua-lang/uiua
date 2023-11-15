@@ -1473,7 +1473,7 @@ primitive!(
     /// See the [Ocean Notation tutorial](/docs/advancedarray#ocean-notation) to understand what this is for.
     /// ex: ∸5
     /// ex: ∸[1_2_3 4_5_6]
-    /// ex: ≑∸≃⊂.[1_2_3 4_5_6]
+    /// ex: ◳∸≃⊂.[1_2_3 4_5_6]
     /// *At the seabed, countless small scavengers feed on the detritus of the ocean above.*
     (1, Seabed, Ocean, ("seabed", '∸')),
     /// Call a function and catch errors

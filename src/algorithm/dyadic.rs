@@ -102,7 +102,6 @@ impl<T: Clone + std::fmt::Debug> Array<T> {
             .zip(b.data.as_slice().chunks_exact(b_row_shape.iter().product()))
         {
             for a in a.chunks_exact_mut(lower_a_row_shape.iter().product()) {
-                println!("a: {:?}, b: {:?}", a, b);
                 f(lower_a_row_shape, a, b_row_shape, b, ctx)?;
             }
         }

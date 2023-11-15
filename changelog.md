@@ -8,6 +8,7 @@ If you are reading this on the website, then these changes are live here.
 ### Language
 - Switch functions are now less strict about branch signature compatibility and can take arrays as conditions
 - Remove `if ?`, as all its use cases are now covered by switch functions. It will continue to parse, but `?ab` will be formatted as `(b|a)`
+- [`level` `≑`](https://uiua.org/docs/level) is no longer equivalent to [`combinate` `◳`](https://uiua.org/docs/combinate) in certain cases
 - [`under` `⍜`](https://uiua.org/docs/under) now works with [`absolut value` `⌵`](https://uiua.org/docs/absolute)
 ### Interpreter
 - Lots of bug and crash fixes

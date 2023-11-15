@@ -1,4 +1,4 @@
-✅ ← ⍤∶≍,0
+✅ ← ⍤⊃∘≍0
 
 &cd "site"
 ✅&runi {"git" "checkout" "site" "-f"}

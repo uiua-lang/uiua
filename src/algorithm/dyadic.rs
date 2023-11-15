@@ -42,8 +42,8 @@ impl Value {
     }
 }
 
-impl<T: Clone> Array<T> {
-    pub(crate) fn depth_slices<U: Clone, C: FillContext>(
+impl<T: Clone + std::fmt::Debug> Array<T> {
+    pub(crate) fn depth_slices<U: Clone + std::fmt::Debug, C: FillContext>(
         &mut self,
         other: &Array<U>,
         mut a_depth: usize,
@@ -57,49 +57,53 @@ impl<T: Clone> Array<T> {
         let mut local_b;
         a_depth = a_depth.min(a.rank());
         b_depth = b_depth.min(b.rank());
-        let a_suffix = &a.shape[a_depth.saturating_sub(1)..];
-        let b_suffix = &b.shape[b_depth.saturating_sub(1)..];
-        if !combinate && !a_suffix.iter().zip(b_suffix).all(|(a, b)| a == b) {
-            return Err(ctx.error(format!(
-                "Cannot combine arrays with shapes {} and {} \
-                because shape suffixes {} and {} are not compatible",
-                a.format_shape(),
-                b.format_shape(),
-                FormatShape(a_suffix),
-                FormatShape(b_suffix)
-            )));
-        }
-        match a_depth.cmp(&b_depth) {
-            Ordering::Equal => {}
-            Ordering::Less => {
-                for b_dim in b.shape[..b_depth - a_depth].iter().rev() {
-                    a.reshape_scalar(*b_dim);
-                    a_depth += 1;
-                }
-            }
-            Ordering::Greater => {
-                for a_dim in a.shape[..a_depth - b_depth].iter().rev() {
-                    local_b = b.clone();
-                    local_b.reshape_scalar(*a_dim);
-                    b = &local_b;
-                    b_depth += 1;
-                }
-            }
-        }
-        let a_row_shape = &a.shape[a_depth..];
-        let b_row_shape = &b.shape[b_depth..];
+        let mut lower_a_depth = a_depth;
         if combinate {
-            for a in (a.data.as_mut_slice()).chunks_exact_mut(a_row_shape.iter().product()) {
-                for b in b.data.as_slice().chunks_exact(b_row_shape.iter().product()) {
-                    f(a_row_shape, a, b_row_shape, b, ctx)?;
-                }
+            for b_dim in b.shape[..b_depth].iter().rev() {
+                a.reshape_scalar(*b_dim);
+                lower_a_depth += 1;
             }
         } else {
-            for (a, b) in (a.data.as_mut_slice())
-                .chunks_exact_mut(a_row_shape.iter().product())
-                .zip(b.data.as_slice().chunks_exact(b_row_shape.iter().product()))
-            {
-                f(a_row_shape, a, b_row_shape, b, ctx)?;
+            let a_suffix = &a.shape[a_depth.saturating_sub(1)..];
+            let b_suffix = &b.shape[b_depth.saturating_sub(1)..];
+            if !a_suffix.iter().zip(b_suffix).all(|(a, b)| a == b) {
+                return Err(ctx.error(format!(
+                    "Cannot combine arrays with shapes {} and {} \
+                    because shape suffixes {} and {} are not compatible",
+                    a.format_shape(),
+                    b.format_shape(),
+                    FormatShape(a_suffix),
+                    FormatShape(b_suffix)
+                )));
+            }
+            match a_depth.cmp(&b_depth) {
+                Ordering::Equal => {}
+                Ordering::Less => {
+                    for b_dim in b.shape[..b_depth - a_depth].iter().rev() {
+                        a.reshape_scalar(*b_dim);
+                        a_depth += 1;
+                    }
+                }
+                Ordering::Greater => {
+                    for a_dim in a.shape[..a_depth - b_depth].iter().rev() {
+                        local_b = b.clone();
+                        local_b.reshape_scalar(*a_dim);
+                        b = &local_b;
+                        b_depth += 1;
+                    }
+                }
+            }
+        }
+        let b_row_shape = &b.shape[b_depth..];
+        let lower_a_row_shape = &a.shape[lower_a_depth..];
+        let higher_a_row_shape = &a.shape[a_depth..];
+        for (a, b) in (a.data.as_mut_slice())
+            .chunks_exact_mut(higher_a_row_shape.iter().product())
+            .zip(b.data.as_slice().chunks_exact(b_row_shape.iter().product()))
+        {
+            for a in a.chunks_exact_mut(lower_a_row_shape.iter().product()) {
+                println!("a: {:?}, b: {:?}", a, b);
+                f(lower_a_row_shape, a, b_row_shape, b, ctx)?;
             }
         }
         Ok(())

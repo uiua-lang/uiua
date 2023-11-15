@@ -498,7 +498,7 @@ r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
 
         <Challenge
             number=2
-            prompt="creates a matrix of 0's with as many columns as the first argument and as many rows as the second argument"
+            prompt="creates a matrix of 0's with as many rows as the first argument and as many columns as the second argument"
             example="3 4"
             answer="↯:0⊟"
             tests={&["2 7", "3 3", "1 8"]}

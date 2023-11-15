@@ -1,11 +1,11 @@
 G ← 2e4
 Dt ← 0.01
-Steps ← 200
+Steps ← 20
 
 Step ← (
   ⊞≠.⇡⧻.     # Make comparison matrix
   ⊃≐▽⋅∘      # Make others
-  ⊃≑≃≃-∘∶    # Get diffs
+  ⊃≡∺-∘∶     # Get diffs
   ÷≑≃(/+×.). # Inverse square
   ≡/+×G      # Get accs
   ⊃⟜+⋅∘ ×Dt  # Apply accs
@@ -16,7 +16,7 @@ Step ← (
 ⊃∘(↯∶0⊂∶2⧻) # Init vels
 
 ⁅×0.5⇌[⊙;⍥(Step ,∶)Steps] # Run
-≑≃≃-/↧/↧.                 # Normalize
+∺∺-/↧/↧.                  # Normalize
 ⬚0≡(⍘⊚)                   # Plot
 ≡(≑2(/↥/↥) ◫3_3)          # Upscale
 

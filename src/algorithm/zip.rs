@@ -209,6 +209,17 @@ fn each1(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
 }
 
 fn each2(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+    if !xs.shape().iter().zip(ys.shape()).all(|(a, b)| a == b) {
+        let min_rank = xs.rank().min(ys.rank());
+        return Err(env.error(format!(
+            "Cannot each arrays with shapes {} and {} because their \
+            shape prefixes {} and {} are different",
+            xs.format_shape(),
+            ys.format_shape(),
+            FormatShape(&xs.shape()[..min_rank]),
+            FormatShape(&ys.shape()[..min_rank])
+        )));
+    }
     if let Some((f, ..)) = instrs_bin_fast_fn(&f.instrs) {
         let xrank = xs.rank();
         let yrank = ys.rank();

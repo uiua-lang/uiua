@@ -106,8 +106,14 @@ pub fn switch(count: usize, sig: Signature, env: &mut Uiua) -> UiuaResult {
         };
         // Discard unused arguments
         let discard_start = env.stack.len().saturating_sub(sig.args);
+        if discard_start > env.stack.len() {
+            return Err(env.error("Stack was empty when discarding excess switch arguments."));
+        }
         let discard_end =
             discard_start + sig.args - f.signature().args - (sig.outputs - f.signature().outputs);
+        if discard_end > env.stack.len() {
+            return Err(env.error("Stack was empty when discarding excess switch arguments."));
+        }
         env.stack.drain(discard_start..discard_end);
         env.call(f)
     } else {

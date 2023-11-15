@@ -499,7 +499,8 @@ impl Parser {
         let mut args = Vec::new();
         self.try_spaces();
         let mut arg_count = 0;
-        for _ in 0..modifier.args() {
+        let mut is_switch = false;
+        for i in 0..modifier.args() {
             args.extend(self.try_spaces());
             if let Some(arg) = self
                 .try_func()
@@ -507,13 +508,21 @@ impl Parser {
                 .or_else(|| self.try_placeholder())
                 .or_else(|| self.try_bind())
             {
+                // Parse switch function syntax
+                if let Word::Switch(sw) = &arg.value {
+                    if i == 0 && sw.branches.len() >= modifier.args() as usize {
+                        args.push(arg);
+                        is_switch = true;
+                        break;
+                    }
+                }
                 args.push(arg);
                 arg_count += 1;
             } else {
                 break;
             }
         }
-        if arg_count != modifier.args() {
+        if !is_switch && arg_count != modifier.args() as usize {
             self.errors.push(self.expected([Expectation::Term]));
         }
 

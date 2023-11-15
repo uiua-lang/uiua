@@ -749,6 +749,79 @@ impl Uiua {
                 }
                 _ => {}
             }
+
+            // De-sugar switched
+            if modified.operands.len() == 1 {
+                if let Sp {
+                    value: Word::Switch(sw),
+                    span,
+                } = modified.operands.first().cloned().unwrap()
+                {
+                    match prim {
+                        Primitive::Fork | Primitive::Bracket => {
+                            let mut branches = sw.branches.into_iter().rev();
+                            let mut new = Modified {
+                                modifier: modified.modifier.clone(),
+                                operands: {
+                                    let mut ops: Vec<_> = branches
+                                        .by_ref()
+                                        .take(2)
+                                        .map(|w| w.map(Word::Func))
+                                        .collect();
+                                    ops.reverse();
+                                    ops
+                                },
+                            };
+                            for branch in branches {
+                                new = Modified {
+                                    modifier: modified.modifier.clone(),
+                                    operands: vec![
+                                        branch.map(Word::Func),
+                                        span.clone().sp(Word::Modified(Box::new(new))),
+                                    ],
+                                };
+                            }
+                            return self.modified(new, call);
+                        }
+                        prim => {
+                            if let Some(margs) = prim.modifier_args() {
+                                if margs >= 2 {
+                                    if sw.branches.len() != margs as usize {
+                                        return Err((modified.modifier.span.merge(span))
+                                            .sp(format!(
+                                                "{} {} requires {} function arguments, but the \
+                                                switch function has {} branches",
+                                                prim,
+                                                prim.name(),
+                                                margs,
+                                                sw.branches.len()
+                                            ))
+                                            .into());
+                                    }
+                                    let new = Modified {
+                                        modifier: modified.modifier.clone(),
+                                        operands: sw
+                                            .branches
+                                            .into_iter()
+                                            .map(|w| w.map(Word::Func))
+                                            .collect(),
+                                    };
+                                    return self.modified(new, call);
+                                }
+                            } else {
+                                return Err((modified.modifier.span.merge(span))
+                                    .sp(format!(
+                                        "{} {} cannot use switch function syntax",
+                                        prim,
+                                        prim.name()
+                                    ))
+                                    .into());
+                            }
+                        }
+                    }
+                }
+            }
+
             // Handle deprecation
             self.handle_primitive_deprecation(prim, &modified.modifier.span);
         }

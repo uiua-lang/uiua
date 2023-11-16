@@ -160,6 +160,138 @@ pub(crate) fn instrs_bin_fast_fn(
     None
 }
 
+pub fn zip(name: &str, mut left: usize, mut right: usize, env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
+    let mut f = env.pop_function()?;
+    loop {
+        if let [Instr::PushFunc(new_f), Instr::Prim(prim, _)] = f.instrs.as_slice() {
+            match prim {
+                Primitive::Rows => {
+                    left += 1;
+                    right += 1;
+                    f = new_f.clone();
+                    continue;
+                }
+                Primitive::Distribute => {
+                    if right >= left {
+                        right += 1;
+                        f = new_f.clone();
+                        continue;
+                    }
+                }
+                Primitive::Tribute => {
+                    if left >= right {
+                        left += 1;
+                        f = new_f.clone();
+                        continue;
+                    }
+                }
+                _ => {}
+            };
+        }
+        break;
+    }
+    let sig = f.signature();
+    match sig.args {
+        0 => return Err(env.error(format!("{name}'s function must take at least 1 argument"))),
+        1 => {
+            if left != right {
+                return Err(env.error(format!(
+                    "{name}'s function must take at least \
+                    2 arguments, but it takes 1",
+                )));
+            }
+            let xs = env.pop(1)?;
+            let mut depth = left.min(xs.rank());
+            if env.base() {
+                depth = xs.rank() - depth;
+            }
+            if let Some((f, 0)) = instrs_un_fast_fn(&f.instrs) {
+                let val = f(xs, depth, env)?;
+                env.push(val);
+            } else {
+                let row_shape = Shape::from(&xs.shape()[depth..]);
+                let mut new_values = multi_output(
+                    sig.outputs,
+                    Vec::with_capacity(xs.shape()[..depth].iter().product()),
+                );
+                for row in xs.row_shaped_slices(row_shape) {
+                    env.push(row);
+                    env.call(f.clone())?;
+                    for i in 0..sig.outputs {
+                        new_values[i].push(env.pop("function result")?);
+                    }
+                }
+                for new_values in new_values.into_iter().rev() {
+                    let mut new_shape = Shape::from(&xs.shape()[..depth]);
+                    let mut zipped = Value::from_row_values(new_values, env)?;
+                    new_shape.extend_from_slice(&zipped.shape()[1..]);
+                    *zipped.shape_mut() = new_shape;
+                    env.push(zipped);
+                }
+            }
+        }
+        2 => {
+            let xs = env.pop(1)?;
+            let ys = env.pop(2)?;
+            let mut xdepth = left.min(xs.rank());
+            let mut ydepth = right.min(ys.rank());
+            if env.base() {
+                xdepth = xs.rank() - xdepth;
+                ydepth = ys.rank() - ydepth;
+            }
+            if let Some((f, 0, 0)) = instrs_bin_fast_fn(&f.instrs, false) {
+                let val = f(xs, ys, xdepth, ydepth, env)?;
+                env.push(val);
+            } else {
+                let xrow_shape = Shape::from(&xs.shape()[xdepth..]);
+                let yrow_shape = Shape::from(&ys.shape()[ydepth..]);
+                let x_row_count: usize = xs.shape()[..xdepth].iter().product();
+                let y_row_count: usize = ys.shape()[..ydepth].iter().product();
+                if !xs.shape()[..xdepth]
+                    .iter()
+                    .zip(&ys.shape()[..ydepth])
+                    .all(|(a, b)| a == b)
+                {
+                    return Err(env.error(format!(
+                        "Cannot zip arrays with shapes {} and {} because their \
+                        shape prefixes {} and {} are different",
+                        xs.format_shape(),
+                        ys.format_shape(),
+                        FormatShape(&xs.shape()[..xdepth]),
+                        FormatShape(&ys.shape()[..ydepth])
+                    )));
+                }
+                let mut new_values = multi_output(
+                    sig.outputs,
+                    Vec::with_capacity(x_row_count.max(y_row_count)),
+                );
+                let new_shape = Shape::from(&xs.shape()[..xdepth]);
+                for (x, y) in xs
+                    .into_row_shaped_slices(xrow_shape)
+                    .zip(ys.into_row_shaped_slices(yrow_shape))
+                {
+                    env.push(y);
+                    env.push(x);
+                    env.call(f.clone())?;
+                    for i in 0..sig.outputs {
+                        new_values[i].push(env.pop("function result")?);
+                    }
+                }
+                for new_values in new_values.into_iter().rev() {
+                    let mut zipped = Value::from_row_values(new_values, env)?;
+                    let mut new_shape = new_shape.clone();
+                    new_shape.extend_from_slice(&zipped.shape()[1..]);
+                    *zipped.shape_mut() = new_shape;
+                    env.push(zipped);
+                }
+            }
+        }
+        _ => todo!(),
+    }
+    Ok(())
+}
+
 pub fn each(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;

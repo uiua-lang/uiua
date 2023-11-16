@@ -86,8 +86,10 @@ pub(crate) struct Scope {
     pub names: HashMap<Ident, usize>,
     /// The current fill values
     fills: Fills,
-    /// The current clear state
+    /// The current pack depth
     pack_depth: usize,
+    /// The current base state
+    base: bool,
 }
 
 impl Default for Scope {
@@ -107,6 +109,7 @@ impl Default for Scope {
             names: HashMap::new(),
             fills: Fills::default(),
             pack_depth: 0,
+            base: false,
         }
     }
 }
@@ -1083,6 +1086,15 @@ code:
     }
     pub(crate) fn pack_boxes(&self) -> bool {
         self.scope.pack_depth > 0
+    }
+    pub(crate) fn with_base(&mut self, in_ctx: impl FnOnce(&mut Self) -> UiuaResult) -> UiuaResult {
+        self.scope.base = !self.scope.base;
+        let res = in_ctx(self);
+        self.scope.base = !self.scope.base;
+        res
+    }
+    pub(crate) fn base(&self) -> bool {
+        self.scope.base
     }
     /// Spawn a thread
     pub(crate) fn spawn(

@@ -51,9 +51,7 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
             f
         };
         loop {
-            if env.call_catch_break(f.clone())? {
-                break;
-            }
+            env.call(f.clone())?;
         }
     } else {
         if n.fract().abs() > f64::EPSILON {
@@ -65,9 +63,7 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
             f
         };
         for _ in 0..n.abs() as usize {
-            if env.call_catch_break(f.clone())? {
-                return Ok(());
-            }
+            env.call(f.clone())?;
         }
     }
     Ok(())
@@ -135,7 +131,7 @@ pub fn unpartition(env: &mut Uiua) -> UiuaResult {
     let mut untransformed = Vec::with_capacity(partitioned.row_count());
     for row in partitioned.into_rows() {
         env.push(row);
-        env.call_error_on_break(f.clone(), "break is not allowed in unpartition")?;
+        env.call(f.clone())?;
         untransformed.push(env.pop("unpartitioned row")?);
     }
     let original = env.pop_temp_under()?;
@@ -200,7 +196,7 @@ pub fn ungroup(env: &mut Uiua) -> UiuaResult {
         Vec::with_capacity(grouped.row_count());
     for mut row in grouped.into_rows().rev() {
         env.push(row);
-        env.call_error_on_break(f.clone(), "break is not allowed in ungroup")?;
+        env.call(f.clone())?;
         row = env.pop("ungrouped row")?;
         ungrouped_rows.push(row.into_rows());
     }
@@ -351,9 +347,7 @@ fn collapse_groups(
             let mut rows = Vec::with_capacity(groups.len());
             for group in groups {
                 env.push(group);
-                env.call_error_on_break_with(f.clone(), || {
-                    format!("break is not allowed in {name}")
-                })?;
+                env.call(f.clone())?;
                 rows.push(env.pop(|| format!("{name}'s function result"))?);
             }
             let res = Value::from_row_values(rows, env)?;
@@ -368,9 +362,7 @@ fn collapse_groups(
             for row in groups {
                 env.push(row);
                 env.push(acc);
-                if env.call_catch_break(f.clone())? {
-                    return Ok(());
-                }
+                env.call(f.clone())?;
                 acc = env.pop("reduced function result")?;
             }
             env.push(acc);

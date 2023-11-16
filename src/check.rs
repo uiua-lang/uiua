@@ -167,10 +167,6 @@ impl<'a> VirtualEnv<'a> {
                 Repeat => {
                     let f = self.pop_func()?;
                     let n = self.pop()?;
-                    // Break anywhere but the end of the function prevents signature checking.
-                    if instrs_contain_break(&f.instrs) {
-                        return Err("break present".into());
-                    }
                     if let BasicValue::Num(n) = n {
                         // If n is a known natural number, then the function can have any signature.
                         if n.fract() == 0.0 && n >= 0.0 {
@@ -468,21 +464,6 @@ impl<'a> VirtualEnv<'a> {
     fn handle_sig(&mut self, sig: Signature) -> Result<(), String> {
         self.handle_args_outputs(sig.args, sig.outputs)
     }
-}
-
-fn instrs_contain_break(instrs: &[Instr]) -> bool {
-    for instr in instrs.iter() {
-        match instr {
-            Instr::Prim(Primitive::Break, _) => return true,
-            Instr::PushFunc(f) => {
-                if instrs_contain_break(&f.instrs) {
-                    return true;
-                }
-            }
-            _ => (),
-        }
-    }
-    false
 }
 
 #[cfg(test)]

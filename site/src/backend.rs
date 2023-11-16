@@ -7,7 +7,7 @@ use std::{
 };
 
 use leptos::*;
-use uiua::{Report, SysBackend, UiuaError};
+use uiua::{Report, SysBackend};
 
 use crate::{editor::get_ast_time, weewuh};
 
@@ -133,7 +133,6 @@ impl SysBackend for WebBackend {
             }
             match f(&times) {
                 Ok(s) => samples.extend(s),
-                Err(UiuaError::Break(0, _)) => break,
                 Err(err) => return Err(format!("{err}")),
             }
         }

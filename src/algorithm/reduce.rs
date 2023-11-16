@@ -163,16 +163,7 @@ fn generic_fold_right_1(
             let rows = init.into_iter().chain(xs.into_rows());
             for row in rows {
                 env.push(row);
-                if env.call_catch_break(f.clone())? {
-                    let reduced = if args == 0 {
-                        None
-                    } else {
-                        Some(env.pop("reduced function result")?)
-                    };
-                    let val = Value::from_row_values(reduced, env)?;
-                    env.push(val);
-                    return Ok(());
-                }
+                env.call(f.clone())?;
             }
         }
         2 => {
@@ -183,11 +174,8 @@ fn generic_fold_right_1(
             for row in rows {
                 env.push(row);
                 env.push(acc);
-                let should_break = env.call_catch_break(f.clone())?;
+                env.call(f.clone())?;
                 acc = env.pop("reduced function result")?;
-                if should_break {
-                    break;
-                }
             }
             env.push(acc);
         }
@@ -316,16 +304,11 @@ fn generic_scan(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
     let mut scanned = Vec::with_capacity(row_count);
     scanned.push(acc.clone());
     for row in rows.by_ref() {
-        let start_height = env.stack_size();
         env.push(row);
         env.push(acc.clone());
-        let should_break = env.call_catch_break(f.clone())?;
+        env.call(f.clone())?;
         acc = env.pop("scanned function result")?;
         scanned.push(acc.clone());
-        if should_break {
-            env.truncate_stack(start_height);
-            break;
-        }
     }
     let val = if rows.len() == 0 {
         Value::from_row_values(scanned, env)?

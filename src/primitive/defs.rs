@@ -1563,17 +1563,6 @@ primitive!(
     /// If no value is available, then an error is thrown.
     /// The error can be caught with [try].
     (1, TryRecv, Misc, "tryrecv"),
-    /// Break out of a loop
-    ///
-    /// [break] is deprectated and will be removed in a future version.
-    /// Use [do] instead.
-    ///
-    /// Expects a non-negative integer. This integer is how many loops will be broken out of.
-    /// Loops that can be broken out of are [reduce], [fold], [scan], [each], [rows], and [repeat].
-    ///
-    /// ex! /(⎋>10.+) ⇡8  # Break when the sum exceeds 10
-    /// ex! ⍥(⎋>100.×2)∞ 1  # Break when the product exceeds 100
-    (1(0), Break, Control, ("break", '⎋')),
     /// Generate a random number in the range `[0, 1)`
     ///
     /// If you need a seeded random number, use [gen].

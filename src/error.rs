@@ -29,8 +29,6 @@ pub enum UiuaError {
     },
     /// An error thrown by `assert`
     Throw(Box<Value>, Span),
-    /// Control flow for `break`
-    Break(usize, Span),
     /// Maximum execution time exceeded
     Timeout(Span),
     /// A wrapper marking this error as being fill-related
@@ -85,7 +83,6 @@ impl fmt::Display for UiuaError {
                 Ok(())
             }
             UiuaError::Throw(value, span) => write!(f, "{span}: {value}"),
-            UiuaError::Break(_, span) => write!(f, "{span}: Break amount exceeded loop depth"),
             UiuaError::Timeout(_) => write!(f, "Maximum execution time exceeded"),
             UiuaError::Fill(error) => error.fmt(f),
         }
@@ -106,18 +103,6 @@ impl UiuaError {
             UiuaError::Throw(value, _) => *value,
             UiuaError::Traced { error, .. } => error.value(),
             error => error.message().into(),
-        }
-    }
-    pub(crate) fn break_data(self) -> Result<(usize, Span), Self> {
-        match self {
-            UiuaError::Traced { error, trace } => {
-                error.break_data().map_err(|error| UiuaError::Traced {
-                    error: Box::new(error),
-                    trace,
-                })
-            }
-            UiuaError::Break(n, span) => Ok((n, span)),
-            error => Err(error),
         }
     }
     /// Check if the error is fill-related
@@ -194,9 +179,6 @@ impl UiuaError {
             UiuaError::Run(error) => Report::new_multi(kind, [(&error.value, error.span.clone())]),
             UiuaError::Traced { error, trace } => error.report().trace(trace),
             UiuaError::Throw(message, span) => Report::new_multi(kind, [(&message, span.clone())]),
-            UiuaError::Break(_, span) => {
-                Report::new_multi(kind, [("Break amount exceeded loop depth", span.clone())])
-            }
             UiuaError::Timeout(span) => {
                 Report::new_multi(kind, [("Maximum execution time exceeded", span.clone())])
             }

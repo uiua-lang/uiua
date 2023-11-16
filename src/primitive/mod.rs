@@ -260,7 +260,6 @@ impl Primitive {
     }
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
         match self {
-            Primitive::Break => Some(format!("try using {} instead", Primitive::Do.format())),
             Primitive::Combinate => Some(format!(
                 "try using {} instead, possibly with {}",
                 Primitive::Cross.format(),
@@ -495,12 +494,6 @@ impl Primitive {
                 let mut array = env.pop(2)?;
                 array.rerank(&rank, env)?;
                 env.push(array);
-            }
-            Primitive::Break => {
-                let n = env.pop(1)?.as_nat(env, "Break expects a natural number")?;
-                if n > 0 {
-                    return Err(UiuaError::Break(n - 1, env.span().clone()));
-                }
             }
             Primitive::Dup => {
                 let x = env.pop(1)?;

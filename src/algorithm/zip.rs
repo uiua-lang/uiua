@@ -187,17 +187,9 @@ fn each1(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
         let mut old_values = xs.into_elements();
         for val in old_values.by_ref() {
             env.push(val);
-            let broke = env.call_catch_break(f.clone())?;
+            env.call(f.clone())?;
             for i in 0..outputs {
                 new_values[i].push(env.pop("each's function result")?);
-            }
-            if broke {
-                for row in old_values {
-                    for i in 0..outputs {
-                        new_values[i].push(row.clone());
-                    }
-                }
-                break;
             }
         }
         for new_values in new_values.into_iter().rev() {
@@ -243,7 +235,7 @@ fn each2(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             |x, y, env| {
                 env.push(y);
                 env.push(x);
-                env.call_error_on_break(f.clone(), "break is not allowed in multi-argument each")?;
+                env.call(f.clone())?;
                 (0..outputs)
                     .map(|_| env.pop("each's function result"))
                     .collect::<Result<MultiOutput<_>, _>>()
@@ -284,7 +276,7 @@ fn eachn(f: Arc<Function>, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         for arg in arg_elems.iter_mut().rev() {
             env.push(arg.next().unwrap());
         }
-        env.call_error_on_break(f.clone(), "break is not allowed in multi-argument each")?;
+        env.call(f.clone())?;
         new_values.push(env.pop("each's function result")?);
     }
     let eached = Value::from_row_values(new_values, env)?;
@@ -320,17 +312,9 @@ fn rows1(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
         let mut old_rows = xs.into_rows();
         for row in old_rows.by_ref() {
             env.push(row);
-            let broke = env.call_catch_break(f.clone())?;
+            env.call(f.clone())?;
             for i in 0..outputs {
                 new_rows[i].add_row(env.pop("rows' function result")?, env)?;
-            }
-            if broke {
-                for row in old_rows {
-                    for i in 0..outputs {
-                        new_rows[i].add_row(row.clone(), env)?;
-                    }
-                }
-                break;
             }
         }
         for new_rows in new_rows.into_iter().rev() {
@@ -359,7 +343,7 @@ fn rows2(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
         for (x, y) in x_rows.into_iter().zip(y_rows) {
             env.push(y);
             env.push(x);
-            env.call_error_on_break(f.clone(), "break is not allowed in multi-argument rows")?;
+            env.call(f.clone())?;
             for i in 0..outputs {
                 new_rows[i].push(env.pop("rows's function result")?);
             }
@@ -390,7 +374,7 @@ fn rowsn(f: Arc<Function>, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         for arg in arg_elems.iter_mut().rev() {
             env.push(arg.next().unwrap());
         }
-        env.call_error_on_break(f.clone(), "break is not allowed in multi-argument each")?;
+        env.call(f.clone())?;
         for i in 0..outputs {
             new_values[i].push(env.pop("rows's function result")?);
         }
@@ -434,7 +418,7 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
                 env.push(x);
                 env.push(b.clone());
                 env.push(a.clone());
-                env.call_error_on_break(f.clone(), "break is not allowed in distribute")?;
+                env.call(f.clone())?;
                 for i in 0..outputs {
                     new_rows[i].push(env.pop("distribute's function result")?);
                 }
@@ -461,7 +445,7 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
                 for arg in args.iter().rev() {
                     env.push(arg.clone());
                 }
-                env.call_error_on_break(f.clone(), "break is not allowed in level")?;
+                env.call(f.clone())?;
                 for i in 0..outputs {
                     new_rows[i].push(env.pop("distribute's function result")?);
                 }
@@ -490,7 +474,7 @@ fn distribute2(f: Arc<Function>, a: Value, xs: Value, env: &mut Uiua) -> UiuaRes
         for x in xs.into_rows() {
             env.push(x);
             env.push(a.clone());
-            env.call_error_on_break(f.clone(), "break is not allowed in distribute")?;
+            env.call(f.clone())?;
             for i in 0..outputs {
                 new_rows[i].push(env.pop("distribute's function result")?);
             }
@@ -534,7 +518,7 @@ pub fn tribute(env: &mut Uiua) -> UiuaResult {
                 env.push(b.clone());
                 env.push(a.clone());
                 env.push(x);
-                env.call_error_on_break(f.clone(), "break is not allowed in tribute")?;
+                env.call(f.clone())?;
                 for i in 0..outputs {
                     new_rows[i].push(env.pop("tribute's function result")?);
                 }
@@ -561,7 +545,7 @@ pub fn tribute(env: &mut Uiua) -> UiuaResult {
                     env.push(arg.clone());
                 }
                 env.push(x);
-                env.call_error_on_break(f.clone(), "break is not allowed in tribute")?;
+                env.call(f.clone())?;
                 for i in 0..outputs {
                     new_rows[i].push(env.pop("tribute's function result")?);
                 }
@@ -590,7 +574,7 @@ fn tribute2(f: Arc<Function>, xs: Value, a: Value, env: &mut Uiua) -> UiuaResult
         for x in xs.into_rows() {
             env.push(a.clone());
             env.push(x);
-            env.call_error_on_break(f.clone(), "break is not allowed in tribute")?;
+            env.call(f.clone())?;
             for i in 0..outputs {
                 new_rows[i].push(env.pop("tribute's function result")?);
             }
@@ -691,7 +675,7 @@ fn monadic_level(f: Arc<Function>, value: Value, mut n: usize, env: &mut Uiua) -
         let mut new_rows = Value::builder(new_shape.iter().product());
         for value in value.row_shaped_slices(row_shape) {
             env.push(value);
-            env.call_error_on_break(f.clone(), "break is not allowed in level")?;
+            env.call(f.clone())?;
             let row = env.pop("level's function result")?;
             new_rows.add_row(row, env)?;
         }
@@ -737,7 +721,7 @@ fn dyadic_level(
     {
         env.push(y);
         env.push(x);
-        env.call_error_on_break(f.clone(), "break is not allowed in level")?;
+        env.call(f.clone())?;
         let row = env.pop("level's function result")?;
         new_rows.push(row);
     }
@@ -765,7 +749,7 @@ fn multi_level_recursive(
         for arg in args.into_iter().rev() {
             env.push(arg);
         }
-        env.call_error_on_break(f, "break is not allowed in level")?;
+        env.call(f)?;
         Ok(env.pop("level's function result")?)
     } else {
         let (&n_with_max_row_count, arg_with_max_row_count) = ns

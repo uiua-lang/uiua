@@ -229,7 +229,7 @@ fn generic_table(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> Uiua
         for y in y_values.iter().cloned() {
             env.push(y);
             env.push(x.clone());
-            env.call_error_on_break(f.clone(), "break is not allowed in table")?;
+            env.call(f.clone())?;
             for i in 0..outputs {
                 items[i].add_row(env.pop("tabled function result")?, env)?;
             }
@@ -265,7 +265,7 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
         for y_row in y_rows.iter().cloned() {
             env.push(y_row);
             env.push(x_row.clone());
-            env.call_error_on_break(f.clone(), "break is not allowed in cross")?;
+            env.call(f.clone())?;
             for i in 0..outputs {
                 items[i].add_row(env.pop("crossed function result")?, env)?;
             }
@@ -332,7 +332,7 @@ fn multi_combinate_recursive(
         for arg in args.iter().rev() {
             env.push(arg.clone());
         }
-        env.call_error_on_break(f, "break is not allowed in combinate")?;
+        env.call(f)?;
         Ok(env.pop("combinate's function result")?)
     } else if ns[curr] == 0 {
         multi_combinate_recursive(f, args, ns, curr + 1, env)

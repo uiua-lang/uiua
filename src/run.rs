@@ -671,40 +671,6 @@ code:
         let call_span = self.span_index();
         self.call_with_span(f, call_span)
     }
-    /// Call a function and catch a `break`
-    pub fn call_catch_break(&mut self, f: impl Into<Arc<Function>>) -> UiuaResult<bool> {
-        match self.call(f) {
-            Ok(_) => Ok(false),
-            Err(e) => match e.break_data() {
-                Ok((0, _)) => Ok(true),
-                Ok((n, span)) => Err(UiuaError::Break(n - 1, span)),
-                Err(e) => Err(e),
-            },
-        }
-    }
-    /// Call a function and throw an error if it `break`s
-    pub fn call_error_on_break(
-        &mut self,
-        f: impl Into<Arc<Function>>,
-        message: &str,
-    ) -> UiuaResult {
-        self.call_error_on_break_with(f, || message.into())
-    }
-    /// Call a function and throw an error if it `break`s
-    pub fn call_error_on_break_with(
-        &mut self,
-        f: impl Into<Arc<Function>>,
-        message: impl FnOnce() -> String,
-    ) -> UiuaResult {
-        match self.call(f) {
-            Ok(_) => Ok(()),
-            Err(e) => match e.break_data() {
-                Ok((0, span)) => Err(span.sp(message()).into()),
-                Ok((n, span)) => Err(UiuaError::Break(n - 1, span)),
-                Err(e) => Err(e),
-            },
-        }
-    }
     pub(crate) fn span_index(&self) -> usize {
         self.scope.call.last().map_or(0, |frame| {
             frame

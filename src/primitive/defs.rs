@@ -787,6 +787,7 @@ primitive!(
     /// Negative ranks are relative to the rank of the array.
     /// ex: ☇ ¯1 ↯2_3_3⇡18
     ///   : ☇ ¯2 ↯2_3_3⇡18
+    ///   : ☇ ¯3 ↯2_3_3⇡18
     (2, Rerank, DyadicArray, ("rerank", '☇')),
     /// Take the first n elements of an array
     ///

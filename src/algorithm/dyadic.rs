@@ -871,8 +871,8 @@ impl Value {
             }
         } else {
             // Negative rank
-            if rank >= shape.len() {
-                for _ in 0..rank - shape.len() + 1 {
+            if rank > shape.len() {
+                for _ in 0..rank - shape.len() {
                     shape.push(1);
                 }
             } else {

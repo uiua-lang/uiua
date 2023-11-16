@@ -267,10 +267,6 @@ impl Primitive {
             "ga" => return Some(Primitive::Gap),
             "re" => return Some(Primitive::Reach),
             "pi" => return Some(Primitive::Pi),
-            "ro" => return Some(Primitive::Rock),
-            "de" => return Some(Primitive::Deep),
-            "ab" => return Some(Primitive::Abyss),
-            "se" => return Some(Primitive::Seabed),
             _ => {}
         }
         if let Some(prim) = Primitive::all().find(|p| p.name() == name) {

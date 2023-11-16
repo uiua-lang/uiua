@@ -90,38 +90,35 @@ fn spanned_bin_fn(
     Box::new(move |a, b, ad, bd, env| env.with_span(span, |env| f(a, b, ad, bd, env)))
 }
 
-fn prim_bin_fast_fn(prim: Primitive, span: usize, combinate: bool) -> Option<ValueBinFn> {
+fn prim_bin_fast_fn(prim: Primitive, span: usize) -> Option<ValueBinFn> {
     use std::boxed::Box;
     use Primitive::*;
     Some(match prim {
-        Add if !combinate => spanned_bin_fn(span, Value::add),
-        Sub if !combinate => spanned_bin_fn(span, Value::sub),
-        Mul if !combinate => spanned_bin_fn(span, Value::mul),
-        Div if !combinate => spanned_bin_fn(span, Value::div),
-        Pow if !combinate => spanned_bin_fn(span, Value::pow),
-        Mod if !combinate => spanned_bin_fn(span, Value::modulus),
-        Log if !combinate => spanned_bin_fn(span, Value::log),
-        Eq if !combinate => spanned_bin_fn(span, Value::is_eq),
-        Ne if !combinate => spanned_bin_fn(span, Value::is_ne),
-        Lt if !combinate => spanned_bin_fn(span, Value::is_lt),
-        Gt if !combinate => spanned_bin_fn(span, Value::is_gt),
-        Le if !combinate => spanned_bin_fn(span, Value::is_le),
-        Ge if !combinate => spanned_bin_fn(span, Value::is_ge),
-        Complex if !combinate => spanned_bin_fn(span, Value::complex),
-        Max if !combinate => spanned_bin_fn(span, Value::max),
-        Min if !combinate => spanned_bin_fn(span, Value::min),
-        Atan if !combinate => spanned_bin_fn(span, Value::atan2),
+        Add => spanned_bin_fn(span, Value::add),
+        Sub => spanned_bin_fn(span, Value::sub),
+        Mul => spanned_bin_fn(span, Value::mul),
+        Div => spanned_bin_fn(span, Value::div),
+        Pow => spanned_bin_fn(span, Value::pow),
+        Mod => spanned_bin_fn(span, Value::modulus),
+        Log => spanned_bin_fn(span, Value::log),
+        Eq => spanned_bin_fn(span, Value::is_eq),
+        Ne => spanned_bin_fn(span, Value::is_ne),
+        Lt => spanned_bin_fn(span, Value::is_lt),
+        Gt => spanned_bin_fn(span, Value::is_gt),
+        Le => spanned_bin_fn(span, Value::is_le),
+        Ge => spanned_bin_fn(span, Value::is_ge),
+        Complex => spanned_bin_fn(span, Value::complex),
+        Max => spanned_bin_fn(span, Value::max),
+        Min => spanned_bin_fn(span, Value::min),
+        Atan => spanned_bin_fn(span, Value::atan2),
         Rotate => Box::new(move |a, b, ad, bd, env| {
-            env.with_span(span, |env| a.rotate_depth(b, ad, bd, combinate, env))
+            env.with_span(span, |env| a.rotate_depth(b, ad, bd, env))
         }),
         _ => return None,
     })
 }
 
-pub(crate) fn instrs_bin_fast_fn(
-    instrs: &[Instr],
-    combinate: bool,
-) -> Option<(ValueBinFn, usize, usize)> {
+pub(crate) fn instrs_bin_fast_fn(instrs: &[Instr]) -> Option<(ValueBinFn, usize, usize)> {
     use std::boxed::Box;
     use Primitive::*;
 
@@ -138,20 +135,20 @@ pub(crate) fn instrs_bin_fast_fn(
 
     match instrs {
         &[Instr::Prim(prim, span)] => {
-            let f = prim_bin_fast_fn(prim, span, combinate)?;
+            let f = prim_bin_fast_fn(prim, span)?;
             return Some((f, 0, 0));
         }
-        [Instr::PushFunc(f), Instr::Prim(Rows, _)] if !combinate => {
-            return nest_bin_fast(instrs_bin_fast_fn(&f.instrs, combinate)?, 1, 1)
+        [Instr::PushFunc(f), Instr::Prim(Rows, _)] => {
+            return nest_bin_fast(instrs_bin_fast_fn(&f.instrs)?, 1, 1)
         }
-        [Instr::PushFunc(f), Instr::Prim(Distribute, _)] if !combinate => {
-            return nest_bin_fast(instrs_bin_fast_fn(&f.instrs, combinate)?, 0, 1)
+        [Instr::PushFunc(f), Instr::Prim(Distribute, _)] => {
+            return nest_bin_fast(instrs_bin_fast_fn(&f.instrs)?, 0, 1)
         }
-        [Instr::PushFunc(f), Instr::Prim(Tribute, _)] if !combinate => {
-            return nest_bin_fast(instrs_bin_fast_fn(&f.instrs, combinate)?, 1, 0)
+        [Instr::PushFunc(f), Instr::Prim(Tribute, _)] => {
+            return nest_bin_fast(instrs_bin_fast_fn(&f.instrs)?, 1, 0)
         }
         [Instr::Prim(Flip, _), rest @ ..] => {
-            let (f, a, b) = instrs_bin_fast_fn(rest, combinate)?;
+            let (f, a, b) = instrs_bin_fast_fn(rest)?;
             let f = Box::new(move |a, b, ad, bd, env: &mut Uiua| f(b, a, bd, ad, env));
             return Some((f, a, b));
         }
@@ -226,7 +223,7 @@ fn each2(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             FormatShape(&ys.shape()[..min_rank])
         )));
     }
-    if let Some((f, ..)) = instrs_bin_fast_fn(&f.instrs, false) {
+    if let Some((f, ..)) = instrs_bin_fast_fn(&f.instrs) {
         let xrank = xs.rank();
         let yrank = ys.rank();
         let val = f(xs, ys, xrank, yrank, env)?;
@@ -351,7 +348,7 @@ fn rows2(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             ys.row_count()
         )));
     }
-    if let Some((f, a, b)) = instrs_bin_fast_fn(&f.instrs, false) {
+    if let Some((f, a, b)) = instrs_bin_fast_fn(&f.instrs) {
         let val = f(xs, ys, a + 1, b + 1, env)?;
         env.push(val);
     } else {
@@ -478,7 +475,7 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
 }
 
 fn distribute2(f: Arc<Function>, a: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
-    if let Some((f, xd, yd)) = instrs_bin_fast_fn(&f.instrs, false) {
+    if let Some((f, xd, yd)) = instrs_bin_fast_fn(&f.instrs) {
         let val = f(a, xs, xd, yd + 1, env)?;
         env.push(val);
     } else {
@@ -578,7 +575,7 @@ pub fn tribute(env: &mut Uiua) -> UiuaResult {
 }
 
 fn tribute2(f: Arc<Function>, xs: Value, a: Value, env: &mut Uiua) -> UiuaResult {
-    if let Some((f, xd, yd)) = instrs_bin_fast_fn(&f.instrs, false) {
+    if let Some((f, xd, yd)) = instrs_bin_fast_fn(&f.instrs) {
         let val = f(xs, a, xd + 1, yd, env)?;
         env.push(val);
     } else {
@@ -656,7 +653,7 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
                 (a, b) if a == xs.rank() && b == ys.rank() => return each2(f, xs, ys, env),
                 _ => {}
             }
-            if let Some((f, a, b)) = instrs_bin_fast_fn(&f.instrs, false) {
+            if let Some((f, a, b)) = instrs_bin_fast_fn(&f.instrs) {
                 let value = f(xs, ys, xn + a, yn + b, env)?;
                 env.push(value);
             } else {

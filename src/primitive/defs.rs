@@ -771,8 +771,6 @@ primitive!(
     /// ex: ↯3_¯1_5 ⇡30
     /// If [fill] is used, the total number of elements in the new shape will always be [equal] to the total number of elements in the original shape.
     /// ex: ⬚0↯ ¯1_5 ⇡12
-    /// You can use [surface] to [join] `¯1` to the front of a shape.
-    /// ex: ↯~5 ⇡15
     ///
     /// See also: [deshape]
     (2, Reshape, DyadicArray, ("reshape", '↯')),
@@ -974,8 +972,8 @@ primitive!(
     /// ex: ≡/+ [1_2_3 4_5_6 7_8_9]  # Sum the elements of each row
     ///
     /// The number of arrays used depends on how many arguments the function takes.
-    /// ex: ≡⊂    1_2 [4_5 6_7]
-    /// ex: ≡∧⋄~+ 1_2 [4_5 6_7]
+    /// ex: ≡/+ [1_2 3_4] 5_6
+    /// ex: ≡⊂  [1_2 3_4] 5_6
     ///
     /// [rows] is equivalent to [level]`¯1` (or `level``[¯1 ¯1 …]` for multiple arrays).
     /// ex: ≑¯1/+ [1_2_3 4_5_6 7_8_9]
@@ -991,7 +989,6 @@ primitive!(
     /// [distribute] is equivalent to [level]`[``infinity``¯1]`.
     /// ex:       ∺⊂ 1_2_3 4_5_6
     ///   : ≑[∞ ¯1]⊂ 1_2_3 4_5_6
-    ///   :     ≑⋄~⊂ 1_2_3 4_5_6
     (2[1], Distribute, IteratingModifier, ("distribute", '∺')),
     /// Apply a function to each row of an array and a fixed value
     ///
@@ -1003,7 +1000,6 @@ primitive!(
     /// [tribute] is equivalent to [level]`[¯1``infinity``]`.
     /// ex:       ≐⊂ 1_2_3 4_5_6
     ///   : ≑[¯1 ∞]⊂ 1_2_3 4_5_6
-    ///   :     ≑~⋄⊂ 1_2_3 4_5_6
     (2[1], Tribute, IteratingModifier, ("tribute", '≐')),
     /// Apply a function to each combination of elements of two arrays
     ///

@@ -1138,7 +1138,7 @@ mod tests {
 
     #[test]
     fn prim_docs() {
-        for prim in Primitive::all() {
+        for prim in Primitive::non_deprecated() {
             if let Some(doc) = prim.doc() {
                 for line in &doc.lines {
                     if let PrimDocLine::Example(ex) = line {

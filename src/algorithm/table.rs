@@ -9,7 +9,6 @@ use crate::{
     algorithm::{
         loops::{rank_list, rank_to_depth},
         pervade::*,
-        zip::instrs_bin_fast_fn,
     },
     array::{Array, ArrayValue, Shape},
     function::Function,
@@ -317,18 +316,8 @@ pub fn combinate(env: &mut Uiua) -> UiuaResult {
         .zip(&args)
         .map(|(n, arg)| rank_to_depth(n, arg.rank()))
         .collect();
-    if let (&[xn, yn], Some((f, a, b))) = (ns.as_slice(), instrs_bin_fast_fn(&f.instrs, true)) {
-        // Optimized
-        let mut args = args.into_iter();
-        let xs = args.next().unwrap();
-        let ys = args.next().unwrap();
-        let value = f(xs, ys, xn + a, yn + b, env)?;
-        env.push(value);
-    } else {
-        // Normal
-        let res = multi_combinate_recursive(f, &mut args, &ns, 0, env)?;
-        env.push(res);
-    }
+    let res = multi_combinate_recursive(f, &mut args, &ns, 0, env)?;
+    env.push(res);
     Ok(())
 }
 

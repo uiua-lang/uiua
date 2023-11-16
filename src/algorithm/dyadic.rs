@@ -48,7 +48,6 @@ impl<T: Clone + std::fmt::Debug> Array<T> {
         other: &Array<U>,
         mut a_depth: usize,
         mut b_depth: usize,
-        combinate: bool,
         ctx: &C,
         f: impl Fn(&[usize], &mut [T], &[usize], &[U], &C) -> Result<(), C::Error>,
     ) -> Result<(), C::Error> {
@@ -57,53 +56,43 @@ impl<T: Clone + std::fmt::Debug> Array<T> {
         let mut local_b;
         a_depth = a_depth.min(a.rank());
         b_depth = b_depth.min(b.rank());
-        let mut lower_a_depth = a_depth;
-        if combinate {
-            for b_dim in b.shape[..b_depth].iter().rev() {
-                a.reshape_scalar(*b_dim);
-                lower_a_depth += 1;
-            }
-        } else {
-            let a_suffix = &a.shape[a_depth.saturating_sub(1)..];
-            let b_suffix = &b.shape[b_depth.saturating_sub(1)..];
-            if !a_suffix.iter().zip(b_suffix).all(|(a, b)| a == b) {
-                return Err(ctx.error(format!(
-                    "Cannot combine arrays with shapes {} and {} \
-                    because shape suffixes {} and {} are not compatible",
-                    a.format_shape(),
-                    b.format_shape(),
-                    FormatShape(a_suffix),
-                    FormatShape(b_suffix)
-                )));
-            }
-            match a_depth.cmp(&b_depth) {
-                Ordering::Equal => {}
-                Ordering::Less => {
-                    for b_dim in b.shape[..b_depth - a_depth].iter().rev() {
-                        a.reshape_scalar(*b_dim);
-                        a_depth += 1;
-                    }
+        let a_prefix = &a.shape[..a_depth];
+        let b_prefix = &b.shape[..b_depth];
+        if !a_prefix.iter().zip(b_prefix).all(|(a, b)| a == b) {
+            return Err(ctx.error(format!(
+                "Cannot combine arrays with shapes {} and {} \
+                because shape prefixes {} and {} are not compatible",
+                a.format_shape(),
+                b.format_shape(),
+                FormatShape(a_prefix),
+                FormatShape(b_prefix)
+            )));
+        }
+        match a_depth.cmp(&b_depth) {
+            Ordering::Equal => {}
+            Ordering::Less => {
+                for b_dim in b.shape[..b_depth - a_depth].iter().rev() {
+                    a.reshape_scalar(*b_dim);
+                    a_depth += 1;
                 }
-                Ordering::Greater => {
-                    for a_dim in a.shape[..a_depth - b_depth].iter().rev() {
-                        local_b = b.clone();
-                        local_b.reshape_scalar(*a_dim);
-                        b = &local_b;
-                        b_depth += 1;
-                    }
+            }
+            Ordering::Greater => {
+                for a_dim in a.shape[..a_depth - b_depth].iter().rev() {
+                    local_b = b.clone();
+                    local_b.reshape_scalar(*a_dim);
+                    b = &local_b;
+                    b_depth += 1;
                 }
             }
         }
+
+        let a_row_shape = &a.shape[a_depth..];
         let b_row_shape = &b.shape[b_depth..];
-        let lower_a_row_shape = &a.shape[lower_a_depth..];
-        let higher_a_row_shape = &a.shape[a_depth..];
         for (a, b) in (a.data.as_mut_slice())
-            .chunks_exact_mut(higher_a_row_shape.iter().product())
+            .chunks_exact_mut(a_row_shape.iter().product())
             .zip(b.data.as_slice().chunks_exact(b_row_shape.iter().product()))
         {
-            for a in a.chunks_exact_mut(lower_a_row_shape.iter().product()) {
-                f(lower_a_row_shape, a, b_row_shape, b, ctx)?;
-            }
+            f(a_row_shape, a, b_row_shape, b, ctx)?;
         }
         Ok(())
     }
@@ -1715,7 +1704,6 @@ impl Value {
         mut rotated: Self,
         a_depth: usize,
         b_depth: usize,
-        combinate: bool,
         env: &Uiua,
     ) -> UiuaResult<Self> {
         let by = self.as_integer_array(env, "Rotation amount must be an array of integers")?;
@@ -1726,13 +1714,13 @@ impl Value {
             }
         }
         match &mut rotated {
-            Value::Num(a) => a.rotate_depth(by, b_depth, a_depth, combinate, env)?,
+            Value::Num(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
             #[cfg(feature = "bytes")]
-            Value::Byte(a) => a.rotate_depth(by, b_depth, a_depth, combinate, env)?,
+            Value::Byte(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
             #[cfg(feature = "complex")]
-            Value::Complex(a) => a.rotate_depth(by, b_depth, a_depth, combinate, env)?,
-            Value::Char(a) => a.rotate_depth(by, b_depth, a_depth, combinate, env)?,
-            Value::Box(a) => a.rotate_depth(by, b_depth, a_depth, combinate, env)?,
+            Value::Complex(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
+            Value::Char(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
+            Value::Box(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
         }
         Ok(rotated)
     }
@@ -1760,23 +1748,15 @@ impl<T: ArrayValue> Array<T> {
         by: Array<isize>,
         depth: usize,
         by_depth: usize,
-        combinate: bool,
         env: &Uiua,
     ) -> UiuaResult {
-        self.depth_slices(
-            &by,
-            depth,
-            by_depth,
-            combinate,
-            env,
-            |ash, a, bsh, b, env| {
-                if bsh.len() > 1 {
-                    return Err(env.error(format!("Cannot rotate by rank {} array", bsh.len())));
-                }
-                rotate(b, ash, a);
-                Ok(())
-            },
-        )
+        self.depth_slices(&by, depth, by_depth, env, |ash, a, bsh, b, env| {
+            if bsh.len() > 1 {
+                return Err(env.error(format!("Cannot rotate by rank {} array", bsh.len())));
+            }
+            rotate(b, ash, a);
+            Ok(())
+        })
     }
 }
 

@@ -1419,7 +1419,7 @@ primitive!(
     ///   : ∧∞_∞_1(+⊙(.+)) 0_0 0_0
     /// However, for this particular example, it is probably better to use [scan].
     /// ex: /+∶⊢⇌.\+[0_1 1_1 1_0 ¯1_¯1]
-    ([2], Fold, AggregatingModifier, ("fold", '∧')),
+    ([1], Fold, AggregatingModifier, ("fold", '∧')),
     /// Apply a function to combinations at array depths
     ///
     /// Expect a list of ranks to operate on, a function, and some arrays.

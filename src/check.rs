@@ -255,7 +255,7 @@ impl<'a> VirtualEnv<'a> {
                     let outputs = f_sig.outputs + g_sig.outputs;
                     self.handle_args_outputs(args, outputs)?;
                 }
-                Level | Fold | Combinate => {
+                Level | Combinate => {
                     let ranks = self.pop_func()?;
                     let ranks_sig = ranks.signature();
                     if ranks_sig.outputs != 1 {
@@ -272,6 +272,10 @@ impl<'a> VirtualEnv<'a> {
                     }
                     let sig = self.pop_func()?.signature();
                     self.handle_sig(sig)?;
+                }
+                Fold => {
+                    let f = self.pop_func()?;
+                    self.handle_sig(f.signature())?;
                 }
                 Try => {
                     let f = self.pop_func()?;

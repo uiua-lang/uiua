@@ -5,13 +5,10 @@ use std::sync::Arc;
 use ecow::EcoVec;
 
 use crate::{
-    algorithm::{
-        loops::{flip, rank_list, rank_to_depth},
-        pervade::*,
-    },
+    algorithm::{loops::flip, pervade::*},
     array::{Array, ArrayValue, Shape},
     cowslice::cowslice,
-    function::{Function, Signature},
+    function::Function,
     value::Value,
     Primitive, Uiua, UiuaResult,
 };
@@ -342,146 +339,40 @@ fn generic_scan(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
 
 pub fn fold(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let ns = rank_list("Fold", env)?;
     let f = env.pop_function()?;
-    let mut args = Vec::with_capacity(ns.len());
-    for i in 0..ns.len() {
-        let arg = env.pop(i + 1)?;
-        args.push(arg);
+    let sig = f.signature();
+    if sig.outputs + 1 < sig.args {
+        return Err(env.error(format!(
+            "{} {}'s function must take at least 1 more value than it returns, \
+            but its signature is {}",
+            Primitive::Fold,
+            Primitive::Fold.name(),
+            sig
+        )));
     }
-    let ns: Vec<usize> = ns
-        .into_iter()
-        .zip(&args)
-        .map(|(n, arg)| rank_to_depth(n, arg.rank()))
-        .collect();
-    let res = fold_recursive(f, args, &ns, env)?;
-    for val in res.into_iter().rev() {
-        env.push(val);
+    let iterable_count = sig.args - sig.outputs;
+    let mut arrays = Vec::with_capacity(iterable_count);
+    let first = env.pop(1)?;
+    let row_count = first.row_count();
+    arrays.push(first.into_rows());
+    for i in 1..iterable_count {
+        let val = env.pop(i + 1)?;
+        if val.row_count() != row_count {
+            return Err(env.error(format!(
+                "Cannot {} {} arrays of different lengths: {} and {}",
+                Primitive::Fold,
+                Primitive::Fold.name(),
+                row_count,
+                val.row_count()
+            )));
+        }
+        arrays.push(val.into_rows());
+    }
+    for _ in 0..row_count {
+        for array in arrays.iter_mut().rev() {
+            env.push(array.next().unwrap());
+        }
+        env.call(f.clone())?;
     }
     Ok(())
-}
-
-fn fold_recursive(
-    f: Arc<Function>,
-    mut args: Vec<Value>,
-    ns: &[usize],
-    env: &mut Uiua,
-) -> UiuaResult<Vec<Value>> {
-    // Determine accumulator and iterator counts
-    let mut acc_count = 0;
-    let mut array_count = 0;
-    for &n in ns {
-        match n {
-            0 => acc_count += 1,
-            1 => array_count += 1,
-            _ => {}
-        }
-    }
-    if acc_count + array_count == ns.len() {
-        // Base case
-        if array_count == 0 {
-            return Ok(args);
-        }
-        let mut accs = Vec::with_capacity(acc_count);
-        let mut arrays = Vec::with_capacity(array_count);
-        for (n, arg) in ns.iter().zip(args) {
-            if *n == 0 {
-                accs.push(arg);
-            } else {
-                arrays.push(arg);
-            }
-        }
-        if arrays.is_empty() {
-            return Ok(accs);
-        }
-        if let Some(w) = arrays
-            .windows(2)
-            .find(|w| w[0].row_count() != w[1].row_count())
-        {
-            return Err(env.error(format!(
-                "Cannot fold arrays with shapes {} and {}",
-                w[0].format_shape(),
-                w[1].format_shape()
-            )));
-        }
-        let row_count = arrays[0].row_count();
-        let mut array_iters: Vec<_> = arrays.into_iter().map(|array| array.into_rows()).collect();
-        let expected_sig = Signature::new(array_count + acc_count, acc_count);
-        if expected_sig != f.signature() {
-            return Err(env.error(format!(
-                "Fold's function's signature is {}, but its rank \
-                list suggests a signature of {}",
-                f.signature(),
-                expected_sig
-            )));
-        }
-
-        for _ in 0..row_count {
-            let mut accs_iter = accs.drain(..).rev();
-            let mut arr_i = array_count;
-            for n in ns.iter().rev() {
-                match n {
-                    0 => env.push(accs_iter.next().unwrap()),
-                    1 => {
-                        arr_i -= 1;
-                        env.push(array_iters[arr_i].next().unwrap())
-                    }
-                    _ => unreachable!(),
-                }
-            }
-            let broke = env.call_catch_break(f.clone())?;
-            drop(accs_iter);
-            for _ in 0..acc_count {
-                accs.push(env.pop("folded function result")?);
-            }
-            if broke {
-                break;
-            }
-        }
-        Ok(accs)
-    } else {
-        // Recursive case
-        let mut row_count = 0;
-        // Check shape agreement
-        for (i, (arg, ni)) in args.iter().zip(ns).enumerate() {
-            if *ni == 0 {
-                continue;
-            }
-            for (arg2, nj) in args.iter().zip(ns).skip(i + 1) {
-                if *nj == 0 {
-                    continue;
-                }
-                if arg.row_count() != arg2.row_count() {
-                    return Err(env.error(format!(
-                        "Cannot fold arrays with shapes {} and {}",
-                        arg.format_shape(),
-                        arg2.format_shape()
-                    )));
-                }
-            }
-            row_count = arg.row_count();
-        }
-        // Decrement ns
-        let dec_ns: Vec<usize> = ns.iter().map(|n| n.saturating_sub(1)).collect();
-        // Collect row iterators
-        let mut row_iters = Vec::with_capacity(array_count);
-        for (i, n) in ns.iter().enumerate().rev() {
-            if *n != 0 {
-                row_iters.push(args.remove(i).into_rows());
-            }
-        }
-        row_iters.reverse();
-        // Recurse
-        for _ in 0..row_count {
-            let mut iter_i = 0;
-            for (i, n) in ns.iter().enumerate() {
-                if *n != 0 {
-                    args.insert(i, row_iters[iter_i].next().unwrap());
-                    iter_i += 1;
-                }
-            }
-            args = fold_recursive(f.clone(), args, &dec_ns, env)?;
-        }
-        Ok(args)
-    }
 }

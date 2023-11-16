@@ -630,7 +630,9 @@ fn under_rows_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Un
     ];
     let afters = vec![
         Instr::PushFunc(f_after.into()),
+        Instr::Prim(Primitive::Reverse, span),
         Instr::Prim(Primitive::Rows, span),
+        Instr::Prim(Primitive::Reverse, span),
     ];
     Some((input, (befores, afters)))
 }

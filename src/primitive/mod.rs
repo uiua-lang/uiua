@@ -168,6 +168,22 @@ constant!(pi, PI);
 constant!(tau, TAU);
 constant!(inf, INFINITY);
 
+/// A wrapper that nicely prints a `Primitive`
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct FormatPrimitive(pub Primitive);
+
+impl fmt::Debug for FormatPrimitive {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self}")
+    }
+}
+
+impl fmt::Display for FormatPrimitive {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {}", self.0, self.0.name())
+    }
+}
+
 impl Primitive {
     /// Get an iterator over all primitives
     pub fn all() -> impl Iterator<Item = Self> + Clone {
@@ -238,14 +254,25 @@ impl Primitive {
             _ => None,
         }
     }
+    /// Get a pretty-printable wrapper for this primitive
+    pub fn format(&self) -> FormatPrimitive {
+        FormatPrimitive(*self)
+    }
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
         match self {
-            Primitive::Break => Some(format!(
-                "try using {}{} instead",
-                Primitive::Do,
-                Primitive::Do.name()
+            Primitive::Break => Some(format!("try using {} instead", Primitive::Do.format())),
+            Primitive::Combinate => Some(format!(
+                "try using {} instead, possibly with {}",
+                Primitive::Cross.format(),
+                Primitive::Rerank.format()
             )),
-            Primitive::Combinate => Some(String::new()),
+            Primitive::Level => Some(format!(
+                "try using {}, {}, or {} instead, possible with {}",
+                Primitive::Rows.format(),
+                Primitive::Distribute.format(),
+                Primitive::Tribute.format(),
+                Primitive::Rerank.format()
+            )),
             prim if prim.is_ocean() => Some(String::new()),
             _ => None,
         }

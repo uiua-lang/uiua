@@ -1026,8 +1026,6 @@ primitive!(
     ///   : b ← .[7_8 9_10]
     ///   : ⊠⊂ a b
     (2[1], Cross, IteratingModifier, ("cross", '⊠')),
-    /// Apply an iterating modifier from the bottom
-    ([1], Base, IteratingModifier, ("base", '⊣')),
     /// Repeat a function a number of times
     ///
     /// ex: ⍥(+2)5 0

@@ -446,9 +446,9 @@ impl Primitive {
             Primitive::Scan => reduce::scan(env)?,
             Primitive::Fold => reduce::fold(env)?,
             Primitive::Each => zip::each(env)?,
-            Primitive::Rows => zip::zip("rows", 1, 1, env)?,
-            Primitive::Distribute => zip::zip("distribute", 0, 1, env)?,
-            Primitive::Tribute => zip::zip("tribute", 1, 0, env)?,
+            Primitive::Rows => zip::rows(env)?,
+            Primitive::Distribute => zip::distribute(env)?,
+            Primitive::Tribute => zip::tribute(env)?,
             Primitive::Level => zip::level(env)?,
             Primitive::Table => table::table(env)?,
             Primitive::Cross => table::cross(env)?,
@@ -457,10 +457,6 @@ impl Primitive {
             Primitive::Do => loops::do_(env)?,
             Primitive::Group => loops::group(env)?,
             Primitive::Partition => loops::partition(env)?,
-            Primitive::Base => {
-                let f = env.pop_function()?;
-                env.with_base(|env| env.call(f))?;
-            }
             Primitive::Reshape => {
                 let shape = env.pop(1)?;
                 let mut array = env.pop(2)?;

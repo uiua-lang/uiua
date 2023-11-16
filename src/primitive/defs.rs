@@ -1008,10 +1008,6 @@ primitive!(
     /// The number of arrays used depends on how many arguments the function takes.
     /// ex: ≡/+ [1_2 3_4] 5_6
     /// ex: ≡⊂  [1_2 3_4] 5_6
-    ///
-    /// [rows] is equivalent to [level]`¯1` (or `level``[¯1 ¯1 …]` for multiple arrays).
-    /// ex: ≑¯1/+ [1_2_3 4_5_6 7_8_9]
-    /// ex:   ≡/+ [1_2_3 4_5_6 7_8_9]
     ([1], Rows, IteratingModifier, ("rows", '≡')),
     /// Apply a function to a fixed value and each row of an array
     ///
@@ -1019,10 +1015,6 @@ primitive!(
     ///
     /// ex: ∺⊂ 1 2_3_4
     /// ex: ∺⊂ 1_2_3 4_5_6
-    ///
-    /// [distribute] is equivalent to [level]`[``infinity``¯1]`.
-    /// ex:       ∺⊂ 1_2_3 4_5_6
-    ///   : ≑[∞ ¯1]⊂ 1_2_3 4_5_6
     (2[1], Distribute, IteratingModifier, ("distribute", '∺')),
     /// Apply a function to each row of an array and a fixed value
     ///
@@ -1030,10 +1022,6 @@ primitive!(
     ///
     /// ex: ≐⊂ 1_2_3 4
     /// ex: ≐⊂ 1_2_3 4_5_6
-    ///
-    /// [tribute] is equivalent to [level]`[¯1``infinity``]`.
-    /// ex:       ≐⊂ 1_2_3 4_5_6
-    ///   : ≑[¯1 ∞]⊂ 1_2_3 4_5_6
     (2[1], Tribute, IteratingModifier, ("tribute", '≐')),
     /// Apply a function to each combination of elements of two arrays
     ///

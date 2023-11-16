@@ -1195,10 +1195,10 @@ fn TutorialTesting() -> impl IntoView {
 ⍤"3² is not 9!" =9 Square 3
 ⍤"4² is not 25!" =25 Square 4
 ---"#/>
-        <p>"One nice pattern for writing tests is to put the expected result before the test computation and use"<Prims prims=[Assert, Fork, Identity, Match]/>"."</p>
+        <p>"One nice pattern for writing tests is to put the expected result before the test computation and use"<Prims prims=[Assert, Fork, Gap, Identity, Match]/>"."</p>
         <p>"If the result does not match the expectation, that incorrect result will be thrown."</p>
-        <Editor example="---\n⍤⊃∘≍ 4 +2 2 # Passes\n---"/>
-        <Editor example="---\n⍤⊃∘≍ [2 3 5] +1 [1 2 3]\n--- #  ↓↓↓↓↓↓↓"/> // Should fail
+        <Editor example="---\n⍤⊃⋅∘≍ 4 +2 2 # Passes\n---"/>
+        <Editor example="---\n⍤⊃⋅∘≍ [2 3 5] +1 [1 2 3]\n--- #  ↓↓↓↓↓↓↓"/> // Should fail
 
         <h2 id="run-modes">"Run Modes"</h2>
         <p>"Whether tests will run or not depends on how you run the code."</p>

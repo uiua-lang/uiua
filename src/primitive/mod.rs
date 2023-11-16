@@ -269,13 +269,13 @@ impl Primitive {
             "pi" => return Some(Primitive::Pi),
             _ => {}
         }
-        if let Some(prim) = Primitive::all().find(|p| p.name() == name) {
+        if let Some(prim) = Primitive::non_deprecated().find(|p| p.name() == name) {
             return Some(prim);
         }
         if name.len() < 3 {
             return None;
         }
-        let mut matching = Primitive::all()
+        let mut matching = Primitive::non_deprecated()
             .filter(|p| p.glyph().is_some_and(|u| !u.is_ascii()) && p.name().starts_with(name));
         let res = matching.next()?;
         let exact_match = res.name() == name;
@@ -1166,7 +1166,7 @@ mod tests {
 
     #[test]
     fn primitive_from_name() {
-        for prim in Primitive::all() {
+        for prim in Primitive::non_deprecated() {
             assert_eq!(Primitive::from_name(prim.name()), Some(prim));
         }
         for test in [
@@ -1178,7 +1178,7 @@ mod tests {
                     .map(|(prim, _)| *prim)
             },
         ] {
-            for prim in Primitive::all() {
+            for prim in Primitive::non_deprecated() {
                 let char_test = match prim.glyph() {
                     None => prim.name().len(),
                     Some(c) if c.is_ascii() => continue,
@@ -1187,7 +1187,7 @@ mod tests {
                 let short: String = prim.name().chars().take(char_test).collect();
                 assert_eq!(test(&short), Some(prim));
             }
-            for prim in Primitive::all() {
+            for prim in Primitive::non_deprecated() {
                 if matches!(
                     prim,
                     Primitive::Range
@@ -1283,25 +1283,26 @@ mod tests {
         }
 
         let stack_functions = gen_group(
-            Primitive::all()
+            Primitive::non_deprecated()
                 .filter(|p| p.class() == PrimClass::Stack && p.modifier_args().is_none())
                 .chain(Some(Primitive::Identity)),
         );
-        let noadic_functions = gen_group(Primitive::all().filter(|p| {
+        let noadic_functions = gen_group(Primitive::non_deprecated().filter(|p| {
             p.class() != PrimClass::Stack && p.modifier_args().is_none() && p.args() == Some(0)
         }));
-        let monadic_functions = gen_group(Primitive::all().filter(|p| {
+        let monadic_functions = gen_group(Primitive::non_deprecated().filter(|p| {
             ![PrimClass::Stack, PrimClass::Planet].contains(&p.class())
                 && p.modifier_args().is_none()
                 && p.args() == Some(1)
         }));
-        let dyadic_functions = gen_group(Primitive::all().filter(|p| {
+        let dyadic_functions = gen_group(Primitive::non_deprecated().filter(|p| {
             p.class() != PrimClass::Stack && p.modifier_args().is_none() && p.args() == Some(2)
         }));
         let monadic_modifiers =
-            gen_group(Primitive::all().filter(|p| matches!(p.modifier_args(), Some(1))));
-        let dyadic_modifiers: String =
-            gen_group(Primitive::all().filter(|p| matches!(p.modifier_args(), Some(n) if n >= 2)));
+            gen_group(Primitive::non_deprecated().filter(|p| matches!(p.modifier_args(), Some(1))));
+        let dyadic_modifiers: String = gen_group(
+            Primitive::non_deprecated().filter(|p| matches!(p.modifier_args(), Some(n) if n >= 2)),
+        );
 
         let text = format!(
             r##"{{

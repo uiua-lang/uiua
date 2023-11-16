@@ -774,8 +774,17 @@ primitive!(
     ///
     /// See also: [deshape]
     (2, Reshape, DyadicArray, ("reshape", '↯')),
-    /// Collapse some dimensions of an array
-    (2, Rerank, DyadicArray, ("rerank", '⊥')),
+    /// Change the rank of an array's rows
+    ///
+    /// The resulting array will always have the given rank plus `1`.
+    /// ex: ☇ 0 ↯2_3_4⇡24
+    ///   : ☇ 1 ↯2_3_4⇡24
+    ///   : ☇ 2 ↯2_3_4⇡24
+    /// Ranks greater than the rank of the original rows will prepend `1` to the array's [shape].
+    /// ex: ☇ 2 [1 2 3 4]
+    /// ex: ☇ 3 ↯2_3_4⇡24
+    ///   : ☇ 4 ↯2_3_4⇡24
+    (2, Rerank, DyadicArray, ("rerank", '☇')),
     /// Take the first n elements of an array
     ///
     /// This is the opposite of [drop].

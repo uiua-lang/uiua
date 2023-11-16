@@ -463,6 +463,12 @@ impl Primitive {
                 array.reshape(&shape, env)?;
                 env.push(array);
             }
+            Primitive::Rerank => {
+                let rank = env.pop(1)?;
+                let mut array = env.pop(2)?;
+                array.rerank(&rank, env)?;
+                env.push(array);
+            }
             Primitive::Break => {
                 let n = env.pop(1)?.as_nat(env, "Break expects a natural number")?;
                 if n > 0 {

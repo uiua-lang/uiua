@@ -776,6 +776,8 @@ primitive!(
     ///
     /// See also: [deshape]
     (2, Reshape, DyadicArray, ("reshape", '↯')),
+    /// Collapse some dimensions of an array
+    (2, Rerank, DyadicArray, ("rerank", '⊥')),
     /// Take the first n elements of an array
     ///
     /// This is the opposite of [drop].

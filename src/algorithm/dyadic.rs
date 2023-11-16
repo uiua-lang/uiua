@@ -5,7 +5,7 @@ use std::{
     cmp::Ordering,
     collections::{hash_map::DefaultHasher, HashMap, HashSet},
     hash::{Hash, Hasher},
-    iter::repeat,
+    iter::{once, repeat},
     mem::take,
 };
 
@@ -857,6 +857,26 @@ impl<T: ArrayValue> Array<T> {
         }
         self.shape = shape;
         self.validate_shape();
+        Ok(())
+    }
+}
+
+impl Value {
+    /// `rerank` this value with another
+    pub fn rerank(&mut self, rank: &Self, env: &Uiua) -> UiuaResult {
+        let rank = rank.as_nat(env, "Rank must be a natural number")?;
+        let shape = self.shape_mut();
+        if rank >= shape.len() {
+            for _ in 0..rank - shape.len() + 1 {
+                shape.insert(0, 1);
+            }
+        } else {
+            let mid = shape.len() - rank;
+            let new_first_dim: usize = shape[..mid].iter().product();
+            *shape = once(new_first_dim)
+                .chain(shape[mid..].iter().copied())
+                .collect();
+        }
         Ok(())
     }
 }

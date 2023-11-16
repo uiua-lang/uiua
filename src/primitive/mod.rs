@@ -245,6 +245,8 @@ impl Primitive {
                 Primitive::Do,
                 Primitive::Do.name()
             )),
+            Primitive::Combinate => Some(String::new()),
+            prim if prim.is_ocean() => Some(String::new()),
             _ => None,
         }
     }

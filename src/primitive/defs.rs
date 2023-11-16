@@ -179,7 +179,7 @@ primitive!(
     ///
     /// ex: [, 1 2 3 4 5]
     ///
-    /// [over] is often used in examples of functions with two inputs two show both inputs and the output.
+    /// [over] is often used in examples of functions with two inputs to show both inputs and the output.
     /// ex: [+,, +3 4 5]
     (2(3), Over, Stack, ("over", ',')),
     /// Swap the top two values on the stack

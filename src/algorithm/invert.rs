@@ -327,7 +327,7 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
             pat!(
                 Rerank,
                 (Over, Shape, Over, Neg, Drop, PushTempN(1), Rerank),
-                (PopTempN(1), Reshape),
+                (Dup, Shape, 1, Drop, PopTempN(1), Join, Reshape),
             ),
         ),
         &pat!((Now), (Now, PushTempN(1)), (PopTempN(1), Now, Flip, Sub),),

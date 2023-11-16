@@ -1013,6 +1013,51 @@ impl Uiua {
                     };
                 }
             }
+            Primitive::Bracket => {
+                let mut operands = modified
+                    .operands
+                    .clone()
+                    .into_iter()
+                    .filter(|word| word.value.is_code());
+                let (a_instrs, a_sig) =
+                    self.compile_operand_words(vec![operands.next().unwrap()])?;
+                let (b_instrs, _) = self.compile_operand_words(vec![operands.next().unwrap()])?;
+                if let Ok(a_sig) = a_sig {
+                    let span = self.add_span(modified.modifier.span.clone());
+                    let mut instrs = vec![Instr::PushTemp {
+                        stack: TempStack::Inline,
+                        count: a_sig.args,
+                        span,
+                    }];
+                    instrs.extend(b_instrs);
+                    instrs.push(Instr::PopTemp {
+                        stack: TempStack::Inline,
+                        count: a_sig.args,
+                        span,
+                    });
+                    instrs.extend(a_instrs);
+                    return if call {
+                        self.extend_instrs(instrs);
+                        Ok(true)
+                    } else {
+                        match instrs_signature(&instrs) {
+                            Ok(sig) => {
+                                let func = Function::new(
+                                    FunctionId::Anonymous(modified.modifier.span.clone()),
+                                    instrs,
+                                    sig,
+                                );
+                                self.push_instr(Instr::push_func(func));
+                                Ok(true)
+                            }
+                            Err(e) => Err(UiuaError::Run(
+                                Span::Code(modified.modifier.span.clone())
+                                    .sp(format!("Cannot infer function signature: {e}")),
+                            )),
+                        }
+                    };
+                }
+            }
             Primitive::Invert => {
                 let mut operands = modified
                     .operands

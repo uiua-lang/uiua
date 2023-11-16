@@ -13,6 +13,8 @@ If you are reading this on the website, then these changes are live here.
 - Add the [`rerank` `☇`](https://uiua.org/docs/rerank) function, which changes the rank of an array's rows
   - This fills the void left by [`level` `≑`](https://uiua.org/docs/level) and [`combinate` `◳`](https://uiua.org/docs/combinate)
 - Switch functions are now less strict about branch signature compatibility and can take arrays as conditions
+- A single switch function can now be used as a list of functions for dyadic modifiers
+  - [`fork` `⊃`](https://uiua.org/docs/fork) and [`bracket` `⊓`](https://uiua.org/docs/bracket) can take more than 2 functions without chaining this way
 - Remove `if ?`, as all its use cases are now covered by switch functions. It will continue to parse, but `?ab` will be formatted as `(b|a)`
 - [`flip` `:`](https://uiua.org/docs/flip)'s glyph is now just a colon (it was `RATIO ∶`)
 - [`under` `⍜`](https://uiua.org/docs/under) now works with [`absolute value` `⌵`](https://uiua.org/docs/absolute)

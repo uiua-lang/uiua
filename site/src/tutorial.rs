@@ -816,6 +816,13 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <p><Prim prim=Bracket/>" too can be chained. Each additional function is called on arguments deeper in the stack."</p>
         <Editor example="[⊓⊓⊓+¯×. 1 2 3 4 5 6]"/>
 
+        <h2 id="switch-notation">"Switch Notation"</h2>
+        <p>"All dyadic modifiers allow a special notation with a single set of "<code>"()"</code>"s with a "<code>"|"</code>" in the middle separating the functions. This is called "<em>"switch notation"</em>". It is called this because it shares syntax with "<A href="/docs/controlflow#switch">"switch functions"</A>", which will be discussed in a "<A href="/docs/controlflow">"later section"</A>"."</p>
+        <Editor example="⊓(+|×) 1 2 3 4"/>
+        <p>"While all dyadic modifiers can use switch notation, "<Prim prim=Fork/>" and "<Prim prim=Bracket/>" allow more than 2 functions to be used. This can sometimes be shorter and/or more readable than chaining the modifier."</p>
+        <Editor example="[⊃(+|-|×|÷) 5 8]"/>
+        <Editor example="[⊓(+1|×|÷2) 5 10 12 22]"/>
+
         <h2 id="dip-gap-reach"><Prim prim=Dip/>", "<Prim prim=Gap/>", and "<Prim prim=Reach/></h2>
         <p>"The "<Prim prim=Dip/>" modifier temporarily pops the top value on the stack, calls its function, then pushes the value back."</p>
         <Editor example="[⊙+ 1 2 3]"/>

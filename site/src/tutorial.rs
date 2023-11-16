@@ -994,85 +994,46 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <h1>"Advanced Array Manipulation"</h1>
         <p>"Sometimes the operation you need to perform on an array is more complicated than modifiers like "<Prim prim=Reduce/>", "<Prim prim=Rows/>", or "<Prim prim=Table/>" allow."</p>
 
-        <h2 id="rank-lists">"Rank Lists"</h2>
-        <p>"Uiua has 3 special modifiers that allow you to specify the ranks of arrays that you want to operate on."</p>
-        <p>"Specified ranks are passed as a single number or a list of numbers."</p>
-        <p>"Ranks can be specified as any integer, or "<Prim prim=Infinity/>"."</p>
-        <br/>
-        <p>"To see how this works, we can use "<Prim prim=Box/>" with the most basic rank-generic modifier, "<Prim prim=Level/>"."</p>
-        <p>"In the examples below, pay attention to the number that comes after "<Prim prim=Level/>" and which parts of the array end up in boxes"</p>
-        <Editor example="≑0□ ↯2_3_4⇡24"/>
-        <Editor example="≑1□ ↯2_3_4⇡24"/>
-        <Editor example="≑2□ ↯2_3_4⇡24"/>
-        <Editor example="≑3□ ↯2_3_4⇡24"/>
-        <Editor example="≑∞□ ↯2_3_4⇡24"/>
-        <Editor example="≑¯1□ ↯2_3_4⇡24"/>
-        <Editor example="≑¯2□ ↯2_3_4⇡24"/>
-        <Editor example="≑¯3□ ↯2_3_4⇡24"/>
-        <p>"As you can see, non-negative ranks refer to the rank of the argument that will be passed to the modifier's function, while negative ranks refer to that many ranks "<em>"less"</em>" than the rank of the argument array."</p>
-        <p><Prim prim=Infinity/>" refers to the exact rank of the argument array."</p>
+        <h2 id="chaining-modifiers">"Chaining Modifiers"</h2>
+        <p><Prim prim=Rows/>", "<Prim prim=Distribute/>", and "<Prim prim=Tribute/>" can be chained to perform more complex operations."</p>
+        <p>"You can chain "<Prim prim=Rows/>" to dig deeper into an array."</p>
+        <Editor example="□    ↯2_3_4⇡24"/>
+        <Editor example="≡□   ↯2_3_4⇡24"/>
+        <Editor example="≡≡□  ↯2_3_4⇡24"/>
+        <Editor example="≡≡≡□ ↯2_3_4⇡24"/>
+        <p>"If you have multiple arrays and you only want to dig into one of them, you can chain "<Prim prim=Distribute/>" or "<Prim prim=Tribute/>"."</p>
+        <Editor example="∺∺+ ×10⇡3 ↯2_2_3⇡12"/>
+        <p>"It is sometimes necessary to mix and match these modifiers."</p>
+        <Editor example="≡∺+ ×10[1_2_3 4_5_6] ↯2_3_3⇡18"/>
 
-        <h2 id="level"><Prim prim=Level/></h2>
-        <p><Prim prim=Level/>" iterates over all arrays of ranks specified in its rank list."</p>
-        <p>"Here, we "<Prim prim=Join/>" all rank 1 arrays from the first arguments with all rank 2 arrays from the second."</p>
-        <Editor example="≑1_2⊂ ,, ↯2_3 π ↯2_2_3⇡12"/>
-        <p>"This is useful when you want to reference a fixed value while iterating over each row of an array."</p>
-        <p>"Here, we fix "<code>"2"</code>" as something that will not be iterated over by specifying its rank as "<Prim prim=Infinity/>"."</p>
-        <Editor example="≑∞_¯1↻ 2 ↯3_4⇡12"/>
-        <p><Prim prim=Level glyph_only=true/><Prim prim=Infinity glyph_only=true/><code>"_¯1"</code>" is actually equivalent to "<Prim prim=Distribute/>", but not all rank lists have equivalent modifiers."</p>
-
-        <h2 id="ocean-notation">"🌊 Ocean Notation 🪸"</h2>
-        <p>"It can sometimes be verbose to specify rank lists, and having numbers that refer to ranks in code next to numbers that refer to, well, "<em>"numbers"</em>", can be confusing."</p>
-        <p>"For this reason, there exists a special set of functions that constructs rank lists. You might say that these functions specify at which "<em>"depth"</em>" to operate on an array, so we call these functions "<em>"ocean functions"</em>", and their use is called "<em>"ocean notation"</em>"."</p>
-        <p>"Each ocean function "<Prim prim=Join/>"s a value to a list. They are as follows:"</p>
-        <table>
-        <tr><th>"Function"</th><th>"Rank Item"</th></tr>
-        {
-            Primitive::all()
-                .filter_map(|p| p.ocean_constant().map(|c| (p, c)))
-                .map(|(prim, c)| {
-                    view! {
-                        <tr>
-                            <td><Prim prim=prim/></td>
-                            <td><code>{uiua::Array::from(c).show()}</code></td>
-                        </tr>
-                    }
-                })
-                .collect::<Vec<_>>()
-        }
-        </table>
-        <p>"The example above with "<Prim prim=Level/>" can be rewritten using "<Prim prim=Rock/>" and "<Prim prim=Surface/>"."</p>
-        <Editor example="≑⋄~↻ 2 ↯3_4⇡12"/>
-        <p>"If you wanted to factor in the rows of another array, you could simply add another "<Prim prim=Surface/>". Unlike the previous example, this cannot be written using "<Prim prim=Distribute/>"."</p>
-        <Editor example="≑⋄~~(↻⊙⊂) 2 ↯3_4⇡12 ↯3_2⇡6"/>
-        <p>"Ocean functions are syntactically special. While they are not modifiers, adjacent ocean functions are parsed as a single unit so they do not have to be surrounded with "<code>"()"</code>"s. They are otherwise normal functions."</p>
-        <p>"Ocean functions work to specify rank lists because if a rank-generic modifier's first argument is a monadic function, it will push an empty list for the function to work on. Ocean functions are monadic, so a chain of ocean functions form a monadic function."</p>
-
-        <h2 id="combinate"><Prim prim=Combinate/></h2>
-        <p><Prim prim=Combinate/>" is a rank-generic version of "<Prim prim=Table/>" and "<Prim prim=Cross/>". It functions similarly to "<Prim prim=Level/>", except instead of calling its function on every tuple of matching rows, it calls it on every "<em>"combination"</em>" of rows."</p>
-        <Editor example="◳⋄~~(▽⊙⊂) 3 [1 2 3] [4 5 6]"/>
-        <Editor example="◳∸≃(+×10) ,, ↯2_2⇡4 ↯2_4⇡8"/>
-
-        <h2 id="fold"><Prim prim=Fold/></h2>
-        <p><Prim prim=Fold/>" uses fixed-rank values as accumulators. Its function's outputs set the new value of the accumulator(s) for the next iteration."</p>
-        <p>"One basic use is to reduce with a default value."</p>
-        <Editor example="∧⋄~+ 10 [1 2 3]"/>
-        <Editor example="∧⋄~+ 10 []"/>
-        <p>"Here is an example that implements a simple stack instruction set. The initially empty stack is marked as an accumulator with "<Prim prim=Rock/>"."</p>
-        <p><code>"0"</code>" duplicates the top stack value, "<code>"1"</code>" pushes a 1, "<code>"2"</code>" adds the top 2 stack values, and "<code>"3"</code>" subtracts the top 2 stack values."</p>
-        <Editor example="\
-Add ← ⊂/+⊃↙↘2
-Sub ← ⊂/-⊃↙↘2
-f ← (⊂⊢.|⊂1|Add|Sub)∶
-∧⋄~f [] [1 0 2 0 2 0 2 1 3]"/>
+        <h2 id="rerank"><Prim prim=Rerank/></h2>
+        <p>"The above examples dig into an array from the top down. But what if you want to think about the array from the "<em>"bottom up"</em>"?"</p>
+        <p>"The "<Prim prim=Rerank/>" function changes the rows of an array to have the specified rank."</p>
+        <Editor example="☇ 3 ↯2_2_2_5⇡40 # The rows are already rank 3"/>
+        <Editor example="☇ 2 ↯2_2_2_5⇡40"/>
+        <Editor example="☇ 1 ↯2_2_2_5⇡40"/>
+        <Editor example="☇ 0 ↯2_2_2_5⇡40 # Equivalent to ♭ deshape"/>
+        <p>"You can then use "<Prim prim=Rows/>" to iterate over arrays of that rank."</p>
+        <Editor example="≡□ ☇1 ↯2_2_2_3⇡24"/>
+        <p>"Notice how in that example we have lost the rest of the shape information."</p>
+        <p>"If you want to keep the shape above the specified rank, you can use "<Prim prim=Under/>"."</p>
+        <Editor example="⍜(☇1)≡□ ↯2_2_2_3⇡24"/>
+        <Editor example="⍜(☇2)≡□ ↯2_2_2_3⇡24"/>
+        <p>"The specified rank can still be dynamic in this case by simply putting it on the stack."</p>
+        <Editor example="⍜☇≡□ 1 ↯2_2_2_3⇡24"/>
+        <Editor example="⍜☇≡□ 2 ↯2_2_2_3⇡24"/>
+        <p>"You can use "<Prim prim=Under/><Prim prim=Both/><Prim prim=Rerank/>" to "<Prim prim=Rerank/>" 2 arrays. Here, we insert one of the ranks for "<Prim prim=Rerank/>" using "<Prim prim=Dip/>"."</p>
+        <Editor example="⍜∩☇≡⊂ 1⊙1 ↯6_2⇡12 ↯2_3_4⇡12"/>
+        <p><Prim prim=Cross/>" is the row-wise version of "<Prim prim=Table/>". It is useful when you want all combinations of the "<Prim prim=Rerank/>"ed arrays or if they have a different number of rows."</p>
+        <Editor example="⍘⊚ ≡[..]⇡3             # Initial state\n[[0_0 0_1] [¯1_1 1_0]] # Rotations\n,,                     # Copy to see inputs\n≡≡□ ⍜(☇1)⊠↻            # All rotation combinations"/>
 
         <h2 id="challenges">"Challenges"</h2>
 
         <Challenge
             number=1
             prompt="rotates the rank 2 arrays in the second argument by the rank 1 arrays in the first"
-            example="1_2 ↯3_4⇡12"
-            answer="≑≃≊↻"
+            example="¯1_¯2 ↯3_4⇡12"
+            answer="⍜∩☇⊠↻ 1⊙2"
             tests={&["[0_2 2_1 1_1] ⊞×⊞×..+1⇡3"]}
             hidden="1 [1 2 3]"/>
     }

@@ -853,19 +853,36 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// `rerank` this value with another
     pub fn rerank(&mut self, rank: &Self, env: &Uiua) -> UiuaResult {
-        let rank = rank.as_nat(env, "Rank must be a natural number")?;
+        let irank = rank.as_int(env, "Rank must be a natural number")?;
         let shape = self.shape_mut();
-        if rank >= shape.len() {
-            for _ in 0..rank - shape.len() + 1 {
-                shape.insert(0, 1);
+        let rank = irank.unsigned_abs();
+        if irank >= 0 {
+            // Positive rank
+            if rank >= shape.len() {
+                for _ in 0..rank - shape.len() + 1 {
+                    shape.insert(0, 1);
+                }
+            } else {
+                let mid = shape.len() - rank;
+                let new_first_dim: usize = shape[..mid].iter().product();
+                *shape = once(new_first_dim)
+                    .chain(shape[mid..].iter().copied())
+                    .collect();
             }
         } else {
-            let mid = shape.len() - rank;
-            let new_first_dim: usize = shape[..mid].iter().product();
-            *shape = once(new_first_dim)
-                .chain(shape[mid..].iter().copied())
-                .collect();
+            // Negative rank
+            if rank >= shape.len() {
+                for _ in 0..rank - shape.len() + 1 {
+                    shape.push(1);
+                }
+            } else {
+                let new_first_dim: usize = shape[..rank].iter().product();
+                *shape = once(new_first_dim)
+                    .chain(shape[rank..].iter().copied())
+                    .collect();
+            }
         }
+        self.validate_shape();
         Ok(())
     }
 }

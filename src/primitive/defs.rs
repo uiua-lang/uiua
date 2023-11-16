@@ -777,13 +777,16 @@ primitive!(
     /// Change the rank of an array's rows
     ///
     /// The resulting array will always have the given rank plus `1`.
-    /// ex: ☇ 0 ↯2_3_4⇡24
-    ///   : ☇ 1 ↯2_3_4⇡24
-    ///   : ☇ 2 ↯2_3_4⇡24
+    /// ex: ☇ 0 ↯2_3_3⇡18
+    ///   : ☇ 1 ↯2_3_3⇡18
+    ///   : ☇ 2 ↯2_3_3⇡18
     /// Ranks greater than the rank of the original rows will prepend `1` to the array's [shape].
     /// ex: ☇ 2 [1 2 3 4]
-    /// ex: ☇ 3 ↯2_3_4⇡24
-    ///   : ☇ 4 ↯2_3_4⇡24
+    /// ex: ☇ 3 ↯2_3_3⇡18
+    ///   : ☇ 4 ↯2_3_3⇡18
+    /// Negative ranks are relative to the rank of the array.
+    /// ex: ☇ ¯1 ↯2_3_3⇡18
+    ///   : ☇ ¯2 ↯2_3_3⇡18
     (2, Rerank, DyadicArray, ("rerank", '☇')),
     /// Take the first n elements of an array
     ///

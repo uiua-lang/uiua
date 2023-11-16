@@ -73,15 +73,6 @@ pub fn Site() -> impl IntoView {
             </div>
         }
         .into_view(),
-        view! {
-            <div style="font-style: normal">
-                <a href="/docs/advancedarray#ocean-notation" style="text-decoration: none">"🌊🪸"</a>" "
-                <code style="font-style: normal">
-                    <span class="ocean-function">"⋄~~"</span>
-                </code>
-            </div>
-        }
-        .into_view(),
         "It's got um...I um...arrays".into_view(),
         view! {
             <div style="font-size: 0.9em;">

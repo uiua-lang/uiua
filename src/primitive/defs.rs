@@ -322,7 +322,7 @@ primitive!(
     ),
     /// Compare for less than
     ///
-    /// The first value is checked to be less than the second.
+    /// The second value is checked to be less than the first.
     /// This is so you can think of `<``x` as a single unit.
     /// ex: <1 2
     /// ex: <5 5
@@ -334,7 +334,7 @@ primitive!(
     ///
     /// Formats from `<=`.
     ///
-    /// The first value is checked to be less than or equal to the second.
+    /// The second value is checked to be less than or equal to the first.
     /// This is so you can think of `≤``x` as a single unit.
     /// ex: ≤1 2
     /// ex: ≤5 5
@@ -349,7 +349,7 @@ primitive!(
     ),
     /// Compare for greater than
     ///
-    /// The first value is checked to be greater than the second.
+    /// The second value is checked to be greater than the first.
     /// This is so you can think of `>``x` as a single unit.
     /// ex: >1 2
     /// ex: >5 5
@@ -361,7 +361,7 @@ primitive!(
     ///
     /// Formats from `>=`.
     ///
-    /// The first value is checked to be greater than or equal to the second.
+    /// The second value is checked to be greater than or equal to the first.
     /// This is so you can think of `≥``x` as a single unit.
     /// ex: ≥1 2
     /// ex: ≥5 5

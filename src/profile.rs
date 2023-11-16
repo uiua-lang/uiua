@@ -36,7 +36,7 @@ pub(crate) mod enabled {
     use crossbeam_channel::{Receiver, Sender};
 
     const BENCHMARKS: &[(&str, &str)] = &[
-        ("PRIMES", "▽¬∊∶♭⊞×...+2⇡1000"),
+        ("PRIMES", "▽¬∊:♭⊞×...+2⇡1000"),
         (
             "STRIPES",
             "\
@@ -46,33 +46,33 @@ pub(crate) mod enabled {
         (
             "AUTOMATA",
             "\
-Rule ← /+⊞=∶ ⍘⋯⇌◫3⇌ ⇌∸⇌∸∶ ⊚⋯
-=⌊÷2∶⇡.500         # Init
+Rule ← /+⊞=: ⍘⋯⇌◫3⇌ ⇌∸⇌∸: ⊚⋯
+=⌊÷2:⇡.500         # Init
 ⇌[⍥(Rule30.)⌊÷2⧻.] # Run",
         ),
         (
             "MANDELBROT",
             "\
-Z ← ⊟/- ⁿ2 ∶×2 /×.⇌        # Step
-⇌⍘⍉⊞⊟.×4 ÷∶-÷2,⇡. 300      # Init
-<2 √/+ ⁿ2;∶⍥(+Z⊙.)20 ↯∶0△. # Run",
+Z ← ⊟/- ⁿ2 :×2 /×.⇌        # Step
+⇌⍘⍉⊞⊟.×4 ÷:-÷2,⇡. 300      # Init
+<2 √/+ ⁿ2;:⍥(+Z⊙.)20 ↯:0△. # Run",
         ),
         (
             "CHORD",
             "\
 [0 4 7 10]       # Notes
-×220 ⁿ∶2÷12      # Freqs
-○×τ ⊞× ÷∶⇡.&asr. # Generate
-÷⧻∶ ≡/+          # Mix",
+×220 ⁿ:2÷12      # Freqs
+○×τ ⊞× ÷:⇡.&asr. # Generate
+÷⧻: ≡/+          # Mix",
         ),
         (
             "LOGO",
             "\
-xy ← ⍘⍉⊞⊟. ÷÷2∶ -÷2,⇡.200
-Rgb ← [∶⍘⊟×.xy ↯△⊢xy0.5]
-u ← ↥<0.2∶>0.7.+×2 ×.∶⍘⊟xy
-c ← <∶√/+ⁿ2 xy
-⍉⊂∶-¬u c1 +0.1 ∺↧c0.95Rgb",
+xy ← ⍘⍉⊞⊟. ÷÷2: -÷2,⇡.200
+Rgb ← [:⍘⊟×.xy ↯△⊢xy0.5]
+u ← ↥<0.2:>0.7.+×2 ×.:⍘⊟xy
+c ← <:√/+ⁿ2 xy
+⍉⊂:-¬u c1 +0.1 ∺↧c0.95Rgb",
         ),
         (
             "LIFE",
@@ -80,13 +80,13 @@ c ← <∶√/+ⁿ2 xy
 Life ← ↥⊙↧∩=3,2-,/+/+≑≃≊↻-1⇡3_3.
 ⁅×0.6∵⋅⚂↯⊟.30 0       # Init
 ⇌;⍥(⊃∘⊂Life)100⊃∘(↯1) # Run
-≡(▽↯⧻,∶⍉▽↯⧻,,∶5)      # Upscale",
+≡(▽↯⧻,:⍉▽↯⧻,,:5)      # Upscale",
         ),
         (
             "SPIRAL",
             "\
 ⇌×τ÷⊃∘⇡20           # Frame times
-⍉.↯∶×20-1×2÷∶⇡..300 # x and y
+⍉.↯:×20-1×2÷:⇡..300 # x and y
 ∺(-⊃∠(-π◿τ+⍜∩⍘√+))  # Generate
 <0.2⌵               # Threshold",
         ),

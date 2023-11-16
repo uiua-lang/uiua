@@ -546,6 +546,7 @@ impl<'a> Lexer<'a> {
                 "≅" => self.end(Primitive::Match, start),
                 "'" => self.end(Quote, start),
                 "?" => self.end(QuestionMark, start),
+                "∶" => self.end(Primitive::Flip, start),
 
                 "(" => self.end(OpenParen, start),
                 ")" => self.end(CloseParen, start),

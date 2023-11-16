@@ -377,9 +377,9 @@ sys_op! {
     ///
     /// ex: &asr
     /// Here is how you can generate a list of sample times for `4` seconds of audio:
-    /// ex: ÷∶⇡×, 4 &asr
+    /// ex: ÷:⇡×, 4 &asr
     /// Pass that to a periodic function, and you get a nice tone!
-    /// ex: ÷4○×τ×220 ÷∶⇡×, 4 &asr
+    /// ex: ÷4○×τ×220 ÷:⇡×, 4 &asr
     (0, AudioSampleRate, Audio, "&asr", "audio - sample rate"),
     /// Synthesize and stream audio
     ///
@@ -389,13 +389,13 @@ sys_op! {
     ///   : Bass ← (
     ///   :   +110×20⌊÷4◿8. # Choose note
     ///   :   ±○×π×÷Sp,     # Square wave
-    ///   :   ×2+1⌊◿2.∶     # Modulation frequency
-    ///   :   ×0.2○×π××∶    # Apply modulation
+    ///   :   ×2+1⌊◿2.:     # Modulation frequency
+    ///   :   ×0.2○×π××:    # Apply modulation
     ///   : )
     ///   : Kick ← ○×τ×40√√◿1
     ///   : Noise ← [⍥⚂10000]
-    ///   : Hit ← ×↯∶Noise △.×<0.6∶>0.5.÷2◿2
-    ///   : Hat ← ×0.3×↯∶Noise △.<0.1÷0.25◿0.25
+    ///   : Hit ← ×↯:Noise △.×<0.6:>0.5.÷2◿2
+    ///   : Hat ← ×0.3×↯:Noise △.<0.1÷0.25◿0.25
     ///   : &ast(÷3/+[⊃⊃⊃Hat(Kick)Hit(Bass)]×Sp)
     /// On the web, this will simply use the function to generate a fixed amount of audio.
     /// How long the audio is can be configure in the editor settings.

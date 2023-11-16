@@ -197,8 +197,8 @@ fn TutorialBasic() -> impl IntoView {
         <p>"This is useful when you want to call a function that takes two arguments, but the arguments are on the stack in the wrong order."</p>
         <p>"For example, if you wanted to get the reciprocal of a number, you would "<Prim prim=Div/>" "<code>"1"</code>" by it. But, if the number is already on the stack, you would need to use "<Prim prim=Flip/>"."</p>
         <Editor example="÷1 5"/>
-        <Editor example="÷∶1 5"/>
-        <Editor example="∶1 2 3 4 5"/>
+        <Editor example="÷:1 5"/>
+        <Editor example=":1 2 3 4 5"/>
         <br/>
         <h2><Prim prim=Over/></h2>
         <p><Prim prim=Over/>" is like "<Prim prim=Dup/>", but it duplicates the second item on the stack instead of the first."</p>
@@ -241,7 +241,7 @@ fn TutorialBasic() -> impl IntoView {
             number=3
             prompt="subtracts the second number from the first then squares the result"
             example="10 1"
-            answer="×.-∶"
+            answer="×.-:"
             tests={&["5 3", "9 2", "5 6"]}
             hidden="6 7"/>
     }
@@ -524,7 +524,7 @@ r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
             number=5
             prompt="splits an array into its first row and the rest of its rows"
             example="1_2_3_4"
-            answer="⊢∶↘1."
+            answer="⊢:↘1."
             tests={&["[27 9 3 1]", "↯4_3⇡12"]}
             hidden="[5]"/>
 

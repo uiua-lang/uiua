@@ -6,10 +6,17 @@ Uiua is not yet stable.
 This version is not yet released.
 If you are reading this on the website, then these changes are live here.
 ### Language
+- **Big Change**
+  - Deprecate all ocean functions
+  - Deprecate [`level` `≑`](https://uiua.org/docs/level) and [`combinate` `◳`](https://uiua.org/docs/combinate)
+  - [`fold` `∧`](https://uiua.org/docs/fold) no longer takes a rank list
+- Add the [`rerank` `☇`](https://uiua.org/docs/rerank) function, which changes the rank of an array's rows
+  - This fills the void left by [`level` `≑`](https://uiua.org/docs/level) and [`combinate` `◳`](https://uiua.org/docs/combinate)
 - Switch functions are now less strict about branch signature compatibility and can take arrays as conditions
 - Remove `if ?`, as all its use cases are now covered by switch functions. It will continue to parse, but `?ab` will be formatted as `(b|a)`
-- [`level` `≑`](https://uiua.org/docs/level) is no longer equivalent to [`combinate` `◳`](https://uiua.org/docs/combinate) in certain cases
-- [`under` `⍜`](https://uiua.org/docs/under) now works with [`absolut value` `⌵`](https://uiua.org/docs/absolute)
+- [`flip` `:`](https://uiua.org/docs/flip)'s glyph is now just a colon (it was `RATIO ∶`)
+- [`under` `⍜`](https://uiua.org/docs/under) now works with [`absolute value` `⌵`](https://uiua.org/docs/absolute)
+- Remove `break ⎋` for good
 ### Interpreter
 - Lots of bug and crash fixes
 - Lots of performance improvements
@@ -131,7 +138,7 @@ If you are reading this on the website, then these changes are live here.
 - Change [`match` `≍`](https://uiua.org/docs/match)'s glyph to avoid confusion with the new ocean functions' glyphs. Code using `≅` will continue to work and will be formatted as `≍`.
 - Stack signatures found to be incorrect at runtime produce an error
 - Dyadic math operations now work with [`under` `⍜`](https://uiua.org/docs/under) even if both arguments are outside [`under` `⍜`](https://uiua.org/docs/under)'s function
-- Some mathematical functions that previously did not work with [`invert` `⍘`](https://uiua.org/docs/invert) and [`under` `⍜`](https://uiua.org/docs/under) when accompanied by [`flip` `∶`](https://uiua.org/docs/flip) now do
+- Some mathematical functions that previously did not work with [`invert` `⍘`](https://uiua.org/docs/invert) and [`under` `⍜`](https://uiua.org/docs/under) when accompanied by [`flip` `:`](https://uiua.org/docs/flip) now do
 ### Website
 - Add 3 new tutorials
   - [Control Flow](https://uiua.org/docs/controlflow)
@@ -312,7 +319,7 @@ You may want to read the new version of the [Advanced Stack Manipulation Tutoria
   - Debug-prints the value on top of the stack without popping it
   - Shows the line and column number too
 - Add [`both` `∩`](https://uiua.org/docs/both) modifier
-  - This can change code like `/(|2 ⊂!∶!∶) {"a" "bc" "def"}`
+  - This can change code like `/(|2 ⊂!:!:) {"a" "bc" "def"}`
   - To just `/'⊂∩! {"a" "bc" "def"}`
 - Turn the term pair syntactic construct into a modifier called [`bind` `'`](https://uiua.org/docs/bind)
 ### Interpreter

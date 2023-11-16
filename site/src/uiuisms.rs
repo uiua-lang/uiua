@@ -125,9 +125,9 @@ uiuisms!(
     /// Sort an array
     "⊏⍏. [1 4 5 3 2]",
     /// Get n numbers between 0 and 1 exclusive
-    "÷∶⇡. 10",
+    "÷:⇡. 10",
     /// Get n numbers between 0 and 1 inclusive
-    "÷-1∶⇡. 11",
+    "÷-1:⇡. 11",
     /// Create an identity matrix
     "⊞=.⇡ 5",
     /// Create an X matrix
@@ -147,7 +147,7 @@ uiuisms!(
     /// Parse a string as a base 2 number
     r#"⍘⋯⇌-@0 "110""#,
     /// Parse a string as a base 3 <= X <= 9 number
-    r#"/+×ⁿ⇌⇡⧻,⊙-∶@0 3 "210""#,
+    r#"/+×ⁿ⇌⇡⧻,⊙-:@0 3 "210""#,
     /// Find the indices of all 1s
     "⊚ [0 1 0 0 1]",
     /// Interleave two arrays
@@ -161,13 +161,13 @@ uiuisms!(
     /// Split an array by a delimiter with fill elements
     r#"⬚@ ⊜∘≠, @, "split,this,up""#,
     /// Split an array by a delimiter keeping empty segments
-    r#"⊕□⍜▽¯∶\+.=, @, "split,this,,up""#,
+    r#"⊕□⍜▽¯:\+.=, @, "split,this,,up""#,
     /// Split an array into groups of contiguous equal elements
     "⊜□. [1 1 1 2 2 1 1 4]",
     /// Join a list of boxed strings
     r#"⊐/⊂ {"a" "bc" "def"}"#,
     /// Find the nth fibonacci number
-    ";⍥(+,∶)⊙.∶1 10",
+    ";⍥(+,:)⊙.:1 10",
     /// Remove all instances of an element from a list
     "▽≠, 4 [1 4 2 0 5 4 3]",
     /// Remove first instance of an element from an array
@@ -179,7 +179,7 @@ uiuisms!(
     /// Filter by a fixed predicate
     "▽ =0◿2 . ⇡10",
     /// Find the most common row in an array
-    r#"⊏⊢⍖⍘⊚⊛∶⊝. "Hello World!""#,
+    r#"⊏⊢⍖⍘⊚⊛:⊝. "Hello World!""#,
     /// Convert a string to uppercase
     r#"-×32×≥@a,≤@z. "These are Words""#,
     /// Convert a string to lowercase
@@ -197,9 +197,9 @@ uiuisms!(
     /// Trim whitespace
     r#"▽×⍜(⊟⇌)≡\↥.≠@ . "  abc xyz   ""#,
     /// Upscale a 2d matrix
-    "[0_1 1_0]\n⍉▽↯⧻,⊙(⍉▽)∶↯⊙.⧻,30",
+    "[0_1 1_0]\n⍉▽↯⧻,⊙(⍉▽):↯⊙.⧻,30",
     /// Upscale a colored image
-    "[[0_0_1 0_1_0] [1_0_0 0_0_0]]\n⍜⍘⍉≡(⍉▽↯⧻,⊙(⍉▽)∶↯⊙.⧻,30)",
+    "[[0_0_1 0_1_0] [1_0_0 0_0_0]]\n⍜⍘⍉≡(⍉▽↯⧻,⊙(⍉▽):↯⊙.⧻,30)",
     /// Linearly interpolate between two values
     "+⊃∘(×-) 0 10 0.2",
     /// Set the value of an array at an index
@@ -213,11 +213,11 @@ uiuisms!(
     /// Dot product
     "/+× [1 2 3] [4 ¯5 6]",
     /// Cross product
-    "1_2_3 4_5_6\n↻1-∩(×↻1)⊃∶⊙∘",
+    "1_2_3 4_5_6\n↻1-∩(×↻1)⊃:⊙∘",
     /// Matrix product
     "[7_8_9 10_11_12] [1_2 3_4 5_6]\n⍜⍉⊠(/+×)",
     /// Matrix power (Also works with scalars)
-    "4 [1_2 3_4]\n⊙;⍥(⊠(/+×)⊙⍉,)∶⊞=.⇡⬚1⊢△,",
+    "4 [1_2 3_4]\n⊙;⍥(⊠(/+×)⊙⍉,):⊞=.⇡⬚1⊢△,",
     /// Add a leading axis of length 1 to an array
     "△. ↯1 [1_2_3 4_5_6]",
     /// Repeat a function and collect intermediate results into an array

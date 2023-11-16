@@ -163,10 +163,10 @@ primitive!(
     ///
     /// [duplicate] is often combined with [flip] to process a single value two different ways.
     /// For example, to find the average value of an array, we [divide] its sum(`reduce``add`) by its [length].
-    /// ex: ÷⧻∶/+. [4 0 1 2]
+    /// ex: ÷⧻:/+. [4 0 1 2]
     /// Or, maybe you want to find all the numbers in an array that lie within a certain range.
     /// Here, we use [multiply] as a logical AND function.
-    /// ex: ×≥5∶≤8. [6 2 5 9 6 5 0 4]
+    /// ex: ×≥5:≤8. [6 2 5 9 6 5 0 4]
     /// This is a very common pattern.
     ///
     /// [duplicate] can be used to make a monadic left-hook, such as in this palindrome checker:
@@ -184,18 +184,18 @@ primitive!(
     (2(3), Over, Stack, ("over", ',')),
     /// Swap the top two values on the stack
     ///
-    /// ex: [∶ 1 2 3 4 5]
+    /// ex: [: 1 2 3 4 5]
     ///
     /// When combined with [duplicate], you can apply two different functions to the same value.
     /// If you have two functions `f` and `g`, the pattern `f``flip``g``duplicate` will call both functions on the top value.
     /// This is a very common pattern.
     /// For example, maybe you want to find all the uppercase letters in a string.
     /// ex: $ Characters On uppercase OnLy
-    ///   : ▽×≥@A∶≤@Z..
+    ///   : ▽×≥@A:≤@Z..
     /// Or maybe you want to calculate the averge of a list of numbers.
     /// Here, we get the [length] and the `reduce``add``sum` of the list, then [divide] them.
-    /// ex: ÷⧻∶/+. 1_8_2_5
-    (2(2), Flip, Stack, ("flip", AsciiToken::Colon, '∶')),
+    /// ex: ÷⧻:/+. 1_8_2_5
+    (2(2), Flip, Stack, ("flip", AsciiToken::Colon, ':')),
     /// Discard the top stack value
     ///
     /// This is usually used to discard values that are no longer needed.
@@ -278,7 +278,7 @@ primitive!(
     /// You can get an arccosine function by [invert]ing the cosine.
     /// ex: ⍘(○+η) 1
     /// You can get a tangent function by [divide]ing the [sine] by the cosine.
-    /// ex: ÷○+η∶○. 0
+    /// ex: ÷○+η:○. 0
     (1, Sin, MonadicPervasive, ("sine", '○')),
     /// Round to the nearest integer towards `¯∞`
     ///
@@ -398,7 +398,7 @@ primitive!(
     ///
     /// Uiua does not have dedicated boolean logical operators.
     /// [multiply] can be used as a logical AND.
-    /// ex: ×,,≥5∶≤8. [6 2 5 9 6 5 0 4]
+    /// ex: ×,,≥5:≤8. [6 2 5 9 6 5 0 4]
     (2, Mul, DyadicPervasive, ("multiply", AsciiToken::Star, '×')),
     /// Divide values
     ///
@@ -445,7 +445,7 @@ primitive!(
     ///
     /// Uiua does not have dedicated boolean logical operators.
     /// [minimum] can be used as a logical AND.
-    /// ex: ≥5∶≤8. [6 2 5 9 6 5 0 4]
+    /// ex: ≥5:≤8. [6 2 5 9 6 5 0 4]
     ///   : ↧,,
     (2, Min, DyadicPervasive, ("minimum", '↧')),
     /// Take the maximum of two arrays
@@ -455,7 +455,7 @@ primitive!(
     ///
     /// Uiua does not have dedicated boolean logical operators.
     /// [maximum] can be used as a logical OR.
-    /// ex: ↥,,≤5∶≥8. [6 2 5 9 6 5 0 4]
+    /// ex: ↥,,≤5:≥8. [6 2 5 9 6 5 0 4]
     (2, Max, DyadicPervasive, ("maximum", '↥')),
     /// Take the arctangent of two numbers
     ///
@@ -552,7 +552,7 @@ primitive!(
     /// `shape``transpose` is always equivalent to `rotate``1``shape`.
     /// ex: [1_2 3_4 5_6]
     ///   : ↻1△ .
-    ///   : △⍉  ∶
+    ///   : △⍉  :
     (1, Transpose, MonadicArray, ("transpose", '⍉')),
     /// Get the indices into an array if it were sorted ascending
     ///
@@ -590,7 +590,7 @@ primitive!(
     /// ex: ⊚ 1_4_2
     /// [where] on a list is equivalent to `keep``flip``range``length``duplicate`
     /// ex:     ⊚ [0 1 0 0 2 0 1]
-    /// ex: ▽∶⇡⧻. [0 1 0 0 2 0 1]
+    /// ex: ▽:⇡⧻. [0 1 0 0 2 0 1]
     ///
     /// [invert][where] will convert the indices back into a a list of counts
     /// ex: ⍘⊚ [0 0 0 1 1 2 2 2 2 2 3]
@@ -613,7 +613,7 @@ primitive!(
     ///
     /// When combined with [group], you can do things like counting the number of occurrences of each character in a string.
     /// ex: $ Count the characters is this string
-    ///   : ⊕($"_ _"⊢∶⧻.) ⊛.⊏⍏.
+    ///   : ⊕($"_ _"⊢:⧻.) ⊛.⊏⍏.
     (1, Classify, MonadicArray, ("classify", '⊛')),
     /// Remove duplicate elements from an array
     ///
@@ -907,7 +907,7 @@ primitive!(
     /// If you expect one of the searched-for rows to be missing, you can use [fill] to set a default value.
     /// ex: a ← [2 3 5 7 11 13]
     ///   : .⊗,a [1 2 3 4 5]
-    ///   : ⬚∞⊏∶a
+    ///   : ⬚∞⊏:a
     ///
     /// [indexof] is closely related to [member].
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),
@@ -984,7 +984,7 @@ primitive!(
     ///
     /// ex: \+   1_2_3_4
     /// ex: \-   1_2_3_4
-    /// ex: \(-∶) 1_2_3_4
+    /// ex: \(-:) 1_2_3_4
     (1[1], Scan, AggregatingModifier, ("scan", '\\')),
     /// Apply a function to each element of an array or arrays.
     ///
@@ -1085,7 +1085,7 @@ primitive!(
     ///
     /// When combined with [classify], you can do things like counting the number of occurrences of each character in a string.
     /// ex: $ Count the characters is this string
-    ///   : ⊕{⊢∶⧻.} ⊛.⊏⍏.
+    ///   : ⊕{⊢:⧻.} ⊛.⊏⍏.
     ///
     /// [under][group] works if [group]'s function is [under]able.
     /// ex: ⍜⊕□≡⇌ ≠@ . $ These are some words
@@ -1298,7 +1298,7 @@ primitive!(
     /// If `g` takes more than 1 argument, keep in mind that `f` will be called on the stack as it is when the full under expression begins.
     /// This means you may have to flip the arguments to `g`.
     /// Consider this equivalence:
-    /// ex: ⍜(↙2)(÷∶)  [1 2 3 4 5] 10
+    /// ex: ⍜(↙2)(÷:)  [1 2 3 4 5] 10
     ///   : ⍜(↙2)(÷10) [1 2 3 4 5]
     ///
     /// [under][both] works, and whether [both] is applied when undoing depends on the signature of `g`.
@@ -1687,11 +1687,11 @@ primitive!(
     /// This is useful when you want to inspect an intermediate value.
     /// For example, let's say you are trying to find all the numbers in some range:
     /// ex: [1 5 2 9 11 0 7 12 8 3]
-    ///   : ▽×≥5∶≤10..
+    ///   : ▽×≥5:≤10..
     /// `greater or equal` and `less or equal` each create a partial mask.
     /// To see them, use [trace].
     /// ex: [1 5 2 9 11 0 7 12 8 3]
-    ///   : ▽×⸮≥5∶⸮≤10..
+    ///   : ▽×⸮≥5:⸮≤10..
     (1, Trace, Stack, ("trace", '⸮')),
     /// Debug print all the values currently on stack without popping them
     ///

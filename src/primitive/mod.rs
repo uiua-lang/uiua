@@ -445,6 +445,7 @@ impl Primitive {
             Primitive::Range => env.monadic_ref_env(Value::range)?,
             Primitive::Reverse => env.monadic_mut(Value::reverse)?,
             Primitive::Deshape => env.monadic_mut(Value::deshape)?,
+            Primitive::Fix => env.monadic_mut(Value::fix)?,
             Primitive::First => env.monadic_env(Value::first)?,
             Primitive::Len => env.monadic_ref(|val| {
                 val.generic_ref_deep(

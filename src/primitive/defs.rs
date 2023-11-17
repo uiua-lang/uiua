@@ -68,7 +68,13 @@ constant!(
     /// The number of processors available
     ("NumProcs", num_cpus::get() as f64),
     ///
-    ("⍼", include_str!("zigzags_descent.txt")),
+    (
+        "⍼",
+        "A dance of lines, a zigzag's descent,
+A symbol obscure, with a right angle bent.
+No purpose apparent, no function defined,
+Yet it captivates minds, with its pleasant design."
+    ),
 );
 
 macro_rules! primitive {
@@ -532,6 +538,8 @@ primitive!(
     ///
     /// See also: [reshape]
     (1, Deshape, MonadicArray, ("deshape", '♭')),
+    /// Add a length-1 axis to an array
+    (1, Fix, MonadicArray, ("fix", '⌀')),
     /// Encode an array as bits (big-endian)
     ///
     /// The result will always be 1 rank higher than the input.

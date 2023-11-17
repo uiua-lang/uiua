@@ -4,8 +4,8 @@ Steps ← 20
 
 Step ← (
   ⊞≠.⇡⧻.     # Make comparison matrix
-  ⊃≐▽⋅∘      # Make others
-  ⊃≡∺-∘∶     # Get diffs
+  ⊃(≡▽⊙⌀)⋅∘  # Make others
+  ⊃≡∺-∘:     # Get diffs
   ÷≑≃(/+×.). # Inverse square
   ≡/+×G      # Get accs
   ⊃⟜+⋅∘ ×Dt  # Apply accs
@@ -13,9 +13,9 @@ Step ← (
 )
 
 [0_60 150_0 30_15 80_110]
-⊃∘(↯∶0⊂∶2⧻) # Init vels
+⊃∘(↯:0⊂:2⧻) # Init vels
 
-⁅×0.5⇌[⊙;⍥(Step ,∶)Steps] # Run
+⁅×0.5⇌[⊙;⍥(Step ,:)Steps] # Run
 ∺∺-/↧/↧.                  # Normalize
 ⬚0≡(⍘⊚)                   # Plot
 ≡(≑2(/↥/↥) ◫3_3)          # Upscale

@@ -18,13 +18,13 @@ pub fn constants() -> &'static [ConstantDef] {
 }
 
 macro_rules! constant {
-    ($(#[doc = $doc:literal] $(#[$attr:meta])* ($name:ident, $value:expr)),* $(,)?) => {
+    ($(#[doc = $doc:literal] $(#[$attr:meta])* ($name:literal, $value:expr)),* $(,)?) => {
         const COUNT: usize = {
             let mut count = 0;
             $(
                 $(#[$attr])*
                 {
-                    _ = stringify!($name);
+                    _ = $name;
                     count += 1;
                 }
             )*
@@ -34,7 +34,7 @@ macro_rules! constant {
             [$(
                 $(#[$attr])*
                 ConstantDef {
-                    name: stringify!($name),
+                    name: $name,
                     value: $value.into(),
                     doc: $doc,
                 },
@@ -45,28 +45,28 @@ macro_rules! constant {
 
 constant!(
     /// Euler's constant
-    (e, std::f64::consts::E),
+    ("e", std::f64::consts::E),
     /// The imaginary unit
     #[cfg(feature = "complex")]
-    (i, crate::Complex::I),
+    ("i", crate::Complex::I),
     /// IEEE 754-2008's `NaN`
-    (NaN, std::f64::NAN),
+    ("NaN", std::f64::NAN),
     /// The maximum integer that can be represented exactly
-    (MaxInt, 2f64.powi(53)),
+    ("MaxInt", 2f64.powi(53)),
     /// A string identifying the operating system
-    (Os, std::env::consts::OS),
+    ("Os", std::env::consts::OS),
     /// A string identifying family of the operating system
-    (Family, std::env::consts::FAMILY),
+    ("Family", std::env::consts::FAMILY),
     /// A string identifying the architecture of the CPU
-    (Arch, std::env::consts::ARCH),
+    ("Arch", std::env::consts::ARCH),
     /// The executable file extension
-    (ExeExt, std::env::consts::EXE_EXTENSION),
+    ("ExeExt", std::env::consts::EXE_EXTENSION),
     /// The file extension for shared libraries
-    (DllExt, std::env::consts::DLL_EXTENSION),
+    ("DllExt", std::env::consts::DLL_EXTENSION),
     /// The primary path separator character
-    (Sep, std::path::MAIN_SEPARATOR),
+    ("Sep", std::path::MAIN_SEPARATOR),
     /// The number of processors available
-    (NumProcs, num_cpus::get() as f64),
+    ("NumProcs", num_cpus::get() as f64),
 );
 
 macro_rules! primitive {

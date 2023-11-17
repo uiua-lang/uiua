@@ -335,25 +335,42 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
     }
     let iterable_count = sig.args - sig.outputs;
     let mut arrays = Vec::with_capacity(iterable_count);
-    let first = env.pop(1)?;
-    let row_count = first.row_count();
-    arrays.push(first.into_rows());
-    for i in 1..iterable_count {
+    for i in 0..iterable_count {
         let val = env.pop(i + 1)?;
-        if val.row_count() != row_count {
-            return Err(env.error(format!(
-                "Cannot {} {} arrays of different lengths: {} and {}",
-                Primitive::Fold,
-                Primitive::Fold.name(),
-                row_count,
-                val.row_count()
-            )));
-        }
-        arrays.push(val.into_rows());
+        arrays.push(if val.row_count() == 1 {
+            Err(val.into_rows().next().unwrap())
+        } else {
+            Ok(val.into_rows())
+        });
     }
+    for i in 0..iterable_count {
+        for j in i + 1..iterable_count {
+            if let (Ok(a), Ok(b)) = (&arrays[i], &arrays[j]) {
+                if a.len() != b.len() {
+                    return Err(env.error(format!(
+                        "Cannot {} arrays of different lengths: {} and {}",
+                        Primitive::Fold.format(),
+                        a.len(),
+                        b.len()
+                    )));
+                }
+            }
+        }
+    }
+    let row_count = arrays
+        .iter()
+        .map(|arr| match arr {
+            Ok(arr) => arr.len(),
+            Err(_) => 1,
+        })
+        .max()
+        .unwrap_or(0);
     for _ in 0..row_count {
         for array in arrays.iter_mut().rev() {
-            env.push(array.next().unwrap());
+            env.push(match array {
+                Ok(arr) => arr.next().unwrap(),
+                Err(arr) => arr.clone(),
+            });
         }
         env.call(f.clone())?;
     }

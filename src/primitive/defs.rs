@@ -946,6 +946,10 @@ primitive!(
     /// You can can reduce with arbitrary functions.
     /// ex: /(×+1) 1_2_3_4_5
     ///
+    /// [reduce][join] is the simplest way to combine the first two dimensions of an array.
+    /// It is optimized in the interpreter to be very fast.
+    /// ex: /⊂ .↯2_2_4⇡16
+    ///
     /// Some functions have default values if the array is empty.
     /// Functions without default values will throw an error if the array is empty.
     /// ex: /+ []

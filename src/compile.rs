@@ -715,7 +715,7 @@ impl Uiua {
         if let Modifier::Primitive(prim) = modified.modifier.value {
             // Give advice about redundancy
             match prim {
-                m @ (Primitive::Each | Primitive::Rows) => {
+                m @ Primitive::Each => {
                     if let [Sp {
                         value: Word::Primitive(prim),
                         span,
@@ -725,10 +725,10 @@ impl Uiua {
                             let span = modified.modifier.span.clone().merge(span.clone());
                             self.diagnostics.insert(Diagnostic::new(
                                 format!(
-                                    "Using {m} {mname} with a pervasive primitive like {prim} {pname} is \
-                                    redundant. Just use {prim} {pname} by itself.",
-                                    mname = m.name(),
-                                    pname = prim.name(),
+                                    "Using {m} with a pervasive primitive like {p} is \
+                                    redundant. Just use {p} by itself.",
+                                    m = m.name(),
+                                    p = prim.name(),
                                 ),
                                 span,
                                 DiagnosticKind::Advice,
@@ -738,9 +738,9 @@ impl Uiua {
                         let span = modified.modifier.span.clone();
                         self.diagnostics.insert(Diagnostic::new(
                             format!(
-                                "{m} {name}'s function is pervasive, \
-                                so {m} {name} is redundant here.",
-                                name = m.name()
+                                "{m}'s function is pervasive, \
+                                so {m} is redundant here.",
+                                m = m.name()
                             ),
                             span,
                             DiagnosticKind::Advice,
@@ -1138,9 +1138,8 @@ impl Uiua {
             };
             self.diagnostics.insert(Diagnostic::new(
                 format!(
-                    "Warning: {}{} is deprecated and will be removed in a future version{}",
-                    prim.name(),
-                    prim,
+                    "Warning: {} is deprecated and will be removed in a future version{}",
+                    prim.format(),
                     suggestion
                 ),
                 span.clone(),

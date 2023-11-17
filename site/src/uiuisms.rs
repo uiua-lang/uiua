@@ -153,7 +153,7 @@ uiuisms!(
     /// Interleave two arrays
     "♭⍉⊟ [1 2 3 4] [5 6 7 8]",
     /// Intersperse an item between the rows of an array
-    "↘1♭∺⊂ π [1 2 3 4]",
+    "↘1♭≡⊂ π [1 2 3 4]",
     /// Split an array at an index
     "⊃↙↘ 3 [1 2 3 4 5]",
     /// Split an array by a delimiter
@@ -175,7 +175,7 @@ uiuisms!(
     /// Remove the nth element from an array
     "⍜↻(↘1) 4 [1 4 2 0 5 4 3]",
     /// Remove all instances of a row from an array
-    "▽∺(¬≍)⊙. 2_0 [1_4 2_0 5_3 2_0]",
+    "▽¬≡≍⌀⊙. 2_0 [1_4 2_0 5_3 2_0]",
     /// Filter by a fixed predicate
     "▽ =0◿2 . ⇡10",
     /// Find the most common row in an array
@@ -190,14 +190,14 @@ uiuisms!(
     r#"▽\↥≠@ . "   ← remove these""#,
     /// Trim trailing whitespace
     r#"▽⍜⇌\↥≠@ . "remove these →   ""#,
-    /// Trim prefix-matching characters from a set
+    /// Trim prefix-matching characters from a set/⊂⍉/⊂∵▽⊃∘(⍉∵▽)
     r#"▽¬\×∊, "abc" "ccab ← remove this""#,
     /// Trim suffix-matching characters from a set
     r#"▽¬⍜⇌\×∊, "abc" "remove this → bcaa""#,
     /// Trim whitespace
     r#"▽×⍜(⊟⇌)≡\↥.≠@ . "  abc xyz   ""#,
     /// Upscale a 2d matrix
-    "[0_1 1_0]\n⍉▽↯⧻,⊙(⍉▽):↯⊙.⧻,30",
+    "30 [0_1 1_0]\n/⊂⍉/⊂∵▽⊃∘(⍉∵▽)",
     /// Upscale a colored image
     "[[0_0_1 0_1_0] [1_0_0 0_0_0]]\n⍜⍘⍉≡(⍉▽↯⧻,⊙(⍉▽):↯⊙.⧻,30)",
     /// Linearly interpolate between two values

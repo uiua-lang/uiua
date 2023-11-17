@@ -23,17 +23,17 @@ Xy ← ⍘⍉⊞⊟. ÷÷2: -÷2,⇡.200
 Rgb ← [:⍘⊟×.Xy ↯△⊢Xy0.5]
 u ← ↥<0.2:>0.7.+×2 ×.:⍘⊟Xy
 c ← <:√/+ⁿ2 Xy
-⍉⊂:-¬u c1 +0.1 ∺↧c0.95Rgb";
+⍉⊂:-¬u c1 +0.1 ≡↧⌀c0.95Rgb";
 const CHORD: &str = "\
 [0 4 7 10]       # Notes
 ×220 ⁿ:2÷12      # Freqs
 ○×τ ⊞× ÷:⇡.&asr. # Generate
 ÷⧻: ≡/+          # Mix";
 const SPIRAL: &str = "\
-⇌×τ÷⊃∘⇡20           # Frame times
-⍉.↯:×20-1×2÷:⇡..300 # x and y
-∺(-⊃∠(-π◿τ+⍜∩⍘√+))  # Generate
-<0.2⌵               # Threshold";
+⇌×τ÷⊃∘⇡20            # Frame times
+⍉.↯:×20-1×2÷:⇡..300  # x and y
+≡(-⊃∠(-π◿τ+⍜∩⍘√+))∩⌀ # Generate
+<0.2⌵                # Threshold";
 const QUADRATIC: &str = "\
 Disc ← +×.⊙(××¯4):
 Quad ← ÷⊙-⊃⊙(×2)(⊟¯.√Disc:):
@@ -49,17 +49,17 @@ Rule ← /+⊞= ⊓(⊚⋯|⍘⋯⇌◫3⇌ ⊂:0⊂0)
 ⇌[⍥(Rule30.)⌊÷2⧻.] # Run";
 const ROMAN: &str = r#"k ← "IVXLCDM"
 n ← [1 5 10 50 100 500 1000]
-f ← /+-⊃(↻1×)(×¬)≡/>◫2⊂:0.⊏:n⊗:k
+f ← /+-⊃(↻1×|×¬)≡/>◫2⊂:0.⊏:n⊗:k
 f "LVII"
 f "MCMXCIV""#;
 const MANDELBROT: &str = "\
 ×2 ⊞ℂ:-1/4. ÷⊙-⊃⊃∘(÷2)⇡ 300 # Init
 >2 ⌵ ⊙;⍥(+×.⊙.)50 0         # Run";
 const LIFE: &str = "\
-Life ← ↥⊙↧∩=3,2-,/+/+≐≐↻-1⇡3_3.
+Life ← ↥⊙↧∩=3,2-,/+≡↻☇1-1⇡3_3⌀.
 ⁅×0.6∵⋅⚂↯⊟.30 0       # Init
 ⇌;⍥(⊃∘⊂Life)100⊃∘(↯1) # Run
-≡(▽↯⧻,:⍉▽↯⧻,,:5)      # Upscale";
+≡(/⊂⍉/⊂∵▽⊃∘(⍉∵▽)5)    # Upscale";
 
 pub const EXAMPLES: &[&str] = &[
     AVG, D3, UIUA, PRIMES, LOGO, CHORD, SPIRAL, QUADRATIC, STRIPES, PALINDROME, AUTOMATA, ROMAN,

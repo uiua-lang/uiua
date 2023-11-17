@@ -1015,6 +1015,7 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <p>"If we have a bunch of arrays and want to choose which ones are fixed and which are not, be can use planet notation."</p>
         <Editor example="≡⊂ ⊙⌀ 1_2_3 4_5_6"/>
         <Editor example="≡(⊂⊂⊂) ⊓⊓⊓∘⌀⌀∘ 1_2_3 4_5_6 7_8_9 10_11_12"/>
+        <Editor example="≡(⊂⊂⊂) ⊙∩⌀     1_2_3 4_5_6 7_8_9 10_11_12"/>
 
         <h2 id="rerank"><Prim prim=Rerank/></h2>
         <p>"The above examples dig into an array from the top down. But what if you want to think about the array from the "<em>"bottom up"</em>"?"</p>

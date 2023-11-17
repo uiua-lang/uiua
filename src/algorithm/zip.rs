@@ -325,54 +325,77 @@ fn rows1(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
 }
 
 fn rows2(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
-    if xs.row_count() != ys.row_count() {
-        return Err(env.error(format!(
-            "Cannot rows arrays with different number of rows {} and {}",
-            xs.row_count(),
-            ys.row_count()
-        )));
-    }
-    if let Some((f, a, b)) = instrs_bin_fast_fn(&f.instrs) {
-        let val = f(xs, ys, a + 1, b + 1, env)?;
-        env.push(val);
-    } else {
-        let outputs = f.signature().outputs;
-        let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
-        let x_rows = xs.into_rows();
-        let y_rows = ys.into_rows();
-        for (x, y) in x_rows.into_iter().zip(y_rows) {
-            env.push(y);
-            env.push(x);
-            env.call(f.clone())?;
-            for i in 0..outputs {
-                new_rows[i].push(env.pop("rows's function result")?);
+    match (xs.row_count(), ys.row_count()) {
+        (a, b) if a == b => {
+            if let Some((f, a, b)) = instrs_bin_fast_fn(&f.instrs) {
+                let val = f(xs, ys, a + 1, b + 1, env)?;
+                env.push(val);
+            } else {
+                let outputs = f.signature().outputs;
+                let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
+                let x_rows = xs.into_rows();
+                let y_rows = ys.into_rows();
+                for (x, y) in x_rows.into_iter().zip(y_rows) {
+                    env.push(y);
+                    env.push(x);
+                    env.call(f.clone())?;
+                    for i in 0..outputs {
+                        new_rows[i].push(env.pop("rows's function result")?);
+                    }
+                }
+                for new_rows in new_rows.into_iter().rev() {
+                    env.push(Value::from_row_values(new_rows, env)?);
+                }
             }
+            Ok(())
         }
-        for new_rows in new_rows.into_iter().rev() {
-            env.push(Value::from_row_values(new_rows, env)?);
+        (_, 1) => {
+            let ys = ys.into_rows().next().unwrap();
+            tribute2(f, xs, ys, env)
         }
+        (1, _) => {
+            let xs = xs.into_rows().next().unwrap();
+            distribute2(f, xs, ys, env)
+        }
+        (a, b) => Err(env.error(format!(
+            "Cannot rows arrays with different number of rows {a} and {b}",
+        ))),
     }
-    Ok(())
 }
 
 fn rowsn(f: Arc<Function>, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
-    for win in args.windows(2) {
-        if win[0].row_count() != win[1].row_count() {
-            return Err(env.error(format!(
-                "The number of rows in each of 3 or more arrays must all match, \
-                but arrays with {} and {} rows were found.",
-                win[0].row_count(),
-                win[1].row_count()
-            )));
+    for a in 0..args.len() {
+        for b in a + 1..args.len() {
+            if !(args[a].row_count() == 1 || args[b].row_count() == 1)
+                && args[a].row_count() != args[b].row_count()
+            {
+                return Err(env.error(format!(
+                    "Cannot rows arrays with different number of rows {} and {}",
+                    args[a].row_count(),
+                    args[b].row_count()
+                )));
+            }
         }
     }
-    let row_count = args[0].row_count();
-    let mut arg_elems: Vec<_> = args.into_iter().map(|v| v.into_rows()).collect();
+    let row_count = args.iter().map(|v| v.row_count()).max().unwrap();
+    let mut arg_elems: Vec<_> = args
+        .into_iter()
+        .map(|v| {
+            if v.row_count() == 1 {
+                Err(v.into_rows().next().unwrap())
+            } else {
+                Ok(v.into_rows())
+            }
+        })
+        .collect();
     let outputs = f.signature().outputs;
     let mut new_values = multi_output(outputs, Vec::new());
     for _ in 0..row_count {
         for arg in arg_elems.iter_mut().rev() {
-            env.push(arg.next().unwrap());
+            match arg {
+                Ok(rows) => env.push(rows.next().unwrap()),
+                Err(row) => env.push(row.clone()),
+            }
         }
         env.call(f.clone())?;
         for i in 0..outputs {

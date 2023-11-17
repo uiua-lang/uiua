@@ -1020,10 +1020,10 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <h2 id="rerank"><Prim prim=Rerank/></h2>
         <p>"The above examples dig into an array from the top down. But what if you want to think about the array from the "<em>"bottom up"</em>"?"</p>
         <p>"The "<Prim prim=Rerank/>" function changes the rows of an array to have the specified rank."</p>
-        <Editor example="☇ 3 ↯2_2_2_5⇡40 # The rows are already rank 3"/>
-        <Editor example="☇ 2 ↯2_2_2_5⇡40"/>
-        <Editor example="☇ 1 ↯2_2_2_5⇡40"/>
-        <Editor example="☇ 0 ↯2_2_2_5⇡40 # Equivalent to ♭ deshape"/>
+        <Editor example="☇3 ↯2_2_2_5⇡40 # The rows are already rank 3"/>
+        <Editor example="☇2 ↯2_2_2_5⇡40"/>
+        <Editor example="☇1 ↯2_2_2_5⇡40"/>
+        <Editor example="☇0 ↯2_2_2_5⇡40 # Equivalent to ♭ deshape"/>
         <p>"You can then use "<Prim prim=Rows/>" to iterate over arrays of that rank."</p>
         <Editor example="≡□ ☇1 ↯2_2_2_3⇡24"/>
         <p>"Notice how in that example we have lost the rest of the shape information."</p>
@@ -1034,7 +1034,7 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <Editor example="⍜☇≡□ 1 ↯2_2_2_3⇡24"/>
         <Editor example="⍜☇≡□ 2 ↯2_2_2_3⇡24"/>
         <p>"You can use "<Prim prim=Under/><Prim prim=Both/><Prim prim=Rerank/>" to "<Prim prim=Rerank/>" 2 arrays. Here, we insert one of the ranks for "<Prim prim=Rerank/>" using "<Prim prim=Dip/>"."</p>
-        <Editor example="⍜∩☇≡⊂ 1⊙1 ↯6_2⇡12 ↯2_3_4⇡12"/>
+        <Editor example="⍜∩☇≡⊂ 1⊙1 ↯6_2⇡12 ↯2_3_4⇡24"/>
         <p><Prim prim=Cross/>" is the row-wise version of "<Prim prim=Table/>". It is useful when you want all combinations of the "<Prim prim=Rerank/>"ed arrays or if they have a different number of rows."</p>
         <Editor example="⍘⊚ ≡[..]⇡3             # Initial state\n[[0_0 0_1] [¯1_1 1_0]] # Rotations\n,,                     # Copy to see inputs\n≡≡□ ⍜(☇1)⊠↻            # All rotation combinations"/>
 

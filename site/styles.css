@@ -605,7 +605,7 @@ input[type=number] {
 
 .glyph-button {
     font-family: "Code Font", monospace;
-    font-size: 1em;
+    font-size: 0.99em;
     padding: 0.05em;
     margin: 0em;
     background-color: transparent;

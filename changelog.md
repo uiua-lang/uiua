@@ -9,9 +9,13 @@ If you are reading this on the website, then these changes are live here.
 - **Big Change**
   - Deprecate all ocean functions
   - Deprecate [`level` `≑`](https://uiua.org/docs/level) and [`combinate` `◳`](https://uiua.org/docs/combinate)
+  - Deprecate [`tribute` `≐`](https://uiua.org/docs/tribute) and [`distribute` `∺`](https://uiua.org/docs/distribute)
   - [`fold` `∧`](https://uiua.org/docs/fold) no longer takes a rank list
 - Add the [`rerank` `☇`](https://uiua.org/docs/rerank) function, which changes the rank of an array's rows
-  - This partially fills the void left by [`level` `≑`](https://uiua.org/docs/level) and [`combinate` `◳`](https://uiua.org/docs/combinate)
+  - This fills the void left by [`level` `≑`](https://uiua.org/docs/level) and [`combinate` `◳`](https://uiua.org/docs/combinate)
+- Add the [`fix` `⌀`](https://uiua.org/docs/fix) function, which adds a length 1 axis to an array
+- [`rows` `≡`](https://uiua.org/docs/rows) now repeats the rows of an arrays that have exactly 1 row
+  - This in combination with [`fix` `⌀`](https://uiua.org/docs/fix) fills the void left by [`tribute` `≐`](https://uiua.org/docs/tribute) and [`distribute` `∺`](https://uiua.org/docs/distribute)
 - [`cross` `⊠`](https://uiua.org/docs/cross) can now take more than 2 arguments
 - Switch functions are now less strict about branch signature compatibility and can take arrays as conditions
 - A single switch function can now be used as a list of functions for dyadic modifiers

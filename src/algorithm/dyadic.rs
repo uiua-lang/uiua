@@ -59,14 +59,36 @@ impl<T: Clone + std::fmt::Debug> Array<T> {
         let a_prefix = &a.shape[..a_depth];
         let b_prefix = &b.shape[..b_depth];
         if !a_prefix.iter().zip(b_prefix).all(|(a, b)| a == b) {
-            return Err(ctx.error(format!(
-                "Cannot combine arrays with shapes {} and {} \
+            while a.shape.starts_with(&[1]) {
+                if a_depth == 0 {
+                    break;
+                }
+                a.shape.remove(0);
+                a_depth -= 1;
+            }
+            if b.shape.starts_with(&[1]) {
+                local_b = b.clone();
+                while local_b.shape.starts_with(&[1]) {
+                    if b_depth == 0 {
+                        break;
+                    }
+                    local_b.shape.remove(0);
+                    b_depth -= 1;
+                }
+                b = &local_b;
+            }
+            let a_prefix = &a.shape[..a_depth];
+            let b_prefix = &b.shape[..b_depth];
+            if !a_prefix.iter().zip(b_prefix).all(|(a, b)| a == b) {
+                return Err(ctx.error(format!(
+                    "Cannot combine arrays with shapes {} and {} \
                 because shape prefixes {} and {} are not compatible",
-                a.format_shape(),
-                b.format_shape(),
-                FormatShape(a_prefix),
-                FormatShape(b_prefix)
-            )));
+                    a.format_shape(),
+                    b.format_shape(),
+                    FormatShape(a_prefix),
+                    FormatShape(b_prefix)
+                )));
+            }
         }
         match a_depth.cmp(&b_depth) {
             Ordering::Equal => {}

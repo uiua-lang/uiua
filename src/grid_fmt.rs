@@ -224,7 +224,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             grid[0][0] = if boxed { '╓' } else { '╭' };
             grid[0][1] = '─';
             for i in 0..self.rank().saturating_sub(1) {
-                grid[i + 1][0] = if boxed { '║' } else { '╷' };
+                grid[i + 1][0] = if boxed { '╟' } else { '╷' };
             }
             *grid.last_mut().unwrap().last_mut().unwrap() = if boxed { '╜' } else { '╯' };
             // Handle really big grid

@@ -241,11 +241,11 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
     }
 
     let patterns: &[&dyn UnderPattern] = &[
-        &UnderPatternFn(under_both_pattern),
-        &UnderPatternFn(under_rows_pattern),
-        &UnderPatternFn(under_each_pattern),
-        &UnderPatternFn(under_partition_pattern),
-        &UnderPatternFn(under_group_pattern),
+        &UnderPatternFn(under_both_pattern, "both"),
+        &UnderPatternFn(under_rows_pattern, "rows"),
+        &UnderPatternFn(under_each_pattern, "each"),
+        &UnderPatternFn(under_partition_pattern, "partition"),
+        &UnderPatternFn(under_group_pattern, "group"),
         &bin!(Flip, Add, Sub),
         &bin!(Flip, Mul, Div),
         &bin!(Flip, Sub),
@@ -356,8 +356,8 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
         &pat!(Deep, Deep, (1, Drop)),
         &pat!(Abyss, Abyss, (1, Drop)),
         &pat!(Seabed, Seabed, (1, Drop)),
-        &UnderPatternFn(under_from_inverse_pattern),
-        &UnderPatternFn(under_temp_pattern),
+        &UnderPatternFn(under_from_inverse_pattern, "from inverse"),
+        &UnderPatternFn(under_temp_pattern, "temp"),
     ];
 
     let mut befores = Vec::new();
@@ -507,15 +507,15 @@ fn under_from_inverse_pattern(input: &[Instr], _: Signature) -> Option<(&[Instr]
     if input.is_empty() {
         return None;
     }
-    let mut end = input.len();
+    let mut end = 1;
     loop {
         if let Some(inverse) = invert_instrs(&input[..end]) {
             return Some((&input[end..], (input[..end].to_vec(), inverse)));
         }
-        if end == 1 {
+        if end == input.len() {
             return None;
         }
-        end -= 1;
+        end += 1;
     }
 }
 
@@ -889,10 +889,10 @@ where
     }
 }
 
-struct UnderPatternFn<F>(F);
+struct UnderPatternFn<F>(F, &'static str);
 impl<F> fmt::Debug for UnderPatternFn<F> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "UnderPatternFn")
+        write!(f, "UnderPatternFn({})", self.1)
     }
 }
 impl<F> UnderPattern for UnderPatternFn<F>

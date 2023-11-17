@@ -802,7 +802,7 @@ primitive!(
     /// ex: ☇ 2 [1 2 3 4]
     /// ex: ☇ 3 ↯2_3_3⇡18
     ///   : ☇ 4 ↯2_3_3⇡18
-    /// Negative ranks are relative to the rank of the array.
+    /// While positive change the rank of the array's rows by combining higher dimensions, negative ranks will combine lower dimensions instead.
     /// ex: ☇ ¯1 ↯2_3_3⇡18
     ///   : ☇ ¯2 ↯2_3_3⇡18
     ///   : ☇ ¯3 ↯2_3_3⇡18

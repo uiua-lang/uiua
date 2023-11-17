@@ -898,10 +898,9 @@ impl Value {
                     shape.push(1);
                 }
             } else {
-                let new_first_dim: usize = shape[..rank].iter().product();
-                *shape = once(new_first_dim)
-                    .chain(shape[rank..].iter().copied())
-                    .collect();
+                let new_last_dim: usize = shape[rank..].iter().product();
+                shape.truncate(rank);
+                shape.push(new_last_dim);
             }
         }
         self.validate_shape();

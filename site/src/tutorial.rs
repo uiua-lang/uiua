@@ -717,8 +717,6 @@ fn TutorialFunctions() -> impl IntoView {
         <p>"This is usually only necessary when you need to call multiple functions within a modifier."</p>
         <p>"For example, if you wanted to get the last element of each row of an array, you could use "<Prim prim=Rows/>"."</p>
         <Editor example="≡(⊢⇌) .[2_5_3 0_2_1 0_0_2]"/>
-        <p>"If you wanted to rotate every row of an array backwards by a fixed amount, you could use "<Prim prim=Distribute/>"."</p>
-        <Editor example="∺(↻¯) 2 [1_2_3 4_5_6 7_8_9]"/>
         <p>"Inline functions may span multiple lines. Unlike multiline stack notation arrays, which run bottom-to-top, multiline inline functions run top-to-bottom as other code does."</p>
         <Editor example="\
 X ← (
@@ -1001,17 +999,22 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <h1>"Advanced Array Manipulation"</h1>
         <p>"Sometimes the operation you need to perform on an array is more complicated than modifiers like "<Prim prim=Reduce/>", "<Prim prim=Rows/>", or "<Prim prim=Table/>" allow."</p>
 
-        <h2 id="chaining-modifiers">"Chaining Modifiers"</h2>
-        <p><Prim prim=Rows/>", "<Prim prim=Distribute/>", and "<Prim prim=Tribute/>" can be chained to perform more complex operations."</p>
-        <p>"You can chain "<Prim prim=Rows/>" to dig deeper into an array."</p>
-        <Editor example="□    ↯2_3_4⇡24"/>
-        <Editor example="≡□   ↯2_3_4⇡24"/>
-        <Editor example="≡≡□  ↯2_3_4⇡24"/>
-        <Editor example="≡≡≡□ ↯2_3_4⇡24"/>
-        <p>"If you have multiple arrays and you only want to dig into one of them, you can chain "<Prim prim=Distribute/>" or "<Prim prim=Tribute/>"."</p>
-        <Editor example="∺∺+ ×10⇡3 ↯2_2_3⇡12"/>
-        <p>"It is sometimes necessary to mix and match these modifiers."</p>
-        <Editor example="≡∺+ ×10[1_2_3 4_5_6] ↯2_3_3⇡18"/>
+        <h2 id="fix"><Prim prim=Fix/></h2>
+        <p><Prim prim=Rows/>" can be used to iterate over multiple arrays."</p>
+        <Editor example="≡⊂ 1_2_3 4_5_6"/>
+        <p>"Usually, the arrays must have the same number of rows."</p>
+        <Editor example="≡⊂ 1_2_3 4_5"/> // Should fail
+        <p>"However, there is an exception for arrays that have exactly one row. In this case, that row will be repeated for each row of the other array(s)."</p>
+        <Editor example="≡⊂ 1_2_3 4"/>
+        <Editor example="≡⊂ 1 2_3_4"/>
+        <Editor example="≡(⊂⊂) 1 2_3_4 5"/>
+        <p>"If we want to combine each row of one array with copies of another, we can turn one of the arrays into a single row array with "<Prim prim=Fix/>". "<Prim prim=Fix/>" adds a 1 to the front of the shape of an array."</p>
+        <Editor example="⌀.1_2_3"/>
+        <p>"Here, we "<Prim prim=Fix/>" "<code>"1_2_3"</code>" so that it is reused for each row of "<code>"4_5_6"</code>"."</p>
+        <Editor example="≡⊂ ⌀ 1_2_3 4_5_6"/>
+        <p>"If we have a bunch of arrays and want to choose which ones are fixed and which are not, be can use planet notation."</p>
+        <Editor example="≡⊂ ⊙⌀ 1_2_3 4_5_6"/>
+        <Editor example="≡(⊂⊂⊂) ⊓⊓⊓∘⌀⌀∘ 1_2_3 4_5_6 7_8_9 10_11_12"/>
 
         <h2 id="rerank"><Prim prim=Rerank/></h2>
         <p>"The above examples dig into an array from the top down. But what if you want to think about the array from the "<em>"bottom up"</em>"?"</p>

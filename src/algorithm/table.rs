@@ -249,35 +249,96 @@ fn generic_table(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> Uiua
 pub fn cross(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
-    let xs = env.pop(1)?;
-    let ys = env.pop(2)?;
     let sig = f.signature();
-    if sig.args != 2 {
-        return Err(env.error(format!(
-            "Cross's function must take 2 arguments, but its signature is {sig}",
-        )));
-    }
-    let new_shape = tiny_vec![xs.row_count(), ys.row_count()];
-    let outputs = sig.outputs;
-    let mut items = multi_output(outputs, Value::builder(xs.row_count() * ys.row_count()));
-    let y_rows = ys.into_rows().collect::<Vec<_>>();
-    for x_row in xs.into_rows() {
-        for y_row in y_rows.iter().cloned() {
-            env.push(y_row);
-            env.push(x_row.clone());
-            env.call(f.clone())?;
-            for i in 0..outputs {
-                items[i].add_row(env.pop("crossed function result")?, env)?;
+    match sig.args {
+        0 | 1 => {
+            return Err(env.error(format!(
+                "Cross's function must take at least 2 arguments, but its signature is {sig}",
+            )))
+        }
+        2 => {
+            let xs = env.pop(1)?;
+            let ys = env.pop(2)?;
+            if sig.args != 2 {
+                return Err(env.error(format!(
+                    "Cross's function must take 2 arguments, but its signature is {sig}",
+                )));
+            }
+            let new_shape = tiny_vec![xs.row_count(), ys.row_count()];
+            let outputs = sig.outputs;
+            let mut items = multi_output(outputs, Value::builder(xs.row_count() * ys.row_count()));
+            let y_rows = ys.into_rows().collect::<Vec<_>>();
+            for x_row in xs.into_rows() {
+                for y_row in y_rows.iter().cloned() {
+                    env.push(y_row);
+                    env.push(x_row.clone());
+                    env.call(f.clone())?;
+                    for i in 0..outputs {
+                        items[i].add_row(env.pop("crossed function result")?, env)?;
+                    }
+                }
+            }
+            for items in items.into_iter().rev() {
+                let mut crossed = items.finish();
+                let mut new_shape = new_shape.clone();
+                new_shape.extend_from_slice(&crossed.shape()[1..]);
+                *crossed.shape_mut() = new_shape;
+                crossed.validate_shape();
+                env.push(crossed);
             }
         }
-    }
-    for items in items.into_iter().rev() {
-        let mut crossed = items.finish();
-        let mut new_shape = new_shape.clone();
-        new_shape.extend_from_slice(&crossed.shape()[1..]);
-        *crossed.shape_mut() = new_shape;
-        crossed.validate_shape();
-        env.push(crossed);
+        n => {
+            let xs = env.pop(1)?;
+            let ys = env.pop(2)?;
+            let zs = env.pop(3)?;
+            let mut others = Vec::with_capacity(n - 3);
+            for i in 3..n {
+                others.push(env.pop(i + 1)?);
+            }
+            let mut new_shape = Shape::with_capacity(n);
+            new_shape.push(xs.row_count());
+            new_shape.push(ys.row_count());
+            new_shape.push(zs.row_count());
+            for arg in &others {
+                new_shape.push(arg.row_count());
+            }
+            let outputs = sig.outputs;
+            let other_rows_product = others.iter().map(|a| a.row_count()).product::<usize>();
+            let mut items = multi_output(
+                outputs,
+                Value::builder(
+                    xs.row_count() * ys.row_count() * zs.row_count() * other_rows_product,
+                ),
+            );
+            for x_row in xs.into_rows() {
+                for y_row in ys.rows() {
+                    for z_row in zs.rows() {
+                        for mut i in 0..other_rows_product {
+                            for arg in others.iter().rev() {
+                                let j = i % arg.row_count();
+                                env.push(arg.row(j));
+                                i /= arg.row_count();
+                            }
+                            env.push(z_row.clone());
+                            env.push(y_row.clone());
+                            env.push(x_row.clone());
+                            env.call(f.clone())?;
+                            for i in 0..outputs {
+                                items[i].add_row(env.pop("crossed function result")?, env)?;
+                            }
+                        }
+                    }
+                }
+            }
+            for items in items.into_iter().rev() {
+                let mut crossed = items.finish();
+                let mut new_shape = new_shape.clone();
+                new_shape.extend_from_slice(&crossed.shape()[1..]);
+                *crossed.shape_mut() = new_shape;
+                crossed.validate_shape();
+                env.push(crossed);
+            }
+        }
     }
     Ok(())
 }

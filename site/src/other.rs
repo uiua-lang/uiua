@@ -279,6 +279,11 @@ pub fn ImagesAndGifs() -> impl IntoView {
 #[component]
 pub fn Constants() -> impl IntoView {
     use Primitive::*;
+    let constants = constants()
+        .iter()
+        .filter(|con| !con.doc.trim().is_empty())
+        .map(|con| view!(<p><Const con=con/>" - "{ con.doc }</p>))
+        .collect::<Vec<_>>();
     view! {
         <Title text="Constants - Uiua Docs"/>
         <h1>"Constants"</h1>
@@ -286,9 +291,7 @@ pub fn Constants() -> impl IntoView {
         <Editor example="e\ne ← 5\ne"/>
         <br/>
         <div>
-        {
-            constants().iter().map(|con| view!(<p><Const con=con/>" - "{ con.doc }</p>)).collect::<Vec<_>>()
-        }
+        { constants }
         </div>
     }
 }

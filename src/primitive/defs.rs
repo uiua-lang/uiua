@@ -67,6 +67,8 @@ constant!(
     ("Sep", std::path::MAIN_SEPARATOR),
     /// The number of processors available
     ("NumProcs", num_cpus::get() as f64),
+    ///
+    ("⍼", include_str!("zigzags_descent.txt")),
 );
 
 macro_rules! primitive {

@@ -260,16 +260,21 @@ impl Primitive {
     }
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
         match self {
-            Primitive::Combinate => Some(format!(
-                "try using {} instead, possibly with {}",
-                Primitive::Cross.format(),
-                Primitive::Rerank.format()
+            Primitive::Tribute | Primitive::Distribute => Some(format!(
+                "try using {} with {} instead",
+                Primitive::Rows.format(),
+                Primitive::Fix.format()
             )),
             Primitive::Level => Some(format!(
                 "try using {}, {}, or {} instead, possible with {}",
                 Primitive::Rows.format(),
                 Primitive::Distribute.format(),
                 Primitive::Tribute.format(),
+                Primitive::Rerank.format()
+            )),
+            Primitive::Combinate => Some(format!(
+                "try using {} instead, possibly with {}",
+                Primitive::Cross.format(),
                 Primitive::Rerank.format()
             )),
             prim if prim.is_ocean() => Some(String::new()),

@@ -329,6 +329,9 @@ impl Primitive {
             let start_index = indices[start];
             for len in (2..=indices.len() - start).rev() {
                 let end_index = indices.get(start + len).copied().unwrap_or(name.len());
+                if end_index - start_index < 2 {
+                    continue;
+                }
                 let sub_name = &name[start_index..end_index];
                 if let Some(p) = Primitive::from_format_name(sub_name) {
                     // Normal primitive matching

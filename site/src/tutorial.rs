@@ -218,6 +218,7 @@ fn TutorialBasic() -> impl IntoView {
         <h2 id="challenges">"Challenges"</h2>
         <p>"At the end of most sections of this tutorial, there will be a few challenges to test your understanding."</p>
         <p>"The code you write will be run on multiple inputs and tested for correctness."</p>
+        <p>"Each challenge has an example input and output followed by some test cases. There is also a hidden test case that your code is checked against, so make sure to think about edge cases!"</p>
         <p>"Remember that you can click the "<code>"↧"</code>" on the right side of the editor to see a list of all the glyphs."</p>
         <br/>
 

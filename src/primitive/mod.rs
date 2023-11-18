@@ -790,6 +790,7 @@ impl ImplPrimitive {
             ImplPrimitive::LastMaxIndex => env.monadic_ref_env(Value::last_max_index)?,
             ImplPrimitive::FirstWhere => env.monadic_ref_env(Value::first_where)?,
             ImplPrimitive::InvParse => env.monadic_ref(ToString::to_string)?,
+            ImplPrimitive::InvFix => env.monadic_mut(Value::inv_fix)?,
         }
         Ok(())
     }

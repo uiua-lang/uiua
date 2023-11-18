@@ -26,6 +26,20 @@ impl Value {
     pub fn deshape(&mut self) {
         self.deshape_depth(0);
     }
+    /// Add a 1-length dimension to the front of the value's shape
+    pub fn fix(&mut self) {
+        self.shape_mut().insert(0, 1);
+    }
+    pub(crate) fn inv_fix(&mut self) {
+        let shape = self.shape_mut();
+        if shape.starts_with(&[1]) {
+            shape.remove(0);
+        } else if shape.len() >= 2 {
+            let new_first_dim = shape[0] * shape[1];
+            shape.drain(0..2);
+            shape.insert(0, new_first_dim);
+        }
+    }
     pub(crate) fn deshape_depth(&mut self, depth: usize) {
         match self {
             Value::Num(n) => n.deshape_depth(depth),

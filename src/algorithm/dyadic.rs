@@ -910,10 +910,6 @@ impl Value {
         self.validate_shape();
         Ok(())
     }
-    /// Add a 1-length dimension to the front of the value's shape
-    pub fn fix(&mut self) {
-        self.shape_mut().insert(0, 1);
-    }
 }
 
 impl Value {

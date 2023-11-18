@@ -48,9 +48,14 @@ impl Value {
     }
     /// Attempt to parse the value into a number
     pub fn parse_num(&self, env: &Uiua) -> UiuaResult<Self> {
-        Ok(self
-            .as_string(env, "Parsed array must be a string")?
-            .parse::<f64>()
+        let mut s = self.as_string(env, "Parsed array must be a string")?;
+        if s.contains('¯') {
+            s = s.replace('¯', "-");
+        }
+        if s.contains('`') {
+            s = s.replace('`', "-");
+        }
+        Ok(s.parse::<f64>()
             .map_err(|e| env.error(format!("Cannot parse into number: {}", e)))?
             .into())
     }

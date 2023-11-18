@@ -326,10 +326,9 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
     if sig.args + 1 < sig.outputs {
         return Err(env.error(format!(
-            "{} {}'s function must take at least 1 more value than it returns, \
+            "{}'s function must take at least 1 more value than it returns, \
             but its signature is {}",
-            Primitive::Fold,
-            Primitive::Fold.name(),
+            Primitive::Fold.format(),
             sig
         )));
     }

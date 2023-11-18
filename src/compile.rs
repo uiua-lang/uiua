@@ -789,10 +789,9 @@ impl Uiua {
                                     if sw.branches.len() != margs as usize {
                                         return Err((modified.modifier.span.merge(span))
                                             .sp(format!(
-                                                "{} {} requires {} function arguments, but the \
+                                                "{} requires {} function arguments, but the \
                                                 switch function has {} branches",
-                                                prim,
-                                                prim.name(),
+                                                prim.format(),
                                                 margs,
                                                 sw.branches.len()
                                             ))
@@ -811,9 +810,8 @@ impl Uiua {
                             } else {
                                 return Err((modified.modifier.span.merge(span))
                                     .sp(format!(
-                                        "{} {} cannot use switch function syntax",
-                                        prim,
-                                        prim.name()
+                                        "{} cannot use switch function syntax",
+                                        prim.format()
                                     ))
                                     .into());
                             }

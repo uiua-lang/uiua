@@ -17,6 +17,7 @@ use crate::{
 
 /// Uiua's array type
 #[derive(Clone)]
+#[repr(C)]
 pub struct Array<T> {
     pub(crate) shape: Shape,
     pub(crate) data: CowSlice<T>,

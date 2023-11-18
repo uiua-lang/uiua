@@ -21,6 +21,7 @@ use crate::{
 ///
 /// This enum is used to represent all possible array types.
 #[derive(Clone)]
+#[repr(C)]
 pub enum Value {
     /// Common number array
     Num(Array<f64>),
@@ -200,45 +201,13 @@ impl Value {
             Self::Box(_) => "boxes",
         }
     }
-    /// Get the shape of the value
-    pub fn shape(&self) -> &[usize] {
-        self.generic_ref_shallow(
-            Array::shape,
-            Array::shape,
-            Array::shape,
-            Array::shape,
-            Array::shape,
-        )
-    }
     /// Get the number of rows
     pub fn row_count(&self) -> usize {
-        self.generic_ref_shallow(
-            Array::row_count,
-            Array::row_count,
-            Array::row_count,
-            Array::row_count,
-            Array::row_count,
-        )
+        self.shape().first().copied().unwrap_or(1)
     }
     /// Get the number of element in each row
     pub fn row_len(&self) -> usize {
-        self.generic_ref_shallow(
-            Array::row_len,
-            Array::row_len,
-            Array::row_len,
-            Array::row_len,
-            Array::row_len,
-        )
-    }
-    /// Get the number of elements
-    pub fn element_count(&self) -> usize {
-        self.generic_ref_shallow(
-            Array::element_count,
-            Array::element_count,
-            Array::element_count,
-            Array::element_count,
-            Array::element_count,
-        )
+        self.shape().iter().skip(1).product()
     }
     pub(crate) fn first_dim_zero(&self) -> Self {
         match self {
@@ -253,29 +222,35 @@ impl Value {
     }
     /// Get a formattable representation of the shape
     pub fn format_shape(&self) -> FormatShape {
-        self.generic_ref_shallow(
-            Array::format_shape,
-            Array::format_shape,
-            Array::format_shape,
-            Array::format_shape,
-            Array::format_shape,
-        )
+        FormatShape(self.shape())
     }
     /// Get the rank
     pub fn rank(&self) -> usize {
         self.shape().len()
     }
+}
+
+#[repr(C)]
+struct Repr {
+    discriminant: u8,
+    arr: Array<f64>,
+}
+
+impl Value {
+    /// Get the shape of the value
+    pub fn shape(&self) -> &[usize] {
+        let repr = unsafe { &*(self as *const Self as *const Repr) };
+        &repr.arr.shape
+    }
     /// Get a mutable reference to the shape
     pub fn shape_mut(&mut self) -> &mut Shape {
-        match self {
-            Self::Num(array) => &mut array.shape,
-            #[cfg(feature = "bytes")]
-            Self::Byte(array) => &mut array.shape,
-            #[cfg(feature = "complex")]
-            Self::Complex(array) => &mut array.shape,
-            Self::Char(array) => &mut array.shape,
-            Self::Box(array) => &mut array.shape,
-        }
+        let repr = unsafe { &mut *(self as *mut Self as *mut Repr) };
+        &mut repr.arr.shape
+    }
+    /// Get the number of elements
+    pub fn element_count(&self) -> usize {
+        let repr = unsafe { &*(self as *const Self as *const Repr) };
+        repr.arr.element_count()
     }
     pub(crate) fn validate_shape(&self) {
         self.generic_ref_shallow(

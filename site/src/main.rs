@@ -181,7 +181,7 @@ pub fn MainPage() -> impl IntoView {
                 <div>
                     <h2>"A Loving Union"</h2>
                     <p>"Uiua combines the stack-based and array-oriented paradigms in a single language. Combining these already terse paradigms results in code with a very high information density and little syntactic noise."</p>
-                    <Editor example="⇌[⍥⊃+⊙∘10 1 0]"/>
+                    <Editor example="⇌[⍥⊃+⊙∘9 1 1]"/>
                 </div>
                 <div>
                     <h2>"True Arrays"</h2>
@@ -196,7 +196,7 @@ pub fn MainPage() -> impl IntoView {
                     <p><Prim prim=Select/>" for re-sequencing array items:"</p>
                     <Editor example=r#"⊏ 2_1_3_0_4 "loco!""#/>
                     <p><Prim prim=Under/>" for modifying only part of an array (among other things):"</p>
-                    <Editor example="⍜(↙2)(×10) 1_2_3_4_5"/>
+                    <Editor example="⍜(↙2|×10) 1_2_3_4_5"/>
                 </div>
                 <div>
                     <h2>"Syntactic Simplicity"</h2>
@@ -234,7 +234,7 @@ pub fn MainPage() -> impl IntoView {
                                 <Editor example="⍉⊠<⊞+⇡3○∩(÷25)⇡240⇡80"/>
                                 <Editor example="÷3/+○⊞×⊟×1.5.220×τ÷:⇡.&asr"/>
                                 <Editor example="Xy ← ⍉⍉⊞⊟.÷:⇡.100\n\
-                                    F ← ⍉◿1⊂⊃(+/÷)(÷3+1○×τ+)Xy\n\
+                                    F ← ⍉◿1⊂⊃(+/÷|÷3+1○×τ+)Xy\n\
                                     ∵F÷:⇡.10"/>
                             })
                         }

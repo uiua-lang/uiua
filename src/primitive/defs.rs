@@ -1211,6 +1211,18 @@ primitive!(
     /// While more inverses exists, most of them are not useful on their own.
     /// They are usually used within [under].
     ([1], Invert, OtherModifier, ("invert", '⍘')),
+    /// Pop the second stack value then call a function
+    ///
+    /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [reach] is useful.
+    ///
+    /// ex: ⟜+ 1 2 3
+    /// ex: ⟜⟜+ 1 3 5 7
+    /// This is especially useful when used in a [fork].
+    /// If you have three values on the stack `a`, `b`, and `c`, and you want to call one function on `a` and `b` and another function on `a` and `c`, you can use [reach].
+    /// ex: [⊃+⟜× 2 3 5]
+    /// If you wanted the argument pairs to be `a` `c` and `b` `c`, you can add a [gap].
+    /// ex: [⊃⟜+⋅× 2 3 5]
+    ([1], Reach, Planet, ("reach", '⟜')),
     /// Discard the top stack value then call a function
     ///
     /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [gap] is useful.
@@ -1228,18 +1240,6 @@ primitive!(
     /// ex: [⊃⋅⊙∘(++) 3 5 10]
     /// ex: [⊃⊙⊙∘(++) 3 5 10]
     ([1], Gap, Planet, ("gap", '⋅')),
-    /// Pop the second stack value then call a function
-    ///
-    /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [reach] is useful.
-    ///
-    /// ex: ⟜+ 1 2 3
-    /// ex: ⟜⟜+ 1 3 5 7
-    /// This is especially useful when used in a [fork].
-    /// If you have three values on the stack `a`, `b`, and `c`, and you want to call one function on `a` and `b` and another function on `a` and `c`, you can use [reach].
-    /// ex: [⊃+⟜× 2 3 5]
-    /// If you wanted the argument pairs to be `a` `c` and `b` `c`, you can add a [gap].
-    /// ex: [⊃⟜+⋅× 2 3 5]
-    ([1], Reach, Planet, ("reach", '⟜')),
     /// Temporarily pop the top value off the stack and call a function
     ///
     /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [dip] is useful.

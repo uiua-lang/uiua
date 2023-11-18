@@ -1000,7 +1000,7 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <p>"Sometimes the operation you need to perform on an array is more complicated than modifiers like "<Prim prim=Reduce/>", "<Prim prim=Rows/>", or "<Prim prim=Table/>" allow."</p>
 
         <h2 id="fix"><Prim prim=Fix/></h2>
-        <p><Prim prim=Rows/>" can be used to iterate over multiple arrays."</p>
+        <p><Prim prim=Rows/>" can be used to iterate over multiple arrays. The nth row of each array will be passed to the function, and the result will be put in a new array."</p>
         <Editor example="≡⊂ 1_2_3 4_5_6"/>
         <p>"Usually, the arrays must have the same number of rows."</p>
         <Editor example="≡⊂ 1_2_3 4_5"/> // Should fail
@@ -1008,6 +1008,8 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <Editor example="≡⊂ 1_2_3 4"/>
         <Editor example="≡⊂ 1 2_3_4"/>
         <Editor example="≡(⊂⊂) 1 2_3_4 5"/>
+        <p>"Notice that the second argument here is a 2D array with 1 row of 2 elements. It will be repeated just like the scalars above."</p>
+        <Editor example="≡⊟ [1_2 3_4 5_6] [¯1_0]"/>
         <p>"If we want to combine each row of one array with copies of another, we can turn one of the arrays into a single row array with "<Prim prim=Fix/>". "<Prim prim=Fix/>" adds a 1 to the front of the shape of an array."</p>
         <Editor example="⌀.1_2_3"/>
         <p>"Here, we "<Prim prim=Fix/>" "<code>"1_2_3"</code>" so that it is reused for each row of "<code>"4_5_6"</code>"."</p>
@@ -1026,26 +1028,46 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <Editor example="☇0 ↯2_2_2_5⇡40 # Equivalent to ♭ deshape"/>
         <p>"You can then use "<Prim prim=Rows/>" to iterate over arrays of that rank."</p>
         <Editor example="≡□ ☇1 ↯2_2_2_3⇡24"/>
-        <p>"Notice how in that example we have lost the rest of the shape information."</p>
-        <p>"If you want to keep the shape above the specified rank, you can use "<Prim prim=Under/>"."</p>
+        <p>"You can think of "<Prim prim=Rerank/>" as combining the dimensions of the array that are above the specified rank into a single dimension."</p>
+        <p>"In the example above, the shape information of the original array is lost."</p>
+        <p>"If you want to keep the part of the shape that is above the specified rank, you can use "<Prim prim=Under/>". This will "<em>"uncombine"</em>" the combined dimensions after the operation is complete."</p>
         <Editor example="⍜(☇1)≡□ ↯2_2_2_3⇡24"/>
+        <p>"Notice in the above example that we specified the rank "<code>"1"</code>", and it was rank "<code>"1"</code>" arrays that were "<Prim prim=Box/>"ed."</p>
+        <p>"We can think of this pattern as allowing us to operate on arrays of the specified rank within the greater array. For example, by changing the rank to "<code>"2"</code>", we end up "<Prim prim=Box/>"ing matrices instead of lists."</p>
         <Editor example="⍜(☇2)≡□ ↯2_2_2_3⇡24"/>
         <p>"The specified rank can still be dynamic in this case by simply putting it on the stack."</p>
         <Editor example="⍜☇≡□ 1 ↯2_2_2_3⇡24"/>
         <Editor example="⍜☇≡□ 2 ↯2_2_2_3⇡24"/>
         <p>"You can use "<Prim prim=Under/><Prim prim=Both/><Prim prim=Rerank/>" to "<Prim prim=Rerank/>" 2 arrays. Here, we insert one of the ranks for "<Prim prim=Rerank/>" using "<Prim prim=Dip/>"."</p>
         <Editor example="⍜∩☇≡⊂ 1⊙1 ↯6_2⇡12 ↯2_3_4⇡24"/>
-        <p><Prim prim=Cross/>" is the row-wise version of "<Prim prim=Table/>". It is useful when you want all combinations of the "<Prim prim=Rerank/>"ed arrays or if they have a different number of rows."</p>
-        <Editor example="⍘⊚ ≡[..]⇡3             # Initial state\n[[0_0 0_1] [¯1_1 1_0]] # Rotations\n,,                     # Copy to see inputs\n≡≡□ ⍜(☇1)⊠↻            # All rotation combinations"/>
+
+        <h2 id="cross"><Prim prim=Cross/></h2>
+        <p><Prim prim=Cross/>" is the row-wise version of "<Prim prim=Table/>". It calls its function on all "<em>"combinations"</em>" of rows of its arguments."</p>
+        <Editor example="⊠⊂ η_π_τ ↯3_3⇡9"/>
+        <p><Prim prim=Cross/>" can be useful when working with "<Prim prim=Rerank/>"ed or "<Prim prim=Fix/>"ed arrays."</p>
+        <p>"In this example, we apply a table of rotations to each matrix cell of a 3D array."</p>
+        <Editor example="⍘⊚ ≡[..]⇡3           # Target array
+[0_0 0_1]_[¯1_1 1_0] # Rotations table
+,,                   # Copy to see inputs
+⍜(☇1)⊠↻              # All rotation combinations
+≡≡□                  # Box for display"/>
 
         <h2 id="challenges">"Challenges"</h2>
 
         <Challenge
             number=1
-            prompt="rotates the rank 2 arrays in the second argument by the rank 1 arrays in the first"
-            example="¯1_¯2 ↯3_4⇡12"
-            answer="⍜∩☇⊠↻ 1⊙2"
-            tests={&["[0_2 2_1 1_1] ⊞×⊞×..+1⇡3"]}
+            prompt="adds the first argument list to each row of the second argument matrix"
+            example="1_2_3 [4_5_6 7_8_9]"
+            answer="≡+⌀"
+            tests={&["10_20 10_20 ↯4_2⇡8", "\"Wow\" ¯[10_0_10 19_14_19]"]}
+            hidden="1_2 [3_4]"/>
+
+        <Challenge
+            number=2
+            prompt="rotates all rank 2 arrays in the second argument by all rank 1 arrays in the first"
+            example="[¯1_¯2 0_1] ↯3_4⇡12"
+            answer="/⊂ ⊠↻ ∩☇1⊙2"
+            tests={&["[0_2 2_1 1_1] ⊞×⊞×.↘1.+1⇡3"]}
             hidden="1 [1 2 3]"/>
     }
 }

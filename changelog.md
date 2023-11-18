@@ -27,6 +27,8 @@ If you are reading this on the website, then these changes are live here.
 ### Interpreter
 - Lots of bug and crash fixes
 - Lots of performance improvements
+### Website
+- Update the [Advanced Array Manipulation Tutorial](https://uiua.org/docs/advancedarray) to reflect the changes in this version
 
 ## 0.2.0 - 2023-11-09
 ### Language

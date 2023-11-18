@@ -376,31 +376,6 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
                 befores.extend(bef);
                 afters = aft.into_iter().chain(afters).collect();
                 if input.is_empty() {
-                    // Hacky solution for when there are both inline and under temps
-                    // in the afters
-                    // With this hack, both these will work:
-                    // f ← |3 ⍜(|3 ↙⊙↘)(×10)
-                    // f 2 1 [1 2 3 4 5]
-                    // f ← ⍜⊙⇌(×10)
-                    // f [1 2 3] [4 5 6]
-                    // This can likely be fixes with the newer g_sig checking
-                    if afters.iter().any(|instr| {
-                        matches!(
-                            instr,
-                            Instr::PopTemp {
-                                stack: TempStack::Under,
-                                ..
-                            }
-                        )
-                    }) {
-                        afters.retain(|instr| {
-                            !matches!(
-                                instr,
-                                Instr::PopTemp { stack, .. } | Instr::PushTemp { stack, .. } if stack == &TempStack::Inline
-                            )
-                        });
-                    }
-
                     // println!("under {:?} to {:?} {:?}", instrs, befores, afters);
                     return Some((befores, afters));
                 }
@@ -521,54 +496,74 @@ fn under_from_inverse_pattern(input: &[Instr], _: Signature) -> Option<(&[Instr]
     }
 }
 
-fn under_temp_pattern(input: &[Instr], _: Signature) -> Option<(&[Instr], Under)> {
-    match input.split_first()? {
-        (
-            &Instr::PushTemp {
+fn under_temp_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Under)> {
+    let (
+        &Instr::PushTemp {
+            stack: TempStack::Inline,
+            count,
+            span,
+        },
+        input,
+    ) = input.split_first()?
+    else {
+        return None;
+    };
+    // Find end
+    let mut depth = 1;
+    let mut end = 0;
+    for (i, instr) in input.iter().enumerate() {
+        match instr {
+            Instr::PushTemp {
                 stack: TempStack::Inline,
-                count,
-                span,
-            },
-            input,
-        ) => Some((
-            input,
-            (
-                vec![Instr::PushTemp {
-                    stack: TempStack::Inline,
-                    count,
-                    span,
-                }],
-                vec![Instr::PopTemp {
-                    stack: TempStack::Inline,
-                    count,
-                    span,
-                }],
-            ),
-        )),
-        (
-            &Instr::PopTemp {
+                ..
+            } => depth += 1,
+            Instr::PopTemp {
                 stack: TempStack::Inline,
-                count,
-                span,
-            },
-            input,
-        ) => Some((
-            input,
-            (
-                vec![Instr::PopTemp {
-                    stack: TempStack::Inline,
-                    count,
-                    span,
-                }],
-                vec![Instr::PushTemp {
-                    stack: TempStack::Inline,
-                    count,
-                    span,
-                }],
-            ),
-        )),
-        _ => None,
+                ..
+            } => depth -= 1,
+            _ => {}
+        }
+        if depth == 0 {
+            end = i;
+            break;
+        }
     }
+    let (inner, input) = input.split_at(end);
+    let input = &input[1..];
+    // Calcular inner functions and signatures
+    let (inner_befores, inner_afters) = under_instrs(inner, g_sig)?;
+    let inner_befores_sig = instrs_signature(&inner_befores).ok()?;
+    let inner_afters_sig = instrs_signature(&inner_afters).ok()?;
+    // Create befores
+    let mut befores = vec![Instr::PushTemp {
+        stack: TempStack::Inline,
+        count,
+        span,
+    }];
+    befores.extend(inner_befores);
+    befores.push(Instr::PopTemp {
+        stack: TempStack::Inline,
+        count,
+        span,
+    });
+    // Create afters
+    let mut afters = inner_afters;
+    if inner_befores_sig.args <= inner_afters_sig.args && g_sig.args <= g_sig.outputs {
+        afters.insert(
+            0,
+            Instr::PushTemp {
+                stack: TempStack::Inline,
+                count,
+                span,
+            },
+        );
+        afters.push(Instr::PopTemp {
+            stack: TempStack::Inline,
+            count,
+            span,
+        });
+    }
+    Some((input, (befores, afters)))
 }
 
 fn under_both_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Under)> {

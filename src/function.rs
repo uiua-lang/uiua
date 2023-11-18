@@ -255,7 +255,7 @@ pub struct Function {
 }
 
 /// A function stack signature
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Signature {
     /// The number of arguments the function pops off the stack
     pub args: usize,
@@ -301,6 +301,12 @@ impl PartialEq<(usize, usize)> for Signature {
 impl From<(usize, usize)> for Signature {
     fn from((args, outputs): (usize, usize)) -> Self {
         Self::new(args, outputs)
+    }
+}
+
+impl fmt::Debug for Signature {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "|{}.{}", self.args, self.outputs)
     }
 }
 

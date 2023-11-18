@@ -327,8 +327,10 @@ impl Parser {
         let start = self.try_exact(initial_token)?;
         self.try_spaces();
         let (args, outs) = self.sig_inner();
-        let end = self.prev_span();
-        self.try_spaces();
+        let mut end = self.prev_span();
+        if let Some(sp) = self.try_spaces() {
+            end = sp.span;
+        }
         let span = start.merge(end);
         Some(span.sp(Signature::new(args, outs)))
     }

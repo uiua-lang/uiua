@@ -631,7 +631,9 @@ impl<'a> Formatter<'a> {
                 );
                 self.format_words(&m.operands, true, depth);
             }
-            Word::Placeholder(sig) => self.format_signature('^', *sig, false),
+            Word::Placeholder(sig) => {
+                self.format_signature('^', *sig, word.span.as_str().ends_with(' '))
+            }
             Word::Spaces => self.push(&word.span, " "),
             Word::Comment(comment) => {
                 let beginning_of_line = self

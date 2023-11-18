@@ -894,13 +894,17 @@ impl Value {
         } else {
             // Negative rank
             if rank > shape.len() {
-                for _ in 0..rank - shape.len() {
-                    shape.push(1);
-                }
+                return Err(env.error(format!(
+                    "Negative rerank has magnitude {}, which is greater \
+                    than the array's rank {}",
+                    rank,
+                    shape.len()
+                )));
             } else {
-                let new_last_dim: usize = shape[rank..].iter().product();
-                shape.truncate(rank);
-                shape.push(new_last_dim);
+                let new_first_dim: usize = shape[..rank].iter().product();
+                *shape = once(new_first_dim)
+                    .chain(shape[rank..].iter().copied())
+                    .collect();
             }
         }
         self.validate_shape();

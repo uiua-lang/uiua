@@ -828,6 +828,11 @@ code:
     }
     /// Take the entire stack
     pub fn take_stack(&mut self) -> Vec<Value> {
+        for stack in &mut self.temp_stacks {
+            stack.clear();
+        }
+        self.temp_function_stack.clear();
+        self.function_stack.clear();
         take(&mut self.stack)
     }
     /// Pop a function from the function stack

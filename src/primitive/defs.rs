@@ -805,6 +805,10 @@ primitive!(
     /// ex: ☇ ¯1 ↯2_3_3⇡18
     ///   : ☇ ¯2 ↯2_3_3⇡18
     ///   : ☇ ¯3 ↯2_3_3⇡18
+    ///
+    /// [under][rerank] will set the rank back when it is done.
+    /// ex: ⍜(☇1)□ ↯2_3_3⇡18
+    /// ex: ⍜☇□  2 ↯2_3_3⇡18
     (2, Rerank, DyadicArray, ("rerank", '☇')),
     /// Take the first n elements of an array
     ///

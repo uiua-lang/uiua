@@ -1,6 +1,6 @@
 mod utils;
 
-use std::{cell::Cell, rc::Rc, time::Duration};
+use std::{cell::Cell, iter::repeat, rc::Rc, time::Duration};
 
 use base64::engine::{general_purpose::STANDARD, Engine};
 
@@ -468,16 +468,22 @@ pub fn Editor<'a>(
                 if range.iter().all(|line| line.trim().starts_with('#')) {
                     // Toggle comments off
                     for line in range {
-                        if line.starts_with("# ") {
-                            line.replace_range(0..2, "");
-                        } else {
-                            *line = line.trim_start_matches('#').into();
-                        }
+                        let space_count = line.chars().take_while(|c| *c == ' ').count();
+                        *line = repeat(' ')
+                            .take(space_count)
+                            .chain(
+                                line.trim()
+                                    .trim_start_matches('#')
+                                    .trim_start_matches(' ')
+                                    .chars(),
+                            )
+                            .collect();
                     }
                 } else {
                     // Toggle comments on
                     for line in range {
-                        line.insert_str(0, "# ");
+                        let spot = line.chars().take_while(|c| " \t".contains(*c)).count();
+                        line.insert_str(spot, "# ");
                     }
                 }
                 let new_code = lines.join("\n");

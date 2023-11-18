@@ -62,6 +62,7 @@
 ParseOrZero ← ⍣parse⋅⋅0
 ⍤⊃⋅∘≍ 5 ParseOrZero "5"
 ⍤⊃⋅∘≍ 0 ParseOrZero "dog"
+⍤⊃⋅∘≍ ∵⍜⍘parse∘. [0 ¯1 η π τ ∞ ¯π NaN]
 
 ⍤⊃⋅∘≍ "5" $"_" 5
 ⍤⊃⋅∘≍ "1 + 2 = 3" $"_ + _ = _" ⊃⊙∘+ 1 2

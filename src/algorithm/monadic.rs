@@ -3,6 +3,7 @@
 use std::{
     cmp::Ordering,
     collections::{BTreeMap, BTreeSet, HashMap},
+    f64::consts::{PI, TAU},
     iter::{once, repeat},
     ptr,
 };
@@ -54,6 +55,18 @@ impl Value {
         }
         if s.contains('`') {
             s = s.replace('`', "-");
+        }
+        if s.contains('η') {
+            s = s.replace('η', &(PI * 0.5).to_string());
+        }
+        if s.contains('π') {
+            s = s.replace('π', &PI.to_string());
+        }
+        if s.contains('τ') {
+            s = s.replace('τ', &TAU.to_string());
+        }
+        if s.contains('∞') {
+            s = s.replace('∞', &f64::INFINITY.to_string());
         }
         Ok(s.parse::<f64>()
             .map_err(|e| env.error(format!("Cannot parse into number: {}", e)))?
